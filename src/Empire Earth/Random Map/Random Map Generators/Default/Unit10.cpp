@@ -581,14 +581,15 @@ long SetRandomMapValues(EERandomMap* ioMap, const UString& inScriptName)
             theY = ioMap->mWalls[i].mEndY;
             theTop = ioMap->mWalls[i].mStartY;
         }
+        // the wall's X and Y extents widen the X and Y bounds, as for the features above
         if (theMinX > theX)
             theMinX = theX;
-        else if (theMaxX < theRight)
+        if (theMaxX < theRight)
             theMaxX = theRight;
-        if (theMinX > theY)
-            theMinX = theY;
-        else if (theTop > theMaxX)
-            theMaxX = theTop;
+        if (theY < theMinY)
+            theMinY = theY;
+        if (theTop > theMaxY)
+            theMaxY = theTop;
     }
     ioMap->mFlatArea.mTop = theMaxY;
     ioMap->mFlatArea.mLeft = theMinX;
