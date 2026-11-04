@@ -1230,8 +1230,13 @@ void EESMEffect::Execute(bool inIsCinematic)
                     continue;
                 if (this->mDuration > 0)
                     gUserInterface->AddChatLogEntry(theColor, theName, theText, this->mDuration * 1000, 1);
-                else
-                    gUIManager->DisplayMessage(theMediaText, 1, NULL, NULL, true);
+                else {
+                    // A chat message without a duration is shown in a message box: with its text (the box showed
+                    // theMediaText, which only the Change Text action fills, so it was empty).
+                    UWideString theChat = theName;
+                    theChat += theText;
+                    gUIManager->DisplayMessage(theChat, 1, NULL, NULL, true);
+                }
             }
             break;
         }
