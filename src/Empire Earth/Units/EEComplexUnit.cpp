@@ -1365,12 +1365,9 @@ bool EEComplexUnit::UpdateHidden()
                         theBlocks = theUnit->mCanBeHidden && (theUnit->GetHitPoints() > 0 || theResource);
                     } else {
                         EEUnitClass* theClass = theNode->mUnit->GetUnitClass();
-                        // The original's null-complex branch reads the null pointer's cloak/player fields
-                        // (absolute 0x345, 0x346, 0x18 in 1f8817..1f8849); preserve that behavior.
-                        theBlocks = !theClass->mIsObstacle && !theClass->mIsProjectile && theClass->mMaxVelocity > 0.0f &&
-                            (!(theUnit->mIsCloakable && theUnit->mIsCloaked) ||
-                             ::gWorld.GetCurrentPlayer() == theUnit->GetPlayer() ||
-                             theUnit->GetPlayer()->mEnemies[::gWorld.GetCurrentPlayer()->GetPlayerID()] == 0);
+                        // a unit without a complex unit cannot be cloaked: only its class decides (the cloak and
+                        // owner tests used to be read through the NULL complex unit)
+                        theBlocks = !theClass->mIsObstacle && !theClass->mIsProjectile && theClass->mMaxVelocity > 0.0f;
                     }
                     if (!theBlocks)
                         continue;
