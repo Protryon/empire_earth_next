@@ -101,7 +101,7 @@ void UIButton::ButtonDown()
 }
 
 // FUNCTION: LLE 0x1005e832
-// Shows the button focused or normal; plays the button-down sound (not the up sound) if an up sound is set
+// Shows the button focused or normal; plays the button-up sound if one is set
 void UIButton::ButtonUp()
 {
     if (this->mForm->GetTabbingOn() && this->mForm->GetTabStop() == this->mIndex) {
@@ -114,8 +114,8 @@ void UIButton::ButtonUp()
         this->SetDirty(true);
     }
     this->mBorderType = 1;
-    if (this->mButtonUpSound != -1)
-        this->GetSoundManager()->Play(this->mButtonDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
+    if (this->mButtonUpSound != -1)   // Fixed: used to play the button-down sound here
+        this->GetSoundManager()->Play(this->mButtonUpSound, 1.0f, 0.0f, 1.0f, false, NULL);
 }
 
 // FUNCTION: LLE 0x1005e8b4
