@@ -265,7 +265,10 @@ long EEUGUnloadTransport::Save(unsigned long inMajorVersion, unsigned long inMin
 {
     long theResult = EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult == 0) {
-        theResult = outFile.Write(this->mTransport->GetUnitID());
+        // RepairPointers clears the transport when it no longer exists: save -1, which it reads back as no
+        // transport, instead of reading the id through NULL
+        unsigned long theTransportID = this->mTransport != NULL ? this->mTransport->GetUnitID() : (unsigned long)-1;
+        theResult = outFile.Write(theTransportID);
         if (theResult == 0) {
             theResult = outFile.Write(this->mDestination.GetX());
             if (theResult == 0) {
