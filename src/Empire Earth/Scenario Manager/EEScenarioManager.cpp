@@ -1192,8 +1192,8 @@ void EEScenarioManager::RenumberEffects(unsigned long inOld, unsigned long inNew
     unsigned long i;
     for (i = 0; i < theCount; i++)
         this->mTriggers[i]->RenumberEffects(inOld, inNew);
-    unsigned long theEntries = this->mTimedEffects.size();
-    for (i = 0; i < theEntries; i++) {
+    // Bounded by the current size: after an erase the cached count read a stale slot past the end.
+    for (i = 0; i < this->mTimedEffects.size(); i++) {
         if (this->mTimedEffects[i].mEffectIndex != inOld)
             continue;
         if (inNew == (unsigned long)-1) {
