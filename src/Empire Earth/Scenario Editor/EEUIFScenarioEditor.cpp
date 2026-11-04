@@ -313,6 +313,9 @@ long EEUIESaveScenarioTriggersOnly::ProcessEvent(UIForm* inForm, UIEntity* inEnt
                     continue;
                 for (unsigned long j = 0; j < theTrigger->mEffects.size(); j++) {
                     EESMEffect* theEffect = theManager->GetEffect(theTrigger->GetEffect(j)->mEffectIndex);
+                    // A missing effect is listed as BAD EFFECT above; skip it here instead of dereferencing NULL.
+                    if (theEffect == NULL)
+                        continue;
                     if ((theEffect->mType == kSMEffectObject && (theEffect->mObjectAction == kSMObjectActionClassName || theEffect->mObjectAction == kSMObjectActionClassAttribute)) ||
                         (theEffect->mType == kSMEffectPlayer && theEffect->mPlayerAction == kSMPlayerActionModifyTechTree))
                         fprintf(theText, "WARNING: Potential performance issue with looping Trigger (%s) calling effect (%s) which repeatedly sets the objects name, class attribute or player tech\n", (const char*)theTrigger->mName, (const char*)theEffect->mName);
