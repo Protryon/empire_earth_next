@@ -102,10 +102,11 @@ DX7Screen::DX7Screen(HMONITOR__* inMonitor, IDirectDraw7* inDirectDraw, const US
     memset(&theCaps, 0, sizeof(theCaps));
     theCaps.dwSize = sizeof(theCaps);
     this->mDirectDraw->GetCaps(&theCaps, NULL);
-    if (theCaps.dwFXCaps | DDFXCAPS_BLTARITHSTRETCHY) {
-        if ((theCaps.dwFXCaps | DDFXCAPS_BLTSHRINKX) && (theCaps.dwFXCaps | DDFXCAPS_BLTSHRINKY))
+    // Test the reported capability bits (a bitwise or made every test true).
+    if (theCaps.dwFXCaps & DDFXCAPS_BLTARITHSTRETCHY) {
+        if ((theCaps.dwFXCaps & DDFXCAPS_BLTSHRINKX) && (theCaps.dwFXCaps & DDFXCAPS_BLTSHRINKY))
             this->mCanMinFilterSurfaces = true;
-        if ((theCaps.dwFXCaps | DDFXCAPS_BLTSTRETCHX) && (theCaps.dwFXCaps | DDFXCAPS_BLTSTRETCHY))
+        if ((theCaps.dwFXCaps & DDFXCAPS_BLTSTRETCHX) && (theCaps.dwFXCaps & DDFXCAPS_BLTSTRETCHY))
             this->mCanMagFilterSurfaces = true;
     }
     this->mDirectDraw->EnumDisplayModes(DDEDM_REFRESHRATES, NULL, &this->mModes, (LPDDENUMMODESCALLBACK2)DX7Screen::EnumVideoModeCallback);
