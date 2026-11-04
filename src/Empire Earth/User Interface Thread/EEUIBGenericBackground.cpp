@@ -482,8 +482,10 @@ long EEUIBMapBackground::LoadBackground()
                 }
             }
         }
-        theImage->Dereference();
     }
+    // Release the image surface also when its load failed.
+    if (theImage != NULL)
+        theImage->Dereference();
 done:
     if (theFile != NULL)
         delete theFile;
