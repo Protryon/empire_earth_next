@@ -1297,8 +1297,8 @@ long EESMObject::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
 #include "ee/EEHerd.h"
 
 // FUNCTION: EXE 0x5c8871
-// Raises or lowers a player's unit type stat by an amount or percent of the class value (armor keeps only bonus +
-// change), clamped, and queues the change as a pending effect
+// Raises or lowers a player's unit type stat by an amount or percent of the class value (armor: the bonus over the
+// class base changes and is clamped at 0), clamped, and queues the change as a pending effect
 // Original cdecl helper. Parameter types follow the dispatcher's pushes and the actual player/upgrade readers.
 // Every case is written out in full (the original reads inUpgrade->mUnitClass per case; the int cases' shared
 // add/clamp/store tail is VC6 tail merging); theAdd is the original's sete (negate when it is false).
@@ -1343,7 +1343,8 @@ void EEModifyUnitAttribute(unsigned long inAttribute, bool inPercentage, EEPlaye
         theFloat = (inUpgrade->mArmor[theArmor] - (float)inUpgrade->mUnitClass->mArmor[theArmor]) + theFloat;
         if (theFloat < 0.0f)
             theFloat = 0.0f;
-        inUpgrade->mArmor[theArmor] = theFloat;
+        // the clamped bonus goes back on top of the class base armor (the upgrade holds the total armor)
+        inUpgrade->mArmor[theArmor] = theFloat + (float)inUpgrade->mUnitClass->mArmor[theArmor];
         break;
     }
     case kSMUnitAttributeReloadTimePlus:
