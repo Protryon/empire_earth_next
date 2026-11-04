@@ -3504,11 +3504,13 @@ void EEUnitClass::FindPath(EEComplexUnit* inUnit)
                 thePosition.mY += theSide.GetY();
                 thePosition.mX += theSide.GetX();
                 theSideTile = U2DPoint<long>(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY()));
+                bool theLeftSqueezed = false;  // a squeeze beside the unit settles the left side (as the right)
                 if (EECanStandOn(theSideTile, inUnit)) {
                     if (UMAbs(theSideTile.GetX() - inUnit->GetTileX()) == 1 && UMAbs(theSideTile.GetY() - inUnit->GetTileY()) == 1 &&
                         EEIsTileTopAbove(theSideTile.GetX(), inUnit->GetTileY(), 0.0f, &theDummy, true) &&
                         EEIsTileTopAbove(inUnit->GetTileX(), theSideTile.GetY(), 0.0f, &theDummy, true)) {
                         theLeft = 0x7fffffff;
+                        theLeftSqueezed = true;
                     } else {
                         for (RTSTileUnitNode* theNode = gWorld.mMap->GetTile(theSideTile.GetX(), theSideTile.GetY())->mUnits;
                              theNode != NULL; theNode = theNode->mNext)
@@ -3518,7 +3520,7 @@ void EEUnitClass::FindPath(EEComplexUnit* inUnit)
                 theGoalPoint.mY += theSide.GetY();
                 theGoalPoint.mX += theSide.GetX();
                 theTile = U2DPoint<long>(UMFloor(theGoalPoint.GetX()), UMFloor(theGoalPoint.GetY()));
-                if (EECanStandOn(theTile, inUnit)) {
+                if (!theLeftSqueezed && EECanStandOn(theTile, inUnit)) {
                     if (UMAbs(theTile.GetX() - inUnit->GetTileX()) == 1 && UMAbs(theTile.GetY() - inUnit->GetTileY()) == 1 &&
                         EEIsTileTopAbove(theTile.GetX(), inUnit->GetTileY(), 0.0f, &theDummy, true) &&
                         EEIsTileTopAbove(inUnit->GetTileX(), theTile.GetY(), 0.0f, &theDummy, true)) {
