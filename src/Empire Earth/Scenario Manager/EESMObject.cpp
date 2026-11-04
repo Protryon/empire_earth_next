@@ -777,9 +777,11 @@ long EESMObject::GetUnitAttribute(unsigned long inAttribute, bool inPercent, EEU
         theResult = theStats->mArmor[0] - theStats->mUnitClass->mArmor[0];
         goto attribute_42;
     case kSMUnitAttributeArrowArmorPlus:
-    case kSMUnitAttributePierceArmorPlus:
         theResult = theStats->mArmor[1] - theStats->mUnitClass->mArmor[1];
         goto attribute_44;
+    case kSMUnitAttributePierceArmorPlus:   // armor slot 2, as the attribute effect uses (shared the arrow body)
+        theResult = theStats->mArmor[2] - theStats->mUnitClass->mArmor[2];
+        goto attribute_pierce;
     case kSMUnitAttributeGunArmorPlus:
         theResult = theStats->mArmor[3] - theStats->mUnitClass->mArmor[3];
         goto attribute_45;
@@ -852,12 +854,20 @@ long EESMObject::GetUnitAttribute(unsigned long inAttribute, bool inPercent, EEU
         }
         break;
     case kSMUnitAttributeTotalArrowArmor:
-    case kSMUnitAttributeTotalPierceArmor:
         theResult = theStats->mArmor[1];
     attribute_44:
         if (inPercent) {
             if (theClass->mArmor[1] > 0)
                 { theResult = (long)(theResult * 100.0f / theClass->mArmor[1]); break; }
+            { theResult = 100; break; }
+        }
+        break;
+    case kSMUnitAttributeTotalPierceArmor:   // armor slot 2 (shared the arrow body)
+        theResult = theStats->mArmor[2];
+    attribute_pierce:
+        if (inPercent) {
+            if (theClass->mArmor[2] > 0)
+                { theResult = (long)(theResult * 100.0f / theClass->mArmor[2]); break; }
             { theResult = 100; break; }
         }
         break;
