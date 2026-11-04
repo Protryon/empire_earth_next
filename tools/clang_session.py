@@ -92,6 +92,19 @@ def main():
             names = {n for n in names if not (n.startswith(b"??_C@") or n.startswith(b"??_F"))}
         return names
     presentation_bridge.exported_names = exported_names
+
+    # --human-script: the driver finds EEPhysics::ReportStatistics's two statics by VC6's register use (`mov [imm],
+    # eax` / `mov [imm], edx`); clang allocates registers differently, and lld's map names both statics
+    sys.path.insert(0, str(BOOT_TOOLS / "human"))
+    import human
+    inner_statics = human.report_statics
+
+    def report_statics(image_path, linkmap_path=None):
+        if linkmap_path:
+            lm = fulllink_locator.LinkMap(linkmap_path)
+            return lm.address("?sLastReport@?1??ReportStatistics@EEPhysics@@QAEXXZ@4KA"), lm.address("_sReportPeriod")
+        return inner_statics(image_path, linkmap_path)
+    human.report_statics = report_statics
     sys.argv = [str(BOOT_TOOLS / "game_session.py"), "--fulllink", str(image), *argv]
     import game_session
     game_session.main()

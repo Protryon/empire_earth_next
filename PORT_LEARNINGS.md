@@ -37,8 +37,14 @@ Process rules learned the hard way:
 ## Compiler flags (clang-cl, phase 1)
 
 `--target=i686-pc-windows-msvc -fms-compatibility -fms-extensions -fms-compatibility-version=12.00 /Zc:wchar_t-
--fdelayed-template-parsing /arch:IA32 /GS- -fno-strict-aliasing -fwrapv`, VC6-only flags dropped (`-G6 -Zm -Zi`,
-`/O1` replaced).
+-fdelayed-template-parsing /arch:IA32 /GS- -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks`, VC6-only
+flags dropped (`-G6 -Zm -Zi`, `/O1` replaced).
+
+- **`-fno-delete-null-pointer-checks`** (found by a crash in the first long AI game): `EEIsLineToUnitBlocked` calls
+  `theList->Scale(...)` and later tests `theList != NULL`. `Scale` never touches `this`, so under VC6 a null
+  `theList` was harmless. Clang inferred non-null from the member call, deleted the test, and the next read faulted.
+  The original code may rely on this anywhere (VC6 never exploited the UB), so the flag stays for the whole port.
+  The source should be cleaned up later (UBSan pass), then the flag can go.
 
 - `/Zc:wchar_t-`: VC6's `wchar_t` is `unsigned short`. This fixes `std::wstring = unsigned short[]` assignments and
   keeps the mangling (`G`) the same as VC6's.
@@ -167,6 +173,24 @@ RTTI gets the old lookup, which only searches the object's base list for the tar
 - Results (2026-11-04): the clang exe with retail DLLs, and the clang exe + engine + TCP + Default (retail renderer
   in its software profile, silent mixer), pass the full menu/settings tour, load a random-map game and play 120 s
   without a fault.
+- The human driver (`--human-script`, also used empty for lockstep) finds `EEPhysics::ReportStatistics`'s statics by
+  VC6's register use. `clang_session.py` looks them up by map name instead (lld's map lists static symbols too).
+
+## Differential comparison (VC6 build vs clang build, same source)
+
+Recipe (run sequentially; synced streams are timing-independent): the reference is the fork's VC6 full link through
+ee's own `--fulllink` path, the candidate the clang test image through `clang_session.py`, both with
+`EE_HUMAN_LOCKSTEP=1 --exercise ai-game --ai-players 2 --map-size Small --difficulty Hard --max-game-seconds 600
+--time-factor 32 --no-render --seed 2 --pt-rate 40 --diff-stream auto --human-script <comment-only file>`. Then
+`ee tools/boot/differential/compare.py A/diff.stream.txt.gz B/diff.stream.txt.gz`, and `dump.py --pt X --a .. --b ..`
+for the differing fields at a snapshot PT (every 100).
+
+What it shows: the SIM hash differs from PT 1, but only by one-ulp float differences (x87 intermediates spilled at
+other points: animation fractions, unit matrices). Behaviour drifts only through them. Seed 2: RNG draws identical
+to PT 3,066, AI identical to PT 2,856, unit counts to PT 3,361, then the games diverge chaotically. Both play the
+full 10.5k PTs. `inputs` differing at PTs ~476–867 is the harness's civ-timer preemption on wall time, not the game.
+With float noise this early, a tick oracle only validates the first few thousand PTs. Beyond that, the evidence is
+"plays to the end without faults" plus behavioural checks.
 
 ## For WONAPI/WONLobby later
 

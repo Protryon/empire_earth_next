@@ -57,6 +57,10 @@ headless live-game harness (`clang_link.py --test-profile windowed-software lle 
 exe, alone or with the clang engine, TCP and Default DLLs, passes the menu/settings tour, loads a random-map game and
 plays 120 s without a fault (2026-11-04).
 
+Differential (same source, VC6 vs clang, 2-AI Hard game, seed 2): float results differ by one ulp from the first PT
+(x87 rounding points). Integer state follows them: RNG draws are identical to PT 3,066 and the AI to PT 2,856, then the
+games drift apart. The clang build plays the whole 10.5k-PT game without a fault. Recipe: `PORT_LEARNINGS.md`.
+
 `PORT_LEARNINGS.md` records every problem and fix, as the checklist for code that is ported later (WONAPI/WONLobby).
 
 Next steps: the differential game comparison against the VC6 build, the clang renderers in the game, and then
