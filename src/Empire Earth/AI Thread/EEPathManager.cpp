@@ -1015,8 +1015,7 @@ EEPathManagerNode* EEPathManager::FindPath(EEComplexUnit* inUnit)
     return theResult;
 }
 
-// The window grows from the unclamped inFrom; inArg8 is not read; *outReached stays false (the result is the
-// reached flag); the machine is prepared twice.
+// The window grows from the unclamped inFrom; inArg8 is not read; *outReached is the result; the machine is prepared twice.
 // FUNCTION: EXE 0x4a71c9
 // Runs a bounded search within inMargin tiles of inFrom and, when it reaches inTo, appends the path (start first);
 // returns whether it reached inTo
@@ -1062,6 +1061,7 @@ start:
     this->mBoundedMachine->Run();
     this->mBoundedMachine->GetPoints(thePath);
     theReached = this->mBoundedMachine->mTile.GetX() == theTo.GetX() && this->mBoundedMachine->mTile.GetY() == theTo.GetY();
+    *outReached = theReached;
     if (theReached) {
         for (long i = thePath.size() - 1; i >= 0; i--)
             outPath.push_back(thePath[i]);
