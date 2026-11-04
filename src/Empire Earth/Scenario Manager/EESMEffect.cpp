@@ -681,43 +681,43 @@ void EESMEffect::SetPlayerAttribute(long inPlayer, unsigned long inAttribute, lo
             thePlayer->mScenarioVariables[inAttribute - 11] += theAmount;
         break;
     case kSMPlayerValueStoneSent:
-        if (inMode == kSMValueModeToExactly) { thePlayer->mTributes[2] = theAmount; thePlayer->mSavedGroups.Set(0x11, theAmount); }
+        if (inMode == kSMValueModeToExactly) { thePlayer->mSavedGroups.Reset(0x11, theAmount - (long)thePlayer->mTributes[2]); thePlayer->mTributes[2] = theAmount; }
         else thePlayer->AddTribute(0, 4, theAmount);
         break;
     case kSMPlayerValueStoneReceived:
-        if (inMode == kSMValueModeToExactly) { thePlayer->mTributes[7] = theAmount; thePlayer->mSavedGroups.Set(0x12, theAmount); }
+        if (inMode == kSMValueModeToExactly) { thePlayer->mSavedGroups.Reset(0x12, theAmount - (long)thePlayer->mTributes[7]); thePlayer->mTributes[7] = theAmount; }
         else thePlayer->AddTribute(1, 4, theAmount);
         break;
     case kSMPlayerValueGoldSent:
-        if (inMode == kSMValueModeToExactly) { thePlayer->mTributes[3] = theAmount; thePlayer->mSavedGroups.Set(0x11, theAmount); }
+        if (inMode == kSMValueModeToExactly) { thePlayer->mSavedGroups.Reset(0x11, theAmount - (long)thePlayer->mTributes[3]); thePlayer->mTributes[3] = theAmount; }
         else thePlayer->AddTribute(0, 5, theAmount);
         break;
     case kSMPlayerValueGoldReceived:
-        if (inMode == kSMValueModeToExactly) { thePlayer->mTributes[8] = theAmount; thePlayer->mSavedGroups.Set(0x12, theAmount); }
+        if (inMode == kSMValueModeToExactly) { thePlayer->mSavedGroups.Reset(0x12, theAmount - (long)thePlayer->mTributes[8]); thePlayer->mTributes[8] = theAmount; }
         else thePlayer->AddTribute(1, 5, theAmount);
         break;
     case kSMPlayerValueWoodSent:
-        if (inMode == kSMValueModeToExactly) { thePlayer->mTributes[1] = theAmount; thePlayer->mSavedGroups.Set(0x11, theAmount); }
+        if (inMode == kSMValueModeToExactly) { thePlayer->mSavedGroups.Reset(0x11, theAmount - (long)thePlayer->mTributes[1]); thePlayer->mTributes[1] = theAmount; }
         else thePlayer->AddTribute(0, 3, theAmount);
         break;
     case kSMPlayerValueWoodReceived:
-        if (inMode == kSMValueModeToExactly) { thePlayer->mTributes[6] = theAmount; thePlayer->mSavedGroups.Set(0x12, theAmount); }
+        if (inMode == kSMValueModeToExactly) { thePlayer->mSavedGroups.Reset(0x12, theAmount - (long)thePlayer->mTributes[6]); thePlayer->mTributes[6] = theAmount; }
         else thePlayer->AddTribute(1, 3, theAmount);
         break;
     case kSMPlayerValueFoodSent:
-        if (inMode == kSMValueModeToExactly) { thePlayer->mTributes[0] = theAmount; thePlayer->mSavedGroups.Set(0x11, theAmount); }
+        if (inMode == kSMValueModeToExactly) { thePlayer->mSavedGroups.Reset(0x11, theAmount - (long)thePlayer->mTributes[0]); thePlayer->mTributes[0] = theAmount; }
         else thePlayer->AddTribute(0, 2, theAmount);
         break;
     case kSMPlayerValueFoodReceived:
-        if (inMode == kSMValueModeToExactly) { thePlayer->mTributes[5] = theAmount; thePlayer->mSavedGroups.Set(0x12, theAmount); }
+        if (inMode == kSMValueModeToExactly) { thePlayer->mSavedGroups.Reset(0x12, theAmount - (long)thePlayer->mTributes[5]); thePlayer->mTributes[5] = theAmount; }
         else thePlayer->AddTribute(1, 2, theAmount);
         break;
     case kSMPlayerValueIronSent:
-        if (inMode == kSMValueModeToExactly) { thePlayer->mTributes[4] = theAmount; thePlayer->mSavedGroups.Set(0x11, theAmount); }
+        if (inMode == kSMValueModeToExactly) { thePlayer->mSavedGroups.Reset(0x11, theAmount - (long)thePlayer->mTributes[4]); thePlayer->mTributes[4] = theAmount; }
         else thePlayer->AddTribute(0, 6, theAmount);
         break;
     case kSMPlayerValueIronReceived:
-        if (inMode == kSMValueModeToExactly) { thePlayer->mTributes[9] = theAmount; thePlayer->mSavedGroups.Set(0x12, theAmount); }
+        if (inMode == kSMValueModeToExactly) { thePlayer->mSavedGroups.Reset(0x12, theAmount - (long)thePlayer->mTributes[9]); thePlayer->mTributes[9] = theAmount; }
         else thePlayer->AddTribute(1, 6, theAmount);
         break;
     default:
