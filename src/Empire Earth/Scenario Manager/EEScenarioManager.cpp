@@ -1668,6 +1668,8 @@ long EEScenarioManager::Load(unsigned long inMajorVersion, unsigned long inMinor
                 }
                 if (theCondition->mType != kSMConditionObject || theCondition->mObjectIndex != 0)
                     this->mConditions.push_back(theCondition);
+                else
+                    delete theCondition;    // a dropped "object 0" condition is freed (it leaked)
             }
         }
         if (theResult == kErrorOK)
