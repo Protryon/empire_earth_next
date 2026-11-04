@@ -1170,22 +1170,24 @@ unsigned long EEHerd::UpdateChasing(unsigned long inTime)
 }
 
 // FUNCTION: EXE 0x4a467b
-// Hunt state: while the target lives and the hunt timer runs, re-circles it when it changes tile; ends the hunt
-// (grazing, timer restarted) only when circling fails, otherwise the state stays; returns 1000 ms
+// Hunt state: while the target lives and the hunt timer runs, re-circles it when it changes tile; otherwise, or
+// when circling fails, ends the hunt (grazing, timer restarted); returns 1000 ms
 unsigned long EEHerd::UpdateHunting(unsigned long inTime)
 {
     U2DPoint<long> theTile;
-    if (!this->mTarget || !(this->mTarget->mHitPoints > 0) || !(this->mHuntTime > inTime))
-        return 1000;
-    long theY = this->mTarget->mTileY;
-    theTile.mX = this->mTarget->mTileX;
-    theTile.mY = theY;
-    if (theTile == this->mCenter)
-        return 1000;
-    bool theFollowing = this->MoveTo(theTile, gPhysics->GetRandom(2L, 5L));
-    this->mCenter = theTile;
-    if (theFollowing)
-        return 1000;
+    // the hunt goes on while the target lives and the hunt timer runs; a dead target, an expired timer or a
+    // failed circling ends it
+    if (this->mTarget && this->mTarget->mHitPoints > 0 && this->mHuntTime > inTime) {
+        long theY = this->mTarget->mTileY;
+        theTile.mX = this->mTarget->mTileX;
+        theTile.mY = theY;
+        if (theTile == this->mCenter)
+            return 1000;
+        bool theFollowing = this->MoveTo(theTile, gPhysics->GetRandom(2L, 5L));
+        this->mCenter = theTile;
+        if (theFollowing)
+            return 1000;
+    }
     this->ReleaseTarget();
     this->ResetGrazeTimes(this->mUnits.size(), true);
     this->mState = 0;
