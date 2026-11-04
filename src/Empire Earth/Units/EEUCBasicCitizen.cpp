@@ -562,7 +562,7 @@ long EEUCBasicCitizen::EvaluateCondition(EEComplexUnit* inUnit, unsigned long in
         theTrue = inUnit->mCitizenBuildQueue.size() == 0;
         break;
     case kTriggerSmartTaskNotAssigned:
-        theTrue = inUnit->mGoalState != NULL;
+        theTrue = inUnit->mGoalState == NULL;
         break;
     case kTriggerGoalIsRepairSite:
         if (inUnit->mActiveGoal != NULL && inUnit->mActiveGoal->mKind == kGoalBuildRepair)
