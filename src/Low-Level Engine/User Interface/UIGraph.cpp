@@ -117,10 +117,12 @@ long UIGraph::CopyData()
     } else
         this->mTitleRectangle = GERectangle();
     if (this->mLabelGrid && this->mGridText) {
-        this->FormatYValues((float)this->mMaxX, theString);
+        // Fixed: the margins used to be measured from FormatYValues(mMaxX) and FormatXValues(mMaxY), axes and
+        // formatters swapped
+        this->FormatXValues((float)this->mMaxX, theString);
         this->mGridText->SetText(theString);
         theValueHeight = this->mGridText->GetTextExtent().GetHeight();
-        this->FormatXValues((float)this->mMaxY, theString);
+        this->FormatYValues((float)this->mMaxY, theString);
         this->mGridText->SetText(theString);
         theValueWidth = this->mGridText->GetTextExtent().GetWidth() + kTextSpacing * 2;
     }
