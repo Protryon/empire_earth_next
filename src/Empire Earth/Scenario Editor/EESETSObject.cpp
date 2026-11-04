@@ -1049,7 +1049,7 @@ void EESETSObject::Hide()
 // NEAR: inline budget (begin()/operator+ out of line in the original) and the local vectors' frame slots
 // FUNCTION: EXE 0x5925a2
 // Fills the page from the selected scenario object: object lists, units selected on the map, counts, owner,
-// family, class, filters and state (a parent past the list resets the near-object combo instead)
+// family, class, filters and state (a parent past the list selects the first entry)
 void EESETSObject::Load()
 {
     std::vector<UWideString> theNames;
@@ -1118,7 +1118,7 @@ void EESETSObject::Load()
     if (theObject->GetParent() < this->mParentComboBox->GetListBox()->GetLineCount())
         this->mParentComboBox->SetCurrentSelection(theObject->mParent);
     else if (this->mParentComboBox->GetListBox()->GetLineCount() > 0)
-        this->mNearObjectComboBox->SetCurrentSelection(0);
+        this->mParentComboBox->SetCurrentSelection(0);   // (the parent combo, not the near-object one)
     this->mAttributeComboBox->SetCurrentSelection(theObject->mAttribute);
     this->mAttributeMinEditBox->SetText(theObject->mAttributeMin);
     this->mAttributeMaxEditBox->SetText(theObject->mAttributeMax);
