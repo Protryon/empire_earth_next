@@ -1024,7 +1024,7 @@ float EECPDefenseCommander::ComputeTownThreat(EETown* inTown, long& outPlayerID,
             if (inTown->mHull.BoundedContains(theArmy->mHull.GetCenter())) {
                 theSum += (long)(theArmy->mStrength * 2.0f);
                 if (inFill) {
-                    thePoint = inTown->mHull.GetClosestPoint(thePoint);
+                    thePoint = inTown->mHull.GetClosestPoint(theArmy->mHull.GetCenter());   // the army's (was the stale point)
                     it = ioMap->find(thePoint);
                     if (it != ioMap->end())
                         it->second.mEnemy += (long)(theArmy->mStrength * 1.5f);
