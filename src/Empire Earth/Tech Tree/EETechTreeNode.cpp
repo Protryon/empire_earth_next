@@ -548,8 +548,7 @@ void EETechTreeNode::SetButton(unsigned long inButton)
 }
 
 // FUNCTION: EXE 0x5cfcc9
-// Unloads the node's media: the unit class and its buttons, and the media its research event uses (the area
-// effect templates are loaded again instead)
+// Unloads the node's media: the unit class and its buttons, and the media its research event uses
 void EETechTreeNode::UnloadMedia(EEPlayer* inPlayer)
 {
     if (this->mData->mMakesUnit) {
@@ -565,8 +564,9 @@ void EETechTreeNode::UnloadMedia(EEPlayer* inPlayer)
                 EEButtonObject::Get(theEffect->mButton)->Release();
                 break;
             case 2:
+                // Release the area-effect template media LoadMedia loaded (this called LoadTemplateMedia again).
                 if (theEffect->mAttribute == 0x28)
-                    gAEManager.LoadTemplateMedia(theEffect->mAreaEffect);
+                    gAEManager.UnloadTemplateMedia(theEffect->mAreaEffect);
                 break;
             case 6:
                 EEMedia::Get(theEffect->mMediaIndex)->UnloadMedia();
