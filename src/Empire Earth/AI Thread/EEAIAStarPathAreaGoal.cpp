@@ -80,10 +80,9 @@ inline void EEAIContinent::AddIDDC(unsigned short inID)
         this->mIDsDC.push_back(inID);
 }
 
-// the original compares against mIDsBC's end (cmp [ecx+0xc4]): a copy-paste slip in the source, reproduced
 inline void EEAIContinent::AddIDEC(unsigned short inID)
 {
-    if (std::find(this->mIDsEC.begin(), this->mIDsEC.end(), inID) == this->mIDsBC.end())
+    if (std::find(this->mIDsEC.begin(), this->mIDsEC.end(), inID) == this->mIDsEC.end())
         this->mIDsEC.push_back(inID);
 }
 
