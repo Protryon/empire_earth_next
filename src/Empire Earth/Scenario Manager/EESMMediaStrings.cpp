@@ -43,7 +43,7 @@ bool EESMMediaStrings::ListMediaFiles(const UWideString& inFile, std::vector<UWi
 
 // FUNCTION: EXE 0x5c5828
 // Finds the movie (0), sound (1: .wav, then .mp3) or map picture (2) in the data path, with the campaign prefix on
-// request; a missing file is sprintf'd into outError's buffer and returns false
+// request; a missing file is reported in outError and returns false
 bool EESMMediaStrings::GetMediaFile(const UWideString& inScenarioName, unsigned long inKind, UWideString& outFile,
                                     UWideString& outError, bool inCampaignPrefix)
 {
@@ -109,7 +109,9 @@ bool EESMMediaStrings::GetMediaFile(const UWideString& inScenarioName, unsigned 
             ESVERIFY_AT(inScenarioName.Tokenize("/.\\", theTokens), 181);
             ESVERIFY_AT(theTokens.size() == 3, 182);
             theScenario = theTokens[1];
-            sprintf(outError, "%s\n", (const char*)theFile1);
+            // Build the message as a string: sprintf into outError's own buffer overran it for long file
+            // names (and wrote into the shared empty string when outError was empty).
+            outError = theFile1 + "\n";
             theResult = false;
         }
     }
