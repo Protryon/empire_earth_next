@@ -538,7 +538,7 @@ EETileLocation EECPAttackSubGroup::ComputeCenterPoint(long inMustBeInList)
 }
 
 // FUNCTION: EXE 0x45bcd0
-// Moves the task location to a random point of its area and re-checks the task in 6-35 s; always returns false
+// Moves the task location to a random point of its area and re-checks the task in 6-35 s; returns whether it moved
 bool EECPAttackSubGroup::RandomizeTaskLocation()
 {
     EECPILocation theLocation(this->mTask.mLocation);
@@ -553,7 +553,8 @@ bool EECPAttackSubGroup::RandomizeTaskLocation()
     this->mTask.mLocation = theLocation;
     unsigned long theTime = gPhysics->mGameTime;
     this->mNextTaskCheckTime = theTime + gPhysics->GetRandom(6000L, 35000L);
-    return false;
+    // report the move (every path used to return false; SetState, the only caller, ignores the result)
+    return true;
 }
 
 // FUNCTION: EXE 0x45bd63
