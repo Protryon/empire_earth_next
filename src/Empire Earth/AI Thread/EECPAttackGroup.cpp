@@ -1723,8 +1723,8 @@ bool EECPAttackGroup::ReplaceUnit(EEComplexUnit* inUnit, EEComplexUnit* inNewUni
 }
 
 // FUNCTION: EXE 0x458a06
-// Removes a unit from the sub-groups, queueing removal of a sub-group it empties; returns the last sub-group's
-// answer (false after a removal that leaves units, unless it was the last one asked)
+// Removes a unit from the sub-groups, queueing removal of a sub-group it empties; returns whether a
+// sub-group held it
 bool EECPAttackGroup::RemoveUnit(EEUnit* inUnit)
 {
     EECPAGOrder theOrder;
@@ -1732,8 +1732,10 @@ bool EECPAttackGroup::RemoveUnit(EEUnit* inUnit)
     bool theResult = false;
     for (long i = this->mSubGroups.size() - 1; i >= 0; i--) {
         theResult = this->mSubGroups[i]->RemoveUnit(theUnit);
-        if (!theResult || this->mSubGroups[i]->GetNumUnits() != 0)
+        if (!theResult)
             continue;
+        if (this->mSubGroups[i]->GetNumUnits() != 0)
+            break;   // removed: done (was: go on asking, later answers overwrite the result)
         theOrder.mType = kAGOrderRemoveSubGroup;
         theOrder.SetSubGroup(this->mSubGroups[i]);
         theOrder.mIsActive = true;
