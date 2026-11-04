@@ -562,9 +562,14 @@ long EEUIESIEOpen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     theStart = theManager->GetBriefing().GetLength() == 0 && theManager->GetHints().GetLength() == 0
                && theManager->GetHistory().GetLength() == 0 && !theManager->OpenMap() && !theManager->OpenMovie()
                && !theManager->OpenSound();
-    if (theStart)
-        inForm->GetManager()->AddEventToTrigger(new EEUIESIEStart, inForm, NULL);
-    else {
+    if (theStart) {
+        // The trigger queue takes its own reference: drop the creation references of the start event and
+        // of the unused movie/briefing event (both leaked).
+        UIEvent* theStartEvent = new EEUIESIEStart;
+        inForm->GetManager()->AddEventToTrigger(theStartEvent, inForm, NULL);
+        theStartEvent->Dereference();
+        theEvent->Dereference();
+    } else {
         gUserInterface->PostEvent(theEvent, NULL);
         theEvent->Dereference();
     }
