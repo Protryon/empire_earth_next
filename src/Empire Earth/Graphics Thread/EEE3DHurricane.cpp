@@ -293,7 +293,8 @@ long EEE3DHurricane::Step()
             this->mScale = max(0.1f, this->mScale - theElapsed / 2000.0f);
     } else {
         this->mAge += theElapsed / this->mGraphicEffect->mDuration;
-        if (this->mAge < this->mGraphicEffect->mDuration * 0.3f)
+        // mAge is the fraction of the duration: grow in over the first 30%, then full size
+        if (this->mAge < 0.3f)
             this->mScale = min(1.0f, theElapsed / 2000.0f + this->mScale);
         else
             this->mScale = 1.0f;
