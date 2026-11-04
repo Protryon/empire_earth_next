@@ -468,13 +468,11 @@ void EECPASGLand::GetPathCosts(void* inFrom, void* inTo, EECPASGWeights& outWeig
         if (this->mPlayer->mTechnologies->mCurrentEpoch > kTechEpochPrehistoric && theAir != 0 && (this->mMission == 2 || this->mMission == 0) &&
             gPhysics->mRandom.Generate() > 0.15f && (!theMixedSectors || gPhysics->mRandom.Generate() > kASGLMixedChance) &&
             theReadiness != 0.0f) {
-            theReadiness /= (float)this->mUnits.size();
-            outWeights.mValues[1] = max(0.0f, 1.0f - theReadiness);
+            outWeights.mValues[1] = max(0.0f, 1.0f - theReadiness / (float)this->mUnits.size());   // the average, not stored back
         }
         if (this->mPlayer->mTechnologies->mCurrentEpoch >= kTechEpochSpace && theSpace != 0 && (this->mMission == 2 || this->mMission == 0) &&
             theReadiness != 0.0f) {
-            theReadiness /= (float)this->mUnits.size();
-            outWeights.mValues[10] = max(0.0f, 1.0f - theReadiness);
+            outWeights.mValues[10] = max(0.0f, 1.0f - theReadiness / (float)this->mUnits.size());   // averaged once (was again)
         }
         if (this->mPlayer->mTechnologies->mCurrentEpoch >= kTechEpochAtomicModern && theLand != 0 &&
             gPhysics->mRandom.Generate() > 0.15f && theReadiness != 0.0f)
