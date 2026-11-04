@@ -476,11 +476,11 @@ extern "C" bool SPIMProcessMessage()
 }
 
 // FUNCTION: MIXER 0x10001871
-// Puts a sample on an idle channel and applies its loop, pan, pitch and volume; reads the sample's data before the
-// NULL test, so a NULL sample (meant to stop the channel) faults
+// Puts a sample on an idle channel and applies its loop, pan, pitch and volume; a NULL sample stops the channel
 extern "C" long SPIMSetChannelSample(unsigned long inChannel, SESample* inSample)
 {
-    SampleData* theWaveData = static_cast<SampleData*>(inSample->GetData());
+    // Fixed: the sample's data used to be read before the NULL test, so a NULL sample faulted
+    SampleData* theWaveData = inSample ? static_cast<SampleData*>(inSample->GetData()) : NULL;
     long theResult = SPIMIsChannelBusyPlaying(inChannel);
     if (theResult != kSPIMChannelIdle)
         return theResult;
