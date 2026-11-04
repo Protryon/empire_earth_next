@@ -286,18 +286,22 @@ unsigned char NESynchronousServer::GetSendToSlotForPlayer(unsigned char inPlayer
 }
 
 // FUNCTION: LLE 0x100480d3
-// Returns the last client (highest slot) with any recorded CPU time, not the slowest; 0xff if none
+// Returns the client with the highest recorded CPU load; 0xff if none has any
 unsigned char NESynchronousServer::GetSlowestClientCPU()
 {
     std::map<unsigned char, NEMMClient*>::iterator theClients;
     unsigned char theSlowest = 0xff;
+    unsigned long theHighestTotal = 0;
     for (theClients = this->mMessageManager->mClients.begin(); theClients != this->mMessageManager->mClients.end();
          ++theClients) {
         unsigned long theTotal = 0;
         for (unsigned long i = 0; i < 240; i++)
             theTotal += theClients->second->mCPUHistory[i];
-        if (theTotal > 0)
+        // the client with the highest CPU load over its history (ties: the higher slot)
+        if (theTotal > 0 && theTotal >= theHighestTotal) {
+            theHighestTotal = theTotal;
             theSlowest = theClients->first;
+        }
     }
     return theSlowest;
 }
