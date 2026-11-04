@@ -193,8 +193,6 @@ unsigned long GETexture::GetAllocatedSize()
 // frame slot (-8) and gives the dead parameter slots to i (+8), theRow, theX, j, theTarget; ours gives +8 to
 // theResult (declaration order has no effect). Tried: theResult initialised at the top, a separate counter per
 // loop (only the frame loop of format 0 as theFrame helps), store orders in format 1.
-// The format-1 path never releases its single-frame staging surface (theSurface): the original leaks it too
-// (only theGrid is dereferenced, 0x100336af).
 // FUNCTION: LLE 0x10032ec4
 // Loads the texture (and its animation frames) from a texture or .tga file, building or dropping MIP levels
 // as asked; frames become separate textures (format 0) or cells of one grid surface (format 1)
@@ -401,7 +399,8 @@ long GETexture::Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GE
                 inDescription.mHeight = this->mFramesPerRow * theHeader.mHeight;
                 theResult = inScreen->CreateSurface(inDescription, &theGrid);
                 if (theResult == kErrorOK) {
-                    for (i = 0; i < theHeader.mFrameCount; i++) {
+                    // A failed read or copy ends the loops (the surfaces are released below).
+                    for (i = 0; i < theHeader.mFrameCount && theResult == kErrorOK; i++) {
                         theMip = theSurface;
                         theTarget = theGrid;
                         for (j = 0; j < theHeader.mMipLevelCount; j++) {
@@ -410,11 +409,11 @@ long GETexture::Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GE
                             else {
                                 theResult = theFile->Read(theType);
                                 if (theResult != kErrorOK)
-                                    return theResult;
+                                    break;
                             }
                             theResult = theMip->Load(*theFile, theType);
                             if (theResult != kErrorOK)
-                                return theResult;
+                                break;
                             theSource.SetLeft(0.0f);
                             theSource.SetTop(0.0f);
                             theSource.SetRight((float)theMip->GetWidth());
@@ -427,17 +426,22 @@ long GETexture::Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GE
                             theDestination.SetBottom(theMip->GetHeight() + theDestination.GetTop());
                             theResult = theMip->CopyTo(theTarget, theSource, theDestination, false);
                             if (theResult != kErrorOK)
-                                return theResult;
+                                break;
                             if (theMip->GetAttachedSurfaceCount() > 0)
                                 theMip = theMip->GetAttachedSurface(0);
                             if (theTarget->GetAttachedSurfaceCount() > 0)
                                 theTarget = theTarget->GetAttachedSurface(0);
                         }
                     }
-                    theResult = this->SetSurface(theGrid);
-                    if (theResult == kErrorOK)
+                    if (theResult == kErrorOK) {
+                        theResult = this->SetSurface(theGrid);
+                        if (theResult == kErrorOK)
+                            theGrid->Dereference();
+                    } else
                         theGrid->Dereference();
                 }
+                // The single-frame staging surface is no longer needed (it leaked on every path).
+                theSurface->Dereference();
             }
         }
     }
