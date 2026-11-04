@@ -6961,13 +6961,17 @@ bool EEMSelectPlayerChatType::IsResponse(NEMessage* inMessage)
 }
 
 // FUNCTION: EXE 0x4c5aaa
-// Replaces the sender's selection with the listed units (no check that each unit still exists)
+// Replaces the sender's selection with the listed units that still exist
 void EEMSelectTheseUnits::Execute()
 {
     EEGroup* theGroup = gWorld.GetPlayerBySlot(this->GetOriginatingSlot())->mActiveGroup;
     theGroup->Clear();
-    for (std::vector<long>::iterator it = this->mUnitIDs.begin(); it != this->mUnitIDs.end(); ++it)
-        theGroup->Add(gWorld.GetUnit(*it)->GetComplexUnit());
+    for (std::vector<long>::iterator it = this->mUnitIDs.begin(); it != this->mUnitIDs.end(); ++it) {
+        // a listed unit may have died between sending and executing (it used to be read through NULL)
+        EEUnit* theUnit = gWorld.GetUnit(*it);
+        if (theUnit != NULL)
+            theGroup->Add(theUnit->GetComplexUnit());
+    }
 }
 
 // FUNCTION: EXE 0x4c5afb
