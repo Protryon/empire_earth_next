@@ -55,14 +55,33 @@ def _newest(d):
     return max(subs, key=lambda p: [int(x) if x.isdigit() else 0 for x in p.name.split(".")])
 
 
+_VS = None
+
+
+def _vs_install():
+    """The newest Visual Studio installation with the x86/x64 C++ tools (vswhere; any edition: Build Tools here,
+    Enterprise on CI runners)."""
+    global _VS
+    if _VS is None:
+        import subprocess
+        vswhere = pathlib.Path(r"C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe")
+        path = ""
+        if vswhere.exists():
+            path = subprocess.run([str(vswhere), "-latest", "-products", "*", "-requires",
+                                   "Microsoft.VisualStudio.Component.VC.Tools.x86.x64", "-property", "installationPath"],
+                                  capture_output=True, text=True).stdout.strip()
+        if not path:
+            raise SystemExit("no Visual Studio with the C++ x86/x64 tools: install VS 2022 Build Tools with the C++ "
+                             "workload (README), or set EE_MSVC_DIR")
+        _VS = pathlib.Path(path.splitlines()[0])
+    return _VS
+
+
 def modern_dirs():
     """(MSVC tools dir, Windows SDK include dir, Windows SDK lib dir, Windows SDK bin dir)."""
     msvc = os.environ.get("EE_MSVC_DIR")
-    if not msvc:   # any Visual Studio 2022 edition (Build Tools here, Enterprise on CI runners)
-        roots = [pathlib.Path(base) / "Microsoft Visual Studio" / "2022" / ed / "VC" / "Tools" / "MSVC"
-                 for base in (r"C:\Program Files (x86)", r"C:\Program Files")
-                 for ed in ("BuildTools", "Enterprise", "Professional", "Community")]
-        msvc = _newest(next((r for r in roots if r.exists()), roots[0]))
+    if not msvc:
+        msvc = _newest(_vs_install() / "VC" / "Tools" / "MSVC")
     msvc = pathlib.Path(msvc)
     kits = pathlib.Path(os.environ.get("EE_WINSDK_ROOT", r"C:\Program Files (x86)\Windows Kits\10"))
     sdk_inc = pathlib.Path(os.environ.get("EE_WINSDK_DIR") or _newest(kits / "Include"))
