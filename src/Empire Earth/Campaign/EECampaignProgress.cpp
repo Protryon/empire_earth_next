@@ -238,7 +238,10 @@ long EECampaignProgress::Load(const UWideString& inUser, const UWideString& inCa
         if (theResult == kErrorOK) {
             theArchive->GetTag(kEECampaignProgressNumScenariosCompletedKey, theScenario);
             this->mNumScenariosCompleted = atoi((const char*)theScenario);
+            // the three lists run in parallel (RestoreCivilization/SaveCompletedScenario index them from 0)
             this->mCompletedScenarios.clear();
+            this->mCivilizationKeys.clear();
+            this->mCivPointsAvailable.clear();
             for (unsigned long i = 0; i < (unsigned long)this->mNumScenariosCompleted; i++) {
                 sprintf(theTag, "%s%.03d", (const char*)kEECampaignProgressScenarioNameKey, i);
                 theArchive->GetTag(theTag, theScenario);
