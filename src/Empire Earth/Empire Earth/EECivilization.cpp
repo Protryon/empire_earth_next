@@ -315,8 +315,7 @@ long EECivilization::ApplyDeferred(EEPlayer* inPlayer, unsigned long inMajorVers
 }
 
 // FUNCTION: EXE 0x52c9ee
-// Writes the purchased upgrades, points, flags and name to the saved game; returns the first error (of the upgrades,
-// only the last write's)
+// Writes the purchased upgrades, points, flags and name to the saved game; returns the first error
 long EECivilization::Save(FSFile& outFile)
 {
     unsigned long theCount = this->mPurchasedUpgrades.size();
@@ -324,7 +323,8 @@ long EECivilization::Save(FSFile& outFile)
     if (theResult != kErrorOK)
         return theResult;
     std::vector<unsigned short>::iterator i = this->mPurchasedUpgrades.begin();
-    while (true) {
+    // stop at the first failed upgrade write (each result used to overwrite the previous one)
+    while (theResult == kErrorOK) {
         if (i == this->mPurchasedUpgrades.end())
             break;
         unsigned long theValue = *i;
