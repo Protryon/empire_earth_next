@@ -37,5 +37,15 @@ change.
 Floating point: x87 (`/arch:IA32`) only while the clang build is compared against VC6. Bit-exact x87 compatibility is
 not a goal.
 
-Next steps: every unit compiling, then linking (lld-link, MSVC ABI, the same import libraries), the differential game
-comparison against the VC6 build, and then replacing Dinkum 2.33 with a modern standard library.
+Status: all 845 units compile with clang-cl (`/Od`, warnings off for now). Dialect bridges, each to be removed once
+the VC6 comparison phase is over:
+
+- `#ifdef __clang__` `const T&` forwarding overloads in the headers, where VC6 bound temporaries to non-const
+  reference parameters. The parameter types are fixed by the original's mangled names while VC6 is the reference;
+  afterwards the parameters become const and the overloads go.
+- Clang-only postfix `++`/`--` on Dinkum's deque iterators, with VC6's meaning (prefix).
+- Call sites that passed a temporary to a one-off non-const reference name it (`theTempN`, `tools/clang_reftemp.py`).
+- `for`-init variables used after their loop are declared before it (`tools/clang_forscope.py`).
+
+Next steps: linking (lld-link, MSVC ABI, the same import libraries), the differential game comparison against the
+VC6 build, and then replacing Dinkum 2.33 with a modern standard library.
