@@ -525,13 +525,12 @@ long EEGamePreferences::Load()
         theString = this->mSettings.mLastGameFile;
         this->mRegistry.CreateRegistryValue(kEERootKey, UWideString(kEERegistryKey), UWideString("Last Game File"), theString);
     }
-    // (sic: the default of "Last Scenario File" writes the last game file)
     theResult = this->mRegistry.GetRegistryValue(kEERootKey, UWideString(kEERegistryKey), UWideString("Last Scenario File"), theString);
     if (theResult == 0) {
         this->mSettings.mLastScenarioFile = theString;
     } else {
         this->mSettings.mLastScenarioFile = EEGamePreferences::sDefaultSettings.mLastScenarioFile;
-        theString = this->mSettings.mLastGameFile;
+        theString = this->mSettings.mLastScenarioFile;
         this->mRegistry.CreateRegistryValue(kEERootKey, UWideString(kEERegistryKey), UWideString("Last Scenario File"), theString);
     }
     theResult = this->mRegistry.GetRegistryValue(kEERootKey, UWideString(kEERegistryKey), UWideString("Show Blood"), theValue);
