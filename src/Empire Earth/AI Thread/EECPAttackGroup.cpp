@@ -1760,8 +1760,8 @@ void EECPAttackGroup::Tick(unsigned long inTime)
 }
 
 // FUNCTION: EXE 0x458b2e
-// Buys random affordable improvements for random unit types in the selection, up to the player's limits (the
-// duplicate check searches the empty improvement list, so a type can be picked twice)
+// Buys random affordable improvements for random unit types in the selection, up to the player's limits (each
+// unit type once)
 void EECPAttackGroup::GiveImprovements(EECPUnitSelectionGroup& inGroup)
 {
     std::vector<long> theClasses;
@@ -1771,7 +1771,7 @@ void EECPAttackGroup::GiveImprovements(EECPUnitSelectionGroup& inGroup)
     unsigned long theNumImprovements = thePlayer->mNumImprovedAttributes;
     unsigned long i;
     for (i = 0; i < inGroup.mSelected.size(); i++) {
-        if (std::find(theImprovements.begin(), theImprovements.end(), inGroup.mSelected[i]) == theImprovements.end())
+        if (std::find(theClasses.begin(), theClasses.end(), inGroup.mSelected[i]) == theClasses.end())   // the type list (was the empty improvement list)
             theClasses.push_back(inGroup.mSelected[i]);
     }
     for (i = 0; i < inGroup.mUnitIDs.size(); i++) {
@@ -1779,7 +1779,7 @@ void EECPAttackGroup::GiveImprovements(EECPUnitSelectionGroup& inGroup)
         if (!theUnit)
             continue;
         long theClass = theUnit->mUnitClass->GetUnitType();
-        if (std::find(theImprovements.begin(), theImprovements.end(), theClass) == theImprovements.end())
+        if (std::find(theClasses.begin(), theClasses.end(), theClass) == theClasses.end())   // the type list (was the empty improvement list)
             theClasses.push_back(theUnit->mUnitClass->GetUnitType());
     }
     EEAIRandomShuffle(theClasses.begin(), theClasses.end());
