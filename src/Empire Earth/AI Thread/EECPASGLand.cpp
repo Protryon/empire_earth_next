@@ -1597,10 +1597,9 @@ bool EECPASGLand::AdvanceSubSector()
             theWeights.Fill(1.0f);
             if (this->mFlags.mFlags[kAITileWater] == true)
                 theWeights.mValues[2] = 0.0f;
-            // The original (0x44974d) writes weights+0x3c, one past the 15-float payload: an original bug, kept
-            // without inventing a 16th field or padding. Which local owns the bytes after it is unknown.
+            // The space weight is slot 10, as in GetPathCosts (the tile kind 15 indexed one past the 15 weights).
             if (this->mFlags.mFlags[kAITileSpace] == true)
-                theWeights.mValues[15] = 0.0f;
+                theWeights.mValues[10] = 0.0f;
             EEAIGPGModifierLandWallAvoider* theModifier = new EEAIGPGModifierLandWallAvoider(this, theWeights);
             EETileCoordinate theFromTile(theCenter.GetX(), theCenter.GetY());
             EETileCoordinate theToTile(theTarget->mLocation.GetX(), theTarget->mLocation.GetY());
@@ -1703,10 +1702,9 @@ bool EECPASGLand::CheckNextSubSector(long inTime)
                     theWeights.Fill(1.0f);
                     if (this->mFlags.mFlags[kAITileWater] == true)
                         theWeights.mValues[2] = 0.0f;
-                    // The original (0x449d17) writes weights+0x3c, one past the 15-float payload: an original bug, kept
-                    // without inventing a 16th field or padding. Which local owns the bytes after it is unknown.
+                    // The space weight is slot 10, as in GetPathCosts (the tile kind 15 indexed one past the 15 weights).
                     if (this->mFlags.mFlags[kAITileSpace] == true)
-                        theWeights.mValues[15] = 0.0f;
+                        theWeights.mValues[10] = 0.0f;
                     EEAIGPGModifierLandWallAvoider* theModifier = new EEAIGPGModifierLandWallAvoider(this, theWeights);
                     EETileCoordinate theFromTile(theCenter.GetX(), theCenter.GetY());
                     EETileCoordinate theToTile(theTo.GetX(), theTo.GetY());
