@@ -2988,11 +2988,12 @@ void EEComplexUnit::ReplaceUnits(const std::vector<EEPUnitSwap>& inReplacements)
             theTarget = theTargets[theIndex];
             for (std::vector<EEPUnitSwap>::const_iterator thePair =
                 inReplacements.begin(); thePair != inReplacements.end(); ++thePair) {
-                if (thePair->mOld == theTarget)
-                    this->AddBuildTarget(thePair->mNew);
-                else
-                    this->AddBuildTarget(theTarget);
+                if (thePair->mOld == theTarget) {
+                    theTarget = thePair->mNew;
+                    break;
+                }
             }
+            this->AddBuildTarget(theTarget);
         }
     }
 }
