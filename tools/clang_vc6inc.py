@@ -22,6 +22,9 @@ PATCHES = {
     "istream": [(REDEFAULT, r"template<class _E, class _Tr>\n\1", 2), (MANIP_FLAGS, r"ios_base::\1", None)],
     # explicit specialisations written without template<>
     "xlocale": [(r"^class _CRTIMP (\w+<)", r"template<> class _CRTIMP \1", None)],
+    # FIELD_OFFSET's null-pointer cast is not a constant expression for clang (DIMOFS_* case labels)
+    "winnt.h": [(r"^#define FIELD_OFFSET\(type, field\)\s+\(\(LONG\)\(INT_PTR\)&\(\(\(type \*\)0\)->field\)\)",
+                 r"#define FIELD_OFFSET(type, field)    ((LONG)__builtin_offsetof(type, field))", 1)],
 }
 
 

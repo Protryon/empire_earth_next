@@ -3,7 +3,8 @@
   python -I tools/clang_build.py [-j N] [--out DIR] [--opt /Od] [module ...]     compile only (for now)
 
 Same units, flags, defines and include order as tools/build.py (the VC6 reference build), with:
-  - clang-cl --target=i686-pc-windows-msvc in MSVC 12.00 (VC6) compatibility mode;
+  - clang-cl --target=i686-pc-windows-msvc in MSVC 12.00 (VC6) compatibility mode, wchar_t = unsigned short
+    (/Zc:wchar_t-, as VC6);
   - /arch:IA32 (x87 floating point, no SSE) while the clang build is compared against the VC6 build;
   - -fno-strict-aliasing -fwrapv (the code relies on both);
   - VC6-only flags dropped (-G6, -Zm, -Zi; /O1 replaced by --opt);
@@ -31,7 +32,7 @@ from ee import COMPILER, ROOT, TOOLCHAIN
 
 CLANG = pathlib.Path(os.environ.get("EE_CLANG", r"C:\Program Files\LLVM\bin\clang-cl.exe"))
 CLANG_FLAGS = ["--target=i686-pc-windows-msvc", "/nologo", "/c", "-fms-compatibility", "-fms-extensions",
-               "-fms-compatibility-version=12.00", "-fdelayed-template-parsing", "/arch:IA32",
+               "-fms-compatibility-version=12.00", "/Zc:wchar_t-", "-fdelayed-template-parsing", "/arch:IA32",
                "-fno-strict-aliasing", "-fwrapv", "-Wno-everything", "-ferror-limit=0", "-fno-color-diagnostics"]
 DROP = re.compile(r"^[-/](G[3-7B]|Zm\d+|Zi|Z7|O[12dsxty]|Ob\d|Og|Gy|Gf|GF)$")
 ERROR = re.compile(r"^(.*?)\((\d+),\d+\)\s*:\s*error: (.*)$", re.M)

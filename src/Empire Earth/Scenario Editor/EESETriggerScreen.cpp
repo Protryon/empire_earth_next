@@ -119,7 +119,8 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
     GE2DPoint thePosition;
     this->mR18 = GERectangle(0.0f, 448.0f, 1023.0f, 606.0f);
     thePosition.SetXY(4.0f, 480.0f);
-    this->mList = new UILBString(0x7da, std::vector<UWideString>(), gU531930, false, GERectangle(thePosition, 300.0f, 105.0f),
+    std::vector<UWideString> theTemp1;
+    this->mList = new UILBString(0x7da, theTemp1, gU531930, false, GERectangle(thePosition, 300.0f, 105.0f),
                            inForm, ioIndex, 3);
     theEvent = new EESEESelectEntry;
     this->mList->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);

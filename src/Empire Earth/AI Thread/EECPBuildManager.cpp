@@ -1147,7 +1147,8 @@ bool EECPBuildManager::FindTowerSite(long inUnitClass, long inSize, EETileCoordi
                         EEAnyUnit theFilter;
                         EEGetUnitsInRectangle(theArea, theUnits, theFilter, true);
                         bool theTaken = false;
-                        for (unsigned long k = 0, n = theUnits.size(); k < n && !theTaken; k++) {
+                        unsigned long k, n;
+                        for (k = 0, n = theUnits.size(); k < n && !theTaken; k++) {
                             EEComplexUnit* theUnit = theUnits[k];
                             theTaken = theUnit->GetHitPoints() > 0 && theUnit->mUnitClass->mUnitType == inUnitClass;
                         }

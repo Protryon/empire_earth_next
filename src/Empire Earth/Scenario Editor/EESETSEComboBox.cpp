@@ -121,7 +121,8 @@ EESETSEffectControls::EESETSEffectControls(GEFont* inFont, UIForm* inForm, unsig
     }
     for (i = 0; i < 2; i++)
     {
-        this->mEffectComboBoxes[i] = new EESETSEComboBox(0x99b + i, 1, std::vector<UWideString>(), inFont, thePosition, 0x122,
+        std::vector<UWideString> theTemp1;
+        this->mEffectComboBoxes[i] = new EESETSEComboBox(0x99b + i, 1, theTemp1, inFont, thePosition, 0x122,
                                                    0x190, inForm, ioIndex, 0, 2);
         this->mEffectComboBoxes[i]->SetTextBoxBgOpacity(0.4f);
         this->mEffectComboBoxes[i]->SetListBoxAlwaysDirty(true);
@@ -230,7 +231,8 @@ EESETSEffectControls::EESETSEffectControls(GEFont* inFont, UIForm* inForm, unsig
     }
     for (i = 0; i < 3; i++)
     {
-        this->mPlayers[i] = new EESETSUICBPlayer(0x992 + i, 1, std::vector<UWideString>(), inFont, thePosition, 0xaf, 0x190,
+        std::vector<UWideString> theTemp2;
+        this->mPlayers[i] = new EESETSUICBPlayer(0x992 + i, 1, theTemp2, inFont, thePosition, 0xaf, 0x190,
                                            inForm, ioIndex, 0, 2);
         this->mPlayers[i]->SetTextBoxBgOpacity(0.4f);
         this->mPlayers[i]->SetListBoxAlwaysDirty(true);
@@ -245,7 +247,8 @@ EESETSEffectControls::EESETSEffectControls(GEFont* inFont, UIForm* inForm, unsig
     }
     for (i = 0; i < 2; i++)
     {
-        this->mListBoxes[i] = new UILBString(0x9bf + i, std::vector<UWideString>(), inFont, true,
+        std::vector<UWideString> theTemp3;
+        this->mListBoxes[i] = new UILBString(0x9bf + i, theTemp3, inFont, true,
                                        GERectangle(thePosition, 150.0f, 150.0f), inForm, ioIndex, 2);
         this->mListBoxes[i]->SetBgOpacity(0.4f);
         theText = this->mListBoxes[i]->GetGEText();

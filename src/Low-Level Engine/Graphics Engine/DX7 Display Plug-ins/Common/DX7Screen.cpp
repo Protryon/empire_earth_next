@@ -555,7 +555,9 @@ void DX7Screen::Test32BitSupport()
     theClass.hIconSm = NULL;
     RegisterClassEx(&theClass);
     GE2DPoint theOrigin(0.0f, 0.0f);
-    long theResult = this->CreateAWindow(theOrigin, 16, 16, UString("TestWindowClass"), UString(""), theWindow, 0, NULL);
+    UString theClassName("TestWindowClass");
+    UString theTitle("");
+    long theResult = this->CreateAWindow(theOrigin, 16, 16, theClassName, theTitle, theWindow, 0, NULL);
     if (theResult == kErrorOK) {
         if (this->Capture(theWindow, false) == kErrorOK) {
             unsigned long i;

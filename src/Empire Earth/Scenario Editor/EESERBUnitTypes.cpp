@@ -656,7 +656,8 @@ void EESEPlayerScreen::CreateTechControls(unsigned long& ioIndex, UIForm* inForm
     }
     theLocation.SetX(245.0f);
     theLocation.SetY(74.0f);
-    this->mTechList = new EESEUITechListBox(kSERBUnitTypesTechList, std::vector<UWideString>(), inFont, false, theLocation,
+    std::vector<UWideString> theTemp1;
+    this->mTechList = new EESEUITechListBox(kSERBUnitTypesTechList, theTemp1, inFont, false, theLocation,
         250, 450, inForm, ioIndex, 3);
     theGEText = this->mTechList->GetGEText();
     theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));
@@ -691,7 +692,8 @@ void EESEPlayerScreen::CreateTechControls(unsigned long& ioIndex, UIForm* inForm
     ++ioIndex;
     theLocation.SetX(545.0f);
     theLocation.SetY(74.0f);
-    this->mOtherTechList = new EESEUITechListBox(kSERBUnitTypesOtherTechList, std::vector<UWideString>(), inFont, false, theLocation,
+    std::vector<UWideString> theTemp2;
+    this->mOtherTechList = new EESEUITechListBox(kSERBUnitTypesOtherTechList, theTemp2, inFont, false, theLocation,
         250, 450, inForm, ioIndex, 3);
     theGEText = this->mOtherTechList->GetGEText();
     theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));

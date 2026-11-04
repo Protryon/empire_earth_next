@@ -265,7 +265,8 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
 
     thePosition.SetX(589.0f);
     thePosition.SetY(this->mPlayerLabel->GetRectangle().GetBottom() + 1.0f);
-    this->mPlayer = new EESETSUICBPlayer(0x841, 1, std::vector<UWideString>(), gU531930, thePosition, 200, 400, inForm, ioIndex,
+    std::vector<UWideString> theTemp1;
+    this->mPlayer = new EESETSUICBPlayer(0x841, 1, theTemp1, gU531930, thePosition, 200, 400, inForm, ioIndex,
                                    0, 0);
     this->mPlayer->SetTextBoxBgOpacity(0.4f);
     this->mPlayer->SetListBoxAlwaysDirty(true);
@@ -380,7 +381,8 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
 
     thePosition.SetX(589.0f);
     thePosition.SetY(this->mUnitListLabel->GetRectangle().GetBottom() + 1.0f);
-    this->mUnitList = new EESETSOUnitList(0x836, std::vector<UWideString>(), gU531930, false, thePosition, 200.0f,
+    std::vector<UWideString> theTemp2;
+    this->mUnitList = new EESETSOUnitList(0x836, theTemp2, gU531930, false, thePosition, 200.0f,
                                     (unsigned long)(this->mMaxEditBox->GetRectangle().GetBottom() - thePosition.GetY()), inForm,
                                     ioIndex, 3);
     theEvent = new EESEEObjectUnitSelect;
@@ -576,7 +578,8 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
 
     thePosition.SetX(508.0f);
     thePosition.SetY(616.0f);
-    this->mPlayerBC = new EESETSUICBPlayer(0x84f, 1, std::vector<UWideString>(), gU531930, thePosition, 0x96, 400, inForm,
+    std::vector<UWideString> theTemp3;
+    this->mPlayerBC = new EESETSUICBPlayer(0x84f, 1, theTemp3, gU531930, thePosition, 0x96, 400, inForm,
                                      ioIndex, 0, 2);
     this->mPlayerBC->SetTextBoxBgOpacity(0.4f);
     this->mPlayerBC->SetListBoxAlwaysDirty(true);
@@ -636,7 +639,8 @@ EESETSObject::EESETSObject(GEFont* inFont, UIForm* inForm, unsigned long& ioInde
 
     thePosition.SetX(508.0f);
     thePosition.SetY(688.0f);
-    this->mPlayerCC = new EESETSUICBPlayer(0x853, 1, std::vector<UWideString>(), gU531930, thePosition, 0x96, 400, inForm,
+    std::vector<UWideString> theTemp4;
+    this->mPlayerCC = new EESETSUICBPlayer(0x853, 1, theTemp4, gU531930, thePosition, 0x96, 400, inForm,
                                      ioIndex, 0, 2);
     this->mPlayerCC->SetTextBoxBgOpacity(0.4f);
     this->mPlayerCC->SetListBoxAlwaysDirty(true);

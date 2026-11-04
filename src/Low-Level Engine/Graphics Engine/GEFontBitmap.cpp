@@ -181,8 +181,9 @@ GETexture* GEFontBitmap::CreateNewFontTexture(GEScreen* inScreen)
     theDescription.mIsTransparencyEnabled = false;
     long theResult = inScreen->CreateSurface(theDescription, &theSurface);
     ESVERIFY_AT(theResult == keseOK, 228);
+GEColor theTemp1(0.0f, 0.0f, 0.0f);
 
-    theSurface->Clear(GEColor(0.0f, 0.0f, 0.0f), 1.0f);
+    theSurface->Clear(theTemp1, 1.0f);
     GETexture* theTexture = inScreen->GetTextureManager()->MakeTexture(theSurface);
     ESVERIFY_AT(theTexture != NULL, 235);
     theTexture->SetStageMinFilterMode(0, -1);

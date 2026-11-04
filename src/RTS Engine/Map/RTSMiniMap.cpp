@@ -69,8 +69,9 @@ RTSMiniMap::RTSMiniMap(RTSPlayer* inPlayer, GEScreen* inScreen)
     theDescription.mIsTransparencyEnabled = false;
     theResult = inScreen->CreateSurface(theDescription, &theSurface);
     ESVERIFY_AT(theResult == keseOK, 91);
+    GEColor theTemp1(0.0f, 0.0f, 0.0f);
     // cleared to black
-    theSurface->Clear(GEColor(0.0f, 0.0f, 0.0f), 1.0f);
+    theSurface->Clear(theTemp1, 1.0f);
 
     // the world texture's handle
     this->mWorldTexture = inScreen->GetTextureManager()->MakeTexture(theSurface);
@@ -94,8 +95,9 @@ RTSMiniMap::RTSMiniMap(RTSPlayer* inPlayer, GEScreen* inScreen)
     theDescription.mIsTransparencyEnabled = false;
     theResult = inScreen->CreateSurface(theDescription, &this->mUnitSurface);
     ESVERIFY_AT(theResult == keseOK, 124);
+    GEColor theTemp2(0.0f, 0.0f, 0.0f);
     // the unit layer
-    this->mUnitSurface->Clear(GEColor(0.0f, 0.0f, 0.0f), 1.0f);
+    this->mUnitSurface->Clear(theTemp2, 1.0f);
 
     // the locks
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mTerrainCriticalSection) == keseOK, 131);

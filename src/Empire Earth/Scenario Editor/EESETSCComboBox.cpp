@@ -96,7 +96,8 @@ EESETSConditionControls::EESETSConditionControls(GEFont* inFont, UIForm* inForm,
     }
     for (i = 0; i < 3; i++)
     {
-        this->mComboBoxes[i] = new EESETSCComboBox(0x933 + i, 1, std::vector<UWideString>(), inFont, thePosition, 0x122, 0x190,
+        std::vector<UWideString> theTemp1;
+        this->mComboBoxes[i] = new EESETSCComboBox(0x933 + i, 1, theTemp1, inFont, thePosition, 0x122, 0x190,
                                              inForm, ioIndex, 0, 2);
         this->mComboBoxes[i]->SetTextBoxBgOpacity(0.4f);
         this->mComboBoxes[i]->SetListBoxAlwaysDirty(true);
@@ -165,7 +166,8 @@ EESETSConditionControls::EESETSConditionControls(GEFont* inFont, UIForm* inForm,
     }
     for (i = 0; i < 2; i++)
     {
-        this->mPlayers[i] = new EESETSUICBPlayer(0x92e + i, 1, std::vector<UWideString>(), inFont, thePosition, 0x96, 0x190,
+        std::vector<UWideString> theTemp2;
+        this->mPlayers[i] = new EESETSUICBPlayer(0x92e + i, 1, theTemp2, inFont, thePosition, 0x96, 0x190,
                                            inForm, ioIndex, 0, 2);
         this->mPlayers[i]->SetTextBoxBgOpacity(0.4f);
         this->mPlayers[i]->SetListBoxAlwaysDirty(true);

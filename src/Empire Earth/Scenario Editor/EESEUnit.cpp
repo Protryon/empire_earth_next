@@ -335,7 +335,8 @@ void EEUIFSELBUnitList::AddUnitType(long inUnitType)
         gResource->GetString(gUnitClassTable[inUnitType]->mNameStringID, theName);
         theText += theName;
     }
-    this->InsertLine(theText, i, UILBNoSort<UWideString>());
+    UILBNoSort<UWideString> theTemp1;
+    this->InsertLine(theText, i, theTemp1);
     this->mUnitTypes.insert(this->mUnitTypes.begin() + i, inUnitType);
 }
 
@@ -436,7 +437,8 @@ void EEUIFSELBCargoList::AddCargo(EEUnit* inUnit)
         }
         this->mCargo.insert(it, inUnit);
     }
-    this->InsertLine(theName, theIndex, UILBNoSort<UWideString>());
+    UILBNoSort<UWideString> theTemp2;
+    this->InsertLine(theName, theIndex, theTemp2);
 }
 
 // FUNCTION: EXE 0x59a05f
@@ -839,7 +841,8 @@ EESEUnit::EESEUnit(unsigned long& ioIndex, EEUIFScenarioEditor* inForm, GEFont* 
     }
 
     thePosition.SetXY(0.0f, 125.0f);
-    this->mUnitList = new EEUIFSELBUnitList(0x3f1, std::vector<UWideString>(), gU531930, false, thePosition, 0xd4, 0x1e1,
+    std::vector<UWideString> theTemp3;
+    this->mUnitList = new EEUIFSELBUnitList(0x3f1, theTemp3, gU531930, false, thePosition, 0xd4, 0x1e1,
                                       inForm, ioIndex, 3);
     this->mUnitList->SetBgOpacity(0.4f);
     this->mUnitList->SetScrollBarBgOpacity(0.4f);
@@ -889,7 +892,8 @@ EESEUnit::EESEUnit(unsigned long& ioIndex, EEUIFScenarioEditor* inForm, GEFont* 
     this->mFamilySortButton->SetTriggerEvent(kControlTriggerChecked, this->mSortEvent);
 
     thePosition.SetXY(260.0f, 633.0f);
-    this->mCargoList = new EEUIFSELBCargoList(0x3f2, std::vector<UWideString>(), inFont, false, thePosition, 0xe1, 99, inForm,
+    std::vector<UWideString> theTemp4;
+    this->mCargoList = new EEUIFSELBCargoList(0x3f2, theTemp4, inFont, false, thePosition, 0xe1, 99, inForm,
                                         ioIndex, 3);
     this->mCargoList->SetBgOpacity(0.4f);
     theGEText = this->mCargoList->GetGEText();
