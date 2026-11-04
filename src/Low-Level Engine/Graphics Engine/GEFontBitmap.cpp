@@ -82,7 +82,7 @@ bool GEFontBitmap::operator==(GEFont* inFont)
 }
 
 // FUNCTION: LLE 0x10015409
-// Renders every glyph of the font into 256x256 alpha textures and records each glyph's cell, but skips the last one
+// Renders every glyph of the font into 256x256 alpha textures and records each glyph's cell
 GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned long inScreen)
 {
     UWideString theString;
@@ -108,7 +108,8 @@ GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned 
     GetTextMetrics(theContext, &theMetrics);
     this->mFirstCharacter = theMetrics.tmFirstChar;
     this->mCharacters.resize(theMetrics.tmLastChar - theMetrics.tmFirstChar + 1);
-    for (unsigned long theCharacter = theMetrics.tmFirstChar; theCharacter < theMetrics.tmLastChar; theCharacter++) {
+    // tmLastChar is the last character of the font, included (mCharacters has room for it).
+    for (unsigned long theCharacter = theMetrics.tmFirstChar; theCharacter <= theMetrics.tmLastChar; theCharacter++) {
         unsigned long theIndex = theCharacter - this->mFirstCharacter;
         sprintf(theString, "%c", theCharacter);
         theText.SetText(theString);
