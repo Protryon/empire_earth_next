@@ -187,9 +187,11 @@ bool EEUISCIFormManager::OpenScenario()
     UString theName;
     bool theResult = false;
     long theError;
+    // Without a scenario file there is nothing to reopen (the name was read before the NULL test).
+    if (this->mFile == NULL)
+        return false;
     theName = this->mFile->GetFile();
-    if (this->mFile)
-        delete this->mFile;
+    delete this->mFile;
     this->mFile = NULL;
     theError = EEOpenSaveGameFile(theName, "Scenarios\\", this->mFile);
     if (theError == kErrorOK || gDataPath->FindFile(theName, this->mFile) == kErrorOK)
