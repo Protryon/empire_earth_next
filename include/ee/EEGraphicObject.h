@@ -136,7 +136,7 @@ public:
     std::vector<EETurretPart*> mTurretParts; // actual original third-party-free record/vector at+4
     std::vector<EEOrbital*> mOrbitals;      // +0x014 (EEE3DDisease copies each) (provisional name)
     // 0x138e4b (ICF-folded with EECalamityManager::GetCalamityClassCount): mOrbitals.size() (provisional name)
-    unsigned long GetOrbitalCount() const;
+    unsigned long GetOrbitalCount() const { return this->mOrbitals.size(); }
     unsigned long GetWheelCount() const;    // 0x200292 (out-of-line COMDAT, defined in EEComplexUnit.cpp): mWheels.size() (provisional name)
     // inline (EEE3DDisease::Load expands it with the const operator[]: lea, then the load; Virtual30 calls the const
     // begin() and operator+ out of line) (provisional name)
@@ -155,7 +155,7 @@ public:
     // 0xd8546: the model point (EEE3DTracers ctor: the target unit's) (provisional name)
     const GE3DPoint& PickPoint();
     // the part count (ICF-folded into 0x91f11, a vector size; EEUnitClass 0x2364f3) (provisional name)
-    unsigned long GetNumParts() const;
+    unsigned long GetNumParts() const { return this->mTurretParts.size(); }
     // 0xd9008 (ret 8): inColor into the colour groups of model part inPart (EEROUnits::DrawUnitModel passes the render
     // unit's +0x40 colour) (provisional name)
     void SetGroupColor(const GEColor& inColor, unsigned long inPart);

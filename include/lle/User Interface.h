@@ -15,6 +15,6 @@ LLE_API unsigned long UIGetStringCutOffIndex(const UWideString& inString, GEFont
                                              bool inBreakAtSpace, bool inStopAtNewline);
 
 // UIEditBox.cpp (0x1006a9a5; not exported): the multi-byte character at inString
-int GetMultiByteChar(const char* inString);
+#include "lle/UIMultiByte.h"
 
 #endif

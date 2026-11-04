@@ -1203,7 +1203,7 @@ public:
     long GetTechnology() const { return this->mTechnology; }
     long GetGarrisonTechnology() const { return this->mGarrisonTechnology; }
     bool IsPriest();                        // 0x6ef9 (EEUGAttackUnit's ctor; provisional name)
-    long GetNumResearchTechnologies();      // 0x196dff (EECPDefenseCommander 0x78dc8: mResearchTechnologies's count) (provisional name)
+    long GetNumResearchTechnologies() { return this->mResearchTechnologies.size(); }      // 0x196dff (EECPDefenseCommander 0x78dc8: mResearchTechnologies's count) (provisional name)
     // 0x7028: gUnitClassTable[inUnitType]'s +0x1d0 is non-zero and one of mCounterKind1/mCounterKind2/mL1DC
     // (EECPAttackSubGroupUnit::GetCounterFactor 0x633ad; provisional name)
     bool IsCounteredBy(long inUnitType);

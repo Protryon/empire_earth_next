@@ -224,18 +224,7 @@ private:
 #endif
 };
 
-// The (possibly double-byte) character at inString, as _ismbcdigit/_ismbcspace take it. Header-inline (provisional
-// name and home): the COMDAT sits after its first user, UIEditBox::AddChar (0x1006a9a5), and UITextLabel.cpp
-// and User Interface.cpp call the same copy.
-inline int GetMultiByteChar(const char* inString)
-{
-    int theChar = 0;
-    if (_ismbblead(*reinterpret_cast<const unsigned char*>(inString))) {
-        theChar = *inString << 8;
-        inString++;
-    }
-    return *inString + theChar;
-}
+#include "lle/UIMultiByte.h"
 
 // UIControl trigger-event ids (FireTriggerEvent / SetTriggerEvent); provisional names from the lle firing sites
 enum UIControlTriggerID {

@@ -89,7 +89,7 @@ public:
     void AddUnitType(EEUnit* inUnit);       // 0x81b0e (ret 4)
     void AddUnitClass(EEUnit* inUnit);      // 0x81c42 (ret 4)
     // mArmies.size() out of line (ICF-folded into 0x91f11; EECPDefenseCommander 0x77e8e/0x79382) (provisional name)
-    unsigned long GetNumArmies() const;
+    unsigned long GetNumArmies() const { return this->mArmies.size(); }
 
     std::vector<EECPIArmy*> mArmies;        // +0x04
     std::vector<EECPIUnitTypeCount> mUnitTypes;   // +0x14

@@ -110,7 +110,8 @@ inline long EEAIGetResourceKind(EEUnitClass* inClass)
 }
 
 // 0x29ced: the resource kind of the first unit of class kind 3 on inTile (not on terrain 1), 0 if none
-inline long EEAIHasResourceUnit(EETile* inTile)
+// not inline: other units call it (VC6 left an out-of-line copy of the inline for them; clang does not)
+long EEAIHasResourceUnit(EETile* inTile)
 {
     long theResult = 0;
     if (inTile && inTile->mTerrainType != kTerrainDeepWater) {
@@ -146,7 +147,8 @@ inline void EEAIContinentManager::SetPathSector(EEAIPathSector* inSector)
 }
 
 // 0x26fed (COMDAT; declared in ee/EEAIContinentManager.h)
-inline bool EEAIContinentManager::IsShoreTile(long inX, long inY) const
+// not inline: other units call it (VC6 left an out-of-line copy of the inline for them; clang does not)
+bool EEAIContinentManager::IsShoreTile(long inX, long inY) const
 {
     return std::binary_search(this->mShoreTiles.begin(), this->mShoreTiles.end(), U2DPoint<long>(inX, inY));
 }
@@ -184,23 +186,7 @@ inline void EEAIContinent::RemoveForestID(unsigned short inID)
         this->mForestIDs.erase(theID);
 }
 
-// 0x273c9/0x273f1 (COMDATs; declared in ee/EEAIContinentManager.h)
-inline EEAIPathSubSector* EEAIContinentManager::GetPathSubSectorAt(long inX, long inY)
-{
-    const std::vector<EEAIPathSubSector*>& theSubSectors = this->mPathSubSectors;
-    unsigned short theID = this->GetPathSubSectorID(inX, inY);
-    return theID ? theSubSectors[theID] : NULL;
-}
-
-inline unsigned short EEAIContinentManager::GetPathSubSectorID(long inX, long inY)
-{
-    if (!((unsigned long)inX < this->mWidth) || !((unsigned long)inY < this->mHeight))
-        return 0;
-    if (this->mPathSubSectorIDs)
-        return this->mPathSubSectorIDs[this->mWidth * inX + inY];
-    return this->FindPathSubSectorID(inX, inY);
-    return 0;
-}
+// 0x273c9/0x273f1: GetPathSubSectorAt/GetPathSubSectorID(long, long) are inline in ee/EEAIContinentManager.h
 
 // FUNCTION: EXE 0x41ed2c
 // Returns the AI tile kind of inTile: 0 off the map; by continent category and shore flag (land 1/7..9, water 2/10/11,

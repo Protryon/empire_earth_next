@@ -6,6 +6,7 @@
 #ifndef EE_UREFERENCECONTAINER_H
 #define EE_UREFERENCECONTAINER_H
 
+#include <algorithm>
 #include <vector>
 
 template <class T>
@@ -65,6 +66,13 @@ void UReferenceContainer<T>::Clear()
 
 // out of line (<EEComplexUnit*>: Remove 0x16cd51, Replace 0x16cd7f, Erase 0x16cfd0 in EEPlayer.cpp's range, after
 // their first user)
+template <class T>
+bool UReferenceContainer<T>::Contains(const T& inItem, std::vector<T>::iterator& outIterator)
+{
+    outIterator = std::find(this->begin(), this->end(), inItem);
+    return outIterator != this->end();
+}
+
 template <class T>
 bool UReferenceContainer<T>::Remove(const T& inItem)
 {

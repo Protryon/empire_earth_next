@@ -4298,6 +4298,7 @@ void EEPlayer::UnselectAllUnits()
 }
 
 #include "ee/EEUGPatrol.h"
+#include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
 // FUNCTION: EXE 0x563659
 // Sets the patrol group the patrol goal follows, moving the reference

@@ -3304,6 +3304,7 @@ void EESMEffect::ChangeAttribute()
 #include "ee/EEUGLoadGarrison.h"
 #include "ee/EEUGLoadTransport.h"
 #include "ee/EEUnitVectorItem.h"
+#include "ee/EEActiveGroup.h"             // EEActiveGroup::ClearGoal (inline)
 
 // FUNCTION: EXE 0x5c2f55
 // Tasks the scenario object's living units against a second object's units (sources dealt round-robin to targets,

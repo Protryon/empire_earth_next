@@ -28,7 +28,16 @@ public:
     }
 };
 
-template <class T> class LLE_API UIListBox : public UIControl {
+#ifdef __clang__
+// clang applies an exported/imported class template's attribute to every instantiation (the modern MSVC rule), so
+// the exe would import members of UIListBox<EESEUITTData> etc. that the engine never exports. VC6 instantiated those
+// where they were used; only UIListBox<UWideString> crosses the DLL boundary (lle/UILBString.h's explicit
+// instantiation carries LLE_API).
+#define UILISTBOX_API
+#else
+#define UILISTBOX_API LLE_API
+#endif
+template <class T> class UILISTBOX_API UIListBox : public UIControl {
     friend class UIComboBox;                // OpenListBox reads mLineHeight
 public:
     UIListBox(unsigned long inId, std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,

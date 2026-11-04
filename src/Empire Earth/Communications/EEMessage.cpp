@@ -4008,7 +4008,8 @@ bool EEMLoadMainScreen::IsResponse(NEMessage* inMessage)
 
 // inline (header-declared; the COMDAT 0x4c0894 sits here): inPoint on the terrain, its own z off
 // the mesh
-inline void EEMap::GetGroundPoint(const GE3DPoint& inPoint, GE3DPoint& outPoint)
+// not inline: other units call it (VC6 left an out-of-line copy of the inline for them; clang does not)
+void EEMap::GetGroundPoint(const GE3DPoint& inPoint, GE3DPoint& outPoint)
 {
     outPoint.SetX(inPoint.GetX());
     outPoint.SetY(inPoint.GetY());
@@ -7641,7 +7642,8 @@ void EEMSetWaterLevel::Execute()
 
 // inline (header-declared; its COMDAT 0x4c7486 follows its first user EEMSetRallyGoal::Execute): the unit can
 // attack inClass: its stats' +0xd8 is positive, and the damage table entry of inClass against this class
-inline bool EEComplexUnit::CanAttackClass(EEUnitClass* inClass)
+// not inline: other units call it (VC6 left an out-of-line copy of the inline for them; clang does not)
+bool EEComplexUnit::CanAttackClass(EEUnitClass* inClass)
 {
     long theTarget;
     unsigned long theAttacker;

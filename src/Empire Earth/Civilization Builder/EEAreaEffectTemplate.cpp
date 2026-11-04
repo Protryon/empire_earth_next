@@ -27,15 +27,7 @@
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAreaEffectKindIDs.h"
 
-// UReferenceContainer<T>::Contains: declared in ee/UReferenceContainer.h; its COMDAT (0x27c820) closes this unit,
-// after Remove's, so the definition is visible here (and not in EEPlayer.cpp, whose range has Remove<EEComplexUnit*>
-// but no Contains)
-template <class T>
-bool UReferenceContainer<T>::Contains(const T& inItem, std::vector<T>::iterator& outIterator)
-{
-    outIterator = std::find(this->begin(), this->end(), inItem);
-    return outIterator != this->end();
-}
+// UReferenceContainer<T>::Contains (its COMDAT 0x27c820 closes this unit) is defined in ee/UReferenceContainer.h
 
 // FUNCTION: EXE 0x67c0f3
 // Creates an empty template: square shape, radius 1, allied players, no unit set or graphics, white tint

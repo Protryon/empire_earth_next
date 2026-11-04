@@ -52,7 +52,7 @@ public:
     // 0x56bac: the sub group with id inID (searched from the back), 0 if none (provisional name)
     EECPAttackSubGroup* GetSubGroup(unsigned long inID);
     // mSubGroups.size() out of line (0x91f11, ICF-folded with UReferenceContainer<EEComplexUnit*>::GetSize)
-    unsigned long GetNumSubGroups() const;
+    unsigned long GetNumSubGroups() const { return this->mSubGroups.size(); }
     // inline: the sub group at inIndex (EECPCombatManager::ForgetTargetUnit 0x47355b keeps the begin() + i operator+
     // out of line one level down, which a direct site cannot do) (provisional name)
     EECPAttackSubGroup* GetSubGroupAt(long inIndex) { return *(this->mSubGroups.begin() + inIndex); }
