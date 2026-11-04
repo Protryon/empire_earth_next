@@ -1014,12 +1014,12 @@ void DX7Rasterizer::SetAlphaTesting(unsigned long inState, unsigned long inScree
 }
 
 // FUNCTION: DX7HR 0x1000b26c
-// Sets the alpha test compare function; the unchanged-state test compares against the alpha-testing on/off state
-// instead of the current compare function
+// Sets the alpha test compare function (skipped when unchanged)
 void DX7Rasterizer::SetAlphaTestingCompareState(unsigned long inState, unsigned long inScreen)
 {
     unsigned long theFunction = 0;
-    if (inState == this->mScreenStates[inScreen]->mAlphaTesting)
+    // Compare with the current compare function (this tested the alpha-testing on/off state).
+    if (inState == this->mScreenStates[inScreen]->mAlphaTestingCompareState)
         return;
     switch (inState) {
     case kCompareNever:
