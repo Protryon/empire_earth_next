@@ -1347,7 +1347,7 @@ void ParseLine(EERandomMap* ioMap, const UString& inLine)
             ioMap->mFeatures.push_back(theFeature);
         }
         RMTrace(theExpanded[0]);
-        // no break: falls into ShallowsElevation
+        break;
     case kRMTokenShallowsElevation:  // ShallowsElevation
         ioMap->mShallowsElevation = theLong;
         break;
