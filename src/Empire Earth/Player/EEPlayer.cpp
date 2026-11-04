@@ -1686,7 +1686,7 @@ bool EEPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCou
 {
     bool theResult = this->CanAffordScaled(inTechnology, inUnitType, 1.0f, inCount);
     if (!theResult)
-        theResult = this->CanAffordSingleResource(inTechnology, inCount, 1);
+        theResult = this->CanAffordSingleResource(inTechnology, inUnitType, inCount);   // was (inTechnology, inCount, 1)
     return theResult;
 }
 
