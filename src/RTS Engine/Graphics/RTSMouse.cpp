@@ -146,7 +146,7 @@ GESurface* RTSMouse::GetPointerSurface(unsigned long inIndex)
 
 // FUNCTION: EXE 0x51af66
 // Loads a 32x32 TGA pointer texture from the texture path into a surface (created if needed), blue transparent;
-// returns the file's close result (load errors are ignored; a missing file crashes)
+// returns the first error of finding, loading and closing the file
 long RTSMouse::LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** ioSurface)
 {
     GEVideoMode theMode = inScreen->GetCurrentMode();
@@ -164,11 +164,16 @@ long RTSMouse::LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** i
     theDescription.mIsTransparencyEnabled = true;
     if (*ioSurface == NULL)
         inScreen->CreateSurface(theDescription, ioSurface);
-    inScreen->GetTextureManager()->GetTexturePath()->FindFile(UString(inFile), theFile);
-    (*ioSurface)->Load(*theFile, kImageFileTGA);
-    long theResult = theFile->Close();
-    if (theFile != NULL)
-        delete theFile;
+    long theResult = inScreen->GetTextureManager()->GetTexturePath()->FindFile(UString(inFile), theFile);
+    // a missing pointer texture fails instead of being loaded through NULL
+    if (theFile == NULL)
+        return theResult != kErrorOK ? theResult : kErrorNotFound;
+    // the load's result counts too (only the close's used to be returned)
+    theResult = (*ioSurface)->Load(*theFile, kImageFileTGA);
+    long theCloseResult = theFile->Close();
+    if (theResult == kErrorOK)
+        theResult = theCloseResult;
+    delete theFile;
     (*ioSurface)->SetTransparencyColor(sTransparencyColor);
     return theResult;
 }
