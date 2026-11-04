@@ -1571,12 +1571,18 @@ long EEModeCamera(void* inLocation, void* inForm)
 }
 
 // FUNCTION: EXE 0x67115c
-// Handles the keys in cinematic mode: Escape ends it (F1 is never read), F3 pauses, F9 takes a screenshot
+// Handles the keys in cinematic mode: Escape or F1 ends it, F3 pauses, F9 takes a screenshot
+static bool EECinematicKeyPressed(unsigned long inKey)
+{
+    ISEntity* theKey;
+    return gISKeyboard->GetEntity(inKey, theKey) == 0 && theKey->GetValue() && theKey->JustPressed();
+}
+
 bool EEModeKeyboardCinematic(void* inForm)
 {
     ISEntity* theKey;
-    if ((gISKeyboard->GetEntity(kKeyEscape, theKey) == 0 || gISKeyboard->GetEntity(kKeyF1, theKey) == 0) &&
-        theKey->GetValue() && theKey->JustPressed() && !gCommunications->GetIsGamePaused()) {
+    // either key ends the cinematic (each is tested, not only the first one found)
+    if ((EECinematicKeyPressed(kKeyEscape) || EECinematicKeyPressed(kKeyF1)) && !gCommunications->GetIsGamePaused()) {
         UIEvent* theEvent = new EEUIEndCinematicModeEvent;
         gUserInterface->PostEvent(theEvent, NULL);
         theEvent->Dereference();
