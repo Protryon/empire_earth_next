@@ -259,7 +259,7 @@ long EEE3DVirus::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
 
 // FUNCTION: EXE 0x4fe328
 // Ages the effect, scrolls its texture, follows the unit, advances animation 13 and the orbitals and updates the frame
-// sound (positioned at an unset local point); returns 7 when the unit dies or the effect's time is up
+// sound (positioned at the unit); returns 7 when the unit dies or the effect's time is up
 long EEE3DVirus::Step()
 {
     GE3DPoint theLocation;
@@ -270,7 +270,8 @@ long EEE3DVirus::Step()
     unsigned long theFrameCount = this->mGraphicObject->mFrameCounts[13];
     unsigned long theFrame = theOldFrame;
     bool theStart;
-    if (theFrame == this->mGraphicObject->mStartFrames[0] && theTime == 0.0f)
+    // The effect plays animation 13: its first frame is that animation's start frame.
+    if (theFrame == this->mGraphicObject->mStartFrames[13] && theTime == 0.0f)
         theStart = true;
     else
         theStart = false;
@@ -298,6 +299,8 @@ long EEE3DVirus::Step()
                 theChanged = true;
             else
                 theChanged = false;
+            // Place the sound at the unit, not at the map origin.
+            this->mUnit->mComplexUnit->mPhysicalModel.GetLocation().GetPosition(theLocation);
             this->SetSound(Fn1487A3(theLocation, this->mGraphicObject, 0, this->mSound, theFrame, theChanged));
             if (this->mSound)
                 this->mSound->Dereference();
