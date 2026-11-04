@@ -40,6 +40,10 @@ void EEUCNavalPriest::AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& 
     if (inSmooth != true)
         return;
     thePath.reserve(ioPath.size());
+    // a collision sphere that rounds to 0 keeps every point (it used to divide by zero); as in
+    // EEUCNavalCitizen::AdjustPath
+    if (theStep == 0)
+        theStep = 1;
     for (long i = 0; i < theCount; i++) {
         if (i == theCount - 1 || i == 0 || i % theStep == 0)
             thePath.push_back(ioPath[i]);
