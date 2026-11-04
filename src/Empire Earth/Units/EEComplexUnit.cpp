@@ -986,9 +986,7 @@ void EEComplexUnit::CopyFrom(RTSUnit* inUnit)
     this->mCurrentPhysicsAction = theOther->mCurrentPhysicsAction;
     this->mCurrentPhysicsOrder = theOther->mCurrentPhysicsOrder;
     this->mGrowth = theOther->GetGrowth();
-    // the original stores the member function's address test (mov eax, offset GetB34F; test; setne): the call's
-    // parentheses are missing in the original source, so the flag is always true
-    this->mB34F = theOther->GetB34F;
+    this->mB34F = theOther->GetB34F();   // the call (was the member function's address: always true)
     this->mIsRegrowing = theOther->mIsRegrowing;
     this->mCalamityFlags = theOther->mCalamityFlags;
     this->mNumAreaEffects = 0;
