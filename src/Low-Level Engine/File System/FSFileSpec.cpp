@@ -642,7 +642,7 @@ long FSFileSpec::SetLength(unsigned long& ioLength, bool inTruncate)
 
 // FUNCTION: LLE 0x10009c9f
 // Moves the file position relative to the begin, end or current position
-// (any target past the end fails with kErrorBeyondEnd: the access test is always true, inExtend is ignored)
+// (a target past the end fails with kErrorBeyondEnd unless inExtend is set on a file opened for writing)
 long FSFileSpec::SetPosition(long inOffset, unsigned long inOrigin, bool inExtend)
 {
     long theResult = kErrorOK;
@@ -657,7 +657,9 @@ long FSFileSpec::SetPosition(long inOffset, unsigned long inOrigin, bool inExten
                     theMethod = inOrigin == kFileOriginCurrent ? FILE_CURRENT : FILE_END;
                 DWORD thePosition = SetFilePointer(this->mHandle, 0, NULL, theMethod);
                 if (thePosition != 0xffffffff) {
-                    if (thePosition + inOffset > theLength && (this->mFileAccess | kFileAccessRead))
+                    // past the end only when asked to extend a file opened for writing
+                    if (thePosition + inOffset > theLength
+                        && !(inExtend && (this->mFileAccess & (kFileAccessWrite | kFileAccessAppend)) != 0))
                         theResult = kErrorBeyondEnd;
                     else if (SetFilePointer(this->mHandle, inOffset, NULL, theMethod) == 0xffffffff) {
                         theResult = kErrorNativeError;
