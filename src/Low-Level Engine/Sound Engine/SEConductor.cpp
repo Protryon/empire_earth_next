@@ -580,7 +580,7 @@ long SEConductor::SetDirectMusicFolder(const UWideString& inFolder)
 }
 
 // FUNCTION: LLE 0x1004d5de
-// Sets the music intensity (DirectMusic master groove level); while not running the intensity is reset to 0
+// Sets the music intensity (DirectMusic master groove level); while not running it is kept for the start
 long SEConductor::SetIntensity(unsigned long inIntensity, bool inImmediate)
 {
     long theResult;
@@ -597,7 +597,7 @@ long SEConductor::SetIntensity(unsigned long inIntensity, bool inImmediate)
                 goto done;
             }
         } else
-            this->mIntensity = 0;
+            this->mIntensity = inIntensity;   // Fixed: used to be replaced by 0, losing the requested intensity
     }
     theResult = kErrorOK;
 done:
