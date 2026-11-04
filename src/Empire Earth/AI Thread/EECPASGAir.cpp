@@ -518,7 +518,8 @@ void EECPASGAir::SetDestination(const EECPILocation& inLocation)
     GE2DPoint thePoint(0.0f, 0.0f);
     EECPILocation theLocation(inLocation);
     bool theForced = this->mTask.mIsActive && this->mTask.mMode != kAGModeWonder;
-    if (gWorld.mMap->GetTileAtLocation(theLocation.mTile) == NULL && gWorld.mMap->GetTileAtLocation(theLocation.mTile) == NULL)
+    // (the tile used to be tested twice)
+    if (gWorld.mMap->GetTileAtLocation(theLocation.mTile) == NULL)
         theLocation.ResetToArea();
     thePoint.SetXY(theLocation.mTile.mX, theLocation.mTile.GetY());
     if (gWorld.mMap->GetTileAtLocation(theLocation.mTile) == NULL)
@@ -535,7 +536,7 @@ void EECPASGAir::SetDestination(const EECPILocation& inLocation)
         EEUnitGoal* theGoal;
         long theAction;
         if (theAircraft && !theOnMap) {
-            theUnit->GetUnit()->StartAction(kActionPrepareToMove);
+            // (started twice in a row before; the second start changed nothing)
             theUnit->GetUnit()->StartAction(kActionPrepareToMove);
             theGoal = new EEUGLocation(thePoint, true, theForced, false, 0.0f, false, false);
             theAction = theUnit->GetUnit()->GetCommandType();
@@ -574,7 +575,7 @@ void EECPASGAir::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPILocation&
     EEUnitGoal* theGoal;
     long theAction;
     if (theAircraft && !theOnMap) {
-        inUnit->GetUnit()->StartAction(kActionPrepareToMove);
+        // (started twice in a row before; the second start changed nothing)
         inUnit->GetUnit()->StartAction(kActionPrepareToMove);
         theGoal = new EEUGLocation(thePoint, true, inFlag, false, 0.0f, false, false);
         theAction = inUnit->GetUnit()->GetCommandType();
