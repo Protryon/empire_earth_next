@@ -336,7 +336,7 @@ void EESETSETGameCalamity::Load(EESMEffect* inEffect, EESETSEffectControls* inCo
 // (the inline empty dtor; ee/EESEEGCPlace.h; emitted with the vtable by EESETSETGameCalamity::Load's `new`)
 
 // FUNCTION: EXE 0x584db5
-// Shows the calamity combo, area/object radios and place combo; re-appends calamity ids to mCalamities (never cleared)
+// Shows the calamity combo, area/object radios and place combo; rebuilds mCalamities with the combo
 void EESETSETGameCalamity::Show(EESETSEffectControls* inControls)
 {
     GERectangle theRect;
@@ -351,6 +351,7 @@ void EESETSETGameCalamity::Show(EESETSEffectControls* inControls)
     inControls->mLabels[2]->SetDisplayMode(kDisplayModeShown);
     theLocation.SetY(666.0f);
     inControls->mComboBoxes[1]->DeleteAllEntries();
+    this->mCalamities.clear();      // rebuilt with the combo (it grew by the list length on every Show)
     for (unsigned long theIndex = 0; theIndex <= EECalamityManager::GetInstance()->GetCalamityClassCount(); theIndex++) {
         EECalamityClass* theClass = EECalamityManager::GetInstance()->GetCalamityClass(theIndex);
         if (!theClass)
@@ -562,7 +563,7 @@ void EESETSETGameGraphicEffect::Load(EESMEffect* inEffect, EESETSEffectControls*
 // (the inline empty dtor; ee/EESEEPlace.h; emitted with the vtable by EESETSETGameGraphicEffect::Load's `new`)
 
 // FUNCTION: EXE 0x585790
-// Shows the listed graphic effects, radios and place combo; re-appends their ids to mGraphicEffects (never cleared)
+// Shows the listed graphic effects, radios and place combo; rebuilds mGraphicEffects with the combo
 void EESETSETGameGraphicEffect::Show(EESETSEffectControls* inControls)
 {
     GERectangle theRect;
@@ -577,6 +578,7 @@ void EESETSETGameGraphicEffect::Show(EESETSEffectControls* inControls)
     inControls->mLabels[2]->SetDisplayMode(kDisplayModeShown);
     theLocation.SetY(666.0f);
     inControls->mComboBoxes[1]->DeleteAllEntries();
+    this->mGraphicEffects.clear();  // rebuilt with the combo (it grew by the list length on every Show)
     for (unsigned long theIndex = 0; theIndex < EEGraphicEffect::GetCount(); theIndex++) {
         EEGraphicEffect* theEffect = EEGraphicEffect::Get(theIndex);
         if (!theEffect || theEffect->mIsScenarioListed != true)
