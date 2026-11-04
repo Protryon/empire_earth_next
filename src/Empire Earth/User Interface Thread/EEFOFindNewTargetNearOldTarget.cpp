@@ -2250,8 +2250,8 @@ void EEMakeWallJunctions(std::vector<EEComplexUnit*>& inUnits, std::vector<EETil
                 RTSTileUnitNode* theNode = theTile->mUnits;
                 if (theNode == NULL)
                     continue;
-                EEUnit* theOther = theNode->mUnit;
                 for (; theNode != NULL; theNode = theNode->mNext) {
+                    EEUnit* theOther = theNode->mUnit;   // each node's unit (was the first node's for all)
                     if (theOther != NULL && theOther->mPlayer == inPlayer && theOther->mHitPoints > 0
                         && theOther->mUnitClass->mIsWall)
                         theCount++;
