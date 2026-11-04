@@ -1022,7 +1022,7 @@ void EECPUnitSelector::ComputeDomainShares(EECPUnitSelectionGroup* inGroup)
 
 // FUNCTION: EXE 0x49ab2f
 // Returns the share of the group for the sea (inSea) or space, from the domain's tile share, own vs target
-// strength and a random factor; with no target strength there it always divides by the own sea-unit count
+// strength and a random factor; with no target strength there it uses the own unit count of that domain
 float EECPUnitSelector::GetDomainShare(EECPUnitSelectionGroup* inGroup, bool inSea)
 {
     float theResult = 0.0f;
@@ -1046,7 +1046,7 @@ float EECPUnitSelector::GetDomainShare(EECPUnitSelectionGroup* inGroup, bool inS
                 else
                     theRatio = 1.0f - theShare;
             } else
-                theRatio = ((float)inSea + 2.0f != 0.0f) ? (float)theOwn->mNumSeaUnits : (float)theOwn->mNumSpaceUnits;
+                theRatio = inSea ? (float)theOwn->mNumSeaUnits : (float)theOwn->mNumSpaceUnits;
             float theFraction = (inSea ? (float)theLand : (float)theSea) / theTotal;
             if (theFraction > kHeightEpsilon) {
                 theResult = gPhysics->GetRandom(0.85f, 1.15f) * theFraction;
