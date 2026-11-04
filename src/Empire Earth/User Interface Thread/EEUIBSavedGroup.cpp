@@ -199,9 +199,10 @@ void EEUIBSavedGroup::Refresh()
     if (theGroup && theGroup->GetNumUnits() > 0)
         this->SetUnit(theGroup->GetFirstUnit());
     else {
+        // Test before SetUnit(NULL), which clears mHasUnit (the redraw after it could never run).
+        bool theHadUnit = this->mHasUnit;
         this->SetUnit(NULL);
-        if (this->mHasUnit) {
-            this->mHasUnit = false;
+        if (theHadUnit) {
             this->SetDirty(true);
         }
     }
