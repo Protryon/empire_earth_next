@@ -2679,7 +2679,7 @@ void GETerrainMesh::SetIsSpace(unsigned long inX, unsigned long inY, bool inIsSp
 
 // FUNCTION: LLE 0x1002d3c1
 // Loads the map size, each tile's texture set (unknown ids become 0) and water info, each point's height and colour,
-// and the fractal seed, then recomputes every normal; a failed read is skipped and later reads may hide it
+// and the fractal seed, then recomputes every normal; returns the first read error
 long GETerrainMesh::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     long theResult;
@@ -2693,11 +2693,12 @@ long GETerrainMesh::Load(unsigned long inMajorVersion, unsigned long inMinorVers
         theResult = inFile.Read(this->mPlayableHeight);
         if (theResult == 0) {
             this->CreateFlatMesh(this->mPlayableWidth, this->mPlayableHeight);
-            for (j = 0; j < this->mTileRowCount; j++) {
+            // Stop at the first failed read and report it (later reads used to go on and hide the error).
+            for (j = 0; j < this->mTileRowCount && theResult == 0; j++) {
                 for (i = 0; i < this->mTileRows[j].mCount; i++) {
                     theResult = inFile.Read(theTextureSetID);
                     if (theResult != 0)
-                        continue;
+                        break;
                     if (theTextureSetID < this->mRegisteredTextureSets.size() &&
                         this->mRegisteredTextureSets[theTextureSetID] != NULL)
                         this->mTileRows[j].mTiles[i].mTextureSetID = theTextureSetID;
@@ -2710,11 +2711,11 @@ long GETerrainMesh::Load(unsigned long inMajorVersion, unsigned long inMinorVers
                         this->mSpaceTileCount++;
                 }
             }
-            for (j = 0; j < this->mPointRowCount; j++) {
+            for (j = 0; j < this->mPointRowCount && theResult == 0; j++) {
                 for (k = 0; k < this->mPointRows[j].mCount; k++) {
                     theResult = inFile.Read(theZ);
                     if (theResult != 0)
-                        continue;
+                        break;
                     this->mPointRows[j].mPoints[k].mZ = theZ;
                     this->mMinimumZ = min(this->mMinimumZ, theZ);
                     this->mMaximumZ = max(this->mMaximumZ, theZ);
@@ -2738,7 +2739,7 @@ long GETerrainMesh::Load(unsigned long inMajorVersion, unsigned long inMinorVers
 
 // FUNCTION: LLE 0x1002d656
 // Writes the map size, each tile's texture set and water info, each point's height and colour, and the fractal seed;
-// a failed tile write is followed by the point writes, whose result replaces it
+// returns the first write error
 long GETerrainMesh::Save(FSFile& inFile) const
 {
     long theResult;
@@ -2757,7 +2758,8 @@ long GETerrainMesh::Save(FSFile& inFile) const
         if (theResult != 0)
             break;
     }
-    for (j = 0; j < this->mPointRowCount; j++) {
+    // A failed tile write ends the save (the point writes used to replace its error).
+    for (j = 0; j < this->mPointRowCount && theResult == 0; j++) {
         for (k = 0; k < this->mPointRows[j].mCount; k++) {
             if ((theResult = inFile.Write(this->mPointRows[j].mPoints[k].mZ)) != 0)
                 break;
