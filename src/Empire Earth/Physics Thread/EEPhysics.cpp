@@ -853,7 +853,7 @@ void EEPhysics::ProcessUnitSwaps()
 
 // FUNCTION: EXE 0x55355c
 // Runs the queued physics tick messages (one while the timer runs): checksums or dumps the world when asked,
-// takes the owed ticks and speed, executes the tick's player inputs; a non-tick message at the head spins
+// takes the owed ticks and speed, executes the tick's player inputs; a stray non-tick message at the head is dropped
 // NEAR: inline budget: the original calls deque::begin() out of line for the first front(); esi/ebx/edi roles
 void EEPhysics::DrainInput()
 {
@@ -862,8 +862,13 @@ void EEPhysics::DrainInput()
         if (this->mTicksToProcess != 0 && this->mTimerRunning)
             break;
         NEMessage* theMessage = this->mServerMessages.front();
-        if (theMessage->GetType() != kNetMessagePhysicsTick)
+        if (theMessage->GetType() != kNetMessagePhysicsTick) {
+            // player inputs are consumed with their tick, so the head should always be a tick; drop a stray
+            // message instead of spinning on it for ever while holding the queue lock
+            this->mServerMessages.pop_front();
+            theMessage->Dereference();
             continue;
+        }
         this->mServerMessages.pop_front();
         NEMPhysicsTick* theTick = static_cast<NEMPhysicsTick*>(theMessage);
         if (theTick->GetGenerateChecksum() == true) {
