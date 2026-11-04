@@ -32,7 +32,7 @@ static void UIShutdown(bool inForced);
 long gUIInitialized;                        // 0x1012ed00 (provisional name)
 
 // FUNCTION: LLE 0x100829f5
-// Splits a string into lines that fit the given pixel width; never returns if a line starts with a newline
+// Splits a string into lines that fit the given pixel width; a newline ends a line
 void UICreateMultilineTextFromString(const UWideString& inString, GEFont* inFont, unsigned long inWidth,
                                      std::vector<UWideString>& outLines)
 {
@@ -40,9 +40,16 @@ void UICreateMultilineTextFromString(const UWideString& inString, GEFont* inFont
     const char* theCurrent = inString;
     while (_mbscmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"") != 0) {
         unsigned long theCount = UIGetStringCutOffIndex(theCurrent, inFont, inWidth, true, true);
+        bool theAtNewline = _mbsnbcmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\n", 1) == 0;
+        if (theCount == 0 && !theAtNewline)
+            theCount = 1;   // always make progress
         theLine.CopyString(theCurrent, theCount);
         outLines.push_back(theLine);
         theCurrent = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>(theCurrent), theCount);
+        // Fixed: the cut-off index stops before a newline without counting it, so the loop used to stay on the
+        // newline forever (pushing empty lines); the newline that ends a line is skipped now
+        if (_mbsnbcmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\n", 1) == 0)
+            theCurrent = (const char*)_mbsinc(reinterpret_cast<const unsigned char*>(theCurrent));
     }
 }
 
