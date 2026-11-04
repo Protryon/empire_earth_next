@@ -4728,7 +4728,6 @@ void EEComputerPlayer::Clear()
 // FUNCTION: EXE 0x43cff8
 // After loading, restores the managers and resource centers, rebases saved times to the game clock, fixes the
 // attack bounds and missing favourite types, and flags stranded units; returns the first error
-// As in the original, the space-type fallback stores 730 into mFavoriteSeaType, not mFavoriteSpaceType
 long EEComputerPlayer::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     long theResult = EEPlayer::RepairPointers(inMajorVersion, inMinorVersion);
@@ -4778,7 +4777,7 @@ long EEComputerPlayer::RepairPointers(unsigned long inMajorVersion, unsigned lon
     if (gUnitClassTable[this->mFavoriteSpaceType] == NULL) {
         this->ChooseFavoriteSpaceType();
         if (gUnitClassTable[this->mFavoriteSpaceType] == NULL)
-            this->mFavoriteSeaType = 730;
+            this->mFavoriteSpaceType = 730;
     }
     this->mSeed = this->mPlayerID % 10;
     if (this->mInteractionManager != NULL)
