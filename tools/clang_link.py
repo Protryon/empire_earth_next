@@ -169,10 +169,42 @@ def clang_def(path, inputs):
               f"(exports_dropped.txt): {', '.join(dropped[:4])}{' ...' if len(dropped) > 4 else ''}")
 
 
+MODERN_CRT = ["msvcrt.lib", "vcruntime.lib", "ucrt.lib", "msvcprt.lib", "oldnames.lib",
+              "kernel32.lib"]   # the modern runtime's startup code imports kernel32 (VC6's msvcrt.dll did not)
+
+
+def modern_libs(args):
+    """--stl msvc: the link's library arguments with the VC6 runtime replaced. The vintage Windows import libraries
+    (toolchain/vc98lib/rtm) become the Windows SDK's, VC6's MSVCRT.LIB becomes the modern DLL runtime (MSVCRT +
+    vcruntime + UCRT + the MSVC STL's msvcprt), and every sxlrt233 library goes: the Dinkum DLL leaves the program
+    (its members built from source, operator new[]/delete[], come from vcruntime now)."""
+    msvc, _, sdk_lib = clang_build.modern_dirs()
+    out = []
+    for a in args:
+        p = pathlib.Path(a.strip('"'))
+        if a.startswith("/") or p.suffix.lower() != ".lib":
+            out.append(a)
+        elif p.stem.lower().startswith("sxlrt233"):
+            continue
+        elif "vc98lib" in p.parts:
+            out += MODERN_CRT if p.stem.upper() == "MSVCRT" else [p.name.lower()]
+        else:
+            out.append(a)
+    return out + [f"/LIBPATH:{msvc / 'lib' / 'x86'}", f"/LIBPATH:{sdk_lib / 'ucrt' / 'x86'}",
+                  f"/LIBPATH:{sdk_lib / 'um' / 'x86'}"]
+
+
 def lld_run(inner, extra_libs):
     def run(cmd, cwd, pkg):
         if pathlib.Path(cmd[0]).name.upper() == "LINK.EXE":
             cmd = [str(LLD_LINK), *LLD_FLAGS, *[FLAG_MAP.get(a.upper(), a) for a in cmd[1:]], *extra_libs]
+            if clang_build.STL == "msvc":
+                cmd = [cmd[0]] + modern_libs(cmd[1:])
+                rsp = [a for a in cmd if a.startswith("@")]
+                for r in rsp:   # exe_fulllink passes its objects and libraries in a response file
+                    f = pathlib.Path(cwd) / r[1:]
+                    lines = modern_libs([l for l in f.read_text().splitlines() if l.strip()])
+                    f.write_text("\n".join(l if l.startswith('"') or " " not in l else f'"{l}"' for l in lines) + "\n")
             inputs = [str(pathlib.Path(cwd) / a) for a in cmd[1:] if a.lower().endswith((".obj", ".lib"))
                       and not a.startswith("/")]
             for a in cmd:
@@ -291,10 +323,15 @@ def main():
                     help="TEST ONLY: -fsanitize=null -fsanitize-trap=null without -fno-delete-null-pointer-checks "
                          "(a ud2 trap at every member call / reference binding through null; no runtime needed). "
                          "Finds where the code relies on null this/references. Default out gains '-nullsan'.")
+    ap.add_argument("--stl", choices=["dinkum", "msvc"], default="dinkum",
+                    help="msvc: the MSVC STL and modern runtime instead of Dinkum 2.33 and VC6's (clang_build.py); "
+                         "default out gains '-msvc'")
     a = ap.parse_args()
     if not LLD_LINK.exists():
         sys.exit(f"{LLD_LINK} is missing: install LLVM (winget install LLVM.LLVM) or set EE_LLD_LINK")
+    clang_build.STL = a.stl
     out = pathlib.Path(a.out or ROOT / "build" / (("clang-test" if a.test_profile else "clang")
+                                                  + ("-msvc" if a.stl == "msvc" else "")
                                                   + ("-nullsan" if a.sanitize_null else ""))).resolve()
     if a.sanitize_null:
         clang_build.CLANG_FLAGS = [f for f in clang_build.CLANG_FLAGS if f != "-fno-delete-null-pointer-checks"] + [

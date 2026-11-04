@@ -206,6 +206,38 @@ full 10.5k PTs. `inputs` differing at PTs ~476–867 is the harness's civ-timer 
 With float noise this early, a tick oracle only validates the first few thousand PTs. Beyond that, the evidence is
 "plays to the end without faults" plus behavioural checks.
 
+## Phase 2: Dinkum 2.33 → MSVC STL (`--stl msvc`)
+
+Setup: VS 2022 Build Tools with the C++ workload (`winget install Microsoft.VisualStudio.2022.BuildTools` with
+`--add Microsoft.VisualStudio.Workload.VCTools`, the x86/x64 tools and a Windows 11 SDK). `clang_build.py --stl msvc`
+and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_WINSDK_DIR`). Outputs:
+`build/clang-msvc`, `build/clang-test-msvc`.
+
+- **Compile flags**: the STL refuses an old `_MSC_VER`, so `-fms-compatibility-version=19.44`, `/std:c++17` and
+  native `wchar_t` (`/Zc:wchar_t`). The VC6 leniency the code needed under 12.00 was already fixed in phase 1;
+  nothing new appeared.
+- **Census** (845 units): 753 compiled at first, 817 once the SDK finished installing, 845 after these fixes:
+  - `std::random_shuffle` (removed in C++17): `EEAIRandomShuffle` now spells out Dinkum 2.33's
+    `random_shuffle(first, last, gen)` loop (`for d = 2..: iter_swap(x, first + gen(d))`). The AI keeps its exact
+    draws and swaps on any library, so behaviour stays comparable with the Dinkum build.
+  - Headers Dinkum pulled in transitively (`<string>` in EEWonNet.h); `std::binary_function` (removed) as a base.
+  - Iterators initialised from `0`/`NULL` (Dinkum's were pointer-like): value-initialise them. `iterator(&v[i])`
+    becomes `v.begin() + i`.
+  - `unsigned short` used as `wchar_t` (`gEmptyWideString`): declare it `wchar_t`, which is the same type under VC6.
+  - Dinkum-only library hooks (`std::gPointerToAssertFunction`): `#ifndef _MSVC_STL_VERSION`.
+  - The ~41 lines of code that touched Dinkum internals by name were nearly all in comments (matching notes).
+- **Link**: the vintage Windows import libraries map to the SDK's. VC6's MSVCRT.LIB becomes `msvcrt vcruntime
+  ucrt msvcprt oldnames kernel32` (the modern startup code imports kernel32, which mixer and Default never linked
+  before). Every `sxlrt233` library goes. Response files (`exe_fulllink`) are rewritten the same way.
+- **Exports**: `UIListBox<UWideString>::Begin/End` return Dinkum's `_Ptrit`, so their names change with the
+  library. Under the MSVC STL nothing old imports them.
+- **Running needs harness work.** All modules switch runtime and STL together, so the retail renderer, the
+  harness-built silent mixer (VC6, linked against sxlrt233) and the binary-patched retail renderer cannot share heap
+  memory or STL objects with the new modules. Also, every class holding a container changes layout: a Dinkum
+  vector is 16 bytes (allocator byte, first, last, end), MSVC's 12. The harness reads memory at VC6 offsets: the
+  presentation bridge (~15: the UI manager's form vector at +0x30/+0x34, form fields, renderer state, the retail
+  renderer's ShowScene entry), the telemetry, the per-PT hasher (`layout.py`) and the drivers.
+
 ## For WONAPI/WONLobby later
 
 The WON library is carved or stubbed (`won` class in the stub report) in both builds. When its source arrives, expect
