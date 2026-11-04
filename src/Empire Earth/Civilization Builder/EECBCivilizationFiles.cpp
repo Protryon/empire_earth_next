@@ -287,7 +287,7 @@ long Fn28015D(const UString& inName, bool inOverwrite)
 // FUNCTION: EXE 0x6802ef
 // Writes the civilization file (name, upgrade count, upgrades), tells players using that file to reload it,
 // and reports errors; the answer to the overwrite question, its form argument the close-the-builder flag
-// a checksum of the name and upgrades is summed up but never written
+// (a checksum of the name and upgrades that was summed up but never written or used has been removed)
 void Fn2802EF(UIForm* inClose)
 {
     std::vector<unsigned long> thePlayers;
@@ -296,7 +296,6 @@ void Fn2802EF(UIForm* inClose)
     UString theFile(gU565518.GetFile());
     std::vector<unsigned short> theUpgrades;
     bool theClose = *(bool*)inClose;
-    long theChecksum = 0;
     unsigned long theWritten = 0;
     unsigned long theLength = 0;
     long theResult;
@@ -309,14 +308,11 @@ void Fn2802EF(UIForm* inClose)
                 theLength = _mbsnbcnt(reinterpret_cast<const unsigned char*>((const char*)theName), theName.GetLength());
                 theResult = gU565518.Write(theLength);
                 if (theResult == 0) {
-                    for (unsigned long i = 0; i < theLength; i++)
-                        theChecksum += theName[(int)i];
                     theResult = gU565518.Write((const char*)theName, theLength, theWritten);
                     if (theResult == 0) {
                         theUpgrades = gEditableCivilization->CopyUpgradeIDs();
                         unsigned long theValue = theUpgrades.size();
                         theResult = gU565518.Write(theValue);
-                        theChecksum += theUpgrades.size();
                         if (theResult == 0) {
                             for (std::vector<unsigned short>::iterator j = theUpgrades.begin(); j != theUpgrades.end();
                                  j++) {
@@ -324,7 +320,6 @@ void Fn2802EF(UIForm* inClose)
                                     break;
                                 theValue = *j;
                                 theResult = gU565518.Write(theValue);
-                                theChecksum += *j;
                             }
                         }
                     }
