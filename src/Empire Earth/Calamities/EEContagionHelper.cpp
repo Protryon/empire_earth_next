@@ -193,14 +193,18 @@ std::vector<EEUnit*>::iterator EEContagionHelper::RemoveUnit(std::vector<EEUnit*
 }
 
 // FUNCTION: EXE 0x4b61ca
-// Turns the loaded unit ids back into referenced units with the calamity flags (a missing unit is not tested for)
+// Turns the loaded unit ids back into referenced units with the calamity flags (an id that no longer resolves is
+// dropped)
 long EEContagionHelper::RestorePointers()
 {
     EEUnit* theUnit = NULL;
     for (std::vector<unsigned long>::iterator theIterator = this->mUnitIDs.begin(); theIterator != this->mUnitIDs.end();
          ++theIterator) {
         theUnit = gWorld.GetUnit(*theIterator);
-        if (theUnit != NULL && theUnit->mComplexUnit != NULL)
+        // a unit that is gone cannot be referenced (it used to be dereferenced through NULL on load)
+        if (theUnit == NULL)
+            continue;
+        if (theUnit->mComplexUnit != NULL)
             theUnit->mComplexUnit->mCalamityFlags |= this->mCalamity->mClass->mClassFlags;
         theUnit->Reference();
         this->mUnits.push_back(theUnit);
