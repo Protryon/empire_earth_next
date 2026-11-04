@@ -1165,10 +1165,11 @@ void EEWonNet::FnCFFDD(long inArg)
 }
 
 // FUNCTION: EXE 0x4cfff2
-// Calls the lobby window's Virtual18 when a lobby exists (it tests the lobby, not the window)
+// Calls the lobby window's Virtual18 when the window exists
 void EEWonNet::FnCFFF2()
 {
-    if (this->mLobby != NULL)
+    // Fix: test the window that is called (this used to test mLobby).
+    if (this->mLobbyWindow != NULL)
         this->mLobbyWindow->Virtual18();
 }
 
