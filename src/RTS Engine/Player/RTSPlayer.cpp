@@ -296,8 +296,8 @@ long RTSPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion,
 }
 
 // FUNCTION: EXE 0x56f7b1
-// Writes each hash bucket's unit count and units (the first, then the rest from last to second); only the
-// last unit's write error of a bucket is checked
+// Writes each hash bucket's unit count and units (the first, then the rest from last to second); returns the first
+// write error
 long RTSPlayer::SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     long theResult;
@@ -315,7 +315,8 @@ long RTSPlayer::SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVer
             unsigned long j;
             for (j = 0; j < theCount - 1; j++)
                 theUnit = theUnit->mNext;
-            for (j = 0; j < theCount - 1; j++) {
+            // stop at the first failed unit write (each result used to overwrite the previous one)
+            for (j = 0; j < theCount - 1 && theResult == 0; j++) {
                 theResult = this->SaveUnit(theUnit, inMajorVersion, inMinorVersion, outFile);
                 theSaved++;
                 theUnit = theUnit->mPrevious;
