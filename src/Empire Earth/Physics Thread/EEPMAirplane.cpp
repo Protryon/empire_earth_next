@@ -418,8 +418,7 @@ void EEPMAirplane::OrientOnCarrier(const GETransformation& inCarrier, const GE3D
 
 // NEAR: second transformation (-0x7c) layout, slots
 // FUNCTION: EXE 0x5583ad
-// Slows the plane's speed and turn rate to a stop; the turned, moved position it computes is dropped
-// (the tile update gets the unmoved transformation, as in the original)
+// Slows the plane's speed and turn rate to a stop, moving and turning it by what is left of them
 void EEPMAirplane::Step4(EEComplexUnit* inUnit)
 {
     GEPhysicalModel& theModel = inUnit->mPhysicalModel;
@@ -493,7 +492,7 @@ void EEPMAirplane::Step4(EEComplexUnit* inUnit)
     theRotation.SetPosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
     float theBank = this->ComputePitch(inUnit, 0.0f);
     theRotation.SetOrientationYPR(theNewHeading, theBank, inUnit->mRoll + this->ComputeRoll(inUnit, theYawRate));
-    EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
+    EEUpdateUnitTile(&theRotation, inUnit, &theTileX, &theTileY);
 }
 
 // NEAR: bool theFree lives in memory; the original keeps it in cl and the y floor in the dead ioLocation slot
