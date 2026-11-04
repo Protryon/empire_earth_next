@@ -337,7 +337,8 @@ long EEE2DMarchingIcons::Step()
         theSelected = theGroup->HasUnitType(theType);
     else
         theSelected = false;
-    if (theType == kUnitTypeTownCenter || theType == kUnitTypeCapitol) {
+    // The town center/capitol test also needs an active group (it was read without the NULL check above).
+    if (theGroup != NULL && (theType == kUnitTypeTownCenter || theType == kUnitTypeCapitol)) {
         if (theGroup->HasUnitType(0x23) || theGroup->HasUnitType(0x29))
             theSelected = true;
     }
