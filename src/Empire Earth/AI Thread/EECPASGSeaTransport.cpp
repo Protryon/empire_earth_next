@@ -432,12 +432,10 @@ bool EECPASGSpaceship::TakeRequestedUnits()
 }
 
 // FUNCTION: EXE 0x44f236
-// Picks units to split off: the largest group when units sit in several space regions, else the first half;
-// it also ranks the units by kind but never uses the ranking
+// Picks units to split off: the largest group when units sit in several space regions, else the first half
 void EECPASGSpaceship::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
 {
     typedef std::map<unsigned short, std::vector<EECPAttackSubGroupUnit*>*> ContinentMap;
-    std::multimap<long, EECPAttackSubGroupUnit*> theKinds;
     ContinentMap theContinents;
     ContinentMap::iterator theIter;
     unsigned long theHalf = this->GetNumUnits() >> 1;
@@ -459,11 +457,7 @@ void EECPASGSpaceship::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
         }
     }
     if (this->GetNumUnits() > 1) {
-        for (long i = this->GetNumUnits() - 1; i >= 0; i--) {
-            EECPAttackSubGroupUnit* theUnit = this->GetUnitAt(i);
-            theKinds.insert(std::multimap<long, EECPAttackSubGroupUnit*>::value_type(this->GetUnitUnit(i)->GetUnitClass()->mAIKind,
-                                                                                theUnit));
-        }
+        // (the units used to be ranked by AI kind here into a map that was never read)
         if (outUnits.size() == 0 && this->GetNumUnits() > theHalf) {
             for (long i = theHalf - 1; i >= 0; i--) {
                 EEComplexUnit* theUnit = this->GetUnitUnit(i);
