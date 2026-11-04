@@ -614,8 +614,8 @@ void EESETSETPlayerTechnology::Load(EESMEffect* inEffect, EESETSEffectControls* 
         inControls->mPlayers[0]->SetTriggerEvent(kControlTriggerSelectionChanged, theAction);
         theAction->Dereference();
     }
-    // the original drops this result and keeps testing the first action (a source bug, 0x18acf1)
-    inControls->mEffectComboBoxes[1]->GetTriggerEvent(kControlTriggerSelectionChanged);
+    // the technology combo's own action is detached while selecting and restored afterwards
+    theAction = inControls->mEffectComboBoxes[1]->GetTriggerEvent(kControlTriggerSelectionChanged);
     if (theAction) {
         theAction->Reference();
         inControls->mEffectComboBoxes[1]->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
