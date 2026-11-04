@@ -4616,9 +4616,12 @@ void EEMLoadTransport::Execute()
             if (theUnit != theTransport && theUnit->mHitPoints > 0)
                 theUnits.push_back(theUnit);
         }
-    } else if (gWorld.GetUnit(this->mPassengerID)->mComplexUnit->mHitPoints > 0) {
-        EEComplexUnit* theUnit = gWorld.GetUnit(this->mPassengerID)->mComplexUnit;
-        theUnits.push_back(theUnit);
+    } else {
+        // the passenger may be gone by the time the order runs (it used to be read through NULL)
+        EEUnit* thePassenger = gWorld.GetUnit(this->mPassengerID);
+        EEComplexUnit* theUnit = thePassenger != NULL ? thePassenger->mComplexUnit : NULL;
+        if (theUnit != NULL && theUnit->mHitPoints > 0)
+            theUnits.push_back(theUnit);
     }
     dynamic_cast<EEUCTransport*>(theTransport->mUnitClass)->FilterLoadable(&theUnits, theTransport, &theRejected);
     long theTileX;
