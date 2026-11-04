@@ -321,8 +321,10 @@ bool EECPASGSpaceTransport::RemoveUnit(EEComplexUnit* inUnit)
     bool theResult = EECPAttackSubGroup::RemoveUnit(inUnit);
     if (theResult && this->mCargoStage == 1 && gPhysics != NULL) {
         for (unsigned long i = 0; i < this->mUnits.size(); i++) {
-            if (!this->mUnits[i]->IsDone() && !gWorldClearing && !gLoadingSavedGame)
-                this->StartLoading();
+            if (!this->mUnits[i]->IsDone() && !gWorldClearing && !gLoadingSavedGame) {
+                this->StartLoading();   // once, not once per remaining unit
+                break;
+            }
         }
     }
     return theResult;

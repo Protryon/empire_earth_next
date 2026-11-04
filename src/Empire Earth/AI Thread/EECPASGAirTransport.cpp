@@ -826,7 +826,7 @@ long EECPASGAirTransport::GetCargoCapacity()
 }
 
 // ICF-FOLDED: EXE 0x45110d
-// Removes the unit; while loading, restarts loading once per remaining active unit (not while the world is cleared
+// Removes the unit; while loading, restarts loading once if any active unit remains (not while the world is cleared
 // or a game loads); returns whether the unit was removed
 // (no address of its own: the same body as EECPASGSpaceTransport::RemoveUnit, which ICF kept; [sib 25])
 bool EECPASGAirTransport::RemoveUnit(EEComplexUnit* inUnit)
@@ -834,8 +834,10 @@ bool EECPASGAirTransport::RemoveUnit(EEComplexUnit* inUnit)
     bool theResult = EECPAttackSubGroup::RemoveUnit(inUnit);
     if (theResult && this->mCargoStage == 1 && gPhysics != NULL) {
         for (unsigned long i = 0; i < this->mUnits.size(); i++) {
-            if (!this->mUnits[i]->IsDone() && !gWorldClearing && !gLoadingSavedGame)
-                this->StartLoading();
+            if (!this->mUnits[i]->IsDone() && !gWorldClearing && !gLoadingSavedGame) {
+                this->StartLoading();   // once, not once per remaining unit
+                break;
+            }
         }
     }
     return theResult;
