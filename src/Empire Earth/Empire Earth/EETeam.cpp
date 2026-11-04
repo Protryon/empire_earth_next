@@ -64,17 +64,22 @@ bool EETeam::Contains(long inPlayer1, long inPlayer2)
 }
 
 // FUNCTION: EXE 0x536ca3
-// Reads the team's players and its victory condition from a saved game; returns only the victory condition's
-// result
+// Reads the team's players and its victory condition from a saved game; returns the first read error
 long EETeam::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     unsigned long theCount;
     long theResult = inFile.Read(theCount);
+    // a failed count read leaves no count to size the player list by
+    if (theResult != kErrorOK)
+        return theResult;
     this->mPlayers.resize(theCount, 0);
     for (unsigned long i = 0; i < theCount; i++) {
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mPlayers[i]);
     }
+    // the player reads' error is reported (it used to be discarded)
+    if (theResult != kErrorOK)
+        return theResult;
     return this->mVictoryCondition->Load(inMajorVersion, inMinorVersion, inFile);
 }
 
