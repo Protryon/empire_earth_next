@@ -322,7 +322,7 @@ void UIButton::TabbedFrom()
 }
 
 // FUNCTION: LLE 0x1005eea6
-// Space or Enter presses the button; releasing them clicks it (an Enter release clicks even without a key press)
+// Space or Enter presses the button; releasing them after a key press on it clicks it
 long UIButton::UpdateKeyboard()
 {
     if (UIControl::sSpaceKey->JustPressed() || UIControl::sEnterKey->JustPressed()) {
@@ -331,7 +331,8 @@ long UIButton::UpdateKeyboard()
         this->ButtonDown();
         if (!this->mMouseDown)
             this->FireTriggerEvent(kControlTriggerButtonDown);
-    } else if (this->mKeyDown && UIControl::sSpaceKey->JustUnpressed() || UIControl::sEnterKey->JustUnpressed()) {
+    } else if (this->mKeyDown && (UIControl::sSpaceKey->JustUnpressed() || UIControl::sEnterKey->JustUnpressed())) {
+        // Fixed: the missing parentheses let an Enter release click the button without a key press on it
         this->mMouseDown = false;
         this->ReleaseCapturedMouse();
         this->ReleaseCapturedKeyboard();
