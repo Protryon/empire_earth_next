@@ -1450,6 +1450,7 @@ bool EECPResourceManager::UpdateWantedGatherers()
                         theNeed = 0;
                     }
                 } else if (j != 3) {
+                    theFound = 0;   // this resource's units only (was carried over from the earlier resources)
                     for (unsigned long k = 0; k < thePlayer->GetNumResourceCenters(); k++) {
                         std::vector<EEUnit*> theUnits = thePlayer->GetResourceCenter(k)->mUnits;
                         for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end(); it++)
