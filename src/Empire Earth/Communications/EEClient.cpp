@@ -208,7 +208,8 @@ FSFile* EEClient::CreateXferFile(const UWideString& inName, unsigned long inSize
                 theOK = false;
             else {
                 theFile->Delete();
-                theOK = theFile->Create() != kErrorOK || theFile->Open(kFileAccessWrite) == kErrorOK;
+                // the re-created file must be created AND opened for writing, as in the no-file branch below
+                theOK = theFile->Create() == kErrorOK && theFile->Open(kFileAccessWrite) == kErrorOK;
             }
         } else {
             theFile->Delete();
