@@ -480,7 +480,7 @@ void EESMEffect::ModifyAIMilitaryTarget()
 }
 
 // FUNCTION: EXE 0x5bc60f
-// Copies another effect's settings, texts and object list, except its attack and favourite-units flags
+// Copies another effect's settings, texts and object list
 void EESMEffect::Copy(const EESMEffect& inEffect)
 {
     this->mName = inEffect.mName;
@@ -549,6 +549,8 @@ void EESMEffect::Copy(const EESMEffect& inEffect)
     this->mAIToggle = inEffect.mAIToggle;
     this->mUsesTargetArea = inEffect.mUsesTargetArea;
     this->mIsAddTarget = inEffect.mIsAddTarget;
+    this->mIsAttack = inEffect.mIsAttack;
+    this->mUsesFavorites = inEffect.mUsesFavorites;
     this->mID = inEffect.mID;
 }
 
