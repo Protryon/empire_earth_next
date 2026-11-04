@@ -142,8 +142,7 @@ void EECPIntelligencePlayerFile::AddToArmies(EEComplexUnit* inUnit)
         EECPIArmy* theBiggest = theNear.back();
         long theMax = theBiggest->mStrength;
         for (j = theNear.size() - 2; j >= 0; j--) {
-            // The original compares the army's tile count with the best strength so far (bytes 0x480e81)
-        if (theNear[j]->mTiles.Size() > theMax) {
+            if (theNear[j]->mStrength > theMax) {   // strength with strength (was the tile count)
                 theBiggest = theNear[j];
                 theMax = theBiggest->mStrength;
             }
