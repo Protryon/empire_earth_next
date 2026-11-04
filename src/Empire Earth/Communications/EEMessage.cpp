@@ -3318,12 +3318,13 @@ void EEMHackANewUnit::Execute()
     if (this->mUnitType == 0x367)
         return;
     EEUnitClass* theClass = gUnitClassTable[this->mUnitType];
-    if ((theClass != NULL && theClass->mCategory == kUnitCategoryAmbient) || theClass->mCategory == kUnitCategoryResource) {
+    // a unit type without a class creates nothing (its category used to be read through NULL first)
+    if (theClass == NULL)
+        return;
+    if (theClass->mCategory == kUnitCategoryAmbient || theClass->mCategory == kUnitCategoryResource) {
         thePlayer = gWorld.mPlayers[0];
         thePlayerID = 0;
     }
-    if (theClass == NULL)
-        return;
     if (!theClass->IsLandBuilding()) {
         thePoint.SetX(theTile.GetX());
         thePoint.SetY(theTile.GetY());
