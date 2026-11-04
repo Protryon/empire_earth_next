@@ -50,9 +50,17 @@
 const UString EEE2DLinearProjectile::sData("EEE2DLinearProjectile-Data");
 
 // NEAR: the tag list's begin() and _Ptrit::operator+ are out of line in the original
+// Scales the rotation part of a transformation by a factor (as EETagPointList::Scale), for shooters without tag points
+static void ScaleTargetTransformation(GETransformation& ioTransformation, float inScale)
+{
+    for (unsigned long theRow = 0; theRow < 3; theRow++)
+        for (unsigned long theColumn = 0; theColumn < 3; theColumn++)
+            ioTransformation.SetElement(theRow, theColumn, ioTransformation.GetElement(theRow, theColumn) * inScale);
+}
+
 // FUNCTION: EXE 0x4e2f20
-// Creates a straight projectile from the shooter's weapon tag point (turret-aware) to the target's model point;
-// the target transformation is scaled by its size only when the shooter has tag points
+// Creates a straight projectile from the shooter's weapon tag point (turret-aware) to the target's model point
+// (on the target's model scaled by its size)
 EEE2DLinearProjectile::EEE2DLinearProjectile(EEUnit* inUnit, EEUnit* inTarget, EEGraphicEffect* inGraphicEffect)
     : EEEffect2D(0, inGraphicEffect, gEffect2DModel, kEffect2DLinearProjectile, false)
 {
@@ -89,6 +97,8 @@ EEE2DLinearProjectile::EEE2DLinearProjectile(EEUnit* inUnit, EEUnit* inTarget, E
         theList->Scale(theTargetTransformation, theTargetScale);
     } else {
         theTransformation.Apply(inUnit->GetModel()->mDefaultPoint, theStart);
+        // the target's point is on its scaled model whatever the shooter has
+        ScaleTargetTransformation(theTargetTransformation, theTargetScale);
     }
     theOffset = inTarget->GetModel()->mDefaultPoint;
     theTargetTransformation.Apply(theOffset, theEnd);
