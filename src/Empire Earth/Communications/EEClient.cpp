@@ -430,6 +430,20 @@ void EEClient::HandleMessage(NEMessage* inMessage)
                 sprintf(theText, theFormat, (const char*)theResponse->GetVersion(), (const char*)gGameVersion);
                 gUIManager->DisplayMessage(theText, true, NULL, NULL, true);
                 this->Disconnect();
+            } else if (theResponse->GetError() == kConnectionGameInProgress
+                       || theResponse->GetError() == kConnectionGameInProgressAsSent) {
+                // Fix: a host refuses a join into a running game with the code kConnectionGameInProgressAsSent (the
+                // message's string id) instead of kConnectionGameInProgress, and this joining branch had no case
+                // for either, so the joining player was never told and kept waiting. The host is left unchanged
+                // (it must stay compatible with other hosts); the joining player now gets the message.
+                if (gWonNet != NULL) {
+                    gWonNet->ClearGameList();
+                    gWonNet->RejoinRoom(false);
+                }
+                gUserInterface->CloseForm(NULL);
+                gResource->GetString(IDS_GAME_IS_IN_PROGRESS, theFormat);
+                gUIManager->DisplayMessage(theFormat, true, NULL, NULL, true);
+                this->Disconnect();
             }
         } else if (theResponse->GetError() == kConnectionRemovedByHost) {
             if (gWonNet != NULL) {

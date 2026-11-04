@@ -163,7 +163,7 @@ void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOption
         }
     }
     if (theOK == true && this->GetGameState() == kServerStateClosed) {
-        theResponse = new NEMClientConnectionRequestResponse(0x2751, gGameVersion, inSlot,
+        theResponse = new NEMClientConnectionRequestResponse(kConnectionGameInProgressAsSent, gGameVersion, inSlot,
                                                              this->GetCurrentCommunicationsTick(), 0xff);
         theResponse->SetOriginatingSlot(kSlotServer);
         this->SendMessageTo(inSlot, theResponse, true);

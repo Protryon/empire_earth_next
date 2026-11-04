@@ -14,6 +14,7 @@ enum NEConnectionResult {
     kConnectionHostGone = 7,       // BootPlayer of the host slot 0xfe sends it to every client; client posts EEABootClientFromCanceledGame(10011 'The host of this game has gone away!') (provisional name)
     kConnectionBadChecksum = 8,    // sent when inChecksum != gBinaryChecksum; client shows string 30445 'One or more of your files are not the correct version or corrupt.' (provisional name)
     kConnectionGameInProgress = 9,  // client shows string 10065 'The Game Is In Progress' (the server sends 0x2751 instead: original bug at 0x4caad8) (provisional name)
+    kConnectionGameInProgressAsSent = 0x2751,  // what EEServer::ProcessConnectionRequest actually sends for a closed (running) game: string id 10065 in place of kConnectionGameInProgress; kept on the wire for compatibility, the client accepts both
 };
 
 // Engine network message type ids (NEMessage::mType): NEMessage::BuildNEMessage case -> new NEM<Name>; each NEM ctor passes its id.
