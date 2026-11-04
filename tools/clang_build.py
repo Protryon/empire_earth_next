@@ -32,7 +32,7 @@ from ee import COMPILER, ROOT, TOOLCHAIN
 
 CLANG = pathlib.Path(os.environ.get("EE_CLANG", r"C:\Program Files\LLVM\bin\clang-cl.exe"))
 CLANG_FLAGS = ["--target=i686-pc-windows-msvc", "/nologo", "/c", "-fms-compatibility", "-fms-extensions",
-               "-fms-compatibility-version=12.00", "/Zc:wchar_t-", "-fdelayed-template-parsing", "/arch:IA32",
+               "-fms-compatibility-version=12.00", "/Zc:wchar_t-", "-fdelayed-template-parsing", "/arch:IA32", "/GS-",
                "-fno-strict-aliasing", "-fwrapv", "-Wno-everything", "-ferror-limit=0", "-fno-color-diagnostics"]
 DROP = re.compile(r"^[-/](G[3-7B]|Zm\d+|Zi|Z7|O[12dsxty]|Ob\d|Og|Gy|Gf|GF)$")
 ERROR = re.compile(r"^(.*?)\((\d+),\d+\)\s*:\s*error: (.*)$", re.M)
@@ -42,27 +42,31 @@ def clang_flags(flags, opt):
     return [f for f in flags.split() if not DROP.match(f)] + opt.split()
 
 
-def compile_one(job, out, opt, vc6inc):
-    mod, src, flags, pkg = job
+def compile_to(src, flags, obj, opt, vc6inc):
+    """Compile one source with clang-cl into obj -> (ok, log)."""
     flags = verify.unit_flags(src, flags)
     staged = verify.stage_source(src)
     iflags, inc = verify.include_paths(staged)
-    inc = inc.replace(str(TOOLCHAIN / pkg / "Include"), str(vc6inc))
-    rel = build.rel_src(src)
-    obj = out / "obj" / mod / rel.with_suffix(".obj")
-    obj.parent.mkdir(parents=True, exist_ok=True)
+    inc = inc.replace(str(TOOLCHAIN / COMPILER / "Include"), str(vc6inc))
+    pathlib.Path(obj).parent.mkdir(parents=True, exist_ok=True)
     cmd = [str(CLANG), *CLANG_FLAGS, *clang_flags(flags, opt), *verify.DEFINES.split(), *iflags, f"/Fo{obj}",
            str(staged)]
     r = subprocess.run(cmd, env=dict(os.environ, INCLUDE=inc), capture_output=True, text=True,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    log = (r.stdout + r.stderr).strip()
+    return r.returncode == 0, (r.stdout + r.stderr).strip()
+
+
+def compile_one(job, out, opt, vc6inc):
+    mod, src, flags, pkg = job
+    rel = build.rel_src(src)
+    ok, log = compile_to(src, flags, out / "obj" / mod / rel.with_suffix(".obj"), opt, vc6inc)
     logf = out / "log" / mod / rel.with_suffix(".log")
-    if r.returncode == 0:
+    if ok:
         logf.unlink(missing_ok=True)
     else:
         logf.parent.mkdir(parents=True, exist_ok=True)
         logf.write_text(log)
-    return job, r.returncode == 0, log
+    return job, ok, log
 
 
 def main():
