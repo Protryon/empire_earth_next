@@ -102,16 +102,18 @@ unsigned long TMPoll::Poll()
 }
 
 // FUNCTION: LLE 0x10053a56
-// Resumes a paused poll, but sets the start time to now plus the elapsed part, so the current period restarts
+// Resumes a paused poll: the current period continues from the part that had elapsed when it was paused
 void TMPoll::Resume()
 {
     if (!(this->mPauseRemaining.QuadPart > 0) || !this->mRunning)
         return;
+    // Fixed: the elapsed part used to be added to the start time (in counter mode without converting it to counter
+    // ticks), so the current period started over; it is subtracted now
     if (this->mUseCounter) {
         QueryPerformanceCounter(&this->mStartTime);
-        this->mStartTime.QuadPart += this->mPauseRemaining.QuadPart;
+        this->mStartTime.QuadPart -= this->mPauseRemaining.QuadPart * TMPoll::sCounterFrequency;
     } else
-        this->mStartTime.QuadPart = timeGetTime() + this->mPauseRemaining.QuadPart;
+        this->mStartTime.QuadPart = timeGetTime() - this->mPauseRemaining.QuadPart;
     this->mPauseRemaining.QuadPart = 0;
 }
 
