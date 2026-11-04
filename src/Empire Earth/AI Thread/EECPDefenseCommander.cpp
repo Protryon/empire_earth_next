@@ -1110,7 +1110,7 @@ float EECPDefenseCommander::ComputeTownThreat(EETown* inTown, long& outPlayerID,
 
 // FUNCTION: EXE 0x4799fa
 // Returns how many more population the defensive groups may use (defensive cap minus used share of the unit
-// limit); with no unit limit it returns the population already used
+// limit); 0 with no unit limit
 long EECPDefenseCommander::GetUnitAllowance()
 {
     std::vector<EECPAttackSubGroup*> theGroups;
@@ -1136,11 +1136,12 @@ long EECPDefenseCommander::GetUnitAllowance()
         } else
             theUsed += (theGroups[i])->mRequest->GetPopulation();
     }
+    long theAllowance = 0;   // no unit limit: no allowance (was the population already used)
     if (theTotal > 0) {
         float theFraction = (float)theUsed / theTotal;
-        theUsed = theFraction < theShare ? (long)((theShare - theFraction) * theTotal) : 0;
+        theAllowance = theFraction < theShare ? (long)((theShare - theFraction) * theTotal) : 0;
     }
-    return theUsed;
+    return theAllowance;
 }
 
 // FUNCTION: EXE 0x479bd1
