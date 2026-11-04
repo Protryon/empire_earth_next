@@ -340,9 +340,14 @@ long GETexture::Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GE
                                 theMip = theNext;
                             }
                         }
+                    } else {
+                        // No surface was created for this frame: report it instead of setting a stale pointer.
+                        theResult = kErrorOutOfMemory;
+                        continue;
                     }
                 drop:
                     if (inNumMipLevelsToDrop > 0) {
+                        // Swap in the reduced surface only when it was created.
                         if (inScreen->CreateSurface(theDropDescription, &theDropSurface) == kErrorOK) {
                             theTarget = theDropSurface;
                             theMip = theSurface;
@@ -359,9 +364,9 @@ long GETexture::Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GE
                                     theTarget = theTarget->GetAttachedSurface(0);
                                 }
                             }
+                            theSurface->Dereference();
+                            theSurface = theDropSurface;
                         }
-                        theSurface->Dereference();
-                        theSurface = theDropSurface;
                     }
                     theResult = this->mFrames[theFrame]->SetSurface(theSurface);
                     if (theResult == kErrorOK)
