@@ -651,8 +651,7 @@ void EEWonNet::ImportGameInfo(unsigned char* inMemoryPointer, EEWonNetGameInfo& 
 }
 
 // FUNCTION: EXE 0x4cede5
-// Joins the named game group with the password, or reports that it was not found; with no groups at all it returns
-// with the routing data lock still held (original bug)
+// Joins the named game group with the password, or reports that it was not found
 void EEWonNet::JoinGame(const char* inName, const char* inPassword)
 {
     UWideString theMessage;
@@ -666,8 +665,11 @@ void EEWonNet::JoinGame(const char* inName, const char* inPassword)
         return;
     EnterCriticalSection(&this->mRouting->mDataLock);
     theGroups = this->mRouting->GetGroupMap();
-    if (theGroups.size() == 0)
+    if (theGroups.size() == 0) {
+        // Fix: release the routing data lock on this early exit too (it used to stay held).
+        LeaveCriticalSection(&this->mRouting->mDataLock);
         return;
+    }
     for (theGroup = theGroups.begin(); theGroup != theGroups.end(); theGroup++) {
         if (_mbscmp((const unsigned char*)this->ToString(theGroup->second->mName).c_str(),
                     reinterpret_cast<const unsigned char*>(inName)) == 0
