@@ -81,12 +81,13 @@ void ESProfile::ClearAllRecords()
 }
 
 // FUNCTION: LLE 0x10003a01
-// Copies the named profile's history to outHistory when it exists; returns true either way
+// Copies the named profile's history to outHistory when it exists; returns whether it exists
 bool ESProfile::GetProfileInformation(const UWideString& inName, ESProfileHistory& outHistory)
 {
     std::map<UWideString, ESProfileHistory>::iterator theRecord = ESProfile::sProfileHistory.find(inName);
-    if (theRecord != ESProfile::sProfileHistory.end())
-        outHistory = theRecord->second;
+    if (theRecord == ESProfile::sProfileHistory.end())
+        return false;   // Fixed: used to return true for a missing profile as well
+    outHistory = theRecord->second;
     return true;
 }
 
