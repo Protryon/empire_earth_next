@@ -2223,9 +2223,7 @@ long EEClearRandomMapGenerators(); // clears the random-map generator list; retu
 
 // FUNCTION: EXE 0x543557
 // Starts the sound engine and music conductor from the preferences and creates the sound manager; returns false
-// if the sound engine fails, else no defined value (see below)
-// The original's success path returns no value (after the three destructors AL holds whatever the last
-// one left), yet the caller tests AL
+// if the sound engine fails, else true
 bool EEInitializeSounds()
 {
     FSFileSpec theStartupDirectory;
@@ -2268,6 +2266,7 @@ bool EEInitializeSounds()
     gSoundManager->SetLatency(200);
     theResult = URegisterShutdown(EEDeleteSoundManager);
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x7c4, "theResult == keseOK");
+    return true;    // the success path returned no value (the caller tested whatever AL held)
 }
 
 // FUNCTION: EXE 0x5414a3
