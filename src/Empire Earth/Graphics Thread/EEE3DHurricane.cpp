@@ -281,7 +281,8 @@ long EEE3DHurricane::Step()
     unsigned long theFrameTime = this->mGraphicObject->mFrameTimes[13];
     unsigned long theFrameCount = this->mGraphicObject->mFrameCounts[13];
     bool theStart;
-    if (theFrame == this->mGraphicObject->mStartFrames[0] && theTime == 0.0f)
+    // The effect plays animation 13: its first frame is that animation's start frame.
+    if (theFrame == this->mGraphicObject->mStartFrames[13] && theTime == 0.0f)
         theStart = true;
     else
         theStart = false;
@@ -319,6 +320,8 @@ long EEE3DHurricane::Step()
             theChanged = true;
         else
             theChanged = false;
+        // Place the sound at the unit, not at the map origin.
+        this->mUnit->mComplexUnit->mPhysicalModel.GetLocation().GetPosition(theLocation);
         this->SetSound(Fn1487A3(theLocation, this->mGraphicObject, 0, this->mSound, theFrame, theChanged));
         if (this->mSound)
             this->mSound->Dereference();
