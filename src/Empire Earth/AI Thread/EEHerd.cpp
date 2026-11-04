@@ -1202,7 +1202,7 @@ unsigned long EEHerd::UpdateIdle(unsigned long inTime)
 
 // FUNCTION: EXE 0x4a475f
 // Attack state: orders animals without a goal to attack the live target; else sends some grazing, sets the
-// follow timer to a bare interval (no current time added) and rests; returns 1000 ms
+// follow timer to the rest interval from now and rests; returns 1000 ms
 unsigned long EEHerd::UpdateAttacking(unsigned long inTime)
 {
     if (this->mTarget && this->mTarget->mHitPoints > 0) {
@@ -1215,7 +1215,7 @@ unsigned long EEHerd::UpdateAttacking(unsigned long inTime)
         }
     } else {
         this->ResetGrazeTimes(gPhysics->Fn82D66(this->mUnits), true);
-        this->mFollowTime = gPhysics->GetRandom(this->mAnimal->GetMinRestInterval(), this->mAnimal->GetMaxRestInterval());
+        this->mFollowTime = gPhysics->GetRandom(this->mAnimal->GetMinRestInterval(), this->mAnimal->GetMaxRestInterval()) + inTime;
         this->mState = 0;
     }
     return 1000;
