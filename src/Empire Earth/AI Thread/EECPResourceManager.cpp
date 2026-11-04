@@ -801,7 +801,7 @@ void EECPResourceManager::FindMines(unsigned long inCount, bool inNear, std::vec
 
 // FUNCTION: EXE 0x490602
 // Returns the first forage bush of a resource center that is reachable, not crowded, unthreatened and in range
-// of the town center; stops at the first bush that is not visible
+// of the town center; bushes not visible are skipped
 EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EEComplexUnit* inUnit)
 {
     EETileDistanceLess theTile(0, 0);
@@ -838,7 +838,7 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
                 continue;
         }
         if (!static_cast<EETile*>(theUnit->mTile)->IsVisibleTo(thePlayer))
-            break;
+            continue;   // skip it (was break: ended the whole search)
         if (gWorld.GetResourceUsers(theUnit) >= theLimit)
             continue;
         theTile.mCenter.mX = theUnit->GetTileX();
