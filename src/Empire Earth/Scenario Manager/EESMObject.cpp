@@ -485,8 +485,7 @@ bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation,
                     if (theArea->IsUnset())
                         theAreaTiles.push_back(theTile);
                     else if (theArea->mSelectMode == 0) {
-                        if ((float)x < theArea->mRect.GetLeft() || theArea->mRect.GetRight() < (float)x
-                            || (float)y < theArea->mRect.GetTop() || theArea->mRect.GetBottom() < (float)y)
+                        if (!theArea->ContainsTile(theTile))
                             theAreaTiles.push_back(theTile);
                     } else if (std::find(theTiles.begin(),theTiles.end(),theTile) == theTiles.end())
                         theAreaTiles.push_back(theTile);
@@ -494,8 +493,7 @@ bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation,
                     if (theArea->IsUnset())
                         theAreaTiles.push_back(theNextTile);
                     else if (theArea->mSelectMode == 0) {
-                        if ((float)(x + 1) < theArea->mRect.GetLeft() || theArea->mRect.GetRight() < (float)(x + 1)
-                            || (float)y < theArea->mRect.GetTop() || theArea->mRect.GetBottom() < (float)y)
+                        if (!theArea->ContainsTile(theNextTile))
                             theAreaTiles.push_back(theNextTile);
                     } else if (std::find(theTiles.begin(),theTiles.end(),theNextTile) == theTiles.end())
                         theAreaTiles.push_back(theNextTile);
