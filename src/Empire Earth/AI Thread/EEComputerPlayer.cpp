@@ -4922,7 +4922,7 @@ void EEComputerPlayer::SetNextIslandExpansionTime()
 
 // FUNCTION: EXE 0x43d677
 // Writes the base player, the managers, the resource centers and every tuning value to the saved game; returns
-// the first write error (resource center errors are ignored; clears mIsEnableTimeSet before writing it)
+// the first write error (resource center errors are ignored; the enable-time flag is written as false)
 // NEAR (99.3): the second save loop keeps i in a register where the original reloads it from [ebp+0x10] per use
 long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -4939,11 +4939,13 @@ long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorV
         theResult = outFile.Write(this->mLBD4);
     if (theResult == kErrorOK)
         theResult = outFile.Write(this->mFavoriteLandType);
-    this->mIsEnableTimeSet = false;
+    // the flag is saved as false (a loaded game schedules its next manager-enable check afresh), without
+    // clearing it in the running game
+    bool theEnableTimeSet = false;
     if (theResult == kErrorOK)
         theResult = outFile.Write(this->mNextEnableTime);
     if (theResult == kErrorOK)
-        theResult = outFile.Write(this->mIsEnableTimeSet);
+        theResult = outFile.Write(theEnableTimeSet);
     if (theResult == kErrorOK)
         theResult = outFile.Write(this->mBuildingDamaged);
     if (theResult == kErrorOK)
