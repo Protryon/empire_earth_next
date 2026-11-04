@@ -3286,7 +3286,8 @@ void EESMEffect::ChangeAttribute()
 // Tasks the scenario object's living units against a second object's units (sources dealt round-robin to targets,
 // grouped per player): calamity, gather, attack, heal, garrison, load, repair, drop off, patrol or move, by mTaskAction
 // mTaskAction > 6 casts calamity mTaskAction - 6; garrison is 5, load 3; a patrol point is unit type 0xdf. The
-// original tests the address of EEUnit::GetComplexUnit twice (C4550).
+// original tested the address of EEUnit::GetComplexUnit instead of calling it, twice, so neither NULL guard worked;
+// both now call it.
 void EESMEffect::TaskUnitsToObject()
 {
     GE3DLine theLine;
@@ -3445,7 +3446,7 @@ void EESMEffect::TaskUnitsToObject()
             }
             if (theTargetPlayer != thePlayer)
                 goto move;
-            if (this->mTaskAction == kSMTaskActionGarrison && theTarget->GetComplexUnit != NULL && theTarget->GetUnitClass()->mGarrisonCapacity > 0) {
+            if (this->mTaskAction == kSMTaskActionGarrison && theTarget->GetComplexUnit() != NULL && theTarget->GetUnitClass()->mGarrisonCapacity > 0) {
                 EEComplexUnit* theBuilding = theTarget->GetComplexUnit();
                 theGroup->SpreadAroundTile(theTarget->GetTileX(), theTarget->GetTileY());
                 theLoadUnits.clear();
@@ -3603,7 +3604,7 @@ void EESMEffect::TaskUnitsToObject()
                 case kSMTaskActionUnload:
                 case kSMTaskActionGarrison:
                     if ((theFirst->GetUnitClass()->GetCategory() == kUnitCategoryAirplane || theFirst->GetUnitClass()->GetCategory() == kUnitCategoryPlanetSpaceship)
-                        && (theFirst->GetComplexUnit == NULL
+                        && (theFirst->GetComplexUnit() == NULL
                             || theFirst->GetComplexUnit()->GetCommandType() == kActionIdle)) {
                         for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
                             EEComplexUnit* theUnit = theGroup->GetUnit(u);
@@ -3642,8 +3643,8 @@ void EESMEffect::TaskUnitsToObject()
 // Sends the scenario object's living units to a random tile of the task area (move, patrol, unload or calamity per
 // player); off-map units are placed in the area, and with no area set every unit is taken off the map instead
 // mTaskAction: 0/2 move, 1 patrol, 4 unload, > 6 cast calamity mTaskAction - 6. EESMArea::IsUnset is true for an
-// area with no anchor. The original tests the address of EEUnit::GetComplexUnit (C4550: argument list missing),
-// which keeps the inline's out-of-line copy at 0x1c42ce.
+// area with no anchor. The original tested the address of EEUnit::GetComplexUnit instead of calling it, so the
+// NULL guard never worked; it now calls it.
 void EESMEffect::TaskUnitsToArea()
 {
     std::vector<long> theNodeIDs;
@@ -3807,7 +3808,7 @@ void EESMEffect::TaskUnitsToArea()
             case kSMTaskActionNormal:
             case kSMTaskActionAttackMove: {
                 if ((theFirst->GetUnitClass()->GetCategory() == kUnitCategoryAirplane || theFirst->GetUnitClass()->GetCategory() == kUnitCategoryPlanetSpaceship)
-                    && (theFirst->GetComplexUnit == NULL || theFirst->GetComplexUnit()->GetCommandType() == kActionIdle)) {
+                    && (theFirst->GetComplexUnit() == NULL || theFirst->GetComplexUnit()->GetCommandType() == kActionIdle)) {
                     for (unsigned long u = 0; u < theGroup->GetNumUnits(); u++) {
                         EEComplexUnit* theUnit = theGroup->GetUnit(u);
                         EEUGLocation* theGoal = new EEUGLocation(theTarget, true, this->mTaskAction == kSMTaskActionNormal, false, 0.0f, false, 0);
