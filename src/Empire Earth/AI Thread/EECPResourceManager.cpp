@@ -1170,7 +1170,7 @@ void EECPResourceManager::UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps)
         if (theNew == NULL)
             continue;
         long theCategory = theNew->GetUnitClass()->mCategory;
-        if ((theCategory != kUnitCategoryLandCitizen && theCategory != kUnitCategoryNavalCitizen) || theUnit->mPlayer != thePlayer)
+        if ((theCategory != kUnitCategoryLandCitizen && theCategory != kUnitCategoryNavalCitizen) || theNew->mPlayer != thePlayer)
             continue;
         EEUGGather* theGoal = dynamic_cast<EEUGGather*>(theNew->GetLoadGoal());
         if (theGoal != NULL && theGoal->mResource != NULL)
