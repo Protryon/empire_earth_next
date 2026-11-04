@@ -146,10 +146,19 @@ void UICheckBox::SetChecked(bool inChecked)
 }
 
 // FUNCTION: LLE 0x1006009b
-// Enables or disables the box; either way shows it pressed
+// Enables or disables the box; a disabled box shows pressed, an enabled one normal
 void UICheckBox::SetDisabled(bool inDisabled)
 {
     this->mIsDisabled = inDisabled;
+    if (!inDisabled) {
+        // Fixed: enabling used to show the box pressed as well, until the next button-up or mouse move
+        if (this->mState == kButtonStatePressed) {
+            this->mBorderType = 1;
+            this->mState = kButtonStateNormal;
+            this->SetDirty(true);
+        }
+        return;
+    }
     if (this->mState == kButtonStatePressed)
         return;
     this->mBorderType = 0;
