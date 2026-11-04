@@ -143,17 +143,25 @@ void EESEAPaintElevation::Virtual4()
 }
 
 // FUNCTION: EXE 0x5a8507
-// Queues the area unless every point already sits at the level; returns whether it queued (the test compares
-// vertex heights with the level number, so it nearly always queues)
+// Queues the area unless every point already sits at the level's height; returns whether it queued
 bool EESEAPaintElevation::SetArea(long inLeft, long inTop, long inRight, long inBottom)
 {
     EESEAPaintRegion theRegion;
     bool theChanged = false;
     long x;
     long y;
+    // the height Virtual4 paints for this level (plateau, hills at 4x, or flat ground), in world units like the
+    // vertex heights
+    float theHeight;
+    if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true)
+        theHeight = this->mLevel * kSEPELevelHeight;
+    else if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationLowerButton))->GetIsChecked() == true)
+        theHeight = this->mLevel * kSEAPEHillHeight;
+    else
+        theHeight = 0.0f;
     for (y = inTop + 1; y >= inBottom; y--) {
         for (x = inLeft; x <= inRight + 1; x++) {
-            if (gWorld.mMap->mTerrainMesh.GetIsValidPoint(x, y) && gWorld.mMap->mTerrainMesh.GetZ(x, y) != this->mLevel)
+            if (gWorld.mMap->mTerrainMesh.GetIsValidPoint(x, y) && gWorld.mMap->mTerrainMesh.GetZ(x, y) != theHeight)
                 theChanged = true;
         }
     }
