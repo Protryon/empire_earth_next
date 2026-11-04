@@ -18,8 +18,7 @@
 #include "lle/GEText.h"
 
 // FUNCTION: LLE 0x10032ae2
-// Measures the text's pixel extent with its font; 256+ byte text is overmeasured (each full 256-byte chunk adds
-// the width of the whole text)
+// Measures the text's pixel extent with its font, in chunks of 256 characters
 void GEText::ComputeTextExtent()
 {
     HDC theContext;
@@ -36,7 +35,9 @@ void GEText::ComputeTextExtent()
             theString = reinterpret_cast<const unsigned char*>((const char*)this->mText);
             this->mTextExtent.SetRight(0.0f);
             for (i = 0; i < theChunks; i++) {
-                if (!GetTextExtentPoint32(theContext, this->mText, this->mText.GetLength(), &theSize)) {
+                // Measure this chunk only (this measured the whole text once per chunk).
+                const unsigned char* theNext = _mbsninc(theString, 256);
+                if (!GetTextExtentPoint32(theContext, reinterpret_cast<const char*>(theString), theNext - theString, &theSize)) {
                     GetLastError();
                     break;
                 }
@@ -44,7 +45,7 @@ void GEText::ComputeTextExtent()
                 this->mTextExtent.SetRight(this->mTextExtent.GetRight() + theSize.cx);
                 this->mTextExtent.SetTop(0.0f);
                 this->mTextExtent.SetBottom((float)theSize.cy);
-                theString = _mbsninc(theString, 256);
+                theString = theNext;
             }
             if (GetTextExtentPoint32(theContext, reinterpret_cast<const char*>(theString), strlen(reinterpret_cast<const char*>(theString)), &theSize)) {
                 this->mTextExtent.SetLeft(0.0f);
