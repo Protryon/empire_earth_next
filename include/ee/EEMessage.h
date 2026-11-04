@@ -36,7 +36,9 @@ public:
 // The local player changes the formation of the selected group (vtable 0x43de14). sizeof 0x18.
 class EEMChangeFormation : public EEMessage {
 public:
-    EEMChangeFormation(unsigned char* inData) { this->ImportMessage(inData); }
+    // the received message does not carry the formation flag (ImportMessage reads only the selection and type):
+    // start it cleared instead of leaving it uninitialised
+    EEMChangeFormation(unsigned char* inData) : mB14(false) { this->ImportMessage(inData); }
     EEMChangeFormation(long inFormationType) : EEMessage(kMessageChangeFormation, false), mFormationType(inFormationType)
     {
         this->mB14 = true;
