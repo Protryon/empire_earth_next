@@ -1563,7 +1563,9 @@ long EvaluateCondition(EERandomMap* ioMap, const UString& inText)
                        (const char*)gFileNames.back(), gLineNumbers.back(), theA);
             break;
         }
-    } else if (theToken < kRMDefined && theToken > kRMNotDefined) {
+    } else if (theToken < kRMDefined || theToken > kRMNotDefined) {
+        // Fixed: tested `< DEFINED && > NOTDEFINED`, never true, so unknown keywords fell into the DEFINED block
+        // (which also yields 0 for them)
         theResult = 0;
         if (gReportErrors)
             printf("%s (%d) : ERROR, unknown keyword %s\n",
