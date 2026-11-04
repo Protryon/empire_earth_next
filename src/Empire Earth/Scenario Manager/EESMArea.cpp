@@ -57,12 +57,13 @@ EESMArea::~EESMArea()
 
 // FUNCTION: EXE 0x5ba0d1
 // Returns whether the unit is in the area (no anchor: the unit is off the map; negative anchor: it has no complex
-// unit or that stands on the unit's tile; else by tile); reads the unit's tile before its NULL test
+// unit or that stands on the unit's tile; else by tile); false for no unit
 bool EESMArea::ContainsUnit(EEUnit* inUnit)
 {
-    U2DPoint<long> theTile(inUnit->GetTileX(), inUnit->GetTileY());
     bool theResult = false;
     if (inUnit != NULL) {
+        // The tile is read only after the NULL test (it was read first).
+        U2DPoint<long> theTile(inUnit->GetTileX(), inUnit->GetTileY());
         if (this->IsUnset()) {
             if (inUnit->GetTileX() == kNoArea)
                 theResult = true;
