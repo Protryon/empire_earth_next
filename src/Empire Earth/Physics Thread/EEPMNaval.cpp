@@ -327,13 +327,13 @@ void EEPMNaval::Step2(EEComplexUnit* inUnit)
 // NEAR: register/slot allocation and x87 order
 // FUNCTION: EXE 0x55c047
 // Accelerates or brakes the ship's pitch rate toward the target pitch and returns the new rate and pitch;
-// the rate is capped by the class's top speed, not its turn rate (as in the original)
+// the rate is capped by the class's turn rate
 void EEPMNaval::ApproachPitch(EEComplexUnit* inUnit, float inCurrent, float inTarget, float* outRate, float* outNew)
 {
     float theStep = gPhysics->mTickSeconds;
     inTarget = inTarget - inCurrent;
     float theAccel = inUnit->mUnitClass->GetAngularAcceleration();
-    float theMax = inUnit->mUnitClass->GetMaxVelocity();
+    float theMax = inUnit->mUnitClass->GetMaxAngularVelocity();
     float theRate = inUnit->mAngularVelocity.mPitch;
     switch (this->PitchMode(inUnit, theRate, inTarget)) {
     case 2:
