@@ -49,7 +49,7 @@ long GESurface::LoadBMP(FSFileSpec& inFile)
 }
 
 // FUNCTION: LLE 0x10025351
-// Saves the surface as a bottom-up 24-bit BMP; the header's file size uses the width for the height (as shipped)
+// Saves the surface as a bottom-up 24-bit BMP
 // NEAR: register/slot choice (the original keeps theHeight in ebx from the biHeight store to the row start, ours
 // theBytesPerRow); declaration orders and pointer-expression shapes tried
 long GESurface::SaveAsBMP(FSFileSpec& inFile)
@@ -82,7 +82,8 @@ long GESurface::SaveAsBMP(FSFileSpec& inFile)
         theRowSize = theWidth * 3 + theWidth % 4;
         theBuffer = new unsigned char[theRowSize];
         theFileHeader.bfType = 0x4d42;
-        theFileHeader.bfSize = theRowSize * theWidth + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + 2;
+        // The file holds theHeight rows (this used the width) plus the two trailing bytes written after the pixels.
+        theFileHeader.bfSize = theRowSize * theHeight + sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + 2;
         theFileHeader.bfReserved1 = 0;
         theFileHeader.bfReserved2 = 0;
         theFileHeader.bfOffBits = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
