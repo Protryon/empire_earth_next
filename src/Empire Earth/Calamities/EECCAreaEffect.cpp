@@ -73,7 +73,7 @@ EECCAreaEffect::~EECCAreaEffect()
 
 // FUNCTION: EXE 0x4af260
 // Starts the calamity when it has a launch effect and a caster: plays it at the target (height from the
-// caster's tile, not the target's) with the sound; returns whether it started
+// target's tile) with the sound; returns whether it started
 bool EECCAreaEffect::Start(EECalamity* inCalamity)
 {
     EE_LOST_DEBUG(3);   // LOST-DEBUG: none: exact only (tools lostdebug_search)
@@ -84,8 +84,10 @@ bool EECCAreaEffect::Start(EECalamity* inCalamity)
     if (this->mGraphicEffect1 != NULL && inCalamity->GetCasterUnit() != NULL) {
         this->GetSourceLocation(inCalamity, theSourceLocation);
         inCalamity->GetTargetLocation(theLocation);
-        long theTerrainType = ::gWorld.mMap->GetTile(UMFloor(theSourceLocation.GetX()),
-                                                     UMFloor(theSourceLocation.GetY()))->mTerrainType;
+        // the effect's height at the target comes from the target's tile (water: sea level), as Infect tests
+        long theTerrainType = 0;
+        if (::gWorld.mMap->GetTile(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY())) != NULL)
+            theTerrainType = ::gWorld.mMap->GetTile(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY()))->mTerrainType;
         if (theTerrainType != 1 && theTerrainType != 10)
             theLocation.SetZ(::gWorld.mMap->mTerrainMesh.GetMeshZ(theLocation.GetX(), theLocation.GetY()));
         else
