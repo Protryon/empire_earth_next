@@ -548,8 +548,8 @@ long EEE3DVolcano::SetUp()
 }
 
 // FUNCTION: EXE 0x500a47
-// Draws the volcano mesh with vertex colours and z writes at depth range 0..1, then leaves the shared viewport's depth
-// range at 0..0 (the reverse of the other effects' save/restore order)
+// Draws the volcano mesh with vertex colours and z writes at depth range 0..1, and leaves the shared viewport at its
+// normal depth range 0..1
 long EEE3DVolcano::DrawPass4()
 {
     unsigned long theScreen = gScreenIndex;
@@ -565,7 +565,8 @@ long EEE3DVolcano::DrawPass4()
     Fn10F833();
     bool theSorted = gOrthographicView;
     long theResult = gRasterizer->Draw(this->mModel, theScreen, 1.0f, theSorted);
-    gU4E8F08.SetDepthRange(0.0f, 0.0f);
+    // Leave the shared viewport at its normal depth range 0..1 for the draws that follow.
+    gU4E8F08.SetDepthRange(0.0f, 1.0f);
     gRasterizer->SetViewport(gU4E8F08, theScreen);
     gRasterizer->SetZBuffer(kZBufferTestAndWrite, theScreen);
     return theResult;
