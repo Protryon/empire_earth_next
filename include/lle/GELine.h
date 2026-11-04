@@ -10,6 +10,15 @@ class LLE_API GELine {                      // sizeof 0xc (implicit operator=, I
 public:
     GELine();
     GELine(GE2DPoint& inStart, GE2DPoint& inEnd, GEColor& inStartColor, GEColor& inEndColor, float inOpacity);
+#ifdef __clang__
+    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
+    // forward to them (clang build only; remove once the parameters themselves are const).
+    GELine(const GE2DPoint& inStart, const GE2DPoint& inEnd, const GEColor& inStartColor, const GEColor& inEndColor,
+           float inOpacity)
+        : GELine(const_cast<GE2DPoint&>(inStart), const_cast<GE2DPoint&>(inEnd), const_cast<GEColor&>(inStartColor), const_cast<GEColor&>(inEndColor), inOpacity) {}
+    void SetEndPoint(const GE2DPoint& inPoint) { SetEndPoint(const_cast<GE2DPoint&>(inPoint)); }
+    void SetStartPoint(const GE2DPoint& inPoint) { SetStartPoint(const_cast<GE2DPoint&>(inPoint)); }
+#endif
     ~GELine();
     void GetColorPerVertex(GEColor& outStart, GEColor& outEnd) const
     {

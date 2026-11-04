@@ -58,6 +58,13 @@ public:
     void SetTexture(GETexture* inTexture, unsigned long inScreen);
     void SetTextureCoordinates(GETextureCoordinate& inTopLeft, GETextureCoordinate& inTopRight,
                                GETextureCoordinate& inBottomRight, GETextureCoordinate& inBottomLeft);
+#ifdef __clang__
+    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
+    // forward to them (clang build only; remove once the parameters themselves are const).
+    void SetTextureCoordinates(const GETextureCoordinate& inTopLeft, const GETextureCoordinate& inTopRight,
+                               const GETextureCoordinate& inBottomRight, const GETextureCoordinate& inBottomLeft)
+        { SetTextureCoordinates(const_cast<GETextureCoordinate&>(inTopLeft), const_cast<GETextureCoordinate&>(inTopRight), const_cast<GETextureCoordinate&>(inBottomRight), const_cast<GETextureCoordinate&>(inBottomLeft)); }
+#endif
     void SetXYScale(float inXScale, float inYScale) { this->mXScale = inXScale; this->mYScale = inYScale; this->ComputeRotation(); }  // 0xf771; the UI expands it
     void SetZ(float inZ);
     void SetZPerVertex(float inTopLeft, float inTopRight, float inBottomRight, float inBottomLeft);

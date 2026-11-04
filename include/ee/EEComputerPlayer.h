@@ -147,6 +147,12 @@ public:
     // 0x2db6d (ret 8): fills ioMap with the classes inScreener accepts (EECPUnitSelector::GatherCandidates)
     // (provisional name)
     void GetScreenedTypesByLine(std::map<long, std::vector<long>*>& ioMap, EEAIFOUnitSelectionScreener& inScreener);
+#ifdef __clang__
+    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
+    // forward to them (clang build only; remove once the parameters themselves are const).
+    void GetScreenedTypesByLine(std::map<long, std::vector<long>*>& ioMap, const EEAIFOUnitSelectionScreener& inScreener)
+        { GetScreenedTypesByLine(ioMap, const_cast<EEAIFOUnitSelectionScreener&>(inScreener)); }
+#endif
     // The scenario effect's AI tuning setters: inline, defined in EESMEffect.cpp (their only user, SetAIVariable, calls
     // them out of line: COMDATs 0x1c1ca9..0x1c24c8, 63 B each). Names are provisional (by field).
     void SetAntiAirMax(long inValue);  // 0x1c1ca9

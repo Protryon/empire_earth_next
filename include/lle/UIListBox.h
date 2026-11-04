@@ -35,6 +35,16 @@ public:
               const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex,
               unsigned long inBorderThickness);
     virtual ~UIListBox();
+#ifdef __clang__
+    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
+    // forward to them (clang build only; remove once the parameters themselves are const).
+    UIListBox(unsigned long inId, const std::vector<T>& inData, unsigned long inLineHeight, bool inAutoSelect,
+              const GERectangle& inRectangle, UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
+        : UIListBox(inId, const_cast<std::vector<T>&>(inData), inLineHeight, inAutoSelect, inRectangle, inForm,
+                    inIndex, inBorderThickness) {}
+    template <class P> void InsertLine(const T& inLine, unsigned long inIndex, const P& inSort)
+        { this->InsertLine(inLine, inIndex, const_cast<P&>(inSort)); }
+#endif
     virtual void AppendLine(const T& inLine);
     virtual void AppendStringArray(std::vector<T>& inLines);
     virtual void ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent, bool inScrollTo);

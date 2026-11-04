@@ -195,6 +195,13 @@ private:
     unsigned long AddToVisibleForms(UIForm* inForm);
     void CreateBitmap(GEBitmap* inBitmap, GETextureCoordinate& inTopLeft, GETextureCoordinate& inTopRight,
                       GETextureCoordinate& inBottomRight, GETextureCoordinate& inBottomLeft);
+#ifdef __clang__
+    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
+    // forward to them (clang build only; remove once the parameters themselves are const).
+    void CreateBitmap(GEBitmap* inBitmap, const GETextureCoordinate& inTopLeft, const GETextureCoordinate& inTopRight,
+                      const GETextureCoordinate& inBottomRight, const GETextureCoordinate& inBottomLeft)
+        { CreateBitmap(inBitmap, const_cast<GETextureCoordinate&>(inTopLeft), const_cast<GETextureCoordinate&>(inTopRight), const_cast<GETextureCoordinate&>(inBottomRight), const_cast<GETextureCoordinate&>(inBottomLeft)); }
+#endif
     void LoadTexture(const UString& inName, GETexture*& outTexture);
     void RemoveClippedForms(unsigned long inIndex);
     void ResetClippedForms();

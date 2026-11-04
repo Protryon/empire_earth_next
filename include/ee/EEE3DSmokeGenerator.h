@@ -8,6 +8,12 @@
 class EEE3DSmokeGenerator : public EEEffect3D {
 public:
     EEE3DSmokeGenerator(GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, long inKind);   // 0xf98b4
+#ifdef __clang__
+    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
+    // forward to them (clang build only; remove once the parameters themselves are const).
+    EEE3DSmokeGenerator(const GE3DPoint& inLocation, EEGraphicEffect* inGraphicEffect, long inKind)
+        : EEE3DSmokeGenerator(const_cast<GE3DPoint&>(inLocation), inGraphicEffect, inKind) {}
+#endif
     EEE3DSmokeGenerator(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind);   // 0xf9945
     EEE3DSmokeGenerator(long inKind);       // 0xf997f
     // +0x00 empty (ICF-folded into EEE3DMultiEffect's 0xf43b8; ??_G 0xf9929)

@@ -80,6 +80,13 @@ public:
 		const_iterator& operator--()
 			{--_Myoff;
 			return (*this); }
+#ifdef __clang__
+		// VC6 had no postfix operators here and fell back to the prefix ones (C4620): it++ meant ++it
+		const_iterator& operator++(int)
+			{return (++*this); }
+		const_iterator& operator--(int)
+			{return (--*this); }
+#endif
 		const_iterator& operator+=(difference_type _N)
 			{_Myoff += _N;
 			return (*this); }
@@ -121,6 +128,13 @@ public:
 		iterator& operator--()
 			{--_Myoff;
 			return (*this); }
+#ifdef __clang__
+		// VC6 had no postfix operators here and fell back to the prefix ones (C4620): it++ meant ++it
+		iterator& operator++(int)
+			{return (++*this); }
+		iterator& operator--(int)
+			{return (--*this); }
+#endif
 		iterator& operator+=(difference_type _N)
 			{_Myoff += _N;
 			return (*this); }

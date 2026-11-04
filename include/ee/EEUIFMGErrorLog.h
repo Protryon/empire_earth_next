@@ -10,6 +10,13 @@ class EEUIFMGErrorLog : public UILBString {
 public:
     EEUIFMGErrorLog(const GERectangle& inRectangle, UIForm* inForm, GEFont* inFont, std::vector<UWideString>& inData,
                     unsigned long inIndex, unsigned long inId);   // 0x267ad9
+#ifdef __clang__
+    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
+    // forward to them (clang build only; remove once the parameters themselves are const).
+    EEUIFMGErrorLog(const GERectangle& inRectangle, UIForm* inForm, GEFont* inFont,
+                    const std::vector<UWideString>& inData, unsigned long inIndex, unsigned long inId)
+        : EEUIFMGErrorLog(inRectangle, inForm, inFont, const_cast<std::vector<UWideString>&>(inData), inIndex, inId) {}
+#endif
     // inline (the main game form's CopyData 0x264dc4 copies its error strings in: vector<UWideString>::operator[]
     // out of line, then SetDirty) (provisional name)
     void SetLine(unsigned long inIndex, const UWideString& inLine) { this->mData[inIndex] = inLine; this->SetDirty(true); }

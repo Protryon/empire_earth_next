@@ -24,6 +24,11 @@ public:
     long Suspend();
     long Terminate();
     void SetName(UString& inName);
+#ifdef __clang__
+    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
+    // forward to them (clang build only; remove once the parameters themselves are const).
+    void SetName(const UString& inName) { SetName(const_cast<UString&>(inName)); }
+#endif
     static void SetThreadName(unsigned long inThreadID, const char* inName);
     // proven inline: exported COMDATs kept in NELagLossSimulator.cpp's range (0x3d78b..0x3d7ba, declaration
     // order), i.e. the first unit in link order that includes this header after the Network Engine headers.

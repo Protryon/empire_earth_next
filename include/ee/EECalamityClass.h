@@ -93,6 +93,13 @@ public:
     // +0x3c (0xadec7): 1 = refused, 2 = protected by an area effect, 0 = fine (tile (inX, inY), when inCheck)
     virtual long CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, unsigned long inX, unsigned long inY, bool inCheck,
                            EEUnit* inTargetUnit);
+#ifdef __clang__
+    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
+    // forward to them (clang build only; remove once the parameters themselves are const).
+    long CanCastAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation, unsigned long inX, unsigned long inY,
+                   bool inCheck, EEUnit* inTargetUnit)
+        { return CanCastAt(inUnit, const_cast<GE3DPoint&>(inLocation), inX, inY, inCheck, inTargetUnit); }
+#endif
     // +0x40 (0xade97): Virtual3C(0, GE3DPoint(), inX, inY, inCheck, inTargetUnit)
     virtual long CanCast(EEUnit* inTargetUnit, unsigned long inX, unsigned long inY, bool inCheck);
     // +0x44 (0xadd8a): advances inCalamity's clock; 7 once its life time is over, else 0. Ticks the contagion helper.

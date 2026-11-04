@@ -21,6 +21,31 @@ public:
     long GetRegistryValue(long inRootKey, UWideString& inKey, UWideString& inValueName, UWideString& outValue);
     long SetRegistryValue(long inRootKey, UWideString& inKey, UWideString& inValueName, UWideString& inValue);
     long SetRegistryValue(long inRootKey, UWideString& inKey, UWideString& inValueName, long inValue);
+#ifdef __clang__
+    // VC6 bound temporaries to the non-const reference parameters above; clang does not. These const overloads
+    // forward to them (clang build only; remove once the parameters themselves are const).
+    long CreateRegistryKey(long inRootKey, const UWideString& inKey)
+        { return CreateRegistryKey(inRootKey, const_cast<UWideString&>(inKey)); }
+    long DeleteRegistryKey(long inRootKey, const UWideString& inKey)
+        { return DeleteRegistryKey(inRootKey, const_cast<UWideString&>(inKey)); }
+    long DeleteRegistryValue(long inRootKey, const UWideString& inKey, const UWideString& inValueName)
+        { return DeleteRegistryValue(inRootKey, const_cast<UWideString&>(inKey), const_cast<UWideString&>(inValueName)); }
+    long CreateRegistryValue(long inRootKey, const UWideString& inKey, const UWideString& inValueName,
+                             const UWideString& inValue)
+        { return CreateRegistryValue(inRootKey, const_cast<UWideString&>(inKey), const_cast<UWideString&>(inValueName), const_cast<UWideString&>(inValue)); }
+    long CreateRegistryValue(long inRootKey, const UWideString& inKey, const UWideString& inValueName, long& inValue)
+        { return CreateRegistryValue(inRootKey, const_cast<UWideString&>(inKey), const_cast<UWideString&>(inValueName), inValue); }
+    long GetRegistryValue(long inRootKey, const UWideString& inKey, const UWideString& inValueName, long& outValue)
+        { return GetRegistryValue(inRootKey, const_cast<UWideString&>(inKey), const_cast<UWideString&>(inValueName), outValue); }
+    long GetRegistryValue(long inRootKey, const UWideString& inKey, const UWideString& inValueName,
+                          UWideString& outValue)
+        { return GetRegistryValue(inRootKey, const_cast<UWideString&>(inKey), const_cast<UWideString&>(inValueName), outValue); }
+    long SetRegistryValue(long inRootKey, const UWideString& inKey, const UWideString& inValueName,
+                          const UWideString& inValue)
+        { return SetRegistryValue(inRootKey, const_cast<UWideString&>(inKey), const_cast<UWideString&>(inValueName), const_cast<UWideString&>(inValue)); }
+    long SetRegistryValue(long inRootKey, const UWideString& inKey, const UWideString& inValueName, long inValue)
+        { return SetRegistryValue(inRootKey, const_cast<UWideString&>(inKey), const_cast<UWideString&>(inValueName), inValue); }
+#endif
 };
 
 #endif
