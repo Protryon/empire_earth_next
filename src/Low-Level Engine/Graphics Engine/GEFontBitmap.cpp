@@ -250,7 +250,7 @@ long GEFontBitmap::Draw(GEText* inText, GERasterizer* inRasterizer, unsigned lon
 }
 
 // FUNCTION: LLE 0x10015dcd
-// Draws the text glyph by glyph clipped to a rectangle; a glyph fully outside is skipped without advancing the pen
+// Draws the text glyph by glyph clipped to a rectangle; a glyph fully outside is skipped (the pen still advances)
 long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERasterizer* inRasterizer,
                         unsigned long inScreen)
 {
@@ -300,7 +300,9 @@ long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERaster
             }
             this->mBitmap->ComputeStretchedCoordsAndScale(theDestination, theDestination, theSource, inScreen);
         } else {
+            // A glyph fully outside the rectangle is not drawn, but the pen still advances past it.
             theDestination.SetLeft(theDestination.GetRight() + 1.0f);
+            theLocation.SetX(theLocation.GetX() + this->mCharacters[theIndex].mRect.GetWidth());
             theCharacter = _mbsinc(theCharacter);
             continue;
         }
