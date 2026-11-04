@@ -284,7 +284,12 @@ bool EEHerd::Chase()
                     long theWaypoint = gPhysics->GetRandom(1L, 7L);
                     if (theWaypoint >= (long)this->mTarget->mWaypoints.size())
                         theWaypoint = this->mTarget->mWaypoints.size();
-                    theLocation = this->mTarget->mWaypoints[theWaypoint].mLocation;
+                    // the clamp above lands one past the last waypoint: that slot holds no waypoint, so it reads
+                    // as the zero location instead of past the end of the path
+                    if (theWaypoint < (long)this->mTarget->mWaypoints.size())
+                        theLocation = this->mTarget->mWaypoints[theWaypoint].mLocation;
+                    else
+                        theLocation = GE3DPoint(0.0f, 0.0f, 0.0f);
                 }
                 EEUGLocation* theGoal = new EEUGLocation(&theLocation, true, true, theFace, theHeading, false, false);
                 if (!this->GiveGoal(theUnit, theGoal, 0, kActionPrepareToMove) && theGoal)
