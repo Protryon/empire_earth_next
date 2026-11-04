@@ -1472,7 +1472,8 @@ void EEWonNet::SendChat(const UWideString& inText)
             break;
         case 'R':
         case 'r':
-            if (inText.GetLength() >= 6 && this->mReplyClientId != 0) {
+            // Fix: "no reply target yet" is 0xffff (the constructor's value), not 0.
+            if (inText.GetLength() >= 6 && this->mReplyClientId != 0xffff) {
                 unsigned char* theRest = _mbsninc(reinterpret_cast<const unsigned char*>((const char*)inText), 5);
                 gResource->GetString(IDS_WHISPERED, theMessage);
                 theMessage += reinterpret_cast<const char*>(theRest);
