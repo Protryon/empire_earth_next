@@ -37,34 +37,19 @@ def _first_ret(pe,rva,limit=0x400):
     raise ValueError(f'no ret within {limit:#x} bytes of rva {rva:#x}')
 
 
-def locate(image_bytes,linkmap=None):
-    """(out_rva, result_rva, world_va) after checking both bodies; raises ValueError on anything unexpected."""
-    import pefile
-    pe=pefile.PE(data=image_bytes,fast_load=True)
-    if linkmap:
-        out=linkmap.address(OUT_SYMBOL)-0x400000;result=linkmap.address(RESULT_SYMBOL)-0x400000;world=linkmap.address(WORLD_SYMBOL)
-    else:out,result,world=OUT_RVA_ORIGINAL,RESULT_RVA_ORIGINAL,WORLD_VA_ORIGINAL
-    body=_first_ret(pe,out)
-    text=[(i.mnemonic,i.op_str) for i in body]
-    size=body[-1].address+body[-1].size-0x400000-out
-    want=[('mov','ebx, dword ptr [esp + 0xc]'),('mov','edi, dword ptr [esi + ebx*4 + 0x74]'),
-          ('mov','eax, dword ptr [esi + 0xb84]'),('cmp','edi, dword ptr [esi + eax*4 + 0x74]'),('ret','8')]
-    if size!=0x72 or text[0]!=('push','ebx') or any(w not in text for w in want) or sum(m=='call' for m,_ in text)!=4:
-        raise ValueError(f'{OUT_SYMBOL} at rva {out:#x}: unexpected body ({size:#x} bytes); refusing --no-human-defeat')
-    body=_first_ret(pe,result)
-    text=[(i.mnemonic,i.op_str) for i in body]
-    stores=[o for m,o in text if m=='mov' and o.endswith(f'+ {RESULT_OFF:#x}], ebx')]
-    refs=[o for m,o in text if f'{world+CURRENT_OFF:#x}]' in o]+[o for m,o in text if f'*4 + {world+PLAYERS_OFF:#x}]' in o]
-    if (text[:3]!=[('push','ebp'),('mov','ebp, esp'),('sub','esp, 0x5c')] or text[-1]!=('ret','4') or len(stores)!=1
-            or ('mov','ebx, dword ptr [ebp + 8]') not in text or ('cmp','ebx, 2') not in text or len(refs)!=2):
-        raise ValueError(f'{RESULT_SYMBOL} at rva {result:#x}: unexpected body; refusing --no-human-defeat')
-    return out,result,world
+def locate(image_bytes,linkmap):
+    """(out_rva, result_rva, world_va) by map name. ee checks both bodies against VC6's code first; every image this
+    fork's harness runs is clang-built (other instructions, same functions), so the guard relies on the map and on
+    the test profile keeping both functions out of line (clang_link.HARNESS_HOOKS)."""
+    return (linkmap.address(OUT_SYMBOL)-0x400000,linkmap.address(RESULT_SYMBOL)-0x400000,linkmap.address(WORLD_SYMBOL))
 
 
 def harness_args(stage,fulllink_map=None):
     from fulllink_locator import LinkMap
-    out,result,world=locate((pathlib.Path(stage)/'EE-AOC.exe').read_bytes(),LinkMap(fulllink_map) if fulllink_map else None)
-    return (out,result,world),('--no-human-defeat',f'{out:x}',f'{result:x}',f'{world:x}',f'{PLAYERS_OFF:x}',f'{CURRENT_OFF:x}')
+    from layout import off
+    out,result,world=locate(None,LinkMap(fulllink_map))
+    return (out,result,world),('--no-human-defeat',f'{out:x}',f'{result:x}',f'{world:x}',
+                               f"{off('EEWorld',PLAYERS_OFF):x}",f"{off('EEWorld',CURRENT_OFF):x}")
 
 
 def record(out,result,world):

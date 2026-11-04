@@ -49,6 +49,7 @@ UNITS = [
     ("exe", "Empire Earth/AI Thread/EEComputerPlayer.cpp"),
     ("exe", "Empire Earth/Units/EEComplexUnit.cpp"),
     ("exe", "Empire Earth/Player/EEPlayer.cpp"),
+    ("exe", "Empire Earth/Communications/EEMessage.cpp"),
 ]
 LINE = re.compile(r"^\s*(\d+)(?::(\d+)-(\d+))? \|( *)(.*)$")
 

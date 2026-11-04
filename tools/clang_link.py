@@ -89,6 +89,22 @@ TEST_PROFILES = {
              "            DDSCAPS_TEXTURE | DDSCAPS_COMPLEX | DDSCAPS_MIPMAP | DDSCAPS_SYSTEMMEMORY;   // TEST PROFILE\n", 1)],
     },
 }
+# Functions the harness (tools/harness) hooks at their entry with a debugger breakpoint: kept out of line in the test
+# profile, so a call inside their own unit cannot be inlined past the hook (VC6 never inlined them).
+HARNESS_HOOKS = [
+    ("Empire Earth/Empire Earth/EEWorld.cpp", "void EEWorld::RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID)"),
+    ("Empire Earth/Player/EEPlayer.cpp", "void EEPlayer::SetGameResult(long inState)"),
+    ("Empire Earth/Physics Thread/EEPhysics.cpp", "void EEPhysics::ReportStatistics()"),
+    ("Empire Earth/Physics Thread/EEPhysics.cpp", "void EEPhysics::Tick()"),
+    ("Empire Earth/Communications/EEMessage.cpp", "void EEMStartLoading::Execute()"),
+    ("Empire Earth/Empire Earth/Empire Earth.cpp", "bool EECreateInstanceMutex()"),
+    ("Empire Earth/User Interface Thread/EEWonNetAvailableGameFormManager.cpp",
+     "bool EEPointUnitOrTile(const GE2DPoint& inPoint, EETile*& outTile, GE3DPoint& outPoint, bool inFlag)"),
+    ("RTS Engine/Graphics/RTSGraphics.cpp", "unsigned long RTSGraphics::Main(void* inGraphics)"),
+]
+for _unit, _decl in HARNESS_HOOKS:
+    TEST_PROFILES["windowed-software"].setdefault(_unit, []).append(
+        ("\n" + _decl + "\n", "\n__declspec(noinline) " + _decl + "   // TEST PROFILE: harness hook\n", 1))
 
 
 class ClangObjects:

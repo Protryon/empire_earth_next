@@ -30,7 +30,8 @@ Requirements: the game install, MSYS2 `mingw-w64-i686-gcc` (`C:\msys64\mingw32`)
 | Part | State |
 |---|---|
 | staging, registry, `exe_boot.c`, presentation bridge, silent mixer, RDP proxy, telemetry (`game_state_probe.py`), `--exercise tour/settings/random-game`, `--play-seconds` | ported: the MSVC STL build passes the tour and plays |
-| `ai_game.py`, `no_human_defeat.py`, `human/` (`human_input.c`: ~110 offsets), `timeshim.*`, seed pin (`EEMStartLoading+0x14`) | not yet: still VC6 offsets |
+| `--exercise ai-game`, `--time-factor`/`--no-render` (time shim), `--seed` (pin offset translated), `--no-human-defeat` (by map name; hooked functions kept out of line by the test profile, `clang_link.HARNESS_HOOKS`) | ported: the MSVC STL build plays a 2-AI game to the time cap |
+| `human/` (`human_input.c`: ~90 offsets, Dinkum deque internals read raw) and so `--human-script` / `EE_HUMAN_LOCKSTEP` | not yet |
 | `differential/` (`layout.py`, `ptsync.h`, `ai_layout.py`, `sampler.py`) | not yet |
 | `mp_game.py`, `save_load.py`, `scenario_game.py`, `synth_scenario.py`, `game_batch.py`, `play.py` | not yet |
 

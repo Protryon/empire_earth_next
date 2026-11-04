@@ -160,7 +160,7 @@ def main():
         trace_names={linkmap.address(s)-0x400000:s for s in a.trace_symbol}
     if a.seed is not None:   # opt-in test intervention; the image is not patched
         seed_rva=(LinkMap(fulllink_map).address(SEED_SYMBOL)-0x400000 if a.fulllink else SEED_RVA_ORIGINAL)
-        harness_extra=tuple(harness_extra)+('--seed-pin',f'{seed_rva:x}','14',str(a.seed))
+        harness_extra=tuple(harness_extra)+('--seed-pin',f'{seed_rva:x}',f"{layout.off('EEMStartLoading',0x14):x}",str(a.seed))
         print(f'TEST seed pin {a.seed} at {SEED_SYMBOL} rva {seed_rva:#x} [ecx+0x14]',flush=True)
     reg_subtree=None;mutex_rva=None
     if a.instance is not None:   # round 39 opt-in: parallel instance; the image is not patched
