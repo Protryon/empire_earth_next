@@ -138,6 +138,9 @@ bool EEUGUnloadTransport::IsInUnloadRange()
     bool theResult;
     if (this->mTransport != NULL && this->mTransport->mUnitClass->mUnitType == kUnitTypeTeleporter)
         theResult = true;
+    else if (this->mTransport == NULL)
+        // a transport not found on load: not in range (its tile used to be read through NULL)
+        theResult = false;
     else {
         U2DPoint<long> theTile(this->mTransport->mTileX, this->mTransport->mTileY);
         theResult = theTile.DistanceToSquaredF(this->mDestination) <= this->mUnloadRangeSquared;
