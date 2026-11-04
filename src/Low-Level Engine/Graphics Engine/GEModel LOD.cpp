@@ -186,8 +186,11 @@ void GEModel::ComputeLODReduction(unsigned long inLODCount)
             }
         }
     }
-    delete[] theMetaVertexLists;
     for (i = 0; i < this->mMaterialCount; i++) {
+        // Free the last set of meta vertices too, then the per-material arrays themselves.
+        UListNode<GELODMetaVertex*>* theMetaNode;
+        for (theMetaNode = theMetaVertexLists[i].mHead; theMetaNode; theMetaNode = theMetaNode->mNext)
+            delete theMetaNode->mData;
         UListNode<GELODPolygon*>* thePolygonNode;
         for (thePolygonNode = thePolygonLists[i].mHead; thePolygonNode; thePolygonNode = thePolygonNode->mNext)
             delete thePolygonNode->mData;
@@ -195,6 +198,10 @@ void GEModel::ComputeLODReduction(unsigned long inLODCount)
         for (theVertexNode = theVertexLists[i].mHead; theVertexNode; theVertexNode = theVertexNode->mNext)
             delete theVertexNode->mData;
     }
+    delete[] theMetaVertexLists;
+    delete[] thePolygonLists;
+    delete[] theVertexLists;
+    delete[] theVertices;
     for (i = 0; i < this->mSubModelCount; i++)
         this->mSubModels[i]->ComputeLODReduction(inLODCount);
 }
