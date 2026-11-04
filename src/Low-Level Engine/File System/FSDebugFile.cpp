@@ -807,12 +807,13 @@ long FSDebugFile::ReadPossibleInfoString(UString& outName)
 }
 
 // FUNCTION: LLE 0x10008c87
-// Skips a line end when reading text, but always reports a native error (fscanf of "\r\n" converts nothing)
+// Skips a line end when reading text; native error if the stream fails
 long FSDebugFile::ReadPossibleEOL()
 {
     long theResult = kErrorOK;
     if (this->mStream && this->mIsTextInput) {
-        if (fscanf(this->mStream, "\r\n", NULL) <= 0)
+        // Fixed: tested fscanf's conversion count, which is always 0 for this format, so it always failed
+        if (fscanf(this->mStream, "\r\n") == EOF && ferror(this->mStream))
             theResult = kErrorNativeError;
     }
     return theResult;
