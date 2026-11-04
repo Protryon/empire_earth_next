@@ -268,7 +268,8 @@ void EEE2DFire::UpdatePart(unsigned long inIndex)
     if (theTime >= (float)theFrameTime) {
         theFrame = UMFloatToLong(theTime / (float)theFrameTime);
         theTime -= (float)(theFrame * theFrameTime);
-        theFrame = (theFrame + theOldFrame) % theFrameCount;
+        // loop within the graphic's frames [start, start + count), where SetUp starts the parts
+        theFrame = theStartFrame + (theFrame + theOldFrame - theStartFrame) % theFrameCount;
     }
     this->mParts[inIndex].mFrame = theFrame;
     this->mParts[inIndex].mTime = theTime;
