@@ -409,7 +409,7 @@ void EEUGLoadContainer::RemoveUnit(EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x6262f3
 // Writes the base goal, container and unit ids, loading distance, destination and rendezvous tiles; returns the first
-// write error (of the unit ids only the last write's)
+// write error
 long EEUGLoadContainer::SaveContainer(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile,
                                       const UString& inKey)
 {
@@ -423,8 +423,9 @@ long EEUGLoadContainer::SaveContainer(unsigned long inMajorVersion, unsigned lon
     theResult = outFile.Write(theCount);
     if (theResult != 0)
         return theResult;
+    // stop at the first failed unit id write (each result used to overwrite the previous one)
     for (std::vector<EEComplexUnit*>::iterator theIterator = this->mUnits.mItems.begin();
-         theIterator != this->mUnits.mItems.end(); ++theIterator)
+         theIterator != this->mUnits.mItems.end() && theResult == 0; ++theIterator)
         theResult = outFile.Write((*theIterator)->GetUnitID());
     if (theResult != 0)
         return theResult;
