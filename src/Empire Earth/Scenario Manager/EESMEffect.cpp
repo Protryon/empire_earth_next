@@ -3675,6 +3675,9 @@ void EESMEffect::TaskUnitsToArea()
         bool theUnset = theArea->IsUnset();
         if (!theUnset && !theArea->IsOffMap()) {
             theArea->GetTiles(theTiles);
+            // An area with no tiles (e.g. anchored to a unit that is gone) has no destination
+            if (theTiles.empty())
+                return;
             long theIndex = gPhysics->GetRandom(0L, (long)theTiles.size() - 1);
             theLocation.SetX((float)(theTiles[theIndex]).GetX());
             theLocation.SetY((float)(theTiles[theIndex]).GetY());
