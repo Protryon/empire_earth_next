@@ -179,18 +179,19 @@ long EEButtonObject::LoadTexture()
 
 // FUNCTION: EXE 0x4d584e
 // Shows the button's cell, inset by one texel, on a bitmap scaled to a rectangle (a 40-texel cell on textures 256 or
-// more wide, else the whole texture); its NULL texture test comes after the texture is already used
+// more wide, else the whole texture); a button without a texture is skipped
 void EEButtonObject::SetFaceBitmap(GEBitmap* inBitmap, const GERectangle& inRectangle, unsigned long inScreen)
 {
     GETextureCoordinate theTopLeft;
     GETextureCoordinate theTopRight;
     GETextureCoordinate theBottomLeft;
     GETextureCoordinate theBottomRight;
+    // Test the texture before reading its size (a button whose texture failed to load is skipped).
+    if (this->mTexture == NULL)
+        return;
     float theWidth = (float)(this->mTexture->GetWidth() << this->mTexture->GetNumMipLevelsToDrop());
     unsigned long theHeight = this->mTexture->GetSurface()->GetHeight();
     unsigned long theDrop = this->mTexture->GetNumMipLevelsToDrop();
-    if (this->mTexture == NULL)
-        return;
     inBitmap->SetTexture(this->mTexture, inScreen);
     float theU;
     float theV;
