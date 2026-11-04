@@ -17,6 +17,9 @@ one-off sources → DLL links → exe link → stub audit against VC6.
 | `tools/clang_forscope.py [--apply]` | hoists for-init variables used after their loop. |
 | `tools/clang_reftemp.py [--apply]` | names temporaries passed to non-const references at plain call sites. |
 | `tools/objcmp.py A B` | compares two VC6 object trees by section contents (A/B of a dialect edit). |
+| `tools/clang_link.py --test-profile windowed-software` | TEST-ONLY images in `build/clang-test/` for the live-game harness (see "Running the game"). |
+| `tools/clang_session.py [game_session options]` | runs a clang exe through ee's `tools/boot/game_session.py` (env `EE_REPO`, default `../ee`). |
+| `tools/clang_rtti_audit.py` | lists `dynamic_cast` sites only VC6's lenient RTTI runtime resolves (see "RTTI"). Heuristic: check each hit. |
 
 Process rules learned the hard way:
 - **Run a fixer once per fresh census.** A second `--apply` on stale logs follows old line numbers and rewrites the
@@ -104,9 +107,17 @@ Clang inlines every local use and emits nothing, so the other units' references 
     to every link;
   - the engine: link lle first and append its own lld import library to the others.
 - **Exports** (`.def` from the original's table): drop entries no clang object defines, listed in
-  `exports_dropped.txt` (lle: 33 pooled string literals `??_C@`, two `UIListBox<UWideString>::InsertLine<P>`
-  instantiations, a default-constructor closure). The C exports are undecorated in the `.def`, so match `_name`
-  and `_name@n` before dropping anything.
+  `exports_dropped.txt` (lle: 33 pooled string literals `??_C@` and a default-constructor closure `??_F`, which no
+  retail or clang image imports). The C exports are undecorated in the `.def`, so match `_name` and `_name@n` before
+  dropping anything.
+- **Member-template instantiations are mangled differently.** VC6 leaves out the template arguments
+  (`?InsertLine@?$UIListBox@...`), clang and modern MSVC keep them (`??$InsertLine@<args>@?$UIListBox@...`). Clang
+  only exports one if it is instantiated explicitly (`template LLE_API void UIListBox<UWideString>::InsertLine<P>(...)`
+  in lle/UILBString.h, clang only). `clang_def` then exports the VC6 name as an alias (`vc6name=clangname`), so VC6-built
+  images (the retail exe imports one of them) still load against the clang engine.
+- **Check mixed loading both ways**: every clang image's imports must be exported by the retail DLLs, and every
+  retail image's imports by the clang DLLs. Then each clang module can be swapped in alone, which the per-module
+  comparisons need.
 - **Exported class templates**: clang applies `dllexport/dllimport` on a class template to every instantiation
   (the modern MSVC rule). VC6 instantiated non-exported specialisations locally. Keep the attribute only on the
   explicit instantiation that crosses the DLL boundary (`UIListBox`: `UILISTBOX_API` is empty under clang).
@@ -124,6 +135,38 @@ Clang inlines every local use and emits nothing, so the other units' references 
   / vslot 263 / pure 11 / mismatch 1 / data 75 / library 2 / engine 2.
 - The VC6 full link had aliased GetPathSubSectorAt/ID(long, long) to same-scope functions with other signatures and
   stack cleanup (latent crash). Proper bodies fixed both builds.
+
+## RTTI: casts the VC6 runtime tolerated
+
+The images keep using the system `msvcrt.dll` for `__RTDynamicCast`, and Windows 11's is a newer implementation.
+Its base class descriptors differ in one flag: clang sets `BCD_HASPCHD` (0x40) and VC6 left it 0. For RTTI with the
+flag the runtime takes a checked path that also requires the source type to be a base of the target. VC6-style
+RTTI gets the old lookup, which only searches the object's base list for the target.
+- The source cast `dynamic_cast<RTSDummyUnit*>(RTSUnit*)` (a tile chain's dummy head, linked through `RTSUnit*`
+  although it is no `RTSUnit`) is a cast between unrelated hierarchies. It worked in the original and returned null
+  under clang, and the first clang game load crashed in `RTSUnit::Link`. Fix: `RTSDummyHead(link)` in
+  ee/RTSDummyHeader.h asks the object's own type (`typeid(*link) == typeid(RTSDummyUnit)`), null-safe. That is the
+  same answer, since nothing derives from RTSDummyUnit.
+- Run `tools/clang_rtti_audit.py` after new code arrives: it lists casts no class of the program can satisfy, from
+  the objects' cast sites and the images' RTTI. It is a heuristic (at -O1 a descriptor address can come from a
+  register), so read each hit.
+
+## Running the game (ee's live harness)
+
+- ee's `tools/boot/game_session.py` needs on the machine: MSYS2 with `mingw-w64-i686-gcc` (`C:\msys64\mingw32`),
+  pip `pefile capstone`, ee's own `toolchain/` (its fetch scripts, `--dl` pointing at a download cache), and from
+  ee's build: `tools/relink.py mixer` and `tools/xref_noreloc.py exe`.
+- The harness puts a full-link exe into its windowed/software test profile by locating the original image's binary
+  patch sites and proving each function's body instruction by instruction. That cannot work for clang code. The
+  same policy is built from source instead (`clang_link.py --test-profile windowed-software`: text rules applied to
+  the staged copies of EEPreferences.cpp and Empire Earth.cpp, each with an expected match count; src/ untouched).
+  `clang_session.py` replaces only that locator step and reads the telemetry globals from the map by name.
+- lld's map has 16-digit addresses; ee's map readers expect LINK 6's 8. `clang_link.py` rewrites the exe's map.
+- The harness refuses a relinked engine that lacks any original export. `clang_session.py` exempts exactly `??_C@`
+  and `??_F`, which nothing imports.
+- Results (2026-11-04): the clang exe with retail DLLs, and the clang exe + engine + TCP + Default (retail renderer
+  in its software profile, silent mixer), pass the full menu/settings tour, load a random-map game and play 120 s
+  without a fault.
 
 ## For WONAPI/WONLobby later
 

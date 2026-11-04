@@ -50,9 +50,14 @@ the VC6 comparison phase is over:
 Linking: `python -I tools/clang_link.py` compiles everything with clang-cl (`-O1`) and links all seven images with
 lld-link into `build/clang/<target>/` (the six DLLs, then the exe via the VC6 build's stub planner). Its stubs are the
 same set as the VC6 build's: WON stubs, ICF aliases, data member aliases, no traps for first-party functions.
-Language.dll is resources only and comes from the VC6 build. Not yet run: no game install on the build machine.
+Language.dll is resources only and comes from the VC6 build.
+
+Running: `python -I tools/clang_session.py [game_session.py options]` runs a clang exe through the ee repository's
+headless live-game harness (`clang_link.py --test-profile windowed-software lle exe` builds its test image). The clang
+exe, alone or with the clang engine, TCP and Default DLLs, passes the menu/settings tour, loads a random-map game and
+plays 120 s without a fault (2026-11-04).
 
 `PORT_LEARNINGS.md` records every problem and fix, as the checklist for code that is ported later (WONAPI/WONLobby).
 
-Next steps: run the clang images in the game, the differential game comparison against the VC6 build, and then
+Next steps: the differential game comparison against the VC6 build, the clang renderers in the game, and then
 replacing Dinkum 2.33 with a modern standard library.
