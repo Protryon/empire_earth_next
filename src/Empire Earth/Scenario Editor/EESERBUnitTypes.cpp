@@ -786,27 +786,17 @@ void EESEPlayerScreen::Load()
 }
 
 // FUNCTION: EXE 0x575c48
-// Enters the player tab on player page 1 and moves the player combo to (5, 74); the group switching for other checked
-// tabs uses shifted groups but is dead, as page 1 is checked first
+// Enters the player tab on player page 1 and moves the player combo to (5, 74); checking page 1 unchecks the other
+// tabs, so only the player page groups are switched (the dead tech tree / AI branches used shifted groups)
 void EESEPlayerScreen::Enter()
 {
     this->mPage = 0;
     GE2DPoint theLocation(5.0f, 74.0f);
     this->mTabs[kPlayerScreenPlayerPage1]->Check();
-    if (this->mTabs[kPlayerScreenTechTree]->GetIsChecked()) {
-        this->mTabs[kPlayerScreenPlayerPage1]->GetForm()->GetEntityGroup(5)->Disable();
-        this->mTabs[kPlayerScreenPlayerPage1]->GetForm()->GetEntityGroup(4)->Disable();
-        this->mTabs[kPlayerScreenPlayerPage1]->GetForm()->GetEntityGroup(8)->Enable();
-    } else if (this->mTabs[kPlayerScreenAISettings]->GetIsChecked()) {
-        this->mTabs[kPlayerScreenPlayerPage1]->GetForm()->GetEntityGroup(5)->Enable();
-        this->mTabs[kPlayerScreenPlayerPage1]->GetForm()->GetEntityGroup(4)->Disable();
-        this->mTabs[kPlayerScreenPlayerPage1]->GetForm()->GetEntityGroup(8)->Disable();
-        this->mPlayerSelection->SetDisplayMode(kDisplayModeShown);
-    } else {
-        this->mTabs[kPlayerScreenPlayerPage1]->GetForm()->GetEntityGroup(5)->Disable();
-        this->mTabs[kPlayerScreenPlayerPage1]->GetForm()->GetEntityGroup(4)->Enable();
-        this->mTabs[kPlayerScreenPlayerPage1]->GetForm()->GetEntityGroup(8)->Disable();
-    }
+    UIForm* theForm = this->mTabs[kPlayerScreenPlayerPage1]->GetForm();
+    theForm->GetEntityGroup(5)->Disable();
+    theForm->GetEntityGroup(4)->Enable();
+    theForm->GetEntityGroup(8)->Disable();
     this->mPlayerSelection->SetLocation(theLocation);
 }
 
