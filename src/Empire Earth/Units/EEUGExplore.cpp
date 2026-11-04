@@ -326,7 +326,7 @@ long EEUGExplore::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
 }
 
 // FUNCTION: EXE 0x621cbd
-// Writes a bad-tile count of 0 (the bad tiles are not saved), the current tile, both no-areas flags and the search
+// Writes the bad tiles (count and points), the current tile, both no-areas flags and the search
 // radius; returns the first write error
 long EEUGExplore::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
@@ -334,9 +334,11 @@ long EEUGExplore::Save(unsigned long inMajorVersion, unsigned long inMinorVersio
     long theResult = EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile);
     this->mBadTiles.BuildPointList(thePoints, 1);
     if (theResult == 0) {
-        // the count written is 0, so the points are never saved (Load reads a zero count)
-        unsigned long theCount = 0;
+        // the bad tiles Load reads back (the count was always written as 0, so they were lost; old saves hold 0)
+        unsigned long theCount = thePoints.size();
         theResult = outFile.Write(theCount);
+        for (unsigned long i = 0; i < theCount && theResult == 0; i++)
+            theResult = thePoints[i].Save(outFile);
         if (theResult == 0) {
             theResult = this->mTile.Save(outFile);
             if (theResult == 0) {
