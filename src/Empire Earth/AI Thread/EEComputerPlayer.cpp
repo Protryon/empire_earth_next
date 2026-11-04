@@ -1138,8 +1138,8 @@ void EEComputerPlayer::Init()
     this->mAttackFrequencyPerEpoch = gCPBehaviors[kCPBehaviorAttackFrequencyPerEpoch].mFloatValue;
     this->mAttackFrequencyModifierEasy = gCPBehaviors[kCPBehaviorAttackFrequencyModifier].mIntValue1;
     this->mAttackFrequencyModifierHard = gCPBehaviors[kCPBehaviorAttackFrequencyModifier].mIntValue2;
-    this->mAttackFrequencyCeiling = gCPBehaviors[kCPBehaviorAttackFrequencyBoundaries].mIntValue2;
-    this->mAttackFrequencyFloor = gCPBehaviors[kCPBehaviorAttackFrequencyBoundaries].mIntValue1;
+    this->mAttackFrequencyCeiling = gCPBehaviors[kCPBehaviorAttackFrequencyBoundary].mIntValue2;
+    this->mAttackFrequencyFloor = gCPBehaviors[kCPBehaviorAttackFrequencyBoundary].mIntValue1;
     this->mAttackFrequencyMax = gCPBehaviors[kCPBehaviorAttackFrequency].mIntValue2;
     this->mAttackFrequencyMin = gCPBehaviors[kCPBehaviorAttackFrequency].mIntValue1;
     this->mInitialAttackDelayPerEpoch = gCPBehaviors[kCPBehaviorInitialAttackDelayPerEpoch].mIntValue1;
