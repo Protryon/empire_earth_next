@@ -811,11 +811,12 @@ EECPUGatherMilitaryUnitsCount::EECPUGatherMilitaryUnitsCount(EEComputerPlayer* i
 
 // FUNCTION: EXE 0x42b239
 // Adds a military request (not unit type 0x2e5 or a space/naval building) to the requested total, in units or
-// population; dereferences the class even when it is null
+// population (the type tests run only after the null and military tests pass)
 bool EECPUGatherMilitaryUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMRequest* inRequest)
 {
     bool theResult = inClass != NULL && this->mPlayer->mCombatManager->IsMilitaryClass(inClass) ? true : false;
-    theResult &= inClass->mUnitType != 0x2e5 && inClass->mCategory != kUnitCategorySpaceBuilding && inClass->mCategory != kUnitCategoryNavalBuilding;
+    theResult = theResult && inClass->mUnitType != 0x2e5 && inClass->mCategory != kUnitCategorySpaceBuilding
+        && inClass->mCategory != kUnitCategoryNavalBuilding;
     if (theResult == true)
         this->mRequested += this->mCountPopulation ? inClass->GetPopulationCost() * inRequest->mCount : inRequest->mCount;
     return theResult;
@@ -823,15 +824,14 @@ bool EECPUGatherMilitaryUnitsCount::CountRequest(EEUnitClass* inClass, EECPUMReq
 
 // FUNCTION: EXE 0x42b2b2
 // Counts a military unit (not unit type 0x2e5 or a space/naval building) as 1 or its population cost;
-// dereferences the unit even when it is null
+// the type tests run only after the null and military tests pass
 bool EECPUGatherMilitaryUnitsCount::CountUnit(EEComplexUnit* inUnit)
 {
     EEUnitClass* theClass;
     EECPCombatManager* theManager;
-    // STAND-IN (owner 2026-10-31): comma-assignments inside && make 0x42b2b2 exact
     bool theResult = inUnit != NULL && (theClass = inUnit->mUnitClass, theManager = this->mPlayer->mCombatManager,
         theManager->IsMilitaryClass(theClass)) ? true : false;
-    theResult &= inUnit->mUnitClass->mUnitType != 0x2e5 && inUnit->mUnitClass->mCategory != kUnitCategorySpaceBuilding
+    theResult = theResult && inUnit->mUnitClass->mUnitType != 0x2e5 && inUnit->mUnitClass->mCategory != kUnitCategorySpaceBuilding
         && inUnit->mUnitClass->mCategory != kUnitCategoryNavalBuilding;
     if (theResult != true)
         return theResult;
@@ -843,12 +843,13 @@ bool EECPUGatherMilitaryUnitsCount::CountUnit(EEComplexUnit* inUnit)
 }
 
 // FUNCTION: EXE 0x42b323
-// Adds a military class's unit list size (or that times its population cost) to the unit total; dereferences
-// the class even when it is null
+// Adds a military class's unit list size (or that times its population cost) to the unit total (the type tests
+// run only after the null and military tests pass)
 bool EECPUGatherMilitaryUnitsCount::CountUnits(EEUnitClass* inClass, std::deque<EEComplexUnit*>* inUnits)
 {
     bool theResult = inClass != NULL && inUnits != NULL && this->mPlayer->mCombatManager->IsMilitaryClass(inClass) ? true : false;
-    theResult &= inClass->mUnitType != 0x2e5 && inClass->mCategory != kUnitCategorySpaceBuilding && inClass->mCategory != kUnitCategoryNavalBuilding;
+    theResult = theResult && inClass->mUnitType != 0x2e5 && inClass->mCategory != kUnitCategorySpaceBuilding
+        && inClass->mCategory != kUnitCategoryNavalBuilding;
     if (theResult == true)
         this->mUnits += this->mCountPopulation ? inClass->GetPopulationCost() * inUnits->size() : inUnits->size();
     return theResult;
