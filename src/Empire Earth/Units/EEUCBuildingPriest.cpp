@@ -256,7 +256,7 @@ long EEUCBuildingPriest::PriestVirtualA0(EEComplexUnit* inUnit, unsigned long in
         }
         break;
     case kTriggerHasEnoughManaForConversion:
-        if (inUnit->mLastAttacker != NULL && inUnit->mPower >= EEGetConversionCost(static_cast<EEComplexUnit*>(inUnit->mLastAttacker)))
+        if (inUnit->mLastAttacker != NULL && inUnit->mPower >= EEGetConversionCost(inUnit))
             theResult = 1;
         break;
     case kTriggerAttackerIsLegalConversionTarget: {

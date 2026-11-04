@@ -252,7 +252,7 @@ long EEUCBasicPriest::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inE
         break;
     }
     case kTriggerHasEnoughManaForConversion:
-        theResult = inUnit->mLastAttacker != NULL && inUnit->GetPower() >= EEGetConversionCost(static_cast<EEComplexUnit*>(inUnit->mLastAttacker)) ? 1 : 0;
+        theResult = inUnit->mLastAttacker != NULL && inUnit->GetPower() >= EEGetConversionCost(inUnit) ? 1 : 0;
         break;
     case kTriggerConvertGoalStillValid:
         if (inUnit->mGoalState != NULL) {
