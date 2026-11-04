@@ -64,8 +64,7 @@ EEE3DDestructionSmoke::EEE3DDestructionSmoke(EEUnit* inUnit, EEGraphicEffect* in
 }
 
 // FUNCTION: EXE 0x4ebc56
-// Launches linked line effects outward in random directions from the centre, more for a bigger radius; returns
-// no value (eax is left over from the last launch, as in the original)
+// Launches linked line effects outward in random directions from the centre, more for a bigger radius; returns 0
 // NEAR: the frame layout and the centre's copies differ (logic as the original's)
 long EEE3DDestructionSmoke::SetUp()
 {
@@ -87,6 +86,7 @@ long EEE3DDestructionSmoke::SetUp()
         theLine.SetDirection(GEVector(theRotated.GetX() * theSpeed, theRotated.GetY() * theSpeed, 0.0f));
         gEffectManager->CreateLineEffect(theLine, this->mGraphicEffect->mLinkedEffect1, NULL);
     }
+    return 0;
 }
 
 // FUNCTION: EXE 0x4ebd9d
