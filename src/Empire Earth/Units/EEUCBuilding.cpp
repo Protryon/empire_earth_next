@@ -626,10 +626,10 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
                             GE2DPoint theTarget((float)theAttack->mTarget->GetTileX(), (float)theAttack->mTarget->GetTileY());
                             theGoal = new EEUGLocation(theTarget, false, true, false, 0.0f, false, false);
                         }
-                    } else if (theGoal->Suits(theCargo))
+                    } else if ((*theIterator)->Suits(theCargo))
                         theGoal = (*theIterator)->Clone();
                     else {
-                        theGoal->GetGoalLocation(thePosition);
+                        (*theIterator)->GetGoalLocation(thePosition);
                         theGoal = new EEUGLocation(&thePosition, false, true, false, 0.0f, false, false);
                     }
                 }
@@ -638,7 +638,8 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
         } else if (!theCargo->mPlayer->IsHuman() && theCargo->mUnitClass->mUnitType == kUnitTypeParatrooperPlane
                    && theCargo->GetGoal() != NULL) {
             GE3DPoint theTarget(0.0f, 0.0f, 0.0f);
-            bool theLast = theIterator == inUnit->mGoalQueues[theQueue].mGoals.end() - 1;
+            // The plane's own goal is its only (so last) destination: drop the troops there if the tile is free
+            bool theLast = true;
             theCargo->GetGoal()->GetGoalLocation(theTarget);
             EEUnitGoal* theCopy;
             if (theLast && EEIsTileFree(theCargo, UMFloorUnsigned(theTarget.GetX()), UMFloorUnsigned(theTarget.GetY())))
