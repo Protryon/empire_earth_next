@@ -924,8 +924,7 @@ void EECPPersonnel::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
             for (it = theRange.first, theEnd = theRange.second; it != theEnd; ++it) {
                 if (it->second != (ioSwaps[i]).mNew)
                     continue;
-                it->second->Dereference();
-                (ioSwaps[i]).mNew->Reference();
+                it->second->Dereference();   // the erased entry's reference (no new one is taken)
                 this->mUnits.erase(it);
                 break;
             }
