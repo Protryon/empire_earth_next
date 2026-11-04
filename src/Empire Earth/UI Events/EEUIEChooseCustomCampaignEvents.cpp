@@ -67,7 +67,7 @@ static void OnNoCustomCampaigns(UIForm* inForm);
 long EEUIECCCEFormOpen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     std::set<UString> theFiles;
-    std::set<UString>::iterator theIterator = 0;
+    std::set<UString>::iterator theIterator;
     UWideString theFileName;
     UWideString theMessage;
     UWideString theExtension;

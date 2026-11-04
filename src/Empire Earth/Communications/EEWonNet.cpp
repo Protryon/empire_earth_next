@@ -65,7 +65,7 @@ wchar_t* kWonCommunityName = L"EmpireEarth";                    // 0x4bba80
 
 extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
 unsigned long gWonClientId;                 // 0x4e60b8 (RegisterCallback stores the server's client id)
-unsigned short gEmptyWideString[2];         // 0x4e60bc (L"": zero .bss right after gWonClientId; size = the gap to 0x4e60c0)
+wchar_t gEmptyWideString[2];         // 0x4e60bc (L"": zero .bss right after gWonClientId; size = the gap to 0x4e60c0)
 extern unsigned long gU5308A0;              // 0x5308a0 (the adapter of the local address)
 
 static const unsigned short kEEWonNetGameInfoVersion = 1;   // 0x43e480 (ExportGameInfo's record version)
@@ -269,8 +269,6 @@ void EEWonNet::ConnectToLobby()
     char theName[1024];
     UWideString theString;
 
-    theGroup = NULL;
-    theMember = NULL;
     if (this->mRouting.get() == NULL)
         return;
     this->mL16C = 0;
@@ -316,7 +314,7 @@ void EEWonNet::ListGamesCallback(RoutingOp* inOp)
 void EEWonNet::ListRoomCallback(RoutingOp* inOp)
 {
     WONStatus theStatus = inOp->GetStatus();
-    RoutingGroupMap::const_iterator theGroup = NULL;
+    RoutingGroupMap::const_iterator theGroup;
     RoutingDataObjectList::iterator theObject = inOp->mDataObjects.begin();
     RoutingDataObjectList::iterator theData = theObject;
     char theName[1024];
@@ -658,7 +656,7 @@ void EEWonNet::JoinGame(const char* inName, const char* inPassword)
 {
     UWideString theMessage;
     RoutingGroupMap theGroups;
-    RoutingGroupMap::const_iterator theGroup = NULL;
+    RoutingGroupMap::const_iterator theGroup;
     std::wstring thePassword;
     std::string theName;
     bool theFound;
@@ -791,7 +789,7 @@ bool EEWonNet::RejoinRoom(bool inFlag)
 void EEWonNet::JoinRoom(const char* inRoom, const char* inPassword)
 {
     RoutingGroupMap theGroups;
-    RoutingGroupMap::const_iterator theGroup = NULL;
+    RoutingGroupMap::const_iterator theGroup;
     UWideString theMessage;
     std::wstring thePassword;
     std::string theName;
@@ -912,7 +910,7 @@ void EEWonNet::ClearGames()
 void EEWonNet::UpdateGameList()
 {
     UWideString theName;
-    std::map<unsigned short, EEWonNetGameInfo>::iterator theGame = NULL;
+    std::map<unsigned short, EEWonNetGameInfo>::iterator theGame;
     bool theShowClosed;
     bool theShowPassworded;
     bool theShowFirewalled;

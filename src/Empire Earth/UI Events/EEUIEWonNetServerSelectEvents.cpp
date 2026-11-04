@@ -68,7 +68,7 @@ long EEUIEWNSSCancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 long EEUIEWNSSOk::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     WONAPI::DirEntityList theServers(gWonNet->mServers);
-    WONAPI::DirEntityList::iterator theIterator = 0;
+    WONAPI::DirEntityList::iterator theIterator;
     unsigned long theSelection;
     UIListBox<UWideString>* theList = (UIListBox<UWideString>*)inForm->GetControl(kSelectServerListBox);
     if (!theList->GetHasSelection())

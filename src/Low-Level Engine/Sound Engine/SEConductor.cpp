@@ -852,7 +852,7 @@ long SEConductor::UnloadScore(long inID)
         else if (inID == this->GetCurrentlyPlayingScore())
             theResult = kErrorBusy;
         else {
-            std::vector<SEConductorScore>::iterator theEntry(&this->mScores[i]);
+            std::vector<SEConductorScore>::iterator theEntry = this->mScores.begin() + i;
             if (theEntry->mLoadCount == 1) {
                 this->mScores.erase(theEntry);
                 if (theScore)

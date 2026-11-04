@@ -25,7 +25,7 @@ class GE3DLine;
 // the bare sort(F, L) family calls U2DPoint::operator< out of line (0x10031459) with the same expression; a plain
 // less<> forwarding to operator< is refused there like the direct calls.
 namespace std {
-template<> struct less<U2DPoint<float> > : binary_function<U2DPoint<float>, U2DPoint<float>, bool> {
+template<> struct less<U2DPoint<float> > {   // (binary_function base dropped: removed from C++17)
     bool operator()(const U2DPoint<float>& inA, const U2DPoint<float>& inB) const
         { return inA.GetY() < inB.GetY() || (inA.GetY() == inB.GetY() && inA.GetX() > inB.GetX()); }
 };

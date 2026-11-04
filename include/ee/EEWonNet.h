@@ -7,6 +7,7 @@
 #define EE_EEWONNET_H
 
 #include <map>                              // EEWonNet::mGames/mRooms
+#include <string>                           // std::string/std::wstring (Dinkum's <map> brought it in)
 
 class EEUICWonNetRoomsBox;
 class TSCriticalSection;

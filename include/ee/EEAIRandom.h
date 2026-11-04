@@ -19,10 +19,16 @@ struct EEAIRandomGenerator {
     }
 };
 
+// Dinkum 2.33's random_shuffle(first, last, generator), spelled out: std::random_shuffle is gone from C++17 and
+// std::shuffle draws differently, so this keeps the AI's exact sequence of draws and swaps on every library.
 template<class _RI> void EEAIRandomShuffle(const _RI& inFirst, const _RI& inLast)
 {
     EEAIRandomGenerator theGenerator;
-    std::random_shuffle(inFirst, inLast, theGenerator);
+    if (inFirst == inLast)
+        return;
+    _RI theAt = inFirst;
+    for (long theCount = 2; ++theAt != inLast; ++theCount)
+        std::iter_swap(theAt, inFirst + theGenerator(theCount));
 }
 
 #endif
