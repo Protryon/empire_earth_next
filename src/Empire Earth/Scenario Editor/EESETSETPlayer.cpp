@@ -667,19 +667,18 @@ struct EESETSETTechnologyNameLess {
     }
 };
 
-static bool sTechnologySorted = false;      // 0x531fec (the technology list is built and sorted once; provisional name)
-
 // NEAR: the original sorts with EESETSConditionType.cpp's EESETSCTResearchNameLess sort (0x1805c0; the functor is shared in the original, ours is a unit copy) and differs in the erase loop
 // FUNCTION: EXE 0x58adb4
-// Shows the add/remove radios and the technology combo; builds the sorted editor tech list once per run (static flag)
-// (an original bug: a later editor session's new type keeps an empty list)
+// Shows the add/remove radios and the technology combo; builds the sorted editor tech list on the first call
 void EESETSETPlayerTechnology::Show(EESETSEffectControls* inControls)
 {
     GERectangle theRect;
     UWideString theText;
     GE2DPoint theLocation;
     GEText* theGEText;
-    if (!sTechnologySorted) {
+    // Built on the first Show of this type object, which is recreated with every scenario editor (a run-wide
+    // flag left a later editor session with an empty list).
+    if (this->mTechnologies.empty()) {
         gTechTree.GetNodeIDs(this->mTechnologies);
         for (unsigned long theEpoch = 0; theEpoch < 15; theEpoch++)
             this->mTechnologies.push_back((long)theEpoch);
@@ -691,7 +690,6 @@ void EESETSETPlayerTechnology::Show(EESETSEffectControls* inControls)
                 this->mTechnologies.erase(this->mTechnologies.begin() + theIndex);
         }
         std::sort(this->mTechnologies.begin(), this->mTechnologies.end(), EESETSETTechnologyNameLess());
-        sTechnologySorted = true;
     }
     gResource->GetString(IDS_TRIGGER_EDITOR_ADD, theText);
     theLocation.SetX(405.0f);

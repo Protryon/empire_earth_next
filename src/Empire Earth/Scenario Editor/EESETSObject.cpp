@@ -864,11 +864,9 @@ void EESETSObject::Duplicate()
 // NEAR: inline budget: the original expands GetPlayerScreen with its operator[] out of line (ours refuses the
 // accessor itself)
 // FUNCTION: EXE 0x591d63
-// Fills the page's player, area and state lists; the class list is built on the first call only (a static
-// flag, so an editor recreated after the main menu keeps an empty class list)
+// Fills the page's player, area and state lists; the class list is built on the first call only
 void EESETSObject::Activate()
 {
-    static bool sFirstTime = true;
     std::vector<UWideString> theNames;
     UWideString theName;
     unsigned long i;
@@ -886,7 +884,9 @@ void EESETSObject::Activate()
     gWorld.mScenarioManager->GetAreaNames(theNames);
     for (i = 0; i < theNames.size(); i++)
         this->mAreaComboBox->AppendLine(theNames[i]);
-    if (sFirstTime) {
+    // The class list is built on the first call for this page, which is recreated with every scenario editor
+    // (a run-wide flag left a later editor session with an empty list).
+    if (this->mUnitTypes.empty()) {
         this->mTypeComboBox->DeleteAllEntries();
         this->mUnitTypes.push_back(0);
         for (i = 1; i < 0x367; i++) {
@@ -901,7 +901,6 @@ void EESETSObject::Activate()
             gResource->GetString(gUnitClassTable[this->mUnitTypes[i]]->mNameStringID, theName);
             this->mTypeComboBox->AppendLine(theName);
         }
-        sFirstTime = false;
     }
     this->mActionComboBox->DeleteAllEntries();
     for (i = 0; i < 0x3e82; i++) {

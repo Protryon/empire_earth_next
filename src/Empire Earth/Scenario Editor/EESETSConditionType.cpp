@@ -514,17 +514,17 @@ struct EESETSCTResearchNameLess {
     }
 };
 
-static bool sResearchSorted = false;        // 0x531fe8 (the research list is built and sorted once per run) (provisional name)
-
 // FUNCTION: EXE 0x5802a4
-// Lays out the 'player has researched' condition; the first call in a run lists the editor-visible, non-unit
-// technologies and ids 0..14 sorted by name (a later editor instance keeps an empty list)
+// Lays out the 'player has researched' condition; the first call for this object lists the editor-visible, non-unit
+// technologies and ids 0..14 sorted by name
 void EESETSCTPlayerResearch::Show(EESETSConditionControls* inControls)
 {
     GERectangle theRect;
     UWideString theText;
     GE2DPoint theLocation;
-    if (!sResearchSorted) {
+    // Built on the first Show of this type object, which is recreated with every scenario editor (a run-wide
+    // flag left a later editor session with an empty list).
+    if (this->mTechnologies.empty()) {
         gTechTree.GetNodeIDs(this->mTechnologies);
         for (unsigned long theEpoch = 0; theEpoch < 15; theEpoch++)
             this->mTechnologies.push_back((long)theEpoch);
@@ -537,7 +537,6 @@ void EESETSCTPlayerResearch::Show(EESETSConditionControls* inControls)
                 this->mTechnologies.erase(this->mTechnologies.begin() + theIndex);
         }
         std::sort(this->mTechnologies.begin(), this->mTechnologies.end(), EESETSCTResearchNameLess());
-        sResearchSorted = true;
     }
     gResource->GetString(IDS_PLAYER_CONDITION_DETAILS, theText);
     theLocation.SetX(4.0f);
