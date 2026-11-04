@@ -48,8 +48,8 @@ unsigned long EEDatabase::GetCount()
 }
 
 // FUNCTION: EXE 0x4d60ae
-// Loads the database's records from a file, replacing any loaded ones; stops at the first failed record (leaking
-// it) and returns its error
+// Loads the database's records from a file, replacing any loaded ones; stops at the first failed record and
+// returns its error
 long EEDatabase::Load(FSFileSpec* inFile)
 {
     unsigned long theCount = 0;
@@ -64,8 +64,10 @@ long EEDatabase::Load(FSFileSpec* inFile)
         for (unsigned long i = 0; i < theCount; i++) {
             EEDbObject* theObject = new EEDbObject;
             theResult = theObject->Load(inFile);
-            if (theResult != kErrorOK)
+            if (theResult != kErrorOK) {
+                delete theObject;   // the failed record is freed (it leaked)
                 break;
+            }
             (*this->mObjects)[i] = theObject;
         }
     }
