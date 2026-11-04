@@ -230,7 +230,7 @@ EECPCombatManager::~EECPCombatManager()
 
 // FUNCTION: EXE 0x471f16
 // Queues an attack task on a unit (a location task for an own unit) or, without one, on an area against a random
-// enemy; reads the unit's complex unit even when the id does not resolve
+// enemy; a unit id that no longer resolves queues nothing
 void EECPCombatManager::AddAttackTask(unsigned long inUnitID, unsigned long inAreaSerial)
 {
     EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(inUnitID));
@@ -238,11 +238,12 @@ void EECPCombatManager::AddAttackTask(unsigned long inUnitID, unsigned long inAr
     EECPAGTask theTask;
     EECPILocation theLocation;
     if (inUnitID != 0 && inUnitID != -1) {
-        if (theUnit) {
-            theTask.mPlayer = gWorld.mPlayers[theUnit->mPlayer->mPlayerID];
-            if (theUnit->mPlayer == this->mPlayer)
-                theTask.mType = kAGTaskLocation;
-        }
+        // the unit is gone: there is nothing to attack (its complex unit used to be read through NULL)
+        if (theUnit == NULL)
+            return;
+        theTask.mPlayer = gWorld.mPlayers[theUnit->mPlayer->mPlayerID];
+        if (theUnit->mPlayer == this->mPlayer)
+            theTask.mType = kAGTaskLocation;
         theTask.SetUnit(theUnit->mComplexUnit);
         theTask.mMode = kAGModeCombat;
         if (theTask.mType == kAGTaskNone)
