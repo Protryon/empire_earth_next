@@ -463,9 +463,11 @@ void EEUnitClassImprovement::ChangeLevel(EEUnitClass* inUnitClass, EEUnitClassUp
 
 // FUNCTION: EXE 0x63b35b
 // Reapplies every raised improvement to the upgrade's freshly reset stats (levels end unchanged; the points spent
-// are added again)
+// are recounted)
 void EEUnitClassImprovement::Reapply(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade)
 {
+    // the points spent are recounted from scratch as the levels are reapplied
+    this->mTotalCost = 0;
     for (unsigned long i = 0; i < 16; i++) {
         if (!(this->mLevels[i] > 1))
             continue;
