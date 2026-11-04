@@ -111,7 +111,7 @@ GEFont* UIFontTable::CreateClosestFont(unsigned long inIndex, unsigned long inPi
 }
 
 // FUNCTION: LLE 0x100702d2
-// Deletes every font table entry and drops one reference to each shared font (the shared font list is kept)
+// Deletes every font table entry, drops one reference to each shared font and empties both lists
 void UIFontTable::DeleteAll()
 {
     unsigned long i;
@@ -122,6 +122,8 @@ void UIFontTable::DeleteAll()
     for (i = 0; i < UIFontTable::sFont.size(); i++)
         UIFontTable::sFont[i]->Dereference();
     UIFontTable::sFontTable.resize(0, NULL);
+    // Fixed: the shared font list used to be kept, so a later lookup or DeleteAll used released fonts
+    UIFontTable::sFont.clear();
 }
 
 // FUNCTION: LLE 0x10070337
