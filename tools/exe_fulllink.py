@@ -1,5 +1,11 @@
-"""Link EE-AOC.exe: its compiled units, the image libraries, the import libraries and
-resources, plus stubs.obj for the symbols the source does not define yet."""
+"""Link EE-AOC.exe with lld-link: its compiled units, the image libraries, the import libraries and resources,
+plus stubs.obj for the symbols the source does not define yet (pass 1 finds them, pass 2 links with the stubs, pass 3
+places the member aliases).
+
+The symbols the source does not define are classified by what they were in the original image (names.txt and the
+other link tables): the WON library (stubbed: its source is not part of the build yet), ICF / vtable-slot / pure
+aliases of defined functions, data the original placed inside other objects (member aliases), and the rest
+(traps). EXTRA_LIBS: libraries the caller adds to every link (tools/build.py: the engine's own import library)."""
 import bisect
 import collections
 import pathlib
@@ -12,15 +18,16 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import exe_roundtrip
 import exe_units
 import verify
-from ee import LINK_DIR, COMPILER, ROOT
+from ee import LINK_DIR, LLD_LINK, LLVM_LIB, ROOT, RUNTIME_LIBS, lib_paths
 from undname import undname
 EXE_RC = ROOT / "src" / "Empire Earth" / "EE-AOC.rc"
 GAME = (0x1000, 0x29d080)
 WON = [(0x29deb0, 0x3fe220), (0x416e00, 0x437000)]
 RDATA, DATA = (0x437000, 0x4b4000), (0x4b4000, 0x4b4000 + 0xb31e4)
 DATA_RAW_END = 0x4b4000 + 0x32000
-LINK_FLAGS = ("/INCREMENTAL:NO /OPT:REF /OPT:ICF /MACHINE:I386 /SUBSYSTEM:WINDOWS /NODEFAULTLIB /FIXED "
-              "/ENTRY:WinMainCRTStartup")
+LINK_FLAGS = ("/INCREMENTAL:NO /OPT:REF /OPT:ICF /MACHINE:X86 /SUBSYSTEM:WINDOWS /NODEFAULTLIB /FIXED "
+              "/ENTRY:WinMainCRTStartup /SAFESEH:NO /ERRORLIMIT:0 /DEMANGLE:NO")
+EXTRA_LIBS = []
 ODS, IDP, EXITP = "__imp__OutputDebugStringA@4", "__imp__IsDebuggerPresent@0", "__imp__ExitProcess@4"
 CLASSES = ("won", "engine", "icf", "vslot", "pure", "mismatch", "compile", "unwritten", "unregistered", "unbound", "data",
            "library")
@@ -135,6 +142,20 @@ def coff_symbols(path):
             defined[s["name"]] = "common"
         elif s["sec"] == 0:
             undef[s["name"]] = undef.get(s["name"], False) or s["type"] == 0x20
+    # clang leaves the type of undefined symbols null (the original compiler typed functions 0x20): a C++ name is a
+    # function when its demangled form has a parameter list, a C name when a call/jmp rel32 targets it
+    import implib
+    called = set()
+    vc = verify.Coff(path)
+    for i, sec in enumerate(vc.secs, 1):
+        if sec["chars"] & 0x20:
+            data = vc.section_data(i)
+            for va, sym, typ in vc.relocs(i):
+                if typ == 0x14 and va > 0 and data[va - 1] in (0xE8, 0xE9):
+                    called.add(sym["name"])
+    for n, f in undef.items():
+        if not f and not n.startswith("__imp_"):
+            undef[n] = (not implib.is_cpp_data(n)) if n.startswith("?") else n in called
     return defined, undef
 
 
@@ -154,8 +175,8 @@ def engine_lib(lib_dir, extra, pkg, functions=()):
     have = {ln.split()[0] for ln in lines[2:] if ln.strip()}
     lines += [f"    {n}{' DATA' if implib.is_cpp_data(n) else ''}" for n in extra if n not in have]
     deff.write_text("\n".join(lines) + "\n")
-    code, log = exe_roundtrip.run([str(pkg / "Bin" / "LIB.EXE"), "/nologo", "/MACHINE:IX86", f"/DEF:{deff.name}",
-                                   f"/OUT:{lib.name}"], lib_dir, pkg)
+    code, log = exe_roundtrip.run([str(LLVM_LIB), "/nologo", "/machine:x86", f"/def:{deff.name}",
+                                   f"/out:{lib.name}"], lib_dir)
     if code:
         sys.exit(log)
     implib.fix_members(lib, hints)
@@ -163,17 +184,19 @@ def engine_lib(lib_dir, extra, pkg, functions=()):
 
 
 def link(out, objs, libs, res, debug, tag):
-    pkg = verify.TOOLCHAIN / COMPILER
     target = out / "EE-AOC.exe"
     rsp = out / f"link_{tag}.rsp"
-    rsp.write_text("\n".join(f'"{p.relative_to(out) if p.is_relative_to(out) else p}"'
-                             for p in objs + libs + res) + "\n")
-    cmd = [str(pkg / "Bin" / "LINK.EXE"), "/nologo", *LINK_FLAGS.split(), *(["/DEBUG"] if debug else []),
-           f"/OUT:{target.name}", f"/MAP:{target.stem}.map", f"/PDB:{target.stem}.pdb", f"@{rsp.name}"]
+    rsp.write_text("\n".join(f'"{pathlib.Path(p).relative_to(out) if pathlib.Path(p).is_relative_to(out) else p}"'
+                             for p in [*objs, *libs, *EXTRA_LIBS, *res, *RUNTIME_LIBS]) + "\n")
+    cmd = [str(LLD_LINK), "/nologo", *LINK_FLAGS.split(), *(["/DEBUG"] if debug else []),
+           f"/OUT:{target.name}", f"/MAP:{target.stem}.map", f"/PDB:{target.stem}.pdb", *lib_paths(), f"@{rsp.name}"]
     if target.exists():
         target.unlink()
-    code, log = exe_roundtrip.run(cmd, out, pkg)
+    code, log = exe_roundtrip.run(cmd, out)
+    log = "\n".join(l for l in log.splitlines() if "ignoring section .debug$S with unrecognized magic" not in l)
     (out / f"link_{tag}.log").write_text(log)
+    import relink
+    relink.link6_map(target.with_suffix(".map"))
     return code, log
 
 
@@ -181,24 +204,27 @@ SYM_RE = re.compile(r'"[^"]*" \((\S+)\)$')
 
 
 def parse_log(log):
-    unres, dups, other = collections.defaultdict(list), [], []
-    for ln in log.splitlines():
-        m = re.match(r"^(.*?) : error LNK20(?:01|19): unresolved external symbol (.*?)(?: referenced in function .*)?$",
-                     ln)
-        if m:
-            s = m.group(2).strip()
-            mm = SYM_RE.search(s)
-            unres[mm.group(1) if mm else s].append(m.group(1))
+    """lld-link output (/demangle:no) -> ({undefined: [referencing objects]}, [(duplicate, object, object)],
+    [other errors])."""
+    unres, dups, other = {}, [], []
+    lines = log.splitlines()
+    for k, ln in enumerate(lines):
+        m = re.match(r"^lld-link: error: (undefined symbol|duplicate symbol): (\S+)", ln)
+        if not m:
+            if "error:" in ln and "too many errors" not in ln:
+                other.append(ln)
             continue
-        m = re.match(r"^(.*?) : (?:error LNK2005|warning LNK4006): (.*) already defined in (\S+?)(?:;.*)?$", ln)
-        if m:
-            s = m.group(2).strip()
-            mm = SYM_RE.search(s)
-            dups.append((mm.group(1) if mm else s, m.group(1), m.group(3)))
-            continue
-        if "error" in ln and "LNK1120" not in ln and "LNK1169" not in ln:
-            other.append(ln)
-    return dict(unres), dups, other
+        where = []
+        for l2 in lines[k + 1:]:
+            if not l2.startswith(">>> "):
+                break
+            mm = re.match(r">>> (?:referenced by|defined at) (?:.*?\()?([^():]+\.obj|[^():]+\.lib\([^)]*\))", l2)
+            where.append(mm.group(1) if mm else l2[4:])
+        if m.group(1) == "undefined symbol":
+            unres.setdefault(m.group(2), []).extend(where)
+        else:
+            dups.append((m.group(2), *(where + ["?", "?"])[:2]))
+    return unres, dups, other
 
 
 def scope_of(name):
@@ -637,8 +663,11 @@ def member_alias_pass(out, objs, libs, res, debug, stubs, member_alias):
             values, by3_obj)
 
 
-def link_exe(out, items, fails, libobj, debug=True, members=None, stubs_pass=True, patch=None, initialised=None):
-    pkg = verify.TOOLCHAIN / COMPILER
+def link_exe(out, items, fails, debug=True, members=None, stubs_pass=True, patch=None, initialised=None,
+             member_offsets=None):
+    """member_offsets(container symbol, VC6 offset) -> this build's offset of the same member (the member table
+    records VC6 layouts; classes holding STL containers changed size), or None to keep the table's offsets."""
+    pkg = None
     ok = [it for it in items if it["obj"] not in fails]
     game = [it for it in ok if it["mod"] == "exe"]
     img = [it for it in ok if it["mod"] == "exeimg"]
@@ -664,26 +693,12 @@ def link_exe(out, items, fails, libobj, debug=True, members=None, stubs_pass=Tru
     shutil.rmtree(lib_dir, ignore_errors=True)
     lib_dir.mkdir(parents=True)
     exe_roundtrip.write_order_object(lib_dir / "refs.obj", sorted(refs))
-    r = subprocess.run([sys.executable, "-I", str(pathlib.Path(__file__).parent / "implib.py"), "exe", str(lib_dir),
-                        str(lib_dir / "refs.obj")], capture_output=True, text=True)
-    if r.returncode:
-        sys.exit(r.stdout + r.stderr)
     import implib
     exe_imports = implib.read_imports("exe")
-    libs = []
-    for dll_name, _ in exe_imports:
-        stem = pathlib.Path(dll_name).stem
-        real = exe_roundtrip.REAL_IMPORT_LIBS.get(stem.upper())
-        libs.append(verify.TOOLCHAIN / real if real else lib_dir / f"{stem}.lib")
-    sx = lib_dir / "sxlrt233.lib"
-    code, log = exe_roundtrip.run([str(pkg / "Bin" / "LIB.EXE"), "/nologo", f"/OUT:{sx.name}",
-                                   str(libobj["newaop"]), str(libobj["delaop"]), sx.name], lib_dir, pkg)
-    if code:
-        sys.exit(log)
+    libs = implib.make_import_libs("exe", lib_dir, [lib_dir / "refs.obj"])
     imglib = lib_dir / "exeimg.lib"
     (lib_dir / "exeimg.rsp").write_text("\n".join(f'"{it["obj"]}"' for it in img) + "\n")
-    code, log = exe_roundtrip.run([str(pkg / "Bin" / "LIB.EXE"), "/nologo", f"/OUT:{imglib.name}", "@exeimg.rsp"],
-                                  lib_dir, pkg)
+    code, log = exe_roundtrip.run([str(LLVM_LIB), "/nologo", f"/out:{imglib.name}", "@exeimg.rsp"], lib_dir)
     if code:
         sys.exit(log)
     libs.insert(1, imglib)
@@ -749,6 +764,10 @@ def link_exe(out, items, fails, libobj, debug=True, members=None, stubs_pass=Tru
         fallback = collections.Counter()
         engine = set()
         members = read_members(members, at, lambda n: n in defined or n in stubbed) if members else {}
+        if member_offsets:
+            for alias, (cont, off, va) in list(members.items()):
+                new = member_offsets(cont, off)
+                members[alias] = (cont, new, va - off + new)
         member_alias = {}
         data_stub_rvas = {}
         for s, (c, d, is_func) in sorted(cls1.items()):

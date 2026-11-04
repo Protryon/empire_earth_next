@@ -1,39 +1,38 @@
-"""Compile resource scripts with RC and link resource-only DLLs."""
+"""Compile resource scripts with the Windows SDK's rc.exe and link resource-only DLLs with lld-link."""
 import os
 import pathlib
 import subprocess
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from ee import TOOLCHAIN
-PKG = TOOLCHAIN / "msvc6.0"
+from ee import LLD_LINK, modern_dirs
 
 
-def run(cmd, cwd, path_dir):
-    env = dict(os.environ, PATH=str(path_dir) + os.pathsep + os.environ["PATH"])
-    r = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True,
+def run(cmd, cwd):
+    r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     return r.returncode, (r.stdout + r.stderr).strip()
 
 
-RC_EXE = TOOLCHAIN / "msvc7.0" / "Bin" / "rc.exe"
+def rc_exe():
+    return pathlib.Path(os.environ.get("EE_RC") or modern_dirs()[3] / "x86" / "rc.exe")
 
 
-def compile_rc(rc, out, rc_exe=RC_EXE):
+def compile_rc(rc, out):
     rc, out = pathlib.Path(rc).resolve(), pathlib.Path(out).resolve()
     out.mkdir(parents=True, exist_ok=True)
     res = out / f"{rc.stem}.res"
-    code, log = run([str(rc_exe), "/fo", str(res), rc.name], rc.parent, pathlib.Path(rc_exe).parent)
+    code, log = run([str(rc_exe()), "/nologo", "/fo", str(res), rc.name], rc.parent)
     if code:
         sys.exit(f"rc {rc}: exit {code}\n{log}")
     return res
 
 
-def build_dll(rc, out, dll, rc_exe=RC_EXE):
+def build_dll(rc, out, dll):
     out = pathlib.Path(out).resolve()
-    res = compile_rc(rc, out, rc_exe)
+    res = compile_rc(rc, out)
     stem = pathlib.Path(dll).stem
-    code, log = run([str(PKG / "Bin" / "LINK.EXE"), "/nologo", "/DLL", "/NOENTRY", "/DEBUG", "/INCREMENTAL:NO",
-                     "/MACHINE:I386", f"/PDB:{stem}.pdb", f"/OUT:{dll}", res.name], out, PKG / "Bin")
+    code, log = run([str(LLD_LINK), "/nologo", "/DLL", "/NOENTRY", "/DEBUG", "/INCREMENTAL:NO", "/MACHINE:X86",
+                     f"/PDB:{stem}.pdb", f"/OUT:{dll}", res.name], out)
     print(f"link: exit {code}" + (f"\n{log}" if log else ""))
     if code:
         sys.exit(1)

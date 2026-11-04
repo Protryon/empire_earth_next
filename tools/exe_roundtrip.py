@@ -6,8 +6,6 @@ import struct
 import subprocess
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-REAL_IMPORT_LIBS = {n: f"vc98lib/rtm/{n}.LIB" for n in ("MSVCRT", "KERNEL32", "USER32", "GDI32", "ADVAPI32", "SHELL32",
-                                                        "OLE32", "WSOCK32", "IMM32")}
 
 
 def short_imports(path):
@@ -42,8 +40,7 @@ def write_order_object(path, symbols):
     pathlib.Path(path).write_bytes(hdr + b"".join(syms) + bytes(strtab))
 
 
-def run(cmd, cwd, pkg):
-    env = dict(os.environ, PATH=str(pkg / "Bin") + os.pathsep + os.environ["PATH"])
-    r = subprocess.run(cmd, cwd=cwd, env=env, capture_output=True, text=True,
+def run(cmd, cwd, pkg=None):
+    r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     return r.returncode, (r.stdout + r.stderr).strip()

@@ -11,14 +11,18 @@ one-off sources → DLL links → exe link → stub audit against VC6.
 
 | Tool | Use |
 |---|---|
+Since the VC6 removal (see "Removing VC6 and Dinkum" at the end), the build is `python -I build.py`
+(`tools/build.py`). The phase-1 tools `clang_link.py`, `clang_vc6inc.py`, `objcmp.py` and `clang_session.py` are
+gone, and their roles appear below only as history.
+
+| Tool | Use |
+|---|---|
 | `tools/clang_build.py [-j N] [--opt X] [module ...]` | compile census. Per-unit logs go to `build/clang/log/`, and the summary ranks the most frequent errors (names masked). Rerun it after every fix batch. |
-| `tools/clang_link.py [target ...]` | compiles everything up front, then links the DLLs (`relink.py` recipe) and the exe (`exe_fulllink.py`), with lld-link. Writes `build/clang/exe/link_report.json`. |
-| `tools/clang_vc6inc.py` | patched copy of the stock VC6 `Include/` (with subdirectories). Each patch states how many times it must match. |
+| `tools/build.py` (`build.py`) | the build: compiles everything up front, then links the engine, the DLLs (`relink.py`) and the exe (`exe_fulllink.py`) with lld-link. Writes `build/clang/exe/link_report.json`. `--test-profile windowed-software`: harness images; `--sanitize-null`: UBSan builds. |
 | `tools/clang_forscope.py [--apply]` | hoists for-init variables used after their loop. |
 | `tools/clang_reftemp.py [--apply]` | names temporaries passed to non-const references at plain call sites. |
-| `tools/objcmp.py A B` | compares two VC6 object trees by section contents (A/B of a dialect edit). |
-| `tools/clang_link.py --test-profile windowed-software` | TEST-ONLY images in `build/clang-test/` for the live-game harness (see "Running the game"). |
-| `tools/clang_session.py [game_session options]` | runs a clang exe through ee's `tools/boot/game_session.py` (env `EE_REPO`, default `../ee`). |
+| `tools/clang_ubdiff.py` | functions whose code depends on a UB-taming flag (with/without, `/Gy`). |
+| `tools/harness/game_session.py` | the fork's live-game harness (`tools/harness/README.md`). |
 | `tools/clang_rtti_audit.py` | lists `dynamic_cast` sites only VC6's lenient RTTI runtime resolves (see "RTTI"). Heuristic: check each hit. |
 
 Process rules learned the hard way:
@@ -32,7 +36,7 @@ Process rules learned the hard way:
   their backslashes, and a raw newline inside an f-string broke a script once.
 - A fresh machine needs: Python 3.12, 7-Zip, LLVM (`winget install LLVM.LLVM`). Python's TLS store rejected
   archive.org on one box while curl worked. Download those archives with curl into `toolchain/dl/` and let
-  `fetch_libs.py` verify their pinned hashes.
+  the fetch script verify the pinned hash (now only `tools/fetch_dx7sdk.py`).
 
 ## Compiler flags (clang-cl, phase 1)
 
@@ -237,6 +241,44 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
   vector is 16 bytes (allocator byte, first, last, end), MSVC's 12. The harness reads memory at VC6 offsets: the
   presentation bridge (~15: the UI manager's form vector at +0x30/+0x34, form fields, renderer state, the retail
   renderer's ShowScene entry), the telemetry, the per-PT hasher (`layout.py`) and the drivers.
+
+## The fork's harness (tools/harness)
+
+- The harness was ported, not adapted in place: the copy of ee's `tools/boot` runs the fork's own test builds.
+  Every offset comes from the build (`layout_gen.py`: clang's `-fdump-record-layouts-complete` of a few units,
+  parsed into `{class: {member.path: offset}}`). ee's VC6 numbers are translated by member name (`layout.off`).
+  Under the MSVC STL 1,926 of 3,306 documented members moved.
+- **The exe's member aliases had the same problem.** Data the original placed inside other objects
+  (`link/exe/fulllink_members.tsv`: 75 globals, VC6 offsets) pointed at the wrong members once containers shrank:
+  29 moved, and the first game start crashed on a zeroed `gGameOptions.mMapType` buffer. The exe link now
+  translates each alias through the layouts. A Dinkum vector's `_First` (+4) becomes MSVC's `_Myfirst` (+0).
+- **Functions the harness hooks must stay out of line**: a breakpoint at a function's entry misses calls that clang
+  inlined into its own unit. The test profile adds `__declspec(noinline)` to them (`HARNESS_HOOKS`).
+- **VC6-shaped checks in the harness that cannot hold**: instruction-pattern proofs (no_human_defeat), registers
+  holding statics (`ReportStatistics`, found by map name instead), the retail renderer's RVAs, `msvcrt.dll`'s
+  `abort` (the UCRT's is in `ucrtbase.dll`). Resolve everything by map name.
+- **Matching stand-ins are UB.** `EE_LOST_DEBUG` (a member call through a null pointer that only charged VC6's inline
+  budget) made clang compile `DX7Rasterizer::SetZBuffer` to a trap in the sanitizer build. Every `EE_LOST_*` and
+  `LostDebug.h` were deleted.
+
+## Removing VC6 and Dinkum
+
+- **Freeze what VC6 knowledge is still needed before deleting it**: the VC6 layout (the reference for every VC6
+  offset in the harness and the member table) is `tools/harness/vc6_layout.json.gz`. It came from the last Dinkum
+  build's dump, after `--check` confirmed all 3,386 documented offsets.
+- Tools: LINK/LIB/DUMPBIN become lld-link/llvm-lib and the COFF reader. VC6's RC becomes the Windows SDK's `rc.exe`.
+  The vintage import libraries become the SDK's, with by-name libraries from `link/*/imports.txt` for the rest.
+- **llvm-lib .def decoration differs from Microsoft LIB on x86**: a plain C name gets the underscore (`foo` ->
+  `_foo`), a stdcall name does not (`foo@8` stays `foo@8`). Write stdcall names with the underscore (`_foo@8`);
+  `fix_members` then sets the import-name type to UNDECORATE.
+- **What the modern SDK dropped**: the DirectMusic and Direct3D 7 GUIDs are gone from `dxguid.lib`. Their values,
+  read once from the DirectX 8.1 SDK's library, live in `src/ThirdParty/dxguid/*.c`. DirectInput 7's
+  `DirectInputCreateA` comes from a by-name library; its data formats (`c_dfDIKeyboard`/`c_dfDIMouse`) come from
+  the SDK's `dinput8.lib`. The DX7 SDK headers are still downloaded (`tools/fetch_dx7sdk.py`).
+- Dinkum's `operator new[]`/`delete[]` members go (vcruntime has them), and so does the retail checksum compensation
+  (the multiplayer version check only ever meets builds of this fork now).
+- Result: 846 units, all 8 images, about two minutes, with the VC6 toolchain directories hidden. The harness tour,
+  play and a 2-AI game to the time cap pass.
 
 ## For WONAPI/WONLobby later
 

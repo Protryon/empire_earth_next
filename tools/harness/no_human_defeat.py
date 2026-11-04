@@ -40,7 +40,7 @@ def _first_ret(pe,rva,limit=0x400):
 def locate(image_bytes,linkmap):
     """(out_rva, result_rva, world_va) by map name. ee checks both bodies against VC6's code first; every image this
     fork's harness runs is clang-built (other instructions, same functions), so the guard relies on the map and on
-    the test profile keeping both functions out of line (clang_link.HARNESS_HOOKS)."""
+    the test profile keeping both functions out of line (tools/build.py HARNESS_HOOKS)."""
     return (linkmap.address(OUT_SYMBOL)-0x400000,linkmap.address(RESULT_SYMBOL)-0x400000,linkmap.address(WORLD_SYMBOL))
 
 

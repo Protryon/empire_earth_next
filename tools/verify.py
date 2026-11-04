@@ -1,4 +1,5 @@
-"""Compile helpers: stage a unit under the original build path (C:\\EEX) and compile it with the pinned VC6."""
+"""Compile helpers: stage a unit under its build path (C:\\EEX, as the original build tree), its include list, its
+// UNIT-FLAGS, and a COFF object reader."""
 import os
 import pathlib
 import re
@@ -7,7 +8,7 @@ import subprocess
 import sys
 import time
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from ee import LINK_DIR, COMPILER, EEX_INCLUDE_DIRS, ORIG_SRC_ROOT, ROOT, TOOLCHAIN
+from ee import LINK_DIR, EEX_INCLUDE_DIRS, ORIG_SRC_ROOT, ROOT, TOOLCHAIN, modern_dirs
 DEFINES = "-DWIN32 -DNDEBUG -D_WINDOWS"
 
 
@@ -44,14 +45,15 @@ def include_paths(src=None):
         for f in sorted((ROOT / "src" / d).glob("*.h")):
             _stage_write(dst / f.name, f.read_bytes())
         flags.append("/I\\eex\\" + d.replace("/", "\\"))
-    pkg = TOOLCHAIN / COMPILER
+    msvc, sdk, _, _ = modern_dirs()
     incdir = pathlib.Path(os.environ.get("EE_INCLUDE", str(ROOT / "include")))
     dx7 = pathlib.Path(os.environ.get("EE_DX7SDK", str(TOOLCHAIN / "dx7sdk" / "include")))
     use_dx7 = src is not None and ("DX7 Display Plug-ins" in str(src) or "dx7sdk" in unit_includes(src)) \
         and dx7.exists()
-    inc = os.pathsep.join([os.environ.get("EE_DINKUM", str(incdir / "dinkum")), str(incdir),
-                           *([str(dx7)] if use_dx7 else []),
-                           str(pkg / "Include"), str(ROOT / "include" / "winsdk")])
+    # include/winsdk last: headers the Windows SDK dropped (dmusici.h, the 2001 iphlpapi.h)
+    inc = os.pathsep.join([str(incdir), *([str(dx7)] if use_dx7 else []),
+                           str(msvc / "include"), str(sdk / "ucrt"), str(sdk / "um"), str(sdk / "shared"),
+                           str(ROOT / "include" / "winsdk")])
     return flags, inc
 
 
@@ -79,21 +81,6 @@ def unit_flags(src, flags):
         return flags
     m = UNIT_FLAGS.search(head)
     return m.group(1) if m else flags
-
-
-def compile_candidate(src, flags, workdir):
-    flags = unit_flags(src, flags)
-    src = stage_source(src)
-    pkg = TOOLCHAIN / COMPILER
-    iflags, inc = include_paths(src)
-    env = dict(os.environ, PATH=str(pkg / "Bin") + os.pathsep + os.environ["PATH"], INCLUDE=inc)
-    obj = pathlib.Path(workdir) / "cand.obj"
-    cmd = [str(pkg / "Bin" / "CL.EXE"), "/nologo", "/c", *flags.split(), *DEFINES.split(), *iflags, f"/Fo{obj}",
-           str(src)]
-    r = subprocess.run(cmd, cwd=workdir, env=env, capture_output=True, text=True,
-                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    out = (r.stdout + r.stderr).strip()
-    return (obj if r.returncode == 0 and obj.exists() else None), out
 
 
 class Coff:

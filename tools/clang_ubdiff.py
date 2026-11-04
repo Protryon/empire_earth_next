@@ -16,11 +16,10 @@ import pathlib
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import build
 import clang_build
-import clang_vc6inc
+import units
 import verify
-from ee import COMPILER, ROOT, TOOLCHAIN
+from ee import ROOT
 from undname import undname
 
 
@@ -61,28 +60,24 @@ def null_tests(fn):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("names", nargs="*", metavar="module", help=f"default: all ({' '.join(build.MODULES)})")
+    ap.add_argument("names", nargs="*", metavar="module", help=f"default: all ({' '.join(units.MODULES)})")
     ap.add_argument("--flag", default="-fno-delete-null-pointer-checks")
     ap.add_argument("--opt", default="-O1")
-    ap.add_argument("--stl", choices=["dinkum", "msvc"], default="dinkum")
     ap.add_argument("-j", type=int, default=os.cpu_count() or 4)
     ap.add_argument("--all", dest="null_tests", action="store_false",
                     help="list every function whose code changes (default: only those that lose null tests)")
     a = ap.parse_args()
-    clang_build.STL = a.stl
-    mods = a.names or build.MODULES
-    jobs = [j for m in mods for j in build.jobs_for(m)] + build.lib_jobs(mods)
-    out = ROOT / "build" / ("ubdiff" + ("-msvc" if a.stl == "msvc" else ""))
-    vc6inc = clang_vc6inc.prepare(TOOLCHAIN / COMPILER / "Include", ROOT / "build" / "clang" / "vc6inc")
+    mods = a.names or units.MODULES
+    jobs = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
+    out = ROOT / "build" / "ubdiff"
     for j in jobs:
         verify.include_paths(verify.stage_source(j[1]))
     base = [f for f in clang_build.CLANG_FLAGS if f != a.flag]
 
     def one(job, variant):
-        mod, src, flags, _ = job
-        obj = out / variant / mod / build.rel_src(src).with_suffix(".obj")
-        ok, log = clang_build.compile_to(src, flags, obj, f"{a.opt} /Gy" + (f" {a.flag}" if variant == "with" else ""),
-                                         vc6inc)
+        mod, src, flags = job
+        obj = out / variant / mod / units.rel_src(src).with_suffix(".obj")
+        ok, log = clang_build.compile_to(src, flags, obj, f"{a.opt} /Gy" + (f" {a.flag}" if variant == "with" else ""))
         return job, variant, ok, obj, log
 
     clang_build.CLANG_FLAGS = base
@@ -91,8 +86,8 @@ def main():
     with concurrent.futures.ThreadPoolExecutor(a.j) as ex:
         for job, variant, ok, obj, log in ex.map(lambda w: one(*w), work):
             if not ok:
-                sys.exit(f"FAILED {build.rel_src(job[1])} ({variant})\n{log[-2000:]}")
-            objs[(job[0], str(build.rel_src(job[1])), variant)] = obj
+                sys.exit(f"FAILED {units.rel_src(job[1])} ({variant})\n{log[-2000:]}")
+            objs[(job[0], str(units.rel_src(job[1])), variant)] = obj
     rows = []
     changed = 0
     for mod, rel, variant in sorted(objs):

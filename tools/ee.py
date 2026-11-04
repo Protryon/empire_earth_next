@@ -1,11 +1,10 @@
-"""Shared paths, module table and compiler flags of the build."""
+"""Shared paths, module table, compiler flags and toolchain locations of the build (clang-cl + lld-link, MSVC STL)."""
 import os
 import pathlib
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 LINK_DIR = ROOT / "link"
-TOOLCHAIN = pathlib.Path(os.environ.get("EE_TOOLCHAIN", ROOT / "toolchain"))
-COMPILER = "msvc6.0"
-ORIG_SRC_ROOT = pathlib.Path(os.environ.get("EE_ORIG_SRC_ROOT", r"C:\EEX"))
+TOOLCHAIN = pathlib.Path(os.environ.get("EE_TOOLCHAIN", ROOT / "toolchain"))   # downloaded headers (DX7 SDK)
+ORIG_SRC_ROOT = pathlib.Path(os.environ.get("EE_ORIG_SRC_ROOT", r"C:\EEX"))   # where units are staged to compile
 MODULE_SRC = {
     "tcp": "Low-Level Engine/Network Engine/TCP Protocol",
     "mixer": "Low-Level Engine/Sound Engine/Miles Sound System Mixer",
@@ -25,20 +24,65 @@ def module_src(mod):
     return ROOT / "src" / MODULE_SRC.get(mod, mod)
 
 
+# per-module flags (clang-cl syntax; the optimisation level comes from the build's --opt)
 MODULE_FLAGS = {
-    "tcp": "-O1 -G6 -MD -GR",
-    "mixer": "-O1 -G6 -MD -GR",
-    "default": "-O1 -G6 -MD -GR",
-    "lle": "-O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS -Zi",
-    "dx7hr": "-O1 -G6 -MD -GR -DLLE_CURRENT_HEADERS -Zi",
-    "dx7hrtnl": "-O1 -G6 -MD -GR -DLLE_CURRENT_HEADERS -Zi",
-    "exe": "-O1 -G6 -MD -GR -DLLE_CURRENT_HEADERS -DLLE_EXE_HEADERS -Zi -Zm200",
-    "jpeg": "-O1 -G6 -MD",
-    "exeimg": "-O2 -MD",
+    "tcp": "-MD -GR",
+    "mixer": "-MD -GR",
+    "default": "-MD -GR",
+    "lle": "-MD -GR -DLOWLEVELENGINE_EXPORTS",
+    "dx7hr": "-MD -GR -DLLE_CURRENT_HEADERS",
+    "dx7hrtnl": "-MD -GR -DLLE_CURRENT_HEADERS",
+    "exe": "-MD -GR -DLLE_CURRENT_HEADERS -DLLE_EXE_HEADERS",
+    "jpeg": "-MD",
+    "exeimg": "-MD",
 }
 MODULE_FILES = {"exe": "EE-AOC.exe", "lle": "Low-Level Engine.dll", "default": "Default.dll", "tcp": "TCP Protocol.dll",
                 "dx7hr": "DX7HRDisplay.dll", "dx7hrtnl": "DX7HRTnLDisplay.dll",
                 "mixer": "Miles Sound System Mixer.dll", "jpeg": "Low-Level Engine.dll", "exeimg": "EE-AOC.exe"}
+
+# ---- toolchain (LLVM, the MSVC STL and the Windows SDK of VS 2022 Build Tools; env overrides) ----
+LLVM = pathlib.Path(os.environ.get("EE_LLVM", r"C:\Program Files\LLVM\bin"))
+CLANG = LLVM / "clang-cl.exe"
+LLD_LINK = LLVM / "lld-link.exe"
+LLVM_LIB = LLVM / "llvm-lib.exe"
+LLVM_NM = LLVM / "llvm-nm.exe"
+
+
+def _newest(d):
+    subs = [p for p in pathlib.Path(d).iterdir() if p.is_dir()] if pathlib.Path(d).exists() else []
+    if not subs:
+        raise SystemExit(f"nothing in {d}: install VS 2022 Build Tools with the C++ workload (see README)")
+    return max(subs, key=lambda p: [int(x) if x.isdigit() else 0 for x in p.name.split(".")])
+
+
+def modern_dirs():
+    """(MSVC tools dir, Windows SDK include dir, Windows SDK lib dir, Windows SDK bin dir)."""
+    msvc = os.environ.get("EE_MSVC_DIR")
+    if not msvc:   # any Visual Studio 2022 edition (Build Tools here, Enterprise on CI runners)
+        roots = [pathlib.Path(base) / "Microsoft Visual Studio" / "2022" / ed / "VC" / "Tools" / "MSVC"
+                 for base in (r"C:\Program Files (x86)", r"C:\Program Files")
+                 for ed in ("BuildTools", "Enterprise", "Professional", "Community")]
+        msvc = _newest(next((r for r in roots if r.exists()), roots[0]))
+    msvc = pathlib.Path(msvc)
+    kits = pathlib.Path(os.environ.get("EE_WINSDK_ROOT", r"C:\Program Files (x86)\Windows Kits\10"))
+    sdk_inc = pathlib.Path(os.environ.get("EE_WINSDK_DIR") or _newest(kits / "Include"))
+    return msvc, sdk_inc, kits / "Lib" / sdk_inc.name, kits / "bin" / sdk_inc.name
+
+
+def lib_paths():
+    """The /LIBPATH: arguments for the MSVC runtime and the Windows SDK (x86)."""
+    msvc, _, sdk_lib, _ = modern_dirs()
+    return [f"/LIBPATH:{msvc / 'lib' / 'x86'}", f"/LIBPATH:{sdk_lib / 'ucrt' / 'x86'}",
+            f"/LIBPATH:{sdk_lib / 'um' / 'x86'}"]
+
+
+# the DLL runtime: MSVC CRT + vcruntime + UCRT + the MSVC STL (+ kernel32, which their startup code imports)
+RUNTIME_LIBS = ["msvcrt.lib", "vcruntime.lib", "ucrt.lib", "msvcprt.lib", "oldnames.lib", "kernel32.lib"]
+# system DLLs the images import, linked against the Windows SDK's import libraries (by DLL stem, upper case)
+SDK_IMPORT_LIBS = {n: n.lower() + ".lib" for n in ("KERNEL32", "USER32", "GDI32", "ADVAPI32", "OLE32", "WINMM",
+                                                    "IMM32", "WS2_32", "SHELL32", "WSOCK32", "IPHLPAPI", "DDRAW")}
+# third-party DLLs that are not linked at all (the VC6 build's Dinkum C++ library; the MSVC STL replaces it)
+DROPPED_IMPORTS = {"SXLRT233"}
 
 
 def module_filename(mod):

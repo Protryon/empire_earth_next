@@ -35,7 +35,7 @@ def build_presentation_bridge(directory, build, play_only=False, mouse=False):
                    + ['-o', str(output), str(source), str(work / 'renderer.a'), '-lgdi32', '-luser32', '-Wl,--kill-at'],
                    check=True, env=env)
     output.with_suffix('.presentation.json').write_text(json.dumps(dict(
-        test_only=True, kind='gdi-rgb-backbuffer-presentation-v2', build=str(build.dir), stl=build.stl,
+        test_only=True, kind='gdi-rgb-backbuffer-presentation-v2', build=str(build.dir),
         defines={k: hex(v) for k, v in defines.items()}, mouse_shim=mouse, play_only=play_only,
         source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
         output_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),

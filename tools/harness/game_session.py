@@ -89,10 +89,8 @@ def main():
     plugins=load_plugins()
     exercise_module=plugins.get('session_exercise')
     ap=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--stl',choices=['msvc','dinkum'],default='msvc',
-                    help='the build under test: the MSVC STL build (build/clang-test-msvc) or the Dinkum build '
-                         '(build/clang-test); see tools/harness/hbuild.py')
-    ap.add_argument('--build-dir',type=pathlib.Path,help='its test-profile images (default by --stl)')
+    ap.add_argument('--build-dir',type=pathlib.Path,
+                    help='the build under test: a test-profile build (default build/clang-test; tools/harness/hbuild.py)')
     ap.add_argument('--timeout',type=int,default=300000)
     ap.add_argument('--exercise',choices=BASE_EXERCISES+[m for m in getattr(exercise_module,'EXERCISES',[]) if m not in BASE_EXERCISES])
     ap.add_argument('--play-seconds',type=int,default=0,help='opt-in: after the gameplay milestone keep the game running N s (telemetry every 10 s), then a final capture')
@@ -125,8 +123,8 @@ def main():
     if a.instance is not None and not 1<=a.instance<=32:ap.error('--instance must be 1..32')
     if a.registry_managed_by_batch and a.instance is None:ap.error('--registry-managed-by-batch requires --instance')
     import hbuild
-    build=hbuild.Build(a.stl,a.build_dir)
-    import layout;layout.use(build.stl)   # every VC6 offset the plugins read is translated for this build
+    build=hbuild.Build(a.build_dir)
+    import layout;layout.use(build.dir)   # every VC6 offset the plugins read is translated for this build
     # the rest of the session (plugins, telemetry) runs on ee's full-link path: everything by map name
     a.fulllink=str(build.exe);a.original=False;a.engine=None;a.tcp=None;a.default_dll=None;a.experimental=None;a.hotfix=[]
     name='windowed_f'
@@ -142,7 +140,7 @@ def main():
               '?gWorld@@3VEEWorld@@A','?gUIManager@@3PAVEEUIManager@@A','?gMouse@@3PAVEEMouse@@A')}
     located=dict(globals=globals_,audio_entry_rva=hex(linkmap0.address('?EEInitializeSounds@@YA_NXZ')-0x400000))
     (stage/'EE-AOC.windowed.json').write_text(json.dumps(dict(test_only=True,kind='clang-build-v1',build=str(build.dir),
-        stl=build.stl,**located),indent=2)+'\n',encoding='utf-8')
+        **located),indent=2)+'\n',encoding='utf-8')
     g=located['globals']
     addresses=dict(communications=int(g['?gCommunications@@3PAVNESynchronousCommunications@@A']['va'],16),
                    world=int(g['?gWorld@@3VEEWorld@@A']['va'],16),victory_detail=bool(a.trace_symbol))
@@ -179,7 +177,7 @@ def main():
         trace=stage/'experimental.trace'
         trace.write_text(''.join(f'{row["candidate_rva"]:x}\n' for row in manifest['functions']),encoding='ascii')
     path=boot.BOOT/(name+'.session')
-    role=f'clang-{build.stl}'
+    role='clang'
     if a.engine:role+='-engine-relinked'
     if a.tcp:role+='-tcp-staged'
     if a.default_dll:role+='-default-staged'

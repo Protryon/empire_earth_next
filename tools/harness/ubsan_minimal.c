@@ -1,5 +1,5 @@
 /* TEST ONLY: a recovering handler set for clang's minimal UBSan runtime (-fsanitize-minimal-runtime), for the
- * sanitizer builds of tools/clang_link.py --sanitize-null (LLVM ships no 32-bit Windows UBSan runtime).
+ * sanitizer builds of tools/build.py --sanitize-null (LLVM ships no 32-bit Windows UBSan runtime).
  *
  * Each check calls __ubsan_handle_<check>_minimal() with no arguments; the site is the return address. Every
  * distinct site is reported once through OutputDebugStringA as

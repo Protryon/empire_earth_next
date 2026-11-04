@@ -47,23 +47,24 @@ def needed():
 def build_proxy(directory):
     directory = pathlib.Path(directory).resolve()
     output = directory/PROXY_NAME
-    test_output(ROOT/'orig-bin/aoc/retail/DX7HRDisplay.dll', output)
+    test_output(directory/'DX7HRDisplay.dll', output)
     work = directory/'rdp-modes-build'
     work.mkdir(exist_ok=True)
-    compiler = ROOT/'toolchain/msvc6.0'
-    env = dict(os.environ, PATH=str(compiler/'Bin')+os.pathsep+os.environ['PATH'],
-               INCLUDE=';'.join(str(p) for p in [ROOT/'toolchain/dx7sdk/include', compiler/'Include', ROOT/'include/winsdk']))
+    sys.path.insert(0, str(ROOT/'tools'))
+    from ee import CLANG, LLD_LINK, RUNTIME_LIBS, lib_paths, modern_dirs
+    msvc, sdk, _, _ = modern_dirs()
+    env = dict(os.environ, INCLUDE=';'.join(str(p) for p in [ROOT/'toolchain/dx7sdk/include', msvc/'include', sdk/'ucrt',
+                                                            sdk/'um', sdk/'shared', ROOT/'include/winsdk']))
     source = pathlib.Path(__file__).with_suffix('.c')
     obj = work/'rdp_modes.obj'
-    subprocess.run([str(compiler/'Bin/CL.EXE'), '/nologo', '/c', '/O1', '/MD', '/W3', str(source), '/Fo'+str(obj)],
-                   env=env, cwd=work, check=True, capture_output=True)
+    subprocess.run([str(CLANG), '--target=i686-pc-windows-msvc', '/nologo', '/c', '/O1', '/MD', '/GS-', '-Wno-everything',
+                    str(source), '/Fo'+str(obj)], env=env, cwd=work, check=True, capture_output=True)
     definition = work/'rdp_modes.def'
     definition.write_text('LIBRARY "DDRDP"\nEXPORTS\nDirectDrawCreateEx\nDirectDrawEnumerateA\nDirectDrawEnumerateExA\n',
                           encoding='ascii')
-    lib = ROOT/'toolchain/vc98lib/rtm'
-    subprocess.run([str(compiler/'Bin/LINK.EXE'), '/nologo', '/DLL', '/NODEFAULTLIB', '/MACHINE:I386', '/ENTRY:DllMain@12',
-                    '/OUT:'+str(output), '/DEF:'+str(definition), str(obj), str(lib/'KERNEL32.LIB'), str(lib/'USER32.LIB'), str(lib/'MSVCRT.LIB')],
-                   env=env, cwd=work, check=True, capture_output=True)
+    subprocess.run([str(LLD_LINK), '/nologo', '/DLL', '/NODEFAULTLIB', '/MACHINE:X86', '/SAFESEH:NO', '/ENTRY:DllMain@12',
+                    '/OUT:'+str(output), '/DEF:'+str(definition), str(obj), 'user32.lib', *RUNTIME_LIBS, *lib_paths()],
+                   cwd=work, check=True, capture_output=True)
     manifest = dict(test_only=True, kind='rdp-mode-proxy-v1', source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
                     output_sha256=hashlib.sha256(output.read_bytes()).hexdigest(), modes=sorted(primary_modes()),
                     synthesized_if_missing=['%dx%dx32' % s for s in SIZES],

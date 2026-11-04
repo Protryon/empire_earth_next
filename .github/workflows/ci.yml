@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    timeout-minutes: 180
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -16,17 +16,18 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Cache toolchain
+      # the runner has Visual Studio 2022 (the MSVC STL, the UCRT and the Windows SDK); a current LLVM:
+      - name: LLVM
+        run: choco upgrade llvm -y --no-progress
+
+      - name: Cache the DirectX 7 SDK headers
         uses: actions/cache@v4
         with:
           path: toolchain
-          key: toolchain-${{ hashFiles('tools/fetch_toolchain.py', 'tools/fetch_libs.py') }}
+          key: dx7sdk-${{ hashFiles('tools/fetch_dx7sdk.py') }}
 
-      - name: Fetch the compiler packages
-        run: python -I tools/fetch_toolchain.py 6.0 6.3 6.4 6.5pp 7.0
-
-      - name: Fetch the SDK headers and link libraries
-        run: python -I tools/fetch_libs.py --libs
+      - name: Fetch the DirectX 7 SDK headers
+        run: python -I tools/fetch_dx7sdk.py
 
       - name: Build every image
         run: python -I build.py -j 4

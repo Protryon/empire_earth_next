@@ -1,76 +1,41 @@
-"""Clang build driver (port phase 1): compile every unit with clang-cl, 32-bit, MSVC ABI, x87.
+"""Compile the game's units with clang-cl: 32-bit, MSVC ABI, the MSVC STL and the UCRT (VS 2022 Build Tools).
 
-  python -I tools/clang_build.py [-j N] [--out DIR] [--opt /Od] [module ...]     compile only (for now)
+  python -I tools/clang_build.py [-j N] [--out DIR] [--opt X] [--only TEXT] [module ...]     compile census
 
-Same units, flags, defines and include order as tools/build.py (the VC6 reference build), with:
-  - clang-cl --target=i686-pc-windows-msvc in MSVC 12.00 (VC6) compatibility mode, wchar_t = unsigned short
-    (/Zc:wchar_t-, as VC6);
-  - /arch:IA32 (x87 floating point, no SSE) while the clang build is compared against the VC6 build;
-  - -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks (the code relies on all three: VC6 never exploited
-    that undefined behaviour);
-  - VC6-only flags dropped (-G6, -Zm, -Zi; /O1 replaced by --opt);
-  - the stock VC6 headers the code includes are read through build/clang/vc6inc, a copy of toolchain/msvc6.0/Include
-    with the patches in tools/clang_vc6inc.py applied (the toolchain itself stays untouched).
-
---stl msvc (port phase 2): compile against Microsoft's STL and the UCRT/Windows SDK instead of Dinkum 2.33 and the
-VC6 headers (VS Build Tools 2022; env EE_MSVC_DIR and EE_WINSDK_DIR override the detected directories), with
-_MSC_VER 19.44 (the STL refuses older), C++17, native wchar_t. Default out: build/clang-msvc.
+The units, their order and their defines come from link/<module>/units.txt and tools/ee.py. Flags:
+  - clang-cl --target=i686-pc-windows-msvc, MSVC 19.44 compatibility, C++17 (C units: C), native wchar_t;
+  - /arch:IA32 (x87 floating point), /GS- (no stack cookies);
+  - -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks: the code relies on all three (the original
+    compiler never exploited that undefined behaviour; PORT_LEARNINGS.md has the plan to drop them);
+  - a unit's `// UNIT-FLAGS:` line replaces the module flags (its old code-generation switches are dropped).
+Every unit is staged under C:\\EEX (tools/verify.py) before it is compiled.
 
 Objects go to <out>/obj/<module>/<unit>.obj (default out: build/clang). A failed unit's diagnostics go to
-<out>/log/<module>/<unit>.log; the summary lists the first error of each.
+<out>/log/<module>/<unit>.log; the summary ranks the most frequent errors (names masked). The full build
+(compile + link) is tools/build.py.
 """
 import argparse
 import concurrent.futures
 import os
 import pathlib
 import re
-import shutil
 import subprocess
 import sys
+import threading
 import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import build
-import clang_vc6inc
+import units
 import verify
-from ee import COMPILER, ROOT, TOOLCHAIN
+from ee import CLANG, ROOT
 
-CLANG = pathlib.Path(os.environ.get("EE_CLANG", r"C:\Program Files\LLVM\bin\clang-cl.exe"))
 CLANG_FLAGS = ["--target=i686-pc-windows-msvc", "/nologo", "/c", "-fms-compatibility", "-fms-extensions",
-               "-fms-compatibility-version=12.00", "/Zc:wchar_t-", "-fdelayed-template-parsing", "/arch:IA32", "/GS-",
+               "-fms-compatibility-version=19.44", "/Zc:wchar_t", "-fdelayed-template-parsing", "/arch:IA32", "/GS-",
                "-fno-strict-aliasing", "-fwrapv", "-fno-delete-null-pointer-checks",
                "-Wno-everything", "-ferror-limit=0", "-fno-color-diagnostics"]
+# old code-generation switches a `// UNIT-FLAGS:` line may still carry (the build's --opt decides)
 DROP = re.compile(r"^[-/](G[3-7B]|Zm\d+|Zi|Z7|O[12dsxty]|Ob\d|Og|Gy|Gf|GF)$")
 ERROR = re.compile(r"^(.*?)\((\d+),\d+\)\s*:\s*error: (.*)$", re.M)
-STL = "dinkum"            # or "msvc" (--stl; clang_link.py sets it too)
-MSVC_FLAGS = {"-fms-compatibility-version=12.00": "-fms-compatibility-version=19.44", "/Zc:wchar_t-": "/Zc:wchar_t"}
-
-
-def _newest(d):
-    subs = [p for p in pathlib.Path(d).iterdir() if p.is_dir()]
-    if not subs:
-        raise SystemExit(f"nothing in {d}")
-    return max(subs, key=lambda p: [int(x) if x.isdigit() else 0 for x in p.name.split(".")])
-
-
-def modern_dirs():
-    """(MSVC tools dir, Windows SDK include dir, Windows SDK lib dir) of the installed VS Build Tools / SDK."""
-    msvc = pathlib.Path(os.environ.get("EE_MSVC_DIR") or _newest(
-        r"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC"))
-    kits = pathlib.Path(r"C:\Program Files (x86)\Windows Kits\10")
-    sdk_inc = pathlib.Path(os.environ.get("EE_WINSDK_DIR") or _newest(kits / "Include"))
-    return msvc, sdk_inc, kits / "Lib" / sdk_inc.name
-
-
-def modern_include(inc):
-    """The VC6 build's INCLUDE list with Dinkum and the VC6 headers replaced by the MSVC STL, UCRT and Windows SDK
-    (placed before include/winsdk, which supplies headers the modern SDK dropped, e.g. dmusici.h)."""
-    msvc, sdk, _ = modern_dirs()
-    drop = {os.path.normcase(str(ROOT / "include" / "dinkum")), os.path.normcase(str(TOOLCHAIN / COMPILER / "Include"))}
-    parts = [x for x in inc.split(os.pathsep) if os.path.normcase(x) not in drop]
-    modern = [str(msvc / "include"), str(sdk / "ucrt"), str(sdk / "um"), str(sdk / "shared")]
-    k = next((i for i, x in enumerate(parts) if pathlib.Path(x).name == "winsdk"), len(parts))
-    return os.pathsep.join(parts[:k] + modern + parts[k:])
 
 
 def clang_flags(flags, opt):
@@ -81,7 +46,6 @@ def apply_overlay(staged, rules):
     """A copy of the staged unit rewritten with (old, new, expected count) text rules, next to it (so its sibling
     headers resolve) under a per-compile name (two modules may compile the same unit in parallel) -> its path. Test
     profiles only; the source tree is never touched. Refuses when a rule does not match exactly its expected count."""
-    import threading
     staged = pathlib.Path(staged)
     raw = staged.read_bytes()
     crlf = b"\r\n" in raw
@@ -96,24 +60,19 @@ def apply_overlay(staged, rules):
     return copy
 
 
-def compile_to(src, flags, obj, opt, vc6inc, overlays=None):
+def compile_to(src, flags, obj, opt, overlays=None, extra=()):
     """Compile one source with clang-cl into obj -> (ok, log). overlays: {source path relative to src/: rules}
-    (apply_overlay) for a test profile."""
+    (apply_overlay) for a test profile; extra: more clang-cl arguments."""
     flags = verify.unit_flags(src, flags)
     staged = verify.stage_source(src)
-    rules = overlays.get(str(build.rel_src(src))) if overlays else None
+    rules = overlays.get(str(units.rel_src(src))) if overlays else None
     iflags, inc = verify.include_paths(staged)
     if rules:
         staged = apply_overlay(staged, rules)
-    base = CLANG_FLAGS
-    if STL == "msvc":
-        inc = modern_include(inc)
-        base = [MSVC_FLAGS.get(f, f) for f in CLANG_FLAGS] + ([] if str(src).endswith(".c") else ["/std:c++17"])
-    else:
-        inc = inc.replace(str(TOOLCHAIN / COMPILER / "Include"), str(vc6inc))
+    std = [] if str(src).lower().endswith(".c") else ["/std:c++17"]
     pathlib.Path(obj).parent.mkdir(parents=True, exist_ok=True)
-    cmd = [str(CLANG), *base, *clang_flags(flags, opt), *verify.DEFINES.split(), *iflags, f"/Fo{obj}",
-           str(staged)]
+    cmd = [str(CLANG), *CLANG_FLAGS, *std, *clang_flags(flags, opt), *extra, *verify.DEFINES.split(), *iflags,
+           f"/Fo{obj}", str(staged)]
     r = subprocess.run(cmd, env=dict(os.environ, INCLUDE=inc), capture_output=True, text=True,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     if rules:
@@ -121,10 +80,10 @@ def compile_to(src, flags, obj, opt, vc6inc, overlays=None):
     return r.returncode == 0, (r.stdout + r.stderr).strip()
 
 
-def compile_one(job, out, opt, vc6inc, overlays=None):
-    mod, src, flags, pkg = job
-    rel = build.rel_src(src)
-    ok, log = compile_to(src, flags, out / "obj" / mod / rel.with_suffix(".obj"), opt, vc6inc, overlays)
+def compile_one(job, out, opt, overlays=None, extra=()):
+    mod, src, flags = job
+    rel = units.rel_src(src)
+    ok, log = compile_to(src, flags, out / "obj" / mod / rel.with_suffix(".obj"), opt, overlays, extra)
     logf = out / "log" / mod / rel.with_suffix(".log")
     if ok:
         logf.unlink(missing_ok=True)
@@ -136,35 +95,30 @@ def compile_one(job, out, opt, vc6inc, overlays=None):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("names", nargs="*", metavar="module", help=f"default: all ({' '.join(build.MODULES)})")
+    ap.add_argument("names", nargs="*", metavar="module", help=f"default: all ({' '.join(units.MODULES)})")
     ap.add_argument("-j", type=int, default=os.cpu_count() or 4)
-    ap.add_argument("--out", help="output root (default build/clang, build/clang-msvc with --stl msvc)")
-    ap.add_argument("--stl", choices=["dinkum", "msvc"], default="dinkum")
-    ap.add_argument("--opt", default="/Od", help="optimisation flags for clang-cl (default /Od)")
+    ap.add_argument("--out", default=str(ROOT / "build" / "clang"))
+    ap.add_argument("--opt", default="-O1", help="clang-cl optimisation (default -O1)")
     ap.add_argument("--only", help="compile only units whose path contains this text")
     a = ap.parse_args()
-    global STL
-    STL = a.stl
-    a.out = a.out or str(ROOT / "build" / ("clang-msvc" if a.stl == "msvc" else "clang"))
     if not CLANG.exists():
-        sys.exit(f"{CLANG} is missing: install LLVM (winget install LLVM.LLVM) or set EE_CLANG")
-    mods = a.names or build.MODULES
-    jobs = [j for m in mods for j in build.jobs_for(m)] + build.lib_jobs(mods)
+        sys.exit(f"{CLANG} is missing: install LLVM (winget install LLVM.LLVM) or set EE_LLVM")
+    mods = a.names or units.MODULES
+    jobs = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
     if a.only:
         jobs = [j for j in jobs if a.only in str(j[1])]
     out = pathlib.Path(a.out).resolve()
-    vc6inc = clang_vc6inc.prepare(TOOLCHAIN / COMPILER / "Include", out / "vc6inc")
     for j in jobs:
         verify.include_paths(verify.stage_source(j[1]))
     t0 = time.time()
     done, errors = {}, {}
     with concurrent.futures.ThreadPoolExecutor(max(1, a.j)) as ex:
-        for job, ok, log in ex.map(lambda j: compile_one(j, out, a.opt, vc6inc), jobs):
+        for job, ok, log in ex.map(lambda j: compile_one(j, out, a.opt), jobs):
             done.setdefault(job[0], [0, 0])[0 if ok else 1] += 1
             if not ok:
                 errs = ERROR.findall(log)
                 first = errs[0] if errs else ("?", "?", log.splitlines()[-1] if log else "no output")
-                print(f"FAILED {job[0]} {build.rel_src(job[1])}: {len(errs)} errors; first: "
+                print(f"FAILED {job[0]} {units.rel_src(job[1])}: {len(errs)} errors; first: "
                       f"{pathlib.Path(first[0]).name}({first[1]}): {first[2]}", flush=True)
                 for f, _, msg in errs:
                     key = (pathlib.Path(f).name, re.sub(r"'[^']*'", "'X'", msg))
