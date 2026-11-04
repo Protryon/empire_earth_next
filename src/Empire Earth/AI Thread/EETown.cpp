@@ -294,8 +294,7 @@ bool EETown::IsTownUnit(EEUnit* inUnit)
 
 // NEAR: Virtual50's result copied field by field in the original (see AddUnit)
 // FUNCTION: EXE 0x4ac351
-// Removes a unit's building from the town (the mirror of AddUnit), but its `x > 0 ? x-- : 0` stores the old
-// value back so the counters never go down; returns whether its tile was in the town (true if not taken)
+// Removes a unit's building from the town (the mirror of AddUnit), counting its counters down; returns whether its tile was in the town (true if not taken)
 bool EETown::RemoveUnit(EEUnit* inUnit)
 {
     U2DPoint<long> theTile;
@@ -308,26 +307,26 @@ bool EETown::RemoveUnit(EEUnit* inUnit)
         theTile = inUnit->FindAreaTile(true, 1);
         theResult = this->RemoveHullTile(theTile);
         if (theClass->mIsWall) {
-            this->mNumWalls = this->mNumWalls > 0 ? this->mNumWalls-- : 0;
+            this->mNumWalls = this->mNumWalls > 0 ? this->mNumWalls - 1 : 0;
             theCount = 0;
             theValue = theValue * 0.1f;
         }
         switch (theClass->mUnitType) {
         case kUnitTypeAirport:
-            this->mNumAirports = this->mNumAirports > 0 ? this->mNumAirports-- : 0;
+            this->mNumAirports = this->mNumAirports > 0 ? this->mNumAirports - 1 : 0;
             break;
         case kUnitTypeDock:
         case kUnitTypeNavyYard:
-            this->mNumDocks = this->mNumDocks > 0 ? this->mNumDocks-- : 0;
+            this->mNumDocks = this->mNumDocks > 0 ? this->mNumDocks - 1 : 0;
             break;
         }
         if (theNode != NULL && theNode->mData->mKind == 4) {
-            this->mNumWonders = this->mNumWonders > 0 ? this->mNumWonders-- : 0;
+            this->mNumWonders = this->mNumWonders > 0 ? this->mNumWonders - 1 : 0;
             theCount--;
         }
-        this->mNumUnits = this->mNumUnits > 0 ? this->mNumUnits-- : 0;
+        this->mNumUnits = this->mNumUnits > 0 ? this->mNumUnits - 1 : 0;
         if (theCount > 0)
-            this->mL80 = this->mL80 > 0 ? this->mL80-- : 0;
+            this->mL80 = this->mL80 > 0 ? this->mL80 - 1 : 0;
         if (this->mValue > theValue)
             this->mValue -= theValue;
         else
