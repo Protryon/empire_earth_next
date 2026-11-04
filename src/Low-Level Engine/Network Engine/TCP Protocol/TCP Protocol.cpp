@@ -1082,6 +1082,12 @@ extern "C" long NPIMReceiveFrom(TCPServer** inHandle, unsigned long inSize, char
                             *outReceived = theCount;
                             theServer->mConnections.push_back(NULL);
                             theResult = kNPIMOK;
+                        } else {
+                            // Fix: a join from an unknown sender that is not accepted used to leave the received
+                            // size and the client index unset (the caller read whatever its locals held); they are
+                            // now zero.
+                            *outIndex = 0;
+                            *outReceived = 0;
                         }
                     } else {
                         *outReceived = 0;
