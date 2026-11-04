@@ -123,7 +123,7 @@ long EEE2DPulseWave::SetUp()
 // NEAR: argument and stack-cleanup scheduling.
 // FUNCTION: EXE 0x4e5dc6
 // Draws the wave as an additive camera-facing sprite sized by its radius, lit by fog; past 90% of life the light
-// drops to (1 - age) * 2 of it (an abrupt dip to 20%); returns the draw result
+// fades linearly to zero; returns the draw result
 long EEE2DPulseWave::DrawPass6()
 {
     float theValue;
@@ -156,7 +156,8 @@ long EEE2DPulseWave::DrawPass6()
     if (this->mDrawAge < 0.9f) {
         gRasterizer->SetAmbientColor(GEColor(theValue, theValue, theValue), theScreen);
     } else {
-        float theLight = (1.0f - this->mDrawAge) * theValue * 2.0f;
+        // Fade from full light at 90% of life to none at the end (the factor 10 keeps the fade continuous).
+        float theLight = (1.0f - this->mDrawAge) * theValue * 10.0f;
         gRasterizer->SetAmbientColor(GEColor(theLight, theLight, theLight), theScreen);
     }
     theModel->PrepareTransforms();
