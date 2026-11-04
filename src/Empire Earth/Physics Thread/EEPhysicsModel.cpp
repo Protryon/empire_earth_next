@@ -790,12 +790,14 @@ bool EEPhysicsModel::Push(EEComplexUnit* inUnit, EEComplexUnit* inOther)
 
 // FUNCTION: EXE 0x5560cf
 // Pushes the unit against each unit it touches (PushMoving for two large mobile units, else Push) until one
-// is handled; skips closed gates and citizens working elsewhere (a skip carries over to later contacts)
+// is handled; skips closed gates and citizens working elsewhere
 void EEPhysicsModel::Collide(EEComplexUnit* inUnit)
 {
     float theSpeed = inUnit->mCollisionRadius;
-    bool theCollide = true;
+    bool theCollide;
     for (UListNode<EEComplexUnit*>* theNode = inUnit->mContacts.mHead; theNode; theNode = theNode->mNext) {
+        // each contact is judged on its own: a skip does not carry over to the next contact
+        theCollide = true;
         if (theNode->mData->mIsCitizen) {
             unsigned char theKind = theNode->mData->mGoalState ? theNode->mData->mGoalState->mKind : 0;
             if (theKind == 6 || theKind == 4) {
