@@ -321,7 +321,7 @@ void GEModel::ComputeBoundingVolumes()
 }
 
 // FUNCTION: LLE 0x1001f80c
-// Recomputes vertex normals from the polygons of LOD 0 for every frame; the sums are not cleared between frames
+// Recomputes vertex normals from the polygons of LOD 0 for every frame
 void GEModel::ComputeModelNormals()
 {
     GEVector theEdge1;
@@ -336,6 +336,12 @@ void GEModel::ComputeModelNormals()
     for (unsigned long i = 0; i < this->GetFrameCount(); i++) {
         GEVertexArray* theArray = this->GetVertexArray(i);
         unsigned long j;
+        // Start each frame from zero sums (they carried the previous frame's normals).
+        for (j = 0; j < this->mVertexCount; j++) {
+            theNormals[j].mX = 0.0f;
+            theNormals[j].mY = 0.0f;
+            theNormals[j].mZ = 0.0f;
+        }
         for (j = 0; j < this->GetPolygonCount(); j++) {
             theArray->GetPoint(thePoint1, this->GetPolygonArray(0)->GetVertexIndex1(j));
             theArray->GetPoint(thePoint2, this->GetPolygonArray(0)->GetVertexIndex2(j));
