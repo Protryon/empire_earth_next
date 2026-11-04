@@ -1832,12 +1832,12 @@ bool EEAIContinentManager::AreConnected(EEAIContinent* inFirst, EEAIContinent* i
                 if (inFlags & 2)
                     theResult = inFirst->mCounts[kAIChainLandWaterCliff] != 0 && inFirst->mCounts[kAIChainLandWaterCliff] == inSecond->mCounts[kAIChainLandWaterCliff];
                 else if (inFlags & 8)
-                    theResult = inFirst->mCounts[kAIChainLandWaterSpace] != 0 && inFirst->mCounts[kAIChainLandWaterSpace] == inSecond->mCounts[kAIChainLandWaterSpace];
+                    theResult = inFirst->mCounts[kAIChainLandCliffSpace] != 0 && inFirst->mCounts[kAIChainLandCliffSpace] == inSecond->mCounts[kAIChainLandCliffSpace];   // cliff + space (was the water + space chain)
                 else
                     theResult = inFirst->mCounts[kAIChainLandCliff] != 0 && inFirst->mCounts[kAIChainLandCliff] == inSecond->mCounts[kAIChainLandCliff];
             } else if (inFlags & 2) {
                 if (inFlags & 8)
-                    theResult = inFirst->mCounts[kAIChainLandCliffSpace] != 0 && inFirst->mCounts[kAIChainLandCliffSpace] == inSecond->mCounts[kAIChainLandCliffSpace];
+                    theResult = inFirst->mCounts[kAIChainLandWaterSpace] != 0 && inFirst->mCounts[kAIChainLandWaterSpace] == inSecond->mCounts[kAIChainLandWaterSpace];   // water + space (was the cliff + space chain)
                 else
                     theResult = inFirst->mCounts[kAIChainLandWater] != 0 && inFirst->mCounts[kAIChainLandWater] == inSecond->mCounts[kAIChainLandWater];
             } else if (inFlags & 8)
