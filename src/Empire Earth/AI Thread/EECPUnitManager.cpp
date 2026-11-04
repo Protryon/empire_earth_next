@@ -279,7 +279,8 @@ void EECPUnitManager::BalanceProduction(EEComplexUnit* inUnit)
             theTechnologies.push_back(theTechnology);
         }
     }
-    unsigned long theShare = theTechnologies.size() / theClassUnits->size();
+    // shared among the same-continent buildings that receive a share (not all buildings of the class)
+    unsigned long theShare = theUnits.empty() ? 0 : theTechnologies.size() / theUnits.size();
     for (theUnit = theUnits.begin(); theUnit != theUnits.end(); theUnit++) {
         for (unsigned long k = theShare; k > 0; k--) {
             long theTechnology = theTechnologies.back();
