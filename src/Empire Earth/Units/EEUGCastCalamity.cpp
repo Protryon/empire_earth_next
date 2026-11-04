@@ -202,8 +202,7 @@ void EEUGCastCalamity::GetDebugLine(UWideString& ioText)
 }
 
 // FUNCTION: EXE 0x620dd6
-// Appends "Casting Calamity", the target's name and a location/type line to the debug text (the line shows the
-// source and target ids and the tile x instead of the tile and type)
+// Appends "Casting Calamity", the target's name and the calamity's tile and type to the debug text
 void EEUGCastCalamity::GetDebugText(UWideString& ioText)
 {
     UWideString theText;
@@ -212,9 +211,8 @@ void EEUGCastCalamity::GetDebugText(UWideString& ioText)
         sprintf(theText, "Cast On Unit: %s\n", (const char*)this->mTarget->mUnitClass->mName);
         ioText += theText;
     }
-    // the format takes three of the five values (the same arguments as Virtual1C's)
-    sprintf(theText, "Calamity Location/Type: (%d,%d) - Type:%d", this->mSource->mUnitID, this->mTarget ? this->mTarget->mUnitID : -1,
-            this->mTileX, this->mTileY, this->mCalamityType);
+    // the line used to print the source and target ids and the tile x (it was passed five values for three)
+    sprintf(theText, "Calamity Location/Type: (%d,%d) - Type:%d", this->mTileX, this->mTileY, this->mCalamityType);
     ioText += theText;
 }
 
