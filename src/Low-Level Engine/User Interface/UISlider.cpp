@@ -31,7 +31,6 @@
 
 // FUNCTION: LLE 0x1007d259
 // Creates a horizontal (style 0) or vertical slider with a square thumb, an empty range and no page size
-// (a horizontal slider's last pixel lacks the +1 that SetLocation adds)
 UISlider::UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned long inSliderStyle, UIForm* inForm,
                    unsigned long inIndex, unsigned long inBorderThickness)
     : UIControl(kControlTypeSlider, inId, inRectangle, inForm, inIndex, inBorderThickness)
@@ -45,7 +44,8 @@ UISlider::UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned 
     if (this->mSliderStyle == 0) {
         theThickness = inRectangle.GetHeight();
         this->mMinPixel = UMFloor(inRectangle.GetLeft());
-        this->mMaxPixel = UMFloor(inRectangle.GetRight());
+        // Fixed: lacked the + 1 that the vertical case and SetLocation add (the track was a pixel short)
+        this->mMaxPixel = UMFloor(inRectangle.GetRight()) + 1;
     } else {
         theThickness = inRectangle.GetWidth();
         this->mMinPixel = UMFloor(inRectangle.GetTop());
