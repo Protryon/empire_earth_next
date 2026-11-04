@@ -262,9 +262,12 @@ void EECCTimeWarp::Return(EECalamity* inCalamity)
             else
                 theGround = 0.0f;
             theTransformation.SetZ(inCalamity->GetFloatPlaceHolder1() + theGround);
-        } else if ((theUnit->mUnitClass->mDomains & kMovementSea) && theValid)
-            theUnit->mUnitClass->GroundLocation(GE3DPoint(theTransformation.GetX(), theTransformation.GetY(),
-                                                     theTransformation.GetZ()));
+        } else if ((theUnit->mUnitClass->mDomains & kMovementSea) && theValid) {
+            // put the ship back on the water surface
+            GE3DPoint theGroundPoint(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
+            theUnit->mUnitClass->GroundLocation(theGroundPoint);
+            theTransformation.SetZ(theGroundPoint.GetZ());
+        }
         theLocation.SetX(theTransformation.GetX());
         theLocation.SetY(theTransformation.GetY());
         theLocation.SetZ(theTransformation.GetZ());
