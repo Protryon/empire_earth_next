@@ -620,11 +620,20 @@ long EEUIELEChangePlayerType::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         if (gCommunications->IsServer() == true && thePlayer.mIsLocal == false) {
             theChanged = thePlayer.mType != PlayerTypeFromMenu(theSelection, sPlayerTypeMenus[thePlayer.mSlot]);
             if (theChanged == true) {
+                long theMenu = sPlayerTypeMenus[thePlayer.mSlot];
                 if (thePlayer.mType == 1 || thePlayer.mType == 2) {
                     theAsk = true;
-                    theSelection--;
+                    // a joined human's box lists its name first (menu 2, or 5 in scenarios): skip that entry and
+                    // map the rest through the same menu without the name (1 or 4); picking the name changes nothing
+                    if (theMenu == 2 || theMenu == 5) {
+                        if (theSelection == 0)
+                            theChanged = false;
+                        theSelection--;
+                        theMenu = theMenu == 2 ? 1 : 4;
+                    }
                 }
-                thePlayer.mType = PlayerTypeFromMenu(theSelection, sPlayerTypeMenus[thePlayer.mSlot]);
+                if (theChanged == true)
+                    thePlayer.mType = PlayerTypeFromMenu(theSelection, theMenu);
             }
         } else {
             switch (thePlayer.mType) {
