@@ -451,7 +451,8 @@ void UIManager::CreateBackgrounds()
                                    theTable->GetDrawPriority(), theTable->GetVisible());
             break;
         case kBackgroundTiled:
-            new UITiledBackground(theTable->GetID(), theTable->GetTextureFile(), theDescription,
+            // Fixed: passed the row ID (GetID) where every other case passes the background ID
+            new UITiledBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
                                   theTable->GetTextureRect(), theTable->GetLayout(), theForm,
                                   theTable->GetDrawPriority(), theTable->GetVisible());
             break;
