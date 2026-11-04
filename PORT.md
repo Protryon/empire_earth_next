@@ -47,5 +47,12 @@ the VC6 comparison phase is over:
 - Call sites that passed a temporary to a one-off non-const reference name it (`theTempN`, `tools/clang_reftemp.py`).
 - `for`-init variables used after their loop are declared before it (`tools/clang_forscope.py`).
 
-Next steps: linking (lld-link, MSVC ABI, the same import libraries), the differential game comparison against the
-VC6 build, and then replacing Dinkum 2.33 with a modern standard library.
+Linking: `python -I tools/clang_link.py` compiles everything with clang-cl (`-O1`) and links all seven images with
+lld-link into `build/clang/<target>/` (the six DLLs, then the exe via the VC6 build's stub planner). Its stubs are the
+same set as the VC6 build's: WON stubs, ICF aliases, data member aliases, no traps for first-party functions.
+Language.dll is resources only and comes from the VC6 build. Not yet run: no game install on the build machine.
+
+`PORT_LEARNINGS.md` records every problem and fix, as the checklist for code that is ported later (WONAPI/WONLobby).
+
+Next steps: run the clang images in the game, the differential game comparison against the VC6 build, and then
+replacing Dinkum 2.33 with a modern standard library.
