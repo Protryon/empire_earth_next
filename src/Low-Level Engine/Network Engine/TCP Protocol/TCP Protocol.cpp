@@ -1230,7 +1230,14 @@ extern "C" long NPIMSendSingle(const UString& inHost, unsigned long inPort, char
             memset(&theTo, 0, sizeof(theTo));
             theTo.sin_family = AF_INET;
             theTo.sin_port = htons((u_short)inPort);
-            memcpy(&theTo.sin_addr, theHost->h_addr_list[gAdapterAddressIndex], 4);
+            // Fix: gAdapterAddressIndex indexes the LOCAL host's address list; a remote host with fewer addresses
+            // used to be read past the end of its list (a NULL entry crashed, a later one was garbage). An
+            // address the remote list does not have is now 0.
+            unsigned long theEntry;
+            for (theEntry = 0; theEntry < gAdapterAddressIndex && theHost->h_addr_list[theEntry] != NULL; theEntry++)
+                ;
+            if (theHost->h_addr_list[theEntry] != NULL)
+                memcpy(&theTo.sin_addr, theHost->h_addr_list[theEntry], 4);
         } else {
             theResult = kNPIMUnavailable;
         }
