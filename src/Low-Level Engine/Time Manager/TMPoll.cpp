@@ -25,7 +25,12 @@ TMPoll::TMPoll(unsigned long inTimeDelay, unsigned long inTimeUnit, bool inStart
         TMPoll::sCounterFrequency = theFrequency.QuadPart / theDivisor;
         QueryPerformanceCounter(&this->mStartTime);
     } else {
-        inTimeDelay = inTimeDelay / theDivisor / 1000;
+        // Fixed: the delay used to become inTimeDelay / divisor / 1000, i.e. 0 for any realistic delay, and Poll
+        // then divided by zero; timeGetTime counts milliseconds, so only a microsecond delay is converted
+        if (inTimeUnit)
+            inTimeDelay /= 1000;
+        if (inTimeDelay == 0)
+            inTimeDelay = 1;
         TMPoll::sCounterFrequency = 1;
         this->mStartTime.LowPart = timeGetTime();
         this->mStartTime.HighPart = 0;
