@@ -203,10 +203,10 @@ long EEE3DTimeWarp::DrawPass4()
 }
 
 // FUNCTION: EXE 0x4fc297
-// Writes the base effect (version arguments swapped) and the age; returns the first write error
+// Writes the base effect and the age; returns the first write error
 long EEE3DTimeWarp::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = EEEffect3D::Save(inMinorVersion, inMajorVersion, outFile);   // (sic: the versions swapped)
+    long theResult = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult == 0)
         theResult = outFile.Write(this->mAge);
     return theResult;

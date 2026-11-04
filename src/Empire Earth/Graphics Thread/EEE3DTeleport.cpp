@@ -201,7 +201,7 @@ long EEE3DTeleport::DrawPass4()
 // ICF-folded into EEE3DTimeWarp's 0xfc297
 long EEE3DTeleport::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = EEEffect3D::Save(inMinorVersion, inMajorVersion, outFile);   // (sic: the versions swapped)
+    long theResult = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult == 0)
         theResult = outFile.Write(this->mAge);
     return theResult;
