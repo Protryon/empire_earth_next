@@ -205,11 +205,11 @@ long FSDebugFile::ReadText(short& outValue)
 }
 
 // FUNCTION: LLE 0x100083ec
-// Parses an unsigned byte from the text stream, but "%u" makes fscanf store four bytes into a one-byte local
+// Parses an unsigned byte from the text stream; kErrorFailed if none
 long FSDebugFile::ReadText(unsigned char& outValue)
 {
     long theResult = kErrorOK;
-    unsigned char theValue;
+    unsigned int theValue;  // Fixed: was a one-byte local, into which "%u" stored four bytes (stack overwrite)
     if (fscanf(this->mStream, " %u ", &theValue) != 1)
         theResult = kErrorFailed;
     else
