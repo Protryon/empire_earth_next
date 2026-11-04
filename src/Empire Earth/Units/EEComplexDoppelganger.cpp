@@ -755,6 +755,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
         for (long empty = this->mHeldUnits.size() - 1; empty >= 0; empty--)
             this->mHeldUnits[empty] = NULL;
         for (unsigned long item = 0; item < this->mGoalQueues.size(); item++) {
+            theFailed = false;
             for (unsigned long goal = 0; goal < this->mGoalQueues[item].mGoals.size(); goal++) {
                 EEUnitGoal* theGoal = this->mGoalQueues[item].mGoals[goal];
                 theResult = theGoal->RepairPointers(inMajorVersion, inMinorVersion);
