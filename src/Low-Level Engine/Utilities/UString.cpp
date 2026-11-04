@@ -297,7 +297,6 @@ UString& UString::Copy(const UString& inString, unsigned long inStart, unsigned 
 
 // FUNCTION: LLE 0x1008319d
 // Copies inCount characters from inStart of a C string to inDestination, optionally reallocating first
-// (the clamp leaves no room for the terminator: a copy that fills the buffer writes one byte past it)
 UString& UString::Copy(const char* inString, unsigned long inStart, unsigned long inCount,
                        unsigned long inDestination, bool inResize)
 {
@@ -316,6 +315,15 @@ UString& UString::Copy(const char* inString, unsigned long inStart, unsigned lon
             unsigned long theCount = this->mCapacity - inDestination;
             if (theCount > inCount)
                 theCount = inCount;
+            // Fixed: a copy that filled the buffer wrote its terminator one byte past the allocation; the buffer
+            // now grows by that byte, keeping the copied characters
+            if (inDestination + theCount >= this->mCapacity) {
+                char* theString = new char[inDestination + theCount + 1];
+                memcpy(theString, this->mString, this->mCapacity);
+                delete[] this->mString;
+                this->mString = theString;
+                this->mCapacity = inDestination + theCount + 1;
+            }
             memcpy(this->mString + inDestination, inString + inStart, theCount);
             (this->mString + theCount)[inDestination] = 0;
             this->mLength = strlen(this->mString);
