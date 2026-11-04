@@ -337,7 +337,8 @@ void EEAmbientSoundManager::UpdateAnimals(float inTimeOfDay, long inTime)
     if (this->mState == 4 || this->mState == 2) {
         if (this->mSounds[10].mNextTime <= inTime) {
             float theRandom = this->Random();
-            if (this->mSounds[10].mProbability < theRandom) {
+            // play with chance p, as every other ambient sound (the test was reversed: chance 1 - p)
+            if (theRandom <= this->mSounds[10].mProbability) {
                 float theVolume;
                 float thePan;
                 if (theRatio >= 0.11f) {
@@ -357,7 +358,8 @@ void EEAmbientSoundManager::UpdateAnimals(float inTimeOfDay, long inTime)
     if (this->mState == 4 || this->mState == 2) {
         if (this->mSounds[14].mNextTime <= inTime) {
             float theRandom = this->Random();
-            if (this->mSounds[14].mProbability < theRandom) {
+            // play with chance p, as every other ambient sound (the test was reversed: chance 1 - p)
+            if (theRandom <= this->mSounds[14].mProbability) {
                 float thePan = this->RandomRange(-1.0f, 1.0f);
                 gSoundManager->Play(this->mSounds[14].mSound->GetSampleID(),
                                     this->mSounds[14].mMaximumVolume, thePan,
@@ -374,7 +376,8 @@ void EEAmbientSoundManager::UpdateAnimals(float inTimeOfDay, long inTime)
         this->mSounds[18].mNextTime = this->RandomInteger(100, this->mSounds[18].mInterval) + inTime;
     } else {
         float theRandom = this->Random();
-        if (this->mSounds[18].mProbability < theRandom) {
+        // play with chance p, as every other ambient sound (the test was reversed: chance 1 - p)
+        if (theRandom <= this->mSounds[18].mProbability) {
             float thePan = this->RandomRange(-1.0f, 1.0f);
             gSoundManager->Play(this->mSounds[18].mSound->GetSampleID(),
                                 this->mSounds[18].mMaximumVolume, thePan,
@@ -539,7 +542,8 @@ void EEAmbientSoundManager::UpdateTerrain(float inTimeOfDay, long inTime)
         if (this->mState == 3 || this->mState == 1) {
             if (this->mSounds[12].mNextTime <= inTime) {
                 float theRandom = this->Random();
-                if (this->mSounds[12].mProbability < theRandom) {
+                // play with chance p, as every other ambient sound (the test was reversed: chance 1 - p)
+                if (theRandom <= this->mSounds[12].mProbability) {
                     float theVolume = this->mSounds[12].mMaximumVolume;
                     EEAmbientSound* theSound = &this->mSounds[12];
                     float thePitch = this->RandomRange(0.8f, kAmbientAnimalPitchHigh);
