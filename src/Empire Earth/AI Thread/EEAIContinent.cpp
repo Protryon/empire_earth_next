@@ -181,12 +181,14 @@ void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, 
         if (theContinent == NULL || theContinent->mCategory != kContinentCategoryLand)
             continue;
         theFound = false;
+        // the neighbours' region of the requested kind (was always the water body)
+        long theKind = inKind == kAIPathSpaceRegion ? kAIPathSpaceRegion : kAIPathWaterBody;
         theNeighbor.mX = this->mShoreTiles[i].mX - 1;
         theNeighbor.mY = this->mShoreTiles[i].mY - 1;
         if ((unsigned long)theNeighbor.mX < gMapWidth &&
             (unsigned long)theNeighbor.mY < gMapHeight) {
             for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, kAIPathWaterBody) == inIDs[j];
+                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
             if (theFound) {
                 outTiles.push_back(this->mShoreTiles[i]);
                 continue;
@@ -197,7 +199,7 @@ void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, 
         if ((unsigned long)theNeighbor.mX < gMapWidth &&
             (unsigned long)theNeighbor.mY < gMapHeight) {
             for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, kAIPathWaterBody) == inIDs[j];
+                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
             if (theFound) {
                 outTiles.push_back(this->mShoreTiles[i]);
                 continue;
@@ -208,7 +210,7 @@ void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, 
         if ((unsigned long)theNeighbor.mX < gMapWidth &&
             (unsigned long)theNeighbor.mY < gMapHeight) {
             for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, kAIPathWaterBody) == inIDs[j];
+                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
             if (theFound) {
                 outTiles.push_back(this->mShoreTiles[i]);
                 continue;
@@ -219,7 +221,7 @@ void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, 
         if ((unsigned long)theNeighbor.mX < gMapWidth &&
             (unsigned long)theNeighbor.mY < gMapHeight) {
             for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, kAIPathWaterBody) == inIDs[j];
+                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
             if (theFound) {
                 outTiles.push_back(this->mShoreTiles[i]);
                 continue;
@@ -230,7 +232,7 @@ void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, 
         if ((unsigned long)theNeighbor.mX < gMapWidth &&
             (unsigned long)theNeighbor.mY < gMapHeight) {
             for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, kAIPathWaterBody) == inIDs[j];
+                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
             if (theFound) {
                 outTiles.push_back(this->mShoreTiles[i]);
                 continue;
@@ -241,7 +243,7 @@ void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, 
         if ((unsigned long)theNeighbor.mX < gMapWidth &&
             (unsigned long)theNeighbor.mY < gMapHeight) {
             for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, kAIPathWaterBody) == inIDs[j];
+                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
             if (theFound) {
                 outTiles.push_back(this->mShoreTiles[i]);
                 continue;
@@ -252,7 +254,7 @@ void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, 
         if ((unsigned long)theNeighbor.mX < gMapWidth &&
             (unsigned long)theNeighbor.mY < gMapHeight) {
             for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-                theFound = gContinentManager.GetContinent(theNeighbor, kAIPathWaterBody) == inIDs[j];
+                theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
             if (theFound) {
                 outTiles.push_back(this->mShoreTiles[i]);
                 continue;
@@ -264,7 +266,7 @@ void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, 
             !((unsigned long)theNeighbor.mY < gMapHeight))
             continue;
         for (j = inIDs.size() - 1; j >= 0 && !theFound; j--)
-            theFound = gContinentManager.GetContinent(theNeighbor, kAIPathWaterBody) == inIDs[j];
+            theFound = gContinentManager.GetContinent(theNeighbor, theKind) == inIDs[j];
         if (theFound)
             outTiles.push_back(this->mShoreTiles[i]);
     }
