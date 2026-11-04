@@ -706,7 +706,7 @@ bool EEAIFOAcceptableComputerPlayerExplorerUnitScreener::Screen(EEUnitClass* inC
 
 // FUNCTION: EXE 0x42b0ba
 // Orders EECPIntelligence's GetTargets list: higher score first, building-19 targets ahead; a building-19 and a
-// non-building pair is 'less' both ways (struct in ee/EECPIntelligence.h)
+// other target pair orders the building first (struct in ee/EECPIntelligence.h)
 bool EECPITargetScoreGreater::operator()(const std::pair<EEComplexUnit*, long>& inFirst,
                                          const std::pair<EEComplexUnit*, long>& inSecond)
 {
@@ -715,7 +715,7 @@ bool EECPITargetScoreGreater::operator()(const std::pair<EEComplexUnit*, long>& 
     if (inSecond.first->GetUnitClass()->mCategory != kUnitCategoryBuilding19)
         theResult = theFirstCategory == kUnitCategoryBuilding19 || inFirst.second > inSecond.second;
     else
-        theResult = theFirstCategory != kUnitCategoryBuilding19 || inSecond.second > inFirst.second;
+        theResult = theFirstCategory == kUnitCategoryBuilding19 && inFirst.second > inSecond.second;
     return theResult;
 }
 
