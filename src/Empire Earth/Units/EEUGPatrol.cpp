@@ -158,10 +158,11 @@ void EEUGPatrol::Step(EEComplexUnit* inUnit)
 {
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionGetNextPatrolPoint)
         return;
+    // test for a missing patrol group first: a loaded goal can have a current point but no group
+    if (this->mPatrolGroup == NULL)
+        return;
     if (this->mTarget != NULL && this->mPatrolGroup->GetNumPoints() == 1 && inUnit->mTileX == this->mTarget->mTileX
         && inUnit->mTileY == this->mTarget->mTileY)
-        return;
-    if (this->mPatrolGroup == NULL)
         return;
     EEComplexUnit* theNext;
     if (this->mIsGoingForward) {
