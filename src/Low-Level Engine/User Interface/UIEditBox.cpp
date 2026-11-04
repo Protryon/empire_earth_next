@@ -460,8 +460,10 @@ void UIEditBox::Copy()
     char* theBuffer = (char*)GlobalLock(theMemory);
     strcpy(theBuffer, theText);
     GlobalUnlock(theMemory);
-    if (!OpenClipboard(NULL))
+    if (!OpenClipboard(NULL)) {
+        GlobalFree(theMemory);   // Fixed: the block used to leak when the clipboard could not be opened
         return;
+    }
     EmptyClipboard();
     SetClipboardData(CF_TEXT, theMemory);
     CloseClipboard();
@@ -1044,7 +1046,10 @@ void UIEditBox::Paste()
         strcpy(theText, theLocked);
     GlobalUnlock(theData);
     CloseClipboard();
-    this->AddChar(theText);
+    // Fixed: the copy used to leak, and an uninitialised buffer was added when the clipboard could not be locked
+    if (theLocked)
+        this->AddChar(theText);
+    delete[] theText;
 }
 
 // FUNCTION: LLE 0x1006ca57
