@@ -155,10 +155,10 @@ void UILayoutUtility::OffsetTop(long inOffset, unsigned long inSize)
 }
 
 // FUNCTION: LLE 0x1007820b
-// Moves the right edge by a pixel offset, but takes the direction from the left edge's offset type (original slip)
+// Moves the right edge by a pixel offset, in the direction of the right edge's offset type
 void UILayoutUtility::OffsetRight(long inOffset, unsigned long inSize)
 {
-    switch (this->mLeftOffsetType) {
+    switch (this->mRightOffsetType) {   // Fixed: used to switch on the left edge's offset type
     case kLayoutFromStart:
     case kLayoutAfterCenter:
     case kLayoutFromStartEdge:
