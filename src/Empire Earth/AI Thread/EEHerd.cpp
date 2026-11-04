@@ -742,8 +742,8 @@ bool EEHerd::IsAnimalOnMap(EEUnit* inUnit)
 }
 
 // FUNCTION: EXE 0x4a34dc
-// Reads the herd from a saved game (ids for its animal, player, leader, target and units); returns the read
-// error, though the unit count read overwrites any earlier one
+// Reads the herd from a saved game (ids for its animal, player, leader, target and units); returns the first read
+// error
 long EEHerd::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     long theResult = 0;
@@ -801,7 +801,9 @@ long EEHerd::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
             theResult = this->mP94.Load(inFile);
     }
     theCount = 0;
-    theResult = inFile.Read(theCount);
+    // an earlier read error is kept (the unit count's result used to replace it)
+    if (theResult == 0)
+        theResult = inFile.Read(theCount);
     if (theResult != 0)
         return theResult;
     this->mUnits.resize(theCount, 0);
@@ -970,8 +972,8 @@ bool EEHerd::GiveBirth(unsigned long inTime)
 }
 
 // FUNCTION: EXE 0x4a3e7a
-// Writes the herd to the saved game (ids for its animal, player, leader, target and units); returns the write
-// error, though the unit count write overwrites any earlier one
+// Writes the herd to the saved game (ids for its animal, player, leader, target and units); returns the first write
+// error
 long EEHerd::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     long theResult = 0;
@@ -1023,7 +1025,9 @@ long EEHerd::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
             theResult = this->mP94.Save(outFile);
     }
     theCount = this->mUnits.size();
-    theResult = outFile.Write(theCount);
+    // an earlier write error is kept (the unit count's result used to replace it)
+    if (theResult == 0)
+        theResult = outFile.Write(theCount);
     if (theResult != 0)
         return theResult;
     for (unsigned long i = 0; i < theCount; i++) {
