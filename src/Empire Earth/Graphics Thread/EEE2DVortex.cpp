@@ -126,8 +126,8 @@ long EEE2DVortex::SetUp()
 
 // NEAR: the transformation pointer is pushed after the z sum in the original
 // FUNCTION: EXE 0x4e7949
-// Poses the vortex model and its orbitals 0.2 above its point, but draws it only from 90% of its life on,
-// fading out; returns the draw result (0 before then)
+// Poses the vortex model and its orbitals 0.2 above its point, draws it, fading out over the last 10%
+// of its life; returns the draw result
 long EEE2DVortex::DrawPass5()
 {
     // LOST-DEBUG: none independent: as EEE3DDisease::DrawPass5, the budget that makes mAngles[i] and
@@ -160,11 +160,11 @@ long EEE2DVortex::DrawPass5()
     }
     theModel->PrepareTransforms();
     theModel->GetMaterial(0)->SetTexture(this->mGraphicObject->mTextures[0], theScreen);
-    if (this->mDrawAge >= 0.9f) {
+    // The vortex is drawn for its whole life and fades out over its last 10%.
+    if (this->mDrawAge >= 0.9f)
         theModel->SetOpacity((1.0f - this->mDrawAge) * 10.0f);
-        bool theSorted = gOrthographicView;
-        theResult = gRasterizer->Draw(theModel, theScreen, 1.0f, theSorted);
-    }
+    bool theSorted = gOrthographicView;
+    theResult = gRasterizer->Draw(theModel, theScreen, 1.0f, theSorted);
     theModel->SetOpacity(1.0f);
     return theResult;
 }
