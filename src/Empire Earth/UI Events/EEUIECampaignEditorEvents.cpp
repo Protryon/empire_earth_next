@@ -208,7 +208,10 @@ static long SaveCampaign(UIForm* inForm)
     UWideString theMessage;
     gResource->GetString(IDS_PLEASE_WAIT, theMessage);
     gUIManager->DisplayMessage(theMessage, true, NULL, 0, false);
-    gUserInterface->PostEvent(new EEUIECECampaignSaveContinued(inForm), NULL);
+    // PostEvent takes its own reference: drop the creation reference (the event leaked).
+    UIEvent* theEvent = new EEUIECECampaignSaveContinued(inForm);
+    gUserInterface->PostEvent(theEvent, NULL);
+    theEvent->Dereference();
     return 0;
 }
 
