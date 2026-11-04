@@ -56,6 +56,7 @@ EEE3DIcon::EEE3DIcon(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, const GE3
         this->mFollowUnit = true;
     this->mGrowing = false;
     this->mScroll = 0.0f;
+    this->mGraphicObject = NULL;
 }
 
 // SYNTHETIC: EXE 0x4f20f2
@@ -142,13 +143,16 @@ void EEE3DIcon::PrepareQueue()
 }
 
 // FUNCTION: EXE 0x4f238a
-// Resets the icon's age, scale, animation and orbitals (the orbital list is emptied without deleting them)
+// Resets the icon's age, scale, animation and orbitals (deleting its orbitals)
 void EEE3DIcon::Clear()
 {
     this->mAge = 0.0f;
     this->mScale = 0.0f;
     this->mGraphicObject = NULL;
     this->mGrowing = false;
+    // The icon owns its orbital copies: delete them before emptying the list.
+    for (std::vector<EEOrbital*>::iterator theOrbital = this->mOrbitals.begin(); theOrbital != this->mOrbitals.end(); theOrbital++)
+        delete *theOrbital;
     this->mOrbitals.clear();
     this->mTime = 0.0f;
     this->mOrbitalCount = 0;
@@ -164,9 +168,13 @@ long EEE3DIcon::SetUp()
 {
     EEGraphicEffect* theEffect = this->mGraphicEffect;
     float theRadius = theEffect->mSize;
+    EEGraphicObject* thePrevious = this->mGraphicObject;
     this->Clear();
     this->mGraphicObject = theEffect->mGraphicObject;
     this->mGraphicObject->LoadMedia();
+    // Release the media of a graphic loaded by an earlier set-up (after the new load, so shared media stays loaded).
+    if (thePrevious)
+        thePrevious->UnloadMedia();
     this->mFrame = this->mGraphicObject->mStartFrames[13];
     this->mFrameCount = this->mGraphicObject->mFrameCounts[13];
     this->mFrameTime = this->mGraphicObject->mFrameTimes[13];
