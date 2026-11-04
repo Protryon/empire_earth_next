@@ -3286,7 +3286,7 @@ void EESMEffect::ChangeAttribute()
         EEModifyUnitAttribute(this->mAttribute, this->mUsesPercent, thePlayer, theUpgrade, this->mAttributeAmount, this->mAttributeMode);
     } else {
         EEUnit* theUnit = this->mAttributeUnit != -1 ? gWorld.GetUnit(this->mAttributeUnit) : NULL;
-        EEChangeUnit(this->mAttribute, false, theUnit, this->mAttributeAmount, 0, false, this->mAttributeMode);
+        EEChangeUnit(this->mAttribute, this->mUsesPercent, theUnit, this->mAttributeAmount, 0, false, this->mAttributeMode);
     }
 }
 
