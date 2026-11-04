@@ -12,7 +12,7 @@
 std::vector<ISDevice*> ISDevice::sDevices;
 
 // FUNCTION: LLE 0x1003975e
-// Creates an input device with a name and adds it to the global device list (never removed again)
+// Creates an input device with a name and adds it to the global device list
 ISDevice::ISDevice(const UString& inName)
     : mName(inName)
 {
@@ -21,9 +21,15 @@ ISDevice::ISDevice(const UString& inName)
 }
 
 // FUNCTION: LLE 0x10039791
-// Destroys the input device (it stays in the device list)
+// Destroys the input device and removes it from the device list
 ISDevice::~ISDevice()
 {
+    // Fixed: the destroyed device used to stay in the list, where GetDevice handed out a dangling pointer
+    for (unsigned long i = 0; i < ISDevice::sDevices.size(); i++)
+        if (ISDevice::sDevices[i] == this) {
+            ISDevice::sDevices.erase(ISDevice::sDevices.begin() + i);
+            break;
+        }
 }
 
 // FUNCTION: LLE 0x1003979f
