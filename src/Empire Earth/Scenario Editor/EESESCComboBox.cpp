@@ -156,7 +156,7 @@ void EESETSEScenarioComboBox::ChangeSelection()
 
 // FUNCTION: EXE 0x57add4
 // Jumps to the trigger, condition, effect, object or area entry right-clicked in the combo (skipping the
-// list's leading built-in entries); the condition/object jump checks the other tab's radio
+// list's leading built-in entries)
 long EESETSEScenarioComboBox::MouseRButtonUp()
 {
     EESETriggerScreen* theScreen = gUIManager->mScenarioEditorForm->GetTriggerScreen();
@@ -186,23 +186,22 @@ long EESETSEScenarioComboBox::MouseRButtonUp()
                 theObjectCondition++;
             }
             if (theObjectCondition != theConditionCount && theObjectCondition != 0 && theSelection >= theObjectCondition) {
-                UIEvent* theEvent = theScreen->mTabs[kSETriggerScreenCondition]->GetTriggerEvent(kControlTriggerChecked);
-                if (theEvent)
-                    theEvent->Reference();
-                theScreen->mTabs[kSETriggerScreenCondition]->SetTriggerEvent(kControlTriggerChecked, NULL);
-                theScreen->mTabs[kSETriggerScreenCondition]->Check();
-                theScreen->mTabs[kSETriggerScreenCondition]->SetTriggerEvent(kControlTriggerChecked, theEvent);
-                theScreen->mScreens[kSETriggerScreenObject]->mSelection = theSelection - theObjectCondition;
-                theScreen->ShowTab(kSETriggerTabObject);
-            } else if (theSelection > 0) {
-                // The original checks the object radio before switching to the condition tab (0x57afae) and
-                // the condition radio before switching to the object tab (0x57b004)
                 UIEvent* theEvent = theScreen->mTabs[kSETriggerScreenObject]->GetTriggerEvent(kControlTriggerChecked);
                 if (theEvent)
                     theEvent->Reference();
                 theScreen->mTabs[kSETriggerScreenObject]->SetTriggerEvent(kControlTriggerChecked, NULL);
                 theScreen->mTabs[kSETriggerScreenObject]->Check();
                 theScreen->mTabs[kSETriggerScreenObject]->SetTriggerEvent(kControlTriggerChecked, theEvent);
+                theScreen->mScreens[kSETriggerScreenObject]->mSelection = theSelection - theObjectCondition;
+                theScreen->ShowTab(kSETriggerTabObject);
+            } else if (theSelection > 0) {
+                // Each jump checks its own tab's radio (the condition and object radios were swapped)
+                UIEvent* theEvent = theScreen->mTabs[kSETriggerScreenCondition]->GetTriggerEvent(kControlTriggerChecked);
+                if (theEvent)
+                    theEvent->Reference();
+                theScreen->mTabs[kSETriggerScreenCondition]->SetTriggerEvent(kControlTriggerChecked, NULL);
+                theScreen->mTabs[kSETriggerScreenCondition]->Check();
+                theScreen->mTabs[kSETriggerScreenCondition]->SetTriggerEvent(kControlTriggerChecked, theEvent);
                 theScreen->mScreens[kSETriggerScreenCondition]->mSelection = theSelection - 1;
                 theScreen->ShowTab(kSETriggerTabCondition);
             }
