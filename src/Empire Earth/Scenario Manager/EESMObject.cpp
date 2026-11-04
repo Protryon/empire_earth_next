@@ -1596,11 +1596,11 @@ void EEChangeUnit(unsigned long inAttribute, bool inPercentage, EEUnit* inUnit,
         if (theAmount < 0) theAmount = 0;
         unsigned long theState = 6;
         if (inAttribute == kSMUnitAttributeAnyResource) {
-            if (theComplex == NULL || theComplex->mCommand == NULL || theComplex->mCommand->mType != kActionGatherResource) {
-                inUnit->SetResourceAmount(theAmount);
+            // any resource: a random type unless the unit is gathering, which keeps the type it gathers
+            inUnit->SetResourceAmount(theAmount);
+            if (theComplex == NULL || theComplex->mCommand == NULL || theComplex->mCommand->mType != kActionGatherResource)
                 inUnit->SetResourceType(gPhysics->GetRandom(2L, 6L));
-            }
-            theState = 4;
+            break;
         } else if (inAttribute == kSMUnitAttributeStone) theState = 4;
         else if (inAttribute == kSMUnitAttributeGold) theState = 5;
         else if (inAttribute == kSMUnitAttributeWood) theState = 3;
