@@ -4019,9 +4019,11 @@ void EEPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction
 // Pays the cost of a unit class improvement at its current level, resources 5 and 6 covering each other
 void EEPlayer::PayImprovement(EEUnitClass* inClass, long inImprovement)
 {
+    if (inClass == NULL)
+        return;
     EEUnitClass* theClass = gUnitClassTable[inClass->mUnitType];
     long theTechnology = theClass != NULL ? theClass->mTechnology : 100000;
-    if (inClass == NULL || theTechnology == kTechNone)
+    if (theTechnology == kTechNone)
         return;
     EETechTreeNode* theNode = this->mTechnologies->Get(theTechnology);
     if (theNode == NULL || inClass->mImprovements == NULL)
