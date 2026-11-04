@@ -108,7 +108,7 @@ long EEUIESPLLoadScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 
 // FUNCTION: EXE 0x5e900e
 // Loads the selected saved game: validates it, sets up the lobby options and a new local server and starts loading
-// (an invalid file shows the reason; the opened file spec is only freed on success)
+// (an invalid file shows the reason; the file spec is freed on every path)
 long EEUIESPLELoadFile::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     UWideString theMessage;
@@ -140,8 +140,12 @@ long EEUIESPLELoadFile::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
                 static_cast<EEServer*>(gCommunications)->StopPing();
                 static_cast<EEServer*>(gCommunications)->mLoadState = true;
                 gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
-            } else
+            } else {
                 gUIManager->DisplayMessage(theMessage, true, NULL, 0, true);
+                delete theFile;     // an invalid file is freed (and closed) too; it leaked
+            }
+        } else if (theFile != NULL) {
+            delete theFile;         // found but not opened: freed too (it leaked)
         }
     }
     return kErrorOK;
