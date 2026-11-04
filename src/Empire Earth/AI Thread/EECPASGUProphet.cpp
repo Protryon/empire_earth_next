@@ -225,6 +225,7 @@ float EECPASGUProphetCalamityAnalyzerVolcano::ApplyChokePointBonus(float inScore
                 this->mTile.mX = theTile.GetX();
                 this->mTile.mY = theTile.GetY();
                 outFound = true;   // the choke point aim stands (Evaluate then skips PickTarget)
+                this->SetUnit(NULL);   // a ground cast: no target unit left over from an earlier pick
             } else
                 theResult = 0.0f;
         }
