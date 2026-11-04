@@ -96,7 +96,7 @@ long UDataCompression::Compress(const char* inData, unsigned long inLength, char
 }
 
 // FUNCTION: LLE 0x100564b9
-// Decompresses a "PK01" block; 0x13 not compressed, 0x15 failure (an overflowing output is not reported)
+// Decompresses a "PK01" block; 0x13 not compressed, 0x15 failure, 0x16 output too small
 long UDataCompression::Decompress(const char* inData, unsigned long inLength, char* outData,
                                   unsigned long inCapacity, unsigned long& outLength)
 {
@@ -114,8 +114,14 @@ long UDataCompression::Decompress(const char* inData, unsigned long inLength, ch
         theStream.mOutputPosition = 0;
         memset(this->mWorkBuffers[1], 0, 0x3134);
         if (explode(UDCReadBuffer, UDCWriteBuffer, this->mWorkBuffers[1], &theStream) == 0) {
-            theResult = 0;
-            outLength = theStream.mOutputPosition;
+            // output that did not fit was dropped: report it as Compress does
+            if (theStream.mOutputPosition <= theStream.mOutputCapacity) {
+                theResult = 0;
+                outLength = theStream.mOutputPosition;
+            } else {
+                theResult = 0x16;
+                outLength = 0;
+            }
         } else {
             theResult = 0x15;
             outLength = 0;
