@@ -255,19 +255,10 @@ long EETechTreeEpoch::Load(unsigned long inMajorVersion, unsigned long inMinorVe
 }
 
 // FUNCTION: EXE 0x5ce53f
-// Walks the nodes that need unit media not yet loaded and computes their media mask, which is then dropped
+// Does nothing: the original walked the nodes needing unit media and computed each one's media mask, then dropped
+// it (the check was never finished); the unused computation is removed
 void EETechTreeEpoch::CheckUnitMedia(EEPlayer* inPlayer)
 {
-    std::map<long, EETechTreeNode*>::const_iterator theNode;
-    unsigned long theMask;
-    theNode = this->mNodes.begin();
-    while (theNode != this->mNodes.end()) {
-        EETechTreeNode* theTreeNode = theNode->second;
-        if (this->mTree->GetPlayer()->mPlayerID > 0 && theTreeNode->NeedsUnitMedia() == true && !theTreeNode->GetIsObsolete()
-            && !theTreeNode->mIsUnitMediaLoaded)
-            EETechTree::GetUnitClassMediaMask(this->mTree, theTreeNode->mData->mUnitClass, &theMask);
-        ++theNode;
-    }
 }
 
 // FUNCTION: EXE 0x5ce5b5
