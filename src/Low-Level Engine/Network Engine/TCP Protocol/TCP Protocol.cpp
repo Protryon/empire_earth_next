@@ -642,11 +642,13 @@ static unsigned long FindAdapterAddressIndex(unsigned long inAdapter)
 
 // FUNCTION: TCP 0x10001bcd
 // Lists the descriptions of up to 10 network adapters; returns how many
-// (frees the walked adapter pointer instead of the buffer start)
 extern "C" long NPIMEnumerateNetworkAdapters(std::vector<UWideString>& outAdapters)
 {
     unsigned long theCount = 0;
     IP_ADAPTER_INFO* theAdapter = (IP_ADAPTER_INFO*)new char[0x1900];
+    // Fix: keep the buffer start for the delete (the walked pointer used to be freed: NULL, so the buffer leaked
+    // on every call, or an interior pointer with more than 10 adapters).
+    IP_ADAPTER_INFO* theBuffer = theAdapter;
     unsigned long theSize = 0x1900;
     DWORD theError = GetAdaptersInfo(theAdapter, &theSize);
     outAdapters.clear();
@@ -655,7 +657,7 @@ extern "C" long NPIMEnumerateNetworkAdapters(std::vector<UWideString>& outAdapte
         outAdapters.push_back(UWideString(theAdapter->Description));
         theAdapter = theAdapter->Next;
     }
-    delete[] (char*)theAdapter;
+    delete[] (char*)theBuffer;
     return theCount;
 }
 
