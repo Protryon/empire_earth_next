@@ -703,7 +703,7 @@ bool EECPResourceCenter::IsWithinRadius(EEUnit* inUnit)
 
 // FUNCTION: EXE 0x48d306
 // Writes the ids of the valid resource units, the main building's id (-1 for none) and the active flag; returns
-// the write error (a failed unit id write can be masked by a later one)
+// the first write error
 long EECPResourceCenter::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     unsigned long i;
@@ -715,7 +715,8 @@ long EECPResourceCenter::Save(unsigned long inMajorVersion, unsigned long inMino
     long theResult = outFile.Write(theCount);
     if (theResult != 0)
         return theResult;
-    for (i = 0; i < this->mUnits.size(); i++) {
+    // stop at the first failed id write (each result used to overwrite the previous one)
+    for (i = 0; i < this->mUnits.size() && theResult == 0; i++) {
         EEUnit* theUnit = this->mUnits[i];
         if (theUnit->mIsValid) {
             unsigned long theID = theUnit->GetUnitID();
