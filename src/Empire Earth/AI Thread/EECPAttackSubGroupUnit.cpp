@@ -1206,14 +1206,10 @@ bool EECPAttackSubGroupUnit::IsExposedToCalamity()
 }
 
 // FUNCTION: EXE 0x4659a0
-// Looks for a prejudice matching the target's class, but discards the result (no effect)
+// Prejudices do not change targeting through this slot: no effect
 void EECPAttackSubGroupUnit::ApplyPrejudices(EECPASTargetUnit* inTarget)
 {
-    bool theFound = false;
-    for (long i = this->mPrejudices.size() - 1; i >= 0 && !theFound; i--) {
-        EEUnitClass* theClass = inTarget->mUnit->mUnitClass;
-        theFound = this->mPrejudices[i].Matches(theClass);
-    }
+    // the search for a prejudice matching the target's class discarded its result, so it is gone
 }
 
 // FUNCTION: EXE 0x4659ee
