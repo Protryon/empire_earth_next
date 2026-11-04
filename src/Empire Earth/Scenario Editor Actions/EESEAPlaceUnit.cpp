@@ -178,9 +178,16 @@ bool EESEAPlaceUnit::Place(long inPlayer)
             } else {
                 float theHalf = 0.5f;
                 long theOffset = (long)(theGhost->mUnitClass->mTileSize * theHalf);
+                // A ghost at the map's low edge has its corner tile off the map: skip it instead of
+                // converting the negative tile to a huge unsigned value and reading a NULL tile.
+                if (theGhost->mTileX < theOffset || theGhost->mTileY < theOffset)
+                    continue;
                 theX = (unsigned long)(theGhost->mTileX - theOffset) + theHalf;
                 theY = (unsigned long)(theGhost->mTileY - theOffset) + theHalf;
-                theZ = gWorld.GetMap()->RTSMap::GetTile((long)theX, (long)theY)->mHeight;
+                EEMapTile* theTile = gWorld.GetMap()->RTSMap::GetTile((long)theX, (long)theY);
+                if (theTile == NULL)
+                    continue;
+                theZ = theTile->mHeight;
             }
             theEntry.mTransformation.SetPosition(theX, theY, theZ);
             theEntry.mAnimation = theGhost->mAnimation;
