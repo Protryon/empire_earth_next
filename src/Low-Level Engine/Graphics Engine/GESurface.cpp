@@ -834,7 +834,7 @@ long GESurface::LoadTGA(FSFileSpec& inFile)
 }
 
 // FUNCTION: LLE 0x10026c57
-// Saves the surface as a bottom-up 24-bit Targa; header width/height swapped and rows padded (as shipped)
+// Saves the surface as a bottom-up 24-bit Targa
 // NEAR: the original loads theHeight into cx before the zero stores and puts theResult in the pixel pointer's slot
 // (-4); field order and chained zero stores tried
 long GESurface::SaveAsTGA(FSFileSpec& inFile)
@@ -865,11 +865,12 @@ long GESurface::SaveAsTGA(FSFileSpec& inFile)
     if (theResult == kErrorOK) {
         theHeader.mYOrigin = theHeader.mXOrigin = theHeader.mColorMapOrigin = theHeader.mColorMapLength = 0;
         theHeader.mDescriptor = theHeader.mIDLength = theHeader.mColorMapType = theHeader.mColorMapDepth = 0;
-        theHeader.mWidth = (unsigned short)theHeight;
+        // Width and height go to their own fields, and Targa rows are not padded (both were BMP habits).
+        theHeader.mWidth = (unsigned short)theWidth;
         theHeader.mPixelDepth = 24;
-        theHeader.mHeight = (unsigned short)theWidth;
+        theHeader.mHeight = (unsigned short)theHeight;
         theHeader.mImageType = 2;
-        theRowSize = theWidth * 3 + theWidth % 4;
+        theRowSize = theWidth * 3;
         theBuffer = new unsigned char[theRowSize];
         theResult = inFile.Write(reinterpret_cast<unsigned char*>(&theHeader), sizeof(GETGAHeader), theWritten);
         if (theResult == kErrorOK) {
