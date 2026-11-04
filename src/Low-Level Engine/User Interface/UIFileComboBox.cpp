@@ -105,8 +105,8 @@ void UIFileComboBox::CreateEntries(unsigned long inSortType)
 }
 
 // FUNCTION: LLE 0x1006f848
-// Tries to delete the selected file from disk by appending each valid extension to its listed name (which already
-// has one, so the lookup fails) and removes its line on success; returns the delete or lookup error
+// Deletes the selected file from disk (the combo box lists full file names, extension included) and removes its
+// line on success; returns the delete or lookup error
 long UIFileComboBox::DeleteSelectedFile()
 {
     UString theName;
@@ -114,18 +114,14 @@ long UIFileComboBox::DeleteSelectedFile()
     long theResult = this->GetCurrentSelection(theSelection);
     if (theResult == kErrorOK) {
         theName = this->mListBox->GetData(theSelection);
-        for (unsigned long i = 0; i < this->mValidExtensions.size(); i++) {
-            theName += this->mValidExtensions[i];
-            FSFileSpec* theFile = NULL;
-            theResult = this->mFilePath->FindFile(theName, theFile);
-            if (theResult != kErrorOK)
-                continue;
+        // Fixed: each valid extension used to be appended (cumulatively) to the listed name, which already has its
+        // extension, so the file was never found
+        FSFileSpec* theFile = NULL;
+        theResult = this->mFilePath->FindFile(theName, theFile);
+        if (theResult == kErrorOK) {
             theResult = theFile->Delete();
-            if (theResult == kErrorOK) {
+            if (theResult == kErrorOK)
                 this->DeleteLine(theSelection);
-                delete theFile;
-                break;
-            }
             delete theFile;
         }
     }
