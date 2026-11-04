@@ -763,9 +763,9 @@ long EEGamePreferences::LoadGameOptions()
     if (theResult == 0) {
         this->mSettings.mGameOptions.mMapType = theString;
     } else {
-        // (sic: the member gets "", the registry "Continental")
-        this->mSettings.mGameOptions.SetMapType("");
+        // the member and the registry both get the default map type
         theString = "Continental";
+        this->mSettings.mGameOptions.SetMapType(theString);
         this->mRegistry.CreateRegistryValue(kEERootKey, UWideString(kEEGameOptionsKey), UWideString("Map Type"), theString);
     }
     theResult = this->mRegistry.GetRegistryValue(kEERootKey, UWideString(kEEGameOptionsKey), UWideString("Starting Resources"), theValue);
