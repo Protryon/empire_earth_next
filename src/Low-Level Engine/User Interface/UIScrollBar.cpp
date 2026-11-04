@@ -39,13 +39,14 @@
 #define kScrollButtonSize 20.0f
 
 // FUNCTION: LLE 0x1007ca21
-// Creates a vertical (style 1) or horizontal scroll bar: a slider between two arrow buttons; a precedence slip
-// makes the bar's own rectangle 19 x (length - 1) for both styles
+// Creates a vertical (style 1) or horizontal scroll bar: a slider between two arrow buttons
+// Fixed: the rectangle's size was `x + (style == 1) ? 19 : length - 1` (a precedence slip), which made it
+// 19 x (length - 1) for both styles; a horizontal bar is now (length - 1) x 19
 UIScrollBar::UIScrollBar(unsigned long inId, const GE2DPoint& inLocation, float inLength, unsigned long inStyle,
                          UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
     : UIControl(kControlTypeScrollBar, inId,
-                GERectangle(inLocation, inLocation.GetX() + (inStyle == 1) ? 19.0f : inLength - 1.0f,
-                            inLocation.GetY() + (inStyle == 1) ? inLength - 1.0f : 19.0f),
+                GERectangle(inLocation, inStyle == 1 ? 19.0f : inLength - 1.0f,
+                            inStyle == 1 ? inLength - 1.0f : 19.0f),
                 inForm, inIndex, 0)
 {
     GERectangle theSliderRectangle;
