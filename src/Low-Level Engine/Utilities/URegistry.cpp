@@ -263,23 +263,18 @@ long URegistry::GetRegistryValue(long inRootKey, UWideString& inKey, UWideString
 }
 
 // FUNCTION: LLE 0x10082443
-// Overwrites an existing string registry value; a missing value fails and leaks the opened key
+// Sets a string registry value in an existing key
 long URegistry::SetRegistryValue(long inRootKey, UWideString& inKey, UWideString& inValueName, UWideString& inValue)
 {
     HKEY theRoot;
-    DWORD theSize;
-    DWORD theType;
-    char theData[1024];
     long theResult = kInvalidRootKey;
-    theType = 0;
-    theSize = 500;
     if (URIsRootKey(inRootKey)) {
         if (RegOpenKeyEx((HKEY)inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
             HKEY theKey;
-            if (RegOpenKeyEx(theRoot, inKey, 0, KEY_ALL_ACCESS, &theKey) == ERROR_SUCCESS
-                && RegQueryValueEx(theKey, inValueName, NULL, &theType, reinterpret_cast<BYTE*>(theData), &theSize)
-                    == ERROR_SUCCESS) {
-                strcpy(theData, inValue);
+            // Fixed: the key was opened and the old value queried in one test; when the query failed (value missing,
+            // or a string over 500 bytes) the call failed and the opened key was never closed
+            if (RegOpenKeyEx(theRoot, inKey, 0, KEY_ALL_ACCESS, &theKey) == ERROR_SUCCESS) {
+                const char* theData = inValue;
                 if (RegSetValueEx(theKey, inValueName, 0, REG_SZ, reinterpret_cast<const BYTE*>(theData), inValue.GetTCHARLength())
                     == ERROR_SUCCESS)
                     theResult = kErrorOK;
@@ -305,22 +300,18 @@ long URegistry::SetRegistryValue(long inRootKey, UWideString& inKey, UWideString
 }
 
 // FUNCTION: LLE 0x1008257a
-// Overwrites an existing DWORD registry value; a missing value fails and leaks the opened key
+// Sets a DWORD registry value in an existing key
 long URegistry::SetRegistryValue(long inRootKey, UWideString& inKey, UWideString& inValueName, long inValue)
 {
-    DWORD theSize;
+    DWORD theSize = sizeof(long);
     HKEY theRoot;
-    DWORD theType;
-    long theValue;
     long theResult = kInvalidRootKey;
-    theType = REG_DWORD;
-    theSize = sizeof(long);
     if (URIsRootKey(inRootKey)) {
         if (RegOpenKeyEx((HKEY)inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
             HKEY theKey;
-            if (RegOpenKeyEx(theRoot, inKey, 0, KEY_ALL_ACCESS, &theKey) == ERROR_SUCCESS
-                && RegQueryValueEx(theKey, inValueName, NULL, &theType, reinterpret_cast<BYTE*>(&theValue), &theSize)
-                    == ERROR_SUCCESS) {
+            // Fixed: the key was opened and the old value queried in one test; when the value was missing the call
+            // failed and the opened key was never closed
+            if (RegOpenKeyEx(theRoot, inKey, 0, KEY_ALL_ACCESS, &theKey) == ERROR_SUCCESS) {
                 if (RegSetValueEx(theKey, inValueName, 0, REG_DWORD, reinterpret_cast<const BYTE*>(&inValue), theSize) == ERROR_SUCCESS)
                     theResult = kErrorOK;
                 else {
