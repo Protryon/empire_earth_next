@@ -248,6 +248,9 @@ long DX7Rasterizer::Draw3DLine(std::vector<std::pair<GE3DPoint, float> >& inPoin
     this->mDX7ScreenStates[inScreen]->mDevice->SetMaterial(&theMaterial);
     this->SetShadingColorSource(0, inScreen);
     unsigned long theCount = inPoints.size();
+    // A polyline needs two points (an empty one would wrap the unsigned vertex count and read past the vector).
+    if (theCount < 2)
+        return 0;
     unsigned long theVertexCount = theCount * 2 - 2;
     if (theVertexCount > 0x960) {
         theVertexCount = 0x960;
