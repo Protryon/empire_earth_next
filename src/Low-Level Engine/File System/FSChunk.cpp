@@ -168,7 +168,7 @@ long FSChunk::SaveChunkToFile(FSFile& outFile)
 }
 
 // FUNCTION: LLE 0x10007fce
-// Saves a persistent object into new compressed chunk data; returns kErrorOK even when the save fails
+// Saves a persistent object into new compressed chunk data; returns the save's error when it fails
 long FSChunk::SavePersistentToChunk(unsigned long inMajorVersion, unsigned long inMinorVersion,
                                     FSPersistent* inPersistent)
 {
@@ -177,8 +177,9 @@ long FSChunk::SavePersistentToChunk(unsigned long inMajorVersion, unsigned long 
         return kErrorOK;
     this->mData = new FSMemoryFile(1000, true, 1);
     FSFile* theFile = this->BuildFileToUse();
-    if (inPersistent->Save(inMajorVersion, inMinorVersion, *theFile) != kErrorOK)
-        return kErrorOK;
+    long theResult = inPersistent->Save(inMajorVersion, inMinorVersion, *theFile);
+    if (theResult != kErrorOK)
+        return theResult;   // Fixed: a failed save used to be reported as success
     this->mData->Compress(0x1000, theLength);
     this->mMajorVersion = inMajorVersion;
     this->mMinorVersion = inMinorVersion;
