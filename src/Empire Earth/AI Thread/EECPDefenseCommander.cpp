@@ -1831,7 +1831,7 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
     inSubGroup->GetLocation(theFrom);
     outTask.mIsActive = false;
     if (this->mAttackCommander->GetCombatManager()->mDefendTasks.size() > 0) {
-        float theChance = max(0.9f, this->mAttackCommander->GetCombatManager()->mDefendTasks.size() * 0.05f + 0.5f);
+        float theChance = min(0.9f, this->mAttackCommander->GetCombatManager()->mDefendTasks.size() * 0.05f + 0.5f);   // 50% + 5% per task, capped at 90% (was max: never below 90%)
         switch (inSubGroup->mKind) {
         case kASGKindLand:
             theCombat2 = false;
