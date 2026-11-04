@@ -84,12 +84,15 @@ long EECPAGTask::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
 }
 
 // FUNCTION: EXE 0x441791
-// Turns the loaded player and unit ids back into pointers (unit -1: none) and references the unit; returns
+// Turns the loaded player and unit ids back into pointers (-1: none) and references the unit; returns
 // the location's restore result
 long EECPAGTask::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     long theResult = this->mLocation.Restore(inMajorVersion, inMinorVersion);
-    this->mPlayer = ::gWorld.mPlayers[reinterpret_cast<unsigned long>(this->mPlayer)];
+    if (reinterpret_cast<unsigned long>(this->mPlayer) != -1)   // -1: no player (older saves wrote 0)
+        this->mPlayer = ::gWorld.mPlayers[reinterpret_cast<unsigned long>(this->mPlayer)];
+    else
+        this->mPlayer = NULL;
     if (reinterpret_cast<unsigned long>(this->mUnit) != -1) {
         this->mUnit = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mUnit)));
         if (this->mUnit)
@@ -110,7 +113,7 @@ void EECPAGTask::ReleaseUnit()
 }
 
 // FUNCTION: EXE 0x44180a
-// Writes the task to the saved game (unit id or -1, player id or 0); returns the first write error
+// Writes the task to the saved game (unit id or -1, player id or -1); returns the first write error
 long EECPAGTask::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     unsigned long theID = -1;
@@ -118,7 +121,7 @@ long EECPAGTask::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     theID = this->mUnit ? this->mUnit->GetUnitID() : -1;
     if (theResult == kErrorOK)
         theResult = outFile.Write(theID);
-    theID = this->mPlayer ? this->mPlayer->GetPlayerID() : 0;
+    theID = this->mPlayer ? this->mPlayer->GetPlayerID() : -1;   // -1: no player (was 0, gaia)
     if (theResult == kErrorOK)
         theResult = outFile.Write(theID);
     if (theResult == kErrorOK)
