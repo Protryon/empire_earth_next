@@ -386,8 +386,8 @@ void GEViewport::SetRearClippingDistance(float inDistance)
 }
 
 // FUNCTION: LLE 0x10037a1d
-// Changes the screen rectangle, its centre and aspect ratio and the clipping planes;
-// the projection matrices are not recomputed
+// Changes the screen rectangle, its centre and aspect ratio and the clipping planes and
+// the projection matrices
 void GEViewport::SetViewRectangle(const GERectangle& inRectangle)
 {
     if (this->mViewRectangle != inRectangle) {
@@ -403,6 +403,9 @@ void GEViewport::SetViewRectangle(const GERectangle& inRectangle)
         else
             this->mAspectRatio = 1.0f;
         this->mAspectRatioMultiplier = this->mAspectRatio / this->mFieldOfViewMultiplier;
+        // The projections depend on the aspect ratio and clipping plane: recompute them for the new size.
+        this->ComputeOrthographicMatrix();
+        this->ComputePerspectiveMatrix();
         this->ComputePlanes();
     }
 }
