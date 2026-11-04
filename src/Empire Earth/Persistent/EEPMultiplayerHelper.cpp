@@ -121,84 +121,46 @@ long EEPMultiplayerHelper::Save(unsigned long inMajorVersion, unsigned long inMi
     NESynchronousClient* theClient;
     if (inMajorVersion <= 0 && inMinorVersion <= 12)
         return kErrorOK;
-    if (inMajorVersion == 0 && inMinorVersion == 12) {
-        theCommunications = dynamic_cast<NESynchronousCommunications*>(gCommunications);
-        theNescommCt = theCommunications->GetNumberOfCTsProcessedInPhysics();
-        theNescommLastTickRecvd = theCommunications->GetLastTickReceived();
-        if (gCommunications->IsServer()) {
-            theServer = dynamic_cast<NESynchronousServer*>(gCommunications);
-            theSNessLastCt = theServer->GetLastCTMessageID();
-            theNessCt = theServer->GetCurrentCommunicationsTick();
-            theNessPt = theServer->GetCurrentPhysicsTick();
-            theNemmMessageNumber = theServer->GetMessageManagerCurrentMessageNumber();
-        } else {
-            theClient = dynamic_cast<NESynchronousClient*>(gCommunications);
-            theNescCt = theClient->GetCurrentCommunicationsTick();
-            theNescPt = theClient->GetCurrentPhysicsTick();
-        }
-        theResult = outFile.Write(theNemmMessageNumber);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theNescCt);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theNescPt);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theNescommCt);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theNescommLastTickRecvd);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theSNessLastCt);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theNessCt);
-        if (theResult != kErrorOK)
-            return theResult;
-        return outFile.Write(theNessPt);
+    // (A branch for exactly version 0.12, unreachable after the test above, was removed.)
+    theCommunications = dynamic_cast<NESynchronousCommunications*>(gCommunications);
+    theNescommCt = theCommunications->GetNumberOfCTsProcessedInPhysics();
+    theNescommLastTickRecvd = theCommunications->GetLastTickReceived();
+    if (gCommunications->IsServer()) {
+        theServer = dynamic_cast<NESynchronousServer*>(gCommunications);
+        theSNessLastCt = theServer->GetLastCTMessageID();
+        theNessCt = theServer->GetCurrentCommunicationsTick();
+        theNessPt = theServer->GetCurrentPhysicsTick();
+        theNemmMessageNumber = theServer->GetMessageManagerCurrentMessageNumber();
     } else {
-        theCommunications = dynamic_cast<NESynchronousCommunications*>(gCommunications);
-        theNescommCt = theCommunications->GetNumberOfCTsProcessedInPhysics();
-        theNescommLastTickRecvd = theCommunications->GetLastTickReceived();
-        if (gCommunications->IsServer()) {
-            theServer = dynamic_cast<NESynchronousServer*>(gCommunications);
-            theSNessLastCt = theServer->GetLastCTMessageID();
-            theNessCt = theServer->GetCurrentCommunicationsTick();
-            theNessPt = theServer->GetCurrentPhysicsTick();
-            theNemmMessageNumber = theServer->GetMessageManagerCurrentMessageNumber();
-        } else {
-            theClient = dynamic_cast<NESynchronousClient*>(gCommunications);
-            theNescCt = theClient->GetCurrentCommunicationsTick();
-            theNescPt = theClient->GetCurrentPhysicsTick();
-        }
-        theResult = gPhysics->Save(inMajorVersion, inMinorVersion, outFile);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theNemmMessageNumber);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theNescCt);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theNescPt);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theNescommCt);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theNescommLastTickRecvd);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theSNessLastCt);
-        if (theResult != kErrorOK)
-            return theResult;
-        theResult = outFile.Write(theNessCt);
-        if (theResult != kErrorOK)
-            return theResult;
-        return outFile.Write(theNessPt);
+        theClient = dynamic_cast<NESynchronousClient*>(gCommunications);
+        theNescCt = theClient->GetCurrentCommunicationsTick();
+        theNescPt = theClient->GetCurrentPhysicsTick();
     }
+    theResult = gPhysics->Save(inMajorVersion, inMinorVersion, outFile);
+    if (theResult != kErrorOK)
+        return theResult;
+    theResult = outFile.Write(theNemmMessageNumber);
+    if (theResult != kErrorOK)
+        return theResult;
+    theResult = outFile.Write(theNescCt);
+    if (theResult != kErrorOK)
+        return theResult;
+    theResult = outFile.Write(theNescPt);
+    if (theResult != kErrorOK)
+        return theResult;
+    theResult = outFile.Write(theNescommCt);
+    if (theResult != kErrorOK)
+        return theResult;
+    theResult = outFile.Write(theNescommLastTickRecvd);
+    if (theResult != kErrorOK)
+        return theResult;
+    theResult = outFile.Write(theSNessLastCt);
+    if (theResult != kErrorOK)
+        return theResult;
+    theResult = outFile.Write(theNessCt);
+    if (theResult != kErrorOK)
+        return theResult;
+    return outFile.Write(theNessPt);
 }
 
 // SYNTHETIC: EXE 0x54ac35
