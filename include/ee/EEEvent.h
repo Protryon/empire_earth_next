@@ -56,7 +56,8 @@ public:
     }
     // the events by id (0x55cf80, 1500 of them: the `$E` chain 0x1ca4ee's loop; guarded dtor = a class static).
     // the tech tree units define it (unguarded)
-    static EEEvent* Get(long inID) { return (inID >= 0 && inID <= 1500) ? &EEEvent::sEvents[inID] : NULL; }
+    // events 0..1499 (1500 used to be accepted, one past the table)
+    static EEEvent* Get(long inID) { return (inID >= 0 && inID < 1500) ? &EEEvent::sEvents[inID] : NULL; }
     static EEEvent sEvents[1500];
     // 0x1ca63b (cdecl, 0x141937): the effect table from inEffects, then every event's 100-byte name, +0x0c, count and
     // indices from inEvents (both opened first; provisional names)

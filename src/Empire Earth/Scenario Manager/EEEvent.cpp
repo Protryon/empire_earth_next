@@ -157,14 +157,14 @@ void EEUnloadBuiltInGraphicObjects()
 }
 
 // FUNCTION: EXE 0x5ca76c
-// Runs every effect of an event for a player (a given player's own index wins); returns the last effect's result;
-// accepts event 1500, one past the table
+// Runs every effect of an event for a player (a given player's own index wins); returns the last effect's result
 long EEEvent::Trigger(long inEvent, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit)
 {
     long theResult = 0;
     long thePlayerIndex = inPlayer != NULL ? inPlayer->mPlayerID : inPlayerIndex;
-    // the range test written out (Get()'s inline form keeps a NULL path the original threads away)
-    if (inEvent >= 0 && inEvent <= 1500) {
+    // the range test written out (Get()'s inline form keeps a NULL path the original threads away); the table
+    // holds events 0..1499 (event 1500 used to read one entry past it)
+    if (inEvent >= 0 && inEvent < 1500) {
         EEEvent* theEvent = &EEEvent::sEvents[inEvent];
         if (theEvent != NULL && theEvent->mEffects != NULL) {
             for (unsigned long i = 0; i < theEvent->mNumEffects; i++)
