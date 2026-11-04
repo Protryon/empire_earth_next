@@ -3963,10 +3963,12 @@ void EEUnitClass::UnloadButtons(EEPlayer* inPlayer)
     if (theTree != NULL) {
         for (long i = 0; i < (long)this->mResearchTechnologies.size(); i++) {
             EETechTreeNode* theNode = theTree->Get(this->mResearchTechnologies[i]);
-            if (theNode != NULL) {
-                if (inPlayer->IsHuman() == true)
-                    theNode->mButton->Release();
-            }
+            // a technology missing from the player's tree has nothing to release (its data used to be read
+            // through NULL)
+            if (theNode == NULL)
+                continue;
+            if (inPlayer->IsHuman() == true)
+                theNode->mButton->Release();
             RTSTechTreeNodeData* theData = theNode->mData;
             if (theData->mKind == 5) {
                 EECalamityEnum theEnum = (EECalamityEnum)theData->mCalamity;
