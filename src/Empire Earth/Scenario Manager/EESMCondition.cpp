@@ -447,14 +447,17 @@ void EESMCondition::RemapTriggers(EESMIDMap& inMap)
 }
 
 // FUNCTION: EXE 0x5bb3b6
-// Writes the condition; returns the first error, ignoring the text and chat text writes
+// Writes the condition; returns the first error
 long EESMCondition::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     long theResult = this->mName.Save(outFile);
     if (theResult == kErrorOK) {
-        this->mText.Save(outFile);
-        this->mChatText.Save(outFile);
-        theResult = outFile.Write(this->mType);
+        // The text and chat text results are checked like every other field (they were ignored).
+        theResult = this->mText.Save(outFile);
+        if (theResult == kErrorOK)
+            theResult = this->mChatText.Save(outFile);
+        if (theResult == kErrorOK)
+            theResult = outFile.Write(this->mType);
     }
     if (theResult == kErrorOK)
         theResult = outFile.Write(this->mObjectIndex);
