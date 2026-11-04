@@ -457,7 +457,7 @@ unsigned long UWideString::Import(unsigned char* inData)
 
 // FUNCTION: LLE 0x1008436b
 // Inserts a string at a character position (inReplace drops the old tail); when it does not fit, the new
-// buffer is sized to the free space instead of the needed size and overflows
+// buffer gets the needed size
 void UWideString::InsertString(const UWideString& inString, unsigned long inPosition, bool inReplace)
 {
     unsigned long theSize;
@@ -470,8 +470,10 @@ void UWideString::InsertString(const UWideString& inString, unsigned long inPosi
                   _mbsnbcnt(MB(inString.mString), _mbslen(MB(inString.mString))) + 2;
     }
     unsigned long theAvailable = this->mCapacity - _mbsnbcnt(MB((const char*)*this), _mbslen(MB((const char*)*this))) + 2;
-    if (theSize > theAvailable)
-        this->mCapacity = theAvailable;
+    // Fixed: the capacity used to be set to the free space (theAvailable), not the needed size, so the copies
+    // below overflowed the new buffer
+    if (theSize > theAvailable || theSize > this->mCapacity)
+        this->mCapacity = theSize;
     char* theNewString = new char[this->mCapacity];
     _mbsncpy(MB(theNewString), MB((const char*)*this), inPosition);
     char* theInsert = (char*)_mbsninc(MB(theNewString), inPosition);
@@ -479,7 +481,7 @@ void UWideString::InsertString(const UWideString& inString, unsigned long inPosi
     char* theRest = (char*)_mbsninc(MB((const char*)*this), inPosition);
     if (!inReplace)
         strcat(theInsert, theRest);
-    delete this->mString;
+    delete[] this->mString;
     this->mString = theNewString;
     this->mLength = _mbslen(MB((const char*)*this));
     this->mByteLength = _mbsnbcnt(MB((const char*)*this), this->mLength);
@@ -487,7 +489,7 @@ void UWideString::InsertString(const UWideString& inString, unsigned long inPosi
 
 // FUNCTION: LLE 0x10084498
 // Inserts a C string at a character position (inReplace drops the old tail); when it does not fit, the new
-// buffer is sized to the free space instead of the needed size and overflows
+// buffer gets the needed size
 void UWideString::InsertString(const char* inString, unsigned long inPosition, bool inReplace)
 {
     unsigned long theSize;
@@ -498,8 +500,10 @@ void UWideString::InsertString(const char* inString, unsigned long inPosition, b
         theSize = _mbsnbcnt(MB((const char*)*this), theLength) + _mbsnbcnt(MB(inString), _mbslen(MB(inString))) + 2;
     }
     unsigned long theAvailable = this->mCapacity - _mbsnbcnt(MB((const char*)*this), _mbslen(MB((const char*)*this))) + 2;
-    if (theSize > theAvailable)
-        this->mCapacity = theAvailable;
+    // Fixed: the capacity used to be set to the free space (theAvailable), not the needed size, so the copies
+    // below overflowed the new buffer
+    if (theSize > theAvailable || theSize > this->mCapacity)
+        this->mCapacity = theSize;
     char* theNewString = new char[this->mCapacity];
     _mbsncpy(MB(theNewString), MB((const char*)*this), inPosition);
     char* theInsert = (char*)_mbsninc(MB(theNewString), inPosition);
@@ -507,7 +511,7 @@ void UWideString::InsertString(const char* inString, unsigned long inPosition, b
     char* theRest = (char*)_mbsninc(MB((const char*)*this), inPosition);
     if (!inReplace)
         strcat(theInsert, theRest);
-    delete this->mString;
+    delete[] this->mString;
     this->mString = theNewString;
     this->mLength = _mbslen(MB((const char*)*this));
     this->mByteLength = _mbsnbcnt(MB((const char*)*this), this->mLength);
