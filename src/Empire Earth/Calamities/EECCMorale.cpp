@@ -72,15 +72,18 @@ bool EECCMorale::Start(EECalamity* inCalamity)
 }
 
 // FUNCTION: EXE 0x4b2cad
-// Takes one positive or negative morale count back from the target, removes its effect and stops the sounds
+// Takes the positive or negative morale count Update gave the target back, removes its effect and stops the sounds
 void EECCMorale::Stop(EECalamity* inCalamity)
 {
     EEUnit* theTargetUnit;
     if (inCalamity->GetTargetUnit(theTargetUnit)) {
-        if (this->mPositive)
-            theTargetUnit->mComplexUnit->mPositiveMorale--;
-        else
-            theTargetUnit->mComplexUnit->mNegativeMorale--;
+        // only a count Update took (once the effect time had passed) is given back
+        if (inCalamity->mBoolPlaceHolder1) {
+            if (this->mPositive)
+                theTargetUnit->mComplexUnit->mPositiveMorale--;
+            else
+                theTargetUnit->mComplexUnit->mNegativeMorale--;
+        }
         if (inCalamity->mEffectHandle != kNoEffectHandle) {
             gEffectManager->DestroyEffect(inCalamity->mEffectHandle);
             inCalamity->mEffectHandle = kNoEffectHandle;
