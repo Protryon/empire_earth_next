@@ -3445,7 +3445,7 @@ void EEComplexUnit::RemoveWaypointMarker(long inX, long inY)
 
 // FUNCTION: EXE 0x5fdc58
 // Starts the next build-queue entry the built building can produce (a citizen may come out female), dropping and
-// refunding unavailable entries; the last one dropped when the queue empties is not refunded
+// refunding unavailable entries
 void EEComplexUnit::StartProduction()
 {
     float theTimeScale = 1.0f;
@@ -3493,12 +3493,13 @@ void EEComplexUnit::StartProduction()
             return;
         }
         while (!theNode->GetIsAvailable()) {
+            // every dropped entry is refunded, the last one too
             this->mBuildQueue.erase(this->mBuildQueue.begin());
-            if (this->mBuildQueue.empty())
-                break;
             if (theNode->mData->mUnitClass <= 0)
                 gUserInterface->UpdateJITManufacturing();
             this->GetPlayer()->RefundTechnology(theNode, this->GetUnitClass()->GetUnitType(), 1.0f);
+            if (this->mBuildQueue.empty())
+                break;
             theNode = this->GetPlayer()->mTechnologies->Get(this->mBuildQueue.front().mTechnology);
         }
         if (this->mBuildQueue.empty())
