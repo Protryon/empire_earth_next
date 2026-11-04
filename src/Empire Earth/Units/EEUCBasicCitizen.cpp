@@ -291,7 +291,7 @@ EEUnit* EEUCBasicCitizen::FindNextResource(EEComplexUnit* inUnit, EEUnit* inReso
 static const float kCitizenFarmRange = 20.0f;
 
 // FUNCTION: EXE 0x60c6b3
-// Returns where the citizen drops its load: its goal's storage, else a farm's first drop site within 20, else the
+// Returns where the citizen drops its load: its goal's storage, else a farm's nearest drop site within 20, else the
 // owner's nearest built drop site that takes the load (docks and navy yards for boats)
 EEUnit* EEUCBasicCitizen::FindStorage(EEComplexUnit* inUnit, bool inAnyStorage)
 {
@@ -321,7 +321,8 @@ EEUnit* EEUCBasicCitizen::FindStorage(EEComplexUnit* inUnit, bool inAnyStorage)
                 if (!(theStorage->GetHitPoints() > 0) || !theStorage->GetComplexUnit()->mIsBuilt
                     || theStorage->GetComplexUnit()->mIsDisabled)
                     continue;
-                if (theResult != NULL && inUnit->DistanceSquaredToUnit(theStorage) >= inUnit->DistanceSquaredToUnit(*it))
+                // keep the storage picked so far unless this drop site is nearer
+                if (theResult != NULL && inUnit->DistanceSquaredToUnit(theStorage) >= inUnit->DistanceSquaredToUnit(theResult))
                     continue;
                 if ((*it)->GetComplexUnit()->DistanceSquaredToUnit(theResource) <= kCitizenFarmRange) {
                     theFarm = true;
