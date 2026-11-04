@@ -112,7 +112,7 @@ void EECheatCodes::AddCheatCode(const UWideString& inText, long inCode, bool inE
 // Gives a player an amount of a resource
 void EECheatCodes::AddResource(long inResource, unsigned long inPlayer, long inAmount)
 {
-    if (inPlayer <= gWorld.mNumPlayers)
+    if (inPlayer < gWorld.mNumPlayers)   // players are 0..mNumPlayers - 1 (the test was <=)
         gWorld.mPlayers[inPlayer]->AddResource(inResource, inAmount);
 }
 
@@ -444,7 +444,7 @@ void EECheatCodes::ParseCheatCode(const UWideString& inText, long& outCode, long
 // Explores the whole map for a player
 void EECheatCodes::ExploreMap(unsigned long inPlayer)
 {
-    if (inPlayer <= gWorld.mNumPlayers)
+    if (inPlayer < gWorld.mNumPlayers)   // players are 0..mNumPlayers - 1 (the test was <=)
         gWorld.mMap->ExploreUnseen(gWorld.mPlayers[inPlayer]);
 }
 
@@ -452,7 +452,7 @@ void EECheatCodes::ExploreMap(unsigned long inPlayer)
 // Refuels every living aircraft of a player, making grounded ones commandable again
 void EECheatCodes::Refuel(unsigned long inPlayer)
 {
-    if (!(inPlayer <= gWorld.mNumPlayers))
+    if (!(inPlayer < gWorld.mNumPlayers))   // players are 0..mNumPlayers - 1 (the test was <=)
         return;
     for (EEUnit* theUnit = gWorld.mPlayers[inPlayer]->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
@@ -469,7 +469,7 @@ void EECheatCodes::Refuel(unsigned long inPlayer)
 // Heals every living unit of a player to full hit points
 void EECheatCodes::HealUnits(unsigned long inPlayer)
 {
-    if (!(inPlayer <= gWorld.mNumPlayers))
+    if (!(inPlayer < gWorld.mNumPlayers))   // players are 0..mNumPlayers - 1 (the test was <=)
         return;
     for (EEUnit* theUnit = gWorld.mPlayers[inPlayer]->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         if (theUnit->mHitPoints > 0)
@@ -481,7 +481,7 @@ void EECheatCodes::HealUnits(unsigned long inPlayer)
 // Restores the power of a player's living units that have power
 void EECheatCodes::RestorePower(unsigned long inPlayer)
 {
-    if (!(inPlayer <= gWorld.mNumPlayers))
+    if (!(inPlayer < gWorld.mNumPlayers))   // players are 0..mNumPlayers - 1 (the test was <=)
         return;
     for (EEUnit* theUnit = gWorld.mPlayers[inPlayer]->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
@@ -496,7 +496,7 @@ void EECheatCodes::RestorePower(unsigned long inPlayer)
 // Sends the message that makes the whole world visible, if the player is the local player
 void EECheatCodes::MakeWorldVisible(unsigned long inPlayer)
 {
-    if (!(inPlayer <= gWorld.mNumPlayers))
+    if (!(inPlayer < gWorld.mNumPlayers))   // players are 0..mNumPlayers - 1 (the test was <=)
         return;
     EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
     if (thePlayer != gWorld.GetCurrentPlayer())
@@ -517,7 +517,7 @@ EEMMakeWorldVisible::EEMMakeWorldVisible()
 // Researches every improvement a player can still get, to its highest level, and drops the queued improvements
 void EECheatCodes::ResearchAll(unsigned long inPlayer)
 {
-    if (!(inPlayer <= gWorld.mNumPlayers))
+    if (!(inPlayer < gWorld.mNumPlayers))   // players are 0..mNumPlayers - 1 (the test was <=)
         return;
     EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
     for (long i = 0; i < 0x366; i++) {
@@ -542,7 +542,7 @@ void EECheatCodes::ResearchAll(unsigned long inPlayer)
 // Advances a player to a later epoch (valid epochs above the prehistoric one only)
 void EECheatCodes::AdvanceEpoch(long inEpoch, unsigned long inPlayer)
 {
-    if (!(inPlayer <= gWorld.mNumPlayers))
+    if (!(inPlayer < gWorld.mNumPlayers))   // players are 0..mNumPlayers - 1 (the test was <=)
         return;
     EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
     if (inEpoch < kTechEpochAll && inEpoch > kTechEpochPrehistoric && inEpoch > thePlayer->mTechnologies->mCurrentEpoch)
@@ -553,7 +553,7 @@ void EECheatCodes::AdvanceEpoch(long inEpoch, unsigned long inPlayer)
 // Toggles instant building for a player
 void EECheatCodes::ToggleInstantBuild(unsigned long inPlayer)
 {
-    if (inPlayer <= gWorld.mNumPlayers)
+    if (inPlayer < gWorld.mNumPlayers)   // players are 0..mNumPlayers - 1 (the test was <=)
         gWorld.mPlayers[inPlayer]->mInstantBuild = !gWorld.mPlayers[inPlayer]->mInstantBuild;
 }
 
@@ -561,7 +561,7 @@ void EECheatCodes::ToggleInstantBuild(unsigned long inPlayer)
 // Ends the game, as a defeat when the player is the local player (else a victory)
 void EECheatCodes::ClearPhysicsFlagForPlayer(unsigned long inPlayer)
 {
-    if (inPlayer <= gWorld.mNumPlayers)
+    if (inPlayer < gWorld.mNumPlayers)   // players are 0..mNumPlayers - 1 (the test was <=)
         gPhysics->EndGame(gWorld.mPlayers[inPlayer] != gWorld.GetCurrentPlayer());
 }
 
@@ -569,7 +569,7 @@ void EECheatCodes::ClearPhysicsFlagForPlayer(unsigned long inPlayer)
 // Ends the game, as a victory when the player is the local player (else a defeat)
 void EECheatCodes::SetPhysicsFlagForPlayer(unsigned long inPlayer)
 {
-    if (inPlayer <= gWorld.mNumPlayers)
+    if (inPlayer < gWorld.mNumPlayers)   // players are 0..mNumPlayers - 1 (the test was <=)
         gPhysics->EndGame(gWorld.mPlayers[inPlayer] == gWorld.GetCurrentPlayer());
 }
 
@@ -577,7 +577,7 @@ void EECheatCodes::SetPhysicsFlagForPlayer(unsigned long inPlayer)
 // Sets a player's stock of a resource to zero
 void EECheatCodes::ClearResource(long inResource, unsigned long inPlayer)
 {
-    if (inPlayer <= gWorld.mNumPlayers)
+    if (inPlayer < gWorld.mNumPlayers)   // players are 0..mNumPlayers - 1 (the test was <=)
         gWorld.mPlayers[inPlayer]->mResourceCaps[inResource] = 0;
 }
 
