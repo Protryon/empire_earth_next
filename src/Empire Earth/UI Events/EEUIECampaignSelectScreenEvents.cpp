@@ -407,6 +407,7 @@ long EEUIECSSEStartScenario::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
                 theInfo->mIsCampaign = true;
                 gUserInterface->OpenForm(theInfoForm);
             } else {
+                delete theFile;     // not handed to the intro form: freed here (it leaked)
                 gResource->GetString(IDS_FILE_COULDNT_BE_OPENED, theError);
                 theError = theError + "\n\"" + theName + "\"";
                 gUIManager->DisplayMessage(theError, true, NULL, CloseCampaignForm, true);
