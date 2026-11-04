@@ -204,8 +204,13 @@ static void LoadCampaignInfo(const UWideString& inName, UWideString& outDescript
 long EEUIEPCECustomCampaign::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     UIForm* theForm = gUIManager->GetFormByID(kFormChooseCustomCampaign);
-    theForm->SetFormOpenEvent(new EEUIECCCEFormOpen);
-    theForm->SetFormCloseEvent(new EEUIECCCEFormClose);
+    // The form takes its own references: drop the creation references (both events leaked).
+    UIEvent* theOpenEvent = new EEUIECCCEFormOpen;
+    UIEvent* theCloseEvent = new EEUIECCCEFormClose;
+    theForm->SetFormOpenEvent(theOpenEvent);
+    theOpenEvent->Dereference();
+    theForm->SetFormCloseEvent(theCloseEvent);
+    theCloseEvent->Dereference();
     gUserInterface->SwitchToForm(theForm);
     return kErrorOK;
 }
