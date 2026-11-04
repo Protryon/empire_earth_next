@@ -262,7 +262,7 @@ long EEUIELELoadScenarioGame::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 }
 
 // FUNCTION: EXE 0x5da184
-// Opens the load screen on the Scenarios folder titled Play Scenario, preselects the last saved game's name and hooks
+// Opens the load screen on the Scenarios folder titled Play Scenario, preselects the last scenario and hooks
 // up Cancel and Load
 long EEUIELEOpenLoadScenarioGame::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -282,7 +282,7 @@ long EEUIELEOpenLoadScenarioGame::ProcessEvent(UIForm* inForm, UIEntity* inEntit
     thePath->AddDirectory(theDirectory, true);
     theList->SetSearchPaths(thePath);
     theList->CreateEntries(1);
-    theName = gLoadSavedGameName;   // (sic: both load screens preselect this name)
+    theName = gLoadScenarioName;    // the last scenario (it preselected the last saved game's name)
     if (theList->FindString(theName, theIndex) == true) {
         theList->ChangeSelectionIndex(theIndex, true, false);
         theList->SetScrollBarCurrentRange(theIndex);
