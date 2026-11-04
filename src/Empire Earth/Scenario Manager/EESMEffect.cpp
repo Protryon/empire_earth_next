@@ -1315,7 +1315,7 @@ void EESMEffect::Execute(bool inIsCinematic)
                         for (RTSTileUnitNode* theNode = theMapTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
                             EEUnit* theUnit = theNode->mUnit;
                             if (theUnit == NULL || std::find(theUnits.begin(), theUnits.end(), theUnit) != theUnits.end()
-                                || theClass->CanCastAt(NULL, thePoint, theTiles[0].GetX(), theTiles[0].GetY(), true, theUnit) != 0)
+                                || theClass->CanCastAt(NULL, thePoint, theUnit->mTileX, theUnit->mTileY, true, theUnit) != 0)
                                 continue;
                             USingleton<EECalamityManager>::GetInstance()->CreateUnitCalamity(theClassEnum, -1,
                                 theUnit->GetUnitID(), 0);
