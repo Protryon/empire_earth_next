@@ -11,6 +11,7 @@
 // and patches them through FSFileSpec::Write after reopening; the TGA writer swaps the header width/height (as shipped).
 #include <windows.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UString.h"
@@ -463,8 +464,14 @@ long GESurface::SaveAsJPG(FSFileSpec& inFile)
                     jpeg_write_scanlines(&theInfo, theBuffer, 1);
                 }
             }
+            // Unlock only a surface that was locked.
+            this->Unlock();
+        } else {
+            // Write blank rows so the image is complete (libjpeg aborts on an image with missing rows).
+            memset(theBuffer[0], 0, theWidth * 3 + theWidth % 4);
+            for (y = 0; y < theHeight; y++)
+                jpeg_write_scanlines(&theInfo, theBuffer, 1);
         }
-        this->Unlock();
         jpeg_finish_compress(&theInfo);
         jpeg_destroy_compress(&theInfo);
     }
@@ -534,7 +541,9 @@ long GESurface::SaveAsJPG2(FSFileSpec& inFile)
         jpeg_start_compress(&theInfo, TRUE);
         theRowSize = theWidth * 3 + theWidth % 4;
         theBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE, theRowSize, 1);
-        if (this->Lock() == kErrorOK) {
+        // The surface stays locked for both passes; remember whether the lock succeeded.
+        bool theLocked = this->Lock() == kErrorOK;
+        if (theLocked) {
             theBytesPerRow = this->GetBytesPerRow();
             if (this->GetPixelDepth() == 32) {
                 for (y = 0; y < theHeight; y++) {
@@ -559,6 +568,11 @@ long GESurface::SaveAsJPG2(FSFileSpec& inFile)
                     jpeg_write_scanlines(&theInfo, theBuffer, 1);
                 }
             }
+        } else {
+            // Write blank rows so the image is complete (libjpeg aborts on an image with missing rows).
+            memset(theBuffer[0], 0, theRowSize);
+            for (y = 0; y < theHeight; y++)
+                jpeg_write_scanlines(&theInfo, theBuffer, 1);
         }
         jpeg_finish_compress(&theInfo);
         jpeg_destroy_compress(&theInfo);
@@ -575,31 +589,39 @@ long GESurface::SaveAsJPG2(FSFileSpec& inFile)
         jpeg_set_quality(&theInfo, 80, TRUE);
         jpeg_start_compress(&theInfo, TRUE);
         theBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE, theRowSize, 1);
-        theBytesPerRow = this->GetBytesPerRow();
-        if (this->GetPixelDepth() == 32) {
-            for (y = 0; y < theHeight; y++) {
-                the32BitPixel = reinterpret_cast<unsigned long*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 4);
-                for (x = 0; x < theWidth; x++) {
-                    theBuffer[0][x * 3] = GEUnpackAlpha(theFormat, *the32BitPixel);
-                    theBuffer[0][x * 3 + 1] = GEUnpackAlpha(theFormat, *the32BitPixel);
-                    theBuffer[0][x * 3 + 2] = GEUnpackAlpha(theFormat, *the32BitPixel);
-                    the32BitPixel++;
+        // Without the lock the surface memory is not valid: read it only when locked.
+        if (theLocked) {
+            theBytesPerRow = this->GetBytesPerRow();
+            if (this->GetPixelDepth() == 32) {
+                for (y = 0; y < theHeight; y++) {
+                    the32BitPixel = reinterpret_cast<unsigned long*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 4);
+                    for (x = 0; x < theWidth; x++) {
+                        theBuffer[0][x * 3] = GEUnpackAlpha(theFormat, *the32BitPixel);
+                        theBuffer[0][x * 3 + 1] = GEUnpackAlpha(theFormat, *the32BitPixel);
+                        theBuffer[0][x * 3 + 2] = GEUnpackAlpha(theFormat, *the32BitPixel);
+                        the32BitPixel++;
+                    }
+                    jpeg_write_scanlines(&theInfo, theBuffer, 1);
                 }
-                jpeg_write_scanlines(&theInfo, theBuffer, 1);
+            } else {
+                for (y = 0; y < theHeight; y++) {
+                    the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 2);
+                    for (x = 0; x < theWidth; x++) {
+                        theBuffer[0][x * 3] = GEUnpackAlpha(theFormat, *the16BitPixel);
+                        theBuffer[0][x * 3 + 1] = GEUnpackAlpha(theFormat, *the16BitPixel);
+                        theBuffer[0][x * 3 + 2] = GEUnpackAlpha(theFormat, *the16BitPixel);
+                        the16BitPixel++;
+                    }
+                    jpeg_write_scanlines(&theInfo, theBuffer, 1);
+                }
             }
+            this->Unlock();
         } else {
-            for (y = 0; y < theHeight; y++) {
-                the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 2);
-                for (x = 0; x < theWidth; x++) {
-                    theBuffer[0][x * 3] = GEUnpackAlpha(theFormat, *the16BitPixel);
-                    theBuffer[0][x * 3 + 1] = GEUnpackAlpha(theFormat, *the16BitPixel);
-                    theBuffer[0][x * 3 + 2] = GEUnpackAlpha(theFormat, *the16BitPixel);
-                    the16BitPixel++;
-                }
+            // Write blank rows so the image is complete (libjpeg aborts on an image with missing rows).
+            memset(theBuffer[0], 0, theRowSize);
+            for (y = 0; y < theHeight; y++)
                 jpeg_write_scanlines(&theInfo, theBuffer, 1);
-            }
         }
-        this->Unlock();
         jpeg_finish_compress(&theInfo);
         jpeg_destroy_compress(&theInfo);
         theEndPosition = ftell(theStream);
@@ -903,8 +925,9 @@ long GESurface::SaveAsTGA(FSFileSpec& inFile)
                         the16BitPixel -= thePitch + theWidth;
                     }
                 }
+                // Unlock only a surface that was locked.
+                this->Unlock();
             }
-            this->Unlock();
             theResult = inFile.Write((unsigned short)0);
         }
         delete theBuffer;
