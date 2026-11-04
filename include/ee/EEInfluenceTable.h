@@ -33,14 +33,18 @@ public:
     long GetValue(unsigned long inPlayer, unsigned long inX, unsigned long inY)
     {
         std::vector<std::pair<unsigned long, long> >* theRegion = this->GetRegion(inX, inY);
-        return theRegion != NULL ? (*theRegion)[inPlayer].second : 0;
+        // an invalid player (the route planner passes -1 for a task without a player) has no entry: value 0
+        // instead of reading the heap header in front of the region's table
+        return theRegion != NULL && inPlayer < theRegion->size() ? (*theRegion)[inPlayer].second : 0;
     }
     // inline (COMDAT 0xff19 after its first user, EEAIGPGModiferUseInfluenceCostsBase::Virtual0C 0xfec1; ret 8):
     // inPlayer's value in region inRegion, through the out-of-line GetRegion (provisional name)
     long GetValue(unsigned long inPlayer, const U2DPoint<long>& inRegion)
     {
         std::vector<std::pair<unsigned long, long> >* theRegion = this->GetRegion(inRegion);
-        return theRegion != NULL ? (*theRegion)[inPlayer].second : 0;
+        // an invalid player (the route planner passes -1 for a task without a player) has no entry: value 0
+        // instead of reading the heap header in front of the region's table
+        return theRegion != NULL && inPlayer < theRegion->size() ? (*theRegion)[inPlayer].second : 0;
     }
 
     unsigned long mNumPlayers;              // +0x18 (ctor argument 2, stored after the vptr)
