@@ -219,13 +219,14 @@ void UGraph::CombineGraph(const UGraph& inGraph, UGraph& outGraph)
 }
 
 // FUNCTION: LLE 0x10057919
-// Returns the series value at x; the next point's y, not the current one's (false when empty or x below the minimum)
+// Returns the series value at x: the y of the last point at or before x (false when empty or x below the minimum)
 static bool UGGetValueAt(const UGraphSeries& inSeries, long inX, long& outY)
 {
     U2DPoint<long> theNext;
     bool theResult = false;
     if (inSeries.GetDataPointCount() > 0 && inX >= inSeries.GetMinX()) {
         unsigned long i = 0;
+        bool theFound = false;
         while (i < inSeries.GetDataPointCount()) {
             U2DPoint<long> thePoint = inSeries.GetDataPoint(i);
             i++;
@@ -235,10 +236,13 @@ static bool UGGetValueAt(const UGraphSeries& inSeries, long inX, long& outY)
                 theNext = thePoint;
             if (inX >= thePoint.mX && inX < theNext.mX) {
                 outY = thePoint.mY;
+                theFound = true;
                 break;
             }
         }
-        outY = theNext.mY;
+        // Fixed: the found point's value used to be overwritten here by the next point's
+        if (!theFound)
+            outY = theNext.mY;
         theResult = true;
     }
     return theResult;
