@@ -629,13 +629,14 @@ bool EECBUIListBox::GetUpgrade(const UWideString& inLine, unsigned short* outUpg
 }
 
 // FUNCTION: EXE 0x67e2bb
-// Fills the list with every upgrade except the excluded ones, in buy mode; the remove_if result is never
-// erased, so the vector's leftover tail is listed too
+// Fills the list with every upgrade except the excluded ones, in buy mode
 void EECBUIListBox::SetUpgradesExcept(const std::vector<unsigned short>& inExcluded)
 {
     std::vector<unsigned short> theUpgrades;
     theUpgrades = gCivilizationManager.GetUpgrades();
-    std::remove_if(theUpgrades.begin(), theUpgrades.end(), EECBIsUpgradeIn(inExcluded));
+    // The removed tail is erased (it was listed too: duplicates or excluded upgrades appeared).
+    theUpgrades.erase(std::remove_if(theUpgrades.begin(), theUpgrades.end(), EECBIsUpgradeIn(inExcluded)),
+                      theUpgrades.end());
     this->SetUpgrades(theUpgrades, true);
 }
 
