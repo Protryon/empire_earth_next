@@ -55,12 +55,57 @@ class Layout:
     def last(self, cls, member):
         return self._sub(cls, member, LAST)
 
+    def translate(self, cls, off, ref=None):
+        """A VC6/Dinkum offset into cls (as ee's harness writes them) -> the same member's offset in this build. The
+        member is identified in the Dinkum layout (identical to VC6's, layout_gen.py --check): an exact member
+        (the shortest path at that offset; a container's _First/_Last become this library's first/last), else the
+        top-level member the offset falls in, plus the delta (an array element)."""
+        if self.stl == "dinkum":
+            return off
+        ref = ref or _reference()
+        f = ref._fields(cls)
+        for p in sorted((p for p, v in f.items() if v == off), key=lambda p: (p.count("."), len(p))):
+            leaf = p.rsplit(".", 1)
+            if len(leaf) == 2 and leaf[1] in FIRST:
+                return self.first(cls, leaf[0])
+            if len(leaf) == 2 and leaf[1] in LAST:
+                return self.last(cls, leaf[0])
+            if p in self._fields(cls):
+                return self._fields(cls)[p]
+        tops = [(v, p) for p, v in f.items() if "." not in p and v <= off]
+        if not tops:
+            raise KeyError(f"{cls}+{off:#x}: no member at or before it in the Dinkum layout")
+        v, p = max(tops)
+        return self.field(cls, p) + (off - v)
+
     def constants(self, spec):
         """{NAME: (kind, class, member)} -> {NAME: offset} (kind: field, first, last, size)."""
         out = {}
         for name, (kind, cls, member) in spec.items():
             out[name] = self.size(cls) if kind == "size" else getattr(self, kind)(cls, member)
         return out
+
+
+_REF = None
+_CURRENT = None
+
+
+def _reference():
+    global _REF
+    if _REF is None:
+        _REF = Layout("dinkum")
+    return _REF
+
+
+def use(stl):
+    """Select the build profile the harness runs (game_session.py); off() translates for it."""
+    global _CURRENT
+    _CURRENT = Layout(stl) if stl != "dinkum" else None
+
+
+def off(cls, vc6_offset):
+    """ee's VC6 offset into cls, translated for the build profile in use (identity for Dinkum/VC6 layouts)."""
+    return _CURRENT.translate(cls, vc6_offset) if _CURRENT else vc6_offset
 
 
 CLASS = re.compile(r"^(?:template\s*<[^>]*>\s*)?(class|struct)\s+(?:\w+\s+)?(\w+)\b[^;]*$")
