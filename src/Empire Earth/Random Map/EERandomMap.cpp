@@ -659,8 +659,8 @@ long EERandomMap::FilterHeightMap()
 }
 
 // FUNCTION: EXE 0x685d9f
-// Smooths each height toward its neighbours' mean and keeps edge or empty cells at sea level (space maps compare
-// a world height with the normalised level), then raises the low corners of tiles straddling the sea level
+// Smooths each height toward its neighbours' mean and keeps edge (space maps: empty) cells at sea level, then
+// raises the low corners of tiles straddling the sea level
 void EERandomMap::SmoothHeights()
 {
     float theRange = (float)(this->mData.mMaxIntElevation - this->mData.mMinIntElevation);
@@ -691,7 +691,8 @@ void EERandomMap::SmoothHeights()
             if (UMAbs(theHeight - (theSum * theRange + theMinimum) * theScale) >= theScale * this->mData.mHeightMapSmoothness)
                 this->mData.mHeights[x][y] = theSum;
             if (this->mData.mIsSpaceMap) {
-                if (theHeight < theSeaLevel && EERMIsTileFree(this->mData.mTiles, x, y))
+                // the normalised height, like the sea level (theHeight is in world units)
+                if (this->mData.mHeights[x][y] < theSeaLevel && EERMIsTileFree(this->mData.mTiles, x, y))
                     this->mData.mHeights[x][y] = theSeaLevel;
             } else {
                 if (this->mMap->GetTile(x, y) && this->mMap->GetTile(x - 1, y) && this->mMap->GetTile(x - 1, y - 1) &&
