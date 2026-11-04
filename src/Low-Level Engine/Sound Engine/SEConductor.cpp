@@ -301,7 +301,7 @@ long SEConductor::InitializeConductor()
 
 // FUNCTION: LLE 0x1004cf65
 // Creates and activates a DLS output port (the default, else the first enumerated one) with the channel-group count
-// capped by the port, adds it to the performance; returns 1 on failure (the enumeration never ends with no DLS port)
+// capped by the port, adds it to the performance; returns 1 on failure (also when there is no DLS output port)
 long SEConductor::InitializePorts(IDirectMusicPerformance* inPerformance, IDirectMusic* inDirectMusic,
                                   IDirectMusicPort*& outPort)
 {
@@ -342,11 +342,19 @@ long SEConductor::InitializePorts(IDirectMusicPerformance* inPerformance, IDirec
                             theParams.dwSize = sizeof(theParams);
                             theParams.dwChannelGroups = 1;
                             theParams.dwValidParams = DMUS_PORTPARAMS_CHANNELGROUPS;
-                            inDirectMusic->CreatePort(theGUID, &theParams, &thePort, NULL);
+                            if (FAILED(inDirectMusic->CreatePort(theGUID, &theParams, &thePort, NULL)))
+                                thePort = NULL;
                             break;
                         }
                         i++;
-                    } while (SUCCEEDED(theError));
+                        // Fixed: looped while SUCCEEDED, but EnumPort ends the list with S_FALSE (a success code),
+                        // so the loop never ended when no port was a DLS output port
+                    } while (theError == S_OK);
+                }
+                if (thePort == NULL) {
+                    // Fixed: with no DLS output port the NULL port used to be dereferenced below
+                    this->mLock->Leave();
+                    return 1;
                 }
                 if (this->mChannelGroupCount > theCaps.dwMaxChannelGroups)
                     this->mChannelGroupCount = theCaps.dwMaxChannelGroups;
