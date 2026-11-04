@@ -2116,7 +2116,7 @@ void EECPAttackSubGroup::Virtual18C(long inTime)
 
 // FUNCTION: EXE 0x45f895
 // Writes the units (kind and data), path, area, waypoint, rally point, task, request ID (-1 if none), timers, state
-// and flags; returns the first write error, but a unit write error is overwritten by the next write
+// and flags; returns the first write error
 long EECPAttackSubGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     unsigned long i = 0;
@@ -2135,7 +2135,9 @@ long EECPAttackSubGroup::Save(unsigned long inMajorVersion, unsigned long inMino
         }
     }
     theCount = this->mPath.size();
-    theResult = outFile.Write(theCount);
+    // a unit write error is kept (the path count's result used to replace it)
+    if (theResult == 0)
+        theResult = outFile.Write(theCount);
     if (theResult == 0) {
         for (i = 0; i < theCount; i++) {
             if (theResult != 0)
