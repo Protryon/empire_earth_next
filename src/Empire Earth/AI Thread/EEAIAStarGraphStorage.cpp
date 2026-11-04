@@ -228,7 +228,7 @@ bool EEAIAStarGraphStorage::GetNextPathNode(EETileCoordinate& outTile, long& out
 
 // FUNCTION: EXE 0x416394
 // Returns the current node and every closed, sorted open, bucketed and pushed node to the free pool and frees
-// the hash tables (the pool counters miss one node per list)
+// the hash tables
 void EEAIAStarGraphStorage::Clear()
 {
     EEAIAStarGraphNode* theLast;
@@ -245,6 +245,7 @@ void EEAIAStarGraphStorage::Clear()
             for (theLast = this->mClosedTable[i]; theLast; theLast = theLast->mNext, theCount++)
                 if (theLast->mNext == NULL)
                     break;
+            theCount++;   // the last node counts too (the loop stops before counting it)
             theLast->mNext = sGSFreeNodes;
             sGSFreeNodes = this->mClosedTable[i];
             sGSFreeCount += theCount;
@@ -259,6 +260,7 @@ void EEAIAStarGraphStorage::Clear()
         for (theLast = this->mClosedList; theLast; theLast = theLast->mNext, theCount++)
             if (theLast->mNext == NULL)
                 break;
+        theCount++;   // the last node counts too (the loop stops before counting it)
         theLast->mNext = sGSFreeNodes;
         sGSFreeNodes = this->mClosedList;
         sGSFreeCount += theCount;
@@ -270,6 +272,7 @@ void EEAIAStarGraphStorage::Clear()
         for (theLast = this->mSortedOpen; theLast; theLast = theLast->mNext, theCount++)
             if (theLast->mNext == NULL)
                 break;
+        theCount++;   // the last node counts too (the loop stops before counting it)
         theLast->mNext = sGSFreeNodes;
         sGSFreeNodes = this->mSortedOpen;
         sGSFreeCount += theCount;
@@ -285,6 +288,7 @@ void EEAIAStarGraphStorage::Clear()
             for (theLast = this->mOpenTable[i]; theLast; theLast = theLast->mNext, theCount++)
                 if (theLast->mNext == NULL)
                     break;
+            theCount++;   // the last node counts too (the loop stops before counting it)
             theLast->mNext = sGSFreeNodes;
             sGSFreeNodes = this->mOpenTable[i];
             sGSFreeCount += theCount;
@@ -300,6 +304,7 @@ void EEAIAStarGraphStorage::Clear()
     for (theLast = this->mOpenList; theLast; theLast = theLast->mNext, theCount++)
         if (theLast->mNext == NULL)
             break;
+    theCount++;   // the last node counts too (the loop stops before counting it)
     theLast->mNext = sGSFreeNodes;
     sGSFreeNodes = this->mOpenList;
     sGSFreeCount += theCount;
