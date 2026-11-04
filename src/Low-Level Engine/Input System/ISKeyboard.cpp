@@ -111,12 +111,13 @@ long ISKeyboard::GetEntity(unsigned long inIndex, ISEntity*& outEntity) const
 
 // FUNCTION: LLE 0x1003b099
 // Reads the buffered DirectInput key events: updates key states, the pressed count, modifiers and double presses;
-// rereads the whole state after a buffer overflow. With exactly 256 events the byte counter never ends the loop
+// rereads the whole state after a buffer overflow
 void ISKeyboard::Refresh()
 {
     DIDEVICEOBJECTDATA theData[256];
     DWORD theCount = 256;
-    unsigned char i;
+    // Fixed: the event counter was an unsigned char, so exactly 256 buffered events looped forever
+    unsigned long i;
     this->mLastNumberOfKeysDown = this->mNumberOfKeysDown;
     memcpy(this->mLast, this->mStatus, this->mKeyCount);
     if (this->mOverflowed) {
