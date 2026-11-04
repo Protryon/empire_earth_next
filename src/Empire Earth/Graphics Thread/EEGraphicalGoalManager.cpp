@@ -351,13 +351,14 @@ EEUnitGoal* EEUnitVectorItem::GetGoalAt(unsigned long inIndex)
 }
 
 // FUNCTION: EXE 0x508185
-// Destroys a player's markers of a type from the front of the list until at most the given count remain
+// Destroys a player's markers of a type from the end of the list until at most the given count remain (Rebuild has
+// just placed this frame's markers at the front)
 void EEGraphicalGoalManager::TrimGoals(long inPlayer, unsigned long inCount, long inType)
 {
-    std::vector<EEGraphicalGoal>::iterator theGoal = this->mGoals[inPlayer][inType].begin();
+    std::vector<EEGraphicalGoal>& theGoals = this->mGoals[inPlayer][inType];
     while (this->GetGoalCount(inPlayer, inType) > inCount) {
-        theGoal->DestroyEffect();
-        theGoal = this->GetGoals(inPlayer, inType).erase(theGoal);
+        theGoals.back().DestroyEffect();
+        theGoals.pop_back();
     }
 }
 
