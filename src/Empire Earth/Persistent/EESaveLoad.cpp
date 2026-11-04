@@ -614,7 +614,8 @@ static long Fn14DC54(std::vector<long>& inTags, long inTag);
 
 // FUNCTION: EXE 0x54da7c
 // Checks a save header's version and chunk tags (each of 1..7, 10 and 11 once, no 0) and that every chunk's size is
-// readable and sane; sets the global load/save error message on failure
+// readable and sane; sets outErrorMessage on failure (it wrote the global message,
+// which only worked because every caller passed it)
 static bool Fn14DA7C(EEPSaveGameHeader& inHeader, UWideString& outErrorMessage, FSFile& inFile)
 {
     std::vector<long> theTags;
@@ -643,13 +644,13 @@ static bool Fn14DA7C(EEPSaveGameHeader& inHeader, UWideString& outErrorMessage, 
                 if (theError == kErrorOK)
                     theResult = true;
             } else {
-                gResource->GetString(IDS_SAVE_GAME_IS_MISSING_DATA_AND_CANNOT, gLoadSaveErrorMessage);
+                gResource->GetString(IDS_SAVE_GAME_IS_MISSING_DATA_AND_CANNOT, outErrorMessage);
             }
         } else {
-            gResource->GetString(IDS_SAVE_GAME_CONTAINS_INVALID_DATA, gLoadSaveErrorMessage);
+            gResource->GetString(IDS_SAVE_GAME_CONTAINS_INVALID_DATA, outErrorMessage);
         }
     } else {
-        gResource->GetString(IDS_SAVE_GAME_INCOMPATIBLE_WITH_THIS_VERSION, gLoadSaveErrorMessage);
+        gResource->GetString(IDS_SAVE_GAME_INCOMPATIBLE_WITH_THIS_VERSION, outErrorMessage);
     }
     return theResult;
 }
