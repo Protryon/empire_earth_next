@@ -567,7 +567,7 @@ void EEAttackPlayers(long inPlayer, unsigned char inFlag)
 
 // FUNCTION: EXE 0x53f736
 // Sums a checksum over the directory's files matching the pattern (name order, one encrypted name skipped): file
-// bytes, or write time and size when asked; reads that return nothing loop forever
+// bytes, or write time and size when asked
 #include <algorithm>
 #include "lle/UEncryption.h"
 #include "ee/EEStringIDs.h"
@@ -608,13 +608,19 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPatter
             theChecksum += theAttributes.ftLastWriteTime.dwHighDateTime
                 + theAttributes.nFileSizeHigh + theAttributes.nFileSizeLow;
         } else {
-            theFile.Open(kFileAccessRead);
-            unsigned long theLength;
+            // Fix: a file that cannot be opened is skipped, and a read that returns no data (an error, or the file
+            // shrank) ends the loop; both used to loop forever.
+            if (theFile.Open(kFileAccessRead) != kErrorOK)
+                continue;
+            unsigned long theLength = 0;
             theFile.GetLength(theLength);
             unsigned long theRead;
             while (theLength > 0) {
                 unsigned long theAmount = min(theLength, 0x800UL);
+                theRead = 0;
                 theFile.Read(theBuffer, theAmount, theRead);
+                if (theRead == 0 || theRead > theAmount)
+                    break;
                 for (long j = 0; j < (long)theRead; j++)
                     theChecksum += theBuffer[j];
                 theLength -= theRead;
