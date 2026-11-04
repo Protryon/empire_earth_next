@@ -1310,6 +1310,10 @@ void EEWorld::RecordStatistics()
                             theBest = theOther;
                     }
                 }
+                // no human among the recorded players: there is no one to top up against (theBest used to be
+                // read through NULL)
+                if (theBest == NULL)
+                    continue;
                 long theBestValue = theBest->mSavedGroups.GetValue(theSeries);
                 long theGathered = theBestValue - theBest->mResourceCaps[r] + theBase;
                 if (thePlayer != theBest)
