@@ -386,7 +386,6 @@ TCPServer::~TCPServer()
 
 // FUNCTION: TCP 0x1000153c
 // Opens a connection to a game (stream or datagram) on the chosen adapter
-// (returns OK without a connection, leaking the socket, when bind fails)
 extern "C" long NPIMConnect(const UString& inName, const UString& inHost, const UWideString& inAddress,
                             long inType, WSAEVENT* inEvent, TCPConnection** outConnection,
                             unsigned long inAdapter)
@@ -418,6 +417,11 @@ extern "C" long NPIMConnect(const UString& inName, const UString& inHost, const 
                     memcpy(&theConnection->mAddress, &theAddress, sizeof(theAddress));
                     *outConnection = theConnection;
                     theResult = kNPIMOK;
+                } else {
+                    // Fix: a failed bind used to return success with no connection and leak the socket.
+                    ESRecordNativeError(WSAGetLastError());
+                    theResult = kNPIMNativeError;
+                    closesocket(theSocket);
                 }
                 gSocketLock->Leave();
             }
