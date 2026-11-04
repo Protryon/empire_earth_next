@@ -179,7 +179,7 @@ static bool Fn11246B(const GE3DPoint& inLocation);
 
 // FUNCTION: EXE 0x5122bb
 // Draws each unit's shadow (its own model or the quad) on the ground under it, turned to its heading and
-// shrunk by height (fade 1 - 0.1 per unit of height, not clamped at 0); skips submarines and units over space
+// shrunk by height (fade 1 - 0.1 per unit of height; none from 10 up); skips submarines and units over space
 void EEROGroundShadows::DrawUnitShadows(EERenderUnitMap& inUnits)
 {
     GETransformation theTransformation;
@@ -201,12 +201,15 @@ void EEROGroundShadows::DrawUnitShadows(EERenderUnitMap& inUnits)
                 theModel->SetGraphicsPostModelTransform(theTransformation);
                 float theFade = 1.0f - (theUnit->mTransformation.GetZ() - theUnit->mGroundZ) * kShadowFade;
                 theFade = min(1.0f, theFade);
-                float theScale = theUnit->mScale / gUnitClassTable[theUnit->mUnitClassIndex]->GetScale() * theUnit->mShadowScale;
-                theModel->SetGraphicsScale(theScale * theFade);
-                theModel->SetOpacity(theUnit->mOpacity);
-                theModel->GetMaterial(0)->SetTexture(theUnit->mSource->mShadowTexture, theScreen);
-                theModel->PrepareTransforms();
-                gRasterizer->Draw(theModel, theScreen, 1.0f, gOrthographicView);
+                // A unit 10 or more units above the ground casts no shadow (a negative scale would mirror it).
+                if (theFade > 0.0f) {
+                    float theScale = theUnit->mScale / gUnitClassTable[theUnit->mUnitClassIndex]->GetScale() * theUnit->mShadowScale;
+                    theModel->SetGraphicsScale(theScale * theFade);
+                    theModel->SetOpacity(theUnit->mOpacity);
+                    theModel->GetMaterial(0)->SetTexture(theUnit->mSource->mShadowTexture, theScreen);
+                    theModel->PrepareTransforms();
+                    gRasterizer->Draw(theModel, theScreen, 1.0f, gOrthographicView);
+                }
             }
         }
         theIterator++;
