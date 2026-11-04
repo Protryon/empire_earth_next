@@ -669,8 +669,7 @@ void EEROUnits::DrawObjectModels(EERenderShadowMap& inObjects)
 }
 
 // FUNCTION: EXE 0x515b63
-// Draws the selection ring at each selected object (an object without a ring size redraws the previous
-// ring transform)
+// Draws the selection ring at each selected object that has a ring size
 void EEROUnits::DrawObjectSelection()
 {
     GETransformation theTransformation;
@@ -686,8 +685,10 @@ void EEROUnits::DrawObjectSelection()
             sSelectionModels[0]->SetGraphicsPostModelTransform(theTransformation);
             sSelectionModels[0]->SetGraphicsScale(theObject->mSelectionSize);
             sSelectionModels[0]->PrepareTransforms();
+            // Drawn only with its own transform and size (an object without a ring size redrew the previous
+            // object's ring).
+            gRasterizer->Draw(sSelectionModels[0], theScreen, 1.0f, gOrthographicView);
         }
-        gRasterizer->Draw(sSelectionModels[0], theScreen, 1.0f, gOrthographicView);
     }
 }
 
