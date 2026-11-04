@@ -317,12 +317,15 @@ long FSFileSpec::GetLength(unsigned long& outLength) const
 }
 
 // FUNCTION: LLE 0x10009627
-// Opens the file just to read its length, then closes it; returns OK even when it cannot open it (no length)
+// Opens the file just to read its length, then closes it; returns OK even when it cannot open it (length 0)
 long FSFileSpec::GetLengthFromClosedFile(unsigned long& outLength)
 {
     unsigned long theLength = 0;
-    if (this->Open(kFileAccessRead) != kErrorOK)
+    if (this->Open(kFileAccessRead) != kErrorOK) {
+        // Fixed: outLength used to be left unset here (the caller saw success with a stale length)
+        outLength = 0;
         return kErrorOK;
+    }
     this->GetLength(theLength);
     this->Close();
     outLength = theLength;
