@@ -657,13 +657,15 @@ void EEAIAStarGraphStorage::Push(EEAIAStarGraphNode* inNode)
 
 // FUNCTION: EXE 0x416be1
 // Pops the head of the unsorted open list (NULL when empty), clearing its open flag and node array entry; the
-// new head keeps its stale back link
+// new head no longer links back to it
 EEAIAStarGraphNode* EEAIAStarGraphStorage::Pop()
 {
     EEAIAStarGraphNode* theNode = NULL;
     if (this->mOpenList) {
         theNode = this->mOpenList;
         this->mOpenList = theNode->mNext;
+        if (this->mOpenList)
+            this->mOpenList->mPrev = NULL;
         theNode->mNext = NULL;
         theNode->mPrev = NULL;
         unsigned char* theFlags = this->mFlags + theNode->mIndex;
