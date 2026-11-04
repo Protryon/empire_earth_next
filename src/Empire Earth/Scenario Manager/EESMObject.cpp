@@ -1109,7 +1109,7 @@ long EESMObject::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
         theResult = inFile.Read(this->mFamily);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mClass);
-    if (theResult == kErrorOK)
+    if (theResult == kErrorOK && inMinorVersion >= 0x2a)   // written only from minor version 0x2a on (Save)
         theResult = inFile.Read(this->mParent);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mMinCount);

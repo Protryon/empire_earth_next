@@ -1762,11 +1762,12 @@ long EEScenarioManager::Load(unsigned long inMajorVersion, unsigned long inMinor
         theResult = inFile.Read(this->mTriggerTimer);
     if (theResult == kErrorOK)
         theResult = this->mMediaStrings.Load(inMajorVersion, inMinorVersion, inFile);
-    if (theResult == kErrorOK)
+    // written only from minor version 0x14 on (Save): older files go straight on to the debug-ID flag
+    if (theResult == kErrorOK && inMinorVersion >= 0x14)
         theResult = inFile.Read(this->mIsMovingCamera);
-    if (theResult == kErrorOK)
+    if (theResult == kErrorOK && inMinorVersion >= 0x14)
         theResult = inFile.Read(this->mStartX);
-    if (theResult == kErrorOK)
+    if (theResult == kErrorOK && inMinorVersion >= 0x14)
         theResult = inFile.Read(this->mStartY);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mShowDebugIDs);
