@@ -7787,6 +7787,10 @@ issue:
                         theUnit->mUnitClass->ActionChanged(theUnit);
                     }
                 } else {
+                    // A unit with a single goal queue (a ship that can set a rally point, e.g. a carrier) has no
+                    // rally queue: queue 1 would be past the end of its queues
+                    if (theUnit->GetNumGoalQueues() < 2)
+                        continue;
                     if (!this->mIsQueued || theClear)
                         theUnit->ClearGoalQueue(1);
                     for (theIterator = theGoals.begin(); theIterator != theGoals.end(); theIterator++)
