@@ -301,8 +301,7 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
 // (EESETriggerScreen's scalar deleting destructor)
 
 // FUNCTION: EXE 0x57bf97
-// Destroys the trigger tab's list, tab buttons, sub-screens, name controls and buttons (the description label
-// and edit box are never deleted)
+// Destroys the trigger tab's list, tab buttons, sub-screens, name and description controls and buttons
 EESETriggerScreen::~EESETriggerScreen()
 {
     unsigned long i;
@@ -313,6 +312,8 @@ EESETriggerScreen::~EESETriggerScreen()
         delete this->mScreens[i];
     delete this->mNameEditBox;
     delete this->mNameLabel;
+    delete this->mTextLabel;      // the description label and edit box were never deleted (leak)
+    delete this->mTextEditBox;
     delete this->mNewButton;
     delete this->mDuplicateButton;
     delete this->mDeleteButton;
