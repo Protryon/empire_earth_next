@@ -1116,8 +1116,9 @@ void EESMEffect::Execute(bool inIsCinematic)
                         EESMObject* theEventObject = theManager->GetScenarioObject(this->mLocationObject);
                         theEventObject->Evaluate(false);
                         EEUnit* theUnit = NULL;
-                        for (i = 0; theUnit == NULL && i < theEventObject->GetUnitCount(); i++)
-                            theUnit = gWorld.GetUnit(theEventObject->mUnits[i]);
+                        // own index: i is the loop over the chosen players
+                        for (unsigned long theIndex = 0; theUnit == NULL && theIndex < theEventObject->GetUnitCount(); theIndex++)
+                            theUnit = gWorld.GetUnit(theEventObject->mUnits[theIndex]);
                         if (theUnit == NULL)
                             break;
                         if (theUnit->mComplexUnit != NULL && theUnit->mComplexUnit->mContainer == NULL) {
