@@ -92,13 +92,14 @@ void EEEnvironmentManager::Step(unsigned long inTime)
 }
 
 // FUNCTION: EXE 0x52ef75
-// Reads the storms, state, wind and timing from a saved game; always returns 0, even when a read fails
+// Reads the storms, state, wind and timing from a saved game; returns the first read error (it used to return 0
+// whatever the reads returned)
 long EEEnvironmentManager::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     unsigned long theCount = 0;
     long theResult = inFile.Read(theCount);
     if (theResult != kErrorOK)
-        return 0;
+        return theResult;
     this->mStorms.resize(theCount, 0);
     for (unsigned long i = 0; i < theCount; i++) {
         this->mStorms[i] = new EEEMStorm(kStormUnknown, this);
@@ -106,13 +107,13 @@ long EEEnvironmentManager::Load(unsigned long inMajorVersion, unsigned long inMi
             theResult = this->mStorms[i]->Load(inMajorVersion, inMinorVersion, inFile);
     }
     if (theResult != kErrorOK)
-        return 0;
+        return theResult;
     if ((theResult = inFile.Read(this->mState)) == 0 && (theResult = inFile.Read(this->mWind)) == 0
         && (theResult = inFile.Read(this->mWindTarget)) == 0 && (theResult = inFile.Read(this->mWindRate)) == 0
         && (theResult = inFile.Read(this->mNextStep)) == 0 && (theResult = inFile.Read(this->mInterval)) == 0
         && (theResult = this->mC24.Load(inFile)) == 0 && (theResult = this->mC18.Load(inFile)) == 0)
-        inFile.Read(this->mL50);
-    return 0;
+        theResult = inFile.Read(this->mL50);
+    return theResult;
 }
 
 // FUNCTION: EXE 0x52f083
@@ -129,13 +130,14 @@ long EEEnvironmentManager::RepairPointers(unsigned long inFirst, unsigned long i
 }
 
 // FUNCTION: EXE 0x52f0ff
-// Writes the storms, state, wind and timing to a saved game; always returns success, even when a write fails
+// Writes the storms, state, wind and timing to a saved game; returns the first write error (it used to return
+// success whatever the writes returned)
 long EEEnvironmentManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     unsigned long theCount = this->mStorms.size();
     long theResult = outFile.Write(theCount);
     if (theResult != 0)
-        return kErrorOK;
+        return theResult;
     for (unsigned long i = 0; i < theCount; i++) {
         if (theResult == 0) {
             EEEMStorm*& theStorm = this->mStorms[i];
@@ -143,13 +145,13 @@ long EEEnvironmentManager::Save(unsigned long inMajorVersion, unsigned long inMi
         }
     }
     if (theResult != 0)
-        return kErrorOK;
+        return theResult;
     if ((theResult = outFile.Write(this->mState)) == 0 && (theResult = outFile.Write(this->mWind)) == 0
         && (theResult = outFile.Write(this->mWindTarget)) == 0 && (theResult = outFile.Write(this->mWindRate)) == 0
         && (theResult = outFile.Write(this->mNextStep)) == 0 && (theResult = outFile.Write(this->mInterval)) == 0
         && (theResult = this->mC24.Save(outFile)) == 0 && (theResult = this->mC18.Save(outFile)) == 0)
-        outFile.Write(this->mL50);
-    return kErrorOK;
+        theResult = outFile.Write(this->mL50);
+    return theResult;
 }
 
 // FUNCTION: EXE 0x52f1fb
