@@ -90,13 +90,15 @@ long EEUIBColor::MouseRButtonUp()
 }
 
 // FUNCTION: EXE 0x6548ce
-// Sets the button's player colour, wrapping 16 to 0 (the wrap below 0 never fires: the colour is unsigned)
+// Sets the button's player colour, wrapping 16 to 0 and one below 0 to 15
 void EEUIBColor::SetColor(unsigned long inColor)
 {
     this->mColor = inColor;
-    if (this->mColor >= 16)
-        this->mColor = 0;
-    else if (this->mColor < 0)
+    // Stepping back from colour 0 gives 0 - 1 = 0xffffffff on the unsigned colour: wrap it to 15 (the old
+    // "< 0" test never fired, so it wrapped to 0).
+    if (this->mColor == (unsigned long)-1)
         this->mColor = 15;
+    else if (this->mColor >= 16)
+        this->mColor = 0;
     this->SetBgColor(EEGetPlayerColor(this->mColor));
 }
