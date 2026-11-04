@@ -600,7 +600,6 @@ extern "C" long NPIMGetDetectedGameCount()
 
 // FUNCTION: TCP 0x10001adb
 // Returns the index of the given adapter's IP in the local host's address list (0 when not found)
-// (frees the walked adapter pointer instead of the buffer start)
 // theIndex is first assigned by the address loop's for-init: VC6 then keeps a zero register (ebx) that the NULL
 // tests compare against. The walk tests theAdapter before the counter.
 static unsigned long FindAdapterAddressIndex(unsigned long inAdapter)
@@ -609,6 +608,9 @@ static unsigned long FindAdapterAddressIndex(unsigned long inAdapter)
     if (inAdapter == 0)
         return 0;
     IP_ADAPTER_INFO* theAdapter = (IP_ADAPTER_INFO*)new char[0x1900];
+    // Fix: keep the buffer start for the delete (the walked pointer used to be freed: an interior pointer for a
+    // later adapter, a leak when the walk ran off the list).
+    IP_ADAPTER_INFO* theBuffer = theAdapter;
     unsigned long theSize = 0x1900;
     if (GetAdaptersInfo(theAdapter, &theSize) == ERROR_SUCCESS) {
         for (unsigned long i = 1; theAdapter != NULL && i < inAdapter; i++)
@@ -634,7 +636,7 @@ static unsigned long FindAdapterAddressIndex(unsigned long inAdapter)
     } else {
         theIndex = 0;
     }
-    delete[] (char*)theAdapter;
+    delete[] (char*)theBuffer;
     return theIndex;
 }
 
