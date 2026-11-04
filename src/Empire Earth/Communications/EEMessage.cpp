@@ -8469,6 +8469,7 @@ void EEMUnloadTransport::Execute()
                 continue;
             EEUGUnloadTransport* theGoal = new EEUGUnloadTransport(theUnit->GetComplexUnit(), this->GetX(), this->GetY(), false);
             unsigned long theCount = theActiveGroup->GetNumUnits();
+            theCanUnload = false;  // each part looks for its own loaded transport
             for (unsigned long j = 0; j < theCount && !theCanUnload; j++) {
                 theUnit = theActiveGroup->GetUnit(j);
                 if ((theUnit->GetUnitClass()->IsTransport() || theUnit->GetUnitClass()->mIsParatrooperBomber)
