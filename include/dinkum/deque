@@ -187,7 +187,7 @@ public:
 	size_type size() const
 		{return (_Mysize); }
 	size_type max_size() const
-		{return (allocator.max_size()); }
+		{return (this->allocator.max_size()); }
 	bool empty() const
 		{return (_Mysize == 0); }
 	const_reference operator[](size_type _N) const
@@ -207,9 +207,9 @@ public:
 		if (_Mapsize <= _Block)
 			_Block -= _Mapsize;
 		if (_Map[_Block] == 0)
-			_Map[_Block] = allocator.allocate(_DEQUESIZ, (void *)0);
+			_Map[_Block] = this->allocator.allocate(_DEQUESIZ, (void *)0);
 		++_Mysize;
-		allocator.construct(_Map[_Block] + _Newoff % _DEQUESIZ, _X); }
+		this->allocator.construct(_Map[_Block] + _Newoff % _DEQUESIZ, _X); }
 	void push_front(const _Ty& _X)
 		{if (_Myoff % _DEQUESIZ == 0
 			&& _Mapsize <= (_Mysize + _DEQUESIZ) / _DEQUESIZ)
@@ -217,13 +217,13 @@ public:
 		size_type _Newoff = _Myoff != 0 ? _Myoff : _Mapsize * _DEQUESIZ;
 		size_type _Block = --_Newoff / _DEQUESIZ;
 		if (_Map[_Block] == 0)
-			_Map[_Block] = allocator.allocate(_DEQUESIZ, (void *)0);
+			_Map[_Block] = this->allocator.allocate(_DEQUESIZ, (void *)0);
 		++_Mysize;
 		_Myoff = _Newoff;
-		allocator.construct(_Map[_Block] + _Newoff % _DEQUESIZ, _X); }
+		this->allocator.construct(_Map[_Block] + _Newoff % _DEQUESIZ, _X); }
 	void pop_front()	// destroys the element: exe 0x1d38c7 (deque<EEChatLogEntry>, a non-trivial element)
 		{if (!empty())
-			{allocator.destroy(_Map[_Myoff / _DEQUESIZ] + _Myoff % _DEQUESIZ);
+			{this->allocator.destroy(_Map[_Myoff / _DEQUESIZ] + _Myoff % _DEQUESIZ);
 			if (_Mapsize * _DEQUESIZ <= ++_Myoff)
 				_Myoff = 0;
 			if (--_Mysize == 0)
@@ -234,7 +234,7 @@ public:
 			size_type _Block = _Newoff / _DEQUESIZ;
 			if (_Mapsize <= _Block)
 				_Block -= _Mapsize;
-			allocator.destroy(_Map[_Block] + _Newoff % _DEQUESIZ);
+			this->allocator.destroy(_Map[_Block] + _Newoff % _DEQUESIZ);
 			if (--_Mysize == 0)
 				_Myoff = 0; }}
 	iterator insert(iterator _P, const _Ty& _X)	// exe 0x95eaf (deque<EEComplexUnit*>, EECPUnitManager)
@@ -396,7 +396,7 @@ protected:
 			*_P = 0; }
 	void _Tidy()
 		{for (size_type _Count = _Mapsize; 0 < _Count; )
-			allocator.deallocate(_Map[--_Count], _DEQUESIZ);
+			this->allocator.deallocate(_Map[--_Count], _DEQUESIZ);
 		operator delete(_Map);
 		_Mapsize = 0;
 		_Map = 0; }

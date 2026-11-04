@@ -122,7 +122,7 @@ public:
 			_Last = _Ucopy(_S, _X.end(), _Last); }
 		else
 			{_Destroy(_First, _Last);
-			allocator.deallocate(_First, _End - _First);
+			this->allocator.deallocate(_First, _End - _First);
 			if (_Buy(_X.size()))
 				_Last = _Ucopy(_X.begin(), _X.end(), _First); }
 		return (*this); }
@@ -130,16 +130,16 @@ public:
 		{if (max_size() < _N)	// destroy + deallocate under one _First != 0 check, as in insert's grow branch)
 			_Xlen();
 		else if (capacity() < _N)
-			{pointer _S = allocator.allocate(_N, (void *)0);
+			{pointer _S = this->allocator.allocate(_N, (void *)0);
 			_TRY_BEGIN
 			_Ucopy(begin(), end(), _S);
 			_CATCH_ALL
-			allocator.deallocate(_S, _N);
+			this->allocator.deallocate(_S, _N);
 			_RERAISE;
 			_CATCH_END
 			if (_First != 0)
 				{_Destroy(_First, _Last);
-				allocator.deallocate(_First, _End - _First); }
+				this->allocator.deallocate(_First, _End - _First); }
 			_End = _S + _N;
 			_Last = _S + size();
 			_First = _S; }}
@@ -171,11 +171,11 @@ public:
 	size_type size() const
 		{return (_First == 0 ? 0 : _Last - _First); }
 	size_type max_size() const
-		{return (allocator.max_size()); }
+		{return (this->allocator.max_size()); }
 	bool empty() const
 		{return (size() == 0); }
 	_A get_allocator() const
-		{return (allocator); }
+		{return (this->allocator); }
 	const_reference at(size_type _P) const
 		{if (size() <= _P)
 			_Xran();
@@ -225,7 +225,7 @@ public:
 			{_N = max_size() - _N / 2 < _N ? 0 : _N + _N / 2;
 			if (_N < size() + _M)
 				_N = size() + _M;
-			pointer _S = allocator.allocate(_N, (void *)0);
+			pointer _S = this->allocator.allocate(_N, (void *)0);
 			pointer _Q = _S;	// proven: the copies sit in a try/catch-all (LLE 0x2f8d, Default 0x63e2)
 			_TRY_BEGIN
 			_Q = _Ucopy(begin(), _P, _S);
@@ -233,12 +233,12 @@ public:
 			_Ucopy(_P, end(), _Q);
 			_CATCH_ALL
 			_Destroy(_S, _Q);
-			allocator.deallocate(_S, _N);
+			this->allocator.deallocate(_S, _N);
 			_RERAISE;
 			_CATCH_END
 			if (_First != 0)
 				{_Destroy(_First, _Last);
-				allocator.deallocate(_First, _End - _First); }
+				this->allocator.deallocate(_First, _End - _First); }
 			_End = _S + _N;
 			_Last = _S + size() + _M;
 			_First = _S; }
@@ -275,7 +275,7 @@ public:
 		{return (lexicographical_compare(begin(), end(),
 			_X.begin(), _X.end())); }
 	void swap(_Myt& _X)
-		{if (allocator == _X.allocator)
+		{if (this->allocator == _X.allocator)
 			{std::swap(_First, _X._First);
 			std::swap(_Last, _X._Last);
 			std::swap(_End, _X._End); }
@@ -297,7 +297,7 @@ protected:
 			{_N = max_size() - _N / 2 < _N ? 0 : _N + _N / 2;
 			if (_N < size() + _M)
 				_N = size() + _M;
-			pointer _S = allocator.allocate(_N, (void *)0);
+			pointer _S = this->allocator.allocate(_N, (void *)0);
 			pointer _Q = _S;
 			_TRY_BEGIN
 			_Q = _Ucopy(begin(), _P, _S);
@@ -305,12 +305,12 @@ protected:
 			_Ucopy(_P, end(), _Q);
 			_CATCH_ALL
 			_Destroy(_S, _Q);
-			allocator.deallocate(_S, _N);
+			this->allocator.deallocate(_S, _N);
 			_RERAISE;
 			_CATCH_END
 			if (_First != 0)
 				{_Destroy(_First, _Last);
-				allocator.deallocate(_First, _End - _First); }
+				this->allocator.deallocate(_First, _End - _First); }
 			_End = _S + _N;
 			_Last = _S + size() + _M;
 			_First = _S; }
@@ -331,24 +331,24 @@ protected:
 		if (_N == 0)
 			return (false);
 		else
-			{_First = allocator.allocate(_N, (void *)0);
+			{_First = this->allocator.allocate(_N, (void *)0);
 			_Last = _First;
 			_End = _First + _N;
 			return (true); }}
 	void _Destroy(pointer _F, pointer _L)
 		{for (; _F != _L; ++_F)
-			allocator.destroy(_F); }
+			this->allocator.destroy(_F); }
 	void _Tidy()
 		{if (_First != 0)
 			{_Destroy(_First, _Last);
-			allocator.deallocate(_First, _End - _First); }
+			this->allocator.deallocate(_First, _End - _First); }
 		_First = 0, _Last = 0, _End = 0; }
 	template<class _It2>
 		pointer _Ucopy(_It2 _F, _It2 _L, pointer _P)
 		{pointer _Ps = _P;
 		_TRY_BEGIN
 		for (; _F != _L; ++_P, ++_F)
-			allocator.construct(_P, *_F);
+			this->allocator.construct(_P, *_F);
 		_CATCH_ALL
 		_Destroy(_Ps, _P);
 		_RERAISE;
@@ -358,7 +358,7 @@ protected:
 		{pointer _Fs = _F;
 		_TRY_BEGIN
 		for (; 0 < _N; --_N, ++_F)
-			allocator.construct(_F, _X);
+			this->allocator.construct(_F, _X);
 		_CATCH_ALL
 		_Destroy(_Fs, _F);
 		_RERAISE;

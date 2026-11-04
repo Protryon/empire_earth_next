@@ -232,11 +232,11 @@ public:
 	size_type size() const
 		{return (_Size); }
 	size_type max_size() const
-		{return (allocator.max_size()); }
+		{return (this->allocator.max_size()); }
 	bool empty() const
 		{return (size() == 0); }
 	_A get_allocator() const
-		{return (allocator); }
+		{return (this->allocator); }
 	_Pr key_comp() const
 		{return (key_compare); }
 	_Pairib insert(const value_type& _V)
@@ -428,7 +428,7 @@ public:
 		{return (_Paircc(lower_bound(_Kv), upper_bound(_Kv))); }
 	void swap(_Myt& _X)
 		{std::swap(key_compare, _X.key_compare);
-		if (allocator == _X.allocator)
+		if (this->allocator == _X.allocator)
 			{std::swap(_Head, _X._Head);
 			std::swap(_Size, _X._Size); }
 		else
@@ -588,7 +588,7 @@ protected:
 				_X = _Right(_X);
 		return (_Y); }
 	_Nodeptr _Buynode(_Nodeptr _Parg, char _Carg)
-		{_Nodeptr _S = (_Nodeptr)allocator._Charalloc(
+		{_Nodeptr _S = (_Nodeptr)this->allocator._Charalloc(
 			1 * sizeof (_Node));
 		_Parent(_S) = _Parg;
 		_Color(_S) = _Carg;
@@ -599,7 +599,7 @@ protected:
 	void _Destval(_Tptr _P)
 		{_Destroy(&*_P); }
 	void _Freenode(_Nodeptr _S)
-		{allocator.deallocate(_S, 1); }
+		{this->allocator.deallocate(_S, 1); }
 
 	_Nodeptr _Head;
 	size_type _Size;
