@@ -406,10 +406,14 @@ long EEUnitTrigger::GetTriggerID(const char* inName)
 }
 
 // FUNCTION: EXE 0x62b837
-// Returns the name of a trigger id (unchecked: an unknown id reads the table's end node)
+// Returns the name of a trigger id (an empty name for an unknown id, e.g. a misspelt name in a unit AI script)
 UString& EEUnitTrigger::GetTriggerName(unsigned long inTrigger)
 {
-    return EEUnitTrigger::sTriggerNames.find(inTrigger)->second;
+    static UString sUnknown;
+    std::map<unsigned long, UString>::iterator it = EEUnitTrigger::sTriggerNames.find(inTrigger);
+    if (it == EEUnitTrigger::sTriggerNames.end())
+        return sUnknown;
+    return it->second;
 }
 
 // FUNCTION: EXE 0x62b854
@@ -751,10 +755,14 @@ long EEUnitAction::GetActionID(const char* inName)
 }
 
 // FUNCTION: EXE 0x62c75a
-// Returns the name of an action id (unchecked: an unknown id reads the table's end node)
+// Returns the name of an action id (an empty name for an unknown id, e.g. a misspelt name in a unit AI script)
 UString& EEUnitAction::GetActionName(unsigned long inAction)
 {
-    return (*EEUnitAction::sActionNames.find(inAction)).second;
+    static UString sUnknown;
+    std::map<unsigned long, UString>::iterator it = EEUnitAction::sActionNames.find(inAction);
+    if (it == EEUnitAction::sActionNames.end())
+        return sUnknown;
+    return it->second;
 }
 
 // FUNCTION: EXE 0x62c777
