@@ -129,8 +129,7 @@
 UString gSECivilizationExtension(".civ");   // 0x531fd8
 
 // FUNCTION: EXE 0x57ad28
-// Changes the selection and refreshes the controls of the trigger screen the combo sits on; a condition
-// screen combo refreshes the effect screen instead
+// Changes the selection and refreshes the controls of the trigger screen the combo sits on
 void EESETSEScenarioComboBox::ChangeSelection()
 {
     UIComboBox::ChangeSelection();
@@ -139,7 +138,7 @@ void EESETSEScenarioComboBox::ChangeSelection()
         gUIManager->mScenarioEditorForm->GetTriggerScreen()->mScreens[kSETriggerScreenTrigger]->RefreshControls();
         break;
     case kSETriggerScreenCondition:
-        gUIManager->mScenarioEditorForm->GetTriggerScreen()->mScreens[kSETriggerScreenEffect]->RefreshControls();
+        gUIManager->mScenarioEditorForm->GetTriggerScreen()->mScreens[kSETriggerScreenCondition]->RefreshControls();
         break;
     case kSETriggerScreenEffect:
         gUIManager->mScenarioEditorForm->GetTriggerScreen()->mScreens[kSETriggerScreenEffect]->RefreshControls();
