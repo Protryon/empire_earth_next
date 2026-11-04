@@ -158,7 +158,7 @@ void EESelectedGroup::SelectSavedGroup(EEGroup* inGroup, bool inRememberGroup)
 }
 
 // FUNCTION: EXE 0x60924f
-// Returns the highest continent id among the selected units (max_element compares the ids before the counts)
+// Returns the continent id most of the selected units are on
 unsigned short EESelectedGroup::GetContinent()
 {
     std::map<unsigned short, unsigned long> theCounts;
@@ -166,11 +166,12 @@ unsigned short EESelectedGroup::GetContinent()
         unsigned short theContinent = gContinentManager.GetContinentID(this->GetUnit(i));
         theCounts[theContinent] = theCounts[theContinent] + 1;
     }
-    std::map<unsigned short, unsigned long>::iterator theBest;
-    if (theCounts.size() == 1)
-        theBest = theCounts.begin();
-    else
-        theBest = std::max_element(theCounts.begin(), theCounts.end());
+    // the most common continent (the first, i.e. lowest id, on a tie)
+    std::map<unsigned short, unsigned long>::iterator theBest = theCounts.begin();
+    for (std::map<unsigned short, unsigned long>::iterator it = theCounts.begin(); it != theCounts.end(); ++it) {
+        if (it->second > theBest->second)
+            theBest = it;
+    }
     return theBest->first;
 }
 
