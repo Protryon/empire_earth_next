@@ -4732,8 +4732,13 @@ void EEMLockUnlock::Execute()
             EEComplexUnit* theUnit = theGroup->GetUnit(i);
             EEUCGate* theGate = dynamic_cast<EEUCGate*>(theUnit->GetUnitClass());
             theUnit->SetLocked(this->mIsLocked);
-            theGate->GetSecondPart(theUnit)->SetLocked(this->mIsLocked);
-            theGate->GetFourthPart(theUnit)->SetLocked(this->mIsLocked);
+            // a gate built as a single piece (scenario Create effect) has no second or fourth part
+            EEComplexUnit* thePart = theGate->GetSecondPart(theUnit);
+            if (thePart != NULL)
+                thePart->SetLocked(this->mIsLocked);
+            thePart = theGate->GetFourthPart(theUnit);
+            if (thePart != NULL)
+                thePart->SetLocked(this->mIsLocked);
         }
     }
 }

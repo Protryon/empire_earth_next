@@ -536,10 +536,12 @@ EEComplexUnit* EEUnitClass::GetLastLinkedCarrier(EEComplexUnit* inUnit)
 }
 
 // FUNCTION: EXE 0x611735
-// Returns gate piece 1 (the piece before piece 3)
+// Returns gate piece 1 (the piece before piece 3); NULL when the chain is too short (a gate created as a single
+// piece, e.g. by a scenario effect)
 EEComplexUnit* EEUCGate::GetSecondPart(EEComplexUnit* inGate)
 {
-    return this->GetFourthPart(inGate)->mPreviousPart;
+    EEComplexUnit* theFourth = this->GetFourthPart(inGate);
+    return theFourth != NULL ? theFourth->mPreviousPart : NULL;
 }
 
 // FUNCTION: EXE 0x611747
@@ -552,10 +554,12 @@ EEComplexUnit* EEUnitClass::GetLastLinked(EEComplexUnit* inUnit)
 }
 
 // FUNCTION: EXE 0x61175c
-// Returns gate piece 3 (two pieces before the end of the chain)
+// Returns gate piece 3 (two pieces before the end of the chain); NULL when the chain is too short (a gate created
+// as a single piece, e.g. by a scenario effect)
 EEComplexUnit* EEUCGate::GetFourthPart(EEComplexUnit* inGate)
 {
-    return this->GetLastLinkedCarrier(inGate)->mPreviousPart;
+    EEComplexUnit* theCarrier = this->GetLastLinkedCarrier(inGate);
+    return theCarrier != NULL ? theCarrier->mPreviousPart : NULL;
 }
 
 // FUNCTION: EXE 0x61176e
