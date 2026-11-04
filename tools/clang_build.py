@@ -78,17 +78,22 @@ def clang_flags(flags, opt):
 
 
 def apply_overlay(staged, rules):
-    """Rewrite the staged copy of a unit with (old, new, expected count) text rules (test profiles only; the
-    source tree is never touched). Refuses when a rule does not match exactly its expected count."""
-    raw = pathlib.Path(staged).read_bytes()
+    """A copy of the staged unit rewritten with (old, new, expected count) text rules, next to it (so its sibling
+    headers resolve) under a per-compile name (two modules may compile the same unit in parallel) -> its path. Test
+    profiles only; the source tree is never touched. Refuses when a rule does not match exactly its expected count."""
+    import threading
+    staged = pathlib.Path(staged)
+    raw = staged.read_bytes()
     crlf = b"\r\n" in raw
     text = raw.decode("latin-1").replace("\r\n", "\n")
     for old, new, want in rules:
         n = text.count(old)
         if n != want:
-            raise SystemExit(f"overlay {pathlib.Path(staged).name}: {old!r} matches {n} times, expected {want}")
+            raise SystemExit(f"overlay {staged.name}: {old!r} matches {n} times, expected {want}")
         text = text.replace(old, new)
-    pathlib.Path(staged).write_bytes((text.replace("\n", "\r\n") if crlf else text).encode("latin-1"))
+    copy = staged.with_name(f"{staged.stem}.test{os.getpid()}-{threading.get_ident()}{staged.suffix}")
+    copy.write_bytes((text.replace("\n", "\r\n") if crlf else text).encode("latin-1"))
+    return copy
 
 
 def compile_to(src, flags, obj, opt, vc6inc, overlays=None):
@@ -96,10 +101,10 @@ def compile_to(src, flags, obj, opt, vc6inc, overlays=None):
     (apply_overlay) for a test profile."""
     flags = verify.unit_flags(src, flags)
     staged = verify.stage_source(src)
-    rules = (overlays or {}).get(str(build.rel_src(src)))
-    if rules:
-        apply_overlay(staged, rules)
+    rules = overlays.get(str(build.rel_src(src))) if overlays else None
     iflags, inc = verify.include_paths(staged)
+    if rules:
+        staged = apply_overlay(staged, rules)
     base = CLANG_FLAGS
     if STL == "msvc":
         inc = modern_include(inc)
@@ -111,6 +116,8 @@ def compile_to(src, flags, obj, opt, vc6inc, overlays=None):
            str(staged)]
     r = subprocess.run(cmd, env=dict(os.environ, INCLUDE=inc), capture_output=True, text=True,
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    if rules:
+        staged.unlink(missing_ok=True)
     return r.returncode == 0, (r.stdout + r.stderr).strip()
 
 

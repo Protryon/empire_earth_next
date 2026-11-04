@@ -54,6 +54,39 @@ TEST_PROFILES = {
             ("mTextureBitDepth != 16)", "mTextureBitDepth != 32)", 1),
             ("mGameBitDepth = 16;", "mGameBitDepth = 32;", 2),
             ("mTextureBitDepth = 16;", "mTextureBitDepth = 32;", 1)],
+        # the renderer's software-display profile (ee tools/boot/windowed_overlay.py SOFTWARE_PATCHES, by meaning):
+        # the D3D7 RGB software device instead of a HAL, every surface in system memory, no texture management
+        "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Rasterizer.cpp": [
+            ("(inCaps->dwDevCaps & D3DDEVCAPS_HWRASTERIZATION) == D3DDEVCAPS_HWRASTERIZATION;",
+             "(inCaps->dwDevCaps & D3DDEVCAPS_FLOATTLVERTEX) == D3DDEVCAPS_FLOATTLVERTEX;   // TEST PROFILE software", 1),
+            ("if ((theCaps.dwCaps & DDCAPS_3D) == DDCAPS_3D) {",
+             "if (true) {   // TEST PROFILE software: adapters without DDCAPS_3D", 2),
+            ("IID_IDirect3DHALDevice", "IID_IDirect3DRGBDevice", 1)],
+        "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Screen.cpp": [
+            ("this->GetMode(i).mHeight == 600 && this->GetMode(i).mBitCount == 16)",
+             "this->GetMode(i).mHeight == 600 && this->GetMode(i).mBitCount == 32)", 1),
+            ("IID_IDirect3DHALDevice", "IID_IDirect3DRGBDevice", 1),
+            ("        theDesc.ddsCaps.dwCaps = inDescription.mIs3DRenderable ?\n"
+             "            DDSCAPS_PRIMARYSURFACE | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM | DDSCAPS_3DDEVICE :\n"
+             "            DDSCAPS_PRIMARYSURFACE | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM;\n",
+             "        theDesc.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;   // TEST PROFILE software\n", 1),
+            ("DDSCAPS_OFFSCREENPLAIN | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM",
+             "DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY", 2),
+            ("DDSCAPS_ZBUFFER | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM;", "DDSCAPS_ZBUFFER | DDSCAPS_SYSTEMMEMORY;", 1),
+            ("DDSCAPS_TEXTURE | DDSCAPS_3DDEVICE | DDSCAPS_VIDEOMEMORY |\n                                     DDSCAPS_LOCALVIDMEM;",
+             "DDSCAPS_TEXTURE | DDSCAPS_3DDEVICE | DDSCAPS_SYSTEMMEMORY;", 1),
+            ("            theDesc.ddsCaps.dwCaps = DDSCAPS_TEXTURE;\n"
+             "            theDesc.ddsCaps.dwCaps2 = inDescription.mSurfaceVolatility ?\n"
+             "                DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTSTATIC :\n"
+             "                DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTDYNAMIC;\n",
+             "            theDesc.ddsCaps.dwCaps = DDSCAPS_TEXTURE | DDSCAPS_SYSTEMMEMORY;   // TEST PROFILE software\n", 1),
+            ("            DDSCAPS_TEXTURE | DDSCAPS_COMPLEX | DDSCAPS_MIPMAP | DDSCAPS_3DDEVICE :\n"
+             "            DDSCAPS_TEXTURE | DDSCAPS_COMPLEX | DDSCAPS_MIPMAP;\n"
+             "        theDesc.ddsCaps.dwCaps2 = inDescription.mSurfaceVolatility ?\n"
+             "            DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTSTATIC :\n"
+             "            DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTDYNAMIC;\n",
+             "            DDSCAPS_TEXTURE | DDSCAPS_COMPLEX | DDSCAPS_MIPMAP | DDSCAPS_3DDEVICE | DDSCAPS_SYSTEMMEMORY :\n"
+             "            DDSCAPS_TEXTURE | DDSCAPS_COMPLEX | DDSCAPS_MIPMAP | DDSCAPS_SYSTEMMEMORY;   // TEST PROFILE\n", 1)],
     },
 }
 
@@ -265,11 +298,39 @@ def clang_coff_symbols(inner):
 
 
 def link6_map(path):
-    """lld's MSVC-style map with LINK 6's 8-digit Rva+Base column (the image is 32-bit)."""
+    """lld's MSVC-style map with LINK 6's 8-digit Rva+Base column (every image is 32-bit), for the map readers of
+    the VC6 build's tools and of the harness (tools/harness)."""
     if path.exists():
         text = path.read_text(encoding="latin-1")
         path.write_text(re.sub(r"(?m)^( [0-9a-f]{4}:[0-9a-f]{8}\s+\S+\s+)0{8}([0-9a-f]{8})", r"\1\2", text),
                         encoding="latin-1")
+
+
+def translated_members(inner):
+    """exe_fulllink.read_members for the MSVC STL profile. The member table (link/exe/fulllink_members.tsv) places
+    globals the source does not define at VC6 offsets inside other globals (gDCGameSpeed = gContinentManager+0x134
+    ...). Classes holding STL containers change layout, so each offset is moved to the same member's offset in this
+    build (tools/harness/layout.py translate; the container's class from its mangled name). A Dinkum vector's _First
+    (+4) becomes this library's first-element pointer. Offset 0 and pointer tables stay."""
+    sys.path.insert(0, str(ROOT / "tools" / "harness"))
+    import layout as L
+    lay = L.Layout("msvc")
+
+    def read_members(path, at, known):
+        out = inner(path, at, known)
+        for alias, (cont, off, va) in list(out.items()):
+            m = re.match(r"\?[^@]+@(?:[^@]+@)*@[23]([VU])([A-Za-z_0-9]+)@@", cont)
+            if off == 0 or re.match(r"\?[^@]+@(?:[^@]+@)*@[23]P", cont):
+                continue                                   # the object itself, or a table of pointers
+            if m:
+                new = lay.translate(m.group(2), off)
+            elif "?$vector@" in cont and off == 4:
+                new = 0                                   # Dinkum vector _First -> MSVC _Myfirst
+            else:
+                raise SystemExit(f"member alias {alias}: cannot translate {cont}+{off:#x} for the MSVC STL layout")
+            out[alias] = (cont, new, va - off + new)
+        return out
+    return read_members
 
 
 def link_exe(out, objs, extra_libs):
@@ -281,6 +342,8 @@ def link_exe(out, objs, extra_libs):
     exe_roundtrip.run = lld_run(exe_roundtrip.run, extra_libs)
     exe_fulllink.parse_log = lld_parse_log
     exe_fulllink.coff_symbols = clang_coff_symbols(exe_fulllink.coff_symbols)
+    if clang_build.STL == "msvc":
+        exe_fulllink.read_members = translated_members(exe_fulllink.read_members)
     exe_fulllink.MAP_RE = re.compile(r"^ ([0-9a-f]{4}):([0-9a-f]{8})\s+(\S+)\s+([0-9a-f]{8}|[0-9a-f]{16})\s+"
                                      r"(?:f\s+)?(?:i\s+)?(\S+)?", re.I)
     dst = out / "exe"
@@ -356,6 +419,7 @@ def main():
             continue
         relink.run = lld_run(inner_run, libs)
         results[t] = relink.relink(t, out / t)
+        link6_map((out / t / relink.module_filename(t)).with_suffix(".map"))
     print()
     for t, r in results.items():
         print(f"{t:9} {'ok' if r == 0 else 'FAILED'}")
