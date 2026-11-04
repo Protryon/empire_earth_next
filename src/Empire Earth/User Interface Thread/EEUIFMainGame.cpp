@@ -249,7 +249,7 @@ EEUIFMGUnitHack::~EEUIFMGUnitHack()
 }
 
 // FUNCTION: EXE 0x662aa5
-// Places a unit at a tile on a Shift or Ctrl click (always type 0x367; for the listed player, or the local
+// Places a unit of the listed class at a tile on a Shift or Ctrl click (for the listed player, or the local
 // one with Shift)
 void EEUIFMGUnitHack::PlaceUnit(const GE2DPoint& inTile)
 {
@@ -265,8 +265,7 @@ void EEUIFMGUnitHack::PlaceUnit(const GE2DPoint& inTile)
         return;
     switch (this->mMode) {
     case 1: {
-        long theType = this->mClassIDs[this->GetSelection()];
-        theType = 0x367;
+        long theType = this->mClassIDs[this->GetSelection()];   // the class picked in the list
         if (theShift->GetValue() == 0 &&
             (static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempPlayerList))->GetListBox()->GetCurrentSelection(thePlayer) == kErrorOK ||
              static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempPlayerList))->GetListBox()->GetCurrentSelection(thePlayer) == 0xd)) {
