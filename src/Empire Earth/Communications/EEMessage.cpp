@@ -6299,7 +6299,7 @@ void EEMResearchTechnology::Execute()
                 && theComplexUnit && theComplexUnit->mIsBuilt && theCount > 0) {
                 for (unsigned long j = 0; j < theCount; j++) {
                     if (theAll || (theWonder && !gWorld.mGameOptions.mIsScenarioGame)) {
-                        unsigned long theQueue = theOther->mComplexUnit->GetBuildQueueSize() + theOther->mComplexUnit->mCurrentResearch != 100000;
+                        unsigned long theQueue = theOther->mComplexUnit->GetBuildQueueSize() + (theOther->mComplexUnit->mCurrentResearch != 100000);   // queue + the one in progress (precedence)
                         if (theQueue < theBestQueue) {
                             theBestQueue = theQueue;
                             theBest = theOther;
