@@ -67,7 +67,9 @@ EEE3DTracerBeam::EEE3DTracerBeam(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* 
     this->mIsImpactCreated = false;
     this->mDrawAge = 0.0f;
     this->mScroll = 0.0f;
-    this->mTargetPoint = this->mTarget->GetModel()->PickPoint();
+    // Pick a point on the target model only when there is a target (the null test above already allows none).
+    if (this->mTarget)
+        this->mTargetPoint = this->mTarget->GetModel()->PickPoint();
     this->mWeaponTagPoint = inFrom->mComplexUnit->mWeaponTagPoint;
     this->Aim();
 }
