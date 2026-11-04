@@ -846,12 +846,13 @@ long SESoundManager::GetTotalPlayTimeInMilli(SESMInstanceNode* inNode)
 }
 
 // FUNCTION: LLE 0x1005034f
-// Returns the instance's volume under the lock, but enters the lock a second time instead of leaving it
+// Returns the instance's volume under the lock
 float SESoundManager::GetVolume(unsigned long inInstanceID)
 {
     this->mLock->Enter();
     float theVolume = this->GetVolume2(inInstanceID);
-    this->mLock->Enter();   // sic: enters twice (never leaves)
+    // Fixed: the lock used to be entered a second time here instead of left, so it was never released
+    this->mLock->Leave();
     return theVolume;
 }
 
