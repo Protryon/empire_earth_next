@@ -979,8 +979,7 @@ void UIManager::SetMusicVolume(float inVolume)
 }
 
 // FUNCTION: LLE 0x1007b616
-// Loads and starts a music track unless it is the current one; the check lower-cases the name but the track
-// name is stored as given, so a mixed-case name always reloads
+// Loads and starts a music track unless it is the current one (names compared lower-cased)
 void UIManager::StartMusic(const UWideString& inFileName)
 {
     UWideString theFileName(inFileName);
@@ -995,7 +994,9 @@ void UIManager::StartMusic(const UWideString& inFileName)
         }
         this->mMusicID = this->mSoundManager->Load((const char*)inFileName, 0, 1);
         if (this->mMusicID != -1) {
-            this->mMusicFileName = inFileName;
+            // Fixed: stored the name as given while the check above compares lower-cased names, so restarting the
+            // current track with a mixed-case name reloaded it
+            this->mMusicFileName = theFileName;
             this->mStartMusic = true;
             this->mCriticalSection->Enter();
             if (this->mMusicInstance == NULL) {
