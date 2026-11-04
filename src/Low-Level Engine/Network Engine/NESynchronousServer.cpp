@@ -659,7 +659,7 @@ void NESynchronousServer::SendCommunicationsTick(bool inGenerateChecksum, bool i
                 for (unsigned long i = 0; i < this->mOOSSlots.size(); i++)
                     this->RemovePlayerFromGameInProgress(this->mOOSSlots[i], true, true, false);
                 this->mIsOOS = false;
-                this->mNumHumanPlayers -= (unsigned char)this->mOOSSlots.size();
+                // (RemovePlayerFromGameInProgress has already counted each removed human out of mNumHumanPlayers)
                 this->mOOSSlots.clear();
             }
         }
