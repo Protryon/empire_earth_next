@@ -1372,8 +1372,8 @@ bool EEComplexUnit::UpdateHidden()
                     this->mHiddenFlags |= kHiddenFlagHidden;
                     this->mHiddenFlags ^= (this->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
                     for (EEComplexUnit* theChild = this->mNextPart; theChild != NULL; theChild = theChild->mNextPart) {
-                        this->mHiddenFlags |= kHiddenFlagHidden;
-                        this->mHiddenFlags ^= (this->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
+                        theChild->mHiddenFlags |= kHiddenFlagHidden;
+                        theChild->mHiddenFlags ^= (theChild->mHiddenFlags ^ thePhase) & kHiddenFlagPhaseMask;
                     }
                     theIndex = -1;
                     break;
