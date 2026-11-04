@@ -554,8 +554,8 @@ void EEPMHelicopter::Step5(EEComplexUnit* inUnit)
 
 // NEAR: floor result slots (x in edi, y in memory)
 // FUNCTION: EXE 0x559ffa
-// Returns false for a move onto a tile it cannot enter or a map edge tile without undoing it (the
-// airplane version undoes it), else clips the move to the map edges
+// Undoes a move onto a tile it cannot enter or a map edge tile (returns false), else clips the move to the
+// map edges
 bool EEPMHelicopter::ClipStep(EEComplexUnit* inUnit, const GEVector& inMove, GE3DPoint& ioLocation, float* outDistance)
 {
     EEMap* theMap = ::gWorld.mMap;
@@ -564,8 +564,12 @@ bool EEPMHelicopter::ClipStep(EEComplexUnit* inUnit, const GEVector& inMove, GE3
     float theDistance = 0.0f;
     EETile* theTile = theMap->GetTile(theX, theY);
     if (theTile && theTile != inUnit->mTile
-        && (!inUnit->mUnitClass->CanMoveOnTerrain(inUnit, theTile->mTerrainType) || theMap->IsEdgeTile(theX, theY)))
+        && (!inUnit->mUnitClass->CanMoveOnTerrain(inUnit, theTile->mTerrainType) || theMap->IsEdgeTile(theX, theY))) {
+        // undo the move, as the airplane version does
+        ioLocation.SetX(ioLocation.GetX() - inMove.GetX());
+        ioLocation.SetY(ioLocation.GetY() - inMove.GetY());
         return false;
+    }
     return EEPhysicsModel::ClipStep(inUnit, inMove, ioLocation, &theDistance);
 }
 
