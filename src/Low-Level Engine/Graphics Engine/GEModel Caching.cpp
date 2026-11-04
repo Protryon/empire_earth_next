@@ -350,6 +350,9 @@ void GEModel::OptimizeMemoryCoherency(long inGenerations)
     for (unsigned long theMaterial = 0; theMaterial < this->mMaterialCount; theMaterial++) {
         long theGeneration = inGenerations;
         unsigned long theCount = this->mMaterials[theMaterial]->GetVertexRangeLength();
+        // A material with fewer than two vertices has nothing to reorder (the genome setup uses entries 0 and 1).
+        if (theCount <= 1)
+            continue;
         float thePopulationSize = (float)theCount;
         unsigned long theEliteCount = UMFloatToLong(thePopulationSize * 0.1f);
         long theMutations = UMFloatToLong(thePopulationSize);
