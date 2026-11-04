@@ -385,7 +385,7 @@ UIControl* UIControlsTable::CreateButton(UIManager* inManager, const GERectangle
     if (this->mButtonDownSound.GetLength() > 0)
         theButton->SetButtonDownSound(this->mButtonDownSound);
     if (this->mButtonUpSound.GetLength() > 0)
-        theButton->SetButtonUpSound(this->mButtonDownSound);
+        theButton->SetButtonUpSound(this->mButtonUpSound);   // Fixed: used to pass mButtonDownSound
     return theButton;
 }
 
@@ -407,7 +407,7 @@ UIControl* UIControlsTable::CreateCheckBox(UIManager* inManager, const GERectang
     if (this->mButtonDownSound.GetLength() > 0)
         theCheckBox->SetButtonDownSound(this->mButtonDownSound);
     if (this->mButtonUpSound.GetLength() > 0)
-        theCheckBox->SetButtonUpSound(this->mButtonDownSound);
+        theCheckBox->SetButtonUpSound(this->mButtonUpSound);   // Fixed: used to pass mButtonDownSound
     return theCheckBox;
 }
 
@@ -752,7 +752,7 @@ UIControl* UIControlsTable::CreateRadioButton(UIManager* inManager, const GERect
     if (this->mButtonDownSound.GetLength() > 0)
         theRadioButton->SetButtonDownSound(this->mButtonDownSound);
     if (this->mButtonUpSound.GetLength() > 0)
-        theRadioButton->SetButtonUpSound(this->mButtonDownSound);
+        theRadioButton->SetButtonUpSound(this->mButtonUpSound);   // Fixed: used to pass mButtonDownSound
     if (this->mNormalFileName.GetLength() > 0) {
         GEBitmap* theBitmap = this->CreateNormalBitmap(inManager, inRectangle);
         theRadioButton->SetUpUncheckedBitmap(theBitmap);
