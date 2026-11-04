@@ -506,7 +506,7 @@ bool EEPMSubmergedNaval::ClipStep(EEComplexUnit* inUnit, const GEVector& inMove,
     ioLocation.mZ = inUnit->mPhysicalModel.GetLocation().GetZ();
     if (inUnit->mCurrentPhysicsAction == 0)
         this->AdjustDiveDepth(inUnit, ioLocation);
-    if (theSlowed)
+    if (theSlowed && (theTriedX || theTriedY))
         inUnit->mCollisionResolutionCount += gPhysics->GetTickTime();
     return theResult;
 }

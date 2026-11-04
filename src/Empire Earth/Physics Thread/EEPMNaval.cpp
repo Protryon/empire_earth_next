@@ -742,7 +742,7 @@ bool EEPMNaval::ClipStep(EEComplexUnit* inUnit, const GEVector& inMove, GE3DPoin
     }
     if (theResult)
         theResult = EEPhysicsModel::ClipStep(inUnit, inMove, ioLocation, &theDistance);
-    if (theSlowed)
+    if (theSlowed && (theTriedX || theTriedY))
         inUnit->mCollisionResolutionCount += gPhysics->GetTickTime() * 0.33f;
     return theResult;
 }

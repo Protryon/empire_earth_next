@@ -618,6 +618,8 @@ bool EEPMSpaceship::ClipStep(EEComplexUnit* inUnit, const GEVector& inMove, GE3D
     }
     if (theResult)
         theResult = EEPhysicsModel::ClipStep(inUnit, inMove, ioLocation, &theDistance);
-    inUnit->mCollisionResolutionCount += gPhysics->mTickTime * 0.33f;
+    // only a step that had to be retried counts towards collision resolution (as on land)
+    if (theTriedX || theTriedY)
+        inUnit->mCollisionResolutionCount += gPhysics->mTickTime * 0.33f;
     return theResult;
 }
