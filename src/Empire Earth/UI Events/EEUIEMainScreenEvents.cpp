@@ -107,21 +107,15 @@ long EEUIEMSESinglePlayer::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // (EEUIESPEOpen's ??_G)
 
 // FUNCTION: EXE 0x5e1f8a
-// Starts multiplayer (leaving editor mode): the external lobby when the check passes (always, as called), else the
-// multiplayer form
+// Starts multiplayer (leaving editor mode) through the external lobby
 long EEUIEMSEMultiPlayer::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     EEUIManager* theManager = static_cast<EEUIManager*>(inForm->GetManager());
     theManager->mInScenarioEditor = false;
     gGameState.mGameOptions.mIsMultiplayer = true;
-    if (EECheck2989A9(false))
-        EEStartExternalLobby();
-    else {
-        UIEvent* theEvent = new EEUIEMSOpenMultiplayerScreen;
-        theManager->GetFormByID(kFormMultiplayer)->SetFormOpenEvent(theEvent);
-        theEvent->Dereference();
-        theManager->Push(theManager->GetFormByID(kFormMultiplayer));
-    }
+    // EECheck2989A9(false) is always true, so the branch that opened the multiplayer form could never run and
+    // was removed.
+    EEStartExternalLobby();
     return kErrorOK;
 }
 
