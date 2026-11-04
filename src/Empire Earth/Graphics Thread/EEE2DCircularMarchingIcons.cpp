@@ -17,9 +17,9 @@
 #include "ee/EEE2DCircularMarchingIcons.h"
 
 // FUNCTION: EXE 0x4df57c
-// Creates an empty ring of marching icons for loading from a saved game
+// Creates an empty ring of marching icons for loading from a saved game (its own kind, as the unit constructor)
 EEE2DCircularMarchingIcons::EEE2DCircularMarchingIcons()
-    : EEE2DMarchingIcons(0xf)
+    : EEE2DMarchingIcons(0x10)
 {
 }
 
