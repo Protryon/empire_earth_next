@@ -130,7 +130,7 @@ SESoundManager::SESoundManager(FSPath* inPath, SEMixer* inMixer, unsigned long i
     this->mSoundCount = 0;
     this->mNextInstanceID = 0;
     this->mCategories.resize(inCategoryCount);
-    for (unsigned long i = 0; i < inCategoryCount; i++)
+    unsigned long i; for (i = 0; i < inCategoryCount; i++)
         this->mCategories[i] = NULL;
     this->mChannels.resize(this->mAvailableChannels);
     for (i = 0; i < this->mAvailableChannels; i++)

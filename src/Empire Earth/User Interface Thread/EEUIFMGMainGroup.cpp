@@ -308,7 +308,7 @@ void EEUIFMGMainGroup::ShowCommands(EEUnit* inUnit)
     EEComplexUnit* theComplex = inUnit ? inUnit->mComplexUnit : NULL;
     long theFreeSlot = -1;
     this->mOwner->RemoveAllHotKeysForAGroup(2);
-    for (unsigned long i = 0x6e; i < 0xce; i++) {
+    unsigned long i; for (i = 0x6e; i < 0xce; i++) {
         this->mOwner->GetControl(i)->SetDisplayMode(kDisplayModeHidden);
         static_cast<EEUIFMGStatusButton*>(this->mOwner->GetControl(i))->ReleaseButton();
     }

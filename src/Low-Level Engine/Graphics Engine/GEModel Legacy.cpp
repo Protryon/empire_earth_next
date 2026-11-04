@@ -160,7 +160,7 @@ long GEModel::ConvertLegacyModel()
     unsigned long theCount;
     bool theFound;
 
-    for (unsigned long m = 0; m < this->mLegacyPolygonCount; m++) {
+    unsigned long m; for (m = 0; m < this->mLegacyPolygonCount; m++) {
         this->mPolygonArrays[0]->SetVertexIndex1(m, this->mLegacyPolygons[m].mVertexIndices[0]);
         this->mPolygonArrays[0]->SetVertexIndex2(m, this->mLegacyPolygons[m].mVertexIndices[1]);
         this->mPolygonArrays[0]->SetVertexIndex3(m, this->mLegacyPolygons[m].mVertexIndices[2]);

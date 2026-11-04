@@ -1026,7 +1026,7 @@ long EEComplexUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVers
     }
     theLength = 0;
     long theQueued = this->mCitizenBuildQueue.size();
-    for (long j = 0; j < theQueued; j++)
+    long j; for (j = 0; j < theQueued; j++)
         if (this->mCitizenBuildQueue[j]->mIsValid)
             theLength++;
     theResult = outFile.Write(theLength);

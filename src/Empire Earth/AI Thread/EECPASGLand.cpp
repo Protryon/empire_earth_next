@@ -1871,7 +1871,7 @@ bool EECPASGLand::BoardTransports(std::vector<EEComplexUnit*>* inTransports)
     bool theResult = false;
     U2DPoint<long> theRendezvous;
     if (this->mTransport != NULL && !inTransports->empty()) {
-        for (long i = this->mUnits.size() - 1; i >= 0; i--) {
+        long i; for (i = this->mUnits.size() - 1; i >= 0; i--) {
             if (this->mUnits[i]->IsDone())
                 continue;
             EEComplexUnit* theUnit = this->mUnits[i]->mUnit;

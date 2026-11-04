@@ -451,7 +451,7 @@ long NEMessageManager::RegisterSlot(unsigned char inSlot)
     long theResult = 1;
     std::map<unsigned char, bool>::iterator theResponded = this->mSentMessages[0].mResponded.find(inSlot);
     if (theResponded == this->mSentMessages[0].mResponded.end()) {
-        for (unsigned long i = 0; i < 50; i++)
+        unsigned long i; for (i = 0; i < 50; i++)
             this->mSentMessages[i].mResponded.insert(std::map<unsigned char, bool>::value_type(inSlot, false));
         NEMMClient* theClient = new NEMMClient;
         for (i = 0; i < 10; i++)

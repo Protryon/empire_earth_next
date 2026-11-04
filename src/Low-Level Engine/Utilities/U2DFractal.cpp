@@ -51,7 +51,7 @@ void U2DFractal::ComputeFractal(float inCornerValue, float inRange, unsigned lon
     float theDimension = (float)theStep;
     do {
         float theScale = (float)theStep / theDimension;
-        for (unsigned long y = 0; y < this->mSquareDimension; y += theStep) {
+        unsigned long y; for (y = 0; y < this->mSquareDimension; y += theStep) {
             for (unsigned long x = 0; x < this->mSquareDimension; x += theStep) {
                 unsigned long theNextX = (x + theStep) % this->mSquareDimension;
                 unsigned long theNextY = (y + theStep) % this->mSquareDimension;

@@ -113,7 +113,7 @@ long EEUIFileComboBox::SelectFile(const UWideString& inName)
 {
     long theResult = kErrorNotFound;
     UWideString theLine;
-    for (unsigned long i = 0; i < this->GetListBox()->GetLineCount(); i++) {
+    unsigned long i; for (i = 0; i < this->GetListBox()->GetLineCount(); i++) {
         theLine = this->GetListBox()->GetData(i);
         if (theLine == inName) {
             theResult = kErrorOK;

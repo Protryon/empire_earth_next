@@ -90,7 +90,7 @@ bool EELobbyLoadSavedGame(const char* inFile)
     if (theGame == NULL)
         return false;
     std::set<GUIString> theNames;
-    for (int i = 0; i < 8; i++) {
+    int i; for (i = 0; i < 8; i++) {
         if (theOptions.mPlayers[i].mType == 1 || theOptions.mPlayers[i].mType == 2)
             theNames.insert(EELobbyToGUIString(theOptions.mPlayers[i].mName));
     }

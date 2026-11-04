@@ -775,7 +775,7 @@ bool EEUGGather::HasGatherRoom(EEComplexUnit* inUnit, EEUnit* inResource)
         EEGetSideTiles(inResource->GetTileX(), inResource->GetTileY(), inResource->GetUnitClass()->mTileSize, theTiles);
         EEGetCornerTiles(0, inResource->GetTileX(), inResource->GetTileY(), inResource->GetUnitClass()->mTileSize, theEdges);
         unsigned long theCount = theTiles.size() * 2 + theEdges.size();
-        for (unsigned long theIndex = 0; theIndex < theTiles.size(); theIndex++) {
+        unsigned long theIndex; for (theIndex = 0; theIndex < theTiles.size(); theIndex++) {
             EEMapTile* theTile = theMap->GetTile(theTiles[theIndex].mX, (theTiles.begin() + theIndex)->mY);
             if (theTile == NULL)
                 theCount--;

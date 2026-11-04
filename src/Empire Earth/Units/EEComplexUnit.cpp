@@ -1917,7 +1917,7 @@ long EEComplexUnit::GetChecksum(unsigned long inFlags)
         }
     }
     if (inFlags & 8) {
-        for (std::vector<EEAreaEffect*>::iterator theEffect = this->mAffectingAreaEffects.mItems.begin(); theEffect != this->mAffectingAreaEffects.mItems.end();
+        std::vector<EEAreaEffect*>::iterator theEffect; for (theEffect = this->mAffectingAreaEffects.mItems.begin(); theEffect != this->mAffectingAreaEffects.mItems.end();
              ++theEffect)
             theSum += (*theEffect)->Checksum();
         for (theEffect = this->mAreaEffects.mItems.begin(); theEffect != this->mAreaEffects.mItems.end(); ++theEffect)

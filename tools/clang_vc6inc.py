@@ -34,7 +34,7 @@ def prepare(src, dst):
     src, dst = pathlib.Path(src), pathlib.Path(dst)
     dst.mkdir(parents=True, exist_ok=True)
     names = "|".join(iosfwd_names(src))
-    for f in src.iterdir():
+    for f in sorted(src.rglob("*")):
         if not f.is_file():
             continue
         data = f.read_bytes()
@@ -47,7 +47,8 @@ def prepare(src, dst):
                     raise SystemExit(f"clang_vc6inc: {f.name}: patch {pat!r} matched {n} times, expected {want}")
             crlf = b"\r\n" in data
             data = (text.replace("\n", "\r\n") if crlf else text).encode("latin-1")
-        g = dst / f.name
+        g = dst / f.relative_to(src)
+        g.parent.mkdir(parents=True, exist_ok=True)
         if not g.exists() or g.read_bytes() != data:
             g.write_bytes(data)
     return dst

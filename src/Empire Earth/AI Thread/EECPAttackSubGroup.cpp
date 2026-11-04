@@ -1645,7 +1645,7 @@ void EECPAttackSubGroup::PickByUpgrade(std::vector<EECPAttackSubGroupUnit*>& out
     std::multimap<float, EECPAttackSubGroupUnit*>::iterator theIt;
     std::multimap<float, EECPAttackSubGroupUnit*>::reverse_iterator theReverse;
     if (inFraction > 0.0f && this->mUnits.size() > 0) {
-        for (long i = this->mUnits.size() - 1; i >= 0; i--) {
+        long i; for (i = this->mUnits.size() - 1; i >= 0; i--) {
             if (this->mUnits[i]->GetUnit()) {  // mUnits[i] x3: owner-approved trade (2026-11-01): VirtualE0 58.33 -> 90.68, COMDAT 0x461393 (_Tree::rend) no longer emitted
                 float theValue = this->mUnits[i]->GetUnit()->mStats->mMaxVelocity;
                 theUnits.insert(std::make_pair(theValue,

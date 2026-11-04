@@ -127,7 +127,7 @@ void UEEncryptGUID(unsigned long inValue, UString& inGUID, unsigned long inKey, 
     outString = theBlock;
     UEEncryptBlock(inGUID.GetLength(), inKey, theBlock);
     outString = outString + theBlock;
-    for (int i = 0; i < inGUID.GetLength(); i += 4) {
+    int i; for (i = 0; i < inGUID.GetLength(); i += 4) {
         unsigned long theValue =
             (((inGUID[i] << 8 | inGUID[i + 1]) << 8 | inGUID[i + 2]) << 8) | inGUID[i + 3];
         UEEncryptBlock(theValue, inKey, theBlock);
@@ -154,7 +154,7 @@ bool UEDecryptGUID(const UString& inString, unsigned long inKey, unsigned long& 
     UEDecryptBlock(theBlock, inKey, outValue);
     theBlock = inString.GetSubstring(8, 8);
     UEDecryptBlock(theBlock, inKey, theLength);
-    for (int i = 16; i < theLength * 2 + 16; i += 8) {
+    int i; for (i = 16; i < theLength * 2 + 16; i += 8) {
         theBlock = inString.GetSubstring(i, 8);
         UEDecryptBlock(theBlock, inKey, theValue);
         sprintf(theBlock, "%c%c%c%c", (char)(theValue >> 24), (char)(theValue >> 16), (char)(theValue >> 8),
@@ -186,7 +186,7 @@ void UEEncryptUString(const UString& inString, UString& outString)
         theString += UString(" ");
     UEEncryptBlock(theString.GetLength(), 0, theBlock);
     outString = UString((const char*)UWideString(outString) + UWideString(theBlock));
-    for (int i = 0; i < theString.GetLength(); i += 4) {
+    int i; for (i = 0; i < theString.GetLength(); i += 4) {
         unsigned long theValue =
             (((theString[i] << 8 | theString[i + 1]) << 8 | theString[i + 2]) << 8) | theString[i + 3];
         UEEncryptBlock(theValue, 0, theBlock);
@@ -215,7 +215,7 @@ bool UEDecryptUString(const UString& inString, UString& outString)
     UEDecryptBlock(theBlock, 0, theLength);
     theBlock = inString.GetSubstring(8, 8);
     UEDecryptBlock(theBlock, 0, thePaddedLength);
-    for (int i = 16; i < thePaddedLength * 2 + 16; i += 8) {
+    int i; for (i = 16; i < thePaddedLength * 2 + 16; i += 8) {
         theBlock = inString.GetSubstring(i, 8);
         UEDecryptBlock(theBlock, 0, theValue);
         sprintf(theBlock, "%c%c%c%c", (char)(theValue >> 24), (char)(theValue >> 16), (char)(theValue >> 8),

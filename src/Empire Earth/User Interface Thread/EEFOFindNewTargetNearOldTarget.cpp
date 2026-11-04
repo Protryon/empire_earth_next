@@ -2020,7 +2020,7 @@ bool EEGetDockShipPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, EEUnit* in
                 EEGetUnitsInFan(theCenter, theDistance + kUUCheckReach, theYaw - theStep, theStep + theYaw,
                            UMFloatToLong(theRadius * 3.0f), theUnits);
                 EEGetUnitsOnTile(UMFloor(outTransformation->GetX()), UMFloor(outTransformation->GetY()), theMore);
-                for (std::vector<EEUnit*>::iterator it = theMore.begin(); it != theMore.end(); it++)
+                std::vector<EEUnit*>::iterator it; for (it = theMore.begin(); it != theMore.end(); it++)
                     theUnits.push_back(*it);
                 if (theMore.size() != 0 && theUnits.size() > 1)
                     EESortUnique(theUnits, EEUUUnitIDGreater(), EEUUUnitIDSame());
@@ -6490,7 +6490,7 @@ EEComplexUnit* EEConvertUnit(EEComplexUnit* inUnit, long inPlayer, bool inIsConv
         {
             std::vector<unsigned short>& theAll = inUnit->GetPlayer()->mCivilization.GetPurchasedUpgrades();
             std::vector<unsigned short> theList;
-            for (std::vector<unsigned short>::iterator it = theAll.begin(); it != theAll.end(); it++)
+            std::vector<unsigned short>::iterator it; for (it = theAll.begin(); it != theAll.end(); it++)
                 theList.push_back(*it);
             EEAIRandomShuffle(theList.begin(), theList.end());
             it = theList.begin();

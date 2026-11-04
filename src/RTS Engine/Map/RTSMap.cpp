@@ -777,7 +777,7 @@ void RTSMap::BuildAreaOutlines(std::vector<U2DRectangle<long> >& inAreas, std::v
         unsigned long j;
         theStart.mY = theTop;
         theEnd.mY = theTop;
-        for (long theX = theLeft; theX < theRight; theX++) {
+        long theX; for (theX = theLeft; theX < theRight; theX++) {
             theStart.mX = theX;
             theEnd.mX = theX + 1;
             for (j = 0; j < theCount; j++) {
@@ -803,7 +803,7 @@ void RTSMap::BuildAreaOutlines(std::vector<U2DRectangle<long> >& inAreas, std::v
         }
         theStart.mX = theLeft;
         theEnd.mX = theLeft;
-        for (long theY = theTop; theY < theBottom; theY++) {
+        long theY; for (theY = theTop; theY < theBottom; theY++) {
             theStart.mY = theY;
             theEnd.mY = theY + 1;
             for (j = 0; j < theCount; j++) {

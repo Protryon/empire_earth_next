@@ -200,7 +200,7 @@ EESEPlayerScreen::~EESEPlayerScreen()
     delete this->mTitle;
     delete this->mMaxPlayersLabel;
     delete this->mGame;
-    for (long i = 0; i < 5; i++) delete this->mColumnLabels[i];
+    long i; for (i = 0; i < 5; i++) delete this->mColumnLabels[i];
     delete this->mCPUOnlyTopLabel; delete this->mCPUOnlyBottomLabel; delete this->mSharedLOSTopLabel; delete this->mSharedLOSBottomLabel;
     delete this->mStartEpochLabel; delete this->mEndEpochLabel; delete this->mPlayerLabel;
     delete this->mMaxPlayer; delete this->mCivilizationLabel;
@@ -225,7 +225,7 @@ void EESEPlayerScreen::SetPlayerCount(unsigned long inCount)
     this->mPlayerSelection->DeleteAllEntries();
     gResource->GetString(IDS_SE_PLAYER, thePrefix);
     gResource->GetString(IDS_SE_HUMAN, theFirstPlayer);
-    for (unsigned long i = 1; i <= inCount; i++) {
+    unsigned long i; for (i = 1; i <= inCount; i++) {
         this->mPlayers[i]->Show(this->mPage, i);
         if (i > 1) sprintf(theText, "%s %d", (const char*)thePrefix, i);
         else theText = theFirstPlayer;
@@ -288,7 +288,7 @@ void EESEPlayerScreen::CreatePlayerControls(unsigned long& ioIndex, UIForm* inFo
     theGEText->SetIsTransparent(true);
     inForm->AddControl(this->mMaxPlayersLabel, 4);
     ++ioIndex;
-    for (unsigned long i = 0; i < 5; ++i) {
+    unsigned long i; for (i = 0; i < 5; ++i) {
         gResource->GetString(IDS_RESOURCE_NAME_FIRST + i, theText);
         theLocation.SetXY((float)i * 55.0f + 145.0f, 50.0f);
         this->mColumnLabels[i] = new UITextLabel(theText, inFont, 0x12f + i,
@@ -821,7 +821,7 @@ void EESEPlayerScreen::Store()
         this->mMaxPlayer->GetListBox()->GetCurrentSelection(theSelection);
         theCount = theSelection + 3;
     }
-    for (unsigned long i = 1; i < theCount; i++) this->mPlayers[i]->Save(i);
+    unsigned long i; for (i = 1; i < theCount; i++) this->mPlayers[i]->Save(i);
     this->ApplyPlayerSettings();
     // The existing queue API transports the original scalar message words as void*.
     for (i = 0; i <= 16; i++) {
@@ -1976,7 +1976,7 @@ void EESEPlayerRow::Load(unsigned long inPlayer)
     this->mControl->DeleteAllEntries();
     gResource->GetString(IDS_NONE, theText);
     this->mControl->AppendLine(theText);
-    for (unsigned long i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
+    unsigned long i; for (i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
         EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[i];
         gResource->GetString(theEntry.mNameID, theText);
         this->mControl->AppendLine(theText);

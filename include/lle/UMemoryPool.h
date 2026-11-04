@@ -254,7 +254,7 @@ template <class T> void UMemoryPoolChunk<T>::GetUsed(std::vector<T*>& outObjects
         theMarks.resize(this->mSize, -1);
         for (long* theFree = this->mFreeList; theFree <= this->mFreeTop; theFree++)
             theMarks[*theFree] = *theFree;
-        for (long i = theMarks.size() - 1; i >= 0; i--) {
+        long i; for (i = theMarks.size() - 1; i >= 0; i--) {
             if (theMarks[i] == -1)
                 theUsed.push_back(i);
         }

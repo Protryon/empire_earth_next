@@ -803,7 +803,7 @@ const UWideString& EERMGetGeneratorDisplayName(unsigned long inIndex)
 // Returns the display name of the generator with the given name, or the name itself when none matches
 const UWideString& EERMGetGeneratorDisplayName(const UWideString& inName)
 {
-    for (unsigned long i = 0; i < EERandomMap::sRandomMapGenerators.size(); i++) {
+    unsigned long i; for (i = 0; i < EERandomMap::sRandomMapGenerators.size(); i++) {
         if (inName == EERandomMap::sRandomMapGenerators[i].mName)
             break;
     }

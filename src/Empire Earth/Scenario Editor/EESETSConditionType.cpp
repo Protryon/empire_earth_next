@@ -706,12 +706,12 @@ void EESETSCTPlayerResource::Show(EESETSConditionControls* inControls)
     inControls->mLabels[2]->SetText(theText);
     inControls->mLabels[2]->SetDisplayMode(kDisplayModeShown);
 
-    for (unsigned long theIndex = 0; theIndex <= 10; theIndex++) {
+    unsigned long theIndex; for (theIndex = 0; theIndex <= 10; theIndex++) {
         gResource->GetString(IDS_TRIGGER_RESOURCE_FIRST + theIndex, theText);
         theResources.push_back(theText);
     }
     gResource->GetString(IDS_VARIABLE, theText);
-    for (unsigned long i = 0; i < 10; i++) {
+    unsigned long i; for (i = 0; i < 10; i++) {
         sprintf(theFormatted, "%s%d", (const char*)theText, i);
         theResources.push_back(theFormatted);
     }

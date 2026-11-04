@@ -193,7 +193,7 @@ long EEUIESaveScenarioTriggersOnly::ProcessEvent(UIForm* inForm, UIEntity* inEnt
                 if (theTrigger->mIsLooping)
                     fprintf(theText, "\tLooping\n");
                 fprintf(theText, "\tIf ");
-                for (unsigned long j = 0; j < theTrigger->GetConditionCount(); j++) {
+                unsigned long j; for (j = 0; j < theTrigger->GetConditionCount(); j++) {
                     EESMTConditionWrapper* theWrapper = theTrigger->GetCondition(j);
                     if (theWrapper->mIsNot)
                         fprintf(theText, " NOT");
@@ -259,7 +259,7 @@ long EEUIESaveScenarioTriggersOnly::ProcessEvent(UIForm* inForm, UIEntity* inEnt
 
             for (i = 1; i < theManager->mObjects.size(); i++) {
                 bool theUnused = true;
-                for (unsigned long j = 1; theUnused && j < theManager->mEffects.size(); j++) {
+                unsigned long j; for (j = 1; theUnused && j < theManager->mEffects.size(); j++) {
                     EESMEffect* theEffect = theManager->GetEffect(j);
                     for (unsigned long k = 0; theUnused && k < theEffect->mObjects.size(); k++) {
                         if (theEffect->mObjects[k] == i)
@@ -293,7 +293,7 @@ long EEUIESaveScenarioTriggersOnly::ProcessEvent(UIForm* inForm, UIEntity* inEnt
 
             for (i = 2; i < theManager->mAreas.size(); i++) {
                 bool theUnused = true;
-                for (unsigned long j = 1; theUnused && j < theManager->GetNumEffects(); j++) {
+                unsigned long j; for (j = 1; theUnused && j < theManager->GetNumEffects(); j++) {
                     EESMEffect* theEffect = theManager->GetEffect(j);
                     if (theEffect->mTargetArea == i || theEffect->mPlaceArea == i ||
                         theEffect->mTaskArea == i || theEffect->mLocationArea == i)
@@ -1015,7 +1015,7 @@ void EEUIFScenarioEditor::CreateTabButtons(unsigned long& ioIndex)
     GERectangle theDestination, theSource;
     float theX;
     GERasterizer* theRasterizer = GERasterizer::GetActiveRasterizer();
-    for (unsigned long i = 0; i < theRasterizer->GetScreenCount(); i++) {
+    unsigned long i; for (i = 0; i < theRasterizer->GetScreenCount(); i++) {
         if (theRasterizer->GetIsScreenActivated(i)) {
             theRasterizer->GetScreen(i);
             break;
