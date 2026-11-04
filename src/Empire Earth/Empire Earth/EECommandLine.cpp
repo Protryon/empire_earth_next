@@ -121,8 +121,11 @@ void EERunBalancer(const UString& inFile)
 long EELoadGameFromCommandLine(const UString& inName)
 {
     FSFileSpec* theFile = NULL;
-    if (gCommunications != NULL)
+    if (gCommunications != NULL) {
         delete gCommunications;
+        // Cleared so the second delete below does not free it again.
+        gCommunications = NULL;
+    }
     long theResult = EEOpenSaveGameFile(inName, "Saved Games\\", theFile);
     if (theResult == kErrorOK) {
         gGameOptions.mLock->WriteLock();
