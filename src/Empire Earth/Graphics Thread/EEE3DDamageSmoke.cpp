@@ -79,7 +79,7 @@ EEE3DDamageSmoke::~EEE3DDamageSmoke()
 // While the unit lives below the effect's health threshold, emits jittered smoke at each tag point (else at the
 // unit) more often the lower its health; returns 7 (remove) once it is dead or healed
 // NEAR: register allocation (this in edi, the unit in ebx) and the element access (the original calls begin() and
-// operator+ out of line). The tag list is scaled before its null test, as in the original (0x4ea868)
+// operator+ out of line).
 long EEE3DDamageSmoke::Step()
 {
     GETransformation theLocation(this->mUnit->mComplexUnit->mPhysicalModel.GetLocation());
@@ -98,8 +98,9 @@ long EEE3DDamageSmoke::Step()
         unsigned long theInterval =
             UMFloatToLong((theEffect->mTime2 - theEffect->mTime1) * (theHealth / theEffect->GetParam2()) + theEffect->mTime1);
         if (this->mSinceEmit >= theInterval) {
-            theList->Scale(theLocation, theScale);
             if (theList) {
+                // Scale only a list that exists (a model without type-0 tag points has none).
+                theList->Scale(theLocation, theScale);
                 for (unsigned long i = 0; i < theList->mPoints.size(); i++) {
                     theList->mPoints[i]->GetPoint(theFrame, theLocation, thePoint);
                     thePoint.SetX(EEDamageSmokeJitter(thePoint.GetX(), theEffect->GetParam1()));
