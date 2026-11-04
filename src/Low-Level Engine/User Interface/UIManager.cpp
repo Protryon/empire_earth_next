@@ -286,13 +286,13 @@ void UIManager::AddClippedForms(unsigned long inIndex)
 
 // FUNCTION: LLE 0x10079e1f
 // Inserts a stacked form into the visible list in stack order and opens it; returns its index (forms not on the
-// stack are not added); with no visible forms it reads back() of the empty list
+// stack are not added)
 unsigned long UIManager::AddToVisibleForms(UIForm* inForm)
 {
     unsigned long theIndex = 0;
     if (this->mVisibleForms.size() == 0 && inForm == this->mFormStack.back()) {
-        if (this->mVisibleForms.back() == inForm)
-            return theIndex;
+        // Fixed: compared mVisibleForms.back() of the empty list with the form here (a read before the list's
+        // start); an empty list never holds the form, so it is simply added below
     } else {
         unsigned long i;
         for (i = 0; i < this->mFormStack.size(); i++) {
