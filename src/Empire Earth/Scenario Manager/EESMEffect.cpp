@@ -237,7 +237,7 @@ void EESMEffect::BuildObject()
                 theRequirement.mNumWanted = theCount;
                 if (!theAnyCount) {
                     theStrategy.mNumUnits += theCount;
-                    theStrategy.mNumRemaining = theStrategy.mNumUnits + theCount;
+                    theStrategy.mNumRemaining = theStrategy.mNumUnits;
                 }
             }
             bool theAddRequirement = true;
@@ -375,7 +375,7 @@ void EESMEffect::CreateAIMilitaryGroup()
                     theRequirement.mNumWanted = theCount;
                     if (!theAnyCount) {
                         theStrategy.mNumUnits += theCount;
-                        theStrategy.mNumRemaining = theStrategy.mNumUnits + theCount;
+                        theStrategy.mNumRemaining = theStrategy.mNumUnits;
                     }
                 }
                 bool theAddRequirement = true;
