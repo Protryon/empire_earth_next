@@ -85,7 +85,7 @@ bool EECCLogicBomb::Start(EECalamity* inCalamity)
 }
 
 // FUNCTION: EXE 0x4b21c2
-// Adds the target model's first-part LOD-0 bounding radius to x, y and z of the location (provisional name)
+// Raises the location by the target model's first-part LOD-0 bounding radius (provisional name)
 static void AdjustLocation(EECalamity* inCalamity, GE3DPoint* ioLocation)
 {
     EEUnit* theTargetUnit;
@@ -97,8 +97,7 @@ static void AdjustLocation(EECalamity* inCalamity, GE3DPoint* ioLocation)
     GEModel* thePart = theModel->mModels[0];
     if (thePart == NULL)
         return;
-    ioLocation->SetX(thePart->GetBoundingRadius(0) + ioLocation->GetX());
-    ioLocation->SetY(thePart->GetBoundingRadius(0) + ioLocation->GetY());
+    // raise the point by the radius (as the disable effect in Step uses it as a height), not shift it sideways
     ioLocation->SetZ(thePart->GetBoundingRadius(0) + ioLocation->GetZ());
 }
 
