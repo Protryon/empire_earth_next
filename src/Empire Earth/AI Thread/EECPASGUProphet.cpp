@@ -1165,7 +1165,7 @@ bool EECPASGUProphet::Retarget()
         theOldY = theGoal->mTileY;
     }
     for (theIter = theRanked.begin(); theIter != theRanked.end() && !theChanged; theIter++) {
-        EECPASGUProphetCalamityAnalyzerBase* theAnalyzer = theRanked.begin()->second;
+        EECPASGUProphetCalamityAnalyzerBase* theAnalyzer = theIter->second;   // this pass's analyzer (was always the best)
         bool theSelect = !theKeepGoal;
         if (theKeepGoal) {
             if (theAnalyzer->mTechID == theGoal->mCalamityType) {
