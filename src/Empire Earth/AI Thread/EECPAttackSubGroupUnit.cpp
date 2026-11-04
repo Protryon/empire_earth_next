@@ -1007,12 +1007,13 @@ void EECPAttackSubGroupUnit::SetState(long inState, unsigned long inTime)
         this->Flee();
         break;
     case kASGUStateChooseAction:
-        this->ReleaseTarget();
+        // the target is tested before it is released (was after: always NULL)
         if (this->mTargetPickResult == -1 && (this->mTarget == NULL || this->mTarget->mHitPoints <= 0)) {
             this->mTargetPickResult = 0;
             this->mPostAttackMode = 1;
         } else
             this->mPostAttackMode = 2;
+        this->ReleaseTarget();
         break;
     }
 }
