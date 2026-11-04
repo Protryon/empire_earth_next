@@ -506,7 +506,7 @@ void EESETSETPlayerResource::Load(EESMEffect* inEffect, EESETSEffectControls* in
 
 // FUNCTION: EXE 0x58a85b
 // Shows the attribute combo (resources, variables, sent/received, statistics, settings), mode combo and amount box
-// (the 'future use' substitution tests i instead of j, so it never applies: an original bug)
+// (two statistics are listed as 'for future use')
 void EESETSETPlayerResource::Show(EESETSEffectControls* inControls)
 {
     GERectangle theRect;
@@ -545,7 +545,7 @@ void EESETSETPlayerResource::Show(EESETSEffectControls* inControls)
         inControls->mEffectComboBoxes[1]->AppendLine(theLine);
     }
     for (j = IDS_BUILDINGS_LOST; j <= IDS_STAT_FOR_FUTURE_USE6; j++) {
-        if (i - 0x79e0 == 22 || i - 0x79e0 == 23)
+        if (j - 0x79e0 == 22 || j - 0x79e0 == 23)   // the statistic in this loop (j), not the finished counter i
             gResource->GetString(IDS_STAT_FOR_FUTURE_USE6, theText);
         else
             gResource->GetString(j, theText);
