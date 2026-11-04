@@ -475,7 +475,7 @@ void EECPAttackSubGroup::MoveToNearestTown()
                     continue;
                 theTownTile.mX = 0;
                 theTownTile.mY = 0;
-                theTown = this->mPlayer->GetNearestTown(theTile, theTownTile);
+                theTown = this->mPlayer->mAllies[i]->GetNearestTown(theTile, theTownTile);   // the ally's (was mPlayer's)
                 if (theTown && !theTown->Contains(theTile))
                     theTowns.insert(std::make_pair(theTile.DistanceToSquared(theTownTile),
                                                                             theTown));
