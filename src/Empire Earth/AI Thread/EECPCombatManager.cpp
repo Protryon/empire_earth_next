@@ -1202,12 +1202,13 @@ void EECPCombatManager::Attack(EEPlayer* inTarget, const EETileLocation& inTile,
     if (theContinent && theContinent->mCategory != kContinentCategoryMapEdge) {
         EETileLocation theHome(this->mPlayer->mCivilizationManager->mBuildManager->mTownCenterTile.mX,
             this->mPlayer->mCivilizationManager->mBuildManager->mTownCenterTile.mY);
-        theAttack = true;
+        // theAttack keeps the unit-limit test above (was reset to true here)
         if (gWorld.mMap->mTerrainMesh.GetIsSpaceMap()) {
             if (theContinent != gContinentManager.GetContinentAt(theHome.mX, theHome.mY)
                 || (theTile && theTile->mTerrainType == kTerrainSpace)) {
                 theNoTransport = !this->mPlayer->mTechnologies->Get(gUnitClassTable[kUnitTypeSpaceDock]->mTechnology)->GetIsAvailable();
-                theAttack = !theNoTransport;
+                if (theNoTransport)
+                    theAttack = false;
             }
         }
     } else {
