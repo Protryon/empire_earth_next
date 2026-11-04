@@ -399,8 +399,10 @@ void EEActiveGroup::LayOutFormation()
             std::vector<float> theWeights;
             float theDX = theSlotX - theCenter.mX;
             float theDY = theCenter.GetY() - theSlotY;
-            theDX = theDX / (UMAbs(theDX) + UMAbs(theDY));
-            theDY = theDY / (UMAbs(theDY) + UMAbs(theDX));
+            // both components are normalised by the same (original) |dx| + |dy|
+            float theSum = UMAbs(theDX) + UMAbs(theDY);
+            theDX = theDX / theSum;
+            theDY = theDY / theSum;
             float theMin = 3.402823466e+38F;
             float theMax = 1.175494351e-38F;
             float theAcrossY = theDY / 10.0f;
