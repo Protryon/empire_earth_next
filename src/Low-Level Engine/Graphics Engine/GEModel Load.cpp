@@ -188,14 +188,17 @@ long GEModel::LoadFrameChunk(FSFileSpec& inFile, std::map<unsigned long, long>& 
 }
 
 // FUNCTION: LLE 0x1001c74a
-// Checks the "SSMF" tag and reads the version (2.x or 1.0-1.3 accepted); a short tag read still returns success
+// Checks the "SSMF" tag and reads the version (2.x or 1.0-1.3 accepted)
 long GEModel::LoadHeaderChunk(FSFileSpec& inFile)
 {
     unsigned long theRead;
     char theTag[5];
     long theResult = inFile.Read(theTag, 4, theRead);
-    if (theResult != kErrorOK || theRead != 4)
+    if (theResult != kErrorOK)
         return theResult;
+    // A short tag read is a truncated file: fail instead of returning the read's success.
+    if (theRead != 4)
+        return kErrorFailed;
     theTag[4] = 0;
     if (strcmp(theTag, "SSMF") == 0) {
         theResult = inFile.Read(sMajorVersion);
