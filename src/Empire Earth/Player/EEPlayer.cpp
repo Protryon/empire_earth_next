@@ -2965,9 +2965,10 @@ void EEPlayer::RemoveQueuedImprovement(long inUnitType, long inImprovement, bool
     }
     if (theImprovement == theQueue.end())
         return;
+    bool theWasHead = theImprovement == theQueue.begin();   // the one in progress (was: the map's first entry)
     theQueue.erase(theImprovement);
     this->RefundImprovement(gUnitClassTable[inUnitType], inImprovement, 1.0f);
-    if (theIterator == this->mQueuedImprovements.begin())
+    if (theWasHead)
         this->mQueuedImprovements[inUnitType].first = 0.0f;
     if (theQueue.size() == 0)
         this->mQueuedImprovements.erase(theIterator);
