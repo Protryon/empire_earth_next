@@ -302,7 +302,7 @@ bool EESMObject::Evaluate(bool inIncludeDead)
                 }
             }
             if (theKeep && this->mVisibleByCheck != 0) {
-                gWorld.mScenarioManager->ChoosePlayer(this->mSelectedByPlayer, &thePlayers, false);
+                gWorld.mScenarioManager->ChoosePlayer(this->mVisibleByPlayer, &thePlayers, false);
                 for (unsigned long j = 0; j < thePlayers.size(); j++) {
                     EEPlayer* thePlayer = gWorld.mPlayers[thePlayers[j]];
                     if (this->mVisibleByCheck == 1)
