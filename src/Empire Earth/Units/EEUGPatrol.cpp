@@ -120,8 +120,7 @@ void EEUGPatrol::GetDebugLine(UWideString& ioText)
 // ee/EEPPatrolGroup.h)
 
 // FUNCTION: EXE 0x628044
-// Appends "Patrol" and the point count to the debug text; the point list starts after the last point, so it
-// never lists any point or closes
+// Appends "Patrol", the point count and the points' tiles to the debug text
 void EEUGPatrol::GetDebugText(UWideString& ioText)
 {
     UWideString theText;
@@ -131,14 +130,14 @@ void EEUGPatrol::GetDebugText(UWideString& ioText)
         return;
     sprintf(theText, "Patrol Points: ( ");
     ioText += theText;
-    EEComplexUnit* theLast = this->mPatrolGroup->GetLast();
-    if (theLast == NULL)
-        return;
-    EEComplexUnit* thePoint = this->mPatrolGroup->GetNext(theLast);
-    while (thePoint != NULL && thePoint != theLast) {
+    // list every point (the list used to start at GetNext(GetLast()), past the end, so it never listed one and
+    // the early return skipped the closing parenthesis)
+    for (unsigned long i = 0; i < this->mPatrolGroup->mPatrolPoints.size(); i++) {
+        EEComplexUnit* thePoint = this->mPatrolGroup->mPatrolPoints[i];
+        if (thePoint == NULL)
+            continue;
         sprintf(theText, "{%d,%d} ", thePoint->mTileX, thePoint->mTileY);
         ioText += theText;
-        thePoint = this->mPatrolGroup->GetNext(thePoint);
     }
     sprintf(theText, " )\n");
     ioText += theText;
