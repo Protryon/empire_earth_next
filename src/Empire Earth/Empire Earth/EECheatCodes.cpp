@@ -117,8 +117,7 @@ void EECheatCodes::AddResource(long inResource, unsigned long inPlayer, long inA
 }
 
 // FUNCTION: EXE 0x52a68c
-// Lists the cheat codes in the chat log, five per line (the third line repeats the second line's first code and
-// the fourth line repeats the third line's last one)
+// Lists the cheat codes in the chat log, up to five per line
 void EECheatCodes::ListCheatCodes()
 {
     UWideString theA;
@@ -143,6 +142,9 @@ void EECheatCodes::ListCheatCodes()
     gResource->GetString(IDS_CREATINE, theE);
     theLine = theA + "     " + theB + "     " + theC + "     " + theD + "     " + theE;
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
+    // the third and fourth lines have four codes: clear the slot they do not set (they used to repeat the line
+    // before's first or last code)
+    theA = gU4E5B98;
     gResource->GetString(IDS_ALL_YOUR_BASE_ARE_BELONG_TO_US, theB);
     gResource->GetString(IDS_BAM, theC);
     gResource->GetString(IDS_BRAINSTORM, theD);
@@ -153,6 +155,7 @@ void EECheatCodes::ListCheatCodes()
     gResource->GetString(IDS_SLIMFAST, theB);
     gResource->GetString(IDS_MINE_YOUR_OWN_BUSINESS, theC);
     gResource->GetString(IDS_GIRLYMAN, theD);
+    theE = gU4E5B98;
     theLine = theA + "     " + theB + "     " + theC + "     " + theD + "     " + theE;
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
     gResource->GetString(IDS_BIG_DIG, theA);
