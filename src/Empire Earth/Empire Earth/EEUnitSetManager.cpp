@@ -22,6 +22,7 @@ struct EEUnitSetRecord {
     long mExcludedSet;                      // +0xb0 (index of the set's mL34)
     bool mShowInEditor;                     // +0xb4 (the set's mB39)
 };
+static_assert(sizeof(EEUnitSetRecord) == 184, "on-disk record: 184 bytes on every target");
 
 // FUNCTION: EXE 0x536f4c
 // Destroys the unit set manager, deleting every unit set

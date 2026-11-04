@@ -48,6 +48,7 @@ struct UIDbDataBackgrounds {
     bool mAttribute2;                       // +0x12f
     bool mAttribute3;                       // +0x130
 };
+static_assert(sizeof(UIDbDataBackgrounds) == 308, "on-disk record: 308 bytes on every target");
 
 class LLE_API UIBackgroundTable {
 public:

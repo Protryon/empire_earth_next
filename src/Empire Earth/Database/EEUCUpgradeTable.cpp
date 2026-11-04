@@ -50,6 +50,7 @@ struct EEUCUpgradeRecord {
     long mLE8;                              // +0xe8
     bool mHasRepairStep;                    // +0xec
 };
+static_assert(sizeof(EEUCUpgradeRecord) == 240, "on-disk record: 240 bytes on every target");
 
 std::vector<EEUCUpgradeTable*> EEUCUpgradeTable::sTable;
 

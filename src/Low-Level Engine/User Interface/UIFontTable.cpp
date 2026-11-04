@@ -41,6 +41,7 @@ struct UIDbDataFonts {
     bool mStyle08;                          // +0x7c style bit 0x08
     char mPad[3];
 };
+static_assert(sizeof(UIDbDataFonts) == 128, "on-disk record: 128 bytes on every target");
 
 std::vector<UIFontTable*> UIFontTable::sFontTable;
 std::vector<GEFont*> UIFontTable::sFont;

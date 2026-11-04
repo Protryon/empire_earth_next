@@ -35,6 +35,7 @@ struct EEEventEffect {
     long mL50;
     long mL54;                              // (sizeof 0x58)
 };
+static_assert(sizeof(EEEventEffect) == 88, "on-disk record: 88 bytes on every target");
 extern EEEventEffect gEventEffects[2000];   // 0x531ff8 (provisional name)
 extern bool gEventsEnabled;                 // 0x4c5a84 (= true; EETechTree 0x1ccf5d clears it while it changes the
                                             // epoch; 0x1ca7cf reads it; provisional name)

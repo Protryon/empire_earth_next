@@ -32,6 +32,7 @@ struct EETerrainTypeRecord {
     long mL78;                              // +0x78 -> +0x18
     bool mIsInEditor;                       // +0x7c -> +0x1c
 };
+static_assert(sizeof(EETerrainTypeRecord) == 128, "on-disk record: 128 bytes on every target");
 
 std::vector<EETerrainTypeTable*> EETerrainTypeTable::sTable;
 
@@ -142,6 +143,7 @@ struct EEDamageTableRecord {
     char _gap00[0x6c];
     long mDamage[0x44];                     // +0x6c (scaled by kHeightEpsilon into gU4E8708's row)
 };
+static_assert(sizeof(EEDamageTableRecord) == 380, "on-disk record: 380 bytes on every target");
 
 // FUNCTION: EXE 0x4dbf11
 // Loads up to 60 rows of 0x44 damage factors (percent to fraction) and builds the two twin tables scaled by world

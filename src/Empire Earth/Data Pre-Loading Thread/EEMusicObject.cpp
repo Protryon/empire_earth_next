@@ -37,6 +37,7 @@ struct EEMusicRecord {
     bool mInEpoch[14];                      // +0xb5..+0xc2
     char _gapC3[1];
 };
+static_assert(sizeof(EEMusicRecord) == 196, "on-disk record: 196 bytes on every target");
 
 // FUNCTION: EXE 0x4d9c6b
 // Reads a song override from Data\Music\New Music.txt (file name, four reverb values; every epoch on);

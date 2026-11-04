@@ -23,6 +23,7 @@ struct UIDbDataHotKeys {
     unsigned long mModifiers[3];            // +0x6c DIK_* codes, 0x7fff: none
     unsigned long mKey;                     // +0x78
 };
+static_assert(sizeof(UIDbDataHotKeys) == 124, "on-disk record: 124 bytes on every target");
 
 // Deletes every element of a vector of pointers, then clears it; returns the element count (provisional name)
 template <class T> unsigned long UIDeleteAll(std::vector<T>& ioVector)

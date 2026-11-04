@@ -65,6 +65,7 @@ struct EETerrainRecord {
     char _gapBC[0x0f];
     bool mIsAmbientsOnly;                   // +0xcb -> +0x87
 };
+static_assert(sizeof(EETerrainRecord) == 204, "on-disk record: 204 bytes on every target");
 
 // One record of db\dbcliffterrain.dat (0x7c bytes). Inferred layout.
 struct EECliffTerrainRecord {
@@ -75,6 +76,7 @@ struct EECliffTerrainRecord {
     long mL74;                              // +0x74 -> +0x1c
     bool mB78;                              // +0x78 -> +0x20
 };
+static_assert(sizeof(EECliffTerrainRecord) == 124, "on-disk record: 124 bytes on every target");
 
 // FUNCTION: EXE 0x4db245
 // Creates an empty terrain: no textures, not water, colour type -1

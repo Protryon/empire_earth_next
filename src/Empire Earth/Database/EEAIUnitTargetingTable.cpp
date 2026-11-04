@@ -26,6 +26,7 @@ struct EEAIUnitTargetingRecord {
     long mL98;                              // +0x98
     long mMaxValue;                         // +0x9c
 };
+static_assert(sizeof(EEAIUnitTargetingRecord) == 160, "on-disk record: 160 bytes on every target");
 
 long** EEAIUnitTargetingTable::sTable;      // 0x4e60c0: three rows of ten values (provisional name)
 

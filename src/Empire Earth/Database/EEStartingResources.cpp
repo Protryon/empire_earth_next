@@ -23,6 +23,7 @@ struct EEStartingResourcesRecord {
     long mGold;                             // +0x7c -> +0x10
     long mIron;                             // +0x80 -> +0x14
 };
+static_assert(sizeof(EEStartingResourcesRecord) == 132, "on-disk record: 132 bytes on every target");
 
 std::vector<EEStartingResources*> EEStartingResources::sTable;
 

@@ -42,6 +42,7 @@ struct EEAreaEffectData {
     bool mBB7;                              // +0xb7
     bool mBB8;                              // +0xb8
 };
+static_assert(sizeof(EEAreaEffectData) == 188, "on-disk record: 188 bytes on every target");
 
 class EEAreaEffectTemplate : public UReferenceCounter {
 public:

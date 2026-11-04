@@ -44,6 +44,7 @@ struct EEButtonRecord {
     long mPosition;                         // +0xd8 -> +0x20
     long mHotKey;                           // +0xdc -> +0x24
 };
+static_assert(sizeof(EEButtonRecord) == 224, "on-disk record: 224 bytes on every target");
 
 // FUNCTION: EXE 0x4d5498
 // Creates a button image entry with no texture and no references

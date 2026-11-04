@@ -57,6 +57,7 @@ struct EEGameVariantData {
     bool mSelectable;                       // +0x10c -> +0x80
     long mL110;                             // +0x110 (0 in every record)
 };
+static_assert(sizeof(EEGameVariantData) == 276, "on-disk record: 276 bytes on every target");
 
 // RTTI EEGameVariant (vtable 0x43e51c, one slot: ??_G 0xd6919; sizeof 0x84: the loader's `new`). The ctor 0xd6910 and
 // dtor 0xd6935 only store the vptr (out of line, user-declared empty). Every member is copied from an

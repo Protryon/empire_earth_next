@@ -24,6 +24,7 @@ struct EEAmbientSoundRecord {
     long mIntervalSeconds;                  // +0x90
     unsigned char _u94[0x4];                // +0x94
 };
+static_assert(sizeof(EEAmbientSoundRecord) == 152, "on-disk record: 152 bytes on every target");
 
 class EEAmbientSound {
 public:

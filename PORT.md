@@ -50,10 +50,44 @@ Source changes merge normally. The build tooling is this fork's own: upstream's 
 
 - The remaining UB flags: `-fwrapv` (`clang_ubdiff.py` + `-fsanitize=signed-integer-overflow` games), then
   `-fno-strict-aliasing`.
-- x64: the 1,274 `-Wshorten-64-to-32` sites of `clang_build.py --x64`; saved-game loaders that read 4-byte ids
-  into vectors of pointers need explicit id fields; fixed-width types for serialized and network data.
+- x64: what is left is the `-Wshorten-64-to-32` class (1,274 sites, 1,139 of them `size()` into `long`, e.g.
+  reverse loops). They are benign (no container approaches 2^31 elements) and the code is headed for a Rust
+  rewrite, so they stay unless a site turns out to matter. Saved games and network messages are fine on x64:
+  loaders read typed 32-bit ids and rebuild pointers, messages copy `long`/`float` members, and every raw on-disk
+  record has the same size on both targets (`tools/record_sizes.py`; each is pinned by a `static_assert`).
+
+## Plan: one static exe, no proprietary third-party code (owner, 2026-11-04)
+
+Decisions: one statically linked `EE-AOC.exe` (static CRT `/MT`; only Windows system DLLs remain); Bink movies
+converted once to MPEG-1/MP2 and played with pl_mpeg; only the T&L renderer is kept. The long-term direction is a
+port to Rust, so new third-party code stays small, C, permissively licensed and behind narrow interfaces that a Rust
+crate can replace.
+
+1. **Fold the game DLLs into the exe.** The engine, TCP protocol, mixer, Default random maps and DX7HRTnLDisplay
+   become static libraries of one link. The PIM plug-in scan (`PIMModule.cpp`, LoadLibrary + `PIMGetName`/
+   `PIMGetType`/`PIMIsValid`) becomes a static table of the same entry points. `LLE_API` and the plug-ins'
+   export macros become empty; the `link/` export/import tables, the engine import library and the per-DLL `.def`
+   go. DX7HRDisplay is dropped (its sources and Common/'s second compile). `/MT` replaces `/MD`. The harness stages
+   one exe (renderer guards and map lookups move to the exe's map). Gate: tour, play, AI games as now.
+2. **Audio output: miniaudio** (`src/ThirdParty/miniaudio`, MIT-0) replaces DirectSound as the one device. The mixer
+   is rewritten on it (its 34 `AIL_*` uses: driver, sample handles, volume/pan/rate/loop/position, named sample
+   files; WAV through dr_wav, MP3 through dr_mp3). `Mss32.dll` and the `redist\win32` providers go.
+3. **Music: GothicKit/dmusic** (MIT, C11; segments, styles, bands, DLS, composer, its own synth) renders PCM into
+   the miniaudio mix. `SEConductor`/`SEScore` move from the DirectMusic COM interfaces to it; motifs
+   (`EnumMotif`/`GetMotif`), `AutoTransition` and the segment-end notifications are the parts to check first and
+   extend if needed. The DirectMusic GUIDs and `include/winsdk/dmusici.h` go.
+4. **Movies: pl_mpeg** (MIT, single header) decodes MPEG-1 video and MP2 audio; `DX7Movie` blits frames to its
+   DirectDraw surface and feeds audio to miniaudio. `tools/convert_movies.py` turns the retail `.bik` files
+   (Movies\, scenario cinematics) into `.mpg` with a user-installed ffmpeg; the game looks for `.mpg` first.
+   `binkw32.dll` goes.
+5. Then: DirectDraw/D3D7 and DirectInput (Microsoft system components, not in this pass), Winsock.
+
+Each step ends with the harness gates and a PORT_LEARNINGS.md entry.
+
+## Other next steps
+
 - Remove the clang dialect bridges: the `#ifdef __clang__` `const T&` forwarding overloads become `const` parameters,
   the `theTempN` call-site locals go.
 - Member aliases in source instead of link tables; the WON library's source (PORT_LEARNINGS.md "For WONAPI/WONLobby").
 - Port the rest of the harness (human driver, per-PT differential) where still useful.
-- Platform layer (DirectDraw/D3D7, DirectInput, Miles, Winsock), then 64-bit and other platforms.
+- Platform layer beyond the plan above, then 64-bit and other platforms.

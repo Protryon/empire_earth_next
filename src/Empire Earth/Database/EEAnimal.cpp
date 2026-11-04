@@ -61,6 +61,7 @@ struct EEAnimalRecord {
     long mSound3;                           // +0xf0 -> mSounds
     char _gapF4[0x1c];
 };
+static_assert(sizeof(EEAnimalRecord) == 272, "on-disk record: 272 bytes on every target");
 
 std::vector<EEAnimal*> EEAnimal::sTable;
 

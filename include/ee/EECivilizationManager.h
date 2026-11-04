@@ -28,6 +28,7 @@ struct EECivilizationEntry {
     long mNameID;                           // +0x70 string id of the name (gResource->GetString)
     long mEraNameID;                        // +0x74
 };
+static_assert(sizeof(EECivilizationEntry) == 120, "on-disk record: 120 bytes on every target");
 
 // Actual serialized600-byte category row,35 records at manager+4. Names provisional.
 struct EECivilizationUpgradeValue { float mValue; float mBonus; };
@@ -40,6 +41,7 @@ struct EECivilizationCategoryEntry {
     long mUnitSet;                         // +74, actual loader writes102
     EECivilizationUpgradeValue mLevels[60];// +78, actual1..<61 float-pair enumeration
 };
+static_assert(sizeof(EECivilizationCategoryEntry) == 600, "on-disk record: 600 bytes on every target");
 
 class EECivilizationManager {
 public:

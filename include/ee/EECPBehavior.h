@@ -31,6 +31,8 @@ struct EECPBehavior {
     bool mIsSettable;                       // +0x34
 };
 
+static_assert(sizeof(EECPBehavior) == 56, "on-disk record: 56 bytes on every target");
+
 extern EECPBehavior gCPBehaviors[129];      // 0x4e6118
 
 // Computer player behaviour record ids (db\dbcpbehavior.dat; the gCPBehaviors index = EECPBehavior::mIndex). Names: Language.rc 28000 + id (EESETSETSetAIAttribute::Show 0x58c96c), else the Init member the record fills.

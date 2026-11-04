@@ -33,6 +33,7 @@ struct EESoundRecord {
     long mVolume;                           // +0x7c: percent -> +0x14 (float, * 0.01)
     char _gap80[4];
 };
+static_assert(sizeof(EESoundRecord) == 132, "on-disk record: 132 bytes on every target");
 
 // FUNCTION: EXE 0x4da600
 // Creates an empty, unloaded sound with no sample

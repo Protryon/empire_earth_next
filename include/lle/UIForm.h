@@ -53,6 +53,7 @@ struct UIDbDataForms {
     bool mUseToolTips;                      // +0x109
     bool mUseExclusiveCoords;               // +0x10a
 };
+static_assert(sizeof(UIDbDataForms) == 268, "on-disk record: 268 bytes on every target");
 
 // A control the form creates from the controls table when it opens (exported AddDatabaseControl parameter type;
 // 8-byte vector element at UIForm +0x48)

@@ -26,6 +26,7 @@ struct EECivPower {
     long mL90;                             // +0x90
     long mUnitType;                        // +0x94
 };
+static_assert(sizeof(EECivPower) == 152, "on-disk record: 152 bytes on every target");
 
 class EEPlayer;
 

@@ -24,6 +24,7 @@ struct EEColorTableRecord {
     float mColor4Blue;                      // +0x8c
     char _gap90[0x18];
 };
+static_assert(sizeof(EEColorTableRecord) == 168, "on-disk record: 168 bytes on every target");
 
 std::vector<EEColorTable*> EEColorTable::sTable;
 GEColor EEColorTable::sColor;

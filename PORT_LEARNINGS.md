@@ -315,8 +315,14 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
   helpers became `lrintf` (same round-to-nearest).
 - **Saved-game pointer swizzling** (~100 sites): loaders read a 32-bit id into the pointer field and a fix-up pass
   (`RepairPointers`, `Restore`) casts it back and looks the object up. `USavedID(field)` (LowLevelEngineCore.h)
-  takes the low 32 bits explicitly. Still open for a real x64 build: loaders that read 4 bytes per element into
-  vectors of pointers. The save format needs explicit id fields there.
+  takes the low 32 bits explicitly. The loaders themselves are x64-safe: they read typed 32-bit ids
+  (`inFile.Read(theUnitID)`) and store them as pointers, element by element for vectors.
+- **Raw on-disk records**: 38 record types are read or written as `sizeof(record)` bytes (database tables, UI
+  tables, texture/TGA headers, scenario events). `tools/record_sizes.py` compares their x86 and x64 layouts from
+  clang's record dumps: all equal (no pointers, `size_t` or vptrs inside; Windows `long` stays 32-bit). Each is now
+  pinned by `static_assert(sizeof(T) == N)` after its definition, which also documents the formats for a later
+  reader in another language. Network messages copy `long`/`float` members one by one, also fixed.
+- **`-Wshorten-64-to-32`** (1,274 sites, 1,139 `size()` into `long`): benign, left alone (PORT.md).
 - **Pointers kept in integers**: the physics-model table (`long gPhysicsModels[]`, passed through every unit-class
   ctor as `long`), the model manager's `map<UString, unsigned long>`, sector neighbour lists, the save/load events'
   form, a farm finder's return value: all retyped to the pointer they hold. Integers carried in `void*` message

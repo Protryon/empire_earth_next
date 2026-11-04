@@ -33,6 +33,7 @@ struct UIDbDataEvents {
     unsigned long mOwnerID;                 // +0x6c control table index / form ID
     unsigned long mEventType;               // +0x70
 };
+static_assert(sizeof(UIDbDataEvents) == 116, "on-disk record: 116 bytes on every target");
 
 // FUNCTION: LLE 0x1006f398
 // Loads the control events from the UI database file and adds each to its control table; returns the read result

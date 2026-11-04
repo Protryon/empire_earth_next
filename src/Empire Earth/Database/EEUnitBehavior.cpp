@@ -36,12 +36,14 @@ struct EEUnitBehaviorRecord {
     bool mRangedCanMoveFreely;              // +0x72 -> +0x06
     char _gap73[0x09];
 };
+static_assert(sizeof(EEUnitBehaviorRecord) == 124, "on-disk record: 124 bytes on every target");
 
 // One record of db\dbweapontohit.dat (0x84 bytes). Inferred layout.
 struct EEToHitRecord {
     char _gap00[0x6c];
     long mPercents[6];                      // +0x6c (hundredths)
 };
+static_assert(sizeof(EEToHitRecord) == 132, "on-disk record: 132 bytes on every target");
 
 std::vector<EEUnitBehavior*> EEUnitBehavior::sTable;
 

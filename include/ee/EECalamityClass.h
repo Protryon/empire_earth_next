@@ -70,6 +70,8 @@ struct EECalamityData {
     bool mBE8;                              // +0xe8 -> +0x24
 };
 
+static_assert(sizeof(EECalamityData) == 236, "on-disk record: 236 bytes on every target");
+
 class EECalamityClass {
 public:
     EECalamityClass();                      // 0xadcd9

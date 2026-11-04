@@ -80,6 +80,7 @@ struct EEGraphicEffectRecord {
     bool mBE0;                              // +0xe0 -> +0x8a
     long mDetailLevel;                      // +0xe4 -> +0x84
 };
+static_assert(sizeof(EEGraphicEffectRecord) == 232, "on-disk record: 232 bytes on every target");
 
 // FUNCTION: EXE 0x4d6ceb
 // Creates a graphic effect from its table record; linked effects stay table indices until LoadTable links them

@@ -69,6 +69,7 @@ struct GETextureFileHeader {
     unsigned long mWidth;                   // +0x06
     unsigned long mHeight;                  // +0x0a
 };
+static_assert(sizeof(GETextureFileHeader) == 14, "on-disk record: 14 bytes on every target");
 #pragma pack(pop)
 
 GERasterizer* GETexture::sRasterizer;

@@ -56,4 +56,6 @@ struct EETechTreeRecord {
     long mDefaultUnitClass;                 // +0x108 -> mU08->mU40
 };
 
+static_assert(sizeof(EETechTreeRecord) == 268, "on-disk record: 268 bytes on every target");
+
 #endif

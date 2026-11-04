@@ -44,6 +44,7 @@ struct EEWorldTableEntry {
     unsigned long mLongValue2;              // +0x14
     long mL18;                              // +0x18 (entry 31: 1, entry 48: 0x50200; otherwise 0)
 };
+static_assert(sizeof(EEWorldTableEntry) == 28, "on-disk record: 28 bytes on every target");
 
 // RTTI EEWorldTable (vtable 0x43f810; ctor 0xdcb53 out of line, in EEUnitBehavior.cpp's range; ??_G 0xdd087). The
 // dtor is inline: the global's atexit stub 0x13eca6 stores the vptr, clears the vector, then destroys it.

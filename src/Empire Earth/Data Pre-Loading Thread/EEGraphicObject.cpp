@@ -244,6 +244,7 @@ struct EEGraphicObjectRecord {
     long mMaxMipLevelsToDrop;  // +0x2c4
     bool mCreateMipMaps;      // +0x2c8
 };
+static_assert(sizeof(EEGraphicObjectRecord) == 716, "on-disk record: 716 bytes on every target");
 
 void EELoadGraphicObjectRecord(EEGraphicObject* inObject, EEGraphicObjectRecord* inRecord);  // 0xd7b37 (cdecl)
 
