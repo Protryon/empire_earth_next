@@ -129,17 +129,17 @@ void ESDumpStack(unsigned long inDepth)
 }
 
 // FUNCTION: LLE 0x1000161d
-// Stops error-log recording; closes the log file only when the debugger-only flag is set
+// Stops error-log recording and closes the log file
 long ESEndRecording()
 {
     long theResult = kErrorOK;
     gLock->Enter();
     if (gRecording) {
-        if (gRecordToDebuggerOnly) {
-            theResult = gRecordingFile.Close();
-            if (theResult != kErrorOK)
-                ESDebugOut("!::ESReport: error closing error log file.\n");
-        }
+        // Fixed: the log was closed only in debugger-only mode, the one mode in which ESBeginRecording does not
+        // open it, so the opened log was never closed (Close does nothing for a file that is not open)
+        theResult = gRecordingFile.Close();
+        if (theResult != kErrorOK)
+            ESDebugOut("!::ESReport: error closing error log file.\n");
         gRecording = false;
     } else
         theResult = kErrorAlreadyExists;
@@ -258,7 +258,7 @@ bool ESFilterDebugOutput(const char* inText)
 }
 
 // FUNCTION: LLE 0x100019cc
-// Shuts the error system down: frees the lock and filters, closes the log only in debugger-only mode
+// Shuts the error system down: frees the lock and filters, closes the log if it is still open
 // URegisterShutdown hook (ESInitialize)
 void ESShutdown(bool inForced)
 {
@@ -268,9 +268,9 @@ void ESShutdown(bool inForced)
         gFilters.pop_back();
         delete theFilter;
     }
-    if (gRecordToDebuggerOnly)
-        if (gRecordingFile.Close() != kErrorOK)
-            ESDebugOut("!::ESReport: error closing error log file.\n");
+    // Fixed: closed the log only in debugger-only mode, in which it is never opened
+    if (gRecordingFile.Close() != kErrorOK)
+        ESDebugOut("!::ESReport: error closing error log file.\n");
     gInitialized = false;
     gInstance = NULL;
     delete gX6b4;
