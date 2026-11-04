@@ -421,11 +421,13 @@ void EECalamityManager::Restore(unsigned long inMajorVersion, unsigned long inMi
 }
 
 // FUNCTION: EXE 0x4ae8bc
-// Starts the calamity and keeps it active if it started (one that fails to start is not deleted)
+// Starts the calamity and keeps it active if it started; one that fails to start is deleted
 void EECalamityManager::AddCalamity(EECalamity* inCalamity)
 {
     if (inCalamity->mClass->Start(inCalamity))
         this->mCalamities.push_back(inCalamity);
+    else
+        delete inCalamity;  // releases its caster/target references and the media its ctor loaded
 }
 
 // FUNCTION: EXE 0x4ae8e1
