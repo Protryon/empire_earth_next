@@ -1819,7 +1819,7 @@ void EEWorld::ResortUnit(RTSUnit* inUnit)
     if (theComplex == NULL)
         return;
     EEUnit* thePrev = static_cast<EEUnit*>(theComplex->mTileNode->mPrev);
-    RTSDummyUnit* theDummy = dynamic_cast<RTSDummyUnit*>(thePrev);
+    RTSDummyUnit* theDummy = RTSDummyHead(thePrev);
     EEUnit* theNext = static_cast<EEUnit*>(theComplex->mTileNode->mNext);
     if (theDummy != NULL && theNext == NULL)
         return;
@@ -1840,7 +1840,7 @@ void EEWorld::ResortUnit(RTSUnit* inUnit)
         if (theAt->mTileX > theComplex->mTileX) {
             theNext = theAt;
             theAt = static_cast<EEUnit*>(theAt->mTileNode->mPrev);
-            theStop = dynamic_cast<RTSDummyUnit*>(theAt);
+            theStop = RTSDummyHead(theAt);
         } else {
             theAt = theNext;
             theNext = static_cast<EEUnit*>(theNext->mTileNode->mNext);
@@ -1978,7 +1978,7 @@ void EEWorld::PlaceQueuedUnits()
                 theAt = theAt->mTileNode->mPrev;
                 bool theDone = false;
                 while (!theDone) {
-                    if (dynamic_cast<RTSDummyUnit*>(theAt) == 0 && theX < theAt->mTileX)
+                    if (RTSDummyHead(theAt) == 0 && theX < theAt->mTileX)
                         theAt = theAt->mTileNode->mPrev;
                     else
                         theDone = true;

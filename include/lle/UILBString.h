@@ -9,6 +9,14 @@
 // Every member of the base instantiation is emitted (and exported) by the first includer, in declaration order.
 #ifdef LOWLEVELENGINE_EXPORTS
 template class LLE_API UIListBox<UWideString>;
+#ifdef __clang__
+// VC6 also exported the InsertLine instantiations the engine used (the retail exe imports the UILBNoSort one);
+// clang exports a member-template instantiation only when it is instantiated explicitly
+template LLE_API void UIListBox<UWideString>::InsertLine<UILBNoSort<UWideString> >(
+    const UWideString&, unsigned long, UILBNoSort<UWideString>&);
+template LLE_API void UIListBox<UWideString>::InsertLine<UWSNoCaseAlphaSort>(
+    const UWideString&, unsigned long, UWSNoCaseAlphaSort&);
+#endif
 #else
 // the importers' view: no instantiation (the exe calls GetLineCount/GetCurrentSelection through the imports)
 extern template class LLE_API UIListBox<UWideString>;

@@ -139,7 +139,7 @@ void RTSUnit::InsertAfter(RTSUnit* inUnit)
 void RTSUnit::Link(RTSUnit* inUnit)
 {
     this->Unlink();
-    RTSDummyUnit* theHead = dynamic_cast<RTSDummyUnit*>(inUnit);
+    RTSDummyUnit* theHead = RTSDummyHead(inUnit);
     if (theHead != NULL) {
         this->mTileNode->mNext = theHead->mFirst;
         this->mTileNode->mPrev = inUnit;
@@ -207,7 +207,7 @@ void RTSUnit::Unlink()
         this->mTileNode->mNext->mTileNode->mPrev = this->mTileNode->mPrev;
     }
     if (this->mTileNode->mPrev != NULL) {
-        RTSDummyUnit* theHead = dynamic_cast<RTSDummyUnit*>(this->mTileNode->mPrev);
+        RTSDummyUnit* theHead = RTSDummyHead(this->mTileNode->mPrev);
         if (theHead != NULL) {
             theHead->mFirst = this->mTileNode->mNext;
         } else {

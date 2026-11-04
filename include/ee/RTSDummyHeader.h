@@ -6,6 +6,8 @@
 #ifndef EE_RTSDUMMYHEADER_H
 #define EE_RTSDUMMYHEADER_H
 
+#include <typeinfo>
+
 template <class T>
 class RTSDummyHeader {
 public:
@@ -19,5 +21,16 @@ class RTSUnit;
 
 class RTSDummyUnit : public RTSDummyHeader<RTSUnit> {
 };
+
+// The tile unit chains link their dummy head through RTSUnit pointers although an RTSDummyUnit is no RTSUnit. The
+// original tested a link with dynamic_cast<RTSDummyUnit*>(link): a cast between unrelated hierarchies that VC6's
+// runtime resolved by finding the target type in the object's own base list. Newer runtimes reject it for RTTI that
+// records class descriptors (clang's), so the test asks the object's own type instead: the same answer, as nothing
+// derives from RTSDummyUnit. Null for a null link, as dynamic_cast.
+template <class T>
+inline RTSDummyUnit* RTSDummyHead(T* inLink)
+{
+    return inLink != NULL && typeid(*inLink) == typeid(RTSDummyUnit) ? reinterpret_cast<RTSDummyUnit*>(inLink) : NULL;
+}
 
 #endif

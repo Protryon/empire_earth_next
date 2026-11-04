@@ -2717,7 +2717,7 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
     }
     while ((!theDone || !theBackDone) && theForward != NULL) {
         if (!theDone) {
-            if (dynamic_cast<RTSDummyUnit*>(theForward) != NULL
+            if (RTSDummyHead(theForward) != NULL
                 || (float)((inX - theForward->mTileX) * (inX - theForward->mTileX)) > theOuterSquared) {
                 theDone = true;
             } else {
@@ -3203,7 +3203,7 @@ bool EEIsEnemyWithinRange(EEComplexUnit* inUnit)
             theBackwardUnit = theBackward->mComplexUnit;
         while (!theDone || !theBackDone) {
             if (!theDone) {
-                if (dynamic_cast<RTSDummyUnit*>(theForward) == NULL
+                if (RTSDummyHead(theForward) == NULL
                     && (float)((theX - theForward->GetTileX()) * (theX - theForward->GetTileX())) <= theOuter) {
                     if (theForward->mPlayer == thePlayer || thePlayer->mEnemies[theForward->mPlayer->GetPlayerID()] == 0
                         || theForward->mPlayer->GetPlayerID() == 0
@@ -3376,7 +3376,7 @@ EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
     long theTileX;
     long theTileY;
 
-    if (dynamic_cast<RTSDummyUnit*>(theForward) != NULL || theForward == NULL)
+    if (RTSDummyHead(theForward) != NULL || theForward == NULL)
         theForwardDone = true;
     else
         theForwardDone = false;
@@ -3399,7 +3399,7 @@ EEComplexUnit* EEGetPursuerOf(EEComplexUnit* inUnit)
                 }
             }
             theForward = static_cast<EEUnit*>(theForward->mTileNode->mPrev);
-            if (dynamic_cast<RTSDummyUnit*>(theForward) != NULL || theForward == NULL)
+            if (RTSDummyHead(theForward) != NULL || theForward == NULL)
                 theForwardDone = true;
             else
                 theForwardDone = false;
