@@ -193,7 +193,7 @@ void EECPASGUProphetCalamityAnalyzerBase::ReleaseUnit()
 
 // FUNCTION: EXE 0x409318
 // Multiplies the score by 1.75 when the prophet stands at a choke point; when asked, aims the volcano at the targets'
-// centre inside it (or a random point of it), score 0 when neither is castable; never sets outFound
+// centre inside it (or a random point of it), score 0 when neither is castable; outFound tells whether it aimed
 float EECPASGUProphetCalamityAnalyzerVolcano::ApplyChokePointBonus(float inScore, bool inUseTargets, bool& outFound)
 {
     std::vector<EETileCoordinate> theTiles;
@@ -201,7 +201,6 @@ float EECPASGUProphetCalamityAnalyzerVolcano::ApplyChokePointBonus(float inScore
     U2DPoint<long> theTile;
     EEAIChokePoint* theChokePoint = gContinentManager.GetChokePointAt(this->mProphet->mUnit);
     float theResult = inScore;
-    // The original (0x40935b) clears this output and never sets it, even when a candidate succeeds.
     outFound = false;
     if (theChokePoint != NULL) {
         // The original's float at 0x839740 is 1.75 (bytes 00 00 e0 3f), read from the frozen image.
@@ -225,6 +224,7 @@ float EECPASGUProphetCalamityAnalyzerVolcano::ApplyChokePointBonus(float inScore
             if (theAllowed) {
                 this->mTile.mX = theTile.GetX();
                 this->mTile.mY = theTile.GetY();
+                outFound = true;   // the choke point aim stands (Evaluate then skips PickTarget)
             } else
                 theResult = 0.0f;
         }
