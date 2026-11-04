@@ -605,11 +605,12 @@ void EEWorld::RebuildTeams()
 }
 
 // FUNCTION: EXE 0x538fe5
-// Counts one gatherer fewer on a resource unit (the unit is assumed to be tracked: no end check)
+// Counts one gatherer fewer on a resource unit (an untracked unit is ignored)
 void EEWorld::ReleaseResourceUser(EEUnit* inUnit)
 {
     std::map<EEUnit*, unsigned long>::iterator it = this->mResourceUsers.find(inUnit);
-    if (it->second > 0)
+    // an untracked unit has no count (the map's head node used to be decremented instead)
+    if (it != this->mResourceUsers.end() && it->second > 0)
         it->second--;
 }
 
