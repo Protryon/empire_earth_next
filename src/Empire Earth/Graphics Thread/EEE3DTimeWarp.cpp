@@ -50,8 +50,9 @@
 // Creates a time warp effect on a unit, starting just below the unit (flag 1) or one model height below it, and
 // launches the effect's two linked line effects from the far end of that span; its age is left unset
 EEE3DTimeWarp::EEE3DTimeWarp(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long inKind)
-    : EEEffect3D(inUnit, inGraphicEffect, inKind)
+    : EEEffect3D(inUnit, inGraphicEffect, inKind), mAge(0.0f)
 {
+    // The warp's age starts at zero (it was left unset, so its lifetime depended on reused memory).
     GETransformation theTransformation;
     GE3DLine theLine;
     GE3DPoint thePoint;
