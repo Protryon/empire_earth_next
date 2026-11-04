@@ -828,14 +828,15 @@ void EECPAttackSubGroup::UpdateAreaEffect()
 }
 
 // FUNCTION: EXE 0x45c925
-// Rebuilds the move mask from the units' terrain flags and stamps the player ID; the mask is ANDed with itself, so
-// the last unit read (index 0) decides it
+// Rebuilds the move mask from the units' terrain flags (the intersection over all units) and stamps
+// the player ID
 void EECPAttackSubGroup::BuildMoveMask()
 {
     memset(this->mFlags.mFlags, 1, sizeof(this->mFlags.mFlags));
+    EECPASGFlags theUnitFlags;   // each unit's flags, ANDed into the mask (was written straight into it)
     for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-        this->mUnits[i]->GetUnit()->mUnitClass->GetTerrainFlags(this->mUnits[i]->GetUnit(), this->mFlags);
-        this->mFlags.And(this->mFlags);
+        this->mUnits[i]->GetUnit()->mUnitClass->GetTerrainFlags(this->mUnits[i]->GetUnit(), theUnitFlags);
+        this->mFlags.And(theUnitFlags);
     }
     this->mFlags.mPlayerID = this->mPlayer->GetPlayerID();
 }

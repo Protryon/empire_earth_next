@@ -381,15 +381,16 @@ EEAIContinent* EECPASGLand::GetTargetContinent(unsigned short inID, unsigned sho
 }
 
 // FUNCTION: EXE 0x4466dd
-// Builds the terrain mask the sub-group may cross from its units' terrain flags, plus walls and gates; each unit
-// overwrites the mask and the AND is with itself, so the last unit read (index 0) decides
+// Builds the terrain mask the sub-group may cross from its units' terrain flags (the intersection
+// over all units), plus walls and gates
 // NEAR: inlining and register allocation differ from the original
 void EECPASGLand::BuildMoveMask()
 {
     memset(this->mFlags.mFlags, 1, sizeof(this->mFlags.mFlags));
+    EECPASGFlags theUnitFlags;   // each unit's flags, ANDed into the mask (was written straight into it)
     for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-        this->mUnits[i]->mUnit->GetUnitClass()->GetTerrainFlags(this->mUnits[i]->mUnit, this->mFlags);
-        this->mFlags.And(this->mFlags);
+        this->mUnits[i]->mUnit->GetUnitClass()->GetTerrainFlags(this->mUnits[i]->mUnit, theUnitFlags);
+        this->mFlags.And(theUnitFlags);
     }
     this->mFlags.mPlayerID = this->mPlayer->mPlayerID;
     this->mFlags.mFlags[kAITileWall] = true;
