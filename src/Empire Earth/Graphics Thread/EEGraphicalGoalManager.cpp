@@ -100,8 +100,8 @@ void EEGraphicalGoal::DestroyEffect()
 }
 
 // FUNCTION: EXE 0x5076f9
-// Moves a changed marker's effect: a line to its from/to points, an icon to its to point (no check that the
-// effect still exists)
+// Moves a changed marker's effect: a line to its from/to points, an icon to its to point; a marker whose effect
+// was not created (its graphic effect is above the effect detail setting) has nothing to move
 void EEGraphicalGoal::Update()
 {
     if (!this->mChanged)
@@ -109,6 +109,8 @@ void EEGraphicalGoal::Update()
     switch (this->mType) {
     case 0: {
         EEE3DMarchingLine* theLine = static_cast<EEE3DMarchingLine*>(gEffectManager->GetEffect(this->mEffect));
+        if (theLine == NULL)
+            break;
         theLine->SetFrom(this->mFrom);
         theLine->SetTo(this->mTo);
         GETransformation theTransformation;
@@ -120,15 +122,16 @@ void EEGraphicalGoal::Update()
         break;
     }
     case 1:
-        static_cast<EEE3DIcon*>(gEffectManager->GetEffect(this->mEffect))->SetLocation(this->mTo);
-        break;
     case 2:
     case 3:
     case 4:
     case 5:
-    case 6:
-        static_cast<EEE3DIcon*>(gEffectManager->GetEffect(this->mEffect))->SetLocation(this->mTo);
+    case 6: {
+        EEE3DIcon* theIcon = static_cast<EEE3DIcon*>(gEffectManager->GetEffect(this->mEffect));
+        if (theIcon != NULL)
+            theIcon->SetLocation(this->mTo);
         break;
+    }
     }
     this->mChanged = false;
 }
