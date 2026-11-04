@@ -207,8 +207,7 @@ void EEE3DDisease::PrepareQueue()
 }
 
 // FUNCTION: EXE 0x4ec3aa
-// Reloads the graphic and its orbitals and reads time, frame and age; returns only the age read's result (earlier
-// errors are overwritten, as in the original)
+// Reloads the graphic and its orbitals and reads time, frame and age; returns the first read error
 long EEE3DDisease::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     EEEffect3D::Load(inMajorVersion, inMinorVersion, inFile);
@@ -221,7 +220,9 @@ long EEE3DDisease::Load(unsigned long inMajorVersion, unsigned long inMinorVersi
     long theResult = inFile.Read(this->mTime);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mFrame);
-    theResult = inFile.Read(this->mAge);
+    // Stop at the first read error instead of letting the age read replace it.
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(this->mAge);
     return theResult;
 }
 
