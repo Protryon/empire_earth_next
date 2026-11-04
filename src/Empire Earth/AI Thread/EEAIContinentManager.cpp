@@ -1210,7 +1210,8 @@ void EEAIContinentManager::CreateScenarioAreas(EEMap* inMap)
         this->mRectangleAreas[i] = NULL;
     for (i = theManager->mAreas.size() - 1; i >= 0; i--) {
         EEAIRectangleArea* theArea = NULL;
-        if (!theManager->mAreas[i] ||
+        // the areas the count above admitted: unset areas too are skipped (they got no slot)
+        if (!theManager->mAreas[i] || theManager->mAreas[i]->IsUnset() ||
             !(theManager->mAreas[i]->mRect.GetHeight() > 0.0f) ||
             !(theManager->mAreas[i]->mRect.GetWidth() > 0.0f))
             continue;
