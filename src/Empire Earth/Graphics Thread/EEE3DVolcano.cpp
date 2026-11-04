@@ -51,7 +51,6 @@
 #include "lle/FSPath.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EEE3DVolcano.h"
-#include "LostDebug.h"
 static const float kVolcanoPixelScale = 1.0f / 255.0f; // original pixel readers use 0x43f7dc
 // the terrain colour blend (unit .rdata before the vtable: named constants)
 const float kVolcanoColorScale = 0.65f;

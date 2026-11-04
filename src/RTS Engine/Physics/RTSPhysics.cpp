@@ -17,7 +17,6 @@
 #include "ee/RTSGraphics.h"
 #include "ee/EEPhysics.h"
 #include "ee/EECommunications.h"
-#include "LostDebug.h"
 // chain at 0x56100f (wrapper)
 //   object 0x931d90  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 UString gRTSPhysicsDataKey("RTSPhysics Data");
@@ -224,9 +223,7 @@ unsigned long RTSPhysics::Main(void* inPointer)
         }
     }
     thePhysics->mThreadDone->Set();
-    // LOST-DEBUG: the original reads the volatile mL60 once more after mThreadDone->Set() and drops the value (no call,
-    // no assert string in .data, no twin): a compiled-away debug check stood in by EE_LOST_READ (owner, 2026-10-25)
-    EE_LOST_READ(thePhysics->mTicksOwed);
+    // no assert string in .data, no twin): a compiled-away debug check stood in by 
     return 0;
 }
 

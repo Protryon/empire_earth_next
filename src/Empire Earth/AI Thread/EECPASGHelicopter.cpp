@@ -59,7 +59,6 @@
 #include "ee/EEAIAStarGraphStorage.h"
 #include "ee/EEAIAStarGraphGoalBase.h"
 #include "ee/EEAIAStarPathGraphGoal.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_DEBUG)
 #include "ee/EEAIKindIDs.h"
 
 // FUNCTION: EXE 0x44597f
@@ -186,7 +185,6 @@ long EEAIGPGModifierLandWallAvoider::GetCost(EEAIAStarGraphNode* inFrom, EEAIPat
             break;
         }
     }
-    EE_LOST_DEBUG(3);   // LOST-DEBUG: none: exact only (the original calls theLinks[i]'s operator+ out of line at all six sites)
     if (theCost <= 1)
         theCost = 1;
     return theCost;

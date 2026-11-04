@@ -42,7 +42,6 @@
 #include "ee/EEEffect2D.h"
 #include "ee/EEEffect3D.h"
 #include "ee/EEE3DDisease.h"
-#include "LostDebug.h"
 #include "ee/EEEffectKindIDs.h"
 
 // SYNTHETIC: EXE 0x4ebde9
@@ -139,7 +138,6 @@ long EEE3DDisease::Queue(EEEffectQueue* inQueues)
 // mFrame is assigned before mTime (the original stores mTime after the mStartFrames[13] load)
 long EEE3DDisease::SetUp()
 {
-    // LOST-DEBUG: none independent: the stand-in at the end makes begin()/operator+ of the orbital copy out of line
 
     this->mGraphicObject = this->GetGraphicObject();
     long theResult = this->mGraphicObject->LoadMedia();
@@ -154,7 +152,6 @@ long EEE3DDisease::SetUp()
     this->mBoundingRadius = this->mGraphicEffect->GetSize();
     this->mSound = NULL;
     return theResult;
-    EE_LOST_DEBUG(6);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x4ec19d
@@ -162,8 +159,6 @@ long EEE3DDisease::SetUp()
 // of its life; returns the draw result
 long EEE3DDisease::DrawPass5()
 {
-    // LOST-DEBUG: none independent: 14 units make mAngles[i]/mOrbitals[i] call operator+ out of line
-    EE_LOST_DEBUG(14);
     GETransformation theTransformation;
     GETransformation theOrientation;
     GEModel* theModel = this->mGraphicObject->mModel;

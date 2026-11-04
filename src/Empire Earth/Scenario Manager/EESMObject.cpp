@@ -25,7 +25,6 @@ float Fn246EA2(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
-#include "LostDebug.h"
 #include "ee/EEPlayer.h"
 #include "ee/EESMArea.h"
 #include "ee/EEStringIDs.h"
@@ -1885,7 +1884,6 @@ void EESMTrigger::Evaluate(float inTime)
             EESMTEffectWrapper* theWrapper = this->mEffects[k];
             if (theRandomCount == theChosen) {
                 unsigned long theTime = (long)(theWrapper->mDelay * 1000.0f + inTime);
-                // LOST-DEBUG: the original fetches the effect and discards it (a trace argument)
                 // (the original also calls GetEffect(mL0C) here and discards it, 0x1c9c6d; no stand-in: the row is not exact, r32 close)
                 gWorld.mScenarioManager->AddTimedEffect(theWrapper->mEffectIndex, theTime, this->mIsInCinematic);
             }

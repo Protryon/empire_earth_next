@@ -42,7 +42,6 @@
 #include "ee/EEWorld.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEEDamagedEffect.h"
-#include "LostDebug.h"
 #include "ee/EEEffectKindIDs.h"
 
 // SYNTHETIC: EXE 0x501fce

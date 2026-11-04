@@ -16,7 +16,6 @@
 #include "dx7/DX7Screen.h"
 #include "dx7/DX7Movie.h"
 #include "dx7/DX7Multimon.h"
-#include "LostDebug.h"  // NOT original source: EE_LOST_DEBUG filler (SetZBuffer; docs/LOST_DEBUG.md)
 
 // The U2D key init chains:
 // SYNTHETIC: DX7HR 0x100091aa
@@ -1606,7 +1605,6 @@ void DX7Rasterizer::SetWaitForVSync(bool inState, unsigned long inScreen)
 // Sets Z testing and Z writing from the Z-buffer state when it changes, sending only what changed
 void DX7Rasterizer::SetZBuffer(unsigned long inState, unsigned long inScreen)
 {
-    EE_LOST_DEBUG(1);  // LOST-DEBUG (PROVISIONAL, owner experiment 2026-10-24): 2001 twin inlines what AoC refuses (0 vs 2 out-of-line _Ptrit<GESurface*>::operator+); no assert-line evidence (the AoC asserts sit 9 lines earlier than the twin's)
     unsigned long theEnable = 1;
     bool theWrite = (inState & kZBufferWriteOnly) > 0;
     if (inState == this->mScreenStates[inScreen]->mZBuffer)

@@ -66,7 +66,6 @@
 #include "lle/UIControlsTable.h"
 #include "lle/User Interface.h"
 #include "ee/EEUICChatLine.h"
-#include "LostDebug.h"
 
 static const float kChatLineMessageSpacing = 5.0f;  // 0x449df0
 

@@ -35,7 +35,6 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEROEffects.h"
 #include "ee/EEROUserInterface.h"
-#include "LostDebug.h"
 
 // the UI's viewport (0x529518) (provisional name)
 GEViewport gUIViewport;
@@ -114,8 +113,6 @@ void EEROUserInterface::RenderScene()
 {
     unsigned long theFog = gRasterizer->GetFog(gScreenIndex);
     float theAlphaRefValue = gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
-    // LOST-DEBUG: none: exact only (tools lostdebug_search, at:2)
-    EE_LOST_DEBUG(12);
     gRasterizer->SetFog(0, gScreenIndex);
     gRasterizer->SetShadingColorSource(1, gScreenIndex);
     gRasterizer->SetLighting(0, gScreenIndex);

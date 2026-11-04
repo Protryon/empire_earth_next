@@ -123,7 +123,6 @@
 #include "ee/EESETSEffectControls.h"
 #include "lle/FSMemoryFile.h"
 #include "ee/EEAQuickSaveLoad.h"
-#include "LostDebug.h"
 // free functions of other units (declared where they are used, as their own units do) (provisional names)
 void Fn102E1B();                            // 0x102e1b (before the rasterizer is deactivated)
 void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFlag);  // 0x140306 (Empire Earth.cpp)
@@ -646,7 +645,6 @@ void EEUserInterface::StartLoadingFromEditor()
 // Opens the WON server selection, remembering the password when asked
 void EEUserInterface::OpenSelectServer()
 {
-    EE_LOST_DEBUG(5);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (start of body)
     gUIManager->LockUIForCopyData();
     UIForm* theForm = gUIManager->GetFormByID(kFormMultiplayer);
     if (gUIManager->IsFormVisible(theForm)) {

@@ -39,7 +39,6 @@
 #include "ee/EEEffect.h"
 #include "ee/EEEffect2D.h"
 #include "ee/EEE2DWinterBreath.h"
-#include "LostDebug.h"
 #include "ee/EEEffectKindIDs.h"
 
 // SYNTHETIC: EXE 0x4e8158
@@ -99,8 +98,6 @@ EEE2DWinterBreath::EEE2DWinterBreath(EEUnit* inUnit, EEGraphicEffect* inGraphicE
     this->mGraphicObject = NULL;
     this->mAge = 0.0f;
     this->mRotation = EEEffect::GetRandom() * 6.2831855f;
-    // LOST-DEBUG: none: exact only (tools lostdebug_search)
-    EE_LOST_DEBUG(9);
 }
 
 // SYNTHETIC: EXE 0x4e83d9

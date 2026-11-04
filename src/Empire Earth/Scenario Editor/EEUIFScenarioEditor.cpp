@@ -766,7 +766,7 @@ extern GEFont* gU531930;
 
 // FUNCTION: EXE 0x59e80f
 // Loads the bottom panel texture (scenpart) and the full-screen tab background (Scenfull)
-// NEAR: EE_LOST_DEBUG(5) at the start makes this bind_only, but LostDebug.h would have to be included before the
+// NEAR:  at the start makes this bind_only, but LostDebug.h would have to be included before the
 // unit's later headers (that reorders its .rdata$r RTTI COMDATs), so it is not applied. The texture manager goes
 // through a local: the original loads it before the name temporary.
 void EEUIFScenarioEditor::CreateBackground()
@@ -1003,7 +1003,6 @@ extern GEFont* gU531938;                    // 0x531938
 #include "ee/EESETriggerScreen.h"
 #include "ee/EESEInstructions.h"
 #include "ee/EESEAQuickSaveLoad.h"
-#include "LostDebug.h"
 extern unsigned long gTexturePixelDepth; // 0x5308b4 (Empire Earth.cpp)
 extern bool gSightUpdatesEnabled;
 extern GEViewport gViewport;

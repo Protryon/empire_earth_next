@@ -41,7 +41,6 @@
 #include "ee/EEEffect.h"
 #include "ee/EERenderLists.h"
 #include "ee/EEROGroundShadows.h"
-#include "LostDebug.h"
 
 // the shadows' named consts (.rdata 0x4413e4/0x4413e8, reloaded per use) (provisional names)
 const float kShadowHeight = 0.01f;
@@ -214,8 +213,6 @@ void EEROGroundShadows::DrawUnitShadows(EERenderUnitMap& inUnits)
         }
         theIterator++;
     }
-    // LOST-DEBUG: none: exact only (tools lostdebug_search)
-    EE_LOST_DEBUG(3);
 }
 
 // FUNCTION: EXE 0x51246b

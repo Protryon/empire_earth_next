@@ -62,7 +62,6 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEUIFSEPaint.h"
 #include "ee/EEMouse.h"
-#include "LostDebug.h"
 
 // FUNCTION: EXE 0x5a3f10
 // Creates the paint area over the game view, with no paint action in progress
@@ -120,8 +119,6 @@ long EEUIFSEPaint::CopyData()
 // square around the clicked tile
 long EEUIFSEPaint::MouseLButtonDown()
 {
-    // LOST-DEBUG: none: exact only
-    EE_LOST_DEBUG(5);
     GE3DPoint thePoint;
     GERectangle theBounds = gViewport.GetViewRectangle();
     EETile* theTile;

@@ -54,7 +54,6 @@
 #include "ee/EECBEditableCivilization.h"
 
 #include "ee/EECBUIListBox.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 // the scroll bar's opacity (a unit-local float ahead of the statics' strings in .rdata: 0x4cfa64)
 static const float kScrollBarBgOpacity = 0.2f;

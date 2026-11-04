@@ -91,7 +91,6 @@
 #include "ee/EESMTrigger.h"
 #include "ee/EESETSTriggerUIComboBox.h"
 #include "ee/EESETSTrigger.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 // The last nine controls set their position with SetXY (one inline expansion each): with SetX/SetY pairs the inline
 // budget refuses GEColor::operator= at label 0x9e5 (mSecondConditionLabel), which the original expands.
@@ -761,7 +760,6 @@ void EESETSTrigger::Activate()
     }
     gUIManager->mScenarioEditorForm->GetTriggerScreen()->HideText();
     gUIManager->mScenarioEditorForm->GetTriggerScreen()->HideAlphaSort();
-    EE_LOST_DEBUG(1);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // NEAR: inline budget (the original expands GetTriggerScreen with operator[] refused at the first site)

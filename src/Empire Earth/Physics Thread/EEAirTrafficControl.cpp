@@ -23,7 +23,6 @@
 #include "ee/EEUnit.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEAirTrafficControl.h"
-#include "LostDebug.h"
 
 const UString EEAirTrafficControl::sData("EEAirTrafficControl Data");
 // SYNTHETIC: EXE 0x54e839   (wrapper)
@@ -218,7 +217,6 @@ bool EEAirTrafficControl::ClearAirportQueue(EEComplexUnit* inAirport, long inKin
                     if ((*theItem).mUnit == theSlot->mAirport->FindPassenger(theSlot->mAirport->mExitingUnitID))
                         theSlot->mAirport->SetExitingUnitID(-1);
                 }
-                EE_LOST_TRACE(*theItem);   // LOST-DEBUG: the orig calls the iterator operator* and discards it (0x14ee90); exact only
                 theItem = theSlot->mTakeoff.erase(theItem, theItem + 1);
                 theMatch = false;
                 theResult = true;

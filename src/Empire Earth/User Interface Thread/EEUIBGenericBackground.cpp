@@ -66,7 +66,6 @@
 #include "ee/EEUIBMapBackground.h"
 
 extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
-#include "LostDebug.h"
 
 // the frame's cells in its 64x64 texture (provisional names)
 static GERectangle sEdgeCell(57.0f, 0.0f, 64.0f, 64.0f);           // 0x564558 (the edges)

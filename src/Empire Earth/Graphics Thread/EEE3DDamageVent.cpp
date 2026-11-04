@@ -44,7 +44,6 @@
 #include "ee/EEEffect3D.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEE3DDamageVent.h"
-#include "LostDebug.h"
 #include "ee/EEEffectKindIDs.h"
 
 // SYNTHETIC: EXE 0x4ea9e2
@@ -183,8 +182,6 @@ long EEE3DDamageVent::DrawPass6()
     }
     gRasterizer->SetFog(theFog, theScreen);
     return theResult;
-    // LOST-DEBUG: none: exact only (tools lostdebug_search)
-    EE_LOST_DEBUG(4);
 }
 
 // FUNCTION: EXE 0x4eae0a

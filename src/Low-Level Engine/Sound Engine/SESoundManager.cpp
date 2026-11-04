@@ -10,7 +10,6 @@
 #include "lle/FSPath.h"
 #include "lle/SESoundManager.h"
 #include <algorithm>
-#include "LostDebug.h"  // NOT original source: EE_LOST_DEBUG filler (ReallyPlayIt; docs/LOST_DEBUG.md)
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 // TEMPLATE: LLE 0x1005278f
@@ -317,7 +316,6 @@ void SESoundManager::DestroySoundInstance(SESMInstanceNode* inNode)
 // Stops the instance on the channel, rewinds its sample and frees the channel
 void SESoundManager::DumpChannel(unsigned long inChannel)
 {
-    EE_LOST_DEBUG(2);  // LOST-DEBUG: none independent (owner, 2026-10-25: exact is exact); smallest n
     if (inChannel == -1)
         return;
     SESMInstanceNode* theNode = this->mChannels[inChannel];
@@ -1022,7 +1020,6 @@ SESMInstanceNode* SESoundManager::PlayAndReturnReferencedNode(unsigned long inSa
 unsigned long SESoundManager::ReallyPlayIt(unsigned long inChannel, unsigned long inSampleID, float inVolume,
                                            float inPan, float inPitch, bool inLooping, SESMInstanceNode*& outNode)
 {
-    EE_LOST_DEBUG(1);  // LOST-DEBUG (PROVISIONAL, owner experiment 2026-10-24): no independent evidence; base-game LLE identical (exact only at n = 1)
     unsigned long theInstanceID = -1;
     outNode = NULL;
     unsigned long theMaxInstances = this->GetMaxInstances(inSampleID);

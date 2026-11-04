@@ -77,7 +77,6 @@
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_DEBUG)
 
 // 0x564f6 (cdecl; EECPAttackGroup.cpp's range): a new sub group unit of inUnit's kind (provisional name)
 EECPAttackSubGroupUnit* EECPCreateSubGroupUnit(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup, bool inGeneric);
@@ -190,7 +189,6 @@ EECPASGPathPoint& EECPASGPathPoint::operator=(const EECPASGPathPoint& inPoint)
 // the group's task player (unless loading a saved game) and a new formation
 EECPAttackSubGroup::EECPAttackSubGroup(EECPAttackGroup* inGroup, long inKind)
 {
-    EE_LOST_DEBUG(2);  // LOST-DEBUG: none: exact only (lostdebug_search, smallest n)
     EECPCombatManager* theManager = inGroup->mCommander->GetCombatManager();
     this->mID = theManager->GetNextSubGroupID();
     this->mRequest = NULL;
@@ -811,7 +809,6 @@ void EECPAttackSubGroup::UpdateAreaEffect()
     this->mHasAreaEffect = false;
     for (long i = this->mUnits.size() - 1; i >= 0 && !this->mHasAreaEffect; i--) {
         EEComplexUnit* theUnit = this->mUnits[i]->GetUnit();
-        EE_LOST_DEBUG(6);   // LOST-DEBUG: none: exact only (the original calls mUnits[i]'s operator+ out of line)
         if (!theUnit)
             continue;
         if (theUnit->mUnitClass->GetNumResearchTechnologies() > 0) {
@@ -919,7 +916,6 @@ float EECPAttackSubGroup::GetWallWeight()
     if (this->mUnits.size() > 0) {
         for (long i = this->mUnits.size() - 1; i >= 0; i--) {
             EEUnitClass* theClass = this->mUnits[i]->GetUnit()->mUnitClass;
-            EE_LOST_DEBUG(6);   // LOST-DEBUG: none: exact only (the original calls mUnits[i]'s operator+ out of line)
             if ((theClass->mDomains & kMovementAir) || theSet->Contains(theClass->mUnitType))
                 theCount += 1.0f;
         }
@@ -1046,10 +1042,6 @@ void EECPAttackSubGroup::Disband()
     for (i = theUnits.size() - 1; i >= 0; i--) {
         if (this->mGroup->mContinentID != 0 && !theUnits[i]->mUnitClass->IsTransport()) {
             this->mPlayer->mCombatManager->mAttackCommander->TakeUnit(theUnits[i]);
-            EE_LOST_TRACE(theUnits[i]);   // LOST-DEBUG: none: exact only (the original evaluates theUnits[i] here, out of line)
-            EE_LOST_TRACE(theUnits[i]);   // LOST-DEBUG: none: exact only (the original evaluates theUnits[i] here, out of line)
-            EE_LOST_TRACE(theUnits[i]);   // LOST-DEBUG: none: exact only (the original evaluates theUnits[i] here, out of line)
-            EE_LOST_TRACE(theUnits[i]);   // LOST-DEBUG: none: exact only (the original evaluates theUnits[i] here, out of line)
         } else
             thePersonnel->ReturnUnit(theUnits[i]);
         theUnits[i]->Dereference();
@@ -2070,7 +2062,6 @@ long EECPAttackSubGroup::Restore(unsigned long inMajorVersion, unsigned long inM
         theResult = (this->mUnits[i])->Restore(inMajorVersion, inMinorVersion);
         if (theResult == 0) {
             if ((this->mUnits[i])->mUnit && EECPCombatManager::IsMilitaryTypeUnit((this->mUnits[i])->GetUnit())) {
-                EE_LOST_DEBUG(5);   // LOST-DEBUG: none: exact only (the original refuses begin() at the IsMilitaryTypeUnit site)
                 (this->mUnits[i])->GetUnit()->SetAIState(this->mState);
                 (this->mUnits[i])->Virtual48();
                 i++;
@@ -2272,7 +2263,6 @@ void EECPAttackSubGroup::UpdateCommonMoveFlags()
         memset(theFlags.mFlags, 0, sizeof(theFlags.mFlags));
         theFlags.mPlayerID = 0;
         this->mUnits[i]->GetUnit()->GetUnitClass()->GetTerrainFlags(this->mUnits[i]->GetUnit(), theFlags);
-        EE_LOST_DEBUG(1);   // LOST-DEBUG: none: exact only (the original calls both operator+ out of line)
         if (theFlags.mFlags[kAITileCliff])
             theCount3++;
         if (theFlags.mFlags[kAITileForest])

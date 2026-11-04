@@ -64,7 +64,6 @@
 #include "lle/UIStatusBar.h"
 #include "lle/UIFontTable.h"
 #include "lle/UIManager.h"
-#include "LostDebug.h"  // NOT original source: EE_LOST_DEBUG filler (CreateBitmap; docs/LOST_DEBUG.md)
 
 // One record of the controls database file (Create reads them with FSFileSpec::Read, 0x35c bytes each). The
 // offsets are proven by the UIDbControl ctor 0x1006796f (provisional field names).
@@ -303,7 +302,6 @@ GEBitmap* UIControlsTable::CreateBitmap(UIManager* inManager, const GERectangle&
                                         const UString& inFileName, bool inHasAlpha,
                                         const GERectangle& inTextureRectangle) const
 {
-    EE_LOST_DEBUG(2);  // LOST-DEBUG (PROVISIONAL, owner experiment 2026-10-24): no independent evidence; base-game LLE identical (exact window 2..18)
     GETextureDescription theDescription;
     GEBitmap* theBitmap = NULL;
     theDescription.mIs3DRenderable = false;

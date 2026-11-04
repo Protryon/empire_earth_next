@@ -44,7 +44,6 @@
 #include "lle/UReferenceCounter.h"
 #include "ee/EEPPatrolGroup.h"
 #include "ee/EETown.h"
-#include "LostDebug.h"   // NOT original source: EE_LOST_DEBUG stand-ins (docs/LOST_DEBUG.md)
 
 // NEAR: only the register of the two argument copies differs (ecx vs eax); store order right
 // FUNCTION: EXE 0x4abbaf
@@ -160,7 +159,6 @@ bool EETown::AddTile(const U2DPoint<long>& inTile)
             this->UpdateNearWater();
     }
     return true;
-    EE_LOST_DEBUG(6);   // LOST-DEBUG: none: exact only (tools lostdebug_search)
 }
 
 // FUNCTION: EXE 0x4abede

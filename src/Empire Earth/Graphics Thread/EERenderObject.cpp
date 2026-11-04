@@ -1143,7 +1143,6 @@ std::vector<GETexture*> gU4E8EF0;
 
 // FillUnit reads the goal's kind
 #include "ee/EEUnitGoal.h"
-#include "LostDebug.h"
 
 // FUNCTION: EXE 0x50d3ad
 // Fills a render unit for a unit and files it in the picker and the texture maps
@@ -1455,8 +1454,6 @@ void EERenderObject::Fn10E8D1()
         sLastTime = theNow;
     }
     gCameraFollowing = true;
-    // LOST-DEBUG: none: exact only (tools lostdebug_search)
-    EE_LOST_DEBUG(7);
 }
 
 // SYNTHETIC: EXE 0x50ea27

@@ -38,7 +38,6 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIFMainGame.h"
 #include "ee/EmpireEarth.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 const UString EETechTree::sNumEpochs("EETechTree-NumEpochs");
 const UString EETechTree::sNumTechIDs("EETechTree-NumTechIDs");
@@ -369,7 +368,6 @@ bool EETechTree::GetUnitClassMediaMask(EETechTree* inTree, long inUnitClass, uns
         }
     }
     return theResult;
-    EE_LOST_DEBUG(8);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x5cc9e8

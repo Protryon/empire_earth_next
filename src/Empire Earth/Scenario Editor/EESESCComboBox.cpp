@@ -118,7 +118,6 @@
 #include "lle/UIESliderChange.h"
 #include "ee/EEUIFSEBrushGroup.h"
 #include "ee/EESETSEScenarioComboBox.h"
-#include "LostDebug.h"
 #include "ee/EEScenarioIDs.h"
 
 // SYNTHETIC: EXE 0x57acf6
@@ -150,7 +149,6 @@ void EESETSEScenarioComboBox::ChangeSelection()
         gUIManager->mScenarioEditorForm->GetTriggerScreen()->mScreens[kSETriggerScreenArea]->RefreshControls();
         break;
     }
-    EE_LOST_DEBUG(5);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x57add4

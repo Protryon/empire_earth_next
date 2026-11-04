@@ -71,7 +71,6 @@
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include "ee/EEAIFOSubGroupFilter.h"
 #include "ee/EECPBehavior.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_DEBUG)
 // The gatherers this unit builds on the stack (out-of-line slots open the unit). Class names from RTTI.
 // RTTI EECPUGatherBuildingUnitsCount (vtable 0x43c0d0): the buildings
 class EECPUGatherBuildingUnitsCount : public EECPUMGatherUnitsScreenBase {
@@ -775,7 +774,6 @@ void EECPDefenseCommander::AidAllies()
 void EECPDefenseCommander::CheckRaids()
 {
     EECPUGatherBuildingUnitsCount theGatherer(this->mPlayer);
-    EE_LOST_DEBUG(10);   // LOST-DEBUG: none: exact only (the original refuses the base ctor 0x478937)
     if (this->mNextRaidCheckTime == 0)
         this->mNextRaidCheckTime = this->mPlayer->mInitialAttackDelayMax * 60000;
     if (!this->mPlayer->mAttackStarted || !(this->mNextRaidCheckTime <= gPhysics->mGameTime))

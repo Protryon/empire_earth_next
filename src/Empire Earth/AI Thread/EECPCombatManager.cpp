@@ -72,7 +72,6 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPPlayerInteractionManager.h"
 #include "ee/EECPCombatManager.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_DEBUG)
 void Fn5B397(long inChunkSize, long inMaxChunks);  // 0x45b397 (cdecl; 0x200, 0x19 from the ctor) (provisional name)
 float Fn102F3D(float inMinimum, float inMaximum);   // 0x502f3d (cdecl; a value in [inMinimum, inMaximum]) (provisional name)
 extern long gDCGameSpeed;                   // 0x530d24 (EECPDefenseCommander.cpp's name; EpochReached: >= 250) (provisional name)
@@ -798,7 +797,6 @@ void EECPCombatManager::ForgetTarget(unsigned long inSerial)
         for (long i = this->mAttackCommander->mGroups.size() - 1; i >= 0; i--) {
             EECPAttackGroup* theGroup = this->mAttackCommander->GetGroup(i);
             if (theGroup) {
-                EE_LOST_DEBUG(9);   // LOST-DEBUG: none: exact only (the original keeps GetGroup inline, its operator[] out of line)
                 for (long j = theGroup->GetNumSubGroups() - 1; j >= 0; j--) {
                     EECPAttackSubGroup* theSubGroup = theGroup->mSubGroups[j];
                     if (theSubGroup && theSubGroup->mTask.mLocation.mSerial == inSerial)
@@ -819,7 +817,6 @@ void EECPCombatManager::ForgetTargetUnit(unsigned long inUnitID)
             if (theGroup) {
                 for (long j = theGroup->GetNumSubGroups() - 1; j >= 0; j--) {
                     EECPAttackSubGroup* theSubGroup = theGroup->GetSubGroupAt(j);
-                    EE_LOST_DEBUG(9);   // LOST-DEBUG: none: exact only (the original calls begin() + j operator+ out of line)
                     if (theSubGroup && theSubGroup->mTask.mUnit && theSubGroup->mTask.mUnit->mUnitID == inUnitID)
                         theSubGroup->mTask.mIsActive = false;
                 }
@@ -1325,7 +1322,6 @@ void EECPCombatManager::DropLostTasks()
         EEComplexUnit* theUnit = (this->mDefendTasks.begin() + i)->mUnit;
         if (!theArea && (!theUnit || theUnit->mHitPoints <= 0))
             this->mDefendTasks.erase(this->mDefendTasks.begin() + i);
-        EE_LOST_DEBUG(2);   // LOST-DEBUG: none: exact only (the original calls both mDefendTasks[i] operator+ out of line)
     }
 }
 

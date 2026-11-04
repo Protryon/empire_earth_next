@@ -83,7 +83,6 @@
 #include "ee/EESETSConditionType.h"
 #include "ee/EESETSCondition.h"
 #include "ee/EESEEvents.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
 // FUNCTION: EXE 0x57e49e
@@ -280,7 +279,6 @@ void EESETSCondition::Load()
             this->RefreshControls();
         }
     }
-    EE_LOST_DEBUG(1);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x57ebb7

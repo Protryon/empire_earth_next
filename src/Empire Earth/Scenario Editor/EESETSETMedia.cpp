@@ -85,7 +85,6 @@
 #include "ee/EESEEClearAddLine.h"
 #include "ee/EESETSETMedia.h"
 #include "ee/EESETSETMSDCameraScrollChange.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
 // FUNCTION: EXE 0x585fed
@@ -417,7 +416,6 @@ void EESETSETMediaSendDialog::Store(EESMEffect* inEffect, EESETSEffectControls* 
     theText = inControls->mTextEditBox->GetText(0);
     inEffect->mFileName = theText;
     inEffect->mIntValue1 = inControls->mSliders[0]->GetCurrentRangeValue() - 1;
-    EE_LOST_DEBUG(2);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x586c7e

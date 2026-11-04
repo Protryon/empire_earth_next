@@ -38,7 +38,6 @@
 #include "ee/EEUnitSetManager.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "LostDebug.h"   // NOT original source: EE_LOST_DEBUG stand-ins (docs/LOST_DEBUG.md)
 
 // FUNCTION: EXE 0x4af1ce
 // Creates an area-effect calamity class with no effects, sound, functor or radius
@@ -76,7 +75,6 @@ EECCAreaEffect::~EECCAreaEffect()
 // target's tile) with the sound; returns whether it started
 bool EECCAreaEffect::Start(EECalamity* inCalamity)
 {
-    EE_LOST_DEBUG(3);   // LOST-DEBUG: none: exact only (tools lostdebug_search)
     bool theResult = false;
     GE3DPoint theSourceLocation;
     GE3DPoint theLocation;

@@ -74,7 +74,6 @@ struct EECPAITargetNearest {
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUGCastCalamity.h"
 #include "ee/EEUGLocation.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_DEBUG)
 // 0x40c6cd (cdecl; only EECPASGUProphet::ReleaseAnalyzers calls it) (provisional name)
 long DeleteAnalyzers(std::vector<EECPASGUProphetCalamityAnalyzerBase*>& inAnalyzers);
 
@@ -541,7 +540,6 @@ float EECPASGUProphetCalamityAnalyzerFire::ApplySplashBonus(float inScore)
         if (theValue > 0)
             theMax = theValue = theMax > theValue ? theMax : theValue;
     }
-    EE_LOST_DEBUG(6);   // LOST-DEBUG: none: exact only (the same n in the Fire/Famine twins)
     if (theMax > 0)
         theResult = (theMax * 0.75f + 1.0f) * inScore;
     return theResult;
@@ -772,7 +770,6 @@ float EECPASGUProphetCalamityAnalyzerFamine::ApplySplashBonus(float inScore)
         if (theValue > 0)
             theMax = theValue = theMax > theValue ? theMax : theValue;
     }
-    EE_LOST_DEBUG(6);   // LOST-DEBUG: none: exact only (the same n in the Fire/Famine twins)
     if (theMax > 0)
         theResult = (theMax * 0.25f + 1.0f) * inScore;
     return theResult;
@@ -872,7 +869,6 @@ float EECPASGUProphetCalamityAnalyzerNegativeMorale::PickBest(EEComplexUnit*& ou
     this->Gather(theTargets, &EECPASGUPCTargetIsUnitSetScreenBase(this->mProphet, this, true));
     for (long i = theTargets.size() - 1; i >= 0; i--) {
         EEComplexUnit* theUnit = theTargets[i]->mUnit;
-        EE_LOST_DEBUG(3); // LOST-DEBUG: none: exact only
         float theScore = this->ScoreTarget(theUnit);
         if (theScore != 0.0f) {
             EECPASTargetUnit* theTarget = theTargets[i];

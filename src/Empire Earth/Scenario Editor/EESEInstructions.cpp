@@ -72,7 +72,6 @@
 #include "ee/EESEInstructions.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUserInterface.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 extern GEFont* gU531938;                    // 0x531938 (Empire Earth.cpp's fonts)
 extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
@@ -465,8 +464,6 @@ void EESEInstructions::Enter()
 // Stores the chosen map, movie and sound files and the four texts into the scenario's media strings
 void EESEInstructions::Store()
 {
-    // LOST-DEBUG: none: exact only (tools lostdebug_search)
-    EE_LOST_DEBUG(9);
     UWideString theText;
     EEScenarioManager* theManager = ::gWorld.mScenarioManager;
     theText = this->mMapComboBox->GetTextLabel()->GetText(0);

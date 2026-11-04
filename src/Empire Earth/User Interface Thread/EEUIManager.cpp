@@ -162,7 +162,6 @@
 #include "ee/EEUIFMGUnitHack.h"
 #include "ee/EEUIBGenericBackground.h"
 #include "ee/EEUIManagerEvents.h"
-#include "LostDebug.h"
 #include "ee/EEFormEventID.h"
 #include "ee/EEControlEventID.h"
 
@@ -250,7 +249,6 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     EEUIESLEActivateForm* theEvent = new EEUIESLEActivateForm;
     this->GetFormByID(kFormSaveGame)->SetFormActivateEvent(theEvent);
     theEvent->Dereference();
-    EE_LOST_DEBUG(1);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // SYNTHETIC: EXE 0x671527

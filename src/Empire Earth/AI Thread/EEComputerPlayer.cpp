@@ -68,7 +68,6 @@
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEGameOptions.h"
 #include "ee/EECPBehavior.h"
-#include "LostDebug.h"   // NOT original source: EE_LOST_DEBUG stand-in (RepairPointers; docs/LOST_DEBUG.md)
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long Fn2806E7(UString& ioName, EEPlayer* inPlayer);
 
@@ -4744,8 +4743,6 @@ long EEComputerPlayer::RepairPointers(unsigned long inMajorVersion, unsigned lon
                 break;
             theResult = this->mResourceCenters[i]->Restore(inMajorVersion, inMinorVersion);
         }
-        // LOST-DEBUG: none: exact only (the original refuses mResourceCenters[i]'s _Ptrit::operator+; inline_sim)
-        EE_LOST_DEBUG(12);
         if (theResult == kErrorOK)
             this->mNextExpansionTime += gPhysics->mGameTime;
     }

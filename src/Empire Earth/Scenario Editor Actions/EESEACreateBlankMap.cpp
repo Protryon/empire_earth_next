@@ -83,7 +83,6 @@
 #include "ee/EESEAPaint.h"
 #include "ee/EESEAPaintTerrain.h"
 #include "ee/EESEACreateBlankMap.h"
-#include "LostDebug.h"
 
 static const float kShallowWater = -0.1f;   // 0x445938 (unit .rdata; provisional name)
 
@@ -132,9 +131,7 @@ void EESEACreateBlankMap::Virtual4()
     gGraphics->PostReleaseScene();
     gGraphics->PostInitialiseScene();
     gGraphics->PostResume();
-    // LOST-DEBUG: none: exact only (n=4 at END: the EEAction(bool) COMDAT 0x5a6695 is emitted exact, refused inside the
     // expanded EESEAPaintTerrain ctor like the original; 0x5a58bc itself 77.6 -> 84.8)
-    EE_LOST_DEBUG(4);
 }
 
 // FUNCTION: EXE 0x5a5ab5

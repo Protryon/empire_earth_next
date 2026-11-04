@@ -48,7 +48,6 @@
 
 #include "ee/EECPAITargetPriority.h"
 #include "ee/EECPASGUMechProphet.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_DEBUG)
 // FUNCTION: EXE 0x4065b0
 // Scores the sub group's unit-set targets and picks the best for a time warp; stores its tile and unit, returns
 // its score (0 and NULL when none scores)
@@ -170,7 +169,6 @@ float EECPASGUProphetCalamityAnalyzerTeleport::PickBest(EEComplexUnit*& outUnit)
 float EECPASGUProphetCalamityAnalyzerTeleport::PickAlly(EEComplexUnit*& outUnit)
 {
     std::multimap<float, EEComplexUnit*, std::greater<float> > theUnits;
-    EE_LOST_DEBUG(9); // LOST-DEBUG: none: exact only
     float theResult = 0.0f;
     outUnit = NULL;
     if (this->mUnit != NULL) {
@@ -467,7 +465,6 @@ float EECPASGUProphetCalamityAnalyzerBase::ApplyClusterBonus(float inScore)
         if (theValue > 0)
             theMax = theValue = theMax > theValue ? theMax : theValue;
     }
-    EE_LOST_DEBUG(6);   // LOST-DEBUG: none: exact only (the same n as the Fire/Famine twins 0x40a131/0x40ab2b)
     if (theMax > 0)
         theResult = (theMax * 0.15f + 1.0f) * inScore;
     return theResult;

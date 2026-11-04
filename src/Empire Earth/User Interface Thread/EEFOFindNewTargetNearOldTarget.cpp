@@ -143,7 +143,6 @@
 #include "ee/EEAIRandom.h"
 #include "ee/EEUserInterface.h"
 #include "ee/EEUnitCollector.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 extern EEToHitTable gToHitTable;           // 0x5318e8 (as EECPAttackSubGroupUnit.cpp declares it)
 
@@ -6129,7 +6128,6 @@ float EEJitterHeading(float inAngle, float inMin, float inMax)
 // (the original calls RTSMap::GetTile out of line: inline budget)
 bool EEIsTileTopAbove(unsigned long inX, unsigned long inY, float inHeight, EEUnit** outArg4, bool inBare)
 {
-    EE_LOST_DEBUG(7);  // LOST-DEBUG: none: exact only (tools/lostdebug_search.py, smallest n)
     bool theResult = false;
     GE3DPoint thePoint;
     EEUnit* theWall = NULL;

@@ -40,7 +40,6 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EEAIRandom.h"
-#include "LostDebug.h"   // NOT original source: EE_LOST_DEBUG stand-in (ChooseResearch; docs/LOST_DEBUG.md)
 const UString EECPResearchManager::sData("EECPResearchManager-Data");
 // SYNTHETIC: EXE 0x489fc4   (wrapper)
 // SYNTHETIC: EXE 0x489fce   (ctor)
@@ -119,8 +118,6 @@ void EECPResearchManager::ChooseResearch()
         unsigned long j;
         for (j = 0, theCount = this->mCandidates.size(); j < theCount && !theFound; j++) {
             theID = this->mCandidates[j];
-            // LOST-DEBUG: none: exact only (the original refuses this mCandidates[j]'s _Ptrit::operator+; inline_sim)
-            EE_LOST_DEBUG(2);
             theNode = this->mTechTree->Get(theID);
             if (theNode != NULL && this->mPlayer->CanProduce(theID, theNode->GetUnitClass(0), 1, true, 3, NULL)) {
                 for (unsigned long k = 0; k < theNode->GetNumUnitClasses() && !theFound; k++)

@@ -6,7 +6,6 @@
 #include <float.h>
 
 #include "lle/LowLevelEngine.h"
-#include "LostDebug.h"  // NOT original source: EE_LOST_DEBUG filler (ResolveAddress; docs/LOST_DEBUG.md)
 #include "TCPPacketType.h"
 // ---- Result codes returned by the NPIM entry points (provisional names); values proven by codegen.
 enum {
@@ -468,10 +467,8 @@ static long ResolveAddress(const UString& inName, const UString& inHost, const U
                            long inType, SOCKET* outSocket, sockaddr_in* outAddress)
 {
     long theResult;
-    // LOST-DEBUG: every ESVERIFY __LINE__ of the AoC build is 11 over the base-game twin's (the 11 lines fall before
     // NPIMActivate), and the twin's identical ResolveAddress inlines all five _Ptrit::operator+ that AoC calls out
     // of line: the AoC build carried inline cost this source does not show. n = 9 (exact for 9..13; docs/LOST_DEBUG.md)
-    EE_LOST_DEBUG(9);
     gDetectedGamesLock->Enter();
     SOCKET theSocket = socket(AF_INET, inType == 1 ? SOCK_STREAM : SOCK_DGRAM, 0);
     if (theSocket != INVALID_SOCKET) {

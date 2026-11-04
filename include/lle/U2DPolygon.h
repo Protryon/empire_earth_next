@@ -643,8 +643,6 @@ public:
 #if defined(EE_LOSTDEBUG_H) && defined(LOWLEVELENGINE_EXPORTS)   // NOT original source (docs/LOST_DEBUG.md)
         // include-order dependent: active only where LostDebug.h is included BEFORE this header (GETerrainMesh.cpp,
         // line 255; bytes otherwise identical); everywhere else it compiles to nothing
-        // LOST-DEBUG: none independent (owner, 2026-10-25: exact is exact); smallest n
-        EE_LOST_DEBUG(1);
 #endif
         GE3DLine theEdge;
         U2DPoint<T> theStart;
@@ -745,9 +743,7 @@ public:
 #if defined(EE_LOSTDEBUG_H) && (defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_EXE_HEADERS))   // NOT original source (docs/LOST_DEBUG.md)
         // include-order dependent: active only where LostDebug.h is included BEFORE this header (GETerrainMesh.cpp,
         // line 255; bytes otherwise identical); everywhere else it compiles to nothing
-        // LOST-DEBUG: the discarded TMGetTime() results (timing whose report the release build dropped); smallest
         // n; makes the out-of-line vector<GAPoint>() call (0x10030249) as the original
-        EE_LOST_DEBUG(1);
 #endif
         if (!inIsSorted) {
             std::sort(this->mPoints.begin(), this->mPoints.end());

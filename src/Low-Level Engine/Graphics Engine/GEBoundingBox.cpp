@@ -312,12 +312,10 @@ bool GEBoundingBox::Intersects(const GEBoundingBox& inBox) const
         return false;
     return true;
 }
-#include "LostDebug.h"  // NOT original source: EE_LOST_DEBUG filler (docs/LOST_DEBUG.md)
 // FUNCTION: LLE 0x10013631
 // Tests the line against the box's six faces; returns whether it hits any and the nearest hit distance
 bool GEBoundingBox::Intersects(const GE3DLine& inLine, float& outDistance) const
 {
-    EE_LOST_DEBUG(1);  // LOST-DEBUG: none independent (owner, 2026-10-25: exact is exact); smallest n
     GE3DPlane thePlane;
     GEVector theUp(0.0f, 1.0f, 0.0f);
     GEVector theDown(0.0f, -1.0f, 0.0f);

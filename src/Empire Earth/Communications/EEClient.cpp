@@ -98,7 +98,6 @@ EEClient::EEClient()
 #include "ee/EEEffectManager.h"
 #include "lle/GETerrainMesh.h"
 #include "ee/EEMap.h"
-#include "LostDebug.h"                      // NOT original source: EE_LOST_DEBUG stand-in (0x4b7722)
 #include "ee/EEStringIDs.h"
 extern UString gCampaignExtension;          // 0x530b78 (ee/EECampaignFormManager.h, which needs the UI form headers)
 void EELobbyFn295CE3(bool inFlag);          // 0x295ce3 (EELobbyInit.cpp; provisional name)
@@ -234,7 +233,6 @@ FSFile* EEClient::CreateXferFile(const UWideString& inName, unsigned long inSize
 // FUNCTION: EXE 0x4b7722
 // Handles a player's removal: the host's starts the server migration, ours shows the booted or out-of-sync
 // box and cancels the game, anyone else's is announced in the chat log and removed; plays the matching sound
-// LOST-DEBUG: none: exact only (tools lostdebug_search)
 void EEClient::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, bool inPlayerIsOOS, bool inGameIsExiting)
 {
     GEColor theColor(1.0f, 1.0f, 1.0f);
@@ -287,7 +285,6 @@ void EEClient::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
                 EELoadSound(UString("sounds\\Booted.wav"), 0x31, theSample, theInstance, 1);
         }
     }
-    EE_LOST_DEBUG(3);
 }
 
 // FUNCTION: EXE 0x4b7992

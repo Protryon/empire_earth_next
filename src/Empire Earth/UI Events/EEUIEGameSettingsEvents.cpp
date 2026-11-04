@@ -85,7 +85,6 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEUIEGameSettingsEvents.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 static UWideString sMusicFileName;          // 0x562f78 (init chain 0x1d6b94): the form's music while it is open
 static bool sInGame;                        // 0x562f8c: opened from the game (InGameOpen), not the main screen
@@ -217,7 +216,6 @@ long EEUIEGSEInGameOk::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         gUserInterface->PostDisplayChanged(false);
     inForm->SetMusicFileName(sMusicFileName);
     return theResult;
-    EE_LOST_DEBUG(4);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x5d6e34

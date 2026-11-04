@@ -26,7 +26,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
 #include "ee/EEDebugTrace.h"
-#include "LostDebug.h"
 #include "lle/SESoundManager.h"
 #include "lle/FSFileSpec.h"
 #include "GEWindow.h"
@@ -193,14 +192,10 @@ void EEScenarioManager::Reset()
 // object, area and pending effect
 EEScenarioManager::~EEScenarioManager()
 {
-    // LOST-DEBUG: none: exact only (tools lostdebug_search, n=1 at START)
-    EE_LOST_DEBUG(1);
     for (unsigned long i = 0; i < this->mUnitClassMedia.size(); i++) {
         EEPlayer* thePlayer = gWorld.GetPlayer(this->mUnitClassMedia[i].mPlayer);
         thePlayer->GetUpgrade(this->mUnitClassMedia[i].mUnitClass)->UnloadMedia(thePlayer);
-        // LOST-DEBUG: a third mUnitClassMedia[i] whose result is discarded (0x1afe66); in Virtual1C 0x1b28c0 the same
         // expression feeds the trace call 0x9ba76, compiled away here (owner-approved stand-in, 2026-10-25)
-        EE_LOST_TRACE(this->mUnitClassMedia[i]);
     }
     DeleteVectorContents(this->mTriggers);
     DeleteVectorContents(this->mConditions);
@@ -370,8 +365,6 @@ EESMArea* EEScenarioManager::NewArea()
 // returns it (its ID is N + 1)
 EESMCondition* EEScenarioManager::NewCondition()
 {
-    // LOST-DEBUG: none: exact only (tools lostdebug_search, n=3 at START; the original refuses the _Tree ctor inline)
-    EE_LOST_DEBUG(3);
     std::vector<EESMCondition*> theOldConditions(this->mConditions);
     EESMIDMap theMap;
     UWideString theName;
@@ -655,8 +648,6 @@ EESMArea* EEScenarioManager::DuplicateArea(unsigned long inIndex)
 // returns it
 EESMCondition* EEScenarioManager::DuplicateCondition(unsigned long inIndex)
 {
-    // LOST-DEBUG: none: exact only (tools lostdebug_search)
-    EE_LOST_DEBUG(6);
     std::vector<EESMCondition*> theOldConditions(this->mConditions);
     EESMIDMap theMap;
     UWideString theNewName;
@@ -795,11 +786,9 @@ void EEScenarioManager::EndCinematic()
     for (i = 0; i < this->mTimedEffects.size(); i++) {
         if (!this->mTimedEffects[i].mIsInCinematic) {
             this->mTimedEffects[i].mTime += (long)theElapsed + 3000;
-            // LOST-DEBUG: the original evaluates `begin() + i` and GetEffect(mEffectIndex) and discards both (a trace)
 
 
         } else if (!this->mTimedEffects[i].mHasRun) {
-            // LOST-DEBUG: GetEffect's result is discarded (a trace)
 
             this->mTimedEffects[i].mHasRun = true;
         }
@@ -929,7 +918,6 @@ void EEScenarioManager::Update()
             }
             for (int k = (int)this->mTimedEffects.size() - 1; k >= 0; k--) {
                 if ((this->mTimedEffects.begin() + k)->mHasRun) {
-                    // LOST-DEBUG: the original computes mEffects.begin() + mEffectIndex and discards it (a trace argument)
 
                     this->EraseTimedEffect(k);
                 }

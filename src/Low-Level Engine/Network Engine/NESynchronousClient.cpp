@@ -11,7 +11,6 @@
 #include "lle/NELagLossSimulator.h"
 #include "lle/FSFile.h"
 #include "lle/NESynchronousClient.h"
-#include "LostDebug.h"  // NOT original source: EE_LOST_DEBUG filler (ProcessCommunicationsTickMessage; docs/LOST_DEBUG.md)
 
 // FUNCTION: LLE 0x1004607d
 // Creates the game client on protocol 0 with its thread events, locks, lag/loss simulator and pass-through recorder
@@ -315,7 +314,6 @@ void NESynchronousClient::ProcessCommunicationsTickMessage(NEMCommunicationsTick
             this->HandleMessage(inMessage);
             theResponse = new NEMCommunicationsTickResponse(this->mNumberOfCTsProcessedInPhysics, theTick,
                                                             this->GetAveragePhysicsUpdateTime());
-            EE_LOST_DEBUG(2);  // LOST-DEBUG: none: exact only (window 2..4; the second NEMPlayerInput ctor stays a call)
             this->mOutgoingMessagesLock->Enter();
             if (!this->IsPlaybackRecordingSession())
                 while (this->mOutgoingMessages.size() > 0) {

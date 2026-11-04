@@ -62,7 +62,6 @@
 #include "ee/EECPAttackCommander.h"
 #include "ee/EECPAttackSubGroup.h"
 #include "ee/EECPDefenseCommander.h"
-#include "LostDebug.h"   // NOT original source: EE_LOST_DEBUG stand-in (Gather; docs/LOST_DEBUG.md)
 // FUNCTION: EXE 0x484d8d
 // Creates a recalled aid package with no sub groups; the first send waits the town-guard delay for the difficulty
 EECPMilitaryAidPackage::EECPMilitaryAidPackage(EEComputerPlayer* inPlayer)
@@ -112,8 +111,6 @@ void EECPMilitaryAidPackage::Gather()
     std::vector<EECPDCTownThreat> theWorst;
     long theTotal = 0;
     bool theSent = false;
-    // LOST-DEBUG: none: exact only (the original calls the map's _Tree ctor 0x7c719 out of line; inline_sim)
-    EE_LOST_DEBUG(13);
     this->mPlayer->mCombatManager->mDefenseCommander->GetWorstThreats(this->mTarget, this->mTownID, theThreats, theWorst);
     if (theWorst.size() > 0) {
         if (this->mSubGroupIDs.size() < theWorst.size()) {

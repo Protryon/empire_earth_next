@@ -89,7 +89,6 @@
 #include "ee/EEUIELobbyEvents.h"
 #include "ee/EEUIEPostGameSummaryEvents.h"
 #include "ee/EEStartingResources.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EETechTreeTechID.h"
 static unsigned long sStartTime;           // 0x562fd0: the lobby's Start time (provisional name)
@@ -407,7 +406,6 @@ long EEUIELEStart::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     }
     gGameOptions.mLock->ReadUnlock();
     return kErrorOK;
-    EE_LOST_DEBUG(1);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x5da876
@@ -716,7 +714,6 @@ void LobbyOnPlayerTypeYes(UIForm* inForm)
         gWonNet->SetGameInfo(theInfo);
     gGameOptions.mPlayers[thePlayer.mSlot] = thePlayer;
     gGameOptions.mLock->WriteUnlock();
-    EE_LOST_DEBUG(4);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x5db2fc
@@ -2176,7 +2173,6 @@ void LobbyOpen(UIForm* inForm)
     }
     for (i = 0; i < 16; i++)
         sPlayerTypeMenus[i] = 0;
-    EE_LOST_DEBUG(4);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x5df874

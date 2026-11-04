@@ -11,7 +11,6 @@
 #include <math.h>
 #include <algorithm>
 
-#include "LostDebug.h"   // NOT original source: EE_LOST_DEBUG in U2DConvexHull<long>::Compute (docs/LOST_DEBUG.md)
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"

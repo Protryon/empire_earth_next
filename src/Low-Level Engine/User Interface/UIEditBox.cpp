@@ -37,7 +37,6 @@
 #include "lle/UISlider.h"
 #include "lle/UIScrollBar.h"
 #include "lle/UIEditBox.h"
-#include "LostDebug.h"  // NOT original source: EE_LOST_DEBUG filler (ProcessEnterKey, SetIndexFromUpDownOffset; docs/LOST_DEBUG.md)
 
 // FUNCTION: LLE 0x10069e8b
 // Creates an empty edit box (one blank line) with caret, key-repeat timers and text; multi-line boxes get a scroll bar
@@ -1199,7 +1198,6 @@ void UIEditBox::ProcessEndKey()
 // Breaks the line at the caret in a multi-line box (re-wrapping the rest); a single-line box fires its Enter trigger
 void UIEditBox::ProcessEnterKey()
 {
-    EE_LOST_DEBUG(4);  // LOST-DEBUG (PROVISIONAL, owner experiment 2026-10-24): no independent evidence; base-game LLE identical (exact only at n = 4)
     UWideString theLine;
     UWideString theEmpty;
     if (!this->mIsSingleLine) {
@@ -1590,7 +1588,6 @@ void UIEditBox::SetCaretLocation(unsigned long inIndex, unsigned long inLine)
 // Places the caret on its new line at the character nearest its remembered x position (after an up/down move)
 void UIEditBox::SetIndexFromUpDownOffset()
 {
-    EE_LOST_DEBUG(3);  // LOST-DEBUG (PROVISIONAL, owner experiment 2026-10-24): no independent evidence; base-game LLE identical (exact window 3..4)
     UWideString theChar;
     const char* theCursor = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]),
                                                   this->mDrawingIndex);

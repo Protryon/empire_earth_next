@@ -69,7 +69,6 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapClass.h"
 #include "ee/EEGlobalConstants.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_DEBUG)
 
 // EETerrainTable::sCliffTable[inIndex] (its COMDAT 0x28aaf7 follows the unit's code; provisional name)
 inline EECliffTerrainTable* EEGetCliffTerrainTable(unsigned long inIndex)
@@ -1159,7 +1158,6 @@ void EERandomMap::PlaceTerrainUnit(unsigned long inX, unsigned long inY, EETerra
 // selects by elevation, and may add that terrain's ambient unit
 void EERandomMap::PaintTiles()
 {
-    EE_LOST_DEBUG(2);  // LOST-DEBUG: none: exact only (lostdebug_search, smallest n; inline_sim: the water loop GetTile refusal at line 1985 needs one more charged candidate)
     U2DFractal theFractal(this->mData.mGridSize, 0.0f, this->mData.mTerrainChaos, this->mData.mSeed);
     GETerrainMesh* theMesh = &this->mMap->mTerrainMesh;
     unsigned long theStart = TMGetTime();

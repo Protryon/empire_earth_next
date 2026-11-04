@@ -66,7 +66,6 @@
 #include "ee/RTSRegionTable.h"
 #include "ee/EEInfluenceTable.h"
 #include "ee/EEAnimal.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_DEBUG)
 #include "ee/EEStringIDs.h"
 #include "lle/ISKeyCode.h"
 // EEUnitGoal.cpp's goal counter (0x964480; Save and Load write and read it: it is not file-static in the original)
@@ -4274,7 +4273,6 @@ void EEPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
 // Reattaches a unit to the AI and drops it from its group when it has no further goals or builds
 void EEPlayer::UnitGoalDone(EEComplexUnit* inUnit)
 {
-    EE_LOST_DEBUG(16);  // LOST-DEBUG: none: exact only (lostdebug_search, smallest n)
     if (inUnit->mIsDetachedFromAI)
         inUnit->mIsDetachedFromAI = false;
     if (inUnit->mGoalQueues[0].mGoals.size() <= 1 && inUnit->mCitizenBuildQueue.size() == 0 && inUnit->mActiveGroup != NULL)

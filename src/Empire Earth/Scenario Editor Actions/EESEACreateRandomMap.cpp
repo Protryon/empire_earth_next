@@ -68,7 +68,6 @@
 #include "ee/EERandomMapClass.h"
 #include "ee/EERandomMapGenerators.h"
 #include "ee/EESEACreateRandomMap.h"
-#include "LostDebug.h"
 extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 // FUNCTION: EXE 0x5a66ae
 // Creates and posts a random-map action for the given map size and generator style
@@ -94,7 +93,6 @@ void EESEACreateRandomMap::Virtual4()
     long theWidth, theHeight;
     unsigned long theNumPlayers;
     EEMap* theMap;
-    EE_LOST_DEBUG(5);   // LOST-DEBUG: none: exact only
     gGraphics->PostPause();
     gWorld.mLock->WriteUnlock();
     gUIManager->UnlockUIForCopyData();

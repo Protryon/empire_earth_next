@@ -35,7 +35,6 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
-#include "LostDebug.h"
 
 // unit-local constants (provisional names)
 static const float kTransportNoPath = 10000.0f;   // 0x44736c (EEGetPathLengthTo: no path)
@@ -439,7 +438,6 @@ void EEUCTransport::FindShoreTile(EEComplexUnit* inTransport, const EETileCoordi
     } else {
         *outTile = *inDestination;
     }
-    EE_LOST_DEBUG(1);   // LOST-DEBUG: none: exact only
 }
 
 // FUNCTION: EXE 0x61c255

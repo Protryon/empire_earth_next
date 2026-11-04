@@ -252,7 +252,6 @@
 #include <map>
 #include <set>
 #include <vector>
-#include "LostDebug.h"  // NOT original source: EE_LOST_DEBUG filler in U2DPolygon.h (Compute, GetScanLines; docs/LOST_DEBUG.md); before the lle headers since the template bodies need the macro (section layout checked unchanged); on the former blank line, so no __LINE__ moves
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UString.h"
 #include "lle/URandom.h"
@@ -340,7 +339,6 @@ void GETerrainMesh::GETMTileRow::Initialize(unsigned long inStart, unsigned long
 // Creates an empty terrain mesh with the default water animation (period 80) and a 64x64 fractal seeded from the clock
 GETerrainMesh::GETerrainMesh()
 {
-    EE_LOST_DEBUG(9);  // LOST-DEBUG: none independent (owner, 2026-10-25: exact is exact); smallest n (1..8 not exact)
     this->mVisibleWaterTilePercentage = 0.0f;
     this->mPointRows = NULL;
     this->mVisibleSpaceTilePercentage = 0.0f;
@@ -1443,7 +1441,6 @@ void GETerrainMesh::GetClosestTile(const GE3DPoint& inPoint, long& outX, long& o
         thePoint.SetX(thePoint.GetX() - 0.001f);
         thePoint.SetY(thePoint.GetY() + 0.001f);
     }
-    EE_LOST_DEBUG(8);  // LOST-DEBUG: none independent (exact only); smallest n (1..7 not exact; start/end positions need >= 8)
     outX = UMFloor(thePoint.GetX());
     outY = UMFloor(thePoint.GetY());
 }
@@ -1452,7 +1449,6 @@ void GETerrainMesh::GetClosestTile(const GE3DPoint& inPoint, long& outX, long& o
 // Defines the four vertical map-edge planes (front, back, left, right) from the first and last tile rows
 void GETerrainMesh::InitializePlanes()
 {
-    EE_LOST_DEBUG(11);  // LOST-DEBUG: none independent (owner, 2026-10-25: exact is exact); smallest n
     GE3DPoint thePoint;
     GEVector theNormal;
     thePoint.SetX((float)this->mTileRows[this->mTileRowCount - 1].mStart + 1.0f);
@@ -1603,7 +1599,6 @@ void GETerrainMesh::GetTileRowsInVolume(const std::vector<GE3DPoint>& inVolume,
     long theRowEnd;
     for (i = 0; i < inVolume.size(); i++) {
         thePoint.mX = inVolume[i].GetX();
-        EE_LOST_DEBUG(5);  // LOST-DEBUG: none independent (exact only); smallest n (1..4 not exact)
         thePoint.mY = inVolume[i].GetY();
         thePoints.push_back(thePoint);
     }
@@ -2028,7 +2023,6 @@ void GETerrainMesh::AddCliffPolys(GETMPolygon*& ioPolygon, int inX, int inY, con
         thePoint.SetZ(theZ - 8.0f + sCliffNoise[theBPointX % 16][theBPointY % 16] * 0.5f);
         this->mCliffWorldPoints.push_back(thePoint);
         theBBottom = new GETMRenderVertex;
-        EE_LOST_DEBUG(6);  // LOST-DEBUG: none independent (exact only); smallest n here (1..5 not exact; the 4th render vertex's point ctor is refused in the orig)
         theBBottom->mVisibility = -1.0f;
         theBBottom->mLinkedVisibility = theBVisibility;
         theBBottom->mClipFlags = 0x3f;

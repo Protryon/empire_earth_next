@@ -77,7 +77,6 @@
 #include "ee/EECBUIListBox.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EEGameVariant.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 
 // The premade civilizations' sort order (RTTI EECMPremadeCivSorter, vtable 0x44bfdc: only the deleting dtor; std::sort

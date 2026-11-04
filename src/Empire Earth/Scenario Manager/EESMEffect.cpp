@@ -32,7 +32,6 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
 #include "ee/EEDebugTrace.h"
-#include "LostDebug.h"
 #include "lle/SESoundManager.h"
 #include "lle/FSFileSpec.h"
 #include "GEWindow.h"

@@ -93,7 +93,6 @@
 #include "ee/EEPGSFormManager.h"
 #include "ee/EEUIEPostGameSummaryEvents.h"
 #include "ee/EEStartingResources.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 static unsigned long sGraphIndex;           // 0x563138 (NextGraph cycles the shown graph 0x0d, 0x0e, 0x17)
 static std::vector<long> sControls;         // 0x563128 the controls the summary added (Close deletes them)
@@ -1061,7 +1060,6 @@ static void ShowMisc(UIForm* inForm, const GEColor& inColor, unsigned long inPla
         }
         AddStatusBar(inForm, theControl, theGraph, inColor, inPlayer, 7, theText);
     }
-    EE_LOST_DEBUG(6);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x5e55af

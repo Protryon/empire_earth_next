@@ -6,7 +6,6 @@
 #include <mbstring.h>
 #include <algorithm>
 #include "lle/LowLevelEngine.h"
-#include "LostDebug.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"

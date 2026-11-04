@@ -143,7 +143,6 @@ extern unsigned long gTexturePixelDepth;
 // are mutable
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIFSEUpgradePanel.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 
 
@@ -651,8 +650,6 @@ void EEUIFSEBRotation::RotateGhosts()
         theGhost->mTransformation = theTransformation;
     }
     gWorld.mGhostUnitsLock->Leave();
-    // LOST-DEBUG: none: exact only (tools lostdebug_search, n=9 at END)
-    EE_LOST_DEBUG(9);
 }
 
 // FUNCTION: EXE 0x59a728

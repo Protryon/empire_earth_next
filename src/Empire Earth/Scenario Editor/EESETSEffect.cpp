@@ -94,7 +94,6 @@
 #include "ee/EESETSETGame.h"
 #include "ee/EESETSETAI.h"
 #include "ee/EESETSEffect.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioIDs.h"
 // FUNCTION: EXE 0x582629
@@ -282,7 +281,6 @@ void EESETSEffect::Load()
             this->mTypes[this->mType]->Show(this->mControls);
         this->mTypes[this->mType]->Load(theEffect, this->mControls);
     }
-    EE_LOST_DEBUG(1);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x582d35

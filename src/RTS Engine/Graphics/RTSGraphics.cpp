@@ -41,7 +41,6 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEMouse.h"
 #include "ee/RTSGraphics.h"
-#include "LostDebug.h"
 
 // FUNCTION: EXE 0x51a1cc
 // Creates the graphics thread, paused, drawing a rasterizer screen with the mouse and UI, and waits until it runs
@@ -314,7 +313,6 @@ void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
     } else if (theResult == kErrorFailed) {
         this->RestoreSurfaces();
     }
-    EE_LOST_DEBUG(5);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x51a8fb

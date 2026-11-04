@@ -44,7 +44,6 @@
 #include "ee/EEEffect3D.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEE3DTimeWarp.h"
-#include "LostDebug.h"
 
 // FUNCTION: EXE 0x4fbec6
 // Creates a time warp effect on a unit, starting just below the unit (flag 1) or one model height below it, and
@@ -200,7 +199,6 @@ long EEE3DTimeWarp::DrawPass4()
     gRasterizer->SetFog(theFog, theScreen);
     gRasterizer->SetAlphaTesting(1, theScreen);
     return theResult;
-    EE_LOST_DEBUG(1);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x4fc297

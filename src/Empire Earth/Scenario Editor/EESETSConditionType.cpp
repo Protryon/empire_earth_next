@@ -90,7 +90,6 @@
 #include "ee/EESEEConditionPlayerResource.h"
 #include "ee/EESETSConditionType.h"
 #include "ee/EESEEvents.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 // FUNCTION: EXE 0x57ef10
 // Shows the condition title and type combo box and the trigger tab's name, duplicate and delete controls again
@@ -265,7 +264,6 @@ void EESETSCTGame::Store(EESMCondition* outCondition, EESETSConditionControls* i
         outCondition->mMaxTime = outCondition->mMinTime;
     outCondition->mUsesHour = inControls->mCheckBoxes[2]->GetIsChecked();
     outCondition->mHour = inControls->mSlider->GetCurrentRangeValue();
-    EE_LOST_DEBUG(1);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x57f5d8
@@ -635,7 +633,6 @@ void EESETSCTPlayerResource::Store(EESMCondition* outCondition, EESETSConditionC
     outCondition->mOtherPlayer = inControls->mPlayers[1]->GetSelectedPlayer();
     inControls->mComboBoxes[2]->GetCurrentSelection(outCondition->mOtherAttribute);
     outCondition->mUsesPlayerAttribute = inControls->mRadioButtons[1]->GetIsChecked();
-    EE_LOST_DEBUG(1);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
 }
 
 // FUNCTION: EXE 0x580d16

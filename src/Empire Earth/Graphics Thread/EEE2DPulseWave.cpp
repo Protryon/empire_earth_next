@@ -39,7 +39,6 @@
 #include "ee/EEEffect.h"
 #include "ee/EEEffect2D.h"
 #include "ee/EEE2DPulseWave.h"
-#include "LostDebug.h"
 #include "ee/EEEffectKindIDs.h"
 
 // SYNTHETIC: EXE 0x4e5c63
@@ -232,6 +231,4 @@ long EEE2DPulseWave::Step()
         theResult = 7;
     }
     return theResult;
-    // LOST-DEBUG: none: exact only (tools lostdebug_search)
-    EE_LOST_DEBUG(5);
 }

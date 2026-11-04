@@ -4,7 +4,6 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
-#include "LostDebug.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GEVector.h"
@@ -137,10 +136,8 @@ long EEE3DShield::SetUp()
 // Draws the shield model with its texture scrolled vertically, alpha blended at its opacity, fading out over
 // the last tenth of its life; restores the model's texture coordinates and opacity
 // the inline SetPosition(point)'s inner SetPosition(float x3) is refused here (the imported call)
-// LOST-DEBUG: none: exact only (n = 7; r27 ui-graphics)
 long EEE3DShield::DrawPass5()
 {
-    EE_LOST_DEBUG(7);
     std::vector<float> theCoordinates;
     GETransformation theTransformation;
     GETextureCoordinate theCoordinate;

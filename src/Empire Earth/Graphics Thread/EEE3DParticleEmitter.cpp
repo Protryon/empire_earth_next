@@ -44,7 +44,6 @@
 #include "ee/EEEffect3D.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEE3DParticleEmitter.h"
-#include "LostDebug.h"
 
 
 // SYNTHETIC: EXE 0x4f5d94

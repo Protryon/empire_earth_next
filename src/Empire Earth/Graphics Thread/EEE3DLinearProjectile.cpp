@@ -43,7 +43,6 @@
 #include "ee/EEEffect2D.h"
 #include "ee/EEEffect3D.h"
 #include "ee/EEE3DLinearProjectile.h"
-#include "LostDebug.h"
 #include "ee/EEEffectKindIDs.h"
 
 // SYNTHETIC: EXE 0x4f2d93
@@ -146,8 +145,6 @@ long EEE3DLinearProjectile::SetUp()
 // draw result
 long EEE3DLinearProjectile::DrawPass5()
 {
-    // LOST-DEBUG: none independent: 13 units make mAngles[i]/mOrbitals[i] call operator+ out of line
-    EE_LOST_DEBUG(13);
     GETransformation theOrientation;
     GETransformation theTransformation;
     GEModel* theModel = this->mGraphicObject->mModel;

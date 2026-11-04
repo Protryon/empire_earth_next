@@ -23,7 +23,6 @@
 #include "lle/UIForm.h"
 #include "lle/UITextLabel.h"
 #include "lle/UITLScrolling.h"
-#include "LostDebug.h"  // NOT original source: EE_LOST_DEBUG filler (DrawTextA; docs/LOST_DEBUG.md)
 
 // FUNCTION: LLE 0x1007fd7d
 // Creates a scrolling text label with scroll, start and end timers and a text area inset by the border; not scrolling
@@ -116,7 +115,6 @@ long UITLScrolling::CopyData()
 // Draws the snapshotted lines one font height apart, clipped to the text area
 long UITLScrolling::DrawTextA()
 {
-    EE_LOST_DEBUG(3);  // LOST-DEBUG (PROVISIONAL, owner experiment 2026-10-24): no independent evidence; base-game LLE identical (exact window 3..13)
     long theResult = UIControl::DrawTextA();
     unsigned long theOffset = this->mDrawPixelOffset;
     for (unsigned long i = 0; i < this->mDrawLineCount; i++) {

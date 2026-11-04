@@ -105,7 +105,6 @@ long EECPASGLandTileFarther::DistanceSquared(const EETileCoordinate& inTile) con
 #include "ee/EEAIRandom.h"
 #include "ee/EECPIntelligence.h"
 #include "ee/EEMapDimensions.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_DEBUG)
 
 // FUNCTION: EXE 0x445ee9
 // Creates a land attack sub-group for the given attack group, with no transport and no avoided tiles
@@ -617,7 +616,7 @@ long EECPASGLand::GetTransportNeeds(long& outA, long& outB, long& outC, long& ou
             theCount++;
     }
     return theCount;
- EE_LOST_DEBUG(8); /* LOST-DEBUG: none: exact only (lostdebug_search, smallest n) */ }
+  /* LOST-DEBUG: none: exact only (lostdebug_search, smallest n) */ }
 
 // FUNCTION: EXE 0x447145
 // Takes the units the request delivered; when they stand on more than one continent, queues a split order
@@ -648,7 +647,6 @@ bool EECPASGLand::TakeRequestedUnits()
 // split kind 11 the units not aboard; else those left behind or the base choice; never every unit
 void EECPASGLand::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
 {
-    EE_LOST_DEBUG(1);  // LOST-DEBUG: none: exact only (lostdebug_search, smallest n)
     long i;
     EEComplexUnit* theUnit;
     EECPAttackSubGroup* theTransport = dynamic_cast<EECPAttackSubGroup*>(this->mTransport);
@@ -705,7 +703,7 @@ bool EECPASGLand::GetUncarriableUnits(std::vector<EEComplexUnit*>& outUnits)
                         (theUnit->GetGoal() == NULL || dynamic_cast<EEUGLoadTransport*>(theUnit->GetLoadGoal()) == NULL)) {
                         theCandidates.push_back(this->mUnits[i]->GetUnit());
                     } else {
-                        dynamic_cast<EEUGLoadTransport*>(theUnit->GetLoadGoal()); EE_LOST_DEBUG(1);  // LOST-DEBUG: none: exact only (else arm: a compiled-away trace; the discarded cast stays)
+                        dynamic_cast<EEUGLoadTransport*>(theUnit->GetLoadGoal());
                     }
                 }
             }

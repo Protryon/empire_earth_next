@@ -78,7 +78,6 @@
 
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_CASE)
 
 // FUNCTION: EXE 0x4440cd
 // Creates an air transport sub-group for the attack group, with no land group to carry yet
@@ -282,10 +281,10 @@ void EECPASGAirTransport::Update(long inTime)
         else if (this->TestCondition(kASGConditionRequestFilled, inTime))
             this->SetState(kASGStateIdle, inTime);
         break;
-    case kASGStateRemove:  // LOST-DEBUG: the compare chain keeps 1002 and 6007 (0x44484e, 0x444837: -> the end), so their bodies compiled away
-        EE_LOST_CASE(theFailed); break;
+    case kASGStateRemove:
+         break;
     case kASGStateReturnToRallyPoint:
-        EE_LOST_CASE(theFailed); break;
+         break;
     case kASGStateLaunch:
         theFailed = !this->TestCondition(kASGConditionTaskValid, inTime);
         if (theFailed)

@@ -40,7 +40,6 @@
 #include "ee/EEEffect.h"
 #include "ee/EEEffect2D.h"
 #include "ee/EEE2DVortex.h"
-#include "LostDebug.h"
 #include "ee/EEEffectKindIDs.h"
 
 // SYNTHETIC: EXE 0x4e773c
@@ -132,7 +131,6 @@ long EEE2DVortex::SetUp()
 // of its life; returns the draw result
 long EEE2DVortex::DrawPass5()
 {
-    // LOST-DEBUG: none independent: as EEE3DDisease::DrawPass5, the budget that makes mAngles[i] and
     // mOrbitals[i] call operator+ out of line
 
     std::vector<long> theUnused;

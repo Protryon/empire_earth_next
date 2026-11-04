@@ -50,7 +50,6 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_CASE)
 // FUNCTION: EXE 0x4adf97
 // Creates the calamity manager with no classes or active calamities
 EECalamityManager::EECalamityManager()
@@ -93,11 +92,11 @@ long EECalamityManager::LoadCalamityClasses(FSFileSpec* inFile)
             EECalamityClass* theCalamity = NULL;
             if (theData.mID >= 0) {
                 switch (theData.mClassEnum) {
-                case 1:   // LOST-DEBUG: the jump table keeps cases 1/2 (entries -> the store), so their bodies compiled away; EE_LOST_CASE stands in
-                    EE_LOST_CASE(theCalamity); break;
+                case 1:
+                     break;
 
                 case 2:
-                    EE_LOST_CASE(theCalamity); break;
+                     break;
 
                 case kCalamityEarthquake:
                     theCalamity = new EECCEarthquake;

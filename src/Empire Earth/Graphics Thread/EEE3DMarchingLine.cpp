@@ -49,7 +49,6 @@
 #include "ee/EEE3DGoal.h"
 #include "ee/EERenderObject.h"
 #include "ee/EEE3DMarchingLine.h"
-#include "LostDebug.h"
 #include "ee/EEEffectKindIDs.h"
 
 // the step along the line in tiles (.rdata 0x440994, loaded from memory: a named constant)
@@ -225,8 +224,6 @@ void EEE3DMarchingLine::RemoveRegions()
 // Draws the line on screen between its projected ends, fading from opaque to 0.3, without fog; returns the draw result
 long EEE3DMarchingLine::DrawPass4()
 {
-    // LOST-DEBUG: none: exact only (tools lostdebug_search)
-    EE_LOST_DEBUG(4);
     GELine theLine;
     GE2DPoint theStart;
     GE2DPoint theEnd;

@@ -49,7 +49,6 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEServer.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_CASE in ProcessSystemMessage)
 #include "ee/EEStringIDs.h"
 long gDefaultPlayerColors[16] = {0, 1, 4, 9, 2, 15, 5, 6, 8, 9, 10, 11, 12, 13, 14, 15};
 static unsigned long sSample = 0xffffffff;   // 0x4bb8b8 (ExecuteRemovePlayer: the last booted/out-of-synch sound)
@@ -423,7 +422,6 @@ void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsE
         }
         this->mAttemptToRemovePlayerLock->Leave();
     }
-    EE_LOST_DEBUG(8);   // LOST-DEBUG: none: exact only (end of body, smallest n)
 }
 
 // SYNTHETIC: EXE 0x4cb815
@@ -676,9 +674,9 @@ void EEServer::ProcessSystemMessage(NEMessage* inMessage)
         gWorld.GetPlayer(static_cast<NEMClientReconnectionRequest*>(inMessage)->GetPlayerNumber())->mSlot =
             inMessage->GetOriginatingSlot();
         break;
-    case kMessageNewEdictEnacted:  // LOST-DEBUG: the compare chain keeps `sub eax, 0x43; je <exit>` (0xcbfaa), so the case had a body
+    case kMessageNewEdictEnacted:
                  // the optimiser removed; VC6 drops a label whose body is only `break`. EE_LOST_CASE stands in
-        EE_LOST_CASE(theNumInputs);   // kept on the 2026-10-24 evidence rule (dispatch matches); function not yet exact
+           // kept on the 2026-10-24 evidence rule (dispatch matches); function not yet exact
         break;
     case kMessageLoadOrSaveGame:
     case kMessageLagStatus:

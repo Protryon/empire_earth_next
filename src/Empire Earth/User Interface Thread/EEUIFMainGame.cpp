@@ -3,7 +3,6 @@
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
-#include "LostDebug.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -1344,7 +1343,6 @@ void EEUIFMainGame::Open()
     gUIManager->GetMainGameForm()->GetBackgroundByID(0x97)->SetVisibility(false);
     gUIManager->GetMainGameForm()->GetEntityGroup(8)->Disable();
     gUIManager->GetMainGameForm()->GetBackgroundByID(0x98)->SetVisibility(false);
-    EE_LOST_DEBUG(6);   // LOST-DEBUG: none: exact only (r27 ui-graphics)
 }
 
 // FUNCTION: EXE 0x6662ac

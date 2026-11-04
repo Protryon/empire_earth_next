@@ -53,7 +53,6 @@
 #include "lle/UIForm.h"
 #include "lle/UIControlsTable.h"
 #include "lle/UIManager.h"
-#include "LostDebug.h"  // NOT original source: EE_LOST_DEBUG filler (Pop, Push; docs/LOST_DEBUG.md)
 
 ISEntity* UIManager::sLMouseButton;
 ISEntity* UIManager::sRMouseButton;
@@ -250,7 +249,6 @@ UIManager::~UIManager()
     this->mRadioDownOn->Dereference();
     this->mAlphaSortUpBitmap->Dereference();
     this->mAlphaSortDownBitmap->Dereference();
-    EE_LOST_DEBUG(1);  // LOST-DEBUG: none: exact only (the original calls both mForms[i] out of line; window 1..2)
     for (unsigned long i = 0; i < this->mForms.size(); i++) {
         delete this->mForms[i];
         this->mForms[i] = NULL;
@@ -719,7 +717,6 @@ long UIManager::OpenIMECompositionString()
 // Closes the top form, re-shows the forms it covered, redraws its area and activates the form below; returns OK
 long UIManager::Pop()
 {
-    EE_LOST_DEBUG(1);  // LOST-DEBUG (PROVISIONAL, owner experiment 2026-10-24): no independent evidence; base-game LLE identical (exact window 1..7)
     this->mCriticalSection->Enter();
     this->mDrawCriticalSection->Enter();
     if (this->mFormStack.size() > 0) {
@@ -762,7 +759,6 @@ long UIManager::PopTo(UIForm* inForm)
 // Opens a form on top of the stack (unless already stacked), deactivating the old top; returns OK
 long UIManager::Push(UIForm* inForm)
 {
-    EE_LOST_DEBUG(5);  // LOST-DEBUG (PROVISIONAL, owner experiment 2026-10-24): no independent evidence; base-game LLE identical (exact window 5..12)
     bool theFound = false;
     this->mCriticalSection->Enter();
     this->mDrawCriticalSection->Enter();

@@ -56,7 +56,6 @@
 #include "ee/EEHerd.h"
 #include "ee/EEUnitCollector.h"
 #include "ee/EEGlobalConstants.h"
-#include "LostDebug.h"
 
 // The unit filter of Chase/GetPrey (by reference to the collector; operator() COMDAT 0xa5238 and its test 0xa526b
 // after the collector): a living sea-going unit on the map, on mContinent (0: any), either a fishing boat (mHuntable:
@@ -408,8 +407,6 @@ void EEHerd::Clear()
 // Makes the animal with the most hit points the leader, giving it the leader look and restoring the old one's
 void EEHerd::PickLeader()
 {
-    // LOST-DEBUG: none: exact only (n=16 is the only exact n in 1..32; the orig refuses all three mUnits[i] op+)
-    EE_LOST_DEBUG(16);
     EEComplexUnit* theBest = NULL;
     for (unsigned long i = 0; i < this->mUnits.size(); i++) {
         if (theBest) {

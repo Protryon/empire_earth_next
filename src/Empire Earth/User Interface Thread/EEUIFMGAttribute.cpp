@@ -65,7 +65,6 @@
 #include "ee/EEUIBUpgrade.h"
 #include "ee/EEUIBUpgrade.h"
 #include "ee/EEUIFMGAttribute.h"
-#include "LostDebug.h"
 
 // FUNCTION: EXE 0x66783d
 // Creates the main game form's attribute upgrade button with a level text in its corner

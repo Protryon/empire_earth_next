@@ -68,7 +68,6 @@ EECPAttackSubGroupUnit* EECPCreateSubGroupUnit(EEComplexUnit*, EECPAttackSubGrou
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
 #include "ee/EEAIPathGoalModifiers.h"
 #include "ee/EECPCombatManager.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_DEBUG)
 
 // FUNCTION: EXE 0x44192c
 // Creates an air attack sub-group belonging to the given attack group
@@ -412,7 +411,7 @@ void EECPASGAir::GoIdle()
         }
         this->RemoveUnits(theRemoved);
     }
- EE_LOST_DEBUG(3); /* LOST-DEBUG: none: exact only (lostdebug_search, smallest n) */ }
+  /* LOST-DEBUG: none: exact only (lostdebug_search, smallest n) */ }
 
 // FUNCTION: EXE 0x4423d4
 // Recalls every active unit (zeroes its flight time or clears its holder's goals), clears its goals, asks for removal
@@ -428,7 +427,7 @@ void EECPASGAir::RequestRemoval()
         this->mUnits[i]->GetUnit()->ClearGoalQueue(0);
     }
     EECPAttackSubGroup::RequestRemoval();
- EE_LOST_DEBUG(1); /* LOST-DEBUG: none: exact only (lostdebug_search, smallest n) */ }
+  /* LOST-DEBUG: none: exact only (lostdebug_search, smallest n) */ }
 
 // FUNCTION: EXE 0x44249f
 // Switches state: idle gets a new task and goes idle; remove, launch, hold-at-task and hold-territory (return to
@@ -914,8 +913,8 @@ void EECPASGAir::Update(long inTime)
         else if (this->TestCondition(kASGConditionRequestFilled, inTime))
             this->SetState(kASGStateIdle, inTime);
         break;
-    case kASGStateRemove:  // LOST-DEBUG: the compare chain keeps 1002 and 6007 (0x450210, 0x45037a: -> the end), so their bodies compiled away
-        EE_LOST_CASE(theFailed); break;
+    case kASGStateRemove:
+         break;
     case kASGStateSplit:
         if (this->TestCondition(kASGConditionAlways, inTime))
             this->SetState(kASGStateIdle, inTime);
@@ -947,7 +946,7 @@ void EECPASGAir::Update(long inTime)
         }
         break;
     case kASGStateReturnToRallyPoint:
-        EE_LOST_CASE(theFailed); break;
+         break;
     case kASGStateRepositionAtTask:
         if (!this->TestCondition(kASGConditionTaskValid, inTime))
             this->SetState(kASGStateIdle, inTime);

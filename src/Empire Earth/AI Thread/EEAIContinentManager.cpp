@@ -79,7 +79,6 @@
 #include "ee/EEAIAStarMachine.h"
 #include "ee/EEAIAStarMachineSteps.h"
 #include "ee/EEDebugTrace.h"
-#include "LostDebug.h"   // NOT original source: EE_LOST_* stand-ins (docs/LOST_DEBUG.md)
 
 // Unit-local inline helpers (out of line in the original: COMDATs 0x429ced/0x429d1b close this unit) (provisional names)
 // 0x29d1b: the resource kind of a unit class by its type (+0x1bc): 1, 3 or 2
@@ -193,7 +192,6 @@ inline void EEAIContinent::RemoveForestID(unsigned short inID)
 // space 15/10/11, map edge 6, cliff 3); on land 4 for live wood, 12/13/14 under a live blocking unit, wall or gate
 long EEAIGetTileKind(const EETileLocation& inTile)
 {
-    EE_LOST_DEBUG(9);   // LOST-DEBUG: none: exact only (lostdebug_search smallest n; inline_sim: the orig calls RTSMap::GetTile, GetContinentAt and EEAIHasResourceUnit out of line)
     EETile* theTile = gWorld.mMap->GetTile(inTile.GetX(), inTile.GetY());
     long theResult = 0;
     if (theTile) {
@@ -1598,7 +1596,6 @@ EEAIChokePoint* EEAIContinentManager::GetChokePointAt(const EETileLocation& inTi
 // Appends the choke points of continent inID (every choke point for id 0) to outChokePoints, cleared first if inClear
 void EEAIContinentManager::GetChokePoints(std::vector<EEAIChokePoint*>& outChokePoints, unsigned short inID, bool inClear)
 {
-    EE_LOST_DEBUG(3);  // LOST-DEBUG: none: exact only (lostdebug_search, smallest n; inline_sim: the mChokePoints[...] _Ptrit::operator+ at line 1569 is out of line in the orig)
     long i;
     EEAIChokePoint* theChokePoint;
     const EEAIContinent* theContinent = this->GetContinentByID(inID);
@@ -2108,9 +2105,7 @@ bool EEAIContinentManager::GetTilesNextTo(long inX, long inY, std::vector<U2DPoi
                     outTiles.push_back(theTiles[i]);
             }
             theResult = outTiles.size() != 0;
-            // LOST-DEBUG: none: exact only (tools/inline_sim.py: two more inline candidates after the GetContinentID
             // arguments refuse the first five theTiles[i] begin() expansions and keep the sixth, as the original)
-            EE_LOST_DEBUG(2);
         }
     } else {
         theResult = true;

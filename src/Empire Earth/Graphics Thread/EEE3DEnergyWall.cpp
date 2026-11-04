@@ -46,7 +46,6 @@
 #include "ee/EEUCGate.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EEE3DEnergyWall.h"
-#include "LostDebug.h"
 
 // 0x4bd7fc / 0x4bd820 (.data): the segment ends' offsets from their post ([1..4]: post 0, [5..8]: post 9)
 static float sEnergyWallOffsetX[9] = {0.0f, -1.0f, -1.0f, 0.0f, 1.0f, -1.0f, -1.0f, 0.0f, 1.0f};
@@ -385,8 +384,6 @@ void EEE3DEnergyWall::FindSegments()
 // Marks each segment whose tile holds a living wall piece or gate side part of the owner, raising its end to it
 void EEE3DEnergyWall::FindSegments(long inX, long inY, long inFrom, long inTo)
 {
-    // LOST-DEBUG: none independent: the original calls vector::begin() out of line in theUnits[j]
-    EE_LOST_DEBUG(6);
     unsigned long theOwner = this->mUnit->mComplexUnit->mPlayer->mPlayerID;
     for (long i = inFrom; i < inTo; i++) {
         long theDX = sEnergyWallTileX[i];

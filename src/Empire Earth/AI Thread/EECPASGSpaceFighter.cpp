@@ -44,7 +44,6 @@
 #include "ee/EEUGAttackUnit.h"
 
 #include "ee/EEUGLocation.h"
-#include "LostDebug.h"   // synthetic, NOT original source (LOST-DEBUG: EE_LOST_CASE, EE_LOST_DEBUG)
 
 // FUNCTION: EXE 0x44fd61
 // Creates a space fighter sub-group belonging to the given attack group
@@ -107,7 +106,6 @@ void EECPASGSpaceFighter::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUn
 // zeroes on-map units' flight time unless units were just taken
 void EECPASGSpaceFighter::GoIdle()
 {
-    EE_LOST_DEBUG(9);  // LOST-DEBUG: none: exact only (tools/lostdebug_search.py, smallest n)
     bool theHadRequest = this->mRequest != NULL;
     if (this->mRequest != NULL)
         this->TakeRequestedUnits();
@@ -188,8 +186,8 @@ void EECPASGSpaceFighter::Update(long inTime)
         else if (this->TestCondition(kASGConditionRequestFilled, inTime))
             this->SetState(kASGStateIdle, inTime);
         break;
-    case kASGStateRemove:  // LOST-DEBUG: the compare chain keeps 1002 and 6007 (0x450210, 0x45037a: -> the end), so their bodies compiled away
-        EE_LOST_CASE(theFailed); break;
+    case kASGStateRemove:
+         break;
     case kASGStateSplit:
         if (this->TestCondition(kASGConditionAlways, inTime))
             this->SetState(kASGStateIdle, inTime);
@@ -221,7 +219,7 @@ void EECPASGSpaceFighter::Update(long inTime)
         }
         break;
     case kASGStateReturnToRallyPoint:
-        EE_LOST_CASE(theFailed); break;
+         break;
     case kASGStateRepositionAtTask:
         if (!this->TestCondition(kASGConditionTaskValid, inTime))
             this->SetState(kASGStateIdle, inTime);

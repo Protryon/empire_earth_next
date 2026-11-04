@@ -49,7 +49,6 @@
 #include "ee/EEDoppelganger.h"
 #include "ee/EEE3DFarm.h"
 #include "ee/EEAreaUtilities.h"
-#include "LostDebug.h"
 #include "ee/EEEffectKindIDs.h"
 
 // 0x4bd920 (.data): the crop variant of a tile by (x / 2 % 4, y / 2 % 4) (provisional name)
@@ -732,8 +731,6 @@ long EEE3DFarm::DrawPass2()
         gRasterizer->SetShadingColorSource(1, theScreen);
     }
     return theResult;
-    // LOST-DEBUG: none: exact only (tools lostdebug_search)
-    EE_LOST_DEBUG(5);
 }
 
 // FUNCTION: EXE 0x4f0f26

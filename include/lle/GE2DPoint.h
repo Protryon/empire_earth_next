@@ -22,7 +22,6 @@ public:
     GE2DPoint(long inX, long inY);          // 0x1000c146 (fild, fild)
 #endif
 #ifdef LLE_EXE_HEADERS
-    // LOST-DEBUG (owner-approved stand-in, 2026-10-31): the exe's header version is not free: the exe
     // calls __imp_??0GE2DPoint@@QAE@MM@Z from 10 functions, and 0x669d8d pins its inline cost at exactly 2 above the
     // free SetXY body. The two `return;` stand in for two compiled-away statements (assert/trace stubs); not original
     // text. docs/LOST_DEBUG.md.

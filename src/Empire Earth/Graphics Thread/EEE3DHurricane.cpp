@@ -44,7 +44,6 @@
 #include "ee/EEEffect3D.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEE3DHurricane.h"
-#include "LostDebug.h"
 #include "ee/EEEffectKindIDs.h"
 
 // SYNTHETIC: EXE 0x4f1600
@@ -159,9 +158,7 @@ void EEE3DHurricane::GetSpawnPoint(GE3DPoint& outPoint)
 // Loads the graphic, starts animation 13 at a tenth of full size, copies the orbitals and moves onto the unit
 long EEE3DHurricane::SetUp()
 {
-    // LOST-DEBUG: none independent: as EEE3DDisease::SetUp, the orbital copy calls begin() and
     // operator+ out of line
-    EE_LOST_DEBUG(12);
     this->mGraphicObject = this->GetGraphicObject();
     long theResult = this->mGraphicObject->LoadMedia();
     this->mFrame = this->mGraphicObject->mStartFrames[13];

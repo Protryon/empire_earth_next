@@ -8,7 +8,6 @@
 #include "lle/U2DGeometry.h"
 #include "ee/EERandomMap.h"
 #include "EEClumps.h"
-#include "LostDebug.h"  // NOT original source: EE_LOST_DEBUG filler (EEClumps::Step; docs/LOST_DEBUG.md)
 
 // Compiler-generated for this unit (names in analysis/default/names.txt):
 // SYNTHETIC: DEFAULT 0x100079fa
@@ -231,7 +230,6 @@ void EEClumps::Generate()
 // returns false once all clumps are done
 bool EEClumps::Step()
 {
-    EE_LOST_DEBUG(10);  // LOST-DEBUG (PROVISIONAL, owner experiment 2026-10-24): 2001 twin inlines what AoC refuses (0 vs 5 out-of-line _Ptrit::operator+; the AoC class also gained a 4-byte member); exact window 10..12; no assert-line evidence
     bool theResult = true;
     if (this->mIndex == this->mClumpCount)
         theResult = false;

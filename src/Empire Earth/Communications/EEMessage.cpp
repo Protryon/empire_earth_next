@@ -109,7 +109,6 @@
 static const float kDisbandRefund = 0.75f;   // EEMDisband (its own .rdata word: a named constant)
 static unsigned char CompressUnits(std::vector<unsigned long>& inUnits, unsigned long inOwner, unsigned char* outBuffer);
 static void DecompressUnits(unsigned char* inBuffer, unsigned char inSize, std::vector<long>& outUnits);
-#include "LostDebug.h"                      // NOT original source: the EE_LOST_DEBUG stand-in (0x4b8f8e)
 // FUNCTION: EXE 0x4b8cda
 // Registers the game's message factory for every game message type (0x41..0xfd) with the network engine
 void EEMessage::RegisterKnownMessages()
@@ -526,7 +525,7 @@ NEMessage* EEMessage::BuildEEMessage(unsigned char* inMemory)
         break;
     }
     return theMessage;
-    EE_LOST_DEBUG(1); }                     // LOST-DEBUG: none: exact only (tools lostdebug_search)
+     }
 
 // FUNCTION: EXE 0x4badd0
 // Toggles the listed units in the sender's selection (twice while a selection is being replayed)
@@ -5100,7 +5099,7 @@ void EEMPathTo::Execute()
         } else
             theGroup->Dereference();
     }
-    EE_LOST_DEBUG(12); }                    // LOST-DEBUG: none: exact only (lostdebug_search, end)
+     }
 
 // FUNCTION: EXE 0x4c2b41
 // Packs the move order (header, facing, x, y, forced, rotating, queued, group-movement flags) into a new send buffer

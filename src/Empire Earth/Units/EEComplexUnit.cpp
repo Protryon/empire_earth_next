@@ -75,7 +75,6 @@
 #include "ee/EEAutoPathRequest.h"
 #include "ee/EEMessage.h"
 #include "ee/EECommunications.h"
-#include "LostDebug.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EEUnitBehavior.h"
 #include "ee/EEFleeFromLocationScreenBase.h"
@@ -833,9 +832,7 @@ void EEComplexUnit::ClearGoalQueue(unsigned long inIndex)
         this->RefreshGoals();
         this->RefreshActiveGoal();
     }
-    // LOST-DEBUG: stand-in (no independent evidence): the original refuses _Ptrit::operator+ for
     // mGoalQueues[0] / mGoalQueues[inIndex]; 8 units at the end make it exact
-    EE_LOST_DEBUG(8);
 }
 
 // FUNCTION: EXE 0x5f709c
@@ -1544,16 +1541,7 @@ void EEDumpLeakedUnits(FSFileSpec& inFile)
                 (const char*)theUnits[i]->GetUnitClass()->GetName(), theUnits[i]->GetTileX(), theUnits[i]->GetTileY(),
                 theUnits[i]->GetUnitID(), (const char*)EEUnitAction::GetActionName(theUnits[i]->mCommand->mType),
                 theUnits[i]->GetGrowth());
-        // LOST-DEBUG: the original evaluates the six arguments a second time with the results unused
         // (0x5f8fd6..0x5f9079, a trace the shipping build compiled away)
-        EE_LOST_TRACE(theUnits[i]->GetGrowth());
-        EE_LOST_TRACE((const char*)EEUnitAction::GetActionName(theUnits[i]->mCommand->mType));
-        EE_LOST_TRACE(theUnits[i]->GetUnitID());
-        EE_LOST_TRACE(theUnits[i]->GetTileY());
-        EE_LOST_TRACE(theUnits[i]->GetTileX());
-        EE_LOST_TRACE((const char*)theUnits[i]->GetUnitClass()->GetName());
-        EE_LOST_TRACE((FILE*)inFile);
-        EE_LOST_DEBUG(1);
     }
 }
 
@@ -2164,7 +2152,6 @@ EETown* EEComplexUnit::FindNearestTown()
     long theCount = this->mPlayer->GetNumTowns();
     for (long i = 0; i < theCount; ++i) {
         EETown* theTown = this->mPlayer->mTowns[i];
-        EE_LOST_DEBUG(3);   // LOST-DEBUG: none: exact only (inline_sim: operator[]'s _Ptrit::operator+ needs +1 site after)
         if (theTown->Contains(theTile)) {
             theResult = theTown;
             break;
@@ -3546,9 +3533,6 @@ void EEComplexUnit::StartAction(long inAction)
         unsigned long theAction = this->GetCommandType();
         if (theAction >= kActionDying && theAction <= kActionKill &&
             ((unsigned long)inAction < kActionDying || (unsigned long)inAction > kActionKill)) {
-            // LOST-DEBUG: original evaluates both out-of-line action-name calls, but no trace call remains.
-            EE_LOST_TRACE(EEUnitAction::GetActionName(inAction));
-            EE_LOST_TRACE(EEUnitAction::GetActionName(this->GetCommandType()));
             return;
         }
     }
@@ -3867,7 +3851,6 @@ inline void EEUnitVectorItem::AddFront(EEUnitGoal* inGoal)
 void EEComplexUnit::SetGoal(EEUnitGoal* inGoal, bool inKeepCurrent, long inIndex)
 {
     // inKeepCurrent is a bool (read as a byte)
-    EE_LOST_DEBUG(5);   // LOST-DEBUG: none: exact only (lostdebug_search with AddFront: n=5..7 exact, n=4 60.74)
     if (this->mGoalQueues.size() <= (unsigned long)inIndex)
         return;
     if (this->mGoalQueues[inIndex].mGoals.size() > 0) {

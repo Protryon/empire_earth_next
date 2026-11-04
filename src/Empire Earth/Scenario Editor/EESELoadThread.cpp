@@ -70,7 +70,6 @@
 #include "ee/EESEUnit.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEDatabaseTables.h"
-#include "LostDebug.h"
 #include "ee/EEStringIDs.h"
 // FUNCTION: EXE 0x572125
 // Starts the editor's loading thread at the given priority, waits until it runs and names it ScenEdit
@@ -142,7 +141,6 @@ void EESELoadThread::Handle406(unsigned long inPlayer, unsigned long inCount)
 // unit classes for player 0
 void EESELoadThread::Handle408(unsigned long inTerrain, bool inUnload)
 {
-    EE_LOST_DEBUG(11);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (start of body)
     UWideString theFormat;
     UWideString theText;
     UWideString theName;

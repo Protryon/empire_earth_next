@@ -11,7 +11,6 @@
 #include "ee/EERandomMap.h"
 #include "Unit10.h"
 #include "Unit12.h"
-#include "LostDebug.h"  // NOT original source: EE_LOST_DEBUG filler (ParseLongList, ParseFloatList; docs/LOST_DEBUG.md)
 #include "ee/EERandomMapIDs.h"
 
 // ---- Unit-local types (provisional names)
@@ -309,7 +308,6 @@ static void EvaluateExpression(EERandomMap* ioMap, const UString& inText, long i
 // OneOf evaluated; an entry that fails stays 0xbaadf00d
 void ParseLongList(EERandomMap* ioMap, const UString& inText, std::vector<long>& outValues)
 {
-    EE_LOST_DEBUG(1);  // LOST-DEBUG (PROVISIONAL, owner experiment 2026-10-24): 2001 twin inlines what AoC refuses (0 vs 3 out-of-line _Ptrit::operator+); no assert-line evidence
     std::vector<UString> theTokens;
     std::vector<UString> theExpanded;
     UString theSeparators(" \t,");
@@ -481,7 +479,6 @@ long GetKeyword(const UString& inName)
 // Parses a script value list into floats like ParseLongList (a failed entry stays -1163005952.0)
 void ParseFloatList(EERandomMap* ioMap, const UString& inText, std::vector<float>& outValues)
 {
-    EE_LOST_DEBUG(1);  // LOST-DEBUG (PROVISIONAL, owner experiment 2026-10-24): 2001 twin inlines what AoC refuses (0 vs 3 out-of-line _Ptrit::operator+); no assert-line evidence
     std::vector<UString> theTokens;
     std::vector<UString> theExpanded;
     UString theSeparators(" 	,");
