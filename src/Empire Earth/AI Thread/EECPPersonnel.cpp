@@ -1005,7 +1005,7 @@ bool EECPPersonnel::RemoveFromRequests(EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x487d12
 // After loading, resolves the free units' saved ids (dropping missing and duplicate units), restores each request
-// and removes units held by more than one request; returns the last request's result
+// and removes units held by more than one request; returns the first request error
 long EECPPersonnel::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     std::multimap<long, EEUnit*>::iterator it;
@@ -1025,8 +1025,12 @@ long EECPPersonnel::Restore(unsigned long inMajorVersion, unsigned long inMinorV
         } else
             it = this->mUnits.erase(it);
     }
-    for (theRequestIt = this->mRequests.begin(); theRequestIt != this->mRequests.end(); ++theRequestIt)
-        theResult = theRequestIt->second->Restore(inMajorVersion, inMinorVersion);
+    // restore every request, keeping the first error (each result used to overwrite the previous one)
+    for (theRequestIt = this->mRequests.begin(); theRequestIt != this->mRequests.end(); ++theRequestIt) {
+        long theRequestResult = theRequestIt->second->Restore(inMajorVersion, inMinorVersion);
+        if (theResult == 0)
+            theResult = theRequestResult;
+    }
     std::map<long, EEComplexUnit*> theTaken;
     std::vector<long> theIDs;
     for (theRequestIt = this->mRequests.begin(); theRequestIt != this->mRequests.end(); ++theRequestIt) {
