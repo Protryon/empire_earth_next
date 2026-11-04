@@ -403,6 +403,7 @@ long FSArchive::ListFiles(const UString& inPattern, std::set<UString>& outFiles,
         }
         if (theMatch)
             outFiles.insert(theIter->first);
+        ++theIter;  // Fixed: the iterator was never advanced (endless loop on a non-empty archive)
     }
     return kErrorOK;
 }
