@@ -1725,6 +1725,8 @@ void EECPCombatManager::DefendUnit(EEComplexUnit* inTarget)
     EECPCMKindFilter theFilter;
     theFilter.mB0 = false;
     theFilter.mNearWater = false;
+    // also clear the spaceship flag: without a nearest town it was left uninitialised
+    theFilter.mNearMapEdge = false;
     EECPAGTask theTask;
     std::vector<EECPAttackSubGroup*> theGroups;
     std::vector<EECPAttackSubGroup*> theSelected;
