@@ -100,8 +100,8 @@ void UIFileListBox::CreateEntries(unsigned long inSortType)
 }
 
 // FUNCTION: LLE 0x1006fe5f
-// Deletes the selected file from disk (extensions are appended cumulatively, so only the first one is tried correctly)
-// and removes its line; returns the delete or lookup error
+// Deletes the selected file from disk (the listed name plus the first valid extension that finds a file) and removes
+// its line; returns the delete or lookup error
 long UIFileListBox::DeleteSelectedFile()
 {
     UString theName;
@@ -110,9 +110,12 @@ long UIFileListBox::DeleteSelectedFile()
     if (theResult == kErrorOK) {
         theName = this->GetData(theSelection);
         for (unsigned long i = 0; i < this->mValidExtensions.size(); i++) {
-            theName += this->mValidExtensions[i];
+            // Fixed: the extensions used to be appended to theName cumulatively ("name.e1.e2"), so only the first
+            // one was tried correctly
+            UString theFileName(theName);
+            theFileName += this->mValidExtensions[i];
             FSFileSpec* theFile = NULL;
-            theResult = this->mFilePath->FindFile(theName, theFile);
+            theResult = this->mFilePath->FindFile(theFileName, theFile);
             if (theResult != kErrorOK)
                 continue;
             theResult = theFile->Delete();
