@@ -3949,7 +3949,7 @@ void EEPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction
         if (inTechnology->mData->mCostResource == 1) {
             for (i = 2; i < 7; i++) {
                 long theCost = this->ScaleCost((long)(inTechnology->GetCost(i, inUnitType, 1.0f) * inFraction));
-                if (this->mResourceCaps[i] <= theCost) {
+                if (this->mResourceCaps[i] >= theCost) {   // the first resource that covers it, as CanAffordSingleResource (was <=)
                     this->TakeResource(i, theCost);
                     break;
                 }
