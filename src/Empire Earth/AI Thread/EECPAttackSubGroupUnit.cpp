@@ -859,7 +859,7 @@ long EECPAttackSubGroupUnit::GetTargetWeight(EECPASTargetUnit* inTarget)
     EEUnitClassUpgrade* theTargetStats = theTarget->mStats;
     float theRangeSquared = theRange * theRange;
     long theKind = 2;
-    float theToHit = gToHitTable.GetAttackFactor(this->mUnit->mUnitClass->mAmmoType, this->mUnit->mUnitClass, this->mUnit->mPlayer->mPlayerID,
+    float theToHit = gToHitTable.GetAttackFactor(this->mUnit->mUnitClass->mAmmoType, theTarget->mUnitClass, this->mUnit->mPlayer->mPlayerID,   // the target's class, as GetToHit (was this unit's)
                                           theTarget->mPlayer->mPlayerID);
     long theX = theTarget->mTileX;
     long theY = theTarget->mTileY;
