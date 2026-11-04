@@ -163,7 +163,10 @@ void EEAIContinent::GetShoreInRegions(const std::vector<unsigned short>& inIDs, 
     }
     for (i = this->mShoreTiles.size() - 1; i >= 0; i--) {
         EEAIPathArea* theArea = gContinentManager.GetPathAreaAt(this->mShoreTiles[i]);
-        unsigned short theID = inKind == kAIPathSpaceRegion ? theArea->mSpaceRegionID : theArea->mWaterBodyID;
+        // read the area's ids only once the area is known to exist (a tile without a path area has none)
+        unsigned short theID = 0;
+        if (theArea != NULL)
+            theID = inKind == kAIPathSpaceRegion ? theArea->mSpaceRegionID : theArea->mWaterBodyID;
         if (theArea && theID) {
             for (j = inIDs.size() - 1; j >= 0; j--) {
                 if (theID == inIDs[j]) {
