@@ -526,6 +526,8 @@ long DX7Rasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPrima
             }
             return theResult;
         }
+        // CreateDevice failed: release the IDirect3D7 the query returned.
+        theDirect3D->Release();
     }
     theResult = kErrorNativeError;
     ESRecordNativeError(theError);
