@@ -64,8 +64,8 @@ EECCVolcano::~EECCVolcano()
 }
 
 // FUNCTION: EXE 0x4b46bc
-// Moves movable units off the volcano's footprint: to their next waypoint outside it, else onto each free ring tile in
-// turn (no break: the unit ends on the last free one), dropping its path
+// Moves movable units off the volcano's footprint: to their next waypoint outside it, else onto the first free ring
+// tile (nearest the sort corner), dropping its path
 void EECCVolcano::ClearArea(EEUnitClass* inClass, long inX, long inY)
 {
     GE3DPoint theLocation;
@@ -133,6 +133,7 @@ void EECCVolcano::ClearArea(EEUnitClass* inClass, long inX, long inY)
             theUnit->DropPath();
             theUnit->StartAction(kActionIdle);
             theUnit->mUnitClass->ActionChanged(theUnit);
+            break;
         }
     }
 }
