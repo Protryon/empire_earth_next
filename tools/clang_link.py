@@ -6,9 +6,17 @@ Reuses the VC6 build's link recipes (tools/relink.py for the DLLs, tools/exe_ful
 import/static libraries, the by-name import libraries, the export .def with the original ordinals) with two swaps:
 every source is compiled with clang-cl (tools/clang_build.py flags, objects cached by source + flags under
 <out>/obj), and LINK 6 is replaced by lld-link (env EE_LLD_LINK overrides the path). LIB/DUMPBIN stay VC6's.
-Outputs go to <out>/<target>/ (default out: build/clang).
+Outputs go to <out>/<target>/ (default out: build/clang). The exe's map is written with LINK 6's 8-digit addresses
+(lld writes 16) so the map readers of the VC6 build's tools take it unchanged.
+
+--test-profile windowed-software (default out: build/clang-test): a TEST-ONLY build for the headless live-game
+harness (tools/clang_session.py). It is the source-level form of the original-image overlay that harness applies
+(windowed_overlay.py PATCHES and the software-display EEInitializeDisplay policy): the staged copies of two units
+are rewritten by TEST_PROFILES's text rules, each refusing unless it matches its expected count. src/ is never
+changed, and the images are test artifacts.
 """
 import argparse
+import collections
 import concurrent.futures
 import os
 import pathlib
@@ -32,14 +40,30 @@ TARGETS = DLL_TARGETS + ["exe"]
 FLAG_MAP = {"/MACHINE:I386": "/MACHINE:X86", "/MACHINE:IX86": "/MACHINE:X86"}
 # the VC6 CRT objects predate SafeSEH (LINK 6 had no such table)
 LLD_FLAGS = ["/SAFESEH:NO", "/ERRORLIMIT:0", "/DEMANGLE:NO"]
+TEST_PROFILES = {
+    "windowed-software": {
+        # windowed_overlay.PATCHES: the settings default and Load keep mFullScreen (+0x5cf) false
+        "Empire Earth/Empire Earth/EEPreferences.cpp": [
+            ("    this->mFullScreen = true;", "    this->mFullScreen = false;   // TEST PROFILE windowed", 1),
+            ("    this->mSettings.mFullScreen = true;",
+             "    this->mSettings.mFullScreen = false;   // TEST PROFILE windowed", 1)],
+        # the software-display policy (fulllink_locator.near_display_patches): the bit-depth checks accept and
+        # store 32 where they accepted/stored 16, and the no-matching-mode fallback is 32
+        "Empire Earth/Empire Earth/Empire Earth.cpp": [
+            ("mGameBitDepth != 16)", "mGameBitDepth != 32)", 1),
+            ("mTextureBitDepth != 16)", "mTextureBitDepth != 32)", 1),
+            ("mGameBitDepth = 16;", "mGameBitDepth = 32;", 2),
+            ("mTextureBitDepth = 16;", "mTextureBitDepth = 32;", 1)],
+    },
+}
 
 
 class ClangObjects:
     """Stands in for verify.compile_candidate: the objects compiled up front, by (source, flags); anything else is
     compiled on the spot."""
 
-    def __init__(self, out, opt, objs):
-        self.out, self.opt, self.objs = out, opt, objs
+    def __init__(self, out, opt, objs, overlays=None):
+        self.out, self.opt, self.objs, self.overlays = out, opt, objs, overlays
         self.vc6inc = clang_vc6inc.prepare(TOOLCHAIN / COMPILER / "Include", out / "vc6inc")
 
     def __call__(self, src, flags, workdir):
@@ -47,13 +71,13 @@ class ClangObjects:
         dst = pathlib.Path(workdir) / "cand.obj"
         obj = self.objs.get((str(build.rel_src(src)), verify.unit_flags(src, flags)))
         if obj is None:
-            ok, log = clang_build.compile_to(src, flags, dst, self.opt, self.vc6inc)
+            ok, log = clang_build.compile_to(src, flags, dst, self.opt, self.vc6inc, self.overlays)
             return (dst if ok else None), log
         shutil.copy(obj, dst)
         return dst, ""
 
 
-def compile_all(targets, out, opt, jobs):
+def compile_all(targets, out, opt, jobs, overlays=None):
     """Compile every unit the targets link, in parallel -> {(rel source, flags): obj}; exits on a failure."""
     mods = [m for t in targets for m in build.TARGET_MODULES.get(t, [t])]
     work = [j for m in mods for j in build.jobs_for(m)] + build.lib_jobs(mods)
@@ -62,7 +86,7 @@ def compile_all(targets, out, opt, jobs):
         verify.include_paths(verify.stage_source(j[1]))
     objs, failed = {}, []
     with concurrent.futures.ThreadPoolExecutor(jobs) as ex:
-        for job, ok, log in ex.map(lambda j: clang_build.compile_one(j, out, opt, vc6inc), work):
+        for job, ok, log in ex.map(lambda j: clang_build.compile_one(j, out, opt, vc6inc, overlays), work):
             if ok:
                 key = (str(build.rel_src(job[1])), verify.unit_flags(job[1], job[2]))
                 objs[key] = out / "obj" / job[0] / build.rel_src(job[1]).with_suffix(".obj")
@@ -110,16 +134,33 @@ def clang_def(path, inputs):
     """Keep only the exports some linked object or static library defines. VC6's images also exported things clang
     never emits as such: pooled string literals (??_C@, named differently and kept local by clang), implicit
     member-template instantiations and default-constructor closures of exported classes. Clang-built consumers
-    instantiate those locally, so nothing imports them. Every dropped export is listed."""
+    instantiate those locally, so nothing imports them. Every dropped export is listed.
+
+    A member-template instantiation that is defined keeps its VC6 export name as an alias: VC6 mangled it without
+    the template arguments (?Name@scope...), clang with them (??$Name@<args>@scope...); the .def line becomes
+    `vc6name=clangname`, so images built by VC6 (the retail exe) still find it."""
     defined = defined_symbols(inputs)
+    templ = collections.defaultdict(list)       # (name, rest) -> clang ??$ symbols
+    for s in defined:
+        m = re.match(r"\?\?\$([^@?]+)@", s)
+        if m:
+            templ[m.group(1)].append(s)
     lines = path.read_text().splitlines(keepends=True)
-    keep, dropped = [], []
+    keep, dropped, aliased = [], [], []
     for l in lines:
         name = l.split()[0] if l.startswith("    ") else None
         if name and name not in defined:
-            dropped.append(name)
+            m = re.match(r"\?([^@?]+)@(.*)$", name)
+            hits = [s for s in templ.get(m.group(1), []) if s.endswith("@" + m.group(2))] if m else []
+            if len(hits) == 1:
+                keep.append(l.replace(name, f"{name}={hits[0]}", 1))
+                aliased.append(name)
+            else:
+                dropped.append(name)
         else:
             keep.append(l)
+    if aliased:
+        print(f"{path.name}: {len(aliased)} VC6 member-template export name(s) aliased to clang's")
     path.write_text("".join(keep))
     (path.parent / "exports_dropped.txt").unlink(missing_ok=True)
     if dropped:
@@ -191,6 +232,14 @@ def clang_coff_symbols(inner):
     return coff_symbols
 
 
+def link6_map(path):
+    """lld's MSVC-style map with LINK 6's 8-digit Rva+Base column (the image is 32-bit)."""
+    if path.exists():
+        text = path.read_text(encoding="latin-1")
+        path.write_text(re.sub(r"(?m)^( [0-9a-f]{4}:[0-9a-f]{8}\s+\S+\s+)0{8}([0-9a-f]{8})", r"\1\2", text),
+                        encoding="latin-1")
+
+
 def link_exe(out, objs, extra_libs):
     """build.link_exe with the clang objects (tools/exe_fulllink.py: pass 1, stubs for what the source does not
     define yet, pass 2, member aliases)."""
@@ -215,6 +264,7 @@ def link_exe(out, objs, extra_libs):
         p = ROOT / "src" / relink.LIB_UNITS[n]
         libobj[n] = objs[(str(build.rel_src(p)), verify.unit_flags(p, build.EXE_LIB_FLAGS))]
     rep, _ = exe_fulllink.link_exe(dst, items, {}, libobj, members=build.EXE_MEMBERS)
+    link6_map(dst / "EE-AOC.map")
     import json
     (dst / "link_report.json").write_text(json.dumps(rep, indent=1, default=str))
     p2 = rep.get("pass2", {})
@@ -231,7 +281,8 @@ def link_exe(out, objs, extra_libs):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("targets", nargs="*", default=TARGETS)
-    ap.add_argument("--out", default=str(ROOT / "build" / "clang"))
+    ap.add_argument("--out", help="output root (default build/clang, build/clang-test with --test-profile)")
+    ap.add_argument("--test-profile", choices=sorted(TEST_PROFILES), help="TEST ONLY: see the module doc")
     ap.add_argument("--opt", default="-O1",
                     help="clang-cl optimisation (default -O1: the dllimport inline functions must be expanded, as "
                          "VC6 -O1 did, or the images import functions the DLLs do not export)")
@@ -239,13 +290,14 @@ def main():
     a = ap.parse_args()
     if not LLD_LINK.exists():
         sys.exit(f"{LLD_LINK} is missing: install LLVM (winget install LLVM.LLVM) or set EE_LLD_LINK")
-    out = pathlib.Path(a.out).resolve()
+    out = pathlib.Path(a.out or ROOT / "build" / ("clang-test" if a.test_profile else "clang")).resolve()
+    overlays = TEST_PROFILES.get(a.test_profile)
     for t in a.targets:
         if t not in TARGETS:
             sys.exit(f"unknown target {t!r}; known: {' '.join(TARGETS)}")
     targets = sorted(a.targets, key=lambda t: t != "lle")  # the engine first: the others link its import library
-    objs = compile_all(targets, out, a.opt, a.j)
-    verify.compile_candidate = ClangObjects(out, a.opt, objs)
+    objs = compile_all(targets, out, a.opt, a.j, overlays)
+    verify.compile_candidate = ClangObjects(out, a.opt, objs, overlays)
     inner_run, extra_libs = relink.run, extra_import_libs(out)
     engine_lib = out / "lle" / "Low-Level Engine.lib"
     results = {}

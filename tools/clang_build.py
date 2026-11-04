@@ -42,10 +42,28 @@ def clang_flags(flags, opt):
     return [f for f in flags.split() if not DROP.match(f)] + opt.split()
 
 
-def compile_to(src, flags, obj, opt, vc6inc):
-    """Compile one source with clang-cl into obj -> (ok, log)."""
+def apply_overlay(staged, rules):
+    """Rewrite the staged copy of a unit with (old, new, expected count) text rules (test profiles only; the
+    source tree is never touched). Refuses when a rule does not match exactly its expected count."""
+    raw = pathlib.Path(staged).read_bytes()
+    crlf = b"\r\n" in raw
+    text = raw.decode("latin-1").replace("\r\n", "\n")
+    for old, new, want in rules:
+        n = text.count(old)
+        if n != want:
+            raise SystemExit(f"overlay {pathlib.Path(staged).name}: {old!r} matches {n} times, expected {want}")
+        text = text.replace(old, new)
+    pathlib.Path(staged).write_bytes((text.replace("\n", "\r\n") if crlf else text).encode("latin-1"))
+
+
+def compile_to(src, flags, obj, opt, vc6inc, overlays=None):
+    """Compile one source with clang-cl into obj -> (ok, log). overlays: {source path relative to src/: rules}
+    (apply_overlay) for a test profile."""
     flags = verify.unit_flags(src, flags)
     staged = verify.stage_source(src)
+    rules = (overlays or {}).get(str(build.rel_src(src)))
+    if rules:
+        apply_overlay(staged, rules)
     iflags, inc = verify.include_paths(staged)
     inc = inc.replace(str(TOOLCHAIN / COMPILER / "Include"), str(vc6inc))
     pathlib.Path(obj).parent.mkdir(parents=True, exist_ok=True)
@@ -56,10 +74,10 @@ def compile_to(src, flags, obj, opt, vc6inc):
     return r.returncode == 0, (r.stdout + r.stderr).strip()
 
 
-def compile_one(job, out, opt, vc6inc):
+def compile_one(job, out, opt, vc6inc, overlays=None):
     mod, src, flags, pkg = job
     rel = build.rel_src(src)
-    ok, log = compile_to(src, flags, out / "obj" / mod / rel.with_suffix(".obj"), opt, vc6inc)
+    ok, log = compile_to(src, flags, out / "obj" / mod / rel.with_suffix(".obj"), opt, vc6inc, overlays)
     logf = out / "log" / mod / rel.with_suffix(".log")
     if ok:
         logf.unlink(missing_ok=True)
