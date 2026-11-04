@@ -454,6 +454,7 @@ bool EEUCGate::AreEnemiesNear(EEComplexUnit* inUnit)
             thePlayer == theUnit->mPlayer || theUnit->mPlayer->mEnemies[thePlayer->mPlayerID] == 0)
             continue;
         float theRange = theUnit->mUnitClass->mInnerCollisionSphere * 0.5f + kGateRangeBase;
+        theRange *= theRange;  // compared with squared distances
         if (inUnit->DistanceSquaredTo(theUnit) <= theRange ||
             theNext->DistanceSquaredTo(theUnit) <= theRange ||
             theLast->DistanceSquaredTo(theUnit) <= theRange)
@@ -496,6 +497,7 @@ bool EEUCGate::IsPasserNear(EEComplexUnit* inUnit)
                 thePasses = theSet->Contains(theUnit->GetUnitClass()->GetUnitType());
             if (thePasses) {
                 float theRange = theUnit->GetUnitClass()->mInnerCollisionSphere * 0.5f + kGateRangeBase;
+                theRange *= theRange;  // compared with squared distances
                 if (inUnit->DistanceSquaredTo(theUnit->GetComplexUnit()) <= theRange ||
                     theNext->DistanceSquaredTo(theUnit->GetComplexUnit()) <= theRange ||
                     theLast->DistanceSquaredTo(theUnit->GetComplexUnit()) <= theRange) {
