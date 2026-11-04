@@ -197,12 +197,15 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
 }
 
 // FUNCTION: EXE 0x54c530
-// Reads the team count and that many teams; returns the first read error (the count read is not checked)
+// Reads the team count and that many teams; returns the first read error
 static long LoadTeams(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile,
                       std::vector<EETeam>& outTeams)
 {
     unsigned long theCount;
     long theResult = inFile.Read(theCount);
+    // A failed count read leaves theCount unset: do not resize to it.
+    if (theResult != kErrorOK)
+        return theResult;
     outTeams.resize(theCount);
     for (std::vector<EETeam>::iterator it = outTeams.begin(); it != outTeams.end() && theResult == kErrorOK; ++it)
         theResult = it->Load(inMajorVersion, inMinorVersion, inFile);
