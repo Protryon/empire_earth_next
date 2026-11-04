@@ -988,11 +988,13 @@ bool EECPASGLand::FindCrossingTile(EEAIContinent* inFirst, EEAIContinent* inSeco
         if (theID != 0) {
             inFirst->GetShoreInRegion(theID, theTiles, theKind);
         } else {
-            // the original uses BC's count even when indexing the separate DC vector
+            // the original uses BC's count even when indexing the separate DC vector; an index past DC's end
+            // reads as id 0 instead of reading past the vector
             for (long i = inFirst->mIDsBC.size() - 1; i >= 0; i--) {
                 if (inWater) {
-                    if (std::find(inSecond->mIDsDC.begin(), inSecond->mIDsDC.end(), inFirst->mIDsDC[i]) != inSecond->mIDsDC.end())
-                        theIDs.push_back(inFirst->mIDsDC[i]);
+                    unsigned short theDCID = (unsigned long)i < inFirst->mIDsDC.size() ? inFirst->mIDsDC[i] : 0;
+                    if (std::find(inSecond->mIDsDC.begin(), inSecond->mIDsDC.end(), theDCID) != inSecond->mIDsDC.end())
+                        theIDs.push_back(theDCID);
                 } else {
                     if (std::find(inSecond->mIDsBC.begin(), inSecond->mIDsBC.end(), inFirst->mIDsBC[i]) != inSecond->mIDsBC.end())
                         theIDs.push_back(inFirst->mIDsBC[i]);
