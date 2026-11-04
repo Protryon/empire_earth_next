@@ -662,8 +662,8 @@ void EEHerd::GrowUnit(EEComplexUnit* inUnit)
 
 // NEAR: EEPlayer::mHerds is a vector<long> in ee/EEPlayer.h (EEHerd* elements): the herds go through casts here
 // FUNCTION: EXE 0x4a3295
-// Surrounds an animal of the nearest other non-predator herd on the continent (always its first: the distances
-// to its animals are computed but unused); returns whether the herd now has a target
+// Surrounds the animal nearest the leader in the nearest other non-predator herd on the continent; returns
+// whether the herd now has a target
 bool EEHerd::FollowNearestHerd()
 {
     std::vector<EEHerd*> theHerds;
@@ -1146,13 +1146,13 @@ void EEHerd::Surround(EEComplexUnit* inTarget)
 }
 
 // FUNCTION: EXE 0x4a45b7
-// Chase state: while the target lives and the chase timer has run out, re-chases it once it moves 3 tiles;
+// Chase state: while the target lives and the chase timer runs, re-chases it once it moves 3 tiles;
 // otherwise ends the chase, sends the herd grazing and restarts the timer; returns 1000 ms
 unsigned long EEHerd::UpdateChasing(unsigned long inTime)
 {
     U2DPoint<long> theTile;
     bool theFollowing = true;
-    if (this->mTarget && this->mTarget->mHitPoints > 0 && this->mChaseTime <= inTime) {
+    if (this->mTarget && this->mTarget->mHitPoints > 0 && this->mChaseTime > inTime) {
         theTile = this->mTarget->GetTile();
         if (theTile.DistanceToSquaredF(this->mCenter) > 9.0f) {
             theFollowing = this->Chase();
