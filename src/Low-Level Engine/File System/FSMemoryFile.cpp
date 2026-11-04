@@ -70,6 +70,8 @@ long FSMemoryFile::Close()
     if (!this->mStream)
         return theResult;
     fclose(this->mStream);
+    // Fixed: the stream pointer was kept, so a second Close (the destructor's) closed the same FILE again
+    this->mStream = NULL;
     if (this->mTemporaryFileName.GetLength() > 0)
         DeleteFileA(this->mTemporaryFileName);
     return theResult;
