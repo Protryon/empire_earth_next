@@ -343,7 +343,10 @@ void EESETSETTrigger::Show(EESETSEffectControls* inControls)
     for (unsigned long i = 0; i < theNames.size(); i++)
         inControls->mScenarioComboBoxes[0]->AppendLine(theNames[i]);
     inControls->mScenarioComboBoxes[0]->SetDisplayMode(kDisplayModeShown);
-    inControls->mScenarioComboBoxes[0]->SetTriggerEvent(kControlTriggerSelectionChanged, new EESEEChangeEffectAction());
+    // SetTriggerEvent takes its own reference: drop the creation reference (the event leaked).
+    EESEEChangeEffectAction* theChangeEvent = new EESEEChangeEffectAction();
+    inControls->mScenarioComboBoxes[0]->SetTriggerEvent(kControlTriggerSelectionChanged, theChangeEvent);
+    theChangeEvent->Dereference();
     gResource->GetString(IDS_STATE, theText);
     theLocation.SetX(inControls->mLabels[0]->GetRectangle().GetRight() + 10.0f);
     theLocation.SetY(641.0f);
