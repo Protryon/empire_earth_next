@@ -208,7 +208,7 @@ long EESEIEExport::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 
 // FUNCTION: EXE 0x570345
 // Imports trigger text from the .lcl file after checking its {Version_n} header; a validation run lists the
-// errors and asks to import anyway. Leaves the file open on a bad version or an empty file
+// errors and asks to import anyway; the file is closed on every path
 void EESEIAImport::Virtual4()
 {
     UWideString theUnused;
@@ -255,5 +255,6 @@ void EESEIAImport::Virtual4()
         gResource->GetString(IDS_LCL_FILE_HAS_INVALID_VERSION, theLine);
     } else
         gResource->GetString(IDS_FILE_ERROR, theLine);
+    this->mFile.Close();    // an empty file or a bad version left the file open (Close does nothing when it is not)
     gUIManager->DisplayMessage(theLine, 1, NULL, NULL, true);
 }
