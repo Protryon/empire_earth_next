@@ -726,11 +726,11 @@ void EECPUnitManager::RequestUnits(long inUnitClass, long inCount, long inTownID
 }
 
 // FUNCTION: EXE 0x494c80
-// Releases every tracked unit and clears the waiting counts, but only the requests of the first 7 epochs
+// Releases every tracked unit and clears the waiting counts and every epoch's requests
 void EECPUnitManager::Reset()
 {
     this->ReleaseUnits();
-    for (long i = 0; i < 7; i++)
+    for (long i = 0; i < 15; i++)   // every epoch's requests (was the first 7)
         this->mRequests[i].clear();
     this->mWaitingCounts.clear();
 }
