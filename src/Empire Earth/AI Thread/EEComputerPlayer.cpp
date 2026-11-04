@@ -1361,7 +1361,8 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
             theResult = this->mCombatManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = this->mCivilizationManager->Load(inMajorVersion, inMinorVersion, inFile);
-        if (inMinorVersion >= 0x20)
+        // the exploration manager's result no longer replaces an earlier error
+        if (theResult == kErrorOK && inMinorVersion >= 0x20)
             theResult = this->mExplorationManager->Load(inMajorVersion, inMinorVersion, inFile);
         if (theResult == kErrorOK)
             theResult = inFile.Read(this->mLBD4);
@@ -1384,9 +1385,10 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         if (theResult == kErrorOK) {
             theResult = inFile.Read(theCount);
             if (theResult == kErrorOK) {
-                for (theIdx = 0; theIdx < theCount; theIdx++) {
+                // a resource center's read error is reported (it used to be discarded)
+                for (theIdx = 0; theIdx < theCount && theResult == kErrorOK; theIdx++) {
                     theCenter = new EECPResourceCenter(this, NULL);
-                    theCenter->Load(inMajorVersion, inMinorVersion, inFile);
+                    theResult = theCenter->Load(inMajorVersion, inMinorVersion, inFile);
                     this->mResourceCenters.push_back(theCenter);
                 }
             }
@@ -1746,9 +1748,10 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         if (theResult == kErrorOK) {
             theResult = inFile.Read(theCount);
             if (theResult == kErrorOK) {
-                for (theIdx = 0; theIdx < theCount; theIdx++) {
+                // a resource center's read error is reported (it used to be discarded)
+                for (theIdx = 0; theIdx < theCount && theResult == kErrorOK; theIdx++) {
                     theCenter = new EECPResourceCenter(this, NULL);
-                    theCenter->Load(inMajorVersion, inMinorVersion, inFile);
+                    theResult = theCenter->Load(inMajorVersion, inMinorVersion, inFile);
                     this->mResourceCenters.push_back(theCenter);
                 }
             }
@@ -2128,9 +2131,10 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         if (theResult == kErrorOK) {
             theResult = inFile.Read(theCount);
             if (theResult == kErrorOK) {
-                for (theIdx = 0; theIdx < theCount; theIdx++) {
+                // a resource center's read error is reported (it used to be discarded)
+                for (theIdx = 0; theIdx < theCount && theResult == kErrorOK; theIdx++) {
                     theCenter = new EECPResourceCenter(this, NULL);
-                    theCenter->Load(inMajorVersion, inMinorVersion, inFile);
+                    theResult = theCenter->Load(inMajorVersion, inMinorVersion, inFile);
                     this->mResourceCenters.push_back(theCenter);
                 }
             }
@@ -2518,9 +2522,10 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         if (theResult == kErrorOK) {
             theResult = inFile.Read(theCount);
             if (theResult == kErrorOK) {
-                for (theIdx = 0; theIdx < theCount; theIdx++) {
+                // a resource center's read error is reported (it used to be discarded)
+                for (theIdx = 0; theIdx < theCount && theResult == kErrorOK; theIdx++) {
                     theCenter = new EECPResourceCenter(this, NULL);
-                    theCenter->Load(inMajorVersion, inMinorVersion, inFile);
+                    theResult = theCenter->Load(inMajorVersion, inMinorVersion, inFile);
                     this->mResourceCenters.push_back(theCenter);
                 }
             }
@@ -2918,9 +2923,10 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         if (theResult == kErrorOK) {
             theResult = inFile.Read(theCount);
             if (theResult == kErrorOK) {
-                for (theIdx = 0; theIdx < theCount; theIdx++) {
+                // a resource center's read error is reported (it used to be discarded)
+                for (theIdx = 0; theIdx < theCount && theResult == kErrorOK; theIdx++) {
                     theCenter = new EECPResourceCenter(this, NULL);
-                    theCenter->Load(inMajorVersion, inMinorVersion, inFile);
+                    theResult = theCenter->Load(inMajorVersion, inMinorVersion, inFile);
                     this->mResourceCenters.push_back(theCenter);
                 }
             }
@@ -3326,9 +3332,10 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         if (theResult == kErrorOK) {
             theResult = inFile.Read(theCount);
             if (theResult == kErrorOK) {
-                for (theIdx = 0; theIdx < theCount; theIdx++) {
+                // a resource center's read error is reported (it used to be discarded)
+                for (theIdx = 0; theIdx < theCount && theResult == kErrorOK; theIdx++) {
                     theCenter = new EECPResourceCenter(this, NULL);
-                    theCenter->Load(inMajorVersion, inMinorVersion, inFile);
+                    theResult = theCenter->Load(inMajorVersion, inMinorVersion, inFile);
                     this->mResourceCenters.push_back(theCenter);
                 }
             }
@@ -3736,9 +3743,10 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         if (theResult == kErrorOK) {
             theResult = inFile.Read(theCount);
             if (theResult == kErrorOK) {
-                for (theIdx = 0; theIdx < theCount; theIdx++) {
+                // a resource center's read error is reported (it used to be discarded)
+                for (theIdx = 0; theIdx < theCount && theResult == kErrorOK; theIdx++) {
                     theCenter = new EECPResourceCenter(this, NULL);
-                    theCenter->Load(inMajorVersion, inMinorVersion, inFile);
+                    theResult = theCenter->Load(inMajorVersion, inMinorVersion, inFile);
                     this->mResourceCenters.push_back(theCenter);
                 }
             }
@@ -4150,9 +4158,10 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
         if (theResult == kErrorOK) {
             theResult = inFile.Read(theCount);
             if (theResult == kErrorOK) {
-                for (theIdx = 0; theIdx < theCount; theIdx++) {
+                // a resource center's read error is reported (it used to be discarded)
+                for (theIdx = 0; theIdx < theCount && theResult == kErrorOK; theIdx++) {
                     theCenter = new EECPResourceCenter(this, NULL);
-                    theCenter->Load(inMajorVersion, inMinorVersion, inFile);
+                    theResult = theCenter->Load(inMajorVersion, inMinorVersion, inFile);
                     this->mResourceCenters.push_back(theCenter);
                 }
             }
@@ -4951,8 +4960,9 @@ long EEComputerPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorV
     if (theResult == kErrorOK) {
         theCount = this->mResourceCenters.size();
         theResult = outFile.Write(theCount);
-        for (i = 0; i < theCount; i++)
-            this->mResourceCenters[i]->Save(inMajorVersion, inMinorVersion, outFile);
+        // a resource center's write error is reported (it used to be discarded)
+        for (i = 0; i < theCount && theResult == kErrorOK; i++)
+            theResult = this->mResourceCenters[i]->Save(inMajorVersion, inMinorVersion, outFile);
     }
     if (theResult == kErrorOK)
         theResult = outFile.Write(this->mUsesFishing);
