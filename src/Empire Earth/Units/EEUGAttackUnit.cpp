@@ -314,8 +314,8 @@ void EEUGAttackUnit::SetOwner(EEComplexUnit* inAttacker)
 }
 
 // FUNCTION: EXE 0x61d9dd
-// Reads the target and attacker ids, last target tile and (from version 0.238) the convert flag; a failed base
-// goal or target id read is overwritten by the next read's result
+// Reads the target and attacker ids, last target tile and (from version 0.238) the convert flag; returns the first
+// read error
 long EEUGAttackUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     unsigned long theUnitID;
@@ -325,6 +325,9 @@ long EEUGAttackUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVer
         if (theResult == 0)
             this->mTarget = reinterpret_cast<EEUnit*>(theUnitID);
     }
+    // a failed base goal or target id read is reported (the attacker id read used to replace it)
+    if (theResult != 0)
+        return theResult;
     theResult = inFile.Read(theUnitID);
     if (theResult != 0)
         return theResult;
