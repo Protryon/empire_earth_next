@@ -683,8 +683,8 @@ long EEEffectManager::CreateWeatherEffect(const std::vector<EETileCoordinate>& i
 }
 
 // FUNCTION: EXE 0x5067ce
-// Destroys every queued effect that still exists and unqueues it; handles of effects already gone stay queued;
-// returns 3 or 9 for the last handle looked at (9: no handle)
+// Destroys every queued effect that still exists and empties the queue; returns 3 or 9 for the last handle looked
+// at (9: no handle)
 long EEEffectManager::DestroyQueued()
 {
     long theResult = 0;
@@ -698,11 +698,11 @@ long EEEffectManager::DestroyQueued()
                 theFound->second->Release();
                 this->RemoveEffect(theFound->second);
                 this->mEffectsByHandle.erase(theFound);
-                it = this->mDestroyedHandles.erase(it);
-                continue;
             }
         }
-        it++;
+        // unqueue every handle: handles of effects that already removed themselves (or of none) have nothing left
+        // to destroy
+        it = this->mDestroyedHandles.erase(it);
     }
     return theResult;
 }
