@@ -152,7 +152,7 @@ bool EESMCondition::Evaluate()
                             if (thePlayerResult)
                                 break;
                         } else {
-                            if ((thePlayerResult || (i == 0 && j == 0))
+                            if ((thePlayerResult || j == 0)
                                 && thePlayer->mEnemies[theOthers[j]] == (long)this->mDiplomacy) {
                                 thePlayerResult = true;
                                 continue;
