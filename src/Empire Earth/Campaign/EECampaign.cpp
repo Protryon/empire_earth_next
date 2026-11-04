@@ -118,8 +118,10 @@ bool EECampaign::CopyScenarioFiles(std::vector<UWideString>& inFiles, std::vecto
             theLowerName = (const char*)*theSource;
             theLowerName.ToLower();
             theDestination = thePath.GetSubstring(0, theLowerPath.Find(theLowerName, 0)) + (const char*)*it;
-            if (theSpec->Copy(theDestination, false, false) != kErrorOK)
+            if (theSpec->Copy(theDestination, false, false) != kErrorOK) {
+                delete theSpec;     // freed on a failed copy too (it leaked)
                 break;
+            }
             theCopied.push_back(*it);
             delete theSpec;
         }
