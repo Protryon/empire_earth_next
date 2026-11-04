@@ -1111,7 +1111,7 @@ bool EEPathManager::TrimPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPa
     long theY = UMFloor(inUnit->mPhysicalModel.GetLocation().GetY());
     bool theResult = false;
     for (long i = ioPath.size() - 1; i > theFirst; i--) {
-        if (UMFloor(ioPath[i].GetX()) != theX || !UMFloor(ioPath[i].GetY() == theY))
+        if (UMFloor(ioPath[i].GetX()) != theX || UMFloor(ioPath[i].GetY()) != theY)   // was !UMFloor(y == theY)
             continue;
         theResult = true;
         ioPath.erase(ioPath.begin() + i, ioPath.end());
