@@ -217,13 +217,14 @@ long EEUIFSEPaintElevation::MouseMove(const GE2DPoint& inLocation)
         if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true) {
             theNewLevel = (long)(float)UMFloor(theT * 4.8989797f + 0.00001f);
             theCheck = theNewLevel;
+            // the grabbed tile's current level on the same scale as the new one
             theOldLevel =
-                (long)(float)UMFloor(gWorld.mMap->GetTile(this->mTileX, this->mTileY)->GetHeight() * 2.4494898f + 0.00001f);
+                (long)(float)UMFloor(gWorld.mMap->GetTile(this->mTileX, this->mTileY)->GetHeight() * 4.8989797f + 0.00001f);
         } else if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationLowerButton))->GetIsChecked() == true) {
             theNewLevel = (long)(float)UMFloor(theT * 1.2247449f + 0.00001f);
             theCheck = theNewLevel * 4;
             theOldLevel =
-                (long)(float)UMFloor(gWorld.mMap->GetTile(this->mTileX, this->mTileY)->GetHeight() * 2.4494898f + 0.00001f);
+                (long)(float)UMFloor(gWorld.mMap->GetTile(this->mTileX, this->mTileY)->GetHeight() * 1.2247449f + 0.00001f);
         } else {
             theOldLevel = 0;
             theCheck = 0;
