@@ -327,10 +327,10 @@ long EEE3DMarchingLine::RepairPointers()
 }
 
 // FUNCTION: EXE 0x4f3f56
-// Writes the base 3D effect (versions swapped, as in the original), time, mCC and the end units' ids
+// Writes the base 3D effect, time, mCC and the end units' ids
 long EEE3DMarchingLine::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = EEEffect3D::Save(inMinorVersion, inMajorVersion, outFile);
+    long theResult = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult != 0)
         return theResult;
     theResult = outFile.Write(this->mTime);
@@ -347,6 +347,8 @@ long EEE3DMarchingLine::Save(unsigned long inMajorVersion, unsigned long inMinor
     if (theHasUnit) {
         theID = this->mFromUnit->GetUnitID();
         theResult = outFile.Write(theID);
+        if (theResult != 0)
+            return theResult;
     }
     theHasUnit = this->mToUnit != NULL;
     theResult = outFile.Write(theHasUnit);

@@ -125,10 +125,10 @@ long EEE3DGoal::DrawPass3()
 }
 
 // FUNCTION: EXE 0x4f15d0
-// Writes the icon (major and minor version passed swapped, as in the original) and the countdown time left
+// Writes the icon (passing the versions in order) and the countdown time left
 long EEE3DGoal::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = EEE3DIcon::Save(inMinorVersion, inMajorVersion, outFile);
+    long theResult = EEE3DIcon::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult == 0)
         theResult = outFile.Write(this->mTimeLeft);
     return theResult;

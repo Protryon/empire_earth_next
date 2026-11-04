@@ -325,12 +325,12 @@ long EEE3DRain::RepairPointers()
 }
 
 // FUNCTION: EXE 0x4f7d7f
-// Writes the storm (version arguments swapped, undoing EEE3DStorm::Save's swap), drop count, thunder delay, position,
+// Writes the storm, drop count, thunder delay, position,
 // radius and live drop count; returns the first write error
 long EEE3DRain::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     GE3DPoint thePosition;
-    long theResult = EEE3DStorm::Save(inMinorVersion, inMajorVersion, outFile);
+    long theResult = EEE3DStorm::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult == 0)
         theResult = outFile.Write(this->mDropCount);
     if (theResult == 0)

@@ -327,12 +327,12 @@ long EEE3DSnow::RepairPointers()
 }
 
 // FUNCTION: EXE 0x4fa663
-// Writes the storm (version arguments swapped, undoing EEE3DStorm::Save's swap), flake count, position, radius and
+// Writes the storm, flake count, position, radius and
 // live flake count; returns the first write error
 long EEE3DSnow::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     GE3DPoint thePosition;
-    long theResult = EEE3DStorm::Save(inMinorVersion, inMajorVersion, outFile);
+    long theResult = EEE3DStorm::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult == 0)
         theResult = outFile.Write(this->mFlakeCount);
     if (theResult == 0) {

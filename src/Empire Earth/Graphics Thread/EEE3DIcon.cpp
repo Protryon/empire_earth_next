@@ -305,10 +305,10 @@ long EEE3DIcon::DrawPass6()
 }
 
 // FUNCTION: EXE 0x4f2a57
-// Writes the base 3D effect (versions passed swapped, as in the original), age, follow flag and fixed location
+// Writes the base 3D effect, age, follow flag and fixed location
 long EEE3DIcon::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = EEEffect3D::Save(inMinorVersion, inMajorVersion, outFile);
+    long theResult = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult == 0) {
         theResult = outFile.Write(this->mAge);
         if (theResult == 0) {

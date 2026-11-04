@@ -246,11 +246,11 @@ long EEE3DStorm::RepairPointers()
 }
 
 // FUNCTION: EXE 0x4fb83f
-// Writes the base effect (version arguments swapped), elapsed time, tiles, centre, intensity and sustained flag;
+// Writes the base effect, elapsed time, tiles, centre, intensity and sustained flag;
 // returns the first write error
 long EEE3DStorm::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
-    long theResult = EEEffect3D::Save(inMinorVersion, inMajorVersion, outFile);
+    long theResult = EEEffect3D::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult == 0)
         theResult = outFile.Write(this->mElapsedTime);
     if (theResult == 0) {
