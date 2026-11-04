@@ -56,8 +56,8 @@ EEAIRectangleArea::EEAIRectangleArea()
 // NEAR: the original calls the map's _Tree(pred, alloc) ctor out of line (ours expands it and refuses _Tree_val one
 // level deeper) and keeps the inner loop counter in edi; EE_LOST_DEBUG 1..16 does not close it
 // FUNCTION: EXE 0x42c7df
-// Recounts the rectangle's land, water and space tiles and stores and returns the highest continent id among
-// its tiles (0 when none); the per-continent tile counts only gate on > 0
+// Recounts the rectangle's land, water and space tiles and stores and returns the continent with the most
+// of its tiles (the lowest id on a tie; 0 when none)
 unsigned short EEAIRectangleArea::UpdateContinents()
 {
     std::map<unsigned short, long> theCounts;
@@ -89,9 +89,12 @@ unsigned short EEAIRectangleArea::UpdateContinents()
         }
     }
     theResult = 0;
+    long theMost = 0;   // the continent covering most of it (was: the highest id present)
     for (theCount = theCounts.begin(); theCount != theCounts.end(); ++theCount) {
-        if (theCount->second > 0)
+        if (theCount->second > theMost) {
+            theMost = theCount->second;
             theResult = theCount->first;
+        }
     }
     this->mContinentID = theResult;
     return theResult;
