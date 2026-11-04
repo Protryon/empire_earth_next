@@ -204,8 +204,8 @@ void EECCTimeWarp::PlaySound(EECalamity* inCalamity)
 }
 
 // FUNCTION: EXE 0x4b3ede
-// Places the departure or arrival effect at the location and plays the secondary sound for both (as the calamity's main
-// sound when departing)
+// Places the departure or arrival effect at the location and plays the main sound when departing (as the calamity's
+// main sound), the secondary sound when arriving
 void EECCTimeWarp::PlayEffect(GE3DPoint& inLocation, EECalamity* inCalamity, bool inDeparting)
 {
     EEEffectHandle theEffectHandle;
@@ -214,9 +214,12 @@ void EECCTimeWarp::PlayEffect(GE3DPoint& inLocation, EECalamity* inCalamity, boo
             gEffectManager->CreatePlacedEffect(inLocation, this->mGraphicEffect2, &theEffectHandle);
             inCalamity->mEffectHandle = theEffectHandle;
         }
-        inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(this->mSecondarySound->GetSampleID(),
-                                                                        this->mSecondarySound->GetVolume(), 0.0f, 1.0f,
-                                                                        this->mSecondarySound->GetLooping(), NULL));
+        // the departure plays the main sound (the secondary one used to play here too, so the main sound was never
+        // heard); without a main sound the secondary one plays, as before
+        EESoundObject* theSound = this->mSound != NULL ? this->mSound : this->mSecondarySound;
+        inCalamity->SetSound(gSoundManager->PlayAndReturnReferencedNode(theSound->GetSampleID(),
+                                                                        theSound->GetVolume(), 0.0f, 1.0f,
+                                                                        theSound->GetLooping(), NULL));
         if (inCalamity->mSound != NULL)
             inCalamity->mSound->Dereference();
     } else {
