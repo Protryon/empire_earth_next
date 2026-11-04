@@ -1249,7 +1249,7 @@ void EECPAttackSubGroup::PlaceFormation(const EECPILocation& inLocation)
 
 // FUNCTION: EXE 0x45d92f
 // Moves every unit the personnel request delivered into the sub-group, regroups, releases the request and refreshes;
-// returns RegroupHere's result (the largest scan range found is never stored)
+// keeps the largest scan range; returns RegroupHere's result
 bool EECPAttackSubGroup::TakeRequestedUnits()
 {
     EEPlayer* thePlayer = this->mGroup->mTask.mPlayer;
@@ -1268,6 +1268,7 @@ bool EECPAttackSubGroup::TakeRequestedUnits()
         theSubGroupUnit->Virtual48();
         this->mUnits.push_back(theSubGroupUnit);
     }
+    this->mScanRange = (long)theMax;   // the largest scan range found (was never stored)
     this->RankUnits();
     bool theResult = this->RegroupHere();
     this->mGroup->mCommander->mPersonnel->ReleaseRequest(this->mRequest->mID);
