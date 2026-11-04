@@ -381,7 +381,7 @@ void EESETSETCreateAIMilitaryGroup::Store(EESMEffect* inEffect, EESETSEffectCont
 }
 
 // FUNCTION: EXE 0x583904
-// Hides the military group controls and detaches their events (the lists' button-down event, though Show set button-up)
+// Hides the military group controls and detaches their events
 void EESETSETCreateAIMilitaryGroup::VirtualC(EESETSEffectControls* inControls)
 {
     inControls->mRadioButtons[0]->SetDisplayMode(kDisplayModeHidden);
@@ -395,8 +395,9 @@ void EESETSETCreateAIMilitaryGroup::VirtualC(EESETSEffectControls* inControls)
     inControls->mLabels[5]->SetAlignment(kTextAlignLeft);
     inControls->mListBoxes[0]->SetDisplayMode(kDisplayModeHidden);
     inControls->mListBoxes[1]->SetDisplayMode(kDisplayModeHidden);
-    inControls->mListBoxes[0]->SetTriggerEvent(kControlTriggerButtonDown, NULL);
-    inControls->mListBoxes[1]->SetTriggerEvent(kControlTriggerButtonDown, NULL);
+    // Show attaches the add/remove handler to button-up: clear that one (button-down was cleared).
+    inControls->mListBoxes[0]->SetTriggerEvent(kControlTriggerButtonUp, NULL);
+    inControls->mListBoxes[1]->SetTriggerEvent(kControlTriggerButtonUp, NULL);
     inControls->mRadioButtons[0]->SetTriggerEvent(kControlTriggerChecked, NULL);
     inControls->mRadioButtons[1]->SetTriggerEvent(kControlTriggerChecked, NULL);
     inControls->mListBoxes[1]->GetForm()->GetControlById(8)->SetDisplayMode(kDisplayModeShown);
