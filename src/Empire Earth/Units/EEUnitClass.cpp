@@ -3873,8 +3873,8 @@ void EEUnitClass::CreateDeathUnit(EEComplexUnit* inUnit)
                                                          theTransformation.GetZ()), false);
     theComplex->SetVelocity(0.0f);
     theComplex->SetLauncherClass(theCreated->GetUnitClass());
-    // The shipping routine gives the newly created unit itself as owner.
-    theComplex->SetOwner(theComplex);
+    // the dying unit owns its death unit, as a shooter owns its shot (FireProjectile)
+    theComplex->SetOwner(inUnit);
     theComplex->SetProjectileStart(GE3DPoint(theTransformation.GetX(), theTransformation.GetY(),
                                       theTransformation.GetZ()));
     theComplex->SetGoal(theGoal, 0, 0);
