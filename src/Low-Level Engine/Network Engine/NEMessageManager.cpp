@@ -600,7 +600,7 @@ unsigned long NEMessageManager::StoreSentMessage(NEMessage* inMessage, unsigned 
 }
 
 // FUNCTION: LLE 0x10042365
-// Removes a client slot from the sent messages and the client list (its transfer queue stays) and resets it
+// Removes a client slot from the sent messages, the client list and the transfer queues and resets it
 void NEMessageManager::UnregisterSlot(unsigned char inSlot)
 {
     std::map<unsigned char, bool>::iterator theResponded = this->mSentMessages[0].mResponded.find(inSlot);
@@ -619,6 +619,21 @@ void NEMessageManager::UnregisterSlot(unsigned char inSlot)
         delete theClients->second;
         this->mClients.erase(theClients);
     }
+    // drop the slot's transfer queue (RegisterSlot creates one per slot): transfers to a departed player are not
+    // attempted any more, and registering the slot again gets a fresh queue
+    this->mXfersLock->Enter();
+    std::map<unsigned char, std::deque<NEMMXfer*>*>::iterator theXfers = this->mXfers.find(inSlot);
+    if (theXfers != this->mXfers.end()) {
+        while (theXfers->second->size() > 0) {
+            NEMMXfer* theXfer = theXfers->second->front();
+            theXfer->mFileSpec.Close();
+            theXfers->second->pop_front();
+            delete theXfer;
+        }
+        delete theXfers->second;
+        this->mXfers.erase(theXfers);
+    }
+    this->mXfersLock->Leave();
     this->mNumClients--;
     this->mServer->ResetClientConnection(inSlot);
 }
