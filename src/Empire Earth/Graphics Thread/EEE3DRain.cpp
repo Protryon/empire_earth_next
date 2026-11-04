@@ -150,7 +150,7 @@ void EEE3DRain::ReleaseRumble()
 
 // FUNCTION: EXE 0x4f75b7
 // Adds a raindrop at a random point of a random storm tile at spawn height, falling to the ground (0 over water, where
-// it may splash); reads the tile's terrain before its null test
+// it may splash)
 long EEE3DRain::AddDrop()
 {
     EETileCoordinate& theTile = this->mTiles[Fn102F57(0, this->mTiles.size() - 1)];
@@ -160,9 +160,9 @@ long EEE3DRain::AddDrop()
     float theY = theTile.mY + theRandom;
     GE3DPoint thePosition(theX, theY, this->mSpawnHeight);
     EEMapTile* theMapTile = gWorld.GetMap()->GetTile(theTile.mX, theTile.mY);
-    float theGround = theMapTile->mTerrainType == kTerrainDeepWater || theMapTile->mTerrainType == kTerrainShallowWater
-                          ? 0.0f : gWorld.GetMap()->mTerrainMesh.GetZ(theTile.mX, theTile.mY);
+    // Test the tile pointer before reading its terrain.
     bool theWater = theMapTile && (theMapTile->mTerrainType == kTerrainDeepWater || theMapTile->mTerrainType == kTerrainShallowWater);
+    float theGround = theWater ? 0.0f : gWorld.GetMap()->mTerrainMesh.GetZ(theTile.mX, theTile.mY);
     this->mDrops.push_back(EE3DRainDrop(thePosition, theGround, theRandom * 6.2831855f, theWater));
     return 0;
 }
