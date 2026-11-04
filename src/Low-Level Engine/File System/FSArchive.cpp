@@ -378,7 +378,7 @@ long FSArchive::GetTag(const UWideString& inName, UWideString& outValue) const
 }
 
 // FUNCTION: LLE 0x10005b81
-// Lists archived files matching a '*' pattern, but never advances its iterator (hangs on a non-empty archive)
+// Lists archived files matching a '*' pattern
 long FSArchive::ListFiles(const UString& inPattern, std::set<UString>& outFiles, bool inClear)
 {
     std::vector<UString> theTokens;
@@ -636,20 +636,23 @@ long FSArchive::SetTag(const UWideString& inName, const UWideString& inValue)
 }
 
 // FUNCTION: LLE 0x100061d9
-// Writes the file table; ignores write errors and always returns kErrorOK
+// Writes the file table; returns the first write error
 long FSArchive::WriteFAT()
 {
+    // Fixed: every write error used to be ignored and kErrorOK returned
     std::map<UString, ArchivedFile>::iterator theIter = this->mFAT.begin();
     unsigned long theSize = this->ComputeFATSize() - 4;
-    if (this->mArchiveFile.Write(theSize) != kErrorOK)
-        return kErrorOK;
-    for (; theIter != this->mFAT.end(); ++theIter) {
-        if (theIter->first.Save(this->mArchiveFile) == kErrorOK)
-            if (this->mArchiveFile.Write(theIter->second.mStart) == kErrorOK)
-                if (this->mArchiveFile.Write(theIter->second.mEnd) == kErrorOK)
-                    this->mArchiveFile.Write(theIter->second.mLength);
+    long theResult = this->mArchiveFile.Write(theSize);
+    for (; theIter != this->mFAT.end() && theResult == kErrorOK; ++theIter) {
+        theResult = theIter->first.Save(this->mArchiveFile);
+        if (theResult == kErrorOK)
+            theResult = this->mArchiveFile.Write(theIter->second.mStart);
+        if (theResult == kErrorOK)
+            theResult = this->mArchiveFile.Write(theIter->second.mEnd);
+        if (theResult == kErrorOK)
+            theResult = this->mArchiveFile.Write(theIter->second.mLength);
     }
-    return kErrorOK;
+    return theResult;
 }
 
 // FUNCTION: LLE 0x1000626d
