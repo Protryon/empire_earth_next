@@ -584,8 +584,8 @@ extern char gU4E5B98[];                 // 0x4e5b98 (the empty string; EECampaig
 static bool Fn14DA7C(EEPSaveGameHeader& inHeader, UWideString& outErrorMessage, FSFile& inFile);
 
 // FUNCTION: EXE 0x54d946
-// Returns whether a file holds a save game this build can load; on failure sets the error message (always the generic
-// "save game invalid" once the file opened)
+// Returns whether a file holds a save game this build can load; on failure sets the error message (the header
+// check's specific text, else the generic "save game invalid")
 bool EEValidateSaveGameFile(FSFile& inFile, UWideString& outErrorMessage)
 {
     EEPSaveGameHeader theHeader;
@@ -602,7 +602,10 @@ bool EEValidateSaveGameFile(FSFile& inFile, UWideString& outErrorMessage)
             inFile.Close();
             inFile.Open(kFileAccessRead);
         } else {
-            ESVERIFY_AT(::gResource->GetString(keeslSaveGameInvalid, outErrorMessage) == keseOK, 967);
+            // The generic text only when the header check left no specific one (it overwrote it).
+            if (outErrorMessage.GetLength() == 0) {
+                ESVERIFY_AT(::gResource->GetString(keeslSaveGameInvalid, outErrorMessage) == keseOK, 967);
+            }
         }
     } else {
         gResource->GetString(IDS_FILE_COULDNT_BE_OPENED, outErrorMessage);
