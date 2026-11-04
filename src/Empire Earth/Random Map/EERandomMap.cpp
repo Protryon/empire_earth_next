@@ -324,8 +324,8 @@ long EERandomMap::Generate()
 }
 
 // FUNCTION: EXE 0x684701
-// Checks that every player's start area is dry, non-space land (only its first column fully: y is not reset) and that
-// no two players stand closer than kRMMinimumPlayerDistance
+// Checks that every player's start area is dry, non-space land and that no two players stand closer than
+// kRMMinimumPlayerDistance
 bool EERMArePlayersConnected(EERandomMapData& inMap, EEMap* inGameMap)
 {
     bool theResult = true;
@@ -334,13 +334,12 @@ bool EERMArePlayersConnected(EERandomMapData& inMap, EEMap* inGameMap)
         if (inMap.mPlayers[i].mIsNeutral)
             continue;
         unsigned long x = UMFloor(inMap.mPlayers[i].mPosition.GetX() + inMap.mFlatArea.GetLeft());
-        unsigned long y = UMFloor(inMap.mPlayers[i].mPosition.GetY() + inMap.mFlatArea.GetBottom());
+        unsigned long theBottom = UMFloor(inMap.mPlayers[i].mPosition.GetY() + inMap.mFlatArea.GetBottom());
         unsigned long theRight = UMFloor(inMap.mPlayers[i].mPosition.GetX() + inMap.mFlatArea.GetRight()) + 1;
         unsigned long theTop = UMFloor(inMap.mPlayers[i].mPosition.GetY() + inMap.mFlatArea.GetTop()) + 1;
-        // y is not reset per column (orig 0x2848cc..0x2848d7: only x is re-tested), so only the first column
-        // runs the full y range
+        // every column of the flat area runs the full y range
         for (; x < theRight && theResult; x++) {
-            for (; y < theTop && theResult; y++) {
+            for (unsigned long y = theBottom; y < theTop && theResult; y++) {
                 EEMapTile* theTile = inGameMap->GetTile(x, y);
                 theResult = theTile && theTile->GetHeight() >= 0.0f && theTile->mTerrainType != kTerrainSpace;
             }
