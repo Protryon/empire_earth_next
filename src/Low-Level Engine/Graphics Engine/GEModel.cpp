@@ -502,7 +502,8 @@ void GEModel::RemoveModelScale(unsigned long inFrame, const GETransformation& in
         this->mVertexArrays[inFrame]->SetPoint(theResult, i);
         this->mVertexArrays[inFrame]->GetNormal(theNormal, i);
         theScale.Apply(theNormal, theTransformedNormal);
-        this->mVertexArrays[inFrame]->GetNormal(theTransformedNormal, i);  // sic: the scaled normal is never stored
+        // Fixed: used to call GetNormal here, so the scaled normal was never stored
+        this->mVertexArrays[inFrame]->SetNormal(theTransformedNormal, i);
     }
     theCount = this->mTagPointCount;
     for (i = 0; i < theCount; i++) {
