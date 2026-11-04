@@ -681,9 +681,13 @@ bool EEHerd::FollowNearestHerd()
     }
     if (theBestHerd) {
         EEComplexUnit* theTarget = NULL;
+        float theNearest = 0.0f;
         for (long j = theBestHerd->mUnits.size() - 1; j >= 0; j--) {
-            theLeader->DistanceSquaredTo(theBestHerd->mUnits[j]);
-            theTarget = theBestHerd->mUnits[j];
+            float theDistance = theLeader->DistanceSquaredTo(theBestHerd->mUnits[j]);
+            if (theTarget == NULL || theDistance <= theNearest) {
+                theTarget = theBestHerd->mUnits[j];
+                theNearest = theDistance;
+            }
         }
         if (theTarget)
             this->Surround(theTarget);
