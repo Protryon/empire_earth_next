@@ -44,7 +44,21 @@ flags dropped (`-G6 -Zm -Zi`, `/O1` replaced).
   `theList->Scale(...)` and later tests `theList != NULL`. `Scale` never touches `this`, so under VC6 a null
   `theList` was harmless. Clang inferred non-null from the member call, deleted the test, and the next read faulted.
   The original code may rely on this anywhere (VC6 never exploited the UB), so the flag stays for the whole port.
-  The source should be cleaned up later (UBSan pass), then the flag can go.
+  The source should be cleaned up later, then the flag can go. Removing it (2026-11-04 attempt):
+  - `tools/clang_ubdiff.py` compiles every unit with and without the flag (`/Gy`) and lists the functions whose code
+    differs. 6,147 differ in all, because the flag also stops clang assuming `this` and references are non-null. 1,136
+    of them have fewer null tests without it. A sample showed mostly benign cases (`delete p` after `p` was used, so
+    its null test goes away).
+  - `clang_link.py --sanitize-null` builds images without the flag and with `-fsanitize=null -fsanitize-trap=null`
+    (a `ud2` at any member call or reference binding through null; no runtime needed). Run them through
+    `clang_session.py`; every trap is a site the game really reaches.
+  - The first trap (`EEUIManager` ctor: `GetFormByID(kFormSaveGame)` null) came from code that had already run
+    differently, not from the trapping line: without the flag, clang dropped null tests after UB that this
+    sanitizer does not watch. Much of that UB is Dinkum's own: its containers do arithmetic on the null `_First` of
+    empty containers, and those inlined bodies sit in hundreds of the 1,136 game functions.
+  - Decision: keep the flag through the Dinkum swap. A modern STL removes that class at the root. Then rerun
+    `clang_ubdiff.py` and the sanitizer games (add `-fsanitize=nonnull-attribute,pointer-overflow` traps), fix the
+    remaining game-code sites, and drop the flag.
 
 - `/Zc:wchar_t-`: VC6's `wchar_t` is `unsigned short`. This fixes `std::wstring = unsigned short[]` assignments and
   keeps the mangling (`G`) the same as VC6's.

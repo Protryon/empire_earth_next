@@ -287,10 +287,18 @@ def main():
                     help="clang-cl optimisation (default -O1: the dllimport inline functions must be expanded, as "
                          "VC6 -O1 did, or the images import functions the DLLs do not export)")
     ap.add_argument("-j", type=int, default=os.cpu_count() or 4)
+    ap.add_argument("--sanitize-null", action="store_true",
+                    help="TEST ONLY: -fsanitize=null -fsanitize-trap=null without -fno-delete-null-pointer-checks "
+                         "(a ud2 trap at every member call / reference binding through null; no runtime needed). "
+                         "Finds where the code relies on null this/references. Default out gains '-nullsan'.")
     a = ap.parse_args()
     if not LLD_LINK.exists():
         sys.exit(f"{LLD_LINK} is missing: install LLVM (winget install LLVM.LLVM) or set EE_LLD_LINK")
-    out = pathlib.Path(a.out or ROOT / "build" / ("clang-test" if a.test_profile else "clang")).resolve()
+    out = pathlib.Path(a.out or ROOT / "build" / (("clang-test" if a.test_profile else "clang")
+                                                  + ("-nullsan" if a.sanitize_null else ""))).resolve()
+    if a.sanitize_null:
+        clang_build.CLANG_FLAGS = [f for f in clang_build.CLANG_FLAGS if f != "-fno-delete-null-pointer-checks"] + [
+            "-fsanitize=null", "-fsanitize-trap=null"]
     overlays = TEST_PROFILES.get(a.test_profile)
     for t in a.targets:
         if t not in TARGETS:

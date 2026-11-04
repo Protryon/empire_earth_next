@@ -23,7 +23,7 @@ def object_symbols(objs, pkg):
     refs, defs = set(), set()
     for o in objs:
         out = subprocess.run([str(pkg / "Bin" / "DUMPBIN.EXE"), "/symbols", str(o)], capture_output=True,
-                             text=True).stdout
+                             text=True, encoding="latin-1").stdout
         for line in out.splitlines():
             m = re.search(r"(UNDEF|SECT\w+) .*External\s+\| (\S+)", line)
             if not m:
