@@ -1296,7 +1296,7 @@ unsigned long SESoundManager::Scavenger(void* inThisObject)
 
 // FUNCTION: LLE 0x1005154b
 // Sets the share of the channels a category may use (0..1, at least one channel), creating the category
-// (its priority left unset)
+// (with the lowest priority, as Load creates one)
 unsigned long SESoundManager::SetCategoryPercentage(unsigned long inCategory, float inPercent)
 {
     ESVERIFY_AT(inPercent >= 0.0 && inPercent <= 1.0, 2936);
@@ -1307,6 +1307,8 @@ unsigned long SESoundManager::SetCategoryPercentage(unsigned long inCategory, fl
     if (this->mCategories[inCategory] == NULL) {
         this->mCategories[inCategory] = new SESMCategory;
         this->mCategories[inCategory]->mNumberOfInstances = 0;
+        // Fixed: the priority used to be left uninitialised (Load's -1 never ran for these categories)
+        this->mCategories[inCategory]->mPriority = -1;
     }
     this->mCategories[inCategory]->mMaxInstances = theMaxInstances;
     this->mCategories[inCategory]->mPercentage = inPercent;
