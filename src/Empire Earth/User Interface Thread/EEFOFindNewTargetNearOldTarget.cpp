@@ -1448,8 +1448,7 @@ void EEGetSelectionBounds(std::vector<EEUnit*>& inUnits, GERectangle& outBounds,
 // FUNCTION: EXE 0x64181a
 // Computes where an attacker should aim to intercept a moving target (else its location)
 // Where inAttacker should aim at a moving inTarget: the intercept point along the target's next waypoint (the
-// quadratic of the two speeds), else the target's location (the vector length and dot product add the z terms
-// instead of multiplying them, as the original does)
+// quadratic of the two speeds), else the target's location
 void EEGetLeadPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& outLocation)
 {
     GE3DPoint theAttacker(inAttacker->mPhysicalModel.GetLocation());
@@ -1469,8 +1468,8 @@ void EEGetLeadPosition(EEComplexUnit* inAttacker, EEUnit* inTarget, GE3DPoint& o
         float theToX = theAttacker.GetX() - thePosition.GetX();
         float theToY = theAttacker.GetY() - thePosition.GetY();
         float theToZ = theAttacker.GetZ() - thePosition.GetZ();
-        float theToLength = (float)sqrt(theToY * theToY + theToX * theToX + (theToZ + theToZ));
-        float theDot = theMoveY * theToY + (theMoveZ + theToZ) + theMoveX * theToX;
+        float theToLength = (float)sqrt(theToY * theToY + theToX * theToX + theToZ * theToZ);
+        float theDot = theMoveY * theToY + theMoveZ * theToZ + theMoveX * theToX;
         float theCosine = theDot / ((float)sqrt(theMoveZ * theMoveZ + theMoveY * theMoveY + theMoveX * theMoveX)
                                     * theToLength);
         float theA;
