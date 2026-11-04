@@ -1596,7 +1596,7 @@ bool EECPASGLand::AdvanceSubSector()
             theWeights.Fill(0.0f);
             theWeights.Fill(1.0f);
             if (this->mFlags.mFlags[kAITileWater] == true)
-                theWeights.mValues[2] = 0.0f;
+                theWeights.mValues[1] = 0.0f;   // the water weight (GetPathCosts); was the tile kind 2 used as the slot
             // The space weight is slot 10, as in GetPathCosts (the tile kind 15 indexed one past the 15 weights).
             if (this->mFlags.mFlags[kAITileSpace] == true)
                 theWeights.mValues[10] = 0.0f;
@@ -1701,7 +1701,7 @@ bool EECPASGLand::CheckNextSubSector(long inTime)
                     theWeights.Fill(0.0f);
                     theWeights.Fill(1.0f);
                     if (this->mFlags.mFlags[kAITileWater] == true)
-                        theWeights.mValues[2] = 0.0f;
+                        theWeights.mValues[1] = 0.0f;   // the water weight (GetPathCosts); was the tile kind 2 used as the slot
                     // The space weight is slot 10, as in GetPathCosts (the tile kind 15 indexed one past the 15 weights).
                     if (this->mFlags.mFlags[kAITileSpace] == true)
                         theWeights.mValues[10] = 0.0f;
