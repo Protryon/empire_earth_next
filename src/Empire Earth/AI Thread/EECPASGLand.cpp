@@ -1789,7 +1789,7 @@ bool EECPASGLand::CanTransportLandAt(const EETileLocation& inTile)
 
 // FUNCTION: EXE 0x44a186
 // Loads the sub-group, pickup/unload locations, transport ID and stage, path flag and transport tiles (newer
-// saves add the avoided tiles; their read result replaces earlier errors); a pending path resumes travel
+// saves add the avoided tiles); returns the first read error; a pending path resumes travel
 long EECPASGLand::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     unsigned long theID = 0;
@@ -1843,13 +1843,18 @@ long EECPASGLand::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
                 }
             }
         }
+        // the avoided tiles are read only after the fields before them read without error (their result used
+        // to replace an earlier error, and the list was resized from a count read after a failure)
         theCount = 0;
-        theResult = inFile.Read(theCount);
-        this->mAvoidedTiles.resize(theCount);
-        for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
-            theResult = this->mAvoidedTiles[i].mTile.Load(inFile);
+        if (theResult == 0) {
+            theResult = inFile.Read(theCount);
             if (theResult == 0)
-                theResult = inFile.Read(this->mAvoidedTiles[i].mTime);
+                this->mAvoidedTiles.resize(theCount);
+            for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
+                theResult = this->mAvoidedTiles[i].mTile.Load(inFile);
+                if (theResult == 0)
+                    theResult = inFile.Read(this->mAvoidedTiles[i].mTime);
+            }
         }
     }
     if (theFlag && !this->mUnits.empty())
@@ -2392,7 +2397,7 @@ long EECPASGLand::Restore(unsigned long inMajorVersion, unsigned long inMinorVer
 
 // FUNCTION: EXE 0x44bab9
 // Writes the sub-group, pickup/unload locations, transport ID and stage, path-pending flag, transport tiles
-// and avoided tiles; the avoided-tile writes' result replaces earlier errors
+// and avoided tiles; returns the first write error
 long EECPASGLand::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     EECPAttackSubGroup* theTransport = dynamic_cast<EECPAttackSubGroup*>(this->mTransport);
@@ -2421,8 +2426,11 @@ long EECPASGLand::Save(unsigned long inMajorVersion, unsigned long inMinorVersio
         theResult = this->mEmbarkTile.Save(outFile);
     if (theResult == 0)
         theResult = this->mLandingTile.Save(outFile);
+    // the avoided tiles are written only after the fields before them (their result used to replace an earlier
+    // error)
     theCount = this->mAvoidedTiles.size();
-    theResult = outFile.Write(theCount);
+    if (theResult == 0)
+        theResult = outFile.Write(theCount);
     for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
         theResult = this->mAvoidedTiles[i].mTile.Save(outFile);
         if (theResult == 0)
