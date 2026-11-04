@@ -156,7 +156,9 @@ bool EEUGExplore::FindNextTile(EEComplexUnit* inUnit)
                 EEMapTile* theTile = theMap->GetTile(this->mTile.GetX(), this->mTile.mY);
                 if (theTile == NULL || theMap->IsEdgeTile(this->mTile.GetX(), this->mTile.GetY()))
                     continue;
-                bool theSeen = !this->mNoUnexploredAreas ? theTile->IsVisibleTo(thePlayer) : theTile->IsSeenBy(thePlayer);
+                // the rings are searched only while mNoUnexploredAreas is false, so the test is always "visible
+                // now" (the "ever seen" arm for mNoUnexploredAreas could never run and is gone)
+                bool theSeen = theTile->IsVisibleTo(thePlayer);
                 if (theSeen)
                     continue;
                 if ((inUnit->mUnitClass->mDomains & kMovementAir) != 0 &&
