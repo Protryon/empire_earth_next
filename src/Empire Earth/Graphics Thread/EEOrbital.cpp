@@ -51,14 +51,15 @@ bool EEOrbital::IsOrbitalModel(GEModel* inModel)
 
 // FUNCTION: EXE 0x608ce6
 // Attaches the orbiting part to a model, speed from the name in degrees per second (orbital_cw_<deg>_... clockwise,
-// orbital_ccw_ counterclockwise); this prefix test is case-sensitive, so a mixed-case orbital name stays still
+// orbital_ccw_ counterclockwise); the prefix test ignores case
 void EEOrbital::Init(GEModel* inModel)
 {
     UString theField(0x40);
     float theDegrees;
     this->mSpeed = 0.0f;
     this->mModel = inModel;
-    if (inModel->GetName().Equals(gOrbitalClockwisePrefix, gOrbitalClockwisePrefix.GetLength())) {
+    // Match the prefixes ignoring case, as IsOrbitalModel does.
+    if (inModel->GetName().EqualsIgnoreCase(gOrbitalClockwisePrefix, gOrbitalClockwisePrefix.GetLength())) {
         unsigned long theEnd = inModel->GetName().FindBackwards("_", (unsigned long)-1);
         unsigned long theCount = theEnd - gOrbitalClockwisePrefix.GetLength();
         if (theCount != 0 && theCount < theEnd) {
@@ -67,8 +68,8 @@ void EEOrbital::Init(GEModel* inModel)
             theDegrees = -(theDegrees < 0.0f ? -theDegrees : theDegrees);
             this->mSpeed = theDegrees * 0.017453292f;
         }
-    } else if (inModel->GetName().Equals(gOrbitalCounterClockwisePrefix,
-                                         gOrbitalCounterClockwisePrefix.GetLength())) {
+    } else if (inModel->GetName().EqualsIgnoreCase(gOrbitalCounterClockwisePrefix,
+                                                   gOrbitalCounterClockwisePrefix.GetLength())) {
         unsigned long theEnd = inModel->GetName().FindBackwards("_", (unsigned long)-1);
         unsigned long theCount = theEnd - gOrbitalCounterClockwisePrefix.GetLength();
         if (theCount != 0 && theCount < theEnd) {
