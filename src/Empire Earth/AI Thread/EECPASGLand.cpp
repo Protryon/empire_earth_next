@@ -1908,14 +1908,16 @@ bool EECPASGLand::BoardTransports(std::vector<EEComplexUnit*>* inTransports)
         if (!theCurrent.mUnits.empty()) {
             theResult = true;
             EEUGLoadTransport* theGoal = new EEUGLoadTransport(theCurrent.mTransport, theCurrent.mUnits, true);
-            if (!this->GiveGoal(theCurrent.mTransport, theGoal, 0, kActionPrepareToMove) && theGoal != NULL)
-                delete theGoal;
+            // a refused goal is deleted only after its tile and the units' copies are taken from it
+            bool theRefused = !this->GiveGoal(theCurrent.mTransport, theGoal, 0, kActionPrepareToMove);
             theRendezvous = theGoal->mUnitTile;
             for (std::vector<EEComplexUnit*>::iterator theUnit = theCurrent.mUnits.begin(); theUnit != theCurrent.mUnits.end(); ++theUnit) {
                 EEUnitGoal* theCopy = theGoal->Clone();
                 if (!this->GiveGoal(*theUnit, theCopy, 0, kActionPrepareToMove) && theCopy != NULL)
                     delete theCopy;
             }
+            if (theRefused && theGoal != NULL)
+                delete theGoal;
         } else {
             theRendezvous.mX = theCurrent.mTransport->mTileX;
             theRendezvous.mY = theCurrent.mTransport->mTileY;
