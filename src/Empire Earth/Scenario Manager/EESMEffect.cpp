@@ -877,7 +877,7 @@ void EESMEffect::CreateUnits()
                 theUnit->GetComplexUnit()->SetFlightTime(theUnit->GetStats()->mFlightTime);
                 theUnit->GetComplexUnit()->SetAmmunition(theUnit->GetUnitClass()->mAmmunition);
                 theDirection.mX = (float)theMap->mSize * 0.5f - theLocation.GetX();
-                theDirection.mY = theLocation.GetX() - theLocation.GetY();
+                theDirection.mY = (float)theMap->mSize * 0.5f - theLocation.GetY();   // towards the map centre
                 theDirection.mZ = 0.0f;
                 theDirection.Normalize();
                 float theHeading = UMArcTan2(-theDirection.GetX(),theDirection.GetY());
