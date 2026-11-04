@@ -3142,11 +3142,12 @@ void EESMEffect::SetUnitsStance()
             EEUCGate* theGate = dynamic_cast<EEUCGate*>(theUnit->GetUnitClass());
             if (theUnit->mIsLocked != true)
                 theUnit->mIsLocked = true;
+            // a single-piece unit (a non-gate, or a gate created by a Create effect) has no second or fourth part
             EEComplexUnit* thePart = theGate->GetSecondPart(theUnit);
-            if (thePart->mIsLocked != true)
+            if (thePart != NULL && thePart->mIsLocked != true)
                 thePart->mIsLocked = true;
             thePart = theGate->GetFourthPart(theUnit);
-            if (thePart->mIsLocked != true)
+            if (thePart != NULL && thePart->mIsLocked != true)
                 thePart->mIsLocked = true;
             break;
         }
@@ -3155,11 +3156,12 @@ void EESMEffect::SetUnitsStance()
             EEUCGate* theGate = dynamic_cast<EEUCGate*>(theUnit->GetUnitClass());
             if (theUnit->mIsLocked)
                 theUnit->mIsLocked = false;
+            // a single-piece unit (a non-gate, or a gate created by a Create effect) has no second or fourth part
             EEComplexUnit* thePart = theGate->GetSecondPart(theUnit);
-            if (thePart->mIsLocked)
+            if (thePart != NULL && thePart->mIsLocked)
                 thePart->mIsLocked = false;
             thePart = theGate->GetFourthPart(theUnit);
-            if (thePart->mIsLocked)
+            if (thePart != NULL && thePart->mIsLocked)
                 thePart->mIsLocked = false;
             break;
         }
