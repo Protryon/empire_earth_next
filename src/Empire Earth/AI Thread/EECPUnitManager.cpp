@@ -176,18 +176,20 @@ bool EECPUnitManager::CancelRequest(long inUnitClass, unsigned long inCount, lon
         if (theLeft == 0)
             goto done;
         std::deque<EECPUMRequest>& theRequests = this->mRequests[i];
-        for (it = theRequests.begin(); it != theRequests.end() && theLeft != 0; ++it) {
+        for (it = theRequests.begin(); it != theRequests.end() && theLeft != 0;) {
             if ((*it).mUnitClass == inUnitClass && (*it).mContinent == inContinent && (*it).mTownID == inTownID) {
-                if (inCount < (*it).mCount) {
-                    (*it).mCount -= inCount;
-                    theLeft -= inCount;
-                    this->mNumInProduction -= inCount;
+                if (theLeft < (*it).mCount) {   // only the count still left (was inCount)
+                    (*it).mCount -= theLeft;
+                    this->mNumInProduction -= theLeft;
+                    theLeft = 0;
                 } else {
                     theLeft -= (*it).mCount;
                     this->mNumInProduction -= (*it).mCount;
-                    theRequests.erase(it, it + 1);
+                    it = theRequests.erase(it, it + 1);   // continue at the next request
+                    continue;
                 }
             }
+            ++it;
         }
     }
     if (theLeft != 0) {
