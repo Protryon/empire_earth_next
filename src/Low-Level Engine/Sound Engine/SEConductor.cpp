@@ -433,7 +433,12 @@ long SEConductor::LoadScore(const UWideString& inName, long& outID, bool inSecon
         if (FAILED(theError) && theError != DMUS_S_PARTIALLOAD) {
             ESRecordNativeError(theError);
             theResult = 1;
-        } else if (SUCCEEDED(theSegment->SetParam(GUID_Download, -1, 0, 0, this->mPerformance))) {
+        } else if (FAILED(theError = theSegment->SetParam(GUID_Download, -1, 0, 0, this->mPerformance))) {
+            // Fixed: a failed download used to leak the segment and report success with outID unset
+            theSegment->Release();
+            ESRecordNativeError(theError);
+            theResult = 1;
+        } else {
             SEScore* theNewScore = new SEScore(theSegment, false);
             if (inSecondary) {
                 this->mScores[i - 1].mScore = theNewScore;
