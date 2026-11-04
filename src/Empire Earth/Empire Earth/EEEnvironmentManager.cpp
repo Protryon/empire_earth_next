@@ -205,8 +205,8 @@ void EEEnvironmentManager::UpdateStorms(float inTimeOfDay, unsigned long inTime)
 static const float kWindStepMinimum = 1e-08f;
 
 // FUNCTION: EXE 0x52f3d6
-// Moves the wind one step toward its target; once there, sets the wind to a random strength and a step rate that
-// brings it back to the (unchanging) target in about fifteen steps
+// Moves the wind one step toward its target; once there, picks a new random target and a step rate that reaches
+// it in about fifteen steps
 void EEEnvironmentManager::UpdateWind(float inTimeOfDay, unsigned long inTime)
 {
     if (this->mWind != this->mWindTarget) {
@@ -221,7 +221,8 @@ void EEEnvironmentManager::UpdateWind(float inTimeOfDay, unsigned long inTime)
         }
 
     } else {
-        this->mWind = gPhysics->GetRandom(kWindMinimum, kWindMaximum);
+        // reached: pick a new random target and a rate that gets there in about fifteen steps
+        this->mWindTarget = gPhysics->GetRandom(kWindMinimum, kWindMaximum);
         if (this->mWind != this->mWindTarget) {
             float theDelta = this->mWindTarget - this->mWind;
             float theStep = (theDelta < 0.0f ? -theDelta : theDelta) / 15.0;
