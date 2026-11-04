@@ -221,8 +221,11 @@ void RTSGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, voi
             this->mMovie = NULL;
         }
         gUserInterface->PostMovieDone(this->mMovieDoneEvent);
+        // release the done event once and forget it (a stop after the movie had ended used to post and release
+        // the already released event again)
         if (this->mMovieDoneEvent != NULL) {
             this->mMovieDoneEvent->Dereference();
+            this->mMovieDoneEvent = NULL;
         }
         gConductor->GetConductor().SetVolume(this->mSavedConductorVolume);
         gSoundManager->SetMasterVolume(this->mSavedMasterVolume);
@@ -263,8 +266,10 @@ void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
             this->mMovie = NULL;
             this->mIsMoviePlaying = false;
             gUserInterface->PostMovieDone(this->mMovieDoneEvent);
+            // release the done event once and forget it (a later stop used to release it again)
             if (this->mMovieDoneEvent != NULL) {
                 this->mMovieDoneEvent->Dereference();
+                this->mMovieDoneEvent = NULL;
             }
             gConductor->GetConductor().SetVolume(this->mSavedConductorVolume);
             gSoundManager->SetMasterVolume(this->mSavedMasterVolume);
