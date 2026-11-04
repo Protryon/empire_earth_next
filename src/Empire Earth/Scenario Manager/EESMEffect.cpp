@@ -2611,7 +2611,9 @@ void EESMEffect::SetAIVariable()
             thePlayer->mSpecializedUnitPercentage = this->mFloatValue;
             break;
         case kCPBehaviorMaximumAttackResponseRange:
-            thePlayer->mMaxAttackResponseRange = this->mFloatValue;
+            // the triggers compare it with squared distances: square it as EECPBehaviorTable::Load squares the
+            // database value (the editor slider uses the unsquared range)
+            thePlayer->mMaxAttackResponseRange = this->mFloatValue * this->mFloatValue;
             break;
         case kCPBehaviorPriestUsage:
             thePlayer->mPriestMaxPerGroup = this->mIntValue1;
