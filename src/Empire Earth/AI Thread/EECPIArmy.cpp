@@ -64,13 +64,13 @@ EECPIArmy::EECPIArmy()
 // (the scalar deleting destructor)
 
 // FUNCTION: EXE 0x48019d
-// Adds the unit's tile (its container's when it is inside one) to the army, growing the bounds and the strength;
-// skips units whose own tile is off the map, so units held in a container are never added
+// Adds the unit's tile (its container's when it is inside one) to the army, growing the bounds and the strength
+// (the unit's own)
 void EECPIArmy::AddUnit(EEComplexUnit* inUnit)
 {
     U2DPoint<long> theTile;
     EEComplexUnit* theUnit = inUnit->mContainer != NULL ? inUnit->mContainer : inUnit;
-    if (theUnit == NULL || inUnit->mTileX == -10000)
+    if (theUnit == NULL || theUnit->mTileX == -10000)   // the tile used (was the contained unit's own, -10000)
         return;
     theTile.SetXY(theUnit->GetTileX(), theUnit->GetTileY());
     if (this->mTiles.Size() > 0)
@@ -82,7 +82,7 @@ void EECPIArmy::AddUnit(EEComplexUnit* inUnit)
         this->mBounds.mRight = theTile.mX;
     }
     this->mTiles.Insert(U2DPoint<long>(theUnit->mTileX, theUnit->mTileY));
-    this->mStrength += theUnit->mUnitClass->mInfluence;
+    this->mStrength += inUnit->mUnitClass->mInfluence;   // the unit's own strength (the container only lends its tile)
 }
 
 // FUNCTION: EXE 0x480221
