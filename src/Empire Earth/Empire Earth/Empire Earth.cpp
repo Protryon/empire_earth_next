@@ -944,24 +944,25 @@ void EEInitializeGraphics()
     gFontArial72 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 72);
 
     ESVERIFY_AT(gFontArial72, 1432);
+    // Each bold font is checked after it is created (the checks below tested the regular fonts again).
     gFontArialBold8 = UIFontTable::FindOrCreateFont(theFontName, 1, 2, 8);
 
-    ESVERIFY_AT(gFontArial8, 1435);
+    ESVERIFY_AT(gFontArialBold8, 1435);
     gFontArialBold9 = UIFontTable::FindOrCreateFont(theFontName, 1, 2, 9);
 
-    ESVERIFY_AT(gFontArial9, 1438);
+    ESVERIFY_AT(gFontArialBold9, 1438);
     gFontArialBold10 = UIFontTable::FindOrCreateFont(theFontName, 1, 2, 10);
 
-    if (!gU531930) ESVerify(__FILE__, 1441, "gFontArial10"); // Preserve original assert spelling over provisional external identity.
+    ESVERIFY_AT(gFontArialBold10, 1441);
     gFontArialBold12 = UIFontTable::FindOrCreateFont(theFontName, 1, 2, 12);
 
-    if (!gU531934) ESVerify(__FILE__, 1444, "gFontArial12"); // Preserve original assert spelling over provisional external identity.
+    ESVERIFY_AT(gFontArialBold12, 1444);
     gFontArialBold14 = UIFontTable::FindOrCreateFont(theFontName, 1, 2, 14);
 
-    if (!gU531938) ESVerify(__FILE__, 1447, "gFontArial14"); // Preserve original assert spelling over provisional external identity.
+    ESVERIFY_AT(gFontArialBold14, 1447);
     gFontArialBold16 = UIFontTable::FindOrCreateFont(theFontName, 1, 2, 16);
 
-    ESVERIFY_AT(gFontArial16, 1450);
+    ESVERIFY_AT(gFontArialBold16, 1450);
     gResource->GetString(IDS_TIMES_NEW_ROMAN, theResourceName);
     theFontName = (const char*)theResourceName;
     gFontTimesNewRoman9 = UIFontTable::FindOrCreateFont(theFontName, 0, 2, 9);
