@@ -50,10 +50,12 @@
 const UString EEE2DVortex::sData("EEE2DVortex-Data");
 
 // FUNCTION: EXE 0x4e777f
-// Creates a vortex at a point with empty orbital lists and no graphic (the orbital count is left unset)
+// Creates a vortex at a point with no orbitals and no graphic
 EEE2DVortex::EEE2DVortex(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect)
-    : EEEffect2D(0, inGraphicEffect, gU4E8DF4, kEffect2DVortex, false)
+    : EEEffect2D(0, inGraphicEffect, gU4E8DF4, kEffect2DVortex, false),
+      mAge(0.0f), mFrame(0), mOrbitalCount(0)
 {
+    // A new vortex has no orbitals until Load copies them: the count must start at zero.
     this->mGraphicObject = NULL;
     this->SetPosition(inPosition);
 }
