@@ -115,7 +115,7 @@ void EEE2DShockwave::PrepareQueue()
 
 // NEAR: begin() of the tag list is expanded, operator+ out of line in the original; register choice
 // FUNCTION: EXE 0x4e6259
-// Places a unit's shockwave on a random one of its type-4 tag points (at the map origin if it has none), then
+// Places a unit's shockwave on a random one of its type-4 tag points (at the unit if it has none), then
 // loads its graphic; returns the load result
 long EEE2DShockwave::SetUp()
 {
@@ -133,6 +133,9 @@ long EEE2DShockwave::SetUp()
                 theIndex = theList->mPoints.size() - 1;
             theList->Scale(theTransformation, theScale);
             theList->mPoints[theIndex]->GetPoint(theFrame, theTransformation, thePosition);
+        } else {
+            // no type-4 tag points: at the unit itself, not at the map origin
+            thePosition = GE3DPoint(theTransformation);
         }
         this->SetPosition(thePosition);
     }
