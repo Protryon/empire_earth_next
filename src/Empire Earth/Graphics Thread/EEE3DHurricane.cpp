@@ -150,7 +150,7 @@ void EEE3DHurricane::GetSpawnPoint(GE3DPoint& outPoint)
     unsigned long theIndex = UMFloatToLong(EEEffect::GetRandom() * theList->mPoints.size());
     if (theIndex == theList->mPoints.size())
         theIndex = theList->mPoints.size() - 1;
-    theList->Scale(theLocation, theScale);
+    EETagPointList::Scale(theLocation, theScale);
     theList->mPoints[theIndex]->GetPoint(theFrame, theLocation, outPoint);
 }
 

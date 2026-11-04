@@ -14,7 +14,7 @@ harness (tools/harness). The windowed and software-display policy is compiled in
 rules on the staged copies of a few units (TEST_PROFILES, each refusing unless it matches its expected count), and
 every function the harness hooks at its entry is kept out of line (HARNESS_HOOKS). src/ is never changed.
 
---sanitize-null (TEST ONLY; out gains -nullsan): without -fno-delete-null-pointer-checks, with the null-pointer
+--sanitize-null (TEST ONLY; out gains -nullsan): with the null-pointer and pointer-overflow
 UBSan checks in recover mode and tools/harness/ubsan_minimal.c's handlers in every image: each distinct site the
 game reaches is logged once ("EE-UBSAN <check> <module>+<rva>").
 
@@ -217,7 +217,6 @@ def main():
     overlays = TEST_PROFILES.get(a.test_profile)
     extra, extra_libs = (), []
     if a.sanitize_null:
-        clang_build.CLANG_FLAGS = [f for f in clang_build.CLANG_FLAGS if f != "-fno-delete-null-pointer-checks"]
         extra = (f"-fsanitize={SANITIZE_CHECKS}", "-fsanitize-minimal-runtime",
                  f"-fsanitize-recover={SANITIZE_CHECKS}")
         ubsan = out / "ubsan_minimal.obj"

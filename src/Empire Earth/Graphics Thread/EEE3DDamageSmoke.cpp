@@ -100,7 +100,7 @@ long EEE3DDamageSmoke::Step()
         if (this->mSinceEmit >= theInterval) {
             if (theList) {
                 // Scale only a list that exists (a model without type-0 tag points has none).
-                theList->Scale(theLocation, theScale);
+                EETagPointList::Scale(theLocation, theScale);
                 for (unsigned long i = 0; i < theList->mPoints.size(); i++) {
                     theList->mPoints[i]->GetPoint(theFrame, theLocation, thePoint);
                     thePoint.SetX(EEDamageSmokeJitter(thePoint.GetX(), theEffect->GetParam1()));

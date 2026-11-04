@@ -131,7 +131,7 @@ long EEE2DShockwave::SetUp()
             long theIndex = UMFloatToLong(EEEffect::GetRandom() * theList->mPoints.size());
             if (theIndex == theList->mPoints.size())
                 theIndex = theList->mPoints.size() - 1;
-            theList->Scale(theTransformation, theScale);
+            EETagPointList::Scale(theTransformation, theScale);
             theList->mPoints[theIndex]->GetPoint(theFrame, theTransformation, thePosition);
         } else {
             // no type-4 tag points: at the unit itself, not at the map origin

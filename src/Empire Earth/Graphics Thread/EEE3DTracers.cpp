@@ -73,7 +73,7 @@ EEE3DTracers::EEE3DTracers(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGrap
     this->mGraphicObject = NULL;
     this->mDrawPosition = 0.0f;
     if (theList != NULL && theList->GetNumTagPoints() != 0) {
-        theList->Scale(theFromTransformation, theScale);
+        EETagPointList::Scale(theFromTransformation, theScale);
         if (theModel->GetNumParts() > 0) {
             GETransformation thePartTransformation(false);
             unsigned long theModelIndex;
@@ -84,7 +84,7 @@ EEE3DTracers::EEE3DTracers(EEUnit* inFrom, EEUnit* inTo, EEGraphicEffect* inGrap
         } else {
             theList->GetTagPoint(theIndex)->GetPoint(theFrame, theFromTransformation, theStart);
         }
-        theList->Scale(theToTransformation, theToScale);
+        EETagPointList::Scale(theToTransformation, theToScale);
     } else {
         theFromTransformation.Apply(inFrom->GetModel()->mDefaultPoint, theStart);
     }

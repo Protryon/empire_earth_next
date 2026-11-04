@@ -65,7 +65,7 @@ EEE2DWinterBreath::EEE2DWinterBreath(EEUnit* inUnit, EEGraphicEffect* inGraphicE
     this->mSlowDownTime = inGraphicEffect->GetParam2();
     this->mFade = inGraphicEffect->GetParam3();
     if (theList) {
-        theList->Scale(theTransformation, theScale);
+        EETagPointList::Scale(theTransformation, theScale);
         theList->GetTagPoint(0)->GetPoint(theFrame, theTransformation, thePosition);
     } else {
         this->mFade = 0.0f;

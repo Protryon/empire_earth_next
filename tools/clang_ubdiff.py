@@ -1,6 +1,6 @@
 """Find the functions whose code depends on a UB-taming clang flag (port phase 1).
 
-  python -I tools/clang_ubdiff.py [--flag -fno-delete-null-pointer-checks] [-j N] [--opt=-O1] [module ...]
+  python -I tools/clang_ubdiff.py [--flag -fwrapv] [-j N] [--opt=-O1] [module ...]
 
 Every unit is compiled twice with clang-cl (tools/clang_build.py flags, one section per function, /Gy): with the
 flag and without it. The functions whose code or relocations differ are the places where clang exploits the
@@ -61,7 +61,7 @@ def null_tests(fn):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("names", nargs="*", metavar="module", help=f"default: all ({' '.join(units.MODULES)})")
-    ap.add_argument("--flag", default="-fno-delete-null-pointer-checks")
+    ap.add_argument("--flag", default="-fwrapv")
     ap.add_argument("--opt", default="-O1")
     ap.add_argument("-j", type=int, default=os.cpu_count() or 4)
     ap.add_argument("--all", dest="null_tests", action="store_false",

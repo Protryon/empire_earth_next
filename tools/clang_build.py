@@ -5,8 +5,8 @@
 The units, their order and their defines come from link/<module>/units.txt and tools/ee.py. Flags:
   - clang-cl --target=i686-pc-windows-msvc, MSVC 19.44 compatibility, C++17 (C units: C), native wchar_t;
   - /arch:IA32 (x87 floating point), /GS- (no stack cookies);
-  - -fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks: the code relies on all three (the original
-    compiler never exploited that undefined behaviour; PORT_LEARNINGS.md has the plan to drop them);
+  - -fno-strict-aliasing -fwrapv: the code relies on both (the original compiler never exploited that undefined
+    behaviour; PORT_LEARNINGS.md has the plan to drop them; -fno-delete-null-pointer-checks is gone);
   - a unit's `// UNIT-FLAGS:` line replaces the module flags (its old code-generation switches are dropped).
 Every unit is staged under C:\\EEX (tools/verify.py) before it is compiled.
 
@@ -31,7 +31,7 @@ from ee import CLANG, ROOT
 
 CLANG_FLAGS = ["--target=i686-pc-windows-msvc", "/nologo", "/c", "-fms-compatibility", "-fms-extensions",
                "-fms-compatibility-version=19.44", "/Zc:wchar_t", "-fdelayed-template-parsing", "/arch:IA32", "/GS-",
-               "-fno-strict-aliasing", "-fwrapv", "-fno-delete-null-pointer-checks",
+               "-fno-strict-aliasing", "-fwrapv",
                "-Wno-everything", "-ferror-limit=0", "-fno-color-diagnostics"]
 # old code-generation switches a `// UNIT-FLAGS:` line may still carry (the build's --opt decides)
 DROP = re.compile(r"^[-/](G[3-7B]|Zm\d+|Zi|Z7|O[12dsxty]|Ob\d|Og|Gy|Gf|GF)$")

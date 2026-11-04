@@ -92,7 +92,7 @@ public:
 class EETagPointList {
 public:
     // 0xe1814: scales the orientation rows of ioTransformation by inScale (does not read this)
-    void Scale(GETransformation& ioTransformation, float inScale);
+    static void Scale(GETransformation& ioTransformation, float inScale);
     // inline (EEE3DCitizenBeam::Aim 0xe9606 calls vector::operator[] out of line through it: the ICF twin 0x11e2a5)
     // (provisional name)
     EETagPoint* GetTagPoint(unsigned long inIndex) { return this->mPoints[inIndex]; }

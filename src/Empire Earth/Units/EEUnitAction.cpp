@@ -870,7 +870,7 @@ static void EELoadScript(const UString& inName, std::map<long, EEUnitAction*>*& 
                     theState = 4;
                 } else {
                     theDelimiters = ", ";
-                    theCursor += 5 - theToken.GetLength();
+                    theCursor -= (long)theToken.GetLength() - 5;   // back to just after "anyof"/"allof"
                     theState = 3;
                 }
                 break;

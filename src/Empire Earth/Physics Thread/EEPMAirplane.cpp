@@ -207,7 +207,7 @@ void EEPMAirplane::FollowCarrier(EEComplexUnit* inUnit)
     inUnit->GetPathStart(theNext, theIndex);
     inUnit->mPhysicalModel.GetLocation().GetPosition(thePosition);
     float theDistance = thePosition.DistanceTo(theNext);
-    theTags->Scale(theTransformation, theScale);
+    EETagPointList::Scale(theTransformation, theScale);
     theTags->mPoints[2]->GetPoint(theCarrier->mPhysicalModel.GetFrame(), theTransformation, theNext);
     theTags->mPoints[0]->GetPoint(theCarrier->mPhysicalModel.GetFrame(), theTransformation, theStart);
     theDistance = theStart.DistanceTo(theNext) - theDistance;

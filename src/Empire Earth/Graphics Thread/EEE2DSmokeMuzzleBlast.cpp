@@ -70,7 +70,7 @@ EEE2DSmokeMuzzleBlast::EEE2DSmokeMuzzleBlast(EEUnit* inUnit, EEUnit* inTarget, E
     float theTargetScale = inTarget->mComplexUnit->mPhysicalModel.GetScale();
     unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
     unsigned long theIndex = theUnit->mWeaponTagPoint;
-    theList->Scale(theTransformation, theScale);
+    EETagPointList::Scale(theTransformation, theScale);
     if (theModel->GetNumParts() > 0) {
         GETransformation thePartTransformation(false);
         unsigned long theModelIndex;
@@ -82,7 +82,7 @@ EEE2DSmokeMuzzleBlast::EEE2DSmokeMuzzleBlast(EEUnit* inUnit, EEUnit* inTarget, E
     } else {
         (*(theList->mPoints.begin() + theIndex))->GetPoint(theFrame, theTransformation, theStart);
     }
-    theList->Scale(theTargetTransformation, theTargetScale);
+    EETagPointList::Scale(theTargetTransformation, theTargetScale);
     theOffset = inTarget->GetModel()->mDefaultPoint;
     theTargetTransformation.Apply(theOffset, theEnd);
     if (inUnit->mUnitClass->mShootsHigh || (inUnit->mStats->mCanFireOverWalls && inUnit->mComplexUnit->mIsFiringHigh))
@@ -116,7 +116,7 @@ EEE2DSmokeMuzzleBlast::EEE2DSmokeMuzzleBlast(EEUnit* inUnit, const GE3DPoint& in
     float theScale = theUnit->mPhysicalModel.GetScale();
     unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
     unsigned long theIndex = theUnit->mWeaponTagPoint;
-    theList->Scale(theTransformation, theScale);
+    EETagPointList::Scale(theTransformation, theScale);
     if (theModel->GetNumParts() > 0) {
         GETransformation thePartTransformation(false);
         unsigned long theModelIndex;

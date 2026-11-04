@@ -414,7 +414,7 @@ long EEE2DLightGlow::PlaceGlows()
         this->SetPosition(thePosition);
         this->mAge += gPhysics->mTickTime;
         if (theTags != NULL)
-            theTags->Scale(theTransformation, theScale);
+            EETagPointList::Scale(theTransformation, theScale);
         for (unsigned long i = 0; i < this->mSpotCount; i++) {
             if (theShow && this->mSpots[i].mStart <= this->mAge) {
                 if (((unsigned long)this->mAge - this->mSpots[i].mStart) % this->mSpots[i].mPeriod > this->mSpots[i].mOnTime) {

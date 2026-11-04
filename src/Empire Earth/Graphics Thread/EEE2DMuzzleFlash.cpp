@@ -84,7 +84,7 @@ long EEE2DMuzzleFlash::SetUp()
     float theScale = theUnit->mPhysicalModel.GetScale();
     unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
     unsigned long theIndex = theUnit->mWeaponTagPoint;
-    theList->Scale(theTransformation, theScale);
+    EETagPointList::Scale(theTransformation, theScale);
     if (theModel->GetNumParts() <= 0) {
         theList->mPoints[theIndex]->GetPoint(theFrame, theTransformation, this->mStart);
     } else {

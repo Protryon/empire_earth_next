@@ -82,7 +82,7 @@ EEE2DLinearProjectile::EEE2DLinearProjectile(EEUnit* inUnit, EEUnit* inTarget, E
     this->mT = 0.0f;
     this->mDrawT = 0.0f;
     if (theList && theList->mPoints.size()) {
-        theList->Scale(theTransformation, theScale);
+        EETagPointList::Scale(theTransformation, theScale);
         if (theModel->GetNumParts() > 0) {
             GETransformation thePartTransformation(false);
             unsigned long theModelIndex;
@@ -94,7 +94,7 @@ EEE2DLinearProjectile::EEE2DLinearProjectile(EEUnit* inUnit, EEUnit* inTarget, E
         } else {
             theList->GetTagPoint(theIndex)->GetPoint(theFrame, theTransformation, theStart);
         }
-        theList->Scale(theTargetTransformation, theTargetScale);
+        EETagPointList::Scale(theTargetTransformation, theTargetScale);
     } else {
         theTransformation.Apply(inUnit->GetModel()->mDefaultPoint, theStart);
         // the target's point is on its scaled model whatever the shooter has
@@ -135,7 +135,7 @@ EEE2DLinearProjectile::EEE2DLinearProjectile(EEUnit* inUnit, const GE3DPoint& in
     this->mGraphicObject = NULL;
     this->mDrawT = 0.0f;
     if (theList && theList->mPoints.size()) {
-        theList->Scale(theTransformation, theScale);
+        EETagPointList::Scale(theTransformation, theScale);
         if (theModel->GetNumParts() > 0) {
             GETransformation thePartTransformation(false);
             unsigned long theModelIndex;

@@ -6242,7 +6242,7 @@ bool EEIsLineToUnitBlocked(EEComplexUnit* inUnit, EEUnit* inTarget, EEUnit** out
             EETagPointList* theList = theModel->mTagPoints[theUnit->mAnimation];
             unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
             unsigned long theIndex = theUnit->mWeaponTagPoint;
-            theList->Scale(theTransformation, theScale);
+            EETagPointList::Scale(theTransformation, theScale);
             if (theModel->GetNumParts() > 0) {
                 theOrientation.MakeIdentity();
                 if (theModel->FindTurretPart(theList->GetTagPoint(theIndex)->mModel, thePart) == 0)

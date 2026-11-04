@@ -109,7 +109,7 @@ void EEUnitClass::RouteDockWaypoint(EEComplexUnit* inUnit)
     } else {
         GETransformation theTransformation(false);
         theTransformation = theCarrier->mPhysicalModel.GetLocation();
-        theTags->Scale(theTransformation, theScale);
+        EETagPointList::Scale(theTransformation, theScale);
         theTags->mPoints[2]->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theTarget);
     }
     this->AddWaypointAt(inUnit, theTarget.GetX(), theTarget.GetY(), theTarget.GetZ(), true);
@@ -709,7 +709,7 @@ void EEUCLandable::ApproachCarrier(EEComplexUnit* inUnit, bool inSteep)
         return;
     GETransformation theTransformation(false);
     theTransformation = theCarrier->mPhysicalModel.GetLocation();
-    theTags->Scale(theTransformation, theScale);
+    EETagPointList::Scale(theTransformation, theScale);
     if ((inUnit->mCommand ? inUnit->mCommand->mType : 0) != kActionBrake) {
         theTags->mPoints[0]->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theDeck);
         theTransformation = theCarrier->mPhysicalModel.GetLocation();
@@ -780,7 +780,7 @@ void EEUCLandable::TakeOffFromCarrier(EEComplexUnit* inUnit)
     inUnit->DropPath();
     if (theTags != NULL && theTags->GetNumTagPoints() != 0) {
         theCarrierLocation = theCarrier->mPhysicalModel.GetLocation();
-        theTags->Scale(theCarrierLocation, theScale);
+        EETagPointList::Scale(theCarrierLocation, theScale);
         theTags->GetTagPoint(0)->GetPoint(inUnit->mPhysicalModel.GetFrame(), theCarrierLocation, theStart);
         theTags->GetTagPoint(2)->GetPoint(inUnit->mPhysicalModel.GetFrame(), theCarrierLocation, theEnd);
     } else {

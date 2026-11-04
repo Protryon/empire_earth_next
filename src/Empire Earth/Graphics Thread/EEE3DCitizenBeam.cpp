@@ -109,7 +109,7 @@ void EEE3DCitizenBeam::Aim()
     float theScale = theUnit->mPhysicalModel.GetScale();
     unsigned long theFrame = theUnit->mPhysicalModel.GetFrame();
     EETagPointList* theList = theModel->mTagPoints[theUnit->mAnimation];
-    theList->Scale(theUnitTransformation, theScale);
+    EETagPointList::Scale(theUnitTransformation, theScale);
     theList->GetTagPoint(0)->GetPoint(theFrame, theUnitTransformation, theStart);
     theDirection.SetX(this->mEnd.GetX() - theStart.GetX());
     theDirection.SetY(this->mEnd.GetY() - theStart.GetY());

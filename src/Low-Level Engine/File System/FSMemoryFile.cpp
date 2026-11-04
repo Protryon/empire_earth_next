@@ -299,8 +299,9 @@ void FSMemoryFile::IncreaseFileSize(unsigned long inLength)
 {
     unsigned long theLength = this->mAllocatedLength + inLength;
     unsigned char* theBuffer = new unsigned char[theLength];
-    this->mCurrent += theBuffer - this->mStart;
-    this->mEnd += theBuffer - this->mStart;
+    // rebase by offsets: adding (new - old) to an old pointer is arithmetic across two allocations
+    this->mCurrent = theBuffer + (this->mCurrent - this->mStart);
+    this->mEnd = theBuffer + (this->mEnd - this->mStart);
     this->mLimit = theBuffer + theLength;
     this->mStart = theBuffer;
     if (this->mBuffer) {

@@ -70,7 +70,7 @@ EEE3DPulseCannonBall::EEE3DPulseCannonBall(EEUnit* inUnit, const GE3DPoint& inTa
     this->mGraphicObject = NULL;
     this->mDrawPosition = 0.0f;
     if (theList != NULL && theList->GetNumTagPoints() != 0) {
-        theList->Scale(theUnitTransformation, theScale);
+        EETagPointList::Scale(theUnitTransformation, theScale);
         if (theModel->GetNumParts() > 0) {
             GETransformation thePartTransformation(false);
             unsigned long theModelIndex;
