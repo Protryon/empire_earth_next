@@ -34,7 +34,7 @@ NESynchronousCommunications::~NESynchronousCommunications()
 }
 
 // FUNCTION: LLE 0x10047375
-// Returns bytes received per second since the last call (divides by zero if called twice in one millisecond)
+// Returns bytes received per second since the last call
 unsigned long NESynchronousCommunications::GetCurrentReceiveBytesPerSec()
 {
     NEProtocol* theProtocol = NULL;
@@ -43,13 +43,17 @@ unsigned long NESynchronousCommunications::GetCurrentReceiveBytesPerSec()
     unsigned long theBytes = theProtocol->GetBytesReceived();
     unsigned long theDeltaBytes = theBytes - this->mLastReceiveBytes;
     unsigned long theDeltaTime = theTime - this->mLastReceiveTime;
+    // Fix: a second call within the same millisecond divided by zero; it now reports 0 and keeps measuring from
+    // the previous call.
+    if (theDeltaTime == 0)
+        return 0;
     this->mLastReceiveBytes = theBytes;
     this->mLastReceiveTime = theTime;
     return theDeltaBytes * 1000 / theDeltaTime;
 }
 
 // FUNCTION: LLE 0x100473bc
-// Returns bytes sent per second since the last call (divides by zero if called twice in one millisecond)
+// Returns bytes sent per second since the last call
 unsigned long NESynchronousCommunications::GetCurrentSendBytesPerSec()
 {
     NEProtocol* theProtocol = NULL;
@@ -58,6 +62,10 @@ unsigned long NESynchronousCommunications::GetCurrentSendBytesPerSec()
     unsigned long theBytes = theProtocol->GetBytesSent();
     unsigned long theDeltaBytes = theBytes - this->mLastSendBytes;
     unsigned long theDeltaTime = theTime - this->mLastSendTime;
+    // Fix: a second call within the same millisecond divided by zero; it now reports 0 and keeps measuring from
+    // the previous call.
+    if (theDeltaTime == 0)
+        return 0;
     this->mLastSendBytes = theBytes;
     this->mLastSendTime = theTime;
     return theDeltaBytes * 1000 / theDeltaTime;
