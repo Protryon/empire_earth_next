@@ -553,13 +553,16 @@ long EEUnit::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorV
 }
 
 // FUNCTION: EXE 0x6299e5
-// Writes the unit to the saved game (resource type, health fraction, amount, a zero); returns the first write error
-// of its own fields (the RTSUnit part's result is ignored)
+// Writes the unit to the saved game (base unit part, resource type, health fraction, amount, a zero); returns the
+// first write error
 long EEUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     long theZero = 0;
-    RTSUnit::Save(inMajorVersion, inMinorVersion, outFile);
-    long theResult = outFile.Write(this->mResourceType);
+    // the base unit part's result counts too (it used to be ignored)
+    long theResult = RTSUnit::Save(inMajorVersion, inMinorVersion, outFile);
+    if (theResult != 0)
+        return theResult;
+    theResult = outFile.Write(this->mResourceType);
     if (theResult != 0)
         return theResult;
     float theFraction = (float)this->mHitPoints / this->mStats->mMaxHitPoints;
