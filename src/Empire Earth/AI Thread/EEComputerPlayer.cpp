@@ -726,7 +726,7 @@ long EEComputerPlayer::ChooseUnitsToKill(EEAIFOUnitsToKillScoringBase& inScorer,
 }
 
 // FUNCTION: EXE 0x42e9e7
-// Returns the most frequent path area id among the tiles around the unit (reads the map head when none has one)
+// Returns the most frequent path area id among the tiles around the unit (0 when none has one)
 unsigned short EEComputerPlayer::GetObjectRegion(EEComplexUnit* inUnit)
 {
     std::map<unsigned short, unsigned long>::iterator theBest;
@@ -739,6 +739,9 @@ unsigned short EEComputerPlayer::GetObjectRegion(EEComplexUnit* inUnit)
         if (theID != 0)
             theCounts[theID] = theCounts.insert(std::map<unsigned short, unsigned long>::value_type(theID, 0)).first->second + 1;
     }
+    // no tile around the unit has a path area: there is no first entry to read (the map head node holds no value)
+    if (theCounts.empty())
+        return 0;
     theBest = theCounts.begin();
     unsigned short theResult = theBest->first;
     unsigned long theMax = theBest->second;
