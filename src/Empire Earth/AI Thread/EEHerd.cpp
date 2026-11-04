@@ -516,7 +516,7 @@ void EEHerd::Graze(EEComplexUnit* inUnit, unsigned long inTime)
                 theOther.mX = gPhysics->GetRandom(0, theRight - theLeft) + theLeft;
                 theOther.mY = gPhysics->GetRandom(0, theBottom - theTop) + theTop;
                 if (std::find(theTried.begin(), theTried.end(), theOther) == theTried.end())
-                    theFound = this->CanStandOn(inUnit, theOther);
+                    theFound = this->CanStandOn(theYoung, theOther);
             }
             if (theFound) {
                 theTried.push_back(theOther);
@@ -529,7 +529,7 @@ void EEHerd::Graze(EEComplexUnit* inUnit, unsigned long inTime)
                                                       false, false);
         if (!this->GiveGoal(theYoung, theYoungGoal, 0, kActionPrepareToMove) && theYoungGoal)
             delete theYoungGoal;
-        inUnit->SetGrazeTime(gPhysics->GetRandom(this->mAnimal->GetMinGrazeTime(), this->mAnimal->GetMaxGrazeTime()) + inTime);
+        theYoung->SetGrazeTime(gPhysics->GetRandom(this->mAnimal->GetMinGrazeTime(), this->mAnimal->GetMaxGrazeTime()) + inTime);
     }
 }
 
