@@ -1973,12 +1973,15 @@ long EEScenarioManager::ImportText(const std::vector<UString>& inLines, unsigned
 
 // FUNCTION: EXE 0x5b4d1a
 // Writes triggers, conditions, effects, objects and areas (not the built-ins), timed and pending effects, ID
-// counters, clocks, media strings, start camera and dialog messages; a later write hides an earlier error
+// counters, clocks, media strings, start camera and dialog messages; returns the first write error
 long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     unsigned long i = 0;
     unsigned long theCount = this->mTriggers.size();
     long theResult = outFile.Write(theCount);
+    // Each section's count is written unconditionally, which used to replace the previous section's error:
+    // the first error is kept and returned (the bytes written are unchanged).
+    long theFirstError = kErrorOK;
     if (theResult == 0) {
         for (; i < theCount; i++) {
             EESMTrigger*& theTrigger = this->mTriggers[i];
@@ -1987,6 +1990,8 @@ long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinor
                 break;
         }
     }
+    if (theFirstError == kErrorOK)
+        theFirstError = theResult;
     theCount = this->mConditions.size() - 1;
     theResult = outFile.Write(theCount);
     if (theResult == 0) {
@@ -1997,6 +2002,8 @@ long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinor
                 break;
         }
     }
+    if (theFirstError == kErrorOK)
+        theFirstError = theResult;
     theCount = this->mEffects.size() - 1;
     theResult = outFile.Write(theCount);
     if (theResult == 0) {
@@ -2007,6 +2014,8 @@ long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinor
                 break;
         }
     }
+    if (theFirstError == kErrorOK)
+        theFirstError = theResult;
     theCount = this->mObjects.size() - 1;
     theResult = outFile.Write(theCount);
     if (theResult == 0) {
@@ -2017,6 +2026,8 @@ long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinor
                 break;
         }
     }
+    if (theFirstError == kErrorOK)
+        theFirstError = theResult;
     theCount = this->mAreas.size() - 2;
     theResult = outFile.Write(theCount);
     if (theResult == 0) {
@@ -2027,6 +2038,8 @@ long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinor
                 break;
         }
     }
+    if (theFirstError == kErrorOK)
+        theFirstError = theResult;
     theCount = this->mTimedEffects.size();
     if (theResult == 0)
         theResult = outFile.Write(theCount);
@@ -2037,6 +2050,8 @@ long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinor
                 break;
         }
     }
+    if (theFirstError == kErrorOK)
+        theFirstError = theResult;
     theCount = this->mPendingEffects.size();
     theResult = outFile.Write(theCount);
     if (theResult == 0) {
@@ -2058,10 +2073,10 @@ long EEScenarioManager::Save(unsigned long inMajorVersion, unsigned long inMinor
             if (theResult == 0 && (theResult = outFile.Write(this->mShowDebugIDs)) == 0
                 && (theResult = EESMSaveVector(inMajorVersion, inMinorVersion, outFile, this->mMessages)) == 0
                 && (theResult = this->mExportFileName.Save(outFile)) == 0)
-                this->mLastChatText.Save(outFile);
+                theResult = this->mLastChatText.Save(outFile);    // its result was dropped
         }
     }
-    return theResult;
+    return theFirstError != kErrorOK ? theFirstError : theResult;
 }
 
 // FUNCTION: EXE 0x5b5173
