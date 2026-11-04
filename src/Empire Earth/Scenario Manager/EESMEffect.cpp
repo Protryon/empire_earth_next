@@ -725,7 +725,7 @@ void EESMEffect::SetPlayerAttribute(long inPlayer, unsigned long inAttribute, lo
             if (inMode == kSMValueModeToExactly)
                 thePlayer->mSavedGroups.Set(inAttribute - 30, theAmount);
             else
-                thePlayer->mSavedGroups.Reset(inAttribute - 29, theAmount);
+                thePlayer->mSavedGroups.Reset(inAttribute - 30, theAmount);
         } else if (inAttribute - 61 == 0) {
             if (inMode == kSMValueModeToExactly) thePlayer->mMiningLimit = theAmount;
             else thePlayer->mMiningLimit += theAmount;
