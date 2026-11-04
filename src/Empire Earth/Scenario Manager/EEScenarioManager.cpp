@@ -466,15 +466,15 @@ void EEScenarioManager::MoveAreaDown(unsigned long inIndex)
 }
 
 // FUNCTION: EXE 0x5b0c45
-// Swaps a user condition with the next one and renumbers references; the last user condition swaps with the
-// first object condition
+// Swaps a user condition with the next user condition and renumbers references
 void EEScenarioManager::MoveConditionDown(unsigned long inIndex)
 {
     EESMCondition* theCondition = this->mConditions[inIndex];
     unsigned long theCount;
     for (theCount = 0; theCount < this->mConditions.size() && this->mConditions[theCount]->mType != kSMConditionObject; theCount++)
         ;
-    if (inIndex <= 0 || inIndex >= theCount || !(inIndex < this->mConditions.size() - 1))
+    // the next condition must be a user condition too (the object conditions stay at the end)
+    if (inIndex <= 0 || inIndex + 1 >= theCount || !(inIndex < this->mConditions.size() - 1))
         return;
     this->mConditions[inIndex] = this->mConditions[inIndex + 1];
     this->mConditions[inIndex + 1] = theCondition;
