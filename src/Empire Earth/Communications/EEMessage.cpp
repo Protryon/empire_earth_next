@@ -1625,6 +1625,9 @@ void EEMChangeSelectedUnitCollisionSphere::Execute()
                 }
             }
             theUnit->mCollisionRadius = (float)theUnit->mUnitClass->mInnerCollisionSphere;
+            // the other units of the class (collected for sea units) take the new radius too
+            for (unsigned long j = 0; j < theUnits.size(); j++)
+                static_cast<EEComplexUnit*>(theUnits[j])->mCollisionRadius = (float)theUnit->mUnitClass->mInnerCollisionSphere;
         }
     }
 }
