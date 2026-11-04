@@ -585,8 +585,7 @@ void EEROUnits::DrawObjectModel(GETransformation& ioTransformation, EERenderShad
 }
 
 // FUNCTION: EXE 0x5157b6
-// Draws a selected object's health bar from its bar tag (projected without the object's location; the back
-// part of a partial bar is shortened twice), restoring the blending
+// Draws a selected object's health bar above the object at its bar tag, restoring the blending
 void EEROUnits::DrawObjectBars(EERenderShadow* inObject)
 {
     GERectangle theBar;
@@ -600,9 +599,11 @@ void EEROUnits::DrawObjectBars(EERenderShadow* inObject)
     gRasterizer->SetBlending(kBlendOne, kBlendZero, theScreen);
     sFGBar->SetColor(gBarColor);
     sBGBar->SetColor(gBarBackColor);
-    theOffset.SetX(inObject->mObject->mBar.GetX() * inObject->mModelScale);
-    theOffset.SetY(inObject->mObject->mBar.GetY() * inObject->mModelScale);
-    theOffset.SetZ(inObject->mObject->mBar.GetZ() * inObject->mModelScale);
+    // The bar tag is relative to the object: add its location before projecting (it was projected near the map
+    // origin).
+    theOffset.SetX(inObject->mLocation.GetX() + inObject->mObject->mBar.GetX() * inObject->mModelScale);
+    theOffset.SetY(inObject->mLocation.GetY() + inObject->mObject->mBar.GetY() * inObject->mModelScale);
+    theOffset.SetZ(inObject->mLocation.GetZ() + inObject->mObject->mBar.GetZ() * inObject->mModelScale);
     Fn118676(theOffset, theScreenPoint);
     theScreenPoint.SetX(theScreenPoint.GetX() - sBarWidth / 2);
     theScreenPoint.SetY(theScreenPoint.GetY() - sBarStep);
@@ -622,7 +623,8 @@ void EEROUnits::DrawObjectBars(EERenderShadow* inObject)
         gRasterizer->Draw(sFGBar, theScreen);
         float theLeft = theBar.GetLeft();
         theBack.SetLeft(theBar.GetRight());
-        theBack.SetRight(sBarWidth + theLeft - (unsigned long)UMFloatToLong(sBarWidth * inObject->mHealth));
+        theBack.SetRight(sBarWidth + theLeft);  // the back part runs to the bar's full width (it was shortened
+                                                // by the filled width a second time)
         theBack.SetBottom(theBar.GetBottom());
         theBack.SetTop(theBar.GetTop());
         sBGBar->SetRectangle(theBack);
