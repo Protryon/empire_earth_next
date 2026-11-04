@@ -143,7 +143,7 @@ void TSThread::SetName(UString& inName)
 }
 
 // FUNCTION: LLE 0x100544cd
-// Starts the Win32 thread (suspended if requested), retrying up to 100 times; returns kErrorOK even if it never starts
+// Starts the Win32 thread (suspended if requested), retrying up to 100 times; kErrorNativeError if it never starts
 long TSThread::StartThread(unsigned long inStackSize)
 {
     HANDLE theHandle = NULL;
@@ -162,8 +162,10 @@ long TSThread::StartThread(unsigned long inStackSize)
     if (theHandle != NULL) {
         this->mHandle = theHandle;
         this->mThreadID = theThreadID;
-    } else
+    } else {
         ESVERIFY_AT("Thread could not be created" == NULL, 397);
+        return kErrorNativeError;   // Fixed: used to report success for a thread that never started
+    }
     return kErrorOK;
 }
 
