@@ -91,6 +91,7 @@ long EEUIECCCEFormOpen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     thePath->AddDirectory(theDirectory, true);
     thePattern = UString("*") + gCampaignExtension;
     thePath->ListFiles(thePattern, theFiles);
+    thePath->Dereference();     // the search path is released after the listing (it leaked)
     for (theIterator = theFiles.begin(); theIterator != theFiles.end(); theIterator++) {
         theFileName = *theIterator;
         if (theFileName.GetLength() > 4) {
