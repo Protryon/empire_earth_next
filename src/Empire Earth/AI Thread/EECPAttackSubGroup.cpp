@@ -1356,11 +1356,11 @@ void EECPAttackSubGroup::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
     if (this->mSplitKind == 4) {
         float theFraction;
         if (gPhysics->GetRandom() < 0.65f) {
-            theFraction = (float)(gPhysics->GetRandom(3L, 7L) / 10);
+            theFraction = gPhysics->GetRandom(3L, 7L) / 10.0f;   // 0.3..0.7 (was an integer division: 0)
             if (theFraction * this->mUnits.size() <= 0.0f)
                 theFraction = 0.5f;
         } else {
-            theFraction = (float)(gPhysics->GetRandom(3L, 7L) / 10);
+            theFraction = gPhysics->GetRandom(3L, 7L) / 10.0f;   // 0.3..0.7 (was an integer division: 0)
         }
         this->PickByUpgrade(theSelected, theReverse, theFraction);
         theCount = theSelected.size();
