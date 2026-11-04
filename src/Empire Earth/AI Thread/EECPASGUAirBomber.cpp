@@ -100,6 +100,11 @@ bool EECPASGUAirBomber::Retarget()
                     delete theGoal;
                     return false;
                 }
+            } else {
+                // the goal is not used: free it (it used to leak). The plane keeps the reference the goal took on
+                // it, as before: unit reference counts are game state (cargo release and the unit pool read them)
+                theGoal->mTransport = NULL;
+                delete theGoal;
             }
         }
     }
