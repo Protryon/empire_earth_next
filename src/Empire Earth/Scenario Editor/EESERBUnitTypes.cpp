@@ -1360,7 +1360,7 @@ EESEGamePage::EESEGamePage(unsigned long& ioIndex, unsigned long& ioID, UIForm* 
 }
 
 // FUNCTION: EXE 0x577b83
-// Destroys the game options page's controls and releases the diplomacy bitmaps; the 120-entry button array leaks
+// Destroys the game options page's controls and releases the diplomacy bitmaps and the 120-entry button array
 EESEGamePage::~EESEGamePage()
 {
     for (unsigned long theLabel = 0; theLabel < 15; ++theLabel) {
@@ -1369,6 +1369,7 @@ EESEGamePage::~EESEGamePage()
         delete this->mPlayerNames[theLabel];
     }
     for (unsigned long i = 0; i < 120; ++i) delete this->mDiplomacy[i];
+    delete[] this->mDiplomacy;  // the pointer array itself (it leaked)
     EESEUIBDiplomacy::ReleaseBitmaps();
     delete this->mUnitLimitLabel;
     delete this->mUnitLimitCountLabel;
