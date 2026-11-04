@@ -146,7 +146,8 @@ void GEModel::ComputeLODReduction(unsigned long inLODCount)
                     continue;
                 theBest = i;
                 theBestVertex = theVertex;
-                theBestCost = theVertex->GetMinEdgeToCollapseCost();
+                // Keep the weighted cost, the value the next materials are compared against.
+                theBestCost = theVertex->GetMinEdgeToCollapseCost() * theWeight;
             }
             GELODMetaVertex::CollapseEdge(thePolygonLists[theBest], theVertexLists[theBest],
                                           theMetaVertexLists[theBest], theBestVertex);
