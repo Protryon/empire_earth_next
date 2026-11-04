@@ -103,7 +103,9 @@ float EEGetSpaceDockYaw(long inX, long inY, long inSize)
         unsigned long theIndex = 0;
         for (x = theLeft; x < theRight; x++) {
             for (y = theBottom; y < theTop; y++) {
-                if (theMap->GetTile(x, y)->mTerrainType == kTerrainSpace)
+                // an off-map tile counts as space, as in the count above (it used to be read through NULL)
+                EETile* theTile = theMap->GetTile(x, y);
+                if (theTile == NULL || theTile->mTerrainType == kTerrainSpace)
                     theWater = theIndex;
                 theIndex++;
             }
@@ -126,8 +128,11 @@ float EEGetSpaceDockYaw(long inX, long inY, long inSize)
         long theKinds[4];
         unsigned long theIndex = 0;
         for (x = theLeft; x < theRight; x++) {
-            for (y = theBottom; y < theTop; y++)
-                theKinds[(unsigned short)theIndex++] = theMap->GetTile(x, y)->mTerrainType;
+            for (y = theBottom; y < theTop; y++) {
+                // an off-map tile counts as space, as in the count above (it used to be read through NULL)
+                EETile* theTile = theMap->GetTile(x, y);
+                theKinds[(unsigned short)theIndex++] = theTile != NULL ? theTile->mTerrainType : kTerrainSpace;
+            }
         }
         long thePiece;
         if (theKinds[1] != 0xc && theKinds[3] != 0xc)
