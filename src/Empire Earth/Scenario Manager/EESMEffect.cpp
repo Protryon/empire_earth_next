@@ -194,6 +194,10 @@ void EESMEffect::BuildObject()
             EEComputerPlayer* thePlayer = dynamic_cast<EEComputerPlayer*>(gWorld.GetPlayer(*(thePlayers.begin() + i)));
             if (thePlayer == NULL)
                 continue;
+            // per player: no town, continent or "any count" carried over from the previous player
+            theTown = NULL;
+            theContinent = NULL;
+            theAnyCount = false;
             if (thePlayer->mTowns.size() != 0)
                 theTown = thePlayer->mTowns[0];
             if (theTown == NULL) {
@@ -289,6 +293,7 @@ void EESMEffect::CreateAIMilitaryGroup()
             if (thePlayer == NULL)
                 continue;
             EECPCombatManager* theCombat = thePlayer->mCombatManager;
+            theAnyCount = false;
             theTask.mMode = kAGModeCombat;
             if (this->mUsesTargetArea) {
                 EESMArea* theArea = gWorld.mScenarioManager->GetArea(this->mTargetArea);
