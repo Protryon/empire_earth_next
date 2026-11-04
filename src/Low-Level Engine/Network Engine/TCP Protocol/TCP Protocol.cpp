@@ -964,8 +964,8 @@ extern "C" long NPIMReceive(TCPConnection** inHandle, unsigned long inSize, char
 }
 
 // FUNCTION: TCP 0x100023a7
-// Deciphers/enciphers data in place with RC4 keyed from the key buffer; returns with the lock held when there is
-// no key buffer or the key is 0
+// Deciphers/enciphers data in place with RC4 keyed from the key buffer; does nothing when there is no key buffer
+// or the key is 0
 static void Encipher(unsigned char* ioData, long inLength, unsigned long inKey)
 {
     unsigned char x;
@@ -974,8 +974,11 @@ static void Encipher(unsigned char* ioData, long inLength, unsigned long inKey)
     unsigned char xorIndex;
     short counter;
     gCipherLock->Enter();
-    if (gRandomBuffer == NULL || inKey == 0)
-        return;                                 // sic: returns with gCipherLock held (original: jumps past Leave)
+    if (gRandomBuffer == NULL || inKey == 0) {
+        // Fix: release the lock on this exit too (it used to return with gCipherLock held).
+        gCipherLock->Leave();
+        return;
+    }
     PrepareCipher(inKey - 1, 7);
     x = gCipher->mX;
     y = gCipher->mY;
