@@ -317,7 +317,7 @@ float EECPASGUProphetCalamityAnalyzerTeleport::Evaluate()
 
 // FUNCTION: EXE 0x406d6d
 // Scores a castable enemy as a teleport destination: veterancy, special, calamity, priest and splash units,
-// distance from the prophet (squared distance against twice its range), and the prophet being in its range
+// distance from the prophet (squared distance against its squared range), and the prophet being in its range
 float EECPASGUProphetCalamityAnalyzerTeleport::ScoreTarget(EEComplexUnit* inUnit)
 {
     float theScore = 0.0f;
@@ -338,7 +338,7 @@ float EECPASGUProphetCalamityAnalyzerTeleport::ScoreTarget(EEComplexUnit* inUnit
                 theScore += 0.18f;
             float theDistance = this->mProphet->mUnit->DistanceSquaredTo(inUnit);
             float theRange = this->mProphet->mUnit->mStats->mRange;
-            theRange += theRange;
+            theRange *= theRange;   // squared, as the squared distance (was range + range)
             if (theDistance >= theRange && theRange != 0.0f) {
                 float theFactor = 1.0f - theRange / theDistance;
                 if (theFactor >= 1.0f)
@@ -365,7 +365,7 @@ bool EEUnitClass::IsPriest()
 
 // FUNCTION: EXE 0x406f1a
 // Scores an own unit other than the prophet for teleporting: non-special, melee, distance from the enemy (squared
-// distance against twice its range), the enemy being countered by it, and attack strength
+// distance against its squared range), the enemy being countered by it, and attack strength
 float EECPASGUProphetCalamityAnalyzerTeleport::ScoreAlly(EEComplexUnit* inUnit)
 {
     float theScore = 0.0f;
@@ -377,7 +377,7 @@ float EECPASGUProphetCalamityAnalyzerTeleport::ScoreAlly(EEComplexUnit* inUnit)
             theScore += 0.15f;
         float theDistance = inUnit->DistanceSquaredTo(this->mUnit);
         float theRange = inUnit->mStats->mRange;
-        theRange += theRange;
+        theRange *= theRange;   // squared, as the squared distance (was range + range)
         if (theDistance >= theRange && theRange != 0.0f) {
             float theFactor = 1.0f - theRange / theDistance;
             if (theFactor >= 1.0f)

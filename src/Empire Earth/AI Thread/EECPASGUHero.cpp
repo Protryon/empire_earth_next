@@ -86,7 +86,7 @@ bool EECPASGUHero::ShouldRetreat()
             if (!theClass->CanBeAttacked() || gU4E8708[theKind][theTargetKind] == 0.0f)
                 continue;
             float theDistance = this->mUnit->DistanceSquaredTo(theTarget);
-            if (theDistance <= 49.0f || theDistance <= theTarget->mStats->mRange + theTarget->mStats->mRange)
+            if (theDistance <= 49.0f || theDistance <= theTarget->mStats->mRange * theTarget->mStats->mRange)   // squared (was range + range)
                 theResult = true;
         }
     }

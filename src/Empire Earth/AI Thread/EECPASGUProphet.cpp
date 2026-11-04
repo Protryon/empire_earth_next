@@ -1334,7 +1334,7 @@ bool EECPASGUProphet::ShouldRetreat()
             long theAttack = theClass->mFamily;
             if (theClass->CanBeAttacked() && gU4E8708[theAttack][theDefense] != 0.0f) {
                 float theDistance = this->GetUnit()->DistanceSquaredTo(theUnit);
-                if (theDistance <= 36.0f || theDistance <= theUnit->GetStats()->mRange + theUnit->GetStats()->mRange) {
+                if (theDistance <= 36.0f || theDistance <= theUnit->GetStats()->mRange * theUnit->GetStats()->mRange) {   // squared (was range + range)
                     theClass = theUnit->GetUnitClass();
                     theDefense = this->GetUnit()->GetUnitClass()->mAmmoType;
                     theAttack = theClass->mFamily;
