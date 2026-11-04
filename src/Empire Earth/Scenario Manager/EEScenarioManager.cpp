@@ -625,7 +625,7 @@ void EEScenarioManager::EraseTimedEffect(unsigned long inIndex)
 }
 
 // FUNCTION: EXE 0x5b120d
-// Appends a copy of an area named <name_Copy> and returns it; advances the area ID counter twice, skipping an ID
+// Appends a copy of an area named <name_Copy> with the next area ID and returns it
 EESMArea* EEScenarioManager::DuplicateArea(unsigned long inIndex)
 {
     UWideString theNewName;
@@ -644,8 +644,7 @@ EESMArea* EEScenarioManager::DuplicateArea(unsigned long inIndex)
     EESMArea* theArea = new EESMArea;
     theArea->Copy(*this->mAreas[inIndex]);
     theArea->mName = theNewName;
-    long theID = ++this->mNextAreaID;
-    this->mNextAreaID++;
+    long theID = ++this->mNextAreaID;   // one new ID per area, as in NewArea
     theArea->mID = theID;
     this->mAreas.push_back(theArea);
     return theArea;
