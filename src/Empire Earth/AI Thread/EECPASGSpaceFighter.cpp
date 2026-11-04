@@ -243,8 +243,8 @@ void EECPASGSpaceFighter::SetDestination(const EECPILocation& inLocation)
 {
     EECPILocation theLocation(inLocation);
     GE2DPoint thePoint(0.0f, 0.0f);
-    if (gWorld.GetMap()->GetTileAtLocation(theLocation.mTile) == NULL &&
-        gWorld.GetMap()->GetTileAtLocation(theLocation.mTile) == NULL)
+    // (the tile used to be tested twice)
+    if (gWorld.GetMap()->GetTileAtLocation(theLocation.mTile) == NULL)
         theLocation.ResetToArea();
     thePoint.SetXY(theLocation.mTile.mX, theLocation.mTile.GetY());
     if (gWorld.GetMap()->GetTileAtLocation(theLocation.mTile) == NULL)
