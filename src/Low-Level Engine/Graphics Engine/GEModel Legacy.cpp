@@ -257,6 +257,8 @@ long GEModel::ConvertLegacyModel()
             this->mVertexArrays[theFrame] = this->mVertexArrays[theIterator->second + theFrame];
     }
 
+    delete[] theVertexArrays;   // the frames now own the arrays; free the temporary table
+
     // one material per legacy material, split in two where only some of its polygons take the player colour
     unsigned long theTextureIndex = 0;
     for (i = 0; i < this->mMaterialCount; i++) {
@@ -382,6 +384,8 @@ long GEModel::ConvertLegacyModel()
         this->mMaterials[i]->Dereference();
     delete[] this->mMaterials;
     delete[] this->mTextureFilenames;
+    // The legacy material index lists are sized by the old material count: remember it for the cleanup.
+    unsigned long theLegacyMaterialCount = this->mMaterialCount;
     this->mMaterialCount = theGroups.size();
     this->mMaterials = new GEMaterial*[this->mMaterialCount];
     for (i = 0; i < this->mMaterialCount; i++)
@@ -410,6 +414,8 @@ long GEModel::ConvertLegacyModel()
     }
     for (i = 0; i < this->mLegacyPolygonGroupCount; i++)
         delete[] this->mLegacyPolygonGroups[i].mIndices;
+    for (i = 0; i < theLegacyMaterialCount; i++)
+        delete[] this->mLegacyMaterials[i].mIndices;
     delete[] this->mLegacyPolygons;
     delete[] this->mLegacyMaterials;
     delete[] this->mLegacyPolygonGroups;
