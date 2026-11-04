@@ -364,7 +364,8 @@ void EECPAttackGroup::AssignLandTask(EECPAttackSubGroup* inSubGroup)
     theCombat->mDefenseCommander->AssignSubGroupTask(inSubGroup, theTask, this->mContinentID != 0);
     if (!theTask.mIsActive && this->mContinentID != 0) {
         EEAIContinent* theContinent = gContinentManager.GetContinentByID(this->mContinentID);
-        if (this->mContinentID != 0) {
+        // test the continent found, not the id again: the id may no longer name a continent
+        if (theContinent != NULL) {
             theTarget.mSerial = theContinent->mSerial;
             theTarget.mType = kAIAreaContinent;
             theTarget.mTile = theContinent->GetRandomPoint();
