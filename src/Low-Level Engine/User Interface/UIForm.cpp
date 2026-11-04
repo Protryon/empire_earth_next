@@ -718,13 +718,15 @@ UIBackground* UIForm::GetBackgroundByID(unsigned long inID) const
 }
 
 // FUNCTION: LLE 0x100724c6
-// Returns the control with the given ID; with no match it reads the slot before the array (mControls[-1])
+// Returns the control with the given ID (NULL: none)
 UIControl* UIForm::GetControlById(unsigned long inId)
 {
     long i;
     for (i = this->mControlCount - 1; i >= 0; i--)
         if (this->mControls[i] && this->mControls[i]->GetId() == inId)
             break;
+    if (i < 0)
+        return NULL;   // Fixed: with no match it used to return mControls[-1], the word before the array
     return this->mControls[i];
 }
 
