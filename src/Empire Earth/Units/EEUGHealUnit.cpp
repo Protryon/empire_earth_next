@@ -96,7 +96,7 @@ long EEUGHealUnit::GetOutOfSynchChecksum()
 }
 
 // FUNCTION: EXE 0x625432
-// Appends "Heal" and the target's name, tile and health to the debug text (the percentage shows the raw fraction)
+// Appends "Heal" and the target's name, tile and health to the debug text
 void EEUGHealUnit::GetDebugText(UWideString& ioText)
 {
     UWideString theText;
@@ -107,7 +107,7 @@ void EEUGHealUnit::GetDebugText(UWideString& ioText)
     long theMaxHitPoints = this->mTarget->mStats->mMaxHitPoints;
     sprintf(theText, "Target Unit: %s at (%d,%d)\nTarget Health: %d/%d (%.2f%%)\n", (const char*)this->mTarget->mUnitClass->mName,
             this->mTarget->mTileX, this->mTarget->mTileY, theHitPoints, theMaxHitPoints,
-            (float)theHitPoints / theMaxHitPoints);
+            100.0f * theHitPoints / theMaxHitPoints);   // a percentage (the raw fraction used to be printed)
     ioText += theText;
 }
 
