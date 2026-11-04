@@ -61,9 +61,9 @@ EEE2DImpact::EEE2DImpact(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect, long 
 // (the scalar deleting destructor, emitted with the vtable)
 
 // FUNCTION: EXE 0x4e10af
-// Creates an impact effect of the given kind at a point, with no unit (its life fraction is left unset)
+// Creates an impact effect of the given kind at a point, with no unit (its life fraction starts at zero)
 EEE2DImpact::EEE2DImpact(const GE3DPoint& inPosition, EEGraphicEffect* inGraphicEffect, long inKind)
-    : EEEffect2D(0, inGraphicEffect, gEffect2DModel, inKind, false)
+    : EEEffect2D(0, inGraphicEffect, gEffect2DModel, inKind, false), mLifeFraction(0.0f)
 {
     this->mStart = inPosition;
     this->mGraphicObject = NULL;
@@ -268,6 +268,9 @@ void EEE2DImpact::PickTagPoint()
 // Moves the impact to its chosen tag point on the unit's current animation frame (the tag list is not null-checked)
 void EEE2DImpact::UpdatePosition()
 {
+    // An impact placed at a point has no unit to follow.
+    if (this->mUnit == NULL)
+        return;
     EEComplexUnit* theUnit = this->mUnit->mComplexUnit;
     if (!theUnit)
         return;
@@ -300,7 +303,8 @@ long EEE2DImpact::Step()
         theStart = false;
     theTime = gPhysics->GetTickTime() + theTime;
     if (this->mGraphicEffect->mFlag2) {
-        if (this->mUnit->mHitPoints <= 0) {
+        // An impact placed at a point has no unit: only its timed life ends it.
+        if (this->mUnit != NULL && this->mUnit->mHitPoints <= 0) {
             theResult = 7;
         } else {
             this->mLifeFraction += gPhysics->GetTickSeconds() * 1000.0f / this->mGraphicEffect->mDuration;
