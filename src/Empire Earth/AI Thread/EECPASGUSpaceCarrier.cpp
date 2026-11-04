@@ -52,7 +52,7 @@ EECPASGUSpaceCarrier::~EECPASGUSpaceCarrier()
 
 // FUNCTION: EXE 0x40d43f
 // Picks a target and, unless the carrier already attacks it, orders the carrier and each cargo unit to attack it
-// and opens the bays; returns whether it re-targeted (the goal it clones from is never deleted)
+// and opens the bays; returns whether it re-targeted
 bool EECPASGUSpaceCarrier::Retarget()
 {
     EETileCoordinate theTile(0, 0);
@@ -76,6 +76,7 @@ bool EECPASGUSpaceCarrier::Retarget()
         EEComplexUnit* theCargo = this->GetUnit()->GetCargo(i);
         theCargo->SetGoal(theAttack->Clone(), 0, 0);
     }
+    delete theAttack;   // the template the goals were cloned from
     this->GetUnit()->StartAction(kActionAirportOpen);
     this->GetUnit()->mUnitClass->ActionChanged(this->GetUnit());
     return true;
