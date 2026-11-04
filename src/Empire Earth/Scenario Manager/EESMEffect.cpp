@@ -2414,12 +2414,13 @@ void EESMEffect::SetAIVariable()
             thePlayer->mInitialAttackDelayMax = max(this->mIntValue1, this->mIntValue2);
             thePlayer->mInitialAttackDelayMin = min(this->mIntValue1, this->mIntValue2);
             break;
-        case kCPBehaviorAttackDelayModifier:
-            thePlayer->mDifficulty = this->mIntValue1;
+        case kCPBehaviorAttackDelayModifier:   // as EEComputerPlayer::Init (was mDifficulty = value 1)
+            thePlayer->mAttackDelayModifierEasy = this->mIntValue1;
+            thePlayer->mAttackDelayModifierHard = this->mIntValue2;
             break;
         case kCPBehaviorTroopsToAssistAllies:
             thePlayer->mAssistAlliesDelayEasy = this->mIntValue1 * 60000;
-            thePlayer->mAssistAlliesDelayMedium = this->mIntValue1 * 60000;
+            thePlayer->mAssistAlliesDelayMedium = this->mIntValue2 * 60000;   // value 2, as Init
             theValue = (long)(this->mFloatValue * 60000.0f);
             thePlayer->mAssistAlliesDelayHard = theValue;
             break;
@@ -2443,13 +2444,13 @@ void EESMEffect::SetAIVariable()
             break;
         case kCPBehaviorAttackGroupModifier:
             thePlayer->mAttackGroupModifierEasy = this->mIntValue1;
-            thePlayer->mAttackGroupModifierMedium = this->mIntValue1;
+            thePlayer->mAttackGroupModifierMedium = this->mIntValue2;   // value 2, as Init
             theValue = (long)this->mFloatValue;
             thePlayer->mAttackGroupModifierHard = theValue;
             break;
         case kCPBehaviorCountWeights:
             thePlayer->mMilitaryCountWeight = (float)this->mIntValue1 * 0.01f;
-            thePlayer->mMilitaryCountWeight = (float)this->mIntValue2 * 0.01f;
+            thePlayer->mWorkerCountWeight = (float)this->mIntValue2 * 0.01f;   // as Init (was mMilitaryCountWeight again)
             break;
         case kCPBehaviorAttackGroupSize:
             thePlayer->mAttackGroupSizeMin = min(this->mIntValue1, this->mIntValue2);
@@ -2672,7 +2673,7 @@ void EESMEffect::SetAIVariable()
             thePlayer->mMaxEnabledManagers = this->mIntValue1;
             break;
         case kCPBehaviorUnitCostReductionMedium:
-            thePlayer->mUnitCostMedium = this->mFloatValue * 0.01f;
+            thePlayer->mUnitCostMedium = this->mFloatValue;   // a percentage, as Init (the user scales it by 0.01)
             break;
         case kCPBehaviorEnableInterval:
             thePlayer->mEnableInterval = this->mFloatValue;
@@ -2757,8 +2758,11 @@ void EESMEffect::SetAIVariable()
             thePlayer->SetTowerMax(UMFloatToLong(this->mFloatValue));
             break;
         }
+        case kCPBehaviorUnitCostReductionEasyAndHard:   // its own values, as Init (was the epoch frequency modifier body)
+            thePlayer->mUnitCostReductionEasy = this->mIntValue1;
+            thePlayer->mUnitCostReductionHard = this->mIntValue2;
+            break;
         case kCPBehaviorEpochFrequencyModifier:
-        case kCPBehaviorUnitCostReductionEasyAndHard:
             thePlayer->mEpochFrequencyModifierEasy = this->mIntValue1;
             thePlayer->mEpochFrequencyModifierHard = this->mIntValue2;
             break;
@@ -2812,7 +2816,9 @@ void EESMEffect::SetAIVariable()
             thePlayer->SetAntiAirMax(UMFloatToLong(this->mFloatValue));
             break;
         }
-        case kCPBehaviorSpecializedUnitSelectionChance:
+        case kCPBehaviorSpecializedUnitSelectionChance:   // its own value, as Init (was the RPS islands body)
+            thePlayer->mSpecializedUnitChance = this->mFloatValue;
+            break;
         case kCPBehaviorRPSSelectionIslands:
             thePlayer->mRPSSelectionIslands = this->mFloatValue;
             break;
