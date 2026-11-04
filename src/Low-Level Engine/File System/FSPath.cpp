@@ -203,8 +203,8 @@ long FSPath::GetDirectory(unsigned long inIndex, FSFileSpec& outDirectory) const
 }
 
 // FUNCTION: LLE 0x1000adfa
-// Sets outArchived to whether the named file comes from an archive rather than a directory, but always returns false
-// The original always returns false (outArchived carries the answer).
+// Sets outArchived to whether the named file comes from an archive rather than a directory; returns whether the
+// file was found
 bool FSPath::GetFileArchiveStatus(const UString& inName, bool& outArchived)
 {
     FSFileSpec theDirectory;
@@ -217,11 +217,11 @@ bool FSPath::GetFileArchiveStatus(const UString& inName, bool& outArchived)
         theFile->GetFile() == theDirectory.GetFile())
         outArchived = false;
     delete theFile;
-    return false;
+    return true;
 }
 
 // FUNCTION: LLE 0x1000aea1
-// Wide-name form of GetFileArchiveStatus (always returns false)
+// Wide-name form of GetFileArchiveStatus
 bool FSPath::GetFileArchiveStatus(const UWideString& inName, bool& outArchived)
 {
     UString theName((const char*)inName);
