@@ -381,7 +381,7 @@ bool EEAIFOGatherAllDeathMatchDefenseBuildUpUnits::Screen(EEUnitClass* inClass)
     EETechTreeNode* theOther = this->mPlayer->GetTechTree()->Get(theClass->GetTechnology());
     if (theOther == NULL)
         return theResult;
-    if (theOther->GetIsObsolete() || theNode->mScenEditorObsoleted != false) {
+    if (theOther->GetIsObsolete() || theOther->mScenEditorObsoleted != false) {   // the upgrade node's flag (was the first node's)
         EECPUnitManager* theManager = this->mPlayer->mCivilizationManager->mUnitManager;
         std::deque<EEComplexUnit*>* theUnits = theManager->GetUnits(theNode->GetUnitClass(0));
         if (theUnits == NULL || !(theUnits->size() > 0))

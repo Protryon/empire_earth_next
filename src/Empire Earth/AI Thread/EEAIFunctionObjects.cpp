@@ -444,10 +444,8 @@ bool EEAIFOFavoriteUnitScreener::Screen(EEUnitClass* inClass)
                 if (theFirst) {
                     EETechTreeNode* theFirstNode = this->mPlayer->GetTechTree()->Get(theFirst->GetTechnology());
                     if (theFirstNode) {
-                        // the original rechecks the class node's +0x22 flag (mScenEditorObsoleted, known clear) here, not the
-                        // builder node's (0x42a901)
                         bool theAvailable = true;
-                        if (theFirstNode->GetIsObsolete() || theNode->mScenEditorObsoleted) {
+                        if (theFirstNode->GetIsObsolete() || theFirstNode->mScenEditorObsoleted) {   // the builder node's flag (was the class node's)
                             std::deque<EEComplexUnit*>* theUnits =
                                 this->mPlayer->mCivilizationManager->GetUnitManager()->GetUnits(theNode->GetUnitClass(0));
                             if (theUnits == NULL || theUnits->size() <= 0)
@@ -620,7 +618,7 @@ bool EEAIFOCurrentlyBuildableUnitScreener::Screen(EEUnitClass* inClass)
             if (theBuilder) {
                 EETechTreeNode* theBuilderNode = this->mPlayer->GetTechTree()->Get(theBuilder->GetTechnology());
                 if (theBuilderNode) {
-                    if (theBuilderNode->GetIsObsolete() || theNode->mScenEditorObsoleted) {
+                    if (theBuilderNode->GetIsObsolete() || theBuilderNode->mScenEditorObsoleted) {   // the builder node's flag (was the class node's)
                         std::deque<EEComplexUnit*>* theUnits =
                             this->mPlayer->mCivilizationManager->GetUnitManager()->GetUnits(theNode->GetUnitClass(0));
                         if (theUnits == NULL || theUnits->size() == 0) {
