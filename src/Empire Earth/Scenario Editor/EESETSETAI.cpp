@@ -157,8 +157,8 @@ void EESETSETAI::Store(EESMEffect* inEffect, EESETSEffectControls* inControls)
 }
 
 // FUNCTION: EXE 0x58301c
-// Hides the AI effect's title, action label, action combo and player combo plus the current action's controls
-// (hides mPlayers[2] instead of the 'Player' label mLabels[2] that Show displays: an original bug)
+// Hides the AI effect's title, action label, action combo, player combo and player label plus the current
+// action's controls
 void EESETSETAI::VirtualC(EESETSEffectControls* inControls)
 {
     inControls->mLabels[0]->SetDisplayMode(kDisplayModeHidden);
@@ -166,6 +166,7 @@ void EESETSETAI::VirtualC(EESETSEffectControls* inControls)
     inControls->mComboBoxes[0]->SetDisplayMode(kDisplayModeHidden);
     inControls->mPlayers[0]->SetDisplayMode(kDisplayModeHidden);
     inControls->mPlayers[2]->SetDisplayMode(kDisplayModeHidden);
+    inControls->mLabels[2]->SetDisplayMode(kDisplayModeHidden);   // the 'Player' label Show displays (it stayed visible)
     this->mTypes[this->mCurrentType]->VirtualC(inControls);
 }
 
