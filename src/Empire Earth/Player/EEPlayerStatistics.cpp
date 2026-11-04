@@ -272,7 +272,8 @@ void EEPlayerStatistics::CompactEpochHistory()
         for (unsigned long j = 0; j < this->mSeries[12].mPoints.size(); j++) {
             thePoint = this->mSeries[12].mPoints[j];
             if (j == this->mSeries[12].mPoints.size() - 1) {
-                if (theSeries.mPoints.back().mValue == thePoint.mValue)
+                // (an empty kept series keeps the last point)
+                if (theSeries.mPoints.size() > 0 && theSeries.mPoints.back().mValue == thePoint.mValue)
                     continue;
             } else {
                 theNext = this->mSeries[12].mPoints[j + 1];
