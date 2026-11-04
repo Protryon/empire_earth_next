@@ -195,13 +195,14 @@ bool EESMArea::IsOffMap() const
 }
 
 // FUNCTION: EXE 0x5ba495
-// Copies the area's tiles out, rebuilding the cache when empty or unused for 3000 ticks (the rebuild appends to the
-// old list); every cached read restarts the timer
+// Copies the area's tiles out, rebuilding the cache when empty or unused for 3000 ticks; every cached read
+// restarts the timer
 void EESMArea::GetTiles(std::vector<U2DPoint<long> >& outTiles)
 {
     std::vector<EETown*> theTowns;
     if (this->mTiles.size() <= 0 || (unsigned long)(gPhysics->mCurrentTick - this->mTilesTime) >= 3000) {
         this->mTilesTime = gPhysics->mCurrentTick;
+        this->mTiles.clear();
         switch (this->mSelectMode) {
         case 0: {
             for (long x = (long)this->mRect.GetLeft(); (float)x <= this->mRect.GetRight(); ++x) {
