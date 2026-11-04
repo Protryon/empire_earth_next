@@ -78,8 +78,8 @@ HRESULT CALLBACK DX7EnumDevicesCallback(LPSTR inDescription, LPSTR inName, LPD3D
 }
 
 // FUNCTION: DX7HR 0x1000934b
-// DirectDraw enumeration callback (Windows 95): creates a screen for each 3D-capable device; the validity test is
-// inverted, so screens with a hardware rasterizer are deleted and the others added
+// DirectDraw enumeration callback (Windows 95): creates a screen for each 3D-capable device and keeps
+// those with a hardware rasterizer
 BOOL WINAPI DX7DirectDrawEnumerateCallback(GUID* inGUID, LPSTR inDescription, LPSTR inName, LPVOID inContext)
 {
     unsigned long* theCounter = (unsigned long*)inContext;
@@ -97,7 +97,8 @@ BOOL WINAPI DX7DirectDrawEnumerateCallback(GUID* inGUID, LPSTR inDescription, LP
         if (theStatus == DD_OK) {
             if ((theCaps.dwCaps & DDCAPS_3D) == DDCAPS_3D) {
                 theScreen = new DX7Screen(NULL, theDDraw, inDescription, theIsAttached, theIsPrimaryDevice);
-                if (!gEnumeratingRasterizer->GetIsScreenValid(theScreen))
+                // Keep a screen with a hardware rasterizer, as the Ex callback does (the test was inverted).
+                if (gEnumeratingRasterizer->GetIsScreenValid(theScreen))
                     gEnumeratingRasterizer->AddValidScreen(theScreen);
                 else
                     delete theScreen;
