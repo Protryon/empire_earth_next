@@ -613,7 +613,7 @@ long RTSMap::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
         for (long theX = 0; theX < this->mSize; theX++) {
             EEMapTile* theTile;
             if (theX >= theLeft && theX < theRight + 1)
-                theTile = this->LoadTile(inMajorVersion, inMinorVersion, inFile, theLeft + theX, theY);
+                theTile = this->LoadTile(inMajorVersion, inMinorVersion, inFile, theX, theY);
             else
                 theTile = NULL;
             this->mTiles[this->mSize * theY + theX] = theTile;
