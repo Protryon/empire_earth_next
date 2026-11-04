@@ -4590,9 +4590,7 @@ void EEPlayer::EnableCamouflagePower()
     EEUnitSet* theSet = gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet);
     for (; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         EEComplexUnit* theComplex = theUnit->GetComplexUnit();
-        // The original forwards Contains' bool as a unit-set index, as its paired reset routine does.
-        if (theComplex == NULL
-            || gUnitSetManager.GetSet(theSet->Contains(theUnit->mUnitClass->mUnitType)) == NULL)
+        if (theComplex == NULL || !theSet->Contains(theUnit->mUnitClass->mUnitType))
             continue;
         unsigned long theCommand = theComplex->mCommand ? theComplex->mCommand->mType : 0;
         if (theCommand == kActionIdle)
