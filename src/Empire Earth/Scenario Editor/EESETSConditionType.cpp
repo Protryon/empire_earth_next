@@ -252,18 +252,17 @@ void EESETSCTDiplomacy::Show(EESETSConditionControls* inControls)
 
 // FUNCTION: EXE 0x57f558
 // Writes the difficulty, elapsed time window and hour tests into the condition; a minimum above the maximum
-// is lowered to the maximum (the earlier raise of the maximum is overwritten at once)
+// raises the maximum
 void EESETSCTGame::Store(EESMCondition* outCondition, EESETSConditionControls* inControls)
 {
     outCondition->mUsesDifficulty = inControls->mCheckBoxes[0]->GetIsChecked();
     inControls->mComboBoxes[0]->GetCurrentSelection(outCondition->mDifficulty);
     outCondition->mUsesElapsedTime = inControls->mCheckBoxes[1]->GetIsChecked();
     outCondition->mMinTime = inControls->mEditBoxes[0]->GetTextAsInt(0);
+    outCondition->mMaxTime = inControls->mEditBoxes[1]->GetTextAsInt(0);
+    // a typed minimum above the maximum raises the maximum
     if (outCondition->mMinTime > outCondition->mMaxTime)
         outCondition->mMaxTime = outCondition->mMinTime;
-    outCondition->mMaxTime = inControls->mEditBoxes[1]->GetTextAsInt(0);
-    if (outCondition->mMaxTime < outCondition->mMinTime)
-        outCondition->mMinTime = outCondition->mMaxTime;
     outCondition->mUsesHour = inControls->mCheckBoxes[2]->GetIsChecked();
     outCondition->mHour = inControls->mSlider->GetCurrentRangeValue();
     EE_LOST_DEBUG(1);   // LOST-DEBUG: inline-budget stand-in: the smallest n that makes this function exact (end of body)
