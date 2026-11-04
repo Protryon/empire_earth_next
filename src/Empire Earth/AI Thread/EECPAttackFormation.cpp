@@ -94,7 +94,7 @@ void EECPAttackFormation::Analyze(EECPAttackFormationUnitAnalysis& outAnalysis)
             EEUnitClass* theClass = theUnit->mUnit->GetUnitClass();
             long theKind;
             if (theClass->IsPriest() || (theKind = theClass->mAIKind) == 0x1b ||
-                theUnit->mIsImportant && (float)(theUnit->mUnit->mHitPoints / theUnit->mUnit->mStats->mMaxHitPoints) < 0.45f)
+                theUnit->mIsImportant && (float)theUnit->mUnit->mHitPoints / theUnit->mUnit->mStats->mMaxHitPoints < 0.45f)   // a float ratio (was integer division)
                 outAnalysis.mSupportUnits.insert(EECPAFTypedUnit(theClass->mUnitType, theUnit));
             else if (theClass->mIsHorse && theUnit->mUnit->mStats->mMaxVelocity > 1.0f &&
                      theUnit->mUnit->GetUnitClass()->mAIKind != kAIKindArcher)

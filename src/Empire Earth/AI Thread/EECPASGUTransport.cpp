@@ -59,7 +59,7 @@ void EECPASGUTransport::SetState(long inState, unsigned long inTime)
 bool EECPASGUTransport::IsInDanger()
 {
     bool theResult = false;
-    if (this->mUnit->mHitPoints / this->mUnit->mStats->mMaxHitPoints < 0.85f) {
+    if ((float)this->mUnit->mHitPoints / this->mUnit->mStats->mMaxHitPoints < 0.85f) {   // a float ratio (was integer division)
         theResult = this->mUnit->mLastAttacker != NULL;
         if (!theResult) {
             for (long i = this->mSubGroup->mTargets.size() - 1; i >= 0 && !theResult; i--) {
