@@ -694,20 +694,18 @@ long EEUGBuildRepair::Save(unsigned long inMajorVersion, unsigned long inMinorVe
 }
 
 // FUNCTION: EXE 0x61f4f5
-// Returns whether units other than the building block its footprint (only the last footprint tile decides)
+// Returns whether units other than the building block any tile of its footprint
 bool EEUGBuildRepair::IsBuildSiteTaken()
 {
     std::vector<U2DPoint<long> > theTiles;
     std::vector<EEUnit*> theUnits;
     bool theResult = false;
     EEGetFootprintTiles(this->mTarget, theTiles);
-    for (unsigned long i = 0; i < theTiles.size(); ++i) {
+    for (unsigned long i = 0; i < theTiles.size() && !theResult; ++i) {
         EEMapTile* theTile = ::gWorld.GetMap()->GetTile(theTiles[i].GetX(), theTiles[i].GetY());
         EEGetBlockingUnits(this->mPlayer, this->mTargetType, theTile, 0, theUnits);
         if (theUnits.size() > 1 || (theUnits.size() == 1 && theUnits[0] != this->mTarget))
             theResult = true;
-        else
-            theResult = false;
     }
     return theResult;
 }
