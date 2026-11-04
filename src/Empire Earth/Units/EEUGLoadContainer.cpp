@@ -290,7 +290,9 @@ void EEUGLoadContainer::Step(EEComplexUnit* inUnit)
         break;
     case kActionCannotReachContainer: {
             EEUGLoadContainer* theGoal = dynamic_cast<EEUGLoadContainer*>(this->mContainer->GetLoadGoal());
-            theGoal->RemoveUnit(inUnit);
+            // the container may no longer have a load goal (Abandon checks the same cast)
+            if (theGoal != NULL)
+                theGoal->RemoveUnit(inUnit);
         }
         this->RemoveUnit(inUnit);
         break;
