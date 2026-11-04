@@ -63,6 +63,7 @@
 #include "ee/EEUIECampaignEditorEvents.h"
 #include "ee/EEStringIDs.h"
 static long SaveCampaign(UIForm* inForm);
+static long SaveCampaignNow(UIForm* inForm);
 static void CloseEditor(UIForm* inForm);
 static bool CheckUnsavedChanges(UIForm* inForm);
 static void OnSaveBeforeOpen(UIForm* inForm);
@@ -273,13 +274,30 @@ static void OnSaveBeforeOpen(UIForm* inForm)
     SaveBeforeOpen(inForm);
 }
 
+// Saves the edited campaign at once (for the "save before ..." answers, whose next step replaces the form
+// contents, so the deferred save would store the next campaign); returns 0 when it was saved
+static long SaveCampaignNow(UIForm* inForm)
+{
+    UWideString theError;
+    if (!ReadForm(inForm)) {
+        RefreshForm(inForm);
+        return 1;
+    }
+    if (!gCampaignEditor.Save(theError)) {
+        gUIManager->DisplayMessage(theError, true, NULL, 0, true);
+        return 1;
+    }
+    ShowCampaigns(inForm);
+    return 0;
+}
+
 // FUNCTION: EXE 0x5d0522
 // Saves the current campaign, then opens the selected one (moved down a line if the save added a file to the list)
 static void SaveBeforeOpen(UIForm* inForm)
 {
     UIListBox<UWideString>* theList = (UIListBox<UWideString>*)inForm->GetControl(10);
     unsigned long theCount = theList->GetLineCount();
-    if (SaveCampaign(inForm) != 0)
+    if (SaveCampaignNow(inForm) != 0)
         return;
     unsigned long theSelection;
     if (theCount < theList->GetLineCount() && theList->GetCurrentSelection(theSelection) == kErrorOK)
@@ -369,7 +387,7 @@ static void OnSaveBeforeNew(UIForm* inForm)
 // Saves the current campaign, then starts a new one
 static void SaveBeforeNew(UIForm* inForm)
 {
-    if (SaveCampaign(inForm) == 0)
+    if (SaveCampaignNow(inForm) == 0)
         NewCampaign(inForm);
 }
 
@@ -399,7 +417,7 @@ static void ShowMainScreen(UIForm* inForm)
 // Saves the current campaign, then returns to the main screen
 static void OnSaveBeforeMainScreen(UIForm* inForm)
 {
-    if (SaveCampaign(inForm) == 0)
+    if (SaveCampaignNow(inForm) == 0)
         ShowMainScreen(inForm);
 }
 
@@ -430,7 +448,7 @@ static void ShowScenarioEditor(UIForm* inForm)
 // Saves the current campaign, then switches to the scenario editor
 static void OnSaveBeforeScenarioEditor(UIForm* inForm)
 {
-    if (SaveCampaign(inForm) == 0)
+    if (SaveCampaignNow(inForm) == 0)
         ShowScenarioEditor(inForm);
 }
 
