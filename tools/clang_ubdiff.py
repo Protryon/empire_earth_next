@@ -64,13 +64,15 @@ def main():
     ap.add_argument("names", nargs="*", metavar="module", help=f"default: all ({' '.join(build.MODULES)})")
     ap.add_argument("--flag", default="-fno-delete-null-pointer-checks")
     ap.add_argument("--opt", default="-O1")
+    ap.add_argument("--stl", choices=["dinkum", "msvc"], default="dinkum")
     ap.add_argument("-j", type=int, default=os.cpu_count() or 4)
     ap.add_argument("--all", dest="null_tests", action="store_false",
                     help="list every function whose code changes (default: only those that lose null tests)")
     a = ap.parse_args()
+    clang_build.STL = a.stl
     mods = a.names or build.MODULES
     jobs = [j for m in mods for j in build.jobs_for(m)] + build.lib_jobs(mods)
-    out = ROOT / "build" / "ubdiff"
+    out = ROOT / "build" / ("ubdiff" + ("-msvc" if a.stl == "msvc" else ""))
     vc6inc = clang_vc6inc.prepare(TOOLCHAIN / COMPILER / "Include", ROOT / "build" / "clang" / "vc6inc")
     for j in jobs:
         verify.include_paths(verify.stage_source(j[1]))

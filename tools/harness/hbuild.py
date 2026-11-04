@@ -31,7 +31,7 @@ ACTIVATE = "?ActivateScreen@DX7Rasterizer@@UAEJKPAVGETextureManager@@PAVGEWindow
 class Build:
     def __init__(self, stl="msvc", test_dir=None):
         self.stl = stl
-        self.dir = pathlib.Path(test_dir or ROOT / "build" / ("clang-test" + ("-msvc" if stl == "msvc" else "")))
+        self.dir = pathlib.Path(test_dir or ROOT / "build" / ("clang-test" + ("-msvc" if stl == "msvc" else ""))).resolve()
         self.layout = L.Layout(stl)
         for t, f in TARGET_FILES.items():
             if not (self.dir / t / f).exists():

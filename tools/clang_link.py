@@ -413,8 +413,11 @@ def main():
                                                   + ("-msvc" if a.stl == "msvc" else "")
                                                   + ("-nullsan" if a.sanitize_null else ""))).resolve()
     if a.sanitize_null:
+        # every inference -fno-delete-null-pointer-checks switches off, trapped where it would fire: member calls /
+        # references through null, arithmetic on a null pointer, null for a non-null parameter or return
+        checks = "null,pointer-overflow,nonnull-attribute,returns-nonnull-attribute"
         clang_build.CLANG_FLAGS = [f for f in clang_build.CLANG_FLAGS if f != "-fno-delete-null-pointer-checks"] + [
-            "-fsanitize=null", "-fsanitize-trap=null"]
+            f"-fsanitize={checks}", "-fsanitize-minimal-runtime", f"-fsanitize-recover={checks}"]
     overlays = TEST_PROFILES.get(a.test_profile)
     for t in a.targets:
         if t not in TARGETS:
@@ -423,6 +426,15 @@ def main():
     objs = compile_all(targets, out, a.opt, a.j, overlays)
     verify.compile_candidate = ClangObjects(out, a.opt, objs, overlays)
     inner_run, extra_libs = relink.run, extra_import_libs(out)
+    if a.sanitize_null:   # the recovering minimal-runtime handlers (tools/harness/ubsan_minimal.c) in every image
+        ubsan = out / "ubsan_minimal.obj"
+        out.mkdir(parents=True, exist_ok=True)
+        r = subprocess.run([str(clang_build.CLANG), "--target=i686-pc-windows-msvc", "/nologo", "/c", "/O1", "/Zl",
+                            "/GS-", str(ROOT / "tools" / "harness" / "ubsan_minimal.c"), f"/Fo{ubsan}"],
+                           capture_output=True, text=True)
+        if r.returncode:
+            sys.exit(f"ubsan_minimal.c: {r.stdout}{r.stderr}")
+        extra_libs = extra_libs + [str(ubsan), "kernel32.lib"]
     engine_lib = out / "lle" / "Low-Level Engine.lib"
     results = {}
     for t in targets:
