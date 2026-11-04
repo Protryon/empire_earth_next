@@ -4609,9 +4609,7 @@ void EEPlayer::DisableCamouflagePower()
     EEUnitSet* theSet = gUnitSetManager.GetSet(gCivPowersManager.GetPowerRecord(kCivPowerCamouflage)->mUnitSet);
     for (; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         EEComplexUnit* theComplexUnit = theUnit->GetComplexUnit();
-        // (the set test's bool is passed on as a set index, as written)
-        if (theComplexUnit == NULL
-            || gUnitSetManager.GetSet(theSet->Contains(theUnit->mUnitClass->mUnitType)) == NULL)
+        if (theComplexUnit == NULL || !theSet->Contains(theUnit->mUnitClass->mUnitType))   // membership (was GetSet(bool))
             continue;
         theComplexUnit->SetCloakableChain(false);
         theComplexUnit->SetCloakedChain(false);
