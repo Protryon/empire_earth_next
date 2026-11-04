@@ -249,6 +249,9 @@ long GESurface::LoadJPG(FSFileSpec& inFile)
             jpeg_finish_decompress(&theInfo);
             jpeg_destroy_decompress(&theInfo);
             this->Unlock();
+        } else {
+            // The lock failed: still release the decompressor's memory pools.
+            jpeg_destroy_decompress(&theInfo);
         }
     }
     if (theWasOpen) {
@@ -377,6 +380,9 @@ long GESurface::LoadJPG2(FSFileSpec& inFile)
             jpeg_finish_decompress(&theInfo);
             jpeg_destroy_decompress(&theInfo);
             this->Unlock();
+        } else {
+            // The lock failed: still release the decompressor's memory pools.
+            jpeg_destroy_decompress(&theInfo);
         }
     }
     if (theWasOpen) {
