@@ -44,7 +44,7 @@ def include_paths(src=None):
         dst.mkdir(parents=True, exist_ok=True)
         for f in sorted((ROOT / "src" / d).glob("*.h")):
             _stage_write(dst / f.name, f.read_bytes())
-        flags.append("/I\\eex\\" + d.replace("/", "\\"))
+        flags.append(f"/I{dst}")   # absolute: a drive-relative \eex\... breaks when the build runs from another drive
     msvc, sdk, _, _ = modern_dirs()
     incdir = pathlib.Path(os.environ.get("EE_INCLUDE", str(ROOT / "include")))
     dx7 = pathlib.Path(os.environ.get("EE_DX7SDK", str(TOOLCHAIN / "dx7sdk" / "include")))
