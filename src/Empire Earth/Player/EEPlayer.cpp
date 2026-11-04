@@ -1375,7 +1375,8 @@ EETown* EEPlayer::GetNearestTown(const EETileLocation& inTile, EETileLocation& o
                 theCandidate = this->mTowns[i]->GetClosestPoint(inTile);
                 if (theCandidate.DistanceToSquared(inTile) < theDistance) {
                     outTile = theCandidate;
-                    theDistance = theCandidate.DistanceToSquared(theCandidate);
+                    theTown = this->mTowns[i];   // the closer town too (was its tile only)
+                    theDistance = theCandidate.DistanceToSquared(inTile);   // was (theCandidate): always 0
                 }
             }
         } else {
