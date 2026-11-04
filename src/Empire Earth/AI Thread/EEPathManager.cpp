@@ -580,8 +580,7 @@ void EEPathManager::CompletePath(EEComplexUnit* inUnit)
 }
 
 // FUNCTION: EXE 0x4a639b
-// Writes the path sub sectors and the queued tile and graph searches to an out-of-synch dump, but casts each queued
-// node (not its machine) to a machine, so every search is listed as an unknown pathfinder
+// Writes the path sub sectors and the queued tile and graph searches to an out-of-synch dump
 void EEPathManager::DumpOutOfSynch(_iobuf* inFile)
 {
     fprintf(inFile, "OUT OF SYNCH DUMP: Pathfinding Information\nOUT OF SYNCH DUMP:----------------------------------\n");
@@ -595,7 +594,8 @@ void EEPathManager::DumpOutOfSynch(_iobuf* inFile)
     fprintf(inFile, "OUT OF SYNCH DUMP: Paths In progress: %d\n", this->mPaths.size());
     unsigned long j;
     for (j = 0; j < this->mPaths.size(); j++) {
-        EEPathMachine* theMachine = dynamic_cast<EEPathMachine*>(this->mPaths[j]);
+        // cast the node's machine (the node itself used to be cast, which always failed)
+        EEPathMachine* theMachine = dynamic_cast<EEPathMachine*>(this->mPaths[j]->mPathMachine);
         if (theMachine) {
             fprintf(inFile, "OUT OF SYNCH DUMP:\n");
             fprintf(inFile, "OUT OF SYNCH DUMP: Paths Queue[%d]: \n", j);
@@ -614,19 +614,20 @@ void EEPathManager::DumpOutOfSynch(_iobuf* inFile)
     }
     fprintf(inFile, "OUT OF SYNCH DUMP: Graphs In progress: %d\n", this->mAutoPaths.size());
     for (j = 0; j < this->mAutoPaths.size(); j++) {
-        EEGraphPathMachine* theMachine = dynamic_cast<EEGraphPathMachine*>(this->mAutoPaths[j]);
+        // the node's graph machine (the node itself used to be cast, which always failed)
+        EEGraphPathMachine* theMachine = this->mAutoPaths[j]->mGraphMachine;
         if (theMachine) {
             fprintf(inFile, "OUT OF SYNCH DUMP:\n");
             fprintf(inFile, "OUT OF SYNCH DUMP: AutoPaths Queue[%d]: \n", j);
             unsigned long theUnitID;
-            // the original reads the unit, tile and passes from mPaths here (0xa659f add edi, 0x5c), not mAutoPaths
-            if (this->mPaths[j]->mUnit)
-                theUnitID = (*(this->mPaths.begin() + j))->mUnit->GetUnitID();
+            // the graph search's own unit, tile and passes (they used to be read from mPaths)
+            if (this->mAutoPaths[j]->mUnit)
+                theUnitID = this->mAutoPaths[j]->mUnit->GetUnitID();
             else
                 theUnitID = 0;
             fprintf(inFile, "OUT OF SYNCH DUMP: AutoPath for Unit: %d to (%d,%d) has been queued %d time.\n",
-                    theUnitID, (*(this->mPaths.begin() + j))->mTile.GetX(), (*(this->mPaths.begin() + j))->mTile.GetY(),
-                    (*(this->mPaths.begin() + j))->mPasses);
+                    theUnitID, this->mAutoPaths[j]->mTile.GetX(), this->mAutoPaths[j]->mTile.GetY(),
+                    this->mAutoPaths[j]->mPasses);
             fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %d. Tile Cap is: %d\n", theMachine->mRevs,
                     theMachine->GetMaxRevs());
         } else {
