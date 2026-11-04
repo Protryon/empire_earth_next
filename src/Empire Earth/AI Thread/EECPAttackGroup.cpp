@@ -1012,14 +1012,16 @@ bool EECPAttackGroup::KeepsUnit(EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x456cc8
 // Reads the task, the sub-groups (kind, then body), the orders, id, continent and finished flag from the saved
-// game; a sub-group read error is lost when the order count reads fine
+// game; returns the first read error
 long EECPAttackGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     unsigned long i = 0;
     unsigned long theCount = 0;
     long theKind = 0;
-    this->mTask.Load(inMajorVersion, inMinorVersion, inFile);
-    long theResult = inFile.Read(theCount);
+    // the task's result counts too (it used to be ignored)
+    long theResult = this->mTask.Load(inMajorVersion, inMinorVersion, inFile);
+    if (theResult == kErrorOK)
+        theResult = inFile.Read(theCount);
     if (theResult == kErrorOK) {
         this->mSubGroups.resize(theCount);
         for (unsigned long j = 0; j < theCount; j++) {
@@ -1027,6 +1029,12 @@ long EECPAttackGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVe
             theKind = 0;
             if (theResult == kErrorOK)
                 theResult = inFile.Read(theKind);
+            // after a read error there is no sub-group to create (a NULL one used to be referenced): keep the
+            // ones read so far and report the error
+            if (theResult != kErrorOK) {
+                this->mSubGroups.resize(j);
+                return theResult;
+            }
             switch (theKind) {
             case kASGKindLand:
                 theSubGroup = new EECPASGLand(this, theKind);
@@ -1068,7 +1076,9 @@ long EECPAttackGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                 theResult = theSubGroup->Load(inMajorVersion, inMinorVersion, inFile);
         }
         theCount = 0;
-        theResult = inFile.Read(theCount);
+        // a sub-group read error is kept (the order count's result used to replace it)
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(theCount);
         if (theResult == kErrorOK) {
             this->mOrders.resize(theCount);
             if (theCount != 0) {
@@ -1593,15 +1603,17 @@ bool EEAIFOContinentScreenContinentsShareAdjacentOceanContinentID::Test(unsigned
 
 // FUNCTION: EXE 0x458625
 // Writes the task, the sub-groups (kind, then body), the orders, id, continent and finished flag to the saved
-// game; a sub-group write error is lost when the order count writes fine
+// game; returns the first write error
 long EECPAttackGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     unsigned long i = 0;
     unsigned long theCount = 0;
     long theKind;
-    this->mTask.Save(inMajorVersion, inMinorVersion, outFile);
+    // the task's result counts too (it used to be ignored)
+    long theResult = this->mTask.Save(inMajorVersion, inMinorVersion, outFile);
     theCount = this->mSubGroups.size();
-    long theResult = outFile.Write(theCount);
+    if (theResult == 0)
+        theResult = outFile.Write(theCount);
     if (theResult == 0) {
         for (i = 0; i < theCount; i++) {
             theKind = this->mSubGroups[i]->mKind;
@@ -1612,7 +1624,9 @@ long EECPAttackGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVe
         }
     }
     theCount = this->mOrders.size();
-    theResult = outFile.Write(theCount);
+    // a sub-group write error is kept (the order count's result used to replace it)
+    if (theResult == 0)
+        theResult = outFile.Write(theCount);
     if (theResult != 0)
         return theResult;
     for (i = 0; i < theCount; i++) {
