@@ -112,8 +112,7 @@ bool IsSquareOpen(std::vector<std::vector<unsigned char> >& inMask, unsigned lon
 }
 
 // FUNCTION: DEFAULT 0x1001581c
-// Meant to tell whether a land tile borders an empty one; tests the centre again instead, so it
-// always returns false (original bug)
+// Tells whether a land tile borders an empty one (8-neighbourhood, within the map)
 bool Unit11_1581c(const std::vector<std::vector<unsigned long> >& inTiles, unsigned long inX, unsigned long inY)
 {
     long theLast = inX + 1;
@@ -123,7 +122,7 @@ bool Unit11_1581c(const std::vector<std::vector<unsigned long> >& inTiles, unsig
         for (long i = inX - 1; !theResult && i <= theLast; i++)
             for (long j = inY - 1; !theResult && j <= (long)(inY + 1); j++)
                 if ((unsigned long)i < theSize && (unsigned long)j < theSize)
-                    theResult = (inTiles[inX][inY] & 0x7fff) == 0;   // sic: tests the centre, not (i, j)
+                    theResult = (inTiles[i][j] & 0x7fff) == 0;
     return theResult;
 }
 
