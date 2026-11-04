@@ -4221,7 +4221,7 @@ void EEPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
 {
     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
     this->mPopulationCount -= theUnit->mUnitClass->GetPopulationCost();
-    if (!theUnit->mUnitClass->IsLandBuilding() || theUnit->GetComplexUnit()->mIsBuilt) {
+    if (!theUnit->mUnitClass->IsLandBuilding() || theUnit->GetComplexUnit() == NULL || theUnit->GetComplexUnit()->mIsBuilt) {
         if (theUnit->mUnitClass->mIsVital
             && (theUnit->GetComplexUnit() == NULL
                 || theUnit->GetComplexUnit()->mPreviousPart == NULL
@@ -4255,7 +4255,7 @@ void EEPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
     }
     if (theUnit->mUnitClass->mUnitType == kUnitTypeHouse)
         this->SuggestRecomputeAllAreaEffects();
-    if (!(!gWorldClearing && theUnit->mUnitClass->mBlocksTile || theUnit->mUnitClass->mCategory == kUnitCategoryGate))
+    if (!(!gWorldClearing && (theUnit->mUnitClass->mBlocksTile || theUnit->mUnitClass->mCategory == kUnitCategoryGate)))
         return;
     gContinentManager.UpdateWallUnit(theUnit, true);
     if (!theUnit->mUnitClass->mIsTree || !gGameScreenActive)
