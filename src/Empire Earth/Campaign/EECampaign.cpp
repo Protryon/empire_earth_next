@@ -512,8 +512,11 @@ bool EECampaign::ListEffectSounds(const UWideString& inFile, std::vector<UWideSt
                     }
                 }
                 delete theManager;
+                theRestorable->mObject = NULL;
             }
         }
+        // The restorable wrapper EELoadPersistent created is freed too (it leaked).
+        delete thePersistent;
     }
     return theResult;
 }
