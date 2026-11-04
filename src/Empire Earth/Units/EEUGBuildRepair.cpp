@@ -668,14 +668,17 @@ void EEUGBuildRepair::Start(EEComplexUnit* inUnit)
 }
 
 // FUNCTION: EXE 0x61f47f
-// Writes the building id (the building must exist), builder-counted flag, first-tick state and repair flag; returns
+// Writes the building id (-1 once the building is gone), builder-counted flag, first-tick state and repair flag; returns
 // the first write error
 long EEUGBuildRepair::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     long theResult = EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile);
     if (theResult != 0)
         return theResult;
-    theResult = outFile.Write(this->mTarget->GetUnitID());
+    // ReplaceUnit clears the building when an enemy takes it over: save -1, which RepairPointers reads as no
+    // building, instead of reading the id through NULL
+    unsigned long theTargetID = this->mTarget != NULL ? this->mTarget->GetUnitID() : (unsigned long)-1;
+    theResult = outFile.Write(theTargetID);
     if (theResult != 0)
         return theResult;
     theResult = outFile.Write(this->mWorkerCountIncremented);
