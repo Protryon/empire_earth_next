@@ -442,6 +442,8 @@ void UIManager::CreateBackgrounds()
             continue;
         theDescription.mHasAlpha = theTable->GetHasAlpha();
         UIForm* theForm = this->GetFormByID(theTable->GetFormID());
+        if (!theForm)
+            continue;   // no such form (GetFormByID used to return a garbage pointer here)
         switch (theTable->GetBackgroundType()) {
         case kBackgroundBitmap:
             new UIBitmapBackground(theTable->GetBackgroundID(), theTable->GetTextureFile(), theDescription,
@@ -574,13 +576,15 @@ long UIManager::DrawTextA()
 }
 
 // FUNCTION: LLE 0x1007a72d
-// Returns the form with the given ID; an unknown ID reads one past the end of the form list
+// Returns the form with the given ID (NULL: none)
 UIForm* UIManager::GetFormByID(unsigned long inID) const
 {
     unsigned long i;
     for (i = 0; i < this->mForms.size(); i++)
         if (this->mForms[i]->GetFormID() == inID)
             break;
+    if (i == this->mForms.size())
+        return NULL;   // Fixed: an unknown ID used to return the word one past the end of the form list
     return this->mForms[i];
 }
 
