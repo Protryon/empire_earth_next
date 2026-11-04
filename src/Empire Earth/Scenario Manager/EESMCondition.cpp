@@ -211,10 +211,11 @@ bool EESMCondition::Evaluate()
     }
     case kSMConditionTriggerAttribute:
         theResult = true;
+        // a missing trigger has neither fired nor is on (it used to be read through NULL)
         if (this->mHasTriggerFired)
-            theResult = theTrigger->mHasFired;
+            theResult = theTrigger != NULL && theTrigger->mHasFired;
         if (this->mIsTriggerOn)
-            theResult = theTrigger->mIsOn;
+            theResult = theTrigger != NULL && theTrigger->mIsOn;
         break;
     case kSMConditionGameAttribute: {
         bool theTimeResult = true;
