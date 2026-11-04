@@ -356,7 +356,8 @@ void EECPResearchManager::ResearchCheapest(unsigned long inCount)
         long theNext = this->mTechTree->mCurrentEpoch + 1;
         if (theNext >= 0 && theNext < 15)
             theEpoch = &this->mTechTree->mEpochs[theNext];
-        for (unsigned long n = 0; n < inCount; n++)
+        // in the last epoch there is no next one to credit
+        for (unsigned long n = 0; theEpoch != NULL && n < inCount; n++)
             theEpoch->AddSOL();
     } else {
         std::sort(theEntries.begin(), theEntries.end(), EECPRMEntryLess());
