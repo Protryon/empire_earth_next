@@ -249,7 +249,7 @@ void EECalamity::Reset()
 }
 
 // FUNCTION: EXE 0x4ad377
-// Writes the calamity's state to the out-of-sync dump (bool placeholder 1 is printed three times, placeholder 2 once)
+// Writes the calamity's state to the out-of-sync dump
 void EECalamity::DumpOutOfSynch(FILE* inFile)
 {
     fprintf(inFile, "\nOUT OF SYNCH DUMP:  Calamity Class is %d\n", this->mClass->mClassEnum);
@@ -269,8 +269,6 @@ void EECalamity::DumpOutOfSynch(FILE* inFile)
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Bool HasTargetLocation has a value of %d\n",
             this->mHasTargetLocation == true);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Bool HasTargetUnit has a value of %d\n", this->mHasTargetUnit == true);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Bool PlaceHolder 1 has a value of %d\n", this->mBoolPlaceHolder1 == true);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Bool PlaceHolder 1 has a value of %d\n", this->mBoolPlaceHolder1 == true);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Float PlaceHolder 1 is %6.6f\n", this->mFloatPlaceHolder1);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Float PlaceHolder 2 is %6.6f\n", this->mFloatPlaceHolder2);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Height is %6.6f\n", this->mHeight);
