@@ -11,18 +11,19 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 from ee import LINK_DIR, MODULE_FLAGS, ROOT, module_units
 
-MODULES = ["tcp", "mixer", "default", "lle", "jpeg", "dx7hr", "dx7hrtnl", "exeimg", "exe"]
-TARGETS = ["tcp", "mixer", "default", "lle", "dx7hr", "dx7hrtnl", "language", "exe"]
-TARGET_MODULES = {"lle": ["lle", "jpeg"], "exe": ["exe", "exeimg"], "language": []}
-PART_OF = {"jpeg": "lle", "exeimg": "exe"}
+# Every module is linked into the one exe (no DLLs): the game, its image libraries, the engine with libjpeg, and the
+# plug-ins (TCP protocol, mixer, Default random maps, the DX7 T&L renderer), registered in PIMModule.cpp.
+MODULES = ["tcp", "mixer", "default", "lle", "jpeg", "dx7hrtnl", "exeimg", "exe"]
+TARGETS = ["exe"]
+TARGET_MODULES = {"exe": ["exe", "exeimg", "lle", "jpeg", "tcp", "mixer", "default", "dx7hrtnl"]}
+PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own (none since the VC6 build's inline-asm _ftol went: clang never calls it)
 EXTRA_UNITS = {}
 LIB_UNITS = {"mssauto": "ThirdParty/mss/mssauto.c",
              "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c",
-             # DirectMusic and Direct3D 7 GUIDs (the Windows SDK's dxguid.lib no longer has them)
-             "dmguids": "ThirdParty/dxguid/dmusic_guids.c", "dx7guids": "ThirdParty/dxguid/dx7_guids.c"}
-LIB_MEMBERS = {"mixer": ["mssauto"], "lle": ["implode", "explode", "dmguids"], "dx7hr": ["dx7guids"],
-               "dx7hrtnl": ["dx7guids"]}
+             # DirectMusic GUIDs (the Windows SDK's dxguid.lib no longer has them)
+             "dmguids": "ThirdParty/dxguid/dmusic_guids.c"}
+LIB_MEMBERS = {"mixer": ["mssauto"], "lle": ["implode", "explode", "dmguids"]}
 LANGUAGE_RC = pathlib.PurePosixPath("Empire Earth/Language/Language.rc")
 EXE_RC = ROOT / "src" / "Empire Earth" / "EE-AOC.rc"
 EXE_MEMBERS = LINK_DIR / "exe" / "fulllink_members.tsv"

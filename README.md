@@ -9,20 +9,26 @@ every original-bug fix) and is free to diverge from the original from here on. `
 This repository contains no game data and no original binaries. You need a legal copy of the game to play anything
 you build.
 
-## Modules
+## What it builds
 
-| Module | Image | Source |
+One statically linked `EE-AOC.exe` with the static C runtime. The original's DLLs are linked into it: the engine
+(`Low-Level Engine.dll`, with libjpeg and the DCL), the TCP protocol, the mixer, the Default random map generator
+and the DX7 hardware T&L renderer (the plug-ins are registered in `src/Low-Level Engine/PIMModule.cpp` instead of
+being loaded from DLLs), and the language strings of `Language.dll`. The non-T&L renderer `DX7HRDisplay.dll` is
+gone. Only Windows system DLLs are imported, plus Miles (`Mss32.dll`) and Bink (`binkw32.dll`) until their
+replacements land (`PORT.md`, "Plan").
+
+| Module | Was | Source |
 |---|---|---|
-| `exe` | `EE-AOC.exe` (game; with libpng, zlib and libjpeg) | `src/Empire Earth/`, `src/RTS Engine/`, `src/ThirdParty/` |
-| `lle` | `Low-Level Engine.dll` (engine core; with libjpeg and the DCL) | `src/Low-Level Engine/` |
+| `exe` | `EE-AOC.exe` (game; with libpng, zlib) | `src/Empire Earth/`, `src/RTS Engine/`, `src/ThirdParty/` |
+| `lle`, `jpeg` | `Low-Level Engine.dll` (engine core, libjpeg, the DCL) | `src/Low-Level Engine/`, `src/ThirdParty/` |
 | `default` | `Default.dll` (random map generators) | `src/Empire Earth/Random Map/Random Map Generators/Default/` |
-| `dx7hr` | `DX7HRDisplay.dll` (renderer) | `src/Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/` |
-| `dx7hrtnl` | `DX7HRTnLDisplay.dll` (T&L renderer) | same folder |
+| `dx7hrtnl` | `DX7HRTnLDisplay.dll` (T&L renderer) | `src/Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/` |
 | `tcp` | `TCP Protocol.dll` (network) | `src/Low-Level Engine/Network Engine/TCP Protocol/` |
 | `mixer` | `Miles Sound System Mixer.dll` (sound) | `src/Low-Level Engine/Sound Engine/Miles Sound System Mixer/` |
-| `language` | `Language.dll` (resources only) | `src/Empire Earth/Language/Language.rc` |
+| (resources) | `Language.dll` | `src/Empire Earth/Language/Language.rc` |
 
-`EE-AOC.exe` still links stubs for the WON online library, whose source is not part of the reconstruction yet (the
+The exe still links stubs for the WON online library, whose source is not part of the reconstruction yet (the
 online services no longer exist).
 
 ## Building
@@ -41,16 +47,15 @@ Requirements (Windows 10/11):
 Then:
 
 ```
-python -I build.py                  # every image -> build/clang/<target>/
-python -I build.py -j 8 lle exe     # some images (the others link against the engine's import library)
-python -I tools/clang_build.py      # compile only, with a ranked error census
+python -I build.py                  # -> build/clang/exe/EE-AOC.exe
+python -I tools/clang_build.py      # compile only, with a ranked error census (--x64: the 64-bit census)
 ```
 
-Each image comes with its `.map` and `.pdb`. Sources are staged under `C:\EEX\` before they are compiled (env
+The exe comes with its `.map` and `.pdb`. Sources are staged under `C:\EEX\` before they are compiled (env
 `EE_ORIG_SRC_ROOT` moves it). A full build takes about two minutes on a 12-core machine.
 
-To play, copy the images over a copy of the game's install directory (keeping the game's own `Mss32.dll` and
-`binkw32.dll`).
+To play, copy `EE-AOC.exe` into a copy of the game's install directory (keeping the game's own `Mss32.dll` and
+`binkw32.dll`; the other DLLs are no longer used).
 
 ## Testing
 

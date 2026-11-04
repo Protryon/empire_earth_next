@@ -275,7 +275,8 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
 - **llvm-lib .def decoration differs from Microsoft LIB on x86**: a plain C name gets the underscore (`foo` ->
   `_foo`), a stdcall name does not (`foo@8` stays `foo@8`). Write stdcall names with the underscore (`_foo@8`);
   `fix_members` then sets the import-name type to UNDECORATE.
-- **What the modern SDK dropped**: the DirectMusic and Direct3D 7 GUIDs are gone from `dxguid.lib`. Their values,
+- **What the modern SDK dropped**: the DirectMusic GUIDs are gone from `dxguid.lib` (the Direct3D 7 ones are
+  still there: a copy of them collided once the engine and renderer shared one link). Their values,
   read once from the DirectX 8.1 SDK's library, live in `src/ThirdParty/dxguid/*.c`. DirectInput 7's
   `DirectInputCreateA` comes from a by-name library; its data formats (`c_dfDIKeyboard`/`c_dfDIMouse`) come from
   the SDK's `dinput8.lib`. The DX7 SDK headers are still downloaded (`tools/fetch_dx7sdk.py`).
@@ -330,6 +331,50 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
   import tables in `link/` follow).
 - A count stored in the last slot of a `vector<GETMPolygon*>` (the terrain draw's visible lists) goes through two
   helpers in that unit.
+
+## One static exe (folding the DLLs in)
+
+- **Plug-ins**: the engine found plug-ins by loading every `*.dll` in a folder and asking `PIMGetName/PIMGetType/
+  PIMIsValid`, then took their other entry points with `GetProcAddress`. Each plug-in now ends with a table of its
+  former exports (`PIMPlugin`/`PIM_ENTRY`, generated from its `extern "C"` definitions; the counts matched the old
+  export tables) and `PIMModule.cpp` walks the tables in the same first/next way. Only the `PIM*` triple collides
+  between plug-ins (made `static`); the type-specific names (`NPIM*`, `SPIM*`, `EERMPIM*`, `RPIM*`) are unique.
+- **Header views meet in one link.** The reconstruction gives each module its own view of shared headers
+  (`LLE_EXE_HEADERS` etc.). In one link: a function inline in one view and out of line in another is a duplicate
+  (non-COMDAT + COMDAT), and one declared but never defined in a view used to resolve against the engine DLL's
+  export of the inline copy, so it became a trap stub. Both fixed by giving every view the same definition. Silent
+  divergences (two COMDAT bodies, the linker keeps one) are listed by `tools/odr_check.py`; `tools/layout_views.py`
+  compares record sizes between two units' views (the 2,561 shared by an engine and a game unit agree).
+- **libjpeg twice**: the game's image libraries and the engine both compiled it; the engine's full copy serves both.
+- **`// UNIT-FLAGS:` lines** replaced the module flags, so five units kept VC6's `-MD` and lost `-DEE_STATIC`
+  (`/failifmismatch: RuntimeLibrary`). Now only their defines are added to the module flags.
+- **By-name import libraries need the decorated name** (`_DirectInputCreateA@16`), which comes from the objects that
+  call it: feed every module's objects, not just the game's.
+- **Language.dll** is resources only: its `.res` is linked into the exe beside the exe's own (no ID overlap: the
+  exe has an icon, a cursor and a bitmap, the language file dialogs and string tables); `UResourceFile` reads the
+  game's own module. The multiplayer version checksum, which summed the engine/Dinkum/TCP DLL files, sums the exe.
+- **clang-cl vector deleting destructors (the hard one).** After the merge the tour crashed with heap corruption
+  (`c0000374`) when a form closed. Full page heap (Image File Execution Options `GlobalFlag 0x02000000`,
+  `PageHeapFlags 0x3`, then `0x13` backwards) turned it into a verifier stop: a freed pointer that was not the start
+  of a block. The DLL build of the previous commit passed the same tour under page heap, which proved the merge
+  caused it. Cause: with the MSVC ABI, `delete[]` of a class with a virtual destructor calls the vtable's vector
+  deleting destructor (`??_E`, flag 3). clang-cl emits a real `??_E` only for dllexport classes or in a unit that
+  holds both the vtable and a `new[]`/`delete[]`; elsewhere `??_E` is a weak alias of the scalar `??_G`, which
+  frees the array pointer past its cookie. The DLL build's engine classes were `dllexport`. Fix: the engine and
+  renderer units keep `dllexport` (the exe gets an export table; nothing loads dynamically). 13 `delete[]` sites
+  are affected (`push 3; call [vtable]`); removing them, or a clang that always emits `??_E`, lets the exports go.
+- **An original bug the merge surfaced while looking**: `UWideString::Reallocate` dropped its fresh buffer and
+  pointed the string at a `""` literal (then `Import` wrote into it and the destructor freed it). Fixed.
+- **Harness for one image**: hooks that waited for a module to load (engine exports, the renderer's checkpoints,
+  `abort` in the runtime DLL) are exe RVAs from the map, armed at process creation (`exe_boot.c --static-exe`).
+  The presentation bridge was loaded by the plug-in scan (it is a DLL in the game folder): the test profile's
+  `WinMain` loads it now, and it calls engine members at map addresses (`bridge_syms.h`). The silent mixer is
+  compiled into the test exe in place of the Miles unit (`TEST_SWAPS`). The time shim's single `Sleep` slot is
+  time-scaled except for the render loop. The T&L renderer needed its own software-device rules in the test
+  profile (it insists on `D3DDEVCAPS_HWTRANSFORMANDLIGHT` and the T&L HAL device).
+- Static initialisation order: the engine's and plug-ins' objects are linked before the game's, so their global
+  constructors run first, as when the engine DLL loaded before the exe initialised (not the cause of the crash
+  above, but the order the code was written for).
 
 ## For WONAPI/WONLobby later
 

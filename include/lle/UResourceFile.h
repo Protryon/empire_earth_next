@@ -10,7 +10,6 @@ class UWideString;
 
 class LLE_API UResourceFile {
 public:
-    UResourceFile(const FSFileSpec& inFile);
     UResourceFile(HINSTANCE inModule);
     virtual ~UResourceFile();
     unsigned short GetLanguage() { return this->mLanguage; }
@@ -19,7 +18,7 @@ public:
 private:
     HINSTANCE mModule;                      // +0x04
     unsigned short mLanguage;               // +0x08
-    bool mOwnsModule;                       // +0x0a (provisional name; loaded from a file: freed by the dtor)
+    bool mOwnsModule;                       // +0x0a (provisional name; always false: the module is the game's)
 };
 
 #endif

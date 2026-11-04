@@ -5,16 +5,19 @@ harness `exe_boot.c`, exercises, telemetry, AI games, the human driver and per-P
 repository's builds. The reconstruction's version runs the original game or a VC6 full link next to the retail DLLs,
 reads memory at VC6 offsets, and binary-patches the images for the VM. Here:
 
-- **The build under test** (`hbuild.py`): a test-profile build, every module from source
-  (`python -I build.py --test-profile windowed-software` -> `build/clang-test`). The windowed and software-display
-  policy is compiled into the exe and the renderer, and the functions the harness hooks are kept out of line.
+- **The build under test** (`hbuild.py`): a test-profile build of the one static exe
+  (`python -I build.py --test-profile windowed-software` -> `build/clang-test/exe/EE-AOC.exe`). The windowed and
+  software-display policy (for the T&L renderer: the RGB software device) and the silent mixer
+  (`silent_mixer.cpp`, compiled in place of the Miles mixer unit) are compiled in, `WinMain` loads the presentation
+  bridge, and the functions the harness hooks are kept out of line.
 - **Offsets by member name** (`layout_gen.py`, `layout.py`): the build's record layouts (clang's dumps;
   `build.py` writes `<build>/layout.json`). `layout.off(cls, vc6_offset)` translates any of the reconstruction
   harness's VC6 offsets through the frozen VC6 layout `vc6_layout.json.gz`.
-- **Companion DLLs for the build**: the silent mixer is compiled like the build's mixer and linked against its
-  engine and runtime. The presentation bridge (`TestPresentation.dll`) gets the build's offsets and its renderer's
-  `ShowScene` RVA as defines. `exe_boot.c` takes the renderer checkpoints (`--renderer-guards`) and guards `abort`
-  in `ucrtbase.dll`. The RDP mode proxy is built with clang.
+- **One image**: the engine, the renderer and the runtime are inside the exe, so every hook is an exe address from
+  its map. The presentation bridge (`TestPresentation.dll`) gets the build's offsets, `ShowScene`'s RVA and the
+  engine members it calls (`bridge_syms.h`, written at build time). `exe_boot.c --static-exe` arms the engine's
+  `ESRecordNativeError`, the static runtime's `abort`, the RNG trace and the renderer checkpoints in the exe. The
+  time shim renames the exe's WINMM import; the RDP mode proxy renames the exe's DDRAW import.
 
 ```
 python -I build.py --test-profile windowed-software

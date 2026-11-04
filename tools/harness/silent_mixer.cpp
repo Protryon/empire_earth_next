@@ -1,5 +1,5 @@
-// TEST TOOL ONLY. Built into staged test directories; never a reconstructed unit.
-// Uses VC6 and existing engine declarations for the original C++ ABI.
+// TEST TOOL ONLY. The test profile compiles it into the exe in place of the Miles mixer unit (tools/build.py
+// TEST_SWAPS); never a reconstructed unit. It registers as the same plug-in (gPIMPluginMilesMixer).
 #include <windows.h>
 #include <stdlib.h>
 #include <string.h>
@@ -42,11 +42,7 @@ static Channel* bound(SESample* s) {
     Channel* c=&channels[s->GetMixerChannel()];
     return c->sample==s ? c : NULL;
 }
-extern "C" BOOL WINAPI DllMain(HINSTANCE, DWORD why, LPVOID) {
-    if(why==DLL_PROCESS_ATTACH) InitializeCriticalSection(&lock);
-    if(why==DLL_PROCESS_DETACH) DeleteCriticalSection(&lock);
-    return TRUE;
-}
+static struct LockInit { LockInit(){InitializeCriticalSection(&lock);} } sLockInit;   // (was DllMain)
 extern "C" const UString* PIMGetName(){return &name;}
 extern "C" unsigned long PIMGetType(){return 0x20736e64;}
 extern "C" bool PIMIsValid(){return true;}
@@ -145,3 +141,43 @@ extern "C" void SPIMSetSampleLooping(SESample* s,bool b){Guard g;if(s){Channel* 
 extern "C" long SPIMSetSamplePan(SESample* s,float p){Guard g;if(!s || !(p>=-1 && p<=1))return BAD;s->SetThePan(p);return OK;}
 extern "C" long SPIMSetSamplePitch(SESample* s,float p){Guard g;if(!s || !(p>0 && p<=16))return BAD;Channel* c=bound(s);if(c)update(*c);s->SetThePitch(p);return OK;}
 extern "C" long SPIMSetSampleVolume(SESample* s,float v){Guard g;if(!s || !(v>=0 && v<=1))return BAD;s->SetTheVolume(v);return OK;}
+
+#include "lle/PIMModule.h"
+
+static const PIMEntry sEntries[] = {
+    PIM_ENTRY(PIMGetName),
+    PIM_ENTRY(PIMGetType),
+    PIM_ENTRY(PIMIsValid),
+    PIM_ENTRY(SPIMActivateMixer),
+    PIM_ENTRY(SPIMCreateChannels),
+    PIM_ENTRY(SPIMDeactivateMixer),
+    PIM_ENTRY(SPIMDeleteWaveData),
+    PIM_ENTRY(SPIMDestroyChannels),
+    PIM_ENTRY(SPIMDuplicateSample),
+    PIM_ENTRY(SPIMGetCPUUsage),
+    PIM_ENTRY(SPIMGetChannelCount),
+    PIM_ENTRY(SPIMGetDirectSoundInterface),
+    PIM_ENTRY(SPIMGetHighestTimerDelay),
+    PIM_ENTRY(SPIMGetMaximumChannelCount),
+    PIM_ENTRY(SPIMGetSampleOffset),
+    PIM_ENTRY(SPIMGetSamplePlayBackTime),
+    PIM_ENTRY(SPIMGetVolume),
+    PIM_ENTRY(SPIMInitializeMixer),
+    PIM_ENTRY(SPIMIsChannelBusyPlaying),
+    PIM_ENTRY(SPIMLoadWaveData),
+    PIM_ENTRY(SPIMMixAhead),
+    PIM_ENTRY(SPIMPlayChannel),
+    PIM_ENTRY(SPIMProcessMessage),
+    PIM_ENTRY(SPIMSetChannelSample),
+    PIM_ENTRY(SPIMSetLatency),
+    PIM_ENTRY(SPIMSetSampleLooping),
+    PIM_ENTRY(SPIMSetSampleOffset),
+    PIM_ENTRY(SPIMSetSamplePan),
+    PIM_ENTRY(SPIMSetSamplePitch),
+    PIM_ENTRY(SPIMSetSampleVolume),
+    PIM_ENTRY(SPIMSetVolume),
+    PIM_ENTRY(SPIMStopAllChannels),
+    PIM_ENTRY(SPIMStopChannel),
+    { NULL, NULL },
+};
+extern const PIMPlugin gPIMPluginMilesMixer = { "Miles Sound System Mixer.dll", sEntries };

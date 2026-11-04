@@ -45,7 +45,6 @@ public:
     // GEVector.cpp (0x35f0e..0x367fc): the vector's cube-face quantization (sQuantizedVectorArray)
     GEVector* GetQuantizedVersion() const;
     static long LoadQuantizedIndex(FSFile& inFile, GEVector*& outVector);
-#ifdef LLE_EXE_HEADERS
     void Normalize()
     {
         float theMagnitude = this->GetMagnitude();
@@ -60,9 +59,6 @@ public:
             this->mZ *= theScale;
         }
     }
-#else
-    void Normalize();
-#endif
     // inline (no import in Default.dll; LLE's exported body 0xc3d4 is this expression; 0xc29f keeps the scale in
     // st0 across the three products, its tail-merged branches load only the scale)
     void Scale(float inScale, GEVector& outVector) const

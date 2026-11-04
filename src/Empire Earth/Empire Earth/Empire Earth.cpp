@@ -1058,10 +1058,11 @@ void EEInitializeNetwork()
     theFile.SetVolume(gStartupVolume);
     TMGetTime();
     theFile.SetDirectory(gStartupDirectory);
-    unsigned long theChecksum = EEGetFileChecksum(theFile, "Low-Level Engine.dll", 0);
-    theChecksum += EEGetFileChecksum(theFile, "sxlrt233.dll", 0);
-    theFile.SetDirectory(gStartupDirectory);
-    theChecksum += EEGetFileChecksum(theFile, "TCP Protocol.dll", 0);
+    // the game's code is all in its exe (the original summed the engine, Dinkum and TCP Protocol DLLs)
+    char theExePath[MAX_PATH];
+    GetModuleFileNameA(NULL, theExePath, MAX_PATH);
+    const char* theExeName = strrchr(theExePath, '\\');
+    unsigned long theChecksum = EEGetFileChecksum(theFile, theExeName != NULL ? theExeName + 1 : theExePath, 0);
     theFile.SetDirectory(gStartupDirectory + "Data\\Db\\");
     theChecksum += EEGetFileChecksum(theFile, "*.dat", 0);
     theFile.SetDirectory(gStartupDirectory + "Data\\Unit AI Scripts\\");
@@ -1914,7 +1915,6 @@ UResourceFile* gResource;
 int WINAPI WinMain(HINSTANCE inInstance, HINSTANCE inPreviousInstance, LPSTR inCommandLine, int inShowCommand)
 {
     EEStartScreen theStartScreen(inInstance);
-    FSFileSpec theLanguageFile;
     FSFileSpec theRecordingFile;
     if (EECreateInstanceMutex()) {
         sCallWndProcHook = SetWindowsHookExA(WH_CALLWNDPROC, EECallWndProcHook, NULL, 0);
@@ -1931,10 +1931,7 @@ int WINAPI WinMain(HINSTANCE inInstance, HINSTANCE inPreviousInstance, LPSTR inC
             theRecordingFile.SetVolume(gStartupVolume);
             theRecordingFile.SetDirectory(gStartupDirectory);
             ESBeginRecording(theRecordingFile);
-            theLanguageFile.SetVolume(gStartupVolume);
-            theLanguageFile.SetDirectory(gStartupDirectory);
-            theLanguageFile.SetFile(UString("Language.dll"));
-            gResource = new UResourceFile(theLanguageFile);
+            gResource = new UResourceFile(inInstance);   // the language resources are linked into the exe
 
             ESVERIFY_AT(gResource, 3632);
             EEInitializeDefaultSettings();

@@ -115,23 +115,6 @@ float GEVector::GetMagnitudeSquared() const
     return this->mX * this->mX + this->mY * this->mY + this->mZ * this->mZ;
 }
 
-// FUNCTION: LLE 0x1000c38d
-// Scales the vector to unit length; a vector shorter than 0.0001 becomes zero
-void GEVector::Normalize()
-{
-    float theMagnitude = this->GetMagnitude();
-    if (theMagnitude >= -0.0001f && theMagnitude <= 0.0001f) {
-        this->mX = 0.0f;
-        this->mY = 0.0f;
-        this->mZ = 0.0f;
-    } else {
-        float theScale = 1.0f / theMagnitude;
-        this->mX *= theScale;
-        this->mY *= theScale;
-        this->mZ *= theScale;
-    }
-}
-
 // FUNCTION: LLE 0x1000c3f7
 // Writes this vector minus another to outVector
 void GEVector::Subtract(const GEVector& inVector, GEVector& outVector) const

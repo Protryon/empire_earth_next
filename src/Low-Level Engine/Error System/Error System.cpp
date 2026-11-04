@@ -31,13 +31,6 @@
 // SYNTHETIC: LLE 0x10001420
 // SYNTHETIC: LLE 0x10001434
 
-#include <cstddef>                          // any standard header: defines _MSVC_STL_VERSION under the MSVC STL
-#ifndef _MSVC_STL_VERSION
-namespace std {
-// Dinkum 2.33 (sxlrt233.dll export ?gPointerToAssertFunction@std@@3P6AXPBDK0@ZA): the library's assert hook
-extern __declspec(dllimport) void (*gPointerToAssertFunction)(const char*, unsigned long, const char*);
-}
-#endif
 
 // Globals in definition order (= initializer order 0x1000144b..: the filters, the recording file, the lock holder).
 // Addresses in analysis/lle/names.txt (provisional names).
@@ -164,9 +157,6 @@ void ESInitialize(HINSTANCE inInstance)
     gInitialized = true;
     gInstance = inInstance;
     URegisterShutdown(ESShutdown);
-#ifndef _MSVC_STL_VERSION
-    std::gPointerToAssertFunction = NULL;   // Dinkum only: no library assert callback
-#endif
     long theResult = TSScheduler::CreateCriticalSection(gLock);
     ESVERIFY_AT(theResult == keseOK, 671);
 }

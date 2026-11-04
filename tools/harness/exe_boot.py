@@ -150,9 +150,10 @@ def rename_import(path, old, new):
 
 
 def stage(name, build, data=True, silent_audio=True):
-    """Stage the build under test (hbuild.Build) in build/boot/<name>: its images (the test profile compiles the
-    windowed/software policy in, nothing is patched), the third-party DLLs, Language.dll, the silent mixer built for
-    the build, the RDP mode-list proxy when the display needs it, and a copy of the game data."""
+    """Stage the build under test (hbuild.Build) in build/boot/<name>: its exe (the test profile compiles the
+    windowed/software policy and the silent mixer in, nothing is patched), the third-party DLLs, the RDP mode-list
+    proxy when the display needs it, and a copy of the game data. silent_audio: kept for the callers (the test exe's
+    mixer is always the silent one)."""
     d = BOOT / name
     if d.resolve().parent != BOOT.resolve():
         raise ValueError('Staging deletion must remain immediately inside build/boot')
@@ -165,12 +166,9 @@ def stage(name, build, data=True, silent_audio=True):
     sys.path.insert(0, str(HERE))
     import rdp_modes   # RDP session: the primary display lacks 640x480/800x600x32 (owner 2026-11-01)
     if rdp_modes.needed():
-        rename_import(d / "DX7HRDisplay.dll", "DDRAW.dll", "DDRDP.dll")
+        rename_import(d / "EE-AOC.exe", "DDRAW.dll", "DDRDP.dll")   # the renderer is inside the exe
         rdp_modes.build_proxy(d)
         print('display: RDP mode-list proxy staged (DDRDP.dll)', flush=True)
-    if silent_audio:
-        from silent_mixer import build_silent_mixer
-        build_silent_mixer(d, build)
     if data:
         c = install_cache()
         for n in GAME_FILES:

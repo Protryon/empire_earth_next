@@ -214,13 +214,6 @@ bool gSearcherRunning;                           // 0x72f9 (provisional name)
 
 const unsigned long kRandomBufferSize = 0x105;
 
-// FUNCTION: TCP 0x100010d3
-// DLL entry point; does nothing and reports success
-BOOL WINAPI DllMain(HINSTANCE inInstance, DWORD inReason, LPVOID inReserved)
-{
-    return TRUE;
-}
-
 // FUNCTION: TCP 0x100010d9
 // Sets whether the server accepts new clients (announces itself to queries and adds unknown senders)
 extern "C" void NPIMAllowNewConnections(TCPServer** inHandle, bool inAllow)
@@ -1352,21 +1345,21 @@ extern "C" long NPIMXferSendTo(TCPServer** inHandle, unsigned long inIndex, char
 
 // FUNCTION: TCP 0x10002da4
 // Returns the plug-in's name ("TCP/IP Protocol")
-extern "C" const UString* PIMGetName()
+static const UString* PIMGetName()
 {
     return &gProtocolName;
 }
 
 // FUNCTION: TCP 0x10002daa
 // Returns the plug-in type ('ntwk')
-extern "C" unsigned long PIMGetType()
+static unsigned long PIMGetType()
 {
     return gProtocolType;
 }
 
 // FUNCTION: TCP 0x10002db0
 // Returns whether WinSock 2.0 started (the plug-in is usable)
-extern "C" bool PIMIsValid()
+static bool PIMIsValid()
 {
     return gValid;
 }
@@ -1519,3 +1512,44 @@ static void swap_byte(unsigned char* a, unsigned char* b)
     *a = *b;
     *b = swapByte;
 }
+
+#include "lle/PIMModule.h"
+
+// The plug-in's entry points (its DLL's export table before; registered in PIMModule.cpp)
+static const PIMEntry sEntries[] = {
+    PIM_ENTRY(PIMGetName),
+    PIM_ENTRY(PIMGetType),
+    PIM_ENTRY(PIMIsValid),
+    PIM_ENTRY(NPIMAccept),
+    PIM_ENTRY(NPIMAcceptForXfer),
+    PIM_ENTRY(NPIMActivate),
+    PIM_ENTRY(NPIMAllowNewConnections),
+    PIM_ENTRY(NPIMCloseConnection),
+    PIM_ENTRY(NPIMCloseServer),
+    PIM_ENTRY(NPIMConnect),
+    PIM_ENTRY(NPIMConnectForXfer),
+    PIM_ENTRY(NPIMDeactivate),
+    PIM_ENTRY(NPIMEnumerateNetworkAdapters),
+    PIM_ENTRY(NPIMGetClientAddress),
+    PIM_ENTRY(NPIMGetConfiguration),
+    PIM_ENTRY(NPIMGetDetectedGame),
+    PIM_ENTRY(NPIMGetDetectedGameCount),
+    PIM_ENTRY(NPIMGetLocalAddress),
+    PIM_ENTRY(NPIMGetProtocolType),
+    PIM_ENTRY(NPIMGetStatus),
+    PIM_ENTRY(NPIMIsAlive),
+    PIM_ENTRY(NPIMPublish),
+    PIM_ENTRY(NPIMReceive),
+    PIM_ENTRY(NPIMReceiveFrom),
+    PIM_ENTRY(NPIMResetClientConnection),
+    PIM_ENTRY(NPIMResetXfer),
+    PIM_ENTRY(NPIMSearchForGame),
+    PIM_ENTRY(NPIMSend),
+    PIM_ENTRY(NPIMSendSingle),
+    PIM_ENTRY(NPIMSendTo),
+    PIM_ENTRY(NPIMSetConfiguration),
+    PIM_ENTRY(NPIMXferReceive),
+    PIM_ENTRY(NPIMXferSendTo),
+    { NULL, NULL },
+};
+extern const PIMPlugin gPIMPluginTCPProtocol = { "TCP Protocol.dll", sEntries };

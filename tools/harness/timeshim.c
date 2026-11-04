@@ -312,7 +312,6 @@ static void HookRenderer(HMODULE m)
     GetModuleFileNameA(m, path, MAX_PATH);
     b = path + lstrlenA(path);
     while (b > path && b[-1] != '\\') b--;
-    if (lstrcmpiA(b, "DX7HRDisplay.dll") && lstrcmpiA(b, "DX7HRTnLDisplay.dll")) return;
     if (PatchSlot(m, "DirectDrawCreateEx", (void *)NullCreateEx, (void **)&sRealCreateEx)) {
         wsprintfA(msg, "EE-TEST-TIMESHIM null-3d hooked %s\n", b);
         OutputDebugStringA(msg);
@@ -346,7 +345,7 @@ static __attribute__((noinline)) VOID WINAPI ShimExeSleep(DWORD ms)
         sCapped++;
         return;
     }
-    rSleep(ms);
+    ShimSleep(ms);
 }
 
 /* ---- IAT patch of the engine's KERNEL32 imports ---- */
@@ -369,9 +368,8 @@ static int PatchImports(HMODULE m, int exe)
             DWORD old;
             if (IMAGE_SNAP_BY_ORDINAL(names->u1.Ordinal)) continue;
             n = (const char *)((IMAGE_IMPORT_BY_NAME *)(base + names->u1.AddressOfData))->Name;
-            if (exe) { if (!lstrcmpA(n, "Sleep")) to = (void *)ShimExeSleep; }
-            else if (!lstrcmpA(n, "QueryPerformanceCounter")) to = (void *)ShimQPC;
-            else if (!lstrcmpA(n, "Sleep")) to = (void *)ShimSleep;
+            if (!lstrcmpA(n, "QueryPerformanceCounter")) to = (void *)ShimQPC;
+            else if (!lstrcmpA(n, "Sleep")) to = kConfig.mFrameMs ? (void *)ShimExeSleep : (void *)ShimSleep;
             else if (!lstrcmpA(n, "WaitForSingleObject")) to = (void *)ShimWFSO;
             else if (!lstrcmpA(n, "WaitForMultipleObjects")) to = (void *)ShimWFMO;
             else if (kConfig.mNull3D && !lstrcmpA(n, "LoadLibraryA")) to = (void *)ShimLoadLibraryA;
@@ -421,9 +419,10 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved)
         QueryPerformanceFrequency(&f); sFreq = f.QuadPart;
         sQ0 = RealNow();
         sT0 = timeGetTime();
-        engine = GetModuleHandleA("Low-Level Engine.dll");
+        engine = GetModuleHandleA(NULL);   /* the engine, the renderer and the game are one image */
         patched = engine ? PatchImports(engine, 0) : -1;
-        if (kConfig.mFrameMs) exeslots = PatchImports(GetModuleHandleA(NULL), 1);
+        exeslots = patched;
+        HookRenderer(engine);
         wsprintfA(msg, "EE-TEST-TIMESHIM factor %ld/%ld engine %p kernel32 slots %d hires %d frame-ms %lu render %08lx..%08lx "
                   "exe slots %d null-3d %lu key-ms %lu\n", sNum, sDen, engine, patched, pCreateWaitableTimerExW != NULL,
                   kConfig.mFrameMs, kConfig.mRenderLo, kConfig.mRenderHi, exeslots, kConfig.mNull3D, kConfig.mKeyMs);

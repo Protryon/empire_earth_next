@@ -23,7 +23,6 @@ public:
     GETransformation& operator=(const GETransformation& inTransformation);   // out of line (0x10034a36)
     bool operator==(const GETransformation& inTransformation);
     bool operator==(const GE3DPoint& inPoint) const;
-#ifdef LLE_EXE_HEADERS
     void Apply(const GE2DPoint& inPoint, GE2DPoint& outPoint) const
     {
         outPoint.mX = inPoint.GetY() * this->mMatrix[0][1] + inPoint.GetX() * this->mMatrix[0][0] + this->mMatrix[0][3];
@@ -41,11 +40,6 @@ public:
         outVector.mY = inVector.GetX() * this->mMatrix[1][0] + inVector.GetZ() * this->mMatrix[1][2] + inVector.GetY() * this->mMatrix[1][1];
         outVector.mZ = inVector.GetX() * this->mMatrix[2][0] + inVector.GetZ() * this->mMatrix[2][2] + inVector.GetY() * this->mMatrix[2][1];
     }
-#else
-    void Apply(const GE2DPoint& inPoint, GE2DPoint& outPoint) const;
-    void Apply(const GE3DPoint& inPoint, GE3DPoint& outPoint) const;
-    void Apply(const GEVector& inVector, GEVector& outVector) const;
-#endif
     void Apply(const GETransformation& inTransformation, GETransformation& outTransformation) const;
     void Apply(const GE3DLine& inLine, GE3DLine& outLine) const;
     void Apply(const GE3DPlane& inPlane, GE3DPlane& outPlane) const;

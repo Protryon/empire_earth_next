@@ -2,7 +2,7 @@
 faster than real time; the simulation per PT is unchanged (pin the PT rate: game_session --pt-rate N).
 
 Staged artifacts only: builds tools/boot/timeshim.c into <stage>/EETMS.dll (factor patched into its kConfig block) and
-renames the import "WINMM.dll" of the staged <stage>/Low-Level Engine.dll to "EETMS.dll" (same length). Both exe builds
+renames the import "WINMM.dll" of the staged <stage>/EE-AOC.exe (the engine is inside it) to "EETMS.dll" (same length). Both exe builds
 load the same staged engine, so the factor applies identically to the original and the full link.
 
   stage_timeshim(stage, factor)    -> manifest dict (also <stage>/EETMS.timeshim.json)
@@ -23,7 +23,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 GCC = pathlib.Path(r'C:\msys64\mingw32\bin\gcc.exe')
 SHIM = 'EETMS.dll'
-ENGINE = 'Low-Level Engine.dll'
+ENGINE = 'EE-AOC.exe'   # the engine is inside the exe
 MAGIC = b'EE-TIMESHIM-CFG\0'
 FORWARDED = ['mciSendCommandA', 'auxGetVolume', 'mixerGetControlDetailsA', 'auxSetVolume', 'mixerSetControlDetails',
              'mixerGetLineControlsA', 'mixerGetLineInfoA', 'mixerGetDevCapsA', 'mixerGetNumDevs', 'auxGetDevCapsA',

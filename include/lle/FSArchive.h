@@ -32,12 +32,8 @@ public:
     long Create(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression);   // 0x5618
     long ExtractAll(const FSFileSpec& inDestination);                           // 0x5801
     long FindFile(const UString& inName, FSMemoryFile*& outFile);               // 0x5a79
-#ifdef LLE_EXE_HEADERS
-    long FindFile(const UWideString& inName, FSMemoryFile*& outFile);           // imported by the exe (0x68c803, 0x68e45a)
-#else
-    long FindFile(const UWideString& inName, FSMemoryFile*& outFile)            // 0x4095 (inline)
+    long FindFile(const UWideString& inName, FSMemoryFile*& outFile)
         { UString theName((const char*)inName); return this->FindFile(theName, outFile); }
-#endif
     const FSFileSpec& GetArchiveFile() const { return this->mArchiveFile; }    // folded 0x40cb (inline)
     long GetTag(const UWideString& inName, UWideString& outValue) const;        // 0x5b4d
     long ListFiles(const UString& inPattern, std::set<UString>& outFiles, bool inClear);   // 0x5b81

@@ -5,13 +5,9 @@
 // callback types), the ctors, the dtor and GetString. The inline members and implicit copy members are emitted by
 // ISKey.cpp (0x10039c02..). User Interface.cpp's init chains start at 0x10082871.
 #include <windows.h>
-#include <float.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/UResourceFile.h"
-
-// A compiled-out diagnostic: the arguments are still evaluated (0x10082765: the library path and GetLastError()).
-inline void URFTrace(unsigned long inError, const UString& inPath) {}
 
 // FUNCTION: LLE 0x1008268d
 // Resource language callback: stores the first language found and stops the enumeration
@@ -33,30 +29,16 @@ static BOOL CALLBACK URFEnumNames(HMODULE inModule, LPCSTR inType, LPSTR inName,
     return TRUE;
 }
 
-// FUNCTION: LLE 0x100826d4
-// Loads a resource DLL, records its string table language (OS language if none) and resets FPU precision to 53 bits
-UResourceFile::UResourceFile(const FSFileSpec& inFile)
-{
-    FSFileSpec theFile(inFile);
-    UString thePath(MAX_PATH);
-    thePath = theFile.GetVolume() + theFile.GetDirectory() + theFile.GetFile();
-    this->mOwnsModule = true;
-    this->mModule = LoadLibrary(thePath);
-    if (this->mModule == NULL)
-        URFTrace(GetLastError(), inFile.GetVolume() + inFile.GetDirectory() + inFile.GetFile());
-    if (!EnumResourceNamesA(this->mModule, RT_STRING, URFEnumNames, reinterpret_cast<LONG_PTR>(&this->mLanguage))) {
-        this->mLanguage = UGetOSLanguage();
-        ESRecordNativeError(GetLastError());
-    }
-    UMSetFloatingPointPrecision(_PC_53);
-}
-
-// FUNCTION: LLE 0x100827f5
-// Wraps an already loaded module without taking ownership
+// Reads the resources of a loaded module (the game's own: the original loaded Language.dll from a file) and records
+// its string table language (the OS language if none)
 UResourceFile::UResourceFile(HINSTANCE inModule)
     : mOwnsModule(false)
 {
     this->mModule = inModule;
+    if (!EnumResourceNamesA(this->mModule, RT_STRING, URFEnumNames, reinterpret_cast<LONG_PTR>(&this->mLanguage))) {
+        this->mLanguage = UGetOSLanguage();
+        ESRecordNativeError(GetLastError());
+    }
 }
 
 // FUNCTION: LLE 0x1008280b

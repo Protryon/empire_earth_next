@@ -6,8 +6,18 @@
 #include <ddraw.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
-__declspec(dllimport) const void* PIMGetName(void); /* Force native renderer dependency. */
+/* The build's engine members by map address (presentation_bridge.py writes bridge_syms.h and passes it with
+   -include): the engine, the renderer and the game are one image, which exports nothing. */
+struct BridgeSym { const char* name; DWORD va; };
+static const struct BridgeSym kBridgeSyms[] = { EE_BRIDGE_SYMS { 0, 0 } };
+static void* ee_sym(const char* name)
+{
+    for (const struct BridgeSym* s = kBridgeSyms; s->name; s++)
+        if (!strcmp(s->name, name)) return (void*)(uintptr_t)s->va;
+    return NULL;
+}
 static HMODULE self_module;
 static HRESULT last_lock;
 #ifndef EE_PLAY_ONLY
@@ -67,40 +77,39 @@ static void ui_test(void) {
 #define EE_UI_MANAGER_VA 0x93191c /* gUIManager; a full-link session passes its map address */
 #endif
     BYTE* manager=*(BYTE**)EE_UI_MANAGER_VA;if(!manager)return;
-    HMODULE engine=GetModuleHandleA("Low-Level Engine.dll");
-    Critical enter=(Critical)GetProcAddress(engine,"?Enter@TSCriticalSection@@QAEXXZ");
-    Critical leave=(Critical)GetProcAddress(engine,"?Leave@TSCriticalSection@@QAEXXZ");
-    GetEvent get=(GetEvent)GetProcAddress(engine,"?GetTriggerEvent@UIControl@@QAEPAVUIEvent@@K@Z");
-    FireEvent fire=(FireEvent)GetProcAddress(engine,"?FireTriggerEvent@UIControl@@QAEXK@Z");
+    Critical enter=(Critical)ee_sym("?Enter@TSCriticalSection@@QAEXXZ");
+    Critical leave=(Critical)ee_sym("?Leave@TSCriticalSection@@QAEXXZ");
+    GetEvent get=(GetEvent)ee_sym("?GetTriggerEvent@UIControl@@QAEPAVUIEvent@@K@Z");
+    FireEvent fire=(FireEvent)ee_sym("?FireTriggerEvent@UIControl@@QAEXK@Z");
     if(!enter || !leave || !get || !fire){OutputDebugStringA("TEST UI API unavailable\n");return;}
-    void* combo_vtbl=(void*)GetProcAddress(engine,"??_7UIComboBox@@6B@");
-    void* check_vtbl=(void*)GetProcAddress(engine,"??_7UICheckBox@@6B@");
-    SetIndex combo_set=(SetIndex)GetProcAddress(engine,"?SetCurrentSelection@UIComboBox@@QAEXK@Z");
-    GetIndexOut combo_get=(GetIndexOut)GetProcAddress(engine,"?GetCurrentSelection@UIComboBox@@QBEJAAK@Z");
-    GetPointer combo_list=(GetPointer)GetProcAddress(engine,"?GetListBox@UIComboBox@@QBEPBVUILBString@@XZ");
-    GetCount list_count=(GetCount)GetProcAddress(engine,"?GetLineCount@?$UIListBox@VUWideString@@@@QBEKXZ");
-    GetLine list_data=(GetLine)GetProcAddress(engine,"?GetData@?$UIListBox@VUWideString@@@@QBEABVUWideString@@K@Z");
-    GetChars chars=(GetChars)GetProcAddress(engine,"??BUWideString@@QBEPBDXZ");
-    SetBool check_set=(SetBool)GetProcAddress(engine,"?SetChecked@UICheckBox@@QAEX_N@Z");
-    GetBool check_get=(GetBool)GetProcAddress(engine,"?GetIsChecked@UICheckBox@@QBE_NXZ");
+    void* combo_vtbl=(void*)ee_sym("??_7UIComboBox@@6B@");
+    void* check_vtbl=(void*)ee_sym("??_7UICheckBox@@6B@");
+    SetIndex combo_set=(SetIndex)ee_sym("?SetCurrentSelection@UIComboBox@@QAEXK@Z");
+    GetIndexOut combo_get=(GetIndexOut)ee_sym("?GetCurrentSelection@UIComboBox@@QBEJAAK@Z");
+    GetPointer combo_list=(GetPointer)ee_sym("?GetListBox@UIComboBox@@QBEPBVUILBString@@XZ");
+    GetCount list_count=(GetCount)ee_sym("?GetLineCount@?$UIListBox@VUWideString@@@@QBEKXZ");
+    GetLine list_data=(GetLine)ee_sym("?GetData@?$UIListBox@VUWideString@@@@QBEABVUWideString@@K@Z");
+    GetChars chars=(GetChars)ee_sym("??BUWideString@@QBEPBDXZ");
+    SetBool check_set=(SetBool)ee_sym("?SetChecked@UICheckBox@@QAEX_N@Z");
+    GetBool check_get=(GetBool)ee_sym("?GetIsChecked@UICheckBox@@QBE_NXZ");
     int combos=combo_vtbl && combo_set && combo_get && combo_list && list_count && list_data && chars;
     int checks=check_vtbl && check_set && check_get;
     /* round 39 saveload: edit boxes (`text`) and file list boxes (`lselect`); the save/load screens */
-    void* edit_vtbl=(void*)GetProcAddress(engine,"??_7UIEditBox@@6B@");
-    void* flist_vtbl=(void*)GetProcAddress(engine,"??_7UIFileListBox@@6B@");
+    void* edit_vtbl=(void*)ee_sym("??_7UIEditBox@@6B@");
+    void* flist_vtbl=(void*)ee_sym("??_7UIFileListBox@@6B@");
     /* final validation (lane scen): string list boxes too (the campaign scenario list, form 33 control 2) */
-    void* lbs_vtbl=(void*)GetProcAddress(engine,"??_7UILBString@@6B@");
+    void* lbs_vtbl=(void*)ee_sym("??_7UILBString@@6B@");
     typedef void (__attribute__((thiscall)) *SetWide)(void*,const void*);
     typedef void (__attribute__((thiscall)) *WideFromChars)(void*,const char*);
     typedef const char* (__attribute__((thiscall)) *EditLine)(void*,unsigned long);
     typedef void (__attribute__((thiscall)) *ChangeSelection)(void*,unsigned long,unsigned char,unsigned char);
-    SetWide edit_set=(SetWide)GetProcAddress(engine,"?SetText@UIEditBox@@QAEXABVUWideString@@@Z");
-    EditLine edit_get=(EditLine)GetProcAddress(engine,"?GetText@UIEditBox@@QBEPBDK@Z");
-    GetCount edit_lines=(GetCount)GetProcAddress(engine,"?GetLineCount@UIEditBox@@QBEKXZ");
-    WideFromChars wide_ctor=(WideFromChars)GetProcAddress(engine,"??0UWideString@@QAE@PBD@Z");
-    Critical wide_dtor=(Critical)GetProcAddress(engine,"??1UWideString@@UAE@XZ");
-    ChangeSelection list_change=(ChangeSelection)GetProcAddress(engine,"?ChangeSelectionIndex@?$UIListBox@VUWideString@@@@UAEXK_N0@Z");
-    GetIndexOut list_get=(GetIndexOut)GetProcAddress(engine,"?GetCurrentSelection@?$UIListBox@VUWideString@@@@QBEJAAK@Z");
+    SetWide edit_set=(SetWide)ee_sym("?SetText@UIEditBox@@QAEXABVUWideString@@@Z");
+    EditLine edit_get=(EditLine)ee_sym("?GetText@UIEditBox@@QBEPBDK@Z");
+    GetCount edit_lines=(GetCount)ee_sym("?GetLineCount@UIEditBox@@QBEKXZ");
+    WideFromChars wide_ctor=(WideFromChars)ee_sym("??0UWideString@@QAE@PBD@Z");
+    Critical wide_dtor=(Critical)ee_sym("??1UWideString@@UAE@XZ");
+    ChangeSelection list_change=(ChangeSelection)ee_sym("?ChangeSelectionIndex@?$UIListBox@VUWideString@@@@UAEXK_N0@Z");
+    GetIndexOut list_get=(GetIndexOut)ee_sym("?GetCurrentSelection@?$UIListBox@VUWideString@@@@QBEJAAK@Z");
     int edits=edit_vtbl && edit_set && edit_get && edit_lines && wide_ctor && wide_dtor;
     int flists=flist_vtbl && list_change && list_get && list_count && list_data && chars;
     void* critical=*(void**)(manager+EE_OFF_UIM_CRITICAL);
@@ -164,7 +173,7 @@ static void ui_test(void) {
                     BYTE* control=(a==form_id && b<count)?controls[b]:NULL;
                     if(!strcmp(op,"click") && fields>=4 && control && get(control,0x3f0)) {
                         if(form_id==5 && b>=1 && b<=3) {
-                            Critical check=(Critical)GetProcAddress(engine,"?Check@UIRadioButton@@UAEXXZ");
+                            Critical check=(Critical)ee_sym("?Check@UIRadioButton@@UAEXXZ");
                             if(check)check(control);
                         }
                         fire(control,0x3f0);verdict="triggered";
@@ -348,7 +357,7 @@ static HRESULT WINAPI hook_di_create(HINSTANCE instance, DWORD version, LPDIRECT
 
 static BOOL mouse_install(void)
 {
-    BYTE* engine = (BYTE*)GetModuleHandleA("Low-Level Engine.dll");
+    BYTE* engine = (BYTE*)GetModuleHandleA(NULL);   /* the engine is inside the exe */
     if (!engine) return FALSE;
     IMAGE_NT_HEADERS* nt = (IMAGE_NT_HEADERS*)(engine + ((IMAGE_DOS_HEADER*)engine)->e_lfanew);
     IMAGE_IMPORT_DESCRIPTOR* d = (IMAGE_IMPORT_DESCRIPTOR*)(engine +
@@ -468,12 +477,11 @@ BOOL WINAPI DllMain(HINSTANCE module,DWORD reason,LPVOID reserved)
         HMODULE pinned=NULL;
         if(!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_PIN,
                               (LPCSTR)(uintptr_t)TestPresentWindowed,&pinned))return FALSE;
-        PIMGetName();
 #ifdef EE_MOUSE_VA
         InitializeCriticalSection(&mouse_lock);
         if(!mouse_install())OutputDebugStringA("TEST mouse shim: DirectInputCreateA import not found\n");
 #endif
-        HMODULE renderer=GetModuleHandleA("DX7HRDisplay.dll");
+        HMODULE renderer=GetModuleHandleA(NULL);   /* the renderer is inside the exe */
         BYTE* entry=(BYTE*)renderer+EE_SHOWSCENE_RVA;
         DWORD old;
         if(!renderer || !VirtualProtect(entry,5,PAGE_EXECUTE_READWRITE,&old))return FALSE;

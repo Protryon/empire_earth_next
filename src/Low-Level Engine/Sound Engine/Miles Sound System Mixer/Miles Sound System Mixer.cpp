@@ -150,30 +150,23 @@ extern "C" long SPIMSetSamplePitch(SESample* inSample, float inPitch);
 extern "C" long SPIMSetSampleVolume(SESample* inSample, float inVolume);
 extern "C" long SPIMStopChannel(unsigned long inChannel);
 
-// FUNCTION: MIXER 0x100011c8
-// DLL entry point; does nothing and reports success
-BOOL WINAPI DllMain(HINSTANCE inInstance, DWORD inReason, LPVOID inReserved)
-{
-    return TRUE;
-}
-
 // FUNCTION: MIXER 0x100011ce
 // Returns the plug-in's name ("Miles Sound System Mixer")
-extern "C" const UString* PIMGetName()
+static const UString* PIMGetName()
 {
     return &gMixerName;
 }
 
 // FUNCTION: MIXER 0x100011d4
 // Returns the plug-in type (' snd')
-extern "C" unsigned long PIMGetType()
+static unsigned long PIMGetType()
 {
     return gMixerType;
 }
 
 // FUNCTION: MIXER 0x100011da
 // Returns whether the mixer works by activating and deactivating it once
-extern "C" bool PIMIsValid()
+static bool PIMIsValid()
 {
     bool theResult;
     if (SPIMActivateMixer() == kSPIMOK) {
@@ -624,3 +617,44 @@ extern "C" long SPIMStopChannel(unsigned long inChannel)
     }
     return kSPIMBadParameter;
 }
+
+#include "lle/PIMModule.h"
+
+// The plug-in's entry points (its DLL's export table before; registered in PIMModule.cpp)
+static const PIMEntry sEntries[] = {
+    PIM_ENTRY(PIMGetName),
+    PIM_ENTRY(PIMGetType),
+    PIM_ENTRY(PIMIsValid),
+    PIM_ENTRY(SPIMActivateMixer),
+    PIM_ENTRY(SPIMCreateChannels),
+    PIM_ENTRY(SPIMDeactivateMixer),
+    PIM_ENTRY(SPIMDeleteWaveData),
+    PIM_ENTRY(SPIMDestroyChannels),
+    PIM_ENTRY(SPIMDuplicateSample),
+    PIM_ENTRY(SPIMGetCPUUsage),
+    PIM_ENTRY(SPIMGetChannelCount),
+    PIM_ENTRY(SPIMGetDirectSoundInterface),
+    PIM_ENTRY(SPIMGetHighestTimerDelay),
+    PIM_ENTRY(SPIMGetMaximumChannelCount),
+    PIM_ENTRY(SPIMGetSampleOffset),
+    PIM_ENTRY(SPIMGetSamplePlayBackTime),
+    PIM_ENTRY(SPIMGetVolume),
+    PIM_ENTRY(SPIMInitializeMixer),
+    PIM_ENTRY(SPIMIsChannelBusyPlaying),
+    PIM_ENTRY(SPIMLoadWaveData),
+    PIM_ENTRY(SPIMMixAhead),
+    PIM_ENTRY(SPIMPlayChannel),
+    PIM_ENTRY(SPIMProcessMessage),
+    PIM_ENTRY(SPIMSetChannelSample),
+    PIM_ENTRY(SPIMSetLatency),
+    PIM_ENTRY(SPIMSetSampleLooping),
+    PIM_ENTRY(SPIMSetSampleOffset),
+    PIM_ENTRY(SPIMSetSamplePan),
+    PIM_ENTRY(SPIMSetSamplePitch),
+    PIM_ENTRY(SPIMSetSampleVolume),
+    PIM_ENTRY(SPIMSetVolume),
+    PIM_ENTRY(SPIMStopAllChannels),
+    PIM_ENTRY(SPIMStopChannel),
+    { NULL, NULL },
+};
+extern const PIMPlugin gPIMPluginMilesMixer = { "Miles Sound System Mixer.dll", sEntries };

@@ -29,32 +29,6 @@
 // SYNTHETIC: LLE 0x1000d5a1
 // GETransformation(bool): header-inline (lle/GETransformation.h; the exe never imports it), emitted here
 
-// FUNCTION: LLE 0x1000d5a6
-// Transforms a 2D point by the matrix's xy part (rotation, scale and translation)
-void GETransformation::Apply(const GE2DPoint& inPoint, GE2DPoint& outPoint) const
-{
-    outPoint.mX = inPoint.GetY() * this->mMatrix[0][1] + inPoint.GetX() * this->mMatrix[0][0] + this->mMatrix[0][3];
-    outPoint.mY = inPoint.GetX() * this->mMatrix[1][0] + inPoint.GetY() * this->mMatrix[1][1] + this->mMatrix[1][3];
-}
-
-// FUNCTION: LLE 0x1000d5d5
-// Transforms a 3D point by the matrix (rotation, scale and translation)
-void GETransformation::Apply(const GE3DPoint& inPoint, GE3DPoint& outPoint) const
-{
-    outPoint.mX = inPoint.GetZ() * this->mMatrix[0][2] + inPoint.GetY() * this->mMatrix[0][1] + inPoint.GetX() * this->mMatrix[0][0] + this->mMatrix[0][3];
-    outPoint.mY = inPoint.GetX() * this->mMatrix[1][0] + inPoint.GetZ() * this->mMatrix[1][2] + inPoint.GetY() * this->mMatrix[1][1] + this->mMatrix[1][3];
-    outPoint.mZ = inPoint.GetX() * this->mMatrix[2][0] + inPoint.GetZ() * this->mMatrix[2][2] + inPoint.GetY() * this->mMatrix[2][1] + this->mMatrix[2][3];
-}
-
-// FUNCTION: LLE 0x1000d62f
-// Transforms a vector by the matrix's rotation and scale (no translation)
-void GETransformation::Apply(const GEVector& inVector, GEVector& outVector) const
-{
-    outVector.mX = inVector.GetZ() * this->mMatrix[0][2] + inVector.GetY() * this->mMatrix[0][1] + inVector.GetX() * this->mMatrix[0][0];
-    outVector.mY = inVector.GetX() * this->mMatrix[1][0] + inVector.GetZ() * this->mMatrix[1][2] + inVector.GetY() * this->mMatrix[1][1];
-    outVector.mZ = inVector.GetX() * this->mMatrix[2][0] + inVector.GetZ() * this->mMatrix[2][2] + inVector.GetY() * this->mMatrix[2][1];
-}
-
 // FUNCTION: LLE 0x1000d680
 // Returns the distance from the transformation's position to a point (full-precision square root)
 float GETransformation::DistanceTo(const GE3DPoint& inPoint) const

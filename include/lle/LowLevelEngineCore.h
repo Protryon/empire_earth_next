@@ -6,9 +6,16 @@
 #ifndef LLE_LOWLEVELENGINECORE_H
 #define LLE_LOWLEVELENGINECORE_H
 
-// The engine's own units are built with LOWLEVELENGINE_EXPORTS (VC6 DLL-wizard convention; MODULE_FLAGS["lle"]).
-#ifdef LOWLEVELENGINE_EXPORTS
+// The engine's own units are built with LOWLEVELENGINE_EXPORTS (VC6 DLL-wizard convention). EE_STATIC: everything is
+// linked into one exe, so the other units neither import nor export. The engine units still declare their classes
+// dllexport: clang-cl emits a class's real vector deleting destructor (??_E, what `delete[]` of a polymorphic array
+// calls through the vtable) only for exported classes or in a unit that holds both the vtable and a new[]/delete[];
+// otherwise ??_E is a weak alias of the scalar ??_G, and a `delete[]` elsewhere frees the array past its cookie. The
+// exe gets an export table; nothing is loaded dynamically. (PORT_LEARNINGS.md "One static exe")
+#if defined(LOWLEVELENGINE_EXPORTS)
 #define LLE_API __declspec(dllexport)
+#elif defined(EE_STATIC)
+#define LLE_API
 #else
 #define LLE_API __declspec(dllimport)
 #endif

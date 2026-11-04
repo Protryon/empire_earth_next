@@ -64,8 +64,8 @@ public:
         { return _mbsnbicmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>(inString), inCount) == 0; }
     void ToLower() { _mbslwr(reinterpret_cast<unsigned char*>(this->mString)); }
     void ToUpper() { _mbsupr(reinterpret_cast<unsigned char*>(this->mString)); }
-    // proven inline: exported ?Reallocate@UWideString@@QAEXK@Z is a COMDAT in the first unit (0x1108); Import calls
-    // it out of line. Reproduced as found: the fresh buffer is dropped and mString points at a "" literal.
+    // Replaces the buffer with an empty one of inSize + 1 bytes. (The original dropped the fresh buffer and pointed
+    // mString at a "" literal, which Import then overwrote and the destructor freed.)
     void Reallocate(unsigned long inSize)
     {
         delete[] this->mString;
@@ -73,7 +73,7 @@ public:
         this->mByteLength = 0;
         this->mCapacity = inSize + 1;
         this->mString = new char[this->mCapacity];
-        this->mString = "";
+        this->mString[0] = '\0';
     }
     // after Reallocate: the first unit emits it last (0x10001136)
 #ifdef LOWLEVELENGINE_EXPORTS

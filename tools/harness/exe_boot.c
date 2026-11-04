@@ -116,6 +116,12 @@ static DWORD audio_entry_rva = 0x143557;
 /* the renderer's checkpoints (DX7Rasterizer::ActivateScreen / ShowScene); defaults: the retail DX7HRDisplay.dll.
    The fork's harness passes its build's own RVAs (--renderer-guards). */
 static DWORD renderer_activate_rva = 0x9ab4, renderer_present_rva = 0xc99e;
+/* --static-exe NATIVE_ERROR ABORT GENERATE NEXT (exe RVAs, hex): the fork's one-image build. The engine, the renderer
+   and the C runtime are inside the exe, so the guards the DLL builds armed when those modules loaded (the engine's
+   ESRecordNativeError and URandom exports, the runtime's abort, the renderer checkpoints of --renderer-guards) are
+   armed in the exe at process creation instead. */
+static int static_exe;
+static DWORD static_native_error_rva, static_abort_rva, static_generate_rva, static_next_rva;
 /* --stack-scan N (opt-in triage): after the 12 stack slots, list every EXE-module value among the next N
    dwords (likely return addresses) and the ebp chain; default 0 keeps the log unchanged. */
 static int stack_scan;
@@ -784,6 +790,11 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[option], "--renderer-guards") && option+2<argc) {
             renderer_activate_rva = strtoul(argv[++option], NULL, 16); renderer_present_rva = strtoul(argv[++option], NULL, 16);
         }
+        else if (!strcmp(argv[option], "--static-exe") && option+4<argc) {
+            static_exe = 1;
+            static_native_error_rva = strtoul(argv[++option], NULL, 16); static_abort_rva = strtoul(argv[++option], NULL, 16);
+            static_generate_rva = strtoul(argv[++option], NULL, 16); static_next_rva = strtoul(argv[++option], NULL, 16);
+        }
         else if (!strcmp(argv[option], "--trace-once")) trace_once=1;
         else if (!strcmp(argv[option], "--rng-trace") && option+1<argc) rng_trace_physics=strtoul(argv[++option],NULL,16);
         else if (!strcmp(argv[option], "--seed-pin") && option+3<argc) {
@@ -918,6 +929,20 @@ int main(int argc, char **argv)
             strcpy(mods[nmods++].name, "EXE");
             if(windowed_test && !target_guard(exeBase+audio_entry_rva,"EEInitializeSounds",G_AUDIO_INITIALIZE)) {
                 printf("STOP cannot guard audio initialization\n");done=1;
+            }
+            if(static_exe && windowed_test) {
+                if(!target_guard(exeBase+static_native_error_rva,"ESRecordNativeError",G_NATIVE_ERROR)
+                    || !target_guard(exeBase+static_abort_rva,"abort",G_STOP)
+                    || !target_guard(exeBase+renderer_activate_rva,"DX7Rasterizer::ActivateScreen",G_RENDER_ACTIVATE)
+                    || !target_guard(exeBase+renderer_present_rva,"DX7Rasterizer::ShowScene",G_RENDER_PRESENT)) {
+                    printf("STOP cannot guard the static exe's engine, runtime and renderer checkpoints\n");done=1;
+                }
+            }
+            if(static_exe && rng_trace_physics) {
+                rng_trace_entries[0]=exeBase+static_generate_rva;
+                rng_trace_entries[1]=exeBase+static_next_rva;
+                printf("TEST rng trace resolved %08lx %08lx (gPhysics %08lx)\n",(unsigned long)rng_trace_entries[0],
+                       (unsigned long)rng_trace_entries[1],(unsigned long)rng_trace_physics);
             }
             for(int k=0;k<nexperimental_entries;k++) {
                 if(experimental_entries[k]>=image_size(exeBase)

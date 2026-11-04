@@ -32,6 +32,9 @@ Source changes merge normally. The build tooling is this fork's own: upstream's 
    The game passes the menu/settings tour, plays, and plays AI games to their time cap in the harness.
 3. **The test harness is this fork's own** (`tools/harness/`, ported from the reconstruction project): it stages a
    test-profile build and reads game memory by member name from the build's own record layouts.
+4. **One static exe** (plan step 1 below, done): every game DLL and the language resources are linked into
+   `EE-AOC.exe` with the static runtime; the plug-ins are a static registry. Tour, play and a 2-AI game to the time
+   cap pass, also under full page heap.
 
 ## Rules of the build
 
@@ -39,6 +42,10 @@ Source changes merge normally. The build tooling is this fork's own: upstream's 
   `-fno-strict-aliasing -fwrapv`. The last two tame undefined behaviour the code relies on; removing them is planned
   work (`-fno-delete-null-pointer-checks` went once the sanitizer games came back clean) (`tools/clang_ubdiff.py`, `build.py --sanitize-null`; see
   PORT_LEARNINGS.md).
+- One image: every module's objects go into the exe link (engine and plug-ins first), the import libraries come from
+  every module's original import table minus the game's own DLLs, the VC6 CRT and Dinkum. The engine and renderer
+  units still declare their classes `dllexport` (clang-cl's vector deleting destructors; PORT_LEARNINGS.md "One
+  static exe"), so the exe has an export table. A unit's `// UNIT-FLAGS:` line only adds its defines now.
 - `link/` holds the original images' import and export tables and the exe's link tables (WON stubs, member aliases).
   The exe's member aliases (data the original placed inside other objects) carry VC6 offsets. The build moves them to
   this build's layout by member name, through the frozen VC6 layout reference `tools/harness/vc6_layout.json.gz`.
@@ -63,12 +70,13 @@ converted once to MPEG-1/MP2 and played with pl_mpeg; only the T&L renderer is k
 port to Rust, so new third-party code stays small, C, permissively licensed and behind narrow interfaces that a Rust
 crate can replace.
 
-1. **Fold the game DLLs into the exe.** The engine, TCP protocol, mixer, Default random maps and DX7HRTnLDisplay
-   become static libraries of one link. The PIM plug-in scan (`PIMModule.cpp`, LoadLibrary + `PIMGetName`/
-   `PIMGetType`/`PIMIsValid`) becomes a static table of the same entry points. `LLE_API` and the plug-ins'
-   export macros become empty; the `link/` export/import tables, the engine import library and the per-DLL `.def`
-   go. DX7HRDisplay is dropped (its sources and Common/'s second compile). `/MT` replaces `/MD`. The harness stages
-   one exe (renderer guards and map lookups move to the exe's map). Gate: tour, play, AI games as now.
+1. **Fold the game DLLs into the exe.** (Done.) The engine, TCP protocol, mixer, Default random maps and
+   DX7HRTnLDisplay are linked into the exe. The PIM plug-in scan (`PIMModule.cpp`, LoadLibrary + `PIMGetName`/
+   `PIMGetType`/`PIMIsValid`) is a static table of the same entry points; `Language.dll`'s resources are the exe's.
+   DX7HRDisplay is dropped. `/MT` replaces `/MD`. The harness stages one exe. Open: the engine's export table
+   (until polymorphic `new[]`/`delete[]` are gone or clang emits vector deleting destructors on its own), the
+   per-module header views (`tools/odr_check.py`: 28 inline functions with divergent copies, mostly older ODR
+   clashes inside the game), and the DLL-era tools (`relink.py`, `implib.py`'s DLL parts, `rsrc_rebuild.build_dll`).
 2. **Audio output: miniaudio** (`src/ThirdParty/miniaudio`, MIT-0) replaces DirectSound as the one device. The mixer
    is rewritten on it (its 34 `AIL_*` uses: driver, sample handles, volume/pan/rate/loop/position, named sample
    files; WAV through dr_wav, MP3 through dr_mp3). `Mss32.dll` and the `redist\win32` providers go.

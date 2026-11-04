@@ -51,33 +51,26 @@
 // SYNTHETIC: DEFAULT 0x100079e4
 // SYNTHETIC: DEFAULT 0x100079ee
 
-UString gName("Default");
-unsigned long gType = 'rmap';
-
-// FUNCTION: DEFAULT 0x10007886
-// Accepts every DLL load and unload notification without doing anything
-BOOL WINAPI DllMain(HINSTANCE inInstance, DWORD inReason, LPVOID inReserved)
-{
-    return TRUE;
-}
+static UString gName("Default");
+static unsigned long gType = 'rmap';
 
 // FUNCTION: DEFAULT 0x1000788c
 // Returns the plug-in's name, "Default"
-extern "C" const UString* PIMGetName()
+static const UString* PIMGetName()
 {
     return &gName;
 }
 
 // FUNCTION: DEFAULT 0x10007892
 // Returns the plug-in type 'rmap' (random map generator)
-extern "C" unsigned long PIMGetType()
+static unsigned long PIMGetType()
 {
     return gType;
 }
 
 // FUNCTION: DEFAULT 0x10007898
 // Reports the plug-in as always usable
-extern "C" bool PIMIsValid()
+static bool PIMIsValid()
 {
     return true;
 }
@@ -175,3 +168,25 @@ extern "C" long EERMPIMSetRandomMapValues(EERandomMap* ioMap, const UString& inS
 {
     return SetRandomMapValues(ioMap, inScriptName);
 }
+
+#include "lle/PIMModule.h"
+
+// The plug-in's entry points (its DLL's export table before; registered in PIMModule.cpp)
+static const PIMEntry sEntries[] = {
+    PIM_ENTRY(PIMGetName),
+    PIM_ENTRY(PIMGetType),
+    PIM_ENTRY(PIMIsValid),
+    PIM_ENTRY(EERMPIMCreateFlatMap),
+    PIM_ENTRY(EERMPIMCreateHeightMap),
+    PIM_ENTRY(EERMPIMCreateNeutralLandWaterMap),
+    PIM_ENTRY(EERMPIMCreatePlayerLandWaterMap),
+    PIM_ENTRY(EERMPIMCreateTrees),
+    PIM_ENTRY(EERMPIMFilterHeightMap),
+    PIM_ENTRY(EERMPIMGenerateNeutralPositions),
+    PIM_ENTRY(EERMPIMGeneratePlayerPositions),
+    PIM_ENTRY(EERMPIMGenerateResources),
+    PIM_ENTRY(EERMPIMGenerateShallows),
+    PIM_ENTRY(EERMPIMSetRandomMapValues),
+    { NULL, NULL },
+};
+extern const PIMPlugin gPIMPluginDefaultRandomMap = { "Default.dll", sEntries };

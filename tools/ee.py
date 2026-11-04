@@ -10,7 +10,6 @@ MODULE_SRC = {
     "mixer": "Low-Level Engine/Sound Engine/Miles Sound System Mixer",
     "default": "Empire Earth/Random Map/Random Map Generators/Default",
     "lle": "Low-Level Engine",
-    "dx7hr": "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins",
     "dx7hrtnl": "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins",
     "exe": "",
     "jpeg": "ThirdParty/libjpeg",
@@ -24,21 +23,20 @@ def module_src(mod):
     return ROOT / "src" / MODULE_SRC.get(mod, mod)
 
 
-# per-module flags (clang-cl syntax; the optimisation level comes from the build's --opt)
+# per-module flags (clang-cl syntax; the optimisation level comes from the build's --opt). Every module is linked
+# into the one exe: the static runtime (-MT) and EE_STATIC (no dllexport/dllimport). The other defines select the
+# header views the modules were reconstructed with (the engine's, the plug-ins', the game's).
 MODULE_FLAGS = {
-    "tcp": "-MD -GR",
-    "mixer": "-MD -GR",
-    "default": "-MD -GR",
-    "lle": "-MD -GR -DLOWLEVELENGINE_EXPORTS",
-    "dx7hr": "-MD -GR -DLLE_CURRENT_HEADERS",
-    "dx7hrtnl": "-MD -GR -DLLE_CURRENT_HEADERS",
-    "exe": "-MD -GR -DLLE_CURRENT_HEADERS -DLLE_EXE_HEADERS",
-    "jpeg": "-MD",
-    "exeimg": "-MD",
+    "tcp": "-MT -GR -DEE_STATIC",
+    "mixer": "-MT -GR -DEE_STATIC",
+    "default": "-MT -GR -DEE_STATIC",
+    "lle": "-MT -GR -DEE_STATIC -DLOWLEVELENGINE_EXPORTS",
+    "dx7hrtnl": "-MT -GR -DEE_STATIC -DLLE_CURRENT_HEADERS",
+    "exe": "-MT -GR -DEE_STATIC -DLLE_CURRENT_HEADERS -DLLE_EXE_HEADERS",
+    "jpeg": "-MT",
+    "exeimg": "-MT",
 }
-MODULE_FILES = {"exe": "EE-AOC.exe", "lle": "Low-Level Engine.dll", "default": "Default.dll", "tcp": "TCP Protocol.dll",
-                "dx7hr": "DX7HRDisplay.dll", "dx7hrtnl": "DX7HRTnLDisplay.dll",
-                "mixer": "Miles Sound System Mixer.dll", "jpeg": "Low-Level Engine.dll", "exeimg": "EE-AOC.exe"}
+MODULE_FILES = {m: "EE-AOC.exe" for m in MODULE_FLAGS}
 
 # ---- toolchain (LLVM, the MSVC STL and the Windows SDK of VS 2022 Build Tools; env overrides) ----
 LLVM = pathlib.Path(os.environ.get("EE_LLVM", r"C:\Program Files\LLVM\bin"))
@@ -95,13 +93,15 @@ def lib_paths():
             f"/LIBPATH:{sdk_lib / 'um' / 'x86'}"]
 
 
-# the DLL runtime: MSVC CRT + vcruntime + UCRT + the MSVC STL (+ kernel32, which their startup code imports)
-RUNTIME_LIBS = ["msvcrt.lib", "vcruntime.lib", "ucrt.lib", "msvcprt.lib", "oldnames.lib", "kernel32.lib"]
+# the static runtime: MSVC CRT + vcruntime + UCRT + the MSVC STL (+ kernel32, which their startup code imports)
+RUNTIME_LIBS = ["libcmt.lib", "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", "kernel32.lib"]
 # system DLLs the images import, linked against the Windows SDK's import libraries (by DLL stem, upper case)
 SDK_IMPORT_LIBS = {n: n.lower() + ".lib" for n in ("KERNEL32", "USER32", "GDI32", "ADVAPI32", "OLE32", "WINMM",
                                                     "IMM32", "WS2_32", "SHELL32", "WSOCK32", "IPHLPAPI", "DDRAW")}
-# third-party DLLs that are not linked at all (the VC6 build's Dinkum C++ library; the MSVC STL replaces it)
-DROPPED_IMPORTS = {"SXLRT233"}
+# DLLs the original images imported that are not linked at all: the VC6 build's Dinkum C++ library (the MSVC STL
+# replaces it), the VC6 CRT (the static runtime replaces it), and the game's own DLLs (linked into the exe)
+DROPPED_IMPORTS = {"SXLRT233", "MSVCRT", "LOW-LEVEL ENGINE", "TCP PROTOCOL", "MILES SOUND SYSTEM MIXER", "DEFAULT",
+                   "DX7HRDISPLAY", "DX7HRTNLDISPLAY"}
 
 
 def module_filename(mod):

@@ -17,22 +17,23 @@ def build_presentation_bridge(directory, build, play_only=False, mouse=False):
     """directory: the stage; build: hbuild.Build. mouse (play only): compile the absolute-pointer mouse shim.
     play_only: -DEE_PLAY_ONLY, no test telemetry (frame dump, UI state/commands, human/lobby helpers)."""
     directory = pathlib.Path(directory).resolve(); output = directory / 'TestPresentation.dll'
-    test_output(build.image('dx7hr'), output)
+    test_output(build.image('exe'), output)
     work = directory / 'presentation-build'; work.mkdir(exist_ok=True)
     source = HERE / 'presentation_bridge.c'
-    definition = work / 'renderer.def'
-    definition.write_text('LIBRARY DX7HRDisplay.dll\nEXPORTS\nPIMGetName\n', encoding='ascii')
     defines = build.bridge_defines()
     defines['EE_UI_MANAGER_VA'] = build.address('exe', '?gUIManager@@3PAVEEUIManager@@A')
     if mouse:
         defines['EE_MOUSE_VA'] = build.address('exe', '?gMouse@@3PAVEEMouse@@A')
     env = dict(os.environ, PATH=str(GCC.parent) + os.pathsep + os.environ['PATH'])
-    subprocess.run([str(GCC.parent / 'dlltool.exe'), '-d', str(definition), '-l', str(work / 'renderer.a')], check=True,
-                   env=env)
+    import re
+    names = sorted(set(re.findall(r'ee_sym\("([^"]+)"\)', source.read_text(encoding='latin-1'))))
+    syms = work / 'bridge_syms.h'
+    syms.write_text('#define EE_BRIDGE_SYMS ' + ' '.join(f'{{"{n}", {build.address("exe", n):#x}}},' for n in names)
+                    + '\n', encoding='ascii')
     subprocess.run([str(GCC), '-shared', '-O1', '-Wall', '-static-libgcc']
                    + [f'-D{k}={v:#x}' for k, v in sorted(defines.items())]
                    + (['-DEE_PLAY_ONLY'] if play_only else [])
-                   + ['-o', str(output), str(source), str(work / 'renderer.a'), '-lgdi32', '-luser32', '-Wl,--kill-at'],
+                   + ['-include', str(syms), '-o', str(output), str(source), '-lgdi32', '-luser32', '-Wl,--kill-at'],
                    check=True, env=env)
     output.with_suffix('.presentation.json').write_text(json.dumps(dict(
         test_only=True, kind='gdi-rgb-backbuffer-presentation-v2', build=str(build.dir),

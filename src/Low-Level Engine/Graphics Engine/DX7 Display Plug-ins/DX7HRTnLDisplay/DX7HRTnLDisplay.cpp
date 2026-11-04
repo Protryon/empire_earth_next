@@ -99,10 +99,10 @@
 // SYNTHETIC: DX7HRTNL 0x1000165f
 // SYNTHETIC: DX7HRTNL 0x100016cb
 
-UString gName("Direct3D Hardware TnL");
+static UString gName("Direct3D Hardware TnL");
 DX7TnLRasterizer gRasterizer(gName);
 DX7Rasterizer* gRasterizerInstance = &gRasterizer;
-unsigned long gType = 'rast';
+static unsigned long gType = 'rast';
 
 // gName's and gRasterizer's init chains:
 // SYNTHETIC: DX7HRTNL 0x10001727
@@ -114,30 +114,23 @@ unsigned long gType = 'rast';
 // SYNTHETIC: DX7HRTNL 0x10001773
 // SYNTHETIC: DX7HRTNL 0x1000177f
 
-// FUNCTION: DX7HRTNL 0x10001789
-// Plug-in DLL entry point; does nothing and always succeeds
-BOOL WINAPI DllMain(HINSTANCE inInstance, DWORD inReason, LPVOID inReserved)
-{
-    return TRUE;
-}
-
 // FUNCTION: DX7HRTNL 0x1000178f
 // Returns the plug-in's name ("Direct3D Hardware TnL")
-extern "C" const UString* PIMGetName()
+static const UString* PIMGetName()
 {
     return &gName;
 }
 
 // FUNCTION: DX7HRTNL 0x10001795
 // Returns the plug-in type ('rast', a rasterizer)
-extern "C" unsigned long PIMGetType()
+static unsigned long PIMGetType()
 {
     return gType;
 }
 
 // FUNCTION: DX7HRTNL 0x1000179b
 // Tells whether the T&L renderer can run: activates it, checks it found at least one screen, then deactivates it
-extern "C" bool PIMIsValid()
+static bool PIMIsValid()
 {
     bool theResult;
     if (gRasterizerInstance->Activate() == kErrorOK && gRasterizerInstance->GetScreenCount() > 0)
@@ -193,3 +186,15 @@ extern "C" GERasterizer* RPIMGetRasterizer()
 // TEMPLATE: DX7HRTNL 0x10001f10
 // TEMPLATE: DX7HRTNL 0x10001f4a
 // TEMPLATE: DX7HRTNL 0x10001f84
+
+#include "lle/PIMModule.h"
+
+// The plug-in's entry points (its DLL's export table before; registered in PIMModule.cpp)
+static const PIMEntry sEntries[] = {
+    PIM_ENTRY(PIMGetName),
+    PIM_ENTRY(PIMGetType),
+    PIM_ENTRY(PIMIsValid),
+    PIM_ENTRY(RPIMGetRasterizer),
+    { NULL, NULL },
+};
+extern const PIMPlugin gPIMPluginDX7HRTnLDisplay = { "DX7HRTnLDisplay.dll", sEntries };

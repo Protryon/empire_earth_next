@@ -39,7 +39,8 @@ ERROR = re.compile(r"^(.*?)\((\d+),\d+\)\s*:\s*error: (.*)$", re.M)
 
 
 def clang_flags(flags, opt):
-    return [f for f in flags.split() if not DROP.match(f)] + opt.split()
+    # the build links the static runtime only: a -MD left in a flag string becomes -MT
+    return [{"-MD": "-MT", "/MD": "-MT"}.get(f, f) for f in flags.split() if not DROP.match(f)] + opt.split()
 
 
 def apply_overlay(staged, rules):
@@ -51,6 +52,9 @@ def apply_overlay(staged, rules):
     crlf = b"\r\n" in raw
     text = raw.decode("latin-1").replace("\r\n", "\n")
     for old, new, want in rules:
+        if old is None:   # append to the unit
+            text = text.rstrip("\n") + "\n\n" + new
+            continue
         n = text.count(old)
         if n != want:
             raise SystemExit(f"overlay {staged.name}: {old!r} matches {n} times, expected {want}")

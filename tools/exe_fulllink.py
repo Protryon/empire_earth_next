@@ -5,7 +5,9 @@ places the member aliases).
 The symbols the source does not define are classified by what they were in the original image (names.txt and the
 other link tables): the WON library (stubbed: its source is not part of the build yet), ICF / vtable-slot / pure
 aliases of defined functions, data the original placed inside other objects (member aliases), and the rest
-(traps). EXTRA_LIBS: libraries the caller adds to every link (tools/build.py: the engine's own import library)."""
+(traps). Everything else of the game (engine, plug-ins, their library units) is linked in as objects: EXTRA_LIBS
+(objects and libraries the caller adds to every link), IMPORT_MODULES (the modules whose original import tables
+name the system and third-party DLLs to link against), EXTRA_RES (more compiled resources: the language strings)."""
 import bisect
 import collections
 import pathlib
@@ -28,6 +30,8 @@ DATA_RAW_END = 0x4b4000 + 0x32000
 LINK_FLAGS = ("/INCREMENTAL:NO /OPT:REF /OPT:ICF /MACHINE:X86 /SUBSYSTEM:WINDOWS /NODEFAULTLIB /FIXED "
               "/ENTRY:WinMainCRTStartup /SAFESEH:NO /ERRORLIMIT:0 /DEMANGLE:NO")
 EXTRA_LIBS = []
+IMPORT_MODULES = ["exe"]
+EXTRA_RES = []
 ODS, IDP, EXITP = "__imp__OutputDebugStringA@4", "__imp__IsDebuggerPresent@0", "__imp__ExitProcess@4"
 CLASSES = ("won", "engine", "icf", "vslot", "pure", "mismatch", "compile", "unwritten", "unregistered", "unbound", "data",
            "library")
@@ -186,8 +190,12 @@ def engine_lib(lib_dir, extra, pkg, functions=()):
 def link(out, objs, libs, res, debug, tag):
     target = out / "EE-AOC.exe"
     rsp = out / f"link_{tag}.rsp"
+    # the engine's and the plug-ins' objects come first: global constructors run in object order, and the game's
+    # (constructed after the engine DLL's in the original) use engine globals
+    first = [p for p in EXTRA_LIBS if str(p).lower().endswith(".obj")]
+    rest = [p for p in EXTRA_LIBS if p not in first]
     rsp.write_text("\n".join(f'"{pathlib.Path(p).relative_to(out) if pathlib.Path(p).is_relative_to(out) else p}"'
-                             for p in [*objs, *libs, *EXTRA_LIBS, *res, *RUNTIME_LIBS]) + "\n")
+                             for p in [*first, *objs, *libs, *rest, *res, *RUNTIME_LIBS]) + "\n")
     cmd = [str(LLD_LINK), "/nologo", *LINK_FLAGS.split(), *(["/DEBUG"] if debug else []),
            f"/OUT:{target.name}", f"/MAP:{target.stem}.map", f"/PDB:{target.stem}.pdb", *lib_paths(), f"@{rsp.name}"]
     if target.exists():
@@ -695,18 +703,21 @@ def link_exe(out, items, fails, debug=True, members=None, stubs_pass=True, patch
     exe_roundtrip.write_order_object(lib_dir / "refs.obj", sorted(refs))
     import implib
     exe_imports = implib.read_imports("exe")
-    libs = implib.make_import_libs("exe", lib_dir, [lib_dir / "refs.obj"])
+    libs = []
+    for m in IMPORT_MODULES:
+        extra_objs = [x for x in EXTRA_LIBS if str(x).lower().endswith(".obj")]   # their decorated names too
+        for lib in implib.make_import_libs(m, lib_dir / m, [lib_dir / "refs.obj", *extra_objs]):
+            if pathlib.Path(lib).name.lower() not in {pathlib.Path(x).name.lower() for x in libs}:
+                libs.append(lib)
     imglib = lib_dir / "exeimg.lib"
     (lib_dir / "exeimg.rsp").write_text("\n".join(f'"{it["obj"]}"' for it in img) + "\n")
     code, log = exe_roundtrip.run([str(LLVM_LIB), "/nologo", f"/out:{imglib.name}", "@exeimg.rsp"], lib_dir)
     if code:
         sys.exit(log)
     libs.insert(1, imglib)
-    direct = {n for n, (f, _) in refs.items() if f and not n.startswith("__imp_")}
-    undata = engine_lib(lib_dir, [], pkg, direct)
-    print(f"Low-Level Engine.lib: call thunks for {len(undata)} `)const` methods (implib, no local repair)")
+    undata = []
     import rsrc_rebuild
-    res = [rsrc_rebuild.compile_rc(EXE_RC, out / "rsrc")]
+    res = [rsrc_rebuild.compile_rc(EXE_RC, out / "rsrc")] + list(EXTRA_RES)
 
     objs = [it["obj"] for it in game]
     dedupe = patch(out, objs, dup_pre, game) if patch else []
@@ -820,7 +831,7 @@ def link_exe(out, items, fails, debug=True, members=None, stubs_pass=True, patch
                else ""), flush=True)
 
         if engine:
-            engine_lib(lib_dir, sorted(engine), pkg)
+            print(f"exe: {len(engine)} engine symbols unresolved (no engine DLL any more): {sorted(engine)[:5]}")
         code2, log2 = link(out, objs + [out / "stubs.obj"], libs, res, debug, "pass2")
         unres2, dups2, other2 = parse_log(log2)
         print(f"pass 2: link exit {code2}: {len(unres2)} unresolved, {len(dups2)} duplicates, "

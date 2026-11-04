@@ -1,13 +1,14 @@
-"""Build every image of the game from source: clang-cl + lld-link, 32-bit, the MSVC STL and the UCRT.
+"""Build the game from source: one statically linked EE-AOC.exe (clang-cl + lld-link, 32-bit, the MSVC STL and
+the static UCRT).
 
   python -I tools/build.py [-j N] [--out DIR] [--opt X] [--test-profile windowed-software] [--sanitize-null]
-                           [--compile-only] [target ...]
+                           [--compile-only]
 
-Targets (default: all): tcp mixer default lle dx7hr dx7hrtnl language exe -> <out>/<target>/ (default out:
-build/clang): TCP Protocol.dll, Miles Sound System Mixer.dll, Default.dll, Low-Level Engine.dll (with libjpeg),
-DX7HRDisplay.dll, DX7HRTnLDisplay.dll, Language.dll (resources only), EE-AOC.exe (with libpng/zlib/libjpeg), each
-with its .map (8-digit addresses) and .pdb. Every unit is compiled first (tools/clang_build.py, objects in
-<out>/obj), then the engine is linked (the other images link against its import library), then the rest.
+-> <out>/exe/EE-AOC.exe with its .map (8-digit addresses) and .pdb (default out: build/clang). The exe holds the
+game with its image libraries (libpng/zlib/libjpeg), the engine, the plug-ins the original loaded as DLLs (TCP
+protocol, the mixer, the Default random map generator, the DX7 T&L renderer; registered in PIMModule.cpp) and the
+language resources. Only Windows system DLLs and the third-party DLLs still to be replaced (Mss32, binkw32) are
+imported. Every unit is compiled first (tools/clang_build.py, objects in <out>/obj), then linked.
 
 --test-profile windowed-software (TEST ONLY; default out build/clang-test): images for the headless live-game
 harness (tools/harness). The windowed and software-display policy is compiled into the exe and the renderer by text
@@ -34,10 +35,9 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import clang_build
-import relink
 import units
 import verify
-from ee import CLANG, LLD_LINK, MODULE_FLAGS, ROOT, module_units
+from ee import CLANG, LINK_DIR, LLD_LINK, MODULE_FLAGS, ROOT, module_units
 
 TEST_PROFILES = {
     "windowed-software": {
@@ -47,8 +47,11 @@ TEST_PROFILES = {
             ("    this->mSettings.mFullScreen = true;",
              "    this->mSettings.mFullScreen = false;   // TEST PROFILE windowed", 1)],
         # software display: the bit-depth checks accept and store 32 where they accepted/stored 16, and the
-        # no-matching-mode fallback is 32
+        # no-matching-mode fallback is 32; WinMain loads the harness's presentation bridge when it is staged (the
+        # DLL builds' plug-in scan loaded every DLL of the folder)
         "Empire Earth/Empire Earth/Empire Earth.cpp": [
+            ("int inShowCommand)\n{\n",
+             "int inShowCommand)\n{\n    LoadLibraryA(\"TestPresentation.dll\");   // TEST PROFILE: the harness's presentation bridge\n", 1),
             ("mGameBitDepth != 16)", "mGameBitDepth != 32)", 1),
             ("mTextureBitDepth != 16)", "mTextureBitDepth != 32)", 1),
             ("mGameBitDepth = 16;", "mGameBitDepth = 32;", 2),
@@ -61,6 +64,11 @@ TEST_PROFILES = {
             ("if ((theCaps.dwCaps & DDCAPS_3D) == DDCAPS_3D) {",
              "if (true) {   // TEST PROFILE software: adapters without DDCAPS_3D", 2),
             ("IID_IDirect3DHALDevice", "IID_IDirect3DRGBDevice", 1)],
+        # the T&L renderer (the only one): accept and create the RGB software device (D3D transforms in software)
+        "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/DX7HRTnLDisplay/DX7TnLRasterizer.cpp": [
+            ("unsigned long theRequiredCaps = D3DDEVCAPS_HWTRANSFORMANDLIGHT | D3DDEVCAPS_HWRASTERIZATION;",
+             "unsigned long theRequiredCaps = D3DDEVCAPS_FLOATTLVERTEX;   // TEST PROFILE software", 1),
+            ("IID_IDirect3DTnLHalDevice", "IID_IDirect3DRGBDevice", 1)],
         "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Screen.cpp": [
             ("this->GetMode(i).mHeight == 600 && this->GetMode(i).mBitCount == 16)",
              "this->GetMode(i).mHeight == 600 && this->GetMode(i).mBitCount == 32)", 1),
@@ -104,19 +112,34 @@ HARNESS_HOOKS = [
 for _unit, _decl in HARNESS_HOOKS:
     TEST_PROFILES["windowed-software"].setdefault(_unit, []).append(
         ("\n" + _decl + "\n", "\n__declspec(noinline) " + _decl + "   // TEST PROFILE: harness hook\n", 1))
+# Units the test profile replaces with a test tool's source (compiled to the unit's object): the silent mixer in place
+# of the Miles mixer (the headless VM has no audio device; it registers as the same plug-in)
+TEST_SWAPS = {
+    "windowed-software": {
+        "Low-Level Engine/Sound Engine/Miles Sound System Mixer/Miles Sound System Mixer.cpp":
+            ROOT / "tools" / "harness" / "silent_mixer.cpp",
+    },
+}
 SANITIZE_CHECKS = "null,pointer-overflow,nonnull-attribute,returns-nonnull-attribute"
 
 
-def compile_all(targets, out, opt, jobs, overlays=None, extra=()):
-    """Compile every unit the targets link, in parallel -> objs(source, flags) -> object path; exits on a failure."""
+def compile_all(targets, out, opt, jobs, overlays=None, extra=(), swaps=None):
+    """Compile every unit the targets link, in parallel -> objs(source, flags) -> object path; exits on a failure.
+    swaps: {unit path relative to src/: source compiled to that unit's object instead} (test profiles)."""
     mods = [m for t in targets for m in units.TARGET_MODULES.get(t, [t])]
     work = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
     for j in work:
         verify.include_paths(verify.stage_source(j[1]))
     table, failed = {}, []
     t0 = time.time()
+    def one(j):
+        swap = (swaps or {}).get(str(units.rel_src(j[1])))
+        if swap is None:
+            return clang_build.compile_one(j, out, opt, overlays, extra)
+        ok, log = clang_build.compile_to(swap, j[2], units.obj_path(out, j), opt, None, extra)
+        return j, ok, log
     with concurrent.futures.ThreadPoolExecutor(jobs) as ex:
-        for job, ok, log in ex.map(lambda j: clang_build.compile_one(j, out, opt, overlays, extra), work):
+        for job, ok, log in ex.map(one, work):
             if ok:
                 table[(str(units.rel_src(job[1])), verify.unit_flags(job[1], job[2]))] = units.obj_path(out, job)
             else:
@@ -155,17 +178,29 @@ def member_offsets(out):
     return translate
 
 
+# system libraries the engine and the renderer linked statically (dinput8: the c_dfDI* data formats)
+STATIC_LIBS = ["dxguid.lib", "dinput8.lib"]
+
+
 def link_exe(out, objs, extra_libs):
     import exe_fulllink
-    print("--- exe: full link", flush=True)
+    import rsrc_rebuild
+    print("--- exe: link", flush=True)
     dst = out / "exe"
     dst.mkdir(parents=True, exist_ok=True)
     items = []
     for mod in ("exe", "exeimg"):
         for lo, hi, p in module_units(mod):
+            if mod == "exeimg" and units.rel_src(p).parts[1] == "libjpeg":
+                continue   # the engine's libjpeg (module jpeg, every file) serves the game too
             items.append({"mod": mod, "lo": lo, "hi": hi, "path": p, "flags": MODULE_FLAGS[mod],
                           "rel": str(units.rel_src(p)), "obj": objs(p, MODULE_FLAGS[mod])})
-    exe_fulllink.EXTRA_LIBS = list(extra_libs)
+    # the rest of the game: every unit of the engine (with libjpeg) and the plug-ins, and their library units
+    rest = [m for m in units.TARGET_MODULES["exe"] if m not in ("exe", "exeimg")]
+    others = [objs(j[1], j[2]) for m in rest for j in units.jobs_for(m)] +              [objs(j[1], j[2]) for j in units.lib_jobs(rest)]
+    exe_fulllink.EXTRA_LIBS = [str(o) for o in others] + list(extra_libs) + STATIC_LIBS
+    exe_fulllink.IMPORT_MODULES = [m for m in units.TARGET_MODULES["exe"] if (LINK_DIR / m / "imports.txt").exists()]
+    exe_fulllink.EXTRA_RES = [rsrc_rebuild.compile_rc(ROOT / "src" / units.LANGUAGE_RC, out / "rsrc-language")]
     rep, _ = exe_fulllink.link_exe(dst, items, {}, members=units.EXE_MEMBERS, member_offsets=member_offsets(out))
     import json
     (dst / "link_report.json").write_text(json.dumps(rep, indent=1, default=str))
@@ -184,16 +219,8 @@ def link_exe(out, objs, extra_libs):
     return 0 if ok else 1
 
 
-def link_language(out):
-    import rsrc_rebuild
-    print("--- language: resources", flush=True)
-    dll = rsrc_rebuild.build_dll(ROOT / "src" / units.LANGUAGE_RC, out / "language", "Language.dll")
-    return 0 if dll.exists() else 1
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("targets", nargs="*", metavar="target", help=f"default: all ({' '.join(units.TARGETS)})")
     ap.add_argument("--out", help="output root (default build/clang, build/clang-test with --test-profile)")
     ap.add_argument("--opt", default="-O1", help="clang-cl optimisation (default -O1)")
     ap.add_argument("-j", type=int, default=os.cpu_count() or 4)
@@ -204,13 +231,6 @@ def main():
     for tool in (CLANG, LLD_LINK):
         if not tool.exists():
             sys.exit(f"{tool} is missing: install LLVM (winget install LLVM.LLVM) or set EE_LLVM")
-    targets = a.targets or units.TARGETS
-    for t in targets:
-        if t in units.PART_OF:
-            sys.exit(f"{t} is linked into {units.PART_OF[t]}: build {units.PART_OF[t]}")
-        if t not in units.TARGETS:
-            sys.exit(f"unknown target {t!r}; known: {' '.join(units.TARGETS)}")
-    targets = sorted(targets, key=lambda t: t != "lle")   # the engine first: the others link its import library
     out = pathlib.Path(a.out or ROOT / "build" / (("clang-test" if a.test_profile else "clang")
                                                   + ("-nullsan" if a.sanitize_null else ""))).resolve()
     out.mkdir(parents=True, exist_ok=True)
@@ -227,32 +247,15 @@ def main():
             sys.exit(f"ubsan_minimal.c: {r.stdout}{r.stderr}")
         extra_libs.append(str(ubsan))
     t0 = time.time()
-    objs = compile_all([t for t in targets if t != "language"], out, a.opt, a.j, overlays, extra)
+    objs = compile_all(units.TARGETS, out, a.opt, a.j, overlays, extra, TEST_SWAPS.get(a.test_profile))
     if a.compile_only:
         return
-    if "exe" in targets:   # the exe link places the member aliases by this build's record layouts
-        sys.path.insert(0, str(ROOT / "tools" / "harness"))
-        import layout_gen
-        layout_gen.generate(out, overlays, extra)
-    engine_lib = out / "lle" / "Low-Level Engine.lib"
-    results = {}
-    for t in targets:
-        if t == "language":
-            results[t] = link_language(out)
-            continue
-        if t != "lle" and not engine_lib.exists():
-            sys.exit(f"{t}: {engine_lib} is missing: build lle first")
-        libs = extra_libs + ([str(engine_lib)] if t != "lle" else [])
-        if t == "exe":
-            results[t] = link_exe(out, objs, libs)
-        else:
-            print(f"--- {t}: link", flush=True)
-            results[t] = relink.relink(t, out / t, objs, libs)
-    print()
-    for t in targets:
-        print(f"{t:9} {'ok' if results[t] == 0 else 'FAILED'}")
+    sys.path.insert(0, str(ROOT / "tools" / "harness"))   # the link places the member aliases by the record layouts
+    import layout_gen
+    layout_gen.generate(out, overlays, extra)
+    result = link_exe(out, objs, extra_libs)
     print(f"built in {time.time() - t0:.0f} s -> {out}")
-    sys.exit(1 if any(results.values()) else 0)
+    sys.exit(result)
 
 
 if __name__ == "__main__":

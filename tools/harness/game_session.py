@@ -146,7 +146,7 @@ def main():
                    world=int(g['?gWorld@@3VEEWorld@@A']['va'],16),victory_detail=bool(a.trace_symbol))
     activate,present=build.renderer_guards()
     harness_extra=('--audio-entry',located['audio_entry_rva'],'--stack-scan','512',
-                   '--renderer-guards',f'{activate:x}',f'{present:x}')
+                   '--renderer-guards',f'{activate:x}',f'{present:x}',*build.static_exe_args())
     from presentation_bridge import build_presentation_bridge
     build_presentation_bridge(stage,build)
     trace=None
