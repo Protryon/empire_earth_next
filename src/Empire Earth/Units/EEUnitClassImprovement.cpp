@@ -493,8 +493,11 @@ long EEUnitClassImprovement::Load(EEUnitClass* inUnitClass, EEUnitClassUpgrade* 
             i = 0;
             do {
                 if (i != kImprovementLeadership) {
-                    if (this->mLevels[i] > 1)
-                        this->ChangeLevel(inUnitClass, inUpgrade, i, this->mLevels[i] - 1);
+                    long theLevel = this->mLevels[i];
+                    if (theLevel > 1) {
+                        this->mLevels[i] = 1;
+                        this->ChangeLevel(inUnitClass, inUpgrade, i, theLevel - 1);
+                    }
                     theOld[i] = this->mLevels[i];
                 } else
                     this->mLevels[10] = 1;
