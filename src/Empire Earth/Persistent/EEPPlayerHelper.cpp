@@ -117,7 +117,12 @@ long EEPPlayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                         theResult = inFile.Read(theType);
                         if (theResult == kErrorOK) {
                             thePlayer = CreatePlayer(theType);
-                            theResult = thePlayer->Load(inMajorVersion, inMinorVersion, inFile);
+                            // An unknown player type (corrupt save) creates no player: fail the load instead of
+                            // calling through NULL.
+                            if (thePlayer == NULL)
+                                theResult = kErrorFailed;
+                            else
+                                theResult = thePlayer->Load(inMajorVersion, inMinorVersion, inFile);
                             if (theResult == kErrorOK)
                                 this->mPlayers.push_back(thePlayer);
                         }
