@@ -79,7 +79,7 @@ bool EEIsWheelModel(GEModel* inModel)
 
 // FUNCTION: EXE 0x63c8ff
 // Rolls the wheel back by the unit's travel this tick (speed or turn rate, whichever is the larger share of its top)
-// over its scaled radius, in physics actions 0, 4 and 5 above a tenth of the top; wraps the angle by pi, not 2 pi
+// over its scaled radius, in physics actions 0, 4 and 5 above a tenth of the top; wraps the angle by a full turn
 void EEWheel::Update(EEComplexUnit* inUnit)
 {
     float theCircumference = inUnit->mPhysicalModel.GetScale() * this->mRadius;
@@ -98,8 +98,9 @@ void EEWheel::Update(EEComplexUnit* inUnit)
     if (!(theTurn >= kMinimumWheelDistance))
         return;
     this->mAngle -= gPhysics->GetTickSeconds() * theStats->GetMaxVelocity() * theTurn / theCircumference;
+    // wrap by a full turn (adding pi made the wheel jump half a turn at each wrap)
     while (this->mAngle < -3.1415927f)
-        this->mAngle += 3.1415927f;
+        this->mAngle += 2.0f * 3.1415927f;
 }
 
 // FUNCTION: EXE 0x63c9d9
