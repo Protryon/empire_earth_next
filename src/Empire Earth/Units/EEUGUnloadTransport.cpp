@@ -261,7 +261,6 @@ void EEUGUnloadTransport::Start(EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x628990
 // Writes the base goal, transport id, unload tile, first cargo and stopping tiles; returns the first write error
-// (the two tile writes are not checked)
 long EEUGUnloadTransport::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     long theResult = EEUnitGoal::Save(inMajorVersion, inMinorVersion, outFile);
@@ -271,10 +270,11 @@ long EEUGUnloadTransport::Save(unsigned long inMajorVersion, unsigned long inMin
             theResult = outFile.Write(this->mDestination.GetX());
             if (theResult == 0) {
                 theResult = outFile.Write(this->mDestination.GetY());
-                if (theResult == 0) {
-                    this->mFirstCargoTile.Save(outFile);
-                    this->mUnloadTile.Save(outFile);
-                }
+                // the two tile writes are checked too (their results used to be ignored)
+                if (theResult == 0)
+                    theResult = this->mFirstCargoTile.Save(outFile);
+                if (theResult == 0)
+                    theResult = this->mUnloadTile.Save(outFile);
             }
         }
     }
