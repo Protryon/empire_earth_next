@@ -281,7 +281,12 @@ EESEAPaint* EEUIFSETerrainPaint::CreatePaintAction()
             if (theColorList->GetCurrentSelection(theColor) != 0)
                 theColor = this->mTerrain->mTerrains[theType]->mColorType;
             this->mIsCentered = true;
-            return new EESEAPaintTerrain(this->mTerrain->mTerrains[theType]->mID, this->mTerrain->mColorTypes[theColor]->mID);
+            // The color type id used as a list position can lie past the filtered color list: an element
+            // past the end counts as color id 0 instead of being read from beyond the vector.
+            long theColorID = 0;
+            if (theColor < this->mTerrain->mColorTypes.size())
+                theColorID = this->mTerrain->mColorTypes[theColor]->mID;
+            return new EESEAPaintTerrain(this->mTerrain->mTerrains[theType]->mID, theColorID);
         }
     } else {
         this->mIsCentered = false;
