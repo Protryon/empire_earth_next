@@ -63,11 +63,11 @@ EESEASaveScenario::EESEASaveScenario()
 }
 
 // FUNCTION: EXE 0x5aa816
-// Opens the save screen: for scenarios (after preparing the map) in the editor, else for saved games; the first
-// save screen it creates is never used or freed
+// Opens the save screen: for scenarios (after preparing the map) in the editor, else for saved games
 void EESEASaveScenario::Virtual4()
 {
-    UIEvent* theEvent = new EEUIESLSaveScreen(gScenarioExtension, UString("data\\") + UString("Scenarios\\"));
+    // Only the save screen that is posted is created (an unused first one leaked on every Save).
+    UIEvent* theEvent;
     gUIManager->mScenarioEditorForm->RefreshCurrentGroup();
     if (gUIManager->mInScenarioEditor == true) {
         gWorld.mMap->PrepareSave();
