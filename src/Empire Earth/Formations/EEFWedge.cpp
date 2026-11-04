@@ -97,12 +97,16 @@ void EEFWedge::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormati
     for (long i = 0; i < theUnitCount; i++) {
         theRadius = max(inUnits[i]->mUnitClass->mOuterCollisionSphere, theRadius);
     }
-    this->mLeftArm.mX *= theRadius;
-    this->mLeftArm.mY *= theRadius;
-    this->mRightArm.mX *= theRadius;
-    this->mRightArm.mY *= theRadius;
-    this->mOrientation.Apply(this->mLeftArm, theLeftStep);
-    this->mOrientation.Apply(this->mRightArm, theRightStep);
+    // scale copies of the arms: scaling the members and dividing back left 0/0 = NaN arms after a call with
+    // no units (or radius 0), and let them drift by rounding on every call
+    GEVector theLeftArm(this->mLeftArm);
+    GEVector theRightArm(this->mRightArm);
+    theLeftArm.mX *= theRadius;
+    theLeftArm.mY *= theRadius;
+    theRightArm.mX *= theRadius;
+    theRightArm.mY *= theRadius;
+    this->mOrientation.Apply(theLeftArm, theLeftStep);
+    this->mOrientation.Apply(theRightArm, theRightStep);
     long thePlaced = 1;
     for (unsigned long j = 0; (long)j < theUnitCount; j++, thePlaced++) {
         if (j % this->mCount == 0) {
@@ -134,8 +138,4 @@ void EEFWedge::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormati
             }
         }
     }
-    this->mLeftArm.mX /= theRadius;
-    this->mLeftArm.mY /= theRadius;
-    this->mRightArm.mX /= theRadius;
-    this->mRightArm.mY /= theRadius;
 }
