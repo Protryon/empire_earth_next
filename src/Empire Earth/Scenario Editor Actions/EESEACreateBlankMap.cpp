@@ -205,8 +205,10 @@ void EESEACreateBlankMap::CreateMap()
     theMap = new EEMap(this->mWidth, this->mHeight, theNumPlayers, this->mTerrain);
     ESVERIFY_AT(theMap, 249);
     gWorld.SetMap(theMap);
-    if (!theLoaded)
+    if (!theLoaded) {
+        delete[] theData;
         return;
+    }
     theLandScale = theLandCutoff == 0.0f ? 0.0f : UMAbs(theLandHeight / (float)theLandCutoff);
     theWaterScale = theWaterCutoff == 0.0f ? 0.0f : UMAbs(theWaterDepth / (float)theWaterCutoff);
     theTransformation.Rotate(-0.78539819f, 0.0f, 0.0f);
@@ -287,6 +289,8 @@ void EESEACreateBlankMap::CreateMap()
                 theMap->mTerrainMesh.SetWaterColorSet(x, y);
         }
     }
+    // The elevation file's height buffer is freed (it leaked on every blank map made from one).
+    delete[] theData;
     theMap->UpdateCliffs(0, theMap->mSize, 0, theMap->mSize);
 }
 
