@@ -281,7 +281,7 @@ void EEMap::RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius
 
 // FUNCTION: EXE 0x51c3ca
 // Sums the tile and corner-height checksums of the next 64 x 64 window and advances the window;
-// past the right edge the cursor becomes end row * end column, so tiles are skipped
+// past the right edge the cursor moves to the start of the next band
 long EEMap::ComputeChecksum()
 {
     unsigned long theStartX = this->mChecksumCursor % this->mSize;
@@ -302,8 +302,9 @@ long EEMap::ComputeChecksum()
     if (theEndX < (unsigned long)this->mSize)
         this->mChecksumCursor += 0x40;
     else {
-        this->mChecksumCursor = theEndY * theEndX;
-        if (this->mChecksumCursor > (unsigned long)(this->mSize * this->mSize))
+        // the next band starts at the beginning of row theEndY
+        this->mChecksumCursor = theEndY * this->mSize;
+        if (this->mChecksumCursor >= (unsigned long)(this->mSize * this->mSize))
             this->mChecksumCursor = 0;
     }
     return theChecksum;
