@@ -589,11 +589,9 @@ void EETechTreeNode::UnloadMedia(EEPlayer* inPlayer)
 }
 
 // FUNCTION: EXE 0x5cfde2
-// Copies another node's state and shares its data; the class cost tables are cleared and copied from the
-// shared (just emptied) data
+// Copies another node's state and shares its data (with its class cost tables)
 EETechTreeNode& EETechTreeNode::operator=(const EETechTreeNode& inOther)
 {
-    std::map<long, long*>::const_iterator theCosts;
     if (&inOther != this) {
         this->mData = inOther.mData;
         this->mEpoch = inOther.mEpoch;
@@ -607,16 +605,8 @@ EETechTreeNode& EETechTreeNode::operator=(const EETechTreeNode& inOther)
         this->mIsUnitMediaLoaded = inOther.mIsUnitMediaLoaded;
         this->mScenEditorObsoleted = inOther.mScenEditorObsoleted;
         this->mResearchDelay = inOther.mResearchDelay;
-        this->ClearClassCosts();
-        theCosts = inOther.mData->mClassCosts.begin();
-        while (true) {
-            if (theCosts == inOther.mData->mClassCosts.end())
-                break;
-            long* theCopy = new long[7];
-            memcpy(theCopy, theCosts->second, 0x1c);
-            this->mData->mClassCosts.insert(std::map<long, long*>::value_type(theCosts->first, theCopy));
-            ++theCosts;
-        }
+        // mData is now inOther's (shared) block, which already holds the class cost tables: clearing and
+        // re-copying them into the same map would empty them for every node sharing the block
         this->mButton = inOther.mButton;
     }
     return *this;
