@@ -275,8 +275,8 @@ long EEButtonObject::Release()
 }
 
 // FUNCTION: EXE 0x4d5c31
-// Reloads the textures of every referenced button image, dropping no mip level on any screen width (both branches
-// give 0); returns the first error
+// Reloads the textures of every referenced button image (a mip level dropped at 800 pixels wide or less, as on the
+// first load); returns the first error
 long EEButtonObject::Reload()
 {
     GETextureDescription theDescription;
@@ -292,7 +292,8 @@ long EEButtonObject::Reload()
     sDatabaseLock.mLock->Enter();
     theDescription.mPixelDepth = gTexturePixelDepth;
     theDescription.mCreateMIPMaps = false;
-    theDescription.mNumMipLevelsToDrop = gRasterizer->GetPrimarySurface(gScreenIndex)->GetWidth() > 800 ? 0 : 0;
+    // Same mip drop as the first load (one level at 800 pixels wide or less); both arms were 0.
+    theDescription.mNumMipLevelsToDrop = gRasterizer->GetPrimarySurface(gScreenIndex)->GetWidth() > 800 ? 0 : 1;
     for (unsigned long i = 0; i < EEButtonObject::sTable.size() && theResult == kErrorOK; i++) {
         EEButtonObject* theButton = EEButtonObject::sTable[i];
         if (theButton != NULL && theButton->mMediaCount > 0) {
