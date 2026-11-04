@@ -110,6 +110,8 @@ unsigned long SEConductor::EventHandler(void* inConductor)
                                     theConductor->mScores[i].mScore->mSegment == theSegment)
                                     theID = theConductor->mScores[i].mID;
                             }
+                            // Fixed: the reference GetSegment adds was never released
+                            theSegment->Release();
                         }
                         theSegmentState->Release();
                         theSegmentState = NULL;
@@ -150,7 +152,7 @@ unsigned long SEConductor::EventHandler(void* inConductor)
 }
 
 // FUNCTION: LLE 0x1004cb52
-// Returns the ID of the score whose segment is playing now (-1: none or not running); the segment reference leaks
+// Returns the ID of the score whose segment is playing now (-1: none or not running)
 long SEConductor::GetCurrentlyPlayingScore()
 {
     long theID = -1;
@@ -164,9 +166,12 @@ long SEConductor::GetCurrentlyPlayingScore()
             IDirectMusicSegment* theSegment;
             if (SUCCEEDED(theSegmentState->GetSegment(&theSegment))) {
                 for (unsigned long i = 0; i < theCount && theID == -1; i++) {
-                    if (this->mScores[i].mScore->mSegment == theSegment)
+                    // Fixed: a score whose load failed (no score object) used to be dereferenced
+                    if (this->mScores[i].mScore && this->mScores[i].mScore->mSegment == theSegment)
                         theID = this->mScores[i].mID;
                 }
+                // Fixed: the reference GetSegment adds was never released
+                theSegment->Release();
             }
             theSegmentState->Release();
         }
