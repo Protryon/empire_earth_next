@@ -156,8 +156,6 @@ long DX7Surface::CopyWithFilter(GESurface* inTarget, GERectangle& inSource, GERe
 // so a failed target lock is not reported
 // Pixels go through GEUnpack*/GEPackColor. NEAR: the remaining differences are -G6 scheduling only (the pushes of the
 // forward-substituted GEUnpackAlpha calls, the destination pointer step at the loop end).
-// The source pixel comes from fistp (round to nearest), so a position in the left half of a pixel blends toward the
-// right neighbour instead of the left one (original bug, bytes 0x1000f1c8).
 long DX7Surface::Copy16BitWithFilter(DX7Surface* inTarget, GERectangle& inSource, GERectangle& inDestination)
 {
     long theResult;
@@ -173,6 +171,7 @@ long DX7Surface::Copy16BitWithFilter(DX7Surface* inTarget, GERectangle& inSource
     long theSourceX, theSourceY;
     float theXFraction, theYFraction, theXInverse, theYInverse;
     long theIndex;
+    long theMinX, theMaxX, theMinY, theMaxY, theNextX, theNextY;
     unsigned long thePixel00, thePixel01, thePixel10, thePixel11;
     float theRed1, theGreen1, theBlue1, theAlpha1;
     float theRed2, theGreen2, theBlue2, theAlpha2;
@@ -187,6 +186,11 @@ long DX7Surface::Copy16BitWithFilter(DX7Surface* inTarget, GERectangle& inSource
     theYStep = 1.0f / inDestination.GetHeight();
     theXOffset = 1.0f / (2.0f * inDestination.GetWidth());
     theYOffset = 1.0f / (2.0f * inDestination.GetHeight());
+    // The taps stay inside the source rectangle (right and bottom are exclusive).
+    theMinX = (long)inSource.GetLeft();
+    theMaxX = (long)inSource.GetRight() - 1;
+    theMinY = (long)inSource.GetTop();
+    theMaxY = (long)inSource.GetBottom() - 1;
     theResult = this->Lock();
     if (theResult != kErrorOK)
         return theResult;
@@ -207,17 +211,37 @@ long DX7Surface::Copy16BitWithFilter(DX7Surface* inTarget, GERectangle& inSource
                 theSourceY = UMFloatToLong(theY);
                 theXFraction = theX - theSourceX;
                 theYFraction = theY - theSourceY;
-                if (theXFraction < 0.0f)
+                // The conversion rounds to nearest: a negative fraction means the sample lies left of (above) the
+                // rounded pixel, so step back one pixel.
+                if (theXFraction < 0.0f) {
                     theXFraction += 1.0f;
-                if (theYFraction < 0.0f)
+                    theSourceX--;
+                }
+                if (theYFraction < 0.0f) {
                     theYFraction += 1.0f;
+                    theSourceY--;
+                }
+                if (theSourceX < theMinX) {
+                    theSourceX = theMinX;
+                    theXFraction = 0.0f;
+                }
+                if (theSourceX > theMaxX)
+                    theSourceX = theMaxX;
+                if (theSourceY < theMinY) {
+                    theSourceY = theMinY;
+                    theYFraction = 0.0f;
+                }
+                if (theSourceY > theMaxY)
+                    theSourceY = theMaxY;
+                theNextX = theSourceX < theMaxX ? 1 : 0;
+                theNextY = theSourceY < theMaxY ? (long)theSourcePitch : 0;
                 theXInverse = 1.0f - theXFraction;
                 theYInverse = 1.0f - theYFraction;
                 theIndex = theSourceY * theSourcePitch + theSourceX;
                 thePixel00 = theSource[theIndex];
-                thePixel01 = theSource[theIndex + 1];
-                thePixel10 = theSource[theSourcePitch + theIndex];
-                thePixel11 = theSource[theSourcePitch + theIndex + 1];
+                thePixel01 = theSource[theIndex + theNextX];
+                thePixel10 = theSource[theIndex + theNextY];
+                thePixel11 = theSource[theIndex + theNextY + theNextX];
                 theRed1 = GEUnpackRed(theFormat, thePixel00);
                 theGreen1 = GEUnpackGreen(theFormat, thePixel00);
                 theBlue1 = GEUnpackBlue(theFormat, thePixel00);
@@ -258,7 +282,7 @@ long DX7Surface::Copy16BitWithFilter(DX7Surface* inTarget, GERectangle& inSource
 }
 
 // FUNCTION: DX7HR 0x1000f4d0
-// Copies a rectangle to the target with bilinear scaling, 32-bit pixels (same quirks as the 16-bit copy)
+// Copies a rectangle to the target with bilinear scaling, 32-bit pixels (as the 16-bit copy)
 // NEAR: the same -G6 scheduling differences as Copy16BitWithFilter.
 long DX7Surface::Copy32BitWithFilter(DX7Surface* inTarget, GERectangle& inSource, GERectangle& inDestination)
 {
@@ -275,6 +299,7 @@ long DX7Surface::Copy32BitWithFilter(DX7Surface* inTarget, GERectangle& inSource
     long theSourceX, theSourceY;
     float theXFraction, theYFraction, theXInverse, theYInverse;
     long theIndex;
+    long theMinX, theMaxX, theMinY, theMaxY, theNextX, theNextY;
     unsigned long thePixel00, thePixel01, thePixel10, thePixel11;
     float theRed1, theGreen1, theBlue1, theAlpha1;
     float theRed2, theGreen2, theBlue2, theAlpha2;
@@ -289,6 +314,11 @@ long DX7Surface::Copy32BitWithFilter(DX7Surface* inTarget, GERectangle& inSource
     theYStep = 1.0f / inDestination.GetHeight();
     theXOffset = 1.0f / (2.0f * inDestination.GetWidth());
     theYOffset = 1.0f / (2.0f * inDestination.GetHeight());
+    // The taps stay inside the source rectangle (right and bottom are exclusive).
+    theMinX = (long)inSource.GetLeft();
+    theMaxX = (long)inSource.GetRight() - 1;
+    theMinY = (long)inSource.GetTop();
+    theMaxY = (long)inSource.GetBottom() - 1;
     theResult = this->Lock();
     if (theResult != kErrorOK)
         return theResult;
@@ -309,17 +339,37 @@ long DX7Surface::Copy32BitWithFilter(DX7Surface* inTarget, GERectangle& inSource
                 theSourceY = UMFloatToLong(theY);
                 theXFraction = theX - theSourceX;
                 theYFraction = theY - theSourceY;
-                if (theXFraction < 0.0f)
+                // The conversion rounds to nearest: a negative fraction means the sample lies left of (above) the
+                // rounded pixel, so step back one pixel.
+                if (theXFraction < 0.0f) {
                     theXFraction += 1.0f;
-                if (theYFraction < 0.0f)
+                    theSourceX--;
+                }
+                if (theYFraction < 0.0f) {
                     theYFraction += 1.0f;
+                    theSourceY--;
+                }
+                if (theSourceX < theMinX) {
+                    theSourceX = theMinX;
+                    theXFraction = 0.0f;
+                }
+                if (theSourceX > theMaxX)
+                    theSourceX = theMaxX;
+                if (theSourceY < theMinY) {
+                    theSourceY = theMinY;
+                    theYFraction = 0.0f;
+                }
+                if (theSourceY > theMaxY)
+                    theSourceY = theMaxY;
+                theNextX = theSourceX < theMaxX ? 1 : 0;
+                theNextY = theSourceY < theMaxY ? (long)theSourcePitch : 0;
                 theXInverse = 1.0f - theXFraction;
                 theYInverse = 1.0f - theYFraction;
                 theIndex = theSourceY * theSourcePitch + theSourceX;
                 thePixel00 = theSource[theIndex];
-                thePixel01 = theSource[theIndex + 1];
-                thePixel10 = theSource[theSourcePitch + theIndex];
-                thePixel11 = theSource[theSourcePitch + theIndex + 1];
+                thePixel01 = theSource[theIndex + theNextX];
+                thePixel10 = theSource[theIndex + theNextY];
+                thePixel11 = theSource[theIndex + theNextY + theNextX];
                 theRed1 = GEUnpackRed(theFormat, thePixel00);
                 theGreen1 = GEUnpackGreen(theFormat, thePixel00);
                 theBlue1 = GEUnpackBlue(theFormat, thePixel00);
