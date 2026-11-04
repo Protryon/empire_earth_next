@@ -322,11 +322,13 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
                     }
                 } else
                     theTarget = EEMakeBuilding(theThis->mPlayer, theClassID, theTile.mX, theTile.mY);
-                EEUGBuildRepair* theGoal = new EEUGBuildRepair(theWorker->GetPlayer(), theTarget, false);
-                theWorker->ClearGoalQueue(0);
-                theWorker->SetGoal(theGoal, 0, 0);
-                theWorker->StartAction(kActionMoveToRepairSite);
-                theWorker->mUnitClass->ActionChanged(theWorker);
+                if (theTarget != NULL) {   // a requeued farm request orders no one (was a build goal on NULL)
+                    EEUGBuildRepair* theGoal = new EEUGBuildRepair(theWorker->GetPlayer(), theTarget, false);
+                    theWorker->ClearGoalQueue(0);
+                    theWorker->SetGoal(theGoal, 0, 0);
+                    theWorker->StartAction(kActionMoveToRepairSite);
+                    theWorker->mUnitClass->ActionChanged(theWorker);
+                }
                 theResult = true;
             } else {
                 bool theSpace = (gWorld.mMap->mMapCharacteristics & kRMMapWaterlessMap) == kRMMapWaterlessMap;
