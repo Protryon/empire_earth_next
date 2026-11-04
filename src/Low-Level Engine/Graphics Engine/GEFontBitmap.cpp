@@ -228,7 +228,12 @@ long GEFontBitmap::Draw(GEText* inText, GERasterizer* inRasterizer, unsigned lon
     while (_mbscmp(theCharacter, (const unsigned char*)"") != 0) {
         strcpy(reinterpret_cast<char*>(theBuffer), "");
         _mbsnbcat(theBuffer, theCharacter, 1);
-        long theIndex = (char)*theCharacter - this->mFirstCharacter;
+        // Index with the unsigned byte (a signed char made bytes >= 0x80 negative) and skip bytes outside the font.
+        long theIndex = (long)*theCharacter - (long)this->mFirstCharacter;
+        if (theIndex < 0 || theIndex >= (long)this->mCharacters.size()) {
+            theCharacter = _mbsinc(theCharacter);
+            continue;
+        }
         this->mBitmap->SetTexture(this->mCharacters[theIndex].mTexture, inScreen);
         this->mBitmap->SetTextureCoordinates(
             this->mCharacters[theIndex].mTopLeft,
@@ -259,7 +264,12 @@ long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERaster
     while (_mbscmp(theCharacter, (const unsigned char*)"") != 0) {
         strcpy(reinterpret_cast<char*>(theBuffer), "");
         _mbsnbcat(theBuffer, theCharacter, 1);
-        long theIndex = (char)*theCharacter - this->mFirstCharacter;
+        // Index with the unsigned byte (a signed char made bytes >= 0x80 negative) and skip bytes outside the font.
+        long theIndex = (long)*theCharacter - (long)this->mFirstCharacter;
+        if (theIndex < 0 || theIndex >= (long)this->mCharacters.size()) {
+            theCharacter = _mbsinc(theCharacter);
+            continue;
+        }
         this->mBitmap->SetTexture(this->mCharacters[theIndex].mTexture, inScreen);
         theDestination = GERectangle(theLocation, this->mCharacters[theIndex].mRect.GetWidth(),
                                      this->mCharacters[theIndex].mRect.GetHeight());
