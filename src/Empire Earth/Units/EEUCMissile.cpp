@@ -66,6 +66,10 @@ bool EEUCMissile::CheckGroundImpact(EEComplexUnit* inUnit)
     }
     if (inUnit->mFlightTime != 0 || theNear)
         return false;
+    // a missile base's missile may get here without a goal: there is no goal kind to test (it used to be read
+    // through NULL)
+    if (theGoal == NULL)
+        return false;
     if ((inUnit->mGoalState->mKind == kGoalAttackUnit && !EEIsOnTargetTiles(inUnit, static_cast<EEUGAttackUnit*>(inUnit->GetGoal())->mTarget))
         || (inUnit->mLauncherClass->mUnitType == kUnitTypeCpMissileBase
             && ::gWorld.mMap->GetTile(UMFloatToLong(theTarget.GetX()), UMFloatToLong(theTarget.GetY())) == inUnit->mTile))
