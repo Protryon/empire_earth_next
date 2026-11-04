@@ -169,7 +169,7 @@ long EEConvertGameFile(const UString& inDirectory, const UString& inFile, const 
 
 // FUNCTION: EXE 0x52ce0c
 // "update_saved_games": converts every saved game and scenario to "UPDATED <name>", logging to "saved game
-// conversion.log", and deletes the originals (even when a conversion failed)
+// conversion.log", and deletes each original once its conversion succeeded
 void EEUpdateSavedGames()
 {
     FSFileSpec theLog;
@@ -215,6 +215,8 @@ void EEUpdateSavedGames()
             }
             if (theStatus == 0) fprintf(theStream, "success!\n"); else fprintf(theStream, "failed!\n");
             fflush(theStream);
+            if (theStatus != 0)
+                continue;   // keep the original when its conversion failed (it was deleted either way)
             theFile.SetVolume(gStartupVolume);
             theFile.SetDirectory(gStartupDirectory + "Data\\Saved Games\\");
             theFile.SetFile(theNames[i]);
@@ -241,6 +243,8 @@ void EEUpdateSavedGames()
             }
             if (theStatus == 0) fprintf(theStream, "success!\n"); else fprintf(theStream, "failed!\n");
             fflush(theStream);
+            if (theStatus != 0)
+                continue;   // keep the original when its conversion failed (it was deleted either way)
             theFile.SetVolume(gStartupVolume);
             theFile.SetDirectory(gStartupDirectory + "Data\\Scenarios\\");
             theFile.SetFile(theNames[j]);
