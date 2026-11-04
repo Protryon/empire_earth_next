@@ -151,7 +151,6 @@ long NEProtocolConfiguration::IsParameterDiscrete(unsigned long inParameter, boo
 
 // FUNCTION: LLE 0x10045037
 // Loads the configuration from a file, replacing the old parameters; rewinds the file and returns failure on error
-// (the old array is freed before the read and stays a dangling pointer if the read fails early)
 long NEProtocolConfiguration::Load(FSFileSpec& inFile)
 {
     long thePosition;
@@ -164,8 +163,13 @@ long NEProtocolConfiguration::Load(FSFileSpec& inFile)
         this->mParameters[i].mDiscreteValueNames = NULL;
     }
     delete[] this->mParameters;
+    // Fix: the freed array used to stay in mParameters (with a count possibly overwritten by a failed read) when
+    // the load failed before allocating a new one, so the destructor or the next Load freed it again.
+    this->mParameters = NULL;
+    this->mParameterCount = 0;
     if (inFile.GetPosition(thePosition) == kErrorOK) {
     if (inFile.Read(this->mProtocolType) != kErrorOK || (theResult = inFile.Read(this->mParameterCount)) != kErrorOK) {
+        this->mParameterCount = 0;
         theResult = kErrorFailed;
     } else {
         theCount = this->mParameterCount;
