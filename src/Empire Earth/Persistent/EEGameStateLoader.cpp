@@ -369,7 +369,6 @@ long EEGameStateLoader::RestorePlayers(EEPPlayerHelper* inHelper)
         if (this->mState->mInScenarioEditor == true) {
             unsigned long theCount = thePlayers.size();
             this->mState->mPlayers.resize(theCount);
-            this->mState->mNumPlayersMade = theCount;
             this->mState->mNumPlayersMade = inHelper->mMaxPlayers;
         } else {
             unsigned long theCount = inHelper->mMaxPlayers;
@@ -392,9 +391,12 @@ long EEGameStateLoader::RestorePlayers(EEPPlayerHelper* inHelper)
             }
         }
     }
-    if (gCommunications != NULL && gCommunications->IsServer()) {
-        thePlayers[1]->mSlot = kSlotNone;
-        thePlayers[theLocal]->mSlot = kSlotServer;
+    // Only with the players read: a failed read left the vector empty and theLocal unset.
+    if (theResult == kErrorOK && gCommunications != NULL && gCommunications->IsServer()) {
+        if (thePlayers.size() > 1)
+            thePlayers[1]->mSlot = kSlotNone;
+        if ((unsigned long)theLocal < thePlayers.size())
+            thePlayers[theLocal]->mSlot = kSlotServer;
     }
     inHelper->Fn157269(this->mState);
     return theResult;
