@@ -140,13 +140,3 @@ def fix_members(lib, hints, as_is=()):
                 struct.pack_into("<H", b, i + 16, hints[name])
         i += 4
     lib.write_bytes(bytes(b))
-
-
-def main():
-    module, out = sys.argv[1], pathlib.Path(sys.argv[2])
-    for lib in make_import_libs(module, out, [pathlib.Path(p) for p in sys.argv[3:]]):
-        print(lib)
-
-
-if __name__ == "__main__":
-    main()

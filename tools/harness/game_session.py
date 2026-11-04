@@ -178,9 +178,6 @@ def main():
         trace.write_text(''.join(f'{row["candidate_rva"]:x}\n' for row in manifest['functions']),encoding='ascii')
     path=boot.BOOT/(name+'.session')
     role='clang'
-    if a.engine:role+='-engine-relinked'
-    if a.tcp:role+='-tcp-staged'
-    if a.default_dll:role+='-default-staged'
     stamp=datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
     evidence=boot.ROOT/'build/menu_validation'/role/(stamp+(f'_i{a.instance}' if a.instance is not None else ''))
     evidence.mkdir(parents=True)

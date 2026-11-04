@@ -17,7 +17,6 @@ import struct
 import subprocess
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-import exe_roundtrip
 import exe_units
 import verify
 from ee import LINK_DIR, LLD_LINK, LLVM_LIB, ROOT, RUNTIME_LIBS, lib_paths
@@ -33,8 +32,37 @@ EXTRA_LIBS = []
 IMPORT_MODULES = ["exe"]
 EXTRA_RES = []
 ODS, IDP, EXITP = "__imp__OutputDebugStringA@4", "__imp__IsDebuggerPresent@0", "__imp__ExitProcess@4"
-CLASSES = ("won", "engine", "icf", "vslot", "pure", "mismatch", "compile", "unwritten", "unregistered", "unbound", "data",
+CLASSES = ("won", "icf", "vslot", "pure", "mismatch", "compile", "unwritten", "unregistered", "unbound", "data",
            "library")
+
+
+def run(cmd, cwd, pkg=None):
+    r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
+                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    return r.returncode, (r.stdout + r.stderr).strip()
+
+
+def write_order_object(path, symbols):
+    syms, strtab = [], bytearray(4)
+    for name in symbols:
+        if len(name) <= 8:
+            raw = name.encode().ljust(8, b"\0")
+        else:
+            raw = struct.pack("<II", 0, len(strtab))
+            strtab.extend(name.encode() + b"\0")
+        syms.append(raw + struct.pack("<IhHBB", 0, 0, 0, 2, 0))
+    strtab[0:4] = struct.pack("<I", len(strtab))
+    hdr = struct.pack("<HHIIIHH", 0x14C, 0, 0, 20, len(syms), 0, 0)
+    pathlib.Path(path).write_bytes(hdr + b"".join(syms) + bytes(strtab))
+
+
+def link6_map(path):
+    """lld's MSVC-style map with LINK 6's 8-digit Rva+Base column (every image is 32-bit), the form the map readers
+    (exe_fulllink, tools/harness) parse."""
+    if path.exists():
+        text = path.read_text(encoding="latin-1")
+        path.write_text(re.sub(r"(?m)^( [0-9a-f]{4}:[0-9a-f]{8}\s+\S+\s+)0{8}([0-9a-f]{8})", r"\1\2", text),
+                        encoding="latin-1")
 
 
 class Obj:
@@ -163,30 +191,6 @@ def coff_symbols(path):
     return defined, undef
 
 
-def engine_lib(lib_dir, extra, pkg, functions=()):
-    import implib
-    lib = lib_dir / "Low-Level Engine.lib"
-    hints = {sym.encode(): hint for (dll, _), (sym, hint) in exe_roundtrip.short_imports(lib).items()}
-    deff = lib_dir / "Low-Level Engine.def"
-    lines = deff.read_text().splitlines()
-    undata, still = [], []
-    for ln in lines:
-        w = ln.split()
-        if w and w[0] in functions and undname(w[0]).rstrip().endswith(")const"):
-            (still if len(w) == 2 and w[1] == "DATA" else undata).append(w[0])
-    if still:
-        sys.exit(f"implib marks {len(still)} `)const` methods DATA again (no call thunk): {still[:3]}")
-    have = {ln.split()[0] for ln in lines[2:] if ln.strip()}
-    lines += [f"    {n}{' DATA' if implib.is_cpp_data(n) else ''}" for n in extra if n not in have]
-    deff.write_text("\n".join(lines) + "\n")
-    code, log = exe_roundtrip.run([str(LLVM_LIB), "/nologo", "/machine:x86", f"/def:{deff.name}",
-                                   f"/out:{lib.name}"], lib_dir)
-    if code:
-        sys.exit(log)
-    implib.fix_members(lib, hints)
-    return undata
-
-
 def link(out, objs, libs, res, debug, tag):
     target = out / "EE-AOC.exe"
     rsp = out / f"link_{tag}.rsp"
@@ -200,11 +204,10 @@ def link(out, objs, libs, res, debug, tag):
            f"/OUT:{target.name}", f"/MAP:{target.stem}.map", f"/PDB:{target.stem}.pdb", *lib_paths(), f"@{rsp.name}"]
     if target.exists():
         target.unlink()
-    code, log = exe_roundtrip.run(cmd, out)
+    code, log = run(cmd, out)
     log = "\n".join(l for l in log.splitlines() if "ignoring section .debug$S with unrecognized magic" not in l)
     (out / f"link_{tag}.log").write_text(log)
-    import relink
-    relink.link6_map(target.with_suffix(".map"))
+    link6_map(target.with_suffix(".map"))
     return code, log
 
 
@@ -285,9 +288,6 @@ def classify1(sym, is_func, ctx):
         rvas = [ctx["inferred"][sym][0]]
     defined = ctx["defined"]
     bare = sym[6:] if sym.startswith("__imp_") else sym
-    if bare in ctx["engine_exports"]:
-        return "engine", "Low-Level Engine.dll exports it; the original exe does not import it" + \
-            (" (dllimport)" if bare != sym else f" ({virtual_tag(sym)}, referenced directly)")
     if any(lo <= r < hi for r in rvas for lo, hi in WON):
         return "won", ", ".join(f"{r:#x}" for r in rvas)
     own = own_scope(sym)
@@ -700,7 +700,7 @@ def link_exe(out, items, fails, debug=True, members=None, stubs_pass=True, patch
     lib_dir = out / "lib"
     shutil.rmtree(lib_dir, ignore_errors=True)
     lib_dir.mkdir(parents=True)
-    exe_roundtrip.write_order_object(lib_dir / "refs.obj", sorted(refs))
+    write_order_object(lib_dir / "refs.obj", sorted(refs))
     import implib
     exe_imports = implib.read_imports("exe")
     libs = []
@@ -711,7 +711,7 @@ def link_exe(out, items, fails, debug=True, members=None, stubs_pass=True, patch
                 libs.append(lib)
     imglib = lib_dir / "exeimg.lib"
     (lib_dir / "exeimg.rsp").write_text("\n".join(f'"{it["obj"]}"' for it in img) + "\n")
-    code, log = exe_roundtrip.run([str(LLVM_LIB), "/nologo", f"/out:{imglib.name}", "@exeimg.rsp"], lib_dir)
+    code, log = run([str(LLVM_LIB), "/nologo", f"/out:{imglib.name}", "@exeimg.rsp"], lib_dir)
     if code:
         sys.exit(log)
     libs.insert(1, imglib)
@@ -734,10 +734,8 @@ def link_exe(out, items, fails, debug=True, members=None, stubs_pass=True, patch
         k = bisect.bisect_right(ulo, rva) - 1
         return units_sorted[k] if k >= 0 and rva < units_sorted[k]["hi"] else None
     imported = {i.name for _, imps in exe_imports for i in imps}
-    engine_exports = {ln.rsplit(" @", 1)[0] for ln in (LINK_DIR / "lle" / "exports.txt").read_text(encoding="utf-8")
-                      .splitlines() if ln.strip() and not ln.startswith("#")} - imported
     ctx = {"at": at, "of": of, "defined": defined, "by_scope": by_scope, "unit_at": unit_at, "fails": fails,
-           "engine_exports": engine_exports, "alias": {}}
+           "alias": {}}
     inferred = infer_addresses(unres1, game, at, of, read_vtable_slots())
     ctx["inferred"] = inferred
     thunks = read_import_thunks()
@@ -773,7 +771,6 @@ def link_exe(out, items, fails, debug=True, members=None, stubs_pass=True, patch
 
         kinds = collections.Counter()
         fallback = collections.Counter()
-        engine = set()
         members = read_members(members, at, lambda n: n in defined or n in stubbed) if members else {}
         if member_offsets:
             for alias, (cont, off, va) in list(members.items()):
@@ -783,10 +780,6 @@ def link_exe(out, items, fails, debug=True, members=None, stubs_pass=True, patch
         data_stub_rvas = {}
         for s, (c, d, is_func) in sorted(cls1.items()):
             rv = sorted(of.get(s, ())) or ([inferred[s][0]] if s in inferred else [])
-            if c == "engine":
-                engine.add(s[6:] if s.startswith("__imp_") else s)
-                kinds["engine import"] += 1
-                continue
             if s in LIB_SHIMS:
                 stubs.shim(s, *LIB_SHIMS[s])
                 kinds["library shim"] += 1
@@ -830,8 +823,6 @@ def link_exe(out, items, fails, debug=True, members=None, stubs_pass=True, patch
               (("; data pointer fallbacks: " + ", ".join(f"{k} {v}" for k, v in fallback.items())) if fallback
                else ""), flush=True)
 
-        if engine:
-            print(f"exe: {len(engine)} engine symbols unresolved (no engine DLL any more): {sorted(engine)[:5]}")
         code2, log2 = link(out, objs + [out / "stubs.obj"], libs, res, debug, "pass2")
         unres2, dups2, other2 = parse_log(log2)
         print(f"pass 2: link exit {code2}: {len(unres2)} unresolved, {len(dups2)} duplicates, "

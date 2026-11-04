@@ -82,8 +82,7 @@ def main():
     ap.add_argument("--image", type=pathlib.Path, action="append")
     ap.add_argument("--objs", type=pathlib.Path, default=ROOT / "build" / "clang" / "obj")
     a = ap.parse_args()
-    images = a.image or [ROOT / "build" / "clang" / "exe" / "EE-AOC.exe",
-                         ROOT / "build" / "clang" / "lle" / "Low-Level Engine.dll"]
+    images = a.image or [ROOT / "build" / "clang" / "exe" / "EE-AOC.exe"]   # one image: the engine is inside
     bases = {}
     for img in images:
         bases.update(image_hierarchies(img, img.with_suffix(".map")))

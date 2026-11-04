@@ -13,12 +13,13 @@ one-off sources → DLL links → exe link → stub audit against VC6.
 |---|---|
 Since the VC6 removal (see "Removing VC6 and Dinkum" at the end), the build is `python -I build.py`
 (`tools/build.py`). The phase-1 tools `clang_link.py`, `clang_vc6inc.py`, `objcmp.py` and `clang_session.py` are
-gone, and their roles appear below only as history.
+gone, and their roles appear below only as history. Kept for the WON port: `clang_forscope.py`, `clang_reftemp.py`,
+`clang_rtti_audit.py`.
 
 | Tool | Use |
 |---|---|
 | `tools/clang_build.py [-j N] [--opt X] [module ...]` | compile census. Per-unit logs go to `build/clang/log/`, and the summary ranks the most frequent errors (names masked). Rerun it after every fix batch. |
-| `tools/build.py` (`build.py`) | the build: compiles everything up front, then links the engine, the DLLs (`relink.py`) and the exe (`exe_fulllink.py`) with lld-link. Writes `build/clang/exe/link_report.json`. `--test-profile windowed-software`: harness images; `--sanitize-null`: UBSan builds. |
+| `tools/build.py` (`build.py`) | the build: compiles everything up front, then links the one exe (`exe_fulllink.py`) with lld-link (the DLL links of `relink.py` are gone with the DLLs). Writes `build/clang/exe/link_report.json`. `--test-profile windowed-software`: harness images; `--sanitize-null`: UBSan builds. |
 | `tools/clang_forscope.py [--apply]` | hoists for-init variables used after their loop. |
 | `tools/clang_reftemp.py [--apply]` | names temporaries passed to non-const references at plain call sites. |
 | `tools/clang_ubdiff.py` | functions whose code depends on a UB-taming flag (with/without, `/Gy`). |

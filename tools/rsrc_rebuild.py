@@ -26,14 +26,3 @@ def compile_rc(rc, out):
         sys.exit(f"rc {rc}: exit {code}\n{log}")
     return res
 
-
-def build_dll(rc, out, dll):
-    out = pathlib.Path(out).resolve()
-    res = compile_rc(rc, out)
-    stem = pathlib.Path(dll).stem
-    code, log = run([str(LLD_LINK), "/nologo", "/DLL", "/NOENTRY", "/DEBUG", "/INCREMENTAL:NO", "/MACHINE:X86",
-                     f"/PDB:{stem}.pdb", f"/OUT:{dll}", res.name], out)
-    print(f"link: exit {code}" + (f"\n{log}" if log else ""))
-    if code:
-        sys.exit(1)
-    return out / dll

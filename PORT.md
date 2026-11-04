@@ -15,7 +15,7 @@ git merge upstream/fixes-all
 ```
 
 Source changes merge normally. The build tooling is this fork's own: upstream's VC6 build files (`tools/build.py`,
-`relink.py`, `implib.py`, `exe_fulllink.py`, `rsrc_rebuild.py`, `verify.py`, `ee.py`, the fetch scripts,
+`relink.py`, `exe_roundtrip.py` (both deleted here), `implib.py`, `exe_fulllink.py`, `rsrc_rebuild.py`, `verify.py`, `ee.py`, the fetch scripts,
 `include/dinkum/`) were rewritten or deleted here. When upstream changes one of them, keep this fork's version
 (`git checkout --ours <file>`) and port anything relevant by hand. Upstream's matching stand-ins
 (`include/LostDebug.h`, `EE_LOST_*`) are deleted here too: resolve new uses by dropping them.
@@ -76,7 +76,7 @@ crate can replace.
    DX7HRDisplay is dropped. `/MT` replaces `/MD`. The harness stages one exe. Open: the engine's export table
    (until polymorphic `new[]`/`delete[]` are gone or clang emits vector deleting destructors on its own), the
    per-module header views (`tools/odr_check.py`: 28 inline functions with divergent copies, mostly older ODR
-   clashes inside the game), and the DLL-era tools (`relink.py`, `implib.py`'s DLL parts, `rsrc_rebuild.build_dll`).
+   clashes inside the game).
 2. **Audio output: miniaudio** (`src/ThirdParty/miniaudio`, MIT-0) replaces DirectSound as the one device. The mixer
    is rewritten on it (its 34 `AIL_*` uses: driver, sample handles, volume/pan/rate/loop/position, named sample
    files; WAV through dr_wav, MP3 through dr_mp3). `Mss32.dll` and the `redist\win32` providers go.
