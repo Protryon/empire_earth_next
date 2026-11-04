@@ -5695,7 +5695,10 @@ void EEComputerPlayer::UpdateGroups()
                 for (; theFirst != theFound; theFirst++)
                     (*theFirst)->SetActive(true, 0);
             }
-            for (theCenter = this->mResourceCenters.begin(); ++theCenter != this->mResourceCenters.end() - 1;) {
+            // activate inactive centers between two active ones; with a single center there is no gap (the loop
+            // used to step past its end then, as begin + 1 never equals end - 1)
+            for (theCenter = this->mResourceCenters.begin();
+                this->mResourceCenters.size() >= 2 && ++theCenter != this->mResourceCenters.end() - 1;) {
                 if (!(*theCenter)->mIsActive && (*(theCenter - 1))->mIsActive && (*(theCenter + 1))->mIsActive)
                     (*theCenter)->SetActive(true, 0);
             }
