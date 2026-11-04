@@ -715,11 +715,11 @@ _stricmp	449
 ??_7URegistry@@6B@	990
 ?UGetOSLanguage@@YAGXZ	4179
 ?ToUpper@UString@@QAEXXZ	4158
-?CreateRegistryValue@URegistry@@QAEJJAAVUWideString@@0AAJ@Z	1363
-?GetRegistryValue@URegistry@@QAEJJAAVUWideString@@0AAJ@Z	2530
-?CreateRegistryValue@URegistry@@QAEJJAAVUWideString@@00@Z	1362
-?GetRegistryValue@URegistry@@QAEJJAAVUWideString@@00@Z	2529
-?CreateRegistryKey@URegistry@@QAEJJAAVUWideString@@@Z	1361
+?CreateRegistryValue@URegistry@@QAEJPAUHKEY__@@AAVUWideString@@1AAJ@Z	1363
+?GetRegistryValue@URegistry@@QAEJPAUHKEY__@@AAVUWideString@@1AAJ@Z	2530
+?CreateRegistryValue@URegistry@@QAEJPAUHKEY__@@AAVUWideString@@11@Z	1362
+?GetRegistryValue@URegistry@@QAEJPAUHKEY__@@AAVUWideString@@11@Z	2529
+?CreateRegistryKey@URegistry@@QAEJPAUHKEY__@@AAVUWideString@@@Z	1361
 ?UEEncryptUString@@YAXABVUString@@AAV1@@Z	4178
 ??1FSMemoryFile@@UAE@XZ	432
 ?SetPosition@FSMemoryFile@@UAEJJK_N@Z	3855

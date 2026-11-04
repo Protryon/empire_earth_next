@@ -902,12 +902,12 @@ long EECPWallManager::Restore(unsigned long inMajorVersion, unsigned long inMino
     this->mWalls.clear();
     for (i = 0; i < theWalls.size(); i++) {
         theWall = theWalls[i];
-        if (reinterpret_cast<unsigned long>(theWall.mUnit) == -1)
+        if (USavedID(theWall.mUnit) == -1)
             continue;
-        theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(theWall.mUnit))));
+        theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(theWall.mUnit))));
         if (theUnit == NULL)
             continue;
-        EEPlayer* thePlayer = gWorld.mPlayers[reinterpret_cast<unsigned long>(theWall.mEnemy)];
+        EEPlayer* thePlayer = gWorld.mPlayers[USavedID(theWall.mEnemy)];
         EEPlayer* theEnemy = dynamic_cast<EEPlayer*>(thePlayer);
         if (theEnemy == NULL)
             continue;
@@ -920,9 +920,9 @@ long EECPWallManager::Restore(unsigned long inMajorVersion, unsigned long inMino
     this->mGates.clear();
     for (i = 0; i < theGates.size(); i++) {
         theUnit = theGates[i];
-        if (reinterpret_cast<unsigned long>(theUnit) == -1)
+        if (USavedID(theUnit) == -1)
             continue;
-        theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(theUnit))));
+        theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(theUnit))));
         if (theUnit != NULL) {
             theUnit->Reference();
             this->mGates.push_back(theUnit);

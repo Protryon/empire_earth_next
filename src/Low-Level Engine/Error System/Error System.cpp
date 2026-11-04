@@ -286,7 +286,7 @@ void ESShutdown(bool inForced)
 // int3; jmp [__imp__abort] (provisional name)
 static void ESShowVerification(const char* inText)
 {
-    __asm int 3
+    __debugbreak();
     abort();
 }
 

@@ -275,7 +275,6 @@ fe553 101c34 Empire Earth/Graphics Thread/EEE3DVolcano.cpp
 137ba3 13e967 Empire Earth/Empire Earth/EEWorld.cpp
 13e967 147dfd Empire Earth/Empire Earth/Empire Earth.cpp
 147dfd 148291 RTS Engine/RTS Engine/RTSWorld.cpp
-148291 1482e4 Low-Level Engine/Utilities/UFtol.cpp
 1482e4 1497f4 Empire Earth/Empire Earth/EEGameUtilities.cpp
 1497f4 149c3c Empire Earth/Persistent/EEPCalamityHelper.cpp
 149c3c 14a009 Empire Earth/Persistent/EEPChecksum.cpp

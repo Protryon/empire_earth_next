@@ -227,7 +227,7 @@ long EEUGUnloadTransport::Load(unsigned long inMajorVersion, unsigned long inMin
 // saves up to 0.218 use the unload tile for all three tiles; returns 0
 long EEUGUnloadTransport::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
-    RTSUnit* theUnit = ::gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mTransport));
+    RTSUnit* theUnit = ::gWorld.GetUnit(USavedID(this->mTransport));
     if (theUnit != NULL) {
         this->mTransport = static_cast<EEUnit*>(theUnit)->mComplexUnit;
         this->mTransport->Reference();

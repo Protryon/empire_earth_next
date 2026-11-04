@@ -18,8 +18,8 @@ public:
     long Stop();
     long Stop(unsigned long& outElapsed, unsigned long& outRemaining);
 private:
-    static void __stdcall TimerCallback(unsigned int inTimerID, unsigned int inMessage, unsigned long inUser,
-                                        unsigned long inParameter1, unsigned long inParameter2);
+    static void CALLBACK TimerCallback(UINT inTimerID, UINT inMessage, DWORD_PTR inUser, DWORD_PTR inParameter1,
+                                      DWORD_PTR inParameter2);
 
     void (*mCallback)(void*);               // +0x00
     void* mParameter;                       // +0x04

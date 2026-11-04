@@ -16,7 +16,7 @@ class EEUCLandable : public EEUnitClass {
 public:
     EEUCLandable();                         // inline
     EEUCLandable(EEUnitClassRecord* inRecord, int inIndex);   // inline: defined in EEUnitClass.cpp (the class factory 0x2358b1; out of line 0x236205)
-    EEUCLandable(EEUnitClassRecord* inRecord, long inModel);   // inline: defined in EEUnitClass.cpp (the class factory 0x2358b1; out of line 0x23622a)
+    EEUCLandable(EEUnitClassRecord* inRecord, EEPhysicsModel* inModel);   // inline: defined in EEUnitClass.cpp (the class factory 0x2358b1; out of line 0x23622a)
     virtual ~EEUCLandable() {}              // +0x00 dtor 0x2305ee
     virtual bool CanAttackMove();           // +0x10 0x18aa9 trivial: mov al, 1; ret (ICF: ?$EEAIAStarGoalBase@VEEAIAStarBoundedStorage@@VEEMap@@, ?$EEAIAStarGoalBase@VEEAIAStarChokePointStorage@@VEEMap@@...)
     virtual float GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocation); // +0x24 0x213ed2 (ICF: EEUCAirplane, EEUCPlanetSpaceship)

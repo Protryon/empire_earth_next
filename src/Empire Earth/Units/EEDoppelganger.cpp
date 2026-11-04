@@ -148,8 +148,8 @@ long EEDoppelganger::Load(unsigned long inMajorVersion, unsigned long inMinorVer
 long EEDoppelganger::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
     long theResult = 0;
-    long thePlayer = reinterpret_cast<long>(this->mPlayer);
-    EEUnit* theUnit = static_cast<EEUnit*>(::gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mUnit)));
+    long thePlayer = (long)USavedID(this->mPlayer);
+    EEUnit* theUnit = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mUnit)));
     if (theUnit != NULL) {
         this->mUnit = theUnit;
         theUnit->Reference();

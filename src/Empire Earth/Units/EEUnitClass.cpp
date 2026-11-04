@@ -185,10 +185,10 @@ std::vector<unsigned long> EEUnitClass::sUnitTypes;
 // FUNCTION: EXE 0x62f317
 // Creates a unit class from its dbunits record: stats, sounds and effects (referenced), terrain table, movement
 // domains and kind flags (terrain slot 5 copies slot 0's record byte; the animal id is looked up twice)
-EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, long inArg3)
+EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysicsModel* inPhysicsModel)
 {
-    this->mResearchTechnologies.resize(inRecord->mNumAttributes, inArg3);
-    this->mPhysicsModel = reinterpret_cast<EEPhysicsModel*>(inArg3);
+    this->mResearchTechnologies.resize(inRecord->mNumAttributes);   // (VC6 filled with the model pointer; all overwritten)
+    this->mPhysicsModel = inPhysicsModel;
     for (unsigned long i = 0; i < inRecord->mNumAttributes; i++)
         this->mResearchTechnologies[i] = inRecord->mAttributes[i];
     for (unsigned long theIndex = 0; theIndex < 7; theIndex++)
@@ -2846,11 +2846,11 @@ void EEUnitClass::LoadMedia(EEPlayer* inPlayer)
 // Where the original's budget refused them, their out-of-line copies follow the factory (0x6361e3..0x6363ce).
 inline EEUCAirAnimal::EEUCAirAnimal(EEUnitClassRecord* inRecord) : EEUCAirplane(inRecord, gPhysicsModels[10]) {}
 inline EEUCAirplane::EEUCAirplane(EEUnitClassRecord* inRecord) : EEUCLandable(inRecord, 1) {}
-inline EEUCAirplane::EEUCAirplane(EEUnitClassRecord* inRecord, long inModel) : EEUCLandable(inRecord, inModel) {}
+inline EEUCAirplane::EEUCAirplane(EEUnitClassRecord* inRecord, EEPhysicsModel* inModel) : EEUCLandable(inRecord, inModel) {}
 inline EEUCAmbient::EEUCAmbient(EEUnitClassRecord* inRecord) : EEUnitClass(0, inRecord, 0) {}
 inline EEUCBasicCitizen::EEUCBasicCitizen(EEUnitClassRecord* inRecord, int inIndex) : EEUnitClass(1, inRecord, gPhysicsModels[inIndex]) {}
 inline EEUCBomb::EEUCBomb(EEUnitClassRecord* inRecord) : EEUCProjectile(inRecord) {}
-inline EEUCBuilding::EEUCBuilding(EEUnitClassRecord* inRecord, long inModel) : EEUnitClass(1, inRecord, inModel) {}
+inline EEUCBuilding::EEUCBuilding(EEUnitClassRecord* inRecord, EEPhysicsModel* inModel) : EEUnitClass(1, inRecord, inModel) {}
 inline EEUCBuildingPriest::EEUCBuildingPriest(EEUnitClassRecord* inRecord) : EEUCBuilding(inRecord, gPhysicsModels[8]) {}
 inline EEUCFortress::EEUCFortress(EEUnitClassRecord* inRecord) : EEUCLandTransport(inRecord, 8) {}
 inline EEUCGate::EEUCGate(EEUnitClassRecord* inRecord) : EEUCBuilding(inRecord, gPhysicsModels[8]) {}
@@ -2863,7 +2863,7 @@ inline EEUCLandMilitaryHero::EEUCLandMilitaryHero(EEUnitClassRecord* inRecord) :
 inline EEUCLandTransport::EEUCLandTransport(EEUnitClassRecord* inRecord) : EEUCTransport(inRecord, 0) {}
 inline EEUCLandTransport::EEUCLandTransport(EEUnitClassRecord* inRecord, int inIndex) : EEUCTransport(inRecord, inIndex) {}
 inline EEUCLandable::EEUCLandable(EEUnitClassRecord* inRecord, int inIndex) : EEUnitClass(1, inRecord, gPhysicsModels[inIndex]) {}
-inline EEUCLandable::EEUCLandable(EEUnitClassRecord* inRecord, long inModel) : EEUnitClass(1, inRecord, inModel) {}
+inline EEUCLandable::EEUCLandable(EEUnitClassRecord* inRecord, EEPhysicsModel* inModel) : EEUnitClass(1, inRecord, inModel) {}
 inline EEUCMiningBuilding::EEUCMiningBuilding(EEUnitClassRecord* inRecord) : EEUCBuilding(inRecord, gPhysicsModels[0]) {}
 inline EEUCMissile::EEUCMissile(EEUnitClassRecord* inRecord) : EEUnitClass(1, inRecord, gPhysicsModels[7]) {}
 inline EEUCNaval::EEUCNaval(EEUnitClassRecord* inRecord) : EEUnitClass(1, inRecord, gPhysicsModels[4]) {}
@@ -2877,7 +2877,7 @@ inline EEUCSeaAnimal::EEUCSeaAnimal(EEUnitClassRecord* inRecord) : EEUCSubmerged
 inline EEUCSpaceBuilding::EEUCSpaceBuilding(EEUnitClassRecord* inRecord) : EEUCBuilding(inRecord, gPhysicsModels[11]) {}
 inline EEUCSpaceTransport::EEUCSpaceTransport(EEUnitClassRecord* inRecord) : EEUCTransport(inRecord, 0xb) {}
 inline EEUCSpaceship::EEUCSpaceship(EEUnitClassRecord* inRecord) : EEUnitClass(1, inRecord, gPhysicsModels[11]) {}
-inline EEUCSubmergedNaval::EEUCSubmergedNaval(EEUnitClassRecord* inRecord, long inModel) : EEUnitClass(1, inRecord, inModel) {}
+inline EEUCSubmergedNaval::EEUCSubmergedNaval(EEUnitClassRecord* inRecord, EEPhysicsModel* inModel) : EEUnitClass(1, inRecord, inModel) {}
 inline EEUCTorpedo::EEUCTorpedo(EEUnitClassRecord* inRecord) : EEUCMissile(inRecord) {}
 inline EEUCTransport::EEUCTransport(EEUnitClassRecord* inRecord, int inIndex) : EEUnitClass(1, inRecord, gPhysicsModels[inIndex]) {}
 

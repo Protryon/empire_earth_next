@@ -169,7 +169,7 @@ void EEWUnitsOffMapInfo::ReleaseUnit()
 // Turns the loaded unit ID back into a referenced unit (NULL when it no longer exists); always succeeds
 long EEWUnitsOffMapInfo::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
-    RTSUnit* theUnit = gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mUnit));
+    RTSUnit* theUnit = gWorld.GetUnit(USavedID(this->mUnit));
     if (theUnit != NULL) {
         this->mUnit = theUnit;
         theUnit->Reference();

@@ -166,7 +166,7 @@ long EEUGHealUnit::RepairPointers(unsigned long inFirst, unsigned long inSecond)
     long theResult = 0;
     if (this->mTarget != NULL) {
         theResult = 3;
-        RTSUnit* theUnit = ::gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mTarget));
+        RTSUnit* theUnit = ::gWorld.GetUnit(USavedID(this->mTarget));
         if (theUnit != NULL) {
             this->mTarget = static_cast<EEUnit*>(theUnit)->mComplexUnit;
             if (this->mTarget != NULL) {

@@ -642,7 +642,7 @@ void EELobbyFn297BE0()
         HINSTANCE theResult = ShellExecuteA(GetDesktopWindow(), "open",
             theFile.GetVolume() + theFile.GetDirectory() + theFile.GetFile(), NULL,
             theFile.GetVolume() + theFile.GetDirectory(), SW_SHOWNORMAL);
-        if ((int)theResult > 32) {
+        if ((INT_PTR)theResult > 32) {
             PostQuitMessage(0);
             return;
         }

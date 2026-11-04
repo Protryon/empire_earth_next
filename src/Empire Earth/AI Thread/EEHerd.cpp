@@ -899,13 +899,13 @@ long EEHerd::RepairPointers(long, long)
 {
     std::vector<EEComplexUnit*> theYoung;
     std::vector<U2DPoint<long> > theTiles;
-    this->mPlayer = gWorld.GetPlayer(reinterpret_cast<unsigned long>(this->mPlayer));
-    this->mAnimal = EEAnimal::sTable[reinterpret_cast<unsigned long>(this->mAnimal)];
+    this->mPlayer = gWorld.GetPlayer(USavedID(this->mPlayer));
+    this->mAnimal = EEAnimal::sTable[USavedID(this->mAnimal)];
     if (this->mAnimal)
         this->mRadiusSquared = this->mAnimal->GetHerdRadius() * this->mAnimal->GetHerdRadius();
     for (long i = this->mUnits.size() - 1; i >= 0; i--) {
         if (this->mUnits[i] != (EEComplexUnit*)-1) {
-            unsigned long theID = reinterpret_cast<unsigned long>(this->mUnits[i]);
+            unsigned long theID = USavedID(this->mUnits[i]);
             this->mUnits[i] = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(theID)));
             if (this->mUnits[i]) {
                 this->mUnits[i]->mReferenceCount++;
@@ -921,7 +921,7 @@ long EEHerd::RepairPointers(long, long)
             this->mAnimal = EEAnimal::Get(this->mUnits[0]->GetUnitClass()->mAnimalID);
     }
     if (this->mLeader != (EEComplexUnit*)-1) {
-        this->mLeader = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mLeader))));
+        this->mLeader = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mLeader))));
         if (this->mLeader)
             this->mLeader->mReferenceCount++;
     } else
@@ -936,7 +936,7 @@ long EEHerd::RepairPointers(long, long)
             this->PickLeader();
     }
     if (this->mTarget != (EEComplexUnit*)-1) {
-        this->mTarget = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mTarget))));
+        this->mTarget = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mTarget))));
         if (this->mTarget)
             this->mTarget->mReferenceCount++;
     } else

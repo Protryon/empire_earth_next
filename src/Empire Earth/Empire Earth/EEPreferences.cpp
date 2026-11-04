@@ -14,7 +14,7 @@
 #include "ee/EEGamePreferences.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EETechTreeTechID.h"
-#define kEERootKey ((long)HKEY_CURRENT_USER)
+#define kEERootKey HKEY_CURRENT_USER
 #define kEERegistryKey "Software\\Mad Doc Software\\EE-AOC"
 #define kEEGameOptionsKey "Software\\Mad Doc Software\\EE-AOC\\Game Options"
 #define kEEOriginalRegistryKey "Software\\SSSI\\Empire Earth"

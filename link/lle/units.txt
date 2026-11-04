@@ -91,7 +91,6 @@
 549b6 56369 Utilities/U2DSparseArray.cpp
 56369 5662f Utilities/UDataCompression.cpp
 5662f 57218 Utilities/UEncryption.cpp
-57218 5726b Utilities/UFtol.cpp
 5726b 58d38 Utilities/UGraph.cpp
 58d38 5c34a User Interface/UIBackground.cpp
 5c34a 5c84e User Interface/UIBackgroundTable.cpp

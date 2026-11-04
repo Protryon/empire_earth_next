@@ -10,11 +10,11 @@
 
 static const long kInvalidRootKey = 3;
 
-inline bool URIsRootKey(long inRootKey)
+inline bool URIsRootKey(HKEY inRootKey)
 {
-    return inRootKey == (long)HKEY_CLASSES_ROOT || inRootKey == (long)HKEY_CURRENT_CONFIG
-        || inRootKey == (long)HKEY_LOCAL_MACHINE || inRootKey == (long)HKEY_USERS
-        || inRootKey == (long)HKEY_DYN_DATA || inRootKey == (long)HKEY_CURRENT_USER;
+    return inRootKey == HKEY_CLASSES_ROOT || inRootKey == HKEY_CURRENT_CONFIG
+        || inRootKey == HKEY_LOCAL_MACHINE || inRootKey == HKEY_USERS
+        || inRootKey == HKEY_DYN_DATA || inRootKey == HKEY_CURRENT_USER;
 }
 
 // Header-inline members emitted here
@@ -25,7 +25,7 @@ inline bool URIsRootKey(long inRootKey)
 
 // FUNCTION: LLE 0x10081dfd
 // Creates a registry key under a root key; 3 for an invalid root, native error on failure
-long URegistry::CreateRegistryKey(long inRootKey, UWideString& inKey)
+long URegistry::CreateRegistryKey(HKEY inRootKey, UWideString& inKey)
 {
     HKEY theNewKey;
     DWORD theDisposition;
@@ -34,7 +34,7 @@ long URegistry::CreateRegistryKey(long inRootKey, UWideString& inKey)
     theClass[0] = 0;
     if (URIsRootKey(inRootKey)) {
         HKEY theRoot;
-        if (RegOpenKeyEx((HKEY)inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
+        if (RegOpenKeyEx(inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
             if (RegCreateKeyEx(theRoot, inKey, 0, theClass, REG_OPTION_NON_VOLATILE, KEY_ALL_ACCESS, NULL, &theNewKey,
                                &theDisposition) == ERROR_SUCCESS) {
                 theResult = kErrorOK;
@@ -56,13 +56,13 @@ long URegistry::CreateRegistryKey(long inRootKey, UWideString& inKey)
 
 // FUNCTION: LLE 0x10081ebf
 // Deletes a registry key under a root key; 3 for an invalid root, native error on failure
-long URegistry::DeleteRegistryKey(long inRootKey, UWideString& inKey)
+long URegistry::DeleteRegistryKey(HKEY inRootKey, UWideString& inKey)
 {
     long theResult = kInvalidRootKey;
     if (URIsRootKey(inRootKey)) {
         HKEY theRoot;
         theResult = kErrorOK;
-        if (RegOpenKeyEx((HKEY)inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
+        if (RegOpenKeyEx(inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
             if (RegDeleteKey(theRoot, inKey) != ERROR_SUCCESS) {
                 ESRecordNativeError(GetLastError());
                 ESGetNativeError();
@@ -80,12 +80,12 @@ long URegistry::DeleteRegistryKey(long inRootKey, UWideString& inKey)
 
 // FUNCTION: LLE 0x10081f5a
 // Deletes a value of a registry key; 3 for an invalid root, native error on failure
-long URegistry::DeleteRegistryValue(long inRootKey, UWideString& inKey, UWideString& inValueName)
+long URegistry::DeleteRegistryValue(HKEY inRootKey, UWideString& inKey, UWideString& inValueName)
 {
     HKEY theRoot;
     long theResult = kInvalidRootKey;
     if (URIsRootKey(inRootKey)) {
-        if (RegOpenKeyEx((HKEY)inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
+        if (RegOpenKeyEx(inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
             HKEY theKey;
             if (RegOpenKeyEx(theRoot, inKey, 0, KEY_ALL_ACCESS, &theKey) == ERROR_SUCCESS) {
                 if (RegDeleteValue(theKey, inValueName) == ERROR_SUCCESS)
@@ -113,14 +113,14 @@ long URegistry::DeleteRegistryValue(long inRootKey, UWideString& inKey, UWideStr
 
 // FUNCTION: LLE 0x10082035
 // Writes a string value into an existing registry key; 3 for an invalid root, native error on failure
-long URegistry::CreateRegistryValue(long inRootKey, UWideString& inKey, UWideString& inValueName,
+long URegistry::CreateRegistryValue(HKEY inRootKey, UWideString& inKey, UWideString& inValueName,
                                     UWideString& inValue)
 {
     HKEY theRoot;
     char theData[1024];
     long theResult = kInvalidRootKey;
     if (URIsRootKey(inRootKey)) {
-        if (RegOpenKeyEx((HKEY)inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
+        if (RegOpenKeyEx(inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
             HKEY theKey;
             if (RegOpenKeyEx(theRoot, inKey, 0, KEY_ALL_ACCESS, &theKey) == ERROR_SUCCESS) {
                 strcpy(theData, inValue);
@@ -149,13 +149,13 @@ long URegistry::CreateRegistryValue(long inRootKey, UWideString& inKey, UWideStr
 
 // FUNCTION: LLE 0x1008213c
 // Writes a DWORD value into an existing registry key; 3 for an invalid root, native error on failure
-long URegistry::CreateRegistryValue(long inRootKey, UWideString& inKey, UWideString& inValueName, long& inValue)
+long URegistry::CreateRegistryValue(HKEY inRootKey, UWideString& inKey, UWideString& inValueName, long& inValue)
 {
     long theValue = inValue;
     long theResult = kInvalidRootKey;
     if (URIsRootKey(inRootKey)) {
         HKEY theRoot;
-        if (RegOpenKeyEx((HKEY)inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
+        if (RegOpenKeyEx(inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
             HKEY theKey;
             if (RegOpenKeyEx(theRoot, inKey, 0, KEY_ALL_ACCESS, &theKey) == ERROR_SUCCESS) {
                 if (RegSetValueEx(theKey, inValueName, 0, REG_DWORD, reinterpret_cast<const BYTE*>(&theValue), sizeof(theValue)) == ERROR_SUCCESS)
@@ -183,7 +183,7 @@ long URegistry::CreateRegistryValue(long inRootKey, UWideString& inKey, UWideStr
 
 // FUNCTION: LLE 0x10082229
 // Reads a DWORD registry value; 3 for an invalid root, native error on failure
-long URegistry::GetRegistryValue(long inRootKey, UWideString& inKey, UWideString& inValueName, long& outValue)
+long URegistry::GetRegistryValue(HKEY inRootKey, UWideString& inKey, UWideString& inValueName, long& outValue)
 {
     HKEY theRoot;
     DWORD theSize;
@@ -193,7 +193,7 @@ long URegistry::GetRegistryValue(long inRootKey, UWideString& inKey, UWideString
     theType = REG_DWORD;
     theSize = sizeof(long);
     if (URIsRootKey(inRootKey)) {
-        if (RegOpenKeyEx((HKEY)inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
+        if (RegOpenKeyEx(inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
             HKEY theKey;
             if (RegOpenKeyEx(theRoot, inKey, 0, KEY_ALL_ACCESS, &theKey) == ERROR_SUCCESS) {
                 if (RegQueryValueEx(theKey, inValueName, NULL, &theType, reinterpret_cast<BYTE*>(&theValue), &theSize)
@@ -223,7 +223,7 @@ long URegistry::GetRegistryValue(long inRootKey, UWideString& inKey, UWideString
 
 // FUNCTION: LLE 0x10082327
 // Reads a string registry value (at most 500 bytes); 3 for an invalid root, native error on failure
-long URegistry::GetRegistryValue(long inRootKey, UWideString& inKey, UWideString& inValueName,
+long URegistry::GetRegistryValue(HKEY inRootKey, UWideString& inKey, UWideString& inValueName,
                                  UWideString& outValue)
 {
     HKEY theRoot;
@@ -234,7 +234,7 @@ long URegistry::GetRegistryValue(long inRootKey, UWideString& inKey, UWideString
     theType = 0;
     theSize = 500;
     if (URIsRootKey(inRootKey)) {
-        if (RegOpenKeyEx((HKEY)inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
+        if (RegOpenKeyEx(inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
             HKEY theKey;
             if (RegOpenKeyEx(theRoot, inKey, 0, KEY_ALL_ACCESS, &theKey) == ERROR_SUCCESS) {
                 if (RegQueryValueEx(theKey, inValueName, NULL, &theType, reinterpret_cast<BYTE*>(theData), &theSize)
@@ -264,12 +264,12 @@ long URegistry::GetRegistryValue(long inRootKey, UWideString& inKey, UWideString
 
 // FUNCTION: LLE 0x10082443
 // Sets a string registry value in an existing key
-long URegistry::SetRegistryValue(long inRootKey, UWideString& inKey, UWideString& inValueName, UWideString& inValue)
+long URegistry::SetRegistryValue(HKEY inRootKey, UWideString& inKey, UWideString& inValueName, UWideString& inValue)
 {
     HKEY theRoot;
     long theResult = kInvalidRootKey;
     if (URIsRootKey(inRootKey)) {
-        if (RegOpenKeyEx((HKEY)inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
+        if (RegOpenKeyEx(inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
             HKEY theKey;
             // Fixed: the key was opened and the old value queried in one test; when the query failed (value missing,
             // or a string over 500 bytes) the call failed and the opened key was never closed
@@ -301,13 +301,13 @@ long URegistry::SetRegistryValue(long inRootKey, UWideString& inKey, UWideString
 
 // FUNCTION: LLE 0x1008257a
 // Sets a DWORD registry value in an existing key
-long URegistry::SetRegistryValue(long inRootKey, UWideString& inKey, UWideString& inValueName, long inValue)
+long URegistry::SetRegistryValue(HKEY inRootKey, UWideString& inKey, UWideString& inValueName, long inValue)
 {
     DWORD theSize = sizeof(long);
     HKEY theRoot;
     long theResult = kInvalidRootKey;
     if (URIsRootKey(inRootKey)) {
-        if (RegOpenKeyEx((HKEY)inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
+        if (RegOpenKeyEx(inRootKey, NULL, 0, KEY_ALL_ACCESS, &theRoot) == ERROR_SUCCESS) {
             HKEY theKey;
             // Fixed: the key was opened and the old value queried in one test; when the value was missing the call
             // failed and the opened key was never closed

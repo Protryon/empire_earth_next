@@ -597,7 +597,7 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
         EEUnit* theStorage = theGoal->mStorage;
         if (theResource != NULL
             && (theStorage == NULL || static_cast<EEComplexUnit*>(theStorage)->DistanceSquaredToUnit(theResource) > (float)theRange)) {
-            theResult = theGoal->FindUnfinishedFarm(inUnit) == 0;
+            theResult = theGoal->FindUnfinishedFarm(inUnit) == NULL;
             if (theResult) {
                 EEUnit* theNearest = theClass->FindStorage(inUnit, true);
                 if (theNearest != NULL

@@ -706,7 +706,7 @@ long EEUserInterface::Run(void* inParameter)
         this->mThread->UnlockMessageQueue();
         for (unsigned long i = 0; i < theMessages.size(); i++) {
             EEUIThreadMessage& theEntry = theMessages[i];
-            this->HandleMessage(theEntry.mMessage, reinterpret_cast<long>(theEntry.mParameter1), reinterpret_cast<long>(theEntry.mParameter2));
+            this->HandleMessage(theEntry.mMessage, (long)reinterpret_cast<intptr_t>(theEntry.mParameter1), (long)reinterpret_cast<intptr_t>(theEntry.mParameter2));
         }
         theMessages.clear();
         if (UMGetFloatingPointPrecision() != kFPPrecision53)
@@ -1759,7 +1759,7 @@ void EEUserInterface::ResumeGraphics()
 // FUNCTION: EXE 0x6798ce
 // Handles the game window's messages: creation, close, size, activation (minimizing and suspending input while
 // inactive), keys, IME and the lobby's custom messages
-long __stdcall EEUserInterface::WindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam)
+LRESULT CALLBACK EEUserInterface::WindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam)
 {
     static float sMasterVolume = gSoundManager != NULL ? gSoundManager->GetMasterVolume() : 0.0f;
     static float sMusicVolume = gConductor != NULL ? gConductor->GetConductor().GetVolume() : 0.0f;

@@ -978,7 +978,7 @@ long EECPCivilizationManager::Restore(unsigned long inMajorVersion, unsigned lon
             this->mScheduleEpochAdvance = true;
         } else
             this->mNextEpochAdvanceTime += gPhysics->mGameTime;
-        unsigned long theID = reinterpret_cast<unsigned long>(this->mGarrison);
+        unsigned long theID = USavedID(this->mGarrison);
         this->mGarrison = NULL;
         if (theID != (unsigned long)-1) {
             EEComplexUnit* theGarrison = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theID));
@@ -987,7 +987,7 @@ long EECPCivilizationManager::Restore(unsigned long inMajorVersion, unsigned lon
                 theGarrison->Reference();
             }
         }
-        theID = reinterpret_cast<unsigned long>(this->mFortress);
+        theID = USavedID(this->mFortress);
         this->mFortress = NULL;
         if (theID != (unsigned long)-1) {
             EEComplexUnit* theFortress = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theID));

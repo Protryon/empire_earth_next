@@ -733,7 +733,7 @@ void EEUGGather::ArriveAtResource(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x623675
 // Returns an unfinished living settlement within twice the gatherer's line of sight (0 if none)
 // NEAR: schedule only (the second fild comes one store later in the original)
-long EEUGGather::FindUnfinishedFarm(EEComplexUnit* inUnit)
+EEUnit* EEUGGather::FindUnfinishedFarm(EEComplexUnit* inUnit)
 {
     GE2DPoint theCenter((float)inUnit->GetTileX(), (float)inUnit->GetTileY());
     std::vector<EEUnit*> theUnits;
@@ -746,7 +746,7 @@ long EEUGGather::FindUnfinishedFarm(EEComplexUnit* inUnit)
             break;
         }
     }
-    return reinterpret_cast<long>(theResult);
+    return theResult;
 }
 
 // FUNCTION: EXE 0x62371b
@@ -834,8 +834,8 @@ void EEUGGather::PathTaken(EEComplexUnit* inUnit)
 long EEUGGather::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
     long theResult = 0;
-    if (reinterpret_cast<unsigned long>(this->mResource) != -1) {
-        this->mResource = static_cast<EEUnit*>(::gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mResource)));
+    if (USavedID(this->mResource) != -1) {
+        this->mResource = static_cast<EEUnit*>(::gWorld.GetUnit(USavedID(this->mResource)));
         if (this->mResource != NULL)
             this->mResource->Reference();
         else
@@ -845,8 +845,8 @@ long EEUGGather::RepairPointers(unsigned long inFirst, unsigned long inSecond)
         this->mWaiting = false;
         this->mGathering = false;
     }
-    if (theResult == 0 && reinterpret_cast<unsigned long>(this->mStorage) != -1) {
-        this->mStorage = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mStorage)));
+    if (theResult == 0 && USavedID(this->mStorage) != -1) {
+        this->mStorage = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(USavedID(this->mStorage)));
         if (this->mStorage != NULL)
             this->mStorage->Reference();
         else

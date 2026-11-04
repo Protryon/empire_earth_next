@@ -139,11 +139,11 @@ void EEE3DTracerBeam::Aim()
     if (this->mGraphicEffect->mIntParam1 == 1) {
         EETagPointList* theOtherTags = theUnit->GetModel()->GetTagPoints(theUnit->GetAnimation(), 6);
         if (theOtherTags && theOtherTags->GetNumTagPoints() != 0) {
-            theOtherTags->Scale(theFrom, theScale);
+            EETagPointList::Scale(theFrom, theScale);
             theOtherTags->GetTagPoint(0)->GetPoint(theFrame, theFrom, theStart);
         }
     } else if (this->mGraphicEffect->mIntParam1 == 0 && theTags && theTags->GetNumTagPoints() != 0) {
-        theTags->Scale(theFrom, theScale);
+        EETagPointList::Scale(theFrom, theScale);
         if (theGraphic->GetNumParts() > 0) {
             unsigned long thePartIndex;
             thePart.MakeIdentity();
@@ -152,7 +152,7 @@ void EEE3DTracerBeam::Aim()
             theTags->GetTagPoint(thePoint)->GetPoint(theFrame, theFrom, thePart, theStart);
         } else
             theTags->GetTagPoint(thePoint)->GetPoint(theFrame, theFrom, theStart);
-        theTags->Scale(theTo, theTargetScale);
+        EETagPointList::Scale(theTo, theTargetScale);
     } else
         theFrom.Apply(this->mUnit->mStats->mModel->mDefaultPoint, theStart);
     if (this->mTarget)
@@ -351,7 +351,7 @@ long EEE3DTracerBeam::RepairPointers()
 {
     long theResult = EEEffect::RepairPointers();
     if (theResult == 0 && this->mTarget != (EEUnit*)-1) {
-        this->mTarget = dynamic_cast<EEUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mTarget)));
+        this->mTarget = dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mTarget)));
         if (this->mTarget == NULL)
             theResult = 7;
         else

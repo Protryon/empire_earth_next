@@ -428,8 +428,8 @@ long EECPPersonnelRequest::Restore(unsigned long inMajorVersion, unsigned long i
     this->mNumFilled = 0;
     std::vector<Unit>::iterator it = this->mUnits.begin();
     while (it != this->mUnits.end()) {
-        if ((unsigned long)it->mUnit != 0xffffffff) {
-            EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit((unsigned long)it->mUnit));
+        if (USavedID(it->mUnit) != 0xffffffff) {
+            EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(it->mUnit)));
             if (theUnit != NULL && EECPCombatManager::IsMilitaryTypeUnit(theUnit)) {
                 it->mUnit = theUnit;
                 theUnit->Reference();
@@ -1010,7 +1010,7 @@ long EECPPersonnel::Restore(unsigned long inMajorVersion, unsigned long inMinorV
     long theResult = 0;
     std::map<long, EEComplexUnit*> theUnits;
     for (it = this->mUnits.begin(); it != this->mUnits.end();) {
-        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit((unsigned long)it->second));
+        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(it->second)));
         if (theUnit != NULL) {
             if (theUnits.end() == theUnits.find(theUnit->mUnitID)) {
                 it->second = theUnit;

@@ -129,16 +129,16 @@ void EEGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, void
 {
     switch (inMessage) {
     case 0x506:
-        EEStartLightFadeIn(reinterpret_cast<unsigned long>(inParameter1));
+        EEStartLightFadeIn((unsigned long)reinterpret_cast<intptr_t>(inParameter1));
         break;
     case 0x507:
-        EEStartLightFadeOut(reinterpret_cast<unsigned long>(inParameter1));
+        EEStartLightFadeOut((unsigned long)reinterpret_cast<intptr_t>(inParameter1));
         break;
     case 0x508:
-        EEStartLetterboxIn(reinterpret_cast<unsigned long>(inParameter1));
+        EEStartLetterboxIn((unsigned long)reinterpret_cast<intptr_t>(inParameter1));
         break;
     case 0x509:
-        EEStartLetterboxOut(reinterpret_cast<unsigned long>(inParameter1));
+        EEStartLetterboxOut((unsigned long)reinterpret_cast<intptr_t>(inParameter1));
         break;
     case 0x503:
         EEInitialiseScene();
@@ -157,7 +157,7 @@ void EEGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, void
         this->SaveScreenShot(static_cast<EEScreenCapture*>(inParameter1));
         break;
     case 0x502:
-        this->mLockMode = reinterpret_cast<long>(inParameter1);
+        this->mLockMode = (long)reinterpret_cast<intptr_t>(inParameter1);
         break;
     case 0x50a:
         this->mMessageQueueDone->Set();

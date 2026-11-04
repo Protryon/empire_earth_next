@@ -153,17 +153,17 @@ long EEGraphicEffect::LoadTable(FSFile* inFile)
         EEGraphicEffect* theEffect = EEGraphicEffect::sEffects[j];
         if (theEffect == NULL)
             continue;
-        unsigned long theIndex = reinterpret_cast<unsigned long>(theEffect->mLinkedEffect1);
+        unsigned long theIndex = USavedID(theEffect->mLinkedEffect1);
         if (theIndex < EEGraphicEffect::sEffects.size())
             theEffect->mLinkedEffect1 = EEGraphicEffect::sEffects[theIndex];
         else
             theEffect->mLinkedEffect1 = NULL;
-        theIndex = reinterpret_cast<unsigned long>(theEffect->mLinkedEffect2);
+        theIndex = USavedID(theEffect->mLinkedEffect2);
         if (theIndex < EEGraphicEffect::sEffects.size())
             theEffect->mLinkedEffect2 = EEGraphicEffect::sEffects[theIndex];
         else
             theEffect->mLinkedEffect2 = NULL;
-        theIndex = reinterpret_cast<unsigned long>(theEffect->mLinkedEffect3);
+        theIndex = USavedID(theEffect->mLinkedEffect3);
         if (theIndex < EEGraphicEffect::sEffects.size())
             theEffect->mLinkedEffect3 = EEGraphicEffect::sEffects[theIndex];
         else

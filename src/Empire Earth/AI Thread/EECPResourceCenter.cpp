@@ -668,7 +668,7 @@ long EECPResourceCenter::Restore(unsigned long inMajorVersion, unsigned long inM
     long theResult = 0;
     unsigned long i;
     for (i = 0; i < this->mUnits.size(); i++)
-        theIDs.push_back(reinterpret_cast<long>(this->mUnits[i]));
+        theIDs.push_back((long)USavedID(this->mUnits[i]));
     this->mUnits.clear();
     for (i = 0; i < theIDs.size(); i++) {
         if (gWorld.mPlayers[0] == NULL)
@@ -677,8 +677,8 @@ long EECPResourceCenter::Restore(unsigned long inMajorVersion, unsigned long inM
         if (theUnit != NULL && !this->Contains(theUnit))
             this->AddUnit(theUnit);
     }
-    if (reinterpret_cast<long>(this->mUnit) != -1) {
-        this->mUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mUnit)));
+    if ((long)USavedID(this->mUnit) != -1) {
+        this->mUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mUnit)));
         if (this->mUnit != NULL)
             this->mUnit->Reference();
         else

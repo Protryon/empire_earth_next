@@ -683,7 +683,7 @@ void EEPhysics::HandleMessage(unsigned long inMessage, void* inParameter1, void*
         this->mLoadSaveRequests.push_back(static_cast<NEMessage*>(inParameter1));
         break;
     case 0x50c:
-        this->mLD4 = reinterpret_cast<long>(inParameter1);
+        this->mLD4 = (long)reinterpret_cast<intptr_t>(inParameter1);
         this->mBE7 = true;
         break;
     default:

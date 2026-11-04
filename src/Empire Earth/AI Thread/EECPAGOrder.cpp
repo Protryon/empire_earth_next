@@ -105,14 +105,14 @@ void EECPAGOrder::ReleaseSubGroup()
 long EECPAGOrder::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion, EECPAttackGroup* inGroup)
 {
     if (this->mSubGroup) {
-        this->mSubGroup = inGroup->mCommander->GetSubGroup(reinterpret_cast<unsigned long>(this->mSubGroup));
+        this->mSubGroup = inGroup->mCommander->GetSubGroup(USavedID(this->mSubGroup));
         if (this->mSubGroup)
             this->mSubGroup->Reference();
     } else {
         this->mSubGroup = NULL;
     }
     if (this->mOtherSubGroup) {
-        this->mOtherSubGroup = inGroup->mCommander->GetSubGroup(reinterpret_cast<unsigned long>(this->mOtherSubGroup));
+        this->mOtherSubGroup = inGroup->mCommander->GetSubGroup(USavedID(this->mOtherSubGroup));
         if (this->mOtherSubGroup)
             this->mOtherSubGroup->Reference();
     } else {

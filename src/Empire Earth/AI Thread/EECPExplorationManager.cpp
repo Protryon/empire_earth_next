@@ -223,7 +223,7 @@ long EECPExplorationManager::Restore(unsigned long inMajorVersion, unsigned long
     long i;
     for (i = this->mRequests.size() - 1; i >= 0; i--) {
         EECPPersonnelRequest* theRequest =
-            this->mPlayer->mCombatManager->mPersonnel->GetRequest(reinterpret_cast<long>(this->mRequests[i]));
+            this->mPlayer->mCombatManager->mPersonnel->GetRequest((long)USavedID(this->mRequests[i]));
         if (theRequest != NULL) {
             theRequest->Reference();
             this->mRequests[i] = theRequest;

@@ -89,12 +89,12 @@ long EECPAGTask::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
 long EECPAGTask::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     long theResult = this->mLocation.Restore(inMajorVersion, inMinorVersion);
-    if (reinterpret_cast<unsigned long>(this->mPlayer) != -1)   // -1: no player (older saves wrote 0)
-        this->mPlayer = ::gWorld.mPlayers[reinterpret_cast<unsigned long>(this->mPlayer)];
+    if (USavedID(this->mPlayer) != -1)   // -1: no player (older saves wrote 0)
+        this->mPlayer = ::gWorld.mPlayers[USavedID(this->mPlayer)];
     else
         this->mPlayer = NULL;
-    if (reinterpret_cast<unsigned long>(this->mUnit) != -1) {
-        this->mUnit = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mUnit)));
+    if (USavedID(this->mUnit) != -1) {
+        this->mUnit = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(USavedID(this->mUnit)));
         if (this->mUnit)
             this->mUnit->Reference();
     } else {

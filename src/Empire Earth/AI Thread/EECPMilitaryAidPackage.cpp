@@ -431,7 +431,7 @@ void EECPMilitaryAidPackage::DropDeadSubGroups()
 long EECPMilitaryAidPackage::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     U2DPoint<long> theTile;
-    this->mTarget = gWorld.mPlayers[reinterpret_cast<long>(this->mTarget)];
+    this->mTarget = gWorld.mPlayers[(long)USavedID(this->mTarget)];
     EETown* theTown = this->mTarget->GetNearestTown(this->mLocation, theTile);
     if (theTown != NULL)
         this->mTownID = theTown->mTownID;

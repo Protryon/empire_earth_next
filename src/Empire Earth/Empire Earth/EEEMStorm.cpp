@@ -450,7 +450,7 @@ long EEEMStorm::Restore()
 {
     long theResult = 0;
     EEEffectHandle theHandle;
-    theHandle.mValue = reinterpret_cast<unsigned long>(this->mStorm);
+    theHandle.mValue = USavedID(this->mStorm);
     this->mStorm = dynamic_cast<EEE3DStorm*>(gEffectManager->GetEffect(theHandle));
     if (this->mStorm != NULL)
         this->mStorm->Reference();

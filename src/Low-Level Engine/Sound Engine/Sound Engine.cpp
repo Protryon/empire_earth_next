@@ -58,13 +58,13 @@ void SEInitializeCD(GEWindow* inWindow)
                 for (theDestination = 0; theDestination < theMixerCaps.cDestinations; theDestination++) {
                     theDestinationLine.cbStruct = sizeof(theDestinationLine);
                     theDestinationLine.dwDestination = theDestination;
-                    if (mixerGetLineInfo((HMIXEROBJ)theMixer, &theDestinationLine, MIXER_GETLINEINFOF_DESTINATION) ==
+                    if (mixerGetLineInfo((HMIXEROBJ)(UINT_PTR)theMixer, &theDestinationLine, MIXER_GETLINEINFOF_DESTINATION) ==
                         MMSYSERR_NOERROR) {
                         for (theSource = 0; theSource < theDestinationLine.cConnections; theSource++) {
                             theSourceLine.cbStruct = sizeof(theSourceLine);
                             theSourceLine.dwDestination = theDestination;
                             theSourceLine.dwSource = theSource;
-                            if (mixerGetLineInfo((HMIXEROBJ)theMixer, &theSourceLine, MIXER_GETLINEINFOF_SOURCE) !=
+                            if (mixerGetLineInfo((HMIXEROBJ)(UINT_PTR)theMixer, &theSourceLine, MIXER_GETLINEINFOF_SOURCE) !=
                                     MMSYSERR_NOERROR ||
                                 theSourceLine.fdwLine != (MIXERLINE_LINEF_ACTIVE | MIXERLINE_LINEF_SOURCE) ||
                                 (theSourceLine.dwComponentType != MIXERLINE_COMPONENTTYPE_SRC_COMPACTDISC &&
@@ -76,7 +76,7 @@ void SEInitializeCD(GEWindow* inWindow)
                             theControls.cControls = 1;
                             theControls.cbmxctrl = sizeof(theControl);
                             theControls.pamxctrl = &theControl;
-                            if (mixerGetLineControls((HMIXEROBJ)theMixer, &theControls,
+                            if (mixerGetLineControls((HMIXEROBJ)(UINT_PTR)theMixer, &theControls,
                                                      MIXER_GETLINECONTROLSF_ONEBYTYPE) != MMSYSERR_NOERROR)
                                 continue;
                             theVolume.mType = kSECDMixerVolumeControl;
@@ -87,7 +87,7 @@ void SEInitializeCD(GEWindow* inWindow)
                             theVolume.mDetails.cbDetails = sizeof(MIXERCONTROLDETAILS_UNSIGNED);
                             theVolume.mMinimum = theControl.Bounds.dwMinimum;
                             theVolume.mMaximum = theControl.Bounds.dwMaximum;
-                            theVolume.mMixer = (HMIXER)theMixer;
+                            theVolume.mMixer = (HMIXER)(UINT_PTR)theMixer;
                             break;
                         }
                     }
@@ -100,8 +100,8 @@ void SEInitializeCD(GEWindow* inWindow)
         }
     }
     for (unsigned short theIndex = 0;; theIndex++) {
-        theOpen.lpstrDeviceType = (LPCSTR)MAKELONG(MCI_DEVTYPE_CD_AUDIO, theIndex);
-        if (mciSendCommand(theIndex, MCI_OPEN, MCI_OPEN_TYPE | MCI_OPEN_TYPE_ID | MCI_WAIT, (DWORD)&theOpen) != 0)
+        theOpen.lpstrDeviceType = (LPCSTR)(DWORD_PTR)MAKELONG(MCI_DEVTYPE_CD_AUDIO, theIndex);
+        if (mciSendCommand(theIndex, MCI_OPEN, MCI_OPEN_TYPE | MCI_OPEN_TYPE_ID | MCI_WAIT, (DWORD_PTR)&theOpen) != 0)
             break;
         theCD = new SECD(theIndex, theOpen.wDeviceID, theVolume);
     }

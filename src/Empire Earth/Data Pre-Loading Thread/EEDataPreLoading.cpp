@@ -130,9 +130,9 @@ void EEDataPreLoading::HandleMessage(unsigned long inMessage, void* inParameter1
         break;
     case 0x404:
     case 0x409: {
-        EEPlayer* thePlayer = gWorld.mPlayers[reinterpret_cast<long>(inParameter1)];
+        EEPlayer* thePlayer = gWorld.mPlayers[(long)reinterpret_cast<intptr_t>(inParameter1)];
         if (thePlayer != NULL) {
-            EEUnitClass* theClass = gUnitClassTable[reinterpret_cast<long>(inParameter2)];
+            EEUnitClass* theClass = gUnitClassTable[(long)reinterpret_cast<intptr_t>(inParameter2)];
             if (theClass != NULL)
                 this->LoadUnitClassMedia(thePlayer, theClass, inMessage == 0x404);
         }
@@ -140,9 +140,9 @@ void EEDataPreLoading::HandleMessage(unsigned long inMessage, void* inParameter1
     }
     case 0x40a:
     case 0x40b: {
-        EEPlayer* thePlayer = gWorld.mPlayers[reinterpret_cast<long>(inParameter1)];
+        EEPlayer* thePlayer = gWorld.mPlayers[(long)reinterpret_cast<intptr_t>(inParameter1)];
         if (thePlayer != NULL) {
-            EETechTreeNode* theNode = thePlayer->mTechnologies->Get(reinterpret_cast<long>(inParameter2));
+            EETechTreeNode* theNode = thePlayer->mTechnologies->Get((long)reinterpret_cast<intptr_t>(inParameter2));
             if (theNode != NULL)
                 this->LoadTechnologyMedia(thePlayer, theNode, inMessage == 0x40a);
         }

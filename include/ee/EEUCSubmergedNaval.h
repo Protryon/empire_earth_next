@@ -17,7 +17,7 @@ class EEUCSubmergedNaval : public EEUnitClass {
 public:
     virtual ~EEUCSubmergedNaval() {}
     EEUCSubmergedNaval();                   // inline
-    EEUCSubmergedNaval(EEUnitClassRecord* inRecord, long inModel);   // inline: defined in EEUnitClass.cpp (the class factory 0x2358b1; out of line 0x2363ce)
+    EEUCSubmergedNaval(EEUnitClassRecord* inRecord, EEPhysicsModel* inModel);   // inline: defined in EEUnitClass.cpp (the class factory 0x2358b1; out of line 0x2363ce)
     // +0x00: the implicit dtor (??_G 0x2363ec calls EEUnitClass's 0x2305ee)
     virtual void GroundLocation(GE3DPoint& ioLocation); // +0x04 0x21ab66
     virtual void LocationToTile(const GE3DPoint& inLocation, long& outX, long& outY); // +0x08 0x21aba6

@@ -19,6 +19,16 @@
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
 
+// A material's visible-polygon lists end with their polygon count, stored in the last (pointer) slot
+static inline unsigned long DX7ListCount(const std::vector<GETerrainMesh::GETMPolygon*>& inList)
+{
+    return (unsigned long)reinterpret_cast<uintptr_t>(inList.back());
+}
+static inline void DX7SetListCount(std::vector<GETerrainMesh::GETMPolygon*>& ioList, unsigned long inCount)
+{
+    ioList.back() = reinterpret_cast<GETerrainMesh::GETMPolygon*>((uintptr_t)inCount);
+}
+
 // The D3D light indices in use (DX7Rasterizer.cpp).
 extern unsigned long gLightsInUse[8];
 
@@ -92,9 +102,9 @@ long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inO
                 theIndex = theIterator->second;
                 if (theIndex < 9 && theIndex > 0) {
                     this->mScreenStates[inScreen]->m32C[1] +=
-                        (unsigned long)inMesh.GetTerrainMaterialList()[theIndex].mIndices.back();
+                        DX7ListCount(inMesh.GetTerrainMaterialList()[theIndex].mIndices);
                     this->mScreenStates[inScreen]->m32C[1] +=
-                        (unsigned long)inMesh.GetTerrainMaterialList()[theIndex].mStripIndices.back();
+                        DX7ListCount(inMesh.GetTerrainMaterialList()[theIndex].mStripIndices);
                     this->SetTexture(theIterator->first, inScreen);
                     this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(D3DRENDERSTATE_CLIPPING, FALSE);
                     this->DrawTerrainMaterial(&theViewport, inMesh.GetTerrainMaterialList()[theIndex].mIndices, inScreen);
@@ -110,9 +120,9 @@ long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inO
             theIndex = (*theIterator).second;
             if (!inMesh.GetIsSpaceMap() || theIndex >= 9 || theIndex <= 0) {
                 this->mScreenStates[inScreen]->m32C[1] +=
-                    (unsigned long)inMesh.GetTerrainMaterialList()[theIndex].mIndices.back();
+                    DX7ListCount(inMesh.GetTerrainMaterialList()[theIndex].mIndices);
                 this->mScreenStates[inScreen]->m32C[1] +=
-                    (unsigned long)inMesh.GetTerrainMaterialList()[theIndex].mStripIndices.back();
+                    DX7ListCount(inMesh.GetTerrainMaterialList()[theIndex].mStripIndices);
                 this->SetTexture((*theIterator).first, inScreen);
                 this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(D3DRENDERSTATE_CLIPPING, FALSE);
                 this->DrawTerrainMaterial(&theViewport, inMesh.GetTerrainMaterialList()[theIndex].mIndices, inScreen);
@@ -552,7 +562,7 @@ long DX7Rasterizer::DrawTerrainMaterial(GEViewport* inViewport, std::vector<GETe
     float theVisibilities[3];
     float theAlphas[3];
     std::vector<GETerrainMesh::GETMPolygon*>::iterator thePolygon = inPolygons.begin();
-    unsigned long theRemaining = (unsigned long)inPolygons.back() * 3;
+    unsigned long theRemaining = DX7ListCount(inPolygons) * 3;
     while (theRemaining > 0) {
         unsigned long theBatch = theRemaining;
         if (theBatch >= 0x960)
@@ -646,8 +656,8 @@ long DX7Rasterizer::DrawWater(GETerrainMesh& inMesh, unsigned long inScreen, boo
         this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_PROJECTION, &theMatrix);
         unsigned long theCount = theMaterials.size();
         for (unsigned long i = 0; i < theCount; i++) {
-            this->mScreenStates[inScreen]->m32C[1] += (unsigned long)theMaterials[i].mIndices.back();
-            this->mScreenStates[inScreen]->m32C[1] += (unsigned long)theMaterials[i].mStripIndices.back();
+            this->mScreenStates[inScreen]->m32C[1] += DX7ListCount(theMaterials[i].mIndices);
+            this->mScreenStates[inScreen]->m32C[1] += DX7ListCount(theMaterials[i].mStripIndices);
             this->SetTexture(theMaterials[i].mTexture, inScreen);
             this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(D3DRENDERSTATE_CLIPPING, FALSE);
             theResult = this->DrawTerrainMaterial(&theViewport, theMaterials[i].mIndices, inScreen);
@@ -1127,8 +1137,8 @@ void DX7Rasterizer::TransformToCamera(GETerrainMesh& inMesh, GEViewport& inViewp
         }
         inMesh.GetTerrainMaterialList()[i].mStripIndices[theStripCount] = NULL;
         inMesh.GetTerrainMaterialList()[i].mIndices[theIndexCount] = NULL;
-        inMesh.GetTerrainMaterialList()[i].mStripIndices.back() = reinterpret_cast<GETerrainMesh::GETMPolygon*>(theStripCount);
-        inMesh.GetTerrainMaterialList()[i].mIndices.back() = reinterpret_cast<GETerrainMesh::GETMPolygon*>(theIndexCount);
+        DX7SetListCount(inMesh.GetTerrainMaterialList()[i].mStripIndices, theStripCount);
+        DX7SetListCount(inMesh.GetTerrainMaterialList()[i].mIndices, theIndexCount);
     }
     theMaterialCount = inMesh.GetWaterMaterialList().size();
     for (i = 0; i < theMaterialCount; i++) {
@@ -1154,8 +1164,8 @@ void DX7Rasterizer::TransformToCamera(GETerrainMesh& inMesh, GEViewport& inViewp
         }
         inMesh.GetWaterMaterialList()[i].mStripIndices[theStripCount] = NULL;
         inMesh.GetWaterMaterialList()[i].mIndices[theIndexCount] = NULL;
-        inMesh.GetWaterMaterialList()[i].mStripIndices.back() = reinterpret_cast<GETerrainMesh::GETMPolygon*>(theStripCount);
-        inMesh.GetWaterMaterialList()[i].mIndices.back() = reinterpret_cast<GETerrainMesh::GETMPolygon*>(theIndexCount);
+        DX7SetListCount(inMesh.GetWaterMaterialList()[i].mStripIndices, theStripCount);
+        DX7SetListCount(inMesh.GetWaterMaterialList()[i].mIndices, theIndexCount);
     }
 }
 

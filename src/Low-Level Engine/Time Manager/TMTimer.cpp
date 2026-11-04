@@ -98,14 +98,14 @@ long TMTimer::SetTimerType(unsigned long inType)
 long TMTimer::Start()
 {
     long theResult;
-    unsigned long theUser = 0;
+    DWORD_PTR theUser = 0;
     if (!this->mRunning) {
         this->mStartTime = timeGetTime();
         LPTIMECALLBACK theCallback;
         unsigned int theFlags;
         if (this->mTimerType == 0) {
             theCallback = TMTimer::TimerCallback;
-            theUser = reinterpret_cast<unsigned long>(this);
+            theUser = reinterpret_cast<DWORD_PTR>(this);
             theFlags = TIME_CALLBACK_FUNCTION;
         } else {
             theCallback = (LPTIMECALLBACK)this->mEvent->mHandle;
@@ -153,8 +153,8 @@ long TMTimer::Stop(unsigned long& outElapsed, unsigned long& outRemaining)
 
 // FUNCTION: LLE 0x10053c77
 // Multimedia-timer callback: restarts the elapsed clock (repeating) or marks the timer stopped, then calls the callback
-void __stdcall TMTimer::TimerCallback(unsigned int inTimerID, unsigned int inMessage, unsigned long inUser,
-                                      unsigned long inParameter1, unsigned long inParameter2)
+void CALLBACK TMTimer::TimerCallback(UINT inTimerID, UINT inMessage, DWORD_PTR inUser, DWORD_PTR inParameter1,
+                                    DWORD_PTR inParameter2)
 {
     TMTimer* theTimer = reinterpret_cast<TMTimer*>(inUser);
     if (theTimer->mRepeating)

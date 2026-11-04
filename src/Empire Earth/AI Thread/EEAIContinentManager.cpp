@@ -977,7 +977,7 @@ void EEAIContinentManager::CreatePathAreas(EEMap* inMap)
     for (long i = this->mPathSubSectors.size() - 1; i >= 0; i--) {
         EEAIPathSubSector* theSubSector = this->mPathSubSectors[i];
         if (theSubSector && this->mContinents[theSubSector->mContinentID])
-            theSubSector->mSector->AddNeighbor(reinterpret_cast<long>(this->mContinents[theSubSector->mContinentID]));
+            theSubSector->mSector->AddNeighbor(this->mContinents[theSubSector->mContinentID]);
     }
 }
 
@@ -1726,8 +1726,8 @@ EEAIContinent* EEAIContinentManager::FindContinent(long inX, long inY) const
     EEAIPathSector* theSector = this->GetPathSector(theTile);
     if (theSector) {
         for (long i = theSector->mNeighbors.size() - 1; i >= 0; i--) {
-            if (theSector->mNeighbors[i] && reinterpret_cast<EEAIContinent*>(theSector->mNeighbors[i])->Contains(thePoint)) {
-                theResult = reinterpret_cast<EEAIContinent*>(theSector->mNeighbors[i]);
+            if (theSector->mNeighbors[i] && theSector->mNeighbors[i]->Contains(thePoint)) {
+                theResult = theSector->mNeighbors[i];
                 break;
             }
         }

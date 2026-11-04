@@ -52,7 +52,7 @@ public:
     void GatherNextTree(EEComplexUnit* inUnit);  // 0x222ff0 (0x1f48)
     void BuildFarms(EEComplexUnit* inUnit);  // 0x22333b (0x1f49)
     bool IsAtStorage(EEComplexUnit* inUnit);  // 0x223c7f: inUnit within sqrt(2) storage radii of the storage (provisional name)
-    long FindUnfinishedFarm(EEComplexUnit* inUnit);  // 0x223675 (ret 4; EECPResourceManager::BuildSettlementFor tests it == 0) (provisional name)
+    EEUnit* FindUnfinishedFarm(EEComplexUnit* inUnit);  // 0x223675 (ret 4; EECPResourceManager::BuildSettlementFor tests it == 0) (provisional name)
     // (provisional names)
     bool IsAtResourceSpot(EEComplexUnit* inUnit);  // 0x222271 (Virtual64: inUnit next to the storage)
     virtual void PathTaken(EEComplexUnit* inUnit);   // +0x48 0x223966 (mB04: the path's end reached)

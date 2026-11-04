@@ -240,13 +240,13 @@ void EESELoadThread::HandleMessage(unsigned long inMessage, void* inParameter1, 
         this->mIsDone = true;
         break;
     case kLoadThreadCreateGhostUnit:
-        this->Handle402(reinterpret_cast<unsigned long>(inParameter1), reinterpret_cast<unsigned long>(inParameter2));
+        this->Handle402((unsigned long)reinterpret_cast<intptr_t>(inParameter1), (unsigned long)reinterpret_cast<intptr_t>(inParameter2));
         break;
     case kLoadThreadLoadEpochMedia:
-        this->Handle406(reinterpret_cast<unsigned long>(inParameter1), reinterpret_cast<unsigned long>(inParameter2));
+        this->Handle406((unsigned long)reinterpret_cast<intptr_t>(inParameter1), (unsigned long)reinterpret_cast<intptr_t>(inParameter2));
         break;
     case 0x403:
-        this->Handle403(reinterpret_cast<unsigned long>(inParameter1), inParameter2 != NULL);
+        this->Handle403((unsigned long)reinterpret_cast<intptr_t>(inParameter1), inParameter2 != NULL);
         break;
     case kLoadThreadStartScenarioTest:
         gUserInterface->StartScenarioTest();
@@ -257,7 +257,7 @@ void EESELoadThread::HandleMessage(unsigned long inMessage, void* inParameter1, 
         static_cast<UReferenceCounter*>(inParameter1)->Dereference();
         break;
     case kLoadThreadLoadTerrain:
-        this->Handle408(reinterpret_cast<unsigned long>(inParameter1), false);
+        this->Handle408((unsigned long)reinterpret_cast<intptr_t>(inParameter1), false);
         break;
     case kLoadThreadShowLoadedObject:
         gUserInterface->ShowLoadedObject(static_cast<UReferenceCounter*>(inParameter1));
@@ -268,10 +268,10 @@ void EESELoadThread::HandleMessage(unsigned long inMessage, void* inParameter1, 
         this->mIsDone = true;
         break;
     case kLoadThreadUnloadEpochMedia:
-        this->Handle407(reinterpret_cast<unsigned long>(inParameter1), reinterpret_cast<unsigned long>(inParameter2));
+        this->Handle407((unsigned long)reinterpret_cast<intptr_t>(inParameter1), (unsigned long)reinterpret_cast<intptr_t>(inParameter2));
         break;
     case kLoadThreadUnloadTerrain:
-        this->Handle408(reinterpret_cast<unsigned long>(inParameter1), true);
+        this->Handle408((unsigned long)reinterpret_cast<intptr_t>(inParameter1), true);
         break;
     case kLoadThreadMessageQueueDone:
         this->mMessageQueueDone->Set();

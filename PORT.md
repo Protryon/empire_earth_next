@@ -36,8 +36,8 @@ Source changes merge normally. The build tooling is this fork's own: upstream's 
 ## Rules of the build
 
 - Compiler flags (`tools/clang_build.py`): i686, MSVC 19.44 compatibility, C++17, `/arch:IA32` (x87), `/GS-`,
-  `-fno-strict-aliasing -fwrapv -fno-delete-null-pointer-checks`. The last three tame undefined behaviour the code
-  relies on; removing them is planned work (`tools/clang_ubdiff.py`, `build.py --sanitize-null`; see
+  `-fno-strict-aliasing -fwrapv`. The last two tame undefined behaviour the code relies on; removing them is planned
+  work (`-fno-delete-null-pointer-checks` went once the sanitizer games came back clean) (`tools/clang_ubdiff.py`, `build.py --sanitize-null`; see
   PORT_LEARNINGS.md).
 - `link/` holds the original images' import and export tables and the exe's link tables (WON stubs, member aliases).
   The exe's member aliases (data the original placed inside other objects) carry VC6 offsets. The build moves them to
@@ -48,8 +48,10 @@ Source changes merge normally. The build tooling is this fork's own: upstream's 
 
 ## Next steps
 
-- The null-pointer UB: run the `--sanitize-null` build through tour and AI games, fix every reported site, drop
-  `-fno-delete-null-pointer-checks`; then `-fwrapv` and `-fno-strict-aliasing`.
+- The remaining UB flags: `-fwrapv` (`clang_ubdiff.py` + `-fsanitize=signed-integer-overflow` games), then
+  `-fno-strict-aliasing`.
+- x64: the 1,274 `-Wshorten-64-to-32` sites of `clang_build.py --x64`; saved-game loaders that read 4-byte ids
+  into vectors of pointers need explicit id fields; fixed-width types for serialized and network data.
 - Remove the clang dialect bridges: the `#ifdef __clang__` `const T&` forwarding overloads become `const` parameters,
   the `theTempN` call-site locals go.
 - Member aliases in source instead of link tables; the WON library's source (PORT_LEARNINGS.md "For WONAPI/WONLobby").

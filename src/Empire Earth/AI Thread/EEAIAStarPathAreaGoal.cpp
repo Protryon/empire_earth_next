@@ -279,10 +279,10 @@ bool EEAIAStarPathAreaGoal::ClassifyTile(EETile* inTile, EEMap* inMap, long inX,
 // (by mode) and adds that id to each touched continent's matching id list
 void EEAIAStarPathAreaGoal::AssignKindIDs()
 {
-    std::set<unsigned long> theAreas;
+    std::set<EEAIPathArea*> theAreas;   // (address order, as the VC6 set of addresses)
     for (long i = this->mTiles.size() - 1; i >= 0; i--) {
         EEAIPathArea* theArea = this->GetArea((*(this->mTiles.begin() + i)).mX, (*(this->mTiles.begin() + i)).mY);
-        theAreas.insert(reinterpret_cast<unsigned long>(theArea));
+        theAreas.insert(theArea);
         if (this->mMode == kAIPathWaterBody)
             theArea->mWaterBodyID = this->mNextKindID;
         else if (this->mMode == kAIPathSpaceRegion)
@@ -292,8 +292,8 @@ void EEAIAStarPathAreaGoal::AssignKindIDs()
         else
             theArea->mSurfaceRegionID = this->mNextKindID;
     }
-    for (std::set<unsigned long>::iterator theIt = theAreas.begin(); theIt != theAreas.end(); theIt++) {
-        EEAIContinent* theContinent = gContinentManager.mContinents[((EEAIPathArea*)*theIt)->mContinentID];
+    for (std::set<EEAIPathArea*>::iterator theIt = theAreas.begin(); theIt != theAreas.end(); theIt++) {
+        EEAIContinent* theContinent = gContinentManager.mContinents[(*theIt)->mContinentID];
         if (!theContinent)
             continue;
         if (this->mMode == kAIPathWaterBody)

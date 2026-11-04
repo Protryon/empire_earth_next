@@ -15,8 +15,8 @@ MODULES = ["tcp", "mixer", "default", "lle", "jpeg", "dx7hr", "dx7hrtnl", "exeim
 TARGETS = ["tcp", "mixer", "default", "lle", "dx7hr", "dx7hrtnl", "language", "exe"]
 TARGET_MODULES = {"lle": ["lle", "jpeg"], "exe": ["exe", "exeimg"], "language": []}
 PART_OF = {"jpeg": "lle", "exeimg": "exe"}
-# the inline-asm _ftol (UFtol.cpp) is linked into these modules besides the engine
-EXTRA_UNITS = {m: ["Low-Level Engine/Utilities/UFtol.cpp"] for m in ("tcp", "default", "dx7hr", "dx7hrtnl")}
+# units a module links besides its own (none since the VC6 build's inline-asm _ftol went: clang never calls it)
+EXTRA_UNITS = {}
 LIB_UNITS = {"mssauto": "ThirdParty/mss/mssauto.c",
              "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c",
              # DirectMusic and Direct3D 7 GUIDs (the Windows SDK's dxguid.lib no longer has them)

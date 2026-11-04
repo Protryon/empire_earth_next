@@ -15,21 +15,22 @@ inline void URFTrace(unsigned long inError, const UString& inPath) {}
 
 // FUNCTION: LLE 0x1008268d
 // Resource language callback: stores the first language found and stops the enumeration
-static bool URFEnumLanguages(HMODULE inModule, LPCSTR inType, LPCSTR inName, WORD inLanguage, LONG inParam)
+// (VC6: a cdecl bool function cast to the stdcall callback type; Windows' callback thunk restored the stack)
+static BOOL CALLBACK URFEnumLanguages(HMODULE inModule, LPCSTR inType, LPCSTR inName, WORD inLanguage, LONG_PTR inParam)
 {
     *reinterpret_cast<unsigned short*>(inParam) = inLanguage;
-    return false;
+    return FALSE;
 }
 
 // FUNCTION: LLE 0x1008269c
 // Resource name callback: stores a string table's language, falling back to the OS language
-static bool URFEnumNames(HMODULE inModule, LPCSTR inType, LPSTR inName, LONG inParam)
+static BOOL CALLBACK URFEnumNames(HMODULE inModule, LPCSTR inType, LPSTR inName, LONG_PTR inParam)
 {
-    if (!EnumResourceLanguages(inModule, RT_STRING, inName, (ENUMRESLANGPROC)URFEnumLanguages, inParam)) {
+    if (!EnumResourceLanguagesA(inModule, RT_STRING, inName, URFEnumLanguages, inParam)) {
         *reinterpret_cast<unsigned short*>(inParam) = UGetOSLanguage();
         ESRecordNativeError(GetLastError());
     }
-    return true;
+    return TRUE;
 }
 
 // FUNCTION: LLE 0x100826d4
@@ -43,7 +44,7 @@ UResourceFile::UResourceFile(const FSFileSpec& inFile)
     this->mModule = LoadLibrary(thePath);
     if (this->mModule == NULL)
         URFTrace(GetLastError(), inFile.GetVolume() + inFile.GetDirectory() + inFile.GetFile());
-    if (!EnumResourceNames(this->mModule, RT_STRING, (ENUMRESNAMEPROC)URFEnumNames, reinterpret_cast<LONG>(&this->mLanguage))) {
+    if (!EnumResourceNamesA(this->mModule, RT_STRING, URFEnumNames, reinterpret_cast<LONG_PTR>(&this->mLanguage))) {
         this->mLanguage = UGetOSLanguage();
         ESRecordNativeError(GetLastError());
     }

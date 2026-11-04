@@ -63,6 +63,10 @@ flags dropped (`-G6 -Zm -Zi`, `/O1` replaced).
   - Decision: keep the flag through the Dinkum swap. A modern STL removes that class at the root. Then rerun
     `clang_ubdiff.py` and the sanitizer games (add `-fsanitize=nonnull-attribute,pointer-overflow` traps), fix the
     remaining game-code sites, and drop the flag.
+  - Outcome (2026-11-04): after the swap, the sanitizer games found four sites ("Undefined behaviour the VC6 code
+    relied on" below). With them fixed, the tour, a 2-AI Small and a 4-AI Medium Hard game to the time cap reported
+    nothing, and the flag was dropped. (`clang_link.py`/`clang_session.py` above are now `build.py --sanitize-null`
+    and `tools/harness/game_session.py --build-dir build/clang-test-nullsan`.)
 
 - `/Zc:wchar_t-`: VC6's `wchar_t` is `unsigned short`. This fixes `std::wstring = unsigned short[]` assignments and
   keeps the mangling (`G`) the same as VC6's.
@@ -279,6 +283,47 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
   (the multiplayer version check only ever meets builds of this fork now).
 - Result: 846 units, all 8 images, about two minutes, with the VC6 toolchain directories hidden. The harness tour,
   play and a 2-AI game to the time cap pass.
+
+## Undefined behaviour the VC6 code relied on (sanitizer build)
+
+- `build.py --sanitize-null` compiles without `-fno-delete-null-pointer-checks` and with
+  `-fsanitize=null,pointer-overflow,nonnull-attribute,returns-nonnull-attribute`, the minimal runtime and recovery;
+  `tools/harness/ubsan_minimal.c` logs `EE-UBSAN <check> <module>+<rva>` once per site. Run the harness on
+  `build/clang-test-nullsan` and map each RVA through the module's map (nearest symbol below it).
+- After the Dinkum swap, the tour, 60 s of play and a 2-AI Hard game reached only four sites:
+  - `FSMemoryFile::IncreaseFileSize` rebased its pointers with `p += newBuffer - oldBuffer` (arithmetic across two
+    allocations): rebase by offset, `p = newBuffer + (p - oldBuffer)`.
+  - `EELoadScript` stepped a cursor back with `cursor += 5 - token.GetLength()`, an unsigned wrap used as a negative
+    step (also a real x64 bug: `unsigned long` stays 32-bit, so the step would be +4 GB).
+  - `EEIsLineToUnitBlocked`: `theList->Scale(...)` on a null `theList`, the crash that brought in the flag. `Scale`
+    never reads `this`: it is a static member now, called as `EETagPointList::Scale` at all 29 sites.
+  - Pattern: "a member function that ignores `this`, called through a pointer that may be null" is the VC6-era UB to
+    look for first; `static` is the honest fix.
+
+## 64-bit census (`clang_build.py --x64`)
+
+- Compiles every unit for x86_64 with `-Wpointer-to-int-cast -Wvoid-pointer-to-int-cast -Wint-to-pointer-cast
+  -Wint-to-void-pointer-cast -Wshorten-64-to-32` and writes each distinct site to `build/clang-x64/x64_census.tsv`.
+  First run: 1,728 sites and 11 failed units; after the fixes below all 840 units compile, and the only pointer
+  truncation left is Bink's own header macro (`BinkSoundUseDirectSound`). The 1,274 `-Wshorten-64-to-32` sites
+  (`size()` into `long` and the like) are the next layer.
+- **Callbacks**: declare them with the Windows types (`LRESULT CALLBACK f(HWND, UINT, WPARAM, LPARAM)`,
+  `DWORD_PTR` timer user data, `LONG_PTR` enum lParams). On x86 these are the same types as the VC6 spellings, so
+  32-bit code and names do not change. Watch for callbacks of the wrong convention cast into place: the resource
+  enumerators were cdecl `bool` functions cast to `ENUMRESNAMEPROC` (Windows' thunk restored the stack).
+- **Inline asm**: the naked `_ftol` is dead under clang (it never calls `_ftol`) and was removed; the `fld/fistp`
+  helpers became `lrintf` (same round-to-nearest).
+- **Saved-game pointer swizzling** (~100 sites): loaders read a 32-bit id into the pointer field and a fix-up pass
+  (`RepairPointers`, `Restore`) casts it back and looks the object up. `USavedID(field)` (LowLevelEngineCore.h)
+  takes the low 32 bits explicitly. Still open for a real x64 build: loaders that read 4 bytes per element into
+  vectors of pointers. The save format needs explicit id fields there.
+- **Pointers kept in integers**: the physics-model table (`long gPhysicsModels[]`, passed through every unit-class
+  ctor as `long`), the model manager's `map<UString, unsigned long>`, sector neighbour lists, the save/load events'
+  form, a farm finder's return value: all retyped to the pointer they hold. Integers carried in `void*` message
+  parameters narrow through `intptr_t`. Registry roots are `HKEY` (this renames nine engine exports; the export and
+  import tables in `link/` follow).
+- A count stored in the last slot of a `vector<GETMPolygon*>` (the terrain draw's visible lists) goes through two
+  helpers in that unit.
 
 ## For WONAPI/WONLobby later
 

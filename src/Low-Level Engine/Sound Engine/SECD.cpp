@@ -59,11 +59,11 @@ unsigned long SECD::GetTrackCount()
         MCI_STATUS_PARMS theStatus;
         MCIERROR theError;
         this->Stop();
-        if ((theError = mciSendCommand(this->mDevice, MCI_SEEK, MCI_SEEK_TO_START, (DWORD)&theSeek)) == 0 &&
+        if ((theError = mciSendCommand(this->mDevice, MCI_SEEK, MCI_SEEK_TO_START, (DWORD_PTR)&theSeek)) == 0 &&
             (theSet.dwTimeFormat = MCI_FORMAT_TMSF,
-             theError = mciSendCommand(this->mDevice, MCI_SET, MCI_SET_TIME_FORMAT | MCI_WAIT, (DWORD)&theSet)) == 0 &&
+             theError = mciSendCommand(this->mDevice, MCI_SET, MCI_SET_TIME_FORMAT | MCI_WAIT, (DWORD_PTR)&theSet)) == 0 &&
             (theStatus.dwItem = MCI_STATUS_NUMBER_OF_TRACKS,
-             theError = mciSendCommand(this->mDevice, MCI_STATUS, MCI_STATUS_ITEM | MCI_WAIT, (DWORD)&theStatus)) == 0)
+             theError = mciSendCommand(this->mDevice, MCI_STATUS, MCI_STATUS_ITEM | MCI_WAIT, (DWORD_PTR)&theStatus)) == 0)
             theCount = theStatus.dwReturn;
         else
             ESRecordNativeError(theError);
@@ -107,11 +107,11 @@ void SECD::Notify(unsigned int inFlags, long inDevice)
         SECD* theCD = SECD::sCDs[i];
         if (inFlags == MCI_NOTIFY_SUCCESSFUL) {
             MCI_GENERIC_PARMS theClose;
-            if (mciSendCommand(theCD->mDevice, MCI_CLOSE, MCI_WAIT, (DWORD)&theClose) == 0) {
+            if (mciSendCommand(theCD->mDevice, MCI_CLOSE, MCI_WAIT, (DWORD_PTR)&theClose) == 0) {
                 MCI_OPEN_PARMS theOpen;
-                theOpen.lpstrDeviceType = (LPCSTR)MAKELONG(MCI_DEVTYPE_CD_AUDIO, theCD->mIndex);
+                theOpen.lpstrDeviceType = (LPCSTR)(DWORD_PTR)MAKELONG(MCI_DEVTYPE_CD_AUDIO, theCD->mIndex);
                 if (mciSendCommand(theCD->mIndex, MCI_OPEN, MCI_OPEN_TYPE | MCI_OPEN_TYPE_ID | MCI_WAIT,
-                                   (DWORD)&theOpen) == 0)
+                                   (DWORD_PTR)&theOpen) == 0)
                     theCD->mDevice = theOpen.wDeviceID;
             }
         }
@@ -125,7 +125,7 @@ void SECD::Notify(unsigned int inFlags, long inDevice)
 long SECD::Pause()
 {
     MCI_GENERIC_PARMS theParms;
-    MCIERROR theError = mciSendCommand(this->mDevice, MCI_PAUSE, MCI_WAIT, (DWORD)&theParms);
+    MCIERROR theError = mciSendCommand(this->mDevice, MCI_PAUSE, MCI_WAIT, (DWORD_PTR)&theParms);
     if (theError == 0) {
         this->mBusy = false;
         return kErrorOK;
@@ -142,7 +142,7 @@ long SECD::Play()
         MCI_PLAY_PARMS theParms;
         theParms.dwCallback = MAKELONG(SECD::sWindow, 0);
         theParms.dwTo = this->mEnd;
-        MCIERROR theError = mciSendCommand(this->mDevice, MCI_PLAY, MCI_NOTIFY | MCI_TO, (DWORD)&theParms);
+        MCIERROR theError = mciSendCommand(this->mDevice, MCI_PLAY, MCI_NOTIFY | MCI_TO, (DWORD_PTR)&theParms);
         if (theError == 0) {
             this->mBusy = true;
             return kErrorOK;
@@ -163,19 +163,19 @@ long SECD::SeekToTime(const SECDTime& inTime)
         MCI_STATUS_PARMS theStatus;
         MCIERROR theError;
         this->Stop();
-        mciSendCommand(this->mDevice, MCI_SEEK, MCI_SEEK_TO_START, (DWORD)&theSeek);
+        mciSendCommand(this->mDevice, MCI_SEEK, MCI_SEEK_TO_START, (DWORD_PTR)&theSeek);
         theSet.dwTimeFormat = MCI_FORMAT_MSF;
-        theError = mciSendCommand(this->mDevice, MCI_SET, MCI_SET_TIME_FORMAT | MCI_WAIT, (DWORD)&theSet);
+        theError = mciSendCommand(this->mDevice, MCI_SET, MCI_SET_TIME_FORMAT | MCI_WAIT, (DWORD_PTR)&theSet);
         if (theError == 0) {
             theStatus.dwItem = MCI_STATUS_LENGTH;
-            theError = mciSendCommand(this->mDevice, MCI_STATUS, MCI_STATUS_ITEM | MCI_WAIT, (DWORD)&theStatus);
+            theError = mciSendCommand(this->mDevice, MCI_STATUS, MCI_STATUS_ITEM | MCI_WAIT, (DWORD_PTR)&theStatus);
             if (theError == 0) {
                 this->mEnd = theStatus.dwReturn;
                 if (!(inTime.mMinutes < MCI_MSF_MINUTE(this->mEnd) ||
                       (inTime.mMinutes == MCI_MSF_MINUTE(this->mEnd) && inTime.mSeconds < MCI_MSF_SECOND(this->mEnd))))
                     return kErrorFailed;
                 theSeek.dwTo = MCI_MAKE_MSF(inTime.mMinutes, inTime.mSeconds, 0);
-                theError = mciSendCommand(this->mDevice, MCI_SEEK, MCI_WAIT | MCI_TO, (DWORD)&theSeek);
+                theError = mciSendCommand(this->mDevice, MCI_SEEK, MCI_WAIT | MCI_TO, (DWORD_PTR)&theSeek);
                 if (theError == 0)
                     return kErrorOK;
             }
@@ -196,25 +196,25 @@ long SECD::SeekToTrack(unsigned long inTrack)
         MCI_STATUS_PARMS theStatus;
         MCIERROR theError;
         this->Stop();
-        theError = mciSendCommand(this->mDevice, MCI_SEEK, MCI_SEEK_TO_START, (DWORD)&theSeek);
+        theError = mciSendCommand(this->mDevice, MCI_SEEK, MCI_SEEK_TO_START, (DWORD_PTR)&theSeek);
         if (theError == 0) {
             theSet.dwTimeFormat = MCI_FORMAT_TMSF;
-            theError = mciSendCommand(this->mDevice, MCI_SET, MCI_SET_TIME_FORMAT | MCI_WAIT, (DWORD)&theSet);
+            theError = mciSendCommand(this->mDevice, MCI_SET, MCI_SET_TIME_FORMAT | MCI_WAIT, (DWORD_PTR)&theSet);
             if (theError == 0) {
                 theStatus.dwItem = MCI_STATUS_NUMBER_OF_TRACKS;
-                theError = mciSendCommand(this->mDevice, MCI_STATUS, MCI_STATUS_ITEM | MCI_WAIT, (DWORD)&theStatus);
+                theError = mciSendCommand(this->mDevice, MCI_STATUS, MCI_STATUS_ITEM | MCI_WAIT, (DWORD_PTR)&theStatus);
                 if (theError == 0) {
                     if (inTrack < 1 || inTrack > theStatus.dwReturn)
                         return kErrorFailed;
                     theStatus.dwTrack = inTrack;
                     theStatus.dwItem = MCI_STATUS_LENGTH;
                     theError = mciSendCommand(this->mDevice, MCI_STATUS, MCI_STATUS_ITEM | MCI_TRACK | MCI_WAIT,
-                                              (DWORD)&theStatus);
+                                              (DWORD_PTR)&theStatus);
                     if (theError == 0) {
                         theSeek.dwTo = MCI_MAKE_TMSF(inTrack, 0, 0, 0);
                         this->mEnd = MCI_MAKE_TMSF(inTrack, MCI_MSF_MINUTE(theStatus.dwReturn),
                                              MCI_MSF_SECOND(theStatus.dwReturn), MCI_MSF_FRAME(theStatus.dwReturn));
-                        theError = mciSendCommand(this->mDevice, MCI_SEEK, MCI_WAIT | MCI_TO, (DWORD)&theSeek);
+                        theError = mciSendCommand(this->mDevice, MCI_SEEK, MCI_WAIT | MCI_TO, (DWORD_PTR)&theSeek);
                         if (theError == 0)
                             return kErrorOK;
                     }
@@ -263,13 +263,13 @@ long SECD::SetVolume(float inVolume)
 long SECD::Stop()
 {
     MCI_GENERIC_PARMS theStop;
-    MCIERROR theError = mciSendCommand(this->mDevice, MCI_STOP, MCI_WAIT, (DWORD)&theStop);
+    MCIERROR theError = mciSendCommand(this->mDevice, MCI_STOP, MCI_WAIT, (DWORD_PTR)&theStop);
     if (theError == 0) {
         MCI_GENERIC_PARMS theClose;
-        if (mciSendCommand(this->mDevice, MCI_CLOSE, MCI_WAIT, (DWORD)&theClose) == 0) {
+        if (mciSendCommand(this->mDevice, MCI_CLOSE, MCI_WAIT, (DWORD_PTR)&theClose) == 0) {
             MCI_OPEN_PARMS theOpen;
-            theOpen.lpstrDeviceType = (LPCSTR)MAKELONG(MCI_DEVTYPE_CD_AUDIO, this->mIndex);
-            if (mciSendCommand(this->mIndex, MCI_OPEN, MCI_OPEN_TYPE | MCI_OPEN_TYPE_ID | MCI_WAIT, (DWORD)&theOpen) == 0)
+            theOpen.lpstrDeviceType = (LPCSTR)(DWORD_PTR)MAKELONG(MCI_DEVTYPE_CD_AUDIO, this->mIndex);
+            if (mciSendCommand(this->mIndex, MCI_OPEN, MCI_OPEN_TYPE | MCI_OPEN_TYPE_ID | MCI_WAIT, (DWORD_PTR)&theOpen) == 0)
                 this->mDevice = theOpen.wDeviceID;
         }
         this->mBusy = false;

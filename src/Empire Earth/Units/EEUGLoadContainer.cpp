@@ -382,7 +382,7 @@ void EEUGLoadContainer::Abandon(EEComplexUnit* inUnit)
 long EEUGLoadContainer::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     long theResult = 0;
-    RTSUnit* theUnit = ::gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mContainer));
+    RTSUnit* theUnit = ::gWorld.GetUnit(USavedID(this->mContainer));
     if (theUnit != NULL) {
         this->mContainer = static_cast<EEUnit*>(theUnit)->mComplexUnit;
         this->mContainer->Reference();

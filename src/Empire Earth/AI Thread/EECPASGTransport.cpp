@@ -76,7 +76,7 @@ long EECPASGTransport::Restore(unsigned long inMajorVersion, unsigned long inMin
     if (!this->mLand)
         return 0;
     EECPAttackCommander* theCommander = theSubGroup->mGroup->mCommander;
-    this->mLand = dynamic_cast<EECPASGLand*>(theCommander->GetSubGroup(reinterpret_cast<unsigned long>(this->mLand)));
+    this->mLand = dynamic_cast<EECPASGLand*>(theCommander->GetSubGroup(USavedID(this->mLand)));
     if (this->mLand)
         this->mLand->Reference();
     return 0;

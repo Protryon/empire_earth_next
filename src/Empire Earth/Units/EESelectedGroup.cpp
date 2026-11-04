@@ -219,7 +219,7 @@ long EESelectedGroup::RepairPointers(unsigned long inMajorVersion, unsigned long
     if (this->mSavedGroup == (EEGroup*)-1) {
         this->mSavedGroup = NULL;
     } else {
-        this->mSavedGroup = this->mPlayer->mGroups[reinterpret_cast<long>(this->mSavedGroup)];
+        this->mSavedGroup = this->mPlayer->mGroups[(long)USavedID(this->mSavedGroup)];
     }
     this->ShowSelectionAreas();
     return theResult;

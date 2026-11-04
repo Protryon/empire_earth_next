@@ -1,7 +1,7 @@
 // C:\EEX\Low-Level Engine\Graphics Engine\GEModelManager.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
-// 0x100206c7..0x10020d20: GEModelManager's members, then the map<UString, unsigned long> COMDATs and the UList
+// 0x100206c7..0x10020d20: GEModelManager's members, then the map<UString, GEModel*> COMDATs and the UList
 // template-static init pairs. No U2D keys. The ESVERIFY is the original's line 39 (0x27).
 #include <windows.h>
 #include <stdio.h>
@@ -61,7 +61,7 @@ GEModel* GEModelManager::CreateModel(unsigned long inPolygonCount, unsigned long
     this->mCriticalSection->Enter();
     sprintf(theName, "GEModelManager::CreateModel(%s_%d)", (const char*)inName, sModelNumber++);
     theModel = new GEModel(inPolygonCount, inVertexCount, inMaterialCount, inTagPointCount, inFrameCount, inSubModelCount, theName, inFlags, this);
-    this->mModels[theName] = reinterpret_cast<unsigned long>(theModel);
+    this->mModels[theName] = theModel;
     this->mCriticalSection->Leave();
     return theModel;
 }
@@ -85,12 +85,12 @@ GEModel* GEModelManager::CreateSubModel(unsigned long inPolygonCount, unsigned l
 // Writes the list of loaded models and their reference counts to a file
 void GEModelManager::DumpAllLoadedMedia(FSFileSpec& inFile)
 {
-    std::map<UString, unsigned long>::iterator theIter;
+    std::map<UString, GEModel*>::iterator theIter;
     this->mCriticalSection->Enter();
     fprintf(inFile, "\n\n*********Model Manager - Current Loaded Files In Memory*********\n\n");
     for (theIter = this->mModels.begin(); theIter != this->mModels.end(); theIter++)
         fprintf(inFile, "The %s model file is loaded in memory with a reference count of %d.\n",
-                (const char*)theIter->first, ((GEModel*)theIter->second)->mReferenceCount);
+                (const char*)theIter->first, theIter->second->mReferenceCount);
     this->mCriticalSection->Leave();
 }
 
@@ -101,17 +101,17 @@ GEModel* GEModelManager::LoadModel(const UString& inName, std::map<unsigned long
     UString theFileName = inName + ".cem";
     FSFileSpec* theFile = NULL;
     GEModel* theModel = NULL;
-    std::map<UString, unsigned long>::iterator theIter;
+    std::map<UString, GEModel*>::iterator theIter;
     TSScheduler::GetCurrentThreadIndex();
     this->mCriticalSection->Enter();
     theIter = this->mModels.find(theFileName);
     if (theIter != this->mModels.end())
-        theModel = (GEModel*)theIter->second;
+        theModel = theIter->second;
     else if (this->mPath->FindFile(theFileName, theFile) == kErrorOK) {
         if (theFile->Open(kFileAccessRead) == kErrorOK) {
             theModel = new GEModel(this);
             if (theModel->Load(*theFile, ioTextures, true) == kErrorOK) {
-                this->mModels[theFileName] = reinterpret_cast<unsigned long>(theModel);
+                this->mModels[theFileName] = theModel;
                 this->mMemoryFootprint += theModel->SizeOf();
             } else {
                 GEReportModelFile(theFile->GetVolume(), theFile->GetDirectory(), theFile->GetFile());
@@ -134,11 +134,11 @@ GEModel* GEModelManager::LoadModel(const UString& inName, std::map<unsigned long
 long GEModelManager::RemoveAllModels()
 {
     long theResult = kErrorOK;
-    std::map<UString, unsigned long>::iterator theIter;
+    std::map<UString, GEModel*>::iterator theIter;
     GEModel* theModel;
     this->mCriticalSection->Enter();
     for (theIter = this->mModels.begin(); theIter != this->mModels.end();) {
-        theModel = (GEModel*)theIter->second;
+        theModel = theIter->second;
         if (theModel->mReferenceCount == 1) {
             this->mMemoryFootprint -= theModel->SizeOf();
             theModel->UReferenceCounter::Dereference();
@@ -157,10 +157,10 @@ long GEModelManager::RemoveAllModels()
 long GEModelManager::RemoveModel(GEModel* inModel)
 {
     long theResult = 3;
-    std::map<UString, unsigned long>::iterator theIter;
+    std::map<UString, GEModel*>::iterator theIter;
     this->mCriticalSection->Enter();
     for (theIter = this->mModels.begin(); theIter != this->mModels.end(); theIter++)
-        if ((GEModel*)theIter->second == inModel) {
+        if (theIter->second == inModel) {
             if (inModel->mReferenceCount == 1) {
                 this->mMemoryFootprint -= inModel->SizeOf();
                 inModel->UReferenceCounter::Dereference();
@@ -189,10 +189,10 @@ void GEModelManager::SetModelPath(FSPath* inPath)
 // Runs the self check on every loaded model (results ignored)
 void GEModelManager::VerifyModels()
 {
-    std::map<UString, unsigned long>::iterator theIter = this->mModels.begin();
+    std::map<UString, GEModel*>::iterator theIter = this->mModels.begin();
     this->mCriticalSection->Enter();
     for (; theIter != this->mModels.end(); theIter++)
-        ((GEModel*)theIter->second)->Verify();
+        theIter->second->Verify();
     this->mCriticalSection->Leave();
 }
 

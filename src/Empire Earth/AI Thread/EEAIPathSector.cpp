@@ -61,12 +61,12 @@ EEAIPathSector::~EEAIPathSector()
 }
 
 // FUNCTION: EXE 0x42bc72
-// Adds a neighbouring sector id unless it is already listed
-void EEAIPathSector::AddNeighbor(long inID)
+// Adds a continent touching the sector unless it is already listed
+void EEAIPathSector::AddNeighbor(EEAIContinent* inContinent)
 {
-    std::vector<long>::iterator theNeighbor = std::find(this->mNeighbors.begin(), this->mNeighbors.end(), inID);
+    std::vector<EEAIContinent*>::iterator theNeighbor = std::find(this->mNeighbors.begin(), this->mNeighbors.end(), inContinent);
     if (theNeighbor == this->mNeighbors.end())
-        this->mNeighbors.push_back(inID);
+        this->mNeighbors.push_back(inContinent);
 }
 
 // FUNCTION: EXE 0x42bccf

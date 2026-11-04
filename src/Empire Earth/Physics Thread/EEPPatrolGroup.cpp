@@ -236,7 +236,7 @@ long EEPPatrolGroup::RepairPointers(unsigned long inMajorVersion, unsigned long 
     std::vector<long> theIDs;
     long theResult = 0;
     for (unsigned long i = 0; i < this->mPatrolPoints.size(); i++) {
-        long theID = reinterpret_cast<long>(this->mPatrolPoints[i]);
+        long theID = (long)USavedID(this->mPatrolPoints[i]);
         theIDs.push_back(theID);
     }
     this->mPatrolPoints.clear();

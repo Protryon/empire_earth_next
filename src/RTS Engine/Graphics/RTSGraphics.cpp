@@ -186,7 +186,7 @@ void RTSGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, voi
         break;
     case 0x407:
         this->mRasterizer = static_cast<GERasterizer*>(inParameter1);
-        this->mScreen = reinterpret_cast<unsigned long>(inParameter2);
+        this->mScreen = (unsigned long)reinterpret_cast<intptr_t>(inParameter2);
         break;
     case 0x409:
         this->mUIManager = static_cast<UIManager*>(inParameter1);

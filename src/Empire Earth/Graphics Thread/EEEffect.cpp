@@ -872,10 +872,10 @@ void Fn103F64()
 long EEEffect::RepairPointers()
 {
     long theResult = 0;
-    if (reinterpret_cast<unsigned long>(this->mUnit) == 0xffffffff)
+    if (USavedID(this->mUnit) == 0xffffffff)
         this->mUnit = NULL;
     else {
-        this->mUnit = dynamic_cast<EEUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mUnit))));
+        this->mUnit = dynamic_cast<EEUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mUnit))));
         if (this->mUnit == NULL)
             theResult = 7;
         else

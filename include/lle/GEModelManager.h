@@ -28,7 +28,7 @@ public:
     void SetModelPath(FSPath* inPath);
     void VerifyModels();
 private:
-    std::map<UString, unsigned long> mModels;   // +0x00 name -> GEModel*
+    std::map<UString, GEModel*> mModels;   // +0x00 name -> model
     FSPath* mPath;                          // +0x0c (referenced)
     TSCriticalSection* mCriticalSection;    // +0x10
     unsigned long mMemoryFootprint;         // +0x14 sum of the loaded models' SizeOf()

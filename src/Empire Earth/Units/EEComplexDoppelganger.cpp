@@ -297,7 +297,7 @@ long EEComplexDoppelganger::Load(unsigned long inMajorVersion, unsigned long inM
 // it if the unit or model is gone; returns 0
 long EEComplexDoppelganger::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 {
-    unsigned long theModel = reinterpret_cast<unsigned long>(this->mModel);
+    unsigned long theModel = USavedID(this->mModel);
     this->mModel = NULL;
     if (EEDoppelganger::RepairPointers(inFirst, inSecond) == kErrorOK) {
         EEModel* theMedia = (EEModel*)EEMedia::Get(theModel);
@@ -774,14 +774,14 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     }
     long theCount = this->mCitizenBuildQueue.size();
     for (long unit = 0; unit < theCount; unit++) {
-        this->mCitizenBuildQueue[unit] = static_cast<EEUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mCitizenBuildQueue[unit])));
+        this->mCitizenBuildQueue[unit] = static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mCitizenBuildQueue[unit])));
         this->mCitizenBuildQueue[unit]->Reference();
     }
     theCount = this->mCargo.size();
     for (long cargo = 0; cargo < theCount; cargo++) {
-        if (this->GetPlayer()->HasLoadedUnitID(reinterpret_cast<unsigned long>(this->mCargo[cargo])))
+        if (this->GetPlayer()->HasLoadedUnitID(USavedID(this->mCargo[cargo])))
             continue;
-        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mCargo[cargo])));
+        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mCargo[cargo])));
         theUnit->Reference();
         theCargo.push_back(theUnit);
     }
@@ -822,22 +822,22 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     if (this->mPatrolGroup == (EEPPatrolGroup*)-1)
         this->mPatrolGroup = NULL;
     else {
-        this->mPatrolGroup = this->GetPlayer()->GetPatrolGroup(reinterpret_cast<unsigned long>(this->mPatrolGroup));
+        this->mPatrolGroup = this->GetPlayer()->GetPatrolGroup(USavedID(this->mPatrolGroup));
         if (this->mPatrolGroup == NULL)
             theResult = 3;
         else
             this->mPatrolGroup->Reference();
     }
-    this->mPreviousPart = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mPreviousPart)));
+    this->mPreviousPart = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mPreviousPart)));
     if (this->mPreviousPart != NULL)
         this->mPreviousPart->Reference();
-    this->mNextPart = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mNextPart)));
+    this->mNextPart = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mNextPart)));
     if (this->mNextPart != NULL)
         this->mNextPart->Reference();
-    this->mHomeBase = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mHomeBase)));
+    this->mHomeBase = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mHomeBase)));
     if (this->mHomeBase != NULL)
         this->mHomeBase->Reference();
-    this->mContainer = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mContainer)));
+    this->mContainer = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mContainer)));
     if (this->mContainer != NULL) {
         // A not-yet-repaired cargo vector still holds IDs; a repaired one holds actual unit pointers.
         if (this->mContainer->mUnitClass->mTransportCapacity < 1
@@ -870,17 +870,17 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     }
     this->mBuildQueue.clear();
     this->mBuildQueue = theResearch;
-    EEUnit* theLink = dynamic_cast<EEUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mGatheredResource)));
+    EEUnit* theLink = dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mGatheredResource)));
     this->mGatheredResource = NULL;
     if (theLink != NULL && (theLink->GetUnitID() != 0 || theLink->mResourceType != kResourceNone))
         this->SetGatheredResource(theLink);
-    this->mLastAttacker = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mLastAttacker)));
+    this->mLastAttacker = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mLastAttacker)));
     if (this->mLastAttacker != NULL)
         this->mLastAttacker->Reference();
     if (this->mOwner == (EEComplexUnit*)-1 || this->mOwner == NULL)
         this->mOwner = NULL;
     else {
-        this->mOwner = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mOwner)));
+        this->mOwner = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mOwner)));
         if (this->mOwner == NULL)
             theLostContainer = true;
         else
@@ -889,7 +889,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     if (this->mMine == (EEUnit*)-1 || this->GetUnitClass() == NULL)
         this->mMine = NULL;
     else {
-        this->mMine = dynamic_cast<EEUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mMine)));
+        this->mMine = dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mMine)));
         if (this->mMine != NULL)
             this->mMine->Reference();
     }
@@ -915,7 +915,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
         this->GetPlayer()->AddWonder(this, !(inMajorVersion == 0 && inMinorVersion < 0xe2));
     this->mHerd = NULL;
     for (long linked = this->mHeldUnits.size() - 1; linked >= 0; linked--) {
-        this->mHeldUnits[linked] = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mHeldUnits[linked])));
+        this->mHeldUnits[linked] = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mHeldUnits[linked])));
         if (this->mHeldUnits[linked] == NULL)
             this->mHeldUnits.erase(this->mHeldUnits.begin() + linked);
         else
@@ -924,13 +924,13 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     if (this->mHolder == (EEComplexUnit*)-1)
         this->mHolder = NULL;
     else {
-        this->mHolder = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mHolder)));
+        this->mHolder = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mHolder)));
         if (this->mHolder != NULL)
             this->mHolder->Reference();
     }
     if (theLostContainer == true)
         this->GetPlayer()->AddStrandedUnit(this);
-    unsigned long theBehavior = reinterpret_cast<unsigned long>(this->mBehavior);
+    unsigned long theBehavior = USavedID(this->mBehavior);
     if (theBehavior < 8) {
         if (theBehavior == 3 || theBehavior == 4)
             this->mBehavior = NULL;
@@ -953,7 +953,7 @@ long EEComplexUnit::RepairPointers(unsigned long inMajorVersion, unsigned long i
     EETagPointList* theTags = this->mStats->mModel->mTagPoints[this->mAnimation];
     if (this->GetPlayer() != NULL && theTags != NULL && theTags->GetNumTagPoints() <= this->mWeaponTagPoint)
         this->mWeaponTagPoint = 0;
-    theLink = dynamic_cast<EEUnit*>(gWorld.GetUnit(reinterpret_cast<unsigned long>(this->mLastResource)));
+    theLink = dynamic_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mLastResource)));
     this->mLastResource = NULL;
     if (theLink != NULL && (theLink->GetUnitID() != 0 || theLink->mResourceType != kResourceNone))
         this->SetLastResource(theLink);

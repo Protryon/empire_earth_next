@@ -93,6 +93,41 @@ def compile_one(job, out, opt, overlays=None, extra=()):
     return job, ok, log
 
 
+# the 64-bit census: casts that lose a pointer's upper half, integers turned into pointers, and 64-bit values
+# (size_t, ptrdiff_t, pointer differences) narrowed into 32-bit integers
+X64_WARNINGS = ["-Wpointer-to-int-cast", "-Wvoid-pointer-to-int-cast", "-Wint-to-pointer-cast",
+                "-Wint-to-void-pointer-cast", "-Wshorten-64-to-32"]
+DIAG = re.compile(r"^(.*?)\((\d+),\d+\)\s*:\s*(warning|error): (.*?)(?: \[(-W[\w-]+)\])?$", re.M)
+
+
+def x64_census(out, logs):
+    """Every diagnostic of a --x64 compile -> <out>/x64_census.tsv (file, line, kind, flag, message), deduplicated
+    (headers are seen by many units), and a summary by warning class and by file."""
+    rows = set()
+    for job, log in logs:
+        for f, line, kind, msg, flag in DIAG.findall(log):
+            rel = pathlib.Path(f)
+            try:
+                rel = rel.resolve().relative_to(verify.ORIG_SRC_ROOT.resolve())
+            except ValueError:
+                try:
+                    rel = rel.resolve().relative_to(ROOT)
+                except ValueError:
+                    pass
+            rows.add((str(rel).replace("\\", "/"), int(line), kind, flag or kind, msg))
+    path = out / "x64_census.tsv"
+    path.write_text("".join("\t".join(map(str, r)) + "\n" for r in sorted(rows)), encoding="utf-8")
+    by_flag, by_file = {}, {}
+    for f, _, _, flag, _ in rows:
+        by_flag[flag] = by_flag.get(flag, 0) + 1
+        by_file[(flag, f)] = by_file.get((flag, f), 0) + 1
+    print(f"\nx64 census: {len(rows)} distinct sites -> {path}")
+    for flag, n in sorted(by_flag.items(), key=lambda kv: -kv[1]):
+        print(f"{n:7}  {flag}")
+        for (fl, f), k in sorted(((k, v) for k, v in by_file.items() if k[0] == flag), key=lambda kv: -kv[1])[:5]:
+            print(f"           {k:5} {f}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("names", nargs="*", metavar="module", help=f"default: all ({' '.join(units.MODULES)})")
@@ -100,9 +135,18 @@ def main():
     ap.add_argument("--out", default=str(ROOT / "build" / "clang"))
     ap.add_argument("--opt", default="-O1", help="clang-cl optimisation (default -O1)")
     ap.add_argument("--only", help="compile only units whose path contains this text")
+    ap.add_argument("--x64", action="store_true",
+                    help="64-bit census (default out build/clang-x64): compile for x86_64 with the pointer-size "
+                         "warnings on; every diagnostic goes to <out>/x64_census.tsv (see X64_WARNINGS)")
     a = ap.parse_args()
     if not CLANG.exists():
         sys.exit(f"{CLANG} is missing: install LLVM (winget install LLVM.LLVM) or set EE_LLVM")
+    if a.x64:
+        global CLANG_FLAGS
+        CLANG_FLAGS = [("--target=x86_64-pc-windows-msvc" if f.startswith("--target=") else f)
+                       for f in CLANG_FLAGS if f != "/arch:IA32"] + X64_WARNINGS
+        if a.out == str(ROOT / "build" / "clang"):
+            a.out = str(ROOT / "build" / "clang-x64")
     mods = a.names or units.MODULES
     jobs = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
     if a.only:
@@ -111,10 +155,11 @@ def main():
     for j in jobs:
         verify.include_paths(verify.stage_source(j[1]))
     t0 = time.time()
-    done, errors = {}, {}
+    done, errors, logs = {}, {}, []
     with concurrent.futures.ThreadPoolExecutor(max(1, a.j)) as ex:
         for job, ok, log in ex.map(lambda j: compile_one(j, out, a.opt), jobs):
             done.setdefault(job[0], [0, 0])[0 if ok else 1] += 1
+            logs.append((job, log))
             if not ok:
                 errs = ERROR.findall(log)
                 first = errs[0] if errs else ("?", "?", log.splitlines()[-1] if log else "no output")
@@ -128,6 +173,8 @@ def main():
         print(f"{m:9} {ok:4} compiled  {bad:3} failed")
     n_bad = sum(b for _, b in done.values())
     print(f"{len(jobs) - n_bad}/{len(jobs)} units compiled in {time.time() - t0:.0f} s -> {out / 'obj'}")
+    if a.x64:
+        x64_census(out, logs)
     if errors:
         print("\nmost frequent errors (file, message with names masked):")
         for (f, msg), n in sorted(errors.items(), key=lambda kv: -kv[1])[:40]:
