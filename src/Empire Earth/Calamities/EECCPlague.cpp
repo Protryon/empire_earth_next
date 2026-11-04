@@ -80,8 +80,8 @@ EEContagionFunctor* EECCPlague::GetContagionFunctor()
 }
 
 // FUNCTION: EXE 0x4b3005
-// Reads the calamity data: sounds, damage, radius, damage time, chance and effect; class 0x13 gets flags 0x10,
-// others 1; builds the plague functor
+// Reads the calamity data: sounds, damage, radius, damage time, chance and effect; sets the class flags to 1;
+// builds the plague functor
 void EECCPlague::Initialize(EECalamityData* inData)
 {
     EECalamityClass::Initialize(inData);
@@ -94,10 +94,9 @@ void EECCPlague::Initialize(EECalamityData* inData)
     this->mGraphicEffect = EEGraphicEffect::Get(inData->mGraphicEffectID1);
     if (this->mGraphicEffect != NULL)
         this->mGraphicEffect->Reference();
-    if (inData->mClassEnum == 0x13)
-        this->mClassFlags = 0x10;
-    else
-        this->mClassFlags = 1;
+    // the calamity manager builds this class only for the plague; the test for class 19 (AE Mind Control, always
+    // built as EECCAEMindControl) that set flags 0x10 could never pass and is gone
+    this->mClassFlags = 1;
     this->mFunctor = new EEPlagueFunctor(theRadius, theChance, this->mDamage, theDamageTime, this->GetUnitSet(), this->mIsBlockedByImmunity ? 2 : 3);
 }
 
