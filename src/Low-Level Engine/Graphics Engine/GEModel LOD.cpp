@@ -6,6 +6,7 @@
 // UList pool registrations (0x1001e2ba..0x1001e2fc). (File name inferred.)
 #include <windows.h>
 #include <float.h>
+#include <math.h>
 
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UString.h"
@@ -488,7 +489,8 @@ float GELODMetaVertex::ComputeEdgeCollapseCost(GELODMetaVertex* inVertex)
             theSum.mY += theNormal.mY;
             theSum.mZ += theNormal.mZ;
         }
-        if (theSum.mX < kBorderTolerance && theSum.mY < kBorderTolerance && theSum.mZ < kBorderTolerance)
+        // A crease is a normal sum near zero in every component (without fabs, all-negative sums counted too).
+        if (fabs(theSum.mX) < kBorderTolerance && fabs(theSum.mY) < kBorderTolerance && fabs(theSum.mZ) < kBorderTolerance)
             theCurvature = kDefaultWeight;
     }
     return theLength * theCurvature;
