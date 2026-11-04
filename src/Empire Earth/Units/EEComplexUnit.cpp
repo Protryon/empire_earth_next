@@ -182,6 +182,9 @@ UMemoryPool<EEComplexUnit> EEComplexUnit::sMemoryPool;
 // Creates a complex unit with every unit, mobile-unit and reference state reset to defaults
 EEComplexUnit::EEComplexUnit()
 {
+    // none of the resets below sets the disable reason, which saved games store: start a new unit at 0
+    // (a unit reused from the pool keeps its last reason, as before)
+    this->mDisabledReason = 0;
     this->Reset();
     this->ResetEEUnit();
     this->ResetEEComplexUnit(true, false);
