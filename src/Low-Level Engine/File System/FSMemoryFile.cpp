@@ -59,7 +59,7 @@ FSMemoryFile::~FSMemoryFile()
 }
 
 // FUNCTION: LLE 0x10009fbe
-// Marks the memory file closed and closes (deletes) its temporary disk copy, but keeps the stale stream pointer
+// Marks the memory file closed and closes (deletes) its temporary disk copy
 long FSMemoryFile::Close()
 {
     long theResult = kErrorOK;
@@ -178,7 +178,6 @@ long FSMemoryFile::Copy(const UString& inDestination, bool inFailIfExists, bool 
 
 // FUNCTION: LLE 0x1000a20b
 // Decompresses the contents in place when they are compressed and closes the file; outLength is the new length
-// (leaks the new buffer when decompression fails)
 long FSMemoryFile::Decompress(unsigned long& outLength)
 {
     unsigned long theDecompressedLength;
@@ -209,7 +208,8 @@ long FSMemoryFile::Decompress(unsigned long& outLength)
                         theResult = kErrorOK;
                     } else
                         delete[] theBuffer;
-                }
+                } else
+                    delete[] theBuffer;   // Fixed: the buffer leaked when decompression failed
             }
         } else
             this->GetLength(outLength);
