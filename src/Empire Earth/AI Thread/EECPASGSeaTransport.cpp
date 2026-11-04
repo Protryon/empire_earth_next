@@ -504,14 +504,13 @@ void EECPASGSpaceship::CollectTargets(EEAIAStarBounds* inBounds, bool inIncludeE
 }
 
 // FUNCTION: EXE 0x44f5b7
-// Returns true if the sub-group is empty or the location's water body id equals the first unit's space region id
-// (an original bug: the two ids come from different maps)
+// Returns true if the sub-group is empty or the location is in the first unit's space region
 bool EECPASGSpaceship::CanReach(const EECPILocation* inLocation)
 {
     bool theResult = true;
     if (this->mUnits.size() > 0) {
         EEComplexUnit* theUnit = (*this->mUnits.begin())->GetUnit();
-        theResult = gContinentManager.GetContinent(inLocation->mTile, kAIPathWaterBody) == gContinentManager.GetContinent(theUnit, kAIPathSpaceRegion);
+        theResult = gContinentManager.GetContinent(inLocation->mTile, kAIPathSpaceRegion) == gContinentManager.GetContinent(theUnit, kAIPathSpaceRegion);
     }
     return theResult;
 }
