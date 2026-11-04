@@ -474,8 +474,9 @@ bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation,
                     theArea->GetTiles(theAreaTiles);
             }
         } else if (this->mInAreaCheck == 2 && theArea != NULL) {
+            // the area's own tiles, to leave out below
             if (!theArea->IsUnset() && theArea->mSelectMode != 0)
-                theArea->GetTiles(theAreaTiles);
+                theArea->GetTiles(theTiles);
             for (long row = 0; row < theWidth; ++row) {
                 long x = row;
                 long y = row + theHeight;
@@ -484,8 +485,8 @@ bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation,
                     if (theArea->IsUnset())
                         theAreaTiles.push_back(theTile);
                     else if (theArea->mSelectMode == 0) {
-                        if ((float)x < theArea->mRect.GetLeft() && theArea->mRect.GetRight() < (float)x
-                            && (float)y < theArea->mRect.GetTop() && theArea->mRect.GetBottom() < (float)y)
+                        if ((float)x < theArea->mRect.GetLeft() || theArea->mRect.GetRight() < (float)x
+                            || (float)y < theArea->mRect.GetTop() || theArea->mRect.GetBottom() < (float)y)
                             theAreaTiles.push_back(theTile);
                     } else if (std::find(theTiles.begin(),theTiles.end(),theTile) == theTiles.end())
                         theAreaTiles.push_back(theTile);
@@ -493,8 +494,8 @@ bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation,
                     if (theArea->IsUnset())
                         theAreaTiles.push_back(theNextTile);
                     else if (theArea->mSelectMode == 0) {
-                        if ((float)(x + 1) < theArea->mRect.GetLeft() && theArea->mRect.GetRight() < (float)(x + 1)
-                            && (float)y < theArea->mRect.GetTop() && theArea->mRect.GetBottom() < (float)y)
+                        if ((float)(x + 1) < theArea->mRect.GetLeft() || theArea->mRect.GetRight() < (float)(x + 1)
+                            || (float)y < theArea->mRect.GetTop() || theArea->mRect.GetBottom() < (float)y)
                             theAreaTiles.push_back(theNextTile);
                     } else if (std::find(theTiles.begin(),theTiles.end(),theNextTile) == theTiles.end())
                         theAreaTiles.push_back(theNextTile);
