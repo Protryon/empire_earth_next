@@ -1104,6 +1104,10 @@ long LobbyRebuildPlayers(EEPSaveGameHeader& inHeader)
             theOthers.push_back(thePlayer);
         }
     }
+    // Fix: every saved slot that is not a joined human takes an entry from theOthers, and nothing checked that one
+    // is left (a saved player matching no joined human used one too many and read and wrote before the start of
+    // the list). Running out now stops the rebuild; the humans left over then make it fail with 9.
+    bool theOutOfSlots = false;
     long theResult = theHumans.size() > 0 ? kErrorOK : 9;
     if (theResult == kErrorOK) {
         if (gWorld.GetLobbyOptions().mLoadType == 2) {
@@ -1128,6 +1132,10 @@ long LobbyRebuildPlayers(EEPSaveGameHeader& inHeader)
                 }
                 if (theFound)
                     continue;
+                if (theOthers.empty()) {
+                    theOutOfSlots = true;
+                    break;
+                }
                 long theType;
                 if (theSaved.mType == 1 || theSaved.mType == 2)
                     theType = 3;
@@ -1155,6 +1163,10 @@ long LobbyRebuildPlayers(EEPSaveGameHeader& inHeader)
                 if (j < (long)inHeader.mNumPlayers - 1) {
                     theSaved = inHeader.mGameOptions.mPlayers[j];
                     if (theSaved.mB36 == true) {
+                        if (theOthers.empty()) {
+                            theOutOfSlots = true;
+                            break;
+                        }
                         theOthers.back().mType = 0;
                         theOthers.back().mName = theSaved.mName;
                         theOthers.back().mStartingCitizens = theSaved.mStartingCitizens;
@@ -1172,6 +1184,10 @@ long LobbyRebuildPlayers(EEPSaveGameHeader& inHeader)
                         gWorld.GetLobbyOptions().GetPlayer(theHumans.back().mSlot) = theHumans.back();
                         theHumans.pop_back();
                     } else {
+                        if (theOthers.empty()) {
+                            theOutOfSlots = true;
+                            break;
+                        }
                         theOthers.back().mType = 3;
                         theOthers.back().mName = theSaved.mName;
                         theOthers.back().mStartingCitizens = theSaved.mStartingCitizens;
@@ -1183,6 +1199,10 @@ long LobbyRebuildPlayers(EEPSaveGameHeader& inHeader)
                         theOthers.pop_back();
                     }
                 } else {
+                    if (theOthers.empty()) {
+                        theOutOfSlots = true;
+                        break;
+                    }
                     theOthers.back().mType = 4;
                     theOthers.back().mLoadedType = 4;
                     theOthers.back().mB36 = false;
@@ -1192,7 +1212,7 @@ long LobbyRebuildPlayers(EEPSaveGameHeader& inHeader)
             }
         }
     }
-    theResult = theHumans.size() != 0 ? 9 : kErrorOK;
+    theResult = theHumans.size() != 0 || theOutOfSlots ? 9 : kErrorOK;
     if (theResult == kErrorOK) {
         for (long j = 0; j < 16; j++) {
             gCommunications->ProcessGuaranteedLocalUserInput(new EEMFullPlayerInformation(gWorld.GetLobbyOptions().mPlayers[j]),
