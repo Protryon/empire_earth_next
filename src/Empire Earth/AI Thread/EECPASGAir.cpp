@@ -296,7 +296,8 @@ void EECPASGAir::CollectTargets(EEAIAStarBounds* inBounds, bool inIncludeEnemies
 
 // FUNCTION: EXE 0x442000
 // Returns true if the sub-group is empty, the location is invalid, it has a helicopter, or some plane's fuel range
-// (flight seconds x speed x 0.9) from its holder reaches the location; the holder is not checked for NULL
+// (flight seconds x speed x 0.9) from its holder (else its home base; planes with neither are skipped) reaches
+// the location
 bool EECPASGAir::CanReach(const EECPILocation* inLocation)
 {
     EECPILocation theLocation(*inLocation);
@@ -313,8 +314,13 @@ bool EECPASGAir::CanReach(const EECPILocation* inLocation)
             EEComplexUnit* theContainer = theUnit->GetContainer();
             if (theFuel <= 0 || !(theStats->GetMaxVelocity() > 0.0f))
                 continue;
-            // The original divides the flight time as an integer (0x4420bf, 0x4420d7) and measures from the unit's
-            // container (0x442099) without a NULL check; both are kept
+            // an airborne plane has no container: measure from its home base, as CountUnitsInRange does, instead
+            // of reading the position through a NULL container
+            if (theContainer == NULL)
+                theContainer = theUnit->mHomeBase;
+            if (theContainer == NULL)
+                continue;
+            // The original divides the flight time as an integer (0x4420bf, 0x4420d7); kept
             float theRange = ((theFuel / 1000) * theStats->GetMaxVelocity() * 0.9f) *
                              ((theFuel / 1000) * theStats->GetMaxVelocity() * 0.9f);
             // The original's jbe (0x442103) also accepts an unordered distance/range compare
