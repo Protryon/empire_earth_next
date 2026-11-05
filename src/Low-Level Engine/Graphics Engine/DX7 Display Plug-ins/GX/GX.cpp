@@ -215,7 +215,8 @@ bool GXCore::Start()
     }
     WGPUInstanceExtras theExtras = {};
     theExtras.chain.sType = (WGPUSType)WGPUSType_InstanceExtras;
-    theExtras.backends = WGPUInstanceBackend_DX12 | WGPUInstanceBackend_Vulkan;
+    // Windows: DX12 (WARP without a GPU), else Vulkan; Linux: Vulkan; macOS: Metal
+    theExtras.backends = WGPUInstanceBackend_DX12 | WGPUInstanceBackend_Vulkan | WGPUInstanceBackend_Metal;
     if (const char* theFlags = getenv("EE_WGPU_FLAGS"))   // wgpu instance flags (debugging: 1 debug, 2 validation)
         theExtras.flags = (WGPUInstanceFlag)strtoul(theFlags, NULL, 0);
     if (const char* theCompiler = getenv("EE_WGPU_DX12_COMPILER"))   // fxc or dxc (with dxcompiler.dll)
@@ -224,6 +225,7 @@ bool GXCore::Start()
         if (!PlatStrICmp(theBackend, "dx12")) theExtras.backends = WGPUInstanceBackend_DX12;
         else if (!PlatStrICmp(theBackend, "vulkan")) theExtras.backends = WGPUInstanceBackend_Vulkan;
         else if (!PlatStrICmp(theBackend, "gl")) theExtras.backends = WGPUInstanceBackend_GL;
+        else if (!PlatStrICmp(theBackend, "metal")) theExtras.backends = WGPUInstanceBackend_Metal;
     }
     WGPUInstanceDescriptor theInstanceDescriptor = {};
     theInstanceDescriptor.nextInChain = &theExtras.chain;
