@@ -141,3 +141,21 @@ long GEFindTextureFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFi
     }
     return inPath->FindFile(inName, outFile);
 }
+
+long GEFindTargaFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
+{
+    std::string theDirectory, theStem;
+    GESplitName(inName, theDirectory, theStem);
+    std::vector<std::vector<unsigned char> > theFrames(1);
+    if (GEReadFromPath(inPath, theDirectory + theStem + ".png", theFrames[0])) {
+        std::vector<unsigned char> theTexture;
+        std::string theError;
+        if (!GEOpenFormats::PngToSst(theFrames, theTexture, theError))
+            return GEOpenFormatFailed(theDirectory + theStem + ".png: " + theError, outFile);
+        // a one-frame .sst: the 14-byte header, the frame's type byte, then the frame's Targa
+        theTexture.erase(theTexture.begin(), theTexture.begin() + 15);
+        outFile = GEMemoryFile(theTexture, theStem + ".tga");
+        return kErrorOK;
+    }
+    return inPath->FindFile(inName, outFile);
+}

@@ -165,7 +165,8 @@ long RTSMouse::LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** i
     theDescription.mIsTransparencyEnabled = true;
     if (*ioSurface == NULL)
         inScreen->CreateSurface(theDescription, ioSurface);
-    long theResult = inScreen->GetTextureManager()->GetTexturePath()->FindFile(UString(inFile), theFile);
+    // its .png in place of the .tga when the data has one (open formats)
+    long theResult = GEFindTargaFile(inScreen->GetTextureManager()->GetTexturePath(), UString(inFile), theFile);
     // a missing pointer texture fails instead of being loaded through NULL
     if (theFile == NULL)
         return theResult != kErrorOK ? theResult : kErrorNotFound;
