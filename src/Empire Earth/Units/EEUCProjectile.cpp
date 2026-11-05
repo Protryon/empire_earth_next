@@ -348,3 +348,15 @@ void EEUCProjectile::Update(EEComplexUnit* inUnit)
         theElapsed = 1;
     inUnit->SetFlightTime(inUnit->mFlightTime + theElapsed);
 }
+
+// ICF-FOLDED: EXE 0x556dd8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUCProjectile::AddToRegion(class EEUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x556dd8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUCProjectile::RemoveFromRegion(class EEUnit *)
+{
+}

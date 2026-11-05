@@ -379,3 +379,11 @@ inline EEEffect2DPart::EEEffect2DPart(const GE3DPoint& inPosition, EEGraphicObje
     this->mTime = 0.0f;
     this->mIsDone = false;
 }
+
+// ICF-FOLDED: EXE 0x4e8eb1
+// Repairs the effect's unit pointer (a `jmp` to EEEffect::RepairPointers)
+// (no address of its own: the same body as EEEffect3D::RepairPointers, which ICF kept)
+long EEEffect2D::RepairPointers()
+{
+    return EEEffect::RepairPointers();
+}

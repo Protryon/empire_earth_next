@@ -990,3 +990,38 @@ void EEEffect::UnloadMedia()
     if (this->mGraphicEffect)
         this->mGraphicEffect->Unload();
 }
+
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEEffect::DrawPass2()
+{
+    return 0;
+}
+
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEEffect::DrawPass3()
+{
+    return 0;
+}
+
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEEffect::DrawPass4()
+{
+    return 0;
+}
+
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEEffect::DrawPass5()
+{
+    return 0;
+}
+
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEEffect::DrawPass6()
+{
+    return 0;
+}

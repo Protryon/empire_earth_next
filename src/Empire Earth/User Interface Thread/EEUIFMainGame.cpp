@@ -1898,3 +1898,24 @@ void EEUIFMGUnitHack::FnE123D()
 void EEUIFMainGame::FnE123D()
 {
 }
+
+// ICF-FOLDED: EXE 0x67c0b4
+// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEPlagueFunctor::InfectsAlliesOnly)
+bool EEFn27C0B4B(void *)
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x67c0b4
+// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEPlagueFunctor::InfectsAlliesOnly)
+bool EEModeKeyboardNone(void *)
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x4fca98
+// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEUnitGoal::GetOutOfSynchChecksum)
+long EEModeMouseNone(void *,void *)
+{
+    return 0;
+}

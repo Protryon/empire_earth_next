@@ -1769,3 +1769,9 @@ static void CloseMessageCallback(UIForm* inForm)
 // (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
 // TEMPLATE: EXE 0x4d3b23
 // (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
+void EEWonNet::PlayerJoined()
+{
+}

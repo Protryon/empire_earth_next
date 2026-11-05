@@ -22,7 +22,9 @@ PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatThread.cpp", "Platform/Win32/PlatString.cpp",
                   "Platform/Win32/PlatPreferences.cpp", "Platform/Win32/PlatFile.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS,
-               "exe": ["Empire Earth/Database/EEDataText.cpp", "Empire Earth/Database/EEDataTextFile.cpp"]}
+               "exe": ["Empire Earth/Database/EEDataText.cpp", "Empire Earth/Database/EEDataTextFile.cpp",
+                       # a unit with no code range of its own (every member was ICF-folded into another unit's)
+                       "Empire Earth/Calamities/EEGlobalCalamityClass.cpp"]}
 LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c", "pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
              "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c"}
 # dmusic (DirectMusic reimplementation, src/ThirdParty/dmusic): every source but the POSIX thread shim

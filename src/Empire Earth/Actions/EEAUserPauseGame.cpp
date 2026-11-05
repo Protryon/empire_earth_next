@@ -34,3 +34,9 @@ void EEAUserPauseGame::Virtual4()
         gWorld.mUserPaused = true;
     }
 }
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEAUserPauseGame::Virtual8()
+{
+}

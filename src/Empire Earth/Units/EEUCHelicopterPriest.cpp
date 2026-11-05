@@ -196,3 +196,48 @@ long EEUCHelicopterPriest::EvaluateCondition(EEComplexUnit* inUnit, unsigned lon
         theResult = 1;
     return theResult;
 }
+
+// ICF-FOLDED: EXE 0x61aaa9
+// Adds the transport to its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::AddToTile, which ICF kept)
+void EEUCHelicopterPriest::AddToTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->mUnits = theTile->AddUnit(theUnit, theTile->mUnits);
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCHelicopterPriest::FliesOver()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x61aaf5
+// Removes the transport from its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::RemoveFromTile, which ICF kept)
+void EEUCHelicopterPriest::RemoveFromTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->RemoveUnit(theUnit);
+}
+
+// ICF-FOLDED: EXE 0x616dd7
+// Updates the land priest as a priest
+// (no address of its own: the same body as EEUCLandPriest::Update, which ICF kept)
+void EEUCHelicopterPriest::Update(EEComplexUnit* inUnit)
+{
+    EEUCBasicPriest::Update(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUCHelicopterPriest::UpdateEffects(class EEComplexUnit *)
+{
+}

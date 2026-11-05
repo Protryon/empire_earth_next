@@ -1151,3 +1151,9 @@ bool EEPhysicsModel::ClipStep(EEComplexUnit* inUnit, const GEVector& inMove, GE3
 
 // the ICF-shared copy LINK kept in this unit's range
 // SYNTHETIC: EXE 0x556dd8
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body of EEABuild::Virtual8)
+void EEPhysicsTrace(char const *,unsigned long,class GEOrientation)
+{
+}

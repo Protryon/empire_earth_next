@@ -4867,3 +4867,43 @@ void EEPlayer::EpochMediaLoaded(long inEpoch)
 void EEPlayer::EpochMediaUnloaded(long inEpoch)
 {
 }
+
+// ICF-FOLDED: EXE 0x69059d
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEPlayer::AvoidsEnemies(class EEComplexUnit *)
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x564223
+// Returns the number of living heroes and/or heroes in production
+// (no address of its own: the same body as EEPlayer::GetNumHeroes, which ICF kept: a call of it)
+long EEPlayer::GetHeroCount(bool inFirst, bool inSecond)
+{
+    return this->GetNumHeroes(inFirst, inSecond);
+}
+
+// ICF-FOLDED: EXE 0x4ac9f3
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEPlayer::IsHuman()
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x556dd8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEPlayer::UnitStranded(class EEComplexUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
+void EEPlayer::Virtual60()
+{
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEPlayer::WonderStarted(class EEComplexUnit *)
+{
+}

@@ -1580,3 +1580,9 @@ inline EESEEQuickSave::~EESEEQuickSave()
 // FUNCTION: EXE 0x5a02ea
 // Destroys and frees the exit editor button event
 // (scalar deleting destructor, emitted with its vtable: CreateToolbarButtons news it)
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
+void EEUIFScenarioEditor::FnE123D()
+{
+}

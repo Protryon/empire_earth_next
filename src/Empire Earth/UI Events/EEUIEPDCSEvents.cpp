@@ -241,3 +241,10 @@ long EEUIEPDCSOk::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 
 // FUNCTION: EXE 0x5e66da
 // Allocates room for a number of civilization entries (vector _Buy)
+
+// ICF-FOLDED: EXE 0x67cf38
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEUIEPDCSFormClose::ProcessEvent(class UIForm *,class UIEntity *)
+{
+    return 0;
+}

@@ -365,3 +365,10 @@ void EEUGLoadGarrison::UpgradeContainer()
     if (this->mUpgrade != 0 && gUnitClassTable[this->mUpgrade] != NULL)
         EEReplaceUnit(this->mContainer, this->mContainer->mPlayer->mPlayerID, gUnitClassTable[this->mUpgrade]);
 }
+
+// ICF-FOLDED: EXE 0x4b3257
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUGLoadGarrison::CanContain(class EEComplexUnit *)
+{
+    return true;
+}

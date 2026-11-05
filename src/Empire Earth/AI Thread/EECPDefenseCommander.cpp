@@ -2154,3 +2154,21 @@ void EECPDefenseCommander::AssignSubGroupTask(EECPAttackSubGroup* inSubGroup, EE
 void EECPDefenseCommander::UnitsSwapped(std::vector<EEPUnitSwap>&)
 {
 }
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
+void EECPDefenseCommander::Refresh()
+{
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body of EECCAreaEffect::Reset)
+void EECPDefenseCommander::RespondToUnit(class EEComplexUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x563d6f
+// (no address of its own: folded into the shared `ret` body of EECCVolcano::UpdateVolcano)
+void EECPDefenseCommander::TargetPlayerNotice(class EEPlayer *,bool)
+{
+}

@@ -32,6 +32,8 @@
 #include "ee/EEUCNavalTransport.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUnitUtilities.h"
+#include "lle/GEBoundingBox.h"
+#include "lle/GEModel.h"
 
 // FUNCTION: EXE 0x618a45
 // Raises a location below the water plane to z 0
@@ -162,4 +164,158 @@ void EEUCNavalTransport::UnloadAt(EEComplexUnit* inTransport, long inX, long inY
 void EEUCNavalTransport::Update(EEComplexUnit* inUnit)
 {
     EEUCTransport::Update(inUnit);
+}
+
+void EEAdjustNavalPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inArg);   // EEUCNaval.cpp
+
+// ICF-FOLDED: EXE 0x61aaa9
+// Adds the transport to its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::AddToTile, which ICF kept)
+void EEUCNavalTransport::AddToTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->mUnits = theTile->AddUnit(theUnit, theTile->mUnits);
+}
+
+// ICF-FOLDED: EXE 0x617c6d
+// Smooths a ship's path with the naval path smoothing (0x23df77)
+// (no address of its own: the same body as EEUCNaval::AdjustPath, which ICF kept)
+void EEUCNavalTransport::AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth)
+{
+    EEAdjustNavalPath(inUnit, ioPath, inSmooth);
+}
+
+// ICF-FOLDED: EXE 0x61a838
+// Returns whether the transport can carry a unit: both on the map, the base rule agrees and their continents connect
+// (no address of its own: the same body as EEUCSpaceTransport::CanCarry, which ICF kept)
+bool EEUCNavalTransport::CanCarry(EEComplexUnit* inUnit1, EEComplexUnit* inUnit2)
+{
+    bool theResult = false;
+    if (inUnit1->mTileX != -10000 && inUnit2->mTileX != -10000) {
+        unsigned short theFirst = gContinentManager.GetContinentID(inUnit1->mTileX, inUnit1->GetTileY());
+        unsigned short theSecond = gContinentManager.GetContinentID(inUnit2->GetTileX(), inUnit2->GetTileY());
+        if (EEUCTransport::CanCarry(inUnit1, inUnit2) && this->ContinentsConnect(theFirst, theSecond))
+            theResult = true;
+        else
+            theResult = false;
+    }
+    return theResult;
+}
+
+// ICF-FOLDED: EXE 0x618605
+// Creates a fishing boat on a tile at sea level
+// (no address of its own: the same body as EEUCNavalCitizen::CreateUnit, which ICF kept)
+EEUnit* EEUCNavalTransport::CreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
+{
+    GETransformation theTransformation;
+    theTransformation.SetX((float)inX);
+    theTransformation.SetY((float)inY);
+    theTransformation.SetZ(0.0f);
+    return EEUnitClass::CreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+}
+
+// ICF-FOLDED: EXE 0x618909
+// Creates a priest ship at a placement on the water plane (z 0)
+// (no address of its own: the same body as EEUCNavalPriest::CreateUnitAt, which ICF kept)
+EEUnit* EEUCNavalTransport::CreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
+                                      EEUnit* inCreator)
+{
+    GETransformation theTransformation(inTransformation);
+    theTransformation.SetX(theTransformation.GetX());
+    theTransformation.SetZ(0.0f);
+    return EEUnitClass::CreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+}
+
+// ICF-FOLDED: EXE 0x617eb2
+// Answers dying done: true once the ship's transformed bounding box lies wholly below the water line
+// (no address of its own: the same body as EEUCNaval::EvaluateCondition, which ICF kept)
+long EEUCNavalTransport::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
+{
+    GE3DPoint thePosition;
+    GEBoundingBox theBox;
+    GEBoundingBox theTransformedBox;
+    EEComplexUnit* theUnit = inUnit;
+    const GEPhysicalModel& thePhysicalModel = theUnit->mPhysicalModel;
+    GEModel* theModel = thePhysicalModel.GetModel();
+    long theResult = 0;
+    if (inEvent != kTriggerDyingAnimationFinished)
+        theResult = EEUnitClass::EvaluateCondition(theUnit, inEvent);
+    else {
+        theUnit->GetPosition(thePosition);
+        GETransformation theTransformation(false);
+        thePhysicalModel.GetLocation().Apply(theModel->GetInternalTransform(thePhysicalModel.GetFrame()),
+                                             theTransformation);
+        float theScale = thePhysicalModel.GetScale();
+        theTransformation.Scale(theScale, theScale, theScale);
+        theTransformation.SetX(thePosition.GetX());
+        theTransformation.SetY(thePosition.GetY());
+        theTransformation.SetZ(thePosition.GetZ());
+        theBox = theModel->GetBoundingBox(theUnit->mPhysicalModel.GetFrame());
+        theBox.Transform(theTransformation, theTransformedBox);
+        if (theTransformedBox.GetTopRightBack().GetZ() < 0.0f)
+            theResult = 1;
+    }
+    return theResult;
+}
+
+// ICF-FOLDED: EXE 0x61a6e0
+// Finds where a space transport meets its passengers: the base rule on one continent, else its shore tile and
+// their landing tile, then the meeting tiles near them
+// (no address of its own: the same body as EEUCSpaceTransport::FindRendezvousTiles, which ICF kept)
+void EEUCNavalTransport::FindRendezvousTiles(std::vector<EEComplexUnit*>* inUnits, EEComplexUnit* inTransport,
+                                   U2DPoint<long>* outTransportTile, U2DPoint<long>* outUnitTile)
+{
+    U2DPoint<long> theGather;
+    U2DPoint<long> theFrom(inTransport->mTileX, inTransport->mTileY);
+    unsigned short theUnitContinent = gContinentManager.GetContinentID((*inUnits->begin())->mTileX, (*inUnits->begin())->mTileY);
+    unsigned short theTransportContinent = gContinentManager.GetContinentID(inTransport->mTileX, inTransport->mTileY);
+    this->FindGatheringTile(inUnits, theFrom, &theGather);
+    if (theUnitContinent == theTransportContinent) {
+        EEUCTransport::FindRendezvousTiles(inUnits, inTransport, outTransportTile, outUnitTile);
+    } else {
+        U2DPoint<long> theTransportTile(inTransport->mTileX, inTransport->mTileY);
+        U2DPoint<long> theUnitTile((*inUnits->begin())->mTileX, (*inUnits->begin())->mTileY);
+        EETileCoordinate theStart(inTransport->mTileX, inTransport->mTileY);
+        this->FindShoreTile(inTransport, theStart, &theUnitTile, &theTransportTile, true, outTransportTile);
+        theFrom = *outTransportTile;
+        theTransportTile = U2DPoint<long>((*inUnits->begin())->mTileX, (*inUnits->begin())->mTileY);
+        this->FindLandingTile(inTransport, &theFrom, &theTransportTile, outUnitTile);
+    }
+    this->FindMeetingTiles(inTransport, (*inUnits->begin()), outTransportTile, outUnitTile);
+}
+
+// ICF-FOLDED: EXE 0x6135bc
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCNavalTransport::HasRoom(class EEComplexUnit *,class EEComplexUnit *)
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x618490
+// Returns the tile under a location along the camera line, at sea level
+// (no address of its own: the same body as EEUCNavalCitizen::LocationToTile, which ICF kept)
+void EEUCNavalTransport::LocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
+{
+    GE3DPoint thePoint;
+    GE3DLine theLine(::gWorld.mLine);
+    theLine.SetStart(inLocation);
+    float theT;
+    theLine.SolveForZ(0.0f, theT, thePoint);
+    outX = UMFloor(thePoint.GetX());
+    outY = UMFloor(thePoint.GetY());
+}
+
+// ICF-FOLDED: EXE 0x61aaf5
+// Removes the transport from its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::RemoveFromTile, which ICF kept)
+void EEUCNavalTransport::RemoveFromTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->RemoveUnit(theUnit);
 }

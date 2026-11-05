@@ -144,3 +144,9 @@ bool EEAScroll::Update(const GE2DPoint& inPoint)
     }
     return theScrolling;
 }
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEAScroll::Virtual8()
+{
+}

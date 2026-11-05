@@ -4774,3 +4774,162 @@ void EEUnitClass::Regenerate(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x63a5ad
 // Returns the transformation of a turret part
 // (EEGraphicObject::GetTurretPartTransformation: inline in ee/EEGraphicObject.h)
+
+// ICF-FOLDED: EXE 0x6907a3
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUnitClass::AdjustPath(class EEComplexUnit *,class std::vector<class GE3DPoint,class std::allocator<class GE3DPoint> > &,bool)
+{
+}
+
+// ICF-FOLDED: EXE 0x556dd8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUnitClass::BadlyHurt(class EEUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x4ac9f3
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEUnitClass::CanAttackMove()
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x6907a3
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUnitClass::CargoAdded(class EEComplexUnit *,class EEComplexUnit *,bool)
+{
+}
+
+// ICF-FOLDED: EXE 0x4ac9c8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUnitClass::CargoRemoved(class EEComplexUnit *,class EEComplexUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x4ac9c8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUnitClass::CargoUnloaded(class EEComplexUnit *,class EEComplexUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x4ac9f3
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEUnitClass::FliesOver()
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body of EECCAreaEffect::Reset)
+void EEUnitClass::Fn157269(class EEComplexUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x4ac9c8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUnitClass::GateReplaced(class EEUnit *,class EEUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x556dd8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUnitClass::GroundLocation(class GE3DPoint &)
+{
+}
+
+// ICF-FOLDED: EXE 0x62db0f
+// Runs the default handling of the unit's new AI-script action (animation, goals, herd, flight, healing, death,
+// rotting), then restarts the current goal's timer
+// (no address of its own: the same body as EEUnitClass::ActionChanged, which ICF kept: a call of it)
+void EEUnitClass::HandleActionChanged(EEComplexUnit* inUnit)
+{
+    this->EEUnitClass::ActionChanged(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x4ac9f3
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEUnitClass::IsBuilding()
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x4ac9f3
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEUnitClass::IsLandBuilding()
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x69059d
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEUnitClass::IsPartLeftOut(class EEComplexUnit *)
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUnitClass::IsPickable()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x620a18
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUnitClass::IsSelectable(class EEUnit *)
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x4792bc
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEUnitClass::LaunchProjectile(class EEComplexUnit *,class GE3DPoint const &)
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x6907a3
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUnitClass::LocationToTile(class GE3DPoint const &,long &,long &)
+{
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUnitClass::Update(class EEComplexUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUnitClass::UpdateEffects(class EEComplexUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x69059d
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEUnitClass::Virtual4C(unsigned long)
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x556dd8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUnitClass::Virtual50(unsigned long)
+{
+}
+
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEUnitClass::Virtual70()
+{
+    return 0;
+}
+
+// ICF-FOLDED: EXE 0x616d8d
+// Returns the class's population cost (mWeight)
+// (no address of its own: the same body as EEUCLandPriest::GetPopulationCost, which ICF kept)
+long EEUnitClass::GetPopulationCost()
+{
+    return this->mWeight;
+}

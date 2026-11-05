@@ -121,3 +121,9 @@ void EEAUpgradeImprovement::Virtual4()
 // FUNCTION: EXE 0x40525d
 // Returns the sound object at an index
 // (EESoundObject::Get, inline in ee/EESoundObject.h)
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEAUpgradeImprovement::Virtual8()
+{
+}

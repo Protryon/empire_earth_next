@@ -23,6 +23,7 @@
 #include "ee/EEUCTransport.h"
 #include "ee/EEUCLandTransport.h"
 #include "ee/EEUCFortress.h"
+#include "ee/EEUCBuilding.h"
 
 // 0x4c8fa4 (.data, a word): the faith a teleporter spends per full unload (provisional name)
 unsigned short gFortressUnloadCost = 100;
@@ -169,4 +170,33 @@ void EEUCFortress::Update(EEComplexUnit* inUnit)
 void EEUCFortress::CargoUnloaded(EEComplexUnit* inUnit, EEComplexUnit* inCargo)
 {
     inUnit->mPlayer->mPopulationCount += inCargo->mUnitClass->GetPopulationCost();
+}
+
+// ICF-FOLDED: EXE 0x60f2ae
+// Adds the building to every tile of its footprint
+// (no address of its own: the same body as EEUCBuilding::AddToTile, which ICF kept)
+void EEUCFortress::AddToTile(EEUnit* inUnit)
+{
+    EEAddToFootprintTiles(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCFortress::IsLandBuilding()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x60fb78
+// Removes the building from every tile of its footprint
+// (no address of its own: the same body as EEUCBuilding::RemoveFromTile, which ICF kept)
+void EEUCFortress::RemoveFromTile(EEUnit* inUnit)
+{
+    EERemoveFromFootprintTiles(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUCFortress::UpdateEffects(class EEComplexUnit *)
+{
 }

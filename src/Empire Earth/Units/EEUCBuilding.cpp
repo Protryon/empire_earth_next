@@ -54,6 +54,7 @@
 #include "ee/EEGraphicObject.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGUnloadTransport.h"
+#include "ee/EEUCFortress.h"
 
 // 0x446ff0/0x446ff4: the unit's named constants (one .rdata copy per unit)
 static const float kBuildingLift = 0.001f;      // 0x446ff0 (a building sits just above the ground)
@@ -820,3 +821,33 @@ void EEUCBuilding::UpdateArmed(EEComplexUnit* inUnit)
 
 // TEMPLATE: EXE 0x60fff7
 // EECalamityManager::GetCalamityClass<EECCVolcano> (inline in ee/EECalamityManager.h)
+
+// ICF-FOLDED: EXE 0x61033d
+// Adds the fortress to the map regions as a building
+// (no address of its own: the same body as EEUCFortress::AddToRegion, which ICF kept)
+void EEUCBuilding::AddToRegion(EEUnit* inUnit)
+{
+    EEAddBuildingRegion(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCBuilding::IsBuilding()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCBuilding::IsLandBuilding()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x61034a
+// Removes the fortress from the map regions as a building
+// (no address of its own: the same body as EEUCFortress::RemoveFromRegion, which ICF kept)
+void EEUCBuilding::RemoveFromRegion(EEUnit* inUnit)
+{
+    EERemoveBuildingRegion(inUnit);
+}

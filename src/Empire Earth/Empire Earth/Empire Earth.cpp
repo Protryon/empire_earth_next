@@ -2771,3 +2771,10 @@ void EEDeleteDatabase(bool inShutdown)
 // TEMPLATE: EXE 0x547d8a
 // TODO 0x547da5, 0x547dcd,
 // 0x547dd9, 0x547de5, 0x547df1: COMDATs not emitted/named yet
+
+// ICF-FOLDED: EXE 0x4fca98
+// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEUnitGoal::GetOutOfSynchChecksum)
+long EEFn0FCA98()
+{
+    return 0;
+}

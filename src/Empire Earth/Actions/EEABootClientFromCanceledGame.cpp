@@ -74,3 +74,9 @@ void EEABootClientFromCanceledGame::Virtual4()
         gUIManager->DisplayMessage(theMessage, true, NULL, NULL, true);
     }
 }
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEABootClientFromCanceledGame::Virtual8()
+{
+}

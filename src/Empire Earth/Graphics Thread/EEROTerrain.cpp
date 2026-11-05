@@ -730,3 +730,21 @@ static void Fn113EBD()
 // SYNTHETIC: EXE 0x514229
 // SYNTHETIC: EXE 0x514252
 // SYNTHETIC: EXE 0x51428f
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEROTerrain::FrameDone()
+{
+}
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEROTerrain::SceneStarting()
+{
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEROTerrain::Virtual14(long)
+{
+}

@@ -1060,3 +1060,20 @@ void EEUGBuildRepair::BeginRepair(EEComplexUnit* inUnit)
 
 // TEMPLATE: EXE 0x620942
 // std::_Pop_heap<_Ptrit<EEUnit*>, EETileDistanceLess>
+
+// ICF-FOLDED: EXE 0x61d0b4
+// Returns the target location
+// (no address of its own: the same body as EEUGAttackGround::GetGoalLocation, which ICF kept)
+void EEUGBuildRepair::GetGoalLocation(GE3DPoint& outLocation)
+{
+    outLocation = this->mTargetLocation;
+}
+
+// ICF-FOLDED: EXE 0x621f43
+// Suits citizens only (land and naval citizen categories)
+// (no address of its own: the same body as EEUGGather::Suits, which ICF kept)
+bool EEUGBuildRepair::Suits(EEUnit* inUnit)
+{
+    long theCategory = inUnit->mUnitClass->mCategory;
+    return theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen;
+}

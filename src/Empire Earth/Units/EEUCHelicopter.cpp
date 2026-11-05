@@ -31,6 +31,7 @@
 #include "ee/EEUCTransport.h"
 #include "ee/EEUCLandable.h"
 #include "ee/EEUCHelicopter.h"
+#include "ee/EEUCSpaceship.h"
 
 // 0x447020: the highest a helicopter flies (one .rdata copy per unit: a named const) (provisional name)
 static const float kHelicopterCeiling = 12.0f;
@@ -163,4 +164,104 @@ void EEUCHelicopter::Update(EEComplexUnit* inUnit)
     if (inUnit->mStats->mRegeneration > 0)
         this->Regenerate(inUnit);
     this->Fn157269(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x61aaa9
+// Adds the transport to its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::AddToTile, which ICF kept)
+void EEUCHelicopter::AddToTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->mUnits = theTile->AddUnit(theUnit, theTile->mUnits);
+}
+
+// ICF-FOLDED: EXE 0x60afe9
+// Animates the animal like any unit
+// (no address of its own: the same body as EEUCAirAnimal::Animate, which ICF kept)
+long EEUCHelicopter::Animate(EEComplexUnit* inUnit)
+{
+    return EEUnitClass::Animate(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCHelicopter::CanAttackMove()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x6137f8
+// Answers the dying-finished (below its tile's height) and move-prepared (has waypoints) triggers; others the
+// common way
+// (no address of its own: the same body as EEUCHelicopterTransport::EvaluateCondition, which ICF kept)
+long EEUCHelicopter::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
+{
+    long theResult = 0;
+    bool theFlag = false;
+    switch (inEvent) {
+    case kTriggerDyingAnimationFinished:
+        if (inUnit->mPhysicalModel.GetLocation().GetZ() < inUnit->mTile->GetHeight())
+            theFlag = true;
+        else
+            theFlag = false;
+        break;
+    case kTriggerMovePreparationComplete:
+        theFlag = (long)inUnit->mWaypoints.size() > 0;
+        break;
+    default:
+        theResult = EEUnitClass::EvaluateCondition(inUnit, inEvent);
+        break;
+    }
+    if (theFlag)
+        theResult = 1;
+    return theResult;
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCHelicopter::FliesOver()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x61a404
+// Returns a sound's volume, pan and pitch, with a doppler shift
+// (no address of its own: the same body as EEUCSpaceship::GetSoundParameters, which ICF kept)
+void EEUCHelicopter::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
+                              float* outPitch)
+{
+    EEUnitClass::GetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
+    EEGetDopplerPitch(inUnit, inSound, outVolume, outPan, outPitch);
+}
+
+// ICF-FOLDED: EXE 0x61aaf5
+// Removes the transport from its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::RemoveFromTile, which ICF kept)
+void EEUCHelicopter::RemoveFromTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->RemoveUnit(theUnit);
+}
+
+// ICF-FOLDED: EXE 0x61a51a
+// Sets up a new spaceship at its flying height for its position
+// (no address of its own: the same body as EEUCSpaceship::UnitCreated, which ICF kept)
+void EEUCHelicopter::UnitCreated(EEComplexUnit* inUnit)
+{
+    GE3DPoint thePosition(0.0f, 0.0f, 0.0f);
+    GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
+    EEUnitClass::UnitCreated(inUnit);
+    thePosition.SetX(theTransformation.GetX());
+    thePosition.SetY(theTransformation.GetY());
+    thePosition.SetZ(theTransformation.GetZ());
+    float theZ = this->GetHeightAt(inUnit, thePosition);
+    theTransformation.SetZ(theZ);
+    inUnit->SetTransformation(theTransformation, true);
+    inUnit->SetHeight(theZ);
 }

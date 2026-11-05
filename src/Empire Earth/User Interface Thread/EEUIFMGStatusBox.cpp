@@ -1262,3 +1262,9 @@ bool EECanAffordTrade(unsigned long inButton)
     }
     return theResult;
 }
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
+EEUIFMGStatusBox::~EEUIFMGStatusBox()
+{
+}

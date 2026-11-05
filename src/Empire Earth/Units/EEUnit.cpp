@@ -905,3 +905,10 @@ void EEUnit::SightOff(unsigned long, unsigned long)
 void EEUnit::ResearchCompleted(unsigned long)
 {
 }
+
+// ICF-FOLDED: EXE 0x67c0b4
+// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEPlagueFunctor::InfectsAlliesOnly)
+bool EEUnit::Fn27C0B4()
+{
+    return false;
+}

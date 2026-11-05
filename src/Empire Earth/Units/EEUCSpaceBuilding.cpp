@@ -14,6 +14,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
+#include "lle/U2DSparseArray.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -22,7 +23,11 @@
 #include "ee/EEWorld.h"
 #include "ee/EEPhysicsModel.h"
 #include "ee/EEUCBuilding.h"
+#include "ee/EEUnitVectorItem.h"
 #include "ee/EEUCSpaceBuilding.h"
+#include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGExplore.h"
+#include "ee/EEUGLocation.h"
 
 // FUNCTION: EXE 0x619fe3
 // Puts a space building's location at the class's cruise altitude
@@ -108,4 +113,92 @@ void EEUCSpaceBuilding::Update(EEComplexUnit* inUnit)
     if (inUnit->mStats != NULL && inUnit->mStats->mRegeneration > 0)
         this->Regenerate(inUnit);
     EEUCBuilding::Update(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x6183f8
+// Answers the dock triggers: unit has a rally goal, ship ready to launch, sunk after dying; others to the building
+// (no address of its own: the same body as EEUCNavalBuilding::EvaluateCondition, which ICF kept)
+long EEUCSpaceBuilding::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent)
+{
+    long theResult = 0;
+    bool theHandled;
+    switch (inEvent) {
+    case kTriggerFighterHasGoal:
+        theHandled = inUnit->GetQueuedGoal(1) != NULL;
+        break;
+    case kTriggerAirplaneAvailableToLaunch:
+        theHandled = this->SelectUnitToRelease(inUnit);
+        break;
+    case kTriggerDyingAnimationFinished:
+        theHandled = this->HasSunk(inUnit);
+        break;
+    default:
+        theResult = EEUCBuilding::EvaluateCondition(inUnit, inEvent);
+        theHandled = false;
+        break;
+    }
+    if (theHandled)
+        theResult = 1;
+    return theResult;
+}
+
+// ICF-FOLDED: EXE 0x4b3257
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCSpaceBuilding::HasSunk(class EEComplexUnit *)
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x4ac9f3
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEUCSpaceBuilding::IsLandBuilding()
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x618164
+// Picks the first fully healed docked ship that should leave (a human's ship whose own or the dock's rally goal is an
+// attack, move or explore goal; any ship with a goal for a computer player); returns whether one was picked
+// (no address of its own: the same body as EEUCNavalBuilding::SelectUnitToRelease, which ICF kept)
+bool EEUCSpaceBuilding::SelectUnitToRelease(EEComplexUnit* inUnit)
+{
+    bool theResult = false;
+    unsigned long theCount = inUnit->GetNumCargoUnits();
+    for (unsigned long i = 0; !theResult && i < theCount; i++) {
+        EEComplexUnit* theCargo = inUnit->mCargo[i];
+        if (theCargo->mHitPoints != theCargo->mStats->mMaxHitPoints)
+            continue;
+        bool theReady = false;
+        if (theCargo->mPlayer->IsHuman()) {
+            if (theCargo->GetQueueGoals(1).size() > 0) {
+                EEUnitGoal* theGoal = (theCargo->mGoalQueues.begin() + 1)->GetFront();
+                if (dynamic_cast<EEUGAttackUnit*>(theGoal) == 0 &&
+                    dynamic_cast<EEUGLocation*>(theGoal) == 0 &&
+                    dynamic_cast<EEUGExplore*>(theGoal) == 0)
+                    theGoal = NULL;
+                if (theGoal != NULL)
+                    theReady = true;
+            }
+            if (!theReady && inUnit->GetQueueGoals(1).size() > 0) {
+                EEUnitGoal* theGoal = (inUnit->mGoalQueues.begin() + 1)->GetFront();
+                if (dynamic_cast<EEUGAttackUnit*>(theGoal) == 0 &&
+                    dynamic_cast<EEUGLocation*>(theGoal) == 0 &&
+                    dynamic_cast<EEUGExplore*>(theGoal) == 0)
+                    theGoal = NULL;
+                if (theGoal != NULL)
+                    theReady = true;
+            }
+        }
+        if (theReady || (inUnit->mPlayer->mComputerPlayer != NULL && theCargo->mGoalState != NULL)) {
+            inUnit->SetExitingUnitID(theCargo->mUnitID);
+            theResult = true;
+        }
+    }
+    return theResult;
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUCSpaceBuilding::UpdateEffects(class EEComplexUnit *)
+{
 }

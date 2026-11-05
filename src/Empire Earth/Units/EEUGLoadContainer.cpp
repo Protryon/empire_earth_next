@@ -561,3 +561,30 @@ void EEUGLoadContainer::ReplaceUnit(EEComplexUnit* inOld, EEComplexUnit* inNew, 
 // TEMPLATE: EXE 0x626a0f
 // (a std::sort / unique / erase COMDAT of vector<EEComplexUnit*>; emitted by the list ctor)
 
+// ICF-FOLDED: EXE 0x4c1ee0
+// (no address of its own: folded into the shared `mov eax, 0x6; ret` body the vtable slot points at)
+long EEUGLoadContainer::GetMaxPathAttempts()
+{
+    return 6;
+}
+
+// ICF-FOLDED: EXE 0x627264
+// (no address of its own: folded into the shared `mov eax, 0x1f40; ret` body the vtable slot points at)
+long EEUGLoadContainer::GetStartAction()
+{
+    return 8000;
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUGLoadContainer::IsLoadGoal()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x620a18
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUGLoadContainer::Suits(class EEUnit *)
+{
+    return true;
+}

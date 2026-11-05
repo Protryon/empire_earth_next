@@ -205,3 +205,9 @@ void EEAServerMigration::Virtual4()
 // FUNCTION: EXE 0x405017
 // Rotates the slot map's tree right around a node
 // (map<unsigned char, unsigned char>::_Rrotate)
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEAServerMigration::Virtual8()
+{
+}

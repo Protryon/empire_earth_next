@@ -1393,3 +1393,9 @@ void Fn118676(const GE3DPoint& inPoint, GE2DPoint& outPoint)
     outPoint.SetY(gU4E8F08.GetYCenter() - gU4E8F08.GetViewRectangle().GetTop() -
                   theNormalPoint.GetY() * gU4E8F08.GetHalfWidth() * theW);
 }
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEROUnits::SceneStarting()
+{
+}

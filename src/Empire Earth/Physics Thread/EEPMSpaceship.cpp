@@ -623,3 +623,21 @@ bool EEPMSpaceship::ClipStep(EEComplexUnit* inUnit, const GEVector& inMove, GE3D
         inUnit->mCollisionResolutionCount += gPhysics->mTickTime * 0.33f;
     return theResult;
 }
+
+// ICF-FOLDED: EXE 0x55c146
+// Returns 4 (brake) when the pitch rate needs the whole remaining angle to stop, else 3 (accelerate)
+// (no address of its own: the same body as EEPMNaval::PitchMode, which ICF kept)
+long EEPMSpaceship::PitchMode(EEComplexUnit* inUnit, float inRate, float inAngle)
+{
+    if (inAngle < 0.0f)
+        inAngle = -inAngle;
+    if (inRate < 0.0f)
+        inRate = -inRate;
+    EEUnitClass* theClass = inUnit->mUnitClass;
+    float theTime = gPhysics->mTicksPerGameSecond;
+    float theTicks = theTime * inRate / theClass->GetAngularAcceleration();
+    float theStep = gPhysics->mTickSeconds;
+    float theStop = (theTicks + 1.0f) * theTicks * 0.5f;
+    theStop = theStop * (theStep * theStep) * theClass->GetAngularAcceleration();
+    return inAngle <= theStop ? 4 : 3;
+}

@@ -69,6 +69,12 @@
 #include "ee/EEUGLoadContainer.h"
 #include "ee/EEMathInline.h"
 #include "ee/EEUnitUtilities.h"
+#include "ee/EEAIPathSubSector.h"
+#include "ee/EECPASGAir.h"
+#include "ee/EECPUnitSelector.h"
+#include "ee/EECPPersonnel.h"
+#include "ee/EETown.h"
+#include "ee/EEUGUnloadTransport.h"
 
 // FUNCTION: EXE 0x44e6e7
 // Creates a naval transport sub-group for the attack group, with no land group to carry yet
@@ -1035,4 +1041,136 @@ long EECPASGSpaceship::GetNumTargets()
 void EECPASGSpaceship::SetDestination(const EECPILocation& inLocation)
 {
     EECPAttackSubGroup::SetDestination(inLocation);
+}
+
+// ICF-FOLDED: EXE 0x44dff2
+// Returns true if the sub-group is in the location's path sub-sector or within 8 tiles of it; else, in a neighbour
+// sector, once all units settle, or within 30 tiles when the target sector's terrain kind is not allowed
+// (no address of its own: the same body as EECPASGSea::IsAt, which ICF kept)
+bool EECPASGSpaceship::IsAt(const EECPILocation& inLocation)
+{
+    EEAIPathSubSector* theTarget = inLocation.GetPathSubSector();
+    EETileLocation theTile;
+    bool theResult = this->FindPosition(theTile, true, false);
+    if (!theResult || theTile.mX == -10000)
+        return theResult;
+    EEAIPathSubSector* theCurrent = gContinentManager.GetPathSubSectorAt(theTile);
+    if (theCurrent == NULL)
+        return theResult;
+    if (theCurrent != theTarget && (unsigned long)theTile.DistanceToSquared(inLocation.mTile) > 64) {
+        theResult = false;
+        if (theCurrent->IsNeighbor(theTarget))
+            theResult = this->AreAllUnitsSettled();
+        else if (theTarget == NULL)
+            theResult = true;
+        else if (!this->mFlags.mFlags[theTarget->mKind])
+            theResult = (unsigned long)theTile.DistanceToSquared(inLocation.mTile) <= 900;
+    } else
+        theResult = true;
+    return theResult;
+}
+
+// ICF-FOLDED: EXE 0x450ddc
+// Loads the sub-group and then its transport data from a saved game; returns the first error
+// (no address of its own: the same body as EECPASGSpaceTransport::Load, which ICF kept)
+long EECPASGSeaTransport::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
+{
+    long theResult = EECPASGSea::Load(inMajorVersion, inMinorVersion, inFile);   // EECPASGSpaceship::Load in the twin (one ICF body)
+    if (theResult == 0)
+        theResult = EECPASGTransport::Load(inMajorVersion, inMinorVersion, inFile);
+    return theResult;
+}
+
+// ICF-FOLDED: EXE 0x444740
+// Asks the land group to board the active transports and marks the cargo stage as loading
+// (no address of its own: the same body as EECPASGAirTransport::LoadCargo, which ICF kept)
+void EECPASGSeaTransport::LoadCargo()
+{
+    std::vector<EEComplexUnit*> theUnits;
+    for (long i = this->mUnits.size() - 1; i >= 0; i--) {
+        if (!this->mUnits[i]->IsDone()) {
+            EEComplexUnit* theUnit = this->mUnits[i]->mUnit;
+            theUnits.push_back(theUnit);
+        }
+    }
+    if (theUnits.size() > 0 && this->mLand != NULL)
+        this->mLand->BoardTransports(&theUnits);
+    this->mCargoStage = 1;
+}
+
+// ICF-FOLDED: EXE 0x441976
+// Replaces the sub-group's personnel request with a town request (at the town's centre) or a continent request
+// for the given classes; during a wonder race the request expires after 300 s
+// (no address of its own: the same body as EECPASGAir::RequestUnits, which ICF kept)
+void EECPASGSpaceship::RequestUnits(std::vector<long>& inClasses, std::vector<long>& inUnitIDs, long inContinent, long inTownID)
+{
+    if (this->mRequest != NULL) {
+        this->mGroup->mCommander->mPersonnel->ReleaseRequest(this->mRequest->mID);
+        this->mRequest->Dereference();
+    }
+    EETown* theTown = NULL;
+    if (inTownID != 0)
+        theTown = this->mPlayer->GetTownByID(inTownID);
+    if (theTown == NULL)
+        this->mRequest = this->mGroup->mCommander->mPersonnel->NewContinentRequest(inClasses, inUnitIDs, inContinent);
+    else {
+        EECPPersonnel* thePersonnel = this->mGroup->mCommander->mPersonnel;
+        this->mRequest = thePersonnel->NewTownRequest(inClasses, inUnitIDs, inTownID, theTown->mHull.GetCenter());
+    }
+    if (this->mRequest != NULL && this->mPlayer2->mCombatManager->mIsWonderRace)
+        this->mRequest->mDeadline = gPhysics->mGameTime + 300000;
+}
+
+// ICF-FOLDED: EXE 0x444ada
+// Restores the air sub-group and then the transport links after a load; returns the first error
+// (no address of its own: the same body as EECPASGAirTransport::Restore, which ICF kept)
+long EECPASGSeaTransport::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    long theResult = EECPAttackSubGroup::Restore(inMajorVersion, inMinorVersion);   // the twin's EECPASGAir::Restore is this one
+    if (theResult == 0) {
+        theResult = EECPASGTransport::Restore(inMajorVersion, inMinorVersion);
+    }
+    return theResult;
+}
+
+// ICF-FOLDED: EXE 0x444c2f
+// Orders each transport to unload at the location; empty ones and those unable to unload there (the tile is marked
+// to avoid) move to a random tile within 7 of it instead; marks the cargo stage as unloading
+// (no address of its own: the same body as EECPASGAirTransport::UnloadAt, which ICF kept)
+void EECPASGSeaTransport::UnloadAt(const EECPILocation& inLocation)
+{
+    EEAIAStarBounds theBounds;
+    theBounds.Set(inLocation.mTile);
+    std::vector<EEComplexUnit*> theFailed;
+    long i;
+    for (i = this->mUnits.size() - 1; i >= 0; i--) {
+        EEComplexUnit* theUnit = this->mUnits[i]->mUnit;
+        EEUGUnloadTransport* theGoal = new EEUGUnloadTransport(theUnit, inLocation.mTile.mX,
+                                                              inLocation.mTile.GetY(), true);
+        bool theSkip = theUnit->GetNumCargoUnits() == 0;
+        if (!theSkip) {
+            theSkip = !theGoal->CanUnloadAtDestination();
+            if (theSkip && this->mLand != NULL)
+                this->mLand->AvoidTile(inLocation.mTile);
+        }
+        if (theSkip) {
+            if (theGoal != NULL)
+                delete theGoal;
+            theFailed.push_back(theUnit);
+        } else if (!this->GiveGoal(theUnit, theGoal, 0, kActionPrepareToMove) && theGoal != NULL) {
+            delete theGoal;
+        }
+    }
+    if (theFailed.size() != 0) {
+        theBounds.Grow(7, true);
+        for (i = theFailed.size() - 1; i >= 0; i--) {
+            EEComplexUnit* theUnit = theFailed[i];
+            EEUnitGoal* theGoal = new EEUGLocation((float)gPhysics->GetRandom(theBounds.mLeft, theBounds.mRight),
+                (float)gPhysics->GetRandom(theBounds.mTop, theBounds.mBottom), 0.0f, true, true, false, 0.0f,
+                false, false);
+            if (!this->GiveGoal(theUnit, theGoal, 0, kActionPrepareToMove) && theGoal != NULL)
+                delete theGoal;
+        }
+    }
+    this->mCargoStage = 2;
 }

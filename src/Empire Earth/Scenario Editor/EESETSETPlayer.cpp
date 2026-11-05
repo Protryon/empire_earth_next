@@ -1201,3 +1201,59 @@ void EESETSETSetAIAttribute::VirtualC(EESETSEffectControls* inControls)
     inControls->mLabels[11]->SetStringTableID(0);
     inControls->mComboBoxes[1]->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
 }
+
+// ICF-FOLDED: EXE 0x5898eb
+// Sets the player picker's flags for the visibility, camera fade and victory actions (shared body)
+// (no address of its own: the same body as EESETSETPVisibility::Show, which ICF kept)
+void EESETSETPlayerVictory::Show(EESETSEffectControls* inControls)
+{
+    inControls->mPlayers[0]->SetFlags(0xde);
+}
+
+// ICF-FOLDED: EXE 0x589891
+// Selects the effect's player without firing the picker event (shared with the camera fade actions)
+// (no address of its own: the same body as EESETSETPVisibility::Load, which ICF kept)
+void EESETSETPCameraFadeIn::Load(EESMEffect* inEffect, EESETSEffectControls* inControls)
+{
+    UIEvent* theAction = inControls->mPlayers[0]->GetTriggerEvent(kControlTriggerSelectionChanged);
+    if (theAction)
+        theAction->Reference();
+    inControls->mPlayers[0]->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
+    inControls->mPlayers[0]->SetSelectedPlayer(inEffect->mPlayer);
+    if (theAction) {
+        inControls->mPlayers[0]->SetTriggerEvent(kControlTriggerSelectionChanged, theAction);
+        theAction->Dereference();
+    }
+}
+
+// ICF-FOLDED: EXE 0x589891
+// Selects the effect's player without firing the picker event (shared with the camera fade actions)
+// (no address of its own: the same body as EESETSETPVisibility::Load, which ICF kept)
+void EESETSETPCameraFadeOut::Load(EESMEffect* inEffect, EESETSEffectControls* inControls)
+{
+    UIEvent* theAction = inControls->mPlayers[0]->GetTriggerEvent(kControlTriggerSelectionChanged);
+    if (theAction)
+        theAction->Reference();
+    inControls->mPlayers[0]->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
+    inControls->mPlayers[0]->SetSelectedPlayer(inEffect->mPlayer);
+    if (theAction) {
+        inControls->mPlayers[0]->SetTriggerEvent(kControlTriggerSelectionChanged, theAction);
+        theAction->Dereference();
+    }
+}
+
+// ICF-FOLDED: EXE 0x5898eb
+// Sets the player picker's flags for the visibility, camera fade and victory actions (shared body)
+// (no address of its own: the same body as EESETSETPVisibility::Show, which ICF kept)
+void EESETSETPCameraFadeIn::Show(EESETSEffectControls* inControls)
+{
+    inControls->mPlayers[0]->SetFlags(0xde);
+}
+
+// ICF-FOLDED: EXE 0x5898eb
+// Sets the player picker's flags for the visibility, camera fade and victory actions (shared body)
+// (no address of its own: the same body as EESETSETPVisibility::Show, which ICF kept)
+void EESETSETPCameraFadeOut::Show(EESETSEffectControls* inControls)
+{
+    inControls->mPlayers[0]->SetFlags(0xde);
+}

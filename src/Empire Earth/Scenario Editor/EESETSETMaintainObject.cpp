@@ -89,6 +89,7 @@
 #include "ee/EESETSETGame.h"
 #include "ee/EESETSETObject.h"
 #include "ee/EESETSETAI.h"
+#include "ee/EEStringIDs.h"
 
 // FUNCTION: EXE 0x585f75
 // Hides the object label and the object combo box (shared by the build and maintain object effects)
@@ -112,4 +113,38 @@ void EESETSETMaintainObject::Load(EESMEffect* inEffect, EESETSEffectControls* in
         theAction->Dereference();
         inControls->mScenarioComboBoxes[1]->SetTriggerEvent(kControlTriggerSelectionChanged, theAction);
     }
+}
+
+// ICF-FOLDED: EXE 0x5835f1
+// Shows the 'Object' label and the object combo filled with the scenario's object names (build and maintain object)
+// (no address of its own: the same body as EESETSETBuildObject::Show, which ICF kept)
+void EESETSETMaintainObject::Show(EESETSEffectControls* inControls)
+{
+    GERectangle theRect;
+    UWideString theText;
+    GE2DPoint theLocation;
+    std::vector<UWideString> theNames;
+    theLocation.SetX(405.0f);
+    theLocation.SetY(641.0f);
+    theRect = GERectangle(theLocation, GE2DPoint(theLocation.GetX() + 200.0f, theLocation.GetY() + 20.0f));
+    gResource->GetString(IDS_TRIGGER_SCREEN_TAB_OBJECT, theText);
+    inControls->mLabels[3]->SetRectangle(theRect);
+    inControls->mLabels[3]->SetText(theText);
+    inControls->mLabels[3]->SetDisplayMode(kDisplayModeShown);
+    theLocation.SetY(inControls->mLabels[3]->GetRectangle().GetBottom() + 3.0f);
+    inControls->mScenarioComboBoxes[1]->SetLocation(theLocation);
+    inControls->mScenarioComboBoxes[1]->ChangeWidth(200);
+    inControls->mScenarioComboBoxes[1]->mMode = kSETriggerScreenObject;
+    inControls->mScenarioComboBoxes[1]->DeleteAllEntries();
+    gWorld.mScenarioManager->GetObjectNames(theNames);
+    inControls->mScenarioComboBoxes[1]->AppendStringArray(theNames);
+    inControls->mScenarioComboBoxes[1]->SetDisplayMode(kDisplayModeShown);
+}
+
+// ICF-FOLDED: EXE 0x58357c
+// Stores the object chosen in the object combo as the effect's target (shared by the build and maintain object actions)
+// (no address of its own: the same body as EESETSETBuildObject::Store, which ICF kept)
+void EESETSETMaintainObject::Store(EESMEffect* inEffect, EESETSEffectControls* inControls)
+{
+    inControls->mScenarioComboBoxes[1]->GetCurrentSelection(inEffect->mTargetObject);
 }

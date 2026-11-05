@@ -31,6 +31,9 @@
 #include "ee/EEUGExplore.h"
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCNavalBuilding.h"
+#include "ee/EEMedia.h"
+#include "ee/EEGraphicEffect.h"
+#include "ee/EmpireEarth.h"
 
 // FUNCTION: EXE 0x618158
 // Puts a dock's location on the water plane (z 0)
@@ -136,4 +139,92 @@ void EEUCNavalBuilding::Update(EEComplexUnit* inUnit)
         this->mPhysicsModel->Step(inUnit);
     this->RefreshSound(inUnit);
     EEUCBuilding::Update(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x61a11d
+// Handles a new action as a building does
+// (no address of its own: the same body as EEUCSpaceBuilding::ActionChanged, which ICF kept)
+void EEUCNavalBuilding::ActionChanged(EEComplexUnit* inUnit)
+{
+    EEUCBuilding::ActionChanged(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x618605
+// Creates a fishing boat on a tile at sea level
+// (no address of its own: the same body as EEUCNavalCitizen::CreateUnit, which ICF kept)
+EEUnit* EEUCNavalBuilding::CreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
+{
+    GETransformation theTransformation;
+    theTransformation.SetX((float)inX);
+    theTransformation.SetY((float)inY);
+    theTransformation.SetZ(0.0f);
+    return EEUnitClass::CreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+}
+
+// ICF-FOLDED: EXE 0x618909
+// Creates a priest ship at a placement on the water plane (z 0)
+// (no address of its own: the same body as EEUCNavalPriest::CreateUnitAt, which ICF kept)
+EEUnit* EEUCNavalBuilding::CreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
+                                      EEUnit* inCreator)
+{
+    GETransformation theTransformation(inTransformation);
+    theTransformation.SetX(theTransformation.GetX());
+    theTransformation.SetZ(0.0f);
+    return EEUnitClass::CreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+}
+
+// ICF-FOLDED: EXE 0x61a144
+// Returns whether the space building may stop: already sinking, a slow request, or at its next waypoint's tile
+// (no address of its own: the same body as EEUCSpaceBuilding::HasArrived, which ICF kept)
+bool EEUCNavalBuilding::HasArrived(EEComplexUnit* inUnit, float inValue)
+{
+    GE3DPoint theLocation;
+    bool theResult = false;
+    if (inUnit->mCollisionState == 8 || inValue <= 0.05f)
+        theResult = true;
+    else {
+        inUnit->GetNextWaypointPoint(theLocation);
+        if (inUnit->GetTileX() == UMFloor(theLocation.GetX()) && inUnit->GetTileY() == UMFloor(theLocation.GetY()))
+            theResult = true;
+    }
+    return theResult;
+}
+
+// ICF-FOLDED: EXE 0x4ac9f3
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEUCNavalBuilding::IsLandBuilding()
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x618490
+// Returns the tile under a location along the camera line, at sea level
+// (no address of its own: the same body as EEUCNavalCitizen::LocationToTile, which ICF kept)
+void EEUCNavalBuilding::LocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
+{
+    GE3DPoint thePoint;
+    GE3DLine theLine(::gWorld.mLine);
+    theLine.SetStart(inLocation);
+    float theT;
+    theLine.SolveForZ(0.0f, theT, thePoint);
+    outX = UMFloor(thePoint.GetX());
+    outY = UMFloor(thePoint.GetY());
+}
+
+// ICF-FOLDED: EXE 0x61a129
+// Sets up a new space building as a building, already built
+// (no address of its own: the same body as EEUCSpaceBuilding::UnitCreated, which ICF kept)
+void EEUCNavalBuilding::UnitCreated(EEComplexUnit* inUnit)
+{
+    EEUCBuilding::UnitCreated(inUnit);
+    inUnit->SetBuilt(1, 0, 1);
+}
+
+// ICF-FOLDED: EXE 0x60d336
+// Updates a living citizen's water ripples when the effect detail allows them
+// (no address of its own: the same body as EEUCBasicCitizen::UpdateEffects, which ICF kept)
+void EEUCNavalBuilding::UpdateEffects(EEComplexUnit* inUnit)
+{
+    if (this->mRippleEffect != NULL && inUnit->mHitPoints != 0 && (unsigned long)this->mRippleEffect->mDetailLevel <= gEffectDetail)
+        this->UpdateRipples(inUnit);
 }

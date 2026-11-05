@@ -90,3 +90,23 @@ long EEUCNavalPriest::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inE
     }
     return theResult;
 }
+
+// ICF-FOLDED: EXE 0x618605
+// Creates a fishing boat on a tile at sea level
+// (no address of its own: the same body as EEUCNavalCitizen::CreateUnit, which ICF kept)
+EEUnit* EEUCNavalPriest::CreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
+{
+    GETransformation theTransformation;
+    theTransformation.SetX((float)inX);
+    theTransformation.SetY((float)inY);
+    theTransformation.SetZ(0.0f);
+    return EEUnitClass::CreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+}
+
+// ICF-FOLDED: EXE 0x616dd7
+// Updates the land priest as a priest
+// (no address of its own: the same body as EEUCLandPriest::Update, which ICF kept)
+void EEUCNavalPriest::Update(EEComplexUnit* inUnit)
+{
+    EEUCBasicPriest::Update(inUnit);
+}

@@ -109,3 +109,19 @@ void EEUCLandTransport::UnloadAt(EEComplexUnit* inTransport, long inX, long inY)
 {
     EEUCTransport::UnloadAt(inTransport, inX, inY);
 }
+
+// ICF-FOLDED: EXE 0x618d33
+// Finds where a unit boards the transport (the base transport's rule)
+// (no address of its own: the same body as EEUCNavalTransport::FindBoardingLocation, which ICF kept)
+bool EEUCLandTransport::FindBoardingLocation(EEComplexUnit* inUnit, EEComplexUnit* inTransport, GE3DPoint& inLocation,
+                                   GE3DPoint& outLocation)
+{
+    return EEUCTransport::FindBoardingLocation(inUnit, inTransport, inLocation, outLocation);
+}
+
+// ICF-FOLDED: EXE 0x6135bc
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCLandTransport::HasRoom(class EEComplexUnit *,class EEComplexUnit *)
+{
+    return true;
+}

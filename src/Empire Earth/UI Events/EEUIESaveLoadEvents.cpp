@@ -293,3 +293,12 @@ long EEUIESLDisplayNewFile::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         theEdit->SetText(theList->GetData(theSelection));
     return kErrorOK;
 }
+
+// ICF-FOLDED: EXE 0x5d2aa1
+// Closes the campaign scenario form
+// (no address of its own: the same body as EEUIECSSEBack::ProcessEvent, which ICF kept)
+long EEUIESLECancelSave::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+{
+    gUserInterface->CloseForm(NULL);
+    return kErrorOK;
+}

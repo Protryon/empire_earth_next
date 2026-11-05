@@ -157,3 +157,45 @@ void EEPMAirAnimal::Step4(EEComplexUnit* inUnit)
 void EEPMAirplane::Collide(EEComplexUnit* inUnit)
 {
 }
+
+// ICF-FOLDED: EXE 0x55d8de
+// Turns toward the target point in physics order 5; otherwise keeps circling, speeding its turn rate up
+// (one way in order 0, the other way else)
+// (no address of its own: the same body as EEPMSeaAnimal::TurnToward, which ICF kept)
+void EEPMAirAnimal::TurnToward(EEComplexUnit* inUnit, const GE3DPoint& inFrom, const GE3DPoint& inTo, float* outA, float* outB, float* outC, bool inUseFacingOffset)
+{
+    GEVector theForward(0.0f, 1.0f, 0.0f);
+    GEVector theResult;
+    float theStep = gPhysics->mTickSeconds;
+    float theAccel = inUnit->mStats->mAngularAcceleration;
+    float theMax = inUnit->mStats->mMaxAngularVelocity;
+    unsigned long theState = inUnit->mCurrentPhysicsOrder;
+    float theRate = inUnit->mAngularVelocity.mYaw;
+    if (theState == 5) {
+        EEPhysicsModel::TurnToward(inUnit, inFrom, inTo, outA, outB, outC, inUseFacingOffset);
+        return;
+    }
+    inUnit->mPhysicalModel.GetLocation().Apply(theForward, theResult);
+    float theHeading = UMArcTan2(-theResult.mX, theResult.mY);
+    float theNew;
+    if (theState == 0) {
+        theNew = theRate - theAccel * theStep;
+        if (theNew < -theMax)
+            theNew = -theMax;
+    } else {
+        theNew = theAccel * theStep + theRate;
+        if (theNew > theMax)
+            theNew = theMax;
+    }
+    *outA = 0.0f;
+    *outB = theNew;
+    *outC = theNew * theStep + theHeading;
+}
+
+// ICF-FOLDED: EXE 0x51c531
+// Collides as an airplane (`push [esp+4]; call EEPMAirplane::Collide; ret 4`)
+// (no address of its own: the same bytes as EEMap::GetChecksum's forwarding call, which ICF kept)
+void EEPMAirAnimal::Collide(EEComplexUnit* inUnit)
+{
+    EEPMAirplane::Collide(inUnit);
+}

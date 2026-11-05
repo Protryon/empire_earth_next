@@ -52,6 +52,10 @@
 #include "ee/EEUGLoadContainer.h"
 #include "ee/EEMathInline.h"
 #include "ee/EEUnitUtilities.h"
+#include "ee/EECPASGAir.h"
+#include "ee/EECPAttackFormation.h"
+#include "ee/EEUGLocation.h"
+#include "ee/EEUGUnloadTransport.h"
 
 // FUNCTION: EXE 0x45096f
 // Creates a space transport sub-group for the attack group, with no land group to carry yet
@@ -567,4 +571,110 @@ void EECPASGSpaceTransport::Shutdown()
 {
     EECPASGTransport::ReleaseLand();
     EECPAttackSubGroup::Shutdown();
+}
+
+// ICF-FOLDED: EXE 0x444740
+// Asks the land group to board the active transports and marks the cargo stage as loading
+// (no address of its own: the same body as EECPASGAirTransport::LoadCargo, which ICF kept)
+void EECPASGSpaceTransport::LoadCargo()
+{
+    std::vector<EEComplexUnit*> theUnits;
+    for (long i = this->mUnits.size() - 1; i >= 0; i--) {
+        if (!this->mUnits[i]->IsDone()) {
+            EEComplexUnit* theUnit = this->mUnits[i]->mUnit;
+            theUnits.push_back(theUnit);
+        }
+    }
+    if (theUnits.size() > 0 && this->mLand != NULL)
+        this->mLand->BoardTransports(&theUnits);
+    this->mCargoStage = 1;
+}
+
+// ICF-FOLDED: EXE 0x44e781
+// Rebuilds the formation with 2-tile spacing (forced moves allowed) and places it at the location, facing the
+// heading from the sub-group's position
+// (no address of its own: the same body as EECPASGSeaTransport::PlaceFormation, which ICF kept)
+void EECPASGSpaceTransport::PlaceFormation(const EECPILocation& inLocation)
+{
+    EETileLocation theTile;
+    this->FindPosition(theTile, true, true);
+    float theDistance = EEGetSeaHeading(theTile, inLocation.mTile);
+    this->mFormation->Build();
+    this->mFormation->mNoForcedMove = false;
+    for (long i = this->mFormation->GetNumNodes() - 1; i >= 0; i--)
+        this->mFormation->mNodes[i]->mSpacing = 2.0f;
+    this->mFormation->Place(inLocation, theDistance);
+}
+
+// ICF-FOLDED: EXE 0x444ada
+// Restores the air sub-group and then the transport links after a load; returns the first error
+// (no address of its own: the same body as EECPASGAirTransport::Restore, which ICF kept)
+long EECPASGSpaceTransport::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
+{
+    long theResult = EECPAttackSubGroup::Restore(inMajorVersion, inMinorVersion);   // the twin's EECPASGAir::Restore is this one
+    if (theResult == 0) {
+        theResult = EECPASGTransport::Restore(inMajorVersion, inMinorVersion);
+    }
+    return theResult;
+}
+
+// ICF-FOLDED: EXE 0x44ec4b
+// Gives one unit a move goal to the location's tile (its area if off the map); inFlag forces it; frees the goal
+// if the unit refuses it
+// (no address of its own: the same body as EECPASGSeaTransport::SendUnitTo, which ICF kept)
+void EECPASGSpaceTransport::SendUnitTo(EECPAttackSubGroupUnit* inUnit, const EECPILocation& inLocation, bool inFlag)
+{
+    GE2DPoint thePoint(0.0f, 0.0f);
+    EECPILocation theLocation(inLocation);
+    if (gWorld.mMap->GetTileAtLocation(theLocation.mTile) == NULL)
+        theLocation.ResetToArea();
+    if (inUnit == NULL || gWorld.mMap->GetTileAtLocation(theLocation.mTile) == NULL)
+        return;
+    thePoint.SetX(theLocation.mTile.mX);
+    thePoint.SetY(theLocation.mTile.mY);
+    EEUnitGoal* theGoal = new EEUGLocation(thePoint, true, inFlag, false, 0.0f, false, false);
+    if (!this->GiveGoal(inUnit->GetUnit(), theGoal, inFlag, kActionPrepareToMove) && theGoal != NULL)
+        delete theGoal;
+}
+
+// ICF-FOLDED: EXE 0x444c2f
+// Orders each transport to unload at the location; empty ones and those unable to unload there (the tile is marked
+// to avoid) move to a random tile within 7 of it instead; marks the cargo stage as unloading
+// (no address of its own: the same body as EECPASGAirTransport::UnloadAt, which ICF kept)
+void EECPASGSpaceTransport::UnloadAt(const EECPILocation& inLocation)
+{
+    EEAIAStarBounds theBounds;
+    theBounds.Set(inLocation.mTile);
+    std::vector<EEComplexUnit*> theFailed;
+    long i;
+    for (i = this->mUnits.size() - 1; i >= 0; i--) {
+        EEComplexUnit* theUnit = this->mUnits[i]->mUnit;
+        EEUGUnloadTransport* theGoal = new EEUGUnloadTransport(theUnit, inLocation.mTile.mX,
+                                                              inLocation.mTile.GetY(), true);
+        bool theSkip = theUnit->GetNumCargoUnits() == 0;
+        if (!theSkip) {
+            theSkip = !theGoal->CanUnloadAtDestination();
+            if (theSkip && this->mLand != NULL)
+                this->mLand->AvoidTile(inLocation.mTile);
+        }
+        if (theSkip) {
+            if (theGoal != NULL)
+                delete theGoal;
+            theFailed.push_back(theUnit);
+        } else if (!this->GiveGoal(theUnit, theGoal, 0, kActionPrepareToMove) && theGoal != NULL) {
+            delete theGoal;
+        }
+    }
+    if (theFailed.size() != 0) {
+        theBounds.Grow(7, true);
+        for (i = theFailed.size() - 1; i >= 0; i--) {
+            EEComplexUnit* theUnit = theFailed[i];
+            EEUnitGoal* theGoal = new EEUGLocation((float)gPhysics->GetRandom(theBounds.mLeft, theBounds.mRight),
+                (float)gPhysics->GetRandom(theBounds.mTop, theBounds.mBottom), 0.0f, true, true, false, 0.0f,
+                false, false);
+            if (!this->GiveGoal(theUnit, theGoal, 0, kActionPrepareToMove) && theGoal != NULL)
+                delete theGoal;
+        }
+    }
+    this->mCargoStage = 2;
 }

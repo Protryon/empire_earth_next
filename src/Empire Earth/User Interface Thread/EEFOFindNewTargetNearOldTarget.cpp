@@ -7057,3 +7057,26 @@ void EECreateSpaceGateEnergyWall(EEComplexUnit* inUnit)
 // TEMPLATE: EXE 0x6543ad
 // TEMPLATE: EXE 0x6543ec
 // TEMPLATE: EXE 0x654420
+
+// ICF-FOLDED: EXE 0x620a18
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEFOFindNewTargetScreenBase::Virtual04(class EEComplexUnit *)
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x620a18
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEFOFindNewTargetScreenBase::Virtual08(class EEComplexUnit *)
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x64edf6
+// Makes the units on the footprint of a unit of inClass placed at inTile (or of inUnit) step aside for it
+// (no address of its own: the same body as EEStepAsideFromSite, which ICF kept; that one only reads the tile)
+void EEPlaceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, EEPlayer* inPlayer, const U2DPoint<long>& inTile, bool inArg)
+{
+    EETileCoordinate theTile(inTile);
+    EEStepAsideFromSite(inUnit, inClass, inPlayer, theTile, inArg);
+}

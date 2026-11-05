@@ -214,3 +214,60 @@ void EEUCSubmergedNaval::Update(EEComplexUnit* inUnit)
     }
     this->Fn157269(inUnit);
 }
+
+// ICF-FOLDED: EXE 0x61884e
+// Thins the priest ship's path to every n-th point and both ends when inSmooth is set (n: its inner collision sphere)
+// (no address of its own: the same body as EEUCNavalPriest::AdjustPath, which ICF kept)
+void EEUCSubmergedNaval::AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& ioPath, bool inSmooth)
+{
+    std::vector<GE3DPoint> thePath;
+    long theCount = ioPath.size();
+    long theStep = UMFloatToLong(this->mInnerCollisionSphere);
+    if (inSmooth != true)
+        return;
+    thePath.reserve(ioPath.size());
+    // a collision sphere that rounds to 0 keeps every point (it used to divide by zero); as in
+    // EEUCNavalCitizen::AdjustPath
+    if (theStep == 0)
+        theStep = 1;
+    for (long i = 0; i < theCount; i++) {
+        if (i == theCount - 1 || i == 0 || i % theStep == 0)
+            thePath.push_back(ioPath[i]);
+    }
+    ioPath = thePath;
+}
+
+// ICF-FOLDED: EXE 0x60afe9
+// Animates the animal like any unit
+// (no address of its own: the same body as EEUCAirAnimal::Animate, which ICF kept)
+long EEUCSubmergedNaval::Animate(EEComplexUnit* inUnit)
+{
+    return EEUnitClass::Animate(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCSubmergedNaval::CanAttackMove()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x61aaf5
+// Removes the transport from its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::RemoveFromTile, which ICF kept)
+void EEUCSubmergedNaval::RemoveFromTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->RemoveUnit(theUnit);
+}
+
+// ICF-FOLDED: EXE 0x60da7a
+// Sets up a new priest like any unit
+// (no address of its own: the same body as EEUCBasicPriest::UnitCreated, which ICF kept)
+void EEUCSubmergedNaval::UnitCreated(EEComplexUnit* inUnit)
+{
+    EEUnitClass::UnitCreated(inUnit);
+}

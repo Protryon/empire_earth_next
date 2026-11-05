@@ -392,3 +392,19 @@ long EEUIEMGOEOpenOptionsScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity
 // FUNCTION: EXE 0x5e1b69
 // Destroys an action and frees it when asked (scalar deleting destructor shared by simple actions)
 // (EEAction's ??_G: EEAUserPauseGame's implicit one, ICF-shared by every action without destructible members)
+
+// ICF-FOLDED: EXE 0x5e136e
+// Shows the scenario briefing
+// (no address of its own: the same body as EEUIEMGOEGameBriefing::ProcessEvent, which ICF kept)
+long EEUIEMGDisplayScenarioIntro::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+{
+    EEDisplayScenarioIntro();
+    return kErrorOK;
+}
+
+// ICF-FOLDED: EXE 0x67cf38
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEUIEMGOECloseOptions::ProcessEvent(class UIForm *,class UIEntity *)
+{
+    return 0;
+}

@@ -528,3 +528,15 @@ UIHotKey* EEButtonObject::GetHotKey()
         return UIHotKey::GetHotKey(this->mHotKeyIndex);
     return NULL;
 }
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUIFMGMainGroup::Select()
+{
+}
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUIFMGMainGroup::Virtual08()
+{
+}
