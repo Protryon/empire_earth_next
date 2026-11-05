@@ -15,8 +15,8 @@ One statically linked `EE-AOC.exe` with the static C runtime. The original's DLL
 (`Low-Level Engine.dll`, with libjpeg and the DCL), the TCP protocol, the mixer, the Default random map generator
 and the DX7 hardware T&L renderer (the plug-ins are registered in `src/Low-Level Engine/PIMModule.cpp` instead of
 being loaded from DLLs), and the language strings of `Language.dll`. The non-T&L renderer `DX7HRDisplay.dll` is
-gone. Only Windows system DLLs are imported, plus Miles (`Mss32.dll`) and Bink (`binkw32.dll`) until their
-replacements land (`PORT.md`, "Plan").
+gone. Sound goes through miniaudio (vendored, statically linked). Only Windows system DLLs are imported, plus Bink
+(`binkw32.dll`) until its replacement lands (`PORT.md`, "Plan").
 
 | Module | Was | Source |
 |---|---|---|
@@ -25,7 +25,7 @@ replacements land (`PORT.md`, "Plan").
 | `default` | `Default.dll` (random map generators) | `src/Empire Earth/Random Map/Random Map Generators/Default/` |
 | `dx7hrtnl` | `DX7HRTnLDisplay.dll` (T&L renderer) | `src/Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/` |
 | `tcp` | `TCP Protocol.dll` (network) | `src/Low-Level Engine/Network Engine/TCP Protocol/` |
-| `mixer` | `Miles Sound System Mixer.dll` (sound) | `src/Low-Level Engine/Sound Engine/Miles Sound System Mixer/` |
+| `mixer` | `Miles Sound System Mixer.dll` (sound; now on miniaudio) | `src/Low-Level Engine/Sound Engine/Mixer/` |
 | (resources) | `Language.dll` | `src/Empire Earth/Language/Language.rc` |
 
 The exe still links stubs for the WON online library, whose source is not part of the reconstruction yet (the
@@ -54,8 +54,8 @@ python -I tools/clang_build.py      # compile only, with a ranked error census (
 The exe comes with its `.map` and `.pdb`. Sources are staged under `C:\EEX\` before they are compiled (env
 `EE_ORIG_SRC_ROOT` moves it). A full build takes about two minutes on a 12-core machine.
 
-To play, copy `EE-AOC.exe` into a copy of the game's install directory (keeping the game's own `Mss32.dll` and
-`binkw32.dll`; the other DLLs are no longer used).
+To play, copy `EE-AOC.exe` into a copy of the game's install directory (keeping the game's own `binkw32.dll`; the
+other DLLs are no longer used).
 
 ## Testing
 

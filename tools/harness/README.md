@@ -7,9 +7,9 @@ reads memory at VC6 offsets, and binary-patches the images for the VM. Here:
 
 - **The build under test** (`hbuild.py`): a test-profile build of the one static exe
   (`python -I build.py --test-profile windowed-software` -> `build/clang-test/exe/EE-AOC.exe`). The windowed and
-  software-display policy (for the T&L renderer: the RGB software device) and the silent mixer
-  (`silent_mixer.cpp`, compiled in place of the Miles mixer unit) are compiled in, `WinMain` loads the presentation
-  bridge, and the functions the harness hooks are kept out of line.
+  software-display policy (for the T&L renderer: the RGB software device) is compiled in, `WinMain` loads the
+  presentation bridge, and the functions the harness hooks are kept out of line. The game's own mixer runs (on
+  miniaudio's null device when the machine has no audio output).
 - **Offsets by member name** (`layout_gen.py`, `layout.py`): the build's record layouts (clang's dumps;
   `build.py` writes `<build>/layout.json`). `layout.off(cls, vc6_offset)` translates any of the reconstruction
   harness's VC6 offsets through the frozen VC6 layout `vc6_layout.json.gz`.

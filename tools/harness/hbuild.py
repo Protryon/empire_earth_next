@@ -6,8 +6,9 @@ runtime inside), built with the test profile:
 
   python -I tools/build.py --test-profile windowed-software            -> build/clang-test/
 
-The test profile compiles the windowed/software-display policy and the silent mixer in, so nothing is patched at
-staging. Miles and Bink still come from the game install until their replacements land.
+The test profile compiles the windowed/software-display policy in, so nothing is patched at staging. The game's
+mixer runs on miniaudio's null device when the machine has no audio output. Bink still comes from the game install
+until its replacement lands.
 """
 import pathlib
 import sys
@@ -20,7 +21,7 @@ from fulllink_locator import LinkMap                 # noqa: E402
 
 INSTALL = pathlib.Path(r"C:\Program Files (x86)\Empire Earth\Empire Earth - The Art of Conquest")
 TARGET_FILES = {"exe": "EE-AOC.exe"}
-THIRD_PARTY = ["Mss32.dll", "binkw32.dll"]
+THIRD_PARTY = ["binkw32.dll"]
 BASE = 0x400000                                      # the exe's fixed base
 SHOWSCENE = "?ShowScene@DX7Rasterizer@@UAEJK@Z"
 ACTIVATE = "?ActivateScreen@DX7Rasterizer@@UAEJKPAVGETextureManager@@PAVGEWindow@@K_NK@Z"

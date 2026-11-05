@@ -128,9 +128,9 @@ def rename_import(path, old, new):
 
 def stage(name, build, data=True, silent_audio=True):
     """Stage the build under test (hbuild.Build) in build/boot/<name>: its exe (the test profile compiles the
-    windowed/software policy and the silent mixer in, nothing is patched), the third-party DLLs, the RDP mode-list
-    proxy when the display needs it, and a copy of the game data. silent_audio: kept for the callers (the test exe's
-    mixer is always the silent one)."""
+    windowed/software policy in, nothing is patched), the third-party DLLs, the RDP mode-list proxy when the display
+    needs it, and a copy of the game data. silent_audio: kept for the callers (the game's own mixer falls back to a
+    null audio device on a machine without one)."""
     d = BOOT / name
     if d.resolve().parent != BOOT.resolve():
         raise ValueError('Staging deletion must remain immediately inside build/boot')

@@ -2,8 +2,8 @@
 
 Units come from link/<module>/units.txt (in link order), or every .cpp of the module's source folder when the module
 has no unit list; each compiles with its module's flags (ee.MODULE_FLAGS) or its own `// UNIT-FLAGS:` line. Library
-code built from source (LIB_UNITS: the PKWARE DCL implode/explode for the engine, Miles' MSS_auto_cleanup for the
-mixer) is compiled with the modules that link it.
+code built from source (LIB_UNITS: the PKWARE DCL implode/explode for the engine, miniaudio for the mixer, GUIDs the
+SDK dropped) is compiled with the modules that link it.
 """
 import pathlib
 import sys
@@ -19,11 +19,11 @@ TARGET_MODULES = {"exe": ["exe", "exeimg", "lle", "jpeg", "tcp", "mixer", "defau
 PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own (none since the VC6 build's inline-asm _ftol went: clang never calls it)
 EXTRA_UNITS = {}
-LIB_UNITS = {"mssauto": "ThirdParty/mss/mssauto.c",
+LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c",
              "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c",
              # DirectMusic GUIDs (the Windows SDK's dxguid.lib no longer has them)
              "dmguids": "ThirdParty/dxguid/dmusic_guids.c"}
-LIB_MEMBERS = {"mixer": ["mssauto"], "lle": ["implode", "explode", "dmguids"]}
+LIB_MEMBERS = {"mixer": ["miniaudio"],"lle": ["implode", "explode", "dmguids"]}
 LANGUAGE_RC = pathlib.PurePosixPath("Empire Earth/Language/Language.rc")
 EXE_RC = ROOT / "src" / "Empire Earth" / "EE-AOC.rc"
 EXE_MEMBERS = LINK_DIR / "exe" / "fulllink_members.tsv"

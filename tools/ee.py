@@ -7,7 +7,7 @@ TOOLCHAIN = pathlib.Path(os.environ.get("EE_TOOLCHAIN", ROOT / "toolchain"))   #
 ORIG_SRC_ROOT = pathlib.Path(os.environ.get("EE_ORIG_SRC_ROOT", r"C:\EEX"))   # where units are staged to compile
 MODULE_SRC = {
     "tcp": "Low-Level Engine/Network Engine/TCP Protocol",
-    "mixer": "Low-Level Engine/Sound Engine/Miles Sound System Mixer",
+    "mixer": "Low-Level Engine/Sound Engine/Mixer",
     "default": "Empire Earth/Random Map/Random Map Generators/Default",
     "lle": "Low-Level Engine",
     "dx7hrtnl": "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins",

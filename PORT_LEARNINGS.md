@@ -377,6 +377,23 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
   constructors run first, as when the engine DLL loaded before the exe initialised (not the cause of the crash
   above, but the order the code was written for).
 
+## Miles -> miniaudio (the mixer)
+
+- The mixer plug-in's contract is small (33 `SPIM*` entry points, result codes, an `SESample` record the engine owns):
+  channels with a bound sample, volume/pan/pitch/loop/position, whole-file loads, master volume. The new mixer keeps
+  every entry point and mixes in software on miniaudio's device thread under one lock; samples decode whole at load
+  into float PCM, shared by reference count between a sample and its duplicates, as the Miles `SampleData` was.
+- **miniaudio's backend list only falls back during context creation**: WASAPI's context opens on a machine without
+  an audio device and then the device fails. Try each backend (WASAPI, DirectSound, waveOut, null) through context
+  and device until one starts. The null backend lets the game run on the headless VM, which retired the test-only
+  silent mixer: the harness now exercises the real mixer (101 sounds decoded, 0 failed in a tour).
+- **`MA_NO_RUNTIME_LINKING` breaks the context init** (MA_FAILED_TO_INIT_BACKEND even for the null backend, from a
+  standalone probe), so miniaudio loads its system DLLs at run time as it does by default.
+- **64-bit atomics**: `/arch:IA32` makes clang assume a CPU without `cmpxchg8b`, so miniaudio's 64-bit atomics became
+  calls to a missing `__atomic_compare_exchange_8`. The build adds `-Xclang -target-feature -Xclang +cx8` (every
+  Pentium has it); x87 stays.
+- The game insists on a mixer ("requires a sound card"): any mixer activation failure ends the game at startup.
+
 ## For WONAPI/WONLobby later
 
 The WON library is carved or stubbed (`won` class in the stub report) in both builds. When its source arrives, expect

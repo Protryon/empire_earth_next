@@ -77,9 +77,12 @@ crate can replace.
    (until polymorphic `new[]`/`delete[]` are gone or clang emits vector deleting destructors on its own), the
    per-module header views (`tools/odr_check.py`: 28 inline functions with divergent copies, mostly older ODR
    clashes inside the game).
-2. **Audio output: miniaudio** (`src/ThirdParty/miniaudio`, MIT-0) replaces DirectSound as the one device. The mixer
-   is rewritten on it (its 34 `AIL_*` uses: driver, sample handles, volume/pan/rate/loop/position, named sample
-   files; WAV through dr_wav, MP3 through dr_mp3). `Mss32.dll` and the `redist\win32` providers go.
+2. **Audio output: miniaudio** (done). `src/Low-Level Engine/Sound Engine/Mixer/Mixer.cpp` mixes the game's channels
+   (volume, pan, pitch by resampling, loop, position) into one miniaudio playback device (WASAPI, DirectSound,
+   waveOut, else the null device); samples are decoded whole on load (WAV/MP3/FLAC). miniaudio 0.11.21 is vendored
+   (`include/miniaudio/`, options in `ee_miniaudio.h`, implementation `src/ThirdParty/miniaudio/miniaudio.c`).
+   `Mss32.dll`, the Miles headers and `redist\win32` are gone, and so is the harness's silent mixer (the null device
+   serves). Still open: the mixer hands a DirectSound object to the DirectMusic and Bink players (steps 3 and 4).
 3. **Music: GothicKit/dmusic** (MIT, C11; segments, styles, bands, DLS, composer, its own synth) renders PCM into
    the miniaudio mix. `SEConductor`/`SEScore` move from the DirectMusic COM interfaces to it; motifs
    (`EnumMotif`/`GetMotif`), `AutoTransition` and the segment-end notifications are the parts to check first and

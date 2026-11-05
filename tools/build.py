@@ -112,34 +112,19 @@ HARNESS_HOOKS = [
 for _unit, _decl in HARNESS_HOOKS:
     TEST_PROFILES["windowed-software"].setdefault(_unit, []).append(
         ("\n" + _decl + "\n", "\n__declspec(noinline) " + _decl + "   // TEST PROFILE: harness hook\n", 1))
-# Units the test profile replaces with a test tool's source (compiled to the unit's object): the silent mixer in place
-# of the Miles mixer (the headless VM has no audio device; it registers as the same plug-in)
-TEST_SWAPS = {
-    "windowed-software": {
-        "Low-Level Engine/Sound Engine/Miles Sound System Mixer/Miles Sound System Mixer.cpp":
-            ROOT / "tools" / "harness" / "silent_mixer.cpp",
-    },
-}
 SANITIZE_CHECKS = "null,pointer-overflow,nonnull-attribute,returns-nonnull-attribute"
 
 
-def compile_all(targets, out, opt, jobs, overlays=None, extra=(), swaps=None):
-    """Compile every unit the targets link, in parallel -> objs(source, flags) -> object path; exits on a failure.
-    swaps: {unit path relative to src/: source compiled to that unit's object instead} (test profiles)."""
+def compile_all(targets, out, opt, jobs, overlays=None, extra=()):
+    """Compile every unit the targets link, in parallel -> objs(source, flags) -> object path; exits on a failure."""
     mods = [m for t in targets for m in units.TARGET_MODULES.get(t, [t])]
     work = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
     for j in work:
         verify.include_paths(verify.stage_source(j[1]))
     table, failed = {}, []
     t0 = time.time()
-    def one(j):
-        swap = (swaps or {}).get(str(units.rel_src(j[1])))
-        if swap is None:
-            return clang_build.compile_one(j, out, opt, overlays, extra)
-        ok, log = clang_build.compile_to(swap, j[2], units.obj_path(out, j), opt, None, extra)
-        return j, ok, log
     with concurrent.futures.ThreadPoolExecutor(jobs) as ex:
-        for job, ok, log in ex.map(one, work):
+        for job, ok, log in ex.map(lambda j: clang_build.compile_one(j, out, opt, overlays, extra), work):
             if ok:
                 table[(str(units.rel_src(job[1])), verify.unit_flags(job[1], job[2]))] = units.obj_path(out, job)
             else:
@@ -179,7 +164,7 @@ def member_offsets(out):
 
 
 # system libraries the engine and the renderer linked statically (dinput8: the c_dfDI* data formats)
-STATIC_LIBS = ["dxguid.lib", "dinput8.lib"]
+STATIC_LIBS = ["dxguid.lib", "dinput8.lib", "dsound.lib", "ole32.lib", "winmm.lib", "user32.lib"]
 
 
 def link_exe(out, objs, extra_libs):
@@ -247,7 +232,7 @@ def main():
             sys.exit(f"ubsan_minimal.c: {r.stdout}{r.stderr}")
         extra_libs.append(str(ubsan))
     t0 = time.time()
-    objs = compile_all(units.TARGETS, out, a.opt, a.j, overlays, extra, TEST_SWAPS.get(a.test_profile))
+    objs = compile_all(units.TARGETS, out, a.opt, a.j, overlays, extra)
     if a.compile_only:
         return
     sys.path.insert(0, str(ROOT / "tools" / "harness"))   # the link places the member aliases by the record layouts
