@@ -1150,3 +1150,29 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   ANSI code pages before) needs the encoding decision PORT.md describes; Western input is complete.
 - **PostQuitMessage has no reader now**: the thread queue is TSThread's own, so the two remaining PostQuitMessage
   calls (the lobby's Sierra Update, the window close) post WM_QUIT (0x12) to the UI thread's TSThread instead.
+
+## The POSIX game, part 5: building and linking it (branch xgame)
+
+- **-fms-compatibility on a GNU target drops __GNUC__**, and system headers decide by it:
+  - glibc's optimised C++ string overloads (`__OPTIMIZE__`: `__extern_always_inline` and `__asm__` labels) fail;
+    `-U__OPTIMIZE__` for the headers keeps them on their plain declarations while the code is still optimised.
+    Claiming GCC back (`-fgnuc-version`) is no way out on Linux: glibc then wants `__STDC__` and its own va_list.
+  - macOS's SDK types `__darwin_va_list` as `void*` without `__GNUC__`, which clashed with clang's
+    `__builtin_va_list` in every unit (the "va_list" blocker of the census): `-fgnuc-version=4.2.1` on macOS only
+    fixes it (851/870 units at once).
+  - libstdc++ compares `type_info` inline only with `__GXX_WEAK__`, else it calls an out-of-line `operator==` the
+    library does not export: `-D__GXX_TYPEINFO_EQUALITY_INLINE=1`.
+  These are the game's C++ units only; C, the vendored libraries and the platform layer compile as standard code.
+- **The census was not the build.** `-fsyntax-only` without `-O` hides the `__OPTIMIZE__` header paths, and does not
+  link: the Itanium ABI does not encode a variable's type, so the engine's and the T&L plug-in's two `gRasterizer`s
+  (different types, distinct MSVC symbols) clashed at the first link. That was the only duplicate in 845 units.
+- **Header leanness differs by library version**: libstdc++ 10 (the Debian 11 sysroot here) brought `<string>` into
+  GX.cpp transitively, CI's libstdc++ 13 did not. The cross build here does not prove the native one.
+- **#embed is new** (clang 19+): CI's clang 18 and Apple clang get the fonts as generated C arrays
+  (`PlatFontDataArrays.h`, chosen with `__has_include`); a skipped `#embed` inside a false `#if` group is harmless
+  to older compilers.
+- **The 2001 zlib/libpng take `TARGET_OS_MAC` for classic Mac OS** (`<fp.h>`, no `Byte`); modern Apple systems
+  define it too. The checks now also require `!__APPLE__`.
+- **CI without game data**: `--smoke-test` exercises what is portable and observable without the retail files: the
+  window system, a window, the wgpu device on the runner's GPU path (lavapipe under Xvfb, Metal on macOS), 30 colour
+  fills read back and presented; the normal start must stop with the "game data not found" message (exit 3).

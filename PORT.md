@@ -215,6 +215,14 @@ Steps:
       SDL and Common, SDL3 and wgpu (a macOS .app bundle: Contents/Resources is the data root); the platform
       layer's data root (`EE_DATA_ROOT` or the executable's directory) replaces the install path. CI runs it to the
       main menu under Xvfb/lavapipe (Linux) and Metal (macOS); the harness itself stays Windows-only.
+      **State (branch xgame, 2026-11-05)**: `xbuild.py game` builds the game for linux-x86_64 (here, cross, and
+      natively in CI) and macos-arm64 (CI), with an .app bundle on macOS; censuses 870/870 on both. The retail data
+      cannot go to CI, so CI runs `ee-aoc --smoke-test` (window system, a window, the wgpu device, 30 frames filled,
+      read back and presented, then the data root is reported) and the plain start without data, which must stop with
+      "game data not found" (exit 3). Linux CI: passes on Xvfb + lavapipe (llvmpipe adapter). Users with the game run
+      `tools/make_play_dir.py OUT --posix-exe ...` and `OUT/run.sh` (README "Linux and macOS"). Not done: running to
+      the main menu with real data on Linux/macOS (no data and no Linux/macOS machine here), the fullscreen start
+      screen off Windows, CJK text input.
    LP64 (`long` is 64-bit there): done on Windows first (branch lp64, PORT_LEARNINGS.md "LP64"): every value in a file or
    network message has a fixed width (FSFile's int32_t/uint32_t overloads with 4-byte long adapters, int32_t fields
    in the 37 raw records and the 133 message members, 32-bit wire locals), the RNG state, checksums, saved ids and
