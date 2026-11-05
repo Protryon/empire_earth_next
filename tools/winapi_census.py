@@ -299,6 +299,11 @@ AREAS = [
     ("src/Low-Level Engine/", "engine (other)"),
     ("include/lle/", "engine headers (other)"),
     ("src/Platform/", "platform layer, OS implementation [impl]"),
+    # the Windows names that are the game's own numbering or types off Windows (wintypes.h, PlatKeys.h) and the
+    # POSIX-only stand-ins for Windows headers (include/compat/): the definitions, not uses
+    ("include/platform/wintypes.h", "platform layer, Windows types off Windows [impl]"),
+    ("include/platform/PlatKeys.h", "platform layer, Windows types off Windows [impl]"),
+    ("include/compat/", "platform layer, Windows types off Windows [impl]"),
     ("include/platform/", "platform layer"),
     ("src/Empire Earth/Random Map/", "game: random map"),
     ("src/Empire Earth/User Interface Thread/", "game: UI thread / lobby"),
