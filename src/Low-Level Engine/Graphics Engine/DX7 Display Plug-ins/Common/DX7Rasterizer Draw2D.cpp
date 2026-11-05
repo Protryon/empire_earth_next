@@ -6,8 +6,7 @@
 // (export order), the vector<GESurface*> iterator operator+ COMDAT, then the template-static init chain head and
 // its atexit registrars.
 #include <windows.h>
-#include <ddraw.h>
-#include <d3d.h>
+#include "gx/GX.h"
 
 #include "dx7/DX7Rasterizer.h"
 #include "dx7/DX7PolygonArray.h"
@@ -88,15 +87,15 @@ long DX7Rasterizer::Draw(GEBitmap* inBitmap, unsigned long inScreen)
             theVertices->SetTextureCoordinate(theBottomLeft, 3);
         }
         this->SetTexture(theTexture, inScreen);
-        D3DVERTEX_STD_COLOR* theBuffer;
+        GXVERTEX_STD_COLOR* theBuffer;
         this->LockVB(4, inScreen, theBuffer);
         memcpy(theBuffer + this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-               static_cast<DX7StdColorVertexArray*>(theVertices)->mVertices, 4 * sizeof(D3DVERTEX_STD_COLOR));
+               static_cast<DX7StdColorVertexArray*>(theVertices)->mVertices, 4 * sizeof(GXVERTEX_STD_COLOR));
         theResult = this->UnlockVB(inScreen);
         while (true) {
-            if (this->mDX7ScreenStates[inScreen]->mDevice->DrawIndexedPrimitiveVB(D3DPT_TRIANGLELIST,
+            if (this->mDX7ScreenStates[inScreen]->mDevice->DrawIndexedPrimitiveVB(GXPT_TRIANGLELIST,
                     this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 4,
-                    theIndices, 6, 0) != DDERR_WASSTILLDRAWING)
+                    theIndices, 6, 0) != GXERR_WASSTILLDRAWING)
                 break;
             Sleep(0);
         }
@@ -123,7 +122,7 @@ long DX7Rasterizer::Draw(GELine* inLine, unsigned long inCount, unsigned long in
     GETexture* theTexture = inLine->GetTexture(inScreen);
     bool theHasTexture = theTexture != NULL;
     this->SetTexture(theTexture, inScreen);
-    D3DVERTEX_STD_COLOR* theBuffer;
+    GXVERTEX_STD_COLOR* theBuffer;
     this->LockVB(theVertexCount, inScreen, theBuffer);
     theBuffer += this->mDX7ScreenStates[inScreen]->mVertexBufferPosition;
     GELine* theLine = inLine;
@@ -139,7 +138,7 @@ long DX7Rasterizer::Draw(GELine* inLine, unsigned long inCount, unsigned long in
                 theVertices->SetTextureCoordinate(theCoordinate, 0);
             }
         }
-        memcpy(theBuffer, static_cast<DX7StdColorVertexArray*>(theVertices)->mVertices, 2 * sizeof(D3DVERTEX_STD_COLOR));
+        memcpy(theBuffer, static_cast<DX7StdColorVertexArray*>(theVertices)->mVertices, 2 * sizeof(GXVERTEX_STD_COLOR));
         theBuffer[0].x += kLineOffset;
         theBuffer[0].y += kLineOffset;
         theBuffer[1].x += kLineOffset;
@@ -148,9 +147,9 @@ long DX7Rasterizer::Draw(GELine* inLine, unsigned long inCount, unsigned long in
     }
     theResult = this->UnlockVB(inScreen);
     while (true) {
-        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(D3DPT_LINELIST,
+        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(GXPT_LINELIST,
                 this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-                theVertexCount, 0) != DDERR_WASSTILLDRAWING)
+                theVertexCount, 0) != GXERR_WASSTILLDRAWING)
             break;
         Sleep(0);
     }
@@ -170,7 +169,7 @@ long DX7Rasterizer::Draw(GEPoint* inPoint, unsigned long inCount, unsigned long 
     GETexture* theTexture = inPoint->GetTexture(inScreen);
     bool theHasTexture = theTexture != NULL;
     this->SetTexture(theTexture, inScreen);
-    D3DVERTEX_STD_COLOR* theBuffer;
+    GXVERTEX_STD_COLOR* theBuffer;
     this->LockVB(inCount, inScreen, theBuffer);
     theBuffer += this->mDX7ScreenStates[inScreen]->mVertexBufferPosition;
     GEPoint* thePoint = inPoint;
@@ -186,14 +185,14 @@ long DX7Rasterizer::Draw(GEPoint* inPoint, unsigned long inCount, unsigned long 
                 theVertices->SetTextureCoordinate(theCoordinate, 0);
             }
         }
-        memcpy(theBuffer, static_cast<DX7StdColorVertexArray*>(theVertices)->mVertices, sizeof(D3DVERTEX_STD_COLOR));
+        memcpy(theBuffer, static_cast<DX7StdColorVertexArray*>(theVertices)->mVertices, sizeof(GXVERTEX_STD_COLOR));
         theBuffer++;
     }
     theResult = this->UnlockVB(inScreen);
     while (true) {
-        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(D3DPT_POINTLIST,
+        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(GXPT_POINTLIST,
                    this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-                   inCount, 0) != DDERR_WASSTILLDRAWING)
+                   inCount, 0) != GXERR_WASSTILLDRAWING)
             break;
         Sleep(0);
     }
@@ -212,15 +211,15 @@ long DX7Rasterizer::Draw(GERhombus* inRhombus, unsigned long inScreen)
     this->Set2DMode(inScreen);
     this->SetTexture(NULL, inScreen);
     GEVertexArray* theVertices = inRhombus->GetVertexArray();
-    D3DVERTEX_STD_COLOR* theBuffer;
+    GXVERTEX_STD_COLOR* theBuffer;
     this->LockVB(4, inScreen, theBuffer);
     memcpy(theBuffer + this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-           static_cast<DX7StdColorVertexArray*>(theVertices)->mVertices, 4 * sizeof(D3DVERTEX_STD_COLOR));
+           static_cast<DX7StdColorVertexArray*>(theVertices)->mVertices, 4 * sizeof(GXVERTEX_STD_COLOR));
     theResult = this->UnlockVB(inScreen);
     while (true) {
-        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawIndexedPrimitiveVB(D3DPT_TRIANGLELIST,
+        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawIndexedPrimitiveVB(GXPT_TRIANGLELIST,
                    this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 4,
-                   theIndices, 6, 0) != DDERR_WASSTILLDRAWING)
+                   theIndices, 6, 0) != GXERR_WASSTILLDRAWING)
             break;
         Sleep(0);
     }
@@ -229,117 +228,126 @@ long DX7Rasterizer::Draw(GERhombus* inRhombus, unsigned long inScreen)
     return theResult;
 }
 
-// FUNCTION: DX7HR 0x100032a9
-// Draws a text with GDI on the target's text DC, aligned; shadow fonts get a black or white shadow 1 pixel down-right
-long DX7Rasterizer::Draw(GEText* inText, GESurface* inTarget)
+// One text draw with GDI (the body both Draw(GEText*) overloads shared): background mode and colours, the font,
+// alignment by the text extent, the shadow 1 pixel down-right for shadow fonts, then the text; clipped to inClip when
+// given. Restores the DC. A GXSurface::DrawText callback: it may run twice on scratch DCs (GPU-resident targets).
+struct DX7TextJob {
+    GEText* mText;
+    const RECT* mClip;
+    long mResult;
+};
+
+static bool DX7DrawTextGDI(HDC theDC, void* inJob)
 {
-    long theResult = kErrorOK;
-    if (inTarget->GetIsTextLocked() || inTarget->TextLock() == kErrorOK) {
-        HDC theDC = inTarget->GetTextDC();
-        int theOldBkMode = SetBkMode(theDC, inText->GetIsTransparent() ? TRANSPARENT : OPAQUE);
-        COLORREF theOldTextColor = SetTextColor(theDC, RGB((BYTE)(inText->GetFgColor().GetRed() * 255.0f),
-                                                           (BYTE)(inText->GetFgColor().GetGreen() * 255.0f),
-                                                           (BYTE)(inText->GetFgColor().GetBlue() * 255.0f)));
-        COLORREF theOldBkColor = SetBkColor(theDC, RGB((BYTE)(inText->GetBgColor().GetRed() * 255.0f),
-                                                       (BYTE)(inText->GetBgColor().GetGreen() * 255.0f),
-                                                       (BYTE)(inText->GetBgColor().GetBlue() * 255.0f)));
-        GEFont* theFont = inText->GetFont();
-        theFont->Reference();
-        HGDIOBJ theOldFont = SelectObject(theDC, theFont->GetOSFont());
-        GE2DPoint theLocation = inText->GetLocation();
-        SIZE theSize;
-        if (GetTextExtentPoint32A(theDC, inText->GetText(), inText->GetText().GetLength(), &theSize)) {
-            if (inText->GetAlignment() == kTextAlignCenter)
-                theLocation.SetX(theLocation.GetX() - theSize.cx / 2);
-            else if (inText->GetAlignment() == kTextAlignRight)
-                theLocation.SetX(theLocation.GetX() - theSize.cx);
-        }
-        if (theFont->GetFontStyle() & kFontStyleShadow) {
-            BYTE theShade = inText->GetFgColor().GetRed() + (inText->GetFgColor().GetGreen() +
-                            inText->GetFgColor().GetBlue()) > 0.1f ? 0 : 255;
-            COLORREF theColor = SetTextColor(theDC, RGB(theShade, theShade, theShade));
-            if (!ExtTextOutA(theDC, (long)theLocation.GetX() + 1, (long)theLocation.GetY() + 1, 0, NULL,
-                             inText->GetText(), inText->GetText().GetTCHARLength(), NULL)) {
-                ESRecordNativeError(GetLastError());
-                ESGetNativeError();
-                theResult = kErrorNativeError;
-            }
-            SetTextColor(theDC, theColor);
-        }
-        if (!ExtTextOutA(theDC, (long)theLocation.GetX(), (long)theLocation.GetY(), 0, NULL, inText->GetText(),
-                         inText->GetText().GetTCHARLength(), NULL)) {
+    DX7TextJob* theJob = static_cast<DX7TextJob*>(inJob);
+    GEText* inText = theJob->mText;
+    UINT theOptions = theJob->mClip ? ETO_CLIPPED : 0;
+    int theOldBkMode = SetBkMode(theDC, inText->GetIsTransparent() ? TRANSPARENT : OPAQUE);
+    COLORREF theOldTextColor = SetTextColor(theDC, RGB((BYTE)(inText->GetFgColor().GetRed() * 255.0f),
+                                                       (BYTE)(inText->GetFgColor().GetGreen() * 255.0f),
+                                                       (BYTE)(inText->GetFgColor().GetBlue() * 255.0f)));
+    COLORREF theOldBkColor = SetBkColor(theDC, RGB((BYTE)(inText->GetBgColor().GetRed() * 255.0f),
+                                                   (BYTE)(inText->GetBgColor().GetGreen() * 255.0f),
+                                                   (BYTE)(inText->GetBgColor().GetBlue() * 255.0f)));
+    GEFont* theFont = inText->GetFont();
+    theFont->Reference();
+    HGDIOBJ theOldFont = SelectObject(theDC, theFont->GetOSFont());
+    GE2DPoint theLocation = inText->GetLocation();
+    SIZE theSize;
+    if (GetTextExtentPoint32A(theDC, inText->GetText(), inText->GetText().GetLength(), &theSize)) {
+        if (inText->GetAlignment() == kTextAlignCenter)
+            theLocation.SetX(theLocation.GetX() - theSize.cx / 2);
+        else if (inText->GetAlignment() == kTextAlignRight)
+            theLocation.SetX(theLocation.GetX() - theSize.cx);
+    }
+    if (theFont->GetFontStyle() & kFontStyleShadow) {
+        BYTE theShade = inText->GetFgColor().GetRed() + inText->GetFgColor().GetGreen() +
+                        inText->GetFgColor().GetBlue() > 0.1f ? 0 : 255;
+        COLORREF theColor = SetTextColor(theDC, RGB(theShade, theShade, theShade));
+        if (!ExtTextOutA(theDC, (long)theLocation.GetX() + 1, (long)theLocation.GetY() + 1, theOptions, theJob->mClip,
+                         inText->GetText(), inText->GetText().GetTCHARLength(), NULL)) {
             ESRecordNativeError(GetLastError());
             ESGetNativeError();
-            theResult = kErrorNativeError;
+            theJob->mResult = kErrorNativeError;
         }
-        SelectObject(theDC, theOldFont);
-        SetTextColor(theDC, theOldTextColor);
-        SetBkColor(theDC, theOldBkColor);
-        SetBkMode(theDC, theOldBkMode);
-        theFont->Dereference();
+        SetTextColor(theDC, theColor);
     }
-    return theResult;
+    if (!ExtTextOutA(theDC, (long)theLocation.GetX(), (long)theLocation.GetY(), theOptions, theJob->mClip,
+                     inText->GetText(), inText->GetText().GetTCHARLength(), NULL)) {
+        ESRecordNativeError(GetLastError());
+        ESGetNativeError();
+        theJob->mResult = kErrorNativeError;
+    }
+    SelectObject(theDC, theOldFont);
+    SetTextColor(theDC, theOldTextColor);
+    SetBkColor(theDC, theOldBkColor);
+    SetBkMode(theDC, theOldBkMode);
+    theFont->Dereference();
+    return true;
+}
+
+// The pixels a text draw can touch: its aligned extent with the shadow and a margin for overhangs, within inClip
+static RECT DX7TextBounds(GEText* inText, const RECT* inClip)
+{
+    RECT theBounds = {0, 0, 0, 0};
+    HDC theDC = CreateCompatibleDC(NULL);
+    HGDIOBJ theOldFont = SelectObject(theDC, inText->GetFont()->GetOSFont());
+    SIZE theSize = {0, 0};
+    GetTextExtentPoint32A(theDC, inText->GetText(), inText->GetText().GetLength(), &theSize);
+    SelectObject(theDC, theOldFont);
+    DeleteDC(theDC);
+    GE2DPoint theLocation = inText->GetLocation();
+    if (inText->GetAlignment() == kTextAlignCenter)
+        theLocation.SetX(theLocation.GetX() - theSize.cx / 2);
+    else if (inText->GetAlignment() == kTextAlignRight)
+        theLocation.SetX(theLocation.GetX() - theSize.cx);
+    long theMargin = theSize.cy / 2 + 2;
+    theBounds.left = (long)theLocation.GetX() - theMargin;
+    theBounds.top = (long)theLocation.GetY() - 2;
+    theBounds.right = (long)theLocation.GetX() + theSize.cx + theMargin;
+    theBounds.bottom = (long)theLocation.GetY() + theSize.cy + 3;
+    if (inClip) {
+        theBounds.left = max(theBounds.left, inClip->left);
+        theBounds.top = max(theBounds.top, inClip->top);
+        theBounds.right = min(theBounds.right, inClip->right);
+        theBounds.bottom = min(theBounds.bottom, inClip->bottom);
+    }
+    return theBounds;
+}
+
+// Draws a text with GDI, on the GPU copy of a GPU-resident target (no read-back) or on the target's text DC
+static long DX7DrawText(GEText* inText, const RECT* inClip, GESurface* inTarget)
+{
+    DX7TextJob theJob = {inText, inClip, kErrorOK};
+    GXSurface* theSurface = *static_cast<DX7Surface*>(inTarget);
+    if (!inTarget->GetIsTextLocked() && theSurface->IsGPUResident()) {
+        RECT theBounds = DX7TextBounds(inText, inClip);
+        if (theSurface->DrawText(theBounds, DX7DrawTextGDI, &theJob) != GX_OK && theJob.mResult == kErrorOK)
+            theJob.mResult = kErrorNativeError;
+    } else if (inTarget->GetIsTextLocked() || inTarget->TextLock() == kErrorOK)
+        DX7DrawTextGDI(inTarget->GetTextDC(), &theJob);
+    return theJob.mResult;
+}
+
+// FUNCTION: DX7HR 0x100032a9
+// Draws a text with GDI on the target, aligned; shadow fonts get a black or white shadow 1 pixel down-right
+long DX7Rasterizer::Draw(GEText* inText, GESurface* inTarget)
+{
+    return DX7DrawText(inText, NULL, inTarget);
 }
 
 // FUNCTION: DX7HR 0x100034e8
 // Draws a text clipped to a rectangle: with the font's bitmap font when it has one, else with GDI (aligned, shadowed)
 long DX7Rasterizer::Draw(GEText* inText, const GERectangle& inRectangle, GESurface* inTarget)
 {
-    long theResult = kErrorOK;
     if (inText->GetFont()->GetFontBitmap() != NULL)
-        theResult = inText->GetFont()->GetFontBitmap()->Draw(inText, inRectangle, this, 0);
-    else {
-        RECT theClip;
-        theClip.top = UMFloor(inRectangle.GetTop());
-        theClip.left = UMFloor(inRectangle.GetLeft());
-        theClip.right = UMFloor(inRectangle.GetRight());
-        theClip.bottom = UMFloor(inRectangle.GetBottom());
-        if (inTarget->GetIsTextLocked() || inTarget->TextLock() == kErrorOK) {
-            HDC theDC = inTarget->GetTextDC();
-            int theOldBkMode = SetBkMode(theDC, inText->GetIsTransparent() ? TRANSPARENT : OPAQUE);
-            COLORREF theOldTextColor = SetTextColor(theDC, RGB((BYTE)(inText->GetFgColor().GetRed() * 255.0f),
-                                                               (BYTE)(inText->GetFgColor().GetGreen() * 255.0f),
-                                                               (BYTE)(inText->GetFgColor().GetBlue() * 255.0f)));
-            COLORREF theOldBkColor = SetBkColor(theDC, RGB((BYTE)(inText->GetBgColor().GetRed() * 255.0f),
-                                                           (BYTE)(inText->GetBgColor().GetGreen() * 255.0f),
-                                                           (BYTE)(inText->GetBgColor().GetBlue() * 255.0f)));
-            GEFont* theFont = inText->GetFont();
-            theFont->Reference();
-            HGDIOBJ theOldFont = SelectObject(theDC, theFont->GetOSFont());
-            GE2DPoint theLocation = inText->GetLocation();
-            SIZE theSize;
-            if (GetTextExtentPoint32A(theDC, inText->GetText(), inText->GetText().GetLength(), &theSize)) {
-                if (inText->GetAlignment() == kTextAlignCenter)
-                    theLocation.SetX(theLocation.GetX() - theSize.cx / 2);
-                else if (inText->GetAlignment() == kTextAlignRight)
-                    theLocation.SetX(theLocation.GetX() - theSize.cx);
-            }
-            if (theFont->GetFontStyle() & kFontStyleShadow) {
-                BYTE theShade = inText->GetFgColor().GetRed() + inText->GetFgColor().GetGreen() +
-                                inText->GetFgColor().GetBlue() > 0.1f ? 0 : 255;
-                COLORREF theColor = SetTextColor(theDC, RGB(theShade, theShade, theShade));
-                if (!ExtTextOutA(theDC, (long)theLocation.GetX() + 1, (long)theLocation.GetY() + 1, ETO_CLIPPED,
-                                 &theClip, inText->GetText(), inText->GetText().GetTCHARLength(), NULL)) {
-                    ESRecordNativeError(GetLastError());
-                    ESGetNativeError();
-                    theResult = kErrorNativeError;
-                }
-                SetTextColor(theDC, theColor);
-            }
-            if (!ExtTextOutA(theDC, (long)theLocation.GetX(), (long)theLocation.GetY(), ETO_CLIPPED, &theClip,
-                             inText->GetText(), inText->GetText().GetTCHARLength(), NULL)) {
-                ESRecordNativeError(GetLastError());
-                ESGetNativeError();
-                theResult = kErrorNativeError;
-            }
-            SelectObject(theDC, theOldFont);
-            SetTextColor(theDC, theOldTextColor);
-            SetBkColor(theDC, theOldBkColor);
-            SetBkMode(theDC, theOldBkMode);
-            theFont->Dereference();
-        }
-    }
-    return theResult;
+        return inText->GetFont()->GetFontBitmap()->Draw(inText, inRectangle, this, 0);
+    RECT theClip;
+    theClip.top = UMFloor(inRectangle.GetTop());
+    theClip.left = UMFloor(inRectangle.GetLeft());
+    theClip.right = UMFloor(inRectangle.GetRight());
+    theClip.bottom = UMFloor(inRectangle.GetBottom());
+    return DX7DrawText(inText, &theClip, inTarget);
 }
 
 // COMDATs this unit is the first (link order) to instantiate, then the template-static init chain head and atexit

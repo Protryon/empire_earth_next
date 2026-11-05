@@ -6,8 +6,7 @@
 // template-static init chain head. The enumeration callbacks and ActivateRasterizer were built without global
 // optimisation (see the pragmas below); everything else is -O1.
 #include <windows.h>
-#include <ddraw.h>
-#include <d3d.h>
+#include "gx/GX.h"
 
 #include "dx7/DX7Rasterizer.h"
 #include "dx7/DX7PolygonArray.h"
@@ -64,52 +63,16 @@ unsigned long gLightsInUse[8];
 // (provisional names, like every local name).
 // FUNCTION: DX7HR 0x10009308
 // Direct3D device enumeration callback: sets the flag and stops at the first hardware-rasterizing device
-HRESULT CALLBACK DX7EnumDevicesCallback(LPSTR inDescription, LPSTR inName, LPD3DDEVICEDESC7 inCaps, LPVOID inContext)
+HRESULT CALLBACK DX7EnumDevicesCallback(LPSTR inDescription, LPSTR inName, GXDEVICEDESC* inCaps, LPVOID inContext)
 {
     bool* theContext = (bool*)inContext;
-    HRESULT theResult = D3DENUMRET_OK;
-    bool theFlag = (inCaps->dwDevCaps & D3DDEVCAPS_HWRASTERIZATION) == D3DDEVCAPS_HWRASTERIZATION;
+    HRESULT theResult = GXENUMRET_OK;
+    bool theFlag = (inCaps->dwDevCaps & GXDEVCAPS_HWRASTERIZATION) == GXDEVCAPS_HWRASTERIZATION;
     if (theFlag) {
         *theContext = true;
-        theResult = D3DENUMRET_CANCEL;
+        theResult = GXENUMRET_CANCEL;
     }
     return theResult;
-}
-
-// FUNCTION: DX7HR 0x1000934b
-// DirectDraw enumeration callback (Windows 95): creates a screen for each 3D-capable device and keeps
-// those with a hardware rasterizer
-BOOL WINAPI DX7DirectDrawEnumerateCallback(GUID* inGUID, LPSTR inDescription, LPSTR inName, LPVOID inContext)
-{
-    unsigned long* theCounter = (unsigned long*)inContext;
-    DX7Screen* theScreen;
-    bool theIsAttached = inGUID == NULL;
-    IDirectDraw7* theDDraw;
-    bool theIsPrimaryDevice = inGUID == NULL;
-    HRESULT theStatus;
-    DDCAPS theCaps;
-    (*theCounter)++;
-    theStatus = DirectDrawCreateEx(inGUID, (void**)&theDDraw, IID_IDirectDraw7, NULL);
-    if (theStatus == DD_OK) {
-        theCaps.dwSize = sizeof(theCaps);
-        theStatus = theDDraw->GetCaps(&theCaps, NULL);
-        if (theStatus == DD_OK) {
-            if ((theCaps.dwCaps & DDCAPS_3D) == DDCAPS_3D) {
-                theScreen = new DX7Screen(NULL, theDDraw, inDescription, theIsAttached, theIsPrimaryDevice);
-                // Keep a screen with a hardware rasterizer, as the Ex callback does (the test was inverted).
-                if (gEnumeratingRasterizer->GetIsScreenValid(theScreen))
-                    gEnumeratingRasterizer->AddValidScreen(theScreen);
-                else
-                    delete theScreen;
-            } else
-                theDDraw->Release();
-        } else {
-            ESRecordNativeError(theStatus);
-            theDDraw->Release();
-        }
-    } else
-        ESRecordNativeError(theStatus);
-    return TRUE;
 }
 
 // FUNCTION: DX7HR 0x10009542
@@ -121,23 +84,23 @@ BOOL WINAPI DX7DirectDrawEnumerateExCallback(GUID* inGUID, LPSTR inDescription, 
     unsigned long* theCounter = (unsigned long*)inContext;
     DX7Screen* theScreen;
     bool theIsAttached = (inGUID == NULL && inMonitor == NULL) || inMonitor != NULL ? TRUE : FALSE;
-    IDirectDraw7* theDDraw;
+    GXDirectDraw* theDDraw;
     bool theIsPrimaryDevice;
     MONITORINFO theInfo;
     HRESULT theStatus;
-    DDCAPS theCaps;
+    GXCAPS theCaps;
     theInfo.cbSize = sizeof(theInfo);
     if (DX7GetMonitorInfo(inMonitor, &theInfo))
         theIsPrimaryDevice = (theInfo.dwFlags & MONITORINFOF_PRIMARY) == MONITORINFOF_PRIMARY;
     else
         theIsPrimaryDevice = inGUID == NULL;
     (*theCounter)++;
-    theStatus = DirectDrawCreateEx(inGUID, (void**)&theDDraw, IID_IDirectDraw7, NULL);
-    if (theStatus == DD_OK) {
+    theStatus = GXDirectDrawCreate(inGUID, &theDDraw);
+    if (theStatus == GX_OK) {
         theCaps.dwSize = sizeof(theCaps);
         theStatus = theDDraw->GetCaps(&theCaps, NULL);
-        if (theStatus == DD_OK) {
-            if ((theCaps.dwCaps & DDCAPS_3D) == DDCAPS_3D) {
+        if (theStatus == GX_OK) {
+            if ((theCaps.dwCaps & GXCAPS_3D) == GXCAPS_3D) {
                 theScreen = new DX7Screen(NULL, theDDraw, inDescription, theIsAttached, theIsPrimaryDevice);
                 if (gEnumeratingRasterizer->GetIsScreenValid(theScreen))
                     gEnumeratingRasterizer->AddValidScreen(theScreen);
@@ -177,24 +140,20 @@ DX7Rasterizer::~DX7Rasterizer()
 long DX7Rasterizer::ActivateRasterizer()
 {
     long theResult;
-    HRESULT theStatus = DD_OK;
+    HRESULT theStatus = GX_OK;
     unsigned long theNumberOfScreens = 0;
     unsigned long theOSType = UGetOSType();
     DX7InitializeMultimon(theOSType);
     gEnumeratingRasterizer = this;
     switch (theOSType) {
-    case 1:
-        theStatus = DirectDrawEnumerate(DX7DirectDrawEnumerateCallback, &theNumberOfScreens);
-        break;
-    case 2:
-    case 3:
-        theStatus = DirectDrawEnumerateEx(DX7DirectDrawEnumerateExCallback, &theNumberOfScreens,
-                                         DDENUM_ATTACHEDSECONDARYDEVICES | DDENUM_DETACHEDSECONDARYDEVICES |
-                                         DDENUM_NONDISPLAYDEVICES);
+    default:
+        theStatus = GXDirectDrawEnumerateEx(DX7DirectDrawEnumerateExCallback, &theNumberOfScreens,
+                                         GXENUM_ATTACHEDSECONDARYDEVICES | GXENUM_DETACHEDSECONDARYDEVICES |
+                                         GXENUM_NONDISPLAYDEVICES);
         break;
     }
     gEnumeratingRasterizer = NULL;
-    if (theStatus == DD_OK) {
+    if (theStatus == GX_OK) {
         GERasterizer::sActiveRasterizer = this;
         theResult = kErrorOK;
     } else {
@@ -459,14 +418,14 @@ long DX7Rasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPrima
 {
     UString theDeviceName;
     DX7Surface* theTarget = dynamic_cast<DX7Surface*>(inSecondary);
-    IDirect3D7* theDirect3D = NULL;
-    IDirect3DDevice7* theDevice = NULL;
+    GXDirect3D* theDirect3D = NULL;
+    GXDevice* theDevice = NULL;
     long theResult;
     HRESULT theError = static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw->QueryInterface(
-        IID_IDirect3D7, (void**)&theDirect3D);
-    if (theError == DD_OK) {
-        theError = theDirect3D->CreateDevice(IID_IDirect3DHALDevice, *theTarget, &theDevice);
-        if (theError == DD_OK) {
+        GXIID_Direct3D7, (void**)&theDirect3D);
+    if (theError == GX_OK) {
+        theError = theDirect3D->CreateDevice(GXIID_HALDevice, *theTarget, &theDevice);
+        if (theError == GX_OK) {
             this->mDX7ScreenStates[inScreen]->mDirect3D = theDirect3D;
             this->mDX7ScreenStates[inScreen]->mDevice = theDevice;
             this->mDX7ScreenStates[inScreen]->mViewport.dwX = 0;
@@ -476,17 +435,17 @@ long DX7Rasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPrima
             this->mDX7ScreenStates[inScreen]->mViewport.dvMinZ = 0.0f;
             this->mDX7ScreenStates[inScreen]->mViewport.dvMaxZ = 1.0f;
             theDevice->SetViewport(&this->mDX7ScreenStates[inScreen]->mViewport);
-            theDevice->SetRenderState(D3DRENDERSTATE_SPECULARENABLE, FALSE);
-            theDevice->SetRenderState(D3DRENDERSTATE_EXTENTS, FALSE);
-            theDevice->SetRenderState(D3DRENDERSTATE_CLIPPING, FALSE);
-            theDevice->SetRenderState(D3DRENDERSTATE_NORMALIZENORMALS, TRUE);
-            theDevice->SetRenderState(D3DRENDERSTATE_LOCALVIEWER, FALSE);
-            theDevice->SetRenderState(D3DRENDERSTATE_FOGVERTEXMODE, D3DFOG_LINEAR);
-            theDevice->SetRenderState(D3DRENDERSTATE_SPECULARMATERIALSOURCE, D3DMCS_MATERIAL);
-            theDevice->SetRenderState(D3DRENDERSTATE_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
+            theDevice->SetRenderState(GXRS_SPECULARENABLE, FALSE);
+            theDevice->SetRenderState(GXRS_EXTENTS, FALSE);
+            theDevice->SetRenderState(GXRS_CLIPPING, FALSE);
+            theDevice->SetRenderState(GXRS_NORMALIZENORMALS, TRUE);
+            theDevice->SetRenderState(GXRS_LOCALVIEWER, FALSE);
+            theDevice->SetRenderState(GXRS_FOGVERTEXMODE, GXFOG_LINEAR);
+            theDevice->SetRenderState(GXRS_SPECULARMATERIALSOURCE, GXMCS_MATERIAL);
+            theDevice->SetRenderState(GXRS_EMISSIVEMATERIALSOURCE, GXMCS_MATERIAL);
             theResult = this->CreateVertexBuffers(inScreen);
             if (theResult == kErrorOK) {
-                DDDEVICEIDENTIFIER2 theIdentifier;
+                GXDEVICEIDENTIFIER theIdentifier;
                 memset(&theIdentifier, 0, sizeof(theIdentifier));
                 static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw->GetDeviceIdentifier(&theIdentifier, 0);
                 theDeviceName = theIdentifier.szDescription;
@@ -521,11 +480,11 @@ long DX7Rasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPrima
                 this->mDX7ScreenStates[inScreen]->mStage.mMagFilterMode = 3;
                 this->mDX7ScreenStates[inScreen]->mStage.mMipFilterMode = 3;
                 this->mDX7ScreenStates[inScreen]->mStage.mMipMapBias = FLT_MAX;
-                this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_TEXCOORDINDEX, 0);
+                this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_TEXCOORDINDEX, 0);
             }
             return theResult;
         }
-        // CreateDevice failed: release the IDirect3D7 the query returned.
+        // CreateDevice failed: release the GXDirect3D the query returned.
         theDirect3D->Release();
     }
     theResult = kErrorNativeError;
@@ -545,7 +504,7 @@ long DX7Rasterizer::AddLight(GELight& inLight, unsigned long inScreen, unsigned 
         gLightsInUse[outIndex] = 1;
         theResult = this->UpdateLight(outIndex, inLight, inScreen);
         if (theResult == kErrorOK) {
-            if (this->mDX7ScreenStates[inScreen]->GetDevice()->LightEnable(outIndex, TRUE) != D3D_OK)
+            if (this->mDX7ScreenStates[inScreen]->GetDevice()->LightEnable(outIndex, TRUE) != GX_OK)
                 theResult = kErrorNativeError;
         }
     } else
@@ -570,11 +529,11 @@ long DX7Rasterizer::BeginScene(GESurface* inTarget, unsigned long inScreen)
     HRESULT theError;
     do {
         theError = this->mDX7ScreenStates[inScreen]->GetDevice()->BeginScene();
-        if (theError == DDERR_WASSTILLDRAWING)
+        if (theError == GXERR_WASSTILLDRAWING)
             Sleep(1);
-    } while (theError == DDERR_WASSTILLDRAWING);
-    if (theError != D3D_OK) {
-        if (theError == DDERR_SURFACELOST) {
+    } while (theError == GXERR_WASSTILLDRAWING);
+    if (theError != GX_OK) {
+        if (theError == GXERR_SURFACELOST) {
             theResult = 9;
             ESRecordNativeError(theError);
         } else {
@@ -593,7 +552,7 @@ bool DX7Rasterizer::CanDoCurrentState(GETexture* inTexture, unsigned long inScre
     this->SetTexture(inTexture, inScreen);
     unsigned long thePasses;
     HRESULT theError = this->mDX7ScreenStates[inScreen]->GetDevice()->ValidateDevice(&thePasses);
-    if (theError == D3D_OK)
+    if (theError == GX_OK)
         theResult = true;
     else
         ESRecordNativeError(theError);
@@ -608,20 +567,20 @@ long DX7Rasterizer::Clear(const GEColor& inColor, const GERectangle& inRectangle
     GERectangle theRectangle;
     theRectangle = inRectangle;
     theRectangle.RoundToNearest();
-    D3DRECT theRect;
+    GXRECT theRect;
     theRect.x1 = UMFloorUnsigned(theRectangle.GetLeft());
     theRect.x2 = UMFloorUnsigned(theRectangle.GetRight());
     theRect.y1 = UMFloorUnsigned(theRectangle.GetTop());
     theRect.y2 = UMFloorUnsigned(theRectangle.GetBottom());
     HRESULT theError;
     do {
-        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->Clear(1, &theRect, D3DCLEAR_TARGET,
-                                                              D3DRGB(inColor.GetRed(), inColor.GetGreen(),
+        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->Clear(1, &theRect, GXCLEAR_TARGET,
+                                                              GXRGB(inColor.GetRed(), inColor.GetGreen(),
                                                                      inColor.GetBlue()), 0.0f, 0);
-        if (theError == DDERR_WASSTILLDRAWING)
+        if (theError == GXERR_WASSTILLDRAWING)
             Sleep(0);
-    } while (theError == DDERR_WASSTILLDRAWING);
-    if (theError != D3D_OK) {
+    } while (theError == GXERR_WASSTILLDRAWING);
+    if (theError != GX_OK) {
         theResult = kErrorNativeError;
         ESRecordNativeError(theError);
     }
@@ -636,18 +595,18 @@ long DX7Rasterizer::ClearZBuffer(float inZ, const GERectangle& inRectangle, unsi
     GERectangle theRectangle;
     theRectangle = inRectangle;
     theRectangle.RoundToNearest();
-    D3DRECT theRect;
+    GXRECT theRect;
     theRect.x1 = UMFloorUnsigned(theRectangle.GetLeft());
     theRect.x2 = UMFloorUnsigned(theRectangle.GetRight());
     theRect.y1 = UMFloorUnsigned(theRectangle.GetTop());
     theRect.y2 = UMFloorUnsigned(theRectangle.GetBottom());
     HRESULT theError;
     do {
-        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->Clear(1, &theRect, D3DCLEAR_ZBUFFER, 0, inZ, 0);
-        if (theError == DDERR_WASSTILLDRAWING)
+        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->Clear(1, &theRect, GXCLEAR_ZBUFFER, 0, inZ, 0);
+        if (theError == GXERR_WASSTILLDRAWING)
             Sleep(0);
-    } while (theError == DDERR_WASSTILLDRAWING);
-    if (theError != D3D_OK) {
+    } while (theError == GXERR_WASSTILLDRAWING);
+    if (theError != GX_OK) {
         theResult = kErrorNativeError;
         ESRecordNativeError(theError);
     }
@@ -663,7 +622,7 @@ float DX7Rasterizer::ComputePolyAreaOfCurrentVB(unsigned long inScreen)
 
 // FUNCTION: DX7HR 0x1000a97c
 // Converts an engine transformation to a Direct3D matrix (transposed)
-void DX7Rasterizer::ConvertToD3DMatrix(const GETransformation& inTransformation, _D3DMATRIX& outMatrix)
+void DX7Rasterizer::ConvertToD3DMatrix(const GETransformation& inTransformation, GXMATRIX& outMatrix)
 {
     outMatrix._11 = inTransformation.GetElement(0, 0);
     outMatrix._12 = inTransformation.GetElement(1, 0);
@@ -732,16 +691,16 @@ GEVertexArray* DX7Rasterizer::CreateVertexArray(unsigned long inType, unsigned l
 // Creates the screen's system-memory vertex buffer of 2,400 coloured vertices
 long DX7Rasterizer::CreateVertexBuffers(unsigned long inScreen)
 {
-    IDirect3D7* theDirect3D = this->mDX7ScreenStates[inScreen]->mDirect3D;
+    GXDirect3D* theDirect3D = this->mDX7ScreenStates[inScreen]->mDirect3D;
     long theResult = kErrorOK;
-    D3DVERTEXBUFFERDESC theDescription;
+    GXVERTEXBUFFERDESC theDescription;
     memset(&theDescription, 0, sizeof(theDescription));
     theDescription.dwSize = sizeof(theDescription);
-    theDescription.dwCaps = D3DVBCAPS_WRITEONLY | D3DVBCAPS_SYSTEMMEMORY;
-    theDescription.dwFVF = D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE | D3DFVF_TEX1;
+    theDescription.dwCaps = GXVBCAPS_WRITEONLY | GXVBCAPS_SYSTEMMEMORY;
+    theDescription.dwFVF = GXFVF_XYZ | GXFVF_NORMAL | GXFVF_DIFFUSE | GXFVF_TEX1;
     theDescription.dwNumVertices = 0x960;
     HRESULT theError = theDirect3D->CreateVertexBuffer(&theDescription, &this->mDX7ScreenStates[inScreen]->mVertexBuffer, 0);
-    if (theError != D3D_OK) {
+    if (theError != GX_OK) {
         theResult = kErrorNativeError;
         ESRecordNativeError(theError);
     }
@@ -796,11 +755,11 @@ long DX7Rasterizer::EndScene(unsigned long inScreen)
     HRESULT theError;
     do {
         theError = this->mDX7ScreenStates[inScreen]->GetDevice()->EndScene();
-        if (theError == DDERR_WASSTILLDRAWING)
+        if (theError == GXERR_WASSTILLDRAWING)
             Sleep(1);
-    } while (theError == DDERR_WASSTILLDRAWING);
-    if (theError != D3D_OK) {
-        if (theError == DDERR_SURFACELOST) {
+    } while (theError == GXERR_WASSTILLDRAWING);
+    if (theError != GX_OK) {
+        if (theError == GXERR_SURFACELOST) {
             theResult = 9;
             ESRecordNativeError(theError);
         } else {
@@ -844,7 +803,7 @@ bool DX7Rasterizer::GetDirtyRectangleSupport(unsigned long inScreen)
     return this->mDX7ScreenStates[inScreen]->mDirtyRectangleSupport;
 }
 
-// Built without /Og like the enumeration callbacks (memory-resident locals, the inlined operator IDirectDraw7*'s
+// Built without /Og like the enumeration callbacks (memory-resident locals, the inlined operator GXDirectDraw*'s
 // temporary, `leave`): 27.3 without the pragma, exact with it.
 #pragma optimize("g", off)
 
@@ -853,12 +812,12 @@ bool DX7Rasterizer::GetDirtyRectangleSupport(unsigned long inScreen)
 bool DX7Rasterizer::GetIsScreenValid(DX7Screen* inScreen)
 {
     long theRetVal = 9;
-    IDirect3D7* theIDirect3D = NULL;
+    GXDirect3D* theIDirect3D = NULL;
     bool theIsValid = false;
-    HRESULT theHResult = ((IDirectDraw7*)*inScreen)->QueryInterface(IID_IDirect3D7, (void**)&theIDirect3D);
-    if (theHResult == DD_OK) {
+    HRESULT theHResult = ((GXDirectDraw*)*inScreen)->QueryInterface(GXIID_Direct3D7, (void**)&theIDirect3D);
+    if (theHResult == GX_OK) {
         theHResult = theIDirect3D->EnumDevices(DX7EnumDevicesCallback, &theIsValid);
-        if (theHResult == D3D_OK) {
+        if (theHResult == GX_OK) {
             if (theIsValid)
                 theRetVal = kErrorOK;
         } else {
@@ -894,12 +853,12 @@ long DX7Rasterizer::GetVideoMemory(unsigned long inScreen, unsigned long& outTot
     unsigned long theTotal = 0;
     unsigned long theFree = 0;
     long theResult = 0xd;
-    DDSCAPS2 theCaps;
+    GXSCAPS theCaps;
     memset(&theCaps, 0, sizeof(theCaps));
-    theCaps.dwCaps = DDSCAPS_VIDEOMEMORY;
+    theCaps.dwCaps = GXSCAPS_VIDEOMEMORY;
     HRESULT theError = static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw->GetAvailableVidMem(
         &theCaps, &theTotal, &theFree);
-    if (theError == DD_OK && theTotal > 0) {
+    if (theError == GX_OK && theTotal > 0) {
         outTotal = theTotal;
         outFree = theFree;
         theResult = kErrorOK;
@@ -909,21 +868,21 @@ long DX7Rasterizer::GetVideoMemory(unsigned long inScreen, unsigned long& outTot
 
 // FUNCTION: DX7HR 0x1000adb6
 // Locks room for the given number of vertices in the vertex buffer, discarding it when full; always returns success
-long DX7Rasterizer::LockVB(unsigned long inCount, unsigned long inScreen, D3DVERTEX_STD_COLOR*& outVertices)
+long DX7Rasterizer::LockVB(unsigned long inCount, unsigned long inScreen, GXVERTEX_STD_COLOR*& outVertices)
 {
     unsigned long theFlags;
     if (inCount <= 0x960 - this->mDX7ScreenStates[inScreen]->mVertexBufferPosition)
-        theFlags = DDLOCK_NOOVERWRITE | DDLOCK_WRITEONLY;
+        theFlags = GXLOCK_NOOVERWRITE | GXLOCK_WRITEONLY;
     else {
         this->mDX7ScreenStates[inScreen]->mVertexBufferPosition = 0;
-        theFlags = DDLOCK_DISCARDCONTENTS | DDLOCK_WRITEONLY;
+        theFlags = GXLOCK_DISCARDCONTENTS | GXLOCK_WRITEONLY;
     }
     HRESULT theError;
     do {
         theError = this->mDX7ScreenStates[inScreen]->mVertexBuffer->Lock(theFlags, reinterpret_cast<void**>(&outVertices), NULL);
-        if (outVertices == NULL || theError == DDERR_SURFACEBUSY)
+        if (outVertices == NULL || theError == GXERR_SURFACEBUSY)
             Sleep(0);
-    } while ((outVertices == NULL && theError == D3D_OK) || theError == DDERR_SURFACEBUSY);
+    } while ((outVertices == NULL && theError == GX_OK) || theError == GXERR_SURFACEBUSY);
     return kErrorOK;
 }
 
@@ -948,7 +907,7 @@ long DX7Rasterizer::RemoveLight(unsigned long inIndex, unsigned long inScreen)
     long theResult = kErrorOK;
     if (inIndex < 8 && gLightsInUse[inIndex] == 1) {
         gLightsInUse[inIndex] = 0;
-        if (this->mDX7ScreenStates[inScreen]->GetDevice()->LightEnable(inIndex, FALSE) != D3D_OK)
+        if (this->mDX7ScreenStates[inScreen]->GetDevice()->LightEnable(inIndex, FALSE) != GX_OK)
             theResult = kErrorNativeError;
     } else
         theResult = 9;
@@ -962,17 +921,17 @@ long DX7Rasterizer::Set2DMode(unsigned long inScreen)
     GETransformation theTransformation;
     if (!this->mDX7ScreenStates[inScreen]->mIs3DMode && !this->mDX7ScreenStates[inScreen]->mViewportChanged)
         return kErrorOK;
-    D3DMATRIX theMatrix;
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_CLIPPING, TRUE);
+    GXMATRIX theMatrix;
+    this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_CLIPPING, TRUE);
     this->ConvertToD3DMatrix(theTransformation, theMatrix);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(D3DTRANSFORMSTATE_WORLD, &theMatrix);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(D3DTRANSFORMSTATE_VIEW, &theMatrix);
+    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(GXTS_WORLD, &theMatrix);
+    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(GXTS_VIEW, &theMatrix);
     theTransformation.SetElement(0, 0, 2.0f / (float)this->mDX7ScreenStates[inScreen]->mViewport.dwWidth);
     theTransformation.SetElement(0, 3, -1.0f);
     theTransformation.SetElement(1, 1, -2.0f / (float)this->mDX7ScreenStates[inScreen]->mViewport.dwHeight);
     theTransformation.SetElement(1, 3, 1.0f);
     this->ConvertToD3DMatrix(theTransformation, theMatrix);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(D3DTRANSFORMSTATE_PROJECTION, &theMatrix);
+    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(GXTS_PROJECTION, &theMatrix);
     this->mDX7ScreenStates[inScreen]->mIs3DMode = false;
     this->mDX7ScreenStates[inScreen]->mViewportChanged = false;
     return kErrorOK;
@@ -986,19 +945,19 @@ long DX7Rasterizer::Set3DMode(unsigned long inScreen)
     if (this->mDX7ScreenStates[inScreen]->mIs3DMode && !this->mDX7ScreenStates[inScreen]->mViewportChanged)
         return kErrorOK;
     GETransformation theView(false);
-    D3DMATRIX theMatrix;
+    GXMATRIX theMatrix;
     theSwap.SetElement(1, 1, 0.0f);
     theSwap.SetElement(1, 2, 1.0f);
     theSwap.SetElement(2, 1, 1.0f);
     theSwap.SetElement(2, 2, 0.0f);
     theSwap.Apply(this->GetViewport(inScreen).GetCameraInverse(), theView);
     this->ConvertToD3DMatrix(theView, theMatrix);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(D3DTRANSFORMSTATE_VIEW, &theMatrix);
+    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(GXTS_VIEW, &theMatrix);
     if (this->mScreenStates[inScreen]->mProjectionMode == 1)
         this->ConvertToD3DMatrix(this->GetViewport(inScreen).GetPerspectiveProjection(), theMatrix);
     else
         this->ConvertToD3DMatrix(this->GetViewport(inScreen).GetOrthographicProjection(), theMatrix);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(D3DTRANSFORMSTATE_PROJECTION, &theMatrix);
+    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(GXTS_PROJECTION, &theMatrix);
     this->mDX7ScreenStates[inScreen]->mIs3DMode = true;
     this->mDX7ScreenStates[inScreen]->mViewportChanged = false;
     return kErrorOK;
@@ -1009,7 +968,7 @@ long DX7Rasterizer::Set3DMode(unsigned long inScreen)
 void DX7Rasterizer::SetAlphaTesting(unsigned long inState, unsigned long inScreen)
 {
     if (inState != this->mScreenStates[inScreen]->mAlphaTesting) {
-        if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_ALPHATESTENABLE, inState) == D3D_OK)
+        if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ALPHATESTENABLE, inState) == GX_OK)
             GERasterizer::SetAlphaTesting(inState, inScreen);
     }
 }
@@ -1024,31 +983,31 @@ void DX7Rasterizer::SetAlphaTestingCompareState(unsigned long inState, unsigned 
         return;
     switch (inState) {
     case kCompareNever:
-        theFunction = D3DCMP_NEVER;
+        theFunction = GXCMP_NEVER;
         break;
     case kCompareLess:
-        theFunction = D3DCMP_LESS;
+        theFunction = GXCMP_LESS;
         break;
     case kCompareLessEqual:
-        theFunction = D3DCMP_LESSEQUAL;
+        theFunction = GXCMP_LESSEQUAL;
         break;
     case kCompareEqual:
-        theFunction = D3DCMP_EQUAL;
+        theFunction = GXCMP_EQUAL;
         break;
     case kCompareNotEqual:
-        theFunction = D3DCMP_NOTEQUAL;
+        theFunction = GXCMP_NOTEQUAL;
         break;
     case kCompareGreaterEqual:
-        theFunction = D3DCMP_GREATEREQUAL;
+        theFunction = GXCMP_GREATEREQUAL;
         break;
     case kCompareGreater:
-        theFunction = D3DCMP_GREATER;
+        theFunction = GXCMP_GREATER;
         break;
     case kCompareAlways:
-        theFunction = D3DCMP_ALWAYS;
+        theFunction = GXCMP_ALWAYS;
         break;
     }
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_ALPHAFUNC, theFunction) == D3D_OK)
+    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ALPHAFUNC, theFunction) == GX_OK)
         GERasterizer::SetAlphaTestingCompareState(inState, inScreen);
 }
 
@@ -1058,8 +1017,8 @@ void DX7Rasterizer::SetAlphaTestingRefValue(float inValue, unsigned long inScree
 {
     if (inValue == this->mScreenStates[inScreen]->mAlphaTestingRefValue)
         return;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_ALPHAREF, (long)(inValue * 255.0f)) ==
-        D3D_OK)
+    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ALPHAREF, (long)(inValue * 255.0f)) ==
+        GX_OK)
         GERasterizer::SetAlphaTestingRefValue(inValue, inScreen);
 }
 
@@ -1071,8 +1030,8 @@ void DX7Rasterizer::SetAmbientColor(const GEColor& inColor, unsigned long inScre
     this->mComputedAmbientColor.SetRed(inColor.GetRed() * this->mAmbientIntensity);
     this->mComputedAmbientColor.SetGreen(inColor.GetGreen() * this->mAmbientIntensity);
     this->mComputedAmbientColor.SetBlue(inColor.GetBlue() * this->mAmbientIntensity);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_AMBIENT,
-        RGBA_MAKE(UMFloatToLong(this->mComputedAmbientColor.GetRed() * 255.0f),
+    this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_AMBIENT,
+        GXRGBA(UMFloatToLong(this->mComputedAmbientColor.GetRed() * 255.0f),
                   UMFloatToLong(this->mComputedAmbientColor.GetGreen() * 255.0f),
                   UMFloatToLong(this->mComputedAmbientColor.GetBlue() * 255.0f), UMFloatToLong(255.0f)));
 }
@@ -1085,8 +1044,8 @@ void DX7Rasterizer::SetAmbientIntensity(float inIntensity, unsigned long inScree
     this->mComputedAmbientColor.SetRed(this->mAmbientColor.GetRed() * inIntensity);
     this->mComputedAmbientColor.SetGreen(this->mAmbientColor.GetGreen() * inIntensity);
     this->mComputedAmbientColor.SetBlue(this->mAmbientColor.GetBlue() * inIntensity);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_AMBIENT,
-        RGBA_MAKE(UMFloatToLong(this->mComputedAmbientColor.GetRed() * 255.0f),
+    this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_AMBIENT,
+        GXRGBA(UMFloatToLong(this->mComputedAmbientColor.GetRed() * 255.0f),
                   UMFloatToLong(this->mComputedAmbientColor.GetGreen() * 255.0f),
                   UMFloatToLong(this->mComputedAmbientColor.GetBlue() * 255.0f), UMFloatToLong(255.0f)));
 }
@@ -1097,12 +1056,12 @@ void DX7Rasterizer::SetAntiAliasing(unsigned long inState, unsigned long inScree
 {
     if (inState == this->mScreenStates[inScreen]->mAntiAliasing)
         return;
-    D3DANTIALIASMODE theMode;
+    unsigned long theMode;
     if (inState == 1)
-        theMode = D3DANTIALIAS_SORTINDEPENDENT;
+        theMode = GXANTIALIAS_SORTINDEPENDENT;
     else
-        theMode = D3DANTIALIAS_NONE;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_ANTIALIAS, theMode) == D3D_OK)
+        theMode = GXANTIALIAS_NONE;
+    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ANTIALIAS, theMode) == GX_OK)
         GERasterizer::SetAntiAliasing(inState, inScreen);
 }
 
@@ -1119,45 +1078,45 @@ void DX7Rasterizer::SetBlending(unsigned long inSource, unsigned long inDestinat
     else
         theEnable = true;
     if (this->mDX7ScreenStates[inScreen]->mAlphaBlendEnable != theEnable) {
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, theEnable);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ALPHABLENDENABLE, theEnable);
         this->mDX7ScreenStates[inScreen]->mAlphaBlendEnable = theEnable;
     }
     if (this->mDX7ScreenStates[inScreen]->mBlendSource != inSource) {
         switch (inSource) {
-        case kBlendZero: theBlend = D3DBLEND_ZERO; break;
-        case kBlendOne: theBlend = D3DBLEND_ONE; break;
-        case kBlendSrcColor: theBlend = D3DBLEND_SRCCOLOR; break;
-        case kBlendInvSrcColor: theBlend = D3DBLEND_INVSRCCOLOR; break;
-        case kBlendSrcAlpha: theBlend = D3DBLEND_SRCALPHA; break;
-        case kBlendInvSrcAlpha: theBlend = D3DBLEND_INVSRCALPHA; break;
-        case kBlendDestAlpha: theBlend = D3DBLEND_DESTALPHA; break;
-        case kBlendInvDestAlpha: theBlend = D3DBLEND_INVDESTALPHA; break;
-        case kBlendDestColor: theBlend = D3DBLEND_DESTCOLOR; break;
-        case kBlendInvDestColor: theBlend = D3DBLEND_INVDESTCOLOR; break;
-        case kBlendSrcAlphaSat: theBlend = D3DBLEND_SRCALPHASAT; break;
-        case kBlendBothSrcAlpha: theBlend = D3DBLEND_BOTHSRCALPHA; break;
-        case kBlendBothInvSrcAlpha: theBlend = D3DBLEND_BOTHINVSRCALPHA; break;
+        case kBlendZero: theBlend = GXBLEND_ZERO; break;
+        case kBlendOne: theBlend = GXBLEND_ONE; break;
+        case kBlendSrcColor: theBlend = GXBLEND_SRCCOLOR; break;
+        case kBlendInvSrcColor: theBlend = GXBLEND_INVSRCCOLOR; break;
+        case kBlendSrcAlpha: theBlend = GXBLEND_SRCALPHA; break;
+        case kBlendInvSrcAlpha: theBlend = GXBLEND_INVSRCALPHA; break;
+        case kBlendDestAlpha: theBlend = GXBLEND_DESTALPHA; break;
+        case kBlendInvDestAlpha: theBlend = GXBLEND_INVDESTALPHA; break;
+        case kBlendDestColor: theBlend = GXBLEND_DESTCOLOR; break;
+        case kBlendInvDestColor: theBlend = GXBLEND_INVDESTCOLOR; break;
+        case kBlendSrcAlphaSat: theBlend = GXBLEND_SRCALPHASAT; break;
+        case kBlendBothSrcAlpha: theBlend = GXBLEND_BOTHSRCALPHA; break;
+        case kBlendBothInvSrcAlpha: theBlend = GXBLEND_BOTHINVSRCALPHA; break;
         }
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_SRCBLEND, theBlend);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_SRCBLEND, theBlend);
         this->mDX7ScreenStates[inScreen]->mBlendSource = inSource;
     }
     if (this->mDX7ScreenStates[inScreen]->mBlendDestination != inDestination) {
         switch (inDestination) {
-        case kBlendZero: theBlend = D3DBLEND_ZERO; break;
-        case kBlendOne: theBlend = D3DBLEND_ONE; break;
-        case kBlendSrcColor: theBlend = D3DBLEND_SRCCOLOR; break;
-        case kBlendInvSrcColor: theBlend = D3DBLEND_INVSRCCOLOR; break;
-        case kBlendSrcAlpha: theBlend = D3DBLEND_SRCALPHA; break;
-        case kBlendInvSrcAlpha: theBlend = D3DBLEND_INVSRCALPHA; break;
-        case kBlendDestAlpha: theBlend = D3DBLEND_DESTALPHA; break;
-        case kBlendInvDestAlpha: theBlend = D3DBLEND_INVDESTALPHA; break;
-        case kBlendDestColor: theBlend = D3DBLEND_DESTCOLOR; break;
-        case kBlendInvDestColor: theBlend = D3DBLEND_INVDESTCOLOR; break;
-        case kBlendSrcAlphaSat: theBlend = D3DBLEND_SRCALPHASAT; break;
-        case kBlendBothSrcAlpha: theBlend = D3DBLEND_BOTHSRCALPHA; break;
-        case kBlendBothInvSrcAlpha: theBlend = D3DBLEND_BOTHINVSRCALPHA; break;
+        case kBlendZero: theBlend = GXBLEND_ZERO; break;
+        case kBlendOne: theBlend = GXBLEND_ONE; break;
+        case kBlendSrcColor: theBlend = GXBLEND_SRCCOLOR; break;
+        case kBlendInvSrcColor: theBlend = GXBLEND_INVSRCCOLOR; break;
+        case kBlendSrcAlpha: theBlend = GXBLEND_SRCALPHA; break;
+        case kBlendInvSrcAlpha: theBlend = GXBLEND_INVSRCALPHA; break;
+        case kBlendDestAlpha: theBlend = GXBLEND_DESTALPHA; break;
+        case kBlendInvDestAlpha: theBlend = GXBLEND_INVDESTALPHA; break;
+        case kBlendDestColor: theBlend = GXBLEND_DESTCOLOR; break;
+        case kBlendInvDestColor: theBlend = GXBLEND_INVDESTCOLOR; break;
+        case kBlendSrcAlphaSat: theBlend = GXBLEND_SRCALPHASAT; break;
+        case kBlendBothSrcAlpha: theBlend = GXBLEND_BOTHSRCALPHA; break;
+        case kBlendBothInvSrcAlpha: theBlend = GXBLEND_BOTHINVSRCALPHA; break;
         }
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_DESTBLEND, theBlend);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_DESTBLEND, theBlend);
         this->mDX7ScreenStates[inScreen]->mBlendDestination = inDestination;
     }
     GERasterizer::SetBlending(inSource, inDestination, inScreen);
@@ -1174,7 +1133,7 @@ void DX7Rasterizer::SetColorKeying(unsigned long inState, unsigned long inScreen
         theEnable = true;
     else
         theEnable = false;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_COLORKEYENABLE, theEnable) == D3D_OK)
+    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_COLORKEYENABLE, theEnable) == GX_OK)
         GERasterizer::SetColorKeying(inState, inScreen);
 }
 
@@ -1187,19 +1146,19 @@ void DX7Rasterizer::SetCulling(unsigned long inState)
     unsigned long theCullMode;
     switch (inState) {
     case kCullCW:
-        theCullMode = D3DCULL_CW;
+        theCullMode = GXCULL_CW;
         break;
     case kCullCCW:
-        theCullMode = D3DCULL_CCW;
+        theCullMode = GXCULL_CCW;
         break;
     default:
-        theCullMode = D3DCULL_NONE;
+        theCullMode = GXCULL_NONE;
         break;
     }
     for (unsigned long i = 0; i < this->mDX7ScreenStates.size(); i++) {
-        IDirect3DDevice7* theDevice = this->mDX7ScreenStates[i]->mDevice;
+        GXDevice* theDevice = this->mDX7ScreenStates[i]->mDevice;
         if (theDevice != NULL)
-            theDevice->SetRenderState(D3DRENDERSTATE_CULLMODE, theCullMode);
+            theDevice->SetRenderState(GXRS_CULLMODE, theCullMode);
     }
     GERasterizer::SetCulling(inState);
 }
@@ -1208,7 +1167,7 @@ void DX7Rasterizer::SetCulling(unsigned long inState)
 // Sets the debug colour (opaque)
 void DX7Rasterizer::SetDebugColor(const GEColor& inColor)
 {
-    this->mDebugColor = RGBA_MAKE(UMFloatToLong(inColor.GetRed() * 255.0f), UMFloatToLong(inColor.GetGreen() * 255.0f),
+    this->mDebugColor = GXRGBA(UMFloatToLong(inColor.GetRed() * 255.0f), UMFloatToLong(inColor.GetGreen() * 255.0f),
                             UMFloatToLong(inColor.GetBlue() * 255.0f), UMFloatToLong(255.0f));
 }
 
@@ -1237,7 +1196,7 @@ void DX7Rasterizer::SetDithering(unsigned long inState, unsigned long inScreen)
         theEnable = true;
     else
         theEnable = false;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_DITHERENABLE, theEnable) == D3D_OK)
+    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_DITHERENABLE, theEnable) == GX_OK)
         GERasterizer::SetDithering(inState, inScreen);
 }
 
@@ -1250,16 +1209,16 @@ void DX7Rasterizer::SetDrawStyle(unsigned long inStyle, unsigned long inScreen)
         return;
     switch (inStyle) {
     case kDrawStyleSolid:
-        theFillMode = D3DFILL_SOLID;
+        theFillMode = GXFILL_SOLID;
         break;
     case kDrawStyleWireframe:
-        theFillMode = D3DFILL_WIREFRAME;
+        theFillMode = GXFILL_WIREFRAME;
         break;
     case kDrawStylePoint:
-        theFillMode = D3DFILL_POINT;
+        theFillMode = GXFILL_POINT;
         break;
     }
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_FILLMODE, theFillMode) == D3D_OK)
+    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FILLMODE, theFillMode) == GX_OK)
         GERasterizer::SetDrawStyle(inStyle, inScreen);
 }
 
@@ -1274,7 +1233,7 @@ void DX7Rasterizer::SetFog(unsigned long inState, unsigned long inScreen)
         theEnable = true;
     else
         theEnable = false;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_FOGENABLE, theEnable) == D3D_OK)
+    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FOGENABLE, theEnable) == GX_OK)
         GERasterizer::SetFog(inState, inScreen);
 }
 
@@ -1284,8 +1243,8 @@ void DX7Rasterizer::SetFogColor(const GEColor& inColor, unsigned long inScreen)
 {
     if (this->mScreenStates[inScreen]->mFog.mColor == inColor)
         return;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_FOGCOLOR,
-            D3DRGB(inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue())) == D3D_OK)
+    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FOGCOLOR,
+            GXRGB(inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue())) == GX_OK)
         GERasterizer::SetFogColor(inColor, inScreen);
 }
 
@@ -1294,9 +1253,9 @@ void DX7Rasterizer::SetFogColor(const GEColor& inColor, unsigned long inScreen)
 void DX7Rasterizer::SetFogRange(float inStart, float inEnd, unsigned long inScreen)
 {
     if (this->mScreenStates[inScreen]->mFog.mStart != inStart)
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_FOGSTART, *reinterpret_cast<unsigned long*>(&inStart));
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FOGSTART, *reinterpret_cast<unsigned long*>(&inStart));
     if (this->mScreenStates[inScreen]->mFog.mEnd != inEnd)
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_FOGEND, *reinterpret_cast<unsigned long*>(&inEnd));
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FOGEND, *reinterpret_cast<unsigned long*>(&inEnd));
     GERasterizer::SetFogRange(inStart, inEnd, inScreen);
 }
 
@@ -1321,9 +1280,9 @@ void DX7Rasterizer::SetLighting(unsigned long inState, unsigned long inScreen)
     if (inState == this->mScreenStates[inScreen]->mLighting)
         return;
     if (inState == 1)
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_LIGHTING, TRUE);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_LIGHTING, TRUE);
     else
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_LIGHTING, FALSE);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_LIGHTING, FALSE);
     GERasterizer::SetLighting(inState, inScreen);
 }
 
@@ -1349,12 +1308,12 @@ void DX7Rasterizer::SetShading(unsigned long inState, unsigned long inScreen)
 {
     if (inState == this->mScreenStates[inScreen]->mShading)
         return;
-    D3DSHADEMODE theMode;
+    unsigned long theMode;
     if (inState == 1)
-        theMode = D3DSHADE_GOURAUD;
+        theMode = GXSHADE_GOURAUD;
     else
-        theMode = D3DSHADE_FLAT;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_SHADEMODE, theMode) == D3D_OK)
+        theMode = GXSHADE_FLAT;
+    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_SHADEMODE, theMode) == GX_OK)
         GERasterizer::SetShading(inState, inScreen);
 }
 
@@ -1366,11 +1325,11 @@ void DX7Rasterizer::SetShadingColorSource(unsigned long inSource, unsigned long 
         return;
     HRESULT theError;
     if (inSource == 0) {
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_COLORVERTEX, FALSE);
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_AMBIENTMATERIALSOURCE, D3DMCS_MATERIAL);
-        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_DIFFUSEMATERIALSOURCE, D3DMCS_MATERIAL);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_COLORVERTEX, FALSE);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_AMBIENTMATERIALSOURCE, GXMCS_MATERIAL);
+        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_DIFFUSEMATERIALSOURCE, GXMCS_MATERIAL);
     } else {
-        D3DMATERIAL7 theMaterial;
+        GXMATERIAL theMaterial;
         theMaterial.dcvAmbient.r = 1.0f;
         theMaterial.dcvAmbient.g = 1.0f;
         theMaterial.dcvAmbient.b = 1.0f;
@@ -1389,11 +1348,11 @@ void DX7Rasterizer::SetShadingColorSource(unsigned long inSource, unsigned long 
         theMaterial.dcvSpecular.a = 0.0f;
         theMaterial.dvPower = 0.0f;
         this->mDX7ScreenStates[inScreen]->GetDevice()->SetMaterial(&theMaterial);
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_COLORVERTEX, TRUE);
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_AMBIENTMATERIALSOURCE, D3DMCS_COLOR1);
-        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_DIFFUSEMATERIALSOURCE, D3DMCS_COLOR1);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_COLORVERTEX, TRUE);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_AMBIENTMATERIALSOURCE, GXMCS_COLOR1);
+        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_DIFFUSEMATERIALSOURCE, GXMCS_COLOR1);
     }
-    if (theError == D3D_OK)
+    if (theError == GX_OK)
         GERasterizer::SetShadingColorSource(inSource, inScreen);
 }
 
@@ -1408,7 +1367,7 @@ void DX7Rasterizer::SetSpecular(unsigned long inState, unsigned long inScreen)
         theEnable = true;
     else
         theEnable = false;
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_SPECULARENABLE, theEnable) == D3D_OK)
+    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_SPECULARENABLE, theEnable) == GX_OK)
         GERasterizer::SetSpecular(inState, inScreen);
 }
 
@@ -1442,8 +1401,8 @@ void DX7Rasterizer::SetTexture(GETexture* inTexture, unsigned long inScreen)
     this->mScreenStates[inScreen]->m32C[3]++;
     if (inTexture == NULL) {
         this->mDX7ScreenStates[inScreen]->GetDevice()->SetTexture(0, NULL);
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_DISABLE);
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_COLOROP, GXTOP_DISABLE);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_ALPHAOP, GXTOP_DISABLE);
         this->mDX7ScreenStates[inScreen]->mStage1ColorOperation = 1;
         this->mDX7ScreenStates[inScreen]->mStage.mTexture = NULL;
         this->mDX7ScreenStates[inScreen]->mStage.mColorMode = 4;
@@ -1451,7 +1410,7 @@ void DX7Rasterizer::SetTexture(GETexture* inTexture, unsigned long inScreen)
         return;
     }
     DX7RTextureStage theCurrent = this->mDX7ScreenStates[inScreen]->mStage;
-    IDirectDrawSurface7* theSurface = *static_cast<DX7Surface*>(inTexture->GetStageTexture(0)->GetFrameSurface());
+    GXSurface* theSurface = *static_cast<DX7Surface*>(inTexture->GetStageTexture(0)->GetFrameSurface());
     if (theSurface != theCurrent.mTexture) {
         this->mDX7ScreenStates[inScreen]->GetDevice()->SetTexture(0, theSurface);
         this->mDX7ScreenStates[inScreen]->mStage.mTexture =
@@ -1460,119 +1419,119 @@ void DX7Rasterizer::SetTexture(GETexture* inTexture, unsigned long inScreen)
     if (inTexture->GetStage()->mColorMode != theCurrent.mColorMode) {
         switch (inTexture->GetStage()->mColorMode) {
         case kStageOpDiffuse:
-            theColorArgument1 = D3DTA_TEXTURE;
-            theColorArgument2 = D3DTA_DIFFUSE;
-            theColorOperation = D3DTOP_SELECTARG2;
+            theColorArgument1 = GXTA_TEXTURE;
+            theColorArgument2 = GXTA_DIFFUSE;
+            theColorOperation = GXTOP_SELECTARG2;
             break;
         case kStageOpTexture:
-            theColorArgument1 = D3DTA_TEXTURE;
-            theColorArgument2 = D3DTA_DIFFUSE;
-            theColorOperation = D3DTOP_SELECTARG1;
+            theColorArgument1 = GXTA_TEXTURE;
+            theColorArgument2 = GXTA_DIFFUSE;
+            theColorOperation = GXTOP_SELECTARG1;
             break;
         case kStageOpModulate:
-            theColorArgument2 = D3DTA_DIFFUSE;
-            theColorArgument1 = D3DTA_TEXTURE;
-            theColorOperation = D3DTOP_MODULATE;
+            theColorArgument2 = GXTA_DIFFUSE;
+            theColorArgument1 = GXTA_TEXTURE;
+            theColorOperation = GXTOP_MODULATE;
             break;
         case kStageOpModulateCurrent:
-            theColorArgument2 = D3DTA_CURRENT;
-            theColorArgument1 = D3DTA_TEXTURE;
-            theColorOperation = D3DTOP_MODULATE;
+            theColorArgument2 = GXTA_CURRENT;
+            theColorArgument1 = GXTA_TEXTURE;
+            theColorOperation = GXTOP_MODULATE;
             break;
         }
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_COLOROP, theColorOperation);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_COLOROP, theColorOperation);
         this->mDX7ScreenStates[inScreen]->mStage.mColorMode = inTexture->GetStage()->mColorMode;
         if (theColorArgument1 != theCurrent.mColorArgument1) {
-            this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_COLORARG1, theColorArgument1);
+            this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_COLORARG1, theColorArgument1);
             this->mDX7ScreenStates[inScreen]->mStage.mColorArgument1 = theColorArgument1;
         }
         if (theColorArgument2 != theCurrent.mColorArgument2) {
-            this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_COLORARG2, theColorArgument2);
+            this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_COLORARG2, theColorArgument2);
             this->mDX7ScreenStates[inScreen]->mStage.mColorArgument2 = theColorArgument2;
         }
     }
     if (inTexture->GetStage()->mAlphaMode != theCurrent.mAlphaMode) {
         switch (inTexture->GetStage()->mAlphaMode) {
         case kStageOpDiffuse:
-            theAlphaArgument1 = D3DTA_TEXTURE;
-            theAlphaArgument2 = D3DTA_DIFFUSE;
-            theAlphaOperation = D3DTOP_SELECTARG2;
+            theAlphaArgument1 = GXTA_TEXTURE;
+            theAlphaArgument2 = GXTA_DIFFUSE;
+            theAlphaOperation = GXTOP_SELECTARG2;
             break;
         case kStageOpTexture:
-            theAlphaArgument1 = D3DTA_TEXTURE;
-            theAlphaArgument2 = D3DTA_DIFFUSE;
-            theAlphaOperation = D3DTOP_SELECTARG1;
+            theAlphaArgument1 = GXTA_TEXTURE;
+            theAlphaArgument2 = GXTA_DIFFUSE;
+            theAlphaOperation = GXTOP_SELECTARG1;
             break;
         case kStageOpModulate:
-            theAlphaArgument2 = D3DTA_DIFFUSE;
-            theAlphaArgument1 = D3DTA_TEXTURE;
-            theAlphaOperation = D3DTOP_MODULATE;
+            theAlphaArgument2 = GXTA_DIFFUSE;
+            theAlphaArgument1 = GXTA_TEXTURE;
+            theAlphaOperation = GXTOP_MODULATE;
             break;
         case kStageOpModulateCurrent:
-            theAlphaArgument2 = D3DTA_CURRENT;
-            theAlphaArgument1 = D3DTA_TEXTURE;
-            theAlphaOperation = D3DTOP_MODULATE;
+            theAlphaArgument2 = GXTA_CURRENT;
+            theAlphaArgument1 = GXTA_TEXTURE;
+            theAlphaOperation = GXTOP_MODULATE;
             break;
         }
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_ALPHAOP, theAlphaOperation);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_ALPHAOP, theAlphaOperation);
         this->mDX7ScreenStates[inScreen]->mStage.mAlphaMode = inTexture->GetStage()->mAlphaMode;
         if (theAlphaArgument1 != theCurrent.mAlphaArgument1) {
-            this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_ALPHAARG1, theAlphaArgument1);
+            this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_ALPHAARG1, theAlphaArgument1);
             this->mDX7ScreenStates[inScreen]->mStage.mAlphaArgument1 = theAlphaArgument1;
         }
         if (theAlphaArgument2 != theCurrent.mAlphaArgument2) {
-            this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_ALPHAARG2, theAlphaArgument2);
+            this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_ALPHAARG2, theAlphaArgument2);
             this->mDX7ScreenStates[inScreen]->mStage.mAlphaArgument2 = theAlphaArgument2;
         }
     }
     if (inTexture->GetStage()->mTextureAddressingMode != theCurrent.mTextureAddressingMode) {
         if (inTexture->GetStage()->mTextureAddressingMode == kAddressingClamp)
-            theAddressing = D3DTADDRESS_CLAMP;
+            theAddressing = GXTADDRESS_CLAMP;
         else if (inTexture->GetStage()->mTextureAddressingMode == kAddressingMirror)
-            theAddressing = D3DTADDRESS_MIRROR;
+            theAddressing = GXTADDRESS_MIRROR;
         else if (inTexture->GetStage()->mTextureAddressingMode == kAddressingWrap)
-            theAddressing = D3DTADDRESS_WRAP;
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_ADDRESS, theAddressing);
+            theAddressing = GXTADDRESS_WRAP;
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_ADDRESS, theAddressing);
         this->mDX7ScreenStates[inScreen]->mStage.mTextureAddressingMode = inTexture->GetStage()->mTextureAddressingMode;
     }
     if (inTexture->GetStage()->mMinFilterMode != theCurrent.mMinFilterMode) {
         if (inTexture->GetStage()->mMinFilterMode == kMinFilterPoint)
-            theMinFilter = D3DTFN_POINT;
+            theMinFilter = GXTFN_POINT;
         else if (inTexture->GetStage()->mMinFilterMode == kMinFilterLinear)
-            theMinFilter = D3DTFN_LINEAR;
+            theMinFilter = GXTFN_LINEAR;
         else if (inTexture->GetStage()->mMinFilterMode == kMinFilterAnisotropic)
-            theMinFilter = D3DTFN_ANISOTROPIC;
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_MINFILTER, theMinFilter);
+            theMinFilter = GXTFN_ANISOTROPIC;
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_MINFILTER, theMinFilter);
         this->mDX7ScreenStates[inScreen]->mStage.mMinFilterMode = inTexture->GetStage()->mMinFilterMode;
     }
     if (inTexture->GetStage()->mMagFilterMode != theCurrent.mMagFilterMode) {
         if (inTexture->GetStage()->mMagFilterMode == kMagFilterPoint)
-            theMagFilter = D3DTFG_POINT;
+            theMagFilter = GXTFG_POINT;
         else if (inTexture->GetStage()->mMagFilterMode == kMagFilterLinear)
-            theMagFilter = D3DTFG_LINEAR;
+            theMagFilter = GXTFG_LINEAR;
         else if (inTexture->GetStage()->mMagFilterMode == kMagFilterFlatCubic)
-            theMagFilter = D3DTFG_FLATCUBIC;
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_MAGFILTER, theMagFilter);
+            theMagFilter = GXTFG_FLATCUBIC;
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_MAGFILTER, theMagFilter);
         this->mDX7ScreenStates[inScreen]->mStage.mMagFilterMode = inTexture->GetStage()->mMagFilterMode;
     }
     if (inTexture->GetStage()->mMipFilterMode != theCurrent.mMipFilterMode) {
         if (inTexture->GetStage()->mMipFilterMode == kMipFilterNone)
-            theMipFilter = D3DTFP_NONE;
+            theMipFilter = GXTFP_NONE;
         else if (inTexture->GetStage()->mMipFilterMode == kMipFilterPoint)
-            theMipFilter = D3DTFP_POINT;
+            theMipFilter = GXTFP_POINT;
         else if (inTexture->GetStage()->mMipFilterMode == kMipFilterLinear)
-            theMipFilter = D3DTFP_LINEAR;
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_MIPFILTER, theMipFilter);
+            theMipFilter = GXTFP_LINEAR;
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_MIPFILTER, theMipFilter);
         this->mDX7ScreenStates[inScreen]->mStage.mMipFilterMode = inTexture->GetStage()->mMipFilterMode;
     }
     if (inTexture->GetStage()->mMipMapBias != theCurrent.mMipMapBias) {
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, D3DTSS_MIPMAPLODBIAS,
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_MIPMAPLODBIAS,
                                                                   *(unsigned long*)&inTexture->GetStage()->mMipMapBias);
         this->mDX7ScreenStates[inScreen]->mStage.mMipMapBias = inTexture->GetStage()->mMipMapBias;
     }
     this->mDX7ScreenStates[inScreen]->GetDevice()->SetTexture(1, NULL);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(1, D3DTSS_COLOROP, D3DTOP_DISABLE);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(1, D3DTSS_ALPHAOP, D3DTOP_DISABLE);
+    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(1, GXTSS_COLOROP, GXTOP_DISABLE);
+    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(1, GXTSS_ALPHAOP, GXTOP_DISABLE);
     this->mDX7ScreenStates[inScreen]->mStage1ColorOperation = 1;
     inTexture->ValidateChanges();
 }
@@ -1612,11 +1571,11 @@ void DX7Rasterizer::SetZBuffer(unsigned long inState, unsigned long inScreen)
     if ((inState & kZBufferTestOnly) <= 0 && !theWrite)
         theEnable = 0;
     if (this->mDX7ScreenStates[inScreen]->mZEnable != theEnable) {
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_ZENABLE, theEnable);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ZENABLE, theEnable);
         this->mDX7ScreenStates[inScreen]->mZEnable = theEnable;
     }
     if (this->mDX7ScreenStates[inScreen]->mZWriteEnable != theWrite) {
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, theWrite);
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ZWRITEENABLE, theWrite);
         this->mDX7ScreenStates[inScreen]->mZWriteEnable = theWrite;
     }
     GERasterizer::SetZBuffer(inState, inScreen);
@@ -1631,31 +1590,31 @@ void DX7Rasterizer::SetZCompare(unsigned long inState, unsigned long inScreen)
         return;
     switch (inState) {
     case kCompareNever:
-        theFunction = D3DCMP_NEVER;
+        theFunction = GXCMP_NEVER;
         break;
     case kCompareLess:
-        theFunction = D3DCMP_LESS;
+        theFunction = GXCMP_LESS;
         break;
     case kCompareLessEqual:
-        theFunction = D3DCMP_LESSEQUAL;
+        theFunction = GXCMP_LESSEQUAL;
         break;
     case kCompareEqual:
-        theFunction = D3DCMP_EQUAL;
+        theFunction = GXCMP_EQUAL;
         break;
     case kCompareNotEqual:
-        theFunction = D3DCMP_NOTEQUAL;
+        theFunction = GXCMP_NOTEQUAL;
         break;
     case kCompareGreaterEqual:
-        theFunction = D3DCMP_GREATEREQUAL;
+        theFunction = GXCMP_GREATEREQUAL;
         break;
     case kCompareGreater:
-        theFunction = D3DCMP_GREATER;
+        theFunction = GXCMP_GREATER;
         break;
     case kCompareAlways:
-        theFunction = D3DCMP_ALWAYS;
+        theFunction = GXCMP_ALWAYS;
         break;
     }
-    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(D3DRENDERSTATE_ZFUNC, theFunction) == D3D_OK)
+    if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_ZFUNC, theFunction) == GX_OK)
         GERasterizer::SetZCompare(inState, inScreen);
 }
 
@@ -1697,8 +1656,8 @@ long DX7Rasterizer::ShowScene(unsigned long inScreen)
     if (theState->mScreen->GetIsFullScreen())
         theResult = theState->mPrimarySurface->Flip(theState->mWaitForVSync);
     else {
-        IDirectDrawSurface7* thePrimary = *static_cast<DX7Surface*>(theState->mPrimarySurface);
-        IDirectDrawSurface7* theSecondary = *static_cast<DX7Surface*>(theState->mSecondarySurface);
+        GXSurface* thePrimary = *static_cast<DX7Surface*>(theState->mPrimarySurface);
+        GXSurface* theSecondary = *static_cast<DX7Surface*>(theState->mSecondarySurface);
         RECT theSource;
         theSource.left = 0;
         theSource.top = 0;
@@ -1713,10 +1672,10 @@ long DX7Rasterizer::ShowScene(unsigned long inScreen)
         HRESULT theError;
         do {
             theError = thePrimary->Blt(&theDestination, theSecondary, &theSource, 0, NULL);
-            if (theError == DDERR_WASSTILLDRAWING)
+            if (theError == GXERR_WASSTILLDRAWING)
                 Sleep(0);
-        } while (theError == DDERR_WASSTILLDRAWING);
-        if (theError == DD_OK)
+        } while (theError == GXERR_WASSTILLDRAWING);
+        if (theError == GX_OK)
             theResult = kErrorOK;
         else {
             ESRecordNativeError(theError);
@@ -1732,13 +1691,13 @@ long DX7Rasterizer::UpdateLight(unsigned long inIndex, GELight& inLight, unsigne
 {
     long theResult = kErrorOK;
     if (inIndex < 8 && gLightsInUse[inIndex] == 1) {
-        D3DLIGHT7 theLight;
+        GXLIGHT theLight;
         memset(&theLight, 0, sizeof(theLight));
         theLight.dvPosition.x = inLight.GetLocation().GetX();
         theLight.dvPosition.y = inLight.GetLocation().GetY();
         theLight.dvPosition.z = inLight.GetLocation().GetZ();
         theLight.dvDirection.x = -inLight.GetDirection().GetX();
-        theLight.dltType = inLight.GetStyle() ? D3DLIGHT_DIRECTIONAL : D3DLIGHT_POINT;
+        theLight.dltType = inLight.GetStyle() ? GXLIGHT_DIRECTIONAL : GXLIGHT_POINT;
         theLight.dvDirection.y = -inLight.GetDirection().GetY();
         theLight.dvDirection.z = -inLight.GetDirection().GetZ();
         theLight.dcvDiffuse.r = inLight.GetComputedColor().GetRed();
@@ -1748,7 +1707,7 @@ long DX7Rasterizer::UpdateLight(unsigned long inIndex, GELight& inLight, unsigne
         theLight.dvAttenuation1 = inLight.GetAttenuation1();
         theLight.dvAttenuation2 = inLight.GetAttenuation2();
         theLight.dvRange = inLight.GetRange();
-        if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetLight(inIndex, &theLight) != D3D_OK)
+        if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetLight(inIndex, &theLight) != GX_OK)
             theResult = kErrorNativeError;
     } else
         theResult = 9;
@@ -1763,10 +1722,10 @@ long DX7Rasterizer::UnlockVB(unsigned long inScreen)
     HRESULT theError;
     do {
         theError = this->mDX7ScreenStates[inScreen]->mVertexBuffer->Unlock();
-        if (theError == DDERR_SURFACEBUSY)
+        if (theError == GXERR_SURFACEBUSY)
             Sleep(0);
-    } while (theError == DDERR_SURFACEBUSY);
-    if (theError == D3D_OK)
+    } while (theError == GXERR_SURFACEBUSY);
+    if (theError == GX_OK)
         theResult = kErrorOK;
     else {
         theResult = kErrorNativeError;

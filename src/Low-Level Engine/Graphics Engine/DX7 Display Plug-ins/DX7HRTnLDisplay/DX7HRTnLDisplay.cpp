@@ -7,8 +7,7 @@
 // DX7Screen, DX7Surface; header order), the plug-in's globals (name, rasterizer), DllMain and the PIM entry points,
 // then the vector/UList COMDATs and the template-static init chain head.
 #include <windows.h>
-#include <ddraw.h>
-#include <d3d.h>
+#include "gx/GX.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/U2DPoint.h"

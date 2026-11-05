@@ -436,6 +436,44 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
   strings (length WGPU_STRLEN = NUL-terminated), chained structs for the HWND surface and the native instance
   extras (backends).
 
+## DirectX -> wgpu: GX (phases 1-3)
+
+- **Port the API, not the renderer.** The DX7 renderer uses about 60 DirectDraw 7/Direct3D 7 calls and a fixed
+  vertex format. Reimplementing that subset (GX: same method names, the DirectX 7 SDK's constant values, GX prefix)
+  and renaming the renderer's types turned a 6,600-line rewrite into a mechanical port (`gxport.py`-style regex
+  renames) plus ~150 lines of hand edits. The renderer's logic, which matched the original, is untouched; a later
+  Rust renderer can still redesign from the GX contract.
+- **Surface model.** DirectDraw lets the CPU lock any surface; wgpu textures are GPU-only. Each GXSurface keeps both
+  copies with valid/stale flags: Unlock/ReleaseDC make the GPU copy stale (upload before the next GPU use), GPU
+  draws and blits make the CPU copy stale (read-back on the next Lock). Blits whose source and target are both
+  current on the CPU (UI composition, the minimap, cursor building) run on the CPU with exact DirectDraw semantics
+  (nearest stretch, colour key compared in the source format), so they never cost a read-back. An upload of a
+  texture the open command encoder already used submits first, so earlier draws keep the old pixels.
+- **GDI text on a GPU target without a read-back**: draw the text twice into scratch DIBs, once on black and once on
+  white. Over black the pixel is colour x coverage; white - black = 1 - coverage. That gives premultiplied colour
+  and alpha for any GDI antialiasing, composited with one blend draw. (GetDC on CPU surfaces moves the surface
+  memory into a DIB section once, so GDI draws in place, exactly as on DirectDraw.)
+- **Direct3D 7 pixel centres** are at integer coordinates, WebGPU's at +0.5: shift clip x by +1/width and y by
+  -1/height (times w) in the vertex shader, or every 2D quad is half a pixel off and blurs.
+- **Vertex colours**: the D3D ARGB dword is B,G,R,A in memory; wgpu-native v29's C API rejects
+  `WGPUVertexFormat_Unorm8x4BGRA` (panic "invalid vertex format"), so read Unorm8x4 and swizzle `.zyxw` in WGSL.
+- **wgpu-native i686**: from v25 (v29.0.0.0 and v29.0.1.1 checked) every DX12 render pipeline fails on i686 with
+  "Shader translation error ... The parameter is incorrect (0x80070057)"; x86_64 is fine and v24.0.3.1 i686 works
+  (same GX code: the C API differences between v24 and v29 did not touch what GX uses). The i686 pin goes away with
+  the 64-bit exe.
+- **wgpu errors are Rust panics**: an invalid object used in a submit aborts the process (c0000409, fast fail) with
+  the message on stderr, which a GUI exe does not have. `EE_GX_STDERR=<file>` redirects stderr there;
+  `EE_GX_LOG=warn|info|debug` routes wgpu's log to OutputDebugString (the harness logs it).
+- **The screen's current mode must be enumerated**: DX7Screen looks its mode up in the enumerated list and never
+  initialises the index otherwise (GetDesktopRectangle then reads garbage). GX always lists the desktop size.
+- **Harness**: the DX12 runtime writes its shader cache under %LOCALAPPDATA%\D3DSCache; exe_boot.c refuses that
+  open with ACCESS_DENIED (D3D12 works without the cache) instead of allowing a persistent write. The windowed
+  capture checkpoint is the game window's creation (GX never takes the display), and the presentation bridge gets
+  each frame from GX's test hook (GXTestSetPresentHook/GXTestReadFrame, found by map address) instead of patching
+  ShowScene and locking DirectDraw surfaces. `--no-render` (accelerated AI games) used to null Direct3D's vtable
+  slots from the time shim; it is now GX's own test switch, `EE_GX_NULL3D=<key ms>` (device draws and clears skipped
+  except one scene per key interval), set by timeshim.py in the environment the game inherits.
+
 ## For WONAPI/WONLobby later
 
 The WON library is carved or stubbed (`won` class in the stub report) in both builds. When its source arrives, expect

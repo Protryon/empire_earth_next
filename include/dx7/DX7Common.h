@@ -5,8 +5,10 @@
 #ifndef DX7_DX7COMMON_H
 #define DX7_DX7COMMON_H
 
+#include "gx/GX.h"
+
 // The game (exe view, LLE_EXE_HEADERS) sees DX7Screen only through the rasterizer's screen pointer
-// (EELobbyInterface.cpp 0x29754d: FlipToGDISurface through the screen's IDirectDraw7): no export, no import.
+// (EELobbyInterface.cpp 0x29754d: FlipToGDISurface through the screen's GXDirectDraw): no export, no import.
 #ifdef LLE_EXE_HEADERS
 #define DX7_API
 #else

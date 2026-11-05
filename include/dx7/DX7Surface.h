@@ -1,4 +1,4 @@
-// DX7Surface (RECONSTRUCTION): a GESurface over an IDirectDrawSurface7. Layout from the ctor 0x1000eced and the
+// DX7Surface (RECONSTRUCTION): a GESurface over an GXSurface. Layout from the ctor 0x1000eced and the
 // inline getters (emitted by DX7HRDisplay.cpp, 0x10001503..): sizeof 0x60 (copy ctor 0x10001563). The ctor is private
 // (??0DX7Surface@@AAE..): DX7Screen::CreateSurface builds them. Member names provisional where no getter names them.
 #ifndef DX7_DX7SURFACE_H
@@ -13,7 +13,7 @@
 class DX7_API DX7Surface : public GESurface {
     friend class DX7Screen;
 public:
-    operator IDirectDrawSurface7*() { return this->mSurface; }
+    operator GXSurface*() { return this->mSurface; }
 
     virtual long AttachSurface(GESurface* inSurface);
     virtual long Clear(GEColor& inColor, float inAlpha);
@@ -50,16 +50,16 @@ public:
 protected:
     virtual ~DX7Surface();
 private:
-    DX7Surface(IDirectDrawSurface7* inSurface, const GESurfaceDescription& inDescription, GEScreen* inParentScreen);
+    DX7Surface(GXSurface* inSurface, const GESurfaceDescription& inDescription, GEScreen* inParentScreen);
     long Copy16BitWithFilter(DX7Surface* inTarget, GERectangle& inSource, GERectangle& inDestination);
     long Copy32BitWithFilter(DX7Surface* inTarget, GERectangle& inSource, GERectangle& inDestination);
 
     GESurfaceDescription mDescription;      // +0x08
     std::vector<GESurface*> mAttachedSurfaces;   // +0x2c
     GEColor mTransparencyColor;             // +0x3c
-    IDirectDrawSurface7* mSurface;          // +0x48
+    GXSurface* mSurface;          // +0x48
     GEScreen* mParentScreen;                // +0x4c
-    unsigned char* mMemoryAddress;          // +0x50 (Lock: DDSURFACEDESC2::lpSurface)
+    unsigned char* mMemoryAddress;          // +0x50 (Lock: GXSURFACEDESC::lpSurface)
     HDC__* mTextDC;                         // +0x54 (TextLock: GetDC)
     unsigned long mBytesPerRow;             // +0x58 (Lock: lPitch)
     bool mIsLocked;                         // +0x5c

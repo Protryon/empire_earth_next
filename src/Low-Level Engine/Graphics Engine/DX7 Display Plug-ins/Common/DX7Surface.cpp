@@ -4,9 +4,8 @@
 //
 // 0x1000eced..0x1000fc91: ctor, dtor, then the members in alphabetical order; the vector<GESurface*>::erase/copy
 // COMDATs it is the first to use close it (0x1000fc0c, 0x1000fc6d). No init chains. DirectDraw calls retry while the
-// blitter is busy (DDERR_WASSTILLDRAWING); a lost surface is reported as 0xd, any other failure as kErrorNativeError.
+// blitter is busy (GXERR_WASSTILLDRAWING); a lost surface is reported as 0xd, any other failure as kErrorNativeError.
 #include <windows.h>
-#include <ddraw.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/Graphics Engine.h"
@@ -14,7 +13,7 @@
 
 // FUNCTION: DX7HR 0x1000eced
 // Wraps a DirectDraw surface with its description and parent screen, unlocked and with no attachments
-DX7Surface::DX7Surface(IDirectDrawSurface7* inSurface, const GESurfaceDescription& inDescription,
+DX7Surface::DX7Surface(GXSurface* inSurface, const GESurfaceDescription& inDescription,
                        GEScreen* inParentScreen)
     : mSurface(inSurface)
 {
@@ -42,7 +41,7 @@ long DX7Surface::AttachSurface(GESurface* inSurface)
     long theResult = kErrorOK;
     DX7Surface* theSurface = static_cast<DX7Surface*>(inSurface);
     HRESULT theError = this->mSurface->AddAttachedSurface(theSurface->mSurface);
-    if (theError == DD_OK) {
+    if (theError == GX_OK) {
         theSurface->Reference();
         this->mAttachedSurfaces.push_back(theSurface);
     } else {
@@ -57,18 +56,18 @@ long DX7Surface::AttachSurface(GESurface* inSurface)
 long DX7Surface::Clear(GEColor& inColor, float inAlpha)
 {
     long theResult = kErrorOK;
-    DDBLTFX theEffects;
+    GXBLTFX theEffects;
     memset(&theEffects, 0, sizeof(theEffects));
     theEffects.dwSize = sizeof(theEffects);
     theEffects.dwFillColor = GEPackColor(this->mDescription.mPixelFormat, inColor, inAlpha);
     HRESULT theError;
     do {
-        theError = this->mSurface->Blt(NULL, NULL, NULL, DDBLT_COLORFILL, &theEffects);
-        if (theError == DDERR_WASSTILLDRAWING)
+        theError = this->mSurface->Blt(NULL, NULL, NULL, GXBLT_COLORFILL, &theEffects);
+        if (theError == GXERR_WASSTILLDRAWING)
             Sleep(0);
-    } while (theError == DDERR_WASSTILLDRAWING);
-    if (theError != DD_OK) {
-        if (theError == DDERR_SURFACELOST)
+    } while (theError == GXERR_WASSTILLDRAWING);
+    if (theError != GX_OK) {
+        if (theError == GXERR_SURFACELOST)
             theResult = 0xd;
         else {
             theResult = kErrorNativeError;
@@ -88,18 +87,18 @@ long DX7Surface::Clear(GERectangle& inRectangle, GEColor& inColor, float inAlpha
     theRect.right = (long)inRectangle.GetRight();
     theRect.top = (long)inRectangle.GetTop();
     theRect.bottom = (long)inRectangle.GetBottom();
-    DDBLTFX theEffects;
+    GXBLTFX theEffects;
     memset(&theEffects, 0, sizeof(theEffects));
     theEffects.dwSize = sizeof(theEffects);
     theEffects.dwFillColor = GEPackColor(this->mDescription.mPixelFormat, inColor, inAlpha);
     HRESULT theError;
     do {
-        theError = this->mSurface->Blt(&theRect, NULL, NULL, DDBLT_COLORFILL, &theEffects);
-        if (theError == DDERR_WASSTILLDRAWING)
+        theError = this->mSurface->Blt(&theRect, NULL, NULL, GXBLT_COLORFILL, &theEffects);
+        if (theError == GXERR_WASSTILLDRAWING)
             Sleep(0);
-    } while (theError == DDERR_WASSTILLDRAWING);
-    if (theError != DD_OK) {
-        if (theError == DDERR_SURFACELOST)
+    } while (theError == GXERR_WASSTILLDRAWING);
+    if (theError != GX_OK) {
+        if (theError == GXERR_SURFACELOST)
             theResult = 0xd;
         else {
             theResult = kErrorNativeError;
@@ -124,15 +123,15 @@ long DX7Surface::CopyTo(GESurface* inTarget, GERectangle& inSource, GERectangle&
     theDestination.right = (long)inDestination.GetRight();
     theDestination.top = (long)inDestination.GetTop();
     theDestination.bottom = (long)inDestination.GetBottom();
-    unsigned long theFlags = inTransparent ? DDBLT_DONOTWAIT | DDBLT_KEYSRC : DDBLT_DONOTWAIT;
+    unsigned long theFlags = inTransparent ? GXBLT_DONOTWAIT | GXBLT_KEYSRC : GXBLT_DONOTWAIT;
     HRESULT theError;
     do {
         theError = static_cast<DX7Surface*>(inTarget)->mSurface->Blt(&theDestination, this->mSurface, &theSource, theFlags, NULL);
-        if (theError == DDERR_WASSTILLDRAWING)
+        if (theError == GXERR_WASSTILLDRAWING)
             Sleep(0);
-    } while (theError == DDERR_WASSTILLDRAWING);
-    if (theError != DD_OK) {
-        if (theError == DDERR_SURFACELOST || theError == DDERR_SURFACEBUSY)
+    } while (theError == GXERR_WASSTILLDRAWING);
+    if (theError != GX_OK) {
+        if (theError == GXERR_SURFACELOST || theError == GXERR_SURFACEBUSY)
             theResult = 0xd;
         else {
             theResult = kErrorNativeError;
@@ -416,7 +415,7 @@ long DX7Surface::DetachSurface(unsigned long inIndex)
     long theResult = kErrorOK;
     GESurface* theSurface = this->mAttachedSurfaces[inIndex];
     HRESULT theError = this->mSurface->DeleteAttachedSurface(0, static_cast<DX7Surface*>(theSurface)->mSurface);
-    if (theError == DD_OK) {
+    if (theError == GX_OK) {
         this->mAttachedSurfaces.erase(this->mAttachedSurfaces.begin() + inIndex);
         theSurface->Dereference();
     } else {
@@ -431,15 +430,15 @@ long DX7Surface::DetachSurface(unsigned long inIndex)
 long DX7Surface::Flip(bool inWait)
 {
     long theResult = kErrorOK;
-    unsigned long theFlags = inWait ? DDFLIP_DONOTWAIT : DDFLIP_DONOTWAIT | DDFLIP_NOVSYNC;
+    unsigned long theFlags = inWait ? GXFLIP_DONOTWAIT : GXFLIP_DONOTWAIT | GXFLIP_NOVSYNC;
     HRESULT theError;
     do {
         theError = this->mSurface->Flip(NULL, theFlags);
-        if (theError == DDERR_WASSTILLDRAWING)
+        if (theError == GXERR_WASSTILLDRAWING)
             Sleep(0);
-    } while (theError == DDERR_WASSTILLDRAWING);
-    if (theError != DD_OK) {
-        if (theError == DDERR_SURFACELOST)
+    } while (theError == GXERR_WASSTILLDRAWING);
+    if (theError != GX_OK) {
+        if (theError == GXERR_SURFACELOST)
             theResult = 0xd;
         else {
             theResult = kErrorNativeError;
@@ -464,20 +463,20 @@ unsigned long DX7Surface::GetAllocatedSize()
 long DX7Surface::Lock()
 {
     long theResult = kErrorOK;
-    DDSURFACEDESC2 theDescription;
+    GXSURFACEDESC theDescription;
     memset(&theDescription, 0, sizeof(theDescription));
     theDescription.dwSize = sizeof(theDescription);
     HRESULT theError;
     do {
         theError = this->mSurface->Lock(NULL, &theDescription, 0, NULL);
-        if (theError == DDERR_WASSTILLDRAWING)
+        if (theError == GXERR_WASSTILLDRAWING)
             Sleep(0);
-    } while (theError == DDERR_WASSTILLDRAWING);
-    if (theError == DD_OK) {
+    } while (theError == GXERR_WASSTILLDRAWING);
+    if (theError == GX_OK) {
         this->mMemoryAddress = (unsigned char*)theDescription.lpSurface;
         this->mIsLocked = true;
         this->mBytesPerRow = theDescription.lPitch;
-    } else if (theError == DDERR_SURFACELOST)
+    } else if (theError == GXERR_SURFACELOST)
         theResult = 0xd;
     else {
         theResult = kErrorNativeError;
@@ -492,7 +491,7 @@ long DX7Surface::RestoreSurface()
 {
     long theResult = kErrorOK;
     HRESULT theError = this->mSurface->Restore();
-    if (theError != DD_OK) {
+    if (theError != GX_OK) {
         ESRecordNativeError(theError);
         theResult = kErrorNativeError;
     }
@@ -504,11 +503,11 @@ long DX7Surface::RestoreSurface()
 void DX7Surface::SetTransparencyColor(GEColor& inColor)
 {
     this->mTransparencyColor = inColor;
-    DDCOLORKEY theKey;
+    GXCOLORKEY theKey;
     unsigned long theColor = GEPackColor(this->mDescription.mPixelFormat, inColor, 1.0f);
     theKey.dwColorSpaceLowValue = theColor;
     theKey.dwColorSpaceHighValue = theColor;
-    this->mSurface->SetColorKey(DDCKEY_SRCBLT, &theKey);
+    this->mSurface->SetColorKey(GXCKEY_SRCBLT, &theKey);
 }
 
 // FUNCTION: DX7HR 0x1000fb55
@@ -522,13 +521,13 @@ long DX7Surface::TextLock()
         HRESULT theError;
         do {
             theError = this->mSurface->GetDC(&this->mTextDC);
-            if (theError == DDERR_WASSTILLDRAWING)
+            if (theError == GXERR_WASSTILLDRAWING)
                 Sleep(0);
-        } while (theError == DDERR_WASSTILLDRAWING);
-        if (theError == DD_OK) {
+        } while (theError == GXERR_WASSTILLDRAWING);
+        if (theError == GX_OK) {
             this->mIsTextLocked = true;
             theResult = kErrorOK;
-        } else if (theError == DDERR_SURFACELOST)
+        } else if (theError == GXERR_SURFACELOST)
             theResult = 0xd;
         else {
             theResult = kErrorNativeError;
@@ -544,7 +543,7 @@ long DX7Surface::TextUnlock()
 {
     if (this->mIsTextLocked) {
         HRESULT theError = this->mSurface->ReleaseDC(this->mTextDC);
-        if (theError == DD_OK) {
+        if (theError == GX_OK) {
             this->mIsTextLocked = false;
             return kErrorOK;
         }
@@ -560,7 +559,7 @@ long DX7Surface::Unlock()
 {
     long theResult = kErrorOK;
     HRESULT theError = this->mSurface->Unlock(NULL);
-    if (theError != DD_OK && theError != DDERR_NOTLOCKED) {
+    if (theError != GX_OK && theError != GXERR_NOTLOCKED) {
         theResult = kErrorNativeError;
         ESRecordNativeError(theError);
     } else

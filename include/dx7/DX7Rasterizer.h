@@ -41,13 +41,13 @@ struct GETMPolygon;
 // The texture stage 0 state the rasterizer last set (sizeof 0x30; SetTexture 0x1000bec0 copies it to a local with
 // rep movsd). Names provisional.
 struct DX7RTextureStage {
-    IDirectDrawSurface7* mTexture;          // +0x00
+    GXSurface* mTexture;          // +0x00
     unsigned long mColorMode;               // +0x04 GETStage::mColorMode
     unsigned long mAlphaMode;               // +0x08 GETStage::mAlphaMode
-    unsigned long mColorArgument1;          // +0x0c D3DTSS_COLORARG1
-    unsigned long mColorArgument2;          // +0x10 D3DTSS_COLORARG2
-    unsigned long mAlphaArgument1;          // +0x14 D3DTSS_ALPHAARG1
-    unsigned long mAlphaArgument2;          // +0x18 D3DTSS_ALPHAARG2
+    unsigned long mColorArgument1;          // +0x0c GXTSS_COLORARG1
+    unsigned long mColorArgument2;          // +0x10 GXTSS_COLORARG2
+    unsigned long mAlphaArgument1;          // +0x14 GXTSS_ALPHAARG1
+    unsigned long mAlphaArgument2;          // +0x18 GXTSS_ALPHAARG2
     unsigned long mTextureAddressingMode;   // +0x1c
     unsigned long mMinFilterMode;           // +0x20
     unsigned long mMagFilterMode;           // +0x24
@@ -73,15 +73,15 @@ struct DX7RScreenState {
     // the extra inline level is what makes the budget refuse every _Ptrit::operator+ in SetRenderTarget (0x1000bb66,
     // exact only with it at the SetViewport site) and moves SetTexture/SetBlending/SetZBuffer closer. The DrawModel/
     // DrawTerrain units keep ->mDevice (DrawModelHierarchy 0x100042c1 is exact only with at most two accessor sites).
-    IDirect3DDevice7* GetDevice() { return this->mDevice; }
+    GXDevice* GetDevice() { return this->mDevice; }
 
-    D3DVIEWPORT7 mViewport;                 // +0x00
-    IDirect3D7* mDirect3D;                  // +0x18
-    IDirect3DDevice7* mDevice;              // +0x1c
+    GXVIEWPORT mViewport;                 // +0x00
+    GXDirect3D* mDirect3D;                  // +0x18
+    GXDevice* mDevice;              // +0x1c
     GEScreen* mScreen;                      // +0x20
-    IDirect3DVertexBuffer7* mVertexBuffer;  // +0x24
+    GXVertexBuffer* mVertexBuffer;  // +0x24
     unsigned long mVertexBufferPosition;    // +0x28 vertices used (LockVB: 0x960 per buffer)
-    unsigned long mStage1ColorOperation;    // +0x2c D3DTSS_COLOROP of stage 1
+    unsigned long mStage1ColorOperation;    // +0x2c GXTSS_COLOROP of stage 1
     DX7RTextureStage mStage;                // +0x30 stage 0 (SetTexture copies it whole)
     unsigned long mBlendSource;             // +0x60
     unsigned long mBlendDestination;        // +0x64
@@ -197,12 +197,12 @@ protected:
     virtual long GetVideoMemory(unsigned long inScreen, unsigned long& outTotal, unsigned long& outFree);   // 0x144
 
     float ComputePolyAreaOfCurrentVB(unsigned long inScreen);
-    void ConvertToD3DMatrix(const GETransformation& inTransformation, _D3DMATRIX& outMatrix);
-    void CopyAndSmoothStdColorVertices(GEModel* inModel, GEMaterial* inMaterial, D3DVERTEX_STD_COLOR* outVertices);
-    void CopyAndSmoothStdVertices(GEModel* inModel, GEMaterial* inMaterial, D3DVERTEX_STD_COLOR* outVertices);
-    void CopyStdColorVertices(GEModel* inModel, GEMaterial* inMaterial, D3DVERTEX_STD_COLOR* outVertices);
-    void CopyStdVertices(GEModel* inModel, GEMaterial* inMaterial, D3DVERTEX_STD_COLOR* outVertices);
-    long LockVB(unsigned long inCount, unsigned long inScreen, D3DVERTEX_STD_COLOR*& outVertices);
+    void ConvertToD3DMatrix(const GETransformation& inTransformation, GXMATRIX& outMatrix);
+    void CopyAndSmoothStdColorVertices(GEModel* inModel, GEMaterial* inMaterial, GXVERTEX_STD_COLOR* outVertices);
+    void CopyAndSmoothStdVertices(GEModel* inModel, GEMaterial* inMaterial, GXVERTEX_STD_COLOR* outVertices);
+    void CopyStdColorVertices(GEModel* inModel, GEMaterial* inMaterial, GXVERTEX_STD_COLOR* outVertices);
+    void CopyStdVertices(GEModel* inModel, GEMaterial* inMaterial, GXVERTEX_STD_COLOR* outVertices);
+    long LockVB(unsigned long inCount, unsigned long inScreen, GXVERTEX_STD_COLOR*& outVertices);
     long Set2DMode(unsigned long inScreen);
     long Set3DMode(unsigned long inScreen);
     long UnlockVB(unsigned long inScreen);

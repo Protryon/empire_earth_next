@@ -4,8 +4,7 @@
 // address, opening and closing the lobby through EEALobbyAction, the game-done event: 0x296aaa..0x297ee7.
 // Module flags (r12-misc-h5, round 12). Every function has source (r24pre-won: 0x2972c6 with its EELobbySoundDecoder /
 // MSNativeIcon ??_G 0x297dc5 / 0x297531, and 0x29754d).
-// UNIT-INCLUDE: dx7sdk
-// (0x29754d calls IDirectDraw7::FlipToGDISurface through the DX7 screen: built against the DirectX 7 SDK headers)
+// (0x29754d called IDirectDraw7::FlipToGDISurface through the DX7 screen; the renderer's GX layer stands in for it)
 #include <windows.h>
 #include <string>
 #include <list>
@@ -439,7 +438,7 @@ void EELobbyFn2972C6()
 // The DX7 screen's declarations come here, not with the other includes: DX7Screen.h declares three class statics
 // (sScreens, sScreensCaptured, sFirstCaptureWasAttachedToDesktop; DX7HRDisplay.dll exports them), and the unit's
 // $E numbers (init chains 0x296aaa.., EEGetLocalAddress's static 0x296d13) show none of them was declared before.
-#include <ddraw.h>
+#include "gx/GX.h"
 #include "dx7/DX7Screen.h"
 
 // FUNCTION: EXE 0x69754d
@@ -477,7 +476,7 @@ void EELobbyFn29754D(bool inFlag)
         if (gISMouse != NULL)
             gISMouse->Suspend();
         if (inFlag)
-            ((IDirectDraw7*)*(DX7Screen*)gRasterizer->GetScreen(gScreenIndex))->FlipToGDISurface();
+            ((GXDirectDraw*)*(DX7Screen*)gRasterizer->GetScreen(gScreenIndex))->FlipToGDISurface();
     } else {
         ShowWindow(gGameWindow->GetOSRepresentation(), SW_HIDE);
     }

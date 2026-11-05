@@ -20,14 +20,15 @@ jobs:
       - name: LLVM
         run: choco upgrade llvm -y --no-progress
 
-      - name: Cache the DirectX 7 SDK headers
+      - name: Cache wgpu-native
         uses: actions/cache@v4
         with:
           path: toolchain
-          key: dx7sdk-${{ hashFiles('tools/fetch_dx7sdk.py') }}
+          key: wgpu-${{ hashFiles('tools/fetch_wgpu.py') }}
 
-      - name: Fetch the DirectX 7 SDK headers
-        run: python -I tools/fetch_dx7sdk.py
+      # the renderer's static wgpu-native (sha256-pinned GitHub release; 7-Zip is on the runner)
+      - name: Fetch wgpu-native
+        run: python -I tools/fetch_wgpu.py
 
       - name: Build every image
         run: python -I build.py -j 4

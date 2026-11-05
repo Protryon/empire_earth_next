@@ -6,8 +6,7 @@
 // DX7TnLRasterizer's ctor and dtor and its members in alphabetical order, then the template-static init chain head
 // and its atexit registrars.
 #include <windows.h>
-#include <ddraw.h>
-#include <d3d.h>
+#include "gx/GX.h"
 #include <float.h>
 
 #include "dx7/DX7Rasterizer.h"
@@ -51,16 +50,16 @@
 
 // FUNCTION: DX7HRTNL 0x1000fe74
 // Device enumeration callback: marks the screen valid and stops at the first device with hardware T&L and rasterization
-HRESULT CALLBACK DX7TnLEnumDevicesCallback(LPSTR inDescription, LPSTR inName, LPD3DDEVICEDESC7 inCaps,
+HRESULT CALLBACK DX7TnLEnumDevicesCallback(LPSTR inDescription, LPSTR inName, GXDEVICEDESC* inCaps,
                                            LPVOID inContext)
 {
     bool* theContext = (bool*)inContext;
-    HRESULT theResult = D3DENUMRET_OK;
-    unsigned long theRequiredCaps = D3DDEVCAPS_HWTRANSFORMANDLIGHT | D3DDEVCAPS_HWRASTERIZATION;
+    HRESULT theResult = GXENUMRET_OK;
+    unsigned long theRequiredCaps = GXDEVCAPS_HWTRANSFORMANDLIGHT | GXDEVCAPS_HWRASTERIZATION;
     bool theFlag = (inCaps->dwDevCaps & theRequiredCaps) == theRequiredCaps;
     if (theFlag) {
         *theContext = true;
-        theResult = D3DENUMRET_CANCEL;
+        theResult = GXENUMRET_CANCEL;
     }
     return theResult;
 }
@@ -81,19 +80,19 @@ DX7TnLRasterizer::~DX7TnLRasterizer()
 
 // FUNCTION: DX7HRTNL 0x1000fedd
 // Creates the T&L HAL device on the back buffer, sets the viewport, fixed render states and vertex buffer, then
-// resets the cached states; on a CreateDevice failure the IDirect3D7 interface is never released
+// resets the cached states; on a CreateDevice failure the GXDirect3D interface is never released
 long DX7TnLRasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPrimary, GESurface* inSecondary,
                                          GETextureManager* inManager, GEWindow* inWindow)
 {
     DX7Surface* theTarget = dynamic_cast<DX7Surface*>(inSecondary);
-    IDirect3D7* theDirect3D = NULL;
-    IDirect3DDevice7* theDevice = NULL;
+    GXDirect3D* theDirect3D = NULL;
+    GXDevice* theDevice = NULL;
     long theResult;
     HRESULT theError = static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw->QueryInterface(
-        IID_IDirect3D7, (void**)&theDirect3D);
-    if (theError == DD_OK) {
-        theError = theDirect3D->CreateDevice(IID_IDirect3DTnLHalDevice, *theTarget, &theDevice);
-        if (theError == DD_OK) {
+        GXIID_Direct3D7, (void**)&theDirect3D);
+    if (theError == GX_OK) {
+        theError = theDirect3D->CreateDevice(GXIID_TnLHalDevice, *theTarget, &theDevice);
+        if (theError == GX_OK) {
             this->mDX7ScreenStates[inScreen]->mDirect3D = theDirect3D;
             this->mDX7ScreenStates[inScreen]->mDevice = theDevice;
             this->mDX7ScreenStates[inScreen]->mViewport.dwX = 0;
@@ -103,14 +102,14 @@ long DX7TnLRasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPr
             this->mDX7ScreenStates[inScreen]->mViewport.dvMinZ = 0.0f;
             this->mDX7ScreenStates[inScreen]->mViewport.dvMaxZ = 1.0f;
             theDevice->SetViewport(&this->mDX7ScreenStates[inScreen]->mViewport);
-            theDevice->SetRenderState(D3DRENDERSTATE_SPECULARENABLE, FALSE);
-            theDevice->SetRenderState(D3DRENDERSTATE_EXTENTS, FALSE);
-            theDevice->SetRenderState(D3DRENDERSTATE_CLIPPING, FALSE);
-            theDevice->SetRenderState(D3DRENDERSTATE_NORMALIZENORMALS, TRUE);
-            theDevice->SetRenderState(D3DRENDERSTATE_LOCALVIEWER, FALSE);
-            theDevice->SetRenderState(D3DRENDERSTATE_FOGVERTEXMODE, D3DFOG_LINEAR);
-            theDevice->SetRenderState(D3DRENDERSTATE_SPECULARMATERIALSOURCE, D3DMCS_MATERIAL);
-            theDevice->SetRenderState(D3DRENDERSTATE_EMISSIVEMATERIALSOURCE, D3DMCS_MATERIAL);
+            theDevice->SetRenderState(GXRS_SPECULARENABLE, FALSE);
+            theDevice->SetRenderState(GXRS_EXTENTS, FALSE);
+            theDevice->SetRenderState(GXRS_CLIPPING, FALSE);
+            theDevice->SetRenderState(GXRS_NORMALIZENORMALS, TRUE);
+            theDevice->SetRenderState(GXRS_LOCALVIEWER, FALSE);
+            theDevice->SetRenderState(GXRS_FOGVERTEXMODE, GXFOG_LINEAR);
+            theDevice->SetRenderState(GXRS_SPECULARMATERIALSOURCE, GXMCS_MATERIAL);
+            theDevice->SetRenderState(GXRS_EMISSIVEMATERIALSOURCE, GXMCS_MATERIAL);
             theResult = this->CreateVertexBuffers(inScreen);
             if (theResult == kErrorOK) {
                 this->mDX7ScreenStates[inScreen]->mCanModulateTextureAlpha = true;
@@ -132,11 +131,11 @@ long DX7TnLRasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPr
                 this->mDX7ScreenStates[inScreen]->mStage.mMagFilterMode = 3;
                 this->mDX7ScreenStates[inScreen]->mStage.mMipFilterMode = 3;
                 this->mDX7ScreenStates[inScreen]->mStage.mMipMapBias = FLT_MAX;
-                this->mDX7ScreenStates[inScreen]->mDevice->SetTextureStageState(0, D3DTSS_TEXCOORDINDEX, 0);
+                this->mDX7ScreenStates[inScreen]->mDevice->SetTextureStageState(0, GXTSS_TEXCOORDINDEX, 0);
             }
             return theResult;
         }
-        // CreateDevice failed: release the IDirect3D7 the query returned.
+        // CreateDevice failed: release the GXDirect3D the query returned.
         theDirect3D->Release();
     }
     theResult = kErrorNativeError;
@@ -148,16 +147,16 @@ long DX7TnLRasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPr
 // Creates the screen's write-only vertex buffer (2400 vertices: position, normal, colour, one texture)
 long DX7TnLRasterizer::CreateVertexBuffers(unsigned long inScreen)
 {
-    IDirect3D7* theDirect3D = this->mDX7ScreenStates[inScreen]->mDirect3D;
+    GXDirect3D* theDirect3D = this->mDX7ScreenStates[inScreen]->mDirect3D;
     long theResult = kErrorOK;
-    D3DVERTEXBUFFERDESC theDescription;
+    GXVERTEXBUFFERDESC theDescription;
     memset(&theDescription, 0, sizeof(theDescription));
     theDescription.dwSize = sizeof(theDescription);
-    theDescription.dwCaps = D3DVBCAPS_WRITEONLY;
-    theDescription.dwFVF = D3DFVF_XYZ | D3DFVF_NORMAL | D3DFVF_DIFFUSE | D3DFVF_TEX1;
+    theDescription.dwCaps = GXVBCAPS_WRITEONLY;
+    theDescription.dwFVF = GXFVF_XYZ | GXFVF_NORMAL | GXFVF_DIFFUSE | GXFVF_TEX1;
     theDescription.dwNumVertices = 0x960;
     HRESULT theError = theDirect3D->CreateVertexBuffer(&theDescription, &this->mDX7ScreenStates[inScreen]->mVertexBuffer, 0);
-    if (theError != D3D_OK) {
+    if (theError != GX_OK) {
         theResult = kErrorNativeError;
         ESRecordNativeError(theError);
     }
@@ -172,12 +171,12 @@ long DX7TnLRasterizer::CreateVertexBuffers(unsigned long inScreen)
 bool DX7TnLRasterizer::GetIsScreenValid(DX7Screen* inScreen)
 {
     long theRetVal = 9;
-    IDirect3D7* theIDirect3D = NULL;
+    GXDirect3D* theIDirect3D = NULL;
     bool theIsValid = false;
-    HRESULT theHResult = ((IDirectDraw7*)*inScreen)->QueryInterface(IID_IDirect3D7, (void**)&theIDirect3D);
-    if (theHResult == DD_OK) {
+    HRESULT theHResult = ((GXDirectDraw*)*inScreen)->QueryInterface(GXIID_Direct3D7, (void**)&theIDirect3D);
+    if (theHResult == GX_OK) {
         theHResult = theIDirect3D->EnumDevices(DX7TnLEnumDevicesCallback, &theIsValid);
-        if (theHResult == D3D_OK) {
+        if (theHResult == GX_OK) {
             if (theIsValid)
                 theRetVal = kErrorOK;
         } else {

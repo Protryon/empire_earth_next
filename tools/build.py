@@ -11,8 +11,8 @@ language resources, with miniaudio, dmusic and pl_mpeg for sound, music and movi
 imported. Every unit is compiled first (tools/clang_build.py, objects in <out>/obj), then linked.
 
 --test-profile windowed-software (TEST ONLY; default out build/clang-test): images for the headless live-game
-harness (tools/harness). The windowed and software-display policy is compiled into the exe and the renderer by text
-rules on the staged copies of a few units (TEST_PROFILES, each refusing unless it matches its expected count), and
+harness (tools/harness). The windowed and 32-bit display policy is compiled into the exe by text rules on the
+staged copies of a few units (TEST_PROFILES, each refusing unless it matches its expected count), and
 every function the harness hooks at its entry is kept out of line (HARNESS_HOOKS). src/ is never changed.
 
 --sanitize-null (TEST ONLY; out gains -nullsan): with the null-pointer and pointer-overflow
@@ -37,7 +37,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import clang_build
 import units
 import verify
-from ee import CLANG, LINK_DIR, LLD_LINK, MODULE_FLAGS, ROOT, module_units
+from ee import CLANG, LINK_DIR, LLD_LINK, MODULE_FLAGS, ROOT, TOOLCHAIN, module_units
 
 TEST_PROFILES = {
     "windowed-software": {
@@ -46,9 +46,10 @@ TEST_PROFILES = {
             ("    this->mFullScreen = true;", "    this->mFullScreen = false;   // TEST PROFILE windowed", 1),
             ("    this->mSettings.mFullScreen = true;",
              "    this->mSettings.mFullScreen = false;   // TEST PROFILE windowed", 1)],
-        # software display: the bit-depth checks accept and store 32 where they accepted/stored 16, and the
-        # no-matching-mode fallback is 32; WinMain loads the harness's presentation bridge when it is staged (the
-        # DLL builds' plug-in scan loaded every DLL of the folder)
+        # 32-bit display: the bit-depth checks accept and store 32 where they accepted/stored 16, and the
+        # no-matching-mode fallback is 32 (the renderer runs on wgpu, WARP on a machine without a GPU); WinMain
+        # loads the harness's presentation bridge when it is staged (the DLL builds' plug-in scan loaded every DLL
+        # of the folder)
         "Empire Earth/Empire Earth/Empire Earth.cpp": [
             ("int inShowCommand)\n{\n",
              "int inShowCommand)\n{\n    LoadLibraryA(\"TestPresentation.dll\");   // TEST PROFILE: the harness's presentation bridge\n", 1),
@@ -56,44 +57,6 @@ TEST_PROFILES = {
             ("mTextureBitDepth != 16)", "mTextureBitDepth != 32)", 1),
             ("mGameBitDepth = 16;", "mGameBitDepth = 32;", 2),
             ("mTextureBitDepth = 16;", "mTextureBitDepth = 32;", 1)],
-        # the renderer's software profile: the D3D7 RGB software device instead of a HAL, every surface in system
-        # memory, no texture management
-        "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Rasterizer.cpp": [
-            ("(inCaps->dwDevCaps & D3DDEVCAPS_HWRASTERIZATION) == D3DDEVCAPS_HWRASTERIZATION;",
-             "(inCaps->dwDevCaps & D3DDEVCAPS_FLOATTLVERTEX) == D3DDEVCAPS_FLOATTLVERTEX;   // TEST PROFILE software", 1),
-            ("if ((theCaps.dwCaps & DDCAPS_3D) == DDCAPS_3D) {",
-             "if (true) {   // TEST PROFILE software: adapters without DDCAPS_3D", 2),
-            ("IID_IDirect3DHALDevice", "IID_IDirect3DRGBDevice", 1)],
-        # the T&L renderer (the only one): accept and create the RGB software device (D3D transforms in software)
-        "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/DX7HRTnLDisplay/DX7TnLRasterizer.cpp": [
-            ("unsigned long theRequiredCaps = D3DDEVCAPS_HWTRANSFORMANDLIGHT | D3DDEVCAPS_HWRASTERIZATION;",
-             "unsigned long theRequiredCaps = D3DDEVCAPS_FLOATTLVERTEX;   // TEST PROFILE software", 1),
-            ("IID_IDirect3DTnLHalDevice", "IID_IDirect3DRGBDevice", 1)],
-        "Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Screen.cpp": [
-            ("this->GetMode(i).mHeight == 600 && this->GetMode(i).mBitCount == 16)",
-             "this->GetMode(i).mHeight == 600 && this->GetMode(i).mBitCount == 32)", 1),
-            ("IID_IDirect3DHALDevice", "IID_IDirect3DRGBDevice", 1),
-            ("        theDesc.ddsCaps.dwCaps = inDescription.mIs3DRenderable ?\n"
-             "            DDSCAPS_PRIMARYSURFACE | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM | DDSCAPS_3DDEVICE :\n"
-             "            DDSCAPS_PRIMARYSURFACE | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM;\n",
-             "        theDesc.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;   // TEST PROFILE software\n", 1),
-            ("DDSCAPS_OFFSCREENPLAIN | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM",
-             "DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY", 2),
-            ("DDSCAPS_ZBUFFER | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM;", "DDSCAPS_ZBUFFER | DDSCAPS_SYSTEMMEMORY;", 1),
-            ("DDSCAPS_TEXTURE | DDSCAPS_3DDEVICE | DDSCAPS_VIDEOMEMORY |\n                                     DDSCAPS_LOCALVIDMEM;",
-             "DDSCAPS_TEXTURE | DDSCAPS_3DDEVICE | DDSCAPS_SYSTEMMEMORY;", 1),
-            ("            theDesc.ddsCaps.dwCaps = DDSCAPS_TEXTURE;\n"
-             "            theDesc.ddsCaps.dwCaps2 = inDescription.mSurfaceVolatility ?\n"
-             "                DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTSTATIC :\n"
-             "                DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTDYNAMIC;\n",
-             "            theDesc.ddsCaps.dwCaps = DDSCAPS_TEXTURE | DDSCAPS_SYSTEMMEMORY;   // TEST PROFILE software\n", 1),
-            ("            DDSCAPS_TEXTURE | DDSCAPS_COMPLEX | DDSCAPS_MIPMAP | DDSCAPS_3DDEVICE :\n"
-             "            DDSCAPS_TEXTURE | DDSCAPS_COMPLEX | DDSCAPS_MIPMAP;\n"
-             "        theDesc.ddsCaps.dwCaps2 = inDescription.mSurfaceVolatility ?\n"
-             "            DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTSTATIC :\n"
-             "            DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTDYNAMIC;\n",
-             "            DDSCAPS_TEXTURE | DDSCAPS_COMPLEX | DDSCAPS_MIPMAP | DDSCAPS_3DDEVICE | DDSCAPS_SYSTEMMEMORY :\n"
-             "            DDSCAPS_TEXTURE | DDSCAPS_COMPLEX | DDSCAPS_MIPMAP | DDSCAPS_SYSTEMMEMORY;   // TEST PROFILE\n", 1)],
     },
 }
 # Functions the harness hooks at their entry with a debugger breakpoint: kept out of line in the test profile, so a
@@ -163,8 +126,14 @@ def member_offsets(out):
     return translate
 
 
-# system libraries the engine and the renderer linked statically (dinput8: the c_dfDI* data formats)
-STATIC_LIBS = ["dxguid.lib", "dinput8.lib", "ole32.lib", "winmm.lib", "user32.lib"]
+# system libraries the engine and the renderer linked statically (dinput8: the c_dfDI* data formats), then the
+# renderer's wgpu-native (static, tools/fetch_wgpu.py) with the system libraries its DX12/Vulkan backends and the
+# Rust standard library import
+STATIC_LIBS = ["dxguid.lib", "dinput8.lib", "ole32.lib", "winmm.lib", "user32.lib",
+               str(TOOLCHAIN / "wgpu" / "i686" / "lib" / "wgpu_native.lib"), "gdi32.lib", "advapi32.lib", "ws2_32.lib",
+               "userenv.lib", "ntdll.lib", "bcrypt.lib", "oleaut32.lib", "d3d12.lib", "dxgi.lib", "d3dcompiler.lib",
+               "opengl32.lib", "propsys.lib", "runtimeobject.lib", "uuid.lib", "synchronization.lib", "shell32.lib",
+               "dwmapi.lib"]
 
 
 def link_exe(out, objs, extra_libs):

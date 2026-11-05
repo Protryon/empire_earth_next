@@ -1,4 +1,4 @@
-// DX7StandardVertexArray (RECONSTRUCTION): a GEVertexArray of D3DVERTEX (position, normal, one texture coordinate;
+// DX7StandardVertexArray (RECONSTRUCTION): a GEVertexArray of GXVERTEX (position, normal, one texture coordinate;
 // no color, opacity 1). Layout from the ctor 0x1000e793: vertices +4, size +8. sizeof 0xc (copy ctor 0x10003998).
 #ifndef DX7_DX7STANDARDVERTEXARRAY_H
 #define DX7_DX7STANDARDVERTEXARRAY_H
@@ -27,7 +27,7 @@ public:
                            const GETextureCoordinate& inCoordinate, float inOpacity, unsigned long inIndex);
     virtual unsigned long SizeOf() const;
 
-    D3DVERTEX* mVertices;                   // +0x04
+    GXVERTEX* mVertices;                   // +0x04
     unsigned long mSize;                    // +0x08
 };
 

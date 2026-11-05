@@ -10,8 +10,7 @@
 // where the original's budget is exhausted; GETerrainMesh::GetNumVisibleTileRows is likewise an inline the budget
 // refuses (called through the import in six functions, expanded with size() out of line in Light).
 #include <windows.h>
-#include <ddraw.h>
-#include <d3d.h>
+#include "gx/GX.h"
 
 #include "dx7/DX7Rasterizer.h"
 #include "dx7/DX7PolygonArray.h"
@@ -75,25 +74,25 @@ struct DX7RDirectionalLight {
 long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
 {
     GETransformation theTransformation;
-    D3DMATRIX theMatrix;
+    GXMATRIX theMatrix;
     std::map<GETexture*, unsigned long>::iterator theIterator;
-    unsigned long theColor = RGBA_MAKE(UMFloatToLong(0.0f), UMFloatToLong(0.0f), UMFloatToLong(0.0f),
+    unsigned long theColor = GXRGBA(UMFloatToLong(0.0f), UMFloatToLong(0.0f), UMFloatToLong(0.0f),
                                        UMFloatToLong(255.0f));
     long theResult;
     GEViewport& theViewport = this->mScreenStates[inScreen]->mViewport;
     this->ConvertToD3DMatrix(theTransformation, theMatrix);
-    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_WORLD, &theMatrix);
+    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_WORLD, &theMatrix);
     theTransformation.SetElement(1, 1, 0.0f);
     theTransformation.SetElement(1, 2, 1.0f);
     theTransformation.SetElement(2, 1, 1.0f);
     theTransformation.SetElement(2, 2, 0.0f);
     this->ConvertToD3DMatrix(theTransformation, theMatrix);
-    theResult = this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_VIEW, &theMatrix);
+    theResult = this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_VIEW, &theMatrix);
     if (!inOrthographic)
         this->ConvertToD3DMatrix(theViewport.GetPerspectiveProjection(), theMatrix);
     else
         this->ConvertToD3DMatrix(theViewport.GetOrthographicProjection(), theMatrix);
-    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_PROJECTION, &theMatrix);
+    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_PROJECTION, &theMatrix);
     if (inMesh.GetNumVisibleTileRows() != 0) {
         unsigned long theIndex;
         if (inMesh.GetIsSpaceMap()) {
@@ -106,9 +105,9 @@ long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inO
                     this->mScreenStates[inScreen]->m32C[1] +=
                         DX7ListCount(inMesh.GetTerrainMaterialList()[theIndex].mStripIndices);
                     this->SetTexture(theIterator->first, inScreen);
-                    this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(D3DRENDERSTATE_CLIPPING, FALSE);
+                    this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(GXRS_CLIPPING, FALSE);
                     this->DrawTerrainMaterial(&theViewport, inMesh.GetTerrainMaterialList()[theIndex].mIndices, inScreen);
-                    this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(D3DRENDERSTATE_CLIPPING, TRUE);
+                    this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(GXRS_CLIPPING, TRUE);
                     theResult = this->DrawTerrainMaterial(&theViewport,
                                                     inMesh.GetTerrainMaterialList()[theIndex].mStripIndices,
                                                     inScreen);
@@ -124,9 +123,9 @@ long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inO
                 this->mScreenStates[inScreen]->m32C[1] +=
                     DX7ListCount(inMesh.GetTerrainMaterialList()[theIndex].mStripIndices);
                 this->SetTexture((*theIterator).first, inScreen);
-                this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(D3DRENDERSTATE_CLIPPING, FALSE);
+                this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(GXRS_CLIPPING, FALSE);
                 this->DrawTerrainMaterial(&theViewport, inMesh.GetTerrainMaterialList()[theIndex].mIndices, inScreen);
-                this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(D3DRENDERSTATE_CLIPPING, TRUE);
+                this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(GXRS_CLIPPING, TRUE);
                 theResult = this->DrawTerrainMaterial(&theViewport, inMesh.GetTerrainMaterialList()[theIndex].mStripIndices,
                                                 inScreen);
             }
@@ -144,7 +143,7 @@ long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inO
         float theCenterX;
         float theCenterY;
         float theCenterZ;
-        D3DVERTEX_STD_COLOR* theBuffer;
+        GXVERTEX_STD_COLOR* theBuffer;
         theViewport.GetCamera().Apply(GEVector(0.0f, 1.0f, 0.0f), theForward);
         theForward.SetZ(0.0f);
         theForward.Normalize();
@@ -195,7 +194,7 @@ long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inO
         theViewport.GetCameraInverse().Apply(theWorldPoints[5], theCameraPoints[5]);
         this->mScreenStates[inScreen]->m32C[1] += 4;
         this->SetTexture(NULL, inScreen);
-        this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(D3DRENDERSTATE_CLIPPING, TRUE);
+        this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(GXRS_CLIPPING, TRUE);
         this->LockVB(12, inScreen, theBuffer);
         theBuffer += this->mDX7ScreenStates[inScreen]->mVertexBufferPosition;
 #define DX7R_BLACK_VERTEX(n)                            \
@@ -224,9 +223,9 @@ long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inO
 #undef DX7R_BLACK_VERTEX
         this->UnlockVB(inScreen);
         while (true) {
-            if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(D3DPT_TRIANGLELIST,
+            if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(GXPT_TRIANGLELIST,
                     this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 12,
-                    0) != DDERR_WASSTILLDRAWING)
+                    0) != GXERR_WASSTILLDRAWING)
                 break;
             Sleep(0);
         }
@@ -246,9 +245,9 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
     GE3DPoint theWorldPoint;
     GE3DPoint theCameraPoint;
     GETransformation theTransformation;
-    D3DMATRIX theMatrix;
-    D3DMATERIAL7 theMaterial;
-    D3DVERTEX_STD_COLOR* theBuffer;
+    GXMATRIX theMatrix;
+    GXMATERIAL theMaterial;
+    GXVERTEX_STD_COLOR* theBuffer;
     theResult = kErrorOK;
     unsigned long theLineCount = inLines.size();
     unsigned long theVertexCount = inLines.size() * 2;
@@ -258,18 +257,18 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
         return theResult;
     GEViewport& theViewport = this->mScreenStates[inScreen]->mViewport;
     this->ConvertToD3DMatrix(theTransformation, theMatrix);
-    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_WORLD, &theMatrix);
+    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_WORLD, &theMatrix);
     theTransformation.SetElement(1, 1, 0.0f);
     theTransformation.SetElement(1, 2, 1.0f);
     theTransformation.SetElement(2, 1, 1.0f);
     theTransformation.SetElement(2, 2, 0.0f);
     this->ConvertToD3DMatrix(theTransformation, theMatrix);
-    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_VIEW, &theMatrix);
+    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_VIEW, &theMatrix);
     if (!inOrthographic)
         this->ConvertToD3DMatrix(theViewport.GetPerspectiveProjection(), theMatrix);
     else
         this->ConvertToD3DMatrix(theViewport.GetOrthographicProjection(), theMatrix);
-    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_PROJECTION, &theMatrix);
+    this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_PROJECTION, &theMatrix);
     this->SetTexture(inTexture, inScreen);
     theMaterial.ambient.r = 1.0f;
     theMaterial.ambient.g = 1.0f;
@@ -324,7 +323,7 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
         theBuffer->nx = 0.0f;
         theBuffer->ny = 0.0f;
         theBuffer->nz = 0.0f;
-        theBuffer->color = RGBA_MAKE(255, 0, 0, 255);
+        theBuffer->color = GXRGBA(255, 0, 0, 255);
         theBuffer->tu = 0.0f;
         theBuffer->tv = inWidth;
         theBuffer++;
@@ -338,7 +337,7 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
         theBuffer->nx = 0.0f;
         theBuffer->ny = 0.0f;
         theBuffer->nz = 0.0f;
-        theBuffer->color = RGBA_MAKE(255, 0, 0, 255);
+        theBuffer->color = GXRGBA(255, 0, 0, 255);
         theBuffer->tu = 0.0f;
         theBuffer->tv = theEndV;
         theBuffer++;
@@ -347,9 +346,9 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
     theResult = this->UnlockVB(inScreen);
     if (theDrawnLines > 0) {
         while (true) {
-            if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(D3DPT_LINELIST,
+            if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(GXPT_LINELIST,
                     this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-                    theDrawnLines * 2, 0) != DDERR_WASSTILLDRAWING)
+                    theDrawnLines * 2, 0) != GXERR_WASSTILLDRAWING)
                 break;
             Sleep(0);
         }
@@ -363,24 +362,24 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
 long DX7Rasterizer::DrawTerrainGrid(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
 {
     GETransformation theTransformation;
-    D3DMATRIX theMatrix;
-    D3DVERTEX_STD_COLOR* theBuffer;
+    GXMATRIX theMatrix;
+    GXVERTEX_STD_COLOR* theBuffer;
     long theResult = kErrorOK;
     if (inMesh.GetNumVisibleTileRows() != 0) {
         GEViewport& theViewport = this->mScreenStates[inScreen]->mViewport;
         this->ConvertToD3DMatrix(theTransformation, theMatrix);
-        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_WORLD, &theMatrix);
+        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_WORLD, &theMatrix);
         theTransformation.SetElement(1, 1, 0.0f);
         theTransformation.SetElement(1, 2, 1.0f);
         theTransformation.SetElement(2, 1, 1.0f);
         theTransformation.SetElement(2, 2, 0.0f);
         this->ConvertToD3DMatrix(theTransformation, theMatrix);
-        theResult = this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_VIEW, &theMatrix);
+        theResult = this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_VIEW, &theMatrix);
         if (!inOrthographic)
             this->ConvertToD3DMatrix(theViewport.GetPerspectiveProjection(), theMatrix);
         else
             this->ConvertToD3DMatrix(theViewport.GetOrthographicProjection(), theMatrix);
-        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_PROJECTION, &theMatrix);
+        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_PROJECTION, &theMatrix);
         unsigned long theStartX;
         unsigned long theStartY;
         unsigned long theWidth;
@@ -406,7 +405,7 @@ long DX7Rasterizer::DrawTerrainGrid(GETerrainMesh& inMesh, unsigned long inScree
                     theBuffer->nx = 0.0f;                                                                           \
                     theBuffer->ny = 0.0f;                                                                           \
                     theBuffer->nz = 0.0f;                                                                           \
-                    theBuffer->color = RGBA_MAKE(255, 0, 0, 255);                                                   \
+                    theBuffer->color = GXRGBA(255, 0, 0, 255);                                                   \
                     theBuffer->tu = 0.0f;                                                                           \
                     theBuffer->tv = 0.0f;                                                                           \
                     theBuffer++;
@@ -417,9 +416,9 @@ long DX7Rasterizer::DrawTerrainGrid(GETerrainMesh& inMesh, unsigned long inScree
 #undef DX7R_GRID_VERTEX
                     theResult = this->UnlockVB(inScreen);
                     while (true) {
-                        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(D3DPT_LINELIST,
+                        if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(GXPT_LINELIST,
                                 this->mDX7ScreenStates[inScreen]->mVertexBuffer,
-                                this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 4, 0) != DDERR_WASSTILLDRAWING)
+                                this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 4, 0) != GXERR_WASSTILLDRAWING)
                             break;
                         Sleep(0);
                     }
@@ -439,8 +438,8 @@ long DX7Rasterizer::DrawTerrainHighlight(GETerrainMesh& inMesh, const U2DRectang
 {
     long theRemaining;
     GETransformation theTransformation;
-    D3DMATRIX theMatrix;
-    D3DVERTEX_STD_COLOR* theBuffer;
+    GXMATRIX theMatrix;
+    GXVERTEX_STD_COLOR* theBuffer;
     unsigned long theRight = inRectangle.mRight;
     unsigned long theLeft = inRectangle.mLeft;
     unsigned long theBottom = inRectangle.mBottom;
@@ -455,25 +454,25 @@ long DX7Rasterizer::DrawTerrainHighlight(GETerrainMesh& inMesh, const U2DRectang
         theHeight = -theHeight;
     theRemaining = (theHeight + 1) * (theWidth + 1);
     if (inMesh.GetNumVisibleTileRows() != 0) {
-        unsigned long theColor = RGBA_MAKE(UMFloatToLong(inColor.GetRed() * 255.0f),
+        unsigned long theColor = GXRGBA(UMFloatToLong(inColor.GetRed() * 255.0f),
                                            UMFloatToLong(inColor.GetGreen() * 255.0f),
                                            UMFloatToLong(inColor.GetBlue() * 255.0f),
                                            UMFloatToLong(inOpacity * 255.0f));
         GEViewport& theViewport = this->mScreenStates[inScreen]->mViewport;
         this->SetTexture(NULL, inScreen);
         this->ConvertToD3DMatrix(theTransformation, theMatrix);
-        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_WORLD, &theMatrix);
+        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_WORLD, &theMatrix);
         theTransformation.SetElement(1, 1, 0.0f);
         theTransformation.SetElement(1, 2, 1.0f);
         theTransformation.SetElement(2, 1, 1.0f);
         theTransformation.SetElement(2, 2, 0.0f);
         this->ConvertToD3DMatrix(theTransformation, theMatrix);
-        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_VIEW, &theMatrix);
+        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_VIEW, &theMatrix);
         if (!inOrthographic)
             this->ConvertToD3DMatrix(theViewport.GetPerspectiveProjection(), theMatrix);
         else
             this->ConvertToD3DMatrix(theViewport.GetOrthographicProjection(), theMatrix);
-        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_PROJECTION, &theMatrix);
+        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_PROJECTION, &theMatrix);
         unsigned long theStartX;
         unsigned long theStartY;
         unsigned long theVisibleWidth;
@@ -520,10 +519,10 @@ long DX7Rasterizer::DrawTerrainHighlight(GETerrainMesh& inMesh, const U2DRectang
                     if (theQuadCount == 400 && theRemaining > 0) {
                         this->UnlockVB(inScreen);
                         while (true) {
-                            if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(D3DPT_TRIANGLELIST,
+                            if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(GXPT_TRIANGLELIST,
                                     this->mDX7ScreenStates[inScreen]->mVertexBuffer,
                                     this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 0x960, 0) !=
-                                DDERR_WASSTILLDRAWING)
+                                GXERR_WASSTILLDRAWING)
                                 break;
                             Sleep(0);
                         }
@@ -538,9 +537,9 @@ long DX7Rasterizer::DrawTerrainHighlight(GETerrainMesh& inMesh, const U2DRectang
         theResult = this->UnlockVB(inScreen);
         if (theQuadCount > 0) {
             while (true) {
-                if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(D3DPT_TRIANGLELIST,
+                if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(GXPT_TRIANGLELIST,
                         this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-                        theQuadCount * 6, 0) != DDERR_WASSTILLDRAWING)
+                        theQuadCount * 6, 0) != GXERR_WASSTILLDRAWING)
                     break;
                 Sleep(0);
             }
@@ -569,7 +568,7 @@ long DX7Rasterizer::DrawTerrainMaterial(GEViewport* inViewport, std::vector<GETe
             theBatch = 0x960;
         theRemaining -= theBatch;
         unsigned long theVertexCount = 0;
-        D3DVERTEX_STD_COLOR* theBuffer;
+        GXVERTEX_STD_COLOR* theBuffer;
         this->LockVB(theBatch, inScreen, theBuffer);
         theBuffer += this->mDX7ScreenStates[inScreen]->mVertexBufferPosition;
         while (*thePolygon != NULL && theBatch > 0) {
@@ -600,12 +599,12 @@ long DX7Rasterizer::DrawTerrainMaterial(GEViewport* inViewport, std::vector<GETe
                     theBuffer->nz = 0.0f;
                     if (theTriangle->mAlpha[i] >= 0.0f)
                         theBuffer->color =
-                            RGBA_MAKE(UMFloatToLong(theVertex->mColor.GetRed() * theVisibilities[i] * 255.0f),
+                            GXRGBA(UMFloatToLong(theVertex->mColor.GetRed() * theVisibilities[i] * 255.0f),
                                       UMFloatToLong(theVertex->mColor.GetGreen() * theVisibilities[i] * 255.0f),
                                       UMFloatToLong(theVertex->mColor.GetBlue() * theVisibilities[i] * 255.0f),
                                       UMFloatToLong(theAlphas[i] * 255.0f));
                     else
-                        theBuffer->color = RGBA_MAKE(UMFloatToLong(0.0f), UMFloatToLong(0.0f), UMFloatToLong(0.0f),
+                        theBuffer->color = GXRGBA(UMFloatToLong(0.0f), UMFloatToLong(0.0f), UMFloatToLong(0.0f),
                                                      UMFloatToLong(theAlphas[i] * 255.0f));
                     theBuffer->tu = theTriangle->mUV[i].GetU();
                     theBuffer->tv = theTriangle->mUV[i].GetV();
@@ -619,9 +618,9 @@ long DX7Rasterizer::DrawTerrainMaterial(GEViewport* inViewport, std::vector<GETe
         theResult = this->UnlockVB(inScreen);
         if (theVertexCount > 0) {
             while (true) {
-                if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(D3DPT_TRIANGLELIST,
+                if (this->mDX7ScreenStates[inScreen]->mDevice->DrawPrimitiveVB(GXPT_TRIANGLELIST,
                         this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
-                        theVertexCount, 0) != DDERR_WASSTILLDRAWING)
+                        theVertexCount, 0) != GXERR_WASSTILLDRAWING)
                     break;
                 Sleep(0);
             }
@@ -636,32 +635,32 @@ long DX7Rasterizer::DrawTerrainMaterial(GEViewport* inViewport, std::vector<GETe
 long DX7Rasterizer::DrawWater(GETerrainMesh& inMesh, unsigned long inScreen, bool inOrthographic)
 {
     GETransformation theTransformation;
-    D3DMATRIX theMatrix;
+    GXMATRIX theMatrix;
     long theResult = kErrorOK;
     std::vector<GETerrainMesh::GETMMaterial>& theMaterials = inMesh.GetWaterMaterialList();
     if (inMesh.GetNumVisibleTileRows() != 0) {
         GEViewport& theViewport = this->mScreenStates[inScreen]->mViewport;
         this->ConvertToD3DMatrix(theTransformation, theMatrix);
-        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_WORLD, &theMatrix);
+        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_WORLD, &theMatrix);
         theTransformation.SetElement(1, 1, 0.0f);
         theTransformation.SetElement(1, 2, 1.0f);
         theTransformation.SetElement(2, 1, 1.0f);
         theTransformation.SetElement(2, 2, 0.0f);
         this->ConvertToD3DMatrix(theTransformation, theMatrix);
-        theResult = this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_VIEW, &theMatrix);
+        theResult = this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_VIEW, &theMatrix);
         if (!inOrthographic)
             this->ConvertToD3DMatrix(theViewport.GetPerspectiveProjection(), theMatrix);
         else
             this->ConvertToD3DMatrix(theViewport.GetOrthographicProjection(), theMatrix);
-        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(D3DTRANSFORMSTATE_PROJECTION, &theMatrix);
+        this->mDX7ScreenStates[inScreen]->mDevice->SetTransform(GXTS_PROJECTION, &theMatrix);
         unsigned long theCount = theMaterials.size();
         for (unsigned long i = 0; i < theCount; i++) {
             this->mScreenStates[inScreen]->m32C[1] += DX7ListCount(theMaterials[i].mIndices);
             this->mScreenStates[inScreen]->m32C[1] += DX7ListCount(theMaterials[i].mStripIndices);
             this->SetTexture(theMaterials[i].mTexture, inScreen);
-            this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(D3DRENDERSTATE_CLIPPING, FALSE);
+            this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(GXRS_CLIPPING, FALSE);
             theResult = this->DrawTerrainMaterial(&theViewport, theMaterials[i].mIndices, inScreen);
-            this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(D3DRENDERSTATE_CLIPPING, TRUE);
+            this->mDX7ScreenStates[inScreen]->mDevice->SetRenderState(GXRS_CLIPPING, TRUE);
             theResult = this->DrawTerrainMaterial(&theViewport, theMaterials[i].mStripIndices, inScreen);
         }
         this->mDX7ScreenStates[inScreen]->mViewportChanged = true;
@@ -676,7 +675,7 @@ void DX7Rasterizer::Light(GETerrainMesh& inMesh, unsigned long inScreen)
 {
     std::vector<DX7RDirectionalLight> theLights;
     DX7RDirectionalLight theDirectional;
-    D3DLIGHT7 theLight;
+    GXLIGHT theLight;
     GEColor theTerrainLight;
     GEColor theWaterLight;
     if (inMesh.GetNumVisibleTileRows() == 0)
@@ -685,7 +684,7 @@ void DX7Rasterizer::Light(GETerrainMesh& inMesh, unsigned long inScreen)
         if (gLightsInUse[i] == 0)
             continue;
         this->mDX7ScreenStates[inScreen]->mDevice->GetLight(i, &theLight);
-        if (theLight.dltType != D3DLIGHT_DIRECTIONAL ||
+        if (theLight.dltType != GXLIGHT_DIRECTIONAL ||
             (theLight.dcvDiffuse.r == 0.0f && theLight.dcvDiffuse.g == 0.0f &&
              theLight.dcvDiffuse.b == 0.0f))
             continue;

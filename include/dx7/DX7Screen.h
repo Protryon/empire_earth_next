@@ -15,12 +15,10 @@ class DX7_API DX7Screen : public GEScreen {
     friend class DX7Rasterizer;
     friend class DX7TnLRasterizer;
     // the rasterizer's DirectDraw enumeration callbacks create and delete the screens (DX7Rasterizer.cpp)
-    friend BOOL WINAPI DX7DirectDrawEnumerateCallback(GUID* inGUID, LPSTR inDescription, LPSTR inName,
-                                                      LPVOID inContext);
     friend BOOL WINAPI DX7DirectDrawEnumerateExCallback(GUID* inGUID, LPSTR inDescription, LPSTR inName,
                                                         LPVOID inContext, HMONITOR inMonitor);
 public:
-    operator IDirectDraw7*() { return this->mDirectDraw; }
+    operator GXDirectDraw*() { return this->mDirectDraw; }
 
     virtual long Capture(const GEWindow* inWindow, bool inToClipboard);
     virtual long CreateSurface(GESurfaceDescription& inDescription, GESurface** outSurface);
@@ -47,18 +45,18 @@ public:
     virtual long SetMode(unsigned long inIndex);
 
 private:
-    DX7Screen(HMONITOR__* inMonitor, IDirectDraw7* inDirectDraw, const UString& inName, bool inAttachedToDesktop,
+    DX7Screen(HMONITOR__* inMonitor, GXDirectDraw* inDirectDraw, const UString& inName, bool inAttachedToDesktop,
               bool inSharesPrimary);
     virtual ~DX7Screen();
-    static long __stdcall EnumTextureFormatCallback(_DDPIXELFORMAT* inFormat, void* inContext);
-    static int __stdcall EnumVideoModeCallback(_DDSURFACEDESC2* inDescription, void* inContext);
+    static long __stdcall EnumTextureFormatCallback(GXPIXELFORMAT* inFormat, void* inContext);
+    static long __stdcall EnumVideoModeCallback(GXSURFACEDESC* inDescription, void* inContext);
     void Test32BitSupport();
     static LRESULT CALLBACK TestWindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam);
 
     std::vector<GEVideoMode> mModes;        // +0x0c
     GERectangle mDesktopRectangle;          // +0x1c
     UString* mName;                         // +0x2c
-    IDirectDraw7* mDirectDraw;              // +0x30
+    GXDirectDraw* mDirectDraw;              // +0x30
     HMONITOR__* mMonitor;                   // +0x34
     unsigned long mCurrentModeIndex;        // +0x38
     bool mAttachedToDesktop;                // +0x3c

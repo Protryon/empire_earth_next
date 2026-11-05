@@ -15,15 +15,17 @@ One statically linked `EE-AOC.exe` with the static C runtime. The original's DLL
 (`Low-Level Engine.dll`, with libjpeg and the DCL), the TCP protocol, the mixer, the Default random map generator
 and the DX7 hardware T&L renderer (the plug-ins are registered in `src/Low-Level Engine/PIMModule.cpp` instead of
 being loaded from DLLs), and the language strings of `Language.dll`. The non-T&L renderer `DX7HRDisplay.dll` is
-gone. Sound goes through miniaudio, music through dmusic and movies through pl_mpeg (all vendored, statically
-linked). The exe imports Windows system DLLs only.
+gone. The renderer draws through GX, its DirectDraw 7/Direct3D 7 subset reimplemented on wgpu (statically linked
+wgpu-native; DX12, or Vulkan where available, with WARP on machines without a GPU). Sound goes through miniaudio,
+music through dmusic and movies through pl_mpeg (all vendored, statically linked). The exe imports Windows system
+DLLs only.
 
 | Module | Was | Source |
 |---|---|---|
 | `exe` | `EE-AOC.exe` (game; with libpng, zlib) | `src/Empire Earth/`, `src/RTS Engine/`, `src/ThirdParty/` |
 | `lle`, `jpeg` | `Low-Level Engine.dll` (engine core, libjpeg, the DCL) | `src/Low-Level Engine/`, `src/ThirdParty/` |
 | `default` | `Default.dll` (random map generators) | `src/Empire Earth/Random Map/Random Map Generators/Default/` |
-| `dx7hrtnl` | `DX7HRTnLDisplay.dll` (T&L renderer) | `src/Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/` |
+| `dx7hrtnl` | `DX7HRTnLDisplay.dll` (T&L renderer; now on wgpu) | `src/Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/` |
 | `tcp` | `TCP Protocol.dll` (network) | `src/Low-Level Engine/Network Engine/TCP Protocol/` |
 | `mixer` | `Miles Sound System Mixer.dll` (sound; now on miniaudio) | `src/Low-Level Engine/Sound Engine/Mixer/` |
 | (resources) | `Language.dll` | `src/Empire Earth/Language/Language.rc` |
@@ -41,8 +43,8 @@ Requirements (Windows 10/11):
   Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add
   Microsoft.VisualStudio.Component.Windows11SDK.22621"`
 - Python 3.12 (standard library only) and 7-Zip (`winget install 7zip.7zip`)
-- The DirectX 7 SDK headers the renderers compile against (sha256-pinned download from archive.org into
-  `toolchain/`, which is not tracked): `python -I tools/fetch_dx7sdk.py`
+- wgpu-native, the renderer's graphics library (static, sha256-pinned GitHub release download into `toolchain/`,
+  which is not tracked): `python -I tools/fetch_wgpu.py`
 
 Then:
 

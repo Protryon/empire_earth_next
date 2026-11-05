@@ -4,7 +4,7 @@
 // 0x1000e96c..0x1000eced. No init chains. GetSize at 0x1000eadf is the ICF-kept body DX7StandardVertexArray's
 // marker claims. Colors are packed with d3dtypes.h's RGBA_* macros; float -> int is UMFloatToLong (fld/fistp).
 #include <windows.h>
-#include <d3d.h>
+#include "gx/GX.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -19,7 +19,7 @@ static const float kScale = 1.0f / 255.0f;
 // Creates a vertex array of the given number of coloured vertices (position, normal, packed colour, texture coordinate)
 DX7StdColorVertexArray::DX7StdColorVertexArray(unsigned long inSize)
 {
-    this->mVertices = new D3DVERTEX_STD_COLOR[inSize];
+    this->mVertices = new GXVERTEX_STD_COLOR[inSize];
     this->mSize = inSize;
 }
 
@@ -35,16 +35,16 @@ DX7StdColorVertexArray::~DX7StdColorVertexArray()
 void DX7StdColorVertexArray::CopyFrom(const GEVertexArray& inArray)
 {
     const DX7StdColorVertexArray& theArray = (const DX7StdColorVertexArray&)inArray;
-    memcpy(this->mVertices, theArray.mVertices, min(this->mSize, theArray.mSize) * sizeof(D3DVERTEX_STD_COLOR));
+    memcpy(this->mVertices, theArray.mVertices, min(this->mSize, theArray.mSize) * sizeof(GXVERTEX_STD_COLOR));
 }
 
 // FUNCTION: DX7HR 0x1000e9e0
 // Returns the colour of the given vertex, unpacking its red, green and blue bytes to 0..1
 void DX7StdColorVertexArray::GetColor(GEColor& outColor, unsigned long inIndex) const
 {
-    outColor.SetRed((float)RGBA_GETRED(this->mVertices[inIndex].color) * kScale);
-    outColor.SetGreen((float)RGBA_GETGREEN(this->mVertices[inIndex].color) * kScale);
-    outColor.SetBlue((float)RGBA_GETBLUE(this->mVertices[inIndex].color) * kScale);
+    outColor.SetRed((float)GXRGBA_GETRED(this->mVertices[inIndex].color) * kScale);
+    outColor.SetGreen((float)GXRGBA_GETGREEN(this->mVertices[inIndex].color) * kScale);
+    outColor.SetBlue((float)GXRGBA_GETBLUE(this->mVertices[inIndex].color) * kScale);
 }
 
 // FUNCTION: DX7HR 0x1000ea57
@@ -60,7 +60,7 @@ void DX7StdColorVertexArray::GetNormal(GEVector& outNormal, unsigned long inInde
 // Returns the opacity of the given vertex, from its alpha byte (0..1)
 float DX7StdColorVertexArray::GetOpacity(unsigned long inIndex) const
 {
-    return (float)RGBA_GETALPHA(this->mVertices[inIndex].color) * kScale;
+    return (float)GXRGBA_GETALPHA(this->mVertices[inIndex].color) * kScale;
 }
 
 // FUNCTION: DX7HR 0x1000eab0
@@ -99,7 +99,7 @@ void DX7StdColorVertexArray::SetColor(const GEColor& inColor, unsigned long inIn
     long theRed = UMFloatToLong(inColor.GetRed() * 255.0f);
     long theGreen = UMFloatToLong(inColor.GetGreen() * 255.0f);
     long theBlue = UMFloatToLong(inColor.GetBlue() * 255.0f);
-    this->mVertices[inIndex].color = (this->mVertices[inIndex].color & 0xff000000) | RGB_MAKE(theRed, theGreen, theBlue);
+    this->mVertices[inIndex].color = (this->mVertices[inIndex].color & 0xff000000) | GXRGB_MAKE(theRed, theGreen, theBlue);
 }
 
 // FUNCTION: DX7HR 0x1000eb77
@@ -116,7 +116,7 @@ void DX7StdColorVertexArray::SetNormal(const GEVector& inNormal, unsigned long i
 void DX7StdColorVertexArray::SetOpacity(float inOpacity, unsigned long inIndex)
 {
     long theAlpha = UMFloatToLong(inOpacity * 255.0f);
-    this->mVertices[inIndex].color = RGBA_SETALPHA(this->mVertices[inIndex].color, theAlpha);
+    this->mVertices[inIndex].color = GXRGBA_SETALPHA(this->mVertices[inIndex].color, theAlpha);
 }
 
 // FUNCTION: DX7HR 0x1000ebe0
@@ -142,14 +142,14 @@ void DX7StdColorVertexArray::SetVertex(const GEColor& inColor, const GE3DPoint& 
                                        const GETextureCoordinate& inCoordinate, float inOpacity,
                                        unsigned long inIndex)
 {
-    D3DVERTEX_STD_COLOR& theVertex = this->mVertices[inIndex];
+    GXVERTEX_STD_COLOR& theVertex = this->mVertices[inIndex];
     theVertex.x = inPoint.GetX();
     theVertex.y = inPoint.GetY();
     theVertex.z = inPoint.GetZ();
     theVertex.nx = inNormal.GetX();
     theVertex.ny = inNormal.GetY();
     theVertex.nz = inNormal.GetZ();
-    theVertex.color = RGBA_MAKE(UMFloatToLong(inColor.GetRed() * 255.0f), UMFloatToLong(inColor.GetGreen() * 255.0f),
+    theVertex.color = GXRGBA(UMFloatToLong(inColor.GetRed() * 255.0f), UMFloatToLong(inColor.GetGreen() * 255.0f),
                                 UMFloatToLong(inColor.GetBlue() * 255.0f), UMFloatToLong(inOpacity * 255.0f));
     theVertex.tu = inCoordinate.GetU();
     theVertex.tv = inCoordinate.GetV();
@@ -159,7 +159,7 @@ void DX7StdColorVertexArray::SetVertex(const GEColor& inColor, const GE3DPoint& 
 // Returns the array's size in bytes: the vertex data plus 8
 unsigned long DX7StdColorVertexArray::SizeOf() const
 {
-    return this->mSize * sizeof(D3DVERTEX_STD_COLOR) + 8;
+    return this->mSize * sizeof(GXVERTEX_STD_COLOR) + 8;
 }
 
 // DX7HRTnLDisplay.dll (the T&L twin builds this unit unchanged): the same functions at their twin addresses.

@@ -4,7 +4,7 @@
 // 0x1000e793..0x1000e96c. No init chains. GetSize is ICF-folded with DX7StdColorVertexArray's (0x1000eadf), and
 // SetColor with SetOpacity (0x1000e89e, `ret 8`).
 #include <windows.h>
-#include <d3d.h>
+#include "gx/GX.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -15,7 +15,7 @@
 // Creates a vertex array of the given number of untinted vertices (position, normal, one texture coordinate)
 DX7StandardVertexArray::DX7StandardVertexArray(unsigned long inSize)
 {
-    this->mVertices = new D3DVERTEX[inSize];
+    this->mVertices = new GXVERTEX[inSize];
     this->mSize = inSize;
 }
 
@@ -31,7 +31,7 @@ DX7StandardVertexArray::~DX7StandardVertexArray()
 void DX7StandardVertexArray::CopyFrom(const GEVertexArray& inArray)
 {
     const DX7StandardVertexArray& theArray = (const DX7StandardVertexArray&)inArray;
-    memcpy(this->mVertices, theArray.mVertices, min(this->mSize, theArray.mSize) * sizeof(D3DVERTEX));
+    memcpy(this->mVertices, theArray.mVertices, min(this->mSize, theArray.mSize) * sizeof(GXVERTEX));
 }
 
 // FUNCTION: DX7HR 0x1000e803
@@ -132,7 +132,7 @@ void DX7StandardVertexArray::SetVertex(const GEColor& inColor, const GE3DPoint& 
                                        const GETextureCoordinate& inCoordinate, float inOpacity,
                                        unsigned long inIndex)
 {
-    D3DVERTEX& theVertex = this->mVertices[inIndex];
+    GXVERTEX& theVertex = this->mVertices[inIndex];
     theVertex.x = inPoint.GetX();
     theVertex.y = inPoint.GetY();
     theVertex.z = inPoint.GetZ();
@@ -147,7 +147,7 @@ void DX7StandardVertexArray::SetVertex(const GEColor& inColor, const GE3DPoint& 
 // Returns the array's size in bytes: the vertex data plus 8
 unsigned long DX7StandardVertexArray::SizeOf() const
 {
-    return this->mSize * sizeof(D3DVERTEX) + 8;
+    return this->mSize * sizeof(GXVERTEX) + 8;
 }
 
 // DX7HRTnLDisplay.dll (the T&L twin builds this unit unchanged): the same functions at their twin addresses.

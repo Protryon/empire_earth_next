@@ -5,8 +5,7 @@
 // the back buffer; the decoded sound waits in a ring that the mixer's device thread pulls (MixSound), resampled to
 // the device rate. The game names movies X.bik; the player reads X.mpg next to it (tools/convert_movies.py).
 #include <windows.h>
-#include <ddraw.h>
-#include <d3d.h>
+#include "gx/GX.h"
 #include <stdio.h>
 #include <string.h>
 

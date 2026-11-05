@@ -1,4 +1,4 @@
-// DX7StdColorVertexArray (RECONSTRUCTION): a GEVertexArray of D3DVERTEX_STD_COLOR (position, normal, a packed
+// DX7StdColorVertexArray (RECONSTRUCTION): a GEVertexArray of GXVERTEX_STD_COLOR (position, normal, a packed
 // ARGB diffuse color carrying the opacity in its alpha byte, one texture coordinate). Layout from the ctor
 // 0x1000e96c: vertices +4, size +8. sizeof 0xc (copy ctor 0x100011bb).
 #ifndef DX7_DX7STDCOLORVERTEXARRAY_H
@@ -9,17 +9,17 @@
 
 // The plug-in's own flexible vertex (name from the exports, e.g. ?CopyStdVertices@DX7Rasterizer@@IAEXPAVGEModel@@
 // PAVGEMaterial@@PAUD3DVERTEX_STD_COLOR@@@Z); sizeof 0x24 (stride of every DX7StdColorVertexArray accessor).
-// Member names provisional (D3DVERTEX/D3DLVERTEX style).
-struct D3DVERTEX_STD_COLOR {
-    D3DVALUE x;                             // +0x00
-    D3DVALUE y;
-    D3DVALUE z;
-    D3DVALUE nx;                            // +0x0c
-    D3DVALUE ny;
-    D3DVALUE nz;
-    D3DCOLOR color;                         // +0x18 ARGB
-    D3DVALUE tu;                            // +0x1c
-    D3DVALUE tv;
+// Member names provisional (GXVERTEX/D3DLVERTEX style).
+struct GXVERTEX_STD_COLOR {
+    float x;                             // +0x00
+    float y;
+    float z;
+    float nx;                            // +0x0c
+    float ny;
+    float nz;
+    unsigned long color;                         // +0x18 ARGB
+    float tu;                            // +0x1c
+    float tv;
 };
 
 class DX7_API DX7StdColorVertexArray : public GEVertexArray {
@@ -43,7 +43,7 @@ public:
                            const GETextureCoordinate& inCoordinate, float inOpacity, unsigned long inIndex);
     virtual unsigned long SizeOf() const;
 
-    D3DVERTEX_STD_COLOR* mVertices;                   // +0x04
+    GXVERTEX_STD_COLOR* mVertices;                   // +0x04
     unsigned long mSize;                    // +0x08
 };
 

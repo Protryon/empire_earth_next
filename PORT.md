@@ -101,7 +101,7 @@ crate can replace.
 
 Each step ends with the harness gates and a PORT_LEARNINGS.md entry.
 
-## Plan: DirectX -> wgpu (draft, 2026-11-04)
+## Plan: DirectX -> wgpu (2026-11-04; phases 0-3 done, see below)
 
 Goal: a new renderer plug-in ('rast') on wgpu replaces DX7HRTnLDisplay (DirectDraw 7 + Direct3D 7), and DirectInput
 goes too, so the game uses no DirectX. 64-bit first: the exe is going 64-bit only, so the renderer is written
@@ -153,16 +153,26 @@ Phases (each gated by the harness, with the DX7 renderer kept in the build until
    frames and reads an offscreen clear back exactly, in both bitnesses: PASS, 7.0 MB (x86_64) / 5.6 MB (i686). On
    this GPU-less VM wgpu picks DX12 on WARP ("Microsoft Basic Render Driver") by itself; Vulkan and GL have no
    driver here.
-1. **2D skeleton**: the WGPU plug-in registered beside DX7 (preference "Rasterizer Name" picks it): screens and
-   modes, surfaces with shadows, Clear/CopyTo/Flip/ShowScene. Gate: the menus render; the settings tour passes.
-   The harness's presentation bridge (it hooks DX7 ShowScene and reads DirectDraw surfaces) gets a wgpu path:
-   frame dumps by readback, and the window presents for real on WARP.
-2. **Text, movies, minimap**: GetTextDC/TextLock, the movie player, CPU-written surfaces. Gate: tour screenshots
-   compared with the DX7 software build at the same states (image-difference threshold).
-3. **3D**: terrain, models, effects, the fixed-function shader. Gate: AI games, scene screenshots against DX7, frame
-   time.
-4. **Input and lobby; DX7 out**: raw input, the lobby presentation, then delete the DX7 plug-in, DirectDraw,
-   DirectInput and the DX7 SDK download. Gate: the exe imports no DirectX DLL.
+1.-3. **Done (2026-11-04), as one step**: instead of a second plug-in, the DX7 renderer itself now runs on **GX**
+   (`include/gx/GX.h`, `DX7 Display Plug-ins/GX/`): a reimplementation of exactly the DirectDraw 7/Direct3D 7 subset
+   the renderer calls (~60 methods, the same names and DirectX 7 constant values, prefix GX) on wgpu. The renderer
+   sources were ported by renaming (DirectX types and constants -> GX) plus a few hand edits (one display device
+   from GXDirectDrawEnumerateEx, the mode-enumeration callback type, GDI text on GPU targets). Surfaces keep a CPU
+   copy in their pixel format and a BGRA8 GPU texture, synchronised lazily (upload before GPU use, read-back before
+   CPU use; blits between CPU-side surfaces stay on the CPU with exact colour keys); the 3D device is one WGSL
+   fixed-function shader (two variants: smooth/flat) with pipelines cached by blend/depth/cull/topology state.
+   Presentation: a wgpu surface on the game window, the frame scaled to the client area (no display mode change, no
+   exclusive mode). `tools/gx_test/` checks GX alone (fills, keyed blits on GPU and CPU, textured/lit/z-tested
+   draws, pixel centres, GDI text both ways, presentation) in both bitnesses: PASS. The exe imports no DDRAW.
+   Gates: settings tour + 60 s of play complete, menus and the 3D scene match the DX7 build's screenshots
+   (`tools/harness`: the bridge dumps frames through GX's test hook instead of patching ShowScene).
+   i686 pins wgpu-native **v24.0.3.1** (v25 and later fail every i686 DX12 pipeline; PORT_LEARNINGS.md); x86_64
+   stays on v29.0.0.0.
+   Open: GXSurface::DrawText's bounds for unusual fonts, sampling the primary surface (falls back to white; seen 3x
+   per session), DXT1 surfaces (unused by the game), wireframe fill mode, 16-bit dithering.
+4. **Input and lobby; DX7 out**: raw input instead of DirectInput, the lobby presentation, the DX7 SDK download
+   gone, and the renderer's DX7 names (DX7Rasterizer, DX7Surface, folder "DX7 Display Plug-ins") renamed. Gate: the
+   exe imports no DirectX DLL (DINPUT is the last one).
 5. **64-bit**: the exe itself on x86_64 (the remaining -Wshorten-64-to-32 census work), linking the x86_64
    wgpu-native.
 

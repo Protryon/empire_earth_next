@@ -55,8 +55,10 @@ def include_paths(src=None):
     msvc, sdk, _, _ = modern_dirs()
     incdir = pathlib.Path(os.environ.get("EE_INCLUDE", str(ROOT / "include")))
     dx7 = pathlib.Path(os.environ.get("EE_DX7SDK", str(TOOLCHAIN / "dx7sdk" / "include")))
-    use_dx7 = src is not None and ("DX7 Display Plug-ins" in str(src) or "dx7sdk" in unit_includes(src)) \
-        and dx7.exists()
+    use_dx7 = src is not None and "dx7sdk" in unit_includes(src) and dx7.exists()
+    # the renderer's GX layer: wgpu-native's C headers (tools/fetch_wgpu.py; the same headers for both bitnesses)
+    wgpu = [str(TOOLCHAIN / "wgpu" / "i686" / "include")] if src is not None and "DX7 Display Plug-ins" in str(src) \
+        else []
     # a third-party library's own include directories (src/ThirdParty/<lib>/include_dirs.txt, relative to the library)
     own = []
     if src is not None and pathlib.Path(src).resolve().is_relative_to(THIRD_PARTY):
@@ -66,7 +68,7 @@ def include_paths(src=None):
     # public headers of vendored libraries that live with their sources
     public = [str(THIRD_PARTY / "dmusic" / "include")]
     # include/winsdk last: headers the Windows SDK dropped (the 2001 iphlpapi.h)
-    inc = os.pathsep.join([*own, str(incdir), *public, *([str(dx7)] if use_dx7 else []),
+    inc = os.pathsep.join([*own, str(incdir), *public, *wgpu, *([str(dx7)] if use_dx7 else []),
                            str(msvc / "include"), str(sdk / "ucrt"), str(sdk / "um"), str(sdk / "shared"),
                            str(ROOT / "include" / "winsdk")])
     return flags, inc

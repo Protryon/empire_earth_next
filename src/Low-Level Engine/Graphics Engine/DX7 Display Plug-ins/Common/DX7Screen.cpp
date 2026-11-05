@@ -7,8 +7,7 @@
 // order, then the vector<DX7Screen*>/vector<GEVideoMode>/vector<GESurface*> COMDATs and the template-static init
 // chain 0x1000e751.
 #include <windows.h>
-#include <ddraw.h>
-#include <d3d.h>
+#include "gx/GX.h"
 
 #include <vector>
 #include <algorithm>
@@ -27,7 +26,7 @@
 #include "dx7/DX7Multimon.h"
 #include "lle/GERenderState.h"
 
-// The pixel formats the GE pixel format numbers stand for, as DDPIXELFORMAT fields after dwSize (.data 0x100166fc,
+// The pixel formats the GE pixel format numbers stand for, as GXPIXELFORMAT fields after dwSize (.data 0x100166fc,
 // stride 0x1c; only this unit reads it) (provisional names).
 struct DX7PixelFormat {
     unsigned long mFlags;
@@ -40,18 +39,18 @@ struct DX7PixelFormat {
 };
 
 DX7PixelFormat gPixelFormats[12] = {
-    { DDPF_RGB | DDPF_ALPHAPIXELS, 0, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 },
-    { DDPF_RGB, 0, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0 },
-    { DDPF_RGB | DDPF_ALPHAPIXELS, 0, 16, 0x0f00, 0x00f0, 0x000f, 0xf000 },
-    { DDPF_RGB | DDPF_ALPHAPIXELS, 0, 16, 0x7c00, 0x03e0, 0x001f, 0x8000 },
-    { DDPF_RGB | DDPF_ALPHAPIXELS, 0, 16, 0xf800, 0x07c0, 0x003e, 0x0001 },
-    { DDPF_RGB, 0, 16, 0x7c00, 0x03e0, 0x001f, 0 },
-    { DDPF_RGB, 0, 16, 0xf800, 0x07c0, 0x003e, 0 },
-    { DDPF_RGB, 0, 16, 0xf800, 0x07e0, 0x001f, 0 },
-    { DDPF_FOURCC, MAKEFOURCC('D', 'X', 'T', '1'), 0, 0, 0, 0, 0 },
-    { DDPF_ZBUFFER, 0, 32, 0, 0xffffffff, 0, 0 },
-    { DDPF_ZBUFFER, 0, 24, 0, 0x00ffffff, 0, 0 },
-    { DDPF_ZBUFFER, 0, 16, 0, 0x0000ffff, 0, 0 }
+    { GXPF_RGB | GXPF_ALPHAPIXELS, 0, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0xff000000 },
+    { GXPF_RGB, 0, 32, 0x00ff0000, 0x0000ff00, 0x000000ff, 0 },
+    { GXPF_RGB | GXPF_ALPHAPIXELS, 0, 16, 0x0f00, 0x00f0, 0x000f, 0xf000 },
+    { GXPF_RGB | GXPF_ALPHAPIXELS, 0, 16, 0x7c00, 0x03e0, 0x001f, 0x8000 },
+    { GXPF_RGB | GXPF_ALPHAPIXELS, 0, 16, 0xf800, 0x07c0, 0x003e, 0x0001 },
+    { GXPF_RGB, 0, 16, 0x7c00, 0x03e0, 0x001f, 0 },
+    { GXPF_RGB, 0, 16, 0xf800, 0x07c0, 0x003e, 0 },
+    { GXPF_RGB, 0, 16, 0xf800, 0x07e0, 0x001f, 0 },
+    { GXPF_FOURCC, GXMAKEFOURCC('D', 'X', 'T', '1'), 0, 0, 0, 0, 0 },
+    { GXPF_ZBUFFER, 0, 32, 0, 0xffffffff, 0, 0 },
+    { GXPF_ZBUFFER, 0, 24, 0, 0x00ffffff, 0, 0 },
+    { GXPF_ZBUFFER, 0, 16, 0, 0x0000ffff, 0, 0 }
 };
 
 // The U2D key init chains, then sScreens' chain (wrapper, ctor, atexit registrar, guarded dtor):
@@ -91,26 +90,26 @@ bool DX7Screen::sFirstCaptureWasAttachedToDesktop;
 // FUNCTION: DX7HR 0x1000d271
 // Creates a screen for a DirectDraw device: lists its display modes, finds the current one, probes 32-bit support
 // and registers it; the filter-cap tests use | instead of &, so both surface filters are always reported available
-DX7Screen::DX7Screen(HMONITOR__* inMonitor, IDirectDraw7* inDirectDraw, const UString& inName,
+DX7Screen::DX7Screen(HMONITOR__* inMonitor, GXDirectDraw* inDirectDraw, const UString& inName,
                      bool inAttachedToDesktop, bool inSharesPrimary)
     : mMonitor(inMonitor), mAttachedToDesktop(inAttachedToDesktop), mIsFullScreen(false),
       mSharesPrimary(inSharesPrimary), mCanMagFilterSurfaces(false), mCanMinFilterSurfaces(false)
 {
     this->mDirectDraw = inDirectDraw;
     this->mName = new UString(inName);
-    DDCAPS theCaps;
+    GXCAPS theCaps;
     memset(&theCaps, 0, sizeof(theCaps));
     theCaps.dwSize = sizeof(theCaps);
     this->mDirectDraw->GetCaps(&theCaps, NULL);
     // Test the reported capability bits (a bitwise or made every test true).
-    if (theCaps.dwFXCaps & DDFXCAPS_BLTARITHSTRETCHY) {
-        if ((theCaps.dwFXCaps & DDFXCAPS_BLTSHRINKX) && (theCaps.dwFXCaps & DDFXCAPS_BLTSHRINKY))
+    if (theCaps.dwFXCaps & GXFXCAPS_BLTARITHSTRETCHY) {
+        if ((theCaps.dwFXCaps & GXFXCAPS_BLTSHRINKX) && (theCaps.dwFXCaps & GXFXCAPS_BLTSHRINKY))
             this->mCanMinFilterSurfaces = true;
-        if ((theCaps.dwFXCaps & DDFXCAPS_BLTSTRETCHX) && (theCaps.dwFXCaps & DDFXCAPS_BLTSTRETCHY))
+        if ((theCaps.dwFXCaps & GXFXCAPS_BLTSTRETCHX) && (theCaps.dwFXCaps & GXFXCAPS_BLTSTRETCHY))
             this->mCanMagFilterSurfaces = true;
     }
-    this->mDirectDraw->EnumDisplayModes(DDEDM_REFRESHRATES, NULL, &this->mModes, (LPDDENUMMODESCALLBACK2)DX7Screen::EnumVideoModeCallback);
-    DDSURFACEDESC2 theMode;
+    this->mDirectDraw->EnumDisplayModes(GXEDM_REFRESHRATES, NULL, &this->mModes, DX7Screen::EnumVideoModeCallback);
+    GXSURFACEDESC theMode;
     memset(&theMode, 0, sizeof(theMode));
     theMode.dwSize = sizeof(theMode);
     this->mDirectDraw->GetDisplayMode(&theMode);
@@ -150,34 +149,34 @@ long DX7Screen::Capture(const GEWindow* inWindow, bool inToClipboard)
     if (inToClipboard) {
         if (DX7Screen::sScreensCaptured == 0) {
             if (this->GetAttachedToDesktop()) {
-                theError = this->mDirectDraw->SetCooperativeLevel(inWindow->GetOSRepresentation(), DDSCL_SETFOCUSWINDOW);
-                if (theError == DD_OK)
+                theError = this->mDirectDraw->SetCooperativeLevel(inWindow->GetOSRepresentation(), GXSCL_SETFOCUSWINDOW);
+                if (theError == GX_OK)
                     theError = this->mDirectDraw->SetCooperativeLevel(inWindow->GetOSRepresentation(),
-                                                                  DDSCL_MULTITHREADED | DDSCL_SETDEVICEWINDOW |
-                                                                  DDSCL_EXCLUSIVE | DDSCL_ALLOWREBOOT |
-                                                                  DDSCL_FULLSCREEN);
-                if (theError == DD_OK) {
+                                                                  GXSCL_MULTITHREADED | GXSCL_SETDEVICEWINDOW |
+                                                                  GXSCL_EXCLUSIVE | GXSCL_ALLOWREBOOT |
+                                                                  GXSCL_FULLSCREEN);
+                if (theError == GX_OK) {
                     this->mIsFullScreen = true;
                     DX7Screen::sFirstCaptureWasAttachedToDesktop = true;
                 }
             } else {
                 theError = this->mDirectDraw->SetCooperativeLevel(inWindow->GetOSRepresentation(),
-                                                              DDSCL_MULTITHREADED | DDSCL_EXCLUSIVE |
-                                                              DDSCL_ALLOWREBOOT | DDSCL_FULLSCREEN);
-                if (theError == DD_OK) {
+                                                              GXSCL_MULTITHREADED | GXSCL_EXCLUSIVE |
+                                                              GXSCL_ALLOWREBOOT | GXSCL_FULLSCREEN);
+                if (theError == GX_OK) {
                     this->mIsFullScreen = true;
                     DX7Screen::sFirstCaptureWasAttachedToDesktop = false;
                 }
             }
         } else if (DX7Screen::sFirstCaptureWasAttachedToDesktop && this->GetAttachedToDesktop()) {
             theError = this->mDirectDraw->SetCooperativeLevel(inWindow->GetOSRepresentation(),
-                                                          DDSCL_MULTITHREADED | DDSCL_CREATEDEVICEWINDOW |
-                                                          DDSCL_SETFOCUSWINDOW | DDSCL_EXCLUSIVE | DDSCL_FULLSCREEN);
-            if (theError == DD_OK)
+                                                          GXSCL_MULTITHREADED | GXSCL_CREATEDEVICEWINDOW |
+                                                          GXSCL_SETFOCUSWINDOW | GXSCL_EXCLUSIVE | GXSCL_FULLSCREEN);
+            if (theError == GX_OK)
                 this->mIsFullScreen = true;
         } else
             theResult = 0xd;
-        if (theResult == kErrorOK && theError != DD_OK) {
+        if (theResult == kErrorOK && theError != GX_OK) {
             ESRecordNativeError(theError);
             theResult = kErrorNativeError;
             this->mIsFullScreen = false;
@@ -186,16 +185,16 @@ long DX7Screen::Capture(const GEWindow* inWindow, bool inToClipboard)
         if (DX7Screen::sScreensCaptured == 0) {
             this->mIsFullScreen = false;
             theError = this->mDirectDraw->SetCooperativeLevel(inWindow->GetOSRepresentation(),
-                                                          DDSCL_MULTITHREADED | DDSCL_NORMAL);
-            if (theError == DD_OK)
+                                                          GXSCL_MULTITHREADED | GXSCL_NORMAL);
+            if (theError == GX_OK)
                 DX7Screen::sFirstCaptureWasAttachedToDesktop = this->GetAttachedToDesktop();
         } else if (DX7Screen::sFirstCaptureWasAttachedToDesktop && this->GetAttachedToDesktop()) {
             this->mIsFullScreen = false;
             theError = this->mDirectDraw->SetCooperativeLevel(inWindow->GetOSRepresentation(),
-                                                          DDSCL_MULTITHREADED | DDSCL_NORMAL);
+                                                          GXSCL_MULTITHREADED | GXSCL_NORMAL);
         } else
             theResult = 0xd;
-        if (theResult == kErrorOK && theError != DD_OK) {
+        if (theResult == kErrorOK && theError != GX_OK) {
             ESRecordNativeError(theError);
             theResult = kErrorNativeError;
         }
@@ -258,8 +257,8 @@ long DX7Screen::CreateSurface(GESurfaceDescription& inDescription, GESurface** o
 {
     GESurfaceDescription theDescription = inDescription;
     *outSurface = NULL;
-    IDirectDrawSurface7* theSurface = NULL;
-    IDirectDrawSurface7* theAttachedSurface = NULL;
+    GXSurface* theSurface = NULL;
+    GXSurface* theAttachedSurface = NULL;
     long theResult = kErrorOK;
     if (inDescription.mType == kSurfaceZBuffer) {
         if (inDescription.mPixelFormat == kPixelFormatZPrefer16) {
@@ -302,8 +301,8 @@ long DX7Screen::CreateSurface(GESurfaceDescription& inDescription, GESurface** o
     }
     if (*outSurface != NULL)
         return theResult;
-    unsigned long theFlags = inDescription.mIsTransparencyEnabled ? DDSD_CKSRCBLT : 0;
-    DDSURFACEDESC2 theDesc;
+    unsigned long theFlags = inDescription.mIsTransparencyEnabled ? GXSD_CKSRCBLT : 0;
+    GXSURFACEDESC theDesc;
     memset(&theDesc, 0, sizeof(theDesc));
     theDesc.dwWidth = inDescription.mWidth;
     theDesc.dwHeight = inDescription.mHeight;
@@ -318,68 +317,68 @@ long DX7Screen::CreateSurface(GESurfaceDescription& inDescription, GESurface** o
     theDesc.ddpfPixelFormat.dwSize = sizeof(theDesc.ddpfPixelFormat);
     switch (inDescription.mType) {
     case kSurfacePrimary:
-        theDesc.dwFlags = theFlags | DDSD_CAPS;
+        theDesc.dwFlags = theFlags | GXSD_CAPS;
         theDesc.ddsCaps.dwCaps = inDescription.mIs3DRenderable ?
-            DDSCAPS_PRIMARYSURFACE | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM | DDSCAPS_3DDEVICE :
-            DDSCAPS_PRIMARYSURFACE | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM;
+            GXSCAPS_PRIMARYSURFACE | GXSCAPS_VIDEOMEMORY | GXSCAPS_LOCALVIDMEM | GXSCAPS_3DDEVICE :
+            GXSCAPS_PRIMARYSURFACE | GXSCAPS_VIDEOMEMORY | GXSCAPS_LOCALVIDMEM;
         break;
     case kSurfaceOffscreen:
-        theDesc.dwFlags = theFlags | DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT;
+        theDesc.dwFlags = theFlags | GXSD_CAPS | GXSD_HEIGHT | GXSD_WIDTH | GXSD_PIXELFORMAT;
         theDesc.ddsCaps.dwCaps = inDescription.mIs3DRenderable ?
-            DDSCAPS_OFFSCREENPLAIN | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM | DDSCAPS_3DDEVICE :
-            DDSCAPS_OFFSCREENPLAIN | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM;
+            GXSCAPS_OFFSCREENPLAIN | GXSCAPS_VIDEOMEMORY | GXSCAPS_LOCALVIDMEM | GXSCAPS_3DDEVICE :
+            GXSCAPS_OFFSCREENPLAIN | GXSCAPS_VIDEOMEMORY | GXSCAPS_LOCALVIDMEM;
         break;
     case kSurfaceFlippingPrimary:
-        theDesc.dwFlags = theFlags | DDSD_CAPS | DDSD_BACKBUFFERCOUNT;
+        theDesc.dwFlags = theFlags | GXSD_CAPS | GXSD_BACKBUFFERCOUNT;
         theDesc.ddsCaps.dwCaps = inDescription.mIs3DRenderable ?
-            DDSCAPS_PRIMARYSURFACE | DDSCAPS_FLIP | DDSCAPS_COMPLEX | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM |
-                DDSCAPS_3DDEVICE :
-            DDSCAPS_PRIMARYSURFACE | DDSCAPS_FLIP | DDSCAPS_COMPLEX | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM;
+            GXSCAPS_PRIMARYSURFACE | GXSCAPS_FLIP | GXSCAPS_COMPLEX | GXSCAPS_VIDEOMEMORY | GXSCAPS_LOCALVIDMEM |
+                GXSCAPS_3DDEVICE :
+            GXSCAPS_PRIMARYSURFACE | GXSCAPS_FLIP | GXSCAPS_COMPLEX | GXSCAPS_VIDEOMEMORY | GXSCAPS_LOCALVIDMEM;
         theDesc.dwBackBufferCount = inDescription.m14;
         break;
     case kSurfaceZBuffer:
-        theDesc.dwFlags = theFlags | DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT;
-        theDesc.ddsCaps.dwCaps = DDSCAPS_ZBUFFER | DDSCAPS_VIDEOMEMORY | DDSCAPS_LOCALVIDMEM;
+        theDesc.dwFlags = theFlags | GXSD_CAPS | GXSD_HEIGHT | GXSD_WIDTH | GXSD_PIXELFORMAT;
+        theDesc.ddsCaps.dwCaps = GXSCAPS_ZBUFFER | GXSCAPS_VIDEOMEMORY | GXSCAPS_LOCALVIDMEM;
         break;
     case kSurfaceSystemMemory:
-        theDesc.dwFlags = theFlags | DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT;
+        theDesc.dwFlags = theFlags | GXSD_CAPS | GXSD_HEIGHT | GXSD_WIDTH | GXSD_PIXELFORMAT;
         theDesc.ddsCaps.dwCaps = inDescription.mIs3DRenderable ?
-            DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY | DDSCAPS_3DDEVICE :
-            DDSCAPS_OFFSCREENPLAIN | DDSCAPS_SYSTEMMEMORY;
+            GXSCAPS_OFFSCREENPLAIN | GXSCAPS_SYSTEMMEMORY | GXSCAPS_3DDEVICE :
+            GXSCAPS_OFFSCREENPLAIN | GXSCAPS_SYSTEMMEMORY;
         break;
     case kSurfaceTexture:
-        theDesc.dwFlags = theFlags | DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT;
+        theDesc.dwFlags = theFlags | GXSD_CAPS | GXSD_HEIGHT | GXSD_WIDTH | GXSD_PIXELFORMAT;
         if (inDescription.mIs3DRenderable) {
-            theDesc.ddsCaps.dwCaps = DDSCAPS_TEXTURE | DDSCAPS_3DDEVICE | DDSCAPS_VIDEOMEMORY |
-                                     DDSCAPS_LOCALVIDMEM;
-            theDesc.ddsCaps.dwCaps2 = inDescription.mSurfaceVolatility ? DDSCAPS2_HINTSTATIC :
-                                      DDSCAPS2_HINTDYNAMIC;
+            theDesc.ddsCaps.dwCaps = GXSCAPS_TEXTURE | GXSCAPS_3DDEVICE | GXSCAPS_VIDEOMEMORY |
+                                     GXSCAPS_LOCALVIDMEM;
+            theDesc.ddsCaps.dwCaps2 = inDescription.mSurfaceVolatility ? GXSCAPS2_HINTSTATIC :
+                                      GXSCAPS2_HINTDYNAMIC;
         } else {
-            theDesc.ddsCaps.dwCaps = DDSCAPS_TEXTURE;
+            theDesc.ddsCaps.dwCaps = GXSCAPS_TEXTURE;
             theDesc.ddsCaps.dwCaps2 = inDescription.mSurfaceVolatility ?
-                DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTSTATIC :
-                DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTDYNAMIC;
+                GXSCAPS2_TEXTUREMANAGE | GXSCAPS2_HINTSTATIC :
+                GXSCAPS2_TEXTUREMANAGE | GXSCAPS2_HINTDYNAMIC;
         }
         break;
     case kSurfaceMipMappedTexture:
-        theDesc.dwFlags = theFlags | DDSD_CAPS | DDSD_HEIGHT | DDSD_WIDTH | DDSD_PIXELFORMAT | DDSD_MIPMAPCOUNT;
+        theDesc.dwFlags = theFlags | GXSD_CAPS | GXSD_HEIGHT | GXSD_WIDTH | GXSD_PIXELFORMAT | GXSD_MIPMAPCOUNT;
         theDesc.ddsCaps.dwCaps = inDescription.mIs3DRenderable ?
-            DDSCAPS_TEXTURE | DDSCAPS_COMPLEX | DDSCAPS_MIPMAP | DDSCAPS_3DDEVICE :
-            DDSCAPS_TEXTURE | DDSCAPS_COMPLEX | DDSCAPS_MIPMAP;
+            GXSCAPS_TEXTURE | GXSCAPS_COMPLEX | GXSCAPS_MIPMAP | GXSCAPS_3DDEVICE :
+            GXSCAPS_TEXTURE | GXSCAPS_COMPLEX | GXSCAPS_MIPMAP;
         theDesc.ddsCaps.dwCaps2 = inDescription.mSurfaceVolatility ?
-            DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTSTATIC :
-            DDSCAPS2_TEXTUREMANAGE | DDSCAPS2_HINTDYNAMIC;
+            GXSCAPS2_TEXTUREMANAGE | GXSCAPS2_HINTSTATIC :
+            GXSCAPS2_TEXTUREMANAGE | GXSCAPS2_HINTDYNAMIC;
         theDesc.dwMipMapCount = inDescription.mMipLevelCount;
         break;
     }
     HRESULT theError = this->mDirectDraw->CreateSurface(&theDesc, &theSurface, NULL);
-    if (theError == DD_OK) {
+    if (theError == GX_OK) {
         *outSurface = new DX7Surface(theSurface, inDescription, this);
         if (inDescription.mType == kSurfaceFlippingPrimary) {
             inDescription.mType = kSurfaceBackBuffer;
-            DDSCAPS2 theCaps;
+            GXSCAPS theCaps;
             memset(&theCaps, 0, sizeof(theCaps));
-            theCaps.dwCaps = DDSCAPS_FLIP;
+            theCaps.dwCaps = GXSCAPS_FLIP;
             DX7Surface* theParent = static_cast<DX7Surface*>(*outSurface);
             for (unsigned long i = 0; i < inDescription.m14; i++) {
                 theParent->mSurface->GetAttachedSurface(&theCaps, &theAttachedSurface);
@@ -387,10 +386,10 @@ long DX7Screen::CreateSurface(GESurfaceDescription& inDescription, GESurface** o
                 theParent = static_cast<DX7Surface*>(theParent->mAttachedSurfaces[0]);
             }
         } else if (inDescription.mType == kSurfaceMipMappedTexture) {
-            DDSCAPS2 theCaps;
+            GXSCAPS theCaps;
             memset(&theCaps, 0, sizeof(theCaps));
             DX7Surface* theParent = static_cast<DX7Surface*>(*outSurface);
-            theCaps.dwCaps = DDSCAPS_MIPMAP;
+            theCaps.dwCaps = GXSCAPS_MIPMAP;
             for (unsigned long i = 0; i < inDescription.mMipLevelCount - 1; i++) {
                 theParent->mSurface->GetAttachedSurface(&theCaps, &theAttachedSurface);
                 theDescription.mWidth >>= 1;
@@ -408,21 +407,21 @@ long DX7Screen::CreateSurface(GESurfaceDescription& inDescription, GESurface** o
 
 // FUNCTION: DX7HR 0x1000dc2b
 // Texture format enumeration callback: sets the flag and stops when it sees a 32-bit ARGB 8888 format
-long __stdcall DX7Screen::EnumTextureFormatCallback(_DDPIXELFORMAT* inFormat, void* inContext)
+long __stdcall DX7Screen::EnumTextureFormatCallback(GXPIXELFORMAT* inFormat, void* inContext)
 {
-    long theResult = DDENUMRET_OK;
+    long theResult = GXENUMRET_OK;
     if (inFormat->dwRGBBitCount == 32 && (inFormat->dwRGBAlphaBitMask & 0xff000000) > 0 &&
         (inFormat->dwRBitMask & 0x00ff0000) > 0 && (inFormat->dwGBitMask & 0x0000ff00) > 0 &&
         (inFormat->dwBBitMask & 0x000000ff) > 0) {
         *static_cast<bool*>(inContext) = true;
-        theResult = DDENUMRET_CANCEL;
+        theResult = GXENUMRET_CANCEL;
     }
     return theResult;
 }
 
 // FUNCTION: DX7HR 0x1000dc67
 // Display mode enumeration callback: adds the mode (size, refresh rate, depth, matching GE pixel format) to the list
-int __stdcall DX7Screen::EnumVideoModeCallback(_DDSURFACEDESC2* inDescription, void* inContext)
+long __stdcall DX7Screen::EnumVideoModeCallback(GXSURFACEDESC* inDescription, void* inContext)
 {
     GEVideoMode theMode;
     theMode.mWidth = inDescription->dwWidth;
@@ -441,7 +440,7 @@ int __stdcall DX7Screen::EnumVideoModeCallback(_DDSURFACEDESC2* inDescription, v
         }
     }
     static_cast<std::vector<GEVideoMode>*>(inContext)->push_back(theMode);
-    return DDENUMRET_OK;
+    return GXENUMRET_OK;
 }
 
 // FUNCTION: DX7HR 0x1000dce2
@@ -480,8 +479,8 @@ const GERectangle& DX7Screen::GetDesktopRectangle()
 long DX7Screen::Release(const GEWindow* inWindow)
 {
     long theResult = kErrorOK;
-    HRESULT theError = this->mDirectDraw->SetCooperativeLevel(inWindow->GetOSRepresentation(), DDSCL_NORMAL);
-    if (theError == DD_OK) {
+    HRESULT theError = this->mDirectDraw->SetCooperativeLevel(inWindow->GetOSRepresentation(), GXSCL_NORMAL);
+    if (theError == GX_OK) {
         this->mIsFullScreen = false;
         DX7Screen::sScreensCaptured--;
     } else {
@@ -496,9 +495,9 @@ long DX7Screen::Release(const GEWindow* inWindow)
 long DX7Screen::RestoreAllSurfaces()
 {
     long theResult = kErrorOK;
-    if (this->mDirectDraw->TestCooperativeLevel() == DD_OK) {
+    if (this->mDirectDraw->TestCooperativeLevel() == GX_OK) {
         HRESULT theError = this->mDirectDraw->RestoreAllSurfaces();
-        if (theError != DD_OK) {
+        if (theError != GX_OK) {
             ESRecordNativeError(theError);
             theResult = kErrorNativeError;
         }
@@ -518,7 +517,7 @@ long DX7Screen::SetMode(unsigned long inIndex)
         HRESULT theError = this->mDirectDraw->SetDisplayMode(this->mModes[inIndex].mWidth, this->mModes[inIndex].mHeight,
                                                        gPixelFormats[this->mModes[inIndex].mPixelFormat].mBitCount,
                                                        this->mModes[inIndex].mRefreshRate, 0);
-        if (theError == DD_OK)
+        if (theError == GX_OK)
             this->mCurrentModeIndex = inIndex;
         else {
             ESRecordNativeError(theError);
@@ -535,8 +534,8 @@ long DX7Screen::SetMode(unsigned long inIndex)
 void DX7Screen::Test32BitSupport()
 {
     GESurfaceDescription theDescription;
-    IDirect3D7* theDirect3D = NULL;
-    IDirect3DDevice7* theDevice = NULL;
+    GXDirect3D* theDirect3D = NULL;
+    GXDevice* theDevice = NULL;
     GESurface* theSurface = NULL;
     GESurface* theTexture = NULL;
     GEWindow* theWindow = NULL;
@@ -577,11 +576,11 @@ void DX7Screen::Test32BitSupport()
             theDescription.mIsTransparencyEnabled = false;
             if (this->CreateSurface(theDescription, &theSurface) == kErrorOK && theSurface != NULL) {
                 DX7Surface* theTarget = dynamic_cast<DX7Surface*>(theSurface);
-                if (this->mDirectDraw->QueryInterface(IID_IDirect3D7, (void**)&theDirect3D) == DD_OK) {
-                    if (theDirect3D->CreateDevice(IID_IDirect3DHALDevice, *theTarget, &theDevice) == D3D_OK) {
-                        D3DDEVICEDESC7 theCaps;
+                if (this->mDirectDraw->QueryInterface(GXIID_Direct3D7, (void**)&theDirect3D) == GX_OK) {
+                    if (theDirect3D->CreateDevice(GXIID_HALDevice, *theTarget, &theDevice) == GX_OK) {
+                        GXDEVICEDESC theCaps;
                         theDevice->GetCaps(&theCaps);
-                        this->m32BitDeviceSupport = (theCaps.dwDeviceRenderBitDepth & DDBD_32) > 0;
+                        this->m32BitDeviceSupport = (theCaps.dwDeviceRenderBitDepth & GXBD_32) > 0;
                         this->m32BitTextureSupport = false;
                         theDevice->EnumTextureFormats(DX7Screen::EnumTextureFormatCallback, &this->m32BitTextureSupport);
                         if (this->m32BitTextureSupport) {

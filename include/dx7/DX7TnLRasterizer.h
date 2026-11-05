@@ -1,5 +1,5 @@
 // DX7TnLRasterizer (RECONSTRUCTION): DX7HRTnLDisplay.dll's rasterizer, a DX7Rasterizer that creates the hardware
-// transform-and-lighting device (IID_IDirect3DTnLHalDevice) and write-only video-memory vertex buffers. Exports:
+// transform-and-lighting device (GXIID_TnLHalDevice) and write-only video-memory vertex buffers. Exports:
 // ctor(const UString&), copy ctor/operator= (implicit), dtor, ActivateTheScreen, CreateVertexBuffers, GetIsScreenValid,
 // vtable ??_7DX7TnLRasterizer@@6B@ (0x10011470). No members of its own (copy ctor 0x10001322 = DX7Rasterizer's + vptr).
 #ifndef DX7_DX7TNLRASTERIZER_H
