@@ -32,7 +32,7 @@ public:
     static TSThread* GetCurrentThread();
     static unsigned long GetCurrentThreadIndex();
 private:
-    static long CreateThread(HANDLE inHandle, unsigned long inThreadID, bool inSuspended);
+    static long CreateThread(PlatThread* inHandle, unsigned long inThreadID, bool inSuspended);
 
     // Inferred: visible to the engine only. A static data member consumes a VC6 `$E` number in every unit that
     // sees the class, and the plug-ins that use TSScheduler (tcp, mixer) number their initializers as if they saw

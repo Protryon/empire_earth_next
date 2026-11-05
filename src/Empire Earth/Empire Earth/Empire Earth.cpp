@@ -1445,7 +1445,7 @@ void EEPlayIntroMovies(bool inSkipMovies)
     std::vector<UString> theMovies;
     GERectangle theRectangle(0.0f, 0.0f, 640.0f, 480.0f);
     long thePriority = TSScheduler::GetCurrentThread()->GetPriority();
-    TSScheduler::GetCurrentThread()->SetPriority(THREAD_PRIORITY_NORMAL);
+    TSScheduler::GetCurrentThread()->SetPriority(PLAT_PRIORITY_NORMAL);
     SetFocus(gGameWindow->GetOSRepresentation());
     gRasterizer->SetWaitForVSync(true, gGamePreferences.mSettings.GetScreenID());
     gISMouse->Resume();

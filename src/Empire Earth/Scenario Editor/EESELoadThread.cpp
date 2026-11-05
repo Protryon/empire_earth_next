@@ -213,7 +213,7 @@ unsigned long EESELoadThread::Main(void* inThis)
     void* theParameter1;
     void* theParameter2;
     theThread->mThreadCreated->Set();
-    theThread->mThread->SetPriority(THREAD_PRIORITY_ABOVE_NORMAL);
+    theThread->mThread->SetPriority(PLAT_PRIORITY_ABOVE_NORMAL);
     UMSetFloatingPointPrecision(kFPPrecision53);
     while (!theThread->mIsDone) {
         long theResult = theThread->mThread->Receive(theMessage, theParameter1, theParameter2);

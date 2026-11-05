@@ -1,7 +1,6 @@
 // C:\EEX\Low-Level Engine\Thread System\TSThread.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
-#include <process.h>
 
 #include "lle/LowLevelEngine.h"
 
@@ -15,8 +14,8 @@ TSThread::TSThread(unsigned long (*inFunction)(void*), void* inParameter, unsign
 }
 
 // FUNCTION: LLE 0x1005425d
-// Creates a thread object wrapping an existing Win32 thread handle and ID, with its message lock
-TSThread::TSThread(HANDLE inHandle, unsigned long inThreadID, bool inSuspended)
+// Creates a thread object wrapping an existing thread handle and ID, with its message lock
+TSThread::TSThread(PlatThread* inHandle, unsigned long inThreadID, bool inSuspended)
     : mFunction(NULL), mParameter(NULL), mHandle(inHandle), mThreadID(inThreadID), mSuspended(inSuspended)
 {
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mMessageLock) == keseOK, 71);
@@ -26,7 +25,7 @@ TSThread::TSThread(HANDLE inHandle, unsigned long inThreadID, bool inSuspended)
 // Destroys the thread object, closing its handle and message lock (the thread itself keeps running)
 TSThread::~TSThread()
 {
-    CloseHandle(this->mHandle);
+    PlatThreadClose(this->mHandle);
     TSScheduler::DestroyCriticalSection(this->mMessageLock);
 }
 
@@ -34,9 +33,9 @@ TSThread::~TSThread()
 // Returns the thread's exit code (STILL_ACTIVE while running); 0 and a recorded native error on failure
 unsigned long TSThread::GetExitCode()
 {
-    unsigned long theExitCode;
-    if (!GetExitCodeThread(this->mHandle, &theExitCode)) {
-        ESRecordNativeError(GetLastError());
+    uint32_t theExitCode;
+    if (!PlatThreadGetExitCode(this->mHandle, &theExitCode)) {
+        ESRecordNativeError(PlatGetLastError());
         ESGetNativeError();
         theExitCode = 0;
     }
@@ -44,32 +43,18 @@ unsigned long TSThread::GetExitCode()
 }
 
 // FUNCTION: LLE 0x10054315
-// Returns the thread's Win32 priority (THREAD_PRIORITY_ERROR_RETURN, with the error recorded, on failure)
+// Returns the thread's priority (PLAT_PRIORITY_ERROR, with the error recorded, on failure)
 long TSThread::GetPriority()
 {
-    long thePriority = GetThreadPriority(this->mHandle);
-    if (thePriority == THREAD_PRIORITY_ERROR_RETURN) {
-        ESRecordNativeError(GetLastError());
+    long thePriority = PlatThreadGetPriority(this->mHandle);
+    if (thePriority == PLAT_PRIORITY_ERROR) {
+        ESRecordNativeError(PlatGetLastError());
         ESGetNativeError();
     }
     return thePriority;
 }
 
-// FUNCTION: LLE 0x1005433f
-// Thread entry for _beginthreadex: initialises COM, runs the thread function, then ends the thread with its result
-unsigned long __stdcall TSThread::POSIXThreadMain(void* inThread)
-{
-    unsigned long theResult;
-    HRESULT theInitialize = CoInitialize(NULL);
-    if (theInitialize == S_OK || theInitialize == S_FALSE) {
-        TSThread* theThread = static_cast<TSThread*>(inThread);
-        theResult = theThread->mFunction(theThread->mParameter);
-        CoUninitialize();
-    } else
-        theResult = (unsigned long)-1;
-    _endthreadex(theResult);
-    return theResult;
-}
+// (0x1005433f, POSIXThreadMain: the unused _beginthreadex twin of the thread entry, gone with it.)
 
 // FUNCTION: LLE 0x10054377
 // Posts a message to the thread's Win32 queue (retrying every 1 ms until it is accepted); optionally queues its ID too
@@ -121,16 +106,16 @@ long TSThread::Receive(unsigned long& outMessage, void*& outParameter1, void*& o
 // NEAR: the original stores mSuspended = false from al after zeroing eax for the return
 long TSThread::Resume()
 {
-    unsigned long theCount = ResumeThread(this->mHandle);
+    unsigned long theCount = PlatThreadResume(this->mHandle);
     if (theCount == 0)
         return kErrorNotSuspended;
     if (theCount == 1) {
         this->mSuspended = false;
         return kErrorOK;
     }
-    if (theCount != (unsigned long)-1)
+    if (theCount != 0xFFFFFFFFu)
         return kErrorOK;
-    ESRecordNativeError(GetLastError());
+    ESRecordNativeError(PlatGetLastError());
     return kErrorNativeError;
 }
 
@@ -143,19 +128,18 @@ void TSThread::SetName(UString& inName)
 }
 
 // FUNCTION: LLE 0x100544cd
-// Starts the Win32 thread (suspended if requested), retrying up to 100 times; kErrorNativeError if it never starts
+// Starts the thread (suspended if requested), retrying up to 100 times; kErrorNativeError if it never starts
 long TSThread::StartThread(unsigned long inStackSize)
 {
-    HANDLE theHandle = NULL;
-    unsigned long theThreadID;
+    PlatThread* theHandle = NULL;
+    uint32_t theThreadID;
     unsigned long i;
     for (i = theThreadID = 0; i < 100; i++) {
         if (theHandle != NULL)
             break;
-        theHandle = CreateThread(NULL, inStackSize, TSThread::WIN32ThreadMain, this, this->mSuspended ? CREATE_SUSPENDED : 0,
-                                 &theThreadID);
+        theHandle = PlatThreadCreate(TSThread::ThreadMain, this, inStackSize, this->mSuspended, &theThreadID);
         if (theHandle == NULL) {
-            GetLastError();
+            PlatGetLastError();
             PlatSleep(1);
         }
     }
@@ -170,12 +154,12 @@ long TSThread::StartThread(unsigned long inStackSize)
 }
 
 // FUNCTION: LLE 0x10054552
-// Sets the thread's Win32 priority; kErrorNativeError on failure
+// Sets the thread's priority (PLAT_PRIORITY_*); kErrorNativeError on failure
 long TSThread::SetPriority(long inPriority)
 {
-    if (SetThreadPriority(this->mHandle, inPriority))
+    if (PlatThreadSetPriority(this->mHandle, inPriority))
         return kErrorOK;
-    ESRecordNativeError(GetLastError());
+    ESRecordNativeError(PlatGetLastError());
     return kErrorNativeError;
 }
 
@@ -183,38 +167,31 @@ long TSThread::SetPriority(long inPriority)
 // Suspends the thread; kErrorNativeError on failure
 long TSThread::Suspend()
 {
-    if (SuspendThread(this->mHandle) != (unsigned long)-1) {
+    if (PlatThreadSuspend(this->mHandle) != 0xFFFFFFFFu) {
         this->mSuspended = true;
         return kErrorOK;
     }
-    ESRecordNativeError(GetLastError());
+    ESRecordNativeError(PlatGetLastError());
     return kErrorNativeError;
 }
 
 // FUNCTION: LLE 0x100545a5
-// Kills the thread with TerminateThread; kErrorNativeError on failure
+// Kills the thread; kErrorNativeError on failure
 long TSThread::Terminate()
 {
-    if (TerminateThread(this->mHandle, 0))
+    if (PlatThreadTerminate(this->mHandle))
         return kErrorOK;
-    ESRecordNativeError(GetLastError());
+    ESRecordNativeError(PlatGetLastError());
     return kErrorNativeError;
 }
 
 // FUNCTION: LLE 0x100545c8
-// Thread entry for CreateThread: initialises COM, runs the thread function, then exits the thread with its result
-unsigned long __stdcall TSThread::WIN32ThreadMain(void* inThread)
+// Thread entry: runs the thread function; its result is the thread's exit code (the platform thread procedure
+// initialises COM around it on Win32, as WIN32ThreadMain did here)
+uint32_t TSThread::ThreadMain(void* inThread)
 {
-    unsigned long theResult;
-    HRESULT theInitialize = CoInitialize(NULL);
-    if (theInitialize == S_OK || theInitialize == S_FALSE) {
-        TSThread* theThread = static_cast<TSThread*>(inThread);
-        theResult = theThread->mFunction(theThread->mParameter);
-        CoUninitialize();
-    } else
-        theResult = (unsigned long)-1;
-    ExitThread(theResult);
-    return theResult;
+    TSThread* theThread = static_cast<TSThread*>(inThread);
+    return theThread->mFunction(theThread->mParameter);
 }
 
 // Sets the debugger name of a thread: does nothing in this build (the debugger thread-name exception is debug-only).

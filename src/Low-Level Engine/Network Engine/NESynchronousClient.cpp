@@ -602,8 +602,8 @@ void NESynchronousClient::StartThreads()
 {
     ESVERIFY_AT(TSScheduler::CreateThread(this->mMainThread, NESynchronousClient::Main, this) == keseOK, 1245);
     ESVERIFY_AT(TSScheduler::CreateThread(this->mReceiveThread, NESynchronousClient::Receive, this) == keseOK, 1246);
-    this->mMainThread->SetPriority(THREAD_PRIORITY_TIME_CRITICAL);
-    this->mReceiveThread->SetPriority(THREAD_PRIORITY_TIME_CRITICAL);
+    this->mMainThread->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
+    this->mReceiveThread->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
     this->mMainThreadStartedEvent->Wait(kTSWaitInfinite);
     this->mReceiveThreadStartedEvent->Wait(kTSWaitInfinite);
     this->mMainThread->SetName(UString("CommMain"));

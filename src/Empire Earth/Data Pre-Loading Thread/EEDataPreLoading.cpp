@@ -190,7 +190,7 @@ void EEDataPreLoading::LoadGame(bool inSkipGameMedia, bool inClearWorld)
     EEGameOptions theOptions(gGameOptions);
     UWideString theError;
     long thePriority = this->mThread->GetPriority();
-    this->mThread->SetPriority(THREAD_PRIORITY_ABOVE_NORMAL);
+    this->mThread->SetPriority(PLAT_PRIORITY_ABOVE_NORMAL);
     gUserInterface->SetLoadProgress(0.0f);
     gUserInterface->SetLoadingText(IDS_LOADING_GLOBAL_MEDIA);
     if (!inSkipGameMedia)

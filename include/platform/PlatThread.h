@@ -42,6 +42,39 @@ int PlatEventReset(PlatEvent* inEvent);
 int32_t PlatEventWait(PlatEvent* inEvent, uint32_t inTimeoutMs);
 int32_t PlatEventWaitAny(PlatEvent* const* inEvents, uint32_t inCount, uint32_t inTimeoutMs);
 
+// Threads. PlatThreadCreate starts inMain(inParameter) on a new thread with inStackSize bytes of stack (0: the
+// default), held before its first instruction when inSuspended (PlatThreadResume starts it) -> its handle and id,
+// NULL on failure. The thread ends when inMain returns; its result is the exit code. On Win32 every such thread has
+// COM initialised around inMain (the renderer and the old DirectX code need it); when that fails the thread ends at
+// once with exit code 0xFFFFFFFF. PlatThreadOpenCurrent -> a handle of the calling thread. PlatThreadClose releases
+// a handle only: the thread runs on.
+typedef struct PlatThread PlatThread;
+typedef uint32_t (*PlatThreadMain)(void* inParameter);
+PlatThread* PlatThreadCreate(PlatThreadMain inMain, void* inParameter, uint32_t inStackSize, int inSuspended,
+                             uint32_t* outThreadID);
+PlatThread* PlatThreadOpenCurrent(void);
+void PlatThreadClose(PlatThread* inThread);
+// The exit code, PLAT_THREAD_STILL_ACTIVE while the thread runs -> nonzero on success
+#define PLAT_THREAD_STILL_ACTIVE 259u
+int PlatThreadGetExitCode(PlatThread* inThread, uint32_t* outExitCode);
+// Scheduling priority, relative to the process (the Win32 THREAD_PRIORITY_* values); PlatThreadGetPriority ->
+// PLAT_PRIORITY_ERROR on failure, PlatThreadSetPriority -> nonzero on success. Another system maps them as it can.
+#define PLAT_PRIORITY_IDLE (-15)
+#define PLAT_PRIORITY_LOWEST (-2)
+#define PLAT_PRIORITY_BELOW_NORMAL (-1)
+#define PLAT_PRIORITY_NORMAL 0
+#define PLAT_PRIORITY_ABOVE_NORMAL 1
+#define PLAT_PRIORITY_HIGHEST 2
+#define PLAT_PRIORITY_TIME_CRITICAL 15
+#define PLAT_PRIORITY_ERROR 0x7FFFFFFF
+int32_t PlatThreadGetPriority(PlatThread* inThread);
+int PlatThreadSetPriority(PlatThread* inThread, int32_t inPriority);
+// Suspend / resume -> the suspend count before the call, 0xFFFFFFFF on failure. Terminate kills the thread (no
+// cleanup) -> nonzero on success. These three exist for the engine's TSThread; a system without them may fail them.
+uint32_t PlatThreadSuspend(PlatThread* inThread);
+uint32_t PlatThreadResume(PlatThread* inThread);
+int PlatThreadTerminate(PlatThread* inThread);
+
 // Atomic increment and decrement of a 32-bit value -> the new value (a full memory barrier).
 int32_t PlatAtomicIncrement(volatile int32_t* ioValue);
 int32_t PlatAtomicDecrement(volatile int32_t* ioValue);

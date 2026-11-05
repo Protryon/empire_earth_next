@@ -722,8 +722,8 @@ void NESynchronousServer::StartThreads()
     ESVERIFY_AT(TSScheduler::CreateThread(this->mMainThread, NESynchronousServer::Main, this) == keseOK, 1584);
     ESVERIFY_AT(TSScheduler::CreateThread(this->mSendThread, NESynchronousServer::Send, this) == keseOK, 1585);
     ESVERIFY_AT(TSScheduler::CreateThread(this->mXferThread, NESynchronousServer::Xfer, this) == keseOK, 1586);
-    this->mMainThread->SetPriority(THREAD_PRIORITY_TIME_CRITICAL);
-    this->mSendThread->SetPriority(THREAD_PRIORITY_TIME_CRITICAL);
+    this->mMainThread->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
+    this->mSendThread->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
     this->mMainThreadStartedEvent->Wait(kTSWaitInfinite);
     this->mSendThreadStartedEvent->Wait(kTSWaitInfinite);
     this->mXferThreadStartedEvent->Wait(kTSWaitInfinite);

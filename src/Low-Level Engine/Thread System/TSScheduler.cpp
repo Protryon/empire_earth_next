@@ -89,8 +89,8 @@ long TSScheduler::CreateThread(TSThread*& outThread, unsigned long (*inFunction)
 }
 
 // FUNCTION: LLE 0x10054029
-// Registers an existing Win32 thread (handle and ID) as a thread object; kErrorOutOfMemory if allocation fails
-long TSScheduler::CreateThread(HANDLE inHandle, unsigned long inThreadID, bool inSuspended)
+// Registers an existing thread (handle and ID) as a thread object; kErrorOutOfMemory if allocation fails
+long TSScheduler::CreateThread(PlatThread* inHandle, unsigned long inThreadID, bool inSuspended)
 {
     TSThread* theThread = new TSThread(inHandle, inThreadID, inSuspended);
     if (theThread) {

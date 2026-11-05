@@ -14,15 +14,15 @@ bool gThreadSystemInitialized;              // 0x12ded0 (provisional name)
 long TSInitialize()
 {
     long theResult;
-    HANDLE theThread;
+    PlatThread* theThread;
     gThreadSystemInitialized = true;
     if (URegisterShutdown(TSShutdown) == kErrorOK) {
-        if (DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &theThread,
-                            THREAD_ALL_ACCESS, FALSE, DUPLICATE_SAME_ACCESS))
-            theResult = TSScheduler::CreateThread(theThread, GetCurrentThreadId(), false);
+        theThread = PlatThreadOpenCurrent();
+        if (theThread != NULL)
+            theResult = TSScheduler::CreateThread(theThread, PlatCurrentThreadId(), false);
         else {
             theResult = kErrorNativeError;
-            ESRecordNativeError(GetLastError());
+            ESRecordNativeError(PlatGetLastError());
             ESGetNativeError();
         }
     } else

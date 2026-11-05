@@ -2,6 +2,7 @@
 // section; a PlatEvent* is the Win32 event HANDLE itself (PlatTimerStartEvent relies on it). The waits call
 // WaitForSingleObject / WaitForMultipleObjects as the engine did, which the test harness's time shim hooks.
 #include <windows.h>
+#include <objbase.h>
 #include <new>
 
 #include "platform/PlatThread.h"
@@ -100,6 +101,103 @@ extern "C" int32_t PlatEventWaitAny(PlatEvent* const* inEvents, uint32_t inCount
     for (uint32_t i = 0; i < inCount; i++)
         theHandles[i] = EventHandle(inEvents[i]);
     return WaitResult(WaitForMultipleObjects(inCount, theHandles, FALSE, inTimeoutMs), inCount);
+}
+
+// ---- threads: a PlatThread* is the thread HANDLE
+
+namespace {
+
+struct ThreadStart {
+    PlatThreadMain mMain;
+    void* mParameter;
+};
+
+// The thread procedure: COM around the thread function, as the engine's TSThread::WIN32ThreadMain did
+DWORD WINAPI ThreadProc(LPVOID inStart)
+{
+    ThreadStart theStart = *static_cast<ThreadStart*>(inStart);
+    delete static_cast<ThreadStart*>(inStart);
+    DWORD theResult;
+    HRESULT theInitialize = CoInitialize(NULL);
+    if (theInitialize == S_OK || theInitialize == S_FALSE) {
+        theResult = theStart.mMain(theStart.mParameter);
+        CoUninitialize();
+    } else
+        theResult = (DWORD)-1;
+    return theResult;
+}
+
+}   // namespace
+
+extern "C" PlatThread* PlatThreadCreate(PlatThreadMain inMain, void* inParameter, uint32_t inStackSize,
+                                        int inSuspended, uint32_t* outThreadID)
+{
+    ThreadStart* theStart = new (std::nothrow) ThreadStart;
+    if (!theStart) {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        return NULL;
+    }
+    theStart->mMain = inMain;
+    theStart->mParameter = inParameter;
+    DWORD theThreadID = 0;
+    HANDLE theHandle = CreateThread(NULL, inStackSize, ThreadProc, theStart, inSuspended ? CREATE_SUSPENDED : 0,
+                                    &theThreadID);
+    if (theHandle == NULL) {
+        DWORD theError = GetLastError();
+        delete theStart;
+        SetLastError(theError);
+        return NULL;
+    }
+    *outThreadID = theThreadID;
+    return reinterpret_cast<PlatThread*>(theHandle);
+}
+
+extern "C" PlatThread* PlatThreadOpenCurrent(void)
+{
+    HANDLE theThread;
+    if (!DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &theThread, THREAD_ALL_ACCESS,
+                         FALSE, DUPLICATE_SAME_ACCESS))
+        return NULL;
+    return reinterpret_cast<PlatThread*>(theThread);
+}
+
+extern "C" void PlatThreadClose(PlatThread* inThread)
+{
+    CloseHandle(reinterpret_cast<HANDLE>(inThread));
+}
+
+extern "C" int PlatThreadGetExitCode(PlatThread* inThread, uint32_t* outExitCode)
+{
+    DWORD theExitCode;
+    if (!GetExitCodeThread(reinterpret_cast<HANDLE>(inThread), &theExitCode))
+        return 0;
+    *outExitCode = theExitCode;
+    return 1;
+}
+
+extern "C" int32_t PlatThreadGetPriority(PlatThread* inThread)
+{
+    return GetThreadPriority(reinterpret_cast<HANDLE>(inThread));
+}
+
+extern "C" int PlatThreadSetPriority(PlatThread* inThread, int32_t inPriority)
+{
+    return SetThreadPriority(reinterpret_cast<HANDLE>(inThread), inPriority) ? 1 : 0;
+}
+
+extern "C" uint32_t PlatThreadSuspend(PlatThread* inThread)
+{
+    return SuspendThread(reinterpret_cast<HANDLE>(inThread));
+}
+
+extern "C" uint32_t PlatThreadResume(PlatThread* inThread)
+{
+    return ResumeThread(reinterpret_cast<HANDLE>(inThread));
+}
+
+extern "C" int PlatThreadTerminate(PlatThread* inThread)
+{
+    return TerminateThread(reinterpret_cast<HANDLE>(inThread), 0) ? 1 : 0;
 }
 
 extern "C" int32_t PlatAtomicIncrement(volatile int32_t* ioValue)

@@ -36,24 +36,23 @@ public:
     static void ForceYield() {}             // exported, empty: ICF-folded into the bare ret at 0x1000c16a
     UString& GetName() { return this->mName; }
     bool IsSuspended() const { return this->mSuspended; }
-    bool IsTerminated() { return this->GetExitCode() != STILL_ACTIVE; }
+    bool IsTerminated() { return this->GetExitCode() != PLAT_THREAD_STILL_ACTIVE; }
     void LockMessageQueue() { this->mMessageLock->Enter(); }
     void UnlockMessageQueue() { this->mMessageLock->Leave(); }
     static void Yield(unsigned long inMilliseconds) { PlatSleep(inMilliseconds); }
 private:
     TSThread(unsigned long (*inFunction)(void*), void* inParameter, unsigned long inStackSize, bool inSuspended);
-    TSThread(HANDLE inHandle, unsigned long inThreadID, bool inSuspended);
+    TSThread(PlatThread* inHandle, unsigned long inThreadID, bool inSuspended);
     ~TSThread();
     long StartThread(unsigned long inStackSize);
-    static unsigned long __stdcall WIN32ThreadMain(void* inThread);
-    static unsigned long __stdcall POSIXThreadMain(void* inThread);
+    static uint32_t ThreadMain(void* inThread);
 
     TSCriticalSection* mMessageLock;        // +0x00 (ESVERIFY text: this->mMessageLock)
     std::deque<unsigned long> mMessages;    // +0x04 queued message ids (Post inQueue / Receive)
     UString mName;                          // +0x18
     unsigned long (*mFunction)(void*);      // +0x28
     void* mParameter;                       // +0x2c
-    HANDLE mHandle;                         // +0x30
+    PlatThread* mHandle;                    // +0x30 (a Win32 thread HANDLE in the original)
     unsigned long mThreadID;                // +0x34
     bool mSuspended;                        // +0x38
 };
