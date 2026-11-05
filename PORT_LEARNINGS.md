@@ -1222,3 +1222,9 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   file byte for byte (`* -text`), so a script edit turned whole files into CRLF diffs: write bytes. Git Bash rewrites
   arguments that start with `/` (`reg export KEY FILE /y` fails): call reg.exe from PowerShell or set
   `MSYS_NO_PATHCONV=1`.
+- **Gates** (test build, game key HKCU Mad Doc Software EE-AOC deleted for the runs and restored after; no data.ssa
+  and nothing of either install staged): binary tree: tour + 120 s (80.8% lit, input check ok), 2-AI Hard game to
+  the time cap (PT 14,248); open tree: tour + 120 s (79.6% lit, input check ok), AI game to the time cap (PT 13,991).
+  Every run: 0 opens of a data.ssa, 0 of either install, no registry write, the key still absent afterwards, a
+  config.ini of 76 values written by the game ([Game] and [Game Options]). plat_test 209/209 on Windows; the Linux
+  game cross-builds (846/846 units). Bundle: 5,761 files, a 327 MB zip of the 426 MB tree.
