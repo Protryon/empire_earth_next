@@ -51,7 +51,7 @@ static const float kBasicPriestSoundFactor = 4.0f;     // 0x446fe4 (the conversi
 // Returns the faith a conversion by a unit costs: the world table's entry 46, at most the unit's own power (0 if none)
 long EEGetConversionCost(EEComplexUnit* inUnit)
 {
-    long theCost = gWorldTable.GetLongValue(46);
+    long theCost = gWorldTable.GetLongValue(kWorldConversionFaithCost);
     if (min(theCost, inUnit->mStats->mPower) > 0)
         return min(theCost, inUnit->mStats->mPower);
     return 0;
@@ -125,7 +125,7 @@ void EEUCBasicPriest::ConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarg
         theLocation.SetX(theConvertedLocation.GetX());
         theLocation.SetY(theConvertedLocation.GetY());
         theLocation.SetZ(theConvertedLocation.GetZ());
-        EEGetUnitsNear(theLocation, gWorldTable.mEntries[0x23].mFloatValue, theUnits);
+        EEGetUnitsNear(theLocation, gWorldTable.GetFloatValue(kWorldAreaConversionRadius), theUnits);
         for (long i = theUnits.size() - 1; i >= 0; i--) {
             EEUnit* theUnit = theUnits[i];
             if (theUnit->GetComplexUnit() != NULL && ((EEMapTile*)theUnit->mTile)->IsSeenBy(inUnit->GetPlayer()) == true) {

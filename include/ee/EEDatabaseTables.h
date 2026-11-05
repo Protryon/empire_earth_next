@@ -8,6 +8,8 @@
 
 #include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 
+#include "ee/EEWorldConstants.h"
+
 class FSFileSpec;
 class EEUnitClass;
 class GETerrainMesh;
@@ -50,7 +52,7 @@ static_assert(sizeof(EEWorldTableEntry) == 28, "on-disk record: 28 bytes on ever
 
 // RTTI EEWorldTable (vtable 0x43f810; ctor 0xdcb53 out of line, in EEUnitBehavior.cpp's range; ??_G 0xdd087). The
 // dtor is inline: the global's atexit stub 0x13eca6 stores the vptr, clears the vector, then destroys it.
-// Its only instance is gWorldTable (0x52fca0). The game reads the constants as gWorldTable.mEntries[k].<field>: the
+// Its only instance is gWorldTable (0x52fca0). The original read the constants as mEntries[k].<field>: the
 // inline operator[]'s begin() is `mov eax, [0x52fca8]` (mEntries._First; what earlier rounds called "gDatabase"),
 // its op+ `imul 0x1c` (refused at some sites: 0x84d7b; the out-of-line operator[] 0x1ae53b, `mov ecx, 0x92fca4`).
 class EEWorldTable {
@@ -62,12 +64,14 @@ public:
 
     // Inline accessors (const: the out-of-line copies compute the element address before the load). Where VC6
     // refused them they are COMDATs called with ecx = &gWorldTable; inlined elsewhere (begin() folds to [0x52fca8]).
-    // Names and the index type inferred.
-    float GetFloatValue(long inIndex) const { return this->mEntries[inIndex].mFloatValue; }
-    float GetFloatValue2(long inIndex) const { return this->mEntries[inIndex].mFloatValue2; }  // 0x61de8
-    unsigned long GetLongValue(long inIndex) const { return this->mEntries[inIndex].mLongValue; }  // 0xcd4b3
-    unsigned long GetLongValue2(long inIndex) const { return this->mEntries[inIndex].mLongValue2; }  // 0x178554
+    // A constant is named by its id (ee/EEWorldConstants.h, generated from dbworld's ids): a raw row number does
+    // not compile. F, F2, L, L2: the four values of a row (docs/DATA_FORMATS.md 8.3).
+    float GetFloatValue(EEWorldConstant inID) const { return this->mEntries[inID].mFloatValue; }
+    float GetFloatValue2(EEWorldConstant inID) const { return this->mEntries[inID].mFloatValue2; }  // 0x61de8
+    unsigned long GetLongValue(EEWorldConstant inID) const { return this->mEntries[inID].mLongValue; }  // 0xcd4b3
+    unsigned long GetLongValue2(EEWorldConstant inID) const { return this->mEntries[inID].mLongValue2; }  // 0x178554
 
+private:
     std::vector<EEWorldTableEntry> mEntries;    // +0x04 (_First +0x08 = 0x52fca8)
 };
 

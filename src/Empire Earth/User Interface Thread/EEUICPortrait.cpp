@@ -337,9 +337,9 @@ void EEUICPortrait::Update()
                 this->mFirstBar->SetRectangle(theRectangle);
                 long theMaximum;
                 if (theUnit->mStats->mImprovement.GetLevel(theImprovement) == 1)
-                    theMaximum = gWorldTable.GetLongValue(theImprovement + 0x39);
+                    theMaximum = gWorldTable.GetLongValue(EEWorldImprovementTime(theImprovement));
                 else
-                    theMaximum = gWorldTable.GetLongValue2(theImprovement + 0x39);
+                    theMaximum = gWorldTable.GetLongValue2(EEWorldImprovementTime(theImprovement));
                 theRectangle.SetLeft(this->GetRectangle().GetLeft());
                 float theMaximumF = theMaximum;
                 theRectangle.SetRight((theMaximumF - theUnit->GetPlayer()->GetImprovementProgress(
@@ -351,9 +351,9 @@ void EEUICPortrait::Update()
             } else if (this->mShowSecondBar == true) {
                 long theMaximum;
                 if (theUnit->mStats->mImprovement.GetLevel(theImprovement) == 1)
-                    theMaximum = gWorldTable.GetLongValue(theImprovement + 0x39);
+                    theMaximum = gWorldTable.GetLongValue(EEWorldImprovementTime(theImprovement));
                 else
-                    theMaximum = gWorldTable.GetLongValue2(theImprovement + 0x39);
+                    theMaximum = gWorldTable.GetLongValue2(EEWorldImprovementTime(theImprovement));
                 theRectangle.SetLeft(this->GetRectangle().GetLeft());
                 float theMaximumF = theMaximum;
                 theRectangle.SetRight((theMaximumF - theUnit->GetPlayer()->GetImprovementProgress(
@@ -383,8 +383,8 @@ void EEUICPortrait::Update()
         this->mLevel = theUnit->mStats->mImprovement.mTotalCost;
     } else
         this->mLevel = 0;
-    if (this->mLevel > gWorldTable.GetLongValue(47))
-        this->mLevel = gWorldTable.GetLongValue(47);
+    if (this->mLevel > gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax))
+        this->mLevel = gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax);
     if (this->mLevel != theOldLevel) {
         UWideString* theText = new UWideString;
         if (this->mLevel > 0)

@@ -164,7 +164,7 @@ void EEUCBuildingPriest::ConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inT
         theLocation.SetX(theConverted->mPhysicalModel.GetLocation().GetX());
         theLocation.SetY(theConverted->mPhysicalModel.GetLocation().GetY());
         theLocation.SetZ(theConverted->mPhysicalModel.GetLocation().GetZ());
-        EEGetUnitsNear(theLocation, gWorldTable.mEntries[0x23].mFloatValue, theUnits);
+        EEGetUnitsNear(theLocation, gWorldTable.GetFloatValue(kWorldAreaConversionRadius), theUnits);
         for (long i = theUnits.size() - 1; i >= 0; i--) {
             EEUnit* theUnit = theUnits[i];
             if (theUnit->mComplexUnit == NULL || ((EEMapTile*)theUnit->mTile)->IsSeenBy(inUnit->GetPlayer()) != true)

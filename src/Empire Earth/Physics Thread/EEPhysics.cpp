@@ -731,7 +731,7 @@ void EEPhysics::Tick()
     if (this->mCivTimerRuns)
         this->UpdateCivTimer();
     if (this->mResourceTimerPending) {
-        long theResourceTime = gWorldTable.GetLongValue(0x5e) * 1000;
+        long theResourceTime = gWorldTable.GetLongValue(kWorldDeathmatchJitManufacturingDelay) * 1000;
         if (theResourceTime <= this->mGameClock) {
             this->mResourceTimerPending = false;
             if (gWorld.mGameOptions.mResources == 4

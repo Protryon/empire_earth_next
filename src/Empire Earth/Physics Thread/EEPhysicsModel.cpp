@@ -71,7 +71,7 @@ void EEInitPhysicsModels()
     gPhysicsModels[9] = new EEPMSeaAnimal;
     gPhysicsModels[10] = new EEPMAirAnimal;
     gPhysicsModels[11] = new EEPMSpaceship;
-    gPhysicsModelsF = gWorldTable.GetFloatValue(79);
+    gPhysicsModelsF = gWorldTable.GetFloatValue(kWorldTrampleMinDistanceSquared);
 }
 
 // FUNCTION: EXE 0x55453a

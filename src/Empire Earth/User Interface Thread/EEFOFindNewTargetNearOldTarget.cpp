@@ -6519,7 +6519,7 @@ EEComplexUnit* EEConvertUnit(EEComplexUnit* inUnit, long inPlayer, bool inIsConv
                 gResource->GetString(IDS_ACQUIRED_THROUGH_ADAPTATION, theFormat);
                 sprintf(theMessage, theFormat, (const char*)theName);
                 gUserInterface->AddChatLogEntry(inUnit->GetPlayer()->mColor, inUnit->GetPlayer()->mName, theMessage,
-                                                gWorldTable.GetLongValue(25) * 2, 0);
+                                                gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
             }
         }
         if (theClass->mUnitType == kUnitTypeTownCenter)

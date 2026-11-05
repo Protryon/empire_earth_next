@@ -647,7 +647,7 @@ EEUnitGoal* EEComplexUnit::GetQueuedGoal(unsigned long inIndex)
 // capping each average at the world table's factor 0x31 times the slowest unit's value
 void EEActiveGroup::ComputeValues()
 {
-    this->mCapFactor = gWorldTable.GetFloatValue(0x31);
+    this->mCapFactor = gWorldTable.GetFloatValue(kWorldGroupSpeedCapFactor);
     this->mSpeed = 0.0f;
     this->mMaxSpeed = 0.0f;
     this->mMinSpeed = 3.402823466e+38F;

@@ -29,6 +29,6 @@ public:
 extern EEDatabase gDatabaseObjects;
 
 // The pointer at 0x52fca8 (formerly `gDatabase`) is gWorldTable.mEntries._First: read the
-// constants with gWorldTable.GetLongValue(k) etc. (ee/EEDatabaseTables.h).
+// constants by id with gWorldTable.GetLongValue(kWorldUnitLimitRange) etc. (ee/EEDatabaseTables.h, ee/EEWorldConstants.h).
 
 #endif

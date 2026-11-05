@@ -251,8 +251,8 @@ long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
         }
         for (i = 0; i < theCount; i++) {
             for (long j = 0; j < 0x44; j++) {
-                gU4E870C[i][j] = gWorldTable.GetFloatValue(0x59) * gU4E8708[i][j];
-                gDamageTableScaled2[i][j] = gWorldTable.GetFloatValue2(0x59) * gU4E8708[i][j];
+                gU4E870C[i][j] = gWorldTable.GetFloatValue(kWorldDifficultyDamageScale) * gU4E8708[i][j];
+                gDamageTableScaled2[i][j] = gWorldTable.GetFloatValue2(kWorldDifficultyDamageScale) * gU4E8708[i][j];
             }
         }
     }

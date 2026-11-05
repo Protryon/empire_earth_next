@@ -699,7 +699,7 @@ void LobbyOnPlayerTypeYes(UIForm* inForm)
     delete static_cast<void*>(inForm);
     gGameOptions.mLock->WriteLock();
     thePlayer.mIsReady = false;
-    thePlayer.mStartingCitizens = gWorldTable.GetLongValue(48);
+    thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
     thePlayer.mName = "";
     thePlayer.mPing = 0.0f;
     thePlayer.mTeam = 0;
@@ -1793,7 +1793,7 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
         theForm->GetControl(kLobbyEpochEndLabel2)->SetDisplayMode(kDisplayModeShown);
     }
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyWorldUnitLimitCombo))->SetCurrentSelection(
-        (inOptions.GetUnitLimit() - gWorldTable.GetLongValue(26)) / 50);
+        (inOptions.GetUnitLimit() - gWorldTable.GetLongValue(kWorldUnitLimitRange)) / 50);
     sprintf(theText, "%ld", inOptions.GetUnitLimit());
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyWorldPopLimitLabel2))->SetText(theText);
     if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
@@ -2144,13 +2144,13 @@ void LobbyOpen(UIForm* inForm)
         gResource->GetString(EEEpochTitleID(j), theText);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyEpochEndCombo))->AppendLine(theText);
     }
-    for (j = gWorldTable.GetLongValue(26); j <= gWorldTable.GetLongValue2(26); j += 50) {
+    for (j = gWorldTable.GetLongValue(kWorldUnitLimitRange); j <= gWorldTable.GetLongValue2(kWorldUnitLimitRange); j += 50) {
         sprintf(theText, "%ld", j);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyWorldUnitLimitCombo))->AppendLine(theText);
     }
     gResource->GetString(IDS_LOBBY_OFF, theText);
     static_cast<UIComboBox*>(inForm->GetControl(kLobbyWondersVictoryCombo))->AppendLine(theText);
-    for (j = 1; j <= gWorldTable.GetLongValue(77); j++) {
+    for (j = 1; j <= gWorldTable.GetLongValue(kWorldWondersForVictoryMax); j++) {
         sprintf(theText, "%ld", j);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyWondersVictoryCombo))->AppendLine(theText);
     }
@@ -2484,11 +2484,11 @@ long EEUIELEGameUnitLimit::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     if (theBox->GetCurrentSelection(theSelection) != kErrorOK)
         return kErrorOK;
     gGameOptions.mLock->WriteLock();
-    if (theSelection != (gGameOptions.mUnitLimit - gWorldTable.GetLongValue(26)) / 50) {
-        NEMessage* theMessage = new EEMGameOptions(6, theSelection * 50 + gWorldTable.GetLongValue(26),
+    if (theSelection != (gGameOptions.mUnitLimit - gWorldTable.GetLongValue(kWorldUnitLimitRange)) / 50) {
+        NEMessage* theMessage = new EEMGameOptions(6, theSelection * 50 + gWorldTable.GetLongValue(kWorldUnitLimitRange),
                                                    UWideString(""));
         gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mUnitLimit = theSelection * 50 + gWorldTable.GetLongValue(26);
+        gGameOptions.mUnitLimit = theSelection * 50 + gWorldTable.GetLongValue(kWorldUnitLimitRange);
     }
     gGameOptions.mLock->WriteUnlock();
     return kErrorOK;

@@ -204,7 +204,7 @@ void EEAJoinOrHostAGame::Virtual4()
                 thePlayer.mName = this->mPlayerName;
                 thePlayer.mColor = 0;
                 thePlayer.mTeam = 0;
-                thePlayer.mStartingCitizens = gWorldTable.GetLongValue(48);
+                thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
                 thePlayer.mPing = 0.0f;
                 thePlayer.mIsLocal = false;
                 thePlayer.mIsReady = false;

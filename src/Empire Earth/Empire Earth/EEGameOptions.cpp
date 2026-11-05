@@ -273,14 +273,14 @@ EEGameOptions& EEGameOptions::operator=(const EEGameOptions& inOther)
         this->mGameSpeed = inOther.mGameSpeed;
     else
         this->mGameSpeed = 1;
-    if (inOther.mWondersForVictory <= gWorldTable.GetLongValue(77))
+    if (inOther.mWondersForVictory <= gWorldTable.GetLongValue(kWorldWondersForVictoryMax))
         this->mWondersForVictory = inOther.mWondersForVictory;
     else
         this->mWondersForVictory = 0;
-    if (inOther.mUnitLimit <= gWorldTable.GetLongValue2(26))
+    if (inOther.mUnitLimit <= gWorldTable.GetLongValue2(kWorldUnitLimitRange))
         this->mUnitLimit = inOther.mUnitLimit;
     else
-        this->mUnitLimit = gWorldTable.GetLongValue(26);
+        this->mUnitLimit = gWorldTable.GetLongValue(kWorldUnitLimitRange);
     this->mCampaignName = inOther.mCampaignName;
     this->mScenarioName = inOther.mScenarioName;
     this->mCampaignChecksum = inOther.mCampaignChecksum;
@@ -372,7 +372,7 @@ void EEGameOptions::SetDefaults()
     this->mScenarioName = gU4E5B98;
     this->mMapName = gU4E5B98;
     this->mMapSize = 1;
-    this->mUnitLimit = gWorldTable.GetLongValue(27);
+    this->mUnitLimit = gWorldTable.GetLongValue(kWorldUnitLimitDefault);
     this->mWondersForVictory = 3;
     this->mGameSpeed = 1;
     this->mVictory = false;

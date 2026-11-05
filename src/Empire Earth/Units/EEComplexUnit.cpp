@@ -1177,7 +1177,7 @@ void EEComplexUnit::SightOn(unsigned long inX, unsigned long inY)
                 }
             }
             if (this->GetUnitClass()->mWonderBonus == 3)
-                ::gWorld.mMap->AddSight(thePlayer, theX, theY, (gWorldTable.mEntries[0x4a]).mFloatValue, false);
+                ::gWorld.mMap->AddSight(thePlayer, theX, theY, gWorldTable.GetFloatValue(kWorldWonderSightRadius), false);
         }
     } else {
         bool theVisible = ::gWorld.GetCurrentPlayer() == thePlayer ||
@@ -2172,8 +2172,8 @@ void EEComplexUnit::GoFanatic()
 {
     if (this->IsCloaked())
         return;
-    this->mCloaked = gPhysics->mGameTime + gWorldTable.GetLongValue(88);
-    long theHitPoints = (1.0f - gWorldTable.GetFloatValue(88)) * this->mHitPoints;
+    this->mCloaked = gPhysics->mGameTime + gWorldTable.GetLongValue(kWorldFanaticism);
+    long theHitPoints = (1.0f - gWorldTable.GetFloatValue(kWorldFanaticism)) * this->mHitPoints;
     if (theHitPoints < 1)
         theHitPoints = 1;
     this->SetHitPoints(theHitPoints);
@@ -3292,7 +3292,7 @@ void EEComplexUnit::SightOff(unsigned long inX, unsigned long inY)
                 }
             }
             if (this->GetUnitClass()->mWonderBonus == 3)
-                ::gWorld.GetMap()->RemoveSight(thePlayer, theX, theY, gWorldTable.GetFloatValue(0x4a), false);
+                ::gWorld.GetMap()->RemoveSight(thePlayer, theX, theY, gWorldTable.GetFloatValue(kWorldWonderSightRadius), false);
         }
     } else {
         bool theVisible = ::gWorld.GetCurrentPlayer() == thePlayer ||
@@ -3899,8 +3899,8 @@ void EEComplexUnit::Fn1FEA22(long inReloadTime)
     static float sMinimum;
     static float sMaximum;
     if (!sInitialized) {
-        sMinimum = gWorldTable.GetFloatValue(87);
-        sMaximum = gWorldTable.GetFloatValue2(87);
+        sMinimum = gWorldTable.GetFloatValue(kWorldReloadTimeRandomRange);
+        sMaximum = gWorldTable.GetFloatValue2(kWorldReloadTimeRandomRange);
         sInitialized = true;
     }
     this->SetReloadTimer(UMFloatToLong(gPhysics->GetRandom(sMinimum, sMaximum) * inReloadTime));
@@ -4267,9 +4267,9 @@ void EEComplexUnit::UpdateCamouflage(long inAction)
             this->mU32C = 0;
         } else if (this->GetCommandType() == kActionIdle && inAction != 5000) {
             this->mCamouflageTimer = 0;
-            this->mU32C = gWorldTable.GetLongValue2(85);
+            this->mU32C = gWorldTable.GetLongValue2(kWorldCamouflageTiming);
         } else if (this->GetCommandType() != kActionIdle && inAction == 5000) {
-            this->mCamouflageTimer = gWorldTable.GetLongValue(85);
+            this->mCamouflageTimer = gWorldTable.GetLongValue(kWorldCamouflageTiming);
             this->mU32C = 0;
         }
     } else {

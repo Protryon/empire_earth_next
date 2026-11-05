@@ -959,7 +959,7 @@ void EEUnitClass::ApplyHit(EEComplexUnit* inUnit, EEUnit* inTarget)
         return;
     theDamage = theHit * theDamage;
     EEComplexUnit* theCloaked = inUnit->mOwner != NULL ? inUnit->mOwner : inUnit;
-    float theScaled = theCloaked->IsCloaked() ? gWorldTable.GetFloatValue2(0x58) * theDamage : theDamage;
+    float theScaled = theCloaked->IsCloaked() ? gWorldTable.GetFloatValue2(kWorldFanaticism) * theDamage : theDamage;
     theDamage = theScaled - inTarget->mStats->mArmor[theClass->mWeapon];
     float theModifier = this->GetElevationFactor(inUnit, inTarget->GetComplexUnit());
     if (theModifier != 1.0f) {
@@ -1169,11 +1169,11 @@ float EEUnitClass::GetElevationFactor(EEComplexUnit* inUnit, EEComplexUnit* inTa
     if (theIsLand && theIsTarget && inTarget != NULL) {
         float theDifference = (theOwnHeight ? inUnit->mPhysicalModel.GetLocation().GetZ() : inUnit->mHeight) -
                               inTarget->mPhysicalModel.GetLocation().GetZ();
-        if (theDifference >= gWorldTable.GetFloatValue(53) * k447ADC) {
+        if (theDifference >= gWorldTable.GetFloatValue(kWorldHighGroundHeight) * k447ADC) {
             float theBonus = inUnit->mPlayer->mHighGroundBonus;
-            theResult = theBonus + gWorldTable.GetFloatValue(55);
-        } else if (theDifference <= -(gWorldTable.GetFloatValue(54) * k447ADC))
-            theResult = gWorldTable.GetFloatValue(56);
+            theResult = theBonus + gWorldTable.GetFloatValue(kWorldHighGroundAttackFactor);
+        } else if (theDifference <= -(gWorldTable.GetFloatValue(kWorldLowGroundHeight) * k447ADC))
+            theResult = gWorldTable.GetFloatValue(kWorldLowGroundAttackFactor);
         else
             theResult = 1.0f;
     } else
@@ -3298,7 +3298,7 @@ void EEUnitClass::MoveToTileCentre(EEComplexUnit* inUnit)
         theTransformation.SetPosition(theTarget);
         theTransformation.SetOrientationYPR(theHeading, 0.0f, 0.0f);
         inUnit->mOrientation = GEOrientation(theHeading, 0.0f, 0.0f);
-        float theDepth = 1.0f - gWorldTable.GetFloatValue(0x4e);
+        float theDepth = 1.0f - gWorldTable.GetFloatValue(kWorldTileStrayDistance);
         theTarget.SetX(0.0f);
         theTarget.SetY(theDepth);
         theTarget.SetZ(0.0f);
@@ -4115,7 +4115,7 @@ void EEUnitClass::UpdateCloakDetection(EEComplexUnit* inUnit)
         inUnit->mAffectingAreaEffects.ApplyModifiers(3, theInput, theRadius, inUnit);
         theRadius = max(theRadius, this->mCloakRadius);
     } else if (inUnit->mU32C != 0)
-        theRadius = UMFloatToLong(gWorldTable.GetFloatValue(0x55) * inUnit->mStats->mRange);
+        theRadius = UMFloatToLong(gWorldTable.GetFloatValue(kWorldCamouflageTiming) * inUnit->mStats->mRange);
     else
         theRadius = this->mCloakRadius;
     if ((float)theRadius > 0.0f && EEGetUnitsNear(thePosition, (float)theRadius + 0.5f, theUnits) > 0) {

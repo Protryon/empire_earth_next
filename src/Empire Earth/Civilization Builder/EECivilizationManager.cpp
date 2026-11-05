@@ -198,7 +198,7 @@ long EECivilizationManager::Load(FSFile* inFile)
         thePowers.mIndex = theLastU04 + 1;
         thePowers.mNameID = IDS_SPECIAL_POWERS;
         thePowers.mUnitSet = 0x66;
-        thePowers.mCost = gWorldTable.GetLongValue(0x56);
+        thePowers.mCost = gWorldTable.GetLongValue(kWorldSpecialPowersCategoryCost);
         EECivilizationUpgradeValue* theLevel = &thePowers.mLevels[0x25];
         unsigned long j = 0;
         while (j < 0x17) {

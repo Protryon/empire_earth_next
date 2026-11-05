@@ -107,7 +107,7 @@ long EETechTreeNode::GetCost(long inResource, long inUnitClass, float inScale)
     if (this->mData->mMakesUnit) {
         EEUnitStats* theStats = thePlayer->mUnitClassUpgrades[this->mData->mUnitClass];
         if (this->mData->mKind == 4 && this->mEpoch != 0) {
-            float theFactor = gWorldTable.GetFloatValue(80);
+            float theFactor = gWorldTable.GetFloatValue(kWorldUnitEpochCostFactor);
             inScale = ((this->mTree->mCurrentEpoch - this->mEpoch) * theFactor + 1.0f) * inScale;
         }
         if (gUnitSetManager.GetSet(EEGameVariant::GetGameVariant(gWorld.mGameOptions.mVariant)->mCostSet) != NULL
@@ -118,9 +118,9 @@ long EETechTreeNode::GetCost(long inResource, long inUnitClass, float inScale)
             theCost = (long)(theStats->GetCostScale() * theCost * inScale + 0.0001f);
         if (thePlayer->mJITManufacturing && gUnitClassTable[inUnitClass] != NULL && gUnitClassTable[inUnitClass]->HasRallyPoint()) {
             if (gWorld.mGameOptions.mResources == 4)
-                theCost = (long)(gWorldTable.GetFloatValue(93) * theCost);
+                theCost = (long)(gWorldTable.GetFloatValue(kWorldJitManufacturingCostFactorDeathmatch) * theCost);
             else
-                theCost = (long)(gWorldTable.GetFloatValue(90) * theCost);
+                theCost = (long)(gWorldTable.GetFloatValue(kWorldJitManufacturingCostFactor) * theCost);
         }
     } else {
         theCost = (long)(theCost * inScale + 0.0001f);

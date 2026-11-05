@@ -75,9 +75,10 @@ def run(a, spec, load_db):
         print('(c) FAIL specs.json is stale: run eedata.py specs')
         ok = False
     import cppgen
-    if not cppgen.OUT.exists() or cppgen.OUT.read_bytes() != cppgen.generate(spec):
-        print(f'(c) FAIL {cppgen.OUT.name} is stale: run eedata.py cppgen')
-        ok = False
+    for out, new in ((cppgen.OUT, cppgen.generate(spec)), (cppgen.WORLD_OUT, cppgen.generate_world(spec))):
+        if not out.exists() or out.read_bytes() != new:
+            print(f'(c) FAIL {out.name} is stale: run eedata.py cppgen')
+            ok = False
     nsize = 0
     for s in spec['structs'].values():
         want, how = s['size_check'] or (None, None)

@@ -495,7 +495,7 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
     this->mNumCargoUnits = 0;
     this->mExitAfterSave = false;
     this->mTabButtons[kEditorTabMap]->Check();
-    this->mC1A0.SetPointsAndMax(gWorldTable.GetLongValue(76));
+    this->mC1A0.SetPointsAndMax(gWorldTable.GetLongValue(kWorldCivilizationBuilderPoints));
     gResource->GetString(IDS_SE_MAP_NONE, theText);
     this->SetMusicFileName(theText);
 }

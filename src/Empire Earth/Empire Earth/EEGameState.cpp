@@ -334,7 +334,7 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
             }
             thePlayer->SetColor(EEGetPlayerColor(theSlot.mColor));
             if (inOptions.mLoadType == 0 && !thePlayer->mObserverMode)
-                thePlayer->SetCivilizationPoints(gWorldTable.GetLongValue(0x4c));
+                thePlayer->SetCivilizationPoints(gWorldTable.GetLongValue(kWorldCivilizationBuilderPoints));
             thePlayer->mMaxStartingCitizens = theSlot.mStartingCitizens;
             for (long j = 1; j < 6; j++)
                 thePlayer->mResourceCaps[j + 1] = EEGetResourceLevel(inOptions.mResources)->mAmounts[j - 1];
@@ -375,17 +375,17 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
         }
         switch (inOptions.mGameSpeed) {
         case 0:
-            this->mGameSpeed = gWorldTable.GetFloatValue(0x51);
+            this->mGameSpeed = gWorldTable.GetFloatValue(kWorldGameSpeedSlowNormal);
             break;
         case 1:
         default:
-            this->mGameSpeed = gWorldTable.GetFloatValue2(0x51);
+            this->mGameSpeed = gWorldTable.GetFloatValue2(kWorldGameSpeedSlowNormal);
             break;
         case 2:
-            this->mGameSpeed = gWorldTable.GetFloatValue(0x52);
+            this->mGameSpeed = gWorldTable.GetFloatValue(kWorldGameSpeedFastFastest);
             break;
         case 3:
-            this->mGameSpeed = gWorldTable.GetFloatValue2(0x52);
+            this->mGameSpeed = gWorldTable.GetFloatValue2(kWorldGameSpeedFastFastest);
             break;
         }
         long theWidth;

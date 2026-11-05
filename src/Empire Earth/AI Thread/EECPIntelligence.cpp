@@ -234,7 +234,7 @@ void EECPIntelligencePlayerFile::Update(EEComputerPlayer* inPlayer, bool inForce
         if (!gWorld.mTeams[t].ContainsPlayer(this->mPlayer->GetPlayerID()) || gWorld.mTeams[t].mVictoryCondition == NULL
             || !gWorld.mTeams[t].mVictoryCondition->GetWonderCountdown(theValue))
             continue;
-        thePercent = (long)((float)theValue / gWorldTable.GetLongValue(0x22) * 100.0f);
+        thePercent = (long)((float)theValue / gWorldTable.GetLongValue(kWorldWonderVictoryTime) * 100.0f);
         if (thePercent > this->mVictoryPercent)
             this->mVictoryPercent = thePercent;
     }

@@ -248,7 +248,7 @@ void EEClient::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
                 gResource->GetString(IDS_HOST_IS_OUT_OF_SYNCH, theFormat);
                 gResource->GetString(IDS_MSG_GAME, theName);
                 sprintf(theText, theFormat, (const char*)gWorld.GetPlayerBySlot(0xfe)->mName);
-                gUserInterface->AddChatLogEntry(theColor, theName, theText, gWorldTable.GetLongValue(25) * 2, 0);
+                gUserInterface->AddChatLogEntry(theColor, theName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
             }
             if (!this->mAllowServerMigration)
                 this->mIsServerLost = true;
@@ -275,7 +275,7 @@ void EEClient::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
                 gResource->GetString(IDS_PLAYER_HAS_DROPPED_OUT_OF_GAME, theFormat);
             sprintf(theText, theFormat, (const char*)gWorld.mPlayers[inPlayer]->mName);
             gResource->GetString(IDS_MSG_GAME, theName);
-            gUserInterface->AddChatLogEntry(theColor, theName, theText, gWorldTable.GetLongValue(25) * 2, 0);
+            gUserInterface->AddChatLogEntry(theColor, theName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
             gWorld.RemoveDisconnectedPlayer(inPlayer);
         }
         if (!inGameIsExiting) {
@@ -705,7 +705,7 @@ unsigned long EEClient::HandleStartGame(unsigned long inParameter)
         gResource->GetString(IDS_PLAYER_HAS_DROPPED_OUT_OF_GAME, theFormat);
         sprintf(theText, theFormat, (const char*)thePlayer->mName);
         gResource->GetString(IDS_MSG_GAME, theName);
-        gUserInterface->AddChatLogEntry(theColor, theName, theText, gWorldTable.GetLongValue(25) * 2, 0);
+        gUserInterface->AddChatLogEntry(theColor, theName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
         gWorld.RemoveDisconnectedPlayer(i);
     }
     return 0;

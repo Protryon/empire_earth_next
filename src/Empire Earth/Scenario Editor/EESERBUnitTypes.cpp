@@ -1231,8 +1231,8 @@ EESEGamePage::EESEGamePage(unsigned long& ioIndex, unsigned long& ioID, UIForm* 
     this->mUnitLimit = new UISlider(0x160, GERectangle(theLocation, 125.0f, 20.0f), 0, inForm, ioIndex, 2);
     this->mUnitLimit->SetBgOpacity(0.4f);
     this->mUnitLimit->SetPageSize(1);
-    this->mUnitLimit->SetRange(gWorldTable.GetLongValue(26), gWorldTable.GetLongValue2(26));
-    this->mUnitLimit->SetCurrentRangeValue(gWorldTable.GetLongValue(27));
+    this->mUnitLimit->SetRange(gWorldTable.GetLongValue(kWorldUnitLimitRange), gWorldTable.GetLongValue2(kWorldUnitLimitRange));
+    this->mUnitLimit->SetCurrentRangeValue(gWorldTable.GetLongValue(kWorldUnitLimitDefault));
     inForm->AddControl(this->mUnitLimit, 8);
     ++ioIndex;
     theLocation.SetXY(this->mUnitLimit->GetRectangle().GetRight() + 1.0f, this->mUnitLimit->GetRectangle().GetTop());
@@ -1244,7 +1244,7 @@ EESEGamePage::EESEGamePage(unsigned long& ioIndex, unsigned long& ioID, UIForm* 
     theGEText->SetIsTransparent(true);
     inForm->AddControl(this->mUnitLimitCountLabel, 8);
     ++ioIndex;
-    this->mUnitLimitCountLabel->SetText(gWorldTable.GetLongValue(27));
+    this->mUnitLimitCountLabel->SetText(gWorldTable.GetLongValue(kWorldUnitLimitDefault));
     UIEvent* theEvent = new EESEEGameUnitLimit(this->mUnitLimitCountLabel, 1.0f, 0);
     this->mUnitLimit->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
     theEvent->Dereference();
@@ -1267,7 +1267,7 @@ EESEGamePage::EESEGamePage(unsigned long& ioIndex, unsigned long& ioID, UIForm* 
     theGEText->SetIsTransparent(true);
     inForm->AddControl(this->mPerPlayerCountLabel, 8);
     ++ioIndex;
-    this->mPerPlayerCountLabel->SetText((long)gWorldTable.GetLongValue(27) / 2);
+    this->mPerPlayerCountLabel->SetText((long)gWorldTable.GetLongValue(kWorldUnitLimitDefault) / 2);
     theLocation.SetXY(this->mPerPlayerLabel->GetRectangle().GetLeft(), this->mPerPlayerLabel->GetRectangle().GetBottom() + 5.0f);
     gResource->GetString(IDS_WONDERS_FOR_VICTORY, theText);
     this->mWondersForVictoryLabel = new UITextLabel(theText, gU531934, 0x163,
