@@ -50,10 +50,12 @@ def crop(a, p, scale):
 # ------------------------------------------------------------------------------------------------- alpha --
 
 
-def bleed(rgb, alpha, threshold=0.5, iterations=64):
-    """Fills the colour of transparent pixels from their opaque neighbours (repeated 3x3 averaging of the known
-    pixels), so the upscaler and later mipmaps/bilinear filtering never see the arbitrary colour hidden under
-    alpha 0: no dark or coloured halos at cut-out edges."""
+def bleed(rgb, alpha, threshold=0.5 / 255, iterations=64):
+    """Fills the colour of fully transparent pixels (alpha 0) from their neighbours (repeated 3x3 averaging of
+    the known pixels), so the upscaler and later mipmaps/bilinear filtering never see the arbitrary colour hidden
+    under alpha 0: no dark or coloured halos at cut-out edges. Every pixel with any alpha keeps its colour: in
+    soft art (glows, smoke, anti-aliased edges) semi-transparent colour is visible. (A threshold of 0.5 here
+    overwrote it: effects lost up to 62/255 of their colour; fixed 2026-11-05.)"""
     known = alpha >= threshold
     if known.all() or not known.any():
         return rgb
