@@ -255,8 +255,14 @@ wchar_t* EEWonNet::A2W(wchar_t* outString, const char* inString, int inLength)
     if (outString == NULL)
         return NULL;
     outString[0] = 0;
-    if (inString != NULL)
+    if (inString != NULL) {
+#ifdef _WIN32
         MultiByteToWideChar(CP_ACP, 0, inString, theBytes, outString, inLength);
+#else   // the WON lobby is gone: byte by byte (Latin-1) is enough for its stand-ins
+        for (int i = 0; i < theBytes && i < inLength; i++)
+            outString[i] = (unsigned char)inString[i];
+#endif
+    }
     return outString;
 }
 
@@ -325,7 +331,7 @@ void EEWonNet::ListRoomCallback(RoutingOp* inOp)
     TMGetTime();
     if (theStatus == 0 && this->mRouting.get() != NULL) {
         this->mLock->Enter();
-        EnterCriticalSection(&this->mRouting->mDataLock);
+        PlatMutexLock(this->mRouting->mDataLock);
         this->mRooms.clear();
         for (theGroup = this->mRouting->GetGroupMap().begin(); theGroup != this->mRouting->mGroupMap.end(); theGroup++) {
             if (!(theGroup->second->mFlags & 0x800))
@@ -349,7 +355,7 @@ void EEWonNet::ListRoomCallback(RoutingOp* inOp)
             this->mRooms[(*theData)->mLinkId].mDescription = theString;
         }
         this->mRoomListChanged = true;
-        LeaveCriticalSection(&this->mRouting->mDataLock);
+        PlatMutexUnlock(this->mRouting->mDataLock);
         this->mLock->Leave();
         TMGetTime();
     } else {
@@ -663,11 +669,11 @@ void EEWonNet::JoinGame(const char* inName, const char* inPassword)
 
     if (this->mRouting.get() == NULL)
         return;
-    EnterCriticalSection(&this->mRouting->mDataLock);
+    PlatMutexLock(this->mRouting->mDataLock);
     theGroups = this->mRouting->GetGroupMap();
     if (theGroups.size() == 0) {
         // Fix: release the routing data lock on this early exit too (it used to stay held).
-        LeaveCriticalSection(&this->mRouting->mDataLock);
+        PlatMutexUnlock(this->mRouting->mDataLock);
         return;
     }
     for (theGroup = theGroups.begin(); theGroup != theGroups.end(); theGroup++) {
@@ -692,7 +698,7 @@ void EEWonNet::JoinGame(const char* inName, const char* inPassword)
         this->mRouting->JoinGroup(theGroup->first, thePassword, std::wstring(gEmptyWideString), 0, 0,
                             new RoutingCompletion(&EEWonNet::JoinGroupCallback));
     }
-    LeaveCriticalSection(&this->mRouting->mDataLock);
+    PlatMutexUnlock(this->mRouting->mDataLock);
 }
 
 // FUNCTION: EXE 0x4cf02c
@@ -1591,7 +1597,13 @@ char* EEWonNet::W2A(char* outString, int inSize, const wchar_t* inString, int in
     outString[0] = 0;
     if (inString == NULL)
         return outString;
+#ifdef _WIN32
     unsigned long theLength = WideCharToMultiByte(CP_ACP, 0, inString, inLength, outString, inSize, NULL, NULL);
+#else   // the WON lobby is gone: byte by byte (Latin-1, '?' beyond) is enough for its stand-ins
+    unsigned long theLength = 0;
+    for (int i = 0; (inLength < 0 ? inString[i] != 0 : i < inLength) && (int)theLength + 1 < inSize; i++)
+        outString[theLength++] = inString[i] < 0x100 ? (char)inString[i] : '?';
+#endif
     if (theLength > 0)
         outString[theLength] = 0;
     return outString;

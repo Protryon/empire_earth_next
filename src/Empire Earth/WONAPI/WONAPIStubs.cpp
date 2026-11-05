@@ -728,7 +728,7 @@ std::string WONAPI::IPAddr::GetHostString(bool) const
     WON_TRAP();
 }
 
-void WONAPI::IPAddr::SetPortA(unsigned short)
+void WONAPI::IPAddr::SetPort(unsigned short)
 {
     WON_STUB();
 }
