@@ -263,17 +263,17 @@ void EECalamity::Reset()
 // Writes the calamity's state to the out-of-sync dump
 void EECalamity::DumpOutOfSynch(FILE* inFile)
 {
-    fprintf(inFile, "\nOUT OF SYNCH DUMP:  Calamity Class is %d\n", this->mClass->mClassEnum);
+    fprintf(inFile, "\nOUT OF SYNCH DUMP:  Calamity Class is %ld\n", this->mClass->mClassEnum);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Location X: %6.6f\n", this->mTargetLocation.GetX());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Location Y: %6.6f\n", this->mTargetLocation.GetY());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Location Z: %6.6f\n", this->mTargetLocation.GetZ());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Tile Int PlaceHolder1 X: %d\n", this->mTilePlaceHolder1X);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Tile Int PlaceHolder1 Y: %d\n", this->mTilePlaceHolder1Y);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Integer PlaceHolder1 %d\n", this->mIntPlaceHolder1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Integer PlaceHolder2 %d\n", this->mIntPlaceHolder2);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Unit ID #%08x\n", this->mTargetUnitID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Caster Unit ID #%08x\n", this->mOriginatingUnitID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Player Number %d\n", this->mPlayerNumber);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Tile Int PlaceHolder1 X: %ld\n", this->mTilePlaceHolder1X);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Tile Int PlaceHolder1 Y: %ld\n", this->mTilePlaceHolder1Y);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Integer PlaceHolder1 %ld\n", this->mIntPlaceHolder1);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Integer PlaceHolder2 %ld\n", this->mIntPlaceHolder2);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Unit ID #%08lx\n", this->mTargetUnitID);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Caster Unit ID #%08lx\n", this->mOriginatingUnitID);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Player Number %ld\n", this->mPlayerNumber);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Bool PlaceHolder 1 has a value of %d\n", this->mBoolPlaceHolder1 == true);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Bool PlaceHolder 2 has a value of %d\n", this->mBoolPlaceHolder2 == true);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Bool Initialized has a value of %d\n", this->mInitialized == true);

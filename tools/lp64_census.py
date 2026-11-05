@@ -230,10 +230,11 @@ def apply_fixes(rows):
             s = text[fl - 1]
             spec = s[c0 - 1:c1 - 1]
             m = CONV.fullmatch(spec)
-            if not m or (m.group(4) or "") not in ("", "l"):
+            if not m or (m.group(4) or "") not in ("", "l") or m.group(5) not in "diouxXn":
                 manual.append((f, fl, c0, f"unexpected conversion {spec!r}"))
                 continue
-            new = spec[:m.start(4) if m.group(4) else -1] + mod + spec[-1]
+            conv = "u" if mod == "z" and spec[-1] in "di" else spec[-1]   # size_t is unsigned: %zu
+            new = spec[:m.start(4) if m.group(4) else -1] + mod + conv
             text[fl - 1] = s[:c0 - 1] + new + s[c1 - 1:]
             changed += 1
         path.write_bytes(("\r\n" if crlf else "\n").join(text).encode("latin-1"))

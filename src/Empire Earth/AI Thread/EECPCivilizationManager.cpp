@@ -265,7 +265,7 @@ void EECPCivilizationManager::AttemptEpochAdvance(unsigned long inTime)
             this->SetNextEpochAdvanceTime(inTime + 60000, true);
         } else {
             this->mResearchManager->Research(theNode->mData->mID);
-            ESDebugOut("EECPCivilizationManager::AttemptEpochAdvance advancing epoch at time %d\n", inTime);
+            ESDebugOut("EECPCivilizationManager::AttemptEpochAdvance advancing epoch at time %ld\n", inTime);
             this->mAdvancingEpoch = true;
         }
     }
@@ -1092,7 +1092,7 @@ void EECPCivilizationManager::SetNextEpochAdvanceTime(unsigned long inTime, bool
     long theEpoch = this->mPlayer->mTechnologies->mCurrentEpoch;
     if (inActual) {
         this->mNextEpochAdvanceTime = inTime;
-        ESDebugOut("EECPCivilizationManager::SetNextEpochAdvanceTime  setting actual next epoch advance time to %d\n",
+        ESDebugOut("EECPCivilizationManager::SetNextEpochAdvanceTime  setting actual next epoch advance time to %ld\n",
             inTime);
     } else {
         float theMinimum = this->mPlayer->GetEpochFrequencyMin();
@@ -1110,7 +1110,7 @@ void EECPCivilizationManager::SetNextEpochAdvanceTime(unsigned long inTime, bool
         }
         long theDelay = UMFloatToLong(theMinutes * 60000.0f);
         this->mNextEpochAdvanceTime = inTime + theDelay;
-        ESDebugOut("EECPCivilizationManager::SetNextEpochAdvanceTime  setting next epoch advance time to %d (%f)\n",
+        ESDebugOut("EECPCivilizationManager::SetNextEpochAdvanceTime  setting next epoch advance time to %ld (%f)\n",
             this->mNextEpochAdvanceTime, (double)theMinutes);
     }
 }
@@ -1251,7 +1251,7 @@ void EECPCivilizationManager::Update(unsigned long inTime)
         this->mBuildingCountsChecked = false;
         this->mLastCountCheck = inTime;
     } else if (this->mLastCountCheck == 0 || inTime - this->mLastCountCheck > 30000) {
-        ESDebugOut("EECPCivilizationManager::Update:  checking building counts at time %d\n", inTime);
+        ESDebugOut("EECPCivilizationManager::Update:  checking building counts at time %ld\n", inTime);
         this->CheckBuildingCounts();
     }
     if (this->mPlayer->mCanBuild && inTime >= this->mNextRepairTime) {

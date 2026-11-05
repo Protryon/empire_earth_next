@@ -1462,7 +1462,7 @@ void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
                         if (theObject->mUnits.size() > 0) {
                             long theValue = theObject->GetUnitAttribute(theObject->GetAttribute(), theObject->GetIsAttributePercent(),
                                 gWorld.GetUnit(theObject->GetUnitAt(0)), 0, 0);
-                            sprintf(theReplacement, "%d", theValue);
+                            sprintf(theReplacement, "%ld", theValue);
                         }
                     }
                     break;
@@ -1473,7 +1473,7 @@ void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
                         theManager->ChoosePlayer(theCondition->mPlayer, &thePlayers, true);
                         if (thePlayers.size() > 0) {
                             long theValue = theCondition->GetPlayerValue(thePlayers.front(), theCondition->mAttribute);
-                            sprintf(theReplacement, "%d", theValue);
+                            sprintf(theReplacement, "%ld", theValue);
                         }
                     }
                     break;
@@ -1482,7 +1482,7 @@ void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
                     EESMObject* theObject = theManager->FindObjectByID(theIndex);
                     if (theObject != NULL) {
                         theObject->Evaluate(0);
-                        sprintf(theReplacement, "%d", theObject->mUnits.size());
+                        sprintf(theReplacement, "%zu", theObject->mUnits.size());
                     }
                     break;
                 }

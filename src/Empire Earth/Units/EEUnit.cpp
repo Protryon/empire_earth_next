@@ -329,11 +329,11 @@ void EEUnit::Describe(UWideString& ioString)
     UWideString theString;
     RTSUnit::Describe(theString);
     ioString += theString;
-    sprintf(theString, "res %d / %d:", this->mResourceType, this->mResourceAmount);
+    sprintf(theString, "res %ld / %ld:", this->mResourceType, this->mResourceAmount);
     ioString += theString;
-    sprintf(theString, "obj %d:", this->mUnitClass->mUnitType);
+    sprintf(theString, "obj %ld:", this->mUnitClass->mUnitType);
     ioString += theString;
-    sprintf(theString, "hp %d:", this->mHitPoints);
+    sprintf(theString, "hp %ld:", this->mHitPoints);
     ioString += theString;
 }
 
@@ -349,14 +349,14 @@ void EEUnit::DescribeLong(UWideString& ioString)
     RTSUnit::DescribeLong(theString);
     ioString += theString;
     if (this->mComplexUnit == NULL) {
-        sprintf(theString, "Object Type and Name: %d, %s\n", this->mUnitClass->mUnitType, (const char*)this->mUnitClass->mName);
+        sprintf(theString, "Object Type and Name: %ld, %s\n", this->mUnitClass->mUnitType, (const char*)this->mUnitClass->mName);
         ioString += theString;
     }
     if (this->mResourceType != kResourceNone) {
-        sprintf(theString, "Resource Type/Amount:%d / %d\n", this->mResourceType, this->mResourceAmount);
+        sprintf(theString, "Resource Type/Amount:%ld / %ld\n", this->mResourceType, this->mResourceAmount);
         ioString += theString;
     }
-    sprintf(theString, "Health: %d / %d (%.2f%%)\n", this->mHitPoints, this->mStats->mMaxHitPoints,
+    sprintf(theString, "Health: %ld / %ld (%.2f%%)\n", this->mHitPoints, this->mStats->mMaxHitPoints,
             (float)this->mHitPoints / (float)this->mStats->mMaxHitPoints);
     ioString += theString;
 }

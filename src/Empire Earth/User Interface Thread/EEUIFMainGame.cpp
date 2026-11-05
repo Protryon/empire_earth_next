@@ -1643,7 +1643,7 @@ void EEUIFMainGame::RefreshStatus()
             theLabel->SetText(theValue);
     }
     UITextLabel* thePopulationLabel = static_cast<UITextLabel*>(this->GetControl(kMainGamePopulation));
-    sprintf(thePopulation, "%d/%d", thePlayer->GetTotalPopulation(false, false), thePlayer->GetPopulationLimit(false));
+    sprintf(thePopulation, "%ld/%ld", thePlayer->GetTotalPopulation(false, false), thePlayer->GetPopulationLimit(false));
     if (thePopulationLabel->GetText(0) != thePopulation)
         thePopulationLabel->SetText(thePopulation);
     if (gWorld.mVictoryEnabled == true) {
@@ -1690,7 +1690,7 @@ void EEUIFMainGame::RefreshStatus()
             gResource->GetString(IDS_FPS, theFormat);
             float theFPS = gRasterizer->GetFramesPerSecond(this->GetManager()->GetScreen());
             unsigned long theRounded = (unsigned long)UMCeil(theFPS);
-            sprintf(theText, "%s: %d", (const char*)theFormat, theRounded);
+            sprintf(theText, "%s: %ld", (const char*)theFormat, theRounded);
             theTimeLabel->SetText(theText);
             break;
         }

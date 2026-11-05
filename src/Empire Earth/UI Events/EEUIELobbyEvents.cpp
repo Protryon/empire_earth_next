@@ -1338,7 +1338,7 @@ void LobbyShowPlayer(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& i
         if (inPlayer.mTeam == 0)
             theText = "-";
         else
-            sprintf(theText, "%d", inPlayer.mTeam);
+            sprintf(theText, "%ld", inPlayer.mTeam);
         UIComboBox* theTeam = static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + 62));
         unsigned long theSelection;
         if (theTeam->GetCurrentSelection(theSelection) != kErrorOK
@@ -1360,7 +1360,7 @@ void LobbyShowPlayer(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& i
             theForm->GetControl(inPlayer.mSlot + 142)->SetDisplayMode(inPlayer.mSlot < 8);
         }
         static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + 126))->SetCurrentSelection(inPlayer.mStartingCitizens - 1);
-        sprintf(theText, "%d", inPlayer.mStartingCitizens);
+        sprintf(theText, "%ld", inPlayer.mStartingCitizens);
         static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 142))->SetText(theText);
     }
     if (inFlags != 1 && inFlags != 8)
@@ -1794,7 +1794,7 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
     }
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyWorldUnitLimitCombo))->SetCurrentSelection(
         (inOptions.GetUnitLimit() - gWorldTable.GetLongValue(26)) / 50);
-    sprintf(theText, "%d", inOptions.GetUnitLimit());
+    sprintf(theText, "%ld", inOptions.GetUnitLimit());
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyWorldPopLimitLabel2))->SetText(theText);
     if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
         theForm->GetControl(kLobbyWorldUnitLimitCombo)->SetDisplayMode(kDisplayModeShown);
@@ -1805,7 +1805,7 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
     }
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyWondersVictoryCombo))->SetCurrentSelection(inOptions.GetWondersForVictory());
     if (inOptions.GetWondersForVictory() != 0)
-        sprintf(theText, "%d", inOptions.GetWondersForVictory());
+        sprintf(theText, "%ld", inOptions.GetWondersForVictory());
     else
         gResource->GetString(IDS_LOBBY_OFF, theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyWondersVictoryLabel2))->SetText(theText);
@@ -2115,13 +2115,13 @@ void LobbyOpen(UIForm* inForm)
     unsigned long j;
     for (i = 126; i < 142; i++)
         for (j = 1; j <= 20; j++) {
-            sprintf(theText, "%d", j);
+            sprintf(theText, "%ld", j);
             static_cast<UIComboBox*>(inForm->GetControl(i))->AppendLine(theText);
         }
     for (i = 62; i < 78; i++) {
         static_cast<UIComboBox*>(inForm->GetControl(i))->AppendLine(UWideString("-"));
         for (j = 1; j <= 4; j++) {
-            sprintf(theText, "%d", j);
+            sprintf(theText, "%ld", j);
             static_cast<UIComboBox*>(inForm->GetControl(i))->AppendLine(theText);
         }
     }
@@ -2145,13 +2145,13 @@ void LobbyOpen(UIForm* inForm)
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyEpochEndCombo))->AppendLine(theText);
     }
     for (j = gWorldTable.GetLongValue(26); j <= gWorldTable.GetLongValue2(26); j += 50) {
-        sprintf(theText, "%d", j);
+        sprintf(theText, "%ld", j);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyWorldUnitLimitCombo))->AppendLine(theText);
     }
     gResource->GetString(IDS_LOBBY_OFF, theText);
     static_cast<UIComboBox*>(inForm->GetControl(kLobbyWondersVictoryCombo))->AppendLine(theText);
     for (j = 1; j <= gWorldTable.GetLongValue(77); j++) {
-        sprintf(theText, "%d", j);
+        sprintf(theText, "%ld", j);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyWondersVictoryCombo))->AppendLine(theText);
     }
     for (j = 0; j < EEGetNumberOfGameVariants(); j++)

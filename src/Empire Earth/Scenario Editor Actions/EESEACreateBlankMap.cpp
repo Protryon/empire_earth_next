@@ -178,7 +178,7 @@ void EESEACreateBlankMap::CreateMap()
         if (theMapFile.Open(kFileAccessRead) == 0) {
             if (theInfoFile.Open(kFileAccessRead) == 0) {
                 theInfoFile.Read(theLine, 0x20, theRead);
-                sscanf(theLine, "%d%d", &theFileWidth, &theFileHeight);
+                sscanf(theLine, "%ld%ld", &theFileWidth, &theFileHeight);
                 unsigned long theCount = theFileHeight * theFileWidth;
                 if (theCount > 0) {
                     theData = new short[theCount];

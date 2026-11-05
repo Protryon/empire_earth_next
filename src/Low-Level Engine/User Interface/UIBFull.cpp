@@ -128,7 +128,7 @@ long UIBFull::LoadBackground()
             if (theExtension) {
                 char theBuffer[256];
                 memcpy(theBuffer, (const char*)this->mTextureFileName, theExtension - (const char*)this->mTextureFileName);
-                sprintf(theBuffer + (theExtension - (const char*)this->mTextureFileName), "_%d_%d%s", theRow + 1,
+                sprintf(theBuffer + (theExtension - (const char*)this->mTextureFileName), "_%ld_%ld%s", theRow + 1,
                         theColumn + 1, theExtension);
                 theFileName = theBuffer;
             } else

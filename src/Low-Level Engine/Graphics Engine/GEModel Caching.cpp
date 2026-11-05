@@ -371,7 +371,7 @@ void GEModel::OptimizeMemoryCoherency(long inGenerations)
             theGenomes[0].mIndices[i] = i;
         unsigned long theBestSpread = this->ComputeMemoryCoherency(theGenomes[0], theMaterial);
         unsigned long theBest = 0;
-        ESDebugOut("Material %d, Initial Data Spread = %d\n", theMaterial, theBestSpread);
+        ESDebugOut("Material %ld, Initial Data Spread = %ld\n", theMaterial, theBestSpread);
         memcpy(theGenomes[1].mIndices, theGenomes[0].mIndices, theCount * sizeof(long));
         this->ComputeInitialVertexOrdering(theGenomes[1], theMaterial);
         unsigned long theSpread = this->ComputeMemoryCoherency(theGenomes[1], theMaterial);
@@ -379,7 +379,7 @@ void GEModel::OptimizeMemoryCoherency(long inGenerations)
             theBestSpread = theSpread;
             theBest = 1;
         }
-        ESDebugOut("Material %d, 1stPass Data Spread = %d\n", theMaterial, theBestSpread);
+        ESDebugOut("Material %ld, 1stPass Data Spread = %ld\n", theMaterial, theBestSpread);
         for (i = 2; i < theCount; i++)
             memcpy(theGenomes[i].mIndices, theGenomes[theBest].mIndices, theCount * sizeof(long));
         for (i = 0; i < theCount; i++)
@@ -399,10 +399,10 @@ void GEModel::OptimizeMemoryCoherency(long inGenerations)
             theIterator = theRanking.begin();
             if (theIterator->first < theBestSpread) {
                 theBestSpread = theIterator->first;
-                ESDebugOut("Material %d, Minimum Data Spread = %d\n", theMaterial, theBestSpread);
+                ESDebugOut("Material %ld, Minimum Data Spread = %ld\n", theMaterial, theBestSpread);
             }
             if (theGeneration % 1000 == 0)
-                ESDebugOut("%d iterations left\n", theGeneration);
+                ESDebugOut("%ld iterations left\n", theGeneration);
             for (i = 0; i < theCount; i++, theIterator++)
                 theOrder[i] = theIterator->second;
             for (i = 0; i < theEliteCount; i++)
@@ -503,7 +503,7 @@ void GEModel::OptimizeVertexCaching(long inGenerations)
             }
             unsigned long theBestMisses = this->ComputeVertexCacheMisses(theGenomes[0]);
             unsigned long theBest = 0;
-            ESDebugOut("Material %d, LOD %d, Initial Cache Misses = %d\n", theMaterial, theLOD, theBestMisses);
+            ESDebugOut("Material %ld, LOD %ld, Initial Cache Misses = %ld\n", theMaterial, theLOD, theBestMisses);
             memcpy(theGenomes[1].mTriangles, theGenomes[0].mTriangles, theSize);
             this->ComputeInitialTriOrdering(theGenomes[1]);
             unsigned long theMisses = this->ComputeVertexCacheMisses(theGenomes[1]);
@@ -511,7 +511,7 @@ void GEModel::OptimizeVertexCaching(long inGenerations)
                 theBestMisses = theMisses;
                 theBest = 1;
             }
-            ESDebugOut("Material %d, LOD %d, 1stPass Cache Misses = %d\n", theMaterial, theLOD, theBestMisses);
+            ESDebugOut("Material %ld, LOD %ld, 1stPass Cache Misses = %ld\n", theMaterial, theLOD, theBestMisses);
             for (i = 2; i < theCount; i++)
                 memcpy(theGenomes[i].mTriangles, theGenomes[theBest].mTriangles, theSize);
             for (i = 0; i < theCount; i++)
@@ -531,11 +531,11 @@ void GEModel::OptimizeVertexCaching(long inGenerations)
                 theIterator = theRanking.begin();
                 if (theIterator->first < theBestMisses) {
                     theBestMisses = theIterator->first;
-                    ESDebugOut("Material %d, LOD %d, Minimum Cache Misses = %d\n", theMaterial, theLOD,
+                    ESDebugOut("Material %ld, LOD %ld, Minimum Cache Misses = %ld\n", theMaterial, theLOD,
                                theBestMisses);
                 }
                 if (theGeneration % 1000 == 0)
-                    ESDebugOut("%d iterations left\n", theGeneration);
+                    ESDebugOut("%ld iterations left\n", theGeneration);
                 for (i = 0; i < theCount; i++, theIterator++)
                     theOrder[i] = theIterator->second;
                 for (i = 0; i < theEliteCount; i++)

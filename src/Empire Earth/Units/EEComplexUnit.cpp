@@ -545,8 +545,8 @@ void EEComplexUnit::PayInsurance(float inFraction)
         }
         char theResourceNumber[64];
         char theAmount[64];
-        sprintf(theResourceNumber, "%d", theResource);
-        sprintf(theAmount, "%d", theShownValue);
+        sprintf(theResourceNumber, "%ld", theResource);
+        sprintf(theAmount, "%ld", theShownValue);
         UWideString theText;
         UWideString thePart;
         gResource->GetString(IDS_YOU_HAVE_RECEIVED, theText);
@@ -1508,7 +1508,7 @@ void EEReportLeakingUnits()
     for (long i = (long)theUnits.size() - 1; i >= 0; i--) {
         theText.Clear();
         theLine = "!Leaking Unit: ";
-        sprintf(theText, "%s at (%d,%d). UnitID: %d with action:%s\n", (const char*)theUnits[i]->GetUnitClass()->mName,
+        sprintf(theText, "%s at (%ld,%ld). UnitID: %ld with action:%s\n", (const char*)theUnits[i]->GetUnitClass()->mName,
                 theUnits[i]->GetTileX(), theUnits[i]->GetTileY(), theUnits[i]->GetUnitID(),
                 (const char*)EEUnitAction::GetActionName(theUnits[i]->mCommand->mType));
         theLine += (const char*)theText;
@@ -1537,7 +1537,7 @@ void EEDumpLeakedUnits(FSFileSpec& inFile)
     EEComplexUnit::sMemoryPool.GetUsed(theUnits);
     fprintf(inFile, "\n\n**********LEAKED UNITS*********\n\n");
     for (long i = (long)theUnits.size() - 1; i >= 0; i--) {
-        fprintf(inFile, "Leaking Unit: %s at (%d,%d). UnitID: %d with action:%s, with %6.6f growth rate\n",
+        fprintf(inFile, "Leaking Unit: %s at (%ld,%ld). UnitID: %ld with action:%s, with %6.6f growth rate\n",
                 (const char*)theUnits[i]->GetUnitClass()->GetName(), theUnits[i]->GetTileX(), theUnits[i]->GetTileY(),
                 theUnits[i]->GetUnitID(), (const char*)EEUnitAction::GetActionName(theUnits[i]->mCommand->mType),
                 theUnits[i]->GetGrowth());
@@ -1552,25 +1552,25 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
     GE3DPoint theLocation;
     std::deque<EEUnitGoal*> theGoals;
     fprintf(inFile, "\n");
-    fprintf(inFile, "OUT OF SYNCH DUMP:  **************  Unit ID: %08x  *************\n", this->mComplexUnit->mUnitID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Times Updated:      %d\n", this->mComplexUnit->mTimesUpdated);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Owner:              %2d\n", this->mPlayer->mPlayerID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Object Type:        %4d\n", this->GetUnitClass()->GetUnitType());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Tile (x):           %4d\n", this->GetTileX());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Tile (y):           %4d\n", this->GetTileY());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Hit Points:         %6d\n", this->mHitPoints);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Action:             %s(%d)\n", (const char*)EEUnitAction::GetActionName(this->mComplexUnit->GetCommandType()),
+    fprintf(inFile, "OUT OF SYNCH DUMP:  **************  Unit ID: %08lx  *************\n", this->mComplexUnit->mUnitID);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Times Updated:      %ld\n", this->mComplexUnit->mTimesUpdated);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Owner:              %2ld\n", this->mPlayer->mPlayerID);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Object Type:        %4ld\n", this->GetUnitClass()->GetUnitType());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Tile (x):           %4ld\n", this->GetTileX());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Tile (y):           %4ld\n", this->GetTileY());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Hit Points:         %6ld\n", this->mHitPoints);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Action:             %s(%ld)\n", (const char*)EEUnitAction::GetActionName(this->mComplexUnit->GetCommandType()),
         this->mComplexUnit->GetCommandType());
     if (this->mComplexUnit->mActiveGroup == NULL)
         fprintf(inFile, "OUT OF SYNCH DUMP:  This unit has no active group\n");
     else
-        fprintf(inFile, "OUT OF SYNCH DUMP:  This unit has an active group with an action of %d\n", this->mComplexUnit->mActiveGroup->mAction);
+        fprintf(inFile, "OUT OF SYNCH DUMP:  This unit has an active group with an action of %ld\n", this->mComplexUnit->mActiveGroup->mAction);
     fprintf(inFile, "OUT OF SYNCH DUMP:  **************    GOALS        *************\n");
     for (unsigned long i = 0; i < this->mComplexUnit->mGoalQueues.size(); ++i) {
         theGoals = this->mComplexUnit->mGoalQueues[i].mGoals;
-        fprintf(inFile, "OUT OF SYNCH DUMP:  ************** GOAL Queue(%6d) Number Of Goals(%6d) *************\n", i, theGoals.size());
+        fprintf(inFile, "OUT OF SYNCH DUMP:  ************** GOAL Queue(%6ld) Number Of Goals(%6zu) *************\n", i, theGoals.size());
         for (unsigned long j = 0; j < theGoals.size(); ++j) {
-            fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Number(%6d) Has a type of:\t%6d\n", j, (theGoals[j])->mKind);
+            fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Number(%6ld) Has a type of:\t%6d\n", j, (theGoals[j])->mKind);
             (theGoals[j])->DumpOutOfSynch(inFile);
             (theGoals[j])->GetGoalLocation(theLocation);
             fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (x): %6.6f\n", (double)theLocation.GetX());
@@ -1592,61 +1592,61 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
         fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (y): %6.6f\n", (double)theLocation.GetY());
         fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (z): %6.6f\n", (double)theLocation.GetZ());
     }
-    fprintf(inFile, "OUT OF SYNCH DUMP:  CurrentPhysicsAction: %2d\n", this->mComplexUnit->mCurrentPhysicsAction);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  CurrentPhysicsOrder:  %2d\n", this->mComplexUnit->mCurrentPhysicsOrder);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Queued for delete:  %2d\n", (unsigned long)(this->mIsQueuedForDelete == true));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Ammunition:         %6d\n", this->mComplexUnit->mAmmunition);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Animation:          %6d\n", this->mComplexUnit->mAnimation);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  CurrentPhysicsAction: %2ld\n", this->mComplexUnit->mCurrentPhysicsAction);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  CurrentPhysicsOrder:  %2ld\n", this->mComplexUnit->mCurrentPhysicsOrder);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Queued for delete:  %2ld\n", (unsigned long)(this->mIsQueuedForDelete == true));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Ammunition:         %6ld\n", this->mComplexUnit->mAmmunition);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Animation:          %6ld\n", this->mComplexUnit->mAnimation);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Yaw Velocity:       %6.6f\n", (double)this->mComplexUnit->mAngularVelocity.GetYaw());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Pitch Velocity:     %6.6f\n", (double)this->mComplexUnit->mAngularVelocity.GetPitch());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Roll Velocity:      %6.6f\n", (double)this->mComplexUnit->mAngularVelocity.GetRoll());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Blg Queue Count:    %6d\n", this->mComplexUnit->mBuildQueue.size());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Cit Build Que Size: %6d\n", this->mComplexUnit->mCitizenBuildQueue.size());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Clearance granted:  %2d\n", (unsigned long)(this->mComplexUnit->mIsClearanceGranted == true));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Blg Queue Count:    %6zu\n", this->mComplexUnit->mBuildQueue.size());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Cit Build Que Size: %6zu\n", this->mComplexUnit->mCitizenBuildQueue.size());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Clearance granted:  %2ld\n", (unsigned long)(this->mComplexUnit->mIsClearanceGranted == true));
     fprintf(inFile, "OUT OF SYNCH DUMP:  Coll Resolut Cnt:   %6.6f\n", (double)this->mComplexUnit->mCollisionResolutionCount);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Collision State:    %6d\n", (unsigned long)this->mComplexUnit->mCollisionState);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Collision Tile (x): %6d\n", this->mComplexUnit->mCollisionTile.mX);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Collision Tile (y): %6d\n", this->mComplexUnit->mCollisionTile.GetY());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Crew Hit Points:    %6d\n", this->mComplexUnit->mCrewHitPoints);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Current Frame:      %6d\n", this->mComplexUnit->mPhysicalModel.GetFrame());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Flight Time:        %6d\n", this->mComplexUnit->mFlightTime);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Collision State:    %6ld\n", (unsigned long)this->mComplexUnit->mCollisionState);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Collision Tile (x): %6ld\n", this->mComplexUnit->mCollisionTile.mX);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Collision Tile (y): %6ld\n", this->mComplexUnit->mCollisionTile.GetY());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Crew Hit Points:    %6ld\n", this->mComplexUnit->mCrewHitPoints);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Current Frame:      %6ld\n", this->mComplexUnit->mPhysicalModel.GetFrame());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Flight Time:        %6ld\n", this->mComplexUnit->mFlightTime);
     fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart X:  %6.6f\n", (double)this->mComplexUnit->mProjectileStart.GetX());
     fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart Y:  %6.6f\n", (double)this->mComplexUnit->mProjectileStart.GetY());
     fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart Z:  %6.6f\n", (double)this->mComplexUnit->mProjectileStart.GetZ());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Rotting Away Time:  %6d\n", this->mComplexUnit->mRottingAwayTime);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Rotting Away Time:  %6ld\n", this->mComplexUnit->mRottingAwayTime);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Velocity:           %6.6f\n", (double)this->mComplexUnit->mVelocity);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Affected by Grav:   %2d\n", (unsigned long)this->GetUnitClass()->mIsAffectedByGravity);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Ammunition:         %6d\n", this->GetUnitClass()->mAmmunition);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Ammo Type:          %6d\n", this->GetUnitClass()->mAmmoType);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Affected by Grav:   %2ld\n", (unsigned long)this->GetUnitClass()->mIsAffectedByGravity);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Ammunition:         %6ld\n", this->GetUnitClass()->mAmmunition);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Ammo Type:          %6ld\n", this->GetUnitClass()->mAmmoType);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Base Accel:         %6.6f\n", (double)this->GetUnitClass()->mAcceleration);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Ang Accel:\t\t\t%6.6f\n", (double)this->GetStats()->mAngularAcceleration);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Base Area Effect:   %6.6f\n", (double)this->GetUnitClass()->mAreaEffect);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Attack         %6d\n", this->GetUnitClass()->mAttack);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Build On Elev: %2d\n", (unsigned long)this->GetUnitClass()->mBuildsOnElevation);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Convert Blg:   %2d\n", (unsigned long)this->GetUnitClass()->mConvertsBuildings);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Conver Priest: %2d\n", (unsigned long)this->GetUnitClass()->mConvertsPriests);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Carry Ammt:    %6d\n", this->GetUnitClass()->mCarryAmount);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Flight Time:   %6d\n", this->GetUnitClass()->mFlightTime);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Healing Pts:   %6d\n", this->GetUnitClass()->mHealingPoints);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Hit Points:    %6d\n", this->GetUnitClass()->mHitPoints);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Attack         %6ld\n", this->GetUnitClass()->mAttack);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Build On Elev: %2ld\n", (unsigned long)this->GetUnitClass()->mBuildsOnElevation);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Convert Blg:   %2ld\n", (unsigned long)this->GetUnitClass()->mConvertsBuildings);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Conver Priest: %2ld\n", (unsigned long)this->GetUnitClass()->mConvertsPriests);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Carry Ammt:    %6ld\n", this->GetUnitClass()->mCarryAmount);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Flight Time:   %6ld\n", this->GetUnitClass()->mFlightTime);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Healing Pts:   %6ld\n", this->GetUnitClass()->mHealingPoints);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Hit Points:    %6ld\n", this->GetUnitClass()->mHitPoints);
     fprintf(inFile, "OUT OF SYNCH DUMP:  LOS:\t\t\t\t%6.6f\n", (double)this->GetStats()->mLineOfSight);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Max Ang Vel:\t\t%6.6f\n", (double)this->GetStats()->mMaxAngularVelocity);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Max Obj Carry: %6d\n", this->GetUnitClass()->mMaxObjectCarry);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Max Obj Carry: %6ld\n", this->GetUnitClass()->mMaxObjectCarry);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Max Vel:\t\t\t%6.6f\n", (double)this->GetStats()->mMaxVelocity);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Base Range:         %6.6f\n", (double)this->GetUnitClass()->mRange);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Reload Time:   %6d\n", this->GetUnitClass()->mReloadTime);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Repair Rate:   %6d\n", this->GetUnitClass()->mRepairRate);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Reload Time:   %6ld\n", this->GetUnitClass()->mReloadTime);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Repair Rate:   %6ld\n", this->GetUnitClass()->mRepairRate);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Base Turret MaxAV:  %6.6f\n", (double)this->GetUnitClass()->mTurretMaxAngularVelocity);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Work Rate:     %6d\n", this->GetUnitClass()->mWorkRate);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Fire While Moving:  %2d\n", (unsigned long)this->GetUnitClass()->mFiresWhileMoving);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Combat Reaction:    %6d\n", this->GetUnitClass()->mCombatReaction);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Base Work Rate:     %6ld\n", this->GetUnitClass()->mWorkRate);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Fire While Moving:  %2ld\n", (unsigned long)this->GetUnitClass()->mFiresWhileMoving);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Combat Reaction:    %6ld\n", this->GetUnitClass()->mCombatReaction);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Cnvert %% per sec:   %6.6f\n", (double)this->GetStats()->mConversionRate);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Cruise Altitude:    %6.6f\n", (double)this->mComplexUnit->mHeight);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Inner Coll Sphere:  %6.6f\n", (double)this->GetUnitClass()->GetInnerCollisionSphere());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Min Range:          %6.6f\n", (double)this->GetUnitClass()->mMinRange);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Missle Delay Time:  %6d\n", this->GetUnitClass()->mMissileDelayTime);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Missle Delay Time:  %6ld\n", this->GetUnitClass()->mMissileDelayTime);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Outer Coll Sphere:  %6.6f\n", (double)this->GetUnitClass()->mOuterCollisionSphere);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Shoots High:        %2d\n", (unsigned long)this->GetUnitClass()->mShootsHigh);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Shoots High:        %2ld\n", (unsigned long)this->GetUnitClass()->mShootsHigh);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Model Location (x): %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetX());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Model Location (y): %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetY());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Model Location (z): %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetZ());
@@ -1666,11 +1666,11 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
     fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (3,1):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(3, 1));
     fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (3,2):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(3, 2));
     fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (3,3):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(3, 3));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Is Cloaked?:\t\t%2d\n", (unsigned long)this->mIsCloaked);
-    fprintf(inFile, "OUT OF SYNCH DUMP:\tPlanet ID:          %6d\n", (unsigned long)this->mPlanetID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Waypoint Size:%d\n", this->mComplexUnit->mWaypoints.size());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Is Cloaked?:\t\t%2ld\n", (unsigned long)this->mIsCloaked);
+    fprintf(inFile, "OUT OF SYNCH DUMP:\tPlanet ID:          %6ld\n", (unsigned long)this->mPlanetID);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Waypoint Size:%zu\n", this->mComplexUnit->mWaypoints.size());
     for (unsigned long theWaypoint = 0; theWaypoint < this->mComplexUnit->mWaypoints.size(); ++theWaypoint)
-        fprintf(inFile, "OUT OF SYNCH DUMP:  Waypoint[%d]: X:%f, Y:%f, Z:%f\n", theWaypoint,
+        fprintf(inFile, "OUT OF SYNCH DUMP:  Waypoint[%ld]: X:%f, Y:%f, Z:%f\n", theWaypoint,
             (double)this->mComplexUnit->mWaypoints[theWaypoint].mLocation.GetX(),
             (double)this->mComplexUnit->mWaypoints[theWaypoint].mLocation.GetY(),
             (double)this->mComplexUnit->mWaypoints[theWaypoint].mLocation.GetZ());
@@ -1959,7 +1959,7 @@ void EEComplexUnit::Describe(UWideString& ioString)
     sprintf(theString, "coll %d", this->mCollisionState);
     ioString += theString;
     if (this->mCollisionState != 0) {
-        sprintf(theString, " / tile(%d,%d)", this->mCollisionTile.GetX(), this->mCollisionTile.GetY());
+        sprintf(theString, " / tile(%ld,%ld)", this->mCollisionTile.GetX(), this->mCollisionTile.GetY());
         ioString += theString;
     }
     ioString += ":";
@@ -2499,7 +2499,7 @@ void EEComplexUnit::Kill(bool inKilled, bool inKeepResearch, bool inOther)
                 if (thePlayer != NULL && thePlayer->mEnemies[this->mPlayer->mPlayerID] == 1)
                     thePlayer->UpdateFreeUnitPower();
             }
-            ESDebugOut("EEComplexUnit::Kill - Increment dead citizen count - type - %d\n", this->GetUnitClass()->GetUnitType());
+            ESDebugOut("EEComplexUnit::Kill - Increment dead citizen count - type - %ld\n", this->GetUnitClass()->GetUnitType());
         }
     }
     if (this->GetUnitClass()->mIsInactive)

@@ -109,7 +109,7 @@ void EESoundObject::Dump(FSFileSpec& inFile)
     for (unsigned long i = 0; i < gSoundObjects.size(); i++) {
         EESoundObject* theSound = gSoundObjects[i];
         if (theSound != NULL && theSound->mMediaCount > 0)
-            fprintf(inFile, "\t%s has a media count of %d\n", (const char*)theSound->mName, theSound->mMediaCount);
+            fprintf(inFile, "\t%s has a media count of %ld\n", (const char*)theSound->mName, theSound->mMediaCount);
     }
 }
 

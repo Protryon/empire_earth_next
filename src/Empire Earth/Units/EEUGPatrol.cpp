@@ -75,8 +75,8 @@ EEUGPatrol::~EEUGPatrol()
 // Writes the patrol group id, current point's unit id and direction to the out-of-synch dump, then the base goal's
 void EEUGPatrol::DumpOutOfSynch(FILE* inFile)
 {
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGPatrol - Patrol Group ID is %d\n", this->mPatrolGroup->mID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGPatrol - Current Patrol Point #%08x\n",
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGPatrol - Patrol Group ID is %ld\n", this->mPatrolGroup->mID);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGPatrol - Current Patrol Point #%08lx\n",
             this->mTarget != NULL ? this->mTarget->mUnitID : -1);
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGPatrol - Going Forward Flag is %d\n", this->mIsGoingForward == true);
     EEUnitGoal::DumpOutOfSynch(inFile);
@@ -109,7 +109,7 @@ void EEUGPatrol::GetDebugLine(UWideString& ioText)
 {
     UWideString theText;
     if (this->mPatrolGroup != NULL)
-        sprintf(theText, "pat %d:", this->mPatrolGroup->GetNumPoints());
+        sprintf(theText, "pat %ld:", this->mPatrolGroup->GetNumPoints());
     else
         sprintf(theText, "pat 0:");
     ioText += theText;
@@ -124,7 +124,7 @@ void EEUGPatrol::GetDebugLine(UWideString& ioText)
 void EEUGPatrol::GetDebugText(UWideString& ioText)
 {
     UWideString theText;
-    sprintf(theText, "Patrol\nPatrol Points: %d", this->mPatrolGroup != NULL ? this->mPatrolGroup->GetNumPoints() : 0);
+    sprintf(theText, "Patrol\nPatrol Points: %ld", this->mPatrolGroup != NULL ? this->mPatrolGroup->GetNumPoints() : 0);
     ioText += theText;
     if (this->mPatrolGroup == NULL)
         return;
@@ -136,7 +136,7 @@ void EEUGPatrol::GetDebugText(UWideString& ioText)
         EEComplexUnit* thePoint = this->mPatrolGroup->mPatrolPoints[i];
         if (thePoint == NULL)
             continue;
-        sprintf(theText, "{%d,%d} ", thePoint->mTileX, thePoint->mTileY);
+        sprintf(theText, "{%ld,%ld} ", thePoint->mTileX, thePoint->mTileY);
         ioText += theText;
     }
     sprintf(theText, " )\n");

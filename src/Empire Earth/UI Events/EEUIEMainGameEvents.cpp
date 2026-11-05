@@ -292,7 +292,7 @@ long EEUIEMGInGameLoadAndSave::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         NESynchronousServer* theServer = dynamic_cast<NESynchronousServer*>(gCommunications);
         if (this->mMode == 0) {
             TMGetTimeOfDay(theTime);
-            sprintf(theName, "%s %4d.%02d.%02d - %02dh.%02dm.%02ds%s", "QuickSave", theTime.mYear, theTime.mMonth + 1,
+            sprintf(theName, "%s %4ld.%02ld.%02ld - %02ldh.%02ldm.%02lds%s", "QuickSave", theTime.mYear, theTime.mMonth + 1,
                     theTime.mDay, theTime.mHour, theTime.mMinute, theTime.mSecond, (const char*)gSavedGameExtension);
             gGamePreferences.mSettings.mLastQuickSave = theName;
             gGamePreferences.Save();

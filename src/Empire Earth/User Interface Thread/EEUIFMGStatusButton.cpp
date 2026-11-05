@@ -337,7 +337,7 @@ long EEUIFMGStatusButton::CopyData()
     } else {
         EETechTreeNode* theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(this->mTechnology);
         if (this->mCount) {
-            sprintf(theString, "%d", this->mCount);
+            sprintf(theString, "%ld", this->mCount);
             this->mBuildQueue->SetText(theString);
             this->mShowCount = true;
         }
@@ -439,7 +439,7 @@ bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
             gResource->GetString(IDS_TRADE_FOR, theCost);
             outString += UWideString(" ") + theCost;
             gResource->GetString(IDS_RESOURCE_NAME_GOLD, theCost);
-            sprintf(theName, " %d %s", thePrice, (const char*)theCost);
+            sprintf(theName, " %ld %s", thePrice, (const char*)theCost);
             outString += theName;
         } else {
             gResource->GetString(theButton + IDS_ACTION_BUTTON_HELP_FIRST, outString);
@@ -451,7 +451,7 @@ bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
                         gResource->GetString(IDS_IMPROVEMENT_POWER, theName);
                         outString += theName;
                         outString += ": ";
-                        sprintf(theCost, "%d", EEGetConversionCost(theUnit->mComplexUnit));
+                        sprintf(theCost, "%ld", EEGetConversionCost(theUnit->mComplexUnit));
                         outString += theCost;
                     }
                 }
@@ -493,14 +493,14 @@ bool EEUIFMGStatusButton::GetHelpString(UWideString& outString) const
                 gResource->GetString(IDS_IMPROVEMENT_POWER, theName);
                 theCost = theName;
                 theCost += ": ";
-                sprintf(theName, "%d", theCalamityClass->GetCost());
+                sprintf(theName, "%ld", theCalamityClass->GetCost());
                 theCost += theName;
             }
         }
         outString += theCost;
         if (theCount > 1) {
             gResource->GetString(IDS_POP_COST, theName);
-            sprintf(theCost, " %s: %d", (const char*)theName, theCount);
+            sprintf(theCost, " %s: %ld", (const char*)theName, theCount);
             outString += theCost;
         }
         if (theNode->mData->mMakesUnit && theNode->mData->mNameID > 0) {

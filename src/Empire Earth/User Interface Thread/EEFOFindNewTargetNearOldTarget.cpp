@@ -6443,7 +6443,7 @@ bool EEFn24E68F(unsigned short inUpgrade, UWideString& outText)
                 theStringID = theIndex + IDS_CIV_POWER_BASE;
             if (gResource->GetString(theStringID, sAttribute) == 0) {
                 if (theIndex <= 0x25)
-                    sprintf(outText, "%s: %s %d%%", (const char*)sCategory, (const char*)sAttribute,
+                    sprintf(outText, "%s: %s %ld%%", (const char*)sCategory, (const char*)sAttribute,
                             (long)(theValue * 100.0f + 0.5f));
                 else
                     sprintf(outText, "%s", (const char*)sAttribute);

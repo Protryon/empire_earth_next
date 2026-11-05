@@ -88,9 +88,9 @@ EEUnitGoal* EEUGHealUnit::Clone()
 // Writes the healee's id and the elapsed heal time to the out-of-synch dump, then the base goal's
 void EEUGHealUnit::DumpOutOfSynch(FILE* inFile)
 {
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGHealUnit - Healee unit id is #%08x\n",
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGHealUnit - Healee unit id is #%08lx\n",
             this->mTarget != NULL ? this->mTarget->mUnitID : -1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGHealUnit - Elasped Time in Milliseconds %d\n", this->mElapsedTime);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGHealUnit - Elasped Time in Milliseconds %ld\n", this->mElapsedTime);
     EEUnitGoal::DumpOutOfSynch(inFile);
 }
 
@@ -112,7 +112,7 @@ void EEUGHealUnit::GetDebugText(UWideString& ioText)
         return;
     long theHitPoints = this->mTarget->mHitPoints;
     long theMaxHitPoints = this->mTarget->mStats->mMaxHitPoints;
-    sprintf(theText, "Target Unit: %s at (%d,%d)\nTarget Health: %d/%d (%.2f%%)\n", (const char*)this->mTarget->mUnitClass->mName,
+    sprintf(theText, "Target Unit: %s at (%ld,%ld)\nTarget Health: %ld/%ld (%.2f%%)\n", (const char*)this->mTarget->mUnitClass->mName,
             this->mTarget->mTileX, this->mTarget->mTileY, theHitPoints, theMaxHitPoints,
             100.0f * theHitPoints / theMaxHitPoints);   // a percentage (the raw fraction used to be printed)
     ioText += theText;

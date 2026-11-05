@@ -461,7 +461,7 @@ void EEServer::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
                     gResource->GetString(IDS_YOU_ARE_OUT_OF_SYNCH, theFormat);
                 else
                     gResource->GetString(IDS_YOU_HAVE_BEEN_BOOTED_DUE, theFormat);
-                sprintf(theText, theFormat);
+                sprintf(theText, "%s", (const char*)theFormat);   // a resource text, not a format
                 gUIManager->DisplayMessage(theText, true, NULL, (EEUIFErrorCallback)FnB7992, true);
             }
         } else {

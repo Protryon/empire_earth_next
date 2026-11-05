@@ -1120,7 +1120,7 @@ void EEPlayer::RemoveOwnSightAt(const EETileLocation& inLocation)
 void EEPlayer::DumpMedia(FSFileSpec& inFile)
 {
     UWideString theString;
-    fprintf(inFile, "Media Information For Player %d, The Players Name is %s\n\n", this->mPlayerID, (const char*)this->mName);
+    fprintf(inFile, "Media Information For Player %ld, The Players Name is %s\n\n", this->mPlayerID, (const char*)this->mName);
     for (unsigned long i = 0; i < this->mUnitClassUpgrades.size(); i++) {
         if (this->mUnitClassUpgrades[i] != NULL)
             this->mUnitClassUpgrades[i]->DumpMediaCount(inFile);
@@ -4648,7 +4648,7 @@ void EEPlayer::CheckButtonsPreloaded(long inUnitClass)
     if (this->mUnitClassUpgrades[inUnitClass]->mButtonLoadCount != 0)
         return;
     UString* theMessage = new UString;
-    sprintf(*theMessage, "The unit %s BUTTONS might not have been preloaded for player %d - have a programmer verify this.\n",
+    sprintf(*theMessage, "The unit %s BUTTONS might not have been preloaded for player %ld - have a programmer verify this.\n",
             (const char*)gUnitClassTable[inUnitClass]->mName, this->mPlayerID);
     this->mMediaWarnings.push_back(*theMessage);
     delete theMessage;
@@ -4661,7 +4661,7 @@ void EEPlayer::LoadUnitClassMedia(long inUnitClass)
     if (this->mUnitClassUpgrades[inUnitClass]->mMediaCount != 0)
         return;
     UString* theMessage = new UString;
-    sprintf(*theMessage, "The unit %s might not have been preloaded for player %d - have a programmer verify this.\n",
+    sprintf(*theMessage, "The unit %s might not have been preloaded for player %ld - have a programmer verify this.\n",
             (const char*)gUnitClassTable[inUnitClass]->mName, this->mPlayerID);
     this->mMediaWarnings.push_back(*theMessage);
     delete theMessage;

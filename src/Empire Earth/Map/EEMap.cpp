@@ -562,7 +562,7 @@ void EEMap::DumpOutOfSynch(FILE* inFile)
             EEMapTile* theTile = this->GetTile(x, y);
             if (!theTile)
                 continue;
-            fprintf(inFile, "Tile X(%d), Y(%d)\n", x, y);
+            fprintf(inFile, "Tile X(%ld), Y(%ld)\n", x, y);
             theTile->Dump(inFile, this->mU19561C);
             fprintf(inFile, "\n");
         }

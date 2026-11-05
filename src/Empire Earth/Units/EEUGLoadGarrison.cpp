@@ -150,8 +150,8 @@ EEUnitGoal* EEUGLoadGarrison::Clone()
 // Writes the upgrade, garrison cost and valid flag to the out-of-synch dump, then the load-container base's
 void EEUGLoadGarrison::DumpOutOfSynch(FILE* inFile)
 {
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadGarrison - Garrison upgrade is %d\n", this->mUpgrade);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadGarrison - Garrison Cost is %d\n", this->mCost);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadGarrison - Garrison upgrade is %ld\n", this->mUpgrade);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadGarrison - Garrison Cost is %ld\n", this->mCost);
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadGarrison - Is Valid is %d\n", this->mIsValid == true);
     EEUGLoadContainer::DumpOutOfSynch(inFile);
 }

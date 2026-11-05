@@ -111,7 +111,7 @@ GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned 
     // tmLastChar is the last character of the font, included (mCharacters has room for it).
     for (unsigned long theCharacter = theMetrics.tmFirstChar; theCharacter <= theMetrics.tmLastChar; theCharacter++) {
         unsigned long theIndex = theCharacter - this->mFirstCharacter;
-        sprintf(theString, "%c", theCharacter);
+        sprintf(theString, "%c", static_cast<int>(theCharacter));
         theText.SetText(theString);
         float theHeight = theText.GetTextExtent().GetHeight();
         if (theHeight > theRowHeight)

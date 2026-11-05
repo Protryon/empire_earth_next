@@ -180,13 +180,13 @@ void EEUGLoadContainer::DumpOutOfSynch(FILE* inFile)
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Actual Destination X: %6.6f\n", this->mDestination.GetX());
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Actual Destination Y: %6.6f\n", this->mDestination.GetY());
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Actual Destination Z: %6.6f\n", this->mDestination.GetZ());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Loadable Unit List Size is %d\n", this->mUnits.GetSize());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Container Unit ID is #%08x\n",
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Loadable Unit List Size is %ld\n", this->mUnits.GetSize());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Container Unit ID is #%08lx\n",
             this->mContainer ? this->mContainer->mUnitID : -1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Container Rendevous Tile X is %d\n", this->mContainerTile.mX);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Container Rendevous Tile Y is %d\n", this->mContainerTile.mY);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Loadable Unit Rendevous Tile X is %d\n", this->mUnitTile.mX);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Loadable Unit Rendevous Tile Y is %d\n", this->mUnitTile.mY);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Container Rendevous Tile X is %ld\n", this->mContainerTile.mX);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Container Rendevous Tile Y is %ld\n", this->mContainerTile.mY);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Loadable Unit Rendevous Tile X is %ld\n", this->mUnitTile.mX);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Loadable Unit Rendevous Tile Y is %ld\n", this->mUnitTile.mY);
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGLoadContainer - Minimum Loading Distance Squared is %6.6f\n",
             this->mMinimumDistanceSquared);
     EEUnitGoal::DumpOutOfSynch(inFile);
@@ -222,21 +222,21 @@ void EEUGLoadContainer::GetDebugText(UWideString& ioText)
     UWideString theText;
     sprintf(theText, "Load Container.\n");
     if (this->mContainer != NULL) {
-        sprintf(theText, "Container: %s, (%d,%d)\n", (const char*)this->mContainer->mUnitClass->mName, this->mContainer->mTileX,
+        sprintf(theText, "Container: %s, (%ld,%ld)\n", (const char*)this->mContainer->mUnitClass->mName, this->mContainer->mTileX,
                 this->mContainer->mTileY);
         ioText += theText;
     }
-    sprintf(theText, "Passengers: %d\n", this->mUnits.GetSize());
+    sprintf(theText, "Passengers: %ld\n", this->mUnits.GetSize());
     ioText += theText;
     if (this->mUnits.GetSize() > 0) {
         for (std::vector<EEComplexUnit*>::iterator theIterator = this->mUnits.mItems.begin();
              theIterator != this->mUnits.mItems.end(); ++theIterator) {
-            sprintf(theText, "%s at %d,%d\n", (const char*)(*theIterator)->mUnitClass->mName, (*theIterator)->mTileX,
+            sprintf(theText, "%s at %ld,%ld\n", (const char*)(*theIterator)->mUnitClass->mName, (*theIterator)->mTileX,
                     (*theIterator)->mTileY);
             ioText += theText;
         }
     }
-    sprintf(theText, "ContainerRendezvous:(%d,%d)\nLoadableUnitRendezvous:(%d,%d)\nMinLoadingDistance:%.4f\n",
+    sprintf(theText, "ContainerRendezvous:(%ld,%ld)\nLoadableUnitRendezvous:(%ld,%ld)\nMinLoadingDistance:%.4f\n",
             this->mContainerTile.mX, this->mContainerTile.mY, this->mUnitTile.mX, this->mUnitTile.mY, this->mMinimumDistanceSquared);
     ioText += theText;
 }

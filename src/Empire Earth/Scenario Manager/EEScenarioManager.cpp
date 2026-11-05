@@ -352,7 +352,7 @@ void EEScenarioManager::SortTriggers()
 EESMArea* EEScenarioManager::NewArea()
 {
     UWideString theName;
-    sprintf(theName, "<Area%d>", this->mNextAreaID++);
+    sprintf(theName, "<Area%ld>", this->mNextAreaID++);
     EESMArea* theArea = new EESMArea;
     theArea->mName = theName;
     theArea->mID = this->mNextAreaID;
@@ -372,7 +372,7 @@ EESMCondition* EEScenarioManager::NewCondition()
     for (i = 0; i < this->mConditions.size(); i++)
         if (this->mConditions[i]->mType == kSMConditionObject)
             break;
-    sprintf(theName, "<Condition%d>", this->mNextConditionID++);
+    sprintf(theName, "<Condition%ld>", this->mNextConditionID++);
     EESMCondition* theCondition = new EESMCondition;
     theCondition->mName = theName;
     theCondition->mID = this->mNextConditionID;
@@ -401,7 +401,7 @@ FSPersistent* EEScenarioManager::CreateDefault() const
 EESMEffect* EEScenarioManager::NewEffect()
 {
     UWideString theName;
-    sprintf(theName, "<Effect%d>", this->mNextEffectID++);
+    sprintf(theName, "<Effect%ld>", this->mNextEffectID++);
     EESMEffect* theEffect = new EESMEffect;
     theEffect->mName = theName;
     theEffect->mID = this->mNextEffectID;
@@ -425,7 +425,7 @@ EESMObject* EEScenarioManager::NewObject()
     this->mConditions.push_back(theCondition);
     ++this->mNextConditionID;
     gResource->GetString(IDS_EXISTS, theText);
-    sprintf(theName, "<%d:%s %s>", this->mNextConditionID, (const char*)theObject->mName, (const char*)theText);
+    sprintf(theName, "<%ld:%s %s>", this->mNextConditionID, (const char*)theObject->mName, (const char*)theText);
     theCondition->mName = theName;
     theCondition->mID = this->mNextConditionID;
     theCondition->mType = kSMConditionObject;
@@ -438,7 +438,7 @@ EESMObject* EEScenarioManager::NewObject()
 EESMTrigger* EEScenarioManager::NewTrigger()
 {
     UWideString theName;
-    sprintf(theName, "<Trigger%d>", this->mNextTriggerID++);
+    sprintf(theName, "<Trigger%ld>", this->mNextTriggerID++);
     EESMTrigger* theTrigger = new EESMTrigger;
     theTrigger->mName = theName;
     theTrigger->mID = this->mNextTriggerID;
@@ -962,7 +962,7 @@ long EEScenarioManager::ExportText(FSFileSpec& inFile)
             }
             if (!(theText.GetLength() > 0))
                 continue;
-            if (fprintf(inFile, "{%d_Effect:%s}\n", theEffect->GetID(), (const char*)theEffect->GetName()) < 0
+            if (fprintf(inFile, "{%ld_Effect:%s}\n", theEffect->GetID(), (const char*)theEffect->GetName()) < 0
                 || fprintf(inFile, "%s\n\n", (const char*)theText) < 0)
                 theResult = 9;
         }
@@ -976,14 +976,14 @@ long EEScenarioManager::ExportText(FSFileSpec& inFile)
                 theText = theCondition->mChatText;
             if (!(theText.GetLength() > 0))
                 continue;
-            if (fprintf(inFile, "{%d_Condition:%s}\n", theCondition->GetID(),
+            if (fprintf(inFile, "{%ld_Condition:%s}\n", theCondition->GetID(),
                         (const char*)theCondition->GetName()) < 0
                 || fprintf(inFile, "%s\n\n", (const char*)theText) < 0)
                 theResult = 9;
         }
         for (unsigned long p = 1; p < gWorld.mNumPlayers; p++) {
             if (gWorld.GetPlayer(p) != NULL) {
-                if (fprintf(inFile, "{%d_Player Name:%s}\n", p, (const char*)gWorld.GetPlayer(p)->mName) < 0)
+                if (fprintf(inFile, "{%ld_Player Name:%s}\n", p, (const char*)gWorld.GetPlayer(p)->mName) < 0)
                     theResult = 9;
             }
         }
@@ -1338,7 +1338,7 @@ void EEScenarioManager::GetUserAreaNames(std::vector<UWideString>& outNames)
     unsigned long theCount = this->mAreas.size();
     for (unsigned long i = 2; i < theCount; i++) {
         if (this->mShowDebugIDs)
-            sprintf(theID, "[%d]", this->mAreas[i]->mID);
+            sprintf(theID, "[%ld]", this->mAreas[i]->mID);
         theName = (const char*)(theID + (const char*)this->mAreas[i]->mName);
         outNames.push_back(theName);
     }
@@ -1353,7 +1353,7 @@ void EEScenarioManager::GetAreaNames(std::vector<UWideString>& outNames)
     unsigned long theCount = this->mAreas.size();
     for (unsigned long i = 0; i < theCount; i++) {
         if (this->mShowDebugIDs)
-            sprintf(theID, "[%d]", this->mAreas[i]->mID);
+            sprintf(theID, "[%ld]", this->mAreas[i]->mID);
         theName = (const char*)(theID + (const char*)this->mAreas[i]->mName);
         outNames.push_back(theName);
     }
@@ -1368,7 +1368,7 @@ void EEScenarioManager::GetAllConditionNames(std::vector<UWideString>& outNames)
     unsigned long theCount = this->mConditions.size();
     for (unsigned long i = 0; i < theCount; i++) {
         if (this->mShowDebugIDs)
-            sprintf(theID, "[%d]", this->mConditions[i]->mID);
+            sprintf(theID, "[%ld]", this->mConditions[i]->mID);
         if (this->mConditions[i]->GetType() == kSMConditionObject) {
             UWideString thePrefix("<");
             this->mConditions[i]->mName = thePrefix + this->GetScenarioObject(this->mConditions[i]->GetObjectIndex())->mName + " Exists>";
@@ -1391,7 +1391,7 @@ void EEScenarioManager::GetUserConditionNames(std::vector<UWideString>& outNames
         if (theCondition->mType == kSMConditionObject)
             continue;
         if (this->mShowDebugIDs)
-            sprintf(theID, "[%d]", theCondition->mID);
+            sprintf(theID, "[%ld]", theCondition->mID);
         theName = (const char*)(theID + (const char*)this->mConditions[i]->mName);
         outNames.push_back(theName);
     }
@@ -1406,7 +1406,7 @@ void EEScenarioManager::GetUserEffectNames(std::vector<UWideString>& outNames)
     unsigned long theCount = this->mEffects.size();
     for (unsigned long i = 1; i < theCount; i++) {
         if (this->mShowDebugIDs)
-            sprintf(theID, "[%d]", this->mEffects[i]->mID);
+            sprintf(theID, "[%ld]", this->mEffects[i]->mID);
         theName = (const char*)(theID + (const char*)this->mEffects[i]->mName);
         outNames.push_back(theName);
     }
@@ -1421,7 +1421,7 @@ void EEScenarioManager::GetAllEffectNames(std::vector<UWideString>& outNames)
     unsigned long theCount = this->mEffects.size();
     for (unsigned long i = 0; i < theCount; i++) {
         if (this->mShowDebugIDs)
-            sprintf(theID, "[%d]", this->mEffects[i]->mID);
+            sprintf(theID, "[%ld]", this->mEffects[i]->mID);
         theName = (const char*)(theID + (const char*)this->mEffects[i]->mName);
         outNames.push_back(theName);
     }
@@ -1436,7 +1436,7 @@ void EEScenarioManager::GetUserObjectNames(std::vector<UWideString>& outNames)
     unsigned long theCount = this->mObjects.size();
     for (unsigned long i = 1; i < theCount; i++) {
         if (this->mShowDebugIDs)
-            sprintf(theID, "[%d]", this->mObjects[i]->mL64);
+            sprintf(theID, "[%ld]", this->mObjects[i]->mL64);
         theName = (const char*)(theID + (const char*)this->mObjects[i]->mName);
         outNames.push_back(theName);
     }
@@ -1451,7 +1451,7 @@ void EEScenarioManager::GetObjectNames(std::vector<UWideString>& outNames)
     unsigned long theCount = this->mObjects.size();
     for (unsigned long i = 0; i < theCount; i++) {
         if (this->mShowDebugIDs)
-            sprintf(theID, "[%d]", this->mObjects[i]->mL64);
+            sprintf(theID, "[%ld]", this->mObjects[i]->mL64);
         theName = (const char*)(theID + (const char*)this->mObjects[i]->mName);
         outNames.push_back(theName);
     }
@@ -1466,7 +1466,7 @@ void EEScenarioManager::GetTriggerNames(std::vector<UWideString>& outNames)
     unsigned long theCount = this->mTriggers.size();
     for (unsigned long i = 0; i < theCount; i++) {
         if (this->mShowDebugIDs)
-            sprintf(theID, "[%d]", this->mTriggers[i]->mID);
+            sprintf(theID, "[%ld]", this->mTriggers[i]->mID);
         theName = (const char*)(theID + (const char*)this->mTriggers[i]->mName);
         outNames.push_back(theName);
     }

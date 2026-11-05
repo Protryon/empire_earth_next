@@ -388,7 +388,7 @@ void EEUICPortrait::Update()
     if (this->mLevel != theOldLevel) {
         UWideString* theText = new UWideString;
         if (this->mLevel > 0)
-            sprintf(*theText, "%d", this->mLevel);
+            sprintf(*theText, "%ld", this->mLevel);
         this->mText->SetText(*theText);
         delete theText;
     }

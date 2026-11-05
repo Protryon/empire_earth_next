@@ -105,7 +105,7 @@ void EEUnitClassUpgrade::DumpMediaCount(FSFileSpec& inFile)
 {
     UWideString theName;
     if (this->mMediaCount > 0)
-        fprintf(inFile, "\t%s has a media count of %d\n", (const char*)this->mUnitClass->mName, this->mMediaCount);
+        fprintf(inFile, "\t%s has a media count of %ld\n", (const char*)this->mUnitClass->mName, this->mMediaCount);
 }
 
 // FUNCTION: EXE 0x63b806

@@ -1284,7 +1284,7 @@ void EEWorld::RecordStatistics()
             gResource->GetString(IDS_COMPUTER, theDefault);
             if (PlatMbsCmp(reinterpret_cast<const unsigned char*>((const char*)thePlayer->mName), reinterpret_cast<const unsigned char*>((const char*)theDefault)) == 0) {
                 theComputerCount++;
-                sprintf(theRecord.mNameSuffix, " #%d", theComputerCount);
+                sprintf(theRecord.mNameSuffix, " #%ld", theComputerCount);
             } else {
                 theRecord.mNameSuffix = gU4E5B98;
             }

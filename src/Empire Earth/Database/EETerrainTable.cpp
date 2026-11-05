@@ -187,7 +187,7 @@ void EETerrainTable::DumpAllLoadedMedia(FSFileSpec& inFile)
         if (theTerrain == NULL)
             continue;
         if (theTerrain->mLoadCount > 0)
-            fprintf(inFile, "\t%s has a media count of %d\n", (const char*)theTerrain->mName,
+            fprintf(inFile, "\t%s has a media count of %ld\n", (const char*)theTerrain->mName,
                     theTerrain->mLoadCount);
         if (theTerrain->mPreviewTexture != NULL)
             fprintf(inFile, "\t%s was loaded for list box display\n", (const char*)theTerrain->mName);
@@ -259,12 +259,12 @@ void EETerrainTable::LoadTextures()
             char theName[256];
             long theLength = theDot - (const char*)this->mTextureName;
             memcpy(theName, (const char*)this->mTextureName, theLength);
-            sprintf(theName + theLength, "_%d%s", n, theDot);
+            sprintf(theName + theLength, "_%ld%s", n, theDot);
             UString theFile(theName);
             this->mTextures[theIndex++] = this->LoadTexture(theFile);
         } else {
             UString theFile;
-            sprintf(theFile, "%s_%d", (const char*)this->mTextureName, n);
+            sprintf(theFile, "%s_%ld", (const char*)this->mTextureName, n);
             this->mTextures[theIndex++] = this->LoadTexture(theFile);
         }
     }

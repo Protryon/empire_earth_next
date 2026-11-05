@@ -377,7 +377,7 @@ long CMUCreateLandWaterMap(EERandomMap* ioMap, CMUClumpsFactory inFactory)
     theDistances.clear();
     unsigned long theTime = TMGetTime() - theStart;
     for (i = 0; i < thePlayers.size(); i++)
-        ESDebugOut("::CMUCreateLandWaterMap: P%d tiles:   %d\n", i, thePlayers[i].mTileCount);
+        ESDebugOut("::CMUCreateLandWaterMap: P%ld tiles:   %ld\n", i, thePlayers[i].mTileCount);
     return 0;
 }
 
@@ -465,8 +465,8 @@ long CMUCreateTrees(EERandomMap* ioMap)
                     theTreeCounts[i] += theClumps->GetTotalSize();
                 } else {
                     ESDebugOut("CMUCreateTrees could not locate a center for");
-                    ESDebugOut(" [CMU] the tree clumps in %d iterations for treeClump %d\n", n, j);
-                    ESDebugOut("CMUCreateTrees center(%d,%d) point (%d,%d) innerR = %6.2f outerR = %6.2f\n",
+                    ESDebugOut(" [CMU] the tree clumps in %ld iterations for treeClump %ld\n", n, j);
+                    ESDebugOut("CMUCreateTrees center(%ld,%ld) point (%ld,%ld) innerR = %6.2f outerR = %6.2f\n",
                                UMFloatToLong(theRing.mCenter.GetX()), UMFloatToLong(theRing.mCenter.GetY()),
                                theX, theY, theRing.mMinRadius, theRing.mMaxRadius);
                 }
@@ -474,10 +474,10 @@ long CMUCreateTrees(EERandomMap* ioMap)
                 theIndex = theNext;
             }
         }
-        ESDebugOut("CMUCreateTrees: %d trees in time:     %6.2f s\n", theTreeTotal,
+        ESDebugOut("CMUCreateTrees: %ld trees in time:     %6.2f s\n", theTreeTotal,
                    (float)(TMGetTime() - theStart) * 0.001f);
         for (i = 0; i < theTreeCounts.size(); i++)
-            ESDebugOut("CMUCreateTrees: P%d trees:   %d\n", i, theTreeCounts[i]);
+            ESDebugOut("CMUCreateTrees: P%ld trees:   %ld\n", i, theTreeCounts[i]);
     }
     return 0;
 }

@@ -108,7 +108,7 @@ long EEUIPGSLineGraph::DrawSeries(const UGraphSeries& inSeries)
 // Formats a y axis value as a rounded integer
 void EEUIPGSLineGraph::FormatYValues(float inValue, UWideString& outString)
 {
-    sprintf(outString, "%d", (long)(inValue + 0.5f));
+    sprintf(outString, "%ld", (long)(inValue + 0.5f));
 }
 
 // FUNCTION: EXE 0x67659d
@@ -120,7 +120,7 @@ void EEUIPGSLineGraph::FormatXValues(float inValue, UWideString& outString)
     if (inValue < 1.0f)
         inValue = 1.0f;
     gPhysics->GetMinutesAndSeconds(&theMinutes, &theSeconds, (unsigned long)inValue);
-    sprintf(outString, "%d:%.2d", theMinutes, theSeconds);
+    sprintf(outString, "%ld:%.2ld", theMinutes, theSeconds);
 }
 
 // FUNCTION: EXE 0x6765eb

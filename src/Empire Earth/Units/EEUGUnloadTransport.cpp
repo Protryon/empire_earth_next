@@ -75,13 +75,13 @@ EEUnitGoal* EEUGUnloadTransport::Clone()
 // dump, then the base goal's
 void EEUGUnloadTransport::DumpOutOfSynch(FILE* inFile)
 {
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGUnloadTransport - Transport ID #%08x\n",
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGUnloadTransport - Transport ID #%08lx\n",
             this->mTransport ? this->mTransport->GetUnitID() : -1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGUnloadTransport - Transport Destination (%d, %d)\n", this->mUnloadTile.mX,
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGUnloadTransport - Transport Destination (%ld, %ld)\n", this->mUnloadTile.mX,
             this->mUnloadTile.mY);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGUnloadTransport - First Cargo Tile (%d, %d)\n", this->mFirstCargoTile.mX,
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGUnloadTransport - First Cargo Tile (%ld, %ld)\n", this->mFirstCargoTile.mX,
             this->mFirstCargoTile.mY);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGUnloadTransport - Unload Tile (%d, %d)\n", this->mDestination.mX,
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGUnloadTransport - Unload Tile (%ld, %ld)\n", this->mDestination.mX,
             this->mDestination.mY);
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGUnloadTransport - Unload Range Squared %6.6f\n", this->mUnloadRangeSquared);
     EEUnitGoal::DumpOutOfSynch(inFile);
@@ -109,7 +109,7 @@ void EEUGUnloadTransport::GetDebugLine(UWideString& ioText)
 {
     UWideString theText;
     ioText += "unloadtransport";
-    sprintf(theText, " (transport id %d, pointx %d pointy %d):", this->mTransport->GetUnitID() & 0xffffff, this->mDestination.mX,
+    sprintf(theText, " (transport id %ld, pointx %ld pointy %ld):", this->mTransport->GetUnitID() & 0xffffff, this->mDestination.mX,
             this->mDestination.mY);
     ioText += theText;
 }
@@ -119,7 +119,7 @@ void EEUGUnloadTransport::GetDebugLine(UWideString& ioText)
 void EEUGUnloadTransport::GetDebugText(UWideString& ioText)
 {
     UWideString theText;
-    sprintf(theText, "UnLoad Transport\n Transport:%s  at(%d,%d):", (const char*)this->mTransport->mUnitClass->mName,
+    sprintf(theText, "UnLoad Transport\n Transport:%s  at(%ld,%ld):", (const char*)this->mTransport->mUnitClass->mName,
             this->mDestination.mX, this->mDestination.mY);
     ioText += theText;
 }

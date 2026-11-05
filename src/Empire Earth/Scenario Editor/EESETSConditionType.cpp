@@ -709,7 +709,7 @@ void EESETSCTPlayerResource::Show(EESETSConditionControls* inControls)
     }
     gResource->GetString(IDS_VARIABLE, theText);
     unsigned long i; for (i = 0; i < 10; i++) {
-        sprintf(theFormatted, "%s%d", (const char*)theText, i);
+        sprintf(theFormatted, "%s%ld", (const char*)theText, i);
         theResources.push_back(theFormatted);
     }
     for (i = IDS_RESOURCE_NAME_FIRST; i <= IDS_RESOURCE_NAME_IRON; i++) {

@@ -80,10 +80,10 @@ EEUGExplore::~EEUGExplore()
 // Writes the bad-tile count, current tile, search radius and both no-areas flags to the out-of-synch dump
 void EEUGExplore::DumpOutOfSynch(FILE* inFile)
 {
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGExplore Bad Tile Array Size %d\n", this->mBadTiles.Size());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGExplore Tile Location X: %d\n", this->mTile.GetX());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGExplore Tile Location Y: %d\n", this->mTile.GetY());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGExplore Search Radius %d\n", this->mSearchRadius);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGExplore Bad Tile Array Size %ld\n", this->mBadTiles.Size());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGExplore Tile Location X: %ld\n", this->mTile.GetX());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGExplore Tile Location Y: %ld\n", this->mTile.GetY());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGExplore Search Radius %ld\n", this->mSearchRadius);
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGExplore No UnExplored Areas flag %d\n", this->mNoUnexploredAreas == true);
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGExplore No NonVisible Areas flag %d\n", this->mNoNonVisibleAreas == true);
 }

@@ -418,7 +418,7 @@ void EEDumpGraphicObjectTable(FSFileSpec& inFile)
     for (unsigned long i = 0; i < gMediaTable.size(); i++) {
         EEGraphicObject* theObject = static_cast<EEGraphicObject*>(gMediaTable[i]);
         if (theObject != NULL && theObject->mMediaCount > 0)
-            fprintf(inFile, "\t%s (filename) has a media count of %d\n",(const char*)*theObject->mFileName,
+            fprintf(inFile, "\t%s (filename) has a media count of %ld\n",(const char*)*theObject->mFileName,
                     theObject->mMediaCount);
     }
 }

@@ -1176,7 +1176,7 @@ void EESETSObject::UpdateSelection()
             if (this->mUnitsRadio->GetIsChecked() == true) {
                 if (theEditor->GetSelectedUnitCount() > 0) {
                     gResource->GetString((theEditor->mSelectedUnits[0])->mUnitClass->mNameStringID, theTypeName);
-                    sprintf(theNumber, "%d", (theEditor->mSelectedUnits[0])->mUnitID % 1000);
+                    sprintf(theNumber, "%ld", (theEditor->mSelectedUnits[0])->mUnitID % 1000);
                     theTypeName = theTypeName + theNumber;
                 } else
                     gResource->GetString(IDS_NONE, theTypeName);

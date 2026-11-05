@@ -104,7 +104,7 @@ EECampaignProgress::~EECampaignProgress()
 void EECampaignProgress::MakeKey(UWideString& outKey, const UWideString& inCampaign, const UWideString& inScenario,
                                  unsigned long inChecksum)
 {
-    sprintf(outKey, "%s.%s.%d", (const char*)inCampaign, (const char*)inScenario, inChecksum);
+    sprintf(outKey, "%s.%s.%ld", (const char*)inCampaign, (const char*)inScenario, inChecksum);
 }
 
 // FUNCTION: EXE 0x68f4fc
@@ -141,7 +141,7 @@ long EECampaignProgress::RestoreCivilization(const UWideString& inUser, const UW
     if (EECampaignFormManager::GetBuiltInCampaign(inCampaign) == 0) {
         theResult = this->Load(inUser, inCampaign, inChecksum, false);
         if (theResult == kErrorOK) {
-            sprintf(theChecksum, "%d", inChecksum);
+            sprintf(theChecksum, "%ld", inChecksum);
             theDirectory.SetVolume(gStartupVolume);
             theDirectory.SetDirectory(gStartupDirectory + "Users\\" + (const char*)inUser + "\\");
             thePath->AddDirectory(theDirectory, true);
@@ -227,7 +227,7 @@ long EECampaignProgress::Load(const UWideString& inUser, const UWideString& inCa
     long theResult;
     long theAvailable;
 
-    sprintf(theChecksum, "%d", inChecksum);
+    sprintf(theChecksum, "%ld", inChecksum);
     theDirectory.SetVolume(gStartupVolume);
     theDirectory.SetDirectory(gStartupDirectory + "Users\\" + (const char*)inUser + "\\");
     thePath->AddDirectory(theDirectory, true);
@@ -243,10 +243,10 @@ long EECampaignProgress::Load(const UWideString& inUser, const UWideString& inCa
             this->mCivilizationKeys.clear();
             this->mCivPointsAvailable.clear();
             for (unsigned long i = 0; i < (unsigned long)this->mNumScenariosCompleted; i++) {
-                sprintf(theTag, "%s%.03d", (const char*)kEECampaignProgressScenarioNameKey, i);
+                sprintf(theTag, "%s%.03ld", (const char*)kEECampaignProgressScenarioNameKey, i);
                 theArchive->GetTag(theTag, theScenario);
                 this->MakeKey(theKey, inCampaign, theScenario, inChecksum);
-                sprintf(theTag, "%s%.03d", (const char*)kEECampaignProgressNumCivPointsAvailableKey, i);
+                sprintf(theTag, "%s%.03ld", (const char*)kEECampaignProgressNumCivPointsAvailableKey, i);
                 theAvailable = theArchive->GetTag(theTag, thePoints) == kErrorOK ? atoi((const char*)thePoints) : 0;
                 this->mCompletedScenarios.push_back(theScenario);
                 this->mCivilizationKeys.push_back(theKey);
@@ -300,7 +300,7 @@ long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const 
     long theResult;
 
     this->MakeKey(theKey, inCampaign, inScenario, inChecksum);
-    sprintf(theChecksum, "%d", inChecksum);
+    sprintf(theChecksum, "%ld", inChecksum);
     theDirectory.SetVolume(gStartupVolume);
     theDirectory.SetDirectory(gStartupDirectory + "Users\\" + (const char*)inUser + "\\");
     thePath->AddDirectory(theDirectory, true);
@@ -318,23 +318,23 @@ long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const 
         }
         theDirectory.SetFile(UString((const char*)(inCampaign + theChecksum + (const char*)gU530B88)));
         FSArchive* theArchive = new FSArchive(theDirectory);
-        sprintf(theCount, "%d", this->mNumScenariosCompleted);
+        sprintf(theCount, "%ld", this->mNumScenariosCompleted);
         theArchive->SetTag(kEECampaignProgressChecksumKey, theChecksum);
         theArchive->SetTag(kEECampaignProgressNumScenariosCompletedKey, theCount);
         theArchiveFiles.clear();
         theTemporaryFiles.clear();
         bool theComplete = true;
         for (unsigned long i = 0; i < (unsigned long)this->mNumScenariosCompleted; i++) {
-            sprintf(theTag, "%s%.03d", (const char*)kEECampaignProgressScenarioNameKey, i);
+            sprintf(theTag, "%s%.03ld", (const char*)kEECampaignProgressScenarioNameKey, i);
             theArchive->SetTag(theTag, this->mCompletedScenarios[i]);
-            sprintf(theTag, "%s%.03d", (const char*)kEECampaignProgressNumCivPointsAvailableKey, i);
+            sprintf(theTag, "%s%.03ld", (const char*)kEECampaignProgressNumCivPointsAvailableKey, i);
             long theValue;
             if (theAlreadyCompleted && PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)this->mCompletedScenarios[i]),
                                                reinterpret_cast<const unsigned char*>((const char*)inScenario)) == 0)
                 theValue = theAvailable;
             else
                 theValue = this->mCivPointsAvailable[i];
-            sprintf(thePoints, "%d", theValue);
+            sprintf(thePoints, "%ld", theValue);
             theArchive->SetTag(theTag, thePoints);
             theFileName = gU5656B8 + "\\" + (const char*)this->mCivilizationKeys[i] + gU5656C8;
             FSFileSpec* theFile;

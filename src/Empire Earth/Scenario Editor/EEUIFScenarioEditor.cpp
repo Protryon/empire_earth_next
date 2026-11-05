@@ -189,7 +189,7 @@ long EEUIESaveScenarioTriggersOnly::ProcessEvent(UIForm* inForm, UIEntity* inEnt
                 if (!theTrigger->mIsOn)
                     fprintf(theText, "\tTrigger starts OFF\n");
                 if (theTrigger->mConditionDuration)
-                    fprintf(theText, "\tConditions True for %d\n", theTrigger->mConditionDuration);
+                    fprintf(theText, "\tConditions True for %ld\n", theTrigger->mConditionDuration);
                 if (theTrigger->mIsLooping)
                     fprintf(theText, "\tLooping\n");
                 fprintf(theText, "\tIf ");
@@ -211,7 +211,7 @@ long EEUIESaveScenarioTriggersOnly::ProcessEvent(UIForm* inForm, UIEntity* inEnt
                 for (j = 0; j < theTrigger->mEffects.size(); j++) {
                     EESMTEffectWrapper* theWrapper = theTrigger->GetEffect(j);
                     if (theWrapper->mDelay)
-                        fprintf(theText, " (Delay %d sec) ", theWrapper->mDelay);
+                        fprintf(theText, " (Delay %ld sec) ", theWrapper->mDelay);
                     EESMEffect* theEffect = theManager->GetEffect(theWrapper->mEffectIndex);
                     if (theEffect)
                         fprintf(theText, " (%s) ", (const char*)theEffect->mName);

@@ -84,8 +84,8 @@ bool ESChecksum::Compare(const ESChecksum& inOther, std::vector<UString>& outErr
                 }
             }
         } else {
-            sprintf(theError, "ESChecksum::Compare(): Checksum sizes don't match!  Source size is %d and incoming "
-                    "size is %d.\n", this->mEntries.size(), inOther.mEntries.size());
+            sprintf(theError, "ESChecksum::Compare(): Checksum sizes don't match!  Source size is %zu and incoming "
+                    "size is %zu.\n", this->mEntries.size(), inOther.mEntries.size());
             outErrors.push_back(theError);
             theResult = false;
         }

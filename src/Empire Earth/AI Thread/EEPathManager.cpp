@@ -584,51 +584,51 @@ void EEPathManager::CompletePath(EEComplexUnit* inUnit)
 void EEPathManager::DumpOutOfSynch(_iobuf* inFile)
 {
     fprintf(inFile, "OUT OF SYNCH DUMP: Pathfinding Information\nOUT OF SYNCH DUMP:----------------------------------\n");
-    fprintf(inFile, "OUT OF SYNCH DUMP: Path SubSectors: %d\n", gContinentManager.mPathSubSectors.size());
+    fprintf(inFile, "OUT OF SYNCH DUMP: Path SubSectors: %zu\n", gContinentManager.mPathSubSectors.size());
     for (long i = gContinentManager.mPathSubSectors.size() - 1; i > 0; i--) {
         EEAIPathSubSector* theSector = gContinentManager.mPathSubSectors[(unsigned short)i];
         if (theSector)
-            fprintf(inFile, "OUT OF SYNCH DUMP: PathSubSector[%d] with center point: %d,%d\n", theSector->mID,
+            fprintf(inFile, "OUT OF SYNCH DUMP: PathSubSector[%d] with center point: %ld,%ld\n", theSector->mID,
                     theSector->mLocation.GetX(), theSector->mLocation.GetY());
     }
-    fprintf(inFile, "OUT OF SYNCH DUMP: Paths In progress: %d\n", this->mPaths.size());
+    fprintf(inFile, "OUT OF SYNCH DUMP: Paths In progress: %zu\n", this->mPaths.size());
     unsigned long j;
     for (j = 0; j < this->mPaths.size(); j++) {
         // cast the node's machine (the node itself used to be cast, which always failed)
         EEPathMachine* theMachine = dynamic_cast<EEPathMachine*>(this->mPaths[j]->mPathMachine);
         if (theMachine) {
             fprintf(inFile, "OUT OF SYNCH DUMP:\n");
-            fprintf(inFile, "OUT OF SYNCH DUMP: Paths Queue[%d]: \n", j);
+            fprintf(inFile, "OUT OF SYNCH DUMP: Paths Queue[%ld]: \n", j);
             unsigned long theUnitID;
             if (this->mPaths[j]->mUnit)
                 theUnitID = this->mPaths[j]->mUnit->GetUnitID();
             else
                 theUnitID = 0;
-            fprintf(inFile, "OUT OF SYNCH DUMP: Path for Unit: %d to (%d,%d) has been queued %d time.\n", theUnitID,
+            fprintf(inFile, "OUT OF SYNCH DUMP: Path for Unit: %ld to (%ld,%ld) has been queued %ld time.\n", theUnitID,
                     this->mPaths[j]->mTile.GetX(), this->mPaths[j]->mTile.GetY(), this->mPaths[j]->mPasses);
-            fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %d. Tile Cap is: %d Pathfinder Type is: %d\n",
+            fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld Pathfinder Type is: %ld\n",
                     theMachine->mRevs, theMachine->GetMaxRevs(), theMachine->mType);
         } else {
             fprintf(inFile, "OUT OF SYNCH DUMP: !!! UNKNOWN PATHFINDER! Can't Dynamic cast it!\n");
         }
     }
-    fprintf(inFile, "OUT OF SYNCH DUMP: Graphs In progress: %d\n", this->mAutoPaths.size());
+    fprintf(inFile, "OUT OF SYNCH DUMP: Graphs In progress: %zu\n", this->mAutoPaths.size());
     for (j = 0; j < this->mAutoPaths.size(); j++) {
         // the node's graph machine (the node itself used to be cast, which always failed)
         EEGraphPathMachine* theMachine = this->mAutoPaths[j]->mGraphMachine;
         if (theMachine) {
             fprintf(inFile, "OUT OF SYNCH DUMP:\n");
-            fprintf(inFile, "OUT OF SYNCH DUMP: AutoPaths Queue[%d]: \n", j);
+            fprintf(inFile, "OUT OF SYNCH DUMP: AutoPaths Queue[%ld]: \n", j);
             unsigned long theUnitID;
             // the graph search's own unit, tile and passes (they used to be read from mPaths)
             if (this->mAutoPaths[j]->mUnit)
                 theUnitID = this->mAutoPaths[j]->mUnit->GetUnitID();
             else
                 theUnitID = 0;
-            fprintf(inFile, "OUT OF SYNCH DUMP: AutoPath for Unit: %d to (%d,%d) has been queued %d time.\n",
+            fprintf(inFile, "OUT OF SYNCH DUMP: AutoPath for Unit: %ld to (%ld,%ld) has been queued %ld time.\n",
                     theUnitID, this->mAutoPaths[j]->mTile.GetX(), this->mAutoPaths[j]->mTile.GetY(),
                     this->mAutoPaths[j]->mPasses);
-            fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %d. Tile Cap is: %d\n", theMachine->mRevs,
+            fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld\n", theMachine->mRevs,
                     theMachine->GetMaxRevs());
         } else {
             fprintf(inFile, "OUT OF SYNCH DUMP: !!! UNKNOWN GraphFinder! Can't Dynamic cast it!\n");

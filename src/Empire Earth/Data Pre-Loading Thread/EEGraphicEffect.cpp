@@ -182,7 +182,7 @@ void EEGraphicEffect::DumpIDs(FSFileSpec& inFile)
     std::set<unsigned long>::iterator theIterator;
     fprintf(inFile, "\n\nMEDIA DUMP OF ALL GRAPHIC EFFECTS THAT WERE NOT LOADED CORRECTLY\n\n");
     for (theIterator = EEGraphicEffect::sIDs.begin(); theIterator != EEGraphicEffect::sIDs.end(); ++theIterator)
-        fprintf(inFile, "The Graphic Effect %d (name not available in release) was used without being preloaded, notify a programmer about this.\n",
+        fprintf(inFile, "The Graphic Effect %ld (name not available in release) was used without being preloaded, notify a programmer about this.\n",
                 EEGraphicEffect::sEffects[*theIterator]->mID);
 }
 

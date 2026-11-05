@@ -67,7 +67,7 @@ void RTSUnit::FreeNode()
 void RTSUnit::Describe(UWideString& ioString)
 {
     UWideString theString;
-    sprintf(theString, "uid %d, at %d,%d:", this->mUnitID & 0xffffff, this->mTileX, this->mTileY);
+    sprintf(theString, "uid %ld, at %ld,%ld:", this->mUnitID & 0xffffff, this->mTileX, this->mTileY);
     ioString += theString;
 }
 
@@ -76,7 +76,7 @@ void RTSUnit::Describe(UWideString& ioString)
 void RTSUnit::DescribeLong(UWideString& ioString)
 {
     UWideString theString;
-    sprintf(theString, "UnitID:%d\nTile:(%d,%d)\n", this->mUnitID & 0xffffff, this->mTileX, this->mTileY);
+    sprintf(theString, "UnitID:%ld\nTile:(%ld,%ld)\n", this->mUnitID & 0xffffff, this->mTileX, this->mTileY);
     ioString += theString;
 }
 

@@ -63,7 +63,7 @@ void GETextureManager::DumpAllLoadedMedia(FSFileSpec& inFile)
     this->mCriticalSection->Enter();
     fprintf(inFile, "\n\n*********Texture Manager - Current Loaded Files In Memory*********\n\n");
     for (theIter = this->mTextures.begin(); theIter != this->mTextures.end(); theIter++)
-        fprintf(inFile, "The %s texture file is loaded in memory with a reference count of %d.\n",
+        fprintf(inFile, "The %s texture file is loaded in memory with a reference count of %ld.\n",
                 (const char*)theIter->first, theIter->second->mReferenceCount);
     this->mCriticalSection->Leave();
 }
@@ -154,7 +154,7 @@ GETexture* GETextureManager::MakeTexture(GESurface* inSurface)
     GETexture* theTexture;
     this->mCriticalSection->Enter();
     theTexture = new GETexture(inSurface, this);
-    sprintf(theName, "GETextureManager::MakeTexture(%d)", sTextureNumber++);
+    sprintf(theName, "GETextureManager::MakeTexture(%ld)", sTextureNumber++);
     this->mTextures[theName] = theTexture;
     theTexture->SetStageAlphaMode(kStageOpModulate, -1);
     theTexture->SetStageColorMode(kStageOpModulate, -1);

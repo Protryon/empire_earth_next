@@ -127,7 +127,7 @@ long UIFullBackground::LoadBackground(const GETextureDescription& inDescription)
                 char theBuffer[256];
                 unsigned long theLength = theExtension - (const char*)this->mFileName;
                 memcpy(theBuffer, (const char*)this->mFileName, theLength);
-                sprintf(theBuffer + theLength, "_%d_%d%s", theRow + 1, theColumn + 1, theExtension);
+                sprintf(theBuffer + theLength, "_%ld_%ld%s", theRow + 1, theColumn + 1, theExtension);
                 theFileName = theBuffer;
             } else
                 theFileName = this->mFileName + "_" + theRowString + "_" + theColumnString;

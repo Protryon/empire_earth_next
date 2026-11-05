@@ -918,14 +918,14 @@ void EESETSTrigger::Load()
     this->mFirstEffectComboBox->SetCurrentSelection(theEffect->mEffectIndex);
     this->ShowOperator(this->mFirstEffectOperatorComboBox, theEffect->mOperator);
     gResource->GetString(IDS_CONDITION, theFormat);
-    sprintf(theText, "%s %d", (const char*)theFormat, this->mFirstCondition);
+    sprintf(theText, "%s %ld", (const char*)theFormat, this->mFirstCondition);
     this->mFirstConditionLabel->SetText(theText);
-    sprintf(theText, "%s %d", (const char*)theFormat, this->mFirstCondition + 1);
+    sprintf(theText, "%s %ld", (const char*)theFormat, this->mFirstCondition + 1);
     this->mSecondConditionLabel->SetText(theText);
     gResource->GetString(IDS_EFFECT, theFormat);
-    sprintf(theText, "%s %d", (const char*)theFormat, this->mFirstEffect);
+    sprintf(theText, "%s %ld", (const char*)theFormat, this->mFirstEffect);
     this->mFirstEffectLabel->SetText(theText);
-    sprintf(theText, "%s %d", (const char*)theFormat, this->mFirstEffect + 1);
+    sprintf(theText, "%s %ld", (const char*)theFormat, this->mFirstEffect + 1);
     this->mSecondEffectLabel->SetText(theText);
     gResource->GetString(IDS_DEL, theFormat);
     if (this->mFirstCondition == 0 && theTrigger->GetConditionCount() == 1)

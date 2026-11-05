@@ -482,7 +482,7 @@ bool EECBUIListBox::FormatUpgrade(unsigned short inUpgrade, UWideString& outLine
             gResource->GetString(IDS_FORMAT_PERCENT_6_2G, theFormat);
             sprintf(theValueText, theFormat, theValue * 100.0f);
             if (theError == kErrorOK) {
-                sprintf(outLine, "%s%s%s%s%d%s%d%s%d%s%d%s%s", (const char*)theCategoryName,
+                sprintf(outLine, "%s%s%s%s%ld%s%ld%s%ld%s%ld%s%s", (const char*)theCategoryName,
                         (const char*)EECBUIListBox::sSeparator, (const char*)theUpgradeName, (const char*)EECBUIListBox::sSeparator,
                         (long)(theBonus * 100.0f), (const char*)EECBUIListBox::sSeparator, (long)inUpgrade,
                         (const char*)EECBUIListBox::sSeparator, theCost, (const char*)EECBUIListBox::sSeparator, thePoints,
@@ -610,7 +610,7 @@ bool EECBUIListBox::GetNumber(const UWideString& inLine, unsigned long inIndex, 
     UWideString theToken;
     bool theResult = EECBUIListBox::GetToken(inLine, inIndex, theToken);
     if (theResult)
-        theResult = sscanf(theToken, "%u", outValue) == 1;
+        theResult = sscanf(theToken, "%lu", outValue) == 1;
     else
         *outValue = 0;
     return theResult;

@@ -253,7 +253,7 @@ long EEE2DLightGlow::SetUp()
             theEnd = theName.Find("_", theStart);
             if (theEnd < theName.GetLength()) {
                 theField.Copy(theName, theStart, theEnd - theStart + 1, 0, false);
-                sscanf(theField, "%d", &this->mSpots[i].mOnTime);
+                sscanf(theField, "%ld", &this->mSpots[i].mOnTime);
             } else {
                 this->mSpots[i].mOnTime = 500;
             }
@@ -261,14 +261,14 @@ long EEE2DLightGlow::SetUp()
             theEnd = theName.Find("_", theStart);
             if (theEnd < theName.GetLength()) {
                 theField.Copy(theName, theStart, theEnd - theStart + 1, 0, false);
-                sscanf(theField, "%d", &this->mSpots[i].mPeriod);
+                sscanf(theField, "%ld", &this->mSpots[i].mPeriod);
             } else {
                 this->mSpots[i].mPeriod = this->mSpots[i].mOnTime;
             }
             theStart = theEnd + 1;
             if (theStart < theName.GetLength()) {
                 theField.Copy(theName, theStart, theName.GetLength() - theStart, 0, false);
-                sscanf(theField, "%d", &this->mSpots[i].mStart);
+                sscanf(theField, "%ld", &this->mSpots[i].mStart);
             } else {
                 this->mSpots[i].mStart = 0;
             }

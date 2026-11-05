@@ -289,16 +289,16 @@ void EEAirTrafficControl::DropDeadPlanes(std::vector<EEATCAirport>::iterator& in
 // Writes the air cargo totals and every airport's landing and takeoff queues to the out-of-sync dump
 void EEAirTrafficControl::Dump(FILE* inFile)
 {
-    fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The max cargo weight is %d\n", this->mMaxCargo);
-    fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The used cargo weight is %d\n", this->mUsedCargo);
+    fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The max cargo weight is %ld\n", this->mMaxCargo);
+    fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The used cargo weight is %ld\n", this->mUsedCargo);
     for (unsigned long i = 0; i < this->mSlots.size(); i++) {
-        fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The Airport %d ID is #%08x\n", i, this->mSlots[i].mAirport->GetUnitID());
+        fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The Airport %ld ID is #%08lx\n", i, this->mSlots[i].mAirport->GetUnitID());
         unsigned long j;
         for (j = 0; j < this->mSlots[i].mLanding.size(); j++)
-            fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The Landing Request %d has a unit ID of #%08x with a request of %d\n",
+            fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The Landing Request %ld has a unit ID of #%08lx with a request of %ld\n",
                     j, this->mSlots[i].mLanding[j].mUnit->GetUnitID(), this->mSlots[i].mLanding[j].mKind);
         for (j = 0; j < this->mSlots[i].mTakeoff.size(); j++)
-            fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The Takeoff Request %d has a unit ID of #%08x with a request of %d\n",
+            fprintf(inFile, "EEAirTrafficControl::DumpOOSInformation - The Takeoff Request %ld has a unit ID of #%08lx with a request of %ld\n",
                     j, this->mSlots[i].mTakeoff[j].mUnit->GetUnitID(), this->mSlots[i].mTakeoff[j].mKind);
     }
 }

@@ -107,7 +107,7 @@ long EETile::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
 void EETile::Dump(FILE* inFile, unsigned long inPlayerCount) const
 {
     for (unsigned long i = 0; i < this->GetNumDoppelgangers(); i++)
-        fprintf(inFile, "Doppelganger %d has unit id of %d\n", i,this->mDoppelgangers[i]->mUnit->mUnitID);
+        fprintf(inFile, "Doppelganger %ld has unit id of %ld\n", i,this->mDoppelgangers[i]->mUnit->mUnitID);
     RTSTile::Dump(inFile, inPlayerCount);
 }
 

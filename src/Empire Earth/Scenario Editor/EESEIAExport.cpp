@@ -138,7 +138,7 @@ void EESEIAExport::Virtual4()
 
     if (this->mFile.FOpen("w") == 0) {
         gUIManager->mScenarioEditorForm->RefreshCurrentGroup();
-        if ((unsigned long)fprintf((FILE*)this->mFile, "{Version_%d}\n\n", gSETextVersion) > 0) {
+        if ((unsigned long)fprintf((FILE*)this->mFile, "{Version_%ld}\n\n", gSETextVersion) > 0) {
             if (gWorld.mScenarioManager->ExportText(this->mFile) != 0) {
                 gResource->GetString(IDS_FILE_ERROR, theError);
                 gUIManager->DisplayMessage(theError, 1, NULL, NULL, true);

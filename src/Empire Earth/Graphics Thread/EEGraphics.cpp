@@ -241,10 +241,10 @@ void EEGraphics::SaveScreenShot(EEScreenCapture* inCapture)
         sprintf(theExtension, ".%s", "bmp");
     do {
         if (inCapture->mIsPostGame) {
-            sprintf(theTime, "%u-%u-%u-%.3u", theNow.mMonth + 1, theNow.mDay, theNow.mYear, theIndex);
+            sprintf(theTime, "%lu-%lu-%lu-%.3lu", theNow.mMonth + 1, theNow.mDay, theNow.mYear, theIndex);
             theFile.SetFile(UString("EEPostGame-") + theTime + theExtension);
         } else {
-            sprintf(theTime, "%.3u", theIndex);
+            sprintf(theTime, "%.3lu", theIndex);
             theFile.SetFile(UString("EE") + theTime + theExtension);
         }
         theIndex++;

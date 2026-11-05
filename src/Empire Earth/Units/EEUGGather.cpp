@@ -253,8 +253,8 @@ void EEUGGather::DumpOutOfSynch(FILE* inFile)
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGGather - Actual Destination X: %6.6f\n", this->mDestination.GetX());
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGGather - Actual Destination Y: %6.6f\n", this->mDestination.GetY());
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGGather - Actual Destination Z: %6.6f\n", this->mDestination.GetZ());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGGather - Resource Target ID: #%08x\n", this->mResource ? this->mResource->mUnitID : -1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGGather - Storage Target ID: #%08x\n", this->mStorage ? this->mStorage->mUnitID : -1);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGGather - Resource Target ID: #%08lx\n", this->mResource ? this->mResource->mUnitID : -1);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGGather - Storage Target ID: #%08lx\n", this->mStorage ? this->mStorage->mUnitID : -1);
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGGather - Gathering Flag %d\n", this->mGathering == true);
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGGather - Waiting Flag %d\n", this->mWaiting == true);
     EEUnitGoal::DumpOutOfSynch(inFile);
@@ -459,14 +459,14 @@ void EEUGGather::GetDebugLine(UWideString& ioText)
     if (this->mGathering) {
         ioText += "gather";
         if (this->mResource != NULL) {
-            sprintf(theText, "(uid %d, at %d,%d, type %d, amount %d)", this->mResource->mUnitID & 0xffffff,
+            sprintf(theText, "(uid %ld, at %ld,%ld, type %ld, amount %ld)", this->mResource->mUnitID & 0xffffff,
                     this->mResource->mTileX, this->mResource->GetTileY(), this->mResource->mResourceType, this->mResource->mResourceAmount);
             ioText += theText;
         }
     } else {
         ioText += "dropoff";
         if (this->mResource != NULL) {
-            sprintf(theText, "(uid %d, at %d,%d)", this->mResource->mUnitID & 0xffffff, this->mResource->mTileX,
+            sprintf(theText, "(uid %ld, at %ld,%ld)", this->mResource->mUnitID & 0xffffff, this->mResource->mTileX,
                     this->mResource->GetTileY());
             ioText += theText;
         }
@@ -482,14 +482,14 @@ void EEUGGather::GetDebugText(UWideString& ioText)
     if (this->mGathering) {
         ioText += "Gathering\n";
         if (this->mResource != NULL) {
-            sprintf(theText, "Unit: %s at (%d,%d)\nType:%d\nAmount:%d\n", (const char*)this->mResource->mUnitClass->mName,
+            sprintf(theText, "Unit: %s at (%ld,%ld)\nType:%ld\nAmount:%ld\n", (const char*)this->mResource->mUnitClass->mName,
                     this->mResource->mTileX, this->mResource->GetTileY(), this->mResource->mResourceType, this->mResource->mResourceAmount);
             ioText += theText;
         }
     } else {
         ioText += "Dropping Off\n";
         if (this->mResource != NULL) {
-            sprintf(theText, "Unit: %s at (%d,%d)\n", (const char*)this->mResource->mUnitClass->mName, this->mResource->mTileX,
+            sprintf(theText, "Unit: %s at (%ld,%ld)\n", (const char*)this->mResource->mUnitClass->mName, this->mResource->mTileX,
                     this->mResource->GetTileY());
             ioText += theText;
         }

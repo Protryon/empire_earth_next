@@ -339,14 +339,14 @@ void RTSMouse::Update()
             if (theMoveX != 0) {
                 if ((theMoveX < 0 ? -theMoveX : theMoveX) < sMinXValue) {
                     sMinXValue = theMoveX < 0 ? -theMoveX : theMoveX;
-                    ESDebugOut("!MinXValue now %d\n", sMinXValue);
+                    ESDebugOut("!MinXValue now %ld\n", sMinXValue);
                 }
                 theDeltaX = (theScaleX + 0.0625f) * (float)theMoveX * 4.0f / sMinXValue;
             }
             if (theMoveY != 0) {
                 if ((theMoveY < 0 ? -theMoveY : theMoveY) < sMinYValue) {
                     sMinYValue = theMoveY < 0 ? -theMoveY : theMoveY;
-                    ESDebugOut("!MinYValue now %d\n", sMinYValue);
+                    ESDebugOut("!MinYValue now %ld\n", sMinYValue);
                 }
                 theDeltaY = (theScaleY + 0.0625f) * (float)theMoveY * 4.0f / sMinYValue;
             }

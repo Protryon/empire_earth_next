@@ -112,7 +112,7 @@ void EEButtonObject::DumpAllLoadedMedia(FSFileSpec& inFile)
     fprintf(inFile, "\n\n**********Button Database Table*********\n\n");
     for (unsigned long i = 0; i < EEButtonObject::sTable.size(); i++)
         if (EEButtonObject::sTable[i] != NULL && EEButtonObject::sTable[i]->mMediaCount > 0)
-            fprintf(inFile, "\t%s (filename) has a media count of %d\n", (const char*)EEButtonObject::sTable[i]->mName,
+            fprintf(inFile, "\t%s (filename) has a media count of %ld\n", (const char*)EEButtonObject::sTable[i]->mName,
                     EEButtonObject::sTable[i]->mMediaCount);
 }
 
