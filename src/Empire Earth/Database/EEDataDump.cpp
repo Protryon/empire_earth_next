@@ -164,7 +164,7 @@ bool InList(const char* inList, const char* inName)
 
 void Row(std::string& out, const EEDTTable& t, long inRow, const unsigned char* rec,
          const std::vector<std::pair<const unsigned char*, uint32_t>>& lead, const std::vector<uint32_t>* list,
-         bool inEpoch)
+         bool inEpoch, long inEpochIndex = 0)
 {
     bool all;
     const char* only = RowFields(t, inRow, all);
@@ -190,9 +190,16 @@ void Row(std::string& out, const EEDTTable& t, long inRow, const unsigned char* 
             continue;   // text only: the game never reads it
         if (only && !InList(only, f.mName))
             continue;
-        if (!inEpoch && t.mContainer == kEEDTC_techtree && strcmp(f.mName, "mFirstNodeID") == 0)
+        if (!inEpoch && t.mContainer == kEEDTC_techtree &&
+            (strcmp(f.mName, "mFirstNodeID") == 0 || strcmp(f.mName, "mTitleID") == 0))
             continue;   // read from epoch records only
         out += ',';
+        if (inEpoch && strcmp(f.mName, "mTitleID") == 0 && Int(rec + f.mOffset, kEEDT_s32) == 0) {
+            char buf[48];
+            snprintf(buf, sizeof(buf), "\"mTitleID\":%ld", 30145 + inEpochIndex);   // what the game uses for 0
+            out += buf;
+            continue;
+        }
         Field(out, f, rec);
     }
     if (list) {
@@ -228,7 +235,7 @@ bool DumpTable(const char* inTable, const unsigned char* inData, size_t inSize, 
     for (unsigned long i = 0; i < kEEDTTableCount; i++)
         if (strcmp(kEEDTTables[i].mName, inTable) == 0)
             t = &kEEDTTables[i];
-    if (!t) {
+    if (!t || t->mTextOnly) {
         outError = std::string(inTable) + ": not a db table with a text form";
         return false;
     }
@@ -254,7 +261,7 @@ bool DumpTable(const char* inTable, const unsigned char* inData, size_t inSize, 
             char buf[48];
             snprintf(buf, sizeof(buf), "\n {\"epoch\":%ld,\"rows\":[", epoch++);
             out += buf;
-            Row(out, *t, -1, rec, noLead, &list, true);
+            Row(out, *t, -1, rec, noLead, &list, true, epoch - 1);
             for (uint32_t k = 0; k < n && !r.mBad; k++) {
                 rec = r.Take(size);
                 ReadList();

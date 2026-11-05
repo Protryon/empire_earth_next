@@ -46,8 +46,11 @@ static int Dump(bool inText, const char* inDir, const char* inOut)
 {
     EEDataText::Content c(TextReader(inDir));
     std::string json = "{";
+    bool first = true;
     for (unsigned long i = 0; i < kEEDTTableCount; i++) {
         const EEDTTable& t = kEEDTTables[i];
+        if (t.mTextOnly)
+            continue;   // epochs: compiles into dbtechtree
         std::vector<unsigned char> data;
         std::string err, raw;
         if (inText) {
@@ -62,8 +65,9 @@ static int Dump(bool inText, const char* inDir, const char* inOut)
             }
             data.assign(raw.begin(), raw.end());
         }
-        if (i)
+        if (!first)
             json += ",\n";
+        first = false;
         if (!EEDataText::DumpTable(t.mName, data.empty() ? nullptr : &data[0], data.size(), json, err)) {
             fprintf(stderr, "%s\n", err.c_str());
             return 1;
@@ -75,7 +79,10 @@ static int Dump(bool inText, const char* inDir, const char* inOut)
         return 2;
     fwrite(json.data(), 1, json.size(), f);
     fclose(f);
-    printf("%lu tables -> %s (%zu bytes)\n", kEEDTTableCount, inOut, json.size());
+    unsigned long theDumped = 0;
+    for (unsigned long i = 0; i < kEEDTTableCount; i++)
+        theDumped += kEEDTTables[i].mTextOnly ? 0 : 1;
+    printf("%lu tables -> %s (%zu bytes)\n", theDumped, inOut, json.size());
     return 0;
 }
 
@@ -100,7 +107,10 @@ static int Batch(const char* inDir, const char* inTextDir)
             }
             return others(inTable, outText);
         });
-        bool ok = c.Compile(table.c_str(), got, err);
+        bool textOnly = false;
+        for (unsigned long i = 0; i < kEEDTTableCount; i++)
+            textOnly = textOnly || (table == kEEDTTables[i].mName && kEEDTTables[i].mTextOnly);
+        bool ok = c.Compile(textOnly ? "dbtechtree" : table.c_str(), got, err);   // epochs compiles into dbtechtree
         std::string out = (std::filesystem::path(inDir) / (name + (ok ? ".out" : ".err"))).string();
         FILE* f = fopen(out.c_str(), "wb");
         if (!f)
@@ -129,8 +139,12 @@ int main(int argc, char** argv)
     int same = 0, bad = 0, missing = 0;
     double total = 0;
     EEDataText::Content c(TextReader(argv[1]));
+    unsigned long theTables = 0;
     for (unsigned long i = 0; i < kEEDTTableCount; i++) {
         const EEDTTable& t = kEEDTTables[i];
+        if (t.mTextOnly)
+            continue;   // epochs: compiled with dbtechtree
+        theTables++;
         std::string text, want;
         std::string tp = std::string(argv[1]) + "/" + t.mName + EEDataText::TextExtension(t.mName);
         if (!ReadFile(tp, text) || !ReadFile(std::string(argv[2]) + "/" + t.mName + ".dat", want)) {
@@ -159,6 +173,6 @@ int main(int argc, char** argv)
         }
     }
     printf("%d/%lu tables compile to identical bytes (%d differ or fail, %d missing; %.0f ms in all)\n", same,
-           kEEDTTableCount, bad, missing, total);
+           theTables, bad, missing, total);
     return bad || missing ? 1 : 0;
 }

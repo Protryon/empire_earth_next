@@ -24,6 +24,7 @@ import re
 import binfmt
 import ids as idsmod
 import scalars
+import techtree
 from binfmt import FormatError, Row, Table, Epoch
 from scalars import ValueError_
 from textio import Scalar, Text, TextError, emit_csv, emit_yaml, parse_csv, parse_yaml
@@ -55,6 +56,8 @@ def _ref_text(v, ref, ids):
     """An integer of a reference field -> the target row's id, or the integer when it names no row."""
     if v in ref['none']:
         return scalars.format_int(v)
+    if ref.get('never') and v == len(ids.get(ref['table'], {})):
+        return 'never'   # the target's count: no row (an epoch never reached)
     i = ids.get(ref['table'], {}).get(v)
     return i if i is not None else scalars.format_int(v)
 
@@ -323,6 +326,8 @@ def parse_all(dbs, spec):
     """{table: db file bytes} -> {table: Table} with the holes detected (and dbworld's unread rows left out)."""
     out = {}
     for name, data in dbs.items():
+        if spec['tables'][name].get('text_only'):
+            continue
         t = binfmt.detect_holes(binfmt.parse(name, data, spec), spec)
         names = _row_names(spec, name)
         if names:   # rows without a name have no reader: left out (holes)
@@ -335,7 +340,23 @@ def export_all(dbs, spec, ids=None):
     """{table: db file bytes} -> {table: text bytes}. ids: {table: {key: id}} (default: generated, ids.py)."""
     tabs = parse_all(dbs, spec)
     ids = ids if ids is not None else idsmod.generate(tabs, spec)
-    return {name: export_table(name, tabs[name], spec, ids) for name in dbs}
+    out = {}
+    for name in dbs:
+        if name == 'dbtechtree':   # two texts: the techs and the epochs
+            out['dbtechtree'], out['epochs'] = techtree.export_texts(tabs[name], spec, ids, _this())
+        elif name not in out:
+            out[name] = export_table(name, tabs[name], spec, ids)
+    return out
+
+
+def _this():
+    import sys
+    return sys.modules[__name__]
+
+
+def binary_tables(spec):
+    """The tables that are db files (all but the text-only epochs, which compiles into dbtechtree)."""
+    return sorted(n for n, t in spec['tables'].items() if not t.get('text_only'))
 
 
 def export_table(name, t, spec, ids):
@@ -444,6 +465,13 @@ class Content:
         self.docs, self.indexes, self.keysets = {}, {}, {}
 
     def doc(self, name):
+        if name in ('dbtechtree', 'epochs'):
+            if 'dbtechtree' not in self.docs:
+                for n in ('dbtechtree', 'epochs'):
+                    if n not in self.texts:
+                        raise TextError(f'{n}: referenced, but the table has no text form here')
+                self.docs['dbtechtree'] = techtree.Layout(self.texts, self.spec, _this())
+            return self.docs['dbtechtree']
         if name not in self.docs:
             if name not in self.texts:
                 raise TextError(f'{name}: referenced, but the table has no text form here')
@@ -453,16 +481,9 @@ class Content:
     def records(self, name):
         """[(key, mapping, where)] of every listed record (dbtechtree: each epoch record, then its nodes)."""
         d = self.doc(name)
-        tspec = self.spec['tables'][name]
-        if d.epochs is None:
-            return [(pos, m, f'{name} line {line}') for pos, m, line in d.rows]
-        f = next(f for f in self.spec['structs'][tspec['struct']]['fields'] if f['name'] == tspec['key'])
-        out = []
-        for em, eline, _, rows in d.epochs:
-            for m, line in [(em, eline)] + [(m, line) for _, m, line in rows]:
-                where = f'{name} line {line}'
-                out.append((_num(f, m.get(tspec['key']), where), m, where))
-        return out
+        if isinstance(d, techtree.Layout):
+            return techtree.records(d, name, _this(), self.spec)
+        return [(pos, m, f'{name} line {line}') for pos, m, line in d.rows]
 
     def index(self, name):
         """{id: key} of a table; a missing, malformed or duplicate id is an error naming the line."""
@@ -491,6 +512,8 @@ class Content:
         if isinstance(s, (list, dict)):
             raise TextError(f'{where}: {field}: a list where a reference belongs')
         target = ref['table']
+        if ref.get('never') and s == 'never':
+            return len(self.index(target))
         if idsmod.ID_RE.match(s):
             idx = self.index(target)
             if s not in idx:
@@ -508,6 +531,10 @@ class Content:
 
     def build(self, name):
         """The table's db file bytes."""
+        if name == 'dbtechtree':
+            self.index('dbtechtree')
+            self.index('epochs')
+            return techtree.build(self.doc(name), self.spec, self, _this())
         return build_table(name, self.doc(name), self.spec, self)
 
 
@@ -613,7 +640,7 @@ def build_table(name, d, spec, content):
 def import_all(texts, spec, names=None):
     """{table: text bytes} -> {table: db file bytes} (names: only these). Raises TextError at the first problem."""
     c = Content(texts, spec)
-    return {n: c.build(n) for n in (names or sorted(texts))}
+    return {n: c.build(n) for n in (names or sorted(texts)) if not spec['tables'][n].get('text_only')}
 
 
 def import_(name, text, spec, texts=None):

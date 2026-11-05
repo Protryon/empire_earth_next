@@ -205,7 +205,9 @@ def generate():
         if name in overlay.ROW_FIELDS:
             t['row_fields'] = {str(k): v for k, v in overlay.ROW_FIELDS[name].items()}
         t['key'] = overlay.KEYS.get(name, 'row')
-        if t['key'] != 'row' and (t['key'] not in byname or byname[t['key']]['cls'] != 'named'):
+        if name in overlay.DERIVED:
+            t['derived'] = {k: list(v) for k, v in overlay.DERIVED[name].items()}
+        if t['key'] not in ('row', 'position') and (t['key'] not in byname or byname[t['key']]['cls'] != 'named'):
             raise SystemExit(f'overlay.KEYS: {name}.{t["key"]} is not a field the text carries')
         if name in overlay.SELF:
             fn, off = overlay.SELF[name]
@@ -223,6 +225,8 @@ def generate():
             elif fn not in byname or byname[fn]['cls'] != 'named' or byname[fn]['type'] in ('f32', 'pair_f32', 'str'):
                 raise SystemExit(f'overlay.REFS: {name}.{fn} is not an integer field the text carries')
             refs[fn] = {'table': r['table'], 'none': list(r.get('none', []))}
+            if r.get('never'):
+                refs[fn]['never'] = True
         t['refs'] = refs
         t['id_names'] = overlay.ID_NAMES.get(name, overlay.ID_DEFAULT)
         tables[name] = t

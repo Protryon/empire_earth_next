@@ -9,6 +9,9 @@ rows the original fixed tables had no room for.
   table, and every such event to a new row above its 1500-row event table, with the tech tree pointing at the new
   events (ids <event>_x, <effect>_x). Every effect is the same, so a game plays as with the vanilla tables: the
   differential test of the lifted event and effect caps.
+* --epoch: a 16th epoch, tin_age, between the copper and the bronze age (a copy of the bronze age's entry with no
+  techs of its own; it and the bronze age need no techs to advance, so a game can pass through it). Every later
+  epoch moves up one place; every tech keeps its id.
 
 The input and output are text tables (eedata.py export); the output folder must be outside the repository.
 """
@@ -41,8 +44,21 @@ def add_units(texts, n):
     texts['dbobjects.yaml'] = t.rstrip('\n') + '\n' + ''.join(out)
 
 
+def add_epoch(texts):
+    s = texts['epochs.yaml']
+    a = s.index('  - id: bronze_age\n')
+    b = s.index('  - id: dark_age\n')
+    bronze = s[a:b]
+    tin = bronze.replace('  - id: bronze_age\n', '  - id: tin_age\n', 1).replace('mEpoch: bronze_age', 'mEpoch: tin_age')
+    tin = re.sub(r'^    label: "[^"]*"$', '    label: "Epoch Tin"', tin, count=1, flags=re.M)
+    tin = re.sub(r'^    slots: \d+$', '    slots: 0', tin, count=1, flags=re.M)
+    tin = re.sub(r'^    mRequiredSOL: \d+$', '    mRequiredSOL: 0', tin, count=1, flags=re.M)
+    bronze = re.sub(r'^    mRequiredSOL: \d+$', '    mRequiredSOL: 0', bronze, count=1, flags=re.M)
+    texts['epochs.yaml'] = s[:a] + tin + bronze + s[b:]
+
+
 def move_events(texts):
-    tt, ev, ef = texts['dbtechtree.yaml'], texts['dbevents.yaml'], texts['dbeffects.csv']
+    tt, ev, ef = texts['dbtechtree.yaml'] + texts['epochs.yaml'], texts['dbevents.yaml'], texts['dbeffects.csv']
     used = sorted(set(re.findall(r'^\s+m(?:Researched|Obsolete)Event: ([a-z]\w*)$', tt, re.M)))
     lines, hdr = _csv_rows(ef)
     cols = lines[hdr].split(',')
@@ -64,8 +80,9 @@ def move_events(texts):
         nb = re.sub(r'^    effects: \[.*\]$', '    effects: [' + ', '.join(done[x] for x in ids) + ']', nb,
                     flags=re.M)
         new_ev.append(nb if nb.endswith('\n') else nb + '\n')
-        tt = re.sub(r'^(\s+m(?:Researched|Obsolete)Event): ' + name + '$', r'\1: ' + name + '_x', tt, flags=re.M)
-    texts['dbtechtree.yaml'] = tt
+        for t in ('dbtechtree.yaml', 'epochs.yaml'):
+            texts[t] = re.sub(r'^(\s+m(?:Researched|Obsolete)Event): ' + name + '$', r'\1: ' + name + '_x', texts[t],
+                              flags=re.M)
     texts['dbevents.yaml'] = ev.rstrip('\n') + '\n' + ''.join(new_ev)
     texts['dbeffects.csv'] = ef.rstrip('\n') + '\n' + '\n'.join(new_eff) + '\n'
     return len(used), len(new_eff)
@@ -78,6 +95,9 @@ def run(a):
     if a.units:
         add_units(texts, a.units)
         print(f'{a.units} extra unit classes (rows 848..{848 + a.units - 1})')
+    if getattr(a, 'epoch', False):
+        add_epoch(texts)
+        print('a 16th epoch, tin_age, between the copper and the bronze age')
     if a.effects:
         nev, nef = move_events(texts)
         print(f'{nev} events moved above row 1499 and {nef} effects above row 1999 (the tech tree points at them)')

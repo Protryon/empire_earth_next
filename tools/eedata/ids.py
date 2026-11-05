@@ -93,6 +93,8 @@ def listed(name, t, spec):
     tspec = spec['tables'][name]
     st = spec['structs'][tspec['struct']]
     out = []
+    if name == 'epochs':
+        return []
     if t.epochs is not None:
         for e in t.epochs:
             out.append((key_of(tspec, st, e.epoch, None), e.epoch))
@@ -125,6 +127,8 @@ def generate(tables, spec):
             named = [(k, _name_of(tspec, st, r, src)) for k, r in rows]
         named = [(k, overlay.ID_OVERRIDES.get(name, {}).get(k, n)) for k, n in named]
         out[name] = assign(named, prefix)
+    if 'dbtechtree' in out:   # the epochs: the epoch records of dbtechtree, keyed by their position
+        out['epochs'] = {k: out['dbtechtree'][k] for k in range(len(tables['dbtechtree'].epochs))}
     if 'dbeffects' in tables:   # an effect is named after the first event that lists it: <event>_<n>
         ev = out.get('dbevents', {})
         named = {}

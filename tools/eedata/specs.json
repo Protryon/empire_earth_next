@@ -891,6 +891,11 @@
     "mMiniMapColor": {
      "table": "dbcolortable",
      "none": []
+    },
+    "mEpoch": {
+     "table": "epochs",
+     "none": [],
+     "never": true
     }
    },
    "id_names": [
@@ -1016,6 +1021,115 @@
     "mHotKey": {
      "table": "dbuihotkey",
      "none": []
+    },
+    "mEpoch": {
+     "table": "epochs",
+     "none": []
+    },
+    "mObsoleteEpoch": {
+     "table": "epochs",
+     "none": [],
+     "never": true
+    }
+   },
+   "id_names": [
+    "label"
+   ]
+  },
+  "epochs": {
+   "struct": "EETechTreeRecord",
+   "container": "epochs",
+   "format": "yaml",
+   "list": [
+    "parents",
+    "u32"
+   ],
+   "text_only": true,
+   "hole": {},
+   "key": "position",
+   "derived": {
+    "mID": [
+     1,
+     0
+    ],
+    "mEpoch": [
+     1,
+     0
+    ],
+    "mNextEpoch": [
+     1,
+     1
+    ],
+    "mFirstNodeID": [
+     1000,
+     1000
+    ]
+   },
+   "refs": {
+    "mResearchedEvent": {
+     "table": "dbevents",
+     "none": []
+    },
+    "mObsoleteEvent": {
+     "table": "dbevents",
+     "none": []
+    },
+    "mPrerequisite1": {
+     "table": "dbtechtree",
+     "none": [
+      0
+     ]
+    },
+    "mPrerequisite2": {
+     "table": "dbtechtree",
+     "none": [
+      0
+     ]
+    },
+    "mPrerequisite3": {
+     "table": "dbtechtree",
+     "none": [
+      0
+     ]
+    },
+    "mPrerequisite4": {
+     "table": "dbtechtree",
+     "none": [
+      0
+     ]
+    },
+    "mUnitClass": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mDefaultUnitClass": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "@list": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mButton": {
+     "table": "dbbuttons",
+     "none": []
+    },
+    "mCalamity": {
+     "table": "dbcalamity",
+     "none": []
+    },
+    "mHotKey": {
+     "table": "dbuihotkey",
+     "none": []
+    },
+    "mEpoch": {
+     "table": "epochs",
+     "none": []
+    },
+    "mObsoleteEpoch": {
+     "table": "epochs",
+     "none": [],
+     "never": true
     }
    },
    "id_names": [
@@ -3614,7 +3728,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x14 a gUnitClassTable index (< 0x367)"
+     "comment": "+0x14 a gUnitClassTable index (< EEUnitClassCount())"
     },
     {
      "name": "mNewUnitClass",
@@ -9498,13 +9612,13 @@
      "comment": "+0xd0 -> mU08->mHotKey"
     },
     {
-     "name": "mUnused5",
-     "member": "mUnused5",
+     "name": "mTitleID",
+     "member": "mTitleID",
      "off": 212,
-     "type": "raw",
-     "count": 4,
-     "cls": "unused",
-     "comment": "+0xd4"
+     "type": "s32",
+     "count": 1,
+     "cls": "named",
+     "comment": "+0xd4 epoch records: the epoch's title string (0: 30145 + the epoch;"
     },
     {
      "name": "mUnused6",

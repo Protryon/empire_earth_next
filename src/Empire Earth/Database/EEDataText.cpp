@@ -902,6 +902,7 @@ struct Placed {
     long mLine;
 };
 
+// one epoch of the tech tree: its epochs.yaml entry and the dbtechtree.yaml techs placed in its block's slots
 struct EpochBlock {
     const Node* mEpoch;
     long mLine;
@@ -909,14 +910,14 @@ struct EpochBlock {
     std::vector<Placed> mNodes;
 };
 
-// a table's text, parsed once: the records placed at their positions
+// a table's text, parsed once: the records placed at their positions (dbtechtree and epochs: placed together, by
+// Resolver::GetLayout)
 struct Doc {
     Node mDoc;
     Node mCsvRecords;
     long mTotal = 0;
     bool mTechtree = false;
     std::vector<Placed> mRows;
-    std::vector<EpochBlock> mEpochs;
 };
 
 // the ids of a table: id -> key, and which keys are listed
@@ -944,21 +945,17 @@ long HeadInt(const Node* v, const char* what, const std::string& where)
 
 // the records of a list -> positions in file order: an explicit row must be after the previous explicit one, a
 // record without one takes the next free position above every explicit row and the count (new rows go above)
-std::vector<Placed> PlaceRecords(const Node* records, long total, const std::string& where,
-                                 const std::vector<long>* lines)
+std::vector<Placed> PlaceList(const std::vector<const Node*>& items, const std::vector<long>& lines, long total,
+                              const std::string& where)
 {
     std::vector<Placed> out;
-    if (!records)
-        return out;
-    if (records->mKind != Node::kList)
-        Fail(where + ": must be a list");
-    std::vector<long> pos(records->mItems.size(), -1);
+    std::vector<long> pos(items.size(), -1);
     long next = 0;
-    for (size_t k = 0; k < records->mItems.size(); k++) {
-        const Node& m = records->mItems[k];
+    for (size_t k = 0; k < items.size(); k++) {
+        const Node& m = *items[k];
         if (m.mKind != Node::kMap)
             Fail(where + " item " + Num(k) + ": not a mapping");
-        long line = lines ? (*lines)[k] : m.mLine;
+        long line = lines[k];
         const Node* v = m.Find("row");
         if (!v || v->IsMissing())
             continue;
@@ -975,13 +972,29 @@ std::vector<Placed> PlaceRecords(const Node* records, long total, const std::str
         next = pos[k] + 1;
     }
     long free = total > next ? total : next;
-    for (size_t k = 0; k < records->mItems.size(); k++) {
+    for (size_t k = 0; k < items.size(); k++) {
         long p = pos[k];
         if (p < 0)
             p = free++;
-        out.push_back(Placed{p, &records->mItems[k], lines ? (*lines)[k] : records->mItems[k].mLine});
+        out.push_back(Placed{p, items[k], lines[k]});
     }
     return out;
+}
+
+std::vector<Placed> PlaceRecords(const Node* records, long total, const std::string& where,
+                                 const std::vector<long>* lines)
+{
+    if (!records)
+        return std::vector<Placed>();
+    if (records->mKind != Node::kList)
+        Fail(where + ": must be a list");
+    std::vector<const Node*> items;
+    std::vector<long> theLines;
+    for (size_t k = 0; k < records->mItems.size(); k++) {
+        items.push_back(&records->mItems[k]);
+        theLines.push_back(lines ? (*lines)[k] : records->mItems[k].mLine);
+    }
+    return PlaceList(items, theLines, total, where);
 }
 
 // CSV columns the exporter can write for a table (tables.csv_columns)
@@ -1052,31 +1065,18 @@ void ParseDoc(const EEDTTable& t, const std::string& inText, Doc& d)
         Fail(name + ": format " + (head[1]->mKind == Node::kScalar ? head[1]->mText : std::string("?")) +
              ", this loader reads format " + Num(EEDT_FORMAT_VERSION));
     d.mTotal = Present(head[2]) ? HeadInt(head[2], "rows", name) : 0;
-    if (t.mContainer == kEEDTC_techtree) {
-        d.mTechtree = true;
-        const Node* eps = d.mDoc.Find("epochs");
-        if (!eps || eps->mKind != Node::kList)
-            Fail(name + ": epochs must be a list");
-        for (size_t k = 0; k < eps->mItems.size(); k++) {
-            const Node& e = eps->mItems[k];
-            std::string where = name + " epoch " + Num(k);
-            const Node* epoch = e.mKind == Node::kMap ? e.Find("epoch") : nullptr;
-            if (!epoch || epoch->mKind != Node::kMap)
-                Fail(where + ": needs an epoch: mapping");
-            for (const std::string& key : e.mKeys)
-                if (key != "slots" && key != "epoch" && key != "nodes")
-                    Fail(where + ": unknown key " + key);
-            const Node* nodes = e.Find("nodes");
-            if (nodes && nodes->IsMissing())
-                nodes = nullptr;
-            const Node* slots = e.Find("slots");
-            EpochBlock b;
-            b.mEpoch = epoch;
-            b.mLine = epoch->mLine;
-            b.mSlots = Present(slots) ? HeadInt(slots, "slots", where) : 0;
-            b.mNodes = PlaceRecords(nodes, b.mSlots, where, nullptr);
-            d.mEpochs.push_back(std::move(b));
-        }
+    if (t.mContainer == kEEDTC_techtree || t.mContainer == kEEDTC_epochs) {
+        d.mTechtree = true;   // placed together with the other text (Resolver::GetLayout)
+        for (const std::string& k : d.mDoc.mKeys)
+            if (k == "epochs" || k == "rows")
+                Fail(name + ": unknown top-level key " + k);
+        const Node* records = d.mDoc.Find("records");
+        if (records && !records->IsMissing() && records->mKind != Node::kList)
+            Fail(name + ": records must be a list");
+        if (records && records->mKind == Node::kList)
+            for (const Node& m : records->mItems)
+                if (m.mKind != Node::kMap)
+                    Fail(name + ": records must be a list of mappings");
         return;
     }
     const Node* records = t.mYaml ? d.mDoc.Find("records") : &d.mCsvRecords;
@@ -1299,34 +1299,111 @@ public:
         return (long)(int32_t)Number(*f, f->mType, Present(v) ? v : nullptr, where);
     }
 
+    // epochs.yaml and dbtechtree.yaml placed: every epoch (its position is its key) with its techs in its block
+    std::vector<EpochBlock>& GetLayout()
+    {
+        if (this->mHaveLayout)
+            return this->mLayout;
+        const EEDTTable& te = *FindTable("epochs");
+        const EEDTTable& tt = *FindTable("dbtechtree");
+        Doc& de = this->GetDoc(te);
+        Doc& dt = this->GetDoc(tt);
+        const Node* eps = de.mDoc.Find("records");
+        const Node* nodes = dt.mDoc.Find("records");
+        std::map<std::string, long> theIndex;
+        this->mLayout.clear();
+        if (eps && eps->mKind == Node::kList) {
+            for (size_t k = 0; k < eps->mItems.size(); k++) {
+                const Node& m = eps->mItems[k];
+                std::string where = "epochs line " + Num(m.mLine);
+                if (m.Find("row"))
+                    Fail(where + ": an epoch has no row (its place in the file is its position)");
+                const Node* slots = m.Find("slots");
+                EpochBlock b;
+                b.mEpoch = &m;
+                b.mLine = m.mLine;
+                b.mSlots = Present(slots) ? HeadInt(slots, "slots", where) : 0;
+                const Node* id = m.Find("id");
+                if (Present(id) && id->mKind == Node::kScalar && !theIndex.count(id->mText))
+                    theIndex[id->mText] = (long)k;
+                this->mLayout.push_back(b);
+            }
+        }
+        std::vector<std::vector<const Node*>> groups(this->mLayout.size());
+        std::vector<std::vector<long>> lines(this->mLayout.size());
+        if (nodes && nodes->mKind == Node::kList) {
+            for (const Node& m : nodes->mItems) {
+                const Node* e = m.Find("epoch");
+                std::map<std::string, long>::const_iterator it =
+                    Present(e) && e->mKind == Node::kScalar ? theIndex.find(e->mText) : theIndex.end();
+                if (it == theIndex.end())
+                    Fail("dbtechtree line " + Num(m.mLine) + ": epoch '" + (Present(e) && e->mKind == Node::kScalar ?
+                         e->mText : std::string()) + "' is not an id of epochs");
+                groups[it->second].push_back(&m);
+                lines[it->second].push_back(m.mLine);
+            }
+        }
+        for (size_t k = 0; k < this->mLayout.size(); k++)
+            this->mLayout[k].mNodes = PlaceList(groups[k], lines[k], this->mLayout[k].mSlots,
+                                                "dbtechtree epoch " + Num((long long)k));
+        this->mHaveLayout = true;
+        return this->mLayout;
+    }
+
+    // a tech's key: its mID, or (epoch + 1) * 1000 + slot
+    long NodeKey(const Placed& p, long inEpoch, const std::string& where)
+    {
+        const Node* v = p.mMap->Find("mID");
+        if (!Present(v))
+            return (inEpoch + 1) * 1000 + p.mPos;
+        const EEDTField* f = FindField(*FindTable("dbtechtree")->mRecord, "mID");
+        return (long)(int32_t)Number(*f, f->mType, v, where);
+    }
+
     const Index& GetIndex(const EEDTTable& t)
     {
         std::map<std::string, Index>::iterator it = this->mIndexes.find(t.mName);
         if (it != this->mIndexes.end())
             return it->second;
-        Doc& d = this->GetDoc(t);
         std::vector<Placed> all;
-        if (d.mTechtree) {
-            for (const EpochBlock& b : d.mEpochs) {
-                all.push_back(Placed{-1, b.mEpoch, b.mLine});
-                all.insert(all.end(), b.mNodes.begin(), b.mNodes.end());
+        std::vector<long> keys;
+        std::vector<std::string> files;
+        if (t.mContainer == kEEDTC_techtree || t.mContainer == kEEDTC_epochs) {
+            std::vector<EpochBlock>& layout = this->GetLayout();
+            for (size_t k = 0; k < layout.size(); k++) {
+                all.push_back(Placed{(long)k, layout[k].mEpoch, layout[k].mLine});
+                keys.push_back((long)k);
+                files.push_back("epochs");
+            }
+            if (t.mContainer == kEEDTC_techtree) {
+                for (size_t k = 0; k < layout.size(); k++)
+                    for (const Placed& p : layout[k].mNodes) {
+                        all.push_back(p);
+                        keys.push_back(this->NodeKey(p, (long)k, "dbtechtree line " + Num(p.mLine)));
+                        files.push_back("dbtechtree");
+                    }
             }
         } else {
+            Doc& d = this->GetDoc(t);
             all = d.mRows;
+            for (const Placed& p : all) {
+                keys.push_back(this->Key(t, p, std::string(t.mName) + " line " + Num(p.mLine)));
+                files.push_back(t.mName);
+            }
         }
         Index idx;
-        std::map<std::string, long> lineOf;
-        for (const Placed& p : all) {
-            std::string where = std::string(t.mName) + " line " + Num(p.mLine);
-            long key = this->Key(t, p, where);
+        std::map<std::string, std::string> lineOf;
+        for (size_t n = 0; n < all.size(); n++) {
+            const Placed& p = all[n];
+            std::string where = files[n] + " line " + Num(p.mLine);
+            long key = keys[n];
             const Node* v = p.mMap->Find("id");
             if (!Present(v) || v->mKind != Node::kScalar)
                 Fail(where + ": no id");
             if (!IsId(v->mText))
                 Fail(where + ": id '" + v->mText + "': an id is a lowercase letter, then a-z, 0-9 or _");
             if (idx.mKeys.count(v->mText))
-                Fail(where + ": duplicate id '" + v->mText + "' (also " + t.mName + " line " +
-                     Num(lineOf[v->mText]) + ")");
+                Fail(where + ": duplicate id '" + v->mText + "' (also " + lineOf[v->mText] + ")");
             if (idx.mIds.count(key))
                 Fail(where + ": id '" + v->mText + "': key " + Num(key) + " is also '" + idx.mIds[key] + "'");
             for (unsigned long i = 0; i < t.mRowNameCount; i++)
@@ -1335,7 +1412,7 @@ public:
                          t.mRowNames[i].mName + "')");
             idx.mKeys[v->mText] = key;
             idx.mIds[key] = v->mText;
-            lineOf[v->mText] = p.mLine;
+            lineOf[v->mText] = where;
         }
         return this->mIndexes[t.mName] = std::move(idx);
     }
@@ -1350,6 +1427,8 @@ public:
         if (v->mKind != Node::kScalar)
             Fail(where + ": " + field + ": a list where a reference belongs");
         const EEDTTable* target = FindTable(ref.mTable);
+        if (ref.mNever && v->mText == "never")
+            return (uint32_t)this->GetIndex(*target).mKeys.size();   // the target's count: no row
         if (IsId(v->mText)) {
             const Index& idx = this->GetIndex(*target);
             std::map<std::string, long>::const_iterator it = idx.mKeys.find(v->mText);
@@ -1377,16 +1456,18 @@ public:
         return (uint32_t)n;
     }
 
-    Row BuildRow(const EEDTTable& t, const Placed& p, bool inHasKey)
+    Row BuildRow(const EEDTTable& t, const Placed& p, bool inHasKey, const char* const* inTextKeys = nullptr)
     {
         const Node& m = *p.mMap;
-        std::string where = std::string(t.mName) + " line " + Num(p.mLine);
+        std::string where = std::string(t.mContainer == kEEDTC_epochs ? "epochs" : t.mName) + " line " + Num(p.mLine);
         const Node* id = m.Find("id");
         if (Present(id) && id->mKind == Node::kScalar)
             where += " (id " + id->mText + ")";
         Getter g(m, where);
         g.Get("row");
         g.Get("id");
+        for (const char* const* k = inTextKeys; k && *k; k++)
+            g.Get(*k);
         Row r;
         r.mHole = false;
         r.mRec = BuildRecord(t, g, *this, inHasKey, p.mPos);
@@ -1425,20 +1506,36 @@ public:
 
     void Build(const EEDTTable& t, std::vector<unsigned char>& out)
     {
+        if (t.mTextOnly)
+            Fail(std::string(t.mName) + ": a text-only table (it compiles into dbtechtree)");
         this->GetIndex(t);   // the ids are checked even where nothing references the table
-        Doc& d = this->GetDoc(t);
         std::vector<unsigned char> hole = Record(t.mHole, t.mRecord->mSize);
         Writer w{t, hole, out, LeadCount(t)};
         out.clear();
-        if (d.mTechtree) {
-            for (const EpochBlock& b : d.mEpochs) {
-                Row ep = this->BuildRow(t, Placed{-1, b.mEpoch, b.mLine}, false);
+        if (t.mContainer == kEEDTC_techtree) {
+            const EEDTTable& te = *FindTable("epochs");
+            this->GetIndex(te);
+            static const char* const kEpochKeys[] = {"slots", "music", "citizen_models", nullptr};
+            static const char* const kNodeKeys[] = {"epoch", nullptr};
+            const EEDTField* theID = FindField(*t.mRecord, "mID");
+            std::vector<EpochBlock>& layout = this->GetLayout();
+            for (size_t k = 0; k < layout.size(); k++) {
+                const EpochBlock& b = layout[k];
+                Row ep = this->BuildRow(te, Placed{(long)k, b.mEpoch, b.mLine}, false, kEpochKeys);
+                for (unsigned long i = 0; i < te.mDerivedCount; i++) {   // what follows from the position
+                    const EEDTDerived& dv = te.mDerived[i];
+                    if (!Present(b.mEpoch->Find(dv.mField)))
+                        PutLE(ep.mRec, FindField(*te.mRecord, dv.mField)->mOffset, (uint32_t)(dv.mA * (long)k + dv.mB), 4);
+                }
                 long n = b.mSlots;
                 for (const Placed& p : b.mNodes)
                     n = p.mPos + 1 > n ? p.mPos + 1 : n;
                 std::vector<Row> rows(n);
-                for (const Placed& p : b.mNodes)
-                    rows[p.mPos] = this->BuildRow(t, p, false);
+                for (const Placed& p : b.mNodes) {
+                    rows[p.mPos] = this->BuildRow(t, p, false, kNodeKeys);
+                    if (!Present(p.mMap->Find("mID")))
+                        PutLE(rows[p.mPos].mRec, theID->mOffset, (uint32_t)(((long)k + 1) * 1000 + p.mPos), 4);
+                }
                 Put32(out, (uint32_t)rows.size());
                 w.Record(ep);
                 w.List(ep);
@@ -1447,7 +1544,11 @@ public:
                     w.List(r);
                 }
             }
+            this->mDocs.erase("epochs");
+            this->mHaveLayout = false;
+            this->mLayout.clear();
         } else {
+            Doc& d = this->GetDoc(t);
             long n = d.mTotal;
             for (const Placed& p : d.mRows)
                 n = p.mPos + 1 > n ? p.mPos + 1 : n;
@@ -1472,6 +1573,8 @@ private:
     std::function<bool(const char*, std::string&)> mRead;
     std::map<std::string, std::unique_ptr<Doc>> mDocs;
     std::map<std::string, Index> mIndexes;
+    std::vector<EpochBlock> mLayout;
+    bool mHaveLayout = false;
 };
 
 std::vector<unsigned char> BuildRecord(const EEDTTable& t, Getter& g, Resolver& r, bool inHasKey, long inKey)

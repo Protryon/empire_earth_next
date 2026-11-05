@@ -94,6 +94,9 @@ TABLES = {
     'dbsounds': dict(struct='EESoundRecord', container='lead', format='csv', lead=['mSampleName']),
     'dbstartingresources': dict(struct='EEStartingResourcesRecord', container='count', format='csv'),
     'dbtechtree': dict(struct='EETechTreeRecord', container='techtree', format='yaml', list=('parents', 'u32')),
+    # the epoch registry: text only (techtree.py); it compiles with dbtechtree.yaml into db\dbtechtree.dat
+    'epochs': dict(struct='EETechTreeRecord', container='epochs', format='yaml', list=('parents', 'u32'),
+                   text_only=True),
     'dbterrain': dict(struct='EETerrainRecord', container='lead', format='csv', lead=['mTextureName']),
     'dbterraintype': dict(struct='EETerrainTypeRecord', container='count', format='csv'),
     'dbuiback': dict(struct='UIDbDataBackgrounds', container='count', format='csv'),
@@ -252,7 +255,11 @@ ROW_FIELDS = {'dbworld': {k: [WORLD_VALUES[v] for v in u.split()] for k, (_, u) 
 # The runtime integer of a row (its key) is its row position, except dbtechtree, whose key is mID (nodes are found
 # by id, EETechTreeEpoch.cpp). The evidence for every reference: docs/DATA_FORMATS.md 8.6 (loader -> consumer).
 
-KEYS = {'dbtechtree': 'mID'}
+KEYS = {'dbtechtree': 'mID', 'epochs': 'position'}
+
+# epochs.yaml: the epoch record fields that follow from the epoch's position p (value = a * p + b): left out where
+# they do (techtree.py)
+DERIVED = {'epochs': {'mID': (1, 0), 'mEpoch': (1, 0), 'mNextEpoch': (1, 1), 'mFirstNodeID': (1000, 1000)}}
 
 # Fields that hold the row's own key (+ an offset): the text leaves them out when they are equal, the importer
 # writes key + offset. dbcivpowers: GetPower(id) reads row id - 0x26.
@@ -287,12 +294,15 @@ REFS = {
         **{f'mAreaEffectTemplate{k}': 'dbareaeffect' for k in range(4)},
         'mTechnology': _TECH, 'mGarrisonTechnology': _TECH, 'mAttributes': _TECH,
         'mOverlapUnitSet': _SET, 'mWonderUnitSet': _SET, 'mMiniMapColor': 'dbcolortable',
+        'mEpoch': {'table': 'epochs', 'never': True},   # 15 (the original's epoch count) on a few: no epoch
     },
     'dbtechtree': {
         'mResearchedEvent': 'dbevents', 'mObsoleteEvent': 'dbevents',
         **{f'mPrerequisite{k}': {'table': _TECH, 'none': [0]} for k in range(1, 5)},   # 0: pre-ticked (none)
         'mUnitClass': _UT, 'mDefaultUnitClass': _UT, '@list': _UT, 'mButton': 'dbbuttons',
         'mCalamity': 'dbcalamity', 'mHotKey': 'dbuihotkey',
+        # a tech's epoch fields: epochs (mObsoleteEpoch's "never" is the epoch count: the original's 15)
+        'mEpoch': 'epochs', 'mObsoleteEpoch': {'table': 'epochs', 'never': True},
     },
     'dbevents': {'@list': 'dbeffects'},
     'dbeffects': {
@@ -319,6 +329,7 @@ REFS = {
     'dbuiformevents': {'mOwnerID': 'dbuiforms'},
     'dbuiback': {'mFormID': 'dbuiforms'},
 }
+REFS['epochs'] = dict(REFS['dbtechtree'])
 
 # Where ids.py takes a row's name from (the first non-empty of these text keys); '@world' and '@cpbehavior' are the
 # readers' names (WORLD_ROWS, include/ee/EECPBehavior.h), '@effects' the first event that lists the effect.
@@ -330,5 +341,9 @@ ID_NAMES = {
 }
 ID_DEFAULT = ['label']
 # Names that make a better id than the row's own (table -> {key: name}).
-ID_OVERRIDES = {'dbweapontohit': {0: 'shock'},   # "Defender: Shock": the row is the shock weapon kind
+_EPOCHS = ['prehistoric_age', 'stone_age', 'copper_age', 'bronze_age', 'dark_age', 'middle_ages', 'renaissance',
+           'imperial_age', 'industrial_age', 'atomic_age_ww1', 'atomic_age_ww2', 'atomic_age_modern', 'digital_age',
+           'nano_age', 'space_age']   # the epochs' titles (Language.rc 30145..30159)
+ID_OVERRIDES = {'dbtechtree': dict(enumerate(_EPOCHS)),
+                'dbweapontohit': {0: 'shock'},   # "Defender: Shock": the row is the shock weapon kind
                 'dbareaeffect': {0: 'none'}}      # "None (don't delete!!!!)": the no-area-effect row

@@ -196,7 +196,7 @@ def cmd_build(a, out=None):
         spec = db_tables()
         (data / 'db').mkdir()
         dbs = {}
-        for t in sorted(spec['tables']):
+        for t in tables.binary_tables(spec):
             name = f'db\\{t}.dat'
             if name not in winner:
                 sys.exit(f'{name} is on no data path place')

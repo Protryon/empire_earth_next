@@ -13,7 +13,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 OUT = ROOT / 'src' / 'Empire Earth' / 'Database' / 'EEDataTextSpecs.h'
 TYPES = ['s8', 'u8', 'bool', 's16', 'u16', 's32', 'u32', 'f32', 'pair_f32', 'str']
-CONTAINERS = ['count', 'lead', 'fixed', 'events', 'techtree']
+CONTAINERS = ['count', 'lead', 'fixed', 'events', 'techtree', 'epochs']
 
 
 def _c(s):
@@ -48,7 +48,9 @@ def generate(spec):
     o.append('struct EEDTRowName { long mRow; const char* mName; const char* mFields; };   // mFields: the fields its readers use')
     o.append('// a reference: the field (or "@list", the trailing list) holds a row of mTable, written as its id; mNone: values')
     o.append('// that stay integers although they are a key of the target')
-    o.append('struct EEDTRef { const char* mField; const char* mTable; const long* mNone; unsigned long mNoneCount; };')
+    o.append('struct EEDTRef { const char* mField; const char* mTable; const long* mNone; unsigned long mNoneCount;')
+    o.append('                 bool mNever; };   // mNever: "never" is the target\'s row count (no row: an epoch never reached)')
+    o.append('struct EEDTDerived { const char* mField; long mA; long mB; };   // epochs.yaml: a * position + b where left out')
     o.append('struct EEDTTable {')
     o.append('    const char* mName;            // file stem (db\\<name>.dat)')
     o.append('    unsigned char mContainer;     // EEDTContainer')
@@ -66,6 +68,9 @@ def generate(spec):
     o.append('    long mSelfOffset;')
     o.append('    const EEDTRef* mRefs;         // the references to rows of other tables')
     o.append('    unsigned long mRefCount;')
+    o.append('    const EEDTDerived* mDerived;  // fields that follow from the position (epochs)')
+    o.append('    unsigned long mDerivedCount;')
+    o.append('    bool mTextOnly;               // no db file of its own (epochs: compiles into dbtechtree)')
     o.append('};')
     o.append('')
     o.append('// record sizes (EEDataTextFile.cpp static_asserts them against the structs the loaders read)')
@@ -101,8 +106,11 @@ def generate(spec):
             o.append(f'static const EEDTRef kEEDTRefs_{name}[] = {{')
             for fn, r in t['refs'].items():
                 none = f'kEEDTNone_{name}_{fn.lstrip("@")}, {len(r["none"])}' if r['none'] else '0, 0'
-                o.append(f'    {{{_c(fn)}, {_c(r["table"])}, {none}}},')
+                o.append(f'    {{{_c(fn)}, {_c(r["table"])}, {none}, {"true" if r.get("never") else "false"}}},')
             o.append('};')
+        if t.get('derived'):
+            o.append(f'static const EEDTDerived kEEDTDerived_{name}[] = {{' +
+                     ', '.join(f'{{{_c(k)}, {a}, {b}}}' for k, (a, b) in t['derived'].items()) + '};')
         rn = spec.get('row_names', {}).get(name)
         if rn:
             o.append(f'static const EEDTRowName kEEDTRows_{name}[] = {{')
@@ -119,11 +127,12 @@ def generate(spec):
         rows = f'kEEDTRows_{name}, {len(rn)}' if rn else '0, 0'
         o.append(f'    {{{_c(name)}, kEEDTC_{t["container"]}, {"true" if t["format"] == "yaml" else "false"}, '
                  f'&kEEDTStructs[{sidx[t["struct"]]}], {lead}, {lst}, {rows},')
-        key = _c(t['key']) if t.get('key', 'row') != 'row' else '0'
+        key = _c(t['key']) if t.get('key', 'row') not in ('row', 'position') else '0'
+        der = f'kEEDTDerived_{name}, {len(t["derived"])}' if t.get('derived') else '0, 0'
         self_ = f'{_c(t["self"][0])}, {t["self"][1]}' if t.get('self') else '0, 0'
         refs = f'kEEDTRefs_{name}, {len(t["refs"])}' if t.get('refs') else '0, 0'
         o.append('     ' + _record(binfmt.hole_record(t, spec['structs'][t['struct']])) + ',')
-        o.append(f'     {key}, {self_}, {refs}}},')
+        o.append(f'     {key}, {self_}, {refs}, {der}, {"true" if t.get("text_only") else "false"}}},')
     o.append('};')
     o.append('static const unsigned long kEEDTTableCount = sizeof(kEEDTTables) / sizeof(EEDTTable);')
     o.append('')

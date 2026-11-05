@@ -54,7 +54,8 @@ def run(a, spec, load_db):
         c = tables.Content(texts, spec)
         for n, t in texts.items():
             (text / (n + ('.yaml' if spec['tables'][n]['format'] == 'yaml' else '.csv'))).write_bytes(t)
-            (want / f'{n}.dat').write_bytes(c.build(n))
+            if not spec['tables'][n].get('text_only'):
+                (want / f'{n}.dat').write_bytes(c.build(n))
         print("--- text -> C++ loader -> the Python importer's .dat", flush=True)
         r = subprocess.run([str(exe), str(text), str(want)])
         status |= r.returncode
@@ -92,8 +93,8 @@ def run_parity(exe, spec, texts, folder, textdir):
     for name, table, text in cs:
         ext = '.yaml' if spec['tables'][table]['format'] == 'yaml' else '.csv'
         (folder / f'{name}__{table}{ext}').write_bytes(text)
-        try:
-            want[name] = tables.import_(table, text, spec, texts)
+        try:   # an edited epochs.yaml compiles into dbtechtree
+            want[name] = tables.Content(dict(texts, **{table: text}), spec).build('dbtechtree' if table == 'epochs' else table)
         except (TextError, FormatError) as e:
             want[name] = e
     print('--- parity: edited texts, C++ loader vs Python importer', flush=True)
