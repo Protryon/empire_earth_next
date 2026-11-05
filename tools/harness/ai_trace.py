@@ -47,8 +47,18 @@ def debug_lines(path, prefix):
     return out
 
 
+INPUTS = re.compile(r' inputs=\d+')
+
+
 def trace(path):
     return debug_lines(path, 'EE-AI ')
+
+
+def compared(lines):
+    """The trace as compared: the sim hash's input count is left out. The harness's own UI inputs (the civilization
+    timer's messages at 240/270/300 game s) execute at wall-time-dependent PTs by design (ai_game.py), and the input
+    count is a local counter; the simulation they reach is in the other hash fields."""
+    return [INPUTS.sub('', x) for x in lines]
 
 
 def parse(line):
@@ -71,7 +81,7 @@ def compare(a, b, out=sys.stdout, until=None):
     """Identical traces -> True; else prints the first differing line with context and returns False.
     A time-capped run stops at a harness poll, so the two runs end at different game times: both traces are cut
     before the earlier run's last game ms (or before `until`)."""
-    ta, tb = trace(a), trace(b)
+    ta, tb = compared(trace(a)), compared(trace(b))
     if until is None and ta and tb:
         until = min(line_time(ta[-1]), line_time(tb[-1]))
     if until is not None:

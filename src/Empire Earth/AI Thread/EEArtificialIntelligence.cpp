@@ -70,6 +70,8 @@ void EEArtificialIntelligence::CollectComputerPlayers()
 void EEArtificialIntelligence::Update()
 {
     unsigned long theTime = gPhysics->mGameTime;
+    if (gCPTraceOn && this->mComputerPlayers.size() > 0)
+        EECPTraceHash(theTime);
     if (!(theTime >= this->mNextUpdateTime) || this->mComputerPlayers.size() <= 0)
         return;
     if (this->mComputerPlayers[this->mNextPlayer]->mActive) {

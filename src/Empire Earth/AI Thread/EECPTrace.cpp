@@ -239,3 +239,29 @@ unsigned long EECPOutOfSynchChecksum()
     }
     return theChecksum;
 }
+
+extern long gU531CF0;   // EEPhysics.cpp: the user-input messages processed (part of the out-of-synch checksum)
+
+// TEST (with the trace): every 10 game s, the parts of the out-of-synch checksum, as a compared trace line
+// ("EE-AI <ms> p0 sim hash ..."): when two runs of a seed diverge, the first differing line says when (to 10 s) and
+// what first (the units, the shared random seed, the input count, or the players' resources and AI state)
+void EECPTraceHash(unsigned long inTime)
+{
+    static unsigned long sNextHash = 0;
+    if (!gCPTraceOn)
+        return;
+    if (sNextHash > inTime + 10000)
+        sNextHash = 0;   // a new game in the same process
+    if (inTime < sNextHash)
+        return;
+    sNextHash = inTime + 10000;
+    unsigned long theUnits = 0;
+    unsigned long theCount = 0;
+    for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
+        theUnits += static_cast<EEUnit*>(theUnit)->GetChecksum(3);   // hit points, tiles, positions, commands
+        theCount++;
+    }
+    ESDebugOut("EE-AI %lu p0 sim hash pt=%lu units=%lu/%08lx rng=%08lx inputs=%ld ai=%08lx | f=0 w=0 s=0 g=0 i=0\n", inTime,
+        (unsigned long)gPhysics->mCurrentTick, theCount, theUnits, (unsigned long)gPhysics->mRandom.GetSeed(),
+        gU531CF0, EECPOutOfSynchChecksum());
+}
