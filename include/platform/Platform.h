@@ -8,6 +8,7 @@
 //   platform/PlatTime.h         clocks, the high-resolution counter, sleep, local time, system timers
 //   platform/PlatThread.h       mutexes, events (wait one / wait any), atomics, thread ids, the last native error
 //   platform/PlatString.h       case-insensitive compares, integer formatting, the multibyte (_mbs*) string functions
+//   platform/PlatPreferences.h  the preferences store (the Windows registry on Win32)
 //
 // Rules: no Windows type or header in these interfaces; results are documented per function; a handle created by
 // one function family is destroyed by the same family. Plan and census: PORT.md "Cross-platform".
@@ -17,5 +18,6 @@
 #include "platform/PlatTime.h"
 #include "platform/PlatThread.h"
 #include "platform/PlatString.h"
+#include "platform/PlatPreferences.h"
 
 #endif
