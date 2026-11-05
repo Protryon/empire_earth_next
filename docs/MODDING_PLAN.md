@@ -295,7 +295,9 @@ and have no cap.
   - `EEPChecksum` stores a world-state checksum chunk that also covers the tech tree (`EETechTree::GetChecksum`,
     `EETechTree.cpp:285`).
   - Once ids are assigned at run time from string keys, every save must carry a **key table** (runtime id → key) and
-    the mod list, and remap on load. Original saves and scenarios map via the legacy ids (see 3.3).
+    the mod list, and remap on load. Scenarios map via the legacy ids (see 3.3). **Owner decision (2026-11-04):
+    no saved-game compatibility goal** — saves from earlier versions (and retail) need not load, so the save format
+    may change freely (e.g. write string keys directly instead of a remap table).
 - **Scenario and campaign files** reference unit and tech ids and embed triggers. The Scenario Editor writes them.
   Campaign `.ssa` archives join `gDataPath`, so a campaign can already ship db overrides: keep that as a "scenario
   mod".
@@ -616,8 +618,9 @@ hot-reload of content in single player for modders.
 - **Hidden coupling**: unit type == record index == slot (`EEUnitClass.cpp:3062`); epoch id == tech id; `.civ`
   6-bit level packing; literal ids in AI and civ-power code; the 2000-effect file with no count header. Lifting caps
   without first moving these to keys breaks silently, so every cap lift needs the grep list and G2.
-- **Saves, scenarios, replays**: id remapping must be in place before the first non-legacy id exists. Decide
-  whether original-format saves remain loadable (recommended: yes for vanilla content, via legacy ids).
+- **Saves, scenarios, replays**: id remapping must be in place before the first non-legacy id exists for
+  scenarios. Saves: decided (owner, 2026-11-04), no compatibility goal; db tables: clean mode only, retail data and
+  multiplayer-checksum compatibility dropped.
 - **Multiplayer**: compatibility with unmodified original clients ends as soon as the checksum changes; decide
   whether "vanilla-compatible" MP (same checksum as the original, no mods) is a requirement (WON is gone; likely
   not). Mods must declare `multiplayer_safe`.
