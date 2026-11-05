@@ -169,6 +169,12 @@ Steps:
       f. The WON lobby (EELobbyInterface.cpp, WONLobbyGUI.h: FlipToGDISurface, GDI child windows): compiled out off
          Windows (the services are gone); on Windows unchanged until WON's source exists.
       Gate: tour + AI game on Windows with the SDL window, screenshots equal to the Win32-window build.
+      **Done (branch xgame, 2026-11-05)** for a-e: the game window is an SDL window on Windows (class name kept for
+      the harness), events reach EEUserInterface::HandleEvent through TSThread::Receive's pump, TSThread has its own
+      message queue, GX presents from the PlatNativeWindow. Gates: tour + 120 s (78.3% lit), 2-AI Hard game to the
+      time cap (PT 14,619), menu screenshots identical to the Win32-window build. Left: f (the WON lobby compiled out
+      off Windows, with step 7); the fullscreen start screen is still a Win32 window (Windows only; none elsewhere);
+      DirectInput, the IME and MCI get the native HWND (GEWindow::GetNativeHandle) until steps 4 and 6.
    4. **Input**: the Input System (Input System.cpp, ISKeyboard.cpp, ISMouse.cpp: DirectInput 7 devices and buffered
       data) is fed from PlatInputEvent: ISKeyboard keeps its DIK-indexed keys and reads KEY_DOWN/UP's mScanCode
       from a queue the UI thread fills (Acquire/Unacquire become focus changes; DI_BUFFEROVERFLOW stays the queue's

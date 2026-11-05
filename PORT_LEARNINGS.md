@@ -1076,3 +1076,32 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
 - **TCP Protocol**: TCPHost padded 8 bytes before its address, assuming a 4-byte SOCKET; on x64 the transfer
   connection read the family and port as the IP. Found by the loopback test (tools/tcp_test), which drives the
   plug-in's PIM entry points the way the network engine does. Socket globals starting at 0 would close stdin on POSIX.
+
+## The POSIX game, part 2: the window on SDL3 (branch xgame)
+
+- **Messages that are sent, not posted.** Win32 sends WM_ACTIVATE/WM_ACTIVATEAPP straight into the window procedure
+  (during CreateWindowEx, DestroyWindow, SetFocus); the game's handler ran at that moment, with whatever state the
+  game had then. SDL queues events, and the game pumps them later. Two consequences, both seen in the first SDL
+  screenshots (the game cursor at the centre of 1024x768 instead of 640x480):
+  - SDL reports keyboard focus only for the foreground window; under the harness's debugger (and over RDP) the game
+    window was activated but never foreground, so no focus event came at all. On Win32 the window layer now
+    subclasses its windows and reports activation from WM_ACTIVATEAPP / WM_ACTIVATE (not minimised), the two cases
+    the original window procedure handled; SDL's focus events are used elsewhere.
+  - The renderer's 32-bit probe (a 16x16 topmost popup created and destroyed while the display starts) hands the
+    activation back to the game window when it is destroyed; the original centred its pointer then (at 640x480).
+    The probe is a visible topmost borderless window again (not hidden), and the events a window's creation or
+    destruction produce are dispatched right there (TSThread::DispatchWindowEvents), as the sent messages were.
+  With both, the menu screenshots are identical to the Win32-window build.
+- **The thread message queue does not need Win32.** TSThread::Post/Receive were PostThreadMessage/PeekMessage; only
+  TSThread used them, and window messages reached the UI thread's window procedure through the same PeekMessage. Now
+  each TSThread has its own queue, and Receive on the window thread pumps one window event per call when its queue is
+  empty (posted messages first: Win32 also returns posted before input messages). The UI loop's "result" rule
+  (a dispatched message counts only while ids queued by Post(..., true) are left) is kept.
+- **The window class name is the harness's key.** exe_boot.c's capture checkpoint and its window bookkeeping look
+  for "Empire Earth Expansion": SDL_RegisterApp sets SDL's class name (and SDL_HINT_WINDOWS_INTRESOURCE_ICON the
+  icon) before the video subsystem starts. SDL's mouse set-up asks SPI_GETMOUSESPEED, which the harness's
+  SystemParametersInfo guard had to learn (a GET).
+- **Text input must be started.** WM_CHAR always arrived; SDL3 sends text events only between SDL_StartTextInput and
+  SDL_StopTextInput. The game window starts text input when it is created (PlatTextInputStart).
+- **macOS needs the Metal layer from the main thread**: GX takes the window's native handles when the primary surface
+  is created (on the window thread) and keeps them; the render thread only reads the client size.
