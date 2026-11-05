@@ -237,7 +237,7 @@ void EETechTreeEpoch::AddSOL()
     if (!(this->mCurrentSOL >= this->mRequiredSOL) || this->mIsAvailable != false)
         return;
     this->mIsAvailable = true;
-    EEEvent::Trigger(0x7d2, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
+    EEEvent::Trigger(kEventHookEpochAvailable, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
     this->mTree->UpdateInterface(false);
 }
 
@@ -364,7 +364,7 @@ void EETechTreeEpoch::UpdateAvailability()
         return;
     if (this->mIsAvailable == false) {
         this->mIsAvailable = true;
-        EEEvent::Trigger(0x7d2, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
+        EEEvent::Trigger(kEventHookEpochAvailable, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
         this->mTree->UpdateInterface(false);
     }
     theNode = this->mNodes.begin();

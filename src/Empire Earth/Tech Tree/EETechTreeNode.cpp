@@ -433,7 +433,7 @@ void EETechTreeNode::SetPrerequisite(long inID)
     if (this->mPrerequisiteFlags != kPrerequisiteAll)
         return;
     this->mIsAvailable = true;
-    EEEvent::Trigger(0x7d1, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
+    EEEvent::Trigger(kEventHookTechResearched, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
     EEPlayer* thePlayer = this->mTree->GetPlayer();
     thePlayer->mSavedGroups.Reset(0x16, 1);
     this->mTree->UpdateInterface(false);
