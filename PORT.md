@@ -97,9 +97,77 @@ crate can replace.
    scenario editor lists `.mpg` files. `binkw32.dll`, the Bink header and the mixer's DirectSound bridge are gone:
    the exe imports only Windows system DLLs. Fixed on the way: a movie created with a rectangle ignored it (the
    original reset the flag), and the playback thread started before its events existed.
-5. Then: DirectDraw/D3D7 and DirectInput (Microsoft system components, not in this pass), Winsock.
+5. Then: DirectDraw/D3D7 and DirectInput (plan below), Winsock.
 
 Each step ends with the harness gates and a PORT_LEARNINGS.md entry.
+
+## Plan: DirectX -> wgpu (draft, 2026-11-04)
+
+Goal: a new renderer plug-in ('rast') on wgpu replaces DX7HRTnLDisplay (DirectDraw 7 + Direct3D 7), and DirectInput
+goes too, so the game uses no DirectX. 64-bit first: the exe is going 64-bit only, so the renderer is written
+pointer-size clean and built for x86_64 from its first commit; the i686 build serves only while the exe is 32-bit.
+
+What it rests on (measured):
+- The renderer is behind the engine's abstract classes: GERasterizer (79 virtuals, 54 pure), GEScreen (21),
+  GESurface (33), GEVertexArray (16), GEPolygonArray (10), GEMovie (8); the DX7 code is ~6,600 lines in 13 files.
+  Outside it only EELobbyInterface touches DirectDraw (FlipToGDISurface for the GDI lobby windows), and DirectInput
+  is the Input System's three files (ISKeyboard, ISMouse, Input System.cpp).
+- The engine and the game write pixels themselves: Lock/GetMemoryAddress in GESurface.cpp (image loading), the
+  fonts (GEFontBitmap, GetTextDC/TextLock: GDI text drawn on a surface), the minimap, the terrain colour table,
+  EEE3DVolcano, Empire Earth.cpp. Surfaces must stay lockable in the game's pixel formats (GEPixelFormatID: 32-bit
+  ARGB/XRGB, 565, 555, 4444, 5551, DXT1).
+- Direct3D 7 is used as a fixed-function pipeline: SetTransform (world/view/projection), one directional light plus
+  ambient, materials and colour-vertex sources, vertex fog (start/end/colour), alpha test and blend, z test/write,
+  culling, flat/Gouraud shading, fill mode, colour keys, texture-stage colour/alpha ops (modulate etc.), vertex
+  buffers drawn with DrawPrimitiveVB/DrawIndexedPrimitiveVB. 2D is DirectDraw blits (stretch, colour key, filter).
+- wgpu-native (gfx-rs, MIT/Apache-2.0) ships static libraries for windows-x86_64-msvc and windows-i686-msvc
+  (v29.0.0.0: webgpu.h + wgpu.h, wgpu_native.lib 49 MB static, no default-library directives). Its DX12 backend
+  runs on WARP (Windows' software adapter), so the headless VM keeps a working renderer without a GPU.
+
+Design:
+- **Surfaces**: every GESurface keeps a CPU shadow in its pixel format (Lock/GetMemoryAddress/GetBytesPerRow keep
+  their meaning; GetTextDC hands out a DIB section on the shadow for GDI text) and a GPU texture, uploaded when the
+  shadow is dirty (Unlock/TextUnlock mark it; dirty rectangles keep UI uploads small). 16-bit formats convert to
+  RGBA8 on upload (WebGPU has no 565/555 texture formats); DXT1 uses BC1 where the adapter has it, else decodes on
+  the CPU. Render targets (the back buffer) are GPU-only; a lock on one reads back (Capture, screenshots).
+- **2D**: CopyTo/CopyWithFilter/Clear become textured-quad draws (point or linear sampling, colour key as a
+  discard against the key colour), batched per target.
+- **3D**: the fixed-function state maps onto a few WGSL pipelines (an "uber" vertex/fragment shader with uniforms
+  for transforms, light, material, fog, alpha reference and the texture-stage combiner), with pipelines cached by
+  the fixed state (blend, depth, cull, topology, vertex layout). GEVertexArray/GEPolygonArray become wgpu vertex and
+  index buffers with the same vertex layouts as the DX7 classes.
+- **Presentation**: a wgpu surface on the game window. The game renders at its chosen resolution into an
+  offscreen target that is scaled to the window (borderless full screen instead of exclusive display modes; the
+  mode list becomes the resolutions the game supports). The lobby's GDI windows: pause presentation while they
+  show, instead of flipping to the GDI surface.
+- **Input**: ISKeyboard/ISMouse keep their interface on window messages and raw input (WM_INPUT) instead of
+  DirectInput.
+- **Movies**: DX7Movie's player moves over unchanged (it only uses surfaces).
+- **Rust**: wgpu is a Rust library. The C++ renderer talks to it through webgpu.h, whose concepts the wgpu crate
+  shares, so a later Rust renderer can keep the design and drop the C layer.
+
+Phases (each gated by the harness, with the DX7 renderer kept in the build until phase 4 for comparisons):
+0. **Probe**: tools/fetch_wgpu.py downloads the pinned wgpu-native release (x86_64 and i686, sha256-pinned, into
+   toolchain/). A test program links wgpu_native.lib with the static CRT (find the system libraries it needs: d3d12,
+   dxgi, d3dcompiler, user32, ws2_32, userenv, ntdll, bcrypt, ...), opens a window, clears and presents, on this VM
+   through WARP, in both bitnesses. Settles the CRT pairing, the libraries and the binary size.
+1. **2D skeleton**: the WGPU plug-in registered beside DX7 (preference "Rasterizer Name" picks it): screens and
+   modes, surfaces with shadows, Clear/CopyTo/Flip/ShowScene. Gate: the menus render; the settings tour passes.
+   The harness's presentation bridge (it hooks DX7 ShowScene and reads DirectDraw surfaces) gets a wgpu path:
+   frame dumps by readback, and the window presents for real on WARP.
+2. **Text, movies, minimap**: GetTextDC/TextLock, the movie player, CPU-written surfaces. Gate: tour screenshots
+   compared with the DX7 software build at the same states (image-difference threshold).
+3. **3D**: terrain, models, effects, the fixed-function shader. Gate: AI games, scene screenshots against DX7, frame
+   time.
+4. **Input and lobby; DX7 out**: raw input, the lobby presentation, then delete the DX7 plug-in, DirectDraw,
+   DirectInput and the DX7 SDK download. Gate: the exe imports no DirectX DLL.
+5. **64-bit**: the exe itself on x86_64 (the remaining -Wshorten-64-to-32 census work), linking the x86_64
+   wgpu-native.
+
+Risks: D3D7 fixed-function details (lighting equations, specular, fog, 16-bit dithering, colour-key edge cases);
+Lock semantics while the render thread draws; upload cost for UI-heavy screens; WARP speed for the harness;
+wgpu-native API churn (pinned release, webgpu.h is still changing); the static CRT with a Rust static library
+(phase 0); binary size (+several MB).
 
 ## Other next steps
 
