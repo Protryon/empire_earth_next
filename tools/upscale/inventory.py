@@ -153,6 +153,14 @@ def build(data_root):
         units.append(Unit(base, "frames" if len(stems) > 1 else "single", cat, [files[s] for s in stems], source=src))
         take(stems)
 
+    # Ids key the manifests, so they must be unique: a grid and a frames unit can share a base name
+    # (splash_<r>_<c> and splash.png / splash@N.png). A later unit with a taken id gets "#<kind>".
+    seen = set()
+    for u in units:
+        if u.id in seen:
+            u.id = f"{u.id}#{u.kind}"
+        seen.add(u.id)
+
     for u in units:
         w, h, ct = png_info(os.path.join(tex, u.files[0]))
         u.size = (w, h)

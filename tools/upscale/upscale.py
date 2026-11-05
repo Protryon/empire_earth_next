@@ -279,6 +279,9 @@ def cmd_run(args):
     root = data_root(args)
     tex = os.path.join(root, "Data", "Textures")
     units = select(inventory.build(str(root)), args)
+    ids = [u.id for u in units]
+    if len(set(ids)) != len(ids):
+        raise SystemExit("duplicate unit ids: " + ", ".join(sorted({i for i in ids if ids.count(i) > 1})))
     out = pathlib.Path(args.out)
     for method in args.methods.split(","):
         mdir = out / method
@@ -429,12 +432,15 @@ def cmd_compose(args):
             raise SystemExit(f"{t}: scale {man['scale']}, the others {scale}")
         models.update(man.get("models", {}))
         for uid, e in man["units"].items():
-            if uid in units:
+            if all(f in sources for f in e["files"]):   # first tree wins, per file set (ids can differ by tree)
                 continue
+            if any(f in sources for f in e["files"]):
+                raise SystemExit(f"{t}: unit {uid} overlaps an earlier tree's unit in some files only")
             for f in e["files"]:
                 shutil.copy2(t / "Data" / "Textures" / f, tdir / f)
                 sources[f] = man["sources"].get(f)
-            units[uid] = {**e, "tree": t.name}
+            key = uid if uid not in units else f"{uid}#{t.name}"
+            units[key] = {**e, "tree": t.name}
     json.dump({"method": "composed", "scale": scale, "trees": [pathlib.Path(t).name for t in args.tree],
                "models": models, "sources": sources, "units": units}, open(out / "upscale.json", "w"), indent=1)
     print(f"{len(units)} units, {len(sources)} files -> {out}")
