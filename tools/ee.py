@@ -104,13 +104,6 @@ def lib_paths():
 
 # the static runtime: MSVC CRT + vcruntime + UCRT + the MSVC STL (+ kernel32, which their startup code imports)
 RUNTIME_LIBS = ["libcmt.lib", "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", "kernel32.lib"]
-# system DLLs the images import, linked against the Windows SDK's import libraries (by DLL stem, upper case)
-SDK_IMPORT_LIBS = {n: n.lower() + ".lib" for n in ("KERNEL32", "USER32", "GDI32", "ADVAPI32", "OLE32", "WINMM",
-                                                    "IMM32", "WS2_32", "SHELL32", "WSOCK32", "IPHLPAPI", "DDRAW")}
-# DLLs the original images imported that are not linked at all: the VC6 build's Dinkum C++ library (the MSVC STL
-# replaces it), the VC6 CRT (the static runtime replaces it), and the game's own DLLs (linked into the exe)
-DROPPED_IMPORTS = {"SXLRT233", "MSVCRT", "LOW-LEVEL ENGINE", "TCP PROTOCOL", "MILES SOUND SYSTEM MIXER", "DEFAULT",
-                   "DX7HRDISPLAY", "DX7HRTNLDISPLAY"}
 
 
 def module_filename(mod):

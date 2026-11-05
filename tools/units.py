@@ -37,7 +37,6 @@ LIB_MEMBERS = {"mixer": ["miniaudio"], "dx7hrtnl": ["pl_mpeg"], "lle": ["implode
     n for n in LIB_UNITS if n.startswith("dmusic-"))}
 LANGUAGE_RC = pathlib.PurePosixPath("Empire Earth/Language/Language.rc")
 EXE_RC = ROOT / "src" / "Empire Earth" / "EE-AOC.rc"
-EXE_MEMBERS = LINK_DIR / "exe" / "fulllink_members.tsv"
 
 
 def rel_src(path):
