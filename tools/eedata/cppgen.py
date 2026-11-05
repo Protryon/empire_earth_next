@@ -74,6 +74,8 @@ def generate(spec):
     o.append('    bool mTextOnly;               // no db file of its own (epochs: compiles into dbtechtree)')
     o.append('    const char* mEpochFlags;      // a per-epoch flag array set from epochs.yaml\'s lists (dbmusic mInEpoch), or 0')
     o.append('    const char* mEpochKey;        // ... the epochs.yaml key of those lists (music)')
+    o.append('    const char* mLevelsField;     // a level pair array written as attribute-keyed levels (dbcivilization), or 0')
+    o.append('    const char* mLevelsKey;       // ... its text key (levels)')
     o.append('};')
     o.append('')
     o.append('// record sizes (EEDataTextFile.cpp static_asserts them against the structs the loaders read)')
@@ -136,7 +138,8 @@ def generate(spec):
         refs = f'kEEDTRefs_{name}, {len(t["refs"])}' if t.get('refs') else '0, 0'
         o.append('     ' + _record(binfmt.hole_record(t, spec['structs'][t['struct']])) + ',')
         ef = f'{_c(t["epoch_flags"][0])}, {_c(t["epoch_flags"][1])}' if t.get('epoch_flags') else '0, 0'
-        o.append(f'     {key}, {self_}, {refs}, {der}, {"true" if t.get("text_only") else "false"}, {ef}}},')
+        kl = f'{_c(t["keyed_levels"][0])}, {_c(t["keyed_levels"][1])}' if t.get('keyed_levels') else '0, 0'
+        o.append(f'     {key}, {self_}, {refs}, {der}, {"true" if t.get("text_only") else "false"}, {ef}, {kl}}},')
     o.append('};')
     o.append('static const unsigned long kEEDTTableCount = sizeof(kEEDTTables) / sizeof(EEDTTable);')
     o.append('')

@@ -15,6 +15,7 @@ rows the original fixed tables had no room for.
 * --options: game options past the original's lists (gameoptions.yaml): a 7th map size, colossal (260 tiles, the
   gigantic scripts), a 5th speed, ludicrous (3.0), and a 4th difficulty, brutal (the hard computer players; the
   damage table x 2.0 when only the target is human, x 0.5 when only the attacker is).
+* --civ: civilization builder content past the 35 categories and 60 levels (add_civ).
 * --rules-demo: modded rules for the behaviour checks: combat minimum damage 5, map size small 50 tiles, positive
   morale 0.5 (combat.yaml, gameoptions.yaml).
 
@@ -115,6 +116,30 @@ def rules_demo(texts):
     texts['combat.yaml'], texts['gameoptions.yaml'] = c, g
 
 
+def add_civ(texts, n=10):
+    """Civilization builder content past the original's 35 categories x 60 levels: n more categories (copies of
+    archers_foot, extra_category_1..n, rows above the table) and an attribute at level 61, extra_vigor (+0.3 attack,
+    mode add), that archers_foot and the copies offer (value 0.3, bonus 0.05); a keyed .civ can name
+    extra_category_3.extra_vigor."""
+    b = texts['civbuilder.yaml']
+    a = b.index('powers_category:')
+    b = b[:a] + ('  - id: extra_vigor\n    level: 61\n    name: 29717\n    applies:\n      - stat: attack\n'
+                 '        mode: add\n') + b[a:]
+    texts['civbuilder.yaml'] = b
+    t = texts['dbcivilization.yaml']
+    starts = [m.start() for m in re.finditer(r'^  - row: ', t, re.M)]
+    blocks = [t[s:(starts[k + 1] if k + 1 < len(starts) else len(t))] for k, s in enumerate(starts)]
+    arch = next(x for x in blocks if '\n    id: archers_foot\n' in x)
+    level = '      - attribute: extra_vigor\n        value: 0.3\n        bonus: 0.05\n'
+    arch2 = arch.rstrip('\n') + '\n' + level
+    t = t.replace(arch, arch2, 1)
+    extra = []
+    for k in range(1, n + 1):
+        c = re.sub(r'^  - row: \d+\n    id: archers_foot\n', f'  - id: extra_category_{k}\n', arch2)
+        extra.append(c)
+    texts['dbcivilization.yaml'] = t.rstrip('\n') + '\n' + ''.join(extra)
+
+
 def run(a):
     src, out = pathlib.Path(a.text), pathlib.Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -131,6 +156,9 @@ def run(a):
     if getattr(a, 'rules_demo', False):
         rules_demo(texts)
         print('rules: combat minimum damage 5, positive morale 0.5, map size small 50 tiles')
+    if getattr(a, 'civ', False):
+        add_civ(texts)
+        print('civbuilder: 10 more categories (past 35) and an attribute at level 61 (past 60)')
     if a.effects:
         nev, nef = move_events(texts)
         print(f'{nev} events moved above row 1499 and {nef} effects above row 1999 (the tech tree points at them)')

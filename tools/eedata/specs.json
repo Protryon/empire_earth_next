@@ -186,6 +186,10 @@
    "format": "yaml",
    "hole": {},
    "key": "row",
+   "keyed_levels": [
+    "mLevels",
+    "levels"
+   ],
    "refs": {
     "mUnitSet": {
      "table": "dbunitset",

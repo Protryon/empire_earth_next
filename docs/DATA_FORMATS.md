@@ -2561,7 +2561,33 @@ an attribute here, and the category's `mLevels[level - 1]` its value and bonus.
 
 An attribute that raises the line of sight takes the class's units' sight off and on around the change (the original
 did so for level 5); one that applies a power applies only the power. Level 22 has no attribute (nothing, as in the
-original).
+original). An attribute has a `name` (the builder's text; the original's IDS_CIV_BONUS_BASE / IDS_CIV_POWER_BASE +
+level), and `powers_category` an `id` (`special_powers`).
+
+**dbcivilization.yaml's levels** (`overlay.KEYED_LEVELS`): a category writes its level pairs keyed by attribute,
+
+    levels:
+      - attribute: attack
+        value: 0.19999999
+        bonus: 0.04
+
+(`level: n` instead of `attribute` names a level that has no attribute). Both compilers map the attributes to levels
+through civbuilder.yaml (the vanilla attributes without it) and fill the record's `mLevels[60]`; levels past 60 are
+not in the record: the game reads every category's levels from the text (`EECivBuilderRules::mCategories`, any
+number) and the content dump lists them (`rules.civbuilder` `levels_past_60`). Upgrade ids are 32 bits, `(category
+<< 16) | level` (`ee/EECivUpgrade.h`; the original's `(category << 6) | level` in 16 bits capped the categories at
+35 and the levels at 60).
+
+**Keyed .civ files.** The civilization builder writes
+
+    eedata: civ
+    format: 3
+    name: "Rome"
+    upgrades: [archers_foot.attack, archers_foot.range, special_powers.flaming_arrows]
+
+(`<dbcivilization id>.<civbuilder attribute id>`) when every upgrade has a key (the text tables give the ids; with
+the binary tables it writes the legacy form). Legacy binary .civ files (the premade civilizations) still load: their
+`(category << 6) | level` ids are converted, and the premade checksums are computed on that legacy form.
 
 **civpowers.yaml** (`EECivPowerRules`; `EECivPowersManager::ApplyPower`): what granting a power does after its
 `mTechnology` is researched, as C++ primitives the data selects and parameterises:

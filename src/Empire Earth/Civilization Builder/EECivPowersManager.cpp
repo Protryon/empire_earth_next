@@ -144,7 +144,7 @@ EECivPower* EECivPowersManager::GetPowerRecord(long inID)
 bool EECivPowersManager::HasPower(EEPlayer* inPlayer, long inID)
 {
     bool theResult = false;
-    for (std::vector<unsigned short>::iterator i = inPlayer->mCivilization.GetPurchasedUpgrades().begin();
+    for (std::vector<EECivUpgrade>::iterator i = inPlayer->mCivilization.GetPurchasedUpgrades().begin();
          i != inPlayer->mCivilization.GetPurchasedUpgrades().end() && !theResult; i++) {
         unsigned long theCategory;
         unsigned long theIndex;

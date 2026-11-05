@@ -6,6 +6,7 @@
 // 0x27ca2b), so the list box and the form events reach it through the global only.
 #ifndef EE_EECBEDITABLECIVILIZATION_H
 #define EE_EECBEDITABLECIVILIZATION_H
+#include "ee/EECivUpgrade.h"
 
 #include <vector>
 
@@ -19,27 +20,27 @@ public:
     // +0x00 0x27ca2b: sends EEMCivUpgradesRequested (the editable's upgrades and name) when 0x27cc4e says there is
     // something to send; false when not
     virtual bool Apply();
-    virtual long GetCost(unsigned short inUpgrade);  // +0x04 0x27cab7
-    virtual long GetRefund(unsigned short inUpgrade);  // +0x08 0x27caf1
+    virtual long GetCost(EECivUpgrade inUpgrade);  // +0x04 0x27cab7
+    virtual long GetRefund(EECivUpgrade inUpgrade);  // +0x08 0x27caf1
     // +0x0c..+0x1c (signatures from the bodies, provisional names)
     virtual bool CanChange();                       // +0x0c 0x27cbb0 (multiplayer: asks mCivilization 0x12c72c)
     virtual unsigned long GetPointsLeft();                 // +0x10 (defined in the .cpp; its COMDAT is ICF-shared 0xb6fee `mov eax, [ecx+0x14]`)
     virtual long GetMaxPoints();                    // +0x14 0x27cc84 (a tail call on mCivilization, 0x12c734)
-    virtual bool AddUpgrade(unsigned short inCount);  // +0x18 0x27cc98 (calls GetCost inCount times)
-    virtual bool RemoveUpgrade(unsigned short inUpgrade);  // +0x1c 0x27ccd6 (finds inUpgrade in mUpgrades)
+    virtual bool AddUpgrade(EECivUpgrade inCount);  // +0x18 0x27cc98 (calls GetCost inCount times)
+    virtual bool RemoveUpgrade(EECivUpgrade inUpgrade);  // +0x1c 0x27ccd6 (finds inUpgrade in mUpgrades)
 
     // non-virtual members, in address order
     void ResetToStart();                            // 0x27cb30 (back to the civilization's start: name string 0x7454, mL14, no upgrades)
-    unsigned long PickedInCategory(unsigned short inUpgrade);  // 0x27cb83
-    std::vector<unsigned short> CopyUpgradeIDs();   // 0x27cbe6 (mUpgrades, then the civilization's own ids)
+    unsigned long PickedInCategory(EECivUpgrade inUpgrade);  // 0x27cb83
+    std::vector<EECivUpgrade> CopyUpgradeIDs();   // 0x27cbe6 (mUpgrades, then the civilization's own ids)
     bool HasChoices();                              // 0x27cc4e (there is something to commit)
     bool GetIsUnchanged();                          // 0x27cc7c (mCivilization's flag +0x3d)
     UWideString* GetName();                         // 0x27cc8c (&mName)
-    std::vector<unsigned short>& GetCivilizationUpgrades();  // 0x27cc90 (the civilization's own ids; non-const: the builder fills the lists from it)
+    std::vector<EECivUpgrade>& GetCivilizationUpgrades();  // 0x27cc90 (the civilization's own ids; non-const: the builder fills the lists from it)
     void SetName(const UWideString& inName);        // 0x27cd52
 
     // members from the ctor 0x27c9db (inCivilization, inB30): sizeof 0x34 (new site)
-    std::vector<unsigned short> mUpgrades;  // +0x04 (the 2-byte _Buy 0x18bdf)
+    std::vector<EECivUpgrade> mUpgrades;  // +0x04 (the 2-byte _Buy 0x18bdf)
     long mPointsLeft;                       // +0x14 (points left; untouched by the ctor; GetPointsLeft returns it)
     EECivilization* mCivilization;          // +0x18 (ctor argument 1; mName = its +0x20 name)
     UWideString mName;                      // +0x1c

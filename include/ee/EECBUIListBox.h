@@ -5,6 +5,7 @@
 // Only what the decompiled units use. Requires lle/UILBString.h.
 #ifndef EE_EECBUILISTBOX_H
 #define EE_EECBUILISTBOX_H
+#include "ee/EECivUpgrade.h"
 
 class EECBUIListBox : public UILBString {
 public:
@@ -48,23 +49,23 @@ public:
     // argument types from `ret N` and the callers; provisional names)
     virtual void AddLine(const UWideString& inLine);    // 0x27d386 (AppendLine, then 0x27d284)
     // 0x27e116: the selected upgrade line's id, bonus and cost (3 without a selection)
-    virtual long GetSelectedUpgrade(unsigned short* outUpgrade, unsigned long* outBonus, unsigned long* outCost);
-    virtual void SetUpgradesExcept(const std::vector<unsigned short>& inExcluded);  // 0x27e2bb (every upgrade but these)
-    virtual void SetCivilizationUpgrades(std::vector<unsigned short>& inUpgrades);  // 0x27e346 (EEUIEPDCSLoadCiv passes the civ's upgrades)
+    virtual long GetSelectedUpgrade(EECivUpgrade* outUpgrade, unsigned long* outBonus, unsigned long* outCost);
+    virtual void SetUpgradesExcept(const std::vector<EECivUpgrade>& inExcluded);  // 0x27e2bb (every upgrade but these)
+    virtual void SetCivilizationUpgrades(std::vector<EECivUpgrade>& inUpgrades);  // 0x27e346 (EEUIEPDCSLoadCiv passes the civ's upgrades)
     virtual void ReformatUpgrades(bool inFlag);         // 0x27dbca (re-formats the upgrade lines)
     virtual void ResetSelection();                      // 0x27e503: UIListBox::ChangeSelectionIndex(0, false, false)
 
     // the unit's own helpers (provisional names)
     bool AddCategory(const UWideString& inLine);        // 0x27d284 (a category's header line, once)
-    void SetUpgrades(std::vector<unsigned short>& inUpgrades, bool inFlag);   // 0x27d4dc
+    void SetUpgrades(std::vector<EECivUpgrade>& inUpgrades, bool inFlag);   // 0x27d4dc
     long DrawCategoryLine(const GERectangle& inRectangle, GEText* inText, const UWideString& inLine);   // 0x27d761
     long DrawUpgradeLine(const GERectangle& inRectangle, GEText* inText, const UWideString& inLine);    // 0x27d8c7
     bool GetCategoryAt(unsigned long inIndex, UWideString& outCategory);   // 0x27dc4b
     static bool GetCategory(const UWideString& inLine, UWideString& outCategory);   // 0x27dc95
     static bool GetCost(const UWideString& inLine, unsigned long* outCost);   // 0x27dca8
     static bool GetUpgradeName(const UWideString& inLine, UWideString& outName);   // 0x27dcbb
-    long FindUpgrade(unsigned short inUpgrade, unsigned long* outIndex);   // 0x27dcce
-    bool FormatUpgrade(unsigned short inUpgrade, UWideString& outLine, bool inFlag, long inIndex);  // 0x27dd4f
+    long FindUpgrade(EECivUpgrade inUpgrade, unsigned long* outIndex);   // 0x27dcce
+    bool FormatUpgrade(EECivUpgrade inUpgrade, UWideString& outLine, bool inFlag, long inIndex);  // 0x27dd4f
     bool FindCategory(const UWideString& inCategory, unsigned long* outIndex);   // 0x27df7f
     bool IsUpgradeAt(unsigned long inIndex, UWideString* outLine);   // 0x27e056
     static bool IsUpgradeLine(const UWideString& inLine);   // 0x27e0af
@@ -72,7 +73,7 @@ public:
     bool GetLine(unsigned long inIndex, UWideString& outLine) const;   // 0x27e19e
     static bool GetToken(const UWideString& inFormattedString, unsigned long inIndex, UWideString& outEntry);   // 0x27e1d4
     static bool GetNumber(const UWideString& inLine, unsigned long inIndex, unsigned long* outValue);   // 0x27e23c
-    static bool GetUpgrade(const UWideString& inLine, unsigned short* outUpgrade);   // 0x27e297
+    static bool GetUpgrade(const UWideString& inLine, EECivUpgrade* outUpgrade);   // 0x27e297
     bool RemoveCategory(const UWideString& inCategory);   // 0x27e38b
     bool RemoveCategoryIfEmpty(const UWideString& inLine);   // 0x27e426
     void SortLines();                                   // 0x27e50f (when mSortLines)

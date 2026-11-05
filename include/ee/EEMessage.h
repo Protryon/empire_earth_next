@@ -3,6 +3,7 @@
 // Requires lle/NEMessage.h.
 #ifndef EE_EEMESSAGE_H
 #define EE_EEMESSAGE_H
+#include "ee/EECivUpgrade.h"
 
 #include <stdint.h>   // int32_t/uint32_t: the wire fields' fixed widths
 
@@ -508,7 +509,7 @@ public:
     EEMCivUpgrades() { this->mPlayerID = 0; }
     // inline, out of line after its first user 0x1e6635 (EEUIEPDCSOk; also 0x27ca6f, 0x280abb): mB0D = the type is
     // 0x7f (Purchased); argument names are provisional
-    EEMCivUpgrades(unsigned char inType, const unsigned char& inPlayer, const std::vector<unsigned short>& inUpgrades,
+    EEMCivUpgrades(unsigned char inType, const unsigned char& inPlayer, const std::vector<EECivUpgrade>& inUpgrades,
                    const UWideString& inName, long inNameString)
         : EEMessage(inType, inType == kMessageCivUpgradesPurchased), mCivName(inName), mUpgrades(inUpgrades), mNameString(inNameString), mPlayerID(inPlayer) {}
     // (implicit dtor: 0xba6fd does not store EEMCivUpgrades' vptr)
@@ -520,7 +521,7 @@ public:
     virtual void SetName(const UWideString& inName) { this->mCivName = inName; }  // +0x30 (0xba6d1) (provisional name)
 
     UWideString mCivName;                   // +0x10
-    std::vector<unsigned short> mUpgrades;  // +0x24
+    std::vector<EECivUpgrade> mUpgrades;  // +0x24
     int32_t mNameString;                    // +0x34
     unsigned char mPlayerID;                // +0x38
 };
@@ -530,7 +531,7 @@ class EEMCivUpgradesPurchased : public EEMCivUpgrades {
 public:
     EEMCivUpgradesPurchased(unsigned char* inData) { this->ImportMessage(inData); }
     // EECBRequestUpgrades 0x280ab9: EEMCivUpgrades' ctor 0x1e6635 with kind 0x7f, then the Purchased vptr
-    EEMCivUpgradesPurchased(const unsigned char& inPlayer, const std::vector<unsigned short>& inUpgrades,
+    EEMCivUpgradesPurchased(const unsigned char& inPlayer, const std::vector<EECivUpgrade>& inUpgrades,
                             const UWideString& inName, long inNameString)
         : EEMCivUpgrades(kMessageCivUpgradesPurchased, inPlayer, inUpgrades, inName, inNameString) {}
     virtual ~EEMCivUpgradesPurchased() {}
@@ -543,7 +544,7 @@ class EEMCivUpgradesRequested : public EEMCivUpgrades {
 public:
     EEMCivUpgradesRequested(unsigned char* inData) { this->ImportMessage(inData); }
     // expanded by EEUIEPDCSOk 0x1e64ed and 0x27ca2b around the out-of-line base ctor
-    EEMCivUpgradesRequested(const unsigned char& inPlayer, const std::vector<unsigned short>& inUpgrades,
+    EEMCivUpgradesRequested(const unsigned char& inPlayer, const std::vector<EECivUpgrade>& inUpgrades,
                             const UWideString& inName, long inNameString)
         : EEMCivUpgrades(kMessageCivUpgradesRequested, inPlayer, inUpgrades, inName, inNameString) {}
     virtual ~EEMCivUpgradesRequested() {}

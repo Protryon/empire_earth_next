@@ -60,6 +60,14 @@ long NodeInt(const Node* inValue, const std::string& inWhere, const char* inName
 float NodeFloat(const Node* inValue, const std::string& inWhere, const char* inName);
 bool NodeBool(const Node* inValue, const std::string& inWhere, const char* inName);   // 0/1, true/false
 const std::string& NodeScalar(const Node* inValue, const std::string& inWhere, const char* inName);   // the raw text
+// A whole text in the YAML subset -> its tree; false with a message ("line 3: ...")
+bool ParseDocument(const std::string& inText, Node& outDoc, std::string& outError);
+// A string scalar's text as the game's CP-1252 bytes (throws Failure naming where + name)
+std::string NodeText(const Node* inValue, const std::string& inWhere, const char* inName);
+// The same without exceptions (for the units built without /EH): false with the message in outText
+bool TryNodeText(const Node* inValue, const std::string& inWhere, const char* inName, std::string& outText);
+// CP-1252 bytes -> a double-quoted YAML scalar (UTF-8): what NodeText reads back
+std::string QuoteText(const std::string& inBytes);
 // A dbworld value named `<id>.<F|F2|L|L2>` ("fanaticism.F2") -> its row and value (0 F .. 3 L2); the value must be
 // one the row's readers use (the text carries only those). Throws Failure naming where + name.
 void WorldValue(const std::string& inText, const std::string& inWhere, const char* inName, long& outRow,

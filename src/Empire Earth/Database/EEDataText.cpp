@@ -5,6 +5,7 @@
 // The gate is tools/eedata/eedata.py cppgate: every exported AoC table compiles here to the Python importer's bytes.
 #include "EEDataText.h"
 #include "EEDataTextSpecs.h"
+#include "ee/EERules.h"   // the vanilla civilization builder attributes (dbcivilization's keyed levels)
 
 #include <charconv>
 #include "lle/UFromChars.h"
@@ -1174,8 +1175,8 @@ std::vector<std::string> CsvColumns(const EEDTTable& t)
     for (unsigned long fi = 0; fi < st.mFieldCount; fi++) {
         const EEDTField& f = st.mFields[fi];
         std::string name = f.mName;
-        if (t.mEpochFlags && name == t.mEpochFlags)
-            continue;   // epochs.yaml's lists
+        if ((t.mEpochFlags && name == t.mEpochFlags) || (t.mLevelsField && name == t.mLevelsField))
+            continue;   // epochs.yaml's lists; the attribute-keyed levels
         if (f.mType == kEEDT_str || f.mCount == 1) {
             cols.push_back(name);
         } else if (f.mType == kEEDT_pair_f32) {
@@ -1575,7 +1576,77 @@ public:
         }
     }
 
+    // the attribute-keyed levels (dbcivilization levels: [{attribute | level, value, bonus}]) -> the record's level
+    // pairs; levels past the field's count are the game's alone (EERules.cpp) (tools/eedata tables._build_levels)
+    void Levels(const EEDTTable& t, const EEDTField& f, Getter& g, std::vector<unsigned char>& buf)
+    {
+        const Node* v = g.Get(t.mLevelsKey);
+        if (!v)
+            return;
+        if (v->mKind != Node::kList)
+            Fail(g.mWhere + ": " + t.mLevelsKey + " must be a list");
+        const std::map<std::string, long>& theLevels = this->AttributeLevels();
+        for (const Node& x : v->mItems) {
+            if (x.mKind != Node::kMap)
+                Fail(g.mWhere + ": " + t.mLevelsKey + ": a level is a mapping (attribute, value, bonus)");
+            for (const std::string& k : x.mKeys)
+                if (k != "attribute" && k != "level" && k != "value" && k != "bonus")
+                    Fail(g.mWhere + ": " + t.mLevelsKey + ": unknown key '" + k + "'");
+            const Node* a = x.Find("attribute");
+            const Node* l = x.Find("level");
+            if (Present(a) == Present(l))
+                Fail(g.mWhere + ": " + t.mLevelsKey + ": name the attribute (or a level without one)");
+            long lv;
+            if (Present(a)) {
+                const std::string& id = ScalarText(a, g.mWhere, t.mLevelsKey, "an attribute id");
+                std::map<std::string, long>::const_iterator it = theLevels.find(id);
+                if (it == theLevels.end())
+                    Fail(g.mWhere + ": " + t.mLevelsKey + ": attribute '" + id + "' is not an attribute of civbuilder");
+                lv = it->second;
+            } else {
+                EEDTField level{"level", 0, 1, kEEDT_s32};
+                lv = (long)(int32_t)Number(level, kEEDT_s32, l, g.mWhere);
+                if (lv < 1)
+                    Fail(g.mWhere + ": " + t.mLevelsKey + ": level must be at least 1");
+            }
+            if (lv > (long)f.mCount)
+                continue;
+            EEDTField value{"value", 0, 1, kEEDT_f32}, bonus{"bonus", 0, 1, kEEDT_f32};
+            const Node* vv = x.Find("value");
+            const Node* bv = x.Find("bonus");
+            PutLE(buf, f.mOffset + 8 * (lv - 1), Number(value, kEEDT_f32, Present(vv) ? vv : nullptr, g.mWhere), 4);
+            PutLE(buf, f.mOffset + 8 * (lv - 1) + 4, Number(bonus, kEEDT_f32, Present(bv) ? bv : nullptr, g.mWhere), 4);
+        }
+    }
+
+    // {attribute id: level}: civbuilder.yaml's when the data path has it, else the vanilla attributes (EERules.h)
+    const std::map<std::string, long>& AttributeLevels()
+    {
+        if (this->mHaveAttributes)
+            return this->mAttributes;
+        std::string text;
+        if (this->mRead("civbuilder", text)) {
+            Node d = ParseYaml(text);
+            const Node* list = d.Find("attributes");
+            if (list && list->mKind == Node::kList)
+                for (const Node& a : list->mItems) {
+                    const Node* id = a.Find("id");
+                    const Node* level = a.Find("level");
+                    if (Present(id) && id->mKind == Node::kScalar && Present(level))
+                        this->mAttributes[id->mText] = NodeInt(level, "civbuilder line " + Num(a.mLine), "level");
+                }
+        } else {
+            EECivBuilderRules theDefaults;
+            for (const EECivAttribute& a : theDefaults.mAttributes)
+                this->mAttributes[a.mID] = a.mLevel;
+        }
+        this->mHaveAttributes = true;
+        return this->mAttributes;
+    }
+
 private:
+    std::map<std::string, long> mAttributes;
+    bool mHaveAttributes = false;
     std::function<bool(const char*, std::string&)> mRead;
     std::map<std::string, std::unique_ptr<Doc>> mDocs;
     std::map<std::string, Index> mIndexes;
@@ -1592,6 +1663,10 @@ std::vector<unsigned char> BuildRecord(const EEDTTable& t, Getter& g, Resolver& 
         std::string name = f.mName;
         if (t.mEpochFlags && name == t.mEpochFlags)
             continue;   // set from epochs.yaml's lists (Resolver::EpochFlags)
+        if (t.mLevelsField && name == t.mLevelsField) {
+            r.Levels(t, f, g, buf);   // the attribute-keyed levels
+            continue;
+        }
         const EEDTRef* ref = FindRef(t, f.mName);
         if (f.mType == kEEDT_str) {
             std::string text = Text(g.Get(name), g.mWhere, f.mName);
@@ -1693,6 +1768,55 @@ float NodeFloat(const Node* inValue, const std::string& inWhere, const char* inN
     float f;
     memcpy(&f, &bits, 4);
     return f;
+}
+
+bool ParseDocument(const std::string& inText, Node& outDoc, std::string& outError)
+{
+    try {
+        outDoc = ParseYaml(inText);
+    } catch (Failure& e) {
+        outError = e.mText;
+        return false;
+    }
+    return true;
+}
+
+std::string NodeText(const Node* inValue, const std::string& inWhere, const char* inName)
+{
+    if (!inValue || inValue->IsMissing())
+        return std::string();
+    return Text(inValue, inWhere, inName);
+}
+
+bool TryNodeText(const Node* inValue, const std::string& inWhere, const char* inName, std::string& outText)
+{
+    try {
+        outText = NodeText(inValue, inWhere, inName);
+    } catch (Failure& e) {
+        outText = e.mText;
+        return false;
+    }
+    return true;
+}
+
+std::string QuoteText(const std::string& inBytes)
+{
+    std::string out = "\"";
+    for (unsigned char b : inBytes) {
+        unsigned long cp = kEEDTCodePage[b];
+        if (cp == '"' || cp == '\\') {
+            out += '\\';
+            out += (char)cp;
+        } else if (cp < 0x20) {
+            static const char kHex[] = "0123456789abcdef";
+            out += "\\x";
+            out += kHex[cp >> 4];
+            out += kHex[cp & 15];
+        } else {
+            AppendUtf8(out, cp);
+        }
+    }
+    return out + "\"";
 }
 
 void WorldValue(const std::string& inText, const std::string& inWhere, const char* inName, long& outRow,

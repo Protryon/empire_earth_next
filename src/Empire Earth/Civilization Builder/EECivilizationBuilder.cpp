@@ -204,7 +204,7 @@ long Fn27F221(UWideString& outText)
 // FUNCTION: EXE 0x67f299
 // Reads the id, bonus and cost of the selected line in the available (0xcb, inBought true) or bought (0xcc)
 // upgrade list
-bool Fn27F299(bool inBought, unsigned short* outUpgrade, unsigned long* outBonus, unsigned long* outCost)
+bool Fn27F299(bool inBought, EECivUpgrade* outUpgrade, unsigned long* outBonus, unsigned long* outCost)
 {
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
     bool theResult = false;
@@ -242,7 +242,7 @@ long Fn27F340()
 // Fills both upgrade lists: 0xcc with the given upgrades, 0xcb with all others; both are selectable unless
 // the lists are locked (gB565566)
 // the original fills control 0xcc (vtable +0xc8) before 0xcb (+0xc4)
-long Fn27F34E(std::vector<unsigned short>& inUpgrades)
+long Fn27F34E(std::vector<EECivUpgrade>& inUpgrades)
 {
     long theResult = 3;
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
@@ -434,7 +434,7 @@ UIFileListBox* Fn27F8F7()
 // FUNCTION: EXE 0x67f92a
 // Moves an upgrade (the selected line when 0) to the bought list or back, then reformats the lists
 // (on a buy only the source list is reformatted)
-bool Fn27F92A(UIForm* inForm, bool inBuy, unsigned short inUpgrade)
+bool Fn27F92A(UIForm* inForm, bool inBuy, EECivUpgrade inUpgrade)
 {
     UWideString theLine;
     UWideString theName;
@@ -536,7 +536,7 @@ long Fn27FB94(UIForm* inForm)
 bool Fn27FBA5()
 {
     std::vector<UWideString> theLines;
-    unsigned short theUpgrade = 0;
+    EECivUpgrade theUpgrade = 0;
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
     theLines = Fn27F8C7(theForm, 0xcc)->GetDataArray();
     for (std::vector<UWideString>::iterator i = theLines.begin(); i != theLines.end(); i++) {
@@ -591,7 +591,7 @@ long EESetCivBuilderButtonBlinking(bool inBlinking)
 
 // FUNCTION: EXE 0x67fd5a
 // Buys an upgrade, playing the button sound on success; returns 0xd when it cannot be moved
-long Fn27FD5A(unsigned short inUpgrade)
+long Fn27FD5A(EECivUpgrade inUpgrade)
 {
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
     long theResult = 0xd;
@@ -604,7 +604,7 @@ long Fn27FD5A(unsigned short inUpgrade)
 
 // FUNCTION: EXE 0x67fdab
 // Sells an upgrade back, playing the button sound on success; returns 0xd when it cannot be moved
-long Fn27FDAB(unsigned short inUpgrade)
+long Fn27FDAB(EECivUpgrade inUpgrade)
 {
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
     long theResult = 0xd;

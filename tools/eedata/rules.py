@@ -159,6 +159,33 @@ CIV_ATTRIBUTES = [   # the original's switch (EECivilizationManager::ApplyUpgrad
 ]
 
 
+def attribute_ids():
+    """{level: attribute id} of the vanilla attributes (the export names dbcivilization's levels by them)."""
+    pw = _consts('EECivPowerIDs.h', 'kCivPower')
+    out = {lv: aid for aid, lv, _ in CIV_ATTRIBUTES}
+    out.update({pw['kCivPowerFlamingArrows'] + k: n for k, n in enumerate(POWER_IDS)})
+    return out
+
+
+def attribute_levels(texts):
+    """{attribute id: level} from civbuilder.yaml when texts has it, else the vanilla attributes."""
+    t = texts.get('civbuilder')
+    if t is None:
+        return {v: k for k, v in attribute_ids().items()}
+    doc = parse_yaml(t.decode('utf-8'))
+    out = {}
+    for a in doc.get('attributes') or []:
+        if isinstance(a, dict) and isinstance(a.get('id'), str):
+            out[a['id']] = _int(a.get('level'), 'civbuilder', 'level')
+    return out
+
+
+POWER_IDS = ['flaming_arrows', 'slavery', 'priest_tower', 'crusaders', 'fanaticism', 'emissaries', 'exploration',
+             'insurance', 'metallurgy', 'advanced_mining', 'pathfinding', 'camouflage', 'bundeswehr', 'sas',
+             'paratroopers', 'market', 'cyber_ninja', 'missile_base', 'cloaking', 'adaptation', 'expansionism',
+             'conquistadors', 'just_in_time_manufacturing']
+
+
 def civbuilder(ids, spec):
     pw = _consts('EECivPowerIDs.h', 'kCivPower')
     s = _consts('EEStringIDs.h', 'IDS_')
@@ -170,16 +197,18 @@ def civbuilder(ids, spec):
 # a slot (0 .. 6); only_category / except_category limit an apply to unit classes of a category; power: a civ power.
 attributes:
 """)
-    rows = CIV_ATTRIBUTES + [(ids('dbcivpowers', k), pw['kCivPowerFlamingArrows'] + k,
+    rows = CIV_ATTRIBUTES + [(POWER_IDS[k], pw['kCivPowerFlamingArrows'] + k,
                               [{'stat': 'power', 'power': ids('dbcivpowers', k)}]) for k in range(23)]
     for aid, level, applies in rows:
-        out.append(f'  - id: {aid}\n    level: {level}\n    applies:\n')
+        name = (s['IDS_CIV_BONUS_BASE'] if level <= 0x25 else s['IDS_CIV_POWER_BASE']) + level
+        out.append(f'  - id: {aid}\n    level: {level}\n    name: {name}\n    applies:\n')
         for ap in applies:
             first = True
             for k, v in ap.items():
                 out.append(('      - ' if first else '        ') + f'{k}: {v}\n')
                 first = False
     out.append(f"""powers_category:                   # the special powers category appended to dbcivilization's
+  id: special_powers               # (the keyed .civ files name its upgrades special_powers.<attribute>)
   name: {s['IDS_SPECIAL_POWERS']}
   unit_set: {ids('dbunitset', 0x66)}
   cost: special_powers_category_cost.L
@@ -444,6 +473,8 @@ def validate(name, text, content, spec):
         levels = set()
 
         def attribute(x):
+            if x.get('name') is not None:
+                _int(x.get('name'), x.where(), 'name')
             lv = _int(x.get('level'), x.where(), 'level')
             if lv < 1 or lv in levels:
                 raise TextError(f'{x.where()}: level {lv}: at least 1, one attribute per level')
@@ -470,6 +501,8 @@ def validate(name, text, content, spec):
         _check_entries(entries(top, 'attributes', attribute), top.where(), 'attribute')
 
         def powers(x):
+            if x.get('id') is not None and not re.match(r'^[a-z][a-z0-9_]*$', str(x.get('id'))):
+                raise TextError(f'{x.where()}: id {x.get("id")!r} is not an id')
             if x.get('name') is not None:
                 _int(x.get('name'), x.where(), 'name')
             if x.get('unit_set') is not None:

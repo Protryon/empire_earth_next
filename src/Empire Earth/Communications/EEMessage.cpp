@@ -1874,7 +1874,7 @@ bool EEMCivTimerExpired::IsResponse(NEMessage* inMessage)
 // Returns the civilization upgrades message's wire size: 11 bytes plus 2 per upgrade plus the name
 unsigned long EEMCivUpgrades::ExportSize()
 {
-    return this->mUpgrades.size() * sizeof(unsigned short) + this->mCivName.GetExportSize() + 11;
+    return this->mUpgrades.size() * sizeof(EECivUpgrade) + this->mCivName.GetExportSize() + 11;
 }
 
 // FUNCTION: EXE 0x4bd218
@@ -1894,8 +1894,8 @@ void EEMCivUpgrades::ExportMessage(unsigned char** outPayloadPointer, unsigned l
         theLocation += sizeof(this->mNameString);
         memcpy(*outPayloadPointer + theLocation, &theNumUpgrades, sizeof(theNumUpgrades));
         theLocation += sizeof(theNumUpgrades);
-        for (std::vector<unsigned short>::iterator it = this->mUpgrades.begin(); it != this->mUpgrades.end(); ++it) {
-            unsigned short theUpgrade = *it;
+        for (std::vector<EECivUpgrade>::iterator it = this->mUpgrades.begin(); it != this->mUpgrades.end(); ++it) {
+            EECivUpgrade theUpgrade = *it;
             memcpy(*outPayloadPointer + theLocation, &theUpgrade, sizeof(theUpgrade));
             theLocation += sizeof(theUpgrade);
         }
@@ -1922,7 +1922,7 @@ void EEMCivUpgrades::ImportMessage(unsigned char* inPayloadPointer)
     memcpy(&theNumUpgrades, inPayloadPointer + theLocation, sizeof(theNumUpgrades));
     theLocation += sizeof(theNumUpgrades);
     for (unsigned long i = 0; i < theNumUpgrades; i++) {
-        unsigned short theUpgrade;
+        EECivUpgrade theUpgrade;
         memcpy(&theUpgrade, inPayloadPointer + theLocation, sizeof(theUpgrade));
         theLocation += sizeof(theUpgrade);
         this->mUpgrades.push_back(theUpgrade);

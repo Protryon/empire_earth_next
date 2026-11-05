@@ -212,6 +212,11 @@ def generate():
             if fn not in byname or byname[fn]['cls'] != 'named' or byname[fn]['type'] != 'bool':
                 raise SystemExit(f'overlay.EPOCH_FLAGS: {name}.{fn} is not a bool array the game reads')
             t['epoch_flags'] = [fn, key]
+        if name in overlay.KEYED_LEVELS:
+            fn, key = overlay.KEYED_LEVELS[name]
+            if fn not in byname or byname[fn]['cls'] != 'named' or byname[fn]['type'] != 'pair_f32':
+                raise SystemExit(f'overlay.KEYED_LEVELS: {name}.{fn} is not a pair array the game reads')
+            t['keyed_levels'] = [fn, key]
         if t['key'] not in ('row', 'position') and (t['key'] not in byname or byname[t['key']]['cls'] != 'named'):
             raise SystemExit(f'overlay.KEYS: {name}.{t["key"]} is not a field the text carries')
         if name in overlay.SELF:

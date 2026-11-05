@@ -3,6 +3,7 @@
 // unless an assert string gives them.
 #ifndef EE_EMPIREEARTH_H
 #define EE_EMPIREEARTH_H
+#include "ee/EECivUpgrade.h"
 
 class GE2DPoint;
 class UResourceFile;
@@ -43,7 +44,7 @@ void EEAttackPlayers(long inPlayer, unsigned char inFlag);   // 0x13f5e9 (Empire
 extern unsigned long gCollisionDetectionUnit;   // 0x4c2378 (unsigned: EEPhysics 0x15401e's fidiv) (initialised .data; EEMToggleCollisionDetection sets it)
 class UWideString;
 // 0x280a05 (Civilization Builder; EEMCivUpgradesRequested): requires <vector>
-void EECBRequestUpgrades(unsigned char inPlayer, UWideString& inName, std::vector<unsigned short>& inUpgrades);
+void EECBRequestUpgrades(unsigned char inPlayer, UWideString& inName, std::vector<EECivUpgrade>& inUpgrades);
 
 class UString;
 // the saved-game / scenario file extensions and the files the lobby's load screens picked (provisional names; init

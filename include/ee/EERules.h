@@ -134,20 +134,33 @@ struct EECivApply {
 };
 struct EECivAttribute {
     std::string mID;
-    long mLevel;                            // its level in every category (dbcivilization mLevels[level - 1]; the
-                                            // upgrade id's low bits)
+    long mLevel;                            // its level in every category (dbcivilization levels; the upgrade id's
+                                            // low 16 bits)
+    long mNameID;                           // its name in the builder (Language.rc; the original: IDS_CIV_BONUS_BASE
+                                            // + level, a power IDS_CIV_POWER_BASE + level)
     std::vector<EECivApply> mApplies;
+};
+// a civilization builder category's levels from dbcivilization.yaml (any number: the record holds the first 60)
+struct EECivCategoryText {
+    long mRow;                              // its dbcivilization row
+    std::string mID;
+    std::vector<float> mValues, mBonuses;   // by level - 1
 };
 struct EECivBuilderRules {
     std::vector<EECivAttribute> mAttributes;
     // the special powers category EECivilizationManager::Load appends (one level per civ power)
+    std::string mPowersID = "special_powers";   // its id (the keyed .civ files name its upgrades by it)
     long mPowersNameID = 32850;             // IDS_SPECIAL_POWERS
     long mPowersUnitSet = 0x66;             // dbunitset row
     EERuleNumber mPowersCost = EERuleNumber::World(86, 2);
     float mPowersLevelValue = 0.01f;
+    // dbcivilization.yaml's categories (ids and levels by attribute); empty without the text (the binary records)
+    std::vector<EECivCategoryText> mCategories;
 
     EECivBuilderRules();
     const EECivAttribute* Find(long inLevel) const;
+    const EECivAttribute* FindID(const std::string& inID) const;
+    const EECivCategoryText* FindCategory(long inRow) const;
 };
 
 // ------------------------------------------------------------------------------------------------ civpowers.yaml

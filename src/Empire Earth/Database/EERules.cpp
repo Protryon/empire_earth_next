@@ -149,6 +149,7 @@ EECivBuilderRules::EECivBuilderRules()
         EECivAttribute a;
         a.mID = d.mID;
         a.mLevel = d.mLevel;
+        a.mNameID = IDS_CIV_BONUS_BASE + d.mLevel;
         EECivApply x;
         x.mStat = d.mStat;
         x.mSlot = d.mSlot;
@@ -176,6 +177,7 @@ EECivBuilderRules::EECivBuilderRules()
         EECivAttribute a;
         a.mID = kPowers[i];
         a.mLevel = kCivPowerFlamingArrows + i;
+        a.mNameID = IDS_CIV_POWER_BASE + a.mLevel;
         EECivApply x;
         x.mStat = kCivStatPower;
         x.mPower = i;
@@ -189,6 +191,22 @@ const EECivAttribute* EECivBuilderRules::Find(long inLevel) const
     for (const EECivAttribute& a : this->mAttributes)
         if (a.mLevel == inLevel)
             return &a;
+    return nullptr;
+}
+
+const EECivAttribute* EECivBuilderRules::FindID(const std::string& inID) const
+{
+    for (const EECivAttribute& a : this->mAttributes)
+        if (a.mID == inID)
+            return &a;
+    return nullptr;
+}
+
+const EECivCategoryText* EECivBuilderRules::FindCategory(long inRow) const
+{
+    for (const EECivCategoryText& c : this->mCategories)
+        if (c.mRow == inRow)
+            return &c;
     return nullptr;
 }
 
@@ -622,8 +640,10 @@ void LoadCivBuilder(EEDataText::Content& c, const Node& d, EECivBuilderRules& r)
             a.mID = Id(x);
             a.mLevel = 0;
             x.Int("level", a.mLevel);
-            if (a.mLevel < 1)
-                Fail(x.Where() + ": level must be at least 1");
+            if (a.mLevel < 1 || a.mLevel > 0xffff)
+                Fail(x.Where() + ": level must be 1 .. 65535");
+            a.mNameID = 0;
+            x.Int("name", a.mNameID);
             for (const EECivAttribute& b : r.mAttributes)
                 if (b.mID == a.mID || b.mLevel == a.mLevel)
                     Fail(x.Where() + ": attribute '" + a.mID + "': its id or level " + std::to_string(a.mLevel) +
@@ -661,6 +681,8 @@ void LoadCivBuilder(EEDataText::Content& c, const Node& d, EECivBuilderRules& r)
     }
     if (const Node* s = m.Sub("powers_category")) {
         Map x(*s, doc, "powers_category");
+        if (x.Get("id"))
+            r.mPowersID = Id(x);
         x.Int("name", r.mPowersNameID);
         r.mPowersUnitSet = Ref(x, c, "unit_set", "dbunitset", r.mPowersUnitSet);
         x.Number("cost", r.mPowersCost);
@@ -668,6 +690,55 @@ void LoadCivBuilder(EEDataText::Content& c, const Node& d, EECivBuilderRules& r)
         x.Done();
     }
     m.Done();
+}
+
+// dbcivilization.yaml: each category's id and its levels, keyed by attribute (the table compiler puts the first 60
+// into the record; the game takes them all from here)
+void LoadCivCategories(EEDataText::Content& c, const Node& d, EECivBuilderRules& r)
+{
+    const Node* recs = d.Find("records");
+    if (!recs || recs->mKind != Node::kList)
+        return;
+    r.mCategories.clear();
+    long next = 0;
+    const Node* rows = d.Find("rows");
+    if (rows && !rows->IsMissing())
+        next = EEDataText::NodeInt(rows, "dbcivilization", "rows");
+    for (const Node& e : recs->mItems) {
+        std::string where = "dbcivilization line " + std::to_string(e.mLine);
+        if (e.mKind != Node::kMap)
+            continue;
+        EECivCategoryText t;
+        const Node* row = e.Find("row");
+        t.mRow = row && !row->IsMissing() ? EEDataText::NodeInt(row, where, "row") : next;
+        next = (t.mRow + 1 > next ? t.mRow + 1 : next);
+        const Node* id = e.Find("id");
+        t.mID = id && id->mKind == Node::kScalar ? id->mText : std::string();
+        if (const Node* levels = e.Find("levels")) {
+            if (levels->mKind != Node::kList && !levels->IsMissing())
+                Fail(where + ": levels must be a list");
+            for (const Node& l : levels->mItems) {
+                Map x(l, "dbcivilization", "a level");
+                const Node* attribute = x.Get("attribute");
+                const std::string& name = EEDataText::NodeScalar(attribute, x.Where(), "attribute");
+                const EECivAttribute* a = r.FindID(name);
+                if (!a)
+                    Fail(x.Where() + ": attribute: '" + name + "' is not an attribute of civbuilder");
+                float value = 0.0f, bonus = 0.0f;
+                x.Float("value", value);
+                x.Float("bonus", bonus);
+                x.Done();
+                if ((long)t.mValues.size() < a->mLevel) {
+                    t.mValues.resize(a->mLevel, 0.0f);
+                    t.mBonuses.resize(a->mLevel, 0.0f);
+                }
+                t.mValues[a->mLevel - 1] = value;
+                t.mBonuses[a->mLevel - 1] = bonus;
+            }
+        }
+        r.mCategories.push_back(t);
+    }
+    (void)c;
 }
 
 void LoadCivPowers(EEDataText::Content& c, const Node& d, EECivPowerRules& r)
@@ -771,6 +842,8 @@ bool EERules::Load(EEDataText::Content& inContent, std::string& outError)
             LoadGameOptions(d, this->mGameOptions);
         if (inContent.Document("civbuilder", d))
             LoadCivBuilder(inContent, d, this->mCivBuilder);
+        if (inContent.Document("dbcivilization", d))
+            LoadCivCategories(inContent, d, this->mCivBuilder);
         if (inContent.Document("civpowers", d))
             LoadCivPowers(inContent, d, this->mCivPowers);
         if (inContent.Document("epochs", d))
@@ -935,6 +1008,7 @@ void EERules::Dump(std::string& outJson) const
             j.Open(nullptr, '{');
             j.Str("id", a.mID);
             j.Int("level", a.mLevel);
+            j.Int("name", a.mNameID);
             j.Open("applies", '[');
             for (const EECivApply& p : a.mApplies) {
                 j.Open(nullptr, '{');
@@ -950,10 +1024,26 @@ void EERules::Dump(std::string& outJson) const
             j.Close('}');
         }
         j.Close(']');
+        j.Str("powers_id", r.mPowersID);
         j.Int("powers_name", r.mPowersNameID);
         j.Int("powers_unit_set", r.mPowersUnitSet);
         j.Number("powers_cost", r.mPowersCost);
         j.Float("powers_level_value", r.mPowersLevelValue);
+        // the levels past the record's 60 (only dbcivilization.yaml can have them; the rest are in its dump)
+        j.Open("levels_past_60", '[');
+        for (const EECivCategoryText& c : r.mCategories) {
+            for (size_t k = 60; k < c.mValues.size(); k++) {
+                if (c.mValues[k] == 0.0f && c.mBonuses[k] == 0.0f)
+                    continue;
+                j.Open(nullptr, '{');
+                j.Int("row", c.mRow);
+                j.Int("level", (long)k + 1);
+                j.Float("value", c.mValues[k]);
+                j.Float("bonus", c.mBonuses[k]);
+                j.Close('}');
+            }
+        }
+        j.Close(']');
         s += "}\n";
     }
     {

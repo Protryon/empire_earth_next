@@ -5,6 +5,7 @@
 // Requires lle/LowLevelEngine.h, lle/GE3DPoint.h, <vector>, ee/EEAreaUtilities.h.
 #ifndef EE_EEUNITUTILITIES_H
 #define EE_EEUNITUTILITIES_H
+#include "ee/EECivUpgrade.h"
 
 class EEComplexUnit;
 class EEUnit;
@@ -224,11 +225,11 @@ float EEJitterHeading(float inAngle, float inMin, float inMax);
 class EEGhostUnit;
 void EEOrientWallGhost(EEGhostUnit* inGhost, long inCorner, long inRaisedCorners);
 long EEOrientWallPiece(GETransformation& ioTransformation, long inCorner, long inRaisedCorners);
-bool EEFn24E68F(unsigned short inUpgrade, UWideString& outText);
+bool EEFn24E68F(EECivUpgrade inUpgrade, UWideString& outText);
 class EECivilization;
 // 0x24edcf: whether inValue is in the civilization's GetPurchasedUpgrades list (0x64edcf calls GetPurchasedUpgrades
 // 0x12c738 on its first argument) (provisional name)
-bool EEHasCivilizationUpgrade(EECivilization* inCivilization, unsigned short inValue);
+bool EEHasCivilizationUpgrade(EECivilization* inCivilization, EECivUpgrade inValue);
 void EEMovePassengers(EEComplexUnit* inUnit, EEComplexUnit* inContainer, bool inIsConversion);
 void EETakeOverLoad(EEComplexUnit* inUnit, EEComplexUnit* inOther);
 bool EEIsTileTopAbove(unsigned long inX, unsigned long inY, float inHeight, EEUnit** outArg4, bool inBare);

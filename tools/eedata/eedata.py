@@ -18,7 +18,7 @@
   python -I tools/eedata/eedata.py cppgate [--ssa PATH | --db DIR] [--out DIR] [-j N]
                                     build the C++ text compiler test and run it over every exported table; also
                                     gate G1: the content dump of the .dat files equals that of the text tables
-  python -I tools/eedata/eedata.py extra TEXTDIR OUT [--units N] [--effects] [--epoch] [--options] [--rules-demo]
+  python -I tools/eedata/eedata.py extra TEXTDIR OUT [--units N] [--effects] [--epoch] [--options] [--rules-demo] [--civ]
                                     a scratch copy of the text tables with content past the original caps (the cap
                                     tests: extra.py)
   python -I tools/eedata/eedata.py doc epochs TEXTDIR [OUT.md]   a readable table of epochs.yaml (docgen.py)
@@ -194,6 +194,7 @@ def main():
     p.add_argument('--epoch', action='store_true')
     p.add_argument('--options', action='store_true')
     p.add_argument('--rules-demo', action='store_true')
+    p.add_argument('--civ', action='store_true')
     p = sub.add_parser('doc')
     p.add_argument('what', choices=['epochs'])
     p.add_argument('text')
