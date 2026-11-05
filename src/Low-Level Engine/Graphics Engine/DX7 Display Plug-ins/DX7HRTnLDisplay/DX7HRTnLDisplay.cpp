@@ -99,8 +99,10 @@
 // SYNTHETIC: DX7HRTNL 0x100016cb
 
 static UString gName("Direct3D Hardware TnL");
-DX7TnLRasterizer gRasterizer(gName);
-DX7Rasterizer* gRasterizerInstance = &gRasterizer;
+// (gTnLRasterizer: "gRasterizer" in the original DLL; one image with the game, whose own gRasterizer has the same
+// name: ELF/Mach-O symbols do not carry the type)
+static DX7TnLRasterizer gTnLRasterizer(gName);
+DX7Rasterizer* gRasterizerInstance = &gTnLRasterizer;
 static unsigned long gType = 'rast';
 
 // gName's and gRasterizer's init chains:

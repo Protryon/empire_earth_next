@@ -32,6 +32,11 @@ extern "C" uint32_t PlatTimeMilliseconds(void)
     return static_cast<uint32_t>(MonotonicNanoseconds() / 1000000ULL);
 }
 
+extern "C" uint64_t PlatTimeMilliseconds64(void)
+{
+    return MonotonicNanoseconds() / 1000000ULL;
+}
+
 extern "C" int64_t PlatCounterFrequency(void)
 {
     return 1000000000LL;

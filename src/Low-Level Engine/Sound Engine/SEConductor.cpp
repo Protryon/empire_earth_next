@@ -61,9 +61,9 @@ void* SEConductor::Resolve(void* inConductor, const char* inFile, size_t* outLen
     char thePath[MAX_PATH];
     const char* theFolder = theConductor->mMusicFolder;
     if (theFolder[0])
-        _snprintf(thePath, MAX_PATH, "%s\\%s", theFolder, inFile);
+        snprintf(thePath, MAX_PATH, "%s\\%s", theFolder, inFile);
     else
-        _snprintf(thePath, MAX_PATH, "%s", inFile);
+        snprintf(thePath, MAX_PATH, "%s", inFile);
     thePath[MAX_PATH - 1] = 0;
     FILE* theStream = fopen(thePath, "rb");
     if (theStream == NULL)

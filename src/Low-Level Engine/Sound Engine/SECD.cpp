@@ -1,7 +1,9 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SECD.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
+#ifdef _WIN32
 #include <mmsystem.h>
+#endif
 #include <string.h>
 #include <algorithm>
 
@@ -48,6 +50,7 @@ long SECD::GetCD(unsigned long inIndex, SECD*& outCD)
     return kErrorBeyondEnd;
 }
 
+#ifdef _WIN32
 // FUNCTION: LLE 0x1004b62a
 // Returns the number of tracks on the CD (stops playback first); 0 while busy or on an MCI error
 unsigned long SECD::GetTrackCount()
@@ -140,7 +143,7 @@ long SECD::Play()
 {
     if (!this->mBusy) {
         MCI_PLAY_PARMS theParms;
-        theParms.dwCallback = MAKELONG(SECD::sWindow, 0);
+        theParms.dwCallback = (DWORD_PTR)SECD::sWindow;
         theParms.dwTo = this->mEnd;
         MCIERROR theError = mciSendCommand(this->mDevice, MCI_PLAY, MCI_NOTIFY | MCI_TO, (DWORD_PTR)&theParms);
         if (theError == 0) {
@@ -278,6 +281,18 @@ long SECD::Stop()
     ESRecordNativeError(theError);
     return kErrorNativeError;
 }
+#else
+// No CD audio off Windows (MCI): SEInitializeCD opens no drive, so none of these is reached
+unsigned long SECD::GetTrackCount() { return 0; }
+float SECD::GetVolume() { return 0.0f; }
+void SECD::Notify(unsigned int inFlags, long inDevice) {}
+long SECD::Pause() { return kErrorNotFound; }
+long SECD::Play() { return kErrorNotFound; }
+long SECD::SeekToTime(const SECDTime& inTime) { return kErrorNotFound; }
+long SECD::SeekToTrack(unsigned long inTrack) { return kErrorNotFound; }
+long SECD::SetVolume(float inVolume) { return kErrorNotFound; }
+long SECD::Stop() { return kErrorNotFound; }
+#endif
 
 // Header inline block, init chain and template COMDATs emitted in this unit (markers at the end):
 // SYNTHETIC: LLE 0x1004b4b7

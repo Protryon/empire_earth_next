@@ -8,6 +8,8 @@
 #include <string.h>
 
 #include "gx/GX.h"
+#include "platform/PlatFont.h"
+#include "platform/PlatWindow.h"
 
 static int gFailures;
 
@@ -73,22 +75,17 @@ static GXSurface* Create(GXDirectDraw* inDD, unsigned long inCaps, unsigned long
     return theSurface;
 }
 
-static LRESULT CALLBACK WindowProc(HWND inWindow, UINT inMessage, WPARAM inW, LPARAM inL)
-{
-    return DefWindowProcA(inWindow, inMessage, inW, inL);
-}
-
 struct Vertex {   // the renderer's D3DVERTEX_STD_COLOR
     float x, y, z, nx, ny, nz;
     unsigned long color;
     float tu, tv;
 };
 
-static bool DrawHello(HDC inDC, void*)
+// "Hello" in yellow at (4, 4) of the surface, transparent background (the renderer's DX7DrawTextPlat)
+static bool DrawHello(const PlatFontTarget& inTarget, long inOriginX, long inOriginY, void* inFont)
 {
-    SetBkMode(inDC, TRANSPARENT);
-    SetTextColor(inDC, RGB(255, 255, 0));
-    return ExtTextOutA(inDC, 4, 4, 0, NULL, "Hello", 5, NULL) != 0;
+    PlatFontDraw((const PlatFont*)inFont, "Hello", 5, 4 - inOriginX, 4 - inOriginY, 0xffff00, 0, 0, NULL, &inTarget);
+    return true;
 }
 
 int main(int argc, char** argv)
@@ -97,13 +94,21 @@ int main(int argc, char** argv)
     for (int i = 1; i < argc; i++)
         if (!strcmp(argv[i], "--frames") && i + 1 < argc)
             theFrames = atoi(argv[++i]);
-    WNDCLASSA theClass = {};
-    theClass.lpfnWndProc = WindowProc;
-    theClass.hInstance = GetModuleHandleA(NULL);
-    theClass.lpszClassName = "gxtest";
-    RegisterClassA(&theClass);
-    HWND theWindow = CreateWindowA("gxtest", "GX test", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 300, 250, NULL, NULL,
-                                   theClass.hInstance, NULL);
+    PlatWindowSetAppName("gxtest", 0);
+    if (!PlatWindowSystemStart()) {
+        printf("FAIL no window system: %s\n", PlatWindowLastError());
+        return 1;
+    }
+    PlatWindow* theWindow = PlatWindowCreateAt("GX test", 100, 100, 300, 250, 0);
+    if (theWindow == NULL) {
+        printf("FAIL no window: %s\n", PlatWindowLastError());
+        return 1;
+    }
+    if (!PlatFontRegisterBuiltIn()) {
+        printf("FAIL built-in fonts\n");
+        return 1;
+    }
+    PlatFont* theFont = PlatFontCreate("Arial", -16, 0, 0, 0, 1);
     GXDirectDraw* theDD = NULL;
     if (GXDirectDrawCreate(NULL, &theDD) != GX_OK) {
         printf("FAIL no GX device\n");
@@ -239,29 +244,26 @@ int main(int argc, char** argv)
     theDevice->DrawIndexedPrimitiveVB(GXPT_TRIANGLELIST, theVB, 8, 4, theIndices, 6, 0);
     Check(Pixel(theBack, 10, 50) == 0xff0000, "z test keeps the near quad", Pixel(theBack, 10, 50), 0xff0000);
 
-    // 6. GDI text on the GPU-side back buffer (coverage from two grounds) and on a CPU surface through GetDC
+    // 6. text on the GPU-side back buffer (premultiplied, blended on the GPU) and on a CPU-side 565 surface
     RECT theText = {0, 0, 64, 24};
-    theBack->DrawText(theText, DrawHello, NULL);
+    theBack->DrawText(theText, DrawHello, theFont);
     bool theYellow = false;
     for (int y = 4; y < 20 && !theYellow; y++)
         for (int x = 4; x < 40 && !theYellow; x++)
             theYellow = Pixel(theBack, x, y) == 0xffff00;
     Check(theYellow, "GPU text has full-coverage yellow pixels", 0, 0);
-    HDC theDC = NULL;
     GXSurface* theTextSurface = Create(theDD, GXSCAPS_OFFSCREENPLAIN, 64, 24, 16, false);
-    if (theTextSurface->GetDC(&theDC) == GX_OK) {
-        DrawHello(theDC, NULL);
-        theTextSurface->ReleaseDC(theDC);
+    if (theTextSurface->DrawText(theText, DrawHello, theFont) == GX_OK) {
         bool theAny = false;
         for (int y = 4; y < 20 && !theAny; y++)
             for (int x = 4; x < 40 && !theAny; x++)
                 theAny = Pixel(theTextSurface, x, y) == 0xffe0;
-        Check(theAny, "GetDC text on a 565 surface", 0, 0);
+        Check(theAny, "CPU text on a 565 surface", 0, 0);
     } else
-        Check(false, "GetDC", 0, 0);
+        Check(false, "DrawText (CPU)", 0, 0);
 
     // 7. present to the window: draw, read back, present (the harness reads each frame back before it is
-    // presented), on a second thread as the game's graphics thread does, while this thread pumps the messages
+    // presented), on a second thread as the game's graphics thread does, while this thread pumps the events
     struct PresentJob {
         GXSurface* mBack;
         GXSurface* mPrimary;
@@ -285,10 +287,8 @@ int main(int argc, char** argv)
         return 0;
     }, &theJob, 0, NULL);
     while (!theJob.mDone) {
-        MSG theMessage;
-        while (PeekMessageA(&theMessage, NULL, 0, 0, PM_REMOVE)) {
-            TranslateMessage(&theMessage);
-            DispatchMessageA(&theMessage);
+        PlatInputEvent theEvent;
+        while (PlatWindowPollEvent(&theEvent)) {
         }
         Sleep(1);
     }
@@ -306,6 +306,9 @@ int main(int argc, char** argv)
     theBack->Release();
     thePrimary->Release();
     theDD->Release();
+    PlatFontDestroy(theFont);
+    PlatWindowDestroy(theWindow);
+    PlatWindowSystemStop();
     printf("%s (%d failed)\n", gFailures ? "FAIL" : "PASS", gFailures);
     return gFailures ? 1 : 0;
 }

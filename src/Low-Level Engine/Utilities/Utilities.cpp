@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
+#include "platform/PlatMessage.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 // SYNTHETIC: LLE 0x100837ad
@@ -23,7 +24,7 @@ bool gShutdownInProgress;                           // 0x12ed18
 // Returns the user's default language id
 unsigned short UGetOSLanguage()
 {
-    return GetUserDefaultLangID();
+    return PlatSystemLanguageId();
 }
 
 // FUNCTION: LLE 0x100837eb
@@ -32,7 +33,7 @@ unsigned short UGetOSLanguage()
 // MSDN's (DWORD)(LOBYTE(LOWORD(v))) casts (the up-front movzx of the minor)
 unsigned long UGetOSType()
 {
-    unsigned long theVersion = GetVersion();
+    unsigned long theVersion = PlatSystemVersion();
     unsigned long theMajor = (unsigned long)(LOBYTE(LOWORD(theVersion)));
     unsigned long theMinor = (unsigned long)(HIBYTE(LOWORD(theVersion)));
     unsigned long theResult;
@@ -73,7 +74,7 @@ void UShutdown(bool inForced, bool inTerminate)
     }
     if (!inTerminate)
         return;
-    CoUninitialize();
+    PlatSystemShutdown();
     if (inForced)
         exit(0);
     else

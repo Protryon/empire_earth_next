@@ -16,6 +16,13 @@ OUT gets:
     The .bik files themselves are not copied: the build plays X.mpg when the game asks for X.bik.
 Run OUT\\EE-AOC.exe. OUT must be outside the repository or under its build/ folder (git-ignored), and never the
 install itself. --force replaces an existing OUT.
+
+Linux and macOS (--posix-exe PATH: the game built by tools/xbuild.py game, e.g.
+build/xbuild/linux-x86_64/game/ee-aoc): OUT gets that program as ee-aoc instead of EE-AOC.exe, a preferences store
+OUT/prefs/HKEY_CURRENT_USER.prefs with the original Empire Earth's install keys (the game refuses to start without
+them; the Windows installers write them to the registry) and OUT/run.sh, which runs the game with EE_DATA_ROOT=OUT
+and EE_PREFS_DIR=OUT/prefs. Prepare OUT on Windows (where the install is) and copy it to the other system, or run
+this there with --install pointing at a copy of the install.
 """
 import argparse
 import json
@@ -93,6 +100,23 @@ def movies(out, sources):
     return len(found)
 
 
+def posix_files(exe, out):
+    """The POSIX game, its preferences store (platform/PlatPreferences.h's file format) and a launcher"""
+    shutil.copy2(exe, out / "ee-aoc")
+    prefs = out / "prefs"
+    prefs.mkdir()
+    # the original Empire Earth's install location (the game refuses to start without it); volume C: maps to "/"
+    text = ('[Software\\SSSI\\Empire Earth]\n'
+            '"Installed From Volume" = string "C:"\n'
+            '"Installed From Directory" = string "\\\\"\n')
+    (prefs / "HKEY_CURRENT_USER.prefs").write_bytes(text.encode("ascii"))
+    (out / "run.sh").write_bytes(b'#!/bin/sh\n# Empire Earth: The Art of Conquest (tools/make_play_dir.py --posix-exe)\n'
+                                 b'here="$(cd "$(dirname "$0")" && pwd)"\n'
+                                 b'EE_DATA_ROOT="$here" EE_PREFS_DIR="$here/prefs" exec "$here/ee-aoc" "$@"\n')
+    for p in (out / "ee-aoc", out / "run.sh"):
+        p.chmod(0o755)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("out", type=pathlib.Path)
@@ -103,8 +127,10 @@ def main():
                     help="a directory with .bik movies (repeatable)")
     ap.add_argument("--binary-db", action="store_true", help="keep the db tables in data.ssa (no text tables)")
     ap.add_argument("--force", action="store_true", help="replace an existing OUT")
+    ap.add_argument("--posix-exe", type=pathlib.Path,
+                    help="the Linux/macOS game (tools/xbuild.py game) in place of EE-AOC.exe")
     a = ap.parse_args()
-    exe = a.exe or ROOT / "build" / "clang" / "exe" / "EE-AOC.exe"
+    exe = a.posix_exe or a.exe or ROOT / "build" / "clang" / "exe" / "EE-AOC.exe"
     if not exe.exists():
         sys.exit(f"{exe} does not exist: build it first (python -I build.py)")
     if not (a.install / "Data").is_dir():
@@ -120,7 +146,10 @@ def main():
     t0 = time.time()
     print(f"game files from {a.install}", flush=True)
     copy_game(a.install, out)
-    shutil.copy2(exe, out / "EE-AOC.exe")
+    if a.posix_exe:
+        posix_files(exe, out)
+    else:
+        shutil.copy2(exe, out / "EE-AOC.exe")
     tables = 0
     if not a.binary_db:
         r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "eedata" / "eedata.py"), "install", str(out)],
@@ -133,7 +162,7 @@ def main():
     (out / "play.json").write_bytes((json.dumps(dict(
         exe=str(exe), install=str(a.install), text_tables=tables, movies=count,
         made=time.strftime("%Y-%m-%d %H:%M:%S")), indent=2) + "\n").encode())
-    print(f"ready in {time.time() - t0:.0f} s: run {out / 'EE-AOC.exe'}")
+    print(f"ready in {time.time() - t0:.0f} s: run {out / ('run.sh' if a.posix_exe else 'EE-AOC.exe')}")
 
 
 if __name__ == "__main__":

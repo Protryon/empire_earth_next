@@ -5,6 +5,7 @@
 // Complete: the debug-output filter (0x100016fb), the shutdown hook (0x100019cc), the globals' init chains
 // (0x1000144b..0x100014f4) and the 0x10001a96.. COMDATs included.
 #include <windows.h>
+#include "platform/PlatMessage.h"
 #include <stdio.h>
 #include <stdarg.h>
 
@@ -115,7 +116,7 @@ void ESDebugOut(const char* inFormat, ...)
         const char* theOutput = theText;
         if (theText[0] == '!')
             theOutput = theText + 1;
-        OutputDebugStringA(theOutput);
+        PlatDebugOutput(theOutput);
     }
 }
 

@@ -1,13 +1,11 @@
-// C:\EEX\Low-Level Engine\Input System\ISKeyboard.h (RECONSTRUCTION; ISKeyboard.cpp 0x39ca1..0x3b2ce). The DirectInput
-// system keyboard. sizeof 0x240 (operator new in ISInitialize; ??_E stride 0x38d82). Inline members and the implicit
+// C:\EEX\Low-Level Engine\Input System\ISKeyboard.h (RECONSTRUCTION; ISKeyboard.cpp 0x39ca1..0x3b2ce). The system
+// keyboard (DirectInput's in the original; the window layer's events now: lle/ISDeviceInput.h). sizeof 0x240 (operator new in ISInitialize; ??_E stride 0x38d82). Inline members and the implicit
 // copy members are emitted by Input System.cpp (0x38be3..0x38de1).
 #ifndef LLE_ISKEYBOARD_H
 #define LLE_ISKEYBOARD_H
 
-#ifndef DIRECTINPUT_VERSION
-#define DIRECTINPUT_VERSION 0x0700          // DirectInputCreate(.., 0x700, ..) in ISInitialize
-#endif
-#include <dinput.h>
+#include "platform/PlatKeys.h"              // DIK_* scan codes
+#include "lle/ISDeviceInput.h"
 #include "lle/ISDevice.h"
 #include "lle/ISKeyCode.h"
 #include "lle/ISModifierState.h"
@@ -44,14 +42,14 @@ public:
     virtual long SetMode(unsigned long inMode) { return kErrorFailed; }
     virtual void Suspend();
 private:
-    ISKeyboard(IDirectInputDevice* inDevice, const UString& inName, UResourceFile* inResources,
+    ISKeyboard(ISDeviceInput* inDevice, const UString& inName, UResourceFile* inResources,
                unsigned long inArg4);
     virtual ~ISKeyboard();
     unsigned char* GetCurrentStatus() const { return this->mCurrentStatus; }
     unsigned char* GetLastStatus() const { return this->mLastStatus; }
     void RecomputeCurrentKeyState();
 
-    IDirectInputDevice* mDevice;            // +0x18
+    ISDeviceInput* mDevice;                 // +0x18 (an IDirectInputDevice in the original)
     ISEntity** mKeys;                       // +0x1c new[256] by DIK_* code (ISKey; 0xe0..0xe2 ISExtendedKey)
     unsigned char* mCurrentStatus;          // +0x20 -> mStatus
     unsigned char* mLastStatus;             // +0x24 -> mLast

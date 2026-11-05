@@ -8,7 +8,7 @@
 // Creates a thread object for a function and parameter (not started yet), with its message lock
 TSThread::TSThread(unsigned long (*inFunction)(void*), void* inParameter, unsigned long inStackSize,
                    bool inSuspended)
-    : mFunction(inFunction), mParameter(inParameter), mSuspended(inSuspended)
+    : mFunction(inFunction), mParameter(inParameter), mSuspended(inSuspended), mPostLock(PlatMutexCreate())
 {
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mMessageLock) == keseOK, 51);
 }
@@ -16,7 +16,8 @@ TSThread::TSThread(unsigned long (*inFunction)(void*), void* inParameter, unsign
 // FUNCTION: LLE 0x1005425d
 // Creates a thread object wrapping an existing thread handle and ID, with its message lock
 TSThread::TSThread(PlatThread* inHandle, unsigned long inThreadID, bool inSuspended)
-    : mFunction(NULL), mParameter(NULL), mHandle(inHandle), mThreadID(inThreadID), mSuspended(inSuspended)
+    : mFunction(NULL), mParameter(NULL), mHandle(inHandle), mThreadID(inThreadID), mSuspended(inSuspended),
+      mPostLock(PlatMutexCreate())
 {
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mMessageLock) == keseOK, 71);
 }
@@ -27,6 +28,23 @@ TSThread::~TSThread()
 {
     PlatThreadClose(this->mHandle);
     TSScheduler::DestroyCriticalSection(this->mMessageLock);
+    PlatMutexDestroy(this->mPostLock);
+}
+
+bool (*TSThread::sEventPump)();
+unsigned long TSThread::sEventThread;
+
+void TSThread::SetEventPump(bool (*inPump)(), unsigned long inThreadID)
+{
+    TSThread::sEventPump = inPump;
+    TSThread::sEventThread = inThreadID;
+}
+
+void TSThread::DispatchWindowEvents()
+{
+    if (TSThread::sEventPump != NULL && PlatCurrentThreadId() == TSThread::sEventThread)
+        while (TSThread::sEventPump())
+            ;
 }
 
 // FUNCTION: LLE 0x100542e5
@@ -57,15 +75,14 @@ long TSThread::GetPriority()
 // (0x1005433f, POSIXThreadMain: the unused _beginthreadex twin of the thread entry, gone with it.)
 
 // FUNCTION: LLE 0x10054377
-// Posts a message to the thread's Win32 queue (retrying every 1 ms until it is accepted); optionally queues its ID too
+// Posts a message to the thread's queue (the original's Win32 thread message queue, retried until it accepted);
+// optionally queues its ID too
 long TSThread::Post(unsigned long inMessage, void* inParameter1, void* inParameter2, bool inQueue)
 {
-    BOOL thePosted;
-    do {
-        thePosted = PostThreadMessage(this->mThreadID, inMessage, reinterpret_cast<WPARAM>(inParameter1), (LPARAM)inParameter2);
-        if (!thePosted)
-            PlatSleep(1);
-    } while (!thePosted);
+    TSPostedMessage theMessage = {inMessage, inParameter1, inParameter2};
+    PlatMutexLock(this->mPostLock);
+    this->mPosted.push_back(theMessage);
+    PlatMutexUnlock(this->mPostLock);
     if (inQueue != true)
         return kErrorOK;
     this->mMessageLock->Enter();
@@ -75,29 +92,37 @@ long TSThread::Post(unsigned long inMessage, void* inParameter1, void* inParamet
 }
 
 // FUNCTION: LLE 0x100543c4
-// Takes one Win32 message off the calling thread's queue, dispatching window messages; kErrorNotFound if none is left
+// Takes one message off the calling thread's queue, else (on the window thread) dispatches one window event;
+// kErrorNotFound if none is left. A posted message counts when it is WM_QUIT (0x12) or a WM_USER (0x400) one, as a
+// window-less Win32 thread message did; a dispatched event counts only while queued IDs are left (Post inQueue).
 long TSThread::Receive(unsigned long& outMessage, void*& outParameter1, void*& outParameter2)
 {
     long theResult = kErrorNotFound;
-    MSG theMessage;
-    if (PeekMessage(&theMessage, NULL, 0, 0, PM_REMOVE)) {
-        this->mMessageLock->Enter();
-        if (theMessage.message == WM_QUIT || (theMessage.hwnd == NULL && theMessage.message >= WM_USER))
-            theResult = kErrorOK;
-        else {
-            TranslateMessage(&theMessage);
-            DispatchMessage(&theMessage);
-            theResult = this->mMessages.size() > 0 ? kErrorOK : kErrorNotFound;
-        }
-        outMessage = theMessage.message;
-        outParameter1 = (void*)theMessage.wParam;
-        outParameter2 = (void*)theMessage.lParam;
-        if (this->mMessages.size() > 0) {
-            this->mMessages.front();
-            this->mMessages.pop_front();
-        }
-        this->mMessageLock->Leave();
+    TSPostedMessage theMessage = {0, NULL, NULL};
+    bool thePosted = false;
+    PlatMutexLock(this->mPostLock);
+    if (!this->mPosted.empty()) {
+        theMessage = this->mPosted.front();
+        this->mPosted.pop_front();
+        thePosted = true;
     }
+    PlatMutexUnlock(this->mPostLock);
+    if (!thePosted && !(TSThread::sEventPump != NULL && PlatCurrentThreadId() == TSThread::sEventThread
+                        && TSThread::sEventPump()))
+        return theResult;
+    this->mMessageLock->Enter();
+    if (thePosted && (theMessage.mMessage == 0x12 || theMessage.mMessage >= 0x400))
+        theResult = kErrorOK;
+    else
+        theResult = this->mMessages.size() > 0 ? kErrorOK : kErrorNotFound;
+    outMessage = theMessage.mMessage;
+    outParameter1 = theMessage.mParameter1;
+    outParameter2 = theMessage.mParameter2;
+    if (this->mMessages.size() > 0) {
+        this->mMessages.front();
+        this->mMessages.pop_front();
+    }
+    this->mMessageLock->Leave();
     return theResult;
 }
 

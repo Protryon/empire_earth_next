@@ -50,7 +50,7 @@
 
 // FUNCTION: DX7HRTNL 0x1000fe74
 // Device enumeration callback: marks the screen valid and stops at the first device with hardware T&L and rasterization
-HRESULT CALLBACK DX7TnLEnumDevicesCallback(LPSTR inDescription, LPSTR inName, GXDEVICEDESC* inCaps,
+GXRESULT CALLBACK DX7TnLEnumDevicesCallback(LPSTR inDescription, LPSTR inName, GXDEVICEDESC* inCaps,
                                            LPVOID inContext)
 {
     bool* theContext = (bool*)inContext;

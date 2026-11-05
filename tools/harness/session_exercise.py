@@ -43,6 +43,10 @@ def add_session_arguments(ap):
                    help='with --human-script: end the play loop GAME_S game seconds after the driver logged "script complete" '
                         '(outcome script-complete; the per-PT streams cover the script and that tail)')
     g.add_argument('--human-settle-ms',type=int,default=150,help='with --human-script: real ms the UI gets after physics caught up, before each input')
+    g.add_argument('--input-check',action='store_true',
+                   help='tour/random-game with --play-seconds: after the play capture, press F3 twice through window '
+                        'messages (WM_KEYDOWN/UP posted to the game window) and require the game to pause and resume: '
+                        'the key travels the window layer, the Input System and the main form\'s hot key')
 
 
 def _prepare_session(ctx):
@@ -105,6 +109,56 @@ MINIMAP_REGION=(0.85,0.74,0.995,0.935)
 VIEW_MIN_LIT=0.30                       # share of pixels with a channel above 24
 VIEW_MIN_COLOURS=512                    # distinct colours at 5 bits per channel (not one uniform fill)
 MINIMAP_MIN_TERRAIN=0.002               # share of lit pixels that are not the white view outline or a blue/red unit dot
+
+
+def game_window(pid):
+    """The game's main window (class "Empire Earth Expansion", visible, the largest) of process pid -> HWND or None"""
+    import ctypes,ctypes.wintypes as w
+    user=ctypes.windll.user32
+    found=[]
+    @ctypes.WINFUNCTYPE(w.BOOL,w.HWND,w.LPARAM)
+    def visit(hwnd,_):
+        owner=w.DWORD();user.GetWindowThreadProcessId(hwnd,ctypes.byref(owner))
+        name=ctypes.create_unicode_buffer(64);user.GetClassNameW(hwnd,name,64)
+        if owner.value==pid and name.value=='Empire Earth Expansion' and user.IsWindowVisible(hwnd):
+            r=w.RECT();user.GetClientRect(hwnd,ctypes.byref(r));found.append(((r.right-r.left)*(r.bottom-r.top),hwnd))
+        return True
+    user.EnumWindows(visit,0)
+    return max(found)[1] if found else None
+
+
+def press_key(hwnd,vk,scan):
+    """A key press and release posted to the window (the window layer reads WM_KEYDOWN/UP as a keyboard would)"""
+    import ctypes
+    user=ctypes.windll.user32
+    user.PostMessageW(hwnd,0x100,vk,1|(scan<<16))
+    time.sleep(.3)
+    user.PostMessageW(hwnd,0x101,vk,1|(scan<<16)|0xC0000000)
+
+
+def input_check(pid,addresses,dismiss=None):
+    """F3 (the main game form's pause hot key) twice: paused, then running again -> evidence dict; raises on failure.
+    The game must be running first (a civilization form the timer opened is cancelled by dismiss)."""
+    from game_state_probe import sample
+    hwnd=game_window(pid)
+    if not hwnd:raise RuntimeError('input check: no visible game window')
+    end=time.monotonic()+30
+    while sample(pid,addresses)['paused'] and time.monotonic()<end:
+        if dismiss:dismiss()
+        time.sleep(1)
+    states=[sample(pid,addresses)['paused']]
+    for _ in range(2):
+        press_key(hwnd,0x72,0x3d)   # VK_F3, scan code DIK_F3
+        end=time.monotonic()+15
+        while time.monotonic()<end:
+            time.sleep(.5)
+            now=sample(pid,addresses)['paused']
+            if now!=states[-1]:break
+        states.append(now)
+    ok=states==[False,True,False]
+    print(f'INPUT CHECK F3 paused {states[0]} -> {states[1]} -> {states[2]}: {"ok" if ok else "FAILED"}',flush=True)
+    if not ok:raise RuntimeError(f'input check failed: paused states {states}')
+    return dict(key='F3',paused=states,ok=ok)
 
 
 def frame_regions(pixels):
@@ -243,6 +297,8 @@ def exercise(stage,evidence,mode,addresses=None,play_seconds=0,options=None):
             time.sleep(2);dismiss()   # the form may open between the last sample and the capture
             # the mini map shows the explored terrain around the start once the game has run (checked from 10 s of play)
             rendered.append(check_rendering(capture('play',11),'play',play_seconds>=10))
+            if getattr(options,'input_check',False):
+                (evidence/'input.json').write_text(json.dumps(input_check(pid,addresses,dismiss),indent=2)+'\n',encoding='utf-8')
         (evidence/'rendering.json').write_text(json.dumps(rendered,indent=2)+'\n',encoding='utf-8')
         (stage/'stop.request').write_text('exercise complete\n',encoding='ascii')
     else:

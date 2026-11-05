@@ -6,6 +6,7 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
+#include "platform/PlatFile.h"
 #include "lle/UEncryption.h"
 #include "lle/UResourceFile.h"
 
@@ -281,7 +282,7 @@ long EEGamePreferences::Load()
             theString = this->mSettings.mInstalledFromVolume;
             this->mRegistry.CreateRegistryValue(kEERootKey, UWideString(kEERegistryKey), UWideString("Installed From Volume"), theString);
         } else {
-            GetCurrentDirectoryA(499, theDirectoryBuffer);
+            PlatGetCurrentDirectory(theDirectoryBuffer, 499);
             theString = theDirectoryBuffer;
             if (theString.GetLength() > 1) {
                 int i = theString[0] == '\\' ? 2 : 0;
@@ -305,7 +306,7 @@ long EEGamePreferences::Load()
             theString = this->mSettings.mInstalledFromDirectory;
             this->mRegistry.CreateRegistryValue(kEERootKey, UWideString(kEERegistryKey), UWideString("Installed From Directory"), theString);
         } else {
-            GetCurrentDirectoryA(499, theDirectoryBuffer);
+            PlatGetCurrentDirectory(theDirectoryBuffer, 499);
             theString = theDirectoryBuffer;
             if (theString.GetLength() > 1) {
                 int i = theString[0] == '\\' ? 2 : 0;

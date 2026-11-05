@@ -17,6 +17,7 @@ class EEUIFMainGame;
 class FSFile;
 class FSFileSpec;
 struct HWND__;
+struct PlatInputEvent;
 class GEColor;
 class TSCriticalSection;
 class TSEvent;
@@ -116,8 +117,8 @@ public:
     // the parameters are the thread message's void* (pointers for most messages): LONG_PTR keeps them whole on x64
     // (and is long on x86, the original's type)
     void HandleMessage(unsigned long inMessage, LONG_PTR inParam1, LONG_PTR inParam2);  // 0x27828f (void: no result in eax) (the 0x401..0x443 switch)
-    // 0x2798ce (address taken at 0x144747; calls the members below through gUserInterface)
-    static LRESULT CALLBACK WindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam);
+    // 0x2798ce: the window procedure (address taken at 0x144747), now the game window's event handler
+    static void HandleEvent(const PlatInputEvent& inEvent);
     void ChangeRasterizer(long inRasterizer, long inScreen);  // 0x276804 (switches gRasterizer; message 0x41e)
     // 0x2768fe: resizes the game window (Empire Earth.cpp 0x140306) when the size changes or inForce
     void ResizeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inForce, bool inFlag);
@@ -142,12 +143,12 @@ public:
     void ShowCivilizationBuilder(long inX, bool inFlag1, bool inFlag2);  // 0x277c1f (messages 0x41f/0x420)
     void PauseGraphics();                   // 0x277e63 (waits for the graphics thread's +0x56 flag)
     void ProcessActions();                  // 0x277f21 (runs the queued actions)
-    void UpdateIMECandidateList(HWND__* inWindow);  // 0x278040 (the IME candidate list)
-    void UpdateIMECompositionString(HWND__* inWindow);  // 0x2780d3 (the IME composition string)
-    void AddIMEResultString(HWND__* inWindow);  // 0x2781da (the IME result string)
+    // the input method's composition (PLAT_EVENT_TEXT_EDITING) and result (PLAT_EVENT_TEXT while composing)
+    void UpdateIMECompositionString(const char* inText, long inCursor, long inLength);  // 0x2780d3
+    void AddIMEResultString(const char* inText);  // 0x2781da
     void UpdateInterface();                 // 0x278ed3 (input, UpdateUI, the actions)
     void OpenIMECandidateWindow();          // 0x278f90 (IMN_OPENCANDIDATE)
-    void OpenIMECompositionString(HWND__* inWindow);  // 0x278fc0 (WM_IME_STARTCOMPOSITION)
+    void OpenIMECompositionString();        // 0x278fc0 (WM_IME_STARTCOMPOSITION)
     void RestartGame();                     // 0x279013 (message 0x428)
     void ShowLagStatus(unsigned long inPlayer, bool inLagging);  // 0x27977c (message 0x442; the caller passes (unsigned short))
     void ResumeGraphics();                  // 0x2798a3
@@ -172,5 +173,11 @@ public:
 
 // 0x27fa40 (no arguments; returns a status): what EEUIEProcessTimerExpired's event does (provisional name)
 long EEProcessTimerExpired();
+
+
+bool EEPumpWindowEvent();   // TSThread::SetEventPump's pump: one window event per call (EEUserInterface.cpp)
+#ifdef _WIN32
+int EENativeMessageHook(void* inWindow, uint32_t inMessage, uint64_t inWParam, int64_t inLParam);
+#endif
 
 #endif

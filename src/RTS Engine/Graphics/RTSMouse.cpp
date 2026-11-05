@@ -4,6 +4,7 @@
 #include <windows.h>
 
 #include "lle/LowLevelEngine.h"
+#include "platform/PlatWindow.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureManager.h"
@@ -49,12 +50,12 @@ RTSMouse::RTSMouse()
 {
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mRenderLock) == keseOK, 68);
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mInputLock) == keseOK, 69);
-    RECT theDesktop;
-    GetWindowRect(GetDesktopWindow(), &theDesktop);
+    int32_t theDesktopWidth = 0, theDesktopHeight = 0;
+    PlatWindowGetDisplaySize(NULL, &theDesktopWidth, &theDesktopHeight);   // the desktop window's size
     this->mSensitivity = 1.0f;
     this->mCurrentSaveUnder = &this->mSaveUnder24;
-    this->mDesktopHeight = theDesktop.bottom - theDesktop.top;
-    this->mDesktopWidth = theDesktop.right - theDesktop.left;
+    this->mDesktopHeight = theDesktopHeight;
+    this->mDesktopWidth = theDesktopWidth;
     this->mPreviousSaveUnder = &this->mSaveUnder38;
     this->mWheel = 0;
     this->mPointer = 0;

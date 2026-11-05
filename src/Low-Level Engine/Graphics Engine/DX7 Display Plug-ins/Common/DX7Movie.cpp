@@ -11,6 +11,8 @@
 
 #include "pl_mpeg/pl_mpeg.h"
 #include "lle/LowLevelEngine.h"
+#include "platform/PlatPath.h"
+#include "platform/PlatFile.h"
 #include "lle/U2DGeometry.h"
 #include "dx7/DX7Rasterizer.h"
 #include "dx7/DX7Surface.h"
@@ -105,7 +107,7 @@ void DX7Movie::Initialize(const FSFileSpec& inFile, unsigned long inScreen, bool
     this->mSoundPosition = 0.0;
     this->mSoundStep = 0.0;
     char theName[MAX_PATH];
-    _snprintf(theName, MAX_PATH, "%s%s%s", (const char*)inFile.GetVolume(), (const char*)inFile.GetDirectory(),
+    snprintf(theName, MAX_PATH, "%s%s%s", (const char*)inFile.GetVolume(), (const char*)inFile.GetDirectory(),
               (const char*)inFile.GetFile());
     theName[MAX_PATH - 1] = 0;
     this->mFilename = theName;
@@ -257,12 +259,15 @@ unsigned long DX7Movie::PlayMovie(void* inParameter)
     UMSetFloatingPointPrecision(0x10000);
     // the converted movie next to the name the game gave (X.bik -> X.mpg)
     char thePath[MAX_PATH];
-    _snprintf(thePath, MAX_PATH, "%s", (const char*)theMovie->mFilename);
+    snprintf(thePath, MAX_PATH, "%s", (const char*)theMovie->mFilename);
     thePath[MAX_PATH - 1] = 0;
     char* theDot = strrchr(thePath, '.');
     if (theDot && strchr(theDot, '\\') == NULL && (size_t)(theDot - thePath) + 5 <= MAX_PATH)
         strcpy(theDot, ".mpg");
-    plm_t* thePLM = GetFileAttributesA(thePath) != INVALID_FILE_ATTRIBUTES ? plm_create_with_filename(thePath) : NULL;
+    // the game's path on the native file system (case-insensitive lookup off Windows; the same path on Win32)
+    char theNative[PLAT_MAX_PATH];
+    plm_t* thePLM = PlatPathGetAttributes(thePath) != PLAT_ATTR_INVALID && PlatPathToNative(thePath, theNative, sizeof(theNative))
+                        ? plm_create_with_filename(theNative) : NULL;
     if (thePLM != NULL && plm_get_num_video_streams(thePLM) > 0) {
         if (theMovie->CreateFrameBuffer(plm_get_width(thePLM), plm_get_height(thePLM)) != kErrorOK)
             theMovie->mIsFinished = true;
@@ -280,21 +285,19 @@ unsigned long DX7Movie::PlayMovie(void* inParameter)
         }
         theMovie->mIsPlaying = true;
         theMovie->mJustStarted = false;
-        LARGE_INTEGER theFrequency, theLast, theNow;
-        QueryPerformanceFrequency(&theFrequency);
-        QueryPerformanceCounter(&theLast);
+        int64_t theFrequency = PlatCounterFrequency(), theLast = PlatCounterTicks(), theNow;
         while (!theMovie->ShouldStop()) {
             if (UMGetFloatingPointPrecision() != 0x10000)
                 UMSetFloatingPointPrecision(0x10000);
             if (UMGetFloatingPointRoundingMode() != 0)
                 UMSetFloatingPointRoundingMode(0);
-            QueryPerformanceCounter(&theNow);
-            double theElapsed = (double)(theNow.QuadPart - theLast.QuadPart) / theFrequency.QuadPart;
+            theNow = PlatCounterTicks();
+            double theElapsed = (double)(theNow - theLast) / theFrequency;
             theLast = theNow;
             plm_decode(thePLM, theElapsed < 0.1 ? theElapsed : 0.1);
             if (!theLoop && plm_has_ended(thePLM))
                 theMovie->mIsFinished = true;
-            Sleep(1);
+            PlatSleep(1);
         }
         if (theSound)
             theMixer->SetMovieSource(NULL, NULL);   // the device thread no longer pulls after this returns
@@ -306,7 +309,7 @@ unsigned long DX7Movie::PlayMovie(void* inParameter)
             theMovie->mFrameBuffer = NULL;
         }
         theMovie->mFrameAccess->Leave();
-        Sleep(100);
+        PlatSleep(100);
     }
     if (thePLM != NULL)
         plm_destroy(thePLM);

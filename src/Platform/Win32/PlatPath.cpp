@@ -73,3 +73,18 @@ extern "C" int PlatPathEnterDataRoot(void)
         return 0;
     return SetCurrentDirectoryA(theRoot) ? 1 : 0;
 }
+
+extern "C" uint32_t PlatPathGetExecutableName(char* outName, uint32_t inSize)
+{
+    char theModule[MAX_PATH];
+    DWORD theLength = GetModuleFileNameA(NULL, theModule, MAX_PATH);
+    if (theLength == 0 || theLength >= MAX_PATH)
+        return 0;
+    const char* theName = strrchr(theModule, '\\');
+    theName = theName ? theName + 1 : theModule;
+    size_t n = strlen(theName);
+    if (n + 1 > inSize)
+        return 0;
+    memcpy(outName, theName, n + 1);
+    return (uint32_t)n;
+}

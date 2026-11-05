@@ -25,7 +25,7 @@ extern "C" {
 }
 
 // Targa file header (18 bytes, packed) (provisional names)
-#include <pshpack1.h>
+#pragma pack(push, 1)
 struct GETGAHeader {
     unsigned char mIDLength;            // +0x00
     unsigned char mColorMapType;        // +0x01
@@ -40,7 +40,20 @@ struct GETGAHeader {
     unsigned char mPixelDepth;          // +0x10
     unsigned char mDescriptor;          // +0x11: bit 4 right-to-left, bit 5 top-down
 };
-#include <poppack.h>
+#pragma pack(pop)
+// _getw/_putw (the MSVC runtime's): a 4-byte int in the file's (little-endian) byte order; EOF on a short read
+static int GEGetWord(FILE* inStream)
+{
+    int32_t theWord;
+    return fread(&theWord, 4, 1, inStream) == 1 ? theWord : EOF;
+}
+
+static void GEPutWord(int inWord, FILE* inStream)
+{
+    int32_t theWord = inWord;
+    fwrite(&theWord, 4, 1, inStream);
+}
+
 static_assert(sizeof(GETGAHeader) == 18, "on-disk record: 18 bytes on every target");
 
 // FUNCTION: LLE 0x1002534b
@@ -194,7 +207,7 @@ long GESurface::LoadJPG(FSFileSpec& inFile)
     bool theWasOpen;
     long theResult;
     FILE* theStream;
-    fpos_t theFilePosition;
+    long theFilePosition;
     struct jpeg_decompress_struct theInfo;
     struct jpeg_error_mgr theError;
     JSAMPARRAY theBuffer;
@@ -214,7 +227,7 @@ long GESurface::LoadJPG(FSFileSpec& inFile)
     theStream = inFile;
     if (theStream) {
         theFilePosition = thePosition;
-        fsetpos(theStream, &theFilePosition);
+        fseek(theStream, theFilePosition, SEEK_SET);
         theInfo.err = jpeg_std_error(&theError);
         jpeg_create_decompress(&theInfo);
         if (this->Lock() == kErrorOK) {
@@ -256,7 +269,7 @@ long GESurface::LoadJPG(FSFileSpec& inFile)
         }
     }
     if (theWasOpen) {
-        fgetpos(theStream, &theFilePosition);
+        theFilePosition = ftell(theStream);
         theResult = inFile.Close();
         if (theResult == kErrorOK) {
             theResult = inFile.Open(kFileAccessRead);
@@ -303,8 +316,8 @@ long GESurface::LoadJPG2(FSFileSpec& inFile)
     theStream = inFile;
     if (theStream) {
         fseek(theStream, thePosition, SEEK_SET);
-        theAlphaPosition = _getw(theStream);
-        theEndPosition = _getw(theStream);
+        theAlphaPosition = GEGetWord(theStream);
+        theEndPosition = GEGetWord(theStream);
         theInfo.err = jpeg_std_error(&theError);
         jpeg_create_decompress(&theInfo);
         if (this->Lock() == kErrorOK) {
@@ -409,7 +422,7 @@ long GESurface::SaveAsJPG(FSFileSpec& inFile)
     bool theWasOpen;
     long theResult;
     FILE* theStream;
-    fpos_t theFilePosition;
+    long theFilePosition;
     struct jpeg_compress_struct theInfo;
     struct jpeg_error_mgr theError;
     JSAMPARRAY theBuffer;
@@ -433,7 +446,7 @@ long GESurface::SaveAsJPG(FSFileSpec& inFile)
     theStream = inFile;
     if (theStream) {
         theFilePosition = thePosition;
-        fsetpos(theStream, &theFilePosition);
+        fseek(theStream, theFilePosition, SEEK_SET);
         theInfo.err = jpeg_std_error(&theError);
         jpeg_create_compress(&theInfo);
         jpeg_stdio_dest(&theInfo, theStream);
@@ -483,7 +496,7 @@ long GESurface::SaveAsJPG(FSFileSpec& inFile)
         jpeg_destroy_compress(&theInfo);
     }
     if (theWasOpen) {
-        fgetpos(theStream, &theFilePosition);
+        theFilePosition = ftell(theStream);
         theResult = inFile.Close();
         if (theResult == kErrorOK) {
             theResult = inFile.Open(kFileAccessAppend);
@@ -533,8 +546,8 @@ long GESurface::SaveAsJPG2(FSFileSpec& inFile)
         return theResult;
     theStream = inFile;
     if (theStream) {
-        _putw(theAlphaPosition, theStream);
-        _putw(theEndPosition, theStream);
+        GEPutWord(theAlphaPosition, theStream);
+        GEPutWord(theEndPosition, theStream);
 
         theInfo.err = jpeg_std_error(&theError);
         jpeg_create_compress(&theInfo);

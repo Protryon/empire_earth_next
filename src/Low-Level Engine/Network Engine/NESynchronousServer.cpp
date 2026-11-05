@@ -1068,7 +1068,7 @@ unsigned long NESynchronousServer::Main(void* inServerObject)
             theTimedOut = true;
             break;
         case kTSWaitFailed:
-            GetLastError();
+            PlatGetLastError();
 
             ESVERIFY_AT("::WaitForMultipleObjects failed" != NULL, 2254);
             break;
@@ -1262,7 +1262,7 @@ unsigned long NESynchronousServer::Send(void* inServerObject)
             theLastTime = theDrift + theNow;
             break;
         case kTSWaitFailed:
-            GetLastError();
+            PlatGetLastError();
             break;
         }
     }
@@ -1307,7 +1307,7 @@ unsigned long NESynchronousServer::Xfer(void* inServerObject)
             PlatSleep(1);
             break;
         case kTSWaitFailed:
-            GetLastError();
+            PlatGetLastError();
             break;
         }
     } while (!theExit);

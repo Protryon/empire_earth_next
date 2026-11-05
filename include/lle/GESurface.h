@@ -55,7 +55,6 @@ public:
     virtual unsigned long GetPixelDepth() const = 0;
     virtual unsigned long GetSurfaceVolatility() const = 0;
     virtual const GESurfaceDescription& GetSurfaceDescription() const = 0;
-    virtual HDC__* GetTextDC() const = 0;
     virtual const GEColor& GetTransparencyColor() const = 0;
     virtual unsigned long GetType() const = 0;
     virtual unsigned long GetWidth() const = 0;            // slot 0x64

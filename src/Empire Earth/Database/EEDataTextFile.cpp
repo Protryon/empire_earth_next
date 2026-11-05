@@ -57,7 +57,7 @@ long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
     size_t theSlash = theName.find_last_of("\\/");
     std::string theDirectory = theSlash == std::string::npos ? std::string() : theName.substr(0, theSlash + 1);
     std::string theStem = theName.substr(theDirectory.size());
-    if (theStem.size() > 4 && _stricmp(theStem.c_str() + theStem.size() - 4, ".dat") == 0) {
+    if (theStem.size() > 4 && PlatStrICmp(theStem.c_str() + theStem.size() - 4, ".dat") == 0) {
         theStem.resize(theStem.size() - 4);
         const char* theExtension = EEDataText::TextExtension(theStem.c_str());
         FSFileSpec* theText = NULL;

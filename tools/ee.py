@@ -95,6 +95,12 @@ def wgpu_dir():
     return TOOLCHAIN / "wgpu" / "x86_64"
 
 
+def sdl3_dir():
+    """SDL3 3.4.18, static, for windows-x86_64 (built from the pinned sources by tools/xbuild.py sdl3; EE_SDL3
+    overrides): <dir>/include, <dir>/lib/SDL3-static.lib."""
+    return pathlib.Path(os.environ.get("EE_SDL3", ROOT / "build" / "xbuild" / "windows-x86_64" / "sdl3"))
+
+
 def lib_paths():
     """The /LIBPATH: arguments for the x64 MSVC runtime and Windows SDK libraries."""
     msvc, _, sdk_lib, _ = modern_dirs()

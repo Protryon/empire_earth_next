@@ -2,9 +2,12 @@
 
   python -I tools/xbuild.py test     [--target T] [--no-run] [--no-network]     platform layer tests (tests/platform)
   python -I tools/xbuild.py fonttest [--target T] [--no-run]                    text rasteriser test (PlatFont)
+  python -I tools/xbuild.py tcptest  [--target T] [--no-run]                    TCP/IP plug-in loopback (tools/tcp_test)
   python -I tools/xbuild.py sdl3     [--target T]                               SDL3 as a static library (CMake)
   python -I tools/xbuild.py sdltest  [--target T] [--no-run] [--frames N]       SDL3 window + wgpu surface test
   python -I tools/xbuild.py census   [--target T] [--dialect ms|gnu] [-j N] [--only TEXT] [module ...]
+  python -I tools/xbuild.py game     [--target T] [-j N] [--debug] [--incremental] [--smoke]
+                                                                                the game (POSIX targets): ee-aoc
   python -I tools/xbuild.py targets                                             what each target needs, and if it is here
 
 Targets (--target, default: the host):
@@ -265,6 +268,65 @@ def cmd_fonttest(a):
     return run_program(t, exe, [str(font_dir())])
 
 
+# ---- tcptest: the TCP/IP network plug-in over 127.0.0.1 (tools/tcp_test/tcp_test.cpp)
+
+TCP_UNIT = ROOT / "src" / "Low-Level Engine" / "Network Engine" / "TCP Protocol" / "TCP Protocol.cpp"
+# the engine units the plug-in links with (tcp_test.cpp stands in for the rest)
+TCP_ENGINE_UNITS = [ROOT / "src" / "Low-Level Engine" / p for p in (
+    "Utilities/UString.cpp", "Utilities/UWideString.cpp", "Network Engine/NEProtocolConfiguration.cpp",
+    "Thread System/TSCriticalSection.cpp", "Thread System/TSEvent.cpp")]
+
+
+def cmd_tcptest(a):
+    t = Target(a.target)
+    why = t.can_build()
+    if why:
+        sys.exit(f"{t.name}: {why}")
+    out = t.out / "tcp_test"
+    out.mkdir(parents=True, exist_ok=True)
+    exe = out / ("tcp_test" + t.exe_suffix)
+    game = [TCP_UNIT, *TCP_ENGINE_UNITS, ROOT / "tools" / "tcp_test" / "tcp_test.cpp"]
+    # the game's include path and dialect (tools/clang_build.py; on POSIX the census's, include/compat/ first)
+    inc = [ROOT / "include", TCP_UNIT.parent, *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
+    defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
+    # the engine units with the engine's module define (tools/ee.py MODULE_FLAGS "lle")
+    unit_defs = lambda src: [*defs, *(["LOWLEVELENGINE_EXPORTS"] if src in TCP_ENGINE_UNITS else [])]
+    objs = []
+    if t.os == "windows":
+        env = windows_env()
+        game_flags = ["-fms-compatibility", "-fms-extensions", "-fms-compatibility-version=19.44", "/Zc:wchar_t",
+                      "-fdelayed-template-parsing", "-fno-strict-aliasing", "-fwrapv", "/GR", "-Wno-everything"]
+        for src in [*game, *platform_sources(t)]:
+            obj = out / (pathlib.Path(src).stem.replace(" ", "_") + ".obj")
+            flags = WIN_CXX + (game_flags if src in game else [f"/I{ROOT / 'src' / 'ThirdParty' / 'stb'}"])
+            if src in TCP_ENGINE_UNITS:   # no exported inline members or vtables of the engine classes it does not link
+                flags = flags + ["/Zc:dllexportInlines-"]
+            run([t.clang(), *flags, "/c", *[f"/I{i}" for i in inc], *[f"/D{d}" for d in unit_defs(src)],
+                 f"/Fo{obj}", src], env=env)
+            objs.append(obj)
+        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, "libcmt.lib",
+             "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS], env=env)
+    else:
+        base = t.base_flags()
+        game_flags = ["-fms-extensions", "-fms-compatibility", "-fdelayed-template-parsing",
+                      "-fms-compatibility-version=19.44", "-fno-strict-aliasing", "-fwrapv", "-w"]
+        for src in [*game, *platform_sources(t)]:
+            obj = out / (pathlib.Path(src).stem.replace(" ", "_") + ".o")
+            if src in game:
+                # -O0: with __OPTIMIZE__ glibc's inline string.h needs the GNU macros -fms-compatibility hides
+                flags = ["-std=c++17", "-O0", "-g", *game_flags, f"-I{COMPAT}", *[f"-I{i}" for i in inc],
+                         *[f"-D{d}" for d in unit_defs(src)]]
+            else:
+                flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}", f"-I{ROOT / 'src' / 'ThirdParty' / 'stb'}"]
+            run([t.clang(), *base, *flags, "-c", "-o", obj, src])
+            objs.append(obj)
+        run([t.clang(), *t.link_flags(), "-o", exe, *objs, *(["-ldl"] if t.os == "linux" else [])])
+    print(f"built {exe}")
+    if a.no_run:
+        return 0
+    return run_program(t, exe)
+
+
 # ---- SDL3
 
 
@@ -440,12 +502,18 @@ def classify(msg):
     return re.sub(r"'[^']*'", "'X'", re.sub(r"\(aka '[^']*'\)", "", msg)).strip()
 
 
+# what clang-cl's Microsoft mode lets through on Windows that a GNU target with the same dialect flags refuses (the
+# Windows build compiles them): the address of a temporary (`&GE3DPoint(...)` arguments) and narrowing in braced
+# initializers (Windows' long and unsigned long are both 32-bit; LP64's are not, the values are small)
+MS_DIALECT_LENIENCE = ["-Wno-address-of-temporary", "-Wno-c++11-narrowing"]
+
+
 def census_flags(t, dialect):
     f = [*t.base_flags(), "-fsyntax-only", "-ferror-limit=0", "-fno-color-diagnostics", "-w",
          "-fno-strict-aliasing", "-fwrapv", "-DNDEBUG"]
     if dialect == "ms":
         f += ["-fms-extensions", "-fms-compatibility", "-fdelayed-template-parsing",
-              "-fms-compatibility-version=19.44"]
+              "-fms-compatibility-version=19.44", *MS_DIALECT_LENIENCE, *MACOS_GNUC(t)]
     elif dialect == "msext":   # the extensions without -fms-compatibility (which retypes va_list on Darwin)
         f += ["-fms-extensions", "-fdelayed-template-parsing"]
     return f
@@ -498,8 +566,14 @@ def cmd_census(a):
            *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
     if (TC / "wgpu" / ("linux-x86_64" if t.os == "linux" else "macos-aarch64") / "include").exists():
         inc.append(TC / "wgpu" / ("linux-x86_64" if t.os == "linux" else "macos-aarch64") / "include")
+    if (TC / "src" / f"SDL3-{SDL_VERSION}" / "include").exists():   # the window layer (src/Platform/SDL)
+        inc.append(TC / "src" / f"SDL3-{SDL_VERSION}" / "include")
+    if (TC / "fonts").exists():   # the built-in fonts for compilers without #embed
+        inc.append(font_arrays(t))
+    have = {pathlib.Path(j[1]).resolve() for j in jobs}
     for s in platform_sources(t):
-        jobs.append(("platform", s, ""))
+        if pathlib.Path(s).resolve() not in have:
+            jobs.append(("platform", s, ""))
     out = t.out / f"census-{a.dialect}"
     out.mkdir(parents=True, exist_ok=True)
     logdir = out / "log"
@@ -591,6 +665,184 @@ def cmd_census(a):
     return 0
 
 
+# ---- the game
+
+
+GAME_NAME = "ee-aoc"
+
+
+FONT_ARRAYS = [("kSansRegular", "LiberationSans-Regular.ttf"), ("kSansBold", "LiberationSans-Bold.ttf"),
+               ("kSansItalic", "LiberationSans-Italic.ttf"), ("kSansBoldItalic", "LiberationSans-BoldItalic.ttf"),
+               ("kSerifRegular", "LiberationSerif-Regular.ttf"), ("kSerifBold", "LiberationSerif-Bold.ttf"),
+               ("kSerifItalic", "LiberationSerif-Italic.ttf"), ("kSerifBoldItalic", "LiberationSerif-BoldItalic.ttf"),
+               ("kMonoRegular", "LiberationMono-Regular.ttf"), ("kMonoBold", "LiberationMono-Bold.ttf"),
+               ("kMonoItalic", "LiberationMono-Italic.ttf"), ("kMonoBoldItalic", "LiberationMono-BoldItalic.ttf")]
+
+
+def font_arrays(t):
+    """<out>/gen/PlatFontDataArrays.h: the built-in fonts as C arrays, for compilers without #embed (clang < 19,
+    Apple clang) -> the directory"""
+    gen = t.out / "gen"
+    header = gen / "PlatFontDataArrays.h"
+    sources = [TC / "fonts" / f for _, f in FONT_ARRAYS]
+    for s in sources:
+        if not s.exists():
+            sys.exit(f"{s} is missing: python -I tools/fetch_posix.py fonts")
+    if header.exists() and all(header.stat().st_mtime > s.stat().st_mtime for s in sources):
+        return gen
+    gen.mkdir(parents=True, exist_ok=True)
+    lines = ["/* GENERATED by tools/xbuild.py from toolchain/fonts (src/Platform/Common/PlatFontData.c) */"]
+    for name, f in FONT_ARRAYS:
+        data = (TC / "fonts" / f).read_bytes()
+        lines.append(f"static const unsigned char {name}[] = {{")
+        for k in range(0, len(data), 32):
+            lines.append(",".join(str(b) for b in data[k:k + 32]) + ",")
+        lines.append("};")
+    header.write_text("\n".join(lines) + "\n")
+    return gen
+
+
+def game_dialect_flags(t, cxx_game):
+    """The game's C++ units keep the Microsoft dialect of the Windows build (with the lenience clang-cl's Microsoft
+    mode has, MS_DIALECT_LENIENCE); C, the vendored libraries and the platform layer are standard code. Optimised
+    builds undefine __OPTIMIZE__ for the headers only: glibc's optimised inline string functions need GNU mode
+    (__asm__ labels, __extern_always_inline), which -fms-compatibility switches off; the code is optimised all the
+    same."""
+    if not cxx_game:
+        return []
+    # libstdc++ compares type_info inline only when the compiler says it supports weak symbols (__GXX_WEAK__, which
+    # -fms-compatibility does not define); otherwise it calls an out-of-line operator== the library does not export
+    f = ["-fms-extensions", "-fdelayed-template-parsing", *MS_DIALECT_LENIENCE, "-D__GXX_TYPEINFO_EQUALITY_INLINE=1",
+         "-fms-compatibility", "-fms-compatibility-version=19.44", *MACOS_GNUC(t)]
+    return f
+
+
+def MACOS_GNUC(t):
+    """macOS: -fms-compatibility stops clang defining __GNUC__, and the SDK then types __darwin_va_list as void*
+    against clang's __builtin_va_list (every unit failed on it): claim GCC 4.2.1 as clang normally does"""
+    return ["-fgnuc-version=4.2.1"] if t.os == "macos" else []
+
+
+def game_job_command(t, job, out, inc, opt):
+    mod, src, flags = job
+    import verify
+    src = pathlib.Path(src).resolve()
+    rel = src.relative_to(ROOT / "src").as_posix()
+    is_c = src.suffix.lower() == ".c"
+    plain = is_c or rel.startswith(("ThirdParty/", "Platform/"))
+    defs = ["-D" + d[2:] for d in verify.unit_flags(src, flags).split() if d.startswith(("-D", "/D"))]
+    own = []
+    third = ROOT / "src" / "ThirdParty"
+    if src.is_relative_to(third):
+        lib = third / src.relative_to(third).parts[0]
+        if (lib / "include_dirs.txt").exists():
+            own = [str(lib / d.strip()) for d in (lib / "include_dirs.txt").read_text().splitlines() if d.strip()]
+    std = ["-x", "c", "-std=gnu11"] if is_c else ["-x", "c++", "-std=gnu++17" if plain else "-std=c++17"]
+    obj = out / "obj" / (rel.replace("/", "__").replace(" ", "_") + ".o")
+    cmd = [t.clang(cxx=not is_c), *t.base_flags(), "-c", *std, *opt, "-g", "-w", "-fno-strict-aliasing", "-fwrapv",
+           "-U__OPTIMIZE__", "-DNDEBUG", *game_dialect_flags(t, not plain), *defs,
+           f"-I{src.parent}", *[f"-I{i}" for i in own], *[f"-I{i}" for i in inc], "-o", str(obj), str(src)]
+    return obj, cmd
+
+
+def cmd_game(a):
+    """Builds the game for a POSIX target: every unit of the Windows exe (tools/units.py) with the POSIX platform
+    layer, SDL3 and wgpu-native, one link -> <out>/game/ee-aoc (macOS: also <out>/game/Empire Earth AoC.app)."""
+    t = Target(a.target)
+    if not t.posix:
+        sys.exit("the game for Windows is tools/build.py")
+    why = t.can_build()
+    if why:
+        sys.exit(f"{t.name}: {why}")
+    import units
+    if not (sdl_prefix(t) / "include" / "SDL3" / "SDL.h").exists():
+        cmd_sdl3(argparse.Namespace(target=t.name, j=a.j, fresh=False))
+    wgpu, wlib = wgpu_dir(t)
+    out = t.out / "game"
+    (out / "obj").mkdir(parents=True, exist_ok=True)
+    mods = units.TARGET_MODULES["exe"]
+    jobs = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
+    jobs = [j for j in jobs if "Platform/Win32" not in units.rel_src(j[1]).as_posix()]
+    have = {pathlib.Path(j[1]).resolve() for j in jobs}
+    for s in platform_sources(t):
+        if pathlib.Path(s).resolve() not in have:
+            jobs.append(("platform", s, ""))
+    # the image libraries' libjpeg is the engine's (as build.py links it); the image units go into an archive
+    jobs = [j for j in jobs if not (j[0] == "exeimg" and units.rel_src(j[1]).parts[1] == "libjpeg")]
+    inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
+           ROOT / "src" / "ThirdParty" / "stb", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS],
+           wgpu / "include", sdl_prefix(t) / "include", font_arrays(t)]
+    opt = ["-O1"] if not a.debug else ["-O0"]
+    t0 = time.time()
+    commands = [(j,) + game_job_command(t, j, out, inc, opt) for j in jobs]
+
+    def compile_one(item):
+        job, obj, cmd = item
+        if a.incremental and obj.exists() and obj.stat().st_mtime > pathlib.Path(job[1]).stat().st_mtime:
+            return job, obj, True, ""
+        r = subprocess.run([str(c) for c in cmd], capture_output=True, text=True,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        return job, obj, r.returncode == 0, r.stdout + r.stderr
+    failed, objs = [], []
+    with concurrent.futures.ThreadPoolExecutor(max(1, a.j)) as ex:
+        for job, obj, ok, log in ex.map(compile_one, commands):
+            if ok:
+                objs.append((job, obj))
+            else:
+                failed.append(job)
+                print(f"FAILED {units.rel_src(job[1])}\n{log[-1500:]}", flush=True)
+    print(f"{len(commands) - len(failed)}/{len(commands)} units compiled in {time.time() - t0:.0f} s -> {out / 'obj'}")
+    if failed:
+        return 1
+    # link order as build.py's: the engine and the plug-ins (and their libraries) first, then the game, then the
+    # image libraries as an archive
+    first = [o for j, o in objs if j[0] not in ("exe", "exeimg")]
+    game = [o for j, o in objs if j[0] == "exe"]
+    img = [o for j, o in objs if j[0] == "exeimg"]
+    archive = out / "libexeimg.a"
+    archive.unlink(missing_ok=True)
+    ar = str(ee.LLVM / "llvm-ar.exe") if IS_WINDOWS else (shutil.which("llvm-ar") or "ar")
+    run([ar, "rcs", archive, *img])
+    exe = out / GAME_NAME
+    rsp = out / "link.rsp"
+    rsp.write_text("".join(f'"{pathlib.Path(o).as_posix()}"\n' for o in [*first, *game]))
+    libs = [archive, *sdl_libs(t), wlib]
+    if t.os == "linux":
+        libs += ["-ldl", "-lm", "-lpthread"]
+    else:
+        libs += ["-framework", "Metal", "-framework", "QuartzCore", "-framework", "Foundation"]
+    run([t.clang(), *t.link_flags(), "-o", exe, f"@{rsp}", *libs])
+    print(f"built {exe} ({exe.stat().st_size // 1024} KB) in {time.time() - t0:.0f} s")
+    if t.os == "macos":
+        app = out / "Empire Earth AoC.app" / "Contents"
+        if app.parent.exists():
+            shutil.rmtree(app.parent)
+        (app / "MacOS").mkdir(parents=True)
+        (app / "Resources").mkdir()
+        shutil.copy2(exe, app / "MacOS" / GAME_NAME)
+        (app / "Info.plist").write_text(MACOS_INFO_PLIST)
+        print(f"app bundle {app.parent} (put the game's data in Contents/Resources, or set EE_DATA_ROOT)")
+    if a.smoke and t.native():
+        return run_program(t, exe, ["--smoke-test"])
+    return 0
+
+
+MACOS_INFO_PLIST = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key><string>ee-aoc</string>
+    <key>CFBundleIdentifier</key><string>net.empire-earth-next.aoc</string>
+    <key>CFBundleName</key><string>Empire Earth AoC</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>1.0</string>
+    <key>LSMinimumSystemVersion</key><string>11.0</string>
+    <key>NSHighResolutionCapable</key><false/>
+</dict>
+</plist>
+"""
+
+
 def cmd_targets(a):
     host = host_target_name()
     for name in TARGETS:
@@ -604,11 +856,11 @@ def cmd_targets(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("test", "fonttest", "sdl3", "sdltest", "census", "targets"):
+    for name in ("test", "fonttest", "tcptest", "sdl3", "sdltest", "census", "game", "targets"):
         p = sub.add_parser(name)
         p.add_argument("--target", default=host_target_name(), choices=TARGETS)
         p.add_argument("-j", type=int, default=3)
-        if name in ("test", "fonttest", "sdltest"):
+        if name in ("test", "fonttest", "tcptest", "sdltest"):
             p.add_argument("--no-run", action="store_true")
         if name == "test":
             p.add_argument("--no-network", action="store_true")
@@ -616,13 +868,17 @@ def main():
             p.add_argument("--frames", type=int, default=60)
         if name == "sdl3":
             p.add_argument("--fresh", action="store_true", help="configure from scratch")
+        if name == "game":
+            p.add_argument("--debug", action="store_true", help="-O0")
+            p.add_argument("--incremental", action="store_true", help="keep objects newer than their unit")
+            p.add_argument("--smoke", action="store_true", help="run the built game with --smoke-test (native only)")
         if name == "census":
             p.add_argument("--dialect", choices=["ms", "msext", "gnu"], default="ms")
             p.add_argument("--only")
             p.add_argument("modules", nargs="*")
     a = ap.parse_args()
-    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
-              "census": cmd_census, "targets": cmd_targets}[a.cmd](a))
+    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "tcptest": cmd_tcptest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
+              "census": cmd_census, "game": cmd_game, "targets": cmd_targets}[a.cmd](a))
 
 
 if __name__ == "__main__":

@@ -5,6 +5,7 @@
 // chains, PIMModule's header-inline block, the rasterizer plug-in list, GEInitialize, the pixel-format packers and
 // the shutdown hook, then vector COMDATs and the UList template statics' init pairs.
 #include <windows.h>
+#include "platform/PlatFont.h"
 
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UString.h"
@@ -93,6 +94,7 @@ long GEInitialize(FSFileSpec& inDirectory, HINSTANCE__* const inInstance)
     RasterizerWrapper* theWrapper;
     long theResult;
     URegisterShutdown(GEShutdown);
+    PlatFontRegisterBuiltIn();   // the faces the fonts are made from (GDI's system fonts before)
     GEScreen::sInstance = inInstance;
     GERasterizer::sRasterizers.clear();
     DeleteRasterizerWrappers();

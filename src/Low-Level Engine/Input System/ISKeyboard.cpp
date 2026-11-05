@@ -15,7 +15,7 @@
 // FUNCTION: LLE 0x10039ca1
 // Creates the keyboard device: one key per scan code, named from the resources or the built-in English table,
 // plus combined Ctrl/Shift/Alt keys; leaves the device suspended
-ISKeyboard::ISKeyboard(IDirectInputDevice* inDevice, const UString& inName, UResourceFile* inResources,
+ISKeyboard::ISKeyboard(ISDeviceInput* inDevice, const UString& inName, UResourceFile* inResources,
                        unsigned long inFirstStringID)
     : ISDevice(inName)
 {
@@ -110,12 +110,12 @@ long ISKeyboard::GetEntity(unsigned long inIndex, ISEntity*& outEntity) const
 }
 
 // FUNCTION: LLE 0x1003b099
-// Reads the buffered DirectInput key events: updates key states, the pressed count, modifiers and double presses;
-// rereads the whole state after a buffer overflow
+// Reads the buffered key events: updates key states, the pressed count, modifiers and double presses; rereads the
+// whole state after a buffer overflow
 void ISKeyboard::Refresh()
 {
-    DIDEVICEOBJECTDATA theData[256];
-    DWORD theCount = 256;
+    ISInputRecord theData[256];
+    unsigned long theCount = 256;
     // Fixed: the event counter was an unsigned char, so exactly 256 buffered events looped forever
     unsigned long i;
     this->mLastNumberOfKeysDown = this->mNumberOfKeysDown;
@@ -128,10 +128,10 @@ void ISKeyboard::Refresh()
             }
     }
     this->mOverflowed = false;
-    HRESULT theResult = this->mDevice->GetDeviceData(sizeof(DIDEVICEOBJECTDATA), theData, &theCount, 0);
-    if (!(theResult >= DI_OK))
+    long theResult = this->mDevice->GetData(theData, theCount);
+    if (theResult == kISInputNotAcquired)
         return;
-    if (theResult == DI_BUFFEROVERFLOW) {
+    if (theResult == kISInputOverflow) {
         this->mOverflowed = true;
         this->RecomputeCurrentKeyState();
     } else if (theCount > 0) {
@@ -160,18 +160,18 @@ void ISKeyboard::Refresh()
 }
 
 // FUNCTION: LLE 0x1003b1d8
-// Rereads the whole keyboard state from DirectInput, discarding buffered events and resetting the modifiers
+// Rereads the whole keyboard state, discarding buffered events and resetting the modifiers
 void ISKeyboard::RecomputeCurrentKeyState()
 {
     unsigned char theState[256];
-    DWORD theCount = INFINITE;
+    unsigned long theCount = 0xffffffffu;
     memset(theState, 0, 256);
     memset(this->mStatus, 0, 256);
     memset(this->mLast, 0, 256);
     this->mModifierState = 0;
-    if (!(this->mDevice->GetDeviceState(256, theState) >= DI_OK))
+    if (this->mDevice->GetKeyState(theState) != kISInputOK)
         return;
-    this->mDevice->GetDeviceData(sizeof(DIDEVICEOBJECTDATA), NULL, &theCount, 0);
+    this->mDevice->GetData(NULL, theCount);
     this->mNumberOfKeysDown = 0;
     for (int i = 0; i < this->mKeyCount; i++) {
         if ((theState[i] & 0x80) == 0x80) {
@@ -192,14 +192,13 @@ void ISKeyboard::RecomputeCurrentKeyState()
 // Reacquires the keyboard and rereads its state
 void ISKeyboard::Resume()
 {
-    if (this->mDevice->Acquire() == DI_OK) {
-        this->mSuspended = false;
-        this->RecomputeCurrentKeyState();
-    }
+    this->mDevice->Acquire();
+    this->mSuspended = false;
+    this->RecomputeCurrentKeyState();
 }
 
 // FUNCTION: LLE 0x1003b2bc
-// Releases the keyboard device and marks it suspended
+// Releases the keyboard (its events are no longer buffered) and marks it suspended
 void ISKeyboard::Suspend()
 {
     this->mDevice->Unacquire();

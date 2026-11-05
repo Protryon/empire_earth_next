@@ -529,7 +529,7 @@ public:
     const RoutingGroupMap& GetGroupMap() const { return mGroupMap; }
     unsigned short GetMyClientId() const { return mClientId; }   // inline (OnChat 0x4d040c: loaded into si first; r35 core P4)
 
-    CRITICAL_SECTION mDataLock;             // +0x08 (the group and data maps)
+    PlatMutex* mDataLock;                   // +0x08 (the group and data maps; was a CRITICAL_SECTION)
     char _gap20[0xc4];
     OpCompletionBasePtr mCompletionE4;      // +0xe4
     char _gap0e8[4];

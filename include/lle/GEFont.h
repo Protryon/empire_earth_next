@@ -5,7 +5,7 @@
 
 #include "lle/GEFontBitmap.h"
 
-struct HFONT__;
+struct PlatFont;   // platform/PlatFont.h (a GDI HFONT in the original)
 
 class LLE_API GEFont : public UReferenceCounter {   // sizeof 0x30 (vector deleting dtor 0x107fc)
 public:
@@ -21,10 +21,10 @@ public:
     unsigned long GetFontSize() const { return this->mSize; }
     unsigned long GetFontStyle() const { return this->mStyle; }
     long GetHeight() const { return this->mHeight; }
-    HFONT__* GetOSFont() const { return this->mFont; }
+    PlatFont* GetOSFont() const { return this->mFont; }
 private:
     UString mName;                          // +0x08
-    HFONT__* mFont;                         // +0x18
+    PlatFont* mFont;                        // +0x18 (an HFONT in the original)
     unsigned long mQuality;                 // +0x1c 0 default, 1 draft, 2 antialiased
     unsigned long mStyle;                   // +0x20 bit 0 bold, bit 1 italic, bit 2 underline
     GEFontBitmap* mFontBitmap;              // +0x24
@@ -36,7 +36,7 @@ private:
 enum GEFontQuality {
     kFontQualityDefault = 0,    // GEFont::GEFont case -> DEFAULT_QUALITY
     kFontQualityDraft = 1,      // GEFont::GEFont case -> DRAFT_QUALITY
-    kFontQualityAntialiased = 2,  // GEFont::GEFont case -> ANTIALIASED_QUALITY
+    kFontQualityAntialiased = 2,  // GEFont::GEFont case -> ANTIALIASED_QUALITY (the only antialiased one)
 };
 
 // GEFont::mStyle (+0x20) bits: the GEFont ctor passes them to CreateFont; UIFontTable::Create builds them from the dbfonts flags

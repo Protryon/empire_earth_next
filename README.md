@@ -71,8 +71,36 @@ every `.bik`.
 Linux and macOS (in progress, PORT.md step 4): `tools/fetch_posix.py` fetches the pinned dependencies (a Debian
 sysroot for cross-compiling to Linux, wgpu-native, SDL3 sources, Liberation fonts) and `tools/xbuild.py` builds the
 platform layer's tests, the window/text test programs and the compile census for `linux-x86_64`, `macos-arm64` and
-`macos-x86_64` (`python -I tools/xbuild.py targets` says what this machine can build). The game itself does not
-build there yet.
+`macos-x86_64` (`python -I tools/xbuild.py targets` says what this machine can build).
+
+## Linux and macOS
+
+The game builds for Linux (x86_64; natively, or cross-compiled from Windows against the pinned Debian sysroot) and
+macOS (arm64; on a Mac only: the Xcode SDK may not leave Apple hardware). Requirements: clang and lld (Linux: e.g.
+`apt install clang lld cmake ninja-build` plus SDL3's X11/Wayland development packages, see
+`.github/workflows/posix.yml`), Python 3.12, CMake.
+
+```
+python -I tools/fetch_posix.py wgpu sdl3 fonts     # wgpu-native, SDL3 sources, Liberation fonts (sha256-pinned)
+python -I tools/xbuild.py game -j 8                # -> build/xbuild/<target>/game/ee-aoc (macOS: also the .app)
+build/xbuild/<target>/game/ee-aoc --smoke-test     # window + wgpu device + 30 frames; needs no game data
+```
+
+The game needs the data of an installed *Art of Conquest* (never committed here). It reads it from the data root:
+`EE_DATA_ROOT` if set, else the program's directory (a macOS app bundle: its `Contents/Resources`). Without it the game
+stops with "game data not found". The game also needs the original Empire Earth's install keys in its preferences
+store (the registry on Windows; on Linux `~/.config/empire-earth-aoc`, on macOS `~/Library/Application
+Support/Empire Earth AoC`, or `EE_PREFS_DIR`). `tools/make_play_dir.py` prepares a complete directory (prepare it on
+Windows where the game is installed, or point `--install` at a copy):
+
+```
+python -I tools/make_play_dir.py OUT --posix-exe build/xbuild/linux-x86_64/game/ee-aoc [--movies DIR]
+OUT/run.sh                                         # sets EE_DATA_ROOT=OUT and EE_PREFS_DIR=OUT/prefs
+```
+
+Status: the Linux and macOS builds are checked by CI (`.github/workflows/posix.yml`, branch `posix-ci`: the game is
+built and run with `--smoke-test` under Xvfb + lavapipe and on Metal, and without data it must exit with the "game
+data not found" message). Nothing has been played on Linux or macOS with real game data yet (PORT.md step 4.7).
 
 ## Testing
 

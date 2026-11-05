@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
+#include "platform/PlatFile.h"
 
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
@@ -51,17 +52,17 @@ void EELobbyFileDialog::ListFiles(const std::string& inDirectory, const std::str
     if (mDirectory.size() != 0 && mDirectory[mDirectory.size() - 1] != '/' && mDirectory[mDirectory.size() - 1] != '\\')
         mDirectory += '\\';
     std::string thePattern = mDirectory + '*' + inExtension;
-    WIN32_FIND_DATA theData;
-    HANDLE theFind = FindFirstFile(thePattern.c_str(), &theData);
-    if (theFind != INVALID_HANDLE_VALUE) {
+    PlatFindData theData;
+    PlatFind* theFind = PlatFindFirst(thePattern.c_str(), &theData);
+    if (theFind != NULL) {
         do {
-            GUIString theName(theData.cFileName);
+            GUIString theName(theData.mName);
             if (theName.length() > inExtension.size()) {
                 theName.resize(theName.length() - inExtension.size());
                 mFileList->InsertString(theName, -1);
             }
-        } while (FindNextFile(theFind, &theData));
-        FindClose(theFind);
+        } while (PlatFindNext(theFind, &theData) == PLAT_FILE_OK);
+        PlatFindClose(theFind);
     }
     mFileList->Fn2FAA10();
 }

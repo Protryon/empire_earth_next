@@ -182,7 +182,7 @@ long DX7Rasterizer::Draw(GEPolygonArray& inPolygons, unsigned long inCount, GEVe
                 this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
                 inVertexCount, ((DX7PolygonArray&)inPolygons).mIndices, inCount * 3, 0) != GXERR_WASSTILLDRAWING)
             break;
-        Sleep(0);
+        PlatSleep(0);
     }
     this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += inVertexCount;
     this->mScreenStates[inScreen]->m32C[1] += inCount;
@@ -293,7 +293,7 @@ long DX7Rasterizer::Draw3DLine(std::vector<std::pair<GE3DPoint, float> >& inPoin
                 this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
                 theVertexCount, 0) != GXERR_WASSTILLDRAWING)
             break;
-        Sleep(0);
+        PlatSleep(0);
     }
     this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += theVertexCount;
     return theResult;
@@ -402,7 +402,7 @@ long DX7Rasterizer::DrawModelHierarchy(GEModel* inModel, unsigned long inScreen,
                             theMaterial->GetPolygonStartingIndex(theLOD) * 3,
                         theMaterial->GetPolygonRangeLength(theLOD) * 3, 0) != GXERR_WASSTILLDRAWING)
                     break;
-                Sleep(0);
+                PlatSleep(0);
             }
             this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += theMaterial->GetVertexRangeLength();
         }

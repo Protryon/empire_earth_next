@@ -203,7 +203,7 @@ void EELobbyFileTransfer::OnProgress(AsyncOp* inOp)
     EELobbyGame* theGame = (EELobbyGame*)GetMyLobbyGame();
     if (theGame == NULL)
         return;
-    unsigned long theTime = GetTickCount();
+    unsigned long theTime = (unsigned long)PlatTimeMilliseconds64();
     if (theTime - mLastProgressTime < 1000)
         return;
     mLastProgressTime = theTime;
@@ -270,7 +270,7 @@ void EELobbyFileTransfer::Download()
 {
     if (mPath.empty() || !mHost.IsValid())
         return;
-    mLastProgressTime = GetTickCount();
+    mLastProgressTime = (unsigned long)PlatTimeMilliseconds64();
     SmartPtr<AsyncSocket> theSocket = new AsyncSocket(0);
     theSocket->SetCloseCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnClientClosed, this));
     SmartPtr<RecvBytesOp> theOp = new RecvBytesOp(0, NULL);

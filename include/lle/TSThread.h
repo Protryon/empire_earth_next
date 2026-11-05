@@ -7,6 +7,13 @@
 
 class TSCriticalSection;
 
+// a message posted to a thread (TSThread::Post: the original's Win32 thread message)
+struct TSPostedMessage {
+    unsigned long mMessage;
+    void* mParameter1;
+    void* mParameter2;
+};
+
 // winbase.h's `#define Yield()` would swallow TSThread::Yield (exported ?Yield@TSThread@@SAXK@Z)
 #ifdef Yield
 #undef Yield
@@ -40,6 +47,13 @@ public:
     void LockMessageQueue() { this->mMessageLock->Enter(); }
     void UnlockMessageQueue() { this->mMessageLock->Leave(); }
     static void Yield(unsigned long inMilliseconds) { PlatSleep(inMilliseconds); }
+    // The window events' pump (platform/PlatWindow.h): Receive on inThreadID (the thread that runs the window system)
+    // dispatches one window event per call once its posted messages are drained, as the original's PeekMessage
+    // dispatched window messages. inPump returns true when it dispatched one.
+    static void SetEventPump(bool (*inPump)(), unsigned long inThreadID);
+    // Dispatches the window events waiting now (on the event thread; elsewhere nothing): what Win32 sent a new window
+    // during its creation (activation, focus) is handled before the game knows the window, as it was
+    static void DispatchWindowEvents();
 private:
     TSThread(unsigned long (*inFunction)(void*), void* inParameter, unsigned long inStackSize, bool inSuspended);
     TSThread(PlatThread* inHandle, unsigned long inThreadID, bool inSuspended);
@@ -55,6 +69,11 @@ private:
     PlatThread* mHandle;                    // +0x30 (a Win32 thread HANDLE in the original)
     unsigned long mThreadID;                // +0x34
     bool mSuspended;                        // +0x38
+    // the thread's message queue (Post/Receive; the original used the Win32 thread message queue)
+    PlatMutex* mPostLock;
+    std::deque<TSPostedMessage> mPosted;
+    static bool (*sEventPump)();
+    static unsigned long sEventThread;
 };
 
 // TSThread::Post message ids. Only the id every thread shares is named: the other ids mean different things per receiving thread.

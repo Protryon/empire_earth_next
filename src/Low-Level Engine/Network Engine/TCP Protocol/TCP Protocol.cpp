@@ -1,9 +1,16 @@
 // C:\EEX\Low-Level Engine\Network Engine\TCP Protocol\TCP Protocol.cpp
 // Unit flags (pinned, docs/CALIBRATION.md): -O1 -G6 -MD
-#include <winsock2.h>  // includes <windows.h>; must precede it (winsock.h clash)
-#include <iphlpapi.h>
+// Port: Winsock and the IP helper API through the platform layer (platform/PlatSocket.h; on Win32 the same Winsock
+// calls in the same order, PlatSocket.cpp): SOCKET -> PlatSocket, sockaddr_in -> PlatSockAddrIn (the same 16 bytes),
+// hostent address lists -> PlatSocketResolveIPv4 arrays, GetAdaptersInfo -> PlatSocketGetAdapters, WSAGetLastError
+// -> PlatSocketLastError (Winsock's numbering on every system), the WSAEVENT the engine passes -> its TSEvent.
+#include <stddef.h>
+#include <string.h>
 #include <vector>
-#include <float.h>
+
+#include "platform/wintypes.h"   // the Windows types the engine headers use (on Windows <windows.h>, as before)
+#include "platform/PlatSocket.h"
+#include "platform/PlatThread.h"
 
 #include "lle/LowLevelEngine.h"
 #include "TCPPacketType.h"
@@ -19,15 +26,21 @@ enum {
 
 // ---- Unit-local types. Layouts: proven offsets only, the rest padded.
 struct TCPConnection {                    // proven sizeof 0x18 (operator new(0x18) in NPIMAccept)
-    SOCKET mSocket;                       // proven +0x00
-    sockaddr_in mAddress;                 // proven +0x04 (memcpy 0x10 in NPIMConnectForXfer)
+    PlatSocket mSocket;                   // proven +0x00
+    PlatSockAddrIn mAddress;              // proven +0x04 (memcpy 0x10 in NPIMConnectForXfer)
     long mState;                          // proven +0x14 (1 = connected)
 };
 
+// The engine passes the client's game connection (a TCPConnection) as the host of NPIMConnectForXfer: mAddress is
+// that connection's peer address (sin_addr).
 struct TCPHost {
-    unsigned char _provisional_pad_00[0x08];
+    PlatSocket _provisional_pad_00;       // TCPConnection::mSocket (port: was 8 padding bytes, i.e. a 32-bit SOCKET
+    uint16_t _provisional_pad_family;     // plus sin_family/sin_port; on x64 that read the family and port)
+    uint16_t _provisional_pad_port;
     uint32_t mAddress;                    // proven +0x08 (sin_addr in NPIMConnectForXfer; an IPv4 address)
 };
+static_assert(offsetof(TCPHost, mAddress) == offsetof(TCPConnection, mAddress) + offsetof(PlatSockAddrIn, mAddress),
+              "TCPHost::mAddress is the connection's sin_addr");
 
 struct DetectedGame {                     // proven sizeof 0x54 (vector size() divides by 0x54)
     DetectedGame()                        // inline; emitted out of line at 0x3178 (QueryGames local, resize)
@@ -37,8 +50,8 @@ struct DetectedGame {                     // proven sizeof 0x54 (vector size() d
         memset(&this->mDatagramAddress, 0, sizeof(this->mDatagramAddress));
     }
 
-    sockaddr_in mStreamAddress;           // proven +0x00 (copied for SOCK_STREAM in 0x1714)
-    sockaddr_in mDatagramAddress;         // proven +0x10 (copied otherwise)
+    PlatSockAddrIn mStreamAddress;        // proven +0x00 (copied for SOCK_STREAM in 0x1714)
+    PlatSockAddrIn mDatagramAddress;      // proven +0x10 (copied otherwise)
     UString mName;                        // proven +0x20 (NPIMGetDetectedGame)
     UString mHost;                        // proven +0x30
     UWideString mAddress;                 // proven +0x40
@@ -58,9 +71,9 @@ struct TCPServer {
     TCPServer();                          // out of line, defined after NPIMPublish (0x211a)
     ~TCPServer();                         // out of line, defined after NPIMCloseServer (0x14c3)
 
-    SOCKET mSocket;                       // proven +0x00 (closed when mListening)
-    SOCKET mXferSocket;                   // proven +0x04 (closed when mXfer)
-    std::vector<sockaddr_in*> mClients;   // proven +0x08: one address per client slot
+    PlatSocket mSocket;                   // proven +0x00 (closed when mListening)
+    PlatSocket mXferSocket;               // proven +0x04 (closed when mXfer)
+    std::vector<PlatSockAddrIn*> mClients; // proven +0x08: one address per client slot
     std::vector<TCPConnection*> mConnections; // proven +0x18: one xfer connection per client slot
     TCPServerFlags mFlags;                // proven +0x28
     UString mName;                        // proven +0x2c (dtor)
@@ -90,13 +103,13 @@ struct GameAnnouncement {                 // proven sizeof 0x88 (sendto length)
 // NPIM entry point in a shared protocol-interface header (inferred).
 extern "C" long NPIMGetStatus(const UWideString& inName, unsigned long inPort);
 static long ResolveAddress(const UString& inName, const UString& inHost, const UWideString& inAddress,
-                           long inType, SOCKET* outSocket, sockaddr_in* outAddress);
+                           long inType, PlatSocket* outSocket, PlatSockAddrIn* outAddress);
 static unsigned long FindAdapterAddressIndex(unsigned long inAdapter);
 static void PrepareCipher(unsigned long inKeyOffset, unsigned long inKeyLength);
 static void Encipher(unsigned char* ioData, long inLength, unsigned long inKey);
 static void swap_byte(unsigned char* a, unsigned char* b);   // defined at the end (classic RC4 rc4.c layout)
-static long CreateSocket(long inType, SOCKET* outSocket, unsigned long* ioPort);
-static long QueryGames(const UString& inName, hostent* inHost);
+static long CreateSocket(long inType, PlatSocket* outSocket, unsigned long* ioPort);
+static long QueryGames(const UString& inName, const uint32_t* inHostAddresses);
 static unsigned long Searcher(void* inService);           // 0x31da (names from assert text)
 
 // Compiler-generated for this unit (names in analysis/tcp/names.txt):
@@ -191,8 +204,10 @@ UString gProtocolName("TCP/IP Protocol");        // 0x72a8
 unsigned long gProtocolKind = 1;                 // 0x7020 (NPIMGetProtocolType)
 unsigned long gProtocolType = 'ntwk';            // 0x7024
 bool gValid;                                     // 0x72f8
-SOCKET gXferSocket;                              // 0x72d4
-SOCKET gSocket7280;                              // 0x7280 (role unknown)
+// Port: both start invalid (were 0: on Win32 socket 0 and INVALID_SOCKET both fail with WSAENOTSOCK; a POSIX
+// fd 0 is stdin, which NPIMCloseConnection would close and NPIMXferReceive read before any xfer connection)
+PlatSocket gXferSocket = PLAT_SOCKET_INVALID;    // 0x72d4
+PlatSocket gSocket7280 = PLAT_SOCKET_INVALID;    // 0x7280 (role unknown)
 TSCriticalSection* gDetectedGamesLock;           // 0x726c
 TSCriticalSection* gSocketLock;                    // 0x729c (role unknown)
 TSCriticalSection* gCipherLock;                    // 0x7298 (role unknown)
@@ -213,6 +228,11 @@ TSThread* gSearcherThread;                       // 0x72a4 (name from assert tex
 bool gSearcherRunning;                           // 0x72f9 (provisional name)
 
 const unsigned long kRandomBufferSize = 0x105;
+// Port: room for a host's address list (Winsock's hostent holds at most 35) and the adapter list
+const uint32_t kMaxHostAddresses = 64;
+const uint32_t kMaxAdapters = 64;
+// float.h's _RC_NEAR (UMGetFloatingPointRoundingMode's value for round to nearest)
+const unsigned long kFPRoundNearest = 0;
 
 // FUNCTION: TCP 0x100010d9
 // Sets whether the server accepts new clients (announces itself to queries and adds unknown senders)
@@ -227,17 +247,17 @@ extern "C" long NPIMAccept(TCPServer** inHandle, TCPConnection** outConnection)
 {
     TCPServer* theServer = *inHandle;
     if (theServer->mFlags.mListening == 1) {
-        SOCKET theSocket = accept(theServer->mSocket, NULL, NULL);
-        if (theSocket != INVALID_SOCKET) {
+        PlatSocket theSocket = PlatSocketAccept(theServer->mSocket, NULL);
+        if (theSocket != PLAT_SOCKET_INVALID) {
             TCPConnection* theConnection = new TCPConnection;
             theConnection->mSocket = theSocket;
             theConnection->mState = 1;
             *outConnection = theConnection;
             return kNPIMOK;
         }
-        int theError = WSAGetLastError();
+        int theError = PlatSocketLastError();
         ESRecordNativeError(theError);
-        return theError == WSAEWOULDBLOCK ? kNPIMWouldBlock : kNPIMNativeError;
+        return theError == PLAT_SOCK_EWOULDBLOCK ? kNPIMWouldBlock : kNPIMNativeError;
     }
     return kNPIMUnavailable;
 }
@@ -248,21 +268,20 @@ extern "C" long NPIMAccept(TCPServer** inHandle, TCPConnection** outConnection)
 extern "C" long NPIMAcceptForXfer(TCPServer** inHandle, TCPConnection** outConnection)
 {
     long theResult;
-    sockaddr_in theAddress;
-    int theLength = sizeof(theAddress);
+    PlatSockAddrIn theAddress;
     gXferLock->Enter();
-    SOCKET theSocket = accept(gSocket7280, (sockaddr*)&theAddress, &theLength);
-    if (theSocket != INVALID_SOCKET) {
+    PlatSocket theSocket = PlatSocketAccept(gSocket7280, &theAddress);
+    if (theSocket != PLAT_SOCKET_INVALID) {
         TCPServer* theServer = *inHandle;
         unsigned long i;
         for (i = 0; i < theServer->mClients.size(); i++) {
-            sockaddr_in* theClient = theServer->mClients[i];
-            if (theAddress.sin_family == theClient->sin_family && theClient->sin_port != 0
-                && theAddress.sin_addr.s_addr == theClient->sin_addr.s_addr)
+            PlatSockAddrIn* theClient = theServer->mClients[i];
+            if (theAddress.mFamily == theClient->mFamily && theClient->mPort != 0
+                && theAddress.mAddress == theClient->mAddress)
                 break;
         }
         if (i == theServer->mClients.size()) {
-            closesocket(theSocket);
+            PlatSocketClose(theSocket);
             theResult = 13;
         } else {
             TCPConnection* theConnection = new TCPConnection;
@@ -273,9 +292,9 @@ extern "C" long NPIMAcceptForXfer(TCPServer** inHandle, TCPConnection** outConne
             theResult = kNPIMOK;
         }
     } else {
-        int theError = WSAGetLastError();
+        int theError = PlatSocketLastError();
         ESRecordNativeError(theError);
-        theResult = theError == WSAEWOULDBLOCK ? kNPIMWouldBlock : kNPIMNativeError;
+        theResult = theError == PLAT_SOCK_EWOULDBLOCK ? kNPIMWouldBlock : kNPIMNativeError;
     }
     gXferLock->Leave();
     return theResult;
@@ -286,12 +305,12 @@ extern "C" long NPIMAcceptForXfer(TCPServer** inHandle, TCPConnection** outConne
 extern "C" long NPIMActivate()
 {
     long theResult;
-    WSADATA theData;
-    if (WSAStartup(MAKEWORD(2, 0), &theData) == 0) {
-        SOCKET theSocket;
-        if (LOBYTE(theData.wVersion) == 2 && HIBYTE(theData.wVersion) == 0
-            && (theSocket = socket(AF_INET, SOCK_STREAM, 0)) != INVALID_SOCKET) {
-            closesocket(theSocket);
+    // Port: PlatSocketStartup is WSAStartup(2.0). The original then required wVersion 2.0, which Winsock 2 always
+    // grants for a 2.0 request (the highest version <= the requested one): the check is gone.
+    if (PlatSocketStartup()) {
+        PlatSocket theSocket;
+        if ((theSocket = PlatSocketOpen(PLAT_SOCKET_STREAM)) != PLAT_SOCKET_INVALID) {
+            PlatSocketClose(theSocket);
             gValid = true;
             theResult = TSScheduler::CreateCriticalSection(gDetectedGamesLock);
             ESVERIFY_AT(theResult == keseOK, 409);
@@ -308,7 +327,7 @@ extern "C" long NPIMActivate()
             theResult = kNPIMUnavailable;
         }
     } else {
-        ESRecordNativeError(WSAGetLastError());
+        ESRecordNativeError(PlatSocketLastError());
         theResult = kNPIMNativeError;
     }
     return theResult;
@@ -320,17 +339,17 @@ extern "C" long NPIMCloseConnection(TCPConnection** ioConnection)
 {
     long theResult;
     TCPConnection* theConnection = *ioConnection;
-    if (theConnection != NULL && closesocket(theConnection->mSocket) == 0) {
+    if (theConnection != NULL && PlatSocketClose(theConnection->mSocket)) {
         delete theConnection;
         *ioConnection = NULL;
         theResult = kNPIMOK;
     } else {
-        ESRecordNativeError(WSAGetLastError());
+        ESRecordNativeError(PlatSocketLastError());
         ESGetNativeError();
         theResult = kNPIMNativeError;
     }
-    if (closesocket(gSocket7280) != 0) {
-        ESRecordNativeError(WSAGetLastError());
+    if (!PlatSocketClose(gSocket7280)) {
+        ESRecordNativeError(PlatSocketLastError());
         ESGetNativeError();
         theResult = kNPIMNativeError;
     }
@@ -343,18 +362,18 @@ extern "C" long NPIMCloseServer(TCPServer** ioServer)
 {
     long theResult = kNPIMOK;
     TCPServer* theServer = *ioServer;
-    if (theServer->mFlags.mListening == 1 && closesocket(theServer->mSocket) != 0) {
-        ESRecordNativeError(WSAGetLastError());
+    if (theServer->mFlags.mListening == 1 && !PlatSocketClose(theServer->mSocket)) {
+        ESRecordNativeError(PlatSocketLastError());
         ESGetNativeError();
         theResult = kNPIMNativeError;
     }
-    if (theServer->mFlags.mXfer == 1 && closesocket(theServer->mXferSocket) != 0) {
-        ESRecordNativeError(WSAGetLastError());
+    if (theServer->mFlags.mXfer == 1 && !PlatSocketClose(theServer->mXferSocket)) {
+        ESRecordNativeError(PlatSocketLastError());
         ESGetNativeError();
         theResult = kNPIMNativeError;
     }
-    if (closesocket(gSocket7280) != 0) {
-        ESRecordNativeError(WSAGetLastError());
+    if (!PlatSocketClose(gSocket7280)) {
+        ESRecordNativeError(PlatSocketLastError());
         ESGetNativeError();
         theResult = kNPIMNativeError;
     }
@@ -379,30 +398,30 @@ TCPServer::~TCPServer()
 // FUNCTION: TCP 0x1000153c
 // Opens a connection to a game (stream or datagram) on the chosen adapter
 extern "C" long NPIMConnect(const UString& inName, const UString& inHost, const UWideString& inAddress,
-                            long inType, WSAEVENT* inEvent, TCPConnection** outConnection,
+                            long inType, TSEvent* inEvent, TCPConnection** outConnection,
                             unsigned long inAdapter)
 {
     long theResult;
     if (inType != 0) {
         gAdapter = inAdapter;
         gAdapterAddressIndex = FindAdapterAddressIndex(inAdapter);
-        SOCKET theSocket;
-        sockaddr_in theAddress;
+        PlatSocket theSocket;
+        PlatSockAddrIn theAddress;
         theResult = ResolveAddress(inName, inHost, inAddress, inType, &theSocket, &theAddress);
         if (theResult == kNPIMOK) {
-            if (inType == 1 && connect(theSocket, (sockaddr*)&theAddress, sizeof(theAddress)) != 0) {
-                ESRecordNativeError(WSAGetLastError());
+            if (inType == 1 && !PlatSocketConnect(theSocket, &theAddress)) {
+                ESRecordNativeError(PlatSocketLastError());
                 ESGetNativeError();
                 theResult = kNPIMNativeError;
-                closesocket(theSocket);
+                PlatSocketClose(theSocket);
             } else {
-                sockaddr_in theLocal;
+                PlatSockAddrIn theLocal;
                 memset(&theLocal, 0, sizeof(theLocal));
-                theLocal.sin_port = 0;
-                theLocal.sin_family = AF_INET;
+                theLocal.mPort = 0;
+                theLocal.mFamily = PLAT_AF_INET;
                 gSocketLock->Enter();
-                if (bind(theSocket, (sockaddr*)&theLocal, sizeof(theLocal)) == 0) {
-                    WSAEventSelect(theSocket, *inEvent, FD_READ);
+                if (PlatSocketBind(theSocket, &theLocal)) {
+                    PlatSocketSelectEvent(theSocket, inEvent->mHandle, PLAT_SOCKET_EVENT_READ);
                     TCPConnection* theConnection = new TCPConnection;
                     theConnection->mState = inType;
                     theConnection->mSocket = theSocket;
@@ -411,9 +430,9 @@ extern "C" long NPIMConnect(const UString& inName, const UString& inHost, const 
                     theResult = kNPIMOK;
                 } else {
                     // Fix: a failed bind used to return success with no connection and leak the socket.
-                    ESRecordNativeError(WSAGetLastError());
+                    ESRecordNativeError(PlatSocketLastError());
                     theResult = kNPIMNativeError;
-                    closesocket(theSocket);
+                    PlatSocketClose(theSocket);
                 }
                 gSocketLock->Leave();
             }
@@ -426,29 +445,29 @@ extern "C" long NPIMConnect(const UString& inName, const UString& inHost, const 
 
 // FUNCTION: TCP 0x1000164d
 // Opens the file-transfer stream connection to the host on port 33335 (13 for a bad mode or no host)
-extern "C" long NPIMConnectForXfer(TCPHost** inHost, long inMode, WSAEVENT* inEvent,
+extern "C" long NPIMConnectForXfer(TCPHost** inHost, long inMode, TSEvent* inEvent,
                                    TCPConnection** outConnection)
 {
     TCPHost* theHost = *inHost;
     if (inMode != 1 || theHost == NULL)
         return 13;
-    gXferSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (gXferSocket != INVALID_SOCKET) {
-        sockaddr_in theAddress;
-        theAddress.sin_family = AF_INET;
-        theAddress.sin_port = htons(33335);
-        theAddress.sin_addr.s_addr = theHost->mAddress;
-        if (connect(gXferSocket, (sockaddr*)&theAddress, sizeof(theAddress)) != SOCKET_ERROR) {
+    gXferSocket = PlatSocketOpen(PLAT_SOCKET_STREAM);
+    if (gXferSocket != PLAT_SOCKET_INVALID) {
+        PlatSockAddrIn theAddress;
+        theAddress.mFamily = PLAT_AF_INET;
+        theAddress.mPort = PlatHostToNet16(33335);
+        theAddress.mAddress = theHost->mAddress;
+        if (PlatSocketConnect(gXferSocket, &theAddress)) {
             TCPConnection* theConnection = new TCPConnection;
             theConnection->mState = 1;
             theConnection->mSocket = gXferSocket;
             memcpy(&theConnection->mAddress, &theAddress, sizeof(theAddress));
             *outConnection = theConnection;
-            WSAEventSelect(gXferSocket, *inEvent, FD_READ);
+            PlatSocketSelectEvent(gXferSocket, inEvent->mHandle, PLAT_SOCKET_EVENT_READ);
             return kNPIMOK;
         }
     }
-    ESRecordNativeError(WSAGetLastError());
+    ESRecordNativeError(PlatSocketLastError());
     ESGetNativeError();
     return kNPIMNativeError;
     return 13;
@@ -457,14 +476,14 @@ extern "C" long NPIMConnectForXfer(TCPHost** inHost, long inMode, WSAEVENT* inEv
 // FUNCTION: TCP 0x10001714
 // Creates a socket and resolves the game's address: from the detected-games list when any exist, else by DNS
 static long ResolveAddress(const UString& inName, const UString& inHost, const UWideString& inAddress,
-                           long inType, SOCKET* outSocket, sockaddr_in* outAddress)
+                           long inType, PlatSocket* outSocket, PlatSockAddrIn* outAddress)
 {
     long theResult;
     // NPIMActivate), and the twin's identical ResolveAddress inlines all five _Ptrit::operator+ that AoC calls out
     // of line: the AoC build carried inline cost this source does not show. n = 9 (exact for 9..13; docs/LOST_DEBUG.md)
     gDetectedGamesLock->Enter();
-    SOCKET theSocket = socket(AF_INET, inType == 1 ? SOCK_STREAM : SOCK_DGRAM, 0);
-    if (theSocket != INVALID_SOCKET) {
+    PlatSocket theSocket = PlatSocketOpen(inType == 1 ? PLAT_SOCKET_STREAM : PLAT_SOCKET_DGRAM);
+    if (theSocket != PLAT_SOCKET_INVALID) {
         if (0 < gDetectedGames.size()) {
             long theIndex = -1;
             for (unsigned long i = 0; i < gDetectedGames.size(); i++) {
@@ -476,38 +495,39 @@ static long ResolveAddress(const UString& inName, const UString& inHost, const U
             }
             if (theIndex != -1) {
                 if (inType == 1)
-                    memcpy(outAddress, &gDetectedGames[theIndex].mStreamAddress, sizeof(sockaddr_in));
+                    memcpy(outAddress, &gDetectedGames[theIndex].mStreamAddress, sizeof(PlatSockAddrIn));
                 else
-                    memcpy(outAddress, &gDetectedGames[theIndex].mDatagramAddress, sizeof(sockaddr_in));
-                outAddress->sin_port = htons(33334);
+                    memcpy(outAddress, &gDetectedGames[theIndex].mDatagramAddress, sizeof(PlatSockAddrIn));
+                outAddress->mPort = PlatHostToNet16(33334);
                 *outSocket = theSocket;
                 theResult = kNPIMOK;
             } else {
                 theResult = kNPIMBadIndex;
-                closesocket(theSocket);
+                PlatSocketClose(theSocket);
             }
         } else {
-            hostent* theHost = gethostbyname(inName);
-            if (theHost == NULL) {
-                uint32_t theAddress = inet_addr(inName);   // an IPv4 address (in_addr_t)
-                if (theAddress == INADDR_NONE)
-                    theHost = NULL;
-                else
-                    theHost = gethostbyaddr(reinterpret_cast<char*>(&theAddress), 4, AF_INET);
+            // gethostbyname, else (a dotted address) inet_addr + gethostbyaddr, whose list holds that address
+            uint32_t theHostAddress;   // h_addr_list[0]
+            bool theFound = PlatSocketResolveIPv4(inName, &theHostAddress, 1) != 0;
+            if (!theFound) {
+                theHostAddress = PlatSocketParseIPv4(inName);
+                char theHostName[0x400];
+                theFound = theHostAddress != PLAT_INADDR_NONE
+                           && PlatSocketReverseLookup(theHostAddress, theHostName, sizeof(theHostName));
             }
-            if (theHost != NULL) {
+            if (theFound) {
                 *outSocket = theSocket;
-                memset(outAddress, 0, sizeof(sockaddr_in));
-                outAddress->sin_family = AF_INET;
-                outAddress->sin_port = htons(33334);
-                memcpy(&outAddress->sin_addr, theHost->h_addr_list[0], 4);
+                memset(outAddress, 0, sizeof(PlatSockAddrIn));
+                outAddress->mFamily = PLAT_AF_INET;
+                outAddress->mPort = PlatHostToNet16(33334);
+                outAddress->mAddress = theHostAddress;
                 theResult = kNPIMOK;
             } else {
                 theResult = kNPIMUnavailable;
             }
         }
     } else {
-        ESRecordNativeError(WSAGetLastError());
+        ESRecordNativeError(PlatSocketLastError());
         ESGetNativeError();
         theResult = kNPIMNativeError;
     }
@@ -519,7 +539,7 @@ static long ResolveAddress(const UString& inName, const UString& inHost, const U
 // Shuts WinSock down and frees the locks, cipher state, key buffer and random generator
 extern "C" long NPIMDeactivate()
 {
-    if (WSACleanup() == 0) {
+    if (PlatSocketCleanup()) {
         TSScheduler::DestroyCriticalSection(gDetectedGamesLock);
         TSScheduler::DestroyCriticalSection(gSocketLock);
         TSScheduler::DestroyCriticalSection(gCipherLock);
@@ -532,7 +552,7 @@ extern "C" long NPIMDeactivate()
         gValid = false;
         return kNPIMOK;
     }
-    ESRecordNativeError(WSAGetLastError());
+    ESRecordNativeError(PlatSocketLastError());
     return kNPIMNativeError;
 }
 
@@ -543,7 +563,9 @@ extern "C" long NPIMGetClientAddress(TCPServer** inHandle, unsigned long inIndex
     TCPServer* theServer = *inHandle;
     long theResult = kNPIMOK;
     if (inIndex < theServer->mClients.size()) {
-        outAddress = inet_ntoa(theServer->mClients[inIndex]->sin_addr);
+        char theText[16];
+        PlatSocketFormatIPv4(theServer->mClients[inIndex]->mAddress, theText);
+        outAddress = theText;
     } else {
         theResult = kNPIMBadIndex;
         outAddress = "";
@@ -597,36 +619,31 @@ static unsigned long FindAdapterAddressIndex(unsigned long inAdapter)
     unsigned long theIndex;
     if (inAdapter == 0)
         return 0;
-    IP_ADAPTER_INFO* theAdapter = (IP_ADAPTER_INFO*)new char[0x1900];
-    // Fix: keep the buffer start for the delete (the walked pointer used to be freed: an interior pointer for a
-    // later adapter, a leak when the walk ran off the list).
-    IP_ADAPTER_INFO* theBuffer = theAdapter;
-    unsigned long theSize = 0x1900;
-    if (GetAdaptersInfo(theAdapter, &theSize) == ERROR_SUCCESS) {
-        for (unsigned long i = 1; theAdapter != NULL && i < inAdapter; i++)
-            theAdapter = theAdapter->Next;
+    // Port: the GetAdaptersInfo walk to adapter inAdapter (1-based) is PlatSocketGetAdapters' list (the address is
+    // the adapter's first IP, inet_addr'd); the local host's gethostbyname list a PlatSocketResolveIPv4 array.
+    PlatNetAdapter* theAdapters = new PlatNetAdapter[kMaxAdapters];
+    uint32_t theAdapterCount = PlatSocketGetAdapters(theAdapters, kMaxAdapters);
+    if (theAdapterCount != 0) {
+        PlatNetAdapter* theAdapter = inAdapter - 1 < theAdapterCount ? &theAdapters[inAdapter - 1] : NULL;
         uint32_t theAddress;    // an IPv4 address (in_addr_t)
         char theHostName[0x400];
-        hostent* theHost;
-        sockaddr_in theHostAddress;
-        if (theAdapter != NULL && theAdapter->IpAddressList.IpAddress.String != NULL
-            && (theAddress = inet_addr(theAdapter->IpAddressList.IpAddress.String)) != 0
-            && gethostname(theHostName, sizeof(theHostName)) != SOCKET_ERROR
-            && (theHost = gethostbyname(theHostName)) != NULL) {
-            for (theIndex = 0; theHost->h_addr_list[theIndex] != NULL; theIndex++) {
-                theHostAddress.sin_addr.s_addr = 0;
-                memcpy(&theHostAddress.sin_addr, theHost->h_addr_list[theIndex], 4);
-                if (theHostAddress.sin_addr.s_addr == theAddress)
+        uint32_t theHostAddresses[kMaxHostAddresses];
+        uint32_t theHostCount;
+        if (theAdapter != NULL && (theAddress = theAdapter->mAddress) != 0
+            && PlatSocketGetHostName(theHostName, sizeof(theHostName))
+            && (theHostCount = PlatSocketResolveIPv4(theHostName, theHostAddresses, kMaxHostAddresses)) != 0) {
+            for (theIndex = 0; theIndex < theHostCount; theIndex++) {
+                if (theHostAddresses[theIndex] == theAddress)
                     break;
             }
-            theIndex = theHost->h_addr_list[theIndex] != NULL ? theIndex : 0;
+            theIndex = theIndex < theHostCount ? theIndex : 0;
         } else {
             theIndex = 0;
         }
     } else {
         theIndex = 0;
     }
-    delete[] (char*)theBuffer;
+    delete[] theAdapters;
     return theIndex;
 }
 
@@ -635,19 +652,16 @@ static unsigned long FindAdapterAddressIndex(unsigned long inAdapter)
 extern "C" long NPIMEnumerateNetworkAdapters(std::vector<UWideString>& outAdapters)
 {
     unsigned long theCount = 0;
-    IP_ADAPTER_INFO* theAdapter = (IP_ADAPTER_INFO*)new char[0x1900];
-    // Fix: keep the buffer start for the delete (the walked pointer used to be freed: NULL, so the buffer leaked
-    // on every call, or an interior pointer with more than 10 adapters).
-    IP_ADAPTER_INFO* theBuffer = theAdapter;
-    unsigned long theSize = 0x1900;
-    DWORD theError = GetAdaptersInfo(theAdapter, &theSize);
+    // Port: GetAdaptersInfo through PlatSocketGetAdapters (the same order and descriptions). Fix (kept): the
+    // original freed the walked pointer (NULL: a leak on every call; an interior pointer with more than 10 adapters).
+    PlatNetAdapter* theAdapters = new PlatNetAdapter[10];
+    uint32_t theAdapterCount = PlatSocketGetAdapters(theAdapters, 10);
     outAdapters.clear();
-    while (theError == ERROR_SUCCESS && theAdapter != NULL && theCount < 10) {
+    while (theCount < theAdapterCount && theCount < 10) {
+        outAdapters.push_back(UWideString(theAdapters[theCount].mDescription));
         theCount++;
-        outAdapters.push_back(UWideString(theAdapter->Description));
-        theAdapter = theAdapter->Next;
     }
-    delete[] (char*)theBuffer;
+    delete[] theAdapters;
     return theCount;
 }
 
@@ -656,30 +670,34 @@ extern "C" long NPIMEnumerateNetworkAdapters(std::vector<UWideString>& outAdapte
 extern "C" const UWideString& NPIMGetLocalAddress(unsigned long inAdapter)
 {
     static UWideString sAddress;
-    int theLength = sizeof(sockaddr_in);
     gAdapter = inAdapter;
     gAdapterAddressIndex = FindAdapterAddressIndex(inAdapter);
     char theHostName[0x400];
-    sockaddr_in theLocal;
-    theLocal.sin_addr.s_addr = 0;
-    if (gethostname(theHostName, sizeof(theHostName)) != SOCKET_ERROR) {
-        hostent* theHost = gethostbyname(theHostName);
-        if (theHost != NULL)
-            memcpy(&theLocal.sin_addr, theHost->h_addr_list[gAdapterAddressIndex], 4);
+    PlatSockAddrIn theLocal;
+    theLocal.mAddress = 0;
+    if (PlatSocketGetHostName(theHostName, sizeof(theHostName))) {
+        uint32_t theHostAddresses[kMaxHostAddresses];
+        uint32_t theHostCount = PlatSocketResolveIPv4(theHostName, theHostAddresses, kMaxHostAddresses);
+        // port: the index is checked (the original read h_addr_list[i] unchecked; FindAdapterAddressIndex took it
+        // from the same list)
+        if (theHostCount != 0 && gAdapterAddressIndex < theHostCount)
+            theLocal.mAddress = theHostAddresses[gAdapterAddressIndex];
     }
-    if (theLocal.sin_addr.s_addr == 0) {
-        SOCKET theSocket = socket(AF_INET, SOCK_DGRAM, 0);
-        if (theSocket != INVALID_SOCKET) {
-            sockaddr_in theRemote;
-            theRemote.sin_family = AF_INET;
-            theRemote.sin_port = htons(7);
-            theRemote.sin_addr.s_addr = inet_addr("128.127.126.125");
-            if (connect(theSocket, (sockaddr*)&theRemote, sizeof(theRemote)) != SOCKET_ERROR)
-                getsockname(theSocket, (sockaddr*)&theLocal, &theLength);
-            closesocket(theSocket);
+    if (theLocal.mAddress == 0) {
+        PlatSocket theSocket = PlatSocketOpen(PLAT_SOCKET_DGRAM);
+        if (theSocket != PLAT_SOCKET_INVALID) {
+            PlatSockAddrIn theRemote;
+            theRemote.mFamily = PLAT_AF_INET;
+            theRemote.mPort = PlatHostToNet16(7);
+            theRemote.mAddress = PlatSocketParseIPv4("128.127.126.125");
+            if (PlatSocketConnect(theSocket, &theRemote))
+                PlatSocketGetName(theSocket, &theLocal);
+            PlatSocketClose(theSocket);
         }
     }
-    sAddress = inet_ntoa(theLocal.sin_addr);
+    char theText[16];
+    PlatSocketFormatIPv4(theLocal.mAddress, theText);
+    sAddress = theText;
     return sAddress;
 }
 
@@ -698,7 +716,7 @@ extern "C" long NPIMGetStatus(const UWideString& inName, unsigned long inPort)
     long theResult = kNPIMOK;
     theName = inName;
     if (theName == inName) {
-        unsigned short thePort = inPort != 0 ? (unsigned short)(inPort >> 16) : htons(33334);
+        unsigned short thePort = inPort != 0 ? (unsigned short)(inPort >> 16) : PlatHostToNet16(33334);
         unsigned long theSeed = 0xffffffff;
         if (gRandomBuffer == NULL)
             gRandomBuffer = new char[kRandomBufferSize];
@@ -720,11 +738,11 @@ extern "C" bool NPIMIsAlive(TCPConnection** inHandle)
     if (theConnection->mState != 1)
         return true;
     char theByte;
-    int theResult = recv(theConnection->mSocket, &theByte, 1, MSG_PEEK);
+    int theResult = PlatSocketPeek(theConnection->mSocket, &theByte, 1);
     if (theResult != 1) {
         if (theResult == 0)
             return false;
-        bool theWouldBlock = WSAGetLastError() == WSAEWOULDBLOCK;
+        bool theWouldBlock = PlatSocketLastError() == PLAT_SOCK_EWOULDBLOCK;
         return theWouldBlock;
     }
     return true;
@@ -734,16 +752,15 @@ extern "C" bool NPIMIsAlive(TCPConnection** inHandle)
 // Hosts a game: refuses a name already announced at that address, creates the stream/datagram sockets
 // and the shared xfer listen socket on port 33335; returns the new server handle
 extern "C" long NPIMPublish(const UString& inName, const UWideString& inAddress, TCPServerFlags inFlags,
-                            WSAEVENT* inDataEvent, WSAEVENT* inListenEvent, WSAEVENT* inAcceptEvent,
+                            TSEvent* inDataEvent, TSEvent* inListenEvent, TSEvent* inAcceptEvent,
                             TCPServer** outHandle, bool inFlag55, bool inFlag56, unsigned long inAdapter)
 {
-    SOCKET theSocket;
+    PlatSocket theSocket;
     long theResult = kNPIMOK;
     UString theName;
     UString theHost;
     UWideString theAddress;
-    unsigned long thePort = htons(33334);
-    unsigned long theNonBlocking = 1;
+    unsigned long thePort = PlatHostToNet16(33334);
     bool theFound = false;
     if (!inFlag55 && QueryGames(inName, NULL) == 0) {
         unsigned long theCount = NPIMGetDetectedGameCount();
@@ -759,8 +776,8 @@ extern "C" long NPIMPublish(const UString& inName, const UWideString& inAddress,
         gAdapter = inAdapter;
         gAdapterAddressIndex = FindAdapterAddressIndex(inAdapter);
         TCPServer* theServer = new TCPServer;
-        theServer->mSocket = INVALID_SOCKET;
-        theServer->mXferSocket = INVALID_SOCKET;
+        theServer->mSocket = PLAT_SOCKET_INVALID;
+        theServer->mXferSocket = PLAT_SOCKET_INVALID;
         theServer->mFlags = inFlags;
         theServer->mFlag55 = inFlag55;
         theServer->mAnnounce = inFlag56;
@@ -770,7 +787,7 @@ extern "C" long NPIMPublish(const UString& inName, const UWideString& inAddress,
                 theServer->mPort = thePort;
                 theServer->mSocket = theSocket;
                 theServer->mAllowNewConnections = false;
-                WSAEventSelect(theSocket, *inDataEvent, FD_READ);
+                PlatSocketSelectEvent(theSocket, inDataEvent->mHandle, PLAT_SOCKET_EVENT_READ);
             }
         }
         if (theResult == kNPIMOK && inFlags.mXfer == 1) {
@@ -779,39 +796,39 @@ extern "C" long NPIMPublish(const UString& inName, const UWideString& inAddress,
                 theServer->mPort = thePort;
                 theServer->mXferSocket = theSocket;
                 theServer->mAllowNewConnections = true;
-                WSAEventSelect(theSocket, *inDataEvent, FD_READ);
+                PlatSocketSelectEvent(theSocket, inDataEvent->mHandle, PLAT_SOCKET_EVENT_READ);
             }
         }
         if (theResult == kNPIMOK) {
             theServer->mName = inName;
             theServer->mAddress = inAddress;
             *outHandle = theServer;
-            gSocket7280 = socket(AF_INET, SOCK_STREAM, 0);
-            if (gSocket7280 != INVALID_SOCKET && ioctlsocket(gSocket7280, FIONBIO, &theNonBlocking) == 0) {
-                sockaddr_in theLocal;
+            gSocket7280 = PlatSocketOpen(PLAT_SOCKET_STREAM);
+            if (gSocket7280 != PLAT_SOCKET_INVALID && PlatSocketSetNonBlocking(gSocket7280, 1)) {
+                PlatSockAddrIn theLocal;
                 memset(&theLocal, 0, sizeof(theLocal));
-                theLocal.sin_family = AF_INET;
-                theLocal.sin_port = htons(33335);
-                if (bind(gSocket7280, (sockaddr*)&theLocal, sizeof(theLocal)) == 0 &&
-                    listen(gSocket7280, SOMAXCONN) == 0) {
-                    WSAEventSelect(gSocket7280, *inListenEvent, FD_READ);
-                    WSAEventSelect(gSocket7280, *inAcceptEvent, FD_ACCEPT);
+                theLocal.mFamily = PLAT_AF_INET;
+                theLocal.mPort = PlatHostToNet16(33335);
+                if (PlatSocketBind(gSocket7280, &theLocal) &&
+                    PlatSocketListen(gSocket7280, PLAT_SOCKET_MAX_BACKLOG)) {
+                    PlatSocketSelectEvent(gSocket7280, inListenEvent->mHandle, PLAT_SOCKET_EVENT_READ);
+                    PlatSocketSelectEvent(gSocket7280, inAcceptEvent->mHandle, PLAT_SOCKET_EVENT_ACCEPT);
                     theResult = kNPIMOK;
                 } else {
-                    ESRecordNativeError(WSAGetLastError());
+                    ESRecordNativeError(PlatSocketLastError());
                     theResult = kNPIMNativeError;
-                    closesocket(gSocket7280);
+                    PlatSocketClose(gSocket7280);
                 }
             } else {
-                ESRecordNativeError(WSAGetLastError());
+                ESRecordNativeError(PlatSocketLastError());
                 theResult = kNPIMNativeError;
-                closesocket(gSocket7280);
+                PlatSocketClose(gSocket7280);
             }
         } else {
-            if (theServer->mSocket != INVALID_SOCKET)
-                closesocket(theServer->mSocket);
-            if (theServer->mXferSocket != INVALID_SOCKET)
-                closesocket(theServer->mXferSocket);
+            if (theServer->mSocket != PLAT_SOCKET_INVALID)
+                PlatSocketClose(theServer->mSocket);
+            if (theServer->mXferSocket != PLAT_SOCKET_INVALID)
+                PlatSocketClose(theServer->mXferSocket);
             delete theServer;
         }
     } else {
@@ -830,59 +847,57 @@ TCPServer::TCPServer()
 
 // FUNCTION: TCP 0x10002156
 // Restarts the whole plug-in, then creates a non-blocking stream or datagram socket bound to *ioPort
-// (listening for stream); returns the bound port and the socket, INVALID_SOCKET on failure
+// (listening for stream); returns the bound port and the socket, PLAT_SOCKET_INVALID on failure
 // NPIMConnect's error shape: every failing branch records, sets theResult and closes the socket itself (VC6
 // tail-merges the four closesocket calls into one). Those references outweigh theResult, so theSocket gets esi
 // and theResult edi, shared with the constant 1.
-static long CreateSocket(long inType, SOCKET* outSocket, unsigned long* ioPort)
+static long CreateSocket(long inType, PlatSocket* outSocket, unsigned long* ioPort)
 {
     long theResult;
-    unsigned long theNonBlocking = 1;
-    int theLength = sizeof(sockaddr_in);
     NPIMDeactivate();
     NPIMActivate();
-    SOCKET theSocket = socket(AF_INET, inType == 1 ? SOCK_STREAM : SOCK_DGRAM, 0);
-    if (theSocket != INVALID_SOCKET) {
-        if (ioctlsocket(theSocket, FIONBIO, &theNonBlocking) == 0) {
-            sockaddr_in theAddress;
+    PlatSocket theSocket = PlatSocketOpen(inType == 1 ? PLAT_SOCKET_STREAM : PLAT_SOCKET_DGRAM);
+    if (theSocket != PLAT_SOCKET_INVALID) {
+        if (PlatSocketSetNonBlocking(theSocket, 1)) {
+            PlatSockAddrIn theAddress;
             memset(&theAddress, 0, sizeof(theAddress));
-            theAddress.sin_port = (u_short)*ioPort;
-            theAddress.sin_family = AF_INET;
-            if (bind(theSocket, (sockaddr*)&theAddress, sizeof(theAddress)) == 0) {
-                if (getsockname(theSocket, (sockaddr*)&theAddress, &theLength) == 0) {
-                    *ioPort = theAddress.sin_port;
-                    if (inType != 1 || listen(theSocket, SOMAXCONN) == 0) {
+            theAddress.mPort = (uint16_t)*ioPort;
+            theAddress.mFamily = PLAT_AF_INET;
+            if (PlatSocketBind(theSocket, &theAddress)) {
+                if (PlatSocketGetName(theSocket, &theAddress)) {
+                    *ioPort = theAddress.mPort;
+                    if (inType != 1 || PlatSocketListen(theSocket, PLAT_SOCKET_MAX_BACKLOG)) {
                         *outSocket = theSocket;
                         theResult = kNPIMOK;
                     } else {
-                        ESRecordNativeError(WSAGetLastError());
+                        ESRecordNativeError(PlatSocketLastError());
                         theResult = kNPIMNativeError;
-                        closesocket(theSocket);
+                        PlatSocketClose(theSocket);
                     }
                 } else {
-                    ESRecordNativeError(WSAGetLastError());
+                    ESRecordNativeError(PlatSocketLastError());
                     theResult = kNPIMNativeError;
-                    closesocket(theSocket);
+                    PlatSocketClose(theSocket);
                 }
             } else {
-                ESRecordNativeError(WSAGetLastError());
+                ESRecordNativeError(PlatSocketLastError());
                 ESGetNativeError();
                 theResult = kNPIMNativeError;
-                closesocket(theSocket);
+                PlatSocketClose(theSocket);
             }
         } else {
-            ESRecordNativeError(WSAGetLastError());
+            ESRecordNativeError(PlatSocketLastError());
             theResult = kNPIMNativeError;
-            closesocket(theSocket);
+            PlatSocketClose(theSocket);
         }
     } else {
-        ESRecordNativeError(WSAGetLastError());
+        ESRecordNativeError(PlatSocketLastError());
         theResult = kNPIMNativeError;
     }
     if (theResult == kNPIMOK)
         *outSocket = theSocket;
     else
-        *outSocket = INVALID_SOCKET;
+        *outSocket = PLAT_SOCKET_INVALID;
     return theResult;
 }
 
@@ -893,20 +908,19 @@ extern "C" long NPIMReceive(TCPConnection** inHandle, unsigned long inSize, char
 {
     long theResult = kNPIMOK;
     bool theContinue = true;
-    sockaddr_in theFrom;
-    int theFromLength;
+    PlatSockAddrIn theFrom;
     TCPConnection* theConnection = *inHandle;
     if (theConnection != NULL) {
         if (theConnection->mState == 1) {
-            int theCount = recv(theConnection->mSocket, outBuffer, inSize, 0);
-            if (theCount != 0 && theCount != SOCKET_ERROR) {
+            int theCount = PlatSocketRecv(theConnection->mSocket, outBuffer, inSize);
+            if (theCount != 0 && theCount != -1) {
                 *outReceived = theCount;
                 theResult = kNPIMOK;
             } else if (theCount == 0) {
                 theResult = kNPIMUnavailable;
             } else {
-                int theError = WSAGetLastError();
-                if (theError == WSAEWOULDBLOCK) {
+                int theError = PlatSocketLastError();
+                if (theError == PLAT_SOCK_EWOULDBLOCK) {
                     *outReceived = 0;
                     theResult = kNPIMWouldBlock;
                 } else {
@@ -916,17 +930,15 @@ extern "C" long NPIMReceive(TCPConnection** inHandle, unsigned long inSize, char
             }
         } else {
             do {
-                theFromLength = sizeof(theFrom);
-                int theCount = recvfrom(theConnection->mSocket, outBuffer, inSize, 0,
-                                        (sockaddr*)&theFrom, &theFromLength);
-                if (theCount != 0 && theCount != SOCKET_ERROR) {
+                int theCount = PlatSocketRecvFrom(theConnection->mSocket, outBuffer, inSize, &theFrom);
+                if (theCount != 0 && theCount != -1) {
                     Encipher((unsigned char*)outBuffer + 1, theCount - 1, (unsigned char)outBuffer[0]);
                     if ((theCount == 0x88 && outBuffer[1] == 0x16) || (theCount == 0x43 && outBuffer[1] == 0x15)) {
                         *outReceived = 0;
                         theResult = kNPIMWouldBlock;
-                    } else if (theFrom.sin_family == theConnection->mAddress.sin_family &&
-                               theFrom.sin_port == theConnection->mAddress.sin_port &&
-                               theFrom.sin_addr.s_addr == theConnection->mAddress.sin_addr.s_addr) {
+                    } else if (theFrom.mFamily == theConnection->mAddress.mFamily &&
+                               theFrom.mPort == theConnection->mAddress.mPort &&
+                               theFrom.mAddress == theConnection->mAddress.mAddress) {
                         theResult = kNPIMOK;
                         *outReceived = theCount;
                         theContinue = false;
@@ -935,8 +947,8 @@ extern "C" long NPIMReceive(TCPConnection** inHandle, unsigned long inSize, char
                     theResult = kNPIMUnavailable;
                     break;
                 } else {
-                    int theError = WSAGetLastError();
-                    if (theError == WSAEWOULDBLOCK) {
+                    int theError = PlatSocketLastError();
+                    if (theError == PLAT_SOCK_EWOULDBLOCK) {
                         *outReceived = 0;
                         theResult = kNPIMWouldBlock;
                     } else {
@@ -1015,15 +1027,14 @@ extern "C" long NPIMReceiveFrom(TCPServer** inHandle, unsigned long inSize, char
 {
     unsigned char theKey;
     char* theData;
-    sockaddr_in* theClient;
+    PlatSockAddrIn* theClient;
     GameAnnouncement thePacket;
     long theResult = kNPIMOK;
     TCPServer* theServer = *inHandle;
     if (theServer->mFlags.mXfer == 1) {
-        sockaddr_in theFrom;
-        int theFromLength = sizeof(theFrom);
-        int theCount = recvfrom(theServer->mXferSocket, outBuffer, inSize, 0, (sockaddr*)&theFrom, &theFromLength);
-        if (theCount != 0 && theCount != SOCKET_ERROR) {
+        PlatSockAddrIn theFrom;
+        int theCount = PlatSocketRecvFrom(theServer->mXferSocket, outBuffer, inSize, &theFrom);
+        if (theCount != 0 && theCount != -1) {
             theKey = outBuffer[0];
             theData = outBuffer + 1;
             Encipher((unsigned char*)theData, theCount - 1, theKey);
@@ -1033,23 +1044,22 @@ extern "C" long NPIMReceiveFrom(TCPServer** inHandle, unsigned long inSize, char
                 if (strcmp(((GameQuery*)outBuffer)->mName, theServer->mName) == 0 &&
                     theServer->mAllowNewConnections == true && theServer->mFlag55 == false &&
                     theServer->mAnnounce == true) {
-                    SOCKET theSocket = socket(AF_INET, SOCK_DGRAM, 0);
-                    if (theSocket != INVALID_SOCKET) {
+                    PlatSocket theSocket = PlatSocketOpen(PLAT_SOCKET_DGRAM);
+                    if (theSocket != PLAT_SOCKET_INVALID) {
                         thePacket.mType = 0x16;
                         strcpy(thePacket.mName, theServer->mName);
                         strcpy(thePacket.mAddress, theServer->mAddress);
                         theKey = (unsigned char)(gRandom->Generate() * 254.0f + 1.0f);
                         memcpy(&thePacket, &theKey, 1);
                         Encipher(&thePacket.mType, sizeof(thePacket) - 1, theKey);
-                        theFrom.sin_port = htons(33334);
-                        if (sendto(theSocket, reinterpret_cast<char*>(&thePacket), sizeof(thePacket), 0, (sockaddr*)&theFrom,
-                                   sizeof(theFrom)) == SOCKET_ERROR) {
-                            ESRecordNativeError(WSAGetLastError());
+                        theFrom.mPort = PlatHostToNet16(33334);
+                        if (PlatSocketSendTo(theSocket, &thePacket, sizeof(thePacket), &theFrom) == -1) {
+                            ESRecordNativeError(PlatSocketLastError());
                             ESGetNativeError();
                         }
-                        closesocket(theSocket);
+                        PlatSocketClose(theSocket);
                     } else {
-                        ESRecordNativeError(WSAGetLastError());
+                        ESRecordNativeError(PlatSocketLastError());
                         ESGetNativeError();
                     }
                 }
@@ -1057,16 +1067,16 @@ extern "C" long NPIMReceiveFrom(TCPServer** inHandle, unsigned long inSize, char
                 unsigned long i;
                 for (i = 0; i < theServer->mClients.size(); i++) {
                     theClient = theServer->mClients[i];
-                    if (theFrom.sin_family == theClient->sin_family &&
-                        theFrom.sin_addr.s_addr == theClient->sin_addr.s_addr &&
-                        theFrom.sin_port == theClient->sin_port)
+                    if (theFrom.mFamily == theClient->mFamily &&
+                        theFrom.mAddress == theClient->mAddress &&
+                        theFrom.mPort == theClient->mPort)
                         break;
                 }
                 if (i == theServer->mClients.size()) {
                     if (theCount >= 4 && (*theData == 0x22 || *theData == 0x37)) {
-                        if (theServer->mAllowNewConnections && theFrom.sin_port != 0) {
-                            theClient = new sockaddr_in;
-                            memcpy(theClient, &theFrom, sizeof(sockaddr_in));
+                        if (theServer->mAllowNewConnections && theFrom.mPort != 0) {
+                            theClient = new PlatSockAddrIn;
+                            memcpy(theClient, &theFrom, sizeof(PlatSockAddrIn));
                             theServer->mClients.push_back(theClient);
                             *outIndex = theServer->mClients.size() - 1;
                             *outReceived = theCount;
@@ -1092,8 +1102,8 @@ extern "C" long NPIMReceiveFrom(TCPServer** inHandle, unsigned long inSize, char
         } else if (theCount == 0) {
             theResult = kNPIMUnavailable;
         } else {
-            int theError = WSAGetLastError();
-            if (theError == WSAEWOULDBLOCK) {
+            int theError = PlatSocketLastError();
+            if (theError == PLAT_SOCK_EWOULDBLOCK) {
                 *outReceived = 0;
                 theResult = kNPIMWouldBlock;
             } else {
@@ -1113,7 +1123,7 @@ extern "C" void NPIMResetClientConnection(TCPServer** inHandle, unsigned long in
 {
     TCPServer* theServer = *inHandle;
     if (inIndex < theServer->mClients.size())
-        theServer->mClients[inIndex]->sin_port = 0;
+        theServer->mClients[inIndex]->mPort = 0;
 }
 
 // FUNCTION: TCP 0x10002841
@@ -1168,9 +1178,9 @@ extern "C" long NPIMSend(TCPConnection** inHandle, char* ioData, unsigned long i
         unsigned long theSent = 0;
         theResult = kNPIMOK;
         while (0 < inLength) {
-            int theCount = send(theConnection->mSocket, ioData + theSent, inLength, 0);
-            if (theCount == SOCKET_ERROR) {
-                ESRecordNativeError(WSAGetLastError());
+            int theCount = PlatSocketSend(theConnection->mSocket, ioData + theSent, inLength);
+            if (theCount == -1) {
+                ESRecordNativeError(PlatSocketLastError());
                 ESGetNativeError();
                 theResult = kNPIMNativeError;
                 break;
@@ -1182,14 +1192,13 @@ extern "C" long NPIMSend(TCPConnection** inHandle, char* ioData, unsigned long i
         theKey = (unsigned char)(gRandom->Generate() * 254.0f + 1.0f);
         memcpy(ioData, &theKey, 1);
         Encipher((unsigned char*)ioData + 1, inLength - 1, theKey);
-        int theCount = sendto(theConnection->mSocket, ioData, inLength, 0,
-                              (sockaddr*)&theConnection->mAddress, sizeof(sockaddr_in));
+        int theCount = PlatSocketSendTo(theConnection->mSocket, ioData, inLength, &theConnection->mAddress);
         if (theCount == inLength) {
             theResult = kNPIMOK;
-        } else if (theCount != SOCKET_ERROR) {
+        } else if (theCount != -1) {
             theResult = kNPIMUnavailable;
         } else {
-            ESRecordNativeError(WSAGetLastError());
+            ESRecordNativeError(PlatSocketLastError());
             ESGetNativeError();
             theResult = kNPIMNativeError;
         }
@@ -1206,53 +1215,56 @@ extern "C" long NPIMSendSingle(const UString& inHost, unsigned long inPort, char
 {
     long theResult = kNPIMOK;
     uint32_t theAddress;    // an IPv4 address (in_addr_t)
-    sockaddr_in theTo;
-    sockaddr_in theLocal;
-    SOCKET theSocket = socket(AF_INET, SOCK_DGRAM, 0);
-    if (theSocket != INVALID_SOCKET) {
-        hostent* theHost = gethostbyname(inHost);
-        if (theHost == NULL) {
-            theAddress = inet_addr(inHost);
-            if (theAddress != INADDR_NONE)
-                theHost = gethostbyaddr((char*)&theAddress, 4, AF_INET);
+    PlatSockAddrIn theTo;
+    PlatSockAddrIn theLocal;
+    PlatSocket theSocket = PlatSocketOpen(PLAT_SOCKET_DGRAM);
+    if (theSocket != PLAT_SOCKET_INVALID) {
+        // gethostbyname, else (a dotted address) inet_addr + gethostbyaddr, whose list holds that address
+        uint32_t theHostAddresses[kMaxHostAddresses];
+        uint32_t theHostCount = PlatSocketResolveIPv4(inHost, theHostAddresses, kMaxHostAddresses);
+        if (theHostCount == 0) {
+            theAddress = PlatSocketParseIPv4(inHost);
+            char theHostName[0x400];
+            if (theAddress != PLAT_INADDR_NONE
+                && PlatSocketReverseLookup(theAddress, theHostName, sizeof(theHostName))) {
+                theHostAddresses[0] = theAddress;
+                theHostCount = 1;
+            }
         }
-        if (theHost != NULL) {
+        if (theHostCount != 0) {
             memset(&theTo, 0, sizeof(theTo));
-            theTo.sin_family = AF_INET;
-            theTo.sin_port = htons((u_short)inPort);
+            theTo.mFamily = PLAT_AF_INET;
+            theTo.mPort = PlatHostToNet16((uint16_t)inPort);
             // Fix: gAdapterAddressIndex indexes the LOCAL host's address list; a remote host with fewer addresses
             // used to be read past the end of its list (a NULL entry crashed, a later one was garbage). An
             // address the remote list does not have is now 0.
-            unsigned long theEntry;
-            for (theEntry = 0; theEntry < gAdapterAddressIndex && theHost->h_addr_list[theEntry] != NULL; theEntry++)
-                ;
-            if (theHost->h_addr_list[theEntry] != NULL)
-                memcpy(&theTo.sin_addr, theHost->h_addr_list[theEntry], 4);
+            if (gAdapterAddressIndex < theHostCount)
+                theTo.mAddress = theHostAddresses[gAdapterAddressIndex];
         } else {
             theResult = kNPIMUnavailable;
         }
         if (theResult == kNPIMOK) {
             memset(&theLocal, 0, sizeof(theLocal));
-            theLocal.sin_family = AF_INET;
-            theLocal.sin_port = 0;
-            if (bind(theSocket, (sockaddr*)&theLocal, sizeof(theLocal)) == 0) {
-                int theCount = sendto(theSocket, inData, inLength, 0, (sockaddr*)&theTo, sizeof(theTo));
+            theLocal.mFamily = PLAT_AF_INET;
+            theLocal.mPort = 0;
+            if (PlatSocketBind(theSocket, &theLocal)) {
+                int theCount = PlatSocketSendTo(theSocket, inData, inLength, &theTo);
                 if (theCount == inLength) {
                     theResult = kNPIMOK;
-                } else if (theCount != SOCKET_ERROR) {
+                } else if (theCount != -1) {
                     theResult = kNPIMUnavailable;
                 } else {
-                    ESRecordNativeError(WSAGetLastError());
+                    ESRecordNativeError(PlatSocketLastError());
                     ESGetNativeError();
                     theResult = kNPIMNativeError;
                 }
             } else {
-                ESRecordNativeError(WSAGetLastError());
+                ESRecordNativeError(PlatSocketLastError());
                 ESGetNativeError();
                 theResult = kNPIMNativeError;
             }
         }
-        closesocket(theSocket);
+        PlatSocketClose(theSocket);
     }
     return theResult;
 }
@@ -1267,13 +1279,12 @@ extern "C" long NPIMSendTo(TCPServer** inHandle, unsigned long inIndex, char* io
             unsigned char theKey = (unsigned char)(gRandom->Generate() * 254.0f + 1.0f);
             memcpy(ioData, &theKey, 1);
             Encipher((unsigned char*)ioData + 1, inLength - 1, theKey);
-            sockaddr_in*& theClient = theServer->mClients[inIndex];
-            int theCount = sendto(theServer->mXferSocket, ioData, inLength, 0,
-                                  (sockaddr*)theClient, sizeof(sockaddr_in));
+            PlatSockAddrIn*& theClient = theServer->mClients[inIndex];
+            int theCount = PlatSocketSendTo(theServer->mXferSocket, ioData, inLength, theClient);
             if (theCount == inLength)
                 return kNPIMOK;
-            if (theCount == SOCKET_ERROR) {
-                ESRecordNativeError(WSAGetLastError());
+            if (theCount == -1) {
+                ESRecordNativeError(PlatSocketLastError());
                 ESGetNativeError();
                 return kNPIMNativeError;
             }
@@ -1297,15 +1308,15 @@ extern "C" long NPIMSetConfiguration(const NEProtocolConfiguration* inConfigurat
 // Receives from the file-transfer socket; would-block when nothing is waiting
 extern "C" long NPIMXferReceive(unsigned long inSize, char* outBuffer, unsigned long* outReceived)
 {
-    int theResult = recv(gXferSocket, outBuffer, inSize, 0);
-    if (theResult != 0 && theResult != SOCKET_ERROR) {
+    int theResult = PlatSocketRecv(gXferSocket, outBuffer, inSize);
+    if (theResult != 0 && theResult != -1) {
         *outReceived = theResult;
         return kNPIMOK;
     }
     if (theResult == 0)
         return kNPIMUnavailable;
-    int theError = WSAGetLastError();
-    if (theError == WSAEWOULDBLOCK) {
+    int theError = PlatSocketLastError();
+    if (theError == PLAT_SOCK_EWOULDBLOCK) {
         *outReceived = 0;
         return kNPIMWouldBlock;
     }
@@ -1324,12 +1335,12 @@ extern "C" long NPIMXferSendTo(TCPServer** inHandle, unsigned long inIndex, char
         unsigned long theSent = 0;
         theResult = kNPIMOK;
         while (0 < inLength) {
-            int theCount = send(theServer->mConnections[inIndex]->mSocket,
-                                inData + theSent, inLength, 0);
-            if (theCount != SOCKET_ERROR) {
+            int theCount = PlatSocketSend(theServer->mConnections[inIndex]->mSocket,
+                                          inData + theSent, inLength);
+            if (theCount != -1) {
                 inLength -= theCount;
                 theSent += theCount;
-            } else if (WSAGetLastError() == WSAEWOULDBLOCK) {
+            } else if (PlatSocketLastError() == PLAT_SOCK_EWOULDBLOCK) {
                 PlatSleep(1);
             } else {
                 theResult = kNPIMNativeError;
@@ -1366,38 +1377,34 @@ static bool PIMIsValid()
 
 // FUNCTION: TCP 0x10002db6
 // Broadcasts a game query and collects the announcements that answer within one second into the detected-games list
-static long QueryGames(const UString& inName, hostent* inHost)
+static long QueryGames(const UString& inName, const uint32_t* inHostAddresses)
 {
     long theResult = kNPIMOK;
     DetectedGame theGame;
     unsigned char theKey;
-    SOCKET theReceiveSocket;
-    SOCKET theSendSocket;
+    PlatSocket theReceiveSocket;
+    PlatSocket theSendSocket;
     unsigned long theDeadline;
-    int theFromLength;
-    int theBroadcast;
-    unsigned long theNonBlocking = 1;
     if (inName.GetLength() > 0) {
         gSocketLock->Enter();
-        theSendSocket = socket(AF_INET, SOCK_DGRAM, 0);
-        if (theSendSocket != INVALID_SOCKET) {
-            sockaddr_in theTo;
+        theSendSocket = PlatSocketOpen(PLAT_SOCKET_DGRAM);
+        if (theSendSocket != PLAT_SOCKET_INVALID) {
+            PlatSockAddrIn theTo;
             memset(&theTo, 0, sizeof(theTo));
-            theTo.sin_family = AF_INET;
-            theTo.sin_port = htons(33334);
-            if (inHost == NULL)
-                theTo.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+            theTo.mFamily = PLAT_AF_INET;
+            theTo.mPort = PlatHostToNet16(33334);
+            if (inHostAddresses == NULL)
+                theTo.mAddress = PlatHostToNet32(PLAT_INADDR_BROADCAST);
             else
-                memcpy(&theTo.sin_addr, inHost->h_addr_list[gAdapterAddressIndex], 4);
-            theBroadcast = 1;
-            if (setsockopt(theSendSocket, SOL_SOCKET, SO_BROADCAST, reinterpret_cast<char*>(&theBroadcast), sizeof(theBroadcast)) == 0) {
-                sockaddr_in theLocal;
+                theTo.mAddress = inHostAddresses[gAdapterAddressIndex];
+            if (PlatSocketSetBroadcast(theSendSocket, 1)) {
+                PlatSockAddrIn theLocal;
                 memset(&theLocal, 0, sizeof(theLocal));
-                theLocal.sin_family = AF_INET;
-                theLocal.sin_port = htons(33334);
-                theReceiveSocket = socket(AF_INET, SOCK_DGRAM, 0);
-                if (bind(theReceiveSocket, (sockaddr*)&theLocal, sizeof(theLocal)) == 0 &&
-                    ioctlsocket(theReceiveSocket, FIONBIO, &theNonBlocking) == 0) {
+                theLocal.mFamily = PLAT_AF_INET;
+                theLocal.mPort = PlatHostToNet16(33334);
+                theReceiveSocket = PlatSocketOpen(PLAT_SOCKET_DGRAM);
+                if (PlatSocketBind(theReceiveSocket, &theLocal) &&
+                    PlatSocketSetNonBlocking(theReceiveSocket, 1)) {
                     GameQuery theQuery;
                     theQuery.mType = kSearchPacketGameQuery;
                     strcpy(theQuery.mName, inName);
@@ -1405,22 +1412,21 @@ static long QueryGames(const UString& inName, hostent* inHost)
                     theKey = (unsigned char)(gRandom->Generate() * 254.0f + 1.0f);
                     memcpy(&theQuery, &theKey, 1);
                     Encipher(&theQuery.mType, sizeof(theQuery) - 1, theKey);
-                    if (sendto(theSendSocket, reinterpret_cast<char*>(&theQuery), sizeof(theQuery), 0, (sockaddr*)&theTo,
-                               sizeof(theTo)) != SOCKET_ERROR) {
+                    if (PlatSocketSendTo(theSendSocket, &theQuery, sizeof(theQuery), &theTo) != -1) {
                         theDeadline = TMGetTime() + 1000;
-                        theFromLength = sizeof(sockaddr_in);
                         while (theDeadline > TMGetTime()) {
                             char theBuffer[0x200];
-                            sockaddr_in theFrom;
-                            int theCount = recvfrom(theReceiveSocket, theBuffer, sizeof(theBuffer), 0,
-                                                    (sockaddr*)&theFrom, &theFromLength);
+                            PlatSockAddrIn theFrom;
+                            int theCount = PlatSocketRecvFrom(theReceiveSocket, theBuffer, sizeof(theBuffer), &theFrom);
                             if (theCount > 0) {
                                 theKey = theBuffer[0];
                                 Encipher(reinterpret_cast<unsigned char*>(theBuffer) + 1, theCount - 1, theKey);
                             }
                             GameAnnouncement* theAnnouncement = reinterpret_cast<GameAnnouncement*>(theBuffer);
                             if (theCount == sizeof(GameAnnouncement) && theAnnouncement->mType == kSearchPacketGameAnnouncement) {
-                                theGame.mName = inet_ntoa(theFrom.sin_addr);
+                                char theText[16];
+                                PlatSocketFormatIPv4(theFrom.mAddress, theText);
+                                theGame.mName = theText;
                                 bool theNew = true;
                                 for (unsigned long i = 0; i < gDetectedGames2.size(); i++) {
                                     DetectedGame& theOther = gDetectedGames2[i];
@@ -1442,26 +1448,26 @@ static long QueryGames(const UString& inName, hostent* inHost)
                         gDetectedGames.resize(gDetectedGames2.size());
                         std::copy(gDetectedGames2.begin(), gDetectedGames2.end(), gDetectedGames.begin());
                         gDetectedGamesLock->Leave();
-                        closesocket(theReceiveSocket);
+                        PlatSocketClose(theReceiveSocket);
                         theResult = kNPIMOK;
                     } else {
-                        ESRecordNativeError(WSAGetLastError());
+                        ESRecordNativeError(PlatSocketLastError());
                         ESGetNativeError();
                         theResult = kNPIMNativeError;
                     }
                 } else {
-                    ESRecordNativeError(WSAGetLastError());
+                    ESRecordNativeError(PlatSocketLastError());
                     ESGetNativeError();
                     theResult = kNPIMNativeError;
                 }
             } else {
-                ESRecordNativeError(WSAGetLastError());
+                ESRecordNativeError(PlatSocketLastError());
                 ESGetNativeError();
                 theResult = kNPIMNativeError;
             }
-            closesocket(theSendSocket);
+            PlatSocketClose(theSendSocket);
         } else {
-            ESRecordNativeError(WSAGetLastError());
+            ESRecordNativeError(PlatSocketLastError());
             ESGetNativeError();
             theResult = kNPIMNativeError;
         }
@@ -1480,12 +1486,12 @@ static unsigned long Searcher(void* inService)
     theName = *static_cast<UString*>(inService);
     delete static_cast<UString*>(inService);
     TSEvent* theExitEvent = gSearcherThreadExitEvent;
-    UMSetFloatingPointPrecision(_PC_53);
+    UMSetFloatingPointPrecision(kFPPrecision53);
     while (!theDone) {
-        if (UMGetFloatingPointPrecision() != _PC_53)
-            UMSetFloatingPointPrecision(_PC_53);
-        if (UMGetFloatingPointRoundingMode() != _RC_NEAR)
-            UMSetFloatingPointRoundingMode(_RC_NEAR);
+        if (UMGetFloatingPointPrecision() != kFPPrecision53)
+            UMSetFloatingPointPrecision(kFPPrecision53);
+        if (UMGetFloatingPointRoundingMode() != kFPRoundNearest)
+            UMSetFloatingPointRoundingMode(kFPRoundNearest);
         switch (TSEvent::WaitAny(&theExitEvent, 1, 50)) {
         case 0:
             gSearcherThreadExitEvent->Clear();
@@ -1495,7 +1501,7 @@ static unsigned long Searcher(void* inService)
             QueryGames(theName, NULL);
             break;
         case kTSWaitFailed:
-            GetLastError();
+            PlatGetLastError();
             break;
         }
     }

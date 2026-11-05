@@ -6,6 +6,7 @@
 #ifndef EE_EERENDEROBJECT_H
 #define EE_EERENDEROBJECT_H
 
+#include <set>                          // IsUnitDrawn's std::set
 #include "ee/RTSGraphics.h"
 
 class RTSRenderObject;
@@ -53,10 +54,8 @@ public:
     void FillGhostRecords();                // 0x10c952 (FillRenderLists: the ghost units)
     void FillRenderLists();                 // 0x10eabe (EEROGroundShadows::FrameStarting; provisional name)
     void Fn10E8D1();                        // 0x10e8d1 (EEROTerrain::FrameStarting; provisional name)
-#ifdef _SET_
     // FillRenderLists's per-unit helpers (thiscall, `this` unused; provisional names; types inferred)
     bool IsUnitDrawn(EEUnit* inUnit, EETile* inTile, std::set<EEUnit*>& ioDrawn);  // 0x10b3b3: the unit is drawn this frame
-#endif
     void DrawGroundCircle(const GETransformation& inLocation, float inRadius, long inMode);  // 0x10bba4: a ground circle
 #ifdef EE_EERENDERLISTS_H
     void FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERenderShadowMap& ioMap, EERenderFrameInfo& ioInfo);

@@ -62,9 +62,30 @@ jobs:
       - name: Compile census (linux-x86_64)
         run: |
           python -I tools/xbuild.py census -j 4 > census-linux-ms.txt 2>&1 || true
-          python -I tools/xbuild.py census -j 4 --dialect gnu > census-linux-gnu.txt 2>&1 || true
-          python -I tools/xbuild.py census -j 4 --dialect msext > census-linux-msext.txt 2>&1 || true
           head -60 census-linux-ms.txt
+
+      # the game itself: every unit, SDL3 and wgpu-native, one link
+      - name: Game (linux-x86_64)
+        run: |
+          rc=0
+          python -I tools/xbuild.py game -j 4 > game-linux.txt 2>&1 || rc=$?
+          tail -40 game-linux.txt
+          exit $rc
+
+      # no game data on CI: --smoke-test opens the window, the wgpu device (lavapipe) and presents 30 frames, then
+      # reports the data root (exit 2: no display or adapter, a warning); without --smoke-test the game must stop
+      # with its "game data not found" message (exit 3)
+      - name: Game smoke test (Xvfb, lavapipe, no game data)
+        run: |
+          exe=build/xbuild/linux-x86_64/game/ee-aoc
+          rc=0
+          xvfb-run -a -s "-screen 0 1280x1024x24" $exe --smoke-test || rc=$?
+          echo "smoke test: exit $rc"
+          if [ "$rc" = "2" ]; then echo "::warning::smoke test: no display or adapter"; elif [ "$rc" != "0" ]; then exit 1; fi
+          rc=0
+          $exe || rc=$?
+          echo "without game data: exit $rc"
+          test "$rc" = "3"
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -72,6 +93,7 @@ jobs:
           name: census-linux
           path: |
             census-linux-*.txt
+            game-linux.txt
             build/xbuild/linux-x86_64/census-*/summary.txt
             build/xbuild/linux-x86_64/census-*/census.tsv
             build/xbuild/linux-x86_64/census-*/census_errors.tsv
@@ -129,10 +151,27 @@ jobs:
       - name: Compile census (macOS)
         run: |
           python -I tools/xbuild.py census -j 4 > census-macos-ms.txt 2>&1 || true
-          python -I tools/xbuild.py census -j 4 --dialect gnu > census-macos-gnu.txt 2>&1 || true
-          python -I tools/xbuild.py census -j 4 --dialect msext > census-macos-msext.txt 2>&1 || true
-          head -30 census-macos-msext.txt
           head -60 census-macos-ms.txt
+
+      - name: Game (macOS)
+        run: |
+          rc=0
+          python -I tools/xbuild.py game -j 4 > game-macos.txt 2>&1 || rc=$?
+          tail -40 game-macos.txt
+          exit $rc
+
+      - name: Game smoke test (Metal, no game data)
+        run: |
+          exe=build/xbuild/macos-arm64/game/ee-aoc
+          rc=0
+          $exe --smoke-test || rc=$?
+          echo "smoke test: exit $rc"
+          if [ "$rc" = "2" ]; then echo "::warning::smoke test: no display or adapter"; elif [ "$rc" != "0" ]; then exit 1; fi
+          rc=0
+          $exe || rc=$?
+          echo "without game data: exit $rc"
+          test "$rc" = "3"
+          ls -la "build/xbuild/macos-arm64/game/Empire Earth AoC.app/Contents/MacOS"
 
       - uses: actions/upload-artifact@v4
         if: always()
@@ -140,6 +179,7 @@ jobs:
           name: census-macos
           path: |
             census-macos-*.txt
+            game-macos.txt
             build/xbuild/macos-*/census-*/summary.txt
             build/xbuild/macos-*/census-*/census.tsv
             build/xbuild/macos-*/census-*/census_errors.tsv

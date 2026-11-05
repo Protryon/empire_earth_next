@@ -1050,3 +1050,129 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   16 distinct byte values in the whole frame, which the UI alone provides. The mini map was not part of this bug: it
   is drawn on the CPU and showed the explored start area in the black frames too (it is mostly black at the start
   because the map is unexplored).
+
+## The POSIX game, part 1: the rest of the Win32 calls (branch xgame)
+
+- **What blocked the Linux census after LP64 was mostly not Win32.** Of the 86 failing units, 30 stopped on one
+  header (EEWonNet.h: `sockaddr_in`, `CRITICAL_SECTION`, `Interlocked*` in inline WON code), and a dozen on things a
+  Windows build cannot see: names the code spelled through windows.h's A/W macros (`PlaySoundA`, `SetPortA` from
+  winspool, a `DrawText()` call that only resolved to `DrawTextA` through the macro), `#ifdef _SET_` (the MSVC STL's
+  include guard as a feature test), `_iobuf` for FILE, `HRESULT` vs `long` callback types (HRESULT is `int32_t` in
+  wintypes.h), `std::max(LONG, long)` (LONG is `int32_t` there), `fpos_t` as an integer, `_getw/_putw`.
+- **clang-cl's Microsoft mode is more lenient than the same flags on a GNU target**: the address of a temporary
+  and narrowing in braced initializers compile on Windows and are errors for Linux even with -fms-compatibility.
+  The census passes `-Wno-address-of-temporary -Wno-c++11-narrowing` (MS_DIALECT_LENIENCE), as the POSIX game build
+  must.
+- **Floating-point `from_chars`** is missing in libstdc++ 10 and in libc++ before macOS 13.3 (deployment target 11):
+  `UFromChars` (include/lle/UFromChars.h) uses it on MSVC and strtof/strtod elsewhere.
+- **Time sources and the harness**: GetTickCount64 (GX's read-back timeout, the null-3D key frames) is not shimmed
+  by the time shim; timeGetTime and QueryPerformanceCounter are. Routing it through PlatTimeMilliseconds would have
+  shrunk a 10 s timeout to 0.3 s under `--time-factor 32`: it got its own PlatTimeMilliseconds64 (GetTickCount64 on
+  Win32).
+- **String resources as data**: LoadStringA converts the UTF-16 resource to the ANSI code page; the generated table
+  stores those bytes (cp1252: every character of Language.rc has a cp1252 code). The generator parses the .rc
+  (escapes `""`, `\n`, `\xHHHH`) and build.py compares its result with the string tables rc.exe compiled (3,707
+  equal), so a parser slip cannot reach the game. An empty string counts as missing (LoadStringA returns 0).
+- **TCP Protocol**: TCPHost padded 8 bytes before its address, assuming a 4-byte SOCKET; on x64 the transfer
+  connection read the family and port as the IP. Found by the loopback test (tools/tcp_test), which drives the
+  plug-in's PIM entry points the way the network engine does. Socket globals starting at 0 would close stdin on POSIX.
+
+## The POSIX game, part 2: the window on SDL3 (branch xgame)
+
+- **Messages that are sent, not posted.** Win32 sends WM_ACTIVATE/WM_ACTIVATEAPP straight into the window procedure
+  (during CreateWindowEx, DestroyWindow, SetFocus); the game's handler ran at that moment, with whatever state the
+  game had then. SDL queues events, and the game pumps them later. Two consequences, both seen in the first SDL
+  screenshots (the game cursor at the centre of 1024x768 instead of 640x480):
+  - SDL reports keyboard focus only for the foreground window; under the harness's debugger (and over RDP) the game
+    window was activated but never foreground, so no focus event came at all. On Win32 the window layer now
+    subclasses its windows and reports activation from WM_ACTIVATEAPP / WM_ACTIVATE (not minimised), the two cases
+    the original window procedure handled; SDL's focus events are used elsewhere.
+  - The renderer's 32-bit probe (a 16x16 topmost popup created and destroyed while the display starts) hands the
+    activation back to the game window when it is destroyed; the original centred its pointer then (at 640x480).
+    The probe is a visible topmost borderless window again (not hidden), and the events a window's creation or
+    destruction produce are dispatched right there (TSThread::DispatchWindowEvents), as the sent messages were.
+  With both, the menu screenshots are identical to the Win32-window build.
+- **The thread message queue does not need Win32.** TSThread::Post/Receive were PostThreadMessage/PeekMessage; only
+  TSThread used them, and window messages reached the UI thread's window procedure through the same PeekMessage. Now
+  each TSThread has its own queue, and Receive on the window thread pumps one window event per call when its queue is
+  empty (posted messages first: Win32 also returns posted before input messages). The UI loop's "result" rule
+  (a dispatched message counts only while ids queued by Post(..., true) are left) is kept.
+- **The window class name is the harness's key.** exe_boot.c's capture checkpoint and its window bookkeeping look
+  for "Empire Earth Expansion": SDL_RegisterApp sets SDL's class name (and SDL_HINT_WINDOWS_INTRESOURCE_ICON the
+  icon) before the video subsystem starts. SDL's mouse set-up asks SPI_GETMOUSESPEED, which the harness's
+  SystemParametersInfo guard had to learn (a GET).
+- **Text input must be started.** WM_CHAR always arrived; SDL3 sends text events only between SDL_StartTextInput and
+  SDL_StopTextInput. The game window starts text input when it is created (PlatTextInputStart).
+- **macOS needs the Metal layer from the main thread**: GX takes the window's native handles when the primary surface
+  is created (on the window thread) and keeps them; the render thread only reads the client size.
+
+## The POSIX game, part 3: input without DirectInput (branch xgame)
+
+- **Keep DirectInput's contract, change its source.** ISKeyboard and ISMouse were written against DirectInput's
+  buffered data (GetDeviceData: changes only, 256 records, DI_BUFFEROVERFLOW once records were lost) and its device
+  state (GetDeviceState: the keyboard's 256 bytes; the mouse's relative motion since the last state read). A small
+  per-device buffer (ISDeviceInput) gives exactly that from the window events, so the two classes changed in their
+  calls only: double presses, the shift/control/alt state, the overflow re-read and the "buffered movement" switch
+  work as before. Auto-repeat is dropped (DirectInput never reported it), a focus loss releases held keys and buttons
+  (a foreground device lost them too), and the mouse's buttons are renumbered from the window layer's (1 left,
+  2 middle, 3 right) to DirectInput's (0 left, 1 right, 2 middle).
+- **The exclusive mouse is relative mode.** DirectInput's exclusive foreground mouse hid the pointer and gave raw
+  motion; ISMouse::Resume/Suspend switch SDL's relative mode on and off.
+- **Testing input under the harness**: the window layer reads keys from WM_KEYDOWN/UP, so a key posted to the game
+  window travels the real path (SDL, PlatInputEvent, ISDeviceInput, the main form's hot keys) without being the
+  foreground window. `--input-check` presses F3 twice and requires the pause flag to go on and off. Posted mouse
+  messages would not test relative mode (raw input), so the mouse path is covered by code review and play only.
+
+## The POSIX game, part 4: text without GDI, the input method (branch xgame)
+
+- **One text path for every surface.** GDI text reached surfaces two ways: a DC on the CPU copy (TextLock, the glyph
+  atlases) and, for GPU-resident targets, two scratch DIBs drawn on black and white grounds to recover the coverage.
+  PlatFont gives coverage directly, so GXSurface::DrawText now takes a PlatFont callback: on a GPU-resident surface
+  the callback draws onto a transparent target in premultiplied colour (PLAT_FONT_TARGET_PREMULTIPLIED: alpha
+  accumulates the coverage, an opaque background cell is alpha 255), which is blended with the existing
+  premultiplied blit; on a CPU-side surface it draws onto a 32-bit copy of the pixels and the changed ones are
+  written back in the surface's format (what the old 32-bit GetDC copy did for formats GDI cannot draw). TextLock
+  is a flag now.
+- **A new surface has no CPU memory yet**: the CPU path must allocate it (GX allocates lazily on the first Lock);
+  tools/gx_test's 565 text check found it.
+- **Fonts are built in.** Liberation Sans/Serif/Mono are compiled into the program (#embed with clang 19+, generated
+  C arrays for older clang and Apple clang), registered under the names the game's font table uses; Tahoma (the
+  table's fourth face) and MS Sans Serif are aliases of Arial. UIFontTable sized fonts by the screen's LOGPIXELSY:
+  the original was DPI-unaware (96), the SDL process is DPI-aware, so the 96 is now a constant.
+- **What changes on screen**: only the glyphs (1.5-4% of a menu's pixels): stb_truetype draws Liberation unhinted
+  and antialiased where GDI drew hinted Arial; stems look a little heavier at small sizes and text sits a pixel
+  higher in places. The layouts did not move and no text wrapped differently in the tour's screens.
+- **The input method's composition stays the game's.** With SDL_HINT_IME_IMPLEMENTED_UI "composition" SDL sends
+  the composition as text-editing events and lets the system draw the candidate list. The game's edit box showed the
+  composition before (WM_IME_COMPOSITION GCS_COMPSTR), so TEXT_EDITING drives the same UIManager calls; the result
+  string comes as a text event while composing (no WM_CHAR bytes follow it, as before). The game's own candidate
+  window (UIIMECandidate) is no longer fed. Text crosses the window layer as Windows-1252, so CJK input (double-byte
+  ANSI code pages before) needs the encoding decision PORT.md describes; Western input is complete.
+- **PostQuitMessage has no reader now**: the thread queue is TSThread's own, so the two remaining PostQuitMessage
+  calls (the lobby's Sierra Update, the window close) post WM_QUIT (0x12) to the UI thread's TSThread instead.
+
+## The POSIX game, part 5: building and linking it (branch xgame)
+
+- **-fms-compatibility on a GNU target drops __GNUC__**, and system headers decide by it:
+  - glibc's optimised C++ string overloads (`__OPTIMIZE__`: `__extern_always_inline` and `__asm__` labels) fail;
+    `-U__OPTIMIZE__` for the headers keeps them on their plain declarations while the code is still optimised.
+    Claiming GCC back (`-fgnuc-version`) is no way out on Linux: glibc then wants `__STDC__` and its own va_list.
+  - macOS's SDK types `__darwin_va_list` as `void*` without `__GNUC__`, which clashed with clang's
+    `__builtin_va_list` in every unit (the "va_list" blocker of the census): `-fgnuc-version=4.2.1` on macOS only
+    fixes it (851/870 units at once).
+  - libstdc++ compares `type_info` inline only with `__GXX_WEAK__`, else it calls an out-of-line `operator==` the
+    library does not export: `-D__GXX_TYPEINFO_EQUALITY_INLINE=1`.
+  These are the game's C++ units only; C, the vendored libraries and the platform layer compile as standard code.
+- **The census was not the build.** `-fsyntax-only` without `-O` hides the `__OPTIMIZE__` header paths, and does not
+  link: the Itanium ABI does not encode a variable's type, so the engine's and the T&L plug-in's two `gRasterizer`s
+  (different types, distinct MSVC symbols) clashed at the first link. That was the only duplicate in 845 units.
+- **Header leanness differs by library version**: libstdc++ 10 (the Debian 11 sysroot here) brought `<string>` into
+  GX.cpp transitively, CI's libstdc++ 13 did not. The cross build here does not prove the native one.
+- **#embed is new** (clang 19+): CI's clang 18 and Apple clang get the fonts as generated C arrays
+  (`PlatFontDataArrays.h`, chosen with `__has_include`); a skipped `#embed` inside a false `#if` group is harmless
+  to older compilers.
+- **The 2001 zlib/libpng take `TARGET_OS_MAC` for classic Mac OS** (`<fp.h>`, no `Byte`); modern Apple systems
+  define it too. The checks now also require `!__APPLE__`.
+- **CI without game data**: `--smoke-test` exercises what is portable and observable without the retail files: the
+  window system, a window, the wgpu device on the runner's GPU path (lavapipe under Xvfb, Metal on macOS), 30 colour
+  fills read back and presented; the normal start must stop with the "game data not found" message (exit 3).

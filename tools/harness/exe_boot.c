@@ -1635,6 +1635,8 @@ int main(int argc, char **argv)
                     static const DWORD gets[] = {0x03, 0x0A, 0x0E, 0x10, 0x16, 0x1F, 0x26, 0x29, 0x30, 0x32,
                                                  0x34, 0x35, 0x3A, 0x48, 0x4A, 0x5C, 0x68, 0x1002, 0x1012, 0x100A,
                                                  0x2000, 0x2002, 0x200C, 0x2012, 0x0068,
+                                                 0x70,    /* SPI_GETMOUSESPEED: SDL3's mouse set-up (the game window
+                                                             is an SDL window since PORT.md step 4.3) */
                                                  0x42};   /* SPI_GETHIGHCONTRAST (round 40, mpengine): user32 itself asks
                                                              in every running game at once on a desktop-wide settings change;
                                                              it stopped four MP sessions mid-game at the same instant */

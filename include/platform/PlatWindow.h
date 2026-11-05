@@ -4,9 +4,8 @@
 // message loop (Empire Earth.cpp WinMain/WndProc, TSThread's message dispatch), DirectInput (the Input System) and
 // the IMM calls of the edit boxes.
 //
-// Implementations: src/Platform/SDL/PlatWindow.cpp (SDL3: Windows, Linux X11/Wayland, macOS Cocoa) is the one the
-// port moves to. src/Platform/Win32/PlatInput.cpp implements only the key-state queries for the current Win32 game
-// (GetKeyState), until the game's window is switched (PORT.md step 4, "window, input and text").
+// Implementation: src/Platform/SDL/PlatWindow.cpp (SDL3: Windows, Linux X11/Wayland, macOS Cocoa), on every system
+// (the game's window since PORT.md step 4.3).
 //
 // Keys are the game's numbering on every system (platform/PlatKeys.h): mScanCode is a DirectInput scan code
 // (DIK_*), mVirtualKey a Windows virtual-key code (VK_*). Text is Windows-1252 bytes (platform/PlatString.h);
@@ -21,6 +20,10 @@ extern "C" {
 #endif
 
 // ---- the window system
+// The application's name and icon, before PlatWindowSystemStart: the window class name on Win32 (the test harness
+// finds the game window by it: "Empire Earth Expansion"), the X11 WM_CLASS / Wayland app id elsewhere; inIconResource
+// is the Win32 icon resource id of the windows (0: none; ignored elsewhere).
+void PlatWindowSetAppName(const char* inName, uint32_t inIconResource);
 // Starts the window system (and installs its message box as PlatMessageSetHandler's handler) -> nonzero on success.
 int PlatWindowSystemStart(void);
 void PlatWindowSystemStop(void);
@@ -30,14 +33,25 @@ typedef struct PlatWindow PlatWindow;
 #define PLAT_WINDOW_FULLSCREEN 0x2u             // borderless on the whole display (no display mode change)
 #define PLAT_WINDOW_HIDDEN 0x4u
 #define PLAT_WINDOW_HIGH_DPI 0x8u               // client size in physical pixels on high-density displays
+#define PLAT_WINDOW_BORDERLESS 0x10u            // no frame (a Win32 WS_POPUP window)
+#define PLAT_WINDOW_TOPMOST 0x20u               // above the other windows (WS_EX_TOPMOST)
 // -> NULL on failure (the reason in PlatWindowLastError)
 PlatWindow* PlatWindowCreate(const char* inTitle, int32_t inWidth, int32_t inHeight, uint32_t inFlags);
+// the same with the client area's origin at inX, inY (desktop pixels)
+PlatWindow* PlatWindowCreateAt(const char* inTitle, int32_t inX, int32_t inY, int32_t inWidth, int32_t inHeight,
+                               uint32_t inFlags);
 void PlatWindowDestroy(PlatWindow* inWindow);
 const char* PlatWindowLastError(void);
 void PlatWindowSetTitle(PlatWindow* inWindow, const char* inTitle);
 void PlatWindowShow(PlatWindow* inWindow, int inShow);
 int PlatWindowSetFullscreen(PlatWindow* inWindow, int inFullscreen);
 void PlatWindowSetSize(PlatWindow* inWindow, int32_t inWidth, int32_t inHeight);
+// the client area's origin in desktop pixels (ClientToScreen of 0, 0), and moving it there
+void PlatWindowGetPosition(PlatWindow* inWindow, int32_t* outX, int32_t* outY);
+void PlatWindowSetPosition(PlatWindow* inWindow, int32_t inX, int32_t inY);
+void PlatWindowMinimize(PlatWindow* inWindow);
+// brings the window to the front with the keyboard focus (SetForegroundWindow / SetFocus)
+void PlatWindowRaise(PlatWindow* inWindow);
 // the drawable size in pixels (what the renderer's surface is configured with)
 void PlatWindowGetClientSize(PlatWindow* inWindow, int32_t* outWidth, int32_t* outHeight);
 // the display's size in pixels (the game's mode list: the resolutions that fit)
@@ -57,6 +71,10 @@ typedef struct PlatNativeWindow {
     void* mWindow;
 } PlatNativeWindow;
 int PlatWindowGetNative(PlatWindow* inWindow, PlatNativeWindow* outNative);
+// Win32 only: a hook that sees every message of the event thread before it is dispatched (MM_MCINOTIFY for CD audio,
+// the WON lobby's window messages); a nonzero result drops the message. NULL removes it. Ignored elsewhere.
+typedef int (*PlatNativeMessageHook)(void* inWindow, uint32_t inMessage, uint64_t inWParam, int64_t inLParam);
+void PlatWindowSetNativeMessageHook(PlatNativeMessageHook inHook);
 
 // ---- events
 typedef enum PlatInputEventType {
@@ -146,6 +164,8 @@ char* PlatClipboardGetText(void);
 // input method places its candidate window by.
 void PlatTextInputStart(PlatWindow* inWindow, int32_t inX, int32_t inY, int32_t inWidth, int32_t inHeight);
 void PlatTextInputStop(PlatWindow* inWindow);
+// Cancels the input method's open composition (ImmNotifyIME(NI_COMPOSITIONSTR, CPS_CANCEL)): the edit box lost focus
+void PlatTextInputCancel(PlatWindow* inWindow);
 
 #ifdef __cplusplus
 }

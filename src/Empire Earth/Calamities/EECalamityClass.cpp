@@ -174,7 +174,7 @@ void EECalamityClass::Place(class EEUnit *,unsigned long,unsigned long)
 
 // ICF-FOLDED: EXE 0x557269
 // (no address of its own: folded into the shared `ret` body the vtable slot points at)
-void EECalamityClass::PlaySoundA(class EECalamity *)
+void EECalamityClass::PlaySound(class EECalamity *)
 {
 }
 

@@ -26,7 +26,7 @@ template <class T> class U2DRectangle;
 typedef U2DRectangle<long> EEAIAStarBounds;   // ee/EEAIAStarStorage.h
 class EEAIPathGoalModifierBase;
 class EEAIGraphPathGoalModifierBase;
-struct _iobuf;                          // FILE
+#include <stdio.h>                      // FILE
 class GE3DPoint;
 class EEPathManagerNode;                // EEPathManager.cpp (vtable 0x43c570, sizeof 0x38; pooled)
 class EEAIAStarMachineBase;             // ee/EEAIAStarMachine.h
@@ -64,7 +64,7 @@ public:
     EEPathManager();                    // 0xa5d10
     virtual ~EEPathManager();           // 0xa5e1c
     void CancelAutoPathRequest(UReferenceCounter* inRequest);  // 0xa896b (ret 4; EEHerd::Clear passes its path request; provisional name)
-    void DumpOutOfSynch(_iobuf* inFile);   // FILE*: 0xa639b (ret 4; EEPhysics's out-of-synch dump) (provisional name)
+    void DumpOutOfSynch(FILE* inFile);   // FILE*: 0xa639b (ret 4; EEPhysics's out-of-synch dump) (provisional name)
     void Update();                      // 0xa8db8 (EEPhysics::Tick, every tick) (provisional name)
     void Reset();                       // 0xa8778 (before a scenario starts; provisional name)
     void RequestPendingPaths(EEMap* inMap);  // 0xa8582 (EEWorld::StartGame; provisional name)

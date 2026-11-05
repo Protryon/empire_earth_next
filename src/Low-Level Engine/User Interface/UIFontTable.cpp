@@ -101,13 +101,13 @@ long UIFontTable::Create(FSFileSpec& inFile, UIManager* inManager)
 GEFont* UIFontTable::CreateClosestFont(unsigned long inIndex, unsigned long inPixelHeight)
 {
     GEFont* theFont = NULL;
-    HDC theDC = GEDeviceContext::GetDeviceContext(NULL);
     UIFontTable* theTable = UIFontTable::sFontTable[inIndex];
     if (theTable) {
-        long theSize = (long)((__int64)inPixelHeight * 72 / GetDeviceCaps(theDC, LOGPIXELSY)) + 1;
+        // the screen's LOGPIXELSY was 96 for the game (a DPI-unaware process): fonts are sized in game pixels
+        const long kLogPixelsY = 96;
+        long theSize = (long)((int64_t)inPixelHeight * 72 / kLogPixelsY) + 1;
         theFont = UIFontTable::FindOrCreateFont(theTable->mName, theTable->mStyle, theTable->mQuality, theSize);
     }
-    GEDeviceContext::ReleaseDeviceContext(NULL, theDC);
     return theFont;
 }
 

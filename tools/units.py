@@ -23,19 +23,25 @@ PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # have no address in the original (the db text loader, the WON library's stand-ins)
 PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatThread.cpp", "Platform/Win32/PlatString.cpp",
                   "Platform/Win32/PlatPreferences.cpp", "Platform/Win32/PlatFile.cpp", "Platform/Win32/PlatPath.cpp",
-                  "Platform/Win32/PlatSocket.cpp", "Platform/Win32/PlatMessage.cpp", "Platform/Win32/PlatInput.cpp"]
+                  "Platform/Win32/PlatSocket.cpp", "Platform/Win32/PlatMessage.cpp",
+                  # the window, its events and input (SDL3; PORT.md step 4.3)
+                  "Platform/SDL/PlatWindow.cpp",
+                  # text (stb_truetype) with the fonts built in (PORT.md step 4.5)
+                  "Platform/Common/PlatFont.cpp", "Platform/Common/PlatFontData.c"]
 OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormats.cpp",
                      "Low-Level Engine/Graphics Engine/GEOpenFormatsFile.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
                "exe": ["Empire Earth/Database/EEDataText.cpp", "Empire Earth/Database/EEDataTextFile.cpp",
                        "Empire Earth/WONAPI/WONAPIStubs.cpp",
+                       # the language strings, generated from Language.rc (tools/lang_strings.py)
+                       "Empire Earth/Language/LanguageStrings.cpp",
                        # a unit with no code range of its own (every member was ICF-folded into another unit's)
                        "Empire Earth/Calamities/EEGlobalCalamityClass.cpp"]}
 LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c", "pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
              "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c",
              "cgltf": "ThirdParty/cgltf/cgltf.c", "stb_image": "ThirdParty/stb_image/stb_image.c"}
-# dmusic (DirectMusic reimplementation, src/ThirdParty/dmusic): every source but the POSIX thread shim
-_DMUSIC = sorted(p for p in (ROOT / "src" / "ThirdParty" / "dmusic").rglob("*.c") if p.name != "Thread.Posix.c")
+# dmusic (DirectMusic reimplementation, src/ThirdParty/dmusic): every source (the POSIX thread file is empty on Windows)
+_DMUSIC = sorted(p for p in (ROOT / "src" / "ThirdParty" / "dmusic").rglob("*.c"))
 LIB_UNITS.update({"dmusic-" + p.relative_to(ROOT / "src" / "ThirdParty" / "dmusic").with_suffix("").as_posix()
                   .replace("/", "-"): p.relative_to(ROOT / "src").as_posix() for p in _DMUSIC})
 LIB_MEMBERS = {"mixer": ["miniaudio"], "dx7hrtnl": ["pl_mpeg"], "lle": ["implode", "explode", "cgltf", "stb_image"] + sorted(

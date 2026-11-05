@@ -1,13 +1,48 @@
 // Platform layer, POSIX: messages to the user (include/platform/PlatMessage.h): the installed handler (the window
 // layer's message box), else stderr.
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
 
 #include <atomic>
+#include <initializer_list>
 
 #include "platform/PlatMessage.h"
 
 namespace {
 std::atomic<PlatMessageHandler> sHandler(nullptr);
+}
+
+extern "C" uint16_t PlatSystemLanguageId(void)
+{
+    const char* theLocale = NULL;
+    for (const char* theName : {"LC_ALL", "LC_MESSAGES", "LANG"}) {
+        theLocale = getenv(theName);
+        if (theLocale && *theLocale)
+            break;
+    }
+    if (!theLocale || strlen(theLocale) < 2)
+        return 0x409;
+    static const struct { const char* mPrefix; uint16_t mId; } kLanguages[] = {
+        {"zh_TW", 0x404}, {"zh_HK", 0xc04}, {"zh", 0x804}, {"de", 0x407}, {"en_GB", 0x809}, {"en", 0x409},
+        {"es", 0xc0a}, {"fr", 0x40c}, {"it", 0x410}, {"ja", 0x411}, {"ko", 0x412}, {"nl", 0x413}, {"pl", 0x415},
+        {"pt_BR", 0x416}, {"pt", 0x816}, {"ru", 0x419}, {"sv", 0x41d}, {"cs", 0x405}, {"hu", 0x40e}};
+    for (const auto& theLanguage : kLanguages)
+        if (strncmp(theLocale, theLanguage.mPrefix, strlen(theLanguage.mPrefix)) == 0)
+            return theLanguage.mId;
+    return 0x409;
+}
+
+extern "C" uint32_t PlatSystemVersion(void)
+{
+    return 0x0a00000au;
+}
+
+extern "C" void PlatSystemShutdown(void)
+{
 }
 
 extern "C" void PlatMessageShow(const char* inTitle, const char* inText, uint32_t inFlags)
@@ -30,4 +65,22 @@ extern "C" void PlatMessageSetHandler(PlatMessageHandler inHandler)
 extern "C" void PlatDebugOutput(const char* inText)
 {
     fputs(inText ? inText : "", stderr);
+}
+
+extern "C" int PlatSystemSingleInstance(const char* inName)
+{
+    // an exclusive lock on <tmp>/<name>-<uid>.lock, kept open for the process's lifetime
+    const char* theDirectory = getenv("TMPDIR");
+    if (!theDirectory || !*theDirectory)
+        theDirectory = "/tmp";
+    char thePath[1024];
+    snprintf(thePath, sizeof(thePath), "%s/%s-%u.lock", theDirectory, inName, static_cast<unsigned>(getuid()));
+    int theFile = open(thePath, O_RDWR | O_CREAT | O_CLOEXEC, 0600);
+    if (theFile < 0)
+        return 1;   // no lock possible: let the game run
+    if (flock(theFile, LOCK_EX | LOCK_NB) != 0) {
+        close(theFile);
+        return 0;
+    }
+    return 1;
 }

@@ -8,6 +8,12 @@
 #include "lle/LowLevelEngine.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "platform/PlatMessage.h"
+#include "platform/PlatWindow.h"
+#include "platform/PlatFile.h"
+#include <stdio.h>
+#include <string.h>
+#include "platform/PlatPath.h"
+#include <string>
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
@@ -450,12 +456,13 @@ long gAOCPacificChecksum = 1;
 long gAOCAsianChecksum = 1;
 long gEEDemoChecksum = 1;
 long gEELearningChecksum = 1;
+#ifdef _WIN32
 static char sStartScreenClassName[] = "Loading Game Window";
 static HBITMAP sStartScreenBitmap;
 static BITMAP sStartScreenBitmapInfo;
 static HDC sStartScreenDC;
+#endif
 static TMTimer* sTimer;                     // 0x5319ec (EECreateGameTimer's assert names it)
-static HHOOK sCallWndProcHook;             // 0x5319e0 (the start-up's SetWindowsHookEx(WH_CALLWNDPROC, ...))
 extern HINSTANCE gInstance;                 // 0x5319d8 (WinMain's instance, set by 0x540d73)
 volatile bool gStartScreenPainted;              // 0x5319f0 (the start screen's first WM_PAINT sets it)
 char gGameWindowTitle[4];                   // 0x5319f4 the start screen's title (only use 0x13f520 pushes it; never written; size 1..4 inferred)
@@ -470,7 +477,9 @@ public:
     ~EEStartScreen();
     void Start();
     void Stop();
+#ifdef _WIN32
     static LRESULT CALLBACK WindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam);
+#endif
     static unsigned long ThreadMain(void* inParameter);
     HINSTANCE mInstance;                    // +0x00
     TSThread* mThread;                      // +0x04
@@ -495,26 +504,33 @@ EEStartScreen::~EEStartScreen()
 
 // FUNCTION: EXE 0x53f2f6
 // In full screen only: starts the splash screen thread and waits until it has painted the splash bitmap
+// (Win32 only: elsewhere there is no splash window yet; PORT.md step 4)
 void EEStartScreen::Start()
 {
+#ifdef _WIN32
     if (gGamePreferences.mSettings.GetFullScreen() != true)
         return;
     gStartScreenPainted = false;
     TSScheduler::CreateThread(this->mThread, EEStartScreen::ThreadMain, this);
     while (gStartScreenPainted == false)
         PlatSleep(1);
+#endif
 }
 
 // FUNCTION: EXE 0x53f331
 // In full screen only: tells the splash screen thread to quit, waits for it to end and destroys it
 void EEStartScreen::Stop()
 {
+#ifdef _WIN32
     if (gGamePreferences.mSettings.GetFullScreen() != true)
         return;
     this->mQuit = true;
     this->mEndThreadEvent->Wait(kTSWaitInfinite);
     TSScheduler::DestroyThread(this->mThread);
+#endif
 }
+
+#ifdef _WIN32
 
 // FUNCTION: EXE 0x53f358
 // Splash window procedure: hides the cursor, skips background erases and paints the splash bitmap (flagging it painted)
@@ -581,8 +597,15 @@ unsigned long EEStartScreen::ThreadMain(void* inParameter)
             HDC theDC = GetDC(theWindow);
             sStartScreenDC = CreateCompatibleDC(theDC);
             ReleaseDC(theWindow, theDC);
+            // the splash window's own message pump (TSThread::Receive no longer dispatches Win32 messages)
             do {
-                theScreen->mThread->Receive(theMessage, theParameter1, theParameter2);
+                MSG theWin32Message;
+                theMessage = 0;
+                if (PeekMessage(&theWin32Message, NULL, 0, 0, PM_REMOVE)) {
+                    theMessage = theWin32Message.message;
+                    TranslateMessage(&theWin32Message);
+                    DispatchMessage(&theWin32Message);
+                }
                 EESetThreadFloatingPoint("StartScreenMainThread");
                 if (theScreen->mQuit == true)
                     PostQuitMessage(0);
@@ -595,6 +618,7 @@ unsigned long EEStartScreen::ThreadMain(void* inParameter)
     }
     return 0;
 }
+#endif   // _WIN32: the start screen's window
 
 // FUNCTION: EXE 0x53f5be
 // Puts the calling thread's FPU into 53-bit precision and round-to-nearest mode (the thread name is unused)
@@ -676,10 +700,15 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPatter
             thePath = theFile.GetVolume();
             thePath += theFile.GetDirectory();
             thePath += theFile.GetFile();
-            WIN32_FILE_ATTRIBUTE_DATA theAttributes;
-            GetFileAttributesExA(thePath, GetFileExInfoStandard, &theAttributes);
-            theChecksum += theAttributes.ftLastWriteTime.dwHighDateTime
-                + theAttributes.nFileSizeHigh + theAttributes.nFileSizeLow;
+            // the write time's high word plus the size (GetFileAttributesEx's ftLastWriteTime.dwHighDateTime,
+            // nFileSizeHigh and nFileSizeLow; files stay below 4 GB)
+            PlatFile* theNative = PlatFileOpen(thePath, PLAT_FILE_READ);
+            if (theNative != NULL) {
+                uint64_t theTime = 0;
+                PlatFileGetWriteTime(theNative, &theTime);
+                theChecksum += (unsigned long)(theTime >> 32) + PlatFileGetSize(theNative);
+                PlatFileClose(theNative);
+            }
         } else {
             // Fix: a file that cannot be opened is skipped, and a read that returns no data (an error, or the file
             // shrank) ends the loop; both used to loop forever.
@@ -862,7 +891,7 @@ bool EEInitializePart1()
         ESVERIFY_AT(theResult == keseOK, 823);
         EESetThreadFloatingPoint("EEInitializePart1:ISInitialize");
         if (EEInitializeSounds() == false) {
-            ShowWindow(gGameWindow->GetOSRepresentation(), SW_HIDE);
+            PlatWindowShow(gGameWindow->GetOSRepresentation(), 0);
             UWideString theMessage;
             UWideString theTitle;
             gResource->GetString(IDS_EMPIRE_EARTH_ART_OF_CONQUEST_REQUIRES_SOUND, theMessage);
@@ -1132,10 +1161,10 @@ void EEInitializeNetwork()
     TMGetTime();
     theFile.SetDirectory(gStartupDirectory);
     // the game's code is all in its exe (the original summed the engine, Dinkum and TCP Protocol DLLs)
-    char theExePath[MAX_PATH];
-    GetModuleFileNameA(NULL, theExePath, MAX_PATH);
-    const char* theExeName = strrchr(theExePath, '\\');
-    unsigned long theChecksum = EEGetFileChecksum(theFile, theExeName != NULL ? theExeName + 1 : theExePath, 0);
+    char theExeName[PLAT_MAX_PATH];
+    if (!PlatPathGetExecutableName(theExeName, sizeof(theExeName)))
+        theExeName[0] = 0;
+    unsigned long theChecksum = EEGetFileChecksum(theFile, theExeName, 0);
     theFile.SetDirectory(gStartupDirectory + "Data\\Db\\");
     theChecksum += EEGetFileChecksum(theFile, "*.dat", 0);
     // the db tables' text forms (EEDbFindFile loads them in place of the .dat); 0 when there are none
@@ -1459,17 +1488,6 @@ void EEClearGame()
     gWorld.mLock->WriteUnlock();
 }
 
-// FUNCTION: EXE 0x54126f
-// Window hook that swallows WM_SETCURSOR messages and passes everything else on
-// (the WH_CALLWNDPROC hook)
-LRESULT CALLBACK EECallWndProcHook(int inCode, WPARAM inWParam, LPARAM inLParam)
-{
-    CWPSTRUCT* theMessage = (CWPSTRUCT*)inLParam;
-    if (inCode >= 0 && (theMessage == NULL || theMessage->message == WM_SETCURSOR))
-        return 0;
-    return CallNextHookEx(sCallWndProcHook, inCode, inWParam, inLParam);
-}
-
 // FUNCTION: EXE 0x541481
 // Creates the game threads and registers the saved game's persistent sections
 void EEInitializePart2()
@@ -1499,17 +1517,23 @@ void EEInitGamePools()
 }
 
 
+#ifdef _WIN32
 static HANDLE sInstanceMutex;               // 0x5319dc
+#endif
 
 // FUNCTION: EXE 0x54398d
 // Creates the single-instance mutex; returns false when another copy of the game already holds it
 // (called by the start-up 0x540d73)
 bool EECreateInstanceMutex()
 {
+#ifdef _WIN32   // (the test harness finds the GetLastError call here: keep it direct)
     sInstanceMutex = CreateMutex(NULL, FALSE, "MadDocSoftwarePresentsEmpireEarthExpansion");
     if (sInstanceMutex != NULL && GetLastError() == 0)
         return true;
     return false;
+#else
+    return PlatSystemSingleInstance("MadDocSoftwarePresentsEmpireEarthExpansion") != 0;
+#endif
 }
 
 #include "lle/GEMovie.h"
@@ -1526,7 +1550,7 @@ void EEPlayIntroMovies(bool inSkipMovies)
     GERectangle theRectangle(0.0f, 0.0f, 640.0f, 480.0f);
     long thePriority = TSScheduler::GetCurrentThread()->GetPriority();
     TSScheduler::GetCurrentThread()->SetPriority(PLAT_PRIORITY_NORMAL);
-    SetFocus(gGameWindow->GetOSRepresentation());
+    PlatWindowRaise(gGameWindow->GetOSRepresentation());
     gRasterizer->SetWaitForVSync(true, gGamePreferences.mSettings.GetScreenID());
     gISMouse->Resume();
     gISKeyboard->Resume();
@@ -1587,7 +1611,9 @@ void EEPlayIntroMovies(bool inSkipMovies)
 // (no direct caller: registered as a shutdown routine)
 void EEReleaseInstanceMutex(bool inShutdown)
 {
+#ifdef _WIN32
     CloseHandle(sInstanceMutex);
+#endif
     ESEndRecording();
     gGamePreferences.Save();
 }
@@ -1653,7 +1679,6 @@ void EEGraphicsShutdown(bool inShutdown)
     gDisplayRasterizers.clear();
     delete gGameWindow;
     gGameWindow = NULL;
-    UnregisterClassA("Empire Earth Expansion", gInstance);
     Fn102E1B();
     gRasterizer->Deactivate();
     delete gU565350;
@@ -1947,20 +1972,8 @@ bool EEInitializeDisplay()
     }
     gGamePreferences.Save();
     Fn10269C();
-    WNDCLASSEXA theClass;
-    theClass.cbSize = sizeof(theClass);
-    theClass.style = CS_HREDRAW | CS_VREDRAW;
-    theClass.lpfnWndProc = EEUserInterface::WindowProc;
-    theClass.cbClsExtra = 0;
-    theClass.cbWndExtra = 0;
-    theClass.hInstance = gInstance;
-    theClass.hIcon = LoadIcon(gInstance, MAKEINTRESOURCE(0x66));
-    theClass.hCursor = LoadCursor(gInstance, MAKEINTRESOURCE(0x68));
-    theClass.hbrBackground = (HBRUSH)GetStockObject(NULL_BRUSH);
-    theClass.lpszMenuName = NULL;
-    theClass.lpszClassName = "Empire Earth Expansion";
-    theClass.hIconSm = NULL;
-    RegisterClassExA(&theClass);
+    // the window class (name, icon 0x66) is the platform window system's (PlatWindowSetAppName in WinMain); its
+    // events go to EEUserInterface::HandleEvent (TSThread::SetEventPump)
     GERectangle theDesktop = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->GetDesktopRectangle();
     theScreen = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID());
     theOrigin.SetXY(theDesktop.GetLeft(), theDesktop.GetTop());
@@ -1974,6 +1987,8 @@ bool EEInitializeDisplay()
     }
 
     ESVERIFY_AT(theResult == keseOK, 3523);
+    // typed text always arrives (WM_CHAR did): the window's text input is on from the start
+    PlatTextInputStart(gGameWindow->GetOSRepresentation(), 0, 0, 0, 0);
     theResult = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->Capture(gGameWindow, gGamePreferences.mSettings.GetFullScreen());
 
     ESVERIFY_AT(theResult == keseOK, 3527);
@@ -1981,7 +1996,9 @@ bool EEInitializeDisplay()
     return true;
 }
 
+#ifdef _WIN32
 #include <objbase.h>
+#endif
 
 bool EEParseCommandLineFirstPass(const char* inCommandLine, bool& outShowMovies); // 0x52d9e5
 bool EEParseCommandLine(const char* inCommandLine); // 0x52d703 (after start-up)
@@ -1992,15 +2009,27 @@ UResourceFile* gResource;
 // Runs the game: single-instance check, start-up, splash and intro, the user interface loop, then shutdown;
 // returns 1 when the original Empire Earth install is missing, else 0
 // (the previous instance and show command arguments are unused)
-int WINAPI WinMain(HINSTANCE inInstance, HINSTANCE inPreviousInstance, LPSTR inCommandLine, int inShowCommand)
+static int EERun(HINSTANCE inInstance, char* inCommandLine)
 {
     EEStartScreen theStartScreen(inInstance);
     FSFileSpec theRecordingFile;
     if (EECreateInstanceMutex()) {
-        sCallWndProcHook = SetWindowsHookExA(WH_CALLWNDPROC, EECallWndProcHook, NULL, 0);
+        // the window system (platform/PlatWindow.h): the window class "Empire Earth Expansion" with the game's icon,
+        // its events pumped by the UI thread's TSThread::Receive (this thread: EEUserInterface::Run runs on it)
+        PlatWindowSetAppName("Empire Earth Expansion", 0x66);
+        if (!PlatWindowSystemStart()) {
+            PlatMessageShow("Empire Earth", PlatWindowLastError(), PLAT_MESSAGE_ERROR);
+            return 1;
+        }
+        TSThread::SetEventPump(EEPumpWindowEvent, PlatCurrentThreadId());
+#ifdef _WIN32
+        PlatWindowSetNativeMessageHook(EENativeMessageHook);
+#endif
+#ifdef _WIN32
         HRESULT theHResult = CoInitialize(NULL);
 
         ESVERIFY_AT(theHResult == S_OK || theHResult == S_FALSE, 3600);
+#endif
         UMSetFloatingPointPrecision(kFPPrecision53);
         UMFastMath::BuildSqrtTable();
         bool theShowMovies;
@@ -2024,8 +2053,10 @@ int WINAPI WinMain(HINSTANCE inInstance, HINSTANCE inPreviousInstance, LPSTR inC
                 gResource->GetString(IDS_EMPIRE_EARTH_ART_OF_CONQUEST_REQUIRES_ORIGINAL, theMessage);
                 gResource->GetString(IDS_ERROR_CANT_RUN, theTitle);
                 PlatMessageShow(theTitle, theMessage, 0);
+#ifdef _WIN32
                 CoUninitialize();
-                UnhookWindowsHookEx(sCallWndProcHook);
+#endif
+                PlatWindowSystemStop();
                 return 1;
             }
             EELoadNetworkSettings();
@@ -2054,11 +2085,156 @@ int WINAPI WinMain(HINSTANCE inInstance, HINSTANCE inPreviousInstance, LPSTR inC
                 gCivilizationDataPath->Dereference();
             }
         }
+#ifdef _WIN32
         CoUninitialize();
-        UnhookWindowsHookEx(sCallWndProcHook);
+#endif
+        PlatWindowSystemStop();
     }
     return 0;
 }
+
+#ifdef _WIN32
+// the Windows entry point (the previous instance and show command arguments are unused)
+int WINAPI WinMain(HINSTANCE inInstance, HINSTANCE inPreviousInstance, LPSTR inCommandLine, int inShowCommand)
+{
+    return EERun(inInstance, inCommandLine);
+}
+#else
+// The POSIX entry point. The game's data is the data root (EE_DATA_ROOT, else the executable's directory, a macOS app
+// bundle's Contents/Resources: platform/PlatPath.h), which becomes the current directory; the arguments are joined into
+// the command line WinMain gets. --smoke-test checks what needs no game data (CI): the window system, a window, the
+// renderer's wgpu device and presented frames, then reports whether the data root holds the game's data.
+#include "gx/GX.h"
+
+static GXSurface* EESmokeSurface(GXDirectDraw* inDirectDraw, unsigned long inCaps, unsigned long inWidth,
+                                 unsigned long inHeight)
+{
+    GXSURFACEDESC theDescription = {};
+    theDescription.dwSize = sizeof(theDescription);
+    theDescription.dwFlags = GXSD_CAPS | GXSD_WIDTH | GXSD_HEIGHT | GXSD_PIXELFORMAT;
+    theDescription.dwWidth = inWidth;
+    theDescription.dwHeight = inHeight;
+    theDescription.ddsCaps.dwCaps = inCaps;
+    GXPIXELFORMAT& theFormat = theDescription.ddpfPixelFormat;
+    theFormat.dwSize = sizeof(theFormat);
+    theFormat.dwFlags = GXPF_RGB;
+    theFormat.dwRGBBitCount = 32;
+    theFormat.dwRBitMask = 0xff0000;
+    theFormat.dwGBitMask = 0xff00;
+    theFormat.dwBBitMask = 0xff;
+    GXSurface* theSurface = NULL;
+    if (inDirectDraw->CreateSurface(&theDescription, &theSurface, NULL) != GX_OK)
+        return NULL;
+    return theSurface;
+}
+
+// Whether the data root holds the game (its Data folder with the db tables) -> nonzero; the root into outRoot
+static int EEDataPresent(char* outRoot, uint32_t inSize)
+{
+    if (!PlatPathGetDataRoot(outRoot, inSize))
+        return 0;
+    std::string theDb = std::string(outRoot) + "Data\\Db";
+    uint32_t theAttributes = PlatPathGetAttributes(theDb.c_str());
+    return theAttributes != PLAT_ATTR_INVALID && (theAttributes & PLAT_ATTR_DIRECTORY) != 0;
+}
+
+static void EEReportMissingData(const char* inRoot)
+{
+    char theText[1024];
+    snprintf(theText, sizeof(theText),
+             "Empire Earth: The Art of Conquest: game data not found in %s (no Data\\Db folder there).\n"
+             "Copy the installed game (its Data and Users folders) there, or point EE_DATA_ROOT at a copy of it: "
+             "see README.md, 'Linux and macOS'.", inRoot && *inRoot ? inRoot : "the data root");
+    PlatMessageShow("Empire Earth", theText, PLAT_MESSAGE_ERROR);
+}
+
+// -> 0: the window, the wgpu device and 30 presented frames worked (the data root is reported); 2: no display or no
+// GPU adapter; 1: a check failed
+static int EESmokeTest()
+{
+    char theRoot[PLAT_MAX_PATH] = "";
+    int theData = EEDataPresent(theRoot, sizeof(theRoot));
+    PlatWindowSetAppName("Empire Earth Expansion", 0);
+    if (!PlatWindowSystemStart()) {
+        fprintf(stderr, "smoke test: no window system: %s\n", PlatWindowLastError());
+        return 2;
+    }
+    PlatWindow* theWindow = PlatWindowCreate("Empire Earth: The Art of Conquest (smoke test)", 640, 480, 0);
+    if (theWindow == NULL) {
+        fprintf(stderr, "smoke test: no window: %s\n", PlatWindowLastError());
+        return 2;
+    }
+    GXDirectDraw* theDirectDraw = NULL;
+    if (GXDirectDrawCreate(NULL, &theDirectDraw) != GX_OK) {
+        fprintf(stderr, "smoke test: no wgpu device (no GPU adapter)\n");
+        return 2;
+    }
+    theDirectDraw->SetCooperativeLevel(theWindow, GXSCL_NORMAL);
+    GXSurface* thePrimary = EESmokeSurface(theDirectDraw, GXSCAPS_PRIMARYSURFACE, 0, 0);
+    GXSurface* theBack = EESmokeSurface(theDirectDraw, GXSCAPS_OFFSCREENPLAIN | GXSCAPS_3DDEVICE, 640, 480);
+    if (thePrimary == NULL || theBack == NULL) {
+        fprintf(stderr, "smoke test: FAIL surfaces\n");
+        return 1;
+    }
+    int theFailed = 0;
+    for (int theFrame = 0; theFrame < 30; theFrame++) {
+        GXBLTFX theFill = {sizeof(GXBLTFX), (unsigned long)(0x00102030 * (theFrame % 8))};
+        theBack->Blt(NULL, NULL, NULL, GXBLT_COLORFILL, &theFill);
+        GXSURFACEDESC theLocked = {};
+        theLocked.dwSize = sizeof(theLocked);
+        RECT theAll = {0, 0, 640, 480};
+        if (theBack->Lock(NULL, &theLocked, 0, NULL) == GX_OK) {
+            uint32_t thePixel = *(const uint32_t*)((const unsigned char*)theLocked.lpSurface + 10 * theLocked.lPitch + 40);
+            theBack->Unlock(NULL);
+            if ((thePixel & 0xffffff) != (theFill.dwFillColor & 0xffffff))
+                theFailed = 1;
+        } else
+            theFailed = 1;
+        thePrimary->Blt(&theAll, theBack, NULL, 0, NULL);   // presents into the window
+        PlatInputEvent theEvent;
+        while (PlatWindowPollEvent(&theEvent))
+            ;
+        PlatSleep(16);
+    }
+    theBack->Release();
+    thePrimary->Release();
+    theDirectDraw->Release();
+    PlatWindowDestroy(theWindow);
+    printf("smoke test: window, wgpu device, 30 frames presented and read back%s\n", theFailed ? ": FAIL" : "");
+    if (theData)
+        printf("smoke test: the game's data is in %s\n", theRoot);
+    else
+        printf("smoke test: game data not found in %s (EE_DATA_ROOT; README.md 'Linux and macOS')\n",
+               *theRoot ? theRoot : "the data root");
+    PlatWindowSystemStop();
+    return theFailed ? 1 : 0;
+}
+
+int main(int argc, char** argv)
+{
+    std::string theCommandLine;
+    for (int i = 1; i < argc; i++) {
+        if (!strcmp(argv[i], "--smoke-test"))
+            return EESmokeTest();
+        if (i > 1)
+            theCommandLine += ' ';
+        theCommandLine += argv[i];
+    }
+    char theRoot[PLAT_MAX_PATH] = "";
+    if (!EEDataPresent(theRoot, sizeof(theRoot))) {
+        EEReportMissingData(theRoot);
+        return 3;
+    }
+    if (!PlatPathEnterDataRoot()) {
+        PlatMessageShow("Empire Earth", "The game's data directory could not be entered (EE_DATA_ROOT).",
+                        PLAT_MESSAGE_ERROR);
+        return 1;
+    }
+    std::vector<char> theBuffer(theCommandLine.begin(), theCommandLine.end());
+    theBuffer.push_back(0);
+    return EERun(NULL, &theBuffer[0]);
+}
+#endif
 #pragma optimize("g", on)   // ??_GUResourceFile 0x54494d (no-/Og in the original) is emitted under WinMain's state
 // FUNCTION: EXE 0x54494d
 // Destroys the resource file and frees it when asked (scalar deleting destructor)

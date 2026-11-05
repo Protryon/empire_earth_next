@@ -7,6 +7,8 @@
 #define EE_EEWONNET_H
 
 #include <stdint.h>   // int32_t/uint32_t: the network fields' fixed widths
+#include "platform/PlatSocket.h"    // PlatSockAddrIn (sockaddr_in's layout)
+#include "platform/PlatThread.h"    // PlatMutex, PlatAtomicIncrement/Decrement
 
 #include <map>                              // EEWonNet::mGames/mRooms
 #include <string>                           // std::string/std::wstring (Dinkum's <map> brought it in)
@@ -32,7 +34,7 @@ public:
     // implicit copy ctor (COMDAT 0x291d59), operator= (COMDAT 0x29181b) and dtor (provisional names)
     bool mB00;                              // +0x00
     std::string mHost;                      // +0x04
-    sockaddr_in mAddr;                      // +0x14 (16 bytes, copied as four dwords)
+    PlatSockAddrIn mAddr;                   // +0x14 (sockaddr_in: 16 bytes, copied as four dwords)
     bool mB24;                              // +0x24
 };
 
@@ -42,12 +44,12 @@ class RefCount {
 public:
     RefCount() : mRefCount(0) {}
     virtual ~RefCount() {}
-    void AddRef() { InterlockedIncrement(&this->mRefCount); }
-    void Release() { if (InterlockedDecrement(&this->mRefCount) <= 0) delete this; }
+    void AddRef() { PlatAtomicIncrement(&this->mRefCount); }
+    void Release() { if (PlatAtomicDecrement(&this->mRefCount) <= 0) delete this; }
     // GUIString::CopyOnWrite 0x29121b compares the count unsigned (`jbe`)
     unsigned long GetRefCount() const { return this->mRefCount; }
 
-    long mRefCount;                         // +0x04
+    volatile int32_t mRefCount;             // +0x04
 };
 
 // WONAPI's lock (no vtable: the lobby lock's `$E` ctor 0x297ef1 pushes the global's address straight to
@@ -55,12 +57,12 @@ public:
 // has one)
 class CriticalSection {
 public:
-    CriticalSection() { InitializeCriticalSection(&this->mCrit); }
-    ~CriticalSection() { DeleteCriticalSection(&this->mCrit); }
-    void Enter() { EnterCriticalSection(&this->mCrit); }
-    void Leave() { LeaveCriticalSection(&this->mCrit); }
+    CriticalSection() : mCrit(PlatMutexCreate()) {}
+    ~CriticalSection() { PlatMutexDestroy(this->mCrit); }
+    void Enter() { PlatMutexLock(this->mCrit); }
+    void Leave() { PlatMutexUnlock(this->mCrit); }
 
-    CRITICAL_SECTION mCrit;
+    PlatMutex* mCrit;                       // was a CRITICAL_SECTION (the platform layer's recursive mutex)
 };
 
 // a directory server entry of WONAPI (class name and layout inferred: the server list form shows mDisplayName, or

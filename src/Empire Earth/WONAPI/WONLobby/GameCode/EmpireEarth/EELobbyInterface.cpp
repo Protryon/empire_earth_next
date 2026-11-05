@@ -393,6 +393,7 @@ void EELobbyPostAction(void (*inFunc)())
 // (the game window's title and icon), the lobby screen in it; then shows it and runs it until it is left (r24pre-won)
 void EELobbyFn2972C6()
 {
+#ifdef _WIN32   // the lobby's windows are Win32 windows (PORT.md step 4.3f): it does not open elsewhere
     char theText[256];
     WNDCLASSA theClass;
     if (gEELobbyOpen)
@@ -412,14 +413,14 @@ void EELobbyFn2972C6()
     if (gGamePreferences.mSettings.mFullScreen)
         theStyle = 0x22;
     gEELobbyPlatformWindow->mStyle = theStyle;
-    GetWindowTextA(gGameWindow->GetOSRepresentation(), theText, 256);
+    GetWindowTextA((HWND)gGameWindow->GetNativeHandle(), theText, 256);
     gEELobbyPlatformWindow->SetTitle(theText);
     if (gGamePreferences.mSettings.mFullScreen)
-        LobbyFn3D08C0(gGameWindow->GetOSRepresentation());
+        LobbyFn3D08C0((HWND)gGameWindow->GetNativeHandle());
     WONRectangle theRect(0, 0, 100, 100);
     gEELobbyPlatformWindow->Create(theRect);
     LobbyFn3D08C0(NULL);
-    if (GetClassNameA(gGameWindow->GetOSRepresentation(), theText, 256) &&
+    if (GetClassNameA((HWND)gGameWindow->GetNativeHandle(), theText, 256) &&
         GetClassInfoA(gInstance, theText, &theClass) && theClass.hIcon != NULL)
         gEELobbyPlatformWindow->SetIcon(new MSNativeIcon(gEELobbyPlatformWindow->mDisplayContext, theClass.hIcon));
     RootContainer* theRoot = gEELobbyPlatformWindow->mRoot;
@@ -430,6 +431,7 @@ void EELobbyFn2972C6()
     EELobbyFn29754D(true);
     LobbyFn362740();
     EELobbyFn2976C7();
+#endif
 }
 
 // SYNTHETIC: EXE 0x697531
@@ -448,10 +450,11 @@ void EELobbyFn2972C6()
 // place, input is suspended (full screen: DirectDraw flips to the GDI surface) or the game window is hidden
 void EELobbyFn29754D(bool inFlag)
 {
+#ifdef _WIN32   // the lobby replaces the game window (Win32 only)
     if (gEELobbyShown || gEELobbyPlatformWindow.mPtr == NULL)
         return;
     RECT theRect;
-    GetWindowRect(gGameWindow->GetOSRepresentation(), &theRect);
+    GetWindowRect((HWND)gGameWindow->GetNativeHandle(), &theRect);
     GE2DPoint theCursor(0.0f, 0.0f);
     sEELobbyWidth = theRect.right - theRect.left;
     sEELobbyHeight = theRect.bottom - theRect.top;
@@ -465,7 +468,7 @@ void EELobbyFn29754D(bool inFlag)
         POINT thePoint;
         thePoint.x = 0;
         thePoint.y = 0;
-        ClientToScreen(gGameWindow->GetOSRepresentation(), &thePoint);
+        ClientToScreen((HWND)gGameWindow->GetNativeHandle(), &thePoint);
         SetCursorPos(thePoint.x + theCursor.mX, thePoint.y + (double)theCursor.mY);
     }
     Fn297F15();
@@ -478,12 +481,13 @@ void EELobbyFn29754D(bool inFlag)
         if (inFlag)
             ((GXDirectDraw*)*(DX7Screen*)gRasterizer->GetScreen(gScreenIndex))->FlipToGDISurface();
     } else {
-        ShowWindow(gGameWindow->GetOSRepresentation(), SW_HIDE);
+        ShowWindow((HWND)gGameWindow->GetNativeHandle(), SW_HIDE);
     }
     Fn297F21();
     for (int theCount = 1 - ShowCursor(TRUE); theCount > 0; theCount--)
         ShowCursor(TRUE);
     gEELobbyPlatformWindow->Fn32A1E0();
+#endif
 }
 
 // FUNCTION: EXE 0x6976c7
@@ -597,13 +601,14 @@ void EELobbyFn297897()
 // back from the lobby to the game: the game window takes the lobby window's place, input resumes (r23)
 void EELobbyFn297AC9()
 {
+#ifdef _WIN32   // back from the lobby (Win32 only)
     if (!gEELobbyShown || gEELobbyPlatformWindow.mPtr == NULL)
         return;
     gEELobbyShown = false;
     if (!gGamePreferences.mSettings.mFullScreen && gEELobbyPlatformWindow->Virtual4C()) {
         WONRectangle theRect;
         gEELobbyPlatformWindow->GetRect(theRect, false);
-        MoveWindow(gGameWindow->GetOSRepresentation(), theRect.x, theRect.y, sEELobbyWidth, sEELobbyHeight, FALSE);
+        MoveWindow((HWND)gGameWindow->GetNativeHandle(), theRect.x, theRect.y, sEELobbyWidth, sEELobbyHeight, FALSE);
     }
     gUIManager->RedrawAll();
     if (gGamePreferences.mSettings.mFullScreen) {
@@ -612,7 +617,7 @@ void EELobbyFn297AC9()
         if (gISMouse != NULL)
             gISMouse->Resume();
     } else {
-        ShowWindow(gGameWindow->GetOSRepresentation(), SW_RESTORE);
+        ShowWindow((HWND)gGameWindow->GetNativeHandle(), SW_RESTORE);
     }
     if (gMouse != NULL) {
         POINT theCursor;
@@ -620,11 +625,12 @@ void EELobbyFn297AC9()
         POINT thePoint;
         thePoint.x = 0;
         thePoint.y = 0;
-        ClientToScreen(gGameWindow->GetOSRepresentation(), &thePoint);
+        ClientToScreen((HWND)gGameWindow->GetNativeHandle(), &thePoint);
         gMouse->SetPosition(GE2DPoint(thePoint.x, thePoint.y));
         gMouse->mPointer = 0;
     }
     gEELobbyPlatformWindow->Show(false);
+#endif
 }
 
 // FUNCTION: EXE 0x697be0
@@ -636,16 +642,19 @@ void EELobbyFn297BE0()
     theFile.SetVolume(gStartupVolume);
     theFile.SetDirectory(gStartupDirectory + UString("Sierra Update\\"));
     theFile.SetFile("SierraUp.exe");
+#ifdef _WIN32   // Sierra Update is a Windows program
     if (theFile.Open(1) == keseOK) {
         theFile.Close();
         HINSTANCE theResult = ShellExecuteA(GetDesktopWindow(), "open",
             theFile.GetVolume() + theFile.GetDirectory() + theFile.GetFile(), NULL,
             theFile.GetVolume() + theFile.GetDirectory(), SW_SHOWNORMAL);
         if ((INT_PTR)theResult > 32) {
-            PostQuitMessage(0);
+            if (gUserInterface != NULL)   // PostQuitMessage: WM_QUIT to the UI thread's queue
+                gUserInterface->mThread->Post(0x12, NULL, NULL, false);
             return;
         }
     }
+#endif
     gResource->GetString(0x8031, theMessage);
     gUIManager->DisplayMessage(theMessage, true, 0, 0, true);
 }

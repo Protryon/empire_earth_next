@@ -8,6 +8,10 @@
 #include <windows.h>
 #include <math.h>
 #include <float.h>
+#include <cmath>
+#ifndef _WIN32
+#include <fenv.h>
+#endif
 
 #include "lle/LowLevelEngine.h"
 
@@ -78,13 +82,13 @@ float UMArcTan(float inValue)
     }
     if (inValue > 1.0f) {
         float theInverse = 1.0f / inValue;
-        if (_finite(theInverse))
+        if (std::isfinite((double)theInverse))
             return 1.5707964f - UMArcTan(theInverse);
         return 1.5707964f;
     }
     if (inValue < -1.0f) {
         float theInverse = -1.0f / inValue;
-        if (_finite(theInverse))
+        if (std::isfinite((double)theInverse))
             return UMArcTan(theInverse) - 1.5707964f;
         return kMinusHalfPi;
     }
@@ -129,19 +133,34 @@ unsigned long UMGetFloatingPointPrecision()
 {
 #if !defined(_M_IX86)
     // only the x87 has a precision control; SSE computes doubles at 53 bits, the precision the game asks for
-    return _PC_53;
-#endif
+    return kFPPrecision53;
+#else
     unsigned long theControl = _controlfp(0, 0);
     if ((theControl & _PC_24) == _PC_24)
         return _PC_24;
     return (theControl & _PC_53) == _PC_53 ? _PC_53 : _PC_64;
+#endif
 }
+
+#ifndef _WIN32
+// float.h's _RC_* rounding-control values (what the engine stores and compares) and <fenv.h>'s modes
+static const unsigned long kRoundingControl[4] = {0x000, 0x100, 0x200, 0x300};   // _RC_NEAR, _RC_DOWN, _RC_UP, _RC_CHOP
+static const int kRoundingMode[4] = {FE_TONEAREST, FE_DOWNWARD, FE_UPWARD, FE_TOWARDZERO};
+#endif
 
 // FUNCTION: LLE 0x10080f02
 // Returns the FPU rounding mode
 unsigned long UMGetFloatingPointRoundingMode()
 {
+#ifdef _WIN32
     return _controlfp(0, 0) & _MCW_RC;
+#else
+    int theMode = fegetround();
+    for (int i = 0; i < 4; i++)
+        if (kRoundingMode[i] == theMode)
+            return kRoundingControl[i];
+    return 0;
+#endif
 }
 
 // FUNCTION: LLE 0x10080f14
@@ -181,7 +200,13 @@ void UMSetFloatingPointPrecision(unsigned long inPrecision)
 // Sets the FPU rounding mode
 void UMSetFloatingPointRoundingMode(unsigned long inMode)
 {
+#ifdef _WIN32
     _controlfp(inMode, _MCW_RC);
+#else
+    for (int i = 0; i < 4; i++)
+        if (kRoundingControl[i] == (inMode & 0x300))
+            fesetround(kRoundingMode[i]);
+#endif
 }
 
 // FUNCTION: LLE 0x10080fcf

@@ -14,6 +14,10 @@ struct PlatEvent;
 // is in force). Monotonic, arbitrary epoch, wraps every 2^32 ms: compare times by unsigned difference.
 uint32_t PlatTimeMilliseconds(void);
 
+// Milliseconds since an arbitrary epoch on a 64-bit clock that does not wrap (Win32: GetTickCount64, which the test
+// harness's time shim leaves at real time: for timeouts that must not shrink when the game's clock runs faster).
+uint64_t PlatTimeMilliseconds64(void);
+
 // The high-resolution counter: its ticks per second, 0 when the system has none (Win32: QueryPerformanceFrequency),
 // and its current value (QueryPerformanceCounter; 0 when there is none).
 int64_t PlatCounterFrequency(void);

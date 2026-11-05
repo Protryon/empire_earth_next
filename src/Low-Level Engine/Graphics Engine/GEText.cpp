@@ -13,49 +13,36 @@
 #include "lle/TSScheduler.h"
 #include "lle/UReferenceCounter.h"
 #include "lle/GEColor.h"
-#include "lle/GEDeviceContext.h"
 #include "lle/GEFont.h"
 #include "lle/GEText.h"
+#include "platform/PlatFont.h"
 
 // FUNCTION: LLE 0x10032ae2
-// Measures the text's pixel extent with its font, in chunks of 256 characters
+// Measures the text's pixel extent with its font (platform/PlatFont.h: GetTextExtentPoint32's), in chunks of 256
+// characters; the height is the font's cell
 void GEText::ComputeTextExtent()
 {
-    HDC theContext;
-    unsigned long i;
-    HGDIOBJ theOldFont;
-    SIZE theSize;
-    HFONT theFont = this->mFont->GetOSFont();
-    const unsigned char* theString;
-    theContext = GEDeviceContext::GetDeviceContext(NULL);
-    if (theContext != NULL) {
-        theOldFont = SelectObject(theContext, theFont);
-        if (theOldFont != NULL) {
-            unsigned long theChunks = this->mText.GetLength() / 256;
-            theString = reinterpret_cast<const unsigned char*>((const char*)this->mText);
-            this->mTextExtent.SetRight(0.0f);
-            for (i = 0; i < theChunks; i++) {
-                // Measure this chunk only (this measured the whole text once per chunk).
-                const unsigned char* theNext = PlatMbsNInc(theString, 256);
-                if (!GetTextExtentPoint32(theContext, reinterpret_cast<const char*>(theString), theNext - theString, &theSize)) {
-                    GetLastError();
-                    break;
-                }
-                this->mTextExtent.SetLeft(0.0f);
-                this->mTextExtent.SetRight(this->mTextExtent.GetRight() + theSize.cx);
-                this->mTextExtent.SetTop(0.0f);
-                this->mTextExtent.SetBottom((float)theSize.cy);
-                theString = theNext;
-            }
-            if (GetTextExtentPoint32(theContext, reinterpret_cast<const char*>(theString), strlen(reinterpret_cast<const char*>(theString)), &theSize)) {
-                this->mTextExtent.SetLeft(0.0f);
-                this->mTextExtent.SetRight(this->mTextExtent.GetRight() + theSize.cx);
-                this->mTextExtent.SetTop(0.0f);
-                this->mTextExtent.SetBottom((float)theSize.cy);
-            } else
-                GetLastError();
-            SelectObject(theContext, theOldFont);
-        }
+    PlatFont* theFont = this->mFont->GetOSFont();
+    if (theFont == NULL)
+        return;
+    PlatFontMetrics theMetrics;
+    PlatFontGetMetrics(theFont, &theMetrics);
+    const unsigned char* theString = reinterpret_cast<const unsigned char*>((const char*)this->mText);
+    unsigned long theChunks = this->mText.GetLength() / 256;
+    this->mTextExtent.SetRight(0.0f);
+    for (unsigned long i = 0; i < theChunks; i++) {
+        const unsigned char* theNext = PlatMbsNInc(theString, 256);
+        this->mTextExtent.SetLeft(0.0f);
+        this->mTextExtent.SetRight(this->mTextExtent.GetRight()
+                                   + PlatFontMeasure(theFont, reinterpret_cast<const char*>(theString), theNext - theString));
+        this->mTextExtent.SetTop(0.0f);
+        this->mTextExtent.SetBottom((float)theMetrics.mHeight);
+        theString = theNext;
     }
-    GEDeviceContext::ReleaseDeviceContext(NULL, theContext);
+    this->mTextExtent.SetLeft(0.0f);
+    this->mTextExtent.SetRight(this->mTextExtent.GetRight()
+                               + PlatFontMeasure(theFont, reinterpret_cast<const char*>(theString),
+                                                 strlen(reinterpret_cast<const char*>(theString))));
+    this->mTextExtent.SetTop(0.0f);
+    this->mTextExtent.SetBottom((float)theMetrics.mHeight);
 }
