@@ -1015,3 +1015,35 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   format is little-endian; `(unsigned long)-10000` coordinate sentinels (EEComplexUnit sight updates) compare a
   converted long, which sign-extends alike on LP64; in-memory `long` arithmetic that overflows 32 bits (with
   `-fwrapv`, Windows wraps, LP64 does not) is not censused beyond hashes, checksums and the RNG.
+
+## x87 range: the black game view (branch render)
+
+- **Symptom**: on x64 the 3D game view stayed black during play (terrain, units, shadows), while the UI, the cursor and
+  the mini map (drawn on the CPU from the terrain) were fine; the logic ran normally. An i686 build with
+  `/arch:SSE2` was black too, the x87 i686 build was not: a floating-point model difference, not pointer size.
+- **Cause**: the graphics thread's light fade (EERenderObject.cpp, the per-frame update) computes
+  `start + (1 - start) * (rate * elapsed)`; a fade "at once" (`EEStartLightFadeIn(0)`, which the main game form posts
+  when the game starts) sets the rate to FLT_MAX. With x87 code the product stays in an extended-range register
+  (FLT_MAX * 16 ms is about 5e39, finite), and `(1 - 1) * 5e39` is 0: the fade stays 1. In SSE float arithmetic the
+  product overflows to infinity and `0 * inf` is a NaN, which passes the `> 1` / `< 0` clamps. From the first frame
+  every light intensity, the ambient and the fog colour were NaN times their colour: GX drew all the geometry
+  (`EE_GX_STATS`: ~140,000 triangles per 60 scenes, 90% of the vertices inside the clip volume) black. The original
+  VC6 build and the x87 clang build never saw it.
+- **Fix**: the fade and the letterbox progress (the same formula with the same FLT_MAX "at once" rate; the
+  letterbox's NaN would also stop a scenario's ending cinematic, which waits for the zoom to be exactly 1) are
+  evaluated in double, the x87 build's range; the result is clamped as before. Other FLT_MAX values in the code
+  are minimum trackers that real values replace before any arithmetic, comparison bounds, or divisors (UMTan's
+  FLT_MAX at a zero cosine: `x / FLT_MAX` is finite either way); none is multiplied.
+- **Lesson**: "float arithmetic is the same on SSE" does not hold for code written against VC6's x87 code: products
+  of a sentinel (FLT_MAX, 1e38) only stay finite in an x87 register. A NaN is silent: it passes every ordered
+  clamp. Look for sentinel arithmetic when x64 and x87 builds differ wholesale, not in the last digit.
+- **Diagnostics**: `EE_GX_STATS=<n>` (opt-in) logs every n scenes the 3D draws by topology, lit/textured/blended/
+  fogged/z draws, the vertices after the world-view-projection (in front, inside the clip volume, clip ranges), their
+  colour range and the fog range/colour with the vertices before/in/past the fog. It told "drawn black" from "not
+  drawn" and "drawn off screen" in one session: geometry inside, fog colour and ambient 0xff000000.
+- **Rendering gate**: the harness's tour (and random-game) exercise now checks the captured gameplay frame and, after
+  `--play-seconds` of at least 10, the play frame (`session_exercise.check_rendering`, evidence `rendering.json`):
+  the game view (x 0-80%, y 6-88% of the frame) needs at least 30% pixels with a channel above 24 and 512 colours at
+  5 bits per channel (correct frames: 78%, ~3,000; the black ones: 0.1%, 181, the cursor); the mini map's inside
+  (x 84-99.5%, y 73-93.5%) at least 0.2% coloured, non-grey, non-player-blue/red pixels (correct at the start:
+  0.7-1.1%). A capture used to need only 16 distinct byte values in the whole frame, which the UI alone provides.

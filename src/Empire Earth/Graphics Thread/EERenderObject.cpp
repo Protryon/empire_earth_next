@@ -698,11 +698,15 @@ void EERenderObject::Fn10C036()
     gRenderEnvironment.mWaterPhase += theElapsed * kEERenderObject_F4413C4 * 6.2831855f;
     gRenderEnvironment.mCloudOffset += theElapsed * gRenderEnvironment.mWindSpeed;
     sF529078 += theElapsed;
+    // The fade and letterbox progress (rate * elapsed ms) is evaluated in double, as the x87 build kept it in an
+    // extended-range register: a fade "at once" is the rate FLT_MAX, and FLT_MAX * elapsed overflows a float to
+    // infinity, where (1 - 1) * inf is a NaN; a NaN fade blacked out the whole 3D view on SSE (x64).
     float theFade;
+    double theProgress = (double)sF529074 * sF529078;
     if (sL529070 == 0)
-        theFade = sLightFadeStart + (1.0f - sLightFadeStart) * (sF529074 * sF529078);
+        theFade = (float)(sLightFadeStart + (1.0 - sLightFadeStart) * theProgress);
     else
-        theFade = (1.0f - sF529074 * sF529078) * sLightFadeStart;
+        theFade = (float)((1.0 - theProgress) * sLightFadeStart);
     if (theFade > 1.0f)
         theFade = 1.0f;
     else if (theFade < 0.0f)
@@ -712,10 +716,11 @@ void EERenderObject::Fn10C036()
     sLightFade = theFade;
     sF529080 += theElapsed;
     float theZoom;
+    theProgress = (double)sF52907C * sF529080;
     if (sLetterboxDirection == 1)
-        theZoom = sLetterboxStart + (1.0f - sLetterboxStart) * (sF52907C * sF529080);
+        theZoom = (float)(sLetterboxStart + (1.0 - sLetterboxStart) * theProgress);
     else
-        theZoom = (1.0f - sF52907C * sF529080) * sLetterboxStart;
+        theZoom = (float)((1.0 - theProgress) * sLetterboxStart);
     if (theZoom > 1.0f)
         theZoom = 1.0f;
     else if (theZoom < 0.0f)
