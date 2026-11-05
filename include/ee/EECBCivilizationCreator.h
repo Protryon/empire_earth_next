@@ -5,6 +5,7 @@
 // ee/EECBEditableCivilization.h.
 #ifndef EE_EECBCIVILIZATIONCREATOR_H
 #define EE_EECBCIVILIZATIONCREATOR_H
+#include "ee/EECivUpgrade.h"
 
 #include "ee/EECBEditableCivilization.h"
 
@@ -15,8 +16,8 @@ public:
     virtual bool CanChange() { return true; }       // +0x0c (ICF-folded 0x60b1)
     virtual unsigned long GetPointsLeft();                 // +0x10 0x27c8e2
     virtual long GetMaxPoints();                    // +0x14 0x27c8f0
-    virtual bool AddUpgrade(unsigned short inCount);  // +0x18 0x27c8ff
-    virtual bool RemoveUpgrade(unsigned short inUpgrade);  // +0x1c 0x27c954
+    virtual bool AddUpgrade(EECivUpgrade inCount);  // +0x18 0x27c8ff
+    virtual bool RemoveUpgrade(EECivUpgrade inUpgrade);  // +0x1c 0x27c954
 
     bool mIsUnlimited;                      // +0x34 (ctor argument 2)
 };

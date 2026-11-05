@@ -69,6 +69,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERandomMapClass.h"
 #include "ee/EEGlobalConstants.h"
+#include "ee/EERules.h"
 
 // EETerrainTable::sCliffTable[inIndex] (its COMDAT 0x28aaf7 follows the unit's code; provisional name)
 inline EECliffTerrainTable* EEGetCliffTerrainTable(unsigned long inIndex)
@@ -937,20 +938,17 @@ void EERandomMap::InitializeValues(unsigned long inSeed)
     this->mData.mPlayerCount = this->mGamePlayers->size() - 1;
     this->mData.mStartEpoch = this->mOptions->mEpochStart;
     unsigned long theHeight = this->mMap->mL195610;
-    if (theHeight <= 42)
-        this->mData.mMapSize = 0;
-    else if (theHeight <= 58)
-        this->mData.mMapSize = 1;
-    else if (theHeight <= 75)
-        this->mData.mMapSize = 2;
-    else if (theHeight <= 105)
-        this->mData.mMapSize = 3;
-    else if (theHeight <= 160)
-        this->mData.mMapSize = 4;
-    else if (theHeight <= 220)
-        this->mData.mMapSize = 5;
-    else
-        ESVERIFY_AT(false, 1735);
+    {   // the scripts' size class: that of the smallest map size (gameoptions.yaml) at least this high
+        long theBest = -1;
+        for (const EEMapSizeRule& theSize : EEGetRules().mGameOptions.mMapSizes)
+            if ((unsigned long)theSize.mTiles >= theHeight &&
+                (theBest < 0 || theSize.mTiles < EEGetRules().mGameOptions.mMapSizes[theBest].mTiles))
+                theBest = &theSize - &EEGetRules().mGameOptions.mMapSizes[0];
+        if (theBest >= 0)
+            this->mData.mMapSize = EEGetRules().mGameOptions.mMapSizes[theBest].mScriptSize;
+        else
+            ESVERIFY_AT(false, 1735);
+    }
     for (i = 0; i < EEUnitClassCount(); i++) {
         EEUnitClass* theClass = gUnitClassTable[i];
         if (theClass == NULL || !theClass->mIsEnabled)

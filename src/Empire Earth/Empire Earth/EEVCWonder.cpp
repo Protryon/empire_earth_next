@@ -70,7 +70,7 @@ EEPlayer* EEVictoryCondition::GetWonderCountdown(unsigned long& outValue)
         std::sort(theEntries.begin(), theEntries.end());
         EEVCWonderEntry& theLast = theEntries[theNeeded - 1];
         theWinner = gWorld.mPlayers[theLast.mPlayer];
-        long theLeft = gWorldTable.GetLongValue(0x22) - (gPhysics->mGameTime - theLast.mTime) / 1000;
+        long theLeft = gWorldTable.GetLongValue(kWorldWonderVictoryTime) - (gPhysics->mGameTime - theLast.mTime) / 1000;
         if (theLeft <= 0)
             theLeft = 0;
         outValue = theLeft;

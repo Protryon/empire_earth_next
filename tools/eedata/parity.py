@@ -145,7 +145,12 @@ def cases(texts):
     add('t_noslots', 'epochs', _sub(ep, '    slots: 929\n', ''))
     add('t_badkey', 'epochs', _sub(ep, '    slots: 929\n', '    slots: 929\n    colour: 1\n'))
     add('t_epoch_row', 'epochs', _sub(ep, '    slots: 929\n', '    slots: 929\n    row: 3\n'))
-    add('t_music', 'epochs', _sub(ep, '    music: []\n', '    music: [pawns, shadows]\n'))
+    add('t_music', 'epochs', _sub(ep, '    music: [pawns, shadows, balance, fallen, enmity, time, honor, rivers]\n',
+                                  '    music: [pawns, shadows]\n'))
+    # dbmusic's per-epoch flags come from epochs.yaml's music lists (overlay.EPOCH_FLAGS): the column is refused
+    mu = texts['dbmusic']
+    add('m_ok', 'dbmusic', mu)
+    add('m_flag_column', 'dbmusic', _sub(mu, 'mReverbTime\n', 'mReverbTime,mInEpoch[0]\n'))
     add('t_never_bad', 'epochs', _sub(ep, 'mObsoleteEpoch: never', 'mObsoleteEpoch: nevermore'))
     add('t_badepoch', 'dbtechtree', _sub(tt, '  - epoch: prehistoric_age\n', '  - epoch: no_such_age\n'))
     first = tt.decode('utf-8').split('\n  - epoch: ')[1]

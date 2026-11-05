@@ -71,6 +71,9 @@
 #include "ee/EEGraphicEffect.h"
 #include "ee/EECivilizationManager.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EERules.h"
+#include "ee/EERulesWorld.h"
+#include "ee/EECivPowerIDs.h"
 // FUNCTION: EXE 0x6830d0
 // Creates the civilization powers table, empty
 EECivPowersManager::EECivPowersManager()
@@ -137,142 +140,96 @@ EECivPower* EECivPowersManager::GetPowerRecord(long inID)
 
 // FUNCTION: EXE 0x683248
 // Tells whether the player bought the civilization power
+// (an upgrade whose attribute applies the power: civbuilder.yaml; the original compared the level with the id)
 bool EECivPowersManager::HasPower(EEPlayer* inPlayer, long inID)
 {
     bool theResult = false;
-    for (std::vector<unsigned short>::iterator i = inPlayer->mCivilization.GetPurchasedUpgrades().begin();
+    for (std::vector<EECivUpgrade>::iterator i = inPlayer->mCivilization.GetPurchasedUpgrades().begin();
          i != inPlayer->mCivilization.GetPurchasedUpgrades().end() && !theResult; i++) {
         unsigned long theCategory;
         unsigned long theIndex;
         gCivilizationManager.SplitAttribute(*i, &theCategory, &theIndex);
-        if (theIndex == inID)
-            theResult = true;
+        const EECivAttribute* theAttribute = EEGetRules().mCivBuilder.Find((long)theIndex);
+        if (theAttribute == NULL)
+            continue;
+        for (const EECivApply& theApply : theAttribute->mApplies)
+            if (theApply.mStat == kCivStatPower && theApply.mPower + kCivPowerFlamingArrows == inID)
+                theResult = true;
     }
     return theResult;
 }
 
-// the graphic effects the 0x28 power loads (0x44bff8)
-static const long sEffects[] = { 247, 256 };
+// the defaults of EERules.cpp's civ powers name these rows (EESoundObject.h, EEGraphicEffect.h)
+static_assert(kSoundSlavery == 0x422 && kSoundPriestTowerConvert == 0x41c && kSoundLightning == 0x176 &&
+              kSoundThunder2 == 0x1ba && kGraphicEffectLightningUnit == 0x15 && kGraphicEffectDustEffect == 0xab &&
+              kGraphicEffectDisintegrationAreaEffectIntermediate == 0xec, "EERules.cpp's civ power rows");
 
 // FUNCTION: EXE 0x6832a3
 // Applies a bought civ power to a player: researches its technology, then the power's own effects
 // (flaming/crusader upgrades, media loads, exploration sight pulse, mining limit, camouflage, expansionism settlements)
+// The effects are civpowers.yaml's (C++ primitives the data selects and parameterises; the original's switch on the
+// power is the vanilla data).
 void EECivPowersManager::ApplyPower(EEPlayer* inPlayer, unsigned long inID)
 {
     EECivPower thePower;
     if (this->GetPower(inID, thePower) == false)
         return;
     inPlayer->GetTechTree()->Research(thePower.mTechnology, NULL);
+    const EECivPowerRule* theRule = EEGetRules().mCivPowers.Find((long)inID - kCivPowerFlamingArrows);
+    if (theRule == NULL)
+        return;
     EETechTreeNode* theNode;
     EESoundObject* theSound;
     EEGraphicEffect* theEffect;
-    switch (inID) {
-    case kCivPowerFlamingArrows:
-        theNode = inPlayer->GetTechTree()->Get(kTechSimpleBowmanResearch);
-        if (theNode && theNode->mIsResearched) {
-            theNode = inPlayer->GetTechTree()->Get(kTechSimpleBowmanFlamingResearch);
-            if (theNode)
-                theNode->ResearchNode(NULL);
-        }
-        theNode = inPlayer->GetTechTree()->Get(kTechCompositeBowUpgrade);
-        if (theNode && theNode->mIsResearched) {
-            theNode = inPlayer->GetTechTree()->Get(kTechCompositeBowFlamingUpgrade);
-            if (theNode)
-                theNode->ResearchNode(NULL);
-        }
-        theNode = inPlayer->GetTechTree()->Get(kTechLongBowUpgrade);
-        if (theNode && theNode->mIsResearched) {
-            theNode = inPlayer->GetTechTree()->Get(kTechLongBowFlamingUpgrade);
-            if (theNode)
-                theNode->ResearchNode(NULL);
-        }
-        break;
-    case kCivPowerSlavery:
-        theSound = EESoundObject::Get(kSoundSlavery);
-        if (theSound) {
-            theSound->LoadMedia();
-            inPlayer->AddLoadedMedia(theSound);
-        }
-        break;
-    case kCivPowerPriestTower: {
-        theSound = EESoundObject::Get(kSoundPriestTowerConvert);
-        if (theSound) {
-            theSound->LoadMedia();
-            inPlayer->AddLoadedMedia(theSound);
-        }
-        for (long i = 0; i < 2; i++) {
-            theEffect = EEGraphicEffect::Get(sEffects[i]);
+    for (const EECivPowerEffect& theDo : theRule->mEffects) {
+        switch (theDo.mAction) {
+        case kPowerResearchIfResearched:
+            theNode = inPlayer->GetTechTree()->Get(theDo.mIfTech);
+            if (theNode && theNode->mIsResearched) {
+                theNode = inPlayer->GetTechTree()->Get(theDo.mTech);
+                if (theNode)
+                    theNode->ResearchNode(NULL);
+            }
+            break;
+        case kPowerLoadSound:
+            theSound = EESoundObject::Get(theDo.mSound);
+            if (theSound) {
+                theSound->LoadMedia();
+                inPlayer->AddLoadedMedia(theSound);
+            }
+            break;
+        case kPowerLoadEffect:
+            theEffect = EEGraphicEffect::Get(theDo.mEffect);
             if (theEffect) {
                 theEffect->LoadMedia();
                 inPlayer->AddLoadedMedia(theEffect);
             }
-        }
-        break;
-    }
-    case kCivPowerCrusaders:
-        theNode = inPlayer->GetTechTree()->Get(kTechShortSwordUpgrade);
-        if (theNode && theNode->mIsResearched) {
-            theNode = inPlayer->GetTechTree()->Get(kTechShortSwordUpgradeCrusaders);
+            break;
+        case kPowerPulseSight:
+            inPlayer->PulseSight(false, thePower.mAmount, theDo.mUnitType);
+            break;
+        case kPowerSetMiningLimit:
+            inPlayer->mMiningLimit = thePower.mMiningLimit;
+            break;
+        case kPowerEnableCamouflage:
+            inPlayer->EnableCamouflagePower();
+            break;
+        case kPowerDisallowTech:
+            theNode = inPlayer->GetTechTree()->Get(theDo.mTech);
+            if (theNode) {
+                theNode->mIsAllowed = false;
+                theNode->SetObsolete(true, false);
+            }
+            break;
+        case kPowerAllowTech:
+            theNode = inPlayer->GetTechTree()->Get(theDo.mTech);
             if (theNode)
-                theNode->ResearchNode(NULL);
+                theNode->mIsAllowed = true;
+            break;
         }
-        theNode = inPlayer->GetTechTree()->Get(kTechLongSwordUpgrade);
-        if (theNode && theNode->mIsResearched) {
-            theNode = inPlayer->GetTechTree()->Get(kTechLongSwordUpgradeCrusaders);
-            if (theNode)
-                theNode->ResearchNode(NULL);
-        }
-        theNode = inPlayer->GetTechTree()->Get(kTechKnightUpgrade);
-        if (theNode && theNode->mIsResearched) {
-            theNode = inPlayer->GetTechTree()->Get(kTechKnightUpgradeCrusaders);
-            if (theNode)
-                theNode->ResearchNode(NULL);
-        }
-        break;
-    case kCivPowerExploration:
-        inPlayer->PulseSight(false, thePower.mAmount, kUnitTypeTownCenter);
-        inPlayer->PulseSight(false, thePower.mAmount, kUnitTypeCapitol);
-        break;
-    case kCivPowerAdvancedMining:
-        inPlayer->mMiningLimit = thePower.mMiningLimit;
-        break;
-    case kCivPowerCamouflage:
-        inPlayer->EnableCamouflagePower();
-        break;
-    case kCivPowerBundeswehr:
-        theSound = EESoundObject::Get(kSoundLightning);
-        if (theSound) {
-            theSound->LoadMedia();
-            inPlayer->AddLoadedMedia(theSound);
-        }
-        theSound = EESoundObject::Get(kSoundThunder2);
-        if (theSound) {
-            theSound->LoadMedia();
-            inPlayer->AddLoadedMedia(theSound);
-        }
-        theEffect = EEGraphicEffect::Get(kGraphicEffectLightningUnit);
-        if (theEffect) {
-            theEffect->LoadMedia();
-            inPlayer->AddLoadedMedia(theEffect);
-        }
-        theEffect = EEGraphicEffect::Get(kGraphicEffectDustEffect);
-        if (theEffect) {
-            theEffect->LoadMedia();
-            inPlayer->AddLoadedMedia(theEffect);
-        }
-        theEffect = EEGraphicEffect::Get(kGraphicEffectDisintegrationAreaEffectIntermediate);
-        if (theEffect) {
-            theEffect->LoadMedia();
-            inPlayer->AddLoadedMedia(theEffect);
-        }
-        break;
-    case kCivPowerExpansionism:
-        inPlayer->GetTechTree()->Get(kTechSettlement)->mIsAllowed = false;
-        inPlayer->GetTechTree()->Get(kTechSettlement)->SetObsolete(true, false);
-        inPlayer->GetTechTree()->Get(kTechTownCenter)->mIsAllowed = true;
-        break;
     }
 }
+
 
 // FUNCTION: EXE 0x683609
 // Standard vector code for the powers table (a std::vector<EECivPower> template COMDAT)

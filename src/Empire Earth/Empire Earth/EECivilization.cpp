@@ -73,7 +73,7 @@ long EECivilization::ComputeCost(long inBase, long inStep, long inCount)
 
 // FUNCTION: EXE 0x52c5e9
 // Returns whether the civilization can afford an upgrade (always, when custom civilizations are off) and its cost
-bool EECivilization::CanAfford(unsigned short inUpgrade, unsigned long* outCost, std::vector<unsigned short>* inList)
+bool EECivilization::CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, std::vector<EECivUpgrade>* inList)
 {
     bool theResult = false;
     long theBase = this->GetBaseCost(inUpgrade);
@@ -88,13 +88,13 @@ bool EECivilization::CanAfford(unsigned short inUpgrade, unsigned long* outCost,
 
 // FUNCTION: EXE 0x52c648
 // Returns whether the civilization can afford every upgrade in a list, bought one after another
-bool EECivilization::CanAffordAll(std::vector<unsigned short>& inUpgrades)
+bool EECivilization::CanAffordAll(std::vector<EECivUpgrade>& inUpgrades)
 {
-    std::vector<unsigned short> theList;
-    unsigned short theUpgrade = 0;
+    std::vector<EECivUpgrade> theList;
+    EECivUpgrade theUpgrade = 0;
     bool theResult = true;
     theList = this->mPurchasedUpgrades;
-    for (std::vector<unsigned short>::iterator i = inUpgrades.begin(); i != inUpgrades.end(); i++) {
+    for (std::vector<EECivUpgrade>::iterator i = inUpgrades.begin(); i != inUpgrades.end(); i++) {
         theUpgrade = *i;
         theResult = this->CanAfford(theUpgrade, NULL, &theList);
         if (!theResult)
@@ -106,7 +106,7 @@ bool EECivilization::CanAffordAll(std::vector<unsigned short>& inUpgrades)
 
 // FUNCTION: EXE 0x52c6bc
 // Returns an upgrade's base cost (its level value times 100), or 0 when unknown
-long EECivilization::GetBaseCost(unsigned short inUpgrade)
+long EECivilization::GetBaseCost(EECivUpgrade inUpgrade)
 {
     float theValue = 0.0f;
     long theResult = 0;
@@ -126,16 +126,16 @@ bool EECivilization::GetNoPointsAdded()
 
 // FUNCTION: EXE 0x52c6fe
 // Returns the extra cost per upgrade already bought in an upgrade's category
-long EECivilization::GetExtraCost(unsigned short inUpgrade)
+long EECivilization::GetExtraCost(EECivUpgrade inUpgrade)
 {
     return gCivilizationManager.GetExtraCost(inUpgrade);
 }
 
 // FUNCTION: EXE 0x52c70f
 // Counts the upgrades of an upgrade's category in a list (by default the purchased upgrades)
-long EECivilization::CountInCategory(unsigned short inUpgrade, std::vector<unsigned short>* inList)
+long EECivilization::CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList)
 {
-    std::vector<unsigned short>* theList = &this->mPurchasedUpgrades;
+    std::vector<EECivUpgrade>* theList = &this->mPurchasedUpgrades;
     if (inList != NULL)
         theList = inList;
     return gCivilizationManager.CountInCategory(inUpgrade, theList);
@@ -164,7 +164,7 @@ long EECivilization::GetMaxPoints()
 
 // FUNCTION: EXE 0x52c738
 // Returns the purchased upgrades
-std::vector<unsigned short>& EECivilization::GetPurchasedUpgrades()
+std::vector<EECivUpgrade>& EECivilization::GetPurchasedUpgrades()
 {
     return this->mPurchasedUpgrades;
 }
@@ -192,7 +192,7 @@ long EECivilization::Load(unsigned long inMajorVersion, unsigned long inMinorVer
         unsigned long theValue;
         theResult = inFile.Read(theValue);
         if (theResult == kErrorOK) {
-            unsigned short theUpgrade = (unsigned short)theValue;
+            EECivUpgrade theUpgrade = (EECivUpgrade)theValue;
             this->mPurchasedUpgrades.push_back(theUpgrade);
         }
     }
@@ -221,7 +221,7 @@ long EECivilization::Load(unsigned long inMajorVersion, unsigned long inMinorVer
 
 // FUNCTION: EXE 0x52c847
 // Applies an upgrade to a player, first paying for it and recording it when buying; returns whether it applied
-bool EECivilization::Buy(unsigned short inUpgrade, long inPlayer, bool inPurchase)
+bool EECivilization::Buy(EECivUpgrade inUpgrade, long inPlayer, bool inPurchase)
 {
     bool theResult = false;
     unsigned long theCost = 0;
@@ -239,10 +239,10 @@ bool EECivilization::Buy(unsigned short inUpgrade, long inPlayer, bool inPurchas
 
 // FUNCTION: EXE 0x52c898
 // Applies a list of upgrades to a player, stopping at the first that fails
-void EECivilization::AddUpgrades(std::vector<unsigned short>& inUpgrades, long inPlayer, bool inFlag)
+void EECivilization::AddUpgrades(std::vector<EECivUpgrade>& inUpgrades, long inPlayer, bool inFlag)
 {
     bool theResult = true;
-    for (std::vector<unsigned short>::iterator i = inUpgrades.begin(); i != inUpgrades.end() && theResult; i++)
+    for (std::vector<EECivUpgrade>::iterator i = inUpgrades.begin(); i != inUpgrades.end() && theResult; i++)
         theResult = this->Buy(*i, inPlayer, inFlag);
 }
 
@@ -250,11 +250,11 @@ void EECivilization::AddUpgrades(std::vector<unsigned short>& inUpgrades, long i
 // Applies the purchased upgrades with attribute index 21 to the world (player 0)
 void EECivilization::ApplyLevel21ToWorld()
 {
-    std::vector<unsigned short>::iterator i = this->mPurchasedUpgrades.begin();
+    std::vector<EECivUpgrade>::iterator i = this->mPurchasedUpgrades.begin();
     while (true) {
         if (i == this->mPurchasedUpgrades.end())
             break;
-        unsigned short theUpgrade = *i;
+        EECivUpgrade theUpgrade = *i;
         unsigned long theCategory;
         unsigned long theIndex;
         gCivilizationManager.SplitAttribute(theUpgrade, &theCategory, &theIndex);
@@ -269,11 +269,11 @@ void EECivilization::ApplyLevel21ToWorld()
 // when one fails
 long EECivilization::Reapply(EEPlayer* inPlayer, unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
-    unsigned short theUpgrade = 0;
+    EECivUpgrade theUpgrade = 0;
     long theResult = 0;
     bool theApplied = true;
     unsigned long thePlayerID = inPlayer->mPlayerID;
-    std::vector<unsigned short>::iterator i = this->mPurchasedUpgrades.begin();
+    std::vector<EECivUpgrade>::iterator i = this->mPurchasedUpgrades.begin();
     while (true) {
         if (i == this->mPurchasedUpgrades.end() || !theApplied)
             break;
@@ -299,11 +299,11 @@ long EECivilization::ApplyDeferred(EEPlayer* inPlayer, unsigned long inMajorVers
     bool theApplied = true;
     long theResult = 0;
     unsigned long thePlayerID = inPlayer->mPlayerID;
-    std::vector<unsigned short>::iterator i = this->mDeferredUpgrades.begin();
+    std::vector<EECivUpgrade>::iterator i = this->mDeferredUpgrades.begin();
     while (true) {
         if (!(i != this->mDeferredUpgrades.end() && theApplied))
             break;
-        unsigned short theId = *i;
+        EECivUpgrade theId = *i;
         theApplied = gCivilizationManager.ApplyUpgrade(theId, thePlayerID);
         i++;
     }
@@ -322,7 +322,7 @@ long EECivilization::Save(FSFile& outFile)
     long theResult = outFile.Write(theCount);
     if (theResult != kErrorOK)
         return theResult;
-    std::vector<unsigned short>::iterator i = this->mPurchasedUpgrades.begin();
+    std::vector<EECivUpgrade>::iterator i = this->mPurchasedUpgrades.begin();
     // stop at the first failed upgrade write (each result used to overwrite the previous one)
     while (theResult == kErrorOK) {
         if (i == this->mPurchasedUpgrades.end())

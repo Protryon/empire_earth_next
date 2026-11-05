@@ -1549,7 +1549,7 @@ void EEUIManager::StartScenarioEditor()
     theHuman.mSlot = 0;
     theHuman.mIsReady = true;
     theHuman.mType = 1;
-    theHuman.mStartingCitizens = gWorldTable.GetLongValue(0x30);
+    theHuman.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
     gWorld.GetLobbyOptions().mPlayers[0] = theHuman;
     gResource->GetString(IDS_COMPUTER, theComputerName);
     theComputer.mIsLocal = false;
@@ -1559,7 +1559,7 @@ void EEUIManager::StartScenarioEditor()
     for (unsigned long i = 1; i < 16; i++) {
         theComputer.mSlot = i;
         theComputer.mColor = i;
-        theComputer.mStartingCitizens = gWorldTable.GetLongValue(0x30);
+        theComputer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
         gWorld.GetLobbyOptions().mPlayers[i] = theComputer;
     }
     static_cast<EEServer*>(gCommunications)->StopPing();

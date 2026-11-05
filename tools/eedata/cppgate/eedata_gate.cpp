@@ -19,6 +19,7 @@
 #include "EEDataDump.h"
 #include "EEDataText.h"
 #include "EEDataTextSpecs.h"
+#include "ee/EERules.h"
 
 static bool ReadFile(const std::string& inPath, std::string& outData)
 {
@@ -40,6 +41,32 @@ static EEDataText::Content::Reader TextReader(const std::string& inDir)
         const char* ext = EEDataText::TextExtension(inTable);
         return ext && ReadFile(inDir + "/" + inTable + ext, outText);
     };
+}
+
+// the binary load's songs per epoch: dbmusic's per-epoch flags (EEMusicObject::LoadTable)
+static bool MusicFromFlags(const std::string& inData, EERules& ioRules)
+{
+    const EEDTTable* t = nullptr;
+    for (unsigned long i = 0; i < kEEDTTableCount; i++)
+        if (strcmp(kEEDTTables[i].mName, "dbmusic") == 0)
+            t = &kEEDTTables[i];
+    const EEDTField* f = nullptr;
+    for (unsigned long i = 0; t && i < t->mRecord->mFieldCount; i++)
+        if (strcmp(t->mRecord->mFields[i].mName, "mInEpoch") == 0)
+            f = &t->mRecord->mFields[i];
+    if (!f || inData.size() < 4)
+        return false;
+    const unsigned char* p = reinterpret_cast<const unsigned char*>(inData.data());
+    unsigned long n = p[0] | p[1] << 8 | p[2] << 16 | (unsigned long)p[3] << 24;
+    if (inData.size() < 4 + (size_t)n * t->mRecord->mSize)
+        return false;
+    for (unsigned long r = 0; r < n; r++) {
+        bool flags[64] = {};
+        for (unsigned long k = 0; k < f->mCount && k < 64; k++)
+            flags[k] = p[4 + r * t->mRecord->mSize + f->mOffset + k] != 0;
+        ioRules.SetMusicFromFlags((long)r, flags, f->mCount);
+    }
+    return true;
 }
 
 static int Dump(bool inText, const char* inDir, const char* inOut)
@@ -72,6 +99,27 @@ static int Dump(bool inText, const char* inDir, const char* inOut)
             fprintf(stderr, "%s\n", err.c_str());
             return 1;
         }
+    }
+    // the rules (ee/EERules.h): from the documents (text), or the defaults with dbmusic's songs (binary)
+    EERules theRules;
+    if (inText) {
+        std::string err;
+        if (!theRules.Load(c, err)) {
+            fprintf(stderr, "%s\n", err.c_str());
+            return 1;
+        }
+    } else {
+        std::string raw;
+        if (!ReadFile(std::string(inDir) + "/dbmusic.dat", raw) || !MusicFromFlags(raw, theRules)) {
+            fprintf(stderr, "dbmusic.dat: cannot be read\n");
+            return 1;
+        }
+    }
+    std::string rules;
+    theRules.Dump(rules);
+    for (size_t at = 0, end; at < rules.size(); at = end + 1) {   // one entry per line
+        end = rules.find('\n', at);
+        json += ",\n" + rules.substr(at, end - at);
     }
     json += "}\n";
     FILE* f = fopen(inOut, "wb");

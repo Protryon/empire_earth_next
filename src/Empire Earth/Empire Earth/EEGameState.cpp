@@ -68,6 +68,8 @@
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EEDatabase.h"
 #include "ee/EEDatabaseTables.h"
+#include "ee/EERules.h"
+#include "ee/EERulesWorld.h"
 #include "ee/EEColorTable.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EECampaignFormManager.h"
@@ -334,7 +336,7 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
             }
             thePlayer->SetColor(EEGetPlayerColor(theSlot.mColor));
             if (inOptions.mLoadType == 0 && !thePlayer->mObserverMode)
-                thePlayer->SetCivilizationPoints(gWorldTable.GetLongValue(0x4c));
+                thePlayer->SetCivilizationPoints(gWorldTable.GetLongValue(kWorldCivilizationBuilderPoints));
             thePlayer->mMaxStartingCitizens = theSlot.mStartingCitizens;
             for (long j = 1; j < 6; j++)
                 thePlayer->mResourceCaps[j + 1] = EEGetResourceLevel(inOptions.mResources)->mAmounts[j - 1];
@@ -373,20 +375,11 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
                 }
             }
         }
-        switch (inOptions.mGameSpeed) {
-        case 0:
-            this->mGameSpeed = gWorldTable.GetFloatValue(0x51);
-            break;
-        case 1:
-        default:
-            this->mGameSpeed = gWorldTable.GetFloatValue2(0x51);
-            break;
-        case 2:
-            this->mGameSpeed = gWorldTable.GetFloatValue(0x52);
-            break;
-        case 3:
-            this->mGameSpeed = gWorldTable.GetFloatValue2(0x52);
-            break;
+        {   // the speed option's factor (gameoptions.yaml speeds; an unknown option: the default speed's)
+            const EEGameOptionRules& theRules = EEGetRules().mGameOptions;
+            unsigned long theSpeed = inOptions.mGameSpeed < theRules.mSpeeds.size() ? inOptions.mGameSpeed
+                                                                                   : theRules.mSpeedDefault;
+            this->mGameSpeed = EERuleFloat(theRules.mSpeeds[theSpeed].mFactor);
         }
         long theWidth;
         long theHeight;

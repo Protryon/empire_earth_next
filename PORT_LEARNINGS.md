@@ -1277,3 +1277,23 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   through the same guarded return address. A thread that hits a return watch belonging to another thread is now
   stepped over (the watch stays pending); a breakpoint event that arrives after its guard was removed (the int3 was
   already executed, the event queued) is rewound instead of resumed one byte into the instruction (c000001d).
+
+## Rules as data (branch rules)
+
+- **The binary tree has no ids**, so a rule that names a row by id cannot be read there. Each rule therefore has a
+  C++ default (the original's literal, integers for the rows) and a text form (ids) that `tools/eedata/rules.py`
+  writes from the same code constants, which it reads out of the C++ headers. The content dump makes the two meet:
+  dump(binary tree: the defaults) == dump(text tree: the vanilla documents read by the game's reader) catches any
+  drift between the Python and the C++ copy.
+- **A raw index stops compiling when the accessor takes an enum.** `gWorldTable.GetLongValue(EEWorldConstant)`: an
+  `int` does not convert to an enum implicitly, so all 120 dbworld reads had to name their constant, and a new one
+  cannot slip in. The enum is generated from the ids (cppgen), and `check` keeps it current.
+- **Moving a field's text to another file needs the compilers to fill it back.** dbmusic's per-epoch flags became
+  epochs.yaml's `music` lists; both compilers set the flags from the lists (`epoch_flags` in the specs), so the
+  compiled table and its dump do not change while the text has one source.
+- **Unifying duplicated code keeps each copy's float order.** ApplyHit, ApplyAreaDamage and the trample computed the
+  same damage with different rounding (UMFloatToLong vs UMCeil for the dead food, the trample rounds the armour,
+  only direct hits scale a fanatic attacker); `ComputeDamage` takes the form and keeps every difference. Pre-scaled
+  tables (the difficulty damage tables) can be replaced by the multiply at the lookup: the same IEEE product.
+- **The harness reads every `*.json` in the stage folder**: a test file there (an `EE_DUMP_CONTENT` dump) breaks the
+  session's report; name it `.txt`. Writes outside the stage folder are stopped by exe_boot.

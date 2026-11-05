@@ -358,9 +358,9 @@ void EEWorld::ApplyShareBonus()
             }
         }
         if (theBalance > 0) {
-            thePlayer->mShareBonus += (long)(gWorldTable.GetFloatValue(0x24) * gWorld.mPlayerPopulationLimit);
+            thePlayer->mShareBonus += (long)(gWorldTable.GetFloatValue(kWorldWonderPopulationBonus) * gWorld.mPlayerPopulationLimit);
         } else if (theBalance < 0) {
-            thePlayer->mShareBonus -= (long)(gWorldTable.GetFloatValue2(0x24) * gWorld.mPlayerPopulationLimit);
+            thePlayer->mShareBonus -= (long)(gWorldTable.GetFloatValue2(kWorldWonderPopulationBonus) * gWorld.mPlayerPopulationLimit);
         }
 next:
         ;
@@ -1771,9 +1771,9 @@ void EEWorld::RemoveShareBonus()
             }
         }
         if (theBalance > 0)
-            thePlayer->mShareBonus -= (long)(gWorldTable.GetFloatValue(0x24) * gWorld.mPlayerPopulationLimit);
+            thePlayer->mShareBonus -= (long)(gWorldTable.GetFloatValue(kWorldWonderPopulationBonus) * gWorld.mPlayerPopulationLimit);
         else if (theBalance < 0)
-            thePlayer->mShareBonus += (long)(gWorldTable.GetFloatValue2(0x24) * gWorld.mPlayerPopulationLimit);
+            thePlayer->mShareBonus += (long)(gWorldTable.GetFloatValue2(kWorldWonderPopulationBonus) * gWorld.mPlayerPopulationLimit);
 next:
         ;
     }

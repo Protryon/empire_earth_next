@@ -52,7 +52,7 @@ bool EECBEditableCivilization::Apply()
 
 // FUNCTION: EXE 0x67cab7
 // Returns the cost of an upgrade given how many of its category are already picked
-long EECBEditableCivilization::GetCost(unsigned short inUpgrade)
+long EECBEditableCivilization::GetCost(EECivUpgrade inUpgrade)
 {
     long theFirst = this->mCivilization->GetBaseCost(inUpgrade);
     long theSecond = this->mCivilization->GetExtraCost(inUpgrade);
@@ -61,7 +61,7 @@ long EECBEditableCivilization::GetCost(unsigned short inUpgrade)
 
 // FUNCTION: EXE 0x67caf1
 // Returns the refund for removing an upgrade: its cost with one fewer picked in its category
-long EECBEditableCivilization::GetRefund(unsigned short inUpgrade)
+long EECBEditableCivilization::GetRefund(EECivUpgrade inUpgrade)
 {
     long theFirst = this->mCivilization->GetBaseCost(inUpgrade);
     long theSecond = this->mCivilization->GetExtraCost(inUpgrade);
@@ -84,7 +84,7 @@ void EECBEditableCivilization::ResetToStart()
 
 // FUNCTION: EXE 0x67cb83
 // Counts the upgrades of the same category, chosen here and already owned by the civilization
-unsigned long EECBEditableCivilization::PickedInCategory(unsigned short inUpgrade)
+unsigned long EECBEditableCivilization::PickedInCategory(EECivUpgrade inUpgrade)
 {
     unsigned long theCount = gCivilizationManager.CountInCategory(inUpgrade, &this->mUpgrades);
     return this->mCivilization->CountInCategory(inUpgrade, NULL) + theCount;
@@ -106,11 +106,11 @@ bool EECBEditableCivilization::CanChange()
 
 // FUNCTION: EXE 0x67cbe6
 // Returns the chosen upgrade ids followed by the civilization's purchased ones
-std::vector<unsigned short> EECBEditableCivilization::CopyUpgradeIDs()
+std::vector<EECivUpgrade> EECBEditableCivilization::CopyUpgradeIDs()
 {
-    std::vector<unsigned short> theResult;
+    std::vector<EECivUpgrade> theResult;
     theResult = this->mUpgrades;
-    std::vector<unsigned short>::iterator theIterator = this->mCivilization->GetPurchasedUpgrades().begin();
+    std::vector<EECivUpgrade>::iterator theIterator = this->mCivilization->GetPurchasedUpgrades().begin();
     while (theIterator != this->mCivilization->GetPurchasedUpgrades().end()) {
         theResult.push_back(*theIterator);
         ++theIterator;
@@ -154,14 +154,14 @@ UWideString* EECBEditableCivilization::GetName()
 
 // FUNCTION: EXE 0x67cc90
 // Returns the civilization's purchased upgrades
-std::vector<unsigned short>& EECBEditableCivilization::GetCivilizationUpgrades()
+std::vector<EECivUpgrade>& EECBEditableCivilization::GetCivilizationUpgrades()
 {
     return this->mCivilization->GetPurchasedUpgrades();
 }
 
 // FUNCTION: EXE 0x67cc98
 // Adds an upgrade and spends its cost if enough points are left
-bool EECBEditableCivilization::AddUpgrade(unsigned short inCount)
+bool EECBEditableCivilization::AddUpgrade(EECivUpgrade inCount)
 {
     bool theResult = false;
     if (inCount > 0) {
@@ -177,10 +177,10 @@ bool EECBEditableCivilization::AddUpgrade(unsigned short inCount)
 
 // FUNCTION: EXE 0x67ccd6
 // Removes a chosen upgrade and refunds its points
-bool EECBEditableCivilization::RemoveUpgrade(unsigned short inUpgrade)
+bool EECBEditableCivilization::RemoveUpgrade(EECivUpgrade inUpgrade)
 {
     bool theResult = false;
-    std::vector<unsigned short>::iterator theIterator = std::find(this->mUpgrades.begin(), this->mUpgrades.end(), inUpgrade);
+    std::vector<EECivUpgrade>::iterator theIterator = std::find(this->mUpgrades.begin(), this->mUpgrades.end(), inUpgrade);
     if (theIterator != this->mUpgrades.end()) {
         this->mPointsLeft += this->GetRefund(inUpgrade);
         this->mUpgrades.erase(theIterator);

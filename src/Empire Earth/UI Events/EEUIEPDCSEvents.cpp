@@ -4,7 +4,7 @@
 // 0x1e6711). FormOpen first, then the ??_G block of the events it creates in declaration order (ClearCivStats' in-class
 // ProcessEvent before its ??_G), SelectCiv with the static file helper and EEUIEPDCSLoadCiv's out-of-line ctor,
 // in-class ProcessEvent and ??_G after it, Ok with EEMCivUpgrades' out-of-line ctor, and the template COMDATs
-// (vector<unsigned short> copy ctor, vector<EECivilizationEntry>::_Buy). Unit flags: the exe's module set.
+// (vector<EECivUpgrade> copy ctor, vector<EECivilizationEntry>::_Buy). Unit flags: the exe's module set.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -205,7 +205,7 @@ long EEUIEPDCSSelectCiv::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // the form, or shows why not
 long EEUIEPDCSOk::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    std::vector<unsigned short> theUpgrades;
+    std::vector<EECivUpgrade> theUpgrades;
     UWideString theFile;
     UWideString theMessage;
     UWideString theName;

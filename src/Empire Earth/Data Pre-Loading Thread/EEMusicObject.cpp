@@ -20,9 +20,10 @@
 #include "EEDatabase.h"
 #include "ee/EEMusicObject.h"
 #include "ee/EETechTreeTechID.h"
+#include "ee/EERules.h"
 
-std::vector<EEMusicObject*> EEMusicObject::sSongs[15];      // 0x4e8568
-std::vector<EEMusicObject*> EEMusicObject::sShuffled[15];   // 0x4e8470
+std::vector<std::vector<EEMusicObject*>> EEMusicObject::sSongs;      // 0x4e8568 (per epoch)
+std::vector<std::vector<EEMusicObject*>> EEMusicObject::sShuffled;   // 0x4e8470
 URandomIntegers gMusicRandom;                     // 0x4e8460
 
 // One record of db\dbmusic.dat (0xc4 bytes, read whole; also what ReadNewMusic fills). Layout inferred.
@@ -125,6 +126,8 @@ EEMusicObject::~EEMusicObject()
 // FUNCTION: EXE 0x4d9f6c
 // Files every song of the music table under the epochs it plays in; a New Music.txt override replaces
 // the table with that one song. Returns the last read result
+// The epochs and their songs are the rules' (epochs.yaml music, EERules.cpp); without epochs.yaml they are the
+// table's per-epoch flags, as in the original (the space age plays the nano age's songs).
 long EEMusicObject::LoadTable(FSFile* inFile)
 {
     EEMusicRecord theRecord;
@@ -133,30 +136,36 @@ long EEMusicObject::LoadTable(FSFile* inFile)
     unsigned long theRead = 0;
     unsigned long i;
     EEMusicObject* theSong;
+    EERules& theRules = EEGetRules();
+    EEMusicObject::sSongs.assign(theRules.mEpochs.size(), std::vector<EEMusicObject*>());
+    EEMusicObject::sShuffled.assign(theRules.mEpochs.size(), std::vector<EEMusicObject*>());
     gMusicRandom.SetSeed(TMGetTime());
     long theResult = EEMusicObject::ReadNewMusic(&theRecord);
     if (theResult != 0) {
+        std::vector<EEMusicObject*> theSongs;   // by row
         theResult = inFile->Read(theCount);
         if (theResult == 0) {
             for (i = 0; i < theCount; i++) {
                 theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-                theSong = new EEMusicObject(&theRecord);
-                for (long j = 0; j < 15; j++) {
-                    if (theSong->mInEpoch[j]) {
-                        EEMusicObject::sSongs[j].push_back(theSong);
-                        theSong->Reference();
-                    }
-                }
-                theSong->Dereference();
+                theSongs.push_back(new EEMusicObject(&theRecord));
+                theRules.SetMusicFromFlags((long)i, theRecord.mInEpoch, 14);   // (no-op when epochs.yaml has them)
             }
         }
+        for (unsigned long j = 0; j < theRules.mEpochs.size(); j++) {
+            for (long theRow : theRules.mEpochs[j].mMusic) {
+                if (theRow < 0 || (unsigned long)theRow >= theSongs.size())
+                    continue;
+                EEMusicObject::sSongs[j].push_back(theSongs[theRow]);
+                theSongs[theRow]->Reference();
+            }
+        }
+        for (EEMusicObject* s : theSongs)
+            s->Dereference();
     } else {
         theSong = new EEMusicObject(&theRecord);
-        for (long j = 0; j < 15; j++) {
-            if (theSong->mInEpoch[j]) {
-                EEMusicObject::sSongs[j].push_back(theSong);
-                theSong->Reference();
-            }
+        for (unsigned long j = 0; j < EEMusicObject::sSongs.size(); j++) {   // the override plays in every epoch
+            EEMusicObject::sSongs[j].push_back(theSong);
+            theSong->Reference();
         }
         theSong->Dereference();
     }
@@ -168,7 +177,7 @@ long EEMusicObject::LoadTable(FSFile* inFile)
 // Releases every song and empties all epoch song lists and shuffled lists
 void EEMusicObject::ClearAll()
 {
-    for (long i = 0; i < 15; i++) {
+    for (unsigned long i = 0; i < EEMusicObject::sSongs.size(); i++) {
         unsigned long theCount = EEMusicObject::sSongs[i].size();
         for (unsigned long j = 0; j < theCount; j++)
             EEMusicObject::sSongs[i][j]->Dereference();
@@ -183,7 +192,7 @@ EEMusicObject* EEMusicObject::GetRandom(long inEpoch)
 {
     std::vector<EEMusicObject*> theSongs;
     EEMusicObject* theResult;
-    if (inEpoch < 0 || inEpoch >= 15)   // the music table flags 15 epochs (epochs.yaml's music slot: the follow-up)
+    if (inEpoch < 0 || (unsigned long)inEpoch >= EEMusicObject::sSongs.size())   // the rules' epochs
         return NULL;
     if (EEMusicObject::sShuffled[inEpoch].size() == 0 && EEMusicObject::sSongs[inEpoch].size() > 0) {
         for (unsigned long i = 0; i < EEMusicObject::sSongs[inEpoch].size(); i++)

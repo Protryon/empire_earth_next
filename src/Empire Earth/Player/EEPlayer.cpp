@@ -729,7 +729,7 @@ bool EEPlayer::CanBuy(long inUnitType, long inImprovement, UWideString* outText)
                     theQueued += theImprovement->GetCost(theQueue[i]);
             }
             if ((unsigned long)(theImprovement->GetCost(inImprovement) + theQueued) <=
-                (unsigned long)gWorldTable.GetLongValue(47) &&
+                (unsigned long)gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax) &&
                 this->GetImprovementLevel(inUnitType, inImprovement) <= theTable->GetMaxLevel()) {
                 float theScale = theTable->mEntries[inImprovement].mCostFactor;
                 long theLevel = this->GetImprovementLevel(inUnitType, inImprovement);
@@ -825,7 +825,7 @@ bool EEPlayer::CanImprove(long inUnitType, long inImprovement, UWideString* outR
         EEUnitClassImprovementTable* theTable = theClass->mImprovements;
         if ((inImprovement != 12 ? theTable->mEntries[inImprovement].mStepFactor : 0.0f) > 0.0f
             && theUpgrade->mImprovement.CanUpgrade(theUpgrade->mUnitClass, inImprovement) == true
-            && theUpgrade->mImprovement.GetCost(inImprovement) + theQueued <= gWorldTable.GetLongValue(47)
+            && theUpgrade->mImprovement.GetCost(inImprovement) + theQueued <= gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax)
             && theUpgrade->mImprovement.GetLevel(inImprovement) <= theTable->GetMaxLevel())
             theResult = true;
     }
@@ -1282,7 +1282,7 @@ void EEPlayer::AddWonderPower(EEComplexUnit* inUnit)
                 continue;
             long theType = this->GetUpgrade(i)->mUnitClass->mUnitType;
             float theFactor = gWorld.GetGameVariant()->GetFactor(theType);
-            float theAmount = gWorldTable.GetFloatValue(0x32);
+            float theAmount = gWorldTable.GetFloatValue(kWorldWonderHitPointBonus);
             EEUpgradeHitPoints(this->mUnitClassUpgrades[i], this->mUnitClassUpgrades[i]->mUnitClass->mUnitType,
                        (theFactor + 1.0f) * theAmount, this);
         }
@@ -1478,7 +1478,7 @@ bool EEPlayer::IsImprovementMaxed(unsigned long inUnitType, long inImprovement)
             for (unsigned long i = 0; i < theQueue.size(); i++)
                 theQueued += theUpgrade->mImprovement.GetCost(theQueue[i]);
         }
-        if (theUpgrade->mImprovement.GetCost(inImprovement) + theQueued <= gWorldTable.GetLongValue(47)
+        if (theUpgrade->mImprovement.GetCost(inImprovement) + theQueued <= gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax)
             && this->GetImprovementLevel(inUnitType, inImprovement) <= theTable->GetMaxLevel())
             theResult = false;
     }
@@ -1807,8 +1807,8 @@ void EEPlayer::Reset()
     this->mHealsUnits = false;
     this->mHealedUnitSet = NULL;
     this->mGameResult = 0;
-    this->mMaxStartingCitizens = gWorldTable.GetLongValue(48);
-    this->mMiningLimit = gWorldTable.GetLongValue(22);
+    this->mMaxStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
+    this->mMiningLimit = gWorldTable.GetLongValue(kWorldGatherersPerResourceMax);
     this->mHealTimer = 0.0f;
     this->mAreaConversion = false;
     this->mBehindFirewall = false;
@@ -2742,7 +2742,7 @@ EEComplexUnit* EEPlayer::GetNextComplexUnit(EEUnit* inUnit)
 void EEPlayer::PlayAcknowledgement(EEComplexUnit* inUnit)
 {
     if (this->mLastAcknowledgedGroup == this->mActiveGroup->mChangeTime) {
-        unsigned long theDelay = gWorldTable.GetLongValue(83);
+        unsigned long theDelay = gWorldTable.GetLongValue(kWorldAcknowledgementDelay);
         if (TMGetTime() - this->mLastAcknowledgementTime <= theDelay)
             return;
     } else
@@ -3008,7 +3008,7 @@ void EEPlayer::RemoveWonderPower(EEComplexUnit* inUnit)
                 continue;
             long theType = this->mUnitClassUpgrades[i]->mUnitClass->mUnitType;
             float theFactor = EEGameVariant::GetGameVariant(gWorld.mGameOptions.GetVariant())->GetFactor(theType);
-            float theAmount = gWorldTable.GetFloatValue(0x32);
+            float theAmount = gWorldTable.GetFloatValue(kWorldWonderHitPointBonus);
             EEUpgradeHitPoints(this->mUnitClassUpgrades[i], this->mUnitClassUpgrades[i]->mUnitClass->GetUnitType(),
                        -((theFactor + 1.0f) * theAmount), this);
         }
@@ -3268,10 +3268,10 @@ bool EEPlayer::AdvanceImprovement(unsigned long inUnitType)
             } else {
                 EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inUnitType];
                 if (theUpgrade->mImprovement.GetLevel(theImprovement) == 1) {
-                    float theTime = (long)gWorldTable.GetLongValue(theImprovement + 57);
+                    float theTime = (long)gWorldTable.GetLongValue(EEWorldImprovementTime(theImprovement));
                     this->mQueuedImprovements[inUnitType].first = theTime;
                 } else {
-                    float theTime = (long)(*(gWorldTable.mEntries.begin() + theImprovement + 57)).mLongValue2;
+                    float theTime = (long)gWorldTable.GetLongValue2(EEWorldImprovementTime(theImprovement));
                     this->mQueuedImprovements[inUnitType].first = theTime;
                 }
             }
@@ -3927,7 +3927,7 @@ void EEPlayer::SetGameResult(long inState)
             sprintf(thePlayerName, "%s - (%s)", (const char*)this->mCivilization.mName, (const char*)this->mName);
             sprintf(theText, theReason, (const char*)thePlayerName);
         }
-        gUserInterface->AddChatLogEntry(theColor, theTitle, theText, gWorldTable.GetLongValue(25) * 2, 0);
+        gUserInterface->AddChatLogEntry(theColor, theTitle, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
     }
 SaveState:
     this->mGameResult = inState;
@@ -4486,11 +4486,11 @@ void EEPlayer::UpdatePlayer()
         return;
     float theTime = this->mHealTimer - theTicks;
     if (theTime <= 0.0f) {
-        long theBase = gWorldTable.GetLongValue(37);
-        long theFactor = gWorldTable.GetLongValue(37);
+        long theBase = gWorldTable.GetLongValue(kWorldWonderHealAmount);
+        long theFactor = gWorldTable.GetLongValue(kWorldWonderHealAmount);
         long theEpoch = this->mTechnologies->mCurrentEpoch;
-        long theDivisor = gWorldTable.GetLongValue(52);
-        long theHeal = theBase + (long)((theEpoch / theDivisor) * gWorldTable.GetFloatValue(51) * theFactor);
+        long theDivisor = gWorldTable.GetLongValue(kWorldWonderHealEpochStep);
+        long theHeal = theBase + (long)((theEpoch / theDivisor) * gWorldTable.GetFloatValue(kWorldWonderHealEpochFactor) * theFactor);
         for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
             if (this->mHealedUnitSet->Contains(theUnit->mUnitClass->mUnitType) != true)
                 continue;
@@ -4593,7 +4593,7 @@ void EEPlayer::EnableCamouflagePower()
             continue;
         unsigned long theCommand = theComplex->mCommand ? theComplex->mCommand->mType : 0;
         if (theCommand == kActionIdle)
-            theComplex->mCamouflageTimer = gWorldTable.GetLongValue(0x55);
+            theComplex->mCamouflageTimer = gWorldTable.GetLongValue(kWorldCamouflageTiming);
     }
 }
 

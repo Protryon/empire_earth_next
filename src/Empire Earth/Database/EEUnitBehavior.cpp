@@ -170,7 +170,7 @@ long EEWorldTable::Load(FSFileSpec* inFile)
         this->mEntries[i] = theEntry;
     }
     inFile->Close();
-    gGameStateGameSpeed = gWorldTable.GetFloatValue(42);
+    gGameStateGameSpeed = gWorldTable.GetFloatValue(kWorldGameSpeedDefault);
     return theResult;
 }
 

@@ -121,7 +121,7 @@ void EEUIBUpgrade::ButtonUp()
     } else if (!this->GetDisabled()) {
         gSoundManager->Play(EESoundObject::Get(kSoundButton2)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
         if (theReason.GetLength() > 0) {
-            unsigned long theDelay = gWorldTable.GetLongValue(75);
+            unsigned long theDelay = gWorldTable.GetLongValue(kWorldRefusalMessageInterval);
             if (TMGetTime() - this->mLastMessageTime > theDelay) {
                 gUserInterface->AddChatLogEntry(theReason, 0);
                 this->mLastMessageTime = TMGetTime();

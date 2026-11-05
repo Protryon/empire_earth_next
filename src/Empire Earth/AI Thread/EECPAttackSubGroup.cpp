@@ -417,14 +417,14 @@ void EECPAttackSubGroup::AttackWith(EECPAttackSubGroupUnit* inUnit, EEComplexUni
             USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(0x17, theClass);
             if (gUnitSetManager.GetSet(theClass->GetUnitSet())->Contains(inTarget->mUnitClass->mUnitType)
                 && inUnit->GetUnit()->GetPower() >= theClass->GetCost()
-                && gWorldTable.GetFloatValue(0x54) >= gPhysics->GetRandom()) {
+                && gWorldTable.GetFloatValue(kWorldAiSpecialAttackChance) >= gPhysics->GetRandom()) {
                 inUnit->GetUnit()->SetPower(inUnit->GetUnit()->GetPower() - theClass->GetCost());
                 inUnit->GetUnit()->mIsSpecialAttack = true;
             }
         } else if (gCivPowersManager.HasPower(inUnit->GetUnit()->GetPlayer(), kCivPowerFanaticism)
                    && gUnitSetManager.GetSet(0x2f)->Contains(inUnit->GetUnit()->GetUnitClass()->mUnitType)
                    && !inUnit->GetUnit()->IsCloaked()
-                   && gPhysics->mRandom.Generate() <= gWorldTable.GetFloatValue2(0x54)) {
+                   && gPhysics->mRandom.Generate() <= gWorldTable.GetFloatValue2(kWorldAiSpecialAttackChance)) {
             inUnit->GetUnit()->GoFanatic();
         } else if (inUnit->GetUnit()->GetUnitClass()->mUnitType == kUnitTypeSp15CapitalShip || inUnit->GetUnit()->GetUnitClass()->mUnitType == kUnitTypeCapitalShipYamato) {
             EECCSpecialAttack* theClass = NULL;

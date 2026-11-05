@@ -92,7 +92,7 @@ public:
     // 0x2794c6: new EEChatLogEntry {inColor, inName, inText, mType = inType, mTime = inTime}, thread message 0x418
     long AddChatLogEntry(const GEColor& inColor, const UWideString& inName, const UWideString& inText,
                          unsigned long inTime, unsigned long inType);
-    // 0x279536: AddChatLogEntry(GEColor(1, 1, 1), UWideString(" > "), inText, gWorldTable.GetLongValue(25) * 3, 2); inY unused
+    // 0x279536: AddChatLogEntry(GEColor(1, 1, 1), UWideString(" > "), inText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 3, 2); inY unused
     long AddChatLogEntry(const UWideString& inText, long inY);
     void PostLobbyUpdatePlayer(long inX, long inY);  // 0x2795a6
     void PostLobbyUpdateGameOptions();      // 0x2795c1

@@ -67,6 +67,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUnitVectorItem.h"
 #include "ee/EEGameOptions.h"
+#include "ee/EERules.h"
 #include "ee/EECPBehavior.h"
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long Fn2806E7(UString& ioName, EEPlayer* inPlayer);
@@ -1090,7 +1091,7 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
 // record 19 (Attack Frequency Boundaries); record 21 (Attack Frequency Boundary) is only set by scenario effects
 void EEComputerPlayer::Init()
 {
-    this->mDifficulty = gWorld.mLobbyOptions.mDifficulty;
+    this->mDifficulty = EEDifficultyAILevel(gWorld.mLobbyOptions.mDifficulty);   // gameoptions.yaml ai_level
     this->mLBD4 = 0;
     this->mFavoriteLandType = 20;
     this->mFavoriteSeaType = 242;

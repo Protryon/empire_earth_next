@@ -146,7 +146,7 @@ void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOption
                 thePlayer.mColor = gDefaultPlayerColors[i];
                 thePlayer.mIsLocal = false;
                 thePlayer.mSlot = i;
-                thePlayer.mStartingCitizens = gWorldTable.GetLongValue(0x30);
+                thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
                 thePlayer.mIsReady = false;
                 thePlayer.mPing = 0.0f;
                 thePlayer.mName = "";
@@ -373,7 +373,7 @@ void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsE
                     thePlayer.mColor = gDefaultPlayerColors[i];
                     thePlayer.mTeam = 0;
                     thePlayer.mB36 = false;
-                    thePlayer.mStartingCitizens = gWorldTable.GetLongValue(0x30);
+                    thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
                 }
                 EEMFullPlayerInformation* theInformation = new EEMFullPlayerInformation(thePlayer);
                 theInformation->SetOriginatingSlot(kSlotServer);
@@ -472,7 +472,7 @@ void EEServer::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
 
             sprintf(theText, theFormat, (const char*)gWorld.mPlayers[inPlayer]->mName);
             gResource->GetString(IDS_MSG_GAME, theName);
-            gUserInterface->AddChatLogEntry(theColor, theName, theText, gWorldTable.GetLongValue(25) * 2, 0);
+            gUserInterface->AddChatLogEntry(theColor, theName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
             if (!inWasBooted) {
                 this->LockSendCommunicationsTick();
                 this->UnregisterSlot(this->GetPlayerSendToSlot(inPlayer));
@@ -652,7 +652,7 @@ void EEServer::ProcessSystemMessage(NEMessage* inMessage)
         thePlayer.mName = theRequest->GetPlayerName();
         thePlayer.mTeam = 0;
         thePlayer.mType = 1;
-        thePlayer.mStartingCitizens = gWorldTable.GetLongValue(0x30);
+        thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
         thePlayer.mPing = 0.0f;
         thePlayer.mIsReady = false;
         this->mBehindFirewall.insert(std::map<unsigned char, bool>::value_type(inMessage->GetOriginatingSlot(),
@@ -743,7 +743,7 @@ bool EEServer::FilterPlayerInput(NEMessage* inMessage)
         thePlayer.mName = theRequest->GetPlayerName();
         thePlayer.mTeam = 0;
         thePlayer.mType = 1;
-        thePlayer.mStartingCitizens = gWorldTable.GetLongValue(0x30);
+        thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
         thePlayer.mPing = 0.0f;
         thePlayer.mIsReady = false;
         this->mBehindFirewall.insert(std::map<unsigned char, bool>::value_type(inMessage->GetOriginatingSlot(),
@@ -947,7 +947,7 @@ void EEServer::HandleLobbyInput(NEMessage* inMessage)
                 sprintf(theMessage, theFormat, (const char*)thePlayer->mName);
                 gResource->GetString(IDS_MSG_GAME, theName);
                 gUserInterface->AddChatLogEntry(theColor, theName, theMessage,
-                                                gWorldTable.GetLongValue(25) * 2, 0);
+                                                gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
                 gWorld.RemoveDisconnectedPlayer(k);
             }
         }

@@ -6425,7 +6425,7 @@ void EEShapeWall(EEComplexUnit* inUnit, long inCorner, long inRaisedCorners)
 // Builds the text of a civilization upgrade ("category: attribute percent%"); false when a string is missing
 // The text of civilization upgrade inUpgrade ("<category>: <attribute> <percent>%"); false when a string is missing.
 // Its two function-local static strings' atexit dtors follow it (0x24e7c4 / 0x24e7cf).
-bool EEFn24E68F(unsigned short inUpgrade, UWideString& outText)
+bool EEFn24E68F(EECivUpgrade inUpgrade, UWideString& outText)
 {
     unsigned long theCategory;
     unsigned long theIndex;
@@ -6439,12 +6439,9 @@ bool EEFn24E68F(unsigned short inUpgrade, UWideString& outText)
         static UWideString sCategory;
         if (gResource->GetString(theStringID, sCategory) == 0) {
             static UWideString sAttribute;
-            if (theIndex <= 0x25)
-                theStringID = theIndex + IDS_CIV_BONUS_BASE;
-            else
-                theStringID = theIndex + IDS_CIV_POWER_BASE;
+            theStringID = EECivilizationManager::LevelNameID(theIndex);   // civbuilder.yaml attribute names
             if (gResource->GetString(theStringID, sAttribute) == 0) {
-                if (theIndex <= 0x25)
+                if (!EECivilizationManager::IsPowerLevel(theIndex))
                     sprintf(outText, "%s: %s %ld%%", (const char*)sCategory, (const char*)sAttribute,
                             (long)(theValue * 100.0f + 0.5f));
                 else
@@ -6482,15 +6479,15 @@ EEComplexUnit* EEConvertUnit(EEComplexUnit* inUnit, long inPlayer, bool inIsConv
         unsigned long theUpgrade = 0;
         for (unsigned long i = 0x26; i < gCivPowersManager.mPowers.size() + 0x26; i++) {
             if (gCivPowersManager.HasPower(inUnit->GetPlayer(), i) && !gCivPowersManager.HasPower(thePlayer, i)) {
-                theUpgrade = gCivilizationManager.MakePowerUpgrade((unsigned char)i);
+                theUpgrade = gCivilizationManager.MakePowerUpgrade(EECivilizationManager::PowerLevel(i));
                 gCivPowersManager.GetName(i, theName);
                 goto grant;
             }
         }
         {
-            std::vector<unsigned short>& theAll = inUnit->GetPlayer()->mCivilization.GetPurchasedUpgrades();
-            std::vector<unsigned short> theList;
-            std::vector<unsigned short>::iterator it; for (it = theAll.begin(); it != theAll.end(); it++)
+            std::vector<EECivUpgrade>& theAll = inUnit->GetPlayer()->mCivilization.GetPurchasedUpgrades();
+            std::vector<EECivUpgrade> theList;
+            std::vector<EECivUpgrade>::iterator it; for (it = theAll.begin(); it != theAll.end(); it++)
                 theList.push_back(*it);
             EEAIRandomShuffle(theList.begin(), theList.end());
             it = theList.begin();
@@ -6519,7 +6516,7 @@ EEComplexUnit* EEConvertUnit(EEComplexUnit* inUnit, long inPlayer, bool inIsConv
                 gResource->GetString(IDS_ACQUIRED_THROUGH_ADAPTATION, theFormat);
                 sprintf(theMessage, theFormat, (const char*)theName);
                 gUserInterface->AddChatLogEntry(inUnit->GetPlayer()->mColor, inUnit->GetPlayer()->mName, theMessage,
-                                                gWorldTable.GetLongValue(25) * 2, 0);
+                                                gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
             }
         }
         if (theClass->mUnitType == kUnitTypeTownCenter)
@@ -6613,10 +6610,10 @@ EEComplexUnit* EEConvertUnit(EEComplexUnit* inUnit, long inPlayer, bool inIsConv
 // FUNCTION: EXE 0x64edcf
 // Tells whether a civilization bought an upgrade
 // Whether inValue is in inCivilization's mPurchasedUpgrades (read through the out-of-line GetPurchasedUpgrades 0x12c738, ICF with EECampaign::GetScenarios)
-bool EEHasCivilizationUpgrade(EECivilization* inCivilization, unsigned short inValue)
+bool EEHasCivilizationUpgrade(EECivilization* inCivilization, EECivUpgrade inValue)
 {
-    std::vector<unsigned short>& theList = inCivilization->GetPurchasedUpgrades();
-    for (std::vector<unsigned short>::iterator it = theList.begin(); it != theList.end(); it++) {
+    std::vector<EECivUpgrade>& theList = inCivilization->GetPurchasedUpgrades();
+    for (std::vector<EECivUpgrade>::iterator it = theList.begin(); it != theList.end(); it++) {
         if (*it == inValue)
             return true;
     }

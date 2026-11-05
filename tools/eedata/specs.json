@@ -186,6 +186,10 @@
    "format": "yaml",
    "hole": {},
    "key": "row",
+   "keyed_levels": [
+    "mLevels",
+    "levels"
+   ],
    "refs": {
     "mUnitSet": {
      "table": "dbunitset",
@@ -618,6 +622,10 @@
    "format": "csv",
    "hole": {},
    "key": "row",
+   "epoch_flags": [
+    "mInEpoch",
+    "music"
+   ],
    "refs": {},
    "id_names": [
     "label"

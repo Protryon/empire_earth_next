@@ -141,3 +141,33 @@ long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
     }
     return inPath->FindFile(inName, outFile);
 }
+
+#include "ee/EERules.h"
+
+void EELoadRules(FSPath* inPath)
+{
+    // the rules documents sit next to the db tables (db\combat.yaml ...); their references read the tables' texts
+    // through the same path
+    sTextPath = inPath;
+    sTextDirectory = "db\\";
+    std::string theError;
+    if (!EEGetRules().Load(EETextContent(), theError)) {
+        theError = "db\\" + theError;
+        PlatMessageShow("Empire Earth: db rules", theError.c_str(), PLAT_MESSAGE_ERROR);
+        ESVerify(__FILE__, __LINE__, theError.c_str());
+    }
+}
+
+void EEDumpRules()
+{
+    const char* theFile = getenv("EE_DUMP_CONTENT");
+    if (theFile == NULL || *theFile == 0)
+        return;
+    std::string theJson;
+    EEGetRules().Dump(theJson);
+    FILE* f = fopen(theFile, "ab");
+    if (f) {
+        fwrite(theJson.data(), 1, theJson.size(), f);
+        fclose(f);
+    }
+}

@@ -1572,7 +1572,7 @@ long EEUserInterface::AddChatLogEntry(const GEColor& inColor, const UWideString&
 long EEUserInterface::AddChatLogEntry(const UWideString& inText, long inY)
 {
     GEColor theColor(1.0f, 1.0f, 1.0f);
-    return this->AddChatLogEntry(theColor, " > ", inText, gWorldTable.GetLongValue(25) * 3, 2);
+    return this->AddChatLogEntry(theColor, " > ", inText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 3, 2);
 }
 
 // FUNCTION: EXE 0x679591

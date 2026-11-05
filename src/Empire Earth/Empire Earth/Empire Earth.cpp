@@ -2521,6 +2521,7 @@ void EEInitializeDatabase()
     UWideString theUserDirectory;
     FSFileSpec* theDbFile;
     long theResult;
+    EELoadRules(gDataPath);   // the rules documents (ee/EERules.h), before the tables that use them
     theResult = EEDbFindFile(gDataPath, kDbStartingResourcesFile, theDbFile);
     if (theResult != kErrorOK) ESVerify(__FILE__, 909, "theResult == keseOK");
     if (theDbFile == NULL) ESVerify(__FILE__, 910, "theDbFile != NULL");
@@ -2729,6 +2730,7 @@ void EEInitializeDatabase()
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x4c1, "theResult == keseOK");
     Fn1030AB();
     EEInitGamePools();
+    EEDumpRules();   // EE_DUMP_CONTENT: the rules, after dbmusic filled the binary load's songs
     theResult = URegisterShutdown(EEDeleteDatabase);
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x4cb, "theResult == keseOK");
 }

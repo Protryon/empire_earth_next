@@ -9,6 +9,7 @@
 // ee/EECivilizationManager.h, lle/UITextLabel.h, lle/UResourceFile.h.
 #ifndef EE_EEUIEPDCSEVENTS_H
 #define EE_EEUIEPDCSEVENTS_H
+#include "ee/EECivUpgrade.h"
 #include "ee/EEStringIDs.h"
 #include "lle/UIControl.h"
 // vtable 0x44ba70; ??_G 0x277e0d; ProcessEvent 0x1e5e2e; sizeof 0xc; ctor inline; new at 0x277d2f, 0x27fae6
@@ -72,7 +73,7 @@ public:
     {
         UWideString theMessage;
         UWideString theName;
-        std::vector<unsigned short> theUpgrades;
+        std::vector<EECivUpgrade> theUpgrades;
         UIForm* theForm = gUIManager->GetFormByID(0x23);
         EECBUIListBox* theCivs = (EECBUIListBox*)theForm->GetControl(3);
         EECBUIListBox* theStats = (EECBUIListBox*)theForm->GetControl(4);

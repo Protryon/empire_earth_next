@@ -104,7 +104,7 @@ long EEUIEEEECivBuilder::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     sCivilization.mPurchasedUpgrades.clear();
     sCivilization.mAvailablePoints = sCivilization.mMaxPoints;
-    sCivilization.SetPointsAndMax(gWorldTable.GetLongValue(76));
+    sCivilization.SetPointsAndMax(gWorldTable.GetLongValue(kWorldCivilizationBuilderPoints));
     gUserInterface->OpenCivilizationBuilder(&sCivilization, false);
     return kErrorOK;
 }

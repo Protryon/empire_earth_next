@@ -83,7 +83,7 @@ void EEUIFMGGStatistics::Refresh()
         return;
     gResource->GetString(IDS_GAME_CONVERSIONS, theLabel);
     sprintf(theText, "%-18.18s  %4.4ld/%-4.4ld", (const char*)theLabel,
-            thePlayer->mSavedGroups.GetLastValue(5), gWorldTable.GetLongValue(21));
+            thePlayer->mSavedGroups.GetLastValue(5), gWorldTable.GetLongValue(kWorldConversionsStatisticMax));
     if (static_cast<UITextLabel*>(this->mOwner->GetControl(kMainGameConversions))->GetText(0) != theText)
         (static_cast<UITextLabel*>(this->mOwner->GetControl(kMainGameConversions)))->SetText(theText);
 }

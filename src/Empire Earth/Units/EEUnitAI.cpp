@@ -535,7 +535,7 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
         break;
     case kTriggerLocationWayOffMap: {
         GE3DPoint theLocation((float)inUnit->mTileX + 0.5f, (float)inUnit->mTileY + 0.5f, inUnit->mHeight);
-        theFlag = inUnit->mPhysicalModel.GetLocation().DistanceTo(theLocation) > gWorldTable.GetFloatValue(0x4e);
+        theFlag = inUnit->mPhysicalModel.GetLocation().DistanceTo(theLocation) > gWorldTable.GetFloatValue(kWorldTileStrayDistance);
         break;
     }
     case kTriggerOneAndAHalfSecondsElapsed:

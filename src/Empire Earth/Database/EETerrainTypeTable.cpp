@@ -101,6 +101,8 @@ void EETerrainTypeTable::Unload()
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEGlobalConstants.h"
+#include "ee/EERules.h"
+#include "ee/EERulesWorld.h"
 
 // FUNCTION: EXE 0x4dbe44
 // Returns the damage factor of an attack kind against a unit class (its family row), 0 when it cannot be attacked or a
@@ -115,27 +117,19 @@ float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned 
     EEPlayer* theTarget = gWorld.mPlayers[inTargetPlayer];
     if (thePlayer == NULL || theTarget == NULL)
         return 0.0f;
+    // the scale by difficulty (gameoptions.yaml difficulties: dbworld difficulty_damage_scale F / F2 on easy and
+    // hard, none on medium) when exactly one side is "human" (IsHuman, not player 0; provisional name)
+    bool theHuman = thePlayer->IsHuman() && inPlayer != 0;
+    bool theTargetHuman = theTarget->IsHuman() && inTargetPlayer != 0;
+    float theFactor = gU4E8708[theRow][inKind];
+    if (theHuman == theTargetHuman)
+        return theFactor;
+    const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
     unsigned long theDifficulty = gWorld.mGameOptions.mDifficulty;
-    bool theComputer = thePlayer->IsHuman() && inPlayer != 0;
-    bool theTargetComputer = theTarget->IsHuman() && inTargetPlayer != 0;
-    float** theTable;
-    if (theDifficulty == 1)
-        theTable = gU4E8708;
-    else if (!theComputer) {
-        if (!theTargetComputer)
-            theTable = gU4E8708;
-        else {
-            theTable = gU4E870C;
-            if (theDifficulty != 0)
-                theTable = gDamageTableScaled2;
-        }
-    } else if (theTargetComputer)
-        theTable = gU4E8708;
-    else if (theDifficulty != 0)
-        theTable = gU4E870C;
-    else
-        theTable = gDamageTableScaled2;
-    return theTable[theRow][inKind];
+    if (theDifficulty >= theList.size())
+        return theFactor;
+    const EEDifficultyRule& theRule = theList[theDifficulty];
+    return EERuleFloat(theTargetHuman ? theRule.mScaleHumanTarget : theRule.mScaleHumanAttacker) * theFactor;
 }
 
 
@@ -251,8 +245,8 @@ long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
         }
         for (i = 0; i < theCount; i++) {
             for (long j = 0; j < 0x44; j++) {
-                gU4E870C[i][j] = gWorldTable.GetFloatValue(0x59) * gU4E8708[i][j];
-                gDamageTableScaled2[i][j] = gWorldTable.GetFloatValue2(0x59) * gU4E8708[i][j];
+                gU4E870C[i][j] = gWorldTable.GetFloatValue(kWorldDifficultyDamageScale) * gU4E8708[i][j];
+                gDamageTableScaled2[i][j] = gWorldTable.GetFloatValue2(kWorldDifficultyDamageScale) * gU4E8708[i][j];
             }
         }
     }

@@ -3,6 +3,7 @@
 // flags. Ctor 0x12c57d, dtor 0x162677 (both out of line); not polymorphic. sizeof 0x40 (at least).
 #ifndef EE_EECIVILIZATION_H
 #define EE_EECIVILIZATION_H
+#include "ee/EECivUpgrade.h"
 
 #include <vector>
 
@@ -23,24 +24,24 @@ public:
     ~EECivilization();                      // 0x162677
     // 0x12c5e9 (ret 0xc): the cost of inUpgrade (inList, else mPurchasedUpgrades, for the category count) into outCost; true when
     // affordable (or gGameOptions.mAllowCustomCivs is clear)
-    bool CanAfford(unsigned short inUpgrade, unsigned long* outCost, std::vector<unsigned short>* inList);
-    bool CanAffordAll(std::vector<unsigned short>& inUpgrades);  // 0x12c648: every one affordable in turn
+    bool CanAfford(EECivUpgrade inUpgrade, unsigned long* outCost, std::vector<EECivUpgrade>* inList);
+    bool CanAffordAll(std::vector<EECivUpgrade>& inUpgrades);  // 0x12c648: every one affordable in turn
     // 0x12c847 (ret 0xc): inPurchase pays and records it; then applies it for inPlayer
-    bool Buy(unsigned short inUpgrade, long inPlayer, bool inPurchase);
+    bool Buy(EECivUpgrade inUpgrade, long inPlayer, bool inPurchase);
     void SetPoints(long inPoints);          // 0x12ca99: sets mAvailablePoints
     void AddPoints(long inAmount);          // 0x12c73b: adds to both epoch fields and clears mB3C
     void SetPointsAndMax(long inEpoch);     // 0x12caa3 (sets +0x38 and +0x34)
     UWideString GetName() const { return this->mName; }  // (the diplomacy form reads it through a temporary, EEUIEDSOpen 0x1d4165)
     void SetName(const UWideString& inName);   // 0x12cab0: mName = inName, mUnchanged = false (provisional name)
     // 0x12c898: 0x12c847(id, inPlayer, inFlag) for every id of inUpgrades (EEMCivUpgradesPurchased; provisional name)
-    void AddUpgrades(std::vector<unsigned short>& inUpgrades, long inPlayer, bool inFlag);
+    void AddUpgrades(std::vector<EECivUpgrade>& inUpgrades, long inPlayer, bool inFlag);
 
     // (provisional names): 0x12c6bc/0x12c6fe/0x12c5d9/0x12c70f never touch this (forwarders to
     // gCivilizationManager; the civilization builder calls them through its civilization)
-    long GetBaseCost(unsigned short inUpgrade);     // 0x12c6bc
-    long GetExtraCost(unsigned short inUpgrade);    // 0x12c6fe
+    long GetBaseCost(EECivUpgrade inUpgrade);     // 0x12c6bc
+    long GetExtraCost(EECivUpgrade inUpgrade);    // 0x12c6fe
     long ComputeCost(long inBase, long inStep, long inCount);  // 0x12c5d9 (inA + inB * inC)
-    long CountInCategory(unsigned short inUpgrade, std::vector<unsigned short>* inList);  // 0x12c70f
+    long CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList);  // 0x12c70f
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x12c74c, ret12/status
     long Save(FSFile& outFile);             // 0x12c9ee (EEPlayer::Save; provisional name)
     bool GetNoPointsAdded();                // 0x12c6fa (mB3C; EEPlayer::RepairPointers; provisional name)
@@ -50,10 +51,10 @@ public:
     bool GetUnchanged();                                           // 0x12c72c
     long GetAvailablePoints();                              // 0x12c730
     long GetMaxPoints();                                    // 0x12c734
-    std::vector<unsigned short>& GetPurchasedUpgrades();  // 0x12c738 (returns this)
+    std::vector<EECivUpgrade>& GetPurchasedUpgrades();  // 0x12c738 (returns this)
 
-    std::vector<unsigned short> mPurchasedUpgrades;  // +0x00 (clear() is 0x2987d, an ICF-shared COMDAT)
-    std::vector<unsigned short> mDeferredUpgrades;  // +0x10
+    std::vector<EECivUpgrade> mPurchasedUpgrades;  // +0x00 (clear() is 0x2987d, an ICF-shared COMDAT)
+    std::vector<EECivUpgrade> mDeferredUpgrades;  // +0x10
     UWideString mName;                      // +0x20
     unsigned long mAvailablePoints;         // +0x34 (Load/Save: FSFile Read/Write unsigned long, slots +0x5c/+0x94)
     unsigned long mMaxPoints;               // +0x38

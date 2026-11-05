@@ -172,10 +172,10 @@ long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy)
     float theRate = 1.0f;
     long theTrade = inPlayer->mResourceTrade[inResource - 2];
     switch (inResource) {
-    case 2: theRate = gWorldTable.GetFloatValue(92); break;
-    case 3: theRate = gWorldTable.GetFloatValue2(92); break;
-    case 4: theRate = gWorldTable.GetFloatValue(91); break;
-    case 6: theRate = gWorldTable.GetFloatValue2(91); break;
+    case 2: theRate = gWorldTable.GetFloatValue(kWorldTradeRateFoodWood); break;
+    case 3: theRate = gWorldTable.GetFloatValue2(kWorldTradeRateFoodWood); break;
+    case 4: theRate = gWorldTable.GetFloatValue(kWorldTradeRateStoneIron); break;
+    case 6: theRate = gWorldTable.GetFloatValue2(kWorldTradeRateStoneIron); break;
     }
     float theLimit = theTrade >= 0 ? kHeightEpsilon : 1000.0f;
     float thePrice = 100.0f / (((theRate - theLimit) * (kTradeCurve * theRate - theLimit) * kTradeScale) /

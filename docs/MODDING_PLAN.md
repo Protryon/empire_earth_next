@@ -3,7 +3,10 @@
 Status (2026-11-05): phases 1 and 2 are built (clean text tables, the game reads them); gate G1 (the content dump)
 exists; the keys of 3.2 exist in the text: every db row has an `id` and every cross-table reference is an id, resolved
 by one Content (DATA_FORMATS.md 8.6). Phase 4: unit classes, events/effects and epochs (epochs.yaml) are sized from
-the data; the mod layer (phase 3) and the other caps are open. See the "Progress" section at the end. Repository: `C:\Users\max\Desktop\empire_earth_next` (clang/C++17 port, fork of the
+the data; the mod layer (phase 3) and the other caps are open. Phase 5 (rules as data): the dbworld constants are
+read by id, and combat, game options, the civilization builder's attribute map, the civ powers and the epoch media are
+rules documents (DATA_FORMATS.md 8.8); civilization builder categories and levels and the game option lists are
+uncapped. See the "Progress" section at the end. Repository: `C:\Users\max\Desktop\empire_earth_next` (clang/C++17 port, fork of the
 `empire_earth` reconstruction, based on `fixes-all`). Paths below are relative to it.
 `src/EE` stands for `src/Empire Earth`. Identifiers and comments are provisional: they come from reverse engineering.
 
@@ -269,7 +272,7 @@ it can hand each loader an in-memory file (`FSMemoryFile` already exists, `FSPat
 | Event effects | 2000 | **file is exactly 2000 records**; highest effect index used 1565 | `EEEvent.h:39,47`, `EEEvent.cpp:110` (raw `Read(gEventEffects, sizeof)`) |
 | Events | 1500 | 289 have effects | `EEEvent.h:58-62`, `EEEvent.cpp:111` (fixed loop of 1500) |
 | Epochs | 15 | none (all used) | `EETechTree.cpp:133,148,210,269,294,444,447,588,605`; `EEPlayer.h:542 mEpochs[15]`; AI `EECPBuildManager.h:101`, `EECPUnitManager.h:88`, `EECPResearchManager.h:49`; `EEMusicObject.h:35-41`; the editor's `EESEPlayerControls.h:60-62`; 92 `[15]`/`<15`-style sites in src/EE + include/ee. **The epoch id = tech id** coupling means adding an epoch renumbers techs. |
-| Civ-builder categories / levels | 35 / 60 (6-bit index) | | `EECivilizationManager.h:42,79`, `.cpp:356,368,379`; `.civ` encoding |
+| Civ-builder categories / levels | 35 / 60 (6-bit index) | **lifted** (2026-11-05: 65,536 / 65,535, a 32-bit upgrade id; keyed .civ) | `EECivilizationManager.h:42,79`, `.cpp:356,368,379`; `.civ` encoding |
 | Unit categories (→ C++ class) | 35 (`0x23`) | | `EEUnitClass.cpp:2914` |
 | Families × attack kinds | 60 × 68 | | `EETerrainTypeTable.cpp:144,161,168` (loop unrolled 68×) |
 | Weapon/armour kinds | 6 | | `gWeaponToHitFactors[6][6]`, `mArmor[6]` (`EEUnit.h:152,1449`); civ-builder case 4 |
@@ -278,8 +281,8 @@ it can hand each loader an in-memory file (`FSMemoryFile` already exists, `FSPat
 | AI behaviour records | 129 | | `EECPBehavior.h` |
 | Players | 16 + nature (17) | lobby shows 8 | `include/ee/RTSWorld.h:62`; `EEGameOptions.h:77`; `EEPlayer.h:1066,1076,1097` (`[17]`); network and save formats |
 | Scenario variables | 10 per player, 3 per unit | | `EEPlayer.h:1074` |
-| Difficulty | 3 | | record layouts; `EEGameOptions` < 3 |
-| Map sizes / speeds | 6 / 4 | | `EEGameOptions.cpp:233,304-333` |
+| Difficulty | 3 | **lifted** for the option list (gameoptions.yaml; each maps to one of the AI's 3 record levels) | record layouts; `EEGameOptions` < 3 |
+| Map sizes / speeds | 6 / 4 | **lifted** (gameoptions.yaml lists; a map size names one of the 6 random map script size classes) | `EEGameOptions.cpp:233,304-333` |
 
 Triggers, conditions, effects, scenario objects, unit sets, civilisations and AI building counts are `std::vector`/`std::map`
 and have no cap.
@@ -677,3 +680,53 @@ hot-reload of content in single player for modders.
   (units 56/39), text + open tree tour and AI game (56/39), the extra tables (878 unit rows, 3,076 effects, 1,794
   events, 16 epochs) tour + 60 s and AI game (56/39); the game's own content dump of the extra tables equals the
   CLI's (37/37 tables); dump(binary tree) == dump(open tree) through the game's code.
+- **Rules as data (phase 5), 2026-11-05.** DATA_FORMATS.md 8.3 (dbworld ids) and 8.8 (the rules documents).
+  * B: the 120 dbworld reads name their constant (`gWorldTable.GetLongValue(kWorldUnitLimitRange)`; the generated
+    `EEWorldConstant` enum is the only accepted index type).
+  * C: combat.yaml: one damage function (`EEUnitClass::ComputeDamage`) for direct hits, splash damage and the
+    trample; minimum damage, fanatic factor (a dbworld reference), elevation step and category lists, ally/herd
+    factors, dead-food share, trample damage/threshold, morale factors, morale buildings (ids), regeneration ticks.
+    The difficulty -> damage table rule is gameoptions.yaml's (per difficulty: the scale when only the target / only
+    the attacker is "human").
+  * K: gameoptions.yaml: map sizes (tiles, name, random map script size class), speeds (factor), difficulties (AI
+    level, damage scales), unit limit range/step/default, wonders maximum/default; the lobby's and the scenario
+    editor's lists come from them; the counts replace the 6/4/3 limits. Load types stay code (kLoadTypeCount).
+  * N: epochs.yaml `music` (dbmusic ids; dbmusic's per-epoch flags are compiled from the lists) and `citizen`
+    (high-tech tools, the removal effects/sound/pitch/thunder) per epoch.
+  * E: civbuilder.yaml: every attribute (= level) with what it raises (stats as C++ primitives, modes share/add/
+    multiply, gather slots, category filters, powers), its name, the special powers category.
+  * D: civpowers.yaml: per power the effects (C++ primitives: research_if_researched, load_sound/effect,
+    pulse_sight, set_mining_limit, enable_camouflage, allow/disallow_tech); HasPower by attribute.
+  Behaviour checks: `eedata.py extra --rules-demo` (minimum damage 5, positive morale 0.5, map size small 50 tiles)
+  shows in the content dump (`rules.combat` minimum_damage 5, `rules.gameoptions` tiles 50) and an AI game on it
+  plays differently (units 5/28/44 at the time cap for 0/56/39).
+- **Caps lifted (phase 4, continued), 2026-11-05.**
+  1. Civilization builder categories / levels 35 / 60: the upgrade id is `EECivUpgrade` (32 bits: category << 16 |
+     level; it was (category << 6) | level in an unsigned short); the manager's categories and each one's levels are
+     vectors; dbcivilization.yaml writes a category's levels keyed by attribute (`levels: [{attribute, value, bonus}]`)
+     and may name levels past 60 (the record holds the first 60, the game reads them all from the text). A keyed
+     `.civ` text (`eedata: civ`, `upgrades: [archers_foot.attack, ...]`) is written when every upgrade has a key;
+     legacy binary .civ files still load (their ids converted; premade checksums on the legacy form). Network and
+     saves carry 32-bit upgrade ids. Test: `eedata.py extra --civ` (10 more categories: 39 with the powers; an
+     attribute at level 61).
+  2. Map sizes / speeds / difficulty: the gameoptions.yaml lists (any length). `eedata.py extra --options` adds a 7th
+     map size (260 tiles), a 5th speed and a 4th difficulty (AI level hard, damage scales 2.0/0.5).
+  Left: terrain types (17 in a 32-bit mask), attack kinds (68), weapon/armour kinds (6), resources (7), scenario
+  variables (10/3), players (16): not started (see the report of 2026-11-05).
+  Assessment of the caps left (2026-11-05):
+  * Players 16 (+ nature): 15 fixed `[16]`/`[17]` arrays in the headers (EEPlayer, EEServer, EEClient, EEGameOptions,
+    RTSWorld, the editor's player screen, the AI's attack groups, unit improvement tables), about 107 `< 16` / `< 17`
+    loops in 26 units, player ids sent as single bytes and per-player tables in the network messages and the save
+    format, and a lobby whose eight slots are fixed controls of the UI data (dbuicontrols 30..37 and their combo
+    boxes). Not contained: it touches the lockstep protocol, every per-player save chunk and the lobby forms. Left for
+    a dedicated branch (or the Rust rewrite); first step would be one `kMaxPlayers` constant behind all of them.
+  * Terrain types (17 in a 32-bit mask), attack kinds (68 dbfamily columns), weapon/armour kinds (6), resources (7),
+    scenario variables (10 per player, 3 per unit): not started. Attack kinds need a dbfamily record of variable
+    width (the 68 columns are its struct; the damage tables are allocated 0x44 wide); the others are arrays in unit,
+    player and AI structs that the saves and messages copy.
+  Gates (2026-11-05, test profile, seed 2 Small Hard 2 AI to the time cap): binary tree tour + 120 s (78.1% lit,
+  input check ok) and AI game (PT 14,060, units 56/39); open tree tour (79.3% lit, input ok) and AI game (PT 13,902,
+  56/39); the extra tree (878 unit rows, events/effects above the old tables, 16 epochs, 7 map sizes, 5 speeds, 4
+  difficulties, 39 civilization categories, a level-61 attribute) AI game (PT 13,716, 57/38); the rules-demo tree AI
+  game (5/28/44). The content dump of the binary tables (the C++ defaults) equals that of the text (37 tables + 5
+  rules entries), its 37 table entries equal main's, and the game's own dumps (binary and open tours) equal the CLI's.

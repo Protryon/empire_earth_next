@@ -224,7 +224,7 @@ void EEUIFMGStatusButton::ButtonUp()
                 gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
             } else {
                 gSoundManager->Play(EESoundObject::Get(kSoundButton2)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-                unsigned long theDelay = gWorldTable.GetLongValue(0x4b);
+                unsigned long theDelay = gWorldTable.GetLongValue(kWorldRefusalMessageInterval);
                 if (TMGetTime() - this->mLastErrorTime > theDelay) {
                     gUserInterface->AddChatLogEntry(theReason, 0);
                     this->mLastErrorTime = TMGetTime();
@@ -253,7 +253,7 @@ void EEUIFMGStatusButton::ButtonUp()
             } else {
                 gResource->GetString(IDS_INSUFFICIENT_POWER, theReason);
                 gSoundManager->Play(EESoundObject::Get(kSoundButton2)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
-                unsigned long theDelay = gWorldTable.GetLongValue(0x4b);
+                unsigned long theDelay = gWorldTable.GetLongValue(kWorldRefusalMessageInterval);
                 if (TMGetTime() - this->mLastErrorTime > theDelay) {
                     gUserInterface->AddChatLogEntry(theReason, 0);
                     this->mLastErrorTime = TMGetTime();
@@ -322,7 +322,7 @@ long EEUIFMGStatusButton::CopyData()
         } else if (theButton >= 0x5dc && theButton <= 0x5e3) {
             this->mAvailable = EECanAffordTrade(theButton);
         } else if (theButton == 0x29 || theButton == 0x2a) {
-            if (gGameResources == 4 && gPhysics->GetGameClock() < (float)(long)(gWorldTable.GetLongValue(0x5e) * 1000))
+            if (gGameResources == 4 && gPhysics->GetGameClock() < (float)(long)(gWorldTable.GetLongValue(kWorldDeathmatchJitManufacturingDelay) * 1000))
                 this->mAvailable = false;
             else
                 this->mAvailable = true;
@@ -761,7 +761,7 @@ void EEUIFMGStatusButton::Command()
             break;
         case 0x29:
         case 0x2a:
-            if (gGameResources == 4 && gPhysics->GetGameClock() < (float)(long)(gWorldTable.GetLongValue(0x5e) * 1000)) {
+            if (gGameResources == 4 && gPhysics->GetGameClock() < (float)(long)(gWorldTable.GetLongValue(kWorldDeathmatchJitManufacturingDelay) * 1000)) {
                 UWideString theString;
                 gResource->GetString(IDS_JUST_IN_TIME_MANUFACTURING_IS_NOT, theString);
                 gUserInterface->AddChatLogEntry(theString, 0);

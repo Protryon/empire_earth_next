@@ -261,6 +261,17 @@ KEYS = {'dbtechtree': 'mID', 'epochs': 'position'}
 # they do (techtree.py)
 DERIVED = {'epochs': {'mID': (1, 0), 'mEpoch': (1, 0), 'mNextEpoch': (1, 1), 'mFirstNodeID': (1000, 1000)}}
 
+# Per-epoch flag arrays whose text is in epochs.yaml (table: (field, epochs.yaml key)): element k of the field is
+# "epoch k's list names this row". The table's text leaves the field out; the importer sets it from the lists of the
+# first `count` epochs (dbmusic: the songs of each epoch, epochs.yaml music; the game reads the lists, EERules.cpp).
+EPOCH_FLAGS = {'dbmusic': ('mInEpoch', 'music')}
+
+# Level arrays written as a list keyed by the civilization builder's attributes (table: (field, text key)): the text
+# has `levels: [{attribute: <civbuilder attribute id>, value, bonus}]` (any level; `level: n` names a level that has
+# no attribute); the importer puts the levels the record holds (the field's count) into it, the game reads them all
+# (EERules.cpp). dbcivilization: a category's value and bonus per attribute.
+KEYED_LEVELS = {'dbcivilization': ('mLevels', 'levels')}
+
 # Fields that hold the row's own key (+ an offset): the text leaves them out when they are equal, the importer
 # writes key + offset. dbcivpowers: GetPower(id) reads row id - 0x26.
 SELF = {

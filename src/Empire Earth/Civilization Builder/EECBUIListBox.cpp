@@ -70,12 +70,12 @@ static const GEColor kTextWhite(1.0f, 1.0f, 1.0f);
 // the remove_if predicate of SetUpgradesExcept (an upgrade of the excluded list) (provisional name)
 class EECBIsUpgradeIn {
 public:
-    EECBIsUpgradeIn(const std::vector<unsigned short>& inUpgrades) : mUpgrades(inUpgrades) {}
+    EECBIsUpgradeIn(const std::vector<EECivUpgrade>& inUpgrades) : mUpgrades(inUpgrades) {}
     // emitted with the remove_if instantiation (0x67e8c0)
-    bool operator()(unsigned short inUpgrade) const
+    bool operator()(EECivUpgrade inUpgrade) const
     {
         bool theFound = false;
-        for (std::vector<unsigned short>::const_iterator theIter = this->mUpgrades.begin(); theIter != this->mUpgrades.end();
+        for (std::vector<EECivUpgrade>::const_iterator theIter = this->mUpgrades.begin(); theIter != this->mUpgrades.end();
              theIter++) {
             if (inUpgrade == *theIter) {
                 theFound = true;
@@ -85,7 +85,7 @@ public:
         return theFound;
     }
 private:
-    const std::vector<unsigned short>& mUpgrades;
+    const std::vector<EECivUpgrade>& mUpgrades;
 };
 
 // the line order of SortLines: lines that start with the "unassigned" string (resource 0x8052) first, then the
@@ -228,7 +228,7 @@ void EECBUIListBox::ChangeSelectionIndex(unsigned long inIndex, bool inFireEvent
 
 // FUNCTION: EXE 0x67d4dc
 // Rebuilds the list from upgrade ids: one formatted line per upgrade plus one header per category, sorted
-void EECBUIListBox::SetUpgrades(std::vector<unsigned short>& inUpgrades, bool inFlag)
+void EECBUIListBox::SetUpgrades(std::vector<EECivUpgrade>& inUpgrades, bool inFlag)
 {
     std::map<UWideString, long> theCategories;
     UWideString theLine;
@@ -238,7 +238,7 @@ void EECBUIListBox::SetUpgrades(std::vector<unsigned short>& inUpgrades, bool in
     bool theSort = this->mSortLines;
     this->DeleteAllEntries();
     this->mSortLines = false;
-    for (std::vector<unsigned short>::iterator theIter = inUpgrades.begin(); theIter != inUpgrades.end();
+    for (std::vector<EECivUpgrade>::iterator theIter = inUpgrades.begin(); theIter != inUpgrades.end();
          theIter++) {
         if (!this->FormatUpgrade(*theIter, theLine, inFlag, 0))
             continue;
@@ -329,8 +329,8 @@ long EECBUIListBox::DrawUpgradeLine(const GERectangle& inRectangle, GEText* inTe
         theValue += " ";
         inText->SetAlignment(kTextAlignLeft);
         if (EECBUIListBox::GetNumber(inLine, kCivTokenUpgrade, &theUpgrade)) {
-            gCivilizationManager.SplitAttribute((unsigned short)theUpgrade, &theCategory, &theIndex);
-            if (theIndex >= 0x26)
+            gCivilizationManager.SplitAttribute((EECivUpgrade)theUpgrade, &theCategory, &theIndex);
+            if (EECivilizationManager::IsPowerLevel(theIndex))   // civbuilder.yaml: a power attribute
                 theValue.Clear();
         }
         inText->SetText(kIndent + theValue + theName);
@@ -391,7 +391,7 @@ void EECBUIListBox::ReformatUpgrades(bool inFlag)
     for (std::vector<UWideString>::iterator theIter = this->mData.begin(); theIter != this->mData.end(); theIter++) {
         if (EECBUIListBox::IsUpgradeLine(*theIter)) {
             if (EECBUIListBox::GetNumber(*theIter, kCivTokenUpgrade, &theUpgrade)) {
-                if (this->FormatUpgrade((unsigned short)theUpgrade, theLine, inFlag, theIndex))
+                if (this->FormatUpgrade((EECivUpgrade)theUpgrade, theLine, inFlag, theIndex))
                     *theIter = theLine;
                 theIndex++;
             }
@@ -434,11 +434,11 @@ bool EECBUIListBox::GetUpgradeName(const UWideString& inLine, UWideString& outNa
 
 // FUNCTION: EXE 0x67dcce
 // Finds the index of the line for an upgrade id; returns 3 when it is not listed
-long EECBUIListBox::FindUpgrade(unsigned short inUpgrade, unsigned long* outIndex)
+long EECBUIListBox::FindUpgrade(EECivUpgrade inUpgrade, unsigned long* outIndex)
 {
     UWideString theLine;
     long theResult = 3;
-    unsigned short theUpgrade = 0;
+    EECivUpgrade theUpgrade = 0;
     for (unsigned long i = 0; i < this->GetNumLines(); i++) {
         if (!this->GetLine(i, theLine) || !EECBUIListBox::GetUpgrade(theLine, &theUpgrade) || theUpgrade != inUpgrade)
             continue;
@@ -452,7 +452,7 @@ long EECBUIListBox::FindUpgrade(unsigned short inUpgrade, unsigned long* outInde
 // FUNCTION: EXE 0x67dd4f
 // Formats an upgrade as a list line: category/name/bonus/id/cost/points/value, the points being its cost to buy
 // or its refund to sell; false for an upgrade without a level
-bool EECBUIListBox::FormatUpgrade(unsigned short inUpgrade, UWideString& outLine, bool inFlag, long inIndex)
+bool EECBUIListBox::FormatUpgrade(EECivUpgrade inUpgrade, UWideString& outLine, bool inFlag, long inIndex)
 {
     long thePoints = 0;
     bool theResult = false;
@@ -477,7 +477,7 @@ bool EECBUIListBox::FormatUpgrade(unsigned short inUpgrade, UWideString& outLine
             static UWideString theUpgradeName;
             static UWideString theFormat;
             static UWideString theValueText;
-            theNameID = theIndex <= 0x25 ? theIndex + IDS_CIV_BONUS_BASE : theIndex + IDS_CIV_POWER_BASE;
+            theNameID = EECivilizationManager::LevelNameID(theIndex);   // civbuilder.yaml attribute names
             theError = gResource->GetString(theNameID, theUpgradeName);
             gResource->GetString(IDS_FORMAT_PERCENT_6_2G, theFormat);
             sprintf(theValueText, theFormat, theValue * 100.0f);
@@ -562,7 +562,7 @@ bool EECBUIListBox::GetBonus(const UWideString& inLine, unsigned long* outBonus)
 
 // FUNCTION: EXE 0x67e116
 // Reads the id, bonus and cost of the selected upgrade line; returns 3 when line 0 or nothing is selected
-long EECBUIListBox::GetSelectedUpgrade(unsigned short* outUpgrade, unsigned long* outBonus, unsigned long* outCost)
+long EECBUIListBox::GetSelectedUpgrade(EECivUpgrade* outUpgrade, unsigned long* outBonus, unsigned long* outCost)
 {
     UWideString theLine;
     unsigned long theSelection;
@@ -618,20 +618,20 @@ bool EECBUIListBox::GetNumber(const UWideString& inLine, unsigned long inIndex, 
 
 // FUNCTION: EXE 0x67e297
 // Reads the upgrade id of a formatted line
-bool EECBUIListBox::GetUpgrade(const UWideString& inLine, unsigned short* outUpgrade)
+bool EECBUIListBox::GetUpgrade(const UWideString& inLine, EECivUpgrade* outUpgrade)
 {
     unsigned long theUpgrade;
     bool theResult = EECBUIListBox::GetNumber(inLine, kCivTokenUpgrade, &theUpgrade);
     if (theResult)
-        *outUpgrade = (unsigned short)theUpgrade;
+        *outUpgrade = (EECivUpgrade)theUpgrade;
     return theResult;
 }
 
 // FUNCTION: EXE 0x67e2bb
 // Fills the list with every upgrade except the excluded ones, in buy mode
-void EECBUIListBox::SetUpgradesExcept(const std::vector<unsigned short>& inExcluded)
+void EECBUIListBox::SetUpgradesExcept(const std::vector<EECivUpgrade>& inExcluded)
 {
-    std::vector<unsigned short> theUpgrades;
+    std::vector<EECivUpgrade> theUpgrades;
     theUpgrades = gCivilizationManager.GetUpgrades();
     // The removed tail is erased (it was listed too: duplicates or excluded upgrades appeared).
     theUpgrades.erase(std::remove_if(theUpgrades.begin(), theUpgrades.end(), EECBIsUpgradeIn(inExcluded)),
@@ -641,9 +641,9 @@ void EECBUIListBox::SetUpgradesExcept(const std::vector<unsigned short>& inExclu
 
 // FUNCTION: EXE 0x67e346
 // Fills the list with the civilization's own upgrades, in sell mode
-void EECBUIListBox::SetCivilizationUpgrades(std::vector<unsigned short>& inUpgrades)
+void EECBUIListBox::SetCivilizationUpgrades(std::vector<EECivUpgrade>& inUpgrades)
 {
-    std::vector<unsigned short> theUnused;
+    std::vector<EECivUpgrade> theUnused;
     this->SetUpgrades(inUpgrades, false);
 }
 

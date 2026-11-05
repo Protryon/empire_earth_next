@@ -12,6 +12,11 @@ class FSFile;
 class TSReadWriteLock;
 
 // One player slot (0x38 bytes). Ctor 0x12f4dd: mType = mU04 = 3, mName = "", the rest 0, mB36 = true.
+// The game's load types (EEGameOptions::mLoadType: new game, scenario, saved game, editor map, campaign scenario,
+// campaign game; behaviour in code: EEGameState::Create, EEWorld). The lobby's option lists are data
+// (gameoptions.yaml); these are not.
+static const unsigned long kLoadTypeCount = 6;
+
 class EEGameOptionsPlayer {
 public:
     EEGameOptionsPlayer();                                          // 0x12f4dd
@@ -81,7 +86,7 @@ public:
     UWideString mMapName;                   // +0x3bc
     TSReadWriteLock* mLock;                 // +0x3d0
     unsigned long mGameSpeed;                        // +0x3d4 option 10
-    unsigned long mLoadType;                         // +0x3d8 0 new game, 1 scenario, 2 saved game (provisional name)
+    unsigned long mLoadType;                         // +0x3d8 0 new game, 1 scenario, 2 saved game ... (< kLoadTypeCount; provisional name)
     unsigned long mMapSize;                          // +0x3dc option 1
     long mEpochStart;                       // +0x3e0 option 4 (15: ...)
     long mEpochEnd;                         // +0x3e4 option 5

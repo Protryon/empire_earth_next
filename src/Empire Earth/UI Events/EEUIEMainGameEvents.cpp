@@ -469,10 +469,10 @@ long EEUIEMGChangeGameSpeed::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     if (gWorld.mGameOptions.GetLockSpeed() != false)
         return kErrorOK;
     if (this->mFaster) {
-        if (gWorld.GetGameSpeed() + gWorldTable.GetFloatValue(0x2c) <= gWorldTable.GetFloatValue2(0x2b))
-            theDelta = gWorldTable.GetFloatValue(0x2c);
-    } else if (gWorld.GetGameSpeed() - gWorldTable.GetFloatValue(0x2c) >= gWorldTable.GetFloatValue(0x2b))
-        theDelta = -gWorldTable.GetFloatValue(0x2c);
+        if (gWorld.GetGameSpeed() + gWorldTable.GetFloatValue(kWorldGameSpeedStep) <= gWorldTable.GetFloatValue2(kWorldGameSpeedRange))
+            theDelta = gWorldTable.GetFloatValue(kWorldGameSpeedStep);
+    } else if (gWorld.GetGameSpeed() - gWorldTable.GetFloatValue(kWorldGameSpeedStep) >= gWorldTable.GetFloatValue(kWorldGameSpeedRange))
+        theDelta = -gWorldTable.GetFloatValue(kWorldGameSpeedStep);
     gCommunications->ProcessLocalUserInput(new EEMGameSpeed(gWorld.GetGameSpeed() + theDelta), kSlotNone);
     return kErrorOK;
 }

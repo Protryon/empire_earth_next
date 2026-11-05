@@ -41,7 +41,7 @@ long EECBCivilizationCreator::GetMaxPoints()
 
 // FUNCTION: EXE 0x67c8ff
 // Adds an upgrade if its cost is affordable (always in unlimited mode, where the cost counts up as spent)
-bool EECBCivilizationCreator::AddUpgrade(unsigned short inCount)
+bool EECBCivilizationCreator::AddUpgrade(EECivUpgrade inCount)
 {
     bool theResult = false;
     if (inCount > 0) {
@@ -61,10 +61,10 @@ bool EECBCivilizationCreator::AddUpgrade(unsigned short inCount)
 
 // FUNCTION: EXE 0x67c954
 // Removes an upgrade and refunds its cost (unlimited mode: subtracts it from the points spent)
-bool EECBCivilizationCreator::RemoveUpgrade(unsigned short inUpgrade)
+bool EECBCivilizationCreator::RemoveUpgrade(EECivUpgrade inUpgrade)
 {
     bool theResult = false;
-    std::vector<unsigned short>::iterator theIterator = std::find(this->mUpgrades.begin(), this->mUpgrades.end(), inUpgrade);
+    std::vector<EECivUpgrade>::iterator theIterator = std::find(this->mUpgrades.begin(), this->mUpgrades.end(), inUpgrade);
     if (theIterator != this->mUpgrades.end()) {
         long theDelta = this->GetRefund(inUpgrade);
         if (this->mIsUnlimited)

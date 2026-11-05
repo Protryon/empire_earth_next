@@ -84,6 +84,8 @@
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEDatabaseTables.h"
+#include "ee/EERules.h"
+#include "ee/EERulesWorld.h"
 #include "ee/EERandomMapGenerators.h"
 #include "ee/EEUICPing.h"
 #include "ee/EEUIELobbyEvents.h"
@@ -95,9 +97,19 @@ static unsigned long sStartTime;           // 0x562fd0: the lobby's Start time (
 static long sPlayerTypeMenus[16];        // 0x562f90: the menu each slot's type box holds (provisional name)
 // .data 0x4c6474..0x4c64b0: the string ids of the lobby's difficulty, (unused) 0x4c6480, speed and game type lists
 // (LobbyOpen fills the boxes from them, LobbyShowGameOptions labels the choice; provisional names)
-static long sDifficultyStrings[3] = { IDS_LOBBY_EASY, IDS_LOBBY_MEDIUM, IDS_LOBBY_HARD };
+// the difficulty and speed texts: gameoptions.yaml's (the original's IDS_LOBBY_EASY .. HARD and IDS_INGAME_SLOW ..
+// IDS_VERY_FAST lists); an option past the list shows the first entry's
+static long EEDifficultyNameID(unsigned long inDifficulty)
+{
+    const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
+    return theList[inDifficulty < theList.size() ? inDifficulty : 0].mNameID;
+}
+static long EESpeedNameID(unsigned long inSpeed)
+{
+    const std::vector<EESpeedRule>& theList = EEGetRules().mGameOptions.mSpeeds;
+    return theList[inSpeed < theList.size() ? inSpeed : 0].mNameID;
+}
 static long sU4C6480[5] = { 30272, 30273, 30274, 30275, 30276 };
-static long sGameSpeedStrings[4] = { IDS_INGAME_SLOW, IDS_STANDARD, IDS_INGAME_FAST, IDS_VERY_FAST };
 static long sGameTypeStrings[3] = { IDS_GAMETYPE_RANDOM_MAP, IDS_SAVED_GAME, IDS_GAMETYPE_SCENARIO };
 
 long LobbyFindFile(const UString& inDirectory, const UString& inExtension, UString& outName, long inLoadType);
@@ -699,7 +711,7 @@ void LobbyOnPlayerTypeYes(UIForm* inForm)
     delete static_cast<void*>(inForm);
     gGameOptions.mLock->WriteLock();
     thePlayer.mIsReady = false;
-    thePlayer.mStartingCitizens = gWorldTable.GetLongValue(48);
+    thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
     thePlayer.mName = "";
     thePlayer.mPing = 0.0f;
     thePlayer.mTeam = 0;
@@ -1718,7 +1730,8 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
     }
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyMapSizeCombo))->SetCurrentSelection(inOptions.GetMapSize());
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyMapSizeCombo))->GetCurrentSelection(theSelection);
-    gResource->GetString(IDS_MAP_SIZE_FIRST + theSelection, theText);
+    gResource->GetString(EEGetRules().mGameOptions.mMapSizes[theSelection < EEGetRules().mGameOptions.mMapSizes.size()
+                                                                 ? theSelection : 0].mNameID, theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyMapSizeLabel2))->SetText(theText);
     if (inOptions.GetLoadType() == 0) {
         theForm->GetControl(kLobbyMapSizeLabel0)->SetDisplayMode(kDisplayModeShown);
@@ -1793,7 +1806,8 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
         theForm->GetControl(kLobbyEpochEndLabel2)->SetDisplayMode(kDisplayModeShown);
     }
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyWorldUnitLimitCombo))->SetCurrentSelection(
-        (inOptions.GetUnitLimit() - gWorldTable.GetLongValue(26)) / 50);
+        (inOptions.GetUnitLimit() - EERuleLong(EEGetRules().mGameOptions.mUnitLimitMinimum)) /
+        EEGetRules().mGameOptions.mUnitLimitStep);
     sprintf(theText, "%ld", inOptions.GetUnitLimit());
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyWorldPopLimitLabel2))->SetText(theText);
     if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
@@ -1832,7 +1846,7 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
         theForm->GetControl(kLobbyGameVariantLabel2)->SetDisplayMode(kDisplayModeShown);
     }
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyDifficultyCombo))->SetCurrentSelection(inOptions.GetDifficulty());
-    gResource->GetString(sDifficultyStrings[inOptions.GetDifficulty()], theText);
+    gResource->GetString(EEDifficultyNameID(inOptions.GetDifficulty()), theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyDifficultyLabel2))->SetText(theText);
     if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
         theForm->GetControl(kLobbyDifficultyCombo)->SetDisplayMode(kDisplayModeShown);
@@ -1842,7 +1856,7 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
         theForm->GetControl(kLobbyDifficultyLabel2)->SetDisplayMode(kDisplayModeShown);
     }
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyGameSpeedCombo))->SetCurrentSelection(inOptions.GetGameSpeed());
-    gResource->GetString(sGameSpeedStrings[inOptions.GetGameSpeed()], theText);
+    gResource->GetString(EESpeedNameID(inOptions.GetGameSpeed()), theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameSpeedLabel2))->SetText(theText);
     if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
         theForm->GetControl(kLobbyGameSpeedCombo)->SetDisplayMode(kDisplayModeShown);
@@ -2125,8 +2139,9 @@ void LobbyOpen(UIForm* inForm)
             static_cast<UIComboBox*>(inForm->GetControl(i))->AppendLine(theText);
         }
     }
-    for (j = IDS_MAP_SIZE_FIRST; j <= IDS_GIGANTIC; j++) {
-        gResource->GetString(j, theText);
+    const EEGameOptionRules& theRules = EEGetRules().mGameOptions;   // the option lists: gameoptions.yaml
+    for (const EEMapSizeRule& theSize : theRules.mMapSizes) {
+        gResource->GetString(theSize.mNameID, theText);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyMapSizeCombo))->AppendLine(theText);
     }
     unsigned long theCount = EERMGetNumberOfGenerators();
@@ -2144,13 +2159,13 @@ void LobbyOpen(UIForm* inForm)
         gResource->GetString(EEEpochTitleID(j), theText);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyEpochEndCombo))->AppendLine(theText);
     }
-    for (j = gWorldTable.GetLongValue(26); j <= gWorldTable.GetLongValue2(26); j += 50) {
+    for (j = EERuleLong(theRules.mUnitLimitMinimum); j <= EERuleLong(theRules.mUnitLimitMaximum); j += theRules.mUnitLimitStep) {
         sprintf(theText, "%ld", j);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyWorldUnitLimitCombo))->AppendLine(theText);
     }
     gResource->GetString(IDS_LOBBY_OFF, theText);
     static_cast<UIComboBox*>(inForm->GetControl(kLobbyWondersVictoryCombo))->AppendLine(theText);
-    for (j = 1; j <= gWorldTable.GetLongValue(77); j++) {
+    for (j = 1; j <= EERuleLong(theRules.mWondersMaximum); j++) {
         sprintf(theText, "%ld", j);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyWondersVictoryCombo))->AppendLine(theText);
     }
@@ -2159,12 +2174,12 @@ void LobbyOpen(UIForm* inForm)
             gResource->GetString(gGameVariants[j]->mNameID, theText);
             static_cast<UIComboBox*>(inForm->GetControl(kLobbyGameVariantCombo))->AppendLine(theText);
         }
-    for (i = 0; i < 3; i++) {
-        gResource->GetString(sDifficultyStrings[i], theText);
+    for (const EEDifficultyRule& theDifficulty : theRules.mDifficulties) {
+        gResource->GetString(theDifficulty.mNameID, theText);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyDifficultyCombo))->AppendLine(theText);
     }
-    for (i = 0; i < 4; i++) {
-        gResource->GetString(sGameSpeedStrings[i], theText);
+    for (const EESpeedRule& theSpeed : theRules.mSpeeds) {
+        gResource->GetString(theSpeed.mNameID, theText);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyGameSpeedCombo))->AppendLine(theText);
     }
     for (i = 0; i < 3; i++) {
@@ -2484,11 +2499,13 @@ long EEUIELEGameUnitLimit::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     if (theBox->GetCurrentSelection(theSelection) != kErrorOK)
         return kErrorOK;
     gGameOptions.mLock->WriteLock();
-    if (theSelection != (gGameOptions.mUnitLimit - gWorldTable.GetLongValue(26)) / 50) {
-        NEMessage* theMessage = new EEMGameOptions(6, theSelection * 50 + gWorldTable.GetLongValue(26),
+    const EEGameOptionRules& theRules = EEGetRules().mGameOptions;   // gameoptions.yaml unit_limit
+    unsigned long theMinimum = EERuleLong(theRules.mUnitLimitMinimum);
+    if (theSelection != (gGameOptions.mUnitLimit - theMinimum) / theRules.mUnitLimitStep) {
+        NEMessage* theMessage = new EEMGameOptions(6, theSelection * theRules.mUnitLimitStep + theMinimum,
                                                    UWideString(""));
         gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
-        gGameOptions.mUnitLimit = theSelection * 50 + gWorldTable.GetLongValue(26);
+        gGameOptions.mUnitLimit = theSelection * theRules.mUnitLimitStep + theMinimum;
     }
     gGameOptions.mLock->WriteUnlock();
     return kErrorOK;

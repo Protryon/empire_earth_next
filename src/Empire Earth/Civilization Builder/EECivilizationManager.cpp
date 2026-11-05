@@ -78,6 +78,9 @@
 #include "ee/EECivilizationManager.h"
 #include "ee/EEGameVariant.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EERules.h"
+#include "ee/EERulesWorld.h"
+#include "ee/EECivPowerIDs.h"
 
 // The premade civilizations' sort order (RTTI EECMPremadeCivSorter, vtable 0x44bfdc: only the deleting dtor; std::sort
 // copies it by value; the comparison is inline)
@@ -91,18 +94,18 @@ public:
 // local to this file; no virtual dtor: GetUpgrades' frame object is destroyed without a vptr store)
 class EECMUpgradeFunctor {
 public:
-    virtual bool operator()(unsigned short inUpgrade, unsigned long inCategory, unsigned long inIndex) = 0;
+    virtual bool operator()(EECivUpgrade inUpgrade, unsigned long inCategory, unsigned long inIndex) = 0;
 };
 
 class EECMGetUpgrades : public EECMUpgradeFunctor {
 public:
-    virtual bool operator()(unsigned short inUpgrade, unsigned long inCategory, unsigned long inIndex)
+    virtual bool operator()(EECivUpgrade inUpgrade, unsigned long inCategory, unsigned long inIndex)
     {
         this->mUpgrades.push_back(inUpgrade);
         return true;
     }
 
-    std::vector<unsigned short> mUpgrades;  // +0x04
+    std::vector<EECivUpgrade> mUpgrades;  // +0x04
 };
 
 // An upgrade's effect on every unit class of a unit set (RTTI EECBProcessUpgrade, vtable 0x44bff4; built by 0x281e4d,
@@ -125,8 +128,6 @@ void EEUpgradeHitPoints(EEUnitClassUpgrade* inUpgrade, long inType, float inFact
 
 // the civilization powers' category index (0x965568; set by Load, read by MakePowerUpgrade)
 static unsigned long sPowersCategory;
-// the civilization powers' level value (0x44bfcc; Load) (provisional name)
-static const float kPowerLevelValue = 0.01f;
 
 // chain at 0x6813f4 (wrapper)
 //   object 0x9654d0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
@@ -148,7 +149,7 @@ const UString kCivilizationsKey("Civilizations");
 // Creates the civilization manager with no categories
 EECivilizationManager::EECivilizationManager()
 {
-    memset(this->mCategories, 0, sizeof(this->mCategories));
+    this->mCategories.clear();
     this->mCategoryCount = 0;
 }
 
@@ -165,13 +166,16 @@ EECivilizationManager::~EECivilizationManager()
 // Appends a category record to the category table
 void EECivilizationManager::AddCategory(const EECivilizationCategoryEntry& inEntry)
 {
-    memcpy(&this->mCategories[this->mCategoryCount], &inEntry, sizeof(EECivilizationCategoryEntry));
+    this->mCategories.push_back(inEntry);
+    this->mLevels.push_back(std::vector<EECivilizationUpgradeValue>(inEntry.mLevels, inEntry.mLevels + 60));
+    this->mCategoryIDs.push_back(std::string());
     this->mCategoryCount++;
 }
 
 // FUNCTION: EXE 0x681514
 // Reads the upgrade categories from the civilization file, then appends the civ powers category (one level per
 // power 0x26..0x3c, cost from world table entry 0x56)
+// The powers category is civbuilder.yaml's powers_category; its levels are the attributes that apply a power.
 long EECivilizationManager::Load(FSFile* inFile)
 {
     long theLastU00 = 0;
@@ -188,28 +192,53 @@ long EECivilizationManager::Load(FSFile* inFile)
             if (!(theEntry.mIndex > 0))
                 continue;
             this->AddCategory(theEntry);
+            // the text's id and levels (any number of them: the record holds the first 60)
+            if (const EECivCategoryText* theText = EEGetRules().mCivBuilder.FindCategory((long)i)) {
+                this->mCategoryIDs.back() = theText->mID;
+                std::vector<EECivilizationUpgradeValue>& theLevels = this->mLevels.back();
+                if (theText->mValues.size() > theLevels.size())
+                    theLevels.resize(theText->mValues.size(), EECivilizationUpgradeValue{0.0f, 0.0f});
+                for (size_t k = 0; k < theText->mValues.size(); k++)
+                    theLevels[k] = EECivilizationUpgradeValue{theText->mValues[k], theText->mBonuses[k]};
+            }
             theLastU00 = theEntry.mDatabaseID;
             theLastU04 = theEntry.mIndex;
         }
         // the civilization powers' category: one level per power 0x26..0x3c
+        const EECivBuilderRules& theRules = EEGetRules().mCivBuilder;
         EECivilizationCategoryEntry thePowers;
         memset(&thePowers, 0, sizeof(EECivilizationCategoryEntry));
         thePowers.mDatabaseID = theLastU00 + 1;
         thePowers.mIndex = theLastU04 + 1;
-        thePowers.mNameID = IDS_SPECIAL_POWERS;
-        thePowers.mUnitSet = 0x66;
-        thePowers.mCost = gWorldTable.GetLongValue(0x56);
-        EECivilizationUpgradeValue* theLevel = &thePowers.mLevels[0x25];
-        unsigned long j = 0;
-        while (j < 0x17) {
-            EECivPower thePower = *gCivPowersManager.GetPowerRecord(j + 0x26);
-            j++;
-            theLevel->mBonus = thePower.mBonus;
-            theLevel->mValue = kPowerLevelValue;
-            theLevel++;
+        thePowers.mNameID = theRules.mPowersNameID;
+        thePowers.mUnitSet = theRules.mPowersUnitSet;
+        thePowers.mCost = EERuleLong(theRules.mPowersCost);
+        for (const EECivAttribute& theAttribute : theRules.mAttributes) {   // a level per power attribute
+            for (const EECivApply& theApply : theAttribute.mApplies) {
+                if (theApply.mStat != kCivStatPower || theAttribute.mLevel < 1 || theAttribute.mLevel > 60 ||   // (the record's)
+                    (unsigned long)theApply.mPower >= gCivPowersManager.mPowers.size())
+                    continue;
+                EECivilizationUpgradeValue* theLevel = &thePowers.mLevels[theAttribute.mLevel - 1];
+                theLevel->mBonus = gCivPowersManager.mPowers[theApply.mPower].mBonus;
+                theLevel->mValue = theRules.mPowersLevelValue;
+                break;
+            }
         }
         sPowersCategory = this->mCategoryCount;
         this->AddCategory(thePowers);
+        std::vector<EECivilizationUpgradeValue>& theLevels = this->mLevels.back();   // powers past level 60
+        for (const EECivAttribute& theAttribute : theRules.mAttributes)
+            for (const EECivApply& theApply : theAttribute.mApplies) {
+                if (theApply.mStat != kCivStatPower || theAttribute.mLevel <= 60 ||
+                    (unsigned long)theApply.mPower >= gCivPowersManager.mPowers.size())
+                    continue;
+                if ((long)theLevels.size() < theAttribute.mLevel)
+                    theLevels.resize(theAttribute.mLevel, EECivilizationUpgradeValue{0.0f, 0.0f});
+                theLevels[theAttribute.mLevel - 1] =
+                    EECivilizationUpgradeValue{theRules.mPowersLevelValue, gCivPowersManager.mPowers[theApply.mPower].mBonus};
+            }
+        if (!EEGetRules().mCivBuilder.mCategories.empty())
+            this->mCategoryIDs.back() = theRules.mPowersID;
     }
     inFile->Close();
     return theResult;
@@ -254,7 +283,7 @@ long EECivilizationManager::LoadPremadeCivilizations(FSFile* inFile)
 
 // FUNCTION: EXE 0x681873
 // Returns the extra cost per pick of the upgrade's category
-long EECivilizationManager::GetExtraCost(unsigned short inUpgrade)
+long EECivilizationManager::GetExtraCost(EECivUpgrade inUpgrade)
 {
     unsigned long theCategory = 0;
     this->SplitAttribute(inUpgrade, &theCategory, NULL);
@@ -263,13 +292,13 @@ long EECivilizationManager::GetExtraCost(unsigned short inUpgrade)
 
 // FUNCTION: EXE 0x68189e
 // Counts the upgrades in the list that share the upgrade's category
-long EECivilizationManager::CountInCategory(unsigned short inUpgrade, std::vector<unsigned short>* inList)
+long EECivilizationManager::CountInCategory(EECivUpgrade inUpgrade, std::vector<EECivUpgrade>* inList)
 {
     unsigned long theCategory = 0;
     unsigned long theOther = 0;
     long theCount = 0;
     this->SplitAttribute(inUpgrade, &theCategory, NULL);
-    for (std::vector<unsigned short>::iterator i = inList->begin(); i != inList->end(); i++) {
+    for (std::vector<EECivUpgrade>::iterator i = inList->begin(); i != inList->end(); i++) {
         this->SplitAttribute(*i, &theOther, NULL);
         if (theOther == theCategory)
             theCount++;
@@ -327,15 +356,19 @@ void EECivilizationManager::FillCivilizationList(EECBUIListBox* inList)
 // matches; reports the premade civilization's name id (0 when the file is not premade)
 // ecx unused: it reads gCivilizationManager
 bool EECivilizationManager::MatchesPremadeCivilization(const UWideString& inFile, const UWideString& inName,
-                                     std::vector<unsigned short>& inUpgrades, long* outNameID)
+                                     std::vector<EECivUpgrade>& inUpgrades, long* outNameID)
 {
     bool theResult = false;
     long theChecksum = inUpgrades.size();
     *outNameID = 0;
     for (int i = 0; i < inName.GetLength(); i++)
         theChecksum += inName[i];
-    for (std::vector<unsigned short>::iterator j = inUpgrades.begin(); j != inUpgrades.end(); j++)
-        theChecksum += *j;
+    for (std::vector<EECivUpgrade>::iterator j = inUpgrades.begin(); j != inUpgrades.end(); j++)
+    {   // the premade checksums sum the legacy (category << 6) | level ids
+        unsigned long theLegacy = 0;
+        EECivilizationManager::ToLegacy(*j, theLegacy);
+        theChecksum += theLegacy;
+    }
     for (unsigned long k = 0; k < gCivilizationManager.GetNumCivilizations(); k++) {
         EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[k];
         if (!inFile.Equals(theEntry.mFileName))
@@ -353,7 +386,7 @@ bool EECivilizationManager::MatchesPremadeCivilization(const UWideString& inFile
 bool EECivilizationManager::GetCategoryNameID(unsigned long inCategory, long* outNameID)
 {
     bool theResult = false;
-    if (inCategory < 0x23) {
+    if (inCategory < this->mCategoryCount) {
         *outNameID = this->mCategories[inCategory].mNameID;
         theResult = true;
     }
@@ -365,7 +398,7 @@ bool EECivilizationManager::GetCategoryNameID(unsigned long inCategory, long* ou
 bool EECivilizationManager::ForEachUpgrade(EECMUpgradeFunctor& inFunctor)
 {
     bool theResult = true;
-    for (unsigned long i = 0; i < 0x23 && theResult; i++)
+    for (unsigned long i = 0; i < this->mCategoryCount && theResult; i++)
         theResult = this->ForEachUpgradeOfCategory(i, inFunctor);
     return theResult;
 }
@@ -376,9 +409,9 @@ bool EECivilizationManager::ForEachUpgradeOfCategory(unsigned long inCategory, E
 {
     bool theResult = false;
     bool theContinue = true;
-    if (inCategory < 0x23) {
-        for (unsigned long i = 1; i <= 0x3c && theContinue; i++) {
-            unsigned short theUpgrade = (unsigned short)this->MakeUpgrade(inCategory, (unsigned char)i);
+    if (inCategory < this->mCategoryCount) {
+        for (unsigned long i = 1; i <= this->GetLevelCount(inCategory) && theContinue; i++) {
+            EECivUpgrade theUpgrade = (EECivUpgrade)this->MakeUpgrade(inCategory, i);
             theContinue = inFunctor(theUpgrade, inCategory, i);
         }
         theResult = theContinue;
@@ -388,9 +421,10 @@ bool EECivilizationManager::ForEachUpgradeOfCategory(unsigned long inCategory, E
 
 // FUNCTION: EXE 0x681d18
 // Reads an upgrade's value and bonus from its category level table
-bool EECivilizationManager::LookupLevel(unsigned short inUpgrade, float* outValue, float* outBonus)
+bool EECivilizationManager::LookupLevel(EECivUpgrade inUpgrade, float* outValue, float* outBonus)
 {
-    return this->GetCategoryLevel(inUpgrade >> 6, inUpgrade & 0x3f, outValue, outBonus);
+    return this->GetCategoryLevel(inUpgrade >> kCivUpgradeLevelBits, inUpgrade & kCivUpgradeLevelMask, outValue,
+                                  outBonus);
 }
 
 // FUNCTION: EXE 0x681d37
@@ -401,10 +435,13 @@ bool EECivilizationManager::GetCategoryLevel(unsigned long inCategory, unsigned 
     EECivilizationCategoryEntry* theEntry = NULL;
     if (this->GetCategory(inCategory, &theEntry) == false)
         return false;
+    // a level past the category's (the original read past its 60): zero
+    const std::vector<EECivilizationUpgradeValue>& theLevels = this->mLevels[inCategory];
+    bool theKnown = inIndex >= 1 && inIndex <= theLevels.size();
     if (outValue)
-        *outValue = theEntry->mLevels[inIndex - 1].mValue;
+        *outValue = theKnown ? theLevels[inIndex - 1].mValue : 0.0f;
     if (outBonus)
-        *outBonus = theEntry->mLevels[inIndex - 1].mBonus;
+        *outBonus = theKnown ? theLevels[inIndex - 1].mBonus : 0.0f;
     return true;
 }
 
@@ -422,31 +459,103 @@ bool EECivilizationManager::GetCategory(unsigned long inCategory, EECivilization
 
 // FUNCTION: EXE 0x681d9c
 // Builds an upgrade id from a category and a level index (category << 6 | index)
-unsigned long EECivilizationManager::MakeUpgrade(unsigned long inCategory, unsigned char inIndex)
+unsigned long EECivilizationManager::MakeUpgrade(unsigned long inCategory, unsigned long inIndex)
 {
-    return (inCategory << 6) + (inIndex & 0x3f);
+    return (inCategory << kCivUpgradeLevelBits) + (inIndex & kCivUpgradeLevelMask);
+}
+
+unsigned long EECivilizationManager::GetLevelCount(unsigned long inCategory) const
+{
+    return inCategory < this->mLevels.size() ? (unsigned long)this->mLevels[inCategory].size() : 0;
+}
+
+long EECivilizationManager::LevelNameID(unsigned long inLevel)
+{
+    const EECivAttribute* theAttribute = EEGetRules().mCivBuilder.Find((long)inLevel);
+    if (theAttribute != NULL && theAttribute->mNameID != 0)
+        return theAttribute->mNameID;
+    return inLevel <= 0x25 ? inLevel + IDS_CIV_BONUS_BASE : inLevel + IDS_CIV_POWER_BASE;
+}
+
+bool EECivilizationManager::IsPowerLevel(unsigned long inLevel)
+{
+    const EECivAttribute* theAttribute = EEGetRules().mCivBuilder.Find((long)inLevel);
+    if (theAttribute == NULL)
+        return inLevel >= 0x26;
+    for (const EECivApply& theApply : theAttribute->mApplies)
+        if (theApply.mStat == kCivStatPower)
+            return true;
+    return false;
+}
+
+unsigned long EECivilizationManager::PowerLevel(unsigned long inPowerID)
+{
+    for (const EECivAttribute& theAttribute : EEGetRules().mCivBuilder.mAttributes)
+        for (const EECivApply& theApply : theAttribute.mApplies)
+            if (theApply.mStat == kCivStatPower && (unsigned long)(theApply.mPower + kCivPowerFlamingArrows) == inPowerID)
+                return (unsigned long)theAttribute.mLevel;
+    return inPowerID;
+}
+
+EECivUpgrade EECivilizationManager::FromLegacy(unsigned long inLegacy)
+{
+    return (EECivUpgrade)(((inLegacy >> 6) << kCivUpgradeLevelBits) | (inLegacy & 0x3f));
+}
+
+bool EECivilizationManager::ToLegacy(EECivUpgrade inUpgrade, unsigned long& outLegacy)
+{
+    unsigned long theCategory = inUpgrade >> kCivUpgradeLevelBits;
+    unsigned long theLevel = inUpgrade & kCivUpgradeLevelMask;
+    outLegacy = (theCategory << 6) | (theLevel & 0x3f);
+    return theCategory < 0x400 && theLevel < 0x40;
+}
+
+bool EECivilizationManager::UpgradeKey(EECivUpgrade inUpgrade, std::string& outKey) const
+{
+    unsigned long theCategory = inUpgrade >> kCivUpgradeLevelBits;
+    const EECivAttribute* theAttribute = EEGetRules().mCivBuilder.Find((long)(inUpgrade & kCivUpgradeLevelMask));
+    if (theCategory >= this->mCategoryIDs.size() || this->mCategoryIDs[theCategory].empty() || theAttribute == NULL)
+        return false;
+    outKey = this->mCategoryIDs[theCategory] + "." + theAttribute->mID;
+    return true;
+}
+
+bool EECivilizationManager::FindUpgradeKey(const std::string& inKey, EECivUpgrade& outUpgrade) const
+{
+    size_t theDot = inKey.find('.');
+    if (theDot == std::string::npos)
+        return false;
+    const EECivAttribute* theAttribute = EEGetRules().mCivBuilder.FindID(inKey.substr(theDot + 1));
+    if (theAttribute == NULL)
+        return false;
+    for (unsigned long i = 0; i < this->mCategoryIDs.size(); i++)
+        if (this->mCategoryIDs[i] == inKey.substr(0, theDot)) {
+            outUpgrade = (EECivUpgrade)((i << kCivUpgradeLevelBits) | ((unsigned long)theAttribute->mLevel & kCivUpgradeLevelMask));
+            return true;
+        }
+    return false;
 }
 
 // FUNCTION: EXE 0x681db1
 // Builds the upgrade id of a civ power from its index
-unsigned long EECivilizationManager::MakePowerUpgrade(unsigned char inIndex)
+unsigned long EECivilizationManager::MakePowerUpgrade(unsigned long inIndex)
 {
-    return (inIndex & 0x3f) + (sPowersCategory << 6);
+    return (inIndex & kCivUpgradeLevelMask) + (sPowersCategory << kCivUpgradeLevelBits);
 }
 
 // FUNCTION: EXE 0x681dc7
 // Splits an upgrade id into its category and level index
-void EECivilizationManager::SplitAttribute(unsigned short inUpgrade, unsigned long* outCategory, unsigned long* outIndex)
+void EECivilizationManager::SplitAttribute(EECivUpgrade inUpgrade, unsigned long* outCategory, unsigned long* outIndex)
 {
     if (outCategory)
-        *outCategory = inUpgrade >> 6;
+        *outCategory = inUpgrade >> kCivUpgradeLevelBits;
     if (outIndex)
-        *outIndex = inUpgrade & 0x3f;
+        *outIndex = inUpgrade & kCivUpgradeLevelMask;
 }
 
 // FUNCTION: EXE 0x681ded
 // Returns every upgrade id of every category
-std::vector<unsigned short> EECivilizationManager::GetUpgrades()
+std::vector<EECivUpgrade> EECivilizationManager::GetUpgrades()
 {
     EECMGetUpgrades theFunctor;
     this->ForEachUpgrade(theFunctor);
@@ -459,7 +568,7 @@ std::vector<unsigned short> EECivilizationManager::GetUpgrades()
 
 // FUNCTION: EXE 0x681e4d
 // Applies an upgrade for a player to every unit class of its category's unit set; false without a level value
-bool EECivilizationManager::ApplyUpgrade(unsigned short inUpgrade, long inPlayer)
+bool EECivilizationManager::ApplyUpgrade(EECivUpgrade inUpgrade, long inPlayer)
 {
     float theValue = 0.0f;
     unsigned long theCategory;
@@ -476,44 +585,52 @@ bool EECivilizationManager::ApplyUpgrade(unsigned short inUpgrade, long inPlayer
     return theResult;
 }
 
-// FUNCTION: EXE 0x681ed3
-// Applies one upgrade level to a player's unit class (attack, hit points, reload, armor, range and sight,
-// speed, gathering, build time, cost ...); levels 0x26..0x3c apply the civ power instead
-// upgrade index inIndex (1..0x17; 0x26..0x3c are the civilization powers) applied with inValue to inUpgrade, the
-// class inUnitType of inPlayer (provisional name)
-void EECivilizationManager::ApplyUpgradeLevel(EEUnitClassUpgrade* inUpgrade, unsigned long inIndex, long inUnitType, float inValue,
-                                     EEPlayer* inPlayer)
+// a float stat by a non-share mode: + the value, or x (1 + the value)
+static float EECBModeValue(float inCurrent, long inMode, float inValue)
 {
-    // the current turn (a volatile read the original performs; its use is gone from the shipping build)
-    unsigned long theTurn = gCommunications->GetNumberOfCTsProcessedInPhysics();
-    if (inIndex > 0x25 && inIndex <= 0x3c) {
-        gCivPowersManager.ApplyPower(inPlayer, inIndex);
-        return;
-    }
-    if (inIndex == 5) {
-        for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-            if (theUnit->mUnitClass->mUnitType == inUnitType)
-                theUnit->SightOffHere();
-        }
-    }
-    switch (inIndex) {
-    case 1: {
-        long theBase = inUpgrade->mUnitClass->mAttack;
-        if (theBase != 0) {
-            float theAdd = theBase * inValue;
-            if (theAdd < 1.0f)
-                theAdd = 1.0f;
-            inUpgrade->mAttack += theAdd;
+    return inMode == kCivModeAdd ? inCurrent + inValue : inCurrent * (1.0f + inValue);
+}
+
+// an integer stat by a non-share mode (rounded)
+static long EECBModeValue(long inCurrent, long inMode, float inValue)
+{
+    if (inMode == kCivModeAdd)
+        return inCurrent + (long)(inValue + (inValue < 0.0f ? -0.5f : 0.5f));
+    return (long)(inCurrent * (1.0f + inValue) + 0.5f);
+}
+
+// One stat of an attribute (civbuilder.yaml applies): the share mode is the original's rule for that stat (the
+// switch EECivilizationManager::ApplyUpgradeLevel had: the base value is the class's)
+static void EECBApplyStat(const EECivApply& inApply, EEUnitClassUpgrade* inUpgrade, long inUnitType, float inValue,
+                          EEPlayer* inPlayer)
+{
+    EEUnitClass* theClass = inUpgrade->mUnitClass;
+    long theMode = inApply.mMode;
+    bool theShare = theMode == kCivModeShare;
+    switch (inApply.mStat) {
+    case kCivStatAttack:
+        if (!theShare) {
+            inUpgrade->mAttack = EECBModeValue(inUpgrade->mAttack, theMode, inValue);
+        } else {
+            long theBase = theClass->mAttack;
+            if (theBase != 0) {
+                float theAdd = theBase * inValue;
+                if (theAdd < 1.0f)
+                    theAdd = 1.0f;
+                inUpgrade->mAttack += theAdd;
+            }
         }
         break;
-    }
-    case 2:
+    case kCivStatHitPoints:
         EEUpgradeHitPoints(inUpgrade, inUnitType, inValue, inPlayer);
         break;
-    case 3:
-        inUpgrade->mReloadTime -= (long)(inUpgrade->mUnitClass->mReloadTime * inValue + 0.5f);
+    case kCivStatReloadTime:
+        if (!theShare)
+            inUpgrade->mReloadTime = EECBModeValue(inUpgrade->mReloadTime, theMode, inValue);
+        else
+            inUpgrade->mReloadTime -= (long)(theClass->mReloadTime * inValue + 0.5f);
         break;
-    case 4:
+    case kCivStatArmor:
         EECBUpgradeArmor(inUpgrade, 0, inValue);
         EECBUpgradeArmor(inUpgrade, 1, inValue);
         EECBUpgradeArmor(inUpgrade, 2, inValue);
@@ -521,90 +638,141 @@ void EECivilizationManager::ApplyUpgradeLevel(EEUnitClassUpgrade* inUpgrade, uns
         EECBUpgradeArmor(inUpgrade, 4, inValue);
         EECBUpgradeArmor(inUpgrade, 5, inValue);
         break;
-    case 5: {
-        float theAdd = inUpgrade->mUnitClass->mRange * inValue;
-        if (theAdd < 1.0f)
-            theAdd = 1.0f;
-        inUpgrade->SetRange(inUpgrade->mRange + theAdd);
-        float theOther = inUpgrade->mUnitClass->mLineOfSight * inValue;
-        if (theOther < 1.0f)
-            theOther = 1.0f;
-        inUpgrade->mLineOfSight += theOther;
-        break;
-    }
-    case 6:
-        inUpgrade->SetMaxVelocity(inUpgrade->mUnitClass->GetMaxVelocity() * inValue + inUpgrade->mMaxVelocity);
-        break;
-    case 7: {
-        long theAdd = (long)(inUpgrade->mUnitClass->mFlightTime * inValue + 0.5f);
-        if (theAdd < 1)
-            theAdd = 1;
-        inUpgrade->mFlightTime += theAdd;
-        break;
-    }
-    case 8:
-        inUpgrade->mAreaEffect += inUpgrade->mUnitClass->mAreaEffect * inValue;
-        break;
-    case 9:
-        if (inUpgrade->mUnitClass->mCategory != kUnitCategoryNavalCitizen) {
-            inUpgrade->mGatherTimes[5] -= (long)(inUpgrade->mUnitClass->mGatherTimes[5] * inValue + 0.5f);
-            inUpgrade->mGatherTimes[4] -= (long)(inUpgrade->mUnitClass->mGatherTimes[4] * inValue + 0.5f);
+    case kCivStatRange:
+        if (!theShare) {
+            inUpgrade->SetRange(EECBModeValue(inUpgrade->mRange, theMode, inValue));
+        } else {
+            float theAdd = theClass->mRange * inValue;
+            if (theAdd < 1.0f)
+                theAdd = 1.0f;
+            inUpgrade->SetRange(inUpgrade->mRange + theAdd);
         }
         break;
-    case 10:
-        inUpgrade->mGatherTimes[0] -= (long)(inUpgrade->mUnitClass->mGatherTimes[0] * inValue + 0.5f);
+    case kCivStatLineOfSight:
+        if (!theShare) {
+            inUpgrade->mLineOfSight = EECBModeValue(inUpgrade->mLineOfSight, theMode, inValue);
+        } else {
+            float theOther = theClass->mLineOfSight * inValue;
+            if (theOther < 1.0f)
+                theOther = 1.0f;
+            inUpgrade->mLineOfSight += theOther;
+        }
         break;
-    case 11:
-        inUpgrade->mGatherTimes[2] -= (long)(inUpgrade->mUnitClass->mGatherTimes[2] * inValue + 0.5f);
+    case kCivStatSpeed:
+        if (!theShare)
+            inUpgrade->SetMaxVelocity(EECBModeValue(inUpgrade->mMaxVelocity, theMode, inValue));
+        else
+            inUpgrade->SetMaxVelocity(theClass->GetMaxVelocity() * inValue + inUpgrade->mMaxVelocity);
         break;
-    case 12:
-        inUpgrade->mGatherTimes[6] -= (long)(inUpgrade->mUnitClass->mGatherTimes[6] * inValue + 0.5f);
+    case kCivStatFlightTime:
+        if (!theShare) {
+            inUpgrade->mFlightTime = EECBModeValue(inUpgrade->mFlightTime, theMode, inValue);
+        } else {
+            long theAdd = (long)(theClass->mFlightTime * inValue + 0.5f);
+            if (theAdd < 1)
+                theAdd = 1;
+            inUpgrade->mFlightTime += theAdd;
+        }
         break;
-    case 13:
-        inUpgrade->mGatherTimes[1] -= (long)(inUpgrade->mUnitClass->mGatherTimes[1] * inValue + 0.5f);
+    case kCivStatAreaEffect:
+        if (!theShare)
+            inUpgrade->mAreaEffect = EECBModeValue(inUpgrade->mAreaEffect, theMode, inValue);
+        else
+            inUpgrade->mAreaEffect += theClass->mAreaEffect * inValue;
         break;
-    case 14:
-        inUpgrade->mGatherTimes[3] -= (long)(inUpgrade->mUnitClass->mGatherTimes[3] * inValue + 0.5f);
+    case kCivStatGatherTime:
+        if (!theShare)
+            inUpgrade->mGatherTimes[inApply.mSlot] = EECBModeValue(inUpgrade->mGatherTimes[inApply.mSlot], theMode, inValue);
+        else
+            inUpgrade->mGatherTimes[inApply.mSlot] -= (long)(theClass->mGatherTimes[inApply.mSlot] * inValue + 0.5f);
         break;
-    case 15:
-        inUpgrade->mBuildTimeScale *= 1.0f - inValue;
+    case kCivStatBuildTime:
+        inUpgrade->mBuildTimeScale = theShare ? inUpgrade->mBuildTimeScale * (1.0f - inValue)
+                                              : EECBModeValue(inUpgrade->mBuildTimeScale, theMode, inValue);
         break;
-    case 16:
-        inPlayer->mConversionFactor *= inValue;
+    case kCivStatConversion:
+        inPlayer->mConversionFactor = theShare ? inPlayer->mConversionFactor * inValue
+                                               : EECBModeValue(inPlayer->mConversionFactor, theMode, inValue);
         break;
-    case 17:
-        if (inUpgrade->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
-            inUpgrade->mGatherTimes[4] -= (long)(inUpgrade->mUnitClass->mGatherTimes[4] * inValue + 0.5f);
+    case kCivStatRepairRate:
+        if (!theShare) {
+            inUpgrade->mRepairRate = EECBModeValue(inUpgrade->mRepairRate, theMode, inValue);
+        } else {
+            long theAdd = (long)(theClass->mRepairRate * inValue + 0.5f);
+            if (theAdd < 1)
+                theAdd = 1;
+            inUpgrade->mRepairRate += theAdd;
+        }
         break;
-    case 18: {
-        long theAdd = (long)(inUpgrade->mUnitClass->mRepairRate * inValue + 0.5f);
-        if (theAdd < 1)
-            theAdd = 1;
-        inUpgrade->mRepairRate += theAdd;
-        break;
-    }
-    case 19: {
-        float theAdd = inUpgrade->mUnitClass->mAreaEffectScale * inValue;
-        if (theAdd < 1.0f)
-            theAdd = 1.0f;
-        inUpgrade->mAreaEffectScale += theAdd;
+    case kCivStatAreaEffectScale:
+        if (!theShare) {
+            inUpgrade->mAreaEffectScale = EECBModeValue(inUpgrade->mAreaEffectScale, theMode, inValue);
+        } else {
+            float theAdd = theClass->mAreaEffectScale * inValue;
+            if (theAdd < 1.0f)
+                theAdd = 1.0f;
+            inUpgrade->mAreaEffectScale += theAdd;
+        }
         inPlayer->SuggestRecomputeAllAreaEffects();
         inPlayer->mSelectedGroup->ShowSelectionAreas();
         break;
-    }
-    case 20:
-        inPlayer->mHighGroundBonus += inValue;
+    case kCivStatHighGround:
+        inPlayer->mHighGroundBonus = theShare ? inPlayer->mHighGroundBonus + inValue
+                                              : EECBModeValue(inPlayer->mHighGroundBonus, theMode, inValue);
         break;
-    case 21:
+    case kCivStatPopulation:
         inPlayer->GetPopulationLimit(0);
-        inPlayer->mShareBonus += (long)(inPlayer->GetPopulationLimit(0) * inValue + 0.5f);
+        if (theShare)
+            inPlayer->mShareBonus += (long)(inPlayer->GetPopulationLimit(0) * inValue + 0.5f);
+        else
+            inPlayer->mShareBonus = EECBModeValue(inPlayer->mShareBonus, theMode, inValue);
         inPlayer->GetPopulationLimit(0);
         break;
-    case 23:
-        inUpgrade->mCostScale *= 1.0f - inValue;
+    case kCivStatCost:
+        inUpgrade->mCostScale = theShare ? inUpgrade->mCostScale * (1.0f - inValue)
+                                         : EECBModeValue(inUpgrade->mCostScale, theMode, inValue);
         break;
     }
-    if (inIndex != 5)
+}
+
+// FUNCTION: EXE 0x681ed3
+// Applies one upgrade level to a player's unit class (attack, hit points, reload, armor, range and sight,
+// speed, gathering, build time, cost ...); levels 0x26..0x3c apply the civ power instead
+// upgrade index inIndex (1..0x17; 0x26..0x3c are the civilization powers) applied with inValue to inUpgrade, the
+// class inUnitType of inPlayer (provisional name)
+// What each level raises is civbuilder.yaml's (the attribute of that level: its applies; the original's switch on the
+// level is the vanilla data). An attribute that applies a power applies only its power; one that raises the line of
+// sight takes the class's units' sight off around it.
+void EECivilizationManager::ApplyUpgradeLevel(EEUnitClassUpgrade* inUpgrade, unsigned long inIndex, long inUnitType, float inValue,
+                                     EEPlayer* inPlayer)
+{
+    // the current turn (a volatile read the original performs; its use is gone from the shipping build)
+    unsigned long theTurn = gCommunications->GetNumberOfCTsProcessedInPhysics();
+    const EECivAttribute* theAttribute = EEGetRules().mCivBuilder.Find((long)inIndex);
+    if (theAttribute == NULL)
+        return;
+    bool theSight = false;
+    for (const EECivApply& theApply : theAttribute->mApplies) {
+        if (theApply.mStat == kCivStatPower) {
+            gCivPowersManager.ApplyPower(inPlayer, theApply.mPower + kCivPowerFlamingArrows);
+            return;
+        }
+        theSight = theSight || theApply.mStat == kCivStatLineOfSight;
+    }
+    if (theSight) {
+        for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            if (theUnit->mUnitClass->mUnitType == inUnitType)
+                theUnit->SightOffHere();
+        }
+    }
+    for (const EECivApply& theApply : theAttribute->mApplies) {
+        long theCategory = inUpgrade->mUnitClass->mCategory;
+        if ((theApply.mOnlyCategory >= 0 && theCategory != theApply.mOnlyCategory) ||
+            (theApply.mExceptCategory >= 0 && theCategory == theApply.mExceptCategory))
+            continue;
+        EECBApplyStat(theApply, inUpgrade, inUnitType, inValue, inPlayer);
+    }
+    if (!theSight)
         return;
     for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         if (theUnit->mUnitClass->mUnitType == inUnitType)

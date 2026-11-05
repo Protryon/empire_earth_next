@@ -40,11 +40,16 @@
 #include "ee/EECivPowersManager.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
+#include "ee/EERules.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EECPIntelligence.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEE2DBattlefieldAmbient.h"
 #include "ee/EESoundObject.h"
+// the default epoch media (EERules.cpp EEDefaultEpochMedia) name these rows
+static_assert(kSoundLightning == 0x176 && kSoundThunder2 == 0x1ba && kGraphicEffectLightningUnit == 0x15 &&
+              kGraphicEffectDustEffect == 0xab && kGraphicEffectDisintegrationAreaEffectIntermediate == 0xec,
+              "EERules.cpp's epoch media rows");
 #include "ee/EEEffectManager.h"
 #include "ee/EEGameSound.h"
 #include "ee/EEUnitVectorItem.h"
@@ -476,62 +481,22 @@ void EEPlayUnitEffect(EEComplexUnit* inUnit, long inEffect)
     if (inUnit->mHitPoints > 0)
         return;
     inUnit->GetPosition(thePosition);
-    long theEpoch = inUnit->mPlayer->mTechnologies->mCurrentEpoch;
-    switch (theEpoch) {
-    case kTechEpochPrehistoric:
-    case kTechEpochStone:
-    case kTechEpochCopper:
-    case kTechEpochBronze:
-        theSound = EESoundObject::Get(kSoundLightning);
-        gWorld.GetEffectManager()->CreatePlacedEffect(thePosition, EEGraphicEffect::Get(kGraphicEffectLightningUnit), &theHandle);
-        gWorld.GetEffectManager()->CreatePlacedEffect(thePosition, EEGraphicEffect::Get(kGraphicEffectDustEffect), &theHandle);
-        gWorld.GetEffectManager()->CreatePlacedEffect(thePosition, EEGraphicEffect::Get(kGraphicEffectDustEffect), &theHandle);
-        gWorld.GetEffectManager()->CreatePlacedEffect(thePosition, EEGraphicEffect::Get(kGraphicEffectDustEffect), &theHandle);
-        if (theSound == NULL)
-            return;
-        EEComputeSoundParameters(1.0f, thePosition, theVolume, thePan, thePitch, kUnitEffectSoundFalloff);
-        theSound->Play(theVolume, thePan, thePitch);
-        if (inUnit->mUnitID & 1)
-            return;
-        break;
-    case kTechEpochDark:
-    case kTechEpochMiddle:
-    case kTechEpochRenaissance:
-    case kTechEpochImperial:
-    case kTechEpochIndustrial:
-        theSound = EESoundObject::Get(kSoundLightning);
-        gWorld.GetEffectManager()->CreatePlacedEffect(thePosition, EEGraphicEffect::Get(kGraphicEffectDisintegrationAreaEffectIntermediate), &theHandle);
-        gWorld.GetEffectManager()->CreatePlacedEffect(thePosition, EEGraphicEffect::Get(kGraphicEffectDustEffect), &theHandle);
-        if (theSound == NULL)
-            return;
-        EEComputeSoundParameters(1.0f, thePosition, theVolume, thePan, thePitch, kUnitEffectSoundFalloff);
-        theSound->Play(theVolume, thePan, thePitch);
-        if (inUnit->mUnitID % 3 != 0)
-            return;
-        break;
-    case kTechEpochAtomicWW1:
-    case kTechEpochAtomicWW2:
-    case kTechEpochAtomicModern:
-        theSound = EESoundObject::Get(kSoundLightning);
-        gWorld.GetEffectManager()->CreatePlacedEffect(thePosition, EEGraphicEffect::Get(kGraphicEffectDisintegrationAreaEffectIntermediate), &theHandle);
-        gWorld.GetEffectManager()->CreatePlacedEffect(thePosition, EEGraphicEffect::Get(kGraphicEffectDustEffect), &theHandle);
-        if (theSound == NULL)
-            return;
-        EEComputeSoundParameters(1.0f, thePosition, theVolume, thePan, thePitch, kUnitEffectSoundFalloff);
-        thePitch = max(-1.0f, thePitch - 0.2f);
-        theSound->Play(theVolume, thePan, thePitch);
+    // the epoch's removal media (epochs.yaml citizen; the original's switch on the epoch: lightning and dust up to the
+    // bronze age, a thunder for every second unit; disintegration later, a thunder for every third up to the
+    // industrial age, a lower pitch in the atomic ages)
+    const EEEpochMedia& theMedia = EEGetRules().Epoch(inUnit->mPlayer->mTechnologies->mCurrentEpoch);
+    theSound = EESoundObject::Get(theMedia.mRemovalSound);
+    for (long theEffect : theMedia.mRemovalEffects)
+        gWorld.GetEffectManager()->CreatePlacedEffect(thePosition, EEGraphicEffect::Get(theEffect), &theHandle);
+    if (theSound == NULL)
         return;
-    default:
-        theSound = EESoundObject::Get(kSoundLightning);
-        gWorld.GetEffectManager()->CreatePlacedEffect(thePosition, EEGraphicEffect::Get(kGraphicEffectDisintegrationAreaEffectIntermediate), &theHandle);
-        gWorld.GetEffectManager()->CreatePlacedEffect(thePosition, EEGraphicEffect::Get(kGraphicEffectDustEffect), &theHandle);
-        if (theSound == NULL)
-            return;
-        EEComputeSoundParameters(1.0f, thePosition, theVolume, thePan, thePitch, kUnitEffectSoundFalloff);
-        theSound->Play(theVolume, thePan, thePitch);
+    EEComputeSoundParameters(1.0f, thePosition, theVolume, thePan, thePitch, kUnitEffectSoundFalloff);
+    if (theMedia.mRemovalPitchOffset != 0.0f)
+        thePitch = max(-1.0f, thePitch + theMedia.mRemovalPitchOffset);
+    theSound->Play(theVolume, thePan, thePitch);
+    if (theMedia.mRemovalThunderEvery == 0 || inUnit->mUnitID % theMedia.mRemovalThunderEvery != 0)
         return;
-    }
-    theSound = EESoundObject::Get(kSoundThunder2);
+    theSound = EESoundObject::Get(theMedia.mRemovalThunder);
     if (theSound == NULL)
         return;
     EEComputeSoundParameters(1.0f, thePosition, theVolume, thePan, thePitch, kUnitEffectSoundFalloff);

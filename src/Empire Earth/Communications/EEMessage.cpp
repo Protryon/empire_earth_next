@@ -1874,7 +1874,7 @@ bool EEMCivTimerExpired::IsResponse(NEMessage* inMessage)
 // Returns the civilization upgrades message's wire size: 11 bytes plus 2 per upgrade plus the name
 unsigned long EEMCivUpgrades::ExportSize()
 {
-    return this->mUpgrades.size() * sizeof(unsigned short) + this->mCivName.GetExportSize() + 11;
+    return this->mUpgrades.size() * sizeof(EECivUpgrade) + this->mCivName.GetExportSize() + 11;
 }
 
 // FUNCTION: EXE 0x4bd218
@@ -1894,8 +1894,8 @@ void EEMCivUpgrades::ExportMessage(unsigned char** outPayloadPointer, unsigned l
         theLocation += sizeof(this->mNameString);
         memcpy(*outPayloadPointer + theLocation, &theNumUpgrades, sizeof(theNumUpgrades));
         theLocation += sizeof(theNumUpgrades);
-        for (std::vector<unsigned short>::iterator it = this->mUpgrades.begin(); it != this->mUpgrades.end(); ++it) {
-            unsigned short theUpgrade = *it;
+        for (std::vector<EECivUpgrade>::iterator it = this->mUpgrades.begin(); it != this->mUpgrades.end(); ++it) {
+            EECivUpgrade theUpgrade = *it;
             memcpy(*outPayloadPointer + theLocation, &theUpgrade, sizeof(theUpgrade));
             theLocation += sizeof(theUpgrade);
         }
@@ -1922,7 +1922,7 @@ void EEMCivUpgrades::ImportMessage(unsigned char* inPayloadPointer)
     memcpy(&theNumUpgrades, inPayloadPointer + theLocation, sizeof(theNumUpgrades));
     theLocation += sizeof(theNumUpgrades);
     for (unsigned long i = 0; i < theNumUpgrades; i++) {
-        unsigned short theUpgrade;
+        EECivUpgrade theUpgrade;
         memcpy(&theUpgrade, inPayloadPointer + theLocation, sizeof(theUpgrade));
         theLocation += sizeof(theUpgrade);
         this->mUpgrades.push_back(theUpgrade);
@@ -3601,7 +3601,7 @@ void EEMInGameChat::Execute()
                     gResource->GetString(IDS_OBSERVERS, theType);
                 if (theType.GetLength() != 0)
                     theType = theType + " ";
-                gUserInterface->AddChatLogEntry(theSender->mColor, theSender->mName, theType + this->mText, gWorldTable.GetLongValue(25), 0);
+                gUserInterface->AddChatLogEntry(theSender->mColor, theSender->mName, theType + this->mText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
 
                 if (theSender != theLocal) {
                     EESoundObject* theSound = EESoundObject::Get(kSoundIncomingChatMessage);
@@ -3891,7 +3891,7 @@ void EEMKillUnit::Execute()
                 if (IsRefundable(theUnit)) {
                     EETechnology* theTechnology = theUnit->GetPlayer()->mTechnologies->Get(theUnit->GetUnitClass()->mTechnology);
                     if (theTechnology)
-                        theUnit->mPlayer->RefundTechnology(theTechnology, 0x20, gWorldTable.GetFloatValue(45));
+                        theUnit->mPlayer->RefundTechnology(theTechnology, 0x20, gWorldTable.GetFloatValue(kWorldDeleteRefundFactor));
                 }
                 theUnit->Kill(1, 0, 0);
             }
@@ -3904,7 +3904,7 @@ void EEMKillUnit::Execute()
                     if (IsRefundable(theUnit)) {
                         EETechnology* theTechnology = theUnit->GetPlayer()->mTechnologies->Get(theUnit->GetUnitClass()->mTechnology);
                         if (theTechnology)
-                            theUnit->mPlayer->RefundTechnology(theTechnology, 0x20, gWorldTable.GetFloatValue(45));
+                            theUnit->mPlayer->RefundTechnology(theTechnology, 0x20, gWorldTable.GetFloatValue(kWorldDeleteRefundFactor));
                     }
                     theUnit->Kill(1, 0, 0);
                 }
@@ -5417,7 +5417,7 @@ void EEMPayTribute::Execute()
         theText += (const char*)theIron;
         theText += theSpace;
     }
-    gUserInterface->AddChatLogEntry(theFrom->mColor, theFrom->mName, theText, gWorldTable.GetLongValue(25), 0);
+    gUserInterface->AddChatLogEntry(theFrom->mColor, theFrom->mName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
 }
 
 // FUNCTION: EXE 0x4c3547
@@ -6098,7 +6098,7 @@ void EEMResign::Execute()
             gResource->GetString(IDS_PLAYER_HAS_RESIGNED_FROM_GAME, theFormat);
             sprintf(theText, theFormat, (const char*)thePlayer->mName);
             gResource->GetString(IDS_MSG_GAME, theName);
-            gUserInterface->AddChatLogEntry(theColor, theName, theText, gWorldTable.GetLongValue(25) * 2, 0);
+            gUserInterface->AddChatLogEntry(theColor, theName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime) * 2, 0);
         }
     }
 }
@@ -7575,7 +7575,7 @@ void EEMSetDiplomaticStance::Execute()
     gResource->GetString(IDS_CHANGES_DIPLOMATIC_STANCE_TO, theIsNow);
     sprintf(theText, "%s %s %s", (const char*)thePlayer->mName, (const char*)theIsNow,
             (const char*)(this->mStance == 0 ? theEnemy : theAlly));
-    gUserInterface->AddChatLogEntry(thePlayer->mColor, thePlayer->mName, theText, gWorldTable.GetLongValue(25), 0);
+    gUserInterface->AddChatLogEntry(thePlayer->mColor, thePlayer->mName, theText, gWorldTable.GetLongValue(kWorldChatLogDisplayTime), 0);
 }
 
 // FUNCTION: EXE 0x4c6c83

@@ -65,6 +65,8 @@
 #include "ee/EECBUIListBox.h"
 
 #include "ee/EECivilizationManager.h"
+#include "EEDataText.h"   // the keyed .civ text
+#include "platform/PlatMessage.h"
 #include "ee/EEUIEPDCSEvents.h"
 #include "lle/UIScrollBar.h"
 #include "lle/UIEditBox.h"
@@ -284,6 +286,9 @@ long Fn28015D(const UString& inName, bool inOverwrite)
     return theResult;
 }
 
+static bool EEKeyedCivilization(const std::string& inName, const std::vector<EECivUpgrade>& inUpgrades,
+                                std::string& outText);   // (below)
+
 // FUNCTION: EXE 0x6802ef
 // Writes the civilization file (name, upgrade count, upgrades), tells players using that file to reload it,
 // and reports errors; the answer to the overwrite question, its form argument the close-the-builder flag
@@ -294,7 +299,7 @@ void Fn2802EF(UIForm* inClose)
     UWideString theName(*gEditableCivilization->GetName());
     UWideString theMessage;
     UString theFile(gU565518.GetFile());
-    std::vector<unsigned short> theUpgrades;
+    std::vector<EECivUpgrade> theUpgrades;
     bool theClose = *(bool*)inClose;
     unsigned long theWritten = 0;
     unsigned long theLength = 0;
@@ -306,19 +311,23 @@ void Fn2802EF(UIForm* inClose)
             theResult = gU565518.Open(kFileAccessWrite);
             if (theResult == 0) {
                 theLength = PlatMbsNBCnt(reinterpret_cast<const unsigned char*>((const char*)theName), theName.GetLength());
-                theResult = gU565518.Write(theLength);
-                if (theResult == 0) {
+                theUpgrades = gEditableCivilization->CopyUpgradeIDs();
+                std::string theText;   // the keyed form, when every upgrade has a key (the text tables' ids)
+                if (EEKeyedCivilization(std::string((const char*)theName, theLength), theUpgrades, theText))
+                    theResult = gU565518.Write(theText.data(), (unsigned long)theText.size(), theWritten);
+                else
+                    theResult = gU565518.Write(theLength);
+                if (theResult == 0 && theText.empty()) {
                     theResult = gU565518.Write((const char*)theName, theLength, theWritten);
                     if (theResult == 0) {
-                        theUpgrades = gEditableCivilization->CopyUpgradeIDs();
                         unsigned long theValue = theUpgrades.size();
                         theResult = gU565518.Write(theValue);
                         if (theResult == 0) {
-                            for (std::vector<unsigned short>::iterator j = theUpgrades.begin(); j != theUpgrades.end();
+                            for (std::vector<EECivUpgrade>::iterator j = theUpgrades.begin(); j != theUpgrades.end();
                                  j++) {
                                 if (theResult != 0)
                                     break;
-                                theValue = *j;
+                                EECivilizationManager::ToLegacy(*j, theValue);   // the legacy file form
                                 theResult = gU565518.Write(theValue);
                             }
                         }
@@ -366,7 +375,7 @@ void Fn2802EF(UIForm* inClose)
 // upgrades again; fails when neither file loads
 long Fn28060C(const UString& inName)
 {
-    std::vector<unsigned short> theUpgrades;
+    std::vector<EECivUpgrade> theUpgrades;
     UWideString theName;
     long theResult = EELoadCivilization(inName, EEGetCivilizationDirectory(false), theName, theUpgrades);
     if (theResult != 0
@@ -376,7 +385,7 @@ long Fn28060C(const UString& inName)
     gEditableCivilization->SetName(theName);
     gB565567 = true;
     if (Fn27FBA5()) {
-        for (std::vector<unsigned short>::iterator i = theUpgrades.begin(); i != theUpgrades.end(); i++)
+        for (std::vector<EECivUpgrade>::iterator i = theUpgrades.begin(); i != theUpgrades.end(); i++)
             Fn28105E(*i);
     } else {
         theResult = 3;
@@ -391,7 +400,7 @@ long Fn2806E7(UString& ioName, EEPlayer* inPlayer)
 {
     long theNameID;
     unsigned long theCost;
-    std::vector<unsigned short> theUpgrades;
+    std::vector<EECivUpgrade> theUpgrades;
     UWideString theName;
     long theResult = EELoadCivilization(ioName, EEGetCivilizationDirectory(false), theName, theUpgrades);
     if (theResult != 0) {
@@ -407,7 +416,7 @@ long Fn2806E7(UString& ioName, EEPlayer* inPlayer)
         theCivilization.mAvailablePoints = theCivilization.mMaxPoints;
         theCivilization.SetPointsAndMax(0);
         theCivilization.SetName(theName);
-        for (std::vector<unsigned short>::iterator i = theUpgrades.begin(); i != theUpgrades.end(); i++) {
+        for (std::vector<EECivUpgrade>::iterator i = theUpgrades.begin(); i != theUpgrades.end(); i++) {
             theCivilization.CanAfford(*i, &theCost, NULL);
             theCivilization.SetPointsAndMax(theCivilization.GetMaxPoints() + theCost);
             theCivilization.Buy(*i, inPlayer->mPlayerID, true);
@@ -417,10 +426,64 @@ long Fn2806E7(UString& ioName, EEPlayer* inPlayer)
     return theResult;
 }
 
+// A civilization as the keyed .civ text (new: the original wrote only the binary form):
+//   eedata: civ / format: 3 / name: "<the name>" / upgrades: [<category id>.<attribute id>, ...]
+// False when an upgrade has no key (the binary tables have no ids: the file is then written in the legacy form)
+static bool EEKeyedCivilization(const std::string& inName, const std::vector<EECivUpgrade>& inUpgrades,
+                                std::string& outText)
+{
+    std::string theList;
+    for (EECivUpgrade theUpgrade : inUpgrades) {
+        std::string theKey;
+        if (!gCivilizationManager.UpgradeKey(theUpgrade, theKey))
+            return false;
+        theList += (theList.empty() ? "" : ", ") + theKey;
+    }
+    outText = "# a civilization (the civilization builder): its upgrades as <category id>.<attribute id>\n"
+              "eedata: civ\nformat: 3\nname: " + EEDataText::QuoteText(inName) + "\nupgrades: [" + theList + "]\n";
+    return true;
+}
+
+// Reads a keyed .civ text (EEKeyedCivilization); 0, or kErrorFailed with the problem shown
+static long EEReadKeyedCivilization(const std::string& inText, const UString& inFile, UWideString& outName,
+                                    std::vector<EECivUpgrade>& outUpgrades)
+{
+    EEDataText::Node theDoc;
+    std::string theError;
+    std::string theWhere = std::string((const char*)inFile);
+    if (EEDataText::ParseDocument(inText, theDoc, theError) && theDoc.mKind == EEDataText::Node::kMap) {
+        std::string theText;
+        if (EEDataText::TryNodeText(theDoc.Find("name"), theWhere, "name", theText))
+            outName = theText.c_str();
+        else
+            theError = theText;
+        const EEDataText::Node* theList = theDoc.Find("upgrades");
+        if (theError.empty() && theList != NULL && theList->mKind == EEDataText::Node::kList) {
+            for (const EEDataText::Node& theItem : theList->mItems) {
+                std::string theKey = theItem.mKind == EEDataText::Node::kScalar ? theItem.mText : std::string();
+                EECivUpgrade theUpgrade;
+                if (!gCivilizationManager.FindUpgradeKey(theKey, theUpgrade)) {
+                    theError = theWhere + " line " + std::to_string(theItem.mLine) + ": '" + theKey +
+                               "' is not an upgrade (<dbcivilization id>.<civbuilder attribute id>)";
+                    break;
+                }
+                outUpgrades.push_back(theUpgrade);
+            }
+        }
+    } else if (theError.empty()) {
+        theError = theWhere + ": not a civilization";
+    }
+    if (theError.empty())
+        return 0;
+    PlatMessageShow("Empire Earth: civilization", theError.c_str(), PLAT_MESSAGE_ERROR);
+    return kErrorFailed;
+}
+
 // FUNCTION: EXE 0x680840
 // Reads a civilization file's name and upgrade ids from the data path or the given directory
+// (the legacy binary form: its (category << 6) | level ids converted; or the keyed text, EEKeyedCivilization)
 long EELoadCivilization(const UString& inName, const UString& inDirectory, UWideString& outName,
-                        std::vector<unsigned short>& outUpgrades)
+                        std::vector<EECivUpgrade>& outUpgrades)
 {
     FSFileSpec* theFile = NULL;
     unsigned long theLength = 0;
@@ -440,7 +503,22 @@ long EELoadCivilization(const UString& inName, const UString& inDirectory, UWide
     }
     theResult = theFile->Open(kFileAccessRead);
     if (theResult == 0) {
-        theResult = theFile->Read(theLength);
+        unsigned long theSize = 0;
+        if (theFile->GetLength(theSize) == kErrorOK && theSize >= 6) {   // the keyed text?
+            std::string theText(theSize, '\0');
+            unsigned long theGot = 0;
+            if (theFile->Read(&theText[0], theSize, theGot) == kErrorOK && theGot == theSize &&
+                (theText.compare(0, 6, "eedata") == 0 || theText[0] == '#')) {
+                theFile->Close();
+                theResult = EEReadKeyedCivilization(theText, inName + kCivKey, outName, outUpgrades);
+                delete theFile;
+                return theResult;
+            }
+            theFile->Close();
+            theResult = theFile->Open(kFileAccessRead);
+        }
+        if (theResult == 0)
+            theResult = theFile->Read(theLength);
         if (theResult == 0) {
             if (theLength == 0) {
                 outName = gU4E5B98;
@@ -453,10 +531,8 @@ long EELoadCivilization(const UString& inName, const UString& inDirectory, UWide
             if (theResult == 0) {
                 for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
                     theResult = theFile->Read(theUpgrade);
-                    if (theResult == 0) {
-                        unsigned short theId = (unsigned short)theUpgrade;
-                        outUpgrades.push_back(theId);
-                    }
+                    if (theResult == 0)
+                        outUpgrades.push_back(EECivilizationManager::FromLegacy(theUpgrade));
                 }
             }
         }
@@ -471,7 +547,7 @@ long EELoadCivilization(const UString& inName, const UString& inDirectory, UWide
 // FUNCTION: EXE 0x680a05
 // Grants a player's civilization upgrade request when allowed, valid and affordable (broadcast in multiplayer);
 // otherwise posts a chat line naming the refused civilization
-void EECBRequestUpgrades(unsigned char inPlayer, UWideString& inName, std::vector<unsigned short>& inUpgrades)
+void EECBRequestUpgrades(unsigned char inPlayer, UWideString& inName, std::vector<EECivUpgrade>& inUpgrades)
 {
     UWideString theFormat;
     UWideString theText;
@@ -673,9 +749,9 @@ long Fn280FFD(EECivilization* inCivilization, bool inReload)
 // FUNCTION: EXE 0x68105e
 // Buys an upgrade (the selected available one when 0) and updates the points; plays the refused sound when
 // it is not affordable
-long Fn28105E(unsigned short inUpgrade)
+long Fn28105E(EECivUpgrade inUpgrade)
 {
-    unsigned short theUpgrade = 0;
+    EECivUpgrade theUpgrade = 0;
     unsigned long theBonus;
     unsigned long theCost;
     long theResult = 0xd;
@@ -705,17 +781,17 @@ long Fn28105E(unsigned short inUpgrade)
 // Sells the selected bought upgrade back, unless the civilization already owned it before the edit
 long Fn281120()
 {
-    std::vector<unsigned short> theOwn;
+    std::vector<EECivUpgrade> theOwn;
     long theResult = 3;
     EECBTrace(Fn27FF56());
     if (!Fn27FF56())
         return theResult;
-    unsigned short theUpgrade;
+    EECivUpgrade theUpgrade;
     unsigned long theBonus;
     unsigned long theCost;
     if (Fn27F299(false, &theUpgrade, &theBonus, &theCost)) {
         theOwn = gEditableCivilization->GetCivilizationUpgrades();
-        std::vector<unsigned short>::iterator i = theOwn.begin();
+        std::vector<EECivUpgrade>::iterator i = theOwn.begin();
         while (true) {
             if (i == theOwn.end())
                 break;

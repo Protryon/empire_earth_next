@@ -35,10 +35,10 @@ public:
     bool mInEpoch[15];                      // +0x38
     volatile bool mIsLoading;               // +0x47 (a load is under way; `mov byte [+0x47], 0` stays a move: volatile)
 
-    // each epoch's songs and their shuffled play order (0x4e8568 / 0x4e8470): class statics, their atexit dtors
-    // $E12 0x4d9b65 / $E17 0x4d9bc9 share one guard byte (0x4e8560 bits 1/2)
-    static std::vector<EEMusicObject*> sSongs[15];
-    static std::vector<EEMusicObject*> sShuffled[15];
+    // each epoch's songs and their shuffled play order (0x4e8568 / 0x4e8470: [15] arrays in the original): one list
+    // per epoch of the rules (epochs.yaml music, or dbmusic's flags; ee/EERules.h)
+    static std::vector<std::vector<EEMusicObject*>> sSongs;
+    static std::vector<std::vector<EEMusicObject*>> sShuffled;
 };
 
 #endif

@@ -4,6 +4,7 @@
 // sounds and the builder's events; not written yet). Signatures from `ret`, the pushes and the callers.
 #ifndef EE_EECIVILIZATIONBUILDER_H
 #define EE_EECIVILIZATIONBUILDER_H
+#include "ee/EECivUpgrade.h"
 
 class EECBUIListBox;
 class UIBlinkingButton;
@@ -29,10 +30,10 @@ UIBlinkingButton* Fn27F0F7();
 long Fn27F134(UWideString& outName);
 long Fn27F1A9(UWideString& outText);
 long Fn27F221(UWideString& outText);
-bool Fn27F299(bool inBought, unsigned short* outUpgrade, unsigned long* outBonus, unsigned long* outCost);
+bool Fn27F299(bool inBought, EECivUpgrade* outUpgrade, unsigned long* outBonus, unsigned long* outCost);
 long Fn27F2E8();
 long Fn27F340();
-long Fn27F34E(std::vector<unsigned short>& inUpgrades);
+long Fn27F34E(std::vector<EECivUpgrade>& inUpgrades);
 long Fn27F3FC();
 long Fn27F418(unsigned long inFormID);
 long Fn27F43F(const UWideString& inName);
@@ -45,14 +46,14 @@ long Fn27F7C0(unsigned long inFormID, unsigned long inControl);
 long Fn27F824();
 EECBUIListBox* Fn27F8C7(UIForm* inForm, unsigned long inControl);
 UIFileListBox* Fn27F8F7();
-bool Fn27F92A(UIForm* inForm, bool inBuy, unsigned short inUpgrade);
+bool Fn27F92A(UIForm* inForm, bool inBuy, EECivUpgrade inUpgrade);
 long Fn27FB5F(UIForm* inForm, unsigned long inControl);
 long Fn27FB83(UIForm* inForm);
 long Fn27FB94(UIForm* inForm);
 bool Fn27FBA5();
 long Fn27FC30();
-long Fn27FD5A(unsigned short inUpgrade);
-long Fn27FDAB(unsigned short inUpgrade);
+long Fn27FD5A(EECivUpgrade inUpgrade);
+long Fn27FDAB(EECivUpgrade inUpgrade);
 
 // the unit at 0x27fdfe (EECBCivilizationFiles.cpp)
 extern bool& gIsScenarioGame;                // 0x531259 (with gAllowCustomCivs: no premade-civilization check)
@@ -78,7 +79,7 @@ long Fn280F34();
 long Fn280FAA();
 long Fn280FAF();                            // 0x280faf (pauses, then opens the builder for the current player)
 long Fn280FFD(EECivilization* inCivilization, bool inReload);
-long Fn28105E(unsigned short inUpgrade);
+long Fn28105E(EECivUpgrade inUpgrade);
 long Fn281120();
 long Fn2811D9(UIForm* inForm, UIEntity* inEntity);
 void Fn28122C(UIForm* inForm);
