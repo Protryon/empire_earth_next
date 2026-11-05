@@ -231,13 +231,13 @@ def plumbing(arch, d):
     if lo != want(timeshim.RENDER_MAIN) or hi <= lo:
         problems.append(f"render range {lo:#x}..{hi:#x}")
     mutex = None
-    if x64:   # the i686 locator checks VC6's/clang's exact prologue, which mingw's code does not have
-        mutex = game_session.mutex_bypass_rva(exe.read_bytes(), b.map("exe"))
-        body = exe.read_bytes()
-        import pefile
-        pe = pefile.PE(data=body, fast_load=True)
-        if pe.get_data(mutex - 6, 2) != b"\xff\x15" or mutex - 6 - syms["selftest_instance_mutex"] >= 0x80:
-            problems.append(f"mutex bypass rva {mutex:#x}")
+    # by map: the instruction after the GetLastError call (i686 absolute, x64 rip-relative)
+    mutex = game_session.mutex_bypass_rva(exe.read_bytes(), b.map("exe"))
+    body = exe.read_bytes()
+    import pefile
+    pe = pefile.PE(data=body, fast_load=True)
+    if pe.get_data(mutex - 6, 2) != b"\xff\x15" or mutex - 6 - syms["selftest_instance_mutex"] >= 0x80:
+        problems.append(f"mutex bypass rva {mutex:#x}")
     shutil.rmtree(PROBE_STAGE)
     return not problems, (f"{len(table)} map names, layout {fake / 'layout.json'}; bridge {out.name} {arch}"
                           + (f"; mutex test at rva {mutex:#x}" if mutex else "") + (f"; PROBLEMS {problems}" if problems else ""))

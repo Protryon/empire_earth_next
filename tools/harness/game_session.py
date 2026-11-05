@@ -74,17 +74,20 @@ def session_verdict(lines,hit_ok,exercise_mode,exercise_result,extra_required=No
 def mutex_bypass_rva(image_bytes,linkmap):
     """RVA of the `test eax,eax` after EECreateInstanceMutex's GetLastError call (original layout fixed, full link by map
     name); the function body and its IAT slot are checked so the guard can only land on that instruction.
-    x64: the instruction right after the one `call [rip+rel32]` to the GetLastError slot in the function's first 0x80
-    bytes (eax is the call's result there, whatever the compiler does with it next)."""
+    A build by map (this fork's clang builds, i686 or x64): the instruction right after the one `call [slot]` (i686:
+    absolute; x64: rip-relative) to the GetLastError slot in the function's first 0x80 bytes: eax is the call's
+    result there, whatever the compiler does with it next (the i686 clang build starts `xor eax,eax; push`, not VC6's
+    `push`, and an x64 build may move eax away first)."""
     import pefile
     pe=pefile.PE(data=image_bytes,fast_load=True)
     start=linkmap.rva(MUTEX_SYMBOL) if linkmap else MUTEX_RVA_ORIGINAL
     slot=linkmap.address(MUTEX_GETLASTERROR) if linkmap else MUTEX_GETLASTERROR_ORIGINAL
-    if linkmap and linkmap.x64:
+    if linkmap:
         body=pe.get_data(start,0x80);hits=[]
         for k in range(len(body)-6):
-            if body[k:k+2]==b'\xff\x15' and linkmap.base+start+k+6+int.from_bytes(body[k+2:k+6],'little',signed=True)==slot:
-                hits.append(k+6)
+            if body[k:k+2]!=b'\xff\x15':continue
+            field=int.from_bytes(body[k+2:k+6],'little',signed=linkmap.x64)
+            if (linkmap.base+start+k+6+field if linkmap.x64 else field)==slot:hits.append(k+6)
         if len(hits)!=1:
             raise ValueError(f'EECreateInstanceMutex at rva {start:#x}: {len(hits)} GetLastError calls in {body.hex()}; refusing mutex bypass')
         return start+hits[0]
