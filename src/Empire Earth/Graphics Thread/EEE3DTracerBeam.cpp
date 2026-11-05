@@ -334,7 +334,7 @@ long EEE3DTracerBeam::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     long theResult = this->mGraphicObject->LoadMedia();
     unsigned long theID;
     if (theResult == 0 && (theResult = inFile.Read(theID)) == 0) {
-        this->mTarget = reinterpret_cast<EEUnit*>(theID);  // serialized ID; RepairPointers resolves it through gWorld.GetUnit
+        this->mTarget = USavedPointer<EEUnit>(theID);  // serialized ID; RepairPointers resolves it through gWorld.GetUnit
         if ((theResult = inFile.Read(this->mAge)) == 0 && (theResult = inFile.Read(this->mIsTimed)) == 0
             && (theResult = inFile.Read(this->mLength)) == 0 && (theResult = inFile.Read(this->mScroll)) == 0
             && (theResult = inFile.Read(this->mWidth)) == 0 && (theResult = this->mTargetPoint.Load(inFile)) == 0

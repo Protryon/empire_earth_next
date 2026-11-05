@@ -760,12 +760,12 @@ long EEHerd::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     theValue = -1;
     if (theResult == 0) {
         theResult = inFile.Read(theValue);
-        this->mLeader = reinterpret_cast<EEComplexUnit*>(theValue);
+        this->mLeader = USavedPointer<EEComplexUnit>(theValue);
     }
     theValue = -1;
     if (theResult == 0) {
         theResult = inFile.Read(theValue);
-        this->mTarget = reinterpret_cast<EEComplexUnit*>(theValue);
+        this->mTarget = USavedPointer<EEComplexUnit>(theValue);
         if (theResult == 0)
             theResult = this->mBounds2.Load(inFile);
         if (theResult == 0)
@@ -812,7 +812,7 @@ long EEHerd::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
         theValue = 0;
         if (theResult == 0) {
             theResult = inFile.Read(theValue);
-            this->mUnits[i] = reinterpret_cast<EEComplexUnit*>(theValue);
+            this->mUnits[i] = USavedPointer<EEComplexUnit>(theValue);
         }
     }
     if (theResult == 0)

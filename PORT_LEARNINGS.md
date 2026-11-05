@@ -333,6 +333,63 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
 - A count stored in the last slot of a `vector<GETMPolygon*>` (the terrain draw's visible lists) goes through two
   helpers in that unit.
 
+## x64 link (`build.py --x64`)
+
+- **One switch, two targets.** `ee.set_arch("x64")` selects the x64 runtime/SDK library directories
+  (`lib_paths`), wgpu-native x86_64 (`ee.wgpu_dir`) and `llvm-lib /machine:x64` for the generated import
+  libraries; `clang_build.set_target(x64=True)` the compile target (no `/arch:IA32`: SSE2). The census
+  (`clang_build.py --x64`) is the same target plus the pointer-size warnings. The record layouts the member aliases
+  are translated with (`layout_gen`, which reads `clang_build.CLANG_FLAGS`) are the x64 build's own. Default out
+  `build/clang-x64-exe`; all 858 units compile, 15.6 MB exe (i686: 11.7 MB).
+- **The link tables are 32-bit names.** `names.txt`, `vtable_slots.tsv`, `import_thunks.tsv` and
+  `fulllink_members.tsv` hold VC6-mangled names. After pass 1, `exe_fulllink.translate_x64` maps each to the x64
+  name of the same entity by `UnDecorateSymbolName(name, UNDNAME_NO_MS_KEYWORDS)` (no calling convention, no
+  `__ptr64`; one key per entity on both targets), then again with `unsigned __int64`/`__int64` folded to
+  `unsigned int`/`int` (size_t, ptrdiff_t), a key counting only when it is unique on both sides. C names lose their
+  x86 decoration (`_name`, `_name@n`, `__imp__name@n`; `__purecall` is `_purecall`). Result: 442 names translated,
+  1,337 spelled the same (no pointer in them), 65 without a counterpart (names the i686 stub planning looks up
+  that this build does not reference).
+- **What broke on the way, all from `__ptr64`**: a demangled x64 member function ends in `__ptr64` (the `this`
+  qualifier), so `implib.is_cpp_data` took every undefined method for data (weak-external "data aliases" instead
+  of jumps) and `signature` found no parameter list (103 WON functions became traps). Strip it before matching
+  the text.
+- **Census**: pass 1 classes identical to i686, symbol by symbol (won 304, icf 36, vslot 262, pure 11, data 75),
+  stubs identical (won 278 graceful + 13 traps, aliases icf 36 / vslot 262 / pure 11, member aliases 75, data zero
+  5 + bss 8), pass 2 0 unresolved / 0 duplicates. A WON stub's graceful-or-trap decision and return kind are read
+  from the x86 name's signature, so the two targets cannot drift.
+- **x64 stubs** (`Stubs64`): one calling convention, the caller pops, so a graceful stub only zeroes rax/rdx/xmm0
+  (a constructor returns rcx with its vtable pointer cleared); traps are `lea rcx,[msg]; mov edx,id; jmp
+  $ee_trap` (OutputDebugString, int3 under a debugger, ExitProcess(id)). Relocations: REL32 for calls and
+  rip-relative data, REL32_1 for `cmp/mov byte [rip+x], imm8`, ADDR64 for vtable slots. Vtable slot inference
+  reads 8-byte ADDR64 slots; data stubs get twice the original's size (its layout had 4-byte pointers).
+- **Image base 0x400000.** Member aliases are absolute symbols (container + offset); a COFF symbol value is 32
+  bits, so the x64 exe links `/FIXED /BASE:0x400000 /HIGHENTROPYVA:NO`. rip-relative references to absolute
+  symbols work there, and the map keeps 8-digit addresses (`link6_map`). This goes when the member aliases become
+  real members in source.
+- **Static checks**: PE32+ AMD64; imports only system DLLs (ADVAPI32, DINPUT, GDI32, IMM32, IPHLPAPI, KERNEL32,
+  SHELL32, USER32, WINMM, WS2_32, WSOCK32, ntdll, ole32, oleaut32, opengl32, setupapi, bcryptprimitives, an
+  api-ms-win synch set; every imported name exists in the System32 DLL's exports); i686 imports D3DCOMPILER_47
+  where x64 imports setupapi (wgpu-native v24 vs v29). 4,745 exports (i686 4,744). `record_sizes.py` 38/38 equal,
+  `layout_views.py --x64` UIManager/EEWorld 2,680 shared records and DX7Rasterizer/Empire Earth 2,607 agree,
+  `odr_check.py` 81 divergent inline functions (i686 80: the same set plus a few MSVC STL `basic_string`
+  internals).
+- **Runtime hazards a link cannot show**, found with clang-query over every unit (int-to-pointer casts from 32-bit
+  integers, explicit pointer-to-integer narrowing; 209 sites): most are the saved-game id swizzling and integers
+  posted through void* thread-message parameters, both fine. Fixed:
+  - `_controlfp(x, _MCW_PC)` is an invalid parameter on x64 (the CRT ends the process): four threads set 53-bit
+    precision at start. Off the x87 it is a no-op and the get reports `_PC_53` (UMath).
+  - `EEUserInterface::HandleMessage(msg, long, long)` received the UI thread's void* parameters, pointers for most
+    messages, narrowed to long: `LONG_PTR` (long on x86, so the same code and name there).
+  - Saved ids are read as `unsigned long` into pointer fields and compared with `(T*)-1` (none) after loading:
+    0xffffffff zero-extends to 0x00000000ffffffff on x64 and the check fails (EESelectedGroup then indexed
+    `mGroups[-1]`). `USavedPointer<T>(id)` sign-extends as x86 did, at the fields compared with -1.
+- Checked and fine: no Get/SetWindowLong(Ptr), no DLGPROC, window/hook procs use the Windows types, timer user
+  data is DWORD_PTR, Interlocked only on int32_t counters, no va_arg, no unions of pointers and integers, no
+  pointer-sized arithmetic on struct offsets, `%x` only formats unit ids, memcpy sizes of 4 copy longs/floats.
+- Left (not run yet, step 2/3 of the plan): whether DirectInput 7 (`DINPUT.dll`, present on x64 Windows) and the
+  GX/wgpu renderer behave under the x64 game; the `-Wshorten-64-to-32` class (benign by the census); the 81 ODR
+  divergences (as i686). The game has not been started as x64.
+
 ## One static exe (folding the DLLs in)
 
 - **Plug-ins**: the engine found plug-ins by loading every `*.dll` in a folder and asking `PIMGetName/PIMGetType/

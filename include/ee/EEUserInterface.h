@@ -113,7 +113,9 @@ public:
     void PushBack(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock, EEAction* inAction);  // 0x278f54
     void ClearQueue(std::deque<EEAction*>& inQueue, TSCriticalSection* inLock);  // 0x276fe0 (Dereference each)
     long Run(void* inParameter);            // 0x2779b8 (the UI thread's loop; called from 0x140d73)
-    void HandleMessage(unsigned long inMessage, long inParam1, long inParam2);  // 0x27828f (void: no result in eax) (the 0x401..0x443 switch)
+    // the parameters are the thread message's void* (pointers for most messages): LONG_PTR keeps them whole on x64
+    // (and is long on x86, the original's type)
+    void HandleMessage(unsigned long inMessage, LONG_PTR inParam1, LONG_PTR inParam2);  // 0x27828f (void: no result in eax) (the 0x401..0x443 switch)
     // 0x2798ce (address taken at 0x144747; calls the members below through gUserInterface)
     static LRESULT CALLBACK WindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam);
     void ChangeRasterizer(long inRasterizer, long inScreen);  // 0x276804 (switches gRasterizer; message 0x41e)

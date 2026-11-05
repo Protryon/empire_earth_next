@@ -120,6 +120,13 @@ template <class T> inline unsigned long USavedID(T* inField)
 {
     return (unsigned long)reinterpret_cast<uintptr_t>(inField);
 }
+// The pointer field's value for a saved id read as unsigned long, sign-extended: the id 0xffffffff ("none") is
+// (T*)-1 on both targets, as on x86, so the fix-up passes that skip a field equal to (T*)-1 still do on x64 (a
+// zero-extended 0x00000000ffffffff would not compare equal). USavedID gives the id back.
+template <class T> inline T* USavedPointer(unsigned long inID)
+{
+    return reinterpret_cast<T*>(static_cast<intptr_t>(static_cast<long>(inID)));
+}
 // Provisional name. Rounds in the current rounding mode (to nearest), as the VC6 build's fld/fistp did.
 inline long UMFloatToLong(float inValue)
 {

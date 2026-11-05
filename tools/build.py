@@ -1,10 +1,12 @@
-"""Build the game from source: one statically linked EE-AOC.exe (clang-cl + lld-link, 32-bit, the MSVC STL and
-the static UCRT).
+"""Build the game from source: one statically linked EE-AOC.exe (clang-cl + lld-link, 32-bit or 64-bit, the MSVC
+STL and the static UCRT).
 
-  python -I tools/build.py [-j N] [--out DIR] [--opt X] [--test-profile windowed-software] [--sanitize-null]
-                           [--compile-only]
+  python -I tools/build.py [-j N] [--out DIR] [--opt X] [--x64] [--test-profile windowed-software]
+                           [--sanitize-null] [--compile-only]
 
--> <out>/exe/EE-AOC.exe with its .map (8-digit addresses) and .pdb (default out: build/clang). The exe holds the
+-> <out>/exe/EE-AOC.exe with its .map (8-digit addresses) and .pdb (default out: build/clang). --x64: an x86_64
+exe (default out build/clang-x64-exe; with --test-profile build/clang-test-x64), linked at the 32-bit image base
+0x400000 (the member aliases are absolute symbols, whose COFF value is 32 bits wide). The exe holds the
 game with its image libraries (libpng/zlib/libjpeg), the engine, the plug-ins the original loaded as DLLs (TCP
 protocol, the mixer, the Default random map generator, the DX7 T&L renderer; registered in PIMModule.cpp) and the
 language resources, with miniaudio, dmusic and pl_mpeg for sound, music and movies. Only Windows system DLLs are
@@ -37,7 +39,8 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import clang_build
 import units
 import verify
-from ee import CLANG, LINK_DIR, LLD_LINK, MODULE_FLAGS, ROOT, TOOLCHAIN, module_units
+import ee
+from ee import CLANG, LINK_DIR, LLD_LINK, MODULE_FLAGS, ROOT, module_units
 
 TEST_PROFILES = {
     "windowed-software": {
@@ -109,13 +112,16 @@ def compile_all(targets, out, opt, jobs, overlays=None, extra=()):
 def member_offsets(out):
     """exe_fulllink.link_exe's member_offsets: the member table's VC6 offset -> the same member's offset in this
     build (tools/harness/layout.py translate; the container's class from its mangled name). A Dinkum vector's _First
-    (+4) is this library's first-element pointer (+0). Offset 0 and tables of pointers stay."""
+    (+4) is this library's first-element pointer (+0). Offset 0 and tables of pointers stay (x64: an element of a
+    table of pointers is 8 bytes wide, so its offset doubles)."""
     sys.path.insert(0, str(ROOT / "tools" / "harness"))
     import layout as L
     lay = L.Layout(out)
 
     def translate(cont, off):
         if off == 0 or re.match(r"\?[^@]+@(?:[^@]+@)*@[23]P", cont):
+            if ee.is_x64() and off and re.match(r"\?[^@]+@(?:[^@]+@)*@[23]PA[PQ]E", cont):
+                return off * 2
             return off
         m = re.match(r"\?[^@]+@(?:[^@]+@)*@[23]([VU])([A-Za-z_0-9]+)@@", cont)
         if m:
@@ -126,14 +132,15 @@ def member_offsets(out):
     return translate
 
 
-# system libraries the engine and the renderer linked statically (dinput8: the c_dfDI* data formats), then the
-# renderer's wgpu-native (static, tools/fetch_wgpu.py) with the system libraries its DX12/Vulkan backends and the
-# Rust standard library import
-STATIC_LIBS = ["dxguid.lib", "dinput8.lib", "ole32.lib", "winmm.lib", "user32.lib",
-               str(TOOLCHAIN / "wgpu" / "i686" / "lib" / "wgpu_native.lib"), "gdi32.lib", "advapi32.lib", "ws2_32.lib",
-               "userenv.lib", "ntdll.lib", "bcrypt.lib", "oleaut32.lib", "d3d12.lib", "dxgi.lib", "d3dcompiler.lib",
-               "opengl32.lib", "propsys.lib", "runtimeobject.lib", "uuid.lib", "synchronization.lib", "shell32.lib",
-               "dwmapi.lib"]
+def static_libs():
+    """System libraries the engine and the renderer linked statically (dinput8: the c_dfDI* data formats), then the
+    renderer's wgpu-native of the target (static, tools/fetch_wgpu.py) with the system libraries its DX12/Vulkan
+    backends and the Rust standard library import."""
+    return ["dxguid.lib", "dinput8.lib", "ole32.lib", "winmm.lib", "user32.lib",
+            str(ee.wgpu_dir() / "lib" / "wgpu_native.lib"), "gdi32.lib", "advapi32.lib", "ws2_32.lib",
+            "userenv.lib", "ntdll.lib", "bcrypt.lib", "oleaut32.lib", "d3d12.lib", "dxgi.lib", "d3dcompiler.lib",
+            "opengl32.lib", "propsys.lib", "runtimeobject.lib", "uuid.lib", "synchronization.lib", "shell32.lib",
+            "dwmapi.lib"]
 
 
 def link_exe(out, objs, extra_libs):
@@ -154,7 +161,7 @@ def link_exe(out, objs, extra_libs):
     others = [objs(j[1], j[2]) for m in rest for j in units.jobs_for(m)] +              [objs(j[1], j[2]) for j in units.lib_jobs(rest)]
     # the game's new units (units.EXTRA_UNITS: no original address, so not in its units.txt)
     others += [objs(ROOT / "src" / rel, MODULE_FLAGS["exe"]) for rel in units.EXTRA_UNITS.get("exe", [])]
-    exe_fulllink.EXTRA_LIBS = [str(o) for o in others] + list(extra_libs) + STATIC_LIBS
+    exe_fulllink.EXTRA_LIBS = [str(o) for o in others] + list(extra_libs) + static_libs()
     exe_fulllink.IMPORT_MODULES = [m for m in units.TARGET_MODULES["exe"] if (LINK_DIR / m / "imports.txt").exists()]
     exe_fulllink.EXTRA_RES = [rsrc_rebuild.compile_rc(ROOT / "src" / units.LANGUAGE_RC, out / "rsrc-language")]
     rep, _ = exe_fulllink.link_exe(dst, items, {}, members=units.EXE_MEMBERS, member_offsets=member_offsets(out))
@@ -179,6 +186,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--out", help="output root (default build/clang, build/clang-test with --test-profile)")
     ap.add_argument("--opt", default="-O1", help="clang-cl optimisation (default -O1)")
+    ap.add_argument("--x64", action="store_true", help="an x86_64 exe (see the module doc)")
     ap.add_argument("-j", type=int, default=os.cpu_count() or 4)
     ap.add_argument("--test-profile", choices=sorted(TEST_PROFILES), help="TEST ONLY: see the module doc")
     ap.add_argument("--sanitize-null", action="store_true", help="TEST ONLY: see the module doc")
@@ -187,8 +195,13 @@ def main():
     for tool in (CLANG, LLD_LINK):
         if not tool.exists():
             sys.exit(f"{tool} is missing: install LLVM (winget install LLVM.LLVM) or set EE_LLVM")
-    out = pathlib.Path(a.out or ROOT / "build" / (("clang-test" if a.test_profile else "clang")
-                                                  + ("-nullsan" if a.sanitize_null else ""))).resolve()
+    if a.x64:
+        ee.set_arch("x64")
+        clang_build.set_target(x64=True)
+        if not (ee.wgpu_dir() / "lib" / "wgpu_native.lib").exists():
+            sys.exit(f"{ee.wgpu_dir()} is missing: python -I tools/fetch_wgpu.py")
+    kind = ("clang-test" if a.test_profile else "clang") + ("-x64" + ("" if a.test_profile else "-exe") if a.x64 else "")
+    out = pathlib.Path(a.out or ROOT / "build" / (kind + ("-nullsan" if a.sanitize_null else ""))).resolve()
     out.mkdir(parents=True, exist_ok=True)
     overlays = TEST_PROFILES.get(a.test_profile)
     extra, extra_libs = (), []
@@ -196,7 +209,8 @@ def main():
         extra = (f"-fsanitize={SANITIZE_CHECKS}", "-fsanitize-minimal-runtime",
                  f"-fsanitize-recover={SANITIZE_CHECKS}")
         ubsan = out / "ubsan_minimal.obj"
-        r = subprocess.run([str(CLANG), "--target=i686-pc-windows-msvc", "/nologo", "/c", "/O1", "/Zl", "/GS-",
+        target = "x86_64-pc-windows-msvc" if a.x64 else "i686-pc-windows-msvc"
+        r = subprocess.run([str(CLANG), f"--target={target}", "/nologo", "/c", "/O1", "/Zl", "/GS-",
                             str(ROOT / "tools" / "harness" / "ubsan_minimal.c"), f"/Fo{ubsan}"],
                            capture_output=True, text=True)
         if r.returncode:

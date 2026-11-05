@@ -73,11 +73,13 @@ State (2026-11-04): all 858 units compile for x86_64 (`clang_build.py --x64`), o
 messages are x64-safe (PORT_LEARNINGS "64-bit census").
 
 Steps:
-1. **x64 link** (`build.py --x64`, worktree agent): lld /MACHINE:X64 with the x86_64 runtime/SDK libraries and
-   wgpu-native v29 x86_64. `exe_fulllink.py`'s pass-1 stub classes (WON library traps/stubs, ICF aliases, vtable-slot
-   aliases, pure, data and member aliases) are keyed by 32-bit mangled names and VC6 addresses: match x64 names to
-   them by demangled signature (x64 adds `__ptr64`, has one calling convention), and take member offsets from the x64
-   build's own record layouts. Gate: 0 unresolved / 0 duplicates, the same stub census as i686.
+1. **x64 link** (done, 2026-11-04): `python -I build.py --x64` -> `build/clang-x64-exe/exe/EE-AOC.exe` (PE32+
+   AMD64, 15.6 MB, system DLLs only), lld /MACHINE:X64 at /BASE:0x400000 (member aliases are absolute 32-bit
+   symbols) with the x86_64 runtime/SDK libraries and wgpu-native v29 x86_64. `exe_fulllink.py` maps the link
+   tables' 32-bit names to x64 names by demangled signature and writes x64 stubs; member offsets come from the x64
+   build's record layouts. Gate met: pass 2 0 unresolved / 0 duplicates, and the pass-1 census and stubs equal the
+   i686 ones symbol by symbol (won 304, icf 36, vslot 262, pure 11, data 75). Three x64 runtime hazards fixed in
+   source (x87 precision control, UI thread message pointers, saved-id -1 sentinels); PORT_LEARNINGS.md "x64 link".
 2. **x64 harness** (worktree agent, in parallel): `exe_boot.c` as a native x64 debugger (guarded APIs read their
    arguments from RCX/RDX/R8/R9 and the stack's home area; breakpoints and context use Rip/Rsp), the presentation
    bridge, time shim and seed pin as x64 DLLs/offsets from the build's layouts. Tested first against a small x64

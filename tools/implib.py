@@ -6,7 +6,8 @@ System DLLs are linked against the Windows SDK's import libraries (ee.SDK_IMPORT
 linked (ee.DROPPED_IMPORTS). For every other DLL (DirectInput 7, Miles, Bink, the engine) a .def is written from the
 import table and turned into an import library by llvm-lib: C names are matched to the objects' references for
 their decoration, C++ data is marked DATA, and the import-name type and hint of each member are set as the table
-records them (fix_members).
+records them (fix_members). x64 (ee.ARCH): C names carry no decoration, so a decorated name of the table
+(name@n, an x86 stdcall export) is listed by its plain name.
 """
 import collections
 import os
@@ -17,6 +18,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import ee
 import verify
 from undname import undname
 from ee import DROPPED_IMPORTS, LLVM_LIB, SDK_IMPORT_LIBS
@@ -53,7 +55,7 @@ def is_decorated_import(name):
 def is_cpp_data(name):
     if re.match(r"\?[^?@][^@]*@(?:[^@?]+@)*@[0-4]", name):
         return True
-    text = undname(name).rstrip()
+    text = re.sub(r"(\s*__ptr64)+$", "", undname(name).rstrip())   # x64: the this pointer's qualifier
     return not re.search(r"\)\s*(?:const)?\s*(?:volatile)?$", text)
 
 
@@ -100,19 +102,21 @@ def make_import_libs(module, out, objs):
         for imp in imports:
             ordinal = f" @{imp.ordinal} NONAME" if imp.import_by_ordinal else ""
             name = imp.name
-            if is_decorated_import(name):
+            if ee.is_x64():
+                sym = plain(name) if is_decorated_import(name) else name
+            elif is_decorated_import(name):
                 sym = name
                 as_is.add(sym.encode())
             else:
                 sym = by_plain.get(name, name if name.startswith("?") else "_" + name)
             # llvm-lib adds the x86 underscore to plain C names but not to stdcall names (name@n)
-            entry = sym if sym.startswith("?") or "@" in sym else sym[1:]
+            entry = sym if ee.is_x64() or sym.startswith("?") or "@" in sym else sym[1:]
             data = name in C_DATA or sym in defs or (name.startswith("?") and is_cpp_data(name))
             lines.append(f"    {entry}{ordinal}{' DATA' if data else ''}")
             if not imp.import_by_ordinal:
                 hints[sym.encode()] = imp.hint or 0
         (out / f"{stem}.def").write_text("\n".join(lines) + "\n")
-        r = subprocess.run([str(LLVM_LIB), "/nologo", "/machine:x86", f"/def:{stem}.def", f"/out:{stem}.lib"],
+        r = subprocess.run([str(LLVM_LIB), "/nologo", f"/machine:{ee.ARCH}", f"/def:{stem}.def", f"/out:{stem}.lib"],
                            cwd=out, capture_output=True, text=True,
                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         if r.returncode:
@@ -129,7 +133,11 @@ def fix_members(lib, hints, as_is=()):
     i = 0
     while (i := b.find(b"\x00\x00\xff\xff", i)) >= 0:
         _, _, _, machine, _, _, _, typ = struct.unpack_from("<HHHHIIHH", b, i)
-        if machine == 0x14C:
+        if machine == 0x8664:   # x64: no decorated names, only the hint
+            name = bytes(b[i + 20:b.index(b"\0", i + 20)])
+            if name in hints:
+                struct.pack_into("<H", b, i + 16, hints[name])
+        elif machine == 0x14C:
             name = bytes(b[i + 20:b.index(b"\0", i + 20)])
             by_ordinal = (typ >> 2) & 7 == 0
             if not by_ordinal and name in as_is:

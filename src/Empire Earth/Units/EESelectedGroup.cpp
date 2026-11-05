@@ -184,7 +184,7 @@ long EESelectedGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVe
         return theResult;
     unsigned long theIndex;
     theResult = inFile.Read(theIndex);
-    this->mSavedGroup = reinterpret_cast<EEGroup*>(theIndex);
+    this->mSavedGroup = USavedPointer<EEGroup>(theIndex);
     return theResult;
 }
 

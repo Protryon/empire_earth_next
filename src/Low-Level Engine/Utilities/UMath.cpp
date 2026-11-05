@@ -127,6 +127,10 @@ float UMCos(float inAngle)
 // Returns the FPU precision setting (24, 53 or 64 bits)
 unsigned long UMGetFloatingPointPrecision()
 {
+#if !defined(_M_IX86)
+    // only the x87 has a precision control; SSE computes doubles at 53 bits, the precision the game asks for
+    return _PC_53;
+#endif
     unsigned long theControl = _controlfp(0, 0);
     if ((theControl & _PC_24) == _PC_24)
         return _PC_24;
@@ -165,7 +169,12 @@ bool UMQuadraticEquation(float inA, float inB, float inC, float& outRoot1, float
 // Sets the FPU precision
 void UMSetFloatingPointPrecision(unsigned long inPrecision)
 {
+#if defined(_M_IX86)
     _controlfp(inPrecision, _MCW_PC);
+#else
+    // x64 has no precision control: the CRT treats _MCW_PC as an invalid parameter (the process ends)
+    (void)inPrecision;
+#endif
 }
 
 // FUNCTION: LLE 0x10080fbd
