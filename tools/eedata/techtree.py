@@ -2,8 +2,9 @@
 together into the one binary dbtechtree file (an epoch block per epoch: the epoch record, then its node slots).
 
 epochs.yaml: `records:` in epoch order, one per epoch: `id` (stone_age ...), `label`, `slots` (the node slots of its
-block), `music` and `citizen_models` (named slots, not read yet: the songs and citizen models per epoch are still
-dbmusic's flags and code), then the epoch record's fields. The epoch's position is its runtime id (the original's
+block), `music` (the epoch's songs, dbmusic ids: they compile into dbmusic's per-epoch flags, overlay.EPOCH_FLAGS,
+and the game reads the lists, EERules.cpp) and `citizen` (the epoch's citizen media: EERules.cpp EEEpochMedia), then
+the epoch record's fields. The epoch's position is its runtime id (the original's
 tech ids 0..14); the fields that follow from the position are left out where they do (mID, mEpoch = position,
 mNextEpoch = position + 1, mFirstNodeID = (position + 1) * 1000). mTitleID is the epoch's title string (the start
 epoch option's label, "Bronze Age"; the original's data has 0 there and the code adds the position to 30145: the
@@ -19,7 +20,54 @@ import binfmt
 from binfmt import Epoch, Table
 from textio import Scalar, TextError, emit_yaml, parse_yaml
 
-TEXT_ONLY = ('music', 'citizen_models', 'slots')   # epochs.yaml keys the compiler takes (slots) or keeps (the slots)
+TEXT_ONLY = ('music', 'citizen', 'slots')   # epochs.yaml keys the compiler takes (slots) or leaves to others (media)
+
+# the original's per-epoch citizen rules by epoch position (EERules.cpp EEDefaultEpochMedia; rows of dbgfxeffects and
+# dbsounds): nano age and later: the high-tech tools; a unit removed by a research: effects, sound, thunder
+_LIGHTNING_UNIT, _DUST, _DISINTEGRATION, _SOUND_LIGHTNING, _SOUND_THUNDER = 0x15, 0xab, 0xec, 0x176, 0x1ba
+
+
+def citizen_media(k):
+    """epoch position -> the citizen block's values (integers for the references)."""
+    if k <= 3:   # prehistoric .. bronze
+        effects, every, pitch = [_LIGHTNING_UNIT, _DUST, _DUST, _DUST], 2, 0.0
+    elif k <= 8:   # dark .. industrial
+        effects, every, pitch = [_DISINTEGRATION, _DUST], 3, 0.0
+    elif k <= 11:   # the atomic ages
+        effects, every, pitch = [_DISINTEGRATION, _DUST], 0, -0.2
+    else:
+        effects, every, pitch = [_DISINTEGRATION, _DUST], 0, 0.0
+    return dict(high_tech_tools=k >= 13, removal_effects=effects, removal_sound=_SOUND_LIGHTNING,
+                removal_pitch_offset=pitch, removal_thunder=_SOUND_THUNDER, removal_thunder_every=every)
+
+
+def _f32(x):
+    import struct
+    import scalars
+    return scalars.format_f32(struct.unpack('<I', struct.pack('<f', x))[0])
+
+
+def citizen_text(k, ids):
+    m = citizen_media(k)
+    return {'high_tech_tools': '1' if m['high_tech_tools'] else '0',
+            'removal_effects': [ids['dbgfxeffects'][e] for e in m['removal_effects']],
+            'removal_sound': ids['dbsounds'][m['removal_sound']],
+            'removal_pitch_offset': _f32(m['removal_pitch_offset']),
+            'removal_thunder': ids['dbsounds'][m['removal_thunder']],
+            'removal_thunder_every': str(m['removal_thunder_every'])}
+
+
+def epoch_music(music, spec, ids, k):
+    """The ids of the songs that play in epoch position k: dbmusic's flag k (the last flag for the epochs past the
+    flags: the original's space age plays the nano age's songs)."""
+    if music is None:
+        return []
+    fn, _ = spec['tables']['dbmusic']['epoch_flags']
+    f = next(x for x in spec['structs'][spec['tables']['dbmusic']['struct']]['fields'] if x['name'] == fn)
+    if k > f['count']:
+        return []
+    slot = min(k, f['count'] - 1)
+    return [ids['dbmusic'][i] for i, r in enumerate(music.rows) if r is not None and r.rec[f['off'] + slot]]
 
 
 def derived(spec, index):
@@ -27,8 +75,9 @@ def derived(spec, index):
     return {f: a * index + b for f, (a, b) in spec['tables']['epochs'].get('derived', {}).items()}
 
 
-def export_texts(t, spec, ids, tables):
-    """The parsed dbtechtree Table -> (dbtechtree text, epochs text)."""
+def export_texts(t, spec, ids, tables, music=None):
+    """The parsed dbtechtree Table -> (dbtechtree text, epochs text); music: the parsed dbmusic Table (each epoch's
+    songs)."""
     tt, ep = spec['tables']['dbtechtree'], spec['tables']['epochs']
     fields = spec['structs'][tt['struct']]['fields']
     keyf = next(f for f in fields if f['name'] == 'mID')
@@ -50,8 +99,8 @@ def export_texts(t, spec, ids, tables):
             m[key] = v
             if key == 'label':
                 m['slots'] = str(len(e.nodes))
-                m['music'] = []
-                m['citizen_models'] = []
+                m['music'] = epoch_music(music, spec, ids, k)
+                m['citizen'] = citizen_text(k, ids)
         epochs.append(m)
         for i, r in enumerate(e.nodes):
             if r is None:
@@ -61,8 +110,9 @@ def export_texts(t, spec, ids, tables):
     banner = ('# {}: Empire Earth: The Art of Conquest db table (tools/eedata; record layout EETechTreeRecord, '
               f'{spec["structs"][tt["struct"]]["size"]} bytes, in tools/eedata/specs.json)\n')
     ep_banner = ('# epochs: Empire Earth: The Art of Conquest: every epoch, in order (tools/eedata/techtree.py; it '
-                 'compiles with dbtechtree.yaml into db\\dbtechtree.dat). `music` and `citizen_models` are named\n'
-                 '# slots the game does not read yet.\n')
+                 'compiles with dbtechtree.yaml into db\\dbtechtree.dat). `music`: the epoch\'s songs (dbmusic ids);\n'
+                 '# `citizen`: its citizen media (high-tech tools from the nano age; the effects, sound and thunder of a unit a\n'
+                 '# research removes).\n')
     tt_doc = {'eedata': 'dbtechtree', 'format': str(spec['format']), 'records': nodes}
     ep_doc = {'eedata': 'epochs', 'format': str(spec['format']), 'records': epochs}
     return ((banner.format('dbtechtree') + emit_yaml(tt_doc)).encode('utf-8'),

@@ -32,7 +32,7 @@ OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormats.cpp",
                      "Low-Level Engine/Graphics Engine/GEOpenFormatsFile.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
                "exe": ["Empire Earth/Database/EEDataText.cpp", "Empire Earth/Database/EEDataTextFile.cpp",
-                       "Empire Earth/Database/EEDataDump.cpp",
+                       "Empire Earth/Database/EEDataDump.cpp", "Empire Earth/Database/EERules.cpp",
                        "Empire Earth/WONAPI/WONAPIStubs.cpp",
                        # the language strings, generated from Language.rc (tools/lang_strings.py)
                        "Empire Earth/Language/LanguageStrings.cpp",

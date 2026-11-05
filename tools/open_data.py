@@ -213,9 +213,8 @@ def cmd_build(a, out=None):
                 sys.exit(f'{name} is on no data path place')
             dbs[t] = winner[name].read(name)
         # all at once: the tables reference each other's rows by id (DATA_FORMATS.md 8.6)
-        for t, text in tables.export_all(dbs, spec).items():
-            ext = '.yaml' if spec['tables'][t]['format'] == 'yaml' else '.csv'
-            (data / 'db' / f'{t}{ext}').write_bytes(text)
+        for t, text in tables.export_tree(dbs, spec).items():   # + the rules documents (eedata rules.py)
+            (data / 'db' / f'{t}{tables.text_ext(spec, t)}').write_bytes(text)
             converted.add(f'db\\{t}.dat')
         print(f'db: {len(spec["tables"])} tables as text', flush=True)
         # models -> glTF, textures -> PNG (tools/eemodel export: the same data path, resolved as the game does)

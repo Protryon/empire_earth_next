@@ -24,6 +24,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEDatabaseTables.h"
+#include "ee/EERules.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUCBuilding.h"
@@ -777,14 +778,11 @@ bool EEPhysicsModel::Push(EEComplexUnit* inUnit, EEComplexUnit* inOther)
         || !(theOtherRadius < theRadius) || !(theDistanceSquared > gPhysicsModelsF) || inOther->mPlayer == inUnit->mPlayer
         || inUnit->mPlayer->mEnemies[inOther->mPlayer->mPlayerID] == 0)
         return false;
-    float theDamage = inUnit->mStats->GetAttack();
-    float theFactor = gWeaponToHitFactors[inOther->mUnitClass->mWeapon][inUnit->mUnitClass->mWeapon];
-    float theHit = gToHitTable.GetAttackFactor(inUnit->mUnitClass->mAmmoType, inOther->mUnitClass,
-                                        inUnit->mPlayer->mPlayerID, inOther->mPlayer->mPlayerID) * theFactor;
-    if (theHit > 0.0f)
-        theDamage = theDamage - UMFloatToLong(inOther->mStats->mArmor[inUnit->mUnitClass->mWeapon]);
-    if (theHit * theDamage > 1.0f)
-        inOther->TakeHit(inUnit, 1, inUnit->mPlayer->mPlayerID, 1);
+    // the trample: the shared damage function (EEUnitClass::ComputeDamage; combat.yaml trample_damage/_threshold)
+    long theAmount;
+    if (inUnit->mUnitClass->ComputeDamage(kDamageTrample, inUnit, inOther, inUnit->mStats->GetAttack(),
+                                          inUnit->mUnitClass->mAmmoType, inUnit->mUnitClass->mWeapon, 0.0f, theAmount))
+        inOther->TakeHit(inUnit, theAmount, inUnit->mPlayer->mPlayerID, 1);
     return false;
 }
 

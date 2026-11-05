@@ -20,10 +20,6 @@
 namespace EEDataText {
 namespace {
 
-struct Failure {
-    std::string mText;
-};
-
 [[noreturn]] void Fail(const std::string& inText)
 {
     throw Failure{inText};
@@ -35,30 +31,7 @@ std::string Num(long long inValue)
 }
 
 // ------------------------------------------------------------------------------------------------ the data model
-
-struct Node {
-    enum Kind { kNull, kScalar, kMap, kList };
-    Kind mKind = kNull;
-    bool mQuoted = false;
-    long mLine = 0;
-    std::string mText;                 // scalar
-    std::vector<std::string> mKeys;    // map, in order
-    std::vector<Node> mItems;          // map values / list items
-
-    bool IsMissing() const
-    {
-        return this->mKind == kNull ||
-               (this->mKind == kScalar && !this->mQuoted &&
-                (this->mText.empty() || this->mText == "~" || this->mText == "null"));
-    }
-    const Node* Find(const std::string& inKey) const
-    {
-        for (size_t i = 0; i < this->mKeys.size(); i++)
-            if (this->mKeys[i] == inKey)
-                return &this->mItems[i];
-        return nullptr;
-    }
-};
+// (Node and Failure: EEDataText.h)
 
 Node Scalar(const std::string& inText, bool inQuoted, long inLine)
 {
@@ -1201,6 +1174,8 @@ std::vector<std::string> CsvColumns(const EEDTTable& t)
     for (unsigned long fi = 0; fi < st.mFieldCount; fi++) {
         const EEDTField& f = st.mFields[fi];
         std::string name = f.mName;
+        if (t.mEpochFlags && name == t.mEpochFlags)
+            continue;   // epochs.yaml's lists
         if (f.mType == kEEDT_str || f.mCount == 1) {
             cols.push_back(name);
         } else if (f.mType == kEEDT_pair_f32) {
@@ -1273,6 +1248,9 @@ Node CsvRecord(const std::vector<std::string>& bases, const std::vector<std::vec
 class Resolver {
 public:
     explicit Resolver(const std::function<bool(const char*, std::string&)>& inRead) : mRead(inRead) {}
+
+    // a text of the data path (a table's, or a rules document's), unparsed
+    bool Read(const char* inName, std::string& outText) { return this->mRead(inName, outText); }
 
     Doc& GetDoc(const EEDTTable& t)
     {
@@ -1515,7 +1493,7 @@ public:
         if (t.mContainer == kEEDTC_techtree) {
             const EEDTTable& te = *FindTable("epochs");
             this->GetIndex(te);
-            static const char* const kEpochKeys[] = {"slots", "music", "citizen_models", nullptr};
+            static const char* const kEpochKeys[] = {"slots", "music", "citizen", nullptr};
             static const char* const kNodeKeys[] = {"epoch", nullptr};
             const EEDTField* theID = FindField(*t.mRecord, "mID");
             std::vector<EpochBlock>& layout = this->GetLayout();
@@ -1553,8 +1531,13 @@ public:
             for (const Placed& p : d.mRows)
                 n = p.mPos + 1 > n ? p.mPos + 1 : n;
             std::vector<Row> rows(n);
-            for (const Placed& p : d.mRows)
+            std::vector<bool> listed(n);
+            for (const Placed& p : d.mRows) {
                 rows[p.mPos] = this->BuildRow(t, p, true);
+                listed[p.mPos] = true;
+            }
+            if (t.mEpochFlags)
+                this->EpochFlags(t, rows, listed);
             if (t.mContainer == kEEDTC_count || t.mContainer == kEEDTC_lead)
                 Put32(out, (uint32_t)rows.size());
             for (const Row& r : rows) {
@@ -1567,6 +1550,29 @@ public:
         }
         // the parsed text is no longer needed once the table is built (its ids stay indexed)
         this->mDocs.erase(t.mName);
+    }
+
+    // a per-epoch flag array (dbmusic mInEpoch) from epochs.yaml's lists: flag k of a row is set when epoch k (k < the
+    // array's count) lists its id (tools/eedata tables._epoch_flags)
+    void EpochFlags(const EEDTTable& t, std::vector<Row>& ioRows, const std::vector<bool>& inListed)
+    {
+        const EEDTField* f = FindField(*t.mRecord, t.mEpochFlags);
+        std::vector<EpochBlock>& layout = this->GetLayout();
+        EEDTRef self{t.mEpochKey, t.mName, nullptr, 0, false};
+        for (size_t k = 0; k < layout.size() && k < f->mCount; k++) {
+            const Node* v = layout[k].mEpoch->Find(t.mEpochKey);
+            std::string where = "epochs line " + Num(layout[k].mLine);
+            if (!Present(v))
+                continue;
+            if (v->mKind != Node::kList)
+                Fail(where + ": " + t.mEpochKey + " must be a list");
+            for (const Node& x : v->mItems) {
+                long pos = (long)(int32_t)this->Resolve(self, kEEDT_s32, &x, where, t.mEpochKey);
+                if (pos < 0 || pos >= (long)ioRows.size() || !inListed[pos])
+                    Fail(where + ": " + t.mEpochKey + ": '" + x.mText + "' names no row of " + t.mName);
+                ioRows[pos].mRec[f->mOffset + k] = 1;
+            }
+        }
     }
 
 private:
@@ -1584,6 +1590,8 @@ std::vector<unsigned char> BuildRecord(const EEDTTable& t, Getter& g, Resolver& 
     for (unsigned long fi = 0; fi < st.mFieldCount; fi++) {
         const EEDTField& f = st.mFields[fi];
         std::string name = f.mName;
+        if (t.mEpochFlags && name == t.mEpochFlags)
+            continue;   // set from epochs.yaml's lists (Resolver::EpochFlags)
         const EEDTRef* ref = FindRef(t, f.mName);
         if (f.mType == kEEDT_str) {
             std::string text = Text(g.Get(name), g.mWhere, f.mName);
@@ -1642,10 +1650,87 @@ bool Run(const std::function<void()>& inBody, const char* inTable, std::string& 
 
 }  // namespace
 
+const char* const kRuleDocuments[] = {"combat", "gameoptions", "civbuilder", "civpowers"};
+const unsigned long kRuleDocumentCount = sizeof(kRuleDocuments) / sizeof(kRuleDocuments[0]);
+
 const char* TextExtension(const char* inTable)
 {
     const EEDTTable* t = FindTable(inTable);
-    return t ? (t->mYaml ? ".yaml" : ".csv") : nullptr;
+    if (t)
+        return t->mYaml ? ".yaml" : ".csv";
+    for (unsigned long i = 0; i < kRuleDocumentCount; i++)
+        if (strcmp(inTable, kRuleDocuments[i]) == 0)
+            return ".yaml";
+    return nullptr;
+}
+
+const std::string& NodeScalar(const Node* inValue, const std::string& inWhere, const char* inName)
+{
+    if (!inValue || inValue->IsMissing())
+        Fail(inWhere + ": " + inName + ": missing");
+    return ScalarText(inValue, inWhere, inName, "a value");
+}
+
+long NodeInt(const Node* inValue, const std::string& inWhere, const char* inName)
+{
+    const std::string& t = NodeScalar(inValue, inWhere, inName);
+    try {
+        return (long)ParseInt(t, kEEDT_s32);
+    } catch (Failure& e) {
+        Fail(inWhere + ": " + inName + ": " + e.mText);
+    }
+}
+
+float NodeFloat(const Node* inValue, const std::string& inWhere, const char* inName)
+{
+    const std::string& t = NodeScalar(inValue, inWhere, inName);
+    uint32_t bits;
+    try {
+        bits = ParseF32(t);
+    } catch (Failure& e) {
+        Fail(inWhere + ": " + inName + ": " + e.mText);
+    }
+    float f;
+    memcpy(&f, &bits, 4);
+    return f;
+}
+
+void WorldValue(const std::string& inText, const std::string& inWhere, const char* inName, long& outRow,
+                int& outValue)
+{
+    static const char* const kValues[] = {"F", "F2", "L", "L2"};
+    static const char* const kFields[] = {"mFloatValue", "mFloatValue2", "mLongValue", "mLongValue2"};
+    size_t dot = inText.rfind('.');
+    std::string id = dot == std::string::npos ? inText : inText.substr(0, dot);
+    std::string value = dot == std::string::npos ? std::string() : inText.substr(dot + 1);
+    const EEDTTable* t = FindTable("dbworld");
+    for (unsigned long i = 0; t && i < t->mRowNameCount; i++) {
+        if (id != t->mRowNames[i].mName)
+            continue;
+        for (int v = 0; v < 4; v++) {
+            if (value != kValues[v])
+                continue;
+            std::string fields = std::string(" ") + t->mRowNames[i].mFields + " ";
+            if (fields.find(std::string(" ") + kFields[v] + " ") == std::string::npos)
+                Fail(inWhere + ": " + inName + ": '" + inText + "': dbworld's " + id + " has no " + value +
+                     " (its readers use " + t->mRowNames[i].mFields + ")");
+            outRow = t->mRowNames[i].mRow;
+            outValue = v;
+            return;
+        }
+        Fail(inWhere + ": " + inName + ": '" + inText + "': a world value is <id>.F, .F2, .L or .L2");
+    }
+    Fail(inWhere + ": " + inName + ": '" + inText + "' is neither a number nor a dbworld value (<id>.F ...)");
+}
+
+bool NodeBool(const Node* inValue, const std::string& inWhere, const char* inName)
+{
+    const std::string& t = NodeScalar(inValue, inWhere, inName);
+    try {
+        return ParseInt(t, kEEDT_bool) != 0;
+    } catch (Failure& e) {
+        Fail(inWhere + ": " + inName + ": " + e.mText);
+    }
 }
 
 struct Content::Impl {
@@ -1668,6 +1753,51 @@ bool Content::Compile(const char* inTable, std::vector<unsigned char>& outData, 
         return false;
     }
     return Run([&] { this->mImpl->mResolver.Build(*t, outData); }, inTable, outError);
+}
+
+bool Content::Document(const char* inName, Node& outDoc)
+{
+    std::string text;
+    if (!this->mImpl->mResolver.Read(inName, text))
+        return false;
+    try {
+        outDoc = ParseYaml(text);
+    } catch (Failure& e) {
+        Fail(std::string(inName) + " " + e.mText);
+    }
+    if (outDoc.mKind != Node::kMap)
+        Fail(std::string(inName) + ": the document is not a mapping");
+    const Node* name = outDoc.Find("eedata");
+    if (name && !name->IsMissing() && (name->mKind != Node::kScalar || name->mText != inName))
+        Fail(std::string(inName) + ": the file says it is '" + (name->mKind == Node::kScalar ? name->mText : "") + "'");
+    const Node* format = outDoc.Find("format");
+    if (format && !format->IsMissing() && (format->mKind != Node::kScalar || format->mText != Num(EEDT_FORMAT_VERSION)))
+        Fail(std::string(inName) + ": format " + (format->mKind == Node::kScalar ? format->mText : "") +
+             ", the game reads format " + Num(EEDT_FORMAT_VERSION));
+    return true;
+}
+
+long Content::Key(const char* inTable, const Node* inID, const std::string& inWhere, const char* inField)
+{
+    const EEDTTable* t = FindTable(inTable);
+    if (!t)
+        Fail(inWhere + ": " + inField + ": " + inTable + " is not a db table");
+    const std::string& id = NodeScalar(inID, inWhere, inField);
+    if (!IsId(id))
+        Fail(inWhere + ": " + inField + ": '" + id + "' is not an id (a lowercase letter, then a-z, 0-9 or _)");
+    const Index& idx = this->mImpl->mResolver.GetIndex(*t);
+    std::map<std::string, long>::const_iterator it = idx.mKeys.find(id);
+    if (it == idx.mKeys.end())
+        Fail(inWhere + ": " + inField + ": '" + id + "' is not an id of " + inTable);
+    return it->second;
+}
+
+long Content::Count(const char* inTable)
+{
+    const EEDTTable* t = FindTable(inTable);
+    if (!t)
+        Fail(std::string(inTable) + " is not a db table");
+    return (long)this->mImpl->mResolver.GetIndex(*t).mKeys.size();
 }
 
 bool Compile(const char* inTable, const char* inText, unsigned long inLength, std::vector<unsigned char>& outData,

@@ -37,14 +37,15 @@
 #include "ee/EEAreaEffect.h"
 #include "ee/EEAreaEffectTemplate.h"
 #include "ee/EEAEMorale.h"
+#include "ee/EERules.h"
 
-// The owner's living, built houses (unit type 0x25) whose footprint meets mRect (0x27bc86, the overlap 0x27bcc1:
+// The owner's living, built morale buildings (combat.yaml morale buildings: the house, 0x25, in the original) whose footprint meets mRect (0x27bc86, the overlap 0x27bcc1:
 // both out of line); layout inferred (0x14 bytes on the caller's frame) (provisional name)
 struct EEAEMFBBuildingInRectangle {
     EEAEMFBBuildingInRectangle(const U2DRectangle<long>& inRect, EEPlayer* inPlayer) : mRect(inRect), mPlayer(inPlayer) {}
     bool operator()(EEComplexUnit* inUnit) const
     {
-        return inUnit->mPlayer == this->mPlayer && inUnit->mUnitClass->mUnitType == kUnitTypeHouse && inUnit->mHitPoints > 0 &&
+        return inUnit->mPlayer == this->mPlayer && EEGetRules().mCombat.IsMoraleBuilding(inUnit->mUnitClass->mUnitType) && inUnit->mHitPoints > 0 &&
                inUnit->mIsBuilt && this->Overlaps(inUnit);
     }
     bool Overlaps(EEComplexUnit* inUnit) const
@@ -70,7 +71,7 @@ struct EEAEMFBBuildingInRange {
         : mCenter(inCenter), mPlayer(inPlayer), mRangeSquared(inRangeSquared) {}
     bool operator()(EEComplexUnit* inUnit) const
     {
-        return inUnit->mPlayer == this->mPlayer && inUnit->mUnitClass->mUnitType == kUnitTypeHouse && inUnit->mHitPoints > 0 &&
+        return inUnit->mPlayer == this->mPlayer && EEGetRules().mCombat.IsMoraleBuilding(inUnit->mUnitClass->mUnitType) && inUnit->mHitPoints > 0 &&
                inUnit->mIsBuilt && this->InRange(inUnit);
     }
     bool InRange(EEComplexUnit* inUnit) const

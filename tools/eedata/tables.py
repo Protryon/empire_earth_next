@@ -68,9 +68,10 @@ def record_items(tspec, fields, rec, yaml, ids, key, only=None):
     out = []
     refs = tspec.get('refs', {})
     self_ = tspec.get('self')
+    flags = tspec.get('epoch_flags', [None])[0]
     for f in binfmt.exported(fields):
         t, n, name = f['type'], f['count'], f['name']
-        if only is not None and name not in only:
+        if (only is not None and name not in only) or name == flags:   # flags: epochs.yaml's lists
             continue
         v = binfmt.field_value(f, rec)
         ref = refs.get(name)
@@ -192,9 +193,12 @@ def build_record(tspec, fields, base, g, content, key):
     buf = bytearray(base)
     refs = tspec.get('refs', {})
     self_ = tspec.get('self')
+    flags = tspec.get('epoch_flags', [None])[0]
     try:
         for f in binfmt.exported(fields):
             t, n, name = f['type'], f['count'], f['name']
+            if name == flags:   # set from epochs.yaml's lists (build_table)
+                continue
             ref = refs.get(name)
             if t == 'str':
                 text = _text(g.get(name), g.where, name)
@@ -342,11 +346,28 @@ def export_all(dbs, spec, ids=None):
     ids = ids if ids is not None else idsmod.generate(tabs, spec)
     out = {}
     for name in dbs:
-        if name == 'dbtechtree':   # two texts: the techs and the epochs
-            out['dbtechtree'], out['epochs'] = techtree.export_texts(tabs[name], spec, ids, _this())
+        if name == 'dbtechtree':   # two texts: the techs and the epochs (with dbmusic's songs per epoch)
+            out['dbtechtree'], out['epochs'] = techtree.export_texts(tabs[name], spec, ids, _this(), tabs.get('dbmusic'))
         elif name not in out:
             out[name] = export_table(name, tabs[name], spec, ids)
     return out
+
+
+def export_tree(dbs, spec):
+    """The whole text tree: every table's text (export_all) and the vanilla rules documents (rules.py, ids from the
+    same export) -> {name: text bytes}; text_ext(spec, name) gives each file's extension."""
+    import rules
+    tabs = parse_all(dbs, spec)
+    ids = idsmod.generate(tabs, spec)
+    out = export_all(dbs, spec, ids)
+    out.update(rules.export(ids, spec))
+    return out
+
+
+def text_ext(spec, name):
+    """The extension of a text tree file: a table's (.csv / .yaml) or a rules document's (.yaml)."""
+    t = spec['tables'].get(name)
+    return '.yaml' if t is None or t['format'] == 'yaml' else '.csv'
 
 
 def _this():
@@ -419,6 +440,8 @@ def _flatten(k, v, out):
 
 
 def csv_columns(tspec, fields):
+    flags = tspec.get('epoch_flags', [None])[0]
+    fields = [f for f in fields if f['name'] != flags]   # epochs.yaml's lists
     cols = ['row', 'id']
     for spec in tspec.get('lead', []):
         if '|' in spec:
@@ -633,8 +656,34 @@ def build_table(name, d, spec, content):
             t.epochs.append(Epoch(ep, _place(placed, slots)))
         return binfmt.serialize(t, spec)
     placed = [(p, build_row(tspec, fields, base, m, where(m, line), p, content)) for p, m, line in d.rows]
+    if 'epoch_flags' in tspec:
+        _epoch_flags(name, tspec, fields, placed, content)
     t.rows = _place(placed, d.total)
     return binfmt.serialize(t, spec)
+
+
+def _epoch_flags(name, tspec, fields, placed, content):
+    """Sets a per-epoch flag array (dbmusic mInEpoch) from epochs.yaml's lists: flag k of a row is set when epoch k
+    (k < the array's count) lists the row's id."""
+    fn, key = tspec['epoch_flags']
+    f = next(x for x in fields if x['name'] == fn)
+    rows = {p: r for p, r in placed}
+    lay = content.doc('epochs')
+    for k, (em, eline, _, _) in enumerate(lay.epochs[:f['count']]):
+        v = em.get(key)
+        if _missing(v):
+            continue
+        if not isinstance(v, list):
+            raise TextError(f'epochs line {eline}: {key} must be a list')
+        for x in v:
+            if isinstance(x, (list, dict)):
+                raise TextError(f'epochs line {eline}: {key}: a list where an id belongs')
+            pos = content.resolve({'table': name, 'none': []}, x, 's32', f'epochs line {eline}', key)
+            if pos not in rows:
+                raise TextError(f'epochs line {eline}: {key}: {x!r} names no row of {name}')
+            rec = bytearray(rows[pos].rec)
+            rec[f['off'] + k] = 1
+            rows[pos].rec = bytes(rec)
 
 
 def import_all(texts, spec, names=None):

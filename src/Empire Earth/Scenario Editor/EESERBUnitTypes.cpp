@@ -120,6 +120,8 @@
 #include "ee/EESERBUnitTypes.h"
 #include "ee/EESEEGameUnitLimit.h"
 #include "ee/EEDatabaseTables.h"
+#include "ee/EERules.h"
+#include "ee/EERulesWorld.h"
 #include "ee/EESEPlayerControls.h"
 #include "ee/EEUIFSEMainButton.h"
 #include "ee/EEUIBColor.h"
@@ -1231,8 +1233,9 @@ EESEGamePage::EESEGamePage(unsigned long& ioIndex, unsigned long& ioID, UIForm* 
     this->mUnitLimit = new UISlider(0x160, GERectangle(theLocation, 125.0f, 20.0f), 0, inForm, ioIndex, 2);
     this->mUnitLimit->SetBgOpacity(0.4f);
     this->mUnitLimit->SetPageSize(1);
-    this->mUnitLimit->SetRange(gWorldTable.GetLongValue(kWorldUnitLimitRange), gWorldTable.GetLongValue2(kWorldUnitLimitRange));
-    this->mUnitLimit->SetCurrentRangeValue(gWorldTable.GetLongValue(kWorldUnitLimitDefault));
+    this->mUnitLimit->SetRange(EERuleLong(EEGetRules().mGameOptions.mUnitLimitMinimum),
+                               EERuleLong(EEGetRules().mGameOptions.mUnitLimitMaximum));   // gameoptions.yaml
+    this->mUnitLimit->SetCurrentRangeValue(EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault));
     inForm->AddControl(this->mUnitLimit, 8);
     ++ioIndex;
     theLocation.SetXY(this->mUnitLimit->GetRectangle().GetRight() + 1.0f, this->mUnitLimit->GetRectangle().GetTop());
@@ -1244,7 +1247,7 @@ EESEGamePage::EESEGamePage(unsigned long& ioIndex, unsigned long& ioID, UIForm* 
     theGEText->SetIsTransparent(true);
     inForm->AddControl(this->mUnitLimitCountLabel, 8);
     ++ioIndex;
-    this->mUnitLimitCountLabel->SetText(gWorldTable.GetLongValue(kWorldUnitLimitDefault));
+    this->mUnitLimitCountLabel->SetText(EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault));
     UIEvent* theEvent = new EESEEGameUnitLimit(this->mUnitLimitCountLabel, 1.0f, 0);
     this->mUnitLimit->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
     theEvent->Dereference();
@@ -1267,7 +1270,7 @@ EESEGamePage::EESEGamePage(unsigned long& ioIndex, unsigned long& ioID, UIForm* 
     theGEText->SetIsTransparent(true);
     inForm->AddControl(this->mPerPlayerCountLabel, 8);
     ++ioIndex;
-    this->mPerPlayerCountLabel->SetText((long)gWorldTable.GetLongValue(kWorldUnitLimitDefault) / 2);
+    this->mPerPlayerCountLabel->SetText((long)EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault) / 2);
     theLocation.SetXY(this->mPerPlayerLabel->GetRectangle().GetLeft(), this->mPerPlayerLabel->GetRectangle().GetBottom() + 5.0f);
     gResource->GetString(IDS_WONDERS_FOR_VICTORY, theText);
     this->mWondersForVictoryLabel = new UITextLabel(theText, gU531934, 0x163,

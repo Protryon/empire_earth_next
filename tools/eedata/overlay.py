@@ -261,6 +261,11 @@ KEYS = {'dbtechtree': 'mID', 'epochs': 'position'}
 # they do (techtree.py)
 DERIVED = {'epochs': {'mID': (1, 0), 'mEpoch': (1, 0), 'mNextEpoch': (1, 1), 'mFirstNodeID': (1000, 1000)}}
 
+# Per-epoch flag arrays whose text is in epochs.yaml (table: (field, epochs.yaml key)): element k of the field is
+# "epoch k's list names this row". The table's text leaves the field out; the importer sets it from the lists of the
+# first `count` epochs (dbmusic: the songs of each epoch, epochs.yaml music; the game reads the lists, EERules.cpp).
+EPOCH_FLAGS = {'dbmusic': ('mInEpoch', 'music')}
+
 # Fields that hold the row's own key (+ an offset): the text leaves them out when they are equal, the importer
 # writes key + offset. dbcivpowers: GetPower(id) reads row id - 0x26.
 SELF = {

@@ -128,6 +128,7 @@
 #include "ee/EESEACreateRandomMap.h"
 #include "ee/EEUIFSEMap.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EERules.h"
 // the map sizes offered by the width/height combo boxes (0x4c4f40, 25 entries) (provisional name)
 static long sSEMapSizes[25] = {15, 25, 50, 60, 70, 75, 80, 90, 100, 125, 130, 135, 140, 145, 150, 155, 160, 165, 175,
                                200, 225, 250, 300, 350, 400};
@@ -468,9 +469,9 @@ EEUIFSEMap::EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
     inForm->AddControl(this->mRandomMapSizeLabel, 1);
     ioIndex++;
 
-    theStrings.resize(6);
-    for (i = 0; i < 6; i++)
-        gResource->GetString(IDS_MAP_SIZE_FIRST + i, theStrings[i]);
+    theStrings.resize(EEGetRules().mGameOptions.mMapSizes.size());   // gameoptions.yaml map_sizes
+    for (i = 0; i < theStrings.size(); i++)
+        gResource->GetString(EEGetRules().mGameOptions.mMapSizes[i].mNameID, theStrings[i]);
 
     thePosition.SetXY(this->mWidth->GetRectangle().GetLeft(), this->mWidth->GetRectangle().GetTop());
     this->mRandomMapSize = new UIComboBox(kSEMapRandomMapSize, 1, theStrings, inFont,

@@ -72,6 +72,8 @@ def generate(spec):
     o.append('    const EEDTDerived* mDerived;  // fields that follow from the position (epochs)')
     o.append('    unsigned long mDerivedCount;')
     o.append('    bool mTextOnly;               // no db file of its own (epochs: compiles into dbtechtree)')
+    o.append('    const char* mEpochFlags;      // a per-epoch flag array set from epochs.yaml\'s lists (dbmusic mInEpoch), or 0')
+    o.append('    const char* mEpochKey;        // ... the epochs.yaml key of those lists (music)')
     o.append('};')
     o.append('')
     o.append('// record sizes (EEDataTextFile.cpp static_asserts them against the structs the loaders read)')
@@ -133,7 +135,8 @@ def generate(spec):
         self_ = f'{_c(t["self"][0])}, {t["self"][1]}' if t.get('self') else '0, 0'
         refs = f'kEEDTRefs_{name}, {len(t["refs"])}' if t.get('refs') else '0, 0'
         o.append('     ' + _record(binfmt.hole_record(t, spec['structs'][t['struct']])) + ',')
-        o.append(f'     {key}, {self_}, {refs}, {der}, {"true" if t.get("text_only") else "false"}}},')
+        ef = f'{_c(t["epoch_flags"][0])}, {_c(t["epoch_flags"][1])}' if t.get('epoch_flags') else '0, 0'
+        o.append(f'     {key}, {self_}, {refs}, {der}, {"true" if t.get("text_only") else "false"}, {ef}}},')
     o.append('};')
     o.append('static const unsigned long kEEDTTableCount = sizeof(kEEDTTables) / sizeof(EEDTTable);')
     o.append('')

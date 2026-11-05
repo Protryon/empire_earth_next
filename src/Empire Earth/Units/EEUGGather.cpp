@@ -31,6 +31,7 @@
 #include "ee/EEGameVariant.h"
 #include "ee/EEMedia.h"
 #include "ee/EEGraphicEffect.h"
+#include "ee/EERules.h"
 #include "ee/EEPhysics.h"
 #include "ee/EEUCNavalCitizen.h"
 #include "ee/EEComputerPlayer.h"
@@ -413,14 +414,14 @@ void EEUGGather::BeginGathering(EEComplexUnit* inUnit)
                 break;
             case kResourceWood:
                 inUnit->SetAnimation(3, -1, 0);
-                if (inUnit->mPlayer->mTechnologies->mCurrentEpoch >= kTechEpochNano)
+                if (EEGetRules().Epoch(inUnit->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools)
                     inUnit->ReleaseFireEffect();
                 break;
             case kResourceStone:
             case kResourceGold:
             case kResourceIron:
                 inUnit->SetAnimation(9, -1, 0);
-                if (inUnit->mPlayer->mTechnologies->mCurrentEpoch >= kTechEpochNano) {
+                if (EEGetRules().Epoch(inUnit->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools) {
                     inUnit->ReleaseFireEffect();
                     if (this->mResource != NULL) {
                         GE3DPoint thePosition;

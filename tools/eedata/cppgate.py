@@ -24,7 +24,7 @@ def build(out, jobs):
     out.mkdir(parents=True, exist_ok=True)
     _, inc = verify.include_paths(None)
     objs = []
-    for src in (db / 'EEDataText.cpp', db / 'EEDataDump.cpp', HERE / 'cppgate' / 'eedata_gate.cpp'):
+    for src in (db / 'EEDataText.cpp', db / 'EEDataDump.cpp', db / 'EERules.cpp', HERE / 'cppgate' / 'eedata_gate.cpp'):
         obj = out / (src.stem + '.obj')
         cmd = [str(CLANG), *clang_build.CLANG_FLAGS, '/std:c++17', '-EHsc', '-MT', '-O1',
                *verify.DEFINES.split(), f'/I{db}', f'/Fo{obj}', str(src)]
@@ -50,30 +50,35 @@ def run(a, spec, load_db):
         text, want = tmp / 'text', tmp / 'want'
         text.mkdir(parents=True)
         want.mkdir(parents=True)
-        texts = tables.export_all(db, spec)
+        texts = tables.export_tree(db, spec)   # the tables and the rules documents
         c = tables.Content(texts, spec)
+        import rules
+        for n, e in rules.check_all(texts, c, spec):
+            print(f'rules {n}: {e}')
+            status = 1
         for n, t in texts.items():
-            (text / (n + ('.yaml' if spec['tables'][n]['format'] == 'yaml' else '.csv'))).write_bytes(t)
-            if not spec['tables'][n].get('text_only'):
+            (text / (n + tables.text_ext(spec, n))).write_bytes(t)
+            if n in spec['tables'] and not spec['tables'][n].get('text_only'):
                 (want / f'{n}.dat').write_bytes(c.build(n))
         print("--- text -> C++ loader -> the Python importer's .dat", flush=True)
         r = subprocess.run([str(exe), str(text), str(want)])
         status |= r.returncode
-        status |= run_dump(exe, db, text, tmp)
+        status |= run_dump(exe, db, text, tmp, out)
         status |= run_parity(exe, spec, texts, tmp / 'parity', text)
     print('PASS' if status == 0 else 'FAIL')
     return status
 
 
-def run_dump(exe, db, textdir, tmp):
-    """G1: the content dump (EEDataDump.cpp: canonical JSON of every value the loaders read) of the binary tables
-    and of the text tables compiled by the game's loader must be identical."""
+def run_dump(exe, db, textdir, tmp, out):
+    """G1: the content dump (EEDataDump.cpp: canonical JSON of every value the loaders read; EERules.cpp: the rules)
+    of the binary tables (the rules' defaults) and of the text tables compiled by the game's loader (the rules
+    documents) must be identical. The two dumps stay in the build folder (OUT/dump_dat.json, dump_text.json)."""
     print('--- content dump: binary .dat vs text (ids resolved), through the game\'s code', flush=True)
     dat = tmp / 'dat'
     dat.mkdir()
     for n, b in db.items():
         (dat / f'{n}.dat').write_bytes(b)
-    a, b = tmp / 'dump_dat.json', tmp / 'dump_text.json'
+    a, b = out / 'dump_dat.json', out / 'dump_text.json'
     if subprocess.run([str(exe), '--dump-dat', str(dat), str(a)]).returncode or \
             subprocess.run([str(exe), '--dump-text', str(textdir), str(b)]).returncode:
         return 1

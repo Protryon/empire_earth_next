@@ -68,6 +68,8 @@
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EEDatabase.h"
 #include "ee/EEDatabaseTables.h"
+#include "ee/EERules.h"
+#include "ee/EERulesWorld.h"
 #include "ee/EEColorTable.h"
 #include "ee/EEEnvironmentManager.h"
 #include "ee/EECampaignFormManager.h"
@@ -373,20 +375,11 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
                 }
             }
         }
-        switch (inOptions.mGameSpeed) {
-        case 0:
-            this->mGameSpeed = gWorldTable.GetFloatValue(kWorldGameSpeedSlowNormal);
-            break;
-        case 1:
-        default:
-            this->mGameSpeed = gWorldTable.GetFloatValue2(kWorldGameSpeedSlowNormal);
-            break;
-        case 2:
-            this->mGameSpeed = gWorldTable.GetFloatValue(kWorldGameSpeedFastFastest);
-            break;
-        case 3:
-            this->mGameSpeed = gWorldTable.GetFloatValue2(kWorldGameSpeedFastFastest);
-            break;
+        {   // the speed option's factor (gameoptions.yaml speeds; an unknown option: the default speed's)
+            const EEGameOptionRules& theRules = EEGetRules().mGameOptions;
+            unsigned long theSpeed = inOptions.mGameSpeed < theRules.mSpeeds.size() ? inOptions.mGameSpeed
+                                                                                   : theRules.mSpeedDefault;
+            this->mGameSpeed = EERuleFloat(theRules.mSpeeds[theSpeed].mFactor);
         }
         long theWidth;
         long theHeight;

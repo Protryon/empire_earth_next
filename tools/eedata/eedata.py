@@ -18,7 +18,7 @@
   python -I tools/eedata/eedata.py cppgate [--ssa PATH | --db DIR] [--out DIR] [-j N]
                                     build the C++ text compiler test and run it over every exported table; also
                                     gate G1: the content dump of the .dat files equals that of the text tables
-  python -I tools/eedata/eedata.py extra TEXTDIR OUT [--units N] [--effects] [--epoch]
+  python -I tools/eedata/eedata.py extra TEXTDIR OUT [--units N] [--effects] [--epoch] [--options] [--rules-demo]
                                     a scratch copy of the text tables with content past the original caps (the cap
                                     tests: extra.py)
   python -I tools/eedata/eedata.py doc epochs TEXTDIR [OUT.md]   a readable table of epochs.yaml (docgen.py)
@@ -68,7 +68,7 @@ def load_db(a, spec, names=None):
 
 
 def ext(spec, name):
-    return '.yaml' if spec['tables'][name]['format'] == 'yaml' else '.csv'
+    return tables.text_ext(spec, name)
 
 
 def outside_repo(p):
@@ -90,7 +90,7 @@ def cmd_unpack(a, spec):
 def cmd_export(a, spec):
     out = outside_repo(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    texts = tables.export_all(load_db(a, spec), spec)   # every table: the references name rows of the others
+    texts = tables.export_tree(load_db(a, spec), spec)   # every table (references name rows of the others), the rules
     for n in a.tables or sorted(texts):
         (out / f'{n}{ext(spec, n)}').write_bytes(texts[n])
     print(f'{len(a.tables or texts)} tables -> {out}')
@@ -100,12 +100,16 @@ def cmd_import(a, spec):
     src = pathlib.Path(a.text)
     out = outside_repo(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    texts = {n: (src / f'{n}{ext(spec, n)}').read_bytes() for n in spec['tables']
+    import rules
+    texts = {n: (src / f'{n}{ext(spec, n)}').read_bytes() for n in [*spec['tables'], *rules.DOCS]
              if (src / f'{n}{ext(spec, n)}').exists()}
     c = tables.Content(texts, spec)   # the references resolve against every table in TEXTDIR
     bad = 0
+    for n, e in rules.check_all(texts, c, spec):   # the rules documents: checked (the game reads them as text)
+        print(f'{src / (n + ".yaml")}: {e}')
+        bad += 1
     for n in a.tables or sorted(texts):
-        if spec['tables'][n].get('text_only'):
+        if n in rules.DOCS or spec['tables'][n].get('text_only'):
             continue
         try:
             (out / f'{n}.dat').write_bytes(c.build(n))
@@ -123,9 +127,10 @@ def cmd_install(a, spec):
         sys.exit(f'{game}: no Data folder (not a game install)')
     out = game / 'Data' / 'db'
     out.mkdir(exist_ok=True)
-    for n, t in tables.export_all(load_db(a, spec), spec).items():
+    texts = tables.export_tree(load_db(a, spec), spec)
+    for n, t in texts.items():
         (out / f'{n}{ext(spec, n)}').write_bytes(t)
-    print(f'{len(spec["tables"])} text tables (with epochs.yaml) -> {out}')
+    print(f'{len(texts)} text tables (with epochs.yaml and the rules documents) -> {out}')
 
 
 def cmd_holes(a, spec):
@@ -187,6 +192,8 @@ def main():
     p.add_argument('--units', type=int, default=0)
     p.add_argument('--effects', action='store_true')
     p.add_argument('--epoch', action='store_true')
+    p.add_argument('--options', action='store_true')
+    p.add_argument('--rules-demo', action='store_true')
     p = sub.add_parser('doc')
     p.add_argument('what', choices=['epochs'])
     p.add_argument('text')

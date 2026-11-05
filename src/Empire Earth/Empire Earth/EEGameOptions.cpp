@@ -74,6 +74,8 @@
 #include "ee/EEGameVariant.h"
 #include "ee/EERandomMapGenerators.h"
 #include "ee/EEGameOptions.h"
+#include "ee/EERules.h"
+#include "ee/EERulesWorld.h"
 
 extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
@@ -202,10 +204,10 @@ EEGameOptions::EEGameOptions()
     this->mRecordGames = false;
     this->mAllowCustomCivs = false;
     this->mIsMultiplayer = false;
-    this->mMapSize = 1;
+    this->mMapSize = EEGetRules().mGameOptions.mMapSizeDefault;   // gameoptions.yaml (1, 3, 1 in the original)
     this->mUnitLimit = 50;
-    this->mWondersForVictory = 3;
-    this->mGameSpeed = 1;
+    this->mWondersForVictory = EEGetRules().mGameOptions.mWondersDefault;
+    this->mGameSpeed = EEGetRules().mGameOptions.mSpeedDefault;
     this->mVictory = true;
     this->mB407 = true;
     for (unsigned long i = 0; i < 16; i++)
@@ -230,10 +232,13 @@ EEGameOptions::~EEGameOptions()
 // FUNCTION: EXE 0x52f8e0
 // Copies other game options, replacing each out-of-range setting (load type, resources, variant, epochs, map,
 // size, difficulty, speed, wonders, unit limit) with a default; copies names, flags and all sixteen slots as they are
+// The option lists and limits are gameoptions.yaml's (EEGameOptionRules): map sizes, speeds, difficulties, the unit
+// limit and the wonders (the original's literal 6, 4, 3 and dbworld constants); load types are the code's.
 EEGameOptions& EEGameOptions::operator=(const EEGameOptions& inOther)
 {
+    const EEGameOptionRules& theRules = EEGetRules().mGameOptions;
     unsigned long theIndex;
-    if (inOther.mLoadType < 6)
+    if (inOther.mLoadType < kLoadTypeCount)
         this->mLoadType = inOther.mLoadType;
     else
         this->mLoadType = 0;
@@ -261,26 +266,26 @@ EEGameOptions& EEGameOptions::operator=(const EEGameOptions& inOther)
     } else {
         this->mMapType = inOther.mMapType;
     }
-    if (inOther.mMapSize < 6)
+    if (inOther.mMapSize < theRules.mMapSizes.size())
         this->mMapSize = inOther.mMapSize;
     else
-        this->mMapSize = 1;
-    if (inOther.mDifficulty < 3)
+        this->mMapSize = theRules.mMapSizeDefault;
+    if (inOther.mDifficulty < theRules.mDifficulties.size())
         this->mDifficulty = inOther.mDifficulty;
     else
         this->mDifficulty = 0;
-    if (inOther.mGameSpeed < 4)
+    if (inOther.mGameSpeed < theRules.mSpeeds.size())
         this->mGameSpeed = inOther.mGameSpeed;
     else
-        this->mGameSpeed = 1;
-    if (inOther.mWondersForVictory <= gWorldTable.GetLongValue(kWorldWondersForVictoryMax))
+        this->mGameSpeed = theRules.mSpeedDefault;
+    if (inOther.mWondersForVictory <= EERuleLong(theRules.mWondersMaximum))
         this->mWondersForVictory = inOther.mWondersForVictory;
     else
         this->mWondersForVictory = 0;
-    if (inOther.mUnitLimit <= gWorldTable.GetLongValue2(kWorldUnitLimitRange))
+    if (inOther.mUnitLimit <= EERuleLong(theRules.mUnitLimitMaximum))
         this->mUnitLimit = inOther.mUnitLimit;
     else
-        this->mUnitLimit = gWorldTable.GetLongValue(kWorldUnitLimitRange);
+        this->mUnitLimit = EERuleLong(theRules.mUnitLimitMinimum);
     this->mCampaignName = inOther.mCampaignName;
     this->mScenarioName = inOther.mScenarioName;
     this->mCampaignChecksum = inOther.mCampaignChecksum;
@@ -301,35 +306,17 @@ EEGameOptions& EEGameOptions::operator=(const EEGameOptions& inOther)
 
 // FUNCTION: EXE 0x52fb70
 // Returns the map's width and height in tiles for the map size setting (0 x 0 for an unknown size)
+// (gameoptions.yaml map_sizes: 42, 58, 75, 105, 160, 220 in the original)
 void EEGameOptions::GetMapDimensions(long& outWidth, long& outHeight)
 {
-    long theSize;
-    switch (this->mMapSize) {
-    case 0:
-        theSize = 42;
-        break;
-    case 1:
-        theSize = 58;
-        break;
-    case 2:
-        theSize = 75;
-        break;
-    case 3:
-        theSize = 105;
-        break;
-    case 4:
-        theSize = 160;
-        break;
-    case 5:
-        theSize = 220;
-        break;
-    default:
+    const std::vector<EEMapSizeRule>& theSizes = EEGetRules().mGameOptions.mMapSizes;
+    if (this->mMapSize >= theSizes.size()) {
         outWidth = 0;
         outHeight = 0;
         return;
     }
-    outWidth = theSize;
-    outHeight = theSize;
+    outWidth = theSizes[this->mMapSize].mTiles;
+    outHeight = theSizes[this->mMapSize].mTiles;
 }
 
 // FUNCTION: EXE 0x52fbc5
@@ -371,10 +358,10 @@ void EEGameOptions::SetDefaults()
     this->mCampaignName = gU4E5B98;
     this->mScenarioName = gU4E5B98;
     this->mMapName = gU4E5B98;
-    this->mMapSize = 1;
-    this->mUnitLimit = gWorldTable.GetLongValue(kWorldUnitLimitDefault);
-    this->mWondersForVictory = 3;
-    this->mGameSpeed = 1;
+    this->mMapSize = EEGetRules().mGameOptions.mMapSizeDefault;
+    this->mUnitLimit = EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault);
+    this->mWondersForVictory = EEGetRules().mGameOptions.mWondersDefault;
+    this->mGameSpeed = EEGetRules().mGameOptions.mSpeedDefault;
     this->mVictory = false;
     this->mLockTeams = false;
     this->mLockSpeed = false;
@@ -387,7 +374,7 @@ void EEGameOptions::SetDefaults()
     this->mIsScenarioGame = false;
     this->mDifficulty = 0;
     unsigned long theDifficulty = gDifficultyLevel;
-    if (theDifficulty < 3)
+    if (theDifficulty < EEGetRules().mGameOptions.mDifficulties.size())
         this->mDifficulty = theDifficulty;
     for (unsigned long i = 0; i < 16; i++)
         this->mPlayers[i] = sEmptyPlayer;

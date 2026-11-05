@@ -115,6 +115,16 @@ def run(a, spec, load_db):
     binary = tables.binary_tables(spec)
     if textdir:   # the text-only epoch registry
         (textdir / 'epochs.yaml').write_bytes(texts['epochs'])
+    # the rules documents (rules.py): the vanilla ones, written with the text's ids, validate against the tables
+    import rules
+    rtexts = rules.export(ids, spec)
+    for n, e in rules.check_all(dict(rtexts, epochs=texts['epochs']), c, spec):   # + epochs.yaml's media
+        print(f'(a) FAIL rules {n}: {e}')
+        ok = False
+    if textdir:
+        for n, t in rtexts.items():
+            (textdir / f'{n}.yaml').write_bytes(t)
+    print(f'(a) {len(rtexts)} rules documents ({", ".join(rtexts)}) validate')
     if texts2.get('epochs') != texts['epochs']:
         print('(a) FAIL epochs: the text does not survive text -> db -> text')
         ok = False

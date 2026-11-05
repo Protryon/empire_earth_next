@@ -618,6 +618,10 @@
    "format": "csv",
    "hole": {},
    "key": "row",
+   "epoch_flags": [
+    "mInEpoch",
+    "music"
+   ],
    "refs": {},
    "id_names": [
     "label"

@@ -59,6 +59,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEAIRandom.h"
 #include "ee/EEDatabaseTables.h"
+#include "ee/EERules.h"
 #include "ee/EEWheel.h"
 #include "ee/EEGraphicObject.h"
 #include "ee/EEGraphicEffect.h"
@@ -2724,14 +2725,15 @@ bool EEComplexUnit::IsRepairable()
 }
 
 // FUNCTION: EXE 0x5fbd81
-// Adjusts a value by the unit's morale: positive morale takes 80% off, negative morale adds 60%
+// Adjusts a value by the unit's morale: positive morale takes a share off, negative morale adds one (combat.yaml
+// morale: 80% and 60% in the original)
 void EEComplexUnit::ApplyMorale(long inValue, long& outValue)
 {
     outValue = inValue;
     if (this->mPositiveMorale > 0)
-        outValue -= UMFloatToLong(inValue * 0.8f);
+        outValue -= UMFloatToLong(inValue * EEGetRules().mCombat.mPositiveMorale);
     if (this->mNegativeMorale > 0)
-        outValue += UMFloatToLong(inValue * 0.6f);
+        outValue += UMFloatToLong(inValue * EEGetRules().mCombat.mNegativeMorale);
 }
 
 // FUNCTION: EXE 0x5fbdd1

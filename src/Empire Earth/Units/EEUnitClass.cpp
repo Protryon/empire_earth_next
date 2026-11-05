@@ -61,6 +61,8 @@
 #include "ee/EECPILocation.h"
 #include "ee/EECPAttackSubGroup.h"
 #include "ee/EEDatabaseTables.h"
+#include "ee/EERules.h"
+#include "ee/EERulesWorld.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EEGameSound.h"
@@ -140,7 +142,6 @@ static const float kCloakFadeMinOpacity = 0.6f;  // 0x447ad8
 static const float k447ADC = 0.40824828f;        // 0x447adc (1 / sqrt(6))
 static const float kFacingTolerance = 0.043633234f;  // 0x447ae0
 extern EEToHitTable gToHitTable;           // 0x5318e8 (Empire Earth.cpp; as EECPAttackSubGroupUnit.cpp declares it)
-static const float k447AE4 = 0.1f;               // 0x447ae4
 static const float kFleeDistanceScale = 1.5f;    // 0x447ae8
 static const float kCallForHelpRadius = 5.0f;    // 0x447aec
 static const float k447AF0 = 0.01f;              // 0x447af0
@@ -830,6 +831,72 @@ void EEUnitClass::LevelGround(GETerrainMesh* inMesh, unsigned long inX, unsigned
         *outZ = kTowerHeight + *outZ;
 }
 
+// The damage of one hit (new: the original had a copy of it in ApplyHit, ApplyAreaDamage and EEPhysicsModel's
+// trample). The constants are combat.yaml's (EECombatRules). Each form keeps the original's arithmetic:
+// direct and splash: to-hit factor (the damage table x dbweapontohit) x attack (direct: only when the attack is
+// positive; a fanatic attacker's x the fanatic factor) less the target's armour of the weapon, the elevation factor
+// moving it at least elevation_step either way, splash on the own player's units x inFriendlyFactor, rounded, at
+// least minimum; a direct hit on an own or allied unit: ceil(amount x ally_factor), or herd_ally_factor by a herd
+// animal. Trample: trample_damage when to-hit x (attack less the rounded armour) > trample_threshold.
+bool EEUnitClass::ComputeDamage(int inForm, EEComplexUnit* inUnit, EEUnit* inTarget, float inAttack, long inAmmo,
+                                long inWeapon, float inFriendlyFactor, long& outAmount)
+{
+    const EECombatRules& theRules = EEGetRules().mCombat;
+    float theHit;
+    if (inForm == kDamageDirect && !(inAttack > 0.0f)) {
+        theHit = 0.0f;
+    } else {
+        float theFactor = gWeaponToHitFactors[inTarget->mUnitClass->mWeapon][inWeapon];
+        theHit = gToHitTable.GetAttackFactor(inAmmo, inTarget->mUnitClass, inUnit->mPlayer->GetPlayerID(),
+                                             inTarget->mPlayer->GetPlayerID()) * theFactor;
+    }
+    if (inForm == kDamageTrample) {
+        float theDamage = inAttack;
+        if (theHit > 0.0f)
+            theDamage = theDamage - UMFloatToLong(inTarget->mStats->mArmor[inWeapon]);
+        if (!(theHit * theDamage > theRules.mTrampleThreshold))
+            return false;
+        outAmount = theRules.mTrampleDamage;
+        return true;
+    }
+    if (theHit <= 0.0f)
+        return false;
+    float theDamage = theHit * inAttack;
+    if (inForm == kDamageDirect) {
+        EEComplexUnit* theFanatic = inUnit->mOwner != NULL ? inUnit->mOwner : inUnit;
+        if (theFanatic->IsCloaked())
+            theDamage = EERuleFloat(theRules.mFanaticFactor) * theDamage;
+    }
+    theDamage = theDamage - inTarget->mStats->mArmor[inWeapon];
+    float theModifier = this->GetElevationFactor(inUnit, inTarget->GetComplexUnit());
+    if (theModifier != 1.0f) {
+        float theStep = theRules.mElevationStep;
+        if (theModifier > 1.0f) {
+            theModifier = theModifier * theDamage;
+            if (theModifier >= theDamage + theStep)
+                theDamage = theModifier;
+            else
+                theDamage = theDamage + theStep;
+        } else if (theModifier < 1.0f) {
+            theModifier = theModifier * theDamage;
+            if (theModifier <= theDamage - theStep)
+                theDamage = theModifier;
+            else
+                theDamage = theDamage - theStep;
+        }
+    }
+    if (inForm == kDamageSplash && inTarget->mPlayer == inUnit->mPlayer)
+        theDamage = inFriendlyFactor * theDamage;
+    long theAmount = UMFloatToLong(theDamage);
+    if (theAmount < theRules.mMinimumDamage)
+        theAmount = theRules.mMinimumDamage;
+    if (inForm == kDamageDirect &&
+        (inTarget->mPlayer == inUnit->mPlayer || inUnit->mPlayer->mEnemies[inTarget->mPlayer->GetPlayerID()] == 0))
+        theAmount = UMCeil(theAmount * (inUnit->mHerd != NULL ? theRules.mHerdAllyFactor : theRules.mAllyFactor));
+    outAmount = theAmount;
+    return true;
+}
+
 // FUNCTION: EXE 0x630c55
 // Deals splash damage to every unit within inRadius of the attacker that it may target, counting kills and
 // cutting the food of a hunted animal it kills
@@ -873,33 +940,10 @@ void EEUnitClass::ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float i
                         gEffectManager->CreateUnitEffect(theUnit, theEffect, NULL, false, 0, 0);
                     continue;
                 }
-                float theFactor = gWeaponToHitFactors[theUnit->GetUnitClass()->mWeapon][inColumn];
-                float theDamage = gToHitTable.GetAttackFactor(inKind, theUnit->GetUnitClass(), inUnit->GetPlayer()->GetPlayerID(),
-                                                       theUnit->GetPlayer()->GetPlayerID()) * theFactor;
-                if (theDamage <= 0.0f)
+                long theAmount;
+                if (!this->ComputeDamage(kDamageSplash, inUnit, theUnit, inDamage, inKind, inColumn,
+                                         theClass->mFriendlyDamageFactor, theAmount))
                     continue;
-                theDamage = theDamage * inDamage - theUnit->GetStats()->mArmor[inColumn];
-                float theModifier = this->GetElevationFactor(inUnit, theUnit);
-                if (theModifier != 1.0f) {
-                    if (theModifier > 1.0f) {
-                        theModifier = theModifier * theDamage;
-                        if (theModifier < theDamage + 1.0f)
-                            theDamage = theDamage + 1.0f;
-                        else
-                            theDamage = theModifier;
-                    } else if (theModifier < 1.0f) {
-                        theModifier = theModifier * theDamage;
-                        if (theModifier > theDamage - 1.0f)
-                            theDamage = theDamage - 1.0f;
-                        else
-                            theDamage = theModifier;
-                    }
-                }
-                if (theUnit->GetPlayer() == inUnit->GetPlayer())
-                    theDamage = theClass->mFriendlyDamageFactor * theDamage;
-                long theAmount = UMFloatToLong(theDamage);
-                if (theAmount < 1)
-                    theAmount = 1;
                 long theHitPoints = theUnit->GetHitPoints();
                 theUnit->TakeHit(inUnit, theAmount, inUnit->GetPlayer()->GetPlayerID(), 1);
                 if (theUnit->GetHitPoints() <= 0)
@@ -907,7 +951,7 @@ void EEUnitClass::ApplyAreaDamage(EEComplexUnit* inUnit, float inRadius, float i
                 if (theClass->GetCategory() == kUnitCategoryLandCitizen || theHitPoints == 0 || theUnit->GetHitPoints() != 0
                     || theUnit->GetUnitClass()->GetCategory() != kUnitCategoryLand || theUnit->mResourceType != kResourceFood)
                     continue;
-                long theRemaining = UMCeil(theUnit->mResourceAmount * 0.25f);
+                long theRemaining = UMCeil(theUnit->mResourceAmount * EEGetRules().mCombat.mDeadFoodShare);
                 if (theUnit->mResourceAmount != theRemaining)
                     theUnit->mResourceAmount = theRemaining;
             }
@@ -945,47 +989,10 @@ void EEUnitClass::ApplyHit(EEComplexUnit* inUnit, EEUnit* inTarget)
     if (inTarget == NULL)
         return;
     long theHitPoints = inTarget->mHitPoints;
-    float theHit;
-    if (theDamage > 0.0f) {
-        long theTargetPlayer = inTarget->mPlayer->GetPlayerID();
-        long theUnitPlayer = inUnit->mPlayer->GetPlayerID();
-        float theFactor = gWeaponToHitFactors[inTarget->mUnitClass->mWeapon][theClass->mWeapon];
-        theHit = gToHitTable.GetAttackFactor(theClass->mAmmoType, inTarget->GetUnitClass(), theUnitPlayer, theTargetPlayer)
-                 * theFactor;
-    } else {
-        theHit = 0.0f;
-    }
-    if (theHit <= 0.0f)
+    long theAmount;
+    if (!this->ComputeDamage(kDamageDirect, inUnit, inTarget, theDamage, theClass->mAmmoType, theClass->mWeapon, 0.0f,
+                             theAmount))
         return;
-    theDamage = theHit * theDamage;
-    EEComplexUnit* theCloaked = inUnit->mOwner != NULL ? inUnit->mOwner : inUnit;
-    float theScaled = theCloaked->IsCloaked() ? gWorldTable.GetFloatValue2(kWorldFanaticism) * theDamage : theDamage;
-    theDamage = theScaled - inTarget->mStats->mArmor[theClass->mWeapon];
-    float theModifier = this->GetElevationFactor(inUnit, inTarget->GetComplexUnit());
-    if (theModifier != 1.0f) {
-        if (theModifier > 1.0f) {
-            theModifier = theModifier * theDamage;
-            if (theModifier >= theDamage + 1.0f)
-                theDamage = theModifier;
-            else
-                theDamage = theDamage + 1.0f;
-        } else if (theModifier < 1.0f) {
-            theModifier = theModifier * theDamage;
-            if (theModifier <= theDamage - 1.0f)
-                theDamage = theModifier;
-            else
-                theDamage = theDamage - 1.0f;
-        }
-    }
-    long theAmount = UMFloatToLong(theDamage);
-    if (theAmount < 1)
-        theAmount = 1;
-    if (inTarget->mPlayer == inUnit->mPlayer || inUnit->mPlayer->mEnemies[inTarget->mPlayer->GetPlayerID()] == 0) {
-        if (inUnit->mHerd != NULL)
-            theAmount = UMCeil(theAmount * k447AE4);
-        else
-            theAmount = 0;
-    }
     inTarget->TakeHit(inUnit, theAmount, inUnit->mPlayer->GetPlayerID(), 1);
     if (inTarget->GetComplexUnit() != NULL && this->mShotEffect == NULL)
         inTarget->mUnitClass->UnitDamaged(inTarget->GetComplexUnit(), inUnit, theAmount);
@@ -994,7 +1001,7 @@ void EEUnitClass::ApplyHit(EEComplexUnit* inUnit, EEUnit* inTarget)
     if (theAmount <= 0 || theClass->mCategory == kUnitCategoryLandCitizen || theTarget == NULL || theHitPoints == 0 || theTarget->mHitPoints != 0
         || theTarget->mUnitClass->mCategory != kUnitCategoryLand || theTarget->mResourceType != kResourceFood)
         return;
-    long theRemaining = UMFloatToLong(theTarget->mResourceAmount * 0.25f);
+    long theRemaining = UMFloatToLong(theTarget->mResourceAmount * EEGetRules().mCombat.mDeadFoodShare);
     if (theTarget->mResourceAmount != theRemaining)
         theTarget->mResourceAmount = theRemaining;
 }
@@ -1075,7 +1082,8 @@ void EEUnitClass::FireShot(EEComplexUnit* inUnit)
     if (theCount != 0) {
         if (this->mMuzzleFlashEffect != NULL)
             gWorld.GetEffectManager()->CreateUnitEffect(inUnit, this->mMuzzleFlashEffect, NULL, 0, 0, 0);
-        if (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen && inUnit->mPlayer->mTechnologies->mCurrentEpoch < kTechEpochNano)
+        if (inUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen &&
+            !EEGetRules().Epoch(inUnit->mPlayer->mTechnologies->mCurrentEpoch).mHighTechTools)   // epochs.yaml citizen
             theDone = true;
         if (this->mShotEffect != NULL && !theDone) {
             if (theTarget != NULL)
@@ -1155,16 +1163,15 @@ float EEUnitClass::GetElevationFactor(EEComplexUnit* inUnit, EEComplexUnit* inTa
     long theCategory = this->mCategory;
     long theTargetCategory = inTarget->mUnitClass->mCategory;
     bool theOwnHeight;
-    if (theCategory == kUnitCategoryProjectile || theCategory == kUnitCategoryBomb || theCategory == kUnitCategoryMissile || theCategory == kUnitCategoryTorpedo) {
+    const EECombatRules& theRules = EEGetRules().mCombat;
+    if (theRules.IsElevationLauncher(theCategory)) {
         theCategory = inUnit->mLauncherClass->mCategory;
         theOwnHeight = false;
     } else
         theOwnHeight = true;
-    bool theIsLand = theCategory == kUnitCategoryLand || theCategory == kUnitCategoryLandCitizen;
-    bool theIsTarget = theTargetCategory == kUnitCategoryLand || theTargetCategory == kUnitCategoryBuilding || theTargetCategory == kUnitCategoryLandCitizen ||
-                       theTargetCategory == kUnitCategoryLandPriest || theTargetCategory == kUnitCategoryBuilding19 || theTargetCategory == kUnitCategoryLand15 ||
-                       theTargetCategory == kUnitCategoryLandMilitaryHero || theTargetCategory == kUnitCategoryLandTransport || theTargetCategory == kUnitCategoryFortress ||
-                       theTargetCategory == kUnitCategoryMiningBuilding || theTargetCategory == kUnitCategoryBuildingPriest || theTargetCategory == kUnitCategoryGate;
+    // which attackers and targets the height difference scales: combat.yaml's elevation categories
+    bool theIsLand = theRules.IsElevationAttacker(theCategory);
+    bool theIsTarget = theRules.IsElevationTarget(theTargetCategory);
     float theResult;
     if (theIsLand && theIsTarget && inTarget != NULL) {
         float theDifference = (theOwnHeight ? inUnit->mPhysicalModel.GetLocation().GetZ() : inUnit->mHeight) -
@@ -4641,7 +4648,7 @@ void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
         if (theValue > inUnit->mStats->mPower)
             theValue = inUnit->mStats->mPower;
         inUnit->SetPower(theValue);
-        theRemaining = 5000;
+        theRemaining = EEGetRules().mCombat.mPowerRegenerationInterval;
     }
     inUnit->SetPowerRegenTimer(theRemaining);
 }
@@ -4700,7 +4707,7 @@ void EEUnitClass::HealGarrison(EEComplexUnit* inUnit)
                 }
             }
         }
-        theTime = 1000;
+        theTime = EEGetRules().mCombat.mRegenerationInterval;
         if (theHealed && inUnit->GetPlayer() == ::gWorld.GetCurrentPlayer() &&
             inUnit->GetPlayer()->mActiveGroup->Contains(inUnit))
             gUIManager->GetMainGameForm()->mGroups[0]->Reset();
@@ -4726,7 +4733,7 @@ void EEUnitClass::Regenerate(EEComplexUnit* inUnit)
                 inUnit->mPlayer->mActiveGroup->Contains(inUnit))
                 gUIManager->GetMainGameForm()->mGroups[0]->Reset();
         }
-        theTime = 1000;
+        theTime = EEGetRules().mCombat.mRegenerationInterval;
     }
     inUnit->SetRegenerationTimer(theTime);
 }
