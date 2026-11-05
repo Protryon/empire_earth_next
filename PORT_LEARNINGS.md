@@ -916,3 +916,40 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   libraries (also for their security fixes) is the clean way. With (2) fixed, CI's second run: macOS arm64
   `msext` 389/862 compile + 287 assert-only (Linux `msext` 407 + 287; the 19 image units are the difference),
   `ms` still 105 (va_list), `gnu` 156.
+
+## Open model and texture formats (tools/eemodel, branch assets)
+
+- **The file's reader is the specification, the data is the test.** Each field of `.cem`/`.sst` was classed by its
+  readers (MODEL_FORMATS.md), then the retail data was measured against the conversion's assumptions before the
+  mapping was fixed: texture coordinates never change between frames (no TEXCOORD morph targets), bounding boxes are
+  always the vertex bounds (computed, not stored), centres and radii are not quite (stored), indices are relative to
+  the material's first vertex (exactly glTF's per-primitive meaning), vertex ranges overlap (shared accessors), one
+  model has NaN normals (compare bit patterns, not floats).
+- **A model's texture names are dead data.** `LoadTexturesForScreen` has no caller; units are drawn with the
+  dbgraphics texture and the material's texture index picks its frame. The glTF images therefore point at the
+  dbgraphics texture's PNG (viewers show the game's look) and keep the dead name as the image name (round trip).
+- **Morph deltas are not always exact in float32.** float32(base + float32(value - base)) misses the value in 290
+  sub-models (opposite signs, very different magnitudes); a nudged delta is searched first, the rest go into a sparse
+  accessor (`frameFixes`).
+- **glTF forbids a matrix on an animated node, including a weights-only animation.** Static frame transforms are
+  written as `matrix` (exact JSON floats); a node with frames gets TRS plus the exact matrices in EE_model.
+- **Exact JSON floats:** write the float32's exact value as a double (`repr`), not its shortest float32 decimal: the
+  validator compares accessor min/max as doubles, and any reader (float or double) gets the bits back.
+- **Editors drop unknown extensions.** Blender keeps node/material extras but not EE_model; the importer therefore
+  works from the core alone (one LOD, computed centre/radii, sampled transforms) and uses EE_model only when it is
+  consistent with the core. Blender's `.001` duplicate suffix is stripped from names (models have duplicate sub-model,
+  tag and material names).
+- **Two implementations, one result.** The C++ loader (`GEOpenFormats.cpp`) mirrors the Python importer operation by
+  operation: every float step in double precision rounded where Python rounds (f32), no FMA contraction
+  (`#pragma clang fp contract(off)`), node TRS values rounded to float32 on both sides (cgltf stores floats), the
+  same integer/number distinction for JSON values (a bool is not an integer). `cppgate` compares the bytes.
+- **stb_image's `comp` is the file's channel count before tRNS expansion:** the C++ side scans the PNG chunks
+  itself (colour type, tRNS, the `ee:surface` text) and asks stb_image for 3 or 4 channels.
+- **cgltf hands strings over raw:** names and URIs keep their JSON escapes (`"orbital_cw_375	_1"` is a real
+  sub-model name with a tab). GEOpenFormats.cpp unescapes them with its own JSON string reader.
+- **x87 does not round a cast:** on the i686 build `(float)x` of a double can stay in an x87 register at double
+  precision (one radius came out 1 ulp off the Python side's). The float32 rounding goes through a `volatile float`.
+- **Tool name clashes:** tools/eedata and tools/eemodel both have a `cppgate.py`; a module that puts another tool
+  folder on `sys.path` must append it, not insert it first.
+- Archive reads are slow in Python (the PKWARE explode: about 2 minutes for the original game's models and
+  textures); the gates take about 6 minutes.

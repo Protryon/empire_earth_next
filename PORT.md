@@ -387,6 +387,29 @@ three), src/Platform/SDL (PlatWindow), src/Platform/Common (PlatFont). `platform
 7. Paths: the game builds `C:\...` paths with backslashes (FSFileSpec volume + directory + file); a POSIX PlatFile
    maps them (volume dropped or mapped to a root, separators, case-insensitive lookup of the game data).
 
+## Plan: open model and texture formats (owner, 2026-11-04; branch assets)
+
+Goal: models and textures in open, editable formats, so mods can make them with common tools: glTF 2.0 instead of
+the `.cem` models, PNG instead of the `.sst`/`.tga` textures. docs/MODEL_FORMATS.md has the formats, what the game
+reads of them and the mapping.
+
+State (2026-11-04):
+1. **Survey** (done): every field of `.cem` 1.0-2.0 and `.sst`/`.tga` with its reader; the retail data (AoC and the
+   original game, 866 models, 2792 textures) parsed end to end.
+2. **Converters** (done): `tools/eemodel/eemodel.py` (export, convert, check, validate, render, install, cppgate;
+   standard library only). Gates: 866/866 models cem -> glTF -> cem byte-identical to the canonical 2.0 form, all
+   glTF structurally valid; 2792/2792 textures PNG -> game view equal; renders of the glTF match the game's transform
+   composition.
+3. **The game reads them** (done, live gates pending): `GEOpenFormatsFile.cpp` serves a model's `.glb`/`.gltf` and a
+   texture's `.png` as the binary bytes the loaders already read (cgltf and stb_image vendored, C++ gate
+   `eemodel.py cppgate`). `eemodel.py install GAMEDIR` writes the open forms into a game copy.
+
+Next: the live gates (tour + an AI game on a copy with the installed open formats, screenshots against the binary
+data); then retire the binary readers' file paths from the game data (the converter keeps reading them); later, a
+native glTF loader once the engine's model class is rewritten (the in-memory conversion keeps the old loader as the
+only consumer for now). Not converted: the `.tga` files read outside the texture manager (pointers, palette, volcano,
+scenario pictures, backgrounds).
+
 ## Other next steps
 
 - Remove the clang dialect bridges: the `#ifdef __clang__` `const T&` forwarding overloads become `const` parameters,
