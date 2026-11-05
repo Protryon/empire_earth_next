@@ -214,12 +214,15 @@ long DX7Screen::CreateAWindow(const GE2DPoint& inOrigin, unsigned long inWidth, 
 {
     long theResult = kErrorOK;
     int32_t theDisplayWidth = 0, theDisplayHeight = 0;
-    PlatWindowGetDisplaySize(NULL, &theDisplayWidth, &theDisplayHeight);
+    // window sizes are in the display's own units (macOS: points), not its pixels
+    PlatWindowGetDisplayLogicalSize(NULL, &theDisplayWidth, &theDisplayHeight);
     PlatWindow* theWindow;
     if (inStyle == 1)
         theWindow = PlatWindowCreate(inTitle, (int32_t)inWidth, (int32_t)inHeight, PLAT_WINDOW_RESIZABLE);
+    else if (inStyle == 2)   // port: a hidden window (Test32BitSupport's probe)
+        theWindow = PlatWindowCreate(inTitle, (int32_t)inWidth, (int32_t)inHeight, PLAT_WINDOW_HIDDEN | PLAT_WINDOW_BORDERLESS);
     else if ((int32_t)inWidth >= theDisplayWidth && (int32_t)inHeight >= theDisplayHeight)
-        theWindow = PlatWindowCreate(inTitle, (int32_t)inWidth, (int32_t)inHeight, PLAT_WINDOW_FULLSCREEN);
+        theWindow = PlatWindowCreate(inTitle, theDisplayWidth, theDisplayHeight, PLAT_WINDOW_FULLSCREEN);   // the display's own units
     else
         theWindow = PlatWindowCreateAt(inTitle, UMFloatToLong(inOrigin.GetX()), UMFloatToLong(inOrigin.GetY()),
                                        (int32_t)inWidth, (int32_t)inHeight, PLAT_WINDOW_BORDERLESS | PLAT_WINDOW_TOPMOST);
@@ -509,7 +512,16 @@ void DX7Screen::Test32BitSupport()
     GE2DPoint theOrigin(0.0f, 0.0f);
     UString theClassName("TestWindowClass");
     UString theTitle("");
-    long theResult = this->CreateAWindow(theOrigin, 16, 16, theClassName, theTitle, theWindow, 0, NULL);
+#ifdef __APPLE__
+    // port: GX renders and samples 32-bit everywhere; a probe window, even hidden, took the key window status from the
+    // full screen game window at every renderer activation and macOS took it out of full screen
+    this->m32BitDeviceSupport = true;
+    this->m32BitTextureSupport = true;
+    return;
+#endif
+    // port: style 2, a hidden probe window (a visible one took the focus from the full screen game window, which
+    // left full screen or minimized at every renderer activation)
+    long theResult = this->CreateAWindow(theOrigin, 16, 16, theClassName, theTitle, theWindow, 2, NULL);
     if (theResult == kErrorOK) {
         if (this->Capture(theWindow, false) == kErrorOK) {
             unsigned long i;

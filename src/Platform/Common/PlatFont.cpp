@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <map>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -97,6 +98,12 @@ struct PlatFont {
     int mUnderlineOffset;           // from the baseline, down
     int mUnderlineThickness;
     Glyph mGlyphs[256];
+    // how it was made (PlatFontScaled makes the same font larger) and its scaled variants (owned)
+    std::string mFace;
+    int32_t mHeight;
+    int mBold, mItalic;
+    std::map<int, PlatFont*> mScaled;   // key: the scale in 1/64
+    std::mutex mScaledLock;
 };
 
 extern "C" int PlatFontRegister(const char* inFace, int inBold, int inItalic, const void* inTrueType, uint32_t inSize)
@@ -181,6 +188,10 @@ extern "C" PlatFont* PlatFontCreate(const char* inFace, int32_t inHeight, int in
         theScale = static_cast<float>(inHeight < 0 ? -inHeight : 12) / static_cast<float>(theUnitsPerEm);
 
     PlatFont* theFont = new PlatFont;
+    theFont->mFace = inFace ? inFace : "";
+    theFont->mHeight = inHeight;
+    theFont->mBold = inBold;
+    theFont->mItalic = inItalic;
     PlatFontMetrics& m = theFont->mMetrics;
     m.mAscent = Round(theWinAscent * theScale);
     m.mDescent = Round(theWinDescent * theScale);
@@ -233,7 +244,31 @@ extern "C" PlatFont* PlatFontCreate(const char* inFace, int32_t inHeight, int in
 
 extern "C" void PlatFontDestroy(PlatFont* inFont)
 {
+    if (!inFont)
+        return;
+    for (std::map<int, PlatFont*>::iterator i = inFont->mScaled.begin(); i != inFont->mScaled.end(); ++i)
+        PlatFontDestroy(i->second);
     delete inFont;
+}
+
+extern "C" const PlatFont* PlatFontScaled(const PlatFont* inFont, float inScale)
+{
+    if (!inFont || !(inScale > 1.01f))
+        return inFont;
+    PlatFont* theFont = const_cast<PlatFont*>(inFont);
+    int theKey = (int)lroundf(inScale * 64.0f);
+    std::lock_guard<std::mutex> theLock(theFont->mScaledLock);
+    std::map<int, PlatFont*>::iterator theFound = theFont->mScaled.find(theKey);
+    if (theFound != theFont->mScaled.end())
+        return theFound->second;
+    int32_t theHeight = inFont->mHeight != 0 ? inFont->mHeight : -12;
+    theHeight = (int32_t)lroundf(theHeight * inScale);
+    PlatFont* theScaled = PlatFontCreate(inFont->mFace.c_str(), theHeight, inFont->mBold, inFont->mItalic,
+                                         inFont->mUnderline ? 1 : 0, inFont->mAntialiased ? 1 : 0);
+    if (!theScaled)
+        return inFont;
+    theFont->mScaled[theKey] = theScaled;
+    return theScaled;
 }
 
 extern "C" void PlatFontGetMetrics(const PlatFont* inFont, PlatFontMetrics* outMetrics)

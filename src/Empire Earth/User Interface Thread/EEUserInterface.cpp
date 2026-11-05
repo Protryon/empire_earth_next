@@ -3,6 +3,8 @@
 // HandleMessage (the 0x401..0x443 switch), the Post* members, the window procedure, then the template COMDATs of
 // the message vector. Unit flags: the exe module set. Names are provisional unless the header says otherwise.
 #include <windows.h>
+unsigned long EEMenuWidth();    // port: the menus' resolution (Empire Earth.cpp)
+unsigned long EEMenuHeight();
 #include <mbstring.h>
 #include <algorithm>
 #include <string>
@@ -212,7 +214,7 @@ void EEUserInterface::ChangeRasterizer(long inRasterizer, long inScreen)
     gRasterizer = GERasterizer::GetRasterizer(inRasterizer);
     gGraphics->PostSetRasterizer(gRasterizer, inScreen);
     gUIManager->ChangeRasterizer(gRasterizer);
-    this->ResizeGameScreen(0x400, 0x300, true, false);
+    this->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false);
 }
 
 // FUNCTION: EXE 0x6768fe
@@ -452,7 +454,7 @@ void EEUserInterface::LeaveMap(UIForm* inForm, bool inFlag)
     gGameScreenActive = false;
     gWorld.mLock->WriteUnlock();
     if (inFlag)
-        this->ResizeGameScreen(0x400, 0x300, true, false);
+        this->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false);
     if (inForm != NULL) {
         while (gUIManager->GetCurrentForm() != gUIManager->GetMainGameForm())
             gUIManager->Pop();
@@ -528,7 +530,7 @@ void EEUserInterface::EnterScenarioEditor(bool inLoad)
     UString theFileName;
     this->PauseGraphics();
     gUIManager->CreateScenarioEditor();
-    this->ResizeGameScreen(0x400, 0x300, false, true);
+    this->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), false, true);
     gWorld.mLock->WriteLock();
     gGameScreenActive = false;
     if (inLoad == true) {
@@ -630,7 +632,7 @@ void EEUserInterface::LoadSavedGame(FSFile* inFile)
 void EEUserInterface::StartLoadingFromEditor()
 {
     this->PauseGraphics();
-    this->ResizeGameScreen(0x400, 0x300, true, true);
+    this->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, true);
     gUIManager->Push(gUIManager->GetFormByID(kFormSplash));
     gWorld.mLock->WriteLock();
     gGameScreenActive = false;
@@ -1090,7 +1092,7 @@ void EEUserInterface::HandleMessage(unsigned long inMessage, LONG_PTR inParamete
         break;
     case 0x430: {
         this->PauseGraphics();
-        this->ResizeGameScreen(0x400, 0x300, true, false);
+        this->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false);
         if (inParameter2 <= 0) {
             gUIManager->Pop();
         } else {

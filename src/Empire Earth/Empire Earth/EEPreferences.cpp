@@ -27,6 +27,8 @@ EEGameSettings EEGamePreferences::sDefaultSettings;
 // SYNTHETIC: EXE 0x53243f   (registrar)
 // SYNTHETIC: EXE 0x53244b   (guarded dtor)
 
+bool gGameWindowSizeDefaulted;   // port: no saved game window size (EEPreferences Load)
+
 // FUNCTION: EXE 0x532466
 // Destroys the game settings (members only)
 EEGameSettings::~EEGameSettings()
@@ -237,6 +239,7 @@ long EEGamePreferences::Load()
         this->mSettings.mGameWindowWidth = theValue;
     } else {
         this->mSettings.mGameWindowWidth = EEGamePreferences::sDefaultSettings.mGameWindowWidth;
+        gGameWindowSizeDefaulted = true;   // port: a full screen game takes the display's size (EEInitializeVideo)
         theValue = this->mSettings.mGameWindowWidth;
         this->mConfig.SetValue(kEEGameSection, "Game Window Width", theValue);
     }

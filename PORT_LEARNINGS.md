@@ -1337,3 +1337,27 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Debugging off Windows**: `xbuild.py game --sanitize address` (a separate `game-address/` output) found each memory
   bug at its first bad access; lldb's regex breakpoints are too slow on this binary, a temporary `fprintf` was faster.
   The GX stats (`EE_GX_STATS`) located the vertex bug (pre-transformed 2D with clip x 3e20) before any debugger.
+
+## macOS: sound, full screen, the menus' resolution and the render scale (2026-11-05)
+
+- **Sound**: the mixer opened the first of WASAPI, DirectSound, WinMM and null; off Windows that was always the null
+  device (silence). Each platform now tries its own backends (Core Audio; PulseAudio, ALSA) before null. Music heard
+  long after the Mac game closed was a Windows VM / RDP session's audio on the same machine.
+- **Full screen on macOS**: the window was created at the desktop's pixel size (twice the points on Retina), every
+  mode change resized it (which takes a macOS window out of full screen), and the 32-bit probe opened a visible 16x16
+  topmost window at every renderer activation (focus loss: minimized). Now: full screen without a Space of its own
+  (`SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES` 0; the Spaces transition is asynchronous), created at the logical size,
+  `PlatWindowSetSize` leaves a window asked to be full screen alone (SDL's flag follows late), no minimize on focus
+  loss, full screen re-entered on focus, no probe window on macOS (GX supports 32 bits). A process started from a
+  background shell while another application is in front is never made active and macOS refuses it full screen:
+  posix_game.py runs are windowed for that reason.
+- **Resolution**: a first full screen start (no saved size) plays at the display's logical size
+  (`PlatWindowGetDisplayLogicalSize`), which GX lists as a mode. The menus, 1024x768 in the original, run at 768
+  lines with the game resolution's aspect ratio (`EEMenuWidth`/`EEMenuHeight`; GX lists those modes too): the controls
+  keep their designed proportions.
+- **Render scale (GX)**: the back buffer and its Z buffer at the display mode's size get a GPU copy
+  `GXRenderScale` times larger (display pixel height / mode height, 1..4; `EE_GX_RENDER_SCALE` overrides, 1 turns it
+  off). The game keeps drawing in logical pixels: viewports and blits map onto the larger texture, text is rasterised
+  with a font made that much larger (`PlatFontScaled`, `PlatFontTarget::mScale`), CPU access goes through a
+  logical-size intermediate (`UploadScaled`/`DownloadScaled`). So the menus' controls and the game's HUD are drawn at
+  the display's resolution: sharp text now, and sharp art once the textures are upscaled.

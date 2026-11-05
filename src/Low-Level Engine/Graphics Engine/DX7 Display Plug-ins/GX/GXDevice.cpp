@@ -862,11 +862,17 @@ static GXRESULT Draw(GXDeviceData* d, GXPRIMITIVETYPE inType, GXVertexBuffer* in
     float theX = (float)std::min(v.dwX, theTarget->mWidth), theY = (float)std::min(v.dwY, theTarget->mHeight);
     float theW = (float)std::min(v.dwWidth, theTarget->mWidth - (unsigned long)theX);
     float theH = (float)std::min(v.dwHeight, theTarget->mHeight - (unsigned long)theY);
+    // a scaled target (GXRenderScale): the logical viewport on its larger texture
+    float theScale = theTarget->mScale;
+    theX *= theScale;
+    theY *= theScale;
+    theW = std::min(theW * theScale, (float)theTarget->TexWidth() - theX);
+    theH = std::min(theH * theScale, (float)theTarget->TexHeight() - theY);
     if (theW <= 0.0f || theH <= 0.0f)
         return GX_OK;
     float theMinZ = std::max(0.0f, std::min(1.0f, v.dvMinZ)), theMaxZ = std::max(theMinZ, std::min(1.0f, v.dvMaxZ));
     wgpuRenderPassEncoderSetViewport(theCore.mPass, theX, theY, theW, theH, theMinZ, theMaxZ);
-    wgpuRenderPassEncoderSetScissorRect(theCore.mPass, 0, 0, theTarget->mWidth, theTarget->mHeight);
+    wgpuRenderPassEncoderSetScissorRect(theCore.mPass, 0, 0, theTarget->TexWidth(), theTarget->TexHeight());
     const unsigned long* s = d->mStageState[0];
     WGPUBindGroup theGroup = theCore.Group(theTexture ? theTexture->Top() : NULL,
                                            GXSamplerKey(s[GXTSS_ADDRESS], s[GXTSS_MINFILTER], s[GXTSS_MAGFILTER],

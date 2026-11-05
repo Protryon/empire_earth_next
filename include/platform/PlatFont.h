@@ -32,6 +32,9 @@ typedef struct PlatFont PlatFont;
 PlatFont* PlatFontCreate(const char* inFace, int32_t inHeight, int inBold, int inItalic, int inUnderline,
                          int inAntialiased);
 void PlatFontDestroy(PlatFont* inFont);
+// The same font inScale times as large (the renderer's text on a render target drawn at a multiple of its logical
+// size), made once and owned by inFont; inFont itself for a scale of 1 or less
+const PlatFont* PlatFontScaled(const PlatFont* inFont, float inScale);
 
 // GDI's TEXTMETRIC subset the game reads: the cell (tmHeight = tmAscent + tmDescent), the leading, the widths and
 // the character range (Windows-1252: 0x20..0xFF).
@@ -57,6 +60,8 @@ typedef struct PlatFontTarget {
     int32_t mWidth;
     int32_t mHeight;
     uint32_t mFlags;                        // PLAT_FONT_TARGET_*
+    float mScale;                           // the target's pixels per logical pixel (0 or 1: the same); the text
+                                            // drawer places and sizes its text in logical pixels times this
 } PlatFontTarget;
 // The target holds premultiplied colour and coverage: drawing composites "over" it (colour times coverage, alpha
 // accumulates the coverage), so text drawn onto a transparent target can be blended onto a surface later (the

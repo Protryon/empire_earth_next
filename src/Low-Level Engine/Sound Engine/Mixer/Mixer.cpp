@@ -241,7 +241,13 @@ extern "C" long SPIMActivateMixer()
     if (gActive)
         return kSPIMOK;
     // the first backend that opens and starts a playback device; the null backend (no output) always does
+#if defined(_WIN32)
     ma_backend theBackends[] = { ma_backend_wasapi, ma_backend_dsound, ma_backend_winmm, ma_backend_null };
+#elif defined(__APPLE__)
+    ma_backend theBackends[] = { ma_backend_coreaudio, ma_backend_null };
+#else
+    ma_backend theBackends[] = { ma_backend_pulseaudio, ma_backend_alsa, ma_backend_null };
+#endif
     ma_device_config theConfig = ma_device_config_init(ma_device_type_playback);
     theConfig.playback.format = ma_format_f32;
     theConfig.playback.channels = 2;

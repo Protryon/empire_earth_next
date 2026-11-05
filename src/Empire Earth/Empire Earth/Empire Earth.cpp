@@ -9,6 +9,8 @@
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "platform/PlatMessage.h"
 void EETestFixtureStart();   // EETestFixture.cpp (TEST ONLY)
+unsigned long EEMenuWidth();    // port: the menus' resolution (below)
+unsigned long EEMenuHeight();
 #include "platform/PlatWindow.h"
 #include "platform/PlatFile.h"
 #include <stdio.h>
@@ -1597,7 +1599,8 @@ void EEPlayIntroMovies(bool inSkipMovies)
     gRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f), theRectangle, gGamePreferences.mSettings.GetScreenID());
 
     gRasterizer->ShowScene(gGamePreferences.mSettings.GetScreenID());
-    EEChangeGameScreen(1024, 768, false);
+    // port: the menus run at EEMenuWidth x EEMenuHeight (the original's 1024x768)
+    EEChangeGameScreen(EEMenuWidth(), EEMenuHeight(), false);
     gISMouse->Suspend();
     gISKeyboard->Suspend();
     gRasterizer->SetWaitForVSync(gGamePreferences.mSettings.mWaitForVSync, gGamePreferences.mSettings.GetScreenID());
@@ -1813,6 +1816,24 @@ extern bool sIconsLoaded; // the status box's icons-loaded flag (defined in EEUI
 // FUNCTION: EXE 0x540306
 // Re-creates the display at the new size (full screen or not): reactivates the rasterizer, resets render states
 // and the camera, reloads mouse, textures, buttons and icons and restarts the mouse pointer thread
+// port: the menus' resolution. Their controls are laid out for 1024x768 (pixel sizes; the forms anchor to their
+// edges), so they keep its height of 768 and take the game resolution's aspect ratio: the frame scales to the window
+// without the 4:3 stretch, and each control keeps its designed proportions. A game resolution under 768 lines is used
+// as it is.
+unsigned long EEMenuHeight()
+{
+    return gGameWindowHeight > 768 ? 768 : gGameWindowHeight;
+}
+
+unsigned long EEMenuWidth()
+{
+    if (gGameWindowHeight <= 768 || gGameWindowHeight == 0)
+        return gGameWindowWidth;
+    unsigned long theWidth = (gGameWindowWidth * 768 + gGameWindowHeight / 2) / gGameWindowHeight;
+    theWidth &= ~1UL;
+    return theWidth < 1024 ? 1024 : theWidth;   // at least the original's width (a 5:4 screen: 1024x768)
+}
+
 void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFullScreen)
 {
     GERectangle theGameView;
@@ -1956,6 +1977,14 @@ bool EEInitializeDisplay()
         || (gGamePreferences.mSettings.mTextureBitDepth == 32 && !gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->Get32BitTextureSupport()))
         gGamePreferences.mSettings.mTextureBitDepth = 16;
     GEScreen* theScreen = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID());
+    // port: the first full screen start (no saved size) plays at the display's size (macOS: in points), not 800x600
+    extern bool gGameWindowSizeDefaulted;
+    int32_t theDisplayWidth = 0, theDisplayHeight = 0;
+    if (gGameWindowSizeDefaulted && gGamePreferences.mSettings.GetFullScreen() &&
+        PlatWindowGetDisplayLogicalSize(NULL, &theDisplayWidth, &theDisplayHeight) && theDisplayWidth > 0) {
+        gGameWindowWidth = (unsigned long)theDisplayWidth;
+        gGameWindowHeight = (unsigned long)theDisplayHeight;
+    }
     unsigned long theMode;
     for (theMode = 0; theMode < theScreen->GetModeCount(); theMode++) {
         if (theScreen->GetMode(theMode).mWidth == gGameWindowWidth
