@@ -1,0 +1,9741 @@
+{
+ "EEUnitClassRecord": {
+  "name": "EEUnitClassRecord",
+  "size": 1960,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mName",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x000 the unit name (UString::Copy into mName)"
+   },
+   {
+    "off": 100,
+    "type": "s32",
+    "name": "mRowID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x064"
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mFamily",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x068"
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mL06C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x06c"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mEpoch",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x070"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mUnitType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x074"
+   },
+   {
+    "off": 120,
+    "type": "s32",
+    "name": "mHitPoints",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x078"
+   },
+   {
+    "off": 124,
+    "type": "s32",
+    "name": "mWaterKind",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x07c"
+   },
+   {
+    "off": 128,
+    "type": "f32",
+    "name": "mMinRange",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x080"
+   },
+   {
+    "off": 132,
+    "type": "f32",
+    "name": "mRange",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x084"
+   },
+   {
+    "off": 136,
+    "type": "f32",
+    "name": "mLineOfSight",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x088"
+   },
+   {
+    "off": 140,
+    "type": "f32",
+    "name": "mReloadTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x08c"
+   },
+   {
+    "off": 144,
+    "type": "f32",
+    "name": "mAreaEffect",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x090"
+   },
+   {
+    "off": 148,
+    "type": "f32",
+    "name": "mMaxVelocity",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x094"
+   },
+   {
+    "off": 152,
+    "type": "f32",
+    "name": "mAcceleration",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x098 (EEUnitClass +0x13c)"
+   },
+   {
+    "off": 156,
+    "type": "f32",
+    "name": "mAngularAcceleration",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x09c"
+   },
+   {
+    "off": 160,
+    "type": "f32",
+    "name": "mMaxAngularVelocity",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0a0"
+   },
+   {
+    "off": 164,
+    "type": "f32",
+    "name": "mTurretMaxAngularVelocity",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0a4"
+   },
+   {
+    "off": 168,
+    "type": "bool",
+    "name": "mCanFly",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x0a8"
+   },
+   {
+    "off": 169,
+    "type": "s8",
+    "name": "mC0A9",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x0a9"
+   },
+   {
+    "off": 170,
+    "type": "s8",
+    "name": "mC0AA",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x0aa"
+   },
+   {
+    "off": 171,
+    "type": "s8",
+    "name": "mC0AB",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x0ab"
+   },
+   {
+    "off": 172,
+    "type": "s32",
+    "name": "mFlightTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0ac"
+   },
+   {
+    "off": 176,
+    "type": "f32",
+    "name": "mFacingOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0b0"
+   },
+   {
+    "off": 180,
+    "type": "f32",
+    "name": "mFiringArc",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0b4"
+   },
+   {
+    "off": 184,
+    "type": "bool",
+    "name": "mFiresBroadside",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x0b8"
+   },
+   {
+    "off": 185,
+    "type": "s8",
+    "name": "mC0B9",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x0b9"
+   },
+   {
+    "off": 186,
+    "type": "s8",
+    "name": "mC0BA",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x0ba"
+   },
+   {
+    "off": 187,
+    "type": "s8",
+    "name": "mC0BB",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x0bb"
+   },
+   {
+    "off": 188,
+    "type": "s32",
+    "name": "mWeapon",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0bc"
+   },
+   {
+    "off": 192,
+    "type": "s32",
+    "name": "mAttack",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0c0"
+   },
+   {
+    "off": 196,
+    "type": "s32",
+    "name": "mShockArmor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0c4"
+   },
+   {
+    "off": 200,
+    "type": "s32",
+    "name": "mArrowArmor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0c8"
+   },
+   {
+    "off": 204,
+    "type": "s32",
+    "name": "mPierceArmor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0cc"
+   },
+   {
+    "off": 208,
+    "type": "s32",
+    "name": "mGunArmor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0d0"
+   },
+   {
+    "off": 212,
+    "type": "s32",
+    "name": "mLaserArmor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0d4"
+   },
+   {
+    "off": 216,
+    "type": "s32",
+    "name": "mMissileArmor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0d8"
+   },
+   {
+    "off": 220,
+    "type": "s32",
+    "name": "mProjectileType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0dc"
+   },
+   {
+    "off": 224,
+    "type": "s32",
+    "name": "mAmmoType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0e0"
+   },
+   {
+    "off": 228,
+    "type": "bool",
+    "name": "mIsEnabled",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x0e4"
+   },
+   {
+    "off": 229,
+    "type": "s8",
+    "name": "mC0E5",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x0e5"
+   },
+   {
+    "off": 230,
+    "type": "s8",
+    "name": "mC0E6",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x0e6"
+   },
+   {
+    "off": 231,
+    "type": "s8",
+    "name": "mC0E7",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x0e7"
+   },
+   {
+    "off": 232,
+    "type": "f32",
+    "name": "mScale",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0e8"
+   },
+   {
+    "off": 236,
+    "type": "s8",
+    "name": "mAIScriptName",
+    "count": 52,
+    "size": 52,
+    "comment": "+0x0ec a name (UString::Copy into mAIScriptName)"
+   },
+   {
+    "off": 288,
+    "type": "s32",
+    "name": "mCategory",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x120"
+   },
+   {
+    "off": 292,
+    "type": "s32",
+    "name": "mU124",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x124"
+   },
+   {
+    "off": 296,
+    "type": "s32",
+    "name": "mButton",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x128"
+   },
+   {
+    "off": 300,
+    "type": "s32",
+    "name": "mGraphic",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x12c"
+   },
+   {
+    "off": 304,
+    "type": "f32",
+    "name": "mWorkRate",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x130"
+   },
+   {
+    "off": 308,
+    "type": "f32",
+    "name": "mIronGatherTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x134"
+   },
+   {
+    "off": 312,
+    "type": "f32",
+    "name": "mFarmGatherTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x138"
+   },
+   {
+    "off": 316,
+    "type": "f32",
+    "name": "mGoldGatherTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x13c"
+   },
+   {
+    "off": 320,
+    "type": "f32",
+    "name": "mStoneGatherTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x140"
+   },
+   {
+    "off": 324,
+    "type": "f32",
+    "name": "mWoodGatherTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x144"
+   },
+   {
+    "off": 328,
+    "type": "f32",
+    "name": "mHuntGatherTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x148"
+   },
+   {
+    "off": 332,
+    "type": "f32",
+    "name": "mForageGatherTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x14c"
+   },
+   {
+    "off": 336,
+    "type": "s32",
+    "name": "mL150",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x150"
+   },
+   {
+    "off": 340,
+    "type": "s32",
+    "name": "mAcknowledgeSound1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x154"
+   },
+   {
+    "off": 344,
+    "type": "s32",
+    "name": "mAcknowledgeSound2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x158"
+   },
+   {
+    "off": 348,
+    "type": "s32",
+    "name": "mSelectionSound1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x15c"
+   },
+   {
+    "off": 352,
+    "type": "s32",
+    "name": "mSelectionSound2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x160"
+   },
+   {
+    "off": 356,
+    "type": "s32",
+    "name": "mDeathSound",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x164"
+   },
+   {
+    "off": 360,
+    "type": "s32",
+    "name": "mRepairRate",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x168"
+   },
+   {
+    "off": 364,
+    "type": "s32",
+    "name": "mCommand0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x16c"
+   },
+   {
+    "off": 368,
+    "type": "s32",
+    "name": "mCommand1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x170"
+   },
+   {
+    "off": 372,
+    "type": "s32",
+    "name": "mCommand2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x174"
+   },
+   {
+    "off": 376,
+    "type": "s32",
+    "name": "mCommand3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x178"
+   },
+   {
+    "off": 380,
+    "type": "s32",
+    "name": "mCommand4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x17c"
+   },
+   {
+    "off": 384,
+    "type": "s32",
+    "name": "mCommand5",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x180"
+   },
+   {
+    "off": 388,
+    "type": "s32",
+    "name": "mCommand6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x184"
+   },
+   {
+    "off": 392,
+    "type": "s32",
+    "name": "mCommand7",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x188"
+   },
+   {
+    "off": 396,
+    "type": "s32",
+    "name": "mCommand8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x18c"
+   },
+   {
+    "off": 400,
+    "type": "s32",
+    "name": "mU190",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x190"
+   },
+   {
+    "off": 404,
+    "type": "s32",
+    "name": "mTileSize",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x194"
+   },
+   {
+    "off": 408,
+    "type": "s32",
+    "name": "mResourceType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x198"
+   },
+   {
+    "off": 412,
+    "type": "f32",
+    "name": "mResourceAmount",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x19c"
+   },
+   {
+    "off": 416,
+    "type": "bool",
+    "name": "mB1A0",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1a0"
+   },
+   {
+    "off": 417,
+    "type": "s8",
+    "name": "mC1A1",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1a1"
+   },
+   {
+    "off": 418,
+    "type": "s8",
+    "name": "mC1A2",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1a2"
+   },
+   {
+    "off": 419,
+    "type": "s8",
+    "name": "mC1A3",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1a3"
+   },
+   {
+    "off": 420,
+    "type": "s32",
+    "name": "mU1A4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1a4"
+   },
+   {
+    "off": 424,
+    "type": "f32",
+    "name": "mRottingTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1a8"
+   },
+   {
+    "off": 428,
+    "type": "s32",
+    "name": "mTransportSize",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1ac"
+   },
+   {
+    "off": 432,
+    "type": "s32",
+    "name": "mTransportCapacity",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1b0"
+   },
+   {
+    "off": 436,
+    "type": "bool",
+    "name": "mCanUpgradeAreaEffect",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1b4"
+   },
+   {
+    "off": 437,
+    "type": "bool",
+    "name": "mCanUpgradeRepair",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1b5"
+   },
+   {
+    "off": 438,
+    "type": "bool",
+    "name": "mCanUpgradeShockArmor",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1b6"
+   },
+   {
+    "off": 439,
+    "type": "bool",
+    "name": "mCanUpgradePierceArmor",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1b7"
+   },
+   {
+    "off": 440,
+    "type": "bool",
+    "name": "mCanUpgradeArrowArmor",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1b8"
+   },
+   {
+    "off": 441,
+    "type": "bool",
+    "name": "mCanUpgradeLaserArmor",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1b9"
+   },
+   {
+    "off": 442,
+    "type": "bool",
+    "name": "mCanUpgradeGunArmor",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1ba"
+   },
+   {
+    "off": 443,
+    "type": "bool",
+    "name": "mCanUpgradeMissileArmor",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1bb"
+   },
+   {
+    "off": 444,
+    "type": "bool",
+    "name": "mCanUpgradeRange",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1bc"
+   },
+   {
+    "off": 445,
+    "type": "s8",
+    "name": "mC1BD",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1bd"
+   },
+   {
+    "off": 446,
+    "type": "s8",
+    "name": "mC1BE",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1be"
+   },
+   {
+    "off": 447,
+    "type": "s8",
+    "name": "mC1BF",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1bf"
+   },
+   {
+    "off": 448,
+    "type": "s32",
+    "name": "mLeadership",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1c0"
+   },
+   {
+    "off": 452,
+    "type": "s32",
+    "name": "mU1C4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1c4"
+   },
+   {
+    "off": 456,
+    "type": "bool",
+    "name": "mPitchesWithTerrain",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1c8"
+   },
+   {
+    "off": 457,
+    "type": "bool",
+    "name": "mRollsWithTerrain",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1c9"
+   },
+   {
+    "off": 458,
+    "type": "s8",
+    "name": "mC1CA",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1ca"
+   },
+   {
+    "off": 459,
+    "type": "s8",
+    "name": "mC1CB",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1cb"
+   },
+   {
+    "off": 460,
+    "type": "f32",
+    "name": "mMaxRoll",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1cc"
+   },
+   {
+    "off": 464,
+    "type": "s32",
+    "name": "mU1D0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1d0"
+   },
+   {
+    "off": 468,
+    "type": "f32",
+    "name": "mCruiseAltitude",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1d4"
+   },
+   {
+    "off": 472,
+    "type": "s32",
+    "name": "mNameStringID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1d8"
+   },
+   {
+    "off": 476,
+    "type": "s32",
+    "name": "mTargetSearchInterval",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1dc"
+   },
+   {
+    "off": 480,
+    "type": "s32",
+    "name": "mHealingPoints",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1e0"
+   },
+   {
+    "off": 484,
+    "type": "s32",
+    "name": "mRegeneration",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1e4"
+   },
+   {
+    "off": 488,
+    "type": "bool",
+    "name": "mCanEnterLandTransports",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1e8"
+   },
+   {
+    "off": 489,
+    "type": "bool",
+    "name": "mCanEnterAirTransports",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1e9"
+   },
+   {
+    "off": 490,
+    "type": "bool",
+    "name": "mCanEnterSeaTransports",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1ea"
+   },
+   {
+    "off": 491,
+    "type": "s8",
+    "name": "mC1EB",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1eb"
+   },
+   {
+    "off": 492,
+    "type": "s32",
+    "name": "mU1EC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1ec"
+   },
+   {
+    "off": 496,
+    "type": "bool",
+    "name": "mFiresWhileMoving",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1f0"
+   },
+   {
+    "off": 497,
+    "type": "s8",
+    "name": "mC1F1",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1f1"
+   },
+   {
+    "off": 498,
+    "type": "s8",
+    "name": "mC1F2",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1f2"
+   },
+   {
+    "off": 499,
+    "type": "s8",
+    "name": "mC1F3",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1f3"
+   },
+   {
+    "off": 500,
+    "type": "f32",
+    "name": "mSelectionSize",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1f4 (-> EEUnitClass::mSelectionSize, a mov copy)"
+   },
+   {
+    "off": 504,
+    "type": "f32",
+    "name": "mShadowScale",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1f8 (EEUnitClass mL16C, a float)"
+   },
+   {
+    "off": 508,
+    "type": "f32",
+    "name": "mL1FC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1fc (EEUnitClass mL170, a float)"
+   },
+   {
+    "off": 512,
+    "type": "f32",
+    "name": "mOuterCollisionSphere",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x200"
+   },
+   {
+    "off": 516,
+    "type": "f32",
+    "name": "mInnerCollisionSphere",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x204"
+   },
+   {
+    "off": 520,
+    "type": "bool",
+    "name": "mIsCollidable",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x208"
+   },
+   {
+    "off": 521,
+    "type": "bool",
+    "name": "mB209",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x209"
+   },
+   {
+    "off": 522,
+    "type": "s8",
+    "name": "mC20A",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x20a"
+   },
+   {
+    "off": 523,
+    "type": "s8",
+    "name": "mC20B",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x20b"
+   },
+   {
+    "off": 524,
+    "type": "f32",
+    "name": "mMissileDelayTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x20c"
+   },
+   {
+    "off": 528,
+    "type": "f32",
+    "name": "mLaunchPitch",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x210"
+   },
+   {
+    "off": 532,
+    "type": "s32",
+    "name": "mAmmunition",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x214"
+   },
+   {
+    "off": 536,
+    "type": "bool",
+    "name": "mUsesAmmunition",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x218"
+   },
+   {
+    "off": 537,
+    "type": "bool",
+    "name": "mCanFireOverWalls",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x219"
+   },
+   {
+    "off": 538,
+    "type": "bool",
+    "name": "mIsAffectedByGravity",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x21a"
+   },
+   {
+    "off": 539,
+    "type": "bool",
+    "name": "mShootsHigh",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x21b"
+   },
+   {
+    "off": 540,
+    "type": "s32",
+    "name": "mL21C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x21c"
+   },
+   {
+    "off": 544,
+    "type": "s32",
+    "name": "mL220",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x220"
+   },
+   {
+    "off": 548,
+    "type": "s32",
+    "name": "mAIKind",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x224"
+   },
+   {
+    "off": 552,
+    "type": "s32",
+    "name": "mCounterKind1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x228"
+   },
+   {
+    "off": 556,
+    "type": "s32",
+    "name": "mCounterKind2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x22c"
+   },
+   {
+    "off": 560,
+    "type": "s32",
+    "name": "mCounterKind3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x230"
+   },
+   {
+    "off": 564,
+    "type": "bool",
+    "name": "mCanSetRallyPoint",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x234"
+   },
+   {
+    "off": 565,
+    "type": "s8",
+    "name": "mC235",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x235"
+   },
+   {
+    "off": 566,
+    "type": "s8",
+    "name": "mC236",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x236"
+   },
+   {
+    "off": 567,
+    "type": "s8",
+    "name": "mC237",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x237"
+   },
+   {
+    "off": 568,
+    "type": "s32",
+    "name": "mUpgradeTableIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x238"
+   },
+   {
+    "off": 572,
+    "type": "s32",
+    "name": "mConversionRate",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x23c"
+   },
+   {
+    "off": 576,
+    "type": "f32",
+    "name": "mConversionResistance",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x240 (a float: EEUnitClass::mConversionResistance's source)"
+   },
+   {
+    "off": 580,
+    "type": "bool",
+    "name": "mIsPlayerPlaceable",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x244"
+   },
+   {
+    "off": 581,
+    "type": "bool",
+    "name": "mIsGaiaPlaceable",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x245"
+   },
+   {
+    "off": 582,
+    "type": "bool",
+    "name": "mIsVital",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x246"
+   },
+   {
+    "off": 583,
+    "type": "s8",
+    "name": "mC247",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x247"
+   },
+   {
+    "off": 584,
+    "type": "bool",
+    "name": "mIsDeletable",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x248"
+   },
+   {
+    "off": 585,
+    "type": "bool",
+    "name": "mIsDecoration",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x249"
+   },
+   {
+    "off": 586,
+    "type": "s8",
+    "name": "mC24A",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x24a"
+   },
+   {
+    "off": 587,
+    "type": "s8",
+    "name": "mC24B",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x24b"
+   },
+   {
+    "off": 588,
+    "type": "s32",
+    "name": "mL24C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x24c"
+   },
+   {
+    "off": 592,
+    "type": "s32",
+    "name": "mL250",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x250"
+   },
+   {
+    "off": 596,
+    "type": "s32",
+    "name": "mL254",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x254"
+   },
+   {
+    "off": 600,
+    "type": "s32",
+    "name": "mL258",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x258"
+   },
+   {
+    "off": 604,
+    "type": "s32",
+    "name": "mL25C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x25c"
+   },
+   {
+    "off": 608,
+    "type": "s32",
+    "name": "mL260",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x260"
+   },
+   {
+    "off": 612,
+    "type": "s32",
+    "name": "mL264",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x264"
+   },
+   {
+    "off": 616,
+    "type": "s32",
+    "name": "mL268",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x268"
+   },
+   {
+    "off": 620,
+    "type": "s32",
+    "name": "mL26C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x26c"
+   },
+   {
+    "off": 624,
+    "type": "s32",
+    "name": "mL270",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x270"
+   },
+   {
+    "off": 628,
+    "type": "s32",
+    "name": "mL274",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x274"
+   },
+   {
+    "off": 632,
+    "type": "s32",
+    "name": "mL278",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x278"
+   },
+   {
+    "off": 636,
+    "type": "s32",
+    "name": "mCreationEffect",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x27c"
+   },
+   {
+    "off": 640,
+    "type": "s32",
+    "name": "mL280",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x280"
+   },
+   {
+    "off": 644,
+    "type": "s32",
+    "name": "mL284",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x284"
+   },
+   {
+    "off": 648,
+    "type": "s32",
+    "name": "mL288",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x288"
+   },
+   {
+    "off": 652,
+    "type": "s32",
+    "name": "mL28C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x28c"
+   },
+   {
+    "off": 656,
+    "type": "s32",
+    "name": "mL290",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x290"
+   },
+   {
+    "off": 660,
+    "type": "s32",
+    "name": "mL294",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x294"
+   },
+   {
+    "off": 664,
+    "type": "s32",
+    "name": "mL298",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x298"
+   },
+   {
+    "off": 668,
+    "type": "s32",
+    "name": "mL29C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x29c"
+   },
+   {
+    "off": 672,
+    "type": "s32",
+    "name": "mLeprosyEffect",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2a0"
+   },
+   {
+    "off": 676,
+    "type": "s32",
+    "name": "mPlagueEffect",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2a4"
+   },
+   {
+    "off": 680,
+    "type": "s32",
+    "name": "mMoraleEffect",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2a8"
+   },
+   {
+    "off": 684,
+    "type": "s32",
+    "name": "mL2AC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2ac"
+   },
+   {
+    "off": 688,
+    "type": "s32",
+    "name": "mL2B0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2b0"
+   },
+   {
+    "off": 692,
+    "type": "s32",
+    "name": "mL2B4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2b4"
+   },
+   {
+    "off": 696,
+    "type": "s32",
+    "name": "mL2B8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2b8"
+   },
+   {
+    "off": 700,
+    "type": "s32",
+    "name": "mL2BC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2bc"
+   },
+   {
+    "off": 704,
+    "type": "s32",
+    "name": "mU2C0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2c0"
+   },
+   {
+    "off": 708,
+    "type": "s32",
+    "name": "mU2C4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2c4"
+   },
+   {
+    "off": 712,
+    "type": "f32",
+    "name": "mBobPitch",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2c8"
+   },
+   {
+    "off": 716,
+    "type": "s32",
+    "name": "mU2CC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2cc"
+   },
+   {
+    "off": 720,
+    "type": "s32",
+    "name": "mU2D0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2d0"
+   },
+   {
+    "off": 724,
+    "type": "s32",
+    "name": "mU2D4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2d4"
+   },
+   {
+    "off": 728,
+    "type": "s32",
+    "name": "mU2D8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2d8"
+   },
+   {
+    "off": 732,
+    "type": "bool",
+    "name": "mB2DC",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2dc"
+   },
+   {
+    "off": 733,
+    "type": "bool",
+    "name": "mB2DD",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2dd"
+   },
+   {
+    "off": 734,
+    "type": "bool",
+    "name": "mB2DE",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2de"
+   },
+   {
+    "off": 735,
+    "type": "bool",
+    "name": "mB2DF",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2df"
+   },
+   {
+    "off": 736,
+    "type": "s8",
+    "name": "mC2E0",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2e0"
+   },
+   {
+    "off": 737,
+    "type": "s8",
+    "name": "mC2E1",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2e1"
+   },
+   {
+    "off": 738,
+    "type": "bool",
+    "name": "mB2E2",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2e2"
+   },
+   {
+    "off": 739,
+    "type": "bool",
+    "name": "mCanEnterFortresses",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2e3"
+   },
+   {
+    "off": 740,
+    "type": "bool",
+    "name": "mB2E4",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2e4"
+   },
+   {
+    "off": 741,
+    "type": "bool",
+    "name": "mB2E5",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2e5"
+   },
+   {
+    "off": 742,
+    "type": "bool",
+    "name": "mB2E6",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2e6"
+   },
+   {
+    "off": 743,
+    "type": "bool",
+    "name": "mB2E7",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2e7"
+   },
+   {
+    "off": 744,
+    "type": "bool",
+    "name": "mB2E8",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2e8"
+   },
+   {
+    "off": 745,
+    "type": "s8",
+    "name": "mC2E9",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2e9"
+   },
+   {
+    "off": 746,
+    "type": "bool",
+    "name": "mB2EA",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2ea"
+   },
+   {
+    "off": 747,
+    "type": "bool",
+    "name": "mB2EB",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2eb"
+   },
+   {
+    "off": 748,
+    "type": "bool",
+    "name": "mIsAttackUnit",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2ec"
+   },
+   {
+    "off": 749,
+    "type": "bool",
+    "name": "mIsDefenseUnit",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2ed"
+   },
+   {
+    "off": 750,
+    "type": "s8",
+    "name": "mC2EE",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2ee"
+   },
+   {
+    "off": 751,
+    "type": "s8",
+    "name": "mC2EF",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2ef"
+   },
+   {
+    "off": 752,
+    "type": "s32",
+    "name": "mAreaEffectTemplate0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2f0"
+   },
+   {
+    "off": 756,
+    "type": "s32",
+    "name": "mAreaEffectTemplate1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2f4"
+   },
+   {
+    "off": 760,
+    "type": "s32",
+    "name": "mAreaEffectTemplate2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2f8"
+   },
+   {
+    "off": 764,
+    "type": "s32",
+    "name": "mAreaEffectTemplate3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2fc"
+   },
+   {
+    "off": 768,
+    "type": "s32",
+    "name": "mU300",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x300"
+   },
+   {
+    "off": 772,
+    "type": "s32",
+    "name": "mU304",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x304"
+   },
+   {
+    "off": 776,
+    "type": "s32",
+    "name": "mU308",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x308"
+   },
+   {
+    "off": 780,
+    "type": "f32",
+    "name": "mCarryAmount",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x30c"
+   },
+   {
+    "off": 784,
+    "type": "s32",
+    "name": "mU310",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x310"
+   },
+   {
+    "off": 788,
+    "type": "s32",
+    "name": "mMaxObjectCarry",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x314"
+   },
+   {
+    "off": 792,
+    "type": "bool",
+    "name": "mIsScenarioSelectable",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x318"
+   },
+   {
+    "off": 793,
+    "type": "bool",
+    "name": "mB319",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x319"
+   },
+   {
+    "off": 794,
+    "type": "bool",
+    "name": "mBuildsOnElevation",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x31a"
+   },
+   {
+    "off": 795,
+    "type": "s8",
+    "name": "mC31B",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x31b"
+   },
+   {
+    "off": 796,
+    "type": "s32",
+    "name": "mU31C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x31c"
+   },
+   {
+    "off": 800,
+    "type": "s32",
+    "name": "mU320",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x320"
+   },
+   {
+    "off": 804,
+    "type": "s32",
+    "name": "mScaffoldingType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x324"
+   },
+   {
+    "off": 808,
+    "type": "s32",
+    "name": "mDeathType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x328"
+   },
+   {
+    "off": 812,
+    "type": "s32",
+    "name": "mL32C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x32c"
+   },
+   {
+    "off": 816,
+    "type": "s32",
+    "name": "mCloakRadius",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x330"
+   },
+   {
+    "off": 820,
+    "type": "s32",
+    "name": "mMiniMapColor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x334"
+   },
+   {
+    "off": 824,
+    "type": "s32",
+    "name": "mGarrisonCapacity",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x338"
+   },
+   {
+    "off": 828,
+    "type": "s32",
+    "name": "mInitialGarrisonCount",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x33c"
+   },
+   {
+    "off": 832,
+    "type": "s32",
+    "name": "mGarrisonTechnology",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x340"
+   },
+   {
+    "off": 836,
+    "type": "s32",
+    "name": "mAirTrafficType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x344"
+   },
+   {
+    "off": 840,
+    "type": "s32",
+    "name": "mOverlapUnitSet",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x348"
+   },
+   {
+    "off": 844,
+    "type": "s32",
+    "name": "mWonderBonus",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x34c"
+   },
+   {
+    "off": 848,
+    "type": "s32",
+    "name": "mWonderUnitSet",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x350"
+   },
+   {
+    "off": 852,
+    "type": "f32",
+    "name": "mF354",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x354"
+   },
+   {
+    "off": 856,
+    "type": "f32",
+    "name": "mBobHeight",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x358 (EEUnitClass +0x190)"
+   },
+   {
+    "off": 860,
+    "type": "f32",
+    "name": "mFriendlyDamageFactor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x35c (a float: EEUnitClass::mFriendlyDamageFactor's source)"
+   },
+   {
+    "off": 864,
+    "type": "f32",
+    "name": "mGarrisonBonus",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x360 (-> EEUnitClass::mGarrisonBonus)"
+   },
+   {
+    "off": 868,
+    "type": "s32",
+    "name": "mU364",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x364"
+   },
+   {
+    "off": 872,
+    "type": "f32",
+    "name": "mF368",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x368"
+   },
+   {
+    "off": 876,
+    "type": "bool",
+    "name": "mIsInactive",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x36c"
+   },
+   {
+    "off": 877,
+    "type": "s8",
+    "name": "mC36D",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x36d"
+   },
+   {
+    "off": 878,
+    "type": "s8",
+    "name": "mC36E",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x36e"
+   },
+   {
+    "off": 879,
+    "type": "s8",
+    "name": "mC36F",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x36f"
+   },
+   {
+    "off": 880,
+    "type": "s32",
+    "name": "mInfluence",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x370"
+   },
+   {
+    "off": 884,
+    "type": "s32",
+    "name": "mNumAttributes",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x374"
+   },
+   {
+    "off": 888,
+    "type": "s32",
+    "name": "mTechnology",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x378"
+   },
+   {
+    "off": 892,
+    "type": "bool",
+    "name": "mBlocksTile",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x37c"
+   },
+   {
+    "off": 893,
+    "type": "bool",
+    "name": "mIsCloakable",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x37d"
+   },
+   {
+    "off": 894,
+    "type": "bool",
+    "name": "mB37E",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x37e"
+   },
+   {
+    "off": 895,
+    "type": "bool",
+    "name": "mCanEnterAirports",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x37f"
+   },
+   {
+    "off": 896,
+    "type": "bool",
+    "name": "mCanEnterCarriers",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x380"
+   },
+   {
+    "off": 897,
+    "type": "s8",
+    "name": "mC381",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x381"
+   },
+   {
+    "off": 898,
+    "type": "bool",
+    "name": "mCanGarrison",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x382"
+   },
+   {
+    "off": 899,
+    "type": "s8",
+    "name": "mC383",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x383"
+   },
+   {
+    "off": 900,
+    "type": "s32",
+    "name": "mDeathSpawnType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x384"
+   },
+   {
+    "off": 904,
+    "type": "s32",
+    "name": "mPower",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x388"
+   },
+   {
+    "off": 908,
+    "type": "s32",
+    "name": "mPowerRegeneration",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x38c"
+   },
+   {
+    "off": 912,
+    "type": "s32",
+    "name": "mBehavior",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x390"
+   },
+   {
+    "off": 916,
+    "type": "s32",
+    "name": "mMinConversionTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x394"
+   },
+   {
+    "off": 920,
+    "type": "f32",
+    "name": "mHealDelay",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x398"
+   },
+   {
+    "off": 924,
+    "type": "f32",
+    "name": "mHealRange",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x39c"
+   },
+   {
+    "off": 928,
+    "type": "f32",
+    "name": "mHealThreshold",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3a0"
+   },
+   {
+    "off": 932,
+    "type": "f32",
+    "name": "mLoadRange",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3a4"
+   },
+   {
+    "off": 936,
+    "type": "f32",
+    "name": "mUnloadRange",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3a8"
+   },
+   {
+    "off": 940,
+    "type": "bool",
+    "name": "mB3AC",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x3ac"
+   },
+   {
+    "off": 941,
+    "type": "bool",
+    "name": "mCanDisband",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x3ad"
+   },
+   {
+    "off": 942,
+    "type": "bool",
+    "name": "mIsObstacle",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x3ae"
+   },
+   {
+    "off": 943,
+    "type": "bool",
+    "name": "mCanAttackGround",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x3af"
+   },
+   {
+    "off": 944,
+    "type": "bool",
+    "name": "mIsMelee",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x3b0"
+   },
+   {
+    "off": 945,
+    "type": "s8",
+    "name": "mC3B1",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x3b1"
+   },
+   {
+    "off": 946,
+    "type": "s8",
+    "name": "mC3B2",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x3b2"
+   },
+   {
+    "off": 947,
+    "type": "s8",
+    "name": "mC3B3",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x3b3"
+   },
+   {
+    "off": 948,
+    "type": "s32",
+    "name": "mU3B4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3b4"
+   },
+   {
+    "off": 952,
+    "type": "s32",
+    "name": "mU3B8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3b8"
+   },
+   {
+    "off": 956,
+    "type": "s32",
+    "name": "mU3BC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3bc"
+   },
+   {
+    "off": 960,
+    "type": "s32",
+    "name": "mU3C0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3c0"
+   },
+   {
+    "off": 964,
+    "type": "s32",
+    "name": "mU3C4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3c4"
+   },
+   {
+    "off": 968,
+    "type": "s32",
+    "name": "mU3C8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3c8"
+   },
+   {
+    "off": 972,
+    "type": "s32",
+    "name": "mU3CC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3cc"
+   },
+   {
+    "off": 976,
+    "type": "s32",
+    "name": "mU3D0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3d0"
+   },
+   {
+    "off": 980,
+    "type": "s32",
+    "name": "mU3D4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3d4"
+   },
+   {
+    "off": 984,
+    "type": "s32",
+    "name": "mU3D8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3d8"
+   },
+   {
+    "off": 988,
+    "type": "s32",
+    "name": "mU3DC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3dc"
+   },
+   {
+    "off": 992,
+    "type": "s32",
+    "name": "mU3E0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3e0"
+   },
+   {
+    "off": 996,
+    "type": "s32",
+    "name": "mU3E4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3e4"
+   },
+   {
+    "off": 1000,
+    "type": "s32",
+    "name": "mU3E8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3e8"
+   },
+   {
+    "off": 1004,
+    "type": "s32",
+    "name": "mU3EC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3ec"
+   },
+   {
+    "off": 1008,
+    "type": "s32",
+    "name": "mU3F0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3f0"
+   },
+   {
+    "off": 1012,
+    "type": "s32",
+    "name": "mU3F4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3f4"
+   },
+   {
+    "off": 1016,
+    "type": "s32",
+    "name": "mU3F8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3f8"
+   },
+   {
+    "off": 1020,
+    "type": "s32",
+    "name": "mU3FC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x3fc"
+   },
+   {
+    "off": 1024,
+    "type": "s32",
+    "name": "mU400",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x400"
+   },
+   {
+    "off": 1028,
+    "type": "s32",
+    "name": "mU404",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x404"
+   },
+   {
+    "off": 1032,
+    "type": "s32",
+    "name": "mU408",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x408"
+   },
+   {
+    "off": 1036,
+    "type": "s32",
+    "name": "mU40C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x40c"
+   },
+   {
+    "off": 1040,
+    "type": "s32",
+    "name": "mU410",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x410"
+   },
+   {
+    "off": 1044,
+    "type": "s32",
+    "name": "mU414",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x414"
+   },
+   {
+    "off": 1048,
+    "type": "s32",
+    "name": "mU418",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x418"
+   },
+   {
+    "off": 1052,
+    "type": "s32",
+    "name": "mU41C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x41c"
+   },
+   {
+    "off": 1056,
+    "type": "s32",
+    "name": "mU420",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x420"
+   },
+   {
+    "off": 1060,
+    "type": "s32",
+    "name": "mU424",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x424"
+   },
+   {
+    "off": 1064,
+    "type": "s32",
+    "name": "mU428",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x428"
+   },
+   {
+    "off": 1068,
+    "type": "s32",
+    "name": "mU42C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x42c"
+   },
+   {
+    "off": 1072,
+    "type": "s32",
+    "name": "mU430",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x430"
+   },
+   {
+    "off": 1076,
+    "type": "s32",
+    "name": "mU434",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x434"
+   },
+   {
+    "off": 1080,
+    "type": "s32",
+    "name": "mU438",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x438"
+   },
+   {
+    "off": 1084,
+    "type": "s32",
+    "name": "mU43C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x43c"
+   },
+   {
+    "off": 1088,
+    "type": "s32",
+    "name": "mU440",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x440"
+   },
+   {
+    "off": 1092,
+    "type": "s32",
+    "name": "mU444",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x444"
+   },
+   {
+    "off": 1096,
+    "type": "s32",
+    "name": "mU448",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x448"
+   },
+   {
+    "off": 1100,
+    "type": "s32",
+    "name": "mU44C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x44c"
+   },
+   {
+    "off": 1104,
+    "type": "s32",
+    "name": "mU450",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x450"
+   },
+   {
+    "off": 1108,
+    "type": "s32",
+    "name": "mU454",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x454"
+   },
+   {
+    "off": 1112,
+    "type": "s32",
+    "name": "mU458",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x458"
+   },
+   {
+    "off": 1116,
+    "type": "s32",
+    "name": "mU45C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x45c"
+   },
+   {
+    "off": 1120,
+    "type": "s32",
+    "name": "mU460",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x460"
+   },
+   {
+    "off": 1124,
+    "type": "s32",
+    "name": "mU464",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x464"
+   },
+   {
+    "off": 1128,
+    "type": "s32",
+    "name": "mU468",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x468"
+   },
+   {
+    "off": 1132,
+    "type": "s32",
+    "name": "mU46C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x46c"
+   },
+   {
+    "off": 1136,
+    "type": "s32",
+    "name": "mU470",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x470"
+   },
+   {
+    "off": 1140,
+    "type": "s32",
+    "name": "mU474",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x474"
+   },
+   {
+    "off": 1144,
+    "type": "s32",
+    "name": "mU478",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x478"
+   },
+   {
+    "off": 1148,
+    "type": "s32",
+    "name": "mPackedType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x47c"
+   },
+   {
+    "off": 1152,
+    "type": "s32",
+    "name": "mL480",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x480"
+   },
+   {
+    "off": 1156,
+    "type": "u32",
+    "name": "mAttributes",
+    "count": 200,
+    "size": 800,
+    "comment": "+0x484 mNumAttributes technology ids (the ctor copies them into mResearchTechnologies)"
+   },
+   {
+    "off": 1956,
+    "type": "bool",
+    "name": "mHasSpecialAttack",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x7a4"
+   },
+   {
+    "off": 1957,
+    "type": "s8",
+    "name": "mC7A5",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x7a5"
+   },
+   {
+    "off": 1958,
+    "type": "s8",
+    "name": "mC7A6",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x7a6"
+   },
+   {
+    "off": 1959,
+    "type": "s8",
+    "name": "mC7A7",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x7a7"
+   }
+  ],
+  "decoded_bytes": 1485
+ },
+ "EEGraphicObjectRecord": {
+  "name": "EEGraphicObjectRecord",
+  "size": 716,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap0",
+    "count": 104,
+    "size": 104,
+    "comment": ""
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mMediaIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68"
+   },
+   {
+    "off": 108,
+    "type": "bool",
+    "name": "mIsDrawn",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x6c"
+   },
+   {
+    "off": 109,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mL70",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mL74",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74"
+   },
+   {
+    "off": 120,
+    "type": "bool",
+    "name": "mSharesFrames0",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x78"
+   },
+   {
+    "off": 121,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 124,
+    "type": "u32",
+    "name": "mFirstFrame0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c"
+   },
+   {
+    "off": 128,
+    "type": "u32",
+    "name": "mLastFrame0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80"
+   },
+   {
+    "off": 132,
+    "type": "u32",
+    "name": "mFrameTime0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x84"
+   },
+   {
+    "off": 136,
+    "type": "bool",
+    "name": "mLoops0",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x88"
+   },
+   {
+    "off": 137,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 140,
+    "type": "u32",
+    "name": "mHoldTime0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x8c (not read: the loader sets mCamouflageTimer[0] to 300000)"
+   },
+   {
+    "off": 144,
+    "type": "u32",
+    "name": "mSound1Frame0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x90"
+   },
+   {
+    "off": 148,
+    "type": "u32",
+    "name": "mSound2Frame0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x94"
+   },
+   {
+    "off": 152,
+    "type": "u32",
+    "name": "mSound1Index0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x98"
+   },
+   {
+    "off": 156,
+    "type": "u32",
+    "name": "mSound2Index0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x9c"
+   },
+   {
+    "off": 160,
+    "type": "bool",
+    "name": "mIsSpeedScaled0",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xa0"
+   },
+   {
+    "off": 161,
+    "type": "bool",
+    "name": "mSharesFrames13",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xa1"
+   },
+   {
+    "off": 162,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 164,
+    "type": "u32",
+    "name": "mFirstFrame13",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa4"
+   },
+   {
+    "off": 168,
+    "type": "u32",
+    "name": "mLastFrame13",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa8"
+   },
+   {
+    "off": 172,
+    "type": "u32",
+    "name": "mFrameTime13",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xac"
+   },
+   {
+    "off": 176,
+    "type": "bool",
+    "name": "mLoops13",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb0"
+   },
+   {
+    "off": 177,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 180,
+    "type": "u32",
+    "name": "mHoldTime13",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb4"
+   },
+   {
+    "off": 184,
+    "type": "u32",
+    "name": "mSound1Frame13",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb8"
+   },
+   {
+    "off": 188,
+    "type": "u32",
+    "name": "mSound2Frame13",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xbc"
+   },
+   {
+    "off": 192,
+    "type": "u32",
+    "name": "mSound1Index13",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc0"
+   },
+   {
+    "off": 196,
+    "type": "u32",
+    "name": "mSound2Index13",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc4"
+   },
+   {
+    "off": 200,
+    "type": "bool",
+    "name": "mIsSpeedScaled13",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xc8"
+   },
+   {
+    "off": 201,
+    "type": "bool",
+    "name": "mSharesFrames7",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xc9"
+   },
+   {
+    "off": 202,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 204,
+    "type": "u32",
+    "name": "mFirstFrame7",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xcc"
+   },
+   {
+    "off": 208,
+    "type": "u32",
+    "name": "mLastFrame7",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd0"
+   },
+   {
+    "off": 212,
+    "type": "u32",
+    "name": "mFrameTime7",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd4"
+   },
+   {
+    "off": 216,
+    "type": "bool",
+    "name": "mLoops7",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xd8"
+   },
+   {
+    "off": 217,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 220,
+    "type": "u32",
+    "name": "mHoldTime7",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xdc"
+   },
+   {
+    "off": 224,
+    "type": "u32",
+    "name": "mSound1Frame7",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe0"
+   },
+   {
+    "off": 228,
+    "type": "u32",
+    "name": "mSound2Frame7",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe4"
+   },
+   {
+    "off": 232,
+    "type": "u32",
+    "name": "mSound1Index7",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe8"
+   },
+   {
+    "off": 236,
+    "type": "u32",
+    "name": "mSound2Index7",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xec"
+   },
+   {
+    "off": 240,
+    "type": "bool",
+    "name": "mIsSpeedScaled7",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xf0"
+   },
+   {
+    "off": 241,
+    "type": "bool",
+    "name": "mSharesFrames8",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xf1"
+   },
+   {
+    "off": 242,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 244,
+    "type": "u32",
+    "name": "mFirstFrame8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xf4"
+   },
+   {
+    "off": 248,
+    "type": "u32",
+    "name": "mLastFrame8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xf8"
+   },
+   {
+    "off": 252,
+    "type": "u32",
+    "name": "mFrameTime8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xfc"
+   },
+   {
+    "off": 256,
+    "type": "bool",
+    "name": "mLoops8",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x100"
+   },
+   {
+    "off": 257,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 260,
+    "type": "u32",
+    "name": "mHoldTime8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x104"
+   },
+   {
+    "off": 264,
+    "type": "u32",
+    "name": "mSound1Frame8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x108"
+   },
+   {
+    "off": 268,
+    "type": "u32",
+    "name": "mSound2Frame8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x10c"
+   },
+   {
+    "off": 272,
+    "type": "u32",
+    "name": "mSound1Index8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x110"
+   },
+   {
+    "off": 276,
+    "type": "u32",
+    "name": "mSound2Index8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x114"
+   },
+   {
+    "off": 280,
+    "type": "bool",
+    "name": "mIsSpeedScaled8",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x118"
+   },
+   {
+    "off": 281,
+    "type": "bool",
+    "name": "mSharesFrames4",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x119"
+   },
+   {
+    "off": 282,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 284,
+    "type": "u32",
+    "name": "mFirstFrame4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x11c"
+   },
+   {
+    "off": 288,
+    "type": "u32",
+    "name": "mLastFrame4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x120"
+   },
+   {
+    "off": 292,
+    "type": "u32",
+    "name": "mFrameTime4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x124"
+   },
+   {
+    "off": 296,
+    "type": "bool",
+    "name": "mLoops4",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x128"
+   },
+   {
+    "off": 297,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 300,
+    "type": "u32",
+    "name": "mHoldTime4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x12c"
+   },
+   {
+    "off": 304,
+    "type": "bool",
+    "name": "mIsSpeedScaled4",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x130"
+   },
+   {
+    "off": 305,
+    "type": "bool",
+    "name": "mSharesFrames5",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x131"
+   },
+   {
+    "off": 306,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 308,
+    "type": "u32",
+    "name": "mFirstFrame5",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x134"
+   },
+   {
+    "off": 312,
+    "type": "u32",
+    "name": "mLastFrame5",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x138"
+   },
+   {
+    "off": 316,
+    "type": "u32",
+    "name": "mFrameTime5",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x13c"
+   },
+   {
+    "off": 320,
+    "type": "bool",
+    "name": "mLoops5",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x140"
+   },
+   {
+    "off": 321,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 324,
+    "type": "u32",
+    "name": "mHoldTime5",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x144"
+   },
+   {
+    "off": 328,
+    "type": "bool",
+    "name": "mIsSpeedScaled5",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x148"
+   },
+   {
+    "off": 329,
+    "type": "bool",
+    "name": "mSharesFrames12",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x149"
+   },
+   {
+    "off": 330,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 332,
+    "type": "u32",
+    "name": "mFirstFrame12",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x14c"
+   },
+   {
+    "off": 336,
+    "type": "u32",
+    "name": "mLastFrame12",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x150"
+   },
+   {
+    "off": 340,
+    "type": "u32",
+    "name": "mFrameTime12",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x154"
+   },
+   {
+    "off": 344,
+    "type": "bool",
+    "name": "mLoops12",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x158"
+   },
+   {
+    "off": 345,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 348,
+    "type": "u32",
+    "name": "mHoldTime12",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x15c"
+   },
+   {
+    "off": 352,
+    "type": "u32",
+    "name": "mSound1Frame12",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x160"
+   },
+   {
+    "off": 356,
+    "type": "u32",
+    "name": "mSound2Frame12",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x164"
+   },
+   {
+    "off": 360,
+    "type": "u32",
+    "name": "mSound1Index12",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x168"
+   },
+   {
+    "off": 364,
+    "type": "u32",
+    "name": "mSound2Index12",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x16c"
+   },
+   {
+    "off": 368,
+    "type": "bool",
+    "name": "mIsSpeedScaled12",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x170"
+   },
+   {
+    "off": 369,
+    "type": "bool",
+    "name": "mSharesFrames11",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x171"
+   },
+   {
+    "off": 370,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 372,
+    "type": "u32",
+    "name": "mFirstFrame11",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x174"
+   },
+   {
+    "off": 376,
+    "type": "u32",
+    "name": "mLastFrame11",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x178"
+   },
+   {
+    "off": 380,
+    "type": "u32",
+    "name": "mFrameTime11",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x17c"
+   },
+   {
+    "off": 384,
+    "type": "bool",
+    "name": "mLoops11",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x180"
+   },
+   {
+    "off": 385,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 388,
+    "type": "u32",
+    "name": "mHoldTime11",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x184"
+   },
+   {
+    "off": 392,
+    "type": "u32",
+    "name": "mSound1Frame11",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x188"
+   },
+   {
+    "off": 396,
+    "type": "u32",
+    "name": "mSound2Frame11",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x18c"
+   },
+   {
+    "off": 400,
+    "type": "u32",
+    "name": "mSound1Index11",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x190"
+   },
+   {
+    "off": 404,
+    "type": "u32",
+    "name": "mSound2Index11",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x194"
+   },
+   {
+    "off": 408,
+    "type": "bool",
+    "name": "mIsSpeedScaled11",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x198"
+   },
+   {
+    "off": 409,
+    "type": "bool",
+    "name": "mSharesFrames9",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x199"
+   },
+   {
+    "off": 410,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 412,
+    "type": "u32",
+    "name": "mFirstFrame9",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x19c"
+   },
+   {
+    "off": 416,
+    "type": "u32",
+    "name": "mLastFrame9",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1a0"
+   },
+   {
+    "off": 420,
+    "type": "u32",
+    "name": "mFrameTime9",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1a4"
+   },
+   {
+    "off": 424,
+    "type": "bool",
+    "name": "mLoops9",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1a8"
+   },
+   {
+    "off": 425,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 428,
+    "type": "u32",
+    "name": "mHoldTime9",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1ac"
+   },
+   {
+    "off": 432,
+    "type": "u32",
+    "name": "mSound1Frame9",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1b0"
+   },
+   {
+    "off": 436,
+    "type": "u32",
+    "name": "mSound2Frame9",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1b4"
+   },
+   {
+    "off": 440,
+    "type": "u32",
+    "name": "mSound1Index9",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1b8"
+   },
+   {
+    "off": 444,
+    "type": "u32",
+    "name": "mSound2Index9",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1bc"
+   },
+   {
+    "off": 448,
+    "type": "bool",
+    "name": "mIsSpeedScaled9",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1c0"
+   },
+   {
+    "off": 449,
+    "type": "bool",
+    "name": "mSharesFrames10",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1c1"
+   },
+   {
+    "off": 450,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 452,
+    "type": "u32",
+    "name": "mFirstFrame10",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1c4"
+   },
+   {
+    "off": 456,
+    "type": "u32",
+    "name": "mLastFrame10",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1c8"
+   },
+   {
+    "off": 460,
+    "type": "u32",
+    "name": "mFrameTime10",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1cc"
+   },
+   {
+    "off": 464,
+    "type": "bool",
+    "name": "mLoops10",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1d0"
+   },
+   {
+    "off": 465,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 468,
+    "type": "u32",
+    "name": "mHoldTime10",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1d4"
+   },
+   {
+    "off": 472,
+    "type": "u32",
+    "name": "mSound1Frame10",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1d8"
+   },
+   {
+    "off": 476,
+    "type": "u32",
+    "name": "mSound2Frame10",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1dc"
+   },
+   {
+    "off": 480,
+    "type": "u32",
+    "name": "mSound1Index10",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1e0"
+   },
+   {
+    "off": 484,
+    "type": "u32",
+    "name": "mSound2Index10",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1e4"
+   },
+   {
+    "off": 488,
+    "type": "bool",
+    "name": "mIsSpeedScaled10",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1e8"
+   },
+   {
+    "off": 489,
+    "type": "bool",
+    "name": "mSharesFrames6",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1e9"
+   },
+   {
+    "off": 490,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 492,
+    "type": "u32",
+    "name": "mFirstFrame6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1ec"
+   },
+   {
+    "off": 496,
+    "type": "u32",
+    "name": "mLastFrame6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1f0"
+   },
+   {
+    "off": 500,
+    "type": "u32",
+    "name": "mFrameTime6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1f4"
+   },
+   {
+    "off": 504,
+    "type": "bool",
+    "name": "mLoops6",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x1f8"
+   },
+   {
+    "off": 505,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 508,
+    "type": "u32",
+    "name": "mHoldTime6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1fc"
+   },
+   {
+    "off": 512,
+    "type": "u32",
+    "name": "mSound1Frame6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x200"
+   },
+   {
+    "off": 516,
+    "type": "u32",
+    "name": "mSound2Frame6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x204"
+   },
+   {
+    "off": 520,
+    "type": "u32",
+    "name": "mSound1Index6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x208"
+   },
+   {
+    "off": 524,
+    "type": "u32",
+    "name": "mSound2Index6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x20c"
+   },
+   {
+    "off": 528,
+    "type": "bool",
+    "name": "mIsSpeedScaled6",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x210"
+   },
+   {
+    "off": 529,
+    "type": "bool",
+    "name": "mSharesFrames3",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x211"
+   },
+   {
+    "off": 530,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 532,
+    "type": "u32",
+    "name": "mFirstFrame3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x214"
+   },
+   {
+    "off": 536,
+    "type": "u32",
+    "name": "mLastFrame3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x218"
+   },
+   {
+    "off": 540,
+    "type": "u32",
+    "name": "mFrameTime3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x21c"
+   },
+   {
+    "off": 544,
+    "type": "bool",
+    "name": "mLoops3",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x220"
+   },
+   {
+    "off": 545,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 548,
+    "type": "u32",
+    "name": "mHoldTime3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x224"
+   },
+   {
+    "off": 552,
+    "type": "u32",
+    "name": "mSound1Frame3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x228"
+   },
+   {
+    "off": 556,
+    "type": "u32",
+    "name": "mSound2Frame3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x22c"
+   },
+   {
+    "off": 560,
+    "type": "u32",
+    "name": "mSound1Index3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x230"
+   },
+   {
+    "off": 564,
+    "type": "u32",
+    "name": "mSound2Index3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x234"
+   },
+   {
+    "off": 568,
+    "type": "bool",
+    "name": "mIsSpeedScaled3",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x238"
+   },
+   {
+    "off": 569,
+    "type": "bool",
+    "name": "mSharesFrames1",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x239"
+   },
+   {
+    "off": 570,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 572,
+    "type": "u32",
+    "name": "mFirstFrame1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x23c"
+   },
+   {
+    "off": 576,
+    "type": "u32",
+    "name": "mLastFrame1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x240"
+   },
+   {
+    "off": 580,
+    "type": "u32",
+    "name": "mFrameTime1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x244"
+   },
+   {
+    "off": 584,
+    "type": "bool",
+    "name": "mLoops1",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x248"
+   },
+   {
+    "off": 585,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 588,
+    "type": "u32",
+    "name": "mHoldTime1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x24c"
+   },
+   {
+    "off": 592,
+    "type": "u32",
+    "name": "mSound1Frame1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x250"
+   },
+   {
+    "off": 596,
+    "type": "u32",
+    "name": "mSound2Frame1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x254"
+   },
+   {
+    "off": 600,
+    "type": "u32",
+    "name": "mSound1Index1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x258"
+   },
+   {
+    "off": 604,
+    "type": "u32",
+    "name": "mSound2Index1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x25c"
+   },
+   {
+    "off": 608,
+    "type": "bool",
+    "name": "mIsSpeedScaled1",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x260"
+   },
+   {
+    "off": 609,
+    "type": "bool",
+    "name": "mSharesFrames2",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x261"
+   },
+   {
+    "off": 610,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 612,
+    "type": "u32",
+    "name": "mFirstFrame2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x264"
+   },
+   {
+    "off": 616,
+    "type": "u32",
+    "name": "mLastFrame2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x268"
+   },
+   {
+    "off": 620,
+    "type": "u32",
+    "name": "mFrameTime2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x26c"
+   },
+   {
+    "off": 624,
+    "type": "bool",
+    "name": "mLoops2",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x270"
+   },
+   {
+    "off": 625,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 628,
+    "type": "u32",
+    "name": "mHoldTime2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x274"
+   },
+   {
+    "off": 632,
+    "type": "u32",
+    "name": "mSound1Frame2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x278"
+   },
+   {
+    "off": 636,
+    "type": "u32",
+    "name": "mSound2Frame2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x27c"
+   },
+   {
+    "off": 640,
+    "type": "u32",
+    "name": "mSound1Index2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x280"
+   },
+   {
+    "off": 644,
+    "type": "u32",
+    "name": "mSound2Index2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x284"
+   },
+   {
+    "off": 648,
+    "type": "bool",
+    "name": "mIsSpeedScaled2",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x288"
+   },
+   {
+    "off": 649,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 652,
+    "type": "s32",
+    "name": "mL28C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x28c"
+   },
+   {
+    "off": 656,
+    "type": "bool",
+    "name": "mB290",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x290"
+   },
+   {
+    "off": 657,
+    "type": "s8",
+    "name": "_gap291",
+    "count": 7,
+    "size": 7,
+    "comment": ""
+   },
+   {
+    "off": 664,
+    "type": "s32",
+    "name": "mL298",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x298"
+   },
+   {
+    "off": 668,
+    "type": "s32",
+    "name": "mL29C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x29c"
+   },
+   {
+    "off": 672,
+    "type": "s32",
+    "name": "mAlphaReference",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2a0"
+   },
+   {
+    "off": 676,
+    "type": "s32",
+    "name": "mL2A4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2a4"
+   },
+   {
+    "off": 680,
+    "type": "s8",
+    "name": "_gap2A8",
+    "count": 4,
+    "size": 4,
+    "comment": ""
+   },
+   {
+    "off": 684,
+    "type": "s32",
+    "name": "mKind",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2ac"
+   },
+   {
+    "off": 688,
+    "type": "bool",
+    "name": "mHasAlpha",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2b0"
+   },
+   {
+    "off": 689,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 692,
+    "type": "f32",
+    "name": "mOpacity",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2b4"
+   },
+   {
+    "off": 696,
+    "type": "s8",
+    "name": "_gap2B8",
+    "count": 4,
+    "size": 4,
+    "comment": ""
+   },
+   {
+    "off": 700,
+    "type": "f32",
+    "name": "mMipMapBias",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2bc"
+   },
+   {
+    "off": 704,
+    "type": "s32",
+    "name": "mNumMipLevelsToDrop",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2c0"
+   },
+   {
+    "off": 708,
+    "type": "s32",
+    "name": "mMaxMipLevelsToDrop",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2c4"
+   },
+   {
+    "off": 712,
+    "type": "bool",
+    "name": "mCreateMipMaps",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x2c8"
+   },
+   {
+    "off": 713,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "tail padding"
+   }
+  ],
+  "decoded_bytes": 489
+ },
+ "EESoundRecord": {
+  "name": "EESoundRecord",
+  "size": 132,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 108,
+    "size": 108,
+    "comment": ""
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mMaxInstances",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c -> +0x1c"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mCategory",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70 -> +0x20"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mL74",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74 -> +0x24"
+   },
+   {
+    "off": 120,
+    "type": "bool",
+    "name": "mLooping",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x78 -> +0x2c (looping)"
+   },
+   {
+    "off": 121,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 124,
+    "type": "s32",
+    "name": "mVolume",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c: percent -> +0x14 (float, * 0.01)"
+   },
+   {
+    "off": 128,
+    "type": "s8",
+    "name": "_gap80",
+    "count": 4,
+    "size": 4,
+    "comment": ""
+   }
+  ],
+  "decoded_bytes": 13
+ },
+ "EEGraphicEffectRecord": {
+  "name": "EEGraphicEffectRecord",
+  "size": 232,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 104,
+    "size": 104,
+    "comment": ""
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 -> +0x60 (> 0: a real record)"
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mKind",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c -> +0x58"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mTagPointKind",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70 -> +0x5c"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mMediaIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74 -> +0x0c (EEMedia::Get)"
+   },
+   {
+    "off": 120,
+    "type": "f32",
+    "name": "mStartSize",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78 -> +0x20"
+   },
+   {
+    "off": 124,
+    "type": "f32",
+    "name": "mHeight",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c -> +0x1c"
+   },
+   {
+    "off": 128,
+    "type": "f32",
+    "name": "mAlpha",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80 -> +0x24"
+   },
+   {
+    "off": 132,
+    "type": "s32",
+    "name": "mTime1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x84 -> +0x70"
+   },
+   {
+    "off": 136,
+    "type": "s32",
+    "name": "mTime2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x88 -> +0x74"
+   },
+   {
+    "off": 140,
+    "type": "s32",
+    "name": "mDuration",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x8c -> +0x78"
+   },
+   {
+    "off": 144,
+    "type": "s32",
+    "name": "mL90",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x90 -> +0x64"
+   },
+   {
+    "off": 148,
+    "type": "s32",
+    "name": "mL94",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x94 -> +0x68"
+   },
+   {
+    "off": 152,
+    "type": "s32",
+    "name": "mL98",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x98 -> +0x6c"
+   },
+   {
+    "off": 156,
+    "type": "s32",
+    "name": "mLinkedEffectIndex1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x9c -> +0x10 (an index until Load links it)"
+   },
+   {
+    "off": 160,
+    "type": "s32",
+    "name": "mLinkedEffectIndex2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa0 -> +0x14"
+   },
+   {
+    "off": 164,
+    "type": "s32",
+    "name": "mLinkedEffectIndex3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa4 -> +0x18"
+   },
+   {
+    "off": 168,
+    "type": "s32",
+    "name": "mNameStringId",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa8 -> +0x7c"
+   },
+   {
+    "off": 172,
+    "type": "f32",
+    "name": "mParam1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xac -> +0x28"
+   },
+   {
+    "off": 176,
+    "type": "f32",
+    "name": "mParam2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb0 -> +0x2c"
+   },
+   {
+    "off": 180,
+    "type": "f32",
+    "name": "mParam3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb4 -> +0x30"
+   },
+   {
+    "off": 184,
+    "type": "f32",
+    "name": "mParam4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb8 -> +0x34"
+   },
+   {
+    "off": 188,
+    "type": "f32",
+    "name": "mParam5",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xbc -> +0x38"
+   },
+   {
+    "off": 192,
+    "type": "f32",
+    "name": "mParam6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc0 -> +0x3c"
+   },
+   {
+    "off": 196,
+    "type": "f32",
+    "name": "mParam7",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc4 -> +0x40"
+   },
+   {
+    "off": 200,
+    "type": "f32",
+    "name": "mParam8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc8 -> +0x44"
+   },
+   {
+    "off": 204,
+    "type": "f32",
+    "name": "mParam9",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xcc -> +0x48"
+   },
+   {
+    "off": 208,
+    "type": "f32",
+    "name": "mParam10",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd0 -> +0x4c"
+   },
+   {
+    "off": 212,
+    "type": "f32",
+    "name": "mParam11",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd4 -> +0x50"
+   },
+   {
+    "off": 216,
+    "type": "f32",
+    "name": "mParam12",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd8 -> +0x54"
+   },
+   {
+    "off": 220,
+    "type": "bool",
+    "name": "mBDC",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xdc -> +0x88"
+   },
+   {
+    "off": 221,
+    "type": "bool",
+    "name": "mBDD",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xdd -> +0x89"
+   },
+   {
+    "off": 222,
+    "type": "bool",
+    "name": "mIsScenarioListed",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xde -> +0x8b"
+   },
+   {
+    "off": 223,
+    "type": "bool",
+    "name": "mBDF",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xdf -> +0x8c"
+   },
+   {
+    "off": 224,
+    "type": "bool",
+    "name": "mBE0",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xe0 -> +0x8a"
+   },
+   {
+    "off": 225,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 228,
+    "type": "s32",
+    "name": "mDetailLevel",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe4 -> +0x84"
+   }
+  ],
+  "decoded_bytes": 61
+ },
+ "EEMusicRecord": {
+  "name": "EEMusicRecord",
+  "size": 196,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 108,
+    "size": 108,
+    "comment": ""
+   },
+   {
+    "off": 108,
+    "type": "s8",
+    "name": "mFileName",
+    "count": 52,
+    "size": 52,
+    "comment": "+0x6c (a plain name; the song object appends \".sgt\")"
+   },
+   {
+    "off": 160,
+    "type": "f32",
+    "name": "mReverbGain",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa0"
+   },
+   {
+    "off": 164,
+    "type": "f32",
+    "name": "mReverbHighFreqRTRatio",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa4"
+   },
+   {
+    "off": 168,
+    "type": "f32",
+    "name": "mReverbMix",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa8"
+   },
+   {
+    "off": 172,
+    "type": "f32",
+    "name": "mReverbTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xac"
+   },
+   {
+    "off": 176,
+    "type": "s8",
+    "name": "_gapB0",
+    "count": 5,
+    "size": 5,
+    "comment": ""
+   },
+   {
+    "off": 181,
+    "type": "bool",
+    "name": "mInEpoch",
+    "count": 14,
+    "size": 14,
+    "comment": "+0xb5..+0xc2"
+   },
+   {
+    "off": 195,
+    "type": "s8",
+    "name": "_gapC3",
+    "count": 1,
+    "size": 1,
+    "comment": ""
+   }
+  ],
+  "decoded_bytes": 82
+ },
+ "EEWorldTableEntry": {
+  "name": "EEWorldTableEntry",
+  "size": 28,
+  "fields": [
+   {
+    "off": 0,
+    "type": "f32",
+    "name": "mFloatValue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x00"
+   },
+   {
+    "off": 4,
+    "type": "f32",
+    "name": "mFloatValue2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x04"
+   },
+   {
+    "off": 8,
+    "type": "s32",
+    "name": "mDatabaseID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x08"
+   },
+   {
+    "off": 12,
+    "type": "s32",
+    "name": "mIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0c"
+   },
+   {
+    "off": 16,
+    "type": "s32",
+    "name": "mLongValue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x10 (signed: EECPIntelligence 0x480f9b `fidiv dword [eax+0x10]`; TYPE CENSUS)"
+   },
+   {
+    "off": 20,
+    "type": "u32",
+    "name": "mLongValue2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x14"
+   },
+   {
+    "off": 24,
+    "type": "s32",
+    "name": "mL18",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x18 (entry 31: 1, entry 48: 0x50200; otherwise 0)"
+   }
+  ],
+  "decoded_bytes": 24
+ },
+ "EEDamageTableRecord": {
+  "name": "EEDamageTableRecord",
+  "size": 380,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 108,
+    "size": 108,
+    "comment": ""
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mDamage",
+    "count": 68,
+    "size": 272,
+    "comment": "+0x6c (scaled by kHeightEpsilon into gU4E8708's row)"
+   }
+  ],
+  "decoded_bytes": 272
+ },
+ "EETerrainTypeRecord": {
+  "name": "EETerrainTypeRecord",
+  "size": 128,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 104,
+    "size": 104,
+    "comment": ""
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 -> +0x08"
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mFirstColor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c -> +0x0c"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mLastColor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70 -> +0x10"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mNameID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74 -> +0x14"
+   },
+   {
+    "off": 120,
+    "type": "s32",
+    "name": "mL78",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78 -> +0x18"
+   },
+   {
+    "off": 124,
+    "type": "bool",
+    "name": "mIsInEditor",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x7c -> +0x1c"
+   },
+   {
+    "off": 125,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "tail padding"
+   }
+  ],
+  "decoded_bytes": 17
+ },
+ "EEButtonRecord": {
+  "name": "EEButtonRecord",
+  "size": 224,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 100,
+    "size": 100,
+    "comment": ""
+   },
+   {
+    "off": 100,
+    "type": "s8",
+    "name": "mFileName",
+    "count": 104,
+    "size": 104,
+    "comment": "+0x64 -> mName"
+   },
+   {
+    "off": 204,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xcc -> +0x30"
+   },
+   {
+    "off": 208,
+    "type": "s32",
+    "name": "mRow",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd0 -> +0x2c"
+   },
+   {
+    "off": 212,
+    "type": "s32",
+    "name": "mColumn",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd4 -> +0x28"
+   },
+   {
+    "off": 216,
+    "type": "s32",
+    "name": "mPosition",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd8 -> +0x20"
+   },
+   {
+    "off": 220,
+    "type": "s32",
+    "name": "mHotKey",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xdc -> +0x24"
+   }
+  ],
+  "decoded_bytes": 124
+ },
+ "EETechTreeRecord": {
+  "name": "EETechTreeRecord",
+  "size": 268,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mName",
+    "count": 104,
+    "size": 104,
+    "comment": "+0x00 (not read: the name?)"
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 -> mU08->mU4C"
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mEpoch",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c -> the epoch's mL14"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mObsoleteEpoch",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70 -> mL18"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mResearchedEvent",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74 -> mU08->mResearchedEvent"
+   },
+   {
+    "off": 120,
+    "type": "s32",
+    "name": "mObsoleteEvent",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78 -> mU08->mObsoleteEvent"
+   },
+   {
+    "off": 124,
+    "type": "s32",
+    "name": "mCost3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c -> mU08->mCosts[3]"
+   },
+   {
+    "off": 128,
+    "type": "s32",
+    "name": "mCost4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80 -> mU08->mCosts[4]"
+   },
+   {
+    "off": 132,
+    "type": "s32",
+    "name": "mU84",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x84"
+   },
+   {
+    "off": 136,
+    "type": "s32",
+    "name": "mCost5",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x88 -> mU08->mCosts[5]"
+   },
+   {
+    "off": 140,
+    "type": "s32",
+    "name": "mU8C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x8c"
+   },
+   {
+    "off": 144,
+    "type": "s32",
+    "name": "mCost6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x90 -> mU08->mCosts[6]"
+   },
+   {
+    "off": 148,
+    "type": "s32",
+    "name": "mCost2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x94 -> mU08->mCosts[2]"
+   },
+   {
+    "off": 152,
+    "type": "s32",
+    "name": "mBuildTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x98 -> mU08->mU58"
+   },
+   {
+    "off": 156,
+    "type": "s32",
+    "name": "mPrerequisite1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x9c -> mU08->mU5C"
+   },
+   {
+    "off": 160,
+    "type": "s32",
+    "name": "mPrerequisite2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa0 -> mU08->mU60"
+   },
+   {
+    "off": 164,
+    "type": "s32",
+    "name": "mPrerequisite3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa4 -> mU08->mU64"
+   },
+   {
+    "off": 168,
+    "type": "s32",
+    "name": "mPrerequisite4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa8 -> mU08->mSelectedObjects"
+   },
+   {
+    "off": 172,
+    "type": "s32",
+    "name": "mUnitClass",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xac -> mU08->mUnitClass"
+   },
+   {
+    "off": 176,
+    "type": "s32",
+    "name": "mButton",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb0 EEButtonObject::Get -> mButton"
+   },
+   {
+    "off": 180,
+    "type": "bool",
+    "name": "mMakesUnit",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb4 -> mU08->mB7C"
+   },
+   {
+    "off": 181,
+    "type": "bool",
+    "name": "mCountsTowardEpoch",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb5 -> mU08->mB7D"
+   },
+   {
+    "off": 182,
+    "type": "bool",
+    "name": "mBB6",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb6"
+   },
+   {
+    "off": 183,
+    "type": "bool",
+    "name": "mBB7",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb7"
+   },
+   {
+    "off": 184,
+    "type": "s32",
+    "name": "mNameID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb8 -> mU08->mU74"
+   },
+   {
+    "off": 188,
+    "type": "s32",
+    "name": "mKind",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xbc -> mU08->mU48"
+   },
+   {
+    "off": 192,
+    "type": "s32",
+    "name": "mCostResource",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc0 -> mU08->mU38"
+   },
+   {
+    "off": 196,
+    "type": "s32",
+    "name": "mRequiredStatistic",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc4 -> mU08->mU3C"
+   },
+   {
+    "off": 200,
+    "type": "s32",
+    "name": "mRequiredStatisticValue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc8 -> mU08->mRequiredStatisticValue"
+   },
+   {
+    "off": 204,
+    "type": "s32",
+    "name": "mCalamity",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xcc -> mU08->mFirstNodeID"
+   },
+   {
+    "off": 208,
+    "type": "s32",
+    "name": "mHotKey",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd0 -> mU08->mHotKey"
+   },
+   {
+    "off": 212,
+    "type": "s32",
+    "name": "mUD4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd4"
+   },
+   {
+    "off": 216,
+    "type": "s32",
+    "name": "mUD8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd8"
+   },
+   {
+    "off": 220,
+    "type": "s32",
+    "name": "mUDC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xdc"
+   },
+   {
+    "off": 224,
+    "type": "s32",
+    "name": "mUE0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe0"
+   },
+   {
+    "off": 228,
+    "type": "f32",
+    "name": "mFactor1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe4 the node Load's cost factor of its second unit class"
+   },
+   {
+    "off": 232,
+    "type": "f32",
+    "name": "mFactor2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe8 (third)"
+   },
+   {
+    "off": 236,
+    "type": "f32",
+    "name": "mFactor3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xec (fourth)"
+   },
+   {
+    "off": 240,
+    "type": "f32",
+    "name": "mFactor4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xf0 (fifth; the others: 1.0f)"
+   },
+   {
+    "off": 244,
+    "type": "bool",
+    "name": "mShowInEditor",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xf4 -> mU08->mB7E"
+   },
+   {
+    "off": 245,
+    "type": "bool",
+    "name": "mObsoletedByDefault",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xf5 -> mU08->mB7F"
+   },
+   {
+    "off": 246,
+    "type": "bool",
+    "name": "mAvailableWithEpoch",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xf6 -> mU08->mHasParentalVengeance"
+   },
+   {
+    "off": 247,
+    "type": "bool",
+    "name": "mResearchedWithEpoch",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xf7 -> mU08->mHasGroupAttack"
+   },
+   {
+    "off": 248,
+    "type": "s32",
+    "name": "mUF8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xf8"
+   },
+   {
+    "off": 252,
+    "type": "s32",
+    "name": "mNextEpoch",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xfc -> the epoch's mU4C"
+   },
+   {
+    "off": 256,
+    "type": "s32",
+    "name": "mRequiredSOL",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x100 -> the epoch's mU40"
+   },
+   {
+    "off": 260,
+    "type": "s32",
+    "name": "mFirstNodeID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x104 -> the epoch's mFirstNodeID"
+   },
+   {
+    "off": 264,
+    "type": "s32",
+    "name": "mDefaultUnitClass",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x108 -> mU08->mU40"
+   }
+  ],
+  "decoded_bytes": 238
+ },
+ "EEEventEffect": {
+  "name": "EEEventEffect",
+  "size": 88,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s32",
+    "name": "mL00",
+    "count": 1,
+    "size": 4,
+    "comment": ""
+   },
+   {
+    "off": 4,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": ""
+   },
+   {
+    "off": 8,
+    "type": "f32",
+    "name": "mValue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x08 the absolute value (0x1ca591/0x1ca5df: used when +0x0c/+0x10 are 0)"
+   },
+   {
+    "off": 12,
+    "type": "f32",
+    "name": "mOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0c the offset added to the base"
+   },
+   {
+    "off": 16,
+    "type": "f32",
+    "name": "mFactor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x10 the factor of the value"
+   },
+   {
+    "off": 20,
+    "type": "s32",
+    "name": "mUnitClass",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x14 a gUnitClassTable index (< 0x367)"
+   },
+   {
+    "off": 24,
+    "type": "s32",
+    "name": "mNewUnitClass",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x18 a unit class (kind 0x13: its media)"
+   },
+   {
+    "off": 28,
+    "type": "s32",
+    "name": "mUnitSet",
+    "count": 1,
+    "size": 4,
+    "comment": ""
+   },
+   {
+    "off": 32,
+    "type": "s32",
+    "name": "mKind",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x20"
+   },
+   {
+    "off": 36,
+    "type": "s32",
+    "name": "mMediaIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x24 an EEMedia index (kind 6)"
+   },
+   {
+    "off": 40,
+    "type": "s32",
+    "name": "mTechnology",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x28 a tech tree id (kind 9)"
+   },
+   {
+    "off": 44,
+    "type": "s32",
+    "name": "mAttribute",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2c (kind 2: 0x28 = an area effect)"
+   },
+   {
+    "off": 48,
+    "type": "s32",
+    "name": "mSoundID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x30 an EESoundObject index (kinds 0xf..0x12, 0x14, 0x15)"
+   },
+   {
+    "off": 52,
+    "type": "s32",
+    "name": "mButton",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x34 an EEButtonObject index (kind 1)"
+   },
+   {
+    "off": 56,
+    "type": "s32",
+    "name": "mAreaEffect",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x38 an EEAEManager index (kind 2)"
+   },
+   {
+    "off": 60,
+    "type": "s32",
+    "name": "mTerrainType",
+    "count": 1,
+    "size": 4,
+    "comment": ""
+   },
+   {
+    "off": 64,
+    "type": "s32",
+    "name": "mL40",
+    "count": 1,
+    "size": 4,
+    "comment": ""
+   },
+   {
+    "off": 68,
+    "type": "u8",
+    "name": "mRunOnLoad",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x44 (RunEffect 0x1ca7cf: while loading (gLoadingSavedGame) only effects with 1 run)"
+   },
+   {
+    "off": 69,
+    "type": "u8",
+    "name": "mB45",
+    "count": 1,
+    "size": 1,
+    "comment": ""
+   },
+   {
+    "off": 70,
+    "type": "u16",
+    "name": "mU46",
+    "count": 1,
+    "size": 2,
+    "comment": ""
+   },
+   {
+    "off": 72,
+    "type": "s32",
+    "name": "mL48",
+    "count": 1,
+    "size": 4,
+    "comment": ""
+   },
+   {
+    "off": 76,
+    "type": "s32",
+    "name": "mL4C",
+    "count": 1,
+    "size": 4,
+    "comment": ""
+   },
+   {
+    "off": 80,
+    "type": "s32",
+    "name": "mL50",
+    "count": 1,
+    "size": 4,
+    "comment": ""
+   },
+   {
+    "off": 84,
+    "type": "s32",
+    "name": "mL54",
+    "count": 1,
+    "size": 4,
+    "comment": "(sizeof 0x58)"
+   }
+  ],
+  "decoded_bytes": 61
+ },
+ "EEAnimalRecord": {
+  "name": "EEAnimalRecord",
+  "size": 272,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 104,
+    "size": 104,
+    "comment": ""
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mAnimalID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 -> +0x3c"
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mUnitType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c -> +0x38"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mMinHerdSize",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70 -> +0x40"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mMaxHerdSize",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74 -> +0x44"
+   },
+   {
+    "off": 120,
+    "type": "bool",
+    "name": "mBreeds",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x78 -> +0x85"
+   },
+   {
+    "off": 121,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 124,
+    "type": "s32",
+    "name": "mMinBirthInterval",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c -> +0x48 (s)"
+   },
+   {
+    "off": 128,
+    "type": "s32",
+    "name": "mMaxBirthInterval",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80 -> +0x4c (s)"
+   },
+   {
+    "off": 132,
+    "type": "bool",
+    "name": "mHasLeader",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x84 -> +0x87"
+   },
+   {
+    "off": 133,
+    "type": "bool",
+    "name": "mB85",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x85 -> +0x88"
+   },
+   {
+    "off": 134,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 136,
+    "type": "s32",
+    "name": "mL88",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x88 -> mL04"
+   },
+   {
+    "off": 140,
+    "type": "s32",
+    "name": "mL8C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x8c -> mL04"
+   },
+   {
+    "off": 144,
+    "type": "s32",
+    "name": "mL90",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x90 -> mL04"
+   },
+   {
+    "off": 148,
+    "type": "s32",
+    "name": "mL94",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x94 -> mL04"
+   },
+   {
+    "off": 152,
+    "type": "bool",
+    "name": "mB98",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x98 -> +0x89"
+   },
+   {
+    "off": 153,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 156,
+    "type": "f32",
+    "name": "mF9C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x9c -> +0x28 (copied with mov in the original)"
+   },
+   {
+    "off": 160,
+    "type": "s32",
+    "name": "mMinHuntInterval",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa0 -> +0x50 (s)"
+   },
+   {
+    "off": 164,
+    "type": "s32",
+    "name": "mMaxHuntInterval",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa4 -> +0x54 (s)"
+   },
+   {
+    "off": 168,
+    "type": "s32",
+    "name": "mMinRoamMargin",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa8 -> +0x58"
+   },
+   {
+    "off": 172,
+    "type": "s32",
+    "name": "mMaxRoamMargin",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xac -> +0x5c"
+   },
+   {
+    "off": 176,
+    "type": "s32",
+    "name": "mMinGrazeTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb0 -> +0x60 (s)"
+   },
+   {
+    "off": 180,
+    "type": "s32",
+    "name": "mMaxGrazeTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb4 -> +0x64 (s)"
+   },
+   {
+    "off": 184,
+    "type": "bool",
+    "name": "mBB8",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb8 -> +0x84"
+   },
+   {
+    "off": 185,
+    "type": "bool",
+    "name": "mIsPredator",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb9 -> +0x86"
+   },
+   {
+    "off": 186,
+    "type": "bool",
+    "name": "mBBA",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xba -> +0x83"
+   },
+   {
+    "off": 187,
+    "type": "bool",
+    "name": "mHasParentalVengeance",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xbb -> +0x80"
+   },
+   {
+    "off": 188,
+    "type": "bool",
+    "name": "mHasGroupAttack",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xbc -> +0x81"
+   },
+   {
+    "off": 189,
+    "type": "bool",
+    "name": "mHasGroupFlee",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xbd -> +0x82"
+   },
+   {
+    "off": 190,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 192,
+    "type": "f32",
+    "name": "mNewbornGrowth",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc0 -> +0x30"
+   },
+   {
+    "off": 196,
+    "type": "f32",
+    "name": "mGrowthStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc4 -> +0x34"
+   },
+   {
+    "off": 200,
+    "type": "s32",
+    "name": "mGrowInterval",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc8 -> +0x6c (s)"
+   },
+   {
+    "off": 204,
+    "type": "s32",
+    "name": "mHerdRadius",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xcc -> +0x68"
+   },
+   {
+    "off": 208,
+    "type": "s32",
+    "name": "mLD0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd0 -> +0x70 (s)"
+   },
+   {
+    "off": 212,
+    "type": "s32",
+    "name": "mLD4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd4 -> +0x74 (s)"
+   },
+   {
+    "off": 216,
+    "type": "s32",
+    "name": "mLD8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd8 -> +0x2c"
+   },
+   {
+    "off": 220,
+    "type": "s32",
+    "name": "mMinFollowInterval",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xdc -> +0x78 (s)"
+   },
+   {
+    "off": 224,
+    "type": "s32",
+    "name": "mMaxFollowInterval",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe0 -> +0x7c (s)"
+   },
+   {
+    "off": 228,
+    "type": "s32",
+    "name": "mMedia",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe4 -> +0x24 (EEMedia::Get)"
+   },
+   {
+    "off": 232,
+    "type": "s32",
+    "name": "mSound1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe8 -> mSounds"
+   },
+   {
+    "off": 236,
+    "type": "s32",
+    "name": "mSound2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xec -> mSounds"
+   },
+   {
+    "off": 240,
+    "type": "s32",
+    "name": "mSound3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xf0 -> mSounds"
+   },
+   {
+    "off": 244,
+    "type": "s8",
+    "name": "_gapF4",
+    "count": 28,
+    "size": 28,
+    "comment": ""
+   }
+  ],
+  "decoded_bytes": 94
+ },
+ "EEColorTableRecord": {
+  "name": "EEColorTableRecord",
+  "size": 168,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 108,
+    "size": 108,
+    "comment": ""
+   },
+   {
+    "off": 108,
+    "type": "f32",
+    "name": "mColorRed",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c"
+   },
+   {
+    "off": 112,
+    "type": "f32",
+    "name": "mColorGreen",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70"
+   },
+   {
+    "off": 116,
+    "type": "f32",
+    "name": "mColorBlue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74"
+   },
+   {
+    "off": 120,
+    "type": "f32",
+    "name": "mColor2Red",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78"
+   },
+   {
+    "off": 124,
+    "type": "f32",
+    "name": "mColor2Green",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c"
+   },
+   {
+    "off": 128,
+    "type": "f32",
+    "name": "mColor2Blue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80"
+   },
+   {
+    "off": 132,
+    "type": "f32",
+    "name": "mColor4Red",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x84"
+   },
+   {
+    "off": 136,
+    "type": "f32",
+    "name": "mColor4Green",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x88"
+   },
+   {
+    "off": 140,
+    "type": "f32",
+    "name": "mColor4Blue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x8c"
+   },
+   {
+    "off": 144,
+    "type": "s8",
+    "name": "_gap90",
+    "count": 24,
+    "size": 24,
+    "comment": ""
+   }
+  ],
+  "decoded_bytes": 36
+ },
+ "EEAIUnitTargetingRecord": {
+  "name": "EEAIUnitTargetingRecord",
+  "size": 160,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 108,
+    "size": 108,
+    "comment": ""
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mAttackerBonus",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mL70",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mInRangeBonus",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74"
+   },
+   {
+    "off": 120,
+    "type": "s32",
+    "name": "mFasterTargetBonus",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78"
+   },
+   {
+    "off": 124,
+    "type": "s32",
+    "name": "mStrongerTargetBonus",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c"
+   },
+   {
+    "off": 128,
+    "type": "s32",
+    "name": "mL80",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80"
+   },
+   {
+    "off": 132,
+    "type": "s32",
+    "name": "mToHitWeight",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x84"
+   },
+   {
+    "off": 136,
+    "type": "s32",
+    "name": "mProximityWeight",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x88"
+   },
+   {
+    "off": 140,
+    "type": "s32",
+    "name": "mImmobileTargetBonus",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x8c"
+   },
+   {
+    "off": 144,
+    "type": "s32",
+    "name": "mL90",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x90"
+   },
+   {
+    "off": 148,
+    "type": "s32",
+    "name": "mL94",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x94"
+   },
+   {
+    "off": 152,
+    "type": "s32",
+    "name": "mL98",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x98"
+   },
+   {
+    "off": 156,
+    "type": "s32",
+    "name": "mMaxValue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x9c"
+   }
+  ],
+  "decoded_bytes": 32
+ },
+ "EETerrainRecord": {
+  "name": "EETerrainRecord",
+  "size": 204,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mName",
+    "count": 104,
+    "size": 104,
+    "comment": "+0x00 -> mFamilies"
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 -> +0x50"
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mTextureID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c -> +0x4c"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mNameID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70 -> +0x54"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mTextureTileCoverage",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74 -> +0x58"
+   },
+   {
+    "off": 120,
+    "type": "s32",
+    "name": "mTerrainType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78 -> +0x5c"
+   },
+   {
+    "off": 124,
+    "type": "s32",
+    "name": "mColumns",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c -> +0x60"
+   },
+   {
+    "off": 128,
+    "type": "s32",
+    "name": "mRows",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80 -> +0x64"
+   },
+   {
+    "off": 132,
+    "type": "bool",
+    "name": "mIsWater",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x84 -> +0x84"
+   },
+   {
+    "off": 133,
+    "type": "bool",
+    "name": "mHasAlpha",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x85 -> +0x86"
+   },
+   {
+    "off": 134,
+    "type": "bool",
+    "name": "mIsInEditor",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x86 -> +0x85"
+   },
+   {
+    "off": 135,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 1,
+    "size": 1,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 136,
+    "type": "s32",
+    "name": "mColorType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x88 -> +0x68"
+   },
+   {
+    "off": 140,
+    "type": "u32",
+    "name": "mFirst",
+    "count": 3,
+    "size": 12,
+    "comment": "+0x8c: unit class ranges [mFirst[k], mLast[k]] -> mUnitClasses"
+   },
+   {
+    "off": 152,
+    "type": "u32",
+    "name": "mLast",
+    "count": 3,
+    "size": 12,
+    "comment": "+0x98"
+   },
+   {
+    "off": 164,
+    "type": "s32",
+    "name": "mAmbientUnitChance",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa4 -> +0x7c"
+   },
+   {
+    "off": 168,
+    "type": "s32",
+    "name": "mWaterAnimationPeriod",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa8 -> +0x44"
+   },
+   {
+    "off": 172,
+    "type": "s32",
+    "name": "mWaterDepth",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xac -> +0x80"
+   },
+   {
+    "off": 176,
+    "type": "s32",
+    "name": "mRed",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb0 (0..255)"
+   },
+   {
+    "off": 180,
+    "type": "s32",
+    "name": "mGreen",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb4"
+   },
+   {
+    "off": 184,
+    "type": "s32",
+    "name": "mBlue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb8"
+   },
+   {
+    "off": 188,
+    "type": "s8",
+    "name": "_gapBC",
+    "count": 15,
+    "size": 15,
+    "comment": ""
+   },
+   {
+    "off": 203,
+    "type": "bool",
+    "name": "mIsAmbientsOnly",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xcb -> +0x87"
+   }
+  ],
+  "decoded_bytes": 172
+ },
+ "EECliffTerrainRecord": {
+  "name": "EECliffTerrainRecord",
+  "size": 124,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mName",
+    "count": 104,
+    "size": 104,
+    "comment": "+0x00"
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 (negative: no entry)"
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mFirstTerrain",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c -> +0x14"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mLastTerrain",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70 -> +0x18"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mL74",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74 -> +0x1c"
+   },
+   {
+    "off": 120,
+    "type": "bool",
+    "name": "mB78",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x78 -> +0x20"
+   },
+   {
+    "off": 121,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "tail padding"
+   }
+  ],
+  "decoded_bytes": 116
+ },
+ "EECivPower": {
+  "name": "EECivPower",
+  "size": 152,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mName",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x00 the power's name, NUL-terminated (dbcivpowers.dat: \"Flaming"
+   },
+   {
+    "off": 100,
+    "type": "s32",
+    "name": "mDatabaseID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x64"
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68"
+   },
+   {
+    "off": 108,
+    "type": "f32",
+    "name": "mBonus",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c (EECivilizationManager::Load copies it as a level bonus: a dword move into a float)"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mUnitSet",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mTechnology",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74 (EEMResearchTechnology compares it with the node's +0x5c)"
+   },
+   {
+    "off": 120,
+    "type": "s32",
+    "name": "mMiningLimit",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78"
+   },
+   {
+    "off": 124,
+    "type": "s32",
+    "name": "mChance",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c"
+   },
+   {
+    "off": 128,
+    "type": "s32",
+    "name": "mL80",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80"
+   },
+   {
+    "off": 132,
+    "type": "f32",
+    "name": "mAmount",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x84"
+   },
+   {
+    "off": 136,
+    "type": "s32",
+    "name": "mL88",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x88"
+   },
+   {
+    "off": 140,
+    "type": "s32",
+    "name": "mL8C",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x8c"
+   },
+   {
+    "off": 144,
+    "type": "s32",
+    "name": "mL90",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x90"
+   },
+   {
+    "off": 148,
+    "type": "s32",
+    "name": "mUnitType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x94"
+   }
+  ],
+  "decoded_bytes": 136
+ },
+ "EECivilizationCategoryEntry": {
+  "name": "EECivilizationCategoryEntry",
+  "size": 600,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s32",
+    "name": "mDatabaseID",
+    "count": 1,
+    "size": 4,
+    "comment": "+00, loader preserves/increments"
+   },
+   {
+    "off": 4,
+    "type": "s32",
+    "name": "mIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+04, loader preserves/increments"
+   },
+   {
+    "off": 8,
+    "type": "u8",
+    "name": "mUndecoded08",
+    "count": 100,
+    "size": 100,
+    "comment": "+08..6b actual persisted interval; untouched"
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mNameID",
+    "count": 1,
+    "size": 4,
+    "comment": "+6c, actual name reader281c92"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+70, actual long281873"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mUnitSet",
+    "count": 1,
+    "size": 4,
+    "comment": "+74, actual loader writes102"
+   },
+   {
+    "off": 120,
+    "type": "pair_f32",
+    "name": "mLevels",
+    "count": 60,
+    "size": 480,
+    "comment": "+78, actual1..<61 float-pair enumeration"
+   }
+  ],
+  "decoded_bytes": 496
+ },
+ "EECivilizationEntry": {
+  "name": "EECivilizationEntry",
+  "size": 120,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s32",
+    "name": "mDatabaseID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x00"
+   },
+   {
+    "off": 4,
+    "type": "s32",
+    "name": "mIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x04"
+   },
+   {
+    "off": 8,
+    "type": "s8",
+    "name": "mFileName",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x08 the civilization's file (EEUIEPDCS: the selected entry's file)"
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mChecksum",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c actual281bc5 filename/checksum record"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mNameID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70 string id of the name (gResource->GetString)"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mEraNameID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74"
+   }
+  ],
+  "decoded_bytes": 120
+ },
+ "EEToHitRecord": {
+  "name": "EEToHitRecord",
+  "size": 132,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 108,
+    "size": 108,
+    "comment": ""
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mPercents",
+    "count": 6,
+    "size": 24,
+    "comment": "+0x6c (hundredths)"
+   }
+  ],
+  "decoded_bytes": 24
+ },
+ "EEUnitBehaviorRecord": {
+  "name": "EEUnitBehaviorRecord",
+  "size": 124,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 104,
+    "size": 104,
+    "comment": ""
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 (negative: no entry)"
+   },
+   {
+    "off": 108,
+    "type": "bool",
+    "name": "mCanMoveFreely",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x6c -> +0x04"
+   },
+   {
+    "off": 109,
+    "type": "bool",
+    "name": "mCanPursuePastInitialContactLOS",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x6d -> +0x07"
+   },
+   {
+    "off": 110,
+    "type": "bool",
+    "name": "mCanTargetEnemies",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x6e -> +0x08"
+   },
+   {
+    "off": 111,
+    "type": "bool",
+    "name": "mReturnsToInitialContactLocation",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x6f -> +0x09"
+   },
+   {
+    "off": 112,
+    "type": "bool",
+    "name": "mCanFlee",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x70 -> +0x0a"
+   },
+   {
+    "off": 113,
+    "type": "bool",
+    "name": "mMeleeCanMoveFreely",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x71 -> +0x05"
+   },
+   {
+    "off": 114,
+    "type": "bool",
+    "name": "mRangedCanMoveFreely",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x72 -> +0x06"
+   },
+   {
+    "off": 115,
+    "type": "s8",
+    "name": "_gap73",
+    "count": 9,
+    "size": 9,
+    "comment": ""
+   }
+  ],
+  "decoded_bytes": 11
+ },
+ "EECalamityData": {
+  "name": "EECalamityData",
+  "size": 236,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mName",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x00 (\"Undefined\", \"Global Warming\", ... \"Special Location\")"
+   },
+   {
+    "off": 100,
+    "type": "f32",
+    "name": "mFloatParam1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x64 (line of sight: the bonus)"
+   },
+   {
+    "off": 104,
+    "type": "f32",
+    "name": "mFloatParam2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 (plague: functor argument)"
+   },
+   {
+    "off": 108,
+    "type": "f32",
+    "name": "mFloatParam3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c (earthquake Initialize 0xb0765)"
+   },
+   {
+    "off": 112,
+    "type": "f32",
+    "name": "mFloatParam4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70 (earthquake Initialize)"
+   },
+   {
+    "off": 116,
+    "type": "f32",
+    "name": "mF74",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74 (0 in every record)"
+   },
+   {
+    "off": 120,
+    "type": "f32",
+    "name": "mRange",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78 -> EECalamityClass +0x1c (rounded)"
+   },
+   {
+    "off": 124,
+    "type": "s32",
+    "name": "mDatabaseID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c (128..: the record's id)"
+   },
+   {
+    "off": 128,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80 -> +0x18 (an enum, as the class member it fills)"
+   },
+   {
+    "off": 132,
+    "type": "s32",
+    "name": "mClassEnum",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x84 -> +0x08"
+   },
+   {
+    "off": 136,
+    "type": "s32",
+    "name": "mTargetKind",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x88"
+   },
+   {
+    "off": 140,
+    "type": "s32",
+    "name": "mLifeTime",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x8c -> +0x04 (as float)"
+   },
+   {
+    "off": 144,
+    "type": "s32",
+    "name": "mL90",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x90 (1 in every record)"
+   },
+   {
+    "off": 148,
+    "type": "s32",
+    "name": "mGraphicEffectID1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x94 EEGraphicEffect table index (area effects: +0x28)"
+   },
+   {
+    "off": 152,
+    "type": "s32",
+    "name": "mGraphicEffectID2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x98 (area effects: +0x2c)"
+   },
+   {
+    "off": 156,
+    "type": "s32",
+    "name": "mGraphicEffectID3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x9c (mind control: +0x30)"
+   },
+   {
+    "off": 160,
+    "type": "s32",
+    "name": "mGraphicEffectID4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa0 (time warp: +0x34)"
+   },
+   {
+    "off": 164,
+    "type": "s32",
+    "name": "mLA4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa4 (0 in every record)"
+   },
+   {
+    "off": 168,
+    "type": "s32",
+    "name": "mLA8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa8 (0)"
+   },
+   {
+    "off": 172,
+    "type": "s32",
+    "name": "mLAC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xac (0)"
+   },
+   {
+    "off": 176,
+    "type": "s32",
+    "name": "mUnitClassIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb0 (drop object: the unit class to drop)"
+   },
+   {
+    "off": 180,
+    "type": "s32",
+    "name": "mIntParam1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb4 (area effects: +0x44)"
+   },
+   {
+    "off": 184,
+    "type": "s32",
+    "name": "mIntParam2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb8 (area effects: +0x3c)"
+   },
+   {
+    "off": 188,
+    "type": "s32",
+    "name": "mIntParam3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xbc (area effects: functor argument)"
+   },
+   {
+    "off": 192,
+    "type": "s32",
+    "name": "mIntParam4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc0 (fire: functor argument)"
+   },
+   {
+    "off": 196,
+    "type": "s32",
+    "name": "mIntParam5",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc4 (earthquake Initialize)"
+   },
+   {
+    "off": 200,
+    "type": "s32",
+    "name": "mIntParam6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc8 (hurricane: the map area its location needs)"
+   },
+   {
+    "off": 204,
+    "type": "bool",
+    "name": "mBCC",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xcc (1 in 31 of 36 records)"
+   },
+   {
+    "off": 205,
+    "type": "bool",
+    "name": "mBoolParam1",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xcd (extra damage: functor argument)"
+   },
+   {
+    "off": 206,
+    "type": "bool",
+    "name": "mBCE",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xce (0 in every record)"
+   },
+   {
+    "off": 207,
+    "type": "bool",
+    "name": "mBCF",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xcf (0)"
+   },
+   {
+    "off": 208,
+    "type": "bool",
+    "name": "mIsCastByAllSelected",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xd0 -> +0x26"
+   },
+   {
+    "off": 209,
+    "type": "bool",
+    "name": "mIsBlockedByImmunity",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xd1 -> +0x25"
+   },
+   {
+    "off": 210,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 212,
+    "type": "s32",
+    "name": "mSoundID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd4 EESoundObject table index (area effects: +0x34)"
+   },
+   {
+    "off": 216,
+    "type": "s32",
+    "name": "mSecondarySoundID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd8 (plague: its second sound)"
+   },
+   {
+    "off": 220,
+    "type": "s32",
+    "name": "mCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xdc -> +0x20"
+   },
+   {
+    "off": 224,
+    "type": "u32",
+    "name": "mUnitSet",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe0 -> +0x10"
+   },
+   {
+    "off": 228,
+    "type": "s32",
+    "name": "mNameID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe4 -> +0x14"
+   },
+   {
+    "off": 232,
+    "type": "bool",
+    "name": "mBE8",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xe8 -> +0x24"
+   },
+   {
+    "off": 233,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "tail padding"
+   }
+  ],
+  "decoded_bytes": 163
+ },
+ "EEUnitSetRecord": {
+  "name": "EEUnitSetRecord",
+  "size": 184,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mName",
+    "count": 104,
+    "size": 104,
+    "comment": "+0x00"
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 (0 or less: no set at this index)"
+   },
+   {
+    "off": 108,
+    "type": "u32",
+    "name": "mFamilies",
+    "count": 8,
+    "size": 32,
+    "comment": "+0x6c (unit classes; all eight are added)"
+   },
+   {
+    "off": 140,
+    "type": "s32",
+    "name": "mUnitTypes",
+    "count": 8,
+    "size": 32,
+    "comment": "+0x8c (only the positive ones are added)"
+   },
+   {
+    "off": 172,
+    "type": "s32",
+    "name": "mIncludedSet",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xac (index of the set's mL30)"
+   },
+   {
+    "off": 176,
+    "type": "s32",
+    "name": "mExcludedSet",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb0 (index of the set's mL34)"
+   },
+   {
+    "off": 180,
+    "type": "bool",
+    "name": "mShowInEditor",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb4 (the set's mB39)"
+   },
+   {
+    "off": 181,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "tail padding"
+   }
+  ],
+  "decoded_bytes": 181
+ },
+ "EEAreaEffectData": {
+  "name": "EEAreaEffectData",
+  "size": 188,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mName",
+    "count": 104,
+    "size": 104,
+    "comment": "+0x00"
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68"
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mKind",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c (> 0 for a template: EEAEManager::Load skips the others)"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mShape",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mGraphicEffect",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74 (EEGraphicEffect::Get index, none if <= 0)"
+   },
+   {
+    "off": 120,
+    "type": "s32",
+    "name": "mUnitSet",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78"
+   },
+   {
+    "off": 124,
+    "type": "s32",
+    "name": "mMode",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c"
+   },
+   {
+    "off": 128,
+    "type": "s32",
+    "name": "mGraphicEffect18",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80 (EEGraphicEffect::Get index)"
+   },
+   {
+    "off": 132,
+    "type": "s32",
+    "name": "mMedia",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x84 (EEMedia::Get index)"
+   },
+   {
+    "off": 136,
+    "type": "s32",
+    "name": "mMaxLevel",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x88"
+   },
+   {
+    "off": 140,
+    "type": "s32",
+    "name": "mLevel",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x8c"
+   },
+   {
+    "off": 144,
+    "type": "s32",
+    "name": "mL90",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x90"
+   },
+   {
+    "off": 148,
+    "type": "s32",
+    "name": "mL94",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x94"
+   },
+   {
+    "off": 152,
+    "type": "s32",
+    "name": "mL98",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x98"
+   },
+   {
+    "off": 156,
+    "type": "f32",
+    "name": "mRadius",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x9c"
+   },
+   {
+    "off": 160,
+    "type": "f32",
+    "name": "mRed",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa0"
+   },
+   {
+    "off": 164,
+    "type": "f32",
+    "name": "mGreen",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa4"
+   },
+   {
+    "off": 168,
+    "type": "f32",
+    "name": "mBlue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa8"
+   },
+   {
+    "off": 172,
+    "type": "f32",
+    "name": "mAlpha",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xac"
+   },
+   {
+    "off": 176,
+    "type": "f32",
+    "name": "mFB0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb0"
+   },
+   {
+    "off": 180,
+    "type": "bool",
+    "name": "mBB4",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb4"
+   },
+   {
+    "off": 181,
+    "type": "bool",
+    "name": "mBB5",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb5"
+   },
+   {
+    "off": 182,
+    "type": "bool",
+    "name": "mBB6",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb6"
+   },
+   {
+    "off": 183,
+    "type": "bool",
+    "name": "mBB7",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb7"
+   },
+   {
+    "off": 184,
+    "type": "bool",
+    "name": "mBB8",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xb8"
+   },
+   {
+    "off": 185,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "tail padding"
+   }
+  ],
+  "decoded_bytes": 160
+ },
+ "EEUCUpgradeRecord": {
+  "name": "EEUCUpgradeRecord",
+  "size": 240,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 100,
+    "size": 100,
+    "comment": ""
+   },
+   {
+    "off": 100,
+    "type": "f32",
+    "name": "mAttackStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x64"
+   },
+   {
+    "off": 104,
+    "type": "f32",
+    "name": "mHitPointsStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68"
+   },
+   {
+    "off": 108,
+    "type": "f32",
+    "name": "mSpeedStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c"
+   },
+   {
+    "off": 112,
+    "type": "f32",
+    "name": "mRangeStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70"
+   },
+   {
+    "off": 116,
+    "type": "f32",
+    "name": "mShockArmorStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74"
+   },
+   {
+    "off": 120,
+    "type": "f32",
+    "name": "mArrowArmorStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78"
+   },
+   {
+    "off": 124,
+    "type": "f32",
+    "name": "mPierceArmorStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c"
+   },
+   {
+    "off": 128,
+    "type": "f32",
+    "name": "mGunArmorStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80"
+   },
+   {
+    "off": 132,
+    "type": "f32",
+    "name": "mLaserArmorStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x84"
+   },
+   {
+    "off": 136,
+    "type": "f32",
+    "name": "mMissileArmorStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x88"
+   },
+   {
+    "off": 140,
+    "type": "f32",
+    "name": "mFlightTimeStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x8c"
+   },
+   {
+    "off": 144,
+    "type": "f32",
+    "name": "mLeadershipStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x90"
+   },
+   {
+    "off": 148,
+    "type": "f32",
+    "name": "mAreaEffectStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x94"
+   },
+   {
+    "off": 152,
+    "type": "f32",
+    "name": "mTransportStep",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x98"
+   },
+   {
+    "off": 156,
+    "type": "f32",
+    "name": "mAttackCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x9c"
+   },
+   {
+    "off": 160,
+    "type": "f32",
+    "name": "mHitPointsCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa0"
+   },
+   {
+    "off": 164,
+    "type": "f32",
+    "name": "mSpeedCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa4"
+   },
+   {
+    "off": 168,
+    "type": "f32",
+    "name": "mRangeCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa8"
+   },
+   {
+    "off": 172,
+    "type": "f32",
+    "name": "mShockArmorCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xac"
+   },
+   {
+    "off": 176,
+    "type": "f32",
+    "name": "mArrowArmorCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb0"
+   },
+   {
+    "off": 180,
+    "type": "f32",
+    "name": "mPierceArmorCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb4"
+   },
+   {
+    "off": 184,
+    "type": "f32",
+    "name": "mGunArmorCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb8"
+   },
+   {
+    "off": 188,
+    "type": "f32",
+    "name": "mLaserArmorCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xbc"
+   },
+   {
+    "off": 192,
+    "type": "f32",
+    "name": "mMissileArmorCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc0"
+   },
+   {
+    "off": 196,
+    "type": "f32",
+    "name": "mFlightTimeCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc4"
+   },
+   {
+    "off": 200,
+    "type": "f32",
+    "name": "mLeadershipCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc8"
+   },
+   {
+    "off": 204,
+    "type": "f32",
+    "name": "mRepairCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xcc"
+   },
+   {
+    "off": 208,
+    "type": "f32",
+    "name": "mAreaEffectCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd0"
+   },
+   {
+    "off": 212,
+    "type": "f32",
+    "name": "mTransportCost",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd4"
+   },
+   {
+    "off": 216,
+    "type": "s32",
+    "name": "mMaxLevel",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd8"
+   },
+   {
+    "off": 220,
+    "type": "s32",
+    "name": "mLDC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xdc"
+   },
+   {
+    "off": 224,
+    "type": "s32",
+    "name": "mIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe0 (negative: no entry)"
+   },
+   {
+    "off": 228,
+    "type": "s32",
+    "name": "mLE4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe4"
+   },
+   {
+    "off": 232,
+    "type": "s32",
+    "name": "mLE8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe8"
+   },
+   {
+    "off": 236,
+    "type": "bool",
+    "name": "mHasRepairStep",
+    "count": 1,
+    "size": 1,
+    "comment": "+0xec"
+   },
+   {
+    "off": 237,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "tail padding"
+   }
+  ],
+  "decoded_bytes": 125
+ },
+ "EECPBehavior": {
+  "name": "EECPBehavior",
+  "size": 56,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s32",
+    "name": "mL00",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x00"
+   },
+   {
+    "off": 4,
+    "type": "s32",
+    "name": "mIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x04 (the slot; records with index <= 0 are skipped)"
+   },
+   {
+    "off": 8,
+    "type": "s32",
+    "name": "mIntValue1Min",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x08"
+   },
+   {
+    "off": 12,
+    "type": "s32",
+    "name": "mIntValue1Max",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0c"
+   },
+   {
+    "off": 16,
+    "type": "s32",
+    "name": "mIntValue1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x10"
+   },
+   {
+    "off": 20,
+    "type": "s32",
+    "name": "mIntValue2Min",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x14"
+   },
+   {
+    "off": 24,
+    "type": "s32",
+    "name": "mIntValue2Max",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x18"
+   },
+   {
+    "off": 28,
+    "type": "s32",
+    "name": "mIntValue2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x1c"
+   },
+   {
+    "off": 32,
+    "type": "s32",
+    "name": "mL20",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x20"
+   },
+   {
+    "off": 36,
+    "type": "s32",
+    "name": "mFloatSliderMin",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x24"
+   },
+   {
+    "off": 40,
+    "type": "s32",
+    "name": "mFloatSliderMax",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x28"
+   },
+   {
+    "off": 44,
+    "type": "s32",
+    "name": "mFloatSliderScale",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2c"
+   },
+   {
+    "off": 48,
+    "type": "f32",
+    "name": "mFloatValue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x30 (squared after loading, for record 48 only)"
+   },
+   {
+    "off": 52,
+    "type": "bool",
+    "name": "mIsSettable",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x34"
+   },
+   {
+    "off": 53,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "tail padding"
+   }
+  ],
+  "decoded_bytes": 45
+ },
+ "EEGameVariantData": {
+  "name": "EEGameVariantData",
+  "size": 276,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mName",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x00"
+   },
+   {
+    "off": 100,
+    "type": "s32",
+    "name": "mDatabaseID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x64"
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 (the loader skips a record whose index is negative) -> +0x70"
+   },
+   {
+    "off": 108,
+    "type": "f32",
+    "name": "mFactor0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c -> +0x04 (factor 0)"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mSet0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70 -> +0x48 (then (long, float) pairs: +0x70/+0x74 .. +0xb8/+0xbc)"
+   },
+   {
+    "off": 116,
+    "type": "f32",
+    "name": "mFactor1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74 -> +0x08"
+   },
+   {
+    "off": 120,
+    "type": "s32",
+    "name": "mSet1",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78 -> +0x4c"
+   },
+   {
+    "off": 124,
+    "type": "f32",
+    "name": "mFactor2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c -> +0x0c"
+   },
+   {
+    "off": 128,
+    "type": "s32",
+    "name": "mSet2",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80 -> +0x50"
+   },
+   {
+    "off": 132,
+    "type": "f32",
+    "name": "mFactor3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x84 -> +0x10"
+   },
+   {
+    "off": 136,
+    "type": "s32",
+    "name": "mSet3",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x88 -> +0x54"
+   },
+   {
+    "off": 140,
+    "type": "f32",
+    "name": "mFactor4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x8c -> +0x14"
+   },
+   {
+    "off": 144,
+    "type": "s32",
+    "name": "mSet4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x90 -> +0x58"
+   },
+   {
+    "off": 148,
+    "type": "f32",
+    "name": "mFactor5",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x94 -> +0x18"
+   },
+   {
+    "off": 152,
+    "type": "s32",
+    "name": "mSet5",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x98 -> +0x5c"
+   },
+   {
+    "off": 156,
+    "type": "f32",
+    "name": "mFactor6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x9c -> +0x1c"
+   },
+   {
+    "off": 160,
+    "type": "s32",
+    "name": "mSet6",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa0 -> +0x60"
+   },
+   {
+    "off": 164,
+    "type": "f32",
+    "name": "mFactor7",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa4 -> +0x20"
+   },
+   {
+    "off": 168,
+    "type": "s32",
+    "name": "mSet7",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xa8 -> +0x64"
+   },
+   {
+    "off": 172,
+    "type": "f32",
+    "name": "mFactor8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xac -> +0x24"
+   },
+   {
+    "off": 176,
+    "type": "s32",
+    "name": "mSet8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb0 -> +0x68"
+   },
+   {
+    "off": 180,
+    "type": "f32",
+    "name": "mFactor9",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb4 -> +0x28"
+   },
+   {
+    "off": 184,
+    "type": "s32",
+    "name": "mSet9",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xb8 -> +0x6c"
+   },
+   {
+    "off": 188,
+    "type": "f32",
+    "name": "mDepositFactor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xbc -> +0x2c"
+   },
+   {
+    "off": 192,
+    "type": "f32",
+    "name": "mEpochCostFactor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc0 -> +0x30"
+   },
+   {
+    "off": 196,
+    "type": "f32",
+    "name": "mWorkTimeFactor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc4 -> +0x34"
+   },
+   {
+    "off": 200,
+    "type": "s32",
+    "name": "mMoraleBonus",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xc8 -> +0x74"
+   },
+   {
+    "off": 204,
+    "type": "s32",
+    "name": "mNameID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xcc -> +0x78 (gResource string id: 31255 / 31254)"
+   },
+   {
+    "off": 208,
+    "type": "f32",
+    "name": "mFirstEpochCostFactor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd0 -> +0x38"
+   },
+   {
+    "off": 212,
+    "type": "f32",
+    "name": "mSecondEpochCostFactor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd4 -> +0x3c"
+   },
+   {
+    "off": 216,
+    "type": "f32",
+    "name": "mCostSetFactor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xd8 -> +0x40"
+   },
+   {
+    "off": 220,
+    "type": "s32",
+    "name": "mCostSet",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xdc -> +0x7c"
+   },
+   {
+    "off": 224,
+    "type": "f32",
+    "name": "mEarthquakeDamageFactor",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe0 -> +0x44"
+   },
+   {
+    "off": 228,
+    "type": "s32",
+    "name": "mLE4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe4 (0 in every record; not copied)"
+   },
+   {
+    "off": 232,
+    "type": "s32",
+    "name": "mLE8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xe8"
+   },
+   {
+    "off": 236,
+    "type": "s32",
+    "name": "mLEC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xec"
+   },
+   {
+    "off": 240,
+    "type": "s32",
+    "name": "mLF0",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xf0"
+   },
+   {
+    "off": 244,
+    "type": "s32",
+    "name": "mLF4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xf4"
+   },
+   {
+    "off": 248,
+    "type": "s32",
+    "name": "mLF8",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xf8"
+   },
+   {
+    "off": 252,
+    "type": "s32",
+    "name": "mLFC",
+    "count": 1,
+    "size": 4,
+    "comment": "+0xfc"
+   },
+   {
+    "off": 256,
+    "type": "s32",
+    "name": "mL100",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x100"
+   },
+   {
+    "off": 260,
+    "type": "s32",
+    "name": "mL104",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x104"
+   },
+   {
+    "off": 264,
+    "type": "s32",
+    "name": "mL108",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x108"
+   },
+   {
+    "off": 268,
+    "type": "bool",
+    "name": "mSelectable",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x10c -> +0x80"
+   },
+   {
+    "off": 269,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 272,
+    "type": "s32",
+    "name": "mL110",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x110 (0 in every record)"
+   }
+  ],
+  "decoded_bytes": 229
+ },
+ "EEStartingResourcesRecord": {
+  "name": "EEStartingResourcesRecord",
+  "size": 132,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "_gap00",
+    "count": 104,
+    "size": 104,
+    "comment": ""
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 (negative: skipped)"
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mNameID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c -> +0x18"
+   },
+   {
+    "off": 112,
+    "type": "s32",
+    "name": "mFood",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70 -> +0x04"
+   },
+   {
+    "off": 116,
+    "type": "s32",
+    "name": "mWood",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74 -> +0x08"
+   },
+   {
+    "off": 120,
+    "type": "s32",
+    "name": "mStone",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78 -> +0x0c"
+   },
+   {
+    "off": 124,
+    "type": "s32",
+    "name": "mGold",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c -> +0x10"
+   },
+   {
+    "off": 128,
+    "type": "s32",
+    "name": "mIron",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80 -> +0x14"
+   }
+  ],
+  "decoded_bytes": 24
+ },
+ "EEAmbientSoundRecord": {
+  "name": "EEAmbientSoundRecord",
+  "size": 152,
+  "fields": [
+   {
+    "off": 0,
+    "type": "u8",
+    "name": "_u00",
+    "count": 104,
+    "size": 104,
+    "comment": "+0x00"
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 (the slot; < 0: unused)"
+   },
+   {
+    "off": 108,
+    "type": "s32",
+    "name": "mSoundID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c"
+   },
+   {
+    "off": 112,
+    "type": "f32",
+    "name": "mMaximumVolume",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70"
+   },
+   {
+    "off": 116,
+    "type": "f32",
+    "name": "mStartVolume",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74"
+   },
+   {
+    "off": 120,
+    "type": "f32",
+    "name": "mFadeUp",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78 (Init copies it to +0x28 with a plain mov)"
+   },
+   {
+    "off": 124,
+    "type": "f32",
+    "name": "mFadeDown",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x7c (to +0x2c)"
+   },
+   {
+    "off": 128,
+    "type": "f32",
+    "name": "mProbability",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x80"
+   },
+   {
+    "off": 132,
+    "type": "u8",
+    "name": "_u84",
+    "count": 12,
+    "size": 12,
+    "comment": "+0x84"
+   },
+   {
+    "off": 144,
+    "type": "s32",
+    "name": "mIntervalSeconds",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x90"
+   },
+   {
+    "off": 148,
+    "type": "u8",
+    "name": "_u94",
+    "count": 4,
+    "size": 4,
+    "comment": "+0x94"
+   }
+  ],
+  "decoded_bytes": 32
+ },
+ "UIDbControl": {
+  "name": "UIDbControl",
+  "size": 860,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mName",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x000"
+   },
+   {
+    "off": 100,
+    "type": "s8",
+    "name": "mNormalFileName",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x064"
+   },
+   {
+    "off": 200,
+    "type": "s8",
+    "name": "mPressedFileName",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x0c8"
+   },
+   {
+    "off": 300,
+    "type": "s8",
+    "name": "mFocusedFileName",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x12c"
+   },
+   {
+    "off": 400,
+    "type": "s8",
+    "name": "mButtonDownSound",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x190"
+   },
+   {
+    "off": 500,
+    "type": "s8",
+    "name": "mButtonUpSound",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x1f4"
+   },
+   {
+    "off": 600,
+    "type": "f32",
+    "name": "mBackgroundOpacity",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x258"
+   },
+   {
+    "off": 604,
+    "type": "f32",
+    "name": "mTextBoxOpacity",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x25c"
+   },
+   {
+    "off": 608,
+    "type": "f32",
+    "name": "mScrollBarBgOpacity",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x260"
+   },
+   {
+    "off": 612,
+    "type": "u32",
+    "name": "mUnknown264",
+    "count": 5,
+    "size": 20,
+    "comment": "+0x264"
+   },
+   {
+    "off": 632,
+    "type": "f32",
+    "name": "mLeftOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x278"
+   },
+   {
+    "off": 636,
+    "type": "f32",
+    "name": "mRightOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x27c"
+   },
+   {
+    "off": 640,
+    "type": "f32",
+    "name": "mBottomOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x280"
+   },
+   {
+    "off": 644,
+    "type": "f32",
+    "name": "mTopOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x284"
+   },
+   {
+    "off": 648,
+    "type": "s32",
+    "name": "mUnknown288",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x288"
+   },
+   {
+    "off": 652,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x28c"
+   },
+   {
+    "off": 656,
+    "type": "s32",
+    "name": "mFormID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x290"
+   },
+   {
+    "off": 660,
+    "type": "u32",
+    "name": "mGroup",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x294"
+   },
+   {
+    "off": 664,
+    "type": "u32",
+    "name": "mControlType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x298"
+   },
+   {
+    "off": 668,
+    "type": "s32",
+    "name": "mFormIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x29c"
+   },
+   {
+    "off": 672,
+    "type": "s32",
+    "name": "mBorderThickness",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2a0"
+   },
+   {
+    "off": 676,
+    "type": "u32",
+    "name": "mLeftOffsetType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2a4"
+   },
+   {
+    "off": 680,
+    "type": "u32",
+    "name": "mRightOffsetType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2a8"
+   },
+   {
+    "off": 684,
+    "type": "u32",
+    "name": "mTopOffsetType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2ac"
+   },
+   {
+    "off": 688,
+    "type": "u32",
+    "name": "mBottomOffsetType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2b0"
+   },
+   {
+    "off": 692,
+    "type": "u32",
+    "name": "mBackgroundRed",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2b4"
+   },
+   {
+    "off": 696,
+    "type": "u32",
+    "name": "mBackgroundGreen",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2b8"
+   },
+   {
+    "off": 700,
+    "type": "u32",
+    "name": "mBackgroundBlue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2bc"
+   },
+   {
+    "off": 704,
+    "type": "s32",
+    "name": "mStringTableBegin",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2c0"
+   },
+   {
+    "off": 708,
+    "type": "s32",
+    "name": "mStringTableEnd",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2c4"
+   },
+   {
+    "off": 712,
+    "type": "u32",
+    "name": "mFontTableIndex",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2c8"
+   },
+   {
+    "off": 716,
+    "type": "u32",
+    "name": "mTextForegroundRed",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2cc"
+   },
+   {
+    "off": 720,
+    "type": "u32",
+    "name": "mTextForegroundGreen",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2d0"
+   },
+   {
+    "off": 724,
+    "type": "u32",
+    "name": "mTextForegroundBlue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2d4"
+   },
+   {
+    "off": 728,
+    "type": "s32",
+    "name": "mTextAlignment",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2d8"
+   },
+   {
+    "off": 732,
+    "type": "s32",
+    "name": "mNormalLeft",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2dc"
+   },
+   {
+    "off": 736,
+    "type": "s32",
+    "name": "mNormalRight",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2e0"
+   },
+   {
+    "off": 740,
+    "type": "s32",
+    "name": "mNormalTop",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2e4"
+   },
+   {
+    "off": 744,
+    "type": "s32",
+    "name": "mNormalBottom",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2e8"
+   },
+   {
+    "off": 748,
+    "type": "s32",
+    "name": "mPressedLeft",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2ec"
+   },
+   {
+    "off": 752,
+    "type": "s32",
+    "name": "mPressedRight",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2f0"
+   },
+   {
+    "off": 756,
+    "type": "s32",
+    "name": "mPressedTop",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2f4"
+   },
+   {
+    "off": 760,
+    "type": "s32",
+    "name": "mPressedBottom",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2f8"
+   },
+   {
+    "off": 764,
+    "type": "s32",
+    "name": "mFocusedLeft",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x2fc"
+   },
+   {
+    "off": 768,
+    "type": "s32",
+    "name": "mFocusedRight",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x300"
+   },
+   {
+    "off": 772,
+    "type": "s32",
+    "name": "mFocusedTop",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x304"
+   },
+   {
+    "off": 776,
+    "type": "s32",
+    "name": "mFocusedBottom",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x308"
+   },
+   {
+    "off": 780,
+    "type": "s32",
+    "name": "mMaxChars",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x30c"
+   },
+   {
+    "off": 784,
+    "type": "u32",
+    "name": "mSelectedListBoxRed",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x310"
+   },
+   {
+    "off": 788,
+    "type": "u32",
+    "name": "mSelectedListBoxGreen",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x314"
+   },
+   {
+    "off": 792,
+    "type": "u32",
+    "name": "mSelectedListBoxBlue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x318"
+   },
+   {
+    "off": 796,
+    "type": "s32",
+    "name": "mStartCurrentSelection",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x31c"
+   },
+   {
+    "off": 800,
+    "type": "u32",
+    "name": "mFocusedLineRed",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x320"
+   },
+   {
+    "off": 804,
+    "type": "u32",
+    "name": "mFocusedLineGreen",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x324"
+   },
+   {
+    "off": 808,
+    "type": "u32",
+    "name": "mFocusedLineBlue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x328"
+   },
+   {
+    "off": 812,
+    "type": "s32",
+    "name": "mStartRange",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x32c"
+   },
+   {
+    "off": 816,
+    "type": "s32",
+    "name": "mEndRange",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x330"
+   },
+   {
+    "off": 820,
+    "type": "s32",
+    "name": "mCurrentRange",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x334"
+   },
+   {
+    "off": 824,
+    "type": "s32",
+    "name": "mPageSize",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x338"
+   },
+   {
+    "off": 828,
+    "type": "s32",
+    "name": "mStringTableID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x33c"
+   },
+   {
+    "off": 832,
+    "type": "s32",
+    "name": "mBlinkRate",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x340"
+   },
+   {
+    "off": 836,
+    "type": "u32",
+    "name": "mUnknown344",
+    "count": 3,
+    "size": 12,
+    "comment": "+0x344"
+   },
+   {
+    "off": 848,
+    "type": "bool",
+    "name": "mIsVisible",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x350"
+   },
+   {
+    "off": 849,
+    "type": "bool",
+    "name": "mStartChecked",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x351"
+   },
+   {
+    "off": 850,
+    "type": "bool",
+    "name": "mListBoxAlwaysDirty",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x352"
+   },
+   {
+    "off": 851,
+    "type": "bool",
+    "name": "mSortListBox",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x353"
+   },
+   {
+    "off": 852,
+    "type": "bool",
+    "name": "mFocusedHasAlpha",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x354"
+   },
+   {
+    "off": 853,
+    "type": "bool",
+    "name": "mPressedHasAlpha",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x355"
+   },
+   {
+    "off": 854,
+    "type": "bool",
+    "name": "mNormalHasAlpha",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x356"
+   },
+   {
+    "off": 855,
+    "type": "bool",
+    "name": "mAlwaysDirty",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x357"
+   },
+   {
+    "off": 856,
+    "type": "bool",
+    "name": "mBoolPlaceholder2",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x358"
+   },
+   {
+    "off": 857,
+    "type": "bool",
+    "name": "mBoolPlaceholder3",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x359"
+   },
+   {
+    "off": 858,
+    "type": "bool",
+    "name": "mBoolPlaceholder4",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x35a"
+   },
+   {
+    "off": 859,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 1,
+    "size": 1,
+    "comment": "tail padding"
+   }
+  ],
+  "decoded_bytes": 820
+ },
+ "UIDbDataBackgrounds": {
+  "name": "UIDbDataBackgrounds",
+  "size": 308,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mName",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x000 an empty name leaves the slot NULL"
+   },
+   {
+    "off": 100,
+    "type": "s8",
+    "name": "mTextureFile",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x064"
+   },
+   {
+    "off": 200,
+    "type": "f32",
+    "name": "mTopOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0c8"
+   },
+   {
+    "off": 204,
+    "type": "f32",
+    "name": "mBottomOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0cc"
+   },
+   {
+    "off": 208,
+    "type": "f32",
+    "name": "mLeftOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0d0"
+   },
+   {
+    "off": 212,
+    "type": "f32",
+    "name": "mRightOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0d4"
+   },
+   {
+    "off": 216,
+    "type": "f32",
+    "name": "mTileWidthPercent",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0d8"
+   },
+   {
+    "off": 220,
+    "type": "f32",
+    "name": "mTileHeightPercent",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0dc"
+   },
+   {
+    "off": 224,
+    "type": "f32",
+    "name": "mOpacity",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0e0"
+   },
+   {
+    "off": 228,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0e4"
+   },
+   {
+    "off": 232,
+    "type": "u32",
+    "name": "mBackgroundID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0e8"
+   },
+   {
+    "off": 236,
+    "type": "u32",
+    "name": "mFormID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0ec"
+   },
+   {
+    "off": 240,
+    "type": "s32",
+    "name": "mTextureTop",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0f0"
+   },
+   {
+    "off": 244,
+    "type": "s32",
+    "name": "mTextureLeft",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0f4"
+   },
+   {
+    "off": 248,
+    "type": "s32",
+    "name": "mTextureBottom",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0f8"
+   },
+   {
+    "off": 252,
+    "type": "s32",
+    "name": "mTextureRight",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0fc"
+   },
+   {
+    "off": 256,
+    "type": "u32",
+    "name": "mBackgroundType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x100"
+   },
+   {
+    "off": 260,
+    "type": "u32",
+    "name": "mTopOffsetType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x104"
+   },
+   {
+    "off": 264,
+    "type": "u32",
+    "name": "mBottomOffsetType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x108"
+   },
+   {
+    "off": 268,
+    "type": "u32",
+    "name": "mLeftOffsetType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x10c"
+   },
+   {
+    "off": 272,
+    "type": "u32",
+    "name": "mRightOffsetType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x110"
+   },
+   {
+    "off": 276,
+    "type": "s32",
+    "name": "mNumCols",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x114"
+   },
+   {
+    "off": 280,
+    "type": "s32",
+    "name": "mNumRows",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x118"
+   },
+   {
+    "off": 284,
+    "type": "s32",
+    "name": "mDrawPriority",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x11c at least 1"
+   },
+   {
+    "off": 288,
+    "type": "s32",
+    "name": "mRed",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x120 0..255"
+   },
+   {
+    "off": 292,
+    "type": "s32",
+    "name": "mGreen",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x124"
+   },
+   {
+    "off": 296,
+    "type": "s32",
+    "name": "mBlue",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x128"
+   },
+   {
+    "off": 300,
+    "type": "bool",
+    "name": "mVisible",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x12c"
+   },
+   {
+    "off": 301,
+    "type": "bool",
+    "name": "mHasAlpha",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x12d"
+   },
+   {
+    "off": 302,
+    "type": "bool",
+    "name": "mAttribute1",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x12e"
+   },
+   {
+    "off": 303,
+    "type": "bool",
+    "name": "mAttribute2",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x12f"
+   },
+   {
+    "off": 304,
+    "type": "bool",
+    "name": "mAttribute3",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x130"
+   },
+   {
+    "off": 305,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 3,
+    "size": 3,
+    "comment": "tail padding"
+   }
+  ],
+  "decoded_bytes": 301
+ },
+ "UIDbDataForms": {
+  "name": "UIDbDataForms",
+  "size": 268,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mName",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x000"
+   },
+   {
+    "off": 100,
+    "type": "s8",
+    "name": "mMusicFile",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x064 \"none\" stops the music"
+   },
+   {
+    "off": 200,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0c8 (provisional name)"
+   },
+   {
+    "off": 204,
+    "type": "s32",
+    "name": "mFormID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0cc 0 or less: no form"
+   },
+   {
+    "off": 208,
+    "type": "u32",
+    "name": "mControlCount",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0d0"
+   },
+   {
+    "off": 212,
+    "type": "u32",
+    "name": "mControlGroupCount",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0d4"
+   },
+   {
+    "off": 216,
+    "type": "f32",
+    "name": "mLeftOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0d8"
+   },
+   {
+    "off": 220,
+    "type": "f32",
+    "name": "mRightOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0dc"
+   },
+   {
+    "off": 224,
+    "type": "f32",
+    "name": "mBottomOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0e0"
+   },
+   {
+    "off": 228,
+    "type": "f32",
+    "name": "mTopOffset",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0e4"
+   },
+   {
+    "off": 232,
+    "type": "u32",
+    "name": "mDesignedWidth",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0e8"
+   },
+   {
+    "off": 236,
+    "type": "u32",
+    "name": "mDesignedHeight",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0ec"
+   },
+   {
+    "off": 240,
+    "type": "u32",
+    "name": "mHelpTextTimeDelay",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0f0"
+   },
+   {
+    "off": 244,
+    "type": "u32",
+    "name": "mUnknownF4",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0f4 (provisional name)"
+   },
+   {
+    "off": 248,
+    "type": "u32",
+    "name": "mLeftOffsetType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0f8"
+   },
+   {
+    "off": 252,
+    "type": "u32",
+    "name": "mRightOffsetType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0fc"
+   },
+   {
+    "off": 256,
+    "type": "u32",
+    "name": "mTopOffsetType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x100"
+   },
+   {
+    "off": 260,
+    "type": "u32",
+    "name": "mBottomOffsetType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x104"
+   },
+   {
+    "off": 264,
+    "type": "bool",
+    "name": "mTabbingOn",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x108"
+   },
+   {
+    "off": 265,
+    "type": "bool",
+    "name": "mUseToolTips",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x109"
+   },
+   {
+    "off": 266,
+    "type": "bool",
+    "name": "mUseExclusiveCoords",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x10a"
+   },
+   {
+    "off": 267,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 1,
+    "size": 1,
+    "comment": "tail padding"
+   }
+  ],
+  "decoded_bytes": 263
+ },
+ "UIDbDataEvents": {
+  "name": "UIDbDataEvents",
+  "size": 116,
+  "fields": [
+   {
+    "off": 0,
+    "type": "u32",
+    "name": "mUnknown00",
+    "count": 26,
+    "size": 104,
+    "comment": "+0x00 PROVISIONAL (unused here)"
+   },
+   {
+    "off": 104,
+    "type": "s32",
+    "name": "mEventID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x68 negative: no event"
+   },
+   {
+    "off": 108,
+    "type": "u32",
+    "name": "mOwnerID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c control table index / form ID"
+   },
+   {
+    "off": 112,
+    "type": "u32",
+    "name": "mEventType",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70"
+   }
+  ],
+  "decoded_bytes": 12
+ },
+ "UIDbDataFonts": {
+  "name": "UIDbDataFonts",
+  "size": 128,
+  "fields": [
+   {
+    "off": 0,
+    "type": "s8",
+    "name": "mFontName",
+    "count": 108,
+    "size": 108,
+    "comment": "+0x00 empty: no font"
+   },
+   {
+    "off": 108,
+    "type": "u32",
+    "name": "mStringID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x6c face name in the string table"
+   },
+   {
+    "off": 112,
+    "type": "u32",
+    "name": "mSize",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x70"
+   },
+   {
+    "off": 116,
+    "type": "u32",
+    "name": "mQuality",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x74"
+   },
+   {
+    "off": 120,
+    "type": "bool",
+    "name": "mBold",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x78 style bit 0x01"
+   },
+   {
+    "off": 121,
+    "type": "bool",
+    "name": "mItalic",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x79 style bit 0x02"
+   },
+   {
+    "off": 122,
+    "type": "bool",
+    "name": "mUnderline",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x7a style bit 0x04"
+   },
+   {
+    "off": 123,
+    "type": "bool",
+    "name": "mStyle10",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x7b style bit 0x10"
+   },
+   {
+    "off": 124,
+    "type": "bool",
+    "name": "mStyle08",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x7c style bit 0x08"
+   },
+   {
+    "off": 125,
+    "type": "s8",
+    "name": "mPad",
+    "count": 3,
+    "size": 3,
+    "comment": ""
+   }
+  ],
+  "decoded_bytes": 124
+ },
+ "UIDbDataHotKeys": {
+  "name": "UIDbDataHotKeys",
+  "size": 124,
+  "fields": [
+   {
+    "off": 0,
+    "type": "u32",
+    "name": "mUnknown00",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x00"
+   },
+   {
+    "off": 4,
+    "type": "s32",
+    "name": "mID",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x04 negative: no hot key"
+   },
+   {
+    "off": 8,
+    "type": "s8",
+    "name": "mName",
+    "count": 100,
+    "size": 100,
+    "comment": "+0x08"
+   },
+   {
+    "off": 108,
+    "type": "u32",
+    "name": "mModifiers",
+    "count": 3,
+    "size": 12,
+    "comment": "+0x6c DIK_* codes, 0x7fff: none"
+   },
+   {
+    "off": 120,
+    "type": "u32",
+    "name": "mKey",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x78"
+   }
+  ],
+  "decoded_bytes": 120
+ },
+ "GETextureFileHeader": {
+  "name": "GETextureFileHeader",
+  "size": 16,
+  "fields": [
+   {
+    "off": 0,
+    "type": "u8",
+    "name": "mIsCompressed",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x00"
+   },
+   {
+    "off": 1,
+    "type": "u8",
+    "name": "mMipLevelCount",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x01 Save writes 1"
+   },
+   {
+    "off": 2,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 2,
+    "size": 2,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 4,
+    "type": "u32",
+    "name": "mFrameCount",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x02"
+   },
+   {
+    "off": 8,
+    "type": "u32",
+    "name": "mWidth",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x06"
+   },
+   {
+    "off": 12,
+    "type": "u32",
+    "name": "mHeight",
+    "count": 1,
+    "size": 4,
+    "comment": "+0x0a"
+   }
+  ],
+  "decoded_bytes": 14
+ },
+ "GETGAHeader": {
+  "name": "GETGAHeader",
+  "size": 20,
+  "fields": [
+   {
+    "off": 0,
+    "type": "u8",
+    "name": "mIDLength",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x00"
+   },
+   {
+    "off": 1,
+    "type": "u8",
+    "name": "mColorMapType",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x01"
+   },
+   {
+    "off": 2,
+    "type": "u8",
+    "name": "mImageType",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x02: 2 = uncompressed true colour"
+   },
+   {
+    "off": 3,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 1,
+    "size": 1,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 4,
+    "type": "u16",
+    "name": "mColorMapOrigin",
+    "count": 1,
+    "size": 2,
+    "comment": "+0x03"
+   },
+   {
+    "off": 6,
+    "type": "u16",
+    "name": "mColorMapLength",
+    "count": 1,
+    "size": 2,
+    "comment": "+0x05"
+   },
+   {
+    "off": 8,
+    "type": "u8",
+    "name": "mColorMapDepth",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x07"
+   },
+   {
+    "off": 9,
+    "type": "pad",
+    "name": "(pad)",
+    "count": 1,
+    "size": 1,
+    "comment": "alignment padding"
+   },
+   {
+    "off": 10,
+    "type": "u16",
+    "name": "mXOrigin",
+    "count": 1,
+    "size": 2,
+    "comment": "+0x08"
+   },
+   {
+    "off": 12,
+    "type": "u16",
+    "name": "mYOrigin",
+    "count": 1,
+    "size": 2,
+    "comment": "+0x0a"
+   },
+   {
+    "off": 14,
+    "type": "u16",
+    "name": "mWidth",
+    "count": 1,
+    "size": 2,
+    "comment": "+0x0c"
+   },
+   {
+    "off": 16,
+    "type": "u16",
+    "name": "mHeight",
+    "count": 1,
+    "size": 2,
+    "comment": "+0x0e"
+   },
+   {
+    "off": 18,
+    "type": "u8",
+    "name": "mPixelDepth",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x10"
+   },
+   {
+    "off": 19,
+    "type": "u8",
+    "name": "mDescriptor",
+    "count": 1,
+    "size": 1,
+    "comment": "+0x11: bit 4 right-to-left, bit 5 top-down"
+   }
+  ],
+  "decoded_bytes": 18
+ }
+}
