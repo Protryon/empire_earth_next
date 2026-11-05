@@ -7,7 +7,7 @@ the static UCRT).
 -> <out>/exe/EE-AOC.exe with its .map (8-digit addresses) and .pdb (default out: build/clang). The exe holds the
 game with its image libraries (libpng/zlib/libjpeg), the engine, the plug-ins the original loaded as DLLs (TCP
 protocol, the mixer, the Default random map generator, the DX7 T&L renderer; registered in PIMModule.cpp) and the
-language resources. Only Windows system DLLs and the third-party DLLs still to be replaced (Mss32, binkw32) are
+language resources, with miniaudio, dmusic and pl_mpeg for sound, music and movies. Only Windows system DLLs are
 imported. Every unit is compiled first (tools/clang_build.py, objects in <out>/obj), then linked.
 
 --test-profile windowed-software (TEST ONLY; default out build/clang-test): images for the headless live-game
