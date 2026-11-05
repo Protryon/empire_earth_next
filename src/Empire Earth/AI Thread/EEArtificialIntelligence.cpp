@@ -4,6 +4,7 @@
 // vector<EEComputerPlayer*>::push_back (first used here).
 #include <windows.h>
 #include <vector>
+#include <chrono>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE3DPoint.h"
@@ -22,6 +23,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEArtificialIntelligence.h"
+#include "ee/EECPTrace.h"
 
 // FUNCTION: EXE 0x42cc87
 // Returns a unit type's weight: 3 for the space fighter, 1 otherwise
@@ -70,8 +72,16 @@ void EEArtificialIntelligence::Update()
     unsigned long theTime = gPhysics->mGameTime;
     if (!(theTime >= this->mNextUpdateTime) || this->mComputerPlayers.size() <= 0)
         return;
-    if (this->mComputerPlayers[this->mNextPlayer]->mActive)
-        this->mComputerPlayers[this->mNextPlayer]->Update(theTime);
+    if (this->mComputerPlayers[this->mNextPlayer]->mActive) {
+        if (gCPTraceOn) {   // the AI's real-time cost (EE-AIPROF lines; never fed back into the simulation)
+            std::chrono::steady_clock::time_point theStart = std::chrono::steady_clock::now();
+            this->mComputerPlayers[this->mNextPlayer]->Update(theTime);
+            long long theMicroseconds = std::chrono::duration_cast<std::chrono::microseconds>(
+                std::chrono::steady_clock::now() - theStart).count();
+            EECPTraceProfile(this->mComputerPlayers[this->mNextPlayer], theTime, theMicroseconds);
+        } else
+            this->mComputerPlayers[this->mNextPlayer]->Update(theTime);
+    }
     this->mNextPlayer++;
     if (this->mNextPlayer == this->mComputerPlayers.size())
         this->mNextPlayer = 0;

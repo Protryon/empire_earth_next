@@ -49,6 +49,7 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPBehavior.h"
+#include "ee/EECPTrace.h"
 
 const UString EECPCivilizationManager::sData("EECPCivilizationManager-Data");
 // SYNTHETIC: EXE 0x46e8d4   (wrapper)
@@ -266,6 +267,7 @@ void EECPCivilizationManager::AttemptEpochAdvance(unsigned long inTime)
         } else {
             this->mResearchManager->Research(theNode->mData->mID);
             ESDebugOut("EECPCivilizationManager::AttemptEpochAdvance advancing epoch at time %ld\n", inTime);
+            EE_CP_TRACE(this->mPlayer, "epoch.advance", "from=%ld to=%ld", theEpoch, theNext);
             this->mAdvancingEpoch = true;
         }
     }
@@ -1239,11 +1241,26 @@ void EECPCivilizationManager::Update(unsigned long inTime)
         this->SetNextEpochAdvanceTime(inTime, false);
         this->mScheduleEpochAdvance = false;
     }
-    this->mUnitManager->Update(inTime);
-    this->mResourceManager->Update(inTime);
-    this->mBuildManager->Update(inTime);
-    this->mResearchManager->Update(inTime);
-    this->mWallManager->Update(inTime);
+    {
+        EECPTraceScope theScope("unit");
+        this->mUnitManager->Update(inTime);
+    }
+    {
+        EECPTraceScope theScope("resource");
+        this->mResourceManager->Update(inTime);
+    }
+    {
+        EECPTraceScope theScope("build");
+        this->mBuildManager->Update(inTime);
+    }
+    {
+        EECPTraceScope theScope("research");
+        this->mResearchManager->Update(inTime);
+    }
+    {
+        EECPTraceScope theScope("wall");
+        this->mWallManager->Update(inTime);
+    }
     if (!this->mAdvancingEpoch && (this->mBuildManager->HasLaterEpochRequests() || this->mResearchManager->HasLaterEpochIDs() || this->mUnitManager->HasLaterEpochRequests()
             || this->IsBehindInEpoch()))
         this->AttemptEpochAdvance(inTime);

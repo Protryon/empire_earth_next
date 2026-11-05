@@ -59,6 +59,7 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include "ee/EEAIFOSubGroupFilter.h"
+#include "ee/EECPTrace.h"
 #include <EEAIFunctionObjects.h>
 
 const UString EECPUnitManager::sData("EECPUnitManager-Data");
@@ -668,6 +669,7 @@ void EECPUnitManager::RequestUnits(long inUnitClass, long inCount, long inTownID
         if (theFound)
             return;
         if (theRequests[i].mUnitClass == inUnitClass) {
+            EE_CP_TRACE(this->mPlayer, "train.request", "cls=%ld n=%ld town=%ld added=1", inUnitClass, inCount, inTownID);
             this->mManager->GetResourceManager()->AddCosts(theNode, inCount);
             theRequests[i].mCount += inCount;
             this->mWaitingCounts[inUnitClass] += inCount;
@@ -716,6 +718,7 @@ void EECPUnitManager::RequestUnits(long inUnitClass, long inCount, long inTownID
         }
         if (theDone) {
         add:
+            EE_CP_TRACE(this->mPlayer, "train.request", "cls=%ld n=%ld town=%ld added=0", inUnitClass, inCount, inTownID);
             this->mManager->GetResourceManager()->AddCosts(theNode, inCount);
             theRequests.push_back(theRequest);
             this->mWaitingCounts[inUnitClass] += inCount;

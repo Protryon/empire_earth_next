@@ -40,6 +40,7 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EEAIRandom.h"
+#include "ee/EECPTrace.h"
 const UString EECPResearchManager::sData("EECPResearchManager-Data");
 // SYNTHETIC: EXE 0x489fc4   (wrapper)
 // SYNTHETIC: EXE 0x489fce   (ctor)
@@ -282,6 +283,7 @@ void EECPResearchManager::Research(long inID)
         this->mEpochIDs[theEpoch].push_back(inID);
     if (!EEIsEpochID(inID))
         this->mManager->mResourceManager->AddCosts(theNode, 1);
+    EE_CP_TRACE(this->mPlayer, "research.request", "tech=%ld epoch=%ld", inID, theEpoch);
 }
 
 // FUNCTION: EXE 0x48a91e
@@ -456,6 +458,7 @@ bool EECPResearchManager::TryResearch(long inID)
                                  || (theUnit->mCommand ? theUnit->mCommand->mType : 0) == kActionWaitForGarrisonCost)
                                 && theUnit->mIsBuilt) {
                                 theUnit->QueueResearch(inID, EEIsEpochID(inID));
+                                EE_CP_TRACE(this->mPlayer, "research.start", "tech=%ld at=%ld", inID, theClass);
                                 theResult = true;
                             }
                             ++theIterator;
@@ -464,6 +467,7 @@ bool EECPResearchManager::TryResearch(long inID)
                         EEComplexUnit* theUnit = *theIterator;
                         if (theUnit->mIsBuilt) {
                             theUnit->QueueResearch(inID, EEIsEpochID(inID));
+                            EE_CP_TRACE(this->mPlayer, "research.start", "tech=%ld at=%ld", inID, theClass);
                             theResult = true;
                         }
                     }

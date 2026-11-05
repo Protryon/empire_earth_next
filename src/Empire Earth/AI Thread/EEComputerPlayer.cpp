@@ -33,6 +33,7 @@
 #include "ee/EEAIRandom.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
+#include "ee/EECPTrace.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
@@ -237,6 +238,8 @@ void EEComputerPlayer::WorkOutPopulation()
                         theMax = theCount;
                 }
             }
+            if (!EECPCheatOn(kCPCheatPopBand))
+                theMax = theOwn;   // EE_AI_CHEATS without popband: no pull toward the human population
             this->mPopulationCap = UMFloatToLong((theOwn * theOwnWeight + theMax * theOtherWeight) / (theOwnWeight + theOtherWeight));
             this->mPopulationCap = UMFloatToLong(this->GetPopLimitAdjustment() * this->mPopulationCap);
         } else
@@ -1039,7 +1042,7 @@ EECPResourceCenter* EEComputerPlayer::GetResourceCenterOf(EEUnit* inUnit)
 // Returns true for epoch technologies; otherwise asks the player whether it can afford the cost
 bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
 {
-    if (this->mTechnologies != NULL && EEIsEpochID(inTechnology->mData->mID))
+    if (this->mTechnologies != NULL && EEIsEpochID(inTechnology->mData->mID) && EECPCheatOn(kCPCheatEpochs))
         return true;
     return EEPlayer::CanAfford(inTechnology, inUnitType, inCount);
 }
@@ -1048,6 +1051,8 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
 // When another player is in a later epoch, pulls the AI's next epoch advance forward to a random catch-up time
 void EEComputerPlayer::CatchUpEpoch(EEPlayer* inPlayer)
 {
+    if (!EECPCheatOn(kCPCheatCatchUp))
+        return;
     unsigned long theNext = this->mCivilizationManager->mNextEpochAdvanceTime;
     unsigned long theNow = gPhysics->mGameTime;
     long theMinimum;
@@ -1320,7 +1325,7 @@ void EEComputerPlayer::Init()
     this->mLF20 = -1;
     this->mDropOffDistance = UMFloatToLong((float)sqrt(this->mDropOffDistance));
     this->mCanBuild = true;
-    this->mIsCheating = true;
+    this->mIsCheating = EECPCheatOn(kCPCheatCost);   // EE_AI_CHEATS (the original: always true)
     this->mCanDefend = true;
     this->mBF4E = true;
     this->mCanExplore = true;
@@ -5438,7 +5443,7 @@ void EEComputerPlayer::TakeResource(long inIndex, long inAmount)
 // Pays for a technology, except epoch advances, which are free for the computer player
 void EEComputerPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction)
 {
-    if (!EEIsEpochID(inTechnology->mData->mID))
+    if (!EEIsEpochID(inTechnology->mData->mID) || !EECPCheatOn(kCPCheatEpochs))
         EEPlayer::Pay(inTechnology, inUnitType, inFraction);
 }
 
@@ -5565,8 +5570,13 @@ void EEComputerPlayer::Update(unsigned long inTime)
 {
     UWideString theUnused1;
     UWideString theUnused2;
+    EECPTraceScope theScope("cp");
     if (!this->mIsStarted) {
-        gWorld.mMap->ExploreUnseen(this);
+        if (EECPCheatOn(kCPCheatReveal))
+            gWorld.mMap->ExploreUnseen(this);
+        EE_CP_TRACE(this, "start", "difficulty=%lu cheats=%s cheating=%d cost100=%ld extra=%ld aggression=%ld",
+            this->mDifficulty, EECPCheatNames(), this->mIsCheating ? 1 : 0, this->ScaleCost(100),
+            EECPCheatOn(kCPCheatExtra) ? this->mExtraResources : 0L, (long)this->mComputerAggression);
         this->EnableManagers(inTime);
         this->SetEnableTime(inTime);
         this->SetNextAttackTime(inTime);
@@ -5576,7 +5586,7 @@ void EEComputerPlayer::Update(unsigned long inTime)
             this->Regroup();
         if (gGameOptions.mLoadType == 0)
             this->ChooseCivilization();
-        const long& theBonus = this->mExtraResources;
+        const long theBonus = EECPCheatOn(kCPCheatExtra) ? this->mExtraResources : 0;
         this->mResourceCaps[kResourceGold] += theBonus;
         this->mResourceCaps[kResourceIron] += theBonus;
         this->mIsStarted = true;
@@ -5610,10 +5620,20 @@ void EEComputerPlayer::Update(unsigned long inTime)
             this->FlagGroup();
             this->SetNextExpansionTime(inTime);
         }
-        this->mCivilizationManager->Update(inTime);
+        {
+            EECPTraceScope theCivilization("civ");
+            this->mCivilizationManager->Update(inTime);
+        }
         this->mDiplomacyManager->Update(inTime);
-        this->mCombatManager->Tick(inTime);
-        this->mExplorationManager->Update(inTime);
+        {
+            EECPTraceScope theCombat("combat");
+            this->mCombatManager->Tick(inTime);
+        }
+        {
+            EECPTraceScope theExploration("explore");
+            this->mExplorationManager->Update(inTime);
+        }
+        EECPTraceStats(this, inTime);
     } else if (this->mCombatManager != NULL)
         this->mCombatManager->DeleteGroups();
     if (this->mUnitsToKill.size() != 0) {

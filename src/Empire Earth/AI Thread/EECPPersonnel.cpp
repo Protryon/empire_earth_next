@@ -59,6 +59,7 @@
 #include "ee/EEUGUnloadTransport.h"
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEMathInline.h"
+#include "ee/EECPTrace.h"
 
 // RTTI EECPUGatherUnitsOfTypeAndTownAndContinent > EECPUMGatherUnitsScreenBase (vtable 0x43c244: CountRequest 0x85a97,
 // the two empty `xor al, al` slots ICF-folded elsewhere): the town and continent of the last pending request of
@@ -745,6 +746,8 @@ void EECPPersonnel::RetireObsoleteUnits()
     long theEpoch = this->mPlayer->mTechnologies->mCurrentEpoch;
     long i;
     EEComplexUnit* theComplexUnit;
+    if (!EECPCheatOn(kCPCheatRetire))
+        return;   // EE_AI_CHEATS without retire (ee/EECPTrace.h)
     for (i = gNumPlayers - 1; i > 0; i--) {
         if (gWorld.mPlayers[i] != NULL && gWorld.mPlayers[i]->IsHuman())
             thePlayers.push_back(gWorld.GetPlayer(i));

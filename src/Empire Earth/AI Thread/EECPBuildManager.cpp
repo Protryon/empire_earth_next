@@ -59,6 +59,7 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPIntelligence.h"
 #include "ee/EEUnitCollector.h"
+#include "ee/EECPTrace.h"
 
 // the class key (0x4e5d00, guard 0x4e5cf8 bit 1)
 const UString EECPBuildManager::sData("EECPBuildManager-Data");
@@ -325,6 +326,8 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
                     theWorker->SetGoal(theGoal, 0, 0);
                     theWorker->StartAction(kActionMoveToRepairSite);
                     theWorker->mUnitClass->ActionChanged(theWorker);
+                    EE_CP_TRACE(this->mPlayer, "build.start", "cls=%ld x=%ld y=%ld", theClassID, (long)theTile.mX,
+                        (long)theTile.mY);
                 }
                 theResult = true;
             } else {
@@ -1494,6 +1497,7 @@ void EECPBuildManager::QueueBuilding(unsigned long inUnitClass, bool inAppend, b
         } else
             return;
     }
+    EE_CP_TRACE(this->mPlayer, "build.queue", "cls=%lu front=%d", inUnitClass, inFront ? 1 : 0);
     this->mManager->GetResourceManager()->AddCosts(theTechTree->Get(theID), 1);
 }
 
@@ -1507,6 +1511,7 @@ void EECPBuildManager::QueueBuildingAt(long inUnitClass, long inX, long inY)
     if (theIndex < 0)
         return;   // a class with no tech (the original indexed past its 15 queues)
     this->mQueues[theIndex].push_back(EECPBuildRequest(inUnitClass, U2DPoint<long>(inX, inY)));
+    EE_CP_TRACE(this->mPlayer, "build.queue", "cls=%ld x=%ld y=%ld", inUnitClass, inX, inY);
     this->mManager->GetResourceManager()->AddCosts(theTechTree->Get(theID), 1);
 }
 
