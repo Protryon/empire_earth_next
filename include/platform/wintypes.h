@@ -234,6 +234,8 @@ typedef struct tagBITMAPINFOHEADER {
 static_assert(sizeof(BITMAPFILEHEADER) == 14 && sizeof(BITMAPINFOHEADER) == 40, "the .bmp headers' sizes");
 #endif
 #define BI_RGB 0
+// the thread message the UI thread quits on (TSThread::Post 0x12; Win32's WM_QUIT)
+#define WM_QUIT 0x0012
 typedef struct tagPALETTEENTRY {
     BYTE peRed;
     BYTE peGreen;

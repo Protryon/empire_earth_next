@@ -3,6 +3,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fcntl.h>
+#include <sys/file.h>
+#include <unistd.h>
 
 #include <atomic>
 #include <initializer_list>
@@ -62,4 +65,22 @@ extern "C" void PlatMessageSetHandler(PlatMessageHandler inHandler)
 extern "C" void PlatDebugOutput(const char* inText)
 {
     fputs(inText ? inText : "", stderr);
+}
+
+extern "C" int PlatSystemSingleInstance(const char* inName)
+{
+    // an exclusive lock on <tmp>/<name>-<uid>.lock, kept open for the process's lifetime
+    const char* theDirectory = getenv("TMPDIR");
+    if (!theDirectory || !*theDirectory)
+        theDirectory = "/tmp";
+    char thePath[1024];
+    snprintf(thePath, sizeof(thePath), "%s/%s-%u.lock", theDirectory, inName, static_cast<unsigned>(getuid()));
+    int theFile = open(thePath, O_RDWR | O_CREAT | O_CLOEXEC, 0600);
+    if (theFile < 0)
+        return 1;   // no lock possible: let the game run
+    if (flock(theFile, LOCK_EX | LOCK_NB) != 0) {
+        close(theFile);
+        return 0;
+    }
+    return 1;
 }

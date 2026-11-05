@@ -339,3 +339,25 @@ extern "C" int PlatPathEnterDataRoot(void)
         return PlatPosix::FailErrno();
     return 1;
 }
+
+extern "C" uint32_t PlatPathGetExecutableName(char* outName, uint32_t inSize)
+{
+    char theBuffer[PATH_MAX + 1];
+#if defined(__APPLE__)
+    uint32_t theSize = sizeof(theBuffer);
+    if (_NSGetExecutablePath(theBuffer, &theSize) != 0)
+        return 0;
+#else
+    ssize_t theLength = readlink("/proc/self/exe", theBuffer, sizeof(theBuffer) - 1);
+    if (theLength <= 0)
+        return 0;
+    theBuffer[theLength] = 0;
+#endif
+    const char* theName = strrchr(theBuffer, '/');
+    theName = theName ? theName + 1 : theBuffer;
+    size_t n = strlen(theName);
+    if (n + 1 > inSize)
+        return 0;
+    memcpy(outName, theName, n + 1);
+    return static_cast<uint32_t>(n);
+}

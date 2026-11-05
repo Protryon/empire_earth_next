@@ -7,6 +7,7 @@
 // optimisation (see the pragmas below); everything else is -O1.
 #include <windows.h>
 #include "gx/GX.h"
+#include <float.h>
 
 #include "dx7/DX7Rasterizer.h"
 #include "dx7/DX7PolygonArray.h"
@@ -62,7 +63,7 @@ unsigned long gLightsInUse[8];
 // (provisional names, like every local name).
 // FUNCTION: DX7HR 0x10009308
 // Direct3D device enumeration callback: sets the flag and stops at the first hardware-rasterizing device
-HRESULT CALLBACK DX7EnumDevicesCallback(LPSTR inDescription, LPSTR inName, GXDEVICEDESC* inCaps, LPVOID inContext)
+GXRESULT CALLBACK DX7EnumDevicesCallback(LPSTR inDescription, LPSTR inName, GXDEVICEDESC* inCaps, LPVOID inContext)
 {
     bool* theContext = (bool*)inContext;
     HRESULT theResult = GXENUMRET_OK;

@@ -29,6 +29,8 @@ int PlatPathSetVolumeRoot(char inVolume, const char* inNativeRoot);
 uint32_t PlatPathGetDataRoot(char* outPath, uint32_t inSize);
 // Makes the data root the current directory (the game resolves its data relative to it) -> nonzero on success.
 int PlatPathEnterDataRoot(void);
+// The executable's file name (no directory) -> its length, 0 on failure.
+uint32_t PlatPathGetExecutableName(char* outName, uint32_t inSize);
 
 #ifdef __cplusplus
 }

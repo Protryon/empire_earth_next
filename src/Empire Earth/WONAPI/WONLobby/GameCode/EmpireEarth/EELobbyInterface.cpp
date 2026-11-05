@@ -393,6 +393,7 @@ void EELobbyPostAction(void (*inFunc)())
 // (the game window's title and icon), the lobby screen in it; then shows it and runs it until it is left (r24pre-won)
 void EELobbyFn2972C6()
 {
+#ifdef _WIN32   // the lobby's windows are Win32 windows (PORT.md step 4.3f): it does not open elsewhere
     char theText[256];
     WNDCLASSA theClass;
     if (gEELobbyOpen)
@@ -430,6 +431,7 @@ void EELobbyFn2972C6()
     EELobbyFn29754D(true);
     LobbyFn362740();
     EELobbyFn2976C7();
+#endif
 }
 
 // SYNTHETIC: EXE 0x697531
@@ -448,6 +450,7 @@ void EELobbyFn2972C6()
 // place, input is suspended (full screen: DirectDraw flips to the GDI surface) or the game window is hidden
 void EELobbyFn29754D(bool inFlag)
 {
+#ifdef _WIN32   // the lobby replaces the game window (Win32 only)
     if (gEELobbyShown || gEELobbyPlatformWindow.mPtr == NULL)
         return;
     RECT theRect;
@@ -484,6 +487,7 @@ void EELobbyFn29754D(bool inFlag)
     for (int theCount = 1 - ShowCursor(TRUE); theCount > 0; theCount--)
         ShowCursor(TRUE);
     gEELobbyPlatformWindow->Fn32A1E0();
+#endif
 }
 
 // FUNCTION: EXE 0x6976c7
@@ -597,6 +601,7 @@ void EELobbyFn297897()
 // back from the lobby to the game: the game window takes the lobby window's place, input resumes (r23)
 void EELobbyFn297AC9()
 {
+#ifdef _WIN32   // back from the lobby (Win32 only)
     if (!gEELobbyShown || gEELobbyPlatformWindow.mPtr == NULL)
         return;
     gEELobbyShown = false;
@@ -625,6 +630,7 @@ void EELobbyFn297AC9()
         gMouse->mPointer = 0;
     }
     gEELobbyPlatformWindow->Show(false);
+#endif
 }
 
 // FUNCTION: EXE 0x697be0
@@ -636,16 +642,19 @@ void EELobbyFn297BE0()
     theFile.SetVolume(gStartupVolume);
     theFile.SetDirectory(gStartupDirectory + UString("Sierra Update\\"));
     theFile.SetFile("SierraUp.exe");
+#ifdef _WIN32   // Sierra Update is a Windows program
     if (theFile.Open(1) == keseOK) {
         theFile.Close();
         HINSTANCE theResult = ShellExecuteA(GetDesktopWindow(), "open",
             theFile.GetVolume() + theFile.GetDirectory() + theFile.GetFile(), NULL,
             theFile.GetVolume() + theFile.GetDirectory(), SW_SHOWNORMAL);
         if ((INT_PTR)theResult > 32) {
-            PostQuitMessage(0);
+            if (gUserInterface != NULL)   // PostQuitMessage: WM_QUIT to the UI thread's queue
+                gUserInterface->mThread->Post(0x12, NULL, NULL, false);
             return;
         }
     }
+#endif
     gResource->GetString(0x8031, theMessage);
     gUIManager->DisplayMessage(theMessage, true, 0, 0, true);
 }

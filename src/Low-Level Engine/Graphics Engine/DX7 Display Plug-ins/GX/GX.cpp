@@ -1152,10 +1152,10 @@ static RECT Whole(GXSurfaceData* inSurface)
 static RECT Clip(const RECT& inRect, GXSurfaceData* inSurface)
 {
     RECT theRect = inRect;
-    theRect.left = std::max(theRect.left, 0L);
-    theRect.top = std::max(theRect.top, 0L);
-    theRect.right = std::min(theRect.right, (long)inSurface->mWidth);
-    theRect.bottom = std::min(theRect.bottom, (long)inSurface->mHeight);
+    theRect.left = std::max<LONG>(theRect.left, 0);
+    theRect.top = std::max<LONG>(theRect.top, 0);
+    theRect.right = std::min<LONG>(theRect.right, (LONG)inSurface->mWidth);
+    theRect.bottom = std::min<LONG>(theRect.bottom, (LONG)inSurface->mHeight);
     return theRect;
 }
 

@@ -6,6 +6,8 @@
   python -I tools/xbuild.py sdl3     [--target T]                               SDL3 as a static library (CMake)
   python -I tools/xbuild.py sdltest  [--target T] [--no-run] [--frames N]       SDL3 window + wgpu surface test
   python -I tools/xbuild.py census   [--target T] [--dialect ms|gnu] [-j N] [--only TEXT] [module ...]
+  python -I tools/xbuild.py game     [--target T] [-j N] [--debug] [--incremental] [--smoke]
+                                                                                the game (POSIX targets): ee-aoc
   python -I tools/xbuild.py targets                                             what each target needs, and if it is here
 
 Targets (--target, default: the host):
@@ -508,7 +510,7 @@ MS_DIALECT_LENIENCE = ["-Wno-address-of-temporary", "-Wno-c++11-narrowing"]
 
 def census_flags(t, dialect):
     f = [*t.base_flags(), "-fsyntax-only", "-ferror-limit=0", "-fno-color-diagnostics", "-w",
-         "-fno-strict-aliasing", "-fwrapv", "-DNDEBUG"]
+         "-fno-strict-aliasing", "-fwrapv", "-DNDEBUG", f"--embed-dir={TC / 'fonts'}"]
     if dialect == "ms":
         f += ["-fms-extensions", "-fms-compatibility", "-fdelayed-template-parsing",
               "-fms-compatibility-version=19.44", *MS_DIALECT_LENIENCE]
@@ -564,8 +566,12 @@ def cmd_census(a):
            *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
     if (TC / "wgpu" / ("linux-x86_64" if t.os == "linux" else "macos-aarch64") / "include").exists():
         inc.append(TC / "wgpu" / ("linux-x86_64" if t.os == "linux" else "macos-aarch64") / "include")
+    if (TC / "src" / f"SDL3-{SDL_VERSION}" / "include").exists():   # the window layer (src/Platform/SDL)
+        inc.append(TC / "src" / f"SDL3-{SDL_VERSION}" / "include")
+    have = {pathlib.Path(j[1]).resolve() for j in jobs}
     for s in platform_sources(t):
-        jobs.append(("platform", s, ""))
+        if pathlib.Path(s).resolve() not in have:
+            jobs.append(("platform", s, ""))
     out = t.out / f"census-{a.dialect}"
     out.mkdir(parents=True, exist_ok=True)
     logdir = out / "log"
@@ -657,6 +663,146 @@ def cmd_census(a):
     return 0
 
 
+# ---- the game
+
+
+GAME_NAME = "ee-aoc"
+
+
+def game_dialect_flags(t, cxx_game):
+    """The game's C++ units keep the Microsoft dialect of the Windows build (with the lenience clang-cl's Microsoft
+    mode has, MS_DIALECT_LENIENCE); C, the vendored libraries and the platform layer are standard code. Optimised
+    builds undefine __OPTIMIZE__ for the headers only: glibc's optimised inline string functions need GNU mode
+    (__asm__ labels, __extern_always_inline), which -fms-compatibility switches off; the code is optimised all the
+    same."""
+    if not cxx_game:
+        return []
+    f = ["-fms-extensions", "-fdelayed-template-parsing", *MS_DIALECT_LENIENCE]
+    if t.os != "macos":   # -fms-compatibility retypes va_list against the macOS SDK's (PORT_LEARNINGS "Linux and macOS")
+        f += ["-fms-compatibility", "-fms-compatibility-version=19.44"]
+    return f
+
+
+def game_job_command(t, job, out, inc, opt):
+    mod, src, flags = job
+    import verify
+    src = pathlib.Path(src).resolve()
+    rel = src.relative_to(ROOT / "src").as_posix()
+    is_c = src.suffix.lower() == ".c"
+    plain = is_c or rel.startswith(("ThirdParty/", "Platform/"))
+    defs = ["-D" + d[2:] for d in verify.unit_flags(src, flags).split() if d.startswith(("-D", "/D"))]
+    own = []
+    third = ROOT / "src" / "ThirdParty"
+    if src.is_relative_to(third):
+        lib = third / src.relative_to(third).parts[0]
+        if (lib / "include_dirs.txt").exists():
+            own = [str(lib / d.strip()) for d in (lib / "include_dirs.txt").read_text().splitlines() if d.strip()]
+    std = ["-x", "c", "-std=gnu11"] if is_c else ["-x", "c++", "-std=gnu++17" if plain else "-std=c++17"]
+    obj = out / "obj" / (rel.replace("/", "__").replace(" ", "_") + ".o")
+    cmd = [t.clang(cxx=not is_c), *t.base_flags(), "-c", *std, *opt, "-g", "-w", "-fno-strict-aliasing", "-fwrapv",
+           "-U__OPTIMIZE__", "-DNDEBUG", f"--embed-dir={TC / 'fonts'}", *game_dialect_flags(t, not plain), *defs,
+           f"-I{src.parent}", *[f"-I{i}" for i in own], *[f"-I{i}" for i in inc], "-o", str(obj), str(src)]
+    return obj, cmd
+
+
+def cmd_game(a):
+    """Builds the game for a POSIX target: every unit of the Windows exe (tools/units.py) with the POSIX platform
+    layer, SDL3 and wgpu-native, one link -> <out>/game/ee-aoc (macOS: also <out>/game/Empire Earth AoC.app)."""
+    t = Target(a.target)
+    if not t.posix:
+        sys.exit("the game for Windows is tools/build.py")
+    why = t.can_build()
+    if why:
+        sys.exit(f"{t.name}: {why}")
+    import units
+    if not (sdl_prefix(t) / "include" / "SDL3" / "SDL.h").exists():
+        cmd_sdl3(argparse.Namespace(target=t.name, j=a.j, fresh=False))
+    wgpu, wlib = wgpu_dir(t)
+    out = t.out / "game"
+    (out / "obj").mkdir(parents=True, exist_ok=True)
+    mods = units.TARGET_MODULES["exe"]
+    jobs = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
+    jobs = [j for j in jobs if "Platform/Win32" not in units.rel_src(j[1]).as_posix()]
+    have = {pathlib.Path(j[1]).resolve() for j in jobs}
+    for s in platform_sources(t):
+        if pathlib.Path(s).resolve() not in have:
+            jobs.append(("platform", s, ""))
+    # the image libraries' libjpeg is the engine's (as build.py links it); the image units go into an archive
+    jobs = [j for j in jobs if not (j[0] == "exeimg" and units.rel_src(j[1]).parts[1] == "libjpeg")]
+    inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
+           ROOT / "src" / "ThirdParty" / "stb", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS],
+           wgpu / "include", sdl_prefix(t) / "include"]
+    opt = ["-O1"] if not a.debug else ["-O0"]
+    t0 = time.time()
+    commands = [(j,) + game_job_command(t, j, out, inc, opt) for j in jobs]
+
+    def compile_one(item):
+        job, obj, cmd = item
+        if a.incremental and obj.exists() and obj.stat().st_mtime > pathlib.Path(job[1]).stat().st_mtime:
+            return job, obj, True, ""
+        r = subprocess.run([str(c) for c in cmd], capture_output=True, text=True,
+                           creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        return job, obj, r.returncode == 0, r.stdout + r.stderr
+    failed, objs = [], []
+    with concurrent.futures.ThreadPoolExecutor(max(1, a.j)) as ex:
+        for job, obj, ok, log in ex.map(compile_one, commands):
+            if ok:
+                objs.append((job, obj))
+            else:
+                failed.append(job)
+                print(f"FAILED {units.rel_src(job[1])}\n{log[-1500:]}", flush=True)
+    print(f"{len(commands) - len(failed)}/{len(commands)} units compiled in {time.time() - t0:.0f} s -> {out / 'obj'}")
+    if failed:
+        return 1
+    # link order as build.py's: the engine and the plug-ins (and their libraries) first, then the game, then the
+    # image libraries as an archive
+    first = [o for j, o in objs if j[0] not in ("exe", "exeimg")]
+    game = [o for j, o in objs if j[0] == "exe"]
+    img = [o for j, o in objs if j[0] == "exeimg"]
+    archive = out / "libexeimg.a"
+    archive.unlink(missing_ok=True)
+    ar = str(ee.LLVM / "llvm-ar.exe") if IS_WINDOWS else (shutil.which("llvm-ar") or "ar")
+    run([ar, "rcs", archive, *img])
+    exe = out / GAME_NAME
+    rsp = out / "link.rsp"
+    rsp.write_text("".join(f'"{pathlib.Path(o).as_posix()}"\n' for o in [*first, *game]))
+    libs = [archive, *sdl_libs(t), wlib]
+    if t.os == "linux":
+        libs += ["-ldl", "-lm", "-lpthread"]
+    else:
+        libs += ["-framework", "Metal", "-framework", "QuartzCore", "-framework", "Foundation"]
+    run([t.clang(), *t.link_flags(), "-o", exe, f"@{rsp}", *libs])
+    print(f"built {exe} ({exe.stat().st_size // 1024} KB) in {time.time() - t0:.0f} s")
+    if t.os == "macos":
+        app = out / "Empire Earth AoC.app" / "Contents"
+        if app.parent.exists():
+            shutil.rmtree(app.parent)
+        (app / "MacOS").mkdir(parents=True)
+        (app / "Resources").mkdir()
+        shutil.copy2(exe, app / "MacOS" / GAME_NAME)
+        (app / "Info.plist").write_text(MACOS_INFO_PLIST)
+        print(f"app bundle {app.parent} (put the game's data in Contents/Resources, or set EE_DATA_ROOT)")
+    if a.smoke and t.native():
+        return run_program(t, exe, ["--smoke-test"])
+    return 0
+
+
+MACOS_INFO_PLIST = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleExecutable</key><string>ee-aoc</string>
+    <key>CFBundleIdentifier</key><string>net.empire-earth-next.aoc</string>
+    <key>CFBundleName</key><string>Empire Earth AoC</string>
+    <key>CFBundlePackageType</key><string>APPL</string>
+    <key>CFBundleShortVersionString</key><string>1.0</string>
+    <key>LSMinimumSystemVersion</key><string>11.0</string>
+    <key>NSHighResolutionCapable</key><false/>
+</dict>
+</plist>
+"""
+
+
 def cmd_targets(a):
     host = host_target_name()
     for name in TARGETS:
@@ -670,7 +816,7 @@ def cmd_targets(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("test", "fonttest", "tcptest", "sdl3", "sdltest", "census", "targets"):
+    for name in ("test", "fonttest", "tcptest", "sdl3", "sdltest", "census", "game", "targets"):
         p = sub.add_parser(name)
         p.add_argument("--target", default=host_target_name(), choices=TARGETS)
         p.add_argument("-j", type=int, default=3)
@@ -682,13 +828,17 @@ def main():
             p.add_argument("--frames", type=int, default=60)
         if name == "sdl3":
             p.add_argument("--fresh", action="store_true", help="configure from scratch")
+        if name == "game":
+            p.add_argument("--debug", action="store_true", help="-O0")
+            p.add_argument("--incremental", action="store_true", help="keep objects newer than their unit")
+            p.add_argument("--smoke", action="store_true", help="run the built game with --smoke-test (native only)")
         if name == "census":
             p.add_argument("--dialect", choices=["ms", "msext", "gnu"], default="ms")
             p.add_argument("--only")
             p.add_argument("modules", nargs="*")
     a = ap.parse_args()
     sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "tcptest": cmd_tcptest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
-              "census": cmd_census, "targets": cmd_targets}[a.cmd](a))
+              "census": cmd_census, "game": cmd_game, "targets": cmd_targets}[a.cmd](a))
 
 
 if __name__ == "__main__":

@@ -33,6 +33,9 @@ void PlatDebugOutput(const char* inText);
 //   family; POSIX: 0x0a00000a, an NT 10.0 system);
 // - the end of the process's use of system services before exit (Win32: CoUninitialize; POSIX: nothing).
 uint16_t PlatSystemLanguageId(void);
+// One running copy per user: takes the named lock for the process's lifetime -> nonzero when this is the only copy
+// (Win32: a named mutex that did not exist; POSIX: an exclusive flock on a file in the temporary directory)
+int PlatSystemSingleInstance(const char* inName);
 uint32_t PlatSystemVersion(void);
 void PlatSystemShutdown(void);
 

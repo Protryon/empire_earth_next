@@ -37,3 +37,9 @@ extern "C" void PlatDebugOutput(const char* inText)
 {
     OutputDebugStringA(inText);
 }
+
+extern "C" int PlatSystemSingleInstance(const char* inName)
+{
+    HANDLE theMutex = CreateMutexA(NULL, FALSE, inName);   // held for the process's lifetime
+    return theMutex != NULL && GetLastError() == 0;
+}
