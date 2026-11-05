@@ -2908,12 +2908,12 @@
      "comment": "layout decoded from the data"
     },
     {
-     "name": "mID",
-     "member": "mID",
+     "name": "mUnusedID",
+     "member": "mUnusedID",
      "off": 100,
-     "type": "u32",
-     "count": 1,
-     "cls": "named",
+     "type": "raw",
+     "count": 4,
+     "cls": "unused",
      "comment": "layout decoded from the data"
     }
    ],

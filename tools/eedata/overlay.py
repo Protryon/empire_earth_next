@@ -51,8 +51,8 @@ COMMENT_SIZES = {'EEUnitClassRecord': 0x7a8, 'UIDbControl': 0x35c}
 # Records with no source struct (loaded field by field). Fields: (name, type, count, class).
 VIRTUAL_STRUCTS = {
     # dbevents.dat row head; the u32 effect count and the effect list follow (EEEvent::LoadEvents reads the name into
-    # a local it never uses)
-    'EEEventRow': [('mLabel', 'str', 100, 'label'), ('mID', 'u32', 1, 'named')],
+    # a local it never uses, the id into EEEvent::mID, which is private and read by nothing)
+    'EEEventRow': [('mLabel', 'str', 100, 'label'), ('mUnusedID', 'raw', 4, 'unused')],
 }
 
 # Tables: file stem (inside db\ of data.ssa) -> container and text form.

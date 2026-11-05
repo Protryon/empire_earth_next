@@ -250,7 +250,6 @@ static const EEDTField kEEDTFields_EEEventEffect[] = {
 };
 static const EEDTField kEEDTFields_EEEventRow[] = {
     {"label", 0x000, 100, kEEDT_str},
-    {"mID", 0x064, 1, kEEDT_u32},
 };
 static const EEDTField kEEDTFields_EEDamageTableRecord[] = {
     {"label", 0x000, 100, kEEDT_str},
