@@ -165,6 +165,13 @@ def link_exe(out, objs, extra_libs):
             sys.exit(f"{cmd[-1]}: {log}")
     res = [rsrc_rebuild.compile_rc(units.EXE_RC, out / "rsrc"),
            rsrc_rebuild.compile_rc(ROOT / "src" / units.LANGUAGE_RC, out / "rsrc-language")]
+    # the language strings are a generated table (LanguageStrings.cpp): it must be current and equal to rc.exe's
+    import lang_strings
+    if lang_strings.OUT.read_bytes().decode("latin-1") != lang_strings.generate():
+        sys.exit(f"{lang_strings.OUT} is stale: python -I tools/lang_strings.py")
+    _, theRc = lang_strings.parse_rc()
+    if {k: v for k, v in theRc.items() if v} != lang_strings.parse_res(res[1]):
+        sys.exit("the language string table differs from rc.exe's string tables (tools/lang_strings.py --check-res)")
     inputs = [*first, *[x for x in extra_libs if str(x).lower().endswith(".obj")], *game, lib / "exeimg.lib",
               lib / "DINPUT.lib", *SDK_LIBS, *[x for x in extra_libs if not str(x).lower().endswith(".obj")],
               *static_libs(), *res, *RUNTIME_LIBS]
