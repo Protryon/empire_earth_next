@@ -9,6 +9,7 @@
 #include "platform/PlatFile.h"
 #include "lle/UEncryption.h"
 #include "lle/UResourceFile.h"
+#include "lle/GETextureManager.h"
 
 #include "ee/EmpireEarth.h"
 #include "ee/EEGameOptions.h"
@@ -28,6 +29,19 @@ EEGameSettings EEGamePreferences::sDefaultSettings;
 // SYNTHETIC: EXE 0x53244b   (guarded dtor)
 
 bool gGameWindowSizeDefaulted;   // port: no saved game window size (EEPreferences Load)
+
+// port: the texture packs (docs/DATA_FORMATS.md "Texture packs"). One pack ships, Data/Textures-4x (4x the original
+// textures' size, a subset of them); resolution 2 draws its files at half size (one more MIP level dropped: a 2x2 box
+// filter), 4 at full size; a texture the pack does not have is the original at either.
+void EESetTextureResolution(long inResolution)
+{
+    if (inResolution == 2)
+        GETextureManager::SetTexturePack("textures-4x", 2, 1);
+    else if (inResolution == 4)
+        GETextureManager::SetTexturePack("textures-4x", 2, 0);
+    else
+        GETextureManager::SetTexturePack(NULL, 0, 0);
+}
 extern float gCameraMaxZoom;     // port: EECameraControl.cpp
 
 // FUNCTION: EXE 0x532466
@@ -126,6 +140,7 @@ EEGameSettings::EEGameSettings()
     this->mL560 = 0;
     this->mL5B8 = 0;
     this->mComputerPlayerDifficultyLevel = 1;
+    this->mTextureResolution = 0;
 }
 
 // FUNCTION: EXE 0x53281e
@@ -251,6 +266,16 @@ long EEGamePreferences::Load()
         this->mConfig.SetValue(kEEGameSection, "Maximum Zoom Out", theValue);
     }
     gCameraMaxZoom = (theValue < 100 ? 100 : theValue > 300 ? 300 : theValue) / 100.0f;
+    // port: which textures the world loads: 0 the originals, 2 or 4 the texture pack (EESetTextureResolution)
+    theResult = this->mConfig.GetValue(kEEGameSection, "Texture Resolution", theValue);
+    if (theResult == 0 && (theValue == 0 || theValue == 2 || theValue == 4)) {
+        this->mSettings.mTextureResolution = theValue;
+    } else {
+        this->mSettings.mTextureResolution = EEGamePreferences::sDefaultSettings.mTextureResolution;
+        theValue = this->mSettings.mTextureResolution;
+        this->mConfig.SetValue(kEEGameSection, "Texture Resolution", theValue);
+    }
+    EESetTextureResolution(this->mSettings.mTextureResolution);
     theResult = this->mConfig.GetValue(kEEGameSection, "Screen ID", theValue);
     if (theResult == 0) {
         this->mSettings.mScreenID = theValue;
@@ -930,6 +955,8 @@ long EEGamePreferences::Save()
     this->mConfig.SetValue(kEEGameSection, "Button MIP Levels to Drop", theValue);
     theValue = this->mSettings.mTerrainMIPLevelsToDrop;
     this->mConfig.SetValue(kEEGameSection, "Terrain MIP Levels to Drop", theValue);
+    theValue = this->mSettings.mTextureResolution;   // port
+    this->mConfig.SetValue(kEEGameSection, "Texture Resolution", theValue);
     theValue = this->mSettings.mZoomLock * 100.0f;
     this->mConfig.SetValue(kEEGameSection, "Zoom Lock", theValue);
     theValue = this->mSettings.mEffectDetail;

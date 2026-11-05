@@ -42,6 +42,8 @@
 #include "lle/UIHotKey.h"
 #include "lle/UIIMECandidate.h"
 #include "lle/UIForm.h"
+#include "lle/UILayoutUtility.h"
+#include "lle/UIControlsTable.h"
 #include "lle/UIManager.h"
 #include "lle/UIButton.h"
 #include "lle/NEMessage.h"
@@ -239,6 +241,11 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     this->RegisterControlEventCallback(EECreateDebugSoundEvent);
     this->RegisterFormEventCallback(EECreateFormEvent);
     this->LoadDatabase(gDataPath, UString());
+    // port: the settings' texture resolution combo box (EEUIEGameSettingsEvents.cpp), in the video tab's right column
+    // below the weather effects check box; a copy of the video card combo box (id 151) with the strings 33100..33102
+    UIControlsTable::AddControlLike(this, 151, kTextureResolutionControlID, kGameSettingsTextureResolutionComboBox, 1,
+                                    0.5767351f, 0.7614858f, 0.88657105f, 0.99f, kTextureResolutionOriginalString,
+                                    kTextureResolutionOriginalString + 2, kTextureResolutionHelpString);
     this->mMainGameForm = static_cast<EEUIFMainGame*>(this->GetFormByID(kFormMainGame));
     this->mInScenarioEditor = false;
     this->mScenarioEditorForm = NULL;

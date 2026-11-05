@@ -78,11 +78,22 @@ long DX7Surface::Clear(GEColor& inColor, float inAlpha)
     return theResult;
 }
 
+// port: a logical rectangle (GESurface::GetLogicalShift) -> the surface's pixels
+static GERectangle DX7PixelRectangle(const GERectangle& inRectangle, const GESurface* inSurface)
+{
+    if (inSurface == NULL || inSurface->GetLogicalShift() == 0)
+        return inRectangle;
+    float theScale = (float)(1u << inSurface->GetLogicalShift());
+    return GERectangle(inRectangle.GetLeft() * theScale, inRectangle.GetTop() * theScale,
+                       inRectangle.GetRight() * theScale, inRectangle.GetBottom() * theScale);
+}
+
 // FUNCTION: DX7HR 0x1000ee8c
 // Fills a rectangle of the surface with a colour and alpha, retrying while the blitter is busy; 0xd when lost
-long DX7Surface::Clear(GERectangle& inRectangle, GEColor& inColor, float inAlpha)
+long DX7Surface::Clear(GERectangle& inLogicalRectangle, GEColor& inColor, float inAlpha)
 {
     long theResult = kErrorOK;
+    GERectangle inRectangle = DX7PixelRectangle(inLogicalRectangle, this);   // port
     RECT theRect;
     theRect.left = (long)inRectangle.GetLeft();
     theRect.right = (long)inRectangle.GetRight();
@@ -111,9 +122,13 @@ long DX7Surface::Clear(GERectangle& inRectangle, GEColor& inColor, float inAlpha
 
 // FUNCTION: DX7HR 0x1000ef4b
 // Blits a source rectangle onto a target surface's rectangle, optionally colour-keyed; 0xd when lost or busy
-long DX7Surface::CopyTo(GESurface* inTarget, GERectangle& inSource, GERectangle& inDestination, bool inTransparent)
+long DX7Surface::CopyTo(GESurface* inTarget, GERectangle& inLogicalSource, GERectangle& inLogicalDestination,
+                        bool inTransparent)
 {
     long theResult = kErrorOK;
+    // port: logical rectangles -> each surface's pixels (a texture pack's surface is stretched onto a plain one)
+    GERectangle inSource = DX7PixelRectangle(inLogicalSource, this);
+    GERectangle inDestination = DX7PixelRectangle(inLogicalDestination, inTarget);
     RECT theSource;
     theSource.left = (long)inSource.GetLeft();
     theSource.right = (long)inSource.GetRight();
@@ -144,8 +159,11 @@ long DX7Surface::CopyTo(GESurface* inTarget, GERectangle& inSource, GERectangle&
 
 // FUNCTION: DX7HR 0x1000f01d
 // Copies a rectangle to the target with bilinear scaling, choosing the 32-bit or 16-bit path by this surface's depth
-long DX7Surface::CopyWithFilter(GESurface* inTarget, GERectangle& inSource, GERectangle& inDestination)
+long DX7Surface::CopyWithFilter(GESurface* inTarget, GERectangle& inLogicalSource, GERectangle& inLogicalDestination)
 {
+    // port: logical rectangles -> each surface's pixels
+    GERectangle inSource = DX7PixelRectangle(inLogicalSource, this);
+    GERectangle inDestination = DX7PixelRectangle(inLogicalDestination, inTarget);
     if (this->mDescription.mPixelDepth == 32)
         return this->Copy32BitWithFilter(static_cast<DX7Surface*>(inTarget), inSource, inDestination);
     return this->Copy16BitWithFilter(static_cast<DX7Surface*>(inTarget), inSource, inDestination);

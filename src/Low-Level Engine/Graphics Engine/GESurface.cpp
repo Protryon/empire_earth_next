@@ -71,8 +71,8 @@ long GESurface::LoadBMP(FSFileSpec& inFile)
 long GESurface::SaveAsBMP(FSFileSpec& inFile)
 {
     unsigned long theFormat = this->GetPixelFormat();
-    unsigned long theWidth = this->GetWidth();
-    unsigned long theHeight = this->GetHeight();
+    unsigned long theWidth = this->GetPixelWidth();
+    unsigned long theHeight = this->GetPixelHeight();
     bool theWasOpen = inFile.GetIsOpen();
     long theResult;
     BITMAPFILEHEADER theFileHeader;
@@ -238,10 +238,10 @@ long GESurface::LoadJPG(FSFileSpec& inFile)
             theRowStride = theInfo.output_width * theInfo.output_components;
             theBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE, theRowStride, 1);
             if (this->GetPixelDepth() == 32) {
-                theSkip = (this->GetBytesPerRow() - this->GetWidth() * 4) / 4;
+                theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * 4) / 4;
                 the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress());
             } else {
-                theSkip = (this->GetBytesPerRow() - this->GetWidth() * 2) / 2;
+                theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * 2) / 2;
                 the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress());
             }
             while (theInfo.output_scanline < theInfo.output_height) {
@@ -328,10 +328,10 @@ long GESurface::LoadJPG2(FSFileSpec& inFile)
             theRowStride = theInfo.output_width * theInfo.output_components;
             theBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE, theRowStride, 1);
             if (this->GetPixelDepth() == 32) {
-                theSkip = (this->GetBytesPerRow() - this->GetWidth() * 4) / 4;
+                theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * 4) / 4;
                 the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress());
             } else {
-                theSkip = (this->GetBytesPerRow() - this->GetWidth() * 2) / 2;
+                theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * 2) / 2;
                 the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress());
             }
             while (theInfo.output_scanline < theInfo.output_height) {
@@ -363,10 +363,10 @@ long GESurface::LoadJPG2(FSFileSpec& inFile)
             theRowStride = theInfo.output_width * theInfo.output_components;
             theBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE, theRowStride, 1);
             if (this->GetPixelDepth() == 32) {
-                theSkip = (this->GetBytesPerRow() - this->GetWidth() * 4) / 4;
+                theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * 4) / 4;
                 the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress());
             } else {
-                theSkip = (this->GetBytesPerRow() - this->GetWidth() * 2) / 2;
+                theSkip = (this->GetBytesPerRow() - this->GetPixelWidth() * 2) / 2;
                 the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress());
             }
             while (theInfo.output_scanline < theInfo.output_height) {
@@ -417,8 +417,8 @@ long GESurface::LoadJPG2(FSFileSpec& inFile)
 long GESurface::SaveAsJPG(FSFileSpec& inFile)
 {
     unsigned long theFormat = this->GetPixelFormat();
-    unsigned long theWidth = this->GetWidth();
-    unsigned long theHeight = this->GetHeight();
+    unsigned long theWidth = this->GetPixelWidth();
+    unsigned long theHeight = this->GetPixelHeight();
     long thePosition = 0;
     bool theWasOpen;
     long theResult;
@@ -516,8 +516,8 @@ long GESurface::SaveAsJPG(FSFileSpec& inFile)
 long GESurface::SaveAsJPG2(FSFileSpec& inFile)
 {
     unsigned long theFormat = this->GetPixelFormat();
-    unsigned long theWidth = this->GetWidth();
-    unsigned long theHeight = this->GetHeight();
+    unsigned long theWidth = this->GetPixelWidth();
+    unsigned long theHeight = this->GetPixelHeight();
     long thePosition = 0;
     long theAlphaPosition = 0;
     long theEndPosition = 0;
@@ -761,6 +761,11 @@ long GESurface::LoadTGA(FSFileSpec& inFile)
                 if (theSource) {
                     theData = theSource;
                     theResult = inFile.Read(theData, theSize, theRead);
+                    // port: an image larger than the surface (a texture pack's pointer into a 32x32 surface) is
+                    // refused instead of written past the surface's memory
+                    if (theResult == kErrorOK && theRead == theSize
+                        && (theHeader.mWidth > this->GetPixelWidth() || theHeader.mHeight > this->GetPixelHeight()))
+                        theResult = kErrorFailed;
                     if (theResult == kErrorOK && theRead == theSize) {
                         theResult = this->Lock();
                         if (theResult == kErrorOK) {
@@ -771,7 +776,7 @@ long GESurface::LoadTGA(FSFileSpec& inFile)
                             if (!theLeftToRight)
                                 theSource += theSourceRowSize - theBytesPerPixel;
                             if (this->GetPixelDepth() == 32) {
-                                theSkip = (theBytesPerRow - this->GetWidth() * 4) / 4;
+                                theSkip = (theBytesPerRow - this->GetPixelWidth() * 4) / 4;
                                 the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress());
                                 if (theBytesPerPixel == 4) {
                                     for (y = 0; y < theHeader.mHeight; y++) {
@@ -816,7 +821,7 @@ long GESurface::LoadTGA(FSFileSpec& inFile)
                                     }
                                 }
                             } else {
-                                theSkip = (theBytesPerRow - this->GetWidth() * 2) / 2;
+                                theSkip = (theBytesPerRow - this->GetPixelWidth() * 2) / 2;
                                 the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress());
                                 if (theBytesPerPixel == 4) {
                                     for (y = 0; y < theHeader.mHeight; y++) {
@@ -883,8 +888,8 @@ long GESurface::LoadTGA(FSFileSpec& inFile)
 long GESurface::SaveAsTGA(FSFileSpec& inFile)
 {
     unsigned long theFormat = this->GetPixelFormat();
-    unsigned long theWidth = this->GetWidth();
-    unsigned long theHeight = this->GetHeight();
+    unsigned long theWidth = this->GetPixelWidth();
+    unsigned long theHeight = this->GetPixelHeight();
     bool theWasOpen = inFile.GetIsOpen();
     long theResult;
     GETGAHeader theHeader;

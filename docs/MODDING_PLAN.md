@@ -345,7 +345,8 @@ and have no cap.
 - **VFS.** Generalise `FSPath` into an ordered list of mount points: vanilla first, then mods in resolved order. All
   file access goes through it, including `.rmv` and the checksum code, which today bypass `gDataPath`
   (`EERandomMap.cpp:863,934`; `Empire Earth.cpp:1065-1071`). Media files (models, textures, sounds) override by path,
-  last mount wins.
+  last mount wins. The texture pack `Data\Textures-4x` (DATA_FORMATS.md 2.1) is one such override (world and UI
+  textures and the pointers, at the originals' logical size), chosen by the "Texture Resolution" setting.
 - **Definitions** do not override by file. Every YAML file contributes entries to typed *registries* (unit, tech,
   epoch, effect, ...), and the merge works per entry (3.2).
 

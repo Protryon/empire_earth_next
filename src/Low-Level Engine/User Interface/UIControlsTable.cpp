@@ -285,6 +285,50 @@ long UIControlsTable::Create(FSFileSpec& inFile, UIManager* inManager)
     return theResult;
 }
 
+// port: see the header
+long UIControlsTable::AddControlLike(UIManager* inManager, long inTemplateID, long inID, long inFormIndex,
+                                     unsigned long inGroup, float inLeft, float inRight, float inTop, float inBottom,
+                                     long inStringTableBegin, long inStringTableEnd, unsigned long inHelpStringID)
+{
+    UIControlsTable* theTemplate = NULL;
+    for (size_t i = 0; i < UIControlsTable::sUIControlsArray.size(); i++) {
+        UIControlsTable* theTable = UIControlsTable::sUIControlsArray[i];
+        if (theTable == NULL)
+            continue;
+        if (theTable->mID == inID)
+            return kErrorNotFound;
+        if (theTable->mID == inTemplateID)
+            theTemplate = theTable;
+    }
+    if (theTemplate == NULL)
+        return kErrorNotFound;
+    for (size_t i = 0; i < UIControlsTable::sUIControlsArray.size(); i++) {
+        UIControlsTable* theTable = UIControlsTable::sUIControlsArray[i];
+        if (theTable && theTable->mFormID == theTemplate->mFormID && theTable->mFormIndex == inFormIndex)
+            return kErrorNotFound;
+    }
+    UIControlsTable* theTable = new UIControlsTable(*theTemplate);
+    theTable->mEventData.clear();
+    theTable->mFont = NULL;
+    theTable->mID = inID;
+    theTable->mFormIndex = inFormIndex;
+    theTable->mGroup = inGroup;
+    theTable->mLayout.SetLeft(kLayoutProportional, inLeft);
+    theTable->mLayout.SetRight(kLayoutProportional, inRight);
+    theTable->mLayout.SetTop(kLayoutProportional, inTop);
+    theTable->mLayout.SetBottom(kLayoutProportional, inBottom);
+    theTable->mStringTableBegin = inStringTableBegin;
+    theTable->mStringTableEnd = inStringTableEnd;
+    theTable->mStringTableID = inHelpStringID;
+    theTable->mStartCurrentSelection = 0;
+    UICDatabase theEntry;
+    theEntry.mControl = NULL;
+    theEntry.mTableIndex = UIControlsTable::sUIControlsArray.size();
+    UIControlsTable::sUIControlsArray.push_back(theTable);
+    inManager->GetFormByID(theTable->mFormID)->AddDatabaseControl(theEntry);
+    return kErrorOK;
+}
+
 // FUNCTION: LLE 0x10067fb4
 // Creates a bitmap control from the description's normal image (or none)
 UIControl* UIControlsTable::CreateBitmap(UIManager* inManager, const GERectangle& inRectangle)

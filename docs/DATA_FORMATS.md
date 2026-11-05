@@ -102,6 +102,30 @@ Not loaded although they are present or referenced:
   archive it adds only its `Timestamp` tag (`data.ssa`: "4035612"). The sum becomes `gBinaryChecksum` and the
   `.%04d` suffix of the game version string. So changed db files change the version suffix, and peers must have the
   same files.
+* **Texture packs** (port): an optional `Data\Textures-4x\` next to `Data\Textures\` holds upscaled textures with
+  the same names and format (PNG) at 4x the original's pixel size. It may hold any subset; a missing folder or file
+  means the original is used, with no error. config.ini `[Game] Texture Resolution` (0, 2 or 4; the settings' video
+  tab "Textures: Original / 2x Upscale / 4x Upscale") picks the set: 0 loads only `Data\Textures`; 4 loads
+  `textures-4x\<name>` when it is on the path, else `textures\<name>`; 2 loads the same pack file with one more MIP
+  level dropped, so the GPU surface is half its size (a 2x2 box filter, `DX7Surface::CopyWithFilter`). The texture
+  quality setting ("MIP Levels to Drop") stacks on top. Every texture the texture manager loads may come from the
+  pack: world skins, terrain and effects, UI pieces, buttons and background tiles
+  (`GETextureDescription::mUseTexturePack`, true by default). The mouse pointers come from it too
+  (`RTSMouse::LoadPointer`). Pictures read as data (`textures\ColorPalette`, `WaterPalette`, `Volcano`) never do.
+  They are read around the texture manager, and the pack lookup also refuses them by name.
+  A pack surface has two sizes. Its **logical** size is the original's (`GESurface::GetWidth`/`GetHeight`,
+  `GETexture::GetWidth`, ...), and every layout, source rectangle, sprite cell, hot spot and UV the game computes uses
+  it, so the 2D code is unchanged. Its **pixel** size is 4x (2x at resolution 2): `GESurface::GetPixelWidth`/
+  `GetPixelHeight`, `GetLogicalShift`. The conversion happens at the bottom. `DX7Surface::CopyTo`, `CopyWithFilter` and
+  `Clear` scale logical rectangles to each surface's pixels, and `Lock`/`GetBytesPerRow` address pixels.
+  `GETexture::GetNumMipLevelsToDrop` stays the caller's drop, because the 2D code rebuilds the original size as
+  `GetWidth() << drop`. A pack texture always gets MIP levels, and a "no MIP filter" stage becomes point MIP
+  filtering, so art drawn smaller than its pixels (most UI at window size) is minified from a box-filtered level,
+  not point-sampled from the big one. Grid backgrounds keep their clamp addressing (no seams).
+  The cache is keyed by name, so a texture's first load decides the file for every user of that name.
+  The setting applies to textures loaded after it changes. Textures already cached keep theirs until they are
+  released, so the settings screen says to restart. `GETextureManager::SetTexturePack`, `EESetTextureResolution`
+  (EEPreferences.cpp); `EE_TEXTURE_PACK_LOG=1` prints every pack texture and pointer loaded with both sizes.
 
 ### 2.2 The `.ssa` archive (`FSArchive`, `src/Low-Level Engine/File System/FSArchive.cpp`)
 

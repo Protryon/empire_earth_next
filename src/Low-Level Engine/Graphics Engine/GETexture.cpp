@@ -96,6 +96,8 @@ GETexture::GETexture(GETextureManager* inManager) : mFrameTopLeftCorner()
     this->mFrame = 0;
     this->mMipLevelCount = 0;
     this->mNumMipLevelsToDrop = 0;
+    this->mIsFromTexturePack = false;
+    this->mTexturePackMipLevels = 0;
     this->mStage.mTexture = this;
     this->mStage.mColorMode = kStageOpTexture;
     this->mStage.mAlphaMode = kStageOpTexture;
@@ -129,6 +131,8 @@ GETexture::GETexture(GESurface* inSurface, GETextureManager* inManager) : mFrame
     this->mFrame = 0;
     this->mMipLevelCount = 0;
     this->mNumMipLevelsToDrop = 0;
+    this->mIsFromTexturePack = false;
+    this->mTexturePackMipLevels = 0;
     this->mStage.mTexture = this;
     this->mStage.mColorMode = kStageOpTexture;
     this->mStage.mAlphaMode = kStageOpTexture;
@@ -468,9 +472,24 @@ long GETexture::Recreate(GEScreen* inScreen)
     GESurfaceDescription theDescription;
     this->mScreen = inScreen;
     theDescription = this->mSurface->GetSurfaceDescription();
+    unsigned long theShift = this->mSurface->GetLogicalShift();   // port: the new surface keeps the logical size
     this->mSurface->Dereference();
     this->mSurface = NULL;
-    return this->mScreen->CreateSurface(theDescription, &this->mSurface);
+    long theResult = this->mScreen->CreateSurface(theDescription, &this->mSurface);
+    if (theResult == kErrorOK)
+        this->mSurface->SetLogicalShift(theShift);
+    return theResult;
+}
+
+// port: see the header
+void GETexture::SetLogicalShift(unsigned long inShift)
+{
+    if (this->mSurface)
+        this->mSurface->SetLogicalShift(inShift);
+    if (this->mFrameFormat == 0 && this->mFrames)
+        for (unsigned long i = 1; i < this->mFrameCount; i++)
+            if (this->mFrames[i] && this->mFrames[i]->mSurface)
+                this->mFrames[i]->mSurface->SetLogicalShift(inShift);
 }
 
 // FSBasicFile::GetFileAccess is header-inline (FSBasicFile.cpp defines it; its export is ICF-folded at 0x4c365)
@@ -492,8 +511,8 @@ long GETexture::Save(FSFileSpec& inFile, unsigned char inType, long inFrame)
         if (theResult != kErrorOK)
             return theResult;
     }
-    theHeader.mWidth = this->mSurface->GetWidth();
-    theHeader.mHeight = this->mSurface->GetHeight();
+    theHeader.mWidth = this->mSurface->GetPixelWidth();     // port: the pixels written below
+    theHeader.mHeight = this->mSurface->GetPixelHeight();
     theHeader.mIsCompressed = this->mIsCompressed;
     theHeader.mMipLevelCount = 1;
     theHeader.mFrameCount = this->mFrameCount;
@@ -590,6 +609,10 @@ void GETexture::SetStageMinFilterMode(unsigned long inMode, unsigned long inStag
 void GETexture::SetStageMipFilterMode(unsigned long inMode, unsigned long inStage)
 {
     unsigned long i;
+    // port: a texture pack's texture is drawn smaller than its pixels (its logical size): its MIP levels are used
+    // even where the game asks for none, so it is not point sampled from the big level (GETextureManager makes them)
+    if (inMode == kMipFilterNone && this->mSurface && this->mSurface->GetLogicalShift() > 0 && this->mCreateMIPMaps)
+        inMode = kMipFilterPoint;
     if (this->mFrameFormat == 0) {
         for (i = 0; i < this->mFrameCount; i++) {
             if (this->mFrames[i]->mStage.mMipFilterMode != inMode) {

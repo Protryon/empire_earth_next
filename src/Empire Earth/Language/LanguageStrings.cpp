@@ -4,7 +4,7 @@
 #include "lle/UResourceStrings.h"
 
 extern const unsigned short gResourceStringsLanguage = 0x409;
-extern const unsigned long gResourceStringCount = 3707;
+extern const unsigned long gResourceStringCount = 3711;
 extern const UResourceString gResourceStrings[] = {
     {0, "FONTS"},
     {1, "Arial"},
@@ -3713,4 +3713,8 @@ extern const UResourceString gResourceStrings[] = {
     {33003, "gold "},
     {33004, "food "},
     {33005, "using insurance."},
+    {33100, "Textures: Original"},
+    {33101, "Textures: 2x Upscale"},
+    {33102, "Textures: 4x Upscale"},
+    {33103, "Use the high-resolution texture pack (Data\\Textures-4x) for units, buildings, terrain and effects, at 2x or 4x the original size. Textures the pack does not have stay original. Uses more video memory. (Note: changes to this option take effect only if you exit and restart Empire Earth: Art of Conquest.)"},
 };
