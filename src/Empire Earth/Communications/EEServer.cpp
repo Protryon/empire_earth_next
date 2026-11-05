@@ -175,7 +175,7 @@ void EEServer::ProcessConnectionRequest(unsigned char inSlot, const EEGameOption
             goto done;
         for (i = 0; i < 16; i++) {
             thePlayer = gGameOptions.mPlayers[i];
-            if ((thePlayer.mType == 1 || thePlayer.mType == 2) && _mbsicmp(reinterpret_cast<const unsigned char*>((const char*)thePlayer.mName),
+            if ((thePlayer.mType == 1 || thePlayer.mType == 2) && PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)thePlayer.mName),
                                                                           reinterpret_cast<const unsigned char*>((const char*)inPlayer.mName)) == 0) {
                 theResponse = new NEMClientConnectionRequestResponse(kConnectionNameInUse, gGameVersion, inSlot,
                                                                      this->GetCurrentCommunicationsTick(), 0xff);
@@ -1120,7 +1120,7 @@ void EEServer::SendPlayerSlotInfo()
         unsigned char j;
         for (j = 0; j < 16; j++) {
             thePlayer = gGameOptions.mPlayers[j];
-            if (_mbsicmp(reinterpret_cast<const unsigned char*>((const char*)thePlayer.mName),
+            if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)thePlayer.mName),
                          reinterpret_cast<const unsigned char*>((const char*)theWorldPlayer->mName)) != 0
                 || (thePlayer.mType != 1 && thePlayer.mType != 2))
                 continue;

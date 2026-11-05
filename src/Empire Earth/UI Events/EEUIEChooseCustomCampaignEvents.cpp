@@ -96,7 +96,7 @@ long EEUIECCCEFormOpen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         theFileName = *theIterator;
         if (theFileName.GetLength() > 4) {
             theExtension = theFileName.GetIndexedSubstring(theFileName.GetLength() - 4, theFileName.GetLength() - 1);
-            _mbslwr((unsigned char*)(const char*)theExtension);
+            PlatMbsLwr((unsigned char*)(const char*)theExtension);
             if (theExtension == gCampaignExtension)
                 theFileName = theFileName.GetIndexedSubstring(0, theFileName.GetLength() - 5);
         }

@@ -37,84 +37,84 @@ UWideString operator+(const UWideString& inLeft, const char* inRight)
 // Returns whether the two strings are equal (multibyte compare)
 bool operator==(const UWideString& inLeft, const UWideString& inRight)
 {
-    return _mbscmp(MB((const char*)inLeft), MB((const char*)inRight)) == 0;
+    return PlatMbsCmp(MB((const char*)inLeft), MB((const char*)inRight)) == 0;
 }
 
 // FUNCTION: LLE 0x100839b6
 // Returns whether the string equals the C string (multibyte compare)
 bool operator==(const UWideString& inLeft, const char* inRight)
 {
-    return _mbscmp(MB((const char*)inLeft), MB(inRight)) == 0;
+    return PlatMbsCmp(MB((const char*)inLeft), MB(inRight)) == 0;
 }
 
 // FUNCTION: LLE 0x100839d0
 // Returns whether the two strings differ (multibyte compare)
 bool operator!=(const UWideString& inLeft, const UWideString& inRight)
 {
-    return _mbscmp(MB((const char*)inLeft), MB((const char*)inRight)) != 0;
+    return PlatMbsCmp(MB((const char*)inLeft), MB((const char*)inRight)) != 0;
 }
 
 // FUNCTION: LLE 0x100839ef
 // Returns whether the string differs from the C string (multibyte compare)
 bool operator!=(const UWideString& inLeft, const char* inRight)
 {
-    return _mbscmp(MB((const char*)inLeft), MB(inRight)) != 0;
+    return PlatMbsCmp(MB((const char*)inLeft), MB(inRight)) != 0;
 }
 
 // FUNCTION: LLE 0x10083a0a
 // Returns whether the left string sorts before the right one (multibyte compare)
 bool operator<(const UWideString& inLeft, const UWideString& inRight)
 {
-    return _mbscmp(MB((const char*)inLeft), MB((const char*)inRight)) < 0;
+    return PlatMbsCmp(MB((const char*)inLeft), MB((const char*)inRight)) < 0;
 }
 
 // FUNCTION: LLE 0x10083a2c
 // Returns whether the string sorts before the C string (multibyte compare)
 bool operator<(const UWideString& inLeft, const char* inRight)
 {
-    return _mbscmp(MB((const char*)inLeft), MB(inRight)) < 0;
+    return PlatMbsCmp(MB((const char*)inLeft), MB(inRight)) < 0;
 }
 
 // FUNCTION: LLE 0x10083a4a
 // Returns whether the left string sorts before or equal to the right one (multibyte compare)
 bool operator<=(const UWideString& inLeft, const UWideString& inRight)
 {
-    return _mbscmp(MB((const char*)inLeft), MB((const char*)inRight)) <= 0;
+    return PlatMbsCmp(MB((const char*)inLeft), MB((const char*)inRight)) <= 0;
 }
 
 // FUNCTION: LLE 0x10083a6c
 // Returns whether the string sorts before or equal to the C string (multibyte compare)
 bool operator<=(const UWideString& inLeft, const char* inRight)
 {
-    return _mbscmp(MB((const char*)inLeft), MB(inRight)) <= 0;
+    return PlatMbsCmp(MB((const char*)inLeft), MB(inRight)) <= 0;
 }
 
 // FUNCTION: LLE 0x10083a8a
 // Returns whether the left string sorts after the right one (multibyte compare)
 bool operator>(const UWideString& inLeft, const UWideString& inRight)
 {
-    return _mbscmp(MB((const char*)inLeft), MB((const char*)inRight)) > 0;
+    return PlatMbsCmp(MB((const char*)inLeft), MB((const char*)inRight)) > 0;
 }
 
 // FUNCTION: LLE 0x10083aac
 // Returns whether the string sorts after the C string (multibyte compare)
 bool operator>(const UWideString& inLeft, const char* inRight)
 {
-    return _mbscmp(MB((const char*)inLeft), MB(inRight)) > 0;
+    return PlatMbsCmp(MB((const char*)inLeft), MB(inRight)) > 0;
 }
 
 // FUNCTION: LLE 0x10083aca
 // Returns whether the left string sorts after or equal to the right one (multibyte compare)
 bool operator>=(const UWideString& inLeft, const UWideString& inRight)
 {
-    return _mbscmp(MB((const char*)inLeft), MB((const char*)inRight)) >= 0;
+    return PlatMbsCmp(MB((const char*)inLeft), MB((const char*)inRight)) >= 0;
 }
 
 // FUNCTION: LLE 0x10083aec
 // Returns whether the string sorts after or equal to the C string (multibyte compare)
 bool operator>=(const UWideString& inLeft, const char* inRight)
 {
-    return _mbscmp(MB((const char*)inLeft), MB(inRight)) >= 0;
+    return PlatMbsCmp(MB((const char*)inLeft), MB(inRight)) >= 0;
 }
 
 // FUNCTION: LLE 0x10083b0a
@@ -124,8 +124,8 @@ long sprintf(UWideString& outString, const char* inFormat, ...)
     va_list theArguments;
     va_start(theArguments, inFormat);
     long theResult = vsprintf(outString.mString, inFormat, theArguments);
-    outString.mLength = _mbslen(MB(outString.mString));
-    outString.mByteLength = _mbsnbcnt(MB((const char*)outString), outString.mLength);
+    outString.mLength = PlatMbsLen(MB(outString.mString));
+    outString.mByteLength = PlatMbsNBCnt(MB((const char*)outString), outString.mLength);
     return theResult;
 }
 
@@ -155,8 +155,8 @@ UWideString::UWideString(const UWideString& inString)
 // Creates a multibyte string from a C string, with room for two bytes per character
 UWideString::UWideString(const char* inString)
 {
-    this->mLength = _mbslen(MB(inString));
-    this->mByteLength = _mbsnbcnt(MB(inString), this->mLength);
+    this->mLength = PlatMbsLen(MB(inString));
+    this->mByteLength = PlatMbsNBCnt(MB(inString), this->mLength);
     this->mCapacity = this->mLength * 2 + 2;
     this->mString = new char[this->mCapacity];
     strcpy(this->mString, inString);
@@ -205,8 +205,8 @@ UWideString& UWideString::operator=(const UWideString& inString)
         }
         if (inString.mString)
             strcpy(this->mString, inString.mString);
-        this->mLength = _mbslen(MB((const char*)*this));
-        this->mByteLength = _mbsnbcnt(MB((const char*)*this), this->mLength);
+        this->mLength = PlatMbsLen(MB((const char*)*this));
+        this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
     }
     return *this;
 }
@@ -215,7 +215,7 @@ UWideString& UWideString::operator=(const UWideString& inString)
 // Copies a C string, growing to fit it or shrinking to whole 256-byte blocks when much smaller
 UWideString& UWideString::operator=(const char* inString)
 {
-    unsigned long theSize = _mbsnbcnt(MB(inString), _mbslen(MB(inString))) + 2;
+    unsigned long theSize = PlatMbsNBCnt(MB(inString), PlatMbsLen(MB(inString))) + 2;
     if (theSize != this->mCapacity) {
         if (theSize > this->mCapacity) {
             delete[] this->mString;
@@ -231,8 +231,8 @@ UWideString& UWideString::operator=(const char* inString)
         }
     }
     strcpy(this->mString, inString);
-    this->mLength = _mbslen(MB((const char*)*this));
-    this->mByteLength = _mbsnbcnt(MB((const char*)*this), this->mLength);
+    this->mLength = PlatMbsLen(MB((const char*)*this));
+    this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
     return *this;
 }
 
@@ -260,18 +260,18 @@ void UWideString::CopyString(const UWideString& inString, unsigned long inCount)
             }
         }
     }
-    _mbsncpy(MB((const char*)*this), MB(inString.mString), inCount);
-    char* theEnd = (char*)_mbsninc(MB((const char*)*this), inCount);
+    PlatMbsNCpy(MB((const char*)*this), MB(inString.mString), inCount);
+    char* theEnd = (char*)PlatMbsNInc(MB((const char*)*this), inCount);
     strcpy(theEnd, "");
-    this->mLength = _mbslen(MB((const char*)*this));
-    this->mByteLength = _mbsnbcnt(MB((const char*)*this), this->mLength);
+    this->mLength = PlatMbsLen(MB((const char*)*this));
+    this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
 }
 
 // FUNCTION: LLE 0x10083e59
 // Copies the first inCount characters of a C string, resizing the buffer to fit them
 void UWideString::CopyString(const char* inString, unsigned long inCount)
 {
-    unsigned long theSize = _mbsnbcnt(MB(inString), inCount) + 1;
+    unsigned long theSize = PlatMbsNBCnt(MB(inString), inCount) + 1;
     if (theSize != this->mCapacity) {
         if (theSize > this->mCapacity) {
             delete[] this->mString;
@@ -286,11 +286,11 @@ void UWideString::CopyString(const char* inString, unsigned long inCount)
             }
         }
     }
-    _mbsncpy(MB((const char*)*this), MB(inString), inCount);
-    char* theEnd = (char*)_mbsninc(MB((const char*)*this), inCount);
+    PlatMbsNCpy(MB((const char*)*this), MB(inString), inCount);
+    char* theEnd = (char*)PlatMbsNInc(MB((const char*)*this), inCount);
     strcpy(theEnd, "");
-    this->mLength = _mbslen(MB((const char*)*this));
-    this->mByteLength = _mbsnbcnt(MB((const char*)*this), this->mLength);
+    this->mLength = PlatMbsLen(MB((const char*)*this));
+    this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
 }
 
 // FUNCTION: LLE 0x10083f0f
@@ -298,7 +298,7 @@ void UWideString::CopyString(const char* inString, unsigned long inCount)
 char UWideString::operator[](int inIndex) const
 {
     if (inIndex >= 0 && inIndex < (int)this->mLength)
-        return *_mbsninc(MB((const char*)*this), inIndex);
+        return *PlatMbsNInc(MB((const char*)*this), inIndex);
     return 0;
 }
 
@@ -306,12 +306,12 @@ char UWideString::operator[](int inIndex) const
 // Appends a string, reallocating to the combined size when it does not fit (tested against free space + 2)
 UWideString& UWideString::operator+=(const UWideString& inString)
 {
-    unsigned long theLength = _mbslen(MB((const char*)*this));
+    unsigned long theLength = PlatMbsLen(MB((const char*)*this));
     char* theString = this->mString;
-    unsigned long theAddedLength = _mbslen(MB(inString.mString));
-    unsigned long theAddedSize = _mbsnbcnt(MB((const char*)inString), theAddedLength);
-    unsigned long theSize = _mbsnbcnt(MB(theString), theLength) + theAddedSize + 2;
-    if (theSize < this->mCapacity - _mbsnbcnt(MB((const char*)*this), _mbslen(MB((const char*)*this))) + 2)
+    unsigned long theAddedLength = PlatMbsLen(MB(inString.mString));
+    unsigned long theAddedSize = PlatMbsNBCnt(MB((const char*)inString), theAddedLength);
+    unsigned long theSize = PlatMbsNBCnt(MB(theString), theLength) + theAddedSize + 2;
+    if (theSize < this->mCapacity - PlatMbsNBCnt(MB((const char*)*this), PlatMbsLen(MB((const char*)*this))) + 2)
         strcat(this->mString, inString.mString);
     else {
         this->mCapacity = theSize;
@@ -321,8 +321,8 @@ UWideString& UWideString::operator+=(const UWideString& inString)
         delete this->mString;
         this->mString = theNewString;
     }
-    this->mLength = _mbslen(MB((const char*)*this));
-    this->mByteLength = _mbsnbcnt(MB((const char*)*this), this->mLength);
+    this->mLength = PlatMbsLen(MB((const char*)*this));
+    this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
     return *this;
 }
 
@@ -330,11 +330,11 @@ UWideString& UWideString::operator+=(const UWideString& inString)
 // Appends a C string, reallocating to the combined size when it does not fit (tested against free space + 2)
 UWideString& UWideString::operator+=(const char* inString)
 {
-    unsigned long theLength = _mbslen(MB((const char*)*this));
+    unsigned long theLength = PlatMbsLen(MB((const char*)*this));
     char* theString = this->mString;
-    unsigned long theAddedSize = _mbsnbcnt(MB(inString), _mbslen(MB(inString)));
-    unsigned long theSize = _mbsnbcnt(MB(theString), theLength) + theAddedSize + 2;
-    if (theSize < this->mCapacity - _mbsnbcnt(MB((const char*)*this), _mbslen(MB((const char*)*this))) + 2)
+    unsigned long theAddedSize = PlatMbsNBCnt(MB(inString), PlatMbsLen(MB(inString)));
+    unsigned long theSize = PlatMbsNBCnt(MB(theString), theLength) + theAddedSize + 2;
+    if (theSize < this->mCapacity - PlatMbsNBCnt(MB((const char*)*this), PlatMbsLen(MB((const char*)*this))) + 2)
         strcat(this->mString, inString);
     else {
         this->mCapacity = theSize;
@@ -344,8 +344,8 @@ UWideString& UWideString::operator+=(const char* inString)
         delete this->mString;
         this->mString = theNewString;
     }
-    this->mLength = _mbslen(MB((const char*)*this));
-    this->mByteLength = _mbsnbcnt(MB((const char*)*this), this->mLength);
+    this->mLength = PlatMbsLen(MB((const char*)*this));
+    this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
     return *this;
 }
 
@@ -366,13 +366,13 @@ void UWideString::Export(unsigned char* outData) const
 unsigned long UWideString::Find(const UWideString& inString, unsigned long inStart) const
 {
     unsigned long theIndex = inStart;
-    unsigned long theLength = _mbslen(MB(inString.mString));
+    unsigned long theLength = PlatMbsLen(MB(inString.mString));
     long theLast = (long)(this->mLength - inString.mLength) > 0 ? this->mLength - inString.mLength : 0;
     unsigned long theResult = this->mLength;
     if (this->mLength >= theLength) {
-        unsigned char* thePosition = _mbsninc(MB((const char*)*this), inStart);
-        for (; theIndex <= (unsigned long)theLast; theIndex++, thePosition = _mbsinc(thePosition)) {
-            if (_mbsncmp(thePosition, MB((const char*)inString), inString.GetLength()) == 0) {
+        unsigned char* thePosition = PlatMbsNInc(MB((const char*)*this), inStart);
+        for (; theIndex <= (unsigned long)theLast; theIndex++, thePosition = PlatMbsInc(thePosition)) {
+            if (PlatMbsNCmp(thePosition, MB((const char*)inString), inString.GetLength()) == 0) {
                 theResult = theIndex;
                 break;
             }
@@ -386,13 +386,13 @@ unsigned long UWideString::Find(const UWideString& inString, unsigned long inSta
 unsigned long UWideString::Find(const char* inString, unsigned long inStart) const
 {
     unsigned long theIndex = inStart;
-    unsigned long theLength = _mbslen(MB(inString));
+    unsigned long theLength = PlatMbsLen(MB(inString));
     long theLast = (long)(this->mLength - theLength) > 0 ? this->mLength - theLength : 0;
     unsigned long theResult = this->mLength;
     if (this->mLength >= theLength) {
-        unsigned char* thePosition = _mbsninc(MB((const char*)*this), inStart);
-        for (; theIndex <= (unsigned long)theLast; theIndex++, thePosition = _mbsinc(thePosition)) {
-            if (_mbsncmp(thePosition, MB(inString), theLength) == 0) {
+        unsigned char* thePosition = PlatMbsNInc(MB((const char*)*this), inStart);
+        for (; theIndex <= (unsigned long)theLast; theIndex++, thePosition = PlatMbsInc(thePosition)) {
+            if (PlatMbsNCmp(thePosition, MB(inString), theLength) == 0) {
                 theResult = theIndex;
                 break;
             }
@@ -405,7 +405,7 @@ unsigned long UWideString::Find(const char* inString, unsigned long inStart) con
 // Returns the bytes Save writes: a 4-byte size plus the bytes and terminator
 unsigned long UWideString::GetBytesUsedToSave() const
 {
-    return _mbsnbcnt(MB((const char*)*this), this->GetLength()) + 5;
+    return PlatMbsNBCnt(MB((const char*)*this), this->GetLength()) + 5;
 }
 
 // FUNCTION: LLE 0x1008422b
@@ -433,8 +433,8 @@ unsigned long UWideString::GetExportSize() const
 UWideString UWideString::GetIndexedSubstring(unsigned long inFirst, unsigned long inLast) const
 {
     UWideString theResult;
-    theResult = (const char*)_mbsninc(MB((const char*)*this), inFirst);
-    char* theEnd = (char*)_mbsninc(MB(theResult.mString), inLast - inFirst + 1);
+    theResult = (const char*)PlatMbsNInc(MB((const char*)*this), inFirst);
+    char* theEnd = (char*)PlatMbsNInc(MB(theResult.mString), inLast - inFirst + 1);
     strcpy(theEnd, "");
     return theResult;
 }
@@ -445,13 +445,13 @@ unsigned long UWideString::Import(unsigned char* inData)
 {
     unsigned long theSize;
     unsigned char* theString = inData + 4;
-    unsigned long theLength = _mbslen(theString);
+    unsigned long theLength = PlatMbsLen(theString);
     memcpy(&theSize, inData, 4);
     if (this->mCapacity < theSize)
         this->Reallocate(theSize);
     memcpy(this->mString, theString, theSize);
     this->mLength = theLength;
-    this->mByteLength = _mbsnbcnt(MB((const char*)*this), theLength);
+    this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), theLength);
     return theSize + 4;
 }
 
@@ -462,29 +462,29 @@ void UWideString::InsertString(const UWideString& inString, unsigned long inPosi
 {
     unsigned long theSize;
     if (inReplace)
-        theSize = _mbsnbcnt(MB((const char*)*this), inPosition) +
-                  _mbsnbcnt(MB(inString.mString), _mbslen(MB(inString.mString))) + 2;
+        theSize = PlatMbsNBCnt(MB((const char*)*this), inPosition) +
+                  PlatMbsNBCnt(MB(inString.mString), PlatMbsLen(MB(inString.mString))) + 2;
     else {
-        unsigned long theLength = _mbslen(MB((const char*)*this));
-        theSize = _mbsnbcnt(MB((const char*)*this), theLength) +
-                  _mbsnbcnt(MB(inString.mString), _mbslen(MB(inString.mString))) + 2;
+        unsigned long theLength = PlatMbsLen(MB((const char*)*this));
+        theSize = PlatMbsNBCnt(MB((const char*)*this), theLength) +
+                  PlatMbsNBCnt(MB(inString.mString), PlatMbsLen(MB(inString.mString))) + 2;
     }
-    unsigned long theAvailable = this->mCapacity - _mbsnbcnt(MB((const char*)*this), _mbslen(MB((const char*)*this))) + 2;
+    unsigned long theAvailable = this->mCapacity - PlatMbsNBCnt(MB((const char*)*this), PlatMbsLen(MB((const char*)*this))) + 2;
     // Fixed: the capacity used to be set to the free space (theAvailable), not the needed size, so the copies
     // below overflowed the new buffer
     if (theSize > theAvailable || theSize > this->mCapacity)
         this->mCapacity = theSize;
     char* theNewString = new char[this->mCapacity];
-    _mbsncpy(MB(theNewString), MB((const char*)*this), inPosition);
-    char* theInsert = (char*)_mbsninc(MB(theNewString), inPosition);
+    PlatMbsNCpy(MB(theNewString), MB((const char*)*this), inPosition);
+    char* theInsert = (char*)PlatMbsNInc(MB(theNewString), inPosition);
     strcpy(theInsert, inString.mString);
-    char* theRest = (char*)_mbsninc(MB((const char*)*this), inPosition);
+    char* theRest = (char*)PlatMbsNInc(MB((const char*)*this), inPosition);
     if (!inReplace)
         strcat(theInsert, theRest);
     delete[] this->mString;
     this->mString = theNewString;
-    this->mLength = _mbslen(MB((const char*)*this));
-    this->mByteLength = _mbsnbcnt(MB((const char*)*this), this->mLength);
+    this->mLength = PlatMbsLen(MB((const char*)*this));
+    this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
 }
 
 // FUNCTION: LLE 0x10084498
@@ -494,27 +494,27 @@ void UWideString::InsertString(const char* inString, unsigned long inPosition, b
 {
     unsigned long theSize;
     if (inReplace)
-        theSize = _mbsnbcnt(MB((const char*)*this), inPosition) + _mbsnbcnt(MB(inString), _mbslen(MB(inString))) + 2;
+        theSize = PlatMbsNBCnt(MB((const char*)*this), inPosition) + PlatMbsNBCnt(MB(inString), PlatMbsLen(MB(inString))) + 2;
     else {
-        unsigned long theLength = _mbslen(MB((const char*)*this));
-        theSize = _mbsnbcnt(MB((const char*)*this), theLength) + _mbsnbcnt(MB(inString), _mbslen(MB(inString))) + 2;
+        unsigned long theLength = PlatMbsLen(MB((const char*)*this));
+        theSize = PlatMbsNBCnt(MB((const char*)*this), theLength) + PlatMbsNBCnt(MB(inString), PlatMbsLen(MB(inString))) + 2;
     }
-    unsigned long theAvailable = this->mCapacity - _mbsnbcnt(MB((const char*)*this), _mbslen(MB((const char*)*this))) + 2;
+    unsigned long theAvailable = this->mCapacity - PlatMbsNBCnt(MB((const char*)*this), PlatMbsLen(MB((const char*)*this))) + 2;
     // Fixed: the capacity used to be set to the free space (theAvailable), not the needed size, so the copies
     // below overflowed the new buffer
     if (theSize > theAvailable || theSize > this->mCapacity)
         this->mCapacity = theSize;
     char* theNewString = new char[this->mCapacity];
-    _mbsncpy(MB(theNewString), MB((const char*)*this), inPosition);
-    char* theInsert = (char*)_mbsninc(MB(theNewString), inPosition);
+    PlatMbsNCpy(MB(theNewString), MB((const char*)*this), inPosition);
+    char* theInsert = (char*)PlatMbsNInc(MB(theNewString), inPosition);
     strcpy(theInsert, inString);
-    char* theRest = (char*)_mbsninc(MB((const char*)*this), inPosition);
+    char* theRest = (char*)PlatMbsNInc(MB((const char*)*this), inPosition);
     if (!inReplace)
         strcat(theInsert, theRest);
     delete[] this->mString;
     this->mString = theNewString;
-    this->mLength = _mbslen(MB((const char*)*this));
-    this->mByteLength = _mbsnbcnt(MB((const char*)*this), this->mLength);
+    this->mLength = PlatMbsLen(MB((const char*)*this));
+    this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
 }
 
 // FUNCTION: LLE 0x100845b5
@@ -534,8 +534,8 @@ long UWideString::Load(FSFile& inFile)
         theResult = inFile.Read(this->mString, theSize, theRead);
         if (theResult == kErrorOK) {
             strcpy(this->mString + theSize, "");
-            this->mLength = _mbslen(MB((const char*)*this));
-            this->mByteLength = _mbsnbcnt(MB((const char*)*this), this->mLength);
+            this->mLength = PlatMbsLen(MB((const char*)*this));
+            this->mByteLength = PlatMbsNBCnt(MB((const char*)*this), this->mLength);
             if (theRead != theSize)
                 theResult = kErrorFailed;
         }
@@ -552,7 +552,7 @@ long UWideString::Load(FSFile& inFile)
 // Writes the byte size and the bytes, both counting the terminator, to the file; returns the first error
 long UWideString::Save(FSFile& inFile) const
 {
-    unsigned long theSize = _mbsnbcnt(MB((const char*)*this), this->GetLength()) + 1;
+    unsigned long theSize = PlatMbsNBCnt(MB((const char*)*this), this->GetLength()) + 1;
     unsigned long theWritten;
     long theResult = inFile.Write(theSize);
     if (theResult != kErrorOK)
@@ -577,23 +577,23 @@ bool UWideString::Tokenize(const UWideString& inSeparators, std::vector<UWideStr
     unsigned char* thePosition = MB((const char*)*this);
     for (; i <= this->mLength; i++) {
         if (theBetweenTokens) {
-            _mbsncpy(MB(theCharacter), thePosition, 1);
-            char* theEnd = (char*)_mbsninc(MB(theCharacter), 1);
+            PlatMbsNCpy(MB(theCharacter), thePosition, 1);
+            char* theEnd = (char*)PlatMbsNInc(MB(theCharacter), 1);
             strcpy(theEnd, "");
             if (inSeparators.Find(theCharacter, 0) == theNotFound) {
                 theBetweenTokens = false;
                 theStart = i;
             }
         } else {
-            _mbsncpy(MB(theCharacter), thePosition, 1);
-            char* theEnd = (char*)_mbsninc(MB(theCharacter), 1);
+            PlatMbsNCpy(MB(theCharacter), thePosition, 1);
+            char* theEnd = (char*)PlatMbsNInc(MB(theCharacter), 1);
             strcpy(theEnd, "");
             if (inSeparators.Find(theCharacter, 0) != theNotFound || i == this->mLength) {
                 outTokens.push_back(this->GetIndexedSubstring(theStart, i - 1));
                 theBetweenTokens = true;
             }
         }
-        thePosition = _mbsinc(thePosition);
+        thePosition = PlatMbsInc(thePosition);
     }
     return true;
 }

@@ -2,6 +2,7 @@
 // a capacity (mCapacity counts the terminator). Requires <vector> (Tokenize) and windows.h-free declarations only.
 #ifndef LLE_USTRING_H
 #define LLE_USTRING_H
+#include "platform/PlatString.h"
 
 #include <vector>
 #include <string.h>
@@ -31,12 +32,12 @@ public:
         { return strncmp(this->mString, inString.mString, inCount) == 0; }
     bool Equals(const char* inString) const { return strcmp(this->mString, inString) == 0; }
     bool Equals(const char* inString, unsigned long inCount) const { return strncmp(this->mString, inString, inCount) == 0; }
-    bool EqualsIgnoreCase(const UString& inString) const { return _stricmp(this->mString, inString.mString) == 0; }
+    bool EqualsIgnoreCase(const UString& inString) const { return PlatStrICmp(this->mString, inString.mString) == 0; }
     bool EqualsIgnoreCase(const UString& inString, unsigned long inCount) const
-        { return _strnicmp(this->mString, inString.mString, inCount) == 0; }
-    bool EqualsIgnoreCase(const char* inString) const { return _stricmp(this->mString, inString) == 0; }
+        { return PlatStrNICmp(this->mString, inString.mString, inCount) == 0; }
+    bool EqualsIgnoreCase(const char* inString) const { return PlatStrICmp(this->mString, inString) == 0; }
     bool EqualsIgnoreCase(const char* inString, unsigned long inCount) const
-        { return _strnicmp(this->mString, inString, inCount) == 0; }
+        { return PlatStrNICmp(this->mString, inString, inCount) == 0; }
 #ifdef LOWLEVELENGINE_EXPORTS
     static void SetDefaultAllocationLength(unsigned long inLength) { UString::sDefaultAllocationLength = inLength; }
 #else

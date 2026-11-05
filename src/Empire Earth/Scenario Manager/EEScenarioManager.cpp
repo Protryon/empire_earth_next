@@ -626,7 +626,7 @@ EESMArea* EEScenarioManager::DuplicateArea(unsigned long inIndex)
     theName = this->mAreas[inIndex]->GetName();
     if (theName.GetLength() > 2) {
         if (theName[0] == '<') {
-            theName = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
+            theName = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
             if (theName[(int)theName.GetLength() - 1] == '>')
                 theName.CopyString(theName, theName.GetLength() - 1);
         }
@@ -659,7 +659,7 @@ EESMCondition* EEScenarioManager::DuplicateCondition(unsigned long inIndex)
     theName = this->mConditions[inIndex]->mName;
     if (theName.GetLength() > 2) {
         if (theName[0] == '<') {
-            theName = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
+            theName = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
             if (theName[(int)theName.GetLength() - 1] == '>')
                 theName.CopyString(theName, theName.GetLength() - 1);
         }
@@ -694,7 +694,7 @@ EESMEffect* EEScenarioManager::DuplicateEffect(unsigned long inIndex)
     theName = this->mEffects[inIndex]->mName;
     if (theName.GetLength() > 2) {
         if (theName[0] == '<') {
-            theName = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
+            theName = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
             if (theName[(int)theName.GetLength() - 1] == '>')
                 theName.CopyString(theName, theName.GetLength() - 1);
         }
@@ -723,7 +723,7 @@ EESMObject* EEScenarioManager::DuplicateObject(unsigned long inIndex)
     UWideString theCopyOf;
     gResource->GetString(IDS_COPY, theCopyOf);
     if (theName.GetLength() > 2 && theName[0] == '<') {
-        theStripped = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
+        theStripped = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
         if (theStripped[(int)theStripped.GetLength() - 1] == '>')
             theName.CopyString(theStripped, theStripped.GetLength() - 1);
         sprintf(theNewName, "<%s_%s>", (const char*)theName, (const char*)theCopyOf);
@@ -755,7 +755,7 @@ EESMTrigger* EEScenarioManager::DuplicateTrigger(unsigned long inIndex)
     theName = this->mTriggers[inIndex]->mName;
     if (theName.GetLength() > 2) {
         if (theName[0] == '<') {
-            theName = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
+            theName = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theName), 1);
             if (theName[(int)theName.GetLength() - 1] == '>')
                 theName.CopyString(theName, theName.GetLength() - 1);
         }
@@ -1793,7 +1793,7 @@ long EEScenarioManager::ParseConditionID(const UString& inLine, unsigned long in
         theNumber.CopyString((const char*)inLine, theIndex);
         *outID = atoi(theNumber);
         if (theIndex + 1 < inLine.GetLength())
-            outRest = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 11);
+            outRest = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 11);
         theResult = 0;
     }
     return theResult;
@@ -1812,7 +1812,7 @@ long EEScenarioManager::ParseEffectID(const UString& inLine, unsigned long inKin
         theNumber.CopyString((const char*)inLine, theIndex);
         *outID = atoi(theNumber);
         if (theIndex + 1 < inLine.GetLength())
-            outRest = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 1);
+            outRest = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 1);
     } else {
         theIndex = inLine.Find("_Effect:", 0);
         if (theIndex <= 0 || theIndex >= inLine.GetLength())
@@ -1820,7 +1820,7 @@ long EEScenarioManager::ParseEffectID(const UString& inLine, unsigned long inKin
         theNumber.CopyString((const char*)inLine, theIndex);
         *outID = atoi(theNumber);
         if (theIndex + 1 < inLine.GetLength())
-            outRest = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 8);
+            outRest = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 8);
     }
     return 0;
 }
@@ -1838,7 +1838,7 @@ long EEScenarioManager::ParsePlayerName(const UString& inLine, unsigned long inK
         theNumber.CopyString((const char*)inLine, theIndex);
         *outID = atoi(theNumber);
         if (theIndex + 1 < inLine.GetLength())
-            outRest = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 13);
+            outRest = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inLine), theIndex + 13);
         theResult = 0;
     }
     return theResult;

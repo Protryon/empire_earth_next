@@ -192,7 +192,7 @@ long EEUIFMGStatusBar::CopyData()
     long theResult = this->mValue2->CopyData();
     if (this->mNumQueued > 0) {
         char theBuffer[32];
-        _itoa(this->mNumQueued, theBuffer, 10);
+        PlatIToA(this->mNumQueued, theBuffer, 10);
         this->mCount->SetText(UWideString(theBuffer));
         this->mShowCount = true;
     } else

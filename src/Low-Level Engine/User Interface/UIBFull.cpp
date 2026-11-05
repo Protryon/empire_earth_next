@@ -118,11 +118,11 @@ long UIBFull::LoadBackground()
     GETextureManager* theManager = this->mForm->GetManager()->GetRasterizer()->GetTextureManager(theScreen);
     for (unsigned long theRow = 0; theRow < this->mRows; theRow++) {
         char theNumber[4];
-        _itoa(theRow + 1, theNumber, 10);
+        PlatIToA(theRow + 1, theNumber, 10);
         theRowString = theNumber;
         for (unsigned long theColumn = 0; theColumn < this->mColumns; theColumn++) {
             unsigned long theIndex = this->mColumns * theRow + theColumn;
-            _itoa(theColumn + 1, theNumber, 10);
+            PlatIToA(theColumn + 1, theNumber, 10);
             theColumnString = theNumber;
             const char* theExtension = strrchr(this->mTextureFileName, '.');
             if (theExtension) {

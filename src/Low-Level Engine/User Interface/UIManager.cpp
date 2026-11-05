@@ -981,7 +981,7 @@ void UIManager::StartMusic(const UWideString& inFileName)
     UWideString theFileName(inFileName);
     if (!this->mSoundManager)
         return;
-    _mbslwr((unsigned char*)(const char*)theFileName);
+    PlatMbsLwr((unsigned char*)(const char*)theFileName);
     if (this->mMusicFileName != theFileName) {
         this->mStopMusic = true;
         if (this->mMusicID != -1) {

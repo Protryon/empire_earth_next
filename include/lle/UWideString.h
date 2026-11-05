@@ -2,6 +2,7 @@
 // (MBCS) string: lengths through _mbslen/_mbsnbcnt. Capacity grows in blocks of sDefaultAllocationLength.
 #ifndef LLE_UWIDESTRING_H
 #define LLE_UWIDESTRING_H
+#include "platform/PlatString.h"
 
 #include <vector>
 #include <mbstring.h>
@@ -45,25 +46,25 @@ public:
     unsigned long GetAllocatedLength() const { return this->mCapacity; }
     void Clear() { this->mString[0] = 0; this->mLength = 0; this->mByteLength = 0; }
     bool Equals(const UWideString& inString) const
-        { return _mbscmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>((const char*)inString)) == 0; }
+        { return PlatMbsCmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>((const char*)inString)) == 0; }
     bool Equals(const UWideString& inString, unsigned long inCount) const
-        { return _mbsnbcmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>((const char*)inString),
+        { return PlatMbsNBCmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>((const char*)inString),
                            inCount) == 0; }
     bool Equals(const char* inString) const
-        { return _mbscmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>(inString)) == 0; }
+        { return PlatMbsCmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>(inString)) == 0; }
     bool Equals(const char* inString, unsigned long inCount) const
-        { return _mbsnbcmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>(inString), inCount) == 0; }
+        { return PlatMbsNBCmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>(inString), inCount) == 0; }
     bool EqualsIgnoreCase(const UWideString& inString) const
-        { return _mbsicmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>((const char*)inString)) == 0; }
+        { return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>((const char*)inString)) == 0; }
     bool EqualsIgnoreCase(const UWideString& inString, unsigned long inCount) const
-        { return _mbsnbicmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>((const char*)inString),
+        { return PlatMbsNBICmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>((const char*)inString),
                             inCount) == 0; }
     bool EqualsIgnoreCase(const char* inString) const
-        { return _mbsicmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>(inString)) == 0; }
+        { return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>(inString)) == 0; }
     bool EqualsIgnoreCase(const char* inString, unsigned long inCount) const
-        { return _mbsnbicmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>(inString), inCount) == 0; }
-    void ToLower() { _mbslwr(reinterpret_cast<unsigned char*>(this->mString)); }
-    void ToUpper() { _mbsupr(reinterpret_cast<unsigned char*>(this->mString)); }
+        { return PlatMbsNBICmp(reinterpret_cast<const unsigned char*>((const char*)*this), reinterpret_cast<const unsigned char*>(inString), inCount) == 0; }
+    void ToLower() { PlatMbsLwr(reinterpret_cast<unsigned char*>(this->mString)); }
+    void ToUpper() { PlatMbsUpr(reinterpret_cast<unsigned char*>(this->mString)); }
     // Replaces the buffer with an empty one of inSize + 1 bytes. (The original dropped the fresh buffer and pointed
     // mString at a "" literal, which Import then overwrote and the destructor freed.)
     void Reallocate(unsigned long inSize)

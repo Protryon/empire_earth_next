@@ -258,7 +258,7 @@ long Fn28015D(const UString& inName, bool inOverwrite)
     if (!inOverwrite) {
         for (unsigned long i = 0; i < gCivilizationManager.GetNumCivilizations(); i++) {
             EECivilizationEntry theEntry = gCivilizationManager.mCivilizations[i];
-            if (_stricmp(inName, theEntry.mFileName) != 0)
+            if (PlatStrICmp(inName, theEntry.mFileName) != 0)
                 continue;
             gResource->GetString(IDS_FILE_NAME_YOU_SPECIFIED_IS_RESERVED, theFormat);
             sprintf(theText, theFormat, (const char*)inName);
@@ -305,7 +305,7 @@ void Fn2802EF(UIForm* inClose)
         if (theResult == 0) {
             theResult = gU565518.Open(kFileAccessWrite);
             if (theResult == 0) {
-                theLength = _mbsnbcnt(reinterpret_cast<const unsigned char*>((const char*)theName), theName.GetLength());
+                theLength = PlatMbsNBCnt(reinterpret_cast<const unsigned char*>((const char*)theName), theName.GetLength());
                 theResult = gU565518.Write(theLength);
                 if (theResult == 0) {
                     theResult = gU565518.Write((const char*)theName, theLength, theWritten);

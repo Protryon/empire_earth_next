@@ -257,12 +257,12 @@ bool EEIsValidName(const UWideString& inName)
     } else
         theValid = false;
     if (theValid) {
-        if (_ismbcspace(inName[(int)theLength - 1]) || _ismbcspace(inName[0]))
+        if (PlatIsMbcSpace(inName[(int)theLength - 1]) || PlatIsMbcSpace(inName[0]))
             theValid = false;
         if (theValid) {
             bool theLastSpace = false;
             for (int j = 0; j < theLength; j++) {
-                if (_ismbcspace(inName[j])) {
+                if (PlatIsMbcSpace(inName[j])) {
                     if (theLastSpace) {
                         theValid = false;
                         break;

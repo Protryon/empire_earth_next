@@ -422,7 +422,7 @@ long EEUIBMapBackground::LoadBackground()
     }
     theExtension = theFile->GetFile().GetSubstring(theFile->GetFile().GetLength() - 4, 4);
     unsigned long theBits;
-    if (_stricmp(theExtension, ".tga") == 0) {
+    if (PlatStrICmp(theExtension, ".tga") == 0) {
         theResult = GESurface::GetImageFileAttributes(*theFile, kImageFileTGA, theDescription.mWidth, theDescription.mHeight,
                                                       theBits);
         if (theResult != 0)

@@ -162,7 +162,7 @@ long EECampaignProgress::RestoreCivilization(const UWideString& inUser, const UW
                             thePreviousScenario = theCompleted[i - 1];
                             theAvailable = this->mCivPointsAvailable[i - 1];
                         }
-                        if (_mbsicmp(reinterpret_cast<const unsigned char*>((const char*)theCompleted[i]),
+                        if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theCompleted[i]),
                                       reinterpret_cast<const unsigned char*>((const char*)inScenario)) == 0)
                             break;
                     }
@@ -329,7 +329,7 @@ long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const 
             theArchive->SetTag(theTag, this->mCompletedScenarios[i]);
             sprintf(theTag, "%s%.03d", (const char*)kEECampaignProgressNumCivPointsAvailableKey, i);
             long theValue;
-            if (theAlreadyCompleted && _mbsicmp(reinterpret_cast<const unsigned char*>((const char*)this->mCompletedScenarios[i]),
+            if (theAlreadyCompleted && PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)this->mCompletedScenarios[i]),
                                                reinterpret_cast<const unsigned char*>((const char*)inScenario)) == 0)
                 theValue = theAvailable;
             else

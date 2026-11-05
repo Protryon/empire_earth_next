@@ -270,7 +270,7 @@ void EEUnitClassImprovement::GetGainText(EEUnitClassUpgrade* inUpgrade, long inL
     }
     outText = " + ";
     char theBuffer[64];
-    _itoa(theDelta, theBuffer, 10);
+    PlatIToA(theDelta, theBuffer, 10);
     outText += theBuffer;
 }
 

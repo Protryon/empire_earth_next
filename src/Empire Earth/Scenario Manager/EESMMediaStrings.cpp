@@ -30,7 +30,7 @@ bool EESMMediaStrings::ListMediaFiles(const UWideString& inFile, std::vector<UWi
         theFile = gU4E5B98;
         if (this->GetMediaFile(inFile, i, theFile, theError, inFlag)) {
             if (theFile != gU4E5B98) {
-                _mbslwr((unsigned char*)(const char*)theFile);
+                PlatMbsLwr((unsigned char*)(const char*)theFile);
                 ioFiles.push_back(theFile);
             }
         } else {

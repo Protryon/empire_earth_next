@@ -143,7 +143,7 @@ void EETechTreeNode::GetCostString(UWideString& outString, long inUnitClass, flo
         gResource->GetString(IDS_RESOURCE_NAME_FOOD, theName);
         outString = theName;
         outString += ": ";
-        _itoa(this->GetCost(kResourceFood, inUnitClass, inScale), theNumber, 10);
+        PlatIToA(this->GetCost(kResourceFood, inUnitClass, inScale), theNumber, 10);
         outString += theNumber;
         outString += " ";
     }
@@ -151,7 +151,7 @@ void EETechTreeNode::GetCostString(UWideString& outString, long inUnitClass, flo
         gResource->GetString(IDS_RESOURCE_NAME_GOLD, theName);
         outString += theName;
         outString += ": ";
-        _itoa(this->GetCost(kResourceGold, inUnitClass, inScale), theNumber, 10);
+        PlatIToA(this->GetCost(kResourceGold, inUnitClass, inScale), theNumber, 10);
         outString += theNumber;
         outString += " ";
     }
@@ -159,7 +159,7 @@ void EETechTreeNode::GetCostString(UWideString& outString, long inUnitClass, flo
         gResource->GetString(IDS_RESOURCE_NAME_IRON, theName);
         outString += theName;
         outString += ": ";
-        _itoa(this->GetCost(kResourceIron, inUnitClass, inScale), theNumber, 10);
+        PlatIToA(this->GetCost(kResourceIron, inUnitClass, inScale), theNumber, 10);
         outString += theNumber;
         outString += " ";
     }
@@ -167,7 +167,7 @@ void EETechTreeNode::GetCostString(UWideString& outString, long inUnitClass, flo
         gResource->GetString(IDS_RESOURCE_NAME_STONE, theName);
         outString += theName;
         outString += ": ";
-        _itoa(this->GetCost(kResourceStone, inUnitClass, inScale), theNumber, 10);
+        PlatIToA(this->GetCost(kResourceStone, inUnitClass, inScale), theNumber, 10);
         outString += theNumber;
         outString += " ";
     }
@@ -179,7 +179,7 @@ void EETechTreeNode::GetCostString(UWideString& outString, long inUnitClass, flo
         gResource->GetString(IDS_RESOURCE_NAME_WOOD, theName);
     outString += theName;
     outString += ": ";
-    _itoa(this->GetCost(kResourceWood, inUnitClass, inScale), theNumber, 10);
+    PlatIToA(this->GetCost(kResourceWood, inUnitClass, inScale), theNumber, 10);
     outString += theNumber;
     outString += " ";
 }

@@ -36,7 +36,7 @@ void GEText::ComputeTextExtent()
             this->mTextExtent.SetRight(0.0f);
             for (i = 0; i < theChunks; i++) {
                 // Measure this chunk only (this measured the whole text once per chunk).
-                const unsigned char* theNext = _mbsninc(theString, 256);
+                const unsigned char* theNext = PlatMbsNInc(theString, 256);
                 if (!GetTextExtentPoint32(theContext, reinterpret_cast<const char*>(theString), theNext - theString, &theSize)) {
                     GetLastError();
                     break;

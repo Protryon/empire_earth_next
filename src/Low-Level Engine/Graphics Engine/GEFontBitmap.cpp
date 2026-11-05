@@ -226,13 +226,13 @@ long GEFontBitmap::Draw(GEText* inText, GERasterizer* inRasterizer, unsigned lon
     theLocation = inText->GetLocation();
     const unsigned char* theCharacter = reinterpret_cast<const unsigned char*>((const char*)inText->GetText());
     this->mBitmap->SetColor(inText->GetFgColor());
-    while (_mbscmp(theCharacter, (const unsigned char*)"") != 0) {
+    while (PlatMbsCmp(theCharacter, (const unsigned char*)"") != 0) {
         strcpy(reinterpret_cast<char*>(theBuffer), "");
-        _mbsnbcat(theBuffer, theCharacter, 1);
+        PlatMbsNBCat(theBuffer, theCharacter, 1);
         // Index with the unsigned byte (a signed char made bytes >= 0x80 negative) and skip bytes outside the font.
         long theIndex = (long)*theCharacter - (long)this->mFirstCharacter;
         if (theIndex < 0 || theIndex >= (long)this->mCharacters.size()) {
-            theCharacter = _mbsinc(theCharacter);
+            theCharacter = PlatMbsInc(theCharacter);
             continue;
         }
         this->mBitmap->SetTexture(this->mCharacters[theIndex].mTexture, inScreen);
@@ -245,7 +245,7 @@ long GEFontBitmap::Draw(GEText* inText, GERasterizer* inRasterizer, unsigned lon
         this->mBitmap->SetLocation(theLocation);
         theResult = inRasterizer->Draw(this->mBitmap, inScreen);
         theLocation.SetX(theLocation.GetX() + this->mCharacters[theIndex].mRect.GetWidth());
-        theCharacter = _mbsinc(theCharacter);
+        theCharacter = PlatMbsInc(theCharacter);
     }
     return theResult;
 }
@@ -262,13 +262,13 @@ long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERaster
     unsigned char theBuffer[4];
     const unsigned char* theCharacter = reinterpret_cast<const unsigned char*>((const char*)inText->GetText());
     this->mBitmap->SetColor(inText->GetFgColor());
-    while (_mbscmp(theCharacter, (const unsigned char*)"") != 0) {
+    while (PlatMbsCmp(theCharacter, (const unsigned char*)"") != 0) {
         strcpy(reinterpret_cast<char*>(theBuffer), "");
-        _mbsnbcat(theBuffer, theCharacter, 1);
+        PlatMbsNBCat(theBuffer, theCharacter, 1);
         // Index with the unsigned byte (a signed char made bytes >= 0x80 negative) and skip bytes outside the font.
         long theIndex = (long)*theCharacter - (long)this->mFirstCharacter;
         if (theIndex < 0 || theIndex >= (long)this->mCharacters.size()) {
-            theCharacter = _mbsinc(theCharacter);
+            theCharacter = PlatMbsInc(theCharacter);
             continue;
         }
         this->mBitmap->SetTexture(this->mCharacters[theIndex].mTexture, inScreen);
@@ -304,13 +304,13 @@ long GEFontBitmap::Draw(GEText* inText, const GERectangle& inRectangle, GERaster
             // A glyph fully outside the rectangle is not drawn, but the pen still advances past it.
             theDestination.SetLeft(theDestination.GetRight() + 1.0f);
             theLocation.SetX(theLocation.GetX() + this->mCharacters[theIndex].mRect.GetWidth());
-            theCharacter = _mbsinc(theCharacter);
+            theCharacter = PlatMbsInc(theCharacter);
             continue;
         }
         this->mBitmap->SetLocation(theDestination.GetTopLeft());
         theResult = inRasterizer->Draw(this->mBitmap, inScreen);
         theLocation.SetX(theLocation.GetX() + this->mCharacters[theIndex].mRect.GetWidth());
-        theCharacter = _mbsinc(theCharacter);
+        theCharacter = PlatMbsInc(theCharacter);
     }
     return theResult;
 }

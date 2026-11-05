@@ -201,17 +201,17 @@ void UIIMECandidate::SetCandidateList(const UIIMECandidateList& inList, float in
     unsigned long thePageStart = inList.mSelection / thePageSize * thePageSize;
     unsigned long i;
     for (i = 0; i < thePageStart; i++)
-        theString = _mbsninc(theString, _mbslen(theString)) + 1;
+        theString = PlatMbsNInc(theString, PlatMbsLen(theString)) + 1;
     for (; i < inList.mCount && i < thePageStart + thePageSize; i++) {
         sprintf(theNumber, "%2d: ", i + 1);
-        unsigned long theLength = _mbslen(theString);
+        unsigned long theLength = PlatMbsLen(theString);
         theCandidate.CopyString(reinterpret_cast<const char*>(theString), theLength);
         theLine = theNumber + theCandidate;
         this->mText->SetText(theLine);
         if (theMaxWidth < this->mText->GetTextExtent().GetWidth())
             theMaxWidth = UMFloor(this->mText->GetTextExtent().GetWidth() + 4.0f);
         this->mCandidateStrings.push_back(theLine);
-        theString = _mbsninc(theString, theLength) + 1;
+        theString = PlatMbsNInc(theString, theLength) + 1;
     }
     if (theMaxWidth > theWindow->GetWidth())
         theMaxWidth = theWindow->GetWidth();

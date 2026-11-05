@@ -592,7 +592,7 @@ unsigned long EEGetFileChecksum(FSFileSpec& inDirectory, const UString& inPatter
     UEDecryptUString(gU530BE0, theExcluded);
     do {
         thePath = theFile.GetFile();
-        if (_stricmp(theFile.GetFile(), theExcluded) != 0)
+        if (PlatStrICmp(theFile.GetFile(), theExcluded) != 0)
             theFiles.push_back(theFile);
     } while (inDirectory.GetNextFile(theFile) == kErrorOK);
     std::sort(theFiles.begin(), theFiles.end(), EEFileNameSorter());

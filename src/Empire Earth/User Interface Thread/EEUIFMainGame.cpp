@@ -673,9 +673,9 @@ void EEUIFMainGame::DisplayChatLine(const GEColor& inColor, const UWideString& i
     }
 theCheck:
     if (theShown < inText.GetLength()) {
-        const unsigned char* theNext = _mbsninc(reinterpret_cast<const unsigned char*>((const char*)inText), theShown);
-        if (_mbsnbcmp(theNext, (const unsigned char*)"\n", 1) == 0)
-            theNext = _mbsinc(theNext);
+        const unsigned char* theNext = PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inText), theShown);
+        if (PlatMbsNBCmp(theNext, (const unsigned char*)"\n", 1) == 0)
+            theNext = PlatMbsInc(theNext);
         theRest = reinterpret_cast<const char*>(theNext);
         theName = "";
         this->DisplayChatLine(inColor, theName, theRest, inFlags);

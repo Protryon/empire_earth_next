@@ -103,7 +103,7 @@ UIForm::UIForm(UIManager* inManager, const UIDbDataForms& inData, bool inUseGDIF
     this->mDrawToolTipShadow = this->mUseToolTips = inData.mUseToolTips;
     this->mHelpTextTimeDelay = inData.mHelpTextTimeDelay;
     this->mMusicFileName = inData.mMusicFile;
-    _mbslwr((unsigned char*)(const char*)this->mMusicFileName);
+    PlatMbsLwr((unsigned char*)(const char*)this->mMusicFileName);
     this->Init();
     this->mLayout.SetLeft(inData.mLeftOffsetType, inData.mLeftOffset);
     this->mLayout.SetTop(inData.mTopOffsetType, inData.mTopOffset);

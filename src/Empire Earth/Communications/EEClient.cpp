@@ -181,13 +181,13 @@ FSFile* EEClient::CreateXferFile(const UWideString& inName, unsigned long inSize
         theExtension = inName.GetIndexedSubstring(inName.GetLength() - 4, inName.GetLength());
         theFile = new FSFileSpec;
         theFile->SetVolume(gStartupVolume);
-        if (_mbsicmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
+        if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
                      reinterpret_cast<const unsigned char*>((const char*)gSavedGameExtension)) == 0)
             theFile->SetDirectory(gStartupDirectory + "data\\" + "Saved Games\\");
-        else if (_mbsicmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
+        else if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
                           reinterpret_cast<const unsigned char*>((const char*)gScenarioExtension)) == 0)
             theFile->SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
-        else if (_mbsicmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
+        else if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
                           reinterpret_cast<const unsigned char*>((const char*)gCampaignExtension)) == 0)
             theFile->SetDirectory(gStartupDirectory + "data\\" + "Campaigns\\");
         else {
