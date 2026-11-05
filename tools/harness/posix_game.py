@@ -8,7 +8,7 @@ parser are ai_game.py's.
 
   python -I tools/harness/posix_game.py [--exe EXE] [--data DIR] [--out DIR] --exercise menu|random-game|ai-game
          [--ai-players N] [--map-size Small] [--map-type Continental] [--difficulty Easy] [--game-speed 'Very Fast']
-         [--play-seconds S] [--max-game-seconds S] [--capture-every S] [--timeout S]
+         [--play-seconds S] [--max-game-seconds S] [--capture-every S] [--timeout S] [--zoom-captures P ...]
 
   menu         main menu reached, captured; the game is closed
   random-game  single player -> random map -> Start with the lobby's defaults (session_exercise's random-game);
@@ -191,6 +191,13 @@ def setup_lobby(g, a):
         options.setdefault(CITIZENS + k, '5')
     for control, value in options.items():
         chosen.append(g.select(control, value, f'control {control}'))
+    for item in a.lobby_check:   # CONTROL=0|1 (as ai_game.py's --lobby-check)
+        control, _, value = item.partition('=')
+        control, value = int(control), int(value)
+        if g.state()['checks'].get(control) != value:
+            seq = g.command(f'check {LOBBY} {control} {value}')
+            g.wait(lambda s2: s2['command'] >= seq and s2['checks'].get(control) == value, f'check {control}', 30)
+        g.note(f'LOBBY check {control} = {value}')
     time.sleep(2)
     st = g.state()
     drift = [c for c in chosen if st['combos'].get(c['control'], {}).get('sel') != c['index']]
@@ -237,6 +244,11 @@ def run(a):
             raise RuntimeError(f'expected {a.ai_players + 2} world players, got {tel["world_players"]}')
         time.sleep(3)
         summary['captures']['gameplay'] = g.capture('gameplay')
+        for percent in a.zoom_captures:
+            seq = g.command(f'zoom {GAME} 0 {percent}')
+            g.wait(lambda st: st['command'] >= seq, f'zoom {percent}', 30)
+            time.sleep(2)
+            summary['captures'][f'zoom{percent}'] = g.capture(f'zoom{percent}')
         start = time.monotonic()
         last_sample = last_capture = 0
         last_ticks, last_advance = tel['ticks'], time.monotonic()
@@ -313,6 +325,9 @@ def main():
     ap.add_argument('--max-game-seconds', type=float, default=0, help='stop at this game time')
     ap.add_argument('--capture-every', type=float, default=0, help='capture the window every S wall seconds')
     ap.add_argument('--timeout', type=float, default=120, help='seconds to reach the main menu')
+    ap.add_argument('--lobby-check', action='append', default=[], help='ai-game: CONTROL=0|1, a lobby check box')
+    ap.add_argument('--zoom-captures', type=int, nargs='*', default=[],
+                    help='once in the game: set the camera zoom to each percent (100 = the original farthest) and capture')
     a = ap.parse_args()
     if a.exercise == 'random-game' and a.play_seconds is None:
         a.play_seconds = 0

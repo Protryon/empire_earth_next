@@ -9,7 +9,8 @@
 //     "combo <i> sel <s> lines <n> a|b|..", "check <i> <0|1>", "list <i> sel <s> lines <n> a|b|.."; plus the
 //     game telemetry: "game ms <t> ticks <n> over <0|1> players <n> map <0|1> local <i>" and one
 //     "player <i> observer <0|1> result <r> population <n> victory <n>" per world player;
-//   - executes the newest line of <dir>/test.command, "<seq> click|select|check|lselect <form> <control> [<k>]",
+//   - executes the newest line of <dir>/test.command, "<seq> click|select|check|lselect <form> <control> [<k>]"
+//     (or "<seq> zoom <form> 0 <percent>", the camera zoom),
 //     through the controls' own methods (the events go to the application's UI queue, as a player's input does),
 //     once per sequence number, only while <form> is on top; the verdict goes to stderr ("TEST UI ...").
 #include <windows.h>
@@ -189,6 +190,10 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
             theCheck->SetChecked(c != 0);
             theVerdict = "checked";
         }
+    } else if (!strcmp(theOp, "zoom") && theFields >= 5 && a == inFormID) {
+        // "<seq> zoom <form> 0 <percent>": the camera zoom (100 = the original's farthest)
+        gWorld.mCameraControl.SetZoom(c / 100.0f);
+        theVerdict = "zoomed";
     } else if (theControl && !strcmp(theOp, "lselect") && theFields >= 5) {
         UILBString* theList = dynamic_cast<UILBString*>(theControl);
         if (theList && c < theList->GetLineCount()) {

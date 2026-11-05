@@ -7,6 +7,10 @@
 #ifndef LLE_GETERRAINMESH_H
 #define LLE_GETERRAINMESH_H
 
+// port: the visible area's point arrays, 101 x 101 in the original (enough for its closest-to-farthest zoom); larger
+// for the farther zoom-out (EECameraControl gCameraMaxZoom). UpdateVisibleTerrain keeps the view inside them.
+#define GETM_VISIBLE_POINTS 257
+
 #include <map>
 #include <vector>
 #include <utility>
@@ -131,8 +135,8 @@ public:
     unsigned long GetTerrainMaterialCount() const { return this->mTerrainMaterialList.size(); }
     std::vector<GETMMaterial>& GetTerrainMaterialList() { return this->mTerrainMaterialList; }
     std::map<GETexture*, unsigned long>& GetTerrainMaterialMap() { return this->mTerrainMaterialMap; }
-    bool (&GetTerrainPointVisibilityArray())[101][101] { return this->mTerrainPointVisibility; }
-    GETMRenderVertex (&GetTerrainRenderVertexArray())[101][101] { return this->mTerrainRenderVertices; }
+    bool (&GetTerrainPointVisibilityArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS] { return this->mTerrainPointVisibility; }
+    GETMRenderVertex (&GetTerrainRenderVertexArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS] { return this->mTerrainRenderVertices; }
     void GetTerrainVisibleBottomLeftIndices(unsigned long& outX, unsigned long& outY) const
     {
         outX = this->mVisibleBottomLeftX;
@@ -166,8 +170,8 @@ public:
         { return this->mTileRows[inY].mTiles[inX - this->mTileRows[inY].mStart].mWaterInfo; }
     unsigned long GetWaterMaterialCount() const { return this->mWaterMaterialList.size(); }
     std::vector<GETMMaterial>& GetWaterMaterialList() { return this->mWaterMaterialList; }
-    bool (&GetWaterPointVisibilityArray())[101][101] { return this->mWaterPointVisibility; }
-    GETMRenderVertex (&GetWaterRenderVertexArray())[101][101] { return this->mWaterRenderVertices; }
+    bool (&GetWaterPointVisibilityArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS] { return this->mWaterPointVisibility; }
+    GETMRenderVertex (&GetWaterRenderVertexArray())[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS] { return this->mWaterRenderVertices; }
     // through a row reference: the Generate*EdgePolygons loops (0x10027f81..) add the strength-reduced row offset
     // to mPointRows, not the reverse
     float GetZ(unsigned long inX, unsigned long inY) const
@@ -318,9 +322,9 @@ private:
     GE3DPlane mLeftPlane;                   // +0xcf8
     GE3DPlane mRightPlane;                  // +0xd10
     GETMPolygon mTerrainPolygons[12000];    // +0xd28
-    GETMRenderVertex mTerrainRenderVertices[101][101];   // +0x8d728
+    GETMRenderVertex mTerrainRenderVertices[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS];   // +0x8d728
     GETMPolygon mWaterPolygons[5000];       // +0xf1110
-    GETMRenderVertex mWaterRenderVertices[101][101];     // +0x12ba90
+    GETMRenderVertex mWaterRenderVertices[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS];     // +0x12ba90
     U2DFractal* mFractal;                   // +0x18f478 colour-set variation
     GETMPointRow* mPointRows;               // +0x18f47c
     GETMTileRow* mTileRows;                 // +0x18f480
@@ -350,8 +354,8 @@ private:
     unsigned long mVisiblePolyCount;        // +0x1905e0
     unsigned long mNumVisibleTiles;         // +0x1905e4
     unsigned long mFractalSeed;             // +0x1905e8
-    bool mTerrainPointVisibility[101][101];  // +0x1905ec
-    bool mWaterPointVisibility[101][101];    // +0x192dc5
+    bool mTerrainPointVisibility[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS];  // +0x1905ec
+    bool mWaterPointVisibility[GETM_VISIBLE_POINTS][GETM_VISIBLE_POINTS];    // +0x192dc5
     std::vector<GETexture*> mSpaceCliffTextures;   // +0x1955a0
 
     // GETerrainMesh.cpp-only visibility (scheme of GEVector.h/GEWindow.h): every class static data member a unit

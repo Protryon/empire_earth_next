@@ -2405,6 +2405,24 @@ void GETerrainMesh::UpdateVisibleTerrain(const GETransformation& inCamera, GEVie
     this->mVisibleTileRows.clear();
     inViewport.GetFrustrumWorldPoints(theFrustumPoints, inOrthographic);
     this->GetTileRowsInVolume(theFrustumPoints, this->mVisibleTileRows, theMinimum, theMaximum);
+    // port: the visible tiles stay inside the point arrays (a tile uses its far corner's point too)
+    const long theSpan = GETM_VISIBLE_POINTS - 3;
+    if (theMaximum.mX - theMinimum.mX > theSpan || theMaximum.mY - theMinimum.mY > theSpan) {
+        std::vector<std::pair<long, std::pair<long, long> > > theKept;
+        for (size_t r = 0; r < this->mVisibleTileRows.size(); r++) {
+            std::pair<long, std::pair<long, long> > theRow = this->mVisibleTileRows[r];
+            if (theRow.first - theMinimum.mY > theSpan || theRow.second.first - theMinimum.mX > theSpan)
+                continue;
+            if (theRow.second.second - theMinimum.mX > theSpan)
+                theRow.second.second = theMinimum.mX + theSpan;
+            theKept.push_back(theRow);
+        }
+        this->mVisibleTileRows.swap(theKept);
+        if (theMaximum.mX - theMinimum.mX > theSpan)
+            theMaximum.mX = theMinimum.mX + theSpan;
+        if (theMaximum.mY - theMinimum.mY > theSpan)
+            theMaximum.mY = theMinimum.mY + theSpan;
+    }
     this->mVisibleBottomLeftX = theMinimum.mX;
     this->mVisibleBottomLeftY = theMinimum.mY;
     this->mVisibleTileWidth = theMaximum.mX - theMinimum.mX;
