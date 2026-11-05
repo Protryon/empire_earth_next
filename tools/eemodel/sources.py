@@ -6,7 +6,7 @@ import pathlib
 import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent / 'eedata'))
+sys.path.append(str(HERE.parent / 'eedata'))
 import ssa   # noqa: E402
 
 AOC = pathlib.Path(r'C:\Program Files (x86)\Empire Earth\Empire Earth - The Art of Conquest')

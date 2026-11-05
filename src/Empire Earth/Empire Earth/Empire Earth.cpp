@@ -1073,6 +1073,10 @@ void EEInitializeNetwork()
     theChecksum += EEGetFileChecksum(theFile, "*.tai", 0);
     theFile.SetDirectory(gStartupDirectory + "Data\\Models\\");
     theChecksum += EEGetFileChecksum(theFile, "*.cem", 0);
+    // the models' open forms (GEFindModelFile loads them in place of the .cem); 0 when there are none
+    theChecksum += EEGetFileChecksum(theFile, "*.glb", 0);
+    theChecksum += EEGetFileChecksum(theFile, "*.gltf", 0);
+    theChecksum += EEGetFileChecksum(theFile, "*.bin", 0);
     for (unsigned long i = 0; i < gDataPath->GetArchiveCount(); i++) {
         bool theHaveTimestamp = gDataPath->GetArchive(i).GetTag(UWideString("Timestamp"), theTag) == kErrorOK;
         if (theHaveTimestamp) {

@@ -27,7 +27,7 @@ from array import array
 
 import cem
 
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / 'eedata'))
+sys.path.append(str(pathlib.Path(__file__).resolve().parent.parent / 'eedata'))   # after tools/eemodel: both have a cppgate.py
 from scalars import decode_str, encode_str   # noqa: E402
 
 EXT = 'EE_model'

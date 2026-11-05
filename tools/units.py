@@ -2,7 +2,8 @@
 
 Units come from link/<module>/units.txt (in link order), or every .cpp of the module's source folder when the module
 has no unit list; each compiles with its module's flags (ee.MODULE_FLAGS) or its own `// UNIT-FLAGS:` line. Library
-code built from source (LIB_UNITS: the PKWARE DCL implode/explode and dmusic for the engine, miniaudio for the mixer)
+code built from source (LIB_UNITS: the PKWARE DCL implode/explode, dmusic, cgltf and stb_image for the engine,
+miniaudio for the mixer)
 is compiled with the modules that link it.
 """
 import pathlib
@@ -18,18 +19,22 @@ TARGETS = ["exe"]
 TARGET_MODULES = {"exe": ["exe", "exeimg", "lle", "jpeg", "tcp", "mixer", "default", "dx7hrtnl"]}
 PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/)
-# with the engine, and new game units that have no address in the original (the db text loader)
+# and the open model/texture formats (glTF, PNG: tools/eemodel) with the engine, and new game units that have no
+# address in the original (the db text loader)
 PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatThread.cpp", "Platform/Win32/PlatString.cpp",
                   "Platform/Win32/PlatPreferences.cpp", "Platform/Win32/PlatFile.cpp"]
-EXTRA_UNITS = {"lle": PLATFORM_UNITS,
+OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormats.cpp",
+                     "Low-Level Engine/Graphics Engine/GEOpenFormatsFile.cpp"]
+EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
                "exe": ["Empire Earth/Database/EEDataText.cpp", "Empire Earth/Database/EEDataTextFile.cpp"]}
 LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c", "pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
-             "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c"}
+             "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c",
+             "cgltf": "ThirdParty/cgltf/cgltf.c", "stb_image": "ThirdParty/stb_image/stb_image.c"}
 # dmusic (DirectMusic reimplementation, src/ThirdParty/dmusic): every source but the POSIX thread shim
 _DMUSIC = sorted(p for p in (ROOT / "src" / "ThirdParty" / "dmusic").rglob("*.c") if p.name != "Thread.Posix.c")
 LIB_UNITS.update({"dmusic-" + p.relative_to(ROOT / "src" / "ThirdParty" / "dmusic").with_suffix("").as_posix()
                   .replace("/", "-"): p.relative_to(ROOT / "src").as_posix() for p in _DMUSIC})
-LIB_MEMBERS = {"mixer": ["miniaudio"], "dx7hrtnl": ["pl_mpeg"], "lle": ["implode", "explode"] + sorted(
+LIB_MEMBERS = {"mixer": ["miniaudio"], "dx7hrtnl": ["pl_mpeg"], "lle": ["implode", "explode", "cgltf", "stb_image"] + sorted(
     n for n in LIB_UNITS if n.startswith("dmusic-"))}
 LANGUAGE_RC = pathlib.PurePosixPath("Empire Earth/Language/Language.rc")
 EXE_RC = ROOT / "src" / "Empire Earth" / "EE-AOC.rc"

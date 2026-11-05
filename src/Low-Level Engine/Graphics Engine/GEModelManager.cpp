@@ -21,6 +21,7 @@
 #include "lle/FSPath.h"
 #include "lle/GEModel.h"
 #include "lle/GEModelManager.h"
+#include "GEOpenFormats.h"   // GEFindModelFile: a model's .glb/.gltf in place of its .cem
 
 static unsigned long sModelNumber = 1;      // 0x100d953c: appended to created models' names
 // Release-build trace of a model file that failed to load or close: compiled out, but its arguments (the file's
@@ -107,7 +108,7 @@ GEModel* GEModelManager::LoadModel(const UString& inName, std::map<unsigned long
     theIter = this->mModels.find(theFileName);
     if (theIter != this->mModels.end())
         theModel = theIter->second;
-    else if (this->mPath->FindFile(theFileName, theFile) == kErrorOK) {
+    else if (GEFindModelFile(this->mPath, theFileName, theFile) == kErrorOK) {   // the open format first
         if (theFile->Open(kFileAccessRead) == kErrorOK) {
             theModel = new GEModel(this);
             if (theModel->Load(*theFile, ioTextures, true) == kErrorOK) {

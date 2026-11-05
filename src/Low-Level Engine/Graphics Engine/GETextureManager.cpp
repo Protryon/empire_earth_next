@@ -25,6 +25,7 @@
 #include "lle/GETextureManager.h"
 #include "lle/GETexture.h"
 #include "lle/GERenderState.h"
+#include "GEOpenFormats.h"   // GEFindTextureFile: a texture's .png in place of its .tga/.sst
 static unsigned long sTextureNumber = 1;    // 0x100d9ca8: appended to made textures' names (provisional name)
 // Release-build trace of a texture file that failed to load or close: compiled out, but its arguments (the file's
 // volume, directory and name) are still evaluated. GEModelManager.cpp has the same shape (provisional name).
@@ -104,11 +105,13 @@ GETexture* GETextureManager::LoadTexture(const UString& inName, const GETextureD
         }
     }
     if (theTexture == NULL) {
-        if (!theIsSST && this->mTexturePath->FindFile(theTGAName, theFile) == kErrorOK) {
-            theFoundName = theTGAName;
+        // a <name>.png on the path comes first (served as .sst bytes, cached under the .sst name)
+        bool theIsOpen = false;
+        if (!theIsSST && GEFindTextureFile(this->mTexturePath, theTGAName, theFile, theIsOpen) == kErrorOK) {
+            theFoundName = theIsOpen ? theSSTName : theTGAName;
             theResult = kErrorOK;
         } else {
-            theResult = this->mTexturePath->FindFile(theSSTName, theFile);
+            theResult = GEFindTextureFile(this->mTexturePath, theSSTName, theFile, theIsOpen);
             theFoundName = theSSTName;
         }
         if (theResult == kErrorOK) {
@@ -199,7 +202,8 @@ long GETextureManager::ReloadTexture(const UString& inName, const GETextureDescr
     }
     if (theIter != this->mTextures.end()) {
         theTexture = theIter->second;
-        theResult = this->mTexturePath->FindFile(theFoundName, theFile);
+        bool theIsOpen;
+        theResult = GEFindTextureFile(this->mTexturePath, theFoundName, theFile, theIsOpen);
         if (theResult == kErrorOK) {
             theResult = theFile->Open(kFileAccessRead);
             if (theResult == kErrorOK) {
@@ -254,7 +258,8 @@ long GETextureManager::RefreshAllTextures()
     theIter = this->mTextures.begin();
     while (theIter != this->mTextures.end()) {
         theTexture = theIter->second;
-        if (this->mTexturePath->FindFile(theIter->first, theFile) == kErrorOK) {
+        bool theIsOpen;
+        if (GEFindTextureFile(this->mTexturePath, theIter->first, theFile, theIsOpen) == kErrorOK) {
             theResult = theFile->Open(kFileAccessRead);
             if (theResult == kErrorOK) {
                 theSurface = theTexture->GetSurface();

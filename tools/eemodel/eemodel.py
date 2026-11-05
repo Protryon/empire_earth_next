@@ -41,7 +41,7 @@ import validate   # noqa: E402
 def texture_map(srcs):
     """{model name ("models\\air_catalina_11"): texture name ("textures\\air_catalina_11t")} from dbgraphics (the
     texture the game draws a unit's model with; the model's own texture names are not read)."""
-    sys.path.insert(0, str(ROOT / 'tools' / 'eedata'))
+    sys.path.append(str(ROOT / 'tools' / 'eedata'))
     import json
     import tables
     src = sources.resolve(srcs, 'db\\dbgraphics.dat')
