@@ -1263,7 +1263,16 @@ int main(int argc, char **argv)
                 int type;
                 BYTE saved=guards[g].orig;
                 for (k=ndd_returns-1;k>=0;k--) if(dd_returns[k].at==a && dd_returns[k].tid==ev.dwThreadId) {pending=k;break;}
-                if (pending<0) { printf("STOP unmatched DirectDraw return\n"); done=1; break; }
+                if (pending<0) {
+                    /* Another thread returns through an address a watched call of a DIFFERENT thread waits at (the
+                       same function called concurrently, e.g. two threads saving config.ini): not this guard's call.
+                       Step it over the original byte and re-arm, as a re-armed guard does; the watch stays pending. */
+                    for(k=0;k<ndd_returns && dd_returns[k].at!=a;k++);
+                    if(k==ndd_returns) { printf("STOP unmatched DirectDraw return\n"); done=1; break; }
+                    wr8(a,saved);R_IP(&c)=a;c.EFlags|=0x100;rearm=a;stepper=ev.dwThreadId;hold_others(stepper,1);
+                    SetThreadContext(th,&c);
+                    break;
+                }
                 type=dd_returns[pending].type;
                 if(type==11) {
                     int thread=net_thread(ev.dwThreadId);if(thread>=0)net_creating[thread].depth--;
