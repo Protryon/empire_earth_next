@@ -168,6 +168,21 @@ static int reg_exists(const char *p)
                       GENERIC_WRITE | GENERIC_ALL | MAXIMUM_ALLOWED)
 static struct { TADDR addr; BYTE orig; const char *name; gkind kind; } guards[MAXGUARD];
 static int nguards;
+/* Addresses of guards removed while the target ran (a return watch consumed, a one-shot entry): another thread may
+   already have executed the int3 there, its breakpoint event still queued. Such a late event is rewound, not taken
+   for a foreign breakpoint (the thread would resume inside the instruction: c000001d). */
+static TADDR removed_guards[64];
+static int nremoved_guards;
+static void remove_guard(int g)
+{
+    removed_guards[nremoved_guards++ % 64] = guards[g].addr;
+    guards[g] = guards[--nguards];
+}
+static int was_guard(TADDR a)
+{
+    for (int k = 0; k < 64 && k < nremoved_guards; k++) if (removed_guards[k] == a) return 1;
+    return 0;
+}
 static int windowed_test; /* opt-in staged build overlay; default boot policy is unchanged */
 static int graphics_checkpoint;
 static int audio_checkpoint;
@@ -1239,6 +1254,12 @@ int main(int argc, char **argv)
             }
             if (coverage_hit(a, th, ev.dwThreadId)) break;   /* TEST ONLY (cov): one-shot entry int3, restored + rewound */
             for (g = 0; g < nguards && guards[g].addr != a; g++);
+            if (g == nguards && th && code == EXCEPTION_BREAKPOINT && was_guard(a) && (rd32(a) & 0xff) != 0xCC) {
+                c.ContextFlags = CONTEXT_CONTROL;   /* a late hit of a removed guard: run the restored instruction */
+                if (GetThreadContext(th, &c)) { R_IP(&c) = a; SetThreadContext(th, &c); }
+                printf("late breakpoint of a removed guard rewound on thread %lu\n", (unsigned long)ev.dwThreadId);
+                break;
+            }
             if (g == nguards || !th) break;   /* the loader's own breakpoint */
             c.ContextFlags = CONTEXT_FULL;
             GetThreadContext(th, &c);
@@ -1328,7 +1349,7 @@ int main(int argc, char **argv)
                 for(k=0;k<ndd_returns;k++) remains|=dd_returns[k].at==a;
                 wr8(a,saved);R_IP(&c)=a;
                 if(remains) { c.EFlags|=0x100;rearm=a;stepper=ev.dwThreadId;hold_others(stepper,1); }
-                else guards[g]=guards[--nguards];
+                else remove_guard(g);
                 SetThreadContext(th,&c);
                 break;
             }
@@ -1679,7 +1700,7 @@ int main(int argc, char **argv)
                 if (!allow) { done = 1; break; }
                 if (trace_once && guards[g].kind == G_EXPERIMENTAL_ENTRY) {   /* opt-in: first entry only, no re-arm */
                     wr8(a, guards[g].orig); R_IP(&c) = a; SetThreadContext(th, &c);
-                    guards[g] = guards[--nguards];
+                    remove_guard(g);
                     break;
                 }
                 /* step over: original byte back, eip back to the call, trap flag; re-arm on the single step */

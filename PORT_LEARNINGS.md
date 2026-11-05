@@ -1259,3 +1259,21 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   writes `never` for the first two (compiled to the count) and the options use the count for random.
 - **The two event hooks past the table** (0x7d1 on every research, 0x7d2 on every epoch availability) ran nothing
   only because 1500 < 2001; a table sized from the data would have run rows 2001/2002. They are named negative ids.
+
+## Window presentation and harness races (2026-11-05)
+
+- **Blits to the primary are not all frames.** At each display-mode change the game draws its 32x32 mouse pointer
+  straight onto the primary surface (DirectDraw drew it into the visible screen). GX presented every blit to the
+  primary as a frame, stretching the pointer over the window for a frame: a "huge cursor" flash at start-up,
+  settings changes and entering the game. GX now holds the last whole frame (a source of at least half the client
+  size in each direction) and draws smaller blits onto a copy of it at their place (`PrimaryBlt`). A "whole source,
+  same-size destination" test is not enough: the pointer blit is exactly that. `GX: presenting WxH frames` is logged
+  whenever the presented size changes; `EE_GX_CHECK_PRESENT=1` compares the GPU copy about to be presented with the
+  CPU copy (a diagnostic; equal in every check so far).
+- **`--no-render` sessions look garbled on screen by design.** `EE_GX_NULL3D` skips the device's draws and clears
+  except one keyframe a second; menu backgrounds and buttons are device draws, text is not, so the window keeps an old
+  picture with each screen's text piling up. Judge display only from rendering sessions (the tour).
+- **Concurrent threads and return guards (exe_boot.c).** With config.ini written from two threads, two threads run
+  through the same guarded return address. A thread that hits a return watch belonging to another thread is now
+  stepped over (the watch stays pending); a breakpoint event that arrives after its guard was removed (the int3 was
+  already executed, the event queued) is rewound instead of resumed one byte into the instruction (c000001d).
