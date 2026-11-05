@@ -23,7 +23,9 @@ PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # have no address in the original (the db text loader, the WON library's stand-ins)
 PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatThread.cpp", "Platform/Win32/PlatString.cpp",
                   "Platform/Win32/PlatPreferences.cpp", "Platform/Win32/PlatFile.cpp", "Platform/Win32/PlatPath.cpp",
-                  "Platform/Win32/PlatSocket.cpp", "Platform/Win32/PlatMessage.cpp", "Platform/Win32/PlatInput.cpp"]
+                  "Platform/Win32/PlatSocket.cpp", "Platform/Win32/PlatMessage.cpp",
+                  # the window, its events and input (SDL3; PORT.md step 4.3)
+                  "Platform/SDL/PlatWindow.cpp"]
 OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormats.cpp",
                      "Low-Level Engine/Graphics Engine/GEOpenFormatsFile.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,

@@ -61,6 +61,9 @@ def include_paths(src=None):
     import ee
     wgpu = [str(ee.wgpu_dir() / "include")] if src is not None and "DX7 Display Plug-ins" in str(src) \
         else []
+    # the window layer's SDL3 headers (tools/xbuild.py sdl3), for its implementation only
+    if src is not None and "Platform" in pathlib.Path(src).parts and "SDL" in pathlib.Path(src).parts:
+        wgpu.append(str(ee.sdl3_dir() / "include"))
     # a third-party library's own include directories (src/ThirdParty/<lib>/include_dirs.txt, relative to the library)
     own = []
     if src is not None and pathlib.Path(src).resolve().is_relative_to(THIRD_PARTY):

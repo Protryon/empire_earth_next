@@ -5,12 +5,22 @@
 // codes come from the scancode for the keys without a character and from the layout's keycode for letters, digits
 // and punctuation (as Windows derives VK_* from the active layout). Text arrives from SDL as UTF-8 and is handed on
 // as Windows-1252 (platform/PlatString.h).
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#endif
 
 #include <string>
 
 #include <SDL3/SDL.h>
+#ifdef _WIN32
+#define SDL_MAIN_NOIMPL   // SDL_RegisterApp only: the game keeps its own entry point
+#include <SDL3/SDL_main.h>
+#endif
 
 #include "platform/PlatKeys.h"
 #include "platform/PlatMessage.h"
@@ -26,6 +36,9 @@ struct PlatWindow {
 namespace {
 
 const char* const kWindowProperty = "ee.platwindow";
+#ifdef _WIN32
+Uint32 sActivateEvent;                      // SDL user event (Subclass below): code 1 activated, 0 deactivated
+#endif
 std::string sLastError;
 
 struct KeyMap {
@@ -221,10 +234,17 @@ bool Translate(const SDL_Event& e, PlatInputEvent* out)
     case SDL_EVENT_QUIT:
         out->mType = PLAT_EVENT_QUIT;
         return true;
+#ifdef _WIN32
+    case SDL_EVENT_WINDOW_FOCUS_GAINED:   // Win32: the activation messages instead (Subclass)
+    case SDL_EVENT_WINDOW_FOCUS_LOST:
+        return false;
+#endif
     case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
     case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+#ifndef _WIN32
     case SDL_EVENT_WINDOW_FOCUS_GAINED:
     case SDL_EVENT_WINDOW_FOCUS_LOST:
+#endif
     case SDL_EVENT_WINDOW_MINIMIZED:
     case SDL_EVENT_WINDOW_RESTORED:
     case SDL_EVENT_WINDOW_EXPOSED:
@@ -291,18 +311,101 @@ bool Translate(const SDL_Event& e, PlatInputEvent* out)
         out->mMouse.mModifiers = ModifiersOf(SDL_GetModState());
         return true;
     default:
+#ifdef _WIN32
+        if (sActivateEvent && e.type == sActivateEvent) {
+            out->mType = e.user.code ? PLAT_EVENT_FOCUS_GAINED : PLAT_EVENT_FOCUS_LOST;
+            out->mWindow = WindowOf(e.user.windowID);
+            return true;
+        }
+#endif
         return false;
     }
 }
 
 }   // namespace
 
+#ifdef _WIN32
+// Win32: every window is subclassed (after SDL's window procedure is in place) for two things SDL does not give:
+// the native message hook sees the sent and posted messages of the window (MM_MCINOTIFY, the lobby's), and the
+// activation is reported as Windows sends it (WM_ACTIVATEAPP, and WM_ACTIVATE while not minimised: the original
+// window procedure's two cases) instead of SDL's keyboard-focus events, which need the window to be the foreground
+// one (not true under a debugger or over RDP, where the game still got its activation messages).
+namespace {
+PlatNativeMessageHook sNativeHook;
+const char* const kNextProc = "ee.platwindow.next";
+const char* const kWindowID = "ee.platwindow.id";
+
+LRESULT CALLBACK SubclassProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam)
+{
+    WNDPROC theNext = reinterpret_cast<WNDPROC>(GetPropA(inWindow, kNextProc));
+    PlatNativeMessageHook theHook = sNativeHook;
+    if (theHook && theHook(inWindow, inMessage, inWParam, static_cast<int64_t>(inLParam)))
+        return 0;
+    bool theActivate = inMessage == WM_ACTIVATE && LOWORD(inWParam) != WA_INACTIVE && !IsIconic(inWindow);
+
+    if ((inMessage == WM_ACTIVATEAPP || theActivate) && sActivateEvent) {
+        SDL_Event e;
+        SDL_zero(e);
+        e.type = sActivateEvent;
+        e.user.windowID = static_cast<SDL_WindowID>(reinterpret_cast<uintptr_t>(GetPropA(inWindow, kWindowID)));
+        e.user.code = inMessage == WM_ACTIVATEAPP ? (inWParam ? 1 : 0) : 1;
+        SDL_PushEvent(&e);
+    }
+    return theNext ? CallWindowProcA(theNext, inWindow, inMessage, inWParam, inLParam)
+                   : DefWindowProcA(inWindow, inMessage, inWParam, inLParam);
+}
+
+void Subclass(SDL_Window* inWindow)
+{
+    HWND theWindow = static_cast<HWND>(
+        SDL_GetPointerProperty(SDL_GetWindowProperties(inWindow), SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL));
+    if (!theWindow)
+        return;
+    SetPropA(theWindow, kWindowID, reinterpret_cast<HANDLE>(static_cast<uintptr_t>(SDL_GetWindowID(inWindow))));
+    SetPropA(theWindow, kNextProc, reinterpret_cast<HANDLE>(GetWindowLongPtrA(theWindow, GWLP_WNDPROC)));
+    SetWindowLongPtrA(theWindow, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(SubclassProc));
+}
+}   // namespace
+#endif
+
+extern "C" void PlatWindowSetNativeMessageHook(PlatNativeMessageHook inHook)
+{
+#ifdef _WIN32
+    sNativeHook = inHook;
+#else
+    (void)inHook;
+#endif
+}
+
+extern "C" void PlatWindowSetAppName(const char* inName, uint32_t inIconResource)
+{
+#ifdef _WIN32
+    if (inIconResource) {
+        char theIcon[16];
+        snprintf(theIcon, sizeof(theIcon), "%u", inIconResource);
+        SDL_SetHint(SDL_HINT_WINDOWS_INTRESOURCE_ICON, theIcon);
+        SDL_SetHint(SDL_HINT_WINDOWS_INTRESOURCE_ICON_SMALL, theIcon);
+    }
+    // the window class name (SDL registers it; CS_HREDRAW | CS_VREDRAW | CS_OWNDC as SDL's default and the game's)
+    SDL_RegisterApp(inName, 0, NULL);
+#else
+    (void)inIconResource;
+#endif
+    SDL_SetAppMetadata(inName, NULL, NULL);
+}
+
 extern "C" int PlatWindowSystemStart(void)
 {
+    // the game minimizes itself when it loses the focus (EEUserInterface); SDL must not do it a second time
+    SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
     if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
         sLastError = SDL_GetError();
         return 0;
     }
+#ifdef _WIN32
+    if (!sActivateEvent)
+        sActivateEvent = SDL_RegisterEvents(1);
+#endif
     PlatMessageSetHandler(ShowMessage);
     return 1;
 }
@@ -320,15 +423,32 @@ extern "C" const char* PlatWindowLastError(void)
 
 extern "C" PlatWindow* PlatWindowCreate(const char* inTitle, int32_t inWidth, int32_t inHeight, uint32_t inFlags)
 {
+    return PlatWindowCreateAt(inTitle, SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, inWidth, inHeight, inFlags);
+}
+
+extern "C" PlatWindow* PlatWindowCreateAt(const char* inTitle, int32_t inX, int32_t inY, int32_t inWidth,
+                                          int32_t inHeight, uint32_t inFlags)
+{
     SDL_WindowFlags theFlags = 0;
     if (inFlags & PLAT_WINDOW_RESIZABLE) theFlags |= SDL_WINDOW_RESIZABLE;
     if (inFlags & PLAT_WINDOW_FULLSCREEN) theFlags |= SDL_WINDOW_FULLSCREEN;
     if (inFlags & PLAT_WINDOW_HIDDEN) theFlags |= SDL_WINDOW_HIDDEN;
     if (inFlags & PLAT_WINDOW_HIGH_DPI) theFlags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+    if (inFlags & PLAT_WINDOW_BORDERLESS) theFlags |= SDL_WINDOW_BORDERLESS;
+    if (inFlags & PLAT_WINDOW_TOPMOST) theFlags |= SDL_WINDOW_ALWAYS_ON_TOP;
 #if defined(__APPLE__)
     theFlags |= SDL_WINDOW_METAL;
 #endif
-    SDL_Window* theWindow = SDL_CreateWindow(ToUTF8(inTitle ? inTitle : "").c_str(), inWidth, inHeight, theFlags);
+    SDL_PropertiesID theProperties = SDL_CreateProperties();
+    std::string theTitle = ToUTF8(inTitle ? inTitle : "");
+    SDL_SetStringProperty(theProperties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, theTitle.c_str());
+    SDL_SetNumberProperty(theProperties, SDL_PROP_WINDOW_CREATE_X_NUMBER, inX);
+    SDL_SetNumberProperty(theProperties, SDL_PROP_WINDOW_CREATE_Y_NUMBER, inY);
+    SDL_SetNumberProperty(theProperties, SDL_PROP_WINDOW_CREATE_WIDTH_NUMBER, inWidth);
+    SDL_SetNumberProperty(theProperties, SDL_PROP_WINDOW_CREATE_HEIGHT_NUMBER, inHeight);
+    SDL_SetNumberProperty(theProperties, SDL_PROP_WINDOW_CREATE_FLAGS_NUMBER, theFlags);
+    SDL_Window* theWindow = SDL_CreateWindowWithProperties(theProperties);
+    SDL_DestroyProperties(theProperties);
     if (!theWindow) {
         sLastError = SDL_GetError();
         return NULL;
@@ -337,6 +457,9 @@ extern "C" PlatWindow* PlatWindowCreate(const char* inTitle, int32_t inWidth, in
     theResult->mWindow = theWindow;
     theResult->mMetalView = NULL;
     SDL_SetPointerProperty(SDL_GetWindowProperties(theWindow), kWindowProperty, theResult);
+#ifdef _WIN32
+    Subclass(theWindow);
+#endif
     return theResult;
 }
 
@@ -372,6 +495,30 @@ extern "C" int PlatWindowSetFullscreen(PlatWindow* inWindow, int inFullscreen)
 extern "C" void PlatWindowSetSize(PlatWindow* inWindow, int32_t inWidth, int32_t inHeight)
 {
     SDL_SetWindowSize(inWindow->mWindow, inWidth, inHeight);
+}
+
+extern "C" void PlatWindowGetPosition(PlatWindow* inWindow, int32_t* outX, int32_t* outY)
+{
+    int x = 0, y = 0;
+    SDL_GetWindowPosition(inWindow->mWindow, &x, &y);   // the client area's origin (SDL3 excludes the frame)
+    *outX = x;
+    *outY = y;
+}
+
+extern "C" void PlatWindowSetPosition(PlatWindow* inWindow, int32_t inX, int32_t inY)
+{
+    SDL_SetWindowPosition(inWindow->mWindow, inX, inY);
+}
+
+extern "C" void PlatWindowMinimize(PlatWindow* inWindow)
+{
+    SDL_MinimizeWindow(inWindow->mWindow);
+}
+
+extern "C" void PlatWindowRaise(PlatWindow* inWindow)
+{
+
+    SDL_RaiseWindow(inWindow->mWindow);
 }
 
 extern "C" void PlatWindowGetClientSize(PlatWindow* inWindow, int32_t* outWidth, int32_t* outHeight)
