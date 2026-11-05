@@ -1247,7 +1247,8 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   Every run: 0 opens of a data.ssa, 0 of either install, no registry write, the key still absent afterwards, a
   config.ini of 76 values written by the game ([Game] and [Game Options]). plat_test 209/209 on Windows; the Linux
   game cross-builds (846/846 units). Bundle: 5,761 files, a 327 MB zip of the 426 MB tree.
-n## Caps from the data (branch ids)
+
+## Caps from the data (branch ids)
 
 - **A tech id named its epoch**: every node id is (block + 1) x 1000 + slot in the retail data, and the code found a
   node with `id / 1000 - 1`. Inserting an epoch then renumbers every later tech (and breaks `kTech*`). A map from
