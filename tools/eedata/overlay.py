@@ -144,4 +144,51 @@ TABLES = {
 
 # Text-only row labels (checked aliases; the binary has no name column): table -> {row position: name}.
 # dbworld: names from the call sites of gWorldTable.Get*Value(k) (docs/DATA_FORMATS.md 3.12).
-ROW_NAMES = {}
+# Each name says what the reading code does with the row (file, function); rows without a clear reader stay
+# unnamed. Long/Long2 and Float/Float2 are the entry's two values of that type (mLongValue, mLongValue2, ...).
+ROW_NAMES = {'dbworld': {
+    21: 'conversionsShownMax',        # Long: the statistics' conversions n/max (EEUIFMGGStatistics::Refresh)
+    22: 'miningLimit',                # Long -> EEPlayer::mMiningLimit (EEPlayer::Reset)
+    25: 'chatMessageTime',            # Long: chat log entry time, ms (x2, x3 for system lines; EEUserInterface)
+    26: 'unitLimitRange',             # Long..Long2: the unit limit choices, step 50 (EEGameOptions, lobby)
+    27: 'unitLimitDefault',           # Long: EEGameOptions::SetDefaults mUnitLimit
+    34: 'wonderVictoryTime',          # Long: wonder victory countdown, s (EEVictoryCondition::GetWonderCountdown)
+    35: 'conversionSearchRadius',     # Float: priest ConvertTarget's EEGetUnitsNear radius
+    36: 'shareBonus',                 # Float/Float2 x population limit (EEWorld::ApplyShareBonus/RemoveShareBonus)
+    37: 'healAmount',                 # Long: heal base and factor (EEPlayer::UpdatePlayer)
+    42: 'gameSpeedDefault',           # Float -> gGameStateGameSpeed (EEWorldTable::Load)
+    43: 'gameSpeedRange',             # Float..Float2: the in-game speed limits (EEUIEMGChangeGameSpeed)
+    44: 'gameSpeedStep',              # Float: the in-game speed step (EEUIEMGChangeGameSpeed)
+    45: 'killRefundFactor',           # Float: RefundTechnology factor (EEMKillUnit::Execute)
+    46: 'conversionCost',             # Long: EEGetConversionCost base
+    47: 'improvementPointLimit',      # Long: improvement cost cap (EEPlayer::CanImprove, EEUICPortrait::Update)
+    48: 'startingCitizens',           # Long -> mStartingCitizens / mMaxStartingCitizens (EEServer, EEPlayer::Reset)
+    49: 'groupCapFactor',             # Float -> EEActiveGroup::mCapFactor
+    50: 'wonderPowerAmount',          # Float: EEPlayer::AddWonderPower/RemoveWonderPower
+    51: 'healEpochFactor',            # Float: heal per epoch step (EEPlayer::UpdatePlayer)
+    52: 'healEpochDivisor',           # Long: epochs per heal step (EEPlayer::UpdatePlayer)
+    53: 'elevationHighThreshold',     # Float x tile height (EEUnitClass::GetElevationFactor)
+    54: 'elevationLowThreshold',      # Float x tile height (EEUnitClass::GetElevationFactor)
+    55: 'elevationHighBonus',         # Float: added to the uphill factor (EEUnitClass::GetElevationFactor)
+    56: 'elevationLowFactor',         # Float: the downhill factor (EEUnitClass::GetElevationFactor)
+    **{57 + k: f'improvementTime{k}' for k in range(16)},   # Long: first level, Long2: later levels, ms
+                                                             # (EEPlayer::AdvanceImprovement: improvement + 57)
+    74: 'complexUnitSight',           # Float: EEComplexUnit::SightOn/SightOff radius
+    75: 'upgradeButtonDelay',         # Long, ms (EEUIBUpgrade::ButtonUp, EEUIFMGStatusButton::ButtonUp)
+    76: 'civilizationPoints',         # Long: civilization builder points (EEGameState::Create, editors)
+    77: 'wondersForVictoryMax',       # Long: the wonders-for-victory choices 1..n (EEGameOptions, lobby)
+    80: 'unitEpochCostFactor',        # Float: unit cost growth per epoch behind (EETechTreeNode::GetCost, kind 4)
+    81: 'gameSpeedOption01',          # Float: game speed option 0, Float2: option 1 (EEGameState::Create)
+    82: 'gameSpeedOption23',          # Float: game speed option 2, Float2: option 3 (EEGameState::Create)
+    83: 'acknowledgementDelay',       # Long, ms (EEPlayer::PlayAcknowledgement)
+    84: 'aiAttackChance',             # Float/Float2: random thresholds (EECPAttackSubGroup::AttackWith)
+    85: 'camouflage',                 # Long/Long2: camouflage timers, Float: cloak detection range factor
+    86: 'civPowerCost',               # Long -> the civ powers category cost (EECivilizationManager::Load)
+    88: 'fanatic',                    # Long: duration ms, Float: hit point loss, Float2: damage factor (GoFanatic)
+    89: 'damageTableScale',           # Float/Float2: the two scaled damage tables (LoadDamageTables)
+    90: 'unitCostScale',              # Float: unit cost factor (EETechTreeNode::GetCost, resources option != 4)
+    91: 'tradeRate46',                # Float: trade rate case 4, Float2: case 6 (EEGetTradePrice)
+    92: 'tradeRate23',                # Float: trade rate case 2, Float2: case 3 (EEGetTradePrice)
+    93: 'unitCostScaleResources4',    # Float: unit cost factor with resources option 4 (EETechTreeNode::GetCost)
+    94: 'resourceTime',               # Long, s (EEPhysics::Tick, resources option 4)
+}}

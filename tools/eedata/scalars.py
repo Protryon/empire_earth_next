@@ -9,6 +9,7 @@ r"""Text forms of the scalar values, shared by the CSV and YAML sides (and mirro
 * raw bytes (raw, pad, string tails): lower-case hex, empty = all zero (trailing zero bytes may be left out).
 """
 import decimal
+import re
 import struct
 from fractions import Fraction
 
@@ -19,6 +20,10 @@ class ValueError_(ValueError):
 
 _RANGES = {'s8': (-128, 127), 'u8': (0, 255), 'bool': (0, 255), 's16': (-32768, 32767), 'u16': (0, 65535),
            's32': (-2 ** 31, 2 ** 31 - 1), 'u32': (0, 2 ** 32 - 1)}
+_HEX = re.compile(r'^0[xX][0-9a-fA-F]+$')
+_DECINT = re.compile(r'^[+-]?[0-9]+$')
+_FLT = re.compile(r'^[+-]?([0-9]+\.?[0-9]*|\.[0-9]+)([eE][+-]?[0-9]+)?$')
+_HEXBYTES = re.compile(r'^([0-9a-fA-F]{2})*$')
 _WIDTH = {'s8': 8, 'u8': 8, 'bool': 8, 's16': 16, 'u16': 16, 's32': 32, 'u32': 32}
 
 
@@ -32,14 +37,14 @@ def parse_int(text, t):
     if t == 'bool' and s in ('true', 'false'):
         return int(s == 'true')
     try:
-        if s.lower().startswith('0x'):
+        if _HEX.match(s):
             v = int(s[2:], 16)
             if v >= 1 << _WIDTH[t]:
                 raise ValueError_(f'{text!r} does not fit {t}')
             if lo < 0 and v > hi:
                 v -= 1 << _WIDTH[t]
             return v
-        if not s or not (s.lstrip('+-').isdigit()) or s.count('-') + s.count('+') > 1:
+        if not _DECINT.match(s):
             raise ValueError_(f'{text!r} is not an integer')
         v = int(s)
     except ValueError as e:
@@ -92,20 +97,25 @@ def parse_f32(text):
         return 0xff800000
     if low in ('.nan', 'nan'):
         return 0x7fc00000
-    if low.startswith('0x'):
+    if _HEX.match(s):
         v = int(s[2:], 16)
         if v >= 1 << 32:
             raise ValueError_(f'{text!r}: more than 32 bits')
         return v
-    neg = s.startswith('-')
-    body = s[1:] if s[:1] in '+-' else s
-    if not body or not (body[0].isdigit() or body[0] == '.') or any(c not in '0123456789.eE+-' for c in body):
+    if not _FLT.match(s):
         raise ValueError_(f'{text!r} is not a number')
-    try:
-        q = Fraction(body)
-    except (ValueError, ZeroDivisionError):
-        raise ValueError_(f'{text!r} is not a number') from None
-    return _round_f32(q) | (0x80000000 if neg else 0)
+    neg = s.startswith('-')
+    q = Fraction(s[1:] if s[:1] in '+-' else s)
+    bits = _round_f32(q)
+    if bits == 0x7f800000 or (bits == 0 and q != 0):
+        raise ValueError_(f'{text!r} is outside the float range')
+    return bits | (0x80000000 if neg else 0)
+
+
+def _decimal_bits(s):
+    """A decimal (as format_f32 writes them) -> float32 bits, overflow to inf, no checks."""
+    neg = s.startswith('-')
+    return _round_f32(Fraction(s.lstrip('+-'))) | (0x80000000 if neg else 0)
 
 
 def format_f32(bits):
@@ -116,7 +126,7 @@ def format_f32(bits):
     f, = struct.unpack('<f', struct.pack('<I', bits))
     for digits in range(1, 10):
         s = f'{f:.{digits - 1}e}'
-        if parse_f32(s) == bits:
+        if _decimal_bits(s) == bits:
             break
     else:
         raise AssertionError(bits)
@@ -165,10 +175,9 @@ def format_hex(b, trim=True):
 
 def parse_hex(text, n=None):
     s = text.strip()
-    try:
-        b = bytes.fromhex(s)
-    except ValueError:
-        raise ValueError_(f'{text[:40]!r} is not hex') from None
+    if not _HEXBYTES.match(s):
+        raise ValueError_(f'{text[:40]!r} is not hex (pairs of hex digits)')
+    b = bytes.fromhex(s)
     if n is not None:
         if len(b) > n:
             raise ValueError_(f'{len(b)} bytes of hex, the field has {n}')

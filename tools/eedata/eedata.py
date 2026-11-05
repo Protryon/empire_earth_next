@@ -160,6 +160,7 @@ def main():
     p.add_argument('--out', help='build/output folder (default build/eedata-cppgate)')
     p.add_argument('-j', type=int, default=2)
     a = ap.parse_args()
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     spec = specgen.load()
     if a.cmd == 'check':
         import check

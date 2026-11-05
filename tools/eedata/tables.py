@@ -3,7 +3,7 @@
 Text model (both containers): a record is a mapping key -> value. Keys: `row` (the row position, checked; empty
 or absent = the next position), `label` (text-only checked alias, tables in ROW_NAMES), the lead strings, every
 record field by its spec name, `<str field>~tail` (hex of the bytes after the NUL; exact mode, only when not
-zero), pad fields (exact mode, only when not zero), and the trailing list (`effects`, `parents`). Arrays are YAML
+zero; `<str field>~raw` instead of the text when the bytes hold no NUL),pad fields (exact mode, only when not zero), and the trailing list (`effects`, `parents`). Arrays are YAML
 flow sequences (trailing zero elements left out) or CSV columns name[i] (pairs: name[i][0], name[i][1]).
 A missing key or an empty cell is zero (empty string). Rows not listed are holes: copies of the `hole` template.
 """
@@ -46,6 +46,9 @@ def record_items(fields, rec, mode, yaml):
         v = binfmt.field_value(f, rec)
         if t == 'str':
             text, tail = v
+            if len(text) == n:   # no NUL: not a string the game can read; kept as bytes (never in AoC rows)
+                out.append((name + '~raw', Text(scalars.format_hex(text, trim=False))))
+                continue
             out.append((name, Text(scalars.decode_str(text))))
             if mode == 'exact' and tail.rstrip(b'\0'):
                 out.append((name + '~tail', Text(scalars.format_hex(tail))))
@@ -180,9 +183,13 @@ def build_record(fields, size, g):
             if t == 'str':
                 text = _text(g.get(name), g.where, name)
                 tail = _hex(g.get(name + '~tail'), None, g.where, name + '~tail')
-                if len(text) >= n and tail:
-                    raise TextError(f'{g.where}: {name}: a tail but no room for the NUL')
-                if len(text) > n:
+                raw = g.get(name + '~raw')
+                if raw is not None:
+                    if text or tail:
+                        raise TextError(f'{g.where}: {name}~raw: and a text or tail too')
+                    binfmt.put_field(dict(f, type='raw'), buf, _hex(raw, n, g.where, name + '~raw'))
+                    continue
+                if len(text) >= n:
                     raise TextError(f'{g.where}: {name}: {len(text)} bytes, the field holds {n - 1} '
                                     f'(+ NUL)')
                 if tail and len(text) + 1 + len(tail) > n:
@@ -227,9 +234,11 @@ def build_list(tspec, g):
         v = _elems(v, max(v) + 1 if v else 0, g.where, name)
     if not isinstance(v, list):
         raise TextError(f'{g.where}: {name} must be a list')
+    if any(isinstance(x, (list, dict)) for x in v):
+        raise TextError(f'{g.where}: {name}: a list where a number belongs')
     try:
         return [scalars.parse_int(x, typ) for x in v]
-    except (ValueError_, TypeError) as e:
+    except ValueError_ as e:
         raise TextError(f'{g.where}: {name}: {e}') from None
 
 
@@ -324,7 +333,7 @@ def export(name, data, spec, mode='exact'):
         flat_rows.append(flat)
     cols = csv_columns(tspec, fields, mode, names)
     present = set(k for fr in flat_rows for k in fr)
-    optional = set(c for c in cols if c.endswith('~tail') or c.startswith('pad_0x'))
+    optional = set(c for c in cols if c.endswith(('~tail', '~raw')) or c.startswith('pad_0x'))
     cols = [c for c in cols if c not in optional or c in present]
     extra = present - set(cols)
     assert not extra, extra
@@ -355,7 +364,7 @@ def csv_columns(tspec, fields, mode, names):
     for f in fields:
         t, n, name = f['type'], f['count'], f['name']
         if t == 'str':
-            cols += [name, name + '~tail']
+            cols += [name, name + '~tail', name + '~raw']
         elif t in ('raw', 'pad') or n == 1:
             cols.append(name)
         elif t == 'pair_f32':
