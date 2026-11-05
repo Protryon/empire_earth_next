@@ -2,6 +2,8 @@
 // The random map script (.rmv) reader: preprocessor (#define/#if/#elif/#else), keyword tables, value parser.
 // Unit flags (calibrated, docs/CALIBRATION.md): -O1 -G6 -MD -GR
 #include <windows.h>
+#include <stdint.h>
+#include "platform/PlatFile.h"
 #include <stdio.h>
 #include <vector>
 #include <map>
@@ -18,7 +20,7 @@ enum {                                      // value types of the number parsers
     kRMLong = 100,
     kRMFloat = 101
 };
-const long kRMUnset = (long)0xbaadf00d;           // value of a list entry that failed to parse (0xc9fd, 0xd223)
+const long kRMUnset = (int32_t)0xbaadf00d;   // negative, as the 32-bit original's           // value of a list entry that failed to parse (0xc9fd, 0xd223)
 
 enum {                                      // keyword tokens (InitializeKeywords 0xefd7)
     kRMUnknownKeyword = 0,
@@ -861,7 +863,7 @@ void ReadScript(EERandomMap* ioMap, const UString& inName)
     bool theDone;
     theFile.SetFile(inName + ".rmv");
     theFile.GetVolume() + theFile.GetDirectory() + theFile.GetFile();
-    theStream = fopen(theFile.GetVolume() + theFile.GetDirectory() + theFile.GetFile(), "r");
+    theStream = PlatFOpen(theFile.GetVolume() + theFile.GetDirectory() + theFile.GetFile(), "r");
     if (theStream) {
         do {
             theDone = fgets(theBuffer, 0x200, theStream) == NULL;
@@ -1436,7 +1438,9 @@ void ParseLine(EERandomMap* ioMap, const UString& inLine)
             if (gIfStack.size() == 0 || gIfStack.back() == 1) {
                 theExpanded[1].NestedTokenize(theSeparators, theBrackets, theTokens);
                 ExpandMapTypes(theTokens, theExpanded);
-                AddMapType(theTokens[0], theExpanded[1]);
+                // Fixed: a one-token #define (a flag) left theExpanded[1] past the end (the original read a destroyed
+                // element; libc++ frees it): its value is empty
+                AddMapType(theTokens[0], theExpanded.size() > 1 ? theExpanded[1] : UString(""));
             }
             break;
         case kRMTokenIf:  // #if
@@ -1444,22 +1448,22 @@ void ParseLine(EERandomMap* ioMap, const UString& inLine)
                 gIfStack.push_back(2);
             else if (gIfStack.size() != 0 && gIfStack.back() == 0)
                 gIfStack.push_back(2);
-            else if (EvaluateCondition(ioMap, theExpanded[1]))
+            else if (theExpanded.size() > 1 && EvaluateCondition(ioMap, theExpanded[1]))   // Fixed: a bare #if read past the end
                 gIfStack.push_back(1);
             else
                 gIfStack.push_back(0);
             break;
         case kRMTokenElif:  // #elif
-            if (gIfStack.back() != 2) {
+            if (gIfStack.size() != 0 && gIfStack.back() != 2) {   // Fixed: an unmatched #elif/#else/#endif used an empty stack
                 if (gIfStack.back() == 0) {
-                    if (EvaluateCondition(ioMap, theExpanded[1]))
+                    if (theExpanded.size() > 1 && EvaluateCondition(ioMap, theExpanded[1]))
                         gIfStack[gIfStack.size() - 1] = 1;
                 } else
                     gIfStack[gIfStack.size() - 1] = 2;
             }
             break;
         case kRMTokenElse:  // #else
-            if (gIfStack.back() != 2) {
+            if (gIfStack.size() != 0 && gIfStack.back() != 2) {
                 if (gIfStack.back() == 0)
                     gIfStack[gIfStack.size() - 1] = 1;
                 else
@@ -1467,12 +1471,14 @@ void ParseLine(EERandomMap* ioMap, const UString& inLine)
             }
             break;
         case kRMTokenEndif:  // #endif
-            gIfStack.pop_back();
+            if (gIfStack.size() != 0)
+                gIfStack.pop_back();
             break;
         case kRMTokenInclude:  // #include
             if (gIfStack.size() == 0 || gIfStack.back() == 1) {
                 inLine.Tokenize(theQuote, theTokens);
-                ReadScript(ioMap, theTokens[1]);
+                if (theTokens.size() > 1)   // Fixed: an #include without a quoted name read past the end
+                    ReadScript(ioMap, theTokens[1]);
             }
             break;
         }

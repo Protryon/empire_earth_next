@@ -6,6 +6,7 @@
 // template-static init chain head. The enumeration callbacks and ActivateRasterizer were built without global
 // optimisation (see the pragmas below); everything else is -O1.
 #include <windows.h>
+#include <stdint.h>
 #include "gx/GX.h"
 #include <float.h>
 
@@ -1248,9 +1249,9 @@ void DX7Rasterizer::SetFogColor(const GEColor& inColor, unsigned long inScreen)
 void DX7Rasterizer::SetFogRange(float inStart, float inEnd, unsigned long inScreen)
 {
     if (this->mScreenStates[inScreen]->mFog.mStart != inStart)
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FOGSTART, *reinterpret_cast<unsigned long*>(&inStart));
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FOGSTART, *reinterpret_cast<uint32_t*>(&inStart));
     if (this->mScreenStates[inScreen]->mFog.mEnd != inEnd)
-        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FOGEND, *reinterpret_cast<unsigned long*>(&inEnd));
+        this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_FOGEND, *reinterpret_cast<uint32_t*>(&inEnd));
     GERasterizer::SetFogRange(inStart, inEnd, inScreen);
 }
 
@@ -1521,7 +1522,7 @@ void DX7Rasterizer::SetTexture(GETexture* inTexture, unsigned long inScreen)
     }
     if (inTexture->GetStage()->mMipMapBias != theCurrent.mMipMapBias) {
         this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_MIPMAPLODBIAS,
-                                                                  *(unsigned long*)&inTexture->GetStage()->mMipMapBias);
+                                                                  *(uint32_t*)&inTexture->GetStage()->mMipMapBias);
         this->mDX7ScreenStates[inScreen]->mStage.mMipMapBias = inTexture->GetStage()->mMipMapBias;
     }
     this->mDX7ScreenStates[inScreen]->GetDevice()->SetTexture(1, NULL);

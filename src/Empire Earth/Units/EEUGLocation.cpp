@@ -3,6 +3,7 @@
 // vtable 0x4478a0. EEUnitGoal's inline ??_G (0x2276c4, EEUGAttackGround's folds into it) is first emitted here.
 
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <deque>
 
@@ -127,13 +128,13 @@ void EEUGLocation::DumpOutOfSynch(FILE* inFile)
 long EEUGLocation::GetOutOfSynchChecksum()
 {
     float theValue = this->mLocation.GetX();
-    long theChecksum = *reinterpret_cast<long*>(&theValue);
+    long theChecksum = *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mLocation.GetY();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mLocation.GetZ();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mYaw;
-    theChecksum += *reinterpret_cast<long*>(&theValue) + (this->mIsForcedMove == true) + (this->mShouldFace == true) + (this->mIsAutoWaypoint == true) + (this->mUseGroupMovement == true) + this->mGroupPathState;
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue) + (this->mIsForcedMove == true) + (this->mShouldFace == true) + (this->mIsAutoWaypoint == true) + (this->mUseGroupMovement == true) + this->mGroupPathState;
     return EEUnitGoal::GetOutOfSynchChecksum() + theChecksum;
 }
 

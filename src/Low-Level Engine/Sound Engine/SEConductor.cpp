@@ -5,6 +5,7 @@
 // music folder (Resolve). The public behaviour follows the original's: scores are loaded by name and remembered while
 // the conductor is stopped, played, stopped and transitioned to; the intensity is the master groove level.
 #include <windows.h>
+#include "platform/PlatFile.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,7 +66,7 @@ void* SEConductor::Resolve(void* inConductor, const char* inFile, size_t* outLen
     else
         snprintf(thePath, MAX_PATH, "%s", inFile);
     thePath[MAX_PATH - 1] = 0;
-    FILE* theStream = fopen(thePath, "rb");
+    FILE* theStream = PlatFOpen(thePath, "rb");
     if (theStream == NULL)
         return NULL;
     fseek(theStream, 0, SEEK_END);

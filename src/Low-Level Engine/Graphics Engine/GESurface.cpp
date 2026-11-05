@@ -10,6 +10,7 @@
 // image carrying the alpha in all three channels (LoadJPG2 merges both). SaveAsJPG2 writes placeholder offsets
 // and patches them through FSFileSpec::Write after reopening; the TGA writer swaps the header width/height (as shipped).
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -81,7 +82,7 @@ long GESurface::SaveAsBMP(FSFileSpec& inFile)
     unsigned long theWritten;
     unsigned long theBytesPerRow;
     unsigned long thePitch;
-    unsigned long* the32BitPixel;
+    uint32_t* the32BitPixel;
     unsigned short* the16BitPixel;
     unsigned long x;
     unsigned long y;
@@ -122,7 +123,7 @@ long GESurface::SaveAsBMP(FSFileSpec& inFile)
                     theBytesPerRow = this->GetBytesPerRow();
                     if (this->GetPixelDepth() == 32) {
                         thePitch = theBytesPerRow / 4;
-                        the32BitPixel = reinterpret_cast<unsigned long*>(this->GetMemoryAddress()) + (theHeight - 1) * thePitch;
+                        the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress()) + (theHeight - 1) * thePitch;
                         for (y = 0; y < theHeight; y++) {
                             for (x = 0; x < theWidth; x++) {
                                 theBuffer[x * 3 + 2] = GEUnpackRed(theFormat, *the32BitPixel);
@@ -200,7 +201,7 @@ long GESurface::GetJPG2FileAttributes(FSFileSpec& inFile, unsigned long& outWidt
 // Decodes a JPEG into the surface (opaque), from the file's current position; reopens a file that was open
 long GESurface::LoadJPG(FSFileSpec& inFile)
 {
-    unsigned long* the32BitPixel = NULL;
+    uint32_t* the32BitPixel = NULL;
     unsigned short* the16BitPixel = NULL;
     unsigned long theFormat = this->GetPixelFormat();
     long thePosition = 0;
@@ -238,7 +239,7 @@ long GESurface::LoadJPG(FSFileSpec& inFile)
             theBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE, theRowStride, 1);
             if (this->GetPixelDepth() == 32) {
                 theSkip = (this->GetBytesPerRow() - this->GetWidth() * 4) / 4;
-                the32BitPixel = reinterpret_cast<unsigned long*>(this->GetMemoryAddress());
+                the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress());
             } else {
                 theSkip = (this->GetBytesPerRow() - this->GetWidth() * 2) / 2;
                 the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress());
@@ -287,7 +288,7 @@ long GESurface::LoadJPG(FSFileSpec& inFile)
 // Decodes a JPG2 into the surface: the colour image, then the alpha image merged into each pixel's alpha
 long GESurface::LoadJPG2(FSFileSpec& inFile)
 {
-    unsigned long* the32BitPixel = NULL;
+    uint32_t* the32BitPixel = NULL;
     unsigned short* the16BitPixel = NULL;
     unsigned long theFormat = this->GetPixelFormat();
     long thePosition = 0;
@@ -328,7 +329,7 @@ long GESurface::LoadJPG2(FSFileSpec& inFile)
             theBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE, theRowStride, 1);
             if (this->GetPixelDepth() == 32) {
                 theSkip = (this->GetBytesPerRow() - this->GetWidth() * 4) / 4;
-                the32BitPixel = reinterpret_cast<unsigned long*>(this->GetMemoryAddress());
+                the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress());
             } else {
                 theSkip = (this->GetBytesPerRow() - this->GetWidth() * 2) / 2;
                 the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress());
@@ -363,7 +364,7 @@ long GESurface::LoadJPG2(FSFileSpec& inFile)
             theBuffer = (*theInfo.mem->alloc_sarray)((j_common_ptr)&theInfo, JPOOL_IMAGE, theRowStride, 1);
             if (this->GetPixelDepth() == 32) {
                 theSkip = (this->GetBytesPerRow() - this->GetWidth() * 4) / 4;
-                the32BitPixel = reinterpret_cast<unsigned long*>(this->GetMemoryAddress());
+                the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress());
             } else {
                 theSkip = (this->GetBytesPerRow() - this->GetWidth() * 2) / 2;
                 the16BitPixel = reinterpret_cast<unsigned short*>(this->GetMemoryAddress());
@@ -427,7 +428,7 @@ long GESurface::SaveAsJPG(FSFileSpec& inFile)
     struct jpeg_error_mgr theError;
     JSAMPARRAY theBuffer;
     unsigned long theBytesPerRow;
-    unsigned long* the32BitPixel;
+    uint32_t* the32BitPixel;
     unsigned short* the16BitPixel;
     unsigned long x;
     unsigned long y;
@@ -463,7 +464,7 @@ long GESurface::SaveAsJPG(FSFileSpec& inFile)
             theBytesPerRow = this->GetBytesPerRow();
             if (this->GetPixelDepth() == 32) {
                 for (y = 0; y < theHeight; y++) {
-                    the32BitPixel = reinterpret_cast<unsigned long*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 4);
+                    the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 4);
                     for (x = 0; x < theWidth; x++) {
                         theBuffer[0][x * 3] = GEUnpackRed(theFormat, *the32BitPixel);
                         theBuffer[0][x * 3 + 1] = GEUnpackGreen(theFormat, *the32BitPixel);
@@ -528,7 +529,7 @@ long GESurface::SaveAsJPG2(FSFileSpec& inFile)
     JSAMPARRAY theBuffer;
     unsigned long theRowSize;
     unsigned long theBytesPerRow;
-    unsigned long* the32BitPixel;
+    uint32_t* the32BitPixel;
     unsigned short* the16BitPixel;
     unsigned long x;
     unsigned long y;
@@ -567,7 +568,7 @@ long GESurface::SaveAsJPG2(FSFileSpec& inFile)
             theBytesPerRow = this->GetBytesPerRow();
             if (this->GetPixelDepth() == 32) {
                 for (y = 0; y < theHeight; y++) {
-                    the32BitPixel = reinterpret_cast<unsigned long*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 4);
+                    the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 4);
                     for (x = 0; x < theWidth; x++) {
                         theBuffer[0][x * 3] = GEUnpackRed(theFormat, *the32BitPixel);
                         theBuffer[0][x * 3 + 1] = GEUnpackGreen(theFormat, *the32BitPixel);
@@ -614,7 +615,7 @@ long GESurface::SaveAsJPG2(FSFileSpec& inFile)
             theBytesPerRow = this->GetBytesPerRow();
             if (this->GetPixelDepth() == 32) {
                 for (y = 0; y < theHeight; y++) {
-                    the32BitPixel = reinterpret_cast<unsigned long*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 4);
+                    the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress()) + y * (theBytesPerRow / 4);
                     for (x = 0; x < theWidth; x++) {
                         theBuffer[0][x * 3] = GEUnpackAlpha(theFormat, *the32BitPixel);
                         theBuffer[0][x * 3 + 1] = GEUnpackAlpha(theFormat, *the32BitPixel);
@@ -731,7 +732,7 @@ long GESurface::LoadTGA(FSFileSpec& inFile)
     unsigned long theBytesPerRow;
     unsigned long theSourceRowSize;
     unsigned long theSkip;
-    unsigned long* the32BitPixel;
+    uint32_t* the32BitPixel;
     unsigned short* the16BitPixel;
     unsigned char theRed;
     unsigned char theGreen;
@@ -771,7 +772,7 @@ long GESurface::LoadTGA(FSFileSpec& inFile)
                                 theSource += theSourceRowSize - theBytesPerPixel;
                             if (this->GetPixelDepth() == 32) {
                                 theSkip = (theBytesPerRow - this->GetWidth() * 4) / 4;
-                                the32BitPixel = reinterpret_cast<unsigned long*>(this->GetMemoryAddress());
+                                the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress());
                                 if (theBytesPerPixel == 4) {
                                     for (y = 0; y < theHeader.mHeight; y++) {
                                         for (x = 0; x < theHeader.mWidth; x++) {
@@ -892,7 +893,7 @@ long GESurface::SaveAsTGA(FSFileSpec& inFile)
     unsigned long theWritten;
     unsigned long theBytesPerRow;
     unsigned long thePitch;
-    unsigned long* the32BitPixel;
+    uint32_t* the32BitPixel;
     unsigned short* the16BitPixel;
     unsigned long x;
     unsigned long y;
@@ -920,7 +921,7 @@ long GESurface::SaveAsTGA(FSFileSpec& inFile)
                 theBytesPerRow = this->GetBytesPerRow();
                 if (this->GetPixelDepth() == 32) {
                     thePitch = theBytesPerRow / 4;
-                    the32BitPixel = reinterpret_cast<unsigned long*>(this->GetMemoryAddress()) + (theHeight - 1) * thePitch;
+                    the32BitPixel = reinterpret_cast<uint32_t*>(this->GetMemoryAddress()) + (theHeight - 1) * thePitch;
                     for (y = 0; y < theHeight; y++) {
                         for (x = 0; x < theWidth; x++) {
                             theBuffer[x * 3] = GEUnpackBlue(theFormat, *the32BitPixel);

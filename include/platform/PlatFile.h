@@ -11,6 +11,7 @@
 #define PLATFORM_PLATFILE_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,6 +61,10 @@ typedef struct PlatFile PlatFile;
 PlatFile* PlatFileOpen(const char* inPath, uint32_t inAccess);
 // Creates a new, empty file (failing when it exists) and closes it again -> OK, EXISTS, BAD_PATH or NATIVE_ERROR.
 PlatFileResult PlatFileCreateNew(const char* inPath);
+// fopen of a game path (the engine's stdio streams: FSFileSpec::FOpen, the mixer's wave files, the music loader)
+// -> the stream, NULL on failure (PlatGetLastError set). Win32: fopen unchanged; POSIX: the path resolved first, and
+// a read-only text open (no 'b', no '+') reads CR LF as LF, as the Windows CRT's text mode.
+FILE* PlatFOpen(const char* inPath, const char* inMode);
 int PlatFileClose(PlatFile* inFile);                                   // -> nonzero on success
 // Reads up to inLength bytes -> nonzero on success (*outRead 0 at the end of the file)
 int PlatFileRead(PlatFile* inFile, void* outData, uint32_t inLength, uint32_t* outRead);

@@ -3,6 +3,7 @@
 // vtable 0x44740c. The tail 0x220283..0x220986 is the std::sort instantiation for EETileDistanceLess (0x21e104).
 
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
@@ -374,15 +375,15 @@ void EEUGBuildRepair::DumpOutOfSynch(FILE* inFile)
 long EEUGBuildRepair::GetOutOfSynchChecksum()
 {
     float theValue = this->mTargetLocation.GetX();
-    long theChecksum = *reinterpret_cast<long*>(&theValue);
+    long theChecksum = *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mTargetLocation.GetY();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mTargetLocation.GetZ();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mTargetCenter.GetX();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mTargetCenter.GetY();
-    theChecksum += *reinterpret_cast<long*>(&theValue) + this->mPlayer->mPlayerID;
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue) + this->mPlayer->mPlayerID;
     long theTargetID = this->mTarget ? this->mTarget->mUnitID : 0;
     theChecksum += theTargetID + this->mTechTreeID + this->mTargetType + this->mTargetScale + this->mFirstTickAmount + this->mTargetClass->mUnitType
         + (this->mWorkerCountIncremented == true) + (this->mFirstTickAdjusted == true) + (this->mIsRepair == true)

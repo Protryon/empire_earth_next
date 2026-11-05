@@ -111,6 +111,7 @@ public:
     GEFont* GetFont(unsigned long inIndex) const { return this->mFonts[inIndex]; }
     UIForm* GetFormByID(unsigned long inID) const;
     unsigned long GetFormCount() const { return this->mFormStack.size(); }
+    UIForm* GetStackedForm(unsigned long inIndex) const { return this->mFormStack[inIndex]; }   // port (test fixture)
     GEBitmap* GetDragBarBitmap() const { return this->mDragBarBitmap; }
     GESurface* GetDrawingSurface() const { return this->mRasterizer->GetSecondarySurface(this->mScreen); }
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe reads __imp_sLMouseButton inline (0x17d6a9, 37 sites)

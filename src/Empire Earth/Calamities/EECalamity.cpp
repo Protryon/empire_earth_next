@@ -5,6 +5,7 @@
 // 0x43c694). (.data): the key strings 0x4b90d8.., type descriptors, the dump formats 0x4b9324..; (.bss): the keys
 // 0x4e5f58..0x4e5fa0 and their guard bytes.
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
@@ -301,24 +302,24 @@ long EECalamity::GetOutOfSynchChecksum()
     float theValue;
     long theChecksum;
     theValue = this->mTargetLocation.GetX();
-    theChecksum = *reinterpret_cast<long*>(&theValue);
+    theChecksum = *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mTargetLocation.GetY();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mTargetLocation.GetZ();
-    theChecksum += *reinterpret_cast<long*>(&theValue) + this->mTilePlaceHolder1X + this->mTilePlaceHolder1Y + this->mIntPlaceHolder1 + this->mIntPlaceHolder2
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue) + this->mTilePlaceHolder1X + this->mTilePlaceHolder1Y + this->mIntPlaceHolder1 + this->mIntPlaceHolder2
                  + this->mTargetUnitID + this->mOriginatingUnitID + this->mPlayerNumber + (this->mBoolPlaceHolder1 == true)
                  + (this->mBoolPlaceHolder2 == true) + (this->mInitialized == true) + (this->mHasTargetLocation == true)
                  + (this->mHasTargetUnit == true);
     theValue = this->mFloatPlaceHolder1;
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mFloatPlaceHolder2;
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mHeight;
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mDiscreteUpdateTime;
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mTimeElapsedSinceLastUpdate;
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     return theChecksum;
 }
 

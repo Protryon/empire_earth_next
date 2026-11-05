@@ -3,6 +3,7 @@
 // 0x563608); vtable 0x4479a0. The (bool) ctor is inline (COMDAT 0x23c685 in EEUnitGoal.cpp).
 
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
@@ -100,7 +101,7 @@ long EEUGUnloadTransport::GetOutOfSynchChecksum()
     long theDestinationY = this->mDestination.mY;
     float theRange = this->mUnloadRangeSquared;
     return EEUnitGoal::GetOutOfSynchChecksum() + theID + theDestinationY + theDestinationX + theFirstY + theFirstX
-           + theUnloadY + theUnloadX + *reinterpret_cast<long*>(&theRange);
+           + theUnloadY + theUnloadX + *reinterpret_cast<int32_t*>(&theRange);
 }
 
 // FUNCTION: EXE 0x6285be

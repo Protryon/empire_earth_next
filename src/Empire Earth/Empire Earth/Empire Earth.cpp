@@ -8,6 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "platform/PlatMessage.h"
+void EETestFixtureStart();   // EETestFixture.cpp (TEST ONLY)
 #include "platform/PlatWindow.h"
 #include "platform/PlatFile.h"
 #include <stdio.h>
@@ -759,7 +760,7 @@ void EELoadNetworkSettings()
 #include "ee/EEMessage.h"
 
 void EEEmptyShutdown(bool inShutdown);
-unsigned long gBinaryChecksum; // 0x5319e4: the install checksum EEInitializeNetwork computes (sent to clients)
+uint32_t gBinaryChecksum; // 0x5319e4: the install checksum EEInitializeNetwork computes (sent to clients; 32-bit on the wire)
 
 #include "GEWindow.h"
 #include "lle/GEFont.h"
@@ -1164,7 +1165,7 @@ void EEInitializeNetwork()
     char theExeName[PLAT_MAX_PATH];
     if (!PlatPathGetExecutableName(theExeName, sizeof(theExeName)))
         theExeName[0] = 0;
-    unsigned long theChecksum = EEGetFileChecksum(theFile, theExeName, 0);
+    uint32_t theChecksum = EEGetFileChecksum(theFile, theExeName, 0);   // a 32-bit sum on every data model (LP64: the server compares it with the request's)
     theFile.SetDirectory(gStartupDirectory + "Data\\Db\\");
     theChecksum += EEGetFileChecksum(theFile, "*.dat", 0);
     // the db tables' text forms (EEDbFindFile loads them in place of the .dat); 0 when there are none
@@ -1188,7 +1189,7 @@ void EEInitializeNetwork()
     TMGetTime();
     gBinaryChecksum = theChecksum;
     gGameVersion = theVersion.GetIndexedSubstring(theVersion.Find("v", 0), theVersion.GetLength() - 1);
-    sprintf(theSuffix, ".%04ld", gBinaryChecksum & 0x1fff);
+    sprintf(theSuffix, ".%04ld", (long)(gBinaryChecksum & 0x1fff));
     gGameVersion += theSuffix;
 }
 
@@ -2056,6 +2057,7 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
             if (theInitialized) {
                 EEPlayIntroMovies(theShowMovies == false);
                 EEInitializePart2();
+                EETestFixtureStart();   // TEST ONLY: nothing unless EE_TEST_UI is set (EETestFixture.cpp)
                 if (EEParseCommandLine(inCommandLine)) {
                     long theResult;
                     {

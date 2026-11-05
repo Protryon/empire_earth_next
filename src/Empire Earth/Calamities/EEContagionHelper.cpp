@@ -2,6 +2,7 @@
 // spreading calamity's units: 0xb5b7d..0xb662f (the four save keys' init chains first). Unit flags: the exe's module
 // set. SetHelperID is ICF-folded (0x1c1c).
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <algorithm>
 
@@ -104,7 +105,7 @@ long EEContagionHelper::GetOutOfSynchChecksum() const
         theChecksum += this->mUnits[i]->mUnitID;
     theChecksum += this->mCalamity->GetOutOfSynchChecksum();
     float theTime = this->mTimeSinceLastSpread;
-    return this->mHelperID + *reinterpret_cast<long*>(&theTime) + theChecksum;
+    return this->mHelperID + *reinterpret_cast<int32_t*>(&theTime) + theChecksum;
 }
 
 // FUNCTION: EXE 0x4b5ef9

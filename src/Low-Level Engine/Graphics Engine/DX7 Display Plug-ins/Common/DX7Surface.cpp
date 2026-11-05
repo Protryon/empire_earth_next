@@ -6,6 +6,7 @@
 // COMDATs it is the first to use close it (0x1000fc0c, 0x1000fc6d). No init chains. DirectDraw calls retry while the
 // blitter is busy (GXERR_WASSTILLDRAWING); a lost surface is reported as 0xd, any other failure as kErrorNativeError.
 #include <windows.h>
+#include <stdint.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/Graphics Engine.h"
@@ -288,10 +289,10 @@ long DX7Surface::Copy32BitWithFilter(DX7Surface* inTarget, GERectangle& inSource
     long theResult;
     unsigned long theTop, theBottom, theLeft, theRight;
     float theXStep, theYStep, theXOffset, theYOffset;
-    unsigned long* theSource;
+    uint32_t* theSource;
     unsigned long theFormat;
     unsigned long theSourcePitch;
-    unsigned long* theDestination;
+    uint32_t* theDestination;
     unsigned long theDestinationPitch;
     unsigned long x, y;
     float theX, theY;
@@ -321,12 +322,12 @@ long DX7Surface::Copy32BitWithFilter(DX7Surface* inTarget, GERectangle& inSource
     theResult = this->Lock();
     if (theResult != kErrorOK)
         return theResult;
-    theSource = reinterpret_cast<unsigned long*>(this->mMemoryAddress);
+    theSource = reinterpret_cast<uint32_t*>(this->mMemoryAddress);
     theFormat = this->mDescription.mPixelFormat;
     theSourcePitch = this->mBytesPerRow / 4;
     theResult = inTarget->Lock();
     if (theResult == kErrorOK) {
-        theDestination = reinterpret_cast<unsigned long*>(inTarget->mMemoryAddress);
+        theDestination = reinterpret_cast<uint32_t*>(inTarget->mMemoryAddress);
         theDestinationPitch = inTarget->mBytesPerRow / 4;
         for (y = theTop; y < theBottom; y++) {
             for (x = theLeft; x < theRight; x++) {

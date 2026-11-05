@@ -1277,3 +1277,63 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   through the same guarded return address. A thread that hits a return watch belonging to another thread is now
   stepped over (the watch stays pending); a breakpoint event that arrives after its guard was removed (the int3 was
   already executed, the event queued) is rewound instead of resumed one byte into the instruction (c000001d).
+
+## The POSIX game with real data: macOS (2026-11-05)
+
+The first runs with the data bundle on a Mac (arm64, Metal; the x86_64 build under Rosetta behaved the same). Every
+bug below was invisible on Windows: four are LP64 leftovers the census could not see (a `long` that only matters at
+run time), the others are Windows CRT behaviour the POSIX layer did not provide yet.
+
+- **Game paths reached `fopen` unresolved.** Ten engine sites (the mixer's wave files, the music loader,
+  `FSFileSpec::FOpen`, `FSDebugFile`, `FSMemoryFile`, the random map scripts, the scenario editor, the lobby file
+  transfer, the out-of-sync log) passed `C:\...` paths straight to `fopen`; every sound failed to load and the first
+  duplicate dereferenced the missing wave (`SPIMDuplicateSample`, now also tolerant of a sample that did not load).
+  `PlatFOpen` (PlatFile.h) is `fopen` on Win32 and resolves the path first on POSIX.
+- **Text mode.** The Windows CRT reads a file opened without `b` with CR LF turned into LF; every text file of the
+  game has CR LF lines. Without it the last token of every random map script line kept its `\r`: numbers did not
+  parse, `#include` names and unit names did not match, no start units were defined and every map failed the
+  connectivity check (11 attempts, then a game of water with every player defeated at once). POSIX `PlatFOpen` reads
+  a read-only text open through a CR LF filter (`funopen` on macOS, `fopencookie` on glibc; rewind and ftell only).
+- **`strtof` reports subnormals as ERANGE**, `std::from_chars` (MSVC) does not: `dbobjects.yaml` holds
+  `mFarmGatherTime = 4.684328e-39` and the db loader stopped with "outside the float range". `UFromChars`' fallback
+  treats ERANGE as out of range only when the result overflowed or underflowed to zero.
+- **LP64, the run-time kind**:
+  - `GXVERTEX_STD_COLOR::color` was `unsigned long`: the vertex grew from 0x24 to 0x28 bytes while GX reads with a
+    0x24 stride, so every vertex after the first was read 4 bytes further off (the menu background as a fan of
+    stretched triangles; GX's stats showed clip x up to 3e20). Now `uint32_t` with a `static_assert`.
+  - 32-bit pixels through `unsigned long*` (GESurface's loaders, DX7Surface's filtered copy, the movie packer, the
+    terrain colour table, the volcano texture) wrote 8 bytes per pixel: a heap overflow past every 32-bit surface
+    (first seen as AppKit's "method cache corrupted", then malloc's own check). Floats read through `unsigned long*`
+    (fog start/end, mipmap bias) and `long*` (the checksums of calamities, area effects and two unit groups) read 4
+    bytes past the float. All `uint32_t`/`int32_t` now.
+  - `gBinaryChecksum` summed in a 64-bit `unsigned long` carried past 32 bits (0x25099fd31) while the connection
+    request carries 32 (0x5099fd31): the local server refused its own player ("bad checksum") and Play Random Map
+    never opened the lobby. The sum is `uint32_t` (the same value mod 2^32 on every data model).
+  - `long theMaximumX = 0x80000000` (the visible terrain rows, `UGraph`'s bounds) is INT_MIN with a 32-bit long and
+    +2^31 on LP64, so no row lowered it: a visible width of 2147483635 and a crash in the terrain lighting.
+    `INT32_MIN`; the random map parser's `kRMUnset` keeps its 32-bit (negative) value the same way.
+  The census looked for `long` in file and network formats; these are in-memory GPU layouts, pixel pointers, a
+  checksum compared with a 32-bit wire value and 32-bit sentinels. Worth a grep elsewhere: `unsigned long*` into
+  raw memory, `long x = 0x8.......`, `*reinterpret_cast<(unsigned) long*>(&aFloat)`.
+- **The follow-up audit** (the patterns above, over the whole tree) found 21 more float-as-`long` checksum reads (unit
+  goals: gather, location, attack unit/ground, unload, `EEComplexUnit::GetChecksum`; harmless after the 32-bit
+  wire truncation but an 8-byte read of a 4-byte float each tick) and `TMGetTime` keeping the full 64-bit millisecond
+  count on LP64 (past 2^32 after 49.7 days of uptime, macOS counting sleep, while ping and start times travel as
+  32-bit fields): now 32-bit like Windows'. Clean: GX layouts, `#pragma pack` records, other pointer casts, the
+  sentinels, the RNG and checksums on the wire, raw file opens. Left: `UMFloatToLong`/`UMFloor` use 64-bit `lrintf`
+  (NaN/inf/out-of-range differ by platform; no reachable case found), the WON lobby's UTF-16 as 4-byte `wchar_t`.
+- **Undefined behaviour the 32-bit original survived** (AddressSanitizer, `xbuild.py game --sanitize address`):
+  a one-token random map `#define (NAME)` (and a bare `#if`/`#elif`, an unmatched `#elif`/`#else`/`#endif`, an
+  unquoted `#include`) read the destroyed second element of a cleared vector (libc++ frees it);
+  a script without `CliffTexture` (Continental and most others) passes -1 to `EEMap::SetCliffTexture`, which indexed
+  the cliff table at [-1] (the original read the heap word before it as a table pointer). Both fixed (an empty value;
+  the first cliff terrain, as `EEMap::Load` does with a bad saved index).
+- **The test driver** (`tools/harness/posix_game.py`): the Windows harness's debugger and presentation bridge do not
+  exist off Windows, so the game carries the bridge's UI fixture itself (`EETestFixture.cpp`, only with `EE_TEST_UI`):
+  the same ui-state.txt and test.command formats, the controls' own methods, plus game telemetry (game time, ticks,
+  players, populations, results). The driver reuses ai_game.py's lobby options, dismiss table and parser; macOS
+  captures come from `screencapture -l` of the game window (`macos_window.swift`). The game changes into its data
+  root at start: the fixture directory must be absolute.
+- **Debugging off Windows**: `xbuild.py game --sanitize address` (a separate `game-address/` output) found each memory
+  bug at its first bad access; lldb's regex breakpoints are too slow on this binary, a temporary `fprintf` was faster.
+  The GX stats (`EE_GX_STATS`) located the vertex bug (pre-transformed 2D with clip x 3e20) before any debugger.
