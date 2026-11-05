@@ -1022,14 +1022,7 @@ GXSurface::~GXSurface()
         theData->mAttached[i]->Release();
     for (std::map<unsigned long, WGPUBindGroup>::iterator i = theData->mGroups.begin(); i != theData->mGroups.end(); ++i)
         wgpuBindGroupRelease(i->second);
-    if (theData->mDC) {
-        SelectObject(theData->mDC, theData->mOldBitmap);
-        DeleteDC(theData->mDC);
-    }
-    if (theData->mDIB)
-        DeleteObject(theData->mDIB);
-    else
-        free(theData->mMemory);
+    free(theData->mMemory);
     if (theData->mTargetView)
         wgpuTextureViewRelease(theData->mTargetView);
     if (theData->mView)
@@ -1218,8 +1211,6 @@ GXRESULT GXSurface::Blt(RECT* inDestination, GXSurface* inSource, RECT* inSource
         theTemporary.mGroups.clear();
         theTemporary.mTexture = NULL;
         theTemporary.mView = theTemporary.mTargetView = NULL;
-        theTemporary.mDIB = NULL;
-        theTemporary.mDC = NULL;
         theTemporary.mSwapChain = NULL;
     } else
         GXBlit(theTarget, theDestination, theSource, &theSourceRect, theKeyed ? kGXBlitKeyed : kGXBlitCopy, NULL, 0.0f,
@@ -1266,106 +1257,6 @@ GXRESULT GXSurface::Unlock(RECT* inRect)
         return GXERR_NOTLOCKED;
     this->mData->mLocked = false;
     this->mData->ForCPUWrite();
-    return GX_OK;
-}
-
-static bool GDICanDraw(const GXFormat& inFormat, unsigned long& outCompression, unsigned long outMasks[3])
-{
-    outMasks[0] = inFormat.mMask[0];
-    outMasks[1] = inFormat.mMask[1];
-    outMasks[2] = inFormat.mMask[2];
-    if (inFormat.mBits == 32 && inFormat.IsBGRA32()) {
-        outCompression = BI_RGB;
-        return true;
-    }
-    if (inFormat.mBits == 16 && inFormat.mMask[0] == 0xf800 && inFormat.mMask[1] == 0x07e0 && inFormat.mMask[2] == 0x1f) {
-        outCompression = BI_BITFIELDS;
-        return true;
-    }
-    if (inFormat.mBits == 16 && inFormat.mMask[0] == 0x7c00 && inFormat.mMask[1] == 0x03e0 && inFormat.mMask[2] == 0x1f) {
-        outCompression = BI_RGB;
-        return true;
-    }
-    return false;
-}
-
-GXRESULT GXSurface::GetDC(HDC* outDC)
-{
-    GX_GUARD;
-    GXSurfaceData* theData = this->mData;
-    if (theData->mDCOut)
-        return GXERR_SURFACEBUSY;
-    if (theData->mIsPrimary || theData->mIsZ)
-        return GXERR_UNSUPPORTED;
-    theData->ForCPURead();
-    if (!theData->mMemory)
-        return GXERR_OUTOFMEMORY;
-    unsigned long theCompression, theMasks[3];
-    bool theDirect = GDICanDraw(theData->mFormat, theCompression, theMasks);
-    if (!theData->mDC) {
-        struct {
-            BITMAPINFOHEADER mHeader;
-            DWORD mMasks[3];
-        } theInfo = {};
-        theInfo.mHeader.biSize = sizeof(BITMAPINFOHEADER);
-        theInfo.mHeader.biWidth = (LONG)theData->mWidth;
-        theInfo.mHeader.biHeight = -(LONG)theData->mHeight;
-        theInfo.mHeader.biPlanes = 1;
-        theInfo.mHeader.biBitCount = theDirect ? (WORD)theData->mFormat.mBits : 32;
-        theInfo.mHeader.biCompression = theDirect ? theCompression : BI_RGB;
-        if (theDirect && theCompression == BI_BITFIELDS) {
-            theInfo.mMasks[0] = theMasks[0];
-            theInfo.mMasks[1] = theMasks[1];
-            theInfo.mMasks[2] = theMasks[2];
-        }
-        void* theBits = NULL;
-        HBITMAP theBitmap = CreateDIBSection(NULL, (BITMAPINFO*)&theInfo, DIB_RGB_COLORS, &theBits, NULL, 0);
-        if (!theBitmap)
-            return GXERR_OUTOFMEMORY;
-        HDC theDC = CreateCompatibleDC(NULL);
-        theData->mOldBitmap = SelectObject(theDC, theBitmap);
-        theData->mDC = theDC;
-        if (theDirect) {
-            // the surface's memory moves into the DIB section (same pitch: DWORD-aligned rows)
-            memcpy(theBits, theData->mMemory, (size_t)theData->mPitch * theData->mHeight);
-            free(theData->mMemory);
-            theData->mMemory = (unsigned char*)theBits;
-            theData->mDIB = theBitmap;
-        } else {
-            theData->mTextCopy = (unsigned char*)theBits;
-            theData->mDIB = NULL;
-            theData->mOldBitmap = theData->mOldBitmap;   // the bitmap is selected and freed with the DC
-        }
-    }
-    if (theData->mTextCopy)   // a 32-bit copy for GDI
-        for (unsigned long y = 0; y < theData->mHeight; y++)
-            for (unsigned long x = 0; x < theData->mWidth; x++)
-                theData->mFormat.ToBGRA(theData->ReadPixel(x, y), theData->mTextCopy + ((size_t)y * theData->mWidth + x) * 4);
-    theData->mDCOut = true;
-    *outDC = theData->mDC;
-    return GX_OK;
-}
-
-GXRESULT GXSurface::ReleaseDC(HDC inDC)
-{
-    GX_GUARD;
-    GXSurfaceData* theData = this->mData;
-    if (!theData->mDCOut)
-        return GXERR_NOTLOCKED;
-    GdiFlush();
-    if (theData->mTextCopy)
-        for (unsigned long y = 0; y < theData->mHeight; y++)
-            for (unsigned long x = 0; x < theData->mWidth; x++) {
-                unsigned char theOld[4];
-                unsigned char* theNew = theData->mTextCopy + ((size_t)y * theData->mWidth + x) * 4;
-                theData->mFormat.ToBGRA(theData->ReadPixel(x, y), theOld);
-                if (memcmp(theOld, theNew, 3)) {
-                    theNew[3] = 255;
-                    theData->WritePixel(x, y, theData->mFormat.FromBGRA(theNew));
-                }
-            }
-    theData->mDCOut = false;
-    theData->ForCPUWrite();
     return GX_OK;
 }
 
@@ -1425,47 +1316,21 @@ GXRESULT GXSurface::DrawText(const RECT& inBounds, TextCallback inDraw, void* in
     long theWidth = theBounds.right - theBounds.left, theHeight = theBounds.bottom - theBounds.top;
     if (theWidth <= 0 || theHeight <= 0)
         return GX_OK;
-    BITMAPINFO theInfo = {};
-    theInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    theInfo.bmiHeader.biWidth = theWidth;
-    theInfo.bmiHeader.biHeight = -theHeight;
-    theInfo.bmiHeader.biPlanes = 1;
-    theInfo.bmiHeader.biBitCount = 32;
-    theInfo.bmiHeader.biCompression = BI_RGB;
-    unsigned char* theBits[2] = {NULL, NULL};
-    HBITMAP theBitmaps[2] = {NULL, NULL};
-    HDC theDC = CreateCompatibleDC(NULL);
-    bool theOK = theDC != NULL;
-    for (int i = 0; i < 2 && theOK; i++) {
-        theBitmaps[i] = CreateDIBSection(NULL, &theInfo, DIB_RGB_COLORS, (void**)&theBits[i], NULL, 0);
-        if (!theBitmaps[i]) {
-            theOK = false;
-            break;
-        }
-        memset(theBits[i], i ? 0xff : 0x00, (size_t)theWidth * theHeight * 4);
-        HGDIOBJ theOld = SelectObject(theDC, theBitmaps[i]);
-        SetViewportOrgEx(theDC, -theBounds.left, -theBounds.top, NULL);
-        theOK = inDraw(theDC, inContext);
-        GdiFlush();
-        SelectObject(theDC, theOld);
-    }
-    bool theAny = false;
-    if (theOK) {
-        // over black the result is colour x coverage; over white it adds (1 - coverage)
-        for (long i = 0; i < theWidth * theHeight; i++) {
-            unsigned char* b = theBits[0] + i * 4;
-            const unsigned char* w = theBits[1] + i * 4;
-            int theCoverage = 765 - ((int)w[0] - b[0] + (int)w[1] - b[1] + (int)w[2] - b[2]);
-            int theAlpha = (theCoverage + 1) / 3;
-            b[3] = (unsigned char)(theAlpha < 0 ? 0 : theAlpha > 255 ? 255 : theAlpha);
-            for (int c = 0; c < 3; c++)
-                if (b[c] > b[3])
-                    b[c] = b[3];
-            theAny |= b[3] != 0;
-        }
-    }
-    if (theAny) {
-        GXCore& theCore = GXGetCore();
+    std::vector<unsigned char> theBits((size_t)theWidth * theHeight * 4);
+    PlatFontTarget theDraw = {&theBits[0], (int32_t)(theWidth * 4), (int32_t)theWidth, (int32_t)theHeight, 0};
+    if (theTarget->mIsPrimary || theTarget->mIsZ)
+        return GXERR_UNSUPPORTED;
+    if (!theTarget->mCPUValid) {
+        // GPU-resident (a render target drawn into): the text goes onto a transparent buffer as premultiplied colour
+        // and coverage, which is blended onto the GPU copy (no read-back)
+        theDraw.mFlags = PLAT_FONT_TARGET_PREMULTIPLIED;
+        if (!inDraw(theDraw, theBounds.left, theBounds.top, inContext))
+            return GXERR_GENERIC;
+        bool theAny = false;
+        for (size_t i = 3; i < theBits.size() && !theAny; i += 4)
+            theAny = theBits[i] != 0;
+        if (!theAny)
+            return GX_OK;
         GXSurfaceData* theText = new GXSurfaceData;
         theText->mWidth = theWidth;
         theText->mHeight = theHeight;
@@ -1473,7 +1338,7 @@ GXRESULT GXSurface::DrawText(const RECT& inBounds, TextCallback inDraw, void* in
                                    0xff000000};
         theText->mPixelFormat = theFormat;
         theText->mFormat.Set(theFormat);
-        theText->mMemory = theBits[0];
+        theText->mMemory = &theBits[0];
         theText->mPitch = theWidth * 4;
         theText->mGPUValid = false;
         theText->Upload();
@@ -1486,14 +1351,29 @@ GXRESULT GXSurface::DrawText(const RECT& inBounds, TextCallback inDraw, void* in
         wgpuTextureViewRelease(theText->mView);
         wgpuTextureRelease(theText->mTexture);
         delete theText;
-        (void)theCore;
+        return GX_OK;
     }
-    for (int i = 0; i < 2; i++)
-        if (theBitmaps[i])
-            DeleteObject(theBitmaps[i]);
-    if (theDC)
-        DeleteDC(theDC);
-    return theOK ? GX_OK : GXERR_GENERIC;
+    // the CPU copy: the text draws onto a 32-bit copy of the bounds and the pixels it changed are written back in the
+    // surface's format (alpha opaque), as the original's GDI text on the surface's DC
+    if (!theTarget->mMemory)
+        return GXERR_OUTOFMEMORY;
+    for (long y = 0; y < theHeight; y++)
+        for (long x = 0; x < theWidth; x++)
+            theTarget->mFormat.ToBGRA(theTarget->ReadPixel(theBounds.left + x, theBounds.top + y),
+                                      &theBits[((size_t)y * theWidth + x) * 4]);
+    std::vector<unsigned char> theBefore(theBits);
+    if (!inDraw(theDraw, theBounds.left, theBounds.top, inContext))
+        return GXERR_GENERIC;
+    for (long y = 0; y < theHeight; y++)
+        for (long x = 0; x < theWidth; x++) {
+            size_t i = ((size_t)y * theWidth + x) * 4;
+            if (memcmp(&theBefore[i], &theBits[i], 3)) {
+                theBits[i + 3] = 255;
+                theTarget->WritePixel(theBounds.left + x, theBounds.top + y, theTarget->mFormat.FromBGRA(&theBits[i]));
+            }
+        }
+    theTarget->ForCPUWrite();
+    return GX_OK;
 }
 
 // ---- vertex buffers

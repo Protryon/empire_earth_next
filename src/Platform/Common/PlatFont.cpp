@@ -255,19 +255,20 @@ struct Clip {
     int32_t mLeft, mTop, mRight, mBottom;
 };
 
-inline void Blend(unsigned char* p, uint32_t inColor, int inCoverage)
+inline void Blend(unsigned char* p, uint32_t inColor, int inCoverage, bool inPremultiplied)
 {
     unsigned char b = inColor & 0xFF, g = (inColor >> 8) & 0xFF, r = (inColor >> 16) & 0xFF;
     if (inCoverage >= 255) {
         p[0] = b;
         p[1] = g;
         p[2] = r;
+        p[3] = 0xFF;
     } else {
         p[0] = static_cast<unsigned char>((b * inCoverage + p[0] * (255 - inCoverage) + 127) / 255);
         p[1] = static_cast<unsigned char>((g * inCoverage + p[1] * (255 - inCoverage) + 127) / 255);
         p[2] = static_cast<unsigned char>((r * inCoverage + p[2] * (255 - inCoverage) + 127) / 255);
+        p[3] = inPremultiplied ? static_cast<unsigned char>(inCoverage + (p[3] * (255 - inCoverage) + 127) / 255) : 0xFF;
     }
-    p[3] = 0xFF;
 }
 
 void Fill(const PlatFontTarget* t, const Clip& c, int32_t x0, int32_t y0, int32_t x1, int32_t y1, uint32_t inColor)
@@ -279,7 +280,7 @@ void Fill(const PlatFontTarget* t, const Clip& c, int32_t x0, int32_t y0, int32_
     for (int32_t y = y0; y < y1; y++) {
         unsigned char* p = static_cast<unsigned char*>(t->mPixels) + static_cast<intptr_t>(y) * t->mPitch + x0 * 4;
         for (int32_t x = x0; x < x1; x++, p += 4)
-            Blend(p, inColor, 255);
+            Blend(p, inColor, 255, false);
     }
 }
 
@@ -299,7 +300,7 @@ void DrawGlyph(const PlatFont* f, const Glyph& g, const PlatFontTarget* t, const
             if (!f->mAntialiased)
                 theCoverage = theCoverage >= 128 ? 255 : 0;
             if (theCoverage)
-                Blend(theRow + x * 4, inColor, theCoverage);
+                Blend(theRow + x * 4, inColor, theCoverage, (t->mFlags & PLAT_FONT_TARGET_PREMULTIPLIED) != 0);
         }
     }
 }

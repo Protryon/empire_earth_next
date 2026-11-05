@@ -11,6 +11,7 @@
 
 #include "gx/GX.h"
 #include "platform/PlatWindow.h"
+#include "platform/PlatFont.h"
 #include "platform/PlatString.h"   // PLAT_PRINTF_FORMAT
 #include "webgpu/webgpu.h"
 #include "webgpu/wgpu.h"
@@ -105,11 +106,6 @@ struct GXSurfaceData {
     // CPU copy
     unsigned char* mMemory = NULL;
     long mPitch = 0;
-    HBITMAP mDIB = NULL;                 // when GetDC moved the memory into a DIB section
-    HDC mDC = NULL;
-    HGDIOBJ mOldBitmap = NULL;
-    unsigned char* mTextCopy = NULL;     // GetDC on a format GDI cannot draw: a 32-bit DIB copy
-    bool mDCOut = false;
     bool mLocked = false;
     bool mCPUValid = true, mGPUValid = false;
 

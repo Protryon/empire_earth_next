@@ -61,6 +61,10 @@ def include_paths(src=None):
     import ee
     wgpu = [str(ee.wgpu_dir() / "include")] if src is not None and "DX7 Display Plug-ins" in str(src) \
         else []
+    # the built-in fonts (#embed in src/Platform/Common/PlatFontData.c; tools/fetch_posix.py fonts)
+    if src is not None and "Platform" in pathlib.Path(src).parts and "Common" in pathlib.Path(src).parts:
+        flags.append(f"/clang:--embed-dir={TOOLCHAIN / 'fonts'}")
+        wgpu.append(str(ROOT / "src" / "ThirdParty" / "stb"))
     # the window layer's SDL3 headers (tools/xbuild.py sdl3), for its implementation only
     if src is not None and "Platform" in pathlib.Path(src).parts and "SDL" in pathlib.Path(src).parts:
         wgpu.append(str(ee.sdl3_dir() / "include"))

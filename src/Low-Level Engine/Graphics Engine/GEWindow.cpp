@@ -20,42 +20,11 @@
 // TEMPLATE: LLE 0x100384ec
 #include <windows.h>
 
-#define LLE_GEWINDOW_CPP    // GEDeviceContext's statics are visible here only (see GEWindow.h) (provisional name)
 #include "lle/LowLevelEngineCore.h"
 #include "lle/GE2DPoint.h"
 #include "lle/TSScheduler.h"
 #include "GEWindow.h"
 #include "platform/PlatWindow.h"
-
-std::map<PlatWindow*, GEDeviceContext::GEDCCriticalSection> GEDeviceContext::sHDC;
-GEDeviceContext::GEDCCriticalSection GEDeviceContext::sLock;
-
-// FUNCTION: LLE 0x100380c8
-// Returns the window's device context (GetDC; a NULL window: the screen's). NULL off Windows (no GDI).
-HDC__* GEDeviceContext::GetDeviceContext(PlatWindow* inWindow)
-{
-#ifdef _WIN32
-    PlatNativeWindow theNative = {};
-    if (inWindow != NULL)
-        PlatWindowGetNative(inWindow, &theNative);
-    return GetDC((HWND)theNative.mWindow);
-#else
-    return NULL;
-#endif
-}
-
-// FUNCTION: LLE 0x100380d3
-// Releases a window's device context; always succeeds
-long GEDeviceContext::ReleaseDeviceContext(PlatWindow* inWindow, HDC__* inContext)
-{
-#ifdef _WIN32
-    PlatNativeWindow theNative = {};
-    if (inWindow != NULL)
-        PlatWindowGetNative(inWindow, &theNative);
-    ReleaseDC((HWND)theNative.mWindow, inContext);
-#endif
-    return kErrorOK;
-}
 
 // FUNCTION: LLE 0x100380e4
 // Destroys the window object, destroying the native window only in full-screen mode

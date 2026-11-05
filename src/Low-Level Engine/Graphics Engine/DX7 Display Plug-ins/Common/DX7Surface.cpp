@@ -511,44 +511,23 @@ void DX7Surface::SetTransparencyColor(GEColor& inColor)
 }
 
 // FUNCTION: DX7HR 0x1000fb55
-// Gets a GDI device context for text drawing; already-exists error when one is held, 0xd when the surface is lost
+// Marks the surface locked for text drawing (the original took a GDI device context on it; text now draws through
+// GXSurface::DrawText into its CPU copy while it is text-locked); already-exists error when it is
 long DX7Surface::TextLock()
 {
-    long theResult;
     if (this->mIsTextLocked == true)
-        theResult = kErrorAlreadyExists;
-    else {
-        HRESULT theError;
-        do {
-            theError = this->mSurface->GetDC(&this->mTextDC);
-            if (theError == GXERR_WASSTILLDRAWING)
-                PlatSleep(0);
-        } while (theError == GXERR_WASSTILLDRAWING);
-        if (theError == GX_OK) {
-            this->mIsTextLocked = true;
-            theResult = kErrorOK;
-        } else if (theError == GXERR_SURFACELOST)
-            theResult = 0xd;
-        else {
-            theResult = kErrorNativeError;
-            ESRecordNativeError(theError);
-        }
-    }
-    return theResult;
+        return kErrorAlreadyExists;
+    this->mIsTextLocked = true;
+    return kErrorOK;
 }
 
 // FUNCTION: DX7HR 0x1000fba9
-// Releases the GDI device context taken by TextLock; already-exists error when none is held
+// Ends a text lock; already-exists error when there is none
 long DX7Surface::TextUnlock()
 {
     if (this->mIsTextLocked) {
-        HRESULT theError = this->mSurface->ReleaseDC(this->mTextDC);
-        if (theError == GX_OK) {
-            this->mIsTextLocked = false;
-            return kErrorOK;
-        }
-        ESRecordNativeError(theError);
-        return kErrorNativeError;
+        this->mIsTextLocked = false;
+        return kErrorOK;
     }
     return kErrorAlreadyExists;
 }

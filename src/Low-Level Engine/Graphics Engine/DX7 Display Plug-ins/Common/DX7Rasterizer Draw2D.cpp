@@ -7,6 +7,7 @@
 // its atexit registrars.
 #include <windows.h>
 #include "gx/GX.h"
+#include "platform/PlatFont.h"
 
 #include "dx7/DX7Rasterizer.h"
 #include "dx7/DX7PolygonArray.h"
@@ -228,60 +229,59 @@ long DX7Rasterizer::Draw(GERhombus* inRhombus, unsigned long inScreen)
     return theResult;
 }
 
-// One text draw with GDI (the body both Draw(GEText*) overloads shared): background mode and colours, the font,
-// alignment by the text extent, the shadow 1 pixel down-right for shadow fonts, then the text; clipped to inClip when
-// given. Restores the DC. A GXSurface::DrawText callback: it may run twice on scratch DCs (GPU-resident targets).
+// One text draw (platform/PlatFont.h; GDI in the original, with the same steps): background mode and colours, the
+// font, alignment by the text extent, the shadow 1 pixel down-right for shadow fonts, then the text; clipped to inClip
+// when given. A GXSurface::DrawText callback: the target covers the surface from (inOriginX, inOriginY).
 struct DX7TextJob {
     GEText* mText;
     const RECT* mClip;
     long mResult;
 };
 
-static bool DX7DrawTextGDI(HDC theDC, void* inJob)
+static uint32_t DX7TextColor(const GEColor& inColor)
+{
+    return ((uint32_t)(BYTE)(inColor.GetRed() * 255.0f) << 16) | ((uint32_t)(BYTE)(inColor.GetGreen() * 255.0f) << 8) |
+           (uint32_t)(BYTE)(inColor.GetBlue() * 255.0f);
+}
+
+static bool DX7DrawTextPlat(const PlatFontTarget& inTarget, long inOriginX, long inOriginY, void* inJob)
 {
     DX7TextJob* theJob = static_cast<DX7TextJob*>(inJob);
     GEText* inText = theJob->mText;
-    UINT theOptions = theJob->mClip ? ETO_CLIPPED : 0;
-    int theOldBkMode = SetBkMode(theDC, inText->GetIsTransparent() ? TRANSPARENT : OPAQUE);
-    COLORREF theOldTextColor = SetTextColor(theDC, RGB((BYTE)(inText->GetFgColor().GetRed() * 255.0f),
-                                                       (BYTE)(inText->GetFgColor().GetGreen() * 255.0f),
-                                                       (BYTE)(inText->GetFgColor().GetBlue() * 255.0f)));
-    COLORREF theOldBkColor = SetBkColor(theDC, RGB((BYTE)(inText->GetBgColor().GetRed() * 255.0f),
-                                                   (BYTE)(inText->GetBgColor().GetGreen() * 255.0f),
-                                                   (BYTE)(inText->GetBgColor().GetBlue() * 255.0f)));
     GEFont* theFont = inText->GetFont();
     theFont->Reference();
-    HGDIOBJ theOldFont = SelectObject(theDC, theFont->GetOSFont());
-    GE2DPoint theLocation = inText->GetLocation();
-    SIZE theSize;
-    if (GetTextExtentPoint32A(theDC, inText->GetText(), inText->GetText().GetLength(), &theSize)) {
-        if (inText->GetAlignment() == kTextAlignCenter)
-            theLocation.SetX(theLocation.GetX() - theSize.cx / 2);
-        else if (inText->GetAlignment() == kTextAlignRight)
-            theLocation.SetX(theLocation.GetX() - theSize.cx);
-    }
-    if (theFont->GetFontStyle() & kFontStyleShadow) {
-        BYTE theShade = inText->GetFgColor().GetRed() + inText->GetFgColor().GetGreen() +
-                        inText->GetFgColor().GetBlue() > 0.1f ? 0 : 255;
-        COLORREF theColor = SetTextColor(theDC, RGB(theShade, theShade, theShade));
-        if (!ExtTextOutA(theDC, (long)theLocation.GetX() + 1, (long)theLocation.GetY() + 1, theOptions, theJob->mClip,
-                         inText->GetText(), inText->GetText().GetTCHARLength(), NULL)) {
-            ESRecordNativeError(PlatGetLastError());
-            ESGetNativeError();
-            theJob->mResult = kErrorNativeError;
-        }
-        SetTextColor(theDC, theColor);
-    }
-    if (!ExtTextOutA(theDC, (long)theLocation.GetX(), (long)theLocation.GetY(), theOptions, theJob->mClip,
-                     inText->GetText(), inText->GetText().GetTCHARLength(), NULL)) {
-        ESRecordNativeError(PlatGetLastError());
-        ESGetNativeError();
+    PlatFont* thePlatFont = theFont->GetOSFont();
+    if (thePlatFont == NULL) {
+        theFont->Dereference();
         theJob->mResult = kErrorNativeError;
+        return true;
     }
-    SelectObject(theDC, theOldFont);
-    SetTextColor(theDC, theOldTextColor);
-    SetBkColor(theDC, theOldBkColor);
-    SetBkMode(theDC, theOldBkMode);
+    const char* theString = inText->GetText();
+    uint32_t theLength = inText->GetText().GetLength();
+    PlatFontRect theClip = {0, 0, inTarget.mWidth, inTarget.mHeight};
+    if (theJob->mClip) {   // ETO_CLIPPED
+        theClip.mLeft = theJob->mClip->left - inOriginX;
+        theClip.mTop = theJob->mClip->top - inOriginY;
+        theClip.mRight = theJob->mClip->right - inOriginX;
+        theClip.mBottom = theJob->mClip->bottom - inOriginY;
+    }
+    GE2DPoint theLocation = inText->GetLocation();
+    int32_t theWidth = PlatFontMeasure(thePlatFont, theString, theLength);
+    if (inText->GetAlignment() == kTextAlignCenter)
+        theLocation.SetX(theLocation.GetX() - theWidth / 2);
+    else if (inText->GetAlignment() == kTextAlignRight)
+        theLocation.SetX(theLocation.GetX() - theWidth);
+    int theOpaque = inText->GetIsTransparent() ? 0 : 1;
+    uint32_t theBackground = DX7TextColor(inText->GetBgColor());
+    if (theFont->GetFontStyle() & kFontStyleShadow) {
+        uint32_t theShade = inText->GetFgColor().GetRed() + inText->GetFgColor().GetGreen() +
+                            inText->GetFgColor().GetBlue() > 0.1f ? 0 : 0xffffff;
+        PlatFontDraw(thePlatFont, theString, theLength, (long)theLocation.GetX() + 1 - inOriginX,
+                     (long)theLocation.GetY() + 1 - inOriginY, theShade, theOpaque, theBackground, &theClip, &inTarget);
+    }
+    PlatFontDraw(thePlatFont, theString, theLength, (long)theLocation.GetX() - inOriginX,
+                 (long)theLocation.GetY() - inOriginY, DX7TextColor(inText->GetFgColor()), theOpaque, theBackground,
+                 &theClip, &inTarget);
     theFont->Dereference();
     return true;
 }
@@ -290,22 +290,24 @@ static bool DX7DrawTextGDI(HDC theDC, void* inJob)
 static RECT DX7TextBounds(GEText* inText, const RECT* inClip)
 {
     RECT theBounds = {0, 0, 0, 0};
-    HDC theDC = CreateCompatibleDC(NULL);
-    HGDIOBJ theOldFont = SelectObject(theDC, inText->GetFont()->GetOSFont());
-    SIZE theSize = {0, 0};
-    GetTextExtentPoint32A(theDC, inText->GetText(), inText->GetText().GetLength(), &theSize);
-    SelectObject(theDC, theOldFont);
-    DeleteDC(theDC);
+    PlatFont* theFont = inText->GetFont()->GetOSFont();
+    long theWidth = 0, theHeight = 0;
+    if (theFont != NULL) {
+        PlatFontMetrics theMetrics;
+        PlatFontGetMetrics(theFont, &theMetrics);
+        theWidth = PlatFontMeasure(theFont, inText->GetText(), inText->GetText().GetLength());
+        theHeight = theMetrics.mHeight;
+    }
     GE2DPoint theLocation = inText->GetLocation();
     if (inText->GetAlignment() == kTextAlignCenter)
-        theLocation.SetX(theLocation.GetX() - theSize.cx / 2);
+        theLocation.SetX(theLocation.GetX() - theWidth / 2);
     else if (inText->GetAlignment() == kTextAlignRight)
-        theLocation.SetX(theLocation.GetX() - theSize.cx);
-    long theMargin = theSize.cy / 2 + 2;
+        theLocation.SetX(theLocation.GetX() - theWidth);
+    long theMargin = theHeight / 2 + 2;
     theBounds.left = (long)theLocation.GetX() - theMargin;
     theBounds.top = (long)theLocation.GetY() - 2;
-    theBounds.right = (long)theLocation.GetX() + theSize.cx + theMargin;
-    theBounds.bottom = (long)theLocation.GetY() + theSize.cy + 3;
+    theBounds.right = (long)theLocation.GetX() + theWidth + theMargin;
+    theBounds.bottom = (long)theLocation.GetY() + theHeight + 3;
     if (inClip) {
         theBounds.left = max(theBounds.left, inClip->left);
         theBounds.top = max(theBounds.top, inClip->top);
@@ -315,17 +317,15 @@ static RECT DX7TextBounds(GEText* inText, const RECT* inClip)
     return theBounds;
 }
 
-// Draws a text with GDI, on the GPU copy of a GPU-resident target (no read-back) or on the target's text DC
+// Draws a text on the target: onto the GPU copy of a GPU-resident target (no read-back), else onto its CPU copy (a
+// text-locked surface: the glyph atlases)
 static long DX7DrawText(GEText* inText, const RECT* inClip, GESurface* inTarget)
 {
     DX7TextJob theJob = {inText, inClip, kErrorOK};
     GXSurface* theSurface = *static_cast<DX7Surface*>(inTarget);
-    if (!inTarget->GetIsTextLocked() && theSurface->IsGPUResident()) {
-        RECT theBounds = DX7TextBounds(inText, inClip);
-        if (theSurface->DrawText(theBounds, DX7DrawTextGDI, &theJob) != GX_OK && theJob.mResult == kErrorOK)
-            theJob.mResult = kErrorNativeError;
-    } else if (inTarget->GetIsTextLocked() || inTarget->TextLock() == kErrorOK)
-        DX7DrawTextGDI(inTarget->GetTextDC(), &theJob);
+    RECT theBounds = DX7TextBounds(inText, inClip);
+    if (theSurface->DrawText(theBounds, DX7DrawTextPlat, &theJob) != GX_OK && theJob.mResult == kErrorOK)
+        theJob.mResult = kErrorNativeError;
     return theJob.mResult;
 }
 

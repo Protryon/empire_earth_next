@@ -10,58 +10,35 @@
 #include "lle/GERectangle.h"
 #include "lle/TSScheduler.h"
 #include "lle/UReferenceCounter.h"
-#include "lle/GEDeviceContext.h"
 #include "lle/GEFont.h"
+#include "platform/PlatFont.h"
 
 // FUNCTION: LLE 0x100151b7
-// Creates a Windows font (name, pixel size, bold/italic/underline style, quality) and measures its height
+// Creates a font (name, pixel size, bold/italic/underline style, quality: platform/PlatFont.h, CreateFont's
+// arguments; only the antialiased quality is antialiased) and measures its height (tmHeight)
 GEFont::GEFont(const UString& inName, unsigned long inSize, unsigned long inStyle, unsigned long inQuality)
     : mName(inName)
 {
-    unsigned long theQuality = DEFAULT_QUALITY;
     long theHeight = 0;
-    HDC theContext;
     this->mSize = inSize;
     this->mStyle = inStyle;
     this->mQuality = inQuality;
-    switch (inQuality) {
-    case kFontQualityDefault:
-        theQuality = DEFAULT_QUALITY;
-        break;
-    case kFontQualityDraft:
-        theQuality = DRAFT_QUALITY;
-        break;
-    case kFontQualityAntialiased:
-        theQuality = ANTIALIASED_QUALITY;
-        break;
-    }
-    this->mFont = CreateFont(-(long)inSize, 0, 0, 0, (inStyle & kFontStyleBold) ? FW_BOLD : FW_NORMAL, (inStyle >> 1) & 1,
-                       (inStyle >> 2) & 1, FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, theQuality,
-                       DEFAULT_PITCH, this->mName);
+    this->mFont = PlatFontCreate(this->mName, -(long)inSize, (inStyle & kFontStyleBold) != 0, (inStyle >> 1) & 1,
+                                 (inStyle >> 2) & 1, inQuality == kFontQualityAntialiased);
     if (this->mFont != NULL) {
-        theContext = GEDeviceContext::GetDeviceContext(NULL);
-        if (theContext != NULL) {
-            HGDIOBJ theOldFont = SelectObject(theContext, this->mFont);
-            if (theOldFont != NULL) {
-                TEXTMETRIC theMetrics;
-                if (GetTextMetrics(theContext, &theMetrics)) {
-                    theHeight = theMetrics.tmHeight;
-                    SelectObject(theContext, theOldFont);
-                } else
-                    GetLastError();
-            }
-        }
-        GEDeviceContext::ReleaseDeviceContext(NULL, theContext);
+        PlatFontMetrics theMetrics;
+        PlatFontGetMetrics(this->mFont, &theMetrics);
+        theHeight = theMetrics.mHeight;
     }
     this->mFontBitmap = NULL;
     this->mHeight = theHeight;
 }
 
 // FUNCTION: LLE 0x100152b6
-// Destroys the font, deleting the Windows font and releasing its glyph bitmap
+// Destroys the font and releases its glyph bitmap
 GEFont::~GEFont()
 {
-    DeleteObject(this->mFont);
+    PlatFontDestroy(this->mFont);
     if (this->mFontBitmap)
         this->mFontBitmap->Dereference();
 }

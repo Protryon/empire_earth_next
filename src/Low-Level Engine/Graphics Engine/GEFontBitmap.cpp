@@ -4,6 +4,7 @@
 // 0x100152e4..0x100166d3: the U2D key init chains, GEFontBitmap (an anchor: __FILE__ in the binary), then the
 // GEFBCharacter/vector<GEFBCharacter> COMDATs.
 #include <windows.h>
+#include "platform/PlatFont.h"
 #include <mbstring.h>
 #include <string.h>
 
@@ -90,8 +91,6 @@ GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned 
     GETextureCoordinate theCoordinate;
     GEText theText(inFont);
     GE2DPoint thePosition;
-    HDC theContext = GEDeviceContext::GetDeviceContext(inRasterizer->GetWindow(inScreen)->GetOSRepresentation());
-    HGDIOBJ theFont = inFont->GetOSFont();
     GEScreen* theScreen = inRasterizer->GetScreen(inScreen);
     GETexture* theTexture = NULL;
     unsigned long theRowHeight = 0;
@@ -102,14 +101,12 @@ GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned 
     this->mBitmap = new GEBitmap;
     theText.SetFgColor(GEColor());
     theText.SetIsTransparent(true);
-    HGDIOBJ theOldFont = SelectObject(theContext, theFont);
-    GetCurrentObject(theContext, OBJ_FONT);
-    TEXTMETRIC theMetrics;
-    GetTextMetrics(theContext, &theMetrics);
-    this->mFirstCharacter = theMetrics.tmFirstChar;
-    this->mCharacters.resize(theMetrics.tmLastChar - theMetrics.tmFirstChar + 1);
-    // tmLastChar is the last character of the font, included (mCharacters has room for it).
-    for (unsigned long theCharacter = theMetrics.tmFirstChar; theCharacter <= theMetrics.tmLastChar; theCharacter++) {
+    PlatFontMetrics theMetrics;   // the font's character range (TEXTMETRIC's tmFirstChar..tmLastChar)
+    PlatFontGetMetrics(inFont->GetOSFont(), &theMetrics);
+    this->mFirstCharacter = theMetrics.mFirstChar;
+    this->mCharacters.resize(theMetrics.mLastChar - theMetrics.mFirstChar + 1);
+    // the last character of the font is included (mCharacters has room for it).
+    for (unsigned long theCharacter = theMetrics.mFirstChar; theCharacter <= theMetrics.mLastChar; theCharacter++) {
         unsigned long theIndex = theCharacter - this->mFirstCharacter;
         sprintf(theString, "%c", static_cast<int>(theCharacter));
         theText.SetText(theString);
@@ -151,9 +148,7 @@ GEFontBitmap::GEFontBitmap(GERasterizer* inRasterizer, GEFont* inFont, unsigned 
     inFont->SetFontBitmap(this);
     theTexture->GetSurface()->TextUnlock();
     this->CreateSurfaceAlpha(theTexture->GetSurface());
-    SelectObject(theContext, theOldFont);
     inRasterizer->SetBlending(theSource, theDestination, inScreen);
-    GEDeviceContext::ReleaseDeviceContext(inRasterizer->GetWindow(inScreen)->GetOSRepresentation(), theContext);
 }
 
 // FUNCTION: LLE 0x100159ac

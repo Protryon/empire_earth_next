@@ -21,6 +21,9 @@ extern "C" {
 int PlatFontRegister(const char* inFace, int inBold, int inItalic, const void* inTrueType, uint32_t inSize);
 // The faces asked for under another name: PlatFontAlias("MS Sans Serif", "Arial"). -> nonzero on success.
 int PlatFontAlias(const char* inFace, const char* inRegisteredFace);
+// Registers the faces built into the program (src/Platform/Common/PlatFontData.c: Liberation Sans/Serif/Mono as
+// Arial/Times New Roman/Courier New, Tahoma and MS Sans Serif as aliases of Arial) -> nonzero when all registered.
+int PlatFontRegisterBuiltIn(void);
 
 typedef struct PlatFont PlatFont;
 // A font as CreateFont makes one: inHeight < 0 is the character (em) height in pixels, > 0 the cell height (ascent
@@ -53,7 +56,12 @@ typedef struct PlatFontTarget {
     int32_t mPitch;                         // bytes per row
     int32_t mWidth;
     int32_t mHeight;
+    uint32_t mFlags;                        // PLAT_FONT_TARGET_*
 } PlatFontTarget;
+// The target holds premultiplied colour and coverage: drawing composites "over" it (colour times coverage, alpha
+// accumulates the coverage), so text drawn onto a transparent target can be blended onto a surface later (the
+// renderer's text on GPU-resident surfaces). Without it the pixels are opaque and their alpha becomes 0xFF.
+#define PLAT_FONT_TARGET_PREMULTIPLIED 0x1u
 typedef struct PlatFontRect {
     int32_t mLeft, mTop, mRight, mBottom;   // right and bottom exclusive
 } PlatFontRect;

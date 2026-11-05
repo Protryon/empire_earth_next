@@ -36,7 +36,6 @@ public:
     virtual unsigned long GetPixelDepth() const { return this->mDescription.mPixelDepth; }
     virtual unsigned long GetSurfaceVolatility() const { return this->mDescription.mSurfaceVolatility; }
     virtual const GESurfaceDescription& GetSurfaceDescription() const { return this->mDescription; }
-    virtual HDC__* GetTextDC() const { return this->mTextDC; }
     virtual const GEColor& GetTransparencyColor() const { return this->mTransparencyColor; }
     virtual unsigned long GetType() const { return this->mDescription.mType; }
     virtual unsigned long GetWidth() const { return this->mDescription.mWidth; }
@@ -60,7 +59,7 @@ private:
     GXSurface* mSurface;          // +0x48
     GEScreen* mParentScreen;                // +0x4c
     unsigned char* mMemoryAddress;          // +0x50 (Lock: GXSURFACEDESC::lpSurface)
-    HDC__* mTextDC;                         // +0x54 (TextLock: GetDC)
+    void* mTextDC;                          // +0x54 (TextLock's GDI DC in the original; unused)
     unsigned long mBytesPerRow;             // +0x58 (Lock: lPitch)
     bool mIsLocked;                         // +0x5c
     bool mIsTextLocked;                     // +0x5d

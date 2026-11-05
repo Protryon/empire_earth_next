@@ -25,7 +25,9 @@ PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatThread.cpp"
                   "Platform/Win32/PlatPreferences.cpp", "Platform/Win32/PlatFile.cpp", "Platform/Win32/PlatPath.cpp",
                   "Platform/Win32/PlatSocket.cpp", "Platform/Win32/PlatMessage.cpp",
                   # the window, its events and input (SDL3; PORT.md step 4.3)
-                  "Platform/SDL/PlatWindow.cpp"]
+                  "Platform/SDL/PlatWindow.cpp",
+                  # text (stb_truetype) with the fonts built in (PORT.md step 4.5)
+                  "Platform/Common/PlatFont.cpp", "Platform/Common/PlatFontData.c"]
 OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormats.cpp",
                      "Low-Level Engine/Graphics Engine/GEOpenFormatsFile.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,

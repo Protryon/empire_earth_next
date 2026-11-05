@@ -3,7 +3,7 @@
 // GX classes below, which keep the COM-style method names and HRESULT-style results, with the constants renamed
 // D3D*/DD* -> GX* (same values as the DirectX 7 SDK, for comparison with the original).
 //
-// Model: a GXSurface holds a CPU copy in its pixel format (Lock, GetDC) and a GPU texture (RGBA8; drawing, blits,
+// Model: a GXSurface holds a CPU copy in its pixel format (Lock, DrawText) and a GPU texture (RGBA8; drawing, blits,
 // presentation). Each side is marked valid or stale and synchronised lazily: uploads before GPU use, read-backs
 // before CPU use. Blits between two CPU-side surfaces run on the CPU (DirectDraw semantics, colour keys compared in
 // the surface format). A GXDevice renders into a target surface with the fixed-function state (transforms, one
@@ -337,8 +337,6 @@ public:
     GXRESULT Flip(GXSurface* inOverride, unsigned long inFlags);
     GXRESULT Lock(RECT* inRect, GXSURFACEDESC* outDescription, unsigned long inFlags, HANDLE inEvent);
     GXRESULT Unlock(RECT* inRect);
-    GXRESULT GetDC(HDC* outDC);
-    GXRESULT ReleaseDC(HDC inDC);
     GXRESULT SetColorKey(unsigned long inFlags, GXCOLORKEY* inKey);
     GXRESULT GetSurfaceDesc(GXSURFACEDESC* outDescription);
     GXRESULT Restore();
@@ -347,10 +345,12 @@ public:
     // GX extensions
     // true when the GPU texture holds the newest pixels (a render target that was drawn into)
     bool IsGPUResident() const;
-    // draws GDI text on a GPU-resident surface without a read-back: the caller's GDI drawing goes into two
-    // scratch DIBs (black and white ground) through inDraw, and the coverage recovered from them is blended onto
-    // the surface inside inBounds
-    typedef bool (*TextCallback)(HDC inDC, void* inContext);
+    // draws text (platform/PlatFont.h) inside inBounds: inDraw draws into a 32-bit BGRA target that covers inBounds
+    // (surface pixel inOriginX + x, inOriginY + y is the target's x, y). On a GPU-resident surface the target starts
+    // transparent and premultiplied (PLAT_FONT_TARGET_PREMULTIPLIED) and is blended onto the GPU copy without a
+    // read-back; otherwise it holds the CPU copy's pixels and the changed ones are written back (DirectDraw's GetDC
+    // and GDI text before). Not on the primary or a Z buffer.
+    typedef bool (*TextCallback)(const struct PlatFontTarget& inTarget, long inOriginX, long inOriginY, void* inContext);
     GXRESULT DrawText(const RECT& inBounds, TextCallback inDraw, void* inContext);
 
     GXSurfaceData* mData;
