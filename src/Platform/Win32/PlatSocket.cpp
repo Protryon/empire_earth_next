@@ -11,6 +11,7 @@
 
 static_assert(sizeof(PlatSockAddrIn) == sizeof(sockaddr_in), "PlatSockAddrIn is sockaddr_in");
 static_assert(PLAT_SOCKET_EVENT_READ == FD_READ && PLAT_SOCKET_EVENT_ACCEPT == FD_ACCEPT, "Winsock's FD_* bits");
+static_assert(PLAT_SOCKET_MAX_BACKLOG == SOMAXCONN, "Winsock 2's SOMAXCONN");
 static_assert(PLAT_SOCK_EWOULDBLOCK == WSAEWOULDBLOCK && PLAT_SOCK_HOST_NOT_FOUND == WSAHOST_NOT_FOUND,
               "Winsock's error numbering");
 
@@ -34,9 +35,9 @@ extern "C" int PlatSocketStartup(void)
     return WSAStartup(MAKEWORD(2, 0), &theData) == 0 ? 1 : 0;
 }
 
-extern "C" void PlatSocketCleanup(void)
+extern "C" int PlatSocketCleanup(void)
 {
-    WSACleanup();
+    return WSACleanup() == 0 ? 1 : 0;
 }
 
 extern "C" uint32_t PlatSocketLastError(void)
@@ -104,6 +105,11 @@ extern "C" int32_t PlatSocketSend(PlatSocket inSocket, const void* inData, uint3
 extern "C" int32_t PlatSocketRecv(PlatSocket inSocket, void* outData, uint32_t inLength)
 {
     return recv(Native(inSocket), static_cast<char*>(outData), static_cast<int>(inLength), 0);
+}
+
+extern "C" int32_t PlatSocketPeek(PlatSocket inSocket, void* outData, uint32_t inLength)
+{
+    return recv(Native(inSocket), static_cast<char*>(outData), static_cast<int>(inLength), MSG_PEEK);
 }
 
 extern "C" int32_t PlatSocketSendTo(PlatSocket inSocket, const void* inData, uint32_t inLength,

@@ -205,8 +205,9 @@ extern "C" int PlatSocketStartup(void)
     return 1;
 }
 
-extern "C" void PlatSocketCleanup(void)
+extern "C" int PlatSocketCleanup(void)
 {
+    return 1;
 }
 
 extern "C" uint32_t PlatSocketLastError(void)
@@ -248,6 +249,8 @@ extern "C" int PlatSocketBind(PlatSocket inSocket, const PlatSockAddrIn* inAddre
 
 extern "C" int PlatSocketListen(PlatSocket inSocket, int inBacklog)
 {
+    if (inBacklog == PLAT_SOCKET_MAX_BACKLOG)
+        inBacklog = SOMAXCONN;
     return listen(Fd(inSocket), inBacklog) == 0 ? 1 : FailErrno();
 }
 
@@ -334,6 +337,22 @@ extern "C" int32_t PlatSocketRecv(PlatSocket inSocket, void* outData, uint32_t i
     while (theRead < 0 && errno == EINTR);
     int theError = errno;
     Rearm(inSocket);
+    if (theRead < 0) {
+        errno = theError;
+        FailErrno();
+        return -1;
+    }
+    return static_cast<int32_t>(theRead);
+}
+
+extern "C" int32_t PlatSocketPeek(PlatSocket inSocket, void* outData, uint32_t inLength)
+{
+    ssize_t theRead;
+    do
+        theRead = recv(Fd(inSocket), outData, inLength, MSG_PEEK);
+    while (theRead < 0 && errno == EINTR);
+    int theError = errno;
+    Rearm(inSocket);   // Winsock re-enables FD_READ after a peek too (the data is still there)
     if (theRead < 0) {
         errno = theError;
         FailErrno();

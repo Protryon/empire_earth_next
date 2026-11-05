@@ -2,6 +2,7 @@
 
   python -I tools/xbuild.py test     [--target T] [--no-run] [--no-network]     platform layer tests (tests/platform)
   python -I tools/xbuild.py fonttest [--target T] [--no-run]                    text rasteriser test (PlatFont)
+  python -I tools/xbuild.py tcptest  [--target T] [--no-run]                    TCP/IP plug-in loopback (tools/tcp_test)
   python -I tools/xbuild.py sdl3     [--target T]                               SDL3 as a static library (CMake)
   python -I tools/xbuild.py sdltest  [--target T] [--no-run] [--frames N]       SDL3 window + wgpu surface test
   python -I tools/xbuild.py census   [--target T] [--dialect ms|gnu] [-j N] [--only TEXT] [module ...]
@@ -265,6 +266,65 @@ def cmd_fonttest(a):
     return run_program(t, exe, [str(font_dir())])
 
 
+# ---- tcptest: the TCP/IP network plug-in over 127.0.0.1 (tools/tcp_test/tcp_test.cpp)
+
+TCP_UNIT = ROOT / "src" / "Low-Level Engine" / "Network Engine" / "TCP Protocol" / "TCP Protocol.cpp"
+# the engine units the plug-in links with (tcp_test.cpp stands in for the rest)
+TCP_ENGINE_UNITS = [ROOT / "src" / "Low-Level Engine" / p for p in (
+    "Utilities/UString.cpp", "Utilities/UWideString.cpp", "Network Engine/NEProtocolConfiguration.cpp",
+    "Thread System/TSCriticalSection.cpp", "Thread System/TSEvent.cpp")]
+
+
+def cmd_tcptest(a):
+    t = Target(a.target)
+    why = t.can_build()
+    if why:
+        sys.exit(f"{t.name}: {why}")
+    out = t.out / "tcp_test"
+    out.mkdir(parents=True, exist_ok=True)
+    exe = out / ("tcp_test" + t.exe_suffix)
+    game = [TCP_UNIT, *TCP_ENGINE_UNITS, ROOT / "tools" / "tcp_test" / "tcp_test.cpp"]
+    # the game's include path and dialect (tools/clang_build.py; on POSIX the census's, include/compat/ first)
+    inc = [ROOT / "include", TCP_UNIT.parent, *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
+    defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
+    # the engine units with the engine's module define (tools/ee.py MODULE_FLAGS "lle")
+    unit_defs = lambda src: [*defs, *(["LOWLEVELENGINE_EXPORTS"] if src in TCP_ENGINE_UNITS else [])]
+    objs = []
+    if t.os == "windows":
+        env = windows_env()
+        game_flags = ["-fms-compatibility", "-fms-extensions", "-fms-compatibility-version=19.44", "/Zc:wchar_t",
+                      "-fdelayed-template-parsing", "-fno-strict-aliasing", "-fwrapv", "/GR", "-Wno-everything"]
+        for src in [*game, *platform_sources(t)]:
+            obj = out / (pathlib.Path(src).stem.replace(" ", "_") + ".obj")
+            flags = WIN_CXX + (game_flags if src in game else [f"/I{ROOT / 'src' / 'ThirdParty' / 'stb'}"])
+            if src in TCP_ENGINE_UNITS:   # no exported inline members or vtables of the engine classes it does not link
+                flags = flags + ["/Zc:dllexportInlines-"]
+            run([t.clang(), *flags, "/c", *[f"/I{i}" for i in inc], *[f"/D{d}" for d in unit_defs(src)],
+                 f"/Fo{obj}", src], env=env)
+            objs.append(obj)
+        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, "libcmt.lib",
+             "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS], env=env)
+    else:
+        base = t.base_flags()
+        game_flags = ["-fms-extensions", "-fms-compatibility", "-fdelayed-template-parsing",
+                      "-fms-compatibility-version=19.44", "-fno-strict-aliasing", "-fwrapv", "-w"]
+        for src in [*game, *platform_sources(t)]:
+            obj = out / (pathlib.Path(src).stem.replace(" ", "_") + ".o")
+            if src in game:
+                # -O0: with __OPTIMIZE__ glibc's inline string.h needs the GNU macros -fms-compatibility hides
+                flags = ["-std=c++17", "-O0", "-g", *game_flags, f"-I{COMPAT}", *[f"-I{i}" for i in inc],
+                         *[f"-D{d}" for d in unit_defs(src)]]
+            else:
+                flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}", f"-I{ROOT / 'src' / 'ThirdParty' / 'stb'}"]
+            run([t.clang(), *base, *flags, "-c", "-o", obj, src])
+            objs.append(obj)
+        run([t.clang(), *t.link_flags(), "-o", exe, *objs, *(["-ldl"] if t.os == "linux" else [])])
+    print(f"built {exe}")
+    if a.no_run:
+        return 0
+    return run_program(t, exe)
+
+
 # ---- SDL3
 
 
@@ -440,12 +500,18 @@ def classify(msg):
     return re.sub(r"'[^']*'", "'X'", re.sub(r"\(aka '[^']*'\)", "", msg)).strip()
 
 
+# what clang-cl's Microsoft mode lets through on Windows that a GNU target with the same dialect flags refuses (the
+# Windows build compiles them): the address of a temporary (`&GE3DPoint(...)` arguments) and narrowing in braced
+# initializers (Windows' long and unsigned long are both 32-bit; LP64's are not, the values are small)
+MS_DIALECT_LENIENCE = ["-Wno-address-of-temporary", "-Wno-c++11-narrowing"]
+
+
 def census_flags(t, dialect):
     f = [*t.base_flags(), "-fsyntax-only", "-ferror-limit=0", "-fno-color-diagnostics", "-w",
          "-fno-strict-aliasing", "-fwrapv", "-DNDEBUG"]
     if dialect == "ms":
         f += ["-fms-extensions", "-fms-compatibility", "-fdelayed-template-parsing",
-              "-fms-compatibility-version=19.44"]
+              "-fms-compatibility-version=19.44", *MS_DIALECT_LENIENCE]
     elif dialect == "msext":   # the extensions without -fms-compatibility (which retypes va_list on Darwin)
         f += ["-fms-extensions", "-fdelayed-template-parsing"]
     return f
@@ -604,11 +670,11 @@ def cmd_targets(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("test", "fonttest", "sdl3", "sdltest", "census", "targets"):
+    for name in ("test", "fonttest", "tcptest", "sdl3", "sdltest", "census", "targets"):
         p = sub.add_parser(name)
         p.add_argument("--target", default=host_target_name(), choices=TARGETS)
         p.add_argument("-j", type=int, default=3)
-        if name in ("test", "fonttest", "sdltest"):
+        if name in ("test", "fonttest", "tcptest", "sdltest"):
             p.add_argument("--no-run", action="store_true")
         if name == "test":
             p.add_argument("--no-network", action="store_true")
@@ -621,7 +687,7 @@ def main():
             p.add_argument("--only")
             p.add_argument("modules", nargs="*")
     a = ap.parse_args()
-    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
+    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "tcptest": cmd_tcptest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
               "census": cmd_census, "targets": cmd_targets}[a.cmd](a))
 
 

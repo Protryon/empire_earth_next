@@ -87,14 +87,15 @@ static inline uint32_t PlatHostToNet32(uint32_t inValue)
 
 // Starts / ends the socket system (Win32: WSAStartup 2.0 / WSACleanup; a no-op elsewhere) -> nonzero on success
 int PlatSocketStartup(void);
-void PlatSocketCleanup(void);
+int PlatSocketCleanup(void);
 // The calling thread's last socket error (PLAT_SOCK_E*)
 uint32_t PlatSocketLastError(void);
 
 PlatSocket PlatSocketOpen(PlatSocketType inType);                 // an AF_INET socket, PLAT_SOCKET_INVALID on failure
 int PlatSocketClose(PlatSocket inSocket);
 int PlatSocketBind(PlatSocket inSocket, const PlatSockAddrIn* inAddress);
-int PlatSocketListen(PlatSocket inSocket, int inBacklog);
+int PlatSocketListen(PlatSocket inSocket, int inBacklog);   // inBacklog PLAT_SOCKET_MAX_BACKLOG: the system's maximum
+#define PLAT_SOCKET_MAX_BACKLOG 0x7fffffff                    // Winsock 2's SOMAXCONN
 PlatSocket PlatSocketAccept(PlatSocket inSocket, PlatSockAddrIn* outPeer);   // outPeer may be NULL
 int PlatSocketConnect(PlatSocket inSocket, const PlatSockAddrIn* inAddress);
 int PlatSocketGetName(PlatSocket inSocket, PlatSockAddrIn* outAddress);        // getsockname
@@ -103,6 +104,8 @@ int PlatSocketSetBroadcast(PlatSocket inSocket, int inBroadcast);
 // -> the bytes sent / received (0: the peer closed a stream), -1 on failure (PLAT_SOCK_EWOULDBLOCK: nothing yet)
 int32_t PlatSocketSend(PlatSocket inSocket, const void* inData, uint32_t inLength);
 int32_t PlatSocketRecv(PlatSocket inSocket, void* outData, uint32_t inLength);
+// recv with MSG_PEEK: the data stays queued
+int32_t PlatSocketPeek(PlatSocket inSocket, void* outData, uint32_t inLength);
 int32_t PlatSocketSendTo(PlatSocket inSocket, const void* inData, uint32_t inLength, const PlatSockAddrIn* inTo);
 int32_t PlatSocketRecvFrom(PlatSocket inSocket, void* outData, uint32_t inLength, PlatSockAddrIn* outFrom);
 
