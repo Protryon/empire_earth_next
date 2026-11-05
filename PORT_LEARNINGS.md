@@ -825,4 +825,6 @@ the stub report reaches 0 with no new traps.
   declares another class under libc++'s inline `std::__1`: "reference to 'pair' is ambiguous" (181 units);
   replaced by `#include <utility>`. (3) The vendored zlib 1.1.3 / libpng 1.0.12 (the 2001 originals) take
   macOS's `TARGET_OS_MAC` for classic Mac OS (`<fp.h>`, no `Byte` typedef): 19 image-library units; updating both
-  libraries (also for their security fixes) is the clean way.
+  libraries (also for their security fixes) is the clean way. With (2) fixed, CI's second run: macOS arm64
+  `msext` 389/862 compile + 287 assert-only (Linux `msext` 407 + 287; the 19 image units are the difference),
+  `ms` still 105 (va_list), `gnu` 156.

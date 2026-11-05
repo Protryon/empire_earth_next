@@ -108,7 +108,8 @@ Steps:
    handle -> wgpu surface, GPU clear and PlatFont text read back exact, frames presented) pass on Windows (WARP),
    Linux (Xvfb + lavapipe, X11) and macOS (Metal on the runner's paravirtual GPU). The Linux census compiles 455
    (CI's libstdc++ 13: 456) of 862 units, 324 more fail only on the LP64 record asserts; macOS (libc++) is behind:
-   105 with -fms-compatibility (it retypes `va_list` against the SDK's), plus old zlib/libpng's classic-Mac
+   105 with -fms-compatibility (it retypes `va_list` against the SDK's), 389 (+287 assert-only) without it,
+   against Linux's 407 (+287) in that dialect; the rest is old zlib/libpng's classic-Mac
    checks, see PORT_LEARNINGS. The steps, each gated by the Windows harness (tour, AI game) where
    it changes the Windows game, and by `xbuild.py census` / CI elsewhere:
    1. **LP64** (branch lp64): fixed-width types in the records, FSFile reads/writes and network messages; then
