@@ -87,7 +87,7 @@ public:
     // inline accessor (EEAIAStarHillGoal::AcceptTile 0x16db8 loads it before the divisor: an accessor value)
     // (provisional name)
     float GetHeight() const { return this->mHeight; }
-    unsigned long* mVisibility;             // +0x0c (not set by the ctor)
+    uint32_t* mVisibility;                  // +0x0c (not set by the ctor; 32-bit words: two players per word, saved)
     float mHeight;                          // +0x10 (EECalamityManager::CreateLocationCalamity: the calamity's z)
     signed char mAIValue;                   // +0x14 the AI tile value (GetTileFlag 0x21f5a movsx; RemoveForestTile 0x425325 -= 10 floored at 0)
 };
@@ -380,7 +380,7 @@ public:
     RTSRegionTable<EEEffect*>* mEffectRegions;   // +0x19563c (the effects per region: EEEffect 0x102e61 etc.; +0x19563c..+0x195660 zeroed by 0x11c9a3) (provisional name)
     RTSRegionTable<EEComplexUnit*>* mUnitRegions;   // +0x195640 (ctor 0x11e05e; the units per region; EEAIArea 0xdcbe/0xde7f) (provisional name)
     EETile* mTileArray;                     // +0x195644 (new EETile[n]: Virtual1C; Virtual18/24 hand them out) (provisional name)
-    unsigned long* mVisibilityWords;        // +0x195648 (the tiles' visibility words, (players + 1) / 2 per tile) (provisional name)
+    uint32_t* mVisibilityWords;             // +0x195648 (the tiles' visibility words, (players + 1) / 2 per tile) (provisional name)
     unsigned long mMapCharacteristics;      // +0x19564c (saved)
     unsigned long mU195650;                 // +0x195650 (saved; a ctor result)
     unsigned long mNextTile;                // +0x195654 (the next free entry of mTileArray) (provisional name)
