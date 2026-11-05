@@ -1,8 +1,8 @@
 """Build and run the GX self-test (gx_test.cpp + the renderer's GX layer) against the pinned wgpu-native.
 
-  python -I tools/gx_test/build.py [--arch x86_64|i686|all] [--run] [-- test arguments]
+  python -I tools/gx_test/build.py [--run] [-- test arguments]
 
--> build/gx_test/<arch>/gx_test.exe (clang-cl, lld-link, static runtime as the game). Needs tools/fetch_wgpu.py.
+-> build/gx_test/x86_64/gx_test.exe (clang-cl, lld-link, static runtime as the game). Needs tools/fetch_wgpu.py.
 """
 import argparse
 import os
@@ -57,11 +57,10 @@ def main():
     test_args = argv[argv.index("--") + 1:] if "--" in argv else []
     argv = argv[:argv.index("--")] if "--" in argv else argv
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--arch", choices=["x86_64", "i686", "all"], default="all")
     ap.add_argument("--run", action="store_true")
     a = ap.parse_args(argv)
     failed = 0
-    for arch in (TARGETS if a.arch == "all" else [a.arch]):
+    for arch in TARGETS:
         exe = build(arch)
         if a.run:
             r = subprocess.run([str(exe), *test_args], capture_output=True, text=True, timeout=300,
