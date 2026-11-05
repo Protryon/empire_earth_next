@@ -305,9 +305,50 @@ static long sNull3DKeyMs = -2;   // -2 not read yet, -1 off
 static bool sDrawScene = true;
 static unsigned long long sNextKeyScene;
 
+// DIAGNOSTIC (opt-in): EE_GX_STATS=<n> logs a summary of the 3D draws every <n> scenes: draws and primitives by
+// topology, lit/textured/blended draws, and the vertices after the world-view-projection transform (in front of the
+// camera, inside the clip volume) with their colour range. Shows whether a blank 3D view is "nothing drawn", "drawn
+// off screen" or "drawn black".
+struct GXDrawStats {
+    unsigned long mScenes = 0, mDraws[3] = {}, mPrimitives[3] = {}, mLit = 0, mTextured = 0, mBlended = 0;
+    unsigned long mVertices = 0, mInFront = 0, mInside = 0, mClears = 0, mFogged = 0, mZ = 0, mFogColor = 0, mAmbient = 0;
+    float mFogStart = 0.0f, mFogEnd = 0.0f;   // of the last fogged draw
+    unsigned long mFogZone[3] = {};          // fogged vertices: view z before the fog start, inside the fog, past the end
+    unsigned char mMin[4] = {255, 255, 255, 255}, mMax[4] = {};
+    float mMinClip[3] = {3e38f, 3e38f, 3e38f}, mMaxClip[3] = {-3e38f, -3e38f, -3e38f};
+};
+static long sStatsEvery = -2;
+static GXDrawStats sStats;
+
+static bool StatsOn()
+{
+    if (sStatsEvery == -2) {
+        const char* theValue = getenv("EE_GX_STATS");
+        sStatsEvery = theValue ? std::max(1L, strtol(theValue, NULL, 10)) : -1;
+    }
+    return sStatsEvery > 0;
+}
+
+static void StatsScene()
+{
+    if (!StatsOn() || ++sStats.mScenes < (unsigned long)sStatsEvery)
+        return;
+    GXDrawStats& s = sStats;
+    GXLog("GX stats: %lu scenes, %lu clears; draws points %lu lines %lu triangles %lu (primitives %lu/%lu/%lu); lit %lu "
+          "textured %lu blended %lu fogged %lu z %lu", s.mScenes, s.mClears, s.mDraws[0], s.mDraws[1], s.mDraws[2],
+          s.mPrimitives[0], s.mPrimitives[1], s.mPrimitives[2], s.mLit, s.mTextured, s.mBlended, s.mFogged, s.mZ);
+    GXLog("GX stats: vertices %lu, in front %lu, inside %lu; clip x %g..%g y %g..%g w %g..%g", s.mVertices, s.mInFront,
+          s.mInside, s.mMinClip[0], s.mMaxClip[0], s.mMinClip[1], s.mMaxClip[1], s.mMinClip[2], s.mMaxClip[2]);
+    GXLog("GX stats: BGRA min %u,%u,%u,%u max %u,%u,%u,%u; fog %g..%g colour %08lx (view z before/in/past %lu/%lu/%lu); "
+          "ambient %08lx", s.mMin[0], s.mMin[1], s.mMin[2], s.mMin[3], s.mMax[0], s.mMax[1], s.mMax[2], s.mMax[3],
+          s.mFogStart, s.mFogEnd, s.mFogColor, s.mFogZone[0], s.mFogZone[1], s.mFogZone[2], s.mAmbient);
+    sStats = GXDrawStats();
+}
+
 GXRESULT GXDevice::BeginScene()
 {
     GX_GUARD;
+    StatsScene();
     if (sNull3DKeyMs == -2) {
         const char* theValue = getenv("EE_GX_NULL3D");
         sNull3DKeyMs = theValue ? strtol(theValue, NULL, 10) : -1;
@@ -364,6 +405,8 @@ GXRESULT GXDevice::Clear(unsigned long inCount, GXRECT* inRects, unsigned long i
         return GXERR_GENERIC;
     if (!sDrawScene)
         return GX_OK;
+    if (StatsOn())
+        sStats.mClears++;
     GXSurfaceData* theTarget = this->mData->mTarget->mData;
     const GXVIEWPORT& v = this->mData->mViewport;
     float theColor[4];
@@ -696,6 +739,61 @@ static void BuildUniform(GXDeviceData* d, GXSurfaceData* inTexture, GXFixedFunct
     }
 }
 
+static void DrawStats(GXDeviceData* d, GXPRIMITIVETYPE inType, GXVertexBuffer* inBuffer, unsigned long inStart,
+                      unsigned long inCount, const unsigned short* inIndices, unsigned long inIndexCount, bool inTextured)
+{
+    if (!StatsOn())
+        return;
+    GXDrawStats& s = sStats;
+    unsigned long theTopology = inType == GXPT_POINTLIST ? 0 : inType == GXPT_LINELIST ? 1 : 2;
+    unsigned long theElements = inIndices ? inIndexCount : inCount;
+    s.mDraws[theTopology]++;
+    s.mPrimitives[theTopology] += theTopology == 0 ? theElements : theTopology == 1 ? theElements / 2 : theElements / 3;
+    s.mLit += d->mRenderState[GXRS_LIGHTING] ? 1 : 0;
+    s.mTextured += inTextured ? 1 : 0;
+    s.mBlended += d->mRenderState[GXRS_ALPHABLENDENABLE] ? 1 : 0;
+    s.mZ += d->mRenderState[GXRS_ZENABLE] ? 1 : 0;
+    s.mAmbient = d->mRenderState[GXRS_AMBIENT];
+    if (d->mRenderState[GXRS_FOGENABLE]) {
+        s.mFogged++;
+        s.mFogStart = AsFloat(d->mRenderState[GXRS_FOGSTART]);
+        s.mFogEnd = AsFloat(d->mRenderState[GXRS_FOGEND]);
+        s.mFogColor = d->mRenderState[GXRS_FOGCOLOR];
+    }
+    float theWV[16], theWVP[16];
+    Multiply(d->mTransform[GXTS_WORLD], d->mTransform[GXTS_VIEW], theWV);
+    GXMATRIX theWVMatrix;
+    memcpy(&theWVMatrix, theWV, sizeof(theWV));
+    Multiply(theWVMatrix, d->mTransform[GXTS_PROJECTION], theWVP);
+    for (unsigned long i = 0; i < inCount; i++) {
+        const unsigned char* v = inBuffer->mVertices + (size_t)(inStart + i) * 36;
+        float p[3];
+        memcpy(p, v, sizeof(p));
+        float c[4];
+        for (int k = 0; k < 4; k++)
+            c[k] = p[0] * theWVP[k] + p[1] * theWVP[4 + k] + p[2] * theWVP[8 + k] + theWVP[12 + k];
+        s.mVertices++;
+        if (d->mRenderState[GXRS_FOGENABLE]) {
+            float z = p[0] * theWV[2] + p[1] * theWV[6] + p[2] * theWV[10] + theWV[14];
+            s.mFogZone[z < s.mFogStart ? 0 : z <= s.mFogEnd ? 1 : 2]++;
+        }
+        if (c[3] > 0.0f) {
+            s.mInFront++;
+            if (fabsf(c[0]) <= c[3] && fabsf(c[1]) <= c[3] && c[2] >= 0.0f && c[2] <= c[3])
+                s.mInside++;
+        }
+        const float theClip[3] = {c[3] != 0.0f ? c[0] / c[3] : 0.0f, c[3] != 0.0f ? c[1] / c[3] : 0.0f, c[3]};
+        for (int k = 0; k < 3; k++) {
+            s.mMinClip[k] = std::min(s.mMinClip[k], theClip[k]);
+            s.mMaxClip[k] = std::max(s.mMaxClip[k], theClip[k]);
+        }
+        for (int k = 0; k < 4; k++) {
+            s.mMin[k] = std::min(s.mMin[k], v[24 + k]);
+            s.mMax[k] = std::max(s.mMax[k], v[24 + k]);
+        }
+    }
+}
+
 static GXRESULT Draw(GXDeviceData* d, GXPRIMITIVETYPE inType, GXVertexBuffer* inBuffer, unsigned long inStart,
                      unsigned long inCount, const unsigned short* inIndices, unsigned long inIndexCount)
 {
@@ -773,6 +871,7 @@ static GXRESULT Draw(GXDeviceData* d, GXPRIMITIVETYPE inType, GXVertexBuffer* in
                                            GXSamplerKey(s[GXTSS_ADDRESS], s[GXTSS_MINFILTER], s[GXTSS_MAGFILTER],
                                                         theTexture && theTexture->Top()->mMipLevels > 1 ?
                                                         s[GXTSS_MIPFILTER] : GXTFP_NONE));
+    DrawStats(d, inType, inBuffer, inStart, inCount, inIndices, inIndexCount, theTexture != NULL);
     uint32_t theOffset = d->mUniformOffset;
     wgpuRenderPassEncoderSetBindGroup(theCore.mPass, 0, theGroup, 1, &theOffset);
     wgpuRenderPassEncoderSetVertexBuffer(theCore.mPass, 0, theCore.mVertexRing, theVertexOffset, theVertexBytes);
