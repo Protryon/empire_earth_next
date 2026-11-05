@@ -21,7 +21,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
-GCC = pathlib.Path(r'C:\msys64\mingw32\bin\gcc.exe')
+GCC = {'x86': pathlib.Path(r'C:\msys64\mingw32\bin\gcc.exe'), 'x64': pathlib.Path(r'C:\msys64\mingw64\bin\gcc.exe')}
 SHIM = 'EETMS.dll'
 ENGINE = 'EE-AOC.exe'   # the engine is inside the exe
 MAGIC = b'EE-TIMESHIM-CFG\0'
@@ -29,23 +29,30 @@ FORWARDED = ['mciSendCommandA', 'auxGetVolume', 'mixerGetControlDetailsA', 'auxS
              'mixerGetLineControlsA', 'mixerGetLineInfoA', 'mixerGetDevCapsA', 'mixerGetNumDevs', 'auxGetDevCapsA',
              'auxGetNumDevs', 'timeBeginPeriod', 'timeEndPeriod']
 OWN = {'timeGetTime': 'ShimTimeGetTime@0', 'timeSetEvent': 'ShimTimeSetEvent@20', 'timeKillEvent': 'ShimTimeKillEvent@4'}
-BUILD = ROOT/'build/boot/timeshim'
+BUILD = ROOT/'build/boot/timeshim'   # i686: EETMS.dll here; x86_64: build/boot/timeshim/x64/EETMS.dll
 
 
-def build_dll():
-    """Compile once per source change into build/boot/timeshim/EETMS.dll (factor 1/1)."""
+def build_dll(arch='x86', out_dir=None):
+    """Compile once per source change into build/boot/timeshim[/x64]/EETMS.dll (factor 1/1). arch: the exe's ('x86'
+    i686 with stdcall decorations, 'x64' x86_64: one convention, no decorations)."""
     source = HERE/'timeshim.c'
-    out = BUILD/SHIM
-    BUILD.mkdir(parents=True, exist_ok=True)
+    build = pathlib.Path(out_dir) if out_dir else (BUILD if arch == 'x86' else BUILD/'x64')
+    out = build/SHIM
+    build.mkdir(parents=True, exist_ok=True)
     if out.exists() and out.stat().st_mtime > source.stat().st_mtime and out.stat().st_mtime > pathlib.Path(__file__).stat().st_mtime:
         return out
+    gcc = GCC[arch]
+    if not gcc.exists():
+        raise SystemExit(f'{gcc} is missing (MSYS2 mingw-w64-{"i686" if arch == "x86" else "x86_64"}-gcc)')
     tag = str(os.getpid())   # parallel sessions: private temporaries, atomic rename into place
-    definition, temp = BUILD/f'timeshim.{tag}.def', BUILD/f'EETMS.{tag}.tmp'
-    definition.write_text('LIBRARY "EETMS.dll"\nEXPORTS\n' + ''.join(f'{k}={v}\n' for k, v in OWN.items())
+    definition, temp = build/f'timeshim.{tag}.def', build/f'EETMS.{tag}.tmp'
+    own = OWN if arch == 'x86' else {k: v.split('@')[0] for k, v in OWN.items()}
+    definition.write_text('LIBRARY "EETMS.dll"\nEXPORTS\n' + ''.join(f'{k}={v}\n' for k, v in own.items())
                           + ''.join(f'{n}=winmm.{n}\n' for n in FORWARDED), encoding='ascii')
-    subprocess.run([str(GCC), '-O2', '-Wall', '-shared', '-nostdlib', '-o', str(temp), str(source), str(definition),
-                    '-Wl,-e,_DllMain@12', '-Wl,--enable-stdcall-fixup', '-lkernel32', '-lwinmm', '-luser32', '-lgcc'],
-                   check=True, env={'PATH': str(GCC.parent), 'SYSTEMROOT': r'C:\Windows', 'TEMP': str(BUILD)})
+    entry = ['-Wl,-e,_DllMain@12', '-Wl,--enable-stdcall-fixup'] if arch == 'x86' else ['-Wl,-e,DllMain']
+    subprocess.run([str(gcc), '-O2', '-Wall', '-fno-tree-loop-distribute-patterns', '-shared', '-nostdlib', '-o', str(temp), str(source), str(definition),
+                    *entry, '-lkernel32', '-lwinmm', '-luser32', '-lgcc'],
+                   check=True, env={'PATH': str(gcc.parent), 'SYSTEMROOT': r'C:\Windows', 'TEMP': str(build)})
     os.replace(temp, out)
     definition.unlink()
     return out
@@ -64,6 +71,9 @@ def rename_import(engine):
     pe = pefile.PE(data=bytes(data))
     for d in pe.DIRECTORY_ENTRY_IMPORT:
         if d.dll.lower() == b'winmm.dll':
+            missing = sorted({i.name.decode() for i in d.imports if i.name} - set(OWN) - set(FORWARDED))
+            if missing or any(not i.name for i in d.imports):
+                raise ValueError(f'{engine}: WINMM imports EETMS.dll does not provide: {missing or "by ordinal"}')
             off = pe.get_offset_from_rva(d.struct.Name)
             assert data[off:off+10].lower() == b'winmm.dll\0'
             data[off:off+9] = SHIM.encode()
@@ -79,11 +89,20 @@ RENDER_MAIN_ORIGINAL = (0x51a3d5, 0x51a4c9)   # analysis/exe/names.txt 0x11a3d5;
 
 
 def render_main_extent(fulllink_map=None):
+    """RTSGraphics::Main's extent as RVAs of the exe (the shim compares return addresses minus the exe's load base)."""
     if fulllink_map is None:
-        return RENDER_MAIN_ORIGINAL
+        return tuple(va - 0x400000 for va in RENDER_MAIN_ORIGINAL)
     sys.path.insert(0, str(HERE))
     from fulllink_locator import LinkMap
-    return LinkMap(fulllink_map).extent(RENDER_MAIN)
+    m = LinkMap(fulllink_map)
+    return tuple(va - m.base for va in m.extent(RENDER_MAIN))
+
+
+def image_arch(path):
+    """'x86' / 'x64' from the PE header (hbuild.machine)."""
+    sys.path.insert(0, str(HERE))
+    import hbuild
+    return hbuild.machine(path)
 
 
 def stage_timeshim(stage, factor=1, null_render=False, key_ms=1000, frame_ms=0, fulllink_map=None):
@@ -93,7 +112,8 @@ def stage_timeshim(stage, factor=1, null_render=False, key_ms=1000, frame_ms=0, 
     if stage.parent != (ROOT/'build/boot').resolve():
         raise ValueError('time shim stages only into build/boot/<stage>')
     f = parse_factor(factor)
-    dll = bytearray(build_dll().read_bytes())
+    arch = image_arch(stage/ENGINE)
+    dll = bytearray(build_dll(arch).read_bytes())
     at = dll.find(MAGIC)
     assert at > 0 and dll.find(MAGIC, at+1) < 0
     lo, hi = render_main_extent(fulllink_map) if frame_ms else (0, 0)
@@ -108,7 +128,7 @@ def stage_timeshim(stage, factor=1, null_render=False, key_ms=1000, frame_ms=0, 
     engine = stage/ENGINE
     before = hashlib.sha256(engine.read_bytes()).hexdigest()
     renamed = rename_import(engine)
-    manifest = dict(test_only=True, kind='time-shim-v1', factor=str(f), numerator=f.numerator, denominator=f.denominator,
+    manifest = dict(test_only=True, kind='time-shim-v1', arch=arch, factor=str(f), numerator=f.numerator, denominator=f.denominator,
                     source_sha256=hashlib.sha256((HERE/'timeshim.c').read_bytes()).hexdigest(),
                     output_sha256=hashlib.sha256(bytes(dll)).hexdigest(), engine_sha256_before=before,
                     engine_sha256_after=hashlib.sha256(engine.read_bytes()).hexdigest(), engine_import_renamed=renamed,

@@ -1,4 +1,8 @@
-"""Read-only telemetry for a staged x86 EE-AOC test process; no input injection."""
+"""Read-only telemetry for a staged EE-AOC test process (i686 or x86_64); no input injection.
+
+The process's bitness decides the pointer size (IsWow64Process); member offsets come from the build's layouts
+(layout.off). addresses['image_base'] (opt-in): the map's preferred load address the given VAs refer to; they are
+moved to the running image's base (an ASLR exe)."""
 import argparse,ctypes,json,pathlib,re,struct,sys,time
 sys.path.insert(0,str(pathlib.Path(__file__).resolve().parent))
 from layout import off   # ee's VC6 offsets, translated for the build profile in use (tools/harness/layout.py)
@@ -20,6 +24,7 @@ def sample(pid,addresses=None,players=False):
     kernel.OpenProcess.restype=wintypes.HANDLE
     kernel.ReadProcessMemory.argtypes=[wintypes.HANDLE,ctypes.c_void_p,ctypes.c_void_p,ctypes.c_size_t,ctypes.POINTER(ctypes.c_size_t)]
     kernel.CloseHandle.argtypes=[wintypes.HANDLE]
+    kernel.IsWow64Process.argtypes=[wintypes.HANDLE,ctypes.POINTER(wintypes.BOOL)]
     handle=kernel.OpenProcess(0x1010,False,pid)
     if not handle:raise ctypes.WinError(ctypes.get_last_error())
     def read(address,size):
@@ -36,11 +41,18 @@ def sample(pid,addresses=None,players=False):
         actual=pathlib.Path(image.value).resolve()
         if actual.name.lower()!='ee-aoc.exe' or not STAGE_NAME.fullmatch(actual.parent.name) or actual.parent.parent!=allowed:
             raise ValueError('Telemetry is restricted to staged game processes')
-        comm=struct.unpack('<I',read(comm_va,4))[0]
+        wow=wintypes.BOOL()
+        if not kernel.IsWow64Process(handle,ctypes.byref(wow)):raise ctypes.WinError(ctypes.get_last_error())
+        P,PF=(4,'<I') if wow.value or ctypes.sizeof(ctypes.c_void_p)==4 else (8,'<Q')   # the target's pointer size
+        def ptr(address):return struct.unpack(PF,read(address,P))[0]
+        if addresses and addresses.get('image_base') is not None:   # move the map's VAs to the running image
+            delta=exe_base(kernel,handle)-addresses['image_base']
+            comm_va+=delta;world_va+=delta;physics_va+=delta
+        comm=ptr(comm_va)
         if not comm:raise ValueError('No game communications object')
         state=read(comm,max(off('NESynchronousCommunications',0x2e)+1,0x30))
         extra={}
-        if addresses and addresses.get('victory_detail'):   # opt-in (full-link triage): EEWorld/EEPlayer victory fields
+        if addresses and addresses.get('victory_detail') and P==4:   # opt-in (full-link triage): EEWorld/EEPlayer victory fields (VC6 vector reads: 32-bit only)
             extra['victory_enabled']=read(world_va+off('EEWorld',0xb96),1)[0]
             extra['wonders_to_win_b88']=struct.unpack('<i',read(world_va+off('EEWorld',0xb88),4))[0]
             extra['world_bba0']=read(world_va+off('EEWorld',0xba0),1)[0]
@@ -59,7 +71,7 @@ def sample(pid,addresses=None,players=False):
                                          victory_units_b18=struct.unpack('<i',read(p+off('EEPlayer',0xb18),4))[0],ua28=struct.unpack('<i',read(p+off('EEPlayer',0xa28),4))[0]))
             extra['players']=players
         if players:
-            physics=struct.unpack('<I',read(physics_va,4))[0]
+            physics=ptr(physics_va)
             if physics:
                 body=read(physics,off('EEPhysics',0xe8))
                 extra['game_ms']=struct.unpack_from('<i',body,off('EEPhysics',0xd0))[0];extra['game_over_be6']=body[off('EEPhysics',0xe6)]
@@ -68,10 +80,10 @@ def sample(pid,addresses=None,players=False):
             extra['victory_enabled']=read(world_va+off('EEWorld',0xb96),1)[0]
             rows=[]
             for i in range(min(struct.unpack('<I',read(world_va+off('EEWorld',0xcc),4))[0],17)):
-                p=struct.unpack('<I',read(world_va+off('EEWorld',0x74)+4*i,4))[0]
+                p=ptr(world_va+off('EEWorld',0x74)+P*i)
                 if not p:continue
                 body=read(p,off('EEPlayer',0xb50))
-                rows.append(dict(index=i,vtable=hex(struct.unpack_from('<I',body,0)[0]),observer_b467=body[off('EEPlayer',0x467)],
+                rows.append(dict(index=i,vtable=hex(struct.unpack_from(PF,body,0)[0]),observer_b467=body[off('EEPlayer',0x467)],
                                  result_a28=struct.unpack_from('<I',body,off('EEPlayer',0xa28))[0],
                                  resources=list(struct.unpack_from('<5i',body,off('EEPlayer',0xaf4)+8)),
                                  lb14=struct.unpack_from('<i',body,off('EEPlayer',0xb14))[0],victory_units_lb18=struct.unpack_from('<i',body,off('EEPlayer',0xb18))[0],
@@ -80,8 +92,18 @@ def sample(pid,addresses=None,players=False):
         return dict(extra,pid=pid,time=time.time(),last_tick_received=struct.unpack_from('<i',state,off('NESynchronousCommunications',4))[0],
                     physics_ticks_processed=struct.unpack_from('<I',state,off('NESynchronousCommunications',0x10))[0],paused=bool(state[off('NESynchronousCommunications',0x2d)]),
                     multiplayer=bool(state[off('NESynchronousCommunications',0x2e)]),world_players=struct.unpack('<I',read(world_va+off('EEWorld',0xcc),4))[0],
-                    world_map=hex(struct.unpack('<I',read(world_va+off('EEWorld',0xbc),4))[0]))
+                    world_map=hex(ptr(world_va+off('EEWorld',0xbc))),pointer_size=P)
     finally:kernel.CloseHandle(handle)
+
+
+def exe_base(kernel,handle):
+    """The load address of the process's exe (its first module)."""
+    psapi=ctypes.WinDLL('psapi',use_last_error=True)
+    psapi.EnumProcessModulesEx.argtypes=[wintypes.HANDLE,ctypes.POINTER(ctypes.c_void_p),wintypes.DWORD,ctypes.POINTER(wintypes.DWORD),wintypes.DWORD]
+    mods=(ctypes.c_void_p*1)();need=wintypes.DWORD()
+    if not psapi.EnumProcessModulesEx(handle,mods,ctypes.sizeof(mods),ctypes.byref(need),0x3):   # LIST_MODULES_ALL
+        raise ctypes.WinError(ctypes.get_last_error())
+    return mods[0] or 0
 
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('pid',type=int)

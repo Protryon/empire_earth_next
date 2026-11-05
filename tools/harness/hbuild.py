@@ -7,8 +7,13 @@ runtime inside), built with the test profile:
   python -I tools/build.py --test-profile windowed-software            -> build/clang-test/
 
 The test profile compiles the windowed/software-display policy in, so nothing is patched at staging. The game's
-mixer runs on miniaudio's null device when the machine has no audio output. Bink still comes from the game install
-until its replacement lands.
+mixer runs on miniaudio's null device when the machine has no audio output.
+
+x64: Build(x64=True) looks for the x64 test-profile build (X64_DIRS; or pass its directory, the architecture is read
+from the exe's PE header). Its map (16-digit addresses) answers for the harness's i686 decorated names
+(fulllink_locator.LinkMap, x64names.py), its layout.json must be the x64 layout (checked), and its helpers are the
+64-bit builds (exe_boot64.exe, the bridge and the time shim with mingw64 gcc). Every exe address the harness passes
+on is an RVA from the map's preferred load address, so an ASLR image works too.
 """
 import pathlib
 import sys
@@ -22,7 +27,7 @@ from fulllink_locator import LinkMap                 # noqa: E402
 INSTALL = pathlib.Path(r"C:\Program Files (x86)\Empire Earth\Empire Earth - The Art of Conquest")
 TARGET_FILES = {"exe": "EE-AOC.exe"}
 THIRD_PARTY = []                                     # every library is linked into the exe
-BASE = 0x400000                                      # the exe's fixed base
+BASE = 0x400000                                      # the i686 exe's fixed base (an x64 map gives its own)
 SHOWSCENE = "?ShowScene@DX7Rasterizer@@UAEJK@Z"
 ACTIVATE = "?ActivateScreen@DX7Rasterizer@@UAEJKPAVGETextureManager@@PAVGEWindow@@K_NK@Z"
 NATIVE_ERROR = "?ESRecordNativeError@@YAKK@Z"
@@ -30,22 +35,72 @@ ABORT = "_abort"                                     # the static runtime's
 RNG_GENERATE = "?Generate@URandom@@QAEMXZ"
 RNG_NEXT = "?NextInSeries@URandom@@AAEKXZ"
 DEFAULT_DIR = ROOT / "build" / "clang-test"
+# the x64 test-profile build: the first of these that has an exe (or pass --build-dir)
+X64_DIRS = [ROOT / "build" / "clang-test-x64", ROOT / "build" / "clang-x64-test"]
+GCC = {"x86": pathlib.Path(r"C:\msys64\mingw32\bin\gcc.exe"), "x64": pathlib.Path(r"C:\msys64\mingw64\bin\gcc.exe")}
+MACHINES = {0x14c: "x86", 0x8664: "x64"}
+
+
+def machine(path):
+    """'x86' or 'x64' from a PE image's FileHeader.Machine."""
+    data = pathlib.Path(path).read_bytes()[:0x400]
+    pe = int.from_bytes(data[0x3c:0x40], "little")
+    m = int.from_bytes(data[pe + 4:pe + 6], "little")
+    if data[:2] != b"MZ" or data[pe:pe + 4] != b"PE\0\0" or m not in MACHINES:
+        raise SystemExit(f"{path}: not an i686/x86_64 PE image")
+    return MACHINES[m]
 
 
 class Build:
-    def __init__(self, build_dir=None):
+    def __init__(self, build_dir=None, x64=False):
+        if build_dir is None and x64:
+            found = [d for d in X64_DIRS if (d / "exe" / TARGET_FILES["exe"]).exists()]
+            if not found:
+                raise SystemExit(f"no x64 test-profile build in {' or '.join(str(d) for d in X64_DIRS)}: build it "
+                                 f"(python -I tools/build.py --x64 --test-profile windowed-software) or pass --build-dir")
+            build_dir = found[0]
         self.dir = pathlib.Path(build_dir or DEFAULT_DIR).resolve()
         for t, f in TARGET_FILES.items():
             if not (self.dir / t / f).exists():
                 raise SystemExit(f"{self.dir / t / f} is missing: python -I tools/build.py --test-profile "
                                  f"windowed-software" + (f" --out {self.dir}" if build_dir else ""))
+        self.arch = machine(self.image("exe"))
+        if x64 and self.arch != "x64":
+            raise SystemExit(f"{self.image('exe')} is a 32-bit image, but --x64 was given")
+        self.ptr = 8 if self.arch == "x64" else 4
         self.layout = L.Layout(self.dir)
+        self._check_layout()
+
+    def _check_layout(self):
+        """layout.json must come from the same target as the exe: a std::vector's end pointer follows its first one."""
+        try:
+            step = self.layout.last("UIManager", "mFormStack") - self.layout.first("UIManager", "mFormStack")
+        except KeyError:
+            return
+        if step != self.ptr:
+            raise SystemExit(f"{self.dir / 'layout.json'} has {step}-byte pointers, the {self.arch} exe {self.ptr}: "
+                             f"python -I tools/harness/layout_gen.py --out {self.dir}"
+                             + (" --x64" if self.arch == "x64" else ""))
+
+    @property
+    def gcc(self):
+        """The mingw gcc for the in-process helpers (bridge, time shim) of this build's architecture."""
+        return GCC[self.arch]
+
+    @property
+    def base(self):
+        """The exe map's preferred load address (the i686 build: 0x400000)."""
+        return self.map("exe").base
 
     def image(self, target="exe"):
         return self.dir / target / TARGET_FILES[target]
 
     def map(self, target="exe"):
-        return LinkMap(self.image(target).with_suffix(".map"))
+        if not hasattr(self, "_maps"):
+            self._maps = {}
+        if target not in self._maps:
+            self._maps[target] = LinkMap(self.image(target).with_suffix(".map"))
+        return self._maps[target]
 
     @property
     def exe(self):
@@ -58,8 +113,8 @@ class Build:
     def address(self, target, symbol):
         return self.map(target).address(symbol)
 
-    def rva(self, target, symbol, base=BASE):
-        return self.address(target, symbol) - base
+    def rva(self, target, symbol, base=None):
+        return self.address(target, symbol) - (self.map(target).base if base is None else base)
 
     def stage_files(self):
         """{staged file name: source path}: the build's exe and the third-party DLLs."""
@@ -85,6 +140,7 @@ class Build:
             "EE_OFF_SURFACE_DD": ("field", "DX7Surface", "mSurface"),
         })
         d["EE_SHOWSCENE_RVA"] = self.rva("exe", SHOWSCENE)
+        d["EE_SIZE_UWIDESTRING"] = self.layout.size("UWideString") if "UWideString" in self.layout.records else 0x14
         return d
 
     def renderer_guards(self):

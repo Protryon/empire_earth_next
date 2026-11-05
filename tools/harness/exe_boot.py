@@ -36,16 +36,28 @@ def _harness_stale(exe):
                                    for n in HARNESS_SOURCES if (HERE / n).exists())
 
 
-def build_harness():
-    """Rebuild exe_boot.exe when a source is newer. Parallel sessions (round 39): built under a lock file into a
-    temporary name and renamed, so no session ever starts a half-written harness."""
+# the debugger harness is native to its target: exe_boot.exe (mingw32 gcc) runs 32-bit builds, exe_boot64.exe
+# (mingw64 gcc, MSYS2 mingw-w64-x86_64-gcc) runs 64-bit builds; one source, exe_boot.c
+HARNESS_ARCH = {"x86": ("exe_boot", pathlib.Path(r"C:\msys64\mingw32\bin\gcc.exe")),
+                "x64": ("exe_boot64", pathlib.Path(r"C:\msys64\mingw64\bin\gcc.exe"))}
+
+
+def build_harness(arch="x86", out_dir=None):
+    """Rebuild exe_boot.exe (arch x86) / exe_boot64.exe (x64) when a source is newer. Parallel sessions (round 39):
+    built under a lock file into a temporary name and renamed, so no session ever starts a half-written harness.
+    out_dir: default build/boot (the self test builds into its own directory)."""
     import os
     import time
-    exe = BOOT / "exe_boot.exe"
+    stem, gcc = HARNESS_ARCH[arch]
+    boot = pathlib.Path(out_dir) if out_dir else BOOT
+    exe = boot / f"{stem}.exe"
     if not _harness_stale(exe):
         return exe
-    BOOT.mkdir(parents=True, exist_ok=True)
-    lock = BOOT / "exe_boot.build.lock"
+    if not gcc.exists():
+        raise SystemExit(f"{gcc} is missing: C:\\msys64\\usr\\bin\\bash -lc \"pacman -S --noconfirm "
+                         f"mingw-w64-{'i686' if arch == 'x86' else 'x86_64'}-gcc\"")
+    boot.mkdir(parents=True, exist_ok=True)
+    lock = boot / f"{stem}.build.lock"
     end = time.monotonic() + 300
     while True:
         try:
@@ -59,12 +71,11 @@ def build_harness():
     try:
         os.close(fd)
         if _harness_stale(exe):
-            gcc = pathlib.Path(r"C:\msys64\mingw32\bin\gcc.exe")
-            tmp = BOOT / f"exe_boot.{os.getpid()}.tmp.exe"
+            tmp = boot / f"{stem}.{os.getpid()}.tmp.exe"
             subprocess.run([str(gcc), "-O1", "-Wall", "-Wno-format-truncation", "-static", "-o", str(tmp),
                             str(HERE / "exe_boot.c"), "-lgdi32", "-ldxguid", "-ldbghelp"], check=True,
-                           env={"PATH": str(gcc.parent), "SYSTEMROOT": r"C:\Windows", "TEMP": str(BOOT)})
-            for old in BOOT.glob("exe_boot.old.*.exe"):   # earlier images no session runs any more
+                           env={"PATH": str(gcc.parent), "SYSTEMROOT": r"C:\Windows", "TEMP": str(boot)})
+            for old in boot.glob(f"{stem}.old.*.exe"):   # earlier images no session runs any more
                 try:
                     old.unlink()
                 except OSError:
@@ -72,7 +83,7 @@ def build_harness():
             try:
                 os.replace(tmp, exe)
             except PermissionError:   # a running session executes exe_boot.exe: Windows still allows a rename
-                exe.rename(BOOT / f"exe_boot.old.{time.time_ns()}.exe")
+                exe.rename(boot / f"{stem}.old.{time.time_ns()}.exe")
                 os.replace(tmp, exe)
     finally:
         lock.unlink(missing_ok=True)
@@ -126,6 +137,13 @@ def rename_import(path, old, new):
     pathlib.Path(path).write_bytes(bytes(data))
 
 
+def imports_dll(path, dll):
+    import pefile
+    pe = pefile.PE(str(path), fast_load=True)
+    pe.parse_data_directories(directories=[pefile.DIRECTORY_ENTRY["IMAGE_DIRECTORY_ENTRY_IMPORT"]])
+    return any(e.dll.decode().lower() == dll.lower() for e in getattr(pe, "DIRECTORY_ENTRY_IMPORT", []))
+
+
 def stage(name, build, data=True, silent_audio=True):
     """Stage the build under test (hbuild.Build) in build/boot/<name>: its exe (the test profile compiles the
     windowed/software policy in, nothing is patched), the third-party DLLs, the RDP mode-list proxy when the display
@@ -142,7 +160,9 @@ def stage(name, build, data=True, silent_audio=True):
     shutil.copy(build.exe_map_path, d / "EE-AOC.map")
     sys.path.insert(0, str(HERE))
     import rdp_modes   # RDP session: the primary display lacks 640x480/800x600x32 (owner 2026-11-01)
-    if rdp_modes.needed():
+    if rdp_modes.needed() and not imports_dll(d / "EE-AOC.exe", "DDRAW.dll"):
+        print("display: RDP session, but the exe does not import DDRAW.dll (GX renderer): no mode-list proxy", flush=True)
+    elif rdp_modes.needed():
         rename_import(d / "EE-AOC.exe", "DDRAW.dll", "DDRDP.dll")   # the renderer is inside the exe
         rdp_modes.build_proxy(d)
         print('display: RDP mode-list proxy staged (DDRDP.dll)', flush=True)

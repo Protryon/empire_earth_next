@@ -102,13 +102,13 @@ static void coverage_write(const char *why)
 }
 
 /* at CREATE_PROCESS, after the harness's own exe guards: an int3 on every listed entry without another guard */
-static void coverage_arm(DWORD base, DWORD size, DWORD pid)
+static void coverage_arm(TADDR base, DWORD size, DWORD pid)
 {
     int i, g; unsigned long n = 0, skipped = 0;
     if (!cov_on) return;
     if (!cov_out[0]) snprintf(cov_out, sizeof cov_out, "%s\\%s.%lu.cov.tsv", cov_outdir, cov_stage, (unsigned long)pid);
     for (i = 0; i < ncov; i++) {
-        DWORD a = base + cov[i].rva;
+        TADDR a = base + cov[i].rva;
         for (g = 0; g < nguards && guards[g].addr != a; g++);
         if (cov[i].rva >= size || g < nguards || !rd(a, &cov[i].orig, 1) || cov[i].orig == 0xCC) {
             cov[i].state = g < nguards ? 3 : 2; skipped++; continue;
@@ -122,18 +122,18 @@ static void coverage_arm(DWORD base, DWORD size, DWORD pid)
 }
 
 /* target_guard on an address: hand a still-armed coverage entry back first (its byte restored) */
-static void coverage_release(DWORD address)
+static void coverage_release(TADDR address)
 {
     cov_entry *e;
-    if (!cov_armed || address < exeBase || !(e = cov_find(address - exeBase)) || e->state != 0) return;
+    if (!cov_armed || address < exeBase || address - exeBase > 0xffffffffu || !(e = cov_find((DWORD)(address - exeBase))) || e->state != 0) return;
     wr8(address, e->orig); e->state = 3; cov_dirty = 1;
 }
 
 /* a breakpoint at a listed entry: record the first hit, restore, rewind eip; 1 if handled */
-static int coverage_hit(DWORD a, HANDLE th, DWORD tid)
+static int coverage_hit(TADDR a, HANDLE th, DWORD tid)
 {
     cov_entry *e; CONTEXT c;
-    if (!cov_armed || !th || a < exeBase || !(e = cov_find(a - exeBase)) || (e->state != 0 && e->state != 1)) return 0;
+    if (!cov_armed || !th || a < exeBase || a - exeBase > 0xffffffffu || !(e = cov_find((DWORD)(a - exeBase))) || (e->state != 0 && e->state != 1)) return 0;
     if (e->state == 0) {
         wr8(a, e->orig);
         e->state = 1; e->order = ++cov_nhit;
@@ -142,7 +142,7 @@ static int coverage_hit(DWORD a, HANDLE th, DWORD tid)
     }
     ZeroMemory(&c, sizeof c); c.ContextFlags = CONTEXT_CONTROL;
     if (!GetThreadContext(th, &c)) return 0;
-    c.Eip = a;
+    R_IP(&c) = a;
     SetThreadContext(th, &c);
     return 1;
 }

@@ -25,18 +25,96 @@
  *     IDirectDraw*::SetDisplayMode), IDirectDraw*::SetCooperativeLevel with DDSCL_EXCLUSIVE or DDSCL_FULLSCREEN,
  *     gamma ramps, networking, process creation, file writes outside the staging directory.
  *   - the process is killed at the first STOP or at the timeout; the exit code is 3 if any window of it survives.
+ *
+ * Two builds of this one source (tools/harness/exe_boot.py): exe_boot.exe (mingw32, i686) for 32-bit targets and
+ * exe_boot64.exe (mingw64, x86_64) for 64-bit targets. The harness is always native to its target, so every Windows
+ * structure it reads from the target (UNICODE_STRING, OBJECT_ATTRIBUTES, PE headers, DDSURFACEDESC2) has the harness's
+ * own layout. What differs is the calling convention at a guarded entry (the "arch layer" below): x86 stdcall/cdecl
+ * arguments are on the stack above the return address, x64's first four in RCX, RDX, R8, R9 and the rest above the
+ * 32-byte home area; a stdcall callee pops its arguments on x86 only. The policy (what is allowed, refused or stopped)
+ * is the same code for both.
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <string.h>
 #include <windows.h>
 #include <dbghelp.h>
 #include <ddraw.h>
 #include <d3d.h>
 
+/* ---- arch layer: target addresses, registers and arguments at a function entry ---- */
+typedef ULONG_PTR TADDR;   /* a target address (the harness is native to its target) */
+#ifdef _WIN64
+#define PTR 8
+#define AFMT "%016llx"
+#define AV(x) ((unsigned long long)(TADDR)(x))
+#define R_IP(c) ((c)->Rip)
+#define R_SP(c) ((c)->Rsp)
+#define R_AX(c) ((c)->Rax)
+#define R_THIS(c) ((c)->Rcx)   /* member functions: this is the first argument */
+#define R_FP(c) ((c)->Rbp)
+#define ARCH_NAME "x64"
+#else
+#define PTR 4
+#define AFMT "%08lx"
+#define AV(x) ((unsigned long)(TADDR)(x))
+#define R_IP(c) ((c)->Eip)
+#define R_SP(c) ((c)->Esp)
+#define R_AX(c) ((c)->Eax)
+#define R_THIS(c) ((c)->Ecx)   /* thiscall */
+#define R_FP(c) ((c)->Ebp)
+#define ARCH_NAME "x86"
+#endif
+#define KEEP_RESULT ((TADDR)0x5eed5eed)   /* fake_return: leave the result register as is */
+static BOOL rd(TADDR a, void *p, SIZE_T n);
+static TADDR rdp(TADDR a);
+static BOOL wrp(TADDR a, TADDR v);
+/* integer/pointer argument n (1-based) of a stdcall/cdecl/COM function at its entry (the return address at [sp]):
+   x86 [esp+4n]; x64 RCX, RDX, R8, R9, then [rsp+8n] (above the home area) */
+static TADDR arg_n(const CONTEXT *c, int n)
+{
+#ifdef _WIN64
+    switch (n) { case 1: return c->Rcx; case 2: return c->Rdx; case 3: return c->R8; case 4: return c->R9; }
+#endif
+    return rdp(R_SP(c) + (TADDR)PTR * n);
+}
+/* replace argument n before the call runs (x64: a register, applied by the caller's SetThreadContext) */
+static BOOL set_arg(CONTEXT *c, int n, TADDR v)
+{
+#ifdef _WIN64
+    switch (n) { case 1: c->Rcx = v; return TRUE; case 2: c->Rdx = v; return TRUE;
+                 case 3: c->R8 = v; return TRUE; case 4: c->R9 = v; return TRUE; }
+#endif
+    return wrp(R_SP(c) + (TADDR)PTR * n, v);
+}
+/* argument n (1-based, after this) of a member function: x86 thiscall (this in ecx, the rest on the stack), x64 (this
+   in rcx, the rest from rdx) */
+static TADDR marg_n(const CONTEXT *c, int n)
+{
+#ifdef _WIN64
+    return arg_n(c, n + 1);
+#else
+    return arg_n(c, n);
+#endif
+}
+/* return to the caller from the entry of a function with nargs stack-passed arguments the callee pops (x86 stdcall
+   and thiscall; 0 for cdecl). x64 callees pop nothing. result: the return register (KEEP_RESULT: unchanged) */
+static void fake_return(CONTEXT *c, int nargs, TADDR result)
+{
+    R_IP(c) = rdp(R_SP(c));
+#ifdef _WIN64
+    (void)nargs;
+    R_SP(c) += 8;
+#else
+    R_SP(c) += 4 + 4 * nargs;
+#endif
+    if (result != KEEP_RESULT) R_AX(c) = result;
+}
+
 #define MAXMOD 128
 #define MAXGUARD 256
-static struct { DWORD base, size; char name[64]; } mods[MAXMOD];
+static struct { TADDR base; DWORD size; char name[64]; } mods[MAXMOD];
 static int nmods;
 typedef enum { G_STOP, G_FILE_CREATE, G_FILE_OPEN, G_SETINFO, G_SPI, G_MSGBOX_A, G_MSGBOX_W, G_WINDOW,
                G_REG_CREATE, G_REG_HANDLE, G_DD_COOP, G_DD_CREATE, G_DD_CREATE_EX, G_DD_QUERY, G_DD_RETURN,
@@ -53,6 +131,12 @@ typedef struct { ULONG Length; HANDLE RootDirectory; USTR *ObjectName; ULONG Att
 typedef LONG (WINAPI *NtOpenKey_t)(PHANDLE, ACCESS_MASK, OBJATTR *);
 static char regMadDoc[600];   /* "\REGISTRY\USER\<sid>\Software\Mad Doc Software" */
 static char regUser[600];
+/* the policy's root key (HKCU-relative) and the game's key below it. --reg-root (TEST ONLY: the harness's own self
+   test, tools/harness/selftest) moves both to another HKCU root so the policy can be exercised without touching the
+   game's key; the game sessions never pass it */
+static char regRootRel[200] = "Software\\Mad Doc Software";
+static char regGameRel[220] = "Software\\Mad Doc Software\\EE-AOC";
+static void reg_private(char *out, size_t n, const char *sub) { snprintf(out, n, "%s\\%s", regGameRel, sub); }
 
 static void local_handle_name(HANDLE h, char *out, size_t n)
 {
@@ -73,7 +157,7 @@ static void reg_init(void)
         local_handle_name((HANDLE)hk, regMadDoc, sizeof regMadDoc - 32);
         snprintf(regUser,sizeof regUser,"%s",regMadDoc);
         if(strlen(regUser)>=9)regUser[strlen(regUser)-9]=0; /* remove \\Software */
-        strcat(regMadDoc, "\\Mad Doc Software");
+        strcat(regMadDoc, regRootRel + 8);   /* "\\Mad Doc Software" (the root below Software) */
         RegCloseKey(hk);
     }
 }
@@ -104,7 +188,7 @@ static int reg_exists(const char *p)
 }
 #define KEY_WRITEISH (KEY_SET_VALUE | KEY_CREATE_SUB_KEY | KEY_CREATE_LINK | DELETE | WRITE_DAC | WRITE_OWNER | \
                       GENERIC_WRITE | GENERIC_ALL | MAXIMUM_ALLOWED)
-static struct { DWORD addr; BYTE orig; const char *name; gkind kind; } guards[MAXGUARD];
+static struct { TADDR addr; BYTE orig; const char *name; gkind kind; } guards[MAXGUARD];
 static int nguards;
 static int windowed_test; /* opt-in staged build overlay; default boot policy is unchanged */
 static int graphics_checkpoint;
@@ -128,9 +212,9 @@ static int stack_scan;
 static int av_dumped;
 static int loopback_test;
 static struct {DWORD tid;int depth;} net_creating[32];static int nnet_creating;
-static struct {DWORD fd;int bound;} net_sockets[128];static int nnet_sockets;
+static struct {TADDR fd;int bound;} net_sockets[128];static int nnet_sockets;   /* SOCKET: pointer-sized */
 static int net_thread(DWORD tid) {for(int i=0;i<nnet_creating;i++)if(net_creating[i].tid==tid)return i;return -1;}
-static int net_socket(DWORD fd) {for(int i=0;i<nnet_sockets;i++)if(net_sockets[i].fd==fd)return i;return -1;}
+static int net_socket(TADDR fd) {for(int i=0;i<nnet_sockets;i++)if(net_sockets[i].fd==fd)return i;return -1;}
 static DWORD experimental_entries[160];   /* at most 8 unless --trace-once (round 36) */
 static int nexperimental_entries;
 /* TEST ONLY (round 36, owner-approved 2026-11-01): --seed-pin RVA OFFSET VALUE writes VALUE into [ecx+OFFSET] at
@@ -147,7 +231,7 @@ static DWORD mutex_bypass_rva;
    gWorld.mCurrentPlayer and victorious false returns at its entry. RESULT is EEPlayer::Fn16AF5C(state) (ret 4: the
    writer of the result +0xa28); a call on gWorld.mPlayers[mCurrentPlayer] with state 2 returns at its entry. Every hit
    is logged (skips and passes); the image is not patched (tools/boot/no_human_defeat.py locates and checks both bodies) */
-static DWORD nhd_out_rva, nhd_result_rva, nhd_world, nhd_players_off, nhd_current_off;
+static DWORD nhd_out_rva, nhd_result_rva, nhd_players_off, nhd_current_off; static TADDR nhd_world;
 /* TEST ONLY (round 40, agent mp; opt-in): --nhd-players MASK makes --no-human-defeat protect the players whose ids
    are set in MASK (every human of a multiplayer game, the same set in every process) instead of the local player.
    --mp-skip RVA returns at the entry of a void cdecl function without arguments (EEStartExternalLobby: the external
@@ -170,12 +254,16 @@ static char reg_subtree[200];
 static int trace_once;   /* --trace-once (TEST ONLY, round 36): log each experimental candidate entry once, then drop its guard */
 /* TEST ONLY (round 36): --rng-trace GPHYSICS_VA logs every engine URandom::Generate/NextInSeries call on
    gPhysics->mRandom (+0x18): seed before the call, return address and the caller frame's return address; read-only */
-static DWORD rng_trace_physics, rng_trace_entries[2];static int rng_trace_armed;
+static TADDR rng_trace_physics, rng_trace_entries[2];static int rng_trace_armed;
+static DWORD rng_trace_offset = 0x18;   /* --rng-offset: EEPhysics::mRandom in the build's layout (VC6: +0x18) */
+/* --image-base HEX: the image base the absolute VAs of --rng-trace and --no-human-defeat refer to (the map's preferred
+   load address); they are moved by the actual base minus it at process creation (an ASLR exe). Off: used as given. */
+static TADDR va_base; static int va_base_set;
 /* the trace is armed only when <stage>/rng.arm appears (in game; map generation would be far too slow) */
 static int game_windowed_capture;
-static struct {DWORD handle;char name[600];} input_handles[32];static int ninput_handles;
+static struct {TADDR handle;char name[600];} input_handles[32];static int ninput_handles;
 static HANDLE hProc;
-static DWORD exeBase, stopAddr, rearm;   /* rearm: guard address to re-insert after a single step */
+static TADDR exeBase, stopAddr, rearm;   /* rearm: guard address to re-insert after a single step */
 static int nexc;
 static HANDLE threads[256]; static DWORD tids[256]; static int held[256]; static int nth;
 static char sandbox[MAX_PATH + 8];   /* "\??\<staging dir>\\": writes below it are allowed */
@@ -198,7 +286,7 @@ static void hold_others(DWORD tid, int suspend)
         }
 }
 
-static void mod_of(DWORD a, char *buf, size_t n)
+static void mod_of(TADDR a, char *buf, size_t n)
 {
     int i;
     for (i = 0; i < nmods; i++)
@@ -206,12 +294,14 @@ static void mod_of(DWORD a, char *buf, size_t n)
             snprintf(buf, n, "%s+%lx", mods[i].name, (unsigned long)(a - mods[i].base));
             return;
         }
-    snprintf(buf, n, "%08lx", (unsigned long)a);
+    snprintf(buf, n, AFMT, AV(a));
 }
 
-static BOOL rd(DWORD a, void *p, SIZE_T n) { SIZE_T got; return ReadProcessMemory(hProc, (void *)a, p, n, &got) && got == n; }
-static DWORD rd32(DWORD a) { DWORD v = 0; rd(a, &v, 4); return v; }
-static BOOL wr32(DWORD a, DWORD value) { SIZE_T n; return WriteProcessMemory(hProc, (void *)a, &value, 4, &n) && n == 4; }
+static BOOL rd(TADDR a, void *p, SIZE_T n) { SIZE_T got; return ReadProcessMemory(hProc, (void *)a, p, n, &got) && got == n; }
+static DWORD rd32(TADDR a) { DWORD v = 0; rd(a, &v, 4); return v; }
+static TADDR rdp(TADDR a) { TADDR v = 0; rd(a, &v, sizeof v); return v; }   /* a pointer-sized value */
+static BOOL wr32(TADDR a, DWORD value) { SIZE_T n; return WriteProcessMemory(hProc, (void *)a, &value, 4, &n) && n == 4; }
+static BOOL wrp(TADDR a, TADDR value) { SIZE_T n; return WriteProcessMemory(hProc, (void *)a, &value, sizeof value, &n) && n == sizeof value; }
 static int loopback_socket_allowed(DWORD family,DWORD type,DWORD protocol) {
     return family==2 && (type==1 || type==2) && (protocol==0 || protocol==6 || protocol==17);
 }
@@ -223,7 +313,7 @@ static int local_uia_pipe(const char* path) {
 /* TEST ONLY (round 39): --port-offset N moves the game's fixed TCP Protocol ports 33334/33335 to +N in every
    loopback bind/connect/sendto of this instance, so parallel instances do not collide (WSAEADDRINUSE) */
 static int port_offset;
-static int loopback_address(DWORD address,DWORD length,DWORD* prior) {
+static int loopback_address(TADDR address,DWORD length,DWORD* prior) {
     WORD family=0,port=0;
     if(length<16 || !rd(address,&family,2) || family!=2)return 0;
     if(port_offset && rd(address+2,&port,2)) {
@@ -236,11 +326,11 @@ static int loopback_address(DWORD address,DWORD length,DWORD* prior) {
     }
     *prior=rd32(address+4);return wr32(address+4,0x0100007f);
 }
-static void wr8(DWORD a, BYTE b) { SIZE_T n; WriteProcessMemory(hProc, (void *)a, &b, 1, &n); FlushInstructionCache(hProc, (void *)a, 1); }
+static void wr8(TADDR a, BYTE b) { SIZE_T n; WriteProcessMemory(hProc, (void *)a, &b, 1, &n); FlushInstructionCache(hProc, (void *)a, 1); }
 
 /* Test harness virtualization: DirectDraw/3D/input bookkeeping goes to real
    handles inside the snapshot-restored HKCU game subtree. Host keys stay read-only. */
-static int redirect_ddraw_key(const char *path, CONTEXT *c, DWORD handle_out, DWORD disposition_out)
+static int redirect_ddraw_key(const char *path, CONTEXT *c, TADDR handle_out, TADDR disposition_out)
 {
     HKEY local = NULL;
     HANDLE remote = NULL;
@@ -248,29 +338,33 @@ static int redirect_ddraw_key(const char *path, CONTEXT *c, DWORD handle_out, DW
     const char *wanted = "\\REGISTRY\\MACHINE\\Software\\Microsoft\\DirectDraw\\MostRecentApplication";
     const char *wanted3d = "\\REGISTRY\\MACHINE\\Software\\Microsoft\\Direct3D\\MostRecentApplication";
     const char *private_key;
-    char input_path[800], input_private[1000], input_recent[800];
+    char input_path[800], input_private[1000], input_recent[800], dd_private[400], d3d_private[400], di_private[400], di_root[400];
     static int input_seeded;
     snprintf(input_path,sizeof input_path,"%s\\System\\CurrentControlSet\\Control\\MediaProperties\\PrivateProperties\\DirectInput",regUser);
     snprintf(input_recent,sizeof input_recent,"%s\\Software\\Microsoft\\DirectInput\\MostRecentApplication",regUser);
     if (!windowed_test) return 0;
+    reg_private(dd_private, sizeof dd_private, "windowed-test DirectDraw\\MostRecentApplication");
+    reg_private(d3d_private, sizeof d3d_private, "windowed-test Direct3D\\MostRecentApplication");
+    reg_private(di_private, sizeof di_private, "windowed-test DirectInput\\MostRecentApplication");
+    reg_private(di_root, sizeof di_root, "windowed-test DirectInput");
     if (!_stricmp(path, wanted))
-        private_key = "Software\\Mad Doc Software\\EE-AOC\\windowed-test DirectDraw\\MostRecentApplication";
+        private_key = dd_private;
     else if (!_stricmp(path, wanted3d))
-        private_key = "Software\\Mad Doc Software\\EE-AOC\\windowed-test Direct3D\\MostRecentApplication";
+        private_key = d3d_private;
     else if (!_strnicmp(path,input_recent,strlen(input_recent)) && (!path[strlen(input_recent)] || !strcmp(path+strlen(input_recent),"\\")))
-        private_key = "Software\\Mad Doc Software\\EE-AOC\\windowed-test DirectInput\\MostRecentApplication";
+        private_key = di_private;
     else if(!_strnicmp(path,input_path,strlen(input_path)) && (!path[strlen(input_path)] || path[strlen(input_path)]=='\\')) {
         const char *sub="System\\CurrentControlSet\\Control\\MediaProperties\\PrivateProperties\\DirectInput";
         if(!input_seeded) {
             HKEY host=NULL, dest=NULL;
-            if(RegCreateKeyExA(HKEY_CURRENT_USER,"Software\\Mad Doc Software\\EE-AOC\\windowed-test DirectInput",0,NULL,REG_OPTION_VOLATILE,KEY_ALL_ACCESS,NULL,&dest,NULL)!=ERROR_SUCCESS)return -1;
+            if(RegCreateKeyExA(HKEY_CURRENT_USER,di_root,0,NULL,REG_OPTION_VOLATILE,KEY_ALL_ACCESS,NULL,&dest,NULL)!=ERROR_SUCCESS)return -1;
             if(RegOpenKeyExA(HKEY_CURRENT_USER,sub,0,KEY_READ,&host)==ERROR_SUCCESS) {
                 LONG copied=RegCopyTreeA(host,NULL,dest);RegCloseKey(host);
                 if(copied!=ERROR_SUCCESS){RegCloseKey(dest);return -1;}
             }
             RegCloseKey(dest);input_seeded=1;
         }
-        snprintf(input_private,sizeof input_private,"Software\\Mad Doc Software\\EE-AOC\\windowed-test DirectInput%s",path+strlen(input_path));
+        snprintf(input_private,sizeof input_private,"%s%s",di_root,path+strlen(input_path));
         private_key=input_private;
     } else return 0;
     if (RegCreateKeyExA(HKEY_CURRENT_USER,
@@ -282,16 +376,14 @@ static int redirect_ddraw_key(const char *path, CONTEXT *c, DWORD handle_out, DW
         return -1;
     }
     RegCloseKey(local);
-    if (!wr32(handle_out, (DWORD)remote) || (disposition_out && !wr32(disposition_out, disposition)))
+    if (!wrp(handle_out, (TADDR)remote) || (disposition_out && !wr32(disposition_out, disposition)))
         return -1;
-    c->Eip = rd32(c->Esp);
-    c->Esp += 32; /* NtCreateKey: seven stdcall arguments and its return address */
-    c->Eax = 0;   /* STATUS_SUCCESS; the returned handle is real, not a success-only stub */
+    fake_return(c, 7, 0);   /* NtCreateKey (seven arguments) returns STATUS_SUCCESS; the handle is real, not a stub */
     return 1;
 }
 
 /* the object name of a handle in the target (duplicated into the harness, queried, closed) */
-static void target_handle_name(DWORD h, char *out, size_t n)
+static void target_handle_name(TADDR h, char *out, size_t n)
 {
     HANDLE dup;
     out[0] = 0;
@@ -310,13 +402,13 @@ static int reg_instance_path(const char *full, char *out, size_t n)
     rest = full + m + 7;
     if (*rest && *rest != '\\') return 0;
     if (!_strnicmp(rest, "\\windowed-test ", 15)) return 0;
-    snprintf(out, n, "Software\\Mad Doc Software\\EE-AOC\\%s%s", reg_subtree, rest);
+    snprintf(out, n, "%s\\%s%s", regGameRel, reg_subtree, rest);
     len = strlen(out);
     while (len && out[len - 1] == '\\') out[--len] = 0;
     return 1;
 }
 
-static int reg_instance_handle(HKEY local, CONTEXT *c, DWORD handle_out)
+static int reg_instance_handle(HKEY local, CONTEXT *c, TADDR handle_out)
 {
     HANDLE remote = NULL;
     if (!DuplicateHandle(GetCurrentProcess(), local, hProc, &remote, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
@@ -324,11 +416,11 @@ static int reg_instance_handle(HKEY local, CONTEXT *c, DWORD handle_out)
         return 0;
     }
     RegCloseKey(local);
-    return wr32(handle_out, (DWORD)remote);
+    return wrp(handle_out, (TADDR)remote);
 }
 
 /* NtCreateKey (7 arguments) inside the game key: create the redirected key here and hand the target a real handle */
-static int reg_instance_create(const char *full, CONTEXT *c, DWORD handle_out, DWORD disposition_out, DWORD options)
+static int reg_instance_create(const char *full, CONTEXT *c, TADDR handle_out, TADDR disposition_out, DWORD options)
 {
     char key[900];
     HKEY local = NULL;
@@ -339,14 +431,12 @@ static int reg_instance_create(const char *full, CONTEXT *c, DWORD handle_out, D
         return -1;
     if (!reg_instance_handle(local, c, handle_out) || (disposition_out && !wr32(disposition_out, disposition))) return -1;
     printf("regredirect-instance create %s -> HKCU\\%s\n", full, key);
-    c->Eip = rd32(c->Esp);
-    c->Esp += 32;
-    c->Eax = 0;
+    fake_return(c, 7, 0);
     return 1;
 }
 
 /* NtOpenKey (3 arguments) / NtOpenKeyEx (4) inside the game key: open the redirected key (absent: not found) */
-static int reg_instance_open(const char *full, CONTEXT *c, DWORD handle_out, int nargs)
+static int reg_instance_open(const char *full, CONTEXT *c, TADDR handle_out, int nargs)
 {
     char key[900];
     HKEY local = NULL;
@@ -356,27 +446,25 @@ static int reg_instance_open(const char *full, CONTEXT *c, DWORD handle_out, int
     r = RegOpenKeyExA(HKEY_CURRENT_USER, key, 0, KEY_ALL_ACCESS, &local);
     if (r == ERROR_FILE_NOT_FOUND) {
         status = 0xC0000034;   /* STATUS_OBJECT_NAME_NOT_FOUND */
-        if (!wr32(handle_out, 0)) return -1;
+        if (!wrp(handle_out, 0)) return -1;
     } else if (r != ERROR_SUCCESS || !reg_instance_handle(local, c, handle_out))
         return -1;
     printf("regredirect-instance open %s -> HKCU\\%s%s\n", full, key, status ? " (absent)" : "");
-    c->Eip = rd32(c->Esp);
-    c->Esp += 4 + 4 * nargs;
-    c->Eax = status;
+    fake_return(c, nargs, status);
     return 1;
 }
 
-static DWORD image_size(DWORD base)
+static DWORD image_size(TADDR base)
 {
-    IMAGE_DOS_HEADER d; IMAGE_NT_HEADERS32 nt;
+    IMAGE_DOS_HEADER d; IMAGE_NT_HEADERS nt;   /* the harness's own PE32/PE32+: its target's */
     if (!rd(base, &d, sizeof d) || !rd(base + d.e_lfanew, &nt, sizeof nt)) return 0x1000;
     return nt.OptionalHeader.SizeOfImage;
 }
 
 /* Windowed tests discover COM entry points in the TARGET. Never load a staged
    graphics wrapper into the debugger or apply system DLL offsets to that wrapper. */
-static void coverage_release(DWORD address);   /* TEST ONLY (round 39, cov): differential/coverage.h */
-static int target_guard(DWORD address, const char *name, gkind kind)
+static void coverage_release(TADDR address);   /* TEST ONLY (round 39, cov): differential/coverage.h */
+static int target_guard(TADDR address, const char *name, gkind kind)
 {
     int i;
     MEMORY_BASIC_INFORMATION info;
@@ -391,14 +479,38 @@ static int target_guard(DWORD address, const char *name, gkind kind)
     return 1;
 }
 
+#ifndef _WIN64
 #include "differential/ptsync.h"   /* TEST ONLY (round 39, agent hash): opt-in --pt-sync RVA NAME */
 #include "differential/ptwatch.h"  /* TEST ONLY (round 39, agent dbg4): opt-in --pt-watch FROM TO CFG */
+#else
+/* The per-PT hasher and the PT watch read VC6-layout game state with 32-bit pointers (differential/, not ported to
+   this fork's builds yet): the x64 harness refuses their options and arms nothing. */
+static struct { unsigned long last_key; int keyed; } pth;
+static unsigned long ptsync_hits;
+static int x64_refuse(const char *o) { fprintf(stderr, "%s: not available in the x64 harness\n", o); exit(2); return 0; }
+static int ptsync_option(int argc, char **argv, int *option)
+{
+    (void)argc;
+    return !strcmp(argv[*option], "--pt-sync") || !strcmp(argv[*option], "--pt-hash") ? x64_refuse(argv[*option]) : 0;
+}
+static int ptsync_arm(TADDR base, DWORD size) { (void)base; (void)size; return 1; }
+static void ptsync_hit(void) {}
+static int ptwatch_option(int argc, char **argv, int *option)
+{
+    (void)argc;
+    return !strcmp(argv[*option], "--pt-watch") ? x64_refuse(argv[*option]) : 0;
+}
+static void ptwatch_env(const char *stage) { (void)stage; if (getenv("EE_PTWATCH")) x64_refuse("EE_PTWATCH"); }
+static void ptwatch_tick(unsigned long key) { (void)key; }
+static void ptwatch_hit(TADDR a, CONTEXT *c, DWORD tid) { (void)a; (void)c; (void)tid; }
+static int ptwatch_single_step(HANDLE th, DWORD tid) { (void)th; (void)tid; return 0; }
+#endif
 #include "differential/coverage.h" /* TEST ONLY (round 39, agent cov): opt-in --coverage LIST OUT / EE_COVERAGE */
 
-static DWORD target_export(DWORD base, const char *name)
+static TADDR target_export(TADDR base, const char *name)
 {
-    IMAGE_DOS_HEADER dos; IMAGE_NT_HEADERS32 nt; IMAGE_EXPORT_DIRECTORY ex;
-    DWORD i, rva, names, functions, ordinals;
+    IMAGE_DOS_HEADER dos; IMAGE_NT_HEADERS nt; IMAGE_EXPORT_DIRECTORY ex;
+    DWORD i, rva; TADDR names, functions, ordinals;
     if (!rd(base, &dos, sizeof dos) || !rd(base+dos.e_lfanew, &nt, sizeof nt)) return 0;
     rva = nt.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_EXPORT].VirtualAddress;
     if (!rva || !rd(base+rva, &ex, sizeof ex)) return 0;
@@ -416,7 +528,7 @@ static DWORD target_export(DWORD base, const char *name)
     return 0;
 }
 
-static int draw_iid(DWORD address)
+static int draw_iid(TADDR address)
 {
     GUID value;
     const GUID ids[] = {
@@ -431,15 +543,19 @@ static int draw_iid(DWORD address)
     return 0;
 }
 
-static int d3d_iid(DWORD address) { GUID g;return rd(address,&g,sizeof g) && !memcmp(&g,&IID_IDirect3D7,sizeof g); }
-static struct {DWORD at, tid, out;int type;} dd_returns[32];
+static int d3d_iid(TADDR address) { GUID g;return rd(address,&g,sizeof g) && !memcmp(&g,&IID_IDirect3D7,sizeof g); }
+static struct {TADDR at; DWORD tid; TADDR out;int type;} dd_returns[32];
 static int ndd_returns;
 /* x86 on ARM64: the system DLLs are CHPE hybrids whose load config lists native ARM64 code ranges
    (CHPE metadata: version, range table RVA, count; range = start RVA | 1 for ARM64, length). An int3 there
    would corrupt an ARM64 instruction. */
-static int chpe_arm64(DWORD va)
+static int chpe_arm64(TADDR va)
 {
     int i;
+#ifdef _WIN64
+    (void)va; (void)i;
+    return 0;   /* x64 on ARM64 is ARM64EC, not CHPE: the x64 harness does not run there */
+#else
     for (i = 0; i < nmods; i++) {
         DWORD base = mods[i].base, lc, meta, ranges, n, k;
         if (va < base || va >= base + mods[i].size) continue;
@@ -453,22 +569,24 @@ static int chpe_arm64(DWORD va)
         return 0;
     }
     return 0;
+#endif
 }
 
-static int watch_dd_return(CONTEXT *c, DWORD tid, DWORD out, int type)
+static int watch_dd_return(CONTEXT *c, DWORD tid, TADDR out, int type)
 {
-    DWORD at=rd32(c->Esp);
+    TADDR at=rdp(R_SP(c));
     if (ndd_returns>=32 || chpe_arm64(at) || !target_guard(at,"<DirectDraw interface return>",G_DD_RETURN)) return 0;
     dd_returns[ndd_returns].at=at;dd_returns[ndd_returns].tid=tid;dd_returns[ndd_returns].out=out;dd_returns[ndd_returns++].type=type;
     return 1;
 }
 
-/* UNICODE_STRING (32-bit) at a -> narrow string */
-static void ustr(DWORD a, char *out, size_t n)
+/* UNICODE_STRING at a (the target's: the harness's own layout) -> narrow string */
+static void ustr(TADDR a, char *out, size_t n)
 {
-    USHORT len = 0; DWORD buf = 0; WCHAR w[512]; int k;
+    USTR u; USHORT len; TADDR buf; WCHAR w[512]; int k;
     out[0] = 0;
-    if (!a || !rd(a, &len, 2) || !rd(a + 4, &buf, 4)) return;
+    if (!a || !rd(a, &u, sizeof u)) return;
+    len = u.Length; buf = (TADDR)u.Buffer;
     if (len > sizeof w - 2) len = sizeof w - 2;
     if (!rd(buf, w, len)) return;
     w[len / 2] = 0;
@@ -476,21 +594,23 @@ static void ustr(DWORD a, char *out, size_t n)
     out[k] = 0;
 }
 
-/* OBJECT_ATTRIBUTES (32-bit): RootDirectory at +4, ObjectName at +8 */
-static void objname(DWORD oa, char *out, size_t n)
+/* OBJECT_ATTRIBUTES at oa (the target's: the harness's own layout) */
+static TADDR oa_root(TADDR oa) { OBJATTR o; return rd(oa, &o, sizeof o) ? (TADDR)o.RootDirectory : 0; }
+static TADDR oa_name(TADDR oa) { OBJATTR o; return rd(oa, &o, sizeof o) ? (TADDR)o.ObjectName : 0; }
+static void objname(TADDR oa, char *out, size_t n)
 {
     char s[600];
-    DWORD root = rd32(oa + 4);
-    ustr(rd32(oa + 8), s, sizeof s);
+    TADDR root = oa_root(oa);
+    ustr(oa_name(oa), s, sizeof s);
     snprintf(out, n, "%s%s", root ? "<rel>\\" : "", s);
 }
 
-static void add_guard(HMODULE ours, DWORD theirs, const char *name, gkind kind)
+static void add_guard(HMODULE ours, TADDR theirs, const char *name, gkind kind)
 {
     FARPROC p = GetProcAddress(ours, name);
-    DWORD a;
+    TADDR a;
     if (!p || nguards >= MAXGUARD) return;
-    a = theirs + (DWORD)((BYTE *)p - (BYTE *)ours);
+    a = theirs + (TADDR)((BYTE *)p - (BYTE *)ours);
     guards[nguards].addr = a;
     guards[nguards].name = name;
     guards[nguards].kind = kind;
@@ -499,7 +619,7 @@ static void add_guard(HMODULE ours, DWORD theirs, const char *name, gkind kind)
     nguards++;
 }
 
-static void guard_module(const char *base, DWORD at, const char *full_path)
+static void guard_module(const char *base, TADDR at, const char *full_path)
 {
     HMODULE m;
     if(windowed_test && !_stricmp(base,"Low-Level Engine.dll"))
@@ -600,7 +720,9 @@ static void guard_module(const char *base, DWORD at, const char *full_path)
             /* DirectDrawCreate records the caller in HKLM\...\DirectDraw\MostRecentApplication. The harness's own
                HKLM is redirected to a volatile scratch key inside the snapshot-restored EE-AOC subtree meanwhile, so
                resolving the vtables writes nothing outside it (the scratch key is deleted right after). */
-            if (RegCreateKeyExA(HKEY_CURRENT_USER, "Software\\Mad Doc Software\\EE-AOC\\exe_boot scratch", 0, NULL,
+            char scratch_key[300];
+            reg_private(scratch_key, sizeof scratch_key, "exe_boot scratch");
+            if (RegCreateKeyExA(HKEY_CURRENT_USER, scratch_key, 0, NULL,
                                 REG_OPTION_VOLATILE, KEY_ALL_ACCESS, NULL, &scratch, NULL) != ERROR_SUCCESS
                 || RegOverridePredefKey(HKEY_LOCAL_MACHINE, scratch) != ERROR_SUCCESS) {
                 printf("ddraw: cannot redirect the harness's HKLM; DirectDraw guarded by its exports only\n");
@@ -622,7 +744,7 @@ static void guard_module(const char *base, DWORD at, const char *full_path)
             if (scratch) {
                 RegOverridePredefKey(HKEY_LOCAL_MACHINE, NULL);
                 RegCloseKey(scratch);
-                if (RegOpenKeyExA(HKEY_CURRENT_USER, "Software\\Mad Doc Software\\EE-AOC", 0, KEY_ALL_ACCESS, &madDoc)
+                if (RegOpenKeyExA(HKEY_CURRENT_USER, regGameRel, 0, KEY_ALL_ACCESS, &madDoc)
                     == ERROR_SUCCESS) {
                     RegDeleteTreeA(madDoc, "exe_boot scratch");
                     RegCloseKey(madDoc);
@@ -737,23 +859,24 @@ static void screenshot(HWND h, const char *file)
 
 static void dump(const char *file, int with_data)
 {
-    IMAGE_DOS_HEADER d; IMAGE_NT_HEADERS32 nt; IMAGE_SECTION_HEADER sh;
-    DWORD iat, n, i, fnv = 2166136261u;
+    IMAGE_DOS_HEADER d; IMAGE_NT_HEADERS nt; IMAGE_SECTION_HEADER sh;
+    TADDR iat, sections; DWORD n, i, fnv = 2166136261u;
     char m[128];
     rd(exeBase, &d, sizeof d);
     rd(exeBase + d.e_lfanew, &nt, sizeof nt);
     iat = exeBase + nt.OptionalHeader.DataDirectory[12].VirtualAddress;
-    n = nt.OptionalHeader.DataDirectory[12].Size / 4;
+    n = nt.OptionalHeader.DataDirectory[12].Size / PTR;
     for (i = 0; i < n; i++) {
-        DWORD v = rd32(iat + 4 * i), k;
+        TADDR v = rdp(iat + PTR * i); DWORD k;
         mod_of(v, m, sizeof m);
-        if (v) printf("iat %04lx %s\n", (unsigned long)(4 * i), m);
+        if (v) printf("iat %04lx %s\n", (unsigned long)(PTR * i), m);
         for (k = 0; m[k]; k++) fnv = (fnv ^ (BYTE)m[k]) * 16777619u;
     }
     printf("IAT: %lu slots, fnv %08lx\n", (unsigned long)n, (unsigned long)fnv);
     if (!with_data) return;
+    sections = exeBase + d.e_lfanew + offsetof(IMAGE_NT_HEADERS, OptionalHeader) + nt.FileHeader.SizeOfOptionalHeader;
     for (i = 0; i < nt.FileHeader.NumberOfSections; i++) {
-        rd(exeBase + d.e_lfanew + sizeof nt + i * sizeof sh, &sh, sizeof sh);
+        rd(sections + i * sizeof sh, &sh, sizeof sh);
         if (!memcmp(sh.Name, ".data", 6)) {
             DWORD size = sh.Misc.VirtualSize, k;
             BYTE *buf = malloc(size);
@@ -802,7 +925,18 @@ int main(int argc, char **argv)
             static_generate_rva = strtoul(argv[++option], NULL, 16); static_next_rva = strtoul(argv[++option], NULL, 16);
         }
         else if (!strcmp(argv[option], "--trace-once")) trace_once=1;
-        else if (!strcmp(argv[option], "--rng-trace") && option+1<argc) rng_trace_physics=strtoul(argv[++option],NULL,16);
+        else if (!strcmp(argv[option], "--rng-trace") && option+1<argc) rng_trace_physics=(TADDR)strtoull(argv[++option],NULL,16);
+        else if (!strcmp(argv[option], "--rng-offset") && option+1<argc) rng_trace_offset=strtoul(argv[++option],NULL,16);
+        else if (!strcmp(argv[option], "--image-base") && option+1<argc) {va_base=(TADDR)strtoull(argv[++option],NULL,16);va_base_set=1;}
+        else if (!strcmp(argv[option], "--reg-root") && option+1<argc) {   /* TEST ONLY: the self test's policy root */
+            option++;
+            if (_strnicmp(argv[option], "Software\\", 9) || strlen(argv[option]) >= sizeof regRootRel - 1 || strchr(argv[option] + 9, '\\')
+                || !_stricmp(argv[option], "Software\\Mad Doc Software")) {
+                fprintf(stderr, "--reg-root must be one key below Software (not the game's)\n"); return 2;
+            }
+            snprintf(regRootRel, sizeof regRootRel, "%s", argv[option]);
+            snprintf(regGameRel, sizeof regGameRel, "%s\\EE-AOC", regRootRel);
+        }
         else if (!strcmp(argv[option], "--seed-pin") && option+3<argc) {
             seed_pin=1;seed_pin_rva=strtoul(argv[++option],NULL,16);
             seed_pin_offset=strtoul(argv[++option],NULL,16);seed_pin_value=strtoul(argv[++option],NULL,0);
@@ -811,7 +945,7 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[option], "--mutex-bypass") && option+1<argc) mutex_bypass_rva=strtoul(argv[++option],NULL,16);
         else if (!strcmp(argv[option], "--no-human-defeat") && option+5<argc) {
             nhd_out_rva=strtoul(argv[++option],NULL,16);nhd_result_rva=strtoul(argv[++option],NULL,16);
-            nhd_world=strtoul(argv[++option],NULL,16);nhd_players_off=strtoul(argv[++option],NULL,16);
+            nhd_world=(TADDR)strtoull(argv[++option],NULL,16);nhd_players_off=strtoul(argv[++option],NULL,16);
             nhd_current_off=strtoul(argv[++option],NULL,16);
         }
         else if (!strcmp(argv[option], "--nhd-players") && option+1<argc) nhd_players_mask=strtoul(argv[++option],NULL,0);
@@ -859,6 +993,10 @@ int main(int argc, char **argv)
     coverage_env(argv[1]);  /* TEST ONLY (cov): EE_COVERAGE="LIST_ORIGINAL LIST_FULLLINK OUTDIR" */
     if (nexperimental_entries > 8 && !trace_once) { fprintf(stderr, "too many experimental trace entries\n"); return 2; }
     if (windowed_test) printf("TEST native-windowed overlay; isolated DirectDraw bookkeeping; display guards retained\n");
+#ifdef _WIN64
+    printf("harness " ARCH_NAME "\n");   /* the 32-bit log is unchanged */
+#endif
+    if (strcmp(regRootRel, "Software\\Mad Doc Software")) printf("TEST registry policy root HKCU\\%s\n", regRootRel);
     snprintf(path, sizeof path, "%s\\%s", argv[1], argv[2]);
     snprintf(cmd, sizeof cmd, "\"%s\"", argv[2]);
     if (!CreateProcessA(path, cmd, NULL, NULL, FALSE, DEBUG_ONLY_THIS_PROCESS, NULL, argv[1], &si, &pi)) {
@@ -909,15 +1047,15 @@ int main(int argc, char **argv)
                 }
                 if(now-last_event>10000 && now-last_diagnostic>30000) {
                     last_diagnostic=now;
-                    printf("diagnostic idle rearm=%08lx stepper=%lu\n",(unsigned long)rearm,(unsigned long)stepper);
+                    printf("diagnostic idle rearm=" AFMT " stepper=%lu\n",AV(rearm),(unsigned long)stepper);
                     for(int t=0;t<nth;t++) {
                         DWORD previous=SuspendThread(threads[t]);CONTEXT context;char module[128];
                         if(previous==(DWORD)-1)continue;
                         ZeroMemory(&context,sizeof context);context.ContextFlags=CONTEXT_CONTROL;
                         if(GetThreadContext(threads[t],&context)) {
-                            mod_of(context.Eip,module,sizeof module);
+                            mod_of(R_IP(&context),module,sizeof module);
                             printf("diagnostic thread %lu suspended=%lu at %s\n",(unsigned long)tids[t],(unsigned long)previous,module);
-                            for(int s=0;s<4;s++){mod_of(rd32(context.Esp+4*s),module,sizeof module);printf("  stack %s\n",module);}
+                            for(int s=0;s<4;s++){mod_of(rdp(R_SP(&context)+PTR*s),module,sizeof module);printf("  stack %s\n",module);}
                         }
                         ResumeThread(threads[t]);
                     }
@@ -929,10 +1067,25 @@ int main(int argc, char **argv)
         last_event=GetTickCount();
         switch (ev.dwDebugEventCode) {
         case CREATE_PROCESS_DEBUG_EVENT:
-            exeBase = (DWORD)ev.u.CreateProcessInfo.lpBaseOfImage;
+            exeBase = (TADDR)ev.u.CreateProcessInfo.lpBaseOfImage;
+            if(va_base_set && exeBase!=va_base) {   /* an ASLR image: move the absolute VAs by the load delta */
+                TADDR delta=exeBase-va_base;
+                if(rng_trace_physics)rng_trace_physics+=delta;
+                if(nhd_world)nhd_world+=delta;
+                printf("image base " AFMT " (map " AFMT "): absolute VAs relocated\n",AV(exeBase),AV(va_base));
+            }
             mods[nmods].base = exeBase;
             mods[nmods].size = image_size(exeBase);
             strcpy(mods[nmods++].name, "EXE");
+            {   /* the harness reads the target's structures in its own layout: the architectures must agree */
+                IMAGE_DOS_HEADER d; IMAGE_FILE_HEADER fh;
+                WORD want = PTR == 8 ? IMAGE_FILE_MACHINE_AMD64 : IMAGE_FILE_MACHINE_I386;
+                if (!rd(exeBase, &d, sizeof d) || !rd(exeBase + d.e_lfanew + 4, &fh, sizeof fh) || fh.Machine != want) {
+                    printf("STOP target machine %04x does not match the " ARCH_NAME " harness (exe_boot.exe: i686, exe_boot64.exe: x86_64)\n",
+                           (unsigned)fh.Machine);
+                    done = 1;
+                }
+            }
             if(windowed_test && !target_guard(exeBase+audio_entry_rva,"EEInitializeSounds",G_AUDIO_INITIALIZE)) {
                 printf("STOP cannot guard audio initialization\n");done=1;
             }
@@ -947,8 +1100,8 @@ int main(int argc, char **argv)
             if(static_exe && rng_trace_physics) {
                 rng_trace_entries[0]=exeBase+static_generate_rva;
                 rng_trace_entries[1]=exeBase+static_next_rva;
-                printf("TEST rng trace resolved %08lx %08lx (gPhysics %08lx)\n",(unsigned long)rng_trace_entries[0],
-                       (unsigned long)rng_trace_entries[1],(unsigned long)rng_trace_physics);
+                printf("TEST rng trace resolved " AFMT " " AFMT " (gPhysics " AFMT ")\n",AV(rng_trace_entries[0]),
+                       AV(rng_trace_entries[1]),AV(rng_trace_physics));
             }
             for(int k=0;k<nexperimental_entries;k++) {
                 if(experimental_entries[k]>=image_size(exeBase)
@@ -970,8 +1123,8 @@ int main(int argc, char **argv)
                     || !target_guard(exeBase+nhd_out_rva,"EEWorld::Fn1391F2 (player out)",G_NHD_OUT)
                     || !target_guard(exeBase+nhd_result_rva,"EEPlayer::Fn16AF5C (player result)",G_NHD_RESULT)) {
                     printf("STOP cannot guard no-human-defeat\n");done=1;
-                } else printf("TEST no-human-defeat armed out rva %08lx result rva %08lx world %08lx players +%lx current +%lx\n",
-                              (unsigned long)nhd_out_rva,(unsigned long)nhd_result_rva,(unsigned long)nhd_world,
+                } else printf("TEST no-human-defeat armed out rva %08lx result rva %08lx world " AFMT " players +%lx current +%lx\n",
+                              (unsigned long)nhd_out_rva,(unsigned long)nhd_result_rva,AV(nhd_world),
                               (unsigned long)nhd_players_off,(unsigned long)nhd_current_off);
             }
             if(mp_skip_rva && (mp_skip_rva>=image_size(exeBase)
@@ -991,7 +1144,7 @@ int main(int argc, char **argv)
             if(seed_pin)printf("TEST seed pin armed rva %08lx [ecx+%lx] := %lu\n",(unsigned long)seed_pin_rva,
                                (unsigned long)seed_pin_offset,(unsigned long)seed_pin_value);
             if (mode) {
-                IMAGE_DOS_HEADER d; IMAGE_NT_HEADERS32 nt;
+                IMAGE_DOS_HEADER d; IMAGE_NT_HEADERS nt;
                 rd(exeBase, &d, sizeof d);
                 rd(exeBase + d.e_lfanew, &nt, sizeof nt);
                 stopAddr = exeBase + (mode == 1 ? nt.OptionalHeader.AddressOfEntryPoint : winmain_rva);
@@ -1020,7 +1173,7 @@ int main(int argc, char **argv)
         }
         case LOAD_DLL_DEBUG_EVENT: {
             char full[MAX_PATH] = "?", *b;
-            DWORD at = (DWORD)ev.u.LoadDll.lpBaseOfDll;
+            TADDR at = (TADDR)ev.u.LoadDll.lpBaseOfDll;
             if (ev.u.LoadDll.hFile) {
                 GetFinalPathNameByHandleA(ev.u.LoadDll.hFile, full, sizeof full, 0);
                 CloseHandle(ev.u.LoadDll.hFile);
@@ -1036,7 +1189,7 @@ int main(int argc, char **argv)
             break;
         }
         case UNLOAD_DLL_DEBUG_EVENT: {
-            DWORD base=(DWORD)ev.u.UnloadDll.lpBaseOfDll, size=0;
+            TADDR base=(TADDR)ev.u.UnloadDll.lpBaseOfDll; DWORD size=0;
             int k;
             for(k=0;k<nmods;k++) if(mods[k].base==base) { size=mods[k].size;mods[k]=mods[--nmods];break; }
             for(k=0;k<nguards;) {
@@ -1047,7 +1200,7 @@ int main(int argc, char **argv)
         }
         case EXCEPTION_DEBUG_EVENT: {
             EXCEPTION_RECORD *er = &ev.u.Exception.ExceptionRecord;
-            DWORD a = (DWORD)er->ExceptionAddress, code = er->ExceptionCode;
+            TADDR a = (TADDR)er->ExceptionAddress; DWORD code = er->ExceptionCode;
             int g, k;
             HANDLE th = NULL;
             CONTEXT c;
@@ -1088,27 +1241,32 @@ int main(int argc, char **argv)
                     if (th) {   /* the top of the stack, for locating the caller of a bad jump */
                         c.ContextFlags = CONTEXT_FULL;
                         GetThreadContext(th, &c);
+#ifdef _WIN64
+                        printf("   rax %016llx rcx %016llx rdx %016llx rbx %016llx\n   rsi %016llx rdi %016llx r8 %016llx r9 %016llx\n",
+                               AV(c.Rax), AV(c.Rcx), AV(c.Rdx), AV(c.Rbx), AV(c.Rsi), AV(c.Rdi), AV(c.R8), AV(c.R9));
+#else
                         printf("   eax %08lx ecx %08lx edx %08lx ebx %08lx esi %08lx edi %08lx\n",
                                (unsigned long)c.Eax, (unsigned long)c.Ecx, (unsigned long)c.Edx,
                                (unsigned long)c.Ebx, (unsigned long)c.Esi, (unsigned long)c.Edi);
+#endif
                         for (k = 0; k < 12; k++) {
-                            mod_of(rd32(c.Esp + 4 * k), m, sizeof m);
-                            printf("   [esp+%02x] %s\n", k * 4, m);
+                            mod_of(rdp(R_SP(&c) + PTR * k), m, sizeof m);
+                            printf("   [%s+%02x] %s\n", PTR == 8 ? "rsp" : "esp", k * PTR, m);
                         }
                         for (k = 12; k < 12 + stack_scan; k++) {
-                            DWORD v = rd32(c.Esp + 4 * k);
+                            TADDR v = rdp(R_SP(&c) + PTR * k);
                             if (v >= exeBase && v < exeBase + image_size(exeBase)) {
                                 mod_of(v, m, sizeof m);
-                                printf("   scan [esp+%03x] %s\n", k * 4, m);
+                                printf("   scan [%s+%03x] %s\n", PTR == 8 ? "rsp" : "esp", k * PTR, m);
                             }
                         }
-                        if (stack_scan) {
-                            DWORD fp = c.Ebp;
-                            for (k = 0; k < 24 && fp > c.Esp && fp < c.Esp + 0x100000; k++) {
-                                DWORD ret = rd32(fp + 4);
+                        if (stack_scan) {   /* x64: only where the code keeps a frame-pointer chain */
+                            TADDR fp = R_FP(&c);
+                            for (k = 0; k < 24 && fp > R_SP(&c) && fp < R_SP(&c) + 0x100000; k++) {
+                                TADDR ret = rdp(fp + PTR);
                                 mod_of(ret, m, sizeof m);
-                                printf("   ebp-chain %d %s\n", k, m);
-                                fp = rd32(fp);
+                                printf("   %s-chain %d %s\n", PTR == 8 ? "rbp" : "ebp", k, m);
+                                fp = rdp(fp);
                             }
                         }
                     }
@@ -1132,11 +1290,11 @@ int main(int argc, char **argv)
                     held[t]=1;
                 }
                 if(done)break;
-                c.Eip=a;c.EFlags&=~0x100;SetThreadContext(th,&c);
+                R_IP(&c)=a;c.EFlags&=~0x100;SetThreadContext(th,&c);
                 printf("deferred concurrent guard breakpoint on thread %lu\n",(unsigned long)ev.dwThreadId);
                 break;
             }
-            mod_of(rd32(c.Esp), m, sizeof m);
+            mod_of(rdp(R_SP(&c)), m, sizeof m);
             if (guards[g].kind == G_DD_RETURN) {
                 int pending=-1, remains=0;
                 int type;
@@ -1146,57 +1304,57 @@ int main(int argc, char **argv)
                 type=dd_returns[pending].type;
                 if(type==11) {
                     int thread=net_thread(ev.dwThreadId);if(thread>=0)net_creating[thread].depth--;
-                    if(c.Eax!=0xffffffff) {
-                        int socket=net_socket(c.Eax);
+                    if(R_AX(&c)!=(TADDR)~(TADDR)0) {   /* INVALID_SOCKET */
+                        int socket=net_socket(R_AX(&c));
                         if(socket<0 && nnet_sockets<128)socket=nnet_sockets++;
                         if(socket<0){printf("STOP network handle tracking full\n");done=1;break;}
-                        net_sockets[socket].fd=c.Eax;net_sockets[socket].bound=0;
+                        net_sockets[socket].fd=R_AX(&c);net_sockets[socket].bound=0;
                     }
-                    printf("loopback socket result %08lx\n",(unsigned long)c.Eax);
+                    printf("loopback socket result %08lx\n",(unsigned long)R_AX(&c));
                 } else if(type==12) {
                     int socket=net_socket(dd_returns[pending].out);
-                    if(c.Eax==0 && socket>=0)net_sockets[socket].bound=1;
-                    printf("loopback bind result %08lx\n",(unsigned long)c.Eax);
+                    if((DWORD)R_AX(&c)==0 && socket>=0)net_sockets[socket].bound=1;
+                    printf("loopback bind result %08lx\n",(unsigned long)(DWORD)R_AX(&c));
                 } else if(type==8) {
-                    if((LONG)c.Eax>=0) {
+                    if((LONG)(DWORD)R_AX(&c)>=0) {
                         if(ninput_handles>=32){printf("STOP input handle tracking full\n");done=1;break;}
-                        input_handles[ninput_handles].handle=rd32(dd_returns[pending].out);
+                        input_handles[ninput_handles].handle=rdp(dd_returns[pending].out);
                         target_handle_name(input_handles[ninput_handles].handle,input_handles[ninput_handles].name,600);
                         if(!input_handles[ninput_handles].name[0]){printf("STOP cannot identify virtual input handle\n");done=1;break;}
                         ninput_handles++;
                     }
                 } else if(type==9) {
-                    printf("audio result EEInitializeSounds: %s\n",(c.Eax&255)?"true":"false");
+                    printf("audio result EEInitializeSounds: %s\n",(R_AX(&c)&255)?"true":"false");
                     if(audio_checkpoint) {
-                        printf((c.Eax&255)?"STOP <windowed audio ready> reached\n":"STOP audio initialization failed\n");done=1;
+                        printf((R_AX(&c)&255)?"STOP <windowed audio ready> reached\n":"STOP audio initialization failed\n");done=1;
                     }
                 } else if (type>=3) {
-                    printf("graphics result %s: %08lx\n",type==3 ? "CreateSurface" : type==4 ? "CreateDevice" : type==5 ? "ActivateScreen" : type==7 ? "SetCooperativeLevel" : "ShowScene",(unsigned long)c.Eax);
-                    if(type==5 && game_windowed_capture && graphics_checkpoint && c.Eax==0) {
+                    printf("graphics result %s: %08lx\n",type==3 ? "CreateSurface" : type==4 ? "CreateDevice" : type==5 ? "ActivateScreen" : type==7 ? "SetCooperativeLevel" : "ShowScene",(unsigned long)(DWORD)R_AX(&c));
+                    if(type==5 && game_windowed_capture && graphics_checkpoint && (DWORD)R_AX(&c)==0) {
                         printf("STOP <windowed graphics ready> reached\n");done=1;
                     }
                     if(type==6 && game_windowed_capture) {
-                        if(c.Eax==0 && live_session) {
+                        if((DWORD)R_AX(&c)==0 && live_session) {
                             frame_presented=1;printf("checkpoint windowed frame presented\n");
                             for(int j=0;j<nguards;j++)if(guards[j].kind==G_RENDER_PRESENT) {
                                 BYTE current=0;if(rd(guards[j].addr,&current,1) && current==0xcc)wr8(guards[j].addr,guards[j].orig);
                             }
-                        } else {printf(c.Eax==0 ? "STOP <windowed frame presented> reached\n" : "STOP render failure\n");done=1;}
+                        } else {printf((DWORD)R_AX(&c)==0 ? "STOP <windowed frame presented> reached\n" : "STOP render failure\n");done=1;}
                     }
-                } else if ((LONG)c.Eax>=0) {
-                    DWORD iface=rd32(dd_returns[pending].out), vt=rd32(iface);
-                    if (!iface || !vt || !target_guard(rd32(vt),"IDirectDraw::QueryInterface",G_DD_QUERY)
-                        || (type==1 && (!target_guard(rd32(vt+20*4),"IDirectDraw::SetCooperativeLevel",G_DD_COOP)
-                            || !target_guard(rd32(vt+21*4),"IDirectDraw::SetDisplayMode",G_STOP)
-                            || !target_guard(rd32(vt+6*4),"IDirectDraw::CreateSurface",G_DD_SURFACE)))
-                        || (type==2 && !target_guard(rd32(vt+4*4),"IDirect3D7::CreateDevice",G_D3D_DEVICE))) {
+                } else if ((LONG)(DWORD)R_AX(&c)>=0) {
+                    TADDR iface=rdp(dd_returns[pending].out), vt=rdp(iface);
+                    if (!iface || !vt || !target_guard(rdp(vt),"IDirectDraw::QueryInterface",G_DD_QUERY)
+                        || (type==1 && (!target_guard(rdp(vt+20*PTR),"IDirectDraw::SetCooperativeLevel",G_DD_COOP)
+                            || !target_guard(rdp(vt+21*PTR),"IDirectDraw::SetDisplayMode",G_STOP)
+                            || !target_guard(rdp(vt+6*PTR),"IDirectDraw::CreateSurface",G_DD_SURFACE)))
+                        || (type==2 && !target_guard(rdp(vt+4*PTR),"IDirect3D7::CreateDevice",G_D3D_DEVICE))) {
                         printf("STOP cannot guard target DirectDraw interface\n");done=1;break;
                     }
                     printf("graphics target interface guarded: %s\n",type==1 ? "DirectDraw" : "Direct3D7");
                 }
                 dd_returns[pending]=dd_returns[--ndd_returns];
                 for(k=0;k<ndd_returns;k++) remains|=dd_returns[k].at==a;
-                wr8(a,saved);c.Eip=a;
+                wr8(a,saved);R_IP(&c)=a;
                 if(remains) { c.EFlags|=0x100;rearm=a;stepper=ev.dwThreadId;hold_others(stepper,1); }
                 else guards[g]=guards[--nguards];
                 SetThreadContext(th,&c);
@@ -1209,11 +1367,12 @@ int main(int argc, char **argv)
                 break;
             }
             {
-                DWORD arg1 = rd32(c.Esp + 4), arg2 = rd32(c.Esp + 8), arg3 = rd32(c.Esp + 12);
+                /* arguments 1..3 of the guarded entry (pointer-sized; a DWORD argument is compared truncated) */
+                TADDR arg1 = arg_n(&c, 1), arg2 = arg_n(&c, 2), arg3 = arg_n(&c, 3);
                 int allow = 0;
                 s[0] = 0;
                 if (guards[g].kind==G_DD_CREATE || guards[g].kind==G_DD_CREATE_EX || guards[g].kind==G_DD_QUERY) {
-                    DWORD iid=guards[g].kind==G_DD_QUERY ? arg2 : arg3;
+                    TADDR iid=guards[g].kind==G_DD_QUERY ? arg2 : arg3;
                     int requested=guards[g].kind==G_DD_CREATE || draw_iid(iid), type=1;
                     if(guards[g].kind==G_DD_QUERY && d3d_iid(iid)) {requested=1;type=2;}
                     allow=!requested || watch_dd_return(&c,ev.dwThreadId,guards[g].kind==G_DD_QUERY ? arg3 : arg2,type);
@@ -1221,7 +1380,7 @@ int main(int argc, char **argv)
                 } else if(guards[g].kind==G_NET_SOCKET) {
                     int thread=net_thread(ev.dwThreadId);
                     if(thread<0 && nnet_creating<32){thread=nnet_creating++;net_creating[thread].tid=ev.dwThreadId;net_creating[thread].depth=0;}
-                    allow=loopback_socket_allowed(arg1,arg2,arg3) && thread>=0;
+                    allow=loopback_socket_allowed((DWORD)arg1,(DWORD)arg2,(DWORD)arg3) && thread>=0;
                     if(allow)allow=watch_dd_return(&c,ev.dwThreadId,0,11);
                     if(allow){net_creating[thread].depth++;printf("loopback socket family %lu type %lu\n",(unsigned long)arg1,(unsigned long)arg2);}
                     else printf("STOP unsupported socket creation\n");
@@ -1233,17 +1392,17 @@ int main(int argc, char **argv)
                     if(allow)net_creating[thread].depth++;
                     printf("%s mp %s on verified loopback bind\n",allow?"TEST":"STOP",guards[g].name);
                 } else if(guards[g].kind==G_NET_IOCTL) {
-                    allow=loopback_ioctl_allowed(arg2);
-                    printf("%s WSAIoctl %08lx\n",allow?"loopback":"STOP",(unsigned long)arg2);
+                    allow=loopback_ioctl_allowed((DWORD)arg2);
+                    printf("%s WSAIoctl %08lx\n",allow?"loopback":"STOP",(unsigned long)(DWORD)arg2);
                 } else if(guards[g].kind==G_NET_CLOSE) {
                     int socket=net_socket(arg1);if(socket>=0)net_sockets[socket]=net_sockets[--nnet_sockets];allow=1;
                 } else if(guards[g].kind==G_NET_LISTEN) {
                     int socket=net_socket(arg1);allow=socket>=0 && net_sockets[socket].bound;
                     printf("%s listen on verified loopback bind\n",allow?"loopback":"STOP");
                 } else if(guards[g].kind==G_NET_ADDRESS) {
-                    DWORD address=arg2,length=arg3;
-                    if(!strcmp(guards[g].name,"sendto")){address=rd32(c.Esp+20);length=rd32(c.Esp+24);}
-                    if(!strcmp(guards[g].name,"WSASendTo")){address=rd32(c.Esp+24);length=rd32(c.Esp+28);}
+                    TADDR address=arg2;DWORD length=(DWORD)arg3;
+                    if(!strcmp(guards[g].name,"sendto")){address=arg_n(&c,5);length=(DWORD)arg_n(&c,6);}
+                    if(!strcmp(guards[g].name,"WSASendTo")){address=arg_n(&c,6);length=(DWORD)arg_n(&c,7);}
                     DWORD prior=0;allow=loopback_address(address,length,&prior);
                     if(allow) {
                         printf("loopback %s address %08lx -> 127.0.0.1\n",guards[g].name,(unsigned long)prior);
@@ -1258,53 +1417,63 @@ int main(int argc, char **argv)
                     if(!allow)printf("STOP unsupported network destination\n");
                 } else if(guards[g].kind==G_NATIVE_ERROR) {
                     static struct {DWORD code;unsigned count;} errors[64];static int nerrors;
-                    int e;for(e=0;e<nerrors && errors[e].code!=arg1;e++);
-                    if(e==nerrors && nerrors<64){errors[e].code=arg1;errors[e].count=0;nerrors++;}
-                    if(e<64){unsigned n=++errors[e].count;if(n<=3 || !(n&(n-1)))printf("native error %08lx count %u (from %s)\n",(unsigned long)arg1,n,m);}
+                    DWORD code=(DWORD)arg1;   /* ESRecordNativeError(unsigned long) */
+                    int e;for(e=0;e<nerrors && errors[e].code!=code;e++);
+                    if(e==nerrors && nerrors<64){errors[e].code=code;errors[e].count=0;nerrors++;}
+                    if(e<64){unsigned n=++errors[e].count;if(n<=3 || !(n&(n-1)))printf("native error %08lx count %u (from %s)\n",(unsigned long)code,n,m);}
                     allow=1;
                 } else if(guards[g].kind==G_EXPERIMENTAL_ENTRY) {
                     printf("experimental hit rva %08lx\n",(unsigned long)(a-exeBase));allow=1;
                 } else if(guards[g].kind==G_RNG_TRACE) {
-                    DWORD physics=rd32(rng_trace_physics);
-                    if(physics && c.Ecx==physics+0x18)
+                    TADDR physics=rdp(rng_trace_physics);
+                    if(physics && R_THIS(&c)==physics+rng_trace_offset) {
+#ifdef _WIN64
+                        /* no frame-pointer chain in x64 code: the caller frame's return and first argument are not logged (0) */
+                        printf("rng %lu ret " AFMT " up %08lx tid %lu arg %08lx id %ld\n",(unsigned long)rd32(R_THIS(&c)),AV(rdp(R_SP(&c))),
+                               0UL,(unsigned long)ev.dwThreadId,0UL,0L);
+#else
                         printf("rng %lu ret %08lx up %08lx tid %lu arg %08lx id %ld\n",(unsigned long)rd32(c.Ecx),(unsigned long)rd32(c.Esp),
                                (unsigned long)rd32(c.Ebp+4),(unsigned long)ev.dwThreadId,(unsigned long)rd32(c.Ebp+8),
                                (long)(rd32(c.Ebp+8)>0x10000 ? rd32(rd32(c.Ebp+8)+0x24) : 0));   /* caller frame's first argument; +0x24 = RTSUnit::mUnitID when it is a unit */
+#endif
+                    }
                     allow=1;
                 } else if(guards[g].kind==G_PT_SYNC) {
                     ptsync_hit(); ptwatch_tick(pth.last_key); allow=1;
                 } else if(guards[g].kind==G_PT_WATCH) {
                     ptwatch_hit(a,&c,ev.dwThreadId); allow=1;
                 } else if(guards[g].kind==G_MUTEX_BYPASS) {
-                    DWORD last=c.Eax;
-                    if(last==183) c.Eax=0;   /* ERROR_ALREADY_EXISTS: another (test) instance holds the mutex */
+                    DWORD last=(DWORD)R_AX(&c);
+                    if(last==183) R_AX(&c)=0;   /* ERROR_ALREADY_EXISTS: another (test) instance holds the mutex */
                     printf("TEST mutex bypass at rva %08lx: GetLastError %lu%s\n",(unsigned long)(a-exeBase),(unsigned long)last,
                            last==183?" (ERROR_ALREADY_EXISTS) -> 0, instance proceeds":last?" (unexpected; left as is)":" (first instance; not needed)");
                     allow=1;
                 } else if(guards[g].kind==G_MP_SKIP) {   /* TEST ONLY (round 40, mp): return at the entry (cdecl, no args) */
-                    DWORD ret=rd32(c.Esp);
+                    TADDR ret=rdp(R_SP(&c));
                     printf("TEST mp skip at rva %08lx (EEStartExternalLobby: external lobby not opened) ret rva %08lx tid %lu\n",
                            (unsigned long)(a-exeBase),(unsigned long)(ret-exeBase),(unsigned long)ev.dwThreadId);
-                    c.Eip=ret;c.Esp+=4;
+                    fake_return(&c,0,KEEP_RESULT);   /* cdecl, no arguments */
                     if(!SetThreadContext(th,&c)){printf("STOP mp skip failed\n");done=1;}
                     break;
                 } else if(guards[g].kind==G_NHD_OUT || guards[g].kind==G_NHD_RESULT) {
                     int out=guards[g].kind==G_NHD_OUT;
-                    DWORD current=rd32(nhd_world+nhd_current_off),local=rd32(nhd_world+nhd_players_off+4*current),ret=rd32(c.Esp);
-                    int skip=out ? (c.Ecx==nhd_world && arg2==current && !(arg1&0xff)) : (local && c.Ecx==local && arg1==2);
+                    /* Fn1391F2(bool victorious, player) / Fn16AF5C(state): member arguments after this */
+                    DWORD m1=(DWORD)marg_n(&c,1),m2=(DWORD)marg_n(&c,2);
+                    DWORD current=rd32(nhd_world+nhd_current_off);TADDR local=rdp(nhd_world+nhd_players_off+PTR*current),ret=rdp(R_SP(&c));
+                    int skip=out ? (R_THIS(&c)==nhd_world && m2==current && !(m1&0xff)) : (local && R_THIS(&c)==local && m1==2);
                     if(nhd_players_mask) {   /* TEST ONLY (round 40, mp): the protected set instead of the local player */
                         skip=0;
-                        if(out)skip=c.Ecx==nhd_world && arg2<32 && ((nhd_players_mask>>arg2)&1) && !(arg1&0xff);
-                        else if(arg1==2)for(DWORD p=0;p<17 && p<32;p++)if(((nhd_players_mask>>p)&1) && rd32(nhd_world+nhd_players_off+4*p)==c.Ecx)skip=1;
+                        if(out)skip=R_THIS(&c)==nhd_world && m2<32 && ((nhd_players_mask>>m2)&1) && !(m1&0xff);
+                        else if(m1==2)for(DWORD p=0;p<17 && p<32;p++)if(((nhd_players_mask>>p)&1) && rdp(nhd_world+nhd_players_off+PTR*p)==R_THIS(&c))skip=1;
                     }
-                    DWORD id=out ? arg2 : 0xffffffff;
-                    if(!out)for(DWORD p=0;p<17;p++)if(rd32(nhd_world+nhd_players_off+4*p)==c.Ecx){id=p;break;}
+                    DWORD id=out ? m2 : 0xffffffff;
+                    if(!out)for(DWORD p=0;p<17;p++)if(rdp(nhd_world+nhd_players_off+PTR*p)==R_THIS(&c)){id=p;break;}
                     printf("TEST no-human-defeat %s %s player %ld (%s %lu; local %lu) ret rva %08lx PT %lu%s\n",skip?"skip":"pass",
                            out?"out Fn1391F2":"result Fn16AF5C",(long)id,out?"victorious":"state",
-                           (unsigned long)(out?(arg1&0xff):arg1),(unsigned long)current,(unsigned long)(ret-exeBase),
+                           (unsigned long)(out?(m1&0xff):m1),(unsigned long)current,(unsigned long)(ret-exeBase),
                            pth.keyed?(unsigned long)pth.last_key:0UL,skip?"":" (not the local player's defeat)");
-                    if(skip) {   /* return at the entry: thiscall, callee pops (ret 8 / ret 4); the guard stays armed */
-                        c.Eip=ret;c.Esp+=out?12:8;
+                    if(skip) {   /* return at the entry: thiscall, callee pops (ret 8 / ret 4; x64: plain ret); the guard stays armed */
+                        fake_return(&c,out?2:1,KEEP_RESULT);
                         if(!SetThreadContext(th,&c)){printf("STOP no-human-defeat skip failed\n");done=1;}
                         break;
                     }
@@ -1313,8 +1482,8 @@ int main(int argc, char **argv)
                     /* NtOpenKey(&h, access, oa) / NtOpenKeyEx(&h, access, oa, options) */
                     char root[600] = "", nm[600] = "", full[1200];
                     int redirected;
-                    target_handle_name(rd32(arg3 + 4), root, sizeof root);
-                    ustr(rd32(arg3 + 8), nm, sizeof nm);
+                    target_handle_name(oa_root(arg3), root, sizeof root);
+                    ustr(oa_name(arg3), nm, sizeof nm);
                     snprintf(full, sizeof full, "%s%s%s", root, root[0] ? "\\" : "", nm);
                     redirected = reg_instance_open(full, &c, arg1, guards[g].kind == G_REG_OPEN ? 3 : 4);
                     if (redirected) {
@@ -1323,23 +1492,25 @@ int main(int argc, char **argv)
                     }
                     allow = 1;   /* any other open: unchanged (opens are not policed) */
                 } else if(guards[g].kind==G_MP_CHECKSUM) {   /* TEST ONLY (round 40, mpengine): eax += delta */
-                    DWORD old=c.Eax;c.Eax=old+mp_checksum_delta;
+                    DWORD old=(DWORD)R_AX(&c);R_AX(&c)=(DWORD)(old+mp_checksum_delta);
                     printf("TEST mp checksum at rva %08lx: gBinaryChecksum %08lx -> %08lx (version suffix .%04lu -> .%04lu)\n",
-                           (unsigned long)(a-exeBase),(unsigned long)old,(unsigned long)c.Eax,(unsigned long)(old&0x1fff),
-                           (unsigned long)(c.Eax&0x1fff));
+                           (unsigned long)(a-exeBase),(unsigned long)old,(unsigned long)(DWORD)R_AX(&c),(unsigned long)(old&0x1fff),
+                           (unsigned long)(R_AX(&c)&0x1fff));
                     allow=1;
                 } else if(guards[g].kind==G_SEED_PIN) {
-                    DWORD at=c.Ecx+seed_pin_offset,old=rd32(at);
-                    allow=c.Ecx && wr32(at,seed_pin_value);
-                    printf("%s seed pin write at %08lx (this %08lx) old %lu new %lu\n",allow?"TEST":"STOP",
-                           (unsigned long)at,(unsigned long)c.Ecx,(unsigned long)old,(unsigned long)seed_pin_value);
+                    TADDR at=R_THIS(&c)+seed_pin_offset;DWORD old=rd32(at);
+                    allow=R_THIS(&c) && wr32(at,seed_pin_value);
+                    printf("%s seed pin write at " AFMT " (this " AFMT ") old %lu new %lu\n",allow?"TEST":"STOP",
+                           AV(at),AV(R_THIS(&c)),(unsigned long)old,(unsigned long)seed_pin_value);
                 } else if(guards[g].kind==G_AUDIO_INITIALIZE) {
                     allow=watch_dd_return(&c,ev.dwThreadId,0,9);
                     if(!allow)printf("STOP cannot watch audio initialization result\n");
                 } else if(guards[g].kind==G_DD_SURFACE || guards[g].kind==G_D3D_DEVICE
                           || guards[g].kind==G_RENDER_ACTIVATE || guards[g].kind==G_RENDER_PRESENT) {
                     int type=guards[g].kind==G_DD_SURFACE ? 3 : guards[g].kind==G_D3D_DEVICE ? 4 : guards[g].kind==G_RENDER_ACTIVATE ? 5 : 6;
-                    if(type==3) printf("ddsurface caps %08lx dimensions %lux%lu depth %lu\n",(unsigned long)rd32(arg2+104),(unsigned long)rd32(arg2+12),(unsigned long)rd32(arg2+8),(unsigned long)rd32(arg2+84));
+                    if(type==3) printf("ddsurface caps %08lx dimensions %lux%lu depth %lu\n",(unsigned long)rd32(arg2+offsetof(DDSURFACEDESC2,ddsCaps)),
+                                       (unsigned long)rd32(arg2+offsetof(DDSURFACEDESC2,dwWidth)),(unsigned long)rd32(arg2+offsetof(DDSURFACEDESC2,dwHeight)),
+                                       (unsigned long)rd32(arg2+offsetof(DDSURFACEDESC2,ddpfPixelFormat)+offsetof(DDPIXELFORMAT,dwRGBBitCount)));
                     if(type==4) printf("d3d device GUID first word %08lx\n",(unsigned long)rd32(arg2));
                     allow=watch_dd_return(&c,ev.dwThreadId,0,type);
                     if(!allow)printf("STOP cannot watch graphics result\n");
@@ -1354,7 +1525,7 @@ int main(int argc, char **argv)
                     allow=1;
                     if(tracked>=0 && guards[g].kind==G_WRITE_FILE)allow=0;
                     if(tracked>=0 && guards[g].kind==G_DEVICE_CONTROL) {
-                        DWORD ctl=rd32(c.Esp+24);
+                        DWORD ctl=(DWORD)arg_n(&c,6);   /* NtDeviceIoControlFile IoControlCode */
                         /* Public hidclass.h GET operations, plus per-handle queue sizing/flush.
                            SET_FEATURE, output reports, device/driver settings stay denied. */
                         const DWORD gets[]={0xb0190,0xb0198,0xb01a0,0xb01a4,0xb01a8,0xb0193,0xb0197,
@@ -1364,16 +1535,17 @@ int main(int argc, char **argv)
                     }
                     if(!allow && guards[g].kind==G_WRITE_FILE)printf("STOP write to virtual input device\n");
                 } else if (guards[g].kind == G_FILE_CREATE || guards[g].kind == G_FILE_OPEN) {
-                    DWORD disp = guards[g].kind == G_FILE_CREATE ? rd32(c.Esp + 32) : 1;
-                    DWORD opts = rd32(c.Esp + (guards[g].kind == G_FILE_CREATE ? 36 : 24));
+                    /* NtCreateFile(.., CreateDisposition 8, CreateOptions 9, ..) / NtOpenFile(.., OpenOptions 6) */
+                    DWORD disp = guards[g].kind == G_FILE_CREATE ? (DWORD)arg_n(&c, 8) : 1;
+                    DWORD opts = (DWORD)arg_n(&c, guards[g].kind == G_FILE_CREATE ? 9 : 6);
                     objname(arg3, s, sizeof s);
                     if(windowed_test && disp==1 && !(opts&0x1000)
                         && !_strnicmp(s,"\\??\\hid#vid_0627&pid_0001#",strlen("\\??\\hid#vid_0627&pid_0001#"))) {
                         arg2 &= ~WRITEISH;
                         /* returning into ARM64 code (CHPE KernelBase), the handle cannot be watched: the
                            read-only access mask still holds, only the ioctl allow-list goes untracked */
-                        int untracked=chpe_arm64(rd32(c.Esp));
-                        if(!wr32(c.Esp+8,arg2) || (!untracked && !watch_dd_return(&c,ev.dwThreadId,arg1,8))) {
+                        int untracked=chpe_arm64(rdp(R_SP(&c)));
+                        if(!set_arg(&c,2,arg2) || (!untracked && !watch_dd_return(&c,ev.dwThreadId,arg1,8))) {
                             printf("STOP cannot constrain virtual input access\n");done=1;break;
                         }
                         printf("input narrowed virtual tablet access to read-only%s\n",
@@ -1388,7 +1560,7 @@ int main(int argc, char **argv)
                     }
                     if(!allow && mp_self_ip && guards[g].kind==G_FILE_CREATE && !_stricmp(s,"\\Device\\RasAcd")) {
                         /* TEST ONLY (round 40, mp): refuse the autodial helper open of gethostbyname; logged */
-                        DWORD ret=rd32(c.Esp);c.Eax=0xC0000022;c.Eip=ret;c.Esp+=4+11*4;
+                        fake_return(&c,11,0xC0000022);   /* NtCreateFile -> STATUS_ACCESS_DENIED */
                         printf("TEST mp refused NtCreateFile %s (gethostbyname autodial helper, from %s): STATUS_ACCESS_DENIED\n",s,m);
                         if(!SetThreadContext(th,&c)){printf("STOP mp refusal failed\n");done=1;}
                         break;
@@ -1396,28 +1568,28 @@ int main(int argc, char **argv)
                     if(!allow && shader_cache(s)) {
                         /* the D3D12 runtime's shader cache (the renderer runs on wgpu's DX12 backend): refused, so
                            nothing persistent is written; D3D12 then works without a disk cache. Logged. */
-                        DWORD ret=rd32(c.Esp);c.Eax=0xC0000022;c.Eip=ret;
-                        c.Esp+=4+(guards[g].kind==G_FILE_CREATE?11:6)*4;
+                        fake_return(&c,guards[g].kind==G_FILE_CREATE?11:6,0xC0000022);   /* STATUS_ACCESS_DENIED */
                         printf("refused %s %s (D3D shader cache, from %s): STATUS_ACCESS_DENIED\n",guards[g].name,s,m);
                         if(!SetThreadContext(th,&c)){printf("STOP shader cache refusal failed\n");done=1;}
                         break;
                     }
                     printf("%s %s access %08lx disp %lu: %s (from %s)\n", ro ? "open" : allow ? "write" : "STOP",
                            guards[g].name,
-                           (unsigned long)arg2, (unsigned long)disp, s, m);
+                           (unsigned long)(DWORD)arg2, (unsigned long)disp, s, m);
                 } else if (guards[g].kind == G_WINDOW) {
                     /* NtUserCreateWindowEx(exstyle, LARGE_STRING *class, *clsversion, *name, style, x, y, cx, cy,
                        parent, ...): message-only windows (parent HWND_MESSAGE, e.g. OLE's) are allowed and logged;
                        any other window stops the run (the boot milestone "first window") */
                     char cls[256] = "", name[256] = "";
-                    DWORD parent = rd32(c.Esp + 40), style = rd32(c.Esp + 20);
+                    DWORD parent = (DWORD)arg_n(&c, 10), style = (DWORD)arg_n(&c, 5);   /* an HWND's significant 32 bits */
                     int k2;
                     for (k2 = 0; k2 < 2; k2++) {
-                        DWORD ls = rd32(c.Esp + (k2 ? 16 : 8)), len, flags, buf;
+                        /* LARGE_STRING {ULONG Length; ULONG MaximumLength:31, bAnsi:1; PVOID Buffer} (native layout) */
+                        TADDR ls = arg_n(&c, k2 ? 4 : 2), buf; DWORD len, flags;
                         char *out = k2 ? name : cls;
                         if (!ls) continue;
                         if (ls < 0x10000) { sprintf(out, "#%lu", (unsigned long)ls); continue; }
-                        len = rd32(ls); flags = rd32(ls + 4); buf = rd32(ls + 8);
+                        len = rd32(ls); flags = rd32(ls + 4); buf = rdp(ls + 8);
                         if (len > 254) len = 254;
                         if (flags & 0x80000000u) { rd(buf, out, len); out[len] = 0; }
                         else {
@@ -1442,11 +1614,11 @@ int main(int argc, char **argv)
                     /* NtCreateKey(&h, access, oa, titleindex, class, options, &disposition) */
                     char root[600] = "", nm[600] = "", full[1200];
                     int cls;
-                    target_handle_name(rd32(arg3 + 4), root, sizeof root);
-                    ustr(rd32(arg3 + 8), nm, sizeof nm);
+                    target_handle_name(oa_root(arg3), root, sizeof root);
+                    ustr(oa_name(arg3), nm, sizeof nm);
                     snprintf(full, sizeof full, "%s%s%s", root, root[0] ? "\\" : "", nm);
                     {
-                        int redirected = reg_instance_create(full, &c, arg1, rd32(c.Esp + 28), rd32(c.Esp + 24));
+                        int redirected = reg_instance_create(full, &c, arg1, arg_n(&c, 7), (DWORD)arg_n(&c, 6));
                         if (redirected) {
                             if (redirected < 0 || !SetThreadContext(th, &c)) {
                                 printf("STOP instance registry redirection failed\n");
@@ -1456,7 +1628,7 @@ int main(int argc, char **argv)
                         }
                     }
                     {
-                        int redirected = redirect_ddraw_key(full, &c, arg1, rd32(c.Esp + 28));
+                        int redirected = redirect_ddraw_key(full, &c, arg1, arg_n(&c, 7));
                         if (redirected) {
                             if (redirected < 0 || !SetThreadContext(th, &c)) {
                                 printf("STOP DirectDraw bookkeeping redirection failed\n");
@@ -1470,12 +1642,12 @@ int main(int argc, char **argv)
                     cls = reg_class(full);
                     if (cls) {
                         allow = 1;
-                        printf("regcreate %s (access %08lx)\n", full, (unsigned long)arg2);
+                        printf("regcreate %s (access %08lx)\n", full, (unsigned long)(DWORD)arg2);
                     } else if (!(arg2 & KEY_WRITEISH) && reg_exists(full)) {
                         allow = 1;   /* an existing key opened read-only: nothing is created */
                         printf("regopen %s (from %s)\n", full, m);
                     } else
-                        printf("STOP NtCreateKey %s access %08lx (from %s)\n", full, (unsigned long)arg2, m);
+                        printf("STOP NtCreateKey %s access %08lx (from %s)\n", full, (unsigned long)(DWORD)arg2, m);
                 } else if (guards[g].kind == G_REG_HANDLE) {
                     /* NtSetValueKey(h, name, ...) / NtDeleteValueKey(h, name) / NtDeleteKey(h) */
                     char key[600] = "", val[300] = "";
@@ -1483,7 +1655,7 @@ int main(int argc, char **argv)
                     if (strcmp(guards[g].name, "NtDeleteKey")) ustr(arg2, val, sizeof val);
                     allow = reg_class(key) == 2;
                     if (allow && !strcmp(guards[g].name, "NtSetValueKey")) {
-                        DWORD type = rd32(c.Esp + 16), data = rd32(c.Esp + 20), size = rd32(c.Esp + 24);
+                        DWORD type = (DWORD)arg_n(&c, 4), size = (DWORD)arg_n(&c, 6); TADDR data = arg_n(&c, 5);
                         printf("regset %s [%s] type %lu size %lu%s", key, val, (unsigned long)type, (unsigned long)size,
                                type == REG_DWORD ? "" : "\n");
                         if (type == REG_DWORD) printf(" = %lu\n", (unsigned long)rd32(data));
@@ -1491,16 +1663,16 @@ int main(int argc, char **argv)
                         printf("%s %s %s [%s] (from %s)\n", allow ? "regwrite" : "STOP", guards[g].name, key, val, m);
                 } else if (guards[g].kind == G_DD_COOP) {
                     /* SetCooperativeLevel(this, hwnd, flags): exclusive/fullscreen would take the display */
-                    allow = !(arg3 & (DDSCL_FULLSCREEN | DDSCL_EXCLUSIVE));
+                    allow = !((DWORD)arg3 & (DDSCL_FULLSCREEN | DDSCL_EXCLUSIVE));
                     if(windowed_test && allow) {
                         char cls[128]={0};GetClassNameA((HWND)arg2,cls,sizeof cls);
                         if(!strcmp(cls,"Empire Earth Expansion")) {game_windowed_capture=1;printf("checkpoint game window uses nonexclusive capture\n");}
                         allow=watch_dd_return(&c,ev.dwThreadId,0,7);
                     }
                     printf("%s IDirectDraw::SetCooperativeLevel flags %08lx (from %s)\n", allow ? "ddcoop" : "STOP",
-                           (unsigned long)arg3, m);
+                           (unsigned long)(DWORD)arg3, m);
                 } else if (guards[g].kind == G_SETINFO) {
-                    DWORD cls = rd32(c.Esp + 20);
+                    DWORD cls = (DWORD)arg_n(&c, 5);
                     /* only a handle opened with write/delete access can change a file, and those opens are
                        confined to the staging directory by the guard above */
                     allow = 1;
@@ -1514,9 +1686,9 @@ int main(int argc, char **argv)
                                                              in every running game at once on a desktop-wide settings change;
                                                              it stopped four MP sessions mid-game at the same instant */
                     unsigned i;
-                    for (i = 0; i < sizeof gets / sizeof *gets; i++) allow |= arg1 == gets[i];
+                    for (i = 0; i < sizeof gets / sizeof *gets; i++) allow |= (DWORD)arg1 == gets[i];
                     printf("%s SystemParametersInfo action %#lx (from %s)\n", allow ? "spi " : "STOP",
-                           (unsigned long)arg1, m);
+                           (unsigned long)(DWORD)arg1, m);
                 } else if (guards[g].kind == G_MSGBOX_A || guards[g].kind == G_MSGBOX_W) {
                     char t[512] = "", cap[256] = "";
                     if (guards[g].kind == G_MSGBOX_A) { rd(arg2, t, sizeof t - 1); rd(arg3, cap, sizeof cap - 1); }
@@ -1528,7 +1700,7 @@ int main(int argc, char **argv)
                     printf("STOP %s: \"%s\" [%s] (from %s)\n", guards[g].name, t, cap, m);
                 } else {
                     if(!strcmp(guards[g].name,"abort")) {
-                        for(k=0;k<24;k++){char caller[128];mod_of(rd32(c.Esp+4*k),caller,sizeof caller);printf("  abort stack+%02x %s\n",k*4,caller);}
+                        for(k=0;k<24;k++){char caller[128];mod_of(rdp(R_SP(&c)+PTR*k),caller,sizeof caller);printf("  abort stack+%02x %s\n",k*PTR,caller);}
                     }
                     if (!strncmp(guards[g].name, "NtCreateKey", 11) || !strcmp(guards[g].name, "NtCreateFile"))
                         objname(arg3, s, sizeof s);
@@ -1538,13 +1710,13 @@ int main(int argc, char **argv)
                 }
                 if (!allow) { done = 1; break; }
                 if (trace_once && guards[g].kind == G_EXPERIMENTAL_ENTRY) {   /* opt-in: first entry only, no re-arm */
-                    wr8(a, guards[g].orig); c.Eip = a; SetThreadContext(th, &c);
+                    wr8(a, guards[g].orig); R_IP(&c) = a; SetThreadContext(th, &c);
                     guards[g] = guards[--nguards];
                     break;
                 }
                 /* step over: original byte back, eip back to the call, trap flag; re-arm on the single step */
                 wr8(a, guards[g].orig);
-                c.Eip = a;
+                R_IP(&c) = a;
                 c.EFlags |= 0x100;
                 SetThreadContext(th, &c);
                 rearm = a;
@@ -1561,7 +1733,7 @@ int main(int argc, char **argv)
             char t[256] = "";
             WORD n = ev.u.DebugString.nDebugStringLength;
             if (!ev.u.DebugString.fUnicode) {
-                rd((DWORD)ev.u.DebugString.lpDebugStringData, t, n < sizeof t - 1 ? n : sizeof t - 1);
+                rd((TADDR)ev.u.DebugString.lpDebugStringData, t, n < sizeof t - 1 ? n : sizeof t - 1);
                 printf("debugstring %s", t);
                 if (!strchr(t, '\n')) printf("\n");
             }
