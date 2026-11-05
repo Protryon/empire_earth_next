@@ -16,7 +16,11 @@
   python -I tools/eedata/eedata.py specs [--check]                  regenerate tools/eedata/specs.json
   python -I tools/eedata/eedata.py cppgen [--check]                 regenerate the C++ spec header
   python -I tools/eedata/eedata.py cppgate [--ssa PATH | --db DIR] [--out DIR] [-j N]
-                                    build the C++ text compiler test and run it over every exported table
+                                    build the C++ text compiler test and run it over every exported table; also
+                                    gate G1: the content dump of the .dat files equals that of the text tables
+  python -I tools/eedata/eedata.py extra TEXTDIR OUT [--units N] [--effects]
+                                    a scratch copy of the text tables with content past the original caps (the cap
+                                    tests: extra.py)
 
 Game data is never written into the repository. --ssa defaults to $EE_DATA_SSA, else the AoC install's
 Data/data.ssa. The text carries only what the game reads: fields nothing reads are left out (the importer writes
@@ -174,6 +178,11 @@ def main():
     p.add_argument('--check', action='store_true')
     p = sub.add_parser('cppgen')
     p.add_argument('--check', action='store_true')
+    p = sub.add_parser('extra')
+    p.add_argument('text')
+    p.add_argument('out')
+    p.add_argument('--units', type=int, default=0)
+    p.add_argument('--effects', action='store_true')
     p = sub.add_parser('cppgate')
     src(p)
     p.add_argument('--out', help='build/output folder (default build/eedata-cppgate)')
@@ -190,6 +199,10 @@ def main():
     if a.cmd == 'census':
         import census
         sys.exit(census.run(a, spec))
+    if a.cmd == 'extra':
+        import extra
+        outside_repo(a.out)
+        sys.exit(extra.run(a))
     if a.cmd == 'cppgate':
         import cppgate
         sys.exit(cppgate.run(a, spec, load_db))
