@@ -2,7 +2,7 @@
 // binary db file. New unit (not in the original game). Portable C++17: no platform or engine headers.
 // UNIT-FLAGS: -EHsc
 // The grammar and every rule mirror tools/eedata (textio.py, scalars.py, tables.py, binfmt.py); keep them in step.
-// The gate is tools/eedata/eedata.py cppgate: every exported AoC table compiles here to the identical .dat bytes.
+// The gate is tools/eedata/eedata.py cppgate: every exported AoC table compiles here to the Python importer's bytes.
 #include "EEDataText.h"
 #include "EEDataTextSpecs.h"
 
@@ -562,7 +562,7 @@ Csv ParseCsv(const std::string& inText)
 
 // ------------------------------------------------------------------------------------------------ scalars
 
-const unsigned long kTypeSize[] = {1, 1, 1, 2, 2, 4, 4, 4, 8, 1, 1, 1};
+const unsigned long kTypeSize[] = {1, 1, 1, 2, 2, 4, 4, 4, 8, 1};
 
 void IntRange(unsigned char t, long long& lo, long long& hi, int& width)
 {
@@ -740,27 +740,6 @@ std::string EncodeText(const std::string& inText)
     return out;
 }
 
-// hex pairs -> bytes; inSize: pad with zeros to it (0: as long as the text)
-std::string ParseHex(const std::string& inText, size_t inSize, bool inPad)
-{
-    std::string s = Trim(inText);
-    if (s.size() % 2)
-        Fail("'" + s.substr(0, 40) + "' is not hex (pairs of hex digits)");
-    std::string out;
-    for (size_t i = 0; i < s.size(); i += 2) {
-        int a = HexDigit(s[i]), b = HexDigit(s[i + 1]);
-        if (a < 0 || b < 0)
-            Fail("'" + s.substr(0, 40) + "' is not hex (pairs of hex digits)");
-        out += (char)(a * 16 + b);
-    }
-    if (inPad) {
-        if (out.size() > inSize)
-            Fail(Num(out.size()) + " bytes of hex, the field has " + Num(inSize));
-        out.resize(inSize, '\0');
-    }
-    return out;
-}
-
 // ------------------------------------------------------------------------------------------------ records
 
 struct Getter {
@@ -853,46 +832,30 @@ std::string Text(const Node* v, const std::string& where, const char* name)
     }
 }
 
-std::string Hex(const Node* v, size_t n, bool pad, const std::string& where, const std::string& name)
+// a record's bytes from the spec (0: all zero)
+std::vector<unsigned char> Record(const char* inBytes, unsigned long inSize)
 {
-    if (!v)
-        return pad ? std::string(n, '\0') : std::string();
-    const std::string& t = ScalarText(v, where, name.c_str(), "hex");
-    try {
-        return ParseHex(t, n, pad);
-    } catch (Failure& e) {
-        Fail(where + ": " + name + ": " + e.mText);
-    }
+    std::vector<unsigned char> out(inSize, 0);
+    if (inBytes)
+        memcpy(out.data(), inBytes, inSize);
+    return out;
 }
 
+// the record: the struct's base (zero + the defaults of the fields the game never reads), then every field the
+// text carries (a missing one is zero)
 std::vector<unsigned char> BuildRecord(const EEDTStruct& st, Getter& g)
 {
-    std::vector<unsigned char> buf(st.mSize, 0);
+    std::vector<unsigned char> buf = Record(st.mBase, st.mSize);
     for (unsigned long fi = 0; fi < st.mFieldCount; fi++) {
         const EEDTField& f = st.mFields[fi];
         std::string name = f.mName;
         if (f.mType == kEEDT_str) {
             std::string text = Text(g.Get(name), g.mWhere, f.mName);
-            std::string tail = Hex(g.Get(name + "~tail"), 0, false, g.mWhere, name + "~tail");
-            const Node* raw = g.Get(name + "~raw");
-            if (raw) {   // bytes with no NUL (exported as hex)
-                if (!text.empty() || !tail.empty())
-                    Fail(g.mWhere + ": " + name + "~raw: and a text or tail too");
-                std::string b = Hex(raw, f.mCount, true, g.mWhere, name + "~raw");
-                memcpy(&buf[f.mOffset], b.data(), f.mCount);
-                continue;
-            }
             if (text.size() >= f.mCount)
                 Fail(g.mWhere + ": " + name + ": " + Num(text.size()) + " bytes, the field holds " +
                      Num(f.mCount - 1) + " (+ NUL)");
-            if (!tail.empty() && text.size() + 1 + tail.size() > f.mCount)
-                Fail(g.mWhere + ": " + name + "~tail: " + Num(tail.size()) + " bytes do not fit after the text");
+            memset(&buf[f.mOffset], 0, f.mCount);
             memcpy(&buf[f.mOffset], text.data(), text.size());
-            if (!tail.empty())
-                memcpy(&buf[f.mOffset + text.size() + 1], tail.data(), tail.size());
-        } else if (f.mType == kEEDT_raw || f.mType == kEEDT_pad) {
-            std::string b = Hex(g.Get(name), f.mCount, true, g.mWhere, name);
-            memcpy(&buf[f.mOffset], b.data(), f.mCount);
         } else if (f.mType == kEEDT_pair_f32) {
             std::vector<const Node*> e = Elems(g.Get(name), f.mCount, g.mWhere, f.mName);
             for (size_t k = 0; k < f.mCount; k++) {
@@ -1064,13 +1027,13 @@ void Put32(std::vector<unsigned char>& out, uint32_t v)
 
 struct Writer {
     const EEDTTable& mTable;
-    const std::vector<unsigned char>* mHole;
+    const std::vector<unsigned char>& mHole;
     std::vector<unsigned char>& mOut;
     unsigned long mLeadCount;
 
     void Record(const Row& r)
     {
-        const std::vector<unsigned char>& rec = r.mHole ? this->Hole() : r.mRec;
+        const std::vector<unsigned char>& rec = r.mHole ? this->mHole : r.mRec;
         this->mOut.insert(this->mOut.end(), rec.begin(), rec.end());
     }
     void List(const Row& r)
@@ -1087,12 +1050,6 @@ struct Writer {
             Put32(this->mOut, (uint32_t)s.size());
             this->mOut.insert(this->mOut.end(), s.begin(), s.end());
         }
-    }
-    const std::vector<unsigned char>& Hole()
-    {
-        if (!this->mHole)
-            Fail(std::string(this->mTable.mName) + ": rows missing but no hole template");
-        return *this->mHole;
     }
 };
 
@@ -1135,11 +1092,7 @@ std::vector<std::string> CsvColumns(const EEDTTable& t)
     for (unsigned long fi = 0; fi < st.mFieldCount; fi++) {
         const EEDTField& f = st.mFields[fi];
         std::string name = f.mName;
-        if (f.mType == kEEDT_str) {
-            cols.push_back(name);
-            cols.push_back(name + "~tail");
-            cols.push_back(name + "~raw");
-        } else if (f.mType == kEEDT_raw || f.mType == kEEDT_pad || f.mCount == 1) {
+        if (f.mType == kEEDT_str || f.mCount == 1) {
             cols.push_back(name);
         } else if (f.mType == kEEDT_pair_f32) {
             for (unsigned long k = 0; k < f.mCount; k++)
@@ -1210,8 +1163,8 @@ void CompileTable(const EEDTTable& t, const std::string& inText, std::vector<uns
     Node doc;
     Node csvRecords;
     std::map<std::string, std::string> directives;
-    const Node* head[6] = {};   // eedata format mode rows hole header
-    static const char* const kHead[6] = {"eedata", "format", "mode", "rows", "hole", "header"};
+    const Node* head[3] = {};   // eedata format rows
+    static const char* const kHead[3] = {"eedata", "format", "rows"};
     std::vector<Node> headNodes;
     if (t.mYaml) {
         doc = ParseYaml(inText);
@@ -1224,7 +1177,7 @@ void CompileTable(const EEDTTable& t, const std::string& inText, std::vector<uns
             if (!ok)
                 Fail(name + ": unknown top-level key " + k);
         }
-        for (int i = 0; i < 6; i++)
+        for (int i = 0; i < 3; i++)
             head[i] = doc.Find(kHead[i]);
     } else {
         Csv csv = ParseCsv(inText);
@@ -1235,8 +1188,8 @@ void CompileTable(const EEDTTable& t, const std::string& inText, std::vector<uns
             if (!ok)
                 Fail(name + ": unknown directive " + d.first);
         }
-        headNodes.resize(6);
-        for (int i = 0; i < 6; i++) {
+        headNodes.resize(3);
+        for (int i = 0; i < 3; i++) {
             std::map<std::string, std::string>::const_iterator it = csv.mDirectives.find(kHead[i]);
             if (it != csv.mDirectives.end()) {
                 headNodes[i] = Scalar(it->second, true, 0);
@@ -1266,23 +1219,9 @@ void CompileTable(const EEDTTable& t, const std::string& inText, std::vector<uns
     if (head[1] && (head[1]->mKind != Node::kScalar || head[1]->mText != Num(EEDT_FORMAT_VERSION)))
         Fail(name + ": format " + (head[1]->mKind == Node::kScalar ? head[1]->mText : std::string("?")) +
              ", this loader reads format " + Num(EEDT_FORMAT_VERSION));
-    std::vector<unsigned char> hole;
-    bool hasHole = false;
-    if (Present(head[4])) {
-        std::string h = Hex(head[4], 0, false, name, "hole");
-        if (h.size() != st.mSize)
-            Fail(name + ": the hole template has " + Num(h.size()) + " bytes, the record " + Num(st.mSize));
-        hole.assign(h.begin(), h.end());
-        hasHole = true;
-    }
-    long header = 0;
-    if (t.mContainer == kEEDTC_header) {
-        if (!head[5])
-            Fail(name + ": the header word is missing");
-        header = HeadInt(head[5], "header", name);
-    }
-    long total = Present(head[3]) ? HeadInt(head[3], "rows", name) : 0;
-    Writer w{t, hasHole ? &hole : nullptr, out, LeadCount(t)};
+    long total = Present(head[2]) ? HeadInt(head[2], "rows", name) : 0;
+    std::vector<unsigned char> hole = Record(t.mHole, st.mSize);
+    Writer w{t, hole, out, LeadCount(t)};
     out.clear();
     if (t.mContainer == kEEDTC_techtree) {
         const Node* eps = doc.Find("epochs");
@@ -1320,10 +1259,6 @@ void CompileTable(const EEDTTable& t, const std::string& inText, std::vector<uns
     std::vector<Row> rows = PlaceRows(t, records, total, name);
     if (t.mContainer == kEEDTC_count || t.mContainer == kEEDTC_lead)
         Put32(out, (uint32_t)rows.size());
-    else if (t.mContainer == kEEDTC_header) {
-        Put32(out, (uint32_t)header);
-        Put32(out, (uint32_t)rows.size());
-    }
     for (const Row& r : rows) {
         if (t.mContainer == kEEDTC_lead)
             w.Lead(r);

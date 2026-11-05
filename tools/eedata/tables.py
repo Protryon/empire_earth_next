@@ -1,11 +1,12 @@
-"""db file <-> text: the record fields as keys/columns, the containers as document structure.
+"""db file <-> text: the fields the game reads as keys/columns, the containers as document structure.
 
-Text model (both containers): a record is a mapping key -> value. Keys: `row` (the row position, checked; empty
-or absent = the next position), `label` (text-only checked alias, tables in ROW_NAMES), the lead strings, every
-record field by its spec name, `<str field>~tail` (hex of the bytes after the NUL; exact mode, only when not
-zero; `<str field>~raw` instead of the text when the bytes hold no NUL),pad fields (exact mode, only when not zero), and the trailing list (`effects`, `parents`). Arrays are YAML
-flow sequences (trailing zero elements left out) or CSV columns name[i] (pairs: name[i][0], name[i][1]).
-A missing key or an empty cell is zero (empty string). Rows not listed are holes: copies of the `hole` template.
+Text model (both containers): a record is a mapping key -> value. Keys: `row` (the row position, checked; empty or
+absent = the next position), `label` (the row's name: text only, the game never reads it; dbworld's labels are the
+constants' names and are checked), the lead strings, every field the game reads by its spec name, and the trailing
+list (`effects`, `parents`). Arrays are YAML flow sequences (trailing zero elements left out) or CSV columns name[i]
+(pairs: name[i][0], name[i][1]). A missing key or an empty cell is zero (empty string). Fields the game never reads
+are not in the text; the importer writes the struct's defaults (zero unless specs.json says otherwise). Rows not
+listed are holes (empty database rows): the importer writes the table's hole record there.
 """
 import re
 
@@ -15,48 +16,36 @@ from binfmt import FormatError, Row, Table, Epoch
 from scalars import ValueError_
 from textio import Scalar, Text, TextError, emit_csv, emit_yaml, parse_csv, parse_yaml
 
-MODES = ('exact', 'clean')
 COLUMN = re.compile(r'^([^\[\]]+)((?:\[\d+\])*)$')
 
 
 def _zero_value(f, v):
     """True when a decoded element is all zero bytes."""
-    t = f['type']
-    if t == 'pair_f32':
-        return v == [0, 0]
-    return v == 0
+    return v == [0, 0] if f['type'] == 'pair_f32' else v == 0
 
 
 # ---------------------------------------------------------------- record -> text values
 
 def _scalar_text(f, v):
     t = f['type']
-    if t in ('f32',):
+    if t == 'f32':
         return scalars.format_f32(v)
     if t == 'pair_f32':
         return [scalars.format_f32(x) for x in v]
     return scalars.format_int(v)
 
 
-def record_items(fields, rec, mode, yaml):
-    """[(key, value)] of a record; value: str (plain), Text (quoted), list (flow) or None (CSV: per element)."""
+def record_items(fields, rec, yaml, only=None):
+    """[(key, value)] of a record's exported fields; value: str (plain), Text (quoted) or list (flow).
+    only: the field names to write (dbworld: the values its row's readers use); the others are left out."""
     out = []
-    for f in fields:
+    for f in binfmt.exported(fields):
         t, n, name = f['type'], f['count'], f['name']
+        if only is not None and name not in only:
+            continue
         v = binfmt.field_value(f, rec)
         if t == 'str':
-            text, tail = v
-            if len(text) == n:   # no NUL: not a string the game can read; kept as bytes (never in AoC rows)
-                out.append((name + '~raw', Text(scalars.format_hex(text, trim=False))))
-                continue
-            out.append((name, Text(scalars.decode_str(text))))
-            if mode == 'exact' and tail.rstrip(b'\0'):
-                out.append((name + '~tail', Text(scalars.format_hex(tail))))
-        elif t == 'raw':
-            out.append((name, Text(scalars.format_hex(v))))
-        elif t == 'pad':
-            if mode == 'exact' and v.rstrip(b'\0'):
-                out.append((name, Text(scalars.format_hex(v))))
+            out.append((name, Text(scalars.decode_str(v[0][:n - 1]))))
         elif n == 1:
             out.append((name, _scalar_text(f, v)))
         else:
@@ -88,14 +77,14 @@ def lead_items(tspec, lead):
     return out
 
 
-def row_items(tspec, fields, r, mode, yaml, pos=None, label=None):
+def row_items(tspec, fields, r, yaml, pos=None, label=None, only=None):
     items = []
     if pos is not None:
         items.append(('row', str(pos)))
     if label is not None:
         items.append(('label', Text(label)))
     items += lead_items(tspec, r.lead)
-    items += record_items(fields, r.rec, mode, yaml)
+    items += record_items(fields, r.rec, yaml, only)
     if 'list' in tspec:
         items.append((tspec['list'][0], [str(x) for x in r.lst]))
     return items
@@ -164,39 +153,18 @@ def _text(v, where, name):
         raise TextError(f'{where}: {name}: {e}') from None
 
 
-def _hex(v, n, where, name):
-    if v is None:
-        return bytes(n) if n is not None else b''
-    if isinstance(v, (list, dict)):
-        raise TextError(f'{where}: {name}: a list where hex belongs')
+def build_record(fields, base, g):
+    """The record bytes: base (the struct's defaults) with every exported field set from the text (missing = 0)."""
+    buf = bytearray(base)
     try:
-        return scalars.parse_hex(v, n)
-    except ValueError_ as e:
-        raise TextError(f'{where}: {name}: {e}') from None
-
-
-def build_record(fields, size, g):
-    buf = bytearray(size)
-    try:
-        for f in fields:
+        for f in binfmt.exported(fields):
             t, n, name = f['type'], f['count'], f['name']
             if t == 'str':
                 text = _text(g.get(name), g.where, name)
-                tail = _hex(g.get(name + '~tail'), None, g.where, name + '~tail')
-                raw = g.get(name + '~raw')
-                if raw is not None:
-                    if text or tail:
-                        raise TextError(f'{g.where}: {name}~raw: and a text or tail too')
-                    binfmt.put_field(dict(f, type='raw'), buf, _hex(raw, n, g.where, name + '~raw'))
-                    continue
                 if len(text) >= n:
-                    raise TextError(f'{g.where}: {name}: {len(text)} bytes, the field holds {n - 1} '
-                                    f'(+ NUL)')
-                if tail and len(text) + 1 + len(tail) > n:
-                    raise TextError(f'{g.where}: {name}~tail: {len(tail)} bytes do not fit after the text')
-                binfmt.put_field(f, buf, (text, tail))
-            elif t in ('raw', 'pad'):
-                binfmt.put_field(f, buf, _hex(g.get(name), n, g.where, name))
+                    raise TextError(f'{g.where}: {name}: {len(text)} bytes, the field holds {n - 1} (+ NUL)')
+                buf[f['off']:f['off'] + n] = bytes(n)
+                binfmt.put_field(f, buf, (text, b''))
             elif n == 1:
                 binfmt.put_field(f, buf, _num(f, g.get(name), g.where))
             else:
@@ -242,13 +210,14 @@ def build_list(tspec, g):
         raise TextError(f'{g.where}: {name}: {e}') from None
 
 
-def build_row(tspec, fields, size, m, where, table, pos, row_names):
+def build_row(tspec, fields, base, m, where, pos, row_names):
     g = _Getter(m, where)
     g.get('row')
-    label = g.get('label')
-    if label is not None and label != '' and pos in row_names and label != row_names[pos]:
-        raise TextError(f'{where}: label {label!r} does not match row {pos} ({row_names[pos]!r})')
-    r = Row(build_record(fields, size, g), build_lead(tspec, g), build_list(tspec, g) if 'list' in tspec else [])
+    if row_names:   # the label is the constant's name: checked
+        label = g.get('label')
+        if label is not None and label != '' and pos in row_names and label != row_names[pos]:
+            raise TextError(f'{where}: label {label!r} does not match row {pos} ({row_names[pos]!r})')
+    r = Row(build_record(fields, base, g), build_lead(tspec, g), build_list(tspec, g) if 'list' in tspec else [])
     g.leftover()
     return r
 
@@ -274,7 +243,7 @@ def _positions(records, where):
     return out
 
 
-def _place(placed, total, where):
+def _place(placed, total):
     n = max([total] + [p + 1 for p, _ in placed])
     rows = [None] * n
     for p, r in placed:
@@ -288,57 +257,48 @@ def _row_names(spec, name):
     return {int(k): v for k, v in spec.get('row_names', {}).get(name, {}).items()}
 
 
-def export(name, data, spec, mode='exact'):
+def _row_fields(tspec):
+    return {int(k): set(v) for k, v in tspec.get('row_fields', {}).items()}
+
+
+def export(name, data, spec):
     """db file bytes -> text (UTF-8 bytes, LF)."""
-    if mode not in MODES:
-        raise ValueError(mode)
     tspec = spec['tables'][name]
     st = spec['structs'][tspec['struct']]
     fields = st['fields']
     t = binfmt.detect_holes(binfmt.parse(name, data, spec), spec)
-    if mode == 'clean':
-        binfmt.clean_table(t, spec)
     names = _row_names(spec, name)
-    head = [('eedata', name), ('format', str(spec['format'])), ('mode', mode)]
-    if t.header is not None:
-        head.append(('header', str(t.header)))
+    only = _row_fields(tspec)
+    if names:   # rows without a name have no reader: left out (holes)
+        t.rows = [r if i in names else None for i, r in enumerate(t.rows)]
+    head = [('eedata', name), ('format', str(spec['format']))]
     if t.epochs is None:
         head.append(('rows', str(len(t.rows))))
-    if t.hole is not None:
-        head.append(('hole', Text(scalars.format_hex(t.hole, trim=False))))
     yaml = tspec['format'] == 'yaml'
     if yaml:
         doc = dict(head)
         if t.epochs is not None:
             doc['epochs'] = [{'slots': str(len(e.nodes)),
-                              'epoch': dict(row_items(tspec, fields, e.epoch, mode, True)),
-                              'nodes': [dict(row_items(tspec, fields, r, mode, True, pos=i))
+                              'epoch': dict(row_items(tspec, fields, e.epoch, True)),
+                              'nodes': [dict(row_items(tspec, fields, r, True, pos=i))
                                         for i, r in enumerate(e.nodes) if r is not None]}
                              for e in t.epochs]
         else:
-            doc['records'] = [dict(row_items(tspec, fields, r, mode, True, pos=i,
-                                             label=names.get(i) if names else None))
+            doc['records'] = [dict(row_items(tspec, fields, r, True, pos=i, label=names.get(i)))
                               for i, r in enumerate(t.rows) if r is not None]
         banner = (f'# {name}: Empire Earth: The Art of Conquest db table (tools/eedata; record layout '
                   f'{tspec["struct"]}, {st["size"]} bytes, in tools/eedata/specs.json)\n')
         return (banner + emit_yaml(doc)).encode('utf-8')
-    # CSV: flatten every row, then the union of the columns in a fixed order
     flat_rows = []
     for i, r in enumerate(t.rows):
         if r is None:
             continue
         flat = {}
-        for k, v in row_items(tspec, fields, r, mode, False, pos=i, label=names.get(i) if names else None):
+        for k, v in row_items(tspec, fields, r, False, pos=i, label=names.get(i), only=only.get(i)):
             _flatten(k, v, flat)
         flat_rows.append(flat)
-    cols = csv_columns(tspec, fields, mode, names)
-    present = set(k for fr in flat_rows for k in fr)
-    optional = set(c for c in cols if c.endswith(('~tail', '~raw')) or c.startswith('pad_0x'))
-    cols = [c for c in cols if c not in optional or c in present]
-    extra = present - set(cols)
-    assert not extra, extra
-    directives = [(k, v) for k, v in head]
-    return emit_csv(directives, cols, [[fr.get(c, '') for c in cols] for fr in flat_rows]).encode('utf-8')
+    cols = csv_columns(tspec, fields, names)
+    return emit_csv(head, cols, [[fr.get(c, '') for c in cols] for fr in flat_rows]).encode('utf-8')
 
 
 def _flatten(k, v, out):
@@ -349,7 +309,7 @@ def _flatten(k, v, out):
         out[k] = str(v)
 
 
-def csv_columns(tspec, fields, mode, names):
+def csv_columns(tspec, fields, names):
     cols = ['row'] + (['label'] if names else [])
     for spec in tspec.get('lead', []):
         if '|' in spec:
@@ -361,11 +321,9 @@ def csv_columns(tspec, fields, mode, names):
             cols += [f'{a}[{k}]' for k in range(int(n))]
         else:
             cols.append(spec)
-    for f in fields:
+    for f in binfmt.exported(fields):
         t, n, name = f['type'], f['count'], f['name']
-        if t == 'str':
-            cols += [name, name + '~tail', name + '~raw']
-        elif t in ('raw', 'pad') or n == 1:
+        if t == 'str' or n == 1:
             cols.append(name)
         elif t == 'pair_f32':
             cols += [f'{name}[{k}][{j}]' for k in range(n) for j in range(2)]
@@ -387,7 +345,8 @@ def import_(name, text, spec):
     """text (bytes) -> db file bytes. Raises TextError with the place of the first problem."""
     tspec = spec['tables'][name]
     st = spec['structs'][tspec['struct']]
-    fields, size = st['fields'], st['size']
+    fields = st['fields']
+    base = binfmt.base_record(st)
     names = _row_names(spec, name)
     try:
         s = text.decode('utf-8')
@@ -399,17 +358,15 @@ def import_(name, text, spec):
         if not isinstance(doc, dict):
             raise TextError(f'{name}: the document is not a mapping')
         head = doc
-        allowed = {'eedata', 'format', 'mode', 'rows', 'hole', 'header', 'records', 'epochs'}
-        bad = [k for k in doc if k not in allowed]
+        bad = [k for k in doc if k not in ('eedata', 'format', 'rows', 'records', 'epochs')]
         if bad:
             raise TextError(f'{name}: unknown top-level key(s) {bad}')
     else:
         head, header, body, line0 = parse_csv(s)
-        allowed = {'eedata', 'format', 'mode', 'rows', 'hole', 'header'}
-        bad = [k for k in head if k not in allowed]
+        bad = [k for k in head if k not in ('eedata', 'format', 'rows')]
         if bad:
             raise TextError(f'{name}: unknown directive(s) {bad}')
-        known = set(csv_columns(tspec, fields, 'exact', names))
+        known = set(csv_columns(tspec, fields, names))
         cols = []
         for c in header:
             m = COLUMN.match(c)
@@ -419,13 +376,13 @@ def import_(name, text, spec):
         records = []
         for r in body:
             m = {}
-            for (base, idx), cell in zip(cols, r):
+            for (base_, idx), cell in zip(cols, r):
                 if cell == '':
                     continue
                 if not idx:
-                    m[base] = Scalar(cell, True)
+                    m[base_] = Scalar(cell, True)
                     continue
-                node = m.setdefault(base, {})
+                node = m.setdefault(base_, {})
                 for j in idx[:-1]:
                     node = node.setdefault(j, {})
                 node[idx[-1]] = Scalar(cell, True)
@@ -433,15 +390,7 @@ def import_(name, text, spec):
     if str(head.get('eedata', name)) != name:
         raise TextError(f'{name}: the file says it is {head.get("eedata")!r}')
     if 'format' in head and str(head['format']) != str(spec['format']):
-        raise TextError(f'{name}: format {head["format"]}, this tool writes format {spec["format"]}')
-    hole = head.get('hole')
-    t.hole = _hex(hole, size, name, 'hole') if hole not in (None, '') else None
-    if t.hole is not None and len(scalars.parse_hex(hole)) != size:
-        raise TextError(f'{name}: the hole template has {len(scalars.parse_hex(hole))} bytes, the record {size}')
-    if tspec['container'] == 'header':
-        if 'header' not in head:
-            raise TextError(f'{name}: the header word is missing')
-        t.header = _head_int(head['header'], 'header', name)
+        raise TextError(f'{name}: format {head["format"]}, this tool reads format {spec["format"]}')
     total = _head_int(head['rows'], 'rows', name) if head.get('rows') not in (None, '') else 0
     if tspec['container'] == 'techtree':
         eps = doc.get('epochs')
@@ -455,25 +404,20 @@ def import_(name, text, spec):
             bad = [x for x in e if x not in ('slots', 'epoch', 'nodes')]
             if bad:
                 raise TextError(f'{where}: unknown key(s) {bad}')
-            ep = build_row(tspec, fields, size, e['epoch'], where, name, None, {})
+            ep = build_row(tspec, fields, base, e['epoch'], where, None, {})
             nodes = e.get('nodes') or []
             if not isinstance(nodes, list):
                 raise TextError(f'{where}: nodes must be a list')
-            placed = [(p, build_row(tspec, fields, size, m, f'{where} node row {p}', name, p, {}))
+            placed = [(p, build_row(tspec, fields, base, m, f'{where} node row {p}', p, {}))
                       for p, m in _positions(nodes, where)]
             slots = _head_int(e['slots'], 'slots', where) if e.get('slots') not in (None, '') else 0
-            rows = _place(placed, slots, where)
-            if t.hole is None and any(r is None for r in rows):
-                raise TextError(f'{where}: node rows missing but no hole template')
-            t.epochs.append(Epoch(ep, rows))
+            t.epochs.append(Epoch(ep, _place(placed, slots)))
         return binfmt.serialize(t, spec)
     if tspec['format'] == 'yaml':
         records = doc.get('records') or []
         if not isinstance(records, list):
             raise TextError(f'{name}: records must be a list')
-    placed = [(p, build_row(tspec, fields, size, m, f'{name} row {p}', name, p, names))
+    placed = [(p, build_row(tspec, fields, base, m, f'{name} row {p}', p, names))
               for p, m in _positions(records, name)]
-    t.rows = _place(placed, total, name)
-    if t.hole is None and any(r is None for r in t.rows):
-        raise TextError(f'{name}: rows missing ({t.rows.index(None)}...) but no hole template')
+    t.rows = _place(placed, total)
     return binfmt.serialize(t, spec)

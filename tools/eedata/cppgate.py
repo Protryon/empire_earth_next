@@ -1,6 +1,7 @@
 """The C++ gate (eedata.py cppgate): build tools/eedata/cppgate/eedata_gate.exe from the game's text loader
-(src/Empire Earth/Database/EEDataText.cpp, the same compiler flags as the build) and run it over every table in both
-modes: exact text must compile to the original .dat bytes, clean text to what the Python importer makes of it.
+(src/Empire Earth/Database/EEDataText.cpp, the same compiler flags as the build) and run it over every table: the
+text must compile to the bytes the Python importer makes of it, and the edited texts of parity.py must give the same
+bytes or an error in both.
 The exported text goes to a temporary folder outside the repository and is deleted afterwards.
 """
 import pathlib
@@ -46,22 +47,19 @@ def run(a, spec, load_db):
     status = 0
     with tempfile.TemporaryDirectory(prefix='eedata-') as tmp:
         tmp = pathlib.Path(tmp)
-        for mode in tables.MODES:
-            text, want = tmp / mode / 'text', tmp / mode / 'want'
-            text.mkdir(parents=True)
-            want.mkdir(parents=True)
-            for n, b in db.items():
-                t = tables.export(n, b, spec, mode)
-                (text / (n + ('.yaml' if spec['tables'][n]['format'] == 'yaml' else '.csv'))).write_bytes(t)
-                (want / f'{n}.dat').write_bytes(b if mode == 'exact' else tables.import_(n, t, spec))
-            print(f'--- {mode} text -> C++ loader -> ' + ('the original .dat' if mode == 'exact' else
-                                                          'the Python importer\'s .dat'), flush=True)
-            r = subprocess.run([str(exe), str(text), str(want)])
-            status |= r.returncode
-            if mode == 'exact':
-                exact = {n: (text / (n + ('.yaml' if spec['tables'][n]['format'] == 'yaml' else '.csv'))).read_bytes()
-                         for n in db}
-        status |= run_parity(exe, spec, exact, tmp / 'parity')
+        text, want = tmp / 'text', tmp / 'want'
+        text.mkdir(parents=True)
+        want.mkdir(parents=True)
+        texts = {}
+        for n, b in db.items():
+            t = tables.export(n, b, spec)
+            texts[n] = t
+            (text / (n + ('.yaml' if spec['tables'][n]['format'] == 'yaml' else '.csv'))).write_bytes(t)
+            (want / f'{n}.dat').write_bytes(tables.import_(n, t, spec))
+        print("--- text -> C++ loader -> the Python importer's .dat", flush=True)
+        r = subprocess.run([str(exe), str(text), str(want)])
+        status |= r.returncode
+        status |= run_parity(exe, spec, texts, tmp / 'parity')
     print('PASS' if status == 0 else 'FAIL')
     return status
 

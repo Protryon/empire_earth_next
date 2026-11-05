@@ -1,22 +1,28 @@
-"""eedata: lossless converter between the game's binary db tables and text (CSV / YAML).
+"""eedata: converter between the game's binary db tables and text (CSV / YAML): the fields the game reads.
 
   python -I tools/eedata/eedata.py unpack [--ssa PATH] OUT          data.ssa -> OUT/<table>.dat (the 39 db files)
-  python -I tools/eedata/eedata.py export [--mode exact|clean] [--ssa PATH | --db DIR] OUT [TABLE ...]
+  python -I tools/eedata/eedata.py export [--ssa PATH | --db DIR] OUT [TABLE ...]
                                                                    db -> OUT/<table>.csv|.yaml
   python -I tools/eedata/eedata.py import TEXTDIR OUT [TABLE ...]   text -> OUT/<table>.dat
-  python -I tools/eedata/eedata.py install [--mode M] [--ssa PATH] GAMEDIR
+  python -I tools/eedata/eedata.py install [--ssa PATH] GAMEDIR
                                     write the text tables into GAMEDIR/Data/db of a game install COPY (for tests)
   python -I tools/eedata/eedata.py check [--ssa PATH | --db DIR] [--text DIR]
-                                    the gates: (a) exact round trip of every table, (b) clean keeps every field
-                                    value, (c) record sizes vs the sources' static_asserts, specs up to date
+                                    the gates: (a) text -> db -> text round trip of every table, (b) every value
+                                    the game reads equals retail, (c) record sizes vs the sources' static_asserts,
+                                    specs up to date
+  python -I tools/eedata/eedata.py holes [--ssa PATH | --db DIR]   print the retail hole rows' values (overlay.HOLES)
+  python -I tools/eedata/eedata.py census [-j N]                  list every read of every record member (compiles
+                                    every unit syntax-only; slow): the evidence for the unused fields
   python -I tools/eedata/eedata.py specs [--check]                  regenerate tools/eedata/specs.json
   python -I tools/eedata/eedata.py cppgen [--check]                 regenerate the C++ spec header
   python -I tools/eedata/eedata.py cppgate [--ssa PATH | --db DIR] [--out DIR] [-j N]
                                     build the C++ text compiler test and run it over every exported table
 
 Game data is never written into the repository. --ssa defaults to $EE_DATA_SSA, else the AoC install's
-Data/data.ssa. Modes: exact (default) keeps every byte (string tails, padding, the hole template), so the files and
-the multiplayer checksum are identical; clean zeroes the junk (string tails, alignment padding).
+Data/data.ssa. The text carries only what the game reads: fields nothing reads are left out (the importer writes
+zero or the spec's default), empty database rows (holes) are left out (the importer writes the table's hole record),
+and junk bytes (after a string's NUL, padding, the converter's 0xCC fill) are gone. The files therefore differ from
+retail, values the game reads do not.
 """
 import argparse
 import os
@@ -79,8 +85,8 @@ def cmd_export(a, spec):
     out = outside_repo(a.out)
     out.mkdir(parents=True, exist_ok=True)
     for n, b in load_db(a, spec, a.tables).items():
-        (out / f'{n}{ext(spec, n)}').write_bytes(tables.export(n, b, spec, a.mode))
-    print(f'{len(a.tables or spec["tables"])} tables ({a.mode}) -> {out}')
+        (out / f'{n}{ext(spec, n)}').write_bytes(tables.export(n, b, spec))
+    print(f'{len(a.tables or spec["tables"])} tables -> {out}')
 
 
 def cmd_import(a, spec):
@@ -109,8 +115,16 @@ def cmd_install(a, spec):
     out = game / 'Data' / 'db'
     out.mkdir(exist_ok=True)
     for n, b in load_db(a, spec).items():
-        (out / f'{n}{ext(spec, n)}').write_bytes(tables.export(n, b, spec, a.mode))
-    print(f'{len(spec["tables"])} text tables ({a.mode}) -> {out}')
+        (out / f'{n}{ext(spec, n)}').write_bytes(tables.export(n, b, spec))
+    print(f'{len(spec["tables"])} text tables -> {out}')
+
+
+def cmd_holes(a, spec):
+    import check
+    for n, b in load_db(a, spec).items():
+        v = check.hole_values(n, b, spec)
+        if v:
+            print(f'    {n!r}: {v!r},')
 
 
 def cmd_specs(a, spec):
@@ -137,7 +151,6 @@ def main():
     p.add_argument('out')
     p = sub.add_parser('export')
     src(p)
-    p.add_argument('--mode', choices=tables.MODES, default='exact')
     p.add_argument('out')
     p.add_argument('tables', nargs='*')
     p = sub.add_parser('import')
@@ -146,7 +159,11 @@ def main():
     p.add_argument('tables', nargs='*')
     p = sub.add_parser('install')
     src(p)
-    p.add_argument('--mode', choices=tables.MODES, default='exact')
+    p = sub.add_parser('holes')
+    src(p)
+    p = sub.add_parser('census')
+    p.add_argument('-j', type=int, default=2)
+    p.add_argument('--out', help='write the use sites here (TSV)')
     p.add_argument('gamedir')
     p = sub.add_parser('check')
     src(p)
@@ -168,11 +185,14 @@ def main():
     if a.cmd == 'cppgen':
         import cppgen
         sys.exit(cppgen.run(a, spec))
+    if a.cmd == 'census':
+        import census
+        sys.exit(census.run(a, spec))
     if a.cmd == 'cppgate':
         import cppgate
         sys.exit(cppgate.run(a, spec, load_db))
     {'unpack': cmd_unpack, 'export': cmd_export, 'import': cmd_import, 'install': cmd_install,
-     'specs': cmd_specs}[a.cmd](a, spec)
+     'specs': cmd_specs, 'holes': cmd_holes}[a.cmd](a, spec)
 
 
 if __name__ == '__main__':

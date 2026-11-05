@@ -1,17 +1,25 @@
 """Generate the table specs (specs.json) from the record structs in the sources plus overlay.py.
 
 Each struct is parsed from its source file (STRUCT_SOURCES) with MSVC x86 natural alignment; its size is checked
-against the source's static_assert (or COMMENT_SIZES). Gaps the survey decoded are split (overlay.SPLITS); every
-other byte stays an explicit field: typed fields keep their source names, undecoded bytes become u_0x<off> raw
-fields, and compiler padding becomes pad fields.
+against the source's static_assert (or COMMENT_SIZES). Every byte of a record gets a field of one class:
 
-Field types: s8 u8 s16 u16 s32 u32 f32 bool (one byte, raw value kept), str (char[N], NUL-terminated text plus a
-tail), raw (bytes, hex), pad (alignment padding, hex), pair_f32 (two floats). count > 1 makes an array (str: N).
-Classes: named, inferred, provisional, unknown, pad (DATA_FORMATS.md, "Field classes").
+  named   a member the game reads: exported to the text under its source name
+  label   the row's name where the game never reads it (a member called mLabel): exported as the text-only
+          `label` (written back to the same bytes, so a person can tell the rows apart)
+  unused  a member the game never reads (mUnused*, the source's _gap/mUndecoded gaps): not in the text; the
+          importer writes overlay.DEFAULTS or zero
+  pad     alignment padding: not in the text, zero
+
+Which members the game reads is decided by the sources (tools/eedata/census.py lists every read of every record
+member); an exported field must have a real name, never an offset name (checked here).
+
+Field types: s8 u8 s16 u16 s32 u32 f32 bool (one byte), str (char[N], NUL-terminated text), raw (bytes; unused
+only), pad, pair_f32 (two floats). count > 1 makes an array (str: N).
 """
 import json
 import pathlib
 import re
+import struct
 
 import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -20,7 +28,7 @@ import overlay  # noqa: E402
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 SPECS = HERE / 'specs.json'
-FORMAT_VERSION = 1
+FORMAT_VERSION = 2
 
 TYPES = {'char': ('s8', 1), 'signed char': ('s8', 1), 'unsigned char': ('u8', 1), 'bool': ('bool', 1),
          'short': ('s16', 2), 'unsigned short': ('u16', 2), 'long': ('s32', 4), 'unsigned long': ('u32', 4),
@@ -29,12 +37,12 @@ TYPES = {'char': ('s8', 1), 'signed char': ('s8', 1), 'unsigned char': ('u8', 1)
          'DWORD': ('u32', 4), 'BYTE': ('u8', 1)}
 SIZES = {'s8': 1, 'u8': 1, 'bool': 1, 's16': 2, 'u16': 2, 's32': 4, 'u32': 4, 'f32': 4, 'pair_f32': 8, 'str': 1,
          'raw': 1, 'pad': 1}
+EXPORTED = ('named', 'label')
 FIELD = re.compile(r'^\s*(?:volatile\s+)?((?:unsigned\s+|signed\s+)?\w+)\s+(\w+)\s*(\[[^\]]+\])?\s*;\s*(?://\s*(.*))?$')
 GAP = re.compile(r'^(_gap\w*|_u[0-9A-Fa-f]+|mUndecoded\w*)$')
 PADNAME = re.compile(r'^(mPad\w*|_pad\w*)$')
-UNKNOWN = re.compile(r'^(mUnknown\w*|_u\w*)$')
-PROVISIONAL = re.compile(r'^(m[LUCBF][0-9A-Fa-f]{2,3}|mU[0-9a-f]{3}|mBoolPlaceholder\d|mIntParam\d|mFloatParam\d|'
-                         r'mParam\d+)$')
+# offset-only or placeholder names: never allowed for a field the text carries
+OFFSET_NAME = re.compile(r'^(m[LUCBF][0-9A-Fa-f]{2,3}|mU[0-9a-f]{3}|mUnknown\w*|mBoolPlaceholder\d|u_0x\w+|_\w+)$')
 
 
 def _eval_size(expr):
@@ -100,45 +108,25 @@ def static_assert_size(name):
     return None, None
 
 
-def _raw_pieces(off, end, out):
-    """Undecoded bytes [off, end): aligned dwords as s32 u_0x<off>, unaligned runs as raw bytes."""
-    o = off
-    while o < end:
-        if o % 4 == 0 and o + 4 <= end:
-            out.append(dict(name=f'u_0x{o:03x}', off=o, type='s32', count=1, cls='unknown', comment='undecoded'))
-            o += 4
-        else:
-            n = min(end, (o // 4 + 1) * 4) - o
-            out.append(dict(name=f'u_0x{o:03x}', off=o, type='raw', count=n, cls='unknown', comment='undecoded'))
-            o += n
+def _field(name, off, typ, count, cls, comment, member=None):
+    return dict(name=name, member=member or name, off=off, type=typ, count=count, cls=cls, comment=comment)
 
 
-def _split_gap(sname, off, size, out):
-    splits = overlay.SPLITS.get(sname, {})
-    end = off + size
-    o = off
-    for so in sorted(k for k in splits if off <= k < end):
-        _raw_pieces(o, so, out)
-        kind = splits[so]
-        if kind == 'name':
-            out.append(dict(name='name', off=so, type='str', count=100, cls='inferred',
-                            comment='the row name (inferred from the data)'))
-            o = so + 100
-        else:
-            out.append(dict(name=kind, off=so, type='s32', count=1, cls='inferred',
-                            comment={'dbId': 'the database row id', 'index': 'the 0-based row index'}[kind] +
-                            ' (inferred from the data)'))
-            o = so + 4
-    _raw_pieces(o, end, out)
+def _split_gap(sname, gname, off, size, out):
+    """A source gap: bytes nothing reads."""
+    out.append(_field(gname, off, 'raw', size, 'unused', 'unread gap'))
 
 
-def _classify(n):
+def _classify(sname, n):
     if PADNAME.match(n):
         return 'pad'
-    if UNKNOWN.match(n):
-        return 'unknown'
-    if PROVISIONAL.match(n):
-        return 'provisional'
+    if n == 'mLabel':
+        return 'label'
+    if n.startswith('mUnused'):
+        return 'unused'
+    if OFFSET_NAME.match(n):
+        raise SystemExit(f'{sname}.{n}: an offset-only name for a field the game reads (name it from its readers, '
+                         f'or mUnused* when nothing reads it)')
     return 'named'
 
 
@@ -146,25 +134,47 @@ def struct_spec(sname):
     if sname in overlay.VIRTUAL_STRUCTS:
         fields, off = [], 0
         for n, t, c, cls in overlay.VIRTUAL_STRUCTS[sname]:
-            fields.append(dict(name=n, off=off, type=t, count=c, cls=cls, comment='layout decoded from the data'))
+            fields.append(_field('label' if cls == 'label' else n, off, t, c, cls, 'layout decoded from the data', n))
             off += SIZES[t] * c
-        return dict(name=sname, size=off, source=None, size_check=None, fields=fields)
+        return dict(name=sname, size=off, source=None, size_check=None, fields=fields, defaults={})
     raw, size = source_fields(sname)
     fields = []
     for off, code, n, cnt, cmt in raw:
         if code == 'pad':
-            fields.append(dict(name=f'pad_0x{off:03x}', off=off, type='pad', count=cnt, cls='pad', comment=cmt))
-        elif GAP.match(n) or (n in ('mUnknown00',) and sname in overlay.SPLITS):
-            _split_gap(sname, off, SIZES[code] * cnt, fields)
-        elif code in ('s8', 'u8') and cnt > 1:
-            cls = _classify(n)
-            fields.append(dict(name=n if cls != 'pad' else f'pad_0x{off:03x}', off=off,
-                               type='pad' if cls == 'pad' else ('str' if code == 's8' else 'raw'), count=cnt,
-                               cls=cls, comment=cmt))
+            fields.append(_field(f'pad_0x{off:03x}', off, 'pad', cnt, 'pad', cmt))
+        elif GAP.match(n):
+            _split_gap(sname, n, off, SIZES[code] * cnt, fields)
         else:
-            fields.append(dict(name=n, off=off, type=code, count=cnt, cls=_classify(n), comment=cmt))
+            cls = _classify(sname, n)
+            if code in ('s8', 'u8') and cnt > 1:
+                code = 'str' if code == 's8' and cls in EXPORTED else 'raw'
+            if cls == 'pad':
+                code = 'pad'
+            if code == 'raw' and cls in EXPORTED:
+                raise SystemExit(f'{sname}.{n}: a byte array the game reads (declare it with its element type)')
+            if cls == 'unused' and code != 'raw':   # an unread member: its bytes only (the type is not the text's)
+                cnt, code = cnt * SIZES[code], 'raw'
+            fields.append(_field('label' if cls == 'label' else n, off, code, cnt, cls, cmt, n))
     want, how = static_assert_size(sname)
-    return dict(name=sname, size=size, source=overlay.STRUCT_SOURCES[sname], size_check=[want, how], fields=fields)
+    defaults = {}
+    for member, v in overlay.DEFAULTS.get(sname, {}).items():
+        f = next((f for f in fields if f['member'] == member), None)
+        if f is None:
+            raise SystemExit(f'overlay.DEFAULTS: {sname}.{member} is not a member')
+        defaults[f['name']] = v
+    return dict(name=sname, size=size, source=overlay.STRUCT_SOURCES[sname], size_check=[want, how], fields=fields,
+                defaults=defaults)
+
+
+def _bits(f, v):
+    """A spec value (int, float, list) -> the field's stored integer(s) (f32 as bits)."""
+    if isinstance(v, list):
+        return [_bits(f, x) for x in v]
+    if f['type'] == 'str':
+        return str(v)
+    if f['type'] == 'f32':
+        return struct.unpack('<I', struct.pack('<f', float(v)))[0]
+    return int(v)
 
 
 def generate():
@@ -181,8 +191,23 @@ def generate():
             names.add(f['name'])
             o += SIZES[f['type']] * f['count']
         assert o == s['size'], s['name']
-    return dict(format=FORMAT_VERSION, generator='tools/eedata/specgen.py', tables=overlay.TABLES,
-                row_names=overlay.ROW_NAMES, structs=structs)
+    tables = {}
+    for name, t in overlay.TABLES.items():
+        t = dict(t)
+        st = structs[t['struct']]
+        byname = {f['name']: f for f in st['fields']}
+        hole = {}
+        for k, v in overlay.HOLES.get(name, {}).items():
+            if k not in byname or byname[k]['cls'] not in EXPORTED:
+                raise SystemExit(f'overlay.HOLES: {name}.{k} is not a field the text carries')
+            hole[k] = _bits(byname[k], v)
+        t['hole'] = hole
+        if name in overlay.ROW_FIELDS:
+            t['row_fields'] = {str(k): v for k, v in overlay.ROW_FIELDS[name].items()}
+        tables[name] = t
+    return dict(format=FORMAT_VERSION, generator='tools/eedata/specgen.py', tables=tables,
+                row_names={t: {str(k): v for k, v in r.items()} for t, r in overlay.ROW_NAMES.items()},
+                structs=structs)
 
 
 def dumps(spec):

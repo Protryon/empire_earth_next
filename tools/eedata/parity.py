@@ -31,7 +31,7 @@ def _sub(text, old, new, count=1):
 
 
 def cases(texts):
-    """texts: {table: exact text bytes} -> [(name, table, text bytes)]."""
+    """texts: {table: text bytes} -> [(name, table, text bytes)]."""
     w, cp, civ, ev = texts['dbworld'], texts['dbcpbehavior'], texts['dbcivilization'], texts['dbevents']
     tt, snd = texts['dbtechtree'], texts['dbsounds']
     out = []
@@ -56,27 +56,30 @@ def cases(texts):
     add('w_norows', 'dbworld', _join([l for l in lines if not l.startswith('#rows')]))
     add('w_comment', 'dbworld', _join(lines[:1] + ['# a comment', ''] + lines[1:]))
     add('w_unknown_directive', 'dbworld', _join(['#colour blue'] + lines))
-    add('w_badformat', 'dbworld', _sub(w, '#format 1', '#format 2'))
+    add('w_badformat', 'dbworld', _sub(w, '#format 2', '#format 3'))
     add('w_wrongtable', 'dbworld', _sub(w, '#eedata dbworld', '#eedata dbfamily'))
-    add('w_append', 'dbworld', w + b',,1.25,0.0,100,95,7,0,0\n')
-    add('w_append_row', 'dbworld', w + b'99,,1.25,0.0,100,95,7,0,0\n')
+    add('w_append', 'dbworld', w + b',,1.25,0.0,100,95\n')
+    add('w_append_row', 'dbworld', w + b'99,,1.25,0.0,100,95\n')
     add('w_rowsbig', 'dbworld', _sub(w, '#rows 95', '#rows 97'))
-    add('w_gap_nohole', 'dbworld', w + b'120,,1,0,0,0,0,0,0\n')
+    add('w_gap', 'dbworld', w + b'120,,1,0,0,0\n')
     add('w_order', 'dbworld', _join(lines[:6] + [lines[7], lines[6]] + lines[8:]))
-    add('w_label_ok', 'dbworld', _cell(w, 22, 'label', 'miningLimit'))
-    add('w_label_bad', 'dbworld', _cell(w, 22, 'label', 'notMiningLimit'))
-    add('w_label_free', 'dbworld', _cell(w, 3, 'label', 'anything'))
+    add('w_label_ok', 'dbworld', _cell(w, 1, 'label', 'gatherersPerResourceMax'))
+    add('w_label_bad', 'dbworld', _cell(w, 1, 'label', 'notGatherersPerResourceMax'))
+    add('w_label_other', 'dbworld', _cell(w, 3, 'label', 'anything'))
+    add('w_unread_row', 'dbworld', _sub(w, '\n21,', '\n5,anything,1,2,3,4\n21,'))
+    add('w_unread_cell', 'dbworld', _cell(w, 3, 'mFloatValue', '2.5'))
     add('w_cells', 'dbworld', w + b'1,2\n')
-    add('w_unknown_col', 'dbworld', _sub(w, 'row,label,', 'row,label,colour,').replace(b'\n0,', b'\n0,x,', 1))
-    add('w_dropcol', 'dbworld', _join([','.join(c for i, c in enumerate(l.split(',')) if i != 8)
+    add('w_unknown_col', 'dbworld', _sub(w, 'row,label,', 'row,label,colour,').replace(b'\n21,', b'\n21,x,', 1))
+    add('w_unread_col', 'dbworld', _sub(w, 'row,label,', 'row,label,mUnusedIndex,').replace(b'\n21,', b'\n21,3,', 1))
+    add('w_dropcol', 'dbworld', _join([','.join(c for i, c in enumerate(l.split(',')) if i != 5)
                                        if not l.startswith('#') and l else l for l in lines]))
     add('w_quoted', 'dbworld', _cell(w, 3, 'mLongValue', '"12"'))
     add('w_badquote', 'dbworld', _cell(w, 3, 'mLongValue', '1"2'))
-    add('w_blanklines', 'dbworld', w.replace(b'\n3,', b'\n\n3,'))
+    add('w_blanklines', 'dbworld', w.replace(b'\n26,', b'\n\n26,'))
     add('w_empty', 'dbworld', b'')
-    # cpbehavior: a negative slot index, an empty hex pad
+    # cpbehavior: a negative slot index
     add('cp_neg', 'dbcpbehavior', _cell(cp, 0, 'mIndex', '-7'))
-    # strings, tails, hex (CSV with lead strings)
+    # strings (CSV with lead strings)
     add('s_euro', 'dbsounds', _sub(snd, 'sounds\\', 'sounds\u20ac\\'))
     add('s_cjk', 'dbsounds', _sub(snd, 'sounds\\', 'sounds\u4e2d\\'))
     add('s_c1', 'dbsounds', _sub(snd, 'sounds\\', 'sounds\u0081\\'))
@@ -89,22 +92,23 @@ def cases(texts):
     # YAML: comments, quoting, flow lists, missing / unknown / duplicate keys, indentation
     add('y_ok', 'dbcivilization', civ)
     add('y_comment', 'dbcivilization', _sub(civ, '\nrecords:', '\n# hello\nrecords: # the rows'))
-    add('y_single', 'dbcivilization', re.sub(rb'name: "([^"\\]*)"', rb"name: '\1'", civ, count=3))
-    add('y_plain', 'dbcivilization', re.sub(rb'name: "([A-Za-z ]+)"', rb'name: \1', civ, count=3))
-    add('y_escape', 'dbcivilization', re.sub(rb'name: "([^"\\]*)"', rb'name: "\\x41\\u00e9\\t\1"', civ, count=1))
-    add('y_badescape', 'dbcivilization', re.sub(rb'name: "([^"\\]*)"', rb'name: "\\q\1"', civ, count=1))
+    add('y_single', 'dbcivilization', re.sub(rb'label: "([^"\\]*)"', rb"label: '\1'", civ, count=3))
+    add('y_plain', 'dbcivilization', re.sub(rb'label: "([A-Za-z ]+)"', rb'label: \1', civ, count=3))
+    add('y_escape', 'dbcivilization', re.sub(rb'label: "([^"\\]*)"', rb'label: "\\x41\\u00e9\\t\1"', civ, count=1))
+    add('y_badescape', 'dbcivilization', re.sub(rb'label: "([^"\\]*)"', rb'label: "\\q\1"', civ, count=1))
     add('y_tab', 'dbcivilization', civ.replace(b'\n    ', b'\n\t', 1))
     add('y_indent', 'dbcivilization', civ.replace(b'\n    ', b'\n     ', 1))
-    add('y_dupkey', 'dbcivilization', _sub(civ, '\nformat: 1', '\nformat: 1\nformat: 1'))
-    add('y_unknownkey', 'dbcivilization', _sub(civ, '    name:', '    colour: 3\n    name:'))
-    add('y_toplevel', 'dbcivilization', _sub(civ, '\nformat: 1', '\nformat: 1\nauthor: me'))
+    add('y_dupkey', 'dbcivilization', _sub(civ, '\nformat: 2', '\nformat: 2\nformat: 2'))
+    add('y_unknownkey', 'dbcivilization', _sub(civ, '    label:', '    colour: 3\n    label:'))
+    add('y_unread_key', 'dbcivilization', _sub(civ, '    label:', '    mUnusedDatabaseID: 3\n    label:'))
+    add('y_toplevel', 'dbcivilization', _sub(civ, '\nformat: 2', '\nformat: 2\nauthor: me'))
     add('y_missing', 'dbcivilization', re.sub(rb'\n    mLevels: [^\n]*', b'', civ, count=1))
     add('y_flowspace', 'dbcivilization', civ.replace(b', ', b' ,  ', 20))
     add('y_trailing_comma', 'dbcivilization', civ.replace(b']\n', b',]\n', 1))
     add('y_unclosed', 'dbcivilization', civ.replace(b']\n', b'\n', 1))
-    add('y_anchor', 'dbcivilization', _sub(civ, '\nformat: 1', '\nformat: &a 1'))
-    add('y_block', 'dbcivilization', _sub(civ, '\nformat: 1', '\nformat: |\n  1'))
-    add('y_flowmap', 'dbcivilization', _sub(civ, '\nformat: 1', '\nformat: {a: 1}'))
+    add('y_anchor', 'dbcivilization', _sub(civ, '\nformat: 2', '\nformat: &a 2'))
+    add('y_block', 'dbcivilization', _sub(civ, '\nformat: 2', '\nformat: |\n  1'))
+    add('y_flowmap', 'dbcivilization', _sub(civ, '\nformat: 2', '\nformat: {a: 2}'))
     add('y_doc', 'dbcivilization', b'---\n' + civ)
     add('y_twodocs', 'dbcivilization', civ + b'---\nx: 1\n')
     add('y_crlf', 'dbcivilization', civ.replace(b'\n', b'\r\n'))
@@ -113,14 +117,13 @@ def cases(texts):
     add('y_pairs_short', 'dbcivilization', re.sub(rb'(\n    mLevels: )\[\[', rb'\1[[1.5], [', civ, count=1))
     add('y_toomany', 'dbcivilization', re.sub(rb'(\n    mLevels: )\[', rb'\1[' + b'[0, 0], ' * 61, civ,
                                               count=1))
-    add('y_mapvalue', 'dbcivilization', re.sub(rb'name: "([^"\\]*)"', rb'name: a: b', civ, count=1))
+    add('y_mapvalue', 'dbcivilization', re.sub(rb'label: "([^"\\]*)"', rb'label: a: b', civ, count=1))
     add('y_seqitem', 'dbcivilization', _sub(civ, '\nrecords:\n  - ', '\nrecords:\n- '))
-    add('y_raw', 'dbcivilization', re.sub(rb'\n    name: "[^"\\]*"', b'\n    name~raw: "4142"', civ, count=1))
-    add('y_raw_and_text', 'dbcivilization', re.sub(rb'(\n    name: "[^"\\]*")', rb'\1\n    name~raw: "41"', civ,
-                                                    count=1))
-    add('y_raw_long', 'dbcivilization', re.sub(rb'\n    name: "[^"\\]*"', b'\n    name~raw: "' + b'41' * 101 + b'"',
-                                                civ, count=1))
-    add('y_nohole', 'dbcivilization', re.sub(rb'\nhole: "[0-9a-f]*"', b'', civ))
+    add('y_label99', 'dbcivilization', re.sub(rb'\n    label: "[^"\\]*"', b'\n    label: "' + b'A' * 99 + b'"', civ,
+                                               count=1))
+    add('y_label100', 'dbcivilization', re.sub(rb'\n    label: "[^"\\]*"', b'\n    label: "' + b'A' * 100 + b'"', civ,
+                                                count=1))
+    add('y_gap', 'dbcivilization', re.sub(rb'\n  - row: 3\n', b'\n  - row: 40\n', civ, count=1))
     # YAML lists (events), techtree structure
     add('e_ok', 'dbevents', ev)
     add('e_effects', 'dbevents', re.sub(rb'effects: \[\]', b'effects: [1, 2, 0x10]', ev, count=1))
@@ -135,7 +138,7 @@ def cases(texts):
 
 
 def _cell_first_name(snd, value):
-    """dbsounds with the first real row's 'name' cell replaced."""
+    """dbsounds with the first real row's 'label' cell replaced."""
     lines = _csv_lines(snd)
     hdr = next(i for i, l in enumerate(lines) if not l.startswith('#'))
     cols = lines[hdr].split(',')
@@ -143,7 +146,7 @@ def _cell_first_name(snd, value):
     import csv
     import io
     cells = next(csv.reader([lines[k]]))
-    cells[cols.index('name')] = value
+    cells[cols.index('label')] = value
     b = io.StringIO()
     csv.writer(b, lineterminator='').writerow(cells)
     lines[k] = b.getvalue()
