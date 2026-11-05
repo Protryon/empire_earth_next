@@ -14,8 +14,9 @@ the session log and the game's summary, and writes:
   python -I tools/harness/ai_bench.py --report build/boot/ai_bench/baseline     # the summary table again
 
 --cheats takes cheat sets separated by spaces or commas between sets with '+' inside one set ("all", "none",
-"reveal+extra"; EE_AI_CHEATS in ee/EECPTrace.h). The local human idles in slot 0 (ai_game.py); --no-human-defeat
-keeps it in, so the computers play on when it has lost its units.
+"reveal+extra"; EE_AI_CHEATS in ee/EECPTrace.h). The local human idles in slot 0 (ai_game.py). By default the runs
+pass --no-human-defeat, which keeps it in, so the computers play on once it has lost its units (--human-defeat:
+the game ends there). Its population still pulls the AI pop cap down unless the cheat set leaves out popband.
 """
 import argparse
 import csv
@@ -53,7 +54,7 @@ def run_one(args, run, out):
            '--seed', str(run['seed']), '--pt-rate', str(args.pt_rate), '--timeout', str(args.timeout)]
     if run['map'] != '-':
         cmd += ['--map-type', run['map']]
-    if args.no_human_defeat:
+    if not args.human_defeat:
         cmd.append('--no-human-defeat')
     if args.build_dir:
         cmd += ['--build-dir', str(args.build_dir)]
@@ -89,8 +90,10 @@ def write_reports(out, results):
     (out / 'results.json').write_text(json.dumps(results, indent=2) + '\n', encoding='utf-8')
     fields = ['run', 'seed', 'map', 'size', 'difficulty', 'ai', 'cheats', 'repeat', 'outcome', 'game_s', 'player',
               'units', 'epoch_final', 'epoch_advances', 'first_epoch_s', 'last_epoch_s', 'first_attack_s',
-              'pop', 'cap', 'citizens', 'idle', 'buildings', 'other', 'unspent_final', 'mean_unspent', 'mean_idle',
-              'pop_capped_samples', 'stats_samples', 'ai_mean_us', 'ai_max_us']
+              'pop', 'cap', 'citizens', 'idle', 'gather_food', 'gather_wood', 'gather_stone', 'gather_gold',
+              'gather_iron', 'buildings', 'other', 'unspent_final', 'mean_unspent', 'mean_idle',
+              'pop_capped_samples', 'stats_samples', 'build_starts', 'build_stalled', 'build_nosite',
+              'build_nobuilder', 'trains', 'ai_mean_us', 'ai_max_us']
     with (out / 'results.csv').open('w', newline='', encoding='utf-8') as f:
         w = csv.DictWriter(f, fields)
         w.writeheader()
@@ -108,10 +111,15 @@ def write_reports(out, results):
                                 last_epoch_s=epochs[-1]['t'] // 1000 if epochs else '',
                                 first_attack_s=p['first_attack_ms'] // 1000 if p['first_attack_ms'] else '',
                                 pop=last.get('pop'), cap=last.get('cap'), citizens=last.get('citizens'),
-                                idle=last.get('idle'), buildings=last.get('buildings'), other=last.get('other'),
+                                idle=last.get('idle'), **{k: last.get(k) for k in ('gather_food', 'gather_wood',
+                                'gather_stone', 'gather_gold', 'gather_iron')}, buildings=last.get('buildings'), other=last.get('other'),
                                 unspent_final=last.get('unspent'), mean_unspent=p['mean_unspent'],
                                 mean_idle=p['mean_idle'], pop_capped_samples=p['pop_blocked_samples'],
-                                stats_samples=p['stats_samples'], ai_mean_us=p['profile']['mean_us'],
+                                stats_samples=p['stats_samples'], build_starts=p['events'].get('build.start', 0),
+                                build_stalled=p['events'].get('build.stalled', 0),
+                                build_nosite=p['events'].get('build.nosite', 0),
+                                build_nobuilder=p['events'].get('build.nobuilder', 0),
+                                trains=p['events'].get('train.request', 0), ai_mean_us=p['profile']['mean_us'],
                                 ai_max_us=p['profile']['max_us']))
 
 
@@ -147,7 +155,8 @@ def main():
     ap.add_argument('--time-factor', default='32')
     ap.add_argument('--pt-rate', type=int, default=40)
     ap.add_argument('--timeout', type=int, default=2400000)
-    ap.add_argument('--no-human-defeat', action='store_true')
+    ap.add_argument('--human-defeat', action='store_true',
+                    help='let the idle human be defeated (that ends the game); default: --no-human-defeat')
     ap.add_argument('--build-dir', type=pathlib.Path)
     ap.add_argument('--report', type=pathlib.Path, help='print the summary of an earlier benchmark and exit')
     a = ap.parse_args()

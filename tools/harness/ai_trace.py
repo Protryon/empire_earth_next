@@ -113,6 +113,9 @@ def summary(path):
             p['first_attack_ms'] = e['t']
         elif e['event'] == 'stats':
             row = dict(t=e['t'], **{k: int(v) for k, v in e['fields'].items() if re.fullmatch(r'-?\d+', v)})
+            if 'gather' in e['fields']:   # gatherers by resource: food/wood/stone/gold/iron/unknown
+                for name, v in zip(RESOURCES + ('unknown',), e['fields']['gather'].split('/')):
+                    row['gather_' + name] = int(v)
             row['unspent'] = sum(e['resources'].values())
             row.update(e['resources'])
             p['stats'].append(row)

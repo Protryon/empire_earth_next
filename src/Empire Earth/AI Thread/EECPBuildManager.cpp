@@ -303,7 +303,11 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
             if (theHasTile || this->FindSite(theClassID, theTile)) {
                 EECPUnitManager* theManager = theThis->mManager->mUnitManager;
                 theWorker = theManager->FindBuilderForTile(theTile, theClassID);
-            }
+                if (theWorker == NULL)
+                    EE_CP_TRACE(this->mPlayer, "build.nobuilder", "cls=%ld x=%ld y=%ld", theClassID, (long)theTile.mX,
+                        (long)theTile.mY);
+            } else
+                EE_CP_TRACE(this->mPlayer, "build.nosite", "cls=%ld", theClassID);
             if (theWorker != NULL) {
                 EEUnit* theTarget;
                 if (theClassID == kUnitTypeFarm || theClassID == kUnitTypeRoboticFarm) {
@@ -433,6 +437,25 @@ void EECPBuildManager::CancelStalledBuilds()
         long theIndex = EECPBMQueueIndex(theID);
         this->mQueues[theIndex].push_front(EECPBuildRequest(theClassID,
             U2DPoint<long>(theGoal->mTarget->mTileX, theGoal->mTarget->mTileY)));
+        if (gCPTraceOn) {   // what holds the site: the first blocking unit on the footprint other than the building
+            std::vector<U2DPoint<long> > theTiles;
+            std::vector<EEUnit*> theBlockers;
+            long theBlocker = -1;
+            long theOwner = -1;
+            EEGetFootprintTiles(theGoal->mTarget, theTiles);
+            for (unsigned long i = 0; i < theTiles.size() && theBlocker < 0; i++) {
+                theBlockers.clear();
+                EEGetBlockingUnits(this->mPlayer, theClassID, gWorld.mMap->GetTile(theTiles[i].GetX(), theTiles[i].GetY()), 0,
+                    theBlockers);
+                for (unsigned long j = 0; j < theBlockers.size() && theBlocker < 0; j++)
+                    if (theBlockers[j] != theGoal->mTarget) {
+                        theBlocker = theBlockers[j]->mUnitClass->mUnitType;
+                        theOwner = theBlockers[j]->mPlayer != NULL ? (long)theBlockers[j]->mPlayer->mPlayerID : -1;
+                    }
+            }
+            EECPTraceOut(this->mPlayer, "build.stalled", "cls=%ld x=%ld y=%ld blocker=%ld owner=%ld", theClassID,
+                (long)theGoal->mTarget->mTileX, (long)theGoal->mTarget->mTileY, theBlocker, theOwner);
+        }
         theGoal->mTarget->Kill(0, 0, 0);
         for (unsigned long i = 2; i < 7; i++)
             this->mPlayer->AddResource(i, this->mPlayer->ScaleCost(theGoal->mTargetNode->GetCost(i, 0x20, 1.0f)));

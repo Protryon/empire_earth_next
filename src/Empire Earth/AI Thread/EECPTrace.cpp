@@ -36,6 +36,8 @@
 #include "ee/EEWorld.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPUnitManager.h"
+#include "ee/EEUnitGoal.h"
+#include "ee/EEUGGather.h"
 #include "ee/EECPTrace.h"
 
 bool gCPTraceOn = false;
@@ -144,14 +146,21 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
     long theOther = 0;
     long theUnfinished = 0;
     long theIdle = 0;
+    long theGatherers[kResourceIron + 1] = {0};   // by the target's resource type (0: unknown)
     for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0))
             continue;
         long theCategory = theUnit->mUnitClass->mCategory;
         if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen) {
             theCitizens++;
-            if (theUnit->mComplexUnit->mActiveGoal == NULL)
+            EEUnitGoal* theGoal = theUnit->mComplexUnit->mActiveGoal;
+            if (theGoal == NULL)
                 theIdle++;
+            else if (theGoal->mKind == kGoalGather) {
+                EEUnit* theResource = static_cast<EEUGGather*>(theGoal)->mResource;
+                unsigned long theType = theResource != NULL ? theResource->mResourceType : 0;
+                theGatherers[theType >= kResourceFood && theType <= kResourceIron ? theType : 0]++;
+            }
         }
         else if (EECPIsBuildingCategory(theCategory)) {
             theBuildings++;
@@ -166,10 +175,12 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
     long theEpoch = inPlayer->mTechnologies != NULL ? inPlayer->mTechnologies->mCurrentEpoch : -1;
     const char* theSaved = gCPTraceManager;
     gCPTraceManager = "cp";
-    EECPTraceOut(inPlayer, "stats", "epoch=%ld pop=%ld cap=%ld limit=%ld citizens=%ld idle=%ld free=%lu buildings=%ld unfinished=%ld other=%ld",
+    EECPTraceOut(inPlayer, "stats", "epoch=%ld pop=%ld cap=%ld limit=%ld citizens=%ld idle=%ld free=%lu gather=%ld/%ld/%ld/%ld/%ld/%ld "
+        "buildings=%ld unfinished=%ld other=%ld",
         theEpoch, inPlayer->GetTotalPopulation(true, true), inPlayer->mPopulationCap,
-        inPlayer->EEPlayer::GetPopulationLimit(0), theCitizens, theIdle, (unsigned long)theFree.size(), theBuildings,
-        theUnfinished, theOther);
+        inPlayer->EEPlayer::GetPopulationLimit(0), theCitizens, theIdle, (unsigned long)theFree.size(),
+        theGatherers[kResourceFood], theGatherers[kResourceWood], theGatherers[kResourceStone],
+        theGatherers[kResourceGold], theGatherers[kResourceIron], theGatherers[0], theBuildings, theUnfinished, theOther);
     gCPTraceManager = theSaved;
 }
 
