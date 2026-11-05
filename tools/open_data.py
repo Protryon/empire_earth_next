@@ -340,6 +340,8 @@ def cmd_pack(a):
             if p.is_file():
                 z.write(p, p.relative_to(tree).as_posix())
                 n += 1
+            elif p.is_dir() and not any(p.iterdir()):
+                z.write(p, p.relative_to(tree).as_posix() + '/')   # an empty folder the game expects
         for p in sorted(FONTS.iterdir()):
             if p.is_file() and not p.name.startswith('.'):
                 z.write(p, 'fonts/' + p.name)
