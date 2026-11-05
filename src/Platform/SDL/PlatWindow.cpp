@@ -1,0 +1,587 @@
+// Platform layer on SDL3: the window and its input (include/platform/PlatWindow.h). The same file on Windows,
+// Linux (X11, Wayland) and macOS (Cocoa; the Metal layer for wgpu).
+//
+// Keys: SDL scancodes (USB usage ids, layout-independent) map to DirectInput scan codes by a table; virtual-key
+// codes come from the scancode for the keys without a character and from the layout's keycode for letters, digits
+// and punctuation (as Windows derives VK_* from the active layout). Text arrives from SDL as UTF-8 and is handed on
+// as Windows-1252 (platform/PlatString.h).
+#include <stdlib.h>
+#include <string.h>
+
+#include <string>
+
+#include <SDL3/SDL.h>
+
+#include "platform/PlatKeys.h"
+#include "platform/PlatMessage.h"
+#include "platform/PlatThread.h"
+#include "platform/PlatTime.h"
+#include "platform/PlatWindow.h"
+
+struct PlatWindow {
+    SDL_Window* mWindow;
+    SDL_MetalView mMetalView;
+};
+
+namespace {
+
+const char* const kWindowProperty = "ee.platwindow";
+std::string sLastError;
+
+struct KeyMap {
+    SDL_Scancode mScanCode;
+    uint8_t mDIK;
+    uint8_t mVK;
+};
+
+// clang-format off
+const KeyMap kKeys[] = {
+    {SDL_SCANCODE_ESCAPE, DIK_ESCAPE, VK_ESCAPE},       {SDL_SCANCODE_1, DIK_1, '1'},
+    {SDL_SCANCODE_2, DIK_2, '2'},                       {SDL_SCANCODE_3, DIK_3, '3'},
+    {SDL_SCANCODE_4, DIK_4, '4'},                       {SDL_SCANCODE_5, DIK_5, '5'},
+    {SDL_SCANCODE_6, DIK_6, '6'},                       {SDL_SCANCODE_7, DIK_7, '7'},
+    {SDL_SCANCODE_8, DIK_8, '8'},                       {SDL_SCANCODE_9, DIK_9, '9'},
+    {SDL_SCANCODE_0, DIK_0, '0'},                       {SDL_SCANCODE_MINUS, DIK_MINUS, VK_OEM_MINUS},
+    {SDL_SCANCODE_EQUALS, DIK_EQUALS, VK_OEM_PLUS},     {SDL_SCANCODE_BACKSPACE, DIK_BACK, VK_BACK},
+    {SDL_SCANCODE_TAB, DIK_TAB, VK_TAB},                {SDL_SCANCODE_Q, DIK_Q, 'Q'},
+    {SDL_SCANCODE_W, DIK_W, 'W'},                       {SDL_SCANCODE_E, DIK_E, 'E'},
+    {SDL_SCANCODE_R, DIK_R, 'R'},                       {SDL_SCANCODE_T, DIK_T, 'T'},
+    {SDL_SCANCODE_Y, DIK_Y, 'Y'},                       {SDL_SCANCODE_U, DIK_U, 'U'},
+    {SDL_SCANCODE_I, DIK_I, 'I'},                       {SDL_SCANCODE_O, DIK_O, 'O'},
+    {SDL_SCANCODE_P, DIK_P, 'P'},                       {SDL_SCANCODE_LEFTBRACKET, DIK_LBRACKET, VK_OEM_4},
+    {SDL_SCANCODE_RIGHTBRACKET, DIK_RBRACKET, VK_OEM_6}, {SDL_SCANCODE_RETURN, DIK_RETURN, VK_RETURN},
+    {SDL_SCANCODE_LCTRL, DIK_LCONTROL, VK_LCONTROL},    {SDL_SCANCODE_A, DIK_A, 'A'},
+    {SDL_SCANCODE_S, DIK_S, 'S'},                       {SDL_SCANCODE_D, DIK_D, 'D'},
+    {SDL_SCANCODE_F, DIK_F, 'F'},                       {SDL_SCANCODE_G, DIK_G, 'G'},
+    {SDL_SCANCODE_H, DIK_H, 'H'},                       {SDL_SCANCODE_J, DIK_J, 'J'},
+    {SDL_SCANCODE_K, DIK_K, 'K'},                       {SDL_SCANCODE_L, DIK_L, 'L'},
+    {SDL_SCANCODE_SEMICOLON, DIK_SEMICOLON, VK_OEM_1},  {SDL_SCANCODE_APOSTROPHE, DIK_APOSTROPHE, VK_OEM_7},
+    {SDL_SCANCODE_GRAVE, DIK_GRAVE, VK_OEM_3},          {SDL_SCANCODE_LSHIFT, DIK_LSHIFT, VK_LSHIFT},
+    {SDL_SCANCODE_BACKSLASH, DIK_BACKSLASH, VK_OEM_5},  {SDL_SCANCODE_NONUSHASH, DIK_BACKSLASH, VK_OEM_5},
+    {SDL_SCANCODE_Z, DIK_Z, 'Z'},                       {SDL_SCANCODE_X, DIK_X, 'X'},
+    {SDL_SCANCODE_C, DIK_C, 'C'},                       {SDL_SCANCODE_V, DIK_V, 'V'},
+    {SDL_SCANCODE_B, DIK_B, 'B'},                       {SDL_SCANCODE_N, DIK_N, 'N'},
+    {SDL_SCANCODE_M, DIK_M, 'M'},                       {SDL_SCANCODE_COMMA, DIK_COMMA, VK_OEM_COMMA},
+    {SDL_SCANCODE_PERIOD, DIK_PERIOD, VK_OEM_PERIOD},   {SDL_SCANCODE_SLASH, DIK_SLASH, VK_OEM_2},
+    {SDL_SCANCODE_RSHIFT, DIK_RSHIFT, VK_RSHIFT},       {SDL_SCANCODE_KP_MULTIPLY, DIK_MULTIPLY, VK_MULTIPLY},
+    {SDL_SCANCODE_LALT, DIK_LMENU, VK_LMENU},           {SDL_SCANCODE_SPACE, DIK_SPACE, VK_SPACE},
+    {SDL_SCANCODE_CAPSLOCK, DIK_CAPITAL, VK_CAPITAL},   {SDL_SCANCODE_F1, DIK_F1, VK_F1},
+    {SDL_SCANCODE_F2, DIK_F2, VK_F2},                   {SDL_SCANCODE_F3, DIK_F3, VK_F3},
+    {SDL_SCANCODE_F4, DIK_F4, VK_F4},                   {SDL_SCANCODE_F5, DIK_F5, VK_F5},
+    {SDL_SCANCODE_F6, DIK_F6, VK_F6},                   {SDL_SCANCODE_F7, DIK_F7, VK_F7},
+    {SDL_SCANCODE_F8, DIK_F8, VK_F8},                   {SDL_SCANCODE_F9, DIK_F9, VK_F9},
+    {SDL_SCANCODE_F10, DIK_F10, VK_F10},                {SDL_SCANCODE_NUMLOCKCLEAR, DIK_NUMLOCK, VK_NUMLOCK},
+    {SDL_SCANCODE_SCROLLLOCK, DIK_SCROLL, VK_SCROLL},   {SDL_SCANCODE_KP_7, DIK_NUMPAD7, VK_NUMPAD7},
+    {SDL_SCANCODE_KP_8, DIK_NUMPAD8, VK_NUMPAD8},       {SDL_SCANCODE_KP_9, DIK_NUMPAD9, VK_NUMPAD9},
+    {SDL_SCANCODE_KP_MINUS, DIK_SUBTRACT, VK_SUBTRACT}, {SDL_SCANCODE_KP_4, DIK_NUMPAD4, VK_NUMPAD4},
+    {SDL_SCANCODE_KP_5, DIK_NUMPAD5, VK_NUMPAD5},       {SDL_SCANCODE_KP_6, DIK_NUMPAD6, VK_NUMPAD6},
+    {SDL_SCANCODE_KP_PLUS, DIK_ADD, VK_ADD},            {SDL_SCANCODE_KP_1, DIK_NUMPAD1, VK_NUMPAD1},
+    {SDL_SCANCODE_KP_2, DIK_NUMPAD2, VK_NUMPAD2},       {SDL_SCANCODE_KP_3, DIK_NUMPAD3, VK_NUMPAD3},
+    {SDL_SCANCODE_KP_0, DIK_NUMPAD0, VK_NUMPAD0},       {SDL_SCANCODE_KP_PERIOD, DIK_DECIMAL, VK_DECIMAL},
+    {SDL_SCANCODE_NONUSBACKSLASH, DIK_OEM_102, VK_OEM_102}, {SDL_SCANCODE_F11, DIK_F11, VK_F11},
+    {SDL_SCANCODE_F12, DIK_F12, VK_F12},                {SDL_SCANCODE_F13, DIK_F13, VK_F13},
+    {SDL_SCANCODE_F14, DIK_F14, VK_F14},                {SDL_SCANCODE_F15, DIK_F15, VK_F15},
+    {SDL_SCANCODE_INTERNATIONAL2, DIK_KANA, VK_KANA},   {SDL_SCANCODE_INTERNATIONAL1, DIK_ABNT_C1, 0},
+    {SDL_SCANCODE_INTERNATIONAL4, DIK_CONVERT, VK_CONVERT}, {SDL_SCANCODE_INTERNATIONAL5, DIK_NOCONVERT, VK_NONCONVERT},
+    {SDL_SCANCODE_INTERNATIONAL3, DIK_YEN, 0},          {SDL_SCANCODE_KP_EQUALS, DIK_NUMPADEQUALS, 0},
+    {SDL_SCANCODE_KP_ENTER, DIK_NUMPADENTER, VK_RETURN}, {SDL_SCANCODE_RCTRL, DIK_RCONTROL, VK_RCONTROL},
+    {SDL_SCANCODE_KP_COMMA, DIK_NUMPADCOMMA, VK_SEPARATOR}, {SDL_SCANCODE_KP_DIVIDE, DIK_DIVIDE, VK_DIVIDE},
+    {SDL_SCANCODE_PRINTSCREEN, DIK_SYSRQ, VK_SNAPSHOT}, {SDL_SCANCODE_RALT, DIK_RMENU, VK_RMENU},
+    {SDL_SCANCODE_PAUSE, DIK_PAUSE, VK_PAUSE},          {SDL_SCANCODE_HOME, DIK_HOME, VK_HOME},
+    {SDL_SCANCODE_UP, DIK_UP, VK_UP},                   {SDL_SCANCODE_PAGEUP, DIK_PRIOR, VK_PRIOR},
+    {SDL_SCANCODE_LEFT, DIK_LEFT, VK_LEFT},             {SDL_SCANCODE_RIGHT, DIK_RIGHT, VK_RIGHT},
+    {SDL_SCANCODE_END, DIK_END, VK_END},                {SDL_SCANCODE_DOWN, DIK_DOWN, VK_DOWN},
+    {SDL_SCANCODE_PAGEDOWN, DIK_NEXT, VK_NEXT},         {SDL_SCANCODE_INSERT, DIK_INSERT, VK_INSERT},
+    {SDL_SCANCODE_DELETE, DIK_DELETE, VK_DELETE},       {SDL_SCANCODE_LGUI, DIK_LWIN, VK_LWIN},
+    {SDL_SCANCODE_RGUI, DIK_RWIN, VK_RWIN},             {SDL_SCANCODE_APPLICATION, DIK_APPS, VK_APPS},
+    {SDL_SCANCODE_POWER, DIK_POWER, 0},                 {SDL_SCANCODE_SLEEP, DIK_SLEEP, 0},
+};
+// clang-format on
+
+const KeyMap* FindScanCode(SDL_Scancode inScanCode)
+{
+    for (const KeyMap& k : kKeys)
+        if (k.mScanCode == inScanCode)
+            return &k;
+    return NULL;
+}
+
+// The VK of a key: letters, digits and punctuation by the layout's character, the rest by position
+uint32_t VirtualKeyOf(SDL_Scancode inScanCode, SDL_Keycode inKey)
+{
+    if (inKey >= 'a' && inKey <= 'z')
+        return static_cast<uint32_t>(inKey - 'a' + 'A');
+    if (inKey >= '0' && inKey <= '9' && !(inScanCode >= SDL_SCANCODE_KP_1 && inScanCode <= SDL_SCANCODE_KP_0))
+        return static_cast<uint32_t>(inKey);
+    switch (inKey) {
+    case ';': return VK_OEM_1;
+    case '=': return VK_OEM_PLUS;
+    case ',': return VK_OEM_COMMA;
+    case '-': return VK_OEM_MINUS;
+    case '.': return VK_OEM_PERIOD;
+    case '/': return VK_OEM_2;
+    case '`': return VK_OEM_3;
+    case '[': return VK_OEM_4;
+    case '\\': return VK_OEM_5;
+    case ']': return VK_OEM_6;
+    case '\'': return VK_OEM_7;
+    default: break;
+    }
+    const KeyMap* k = FindScanCode(inScanCode);
+    return k ? k->mVK : 0;
+}
+
+uint32_t ModifiersOf(SDL_Keymod inMod)
+{
+    uint32_t m = 0;
+    if (inMod & SDL_KMOD_SHIFT) m |= PLAT_MOD_SHIFT;
+    if (inMod & SDL_KMOD_CTRL) m |= PLAT_MOD_CONTROL;
+    if (inMod & SDL_KMOD_ALT) m |= PLAT_MOD_ALT;
+    if (inMod & SDL_KMOD_GUI) m |= PLAT_MOD_GUI;
+    if (inMod & SDL_KMOD_CAPS) m |= PLAT_MOD_CAPS;
+    if (inMod & SDL_KMOD_NUM) m |= PLAT_MOD_NUM;
+    return m;
+}
+
+// Windows-1252 0x80..0x9F
+const uint16_t kCP1252[32] = {0x20AC, 0,      0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021,
+                              0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0,      0x017D, 0,
+                              0,      0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014,
+                              0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0,      0x017E, 0x0178};
+
+// UTF-8 -> Windows-1252 into outText (inSize bytes, terminated) -> the bytes written
+size_t ToCP1252(const char* inUTF8, char* outText, size_t inSize)
+{
+    size_t n = 0;
+    const unsigned char* p = reinterpret_cast<const unsigned char*>(inUTF8 ? inUTF8 : "");
+    while (*p && n + 1 < inSize) {
+        uint32_t c;
+        int theLength = *p < 0x80 ? 1 : (*p >> 5) == 6 ? 2 : (*p >> 4) == 14 ? 3 : (*p >> 3) == 30 ? 4 : 1;
+        c = theLength == 1 ? *p : theLength == 2 ? (*p & 0x1F) : theLength == 3 ? (*p & 0x0F) : (*p & 0x07);
+        for (int i = 1; i < theLength; i++) {
+            if ((p[i] & 0xC0) != 0x80) {
+                theLength = i;
+                c = '?';
+                break;
+            }
+            c = (c << 6) | (p[i] & 0x3F);
+        }
+        p += theLength;
+        unsigned char b = '?';
+        if (c < 0x80 || (c >= 0xA0 && c <= 0xFF))
+            b = static_cast<unsigned char>(c);
+        else
+            for (int i = 0; i < 32; i++)
+                if (kCP1252[i] == c)
+                    b = static_cast<unsigned char>(0x80 + i);
+        outText[n++] = static_cast<char>(b);
+    }
+    outText[n] = 0;
+    return n;
+}
+
+std::string ToUTF8(const char* inText)
+{
+    std::string theOut;
+    for (const unsigned char* p = reinterpret_cast<const unsigned char*>(inText); *p; p++) {
+        uint32_t c = *p >= 0x80 && *p < 0xA0 ? (kCP1252[*p - 0x80] ? kCP1252[*p - 0x80] : '?') : *p;
+        if (c < 0x80) {
+            theOut += static_cast<char>(c);
+        } else if (c < 0x800) {
+            theOut += static_cast<char>(0xC0 | (c >> 6));
+            theOut += static_cast<char>(0x80 | (c & 0x3F));
+        } else {
+            theOut += static_cast<char>(0xE0 | (c >> 12));
+            theOut += static_cast<char>(0x80 | ((c >> 6) & 0x3F));
+            theOut += static_cast<char>(0x80 | (c & 0x3F));
+        }
+    }
+    return theOut;
+}
+
+PlatWindow* WindowOf(SDL_WindowID inID)
+{
+    SDL_Window* theWindow = SDL_GetWindowFromID(inID);
+    if (!theWindow)
+        return NULL;
+    return static_cast<PlatWindow*>(SDL_GetPointerProperty(SDL_GetWindowProperties(theWindow), kWindowProperty, NULL));
+}
+
+void ShowMessage(const char* inTitle, const char* inText, uint32_t inFlags)
+{
+    SDL_MessageBoxFlags theFlags = (inFlags & PLAT_MESSAGE_ERROR) ? SDL_MESSAGEBOX_ERROR : SDL_MESSAGEBOX_INFORMATION;
+    SDL_ShowSimpleMessageBox(theFlags, ToUTF8(inTitle).c_str(), ToUTF8(inText).c_str(), NULL);
+}
+
+bool Translate(const SDL_Event& e, PlatInputEvent* out)
+{
+    memset(out, 0, sizeof(*out));
+    out->mTime = PlatTimeMilliseconds();
+    switch (e.type) {
+    case SDL_EVENT_QUIT:
+        out->mType = PLAT_EVENT_QUIT;
+        return true;
+    case SDL_EVENT_WINDOW_CLOSE_REQUESTED:
+    case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
+    case SDL_EVENT_WINDOW_FOCUS_GAINED:
+    case SDL_EVENT_WINDOW_FOCUS_LOST:
+    case SDL_EVENT_WINDOW_MINIMIZED:
+    case SDL_EVENT_WINDOW_RESTORED:
+    case SDL_EVENT_WINDOW_EXPOSED:
+        out->mWindow = WindowOf(e.window.windowID);
+        out->mType = e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED ? PLAT_EVENT_CLOSE
+            : e.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED     ? PLAT_EVENT_RESIZED
+            : e.type == SDL_EVENT_WINDOW_FOCUS_GAINED           ? PLAT_EVENT_FOCUS_GAINED
+            : e.type == SDL_EVENT_WINDOW_FOCUS_LOST             ? PLAT_EVENT_FOCUS_LOST
+            : e.type == SDL_EVENT_WINDOW_MINIMIZED              ? PLAT_EVENT_MINIMIZED
+            : e.type == SDL_EVENT_WINDOW_RESTORED               ? PLAT_EVENT_RESTORED
+                                                                : PLAT_EVENT_EXPOSED;
+        out->mSize.mWidth = e.window.data1;
+        out->mSize.mHeight = e.window.data2;
+        return true;
+    case SDL_EVENT_KEY_DOWN:
+    case SDL_EVENT_KEY_UP: {
+        out->mType = e.type == SDL_EVENT_KEY_DOWN ? PLAT_EVENT_KEY_DOWN : PLAT_EVENT_KEY_UP;
+        out->mWindow = WindowOf(e.key.windowID);
+        const KeyMap* k = FindScanCode(e.key.scancode);
+        out->mKey.mScanCode = k ? k->mDIK : 0;
+        out->mKey.mVirtualKey = VirtualKeyOf(e.key.scancode, e.key.key);
+        out->mKey.mModifiers = ModifiersOf(e.key.mod);
+        out->mKey.mRepeat = e.key.repeat ? 1 : 0;
+        return true;
+    }
+    case SDL_EVENT_TEXT_INPUT:
+        out->mType = PLAT_EVENT_TEXT;
+        out->mWindow = WindowOf(e.text.windowID);
+        ToCP1252(e.text.text, out->mText.mText, sizeof(out->mText.mText));
+        return true;
+    case SDL_EVENT_TEXT_EDITING:
+        out->mType = PLAT_EVENT_TEXT_EDITING;
+        out->mWindow = WindowOf(e.edit.windowID);
+        ToCP1252(e.edit.text, out->mText.mText, sizeof(out->mText.mText));
+        out->mText.mCursor = e.edit.start;
+        out->mText.mLength = e.edit.length;
+        return true;
+    case SDL_EVENT_MOUSE_MOTION:
+        out->mType = PLAT_EVENT_MOUSE_MOVE;
+        out->mWindow = WindowOf(e.motion.windowID);
+        out->mMouse.mX = static_cast<int32_t>(e.motion.x);
+        out->mMouse.mY = static_cast<int32_t>(e.motion.y);
+        out->mMouse.mDeltaX = static_cast<int32_t>(e.motion.xrel);
+        out->mMouse.mDeltaY = static_cast<int32_t>(e.motion.yrel);
+        out->mMouse.mModifiers = ModifiersOf(SDL_GetModState());
+        return true;
+    case SDL_EVENT_MOUSE_BUTTON_DOWN:
+    case SDL_EVENT_MOUSE_BUTTON_UP:
+        out->mType = e.type == SDL_EVENT_MOUSE_BUTTON_DOWN ? PLAT_EVENT_MOUSE_DOWN : PLAT_EVENT_MOUSE_UP;
+        out->mWindow = WindowOf(e.button.windowID);
+        out->mMouse.mX = static_cast<int32_t>(e.button.x);
+        out->mMouse.mY = static_cast<int32_t>(e.button.y);
+        // SDL: 1 left, 2 middle, 3 right, 4 and 5 the side buttons: PlatWindow.h's numbering
+        out->mMouse.mButton = e.button.button;
+        out->mMouse.mClicks = e.button.clicks;
+        out->mMouse.mModifiers = ModifiersOf(SDL_GetModState());
+        return true;
+    case SDL_EVENT_MOUSE_WHEEL:
+        out->mType = PLAT_EVENT_MOUSE_WHEEL;
+        out->mWindow = WindowOf(e.wheel.windowID);
+        out->mMouse.mWheel = e.wheel.direction == SDL_MOUSEWHEEL_FLIPPED ? -e.wheel.y : e.wheel.y;
+        out->mMouse.mX = static_cast<int32_t>(e.wheel.mouse_x);
+        out->mMouse.mY = static_cast<int32_t>(e.wheel.mouse_y);
+        out->mMouse.mModifiers = ModifiersOf(SDL_GetModState());
+        return true;
+    default:
+        return false;
+    }
+}
+
+}   // namespace
+
+extern "C" int PlatWindowSystemStart(void)
+{
+    if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
+        sLastError = SDL_GetError();
+        return 0;
+    }
+    PlatMessageSetHandler(ShowMessage);
+    return 1;
+}
+
+extern "C" void PlatWindowSystemStop(void)
+{
+    PlatMessageSetHandler(NULL);
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
+}
+
+extern "C" const char* PlatWindowLastError(void)
+{
+    return sLastError.c_str();
+}
+
+extern "C" PlatWindow* PlatWindowCreate(const char* inTitle, int32_t inWidth, int32_t inHeight, uint32_t inFlags)
+{
+    SDL_WindowFlags theFlags = 0;
+    if (inFlags & PLAT_WINDOW_RESIZABLE) theFlags |= SDL_WINDOW_RESIZABLE;
+    if (inFlags & PLAT_WINDOW_FULLSCREEN) theFlags |= SDL_WINDOW_FULLSCREEN;
+    if (inFlags & PLAT_WINDOW_HIDDEN) theFlags |= SDL_WINDOW_HIDDEN;
+    if (inFlags & PLAT_WINDOW_HIGH_DPI) theFlags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+#if defined(__APPLE__)
+    theFlags |= SDL_WINDOW_METAL;
+#endif
+    SDL_Window* theWindow = SDL_CreateWindow(ToUTF8(inTitle ? inTitle : "").c_str(), inWidth, inHeight, theFlags);
+    if (!theWindow) {
+        sLastError = SDL_GetError();
+        return NULL;
+    }
+    PlatWindow* theResult = new PlatWindow;
+    theResult->mWindow = theWindow;
+    theResult->mMetalView = NULL;
+    SDL_SetPointerProperty(SDL_GetWindowProperties(theWindow), kWindowProperty, theResult);
+    return theResult;
+}
+
+extern "C" void PlatWindowDestroy(PlatWindow* inWindow)
+{
+    if (!inWindow)
+        return;
+    if (inWindow->mMetalView)
+        SDL_Metal_DestroyView(inWindow->mMetalView);
+    SDL_DestroyWindow(inWindow->mWindow);
+    delete inWindow;
+}
+
+extern "C" void PlatWindowSetTitle(PlatWindow* inWindow, const char* inTitle)
+{
+    SDL_SetWindowTitle(inWindow->mWindow, ToUTF8(inTitle ? inTitle : "").c_str());
+}
+
+extern "C" void PlatWindowShow(PlatWindow* inWindow, int inShow)
+{
+    if (inShow)
+        SDL_ShowWindow(inWindow->mWindow);
+    else
+        SDL_HideWindow(inWindow->mWindow);
+}
+
+extern "C" int PlatWindowSetFullscreen(PlatWindow* inWindow, int inFullscreen)
+{
+    SDL_SetWindowFullscreenMode(inWindow->mWindow, NULL);   // borderless desktop full screen, no mode change
+    return SDL_SetWindowFullscreen(inWindow->mWindow, inFullscreen != 0) ? 1 : 0;
+}
+
+extern "C" void PlatWindowSetSize(PlatWindow* inWindow, int32_t inWidth, int32_t inHeight)
+{
+    SDL_SetWindowSize(inWindow->mWindow, inWidth, inHeight);
+}
+
+extern "C" void PlatWindowGetClientSize(PlatWindow* inWindow, int32_t* outWidth, int32_t* outHeight)
+{
+    int w = 0, h = 0;
+    SDL_GetWindowSizeInPixels(inWindow->mWindow, &w, &h);
+    *outWidth = w;
+    *outHeight = h;
+}
+
+extern "C" int PlatWindowGetDisplaySize(PlatWindow* inWindow, int32_t* outWidth, int32_t* outHeight)
+{
+    SDL_DisplayID theDisplay = inWindow ? SDL_GetDisplayForWindow(inWindow->mWindow) : SDL_GetPrimaryDisplay();
+    const SDL_DisplayMode* theMode = SDL_GetDesktopDisplayMode(theDisplay);
+    if (!theMode)
+        return 0;
+    float theDensity = theMode->pixel_density > 0 ? theMode->pixel_density : 1.0f;
+    *outWidth = static_cast<int32_t>(theMode->w * theDensity);
+    *outHeight = static_cast<int32_t>(theMode->h * theDensity);
+    return 1;
+}
+
+extern "C" int PlatWindowGetNative(PlatWindow* inWindow, PlatNativeWindow* outNative)
+{
+    memset(outNative, 0, sizeof(*outNative));
+    SDL_PropertiesID theProperties = SDL_GetWindowProperties(inWindow->mWindow);
+#if defined(_WIN32)
+    outNative->mKind = PLAT_NATIVE_WIN32;
+    outNative->mDisplay = SDL_GetPointerProperty(theProperties, SDL_PROP_WINDOW_WIN32_INSTANCE_POINTER, NULL);
+    outNative->mWindow = SDL_GetPointerProperty(theProperties, SDL_PROP_WINDOW_WIN32_HWND_POINTER, NULL);
+#elif defined(__APPLE__)
+    if (!inWindow->mMetalView)
+        inWindow->mMetalView = SDL_Metal_CreateView(inWindow->mWindow);
+    outNative->mKind = PLAT_NATIVE_METAL;
+    outNative->mWindow = inWindow->mMetalView ? SDL_Metal_GetLayer(inWindow->mMetalView) : NULL;
+#else
+    const char* theDriver = SDL_GetCurrentVideoDriver();
+    if (theDriver && strcmp(theDriver, "wayland") == 0) {
+        outNative->mKind = PLAT_NATIVE_WAYLAND;
+        outNative->mDisplay = SDL_GetPointerProperty(theProperties, SDL_PROP_WINDOW_WAYLAND_DISPLAY_POINTER, NULL);
+        outNative->mWindow = SDL_GetPointerProperty(theProperties, SDL_PROP_WINDOW_WAYLAND_SURFACE_POINTER, NULL);
+    } else if (theDriver && strcmp(theDriver, "x11") == 0) {
+        outNative->mKind = PLAT_NATIVE_X11;
+        outNative->mDisplay = SDL_GetPointerProperty(theProperties, SDL_PROP_WINDOW_X11_DISPLAY_POINTER, NULL);
+        outNative->mWindow = reinterpret_cast<void*>(
+            static_cast<uintptr_t>(SDL_GetNumberProperty(theProperties, SDL_PROP_WINDOW_X11_WINDOW_NUMBER, 0)));
+    }
+#endif
+    if (outNative->mKind == PLAT_NATIVE_NONE || !outNative->mWindow) {
+        sLastError = "no native window handle for this video driver";
+        return 0;
+    }
+    return 1;
+}
+
+extern "C" int PlatWindowPollEvent(PlatInputEvent* outEvent)
+{
+    SDL_Event e;
+    while (SDL_PollEvent(&e))
+        if (Translate(e, outEvent))
+            return 1;
+    return 0;
+}
+
+extern "C" int PlatWindowWaitEvent(PlatInputEvent* outEvent, uint32_t inTimeoutMs)
+{
+    uint32_t theStart = PlatTimeMilliseconds();
+    for (;;) {
+        SDL_Event e;
+        int32_t theLeft = -1;
+        if (inTimeoutMs != PLAT_WAIT_INFINITE) {
+            uint32_t theElapsed = PlatTimeMilliseconds() - theStart;
+            if (theElapsed >= inTimeoutMs)
+                return PlatWindowPollEvent(outEvent);
+            theLeft = static_cast<int32_t>(inTimeoutMs - theElapsed);
+        }
+        if (!SDL_WaitEventTimeout(&e, theLeft))
+            return 0;
+        if (Translate(e, outEvent))
+            return 1;
+    }
+}
+
+extern "C" int PlatScanCodeIsDown(uint32_t inScanCode)
+{
+    const bool* theState = SDL_GetKeyboardState(NULL);
+    for (const KeyMap& k : kKeys)
+        if (k.mDIK == inScanCode && theState[k.mScanCode])
+            return 1;
+    return 0;
+}
+
+extern "C" int PlatKeyIsDown(uint32_t inVirtualKey)
+{
+    if (inVirtualKey >= VK_LBUTTON && inVirtualKey <= VK_MBUTTON && inVirtualKey != VK_CANCEL) {
+        SDL_MouseButtonFlags theButtons = SDL_GetMouseState(NULL, NULL);
+        return inVirtualKey == VK_LBUTTON ? (theButtons & SDL_BUTTON_LMASK) != 0
+            : inVirtualKey == VK_RBUTTON  ? (theButtons & SDL_BUTTON_RMASK) != 0
+                                          : (theButtons & SDL_BUTTON_MMASK) != 0;
+    }
+    const bool* theState = SDL_GetKeyboardState(NULL);
+    switch (inVirtualKey) {
+    case VK_SHIFT: return theState[SDL_SCANCODE_LSHIFT] || theState[SDL_SCANCODE_RSHIFT];
+    case VK_CONTROL: return theState[SDL_SCANCODE_LCTRL] || theState[SDL_SCANCODE_RCTRL];
+    case VK_MENU: return theState[SDL_SCANCODE_LALT] || theState[SDL_SCANCODE_RALT];
+    default: break;
+    }
+    if ((inVirtualKey >= 'A' && inVirtualKey <= 'Z') || (inVirtualKey >= '0' && inVirtualKey <= '9')) {
+        SDL_Keycode theKey = inVirtualKey >= 'A' ? static_cast<SDL_Keycode>(inVirtualKey - 'A' + 'a') : inVirtualKey;
+        SDL_Scancode theScanCode = SDL_GetScancodeFromKey(theKey, NULL);
+        return theScanCode != SDL_SCANCODE_UNKNOWN && theState[theScanCode];
+    }
+    for (const KeyMap& k : kKeys)
+        if (k.mVK == inVirtualKey && theState[k.mScanCode])
+            return 1;
+    return 0;
+}
+
+extern "C" int PlatKeyIsToggled(uint32_t inVirtualKey)
+{
+    SDL_Keymod theMod = SDL_GetModState();
+    switch (inVirtualKey) {
+    case VK_CAPITAL: return (theMod & SDL_KMOD_CAPS) != 0;
+    case VK_NUMLOCK: return (theMod & SDL_KMOD_NUM) != 0;
+    case VK_SCROLL: return (theMod & SDL_KMOD_SCROLL) != 0;
+    default: return 0;
+    }
+}
+
+extern "C" uint32_t PlatModifiers(void)
+{
+    return ModifiersOf(SDL_GetModState());
+}
+
+extern "C" uint32_t PlatMouseGetState(PlatWindow* inWindow, int32_t* outX, int32_t* outY)
+{
+    float x = 0, y = 0;
+    SDL_MouseButtonFlags theButtons = SDL_GetGlobalMouseState(&x, &y);
+    if (inWindow) {
+        int wx = 0, wy = 0;
+        SDL_GetWindowPosition(inWindow->mWindow, &wx, &wy);
+        float theScale = SDL_GetWindowPixelDensity(inWindow->mWindow);
+        x = (x - static_cast<float>(wx)) * theScale;
+        y = (y - static_cast<float>(wy)) * theScale;
+    }
+    if (outX)
+        *outX = static_cast<int32_t>(x);
+    if (outY)
+        *outY = static_cast<int32_t>(y);
+    uint32_t theResult = 0;
+    if (theButtons & SDL_BUTTON_LMASK) theResult |= 1;
+    if (theButtons & SDL_BUTTON_MMASK) theResult |= 2;
+    if (theButtons & SDL_BUTTON_RMASK) theResult |= 4;
+    return theResult;
+}
+
+extern "C" int PlatMouseSetRelative(PlatWindow* inWindow, int inRelative)
+{
+    return SDL_SetWindowRelativeMouseMode(inWindow->mWindow, inRelative != 0) ? 1 : 0;
+}
+
+extern "C" void PlatMouseWarp(PlatWindow* inWindow, int32_t inX, int32_t inY)
+{
+    float theScale = SDL_GetWindowPixelDensity(inWindow->mWindow);
+    if (theScale <= 0)
+        theScale = 1;
+    SDL_WarpMouseInWindow(inWindow->mWindow, static_cast<float>(inX) / theScale, static_cast<float>(inY) / theScale);
+}
+
+extern "C" void PlatCursorShow(int inShow)
+{
+    if (inShow)
+        SDL_ShowCursor();
+    else
+        SDL_HideCursor();
+}
+
+extern "C" void PlatMouseConfine(PlatWindow* inWindow, int inConfine)
+{
+    SDL_SetWindowMouseGrab(inWindow->mWindow, inConfine != 0);
+}
+
+extern "C" int PlatClipboardSetText(const char* inText)
+{
+    return SDL_SetClipboardText(ToUTF8(inText ? inText : "").c_str()) ? 1 : 0;
+}
+
+extern "C" char* PlatClipboardGetText(void)
+{
+    if (!SDL_HasClipboardText())
+        return NULL;
+    char* theText = SDL_GetClipboardText();
+    if (!theText)
+        return NULL;
+    size_t theSize = strlen(theText) + 1;
+    char* theResult = static_cast<char*>(malloc(theSize));
+    if (theResult)
+        ToCP1252(theText, theResult, theSize);
+    SDL_free(theText);
+    return theResult;
+}
+
+extern "C" void PlatTextInputStart(PlatWindow* inWindow, int32_t inX, int32_t inY, int32_t inWidth, int32_t inHeight)
+{
+    SDL_Rect theArea = {inX, inY, inWidth, inHeight};
+    SDL_SetTextInputArea(inWindow->mWindow, &theArea, 0);
+    SDL_StartTextInput(inWindow->mWindow);
+}
+
+extern "C" void PlatTextInputStop(PlatWindow* inWindow)
+{
+    SDL_StopTextInput(inWindow->mWindow);
+}

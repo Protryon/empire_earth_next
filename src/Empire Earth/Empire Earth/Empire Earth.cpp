@@ -7,6 +7,7 @@
 
 #include "lle/LowLevelEngine.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
+#include "platform/PlatMessage.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
@@ -866,7 +867,7 @@ bool EEInitializePart1()
             UWideString theTitle;
             gResource->GetString(IDS_EMPIRE_EARTH_ART_OF_CONQUEST_REQUIRES_SOUND, theMessage);
             gResource->GetString(IDS_ERROR_CANT_RUN_16EA, theTitle);
-            MessageBoxA(NULL, theMessage, theTitle, MB_ICONHAND | MB_SYSTEMMODAL | MB_SETFOREGROUND);
+            PlatMessageShow(theTitle, theMessage, PLAT_MESSAGE_ERROR | PLAT_MESSAGE_SYSTEM_MODAL | PLAT_MESSAGE_FOREGROUND);
             return false;
         }
         EESetThreadFloatingPoint("EEInitializePart1:InitializeSounds");
@@ -2018,7 +2019,7 @@ int WINAPI WinMain(HINSTANCE inInstance, HINSTANCE inPreviousInstance, LPSTR inC
                 UWideString theTitle;
                 gResource->GetString(IDS_EMPIRE_EARTH_ART_OF_CONQUEST_REQUIRES_ORIGINAL, theMessage);
                 gResource->GetString(IDS_ERROR_CANT_RUN, theTitle);
-                MessageBoxA(NULL, theMessage, theTitle, 0);
+                PlatMessageShow(theTitle, theMessage, 0);
                 CoUninitialize();
                 UnhookWindowsHookEx(sCallWndProcHook);
                 return 1;

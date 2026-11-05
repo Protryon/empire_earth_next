@@ -146,7 +146,7 @@ struct RTSMapTileRun;
 class EEAIContinent;
 class EEAIChokePoint;
 class EETown;
-namespace std { template <class _T1, class _T2> struct pair; }   // (the pair overload)
+#include <utility>   // std::pair (a forward declaration names another class under libc++'s std::__1)
 template <class T> class U2DPoint;
 struct EETileDistanceLess {
     EETileDistanceLess(long inX, long inY) : mCenter(inX, inY) {}

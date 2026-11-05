@@ -11,6 +11,7 @@
 #include <deque>
 
 #include "lle/UILayoutUtility.h"
+#include "platform/PlatWindow.h"   // PlatKeyIsToggled
 
 class FSFileSpec;
 class GEBitmap;
@@ -164,9 +165,8 @@ public:
     UIEvent* GetMouseRightButtonDoublePressedEvent() const { return this->mMouseRightButtonDoublePressedEvent; }
     UIEvent* GetMouseWheelMoveEvent() const { return this->mMouseWheelMoveEvent; }
     const UWideString& GetMusicFileName() const { return this->mMusicFileName; }
-    // Inferred form: inlined as `not al; test al,1` by UIControl's key tests (all exact); the standalone body
-    // (0x100596a2, `not al; and al,1`) is matched by `? true : false`, which VC6 then refuses to inline
-    static bool GetNumLockOff() { return GetKeyState(VK_NUMLOCK) & 1 ? false : true; }   // the ternary gives `not al; and al, 1`
+    // Num Lock is off (GetKeyState(VK_NUMLOCK) & 1 was the original's test; 0x100596a2)
+    static bool GetNumLockOff() { return PlatKeyIsToggled(VK_NUMLOCK) ? false : true; }
     const GERectangle& GetRectangle() const { return this->mRectangle; }
     bool GetShouldFadeIn();
     bool GetTabbingOn() const { return this->mTabbingOn; }

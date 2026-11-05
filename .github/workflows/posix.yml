@@ -1,0 +1,145 @@
+name: posix
+
+# Linux and macOS: the platform layer's tests, the text rasteriser, SDL3 + the window layer's test program, and the
+# compile census of the game's units (tools/xbuild.py; PORT.md "Plan: x64 only, then macOS and Linux", step 4).
+# The Windows build is ci.yml.
+on:
+  push:
+    branches: [posix-ci]
+  workflow_dispatch:
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # clang + lld; SDL3's X11/Wayland development files; Xvfb and Mesa's software Vulkan (lavapipe) for a window
+      # and a GPU adapter on a machine without either
+      - name: Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends clang lld cmake ninja-build pkg-config \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev libxfixes-dev libxtst-dev \
+            libxkbcommon-dev libwayland-dev wayland-protocols libegl1-mesa-dev libgl1-mesa-dev libdbus-1-dev \
+            libibus-1.0-dev libdecor-0-dev xvfb xauth mesa-vulkan-drivers libvulkan1
+          clang --version
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: toolchain/dl
+          key: posix-dl-${{ hashFiles('tools/fetch_posix.py') }}
+
+      - name: Fetch wgpu-native, SDL3, fonts
+        run: python -I tools/fetch_posix.py wgpu sdl3 fonts
+
+      - name: Targets
+        run: python -I tools/xbuild.py targets
+
+      - name: Platform layer tests
+        run: python -I tools/xbuild.py test
+
+      - name: Text rasteriser test
+        run: python -I tools/xbuild.py fonttest
+
+      - name: SDL3 (static)
+        run: python -I tools/xbuild.py sdl3 -j 4
+
+      # exit 2: no display or no GPU adapter (reported, not a failure); 1: a check failed
+      - name: Window layer test (Xvfb, lavapipe)
+        run: |
+          rc=0
+          xvfb-run -a -s "-screen 0 1280x1024x24" python -I tools/xbuild.py sdltest --frames 60 || rc=$?
+          if [ "$rc" = "1" ]; then exit 1; fi
+          if [ "$rc" != "0" ]; then echo "::warning::sdl_test exit $rc (no display or adapter)"; fi
+
+      - name: Compile census (linux-x86_64)
+        run: |
+          python -I tools/xbuild.py census -j 4 > census-linux-ms.txt 2>&1 || true
+          python -I tools/xbuild.py census -j 4 --dialect gnu > census-linux-gnu.txt 2>&1 || true
+          python -I tools/xbuild.py census -j 4 --dialect msext > census-linux-msext.txt 2>&1 || true
+          head -60 census-linux-ms.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: census-linux
+          path: |
+            census-linux-*.txt
+            build/xbuild/linux-x86_64/census-*/summary.txt
+            build/xbuild/linux-x86_64/census-*/census.tsv
+            build/xbuild/linux-x86_64/census-*/census_errors.tsv
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Tools
+        run: |
+          brew install ninja || true
+          cmake --version
+          clang --version
+          xcrun --show-sdk-path
+
+      - name: Cache downloads
+        uses: actions/cache@v4
+        with:
+          path: toolchain/dl
+          key: posix-dl-${{ hashFiles('tools/fetch_posix.py') }}
+
+      - name: Fetch wgpu-native, SDL3, fonts
+        run: python -I tools/fetch_posix.py wgpu sdl3 fonts
+
+      - name: Targets
+        run: python -I tools/xbuild.py targets
+
+      - name: Platform layer tests
+        run: python -I tools/xbuild.py test
+
+      - name: Platform layer tests, the other architecture (build only)
+        run: |
+          if [ "$(uname -m)" = "arm64" ]; then other=macos-x86_64; else other=macos-arm64; fi
+          python -I tools/xbuild.py test --target $other --no-run
+
+      - name: Text rasteriser test
+        run: python -I tools/xbuild.py fonttest
+
+      - name: SDL3 (static)
+        run: python -I tools/xbuild.py sdl3 -j 4
+
+      - name: Window layer test (Metal)
+        run: |
+          rc=0
+          python -I tools/xbuild.py sdltest --frames 60 || rc=$?
+          if [ "$rc" = "1" ]; then exit 1; fi
+          if [ "$rc" != "0" ]; then echo "::warning::sdl_test exit $rc (no display or adapter)"; fi
+
+      - name: Compile census (macOS)
+        run: |
+          python -I tools/xbuild.py census -j 4 > census-macos-ms.txt 2>&1 || true
+          python -I tools/xbuild.py census -j 4 --dialect gnu > census-macos-gnu.txt 2>&1 || true
+          python -I tools/xbuild.py census -j 4 --dialect msext > census-macos-msext.txt 2>&1 || true
+          head -30 census-macos-msext.txt
+          head -60 census-macos-ms.txt
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: census-macos
+          path: |
+            census-macos-*.txt
+            build/xbuild/macos-*/census-*/summary.txt
+            build/xbuild/macos-*/census-*/census.tsv
+            build/xbuild/macos-*/census-*/census_errors.tsv

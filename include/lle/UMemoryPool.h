@@ -12,6 +12,8 @@
 #ifndef LLE_UMEMORYPOOL_H
 #define LLE_UMEMORYPOOL_H
 
+#include "platform/PlatMessage.h"   // PlatDebugOutput
+
 // One block of mSize preallocated objects plus a stack of free indices. (provisional name)
 template <class T> class UMemoryPoolChunk {     // proven sizeof 0x10 (LLE: operator new(0x10))
 public:
@@ -182,7 +184,7 @@ template <class T> void UMemoryPool<T>::DumpStats(bool inToDebugger)
             "NormalNews: %d\n\tNormalDeletes: %d\n\tLeaks: %d\n", typeid(T).name(), this->mRequests, this->mDeletions,
             this->mPeakUsage, this->mNormalNews, this->mNormalDeletes, this->mRequests - this->mDeletions);
     if (inToDebugger)
-        OutputDebugString(theString);
+        PlatDebugOutput(theString);
     else
         UMemoryPoolTraceStub(theString);
 }

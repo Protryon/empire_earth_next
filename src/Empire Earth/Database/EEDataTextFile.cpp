@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
+#include "platform/PlatMessage.h"
 #include "lle/GEColor.h"
 #include "lle/FSFileSpec.h"
 #include "lle/FSMemoryFile.h"
@@ -75,7 +76,7 @@ long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
                 theError = theDirectory + theStem + theExtension + ": " + theError;
             if (!theError.empty()) {
                 // a broken text table stops the game, with the place of the problem
-                MessageBoxA(NULL, theError.c_str(), "Empire Earth: db text table", MB_OK | MB_ICONERROR);
+                PlatMessageShow("Empire Earth: db text table", theError.c_str(), PLAT_MESSAGE_ERROR);
                 ESVerify(__FILE__, __LINE__, theError.c_str());
                 outFile = NULL;
                 return kErrorFailed;
