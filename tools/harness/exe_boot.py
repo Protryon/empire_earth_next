@@ -17,6 +17,7 @@ import argparse
 import hashlib
 import json
 import difflib
+import os
 import re
 import pathlib
 import shutil
@@ -173,6 +174,14 @@ def stage(name, build, data=True, silent_audio=True):
                 shutil.copytree(c / n, d / n)
             elif (c / n).exists():
                 shutil.copy(c / n, d / n)
+        if os.environ.get("EE_HARNESS_TEXT_DB"):
+            # TEST: the db tables as text (tools/eedata, clean mode) in the staged copy's Data\db; the game prefers
+            # them over data.ssa
+            r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "eedata" / "eedata.py"), "install", str(d)],
+                               capture_output=True, text=True)
+            if r.returncode:
+                raise RuntimeError(f"eedata install failed:\n{r.stdout}{r.stderr}")
+            print(f"data: db text tables installed ({len(list((d / 'Data' / 'db').glob('*.*')))} files)", flush=True)
     return d
 
 

@@ -68,7 +68,8 @@ def ext(spec, name):
 
 def outside_repo(p):
     p = pathlib.Path(p).resolve()
-    if p.is_relative_to(ROOT):
+    # build/ is git-ignored (the harness stages a game copy there): allowed; the rest of the repository is not
+    if p.is_relative_to(ROOT) and not p.is_relative_to(ROOT / 'build'):
         sys.exit(f'{p} is inside the repository: game data never goes there')
     return p
 
