@@ -100,6 +100,17 @@ def run(a, spec, load_db):
             cls_fields[f['cls']] += 1
             cls_bytes[f['cls']] += SIZES[f['type']] * f['count']
     junk_total = 0
+    try:   # (a) every table at once: the references name rows of the others
+        texts = tables.export_all(db, spec)
+        c = tables.Content(texts, spec)
+        comp = {n: c.build(n) for n in sorted(texts)}
+        ids = {n: {k: i for i, k in c.index(n).items()} for n in texts}   # the text's ids, not regenerated
+        texts2 = tables.export_all(comp, spec, ids)
+        c2 = tables.Content(texts2, spec)
+        comp2 = {n: c2.build(n) for n in sorted(texts2)}
+    except Exception as e:
+        print(f'(a) FAIL: {type(e).__name__}: {e}')
+        return 1
     for n in sorted(spec['tables']):
         b = db[n]
         tspec = spec['tables'][n]
@@ -107,15 +118,7 @@ def run(a, spec, load_db):
         fields = st['fields']
         exp = binfmt.exported(fields)
         # (a)
-        try:
-            text = tables.export(n, b, spec)
-            cb = tables.import_(n, text, spec)
-            text2 = tables.export(n, cb, spec)
-            cb2 = tables.import_(n, text2, spec)
-        except Exception as e:   # report every table
-            print(f'(a) FAIL {n}: {type(e).__name__}: {e}')
-            ok = False
-            continue
+        text, cb, text2, cb2 = texts[n], comp[n], texts2[n], comp2[n]
         if text2 != text or cb2 != cb:
             print(f'(a) FAIL {n}: the text does not survive text -> db -> text')
             ok = False
@@ -128,7 +131,7 @@ def run(a, spec, load_db):
         tmpl = binfmt.retail_template(tr)
         tc = binfmt.parse(n, cb, spec)
         rr, rc = _rows(tr), _rows(tc)
-        names = tables._row_names(spec, n)
+        names = tables._row_names(spec, n)   # dbworld: its unread rows are not compared
         only = tables._row_fields(tspec)
         bad = None
         junk = collections.Counter()

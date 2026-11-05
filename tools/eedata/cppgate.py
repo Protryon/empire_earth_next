@@ -24,7 +24,7 @@ def build(out, jobs):
     out.mkdir(parents=True, exist_ok=True)
     _, inc = verify.include_paths(None)
     objs = []
-    for src in (db / 'EEDataText.cpp', HERE / 'cppgate' / 'eedata_gate.cpp'):
+    for src in (db / 'EEDataText.cpp', db / 'EEDataDump.cpp', HERE / 'cppgate' / 'eedata_gate.cpp'):
         obj = out / (src.stem + '.obj')
         cmd = [str(CLANG), *clang_build.CLANG_FLAGS, '/std:c++17', '-EHsc', '-MT', '-O1',
                *verify.DEFINES.split(), f'/I{db}', f'/Fo{obj}', str(src)]
@@ -50,21 +50,38 @@ def run(a, spec, load_db):
         text, want = tmp / 'text', tmp / 'want'
         text.mkdir(parents=True)
         want.mkdir(parents=True)
-        texts = {}
-        for n, b in db.items():
-            t = tables.export(n, b, spec)
-            texts[n] = t
+        texts = tables.export_all(db, spec)
+        c = tables.Content(texts, spec)
+        for n, t in texts.items():
             (text / (n + ('.yaml' if spec['tables'][n]['format'] == 'yaml' else '.csv'))).write_bytes(t)
-            (want / f'{n}.dat').write_bytes(tables.import_(n, t, spec))
+            (want / f'{n}.dat').write_bytes(c.build(n))
         print("--- text -> C++ loader -> the Python importer's .dat", flush=True)
         r = subprocess.run([str(exe), str(text), str(want)])
         status |= r.returncode
-        status |= run_parity(exe, spec, texts, tmp / 'parity')
+        status |= run_dump(exe, db, text, tmp)
+        status |= run_parity(exe, spec, texts, tmp / 'parity', text)
     print('PASS' if status == 0 else 'FAIL')
     return status
 
 
-def run_parity(exe, spec, texts, folder):
+def run_dump(exe, db, textdir, tmp):
+    """G1: the content dump (EEDataDump.cpp: canonical JSON of every value the loaders read) of the binary tables
+    and of the text tables compiled by the game's loader must be identical."""
+    print('--- content dump: binary .dat vs text (ids resolved), through the game\'s code', flush=True)
+    dat = tmp / 'dat'
+    dat.mkdir()
+    for n, b in db.items():
+        (dat / f'{n}.dat').write_bytes(b)
+    a, b = tmp / 'dump_dat.json', tmp / 'dump_text.json'
+    if subprocess.run([str(exe), '--dump-dat', str(dat), str(a)]).returncode or \
+            subprocess.run([str(exe), '--dump-text', str(textdir), str(b)]).returncode:
+        return 1
+    same = a.read_bytes() == b.read_bytes()
+    print(f'content dumps {"identical" if same else "DIFFER"} ({a.stat().st_size:,d} bytes)')
+    return 0 if same else 1
+
+
+def run_parity(exe, spec, texts, folder, textdir):
     """Edited texts: the C++ loader and the Python importer must give the same bytes or both an error."""
     import parity
     from binfmt import FormatError
@@ -76,11 +93,11 @@ def run_parity(exe, spec, texts, folder):
         ext = '.yaml' if spec['tables'][table]['format'] == 'yaml' else '.csv'
         (folder / f'{name}__{table}{ext}').write_bytes(text)
         try:
-            want[name] = tables.import_(table, text, spec)
+            want[name] = tables.import_(table, text, spec, texts)
         except (TextError, FormatError) as e:
             want[name] = e
     print('--- parity: edited texts, C++ loader vs Python importer', flush=True)
-    r = subprocess.run([str(exe), '--batch', str(folder)])
+    r = subprocess.run([str(exe), '--batch', str(folder), str(textdir)])
     if r.returncode:
         return 1
     bad = errors = 0

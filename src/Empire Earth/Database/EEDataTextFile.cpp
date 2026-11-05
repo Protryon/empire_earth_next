@@ -4,6 +4,10 @@
 // FSMemoryFile, so the loaders read the same record stream as from the .dat; otherwise the .dat is found as before.
 // The path's own order applies: a loose Data\db\<table>.csv wins over the archive. When both the text and a .dat
 // are loose, the text wins.
+// The text tables reference each other's rows by id: one EEDataText::Content serves every table, reading the other
+// tables' texts through the same path when a reference needs their ids (each text is parsed once).
+// EE_DUMP_CONTENT=<file> (tests): every db table served, text or .dat, is appended to <file> as the content dump
+// (EEDataDump.cpp; docs/MODDING_PLAN.md gate G1).
 #include <windows.h>
 #include <set>
 #include <string>
@@ -22,6 +26,7 @@
 #include "ee/EETechTreeRecord.h"
 #include "ee/EEUnitClassRecord.h"
 
+#include "EEDataDump.h"
 #include "EEDataText.h"
 #include "EEDataTextSpecs.h"
 
@@ -50,6 +55,45 @@ static bool EEReadWholeFile(FSFileSpec& inFile, std::string& outData)
     return theOK;
 }
 
+// the path and folder the text tables are read from (the path of the current lookup)
+static FSPath* sTextPath = NULL;
+static std::string sTextDirectory;
+
+static bool EEReadTextTable(const char* inTable, std::string& outText)
+{
+    const char* theExtension = EEDataText::TextExtension(inTable);
+    FSFileSpec* theText = NULL;
+    if (theExtension == NULL || sTextPath == NULL ||
+        sTextPath->FindFile(UString((sTextDirectory + inTable + theExtension).c_str()), theText) != kErrorOK ||
+        theText == NULL)
+        return false;
+    bool theRead = EEReadWholeFile(*theText, outText);
+    delete theText;
+    return theRead;
+}
+
+static EEDataText::Content& EETextContent()
+{
+    static EEDataText::Content sContent(EEReadTextTable);
+    return sContent;
+}
+
+// EE_DUMP_CONTENT: appends a served table's content dump
+static void EEDumpContent(const std::string& inTable, const unsigned char* inData, size_t inSize)
+{
+    const char* theFile = getenv("EE_DUMP_CONTENT");
+    if (theFile == NULL || *theFile == 0)
+        return;
+    std::string theJson, theError;
+    if (!EEDataText::DumpTable(inTable.c_str(), inData, inSize, theJson, theError))
+        theJson = "\"" + inTable + "\":\"" + theError + "\"";
+    FILE* f = fopen(theFile, "ab");
+    if (f) {
+        fprintf(f, "%s\n", theJson.c_str());
+        fclose(f);
+    }
+}
+
 long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
 {
     // "db\dbworld.dat" -> directory "db\", table "dbworld"
@@ -59,20 +103,19 @@ long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
     std::string theStem = theName.substr(theDirectory.size());
     if (theStem.size() > 4 && PlatStrICmp(theStem.c_str() + theStem.size() - 4, ".dat") == 0) {
         theStem.resize(theStem.size() - 4);
+        for (char& c : theStem)
+            c = (char)(c >= 'A' && c <= 'Z' ? c + 32 : c);   // the loaders spell some names in mixed case
         const char* theExtension = EEDataText::TextExtension(theStem.c_str());
         FSFileSpec* theText = NULL;
         if (theExtension != NULL &&
             inPath->FindFile(UString((theDirectory + theStem + theExtension).c_str()), theText) == kErrorOK &&
             theText != NULL) {
-            std::string theSource;
-            bool theRead = EEReadWholeFile(*theText, theSource);
             delete theText;
+            sTextPath = inPath;
+            sTextDirectory = theDirectory;
             std::vector<unsigned char> theData;
             std::string theError;
-            if (!theRead)
-                theError = theDirectory + theStem + theExtension + ": cannot be read";
-            else if (!EEDataText::Compile(theStem.c_str(), theSource.data(), (unsigned long)theSource.size(),
-                                          theData, theError))
+            if (!EETextContent().Compile(theStem.c_str(), theData, theError))
                 theError = theDirectory + theStem + theExtension + ": " + theError;
             if (!theError.empty()) {
                 // a broken text table stops the game, with the place of the problem
@@ -84,8 +127,16 @@ long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
             unsigned char* theBuffer = new unsigned char[theData.size() ? theData.size() : 1];
             if (!theData.empty())
                 memcpy(theBuffer, &theData[0], theData.size());
+            EEDumpContent(theStem, theData.empty() ? NULL : &theData[0], theData.size());
             outFile = new FSMemoryFile(theBuffer, (unsigned long)theData.size(), 1000, true);   // owns theBuffer
             return kErrorOK;
+        }
+        if (getenv("EE_DUMP_CONTENT") != NULL && theExtension != NULL) {   // the binary load, for the dump
+            FSFileSpec* theDat = NULL;
+            std::string theBytes;
+            if (inPath->FindFile(inName, theDat) == kErrorOK && theDat != NULL && EEReadWholeFile(*theDat, theBytes))
+                EEDumpContent(theStem, reinterpret_cast<const unsigned char*>(theBytes.data()), theBytes.size());
+            delete theDat;
         }
     }
     return inPath->FindFile(inName, outFile);

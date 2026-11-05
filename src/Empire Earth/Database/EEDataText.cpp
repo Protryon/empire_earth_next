@@ -10,7 +10,9 @@
 #include "lle/UFromChars.h"
 #include <cstdint>
 #include <cstring>
+#include <functional>
 #include <map>
+#include <memory>
 #include <string>
 #include <system_error>
 #include <vector>
@@ -468,6 +470,7 @@ struct Csv {
     std::map<std::string, std::string> mDirectives;
     std::vector<std::string> mHeader;
     std::vector<std::vector<std::string>> mRows;
+    std::vector<long> mRowLines;   // the line each row starts on
 };
 
 Csv ParseCsv(const std::string& inText)
@@ -497,7 +500,10 @@ Csv ParseCsv(const std::string& inText)
     }
     // RFC 4180 records (as Python's csv module reads them: a quote inside an unquoted field is a character)
     std::vector<std::vector<std::string>> rows;
+    std::vector<long> starts;
+    long line = no + 1;
     while (p < inText.size()) {
+        long start = line;
         std::vector<std::string> row;
         std::string cell;
         bool any = false;
@@ -517,6 +523,8 @@ Csv ParseCsv(const std::string& inText)
                         p++;
                         break;
                     }
+                    if (inText[p] == '\n')
+                        line++;
                     cell += inText[p++];
                 }
                 if (p < inText.size() && inText[p] != ',' && inText[p] != '\n' &&
@@ -538,12 +546,16 @@ Csv ParseCsv(const std::string& inText)
             }
             if (p < inText.size() && inText[p] == '\r')
                 p++;
-            if (p < inText.size() && inText[p] == '\n')
+            if (p < inText.size() && inText[p] == '\n') {
                 p++;
+                line++;
+            }
             break;
         }
-        if (any)
+        if (any) {
             rows.push_back(row);
+            starts.push_back(start);
+        }
     }
     if (rows.empty())
         Fail("CSV: no header row");
@@ -554,9 +566,10 @@ Csv ParseCsv(const std::string& inText)
                 Fail("CSV: duplicate column names");
     for (size_t i = 1; i < rows.size(); i++) {
         if (rows[i].size() != out.mHeader.size())
-            Fail("CSV row " + Num(i) + ": " + Num(rows[i].size()) + " cells, the header has " +
+            Fail("line " + Num(starts[i]) + ": " + Num(rows[i].size()) + " cells, the header has " +
                  Num(out.mHeader.size()));
         out.mRows.push_back(rows[i]);
+        out.mRowLines.push_back(starts[i]);
     }
     return out;
 }
@@ -842,47 +855,250 @@ std::vector<unsigned char> Record(const char* inBytes, unsigned long inSize)
     return out;
 }
 
-// the record: the struct's base (zero + the defaults of the fields the game never reads), then every field the
-// text carries (a missing one is zero)
-std::vector<unsigned char> BuildRecord(const EEDTStruct& st, Getter& g)
+// an id: a lowercase letter, then a-z, 0-9 or _ (tools/eedata/ids.py ID_RE)
+bool IsId(const std::string& s)
 {
-    std::vector<unsigned char> buf = Record(st.mBase, st.mSize);
-    for (unsigned long fi = 0; fi < st.mFieldCount; fi++) {
-        const EEDTField& f = st.mFields[fi];
-        std::string name = f.mName;
-        if (f.mType == kEEDT_str) {
-            std::string text = Text(g.Get(name), g.mWhere, f.mName);
-            if (text.size() >= f.mCount)
-                Fail(g.mWhere + ": " + name + ": " + Num(text.size()) + " bytes, the field holds " +
-                     Num(f.mCount - 1) + " (+ NUL)");
-            memset(&buf[f.mOffset], 0, f.mCount);
-            memcpy(&buf[f.mOffset], text.data(), text.size());
-        } else if (f.mType == kEEDT_pair_f32) {
-            std::vector<const Node*> e = Elems(g.Get(name), f.mCount, g.mWhere, f.mName);
-            for (size_t k = 0; k < f.mCount; k++) {
-                std::vector<const Node*> p = Elems(e[k], 2, g.mWhere, f.mName);
-                PutLE(buf, f.mOffset + 8 * k, Number(f, kEEDT_f32, p[0], g.mWhere), 4);
-                PutLE(buf, f.mOffset + 8 * k + 4, Number(f, kEEDT_f32, p[1], g.mWhere), 4);
-            }
-        } else {
-            unsigned long size = kTypeSize[f.mType];
-            if (f.mCount == 1) {
-                const Node* v = g.Get(name);
-                if (v && v->mKind == Node::kList)
-                    Fail(g.mWhere + ": " + name + ": a list where a number belongs");
-                PutLE(buf, f.mOffset, Number(f, f.mType, v, g.mWhere), size);
-            } else {
-                std::vector<const Node*> e = Elems(g.Get(name), f.mCount, g.mWhere, f.mName);
-                for (size_t k = 0; k < f.mCount; k++) {
-                    if (e[k] && e[k]->mKind == Node::kList)
-                        Fail(g.mWhere + ": " + name + ": a list where a number belongs");
-                    PutLE(buf, f.mOffset + size * k, Number(f, f.mType, e[k], g.mWhere), size);
-                }
+    if (s.empty() || s[0] < 'a' || s[0] > 'z')
+        return false;
+    for (char c : s)
+        if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_'))
+            return false;
+    return true;
+}
+
+const EEDTTable* FindTable(const char* inTable)
+{
+    std::string want;
+    for (const char* p = inTable; *p; p++)
+        want += (char)(*p >= 'A' && *p <= 'Z' ? *p + 32 : *p);
+    for (unsigned long i = 0; i < kEEDTTableCount; i++)
+        if (want == kEEDTTables[i].mName)
+            return &kEEDTTables[i];
+    return nullptr;
+}
+
+const EEDTRef* FindRef(const EEDTTable& t, const char* inField)
+{
+    for (unsigned long i = 0; i < t.mRefCount; i++)
+        if (strcmp(t.mRefs[i].mField, inField) == 0)
+            return &t.mRefs[i];
+    return nullptr;
+}
+
+const EEDTField* FindField(const EEDTStruct& st, const char* inName)
+{
+    for (unsigned long i = 0; i < st.mFieldCount; i++)
+        if (strcmp(st.mFields[i].mName, inName) == 0)
+            return &st.mFields[i];
+    return nullptr;
+}
+
+// ------------------------------------------------------------------------------------------------ the parsed text
+
+// a listed record: its position (the row's key, or its slot in an epoch block), its mapping and line
+struct Placed {
+    long mPos;
+    const Node* mMap;
+    long mLine;
+};
+
+struct EpochBlock {
+    const Node* mEpoch;
+    long mLine;
+    long mSlots;
+    std::vector<Placed> mNodes;
+};
+
+// a table's text, parsed once: the records placed at their positions
+struct Doc {
+    Node mDoc;
+    Node mCsvRecords;
+    long mTotal = 0;
+    bool mTechtree = false;
+    std::vector<Placed> mRows;
+    std::vector<EpochBlock> mEpochs;
+};
+
+// the ids of a table: id -> key, and which keys are listed
+struct Index {
+    std::map<std::string, long> mKeys;
+    std::map<long, std::string> mIds;
+};
+
+bool Present(const Node* v)
+{
+    return v && !(v->mKind == Node::kScalar && (v->mText.empty() || (!v->mQuoted && (v->mText == "~" ||
+                                                                                       v->mText == "null"))));
+}
+
+long HeadInt(const Node* v, const char* what, const std::string& where)
+{
+    if (v->mKind != Node::kScalar)
+        Fail(where + ": " + what + ": not a number");
+    try {
+        return (long)(uint32_t)ParseInt(v->mText, kEEDT_u32);
+    } catch (Failure& e) {
+        Fail(where + ": " + what + ": " + e.mText);
+    }
+}
+
+// the records of a list -> positions in file order: an explicit row must be after the previous explicit one, a
+// record without one takes the next free position above every explicit row and the count (new rows go above)
+std::vector<Placed> PlaceRecords(const Node* records, long total, const std::string& where,
+                                 const std::vector<long>* lines)
+{
+    std::vector<Placed> out;
+    if (!records)
+        return out;
+    if (records->mKind != Node::kList)
+        Fail(where + ": must be a list");
+    std::vector<long> pos(records->mItems.size(), -1);
+    long next = 0;
+    for (size_t k = 0; k < records->mItems.size(); k++) {
+        const Node& m = records->mItems[k];
+        if (m.mKind != Node::kMap)
+            Fail(where + " item " + Num(k) + ": not a mapping");
+        long line = lines ? (*lines)[k] : m.mLine;
+        const Node* v = m.Find("row");
+        if (!v || v->IsMissing())
+            continue;
+        if (v->mKind != Node::kScalar)
+            Fail(where + " line " + Num(line) + ": row: not a number");
+        try {
+            pos[k] = (long)ParseInt(v->mText, kEEDT_s32);
+        } catch (Failure& e) {
+            Fail(where + " line " + Num(line) + ": row: " + e.mText);
+        }
+        if (pos[k] < next)
+            Fail(where + " line " + Num(line) + ": row " + Num(pos[k]) + " is not after the previous row (" +
+                 Num(next - 1) + ")");
+        next = pos[k] + 1;
+    }
+    long free = total > next ? total : next;
+    for (size_t k = 0; k < records->mItems.size(); k++) {
+        long p = pos[k];
+        if (p < 0)
+            p = free++;
+        out.push_back(Placed{p, &records->mItems[k], lines ? (*lines)[k] : records->mItems[k].mLine});
+    }
+    return out;
+}
+
+// CSV columns the exporter can write for a table (tables.csv_columns)
+std::vector<std::string> CsvColumns(const EEDTTable& t);
+bool SplitColumn(const std::string& c, std::string& base, std::vector<unsigned long>& idx);
+Node CsvRecord(const std::vector<std::string>& bases, const std::vector<std::vector<unsigned long>>& idx,
+               const std::vector<std::string>& cells, long line);
+
+void ParseDoc(const EEDTTable& t, const std::string& inText, Doc& d)
+{
+    std::string name = t.mName;
+    const Node* head[3] = {};   // eedata format rows
+    static const char* const kHead[3] = {"eedata", "format", "rows"};
+    std::vector<Node> headNodes;
+    std::vector<long> csvLines;
+    if (t.mYaml) {
+        d.mDoc = ParseYaml(inText);
+        if (d.mDoc.mKind != Node::kMap)
+            Fail(name + ": the document is not a mapping");
+        for (const std::string& k : d.mDoc.mKeys) {
+            bool ok = k == "records" || k == "epochs";
+            for (const char* h : kHead)
+                ok = ok || k == h;
+            if (!ok)
+                Fail(name + ": unknown top-level key " + k);
+        }
+        for (int i = 0; i < 3; i++)
+            head[i] = d.mDoc.Find(kHead[i]);
+    } else {
+        Csv csv = ParseCsv(inText);
+        for (const std::pair<const std::string, std::string>& dir : csv.mDirectives) {
+            bool ok = false;
+            for (const char* h : kHead)
+                ok = ok || dir.first == h;
+            if (!ok)
+                Fail(name + ": unknown directive " + dir.first);
+        }
+        headNodes.resize(3);
+        for (int i = 0; i < 3; i++) {
+            std::map<std::string, std::string>::const_iterator it = csv.mDirectives.find(kHead[i]);
+            if (it != csv.mDirectives.end()) {
+                headNodes[i] = Scalar(it->second, true, 0);
+                head[i] = &headNodes[i];
             }
         }
+        std::vector<std::string> known = CsvColumns(t);
+        std::vector<std::string> bases;
+        std::vector<std::vector<unsigned long>> idx;
+        for (const std::string& c : csv.mHeader) {
+            bool ok = false;
+            for (const std::string& k : known)
+                ok = ok || k == c;
+            std::string base;
+            std::vector<unsigned long> ix;
+            if (!ok || !SplitColumn(c, base, ix))
+                Fail(name + ": unknown column " + c);
+            bases.push_back(base);
+            idx.push_back(ix);
+        }
+        d.mCsvRecords.mKind = Node::kList;
+        for (size_t r = 0; r < csv.mRows.size(); r++)
+            d.mCsvRecords.mItems.push_back(CsvRecord(bases, idx, csv.mRows[r], csv.mRowLines[r]));
+        csvLines = csv.mRowLines;
     }
-    return buf;
+    if (head[0] && head[0]->mKind == Node::kScalar && head[0]->mText != name)
+        Fail(name + ": the file says it is '" + head[0]->mText + "'");
+    if (head[1] && (head[1]->mKind != Node::kScalar || head[1]->mText != Num(EEDT_FORMAT_VERSION)))
+        Fail(name + ": format " + (head[1]->mKind == Node::kScalar ? head[1]->mText : std::string("?")) +
+             ", this loader reads format " + Num(EEDT_FORMAT_VERSION));
+    d.mTotal = Present(head[2]) ? HeadInt(head[2], "rows", name) : 0;
+    if (t.mContainer == kEEDTC_techtree) {
+        d.mTechtree = true;
+        const Node* eps = d.mDoc.Find("epochs");
+        if (!eps || eps->mKind != Node::kList)
+            Fail(name + ": epochs must be a list");
+        for (size_t k = 0; k < eps->mItems.size(); k++) {
+            const Node& e = eps->mItems[k];
+            std::string where = name + " epoch " + Num(k);
+            const Node* epoch = e.mKind == Node::kMap ? e.Find("epoch") : nullptr;
+            if (!epoch || epoch->mKind != Node::kMap)
+                Fail(where + ": needs an epoch: mapping");
+            for (const std::string& key : e.mKeys)
+                if (key != "slots" && key != "epoch" && key != "nodes")
+                    Fail(where + ": unknown key " + key);
+            const Node* nodes = e.Find("nodes");
+            if (nodes && nodes->IsMissing())
+                nodes = nullptr;
+            const Node* slots = e.Find("slots");
+            EpochBlock b;
+            b.mEpoch = epoch;
+            b.mLine = epoch->mLine;
+            b.mSlots = Present(slots) ? HeadInt(slots, "slots", where) : 0;
+            b.mNodes = PlaceRecords(nodes, b.mSlots, where, nullptr);
+            d.mEpochs.push_back(std::move(b));
+        }
+        return;
+    }
+    const Node* records = t.mYaml ? d.mDoc.Find("records") : &d.mCsvRecords;
+    if (records && records->IsMissing())
+        records = nullptr;
+    d.mRows = PlaceRecords(records, d.mTotal, name, t.mYaml ? nullptr : &csvLines);
 }
+
+// ------------------------------------------------------------------------------------------------ records
+
+struct Row {
+    std::vector<unsigned char> mRec;
+    std::vector<std::string> mLead;
+    std::vector<uint32_t> mList;
+    bool mHole = true;
+};
+
+class Resolver;
+
+// the record: the struct's base (zero + the defaults of the fields the game never reads), then every field the
+// text carries (a missing one is zero; a missing self field is the row's key + offset; a reference is resolved)
+std::vector<unsigned char> BuildRecord(const EEDTTable& t, Getter& g, Resolver& r, bool inHasKey, long inKey);
 
 // "A|B[n]" -> A, B, n (B empty for "A[n]"; n 0 for a single string)
 void LeadSpec(const char* inSpec, std::string& a, std::string& b, unsigned long& n)
@@ -905,13 +1121,6 @@ unsigned long LeadCount(const EEDTTable& t)
     }
     return total;
 }
-
-struct Row {
-    std::vector<unsigned char> mRec;
-    std::vector<std::string> mLead;
-    std::vector<uint32_t> mList;
-    bool mHole = true;
-};
 
 std::vector<std::string> BuildLead(const EEDTTable& t, Getter& g)
 {
@@ -936,88 +1145,6 @@ std::vector<std::string> BuildLead(const EEDTTable& t, Getter& g)
         }
     }
     return out;
-}
-
-std::vector<uint32_t> BuildList(const EEDTTable& t, Getter& g)
-{
-    std::vector<uint32_t> out;
-    const Node* v = g.Get(t.mListName);
-    if (!v)
-        return out;
-    if (v->mKind != Node::kList)
-        Fail(g.mWhere + ": " + t.mListName + " must be a list");
-    for (const Node& x : v->mItems) {
-        if (x.mKind != Node::kScalar)
-            Fail(g.mWhere + ": " + t.mListName + ": a list where a number belongs");
-        try {
-            out.push_back((uint32_t)ParseInt(x.mText, t.mListSigned ? kEEDT_s32 : kEEDT_u32));
-        } catch (Failure& e) {
-            Fail(g.mWhere + ": " + t.mListName + ": " + e.mText);
-        }
-    }
-    return out;
-}
-
-Row BuildRow(const EEDTTable& t, const Node& m, const std::string& where, long pos)
-{
-    if (m.mKind != Node::kMap)
-        Fail(where + ": not a mapping");
-    Getter g(m, where);
-    g.Get("row");
-    const Node* label = g.Get("label");
-    if (label && label->mKind == Node::kScalar && !label->mText.empty() && pos >= 0) {
-        for (unsigned long i = 0; i < t.mRowNameCount; i++)
-            if (t.mRowNames[i].mRow == pos && label->mText != t.mRowNames[i].mName)
-                Fail(where + ": label '" + label->mText + "' does not match row " + Num(pos) + " ('" +
-                     t.mRowNames[i].mName + "')");
-    }
-    Row r;
-    r.mHole = false;
-    r.mRec = BuildRecord(*t.mRecord, g);
-    r.mLead = BuildLead(t, g);
-    if (t.mListName)
-        r.mList = BuildList(t, g);
-    g.Leftover();
-    return r;
-}
-
-// the records of a list -> rows placed at their positions (missing ones stay holes)
-std::vector<Row> PlaceRows(const EEDTTable& t, const Node* records, long total, const std::string& where)
-{
-    std::vector<std::pair<long, Row>> placed;
-    long next = 0;
-    if (records && records->mKind != Node::kList)
-        Fail(where + ": must be a list");
-    if (records) {
-        for (size_t k = 0; k < records->mItems.size(); k++) {
-            const Node& m = records->mItems[k];
-            if (m.mKind != Node::kMap)
-                Fail(where + " item " + Num(k) + ": not a mapping");
-            const Node* v = m.Find("row");
-            long pos = next;
-            if (v && !v->IsMissing()) {
-                if (v->mKind != Node::kScalar)
-                    Fail(where + " item " + Num(k) + ": row: not a number");
-                try {
-                    pos = (long)ParseInt(v->mText, kEEDT_s32);
-                } catch (Failure& e) {
-                    Fail(where + " item " + Num(k) + ": row: " + e.mText);
-                }
-                if (pos < next)
-                    Fail(where + " item " + Num(k) + ": row " + Num(pos) + " is not after the previous row (" +
-                         Num(next - 1) + ")");
-            }
-            placed.emplace_back(pos, BuildRow(t, m, where + " row " + Num(pos), pos));
-            next = pos + 1;
-        }
-    }
-    long n = total;
-    if (next > n)
-        n = next;
-    std::vector<Row> rows(n);
-    for (std::pair<long, Row>& p : placed)
-        rows[p.first] = std::move(p.second);
-    return rows;
 }
 
 void Put32(std::vector<unsigned char>& out, uint32_t v)
@@ -1054,29 +1181,10 @@ struct Writer {
     }
 };
 
-long HeadInt(const Node* v, const char* what, const std::string& where)
-{
-    if (v->mKind != Node::kScalar)
-        Fail(where + ": " + what + ": not a number");
-    try {
-        return (long)(uint32_t)ParseInt(v->mText, kEEDT_u32);
-    } catch (Failure& e) {
-        Fail(where + ": " + what + ": " + e.mText);
-    }
-}
-
-bool Present(const Node* v)
-{
-    return v && !(v->mKind == Node::kScalar && (v->mText.empty() || (!v->mQuoted && (v->mText == "~" ||
-                                                                                       v->mText == "null"))));
-}
-
 // CSV columns the exporter can write for a table (tables.csv_columns)
 std::vector<std::string> CsvColumns(const EEDTTable& t)
 {
-    std::vector<std::string> cols{"row"};
-    if (t.mRowNameCount)
-        cols.push_back("label");
+    std::vector<std::string> cols{"row", "id"};
     for (unsigned long i = 0; i < t.mLeadCount; i++) {
         std::string a, b;
         unsigned long n;
@@ -1130,10 +1238,11 @@ bool SplitColumn(const std::string& c, std::string& base, std::vector<unsigned l
 
 // one CSV row -> the same mapping the YAML side gives (arrays as lists with null gaps)
 Node CsvRecord(const std::vector<std::string>& bases, const std::vector<std::vector<unsigned long>>& idx,
-               const std::vector<std::string>& cells)
+               const std::vector<std::string>& cells, long line)
 {
     Node m;
     m.mKind = Node::kMap;
+    m.mLine = line;
     for (size_t c = 0; c < cells.size(); c++) {
         if (cells[c].empty())
             continue;
@@ -1152,132 +1261,280 @@ Node CsvRecord(const std::vector<std::string>& bases, const std::vector<std::vec
                 slot->mItems.resize(i + 1);
             slot = &slot->mItems[i];
         }
-        *slot = Scalar(cells[c], true, 0);
+        *slot = Scalar(cells[c], true, line);
     }
     return m;
 }
 
-void CompileTable(const EEDTTable& t, const std::string& inText, std::vector<unsigned char>& out)
+// ------------------------------------------------------------------------------------------------ the resolver
+
+// Every table's parsed text, the ids of each and the references between them (tools/eedata tables.Content). The
+// single place where tables meet: a later mod layer feeds it merged entries instead of files.
+class Resolver {
+public:
+    explicit Resolver(const std::function<bool(const char*, std::string&)>& inRead) : mRead(inRead) {}
+
+    Doc& GetDoc(const EEDTTable& t)
+    {
+        std::map<std::string, std::unique_ptr<Doc>>::iterator it = this->mDocs.find(t.mName);
+        if (it != this->mDocs.end())
+            return *it->second;
+        std::string text;
+        if (!this->mRead(t.mName, text))
+            Fail(std::string(t.mName) + ": referenced, but the table has no text form here");
+        std::unique_ptr<Doc> d(new Doc);
+        ParseDoc(t, text, *d);
+        Doc& out = *d;
+        this->mDocs[t.mName] = std::move(d);
+        return out;
+    }
+
+    // a record's key: its position, or its key field (dbtechtree mID)
+    long Key(const EEDTTable& t, const Placed& p, const std::string& where)
+    {
+        if (!t.mKeyField)
+            return p.mPos;
+        const EEDTField* f = FindField(*t.mRecord, t.mKeyField);
+        const Node* v = p.mMap->Find(t.mKeyField);
+        return (long)(int32_t)Number(*f, f->mType, Present(v) ? v : nullptr, where);
+    }
+
+    const Index& GetIndex(const EEDTTable& t)
+    {
+        std::map<std::string, Index>::iterator it = this->mIndexes.find(t.mName);
+        if (it != this->mIndexes.end())
+            return it->second;
+        Doc& d = this->GetDoc(t);
+        std::vector<Placed> all;
+        if (d.mTechtree) {
+            for (const EpochBlock& b : d.mEpochs) {
+                all.push_back(Placed{-1, b.mEpoch, b.mLine});
+                all.insert(all.end(), b.mNodes.begin(), b.mNodes.end());
+            }
+        } else {
+            all = d.mRows;
+        }
+        Index idx;
+        std::map<std::string, long> lineOf;
+        for (const Placed& p : all) {
+            std::string where = std::string(t.mName) + " line " + Num(p.mLine);
+            long key = this->Key(t, p, where);
+            const Node* v = p.mMap->Find("id");
+            if (!Present(v) || v->mKind != Node::kScalar)
+                Fail(where + ": no id");
+            if (!IsId(v->mText))
+                Fail(where + ": id '" + v->mText + "': an id is a lowercase letter, then a-z, 0-9 or _");
+            if (idx.mKeys.count(v->mText))
+                Fail(where + ": duplicate id '" + v->mText + "' (also " + t.mName + " line " +
+                     Num(lineOf[v->mText]) + ")");
+            if (idx.mIds.count(key))
+                Fail(where + ": id '" + v->mText + "': key " + Num(key) + " is also '" + idx.mIds[key] + "'");
+            for (unsigned long i = 0; i < t.mRowNameCount; i++)
+                if (t.mRowNames[i].mRow == key && v->mText != t.mRowNames[i].mName)
+                    Fail(where + ": id '" + v->mText + "' does not match row " + Num(key) + " ('" +
+                         t.mRowNames[i].mName + "')");
+            idx.mKeys[v->mText] = key;
+            idx.mIds[key] = v->mText;
+            lineOf[v->mText] = p.mLine;
+        }
+        return this->mIndexes[t.mName] = std::move(idx);
+    }
+
+    // a reference cell -> the integer the record holds: an id is the target row's key; an integer must name no
+    // listed row of the target (or be one of the field's none values)
+    uint32_t Resolve(const EEDTRef& ref, unsigned char type, const Node* v, const std::string& where,
+                     const char* field)
+    {
+        if (!v)
+            return 0;
+        if (v->mKind != Node::kScalar)
+            Fail(where + ": " + field + ": a list where a reference belongs");
+        const EEDTTable* target = FindTable(ref.mTable);
+        if (IsId(v->mText)) {
+            const Index& idx = this->GetIndex(*target);
+            std::map<std::string, long>::const_iterator it = idx.mKeys.find(v->mText);
+            if (it == idx.mKeys.end())
+                Fail(where + ": " + field + ": '" + v->mText + "' is not an id of " + ref.mTable);
+            long long lo, hi;
+            int width;
+            IntRange(type, lo, hi, width);
+            if (it->second < lo || it->second > hi)
+                Fail(where + ": " + field + ": '" + v->mText + "' is key " + Num(it->second) + ", out of range");
+            return (uint32_t)it->second;
+        }
+        long long n;
+        try {
+            n = ParseInt(v->mText, type);
+        } catch (Failure& e) {
+            Fail(where + ": " + field + ": " + e.mText);
+        }
+        bool none = false;
+        for (unsigned long i = 0; i < ref.mNoneCount; i++)
+            none = none || ref.mNone[i] == n;
+        const Index& idx = this->GetIndex(*target);
+        if (!none && n >= -2147483648LL && n <= 2147483647LL && idx.mIds.count((long)n))
+            Fail(where + ": " + field + ": " + v->mText + " names a row of " + ref.mTable + ": write its id");
+        return (uint32_t)n;
+    }
+
+    Row BuildRow(const EEDTTable& t, const Placed& p, bool inHasKey)
+    {
+        const Node& m = *p.mMap;
+        std::string where = std::string(t.mName) + " line " + Num(p.mLine);
+        const Node* id = m.Find("id");
+        if (Present(id) && id->mKind == Node::kScalar)
+            where += " (id " + id->mText + ")";
+        Getter g(m, where);
+        g.Get("row");
+        g.Get("id");
+        Row r;
+        r.mHole = false;
+        r.mRec = BuildRecord(t, g, *this, inHasKey, p.mPos);
+        r.mLead = BuildLead(t, g);
+        if (t.mListName)
+            r.mList = this->BuildList(t, g);
+        g.Leftover();
+        return r;
+    }
+
+    std::vector<uint32_t> BuildList(const EEDTTable& t, Getter& g)
+    {
+        std::vector<uint32_t> out;
+        const Node* v = g.Get(t.mListName);
+        if (!v)
+            return out;
+        if (v->mKind != Node::kList)
+            Fail(g.mWhere + ": " + t.mListName + " must be a list");
+        const EEDTRef* ref = FindRef(t, "@list");
+        unsigned char type = t.mListSigned ? kEEDT_s32 : kEEDT_u32;
+        for (const Node& x : v->mItems) {
+            if (x.mKind != Node::kScalar)
+                Fail(g.mWhere + ": " + t.mListName + ": a list where a number belongs");
+            if (ref) {
+                out.push_back(this->Resolve(*ref, type, &x, g.mWhere, t.mListName));
+                continue;
+            }
+            try {
+                out.push_back((uint32_t)ParseInt(x.mText, type));
+            } catch (Failure& e) {
+                Fail(g.mWhere + ": " + t.mListName + ": " + e.mText);
+            }
+        }
+        return out;
+    }
+
+    void Build(const EEDTTable& t, std::vector<unsigned char>& out)
+    {
+        this->GetIndex(t);   // the ids are checked even where nothing references the table
+        Doc& d = this->GetDoc(t);
+        std::vector<unsigned char> hole = Record(t.mHole, t.mRecord->mSize);
+        Writer w{t, hole, out, LeadCount(t)};
+        out.clear();
+        if (d.mTechtree) {
+            for (const EpochBlock& b : d.mEpochs) {
+                Row ep = this->BuildRow(t, Placed{-1, b.mEpoch, b.mLine}, false);
+                long n = b.mSlots;
+                for (const Placed& p : b.mNodes)
+                    n = p.mPos + 1 > n ? p.mPos + 1 : n;
+                std::vector<Row> rows(n);
+                for (const Placed& p : b.mNodes)
+                    rows[p.mPos] = this->BuildRow(t, p, false);
+                Put32(out, (uint32_t)rows.size());
+                w.Record(ep);
+                w.List(ep);
+                for (const Row& r : rows) {
+                    w.Record(r);
+                    w.List(r);
+                }
+            }
+        } else {
+            long n = d.mTotal;
+            for (const Placed& p : d.mRows)
+                n = p.mPos + 1 > n ? p.mPos + 1 : n;
+            std::vector<Row> rows(n);
+            for (const Placed& p : d.mRows)
+                rows[p.mPos] = this->BuildRow(t, p, true);
+            if (t.mContainer == kEEDTC_count || t.mContainer == kEEDTC_lead)
+                Put32(out, (uint32_t)rows.size());
+            for (const Row& r : rows) {
+                if (t.mContainer == kEEDTC_lead)
+                    w.Lead(r);
+                w.Record(r);
+                if (t.mContainer == kEEDTC_events)
+                    w.List(r);
+            }
+        }
+        // the parsed text is no longer needed once the table is built (its ids stay indexed)
+        this->mDocs.erase(t.mName);
+    }
+
+private:
+    std::function<bool(const char*, std::string&)> mRead;
+    std::map<std::string, std::unique_ptr<Doc>> mDocs;
+    std::map<std::string, Index> mIndexes;
+};
+
+std::vector<unsigned char> BuildRecord(const EEDTTable& t, Getter& g, Resolver& r, bool inHasKey, long inKey)
 {
     const EEDTStruct& st = *t.mRecord;
-    std::string name = t.mName;
-    Node doc;
-    Node csvRecords;
-    std::map<std::string, std::string> directives;
-    const Node* head[3] = {};   // eedata format rows
-    static const char* const kHead[3] = {"eedata", "format", "rows"};
-    std::vector<Node> headNodes;
-    if (t.mYaml) {
-        doc = ParseYaml(inText);
-        if (doc.mKind != Node::kMap)
-            Fail(name + ": the document is not a mapping");
-        for (const std::string& k : doc.mKeys) {
-            bool ok = k == "records" || k == "epochs";
-            for (const char* h : kHead)
-                ok = ok || k == h;
-            if (!ok)
-                Fail(name + ": unknown top-level key " + k);
-        }
-        for (int i = 0; i < 3; i++)
-            head[i] = doc.Find(kHead[i]);
-    } else {
-        Csv csv = ParseCsv(inText);
-        for (const std::pair<const std::string, std::string>& d : csv.mDirectives) {
-            bool ok = false;
-            for (const char* h : kHead)
-                ok = ok || d.first == h;
-            if (!ok)
-                Fail(name + ": unknown directive " + d.first);
-        }
-        headNodes.resize(3);
-        for (int i = 0; i < 3; i++) {
-            std::map<std::string, std::string>::const_iterator it = csv.mDirectives.find(kHead[i]);
-            if (it != csv.mDirectives.end()) {
-                headNodes[i] = Scalar(it->second, true, 0);
-                head[i] = &headNodes[i];
+    std::vector<unsigned char> buf = Record(st.mBase, st.mSize);
+    for (unsigned long fi = 0; fi < st.mFieldCount; fi++) {
+        const EEDTField& f = st.mFields[fi];
+        std::string name = f.mName;
+        const EEDTRef* ref = FindRef(t, f.mName);
+        if (f.mType == kEEDT_str) {
+            std::string text = Text(g.Get(name), g.mWhere, f.mName);
+            if (text.size() >= f.mCount)
+                Fail(g.mWhere + ": " + name + ": " + Num(text.size()) + " bytes, the field holds " +
+                     Num(f.mCount - 1) + " (+ NUL)");
+            memset(&buf[f.mOffset], 0, f.mCount);
+            memcpy(&buf[f.mOffset], text.data(), text.size());
+        } else if (f.mType == kEEDT_pair_f32) {
+            std::vector<const Node*> e = Elems(g.Get(name), f.mCount, g.mWhere, f.mName);
+            for (size_t k = 0; k < f.mCount; k++) {
+                std::vector<const Node*> p = Elems(e[k], 2, g.mWhere, f.mName);
+                PutLE(buf, f.mOffset + 8 * k, Number(f, kEEDT_f32, p[0], g.mWhere), 4);
+                PutLE(buf, f.mOffset + 8 * k + 4, Number(f, kEEDT_f32, p[1], g.mWhere), 4);
+            }
+        } else {
+            unsigned long size = kTypeSize[f.mType];
+            if (f.mCount == 1) {
+                const Node* v = g.Get(name);
+                if (v && v->mKind == Node::kList)
+                    Fail(g.mWhere + ": " + name + ": a list where a number belongs");
+                uint32_t x;
+                if (!v && inHasKey && t.mSelfField && strcmp(t.mSelfField, f.mName) == 0)
+                    x = (uint32_t)(inKey + t.mSelfOffset);
+                else
+                    x = ref ? r.Resolve(*ref, f.mType, v, g.mWhere, f.mName) : Number(f, f.mType, v, g.mWhere);
+                PutLE(buf, f.mOffset, x, size);
+            } else {
+                std::vector<const Node*> e = Elems(g.Get(name), f.mCount, g.mWhere, f.mName);
+                for (size_t k = 0; k < f.mCount; k++) {
+                    if (e[k] && e[k]->mKind == Node::kList)
+                        Fail(g.mWhere + ": " + name + ": a list where a number belongs");
+                    uint32_t x = ref ? r.Resolve(*ref, f.mType, e[k], g.mWhere, f.mName)
+                                     : Number(f, f.mType, e[k], g.mWhere);
+                    PutLE(buf, f.mOffset + size * k, x, size);
+                }
             }
         }
-        std::vector<std::string> known = CsvColumns(t);
-        std::vector<std::string> bases;
-        std::vector<std::vector<unsigned long>> idx;
-        for (const std::string& c : csv.mHeader) {
-            bool ok = false;
-            for (const std::string& k : known)
-                ok = ok || k == c;
-            std::string base;
-            std::vector<unsigned long> ix;
-            if (!ok || !SplitColumn(c, base, ix))
-                Fail(name + ": unknown column " + c);
-            bases.push_back(base);
-            idx.push_back(ix);
-        }
-        csvRecords.mKind = Node::kList;
-        for (const std::vector<std::string>& r : csv.mRows)
-            csvRecords.mItems.push_back(CsvRecord(bases, idx, r));
     }
-    if (head[0] && head[0]->mKind == Node::kScalar && head[0]->mText != name)
-        Fail(name + ": the file says it is '" + head[0]->mText + "'");
-    if (head[1] && (head[1]->mKind != Node::kScalar || head[1]->mText != Num(EEDT_FORMAT_VERSION)))
-        Fail(name + ": format " + (head[1]->mKind == Node::kScalar ? head[1]->mText : std::string("?")) +
-             ", this loader reads format " + Num(EEDT_FORMAT_VERSION));
-    long total = Present(head[2]) ? HeadInt(head[2], "rows", name) : 0;
-    std::vector<unsigned char> hole = Record(t.mHole, st.mSize);
-    Writer w{t, hole, out, LeadCount(t)};
-    out.clear();
-    if (t.mContainer == kEEDTC_techtree) {
-        const Node* eps = doc.Find("epochs");
-        if (!eps || eps->mKind != Node::kList)
-            Fail(name + ": epochs must be a list");
-        for (size_t k = 0; k < eps->mItems.size(); k++) {
-            const Node& e = eps->mItems[k];
-            std::string where = name + " epoch " + Num(k);
-            const Node* epoch = e.mKind == Node::kMap ? e.Find("epoch") : nullptr;
-            if (!epoch || epoch->mKind != Node::kMap)
-                Fail(where + ": needs an epoch: mapping");
-            for (const std::string& key : e.mKeys)
-                if (key != "slots" && key != "epoch" && key != "nodes")
-                    Fail(where + ": unknown key " + key);
-            Row ep = BuildRow(t, *epoch, where, -1);
-            const Node* nodes = e.Find("nodes");
-            if (nodes && nodes->IsMissing())
-                nodes = nullptr;
-            const Node* slots = e.Find("slots");
-            long n = Present(slots) ? HeadInt(slots, "slots", where) : 0;
-            std::vector<Row> rows = PlaceRows(t, nodes, n, where);
-            Put32(out, (uint32_t)rows.size());
-            w.Record(ep);
-            w.List(ep);
-            for (const Row& r : rows) {
-                w.Record(r);
-                w.List(r);
-            }
-        }
-        return;
-    }
-    const Node* records = t.mYaml ? doc.Find("records") : &csvRecords;
-    if (records && records->IsMissing())
-        records = nullptr;
-    std::vector<Row> rows = PlaceRows(t, records, total, name);
-    if (t.mContainer == kEEDTC_count || t.mContainer == kEEDTC_lead)
-        Put32(out, (uint32_t)rows.size());
-    for (const Row& r : rows) {
-        if (t.mContainer == kEEDTC_lead)
-            w.Lead(r);
-        w.Record(r);
-        if (t.mContainer == kEEDTC_events)
-            w.List(r);
-    }
+    return buf;
 }
 
-const EEDTTable* FindTable(const char* inTable)
+bool Run(const std::function<void()>& inBody, const char* inTable, std::string& outError)
 {
-    std::string want;
-    for (const char* p = inTable; *p; p++)
-        want += (char)(*p >= 'A' && *p <= 'Z' ? *p + 32 : *p);
-    for (unsigned long i = 0; i < kEEDTTableCount; i++)
-        if (want == kEEDTTables[i].mName)
-            return &kEEDTTables[i];
-    return nullptr;
+    try {
+        inBody();
+    } catch (Failure& e) {
+        outError = e.mText;
+        return false;
+    } catch (std::exception& e) {
+        outError = std::string(inTable) + ": " + e.what();
+        return false;
+    }
+    return true;
 }
 
 }  // namespace
@@ -1288,24 +1545,40 @@ const char* TextExtension(const char* inTable)
     return t ? (t->mYaml ? ".yaml" : ".csv") : nullptr;
 }
 
-bool Compile(const char* inTable, const char* inText, unsigned long inLength, std::vector<unsigned char>& outData,
-             std::string& outError)
+struct Content::Impl {
+    Resolver mResolver;
+    explicit Impl(const Reader& inRead) : mResolver(inRead) {}
+};
+
+Content::Content(const Reader& inRead) : mImpl(new Impl(inRead)) {}
+
+Content::~Content()
+{
+    delete this->mImpl;
+}
+
+bool Content::Compile(const char* inTable, std::vector<unsigned char>& outData, std::string& outError)
 {
     const EEDTTable* t = FindTable(inTable);
     if (!t) {
         outError = std::string(inTable) + ": not a db table with a text form";
         return false;
     }
-    try {
-        CompileTable(*t, std::string(inText, inLength), outData);
-    } catch (Failure& e) {
-        outError = e.mText;
-        return false;
-    } catch (std::exception& e) {
-        outError = std::string(inTable) + ": " + e.what();
-        return false;
-    }
-    return true;
+    return Run([&] { this->mImpl->mResolver.Build(*t, outData); }, inTable, outError);
+}
+
+bool Compile(const char* inTable, const char* inText, unsigned long inLength, std::vector<unsigned char>& outData,
+             std::string& outError)
+{
+    const EEDTTable* t = FindTable(inTable);
+    std::string text(inText, inLength);
+    Content c([&](const char* inName, std::string& outText) {
+        if (!t || strcmp(inName, t->mName) != 0)
+            return false;
+        outText = text;
+        return true;
+    });
+    return c.Compile(inTable, outData, outError);
 }
 
 }  // namespace EEDataText

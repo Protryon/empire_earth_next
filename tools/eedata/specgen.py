@@ -28,12 +28,12 @@ import overlay  # noqa: E402
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 SPECS = HERE / 'specs.json'
-FORMAT_VERSION = 2
+FORMAT_VERSION = 3
 
 TYPES = {'char': ('s8', 1), 'signed char': ('s8', 1), 'unsigned char': ('u8', 1), 'bool': ('bool', 1),
          'short': ('s16', 2), 'unsigned short': ('u16', 2), 'long': ('s32', 4), 'unsigned long': ('u32', 4),
          'int': ('s32', 4), 'unsigned int': ('u32', 4), 'float': ('f32', 4), 'EECalamityKind': ('s32', 4),
-         'int32': ('s32', 4), 'EECivilizationUpgradeValue': ('pair_f32', 8), 'WORD': ('u16', 2),
+         'int32': ('s32', 4), 'int32_t': ('s32', 4), 'uint32_t': ('u32', 4), 'int16_t': ('s16', 2), 'uint16_t': ('u16', 2), 'uint8_t': ('u8', 1), 'int8_t': ('s8', 1), 'EECivilizationUpgradeValue': ('pair_f32', 8), 'WORD': ('u16', 2),
          'DWORD': ('u32', 4), 'BYTE': ('u8', 1)}
 SIZES = {'s8': 1, 'u8': 1, 'bool': 1, 's16': 2, 'u16': 2, 's32': 4, 'u32': 4, 'f32': 4, 'pair_f32': 8, 'str': 1,
          'raw': 1, 'pad': 1}
@@ -204,6 +204,27 @@ def generate():
         t['hole'] = hole
         if name in overlay.ROW_FIELDS:
             t['row_fields'] = {str(k): v for k, v in overlay.ROW_FIELDS[name].items()}
+        t['key'] = overlay.KEYS.get(name, 'row')
+        if t['key'] != 'row' and (t['key'] not in byname or byname[t['key']]['cls'] != 'named'):
+            raise SystemExit(f'overlay.KEYS: {name}.{t["key"]} is not a field the text carries')
+        if name in overlay.SELF:
+            fn, off = overlay.SELF[name]
+            if fn not in byname or byname[fn]['cls'] != 'named' or byname[fn]['count'] != 1:
+                raise SystemExit(f'overlay.SELF: {name}.{fn} is not a scalar field the text carries')
+            t['self'] = [fn, off]
+        refs = {}
+        for fn, r in overlay.REFS.get(name, {}).items():
+            r = r if isinstance(r, dict) else {'table': r}
+            if r['table'] not in overlay.TABLES:
+                raise SystemExit(f'overlay.REFS: {name}.{fn} -> {r["table"]}: not a table')
+            if fn == '@list':
+                if 'list' not in t:
+                    raise SystemExit(f'overlay.REFS: {name} has no list')
+            elif fn not in byname or byname[fn]['cls'] != 'named' or byname[fn]['type'] in ('f32', 'pair_f32', 'str'):
+                raise SystemExit(f'overlay.REFS: {name}.{fn} is not an integer field the text carries')
+            refs[fn] = {'table': r['table'], 'none': list(r.get('none', []))}
+        t['refs'] = refs
+        t['id_names'] = overlay.ID_NAMES.get(name, overlay.ID_DEFAULT)
         tables[name] = t
     return dict(format=FORMAT_VERSION, generator='tools/eedata/specgen.py', tables=tables,
                 row_names={t: {str(k): v for k, v in r.items()} for t, r in overlay.ROW_NAMES.items()},

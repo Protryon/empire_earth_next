@@ -6,6 +6,7 @@
 #ifndef EE_DATATEXT_H
 #define EE_DATATEXT_H
 
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -15,8 +16,30 @@ namespace EEDataText {
 // inTable: the file stem, case-insensitive ("dbworld", "dbUnitBehavior").
 const char* TextExtension(const char* inTable);
 
-// Compiles a table's text into the db file bytes. Returns false with a message ("dbworld row 3: mIndex: ...")
-// on the first problem; outData is then undefined.
+// The db tables' texts and the ids that tie them together (tools/eedata tables.Content). Every listed row has an
+// `id`; a reference to a row of another table is written as that row's id and compiled to its key (its row
+// position; dbtechtree: its mID). The reader returns a table's text (by file stem, "dbobjects"), false when the
+// table has no text form; each text is read once and parsed once, its ids are indexed on first use (a referenced
+// table is parsed before it is compiled). This is the single place a later mod merge step feeds.
+class Content {
+public:
+    typedef std::function<bool(const char* inTable, std::string& outText)> Reader;
+    explicit Content(const Reader& inRead);
+    ~Content();
+    Content(const Content&) = delete;
+    Content& operator=(const Content&) = delete;
+
+    // Compiles a table into the db file bytes. Returns false with a message ("dbobjects line 120 (id priest):
+    // mGraphic: 'x' is not an id of dbgraphics") on the first problem; outData is then undefined. A duplicate id
+    // or a reference to an unknown id is an error.
+    bool Compile(const char* inTable, std::vector<unsigned char>& outData, std::string& outError);
+
+private:
+    struct Impl;
+    Impl* mImpl;
+};
+
+// One table on its own (no other table's text: a reference by id to another table is an error).
 bool Compile(const char* inTable, const char* inText, unsigned long inLength, std::vector<unsigned char>& outData,
              std::string& outError);
 

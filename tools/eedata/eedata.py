@@ -85,8 +85,9 @@ def cmd_unpack(a, spec):
 def cmd_export(a, spec):
     out = outside_repo(a.out)
     out.mkdir(parents=True, exist_ok=True)
-    for n, b in load_db(a, spec, a.tables).items():
-        (out / f'{n}{ext(spec, n)}').write_bytes(tables.export(n, b, spec))
+    texts = tables.export_all(load_db(a, spec), spec)   # every table: the references name rows of the others
+    for n in a.tables or sorted(spec['tables']):
+        (out / f'{n}{ext(spec, n)}').write_bytes(texts[n])
     print(f'{len(a.tables or spec["tables"])} tables -> {out}')
 
 
@@ -94,15 +95,15 @@ def cmd_import(a, spec):
     src = pathlib.Path(a.text)
     out = outside_repo(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    texts = {n: (src / f'{n}{ext(spec, n)}').read_bytes() for n in spec['tables']
+             if (src / f'{n}{ext(spec, n)}').exists()}
+    c = tables.Content(texts, spec)   # the references resolve against every table in TEXTDIR
     bad = 0
-    for n in a.tables or sorted(spec['tables']):
-        p = src / f'{n}{ext(spec, n)}'
-        if not p.exists():
-            continue
+    for n in a.tables or sorted(texts):
         try:
-            (out / f'{n}.dat').write_bytes(tables.import_(n, p.read_bytes(), spec))
+            (out / f'{n}.dat').write_bytes(c.build(n))
         except (TextError, binfmt.FormatError) as e:
-            print(f'{p}: {e}')
+            print(f'{src / (n + ext(spec, n))}: {e}')
             bad += 1
     sys.exit(1 if bad else 0)
 
@@ -115,8 +116,8 @@ def cmd_install(a, spec):
         sys.exit(f'{game}: no Data folder (not a game install)')
     out = game / 'Data' / 'db'
     out.mkdir(exist_ok=True)
-    for n, b in load_db(a, spec).items():
-        (out / f'{n}{ext(spec, n)}').write_bytes(tables.export(n, b, spec))
+    for n, t in tables.export_all(load_db(a, spec), spec).items():
+        (out / f'{n}{ext(spec, n)}').write_bytes(t)
     print(f'{len(spec["tables"])} text tables -> {out}')
 
 

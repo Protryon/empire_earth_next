@@ -45,7 +45,10 @@ def generate(spec):
     o.append('struct EEDTField { const char* mName; unsigned short mOffset; unsigned short mCount; unsigned char mType; };')
     o.append('struct EEDTStruct { const char* mName; unsigned long mSize; const EEDTField* mFields; unsigned long mFieldCount;')
     o.append('                   const char* mBase; };   // the record every row starts from (zero + defaults; 0: all zero)')
-    o.append('struct EEDTRowName { long mRow; const char* mName; };')
+    o.append('struct EEDTRowName { long mRow; const char* mName; const char* mFields; };   // mFields: the fields its readers use')
+    o.append('// a reference: the field (or "@list", the trailing list) holds a row of mTable, written as its id; mNone: values')
+    o.append('// that stay integers although they are a key of the target')
+    o.append('struct EEDTRef { const char* mField; const char* mTable; const long* mNone; unsigned long mNoneCount; };')
     o.append('struct EEDTTable {')
     o.append('    const char* mName;            // file stem (db\\<name>.dat)')
     o.append('    unsigned char mContainer;     // EEDTContainer')
@@ -55,9 +58,14 @@ def generate(spec):
     o.append('    unsigned long mLeadCount;')
     o.append('    const char* mListName;        // trailing list (events, techtree) or 0')
     o.append('    bool mListSigned;')
-    o.append('    const EEDTRowName* mRowNames; // text-only checked row labels')
+    o.append('    const EEDTRowName* mRowNames; // dbworld: the id each row must have (the name of its readers)')
     o.append('    unsigned long mRowNameCount;')
     o.append('    const char* mHole;            // the record of an unlisted row (an empty database row; 0: all zero)')
+    o.append('    const char* mKeyField;        // the runtime integer of a row: this field (dbtechtree mID), or 0: its row position')
+    o.append('    const char* mSelfField;       // the field that holds the row key + mSelfOffset (left out of the text), or 0')
+    o.append('    long mSelfOffset;')
+    o.append('    const EEDTRef* mRefs;         // the references to rows of other tables')
+    o.append('    unsigned long mRefCount;')
     o.append('};')
     o.append('')
     o.append('// record sizes (EEDataTextFile.cpp static_asserts them against the structs the loaders read)')
@@ -85,11 +93,22 @@ def generate(spec):
     for name, t in spec['tables'].items():
         if t.get('lead'):
             o.append(f'static const char* const kEEDTLead_{name}[] = {{' + ', '.join(_c(x) for x in t['lead']) + '};')
+        for fn, r in t.get('refs', {}).items():
+            if r['none']:
+                o.append(f'static const long kEEDTNone_{name}_{fn.lstrip("@")}[] = {{' +
+                         ', '.join(str(v) for v in r['none']) + '};')
+        if t.get('refs'):
+            o.append(f'static const EEDTRef kEEDTRefs_{name}[] = {{')
+            for fn, r in t['refs'].items():
+                none = f'kEEDTNone_{name}_{fn.lstrip("@")}, {len(r["none"])}' if r['none'] else '0, 0'
+                o.append(f'    {{{_c(fn)}, {_c(r["table"])}, {none}}},')
+            o.append('};')
         rn = spec.get('row_names', {}).get(name)
         if rn:
             o.append(f'static const EEDTRowName kEEDTRows_{name}[] = {{')
+            rf = t.get('row_fields', {})
             for k, v in sorted(rn.items(), key=lambda kv: int(kv[0])):
-                o.append(f'    {{{int(k)}, {_c(v)}}},')
+                o.append(f'    {{{int(k)}, {_c(v)}, {_c(" ".join(rf.get(k, [])))}}},')
             o.append('};')
     o.append('')
     o.append('static const EEDTTable kEEDTTables[] = {')
@@ -100,7 +119,11 @@ def generate(spec):
         rows = f'kEEDTRows_{name}, {len(rn)}' if rn else '0, 0'
         o.append(f'    {{{_c(name)}, kEEDTC_{t["container"]}, {"true" if t["format"] == "yaml" else "false"}, '
                  f'&kEEDTStructs[{sidx[t["struct"]]}], {lead}, {lst}, {rows},')
-        o.append('     ' + _record(binfmt.hole_record(t, spec['structs'][t['struct']])) + '},')
+        key = _c(t['key']) if t.get('key', 'row') != 'row' else '0'
+        self_ = f'{_c(t["self"][0])}, {t["self"][1]}' if t.get('self') else '0, 0'
+        refs = f'kEEDTRefs_{name}, {len(t["refs"])}' if t.get('refs') else '0, 0'
+        o.append('     ' + _record(binfmt.hole_record(t, spec['structs'][t['struct']])) + ',')
+        o.append(f'     {key}, {self_}, {refs}}},')
     o.append('};')
     o.append('static const unsigned long kEEDTTableCount = sizeof(kEEDTTables) / sizeof(EEDTTable);')
     o.append('')
