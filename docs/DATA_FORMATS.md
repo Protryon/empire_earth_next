@@ -2521,6 +2521,7 @@ and the scenario editor's lists, `EEGameState::Create`, `EERandomMap`, `EEToHitT
         ai_level: 0                    # the computer players' records: 0 easy, 1 medium, 2 hard
         damage_scale_human_target: difficulty_damage_scale.F     # the damage table scale when only the target is
         damage_scale_human_attacker: difficulty_damage_scale.F2  # "human" (EEPlayer::IsHuman) / only the attacker
+        ai_cheats: [cost, reveal, epochs, extra, popband, catchup, retire]   # the computer players' cheats kept
       ...                              # medium: 1.0 and 1.0 (the base table), hard: .F2 and .F
     unit_limit: {minimum: unit_limit_range.L, maximum: unit_limit_range.L2, step: 50, default: unit_limit_default.L}
     wonders_for_victory: {maximum: wonders_for_victory_max.L, default: 3}
@@ -2528,7 +2529,12 @@ and the scenario editor's lists, `EEGameState::Create`, `EERandomMap`, `EEToHitT
 (`unit_limit` and `wonders_for_victory` are block mappings in the file.) The counts of the lists replace the
 original's limits (map size < 6, speed < 4, difficulty < 3); an out-of-range option falls back to the default entry
 (difficulty: the first). The damage table by difficulty is computed at the lookup (the scale x the base table) instead
-of two pre-scaled copies: the same float product. Load types stay the code's (`kLoadTypeCount`, 6: new game,
+of two pre-scaled copies: the same float product. `ai_cheats` lists the computer players' cheats a difficulty keeps
+(`EEAICheat`, ee/EERules.h; every one by default, as the original; `[]` makes a fair difficulty): `cost` (the unit
+cost modifier, dbcpbehavior rows 67/96, 1% stock), `reveal` (the map explored at the start), `epochs` (free epoch
+advances), `extra` (row 101's gold and iron), `popband` (the pop cap pulled toward the largest human population),
+`catchup` (epoch catch-up) and `retire` (unseen obsolete units deleted); see docs/AI_RESEARCH.md. A new difficulty
+entry with `ai_level: 2` and `ai_cheats: []` is a fair Hard. Load types stay the code's (`kLoadTypeCount`, 6: new game,
 scenario, saved game ...: each is a code path).
 
 **civbuilder.yaml** (`EECivBuilderRules`; `EECivilizationManager::ApplyUpgradeLevel`, `Load`'s special powers

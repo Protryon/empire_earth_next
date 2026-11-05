@@ -99,6 +99,10 @@ ticks:
 """
 
 
+# the computer players' cheats (ee/EERules.h EEAICheat, by bit): a difficulty's ai_cheats lists the ones it keeps
+AI_CHEATS = ('cost', 'reveal', 'epochs', 'extra', 'popband', 'catchup', 'retire')
+
+
 def gameoptions(ids, spec):
     s = _consts('EEStringIDs.h', 'IDS_')
     sizes = [('tiny', 42), ('small', 58), ('medium', 75), ('large', 105), ('huge', 160), ('gigantic', 220)]
@@ -125,7 +129,9 @@ def gameoptions(ids, spec):
             ('hard', 'IDS_LOBBY_HARD', 2, 'difficulty_damage_scale.F2', 'difficulty_damage_scale.F')]:
         out.append(f'  - id: {sid}\n    name: {s[name]}\n    ai_level: {level}                    '
                    f'# the computer players\' records: 0 easy, 1 medium, 2 hard\n'
-                   f'    damage_scale_human_target: {target}\n    damage_scale_human_attacker: {attacker}\n')
+                   f'    damage_scale_human_target: {target}\n    damage_scale_human_attacker: {attacker}\n'
+                   f'    ai_cheats: [{", ".join(AI_CHEATS)}]   # the computer players\' cheats this '
+                   f'difficulty keeps (docs/AI_RESEARCH.md; [] for none)\n')
     out.append('unit_limit:\n  minimum: unit_limit_range.L\n  maximum: unit_limit_range.L2\n  step: 50\n'
                '  default: unit_limit_default.L\n')
     out.append('wonders_for_victory:\n  maximum: wonders_for_victory_max.L\n  default: 3\n')
@@ -445,6 +451,9 @@ def validate(name, text, content, spec):
             for k in ('damage_scale_human_target', 'damage_scale_human_attacker'):
                 if x.get(k) is not None:
                     _number(x.get(k), x.where(), k, spec)
+            for c in _list(x.get('ai_cheats'), x.where(), 'ai_cheats'):
+                if str(c) not in AI_CHEATS:
+                    raise TextError(f'{x.where()}: ai_cheats: {c!r} is not one of {", ".join(AI_CHEATS)}')
             return x.get('id')
         lists = {}
         for k, fn in (('map_sizes', size), ('speeds', speed), ('difficulties', difficulty)):

@@ -309,6 +309,23 @@ EERules& EEGetRules()
     return sRules;
 }
 
+const char* const kEEAICheatNames[] = {"cost", "reveal", "epochs", "extra", "popband", "catchup", "retire"};
+const unsigned long kEEAICheatCount = sizeof(kEEAICheatNames) / sizeof(kEEAICheatNames[0]);
+
+long EEAICheatBit(const std::string& inName)
+{
+    for (unsigned long i = 0; i < kEEAICheatCount; i++)
+        if (inName == kEEAICheatNames[i])
+            return 1L << i;
+    return 0;
+}
+
+long EEDifficultyAICheats(unsigned long inDifficulty)
+{
+    const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
+    return inDifficulty < theList.size() ? theList[inDifficulty].mAICheats : (long)kAICheatAll;
+}
+
 long EEDifficultyAILevel(unsigned long inDifficulty)
 {
     const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
@@ -601,6 +618,16 @@ void LoadGameOptions(const Node& d, EEGameOptionRules& r)
                 Fail(x.Where() + ": ai_level is 0 (easy), 1 (medium) or 2 (hard): the computer players' records");
             x.Number("damage_scale_human_target", s.mScaleHumanTarget);
             x.Number("damage_scale_human_attacker", s.mScaleHumanAttacker);
+            if (const Node* c = x.List("ai_cheats")) {
+                s.mAICheats = 0;
+                for (const Node& n : c->mItems) {
+                    const std::string& t = EEDataText::NodeScalar(&n, x.Where(n), "ai_cheats");
+                    long theBit = EEAICheatBit(t);
+                    if (theBit == 0)
+                        Fail(x.Where(n) + ": ai_cheats: '" + t + "' is not cost, reveal, epochs, extra, popband, catchup or retire");
+                    s.mAICheats |= theBit;
+                }
+            }
             x.Done();
             r.mDifficulties.push_back(s);
         }
@@ -988,6 +1015,7 @@ void EERules::Dump(std::string& outJson) const
             j.Int("ai_level", m.mAILevel);
             j.Number("damage_scale_human_target", m.mScaleHumanTarget);
             j.Number("damage_scale_human_attacker", m.mScaleHumanAttacker);
+            j.Int("ai_cheats", m.mAICheats);
             j.Close('}');
         }
         j.Close(']');

@@ -746,7 +746,7 @@ void EECPPersonnel::RetireObsoleteUnits()
     long theEpoch = this->mPlayer->mTechnologies->mCurrentEpoch;
     long i;
     EEComplexUnit* theComplexUnit;
-    if (!EECPCheatOn(kCPCheatRetire))
+    if (!EECPCheatOn(kAICheatRetire))
         return;   // EE_AI_CHEATS without retire (ee/EECPTrace.h)
     for (i = gNumPlayers - 1; i > 0; i--) {
         if (gWorld.mPlayers[i] != NULL && gWorld.mPlayers[i]->IsHuman())

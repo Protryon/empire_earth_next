@@ -44,12 +44,8 @@ bool gCPTraceOn = false;
 const char* gCPTraceManager = "-";
 
 static bool sInitialized = false;
-static long sCheats = kCPCheatAll;
+static long sCheats = kAICheatAll;         // EE_AI_CHEATS (TEST ONLY): the cheats it lets through
 static char sCheatNames[128];
-static const struct { const char* mName; long mBit; } kCheatNames[] = {
-    {"cost", kCPCheatCost}, {"reveal", kCPCheatReveal}, {"epochs", kCPCheatEpochs}, {"extra", kCPCheatExtra},
-    {"popband", kCPCheatPopBand}, {"catchup", kCPCheatCatchUp}, {"retire", kCPCheatRetire},
-};
 static const long kMaxTracedPlayers = 64;
 static unsigned long sNextStats[kMaxTracedPlayers];
 static unsigned long sNextProfile[kMaxTracedPlayers];
@@ -74,37 +70,39 @@ void EECPTraceInit()
             if (theEnd == std::string::npos)
                 theEnd = theList.size();
             std::string theName = theList.substr(theStart, theEnd - theStart);
-            bool theKnown = theName == "none" || theName.empty();
-            for (unsigned long i = 0; i < sizeof(kCheatNames) / sizeof(kCheatNames[0]); i++)
-                if (theName == kCheatNames[i].mName) {
-                    sCheats |= kCheatNames[i].mBit;
-                    theKnown = true;
-                }
-            if (!theKnown)
+            long theBit = EEAICheatBit(theName);
+            if (theBit == 0 && theName != "none" && !theName.empty())
                 ESDebugOut("EE-AI EE_AI_CHEATS: unknown cheat '%s' ignored\n", theName.c_str());
+            sCheats |= theBit;
             theStart = theEnd + 1;
         }
     }
-    sCheatNames[0] = '\0';
-    for (unsigned long i = 0; i < sizeof(kCheatNames) / sizeof(kCheatNames[0]); i++)
-        if (sCheats & kCheatNames[i].mBit) {
-            if (sCheatNames[0] != '\0')
-                strcat(sCheatNames, ",");
-            strcat(sCheatNames, kCheatNames[i].mName);
-        }
-    if (sCheatNames[0] == '\0')
-        strcpy(sCheatNames, "none");
+}
+
+// The game's difficulty's cheats (gameoptions.yaml ai_cheats), narrowed by EE_AI_CHEATS
+static long EECPCheats()
+{
+    EECPTraceInit();
+    return EEDifficultyAICheats(gWorld.mLobbyOptions.mDifficulty) & sCheats;
 }
 
 bool EECPCheatOn(long inCheat)
 {
-    EECPTraceInit();
-    return (sCheats & inCheat) != 0;
+    return (EECPCheats() & inCheat) != 0;
 }
 
 const char* EECPCheatNames()
 {
-    EECPTraceInit();
+    long theCheats = EECPCheats();
+    sCheatNames[0] = '\0';
+    for (unsigned long i = 0; i < kEEAICheatCount; i++)
+        if (theCheats & (1L << i)) {
+            if (sCheatNames[0] != '\0')
+                strcat(sCheatNames, ",");
+            strcat(sCheatNames, kEEAICheatNames[i]);
+        }
+    if (sCheatNames[0] == '\0')
+        strcpy(sCheatNames, "none");
     return sCheatNames;
 }
 

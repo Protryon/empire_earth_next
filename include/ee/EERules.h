@@ -83,6 +83,22 @@ struct EESpeedRule {
     EERuleNumber mFactor;                   // the game speed
 };
 
+// The computer players' cheats a difficulty keeps (EEDifficultyRule::mAICheats; gameoptions.yaml `ai_cheats`, a list
+// of these names; docs/AI_RESEARCH.md). The original keeps every one at every difficulty.
+enum EEAICheat {
+    kAICheatCost = 1 << 0,      // cost: the difficulty's unit cost modifier (dbcpbehavior rows 67/96; stock 1%)
+    kAICheatReveal = 1 << 1,    // reveal: the whole map explored at the start
+    kAICheatEpochs = 1 << 2,    // epochs: epoch advances are free and always affordable
+    kAICheatExtra = 1 << 3,     // extra: computer_player_extra_resources (row 101) gold and iron at the start
+    kAICheatPopBand = 1 << 4,   // popband: the pop cap pulled toward the largest human population (rows 92/93)
+    kAICheatCatchUp = 1 << 5,   // catchup: the next epoch advance pulled forward when another player is ahead
+    kAICheatRetire = 1 << 6,    // retire: obsolete units no human sees are deleted
+    kAICheatAll = (1 << 7) - 1,
+};
+extern const char* const kEEAICheatNames[];   // by bit position
+extern const unsigned long kEEAICheatCount;
+long EEAICheatBit(const std::string& inName);  // 0: not a cheat name
+
 struct EEDifficultyRule {
     std::string mID;
     long mNameID;
@@ -90,6 +106,7 @@ struct EEDifficultyRule {
     // the damage table scale when exactly one side is "human" (EEPlayer::IsHuman, not player 0; provisional name):
     EERuleNumber mScaleHumanTarget;         // ... the target
     EERuleNumber mScaleHumanAttacker;       // ... the attacker
+    long mAICheats = kAICheatAll;           // the computer players' cheats (EEAICheat bits)
 };
 
 struct EEGameOptionRules {
@@ -241,6 +258,8 @@ EERules& EEGetRules();
 
 // the computer players' level (0 easy .. 2 hard: their records' values) of a game option difficulty
 long EEDifficultyAILevel(unsigned long inDifficulty);
+// the computer players' cheats (EEAICheat bits) of a game option difficulty
+long EEDifficultyAICheats(unsigned long inDifficulty);
 
 // unit category names (the data's category ids): kUnitCategory* by value
 extern const char* const kEERuleCategoryNames[];
