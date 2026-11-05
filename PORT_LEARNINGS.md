@@ -1050,3 +1050,29 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   16 distinct byte values in the whole frame, which the UI alone provides. The mini map was not part of this bug: it
   is drawn on the CPU and showed the explored start area in the black frames too (it is mostly black at the start
   because the map is unexplored).
+
+## The POSIX game, part 1: the rest of the Win32 calls (branch xgame)
+
+- **What blocked the Linux census after LP64 was mostly not Win32.** Of the 86 failing units, 30 stopped on one
+  header (EEWonNet.h: `sockaddr_in`, `CRITICAL_SECTION`, `Interlocked*` in inline WON code), and a dozen on things a
+  Windows build cannot see: names the code spelled through windows.h's A/W macros (`PlaySoundA`, `SetPortA` from
+  winspool, a `DrawText()` call that only resolved to `DrawTextA` through the macro), `#ifdef _SET_` (the MSVC STL's
+  include guard as a feature test), `_iobuf` for FILE, `HRESULT` vs `long` callback types (HRESULT is `int32_t` in
+  wintypes.h), `std::max(LONG, long)` (LONG is `int32_t` there), `fpos_t` as an integer, `_getw/_putw`.
+- **clang-cl's Microsoft mode is more lenient than the same flags on a GNU target**: the address of a temporary
+  and narrowing in braced initializers compile on Windows and are errors for Linux even with -fms-compatibility.
+  The census passes `-Wno-address-of-temporary -Wno-c++11-narrowing` (MS_DIALECT_LENIENCE), as the POSIX game build
+  must.
+- **Floating-point `from_chars`** is missing in libstdc++ 10 and in libc++ before macOS 13.3 (deployment target 11):
+  `UFromChars` (include/lle/UFromChars.h) uses it on MSVC and strtof/strtod elsewhere.
+- **Time sources and the harness**: GetTickCount64 (GX's read-back timeout, the null-3D key frames) is not shimmed
+  by the time shim; timeGetTime and QueryPerformanceCounter are. Routing it through PlatTimeMilliseconds would have
+  shrunk a 10 s timeout to 0.3 s under `--time-factor 32`: it got its own PlatTimeMilliseconds64 (GetTickCount64 on
+  Win32).
+- **String resources as data**: LoadStringA converts the UTF-16 resource to the ANSI code page; the generated table
+  stores those bytes (cp1252: every character of Language.rc has a cp1252 code). The generator parses the .rc
+  (escapes `""`, `\n`, `\xHHHH`) and build.py compares its result with the string tables rc.exe compiled (3,707
+  equal), so a parser slip cannot reach the game. An empty string counts as missing (LoadStringA returns 0).
+- **TCP Protocol**: TCPHost padded 8 bytes before its address, assuming a 4-byte SOCKET; on x64 the transfer
+  connection read the family and port as the IP. Found by the loopback test (tools/tcp_test), which drives the
+  plug-in's PIM entry points the way the network engine does. Socket globals starting at 0 would close stdin on POSIX.
