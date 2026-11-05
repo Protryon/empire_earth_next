@@ -195,13 +195,17 @@ def cmd_build(a, out=None):
         import tables
         spec = db_tables()
         (data / 'db').mkdir()
-        for t, info in sorted(spec['tables'].items()):
+        dbs = {}
+        for t in sorted(spec['tables']):
             name = f'db\\{t}.dat'
             if name not in winner:
                 sys.exit(f'{name} is on no data path place')
-            ext = '.yaml' if info['format'] == 'yaml' else '.csv'
-            (data / 'db' / f'{t}{ext}').write_bytes(tables.export(t, winner[name].read(name), spec))
-            converted.add(name)
+            dbs[t] = winner[name].read(name)
+        # all at once: the tables reference each other's rows by id (DATA_FORMATS.md 8.6)
+        for t, text in tables.export_all(dbs, spec).items():
+            ext = '.yaml' if spec['tables'][t]['format'] == 'yaml' else '.csv'
+            (data / 'db' / f'{t}{ext}').write_bytes(text)
+            converted.add(f'db\\{t}.dat')
         print(f'db: {len(spec["tables"])} tables as text', flush=True)
         # models -> glTF, textures -> PNG (tools/eemodel export: the same data path, resolved as the game does)
         import eemodel
