@@ -3,9 +3,10 @@
   python -I tools/fetch_wgpu.py [--arch x86_64|i686|all] [--dl DIR ...]
 
 wgpu-native (gfx-rs, MIT or Apache-2.0), the windows-<arch>-msvc-release packages: include/webgpu/webgpu.h and
-wgpu.h, lib/wgpu_native.lib (static). x86_64: v29.0.0.0. i686: v24.0.3.1, because from v25 the i686 build's DX12
-backend fails every render pipeline ("Shader translation error ... The parameter is incorrect", E_INVALIDARG; v29.0.0.0
-and v29.0.1.1 checked, x86_64 unaffected; tools/gx_test). The renderer's GX layer compiles against both headers. The downloads are cached in toolchain/dl/ and sha256-pinned;
+wgpu.h, lib/wgpu_native.lib (static). Both architectures pin v24.0.3.1: from v25 the i686 build's DX12 backend fails
+every render pipeline ("Shader translation error ... The parameter is incorrect", E_INVALIDARG; v29.0.0.0 and v29.0.1.1
+checked), and with v29.0.0.0 the x86_64 game's buffer read-backs never complete on DX12/WARP (the GX self-test passes;
+the game's workload does not). The renderer's GX layer compiles against both header versions. The downloads are cached in toolchain/dl/ and sha256-pinned;
 refuses on a mismatch. --dl DIR (repeatable) names directories already holding the downloads (read, never written).
 x86_64 is the target (the exe goes 64-bit only); i686 serves while the exe is still 32-bit. Needs 7-Zip (`7z` on
 PATH, C:\\Program Files\\7-Zip\\7z.exe, or env EE_7Z); nothing from the package is executed.
@@ -23,8 +24,8 @@ import urllib.request
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 TC = pathlib.Path(os.environ.get("EE_TOOLCHAIN", ROOT / "toolchain"))
 PACKAGES = {   # arch: (release, package, sha256); the cache file name carries the release
-    "x86_64": ("v29.0.0.0", "wgpu-windows-x86_64-msvc-release.zip",
-               "6ec736b6e7c7259ee5d13cdd06eac4407d1f38539b2e555cbe7040e6098f9dd9"),
+    "x86_64": ("v24.0.3.1", "wgpu-windows-x86_64-msvc-release.zip",
+               "72d3abf74e0b55f9474602e2ce7f20fd0f9b9c46be8405b45a697ec1ee343436"),
     "i686": ("v24.0.3.1", "wgpu-windows-i686-msvc-release.zip",
              "226e196ba4b65a29a1f08e236ad53787f066e4677a8e62382af5a049d07787b2"),
 }

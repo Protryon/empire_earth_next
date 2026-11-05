@@ -516,8 +516,14 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
   `WGPUVertexFormat_Unorm8x4BGRA` (panic "invalid vertex format"), so read Unorm8x4 and swizzle `.zyxw` in WGSL.
 - **wgpu-native i686**: from v25 (v29.0.0.0 and v29.0.1.1 checked) every DX12 render pipeline fails on i686 with
   "Shader translation error ... The parameter is incorrect (0x80070057)"; x86_64 is fine and v24.0.3.1 i686 works
-  (same GX code: the C API differences between v24 and v29 did not touch what GX uses). The i686 pin goes away with
-  the 64-bit exe.
+  (same GX code: the C API differences between v24 and v29 did not touch what GX uses).
+- **wgpu-native v29 x86_64 in the game**: the GX self-test passes (read-backs between presents, on a second thread,
+  under the harness debugger), but in the x64 game every buffer read-back of the 1024x768 frame stalls: a blocking
+  `wgpuDevicePoll` never returns (the first hang: the frame dump after "Single Player"), a non-blocking poll never
+  completes the map. The same game on v24.0.3.1 x86_64 has no stall, so both architectures pin v24.0.3.1. GX's
+  read-back now polls without blocking and gives up after 10 s with a log line instead of hanging the graphics
+  thread. Headers must match the linked library (verify.py takes them from the target's toolchain/wgpu/<arch>):
+  v29 headers with the v24 library and vice versa crash at device creation.
 - **wgpu errors are Rust panics**: an invalid object used in a submit aborts the process (c0000409, fast fail) with
   the message on stderr, which a GUI exe does not have. `EE_GX_STDERR=<file>` redirects stderr there;
   `EE_GX_LOG=warn|info|debug` routes wgpu's log to OutputDebugString (the harness logs it).

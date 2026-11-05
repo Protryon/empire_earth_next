@@ -1051,10 +1051,31 @@ int main(int argc, char **argv)
                     for(int t=0;t<nth;t++) {
                         DWORD previous=SuspendThread(threads[t]);CONTEXT context;char module[128];
                         if(previous==(DWORD)-1)continue;
-                        ZeroMemory(&context,sizeof context);context.ContextFlags=CONTEXT_CONTROL;
+                        ZeroMemory(&context,sizeof context);
+#ifdef _WIN64
+                        context.ContextFlags=CONTEXT_FULL;
+#else
+                        context.ContextFlags=CONTEXT_CONTROL;
+#endif
                         if(GetThreadContext(threads[t],&context)) {
                             mod_of(R_IP(&context),module,sizeof module);
                             printf("diagnostic thread %lu suspended=%lu at %s\n",(unsigned long)tids[t],(unsigned long)previous,module);
+#ifdef _WIN64
+                            /* x64 code keeps no frame-pointer chain: unwind with the modules' .pdata (dbghelp) */
+                            static int sym_ready;
+                            if(!sym_ready){SymSetOptions(SYMOPT_DEFERRED_LOADS);sym_ready=SymInitialize(hProc,NULL,TRUE)?1:-1;}
+                            else if(sym_ready>0)SymRefreshModuleList(hProc);
+                            if(sym_ready>0) {
+                                STACKFRAME64 frame;ZeroMemory(&frame,sizeof frame);CONTEXT walk=context;
+                                frame.AddrPC.Offset=walk.Rip;frame.AddrPC.Mode=AddrModeFlat;
+                                frame.AddrStack.Offset=walk.Rsp;frame.AddrStack.Mode=AddrModeFlat;
+                                frame.AddrFrame.Offset=walk.Rbp;frame.AddrFrame.Mode=AddrModeFlat;
+                                for(int s=0;s<24 && StackWalk64(IMAGE_FILE_MACHINE_AMD64,hProc,threads[t],&frame,&walk,NULL,
+                                        SymFunctionTableAccess64,SymGetModuleBase64,NULL) && frame.AddrPC.Offset;s++) {
+                                    mod_of((TADDR)frame.AddrPC.Offset,module,sizeof module);printf("  frame %s\n",module);
+                                }
+                            } else
+#endif
                             for(int s=0;s<4;s++){mod_of(rdp(R_SP(&context)+PTR*s),module,sizeof module);printf("  stack %s\n",module);}
                         }
                         ResumeThread(threads[t]);

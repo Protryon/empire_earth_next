@@ -619,9 +619,20 @@ void GXSurfaceData::Download()
     theCallback.callback = OnMap;
     theCallback.userdata1 = &theDone;
     wgpuBufferMapAsync(theBuffer, WGPUMapMode_Read, 0, (size_t)theDescriptor.size, theCallback);
-    for (int i = 0; i < 100000 && !theDone; i++) {
-        wgpuDevicePoll(theCore.mDevice, 1, NULL);
+    // poll without a blocking wait (a blocking device poll never returned in an x64 session, wgpu-native v29 on
+    // DX12/WARP): give the copy up to 10 s
+    unsigned long long theStart = GetTickCount64();
+    for (unsigned long theSpin = 0; !theDone; theSpin++) {
+        wgpuDevicePoll(theCore.mDevice, 0, NULL);
         wgpuInstanceProcessEvents(theCore.mInstance);
+        if (theDone)
+            break;
+        if (GetTickCount64() - theStart > 10000) {
+            GXLog("GX: read-back of %lux%lu timed out", this->mWidth, this->mHeight);
+            break;
+        }
+        if (theSpin > 64)
+            Sleep(theSpin > 1000 ? 1 : 0);
     }
     if (theDone > 0) {
         const unsigned char* theData = (const unsigned char*)wgpuBufferGetConstMappedRange(theBuffer, 0,

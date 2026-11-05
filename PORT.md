@@ -75,7 +75,7 @@ messages are x64-safe (PORT_LEARNINGS "64-bit census").
 Steps:
 1. **x64 link** (done, 2026-11-04): `python -I build.py --x64` -> `build/clang-x64-exe/exe/EE-AOC.exe` (PE32+
    AMD64, 15.6 MB, system DLLs only), lld /MACHINE:X64 at /BASE:0x400000 (member aliases are absolute 32-bit
-   symbols) with the x86_64 runtime/SDK libraries and wgpu-native v29 x86_64. `exe_fulllink.py` maps the link
+   symbols) with the x86_64 runtime/SDK libraries and wgpu-native x86_64 (v24.0.3.1, see below). `exe_fulllink.py` maps the link
    tables' 32-bit names to x64 names by demangled signature and writes x64 stubs; member offsets come from the x64
    build's record layouts. Gate met: pass 2 0 unresolved / 0 duplicates, and the pass-1 census and stubs equal the
    i686 ones symbol by symbol (won 304, icf 36, vslot 262, pure 11, data 75). Three x64 runtime hazards fixed in
@@ -197,8 +197,8 @@ Phases (each gated by the harness, with the DX7 renderer kept in the build until
    draws, pixel centres, GDI text both ways, presentation) in both bitnesses: PASS. The exe imports no DDRAW.
    Gates: settings tour + 60 s of play complete, menus and the 3D scene match the DX7 build's screenshots
    (`tools/harness`: the bridge dumps frames through GX's test hook instead of patching ShowScene).
-   i686 pins wgpu-native **v24.0.3.1** (v25 and later fail every i686 DX12 pipeline; PORT_LEARNINGS.md); x86_64
-   stays on v29.0.0.0.
+   Both architectures pin wgpu-native **v24.0.3.1** (v25+ fail every i686 DX12 pipeline; with v29 the x86_64
+   game's read-backs never complete; PORT_LEARNINGS.md).
    Open: GXSurface::DrawText's bounds for unusual fonts, sampling the primary surface (falls back to white; seen 3x
    per session), DXT1 surfaces (unused by the game), wireframe fill mode, 16-bit dithering.
 4. **Input and lobby; DX7 out**: raw input instead of DirectInput, the lobby presentation, the DX7 SDK download

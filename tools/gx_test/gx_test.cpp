@@ -260,17 +260,42 @@ int main(int argc, char** argv)
     } else
         Check(false, "GetDC", 0, 0);
 
-    // 7. present to the window
-    for (int f = 0; f < theFrames; f++) {
+    // 7. present to the window: draw, read back, present (the harness reads each frame back before it is
+    // presented), on a second thread as the game's graphics thread does, while this thread pumps the messages
+    struct PresentJob {
+        GXSurface* mBack;
+        GXSurface* mPrimary;
+        int mFrames;
+        volatile LONG mDone;
+        int mFailed;
+    } theJob = {theBack, thePrimary, theFrames, 0, 0};
+    HANDLE theThread = CreateThread(NULL, 0, [](void* inJob) -> DWORD {
+        PresentJob* j = (PresentJob*)inJob;
+        for (int f = 0; f < j->mFrames; f++) {
+            RECT theScreen = {0, 0, 64, 64};
+            GXBLTFX theFrameFill = {sizeof(GXBLTFX), (unsigned long)(0x00101010 * (f % 8))};
+            j->mBack->Blt(NULL, NULL, NULL, GXBLT_COLORFILL, &theFrameFill);
+            if (Pixel(j->mBack, 1, 1) != theFrameFill.dwFillColor) {
+                j->mFailed = 1;
+                break;
+            }
+            j->mPrimary->Blt(&theScreen, j->mBack, NULL, 0, NULL);
+        }
+        InterlockedExchange(&j->mDone, 1);
+        return 0;
+    }, &theJob, 0, NULL);
+    while (!theJob.mDone) {
         MSG theMessage;
         while (PeekMessageA(&theMessage, NULL, 0, 0, PM_REMOVE)) {
             TranslateMessage(&theMessage);
             DispatchMessageA(&theMessage);
         }
-        RECT theScreen = {0, 0, 64, 64};
-        thePrimary->Blt(&theScreen, theBack, NULL, 0, NULL);
+        Sleep(1);
     }
-    printf("presented %d frames\n", theFrames);
+    WaitForSingleObject(theThread, INFINITE);
+    CloseHandle(theThread);
+    Check(!theJob.mFailed, "read-back between presents (graphics thread)", 0, 0);
+    printf("presented %d frames (each read back first)\n", theFrames);
     theVB->Release();
     theDevice->Release();
     theTextSurface->Release();
