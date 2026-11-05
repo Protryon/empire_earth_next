@@ -181,13 +181,13 @@ FSFile* EEClient::CreateXferFile(const UWideString& inName, unsigned long inSize
         theExtension = inName.GetIndexedSubstring(inName.GetLength() - 4, inName.GetLength());
         theFile = new FSFileSpec;
         theFile->SetVolume(gStartupVolume);
-        if (_mbsicmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
+        if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
                      reinterpret_cast<const unsigned char*>((const char*)gSavedGameExtension)) == 0)
             theFile->SetDirectory(gStartupDirectory + "data\\" + "Saved Games\\");
-        else if (_mbsicmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
+        else if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
                           reinterpret_cast<const unsigned char*>((const char*)gScenarioExtension)) == 0)
             theFile->SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
-        else if (_mbsicmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
+        else if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theExtension),
                           reinterpret_cast<const unsigned char*>((const char*)gCampaignExtension)) == 0)
             theFile->SetDirectory(gStartupDirectory + "data\\" + "Campaigns\\");
         else {
@@ -543,7 +543,7 @@ void EEClient::HandleConnectionLost()
         if (this->mAllowServerMigration) {
             gResource->GetString(IDS_HOST_IS_NOT_RESPONDING_PLEASE_WAIT, theText);
             gUserInterface->AddChatLogEntry(theText, 1);
-            Sleep(500);
+            PlatSleep(500);
             EEAction* theAction = new EEAServerMigration;
             gUserInterface->PostAction(theAction);
             theAction->Dereference();
@@ -690,12 +690,12 @@ unsigned long EEClient::HandleStartGame(unsigned long inParameter)
     UWideString theFormat;
     gGraphics->PostResume();
     for (bool theStopping = gGraphics->mIsPaused; theStopping; theStopping = gGraphics->mIsPaused)
-        Sleep(1);
+        PlatSleep(1);
     gPhysics->mThread->Post(0x404, NULL, NULL, true);
     while (true) {
         if (gPhysics->mTimerRunning)
             break;
-        Sleep(1);
+        PlatSleep(1);
     }
     gUIManager->mMainGameForm->SetUIState(0);
     for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {

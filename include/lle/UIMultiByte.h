@@ -2,6 +2,7 @@
 // Requires <mbstring.h>.
 #ifndef LLE_UIMULTIBYTE_H
 #define LLE_UIMULTIBYTE_H
+#include "platform/PlatString.h"
 
 // The (possibly double-byte) character at inString, as _ismbcdigit/_ismbcspace take it. Header-inline (provisional
 // name and home): the COMDAT sits after its first user, UIEditBox::AddChar (0x1006a9a5), and UITextLabel.cpp
@@ -9,7 +10,7 @@
 inline int GetMultiByteChar(const char* inString)
 {
     int theChar = 0;
-    if (_ismbblead(*reinterpret_cast<const unsigned char*>(inString))) {
+    if (PlatIsMbbLead(*reinterpret_cast<const unsigned char*>(inString))) {
         theChar = *inString << 8;
         inString++;
     }

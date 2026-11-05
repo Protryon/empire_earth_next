@@ -137,7 +137,7 @@ void EEPGSPlayerReport::ExportMessage(unsigned char** outPayloadPointer, unsigne
     unsigned long theMessageSize = this->ExportSize();
     char theTerminator = 0;
     const char* theName = this->mName;
-    unsigned long theNameLength = _mbsnbcnt(reinterpret_cast<const unsigned char*>(theName), this->mName.GetLength());
+    unsigned long theNameLength = PlatMbsNBCnt(reinterpret_cast<const unsigned char*>(theName), this->mName.GetLength());
     long theMessageType = 1001;
     *outPayloadPointer = new unsigned char[theMessageSize];
     if (*outPayloadPointer == NULL)
@@ -167,7 +167,7 @@ void EEPGSPlayerReport::ExportMessage(unsigned char** outPayloadPointer, unsigne
 // Returns the player report's message size: 22 bytes plus the name's byte length
 unsigned long EEPGSPlayerReport::ExportSize()
 {
-    return _mbsnbcnt(reinterpret_cast<const unsigned char*>((const char*)this->mName), this->mName.GetLength()) + 22;
+    return PlatMbsNBCnt(reinterpret_cast<const unsigned char*>((const char*)this->mName), this->mName.GetLength()) + 22;
 }
 
 static EEPGSGameReport sGameReport;                     // 0x5630f0

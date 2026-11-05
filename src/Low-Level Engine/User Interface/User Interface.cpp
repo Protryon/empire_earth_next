@@ -38,18 +38,18 @@ void UICreateMultilineTextFromString(const UWideString& inString, GEFont* inFont
 {
     UWideString theLine;
     const char* theCurrent = inString;
-    while (_mbscmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"") != 0) {
+    while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"") != 0) {
         unsigned long theCount = UIGetStringCutOffIndex(theCurrent, inFont, inWidth, true, true);
-        bool theAtNewline = _mbsnbcmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\n", 1) == 0;
+        bool theAtNewline = PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\n", 1) == 0;
         if (theCount == 0 && !theAtNewline)
             theCount = 1;   // always make progress
         theLine.CopyString(theCurrent, theCount);
         outLines.push_back(theLine);
-        theCurrent = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>(theCurrent), theCount);
+        theCurrent = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>(theCurrent), theCount);
         // Fixed: the cut-off index stops before a newline without counting it, so the loop used to stay on the
         // newline forever (pushing empty lines); the newline that ends a line is skipped now
-        if (_mbsnbcmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\n", 1) == 0)
-            theCurrent = (const char*)_mbsinc(reinterpret_cast<const unsigned char*>(theCurrent));
+        if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\n", 1) == 0)
+            theCurrent = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCurrent));
     }
 }
 
@@ -67,18 +67,18 @@ unsigned long UIGetStringCutOffIndex(const UWideString& inString, GEFont* inFont
     bool theNewline = false;
     bool theFoundSpace = false;
     const char* theCurrent = inString;
-    while (_mbscmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"") != 0) {
+    while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"") != 0) {
         if (theTabCount == 0) {
             theChar.CopyString(theCurrent, 1);
-            if (inStopAtNewline && _mbsnbcmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\n", 1) == 0)
+            if (inStopAtNewline && PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\n", 1) == 0)
                 theNewline = true;
-            if (inBreakAtSpace && _ismbcspace(GetMultiByteChar(theCurrent))) {
+            if (inBreakAtSpace && PlatIsMbcSpace(GetMultiByteChar(theCurrent))) {
                 theFoundSpace = true;
                 theSpaceIndex = theIndex + 1;
             }
-            if (_mbsnbcmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\r", 1) == 0)
+            if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\r", 1) == 0)
                 theChar = "";
-            else if (_mbsnbcmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\t", 1) == 0) {
+            else if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCurrent), (const unsigned char*)"\t", 1) == 0) {
                 theTabCount = 4;
                 theChar = "";
             }
@@ -96,7 +96,7 @@ unsigned long UIGetStringCutOffIndex(const UWideString& inString, GEFont* inFont
         if (theNewline)
             break;
         if (theTabCount == 0)
-            theCurrent = (const char*)_mbsinc(reinterpret_cast<const unsigned char*>(theCurrent));
+            theCurrent = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCurrent));
         theIndex++;
     }
     if (theCurrent == (const char*)inString && !theNewline)

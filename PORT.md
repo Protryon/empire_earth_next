@@ -181,10 +181,85 @@ Lock semantics while the render thread draws; upload cost for UI-heavy screens; 
 wgpu-native API churn (pinned release, webgpu.h is still changing); the static CRT with a Rust static library
 (phase 0); binary size (+several MB).
 
+## Cross-platform: census and plan (branch xplat, 2026-11-04)
+
+`tools/winapi_census.py` lists every Windows-specific name in the first-party source (`src/`, `include/`; the
+vendored libraries excluded): Win32 calls, constants and types by family, Windows-only headers, MSVC runtime and
+language extensions, and member functions whose names are A/W expansions of Win32 macros (`UIControl::DrawTextA`:
+they keep that spelling only while `<windows.h>` is included everywhere). It prints the counts by family, by area
+and the top files of each family, and writes every site to `build/winapi_census.tsv`. Areas marked [out] belong to
+the DirectX -> wgpu work (renderer, Input System, GE screen/surface/window) and are only catalogued; the platform
+layer's own Win32 implementation (src/Platform/Win32, [impl]) is where Windows calls are meant to be.
+
+Headline: at the branch base 4,065 sites, 2,867 of them in scope (1,942 without the `#include` lines); now 3,340
+sites in 792 files, 1,871 in scope (950 without the `#include` lines). The Win32 calls that moved into
+src/Platform/Win32 count as [impl]. Families now (in scope = outside [out] and [impl]):
+
+| family | sites | in scope | names | files | top names |
+|---|---|---|---|---|---|
+| directx | 834 | 11 | 346 | 24 | DD_OK 38, D3DVERTEX_STD_COLOR 37, DDERR_WASSTILLDRAWING 35, D3DRENDERSTATE_CLIPPING 13 |
+| winsock | 313 | 313 | 43 | 2 | WSAGetLastError 37, sockaddr_in 36, closesocket 23, AF_INET 22 |
+| com | 60 | 7 | 6 | 10 | HRESULT 45, CoUninitialize 4, GUID 4, S_FALSE 3 |
+| registry | 40 | 0 | 17 | 1 | HKEY 14, RegCloseKey 5, KEY_ALL_ACCESS 3, RegOpenKeyExA 2 |
+| time | 59 | 5 | 19 | 12 | Sleep 32, LARGE_INTEGER 3, QueryPerformanceCounter 3, GetTickCount 2 |
+| threads | 42 | 14 | 25 | 8 | LeaveCriticalSection 5, EnterCriticalSection 4, INFINITE 4, CRITICAL_SECTION 3 |
+| files | 62 | 15 | 39 | 7 | MAX_PATH 14, INVALID_HANDLE_VALUE 4, GetCurrentDirectoryA 3, WIN32_FIND_DATAA 3 |
+| messagebox | 5 | 5 | 4 | 1 | MessageBoxA 2, MB_ICONHAND 1, MB_SYSTEMMODAL 1, MB_SETFOREGROUND 1 |
+| gdi | 108 | 50 | 38 | 8 | SelectObject 12, HDC 9, SetTextColor 8, HGDIOBJ 7 |
+| ime | 63 | 63 | 24 | 4 | HIMC 8, ImmGetContext 8, ImmReleaseContext 8, ImmGetCompositionStringA 6 |
+| windowing | 222 | 178 | 106 | 22 | HWND 23, DefWindowProc 19, WPARAM 8, LPARAM 8 |
+| process | 139 | 67 | 33 | 28 | GetLastError 32, HANDLE 24, HINSTANCE 22, ERROR_SUCCESS 11 |
+| msvc-string | 47 | 10 | 26 | 10 | LPSTR 14, LPCSTR 6, _snprintf 4, _stricmp 1 |
+| msvc-lang | 63 | 47 | 13 | 18 | CALLBACK 12, __int64 11, _PC_53 9, WINAPI 7 |
+| win-types | 206 | 63 | 16 | 31 | TRUE 35, DWORD 31, FALSE 29, DWORD_PTR 26 |
+| win-headers | 975 | 921 | 12 | 745 | windows.h 741, mbstring.h 190, ddraw.h 10, d3d.h 10 |
+
+### The platform layer
+
+`include/platform/*.h` is a C interface (extern "C", `<stdint.h>` types, opaque handles, documented results) so a
+POSIX implementation, or a Rust crate exporting the same symbols, can replace `src/Platform/Win32/` without
+touching the callers. The Win32 implementation calls exactly the Win32 functions the code called before (the
+harness's time shim hooks those imports), and is linked with the engine (`tools/units.py` PLATFORM_UNITS).
+
+| Header | Covers | Routed |
+|---|---|---|
+| PlatTime.h | millisecond clock, high-resolution counter, sleep, timer period, local time, system timers | Time Manager, TMPoll, TMTimer, all Sleep calls but RTSGraphics::Main's, GEModel Caching |
+| PlatThread.h | recursive mutex, events (wait, wait-any), atomics, thread id, last native error, threads (create, priority, suspend/resume, exit code) | TSCriticalSection, TSEvent (+WaitAny), TSReadWriteLock, TSScheduler, TSThread (not its message queue), Thread System.cpp, the mixer lock, the NE/music/sound/TCP wait loops |
+| PlatString.h | _stricmp/_strnicmp/_itoa/_strdup and the 19 _mbs*/_ismb* multibyte functions | UString, UWideString, the UI text controls, the game (292 sites) |
+| PlatPreferences.h | key/value store under roots (the registry on Win32) | URegistry (no HKEY in its interface) |
+| PlatFile.h | files, directory search, attributes, temp files, read-only file mapping | FSFileSpec, FSBasicFile, FSDebugFile, FSMemoryFile, FSArchive, File System.cpp |
+
+### What is left, in the order to take it
+
+1. **`<windows.h>` everywhere** (741 units). Every unit includes it before `lle/LowLevelEngine.h`, because the engine
+   headers use Win32 types (HINSTANCE in ESInitialize, HWND/HDC in the UI and graphics headers) and because member
+   names were spelled through the A/W macros (`DrawTextA`, `TSScheduler::CreateEvent` is really `CreateEventA`,
+   `FSFileSpec::CreateDirectory`). Step: rename those members to their plain names in one batch (they are the
+   game's own; the census family win-macro-names lists them), then make the engine headers self-contained without
+   `<windows.h>` and drop the include from units that no longer need it.
+2. **TSThread's message queue** (Post/Receive: PostThreadMessage/PeekMessage, and dispatching window messages from
+   the UI thread). Needs a platform message queue per thread plus the window system's event pump (below).
+3. **Windowing, GDI, IME** (Empire Earth.cpp WinMain/WndProc, EEUserInterface, UIManager, GEFont/GEFontBitmap GDI
+   text, UIEditBox/UIIMECandidate IME): a platform window + event interface (an SDL-like shape: create window,
+   poll events, cursor, clipboard, text input/composition) and a font rasteriser in place of GDI text on surfaces.
+   This meets the wgpu renderer's presentation (PORT.md "Plan: DirectX -> wgpu") and the Input System rewrite.
+4. **Winsock** (TCP Protocol.cpp, 312 sites): BSD sockets are close to portable; a thin PlatSocket layer
+   (or `#ifdef _WIN32` for WSAStartup/closesocket/ioctlsocket/WSAGetLastError) and the adapter enumeration
+   (GetAdaptersInfo) behind one function.
+5. **The rest of `process`**: resources (UResourceFile: the language strings from the exe's resources -> a data
+   file), MessageBox, GetVersion/UGetOSType, LoadLibrary (left only in the test profile), the floating-point control
+   word (`_controlfp`, UMath: x87 precision; becomes a no-op on x64/SSE, but check the determinism it was for).
+6. **LP64 (Linux/macOS 64-bit)**: Windows `long` is 32-bit on both x86 and x64, so the x64 census found the record
+   formats safe; on LP64 `long` is 64-bit. Everything that writes `sizeof(long)` (FSFile::Read(long&)/Write(const
+   long&), the network messages' long members, the `static_assert`ed records holding `long`) must become int32_t
+   before a non-Windows 64-bit build reads a saved game or talks to another player.
+7. Paths: the game builds `C:\...` paths with backslashes (FSFileSpec volume + directory + file); a POSIX PlatFile
+   maps them (volume dropped or mapped to a root, separators, case-insensitive lookup of the game data).
+
 ## Other next steps
 
 - Remove the clang dialect bridges: the `#ifdef __clang__` `const T&` forwarding overloads become `const` parameters,
   the `theTempN` call-site locals go.
 - Member aliases in source instead of link tables; the WON library's source (PORT_LEARNINGS.md "For WONAPI/WONLobby").
 - Port the rest of the harness (human driver, per-PT differential) where still useful.
-- Platform layer beyond the plan above, then 64-bit and other platforms.
+- The platform layer's next steps ("Cross-platform: census and plan" above), then 64-bit and other platforms.

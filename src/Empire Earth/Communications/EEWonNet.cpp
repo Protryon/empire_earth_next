@@ -251,7 +251,7 @@ EEWonNet::~EEWonNet()
 // Converts inLength multibyte characters to wide into the caller's buffer
 wchar_t* EEWonNet::A2W(wchar_t* outString, const char* inString, int inLength)
 {
-    int theBytes = _mbsnbcnt(reinterpret_cast<const unsigned char*>(inString), inLength);
+    int theBytes = PlatMbsNBCnt(reinterpret_cast<const unsigned char*>(inString), inLength);
     if (outString == NULL)
         return NULL;
     outString[0] = 0;
@@ -671,7 +671,7 @@ void EEWonNet::JoinGame(const char* inName, const char* inPassword)
         return;
     }
     for (theGroup = theGroups.begin(); theGroup != theGroups.end(); theGroup++) {
-        if (_mbscmp((const unsigned char*)this->ToString(theGroup->second->mName).c_str(),
+        if (PlatMbsCmp((const unsigned char*)this->ToString(theGroup->second->mName).c_str(),
                     reinterpret_cast<const unsigned char*>(inName)) == 0
             && (theGroup->second->mFlags & 0x800) == 0)
             theFound = true;
@@ -799,7 +799,7 @@ void EEWonNet::JoinRoom(const char* inRoom, const char* inPassword)
         theGroups = this->mRouting->GetGroupMap();
         if (theGroups.size() != 0) {
             for (theGroup = theGroups.begin(); theGroup != theGroups.end(); theGroup++) {
-                if (_mbscmp((const unsigned char*)this->ToString(theGroup->second->mName).c_str(),
+                if (PlatMbsCmp((const unsigned char*)this->ToString(theGroup->second->mName).c_str(),
                             reinterpret_cast<const unsigned char*>(inRoom)) == 0
                     && (theGroup->second->mFlags & 0x800) != 0)
                     theFound = true;
@@ -1417,12 +1417,12 @@ void EEWonNet::SendChat(const UWideString& inText)
                 if (inText[5] == '"') {
                     for (theEnd = 6; theEnd < inText.GetLength() && inText[theEnd] != '"'; theEnd++)
                         ;
-                    theName.CopyString((const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)inText), 6),
+                    theName.CopyString((const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inText), 6),
                                        theEnd - 6);
                 } else {
                     for (theEnd = 5; theEnd < inText.GetLength() && inText[theEnd] != ' '; theEnd++)
                         ;
-                    theName.CopyString((const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)inText), 5),
+                    theName.CopyString((const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inText), 5),
                                        theEnd - 5);
                 }
                 this->mRouting->FindClient(this->ToWString(theName), theClient);
@@ -1448,17 +1448,17 @@ void EEWonNet::SendChat(const UWideString& inText)
                 if (inText[5] == '"') {
                     for (theEnd = 6; theEnd < inText.GetLength() && inText[theEnd] != '"'; theEnd++)
                         ;
-                    theName.CopyString((const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)inText), 6),
+                    theName.CopyString((const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inText), 6),
                                        theEnd - 6);
                     theEnd += 2;
                 } else {
                     for (theEnd = 5; theEnd < inText.GetLength() && inText[theEnd] != ' '; theEnd++)
                         ;
-                    theName.CopyString((const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)inText), 5),
+                    theName.CopyString((const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inText), 5),
                                        theEnd - 5);
                     theEnd += 1;
                 }
-                unsigned char* theRest = _mbsninc(reinterpret_cast<const unsigned char*>((const char*)inText), theEnd);
+                unsigned char* theRest = PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inText), theEnd);
                 this->mRouting->FindClient(this->ToWString(theName), theClient);
                 if (theClient.get() != NULL) {
                     gResource->GetString(IDS_WHISPERED, theMessage);
@@ -1473,7 +1473,7 @@ void EEWonNet::SendChat(const UWideString& inText)
         case 'r':
             // Fix: "no reply target yet" is 0xffff (the constructor's value), not 0.
             if (inText.GetLength() >= 6 && this->mReplyClientId != 0xffff) {
-                unsigned char* theRest = _mbsninc(reinterpret_cast<const unsigned char*>((const char*)inText), 5);
+                unsigned char* theRest = PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)inText), 5);
                 gResource->GetString(IDS_WHISPERED, theMessage);
                 theMessage += reinterpret_cast<const char*>(theRest);
                 theRecipients.push_back(this->mRouting->mClientId);
@@ -1500,7 +1500,7 @@ std::wstring EEWonNet::ToWString(const char* inString)
 {
     if (inString == NULL || *inString == 0)
         return std::wstring();
-    int theLength = _mbslen(reinterpret_cast<const unsigned char*>(inString));
+    int theLength = PlatMbsLen(reinterpret_cast<const unsigned char*>(inString));
     wchar_t* theBuffer = new wchar_t[theLength + 1];
     this->A2W(theBuffer, inString, theLength);
     theBuffer[theLength] = 0;

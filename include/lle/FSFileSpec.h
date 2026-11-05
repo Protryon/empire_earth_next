@@ -1,10 +1,11 @@
-// C:\EEX\Low-Level Engine\File System\FSFileSpec.h (file name inferred): a file on disk (Win32 handle).
+// C:\EEX\Low-Level Engine\File System\FSFileSpec.h (file name inferred): a file on disk (platform/PlatFile.h).
 // Vtable 0x10097720 (RTTI .?AVFSFileSpec@@ > FSBasicFile > FSFile); sizeof 0x48 (Default.dll stack local).
 // Requires lle/FSBasicFile.h and <windows.h> first: CreateDirectory is exported as ?CreateDirectoryA@ (A/W macro).
 #ifndef LLE_FSFILESPEC_H
 #define LLE_FSFILESPEC_H
 
 #include <stdio.h>
+#include "platform/PlatFile.h"
 #include "lle/FSBasicFile.h" // the base class
 
 class LLE_API FSFileSpec : public FSBasicFile {
@@ -21,7 +22,7 @@ public:
     virtual long Close();                                                       // +0x08 0x91cd
     void CloseSearchHandle()                          // 0x13d6 (inline)
     {
-        FindClose(this->mHandle);
+        PlatFindClose(static_cast<PlatFind*>(this->mHandle));
         this->mHandle = NULL;
     }
     virtual long Copy(const UString& inDestination, bool inOverwrite, bool inKeepTimes);   // +0x0c 0x921c
@@ -75,7 +76,8 @@ public:
     operator FILE*() const { return this->mStream; }  // exported ??BFSFileSpec@@QBEPAU_iobuf@@XZ (inline; ESFilterDebugOutput)
 
 protected:
-    HANDLE mHandle;                                   // +0x40: CreateFileA / FindFirstFileA handle
+    void* mHandle;                                    // +0x40: the open PlatFile*, or a search's PlatFind*
+                                                      // (a Win32 HANDLE in the original)
     FILE* mStream;                                    // +0x44: FOpen's fopen stream (Close: fclose)
 };
 

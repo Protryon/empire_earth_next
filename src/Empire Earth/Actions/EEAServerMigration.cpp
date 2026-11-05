@@ -166,7 +166,7 @@ void EEAServerMigration::Virtual4()
             else
                 (static_cast<EEServer*>(gCommunications))->StartWaitingForReconnects(theCount - 1);
         } else {
-            Sleep(7000);
+            PlatSleep(7000);
             gResource->GetString(IDS_HOST_IS_GONE, theFormat);
             sprintf(theMessage, theFormat, (const char*)theDroppedName);
             gUserInterface->AddChatLogEntry(theMessage, 0);

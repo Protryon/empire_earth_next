@@ -6,7 +6,7 @@
 
 // FUNCTION: LLE 0x10053cee
 // Wraps an event handle (manual or automatic reset)
-TSEvent::TSEvent(HANDLE inHandle, bool inManualReset)
+TSEvent::TSEvent(PlatEvent* inHandle, bool inManualReset)
     : mHandle(inHandle), mManualReset(inManualReset)
 {
 }
@@ -15,50 +15,61 @@ TSEvent::TSEvent(HANDLE inHandle, bool inManualReset)
 // Destroys the event, closing its handle
 TSEvent::~TSEvent()
 {
-    CloseHandle(this->mHandle);
+    PlatEventDestroy(this->mHandle);
 }
 
 // FUNCTION: LLE 0x10053d09
-// Signals the event; records the Windows error on failure
+// Signals the event; records the native error on failure
 long TSEvent::Set()
 {
     long theResult;
-    if (SetEvent(this->mHandle))
+    if (PlatEventSet(this->mHandle))
         theResult = kErrorOK;
     else {
         theResult = kErrorNativeError;
-        ESRecordNativeError(GetLastError());
+        ESRecordNativeError(PlatGetLastError());
     }
     return theResult;
 }
 
 // FUNCTION: LLE 0x10053d2e
-// Resets the event to unsignalled; records the Windows error on failure
+// Resets the event to unsignalled; records the native error on failure
 long TSEvent::Clear()
 {
     long theResult;
-    if (ResetEvent(this->mHandle))
+    if (PlatEventReset(this->mHandle))
         theResult = kErrorOK;
     else {
         theResult = kErrorNativeError;
-        ESRecordNativeError(GetLastError());
+        ESRecordNativeError(PlatGetLastError());
     }
     return theResult;
 }
 
 // FUNCTION: LLE 0x10053d53
-// Waits for the event up to the timeout; kErrorTimeout on time-out, records the Windows error on failure
+// Waits for the event up to the timeout; kErrorTimeout on time-out, records the native error on failure
 long TSEvent::Wait(unsigned long inTimeout)
 {
     long theResult;
-    unsigned long theWait = WaitForSingleObject(this->mHandle, inTimeout);
-    if (theWait == WAIT_TIMEOUT)
+    long theWait = PlatEventWait(this->mHandle, inTimeout);
+    if (theWait == PLAT_WAIT_TIMEOUT)
         theResult = kErrorTimeout;
-    else if (theWait != WAIT_FAILED)
+    else if (theWait != PLAT_WAIT_FAILED)
         theResult = kErrorOK;
     else {
         theResult = kErrorNativeError;
-        ESRecordNativeError(GetLastError());
+        ESRecordNativeError(PlatGetLastError());
     }
     return theResult;
+}
+
+// Waits until one of the events is set -> its index, kTSWaitTimeout or kTSWaitFailed (the callers report failures)
+long TSEvent::WaitAny(TSEvent* const* inEvents, unsigned long inCount, unsigned long inTimeout)
+{
+    PlatEvent* theHandles[PLAT_WAIT_MAX];
+    if (inCount > PLAT_WAIT_MAX)
+        return kTSWaitFailed;
+    for (unsigned long i = 0; i < inCount; i++)
+        theHandles[i] = inEvents[i]->mHandle;
+    return PlatEventWaitAny(theHandles, inCount, inTimeout);
 }

@@ -155,27 +155,27 @@ long EESEEFindText::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     theText.CopyString(theEdit->GetText(0), 3);
     if (theText == thePrefix) {
         theText = "";
-        const unsigned char* theCurrent = _mbsninc(reinterpret_cast<const unsigned char*>(theEdit->GetText(0)), 3);
+        const unsigned char* theCurrent = PlatMbsNInc(reinterpret_cast<const unsigned char*>(theEdit->GetText(0)), 3);
         while (theLine < theLineCount) {
-            if (_mbsnbcmp(theCurrent, (const unsigned char*)"", 1) == 0) {
+            if (PlatMbsNBCmp(theCurrent, (const unsigned char*)"", 1) == 0) {
                 theLine++;
                 if (theLineCount <= theLine)
                     break;
                 theCurrent = reinterpret_cast<const unsigned char*>(theEdit->GetText(theLine));
             } else {
-                if (_ismbcdigit((char)*theCurrent)) {
+                if (PlatIsMbcDigit((char)*theCurrent)) {
                     unsigned char theDigit[4];
-                    _mbsncpy(theDigit, theCurrent, 1);
-                    strcpy((char*)_mbsinc(theDigit), "");
+                    PlatMbsNCpy(theDigit, theCurrent, 1);
+                    strcpy((char*)PlatMbsInc(theDigit), "");
                     theNumber += reinterpret_cast<const char*>(theDigit);
                 } else {
-                    if (_mbsnbcmp(theCurrent, (const unsigned char*)",", 1) != 0)
+                    if (PlatMbsNBCmp(theCurrent, (const unsigned char*)",", 1) != 0)
                         break;
                     gResource->GetString(atoi(theNumber), theNumber);
                     theText += theNumber;
                     theNumber = "";
                 }
-                theCurrent = _mbsinc(theCurrent);
+                theCurrent = PlatMbsInc(theCurrent);
             }
         }
         if (theNumber.GetLength() > 0) {

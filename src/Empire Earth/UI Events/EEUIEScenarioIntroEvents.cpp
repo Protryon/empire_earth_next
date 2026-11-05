@@ -375,7 +375,7 @@ long EEUIESIEClose::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     }
     if (theBackground)
         inForm->RemoveBackground(theBackground);
-    Sleep(500);
+    PlatSleep(500);
     return kErrorOK;
 }
 

@@ -205,7 +205,7 @@ void EEUserInterface::ChangeRasterizer(long inRasterizer, long inScreen)
     gGameWindow->GetClientOrigin();
     gMousePointer->mThread->Post(0x402, NULL, NULL, true);
     while (gMousePointer->mIsShown)
-        Sleep(1);
+        PlatSleep(1);
     for (unsigned long i = 0; i < gRasterizer->GetScreenCount(); i++)
         gRasterizer->GetScreen(i)->Release(gGameWindow);
     Fn102E1B();
@@ -227,9 +227,9 @@ void EEUserInterface::ResizeGameScreen(unsigned long inWidth, unsigned long inHe
         return;
     gMousePointer->mThread->Post(0x402, NULL, NULL, true);
     while (gMousePointer->mIsShown)
-        Sleep(1);
+        PlatSleep(1);
     while (gMousePointer->mIsShown)
-        Sleep(1);
+        PlatSleep(1);
     EEChangeGameScreen(inWidth, inHeight, inFlag);
     gUIManager->RelayoutAllForms();
     if (theWasShown)
@@ -479,7 +479,7 @@ void EEUserInterface::CancelGame()
     this->PauseGraphics();
     gPhysics->mThread->Post(0x402, NULL, NULL, true);
     while (gPhysics->mTimerRunning)
-        Sleep(1);
+        PlatSleep(1);
     EEUnloadGameMedia();
     if (gCommunications != NULL) {
         delete gCommunications;
@@ -510,7 +510,7 @@ void EEUserInterface::CloseScenarioEditor()
     EEUnloadGameMedia();
     gPhysics->mThread->Post(0x402, NULL, NULL, true);
     while (gPhysics->mTimerRunning)
-        Sleep(1);
+        PlatSleep(1);
     if (gCommunications != NULL) {
         delete gCommunications;
         gCommunications = new EEClient;
@@ -593,7 +593,7 @@ void EEUserInterface::LoadSavedGame(FSFile* inFile)
         this->PauseGraphics();
         gPhysics->mThread->Post(0x402, NULL, NULL, true);
         while (gPhysics->mTimerRunning)
-            Sleep(1);
+            PlatSleep(1);
         if (gCommunications != NULL)
             delete gCommunications;
         gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
@@ -676,7 +676,7 @@ long EEUserInterface::Run(void* inParameter)
     static unsigned long sLastTime = TMGetTime();
     gISMouse->Resume();
     gISKeyboard->Resume();
-    TSThread::SetThreadName(GetCurrentThreadId(), gUserInterfaceThreadName);
+    TSThread::SetThreadName(PlatCurrentThreadId(), gUserInterfaceThreadName);
     gResource->GetString(IDS_ENGLISH, theLocale);
     setlocale(LC_ALL, theLocale);
     setlocale(LC_NUMERIC, "English");
@@ -701,7 +701,7 @@ long EEUserInterface::Run(void* inParameter)
             if (theResult != kErrorOK)
                 break;
             theMessages.push_back(theMessage);
-            Sleep(1);
+            PlatSleep(1);
         }
         this->mThread->UnlockMessageQueue();
         for (unsigned long i = 0; i < theMessages.size(); i++) {
@@ -722,7 +722,7 @@ long EEUserInterface::Run(void* inParameter)
             gWorld.mCameraControl.Update((theTime - sLastTime) * 0.001f);
             sLastTime = theTime;
         }
-        Sleep(1);
+        PlatSleep(1);
     }
     return 0;
 }
@@ -777,7 +777,7 @@ void EEUserInterface::PauseGraphics()
 {
     gGraphics->PostPause();
     for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
-        Sleep(1);
+        PlatSleep(1);
 }
 
 // FUNCTION: EXE 0x677e8e
@@ -976,7 +976,7 @@ void EEUserInterface::HandleMessage(unsigned long inMessage, long inParameter1, 
         if (gGraphics->PostPause() != kErrorOK)
             break;
         for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
-            Sleep(1);
+            PlatSleep(1);
         EEAQuickSaveLoad* theAction = reinterpret_cast<EEAQuickSaveLoad*>(inParameter1);
         theAction->mIsLoad = true;
         theAction->mGameState = &gGameState;
@@ -1003,7 +1003,7 @@ void EEUserInterface::HandleMessage(unsigned long inMessage, long inParameter1, 
         EEScreenCapture* theScreenCaptureStruct = reinterpret_cast<EEScreenCapture*>(inParameter1);
         ESVERIFY_AT(TSScheduler::CreateEvent(theScreenCaptureStruct->mCaptureComplete) == keseOK, 1956);
         gGraphics->PostScreenShot(theScreenCaptureStruct);
-        theScreenCaptureStruct->mCaptureComplete->Wait(INFINITE);
+        theScreenCaptureStruct->mCaptureComplete->Wait(kTSWaitInfinite);
         TSScheduler::DestroyEvent(theScreenCaptureStruct->mCaptureComplete);
         if (theScreenCaptureStruct->mWidth != -1)
             theScreenCaptureStruct->mSurface->Dereference();
@@ -1092,12 +1092,12 @@ void EEUserInterface::HandleMessage(unsigned long inMessage, long inParameter1, 
             if (gGraphics->PlayMovie(*theSpec, reinterpret_cast<UReferenceCounter*>(inParameter2)) == kErrorOK)
                 gMouse->mPointer = 6;
             while (!gGraphics->mIsMoviePlaying)
-                Sleep(1);
+                PlatSleep(1);
         } else {
             gGraphics->PostStopMovie();
             while (gGraphics->mIsMoviePlaying)
                 ;
-            Sleep(1);
+            PlatSleep(1);
             gUserInterface->PostPlayMovie(*theSpec, reinterpret_cast<UReferenceCounter*>(inParameter2));
         }
         if (inParameter2 != 0)
@@ -1163,11 +1163,11 @@ void EEUserInterface::HandleMessage(unsigned long inMessage, long inParameter1, 
         if (gGraphics->PostPause() != kErrorOK)
             break;
         for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
-            Sleep(1);
+            PlatSleep(1);
         this->ChangeRasterizer(inParameter1, inParameter2);
         gGraphics->PostResume();
         for (bool theStopped = gGraphics->mIsPaused; theStopped != false; theStopped = gGraphics->mIsPaused)
-            Sleep(1);
+            PlatSleep(1);
         gUIManager->RedrawAll();
         break;
     }
@@ -1353,7 +1353,7 @@ void EEUserInterface::RestartGame()
     this->PauseGraphics();
     gPhysics->mThread->Post(0x402, NULL, NULL, true);
     while (gPhysics->mTimerRunning)
-        Sleep(1);
+        PlatSleep(1);
     if (gCommunications != NULL)
         delete gCommunications;
     gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
@@ -1753,7 +1753,7 @@ void EEUserInterface::ResumeGraphics()
 {
     gGraphics->PostResume();
     for (bool theStarted = gGraphics->mIsPaused; theStarted != false; theStarted = gGraphics->mIsPaused)
-        Sleep(1);
+        PlatSleep(1);
 }
 
 // FUNCTION: EXE 0x6798ce
@@ -1842,7 +1842,7 @@ LRESULT CALLBACK EEUserInterface::WindowProc(HWND inWindow, UINT inMessage, WPAR
             if (gMousePointer != NULL) {
                 gMousePointer->mThread->Post(0x402, NULL, NULL, true);
                 while (gMousePointer->mIsShown)
-                    Sleep(1);
+                    PlatSleep(1);
             }
         } else {
             if (gISKeyboard != NULL)

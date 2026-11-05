@@ -756,7 +756,7 @@ long EERandomMap::CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer
     inOptions->GetMapDimensions(theWidth, theHeight);
     unsigned long theGeneratorIndex = 0;
     while (theGeneratorIndex < EERandomMap::sRandomMapGenerators.size()) {
-        if (_mbsicmp(reinterpret_cast<const unsigned char*>((const char*)EERandomMap::sRandomMapGenerators[theGeneratorIndex].mName),
+        if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)EERandomMap::sRandomMapGenerators[theGeneratorIndex].mName),
                      reinterpret_cast<const unsigned char*>((const char*)inGenerator)) == 0)
             break;
         theGeneratorIndex++;
@@ -765,7 +765,7 @@ long EERandomMap::CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer
     long theResult = PIMModule::GetFirstModule(EERandomMap::sGeneratorDirectory, 'rmap', theModule);
     while (theResult == 0) {
         EERMGenerator& theGenerator = EERandomMap::sRandomMapGenerators.begin()[theGeneratorIndex];
-        if (_stricmp(theGenerator.mModuleName, theModule->GetName()) == 0) {
+        if (PlatStrICmp(theGenerator.mModuleName, theModule->GetName()) == 0) {
             bool theConnected;
             do {
                 EERandomMap* theMap = new EERandomMap(theModule, inOptions, &inPlayers);
@@ -981,7 +981,7 @@ void EERandomMap::InitializeValues(unsigned long inSeed)
         theTerrain.mName = theName;
         theTerrain.mValue = i;
         this->mData.mTerrainNames.push_back(theTerrain);
-        if (_stricmp(theName, "Space") == 0)
+        if (PlatStrICmp(theName, "Space") == 0)
             gSpaceTerrain = i;
     }
     std::vector<EERMNamedValue>& theCliffs = this->mData.mCliffNames;

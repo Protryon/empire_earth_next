@@ -92,16 +92,16 @@ bool FSFileSpec::operator<(FSFileSpec& inSpec)
     bool theOpenedThis = false;
     bool theOpenedOther = false;
     bool theResult = true;
-    FILETIME theThisTime;
-    FILETIME theOtherTime;
+    uint64_t theThisTime = 0;
+    uint64_t theOtherTime = 0;
     if (mHandle == NULL && Open(1) == kErrorOK)
         theOpenedThis = true;
     if (inSpec.mHandle == NULL && inSpec.Open(1) == kErrorOK)
         theOpenedOther = true;
     if (mHandle && inSpec.mHandle) {
-        GetFileTime(mHandle, NULL, NULL, &theThisTime);
-        GetFileTime(inSpec.mHandle, NULL, NULL, &theOtherTime);
-        theResult = CompareFileTime(&theThisTime, &theOtherTime) < 0;
+        PlatFileGetWriteTime(static_cast<PlatFile*>(mHandle), &theThisTime);
+        PlatFileGetWriteTime(static_cast<PlatFile*>(inSpec.mHandle), &theOtherTime);
+        theResult = theThisTime < theOtherTime;
     }
     if (theOpenedThis == true)
         Close();
@@ -115,30 +115,25 @@ bool FSFileSpec::operator<(FSFileSpec& inSpec)
 long FSFileSpec::Create()
 {
     long theResult = kErrorOK;
-    UString thePath(MAX_PATH);
+    UString thePath(PLAT_MAX_PATH);
     if (strcspn(this->mFile, ":*?\"<>|") != this->mFile.GetLength() || strspn(this->mFile, " ") == this->mFile.GetLength())
         return kErrorFailed;
-    if (this->mFile.GetLength() + this->mVolume.GetLength() + this->mDirectory.GetLength() <= MAX_PATH) {
+    if (this->mFile.GetLength() + this->mVolume.GetLength() + this->mDirectory.GetLength() <= PLAT_MAX_PATH) {
         thePath = this->mVolume + this->mDirectory + this->mFile;
-        this->mHandle = CreateFileA(thePath, 0, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
-        if (this->mHandle != INVALID_HANDLE_VALUE) {
-            CloseHandle(this->mHandle);
-            this->mHandle = NULL;
-        } else {
-            this->mHandle = NULL;
-            switch (GetLastError()) {
-            case ERROR_PATH_NOT_FOUND:
-            case ERROR_INVALID_NAME:
-                theResult = kErrorFailed;
-                break;
-            case ERROR_FILE_EXISTS:
-                theResult = kErrorAlreadyExists;
-                break;
-            default:
-                theResult = kErrorNativeError;
-                ESRecordNativeError(GetLastError());
-                break;
-            }
+        this->mHandle = NULL;
+        switch (PlatFileCreateNew(thePath)) {
+        case PLAT_FILE_OK:
+            break;
+        case PLAT_FILE_BAD_PATH:
+            theResult = kErrorFailed;
+            break;
+        case PLAT_FILE_EXISTS:
+            theResult = kErrorAlreadyExists;
+            break;
+        default:
+            theResult = kErrorNativeError;
+            ESRecordNativeError(PlatGetLastError());
+            break;
         }
     } else
         theResult = kErrorBadPath;
@@ -149,16 +144,17 @@ long FSFileSpec::Create()
 // Creates the spec's directory; kErrorAlreadyExists if present, kErrorBadPath when the path is too long
 long FSFileSpec::CreateDirectory()
 {
-    UString thePath(MAX_PATH);
+    UString thePath(PLAT_MAX_PATH);
     long theResult = kErrorOK;
-    if (this->mVolume.GetLength() + this->mDirectory.GetLength() <= MAX_PATH) {
+    if (this->mVolume.GetLength() + this->mDirectory.GetLength() <= PLAT_MAX_PATH) {
         thePath = this->mVolume + this->mDirectory;
-        if (!::CreateDirectory(thePath, NULL)) {
-            if (GetLastError() == ERROR_ALREADY_EXISTS)
+        PlatFileResult theCreated = PlatCreateDirectory(thePath);
+        if (theCreated != PLAT_FILE_OK) {
+            if (theCreated == PLAT_FILE_EXISTS)
                 theResult = kErrorAlreadyExists;
             else {
                 theResult = kErrorNativeError;
-                ESRecordNativeError(GetLastError());
+                ESRecordNativeError(PlatGetLastError());
             }
         }
     } else
@@ -173,19 +169,19 @@ long FSFileSpec::Close()
     long theResult = kErrorOK;
     if (this->mIsOpen == true) {
         if (this->mHandle) {
-            if (CloseHandle(this->mHandle)) {
+            if (PlatFileClose(static_cast<PlatFile*>(this->mHandle))) {
                 this->mHandle = NULL;
                 this->mIsOpen = false;
             } else {
                 theResult = kErrorNativeError;
-                ESRecordNativeError(GetLastError());
+                ESRecordNativeError(PlatGetLastError());
             }
         } else if (fclose(this->mStream) == 0) {
             this->mStream = NULL;
             this->mIsOpen = false;
         } else {
             theResult = kErrorNativeError;
-            ESRecordNativeError(GetLastError());
+            ESRecordNativeError(PlatGetLastError());
         }
     }
     return theResult;
@@ -198,15 +194,15 @@ long FSFileSpec::Copy(const UString& inDestination, bool inFailIfExists, bool in
     UString thePath;
     long theResult = kErrorOK;
     thePath = this->mVolume + this->mDirectory + this->mFile;
-    if (CopyFileA(thePath, inDestination, inFailIfExists)) {
+    if (PlatCopyFile(thePath, inDestination, inFailIfExists)) {
         if (!inKeepAttributes) {
-            DWORD theAttributes = GetFileAttributesA(thePath);
-            if (theAttributes != 0xffffffff)
-                SetFileAttributesA(inDestination, theAttributes & ~FILE_ATTRIBUTE_READONLY);
+            uint32_t theAttributes = PlatPathGetAttributes(thePath);
+            if (theAttributes != PLAT_ATTR_INVALID)
+                PlatPathSetAttributes(inDestination, theAttributes & ~PLAT_ATTR_READONLY);
         }
     } else {
         theResult = kErrorNativeError;
-        ESRecordNativeError(GetLastError());
+        ESRecordNativeError(PlatGetLastError());
     }
     return theResult;
 }
@@ -216,13 +212,13 @@ long FSFileSpec::Copy(const UString& inDestination, bool inFailIfExists, bool in
 long FSFileSpec::DeleteDirectory()
 {
     long theResult = kErrorOK;
-    UString thePath(MAX_PATH);
-    if (this->mVolume.GetLength() + this->mDirectory.GetLength() <= MAX_PATH) {
+    UString thePath(PLAT_MAX_PATH);
+    if (this->mVolume.GetLength() + this->mDirectory.GetLength() <= PLAT_MAX_PATH) {
         if (this->mDirectory != "\\") {
             thePath = this->mVolume + this->mDirectory;
-            if (!RemoveDirectoryA(thePath)) {
+            if (!PlatRemoveDirectory(thePath)) {
                 theResult = kErrorNativeError;
-                ESRecordNativeError(GetLastError());
+                ESRecordNativeError(PlatGetLastError());
             }
         } else
             theResult = kErrorFailed;
@@ -236,15 +232,15 @@ long FSFileSpec::DeleteDirectory()
 long FSFileSpec::FOpen(char* inMode)
 {
     long theResult = kErrorOK;
-    UString thePath(MAX_PATH);
+    UString thePath(PLAT_MAX_PATH);
     this->mIsOpen = true;
-    if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= MAX_PATH) {
+    if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= PLAT_MAX_PATH) {
         thePath = this->mVolume + this->mDirectory + this->mFile;
         this->mStream = fopen(thePath, inMode);
         if (this->mStream == NULL) {
             this->mIsOpen = false;
             theResult = kErrorNativeError;
-            ESRecordNativeError(GetLastError());
+            ESRecordNativeError(PlatGetLastError());
         }
     } else {
         this->mIsOpen = false;
@@ -259,27 +255,27 @@ long FSFileSpec::FOpen(char* inMode)
 long FSFileSpec::GetFirstFile(const UString& inPattern, FSFileSpec& outFile)
 {
     long theResult = kErrorOK;
-    UString thePath(MAX_PATH);
+    UString thePath(PLAT_MAX_PATH);
     UString theCurrent(".");
     UString theParent("..");
-    WIN32_FIND_DATA theData = { 0 };
+    PlatFindData theData = {};
     if (this->IsDirectory() == true) {
         thePath = this->mVolume + this->mDirectory + inPattern;
         FSFileSpec theSpec(thePath);
-        this->mHandle = FindFirstFileA(thePath, &theData);
-        if (this->mHandle != INVALID_HANDLE_VALUE) {
-            if (theCurrent == theData.cFileName || theParent == theData.cFileName)
+        this->mHandle = PlatFindFirst(thePath, &theData);
+        if (this->mHandle != NULL) {
+            if (theCurrent == theData.mName || theParent == theData.mName)
                 theResult = this->GetNextFile(outFile);
             else {
-                if ((theData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0) {
+                if ((theData.mAttributes & PLAT_ATTR_DIRECTORY) > 0) {
                     outFile.mVolume = theSpec.mVolume;
-                    outFile.mDirectory = theSpec.mDirectory + theData.cFileName;
+                    outFile.mDirectory = theSpec.mDirectory + theData.mName;
                     outFile.mDirectory += "\\";
                     outFile.mFile = "";
                 } else {
                     outFile.mVolume = theSpec.mVolume;
                     outFile.mDirectory = theSpec.mDirectory;
-                    outFile.mFile = theData.cFileName;
+                    outFile.mFile = theData.mName;
                 }
                 outFile.mHandle = NULL;
                 outFile.mStream = NULL;
@@ -302,12 +298,12 @@ long FSFileSpec::GetLength(unsigned long& outLength) const
     long theResult = kErrorOK;
     if (this->mIsOpen == true) {
         if (this->mHandle) {
-            DWORD theLength = GetFileSize(this->mHandle, NULL);
+            uint32_t theLength = PlatFileGetSize(static_cast<PlatFile*>(this->mHandle));
             if (theLength != 0xffffffff)
                 outLength = theLength;
             else {
                 theResult = kErrorNativeError;
-                ESRecordNativeError(GetLastError());
+                ESRecordNativeError(PlatGetLastError());
             }
         } else
             theResult = kErrorFailed;
@@ -337,24 +333,25 @@ long FSFileSpec::GetLengthFromClosedFile(unsigned long& outLength)
 long FSFileSpec::GetNextFile(FSFileSpec& outFile)
 {
     long theResult = kErrorOK;
-    UString thePath(MAX_PATH);
+    UString thePath(PLAT_MAX_PATH);
     UString theCurrent(".");
     UString theParent("..");
-    WIN32_FIND_DATA theData = { 0 };
+    PlatFindData theData = {};
     if (this->IsDirectory() == true && this->mHandle != NULL) {
-        if (FindNextFileA(this->mHandle, &theData)) {
-            if (theCurrent == theData.cFileName || theParent == theData.cFileName)
+        PlatFileResult theNext = PlatFindNext(static_cast<PlatFind*>(this->mHandle), &theData);
+        if (theNext == PLAT_FILE_OK) {
+            if (theCurrent == theData.mName || theParent == theData.mName)
                 theResult = this->GetNextFile(outFile);
             else {
-                if ((theData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) > 0) {
+                if ((theData.mAttributes & PLAT_ATTR_DIRECTORY) > 0) {
                     outFile.mVolume = this->mVolume;
-                    outFile.mDirectory = this->mDirectory + theData.cFileName;
+                    outFile.mDirectory = this->mDirectory + theData.mName;
                     outFile.mDirectory += "\\";
                     outFile.mFile = "";
                 } else {
                     outFile.mVolume = this->mVolume;
                     outFile.mDirectory = this->mDirectory;
-                    outFile.mFile = theData.cFileName;
+                    outFile.mFile = theData.mName;
                 }
                 outFile.mIsOpen = false;
                 outFile.mHandle = NULL;
@@ -362,14 +359,14 @@ long FSFileSpec::GetNextFile(FSFileSpec& outFile)
                 outFile.mFileAccess = kFileAccessRead;
             }
         } else {
-            FindClose(this->mHandle);
-            if (GetLastError() == ERROR_NO_MORE_FILES) {
+            PlatFindClose(static_cast<PlatFind*>(this->mHandle));
+            if (theNext == PLAT_FILE_NO_MORE) {
                 this->mHandle = NULL;
                 theResult = kErrorNoMoreFiles;
             } else {
                 this->mHandle = NULL;
                 theResult = kErrorNativeError;
-                ESRecordNativeError(GetLastError());
+                ESRecordNativeError(PlatGetLastError());
             }
         }
     } else
@@ -409,12 +406,12 @@ long FSFileSpec::GetPosition(long& outPosition) const
     long theResult = kErrorOK;
     if (this->mIsOpen == true) {
         if (this->mHandle) {
-            DWORD thePosition = SetFilePointer(this->mHandle, 0, NULL, FILE_CURRENT);
+            uint32_t thePosition = PlatFileSeek(static_cast<PlatFile*>(this->mHandle), 0, PLAT_SEEK_CURRENT);
             if (thePosition != 0xffffffff)
                 outPosition = thePosition;
             else {
                 theResult = kErrorNativeError;
-                ESRecordNativeError(GetLastError());
+                ESRecordNativeError(PlatGetLastError());
             }
         } else
             theResult = kErrorFailed;
@@ -427,12 +424,12 @@ long FSFileSpec::GetPosition(long& outPosition) const
 // Returns whether the spec names an existing directory (no file name part)
 bool FSFileSpec::IsDirectory() const
 {
-    UString thePath(MAX_PATH);
+    UString thePath(PLAT_MAX_PATH);
     bool theResult = true;
-    if (this->mFile.GetLength() == 0 && this->mVolume.GetLength() + this->mDirectory.GetLength() <= MAX_PATH) {
+    if (this->mFile.GetLength() == 0 && this->mVolume.GetLength() + this->mDirectory.GetLength() <= PLAT_MAX_PATH) {
         thePath = this->mVolume + this->mDirectory;
-        DWORD theAttributes = GetFileAttributesA(thePath);
-        if (theAttributes == 0xffffffff || !(theAttributes & FILE_ATTRIBUTE_DIRECTORY))
+        uint32_t theAttributes = PlatPathGetAttributes(thePath);
+        if (theAttributes == PLAT_ATTR_INVALID || !(theAttributes & PLAT_ATTR_DIRECTORY))
             theResult = false;
     } else
         theResult = false;
@@ -444,21 +441,21 @@ bool FSFileSpec::IsDirectory() const
 long FSFileSpec::Lock()
 {
     long theResult = kErrorOK;
-    UString thePath(MAX_PATH);
-    if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= MAX_PATH) {
+    UString thePath(PLAT_MAX_PATH);
+    if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= PLAT_MAX_PATH) {
         thePath = this->mVolume + this->mDirectory + this->mFile;
-        DWORD theAttributes = GetFileAttributesA(thePath);
-        if (theAttributes != 0xffffffff) {
-            if (!(theAttributes & FILE_ATTRIBUTE_READONLY)) {
-                if (!SetFileAttributesA(thePath, FILE_ATTRIBUTE_READONLY)) {
+        uint32_t theAttributes = PlatPathGetAttributes(thePath);
+        if (theAttributes != PLAT_ATTR_INVALID) {
+            if (!(theAttributes & PLAT_ATTR_READONLY)) {
+                if (!PlatPathSetAttributes(thePath, PLAT_ATTR_READONLY)) {
                     theResult = kErrorNativeError;
-                    ESRecordNativeError(GetLastError());
+                    ESRecordNativeError(PlatGetLastError());
                 }
             } else
                 theResult = kErrorAlreadyExists;
         } else {
             theResult = kErrorNativeError;
-            ESRecordNativeError(GetLastError());
+            ESRecordNativeError(PlatGetLastError());
         }
     } else
         theResult = kErrorBadPath;
@@ -470,33 +467,33 @@ long FSFileSpec::Lock()
 long FSFileSpec::Open(unsigned long inAccess)
 {
     long theResult = kErrorOK;
-    UString thePath(MAX_PATH);
+    UString thePath(PLAT_MAX_PATH);
     this->mIsOpen = true;
     this->mFileAccess = inAccess;
-    if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= MAX_PATH) {
-        DWORD theAccess;
+    if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= PLAT_MAX_PATH) {
+        uint32_t theAccess;
         if (inAccess == kFileAccessRead)
-            theAccess = GENERIC_READ;
+            theAccess = PLAT_FILE_READ;
         else if (inAccess == kFileAccessWrite || inAccess == kFileAccessAppend)
-            theAccess = GENERIC_WRITE;
+            theAccess = PLAT_FILE_WRITE;
         else
-            theAccess = GENERIC_READ | GENERIC_WRITE;
+            theAccess = PLAT_FILE_READ | PLAT_FILE_WRITE;
         thePath = this->mVolume + this->mDirectory + this->mFile;
-        this->mHandle = CreateFileA(thePath, theAccess, FILE_SHARE_READ, NULL, OPEN_EXISTING,
-                              FILE_FLAG_SEQUENTIAL_SCAN, NULL);
-        if (this->mHandle != INVALID_HANDLE_VALUE) {
-            if ((inAccess & kFileAccessAppend) && SetFilePointer(this->mHandle, 0, NULL, FILE_END) == 0xffffffff) {
-                CloseHandle(this->mHandle);
+        PlatFile* theFile = PlatFileOpen(thePath, theAccess);
+        this->mHandle = theFile;
+        if (theFile != NULL) {
+            if ((inAccess & kFileAccessAppend) && PlatFileSeek(theFile, 0, PLAT_SEEK_END) == 0xffffffff) {
+                PlatFileClose(theFile);
                 this->mHandle = NULL;
                 this->mIsOpen = false;
                 theResult = kErrorNativeError;
-                ESRecordNativeError(GetLastError());
+                ESRecordNativeError(PlatGetLastError());
             }
         } else {
             this->mHandle = NULL;
             this->mIsOpen = false;
             theResult = kErrorNativeError;
-            ESRecordNativeError(GetLastError());
+            ESRecordNativeError(PlatGetLastError());
         }
     } else {
         this->mIsOpen = false;
@@ -513,13 +510,15 @@ long FSFileSpec::Read(unsigned char* outData, unsigned long inLength, unsigned l
     if (this->mIsOpen == true) {
         if (this->mHandle) {
             if (this->mFileAccess & kFileAccessRead) {
-                BOOL theSucceeded = ReadFile(this->mHandle, outData, inLength, &outRead, NULL);
+                uint32_t theRead = 0;
+                int theSucceeded = PlatFileRead(static_cast<PlatFile*>(this->mHandle), outData, inLength, &theRead);
+                outRead = theRead;
                 if (outRead == 0) {
-                    if (theSucceeded == TRUE)
+                    if (theSucceeded)
                         theResult = kErrorEndOfFile;
                     else {
                         theResult = kErrorNativeError;
-                        ESRecordNativeError(GetLastError());
+                        ESRecordNativeError(PlatGetLastError());
                     }
                 }
             } else
@@ -629,9 +628,10 @@ long FSFileSpec::SetLength(unsigned long& ioLength, bool inTruncate)
         if (this->mHandle) {
             if ((this->mFileAccess & 6) == 0)
                 theResult = kErrorNotWritable;
-            else if (SetFilePointer(this->mHandle, ioLength, NULL, FILE_BEGIN) == 0xffffffff || !SetEndOfFile(this->mHandle)) {
+            else if (PlatFileSeek(static_cast<PlatFile*>(this->mHandle), (int32_t)ioLength, PLAT_SEEK_BEGIN) == 0xffffffff
+                     || !PlatFileTruncate(static_cast<PlatFile*>(this->mHandle))) {
                 theResult = kErrorNativeError;
-                ESRecordNativeError(GetLastError());
+                ESRecordNativeError(PlatGetLastError());
             }
         } else
             theResult = kErrorFailed;
@@ -648,30 +648,31 @@ long FSFileSpec::SetPosition(long inOffset, unsigned long inOrigin, bool inExten
     long theResult = kErrorOK;
     if (this->mIsOpen == true) {
         if (this->mHandle) {
-            DWORD theLength = GetFileSize(this->mHandle, NULL);
+            PlatFile* theFile = static_cast<PlatFile*>(this->mHandle);
+            uint32_t theLength = PlatFileGetSize(theFile);
             if (theLength != 0xffffffff) {
-                DWORD theMethod;
+                PlatFileOrigin theMethod;
                 if (inOrigin == kFileOriginBegin)
-                    theMethod = FILE_BEGIN;
+                    theMethod = PLAT_SEEK_BEGIN;
                 else
-                    theMethod = inOrigin == kFileOriginCurrent ? FILE_CURRENT : FILE_END;
-                DWORD thePosition = SetFilePointer(this->mHandle, 0, NULL, theMethod);
+                    theMethod = inOrigin == kFileOriginCurrent ? PLAT_SEEK_CURRENT : PLAT_SEEK_END;
+                uint32_t thePosition = PlatFileSeek(theFile, 0, theMethod);
                 if (thePosition != 0xffffffff) {
                     // past the end only when asked to extend a file opened for writing
                     if (thePosition + inOffset > theLength
                         && !(inExtend && (this->mFileAccess & (kFileAccessWrite | kFileAccessAppend)) != 0))
                         theResult = kErrorBeyondEnd;
-                    else if (SetFilePointer(this->mHandle, inOffset, NULL, theMethod) == 0xffffffff) {
+                    else if (PlatFileSeek(theFile, (int32_t)inOffset, theMethod) == 0xffffffff) {
                         theResult = kErrorNativeError;
-                        ESRecordNativeError(GetLastError());
+                        ESRecordNativeError(PlatGetLastError());
                     }
                 } else {
                     theResult = kErrorNativeError;
-                    ESRecordNativeError(GetLastError());
+                    ESRecordNativeError(PlatGetLastError());
                 }
             } else {
                 theResult = kErrorNativeError;
-                ESRecordNativeError(GetLastError());
+                ESRecordNativeError(PlatGetLastError());
             }
         } else
             theResult = kErrorFailed;
@@ -685,21 +686,21 @@ long FSFileSpec::SetPosition(long inOffset, unsigned long inOrigin, bool inExten
 long FSFileSpec::Unlock()
 {
     long theResult = kErrorOK;
-    UString thePath(MAX_PATH);
-    if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= MAX_PATH) {
+    UString thePath(PLAT_MAX_PATH);
+    if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= PLAT_MAX_PATH) {
         thePath = this->mVolume + this->mDirectory + this->mFile;
-        DWORD theAttributes = GetFileAttributesA(thePath);
-        if (theAttributes != 0xffffffff) {
-            if ((theAttributes & FILE_ATTRIBUTE_READONLY) > 0) {
-                if (!SetFileAttributesA(thePath, FILE_ATTRIBUTE_NORMAL)) {
+        uint32_t theAttributes = PlatPathGetAttributes(thePath);
+        if (theAttributes != PLAT_ATTR_INVALID) {
+            if ((theAttributes & PLAT_ATTR_READONLY) > 0) {
+                if (!PlatPathSetAttributes(thePath, PLAT_ATTR_NORMAL)) {
                     theResult = kErrorNativeError;
-                    ESRecordNativeError(GetLastError());
+                    ESRecordNativeError(PlatGetLastError());
                 }
             } else
                 theResult = kErrorAlreadyExists;
         } else {
             theResult = kErrorNativeError;
-            ESRecordNativeError(GetLastError());
+            ESRecordNativeError(PlatGetLastError());
         }
     } else
         theResult = kErrorBadPath;
@@ -715,9 +716,14 @@ long FSFileSpec::Write(const unsigned char* inData, unsigned long inLength, unsi
         if (this->mHandle) {
             if ((this->mFileAccess & 6) == 0)
                 theResult = kErrorNotWritable;
-            else if (!WriteFile(this->mHandle, inData, inLength, &outWritten, NULL) || outWritten != inLength) {
-                theResult = kErrorNativeError;
-                ESRecordNativeError(GetLastError());
+            else {
+                uint32_t theWritten = 0;
+                int theSucceeded = PlatFileWrite(static_cast<PlatFile*>(this->mHandle), inData, inLength, &theWritten);
+                outWritten = theWritten;
+                if (!theSucceeded || outWritten != inLength) {
+                    theResult = kErrorNativeError;
+                    ESRecordNativeError(PlatGetLastError());
+                }
             }
         } else
             theResult = kErrorFailed;

@@ -73,14 +73,14 @@ static void* gMusicContext;
 static void (*gMovieSource)(void* inContext, float* outFrames, unsigned long inCount);
 static void* gMovieContext;
 static std::vector<float> gMusicBuffer;
-static CRITICAL_SECTION gLock;              // the channels, between the game's threads and the device thread
+static PlatMutex* gLock;                    // the channels, between the game's threads and the device thread
 static struct LockInit {
-    LockInit() { InitializeCriticalSection(&gLock); }
+    LockInit() { gLock = PlatMutexCreate(); }
 } sLockInit;
 
 struct Guard {
-    Guard() { EnterCriticalSection(&gLock); }
-    ~Guard() { LeaveCriticalSection(&gLock); }
+    Guard() { PlatMutexLock(gLock); }
+    ~Guard() { PlatMutexUnlock(gLock); }
 };
 
 extern "C" long SPIMActivateMixer();

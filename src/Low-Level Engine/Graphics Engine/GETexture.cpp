@@ -249,7 +249,7 @@ long GETexture::Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GE
     this->mCreateMIPMaps = inCreateMIPMaps;
     memset(&theHeader, 0, sizeof(theHeader));
     theName = inFile.GetFile();
-    if (_stricmp(theName + strlen(theName) - 4, ".tga") == 0) {
+    if (PlatStrICmp(theName + strlen(theName) - 4, ".tga") == 0) {
         const unsigned char* theData = dynamic_cast<FSMemoryFile*>(theFile)->GetData();
         theHeader.mIsCompressed = 0;
         theHeader.mMipLevelCount = 0;

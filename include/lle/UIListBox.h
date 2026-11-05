@@ -7,6 +7,7 @@
 // Requires lle/UIControl.h, lle/UIScrollBar.h, lle/TMPoll.h, lle/GERhombus.h, <vector>, <algorithm>.
 #ifndef LLE_UILISTBOX_H
 #define LLE_UILISTBOX_H
+#include "platform/PlatString.h"
 
 #include <vector>
 #include <algorithm>
@@ -24,7 +25,7 @@ public:
     UWSNoCaseAlphaSort() {}                 // user-declared: exported ??0UWSNoCaseAlphaSort@@QAE@XZ (ICF-folded, 0x1093c)
     bool operator()(const UWideString& inLeft, const UWideString& inRight) const
     {
-        return _mbsicmp(reinterpret_cast<const unsigned char*>((const char*)inLeft), reinterpret_cast<const unsigned char*>((const char*)inRight)) < 0;
+        return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)inLeft), reinterpret_cast<const unsigned char*>((const char*)inRight)) < 0;
     }
 };
 

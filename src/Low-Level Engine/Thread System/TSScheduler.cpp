@@ -25,21 +25,21 @@ long TSScheduler::CreateCriticalSection(TSCriticalSection*& outSection)
 }
 
 // FUNCTION: LLE 0x10053ec6
-// Creates a Win32 event (manual or auto reset) wrapped in a TSEvent; records the native error if creation fails
+// Creates an event (manual or auto reset) wrapped in a TSEvent; records the native error if creation fails
 // NEAR: register choice only (the original keeps theResult/NULL in esi and the handle in edi)
 long TSScheduler::CreateEvent(TSEvent*& outEvent, bool inManualReset)
 {
     long theResult = kErrorOK;
-    HANDLE theHandle = ::CreateEvent(NULL, inManualReset, FALSE, NULL);
+    PlatEvent* theHandle = PlatEventCreate(inManualReset, 0);
     if (theHandle) {
         outEvent = new TSEvent(theHandle, inManualReset);
         if (outEvent == NULL) {
-            CloseHandle(theHandle);
+            PlatEventDestroy(theHandle);
             theResult = kErrorOutOfMemory;
         }
     } else {
         theResult = kErrorNativeError;
-        ESRecordNativeError(GetLastError());
+        ESRecordNativeError(PlatGetLastError());
     }
     return theResult;
 }
@@ -89,8 +89,8 @@ long TSScheduler::CreateThread(TSThread*& outThread, unsigned long (*inFunction)
 }
 
 // FUNCTION: LLE 0x10054029
-// Registers an existing Win32 thread (handle and ID) as a thread object; kErrorOutOfMemory if allocation fails
-long TSScheduler::CreateThread(HANDLE inHandle, unsigned long inThreadID, bool inSuspended)
+// Registers an existing thread (handle and ID) as a thread object; kErrorOutOfMemory if allocation fails
+long TSScheduler::CreateThread(PlatThread* inHandle, unsigned long inThreadID, bool inSuspended)
 {
     TSThread* theThread = new TSThread(inHandle, inThreadID, inSuspended);
     if (theThread) {
@@ -146,7 +146,7 @@ long TSScheduler::DestroyThread(TSThread* inThread)
 TSThread* TSScheduler::GetCurrentThread()
 {
     TSThread* theThread = NULL;
-    unsigned long theThreadID = GetCurrentThreadId();
+    unsigned long theThreadID = PlatCurrentThreadId();
     for (unsigned long i = 0; i < TSScheduler::sThreads.size(); i++)
         if (TSScheduler::sThreads[i]->mThreadID == theThreadID) {
             theThread = TSScheduler::sThreads[i];
@@ -160,7 +160,7 @@ TSThread* TSScheduler::GetCurrentThread()
 unsigned long TSScheduler::GetCurrentThreadIndex()
 {
     unsigned long theIndex = (unsigned long)-1;
-    unsigned long theThreadID = GetCurrentThreadId();
+    unsigned long theThreadID = PlatCurrentThreadId();
     for (unsigned long i = 0; i < TSScheduler::sThreads.size(); i++)
         if (TSScheduler::sThreads[i]->mThreadID == theThreadID) {
             theIndex = i;

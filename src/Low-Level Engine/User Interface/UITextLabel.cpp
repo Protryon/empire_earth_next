@@ -362,7 +362,7 @@ unsigned long UITextLabel::ReadLine(const char* inText)
     unsigned long theWidth = 0;
     unsigned long theLength = 0;
     char theWord[512];
-    while (_mbscmp(reinterpret_cast<const unsigned char*>(inText), (const unsigned char*)"") != 0) {
+    while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(inText), (const unsigned char*)"") != 0) {
         long theWordLength = this->ReadWord(inText, theWord);
         this->mText->SetText(UWideString(theWord));
         theWidth += UMFloor(this->mText->GetTextExtent().GetWidth());
@@ -370,7 +370,7 @@ unsigned long UITextLabel::ReadLine(const char* inText)
             if (theLength == 0) {
                 while (theWordLength > 0) {
                     theWordLength--;
-                    strcpy((char*)_mbsninc(reinterpret_cast<unsigned char*>(theWord), theWordLength), "");
+                    strcpy((char*)PlatMbsNInc(reinterpret_cast<unsigned char*>(theWord), theWordLength), "");
                     this->mText->SetText(UWideString(theWord));
                     if ((unsigned long)UMFloor(this->mText->GetTextExtent().GetWidth()) <
                         UMFloorUnsigned(this->mTextRectangle.GetWidth())) {
@@ -382,8 +382,8 @@ unsigned long UITextLabel::ReadLine(const char* inText)
             break;
         }
         theLength += theWordLength;
-        inText = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>(inText), theWordLength);
-        if (_mbsnbcmp(_mbsninc(reinterpret_cast<unsigned char*>(theWord), theWordLength - 1), (const unsigned char*)"\n", 1) == 0)
+        inText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>(inText), theWordLength);
+        if (PlatMbsNBCmp(PlatMbsNInc(reinterpret_cast<unsigned char*>(theWord), theWordLength - 1), (const unsigned char*)"\n", 1) == 0)
             break;
     }
     return theLength;
@@ -394,16 +394,16 @@ unsigned long UITextLabel::ReadLine(const char* inText)
 unsigned long UITextLabel::ReadWord(const char* inText, char* outWord)
 {
     unsigned long theCount = 0;
-    while (_mbscmp(reinterpret_cast<const unsigned char*>(inText), (const unsigned char*)"") != 0 && theCount++ < 256) {
-        _mbsncpy(reinterpret_cast<unsigned char*>(outWord), reinterpret_cast<const unsigned char*>(inText), 1);
-        if (_mbsnbcmp(reinterpret_cast<const unsigned char*>(outWord), (const unsigned char*)"\n", 1) == 0 ||
-            _ismbcspace(GetMultiByteChar(outWord)) ||
-            _mbsnbcmp(reinterpret_cast<const unsigned char*>(outWord), (const unsigned char*)"\t", 1) == 0) {
-            outWord = (char*)_mbsinc(reinterpret_cast<unsigned char*>(outWord));
+    while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(inText), (const unsigned char*)"") != 0 && theCount++ < 256) {
+        PlatMbsNCpy(reinterpret_cast<unsigned char*>(outWord), reinterpret_cast<const unsigned char*>(inText), 1);
+        if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(outWord), (const unsigned char*)"\n", 1) == 0 ||
+            PlatIsMbcSpace(GetMultiByteChar(outWord)) ||
+            PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(outWord), (const unsigned char*)"\t", 1) == 0) {
+            outWord = (char*)PlatMbsInc(reinterpret_cast<unsigned char*>(outWord));
             break;
         }
-        outWord = (char*)_mbsinc(reinterpret_cast<unsigned char*>(outWord));
-        inText = (const char*)_mbsinc(reinterpret_cast<const unsigned char*>(inText));
+        outWord = (char*)PlatMbsInc(reinterpret_cast<unsigned char*>(outWord));
+        inText = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(inText));
     }
     strcpy(outWord, "");
     return theCount;
@@ -482,19 +482,19 @@ void UITextLabel::SetText(const UWideString& inText, bool inReplace)
     if (this->mLabelType == 0)
         this->mLines.push_back(new UWideString(inText));
     else {
-        while (_mbscmp(reinterpret_cast<const unsigned char*>(theText), (const unsigned char*)"") != 0) {
+        while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(theText), (const unsigned char*)"") != 0) {
             unsigned long theLength = this->ReadLine(theText);
             if (theLength == 0)
                 break;
             char* theLine = new char[theLength * 2 + 1];
-            _mbsncpy(reinterpret_cast<unsigned char*>(theLine), reinterpret_cast<const unsigned char*>(theText), theLength);
-            char* theEnd = (char*)_mbsninc(reinterpret_cast<unsigned char*>(theLine), theLength - 1);
-            if (_mbsnbcmp(reinterpret_cast<const unsigned char*>(theEnd), (const unsigned char*)"\n", 1) != 0)
-                theEnd = (char*)_mbsinc(reinterpret_cast<unsigned char*>(theEnd));
+            PlatMbsNCpy(reinterpret_cast<unsigned char*>(theLine), reinterpret_cast<const unsigned char*>(theText), theLength);
+            char* theEnd = (char*)PlatMbsNInc(reinterpret_cast<unsigned char*>(theLine), theLength - 1);
+            if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theEnd), (const unsigned char*)"\n", 1) != 0)
+                theEnd = (char*)PlatMbsInc(reinterpret_cast<unsigned char*>(theEnd));
             strcpy(theEnd, "");
             this->mLines.push_back(new UWideString(theLine));
             delete theLine;
-            theText = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>(theText), theLength);
+            theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>(theText), theLength);
         }
     }
     this->SetDirty(true);

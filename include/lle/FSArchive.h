@@ -65,8 +65,8 @@ private:
     FSFileSpec mArchiveFile;                            // +0x04
     std::map<UString, ArchivedFile> mFAT;               // +0x4c (head +0x50, size +0x54); keys lower case
     std::map<UWideString, UWideString> mTags;           // +0x58 (head +0x5c, size +0x60)
-    HANDLE mMapping;                                    // +0x64 CreateFileMappingA
-    const unsigned char* mView;                         // +0x68 MapViewOfFile
+    PlatFileMapping* mMapping;                          // +0x64 PlatFileMap (CreateFileMappingA in the original)
+    const unsigned char* mView;                         // +0x68 the mapped view
 };
 
 #endif

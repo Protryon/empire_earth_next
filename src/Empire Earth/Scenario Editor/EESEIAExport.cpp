@@ -221,10 +221,10 @@ void EESEIAImport::Virtual4()
         theLine = fgets(theBuffer, 0x200, (FILE*)this->mFile);
         thePosition = theLine.Find("{Version_", 0);
         if (thePosition <= theLine.GetLength()) {
-            theLine = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theLine), thePosition + 9);
+            theLine = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theLine), thePosition + 9);
             thePosition = theLine.Find("}", 0);
             if (thePosition <= theLine.GetLength()) {
-                char* theEnd = (char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theLine), thePosition);
+                char* theEnd = (char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theLine), thePosition);
                 strcpy(theEnd, gU4E5B98);
                 unsigned long theVersion = atoi(theLine);
                 if (theVersion <= gSETextVersion) {

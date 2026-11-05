@@ -345,8 +345,8 @@ void GEModel::OptimizeMemoryCoherency(long inGenerations)
     URandomIntegers theMutator;
     std::multimap<unsigned long, unsigned long> theRanking;
     std::multimap<unsigned long, unsigned long>::iterator theIterator;
-    theSelector.mSeed = timeGetTime();
-    theMutator.mSeed = timeGetTime();
+    theSelector.mSeed = PlatTimeMilliseconds();
+    theMutator.mSeed = PlatTimeMilliseconds();
     for (unsigned long theMaterial = 0; theMaterial < this->mMaterialCount; theMaterial++) {
         long theGeneration = inGenerations;
         unsigned long theCount = this->mMaterials[theMaterial]->GetVertexRangeLength();
@@ -472,8 +472,8 @@ void GEModel::OptimizeVertexCaching(long inGenerations)
     URandomIntegers theMutator;
     std::multimap<unsigned long, unsigned long> theRanking;
     std::multimap<unsigned long, unsigned long>::iterator theIterator;
-    theSelector.mSeed = timeGetTime();
-    theMutator.mSeed = timeGetTime();
+    theSelector.mSeed = PlatTimeMilliseconds();
+    theMutator.mSeed = PlatTimeMilliseconds();
     for (unsigned long theLOD = 0; theLOD < this->mLODCount; theLOD++) {
         for (unsigned long theMaterial = 0; theMaterial < this->mMaterialCount; theMaterial++) {
             if (!(this->mMaterials[theMaterial]->GetPolygonRangeLength(theLOD) > 1))

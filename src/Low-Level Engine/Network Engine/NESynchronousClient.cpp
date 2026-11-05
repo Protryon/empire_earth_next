@@ -175,24 +175,24 @@ long NESynchronousClient::LagSendLossCallback(NEMessage* inMessage, void* inThis
 // on timeout (5 s between retries, 10 s after the start)
 unsigned long NESynchronousClient::Main(void* inClientObject)
 {
-    unsigned long theTimeout = INFINITE;
-    HANDLE theEvents[4];
+    unsigned long theTimeout = kTSWaitInfinite;
+    TSEvent* theEvents[4];
     NEMessage* theMessage;
     NESynchronousClient* theClient = static_cast<NESynchronousClient*>(inClientObject);
     ESVERIFY_AT(inClientObject != NULL, 341);
     theClient->mMainThreadStartedEvent->Set();
     UMSetFloatingPointPrecision(kFPPrecision53);
-    theEvents[0] = theClient->mIncomingMessageAvailableEvent->mHandle;
-    theEvents[1] = theClient->mMainThreadExitEvent->mHandle;
-    theEvents[2] = theClient->mMainThreadStartConnectEvent->mHandle;
-    theEvents[3] = theClient->mMainThreadEndConnectEvent->mHandle;
+    theEvents[0] = theClient->mIncomingMessageAvailableEvent;
+    theEvents[1] = theClient->mMainThreadExitEvent;
+    theEvents[2] = theClient->mMainThreadStartConnectEvent;
+    theEvents[3] = theClient->mMainThreadEndConnectEvent;
     for (;;) {
         if (UMGetFloatingPointPrecision() != kFPPrecision53)
             UMSetFloatingPointPrecision(kFPPrecision53);
         if (UMGetFloatingPointRoundingMode() != 0)
             UMSetFloatingPointRoundingMode(0);
-        switch (WaitForMultipleObjects(4, theEvents, FALSE, theTimeout)) {
-        case WAIT_OBJECT_0:
+        switch (TSEvent::WaitAny(theEvents, 4, theTimeout)) {
+        case 0:
             theClient->mIncomingMessageAvailableEvent->Clear();
             theClient->mIncomingMessagesLock->Enter();
             while (theClient->mIncomingMessages.size() > 0) {
@@ -206,20 +206,20 @@ unsigned long NESynchronousClient::Main(void* inClientObject)
             theClient->mIncomingMessagesLock->Leave();
             theClient->mReceiveThreadCanGoEvent->Set();
             break;
-        case WAIT_OBJECT_0 + 1:
+        case 1:
             theClient->mMainThreadExitEvent->Clear();
             theClient->mMainThreadFinishedEvent->Set();
             return 0;
-        case WAIT_OBJECT_0 + 2:
+        case 2:
             theClient->mMainThreadStartConnectEvent->Clear();
             theTimeout = 10000;
             break;
-        case WAIT_OBJECT_0 + 3:
+        case 3:
             theClient->mMainThreadEndConnectEvent->Clear();
             theClient->SetConnectionState(2);
-            theTimeout = INFINITE;
+            theTimeout = kTSWaitInfinite;
             break;
-        case WAIT_TIMEOUT:
+        case kTSWaitTimeout:
             if (++theClient->mNumConnectionTrys < theClient->mMaxNumConnectionTrys) {
                 theClient->mStartConnectMessage->Reference();
                 theTimeout = 5000;
@@ -228,12 +228,12 @@ unsigned long NESynchronousClient::Main(void* inClientObject)
                 theClient->mMaxNumConnectionTrys = 1;
                 theClient->mNumConnectionTrys = 0;
                 theClient->mStartConnectMessage->Dereference();
-                theTimeout = INFINITE;
+                theTimeout = kTSWaitInfinite;
                 theClient->mStartConnectMessage = NULL;
                 theClient->SetConnectionState(0);
             }
             break;
-        case WAIT_FAILED:
+        case kTSWaitFailed:
             GetLastError();
             break;
         }
@@ -410,7 +410,7 @@ unsigned long NESynchronousClient::Receive(void* inClientObject)
     unsigned long theLastTime = 0;
     unsigned long theElapsed = 0;
     unsigned long theTimeout = 10000;
-    HANDLE theEvents[3];
+    TSEvent* theEvents[3];
     unsigned long theLength;
     unsigned char theBuffer[0x240];
     NEMessage* theMessage;
@@ -427,19 +427,19 @@ unsigned long NESynchronousClient::Receive(void* inClientObject)
     ESVERIFY_AT(inClientObject != NULL, 900);
     theClient->mReceiveThreadStartedEvent->Set();
     UMSetFloatingPointPrecision(kFPPrecision53);
-    theEvents[0] = theClient->mIncomingPacketAvailableEvent->mHandle;
-    theEvents[1] = theClient->mReceiveThreadExitEvent->mHandle;
-    theEvents[2] = theClient->mXferIncomingAvailableEvent->mHandle;
+    theEvents[0] = theClient->mIncomingPacketAvailableEvent;
+    theEvents[1] = theClient->mReceiveThreadExitEvent;
+    theEvents[2] = theClient->mXferIncomingAvailableEvent;
     do {
         if (UMGetFloatingPointPrecision() != kFPPrecision53)
             UMSetFloatingPointPrecision(kFPPrecision53);
         if (UMGetFloatingPointRoundingMode() != 0)
             UMSetFloatingPointRoundingMode(0);
         TMGetTime();
-        switch (WaitForMultipleObjects(3, theEvents, FALSE, theTimeout)) {
-        case WAIT_OBJECT_0:
+        switch (TSEvent::WaitAny(theEvents, 3, theTimeout)) {
+        case 0:
             theClient->mIncomingPacketAvailableEvent->Clear();
-            theClient->mReceiveThreadCanGoEvent->Wait(INFINITE);
+            theClient->mReceiveThreadCanGoEvent->Wait(kTSWaitInfinite);
             theClient->mReceiveThreadCanGoEvent->Clear();
             theCount = 0;
             if (theClient->mConnection != NULL) {
@@ -469,13 +469,13 @@ unsigned long NESynchronousClient::Receive(void* inClientObject)
                 theTimedOut = true;
             theClient->mReceiveThreadCanGoEvent->Set();
             break;
-        case WAIT_OBJECT_0 + 1:
+        case 1:
             theTimeout = 10000;
             theElapsed = 0;
             theClient->mReceiveThreadExitEvent->Clear();
             theExit = true;
             break;
-        case WAIT_OBJECT_0 + 2:
+        case 2:
             theTimeout = 10000;
             theElapsed = 0;
             theClient->mXferIncomingAvailableEvent->Clear();
@@ -534,10 +534,10 @@ unsigned long NESynchronousClient::Receive(void* inClientObject)
                 theXferMessage->Dereference();
             }
             break;
-        case WAIT_TIMEOUT:
+        case kTSWaitTimeout:
             theTimedOut = true;
             break;
-        case WAIT_FAILED:
+        case kTSWaitFailed:
             theTimeout = 10000;
             theElapsed = 0;
             GetLastError();
@@ -602,10 +602,10 @@ void NESynchronousClient::StartThreads()
 {
     ESVERIFY_AT(TSScheduler::CreateThread(this->mMainThread, NESynchronousClient::Main, this) == keseOK, 1245);
     ESVERIFY_AT(TSScheduler::CreateThread(this->mReceiveThread, NESynchronousClient::Receive, this) == keseOK, 1246);
-    this->mMainThread->SetPriority(THREAD_PRIORITY_TIME_CRITICAL);
-    this->mReceiveThread->SetPriority(THREAD_PRIORITY_TIME_CRITICAL);
-    this->mMainThreadStartedEvent->Wait(INFINITE);
-    this->mReceiveThreadStartedEvent->Wait(INFINITE);
+    this->mMainThread->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
+    this->mReceiveThread->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
+    this->mMainThreadStartedEvent->Wait(kTSWaitInfinite);
+    this->mReceiveThreadStartedEvent->Wait(kTSWaitInfinite);
     this->mMainThread->SetName(UString("CommMain"));
     this->mReceiveThread->SetName(UString("CommRecv"));
 }
@@ -615,9 +615,9 @@ void NESynchronousClient::StartThreads()
 void NESynchronousClient::StopThreads()
 {
     this->mReceiveThreadExitEvent->Set();
-    this->mReceiveThreadFinishedEvent->Wait(INFINITE);
+    this->mReceiveThreadFinishedEvent->Wait(kTSWaitInfinite);
     this->mMainThreadExitEvent->Set();
-    this->mMainThreadFinishedEvent->Wait(INFINITE);
+    this->mMainThreadFinishedEvent->Wait(kTSWaitInfinite);
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):

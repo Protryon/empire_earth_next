@@ -10,24 +10,25 @@ TSCriticalSection::TSCriticalSection()
 {
     this->mLockCount = 0;
     this->mOwnerThread = 0;
-    InitializeCriticalSection(&this->mSection);
+    this->mSection = PlatMutexCreate();
+    ESVERIFY(this->mSection != NULL);
 }
 
 // FUNCTION: LLE 0x10053cb7
 // Destroys the critical section
 TSCriticalSection::~TSCriticalSection()
 {
-    DeleteCriticalSection(&this->mSection);
+    PlatMutexDestroy(this->mSection);
 }
 
 // FUNCTION: LLE 0x10053cbf
 // Enters the critical section, recording the owning thread on the first entry
 void TSCriticalSection::Enter()
 {
-    EnterCriticalSection(&this->mSection);
+    PlatMutexLock(this->mSection);
     this->mLockCount++;
     if (this->mLockCount == 1)
-        this->mOwnerThread = GetCurrentThreadId();
+        this->mOwnerThread = PlatCurrentThreadId();
 }
 
 // FUNCTION: LLE 0x10053cdd
@@ -37,5 +38,5 @@ void TSCriticalSection::Leave()
     this->mLockCount--;
     if (this->mLockCount == 0)
         this->mOwnerThread = 0;
-    LeaveCriticalSection(&this->mSection);
+    PlatMutexUnlock(this->mSection);
 }

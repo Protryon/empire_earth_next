@@ -225,7 +225,7 @@ long EEMusicObject::LoadScore()
         this->mState++;
         sDatabaseLock.mLock->Leave();
         while (this->mIsLoading == true)
-            Sleep(1);
+            PlatSleep(1);
         sDatabaseLock.mLock->Enter();
     }
     sDatabaseLock.mLock->Leave();
@@ -239,7 +239,7 @@ long EEMusicObject::UnloadScore()
     SEConductor& theConductor = gConductor->GetConductor();
     long theResult = 0;
     while (this->mIsLoading == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mState == 1) {
         theResult = theConductor.UnloadScore(this->mScoreID);

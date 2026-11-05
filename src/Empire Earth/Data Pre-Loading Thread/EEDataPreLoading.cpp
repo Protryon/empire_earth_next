@@ -62,7 +62,7 @@ EEDataPreLoading::EEDataPreLoading(long inThreadPriority)
 
     ESVERIFY_AT(TSScheduler::CreateThread(this->mThread, EEDataPreLoading::Main, (void*)this) == keseOK, 65);
     ESVERIFY_AT(this->mThread->SetPriority(inThreadPriority) == keseOK, 66);
-    this->mThreadCreated->Wait(INFINITE);
+    this->mThreadCreated->Wait(kTSWaitInfinite);
     this->mThread->SetName(gDataPreLoadingThreadName);
 }
 
@@ -107,7 +107,7 @@ unsigned long EEDataPreLoading::Main(void* inThis)
                 else
                     theThis->HandleMessage(theMessage, theParameter1, theParameter2);
             }
-            Sleep(1);
+            PlatSleep(1);
         } while (theResult == kErrorOK);
     }
     theThis->mThreadDone->Set();
@@ -190,7 +190,7 @@ void EEDataPreLoading::LoadGame(bool inSkipGameMedia, bool inClearWorld)
     EEGameOptions theOptions(gGameOptions);
     UWideString theError;
     long thePriority = this->mThread->GetPriority();
-    this->mThread->SetPriority(THREAD_PRIORITY_ABOVE_NORMAL);
+    this->mThread->SetPriority(PLAT_PRIORITY_ABOVE_NORMAL);
     gUserInterface->SetLoadProgress(0.0f);
     gUserInterface->SetLoadingText(IDS_LOADING_GLOBAL_MEDIA);
     if (!inSkipGameMedia)
@@ -323,7 +323,7 @@ long EEDataPreLoading::WaitForMessageQueue()
 {
     long theResult = this->mThread->Post(0x40c, NULL, NULL, true);
     if (theResult == kErrorOK) {
-        this->mMessageQueueDone->Wait(INFINITE);
+        this->mMessageQueueDone->Wait(kTSWaitInfinite);
         this->mMessageQueueDone->Clear();
     }
     return theResult;

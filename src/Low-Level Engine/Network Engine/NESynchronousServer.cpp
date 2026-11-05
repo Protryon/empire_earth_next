@@ -722,11 +722,11 @@ void NESynchronousServer::StartThreads()
     ESVERIFY_AT(TSScheduler::CreateThread(this->mMainThread, NESynchronousServer::Main, this) == keseOK, 1584);
     ESVERIFY_AT(TSScheduler::CreateThread(this->mSendThread, NESynchronousServer::Send, this) == keseOK, 1585);
     ESVERIFY_AT(TSScheduler::CreateThread(this->mXferThread, NESynchronousServer::Xfer, this) == keseOK, 1586);
-    this->mMainThread->SetPriority(THREAD_PRIORITY_TIME_CRITICAL);
-    this->mSendThread->SetPriority(THREAD_PRIORITY_TIME_CRITICAL);
-    this->mMainThreadStartedEvent->Wait(INFINITE);
-    this->mSendThreadStartedEvent->Wait(INFINITE);
-    this->mXferThreadStartedEvent->Wait(INFINITE);
+    this->mMainThread->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
+    this->mSendThread->SetPriority(PLAT_PRIORITY_TIME_CRITICAL);
+    this->mMainThreadStartedEvent->Wait(kTSWaitInfinite);
+    this->mSendThreadStartedEvent->Wait(kTSWaitInfinite);
+    this->mXferThreadStartedEvent->Wait(kTSWaitInfinite);
     this->mMainThread->SetName(UString("CommMain"));
     this->mSendThread->SetName(UString("CommSend"));
     this->mXferThread->SetName(UString("CommXfer"));
@@ -739,11 +739,11 @@ void NESynchronousServer::StopThreads()
     if (this->mGameWasPublished != true)
         return;
     this->mSendThreadExitEvent->Set();
-    this->mSendThreadFinishedEvent->Wait(INFINITE);
+    this->mSendThreadFinishedEvent->Wait(kTSWaitInfinite);
     this->mMainThreadExitEvent->Set();
-    this->mMainThreadFinishedEvent->Wait(INFINITE);
+    this->mMainThreadFinishedEvent->Wait(kTSWaitInfinite);
     this->mXferThreadExitEvent->Set();
-    this->mXferThreadFinishedEvent->Wait(INFINITE);
+    this->mXferThreadFinishedEvent->Wait(kTSWaitInfinite);
 }
 
 // FUNCTION: LLE 0x1004907e
@@ -1013,7 +1013,7 @@ long NESynchronousServer::XferFileToClient(FSFileSpec& inFile, unsigned long inU
 // Server main thread: handles start/pause/stop, client packets, answer waits with retries and reconnect waits
 unsigned long NESynchronousServer::Main(void* inServerObject)
 {
-    unsigned long theSavedSendInterval = INFINITE;
+    unsigned long theSavedSendInterval = kTSWaitInfinite;
     bool theExit = false;
     unsigned long theDeadline = 0;
     bool theTimedOut = false;
@@ -1021,58 +1021,58 @@ unsigned long NESynchronousServer::Main(void* inServerObject)
     unsigned long theRetries = 0;
     unsigned long theTimeout;
     NEConnection* theConnection;
-    HANDLE theEvents[11];
+    TSEvent* theEvents[11];
     NESynchronousServer* theServer = static_cast<NESynchronousServer*>(inServerObject);
     ESVERIFY_AT(inServerObject != NULL, 2203);
     theServer->mMainThreadStartedEvent->Set();
     UMSetFloatingPointPrecision(kFPPrecision53);
-    theEvents[0] = theServer->mStartGameEvent->mHandle;
-    theEvents[1] = theServer->mPauseGameEvent->mHandle;
-    theEvents[2] = theServer->mStopGameEvent->mHandle;
-    theEvents[3] = theServer->mMainThreadExitEvent->mHandle;
-    theEvents[4] = theServer->mInputAvailableEvent->mHandle;
-    theEvents[5] = theServer->mWaitForResponseEvent->mHandle;
-    theEvents[6] = theServer->mWaitForReconnectsEvent->mHandle;
-    theEvents[7] = theServer->mXferInputAvailableEvent->mHandle;
-    theEvents[8] = theServer->mXferAcceptEvent->mHandle;
-    theEvents[9] = theServer->mResumeMigratedGame->mHandle;
-    theEvents[10] = theServer->mUnpauseGameEvent->mHandle;
+    theEvents[0] = theServer->mStartGameEvent;
+    theEvents[1] = theServer->mPauseGameEvent;
+    theEvents[2] = theServer->mStopGameEvent;
+    theEvents[3] = theServer->mMainThreadExitEvent;
+    theEvents[4] = theServer->mInputAvailableEvent;
+    theEvents[5] = theServer->mWaitForResponseEvent;
+    theEvents[6] = theServer->mWaitForReconnectsEvent;
+    theEvents[7] = theServer->mXferInputAvailableEvent;
+    theEvents[8] = theServer->mXferAcceptEvent;
+    theEvents[9] = theServer->mResumeMigratedGame;
+    theEvents[10] = theServer->mUnpauseGameEvent;
     theServer->mGameState = kServerStateOpen;
     theServer->mSendInterval = theServer->mDefaultSendInterval;
     theServer->mChangeSendIntervalEvent->Set();
-    theTimeout = INFINITE;
+    theTimeout = kTSWaitInfinite;
     do {
         if (UMGetFloatingPointPrecision() != kFPPrecision53)
             UMSetFloatingPointPrecision(kFPPrecision53);
         if (UMGetFloatingPointRoundingMode() != 0)
             UMSetFloatingPointRoundingMode(0);
-        switch (WaitForMultipleObjects(11, theEvents, FALSE, theTimeout)) {
-        case WAIT_OBJECT_0:
+        switch (TSEvent::WaitAny(theEvents, 11, theTimeout)) {
+        case 0:
             theServer->mStartGameEvent->Clear();
             theServer->mGameState = kServerStateRunning;
             theServer->mSendInterval = theServer->mDefaultSendInterval;
             theServer->mChangeSendIntervalEvent->Set();
             if (theWaitState == 2) {
-                theTimeout = INFINITE;
+                theTimeout = kTSWaitInfinite;
                 theWaitState = 0;
             }
             break;
-        case WAIT_OBJECT_0 + 1:
+        case 1:
             theServer->mPauseGameEvent->Clear();
             if (theWaitState != 2 && theServer->mGameState == kServerStateRunning) {
                 theServer->mGameState = kServerStatePaused;
                 theServer->mIsGamePaused = true;
             }
             break;
-        case WAIT_TIMEOUT:
+        case kTSWaitTimeout:
             theTimedOut = true;
             break;
-        case WAIT_FAILED:
+        case kTSWaitFailed:
             GetLastError();
 
             ESVERIFY_AT("::WaitForMultipleObjects failed" != NULL, 2254);
             break;
-        case WAIT_OBJECT_0 + 2:
+        case 2:
             theServer->mStopGameEvent->Clear();
             if (theWaitState != 2) {
                 NEMessage* theMessage = new NEMStopGame();
@@ -1081,17 +1081,17 @@ unsigned long NESynchronousServer::Main(void* inServerObject)
                     theServer->mMessageManager->Send(theMessage, true);
                     theMessage->Dereference();
                     theServer->mGameState = kServerStateOpen;
-                    theServer->mSendInterval = INFINITE;
+                    theServer->mSendInterval = kTSWaitInfinite;
                     theServer->mChangeSendIntervalEvent->Set();
                 }
             }
             break;
-        case WAIT_OBJECT_0 + 3:
+        case 3:
             theServer->mMainThreadExitEvent->Clear();
             if (theWaitState != 2)
                 theExit = true;
             break;
-        case WAIT_OBJECT_0 + 4:
+        case 4:
             theServer->mInputAvailableEvent->Clear();
             theServer->ProcessPendingPlayerInputs();
             if (theWaitState == 1)
@@ -1099,7 +1099,7 @@ unsigned long NESynchronousServer::Main(void* inServerObject)
             if (theWaitState == 2 && TMGetTime() > theDeadline)
                 theServer->HandleReconnectWaitTimedOut();
             break;
-        case WAIT_OBJECT_0 + 5:
+        case 5:
             theServer->mWaitForResponseEvent->Clear();
             theSavedSendInterval = theServer->mSendInterval;
             if (theServer->mIsMultiplayerSession) {
@@ -1111,20 +1111,20 @@ unsigned long NESynchronousServer::Main(void* inServerObject)
             theRetries = 0;
             theWaitState = 1;
             break;
-        case WAIT_OBJECT_0 + 6:
+        case 6:
             theServer->mWaitForReconnectsEvent->Clear();
             theTimeout = 1000;
             theDeadline = TMGetTime() + 20000;
             theWaitState = 2;
             break;
-        case WAIT_OBJECT_0 + 7:
+        case 7:
             theServer->mXferInputAvailableEvent->Clear();
             break;
-        case WAIT_OBJECT_0 + 8:
+        case 8:
             theServer->mXferAcceptEvent->Clear();
             theServer->mProtocol->AcceptForXfer(theServer->mServer, theConnection);
             break;
-        case WAIT_OBJECT_0 + 9:
+        case 9:
             {
                 theServer->mResumeMigratedGame->Clear();
                 theServer->mWaitForReconnectsTime = 0;
@@ -1133,7 +1133,7 @@ unsigned long NESynchronousServer::Main(void* inServerObject)
                     theDeadline = theNow + 3000;
             }
             break;
-        case WAIT_OBJECT_0 + 10:
+        case 10:
             theServer->mUnpauseGameEvent->Clear();
             if (theWaitState != 2 && theServer->mGameState == kServerStatePaused) {
                 theServer->mIsGamePaused = false;
@@ -1161,14 +1161,14 @@ unsigned long NESynchronousServer::Main(void* inServerObject)
                     theServer->mSendInterval = theSavedSendInterval;
                     theServer->mChangeSendIntervalEvent->Set();
                     theServer->mSendToAllLock->Leave();
-                    theTimeout = INFINITE;
+                    theTimeout = kTSWaitInfinite;
                     theWaitState = 0;
                 } else if (TMGetTime() > theDeadline) {
                     if (++theRetries >= theServer->mSendToAllAndWaitRetries) {
                         theServer->BootAllLaggers(theServer->mSendToAllAndWaitMessageNumber);
                         theServer->mSendInterval = theServer->mDefaultSendInterval;
                         theServer->mChangeSendIntervalEvent->Set();
-                        theTimeout = INFINITE;
+                        theTimeout = kTSWaitInfinite;
                     } else {
                         theServer->mMessageManager->Resend(theServer->mSendToAllAndWaitMessageNumber);
                         theDeadline = TMGetTime() + theServer->mSendToAllAndWaitTimeout;
@@ -1197,7 +1197,7 @@ unsigned long NESynchronousServer::Send(void* inServerObject)
     ESVERIFY_AT(inServerObject != NULL, 2647);
     unsigned long theSendInterval = theServer->mSendInterval;
     long theTimeout = theSendInterval;
-    if (theSendInterval != INFINITE) {
+    if (theSendInterval != kTSWaitInfinite) {
         theTimeout = theSendInterval - 50;
         if (theTimeout < 0)
             theTimeout = 1;
@@ -1205,24 +1205,24 @@ unsigned long NESynchronousServer::Send(void* inServerObject)
     unsigned long theLastTime = TMGetTime();
     theServer->mSendThreadStartedEvent->Set();
     UMSetFloatingPointPrecision(kFPPrecision53);
-    HANDLE theEvents[3];
-    theEvents[0] = theServer->mChangeSendIntervalEvent->mHandle;
-    theEvents[1] = theServer->mSendThreadExitEvent->mHandle;
-    theEvents[2] = theServer->mSendThreadForceCTEvent->mHandle;
+    TSEvent* theEvents[3];
+    theEvents[0] = theServer->mChangeSendIntervalEvent;
+    theEvents[1] = theServer->mSendThreadExitEvent;
+    theEvents[2] = theServer->mSendThreadForceCTEvent;
     for (;;) {
         if (UMGetFloatingPointPrecision() != kFPPrecision53)
             UMSetFloatingPointPrecision(kFPPrecision53);
         if (UMGetFloatingPointRoundingMode() != 0)
             UMSetFloatingPointRoundingMode(0);
-        DWORD theWaitResult = WaitForMultipleObjects(3, theEvents, FALSE, theTimeout);
+        long theWaitResult = TSEvent::WaitAny(theEvents, 3, theTimeout);
         unsigned long theNow = TMGetTime();
         long theDrift = theLastTime - theNow + theSendInterval;
         switch (theWaitResult) {
-        case WAIT_OBJECT_0:
+        case 0:
             theServer->mChangeSendIntervalEvent->Clear();
             theSendInterval = theServer->mSendInterval;
-            if (theSendInterval == INFINITE)
-                theTimeout = INFINITE;
+            if (theSendInterval == kTSWaitInfinite)
+                theTimeout = kTSWaitInfinite;
             else {
                 theTimeout = theSendInterval - 50;
                 if (theTimeout < 0)
@@ -1230,16 +1230,16 @@ unsigned long NESynchronousServer::Send(void* inServerObject)
             }
             theLastTime = theNow;
             break;
-        case WAIT_OBJECT_0 + 1:
+        case 1:
             theServer->mSendThreadExitEvent->Clear();
             theServer->mSendThreadFinishedEvent->Set();
             return 0;
-        case WAIT_OBJECT_0 + 2:
+        case 2:
             theServer->mSendThreadForceCTEvent->Clear();
             theServer->SendCommunicationsTick(false, true);
             theServer->mMessageManager->mForceCTWhenAllResponded = false;
-            if (theSendInterval == INFINITE)
-                theTimeout = INFINITE;
+            if (theSendInterval == kTSWaitInfinite)
+                theTimeout = kTSWaitInfinite;
             else {
                 theTimeout = theSendInterval - 50;
                 if (theTimeout < 0)
@@ -1247,21 +1247,21 @@ unsigned long NESynchronousServer::Send(void* inServerObject)
             }
             theLastTime = theNow;
             break;
-        case WAIT_TIMEOUT:
+        case kTSWaitTimeout:
             if (theServer->mCurrentCommunicationsTick >= theServer->mNextChecksumCT) {
                 theServer->SendCommunicationsTick(true, true);
                 theServer->mNextChecksumCT += theServer->mChecksumInterval;
             } else
                 theServer->SendCommunicationsTick(false, true);
-            theTimeout = INFINITE;
-            if (theSendInterval != INFINITE) {
+            theTimeout = kTSWaitInfinite;
+            if (theSendInterval != kTSWaitInfinite) {
                 theTimeout = theDrift + theSendInterval - 50;
                 if (theTimeout < 0)
                     theTimeout = 1;
             }
             theLastTime = theDrift + theNow;
             break;
-        case WAIT_FAILED:
+        case kTSWaitFailed:
             GetLastError();
             break;
         }
@@ -1275,38 +1275,38 @@ unsigned long NESynchronousServer::Xfer(void* inServerObject)
     bool theExit = false;
     bool theXfersWaiting = false;
     unsigned long theTimeout;
-    HANDLE theEvents[2];
+    TSEvent* theEvents[2];
     NESynchronousServer* theServer = static_cast<NESynchronousServer*>(inServerObject);
     ESVERIFY_AT(inServerObject != NULL, 2824);
-    theTimeout = INFINITE;
+    theTimeout = kTSWaitInfinite;
     theServer->mXferThreadStartedEvent->Set();
     UMSetFloatingPointPrecision(kFPPrecision53);
-    theEvents[0] = theServer->mXferThreadExitEvent->mHandle;
-    theEvents[1] = theServer->mXferStuffWaitingToGoEvent->mHandle;
+    theEvents[0] = theServer->mXferThreadExitEvent;
+    theEvents[1] = theServer->mXferStuffWaitingToGoEvent;
     do {
         if (UMGetFloatingPointPrecision() != kFPPrecision53)
             UMSetFloatingPointPrecision(kFPPrecision53);
         if (UMGetFloatingPointRoundingMode() != 0)
             UMSetFloatingPointRoundingMode(0);
-        switch (WaitForMultipleObjects(2, theEvents, FALSE, theTimeout)) {
-        case WAIT_OBJECT_0:
+        switch (TSEvent::WaitAny(theEvents, 2, theTimeout)) {
+        case 0:
             theServer->mXferThreadExitEvent->Clear();
             theExit = true;
             break;
-        case WAIT_OBJECT_0 + 1:
+        case 1:
             theServer->mXferStuffWaitingToGoEvent->Clear();
             theXfersWaiting = true;
             theTimeout = 500;
             break;
-        case WAIT_TIMEOUT:
+        case kTSWaitTimeout:
             if (theXfersWaiting) {
                 theXfersWaiting = theServer->mMessageManager->ProcessXfers();
                 if (!theXfersWaiting)
-                    theTimeout = INFINITE;
+                    theTimeout = kTSWaitInfinite;
             }
-            Sleep(1);
+            PlatSleep(1);
             break;
-        case WAIT_FAILED:
+        case kTSWaitFailed:
             GetLastError();
             break;
         }

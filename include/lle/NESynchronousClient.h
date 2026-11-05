@@ -52,9 +52,9 @@ public:
     void SendExitMessage()
     {
         this->mReceiveThreadExitEvent->Set();
-        this->mReceiveThreadFinishedEvent->Wait(INFINITE);
+        this->mReceiveThreadFinishedEvent->Wait(kTSWaitInfinite);
         this->mMainThreadExitEvent->Set();
-        this->mMainThreadFinishedEvent->Wait(INFINITE);
+        this->mMainThreadFinishedEvent->Wait(kTSWaitInfinite);
     }
     void SendStartConnectMessage(NEMessage* inMessage)
     {

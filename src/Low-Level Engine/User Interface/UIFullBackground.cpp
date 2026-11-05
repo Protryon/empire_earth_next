@@ -116,11 +116,11 @@ long UIFullBackground::LoadBackground(const GETextureDescription& inDescription)
     unsigned long theScreen = this->mForm->GetManager()->GetScreen();
     GETextureManager* theManager = this->mForm->GetManager()->GetRasterizer()->GetTextureManager(theScreen);
     for (unsigned long theRow = 0; theRow < this->mRows; theRow++) {
-        _itoa(theRow + 1, theNumber, 10);
+        PlatIToA(theRow + 1, theNumber, 10);
         theRowString = theNumber;
         for (unsigned long theColumn = 0; theColumn < this->mColumns; theColumn++) {
             unsigned long theIndex = this->mColumns * theRow + theColumn;
-            _itoa(theColumn + 1, theNumber, 10);
+            PlatIToA(theColumn + 1, theNumber, 10);
             theColumnString = theNumber;
             const char* theExtension = strrchr(this->mFileName, '.');
             if (theExtension) {

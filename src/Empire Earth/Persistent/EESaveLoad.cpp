@@ -410,7 +410,7 @@ long Fn14D195(bool inLoading, bool inQuiet)
     sMusicVolume = gConductor->GetConductor().GetVolume();
     gSoundManager->SetMasterVolume(0.0f);
     gConductor->GetConductor().SetVolume(0.0f);
-    Sleep(0x282);
+    PlatSleep(0x282);
     if (inQuiet || gCommunications == NULL || !gCommunications->IsServer() || inLoading != true)
         return 0;
     gUIManager->LockUIForCopyData();
@@ -430,7 +430,7 @@ long Fn14D253(bool inLoading, bool inQuiet)
     gConductor->GetConductor().SetVolume(sMusicVolume);
     if (!inQuiet && gCommunications->IsServer() && inLoading == true) {
         gUserInterface->OpenForm(gUIManager->mMainGameForm);
-        gGraphics->mRenderNow->Wait(INFINITE);
+        gGraphics->mRenderNow->Wait(kTSWaitInfinite);
     }
     return 0;
 }

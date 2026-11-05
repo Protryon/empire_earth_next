@@ -101,7 +101,7 @@ void EECheatCodes::AddCheatCode(const UWideString& inText, long inCode, bool inE
     std::pair<UWideString, long> theEntry;
     UWideString theText;
     theText = inText;
-    _mbslwr((unsigned char*)(const char*)theText);
+    PlatMbsLwr((unsigned char*)(const char*)theText);
     theEntry.first = theText;
     theEntry.second = inCode;
     this->mCodes.insert(theEntry);
@@ -430,15 +430,15 @@ void EECheatCodes::ParseCheatCode(const UWideString& inText, long& outCode, long
     } else {
         long theLength = theText.GetLength();
         if (theLength > 1) {
-            unsigned char* theLast = _mbsninc(reinterpret_cast<const unsigned char*>((const char*)theText), theLength - 2);
+            unsigned char* theLast = PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theText), theLength - 2);
             outParameter = atoi(reinterpret_cast<const char*>(theLast));
-            if (outParameter != 0 || _mbscmp(theLast, reinterpret_cast<const unsigned char*>((const char*)UWideString(" 0"))) == 0) {
+            if (outParameter != 0 || PlatMbsCmp(theLast, reinterpret_cast<const unsigned char*>((const char*)UWideString(" 0"))) == 0) {
                 if ((unsigned long)outParameter > 9 && (const char*)theText != reinterpret_cast<const char*>(theLast))
-                    theLast = _mbsdec(reinterpret_cast<const unsigned char*>((const char*)theText), theLast);
+                    theLast = PlatMbsDec(reinterpret_cast<const unsigned char*>((const char*)theText), theLast);
                 strcpy(reinterpret_cast<char*>(theLast), gU4E5B98);
             }
         }
-        _mbslwr((unsigned char*)(const char*)theText);
+        PlatMbsLwr((unsigned char*)(const char*)theText);
         outCode = this->LookUp(theText);
     }
 }

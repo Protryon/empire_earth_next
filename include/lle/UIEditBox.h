@@ -6,6 +6,7 @@
 // Requires lle/UIControl.h, lle/UIScrollBar.h, <vector>.
 #ifndef LLE_UIEDITBOX_H
 #define LLE_UIEDITBOX_H
+#include "platform/PlatString.h"
 
 #include <vector>
 
@@ -81,7 +82,7 @@ public:
     void SetText(unsigned long inValue)
     {
         char theBuffer[50];
-        _itoa(inValue, theBuffer, 10);
+        PlatIToA(inValue, theBuffer, 10);
         this->SetText(theBuffer);
     }
     virtual long UpdateKeyboard();

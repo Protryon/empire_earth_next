@@ -107,7 +107,7 @@ struct EESETerrainNameLess {
         UWideString theFirst, theSecond;
         gResource->GetString(inFirst->mNameID, theFirst);
         gResource->GetString(inSecond->mNameID, theSecond);
-        return _mbsicmp(reinterpret_cast<const unsigned char*>((const char*)theFirst),
+        return PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theFirst),
                         reinterpret_cast<const unsigned char*>((const char*)theSecond)) < 0;
     }
 };

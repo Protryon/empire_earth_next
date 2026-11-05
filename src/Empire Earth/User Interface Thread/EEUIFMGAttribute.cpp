@@ -99,7 +99,7 @@ long EEUIFMGAttribute::CopyData()
     long theResult = EEUIBUpgrade::CopyData();
     if (this->mNumQueued > 0) {
         char theBuffer[32];
-        _itoa(this->mNumQueued, theBuffer, 10);
+        PlatIToA(this->mNumQueued, theBuffer, 10);
         this->mLevelText->SetText(UWideString(theBuffer));
         this->mShowLevel = true;
     } else

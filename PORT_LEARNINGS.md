@@ -480,3 +480,46 @@ The WON library is carved or stubbed (`won` class in the stub report) in both bu
 the same sequence. Apply the dialect passes and header bridges first, then check the exports/imports both ways
 (WON is linked into the exe, not a DLL, so the ODR/inline section matters most). Then make sure the `won` count in
 the stub report reaches 0 with no new traps.
+
+## Cross-platform: the platform layer (branch xplat)
+
+- **Census first** (`tools/winapi_census.py`): a name list per family plus regexes (`WM_*`, `Reg*`, `_mbs*`, ...)
+  over the comment- and string-stripped source. Two traps made the first run lie: game constants that share a
+  Windows prefix (`IDS_*` string ids: 3,765 false windowing hits) and the game's own members spelled like Win32
+  functions (`TSScheduler::CreateEvent`, `GEWindow`'s `GetWindow`, `UIControl::DrawTextA`). Names used after `.`,
+  `->` or `Class::` in a file are members there; such a name counts as Win32 only when written `::Name`.
+- **windows.h renames members.** `CreateEvent`, `DrawText`, `CreateDirectory` are A/W macros, so the methods of those
+  names are really `CreateEventA`/`DrawTextA`/`CreateDirectoryA` (the reconstruction even spells `DrawTextA`, from
+  the mangled names). Removing `<windows.h>` from a unit silently renames them there: rename them in one batch
+  before making headers windows-free (census family win-macro-names).
+- **The harness constrains the wrappers.** Its time shim patches the exe's IAT (Sleep, QueryPerformanceCounter,
+  WaitForSingleObject/WaitForMultipleObjects, timeGetTime/timeSetEvent/timeKillEvent), so the Win32 implementation
+  must keep calling exactly those imports (a PlatEventWait is WaitForSingleObject, not WaitForMultipleObjects with
+  one handle). It also caps the frame rate at the Sleep import by the caller's return address inside
+  RTSGraphics::Main: a PlatSleep wrapper would hide the caller, so those Sleeps stay direct Win32 calls (commented).
+  The harness also calls engine exports by mangled name (`?Enter@TSCriticalSection@@QAEXXZ`, the read/write lock):
+  keep those signatures.
+- **Opaque handles that are the Win32 handle.** On Win32 a PlatEvent*, PlatThread*, PlatFile*, PlatFind* is the
+  HANDLE itself (no allocation, no behaviour change); TMTimer's event timers rely on PlatEvent* being the event
+  handle (TIME_CALLBACK_EVENT_SET). Only PlatMutex is a heap object (a CRITICAL_SECTION has no stable size across
+  systems). Class layouts kept their offsets where they held handles (FSFileSpec +0x40, FSArchive +0x64, TSThread
+  +0x30); TSCriticalSection shrank (it is only ever heap-allocated by TSScheduler).
+- **Keep the last error where the engine records it.** URegistry, FSFileSpec and friends call
+  `ESRecordNativeError(GetLastError())` after a failure, sometimes after closing other handles. The platform
+  functions capture the error at the failing call and restore it before returning (PlatFindClose, the preferences
+  store), so `PlatGetLastError()` gives the value the old code recorded.
+- **Wait results**: `WaitForMultipleObjects` switches (`case WAIT_OBJECT_0 + 3:`) became `TSEvent::WaitAny`
+  returning the index or kTSWaitTimeout/kTSWaitFailed; INFINITE is kTSWaitInfinite (same value).
+- **Multimedia timer callbacks** carry one user word: callback timers keep (callback, user) in a table keyed by the
+  timer id, which the thunk looks up by the id it is passed (never through a pointer a concurrent Stop may free).
+- **COM per thread** (CoInitialize in TSThread's entry) moved into the Win32 thread procedure: it is Windows' need,
+  not the engine's. The unused `_beginthreadex` twin (POSIXThreadMain) went.
+- **LP64 is the next format trap.** Windows `long` is 32-bit on x64 too, which is why the x64 census found the
+  record formats safe. On Linux/macOS `long` is 64-bit: FSFile::Read(long&)/Write(const long&), message members and
+  the static_asserted records with `long` change size. The preferences store already takes int32_t.
+- **Multibyte text**: the game's strings are MBCS in the ANSI code page (`_mbs*`, double-byte on CJK Windows). The
+  platform functions keep that meaning; a non-Windows implementation has to pick an encoding together with the
+  fonts and IME code, so PlatString.h documents it instead of pretending to be portable.
+- Process: a Git Bash heredoc lost backslashes in Python string literals here (a doubled backslash arrived single);
+  write edit scripts with the editor tool. Edits that touch included headers must wait until a running compile has
+  finished: units are restaged and `include/` is read live while it runs.

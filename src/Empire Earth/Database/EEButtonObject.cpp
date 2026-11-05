@@ -139,7 +139,7 @@ long EEButtonObject::Acquire()
         this->mMediaCount++;
         sDatabaseLock.mLock->Leave();
         while (this->mIsLoading == true)
-            Sleep(1);
+            PlatSleep(1);
         sDatabaseLock.mLock->Enter();
     }
     sDatabaseLock.mLock->Leave();
@@ -262,7 +262,7 @@ void EEButtonObject::SetPressedBitmap(GEBitmap* inBitmap, const GERectangle& inR
 long EEButtonObject::Release()
 {
     while (this->mIsLoading == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount == 1) {
         this->mTexture->Dereference();

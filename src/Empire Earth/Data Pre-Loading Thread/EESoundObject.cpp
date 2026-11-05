@@ -133,7 +133,7 @@ long EESoundObject::LoadMedia()
         this->mMediaCount++;
         sDatabaseLock.mLock->Leave();
         while (this->mIsLoading == true)
-            Sleep(1);
+            PlatSleep(1);
         sDatabaseLock.mLock->Enter();
     }
     sDatabaseLock.mLock->Leave();
@@ -175,7 +175,7 @@ long EESoundObject::Play(float inVolume, float inPan, float inPitch)
 long EESoundObject::UnloadMedia()
 {
     while (this->mIsLoading == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount == 1) {
         this->mMediaCount = 0;

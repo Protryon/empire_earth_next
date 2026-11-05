@@ -915,7 +915,7 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
     if (gCommunications->GetNumHumanPlayers() > 1) {
         if (gWonNet != NULL) theLocalName = gWonPlayerName; else theLocalName = gPlayerName;
         for (unsigned long i = 0; i < inState->GetNumPlayers(); i++) {
-            if (_mbsicmp(reinterpret_cast<const unsigned char*>((const char*)inState->mPlayers[i]->mName),
+            if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)inState->mPlayers[i]->mName),
                     reinterpret_cast<const unsigned char*>((const char*)theLocalName)) != 0)
                 continue;
             theLocal = i;
@@ -1282,7 +1282,7 @@ void EEWorld::RecordStatistics()
         EEPlayer* thePlayer = this->mPlayers[thePlayers[i]];
         if (!thePlayer->IsHuman()) {
             gResource->GetString(IDS_COMPUTER, theDefault);
-            if (_mbscmp(reinterpret_cast<const unsigned char*>((const char*)thePlayer->mName), reinterpret_cast<const unsigned char*>((const char*)theDefault)) == 0) {
+            if (PlatMbsCmp(reinterpret_cast<const unsigned char*>((const char*)thePlayer->mName), reinterpret_cast<const unsigned char*>((const char*)theDefault)) == 0) {
                 theComputerCount++;
                 sprintf(theRecord.mNameSuffix, " #%d", theComputerCount);
             } else {

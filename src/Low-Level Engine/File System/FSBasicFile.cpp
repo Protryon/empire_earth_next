@@ -28,17 +28,17 @@ FSBasicFile::FSBasicFile(const FSBasicFile& inFile)
 }
 
 // FUNCTION: LLE 0x10007ba6
-// Deletes the file from disk; fails if it is open or its path is longer than MAX_PATH
+// Deletes the file from disk; fails if it is open or its path is longer than PLAT_MAX_PATH
 long FSBasicFile::Delete()
 {
     long theResult = kErrorOK;
-    UString thePath(MAX_PATH);
+    UString thePath(PLAT_MAX_PATH);
     if (!this->mIsOpen) {
-        if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= MAX_PATH) {
+        if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= PLAT_MAX_PATH) {
             thePath = this->mVolume + this->mDirectory + this->mFile;
-            if (!DeleteFileA(thePath)) {
+            if (!PlatDeleteFile(thePath)) {
                 theResult = kErrorNativeError;
-                ESRecordNativeError(GetLastError());
+                ESRecordNativeError(PlatGetLastError());
             }
         } else
             theResult = kErrorBadPath;

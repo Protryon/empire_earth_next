@@ -53,7 +53,7 @@ long FSArchive::BuildFAT(const FSFileSpec& inRoot, const FSFileSpec& inDirectory
                          unsigned long inCompression, bool inRecursive)
 {
     long theResult;
-    UString theFilename(MAX_PATH);
+    UString theFilename(PLAT_MAX_PATH);
     FSFileSpec theDirectory(inDirectory);
     FSFileSpec theFile;
     std::pair<UString, ArchivedFile> theFATPair;
@@ -91,7 +91,7 @@ long FSArchive::BuildFAT(const FSFileSpec& inRoot, const FSFileSpec& inDirectory
 // Adds the listed files under a root to the file table with their compressed lengths
 long FSArchive::BuildFAT(const FSFileSpec& inRoot, std::vector<UString>& inFiles, unsigned long inCompression)
 {
-    UString theFilename(MAX_PATH);
+    UString theFilename(PLAT_MAX_PATH);
     FSFileSpec theFile(inRoot);
     std::pair<UString, ArchivedFile> theFATPair;
     ArchivedFile theArchivedFile;
@@ -422,19 +422,12 @@ long FSArchive::Open()
             if (theResult == kErrorOK)
                 theResult = this->ReadTags();
             if (theResult == kErrorOK) {
-                this->mMapping = CreateFileMappingA(this->mArchiveFile.GetFileHandle(), NULL, PAGE_READONLY | SEC_COMMIT, 0, 0,
-                                              NULL);
-                if (this->mMapping) {
-                    this->mView = (const unsigned char*)MapViewOfFile(this->mMapping, FILE_MAP_READ, 0, 0, 0);
-                    if (!this->mView) {
-                        ESRecordNativeError(GetLastError());
-                        ESGetNativeError();
-                        theResult = kErrorNativeError;
-                        CloseHandle(this->mMapping);
-                        this->mMapping = NULL;
-                    }
-                } else {
-                    ESRecordNativeError(GetLastError());
+                const void* theView = NULL;
+                this->mMapping = PlatFileMap(static_cast<PlatFile*>(this->mArchiveFile.GetFileHandle()), &theView);
+                if (this->mMapping)
+                    this->mView = static_cast<const unsigned char*>(theView);
+                else {   // the mapping or the view failed (PlatFileMap closes a mapping without a view)
+                    ESRecordNativeError(PlatGetLastError());
                     ESGetNativeError();
                     theResult = kErrorNativeError;
                 }
@@ -582,14 +575,11 @@ long FSArchive::ReadTags()
 // Unmaps the archive view, closes the archive file and empties the file table
 void FSArchive::Reset()
 {
-    if (this->mView) {
-        UnmapViewOfFile(this->mView);
-        this->mView = NULL;
-    }
     if (this->mMapping) {
-        CloseHandle(this->mMapping);
+        PlatFileUnmap(this->mMapping, this->mView);
         this->mMapping = NULL;
     }
+    this->mView = NULL;
     this->mArchiveFile.Close();
     this->mFAT.clear();
 }

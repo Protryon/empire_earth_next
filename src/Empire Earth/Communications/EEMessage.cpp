@@ -4030,12 +4030,12 @@ void EEMLoadMainScreen::Execute()
         while (true) {
             if (!gGraphics->mIsPaused)
                 break;
-            Sleep(1);
+            PlatSleep(1);
         }
     } else {
         gGraphics->PostPause();
         for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
-            Sleep(1);
+            PlatSleep(1);
         if (gWorld.mGameScreenActive == true) {
             gUIManager->SwapForm(gUIManager->mMainGameForm);
             gUIManager->mMainGameForm->mInfoBlinking = false;
@@ -5383,35 +5383,35 @@ void EEMPayTribute::Execute()
     } else
         return;
     if (this->mFood > 0) {
-        _itoa(this->mFood, theNumber, 10);
+        PlatIToA(this->mFood, theNumber, 10);
         theText += theNumber;
         theText += theSpace;
         theText += (const char*)theGold;
         theText += theSpace;
     }
     if (this->mWood > 0) {
-        _itoa(this->mWood, theNumber, 10);
+        PlatIToA(this->mWood, theNumber, 10);
         theText += theNumber;
         theText += theSpace;
         theText += (const char*)theStone;
         theText += theSpace;
     }
     if (this->mStone > 0) {
-        _itoa(this->mStone, theNumber, 10);
+        PlatIToA(this->mStone, theNumber, 10);
         theText += theNumber;
         theText += theSpace;
         theText += (const char*)theFood;
         theText += theSpace;
     }
     if (this->mGold > 0) {
-        _itoa(this->mGold, theNumber, 10);
+        PlatIToA(this->mGold, theNumber, 10);
         theText += theNumber;
         theText += theSpace;
         theText += (const char*)theWood;
         theText += theSpace;
     }
     if (this->mIron > 0) {
-        _itoa(this->mIron, theNumber, 10);
+        PlatIToA(this->mIron, theNumber, 10);
         theText += theNumber;
         theText += theSpace;
         theText += (const char*)theIron;

@@ -77,7 +77,7 @@ bool EEGetScriptToken(const char* inDelimiters, char*& ioCursor, UString& outTok
 // comma before the closing bracket of each anyof(/allof( list
 void EEStripScript(char* ioText)
 {
-    char* theCopy = _strdup(ioText);
+    char* theCopy = PlatStrDup(ioText);
     bool theComment = false;
     bool theBlank = false;
     bool theInList = false;

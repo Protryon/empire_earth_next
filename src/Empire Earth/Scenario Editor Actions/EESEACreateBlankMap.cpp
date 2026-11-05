@@ -104,7 +104,7 @@ void EESEACreateBlankMap::Virtual4()
     gWorld.mLock->WriteUnlock();
     gUIManager->UnlockUIForCopyData();
     for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
-        Sleep(1);
+        PlatSleep(1);
     gUIManager->LockUIForCopyData();
     gWorld.mLock->WriteLock();
 

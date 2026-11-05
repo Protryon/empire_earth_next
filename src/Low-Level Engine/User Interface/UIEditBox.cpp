@@ -149,27 +149,27 @@ const char* UIEditBox::AddChar(const char* inString)
     UWideString theLine;
     UWideString theChar;
     UWideString theEmpty;
-    unsigned long theLength = _mbslen(reinterpret_cast<const unsigned char*>(inString));
+    unsigned long theLength = PlatMbsLen(reinterpret_cast<const unsigned char*>(inString));
     unsigned long theSpaces = 0;
     bool theNewLine = false;
     if (this->mIsTextSelected)
         this->DeleteSelectedText();
     theLine = this->mLines[this->mCaretLine];
-    unsigned long theLineLength = _mbslen(reinterpret_cast<const unsigned char*>((const char*)theLine));
+    unsigned long theLineLength = PlatMbsLen(reinterpret_cast<const unsigned char*>((const char*)theLine));
     this->mWorkString = "";
     if (theLength == 0)
         return inString;
     if (this->mIsSingleLine) {
         while (theLineLength < this->mMaxChars && *inString != 0) {
-            if (!this->mNumbersOnly || _ismbcdigit(GetMultiByteChar(inString))) {
+            if (!this->mNumbersOnly || PlatIsMbcDigit(GetMultiByteChar(inString))) {
                 theChar.CopyString(inString, 1);
                 this->mWorkString += theChar;
             }
             theLineLength++;
-            inString = (const char*)_mbsinc(reinterpret_cast<const unsigned char*>(inString));
+            inString = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(inString));
         }
-        theLength = _mbslen(reinterpret_cast<const unsigned char*>((const char*)this->mWorkString));
-        char* theTail = (char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theLine), this->mCaretIndex);
+        theLength = PlatMbsLen(reinterpret_cast<const unsigned char*>((const char*)this->mWorkString));
+        char* theTail = (char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theLine), this->mCaretIndex);
         this->mWorkString += theTail;
         strcpy(theTail, "");
         theLine += this->mWorkString;
@@ -177,11 +177,11 @@ const char* UIEditBox::AddChar(const char* inString)
     } else {
         unsigned long theLineIndex = this->mCaretLine;
         this->mWorkString.CopyString(theLine, this->mCaretIndex);
-        const char* theTail = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theLine), this->mCaretIndex);
+        const char* theTail = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theLine), this->mCaretIndex);
         this->mWorkString += inString;
         this->mWorkString += theTail;
         const char* theCursor = this->mWorkString;
-        while (_mbscmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"") != 0) {
+        while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"") != 0) {
             theLine = "";
             float theWidth = 0.0f;
             unsigned long theCount = 0;
@@ -191,15 +191,15 @@ const char* UIEditBox::AddChar(const char* inString)
             do {
                 if (theSpaces == 0) {
                     theChar.CopyString(theCursor, 1);
-                    if (_mbsnbcmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"\n", 1) == 0) {
+                    if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"\n", 1) == 0) {
                         theNewLine = true;
-                        theCursor = (const char*)_mbsinc(reinterpret_cast<const unsigned char*>(theCursor));
+                        theCursor = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCursor));
                         theLine += "\n";
-                    } else if (_ismbcspace(GetMultiByteChar(theCursor))) {
+                    } else if (PlatIsMbcSpace(GetMultiByteChar(theCursor))) {
                         theLastSpace = theCount + 1;
-                    } else if (_mbsnbcmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"\r", 1) == 0) {
+                    } else if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"\r", 1) == 0) {
                         theChar = "";
-                    } else if (_mbsnbcmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"\t", 1) == 0) {
+                    } else if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"\t", 1) == 0) {
                         theSpaces = 4;
                         theChar = "";
                     }
@@ -215,16 +215,16 @@ const char* UIEditBox::AddChar(const char* inString)
                 }
                 theLine += theChar;
                 if (theSpaces == 0)
-                    theCursor = (const char*)_mbsinc(reinterpret_cast<const unsigned char*>(theCursor));
+                    theCursor = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCursor));
                 theCount++;
-            } while (_mbscmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"") != 0 &&
+            } while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(theCursor), (const unsigned char*)"") != 0 &&
                      theCursor != theStart);
             if (!theWrap) {
                 this->mLines[theLineIndex] = theLine;
                 continue;
             }
             if (theLastSpace > 0 && !theNewLine && theLastSpace < theCount + 1) {
-                theCursor = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mWorkString), theLastSpace);
+                theCursor = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mWorkString), theLastSpace);
                 this->mLines[theLineIndex].CopyString(theLine, theLastSpace);
                 if (theLineIndex == this->mCaretLine && this->mCaretIndex > (long)this->mLines[theLineIndex].GetLength()) {
                     this->mCaretIndex -= theLastSpace;
@@ -258,7 +258,7 @@ void UIEditBox::AddIMEResultString(const UWideString& inString)
     this->mIMEActive = false;
     while (*theCursor != 0) {
         this->mForm->GetManager()->UpdateTranslatedKey(theCursor, 1);
-        theCursor = (const char*)_mbsinc(reinterpret_cast<const unsigned char*>(theCursor));
+        theCursor = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCursor));
     }
     this->mIMEStartIndex = this->mCaretIndex;
     this->mIMEStartLine = this->mCaretLine;
@@ -306,23 +306,23 @@ void UIEditBox::CalculateCaretFromMouseLocation(unsigned long& outLine, long& ou
             outLine = this->mLines.size() - 1;
     }
     if (inLocation.GetX() > this->mTextRectangle.GetLeft()) {
-        const char* theCursor = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[outLine]),
+        const char* theCursor = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[outLine]),
                                                       this->mDrawingIndex);
         long theLength;
-        if (!this->mIsSingleLine && _mbschr(reinterpret_cast<const unsigned char*>(theCursor), '\n'))
+        if (!this->mIsSingleLine && PlatMbsChr(reinterpret_cast<const unsigned char*>(theCursor), '\n'))
             theLength = this->mLines[outLine].GetLength() - 1;
         else
             theLength = this->mLines[outLine].GetLength();
         while (++theIndex <= theLength) {
             theChar.CopyString(theCursor, 1);
-            char* theEnd = (char*)_mbsinc(reinterpret_cast<const unsigned char*>((const char*)theChar));
+            char* theEnd = (char*)PlatMbsInc(reinterpret_cast<const unsigned char*>((const char*)theChar));
             strcpy(theEnd, "");
             this->GetGEText()->SetText(theChar);
             theX += UMFloor(this->GetGEText()->GetTextExtent().GetWidth());
             float theRight = (float)theX;
             if (theRight > this->mTextRectangle.GetRight() || theRight > inLocation.GetX())
                 break;
-            theCursor = (const char*)_mbsinc(reinterpret_cast<const unsigned char*>(theCursor));
+            theCursor = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCursor));
         }
         theIndex--;
     }
@@ -341,7 +341,7 @@ long UIEditBox::ChangeIMECompositionString(const UWideString& inString, const US
         this->mIMEStartIndex = this->mCaretIndex;
         this->mIMEStartLine = this->mCaretLine;
         this->mIMECompositionLength = inString.GetLength();
-        this->IncrementCaretPos(_mbsnccnt(reinterpret_cast<const unsigned char*>((const char*)inString), inCursor));
+        this->IncrementCaretPos(PlatMbsNCCnt(reinterpret_cast<const unsigned char*>((const char*)inString), inCursor));
     }
     return kErrorOK;
 }
@@ -435,7 +435,7 @@ void UIEditBox::ComputeCaretLocation(bool inUpdateCaretX)
 void UIEditBox::ComputeDrawingIndex()
 {
     this->mWorkString.CopyString(this->mLines[this->mCaretLine], this->mCaretIndex);
-    const char* theCursor = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mWorkString), this->mCaretIndex);
+    const char* theCursor = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mWorkString), this->mCaretIndex);
     theCursor = this->mWorkString;
     this->mDrawingIndex = 0;
     while (this->mDrawingIndex < this->mCaretIndex) {
@@ -443,7 +443,7 @@ void UIEditBox::ComputeDrawingIndex()
         if (this->GetGEText()->GetTextExtent().GetWidth() < this->mTextRectangle.GetWidth())
             break;
         this->mDrawingIndex++;
-        theCursor = (const char*)_mbsinc(reinterpret_cast<const unsigned char*>(theCursor));
+        theCursor = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCursor));
     }
 }
 
@@ -499,12 +499,12 @@ long UIEditBox::CopyData()
     if (this->mIsSingleLine) {
         const char* theString;
         if (!this->mIsPasswordBox)
-            theString = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]), this->mDrawingIndex);
+            theString = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]), this->mDrawingIndex);
         else {
             thePassword.Clear();
             for (unsigned long i = 0; i < this->mLines[this->mCaretLine].GetLength(); i++)
                 thePassword += UWideString("*");
-            theString = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)thePassword), this->mDrawingIndex);
+            theString = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)thePassword), this->mDrawingIndex);
         }
         theLocation = GE2DPoint(this->mTextRectangle.GetLeft(), this->mTextRectangle.GetTop());
         this->GetGEText()->SetLocation(theLocation);
@@ -531,7 +531,7 @@ long UIEditBox::CopyData()
         theLastLine = theFirstLine + this->mVisibleLineCount;
         for (unsigned long i = theFirstLine; i < theLastLine; i++) {
             if (i < this->mLines.size()) {
-                if (_mbschr(reinterpret_cast<const unsigned char*>((const char*)this->mLines[i]), '\n'))
+                if (PlatMbsChr(reinterpret_cast<const unsigned char*>((const char*)this->mLines[i]), '\n'))
                     this->mDisplayLines[i - theFirstLine].CopyString(this->mLines[i], this->mLines[i].GetLength() - 1);
                 else
                     this->mDisplayLines[i - theFirstLine] = this->mLines[i];
@@ -552,7 +552,7 @@ long UIEditBox::CopyData()
                 this->mCopiedIMEActive = false;
             else
                 this->mCopiedIMEStartLine = this->mIMEStartLine - theFirstLine;
-            long theLength = _mbslen(_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mIMEStartLine]),
+            long theLength = PlatMbsLen(PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mIMEStartLine]),
                                               this->mIMEStartIndex));
             if (theLength < (long)this->mIMECompositionLength) {
                 long theCount = this->mIMECompositionLength - theLength;
@@ -726,7 +726,7 @@ void UIEditBox::DeleteText(unsigned long inStartIndex, unsigned long inStartLine
     UWideString theString;
     if (inStartLine == inEndLine) {
         theString.CopyString(this->mLines[inStartLine], inStartIndex);
-        theString += (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inStartLine]),
+        theString += (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inStartLine]),
                                            inEndIndex);
         this->mLines[inStartLine] = theString;
     } else {
@@ -735,7 +735,7 @@ void UIEditBox::DeleteText(unsigned long inStartIndex, unsigned long inStartLine
         if (inEndIndex == (this->mLines.begin() + inEndLine)->GetLength())
             this->DeleteLine(inEndLine);
         else {
-            const char* theTail = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inEndLine]),
+            const char* theTail = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inEndLine]),
                                                         inEndIndex);
             this->mLines[inEndLine] = theTail;
             if (this->mCaretIndex > (long)(this->mLines.begin() + inEndLine)->GetLength())
@@ -745,13 +745,13 @@ void UIEditBox::DeleteText(unsigned long inStartIndex, unsigned long inStartLine
     if (inEndLine > 0)
         for (unsigned long i = inStartLine + 1; i < inEndLine; i++)
             this->DeleteLine(inStartLine + 1);
-    if (inStartLine > 0 && !_mbschr(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inStartLine - 1]), '\n')) {
+    if (inStartLine > 0 && !PlatMbsChr(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inStartLine - 1]), '\n')) {
         inStartLine--;
         inStartIndex += this->mLines[inStartLine].GetLength();
     }
     unsigned long theLine = inStartLine;
     while (theLine + 1 < this->mLines.size()) {
-        if (_mbschr(reinterpret_cast<const unsigned char*>((const char*)this->mLines[theLine]), '\n'))
+        if (PlatMbsChr(reinterpret_cast<const unsigned char*>((const char*)this->mLines[theLine]), '\n'))
             break;
         this->mCaretLine = theLine;
         this->mCaretIndex = this->mLines[theLine].GetLength();
@@ -819,7 +819,7 @@ long UIEditBox::DrawPolygons()
                 theString.CopyString(this->mDisplayLines[i], j);
                 this->mCopiedText->SetText(theString);
                 float theX = this->mCopiedText->GetTextExtent().GetWidth() + this->mCopiedTextRectangle.GetLeft();
-                const char* theChar = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mDisplayLines[i]), j);
+                const char* theChar = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mDisplayLines[i]), j);
                 theString.CopyString(theChar, 1);
                 if ((this->mCopiedIMEAttributes[theOffset] == 1 || this->mCopiedIMEAttributes[theOffset] == 3) &&
                     this->mCopiedTextRectangle.GetRight() > theX) {
@@ -836,7 +836,7 @@ long UIEditBox::DrawPolygons()
                     theLine.SetEndPoint(GE2DPoint(theEnd, theStart.GetY()));
                     theResult = this->GetRasterizer()->Draw(&theLine, this->GetScreenIndex());
                 }
-                theOffset += _mbsnbcnt(reinterpret_cast<const unsigned char*>((const char*)theString), 1);
+                theOffset += PlatMbsNBCnt(reinterpret_cast<const unsigned char*>((const char*)theString), 1);
             }
         }
     }
@@ -869,12 +869,12 @@ long UIEditBox::DrawTextA()
         }
         theString = this->mDisplayLines[i];
         if (this->mCopiedIMEEndLine == i) {
-            char* theEnd = (char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theString), this->mCopiedIMEEndIndex);
+            char* theEnd = (char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theString), this->mCopiedIMEEndIndex);
             strcpy(theEnd, "");
         }
         const char* theText;
         if (this->mCopiedIMEStartLine == i)
-            theText = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theString), this->mCopiedIMEStartIndex);
+            theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theString), this->mCopiedIMEStartIndex);
         else
             theText = theString;
         GEColor theColor;
@@ -897,16 +897,16 @@ void UIEditBox::GetLocationFromIndex(unsigned long inIndex, unsigned long inLine
     UWideString thePassword;
     const char* theText;
     if (!this->mIsPasswordBox)
-        theText = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]),
+        theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]),
                                         this->mDrawingIndex);
     else {
         thePassword.Clear();
         for (unsigned long i = 0; i < this->mLines[this->mCaretLine].GetLength(); i++)
             thePassword += UWideString("*");
-        theText = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)thePassword), this->mDrawingIndex);
+        theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)thePassword), this->mDrawingIndex);
     }
     theString.CopyString(theText, inIndex - this->mDrawingIndex);
-    char* theEnd = (char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theString), inIndex - this->mDrawingIndex);
+    char* theEnd = (char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theString), inIndex - this->mDrawingIndex);
     strcpy(theEnd, "");
     this->GetGEText()->SetText(theString);
     outLocation = GE2DPoint(this->GetGEText()->GetTextExtent().GetWidth() + this->mTextRectangle.GetLeft(), this->mTextRectangle.GetTop());
@@ -961,7 +961,7 @@ void UIEditBox::GetSelectedTextRectangle(unsigned long inLine, unsigned long inS
     theString.CopyString(this->mDisplayLines[inLine], inStartIndex);
     this->mCopiedText->SetText(theString);
     outRectangle.SetLeft(this->mCopiedText->GetTextExtent().GetWidth() + this->mTextRectangle.GetLeft());
-    const char* theText = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mDisplayLines[inLine]),
+    const char* theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mDisplayLines[inLine]),
                                                 inStartIndex);
     theString.CopyString(theText, inEndIndex - inStartIndex);
     this->mCopiedText->SetText(theString);
@@ -977,13 +977,13 @@ void UIEditBox::GetText(unsigned long inStartLine, unsigned long inEndLine, unsi
     UWideString theString;
     const char* theText;
     if (inStartLine == inEndLine) {
-        theText = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inStartLine]), inStartIndex);
+        theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inStartLine]), inStartIndex);
         outString.CopyString(theText, inEndIndex - inStartIndex);
     } else {
         if (inStartIndex == this->mLines[inStartLine].GetLength())
             outString = "";
         else {
-            theText = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inStartLine]), inStartIndex);
+            theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[inStartLine]), inStartIndex);
             outString.CopyString(theText, this->mLines[inStartLine].GetLength() - inStartIndex);
         }
         for (unsigned long i = inStartLine + 1; i < inEndLine; i++)
@@ -1186,7 +1186,7 @@ void UIEditBox::ProcessDownKey()
 void UIEditBox::ProcessEndKey()
 {
     this->mCaretIndex = this->mLines[this->mCaretLine].GetLength();
-    if (_mbschr(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]), '\n'))
+    if (PlatMbsChr(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]), '\n'))
         this->mCaretIndex--;
     if (this->mIsSingleLine)
         this->ComputeDrawingIndex();
@@ -1209,10 +1209,10 @@ void UIEditBox::ProcessEnterKey()
         if (this->mLines[this->mCaretLine].GetLength() > 0) {
             theLine = this->mLines[this->mCaretLine];
             this->mLines[this->mCaretLine].InsertString("\n", this->mCaretIndex, true);
-            theTail = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)theLine), this->mCaretIndex);
+            theTail = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theLine), this->mCaretIndex);
         } else {
             this->mLines[this->mCaretLine] = "\n";
-            theTail = (const char*)_mbsinc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]));
+            theTail = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]));
         }
         this->mCaretLine++;
         this->mCaretIndex = 0;
@@ -1589,11 +1589,11 @@ void UIEditBox::SetCaretLocation(unsigned long inIndex, unsigned long inLine)
 void UIEditBox::SetIndexFromUpDownOffset()
 {
     UWideString theChar;
-    const char* theCursor = (const char*)_mbsninc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]),
+    const char* theCursor = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)this->mLines[this->mCaretLine]),
                                                   this->mDrawingIndex);
     float theWidth = 0.0f;
     long theLength = this->mLines[this->mCaretLine].GetLength();
-    if (_mbschr(reinterpret_cast<const unsigned char*>(theCursor), '\n'))
+    if (PlatMbsChr(reinterpret_cast<const unsigned char*>(theCursor), '\n'))
         theLength--;
     for (this->mCaretIndex = this->mDrawingIndex; this->mCaretIndex < theLength; this->mCaretIndex++) {
         theChar = "";
@@ -1602,7 +1602,7 @@ void UIEditBox::SetIndexFromUpDownOffset()
         theWidth += this->GetGEText()->GetTextExtent().GetWidth();
         if (theWidth > this->mCaretX)
             break;
-        theCursor = (const char*)_mbsinc(reinterpret_cast<const unsigned char*>(theCursor));
+        theCursor = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(theCursor));
     }
     this->SetDirty(true);
 }

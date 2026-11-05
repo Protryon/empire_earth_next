@@ -54,7 +54,7 @@ RTSPhysics::RTSPhysics(RTSGraphics* inGraphics, TMTimer* inTimer, long inDefault
 
     ESVERIFY_AT(TSScheduler::CreateThread(this->mThread, RTSPhysics::Main, (void*)this) == keseOK, 81);
     ESVERIFY_AT(this->mThread->SetPriority(inThreadPriority) == keseOK, 82);
-    this->mThreadCreated->Wait(INFINITE);
+    this->mThreadCreated->Wait(kTSWaitInfinite);
     this->mThread->SetName(gPhysicsThreadName);
 
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mServerMessageQueueLock) == keseOK, 91);
@@ -168,7 +168,7 @@ unsigned long RTSPhysics::Main(void* inPointer)
     void* theParameter2;
     long theResult;
     thePhysics->mThreadCreated->Set();
-    thePhysics->mStartThreadMainLoop->Wait(INFINITE);
+    thePhysics->mStartThreadMainLoop->Wait(kTSWaitInfinite);
     UMSetFloatingPointPrecision(kFPPrecision53);
     while (!thePhysics->mStopThread) {
         theResult = thePhysics->mThread->Receive(theMessage, theParameter1, theParameter2);
@@ -219,7 +219,7 @@ unsigned long RTSPhysics::Main(void* inPointer)
         } else {
             thePhysics->Idle();
             thePhysics->mGraphics->mRenderNow->Set();
-            Sleep(1);
+            PlatSleep(1);
         }
     }
     thePhysics->mThreadDone->Set();

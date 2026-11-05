@@ -239,8 +239,8 @@ bool EESMCondition::Evaluate()
     case kSMConditionChatMessageContains: {
         UWideString theText(this->mChatText);
         UWideString theChat(gWorld.mScenarioManager->mLastChatText);
-        _mbslwr((unsigned char*)(const char*)theText);
-        _mbslwr((unsigned char*)(const char*)theChat);
+        PlatMbsLwr((unsigned char*)(const char*)theText);
+        PlatMbsLwr((unsigned char*)(const char*)theChat);
         theResult = theChat.Find(theText, 0) != theChat.GetLength();
         break;
     }

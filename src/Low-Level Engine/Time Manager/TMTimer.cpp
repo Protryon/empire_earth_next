@@ -1,7 +1,6 @@
 // C:\EEX\Low-Level Engine\Time Manager\TMTimer.cpp (folder name inferred)
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
-#include <mmsystem.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/TMTimer.h"
@@ -10,7 +9,7 @@
 // SYNTHETIC: LLE 0x10053ad3
 
 // FUNCTION: LLE 0x10053ae7
-// Creates a stopped multimedia timer with an interval (ms, or us for unit 1, kept in ms) and no callback or event
+// Creates a stopped system timer with an interval (ms, or us for unit 1, kept in ms) and no callback or event
 TMTimer::TMTimer(unsigned long inInterval, unsigned long inTimeUnit, bool inRepeating)
 {
     this->mInterval = inInterval / (inTimeUnit ? 1000 : 1);
@@ -94,26 +93,16 @@ long TMTimer::SetTimerType(unsigned long inType)
 }
 
 // FUNCTION: LLE 0x10053bbb
-// Starts the multimedia timer (callback or event, one-shot or periodic); kErrorBusy if running, kErrorNotFound if not
+// Starts the system timer (callback or event, one-shot or periodic); kErrorBusy if running, kErrorNotFound if not
 long TMTimer::Start()
 {
     long theResult;
-    DWORD_PTR theUser = 0;
     if (!this->mRunning) {
-        this->mStartTime = timeGetTime();
-        LPTIMECALLBACK theCallback;
-        unsigned int theFlags;
-        if (this->mTimerType == 0) {
-            theCallback = TMTimer::TimerCallback;
-            theUser = reinterpret_cast<DWORD_PTR>(this);
-            theFlags = TIME_CALLBACK_FUNCTION;
-        } else {
-            theCallback = (LPTIMECALLBACK)this->mEvent->mHandle;
-            theFlags = TIME_CALLBACK_EVENT_SET;
-        }
-        if (this->mRepeating)
-            theFlags |= TIME_PERIODIC;
-        this->mTimerID = timeSetEvent(this->mInterval, 0, theCallback, theUser, theFlags);
+        this->mStartTime = PlatTimeMilliseconds();
+        if (this->mTimerType == 0)
+            this->mTimerID = PlatTimerStartCallback(this->mInterval, this->mRepeating, TMTimer::TimerCallback, this);
+        else
+            this->mTimerID = PlatTimerStartEvent(this->mInterval, this->mRepeating, this->mEvent->mHandle);
         if (this->mTimerID) {
             this->mRunning = true;
             theResult = kErrorOK;
@@ -128,7 +117,7 @@ long TMTimer::Start()
 // Stops the timer; kErrorNotFound if it is not running or cannot be killed
 long TMTimer::Stop()
 {
-    if (this->mRunning && timeKillEvent(this->mTimerID) == TIMERR_NOERROR) {
+    if (this->mRunning && PlatTimerStop(this->mTimerID)) {
         this->mRunning = false;
         return kErrorOK;
     }
@@ -141,8 +130,8 @@ long TMTimer::Stop(unsigned long& outElapsed, unsigned long& outRemaining)
 {
     if (!this->mRunning)
         return kErrorNotFound;
-    unsigned long theNow = timeGetTime();
-    if (timeKillEvent(this->mTimerID) == TIMERR_NOERROR) {
+    unsigned long theNow = PlatTimeMilliseconds();
+    if (PlatTimerStop(this->mTimerID)) {
         outElapsed = theNow - this->mStartTime;
         outRemaining = 0;
         this->mRunning = false;
@@ -152,13 +141,12 @@ long TMTimer::Stop(unsigned long& outElapsed, unsigned long& outRemaining)
 }
 
 // FUNCTION: LLE 0x10053c77
-// Multimedia-timer callback: restarts the elapsed clock (repeating) or marks the timer stopped, then calls the callback
-void CALLBACK TMTimer::TimerCallback(UINT inTimerID, UINT inMessage, DWORD_PTR inUser, DWORD_PTR inParameter1,
-                                    DWORD_PTR inParameter2)
+// System-timer callback: restarts the elapsed clock (repeating) or marks the timer stopped, then calls the callback
+void TMTimer::TimerCallback(void* inUser)
 {
-    TMTimer* theTimer = reinterpret_cast<TMTimer*>(inUser);
+    TMTimer* theTimer = static_cast<TMTimer*>(inUser);
     if (theTimer->mRepeating)
-        theTimer->mStartTime = timeGetTime();
+        theTimer->mStartTime = PlatTimeMilliseconds();
     else
         theTimer->mRunning = false;
     if (theTimer->mCallback)

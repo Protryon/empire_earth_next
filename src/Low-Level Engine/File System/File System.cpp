@@ -58,16 +58,16 @@ void FSGetVolumeAndDirectory(const UString& inPath, FSFileSpec& outSpec)
 // is empty or not a directory
 void FSInitialize(const UString& inPath)
 {
-    char theCurrentDirectory[MAX_PATH] = {0};
+    char theCurrentDirectory[PLAT_MAX_PATH] = {0};
     FSFileSpec theSpec;
-    UString thePath(MAX_PATH);
+    UString thePath(PLAT_MAX_PATH);
     bool theFound = false;
     if (inPath.GetLength() > 0) {
         FSGetVolumeAndDirectory(inPath, theSpec);
         theFound = theSpec.IsDirectory();
     }
     if (!theFound) {
-        GetCurrentDirectoryA(MAX_PATH, theCurrentDirectory);
+        PlatGetCurrentDirectory(theCurrentDirectory, PLAT_MAX_PATH);
         thePath = theCurrentDirectory;
         FSGetVolumeAndDirectory(thePath, theSpec);
     }

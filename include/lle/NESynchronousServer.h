@@ -102,9 +102,9 @@ public:
     void SendExitMessage()
     {
         this->mSendThreadExitEvent->Set();
-        this->mSendThreadFinishedEvent->Wait(INFINITE);
+        this->mSendThreadFinishedEvent->Wait(kTSWaitInfinite);
         this->mMainThreadExitEvent->Set();
-        this->mMainThreadFinishedEvent->Wait(INFINITE);
+        this->mMainThreadFinishedEvent->Wait(kTSWaitInfinite);
     }
     virtual void SetCurrentCommunicationsTick(unsigned long inTick) { this->mCurrentCommunicationsTick = inTick; }
     void SetCurrentPhysicsTick(unsigned long& inTick) { this->mCurrentPhysicsTick = inTick; }

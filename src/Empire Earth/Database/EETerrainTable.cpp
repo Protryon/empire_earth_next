@@ -221,7 +221,7 @@ void EETerrainTable::Load(GETerrainMesh& ioMesh)
         this->mLoadCount++;
         sDatabaseLock.mLock->Leave();
         while (this->mIsLoading == true)
-            Sleep(1);
+            PlatSleep(1);
         sDatabaseLock.mLock->Enter();
     }
     sDatabaseLock.mLock->Leave();
@@ -306,7 +306,7 @@ void EELoadTerrainPreviews()
 void EETerrainTable::AttachTextures(GETextureSet* inTextureSet)
 {
     while (this->mIsLoading == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mLoadCount > 0) {
         for (long y = 0; y < this->mRows; y++) {
@@ -322,7 +322,7 @@ void EETerrainTable::AttachTextures(GETextureSet* inTextureSet)
 void EETerrainTable::Unload(GETerrainMesh& ioMesh)
 {
     while (this->mIsLoading == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mLoadCount == 1) {
         this->mLoadCount = 0;

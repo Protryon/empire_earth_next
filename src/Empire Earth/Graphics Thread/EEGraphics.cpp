@@ -180,9 +180,9 @@ long EEGraphics::RestoreSurfaces()
     if (theResult == 0) {
         gMousePointer->mThread->Post(0x402, NULL, NULL, true);
         while (gMousePointer->mIsShown)
-            Sleep(1);
+            PlatSleep(1);
         while (gMousePointer->mIsShown)
-            Sleep(1);
+            PlatSleep(1);
         gWorld.mLock->WriteLock();
         gUIManager->RedrawAll();
         this->PostRedrawUI();
@@ -545,7 +545,7 @@ long EEGraphics::PostMessage50AAndWait()
 {
     long theResult = this->mThread->Post(0x50a, NULL, NULL, true);
     if (theResult == 0)
-        this->mMessageQueueDone->Wait(INFINITE);
+        this->mMessageQueueDone->Wait(kTSWaitInfinite);
     return theResult;
 }
 

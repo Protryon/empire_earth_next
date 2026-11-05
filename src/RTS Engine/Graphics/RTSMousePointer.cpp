@@ -33,7 +33,7 @@ RTSMousePointer::RTSMousePointer(RTSMouse* inMouse, GEWindow* inWindow, long inT
 
     ESVERIFY_AT(TSScheduler::CreateThread(this->mThread, RTSMousePointer::Main, (void*)this) == keseOK, 54);
     ESVERIFY_AT(this->mThread->SetPriority(inThreadPriority) == keseOK, 55);
-    this->mThreadCreated->Wait(INFINITE);
+    this->mThreadCreated->Wait(kTSWaitInfinite);
     this->mThread->SetName(gMousePointerThreadName);
 }
 
@@ -91,7 +91,7 @@ unsigned long RTSMousePointer::Main(void* inPointer)
                 thePointer->mMouse->EndFrame();
             }
         }
-        Sleep(0x19);
+        PlatSleep(0x19);
     }
     thePointer->mThreadDone->Set();
     return 0;

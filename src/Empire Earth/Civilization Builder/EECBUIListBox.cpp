@@ -110,7 +110,7 @@ public:
                  && theRight.GetIndexedSubstring(0, theUnassigned.GetLength() - 1) == theUnassigned)
             theResult = false;
         else
-            theResult = _mbsicmp(reinterpret_cast<const unsigned char*>((const char*)inLeft),
+            theResult = PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)inLeft),
                                  reinterpret_cast<const unsigned char*>((const char*)inRight)) < 0;
         return theResult;
     }

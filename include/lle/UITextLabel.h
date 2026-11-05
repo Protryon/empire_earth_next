@@ -6,6 +6,7 @@
 // 0x1005f689 (sizeof 0x124). Access levels from the exports. Requires lle/UIControl.h (includes lle/UIScrollBar.h).
 #ifndef LLE_UITEXTLABEL_H
 #define LLE_UITEXTLABEL_H
+#include "platform/PlatString.h"
 
 #include <stdlib.h>
 #include <vector>
@@ -81,7 +82,7 @@ public:
     void SetText(long inValue)
     {
         char theBuffer[50];
-        _itoa(inValue, theBuffer, 10);
+        PlatIToA(inValue, theBuffer, 10);
         UWideString theText(theBuffer);
         this->SetText(theText, true);
     }
