@@ -277,6 +277,8 @@ void ESShutdown(bool inForced)
 // int3; jmp [__imp__abort] (provisional name)
 static void ESShowVerification(const char* inText)
 {
+    fprintf(stderr, "%s\n", inText);   // port: the reason reaches the console and test logs before the break
+    fflush(stderr);
     __debugbreak();
     abort();
 }
