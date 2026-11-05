@@ -1,17 +1,14 @@
 """The guarded live-game runner the sessions use (tools/harness/exe_boot.c): builds the debugger harness, stages
 the build under test (stage) and runs it under exe_boot.exe's guards (run). game_session.py is the entry point.
 
-"Registry + window" (owner decision 2026-10-23):
-  - every process run is wrapped in a snapshot/restore of HKCU\\Software\\Mad Doc Software\\EE-AOC, the game's own
-    key and the only one the harness may touch (reg export before; after: delete + reg import, checked byte for byte
-    against the snapshot; the key is deleted if it was absent). The parent key's subkeys are listed before and
-    after: a run that creates anything else under it FAILs (left for the owner; never deleted here).
-    A marker file (build/boot/reg_restore_pending.txt) makes the next start restore first if a run was interrupted.
-    The key each run leaves behind is exported to build/boot/exe_{o,r}.<mode>.reg and compared.
+Settings + window:
+  - the game keeps its settings in config.ini in its own directory (platform/PlatConfig.h); the registry is not used.
+    Every run writes a fresh config.ini into the staged copy with the run's pins (config_set: "Name=value" or
+    "Name=dword:N" in the [Game] section, e.g. Game Bit Depth=32) and copies the file the game leaves behind to
+    config_out. exe_boot.c refuses every registry write (a run that writes one STOPs).
   - the run mode stages a copy of the game data (Data, Users, redist, *.cfg; copied once from the install, read
-    only, into build/boot/aoc_install_copy), allows windows and DirectDraw initialisation, and captures the largest
-    window at the STOP to build/boot/exe_{o,r}.run.bmp. --reg-set NAME=dword:N writes a value into the EE-AOC key
-    inside the snapshot (e.g. to try a windowed option).
+    only, into build/boot/aoc_install_copy; or the unified open data, EE_HARNESS_OPEN_DATA), allows windows and the
+    renderer's initialisation, and captures the largest window at the STOP to build/boot/<stage>.run.bmp.
 """
 import argparse
 import hashlib
@@ -95,14 +92,7 @@ INSTALL = pathlib.Path(r"C:\Program Files (x86)\Empire Earth\Empire Earth - The 
 # from there into every staging directory; the community DDraw.dll/dreXmod/discord files are not copied
 GAME_FILES = ["Data", "Users", "redist", "WONLobby.cfg", "zzWONVersion.cfg"]
 CACHE = BOOT / "aoc_install_copy"
-REG_PARENT = r"HKCU\Software\Mad Doc Software"
-REG_KEY = REG_PARENT + r"\EE-AOC"     # the only key the harness snapshots, writes (--reg-set) and restores
-REG_PENDING = BOOT / "reg_restore_pending.txt"   # present while a run may have changed the key: restore at next start
-REG_SNAP = BOOT / "reg_snapshot.reg"
-# Round 39 (parallel sessions): the shared snapshot of lease holders (batches, --instance sessions); see REG_LEASES.
-REG_BATCH_PENDING = BOOT / "reg_batch_pending.txt"
-REG_BATCH_SNAP = BOOT / "reg_batch_snapshot.reg"
-INSTANCE_SUBTREE = "windowed-test instance {}"   # per-instance view of the game key (exe_boot.c --registry-subtree)
+CONFIG_SECTION = "Game"   # the section of config.ini the run pins go to (EEPreferences.cpp kEEGameSection)
 
 
 def install_cache():
@@ -121,6 +111,59 @@ def install_cache():
             shutil.copy(src, CACHE / n)
     (CACHE / ".complete").write_text("copied from the install (read only)\n")
     return CACHE
+
+
+OPEN_DATA = ROOT / "build" / "open_data"
+
+
+def data_tree(kind):
+    """The unified data tree the runs stage (tools/open_data.py: both installs' data.ssa and loose data in one Data
+    folder; the game needs neither an archive nor the original game). kind "open": db text, glTF, PNG
+    (build/open_data/tree, or the tree EE_HARNESS_OPEN_DATA names when that is a directory); "binary": the same files
+    unconverted (build/open_data/tree-binary). Built once when missing."""
+    env = os.environ.get("EE_HARNESS_OPEN_DATA")
+    if kind == "open" and env and env not in ("1", "yes") and pathlib.Path(env).is_dir():
+        tree = pathlib.Path(env)
+    else:
+        tree = OPEN_DATA / ("tree" if kind == "open" else "tree-binary")
+    if not (tree / "open_data.json").exists():
+        print(f"data: building {tree} (tools/open_data.py build)", flush=True)
+        cmd = [sys.executable, "-I", str(ROOT / "tools" / "open_data.py"), "build", str(tree), "--force"]
+        if kind == "binary":
+            cmd.append("--binary")
+        r = subprocess.run(cmd, capture_output=True, text=True)
+        if r.returncode:
+            raise RuntimeError(f"open_data build failed:\n{r.stdout}{r.stderr}")
+    return tree
+
+
+WRITABLE = {"saved games", "scenarios"}   # Data folders the game writes into: copied, not linked
+
+
+def stage_tree(tree, d):
+    """Stages a data tree into d: Data's read-only files as hard links (fast; copies when linking fails), the folders
+    the game writes into, Users and the root files as copies."""
+    for item in tree.iterdir():
+        if item.name == "open_data.json":
+            continue
+        if item.is_file():
+            shutil.copy(item, d / item.name)
+        elif item.name.lower() != "data":
+            shutil.copytree(item, d / item.name)
+    for src in (tree / "Data").rglob("*"):
+        rel = src.relative_to(tree / "Data")
+        dst = d / "Data" / rel
+        if src.is_dir():
+            dst.mkdir(parents=True, exist_ok=True)
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if rel.parts[0].lower() in WRITABLE or len(rel.parts) == 1:
+            shutil.copy(src, dst)
+            continue
+        try:
+            os.link(src, dst)
+        except OSError:
+            shutil.copy(src, dst)
 
 
 def rename_import(path, old, new):
@@ -167,13 +210,15 @@ def stage(name, build, data=True, silent_audio=True):
         rdp_modes.build_proxy(d)
         print('display: RDP mode-list proxy staged (DDRDP.dll)', flush=True)
     if data:
-        c = install_cache()
-        for n in GAME_FILES:
-            if (c / n).is_dir():
-                shutil.copytree(c / n, d / n)
-            elif (c / n).exists():
-                shutil.copy(c / n, d / n)
-        if os.environ.get("EE_HARNESS_TEXT_DB"):
+        text_db, open_assets = os.environ.get("EE_HARNESS_TEXT_DB"), os.environ.get("EE_HARNESS_OPEN_ASSETS")
+        kind = "open" if os.environ.get("EE_HARNESS_OPEN_DATA") or (text_db and open_assets) else "binary"
+        c = data_tree(kind)
+        stage_tree(c, d)
+        print(f"data: the unified {kind} data tree {c} ({json.loads((c / 'open_data.json').read_text())['files']} files)",
+              flush=True)
+        if kind == "open":
+            text_db = open_assets = None   # already in the tree
+        if text_db:
             # TEST: the db tables as text (tools/eedata, clean mode) in the staged copy's Data\db; the game prefers
             # them over data.ssa
             r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "eedata" / "eedata.py"), "install", str(d)],
@@ -181,7 +226,7 @@ def stage(name, build, data=True, silent_audio=True):
             if r.returncode:
                 raise RuntimeError(f"eedata install failed:\n{r.stdout}{r.stderr}")
             print(f"data: db text tables installed ({len(list((d / 'Data' / 'db').glob('*.*')))} files)", flush=True)
-        if os.environ.get("EE_HARNESS_OPEN_ASSETS"):
+        if open_assets:
             # TEST: every model as glTF and every texture as PNG (tools/eemodel) in the staged copy's Data\Models and
             # Data\Textures; the game prefers them over the .cem/.sst/.tga
             r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "eemodel" / "eemodel.py"), "install", str(d)],
@@ -193,342 +238,35 @@ def stage(name, build, data=True, silent_audio=True):
     return d
 
 
-def reg(*args):
-    r = subprocess.run(["reg.exe", *args], capture_output=True, text=True)
-    return r.returncode, (r.stdout + r.stderr).strip()
-
-
-def reg_export(path):
-    """Export the EE-AOC key to path; False if the key does not exist."""
-    if pathlib.Path(path).exists():
-        pathlib.Path(path).unlink()
-    return reg("export", REG_KEY, str(path), "/y")[0] == 0
-
-
-REG_LOCK = BOOT / "reg_owner.lock"   # round 39: a plain (whole-key) session's exclusive ownership of the key
-REG_LOCK_WAIT_S = 3600
-# Round 39: instance sessions and batches share the key under leases (one file per owner process, pid + start time):
-# the first lease snapshots the key (REG_BATCH_SNAP), the last one to leave restores it byte-exact; a lease whose
-# process is gone is pruned by the next caller (an interrupted batch or session is restored that way). Plain sessions
-# need the key alone: they wait while any live lease exists, and leases wait while a plain session owns it.
-REG_LEASES = BOOT / "reg_leases"
-REG_MUTEX = BOOT / "reg_state.mutex"   # held for the few seconds a state change (snapshot/restore/lease) takes
-
-
-def _owner_fields(path):
-    try:
-        lines = path.read_text().splitlines()
-    except OSError:
-        return None
-    fields = dict(ln.split(" ", 1) for ln in lines if " " in ln)
-    return int(fields.get("pid", "0") or 0), fields.get("start", "")
-
-
-def _owner_text(what, extra=""):
-    import os
-    return f"{what}\npid {os.getpid()}\nstart {_process_start(os.getpid())}\n" + extra
-
-
-def _live(path):
-    owner = _owner_fields(path)
-    return bool(owner and owner[0] and str(_process_start(owner[0])) == owner[1])
-
-
-class _StateMutex:
-    def __enter__(self):
-        import os
-        import time
-        BOOT.mkdir(parents=True, exist_ok=True)
-        end = time.monotonic() + 300
-        while True:
-            try:
-                fd = os.open(str(REG_MUTEX), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.write(fd, _owner_text("registry state change").encode())
-                os.close(fd)
-                return self
-            except FileExistsError:
-                try:
-                    age = time.time() - REG_MUTEX.stat().st_mtime
-                except OSError:
-                    continue
-                if (age > 2 and not _live(REG_MUTEX)) or age > 120 or time.monotonic() > end:
-                    REG_MUTEX.unlink(missing_ok=True)   # left by a killed process
-                    continue
-                time.sleep(0.2)
-
-    def __exit__(self, *exc):
-        REG_MUTEX.unlink(missing_ok=True)
-
-
-def _prune_leases():
-    """Remove leases of dead processes; return (live lease paths, the dead ones' texts)."""
-    REG_LEASES.mkdir(parents=True, exist_ok=True)
-    live, dead = [], []
-    for lease in sorted(REG_LEASES.glob("*.lease")):
-        if _live(lease):
-            live.append(lease)
-        else:
-            try:
-                dead.append(lease.read_text())
-            except OSError:
-                pass
-            lease.unlink(missing_ok=True)
-    return live, dead
-
-
-def _restore_shared_if_idle(live):
-    if not live and REG_BATCH_PENDING.exists():
-        print("registry: restoring the shared snapshot (every lease holder has ended)", flush=True)
-        reg_restore(REG_BATCH_PENDING, REG_BATCH_SNAP)
-        return True
-    return False
-
-
-def shared_acquire(what, extra=""):
-    """Take a lease on the key (batch or instance session). Returns (lease path, texts of dead leases pruned)."""
-    import os
-    import time
-    end, told, pruned = time.monotonic() + REG_LOCK_WAIT_S, False, []
-    while True:
-        with _StateMutex():
-            if REG_LOCK.exists() and not _live(REG_LOCK):
-                print("registry: a plain session that owned the key is gone; taking over", flush=True)
-                REG_LOCK.unlink(missing_ok=True)
-            if not REG_LOCK.exists():
-                live, dead = _prune_leases()
-                pruned += dead
-                if not live:
-                    _restore_shared_if_idle(live)   # an interrupted lease set
-                    if REG_PENDING.exists():
-                        print("registry: restoring after an interrupted run", flush=True)
-                        reg_restore()
-                    existed = reg_export(REG_BATCH_SNAP)
-                    REG_BATCH_PENDING.write_text(("existed" if existed else "absent") + "\n"
-                                                 + json_line(siblings=reg_siblings()))
-                lease = REG_LEASES / f"{what.split()[0]}.{os.getpid()}.lease"
-                lease.write_text(_owner_text(what, extra))
-                return lease, pruned
-        if not told:
-            print(f"registry: {REG_KEY} is owned by a plain session (pid {(_owner_fields(REG_LOCK) or (0,))[0]}); "
-                  f"{what} waits", flush=True)
-            told = True
-        if time.monotonic() > end:
-            raise SystemExit(f"registry: still owned by a plain session after {REG_LOCK_WAIT_S} s")
-        time.sleep(3)
-
-
-def shared_release(lease):
-    """Drop a lease; the last holder restores byte-exact. Returns True if this call restored the key, else the pids
-    of the leases still live (the restore is theirs)."""
-    with _StateMutex():
-        pathlib.Path(lease).unlink(missing_ok=True)
-        live, _ = _prune_leases()
-        if live:
-            return [(_owner_fields(x) or (0,))[0] for x in live]
-        siblings = shared_siblings()
-        _restore_shared_if_idle(live)
-    after = reg_siblings()
-    if siblings is not False and after != siblings and not (siblings is None and after == []):
-        raise SystemExit(f"registry: the runs changed the subkeys of {REG_PARENT} outside EE-AOC (before {siblings}, "
-                         f"after {after}); left as is for the owner")
-    return True
-
-
-def json_line(**kw):
-    import json
-    return "json " + json.dumps(kw) + "\n"
-
-
-def shared_siblings():
-    import json
-    try:
-        for ln in REG_BATCH_PENDING.read_text().splitlines():
-            if ln.startswith("json "):
-                return json.loads(ln[5:]).get("siblings")
-    except OSError:
-        pass
-    return False
-
-
-def shared_recover():
-    """Prune dead leases; restore the shared snapshot if no live lease is left (also a dead plain owner's). Returns the
-    live lease paths."""
-    with _StateMutex():
-        live, _ = _prune_leases()
-        if not live and not (REG_LOCK.exists() and _live(REG_LOCK)):
-            _restore_shared_if_idle(live)
-            if REG_PENDING.exists():
-                print("registry: restoring after an interrupted run", flush=True)
-                reg_restore()
-                REG_LOCK.unlink(missing_ok=True)
-        return live
-
-
-def shared_live():
-    with _StateMutex():
-        return _prune_leases()[0]
-
-
-def reg_lock_acquire(what):
-    """A plain session's exclusive ownership: wait while a live plain session or any live lease holds the key; take
-    over from dead owners (their snapshots are then restored by the caller's interrupted-run checks)."""
-    import time
-    end, told = time.monotonic() + REG_LOCK_WAIT_S, False
-    while True:
-        with _StateMutex():
-            if REG_LOCK.exists() and not _live(REG_LOCK):
-                print("registry: the previous owner of the key is gone; taking over", flush=True)
-                REG_LOCK.unlink(missing_ok=True)
-            live, _ = _prune_leases()
-            if not REG_LOCK.exists() and not live:
-                _restore_shared_if_idle(live)
-                REG_LOCK.write_text(_owner_text(what))
-                return
-            holder = (_owner_fields(REG_LOCK) or (0,))[0] if REG_LOCK.exists() else [(_owner_fields(x) or (0,))[0] for x in live]
-        if not told:
-            print(f"registry: {REG_KEY} is in use by pid {holder}; {what} waits (parallel sessions: "
-                  f"tools/boot/game_batch.py or --instance)", flush=True)
-            told = True
-        if time.monotonic() > end:
-            raise SystemExit(f"registry: still in use after {REG_LOCK_WAIT_S} s")
-        time.sleep(3)
-
-
-def reg_lock_release():
-    import os
-    owner = _owner_fields(REG_LOCK)
-    if owner and owner[0] == os.getpid():
-        REG_LOCK.unlink(missing_ok=True)
-
-
-def reg_snapshot():
-    """Snapshot before a plain run (restoring first if a previous run did not finish its restore). Round 39: under the
-    exclusive owner lock, so concurrent plain sessions wait instead of clobbering each other's snapshot."""
-    reg_lock_acquire("session")
-    if REG_PENDING.exists():
-        print("registry: restoring after an interrupted run")
-        reg_restore()
-    existed = reg_export(REG_SNAP)
-    REG_PENDING.write_text("existed\n" if existed else "absent\n")
-    return existed
-
-
-def reg_restore(pending=REG_PENDING, snap=REG_SNAP):
-    existed = pending.exists() and pending.read_text().startswith("existed")
-    if reg("query", REG_KEY)[0] == 0:
-        code, log = reg("delete", REG_KEY, "/f")
-        if code:
-            raise SystemExit(f"registry restore failed (delete): {log}")
-    if existed:
-        code, log = reg("import", str(snap))
-        if code:
-            raise SystemExit(f"registry restore failed (import): {log}")
-        check = BOOT / f"reg_check.{pending.stem}.reg"
-        reg_export(check)
-        if check.read_bytes() != snap.read_bytes():
-            raise SystemExit("registry restore: the key differs from its snapshot")
-        check.unlink()
-    elif reg("query", REG_KEY)[0] == 0:
-        raise SystemExit("registry restore: the key still exists")
-    pending.unlink(missing_ok=True)
-
-
-def _process_start(pid):
-    """Creation time (FILETIME int) of a live process, or None when it is gone (ctypes; no psutil here)."""
-    import ctypes
-    from ctypes import wintypes
-    k = ctypes.WinDLL("kernel32", use_last_error=True)
-    k.OpenProcess.restype = wintypes.HANDLE
-    h = k.OpenProcess(0x1000, False, int(pid))   # PROCESS_QUERY_LIMITED_INFORMATION
-    if not h:
-        return None
-    try:
-        code = wintypes.DWORD()
-        times = [wintypes.FILETIME() for _ in range(4)]
-        if not k.GetExitCodeProcess(h, ctypes.byref(code)) or code.value != 259:   # STILL_ACTIVE
-            return None
-        if not k.GetProcessTimes(h, *[ctypes.byref(t) for t in times]):
-            return None
-        return (times[0].dwHighDateTime << 32) | times[0].dwLowDateTime
-    finally:
-        k.CloseHandle(h)
+def config_text(config_set):
+    """config.ini holding the run's pins: "Name=value" or "Name=dword:N" items (the old registry pin syntax)."""
+    lines = [f"[{CONFIG_SECTION}]"]
+    for item in config_set:
+        name, value = item.split("=", 1)
+        if value.startswith(("dword:", "sz:")):
+            value = value.split(":", 1)[1]
+        lines.append(f"{name.strip()} = {value}")
+    return "\n".join(lines) + "\n"
 
 
 def batch_begin(instances=()):
-    """Batch-level lease (tools/boot/game_batch.py): the snapshot is taken by the first lease and kept across the
-    whole batch. Returns the lease record plus the dead leases pruned (an interrupted batch's instances)."""
-    lease, pruned = shared_acquire("batch", json_line(instances=list(instances)))
-    return dict(lease=str(lease), pruned=pruned, snapshot=str(REG_BATCH_SNAP),
-                existed=REG_BATCH_PENDING.read_text().startswith("existed"))
+    """tools/harness/game_batch.py: nothing to snapshot (every staged copy has its own config.ini)."""
+    return dict(lease=None, pruned=[], snapshot=None, existed=False)
 
 
 def batch_end(begin):
-    """Release the batch lease. True: this call restored the key byte-exact; a list: the pids of other live lease
-    holders (instance sessions of other users), the last of which restores."""
-    return shared_release(begin["lease"])
+    return True
 
 
-def seed_instance_subtree(subtree, snapshot, reg_set=()):
-    """(Re)create EE-AOC\\<subtree> as a copy of the snapshot's game key (without any "windowed-test *" subtree)
-    plus the run's pins: the instance's private view of its preferences (exe_boot.c --registry-subtree)."""
-    if not subtree.startswith("windowed-test ") or "\\" in subtree:
-        raise ValueError("instance subtree must be a single 'windowed-test ...' key name")
-    key = REG_KEY + "\\" + subtree
-    if reg("query", key)[0] == 0:
-        code, log = reg("delete", key, "/f")
-        if code:
-            raise RuntimeError(f"instance registry reset failed: {log}")
-    raw = pathlib.Path(snapshot).read_bytes() if pathlib.Path(snapshot).exists() else b""
-    sections = 0
-    if raw[:2] == b"\xff\xfe":
-        root = "[HKEY_CURRENT_USER\\Software\\Mad Doc Software\\EE-AOC"
-        out, keep = ["Windows Registry Editor Version 5.00", ""], False
-        for line in raw.decode("utf-16").splitlines()[1:]:
-            if line.startswith("["):
-                rest = line[len(root):] if line.lower().startswith(root.lower()) else None
-                keep = rest is not None and (rest == "]" or (rest.startswith("\\")
-                                                            and not rest.lower().startswith("\\windowed-test ")))
-                if keep:
-                    line = root + "\\" + subtree + rest
-                    sections += 1
-            if keep:
-                out.append(line)
-        if sections:
-            seed = BOOT / f"reg_seed.{subtree.replace(' ', '_')}.reg"
-            seed.write_bytes(b"\xff\xfe" + ("\r\n".join(out) + "\r\n").encode("utf-16-le"))
-            code, log = reg("import", str(seed))
-            if code:
-                raise RuntimeError(f"instance registry seed failed: {log}")
-    if not sections:
-        code, log = reg("add", key, "/f")
-        if code:
-            raise RuntimeError(f"instance registry create failed: {log}")
-    for item in reg_set:
-        reg_add(key, item)
-    return key
+def shared_recover():
+    return []
 
 
-def reg_add(key, item):
-    name, value = item.split("=", 1)
-    typ, val = value.split(":", 1) if ":" in value else ("sz", value)
-    code, log = reg("add", key, "/v", name, "/t", {"dword": "REG_DWORD", "sz": "REG_SZ"}[typ], "/d", val, "/f")
-    if code:
-        raise RuntimeError(f'Test registry setup failed: {log}')
-
-
-def reg_siblings():
-    """The parent key's subkeys (None if the parent does not exist): a run must not add any but EE-AOC."""
-    code, out = reg("query", REG_PARENT)
-    return None if code else sorted(ln.strip() for ln in out.splitlines() if ln.strip().upper().startswith("HKEY_"))
-
-
-def run(harness, d, mode, timeout, dump=None, reg_set=(), reg_out=None, windowed=False, checkpoint='frame', trace_functions=None, live_log=None, loopback=False, harness_extra=(),
+def run(harness, d, mode, timeout, dump=None, config_set=(), config_out=None, windowed=False, checkpoint='frame', trace_functions=None, live_log=None, loopback=False, harness_extra=(),
         registry='self', reg_subtree=None, on_start=None):
-    """registry='self' (default): snapshot/restore around this run. registry='batch' (round 39): a batch
-    lease (batch_begin/batch_end) holds the shared snapshot; this run neither snapshots nor restores. registry='self'
-    with reg_subtree: this run takes its own lease on the shared snapshot (parallel --instance sessions). reg_subtree (round 39,
-    parallel instances): the game key is redirected to EE-AOC\\<reg_subtree>, seeded from the snapshot plus reg_set;
-    reg_set and reg_out then apply to that subtree. on_start(): called right before the harness starts."""
+    """config_set: the run's settings pins, written to a fresh config.ini in the staged copy d (config_text);
+    config_out: where the config.ini the game leaves behind is copied. registry and reg_subtree are accepted for
+    the callers and ignored (the game uses no registry). on_start(): called right before the harness starts."""
     cmd = [str(harness), str(d), "EE-AOC.exe", mode, str(timeout)] + ([str(dump)] if dump else [])
     if windowed:
         if not dump:
@@ -545,65 +283,32 @@ def run(harness, d, mode, timeout, dump=None, reg_set=(), reg_out=None, windowed
     if loopback:
         cmd.append('--loopback-only')
     cmd += list(harness_extra)   # opt-in (full-link layout: --audio-entry RVA)
-    if reg_subtree:
-        cmd += ["--registry-subtree", reg_subtree]
-    if registry not in ('self', 'batch'):
-        raise ValueError(registry)
-    plain = registry == 'self' and not reg_subtree   # the default: this run owns the whole key
-    lease = None
-    if registry == 'batch':
-        if not reg_subtree:
-            raise SystemExit("registry: batch-managed runs need their own instance subtree")
-        if not shared_live():
-            raise SystemExit("registry: --registry-managed-by-batch but no live batch holds a lease on the key")
-    before = reg_siblings() if plain else None
-    if plain:
-        reg_snapshot()
-    elif registry == 'self':   # an --instance session outside a batch: its own lease on the shared snapshot
-        lease, _ = shared_acquire(f"session {d.name}")
+    (d / "config.ini").write_bytes(config_text(config_set).encode("cp1252"))
+    (d / "config.ini.new").unlink(missing_ok=True)
+    if on_start:
+        on_start()
     try:
-        if reg_subtree:
-            reg_key = seed_instance_subtree(reg_subtree, REG_SNAP if plain else REG_BATCH_SNAP, reg_set)
+        if live_log:
+            with pathlib.Path(live_log).open('w',encoding='utf-8') as stream:
+                r=subprocess.run(cmd,stdout=stream,stderr=subprocess.STDOUT,text=True,timeout=timeout/1000+60)
+            out=pathlib.Path(live_log).read_text(encoding='utf-8')
         else:
-            reg_key = REG_KEY
-            for item in reg_set:   # values the harness writes into the (snapshot-restored) EE-AOC key before the run
-                reg_add(REG_KEY, item)
-        if on_start:
-            on_start()
-        try:
-            if live_log:
-                with pathlib.Path(live_log).open('w',encoding='utf-8') as stream:
-                    r=subprocess.run(cmd,stdout=stream,stderr=subprocess.STDOUT,text=True,timeout=timeout/1000+60)
-                out=pathlib.Path(live_log).read_text(encoding='utf-8')
-            else:
-                r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout / 1000 + 60)
-                out = r.stdout
-            if r.returncode:
-                out += f'\nHARNESS FAILURE exit={r.returncode}: {(r.stderr or "").strip()}\n'
-        except subprocess.TimeoutExpired as e:   # killing the harness kills the debuggee (kill-on-exit)
-            out = ((pathlib.Path(live_log).read_text(encoding='utf-8') if live_log else (e.stdout or b'').decode(errors='replace'))
-                   + '\nSTOP harness timeout (killed)\n')
-        if reg_out:
-            if pathlib.Path(reg_out).exists():
-                pathlib.Path(reg_out).unlink()
-            if reg("export", reg_key, str(reg_out), "/y")[0]:
-                pathlib.Path(reg_out).write_text("(key absent)\n")
-    finally:
-        if plain:
-            try:
-                reg_restore()
-            finally:
-                reg_lock_release()
-        elif lease:
-            shared_release(lease)
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout / 1000 + 60)
+            out = r.stdout
+        if r.returncode:
+            out += f'\nHARNESS FAILURE exit={r.returncode}: {(r.stderr or "").strip()}\n'
+    except subprocess.TimeoutExpired as e:   # killing the harness kills the debuggee (kill-on-exit)
+        out = ((pathlib.Path(live_log).read_text(encoding='utf-8') if live_log else (e.stdout or b'').decode(errors='replace'))
+               + '\nSTOP harness timeout (killed)\n')
+    if config_out:
+        if (d / "config.ini").exists():
+            shutil.copy(d / "config.ini", config_out)
+        else:
+            pathlib.Path(config_out).write_text("(no config.ini)\n")
     if not any(ln.startswith('STOP ') for ln in out.splitlines()) or 'process gone: yes; windows left: 0' not in out:
         out += '\nHARNESS FAILURE: missing stop/clean process termination\n'
     if not live_log:
         (BOOT/f'{d.name}.{mode}.raw.txt').write_text(out,encoding='utf-8')
-    after = reg_siblings() if plain else before
-    if after != before and not (before is None and after == []):   # (an emptied parent the game created)
-        raise SystemExit(f"registry: the run changed the subkeys of {REG_PARENT} outside EE-AOC (before {before}, "
-                         f"after {after}); left as is for the owner")
     # Debugger scheduling bookkeeping varies independently of application behavior.
     # Preserve it in raw logs, exclude it from the differential behavioral trace.
     lines = [re.sub(re.escape(d.name), "<dir>", ln, flags=re.I) for ln in out.splitlines()
@@ -630,21 +335,10 @@ def data_verdict(o1, o2, r, image=(0x400000, 0x400000 + 0x67b000)):
     return not rest and len(a) == len(c), msg
 
 
-def windowed_registry(raw, directory):
-    """Exclude only harness bookkeeping; retain raw exports for inspection."""
-    if raw[:2] != b'\xff\xfe':
-        return raw
-    text = re.sub(re.escape(str(directory).replace('\\', '\\\\')), '<staging>', raw.decode('utf-16'), flags=re.I)
-    kept, excluded = [], False
-    roots = [r'HKEY_CURRENT_USER\Software\Mad Doc Software\EE-AOC\windowed-test '+n
-             for n in ('DirectDraw', 'Direct3D', 'DirectInput')]
-    for line in text.splitlines():
-        if line.startswith('['):
-            key = line[1:-1].lower()
-            excluded = any(key == root.lower() or key.startswith(root.lower()+'\\') for root in roots)
-        if not excluded:
-            kept.append(line)
-    return '\n'.join(kept).strip().encode('utf-8')
+def windowed_config(raw, directory):
+    """A run's config.ini for comparison (the staging directory's name masked)."""
+    text = raw.decode('cp1252', errors='replace')
+    return re.sub(re.escape(str(directory)), '<staging>', text, flags=re.I).strip().encode('utf-8')
 
 
 def windowed_verdict(lines, checkpoint):

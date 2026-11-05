@@ -1,9 +1,9 @@
 """Bounded live game integration session. Request clean harness stop via stage/stop.request.
 
 Round 39 (TEST ONLY, opt-in): --instance K stages build/boot/windowed_{o,f,r}_K with its own logs and evidence, lets
-the harness debugger bypass the single-instance mutex (logged, image unpatched) and redirects the game's registry key
-to its own subkey EE-AOC\\windowed-test instance K (seeded from the snapshot plus this run's pins);
---registry-managed-by-batch leaves the snapshot/restore to tools/boot/game_batch.py. Plugin hooks (optional files):
+the harness debugger bypass the single-instance mutex (logged, image unpatched); each stage has its own config.ini
+(the game's settings, written fresh with this run's pins; --registry-managed-by-batch is accepted and has no effect).
+Plugin hooks (optional files):
 timeshim.py, session_exercise.py, differential/session_hook.py may define add_session_arguments(ap),
 prepare_session(ctx), start_session(ctx) -> obj with .stop(), finish_session(ctx, lines); see docs/LIVE_GAME_TESTING.md.
 """
@@ -124,10 +124,10 @@ def main():
     ap.add_argument('--instance',type=int,
                     help='TEST ONLY (round 39): parallel instance K (1..32): stage build/boot/windowed_{o,f,r}_K, logs '
                          'build/boot/windowed_*_K.session.*, the harness bypasses the single-instance mutex (logged; image '
-                         'unpatched) and gives the game key its own subkey EE-AOC\\windowed-test instance K')
+                         'unpatched); the stage has its own config.ini')
     ap.add_argument('--registry-managed-by-batch',action='store_true',
-                    help='TEST ONLY (round 39, with --instance): a live tools/boot/game_batch.py owns the EE-AOC '
-                         'snapshot/restore; this session only seeds and uses its own instance subkey')
+                    help='TEST ONLY (round 39, with --instance): run from tools/harness/game_batch.py (no effect: the game '
+                         'uses no registry; every stage has its own config.ini)')
     for module in plugins.values():
         if hasattr(module,'add_session_arguments'):module.add_session_arguments(ap)
     a=ap.parse_args()
@@ -177,19 +177,17 @@ def main():
         harness_extra=tuple(harness_extra)+('--seed-pin',f'{seed_rva:x}',f"{layout.off('EEMStartLoading',0x14):x}",str(a.seed))
         print(f"TEST seed pin {a.seed} at {SEED_SYMBOL} rva {seed_rva:#x} [rcx+"
               f"{layout.off('EEMStartLoading',0x14):#x}]",flush=True)
-    reg_subtree=None;mutex_rva=None
+    mutex_rva=None
     if a.instance is not None:   # round 39 opt-in: parallel instance; the image is not patched
         mutex_rva=mutex_bypass_rva((stage/'EE-AOC.exe').read_bytes(),LinkMap(fulllink_map) if a.fulllink else None)
         harness_extra=tuple(harness_extra)+('--mutex-bypass',f'{mutex_rva:x}','--port-offset',str(PORT_STEP*a.instance))
-        reg_subtree=boot.INSTANCE_SUBTREE.format(a.instance)
         print(f'TEST instance {a.instance}: stage {name}; mutex bypass at {MUTEX_SYMBOL} rva {mutex_rva:#x} '
-              f'(GetLastError 183 -> 0); registry view HKCU\\Software\\Mad Doc Software\\EE-AOC\\{reg_subtree}'
-              f'{" (batch-managed snapshot)" if a.registry_managed_by_batch else ""}',flush=True)
+              f'(GetLastError 183 -> 0); settings in the stage\'s own config.ini',flush=True)
     if a.trace_once:harness_extra=tuple(harness_extra)+('--trace-once',)
     if a.rng_trace:
         physics_va=LinkMap(fulllink_map).address(PHYSICS_SYMBOL) if a.fulllink else PHYSICS_VA_ORIGINAL
         harness_extra=tuple(harness_extra)+('--rng-trace',f'{physics_va:x}','--rng-offset',f"{layout.off('EEPhysics',0x18):x}")
-    reg_pins=[f'Min PTs per Second=dword:{a.pt_rate}',f'Max PTs per Second=dword:{a.pt_rate}'] if a.pt_rate else []
+    reg_pins=[f'Min PTs per Second={a.pt_rate}',f'Max PTs per Second={a.pt_rate}'] if a.pt_rate else []
     if manifest:
         trace=stage/'experimental.trace'
         trace.write_text(''.join(f'{row["candidate_rva"]:x}\n' for row in manifest['functions']),encoding='ascii')
@@ -205,12 +203,12 @@ def main():
         if not hasattr(module,'prepare_session'):continue
         result=module.prepare_session(ctx) or {}
         harness_extra=tuple(harness_extra)+tuple(result.pop('harness_extra',()))
-        plugin_pins+=list(result.pop('registry',()))
+        plugin_pins+=list(result.pop('config',result.pop('registry',())))
         plugin_interventions+=list(result.pop('interventions',()))
         if result:plugin_records.setdefault(key,{}).update(result)
     (stage/'session.context.json').write_text(json.dumps(dict(test_only=True,name=name,instance=a.instance,image=ctx['image'],
         image_path=str(image),map=str(fulllink_map) if fulllink_map else None,stage=str(stage),log=str(path),
-        evidence=str(evidence),registry_subtree=reg_subtree,mutex_bypass_rva=hex(mutex_rva) if mutex_rva else None),indent=2)+'\n',encoding='utf-8')
+        evidence=str(evidence),mutex_bypass_rva=hex(mutex_rva) if mutex_rva else None),indent=2)+'\n',encoding='utf-8')
     print(f'LIVE TEST {stage}; log {path}.raw.txt',flush=True)
     exercise_result=dict(done=False,error=None,milestones=[])
     if a.exercise:
@@ -225,7 +223,7 @@ def main():
                 print(f'UI EXERCISE FAILED: {error}',flush=True)
                 (stage/'stop.request').write_text('exercise failed\n',encoding='ascii')
     started={}
-    def start_plugins():   # once the registry is ours (a session may wait for its owner lock first)
+    def start_plugins():   # right before the harness starts the game
         if a.exercise:threading.Thread(target=drive,daemon=True).start()
         for key,module in plugins.items():
             if hasattr(module,'start_session'):
@@ -233,10 +231,10 @@ def main():
                 if handle is not None:started[key]=handle
     try:
         lines=boot.run(harness,stage,'run',a.timeout,str(path)+'.bmp',
-                       ['Game Bit Depth=dword:32','Texture Bit Depth=dword:32','Music Enabled=dword:1']+reg_pins+plugin_pins,
-                       str(path)+'.reg',windowed=True,checkpoint='session',trace_functions=trace,live_log=str(path)+'.raw.txt',loopback=True,
-                       harness_extra=harness_extra,registry='batch' if a.registry_managed_by_batch else 'self',
-                       reg_subtree=reg_subtree,on_start=start_plugins)
+                       ['Game Bit Depth=32','Texture Bit Depth=32','Music Enabled=1']+reg_pins+plugin_pins,
+                       str(path)+'.config.ini',windowed=True,checkpoint='session',trace_functions=trace,live_log=str(path)+'.raw.txt',loopback=True,
+                       harness_extra=harness_extra,
+                       on_start=start_plugins)
     finally:
         for key,handle in started.items():
             try:
@@ -269,15 +267,12 @@ def main():
         writes=[line for line in lines if ' seed pin ' in line]
         interventions.append(dict(kind='seed-pin',symbol=SEED_SYMBOL,value=a.seed,log=writes))
         print('\n'.join(writes) or 'TEST seed pin: no write (EEMStartLoading::Execute not reached)',flush=True)
-    if a.pt_rate:interventions.append(dict(kind='pt-rate-pin',registry=reg_pins))
+    if a.pt_rate:interventions.append(dict(kind='pt-rate-pin',config=reg_pins))
     if a.instance is not None:
         bypass=[line for line in lines if line.startswith(('TEST mutex bypass','STOP cannot guard mutex bypass'))]
         interventions.append(dict(kind='mutex-bypass',symbol=MUTEX_SYMBOL,rva=hex(mutex_rva),log=bypass))
         interventions.append(dict(kind='loopback-port-offset',offset=PORT_STEP*a.instance,
                                   log=[line for line in lines if line.startswith('TEST instance port ')]))
-        interventions.append(dict(kind='registry-instance-subtree',key=boot.REG_KEY+'\\'+reg_subtree,
-                                  snapshot='batch' if a.registry_managed_by_batch else 'session',
-                                  redirects=sum(line.startswith('regredirect-instance ') for line in lines)))
         print('\n'.join(bypass) or 'TEST mutex bypass: guard not reached',flush=True)
     interventions+=plugin_interventions
     pathlib.Path(str(path)+'.json').write_text(json.dumps(dict(test_only=True,completed=completed,stops=stops,

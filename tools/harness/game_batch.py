@@ -8,13 +8,10 @@ is forwarded to every job's game_session.py (e.g. --exercise random-game --pt-ra
 options --time-factor F / --exercise ai-game --ai-players 4 / --diff-sampler ...). --jobs FILE: a JSON list of
 {"image": ..., "seed": N, "label": "...", "args": [...], "timeout": S}; a job's own args come after the shared ones.
 
-Registry (HKCU\\Software\\Mad Doc Software\\EE-AOC only): the batch holds a lease on the key (exe_boot.batch_begin); the
-first lease holder snapshots it, each session runs with --instance K --registry-managed-by-batch and seeds/uses its own
-subkey EE-AOC\\windowed-test instance K, and the last lease holder to leave restores the key byte-exact
-(exe_boot.batch_end), also after an error or Ctrl-C. Leases name pid + process start time: if the runner is killed,
-the next lease/plain caller prunes the dead lease (restoring when it was the last) and the next batch kills the
-sessions it left on its instances, by command-line/executable-path filter (own stage dirs only). A plain session (no
---instance) waits until no lease is live. --instance-base B: instances B..B+P-1 (disjoint ranges for batches at once).
+Settings: the game keeps them in config.ini in its stage (no registry), so the parallel sessions (--instance K, own
+stage dirs) share nothing; exe_boot.batch_begin/batch_end are no-ops kept for this script. If the runner is killed, the
+next batch kills the sessions it left on its instances, by command-line/executable-path filter (own stage dirs only).
+--instance-base B: instances B..B+P-1 (disjoint ranges for batches at once).
 
 At most P jobs run at once (instances 1..P are reused). A job that exceeds its timeout is killed by the same filter.
 Per job: <out>/<label>.log (session stdout), <label>.json (the session json + batch fields: rc, wall time, instance,
@@ -248,7 +245,7 @@ def main():
     except BaseException:
         boot.batch_end(begin)
         raise
-    print(f'BATCH {len(jobs)} jobs, P={a.parallel}; registry snapshot {begin["snapshot"]} (key existed: {begin["existed"]}); '
+    print(f'BATCH {len(jobs)} jobs, P={a.parallel}; '
           f'out {out}', flush=True)
     cpu = Cpu()
     cpu_samples = []

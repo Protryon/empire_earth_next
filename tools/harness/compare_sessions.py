@@ -13,7 +13,7 @@ def main():
         reports[role]=json.loads((directory/f'windowed_{suffix}.session.json').read_text(encoding='utf-8'))
     left=reports['original'];right=reports['experimental']
     labels=lambda report:[(row['milestone'],row['form']) for row in report['exercise']['milestones']]
-    registries=[boot.windowed_registry((evidence[role]/f'windowed_{suffix}.session.reg').read_bytes(),boot.BOOT/f'windowed_{suffix}')
+    registries=[boot.windowed_config((evidence[role]/f'windowed_{suffix}.session.config.ini').read_bytes(),boot.BOOT/f'windowed_{suffix}')
                 for role,suffix in [('original','o'),('experimental','r')]]
     overlay_sources={}
     for extension in ('silent','presentation'):
