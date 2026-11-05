@@ -12,7 +12,8 @@ class SESMInstanceNode;
 
 // the 0x98-byte record Init copies from (EEAmbientSoundManager::Load reads them from the file)
 struct EEAmbientSoundRecord {
-    unsigned char _u00[0x68];               // +0x00
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
+    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
     long mIndex;                            // +0x68 (the slot; < 0: unused)
     long mSoundID;                          // +0x6c
     float mMaximumVolume;                   // +0x70

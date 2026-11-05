@@ -11,7 +11,9 @@
 
 // One record of the file (0xa0 bytes, read whole; Load keeps ten of its fields; inferred layout, provisional names)
 struct EEAIUnitTargetingRecord {
-    char _gap00[0x6c];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
+    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
+    long mUnusedIndex;                      // +0x068 the 0-based row index (not read)
     long mAttackerBonus;                    // +0x6c
     long mUnusedWeight;                     // +0x70
     long mInRangeBonus;                     // +0x74

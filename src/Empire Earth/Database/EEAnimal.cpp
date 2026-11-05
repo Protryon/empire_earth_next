@@ -18,7 +18,8 @@ extern std::vector<EEMedia*> gMediaTable;
 
 // One record of db\dbAnimals.dat (0x110 bytes, read whole). Inferred layout (only the fields Load copies).
 struct EEAnimalRecord {
-    char _gap00[0x68];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
+    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
     long mAnimalID;                         // +0x68 -> +0x3c
     long mUnitType;                         // +0x6c -> +0x38
     long mMinHerdSize;                      // +0x70 -> +0x40

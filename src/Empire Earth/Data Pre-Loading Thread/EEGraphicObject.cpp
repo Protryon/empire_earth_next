@@ -76,7 +76,8 @@ EEGraphicObject* gGraphicObjectU4E8440;
 // by offset: the loader's copies give the types (the per-state animation blocks are packed: each state's closing
 // flag shares a dword with the next state's first flag). +0x00..+0x68 is not read by the loader
 struct EEGraphicObjectRecord {
-    char _gap0[0x68];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
+    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
     long mMediaIndex;         // +0x68
     bool mIsDrawn;            // +0x6c
     long mUnusedBuildingValue1; // +0x70

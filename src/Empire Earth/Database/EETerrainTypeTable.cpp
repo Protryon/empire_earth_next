@@ -24,7 +24,8 @@ unsigned long gU4E8718;
 
 // One record of db\dbterrainType.dat (0x80 bytes, read whole). Inferred layout.
 struct EETerrainTypeRecord {
-    char _gap00[0x68];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
+    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
     long mID;                               // +0x68 -> +0x08
     long mFirstColor;                       // +0x6c -> +0x0c
     long mLastColor;                        // +0x70 -> +0x10
@@ -140,7 +141,9 @@ float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned 
 
 // One record of the damage tables' file (0x17c bytes, read whole): 0x44 damage values from +0x6c. Inferred layout.
 struct EEDamageTableRecord {
-    char _gap00[0x6c];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
+    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
+    long mUnusedIndex;                      // +0x068 the 0-based row index (not read)
     long mDamage[0x44];                     // +0x6c (scaled by kHeightEpsilon into gU4E8708's row)
 };
 static_assert(sizeof(EEDamageTableRecord) == 380, "on-disk record: 380 bytes on every target");

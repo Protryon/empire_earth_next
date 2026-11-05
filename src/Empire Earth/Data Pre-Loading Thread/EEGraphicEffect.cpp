@@ -43,7 +43,8 @@ extern std::vector<EEMedia*> gMediaTable;   // 0x4e8448 (EEAnimal.cpp)
 
 // One record of db\dbgfxeffects.dat (0xe8 bytes, read whole). Layout inferred (only the fields the ctor copies).
 struct EEGraphicEffectRecord {
-    char _gap00[0x68];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
+    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
     long mID;                               // +0x68 -> +0x60 (> 0: a real record)
     long mKind;                             // +0x6c -> +0x58
     long mTagPointKind;                     // +0x70 -> +0x5c

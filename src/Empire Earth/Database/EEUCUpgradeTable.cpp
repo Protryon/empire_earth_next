@@ -13,7 +13,7 @@
 
 // One record of db\dbupgrade.dat (0xf0 bytes, read whole). Inferred layout.
 struct EEUCUpgradeRecord {
-    char _gap00[0x64];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
     float mAttackStep;                      // +0x64
     float mHitPointsStep;                   // +0x68
     float mSpeedStep;                       // +0x6c

@@ -25,7 +25,9 @@ std::vector<EESoundObject*> gSoundObjects;        // 0x4e8678
 
 // One record of db\dbsounds.dat (0x84 bytes, read whole). Layout inferred (only the fields LoadTable copies).
 struct EESoundRecord {
-    char _gap00[0x6c];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
+    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
+    long mUnusedIndex;                      // +0x068 the 0-based row index (not read)
     long mMaxInstances;                     // +0x6c -> +0x1c
     long mCategory;                         // +0x70 -> +0x20
     long mUnusedPriority;                   // +0x74 -> +0x24

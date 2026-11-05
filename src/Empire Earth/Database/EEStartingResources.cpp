@@ -14,7 +14,8 @@
 
 // One record of db\dbStartingResources.dat (0x84 bytes, read whole). Inferred layout.
 struct EEStartingResourcesRecord {
-    char _gap00[0x68];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
+    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
     long mIndex;                            // +0x68 (negative: skipped)
     long mNameID;                           // +0x6c -> +0x18
     long mFood;                             // +0x70 -> +0x04

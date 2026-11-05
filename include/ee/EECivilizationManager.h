@@ -35,7 +35,7 @@ struct EECivilizationUpgradeValue { float mValue; float mBonus; };
 struct EECivilizationCategoryEntry {
     long mDatabaseID;                      // +00, loader preserves/increments
     long mIndex;                           // +04, loader preserves/increments
-    unsigned char mUndecoded08[100];       // +08..6b actual persisted interval; untouched
+    char mLabel[100];                       // +0x008 the category name (the game never reads it; the text's label)
     long mNameID;                          // +6c, actual name reader281c92
     long mCost;                            // +70, actual long281873
     long mUnitSet;                         // +74, actual loader writes102
