@@ -354,8 +354,8 @@ UWideString& UWideString::operator+=(const char* inString)
 void UWideString::Export(unsigned char* outData) const
 {
     unsigned long theLength = strlen(this->mString);
-    unsigned long theTerminator = 0;
-    unsigned long theSize = theLength + 2;
+    uint16_t theTerminator = 0;
+    uint32_t theSize = theLength + 2;       // 4 bytes on the wire on every data model
     memcpy(outData, &theSize, 4);
     memcpy(outData + 4, this->mString, theLength);
     memcpy(outData + theLength + 4, &theTerminator, 2);
@@ -443,7 +443,7 @@ UWideString UWideString::GetIndexedSubstring(unsigned long inFirst, unsigned lon
 // Reads a size-prefixed string from inData, growing the buffer if needed; returns the bytes consumed
 unsigned long UWideString::Import(unsigned char* inData)
 {
-    unsigned long theSize;
+    uint32_t theSize;                       // 4 bytes on the wire (unsigned long is 8 on LP64)
     unsigned char* theString = inData + 4;
     unsigned long theLength = PlatMbsLen(theString);
     memcpy(&theSize, inData, 4);

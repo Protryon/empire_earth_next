@@ -104,7 +104,7 @@ static UString sReportFile("B7B226CDB7B226CD2C112D1E2C99B50E9C2355F6C48226BEB7B2
 void EEPGSGameReport::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
     unsigned long theMessageSize = this->ExportSize();
-    long theMessageType = 1000;
+    int32_t theMessageType = 1000;   // 4 bytes on the wire
     *outPayloadPointer = new unsigned char[theMessageSize];
     if (*outPayloadPointer == NULL)
         return;
@@ -138,7 +138,7 @@ void EEPGSPlayerReport::ExportMessage(unsigned char** outPayloadPointer, unsigne
     char theTerminator = 0;
     const char* theName = this->mName;
     unsigned long theNameLength = PlatMbsNBCnt(reinterpret_cast<const unsigned char*>(theName), this->mName.GetLength());
-    long theMessageType = 1001;
+    int32_t theMessageType = 1001;   // 4 bytes on the wire
     *outPayloadPointer = new unsigned char[theMessageSize];
     if (*outPayloadPointer == NULL)
         return;

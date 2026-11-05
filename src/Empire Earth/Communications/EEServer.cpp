@@ -1147,7 +1147,7 @@ void EEServer::SendPlayerSlotInfo()
 
 // FUNCTION: EXE 0x4ccf3a
 // Sends a file transfer's progress for the lobby slot of the given network slot
-void EEServer::HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentDone, unsigned long& inXferID,
+void EEServer::HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentDone, uint32_t& inXferID,
                             unsigned char& inStatusID)
 {
     unsigned char thePlayer = this->GetLobbySlot(inSlot);

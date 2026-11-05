@@ -9,6 +9,8 @@
 #ifndef LLE_NEMESSAGE_H
 #define LLE_NEMESSAGE_H
 
+#include <stdint.h>   // int32_t/uint32_t: the wire fields' fixed widths
+
 #include <vector>
 #include "lle/NEMessageID.h"
 
@@ -111,7 +113,7 @@ public:
 
     UWideString mPlayerName;                // +0x0c
     UWideString mVersion;                   // +0x20
-    unsigned long mBinaryChecksum;          // +0x34
+    uint32_t mBinaryChecksum;               // +0x34
     bool mIsBehindFirewall;                 // +0x38
 };
 
@@ -141,9 +143,9 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    long mError;                            // +0x0c
+    int32_t mError;                         // +0x0c
     UWideString mVersion;                   // +0x10
-    unsigned long mCurrentCT;               // +0x24
+    uint32_t mCurrentCT;                    // +0x24
     unsigned char mUISlotNumber;            // +0x28
     unsigned char mSendToSlot;              // +0x29
 };
@@ -176,7 +178,7 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    long mError;                            // +0x0c
+    int32_t mError;                         // +0x0c
 };
 
 class LLE_API NEMClientReconnectionRequest : public NEMessage {
@@ -194,8 +196,8 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mCurrentCT;               // +0x0c
-    unsigned long mPlayerNumber;            // +0x10
+    uint32_t mCurrentCT;                    // +0x0c
+    uint32_t mPlayerNumber;                 // +0x10
 };
 
 class LLE_API NEMClientReconnectionRequestResponse : public NEMessage {
@@ -214,8 +216,8 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    long mError;                            // +0x0c
-    unsigned long mCurrentCT;               // +0x10
+    int32_t mError;                         // +0x0c
+    uint32_t mCurrentCT;                    // +0x10
     unsigned char mNewSendToSlot;           // +0x14
 };
 
@@ -258,7 +260,7 @@ public:
         : NEMPlayerInput(kNetMessageCommunicationsTick), mCurrentCommunicationsTick(inCurrentCommunicationsTick), mPhysicsTicksPerSecond(inPhysicsTicksPerSecond), mPhysicsTicksToPerform(inPhysicsTicksToPerform), mGenerateChecksum(inGenerateChecksum), mDumpTheWorld(inDumpTheWorld) {}
     NEMCommunicationsTick(unsigned char* inData) { this->ImportMessage(inData); }
     virtual ~NEMCommunicationsTick();
-    unsigned long& GetCurrentCommunicationsTick() { return this->mCurrentCommunicationsTick; }
+    uint32_t& GetCurrentCommunicationsTick() { return this->mCurrentCommunicationsTick; }
     bool GetDumpTheWorld() { return this->mDumpTheWorld; }
     bool GetGenerateChecksum() { return this->mGenerateChecksum; }
     unsigned char& GetPhysicsTicksPerSecond() { return this->mPhysicsTicksPerSecond; }
@@ -271,7 +273,7 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mCurrentCommunicationsTick;   // +0x1c
+    uint32_t mCurrentCommunicationsTick;        // +0x1c
     unsigned char mPhysicsTicksPerSecond;       // +0x20
     unsigned char mPhysicsTicksToPerform;       // +0x21
     bool mGenerateChecksum;                     // +0x22
@@ -295,8 +297,8 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mLastCommunicationsTickProcessed;   // +0x1c
-    unsigned long mServersCommunicationTick;          // +0x20
+    uint32_t mLastCommunicationsTickProcessed;        // +0x1c
+    uint32_t mServersCommunicationTick;               // +0x20
     unsigned short mAveragePhysicsTickTime;           // +0x24
 };
 
@@ -315,8 +317,8 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mSendToAllAndWaitMessageID;   // +0x0c
-    unsigned long mUniqueID;                    // +0x10
+    uint32_t mSendToAllAndWaitMessageID;        // +0x0c
+    uint32_t mUniqueID;                         // +0x10
 };
 
 class LLE_API NEMPauseGameResponse : public NEMessage {
@@ -332,7 +334,7 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mUniqueID;                // +0x0c
+    uint32_t mUniqueID;                     // +0x0c
 };
 
 class LLE_API NEMPhysicsTick : public NEMessage {
@@ -354,7 +356,7 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mNumberOfPlayerInputs;    // +0x0c
+    uint32_t mNumberOfPlayerInputs;         // +0x0c
     unsigned char mPhysicsTicksToPerform;   // +0x10
     unsigned char mPhysicsTicksPerSecond;   // +0x11
     bool mGenerateChecksum;                 // +0x12
@@ -374,7 +376,7 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mPingTimeStart;           // +0x0c
+    uint32_t mPingTimeStart;                // +0x0c
 };
 
 class LLE_API NEMPlayerConnectionCheckResponse : public NEMessage {
@@ -390,7 +392,7 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mPingTimeStart;           // +0x0c
+    uint32_t mPingTimeStart;                // +0x0c
 };
 
 class LLE_API NEMRemovePlayer : public NEMessage {
@@ -443,7 +445,7 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mOffsetStartTime;         // +0x0c
+    uint32_t mOffsetStartTime;              // +0x0c
 };
 
 class LLE_API NEMStartGameResponse : public NEMessage {
@@ -459,7 +461,7 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mApplicationTimeAtStart;  // +0x0c
+    uint32_t mApplicationTimeAtStart;       // +0x0c
 };
 
 class LLE_API NEMStopGame : public NEMessage {
@@ -502,8 +504,8 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mSendToAllAndWaitMessageID;   // +0x0c
-    unsigned long mUniqueID;                    // +0x10
+    uint32_t mSendToAllAndWaitMessageID;        // +0x0c
+    uint32_t mUniqueID;                         // +0x10
 };
 
 class LLE_API NEMUnPauseGameResponse : public NEMessage {
@@ -519,7 +521,7 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mUniqueID;                // +0x0c
+    uint32_t mUniqueID;                     // +0x0c
 };
 
 class LLE_API NEMWorldDatabaseChecksum : public NEMessage {
@@ -536,7 +538,7 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mPhysicsTickTrigger;      // +0x0c
+    uint32_t mPhysicsTickTrigger;           // +0x0c
     bool mDumpWorld;                        // +0x10
 };
 
@@ -546,7 +548,7 @@ public:
         : NEMessage(kNetMessageWorldDatabaseChecksumResponse), mCommunicationsTick(inCommunicationsTick), mWorldDatabaseChecksum(inWorldDatabaseChecksum) {}
     NEMWorldDatabaseChecksumResponse(unsigned char* inData) { this->ImportMessage(inData); }
     virtual char* GetMessageLabel() const { return "World Database Checksum Response"; }
-    unsigned long& GetCommunicationsTick() { return this->mCommunicationsTick; }
+    uint32_t& GetCommunicationsTick() { return this->mCommunicationsTick; }
     unsigned long GetWorldDatabaseChecksum() const { return this->mWorldDatabaseChecksum; }
     virtual void ExportMessage(unsigned char** outData, unsigned long& outSize);
     virtual unsigned long ExportSize();
@@ -554,8 +556,8 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mCommunicationsTick;      // +0x0c
-    unsigned long mWorldDatabaseChecksum;   // +0x10
+    uint32_t mCommunicationsTick;           // +0x0c
+    uint32_t mWorldDatabaseChecksum;        // +0x10
 };
 
 class LLE_API NEMXferMessage : public NEMessage {   // proven sizeof 0x414
@@ -581,13 +583,13 @@ public:
     virtual void Execute() {}
 
     unsigned char mData[0x400];             // +0x0c
-    unsigned long mDataSize;                // +0x40c
+    uint32_t mDataSize;                     // +0x40c
     unsigned char mID;                      // +0x410
 };
 
 class LLE_API NEMXferStatus : public NEMessage {
 public:
-    NEMXferStatus(unsigned char& inClientSlot, unsigned char& inPercentDone, unsigned long& inXferID,
+    NEMXferStatus(unsigned char& inClientSlot, unsigned char& inPercentDone, uint32_t& inXferID,
                   unsigned char& inStatusID) : NEMessage(kNetMessageXferStatus), mXferID(inXferID), mStatusID(inStatusID), mClientSlot(inClientSlot), mPercentDone(inPercentDone) {}
     NEMXferStatus(unsigned char* inData) { this->ImportMessage(inData); }
 #ifdef LLE_EXE_HEADERS
@@ -607,7 +609,7 @@ public:
     virtual bool IsResponse(NEMessage* inMessage);
     virtual void Execute() {}
 
-    unsigned long mXferID;                  // +0x0c
+    uint32_t mXferID;                       // +0x0c
     unsigned char mStatusID;                // +0x10
     unsigned char mClientSlot;              // +0x11
     unsigned char mPercentDone;             // +0x12

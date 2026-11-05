@@ -6,6 +6,8 @@
 #ifndef EE_EEWONNET_H
 #define EE_EEWONNET_H
 
+#include <stdint.h>   // int32_t/uint32_t: the network fields' fixed widths
+
 #include <map>                              // EEWonNet::mGames/mRooms
 #include <string>                           // std::string/std::wstring (Dinkum's <map> brought it in)
 
@@ -134,10 +136,10 @@ struct EEWonNetGameInfo {
     UWideString mGameName;                  // +0x00
     UWideString mAddress;                   // +0x14
     UWideString mPassword;                  // +0x28
-    unsigned long mHumans;                  // +0x3c
-    unsigned long mPlayers;                 // +0x40 humans and computers
-    unsigned long mHostClientId;            // +0x44
-    unsigned long mFlags;                   // +0x48 bit 0 open (Start clears it), bit 1 firewalled (EEWonNet::mIsBehindFirewall)
+    uint32_t mHumans;                       // +0x3c
+    uint32_t mPlayers;                      // +0x40 humans and computers
+    uint32_t mHostClientId;                 // +0x44
+    uint32_t mFlags;                        // +0x48 bit 0 open (Start clears it), bit 1 firewalled (EEWonNet::mIsBehindFirewall)
     unsigned short mRoomGroupId;            // +0x4c
 
     // 0xcd9ba (inline; returns nothing: no `mov eax, this` before its ret 4)

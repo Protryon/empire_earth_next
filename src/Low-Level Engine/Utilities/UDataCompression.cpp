@@ -66,9 +66,9 @@ long UDataCompression::Compress(const char* inData, unsigned long inLength, char
         theResult = 0x14;
     } else {
         memcpy(outData, kCompressionSignature, 4);
-        unsigned long theLength = inLength;
+        uint32_t theLength = inLength;      // the header's words are 4 bytes on every data model
         memcpy(outData + 4, &theLength, 4);
-        unsigned long theReserved = 0;
+        uint32_t theReserved = 0;
         memcpy(outData + 8, &theReserved, 4);
         theStream.mInput = inData;
         theStream.mInputLength = inLength;
@@ -140,7 +140,9 @@ long UDataCompression::GetDecompressedSize(const char* inData, unsigned long inL
         theResult = 0x13;
     } else {
         theResult = 0;
-        memcpy(&outSize, inData + 4, 4);
+        uint32_t theSize;                   // 4 bytes in the header (unsigned long is 8 on LP64)
+        memcpy(&theSize, inData + 4, 4);
+        outSize = theSize;
     }
     return theResult;
 }

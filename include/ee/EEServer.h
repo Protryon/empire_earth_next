@@ -33,7 +33,7 @@ public:
     virtual bool IsMigrating();             // +0x2c 0xcbb65
     virtual void BeforeRemovingPlayers();   // +0x30 (ICF: the empty 0xe123d)
     virtual void HandleReconnectWaitTimedOut();  // +0x34 0xcc9f1
-    virtual void HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentDone, unsigned long& inXferID,
+    virtual void HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentDone, uint32_t& inXferID,
                               unsigned char& inStatusID);   // +0x38 0xccf3a
     virtual void PlayWarningSound(long inSound);  // +0x44 0xcc2e7
     virtual void ServerSlot48();            // +0x48 0xcd3e8
