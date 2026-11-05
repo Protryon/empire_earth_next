@@ -229,7 +229,7 @@ FAMILIES = [
                      "_stprintf", "_sntprintf", "_tprintf", "_ttoi", "_tfopen", "TCHAR", "_TCHAR", "_T", "TEXT",
                      "LPSTR", "LPCSTR", "LPTSTR", "LPCTSTR", "LPWSTR", "LPCWSTR", "PSTR", "PCSTR", "PWSTR", "PCWSTR",
                      "WCHAR", "CHAR", "_wcsrev", "_strtime", "_strdate", "_getch", "_kbhit", "_putch", "_cputs"},
-     None),
+     r"(?:_mbs\w+|_mbc\w+|_ismb\w+|_wcs\w+|_tcs\w+)"),
     ("msvc-lang", {"__int64", "__int32", "__int16", "__int8", "__stdcall", "__cdecl", "__fastcall", "__thiscall",
                    "__declspec", "__forceinline", "_asm", "__asm", "__try", "__except", "__finally", "__leave",
                    "_MSC_VER", "WINAPI", "CALLBACK", "APIENTRY", "PASCAL", "FAR", "NEAR", "_cdecl", "_stdcall",
