@@ -40,8 +40,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
 LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c", "pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
              "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c",
              "cgltf": "ThirdParty/cgltf/cgltf.c", "stb_image": "ThirdParty/stb_image/stb_image.c"}
-# dmusic (DirectMusic reimplementation, src/ThirdParty/dmusic): every source but the POSIX thread shim
-_DMUSIC = sorted(p for p in (ROOT / "src" / "ThirdParty" / "dmusic").rglob("*.c") if p.name != "Thread.Posix.c")
+# dmusic (DirectMusic reimplementation, src/ThirdParty/dmusic): every source (the POSIX thread file is empty on Windows)
+_DMUSIC = sorted(p for p in (ROOT / "src" / "ThirdParty" / "dmusic").rglob("*.c"))
 LIB_UNITS.update({"dmusic-" + p.relative_to(ROOT / "src" / "ThirdParty" / "dmusic").with_suffix("").as_posix()
                   .replace("/", "-"): p.relative_to(ROOT / "src").as_posix() for p in _DMUSIC})
 LIB_MEMBERS = {"mixer": ["miniaudio"], "dx7hrtnl": ["pl_mpeg"], "lle": ["implode", "explode", "cgltf", "stb_image"] + sorted(

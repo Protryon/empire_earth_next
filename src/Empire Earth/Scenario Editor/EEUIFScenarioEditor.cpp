@@ -1544,8 +1544,9 @@ EESEEQuickLoad::EESEEQuickLoad(UReferenceCounter* inOwner) : mOwner(inOwner)
 
 // SYNTHETIC: EXE 0x5a01e1
 // (the scalar deleting destructor, emitted with the vtable; slot EESEEQuickLoad+0x0, stores EESEEQuickLoad vtable)
-// the dtor is inline (expanded into ??_G: Dereference the owner, no out-of-line ??1 in the exe)
-inline EESEEQuickLoad::~EESEEQuickLoad()
+// the dtor was inline (expanded into ??_G); out of line here: it is the class's key function, and the Itanium ABI
+// (Linux, macOS) emits the vtable with it
+EESEEQuickLoad::~EESEEQuickLoad()
 {
     this->mOwner->Dereference();
 }
@@ -1560,7 +1561,7 @@ EESEEQuickSave::EESEEQuickSave(EEAQuickSaveLoad* inOwner) : mOwner(inOwner)
 // SYNTHETIC: EXE 0x5a0235
 // (the scalar deleting destructor, emitted with the vtable; slot EESEEQuickSave+0x0, stores EESEEQuickSave vtable)
 // likewise inline (expanded into ??_G)
-inline EESEEQuickSave::~EESEEQuickSave()
+EESEEQuickSave::~EESEEQuickSave()
 {
     this->mOwner->Dereference();
 }

@@ -4,7 +4,7 @@
 bands, DLS, the composer, its own synthesizer on TinySoundFont), commit
 `b73b270b94714b8ec8d9d0b2a9f3a5c445da52d1` (2026-03-02). MIT (Modern Variant), see `LICENSE.md`.
 
-Taken: `include/`, `src/` (without `src/thread/Thread.Posix.c`), `vendor/TinySoundFont/tsf.{c,h}`.
+Taken: `include/`, `src/` (without upstream's `src/thread/Thread.Posix.c`; this copy has its own: the four C11 mutex functions dmusic uses, over pthreads, for macOS), `vendor/TinySoundFont/tsf.{c,h}`.
 `include_dirs.txt` lists the directories the build adds to `INCLUDE` for these sources.
 
 Changes made here (each marked "empire_earth_next addition" in `dmusic.h`):
