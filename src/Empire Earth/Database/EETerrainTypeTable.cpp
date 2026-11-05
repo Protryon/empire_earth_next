@@ -29,7 +29,7 @@ struct EETerrainTypeRecord {
     long mFirstColor;                       // +0x6c -> +0x0c
     long mLastColor;                        // +0x70 -> +0x10
     long mNameID;                           // +0x74 -> +0x14
-    long mL78;                              // +0x78 -> +0x18
+    long mUnusedPaletteIndex;               // +0x78 -> +0x18
     bool mIsInEditor;                       // +0x7c -> +0x1c
 };
 static_assert(sizeof(EETerrainTypeRecord) == 128, "on-disk record: 128 bytes on every target");
@@ -67,7 +67,7 @@ long EETerrainTypeTable::Load(FSFileSpec* inFile)
             theType->mFirstColor = theRecord.mFirstColor;
             theType->mLastColor = theRecord.mLastColor;
             theType->mNameID = theRecord.mNameID;
-            theType->mL18 = theRecord.mL78;
+            theType->mL18 = theRecord.mUnusedPaletteIndex;
             theType->mIsInEditor = theRecord.mIsInEditor;
             EETerrainTypeTable::sTable[i] = theType;
         }

@@ -342,7 +342,7 @@ long EEPhysicsModel::SpeedMode(EEComplexUnit* inUnit, float inDistance, float in
     float theBrake = inUnit->GetAcceleration();
     inUnit->GetMaxVelocity();
     float theSpeed = inUnit->GetVelocity();
-    float theTurnPenalty = inUnit->mUnitClass->mF18C;
+    float theTurnPenalty = inUnit->mUnitClass->mSlopeSpeedPenalty;
     float theTime = gPhysics->mTicksPerGameSecond;
     float theDecel = inUnit->GetInverseAcceleration();
     float theTicks = (theDecel * theTime * theSpeed) / kPMRateScale;

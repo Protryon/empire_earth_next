@@ -258,7 +258,7 @@ long EEPMSeaAnimal::SpeedMode(EEComplexUnit* inUnit, float inDistance, float inT
     float theMaxSpeed = inUnit->GetMaxVelocity();
     float theSpeed = inUnit->GetVelocity();
     float theLimit = inDistance;
-    float theTurnPenalty = inUnit->mUnitClass->mF18C;
+    float theTurnPenalty = inUnit->mUnitClass->mSlopeSpeedPenalty;
     if ((long) inUnit->mWaypoints.size() > 1) {
         float theFactor;
         if ((*inUnit->mWaypoints.begin()).mLocation.GetZ() > 0.0f) {

@@ -78,7 +78,7 @@ void EECalamityClass::Initialize(EECalamityData* inData)
     this->mRange = UMFloatToLong(inData->mRange);
     this->mIsBlockedByImmunity = inData->mIsBlockedByImmunity;
     this->mIsCastByAllSelected = inData->mIsCastByAllSelected;
-    this->mB24 = inData->mBE8;
+    this->mB24 = inData->mUnusedClassFlag;
     this->mNameID = inData->mNameID;
     this->mID = inData->mID;
 }

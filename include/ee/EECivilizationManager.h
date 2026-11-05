@@ -21,7 +21,7 @@ struct EECivilizationEntry {
     // the original does; provisional name)
     const char* GetFileName() const { return this->mFileName; }
 
-    long mDatabaseID;                       // +0x00
+    long mUnusedDatabaseID;                 // +0x00
     long mIndex;                            // +0x04
     char mFileName[100];                   // +0x08 the civilization's file (EEUIEPDCS: the selected entry's file)
     long mChecksum;                        // +0x6c actual281bc5 filename/checksum record

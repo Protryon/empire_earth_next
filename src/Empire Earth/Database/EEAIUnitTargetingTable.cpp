@@ -13,17 +13,17 @@
 struct EEAIUnitTargetingRecord {
     char _gap00[0x6c];
     long mAttackerBonus;                    // +0x6c
-    long mL70;                              // +0x70
+    long mUnusedWeight;                     // +0x70
     long mInRangeBonus;                     // +0x74
     long mFasterTargetBonus;                // +0x78
     long mStrongerTargetBonus;              // +0x7c
-    long mL80;                              // +0x80
+    long mPreferredUnitType;                // +0x80
     long mToHitWeight;                      // +0x84
     long mProximityWeight;                  // +0x88
     long mImmobileTargetBonus;              // +0x8c
-    long mL90;                              // +0x90
-    long mL94;                              // +0x94
-    long mL98;                              // +0x98
+    long mUnused1;                          // +0x90
+    long mUnused2;                          // +0x94
+    long mUnused3;                          // +0x98
     long mMaxValue;                         // +0x9c
 };
 static_assert(sizeof(EEAIUnitTargetingRecord) == 160, "on-disk record: 160 bytes on every target");
@@ -48,11 +48,11 @@ long EEAIUnitTargetingTable::Load(FSFileSpec* inFile)
             EEAIUnitTargetingTable::sTable[i] = new long[10];
             theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
             EEAIUnitTargetingTable::sTable[i][0] = theRecord.mAttackerBonus;
-            EEAIUnitTargetingTable::sTable[i][1] = theRecord.mL70;
+            EEAIUnitTargetingTable::sTable[i][1] = theRecord.mUnusedWeight;
             EEAIUnitTargetingTable::sTable[i][2] = theRecord.mInRangeBonus;
             EEAIUnitTargetingTable::sTable[i][3] = theRecord.mFasterTargetBonus;
             EEAIUnitTargetingTable::sTable[i][4] = theRecord.mStrongerTargetBonus;
-            EEAIUnitTargetingTable::sTable[i][5] = theRecord.mL80;
+            EEAIUnitTargetingTable::sTable[i][5] = theRecord.mPreferredUnitType;
             EEAIUnitTargetingTable::sTable[i][6] = theRecord.mToHitWeight;
             EEAIUnitTargetingTable::sTable[i][7] = theRecord.mProximityWeight;
             EEAIUnitTargetingTable::sTable[i][8] = theRecord.mImmobileTargetBonus;

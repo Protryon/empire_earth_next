@@ -27,20 +27,20 @@ struct EEAreaEffectData {
     long mMedia;                            // +0x84 (EEMedia::Get index)
     long mMaxLevel;                         // +0x88
     long mLevel;                            // +0x8c
-    long mL90;                              // +0x90
-    long mL94;                              // +0x94
-    long mL98;                              // +0x98
+    long mUnusedValue1;                     // +0x90
+    long mUnusedValue2;                     // +0x94
+    long mUnusedValue3;                     // +0x98
     float mRadius;                          // +0x9c
     float mRed;                             // +0xa0
     float mGreen;                           // +0xa4
     float mBlue;                            // +0xa8
     float mAlpha;                           // +0xac
-    float mFB0;                             // +0xb0
-    bool mBB4;                              // +0xb4
-    bool mBB5;                              // +0xb5
-    bool mBB6;                              // +0xb6
-    bool mBB7;                              // +0xb7
-    bool mBB8;                              // +0xb8
+    float mUnusedFloat;                     // +0xb0
+    bool mUnusedFlag1;                      // +0xb4
+    bool mUnusedFlag2;                      // +0xb5
+    bool mUnusedFlag3;                      // +0xb6
+    bool mUnusedFlag4;                      // +0xb7
+    bool mUnusedFlag5;                      // +0xb8
 };
 static_assert(sizeof(EEAreaEffectData) == 188, "on-disk record: 188 bytes on every target");
 

@@ -68,7 +68,7 @@ public:
     float mParam9;                          // +0x48 (fld/fmul in the EEE3D effects)
     float mParam10;                         // +0x4c (fld/fmul in the EEE3D effects)
     float mParam11;                         // +0x50 (fld/fmul in the EEE3D effects)
-    float mParam12;                          // +0x54
+    float mEmitPositionSpread;                          // +0x54
     long mKind;                             // +0x58 (the plague draws 0x23 between two points, 0x40 unit to unit)
     long mTagPointKind;                     // +0x5c
     unsigned long mID;                      // +0x60 (unsigned: EESETSETGameGraphicEffect::Show 0x185790 pushes a converted temporary)
@@ -83,9 +83,9 @@ public:
     long mDetailLevel;                      // +0x84
     bool mFlag1;                            // +0x88
     bool mFlag2;                            // +0x89
-    bool mFlag3;                            // +0x8a
+    bool mEndsWithUnitOrDuration;                            // +0x8a
     bool mIsScenarioListed;                 // +0x8b
-    bool mFlag4;                            // +0x8c
+    bool mIsEmitFlat;                            // +0x8c
 
     // the table Get/GetCount read (0x4e8420: allocator byte, _First 0x4e8424, _Last 0x4e8428; a class static like
     // Get) (provisional name)

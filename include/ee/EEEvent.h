@@ -10,8 +10,8 @@ class EEComplexUnit;
 // the table at 0x531ff8 (2000 of them: 0x531ff8 + 2000 * 0x58 is EEEvent's guard byte 0x55cf78). An EEEvent holds
 // indices into it. No arrays: an array member costs every includer a VC6 `$E` number.
 struct EEEventEffect {
-    long mL00;
-    long mID;
+    long mUnused1;
+    long mUnusedID;
     float mValue;                           // +0x08 the absolute value (0x1ca591/0x1ca5df: used when +0x0c/+0x10 are 0)
     float mOffset;                          // +0x0c the offset added to the base
     float mFactor;                          // +0x10 the factor of the value
@@ -26,14 +26,14 @@ struct EEEventEffect {
     long mButton;                           // +0x34 an EEButtonObject index (kind 1)
     long mAreaEffect;                       // +0x38 an EEAEManager index (kind 2)
     long mTerrainType;
-    long mL40;
+    long mUnused2;
     unsigned char mRunOnLoad;               // +0x44 (RunEffect 0x1ca7cf: while loading (gLoadingSavedGame) only effects with 1 run)
-    unsigned char mB45;
-    unsigned short mU46;
-    long mL48;
-    long mL4C;
-    long mL50;
-    long mL54;                              // (sizeof 0x58)
+    unsigned char mUnused3;
+    unsigned short mUnused4;
+    long mUnused5;
+    long mUnused6;
+    long mUnused7;
+    long mUnused8;                          // (sizeof 0x58)
 };
 static_assert(sizeof(EEEventEffect) == 88, "on-disk record: 88 bytes on every target");
 extern EEEventEffect gEventEffects[2000];   // 0x531ff8 (provisional name)

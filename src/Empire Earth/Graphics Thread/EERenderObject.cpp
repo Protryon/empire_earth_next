@@ -1071,9 +1071,9 @@ void EERenderObject::FillDoppelgangerUnit(EEDoppelganger* inDoppelganger, EERend
         thePoint.mZ = theMap->mTerrainMesh.GetMeshZ(thePoint.GetX(), thePoint.GetY());
         theTransformation.SetPosition(thePoint.GetX(), thePoint.GetY(), thePoint.mZ);
     }
-    if (inDoppelganger->mUnit->mUnitClass->mB2F6 == true)
+    if (inDoppelganger->mUnit->mUnitClass->mFacesCamera == true)
         theTransformation.SetOrientationYPR(ioInfo.mYaw, 0.0f, 0.0f);
-    if (inDoppelganger->mUnit->mUnitClass->mB2F6 == true)
+    if (inDoppelganger->mUnit->mUnitClass->mFacesCamera == true)
         theTransformation.SetOrientationYPR(ioInfo.mYaw, 0.0f, 0.0f);
     theModel.SetModel(inDoppelganger->GetModel()->mModels[inDoppelganger->GetAnimation()]);
     theModel.SetFrame(0);
@@ -1305,7 +1305,7 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
             outUnit->mFraction = 0.0f;
         }
         outUnit->mTransformation = theComplex->mPhysicalModel.GetLocation();
-        if (theComplex->mUnitClass->mB2F6) {
+        if (theComplex->mUnitClass->mFacesCamera) {
             outUnit->mTransformation.Apply(theUp, theForward);
             outUnit->mTransformation.SetOrientationYPR(ioInfo.mYaw, UMArcCos(-theForward.mZ) - 1.5707964f, 0.0f);
         }
@@ -1380,7 +1380,7 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
         inUnit->mUnitClass->GroundLocation(thePoint);
         if (inUnit->IsPathMarker() && theTile->GetHeight() < gRenderEnvironment.mSeaLevel)
             thePoint.SetZ(gRenderEnvironment.mSeaLevel);
-        outUnit->mTransformation.SetOrientationYPR(inUnit->mUnitClass->mB2F6 ? ioInfo.mYaw : 0.0f, 0.0f, 0.0f);
+        outUnit->mTransformation.SetOrientationYPR(inUnit->mUnitClass->mFacesCamera ? ioInfo.mYaw : 0.0f, 0.0f, 0.0f);
         outUnit->mTransformation.mMatrix[0][3] = thePoint.GetX();
         outUnit->mTransformation.mMatrix[1][3] = thePoint.GetY();
         outUnit->mTransformation.mMatrix[2][3] = thePoint.mZ;

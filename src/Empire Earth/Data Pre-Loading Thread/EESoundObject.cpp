@@ -28,7 +28,7 @@ struct EESoundRecord {
     char _gap00[0x6c];
     long mMaxInstances;                     // +0x6c -> +0x1c
     long mCategory;                         // +0x70 -> +0x20
-    long mL74;                              // +0x74 -> +0x24
+    long mUnusedPriority;                   // +0x74 -> +0x24
     bool mLooping;                          // +0x78 -> +0x2c (looping)
     long mVolume;                           // +0x7c: percent -> +0x14 (float, * 0.01)
     char _gap80[4];
@@ -80,7 +80,7 @@ long EESoundObject::LoadTable(FSFile* inFile)
             theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
             theSound->mMaxInstances = theRecord.mMaxInstances;
             theSound->mCategory = theRecord.mCategory;
-            theSound->mL24 = theRecord.mL74;
+            theSound->mL24 = theRecord.mUnusedPriority;
             theSound->mLooping = theRecord.mLooping;
             theSound->mVolume = theRecord.mVolume * 0.01f;
             gSoundObjects[i] = theSound;

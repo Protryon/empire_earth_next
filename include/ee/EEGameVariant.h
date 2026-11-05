@@ -11,8 +11,8 @@ class FSFileSpec;
 // the loader 0xd693c into a local, then copied field by field into a new EEGameVariant). Layout from the file
 // (dbgamevariant) and the loader's copies; names are provisional.
 struct EEGameVariantData {
-    char mName[100];                        // +0x00
-    long mDatabaseID;                       // +0x64
+    char mLabel[100];                       // +0x00
+    long mUnusedDatabaseID;                 // +0x64
     long mIndex;                            // +0x68 (the loader skips a record whose index is negative) -> +0x70
     float mFactor0;                         // +0x6c -> +0x04 (factor 0)
     long mSet0;                             // +0x70 -> +0x48 (then (long, float) pairs: +0x70/+0x74 .. +0xb8/+0xbc)
@@ -44,18 +44,18 @@ struct EEGameVariantData {
     float mCostSetFactor;                   // +0xd8 -> +0x40
     long mCostSet;                          // +0xdc -> +0x7c
     float mEarthquakeDamageFactor;          // +0xe0 -> +0x44
-    long mLE4;                              // +0xe4 (0 in every record; not copied)
-    long mLE8;                              // +0xe8
-    long mLEC;                              // +0xec
-    long mLF0;                              // +0xf0
-    long mLF4;                              // +0xf4
-    long mLF8;                              // +0xf8
-    long mLFC;                              // +0xfc
-    long mL100;                             // +0x100
-    long mL104;                             // +0x104
-    long mL108;                             // +0x108
+    long mUnused1;                          // +0xe4 (0 in every record; not copied)
+    long mUnused2;                          // +0xe8
+    long mUnused3;                          // +0xec
+    long mUnused4;                          // +0xf0
+    long mUnused5;                          // +0xf4
+    long mUnused6;                          // +0xf8
+    long mUnused7;                          // +0xfc
+    long mUnused8;                          // +0x100
+    long mUnused9;                          // +0x104
+    long mUnused10;                         // +0x108
     bool mSelectable;                       // +0x10c -> +0x80
-    long mL110;                             // +0x110 (0 in every record)
+    long mUnused11;                         // +0x110 (0 in every record)
 };
 static_assert(sizeof(EEGameVariantData) == 276, "on-disk record: 276 bytes on every target");
 

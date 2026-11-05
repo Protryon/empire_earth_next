@@ -38,11 +38,11 @@ public:
 struct EEWorldTableEntry {
     float mFloatValue;                      // +0x00
     float mFloatValue2;                     // +0x04
-    long mDatabaseID;                       // +0x08
-    long mIndex;                            // +0x0c
+    long mUnusedDatabaseID;                 // +0x08
+    long mUnusedIndex;                      // +0x0c
     long mLongValue;                        // +0x10 (signed: EECPIntelligence 0x480f9b `fidiv dword [eax+0x10]`; TYPE CENSUS)
     unsigned long mLongValue2;              // +0x14
-    long mL18;                              // +0x18 (entry 31: 1, entry 48: 0x50200; otherwise 0)
+    long mUnused;                           // +0x18 (entry 31: 1, entry 48: 0x50200; otherwise 0)
 };
 static_assert(sizeof(EEWorldTableEntry) == 28, "on-disk record: 28 bytes on every target");
 

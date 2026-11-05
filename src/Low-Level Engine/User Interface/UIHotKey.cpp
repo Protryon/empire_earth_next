@@ -17,9 +17,9 @@
 
 // One hot key record of the UI database (0x7c bytes) (provisional names)
 struct UIDbDataHotKeys {
-    unsigned long mUnknown00;               // +0x00
+    unsigned long mUnused;                  // +0x00
     long mID;                               // +0x04 negative: no hot key
-    char mName[0x64];                       // +0x08
+    char mLabel[0x64];                      // +0x08
     unsigned long mModifiers[3];            // +0x6c DIK_* codes, 0x7fff: none
     unsigned long mKey;                     // +0x78
 };

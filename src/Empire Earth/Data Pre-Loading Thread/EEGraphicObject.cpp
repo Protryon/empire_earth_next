@@ -79,14 +79,14 @@ struct EEGraphicObjectRecord {
     char _gap0[0x68];
     long mMediaIndex;         // +0x68
     bool mIsDrawn;            // +0x6c
-    long mL70;                // +0x70
-    long mL74;                // +0x74
+    long mUnusedBuildingValue1; // +0x70
+    long mUnusedBuildingValue2; // +0x74
     bool mSharesFrames0;      // +0x78
     unsigned long mFirstFrame0;  // +0x7c
     unsigned long mLastFrame0;  // +0x80
     unsigned long mFrameTime0;  // +0x84
     bool mLoops0;             // +0x88
-    unsigned long mHoldTime0;  // +0x8c (not read: the loader sets mCamouflageTimer[0] to 300000)
+    unsigned long mUnusedHoldTime0; // +0x8c (not read: the loader sets mCamouflageTimer[0] to 300000)
     unsigned long mSound1Frame0;  // +0x90
     unsigned long mSound2Frame0;  // +0x94
     unsigned long mSound1Index0;  // +0x98
@@ -227,13 +227,13 @@ struct EEGraphicObjectRecord {
     unsigned long mSound1Index2;  // +0x280
     unsigned long mSound2Index2;  // +0x284
     bool mIsSpeedScaled2;     // +0x288
-    long mL28C;               // +0x28c
-    bool mB290;               // +0x290
+    long mUnusedIsBuilding;   // +0x28c
+    bool mUnusedIsSprite;     // +0x290
     char _gap291[0x7];
-    long mL298;               // +0x298
-    long mL29C;               // +0x29c
+    long mUnusedDummyValue;   // +0x298
+    long mUnusedBaseGraphic;  // +0x29c
     long mAlphaReference;     // +0x2a0
-    long mL2A4;               // +0x2a4
+    long mUnusedBuildingIndex; // +0x2a4
     char _gap2A8[0x4];
     long mKind;               // +0x2ac
     bool mHasAlpha;           // +0x2b0
@@ -432,8 +432,8 @@ void EELoadGraphicObjectRecord(EEGraphicObject* inObject, EEGraphicObjectRecord*
         inObject->mMediaIndex = inRecord->mMediaIndex;
         inObject->mKind = inRecord->mKind;
         inObject->mIsDrawn = inRecord->mIsDrawn;
-        inObject->mL318 = inRecord->mL70;
-        inObject->mL31C = inRecord->mL74;
+        inObject->mL318 = inRecord->mUnusedBuildingValue1;
+        inObject->mL31C = inRecord->mUnusedBuildingValue2;
         inObject->mStartFrames[0] = inRecord->mFirstFrame0;
         inObject->mLastFrames[0] = inRecord->mLastFrame0;
         inObject->mFrameTimes[0] = inRecord->mFrameTime0;
@@ -660,11 +660,11 @@ void EELoadGraphicObjectRecord(EEGraphicObject* inObject, EEGraphicObjectRecord*
         else
             inObject->mSound2Frames[2] = -1;
         inObject->mIsSpeedScaled[2] = inRecord->mIsSpeedScaled2;
-        inObject->mL4B4 = inRecord->mL28C;
-        inObject->mB4CE = inRecord->mB290;
-        inObject->mL4B0 = inRecord->mL298;
-        inObject->mL2FC = inRecord->mL29C;
-        inObject->mL320 = inRecord->mL2A4;
+        inObject->mL4B4 = inRecord->mUnusedIsBuilding;
+        inObject->mB4CE = inRecord->mUnusedIsSprite;
+        inObject->mL4B0 = inRecord->mUnusedDummyValue;
+        inObject->mL2FC = inRecord->mUnusedBaseGraphic;
+        inObject->mL320 = inRecord->mUnusedBuildingIndex;
         inObject->mHasAlpha = inRecord->mHasAlpha;
         inObject->mMipMapBias = inRecord->mMipMapBias;
         inObject->mOpacity = inRecord->mOpacity;

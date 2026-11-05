@@ -10,20 +10,20 @@ class UWideString;
 // One civilization power record (0x98 bytes: EECivPowersManager::GetPower copies 0x26 dwords; provisional name;
 // layout inferred)
 struct EECivPower {
-    char mName[100];                       // +0x00 the power's name, NUL-terminated (dbcivpowers.dat: "Flaming
+    char mLabel[100];                      // +0x00 the power's name, NUL-terminated (dbcivpowers.dat: "Flaming
                                            //  Arrows" .. "Just In Time Manufacturing"; only copied whole)
-    long mDatabaseID;                      // +0x64
+    long mUnusedDatabaseID;                // +0x64
     long mID;                              // +0x68
     float mBonus;                           // +0x6c (EECivilizationManager::Load copies it as a level bonus: a dword move into a float)
     long mUnitSet;                         // +0x70
     long mTechnology;                      // +0x74 (EEMResearchTechnology compares it with the node's +0x5c)
     long mMiningLimit;                     // +0x78
     long mChance;                          // +0x7c
-    long mL80;                             // +0x80
+    long mUnused1;                         // +0x80
     float mAmount;                          // +0x84
-    long mL88;                             // +0x88
-    long mL8C;                             // +0x8c
-    long mL90;                             // +0x90
+    long mUnused2;                         // +0x88
+    long mUnused3;                         // +0x8c
+    long mUnused4;                         // +0x90
     long mUnitType;                        // +0x94
 };
 static_assert(sizeof(EECivPower) == 152, "on-disk record: 152 bytes on every target");
