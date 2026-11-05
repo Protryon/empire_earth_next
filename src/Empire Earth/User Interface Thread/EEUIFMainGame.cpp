@@ -218,7 +218,7 @@ EEUIFMGUnitHack::EEUIFMGUnitHack(EEUIFMainGame* inForm)
     theCount = 0;
     this->mMode = 0;
     this->mForm = inForm;
-    for (i = 0; i < 0x366; i++) {
+    for (i = 0; i < EEUnitClassCount(); i++) {
         EEUnitClass* theClass = gUnitClassTable[i];
         if (theClass == NULL || !theClass->mIsEnabled)
             continue;

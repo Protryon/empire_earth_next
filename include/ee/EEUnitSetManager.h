@@ -23,7 +23,7 @@ public:
     EEUnitSet();                            // 0x136d66
     void AddFamily(unsigned long inUnitClass);     // 0x136dee (a class in 1..0x3b; sets mB38; provisional name)
     void AddUnitType(unsigned long inUnitClass);   // 0x136e1b (provisional name)
-    // 0x136e3a (every unit type 1..0x366 in the set; stops at the first false). void: the original keeps the loop's
+    // 0x136e3a (every unit type 1..EEUnitClassCount() - 1 in the set; stops at the first false). void: the original keeps the loop's
     // result in bl and never loads al; both callers discard it
     void ForEach(EEUnitSetFunctor* inFunctor);
     // inline (COMDAT 0x2bae4, `push 1; pop eax`; EECPAttackSubGroup::GetGateWeight calls it) (provisional name)

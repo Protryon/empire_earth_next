@@ -3315,9 +3315,9 @@ void EEMHackANewUnit::Execute()
     long thePlayerID = this->mPlayerID;
     gWorld.GetMap()->GetTile((long)this->mPoint.GetX(), (long)this->mPoint.GetY());
     EEPlayer* thePlayer = gWorld.mPlayers[thePlayerID];
-    if (this->mUnitType == 0x367)
-        this->mUnitType = theSender->mHackUnitClass;
-    if (this->mUnitType == 0x367)
+    if ((unsigned long)this->mUnitType == kNoUnitClass)
+        this->mUnitType = (int32_t)theSender->mHackUnitClass;
+    if ((unsigned long)this->mUnitType >= EEUnitClassCount())
         return;
     EEUnitClass* theClass = gUnitClassTable[this->mUnitType];
     // a unit type without a class creates nothing (its category used to be read through NULL first)
@@ -4418,11 +4418,11 @@ void EEMLoadUnitData::Execute()
     if (thePlayer->mHackUnitClass != this->mUnitType) {
         unsigned long i;
         for (i = 1; i < gWorld.mNumPlayers; i++)
-            if (thePlayer->mHackUnitClass < 0x367 && gUnitClassTable[thePlayer->mHackUnitClass])
+            if (thePlayer->mHackUnitClass < EEUnitClassCount() && gUnitClassTable[thePlayer->mHackUnitClass])
                 gDataPreLoading->PostUnloadUnitClass(gWorld.mPlayers[i]->mPlayerID, thePlayer->mHackUnitClass);
         thePlayer->SetHackUnitClass(this->mUnitType);
         for (i = 1; i < gWorld.mNumPlayers; i++)
-            if (thePlayer->mHackUnitClass < 0x367 && gUnitClassTable[thePlayer->mHackUnitClass])
+            if (thePlayer->mHackUnitClass < EEUnitClassCount() && gUnitClassTable[thePlayer->mHackUnitClass])
                 gDataPreLoading->PostLoadUnitClass(gWorld.mPlayers[i]->mPlayerID, thePlayer->mHackUnitClass);
     }
 }

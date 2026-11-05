@@ -17,7 +17,7 @@ struct EEEventEffect {
     float mValue;                           // +0x08 the absolute value (0x1ca591/0x1ca5df: used when +0x0c/+0x10 are 0)
     float mOffset;                          // +0x0c the offset added to the base
     float mFactor;                          // +0x10 the factor of the value
-    int32_t mUnitClass;                     // +0x14 a gUnitClassTable index (< 0x367)
+    int32_t mUnitClass;                     // +0x14 a gUnitClassTable index (< EEUnitClassCount())
     int32_t mNewUnitClass;                  // +0x18 a unit class (kind 0x13: its media)
     int32_t mUnitSet;
     int32_t mKind;                          // +0x20

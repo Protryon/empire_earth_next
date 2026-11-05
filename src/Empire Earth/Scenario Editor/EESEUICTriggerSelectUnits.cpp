@@ -133,7 +133,7 @@ long EESEUICTriggerSelectUnits::MouseLButtonUp()
         if (this->mRightButton)
             this->mLasso->SelectInRectangle(theRectangle, 2);
         else
-            this->mLasso->SelectUnits(theRectangle, 1, 0x366, 0);
+            this->mLasso->SelectUnits(theRectangle, 1, kAnyUnitType, 0);
     }
     else if (gViewport.GetViewRectangle().Contains(this->GetMouseLocation()))
     {

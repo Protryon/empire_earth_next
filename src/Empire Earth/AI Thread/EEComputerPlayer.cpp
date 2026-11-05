@@ -388,7 +388,7 @@ void EEComputerPlayer::GetScreenedTypesByLine(std::map<long, std::vector<long>*>
     EEUnitClass* theClass;
     long theValue;
     long theType;
-    for (i = 0; i < 0x367; i++) {
+    for (i = 0; i < EEUnitClassCount(); i++) {
         theClass = gUnitClassTable[i];
         if (theClass != NULL && theClass->mIsEnabled && inScreener.Screen(theClass)) {
             theValue = theClass->mAIKind;
@@ -946,7 +946,7 @@ bool EEComputerPlayer::IsIslandExpansionDue()
 unsigned long EEComputerPlayer::GetBuildableTypes(long inCategory, std::vector<long>& outTypes)
 {
     EEAIFOCurrentlyBuildableUnitScreener theScreener(this);
-    for (long i = 0; i < 0x367; i++) {
+    for (long i = 0; i < EEUnitClassCount(); i++) {
         EEUnitClass* theClass = gUnitClassTable[i];
         if (theClass != NULL && theClass->mCategory == inCategory && theClass->mIsEnabled && theScreener.Screen(theClass)) {
             long theType = theClass->mUnitType;

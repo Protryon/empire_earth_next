@@ -158,7 +158,7 @@ void EETechTree::BuildUnitClassInfo()
                 continue;
             for (unsigned long j = 0; j < theEvent->GetNumEffects(); j++) {
                 long theUnitClass = EEEvent::GetEventEffect(theEvent->GetEffect(j))->mUnitClass;
-                EEUnitClass* theClass = (theUnitClass > 0 && theUnitClass < 0x367) ? gUnitClassTable[theUnitClass] : NULL;
+                EEUnitClass* theClass = (theUnitClass > 0 && theUnitClass < EEUnitClassCount()) ? gUnitClassTable[theUnitClass] : NULL;
                 if (theClass != NULL) {
                     switch (EEEvent::GetEventEffect(theEvent->GetEffect(j))->mKind) {
                     case 6:

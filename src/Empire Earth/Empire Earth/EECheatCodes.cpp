@@ -523,7 +523,7 @@ void EECheatCodes::ResearchAll(unsigned long inPlayer)
     if (!(inPlayer < gWorld.mNumPlayers))   // players are 0..mNumPlayers - 1 (the test was <=)
         return;
     EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
-    for (long i = 0; i < 0x366; i++) {
+    for (long i = 0; i < EEUnitClassCount(); i++) {
         EEUnitClass* theClass = gUnitClassTable[i];
         if (theClass == NULL)
             continue;

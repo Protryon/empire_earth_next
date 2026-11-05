@@ -656,7 +656,7 @@ long Fn1CAEA4(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer)
 // Allows or forbids the terrain type in the player's upgrade of a unit type; always continues the set walk
 bool EEUnitSetFunctorModifyPathfindingBehavior::Execute(long inUnitType)
 {
-    if ((unsigned long)inUnitType < 0x367) {
+    if ((unsigned long)inUnitType < EEUnitClassCount()) {
         EEUnitClassUpgrade* theUpgrade = this->mPlayer->GetUpgrade(inUnitType);
         if (theUpgrade != NULL) {
             if (this->mEnabled) {

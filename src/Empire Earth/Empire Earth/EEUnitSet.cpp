@@ -50,7 +50,7 @@ void EEUnitSet::AddUnitType(unsigned long inUnitClass)
 void EEUnitSet::ForEach(EEUnitSetFunctor* inFunctor)
 {
     bool theResult = true;
-    for (unsigned long i = 1; i != 0x367 && theResult; i++) {
+    for (unsigned long i = 1; i < EEUnitClassCount() && theResult; i++) {
         if (this->Contains(i))
             theResult = inFunctor->Execute(i);
     }

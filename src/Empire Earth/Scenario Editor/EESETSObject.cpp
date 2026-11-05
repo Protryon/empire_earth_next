@@ -893,7 +893,7 @@ void EESETSObject::Activate()
     if (this->mUnitTypes.empty()) {
         this->mTypeComboBox->DeleteAllEntries();
         this->mUnitTypes.push_back(0);
-        for (i = 1; i < 0x367; i++) {
+        for (i = 1; i < EEUnitClassCount(); i++) {
             EEUnitClass* theClass = gUnitClassTable[i];
             if (theClass != NULL && theClass->mCategory != kUnitCategoryProjectile && theClass->mCategory != kUnitCategoryMissile && theClass->mIsScenarioSelectable == true)
                 this->mUnitTypes.push_back(i);

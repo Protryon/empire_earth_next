@@ -291,7 +291,7 @@ EEPlayer::~EEPlayer()
         delete mAirTraffic[theAirport];
         mAirTraffic[theAirport] = NULL;
     }
-    for (unsigned long theClass = 0; theClass < 0x367; theClass++)
+    for (unsigned long theClass = 0; theClass < EEUnitClassCount(); theClass++)
         delete this->mUnitClassUpgrades.begin()[theClass];
     this->mUnitClassUpgrades.clear();
     EEDeletePointers(this->mTowns);
@@ -867,7 +867,7 @@ void EEPlayer::FlareReceived(EEPlayer* inFrom, const U2DPoint<long>& inTile)
 // and acquires the other's
 void EEPlayer::SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* inFirst, EEButtonObject* inSecond)
 {
-    if (inUnitClass >= 0x367)
+    if (inUnitClass >= EEUnitClassCount())
         return;
     EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
     if (theStats == NULL || !(theStats->mButtonLoadCount > 0) || this->IsHuman() != true)
@@ -882,7 +882,7 @@ void EEPlayer::SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* i
 // Sets one of a unit class's acknowledgement sounds for the player
 void EEPlayer::SetClassAcknowledgeSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex)
 {
-    if (inUnitClass >= 0x367)
+    if (inUnitClass >= EEUnitClassCount())
         return;
     EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
     if (theStats != NULL)
@@ -893,7 +893,7 @@ void EEPlayer::SetClassAcknowledgeSound(unsigned long inUnitClass, EESoundObject
 // Sets a unit class's creation sound for the player
 void EEPlayer::SetClassCreationSound(unsigned long inUnitClass, EESoundObject* inSound)
 {
-    if (inUnitClass >= 0x367)
+    if (inUnitClass >= EEUnitClassCount())
         return;
     EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
     if (theStats != NULL)
@@ -904,7 +904,7 @@ void EEPlayer::SetClassCreationSound(unsigned long inUnitClass, EESoundObject* i
 // Sets a unit class's death sound for the player
 void EEPlayer::SetClassDeathSound(unsigned long inUnitClass, EESoundObject* inSound)
 {
-    if (inUnitClass >= 0x367)
+    if (inUnitClass >= EEUnitClassCount())
         return;
     EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
     if (theStats != NULL)
@@ -915,7 +915,7 @@ void EEPlayer::SetClassDeathSound(unsigned long inUnitClass, EESoundObject* inSo
 // Sets a unit class's model for the player
 void EEPlayer::SetClassModel(unsigned long inUnitClass, EEModel* inModel)
 {
-    if (inUnitClass >= 0x367)
+    if (inUnitClass >= EEUnitClassCount())
         return;
     EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
     if (theStats != NULL)
@@ -926,7 +926,7 @@ void EEPlayer::SetClassModel(unsigned long inUnitClass, EEModel* inModel)
 // Sets a unit class's button for the player
 void EEPlayer::SetClassButton(unsigned long inUnitClass, EEButtonObject* inButton)
 {
-    if (inUnitClass >= 0x367)
+    if (inUnitClass >= EEUnitClassCount())
         return;
     EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
     if (theStats != NULL)
@@ -937,7 +937,7 @@ void EEPlayer::SetClassButton(unsigned long inUnitClass, EEButtonObject* inButto
 // Sets one of a unit class's selection sounds for the player
 void EEPlayer::SetClassSelectionSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex)
 {
-    if (inUnitClass >= 0x367)
+    if (inUnitClass >= EEUnitClassCount())
         return;
     EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
     if (theStats != NULL)
@@ -1775,8 +1775,8 @@ void EEPlayer::Reset()
     this->mSavedGroups.SetName(this->GetName());
     for (unsigned long thePlayer = 0; thePlayer <= 16; thePlayer++)
         this->mEnemies[thePlayer] = this->mPlayerID != thePlayer;
-    this->mUnitClassUpgrades.resize(0x367);
-    for (long theClass = 0; theClass < 0x367; theClass++) {
+    this->mUnitClassUpgrades.resize(EEUnitClassCount());
+    for (long theClass = 0; theClass < EEUnitClassCount(); theClass++) {
         if (gUnitClassTable[theClass] != NULL)
             this->mUnitClassUpgrades[theClass] = new EEUnitClassUpgrade(gUnitClassTable[theClass]);
         else
@@ -1832,7 +1832,7 @@ void EEPlayer::Reset()
     }
     this->mNumAttacks = 0;
     this->mCombatState = 0;
-    this->mHackUnitClass = 0x367;
+    this->mHackUnitClass = kNoUnitClass;
     for (long theValue = 0; theValue < 10; theValue++)
         this->mScenarioVariables[theValue] = 0;
     this->mEvents.Clear(this);
@@ -1906,7 +1906,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
         inFile.Read(theCount);
         long theUpgradeResult = inFile.Read(theFormatVersion);
         EEUnitClassUpgrade* theDummyUpgrade = NULL;
-        for (i = 0; i < 0x367; i++) {
+        for (i = 0; i < EEUnitClassCount(); i++) {
             if (gUnitClassTable[i] != NULL) {
                 theDummyUpgrade = new EEUnitClassUpgrade(gUnitClassTable[i]);
                 break;
@@ -1918,7 +1918,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
             theUpgradeResult = inFile.Read(theID);
             if (theUpgradeResult != kErrorOK)
                 continue;
-            if (theID < 0x367 && this->mUnitClassUpgrades[theID] != NULL)
+            if (theID < EEUnitClassCount() && this->mUnitClassUpgrades[theID] != NULL)
                 this->mUnitClassUpgrades[theID]->Load(inMajorVersion, inMinorVersion, inFile);
             else
                 theUpgradeResult = theDummyUpgrade->Load(inMajorVersion, inMinorVersion, inFile);
@@ -2061,7 +2061,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
         inFile.Read(theCount);
         long theUpgradeResult = inFile.Read(theFormatVersion);
         EEUnitClassUpgrade* theDummyUpgrade = NULL;
-        for (i = 0; i < 0x367; i++) {
+        for (i = 0; i < EEUnitClassCount(); i++) {
             if (gUnitClassTable[i] != NULL) {
                 theDummyUpgrade = new EEUnitClassUpgrade(gUnitClassTable[i]);
                 break;
@@ -2073,7 +2073,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
             theUpgradeResult = inFile.Read(theID);
             if (theUpgradeResult != kErrorOK)
                 continue;
-            if (theID < 0x367 && this->mUnitClassUpgrades[theID] != NULL)
+            if (theID < EEUnitClassCount() && this->mUnitClassUpgrades[theID] != NULL)
                 this->mUnitClassUpgrades[theID]->Load(inMajorVersion, inMinorVersion, inFile);
             else
                 theUpgradeResult = theDummyUpgrade->Load(inMajorVersion, inMinorVersion, inFile);
@@ -2227,7 +2227,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
         inFile.Read(theCount);
         long theUpgradeResult = inFile.Read(theFormatVersion);
         EEUnitClassUpgrade* theDummyUpgrade = NULL;
-        for (i = 0; i < 0x367; i++) {
+        for (i = 0; i < EEUnitClassCount(); i++) {
             if (gUnitClassTable[i] != NULL) {
                 theDummyUpgrade = new EEUnitClassUpgrade(gUnitClassTable[i]);
                 break;
@@ -2239,7 +2239,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
             theUpgradeResult = inFile.Read(theID);
             if (theUpgradeResult != kErrorOK)
                 continue;
-            if (theID < 0x367 && this->mUnitClassUpgrades[theID] != NULL)
+            if (theID < EEUnitClassCount() && this->mUnitClassUpgrades[theID] != NULL)
                 this->mUnitClassUpgrades[theID]->Load(inMajorVersion, inMinorVersion, inFile);
             else
                 theUpgradeResult = theDummyUpgrade->Load(inMajorVersion, inMinorVersion, inFile);
@@ -2409,7 +2409,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
         inFile.Read(theCount);
         long theUpgradeResult = inFile.Read(theFormatVersion);
         EEUnitClassUpgrade* theDummyUpgrade = NULL;
-        for (i = 0; i < 0x367; i++) {
+        for (i = 0; i < EEUnitClassCount(); i++) {
             if (gUnitClassTable[i] != NULL) {
                 theDummyUpgrade = new EEUnitClassUpgrade(gUnitClassTable[i]);
                 break;
@@ -2421,7 +2421,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
             theUpgradeResult = inFile.Read(theID);
             if (theUpgradeResult != kErrorOK)
                 continue;
-            if (theID < 0x367 && this->mUnitClassUpgrades[theID] != NULL)
+            if (theID < EEUnitClassCount() && this->mUnitClassUpgrades[theID] != NULL)
                 this->mUnitClassUpgrades[theID]->Load(inMajorVersion, inMinorVersion, inFile);
             else
                 theUpgradeResult = theDummyUpgrade->Load(inMajorVersion, inMinorVersion, inFile);
@@ -2607,7 +2607,7 @@ long EEPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
 // Loads the class media of every unit class that has media and records those classes for a later unload
 void EEPlayer::LoadAllClassMedia()
 {
-    for (long i = 0; i < 0x367; i++) {
+    for (long i = 0; i < EEUnitClassCount(); i++) {
         EEUnitStats* theStats = this->mUnitClassUpgrades[i];
         if (theStats != NULL && theStats->GetMediaCount() > 0) {
             theStats->mUnitClass->LoadClassMedia();
@@ -2620,7 +2620,7 @@ void EEPlayer::LoadAllClassMedia()
 // Loads the command buttons of one unit class for the player, if the class index is valid
 void EEPlayer::LoadUnitClassButtons(long inUnitClass)
 {
-    if ((unsigned long)inUnitClass >= 0x367)
+    if ((unsigned long)inUnitClass >= EEUnitClassCount())
         return;
     EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
     if (theStats != NULL)
@@ -2631,7 +2631,7 @@ void EEPlayer::LoadUnitClassButtons(long inUnitClass)
 // Loads the media of one unit class for the player, if the class index is valid
 void EEPlayer::SetUnitClassMedia(long inUnitClass, long inMediaFlags)
 {
-    if ((unsigned long)inUnitClass >= 0x367)
+    if ((unsigned long)inUnitClass >= EEUnitClassCount())
         return;
     EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
     if (theStats != NULL)
@@ -3335,7 +3335,7 @@ void EEPlayer::ReloadTechTree(bool inFlag)
 // Recomputes every unit class upgrade and rescales the hit points, flight time and area effects of existing units
 void EEPlayer::RefreshUpgrades()
 {
-    for (unsigned long i = 0; i < 0x367; i++) {
+    for (unsigned long i = 0; i < EEUnitClassCount(); i++) {
         EEUnitClassUpgrade* theUpgrade = this->GetUpgrade(i);
         if (theUpgrade == NULL)
             continue;
@@ -4093,7 +4093,7 @@ void EEPlayer::UnloadAllClassMedia()
 // Unloads the command buttons of one unit class for the player, if the class index is valid
 void EEPlayer::UnloadUnitClassButtons(long inUnitClass)
 {
-    if ((unsigned long)inUnitClass >= 0x367)
+    if ((unsigned long)inUnitClass >= EEUnitClassCount())
         return;
     EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
     if (theStats != NULL)
@@ -4104,7 +4104,7 @@ void EEPlayer::UnloadUnitClassButtons(long inUnitClass)
 // Unloads the media of one unit class for the player, if the class index is valid
 void EEPlayer::UnloadUnitClassMedia(long inUnitClass)
 {
-    if ((unsigned long)inUnitClass >= 0x367)
+    if ((unsigned long)inUnitClass >= EEUnitClassCount())
         return;
     EEUnitStats* theStats = this->mUnitClassUpgrades[inUnitClass];
     if (theStats != NULL)

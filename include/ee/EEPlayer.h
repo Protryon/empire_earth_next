@@ -815,7 +815,7 @@ public:
     // 0x16ae11: with inUnit and inFlag set, calls slot 0x24 of +0x9ac; the hot-key events call it with (0, true)
     // (provisional name)
     void UpdateSelection(EEUnit* inUnit, bool inFlag);
-    // per unit class (+0x888, 0x367 entries; the meteor storm's Virtual28/Virtual34 with its meteor class)
+    // per unit class (+0x888, one per unit class; the meteor storm's Virtual28/Virtual34 with its meteor class)
     // (provisional names)
     void LoadUnitClassMedia(long inUnitClass);              // 0x16c776
     void GetHerdsOfType(std::vector<EEHerd*>& outHerds, long inUnitType);  // 0x164e78 (the herds of inUnitType's animal; EESMObject 0x1c8e37; provisional name)
@@ -998,7 +998,7 @@ public:
     long GetNumHeroes(bool inFirst, bool inSecond);   // 0x164223 (mNumHeroes and/or mNumHeroesInProduction; provisional name)
     long GetWonderTime(long inIndex) const;  // 0x165644 (mWonders's unit inIndex's mCloaked; provisional name)
     unsigned long GetNumWonderUnits() const;   // 0x16565f: mWonders->GetSize() (provisional name)
-    // per unit class (mUnitClassUpgrades[inUnitClass] when inUnitClass < 0x367; provisional names)
+    // per unit class (mUnitClassUpgrades[inUnitClass] when inUnitClass < EEUnitClassCount(); provisional names)
     EEUnitClassUpgrade* GetUpgrade(long inUnitClass) { return this->mUnitClassUpgrades[inUnitClass]; }  // inline COMDAT 0x1bcae9
     void SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* inFirst, EEButtonObject* inSecond);  // 0x163d72
     void SetClassAcknowledgeSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex);  // 0x163db9
@@ -1029,7 +1029,7 @@ public:
     std::vector<EEGroup*> mPendingGroups;   // +0x854 (the command messages push their new EEActiveGroups)
     std::vector<EEGroup*> mFinishedGroups;  // +0x864 (EEActiveGroup::Finish pushes itself)
     std::vector<EEPPatrolGroup*> mPatrolGroups;  // +0x874 (AddPatrolGroup: push_back 0x16c986)
-    std::vector<EEUnitClassUpgrade*> mUnitClassUpgrades; // +0x884 (resized to 0x367 by Reset: one per unit class; the forwarders
+    std::vector<EEUnitClassUpgrade*> mUnitClassUpgrades; // +0x884 (resized to EEUnitClassCount() by Reset: one per unit class; the forwarders
                                             // 0x163db9.. index it
     std::vector<EEPlayer*> mAllies;         // +0x894 (EEPPlayerHelper push_backs into it; EEMSendFlare copies it with
                                             // vector<EEPlayer*>::operator= 0x1119ec and flares each)
@@ -1064,7 +1064,7 @@ public:
     unsigned long mChatType;                // +0x9d8 0..3 (the chat form's radio buttons 3, 2, 4, 5; saved)
     unsigned long mEnemies[17];             // +0x9dc non-zero: at war with that player (calamity targets; unsigned: Save writes it with Write(const unsigned long&))
     unsigned long mCombatState;             // +0xa20 (saved)
-    unsigned long mHackUnitClass;           // +0xa24 (= 0x367: none; a gUnitClassTable index, compared unsigned: EEMLoadUnitData)
+    unsigned long mHackUnitClass;           // +0xa24 (kNoUnitClass: none (the original: 0x367); a gUnitClassTable index, compared unsigned: EEMLoadUnitData)
     unsigned long mGameResult;              // +0xa28 (saved)
     float mConversionFactor;                // +0xa2c (= 1)
     float mTributeFee;                      // +0xa30 (the tribute fee: the diplomacy form loads it with fld)
