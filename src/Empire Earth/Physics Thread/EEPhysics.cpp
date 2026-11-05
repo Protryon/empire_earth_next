@@ -2,6 +2,7 @@
 // "EEPhysics Data" key's init chain, the class in definition order, the inline COMDATs of other classes after their
 // first users). Unit flags: the exe's module set.
 #include <windows.h>
+#include "platform/PlatFile.h"
 #include <vector>
 #include <stdlib.h>
 
@@ -261,7 +262,7 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
         TMGetTimeOfDay(theTime);
         sprintf(theName, "OOS %4ld.%02ld.%02ld - %02ldh.%02ldm.%02lds.log", theTime.mYear, theTime.mMonth + 1, theTime.mDay,
                 theTime.mHour, theTime.mMinute, theTime.mSecond);
-        theFile = fopen(theName, "w");
+        theFile = PlatFOpen(theName, "w");
         ESVERIFY_AT(theFile != NULL, 544);
         for (i = 0; i < gWorld.mNumPlayers; i++) {
             thePlayer = gWorld.mPlayers[i];

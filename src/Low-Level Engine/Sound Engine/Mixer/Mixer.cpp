@@ -5,6 +5,7 @@
 // FLAC through miniaudio's decoders) and shared, reference-counted, by a sample and its duplicates. The SPIM entry
 // points and their result codes are the original plug-in's.
 #include <windows.h>
+#include "platform/PlatFile.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -240,7 +241,13 @@ extern "C" long SPIMActivateMixer()
     if (gActive)
         return kSPIMOK;
     // the first backend that opens and starts a playback device; the null backend (no output) always does
+#if defined(_WIN32)
     ma_backend theBackends[] = { ma_backend_wasapi, ma_backend_dsound, ma_backend_winmm, ma_backend_null };
+#elif defined(__APPLE__)
+    ma_backend theBackends[] = { ma_backend_coreaudio, ma_backend_null };
+#else
+    ma_backend theBackends[] = { ma_backend_pulseaudio, ma_backend_alsa, ma_backend_null };
+#endif
     ma_device_config theConfig = ma_device_config_init(ma_device_type_playback);
     theConfig.playback.format = ma_format_f32;
     theConfig.playback.channels = 2;
@@ -321,7 +328,8 @@ extern "C" long SPIMDuplicateSample(SESample* inSample, SESample** outSample)
 {
     UReferenceCounter* theWaveData = static_cast<UReferenceCounter*>(inSample->GetData());
     SESample* theSample = new SESample(*inSample);
-    theWaveData->Reference();
+    if (theWaveData)   // the original sample's wave did not load: the copy is silent too
+        theWaveData->Reference();
     theSample->SetData(theWaveData);
     *outSample = theSample;
     return kSPIMOK;
@@ -433,7 +441,7 @@ extern "C" long SPIMLoadWaveData(FSFileSpec* inSpec, SESample* ioSample)
     if (theMemoryFile == NULL) {
         char thePath[MAX_PATH];
         sprintf(thePath, "%s", (const char*)(inSpec->GetVolume() + inSpec->GetDirectory() + inSpec->GetFile()));
-        FILE* theStream = fopen(thePath, "rb");
+        FILE* theStream = PlatFOpen(thePath, "rb");
         if (theStream == NULL)
             return kSPIMNativeError;
         fseek(theStream, 0, SEEK_END);

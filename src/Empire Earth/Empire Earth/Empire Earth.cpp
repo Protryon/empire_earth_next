@@ -8,6 +8,9 @@
 #include "lle/LowLevelEngine.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "platform/PlatMessage.h"
+void EETestFixtureStart();   // EETestFixture.cpp (TEST ONLY)
+unsigned long EEMenuWidth();    // port: the menus' resolution (below)
+unsigned long EEMenuHeight();
 #include "platform/PlatWindow.h"
 #include "platform/PlatFile.h"
 #include <stdio.h>
@@ -759,7 +762,7 @@ void EELoadNetworkSettings()
 #include "ee/EEMessage.h"
 
 void EEEmptyShutdown(bool inShutdown);
-unsigned long gBinaryChecksum; // 0x5319e4: the install checksum EEInitializeNetwork computes (sent to clients)
+uint32_t gBinaryChecksum; // 0x5319e4: the install checksum EEInitializeNetwork computes (sent to clients; 32-bit on the wire)
 
 #include "GEWindow.h"
 #include "lle/GEFont.h"
@@ -1164,7 +1167,7 @@ void EEInitializeNetwork()
     char theExeName[PLAT_MAX_PATH];
     if (!PlatPathGetExecutableName(theExeName, sizeof(theExeName)))
         theExeName[0] = 0;
-    unsigned long theChecksum = EEGetFileChecksum(theFile, theExeName, 0);
+    uint32_t theChecksum = EEGetFileChecksum(theFile, theExeName, 0);   // a 32-bit sum on every data model (LP64: the server compares it with the request's)
     theFile.SetDirectory(gStartupDirectory + "Data\\Db\\");
     theChecksum += EEGetFileChecksum(theFile, "*.dat", 0);
     // the db tables' text forms (EEDbFindFile loads them in place of the .dat); 0 when there are none
@@ -1188,7 +1191,7 @@ void EEInitializeNetwork()
     TMGetTime();
     gBinaryChecksum = theChecksum;
     gGameVersion = theVersion.GetIndexedSubstring(theVersion.Find("v", 0), theVersion.GetLength() - 1);
-    sprintf(theSuffix, ".%04ld", gBinaryChecksum & 0x1fff);
+    sprintf(theSuffix, ".%04ld", (long)(gBinaryChecksum & 0x1fff));
     gGameVersion += theSuffix;
 }
 
@@ -1596,7 +1599,8 @@ void EEPlayIntroMovies(bool inSkipMovies)
     gRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f), theRectangle, gGamePreferences.mSettings.GetScreenID());
 
     gRasterizer->ShowScene(gGamePreferences.mSettings.GetScreenID());
-    EEChangeGameScreen(1024, 768, false);
+    // port: the menus run at EEMenuWidth x EEMenuHeight (the original's 1024x768)
+    EEChangeGameScreen(EEMenuWidth(), EEMenuHeight(), false);
     gISMouse->Suspend();
     gISKeyboard->Suspend();
     gRasterizer->SetWaitForVSync(gGamePreferences.mSettings.mWaitForVSync, gGamePreferences.mSettings.GetScreenID());
@@ -1812,6 +1816,24 @@ extern bool sIconsLoaded; // the status box's icons-loaded flag (defined in EEUI
 // FUNCTION: EXE 0x540306
 // Re-creates the display at the new size (full screen or not): reactivates the rasterizer, resets render states
 // and the camera, reloads mouse, textures, buttons and icons and restarts the mouse pointer thread
+// port: the menus' resolution. Their controls are laid out for 1024x768 (pixel sizes; the forms anchor to their
+// edges), so they keep its height of 768 and take the game resolution's aspect ratio: the frame scales to the window
+// without the 4:3 stretch, and each control keeps its designed proportions. A game resolution under 768 lines is used
+// as it is.
+unsigned long EEMenuHeight()
+{
+    return gGameWindowHeight > 768 ? 768 : gGameWindowHeight;
+}
+
+unsigned long EEMenuWidth()
+{
+    if (gGameWindowHeight <= 768 || gGameWindowHeight == 0)
+        return gGameWindowWidth;
+    unsigned long theWidth = (gGameWindowWidth * 768 + gGameWindowHeight / 2) / gGameWindowHeight;
+    theWidth &= ~1UL;
+    return theWidth < 1024 ? 1024 : theWidth;   // at least the original's width (a 5:4 screen: 1024x768)
+}
+
 void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFullScreen)
 {
     GERectangle theGameView;
@@ -1955,6 +1977,14 @@ bool EEInitializeDisplay()
         || (gGamePreferences.mSettings.mTextureBitDepth == 32 && !gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->Get32BitTextureSupport()))
         gGamePreferences.mSettings.mTextureBitDepth = 16;
     GEScreen* theScreen = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID());
+    // port: the first full screen start (no saved size) plays at the display's size (macOS: in points), not 800x600
+    extern bool gGameWindowSizeDefaulted;
+    int32_t theDisplayWidth = 0, theDisplayHeight = 0;
+    if (gGameWindowSizeDefaulted && gGamePreferences.mSettings.GetFullScreen() &&
+        PlatWindowGetDisplayLogicalSize(NULL, &theDisplayWidth, &theDisplayHeight) && theDisplayWidth > 0) {
+        gGameWindowWidth = (unsigned long)theDisplayWidth;
+        gGameWindowHeight = (unsigned long)theDisplayHeight;
+    }
     unsigned long theMode;
     for (theMode = 0; theMode < theScreen->GetModeCount(); theMode++) {
         if (theScreen->GetMode(theMode).mWidth == gGameWindowWidth
@@ -2056,6 +2086,7 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
             if (theInitialized) {
                 EEPlayIntroMovies(theShowMovies == false);
                 EEInitializePart2();
+                EETestFixtureStart();   // TEST ONLY: nothing unless EE_TEST_UI is set (EETestFixture.cpp)
                 if (EEParseCommandLine(inCommandLine)) {
                     long theResult;
                     {

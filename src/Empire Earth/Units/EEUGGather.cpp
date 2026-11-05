@@ -4,6 +4,7 @@
 // 0x563580 (guard byte 0x563578); vtable 0x4475a8.
 
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <algorithm>
 
@@ -267,17 +268,17 @@ void EEUGGather::DumpOutOfSynch(FILE* inFile)
 long EEUGGather::GetOutOfSynchChecksum()
 {
     float theValue = this->mWaitingArea.GetX();
-    long theChecksum = *reinterpret_cast<long*>(&theValue);
+    long theChecksum = *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mWaitingArea.GetY();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mWaitingArea.GetZ();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mDestination.GetX();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mDestination.GetY();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mDestination.GetZ();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theChecksum += this->mResource ? this->mResource->mUnitID : 0;
     theChecksum += (this->mStorage ? this->mStorage->mUnitID : 0) + (this->mWaiting == true) + (this->mGathering == true);
     return EEUnitGoal::GetOutOfSynchChecksum() + theChecksum;

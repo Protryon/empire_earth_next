@@ -5,6 +5,7 @@
 // operation classes 0x291463..0x2916b3 and 0x291870..0x291b06, Download and the LobbyCompletion/set COMDATs after
 // 0x291d59 are not written yet.
 #include <windows.h>
+#include "platform/PlatFile.h"
 #include <string>
 #include <list>
 #include <vector>
@@ -86,7 +87,7 @@ WONStatus SendFileOp::Virtual0C()
 {
     if (mPath.size() == 0)
         return 100007;
-    if ((mFile = fopen(mPath.c_str(), "rb")) == NULL)
+    if ((mFile = PlatFOpen(mPath.c_str(), "rb")) == NULL)
         return 100007;
     ReadChunk();
     return Virtual10();

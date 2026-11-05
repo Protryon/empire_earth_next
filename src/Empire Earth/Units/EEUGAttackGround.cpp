@@ -4,6 +4,7 @@
 // (0xb2a4b..), the (bool) ctor by EEUnitGoal.cpp; Virtual30 is ICF-folded into EEUGAttackUnit.cpp's 0x21d460.
 
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
@@ -69,11 +70,11 @@ void EEUGAttackGround::DumpOutOfSynch(FILE* inFile)
 long EEUGAttackGround::GetOutOfSynchChecksum()
 {
     float theValue = this->mTarget.GetX();
-    long theChecksum = *reinterpret_cast<long*>(&theValue);
+    long theChecksum = *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mTarget.GetY();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mTarget.GetZ();
-    return EEUnitGoal::GetOutOfSynchChecksum() + *reinterpret_cast<long*>(&theValue) + theChecksum;
+    return EEUnitGoal::GetOutOfSynchChecksum() + *reinterpret_cast<int32_t*>(&theValue) + theChecksum;
 }
 
 // FUNCTION: EXE 0x61d016

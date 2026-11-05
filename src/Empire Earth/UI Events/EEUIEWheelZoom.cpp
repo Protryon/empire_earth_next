@@ -49,6 +49,8 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUIEWheelZoom.h"
 
+extern float gCameraMaxZoom;   // port: EECameraControl.cpp
+
 // FUNCTION: EXE 0x5e9f40
 // Zooms the camera by the mouse wheel (clamped to 0..1); in camera mode 3 outside a cinematic, resets the camera
 long EEUIEWheelZoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
@@ -68,8 +70,8 @@ long EEUIEWheelZoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         theZoom = theZoom - theWheel->GetNormalizedValue() * 0.05f;
         if (theZoom < 0.0f)
             theZoom = 0.0f;
-        else if (theZoom > 1.0f)
-            theZoom = 1.0f;
+        else if (theZoom > gCameraMaxZoom)   // port: the farther zoom-out (1.0 in the original)
+            theZoom = gCameraMaxZoom;
         gWorld.mCameraControl.SetZoom(theZoom);
     }
     return kErrorOK;

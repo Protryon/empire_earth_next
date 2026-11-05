@@ -8,6 +8,7 @@
 
 #include <charconv>
 #include <errno.h>
+#include <limits>
 #include <stdlib.h>
 #include <string>
 #include <system_error>
@@ -26,7 +27,10 @@ template <class T> inline std::from_chars_result UFromChars(const char* inFirst,
     if (theEnd == theCopy.c_str()) {
         theResult.ptr = inFirst;
         theResult.ec = std::errc::invalid_argument;
-    } else if (errno == ERANGE) {
+    } else if (errno == ERANGE && (theValue == 0 || theValue > std::numeric_limits<T>::max() ||
+                                   theValue < -std::numeric_limits<T>::max())) {
+        // strtof/strtod set ERANGE for subnormal results too; from_chars (MSVC) accepts those: only overflow and
+        // underflow to zero are out of range (the data has subnormals, e.g. dbobjects mFarmGatherTime 4.684328e-39)
         theResult.ec = std::errc::result_out_of_range;
     } else {
         theResult.ec = std::errc();

@@ -6,7 +6,7 @@
   python -I tools/xbuild.py sdl3     [--target T]                               SDL3 as a static library (CMake)
   python -I tools/xbuild.py sdltest  [--target T] [--no-run] [--frames N]       SDL3 window + wgpu surface test
   python -I tools/xbuild.py census   [--target T] [--dialect ms|gnu] [-j N] [--only TEXT] [module ...]
-  python -I tools/xbuild.py game     [--target T] [-j N] [--debug] [--incremental] [--smoke]
+  python -I tools/xbuild.py game     [--target T] [-j N] [--debug] [--incremental] [--smoke] [--sanitize address|undefined]
                                                                                 the game (POSIX targets): ee-aoc
   python -I tools/xbuild.py targets                                             what each target needs, and if it is here
 
@@ -758,7 +758,7 @@ def cmd_game(a):
     if not (sdl_prefix(t) / "include" / "SDL3" / "SDL.h").exists():
         cmd_sdl3(argparse.Namespace(target=t.name, j=a.j, fresh=False))
     wgpu, wlib = wgpu_dir(t)
-    out = t.out / "game"
+    out = t.out / ("game" if not a.sanitize else f"game-{a.sanitize}")
     (out / "obj").mkdir(parents=True, exist_ok=True)
     mods = units.TARGET_MODULES["exe"]
     jobs = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
@@ -773,6 +773,8 @@ def cmd_game(a):
            ROOT / "src" / "ThirdParty" / "stb", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS],
            wgpu / "include", sdl_prefix(t) / "include", font_arrays(t)]
     opt = ["-O1"] if not a.debug else ["-O0"]
+    san = [f"-fsanitize={a.sanitize}", "-fno-omit-frame-pointer"] if a.sanitize else []
+    opt += san
     t0 = time.time()
     commands = [(j,) + game_job_command(t, j, out, inc, opt) for j in jobs]
 
@@ -811,7 +813,7 @@ def cmd_game(a):
         libs += ["-ldl", "-lm", "-lpthread"]
     else:
         libs += ["-framework", "Metal", "-framework", "QuartzCore", "-framework", "Foundation"]
-    run([t.clang(), *t.link_flags(), "-o", exe, f"@{rsp}", *libs])
+    run([t.clang(), *t.link_flags(), *san, "-o", exe, f"@{rsp}", *libs])
     print(f"built {exe} ({exe.stat().st_size // 1024} KB) in {time.time() - t0:.0f} s")
     if t.os == "macos":
         app = out / "Empire Earth AoC.app" / "Contents"
@@ -872,6 +874,8 @@ def main():
             p.add_argument("--debug", action="store_true", help="-O0")
             p.add_argument("--incremental", action="store_true", help="keep objects newer than their unit")
             p.add_argument("--smoke", action="store_true", help="run the built game with --smoke-test (native only)")
+            p.add_argument("--sanitize", choices=["address", "undefined"],
+                           help="clang sanitizer build -> <out>/game-<sanitizer>/ (POSIX debugging)")
         if name == "census":
             p.add_argument("--dialect", choices=["ms", "msext", "gnu"], default="ms")
             p.add_argument("--only")

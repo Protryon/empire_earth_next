@@ -89,6 +89,9 @@ unsigned long GXSamplerKey(unsigned long inAddress, unsigned long inMin, unsigne
 
 // the blits (GX.cpp): a quad from a source texture (or a fill colour) into the open pass
 enum GXBlitMode { kGXBlitCopy, kGXBlitKeyed, kGXBlitFill, kGXBlitPremultiplied, kGXBlitDepth };
+// the GPU copy's scale for a back buffer of the display mode's size (inModeHeight lines): the display's pixel height over
+// it, 1..4 (EE_GX_RENDER_SCALE overrides; 1 turns it off)
+float GXRenderScale(unsigned long inModeHeight);
 void GXBlit(GXSurfaceData* inTarget, const RECT& inDestination, GXSurfaceData* inSource, const RECT* inSourceRect,
             GXBlitMode inMode, const float inColor[4], float inDepth, bool inLinear);
 
@@ -102,6 +105,11 @@ struct GXSurfaceData {
     PlatWindow* mWindow = NULL;          // primary: the window it shows in
     PlatNativeWindow mNative = {};       // its native handles (taken on the window's thread: macOS' Metal layer)
     bool mIsPrimary = false, mIsZ = false, mIsTexture = false, mIsRenderTarget = false;
+    // the render scale (GXRenderScale): a back buffer and its Z buffer at the display mode's size have a GPU copy this
+    // many times larger, which the game draws into in its own (logical) pixels; the CPU copy stays at mWidth x mHeight
+    float mScale = 1.0f;
+    unsigned long TexWidth() const { return this->mScale == 1.0f ? this->mWidth : (unsigned long)(this->mWidth * this->mScale + 0.5f); }
+    unsigned long TexHeight() const { return this->mScale == 1.0f ? this->mHeight : (unsigned long)(this->mHeight * this->mScale + 0.5f); }
 
     // CPU copy
     unsigned char* mMemory = NULL;

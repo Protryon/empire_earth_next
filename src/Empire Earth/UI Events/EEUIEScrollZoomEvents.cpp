@@ -134,6 +134,8 @@ long EEUIEKeyboardScroll::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 
 // FUNCTION: EXE 0x5d9c3b
 // Zooms the camera one step in or out (step grows with zoom), clamped to 0..1; in camera mode 3 (outside a
+extern float gCameraMaxZoom;   // port: EECameraControl.cpp
+
 // cinematic) returns to mode 0 at the default zoom instead; nothing when zooming is disabled
 long EEUIEHotKeyZoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
@@ -151,7 +153,7 @@ long EEUIEHotKeyZoom::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
                 theZoom = theZoom - theStep;
             else
                 theZoom = theZoom + theStep;
-            theZoom = min(max(theZoom, 0.0f), 1.0f);
+            theZoom = min(max(theZoom, 0.0f), gCameraMaxZoom);   // port: the farther zoom-out (1.0 in the original)
             gWorld.mCameraControl.SetZoom(theZoom);
         }
     }

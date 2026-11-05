@@ -56,6 +56,9 @@ void PlatWindowRaise(PlatWindow* inWindow);
 void PlatWindowGetClientSize(PlatWindow* inWindow, int32_t* outWidth, int32_t* outHeight);
 // the display's size in pixels (the game's mode list: the resolutions that fit)
 int PlatWindowGetDisplaySize(PlatWindow* inWindow, int32_t* outWidth, int32_t* outHeight);
+// the display's size in its own units (macOS: points, half the pixels on a Retina display; elsewhere the pixels):
+// the resolution a full screen game defaults to
+int PlatWindowGetDisplayLogicalSize(PlatWindow* inWindow, int32_t* outWidth, int32_t* outHeight);
 
 // The native handles for a wgpu surface (WGPUSurfaceSourceWindowsHWND / XlibWindow / WaylandSurface / MetalLayer)
 typedef enum PlatNativeKind {

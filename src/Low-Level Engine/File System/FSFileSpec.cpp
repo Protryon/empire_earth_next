@@ -1,6 +1,7 @@
 // C:\EEX\Low-Level Engine\File System\FSFileSpec.cpp
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
+#include "platform/PlatFile.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -236,7 +237,7 @@ long FSFileSpec::FOpen(char* inMode)
     this->mIsOpen = true;
     if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= PLAT_MAX_PATH) {
         thePath = this->mVolume + this->mDirectory + this->mFile;
-        this->mStream = fopen(thePath, inMode);
+        this->mStream = PlatFOpen(thePath, inMode);
         if (this->mStream == NULL) {
             this->mIsOpen = false;
             theResult = kErrorNativeError;

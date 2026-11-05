@@ -2,6 +2,7 @@
 // chain, both ctors, the dtor, BuildModel, the virtuals, then the template COMDATs of BuildModel's vectors
 // (0x100d4d..0x101c34). Unit flags: the exe's module set.
 #include <windows.h>
+#include <stdint.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -178,10 +179,10 @@ long EEE3DVolcano::BuildModel()
     if (theFile != NULL)
         delete theFile;
     theSurface->Lock();
-    unsigned long* thePixels = reinterpret_cast<unsigned long*>(theSurface->GetMemoryAddress());
+    uint32_t* thePixels = reinterpret_cast<uint32_t*>(theSurface->GetMemoryAddress());
     unsigned long theRowLength = theSurface->GetBytesPerRow() / 4;
     for (i = 0; i < 19; i++) {
-        unsigned long* thePixel = thePixels + i;
+        uint32_t* thePixel = thePixels + i;
         long theIndex = i;
         for (j = 19; j != 0; j--) {
             unsigned long theValue = *thePixel;

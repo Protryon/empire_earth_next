@@ -225,9 +225,11 @@ Steps:
       cannot go to CI, so CI runs `ee-aoc --smoke-test` (window system, a window, the wgpu device, 30 frames filled,
       read back and presented, then the data root is reported) and the plain start without data, which must stop with
       "game data not found" (exit 3). Linux CI: passes on Xvfb + lavapipe (llvmpipe adapter). Users with the game run
-      `tools/make_play_dir.py OUT --posix-exe ...` and `OUT/run.sh` (README "Linux and macOS"). Not done: running to
-      the main menu with real data on Linux/macOS (no data and no Linux/macOS machine here), the fullscreen start
-      screen off Windows, CJK text input.
+      `tools/make_play_dir.py OUT --posix-exe ...` and `OUT/run.sh` (README "Linux and macOS"). **Real data on macOS
+      (2026-11-05)**: menus, lobby and AI games run (arm64, Metal) after the fixes in PORT_LEARNINGS.md "The POSIX game
+      with real data" (unresolved `fopen` paths, CRT text mode, subnormal floats, four run-time LP64 leftovers, two
+      undefined behaviours); `tools/harness/posix_game.py` drives it through the game's own UI fixture. Not done: real
+      data on Linux, the fullscreen start screen off Windows, CJK text input.
    LP64 (`long` is 64-bit there): done on Windows first (branch lp64, PORT_LEARNINGS.md "LP64"): every value in a file or
    network message has a fixed width (FSFile's int32_t/uint32_t overloads with 4-byte long adapters, int32_t fields
    in the 37 raw records and the 133 message members, 32-bit wire locals), the RNG state, checksums, saved ids and

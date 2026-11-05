@@ -107,6 +107,10 @@ static const float kCameraRearNormal = 35.0f;
 static const float kCameraZoomDistanceFree = -42.0f;
 static const float kCameraRearFree = 58.0f;
 
+// port: the farthest zoom (1.0 in the original; the camera's distance grows linearly past it, its pitch stays at the
+// farthest), from config.ini's "Maximum Zoom Out" (EEPreferences)
+float gCameraMaxZoom = 2.0f;
+
 // FUNCTION: EXE 0x5275b6
 // FUNCTION: EXE 0x5275bb
 // Initialises the camera's field of view (30 degrees)
@@ -256,7 +260,7 @@ void EECameraControl::SetClippingDistances()
             theFront = kCameraFrontMinimum;
         gViewport.SetFrontClippingDistance(theFront);
         if (this->mMode != 3 && !gFreeCamera && !gFarRearClipping)
-            theRear = kCameraRearNormal;
+            theRear = kCameraRearNormal * (this->mZoom > 1.0f ? this->mZoom : 1.0f);   // port: the farther zoom-out
         else
             theRear = kCameraRearFree;
     } else {
@@ -510,6 +514,8 @@ float EECameraControl::GetPitch(float inZoom, long inMode)
     GEVector theUp(0.0f, 1.0f, 0.0f);
     GEVector theRotated;
     float theResult = 0.0f;
+    if ((inMode == 0 || inMode == 1) && inZoom > 1.0f)
+        inZoom = 1.0f;   // port: zoomed out past the original's farthest, the pitch stays there
     if (inMode == 0)
         return (sCameraPitchFar - sCameraPitchNear) * (1.0f - (float)pow(1.0f - inZoom, 1.0)) + sCameraPitchNear;
     if (inMode == 1)

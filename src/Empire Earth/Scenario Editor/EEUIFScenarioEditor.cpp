@@ -4,6 +4,7 @@
 // (0x19e2d2) and EEUIEOpenCivBuilder.cpp (0x19eba9): EEUIFScenarioEditor.h places the unit at ~0x19cc39..0x1a0315
 // (one file). After EESEUnit.cpp. Unit flags: the exe module set.
 #include <windows.h>
+#include "platform/PlatFile.h"
 #include <mbstring.h>
 #include <algorithm>
 #include "lle/LowLevelEngine.h"
@@ -178,7 +179,7 @@ long EEUIESaveScenarioTriggersOnly::ProcessEvent(UIForm* inForm, UIEntity* inEnt
     theFile.Close();
     thePath = gStartupVolume + gStartupDirectory + "ScenarioTriggers.txt";
     if (theResult == kErrorOK) {
-        FILE* theText = fopen(thePath, "w");
+        FILE* theText = PlatFOpen(thePath, "w");
         if (theText) {
             unsigned long i;
             for (i = 0; i < theManager->mTriggers.size(); i++) {

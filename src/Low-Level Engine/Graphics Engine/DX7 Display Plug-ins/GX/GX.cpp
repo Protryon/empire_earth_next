@@ -498,8 +498,8 @@ bool GXSurfaceData::CreateTexture()
     GXCore& theCore = GXGetCore();
     WGPUTextureDescriptor theDescriptor = {};
     theDescriptor.dimension = WGPUTextureDimension_2D;
-    theDescriptor.size.width = theTop->mWidth ? theTop->mWidth : 1;
-    theDescriptor.size.height = theTop->mHeight ? theTop->mHeight : 1;
+    theDescriptor.size.width = theTop->TexWidth() ? theTop->TexWidth() : 1;
+    theDescriptor.size.height = theTop->TexHeight() ? theTop->TexHeight() : 1;
     theDescriptor.size.depthOrArrayLayers = 1;
     theDescriptor.mipLevelCount = theTop->mMipLevels;
     theDescriptor.sampleCount = 1;
@@ -566,11 +566,22 @@ void GXSurfaceData::UploadLevel(GXSurfaceData* inLevel)
     inLevel->mGPUValid = true;
 }
 
+// the pixels of a scaled surface's CPU copy, through a texture of its logical size stretched onto its GPU copy
+static void UploadScaled(GXSurfaceData* inSurface);
+// the GPU copy of a scaled surface brought down to its logical size into the CPU copy
+static void DownloadScaled(GXSurfaceData* inSurface);
+
 void GXSurfaceData::Upload()
 {
     GXSurfaceData* theTop = this->Top();
     if (!theTop->CreateTexture())
         return;
+    if (theTop->mScale != 1.0f) {
+        if (!theTop->mGPUValid)
+            UploadScaled(theTop);
+        theTop->mGPUValid = true;
+        return;
+    }
     if (!theTop->mGPUValid)
         theTop->UploadLevel(theTop);
     if (theTop->mLevelsDirty) {
@@ -599,6 +610,11 @@ void GXSurfaceData::Download()
         return;
     GXCore& theCore = GXGetCore();
     if (!this->AllocateMemory() || !this->mTexture) {
+        this->mCPUValid = true;
+        return;
+    }
+    if (this->mScale != 1.0f) {
+        DownloadScaled(this);
         this->mCPUValid = true;
         return;
     }
@@ -843,8 +859,96 @@ void GXBlit(GXSurfaceData* inTarget, const RECT& inDestination, GXSurfaceData* i
     GXSurfaceData* theDepth = inMode == kGXBlitDepth ? inTarget->mDepth :
         (theCore.mPass && theCore.mPassTarget == inTarget ? theCore.mPassDepth : NULL);
     theCore.BeginPass(inTarget, theDepth);
-    DrawBlit(WGPUTextureFormat_BGRA8Unorm, inTarget->mWidth, inTarget->mHeight, inDestination, inSource, inSourceRect,
-             inMode, inColor, inDepth, inLinear, theOffset);
+    DrawBlit(WGPUTextureFormat_BGRA8Unorm, inTarget->TexWidth(), inTarget->TexHeight(), inDestination, inSource,
+             inSourceRect, inMode, inColor, inDepth, inLinear || inTarget->mScale != 1.0f, theOffset);
+}
+
+// a GPU-only surface of a logical size in a format (the scaled transfers' intermediate); FreeTemporary releases it
+static GXSurfaceData* NewTemporary(unsigned long inWidth, unsigned long inHeight, const GXSurfaceData* inLike)
+{
+    GXSurfaceData* theTemporary = new GXSurfaceData;
+    theTemporary->mWidth = inWidth;
+    theTemporary->mHeight = inHeight;
+    theTemporary->mPixelFormat = inLike->mPixelFormat;
+    theTemporary->mFormat = inLike->mFormat;
+    theTemporary->mIsRenderTarget = true;
+    return theTemporary;
+}
+
+static void FreeTemporary(GXSurfaceData* inTemporary, bool inOwnsMemory)
+{
+    GXCore& theCore = GXGetCore();
+    if (theCore.mPassTarget == inTemporary)
+        theCore.EndPass();
+    for (std::map<unsigned long, WGPUBindGroup>::iterator i = inTemporary->mGroups.begin(); i != inTemporary->mGroups.end(); ++i)
+        wgpuBindGroupRelease(i->second);
+    if (inTemporary->mTargetView)
+        wgpuTextureViewRelease(inTemporary->mTargetView);
+    if (inTemporary->mView)
+        wgpuTextureViewRelease(inTemporary->mView);
+    if (inTemporary->mTexture)
+        wgpuTextureRelease(inTemporary->mTexture);
+    if (inOwnsMemory)
+        free(inTemporary->mMemory);
+    delete inTemporary;
+}
+
+static RECT WholeOf(GXSurfaceData* inSurface)
+{
+    RECT theRect = {0, 0, (long)inSurface->mWidth, (long)inSurface->mHeight};
+    return theRect;
+}
+
+static void UploadScaled(GXSurfaceData* inSurface)
+{
+    if (!inSurface->mMemory)
+        return;
+    GXSurfaceData* theTemporary = NewTemporary(inSurface->mWidth, inSurface->mHeight, inSurface);
+    theTemporary->mMemory = inSurface->mMemory;
+    theTemporary->mPitch = inSurface->mPitch;
+    theTemporary->mGPUValid = false;
+    theTemporary->Upload();
+    // the blit must not upload the target again (its GPU copy is being made) nor mark its CPU copy stale (it is the
+    // source of these pixels)
+    inSurface->mGPUValid = true;
+    RECT theAll = WholeOf(inSurface);
+    GXBlit(inSurface, theAll, theTemporary, &theAll, kGXBlitCopy, NULL, 0.0f, true);
+    inSurface->mCPUValid = true;
+    theTemporary->mMemory = NULL;
+    FreeTemporary(theTemporary, false);
+}
+
+static void DownloadScaled(GXSurfaceData* inSurface)
+{
+    GXSurfaceData* theTemporary = NewTemporary(inSurface->mWidth, inSurface->mHeight, inSurface);
+    if (!theTemporary->CreateTexture()) {
+        FreeTemporary(theTemporary, true);
+        return;
+    }
+    theTemporary->mCPUValid = false;
+    theTemporary->mGPUValid = true;
+    RECT theAll = WholeOf(inSurface);
+    GXBlit(theTemporary, theAll, inSurface, &theAll, kGXBlitCopy, NULL, 0.0f, true);
+    theTemporary->Download();
+    if (theTemporary->mMemory && inSurface->mMemory)
+        for (unsigned long y = 0; y < inSurface->mHeight; y++)
+            memcpy(inSurface->mMemory + (size_t)y * inSurface->mPitch, theTemporary->mMemory + (size_t)y * theTemporary->mPitch,
+                   (size_t)std::min(inSurface->mPitch, theTemporary->mPitch));
+    FreeTemporary(theTemporary, true);
+}
+
+float GXRenderScale(unsigned long inModeHeight)
+{
+    static const char* sOverride = getenv("EE_GX_RENDER_SCALE");
+    if (sOverride && *sOverride) {
+        float theScale = (float)atof(sOverride);
+        return theScale >= 1.0f && theScale <= 4.0f ? theScale : 1.0f;
+    }
+    int32_t theWidth = 0, theHeight = 0;
+    if (!inModeHeight || !PlatWindowGetDisplaySize(NULL, &theWidth, &theHeight) || theHeight <= 0)
+        return 1.0f;
+    float theScale = (float)theHeight / (float)inModeHeight;
+    return theScale < 1.05f ? 1.0f : theScale > 4.0f ? 4.0f : theScale;
 }
 
 // TEST ONLY (tools/harness/presentation_bridge.c finds these by map address): a callback before every presented
@@ -1017,7 +1121,7 @@ void GXSurfaceData::Present(GXSurfaceData* inSource, bool inWait)
         return;
     }
     RECT theAll = {0, 0, (long)this->mSwapWidth, (long)this->mSwapHeight};
-    bool theLinear = this->mSwapWidth != inSource->mWidth || this->mSwapHeight != inSource->mHeight;
+    bool theLinear = this->mSwapWidth != inSource->TexWidth() || this->mSwapHeight != inSource->TexHeight();
     unsigned long theOffset = BlitUniform(this->mSwapWidth, this->mSwapHeight, theAll, inSource, NULL, kGXBlitCopy, NULL,
                                           0.0f, true);
     theCore.EndPass();
@@ -1237,13 +1341,15 @@ static GXRESULT PrimaryBlt(GXSurfaceData* inPrimary, RECT* inDestination, GXSurf
     if (!theLast || theWidth <= 0 || theHeight <= 0)
         return GX_OK;   // nothing shown yet to draw into
     GXSurfaceData* theImage = inPrimary->mWindowImage ? inPrimary->mWindowImage->mData : NULL;
-    if (!theImage || theImage->mWidth != theLast->mWidth || theImage->mHeight != theLast->mHeight) {
+    if (!theImage || theImage->mWidth != theLast->mWidth || theImage->mHeight != theLast->mHeight ||
+        theImage->mScale != theLast->mScale) {
         if (inPrimary->mWindowImage)
             inPrimary->mWindowImage->Release();
         GXSurface* theSurface = GXSurfaceData::NewSurface();
         theImage = theSurface->mData;
         theImage->mWidth = theLast->mWidth;
         theImage->mHeight = theLast->mHeight;
+        theImage->mScale = theLast->mScale;
         GXPIXELFORMAT theFormat = {sizeof(GXPIXELFORMAT), GXPF_RGB | GXPF_ALPHAPIXELS, 0, 32, 0xff0000, 0xff00, 0xff,
                                    0xff000000};
         theImage->mPixelFormat = theFormat;
@@ -1441,6 +1547,17 @@ GXRESULT GXSurface::DrawText(const RECT& inBounds, TextCallback inDraw, void* in
         // GPU-resident (a render target drawn into): the text goes onto a transparent buffer as premultiplied colour
         // and coverage, which is blended onto the GPU copy (no read-back)
         theDraw.mFlags = PLAT_FONT_TARGET_PREMULTIPLIED;
+        if (theTarget->mScale != 1.0f) {
+            // a scaled target: the text at its scale, onto the same logical bounds (sharp, not stretched)
+            theWidth = (long)ceilf(theWidth * theTarget->mScale);
+            theHeight = (long)ceilf(theHeight * theTarget->mScale);
+            theBits.assign((size_t)theWidth * theHeight * 4, 0);
+            theDraw.mPixels = &theBits[0];
+            theDraw.mPitch = (int32_t)(theWidth * 4);
+            theDraw.mWidth = (int32_t)theWidth;
+            theDraw.mHeight = (int32_t)theHeight;
+            theDraw.mScale = theTarget->mScale;
+        }
         if (!inDraw(theDraw, theBounds.left, theBounds.top, inContext))
             return GXERR_GENERIC;
         bool theAny = false;
@@ -1626,25 +1743,38 @@ GXRESULT GXDirectDraw::EnumDisplayModes(unsigned long inFlags, GXSURFACEDESC* in
                                               {1920, 1080}, {1920, 1200}, {2560, 1440}, {3840, 2160}};
     unsigned long theDesktopWidth, theDesktopHeight;
     DesktopSize(theDesktopWidth, theDesktopHeight);
-    const size_t theCount = sizeof(kSizes) / sizeof(kSizes[0]);
-    bool theDesktopListed = false;
-    for (size_t i = 0; i < theCount; i++)
-        theDesktopListed |= kSizes[i][0] == theDesktopWidth && kSizes[i][1] == theDesktopHeight;
+    std::vector<std::pair<unsigned long, unsigned long> > theSizes;
+    for (size_t i = 0; i < sizeof(kSizes) / sizeof(kSizes[0]); i++) {
+        // modes up to 1600x1200 always (a window can be larger than a small desktop), larger ones when they fit
+        if (kSizes[i][0] > 1600 && (kSizes[i][0] > theDesktopWidth || kSizes[i][1] > theDesktopHeight))
+            continue;
+        theSizes.push_back(std::make_pair(kSizes[i][0], kSizes[i][1]));
+    }
+    // the desktop's own size is always a mode (the screen's current mode is looked up among them), and so is the
+    // display's logical size (macOS: points, the default of a full screen game) when it differs from its pixels
+    theSizes.push_back(std::make_pair(theDesktopWidth, theDesktopHeight));
+    int32_t theLogicalWidth = 0, theLogicalHeight = 0;
+    if (PlatWindowGetDisplayLogicalSize(NULL, &theLogicalWidth, &theLogicalHeight) && theLogicalWidth > 0)
+        theSizes.push_back(std::make_pair((unsigned long)theLogicalWidth, (unsigned long)theLogicalHeight));
+    // the menus' size for each of them (EEMenuWidth / EEMenuHeight: 768 lines at the game resolution's aspect ratio)
+    for (size_t i = 0, n = theSizes.size(); i < n; i++) {
+        unsigned long theWidth = theSizes[i].first, theHeight = theSizes[i].second;
+        if (theHeight <= 768)
+            continue;
+        unsigned long theMenuWidth = ((theWidth * 768 + theHeight / 2) / theHeight) & ~1UL;
+        theSizes.push_back(std::make_pair(theMenuWidth < 1024 ? 1024 : theMenuWidth, 768UL));
+    }
+    std::vector<std::pair<unsigned long, unsigned long> > theListed;
+    for (size_t i = 0; i < theSizes.size(); i++)
+        if (std::find(theListed.begin(), theListed.end(), theSizes[i]) == theListed.end())
+            theListed.push_back(theSizes[i]);
     for (int theDepth = 0; theDepth < 2; theDepth++)
-        for (size_t i = 0; i <= theCount; i++) {
-            // the desktop's own size is always a mode (the screen's current mode is looked up among them)
-            unsigned long theWidth = i < theCount ? kSizes[i][0] : theDesktopWidth;
-            unsigned long theHeight = i < theCount ? kSizes[i][1] : theDesktopHeight;
-            if (i == theCount && theDesktopListed)
-                continue;
-            // modes up to 1600x1200 always (a window can be larger than a small desktop), larger ones when they fit
-            if (i < theCount && theWidth > 1600 && (theWidth > theDesktopWidth || theHeight > theDesktopHeight))
-                continue;
+        for (size_t i = 0; i < theListed.size(); i++) {
             GXSURFACEDESC theMode = {};
             theMode.dwSize = sizeof(theMode);
             theMode.dwFlags = GXSD_WIDTH | GXSD_HEIGHT | GXSD_PIXELFORMAT;
-            theMode.dwWidth = theWidth;
-            theMode.dwHeight = theHeight;
+            theMode.dwWidth = theListed[i].first;
+            theMode.dwHeight = theListed[i].second;
             theMode.dwRefreshRate = 60;
             theMode.ddpfPixelFormat = theDepth ? kXRGB32 : kRGB565;
             if (inCallback(&theMode, inContext) == GXENUMRET_CANCEL)
@@ -1709,6 +1839,10 @@ GXRESULT GXDirectDraw::CreateSurface(GXSURFACEDESC* inDescription, GXSurface** o
                                 (this->mModeBitCount == 16 ? kRGB565 : kXRGB32);
     }
     theData->mFormat.Set(theData->mPixelFormat);
+    // a render target or Z buffer of the display mode's size is (or goes with) the back buffer: the render scale
+    if ((theData->mIsRenderTarget || theData->mIsZ) && theData->mWidth == this->mModeWidth &&
+        theData->mHeight == this->mModeHeight)
+        theData->mScale = GXRenderScale(theData->mHeight);
     if (!theData->mIsZ && !theData->mIsPrimary && theData->mFormat.mBits != 16 && theData->mFormat.mBits != 32) {
         theSurface->Release();   // DXT1 and other formats the renderer never creates
         return GXERR_UNSUPPORTED;
@@ -1752,6 +1886,7 @@ GXRESULT GXDirectDraw::CreateSurface(GXSURFACEDESC* inDescription, GXSurface** o
             theBackData->mHeight = theData->mHeight;
             theBackData->mPixelFormat = theData->mPixelFormat;
             theBackData->mFormat = theData->mFormat;
+            theBackData->mScale = GXRenderScale(theData->mHeight);
             theParent->mAttached.push_back(theBack);
         }
     }

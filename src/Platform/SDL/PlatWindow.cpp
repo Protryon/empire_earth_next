@@ -31,6 +31,7 @@
 struct PlatWindow {
     SDL_Window* mWindow;
     SDL_MetalView mMetalView;
+    bool mFullscreen;   // asked to be full screen (SDL's flag follows asynchronously on macOS)
 };
 
 namespace {
@@ -249,6 +250,13 @@ bool Translate(const SDL_Event& e, PlatInputEvent* out)
     case SDL_EVENT_WINDOW_RESTORED:
     case SDL_EVENT_WINDOW_EXPOSED:
         out->mWindow = WindowOf(e.window.windowID);
+#ifdef __APPLE__
+        // a window meant to be full screen that lost it (the game started while another application was in front, or
+        // the system took it out) goes back to full screen when it is the active window again
+        if (e.type == SDL_EVENT_WINDOW_FOCUS_GAINED && out->mWindow && out->mWindow->mFullscreen &&
+            !(SDL_GetWindowFlags(out->mWindow->mWindow) & SDL_WINDOW_FULLSCREEN))
+            SDL_SetWindowFullscreen(out->mWindow->mWindow, true);
+#endif
         out->mType = e.type == SDL_EVENT_WINDOW_CLOSE_REQUESTED ? PLAT_EVENT_CLOSE
             : e.type == SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED     ? PLAT_EVENT_RESIZED
             : e.type == SDL_EVENT_WINDOW_FOCUS_GAINED           ? PLAT_EVENT_FOCUS_GAINED
@@ -441,7 +449,12 @@ extern "C" PlatWindow* PlatWindowCreateAt(const char* inTitle, int32_t inX, int3
     if (inFlags & PLAT_WINDOW_TOPMOST) theFlags |= SDL_WINDOW_ALWAYS_ON_TOP;
 #if defined(__APPLE__)
     theFlags |= SDL_WINDOW_METAL;
+    // full screen without a Space of its own: the Spaces transition is animated and asynchronous, and the game's
+    // start-up (the Metal view, the first mode changes) took the new window straight back out of it
+    SDL_SetHint(SDL_HINT_VIDEO_MAC_FULLSCREEN_SPACES, "0");
 #endif
+    // a full screen game window stays up when another window or application takes the focus
+    SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
     SDL_PropertiesID theProperties = SDL_CreateProperties();
     std::string theTitle = ToUTF8(inTitle ? inTitle : "");
     SDL_SetStringProperty(theProperties, SDL_PROP_WINDOW_CREATE_TITLE_STRING, theTitle.c_str());
@@ -459,6 +472,18 @@ extern "C" PlatWindow* PlatWindowCreateAt(const char* inTitle, int32_t inX, int3
     PlatWindow* theResult = new PlatWindow;
     theResult->mWindow = theWindow;
     theResult->mMetalView = NULL;
+    theResult->mFullscreen = (inFlags & PLAT_WINDOW_FULLSCREEN) != 0;
+#ifdef __APPLE__
+    // full screen at creation is asynchronous on macOS and can be refused (another application in front, the previous
+    // instance's full screen still closing): wait for it, and ask once more
+    if (theResult->mFullscreen) {
+        SDL_SyncWindow(theWindow);
+        if (!(SDL_GetWindowFlags(theWindow) & SDL_WINDOW_FULLSCREEN)) {
+            SDL_SetWindowFullscreen(theWindow, true);
+            SDL_SyncWindow(theWindow);
+        }
+    }
+#endif
     SDL_SetPointerProperty(SDL_GetWindowProperties(theWindow), kWindowProperty, theResult);
 #ifdef _WIN32
     Subclass(theWindow);
@@ -492,11 +517,16 @@ extern "C" void PlatWindowShow(PlatWindow* inWindow, int inShow)
 extern "C" int PlatWindowSetFullscreen(PlatWindow* inWindow, int inFullscreen)
 {
     SDL_SetWindowFullscreenMode(inWindow->mWindow, NULL);   // borderless desktop full screen, no mode change
+    inWindow->mFullscreen = inFullscreen != 0;
     return SDL_SetWindowFullscreen(inWindow->mWindow, inFullscreen != 0) ? 1 : 0;
 }
 
 extern "C" void PlatWindowSetSize(PlatWindow* inWindow, int32_t inWidth, int32_t inHeight)
 {
+    // a full screen window keeps the display's size: the game's mode is its render size, which GX scales to the
+    // window (macOS left full screen for a titled window of the mode's size at every mode change)
+    if (inWindow->mFullscreen || (SDL_GetWindowFlags(inWindow->mWindow) & SDL_WINDOW_FULLSCREEN))
+        return;
     SDL_SetWindowSize(inWindow->mWindow, inWidth, inHeight);
 }
 
@@ -541,6 +571,17 @@ extern "C" int PlatWindowGetDisplaySize(PlatWindow* inWindow, int32_t* outWidth,
     float theDensity = theMode->pixel_density > 0 ? theMode->pixel_density : 1.0f;
     *outWidth = static_cast<int32_t>(theMode->w * theDensity);
     *outHeight = static_cast<int32_t>(theMode->h * theDensity);
+    return 1;
+}
+
+extern "C" int PlatWindowGetDisplayLogicalSize(PlatWindow* inWindow, int32_t* outWidth, int32_t* outHeight)
+{
+    SDL_DisplayID theDisplay = inWindow ? SDL_GetDisplayForWindow(inWindow->mWindow) : SDL_GetPrimaryDisplay();
+    const SDL_DisplayMode* theMode = SDL_GetDesktopDisplayMode(theDisplay);
+    if (!theMode)
+        return 0;
+    *outWidth = theMode->w;
+    *outHeight = theMode->h;
     return 1;
 }
 

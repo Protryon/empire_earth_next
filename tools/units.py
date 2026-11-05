@@ -34,6 +34,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
                "exe": ["Empire Earth/Database/EEDataText.cpp", "Empire Earth/Database/EEDataTextFile.cpp",
                        "Empire Earth/Database/EEDataDump.cpp", "Empire Earth/Database/EERules.cpp",
                        "Empire Earth/WONAPI/WONAPIStubs.cpp",
+                       # TEST ONLY: the POSIX test driver's in-process UI fixture (EE_TEST_UI; tools/harness/posix_game.py)
+                       "Empire Earth/Empire Earth/EETestFixture.cpp",
                        # the language strings, generated from Language.rc (tools/lang_strings.py)
                        "Empire Earth/Language/LanguageStrings.cpp",
                        # a unit with no code range of its own (every member was ICF-folded into another unit's)

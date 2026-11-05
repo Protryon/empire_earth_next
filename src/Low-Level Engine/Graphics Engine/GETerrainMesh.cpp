@@ -245,6 +245,7 @@
 // TEMPLATE: LLE 0x10032a9a
 #define LLE_GETERRAINMESH_CPP
 #include <windows.h>
+#include <stdint.h>
 #include <float.h>
 #include <math.h>
 #include <string.h>
@@ -1589,8 +1590,8 @@ void GETerrainMesh::GetTileRowsInVolume(const std::vector<GE3DPoint>& inVolume,
     long theMinimumX = 0x7fffffff;
     long theMinimumY = 0x7fffffff;
     std::map<long, std::pair<long, long> >::iterator theIterator;
-    long theMaximumX = 0x80000000;
-    long theMaximumY = 0x80000000;
+    long theMaximumX = INT32_MIN;   // the 32-bit original's 0x80000000 (LP64: a positive long, so no row lowered it)
+    long theMaximumY = INT32_MIN;
     unsigned long i;
     long theY;
     long theFirst;
@@ -2404,6 +2405,24 @@ void GETerrainMesh::UpdateVisibleTerrain(const GETransformation& inCamera, GEVie
     this->mVisibleTileRows.clear();
     inViewport.GetFrustrumWorldPoints(theFrustumPoints, inOrthographic);
     this->GetTileRowsInVolume(theFrustumPoints, this->mVisibleTileRows, theMinimum, theMaximum);
+    // port: the visible tiles stay inside the point arrays (a tile uses its far corner's point too)
+    const long theSpan = GETM_VISIBLE_POINTS - 3;
+    if (theMaximum.mX - theMinimum.mX > theSpan || theMaximum.mY - theMinimum.mY > theSpan) {
+        std::vector<std::pair<long, std::pair<long, long> > > theKept;
+        for (size_t r = 0; r < this->mVisibleTileRows.size(); r++) {
+            std::pair<long, std::pair<long, long> > theRow = this->mVisibleTileRows[r];
+            if (theRow.first - theMinimum.mY > theSpan || theRow.second.first - theMinimum.mX > theSpan)
+                continue;
+            if (theRow.second.second - theMinimum.mX > theSpan)
+                theRow.second.second = theMinimum.mX + theSpan;
+            theKept.push_back(theRow);
+        }
+        this->mVisibleTileRows.swap(theKept);
+        if (theMaximum.mX - theMinimum.mX > theSpan)
+            theMaximum.mX = theMinimum.mX + theSpan;
+        if (theMaximum.mY - theMinimum.mY > theSpan)
+            theMaximum.mY = theMinimum.mY + theSpan;
+    }
     this->mVisibleBottomLeftX = theMinimum.mX;
     this->mVisibleBottomLeftY = theMinimum.mY;
     this->mVisibleTileWidth = theMaximum.mX - theMinimum.mX;

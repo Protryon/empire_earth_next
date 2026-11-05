@@ -8,6 +8,7 @@
 #include <windows.h>
 #include "gx/GX.h"
 #include "platform/PlatFont.h"
+#include <math.h>
 
 #include "dx7/DX7Rasterizer.h"
 #include "dx7/DX7PolygonArray.h"
@@ -258,12 +259,16 @@ static bool DX7DrawTextPlat(const PlatFontTarget& inTarget, long inOriginX, long
     }
     const char* theString = inText->GetText();
     uint32_t theLength = inText->GetText().GetLength();
+    // port: a target drawn at a multiple of its logical size (GX's render scale) gets the text at that scale, from the
+    // font made that much larger: placed in logical pixels, drawn sharp
+    float theScale = inTarget.mScale > 1.0f ? inTarget.mScale : 1.0f;
+    const PlatFont* theDrawFont = PlatFontScaled(thePlatFont, theScale);
     PlatFontRect theClip = {0, 0, inTarget.mWidth, inTarget.mHeight};
     if (theJob->mClip) {   // ETO_CLIPPED
-        theClip.mLeft = theJob->mClip->left - inOriginX;
-        theClip.mTop = theJob->mClip->top - inOriginY;
-        theClip.mRight = theJob->mClip->right - inOriginX;
-        theClip.mBottom = theJob->mClip->bottom - inOriginY;
+        theClip.mLeft = (int32_t)floorf((theJob->mClip->left - inOriginX) * theScale);
+        theClip.mTop = (int32_t)floorf((theJob->mClip->top - inOriginY) * theScale);
+        theClip.mRight = (int32_t)ceilf((theJob->mClip->right - inOriginX) * theScale);
+        theClip.mBottom = (int32_t)ceilf((theJob->mClip->bottom - inOriginY) * theScale);
     }
     GE2DPoint theLocation = inText->GetLocation();
     int32_t theWidth = PlatFontMeasure(thePlatFont, theString, theLength);
@@ -271,17 +276,25 @@ static bool DX7DrawTextPlat(const PlatFontTarget& inTarget, long inOriginX, long
         theLocation.SetX(theLocation.GetX() - theWidth / 2);
     else if (inText->GetAlignment() == kTextAlignRight)
         theLocation.SetX(theLocation.GetX() - theWidth);
+    // the scaled text keeps the logical text's centre (its own width rounds differently)
+    float theX = ((long)theLocation.GetX() - inOriginX) * theScale;
+    if (theScale > 1.0f && inText->GetAlignment() != kTextAlignLeft) {
+        float theScaledWidth = (float)PlatFontMeasure(theDrawFont, theString, theLength);
+        theX += (theWidth * theScale - theScaledWidth) * (inText->GetAlignment() == kTextAlignCenter ? 0.5f : 1.0f);
+    }
+    int32_t theDrawX = (int32_t)lroundf(theX);
+    int32_t theDrawY = (int32_t)lroundf(((long)theLocation.GetY() - inOriginY) * theScale);
+    int32_t theShadow = (int32_t)lroundf(theScale) > 0 ? (int32_t)lroundf(theScale) : 1;
     int theOpaque = inText->GetIsTransparent() ? 0 : 1;
     uint32_t theBackground = DX7TextColor(inText->GetBgColor());
     if (theFont->GetFontStyle() & kFontStyleShadow) {
         uint32_t theShade = inText->GetFgColor().GetRed() + inText->GetFgColor().GetGreen() +
                             inText->GetFgColor().GetBlue() > 0.1f ? 0 : 0xffffff;
-        PlatFontDraw(thePlatFont, theString, theLength, (long)theLocation.GetX() + 1 - inOriginX,
-                     (long)theLocation.GetY() + 1 - inOriginY, theShade, theOpaque, theBackground, &theClip, &inTarget);
+        PlatFontDraw(theDrawFont, theString, theLength, theDrawX + theShadow, theDrawY + theShadow, theShade, theOpaque,
+                     theBackground, &theClip, &inTarget);
     }
-    PlatFontDraw(thePlatFont, theString, theLength, (long)theLocation.GetX() - inOriginX,
-                 (long)theLocation.GetY() - inOriginY, DX7TextColor(inText->GetFgColor()), theOpaque, theBackground,
-                 &theClip, &inTarget);
+    PlatFontDraw(theDrawFont, theString, theLength, theDrawX, theDrawY, DX7TextColor(inText->GetFgColor()), theOpaque,
+                 theBackground, &theClip, &inTarget);
     theFont->Dereference();
     return true;
 }

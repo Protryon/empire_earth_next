@@ -2,6 +2,7 @@
 // 0x22585a..0x226a43 (no init chain). Unit flags: the exe's module set. Vtable 0x4476b0. The unit closes with the
 // std::sort/unique/erase COMDATs of vector<EEComplexUnit*> (0x22660f..) its list ctor instantiates.
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <algorithm>
 
@@ -199,11 +200,11 @@ long EEUGLoadContainer::GetOutOfSynchChecksum()
 {
     long theChecksum = 0;
     float theValue = this->mDestination.GetX();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mDestination.GetY();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mDestination.GetZ();
-    theChecksum += *reinterpret_cast<long*>(&theValue) + this->mUnits.GetSize();
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue) + this->mUnits.GetSize();
     long theContainerID = this->mContainer ? this->mContainer->GetUnitID() : 0;
     long theContainerX = this->mContainerTile.mX;
     long theContainerY = this->mContainerTile.mY;
@@ -211,7 +212,7 @@ long EEUGLoadContainer::GetOutOfSynchChecksum()
     long theUnitY = this->mUnitTile.mY;
     theValue = this->mMinimumDistanceSquared;
     return EEUnitGoal::GetOutOfSynchChecksum() + theContainerID + theUnitY + theUnitX + theContainerY + theContainerX
-        + *reinterpret_cast<long*>(&theValue) + theChecksum;
+        + *reinterpret_cast<int32_t*>(&theValue) + theChecksum;
 }
 
 // FUNCTION: EXE 0x625dfe

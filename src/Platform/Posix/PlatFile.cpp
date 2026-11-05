@@ -2,6 +2,9 @@
 // resolved by PlatPosix::ResolvePath (PlatPath.cpp: volumes, separators, case-insensitive lookup). A PlatFile is a
 // file descriptor, a PlatFind a sorted snapshot of the directory's matching entries (NTFS lists a directory in
 // case-insensitive order; readdir has no order at all), a PlatFileMapping an mmap'ed view.
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE   // glibc: fopencookie (PlatFOpen's text mode)
+#endif
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -347,6 +350,138 @@ extern "C" PlatFile* PlatFileOpen(const char* inPath, uint32_t inAccess)
     }
     theHandle->mDescriptor = theFile;
     return theHandle;
+}
+
+// ---- PlatFOpen's text mode: the Windows CRT reads a file opened without 'b' with every CR LF turned into LF (the
+// game's text files, the random map scripts and the debug files, have CR LF lines; fgets/fscanf callers expect LF).
+// A read-only text open goes through this filter; writing is unchanged (LF lines, which the game reads back alike).
+namespace {
+
+struct TextReader {
+    FILE* mBase;
+    int mPending;           // a byte read past a lone CR, -1 when none
+    long long mPosition;    // bytes delivered (ftell)
+};
+
+long ReadText(TextReader* inReader, char* outData, size_t inSize)
+{
+    size_t n = 0;
+    while (n < inSize) {
+        int c = inReader->mPending >= 0 ? inReader->mPending : getc(inReader->mBase);
+        inReader->mPending = -1;
+        if (c == EOF)
+            break;
+        if (c == '\r') {
+            int d = getc(inReader->mBase);
+            if (d == '\n')
+                c = '\n';
+            else
+                inReader->mPending = d == EOF ? -1 : d;
+        }
+        outData[n++] = (char)c;
+    }
+    inReader->mPosition += (long long)n;
+    return ferror(inReader->mBase) && n == 0 ? -1 : (long)n;
+}
+
+// Rewind (SEEK_SET 0) and ftell (SEEK_CUR 0) only: a text stream's other offsets have no portable meaning
+long long SeekText(TextReader* inReader, long long inOffset, int inWhence)
+{
+    if (inWhence == SEEK_SET && inOffset == 0) {
+        if (fseek(inReader->mBase, 0, SEEK_SET) != 0)
+            return -1;
+        inReader->mPending = -1;
+        inReader->mPosition = 0;
+        return 0;
+    }
+    if (inWhence == SEEK_CUR && inOffset == 0)
+        return inReader->mPosition;
+    errno = EINVAL;
+    return -1;
+}
+
+int CloseText(TextReader* inReader)
+{
+    int theResult = fclose(inReader->mBase);
+    delete inReader;
+    return theResult;
+}
+
+#ifdef __APPLE__
+int ReadTextFn(void* inCookie, char* outData, int inSize)
+{
+    return (int)ReadText(static_cast<TextReader*>(inCookie), outData, (size_t)inSize);
+}
+fpos_t SeekTextFn(void* inCookie, fpos_t inOffset, int inWhence)
+{
+    return (fpos_t)SeekText(static_cast<TextReader*>(inCookie), (long long)inOffset, inWhence);
+}
+int CloseTextFn(void* inCookie)
+{
+    return CloseText(static_cast<TextReader*>(inCookie));
+}
+#else
+ssize_t ReadTextFn(void* inCookie, char* outData, size_t inSize)
+{
+    return (ssize_t)ReadText(static_cast<TextReader*>(inCookie), outData, inSize);
+}
+int SeekTextFn(void* inCookie, off64_t* ioOffset, int inWhence)
+{
+    long long theResult = SeekText(static_cast<TextReader*>(inCookie), (long long)*ioOffset, inWhence);
+    if (theResult < 0)
+        return -1;
+    *ioOffset = (off64_t)theResult;
+    return 0;
+}
+int CloseTextFn(void* inCookie)
+{
+    return CloseText(static_cast<TextReader*>(inCookie));
+}
+#endif
+
+FILE* OpenTextReader(FILE* inBase)
+{
+    TextReader* theReader = new TextReader{inBase, -1, 0};
+#ifdef __APPLE__
+    FILE* theStream = funopen(theReader, ReadTextFn, NULL, SeekTextFn, CloseTextFn);
+#else
+    cookie_io_functions_t theFunctions = {ReadTextFn, NULL, SeekTextFn, CloseTextFn};
+    FILE* theStream = fopencookie(theReader, "r", theFunctions);
+#endif
+    if (!theStream) {
+        fclose(inBase);
+        delete theReader;
+    }
+    return theStream;
+}
+
+}   // namespace
+
+extern "C" FILE* PlatFOpen(const char* inPath, const char* inMode)
+{
+    std::string theNative;
+    if (!inMode || !NativeOf(inPath, theNative))
+        return NULL;
+    // the CRT's mode letters: 'b' binary, 't' text (the default); the C library takes neither 't' nor a text mode
+    std::string theMode;
+    bool theBinary = false;
+    for (const char* p = inMode; *p; p++) {
+        if (*p == 'b')
+            theBinary = true;
+        if (*p != 't')
+            theMode += *p;
+    }
+    bool theTextRead = !theBinary && theMode.find('r') != std::string::npos && theMode.find('+') == std::string::npos;
+    if (theTextRead)
+        theMode += 'b';
+    FILE* theStream = fopen(theNative.c_str(), theMode.c_str());
+    if (!theStream) {
+        FailErrno();
+        return NULL;
+    }
+    if (theTextRead)
+        theStream = OpenTextReader(theStream);
+    return theStream;
 }
 
 extern "C" PlatFileResult PlatFileCreateNew(const char* inPath)

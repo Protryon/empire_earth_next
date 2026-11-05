@@ -5,6 +5,7 @@
 // +0x2c..+0x34 0x27acf9, +0x3c 0x5720c6, +0x48 0x4ac9c8); EEAreaEffectTemplate.cpp starts at 0x27c0f3.
 // Unit flags: the exe's module set.
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <vector>
 
@@ -77,9 +78,9 @@ void EEAreaEffect::Dump(FILE* inFile)
 long EEAreaEffect::Checksum()
 {
     float theValue = this->mLocation.mX;
-    long theSum = *reinterpret_cast<long*>(&theValue);
+    long theSum = *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mLocation.mY;
-    theSum += *reinterpret_cast<long*>(&theValue);
+    theSum += *reinterpret_cast<int32_t*>(&theValue);
     return this->mPlayer + (this->mUnit != NULL ? this->mUnit->mUnitID : 0) + theSum;
 }
 

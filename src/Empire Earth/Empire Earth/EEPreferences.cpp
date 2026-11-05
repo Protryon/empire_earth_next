@@ -27,6 +27,9 @@ EEGameSettings EEGamePreferences::sDefaultSettings;
 // SYNTHETIC: EXE 0x53243f   (registrar)
 // SYNTHETIC: EXE 0x53244b   (guarded dtor)
 
+bool gGameWindowSizeDefaulted;   // port: no saved game window size (EEPreferences Load)
+extern float gCameraMaxZoom;     // port: EECameraControl.cpp
+
 // FUNCTION: EXE 0x532466
 // Destroys the game settings (members only)
 EEGameSettings::~EEGameSettings()
@@ -237,9 +240,17 @@ long EEGamePreferences::Load()
         this->mSettings.mGameWindowWidth = theValue;
     } else {
         this->mSettings.mGameWindowWidth = EEGamePreferences::sDefaultSettings.mGameWindowWidth;
+        gGameWindowSizeDefaulted = true;   // port: a full screen game takes the display's size (EEInitializeVideo)
         theValue = this->mSettings.mGameWindowWidth;
         this->mConfig.SetValue(kEEGameSection, "Game Window Width", theValue);
     }
+    // port: how far the camera zooms out, in percent of the original's farthest zoom (EECameraControl)
+    theResult = this->mConfig.GetValue(kEEGameSection, "Maximum Zoom Out", theValue);
+    if (theResult != 0) {
+        theValue = 200;
+        this->mConfig.SetValue(kEEGameSection, "Maximum Zoom Out", theValue);
+    }
+    gCameraMaxZoom = (theValue < 100 ? 100 : theValue > 300 ? 300 : theValue) / 100.0f;
     theResult = this->mConfig.GetValue(kEEGameSection, "Screen ID", theValue);
     if (theResult == 0) {
         this->mSettings.mScreenID = theValue;
