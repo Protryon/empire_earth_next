@@ -1151,12 +1151,12 @@ unsigned long SESoundManager::Scavenger(void* inThisObject)
     ESVERIFY_AT(inThisObject != NULL, 2626);
     TSEvent* theHandles[1];
     theHandles[0] = theManager->mScavengerThreadExitEvent;
-    UMSetFloatingPointPrecision(_PC_53);
+    UMSetFloatingPointPrecision(kFPPrecision53);
     do {
-        if (UMGetFloatingPointPrecision() != _PC_53)
-            UMSetFloatingPointPrecision(_PC_53);
-        if (UMGetFloatingPointRoundingMode() != _RC_NEAR)
-            UMSetFloatingPointRoundingMode(_RC_NEAR);
+        if (UMGetFloatingPointPrecision() != kFPPrecision53)
+            UMSetFloatingPointPrecision(kFPPrecision53);
+        if (UMGetFloatingPointRoundingMode() != 0)
+            UMSetFloatingPointRoundingMode(0);
         theManager->UpdateOneShotSounds();
         switch (TSEvent::WaitAny(theHandles, 1, 1000)) {
         case 0:
@@ -1283,7 +1283,7 @@ unsigned long SESoundManager::Scavenger(void* inThisObject)
             break;
         }
         case kTSWaitFailed:
-            GetLastError();
+            PlatGetLastError();
             break;
         }
     } while (!theDone);

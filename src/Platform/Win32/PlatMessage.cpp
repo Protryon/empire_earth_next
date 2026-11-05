@@ -8,6 +8,21 @@ static_assert(PLAT_MESSAGE_ERROR == MB_ICONERROR && PLAT_MESSAGE_SYSTEM_MODAL ==
                   && PLAT_MESSAGE_FOREGROUND == MB_SETFOREGROUND,
               "the flags are the MB_* values");
 
+extern "C" uint16_t PlatSystemLanguageId(void)
+{
+    return GetUserDefaultLangID();
+}
+
+extern "C" uint32_t PlatSystemVersion(void)
+{
+    return GetVersion();
+}
+
+extern "C" void PlatSystemShutdown(void)
+{
+    CoUninitialize();
+}
+
 extern "C" void PlatMessageShow(const char* inTitle, const char* inText, uint32_t inFlags)
 {
     MessageBoxA(NULL, inText, inTitle, inFlags);

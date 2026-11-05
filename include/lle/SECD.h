@@ -1,10 +1,19 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SECD.h (RECONSTRUCTION; SECD.cpp 0x4b4b7..0x4bbce). Red Book audio through
-// MCI, volume through the mixer or aux API. Requires <windows.h> and <mmsystem.h>.
+// MCI, volume through the mixer or aux API (Windows only: no drives elsewhere). Requires <windows.h>.
 #ifndef LLE_SECD_H
 #define LLE_SECD_H
 
 #include <vector>
+#ifdef _WIN32
 #include <mmsystem.h>
+#else
+// CD audio is Windows' MCI: elsewhere there are no drives (SEInitializeCD opens none) and these stand for the
+// Windows types in the class layout only
+typedef struct { uint32_t mOpaque[6]; void* paDetails; } MIXERCONTROLDETAILS;
+typedef struct { uint32_t dwValue; } MIXERCONTROLDETAILS_UNSIGNED;
+typedef void* HMIXER;
+typedef uint32_t MCIDEVICEID;
+#endif
 #include "GEWindow.h"
 
 // How a drive's volume is controlled (SECDVolumeControl::mType). Names are provisional.

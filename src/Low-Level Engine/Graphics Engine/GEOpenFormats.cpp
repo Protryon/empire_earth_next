@@ -9,6 +9,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <charconv>
+#include "lle/UFromChars.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -193,7 +194,7 @@ private:
             while (*mP >= '0' && *mP <= '9')
                 mP++;
         }
-        std::from_chars_result r = std::from_chars(theStart, mP, outValue.mNumber);   // correctly rounded
+        std::from_chars_result r = UFromChars(theStart, mP, outValue.mNumber);   // correctly rounded
         if (r.ec != std::errc() && r.ec != std::errc::result_out_of_range)
             return false;
         outValue.mKind = theIsInt ? JValue::kInt : JValue::kNumber;

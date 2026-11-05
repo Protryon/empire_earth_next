@@ -530,7 +530,7 @@ long DX7Rasterizer::BeginScene(GESurface* inTarget, unsigned long inScreen)
     do {
         theError = this->mDX7ScreenStates[inScreen]->GetDevice()->BeginScene();
         if (theError == GXERR_WASSTILLDRAWING)
-            Sleep(1);
+            PlatSleep(1);
     } while (theError == GXERR_WASSTILLDRAWING);
     if (theError != GX_OK) {
         if (theError == GXERR_SURFACELOST) {
@@ -578,7 +578,7 @@ long DX7Rasterizer::Clear(const GEColor& inColor, const GERectangle& inRectangle
                                                               GXRGB(inColor.GetRed(), inColor.GetGreen(),
                                                                      inColor.GetBlue()), 0.0f, 0);
         if (theError == GXERR_WASSTILLDRAWING)
-            Sleep(0);
+            PlatSleep(0);
     } while (theError == GXERR_WASSTILLDRAWING);
     if (theError != GX_OK) {
         theResult = kErrorNativeError;
@@ -604,7 +604,7 @@ long DX7Rasterizer::ClearZBuffer(float inZ, const GERectangle& inRectangle, unsi
     do {
         theError = this->mDX7ScreenStates[inScreen]->GetDevice()->Clear(1, &theRect, GXCLEAR_ZBUFFER, 0, inZ, 0);
         if (theError == GXERR_WASSTILLDRAWING)
-            Sleep(0);
+            PlatSleep(0);
     } while (theError == GXERR_WASSTILLDRAWING);
     if (theError != GX_OK) {
         theResult = kErrorNativeError;
@@ -756,7 +756,7 @@ long DX7Rasterizer::EndScene(unsigned long inScreen)
     do {
         theError = this->mDX7ScreenStates[inScreen]->GetDevice()->EndScene();
         if (theError == GXERR_WASSTILLDRAWING)
-            Sleep(1);
+            PlatSleep(1);
     } while (theError == GXERR_WASSTILLDRAWING);
     if (theError != GX_OK) {
         if (theError == GXERR_SURFACELOST) {
@@ -881,7 +881,7 @@ long DX7Rasterizer::LockVB(unsigned long inCount, unsigned long inScreen, GXVERT
     do {
         theError = this->mDX7ScreenStates[inScreen]->mVertexBuffer->Lock(theFlags, reinterpret_cast<void**>(&outVertices), NULL);
         if (outVertices == NULL || theError == GXERR_SURFACEBUSY)
-            Sleep(0);
+            PlatSleep(0);
     } while ((outVertices == NULL && theError == GX_OK) || theError == GXERR_SURFACEBUSY);
     return kErrorOK;
 }
@@ -1673,7 +1673,7 @@ long DX7Rasterizer::ShowScene(unsigned long inScreen)
         do {
             theError = thePrimary->Blt(&theDestination, theSecondary, &theSource, 0, NULL);
             if (theError == GXERR_WASSTILLDRAWING)
-                Sleep(0);
+                PlatSleep(0);
         } while (theError == GXERR_WASSTILLDRAWING);
         if (theError == GX_OK)
             theResult = kErrorOK;
@@ -1723,7 +1723,7 @@ long DX7Rasterizer::UnlockVB(unsigned long inScreen)
     do {
         theError = this->mDX7ScreenStates[inScreen]->mVertexBuffer->Unlock();
         if (theError == GXERR_SURFACEBUSY)
-            Sleep(0);
+            PlatSleep(0);
     } while (theError == GXERR_SURFACEBUSY);
     if (theError == GX_OK)
         theResult = kErrorOK;

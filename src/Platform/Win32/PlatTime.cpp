@@ -13,6 +13,11 @@ extern "C" uint32_t PlatTimeMilliseconds(void)
     return timeGetTime();
 }
 
+extern "C" uint64_t PlatTimeMilliseconds64(void)
+{
+    return GetTickCount64();
+}
+
 extern "C" int64_t PlatCounterFrequency(void)
 {
     LARGE_INTEGER theFrequency;

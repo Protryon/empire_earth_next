@@ -122,7 +122,7 @@ unsigned long EEMusicManager::MusicManagerMain(void* inThis)
             theThis->mIntensityDelay -= theElapsedTime;
         switch (theResult) {
         case kTSWaitFailed:
-            GetLastError();
+            PlatGetLastError();
             break;
         case kTSWaitTimeout:
             if (theThis->mState == 2)

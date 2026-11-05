@@ -243,7 +243,7 @@ long DX7Screen::CreateAWindow(const GE2DPoint& inOrigin, unsigned long inWidth, 
     if (theWindow != NULL)
         outWindow = new GEWindow(theWindow, inWidth, inHeight, inStyle, true);
     else {
-        ESRecordNativeError(GetLastError());
+        ESRecordNativeError(PlatGetLastError());
         ESGetNativeError();
         theResult = kErrorNativeError;
     }
@@ -503,7 +503,7 @@ long DX7Screen::RestoreAllSurfaces()
         }
     } else {
         theResult = kErrorNativeError;
-        Sleep(100);
+        PlatSleep(100);
     }
     return theResult;
 }

@@ -64,7 +64,7 @@ long DX7Surface::Clear(GEColor& inColor, float inAlpha)
     do {
         theError = this->mSurface->Blt(NULL, NULL, NULL, GXBLT_COLORFILL, &theEffects);
         if (theError == GXERR_WASSTILLDRAWING)
-            Sleep(0);
+            PlatSleep(0);
     } while (theError == GXERR_WASSTILLDRAWING);
     if (theError != GX_OK) {
         if (theError == GXERR_SURFACELOST)
@@ -95,7 +95,7 @@ long DX7Surface::Clear(GERectangle& inRectangle, GEColor& inColor, float inAlpha
     do {
         theError = this->mSurface->Blt(&theRect, NULL, NULL, GXBLT_COLORFILL, &theEffects);
         if (theError == GXERR_WASSTILLDRAWING)
-            Sleep(0);
+            PlatSleep(0);
     } while (theError == GXERR_WASSTILLDRAWING);
     if (theError != GX_OK) {
         if (theError == GXERR_SURFACELOST)
@@ -128,7 +128,7 @@ long DX7Surface::CopyTo(GESurface* inTarget, GERectangle& inSource, GERectangle&
     do {
         theError = static_cast<DX7Surface*>(inTarget)->mSurface->Blt(&theDestination, this->mSurface, &theSource, theFlags, NULL);
         if (theError == GXERR_WASSTILLDRAWING)
-            Sleep(0);
+            PlatSleep(0);
     } while (theError == GXERR_WASSTILLDRAWING);
     if (theError != GX_OK) {
         if (theError == GXERR_SURFACELOST || theError == GXERR_SURFACEBUSY)
@@ -435,7 +435,7 @@ long DX7Surface::Flip(bool inWait)
     do {
         theError = this->mSurface->Flip(NULL, theFlags);
         if (theError == GXERR_WASSTILLDRAWING)
-            Sleep(0);
+            PlatSleep(0);
     } while (theError == GXERR_WASSTILLDRAWING);
     if (theError != GX_OK) {
         if (theError == GXERR_SURFACELOST)
@@ -470,7 +470,7 @@ long DX7Surface::Lock()
     do {
         theError = this->mSurface->Lock(NULL, &theDescription, 0, NULL);
         if (theError == GXERR_WASSTILLDRAWING)
-            Sleep(0);
+            PlatSleep(0);
     } while (theError == GXERR_WASSTILLDRAWING);
     if (theError == GX_OK) {
         this->mMemoryAddress = (unsigned char*)theDescription.lpSurface;
@@ -522,7 +522,7 @@ long DX7Surface::TextLock()
         do {
             theError = this->mSurface->GetDC(&this->mTextDC);
             if (theError == GXERR_WASSTILLDRAWING)
-                Sleep(0);
+                PlatSleep(0);
         } while (theError == GXERR_WASSTILLDRAWING);
         if (theError == GX_OK) {
             this->mIsTextLocked = true;

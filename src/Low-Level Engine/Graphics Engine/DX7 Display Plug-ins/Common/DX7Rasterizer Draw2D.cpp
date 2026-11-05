@@ -97,7 +97,7 @@ long DX7Rasterizer::Draw(GEBitmap* inBitmap, unsigned long inScreen)
                     this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 4,
                     theIndices, 6, 0) != GXERR_WASSTILLDRAWING)
                 break;
-            Sleep(0);
+            PlatSleep(0);
         }
         this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += 4;
     } else
@@ -151,7 +151,7 @@ long DX7Rasterizer::Draw(GELine* inLine, unsigned long inCount, unsigned long in
                 this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
                 theVertexCount, 0) != GXERR_WASSTILLDRAWING)
             break;
-        Sleep(0);
+        PlatSleep(0);
     }
     this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += theVertexCount;
     this->mDrawingAccess->Leave();
@@ -194,7 +194,7 @@ long DX7Rasterizer::Draw(GEPoint* inPoint, unsigned long inCount, unsigned long 
                    this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
                    inCount, 0) != GXERR_WASSTILLDRAWING)
             break;
-        Sleep(0);
+        PlatSleep(0);
     }
     this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += inCount;
     this->mDrawingAccess->Leave();
@@ -221,7 +221,7 @@ long DX7Rasterizer::Draw(GERhombus* inRhombus, unsigned long inScreen)
                    this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 4,
                    theIndices, 6, 0) != GXERR_WASSTILLDRAWING)
             break;
-        Sleep(0);
+        PlatSleep(0);
     }
     this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += 4;
     this->mDrawingAccess->Leave();
@@ -266,7 +266,7 @@ static bool DX7DrawTextGDI(HDC theDC, void* inJob)
         COLORREF theColor = SetTextColor(theDC, RGB(theShade, theShade, theShade));
         if (!ExtTextOutA(theDC, (long)theLocation.GetX() + 1, (long)theLocation.GetY() + 1, theOptions, theJob->mClip,
                          inText->GetText(), inText->GetText().GetTCHARLength(), NULL)) {
-            ESRecordNativeError(GetLastError());
+            ESRecordNativeError(PlatGetLastError());
             ESGetNativeError();
             theJob->mResult = kErrorNativeError;
         }
@@ -274,7 +274,7 @@ static bool DX7DrawTextGDI(HDC theDC, void* inJob)
     }
     if (!ExtTextOutA(theDC, (long)theLocation.GetX(), (long)theLocation.GetY(), theOptions, theJob->mClip,
                      inText->GetText(), inText->GetText().GetTCHARLength(), NULL)) {
-        ESRecordNativeError(GetLastError());
+        ESRecordNativeError(PlatGetLastError());
         ESGetNativeError();
         theJob->mResult = kErrorNativeError;
     }

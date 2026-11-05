@@ -207,6 +207,33 @@ typedef struct tagRGBQUAD {
     BYTE rgbRed;
     BYTE rgbReserved;
 } RGBQUAD;
+// the bitmap file's headers (GESurface writes screenshots as .bmp): Windows' layouts, packed as in <wingdi.h>
+#pragma pack(push, 2)
+typedef struct tagBITMAPFILEHEADER {
+    WORD bfType;
+    DWORD bfSize;
+    WORD bfReserved1;
+    WORD bfReserved2;
+    DWORD bfOffBits;
+} BITMAPFILEHEADER;
+#pragma pack(pop)
+typedef struct tagBITMAPINFOHEADER {
+    DWORD biSize;
+    LONG biWidth;
+    LONG biHeight;
+    WORD biPlanes;
+    WORD biBitCount;
+    DWORD biCompression;
+    DWORD biSizeImage;
+    LONG biXPelsPerMeter;
+    LONG biYPelsPerMeter;
+    DWORD biClrUsed;
+    DWORD biClrImportant;
+} BITMAPINFOHEADER;
+#ifdef __cplusplus
+static_assert(sizeof(BITMAPFILEHEADER) == 14 && sizeof(BITMAPINFOHEADER) == 40, "the .bmp headers' sizes");
+#endif
+#define BI_RGB 0
 typedef struct tagPALETTEENTRY {
     BYTE peRed;
     BYTE peGreen;

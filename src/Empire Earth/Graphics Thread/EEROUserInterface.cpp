@@ -132,5 +132,5 @@ void EEROUserInterface::RenderScene()
 // Draws the UI's text
 void EEROUserInterface::FrameDone()
 {
-    this->mUIManager->DrawText();
+    this->mUIManager->DrawTextA();
 }

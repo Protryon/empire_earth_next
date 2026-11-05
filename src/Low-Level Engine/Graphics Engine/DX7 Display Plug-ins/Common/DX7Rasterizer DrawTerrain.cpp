@@ -227,7 +227,7 @@ long DX7Rasterizer::Draw(GETerrainMesh& inMesh, unsigned long inScreen, bool inO
                     this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 12,
                     0) != GXERR_WASSTILLDRAWING)
                 break;
-            Sleep(0);
+            PlatSleep(0);
         }
         this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += 12;
         theResult = kErrorOK;
@@ -350,7 +350,7 @@ long DX7Rasterizer::DrawGridLines(GETerrainMesh& inMesh,
                     this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
                     theDrawnLines * 2, 0) != GXERR_WASSTILLDRAWING)
                 break;
-            Sleep(0);
+            PlatSleep(0);
         }
     }
     this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += theVertexCount;
@@ -420,7 +420,7 @@ long DX7Rasterizer::DrawTerrainGrid(GETerrainMesh& inMesh, unsigned long inScree
                                 this->mDX7ScreenStates[inScreen]->mVertexBuffer,
                                 this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 4, 0) != GXERR_WASSTILLDRAWING)
                             break;
-                        Sleep(0);
+                        PlatSleep(0);
                     }
                     this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += 4;
                 }
@@ -524,7 +524,7 @@ long DX7Rasterizer::DrawTerrainHighlight(GETerrainMesh& inMesh, const U2DRectang
                                     this->mDX7ScreenStates[inScreen]->mVertexBufferPosition, 0x960, 0) !=
                                 GXERR_WASSTILLDRAWING)
                                 break;
-                            Sleep(0);
+                            PlatSleep(0);
                         }
                         theQuadCount = 0;
                         this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += 0x960;
@@ -541,7 +541,7 @@ long DX7Rasterizer::DrawTerrainHighlight(GETerrainMesh& inMesh, const U2DRectang
                         this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
                         theQuadCount * 6, 0) != GXERR_WASSTILLDRAWING)
                     break;
-                Sleep(0);
+                PlatSleep(0);
             }
             this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += theQuadCount * 6;
         }
@@ -622,7 +622,7 @@ long DX7Rasterizer::DrawTerrainMaterial(GEViewport* inViewport, std::vector<GETe
                         this->mDX7ScreenStates[inScreen]->mVertexBuffer, this->mDX7ScreenStates[inScreen]->mVertexBufferPosition,
                         theVertexCount, 0) != GXERR_WASSTILLDRAWING)
                     break;
-                Sleep(0);
+                PlatSleep(0);
             }
         }
         this->mDX7ScreenStates[inScreen]->mVertexBufferPosition += theVertexCount;

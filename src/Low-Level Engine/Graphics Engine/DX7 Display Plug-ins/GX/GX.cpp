@@ -1,6 +1,8 @@
 // GX core (include/gx/GX.h): the wgpu device, the command stream, pixel formats, surfaces with their CPU and GPU
 // copies, the blits, presentation and the display object. The 3D device is GXDevice.cpp.
 #include <stdarg.h>
+#include "platform/PlatMessage.h"
+#include "platform/PlatTime.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +25,7 @@ void GXLog(const char* inFormat, ...)
     vsnprintf(theText, sizeof(theText) - 2, inFormat, theArguments);
     va_end(theArguments);
     strcat(theText, "\n");
-    OutputDebugStringA(theText);
+    PlatDebugOutput(theText);
     if (getenv("EE_GX_LOG"))
         fputs(theText, stderr);
 }
@@ -196,9 +198,13 @@ bool GXCore::Start()
         return false;
     this->mFailed = true;
     if (const char* theFile = getenv("EE_GX_STDERR")) {   // debugging: wgpu's panic messages go to stderr
+#ifdef _WIN32
         HANDLE theHandle = CreateFileA(theFile, GENERIC_WRITE, FILE_SHARE_READ, NULL, CREATE_ALWAYS, 0, NULL);
         if (theHandle != INVALID_HANDLE_VALUE)
             SetStdHandle(STD_ERROR_HANDLE, theHandle);
+#else
+        freopen(theFile, "w", stderr);
+#endif
     }
     if (getenv("EE_GX_LOG")) {   // wgpu's own log (backend details of validation errors)
         wgpuSetLogCallback(OnLog, NULL);
@@ -212,11 +218,11 @@ bool GXCore::Start()
     if (const char* theFlags = getenv("EE_WGPU_FLAGS"))   // wgpu instance flags (debugging: 1 debug, 2 validation)
         theExtras.flags = (WGPUInstanceFlag)strtoul(theFlags, NULL, 0);
     if (const char* theCompiler = getenv("EE_WGPU_DX12_COMPILER"))   // fxc or dxc (with dxcompiler.dll)
-        theExtras.dx12ShaderCompiler = !_stricmp(theCompiler, "dxc") ? WGPUDx12Compiler_Dxc : WGPUDx12Compiler_Fxc;
+        theExtras.dx12ShaderCompiler = !PlatStrICmp(theCompiler, "dxc") ? WGPUDx12Compiler_Dxc : WGPUDx12Compiler_Fxc;
     if (const char* theBackend = getenv("EE_WGPU_BACKEND")) {
-        if (!_stricmp(theBackend, "dx12")) theExtras.backends = WGPUInstanceBackend_DX12;
-        else if (!_stricmp(theBackend, "vulkan")) theExtras.backends = WGPUInstanceBackend_Vulkan;
-        else if (!_stricmp(theBackend, "gl")) theExtras.backends = WGPUInstanceBackend_GL;
+        if (!PlatStrICmp(theBackend, "dx12")) theExtras.backends = WGPUInstanceBackend_DX12;
+        else if (!PlatStrICmp(theBackend, "vulkan")) theExtras.backends = WGPUInstanceBackend_Vulkan;
+        else if (!PlatStrICmp(theBackend, "gl")) theExtras.backends = WGPUInstanceBackend_GL;
     }
     WGPUInstanceDescriptor theInstanceDescriptor = {};
     theInstanceDescriptor.nextInChain = &theExtras.chain;
@@ -240,7 +246,7 @@ bool GXCore::Start()
         for (int i = 0; i < 5000 && !theDone; i++) {
             wgpuInstanceProcessEvents(this->mInstance);
             if (!theDone)
-                Sleep(1);
+                PlatSleep(1);
         }
     }
     if (!this->mAdapter) {
@@ -260,7 +266,7 @@ bool GXCore::Start()
     for (int i = 0; i < 5000 && !theDone; i++) {
         wgpuInstanceProcessEvents(this->mInstance);
         if (!theDone)
-            Sleep(1);
+            PlatSleep(1);
     }
     if (!this->mDevice) {
         GXLog("GX: no device");
@@ -621,18 +627,18 @@ void GXSurfaceData::Download()
     wgpuBufferMapAsync(theBuffer, WGPUMapMode_Read, 0, (size_t)theDescriptor.size, theCallback);
     // poll without a blocking wait (a blocking device poll never returned in an x64 session, wgpu-native v29 on
     // DX12/WARP): give the copy up to 10 s
-    unsigned long long theStart = GetTickCount64();
+    unsigned long long theStart = PlatTimeMilliseconds64();
     for (unsigned long theSpin = 0; !theDone; theSpin++) {
         wgpuDevicePoll(theCore.mDevice, 0, NULL);
         wgpuInstanceProcessEvents(theCore.mInstance);
         if (theDone)
             break;
-        if (GetTickCount64() - theStart > 10000) {
+        if (PlatTimeMilliseconds64() - theStart > 10000) {
             GXLog("GX: read-back of %lux%lu timed out", this->mWidth, this->mHeight);
             break;
         }
         if (theSpin > 64)
-            Sleep(theSpin > 1000 ? 1 : 0);
+            PlatSleep(theSpin > 1000 ? 1 : 0);
     }
     if (theDone > 0) {
         const unsigned char* theData = (const unsigned char*)wgpuBufferGetConstMappedRange(theBuffer, 0,

@@ -234,7 +234,7 @@ unsigned long NESynchronousClient::Main(void* inClientObject)
             }
             break;
         case kTSWaitFailed:
-            GetLastError();
+            PlatGetLastError();
             break;
         }
     }
@@ -540,7 +540,7 @@ unsigned long NESynchronousClient::Receive(void* inClientObject)
         case kTSWaitFailed:
             theTimeout = 10000;
             theElapsed = 0;
-            GetLastError();
+            PlatGetLastError();
             break;
         }
         if (theTimedOut == true) {

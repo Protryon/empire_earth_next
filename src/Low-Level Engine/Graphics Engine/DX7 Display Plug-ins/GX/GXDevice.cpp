@@ -7,6 +7,7 @@
 // (select/modulate of texture and diffuse), specular add, colour key (texels whose key was baked into alpha 0),
 // alpha test, blending and z by pipeline state. Not emulated: wireframe/point fill, dithering, antialiasing.
 #include <math.h>
+#include "platform/PlatTime.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -356,7 +357,7 @@ GXRESULT GXDevice::BeginScene()
             GXLog("GX: null 3D device, one scene every %ld ms", sNull3DKeyMs);
     }
     if (sNull3DKeyMs >= 0) {
-        unsigned long long theNow = GetTickCount64();
+        unsigned long long theNow = PlatTimeMilliseconds64();
         sDrawScene = sNull3DKeyMs > 0 && theNow >= sNextKeyScene;
         if (sDrawScene)
             sNextKeyScene = theNow + (unsigned long long)sNull3DKeyMs;
@@ -414,13 +415,13 @@ GXRESULT GXDevice::Clear(unsigned long inCount, GXRECT* inRects, unsigned long i
     for (unsigned long i = 0; i < (inRects ? inCount : 1); i++) {
         RECT theRect = {(long)v.dwX, (long)v.dwY, (long)(v.dwX + v.dwWidth), (long)(v.dwY + v.dwHeight)};
         if (inRects) {
-            theRect.left = std::max(theRect.left, inRects[i].x1);
-            theRect.top = std::max(theRect.top, inRects[i].y1);
-            theRect.right = std::min(theRect.right, inRects[i].x2);
-            theRect.bottom = std::min(theRect.bottom, inRects[i].y2);
+            theRect.left = std::max(theRect.left, (LONG)inRects[i].x1);
+            theRect.top = std::max(theRect.top, (LONG)inRects[i].y1);
+            theRect.right = std::min(theRect.right, (LONG)inRects[i].x2);
+            theRect.bottom = std::min(theRect.bottom, (LONG)inRects[i].y2);
         }
-        theRect.right = std::min(theRect.right, (long)theTarget->mWidth);
-        theRect.bottom = std::min(theRect.bottom, (long)theTarget->mHeight);
+        theRect.right = std::min(theRect.right, (LONG)theTarget->mWidth);
+        theRect.bottom = std::min(theRect.bottom, (LONG)theTarget->mHeight);
         if (theRect.right <= theRect.left || theRect.bottom <= theRect.top)
             continue;
         if (inFlags & GXCLEAR_TARGET)

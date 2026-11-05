@@ -7,6 +7,7 @@
 #include "EEDataTextSpecs.h"
 
 #include <charconv>
+#include "lle/UFromChars.h"
 #include <cstdint>
 #include <cstring>
 #include <map>
@@ -686,7 +687,7 @@ uint32_t ParseF32(const std::string& inText)
     bool neg = s[0] == '-';
     std::string body = (s[0] == '+' || s[0] == '-') ? s.substr(1) : s;
     float f = 0.0f;
-    std::from_chars_result r = std::from_chars(body.data(), body.data() + body.size(), f, std::chars_format::general);
+    std::from_chars_result r = UFromChars(body.data(), body.data() + body.size(), f);
     if (r.ec == std::errc::result_out_of_range)
         Fail("'" + inText + "' is outside the float range");
     if (r.ec != std::errc() || r.ptr != body.data() + body.size())

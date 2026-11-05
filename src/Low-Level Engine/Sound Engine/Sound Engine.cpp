@@ -1,7 +1,9 @@
 // C:\EEX\Low-Level Engine\Sound Engine\Sound Engine.cpp (file name by analogy with Error System.cpp / Thread System.cpp)
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
+#ifdef _WIN32
 #include <mmsystem.h>
+#endif
 
 #include "lle/LowLevelEngine.h"
 #include "GEWindow.h"
@@ -29,6 +31,7 @@ long SEInitialize(const FSFileSpec& inDirectory, GEWindow* inWindow, bool inUseC
 // the constant 1 in edi and the device index in ebx)
 void SEInitializeCD(GEWindow* inWindow)
 {
+#ifdef _WIN32
     SECD* theCD;
     SECDVolumeControl theVolume;
     MCI_OPEN_PARMS theOpen;
@@ -109,6 +112,7 @@ void SEInitializeCD(GEWindow* inWindow)
         SECD::GetCD(0, theCD);
         gCDVolume = theCD->GetVolume();
     }
+#endif   // no CD audio (MCI) off Windows
 }
 
 // FUNCTION: LLE 0x1005354b

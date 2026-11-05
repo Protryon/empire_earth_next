@@ -134,7 +134,11 @@ unsigned long RTSGraphics::Main(void* inGraphics)
         }
         // Win32 Sleep, not PlatSleep: the test harness's time shim caps the frame rate at the Sleep import by the
         // caller's return address (inside RTSGraphics::Main; tools/harness/timeshim.c), which a wrapper would hide
+#ifdef _WIN32
         Sleep(1);
+#else
+        PlatSleep(1);
+#endif
     }
     theGraphics->mThreadDone->Set();
     return 0;
@@ -215,7 +219,11 @@ void RTSGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, voi
         if (this->mMovie != NULL) {
             this->mMovie->Stop();
             while (this->mMovie->GetIsPlaying()) {
+#ifdef _WIN32
                 Sleep(1);   // Win32 Sleep (see Main): HandleMessage may be inlined into Main
+#else
+                PlatSleep(1);
+#endif
             }
             this->mIsMoviePlaying = false;
             this->mMovie->Dereference();

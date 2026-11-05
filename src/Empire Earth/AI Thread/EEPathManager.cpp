@@ -581,7 +581,7 @@ void EEPathManager::CompletePath(EEComplexUnit* inUnit)
 
 // FUNCTION: EXE 0x4a639b
 // Writes the path sub sectors and the queued tile and graph searches to an out-of-synch dump
-void EEPathManager::DumpOutOfSynch(_iobuf* inFile)
+void EEPathManager::DumpOutOfSynch(FILE* inFile)
 {
     fprintf(inFile, "OUT OF SYNCH DUMP: Pathfinding Information\nOUT OF SYNCH DUMP:----------------------------------\n");
     fprintf(inFile, "OUT OF SYNCH DUMP: Path SubSectors: %zu\n", gContinentManager.mPathSubSectors.size());

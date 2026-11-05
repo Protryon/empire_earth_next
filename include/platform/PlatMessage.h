@@ -26,6 +26,16 @@ void PlatMessageSetHandler(PlatMessageHandler inHandler);
 // caller ends lines).
 void PlatDebugOutput(const char* inText);
 
+// The system, as the engine asks about it (Utilities.cpp):
+// - the user's language as a Windows LANGID (Win32: GetUserDefaultLangID; POSIX: from LC_ALL/LC_MESSAGES/LANG, e.g.
+//   "ko_KR.UTF-8" -> 0x412, 0x409 when unset or unknown);
+// - the system version in GetVersion's packing (low byte major, next byte minor, bit 31 set for the Windows 9x
+//   family; POSIX: 0x0a00000a, an NT 10.0 system);
+// - the end of the process's use of system services before exit (Win32: CoUninitialize; POSIX: nothing).
+uint16_t PlatSystemLanguageId(void);
+uint32_t PlatSystemVersion(void);
+void PlatSystemShutdown(void);
+
 #ifdef __cplusplus
 }
 #endif
