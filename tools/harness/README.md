@@ -26,6 +26,12 @@ python -I tools/harness/game_session.py --exercise ai-game --ai-players 2 --map-
        --max-game-seconds 600 --time-factor 32 --no-render --seed 2 --pt-rate 40 --timeout 2400000
 ```
 
+The tour and random-game exercises check the rendering of the gameplay frame and (from `--play-seconds 10`) of
+the play frame: the game view must be lit and varied, the mini map must show terrain
+(`session_exercise.check_rendering`, thresholds in PORT_LEARNINGS.md "x87 range"; evidence `rendering.json`).
+`EE_GX_STATS=<n>` in the environment makes GX log a summary of the 3D draws every n scenes (debug strings in the
+session log).
+
 Requirements: the game install (its data is staged from it), MSYS2 `mingw-w64-x86_64-gcc` (`C:\msys64\mingw64`;
 the debugger harness `exe_boot.exe`, the bridge and the time shim are built with it), pip `pefile capstone`.
 
