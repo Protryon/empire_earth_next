@@ -63,6 +63,7 @@ jobs:
         run: |
           python -I tools/xbuild.py census -j 4 > census-linux-ms.txt 2>&1 || true
           python -I tools/xbuild.py census -j 4 --dialect gnu > census-linux-gnu.txt 2>&1 || true
+          python -I tools/xbuild.py census -j 4 --dialect msext > census-linux-msext.txt 2>&1 || true
           head -60 census-linux-ms.txt
 
       - uses: actions/upload-artifact@v4
@@ -129,6 +130,8 @@ jobs:
         run: |
           python -I tools/xbuild.py census -j 4 > census-macos-ms.txt 2>&1 || true
           python -I tools/xbuild.py census -j 4 --dialect gnu > census-macos-gnu.txt 2>&1 || true
+          python -I tools/xbuild.py census -j 4 --dialect msext > census-macos-msext.txt 2>&1 || true
+          head -30 census-macos-msext.txt
           head -60 census-macos-ms.txt
 
       - uses: actions/upload-artifact@v4

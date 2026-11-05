@@ -446,6 +446,8 @@ def census_flags(t, dialect):
     if dialect == "ms":
         f += ["-fms-extensions", "-fms-compatibility", "-fdelayed-template-parsing",
               "-fms-compatibility-version=19.44"]
+    elif dialect == "msext":   # the extensions without -fms-compatibility (which retypes va_list on Darwin)
+        f += ["-fms-extensions", "-fdelayed-template-parsing"]
     return f
 
 
@@ -461,7 +463,7 @@ def census_job(t, job, dialect, inc, logdir):
     rel = pathlib.Path(src).resolve().relative_to(ROOT / "src").as_posix()
     if is_c or rel.startswith(("ThirdParty/", "Platform/")):
         dialect = "gnu"
-    std = ["-x", "c", "-std=gnu11"] if is_c else ["-x", "c++", "-std=gnu++17" if dialect == "gnu" else "-std=c++17"]
+    std = ["-x", "c", "-std=gnu11"] if is_c else ["-x", "c++", "-std=gnu++17" if dialect != "ms" else "-std=c++17"]
     own = []
     p = pathlib.Path(src).resolve()
     third = ROOT / "src" / "ThirdParty"
@@ -615,7 +617,7 @@ def main():
         if name == "sdl3":
             p.add_argument("--fresh", action="store_true", help="configure from scratch")
         if name == "census":
-            p.add_argument("--dialect", choices=["ms", "gnu"], default="ms")
+            p.add_argument("--dialect", choices=["ms", "msext", "gnu"], default="ms")
             p.add_argument("--only")
             p.add_argument("modules", nargs="*")
     a = ap.parse_args()
