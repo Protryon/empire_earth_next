@@ -487,7 +487,7 @@ static void TestConfig(const std::string& inPath)
     CHECK(!PlatConfigGetInt("Game", "Width", &theValue));   // no file yet: empty
     CHECK(PlatConfigSetInt("Game", "Width", 1024));
     CHECK(PlatConfigSetInt("Game", "Negative", -7));
-    const char theString[] = "C:\Games\Empire Earth \"AoC\"";
+    const char theString[] = "C:\\Games\\Empire Earth \"AoC\"";
     CHECK(PlatConfigSetString("Game", "Path", theString));
     CHECK(PlatConfigSetString("Game Options", "Blank", " padded\t"));
     CHECK(PlatConfigSetString("Game Options", "Empty", ""));
@@ -503,13 +503,13 @@ static void TestConfig(const std::string& inPath)
     CHECK(!PlatConfigGetInt("Game", "Missing", &theValue));
     // the file: plain "Name = value" lines, a string quoted only when it needs it
     std::string theText = ReadText(inPath.c_str());
-    CHECK(theText == "[Game]\nWidth = 1024\nNegative = -7\nPath = C:\Games\Empire Earth \"AoC\"\n\n"
-                     "[Game Options]\nBlank = \" padded\t\"\nEmpty = \n");
+    CHECK(theText == "[Game]\nWidth = 1024\nNegative = -7\nPath = C:\\Games\\Empire Earth \"AoC\"\n\n"
+                     "[Game Options]\nBlank = \" padded\\t\"\nEmpty = \n");
     CHECK(PlatConfigDelete("Game", "Negative"));
     CHECK(!PlatConfigDelete("Game", "Negative"));
     CHECK(PlatConfigDelete("Game Options", NULL));
     CHECK(!PlatConfigGetString("Game Options", "Blank", theBuffer, sizeof(theBuffer)));
-    CHECK(ReadText(inPath.c_str()) == "[Game]\nWidth = 1024\nPath = C:\Games\Empire Earth \"AoC\"\n");
+    CHECK(ReadText(inPath.c_str()) == "[Game]\nWidth = 1024\nPath = C:\\Games\\Empire Earth \"AoC\"\n");
     remove(inPath.c_str());
 }
 
