@@ -11,6 +11,11 @@ class GEScreen;
 class GESurface;
 class GETexture;
 class TSCriticalSection;
+class UString;
+
+// A picture the caller loads as a Targa (GESurface::Load, kImageFileTGA): its .png in place of the .tga when the path
+// has one (GEOpenFormatsFile.cpp), else FSPath::FindFile
+long GEFindTargaFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile);
 
 // How a texture file is loaded (sizeof 0x14, copied with `rep movsd` x5 by the User Interface backgrounds,
 // UITextureBackground 0x1005c84e). Fields from GETextureManager::LoadTexture (0x33cd4), which turns it into a

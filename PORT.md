@@ -41,6 +41,11 @@ deleted here, keep them deleted) were rewritten or deleted here. When upstream c
 6. **A plain link** (2026-11-05): every symbol the exe uses is defined in source (member aliases are references to
    the members, the ICF/vtable-slot aliases are bodies, the WON library is a unit of stand-ins); the exe is one
    lld-link with no stubs and no link tables (PORT_LEARNINGS.md "Plain link").
+7. **Self-contained data and settings** (2026-11-05, branch nossa): the game reads one loose `Data` folder in its own
+   directory (`tools/open_data.py`: both retail archives and the original game's loose data merged, db tables as
+   text, models glTF, textures PNG; packed as a private bundle), needs neither a `data.ssa` nor the original Empire
+   Earth, and keeps its settings in `config.ini` next to it (no registry, `platform/PlatConfig.h`). PORT_LEARNINGS.md
+   "No data.ssa, no original install, no registry".
 
 ## Rules of the build
 
@@ -394,7 +399,7 @@ harness's time shim hooks those imports), and is linked with the engine (`tools/
 | PlatTime.h | millisecond clock, high-resolution counter, sleep, timer period, local time, system timers | Time Manager, TMPoll, TMTimer, all Sleep calls but RTSGraphics::Main's, GEModel Caching |
 | PlatThread.h | recursive mutex, events (wait, wait-any), atomics, thread id, last native error, threads (create, priority, suspend/resume, exit code) | TSCriticalSection, TSEvent (+WaitAny), TSReadWriteLock, TSScheduler, TSThread (not its message queue), Thread System.cpp, the mixer lock, the NE/music/sound/TCP wait loops |
 | PlatString.h | _stricmp/_strnicmp/_itoa/_strdup and the 19 _mbs*/_ismb* multibyte functions | UString, UWideString, the UI text controls, the game (292 sites) |
-| PlatPreferences.h | key/value store under roots (the registry on Win32) | URegistry (no HKEY in its interface) |
+| PlatConfig.h | the settings file config.ini (sections, named strings and integers; one implementation in src/Platform/Common) | UConfig (was URegistry; the registry is gone) |
 | PlatFile.h | files, directory search, attributes, temp files, read-only file mapping | FSFileSpec, FSBasicFile, FSDebugFile, FSMemoryFile, FSArchive, File System.cpp |
 | PlatPath.h | game paths on the native file system (volumes, separators, case-insensitive lookup), the data root | (POSIX PlatFile; the POSIX game's start-up) |
 | PlatSocket.h | IPv4 sockets, readiness events (WSAEventSelect), name lookups, adapters; Winsock error numbers | not yet: TCP Protocol.cpp (step 4.2) |

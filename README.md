@@ -54,19 +54,34 @@ python -I build.py                  # -> build/clang/exe/EE-AOC.exe (x86_64, the
 python -I tools/clang_build.py      # compile only, with a ranked error census (--census: the pointer-size warnings)
 ```
 
-To play, prepare a directory with the exe, a copy of the installed game's data, the db tables as text and the movies
-converted for the build's player (`--movies DIR` points at `.bik` files, e.g. an extracted retail disc; ffmpeg):
+The game reads its data as one loose `Data` folder in its own directory: the contents of both retail `data.ssa`
+archives (*Art of Conquest* and the original *Empire Earth*) and the original game's loose data, merged in the game's
+search order, with the db tables as text (CSV/YAML), the models as glTF and the textures as PNG. Neither a `data.ssa`
+nor an installation of the original game is needed. `tools/open_data.py` makes that tree from the two installs (only
+read) and packs it as a bundle (private: it is derived from the retail game):
 
 ```
-python -I tools/make_play_dir.py C:\EE-play [--movies DIR]    # then run C:\EE-play\EE-AOC.exe
+python -I tools/open_data.py build build/open_data/tree       # the tree (about 4 minutes; --binary: unconverted)
+python -I tools/open_data.py pack build/ee-aoc-data.zip       # the bundle: the tree, fonts/, README.txt
 ```
+
+To play, prepare a directory with the exe, that data and the movies converted for the build's player (`--movies DIR`
+points at `.bik` files, e.g. an extracted retail disc; ffmpeg):
+
+```
+python -I tools/make_play_dir.py C:\EE-play [--data TREE|BUNDLE.zip] [--movies DIR]   # then run C:\EE-play\EE-AOC.exe
+```
+
+The game keeps its settings in `config.ini` in its directory (it creates the file; `EE_CONFIG` names another file).
+It uses no registry and no other settings store; when its directory is not writable, the file goes to the user's
+configuration directory (`%APPDATA%\Empire Earth AoC`, `~/.config/empire-earth-aoc`, `~/Library/Application
+Support/Empire Earth AoC`).
 
 The exe comes with its `.map` and `.pdb`. Sources are staged under `C:\EEX\` before they are compiled (env
 `EE_ORIG_SRC_ROOT` moves it). A full build takes about two minutes on a 12-core machine.
 
-To play, copy `EE-AOC.exe` into a copy of the game's install directory (none of its DLLs are used). The movies
-need converting once: `python -I tools/convert_movies.py <game directory>` (needs ffmpeg) writes an `.mpg` next to
-every `.bik`.
+The movies need converting once: `python -I tools/convert_movies.py <game directory>` (needs ffmpeg) writes an
+`.mpg` next to every `.bik` (`make_play_dir.py --movies` does it for a play directory).
 
 Linux and macOS (in progress, PORT.md step 4): `tools/fetch_posix.py` fetches the pinned dependencies (a Debian
 sysroot for cross-compiling to Linux, wgpu-native, SDL3 sources, Liberation fonts) and `tools/xbuild.py` builds the
@@ -86,16 +101,15 @@ python -I tools/xbuild.py game -j 8                # -> build/xbuild/<target>/ga
 build/xbuild/<target>/game/ee-aoc --smoke-test     # window + wgpu device + 30 frames; needs no game data
 ```
 
-The game needs the data of an installed *Art of Conquest* (never committed here). It reads it from the data root:
-`EE_DATA_ROOT` if set, else the program's directory (a macOS app bundle: its `Contents/Resources`). Without it the game
-stops with "game data not found". The game also needs the original Empire Earth's install keys in its preferences
-store (the registry on Windows; on Linux `~/.config/empire-earth-aoc`, on macOS `~/Library/Application
-Support/Empire Earth AoC`, or `EE_PREFS_DIR`). `tools/make_play_dir.py` prepares a complete directory (prepare it on
-Windows where the game is installed, or point `--install` at a copy):
+The game needs the game data (the bundle above; never committed here). It reads it from the data root: `EE_DATA_ROOT`
+if set, else the program's directory (a macOS app bundle: its `Contents/Resources`). Without it the game stops with
+"game data not found". Its settings go to `config.ini` in the data root (a read-only app bundle: the user's
+configuration directory, see above). `tools/make_play_dir.py` prepares a complete directory (anywhere: it needs only
+the data tree or bundle):
 
 ```
-python -I tools/make_play_dir.py OUT --posix-exe build/xbuild/linux-x86_64/game/ee-aoc [--movies DIR]
-OUT/run.sh                                         # sets EE_DATA_ROOT=OUT and EE_PREFS_DIR=OUT/prefs
+python -I tools/make_play_dir.py OUT --posix-exe build/xbuild/linux-x86_64/game/ee-aoc [--data BUNDLE.zip] [--movies DIR]
+OUT/run.sh                                         # sets EE_DATA_ROOT=OUT
 ```
 
 Status: the Linux and macOS builds are checked by CI (`.github/workflows/posix.yml`, branch `posix-ci`: the game is

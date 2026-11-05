@@ -54,7 +54,7 @@ long EETerrainColorTable::Load()
     ESVERIFY_AT(theResult == keseOK, 76);
 
     theFileName = UString("textures\\ColorPalette.tga");
-    theResult = gTextureManager->GetTexturePath()->FindFile(theFileName, theFile);
+    theResult = GEFindTargaFile(gTextureManager->GetTexturePath(), theFileName, theFile);   // or its .png
     ESVERIFY_AT(theResult == keseOK, 81);
     ESVERIFY_AT(theFile != NULL, 82);
     theResult = theSurface->Load(*theFile, kImageFileTGA);

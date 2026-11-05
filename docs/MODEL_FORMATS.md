@@ -17,7 +17,10 @@ used), **derived** (read, but always equal to a value computed from other fields
 `EEShowSinglePlayerScreen` (Empire Earth.cpp) builds `gDataPath`: the AoC `Data\data.ssa`, the original game's
 `Data\data.ssa` (the install path from the preferences), then the two `Data\` folders. `FSPath::FindFile` searches the
 **folders first**, then the archives, each in that order. Models and textures are both found through it
-(`gModelManager`, `gTextureManager` share `gDataPath`).
+(`gModelManager`, `gTextureManager` share `gDataPath`). That was the original; this port (branch nossa) searches
+only its own `Data\` folder (and a `Data\data.ssa` when one is present), which `tools/open_data.py build` fills from
+both installs in the order above, with every model as glTF and every texture as PNG. The table describes the retail
+sources.
 
 | Kind | Name the game asks for | Loader | AoC data.ssa | Original data.ssa | Loose |
 |---|---|---|---|---|---|
@@ -28,10 +31,11 @@ Which texture a unit's model is drawn with comes from **dbgraphics** (`mTextureN
 model: `EEROUnits` sets the dbgraphics texture on every material (`GEModel::SetTexture`), and a material's
 `texture index` picks a frame of it. The texture names stored in a `.cem` are never read (2.2).
 
-Other readers of `.tga` files go around the texture manager and are not covered by the open formats:
-`textures\ColorPalette.tga` (EETerrainColorTable), `textures\Volcano.tga` (EEE3DVolcano), the mouse pointers
-(EEMouse), scenario pictures (EEUIEScenarioIntroEvents), generic backgrounds (EEUIBGenericBackground). They read the
-`.tga` through `GESurface` as before.
+Other readers of `.tga` files go around the texture manager: `textures\ColorPalette.tga` (EETerrainColorTable),
+`textures\Volcano.tga` (EEE3DVolcano), the mouse pointers (RTSMouse), scenario pictures (EEUIEScenarioIntroEvents),
+campaign map backgrounds (EEUIBMapBackground). They read the `.tga` through `GESurface`. The first three look it up
+through `GEFindTargaFile`, which serves `<name>.png` as the Targa when the path has one; the scenario and campaign
+pictures come from scenario files and campaign archives, which are not converted.
 
 The multiplayer checksum (`EEInitializeNetwork`) sums the loose `Data\Models\*.cem`, and now `*.glb`, `*.gltf` and
 `*.bin` too (0 when there are none): models carry tag points and bounds the simulation uses.
