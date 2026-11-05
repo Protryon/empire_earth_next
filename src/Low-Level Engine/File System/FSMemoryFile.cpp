@@ -73,7 +73,7 @@ long FSMemoryFile::Close()
     // Fixed: the stream pointer was kept, so a second Close (the destructor's) closed the same FILE again
     this->mStream = NULL;
     if (this->mTemporaryFileName.GetLength() > 0)
-        DeleteFileA(this->mTemporaryFileName);
+        PlatDeleteFile(this->mTemporaryFileName);
     return theResult;
 }
 
@@ -238,13 +238,13 @@ long FSMemoryFile::Delete()
 // Copies the contents to a new temporary disk file and reopens it as a stdio stream with the given mode
 long FSMemoryFile::FOpen(char* inMode)
 {
-    char theDirectory[MAX_PATH];
-    char theName[MAX_PATH];
+    char theDirectory[PLAT_MAX_PATH];
+    char theName[PLAT_MAX_PATH];
     char thePrefix[] = "EE_";
     bool theOpened = false;
     long theResult;
     this->mIsOpen = true;
-    if (GetTempPathA(_MAX_FNAME, theDirectory) && GetTempFileNameA(theDirectory, thePrefix, 0, theName)) {
+    if (PlatGetTempDirectory(theDirectory, 256) && PlatCreateTempFile(theDirectory, thePrefix, theName)) {   // 256: _MAX_FNAME
         this->mTemporaryFileName = UWideString(theName);
         this->mStream = fopen(this->mTemporaryFileName, "w+b");
         if (this->mStream) {
@@ -269,7 +269,7 @@ long FSMemoryFile::FOpen(char* inMode)
     }
     if (!theOpened) {
         theResult = kErrorNativeError;
-        ESRecordNativeError(GetLastError());
+        ESRecordNativeError(PlatGetLastError());
     }
     return theResult;
 }

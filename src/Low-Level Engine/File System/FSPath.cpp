@@ -233,9 +233,9 @@ bool FSPath::GetFileArchiveStatus(const UWideString& inName, bool& outArchived)
 // returns the last search's result, which is the end-of-search code when the path has directories
 long FSPath::ListFiles(const UString& inPattern, std::set<UString>& outFiles)
 {
-    UString theRoot(MAX_PATH);
-    UString thePath(MAX_PATH);
-    UString theName(MAX_PATH);
+    UString theRoot(PLAT_MAX_PATH);
+    UString thePath(PLAT_MAX_PATH);
+    UString theName(PLAT_MAX_PATH);
     FSFileSpec theFile;
     long theResult = kErrorOK;
     unsigned long i;

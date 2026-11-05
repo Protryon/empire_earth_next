@@ -44,7 +44,7 @@ long FSDebugFile::Close()
                 this->mDelegate->Close();
         } else {
             theResult = kErrorNativeError;
-            ESRecordNativeError(GetLastError());
+            ESRecordNativeError(PlatGetLastError());
         }
     } else
         theResult = kErrorNotOpen;
@@ -60,12 +60,12 @@ long FSDebugFile::Copy(const UString& inDestination, bool inOverwrite, bool inKe
 
 bool FSDebugFile::IsDirectory() const
 {
-    UString thePath(MAX_PATH);
+    UString thePath(PLAT_MAX_PATH);
     bool theResult = true;
-    if (this->mFile.GetLength() == 0 && this->mVolume.GetLength() + this->mDirectory.GetLength() <= MAX_PATH) {
+    if (this->mFile.GetLength() == 0 && this->mVolume.GetLength() + this->mDirectory.GetLength() <= PLAT_MAX_PATH) {
         thePath = this->mVolume + this->mDirectory;
-        DWORD theAttributes = GetFileAttributesA(thePath);
-        if (theAttributes == 0xffffffff || !(theAttributes & FILE_ATTRIBUTE_DIRECTORY))
+        uint32_t theAttributes = PlatPathGetAttributes(thePath);
+        if (theAttributes == PLAT_ATTR_INVALID || !(theAttributes & PLAT_ATTR_DIRECTORY))
             theResult = false;
     } else
         theResult = false;
@@ -77,11 +77,11 @@ bool FSDebugFile::IsDirectory() const
 long FSDebugFile::Open(unsigned long inAccess)
 {
     long theResult = kErrorOK;
-    UString thePath(MAX_PATH);
+    UString thePath(PLAT_MAX_PATH);
     UString theMode;
     this->mIsOpen = true;
     this->mFileAccess = inAccess;
-    if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= MAX_PATH) {
+    if (this->mVolume.GetLength() + this->mDirectory.GetLength() + this->mFile.GetLength() <= PLAT_MAX_PATH) {
         if (inAccess == kFileAccessRead || inAccess == kFileAccessWrite) {
             if (inAccess == kFileAccessRead)
                 theMode = "rt";
@@ -97,7 +97,7 @@ long FSDebugFile::Open(unsigned long inAccess)
         if (this->mStream == NULL) {
             this->mIsOpen = false;
             theResult = kErrorNativeError;
-            ESRecordNativeError(GetLastError());
+            ESRecordNativeError(PlatGetLastError());
         } else if (strrchr(theMode, 'w') && strrchr(theMode, 't'))
             this->mIsTextOutput = true;
         else if (strrchr(theMode, 'r') && strrchr(theMode, 't'))

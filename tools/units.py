@@ -20,7 +20,7 @@ PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/),
 # with the engine
 PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatThread.cpp", "Platform/Win32/PlatString.cpp",
-                  "Platform/Win32/PlatPreferences.cpp"]
+                  "Platform/Win32/PlatPreferences.cpp", "Platform/Win32/PlatFile.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS}
 LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c", "pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
              "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c"}
