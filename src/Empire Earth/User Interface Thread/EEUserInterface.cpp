@@ -1870,6 +1870,7 @@ bool EEPumpWindowEvent()
                    (unsigned)theEvent.mKey.mScanCode, (unsigned)theEvent.mKey.mVirtualKey,
                    theEvent.mType == PLAT_EVENT_TEXT ? theEvent.mText.mText : "", gUserInterface != NULL,
                    gGameWindow ? gGameWindow->GetWidth() : 0, gGameWindow ? gGameWindow->GetHeight() : 0);
+    ISHandleEvent(theEvent);   // the Input System's keyboard and mouse (DirectInput's devices before)
     EEUserInterface::HandleEvent(theEvent);
     return true;
 }

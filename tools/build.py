@@ -10,9 +10,8 @@ with its image libraries (libpng/zlib/libjpeg), the engine, the plug-ins the ori
 protocol, the mixer, the Default random map generator, the DX7 T&L renderer; registered in PIMModule.cpp) and the
 language resources, with miniaudio, dmusic and pl_mpeg for sound, music and movies. Only Windows system DLLs are
 imported. Every unit is compiled first (tools/clang_build.py, objects in <out>/obj), then linked: one plain lld-link
-of every object, the image libraries (an archive), the Windows SDK import libraries (DINPUT.dll's DirectInputCreateA
-from a one-line .def: the SDK has no DirectInput 7 library), the static libraries (SDL3, wgpu-native) and runtime,
-and the resources.
+of every object, the image libraries (an archive), the Windows SDK import libraries, the static libraries (SDL3,
+wgpu-native) and runtime, and the resources.
 Every symbol is defined in source (the WON library's stand-ins: src/Empire Earth/WONAPI/WONAPIStubs.cpp).
 
 --test-profile windowed-software (TEST ONLY; default out build/clang-test): images for the headless live-game
@@ -111,11 +110,10 @@ def compile_all(targets, out, opt, jobs, overlays=None, extra=()):
 
 
 def static_libs():
-    """System libraries the engine and the renderer linked statically (dinput8: the c_dfDI* data formats), the
-    window layer (SDL3: tools/xbuild.py sdl3), then the
+    """System libraries the engine and the window layer link statically (SDL3: tools/xbuild.py sdl3), then the
     renderer's wgpu-native of the target (static, tools/fetch_wgpu.py) with the system libraries its DX12/Vulkan
     backends and the Rust standard library import."""
-    return ["dxguid.lib", "dinput8.lib", "ole32.lib", "winmm.lib", "user32.lib",
+    return ["ole32.lib", "winmm.lib", "user32.lib",
             # the window layer: SDL3 (static) and the system libraries it imports besides the ones below
             str(ee.sdl3_dir() / "lib" / "SDL3-static.lib"), "setupapi.lib", "version.lib", "cfgmgr32.lib",
             "imm32.lib",
@@ -131,8 +129,7 @@ LINK_FLAGS = ["/INCREMENTAL:NO", "/OPT:REF", "/OPT:ICF", "/MACHINE:X64", "/SUBSY
 # import tables: a name both WSOCK32 (Winsock 1.1: the TCP protocol's) and WS2_32 export resolves to WSOCK32's
 SDK_LIBS = ["imm32.lib", "kernel32.lib", "user32.lib", "gdi32.lib", "shell32.lib", "ole32.lib", "wsock32.lib",
             "advapi32.lib", "winmm.lib", "iphlpapi.lib", "ws2_32.lib"]
-# DirectInput 7's DirectInputCreateA (the SDK ships only dinput8.lib)
-DINPUT_DEF = 'LIBRARY "DINPUT.dll"\nEXPORTS\n    DirectInputCreateA\n'
+
 
 
 def run(cmd, cwd):
@@ -162,9 +159,7 @@ def link_exe(out, objs, extra_libs):
     first = [objs(j[1], j[2]) for m in rest for j in units.jobs_for(m)] + [objs(j[1], j[2]) for j in units.lib_jobs(rest)]
     game += [objs(ROOT / "src" / rel, MODULE_FLAGS["exe"]) for rel in units.EXTRA_UNITS.get("exe", [])]
     (lib / "exeimg.rsp").write_text("".join(f'"{o}"\n' for o in img))
-    (lib / "DINPUT.def").write_text(DINPUT_DEF)
-    for cmd in ([str(LLVM_LIB), "/nologo", "/out:exeimg.lib", "@exeimg.rsp"],
-                [str(LLVM_LIB), "/nologo", "/machine:x64", "/def:DINPUT.def", "/out:DINPUT.lib"]):
+    for cmd in ([str(LLVM_LIB), "/nologo", "/out:exeimg.lib", "@exeimg.rsp"],):
         code, log = run(cmd, lib)
         if code:
             sys.exit(f"{cmd[-1]}: {log}")
@@ -178,7 +173,7 @@ def link_exe(out, objs, extra_libs):
     if {k: v for k, v in theRc.items() if v} != lang_strings.parse_res(res[1]):
         sys.exit("the language string table differs from rc.exe's string tables (tools/lang_strings.py --check-res)")
     inputs = [*first, *[x for x in extra_libs if str(x).lower().endswith(".obj")], *game, lib / "exeimg.lib",
-              lib / "DINPUT.lib", *SDK_LIBS, *[x for x in extra_libs if not str(x).lower().endswith(".obj")],
+              *SDK_LIBS, *[x for x in extra_libs if not str(x).lower().endswith(".obj")],
               *static_libs(), *res, *RUNTIME_LIBS]
     rsp = dst / "link.rsp"
     rsp.write_text("".join(f'"{x}"\n' for x in inputs))

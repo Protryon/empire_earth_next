@@ -1,13 +1,12 @@
-// C:\EEX\Low-Level Engine\Input System\ISMouse.h (RECONSTRUCTION; ISMouse.cpp 0x3b2ce..0x3bab2). The DirectInput
-// system mouse. sizeof 0x60 (operator new in ISInitialize; ??_E stride 0x38f53). Inline members and the implicit copy
+// C:\EEX\Low-Level Engine\Input System\ISMouse.h (RECONSTRUCTION; ISMouse.cpp 0x3b2ce..0x3bab2). The system mouse
+// (DirectInput's exclusive mouse in the original; the window layer's events in relative mode now: lle/ISDeviceInput.h). sizeof 0x60 (operator new in ISInitialize; ??_E stride 0x38f53). Inline members and the implicit copy
 // members are emitted by Input System.cpp (0x38de1..0x38faf).
 #ifndef LLE_ISMOUSE_H
 #define LLE_ISMOUSE_H
 
-#ifndef DIRECTINPUT_VERSION
-#define DIRECTINPUT_VERSION 0x0700
-#endif
-#include <dinput.h>
+#include "lle/ISDeviceInput.h"
+
+struct PlatWindow;
 #include "lle/ISDevice.h"
 
 class LLE_API ISMouse : public ISDevice {
@@ -32,21 +31,21 @@ public:
     void SetUseBufferedMovement(bool inUse) { this->mUseBufferedMovement = inUse; }
     virtual void Suspend();
 private:
-    ISMouse(IDirectInputDevice* inDevice, HWND inWindow, const UString& inName);
+    ISMouse(ISDeviceInput* inDevice, PlatWindow* inWindow, const UString& inName);
     virtual ~ISMouse();
-    DIMOUSESTATE* GetCurrentStatus() { return this->mCurrentStatus; }
-    DIMOUSESTATE* GetLastStatus() { return this->mLastStatus; }
+    ISMouseState* GetCurrentStatus() { return this->mCurrentStatus; }
+    ISMouseState* GetLastStatus() { return this->mLastStatus; }
     void RecomputeCurrentButtonState();
 
     unsigned char mButtons[4];              // +0x18 per button: transition count, bit 0 = down
     unsigned char mLastButtons[4];          // +0x1c
-    DIMOUSESTATE mState;                    // +0x20
-    DIMOUSESTATE mLastState;                // +0x30
+    ISMouseState mState;                    // +0x20 (DIMOUSESTATE)
+    ISMouseState mLastState;                // +0x30
     ISEntity** mEntities;                   // +0x40 new[7]: X, Y, Z axes, 4 buttons
-    IDirectInputDevice* mDevice;            // +0x44
-    DIMOUSESTATE* mCurrentStatus;           // +0x48 -> mState
-    DIMOUSESTATE* mLastStatus;              // +0x4c -> mLastState
-    HWND mWindow;                           // +0x50
+    ISDeviceInput* mDevice;                 // +0x44 (an IDirectInputDevice in the original)
+    ISMouseState* mCurrentStatus;           // +0x48 -> mState
+    ISMouseState* mLastStatus;              // +0x4c -> mLastState
+    PlatWindow* mWindow;                    // +0x50 (relative mode while resumed; an HWND in the original)
     unsigned long mEntityCount;             // +0x54 7
     unsigned long mFirstDigitalEntity;      // +0x58 3
     bool mOverflowed;                       // +0x5c

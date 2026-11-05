@@ -1,6 +1,7 @@
 // C:\EEX\Low-Level Engine\Input System\Input System.cpp
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
+// The devices read the window layer's events (lle/ISDeviceInput.h; DirectInput 7 before, PORT.md step 4.4).
 // 0x10038abf..0x10039715: first Input System unit, so it emits every IS class's header-inline members, implicit copy
 // members and vector deleting dtors (ISEntity, ISDevice, ISKeyboard, ISMouse, ISKey, ISExtendedKey, ISMouseAxis,
 // ISMouseButton, in include order), then ISInitialize, ISSetDoublePressTimeDelta and the shutdown hook.
@@ -17,56 +18,218 @@
 #include "lle/ISExtendedKey.h"
 #include "lle/ISMouseAxis.h"
 #include "lle/ISMouseButton.h"
+#include "lle/ISDeviceInput.h"
+#include "platform/PlatWindow.h"
 
 void ISShutdown(bool inForced);
 
 ISKeyboard* gISKeyboard;
 ISMouse* gISMouse;
 unsigned long gDoublePressTimeDelta = 250;
-static IDirectInput* sDirectInput;          // 0x1012d954
+static ISDeviceInput* sKeyboardInput;       // the devices' event buffers (DirectInput's devices before)
+static ISDeviceInput* sMouseInput;
+
+// ---- ISDeviceInput (lle/ISDeviceInput.h)
+
+ISDeviceInput::ISDeviceInput() : mLock(PlatMutexCreate()), mAcquired(false), mLost(false)
+{
+    memset(this->mKeys, 0, sizeof(this->mKeys));
+    memset(this->mMotion, 0, sizeof(this->mMotion));
+    memset(this->mButtons, 0, sizeof(this->mButtons));
+}
+
+ISDeviceInput::~ISDeviceInput()
+{
+    PlatMutexDestroy(this->mLock);
+}
+
+void ISDeviceInput::Acquire()
+{
+    PlatMutexLock(this->mLock);
+    if (!this->mAcquired) {   // a newly acquired device starts with an empty buffer and no motion
+        this->mRecords.clear();
+        this->mLost = false;
+        memset(this->mMotion, 0, sizeof(this->mMotion));
+    }
+    this->mAcquired = true;
+    PlatMutexUnlock(this->mLock);
+}
+
+void ISDeviceInput::Unacquire()
+{
+    PlatMutexLock(this->mLock);
+    this->mAcquired = false;
+    PlatMutexUnlock(this->mLock);
+}
+
+bool ISDeviceInput::IsAcquired()
+{
+    return this->mAcquired;
+}
+
+long ISDeviceInput::GetData(ISInputRecord* outRecords, unsigned long& ioCount)
+{
+    PlatMutexLock(this->mLock);
+    if (!this->mAcquired) {
+        PlatMutexUnlock(this->mLock);
+        ioCount = 0;
+        return kISInputNotAcquired;
+    }
+    unsigned long n = 0;
+    while (n < ioCount && !this->mRecords.empty()) {
+        if (outRecords != NULL)
+            outRecords[n] = this->mRecords.front();
+        this->mRecords.pop_front();
+        n++;
+    }
+    long theResult = this->mLost ? kISInputOverflow : kISInputOK;
+    this->mLost = false;
+    PlatMutexUnlock(this->mLock);
+    ioCount = n;
+    return theResult;
+}
+
+long ISDeviceInput::GetKeyState(unsigned char* outKeys)
+{
+    PlatMutexLock(this->mLock);
+    long theResult = this->mAcquired ? kISInputOK : kISInputNotAcquired;
+    if (this->mAcquired)
+        memcpy(outKeys, this->mKeys, sizeof(this->mKeys));
+    PlatMutexUnlock(this->mLock);
+    return theResult;
+}
+
+long ISDeviceInput::GetMouseState(ISMouseState& outState)
+{
+    PlatMutexLock(this->mLock);
+    long theResult = this->mAcquired ? kISInputOK : kISInputNotAcquired;
+    if (this->mAcquired) {
+        outState.lX = this->mMotion[0];
+        outState.lY = this->mMotion[1];
+        outState.lZ = this->mMotion[2];
+        memcpy(outState.rgbButtons, this->mButtons, sizeof(this->mButtons));
+        memset(this->mMotion, 0, sizeof(this->mMotion));   // relative axes: the motion since the last read
+    }
+    PlatMutexUnlock(this->mLock);
+    return theResult;
+}
+
+void ISDeviceInput::Push(unsigned long inOffset, unsigned long inData)
+{
+    if (!this->mAcquired)
+        return;
+    if (this->mRecords.size() >= 256) {   // DIPROP_BUFFERSIZE
+        this->mLost = true;
+        return;
+    }
+    ISInputRecord theRecord = {inOffset, inData};
+    this->mRecords.push_back(theRecord);
+}
+
+void ISDeviceInput::Key(unsigned long inScanCode, bool inDown)
+{
+    if (inScanCode == 0 || inScanCode > 0xff)
+        return;
+    PlatMutexLock(this->mLock);
+    unsigned char theState = inDown ? 0x80 : 0;
+    if (this->mKeys[inScanCode] != theState) {   // DirectInput reports changes only (no auto-repeat)
+        this->mKeys[inScanCode] = theState;
+        this->Push(inScanCode, theState);
+    }
+    PlatMutexUnlock(this->mLock);
+}
+
+void ISDeviceInput::MouseMove(long inDeltaX, long inDeltaY)
+{
+    PlatMutexLock(this->mLock);
+    if (this->mAcquired) {
+        this->mMotion[0] += inDeltaX;
+        this->mMotion[1] += inDeltaY;
+        if (inDeltaX)
+            this->Push(kISMouseOffsetX, (unsigned long)inDeltaX);
+        if (inDeltaY)
+            this->Push(kISMouseOffsetY, (unsigned long)inDeltaY);
+    }
+    PlatMutexUnlock(this->mLock);
+}
+
+void ISDeviceInput::MouseWheel(long inDelta)
+{
+    PlatMutexLock(this->mLock);
+    if (this->mAcquired && inDelta) {
+        this->mMotion[2] += inDelta;
+        this->Push(kISMouseOffsetZ, (unsigned long)inDelta);
+    }
+    PlatMutexUnlock(this->mLock);
+}
+
+void ISDeviceInput::MouseButton(unsigned long inButton, bool inDown)
+{
+    if (inButton > 3)
+        return;
+    PlatMutexLock(this->mLock);
+    unsigned char theState = inDown ? 0x80 : 0;
+    if (this->mButtons[inButton] != theState) {
+        this->mButtons[inButton] = theState;
+        this->Push(kISMouseOffsetButton0 + inButton, theState);
+    }
+    PlatMutexUnlock(this->mLock);
+}
+
+// Feeds a window event to the system keyboard and mouse: keys by their DIK_* scan code (auto-repeat dropped), the
+// mouse's motion (raw deltas in relative mode, the exclusive mouse), buttons (DirectInput's order: left, right,
+// middle, side) and the wheel (WHEEL_DELTA 120 a notch); a focus loss lets go of what is held
+void ISHandleEvent(const PlatInputEvent& inEvent)
+{
+    switch (inEvent.mType) {
+    case PLAT_EVENT_KEY_DOWN:
+    case PLAT_EVENT_KEY_UP:
+        if (sKeyboardInput != NULL)
+            sKeyboardInput->Key(inEvent.mKey.mScanCode, inEvent.mType == PLAT_EVENT_KEY_DOWN);
+        break;
+    case PLAT_EVENT_MOUSE_MOVE:
+        if (sMouseInput != NULL)
+            sMouseInput->MouseMove(inEvent.mMouse.mDeltaX, inEvent.mMouse.mDeltaY);
+        break;
+    case PLAT_EVENT_MOUSE_DOWN:
+    case PLAT_EVENT_MOUSE_UP: {
+        // PlatWindow.h's buttons 1 left, 2 middle, 3 right, 4 side -> DirectInput's 0 left, 1 right, 2 middle, 3 side
+        static const unsigned long kButtons[6] = {4, 0, 2, 1, 3, 4};
+        unsigned long theButton = inEvent.mMouse.mButton < 6 ? kButtons[inEvent.mMouse.mButton] : 4;
+        if (sMouseInput != NULL)
+            sMouseInput->MouseButton(theButton, inEvent.mType == PLAT_EVENT_MOUSE_DOWN);
+        break;
+    }
+    case PLAT_EVENT_MOUSE_WHEEL:
+        if (sMouseInput != NULL)
+            sMouseInput->MouseWheel((long)lrintf(inEvent.mMouse.mWheel * 120.0f));
+        break;
+    case PLAT_EVENT_FOCUS_LOST:
+        if (sKeyboardInput != NULL)
+            for (unsigned long i = 1; i < 256; i++)
+                sKeyboardInput->Key(i, false);
+        if (sMouseInput != NULL)
+            for (unsigned long i = 0; i < 4; i++)
+                sMouseInput->MouseButton(i, false);
+        break;
+    default:
+        break;
+    }
+}
 
 // FUNCTION: LLE 0x100394a7
-// Starts DirectInput and creates the system keyboard and mouse; kErrorNativeError if either device fails
+// Creates the system keyboard and mouse on the window's events (DirectInput's devices in the original: a
+// non-exclusive keyboard and an exclusive mouse, buffers of 256)
 long ISInitialize(HINSTANCE inInstance, GEWindow* inWindow, UResourceFile* inResources, unsigned long inFirstStringID,
                   unsigned long inDoublePressTimeDelta)
 {
-    DIPROPDWORD theProperty;
-    HWND theWindow = (HWND)inWindow->GetNativeHandle();   // DirectInput takes the HWND (until PORT.md step 4.4)
-    IDirectInputDevice* theMouse = NULL;
-    IDirectInputDevice* theKeyboard = NULL;
-    long theResult = kErrorOK;
     gDoublePressTimeDelta = inDoublePressTimeDelta;
     URegisterShutdown(ISShutdown);
-    if (DirectInputCreate(inInstance, DIRECTINPUT_VERSION, &sDirectInput, NULL) == DI_OK) {
-        if (sDirectInput->CreateDevice(GUID_SysKeyboard, &theKeyboard, NULL) == DI_OK &&
-            theKeyboard->SetDataFormat(&c_dfDIKeyboard) == DI_OK &&
-            theKeyboard->SetCooperativeLevel(theWindow, DISCL_NONEXCLUSIVE | DISCL_FOREGROUND) == DI_OK) {
-            theProperty.diph.dwSize = sizeof(DIPROPDWORD);
-            theProperty.diph.dwHeaderSize = sizeof(DIPROPHEADER);
-            theProperty.diph.dwObj = 0;
-            theProperty.diph.dwHow = DIPH_DEVICE;
-            theProperty.dwData = 256;
-            if (theKeyboard->SetProperty(DIPROP_BUFFERSIZE, &theProperty.diph) == DI_OK)
-                gISKeyboard = new ISKeyboard(theKeyboard, "System Keyboard", inResources, inFirstStringID);
-            else
-                theResult = kErrorNativeError;
-        } else
-            theResult = kErrorNativeError;
-        if (sDirectInput->CreateDevice(GUID_SysMouse, &theMouse, NULL) == DI_OK &&
-            theMouse->SetDataFormat(&c_dfDIMouse) == DI_OK &&
-            theMouse->SetCooperativeLevel(theWindow, DISCL_EXCLUSIVE | DISCL_FOREGROUND) == DI_OK) {
-            theProperty.diph.dwSize = sizeof(DIPROPDWORD);
-            theProperty.diph.dwHeaderSize = sizeof(DIPROPHEADER);
-            theProperty.diph.dwObj = 0;
-            theProperty.diph.dwHow = DIPH_DEVICE;
-            theProperty.dwData = 256;
-            theMouse->SetProperty(DIPROP_BUFFERSIZE, &theProperty.diph);
-            gISMouse = new ISMouse(theMouse, theWindow, "System Mouse");
-        } else
-            theResult = kErrorNativeError;
-    } else
-        theResult = kErrorNativeError;
-    return theResult;
+    sKeyboardInput = new ISDeviceInput;
+    sMouseInput = new ISDeviceInput;
+    gISKeyboard = new ISKeyboard(sKeyboardInput, "System Keyboard", inResources, inFirstStringID);
+    gISMouse = new ISMouse(sMouseInput, inWindow->GetOSRepresentation(), "System Mouse");
+    return kErrorOK;
 }
 
 // FUNCTION: LLE 0x10039691
@@ -77,23 +240,25 @@ void ISSetDoublePressTimeDelta(unsigned long inDelta)
 }
 
 // FUNCTION: LLE 0x1003969b
-// Suspends and releases the system mouse and keyboard, then releases DirectInput
+// Suspends and destroys the system mouse and keyboard and their event buffers
 void ISShutdown(bool inForced)
 {
     if (gISMouse) {
         gISMouse->Suspend();
-        gISMouse->mDevice->Release();
         delete gISMouse;
         gISMouse = NULL;
     }
     if (gISKeyboard) {
         gISKeyboard->Suspend();
-        gISKeyboard->mDevice->Release();
         delete gISKeyboard;
         gISKeyboard = NULL;
     }
-    if (sDirectInput)
-        sDirectInput->Release();
+    ISDeviceInput* theKeyboard = sKeyboardInput;
+    ISDeviceInput* theMouse = sMouseInput;
+    sKeyboardInput = NULL;
+    sMouseInput = NULL;
+    delete theKeyboard;
+    delete theMouse;
 }
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
