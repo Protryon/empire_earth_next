@@ -169,7 +169,7 @@ long FSDebugFile::ReadText(char* outData, unsigned long inLength, unsigned long&
 long FSDebugFile::ReadText(unsigned long& outValue)
 {
     long theResult = kErrorOK;
-    if (fscanf(this->mStream, " %u ", &outValue) != 1)
+    if (fscanf(this->mStream, " %lu ", &outValue) != 1)
         theResult = kErrorFailed;
     return theResult;
 }
@@ -179,7 +179,7 @@ long FSDebugFile::ReadText(unsigned long& outValue)
 long FSDebugFile::ReadText(long& outValue)
 {
     long theResult = kErrorOK;
-    if (fscanf(this->mStream, " %d ", &outValue) != 1)
+    if (fscanf(this->mStream, " %ld ", &outValue) != 1)
         theResult = kErrorFailed;
     return theResult;
 }
@@ -223,7 +223,7 @@ long FSDebugFile::ReadText(signed char& outValue)
 {
     long theResult = kErrorOK;
     long theValue = 0;
-    if (fscanf(this->mStream, " %d ", &theValue) != 1)
+    if (fscanf(this->mStream, " %ld ", &theValue) != 1)
         theResult = kErrorFailed;
     else
         outValue = (signed char)theValue;
@@ -256,7 +256,7 @@ long FSDebugFile::ReadText(bool& outValue)
 {
     long theResult = kErrorOK;
     long theValue = 0;
-    if (fscanf(this->mStream, " %d ", &theValue) != 1)
+    if (fscanf(this->mStream, " %ld ", &theValue) != 1)
         theResult = kErrorFailed;
     else if (theValue == 0)
         outValue = false;
@@ -281,14 +281,14 @@ long FSDebugFile::Read(char* outData, unsigned long inLength, unsigned long& out
 
 // FUNCTION: LLE 0x1000851d
 // Reads an unsigned long from the delegate file
-long FSDebugFile::Read(unsigned long& outValue)
+long FSDebugFile::Read(uint32_t& outValue)
 {
     return this->mDelegate->Read(outValue);
 }
 
 // FUNCTION: LLE 0x1000852c
 // Reads a long from the delegate file
-long FSDebugFile::Read(long& outValue)
+long FSDebugFile::Read(int32_t& outValue)
 {
     return this->mDelegate->Read(outValue);
 }
@@ -485,7 +485,7 @@ long FSDebugFile::WriteText(const unsigned long& inValue)
 {
     long theResult = kErrorOK;
     if (this->mIsOpen == true) {
-        if (fprintf(this->mStream, " %u ", inValue) <= 0)
+        if (fprintf(this->mStream, " %lu ", inValue) <= 0)
             theResult = kErrorNativeError;
     } else
         theResult = kErrorNotOpen;
@@ -498,7 +498,7 @@ long FSDebugFile::WriteText(const long& inValue)
 {
     long theResult = kErrorOK;
     if (this->mIsOpen == true) {
-        if (fprintf(this->mStream, " %d ", inValue) <= 0)
+        if (fprintf(this->mStream, " %ld ", inValue) <= 0)
             theResult = kErrorNativeError;
     } else
         theResult = kErrorNotOpen;
@@ -612,14 +612,14 @@ long FSDebugFile::Write(const char* inData, unsigned long inLength, unsigned lon
 
 // FUNCTION: LLE 0x100089ac
 // Writes an unsigned long to the delegate file
-long FSDebugFile::Write(const unsigned long& inValue)
+long FSDebugFile::Write(const uint32_t& inValue)
 {
     return this->mDelegate->Write(inValue);
 }
 
 // FUNCTION: LLE 0x100089be
 // Writes a long to the delegate file
-long FSDebugFile::Write(const long& inValue)
+long FSDebugFile::Write(const int32_t& inValue)
 {
     return this->mDelegate->Write(inValue);
 }

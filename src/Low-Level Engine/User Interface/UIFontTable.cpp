@@ -31,9 +31,9 @@
 // One font record of the UI database (0x80 bytes) (provisional names).
 struct UIDbDataFonts {
     char mFontName[0x6c];                   // +0x00 empty: no font
-    unsigned long mStringID;                // +0x6c face name in the string table
-    unsigned long mSize;                    // +0x70
-    unsigned long mQuality;                 // +0x74
+    uint32_t mStringID;                     // +0x6c face name in the string table
+    uint32_t mSize;                         // +0x70
+    uint32_t mQuality;                      // +0x74
     bool mBold;                             // +0x78 style bit 0x01
     bool mItalic;                           // +0x79 style bit 0x02
     bool mUnderline;                        // +0x7a style bit 0x04

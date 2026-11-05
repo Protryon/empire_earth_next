@@ -349,13 +349,13 @@ static void ParseNumber(const UString& inText, long inType, void* outValue, long
 {
     switch (inType) {
     case kRMFloat:
-        if (inSize == sizeof(float) && sscanf(inText, "%f", outValue) != 1 && gReportErrors)
-            printf("%s (%d) : ERROR, unknown float value, \"%s\"\n",
+        if (inSize == sizeof(float) && sscanf(inText, "%f", static_cast<float*>(outValue)) != 1 && gReportErrors)
+            printf("%s (%ld) : ERROR, unknown float value, \"%s\"\n",
                    (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)inText);
         break;
     case kRMLong:
-        if (inSize == sizeof(long) && sscanf(inText, "%d", outValue) != 1 && gReportErrors)
-            printf("%s (%d) : ERROR, unknown integer value, \"%s\"\n",
+        if (inSize == sizeof(long) && sscanf(inText, "%ld", static_cast<long*>(outValue)) != 1 && gReportErrors)
+            printf("%s (%ld) : ERROR, unknown integer value, \"%s\"\n",
                    (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)inText);
         break;
     }
@@ -408,7 +408,7 @@ void EvaluateExpression(EERandomMap* ioMap, const UString& inText, long inType, 
         switch (theKeyword) {
         default:
             if (gReportErrors)
-                printf("%s (%d) : ERROR, keyword \"%s\" can only be used in #if tests.\n",
+                printf("%s (%ld) : ERROR, keyword \"%s\" can only be used in #if tests.\n",
                        (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)theExpanded[0]);
             break;
         case kRMOneOf:
@@ -429,8 +429,8 @@ void EvaluateExpression(EERandomMap* ioMap, const UString& inText, long inType, 
                     *static_cast<float*>(outValue) = theFloats[ioMap->mRandomIntegers.Generate(0, theFloats.size() - 1)];
                 }
             } else if (gReportErrors)
-                printf("%s (%d) : ERROR, wrong number of arguments for OneOf(n1,n2,...).\n",
-                       (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)theExpanded[0]);
+                printf("%s (%ld) : ERROR, wrong number of arguments for OneOf(n1,n2,...).\n",
+                       (const char*)gFileNames.back(), gLineNumbers.back());
             break;
         case kRMBetween:
             if (theExpanded.size() == 3) {
@@ -446,12 +446,12 @@ void EvaluateExpression(EERandomMap* ioMap, const UString& inText, long inType, 
                     *static_cast<float*>(outValue) = ioMap->mRandom.Generate(theFloat, theFloatMaximum);
                 }
             } else if (gReportErrors)
-                printf("%s (%d) : ERROR, wrong number of arguments for Between(min,max).\n",
-                       (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)theExpanded[0]);
+                printf("%s (%ld) : ERROR, wrong number of arguments for Between(min,max).\n",
+                       (const char*)gFileNames.back(), gLineNumbers.back());
             break;
         case kRMUnknownKeyword:
             if (gReportErrors)
-                printf("%s (%d) : ERROR, unknown keyword \"%s\" detected.\n",
+                printf("%s (%ld) : ERROR, unknown keyword \"%s\" detected.\n",
                        (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)theExpanded[0]);
             break;
         }
@@ -459,7 +459,7 @@ void EvaluateExpression(EERandomMap* ioMap, const UString& inText, long inType, 
         if (gKeywordHandler)
             gKeywordHandler(ioMap, theKeyword, theExpanded, inType, outValue, inSize);
         if (gReportErrors)
-            printf("%s (%d) : ERROR, user-defined keyword \"%s\" detected, ignoring.\n",
+            printf("%s (%ld) : ERROR, user-defined keyword \"%s\" detected, ignoring.\n",
                    (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)theExpanded[0]);
     }
 }
@@ -745,11 +745,11 @@ void InitializeMapTypes(EERandomMap* ioMap)
     AddMapType("true", "1");
     AddMapType("false", "0");
     AddMapType("Infinity", "0xFFFFFFFF");
-    sprintf(theValue, "%d", ioMap->mStartEpoch);
+    sprintf(theValue, "%ld", ioMap->mStartEpoch);
     AddMapType("$StartEpoch", theValue);
-    sprintf(theValue, "%d", ioMap->mPlayerCount);
+    sprintf(theValue, "%ld", ioMap->mPlayerCount);
     AddMapType("$PlayerCount", theValue);
-    sprintf(theValue, "%d", ioMap->mMapSize);
+    sprintf(theValue, "%ld", ioMap->mMapSize);
     AddMapType("$MapSize", theValue);
     sprintf(theValue, "%d", 0);
     AddMapType("TinyMap", theValue);
@@ -794,15 +794,15 @@ void InitializeMapTypes(EERandomMap* ioMap)
     AddMapType("NanoEpoch", "13");
     AddMapType("SpaceEpoch", "14");
     for (i = 0; i < ioMap->mUnitNames.size(); i++) {
-        sprintf(theValue, "%d", i);
+        sprintf(theValue, "%ld", i);
         AddMapType(ioMap->mUnitNames[i].mName, theValue);
     }
     for (i = 0; i < ioMap->mTerrainNames.size(); i++) {
-        sprintf(theValue, "%d", ioMap->mTerrainNames[i].mValue);
+        sprintf(theValue, "%ld", ioMap->mTerrainNames[i].mValue);
         AddMapType(ioMap->mTerrainNames[i].mName, theValue);
     }
     for (i = 0; i < ioMap->mCliffNames.size(); i++) {
-        sprintf(theValue, "%d", ioMap->mCliffNames[i].mValue);
+        sprintf(theValue, "%ld", ioMap->mCliffNames[i].mValue);
         AddMapType(ioMap->mCliffNames[i].mName, theValue);
     }
 }
@@ -1497,12 +1497,12 @@ long EvaluateCondition(EERandomMap* ioMap, const UString& inText)
     ExpandMapTypes(theTokens, theExpanded);
     theToken = GetKeyword(theExpanded[0]);
     if (theExpanded.size() == 1) {
-        if (sscanf(theExpanded[0], "%d", &theResult) != 1 && gReportErrors)
-            printf("%s (%d) : ERROR, unknown token encountered, %s\n",
+        if (sscanf(theExpanded[0], "%ld", &theResult) != 1 && gReportErrors)
+            printf("%s (%ld) : ERROR, unknown token encountered, %s\n",
                    (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)theExpanded[0]);
     } else if (theToken >= kRMAnd && theToken <= kRMPercent) {
         if (gReportErrors && (theExpanded.size() < 2 || theExpanded.size() > 3))
-            printf("%s (%d) : ERROR, too many parameters for keyword %s\n",
+            printf("%s (%ld) : ERROR, too many parameters for keyword %s\n",
                    (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)theExpanded[0]);
         theA = EvaluateCondition(ioMap, theExpanded[1]);
         if (theExpanded.size() == 3)
@@ -1557,7 +1557,7 @@ long EvaluateCondition(EERandomMap* ioMap, const UString& inText)
             else
                 theResult = ioMap->mRandomIntegers.Generate(0, 99) <= theA - 1;
             if (gReportErrors && (theA < 0 || theA > 100))
-                printf("%s (%d) : ERROR, out-of-range value specified, %d, in PERCENT. Valid range is 0 to 100.\n",
+                printf("%s (%ld) : ERROR, out-of-range value specified, %ld, in PERCENT. Valid range is 0 to 100.\n",
                        (const char*)gFileNames.back(), gLineNumbers.back(), theA);
             break;
         }
@@ -1566,11 +1566,11 @@ long EvaluateCondition(EERandomMap* ioMap, const UString& inText)
         // (which also yields 0 for them)
         theResult = 0;
         if (gReportErrors)
-            printf("%s (%d) : ERROR, unknown keyword %s\n",
+            printf("%s (%ld) : ERROR, unknown keyword %s\n",
                    (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)theExpanded[0]);
     } else {
         if (gReportErrors && theExpanded.size() != 2)
-            printf("%s (%d) : ERROR, too many parameters for keyword %s\n",
+            printf("%s (%ld) : ERROR, too many parameters for keyword %s\n",
                    (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)theExpanded[0]);
         theDefined = gMapTypes.find(theTokens[1]) != gMapTypes.end();
         switch (theToken) {
@@ -1596,7 +1596,7 @@ long GetAttributeToken(const UString& inName)
     else {
         theResult = 0;
         if (gReportErrors)
-            printf("%s (%d) : ERROR, unknown attribute \"%s\" detected.\n",
+            printf("%s (%ld) : ERROR, unknown attribute \"%s\" detected.\n",
                    (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)inName);
     }
     return theResult;

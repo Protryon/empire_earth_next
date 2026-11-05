@@ -4,6 +4,8 @@
 #ifndef EE_EEMESSAGE_H
 #define EE_EEMESSAGE_H
 
+#include <stdint.h>   // int32_t/uint32_t: the wire fields' fixed widths
+
 #include "lle/U2DPoint.h"                  // EEMSendFlare's inline ctor
 #include "ee/EEMessageID.h"
 
@@ -50,7 +52,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mFormationType;                    // +0x10
+    int32_t mFormationType;                 // +0x10
     bool mB14;                              // +0x14
 };
 
@@ -68,7 +70,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mChatType;                         // +0x10
+    int32_t mChatType;                      // +0x10
 };
 
 // A cheat code typed into the chat line (type 0x85, vtable 0x43dde0). sizeof 0x18.
@@ -83,8 +85,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mCode;                             // +0x10
-    long mParameter;                        // +0x14
+    int32_t mCode;                          // +0x10
+    int32_t mParameter;                     // +0x14
 };
 
 // A chat line (type 0x7d, vtable 0x43e0bc). sizeof 0x24.
@@ -120,7 +122,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    unsigned long mUnitID;                  // +0x10
+    uint32_t mUnitID;                       // +0x10
 };
 
 // The local player adds one unit to the selection (type 0x49, vtable 0x438e44; out-of-line ctor 0x32d2). sizeof 0x14.
@@ -136,7 +138,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    unsigned long mUnitID;                  // +0x10
+    uint32_t mUnitID;                       // +0x10
 };
 
 // The same without the toggle (type 0x76, vtable 0x438e10; the hot keys with shift held)
@@ -217,7 +219,7 @@ public:
 
     std::vector<long> mUnitIDs;             // +0x10
     GERectangle mRectangle;                 // +0x20
-    long mL30;                              // +0x30
+    int32_t mL30;                           // +0x30
     unsigned char mBuffer[0x100];           // +0x34
     unsigned char mBufferSize;              // +0x134
 };
@@ -261,9 +263,9 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Add Remove Resources"; }
 
-    unsigned long mAmount;                  // +0x10 (unsigned: Execute's compares)
-    long mPlayerID;                         // +0x14
-    long mResourceType;                     // +0x18
+    uint32_t mAmount;                       // +0x10 (unsigned: Execute's compares)
+    int32_t mPlayerID;                      // +0x14
+    int32_t mResourceType;                  // +0x18
     unsigned char mAdd;                     // +0x1c
 };
 
@@ -312,7 +314,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Attack Players"; }
 
-    long mPlayerID;                         // +0x10
+    int32_t mPlayerID;                      // +0x10
     unsigned char mAllies;                  // +0x14
 };
 
@@ -332,7 +334,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mTargetID;                         // +0x10
+    int32_t mTargetID;                      // +0x10
     bool mIsQueued;                         // +0x14 (EEActiveGroup::SetGoal's flag)
     bool mIsConvert;                        // +0x15 (EEUGAttackUnit's last argument)
 };
@@ -357,9 +359,9 @@ public:
     virtual char* GetMessageLabel() const;
 
     GE2DPoint mPoint;                       // +0x10
-    long mTechnology;                       // +0x18
-    long mSide;                             // +0x1c
-    long mPlayerID;                         // +0x20
+    int32_t mTechnology;                    // +0x18
+    int32_t mSide;                          // +0x1c
+    int32_t mPlayerID;                      // +0x20
 };
 
 // vtable 0x438ab4; sizeof 0x20
@@ -381,7 +383,7 @@ public:
     virtual char* GetMessageLabel() const;
 
     GE2DPoint mPoint;                       // +0x10
-    long mTechnology;                       // +0x18
+    int32_t mTechnology;                    // +0x18
     unsigned char mIsQueued;                // +0x1c
 };
 
@@ -407,8 +409,8 @@ public:
 
     GE2DPoint mStart;                       // +0x10
     GE2DPoint mEnd;                         // +0x18
-    long mTechnology;                       // +0x20
-    long mPlayerID;                         // +0x24
+    int32_t mTechnology;                    // +0x20
+    int32_t mPlayerID;                      // +0x24
 };
 
 // vtable 0x43df4c; sizeof 0x1c
@@ -443,11 +445,11 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Cast Calamity"; }
 
-    long mCasterID;                         // +0x10
-    long mTargetID;                         // +0x14
-    long mTileX;                            // +0x18
-    long mTileY;                            // +0x1c
-    long mTechnology;                       // +0x20
+    int32_t mCasterID;                      // +0x10
+    int32_t mTargetID;                      // +0x14
+    int32_t mTileX;                         // +0x18
+    int32_t mTileY;                         // +0x1c
+    int32_t mTechnology;                    // +0x20
 };
 
 // vtable 0x43de48; sizeof 0x14
@@ -519,7 +521,7 @@ public:
 
     UWideString mCivName;                   // +0x10
     std::vector<unsigned short> mUpgrades;  // +0x24
-    long mNameString;                       // +0x34
+    int32_t mNameString;                    // +0x34
     unsigned char mPlayerID;                // +0x38
 };
 
@@ -588,7 +590,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mDropoffID;                        // +0x10
+    int32_t mDropoffID;                     // +0x10
 };
 
 // vtable 0x43dc38; sizeof 0x14
@@ -682,7 +684,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mGameTime;                         // +0x10
+    int32_t mGameTime;                      // +0x10
 };
 
 // vtable 0x43dfec; sizeof 0x1c
@@ -700,7 +702,7 @@ public:
     virtual char* GetMessageLabel() const;
 
     unsigned char mIsSell;                  // +0x10
-    long mResourceType;                     // +0x14
+    int32_t mResourceType;                  // +0x14
     unsigned char mFiveTimes;               // +0x18
 };
 
@@ -716,7 +718,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mGameTime;                         // +0x10
+    int32_t mGameTime;                      // +0x10
 };
 
 // vtable 0x43db68; sizeof 0x10
@@ -746,16 +748,16 @@ public:
     virtual char* GetMessageLabel() const;
 
     UWideString mMapType;                   // +0x10
-    long mGameSpeed;                        // +0x24
-    long mLoadType;                         // +0x28
-    long mMapSize;                          // +0x2c
-    long mEpochStart;                       // +0x30
-    long mEpochEnd;                         // +0x34
-    long mVariant;                          // +0x38
-    long mResources;                        // +0x3c
-    long mUnitLimit;                        // +0x40
-    long mWondersForVictory;                // +0x44
-    long mDifficulty;                       // +0x48
+    int32_t mGameSpeed;                     // +0x24
+    int32_t mLoadType;                      // +0x28
+    int32_t mMapSize;                       // +0x2c
+    int32_t mEpochStart;                    // +0x30
+    int32_t mEpochEnd;                      // +0x34
+    int32_t mVariant;                       // +0x38
+    int32_t mResources;                     // +0x3c
+    int32_t mUnitLimit;                     // +0x40
+    int32_t mWondersForVictory;             // +0x44
+    int32_t mDifficulty;                    // +0x48
     bool mVictory;                          // +0x4c
     bool mLockTeams;                        // +0x4d
     bool mLockSpeed;                        // +0x4e
@@ -780,13 +782,13 @@ public:
     virtual char* GetMessageLabel() const;
 
     UWideString mName;                      // +0x10
-    long mSlotType;                         // +0x24
-    long mLoadedType;                       // +0x28
+    int32_t mSlotType;                      // +0x24
+    int32_t mLoadedType;                    // +0x28
     float mPing;                            // +0x2c (the ping)
-    long mSlot;                             // +0x30
-    long mColor;                            // +0x34
-    long mTeam;                             // +0x38
-    long mCitizenBonus;                     // +0x3c
+    int32_t mSlot;                          // +0x30
+    int32_t mColor;                         // +0x34
+    int32_t mTeam;                          // +0x38
+    int32_t mCitizenBonus;                  // +0x3c
     bool mIsLocal;                          // +0x40
     bool mIsReady;                          // +0x41
     bool mB42;                              // +0x42
@@ -804,9 +806,9 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mOption;                           // +0x10
+    int32_t mOption;                        // +0x10
     UWideString mMapType;                   // +0x14
-    unsigned long mValue;                   // +0x28 the value (unsigned: the flags are mL28 > 0 with seta)
+    uint32_t mValue;                        // +0x28 the value (unsigned: the flags are mL28 > 0 with seta)
 };
 
 // vtable 0x43db34; sizeof 0x10
@@ -851,7 +853,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mTargetID;                         // +0x10
+    int32_t mTargetID;                      // +0x10
     bool mIsQueued;                         // +0x14 (EEActiveGroup::SetGoal's flag)
 };
 
@@ -883,7 +885,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Hack A New Unit"; }
 
-    long mUnitType;                         // +0x10
+    int32_t mUnitType;                      // +0x10
     GE2DPoint mPoint;                       // +0x14
     unsigned char mPlayerID;                // +0x1c
 };
@@ -913,7 +915,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mTargetID;                         // +0x10
+    int32_t mTargetID;                      // +0x10
 };
 
 // vtable 0x43da64; sizeof 0x1c
@@ -930,8 +932,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Immediate Cargo Unload"; }
 
-    long mTransportID;                      // +0x10
-    long mCargoID;                          // +0x14
+    int32_t mTransportID;                   // +0x10
+    int32_t mCargoID;                       // +0x14
     bool mB18;                              // +0x18
 };
 
@@ -953,8 +955,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Upgrade Unit"; }
 
-    long mUnitID;                           // +0x10
-    long mImprovement;                      // +0x14
+    int32_t mUnitID;                        // +0x10
+    int32_t mImprovement;                   // +0x14
 };
 
 // vtable 0x43da30; sizeof 0x10
@@ -1050,8 +1052,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load Unit(s) Into Garrison"; }
 
-    long mGarrisonID;                       // +0x10
-    long mUnitID;                           // +0x14
+    int32_t mGarrisonID;                    // +0x10
+    int32_t mUnitID;                        // +0x14
     unsigned char mB18;                     // +0x18
 };
 
@@ -1105,9 +1107,9 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load or Save"; }
 
-    unsigned long mWaitMessageID;           // +0x10
-    long mTick;                             // +0x14
-    long mTime;                             // +0x18
+    uint32_t mWaitMessageID;                // +0x10
+    int32_t mTick;                          // +0x14
+    int32_t mTime;                          // +0x18
     unsigned char mIsLoad;                  // +0x1c
     bool mIsQuiet;                          // +0x1d
     unsigned char mIsAutoSave;              // +0x1e
@@ -1127,7 +1129,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load or Save Repsponse"; }
 
-    long mTick;                             // +0x10
+    int32_t mTick;                          // +0x10
 };
 
 // vtable 0x43d890; sizeof 0x18
@@ -1143,8 +1145,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load Percent"; }
 
-    unsigned long mPercent;                 // +0x10 (unsigned: clamped to 100 with jbe, 0xc142d)
-    long mSlot;                             // +0x14
+    uint32_t mPercent;                      // +0x10 (unsigned: clamped to 100 with jbe, 0xc142d)
+    int32_t mSlot;                          // +0x14
 };
 
 // vtable 0x438ddc; sizeof 0x1c
@@ -1162,8 +1164,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load Unit(s) Into Transport"; }
 
-    long mTransportID;                      // +0x10
-    long mPassengerID;                      // +0x14
+    int32_t mTransportID;                   // +0x10
+    int32_t mPassengerID;                   // +0x14
     unsigned char mB18;                     // +0x18
 };
 
@@ -1181,7 +1183,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Load Unit Data"; }
 
-    long mUnitType;                         // +0x10
+    int32_t mUnitType;                      // +0x10
     unsigned char mB14;                     // +0x14
 };
 
@@ -1320,7 +1322,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mTargetID;                         // +0x10
+    int32_t mTargetID;                      // +0x10
 };
 
 // vtable 0x43d688; sizeof 0x28
@@ -1339,11 +1341,11 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Pay Tribute"; }
 
-    unsigned long mFood;                    // +0x10 (unsigned: the tribute tests)
-    unsigned long mGold;                    // +0x14 (unsigned: the tribute tests)
-    unsigned long mIron;                    // +0x18 (unsigned: the tribute tests)
-    unsigned long mStone;                   // +0x1c (unsigned: the tribute tests)
-    unsigned long mWood;                    // +0x20 (unsigned: the tribute tests)
+    uint32_t mFood;                         // +0x10 (unsigned: the tribute tests)
+    uint32_t mGold;                         // +0x14 (unsigned: the tribute tests)
+    uint32_t mIron;                         // +0x18 (unsigned: the tribute tests)
+    uint32_t mStone;                        // +0x1c (unsigned: the tribute tests)
+    uint32_t mWood;                         // +0x20 (unsigned: the tribute tests)
     unsigned char mReceiver;                // +0x24 the receiver (an index into gWorld.mPlayers)
 };
 
@@ -1361,10 +1363,10 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mField;                            // +0x10
+    int32_t mField;                         // +0x10
     float mPing;                            // +0x14 (the ctor takes a float)
-    long mSlot;                             // +0x18
-    unsigned long mValue;                   // +0x1c (unsigned: Execute's case 5 is mL1C > 0 with seta)
+    int32_t mSlot;                          // +0x18
+    uint32_t mValue;                        // +0x1c (unsigned: Execute's case 5 is mL1C > 0 with seta)
 };
 
 // vtable 0x43e158; sizeof 0x28
@@ -1419,8 +1421,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mUnitID;                           // +0x10
-    long mImprovement;                      // +0x14
+    int32_t mUnitID;                        // +0x10
+    int32_t mImprovement;                   // +0x14
 };
 
 // vtable 0x43d584; sizeof 0x1c
@@ -1449,8 +1451,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mUnitID;                           // +0x10
-    long mTechnology;                       // +0x14
+    int32_t mUnitID;                        // +0x10
+    int32_t mTechnology;                    // +0x14
     bool mToggleJITManufacturing;           // +0x18 (toggle the JIT manufacturing)
     bool mFiveTimes;                        // +0x19 (five times)
 };
@@ -1469,7 +1471,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mUnitID;                           // +0x10
+    int32_t mUnitID;                        // +0x10
 };
 
 // vtable 0x438f80; sizeof 0x18
@@ -1484,7 +1486,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mTargetID;                         // +0x10
+    int32_t mTargetID;                      // +0x10
     bool mIsQueued;                         // +0x14
 };
 
@@ -1500,7 +1502,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mFarmID;                           // +0x10
+    int32_t mFarmID;                        // +0x10
 };
 
 // vtable 0x43d51c; sizeof 0x18
@@ -1515,8 +1517,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mL10;                              // +0x10
-    long mL14;                              // +0x14
+    int32_t mL10;                           // +0x10
+    int32_t mL14;                           // +0x14
 };
 
 // vtable 0x43d550; sizeof 0x1c
@@ -1536,8 +1538,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mBuildingID;                       // +0x10
-    long mTechnology;                       // +0x14
+    int32_t mBuildingID;                    // +0x10
+    int32_t mTechnology;                    // +0x14
     bool mFiveTimes;                        // +0x18 (five times)
 };
 
@@ -1567,7 +1569,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mBaseID;                           // +0x10
+    int32_t mBaseID;                        // +0x10
     bool mKeepFlightTime;                   // +0x14 (keep +0x290)
 };
 
@@ -1601,9 +1603,9 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mX;                                // +0x10
-    long mY;                                // +0x14
-    long mUnitID;                           // +0x18
+    int32_t mX;                             // +0x10
+    int32_t mY;                             // +0x14
+    int32_t mUnitID;                        // +0x18
 };
 
 // vtable 0x43d3b0; sizeof 0x18
@@ -1620,7 +1622,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mPlayerID;                         // +0x10
+    int32_t mPlayerID;                      // +0x10
     bool mIsSelected;                       // +0x14 (stored into EEPlayer::mSendChatMessage[mL10])
 };
 
@@ -1637,7 +1639,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mUnitID;                           // +0x10
+    int32_t mUnitID;                        // +0x10
 };
 
 // vtable 0x43e18c; sizeof 0x20; import ctor 0xbaaf1, ??_G 0xbab3d
@@ -1689,8 +1691,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Send Flare"; }
 
-    long mX;                                // +0x10
-    long mY;                                // +0x14
+    int32_t mX;                             // +0x10
+    int32_t mY;                             // +0x14
 };
 
 inline EEMSendFlare::EEMSendFlare(const U2DPoint<long>& inTile)
@@ -1714,8 +1716,8 @@ public:
     virtual char* GetMessageLabel() const { return "Set Airport Command"; }
 
     GE2DPoint mPoint;                       // +0x10
-    long mCommand;                          // +0x18
-    long mTargetID;                         // +0x1c
+    int32_t mCommand;                       // +0x18
+    int32_t mTargetID;                      // +0x1c
     unsigned char mIsQueued;                // +0x20
 };
 
@@ -1733,8 +1735,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Set Diplomatic Stance"; }
 
-    long mPlayerID;                         // +0x10
-    long mStance;                           // +0x14
+    int32_t mPlayerID;                      // +0x10
+    int32_t mStance;                        // +0x14
 };
 
 // vtable 0x438d90; sizeof 0x24
@@ -1753,8 +1755,8 @@ public:
     virtual char* GetMessageLabel() const { return "Set Rally Goal"; }
 
     GE2DPoint mPoint;                       // +0x10
-    long mTargetID;                         // +0x18
-    long mBuildingID;                       // +0x1c
+    int32_t mTargetID;                      // +0x18
+    int32_t mBuildingID;                    // +0x1c
     unsigned char mIsQueued;                // +0x20
 };
 
@@ -1771,7 +1773,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Set Unit Behavior"; }
 
-    long mBehavior;                         // +0x10
+    int32_t mBehavior;                      // +0x10
 };
 
 // vtable 0x43d2ac; sizeof 0x14
@@ -1800,7 +1802,7 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const;
 
-    long mTargetID;                         // +0x10
+    int32_t mTargetID;                      // +0x10
     unsigned char mIsQueued;                // +0x14
 };
 
@@ -1831,7 +1833,7 @@ public:
     virtual char* GetMessageLabel() const { return "Start Loading"; }
 
     unsigned char mNumHumanPlayers;         // +0x10
-    long mSeed;                             // +0x14
+    int32_t mSeed;                          // +0x14
 };
 
 // vtable 0x43d244; sizeof 0x14,None
@@ -1876,8 +1878,8 @@ public:
     virtual void Execute();
     virtual char* GetMessageLabel() const { return "Toggle Collision Detection"; }
 
-    long mDivisor;                          // +0x10
-    long mL14;                              // +0x14
+    int32_t mDivisor;                       // +0x10
+    int32_t mL14;                           // +0x14
 };
 
 // vtable 0x43e25c; sizeof 0x10
@@ -1910,9 +1912,9 @@ public:
     long GetX() const { return this->mX; }
     long GetY() const { return this->mY; }
 
-    long mUnitID;                           // +0x10
-    long mX;                                // +0x14
-    long mY;                                // +0x18
+    int32_t mUnitID;                        // +0x10
+    int32_t mX;                             // +0x14
+    int32_t mY;                             // +0x18
 };
 
 // vtable 0x438eac; sizeof 0x10

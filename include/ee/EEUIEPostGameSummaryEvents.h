@@ -6,6 +6,8 @@
 #ifndef EE_EEUIEPOSTGAMESUMMARYEVENTS_H
 #define EE_EEUIEPOSTGAMESUMMARYEVENTS_H
 
+#include <stdint.h>   // int32_t/uint32_t: the network fields' fixed widths
+
 // vtable 0x44b760; ??_G 0x273ca4; ProcessEvent 0x1e3305; sizeof 0xc; ctor inline; new at 0x273acb
 class EEUIEPGSETabSummary : public UIEvent {
 public:
@@ -111,10 +113,10 @@ struct EEPGSGameReport {
     void ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize);   // 0x1e2a01
     unsigned long ExportSize();             // 0x1e2aa3 (20)
 
-    long mStartTime;                        // +0x00 gWorld's statistics +0x24
-    long mEndTime;                          // +0x04 gWorld's statistics +0x2c
-    unsigned long mNumPlayers;              // +0x08 the number of players
-    unsigned long mNumHumans;               // +0x0c the players with EEStatisticsRecord::mIsHuman
+    int32_t mStartTime;                     // +0x00 gWorld's statistics +0x24
+    int32_t mEndTime;                       // +0x04 gWorld's statistics +0x2c
+    uint32_t mNumPlayers;                   // +0x08 the number of players
+    uint32_t mNumHumans;                    // +0x0c the players with EEStatisticsRecord::mIsHuman
 };
 
 struct EEPGSPlayerReport {
@@ -122,12 +124,12 @@ struct EEPGSPlayerReport {
     unsigned long ExportSize();             // 0x1e2ba5 (the name's bytes + 22)
 
     UWideString mName;                      // +0x00
-    long mStartTime;                        // +0x14 gWorld's statistics +0x24
-    long mUnitsLost;                        // +0x18 (0x1e4ed5: graph 4's maximum)
-    long mUnitsKilled;                      // +0x1c (0x1e4ed5: graph 3's maximum)
-    long mResult;                           // +0x20 EEStatisticsRecord::mResult
+    int32_t mStartTime;                     // +0x14 gWorld's statistics +0x24
+    int32_t mUnitsLost;                     // +0x18 (0x1e4ed5: graph 4's maximum)
+    int32_t mUnitsKilled;                   // +0x1c (0x1e4ed5: graph 3's maximum)
+    int32_t mResult;                        // +0x20 EEStatisticsRecord::mResult
     bool mIsHuman;                          // +0x24 EEStatisticsRecord::mIsHuman
-    long mU28;                              // +0x28
+    int32_t mU28;                           // +0x28
 };
 
 // Globals of other units the summary reads (provisional names; no evidence beyond these reads)

@@ -1152,14 +1152,14 @@ void EEInitializeNetwork()
     for (unsigned long i = 0; i < gDataPath->GetArchiveCount(); i++) {
         bool theHaveTimestamp = gDataPath->GetArchive(i).GetTag(UWideString("Timestamp"), theTag) == kErrorOK;
         if (theHaveTimestamp) {
-            sscanf(theTag, "%d", &theTimestamp);
+            sscanf(theTag, "%ld", &theTimestamp);
             theChecksum += theTimestamp;
         }
     }
     TMGetTime();
     gBinaryChecksum = theChecksum;
     gGameVersion = theVersion.GetIndexedSubstring(theVersion.Find("v", 0), theVersion.GetLength() - 1);
-    sprintf(theSuffix, ".%04d", gBinaryChecksum & 0x1fff);
+    sprintf(theSuffix, ".%04ld", gBinaryChecksum & 0x1fff);
     gGameVersion += theSuffix;
 }
 
@@ -1385,7 +1385,7 @@ void EESetVideoMode(unsigned long inWidth, unsigned long inHeight, unsigned long
         gRasterizer->GetSecondarySurface(theScreen)->Clear(theRectangle, theBlack, 1.0f);
     }
     theVideoMode = gRasterizer->GetScreen(theScreen)->GetMode(theMode);
-    ESDebugOut("!::EESetVideoMode: Video mode changed to %dx%dx%d at %dHz.\n",
+    ESDebugOut("!::EESetVideoMode: Video mode changed to %ldx%ldx%ld at %ldHz.\n",
                theVideoMode.mWidth, theVideoMode.mHeight, theVideoMode.mBitCount, theVideoMode.mRefreshRate);
     } else {
         ESDebugOut("!::EESetVideoMode: Requested video mode is already active.\n");
@@ -2246,9 +2246,9 @@ void EELoadSound(const UString& inName, unsigned long inType, unsigned long& out
         (inName.GetSubstring(inName.GetLength() - 4, 4).EqualsIgnoreCase(".wav", 4) ||
          inName.GetSubstring(inName.GetLength() - 4, 4).EqualsIgnoreCase(".mp3", 4))) {
         theSample = gSoundManager->Load(inName, inType, 1);
-        if (theSample != (unsigned long)-1) {
+        if (!UIsNone32(theSample)) {
             theInstance = gSoundManager->Play(theSample, 1.0f, 0.0f, 1.0f, false, NULL);
-            if (theInstance == (unsigned long)-1) {
+            if (UIsNone32(theInstance)) {
                 gSoundManager->Unload(theSample);
                 theSample = (unsigned long)-1;
             } else if ((unsigned char)inFlag == 1)
@@ -2258,7 +2258,7 @@ void EELoadSound(const UString& inName, unsigned long inType, unsigned long& out
         theName = inName;
         theName += ".wav";
         EELoadSound(theName, inType, theSample, theInstance, inFlag);
-        if (theSample == (unsigned long)-1) {
+        if (UIsNone32(theSample)) {
             theName = inName;
             theName += ".mp3";
             EELoadSound(theName, inType, theSample, theInstance, inFlag);

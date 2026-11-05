@@ -415,9 +415,9 @@ unsigned long NESynchronousClient::Receive(void* inClientObject)
     unsigned char theBuffer[0x240];
     NEMessage* theMessage;
     unsigned long theCount;
-    unsigned long theXferID;
+    uint32_t theXferID;     // 4 bytes on the wire
     unsigned long theReceived;
-    unsigned long theSize;
+    uint32_t theSize;
     unsigned char* theData;
     long theResult;
     unsigned char theSlot;

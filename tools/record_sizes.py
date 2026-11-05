@@ -6,7 +6,10 @@ A raw record's size is its file format: every one is pinned in source by a `stat
 (the size the original's files have). Every unit that does raw record I/O is compiled -fsyntax-only with the
 build's flags and clang's complete record-layout dump; a record whose size is not its pin, or that has no pin,
 would read or write another number of bytes than the files hold (a pointer, size_t, long on LP64 or a vptr inside
-it). Prints each record's size and pin; exits 1 if any differs or is unpinned.
+it). The dump has canonical field types (typedefs resolved, nested records expanded): a field of type long or
+unsigned long is 8 bytes on LP64 (Linux, macOS) and would change the record there, so the records use
+int32_t/uint32_t. Prints each record's size, pin and long fields; exits 1 if any differs, is unpinned or holds a
+long.
 """
 import argparse
 import collections
@@ -27,7 +30,8 @@ PRIM = r"(long|unsigned long|short|unsigned short|char|unsigned char|float|doubl
        r"unsigned int|GUID)"
 PIN = re.compile(r"static_assert\(sizeof\((\w+)\)\s*==\s*(\d+)\s*,")
 SITE = re.compile(r"(Read|Write|ReadFile|WriteFile|fread|fwrite)\([^;]*sizeof\(([^()]*)\)")
-LAYOUT = re.compile(r"^\s*0 \| (?:class|struct|union) (\S+)\n(?:.*\n)*?\s*\| \[sizeof=(\d+)", re.M)
+LAYOUT = re.compile(r"^\s*0 \| (?:class|struct|union) (\S+)\n((?:.*\n)*?)\s*\| \[sizeof=(\d+)", re.M)
+LONG_FIELD = re.compile(r"\|\s+(?:unsigned )?long(?:\[\d+\])* \w+\s*$", re.M)
 
 
 def record_sites():
@@ -76,10 +80,12 @@ def layouts(src):
     iflags, inc = verify.include_paths(staged)
     base = [f for f in clang_build.CLANG_FLAGS if f != "/c"]
     cmd = [str(CLANG), *base, "/std:c++17", *clang_build.clang_flags(flags, "-O0"), *verify.DEFINES.split(), *iflags,
-           "-fsyntax-only", "-Xclang", "-fdump-record-layouts-complete", str(staged)]
+           "-fsyntax-only", "-Xclang", "-fdump-record-layouts-complete", "-Xclang", "-fdump-record-layouts-canonical",
+           str(staged)]
     r = subprocess.run(cmd, env=dict(os.environ, INCLUDE=inc), capture_output=True, text=True, errors="replace",
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    return {name.split("::")[-1]: int(size) for name, size in LAYOUT.findall(r.stdout)}
+    return {name.split("::")[-1]: (int(size), len(LONG_FIELD.findall(body)))
+            for name, body, size in LAYOUT.findall(r.stdout)}
 
 
 def main():
@@ -88,20 +94,23 @@ def main():
     a = ap.parse_args()
     sites = record_sites()
     pinned = pins()
-    rows, bad = {}, 0
+    rows, bad, longs = {}, 0, 0
     with concurrent.futures.ThreadPoolExecutor(a.j) as ex:
         futs = {ex.submit(layouts, s): s for s in sites}
         for fut in concurrent.futures.as_completed(futs):
             sizes = fut.result()
             for t in sites[futs[fut]]:
-                rows[t] = (sizes.get(t), pinned.get(t), futs[fut].relative_to(ROOT / "src"))
-    for t, (size, pin, src) in sorted(rows.items()):
+                size, nlong = sizes.get(t, (None, 0))
+                rows[t] = (size, pinned.get(t), nlong, futs[fut].relative_to(ROOT / "src"))
+    for t, (size, pin, nlong, src) in sorted(rows.items()):
         flag = "" if size == pin and size is not None else "  (no layout)" if size is None else \
             "  <-- NOT PINNED" if pin is None else "  <-- DIFFERS"
+        flag += f"  <-- {nlong} long fields (LP64)" if nlong else ""
         bad += size != pin
+        longs += nlong > 0
         print(f"{t:32} size {size!s:>6}  pin {pin!s:>6}  {src}{flag}")
-    print(f"\n{len(rows)} records, {bad} not at their pinned size")
-    sys.exit(1 if bad else 0)
+    print(f"\n{len(rows)} records, {bad} not at their pinned size, {longs} hold a long")
+    sys.exit(1 if bad or longs else 0)
 
 
 if __name__ == "__main__":

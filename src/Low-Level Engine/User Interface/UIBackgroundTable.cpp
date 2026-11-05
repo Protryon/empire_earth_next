@@ -52,8 +52,8 @@ long UIBackgroundTable::Create(FSFileSpec& inFile)
                 theTable->mBackgroundID = theData.mBackgroundID;
                 theTable->mFormID = theData.mFormID;
                 theTable->mTextureFile.Copy(theData.mTextureFile, 0, strlen(theData.mTextureFile), 0, true);
-                theTable->mTextureRect = GERectangle(theData.mTextureLeft, theData.mTextureTop, theData.mTextureRight,
-                                                     theData.mTextureBottom);
+                theTable->mTextureRect = GERectangle(long(theData.mTextureLeft), long(theData.mTextureTop), long(theData.mTextureRight),
+                                                     long(theData.mTextureBottom));   // the long overload (int32_t fields)
                 theTable->mBackgroundType = theData.mBackgroundType;
                 theTable->mLayout.SetTop(theData.mTopOffsetType, theData.mTopOffset);
                 theTable->mLayout.SetBottom(theData.mBottomOffsetType, theData.mBottomOffset);

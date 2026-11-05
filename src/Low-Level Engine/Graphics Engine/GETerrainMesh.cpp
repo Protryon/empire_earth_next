@@ -2518,7 +2518,7 @@ void GETerrainMesh::UpdateVisibleTerrain(const GETransformation& inCamera, GEVie
                         this->GetTile(theX + sCornerTiles[theLayer][0], theY + sCornerTiles[theLayer][1])->mTextureSetID;
                     if (this->mSpaceTileCount != 0) {
                         for (k = 0; k < 3; k++) {
-                            if (theLayers[theLayer].mTextureSetID == (unsigned long)-1)
+                            if (UIsNone32(theLayers[theLayer].mTextureSetID))
                                 break;
                             if (this->GetIsValidTile(theX + sCornerNeighbours[theLayer][k][0],
                                                theY + sCornerNeighbours[theLayer][k][1]) &&
@@ -2534,7 +2534,7 @@ void GETerrainMesh::UpdateVisibleTerrain(const GETransformation& inCamera, GEVie
                         theLayers[theLayer].mTexture = theLayers[0].mTexture;
                     } else {
                         theLayers[theLayer].mIsUsed = true;
-                        if (theLayers[theLayer].mTextureSetID != (unsigned long)-1)
+                        if (!UIsNone32(theLayers[theLayer].mTextureSetID))
                             theLayers[theLayer].mTexture =
                                 this->mRegisteredTextureSets[theLayers[theLayer].mTextureSetID]->GetTexture(theX, theY);
                         if (theBest == -1 || theLayers[theLayer].mTexture < theLayers[theBest].mTexture)

@@ -261,7 +261,7 @@ bool EEGetLanguageStringReference(const UWideString& inText, unsigned long& outI
     bool theFound = inText.Tokenize("::", theTokens);
     if (theFound && theTokens.size() == 2) {
         theToken = theTokens[0];
-        if (sscanf(theToken, "%u", &outID) == 1)
+        if (sscanf(theToken, "%lu", &outID) == 1)
             theResult = true;
     }
     return theResult;

@@ -920,7 +920,7 @@ static void ShowResolutions(UIForm* inForm, EEGameSettings inSettings)
     theResolutionList->DeleteAllEntries();
     for (std::vector<GEVideoMode>::iterator it = theModes.begin(); it != theModes.end(); it++) {
         GEVideoMode theMode = *it;
-        sprintf(theText, "%u x %u x %u Bit", theMode.mWidth, theMode.mHeight, theMode.mBitCount);
+        sprintf(theText, "%lu x %lu x %lu Bit", theMode.mWidth, theMode.mHeight, theMode.mBitCount);
         theResolutionList->AppendLine(theText);
         if (theMode.mBitCount == theCurrentMode.mBitCount && theMode.mHeight == theCurrentMode.mHeight
             && theMode.mWidth == theCurrentMode.mWidth) {

@@ -96,7 +96,7 @@ void EEUIBColor::SetColor(unsigned long inColor)
     this->mColor = inColor;
     // Stepping back from colour 0 gives 0 - 1 = 0xffffffff on the unsigned colour: wrap it to 15 (the old
     // "< 0" test never fired, so it wrapped to 0).
-    if (this->mColor == (unsigned long)-1)
+    if (UIsNone32(this->mColor))
         this->mColor = 15;
     else if (this->mColor >= 16)
         this->mColor = 0;

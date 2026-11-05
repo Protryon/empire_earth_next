@@ -535,7 +535,7 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
     switch (this->mKind) {
     case kSETriggerScreenTrigger:
         theSelection = this->mCurrentSelection;
-        if (theSelection != -1) {
+        if (!UIsNone32(theSelection)) {
             theEvent = theScreen->mTabs[kSETriggerScreenTrigger]->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent != NULL)
                 theEvent->Reference();
@@ -548,7 +548,7 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
         break;
     case kSETriggerScreenCondition:
         theSelection = this->mCurrentSelection;
-        if (theSelection != -1) {
+        if (!UIsNone32(theSelection)) {
             unsigned long theCount = gWorld.mScenarioManager->mConditions.size();
             for (theIndex = 0; theIndex < theCount; theIndex++) {
                 if (gWorld.mScenarioManager->GetCondition(theIndex)->GetType() != kSMConditionObject)
@@ -580,7 +580,7 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
         break;
     case kSETriggerScreenEffect:
         theSelection = this->mCurrentSelection;
-        if (theSelection != -1 && theSelection > 0) {
+        if (!UIsNone32(theSelection) && theSelection > 0) {
             theEvent = theScreen->mTabs[kSETriggerScreenEffect]->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent != NULL)
                 theEvent->Reference();
@@ -593,7 +593,7 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
         break;
     case kSETriggerScreenObject:
         theSelection = this->mCurrentSelection;
-        if (theSelection != -1 && theSelection > 0) {
+        if (!UIsNone32(theSelection) && theSelection > 0) {
             theEvent = theScreen->mTabs[kSETriggerScreenObject]->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent != NULL)
                 theEvent->Reference();
@@ -606,7 +606,7 @@ long EESETSTriggerUIComboBox::MouseRButtonUp()
         break;
     case kSETriggerScreenArea:
         theSelection = this->mCurrentSelection;
-        if (theSelection != -1 && theSelection > 1) {
+        if (!UIsNone32(theSelection) && theSelection > 1) {
             theEvent = theScreen->mTabs[kSETriggerScreenArea]->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent != NULL)
                 theEvent->Reference();
@@ -918,14 +918,14 @@ void EESETSTrigger::Load()
     this->mFirstEffectComboBox->SetCurrentSelection(theEffect->mEffectIndex);
     this->ShowOperator(this->mFirstEffectOperatorComboBox, theEffect->mOperator);
     gResource->GetString(IDS_CONDITION, theFormat);
-    sprintf(theText, "%s %d", (const char*)theFormat, this->mFirstCondition);
+    sprintf(theText, "%s %ld", (const char*)theFormat, this->mFirstCondition);
     this->mFirstConditionLabel->SetText(theText);
-    sprintf(theText, "%s %d", (const char*)theFormat, this->mFirstCondition + 1);
+    sprintf(theText, "%s %ld", (const char*)theFormat, this->mFirstCondition + 1);
     this->mSecondConditionLabel->SetText(theText);
     gResource->GetString(IDS_EFFECT, theFormat);
-    sprintf(theText, "%s %d", (const char*)theFormat, this->mFirstEffect);
+    sprintf(theText, "%s %ld", (const char*)theFormat, this->mFirstEffect);
     this->mFirstEffectLabel->SetText(theText);
-    sprintf(theText, "%s %d", (const char*)theFormat, this->mFirstEffect + 1);
+    sprintf(theText, "%s %ld", (const char*)theFormat, this->mFirstEffect + 1);
     this->mSecondEffectLabel->SetText(theText);
     gResource->GetString(IDS_DEL, theFormat);
     if (this->mFirstCondition == 0 && theTrigger->GetConditionCount() == 1)

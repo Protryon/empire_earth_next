@@ -87,11 +87,11 @@ bool EEContagionHelper::AddUnit(EEUnit* inUnit, bool inNotify)
 // Writes the helper's id, spread timer, unit ids and calamity to the out-of-sync dump
 void EEContagionHelper::DumpOutOfSynch(FILE* inFile) const
 {
-    fprintf(inFile, "\nOUT OF SYNCH DUMP:  Contangion Helper id is %d\n", this->mHelperID);
+    fprintf(inFile, "\nOUT OF SYNCH DUMP:  Contangion Helper id is %ld\n", this->mHelperID);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Contangion Helper time since last spread: %6.6f\n", this->mTimeSinceLastSpread);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Contangion Helper unit list size is %d\n", this->mUnits.size());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Contangion Helper unit list size is %zu\n", this->mUnits.size());
     for (unsigned long i = 0; i < this->mUnits.size(); i++)
-        fprintf(inFile, "OUT OF SYNCH DUMP:  Contangion Helper Unit ID for index %d is #%08x\n", i, this->mUnits[i]->mUnitID);
+        fprintf(inFile, "OUT OF SYNCH DUMP:  Contangion Helper Unit ID for index %ld is #%08lx\n", i, this->mUnits[i]->mUnitID);
     this->mCalamity->DumpOutOfSynch(inFile);
 }
 

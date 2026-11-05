@@ -101,8 +101,8 @@ long RTSTile::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, F
 void RTSTile::Dump(FILE* inFile, unsigned long inPlayerCount) const
 {
     for (unsigned long i = 0; i < inPlayerCount; i++)
-        fprintf(inFile, "Tile Vis Count For Player %d has a value of %d\n", i, this->GetVisibility(i));
-    fprintf(inFile, "Tile Terrain Type has value %d\n", this->mTerrainType);
+        fprintf(inFile, "Tile Vis Count For Player %ld has a value of %ld\n", i, this->GetVisibility(i));
+    fprintf(inFile, "Tile Terrain Type has value %ld\n", this->mTerrainType);
 }
 
 // FUNCTION: EXE 0x5247ed

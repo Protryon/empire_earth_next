@@ -151,11 +151,11 @@ void EEUGCastCalamity::GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocat
 // Writes the source and target ids, tile and calamity type to the out-of-synch dump
 void EEUGCastCalamity::DumpOutOfSynch(FILE* inFile)
 {
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGCastCalamity Source Unit ID #%08x\n", this->mSource ? this->mSource->mUnitID : -1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGCastCalamity Target Unit ID #%08x\n", this->mTarget ? this->mTarget->mUnitID : -1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGCastCalamity Tile X: %d\n", this->mTileX);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGCastCalamity Tile Y: %d\n", this->mTileY);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGCastCalamity Calamity Type: %d\n", this->mCalamityType);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGCastCalamity Source Unit ID #%08lx\n", this->mSource ? this->mSource->mUnitID : -1);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGCastCalamity Target Unit ID #%08lx\n", this->mTarget ? this->mTarget->mUnitID : -1);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGCastCalamity Tile X: %ld\n", this->mTileX);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGCastCalamity Tile Y: %ld\n", this->mTileY);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGCastCalamity Calamity Type: %ld\n", this->mCalamityType);
 }
 
 // FUNCTION: EXE 0x620ca5
@@ -196,7 +196,7 @@ EEUnitGoal* EEUGCastCalamity::Clone()
 void EEUGCastCalamity::GetDebugLine(UWideString& ioText)
 {
     UWideString theText;
-    sprintf(theText, "cc: %d,%d,%d,%d,%d", this->mSource->mUnitID, this->mTarget ? this->mTarget->mUnitID : -1, this->mTileX, this->mTileY,
+    sprintf(theText, "cc: %ld,%ld,%ld,%ld,%ld", this->mSource->mUnitID, this->mTarget ? this->mTarget->mUnitID : -1, this->mTileX, this->mTileY,
             this->mCalamityType);
     ioText += theText;
 }
@@ -212,7 +212,7 @@ void EEUGCastCalamity::GetDebugText(UWideString& ioText)
         ioText += theText;
     }
     // the line used to print the source and target ids and the tile x (it was passed five values for three)
-    sprintf(theText, "Calamity Location/Type: (%d,%d) - Type:%d", this->mTileX, this->mTileY, this->mCalamityType);
+    sprintf(theText, "Calamity Location/Type: (%ld,%ld) - Type:%ld", this->mTileX, this->mTileY, this->mCalamityType);
     ioText += theText;
 }
 

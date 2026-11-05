@@ -152,7 +152,7 @@ long EEUICWonNetGamesBox::DrawTextA()
             case 1:
                 theRect.SetLeft(this->GetCopyTextRectangle().GetLeft() + 2.0f);
                 theRect.SetRight(theRect.GetLeft() + 55.0f);
-                sprintf(theText, "[%02d/%02d]", this->mCopyLineArray[i].mHumans, this->mCopyLineArray[i].mPlayers);
+                sprintf(theText, "[%02ld/%02ld]", this->mCopyLineArray[i].mHumans, this->mCopyLineArray[i].mPlayers);
                 this->mCopiedText->SetText(theText);
                 break;
             case 3:

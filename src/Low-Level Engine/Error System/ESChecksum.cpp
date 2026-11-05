@@ -84,8 +84,8 @@ bool ESChecksum::Compare(const ESChecksum& inOther, std::vector<UString>& outErr
                 }
             }
         } else {
-            sprintf(theError, "ESChecksum::Compare(): Checksum sizes don't match!  Source size is %d and incoming "
-                    "size is %d.\n", this->mEntries.size(), inOther.mEntries.size());
+            sprintf(theError, "ESChecksum::Compare(): Checksum sizes don't match!  Source size is %zu and incoming "
+                    "size is %zu.\n", this->mEntries.size(), inOther.mEntries.size());
             outErrors.push_back(theError);
             theResult = false;
         }
@@ -109,7 +109,7 @@ bool ESChecksum::GetIsVerboseMode() const
 // Returns the sum of every entry's checksum
 unsigned long ESChecksum::GetTotalChecksum() const
 {
-    unsigned long theTotal = 0;
+    uint32_t theTotal = 0;   // 32-bit sum on every data model (the total is saved and compared between peers)
     for (std::vector<ESChecksumEntry>::const_iterator theEntry = this->mEntries.begin(); theEntry != this->mEntries.end();
          ++theEntry)
         theTotal += theEntry->GetChecksum();

@@ -1575,7 +1575,7 @@ void EEWonNet::UpdateRoomList(EEUICWonNetRoomsBox* inRooms, UITextLabel* inLabel
     if (theNoSelection == 0 && theSelection < inRooms->GetLineCount())
         inRooms->ChangeSelectionIndex(theSelection, true, false);
     gResource->GetString(IDS_SETUP_PLAYERS, theFormat);
-    sprintf(theText, "%d  (%d %s)", theGames, thePlayers, (const char*)theFormat);
+    sprintf(theText, "%ld  (%ld %s)", theGames, thePlayers, (const char*)theFormat);
     inLabel14->SetText(theText);
     inLabel16->SetText(theServer);
     this->mRoomListChanged = false;

@@ -202,7 +202,7 @@ unsigned long EESETSUICBPlayer::GetSelectedPlayer()
     unsigned long theSelection = this->mCurrentSelection;
     unsigned long theIndex = 0;
     unsigned long thePlayer = 0;
-    if (theSelection != -1) {
+    if (!UIsNone32(theSelection)) {
         for (unsigned long theBit = 1; theBit <= 0x80; theBit <<= 1) {
             if (this->mFlags & theBit) {
                 if (theBit == 0x80 && theSelection < this->mPlayerCount + theIndex) {

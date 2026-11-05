@@ -68,8 +68,8 @@ void EEAreaEffect::Dump(FILE* inFile)
 {
     fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Position Location X: %6.6f\n", (double)this->mLocation.mX);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Position Location Y: %6.6f\n", (double)this->mLocation.mY);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Owning Unit ID #%08x\n", this->mUnit != NULL ? this->mUnit->mUnitID : -1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Player Number %d\n", this->mPlayer);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Owning Unit ID #%08lx\n", this->mUnit != NULL ? this->mUnit->mUnitID : -1);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Area Effect Player Number %ld\n", this->mPlayer);
 }
 
 // FUNCTION: EXE 0x67c073

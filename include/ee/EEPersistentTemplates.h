@@ -8,6 +8,13 @@
 #ifndef EE_EEPERSISTENTTEMPLATES_H
 #define EE_EEPERSISTENTTEMPLATES_H
 
+#include <stdint.h>
+
+// The value's width in the file: long/unsigned long are 4 bytes on every data model (LP64: long is 8 bytes)
+template <class T> struct EEPTWireType { typedef T Type; };
+template <> struct EEPTWireType<long> { typedef int32_t Type; };
+template <> struct EEPTWireType<unsigned long> { typedef uint32_t Type; };
+
 template <class T> class EEPTGeneric : public FSPersistent {
 public:
     EEPTGeneric(long inTagID) : FSPersistent(inTagID) { this->mValue = 0; }
@@ -18,8 +25,10 @@ public:
     {
         long theResult = kErrorOK;
         unsigned long theRead = 0;
-        theResult = inFile.Read((unsigned char*)&this->mValue, sizeof(T), theRead);
-        if (theResult == kErrorOK && theRead != sizeof(T))
+        typename EEPTWireType<T>::Type theValue = static_cast<typename EEPTWireType<T>::Type>(this->mValue);
+        theResult = inFile.Read((unsigned char*)&theValue, sizeof(theValue), theRead);
+        this->mValue = theValue;
+        if (theResult == kErrorOK && theRead != sizeof(theValue))
             theResult = 0xe;
         return theResult;
     }
@@ -27,8 +36,9 @@ public:
     {
         long theResult = kErrorOK;
         unsigned long theWritten = 0;
-        theResult = outFile.Write((const unsigned char*)&this->mValue, sizeof(T), theWritten);
-        if (theResult == kErrorOK && theWritten != sizeof(T))
+        const typename EEPTWireType<T>::Type theValue = static_cast<typename EEPTWireType<T>::Type>(this->mValue);
+        theResult = outFile.Write((const unsigned char*)&theValue, sizeof(theValue), theWritten);
+        if (theResult == kErrorOK && theWritten != sizeof(theValue))
             theResult = 0xe;
         return theResult;
     }

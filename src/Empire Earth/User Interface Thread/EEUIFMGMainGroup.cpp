@@ -424,7 +424,7 @@ void EEUIFMGMainGroup::ShowSpecialButtons(EEUnit* inUnit)
             unsigned long theMinutes;
             unsigned long theSeconds;
             gPhysics->GetMinutesAndSeconds(&theMinutes, &theSeconds, theTimeLeft);
-            sprintf(theText, "%d:%.2d", theMinutes, theSeconds);
+            sprintf(theText, "%ld:%.2ld", theMinutes, theSeconds);
             theButton->SetDisplayMode(kDisplayModeShown);
             theButton->SetText(theText, gU531930);
         } else

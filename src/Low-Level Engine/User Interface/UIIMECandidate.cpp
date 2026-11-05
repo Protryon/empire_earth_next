@@ -203,7 +203,7 @@ void UIIMECandidate::SetCandidateList(const UIIMECandidateList& inList, float in
     for (i = 0; i < thePageStart; i++)
         theString = PlatMbsNInc(theString, PlatMbsLen(theString)) + 1;
     for (; i < inList.mCount && i < thePageStart + thePageSize; i++) {
-        sprintf(theNumber, "%2d: ", i + 1);
+        sprintf(theNumber, "%2ld: ", i + 1);
         unsigned long theLength = PlatMbsLen(theString);
         theCandidate.CopyString(reinterpret_cast<const char*>(theString), theLength);
         theLine = theNumber + theCandidate;

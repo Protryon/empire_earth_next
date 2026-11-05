@@ -7,6 +7,8 @@
 #ifndef EE_EECALAMITYCLASS_H
 #define EE_EECALAMITYCLASS_H
 
+#include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
+
 class EECalamity;
 class EEContagionFunctor;
 class EEPlayer;
@@ -36,37 +38,37 @@ struct EECalamityData {
     float mQuakeStrength;                   // +0x70 (earthquake Initialize)
     float mUnused1;                         // +0x74 (0 in every record)
     float mRange;                           // +0x78 -> EECalamityClass +0x1c (rounded)
-    long mUnusedDatabaseID;                 // +0x7c (128..: the record's id)
+    int32_t mUnusedDatabaseID;              // +0x7c (128..: the record's id)
     EECalamityKind mID;                     // +0x80 -> +0x18 (an enum, as the class member it fills)
-    long mClassEnum;                        // +0x84 -> +0x08
-    long mUnusedTargetKind;                 // +0x88
-    long mLifeTime;                         // +0x8c -> +0x04 (as float)
-    long mUnused2;                          // +0x90 (1 in every record)
-    long mGraphicEffectID1;                 // +0x94 EEGraphicEffect table index (area effects: +0x28)
-    long mGraphicEffectID2;                 // +0x98 (area effects: +0x2c)
-    long mGraphicEffectID3;                 // +0x9c (mind control: +0x30)
-    long mGraphicEffectID4;                 // +0xa0 (time warp: +0x34)
-    long mUnused3;                          // +0xa4 (0 in every record)
-    long mUnused4;                          // +0xa8 (0)
-    long mUnused5;                          // +0xac (0)
-    long mUnitClassIndex;                   // +0xb0 (drop object: the unit class to drop)
-    long mIntParam1;                        // +0xb4 (area effects: +0x44)
-    long mIntParam2;                        // +0xb8 (area effects: +0x3c)
-    long mIntParam3;                        // +0xbc (area effects: functor argument)
-    long mIntParam4;                        // +0xc0 (fire: functor argument)
-    long mIntParam5;                        // +0xc4 (earthquake Initialize)
-    long mIntParam6;                        // +0xc8 (hurricane: the map area its location needs)
+    int32_t mClassEnum;                     // +0x84 -> +0x08
+    int32_t mUnusedTargetKind;              // +0x88
+    int32_t mLifeTime;                      // +0x8c -> +0x04 (as float)
+    int32_t mUnused2;                       // +0x90 (1 in every record)
+    int32_t mGraphicEffectID1;              // +0x94 EEGraphicEffect table index (area effects: +0x28)
+    int32_t mGraphicEffectID2;              // +0x98 (area effects: +0x2c)
+    int32_t mGraphicEffectID3;              // +0x9c (mind control: +0x30)
+    int32_t mGraphicEffectID4;              // +0xa0 (time warp: +0x34)
+    int32_t mUnused3;                       // +0xa4 (0 in every record)
+    int32_t mUnused4;                       // +0xa8 (0)
+    int32_t mUnused5;                       // +0xac (0)
+    int32_t mUnitClassIndex;                // +0xb0 (drop object: the unit class to drop)
+    int32_t mIntParam1;                     // +0xb4 (area effects: +0x44)
+    int32_t mIntParam2;                     // +0xb8 (area effects: +0x3c)
+    int32_t mIntParam3;                     // +0xbc (area effects: functor argument)
+    int32_t mIntParam4;                     // +0xc0 (fire: functor argument)
+    int32_t mIntParam5;                     // +0xc4 (earthquake Initialize)
+    int32_t mIntParam6;                     // +0xc8 (hurricane: the map area its location needs)
     bool mUnused6;                          // +0xcc (1 in 31 of 36 records)
     bool mBoolParam1;                       // +0xcd (extra damage: functor argument)
     bool mUnused7;                          // +0xce (0 in every record)
     bool mUnused8;                          // +0xcf (0)
     bool mIsCastByAllSelected;              // +0xd0 -> +0x26
     bool mIsBlockedByImmunity;              // +0xd1 -> +0x25
-    long mSoundID;                          // +0xd4 EESoundObject table index (area effects: +0x34)
-    long mSecondarySoundID;                 // +0xd8 (plague: its second sound)
-    long mCost;                             // +0xdc -> +0x20
-    unsigned long mUnitSet;                 // +0xe0 -> +0x10
-    long mNameID;                           // +0xe4 -> +0x14
+    int32_t mSoundID;                       // +0xd4 EESoundObject table index (area effects: +0x34)
+    int32_t mSecondarySoundID;              // +0xd8 (plague: its second sound)
+    int32_t mCost;                          // +0xdc -> +0x20
+    uint32_t mUnitSet;                      // +0xe0 -> +0x10
+    int32_t mNameID;                        // +0xe4 -> +0x14
     bool mUnusedClassFlag;                  // +0xe8 -> +0x24
 };
 

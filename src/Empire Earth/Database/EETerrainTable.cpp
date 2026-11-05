@@ -43,25 +43,25 @@ long gFirstCliffTerrain;
 // One record of db\dbterrain.dat (0xcc bytes after the file name string). Inferred layout.
 struct EETerrainRecord {
     char mName[0x68];                       // +0x00 -> mFamilies
-    long mID;                               // +0x68 -> +0x50
-    long mTextureID;                        // +0x6c -> +0x4c
-    long mNameID;                           // +0x70 -> +0x54
-    long mTextureTileCoverage;              // +0x74 -> +0x58
-    long mTerrainType;                      // +0x78 -> +0x5c
-    long mColumns;                          // +0x7c -> +0x60
-    long mRows;                             // +0x80 -> +0x64
+    int32_t mID;                            // +0x68 -> +0x50
+    int32_t mTextureID;                     // +0x6c -> +0x4c
+    int32_t mNameID;                        // +0x70 -> +0x54
+    int32_t mTextureTileCoverage;           // +0x74 -> +0x58
+    int32_t mTerrainType;                   // +0x78 -> +0x5c
+    int32_t mColumns;                       // +0x7c -> +0x60
+    int32_t mRows;                          // +0x80 -> +0x64
     bool mIsWater;                          // +0x84 -> +0x84
     bool mHasAlpha;                         // +0x85 -> +0x86
     bool mIsInEditor;                       // +0x86 -> +0x85
-    long mColorType;                        // +0x88 -> +0x68
-    unsigned long mFirst[3];                // +0x8c: unit class ranges [mFirst[k], mLast[k]] -> mUnitClasses
-    unsigned long mLast[3];                 // +0x98
-    long mAmbientUnitChance;                // +0xa4 -> +0x7c
-    long mWaterAnimationPeriod;             // +0xa8 -> +0x44
-    long mWaterDepth;                       // +0xac -> +0x80
-    long mRed;                              // +0xb0 (0..255)
-    long mGreen;                            // +0xb4
-    long mBlue;                             // +0xb8
+    int32_t mColorType;                     // +0x88 -> +0x68
+    uint32_t mFirst[3];                     // +0x8c: unit class ranges [mFirst[k], mLast[k]] -> mUnitClasses
+    uint32_t mLast[3];                      // +0x98
+    int32_t mAmbientUnitChance;             // +0xa4 -> +0x7c
+    int32_t mWaterAnimationPeriod;          // +0xa8 -> +0x44
+    int32_t mWaterDepth;                    // +0xac -> +0x80
+    int32_t mRed;                           // +0xb0 (0..255)
+    int32_t mGreen;                         // +0xb4
+    int32_t mBlue;                          // +0xb8
     char _gapBC[0x0f];
     bool mIsAmbientsOnly;                   // +0xcb -> +0x87
 };
@@ -70,10 +70,10 @@ static_assert(sizeof(EETerrainRecord) == 204, "on-disk record: 204 bytes on ever
 // One record of db\dbcliffterrain.dat (0x7c bytes). Inferred layout.
 struct EECliffTerrainRecord {
     char mName[0x68];                       // +0x00
-    long mIndex;                            // +0x68 (negative: no entry)
-    long mFirstTerrain;                     // +0x6c -> +0x14
-    long mLastTerrain;                      // +0x70 -> +0x18
-    long mUnusedValue;                      // +0x74 -> +0x1c
+    int32_t mIndex;                         // +0x68 (negative: no entry)
+    int32_t mFirstTerrain;                  // +0x6c -> +0x14
+    int32_t mLastTerrain;                   // +0x70 -> +0x18
+    int32_t mUnusedValue;                   // +0x74 -> +0x1c
     bool mUnusedFlag;                       // +0x78 -> +0x20
 };
 static_assert(sizeof(EECliffTerrainRecord) == 124, "on-disk record: 124 bytes on every target");
@@ -187,7 +187,7 @@ void EETerrainTable::DumpAllLoadedMedia(FSFileSpec& inFile)
         if (theTerrain == NULL)
             continue;
         if (theTerrain->mLoadCount > 0)
-            fprintf(inFile, "\t%s has a media count of %d\n", (const char*)theTerrain->mName,
+            fprintf(inFile, "\t%s has a media count of %ld\n", (const char*)theTerrain->mName,
                     theTerrain->mLoadCount);
         if (theTerrain->mPreviewTexture != NULL)
             fprintf(inFile, "\t%s was loaded for list box display\n", (const char*)theTerrain->mName);
@@ -259,12 +259,12 @@ void EETerrainTable::LoadTextures()
             char theName[256];
             long theLength = theDot - (const char*)this->mTextureName;
             memcpy(theName, (const char*)this->mTextureName, theLength);
-            sprintf(theName + theLength, "_%d%s", n, theDot);
+            sprintf(theName + theLength, "_%ld%s", n, theDot);
             UString theFile(theName);
             this->mTextures[theIndex++] = this->LoadTexture(theFile);
         } else {
             UString theFile;
-            sprintf(theFile, "%s_%d", (const char*)this->mTextureName, n);
+            sprintf(theFile, "%s_%ld", (const char*)this->mTextureName, n);
             this->mTextures[theIndex++] = this->LoadTexture(theFile);
         }
     }

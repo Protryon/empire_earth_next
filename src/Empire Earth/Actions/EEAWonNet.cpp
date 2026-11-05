@@ -159,7 +159,7 @@ void EEAWonNet::Virtual4()
     case 8:
         if (gUIManager->GetCurrentForm() == gUIManager->GetFormByID(kFormAvailableRooms)) {
             gResource->GetString(IDS_SETUP_PLAYERS, theFormat);
-            sprintf(theLabel, "%d  (%d ", this->mL8C, this->mPlayers);
+            sprintf(theLabel, "%ld  (%ld ", this->mL8C, this->mPlayers);
             theLabel += theFormat;
             theLabel += UWideString(")");
             static_cast<UITextLabel*>(gUIManager->GetFormByID(kFormAvailableRooms)->GetControl(kAvailableRoomsTotalGamesNumber))->SetText(theLabel);

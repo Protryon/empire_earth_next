@@ -39,7 +39,7 @@ GUIString EELobbyServerDetailsItem::GetOptionText(int inOption, int inFirstStrin
 GUIString EELobbyServerDetailsItem::GetNumberText(int inOption)
 {
     char theBuffer[50];
-    sprintf(theBuffer, "%d", GetGame()->GetOption(inOption));
+    sprintf(theBuffer, "%ld", GetGame()->GetOption(inOption));
     return GUIString(theBuffer);
 }
 

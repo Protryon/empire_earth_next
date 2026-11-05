@@ -43,11 +43,11 @@ struct EEUCUpgradeRecord {
     float mRepairCost;                      // +0xcc
     float mAreaEffectCost;                  // +0xd0
     float mTransportCost;                   // +0xd4
-    long mMaxLevel;                         // +0xd8
-    long mUnused1;                          // +0xdc
-    long mIndex;                            // +0xe0 (negative: no entry)
-    long mUnused2;                          // +0xe4
-    long mUnused3;                          // +0xe8
+    int32_t mMaxLevel;                      // +0xd8
+    int32_t mUnused1;                       // +0xdc
+    int32_t mIndex;                         // +0xe0 (negative: no entry)
+    int32_t mUnused2;                       // +0xe4
+    int32_t mUnused3;                       // +0xe8
     bool mHasRepairStep;                    // +0xec
 };
 static_assert(sizeof(EEUCUpgradeRecord) == 240, "on-disk record: 240 bytes on every target");

@@ -461,7 +461,7 @@ void EEServer::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
                     gResource->GetString(IDS_YOU_ARE_OUT_OF_SYNCH, theFormat);
                 else
                     gResource->GetString(IDS_YOU_HAVE_BEEN_BOOTED_DUE, theFormat);
-                sprintf(theText, theFormat);
+                sprintf(theText, "%s", (const char*)theFormat);   // a resource text, not a format
                 gUIManager->DisplayMessage(theText, true, NULL, (EEUIFErrorCallback)FnB7992, true);
             }
         } else {
@@ -487,7 +487,7 @@ void EEServer::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
                 sSample = gSoundManager->Load(UString("sounds\\OutOfSynch.wav"), 0x31, 1);
             else
                 sSample = gSoundManager->Load(UString("sounds\\Booted.wav"), 0x31, 1);
-            if (sSample != (unsigned long)-1)
+            if (!UIsNone32(sSample))
                 gSoundManager->Play(sSample, 1.0f, 0.0f, 1.0f, false, NULL);
         }
     }
@@ -1147,7 +1147,7 @@ void EEServer::SendPlayerSlotInfo()
 
 // FUNCTION: EXE 0x4ccf3a
 // Sends a file transfer's progress for the lobby slot of the given network slot
-void EEServer::HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentDone, unsigned long& inXferID,
+void EEServer::HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentDone, uint32_t& inXferID,
                             unsigned char& inStatusID)
 {
     unsigned char thePlayer = this->GetLobbySlot(inSlot);

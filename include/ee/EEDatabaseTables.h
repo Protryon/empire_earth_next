@@ -6,6 +6,8 @@
 #ifndef EE_EEDATABASETABLES_H
 #define EE_EEDATABASETABLES_H
 
+#include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
+
 class FSFileSpec;
 class EEUnitClass;
 class GETerrainMesh;
@@ -38,11 +40,11 @@ public:
 struct EEWorldTableEntry {
     float mFloatValue;                      // +0x00
     float mFloatValue2;                     // +0x04
-    long mUnusedDatabaseID;                 // +0x08
-    long mUnusedIndex;                      // +0x0c
-    long mLongValue;                        // +0x10 (signed: EECPIntelligence 0x480f9b `fidiv dword [eax+0x10]`; TYPE CENSUS)
-    unsigned long mLongValue2;              // +0x14
-    long mUnused;                           // +0x18 (entry 31: 1, entry 48: 0x50200; otherwise 0)
+    int32_t mUnusedDatabaseID;              // +0x08
+    int32_t mUnusedIndex;                   // +0x0c
+    int32_t mLongValue;                     // +0x10 (signed: EECPIntelligence 0x480f9b `fidiv dword [eax+0x10]`; TYPE CENSUS)
+    uint32_t mLongValue2;                   // +0x14
+    int32_t mUnused;                        // +0x18 (entry 31: 1, entry 48: 0x50200; otherwise 0)
 };
 static_assert(sizeof(EEWorldTableEntry) == 28, "on-disk record: 28 bytes on every target");
 

@@ -410,10 +410,10 @@ void EESMCondition::RenumberObjects(unsigned long inOldIndex, unsigned long inNe
 {
     unsigned long theIndex = this->mObjectIndex;
     if (theIndex == inOldIndex) {
-        this->mObjectIndex = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mObjectIndex = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mObjectIndex = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mObjectIndex = theIndex - 1;
     }
 }
@@ -424,10 +424,10 @@ void EESMCondition::RenumberTriggers(unsigned long inOldIndex, unsigned long inN
 {
     unsigned long theIndex = this->mTrigger;
     if (theIndex == inOldIndex) {
-        this->mTrigger = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mTrigger = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mTrigger = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mTrigger = theIndex - 1;
     }
 }

@@ -162,11 +162,11 @@ void EEUGAttackUnit::DumpOutOfSynch(FILE* inFile)
 {
     fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - The Actual Destination is (%6.6f, %6.6f, %6.6f)\n",
             this->mLocation.GetX(), this->mLocation.GetY(), this->mLocation.GetZ());
-    fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - The attacking unit #%08x is a %s\n", this->mAttacker->mUnitID,
+    fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - The attacking unit #%08lx is a %s\n", this->mAttacker->mUnitID,
             (const char*)this->mAttacker->mUnitClass->mName);
-    fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - The target unit #%08x is a %s\n",
+    fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - The target unit #%08lx is a %s\n",
             this->mTarget ? this->mTarget->mUnitID : -1, this->mTarget ? (const char*)this->mTarget->mUnitClass->mName : "???");
-    fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - The last known target X,Y(%d, %d)\n", this->mTargetTileX,
+    fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - The last known target X,Y(%ld, %ld)\n", this->mTargetTileX,
             this->mTargetTileY);
     fprintf(inFile, "EEUGAttackUnit::DumpOOSInformation - Is this a convert goal? %2d\n", this->mIsConvert != 0);
     EEUnitGoal::DumpOutOfSynch(inFile);
@@ -204,7 +204,7 @@ void EEUGAttackUnit::GetDebugLine(UWideString& ioText)
     UWideString theText;
     ioText += "attack";
     if (this->mTarget != NULL) {
-        sprintf(theText, " unit (uid %d, hp %d):", this->mTarget->mUnitID & 0xffffff, this->mTarget->mHitPoints);
+        sprintf(theText, " unit (uid %ld, hp %ld):", this->mTarget->mUnitID & 0xffffff, this->mTarget->mHitPoints);
         ioText += theText;
     }
 }
@@ -217,7 +217,7 @@ void EEUGAttackUnit::GetDebugText(UWideString& ioText)
     ioText += "Attack\n";
     if (this->mTarget == NULL)
         return;
-    sprintf(theText, "Target Unit: %s at (%d,%d)\nTarget Health: %d/%d (%.2f%%)\n",
+    sprintf(theText, "Target Unit: %s at (%ld,%ld)\nTarget Health: %ld/%ld (%.2f%%)\n",
             (const char*)this->mTarget->mUnitClass->mName, this->mTarget->mTileX, this->mTarget->mTileY, this->mTarget->mHitPoints,
             this->mTarget->mStats->mMaxHitPoints, (float)this->mTarget->mHitPoints / this->mTarget->mStats->mMaxHitPoints);
     ioText += theText;

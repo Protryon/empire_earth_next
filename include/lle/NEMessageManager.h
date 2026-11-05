@@ -30,9 +30,9 @@ struct NEMMXfer {                           // one queued file transfer (operato
     unsigned long mBytesSent;               // +0x48
     unsigned long mLength;                  // +0x4c
     unsigned long mState;                   // +0x50 (0 open, 1 sending)
-    unsigned long mXferID;                  // +0x54
+    uint32_t mXferID;                       // +0x54 (4 bytes on the wire)
     unsigned long mLastStatusTime;          // +0x58
-    unsigned long mUserData;                // +0x5c
+    uint32_t mUserData;                     // +0x5c (4 bytes on the wire)
     unsigned long mRetries;                 // +0x60
     unsigned char mSlot;                    // +0x64
     bool mFlag;                             // +0x65

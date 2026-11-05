@@ -6,6 +6,8 @@
 #ifndef LLE_UIBACKGROUNDTABLE_H
 #define LLE_UIBACKGROUNDTABLE_H
 
+#include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
+
 #include <vector>
 
 #include "lle/UILayoutUtility.h"
@@ -24,24 +26,24 @@ struct UIDbDataBackgrounds {
     float mTileWidthPercent;                // +0x0d8
     float mTileHeightPercent;               // +0x0dc
     float mOpacity;                         // +0x0e0
-    long mID;                               // +0x0e4
-    unsigned long mBackgroundID;            // +0x0e8
-    unsigned long mFormID;                  // +0x0ec
-    long mTextureTop;                       // +0x0f0
-    long mTextureLeft;                      // +0x0f4
-    long mTextureBottom;                    // +0x0f8
-    long mTextureRight;                     // +0x0fc
-    unsigned long mBackgroundType;          // +0x100
-    unsigned long mTopOffsetType;           // +0x104
-    unsigned long mBottomOffsetType;        // +0x108
-    unsigned long mLeftOffsetType;          // +0x10c
-    unsigned long mRightOffsetType;         // +0x110
-    long mNumCols;                          // +0x114
-    long mNumRows;                          // +0x118
-    long mDrawPriority;                     // +0x11c at least 1
-    long mRed;                              // +0x120 0..255
-    long mGreen;                            // +0x124
-    long mBlue;                             // +0x128
+    int32_t mID;                            // +0x0e4
+    uint32_t mBackgroundID;                 // +0x0e8
+    uint32_t mFormID;                       // +0x0ec
+    int32_t mTextureTop;                    // +0x0f0
+    int32_t mTextureLeft;                   // +0x0f4
+    int32_t mTextureBottom;                 // +0x0f8
+    int32_t mTextureRight;                  // +0x0fc
+    uint32_t mBackgroundType;               // +0x100
+    uint32_t mTopOffsetType;                // +0x104
+    uint32_t mBottomOffsetType;             // +0x108
+    uint32_t mLeftOffsetType;               // +0x10c
+    uint32_t mRightOffsetType;              // +0x110
+    int32_t mNumCols;                       // +0x114
+    int32_t mNumRows;                       // +0x118
+    int32_t mDrawPriority;                  // +0x11c at least 1
+    int32_t mRed;                           // +0x120 0..255
+    int32_t mGreen;                         // +0x124
+    int32_t mBlue;                          // +0x128
     bool mVisible;                          // +0x12c
     bool mHasAlpha;                         // +0x12d
     bool mAttribute1;                       // +0x12e

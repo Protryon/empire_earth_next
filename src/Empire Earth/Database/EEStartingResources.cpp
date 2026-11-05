@@ -15,14 +15,14 @@
 // One record of db\dbStartingResources.dat (0x84 bytes, read whole). Inferred layout.
 struct EEStartingResourcesRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
-    long mIndex;                            // +0x68 (negative: skipped)
-    long mNameID;                           // +0x6c -> +0x18
-    long mFood;                             // +0x70 -> +0x04
-    long mWood;                             // +0x74 -> +0x08
-    long mStone;                            // +0x78 -> +0x0c
-    long mGold;                             // +0x7c -> +0x10
-    long mIron;                             // +0x80 -> +0x14
+    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
+    int32_t mIndex;                         // +0x68 (negative: skipped)
+    int32_t mNameID;                        // +0x6c -> +0x18
+    int32_t mFood;                          // +0x70 -> +0x04
+    int32_t mWood;                          // +0x74 -> +0x08
+    int32_t mStone;                         // +0x78 -> +0x0c
+    int32_t mGold;                          // +0x7c -> +0x10
+    int32_t mIron;                          // +0x80 -> +0x14
 };
 static_assert(sizeof(EEStartingResourcesRecord) == 132, "on-disk record: 132 bytes on every target");
 

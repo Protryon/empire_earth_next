@@ -577,7 +577,7 @@ void EERandomMap::CreateValidMap()
                 theCount++;
         }
     }
-    ESDebugOut("EERandomMap::CreateValidMap %d valid tiles found\n", theCount);
+    ESDebugOut("EERandomMap::CreateValidMap %ld valid tiles found\n", theCount);
 }
 
 // FUNCTION: EXE 0x6859e7
@@ -775,7 +775,7 @@ long EERandomMap::CreateRandomMap(EEGameOptions* inOptions, std::vector<EEPlayer
                 theAttempts++;
                 delete theMap;
             } while (!theConnected && theAttempts <= 10);
-            ESDebugOut("!Playable random map created after %d attempts.\n", theAttempts);
+            ESDebugOut("!Playable random map created after %ld attempts.\n", theAttempts);
             theModule->Unload();
             break;
         }
@@ -884,7 +884,7 @@ long EERandomMap::Initialize(const FSFileSpec& inDirectory)
                 theLine.NestedTokenize(theSeparators, theBrackets, theTokens);
                 if (theTokens.size() >= 2 &&
                     theTokens[0].GetSubstring(0, kStringTableIDKey.GetLength()) == kStringTableIDKey) {
-                    sscanf(theTokens[1], "%d", &theStringID);
+                    sscanf(theTokens[1], "%ld", &theStringID);
                     theHasStringID = true;
                 }
             }

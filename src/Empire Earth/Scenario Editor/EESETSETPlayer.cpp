@@ -532,7 +532,7 @@ void EESETSETPlayerResource::Show(EESETSEffectControls* inControls)
     }
     gResource->GetString(IDS_VARIABLE, theText);
     for (j = i; j < i + 10; j++) {
-        sprintf(theLine, "%s%d", (const char*)theText, j - i);
+        sprintf(theLine, "%s%ld", (const char*)theText, j - i);
         inControls->mEffectComboBoxes[1]->AppendLine(theLine);
     }
     for (j = IDS_RESOURCE_NAME_FIRST; j <= IDS_RESOURCE_NAME_IRON; j++) {
@@ -727,7 +727,7 @@ void EESETSETPlayerTechnology::Show(EESETSEffectControls* inControls)
         } else
             theText = "";
         if (theNode && theText == "FONTS")
-            sprintf(theText, "BAD Node %d - (name not available in release)", theNode->mData->mID);
+            sprintf(theText, "BAD Node %ld - (name not available in release)", theNode->mData->mID);
         inControls->mEffectComboBoxes[1]->AppendLine(theText);
     }
     inControls->mEffectComboBoxes[1]->ChangeWidth(0xfe);

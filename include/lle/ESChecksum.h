@@ -3,6 +3,7 @@
 #ifndef LLE_ESCHECKSUM_H
 #define LLE_ESCHECKSUM_H
 
+#include <stdint.h>
 #include <vector>
 
 // Every member inline: emitted at the head of ESChecksum.cpp (0x28ca..0x2921) in this order; the accessors are
@@ -24,7 +25,7 @@ private:
     bool Compare(const ESChecksumEntry& inOther, UString& outError) const;   // 0x29f3
 
     UString mDescription;                   // +0x00
-    unsigned long mChecksum;                // +0x10
+    uint32_t mChecksum;                     // +0x10 (32 bits on every data model: saved and compared between peers)
 };
 
 class LLE_API ESChecksum {                  // vtable 0x10097520 (dtor only); sizeof 0x18

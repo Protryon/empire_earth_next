@@ -364,7 +364,7 @@ void EESEUITechListBox::Rebuild()
     if (theByEpoch) {
         for (i = 0; i < theCount; i++) {
             EETechTreeNode* theNode = gTechTree.Get(this->mTechs[i]);
-            sprintf(theText, "%d: ", EESETLGetEpoch(theNode->mData->mID) + 1);
+            sprintf(theText, "%ld: ", EESETLGetEpoch(theNode->mData->mID) + 1);
             if (!theByTech)
                 gResource->GetString(gUnitClassTable[theNode->mData->mUnitClass]->mNameStringID, theName);
             else

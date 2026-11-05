@@ -113,7 +113,7 @@ long EEEvent::LoadEvents(FSFile& inEvents, FSFile& inEffects)
         inEvents.Read(EEEvent::sEvents[i].mID);
         theResult = inEvents.Read(EEEvent::sEvents[i].mNumEffects);
         if (EEEvent::sEvents[i].mNumEffects > 0) {
-            EEEvent::sEvents[i].mEffects = new long[EEEvent::sEvents[i].mNumEffects];
+            EEEvent::sEvents[i].mEffects = new int32_t[EEEvent::sEvents[i].mNumEffects];
             theResult = inEvents.Read(reinterpret_cast<char*>(EEEvent::sEvents[i].mEffects), EEEvent::sEvents[i].mNumEffects * 4, theRead);
         } else
             EEEvent::sEvents[i].mEffects = NULL;

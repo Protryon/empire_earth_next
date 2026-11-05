@@ -137,7 +137,7 @@ void EEPhysics::AutoSave()
     if (gGamePreferences.mSettings.mNumberOfAutoSaves > 0) {
         TMTime theTime;
         TMGetTimeOfDay(theTime);
-        sprintf(theName, "%s %4d.%02d.%02d - %02dh.%02dm.%02ds%s", "AutoSave", theTime.mYear, theTime.mMonth + 1,
+        sprintf(theName, "%s %4ld.%02ld.%02ld - %02ldh.%02ldm.%02lds%s", "AutoSave", theTime.mYear, theTime.mMonth + 1,
                 theTime.mDay, theTime.mHour, theTime.mMinute, theTime.mSecond, (const char*)gSavedGameExtension);
         gGamePreferences.mSettings.mLastAutoSave = theName;
         gGamePreferences.Save();
@@ -259,36 +259,36 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
     if (inDump == true) {
         TMTime theTime;
         TMGetTimeOfDay(theTime);
-        sprintf(theName, "OOS %4d.%02d.%02d - %02dh.%02dm.%02ds.log", theTime.mYear, theTime.mMonth + 1, theTime.mDay,
+        sprintf(theName, "OOS %4ld.%02ld.%02ld - %02ldh.%02ldm.%02lds.log", theTime.mYear, theTime.mMonth + 1, theTime.mDay,
                 theTime.mHour, theTime.mMinute, theTime.mSecond);
         theFile = fopen(theName, "w");
         ESVERIFY_AT(theFile != NULL, 544);
         for (i = 0; i < gWorld.mNumPlayers; i++) {
             thePlayer = gWorld.mPlayers[i];
             fprintf(theFile, "\n");
-            fprintf(theFile, "OUT OF SYNCH DUMP:  **************  Player Number: %d  *************\n",
+            fprintf(theFile, "OUT OF SYNCH DUMP:  **************  Player Number: %ld  *************\n",
                     thePlayer->mPlayerID);
             theGroup = thePlayer->mActiveGroup;
             if (theGroup != NULL) {
                 fprintf(theFile, "\n");
-                fprintf(theFile, "OUT OF SYNCH DUMP:  **************  Selected Group Count: %d  *************\n",
+                fprintf(theFile, "OUT OF SYNCH DUMP:  **************  Selected Group Count: %ld  *************\n",
                         theGroup->GetNumUnits());
                 for (j = 0; j < theGroup->GetNumUnits(); j++) {
                     unsigned long theID = theGroup->GetUnit(j)->mUnitID;
-                    fprintf(theFile, "OUT OF SYNCH DUMP: Unit #%d has an id of %d(%08x)\n", j, theID, theID);
+                    fprintf(theFile, "OUT OF SYNCH DUMP: Unit #%ld has an id of %ld(%08lx)\n", j, theID, theID);
                 }
             }
             fprintf(theFile, "\n");
-            fprintf(theFile, "OUT OF SYNCH DUMP:  **************  Active Group Count: %d  *************\n",
+            fprintf(theFile, "OUT OF SYNCH DUMP:  **************  Active Group Count: %ld  *************\n",
                     thePlayer->GetNumRunningGroups());
             for (j = 0; j < thePlayer->GetNumRunningGroups(); j++) {
                 theActiveGroup = thePlayer->mRunningGroups[j];
                 fprintf(theFile, "\n");
-                fprintf(theFile, "OUT OF SYNCH DUMP:  Active Group #%d has a unit count of %d\n", j,
+                fprintf(theFile, "OUT OF SYNCH DUMP:  Active Group #%ld has a unit count of %ld\n", j,
                         theActiveGroup->GetNumUnits());
                 for (m = 0; m < theActiveGroup->GetNumUnits(); m++) {
                     unsigned long theID = theActiveGroup->GetUnit(m)->mUnitID;
-                    fprintf(theFile, "OUT OF SYNCH DUMP: Unit #%d has an id of %d(%08x)\n", m, theID, theID);
+                    fprintf(theFile, "OUT OF SYNCH DUMP: Unit #%ld has an id of %ld(%08lx)\n", m, theID, theID);
                 }
             }
             thePlayer->mAirTraffic[0]->Dump(theFile);
@@ -308,14 +308,14 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
         fprintf(theFile, "OUT OF SYNCH DUMP: ******* Dumped on PT %ld *******\n", this->mNumTicksDone);
         fprintf(theFile, "OUT OF SYNCH DUMP: ******* Current PT %ld *******\n", this->mCurrentTick);
         fprintf(theFile, "OUT OF SYNCH DUMP: ******* Continent Manager Checksum: %ld *******\n", gContinentManagerChecksum);
-        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Overall Checksum: %ld *******\n", 0);
+        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Overall Checksum: %d *******\n", 0);
         fprintf(theFile, "OUT OF SYNCH DUMP: ******* this->mRandomNumberGenerator.GetSeed(): %ld *******\n",
                 this->mRandom.GetSeed());
         fprintf(theFile, "OUT OF SYNCH DUMP: ******* Number of user-input messages processed: %ld *******\n",
                 gU531CF0);
-        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Number of Messages in Server Queue: %d *******\n",
+        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Number of Messages in Server Queue: %zu *******\n",
                 gPhysics->mServerMessages.size());
-        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Number of CT Physics Ticks To Process: %d *******\n",
+        fprintf(theFile, "OUT OF SYNCH DUMP: ******* Number of CT Physics Ticks To Process: %ld *******\n",
                 gPhysics->mTicksToProcess);
         fclose(theFile);
         ESEndRecording();
@@ -372,9 +372,9 @@ UWideString EEPhysics::GetTimeString()
         theMinutes = ((unsigned long)theTime - theHours * 3600000) / 60000;
     unsigned long theSeconds = ((unsigned long)theTime - theHours * 3600000 - theMinutes * 60000) / 1000;
     if (theHours < 100)
-        sprintf(theString, "%03.2f %02d:%02d:%02d", gWorld.mGameSpeed, theHours, theMinutes, theSeconds);
+        sprintf(theString, "%03.2f %02ld:%02ld:%02ld", gWorld.mGameSpeed, theHours, theMinutes, theSeconds);
     else
-        sprintf(theString, "%03.2f %03d:%02d:%02d", gWorld.mGameSpeed, theHours, theMinutes, theSeconds);
+        sprintf(theString, "%03.2f %03ld:%02ld:%02ld", gWorld.mGameSpeed, theHours, theMinutes, theSeconds);
     return theString;
 }
 

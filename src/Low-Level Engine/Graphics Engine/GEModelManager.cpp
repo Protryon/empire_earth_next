@@ -60,7 +60,7 @@ GEModel* GEModelManager::CreateModel(unsigned long inPolygonCount, unsigned long
     UString theName;
     GEModel* theModel;
     this->mCriticalSection->Enter();
-    sprintf(theName, "GEModelManager::CreateModel(%s_%d)", (const char*)inName, sModelNumber++);
+    sprintf(theName, "GEModelManager::CreateModel(%s_%ld)", (const char*)inName, sModelNumber++);
     theModel = new GEModel(inPolygonCount, inVertexCount, inMaterialCount, inTagPointCount, inFrameCount, inSubModelCount, theName, inFlags, this);
     this->mModels[theName] = theModel;
     this->mCriticalSection->Leave();
@@ -90,7 +90,7 @@ void GEModelManager::DumpAllLoadedMedia(FSFileSpec& inFile)
     this->mCriticalSection->Enter();
     fprintf(inFile, "\n\n*********Model Manager - Current Loaded Files In Memory*********\n\n");
     for (theIter = this->mModels.begin(); theIter != this->mModels.end(); theIter++)
-        fprintf(inFile, "The %s model file is loaded in memory with a reference count of %d.\n",
+        fprintf(inFile, "The %s model file is loaded in memory with a reference count of %ld.\n",
                 (const char*)theIter->first, theIter->second->mReferenceCount);
     this->mCriticalSection->Leave();
 }

@@ -308,7 +308,7 @@ void EEUIFMGUnitHack::LoadUnitData()
     unsigned long theSelection;
 
     this->FnE123D();
-    if (static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->GetCurrentSelection(theSelection), theSelection != -1)
+    if (static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->GetCurrentSelection(theSelection), !UIsNone32(theSelection))
         gCommunications->ProcessLocalUserInput(new EEMLoadUnitData(this->mClassIDs[theSelection], true), kSlotNone);
 }
 
@@ -963,7 +963,7 @@ void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
             }
         }
         EELoadSound("Sounds\\" + UString((const char*)inInformation->mSound), 0x31, theSampleID, theLength, 1);
-        if (theLength != -1)
+        if (!UIsNone32(theLength))
             theText->ScrollText(gSoundManager->GetTotalPlayTimeInMilli(theSampleID) + 300, inInformation->mTime);
         else
             theText->ScrollText(inInformation->mTime, 0);
@@ -1643,7 +1643,7 @@ void EEUIFMainGame::RefreshStatus()
             theLabel->SetText(theValue);
     }
     UITextLabel* thePopulationLabel = static_cast<UITextLabel*>(this->GetControl(kMainGamePopulation));
-    sprintf(thePopulation, "%d/%d", thePlayer->GetTotalPopulation(false, false), thePlayer->GetPopulationLimit(false));
+    sprintf(thePopulation, "%ld/%ld", thePlayer->GetTotalPopulation(false, false), thePlayer->GetPopulationLimit(false));
     if (thePopulationLabel->GetText(0) != thePopulation)
         thePopulationLabel->SetText(thePopulation);
     if (gWorld.mVictoryEnabled == true) {
@@ -1690,7 +1690,7 @@ void EEUIFMainGame::RefreshStatus()
             gResource->GetString(IDS_FPS, theFormat);
             float theFPS = gRasterizer->GetFramesPerSecond(this->GetManager()->GetScreen());
             unsigned long theRounded = (unsigned long)UMCeil(theFPS);
-            sprintf(theText, "%s: %d", (const char*)theFormat, theRounded);
+            sprintf(theText, "%s: %ld", (const char*)theFormat, theRounded);
             theTimeLabel->SetText(theText);
             break;
         }

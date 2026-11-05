@@ -3,6 +3,8 @@
 // (0x52a3a0; Empire Earth.cpp's init chain constructs it; provisional name). Only what the decompiled units use.
 #ifndef EE_EECIVILIZATIONMANAGER_H
 #define EE_EECIVILIZATIONMANAGER_H
+
+#include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 class FSFile;
 
 class EECBUIListBox;
@@ -21,24 +23,24 @@ struct EECivilizationEntry {
     // the original does; provisional name)
     const char* GetFileName() const { return this->mFileName; }
 
-    long mUnusedDatabaseID;                 // +0x00
-    long mIndex;                            // +0x04
+    int32_t mUnusedDatabaseID;              // +0x00
+    int32_t mIndex;                         // +0x04
     char mFileName[100];                   // +0x08 the civilization's file (EEUIEPDCS: the selected entry's file)
-    long mChecksum;                        // +0x6c actual281bc5 filename/checksum record
-    long mNameID;                           // +0x70 string id of the name (gResource->GetString)
-    long mEraNameID;                        // +0x74
+    int32_t mChecksum;                     // +0x6c actual281bc5 filename/checksum record
+    int32_t mNameID;                        // +0x70 string id of the name (gResource->GetString)
+    int32_t mEraNameID;                     // +0x74
 };
 static_assert(sizeof(EECivilizationEntry) == 120, "on-disk record: 120 bytes on every target");
 
 // Actual serialized600-byte category row,35 records at manager+4. Names provisional.
 struct EECivilizationUpgradeValue { float mValue; float mBonus; };
 struct EECivilizationCategoryEntry {
-    long mDatabaseID;                      // +00, loader preserves/increments
-    long mIndex;                           // +04, loader preserves/increments
+    int32_t mDatabaseID;                   // +00, loader preserves/increments
+    int32_t mIndex;                        // +04, loader preserves/increments
     char mLabel[100];                       // +0x008 the category name (the game never reads it; the text's label)
-    long mNameID;                          // +6c, actual name reader281c92
-    long mCost;                            // +70, actual long281873
-    long mUnitSet;                         // +74, actual loader writes102
+    int32_t mNameID;                       // +6c, actual name reader281c92
+    int32_t mCost;                         // +70, actual long281873
+    int32_t mUnitSet;                      // +74, actual loader writes102
     EECivilizationUpgradeValue mLevels[60];// +78, actual1..<61 float-pair enumeration
 };
 static_assert(sizeof(EECivilizationCategoryEntry) == 600, "on-disk record: 600 bytes on every target");

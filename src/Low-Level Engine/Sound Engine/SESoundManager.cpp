@@ -201,7 +201,7 @@ SESoundManager::~SESoundManager()
 void SESoundManager::AddInstanceToPausedQueue(SESMInstanceNode* inNode)
 {
     this->mMixer->StopChannel(inNode->mSample->GetMixerChannel());
-    if (inNode->mChannel != -1) {
+    if (!UIsNone32(inNode->mChannel)) {
         if (this->mChannels[inNode->mChannel])
             this->mChannels[inNode->mChannel]->Dereference();
         this->mChannels[inNode->mChannel] = NULL;
@@ -224,7 +224,7 @@ unsigned long SESoundManager::AddNewSampleToPausedQueue(unsigned long inSampleID
         SESMInstanceNode* theNode = (*theInstances)[0];
         for (unsigned long i = 0; i < theMaxInstances; i++) {
             theNode = (*theInstances)[i];
-            if (theNode->mChannel != -1)
+            if (!UIsNone32(theNode->mChannel))
                 continue;
             theNode->mSample->SetIsLooping(true);
             theNode->mInstanceID = this->mNextInstanceID++;
@@ -239,7 +239,7 @@ unsigned long SESoundManager::AddNewSampleToPausedQueue(unsigned long inSampleID
             this->SetPitch2(theNode, inPitch);
             break;
         }
-        if (theInstanceID == -1) {
+        if (UIsNone32(theInstanceID)) {
             SESMInstanceNode* theNewNode = SESoundManager::GetNewSoundInstance();
             theNewNode->mCategory = theNode->mCategory;
             theNewNode->mInstanceID = this->mNextInstanceID++;
@@ -316,7 +316,7 @@ void SESoundManager::DestroySoundInstance(SESMInstanceNode* inNode)
 // Stops the instance on the channel, rewinds its sample and frees the channel
 void SESoundManager::DumpChannel(unsigned long inChannel)
 {
-    if (inChannel == -1)
+    if (UIsNone32(inChannel))
         return;
     SESMInstanceNode* theNode = this->mChannels[inChannel];
     if (!theNode)
@@ -350,7 +350,7 @@ unsigned long SESoundManager::DumpLowerPrioritySample(unsigned long inSampleID, 
             continue;
         if (this->mCategories[theNode->mCategory]->mPriority > thePriority) {
             if (theNode->mSample->GetIsLooping()) {
-                if (theLower.mChannel == -1) {
+                if (UIsNone32(theLower.mChannel)) {
                     theLower.mChannel = i;
                     theLower.mIsLooping = true;
                     theLower.mTimeLeft = FLT_MAX;
@@ -365,7 +365,7 @@ unsigned long SESoundManager::DumpLowerPrioritySample(unsigned long inSampleID, 
             }
         } else if (this->mCategories[theNode->mCategory]->mPriority == thePriority) {
             if (theNode->mSample->GetIsLooping()) {
-                if (theEqual.mChannel == -1) {
+                if (UIsNone32(theEqual.mChannel)) {
                     theEqual.mChannel = i;
                     theEqual.mIsLooping = true;
                     theEqual.mTimeLeft = FLT_MAX;
@@ -380,13 +380,13 @@ unsigned long SESoundManager::DumpLowerPrioritySample(unsigned long inSampleID, 
             }
         }
     }
-    if (theLower.mChannel != -1) {
+    if (!UIsNone32(theLower.mChannel)) {
         if (theLower.mIsLooping == true)
             this->AddInstanceToPausedQueue(this->mChannels[theLower.mChannel]);
         else
             this->DumpChannel(theLower.mChannel);
         theChannel = theLower.mChannel;
-    } else if (theEqual.mChannel != -1) {
+    } else if (!UIsNone32(theEqual.mChannel)) {
         if (theEqual.mIsLooping == true) {
             this->AddInstanceToPausedQueue(this->mChannels[theEqual.mChannel]);
             theChannel = theEqual.mChannel;
@@ -469,7 +469,7 @@ bool SESoundManager::GetIsLooping(unsigned long inInstanceID)
 {
     bool theLooping = false;
     unsigned long theIndex;
-    if (inInstanceID != -1) {
+    if (!UIsNone32(inInstanceID)) {
         this->mLock->Enter();
         SESMInstanceNode* theNode = this->GetPlayingInstance(inInstanceID, &theIndex);
         if (theNode || (theNode = this->GetPausedInstance(inInstanceID, NULL)) != NULL) {
@@ -508,7 +508,7 @@ bool SESoundManager::GetIsPlaying(unsigned long inInstanceID)
     this->mLock->Enter();
     SESMInstanceNode* theNode = this->GetPlayingInstance(inInstanceID, &theIndex);
     if ((theNode || (theNode = this->GetPausedInstance(inInstanceID, NULL)) != NULL) && theNode->mSample &&
-        theNode->mSample->GetMixerChannel() != 0 && theNode->mSample->GetMixerChannel() != -1)
+        theNode->mSample->GetMixerChannel() != 0 && !UIsNone32(theNode->mSample->GetMixerChannel()))
         thePlaying = true;
     this->mLock->Leave();
     return thePlaying;
@@ -522,7 +522,7 @@ bool SESoundManager::GetIsPlaying(SESMInstanceNode* inNode)
     if (inNode) {
         this->mLock->Enter();
         if (inNode->mSample) {
-            if (inNode->mSample->GetMixerChannel() != 0 && inNode->mSample->GetMixerChannel() != -1)
+            if (inNode->mSample->GetMixerChannel() != 0 && !UIsNone32(inNode->mSample->GetMixerChannel()))
                 thePlaying = true;
             else
                 thePlaying = false;
@@ -538,7 +538,7 @@ unsigned long SESoundManager::GetMaxCategoryInstances(unsigned long inSampleID)
 {
     unsigned long theCount = 0;
     unsigned long theCategory;
-    if (this->mSounds[inSampleID].mInstances && (theCategory = this->GetCategory(inSampleID)) != -1)
+    if (this->mSounds[inSampleID].mInstances && !UIsNone32((theCategory = this->GetCategory(inSampleID))))
         theCount = this->mCategories[theCategory]->mMaxInstances;
     return theCount;
 }
@@ -570,7 +570,7 @@ unsigned long SESoundManager::GetNumberOfCategoryInstances(unsigned long inSampl
 {
     unsigned long theCount = 0;
     unsigned long theCategory;
-    if (this->mSounds[inSampleID].mInstances && (theCategory = this->GetCategory(inSampleID)) != -1)
+    if (this->mSounds[inSampleID].mInstances && !UIsNone32((theCategory = this->GetCategory(inSampleID))))
         theCount = this->mCategories[theCategory]->mNumberOfInstances;
     return theCount;
 }
@@ -584,7 +584,7 @@ unsigned long SESoundManager::GetNumberOfInstances(unsigned long inSampleID)
     if (theInstances) {
         unsigned long i;
         for (i = 0; i < theInstances->size(); i++)
-            if ((*theInstances)[i]->mChannel != -1)
+            if (!UIsNone32((*theInstances)[i]->mChannel))
                 theCount++;
         for (i = 0; i < this->mPaused.size(); i++)
             if (this->mPaused[i]->mSampleID == inSampleID && this->mPaused[i]->mSample == NULL)
@@ -672,7 +672,7 @@ float SESoundManager::GetPitch(SESMInstanceNode* inNode)
 SESMInstanceNode* SESoundManager::GetPlayingInstance(unsigned long inInstanceID, unsigned long* outChannel)
 {
     SESMInstanceNode* theResult = NULL;
-    if (inInstanceID != -1) {
+    if (!UIsNone32(inInstanceID)) {
         for (unsigned long i = 0; i < this->mAvailableChannels; i++) {
             SESMInstanceNode* theNode = this->mChannels[i];
             if (!theNode || theNode->mInstanceID != inInstanceID)
@@ -691,7 +691,7 @@ SESMInstanceNode* SESoundManager::GetPausedInstance(unsigned long inInstanceID, 
 {
     SESMInstanceNode* theNode = NULL;
     unsigned long theCount;
-    if (inInstanceID != -1) {
+    if (!UIsNone32(inInstanceID)) {
         if (outIndex == NULL) {
             std::map<unsigned long, SESMInstanceNode*>::iterator theEntry = this->mPausedInstances.find(inInstanceID);
             if (theEntry != this->mPausedInstances.end())
@@ -775,7 +775,7 @@ SESMInstanceNode* SESoundManager::GetAndReferenceSoundInstance(unsigned long inI
 {
     SESMInstanceNode* theNode = NULL;
     unsigned long theIndex;
-    if (inInstanceID != -1) {
+    if (!UIsNone32(inInstanceID)) {
         this->mLock->Enter();
         theNode = this->GetPlayingInstance(inInstanceID, &theIndex);
         if (theNode || (theNode = this->GetPausedInstance(inInstanceID, NULL)) != NULL)
@@ -991,11 +991,11 @@ SESMInstanceNode* SESoundManager::PlayAndReturnReferencedNode(unsigned long inSa
     if (this->GetNumberOfInstances(inSampleID) < this->GetMaxInstances(inSampleID) &&
         this->GetNumberOfCategoryInstances(inSampleID) < this->GetMaxCategoryInstances(inSampleID)) {
         theChannel = this->GetFreeChannel();
-        if (theChannel == -1)
+        if (UIsNone32(theChannel))
             theChannel = this->DumpNonPlayingChannels();
-        if (theChannel == -1)
+        if (UIsNone32(theChannel))
             theChannel = this->DumpLowerPrioritySample(inSampleID, inLooping);
-        if (theChannel == -1) {
+        if (UIsNone32(theChannel)) {
             if (inLooping == true)
                 this->AddNewSampleToPausedQueue(inSampleID, inVolume, inPan, inPitch, theNode);
         } else
@@ -1007,7 +1007,7 @@ SESMInstanceNode* SESoundManager::PlayAndReturnReferencedNode(unsigned long inSa
             theChannel = this->ReplaceNonLoopingInstance(inSampleID);
         else
             theChannel = this->ReplaceCategoryInstance(inSampleID);
-        if (theChannel != -1)
+        if (!UIsNone32(theChannel))
             this->ReallyPlayIt(theChannel, inSampleID, inVolume, inPan, inPitch, inLooping, theNode);
     }
     this->mLock->Leave();
@@ -1027,7 +1027,7 @@ unsigned long SESoundManager::ReallyPlayIt(unsigned long inChannel, unsigned lon
     if (theInstances) {
         for (unsigned long i = 0; i < theMaxInstances; i++) {
             SESMInstanceNode* theNode = (*theInstances)[i];
-            if (theNode->mChannel != -1)
+            if (!UIsNone32(theNode->mChannel))
                 continue;
             this->mMixer->StopChannel(inChannel);
             this->mMixer->StopChannel(theNode->mSample->GetMixerChannel());
@@ -1104,7 +1104,7 @@ unsigned long SESoundManager::ReplaceCategoryInstance(unsigned long inSampleID)
     if (!theCandidate)
         return theFreeChannel;
     unsigned long theChannel = theCandidate->mChannel;
-    if (theChannel != -1 && theChannel != -2) {
+    if (!UIsNone32(theChannel) && theChannel != -2) {
         if (theCandidate->mSampleID == inSampleID) {
             if (theCandidate->mSample->GetIsLooping())
                 return theFreeChannel;
@@ -1115,7 +1115,7 @@ unsigned long SESoundManager::ReplaceCategoryInstance(unsigned long inSampleID)
             this->DumpChannel(theChannel);
     } else
         theChannel = -1;
-    if (theChannel != -1)
+    if (!UIsNone32(theChannel))
         return theChannel;
     return theFreeChannel;
 }
@@ -1134,7 +1134,7 @@ unsigned long SESoundManager::ReplaceNonLoopingInstance(unsigned long inSampleID
             theVolume = this->GetVolume2(theNode);
         }
     }
-    if (theChannel != -1)
+    if (!UIsNone32(theChannel))
         this->DumpChannel(theChannel);
     return theChannel;
 }
@@ -1195,7 +1195,7 @@ unsigned long SESoundManager::Scavenger(void* inThisObject)
                 theNode->mChannel = -2;
                 theNode->mSample->SetMixerChannel(-1);
                 theNode->mSample->SetVolume(0.0f);
-                if (theNode->mInstanceIndex != -1 && theManager->mSounds[theNode->mSampleID].mInstances) {
+                if (!UIsNone32(theNode->mInstanceIndex) && theManager->mSounds[theNode->mSampleID].mInstances) {
                     (*theManager->mSounds[theNode->mSampleID].mInstances)[theNode->mInstanceIndex] =
                         SESoundManager::GetNewSoundInstance();
                     (*theManager->mSounds[theNode->mSampleID].mInstances)[theNode->mInstanceIndex]->mSample =
@@ -1244,7 +1244,7 @@ unsigned long SESoundManager::Scavenger(void* inThisObject)
                             if (theInstances) {
                                 for (unsigned long k = 0; k < theMaxInstances; k++) {
                                     SESMInstanceNode* theOther = (*theInstances)[k];
-                                    if (theOther->mChannel != -1)
+                                    if (!UIsNone32(theOther->mChannel))
                                         continue;
                                     theNode->mSample = theOther->mSample;
                                     theOther->mSample = NULL;
@@ -1597,7 +1597,7 @@ long SESoundManager::Stop(unsigned long inInstanceID, bool inLetFinish)
 {
     unsigned long theIndex = 0;
     SESMInstanceNode* theNode;
-    if (inInstanceID == -1)
+    if (UIsNone32(inInstanceID))
         return kErrorOK;
     this->mLock->Enter();
     theNode = this->GetPlayingInstance(inInstanceID, &theIndex);
@@ -1649,7 +1649,7 @@ long SESoundManager::Stop(SESMInstanceNode* inNode, bool inImmediately)
     this->mLock->Enter();
     unsigned long theInstanceID = inNode->mInstanceID;
     this->mLock->Leave();
-    if (theInstanceID != -1)
+    if (!UIsNone32(theInstanceID))
         this->Stop(theInstanceID, inImmediately);
     return kErrorOK;
 }

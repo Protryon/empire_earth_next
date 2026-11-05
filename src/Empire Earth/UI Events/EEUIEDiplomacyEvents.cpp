@@ -503,7 +503,7 @@ long EEUIEDSTributeLClick::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     long theOld = atoi(theText);
     long theLimit = GetTributeLimit(inForm, theButton->GetIndex()) + theOld;
     theAmount = min(theLimit, min(99999, theOld + theAmount));
-    sprintf(theString, "%d", theAmount);
+    sprintf(theString, "%ld", theAmount);
     theButton->SetText(theString, theGEText->GetFont());
     if (theOld == theAmount)
         return kErrorOK;
@@ -527,7 +527,7 @@ long EEUIEDSTributeRClick::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     theText = theGEText->GetText();
     long theOld = atoi(theText);
     theAmount = theOld - theAmount < 0 ? 0 : theOld - theAmount;
-    sprintf(theString, "%d", theAmount);
+    sprintf(theString, "%ld", theAmount);
     theButton->SetText(theString, theGEText->GetFont());
     if (theOld != theAmount) {
         float theFee = gWorld.GetCurrentPlayer()->mTributeFee;

@@ -82,7 +82,7 @@ void EEUIFMGGStatistics::Refresh()
     if (!thePlayer)
         return;
     gResource->GetString(IDS_GAME_CONVERSIONS, theLabel);
-    sprintf(theText, "%-18.18s  %4.4d/%-4.4d", (const char*)theLabel,
+    sprintf(theText, "%-18.18s  %4.4ld/%-4.4ld", (const char*)theLabel,
             thePlayer->mSavedGroups.GetLastValue(5), gWorldTable.GetLongValue(21));
     if (static_cast<UITextLabel*>(this->mOwner->GetControl(kMainGameConversions))->GetText(0) != theText)
         (static_cast<UITextLabel*>(this->mOwner->GetControl(kMainGameConversions)))->SetText(theText);
@@ -100,7 +100,7 @@ void EEUIFMGGStatistics::Select()
     UWideString theLabel;
     UWideString theEpoch;
     gResource->GetString(IDS_WONDERS_TO_WIN, theLabel);
-    sprintf(theText, "%-18.18s  %4.4d", (const char*)theLabel, gWorld.mNumberOfWondersToWin);
+    sprintf(theText, "%-18.18s  %4.4ld", (const char*)theLabel, gWorld.mNumberOfWondersToWin);
     static_cast<UITextLabel*>(this->mOwner->GetControl(kMainGameWondersToWin))->SetText(theText);
     gResource->GetString(IDS_WONDERS_AVAILABLE_IN, theLabel);
     gResource->GetString(gWorld.GetCurrentPlayer()->GetTechTree()->GetShownEpoch() + IDS_EPOCH_NAME_FIRST, theEpoch);

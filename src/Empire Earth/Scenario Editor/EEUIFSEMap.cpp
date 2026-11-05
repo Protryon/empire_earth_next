@@ -269,7 +269,7 @@ EEUIFSEMap::EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
 
     theStrings.resize(25);
     for (i = 0; i < 25; i++) {
-        sprintf(theBuffer, "%d", sSEMapSizes[i]);
+        sprintf(theBuffer, "%ld", sSEMapSizes[i]);
         theStrings[i] = theBuffer;
     }
 

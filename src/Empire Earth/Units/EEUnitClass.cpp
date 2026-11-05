@@ -4644,7 +4644,7 @@ extern bool& gOrthographicView;
 void EEUnitClass::RefreshSound(EEComplexUnit* inUnit)
 {
     SESMInstanceNode* theInstance = inUnit->mSound;
-    if (theInstance == NULL || gSoundManager->GetInstanceID(theInstance) == 0xffffffff)
+    if (theInstance == NULL || UIsNone32(gSoundManager->GetInstanceID(theInstance)))
         return;
     unsigned long theTick = gPhysics->mNumTicksDone;
     if (inUnit->mUnitID % 3 != theTick % 3)

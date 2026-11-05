@@ -115,17 +115,28 @@ LLE_API bool UMQuadraticEquation(float inA, float inB, float inC, float& outRoot
 inline float UMSin(float inAngle) { return UMCos(1.5707964f - inAngle); }
 // Saved games keep an object's 32-bit id in the pointer field the object will fill: the loader reads the id into
 // the field and a fix-up pass (RepairPointers, Restore, ...) looks the object up. The id held by such a field (its
-// low 32 bits: the loader writes 4 bytes, whatever the pointer size).
-template <class T> inline unsigned long USavedID(T* inField)
+// low 32 bits: the loader writes 4 bytes, whatever the pointer size). uint32_t on every data model, so the "none"
+// id compares equal to 0xffffffff and to -1, and (int32_t)USavedID(p) is -1 for it (a (long) cast would not be on
+// LP64, where long is 64-bit).
+template <class T> inline uint32_t USavedID(T* inField)
 {
-    return (unsigned long)reinterpret_cast<uintptr_t>(inField);
+    return static_cast<uint32_t>(reinterpret_cast<uintptr_t>(inField));
 }
 // The pointer field's value for a saved id read as unsigned long, sign-extended: the id 0xffffffff ("none") is
 // (T*)-1 on both targets, as on x86, so the fix-up passes that skip a field equal to (T*)-1 still do on x64 (a
-// zero-extended 0x00000000ffffffff would not compare equal). USavedID gives the id back.
+// zero-extended 0x00000000ffffffff would not compare equal). USavedID gives the id back. The id is taken as its low
+// 32 bits, signed (an unsigned long holding 0xffffffff is -1 here on LP64 too).
 template <class T> inline T* USavedPointer(unsigned long inID)
 {
-    return reinterpret_cast<T*>(static_cast<intptr_t>(static_cast<long>(inID)));
+    return reinterpret_cast<T*>(static_cast<intptr_t>(static_cast<int32_t>(inID)));
+}
+// The "none" id, index, channel or sample of an unsigned long (or long): all 32 bits set (written -1, (unsigned
+// long)-1 or 0xffffffff). On LP64 a value set to -1 in memory has 64 bits set while one read from a file or message
+// (4 bytes) has 32, so the test looks at the low 32 bits; both are "none" on every data model (on Windows this is
+// `inValue == 0xffffffff`).
+inline bool UIsNone32(unsigned long inValue)
+{
+    return static_cast<uint32_t>(inValue) == 0xffffffffu;
 }
 // Provisional name. Rounds in the current rounding mode (to nearest), as the VC6 build's fld/fistp did.
 inline long UMFloatToLong(float inValue)

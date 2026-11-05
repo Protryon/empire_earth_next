@@ -155,7 +155,7 @@ public:
     virtual bool IsMigrating() = 0;                                             // +0x2c
     virtual void BeforeRemovingPlayers() = 0;                                   // +0x30
     virtual void HandleReconnectWaitTimedOut() = 0;                             // +0x34
-    virtual void HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentDone, unsigned long& inXferID,
+    virtual void HandleXferStatus(unsigned char& inSlot, unsigned char& inPercentDone, uint32_t& inXferID,
                               unsigned char& inStatusID) = 0;                    // +0x38 (xfer status)
     virtual void StartThreads();                                                // +0x3c
     virtual void StopThreads();                                                 // +0x40

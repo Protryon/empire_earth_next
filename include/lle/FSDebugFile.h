@@ -12,6 +12,8 @@
 // copy ctor 0x4299 and operator= 0x42d8, vector deleting dtor 0x4311.
 class LLE_API FSDebugFile : public FSBasicFile {
 public:
+    using FSFile::Read;    // the long/unsigned long adapters (lle/FSFile.h)
+    using FSFile::Write;
     FSDebugFile(FSFile* inDelegate);                                            // 0x80b9
     virtual ~FSDebugFile();                                                     // 0x80e7
 
@@ -23,8 +25,8 @@ public:
     virtual void PushIndentHint();                                              // +0x38 0x82df
     virtual long Read(unsigned char* outData, unsigned long inLength, unsigned long& outRead);   // +0x64 0x84ef
     virtual long Read(char* outData, unsigned long inLength, unsigned long& outRead);            // +0x60 0x8506
-    virtual long Read(unsigned long& outValue);                                 // +0x5c 0x851d
-    virtual long Read(long& outValue);                                          // +0x58 0x852c
+    virtual long Read(uint32_t& outValue);                                      // +0x5c 0x851d
+    virtual long Read(int32_t& outValue);                                       // +0x58 0x852c
     virtual long Read(unsigned short& outValue);                                // +0x54 0x853b
     virtual long Read(short& outValue);                                         // +0x50 0x854a
     virtual long Read(unsigned char& outValue);                                 // +0x4c 0x8559
@@ -34,8 +36,8 @@ public:
     virtual long Read(bool& outValue);                                          // +0x3c 0x8595
     virtual long Write(const unsigned char* inData, unsigned long inLength, unsigned long& outWritten);  // +0x9c 0x8978
     virtual long Write(const char* inData, unsigned long inLength, unsigned long& outWritten);           // +0x98 0x8992
-    virtual long Write(const unsigned long& inValue);                           // +0x94 0x89ac
-    virtual long Write(const long& inValue);                                    // +0x90 0x89be
+    virtual long Write(const uint32_t& inValue);                                // +0x94 0x89ac
+    virtual long Write(const int32_t& inValue);                                 // +0x90 0x89be
     virtual long Write(const unsigned short& inValue);                          // +0x8c 0x89d0
     virtual long Write(const short& inValue);                                   // +0x88 0x89e2
     virtual long Write(const unsigned char& inValue);                           // +0x84 0x89f4

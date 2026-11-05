@@ -236,7 +236,7 @@ void EECPCombatManager::AddAttackTask(unsigned long inUnitID, unsigned long inAr
     EEAIArea* theArea = gContinentManager.GetArea(inAreaSerial);
     EECPAGTask theTask;
     EECPILocation theLocation;
-    if (inUnitID != 0 && inUnitID != -1) {
+    if (inUnitID != 0 && !UIsNone32(inUnitID)) {
         // the unit is gone: there is nothing to attack (its complex unit used to be read through NULL)
         if (theUnit == NULL)
             return;
@@ -277,7 +277,7 @@ void EECPCombatManager::AddDefendTask(unsigned long inUnitID, unsigned long inAr
     EEAIArea* theArea = gContinentManager.GetArea(inAreaSerial);
     EECPAGTask theTask;
     EECPILocation theLocation;
-    if (inUnitID != 0 && inUnitID != -1) {
+    if (inUnitID != 0 && !UIsNone32(inUnitID)) {
         if (theUnit) {
             theTask.mPlayer = gWorld.mPlayers[theUnit->mPlayer->mPlayerID];
             if (theUnit->mPlayer == this->mPlayer)
@@ -811,7 +811,7 @@ void EECPCombatManager::ForgetTarget(unsigned long inSerial)
 // Deactivates every sub group task aimed at the given unit
 void EECPCombatManager::ForgetTargetUnit(unsigned long inUnitID)
 {
-    if (inUnitID != -1) {
+    if (!UIsNone32(inUnitID)) {
         for (long i = this->mAttackCommander->mGroups.size() - 1; i >= 0; i--) {
             EECPAttackGroup* theGroup = this->mAttackCommander->GetGroup(i);
             if (theGroup) {
@@ -860,7 +860,7 @@ bool EECPCombatManager::IsValidTarget(unsigned long inSerial, unsigned long inUn
     EEAIArea* theArea = gContinentManager.GetArea(inSerial);
     EETown* theTown = dynamic_cast<EETown*>(theArea);
     EEComplexUnit* theUnit;
-    theUnit = inUnitID != -1 ? dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(inUnitID)) : NULL;
+    theUnit = !UIsNone32(inUnitID) ? dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(inUnitID)) : NULL;
     bool theResult = false;
     if (theArea) {
         theResult = true;
@@ -1353,7 +1353,7 @@ bool EECPCombatManager::DropUnitTask(unsigned long inUnitID, bool inRelease)
 {
     EECPAGTask theTask;
     bool theFound = false;
-    if (inUnitID != -1) {
+    if (!UIsNone32(inUnitID)) {
         for (long i = this->mDefendTasks.size() - 1; i >= 0; i--) {
             if (theFound)
                 break;

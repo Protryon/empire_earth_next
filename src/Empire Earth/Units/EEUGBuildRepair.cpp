@@ -352,14 +352,14 @@ void EEUGBuildRepair::DumpOutOfSynch(FILE* inFile)
             this->mTargetLocation.GetX(), this->mTargetLocation.GetY(), this->mTargetLocation.GetZ());
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Center (%6.6f, %6.6f, %6.6f)\n",
             this->mTargetCenter.GetX(), this->mTargetCenter.GetY(), this->mTargetCenter.GetZ());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Player Number %d\n", this->mPlayer->mPlayerID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Unit ID #%08x\n", this->mTarget ? this->mTarget->mUnitID : -1);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Class %d\n", this->mTargetClass->mUnitType);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Tech Tree Node ID %d\n", this->mTargetNode->mData->mID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Tech Tree ID %d\n", this->mTechTreeID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Type %d\n", this->mTargetType);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Scale %d\n", this->mTargetScale);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Amount added to First Tick %d\n", this->mFirstTickAmount);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Player Number %ld\n", this->mPlayer->mPlayerID);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Unit ID #%08lx\n", this->mTarget ? this->mTarget->mUnitID : -1);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Class %ld\n", this->mTargetClass->mUnitType);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Tech Tree Node ID %ld\n", this->mTargetNode->mData->mID);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Tech Tree ID %ld\n", this->mTechTreeID);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Type %ld\n", this->mTargetType);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Target Scale %ld\n", this->mTargetScale);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Amount added to First Tick %ld\n", this->mFirstTickAmount);
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair Construction Worker Count Incremented Flag Value %d\n",
             this->mWorkerCountIncremented == true);
     fprintf(inFile, "OUT OF SYNCH DUMP:  EEUGBuildRepair First Tick Adjustment Made Flag Value %d\n",
@@ -486,7 +486,7 @@ bool EEUGBuildRepair::GatherNearBuilding(EEComplexUnit* inUnit, EEComplexUnit* i
 void EEUGBuildRepair::GetDebugLine(UWideString& ioText)
 {
     UWideString theText;
-    sprintf(theText, "build at %d,%d, obj %d (%s):", UMFloor(this->mTargetLocation.GetX()), UMFloor(this->mTargetLocation.GetY()),
+    sprintf(theText, "build at %ld,%ld, obj %ld (%s):", UMFloor(this->mTargetLocation.GetX()), UMFloor(this->mTargetLocation.GetY()),
             this->mTargetType, this->mWorkerCountIncremented ? "true" : "false");
     ioText += theText;
 }
@@ -496,7 +496,7 @@ void EEUGBuildRepair::GetDebugLine(UWideString& ioText)
 void EEUGBuildRepair::GetDebugText(UWideString& ioText)
 {
     UWideString theText;
-    sprintf(theText, "BuildRepair: at %d,%d\nObject:%s\nConstructionWorkerCountIncremented:%s\n",
+    sprintf(theText, "BuildRepair: at %ld,%ld\nObject:%s\nConstructionWorkerCountIncremented:%s\n",
             UMFloor(this->mTargetLocation.GetX()), UMFloor(this->mTargetLocation.GetY()),
             this->mTarget ? (const char*)this->mTarget->mUnitClass->mName : "None", this->mWorkerCountIncremented ? "true" : "false");
     ioText += theText;

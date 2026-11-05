@@ -454,7 +454,7 @@ void EEBuildWallGhosts(std::vector<EETileCoordinate>& inTiles, std::vector<long>
 void EEGhostUnit::AddChecksum(ESChecksum& ioChecksum)
 {
     UString theText;
-    sprintf(theText, "The Ghost Unit Player Number was: %d", this->mPlayer->mPlayerID);
+    sprintf(theText, "The Ghost Unit Player Number was: %ld", this->mPlayer->mPlayerID);
     ioChecksum.AddChecksum(theText, 0);
     sprintf(theText, "The Object Type was %s", (const char*)this->mUnitClass->mName);
     ioChecksum.AddChecksum(theText, 1);

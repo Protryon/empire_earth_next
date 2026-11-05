@@ -133,7 +133,7 @@ long EEPCalamityHelper::RepairPointers(unsigned long inFirst, unsigned long inSe
             EEUnit* theCaster = gWorld.GetUnit(theCasterID);
             theCalamity->SetCasterUnit(theCaster);
             if (theCaster == NULL) {
-                if (theCasterID == -1)
+                if (UIsNone32(theCasterID))
                     theCalamity->mClass->LoadMedia(gWorld.mPlayers[0], false);
                 else
                     theError = 9;

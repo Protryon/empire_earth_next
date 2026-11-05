@@ -27,8 +27,8 @@ URandomIntegers gMusicRandom;                     // 0x4e8460
 
 // One record of db\dbmusic.dat (0xc4 bytes, read whole; also what ReadNewMusic fills). Layout inferred.
 struct EEMusicRecord {
-    long mUnusedDatabaseID;                 // +0x000 the database row id (not read)
-    long mUnusedIndex;                      // +0x004 the 0-based row index (not read)
+    int32_t mUnusedDatabaseID;              // +0x000 the database row id (not read)
+    int32_t mUnusedIndex;                   // +0x004 the 0-based row index (not read)
     char mLabel[100];                       // +0x008 the row name (the game never reads it; the text's label)
     char mFileName[0x34];                   // +0x6c (a plain name; the song object appends ".sgt")
     float mReverbGain;                      // +0xa0

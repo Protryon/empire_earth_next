@@ -121,7 +121,7 @@ void EELobbySound::Play()
 // FUNCTION: EXE 0x69cf1c
 void EELobbySound::Stop()
 {
-    if (gSoundManager != NULL && mInstanceID != -1)
+    if (gSoundManager != NULL && !UIsNone32(mInstanceID))
         gSoundManager->Stop(mInstanceID, false);
     mInstanceID = -1;
 }

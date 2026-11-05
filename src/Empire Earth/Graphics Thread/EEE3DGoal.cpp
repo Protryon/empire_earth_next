@@ -106,7 +106,7 @@ long EEE3DGoal::DrawPass3()
         theText.SetIsTransparent(true);
         theText.SetFgColor(GEColor(0.0f, 0.0f, 0.0f));
         theText.SetAlignment(kTextAlignCenter);
-        sprintf(theString, "%d:%.2d", theMinutes, theSeconds);
+        sprintf(theString, "%ld:%.2ld", theMinutes, theSeconds);
         theText.SetText(theString);
         thePosition = this->mLocation;
         thePosition.SetZ(thePosition.GetZ() + kGoalLabelHeight);

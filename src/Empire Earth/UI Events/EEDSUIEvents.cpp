@@ -140,7 +140,7 @@ static bool EEDSUIAdjustSound(UIEntity* inEntity, long inKind)
     UIControl* theControl = theForm->GetControlById(kDSUIValueLabels[inKind]);
     UITextLabel* theLabel = dynamic_cast<UITextLabel*>(theControl);
     if (theLabel != NULL) {
-        sprintf(theText, "%d", theValue);
+        sprintf(theText, "%ld", theValue);
         theLabel->SetText(theText);
     }
     theResult = true;

@@ -5,15 +5,17 @@
 #ifndef EE_EEUNITCLASSRECORD_H
 #define EE_EEUNITCLASSRECORD_H
 
+#include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
+
 struct EEUnitClassRecord {
     char mName[100];             // +0x000 the unit name (UString::Copy into mName)
-    long mUnusedRowID;           // +0x064
-    long mFamily;                // +0x068
-    long mUnusedUnitGroup;       // +0x06c
-    long mEpoch;                 // +0x070
-    long mUnitType;              // +0x074
-    long mHitPoints;             // +0x078
-    long mWaterKind;             // +0x07c
+    int32_t mUnusedRowID;        // +0x064
+    int32_t mFamily;             // +0x068
+    int32_t mUnusedUnitGroup;    // +0x06c
+    int32_t mEpoch;              // +0x070
+    int32_t mUnitType;           // +0x074
+    int32_t mHitPoints;          // +0x078
+    int32_t mWaterKind;          // +0x07c
     float mMinRange;              // +0x080
     float mRange;                // +0x084
     float mLineOfSight;          // +0x088
@@ -25,27 +27,27 @@ struct EEUnitClassRecord {
     float mMaxAngularVelocity;   // +0x0a0
     float mTurretMaxAngularVelocity;  // +0x0a4
     bool mCanFly;                // +0x0a8
-    long mFlightTime;            // +0x0ac
+    int32_t mFlightTime;         // +0x0ac
     float mFacingOffset;         // +0x0b0
     float mFiringArc;            // +0x0b4
     bool mFiresBroadside;        // +0x0b8
-    long mWeapon;                // +0x0bc
-    long mAttack;                // +0x0c0
-    long mShockArmor;            // +0x0c4
-    long mArrowArmor;            // +0x0c8
-    long mPierceArmor;           // +0x0cc
-    long mGunArmor;              // +0x0d0
-    long mLaserArmor;            // +0x0d4
-    long mMissileArmor;          // +0x0d8
-    long mProjectileType;        // +0x0dc
-    long mAmmoType;              // +0x0e0
+    int32_t mWeapon;             // +0x0bc
+    int32_t mAttack;             // +0x0c0
+    int32_t mShockArmor;         // +0x0c4
+    int32_t mArrowArmor;         // +0x0c8
+    int32_t mPierceArmor;        // +0x0cc
+    int32_t mGunArmor;           // +0x0d0
+    int32_t mLaserArmor;         // +0x0d4
+    int32_t mMissileArmor;       // +0x0d8
+    int32_t mProjectileType;     // +0x0dc
+    int32_t mAmmoType;           // +0x0e0
     bool mIsEnabled;             // +0x0e4
     float mScale;                // +0x0e8
     char mAIScriptName[52];      // +0x0ec a name (UString::Copy into mAIScriptName)
-    long mCategory;              // +0x120
-    long mUnused1;               // +0x124
-    long mButton;                // +0x128
-    long mGraphic;               // +0x12c
+    int32_t mCategory;           // +0x120
+    int32_t mUnused1;            // +0x124
+    int32_t mButton;             // +0x128
+    int32_t mGraphic;            // +0x12c
     float mWorkRate;             // +0x130
     float mIronGatherTime;       // +0x134
     float mFarmGatherTime;       // +0x138
@@ -54,31 +56,31 @@ struct EEUnitClassRecord {
     float mWoodGatherTime;       // +0x144
     float mHuntGatherTime;       // +0x148
     float mForageGatherTime;     // +0x14c
-    long mCreationSound;         // +0x150
-    long mAcknowledgeSound1;     // +0x154
-    long mAcknowledgeSound2;     // +0x158
-    long mSelectionSound1;       // +0x15c
-    long mSelectionSound2;       // +0x160
-    long mDeathSound;            // +0x164
-    long mRepairRate;            // +0x168
-    long mCommand0;              // +0x16c
-    long mCommand1;              // +0x170
-    long mCommand2;              // +0x174
-    long mCommand3;              // +0x178
-    long mCommand4;              // +0x17c
-    long mCommand5;              // +0x180
-    long mCommand6;              // +0x184
-    long mCommand7;              // +0x188
-    long mCommand8;              // +0x18c
-    long mUnused2;               // +0x190
-    long mTileSize;              // +0x194
-    long mResourceType;          // +0x198
+    int32_t mCreationSound;      // +0x150
+    int32_t mAcknowledgeSound1;  // +0x154
+    int32_t mAcknowledgeSound2;  // +0x158
+    int32_t mSelectionSound1;    // +0x15c
+    int32_t mSelectionSound2;    // +0x160
+    int32_t mDeathSound;         // +0x164
+    int32_t mRepairRate;         // +0x168
+    int32_t mCommand0;           // +0x16c
+    int32_t mCommand1;           // +0x170
+    int32_t mCommand2;           // +0x174
+    int32_t mCommand3;           // +0x178
+    int32_t mCommand4;           // +0x17c
+    int32_t mCommand5;           // +0x180
+    int32_t mCommand6;           // +0x184
+    int32_t mCommand7;           // +0x188
+    int32_t mCommand8;           // +0x18c
+    int32_t mUnused2;            // +0x190
+    int32_t mTileSize;           // +0x194
+    int32_t mResourceType;       // +0x198
     float mResourceAmount;       // +0x19c
     bool mFacesCamera;           // +0x1a0
-    long mUnused3;               // +0x1a4
+    int32_t mUnused3;            // +0x1a4
     float mRottingTime;          // +0x1a8
-    long mTransportSize;         // +0x1ac
-    long mTransportCapacity;     // +0x1b0
+    int32_t mTransportSize;      // +0x1ac
+    int32_t mTransportCapacity;  // +0x1b0
     bool mCanUpgradeAreaEffect;  // +0x1b4
     bool mCanUpgradeRepair;      // +0x1b5
     bool mCanUpgradeShockArmor;  // +0x1b6
@@ -88,21 +90,21 @@ struct EEUnitClassRecord {
     bool mCanUpgradeGunArmor;    // +0x1ba
     bool mCanUpgradeMissileArmor;  // +0x1bb
     bool mCanUpgradeRange;       // +0x1bc
-    long mLeadership;            // +0x1c0
-    long mUnused4;               // +0x1c4
+    int32_t mLeadership;         // +0x1c0
+    int32_t mUnused4;            // +0x1c4
     bool mPitchesWithTerrain;    // +0x1c8
     bool mRollsWithTerrain;      // +0x1c9
     float mMaxRoll;              // +0x1cc
-    long mUnused5;               // +0x1d0
+    int32_t mUnused5;            // +0x1d0
     float mCruiseAltitude;       // +0x1d4
-    long mNameStringID;          // +0x1d8
-    long mTargetSearchInterval;  // +0x1dc
-    long mHealingPoints;         // +0x1e0
-    long mRegeneration;          // +0x1e4
+    int32_t mNameStringID;       // +0x1d8
+    int32_t mTargetSearchInterval; // +0x1dc
+    int32_t mHealingPoints;      // +0x1e0
+    int32_t mRegeneration;       // +0x1e4
     bool mCanEnterLandTransports;  // +0x1e8
     bool mCanEnterAirTransports;  // +0x1e9
     bool mCanEnterSeaTransports;  // +0x1ea
-    long mUnused6;               // +0x1ec
+    int32_t mUnused6;            // +0x1ec
     bool mFiresWhileMoving;      // +0x1f0
     float mSelectionSize;        // +0x1f4 (-> EEUnitClass::mSelectionSize, a mov copy)
     float mShadowScale;          // +0x1f8 (EEUnitClass mL16C, a float)
@@ -113,20 +115,20 @@ struct EEUnitClassRecord {
     bool mUnusedGroundFlag;      // +0x209
     float mMissileDelayTime;     // +0x20c
     float mLaunchPitch;          // +0x210
-    long mAmmunition;            // +0x214
+    int32_t mAmmunition;         // +0x214
     bool mUsesAmmunition;        // +0x218
     bool mCanFireOverWalls;      // +0x219
     bool mIsAffectedByGravity;   // +0x21a
     bool mShootsHigh;            // +0x21b
-    long mUnusedReference;       // +0x21c
-    long mUnusedValue;           // +0x220
-    long mAIKind;                // +0x224
-    long mCounterKind1;          // +0x228
-    long mCounterKind2;          // +0x22c
-    long mCounterKind3;          // +0x230
+    int32_t mUnusedReference;    // +0x21c
+    int32_t mUnusedValue;        // +0x220
+    int32_t mAIKind;             // +0x224
+    int32_t mCounterKind1;       // +0x228
+    int32_t mCounterKind2;       // +0x22c
+    int32_t mCounterKind3;       // +0x230
     bool mCanSetRallyPoint;      // +0x234
-    long mUpgradeTableIndex;     // +0x238
-    long mConversionRate;        // +0x23c
+    int32_t mUpgradeTableIndex;  // +0x238
+    int32_t mConversionRate;     // +0x23c
     float mConversionResistance;  // +0x240 (a float: EEUnitClass::mConversionResistance's source)
     bool mIsPlayerPlaceable;     // +0x244
     bool mIsGaiaPlaceable;       // +0x245
@@ -134,42 +136,42 @@ struct EEUnitClassRecord {
     char mUnusedFlag1;           // +0x247
     bool mIsDeletable;           // +0x248
     bool mIsDecoration;          // +0x249
-    long mDeathEffect;           // +0x24c
-    long mDamageEffect;          // +0x250
-    long mMuzzleFlashEffect;     // +0x254
-    long mTrailEffect;           // +0x258
-    long mRippleEffect;          // +0x25c
-    long mSplashEffect;          // +0x260
-    long mHealEffect;            // +0x264
-    long mUnusedFireTrailEffect; // +0x268
-    long mImpactSparksEffect;    // +0x26c
-    long mImpactBloodEffect;     // +0x270
-    long mAttachedEffect;        // +0x274
-    long mUnusedEffect1;         // +0x278
-    long mCreationEffect;        // +0x27c
-    long mUnusedEffect2;         // +0x280
-    long mUnusedEffect3;         // +0x284
-    long mUnusedEffect4;         // +0x288
-    long mUnusedEffect5;         // +0x28c
-    long mUnusedEffect6;         // +0x290
-    long mSpecialAttackEffect;   // +0x294
-    long mUnusedEffect7;         // +0x298
-    long mShotEffect;            // +0x29c
-    long mLeprosyEffect;         // +0x2a0
-    long mPlagueEffect;          // +0x2a4
-    long mMoraleEffect;          // +0x2a8
-    long mPulseCannonEffect;     // +0x2ac
-    long mBattleCryEffect;       // +0x2b0
-    long mShellHoleEffect;       // +0x2b4
-    long mUnusedEffect8;         // +0x2b8
-    long mBloodStainEffect;      // +0x2bc
-    long mUnused7;               // +0x2c0
-    long mUnused8;               // +0x2c4
+    int32_t mDeathEffect;        // +0x24c
+    int32_t mDamageEffect;       // +0x250
+    int32_t mMuzzleFlashEffect;  // +0x254
+    int32_t mTrailEffect;        // +0x258
+    int32_t mRippleEffect;       // +0x25c
+    int32_t mSplashEffect;       // +0x260
+    int32_t mHealEffect;         // +0x264
+    int32_t mUnusedFireTrailEffect; // +0x268
+    int32_t mImpactSparksEffect; // +0x26c
+    int32_t mImpactBloodEffect;  // +0x270
+    int32_t mAttachedEffect;     // +0x274
+    int32_t mUnusedEffect1;      // +0x278
+    int32_t mCreationEffect;     // +0x27c
+    int32_t mUnusedEffect2;      // +0x280
+    int32_t mUnusedEffect3;      // +0x284
+    int32_t mUnusedEffect4;      // +0x288
+    int32_t mUnusedEffect5;      // +0x28c
+    int32_t mUnusedEffect6;      // +0x290
+    int32_t mSpecialAttackEffect; // +0x294
+    int32_t mUnusedEffect7;      // +0x298
+    int32_t mShotEffect;         // +0x29c
+    int32_t mLeprosyEffect;      // +0x2a0
+    int32_t mPlagueEffect;       // +0x2a4
+    int32_t mMoraleEffect;       // +0x2a8
+    int32_t mPulseCannonEffect;  // +0x2ac
+    int32_t mBattleCryEffect;    // +0x2b0
+    int32_t mShellHoleEffect;    // +0x2b4
+    int32_t mUnusedEffect8;      // +0x2b8
+    int32_t mBloodStainEffect;   // +0x2bc
+    int32_t mUnused7;            // +0x2c0
+    int32_t mUnused8;            // +0x2c4
     float mBobPitch;             // +0x2c8
-    long mUnused9;               // +0x2cc
-    long mUnused10;              // +0x2d0
-    long mUnused11;              // +0x2d4
-    long mUnused12;              // +0x2d8
+    int32_t mUnused9;            // +0x2cc
+    int32_t mUnused10;           // +0x2d0
+    int32_t mUnused11;           // +0x2d4
+    int32_t mUnused12;           // +0x2d8
     bool mCanMoveOnLand;         // +0x2dc
     bool mCanMoveOnDeepWater;    // +0x2dd
     bool mCanMoveOnRock;         // +0x2de
@@ -188,43 +190,43 @@ struct EEUnitClassRecord {
     bool mCanMoveInSpace;        // +0x2eb
     bool mIsAttackUnit;          // +0x2ec
     bool mIsDefenseUnit;         // +0x2ed
-    long mAreaEffectTemplate0;   // +0x2f0
-    long mAreaEffectTemplate1;   // +0x2f4
-    long mAreaEffectTemplate2;   // +0x2f8
-    long mAreaEffectTemplate3;   // +0x2fc
-    long mUnused13;              // +0x300
-    long mUnused14;              // +0x304
-    long mUnused15;              // +0x308
+    int32_t mAreaEffectTemplate0; // +0x2f0
+    int32_t mAreaEffectTemplate1; // +0x2f4
+    int32_t mAreaEffectTemplate2; // +0x2f8
+    int32_t mAreaEffectTemplate3; // +0x2fc
+    int32_t mUnused13;           // +0x300
+    int32_t mUnused14;           // +0x304
+    int32_t mUnused15;           // +0x308
     float mCarryAmount;          // +0x30c
-    long mUnused16;              // +0x310
-    long mMaxObjectCarry;        // +0x314
+    int32_t mUnused16;           // +0x310
+    int32_t mMaxObjectCarry;     // +0x314
     bool mIsScenarioSelectable;  // +0x318
     bool mUnusedFlag6;           // +0x319
     bool mBuildsOnElevation;     // +0x31a
-    long mUnused17;              // +0x31c
-    long mUnused18;              // +0x320
-    long mScaffoldingType;       // +0x324
-    long mDeathType;             // +0x328
-    long mUnusedSelectionValue;  // +0x32c
-    long mCloakRadius;           // +0x330
-    long mMiniMapColor;          // +0x334
-    long mGarrisonCapacity;      // +0x338
-    long mInitialGarrisonCount;  // +0x33c
-    long mGarrisonTechnology;    // +0x340
-    long mAirTrafficType;        // +0x344
-    long mOverlapUnitSet;        // +0x348
-    long mWonderBonus;           // +0x34c
-    long mWonderUnitSet;         // +0x350
+    int32_t mUnused17;           // +0x31c
+    int32_t mUnused18;           // +0x320
+    int32_t mScaffoldingType;    // +0x324
+    int32_t mDeathType;          // +0x328
+    int32_t mUnusedSelectionValue; // +0x32c
+    int32_t mCloakRadius;        // +0x330
+    int32_t mMiniMapColor;       // +0x334
+    int32_t mGarrisonCapacity;   // +0x338
+    int32_t mInitialGarrisonCount; // +0x33c
+    int32_t mGarrisonTechnology; // +0x340
+    int32_t mAirTrafficType;     // +0x344
+    int32_t mOverlapUnitSet;     // +0x348
+    int32_t mWonderBonus;        // +0x34c
+    int32_t mWonderUnitSet;      // +0x350
     float mSlopeSpeedPenalty;    // +0x354
     float mBobHeight;            // +0x358 (EEUnitClass +0x190)
     float mFriendlyDamageFactor;  // +0x35c (a float: EEUnitClass::mFriendlyDamageFactor's source)
     float mGarrisonBonus;        // +0x360 (-> EEUnitClass::mGarrisonBonus)
-    long mUnused19;              // +0x364
+    int32_t mUnused19;           // +0x364
     float mUnusedDefaultedValue; // +0x368
     bool mIsInactive;            // +0x36c
-    long mInfluence;             // +0x370
-    long mNumAttributes;         // +0x374
-    long mTechnology;            // +0x378
+    int32_t mInfluence;          // +0x370
+    int32_t mNumAttributes;      // +0x374
+    int32_t mTechnology;         // +0x378
     bool mBlocksTile;            // +0x37c
     bool mIsCloakable;           // +0x37d
     bool mIsExpansionUnit;       // +0x37e
@@ -232,11 +234,11 @@ struct EEUnitClassRecord {
     bool mCanEnterCarriers;      // +0x380
     char mUnusedFlag5;           // +0x381
     bool mCanGarrison;           // +0x382
-    long mDeathSpawnType;        // +0x384
-    long mPower;                 // +0x388
-    long mPowerRegeneration;     // +0x38c
-    long mBehavior;              // +0x390
-    long mMinConversionTime;     // +0x394
+    int32_t mDeathSpawnType;     // +0x384
+    int32_t mPower;              // +0x388
+    int32_t mPowerRegeneration;  // +0x38c
+    int32_t mBehavior;           // +0x390
+    int32_t mMinConversionTime;  // +0x394
     float mHealDelay;            // +0x398
     float mHealRange;            // +0x39c
     float mHealThreshold;        // +0x3a0
@@ -247,10 +249,10 @@ struct EEUnitClassRecord {
     bool mIsObstacle;            // +0x3ae
     bool mCanAttackGround;       // +0x3af
     bool mIsMelee;               // +0x3b0
-    long mUnusedConverterScratch[50];  // +0x3b4..+0x47b: not read (stale converter heap values)
-    long mPackedType;            // +0x47c
-    long mRemainsType;           // +0x480
-    unsigned long mAttributes[200];  // +0x484 mNumAttributes technology ids (the ctor copies them into mResearchTechnologies)
+    int32_t mUnusedConverterScratch[50]; // +0x3b4..+0x47b: not read (stale converter heap values)
+    int32_t mPackedType;         // +0x47c
+    int32_t mRemainsType;        // +0x480
+    uint32_t mAttributes[200];       // +0x484 mNumAttributes technology ids (the ctor copies them into mResearchTechnologies)
     bool mHasSpecialAttack;      // +0x7a4
 };
 

@@ -20,7 +20,7 @@ public:
     void ImportMessage(unsigned char* inData);
 
     NEMessage* mMessage;                    // +0x00
-    unsigned long mTimestamp;               // +0x04
+    uint32_t mTimestamp;                    // +0x04 (4 bytes in the record file)
 };
 
 #endif

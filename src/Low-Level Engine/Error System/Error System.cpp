@@ -80,7 +80,7 @@ long ESBeginRecording(FSFileSpec& inSpec)
     TMTime theTime;
     gLock->Enter();
     TMGetTimeOfDay(theTime);
-    sprintf(theName, "%d_%s", gRecordingSuffix, "Error.log");
+    sprintf(theName, "%ld_%s", gRecordingSuffix, "Error.log");
     gRecordingSuffix++;
     if (gRecordingSuffix >= 10)
         gRecordingSuffix = 0;
@@ -166,7 +166,7 @@ void ESInitialize(HINSTANCE inInstance)
 void ESQuietVerify(const char* inFile, unsigned long inLine, const char* inExpression)
 {
     char theText[1024];
-    sprintf(theText, "%s (%d) : Quiet verification failure (%s)", inFile, inLine, inExpression);
+    sprintf(theText, "%s (%ld) : Quiet verification failure (%s)", inFile, inLine, inExpression);
 }
 
 // FUNCTION: LLE 0x100016ed
@@ -288,7 +288,7 @@ void ESVerify(const char* inFile, unsigned long inLine, const char* inExpression
     if (gInVerify)
         return;
     gInVerify = true;
-    sprintf(theText, "%s (%d) : Verification failure (%s)", inFile, inLine, inExpression);
+    sprintf(theText, "%s (%ld) : Verification failure (%s)", inFile, inLine, inExpression);
     ESShowVerification(theText);
 }
 

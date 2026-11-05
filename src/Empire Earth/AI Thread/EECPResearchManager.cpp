@@ -515,7 +515,7 @@ void EECPResearchManager::SetNextRandomResearchTime(unsigned long inTime)
     long theDelay = this->mPlayer->mResearchFrequency;
     theDelay = UMFloatToLong(this->mPlayer->GetResearchFrequencyModifier() * theDelay);
     this->mNextTime = theDelay * 1000 + inTime;
-    ESDebugOut("EECPResearchManager::SetNextRandomResearchTime  setting next research time to %d (%f)\n", this->mNextTime,
+    ESDebugOut("EECPResearchManager::SetNextRandomResearchTime  setting next research time to %ld (%f)\n", this->mNextTime,
                (double)theDelay);
 }
 
@@ -593,7 +593,7 @@ void EECPResearchManager::Update(unsigned long inTime)
     }
     if (!(inTime > this->mNextTime))
         return;
-    ESDebugOut("EECPResearchManager::Update  attempting random research at %d\n", inTime);
+    ESDebugOut("EECPResearchManager::Update  attempting random research at %ld\n", inTime);
     this->ChooseResearch();
     this->SetNextRandomResearchTime(inTime);
 }

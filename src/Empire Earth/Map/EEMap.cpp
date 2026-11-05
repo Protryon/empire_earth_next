@@ -118,8 +118,8 @@ void EEMap::ReserveTiles(unsigned long inCount)
         this->mVisibilityWords = NULL;
     }
     this->mTileArray = new EETile[inCount];
-    this->mVisibilityWords = new unsigned long[theWords * inCount];
-    memset(this->mVisibilityWords, 0, theWords * inCount * sizeof(unsigned long));
+    this->mVisibilityWords = new uint32_t[theWords * inCount];
+    memset(this->mVisibilityWords, 0, theWords * inCount * sizeof(uint32_t));
     this->mNextTile = 0;
     this->mTileArrayCount = inCount;
 }
@@ -133,9 +133,9 @@ void EEMap::SetPlayerCount(unsigned long inPlayerCount)
 {
     unsigned long theOldWords = (this->mU19561C >> 1) + (this->mU19561C & 1);
     unsigned long theNewWords = (inPlayerCount >> 1) + (inPlayerCount & 1);
-    unsigned long theCopy = theOldWords < theNewWords ? theOldWords * sizeof(unsigned long) : theNewWords * sizeof(unsigned long);
-    unsigned long* theWords = new unsigned long[this->GetTileCount() * theNewWords];
-    memset(theWords, 0, this->GetTileCount() * theNewWords * sizeof(unsigned long));
+    unsigned long theCopy = theOldWords < theNewWords ? theOldWords * sizeof(uint32_t) : theNewWords * sizeof(uint32_t);
+    uint32_t* theWords = new uint32_t[this->GetTileCount() * theNewWords];
+    memset(theWords, 0, this->GetTileCount() * theNewWords * sizeof(uint32_t));
     if (this->mVisibilityWords) {
         unsigned long theIndex = 0;
         for (long y = 0; y < this->mSize; y++) {
@@ -562,7 +562,7 @@ void EEMap::DumpOutOfSynch(FILE* inFile)
             EEMapTile* theTile = this->GetTile(x, y);
             if (!theTile)
                 continue;
-            fprintf(inFile, "Tile X(%d), Y(%d)\n", x, y);
+            fprintf(inFile, "Tile X(%ld), Y(%ld)\n", x, y);
             theTile->Dump(inFile, this->mU19561C);
             fprintf(inFile, "\n");
         }

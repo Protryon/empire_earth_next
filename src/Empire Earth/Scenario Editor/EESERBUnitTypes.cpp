@@ -227,7 +227,7 @@ void EESEPlayerScreen::SetPlayerCount(unsigned long inCount)
     gResource->GetString(IDS_SE_HUMAN, theFirstPlayer);
     unsigned long i; for (i = 1; i <= inCount; i++) {
         this->mPlayers[i]->Show(this->mPage, i);
-        if (i > 1) sprintf(theText, "%s %d", (const char*)thePrefix, i);
+        if (i > 1) sprintf(theText, "%s %ld", (const char*)thePrefix, i);
         else theText = theFirstPlayer;
         this->mPlayerSelection->AppendLine(theText);
     }
@@ -508,7 +508,7 @@ void EESEPlayerScreen::CreatePlayerControls(unsigned long& ioIndex, UIForm* inFo
     theStrings.resize(15);
     gResource->GetString(IDS_SE_PLAYERS, theText);
     for (i = 2; i <= 16; ++i)
-        sprintf(theStrings[i - 2], "%d %s", i, (const char*)theText);
+        sprintf(theStrings[i - 2], "%ld %s", i, (const char*)theText);
     theLocation.SetXY(5.0f, 47.0f);
     this->mMaxPlayer = new EESECBMaxPlayer(0x15c, 1, theStrings, inFont, theLocation,
         125, inFont->GetHeight() << 4, inForm, ioIndex, 0, 2);
@@ -761,7 +761,7 @@ void EESEPlayerScreen::Refresh()
     this->mMaxPlayer->DeleteAllEntries();
     gResource->GetString(IDS_SE_PLAYERS, thePrefix);
     for (unsigned long thePlayerCount = 2; thePlayerCount < (unsigned long)gWorld.GetNumPlayers(); ++thePlayerCount) {
-        sprintf(theText, "%d %s", thePlayerCount, (const char*)thePrefix);
+        sprintf(theText, "%ld %s", thePlayerCount, (const char*)thePrefix);
         this->mMaxPlayer->AppendLine(theText);
     }
     unsigned long theSelection;
@@ -1472,7 +1472,7 @@ void EESEGamePage::CreateLabels(unsigned long& ioIndex, unsigned long& ioID, UIF
     GEText* theGEText;
     for (unsigned long theColumn = 0; theColumn < 15; ++theColumn) {
         float theX = (float)(theColumn + 1) * 25.0f + 274.0f;
-        sprintf(theText, "%d", theColumn + 2);
+        sprintf(theText, "%ld", theColumn + 2);
         this->mColumnLabels[theColumn] = new UITextLabel(theText, gU531938, ioID,
             GERectangle(theX, 100.0f, theX + 22.0f, 122.0f), inForm, 0, ioIndex, 0);
         this->mColumnLabels[theColumn]->SetAlignment(kTextAlignCenter);
@@ -1486,7 +1486,7 @@ void EESEGamePage::CreateLabels(unsigned long& ioIndex, unsigned long& ioID, UIF
     }
     for (unsigned long i = 0; i < 15; ++i) {
         float theY = (float)i * 25.0f + 125.0f;
-        sprintf(theText, "%d", i + 1);
+        sprintf(theText, "%ld", i + 1);
         this->mRowLabels[i] = new UITextLabel(theText, gU531938, ioID,
             GERectangle(249.0f, theY, 271.0f, theY + 22.0f), inForm, 0, ioIndex, 0);
         this->mRowLabels[i]->SetAlignment(kTextAlignCenter);
@@ -1586,10 +1586,10 @@ long EESEEChangeStartEpoch::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     unsigned long theStart;
     unsigned long theEnd;
     static_cast<UIComboBox*>(inEntity)->GetCurrentSelection(theStart);
-    if (theStart == -1)
+    if (UIsNone32(theStart))
         return kErrorOK;
     this->mEndEpochComboBox->GetCurrentSelection(theEnd);
-    if (theEnd == -1)
+    if (UIsNone32(theEnd))
         return kErrorOK;
     theEnd += 15 - this->mEndEpochComboBox->GetListBox()->GetLineCount();
     for (unsigned long i = theStart; i < 15; i++) {
@@ -1620,7 +1620,7 @@ EESEPlayerRow::EESEPlayerRow(unsigned long& ioID, float inY, GEFont* inFont,
     if (!inGlobal) {
         if (inPlayer != 1) {
             gResource->GetString(IDS_SE_PLAYER, theValue);
-            sprintf(theText, "%s %d", (const char*)theValue, inPlayer);
+            sprintf(theText, "%s %ld", (const char*)theValue, inPlayer);
         }
         else gResource->GetString(IDS_SE_HUMAN, theText);
         theLocation.SetX(5.0f);
@@ -1840,13 +1840,13 @@ void EESEPlayerRow::CopyFrom(EESEPlayerRow* inSource)
     unsigned long theSourceControl;
     this->mStartEpoch->GetCurrentSelection(theDestinationEpoch);
     inSource->mStartEpoch->GetCurrentSelection(theSourceEpoch);
-    if (theSourceEpoch != (unsigned long)-1 && this->mStartEpoch->GetDisplayMode() == kDisplayModeShown)
+    if (!UIsNone32(theSourceEpoch) && this->mStartEpoch->GetDisplayMode() == kDisplayModeShown)
         this->mStartEpoch->SetCurrentSelection(theSourceEpoch);
     inSource->mEndEpoch->GetCurrentSelection(theSourceEnd);
-    if (theSourceEnd != (unsigned long)-1 && this->mEndEpoch->GetDisplayMode() == kDisplayModeShown)
+    if (!UIsNone32(theSourceEnd) && this->mEndEpoch->GetDisplayMode() == kDisplayModeShown)
         this->mEndEpoch->SetCurrentSelection(theSourceEnd - theDestinationEpoch + theSourceEpoch);
     inSource->mControl->GetCurrentSelection(theSourceControl);
-    if (theSourceControl != (unsigned long)-1 && this->mControl->GetDisplayMode() == kDisplayModeShown)
+    if (!UIsNone32(theSourceControl) && this->mControl->GetDisplayMode() == kDisplayModeShown)
         this->mControl->SetCurrentSelection(theSourceControl);
     if (inSource->mName && this->mName) this->mName->SetText(inSource->mName->GetText(0));
     if (inSource->mCPUOnlyCheckBox && this->mCPUOnlyCheckBox && this->mCPUOnlyCheckBox->GetDisplayMode() == kDisplayModeShown)
@@ -1991,7 +1991,7 @@ void EESEPlayerRow::Load(unsigned long inPlayer)
     this->mControl->SetCurrentSelection(0);
     if (inPlayer > 0) {
         for (i = 0; i < 5; i++) {
-            sprintf(theNumber, "%u", thePlayer->mResourceCaps[i + 2]);
+            sprintf(theNumber, "%lu", thePlayer->mResourceCaps[i + 2]);
             this->mValues[i]->SetText(theNumber);
         }
         theOptions = gWorld.mGameOptions.mPlayers[inPlayer - 1];

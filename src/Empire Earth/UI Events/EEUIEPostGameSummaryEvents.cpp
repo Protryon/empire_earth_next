@@ -104,7 +104,7 @@ static UString sReportFile("B7B226CDB7B226CD2C112D1E2C99B50E9C2355F6C48226BEB7B2
 void EEPGSGameReport::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
     unsigned long theMessageSize = this->ExportSize();
-    long theMessageType = 1000;
+    int32_t theMessageType = 1000;   // 4 bytes on the wire
     *outPayloadPointer = new unsigned char[theMessageSize];
     if (*outPayloadPointer == NULL)
         return;
@@ -138,7 +138,7 @@ void EEPGSPlayerReport::ExportMessage(unsigned char** outPayloadPointer, unsigne
     char theTerminator = 0;
     const char* theName = this->mName;
     unsigned long theNameLength = PlatMbsNBCnt(reinterpret_cast<const unsigned char*>(theName), this->mName.GetLength());
-    long theMessageType = 1001;
+    int32_t theMessageType = 1001;   // 4 bytes on the wire
     *outPayloadPointer = new unsigned char[theMessageSize];
     if (*outPayloadPointer == NULL)
         return;
@@ -208,7 +208,7 @@ void ShowTimeLine(UIForm* inForm, const GEColor& inColor, unsigned long inPlayer
             break;
         case 1:
             theGraph = theLineGraph->GetGraphAt(0x0f);
-            sprintf(theText, "%d", theRecord.mStatistics.CountIncreases(0x0f));
+            sprintf(theText, "%ld", theRecord.mStatistics.CountIncreases(0x0f));
             break;
         case 2:
             theGraph = theLineGraph->GetGraphAt(0x0e);
@@ -281,7 +281,7 @@ void AddStatusBar(UIForm* inForm, UIStatusBar* inControl, const UGraph& inGraph,
     if (inText.GetLength() > 0)
         theString = inText;
     else
-        sprintf(theString, "%d", theValue);
+        sprintf(theString, "%ld", theValue);
     theStatusBar->SetText(theString, NULL);
     unsigned long theStarIndex = theStatusBar->GetIndex() + 0x2e5;
     UIBitmap* theStar = dynamic_cast<UIBitmap*>(inForm->GetControl(theStarIndex));
@@ -639,7 +639,7 @@ long EEUIEPGSEOpen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         sPlayerReports[i - 1].mResult = theRecord.GetResult();
         sPlayerReports[i - 1].mIsHuman = theRecord.GetIsHuman();
         if (!theCounted) {
-            sprintf(theNumber, "%.2d", theOthers);
+            sprintf(theNumber, "%.2ld", theOthers);
             sPlayerReports[i - 1].mName += theNumber;
         }
         ShowName(inForm, theRecord.GetName(), theRecord.GetColor(), i);
@@ -693,7 +693,7 @@ theEnd:
         inForm->RemoveBackground(theBackground);
     if (gGamePreferences.GetSettings().mTakeEndGameScreenshots && (theResult == 1 || theResult == 2)) {
         TMGetTimeOfDay(theTime);
-        sprintf(theFileName, "EEPostGame-%u-%u-%u-???.jpg", theTime.mMonth + 1, theTime.mDay, theTime.mYear);
+        sprintf(theFileName, "EEPostGame-%lu-%lu-%lu-???.jpg", theTime.mMonth + 1, theTime.mDay, theTime.mYear);
         theSearch.SetVolume(gStartupVolume);
         theSearch.SetDirectory(gStartupDirectory);
         if (theSearch.GetFirstFile(theFileName, theFound) == kErrorOK) {
@@ -1009,7 +1009,7 @@ static void ShowEpochs(UIForm* inForm, const GEColor& inColor, unsigned long inP
                     theHours = theTime >= 3600000 ? theTime / 3600000 : 0;
                     unsigned long theMinutes;
                     theMinutes = theTime >= 60000 ? (theTime - theHours * 3600000) / 60000 : 0;
-                    sprintf(theText, "%d:%.2d:%.2d", theHours, theMinutes,
+                    sprintf(theText, "%ld:%.2ld:%.2ld", theHours, theMinutes,
                             (theTime - theHours * 3600000 - theMinutes * 60000) / 1000);
                 }
             }
@@ -1045,7 +1045,7 @@ static void ShowMisc(UIForm* inForm, const GEColor& inColor, unsigned long inPla
             continue;
         switch (i) {
         case 0:
-            sprintf(theText, "%d%%", (long)(thePercent + 0.5f));
+            sprintf(theText, "%ld%%", (long)(thePercent + 0.5f));
             theGraph = theLineGraph->GetGraphAt(0x18);
             break;
         case 1:

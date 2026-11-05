@@ -2079,7 +2079,7 @@ long EECPAttackSubGroup::Restore(unsigned long inMajorVersion, unsigned long inM
                 theResult = this->mTask.Restore(inMajorVersion, inMinorVersion);
         }
     }
-    this->mRequest = (long)USavedID(this->mRequest) != -1 ? this->mGroup->mCommander->GetPersonnel()->GetRequest((long)USavedID(this->mRequest)) : 0;
+    this->mRequest = (int32_t)USavedID(this->mRequest) != -1 ? this->mGroup->mCommander->GetPersonnel()->GetRequest((int32_t)USavedID(this->mRequest)) : 0;
     if (this->mRequest)
         this->mRequest->Reference();
     if (this->mUnits.size() > 0)

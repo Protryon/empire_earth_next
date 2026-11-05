@@ -705,7 +705,7 @@ void EEMAddRemoveResources::Execute()
     EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayerID];
     if (this->mAdd)
         thePlayer->AddResource(this->mResourceType, this->mAmount);
-    else if (this->mAmount > 0 && this->mAmount <= thePlayer->mResourceCaps[this->mResourceType])
+    else if (this->mAmount > 0 && this->mAmount <= static_cast<uint32_t>(thePlayer->mResourceCaps[this->mResourceType]))   // unsigned, as on Windows
         thePlayer->TakeResource(this->mResourceType, this->mAmount);
 }
 
@@ -6729,7 +6729,7 @@ void EEMScrambleAircraft::Execute()
     if (theUnit) {
         EEComplexUnit* theAircraft = theUnit->GetComplexUnit();
         if (theAircraft && (theAircraft->mUnitClass->mCategory == kUnitCategoryAirplane || theAircraft->mUnitClass->mCategory == kUnitCategoryPlanetSpaceship)) {
-            EEUGLocation* theGoal = new EEUGLocation(GE2DPoint(this->mX, this->mY), false, false, false, 0.0f, false, false);
+            EEUGLocation* theGoal = new EEUGLocation(GE2DPoint(long(this->mX), long(this->mY)), false, false, false, 0.0f, false, false);
             theAircraft->ClearAllGoalQueues();
             theAircraft->QueueGoal(theGoal, 0);
             theAircraft->QueueGoal(theGoal->Clone(), 1);
@@ -6982,7 +6982,7 @@ void EEMSelectTheseUnits::Execute()
 void EEMSelectTheseUnits::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
     unsigned long theMessageSize = this->ExportSize();
-    unsigned long theNumUnits = this->mUnitIDs.size();
+    uint32_t theNumUnits = this->mUnitIDs.size();
     *outPayloadPointer = new unsigned char[theMessageSize];
     if (*outPayloadPointer != NULL) {
         unsigned long theLocation = this->ExportHeader(*outPayloadPointer);
@@ -6991,8 +6991,9 @@ void EEMSelectTheseUnits::ExportMessage(unsigned char** outPayloadPointer, unsig
         memcpy(*outPayloadPointer + theLocation, &theNumUnits, sizeof(theNumUnits));
         theLocation += sizeof(theNumUnits);
         for (unsigned long i = 0; i < theNumUnits; i++) {
-            memcpy(*outPayloadPointer + theLocation, &this->mUnitIDs[i], sizeof(long));
-            theLocation += sizeof(long);
+            int32_t theUnitID = this->mUnitIDs[i];   // 4 bytes on the wire (LP64: long is 8)
+            memcpy(*outPayloadPointer + theLocation, &theUnitID, sizeof(theUnitID));
+            theLocation += sizeof(theUnitID);
         }
         ESVERIFY_AT(theLocation == theMessageSize, 14191);
         outMessageSize = theMessageSize;
@@ -7003,7 +7004,7 @@ void EEMSelectTheseUnits::ExportMessage(unsigned char** outPayloadPointer, unsig
 // Returns the unit list's payload size: 4 bytes per unit plus 9
 unsigned long EEMSelectTheseUnits::ExportSize()
 {
-    return this->mUnitIDs.size() * sizeof(long) + 9;
+    return this->mUnitIDs.size() * sizeof(int32_t) + 9;
 }
 
 // FUNCTION: EXE 0x4c5be3
@@ -7021,11 +7022,11 @@ void EEMSelectTheseUnits::ImportMessage(unsigned char* inPayloadPointer)
     unsigned long theLocation = this->ImportHeader(inPayloadPointer);
     memcpy(&this->mFastSelectionID, inPayloadPointer + theLocation, sizeof(this->mFastSelectionID));
     theLocation += sizeof(this->mFastSelectionID);
-    unsigned long theNumUnits;
+    uint32_t theNumUnits;
     memcpy(&theNumUnits, inPayloadPointer + theLocation, sizeof(theNumUnits));
     theLocation += sizeof(theNumUnits);
     for (unsigned long i = 0; i < theNumUnits; i++) {
-        long theUnitID;
+        int32_t theUnitID;
         memcpy(&theUnitID, inPayloadPointer + theLocation, sizeof(theUnitID));
         theLocation += sizeof(theUnitID);
         this->mUnitIDs.push_back(theUnitID);

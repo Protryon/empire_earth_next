@@ -297,7 +297,7 @@ extern "C" long SPIMDeactivateMixer()
 // Stops the sample's channel and drops its reference to the wave data
 extern "C" void SPIMDeleteWaveData(SESample* inSample)
 {
-    if (inSample->GetMixerChannel() != -1)
+    if (!UIsNone32(inSample->GetMixerChannel()))
         SPIMStopChannel(inSample->GetMixerChannel());
     if (inSample->GetData()) {
         static_cast<UReferenceCounter*>(inSample->GetData())->Dereference();
@@ -505,7 +505,7 @@ extern "C" long SPIMSetChannelSample(unsigned long inChannel, SESample* inSample
     }
     if (inSample->GetMixerChannel() == inChannel)
         return kSPIMOK;
-    if (inSample->GetMixerChannel() != -1)
+    if (!UIsNone32(inSample->GetMixerChannel()))
         return kSPIMSampleOnOtherChannel;
     SPIMStopChannel(inChannel);
     {

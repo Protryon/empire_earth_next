@@ -95,12 +95,12 @@ bool EEContagionManager::DestroyContagionHelper(long inHelperID)
 void EEContagionManager::DumpOutOfSynch(FILE* inFile)
 {
     fprintf(inFile, "\nOUT OF SYNCH DUMP:  Contangion Manager Dump\n");
-    fprintf(inFile, "\nOUT OF SYNCH DUMP:  Contangion Manager Help list size %d\n", this->mHelpers.size());
+    fprintf(inFile, "\nOUT OF SYNCH DUMP:  Contangion Manager Help list size %zu\n", this->mHelpers.size());
     for (unsigned long i = 0; i < this->mHelpers.size(); i++) {
         EEContagionHelper*& theHelper = this->mHelpers[i];
         theHelper->DumpOutOfSynch(inFile);
     }
-    fprintf(inFile, "OUT OF SYNCH DUMP:  EEContagionManager-Unique Number is %d\n", this->mNextHelperID);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  EEContagionManager-Unique Number is %ld\n", this->mNextHelperID);
 }
 
 // FUNCTION: EXE 0x4b68c3

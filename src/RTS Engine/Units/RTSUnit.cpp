@@ -67,7 +67,7 @@ void RTSUnit::FreeNode()
 void RTSUnit::Describe(UWideString& ioString)
 {
     UWideString theString;
-    sprintf(theString, "uid %d, at %d,%d:", this->mUnitID & 0xffffff, this->mTileX, this->mTileY);
+    sprintf(theString, "uid %ld, at %ld,%ld:", this->mUnitID & 0xffffff, this->mTileX, this->mTileY);
     ioString += theString;
 }
 
@@ -76,7 +76,7 @@ void RTSUnit::Describe(UWideString& ioString)
 void RTSUnit::DescribeLong(UWideString& ioString)
 {
     UWideString theString;
-    sprintf(theString, "UnitID:%d\nTile:(%d,%d)\n", this->mUnitID & 0xffffff, this->mTileX, this->mTileY);
+    sprintf(theString, "UnitID:%ld\nTile:(%ld,%ld)\n", this->mUnitID & 0xffffff, this->mTileX, this->mTileY);
     ioString += theString;
 }
 
@@ -84,7 +84,7 @@ void RTSUnit::DescribeLong(UWideString& ioString)
 // Returns a hash of the unit's id and tile
 unsigned long RTSUnit::HashValue()
 {
-    return ((this->mUnitID << 4) + this->mTileY << 4) + this->mTileX;
+    return static_cast<uint32_t>(((this->mUnitID << 4) + this->mTileY << 4) + this->mTileX);   // a 32-bit hash on every data model
 }
 
 // FUNCTION: EXE 0x63da54

@@ -254,7 +254,7 @@ bool EECalamityManager::CreateLocationCalamity(unsigned long inClassEnum, unsign
     if (this->GetCalamityClass(inClassEnum, theClass)) {
         EEMapTile* theTile = gWorld.mMap->GetTile(inX, inY);
         EEUnit* theCasterUnit = gWorld.GetUnit(inCasterUnitID);
-        if (theTile != NULL && (theCasterUnit != NULL || inCasterUnitID == -1)) {
+        if (theTile != NULL && (theCasterUnit != NULL || UIsNone32(inCasterUnitID))) {
             theLocation.SetX(inX + 0.5f);
             theLocation.SetY(inY + 0.5f);
             theLocation.SetZ(theTile->mHeight);
@@ -278,7 +278,7 @@ bool EECalamityManager::CreateUnitCalamity(unsigned long inClassEnum, unsigned l
     if (this->GetCalamityClass(inClassEnum, theClass)) {
         EEUnit* theTargetUnit = gWorld.GetUnit(inTargetUnitID);
         EEUnit* theCasterUnit = gWorld.GetUnit(inCasterUnitID);
-        if (theTargetUnit != NULL && (theCasterUnit != NULL || inCasterUnitID == -1)) {
+        if (theTargetUnit != NULL && (theCasterUnit != NULL || UIsNone32(inCasterUnitID))) {
             EECalamity* theCalamity = theClass->CreateCalamity(theTargetUnit, theCasterUnit);
             theCalamity->mPlayerNumber = inPlayerNumber;
             this->AddCalamity(theCalamity);

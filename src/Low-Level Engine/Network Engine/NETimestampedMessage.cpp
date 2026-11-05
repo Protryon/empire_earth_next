@@ -27,7 +27,7 @@ NETimestampedMessage::NETimestampedMessage(unsigned char* inPayloadPointer)
 // Exports the message as [timestamp][size][message] in a new buffer
 void NETimestampedMessage::ExportMessage(unsigned char** outPayloadPointer, unsigned long& outMessageSize)
 {
-    unsigned long theMessageSize = this->mMessage->ExportSize();
+    uint32_t theMessageSize = this->mMessage->ExportSize();   // 4 bytes in the record
     unsigned long theTimestampedMessageSize = theMessageSize + 8;
     unsigned char* theData;
     unsigned long theDataSize;
@@ -49,7 +49,7 @@ void NETimestampedMessage::ExportMessage(unsigned char** outPayloadPointer, unsi
 // Reads the timestamp and message from a recorded buffer
 void NETimestampedMessage::ImportMessage(unsigned char* inPayloadPointer)
 {
-    unsigned long theMessageSize;
+    uint32_t theMessageSize;
     ESVERIFY_AT(inPayloadPointer != NULL, 69);
     memcpy(&this->mTimestamp, inPayloadPointer, sizeof(this->mTimestamp));
     memcpy(&theMessageSize, inPayloadPointer + 4, sizeof(theMessageSize));

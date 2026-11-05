@@ -9,6 +9,8 @@
 
 class LLE_API FSMemoryFile : public FSFileSpec {
 public:
+    using FSFile::Read;    // the long/unsigned long adapters (lle/FSFile.h)
+    using FSFile::Write;
     // defaults proven by the default-constructor closure ??_F (0x4715: push 1; push 1; push 1000)
     FSMemoryFile(unsigned long inBlockSize = 1000, bool inGrowByDoubling = true, unsigned long inBlockCount = 1);   // 0x9ec5
     FSMemoryFile(unsigned char* inData, unsigned long inLength, unsigned long inBlockSize, bool inGrowByDoubling);   // 0x9f30
@@ -23,8 +25,8 @@ public:
     virtual long Open(unsigned long inAccess);                                  // +0x30 0xa58b
     virtual long Read(unsigned char* outData, unsigned long inLength, unsigned long& outRead);   // +0x64 0xa5de
     virtual long Read(char* outData, unsigned long inLength, unsigned long& outRead);            // +0x60 0xa624
-    virtual long Read(unsigned long& outValue);                                 // +0x5c (folded 0xa638)
-    virtual long Read(long& outValue);                                          // +0x58 0xa638
+    virtual long Read(uint32_t& outValue);                                      // +0x5c (folded 0xa638)
+    virtual long Read(int32_t& outValue);                                       // +0x58 0xa638
     virtual long Read(unsigned short& outValue);                                // +0x54 (folded 0xa64d)
     virtual long Read(short& outValue);                                         // +0x50 0xa64d
     virtual long Read(unsigned char& outValue);                                 // +0x4c (folded 0xa662)
@@ -34,8 +36,8 @@ public:
     virtual long Read(bool& outValue);                                          // +0x3c (folded 0xa662)
     virtual long Write(const unsigned char* inData, unsigned long inLength, unsigned long& outWritten);  // +0x9c 0xa754
     virtual long Write(const char* inData, unsigned long inLength, unsigned long& outWritten);           // +0x98 0xa7cc
-    virtual long Write(const unsigned long& inValue);                           // +0x94 (folded 0xa7e3)
-    virtual long Write(const long& inValue);                                    // +0x90 0xa7e3
+    virtual long Write(const uint32_t& inValue);                                // +0x94 (folded 0xa7e3)
+    virtual long Write(const int32_t& inValue);                                 // +0x90 0xa7e3
     virtual long Write(const unsigned short& inValue);                          // +0x8c (folded 0xa7fb)
     virtual long Write(const short& inValue);                                   // +0x88 0xa7fb
     virtual long Write(const unsigned char& inValue);                           // +0x84 (folded 0xa813)

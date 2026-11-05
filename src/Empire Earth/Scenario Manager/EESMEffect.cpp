@@ -462,13 +462,13 @@ void EESMEffect::ModifyAIMilitaryTarget()
         if (this->mIsAttack) {
             if (this->mIsAddTarget)
                 theCombat->AddAttackTask(theUnitID, theSerial);
-            else if (theUnitID == (unsigned long)-1)
+            else if (UIsNone32(theUnitID))
                 theCombat->DropAreaTask(theSerial, false);
             else
                 theCombat->DropUnitTask(theUnitID, true);
         } else {
             if (!this->mIsAddTarget) {
-                if (theUnitID == (unsigned long)-1)
+                if (UIsNone32(theUnitID))
                     theCombat->DropAreaTask(theSerial, false);
                 else
                     theCombat->DropUnitTask(theUnitID, true);
@@ -1166,7 +1166,7 @@ void EESMEffect::Execute(bool inIsCinematic)
                 thePath = gU4E5B98;
             unsigned long theInstance;
             EELoadSound("Sounds\\" + thePath + UString(this->mFileName), 0x31, theSample, theInstance, 0);
-            if (theInstance != -1)
+            if (!UIsNone32(theInstance))
                 gSoundManager->RegisterOneShotSound(theSample, theInstance);
             break;
         }
@@ -1462,7 +1462,7 @@ void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
                         if (theObject->mUnits.size() > 0) {
                             long theValue = theObject->GetUnitAttribute(theObject->GetAttribute(), theObject->GetIsAttributePercent(),
                                 gWorld.GetUnit(theObject->GetUnitAt(0)), 0, 0);
-                            sprintf(theReplacement, "%d", theValue);
+                            sprintf(theReplacement, "%ld", theValue);
                         }
                     }
                     break;
@@ -1473,7 +1473,7 @@ void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
                         theManager->ChoosePlayer(theCondition->mPlayer, &thePlayers, true);
                         if (thePlayers.size() > 0) {
                             long theValue = theCondition->GetPlayerValue(thePlayers.front(), theCondition->mAttribute);
-                            sprintf(theReplacement, "%d", theValue);
+                            sprintf(theReplacement, "%ld", theValue);
                         }
                     }
                     break;
@@ -1482,7 +1482,7 @@ void EESMEffect::ExpandTokens(const UWideString& inText, UWideString& outText)
                     EESMObject* theObject = theManager->FindObjectByID(theIndex);
                     if (theObject != NULL) {
                         theObject->Evaluate(0);
-                        sprintf(theReplacement, "%d", theObject->mUnits.size());
+                        sprintf(theReplacement, "%zu", theObject->mUnits.size());
                     }
                     break;
                 }
@@ -1505,34 +1505,34 @@ void EESMEffect::RenumberAreas(unsigned long inOldIndex, unsigned long inNewInde
     unsigned long theIndex;
     theIndex = this->mTaskArea;
     if (theIndex == inOldIndex) {
-        this->mTaskArea = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mTaskArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mTaskArea = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mTaskArea = theIndex - 1;
     }
     theIndex = this->mTargetArea;
     if (theIndex == inOldIndex) {
-        this->mTargetArea = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mTargetArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mTargetArea = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mTargetArea = theIndex - 1;
     }
     theIndex = this->mPlaceArea;
     if (theIndex == inOldIndex) {
-        this->mPlaceArea = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mPlaceArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mPlaceArea = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mPlaceArea = theIndex - 1;
     }
     theIndex = this->mLocationArea;
     if (theIndex == inOldIndex) {
-        this->mLocationArea = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mLocationArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mLocationArea = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mLocationArea = theIndex - 1;
     }
 }
@@ -1544,52 +1544,52 @@ void EESMEffect::RenumberObjects(unsigned long inOldIndex, unsigned long inNewIn
     unsigned long theIndex;
     theIndex = this->mObject;
     if (theIndex == inOldIndex) {
-        this->mObject = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mObject = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mObject = theIndex - 1;
     }
     theIndex = this->mLocationObject;
     if (theIndex == inOldIndex) {
-        this->mLocationObject = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mLocationObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mLocationObject = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mLocationObject = theIndex - 1;
     }
     theIndex = this->mTaskObject;
     if (theIndex == inOldIndex) {
-        this->mTaskObject = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mTaskObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mTaskObject = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mTaskObject = theIndex - 1;
     }
     theIndex = this->mPlaceObject;
     if (theIndex == inOldIndex) {
-        this->mPlaceObject = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mPlaceObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mPlaceObject = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mPlaceObject = theIndex - 1;
     }
     theIndex = this->mTargetObject;
     if (theIndex == inOldIndex) {
-        this->mTargetObject = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mTargetObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mTargetObject = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mTargetObject = theIndex - 1;
     }
     for (unsigned long i = 0; i < this->mObjects.size(); i++) {
         unsigned long& theID = this->mObjects[i];
         theIndex = theID;
         if (theIndex == inOldIndex) {
-            theID = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+            theID = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
         } else if (theIndex == inNewIndex) {
             theID = inOldIndex;
-        } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+        } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
             theID = theIndex - 1;
         }
     }
@@ -1601,10 +1601,10 @@ void EESMEffect::RenumberTriggers(unsigned long inOldIndex, unsigned long inNewI
 {
     unsigned long theIndex = this->mTrigger;
     if (theIndex == inOldIndex) {
-        this->mTrigger = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mTrigger = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mTrigger = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mTrigger = theIndex - 1;
     }
 }
@@ -3235,7 +3235,7 @@ void EESMEffect::ChangeAttribute()
     std::vector<U2DPoint<long> > theTargets;
     U2DPoint<long> theTarget;
     EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mObject);
-    if (theObject != NULL && this->mAttributeUnit == -1 && this->mAttributeUnitType == 0) {
+    if (theObject != NULL && UIsNone32(this->mAttributeUnit) && this->mAttributeUnitType == 0) {
         if (this->mAttribute < kSMUnitAttributeShockArmorPlus) {
             theObject->Evaluate(false);
             unsigned long theCount = theObject->mUnits.size();
@@ -3284,7 +3284,7 @@ void EESMEffect::ChangeAttribute()
         EEPlayer* thePlayer = this->mAttributePlayer >= 0 ? gWorld.GetPlayer(this->mAttributePlayer) : NULL;
         EEModifyUnitAttribute(this->mAttribute, this->mUsesPercent, thePlayer, theUpgrade, this->mAttributeAmount, this->mAttributeMode);
     } else {
-        EEUnit* theUnit = this->mAttributeUnit != -1 ? gWorld.GetUnit(this->mAttributeUnit) : NULL;
+        EEUnit* theUnit = !UIsNone32(this->mAttributeUnit) ? gWorld.GetUnit(this->mAttributeUnit) : NULL;
         EEChangeUnit(this->mAttribute, this->mUsesPercent, theUnit, this->mAttributeAmount, 0, false, this->mAttributeMode);
     }
 }

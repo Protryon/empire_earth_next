@@ -191,7 +191,7 @@ void EEUpdateSavedGames()
     theLog.Create();
     if (theLog.FOpen("w") == 0) {
         FILE* theStream = theLog;
-        fprintf(theStream, "Saved game conversion started on %02d/%02d/%02d, %02d:%02d.%02d\n", theTime.mMonth + 1,
+        fprintf(theStream, "Saved game conversion started on %02ld/%02ld/%02ld, %02ld:%02ld.%02ld\n", theTime.mMonth + 1,
                 theTime.mDay, theTime.mYear, theTime.mHour, theTime.mMinute, theTime.mSecond);
         fflush(theStream);
 

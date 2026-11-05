@@ -13,8 +13,8 @@
 // One record of db\dbcolortable.dat (0xa8 bytes, read whole). Inferred layout.
 struct EEColorTableRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
-    long mUnusedIndex;                      // +0x068 the 0-based row index (not read)
+    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
+    int32_t mUnusedIndex;                   // +0x068 the 0-based row index (not read)
     float mColorRed;                        // +0x6c
     float mColorGreen;                      // +0x70
     float mColorBlue;                       // +0x74

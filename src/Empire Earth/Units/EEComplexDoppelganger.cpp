@@ -445,7 +445,7 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
     this->mCollisionTile.mY = theState;
     if (theResult != 0 || (theResult = inFile.Read(theValue)) != 0)
         goto LoadFlags;
-    this->mLauncherClass = theValue == 0 || theValue == (unsigned long)-1 ? NULL : gUnitClassTable[theValue];
+    this->mLauncherClass = theValue == 0 || UIsNone32(theValue) ? NULL : gUnitClassTable[theValue];
     theResult = inFile.Read(theValue);
     this->mPatrolGroup = USavedPointer<EEPPatrolGroup>(theValue);
     if (theResult != 0)

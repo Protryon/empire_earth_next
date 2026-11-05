@@ -112,7 +112,7 @@ void EEReportLoadFailure(const UString& inMessage, bool inLock, ESChecksum* inCh
         gWorld.GetChecksum(*theChecksum);
         if (inLock)
             gWorld.mLock->ReadUnlock();
-        sprintf(theTotal, " Game state checksum: %u ", theChecksum->GetTotalChecksum());
+        sprintf(theTotal, " Game state checksum: %lu ", theChecksum->GetTotalChecksum());
         theText += (const char*)theTotal;
         if (inChecksum->Compare(*theChecksum, theErrors)) {
             theText += " (checksum OK)";
@@ -120,14 +120,14 @@ void EEReportLoadFailure(const UString& inMessage, bool inLock, ESChecksum* inCh
             theText += " (wrong checksum, see error log)";
             theDebug += (const char*)theText;
             theDebug += " (wrong checksum, see following errors)\r\n";
-            ESDebugOut(theDebug);
+            ESDebugOut("%s", (const char*)theDebug);
             for (std::vector<UString>::iterator i = theErrors.begin(); i != theErrors.end(); i++)
-                ESDebugOut(*i);
+                ESDebugOut("%s", (const char*)*i);
             ESDebugOut("End checksum errors");
         } else {
             theText += " (wrong checksum, game saved in release so extended info not available)";
             theDebug += (const char*)theText;
-            ESDebugOut(theDebug);
+            ESDebugOut("%s", (const char*)theDebug);
         }
         delete theChecksum;
     }
@@ -178,7 +178,7 @@ void EEEnumerateDisplayDevices()
                         ? theMemory >= theVideoMode.mBitCount / 8 * theVideoMode.mHeight * theVideoMode.mWidth * 3
                         : true;
                     if (theFits) {
-                        sprintf(theMode.mName, "%u x %u x %u Bit", theVideoMode.mWidth, theVideoMode.mHeight,
+                        sprintf(theMode.mName, "%lu x %lu x %lu Bit", theVideoMode.mWidth, theVideoMode.mHeight,
                                 theVideoMode.mBitCount);
                         theMode.mMode = theVideoMode;
                         theMode.mIndex = k;

@@ -878,7 +878,7 @@ void EEUIFMGStatusBox::GetAttributeText(float inBase, float inBonus, UWideString
         theBase = (long)(inBase + inBonus + 0.5f);
     else
         theBase = (long)(inBase + 0.5f);
-    sprintf(outText, "%d+%d", theBase, theBonus);
+    sprintf(outText, "%ld+%ld", theBase, theBonus);
 }
 
 // FUNCTION: EXE 0x66cbe1
@@ -910,14 +910,14 @@ void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
     }
     this->UpdateArmorTexts(inUnit);
     if (theClass->mHitPoints > 0) {
-        sprintf(theText, "%d/%d", (long)((float)inUnit->GetHitPoints() + 0.5f),
+        sprintf(theText, "%ld/%ld", (long)((float)inUnit->GetHitPoints() + 0.5f),
                 (long)((float)theStats->mMaxHitPoints + 0.5f));
         if (theText != static_cast<EEUIFMGStatusBar*>(this->mC84)->GetValueText()) {
             static_cast<EEUIFMGStatusBar*>(this->mC84)->mValue->SetText(theText);
             static_cast<EEUIFMGStatusBar*>(this->mC84)->mBar->SetCurrentRangeValue(inUnit->GetHitPoints());
         }
         float theBonus = theStats->mMaxHitPoints - theStats->mUnitClass->mHitPoints;
-        sprintf(theText, "+ %d", theBonus >= 0.0f ? (long)(theBonus + 0.5f) : 0);
+        sprintf(theText, "+ %ld", theBonus >= 0.0f ? (long)(theBonus + 0.5f) : 0);
         if (theText != static_cast<EEUIFMGStatusBar*>(this->mC84)->GetValue2Text()) {
             static_cast<EEUIFMGStatusBar*>(this->mC84)->mValue2->SetText(theText);
             static_cast<EEUIFMGStatusBar*>(this->mC84)->mBar->SetRange(0, theStats->mMaxHitPoints);
@@ -959,18 +959,18 @@ void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
     if (theUnit != NULL) {
         if ((theIndex = this->mAttributes[12]) != -1) {
             unsigned long theAmount = theUnit->GetUnitClass()->mTransportCapacity - theUnit->mCargoRoom;
-            sprintf(theText, "%d/%d", (long)((float)theAmount + 0.5f), (long)((float)theClass->mTransportCapacity + 0.5f));
+            sprintf(theText, "%ld/%ld", (long)((float)theAmount + 0.5f), (long)((float)theClass->mTransportCapacity + 0.5f));
             static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
         }
         if (theClass->mFlightTime > 0) {
-            sprintf(theText, "%d/%d", (long)((float)(theUnit->mFlightTime / 1000) + 0.5f),
+            sprintf(theText, "%ld/%ld", (long)((float)(theUnit->mFlightTime / 1000) + 0.5f),
                     (long)((float)(theStats->mFlightTime / 1000) + 0.5f));
             if (theText != static_cast<EEUIFMGStatusBar*>(this->mC88)->GetValueText()) {
                 static_cast<EEUIFMGStatusBar*>(this->mC88)->mValue->SetText(theText);
                 static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetCurrentRangeValue(theUnit->mFlightTime / 1000);
             }
             float theBonus = (theStats->mFlightTime - theStats->mUnitClass->mFlightTime) / 1000;
-            sprintf(theText, "+ %d", theBonus >= 0.0f ? (long)(theBonus + 0.5f) : 0);
+            sprintf(theText, "+ %ld", theBonus >= 0.0f ? (long)(theBonus + 0.5f) : 0);
             if (theText != static_cast<EEUIFMGStatusBar*>(this->mC88)->GetValue2Text()) {
                 static_cast<EEUIFMGStatusBar*>(this->mC88)->mValue2->SetText(theText);
                 static_cast<EEUIFMGStatusBar*>(this->mC88)->mBar->SetRange(0, theStats->mFlightTime / 1000);
@@ -978,7 +978,7 @@ void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
             }
             static_cast<EEUIBUpgrade*>(this->mC88)->UpdateCost(theText);
         } else if (theStats->mPower > 0) {
-            sprintf(theText, "%d/%d", (long)((float)theUnit->mPower + 0.5f),
+            sprintf(theText, "%ld/%ld", (long)((float)theUnit->mPower + 0.5f),
                     (long)((float)theStats->mPower + 0.5f));
             EEUIFMGStatusBar* theBar;
             if (this->mCA8 != NULL && this->mCAC != NULL) {
@@ -997,7 +997,7 @@ void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
                 theBar->mBar->SetCurrentRangeValue(theUnit->mPower);
             }
             float theBonus = theStats->mPower - theStats->mUnitClass->mPower;
-            sprintf(theText, "+ %d", theBonus >= 0.0f ? (long)(theBonus + 0.5f) : 0);
+            sprintf(theText, "+ %ld", theBonus >= 0.0f ? (long)(theBonus + 0.5f) : 0);
             if (theText != theBar->GetValue2Text()) {
                 theBar->mValue2->SetText(theText);
                 theBar->mBar->SetRange(0, theStats->mPower);
@@ -1006,7 +1006,7 @@ void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
             theBar->UpdateCost(theText);
         }
         if (theClass->mGarrisonCapacity > 0) {
-            sprintf(theText, "%d/%d", (long)((float)theUnit->mGarrisonCount + 0.5f),
+            sprintf(theText, "%ld/%ld", (long)((float)theUnit->mGarrisonCount + 0.5f),
                     (long)((float)theUnit->GetUnitClass()->mGarrisonCapacity + 0.5f));
             if (theText != static_cast<EEUIFMGStatusBar*>(this->mC88)->GetValueText()) {
                 static_cast<EEUIFMGStatusBar*>(this->mC88)->mValue->SetText(theText);
@@ -1114,9 +1114,9 @@ void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
         }
         }
         if (inUnit->GetUnitClass()->mCategory == kUnitCategoryLandCitizen || inUnit->GetUnitClass()->mCategory == kUnitCategoryNavalCitizen)
-            sprintf(theText, "%d/%d", (long)((float)inUnit->mResourceAmount + 0.5f), (long)((float)theStats->mCarryAmount + 0.5f));
+            sprintf(theText, "%ld/%ld", (long)((float)inUnit->mResourceAmount + 0.5f), (long)((float)theStats->mCarryAmount + 0.5f));
         else
-            sprintf(theText, "%d", inUnit->mResourceAmount);
+            sprintf(theText, "%ld", inUnit->mResourceAmount);
         static_cast<EEUIBUpgrade*>(this->mIcons[this->mAttributeCount])->UpdateCost(theText);
     } else if (this->mIsResourceShown) {
         this->mIcons[this->mAttributeCount]->SetDisplayMode(kDisplayModeHidden);

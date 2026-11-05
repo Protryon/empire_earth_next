@@ -5,6 +5,8 @@
 #ifndef EE_EEGAMEVARIANT_H
 #define EE_EEGAMEVARIANT_H
 
+#include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
+
 class FSFileSpec;
 
 // One record of db\dbgamevariant.dat (3 records of 0x114 bytes: "Scenario", "Tournament", "Standard"; read whole by
@@ -12,50 +14,50 @@ class FSFileSpec;
 // (dbgamevariant) and the loader's copies; names are provisional.
 struct EEGameVariantData {
     char mLabel[100];                       // +0x00
-    long mUnusedDatabaseID;                 // +0x64
-    long mIndex;                            // +0x68 (the loader skips a record whose index is negative) -> +0x70
+    int32_t mUnusedDatabaseID;              // +0x64
+    int32_t mIndex;                         // +0x68 (the loader skips a record whose index is negative) -> +0x70
     float mFactor0;                         // +0x6c -> +0x04 (factor 0)
-    long mSet0;                             // +0x70 -> +0x48 (then (long, float) pairs: +0x70/+0x74 .. +0xb8/+0xbc)
+    int32_t mSet0;                          // +0x70 -> +0x48 (then (long, float) pairs: +0x70/+0x74 .. +0xb8/+0xbc)
     float mFactor1;                         // +0x74 -> +0x08
-    long mSet1;                             // +0x78 -> +0x4c
+    int32_t mSet1;                          // +0x78 -> +0x4c
     float mFactor2;                         // +0x7c -> +0x0c
-    long mSet2;                             // +0x80 -> +0x50
+    int32_t mSet2;                          // +0x80 -> +0x50
     float mFactor3;                         // +0x84 -> +0x10
-    long mSet3;                             // +0x88 -> +0x54
+    int32_t mSet3;                          // +0x88 -> +0x54
     float mFactor4;                         // +0x8c -> +0x14
-    long mSet4;                             // +0x90 -> +0x58
+    int32_t mSet4;                          // +0x90 -> +0x58
     float mFactor5;                         // +0x94 -> +0x18
-    long mSet5;                             // +0x98 -> +0x5c
+    int32_t mSet5;                          // +0x98 -> +0x5c
     float mFactor6;                         // +0x9c -> +0x1c
-    long mSet6;                             // +0xa0 -> +0x60
+    int32_t mSet6;                          // +0xa0 -> +0x60
     float mFactor7;                         // +0xa4 -> +0x20
-    long mSet7;                             // +0xa8 -> +0x64
+    int32_t mSet7;                          // +0xa8 -> +0x64
     float mFactor8;                         // +0xac -> +0x24
-    long mSet8;                             // +0xb0 -> +0x68
+    int32_t mSet8;                          // +0xb0 -> +0x68
     float mFactor9;                         // +0xb4 -> +0x28
-    long mSet9;                             // +0xb8 -> +0x6c
+    int32_t mSet9;                          // +0xb8 -> +0x6c
     float mDepositFactor;                   // +0xbc -> +0x2c
     float mEpochCostFactor;                 // +0xc0 -> +0x30
     float mWorkTimeFactor;                  // +0xc4 -> +0x34
-    long mMoraleBonus;                      // +0xc8 -> +0x74
-    long mNameID;                           // +0xcc -> +0x78 (gResource string id: 31255 / 31254)
+    int32_t mMoraleBonus;                   // +0xc8 -> +0x74
+    int32_t mNameID;                        // +0xcc -> +0x78 (gResource string id: 31255 / 31254)
     float mFirstEpochCostFactor;            // +0xd0 -> +0x38
     float mSecondEpochCostFactor;           // +0xd4 -> +0x3c
     float mCostSetFactor;                   // +0xd8 -> +0x40
-    long mCostSet;                          // +0xdc -> +0x7c
+    int32_t mCostSet;                       // +0xdc -> +0x7c
     float mEarthquakeDamageFactor;          // +0xe0 -> +0x44
-    long mUnused1;                          // +0xe4 (0 in every record; not copied)
-    long mUnused2;                          // +0xe8
-    long mUnused3;                          // +0xec
-    long mUnused4;                          // +0xf0
-    long mUnused5;                          // +0xf4
-    long mUnused6;                          // +0xf8
-    long mUnused7;                          // +0xfc
-    long mUnused8;                          // +0x100
-    long mUnused9;                          // +0x104
-    long mUnused10;                         // +0x108
+    int32_t mUnused1;                       // +0xe4 (0 in every record; not copied)
+    int32_t mUnused2;                       // +0xe8
+    int32_t mUnused3;                       // +0xec
+    int32_t mUnused4;                       // +0xf0
+    int32_t mUnused5;                       // +0xf4
+    int32_t mUnused6;                       // +0xf8
+    int32_t mUnused7;                       // +0xfc
+    int32_t mUnused8;                       // +0x100
+    int32_t mUnused9;                       // +0x104
+    int32_t mUnused10;                      // +0x108
     bool mSelectable;                       // +0x10c -> +0x80
-    long mUnused11;                         // +0x110 (0 in every record)
+    int32_t mUnused11;                      // +0x110 (0 in every record)
 };
 static_assert(sizeof(EEGameVariantData) == 276, "on-disk record: 276 bytes on every target");
 

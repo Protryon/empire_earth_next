@@ -161,7 +161,7 @@ long EESETSEScenarioComboBox::MouseRButtonUp()
     switch (this->mMode) {
     case kSETriggerScreenTrigger:
         this->GetCurrentSelection(theSelection);
-        if (theSelection != -1) {
+        if (!UIsNone32(theSelection)) {
             UIEvent* theEvent = theScreen->mTabs[kSETriggerScreenTrigger]->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent)
                 theEvent->Reference();
@@ -174,7 +174,7 @@ long EESETSEScenarioComboBox::MouseRButtonUp()
         break;
     case kSETriggerScreenCondition:
         this->GetCurrentSelection(theSelection);
-        if (theSelection != -1) {
+        if (!UIsNone32(theSelection)) {
             unsigned long theConditionCount = gWorld.mScenarioManager->mConditions.size();
             unsigned long theObjectCondition = 0;
             while (theObjectCondition < theConditionCount) {
@@ -206,7 +206,7 @@ long EESETSEScenarioComboBox::MouseRButtonUp()
         break;
     case kSETriggerScreenEffect:
         this->GetCurrentSelection(theSelection);
-        if (theSelection != -1 && theSelection > 0) {
+        if (!UIsNone32(theSelection) && theSelection > 0) {
             UIEvent* theEvent = theScreen->mTabs[kSETriggerScreenEffect]->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent)
                 theEvent->Reference();
@@ -219,7 +219,7 @@ long EESETSEScenarioComboBox::MouseRButtonUp()
         break;
     case kSETriggerScreenObject:
         this->GetCurrentSelection(theSelection);
-        if (theSelection != -1 && theSelection > 0) {
+        if (!UIsNone32(theSelection) && theSelection > 0) {
             UIEvent* theEvent = theScreen->mTabs[kSETriggerScreenObject]->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent)
                 theEvent->Reference();
@@ -232,7 +232,7 @@ long EESETSEScenarioComboBox::MouseRButtonUp()
         break;
     case kSETriggerScreenArea:
         this->GetCurrentSelection(theSelection);
-        if (theSelection != -1 && theSelection > 1) {
+        if (!UIsNone32(theSelection) && theSelection > 1) {
             UIEvent* theEvent = theScreen->mTabs[kSETriggerScreenArea]->GetTriggerEvent(kControlTriggerChecked);
             if (theEvent)
                 theEvent->Reference();

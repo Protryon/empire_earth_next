@@ -953,3 +953,65 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   folder on `sys.path` must append it, not insert it first.
 - Archive reads are slow in Python (the PKWARE explode: about 2 minutes for the original game's models and
   textures); the gates take about 6 minutes.
+
+## LP64 (branch lp64)
+
+- **Why it matters**: Windows keeps `long` at 32 bits on x64 (LLP64), Linux and macOS make it 64 (LP64). The code
+  writes `long`/`unsigned long` to files and network buffers (`sizeof(long)`, `memcpy(&x, p, 4)`), keeps 32-bit
+  ids with -1 for "none", hashes and rotates in `unsigned long` and prints/scans it with `%d`. None of it shows on a
+  Windows build, which is why the x64 census found the formats safe.
+- **Method** (no LP64 compile is possible while every unit includes `<windows.h>`): `tools/lp64_census.py`
+  compiles every first-party unit (743) for x86_64 with the build's flags and lists (1) every `-Wformat`
+  diagnostic, (2) clang-query matches for the width-dependent constructs: `sizeof` of a long, memcpy/memset through
+  a `long*`, casts from `long*`, shifts/bitwise ops/`~` on long, all-ones sentinel compares, long/unsigned int mixes,
+  unions holding a long, `sizeof` of a record in an I/O call. `tools/record_sizes.py` dumps the raw records' x64
+  layouts with canonical field types and fails on any `long` field. The behaviour gate on Windows is
+  `tools/objdiff.py`: the same tree compiled before and after a change, compared function by function (bytes and
+  relocation offsets/types). Retyping `long` as `int32_t` where both are 32 bits must give identical code; every
+  commit lists the few functions that changed and why.
+- **Census by category** (sites; before -> after): `-Wformat` 535 -> 0; `sizeof(long)` 586 -> 21 (all consistent
+  in-memory sizes: arrays allocated and copied with the same `sizeof(long)`, the random-map parser's own `long`);
+  memcpy/memset through `long*` 325 -> 21 (same, plus four float fraction words packed into `long` members between
+  Load and FinishLoad: little-endian, the low four bytes round-trip); unsigned long compared with -1/0xffffffff 145 ->
+  2 (`UIsNone32`, below; the two left compare Win32 results: GetFileAttributes, ResumeThread); raw records
+  holding a long 37 -> 0;
+  shifts 1,062 and bitwise ops 1,555 on long reviewed by file: masks, flags, colour packing and small coordinates,
+  width-independent except the rotates and sums fixed below.
+- **File I/O**: the `FSFile` value overloads are `int32_t`/`uint32_t` virtuals; `long`/`unsigned long` go through
+  non-virtual adapters that read/write exactly four bytes (sign-/zero-extending back), so the hundreds of
+  `inFile.Read(theLong)` callers keep their types and write the same bytes on every data model. A short read leaves
+  what the direct read left (the 32-bit copy starts as the old value). `EEPTGeneric<unsigned long>` (the saved seed)
+  writes through a 32-bit copy. Derived file classes bring the adapters in with `using FSFile::Read/Write`.
+- **Records**: the 37 raw records hold `int32_t`/`uint32_t` (625 fields; `UIDbControl` and the TGA header newly
+  pinned by `static_assert`). Retyping a field made a few `GERectangle(a, b, c, d)` calls ambiguous between the
+  `long` and `float` constructors: they name the `long` one, as before.
+- **Network**: every long member of the NE*/EEM* messages is `int32_t`/`uint32_t` (133), and the wire locals
+  (counts, ids, the transfer id, the record file's timestamp and size, the UWideString export size, the PK01
+  compression header) are 32-bit. The trap was `memcpy(&theUnsignedLong, p, 4)`: on LP64 it leaves the upper half
+  undefined (a size read that way allocates gigabytes).
+- **Sentinels**: an `unsigned long` set to -1 in memory has 64 bits set on LP64, the same id read from a file or
+  message 32. `UIsNone32(x)` tests the low 32 bits (Windows: `x == 0xffffffff`); `USavedID` returns `uint32_t` and
+  `USavedPointer` sign-extends from 32 bits; `(long)USavedID(p) != -1` became `(int32_t)`.
+- **Mixed signedness**: `uint32_t` against `long` is an unsigned compare on Windows (both become unsigned long) and
+  a signed one on LP64 (the uint32_t becomes long). Retyping an `unsigned long` member as `uint32_t` therefore
+  changes LP64 semantics where it meets a `long`: the census's long-uint-mix finds those (two fixed with a cast to
+  uint32_t, the rest are hashes of small coordinates and shift counts).
+- **RNG determinism**: `URandom` is the only game generator (the CRT `rand()` only seeds a lobby game and a debug
+  report period, and the host sends that seed). Its state is `uint32_t`: seed' = (0x343fd * seed + 0x269ec3) mod 2^31
+  in unsigned 32-bit arithmetic, which is the same function on every data model (and was already: 2^31 divides
+  2^32, so the old `unsigned long` LCG agreed in its low 31 bits; now it is explicit). `Generate()` divides in
+  double, `URandomIntegers::Generate` scales a float and rounds with `lrintf`: those follow the floating-point model
+  (SSE2 on x86_64 Windows, Linux and macOS alike), not the data model. Checksums (`ESChecksumEntry`, the total) are
+  uint32_t sums, so a 64-bit accumulation cannot carry into bits a peer does not have.
+- **Formats**: 512 conversions got the length modifier their argument needs (`%ld` for long, `%zu` for size_t,
+  `%d` for a field retyped as int32_t), keeping the conversion letter (`%d` of an unsigned long became `%ld`, what
+  Windows printed); five resource texts or debug strings passed as the format became `"%s"` arguments (none holds a
+  `%`), two unused arguments were dropped. sscanf now writes the width it is given: `%ld` into `long`, and the
+  random-map parser's `sscanf("%d", void*)` scans `%ld` into its `long`.
+- **Left for the POSIX port** (not data-model issues of the game's own types, or not reachable): `wchar_t` is 4
+  bytes on Linux/macOS (the WON lobby reads UTF-16 as `wchar_t` from the wire; UWideString is char-based, so the
+  game's own formats do not depend on it); Windows SDK structs read from files (`BITMAPFILEHEADER`/`INFOHEADER`
+  through `DWORD`/`LONG`, `#include <pshpack1.h>` around the TGA header) need fixed-width definitions there; every
+  format is little-endian; `(unsigned long)-10000` coordinate sentinels (EEComplexUnit sight updates) compare a
+  converted long, which sign-extends alike on LP64; in-memory `long` arithmetic that overflows 32 bits (with
+  `-fwrapv`, Windows wraps, LP64 does not) is not censused beyond hashes, checksums and the RNG.

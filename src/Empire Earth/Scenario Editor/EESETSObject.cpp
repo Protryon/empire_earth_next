@@ -972,7 +972,7 @@ void EESETSObject::Store()
     theObject->mFamily = theGroup;
     unsigned long theType;
     this->mTypeComboBox->GetCurrentSelection(theType);
-    if (theType == -1)
+    if (UIsNone32(theType))
         theType = 0;
     theObject->mClass = this->mUnitTypes[theType];
     unsigned long theParent;
@@ -986,14 +986,14 @@ void EESETSObject::Store()
     theObject->mSelectedByCheck = this->mSelectedByCheck->GetCheckState();
     unsigned long theArea;
     this->mAreaComboBox->GetCurrentSelection(theArea);
-    if (theArea != -1)
+    if (!UIsNone32(theArea))
         theObject->mArea = theArea;
     else
         theObject->mInAreaCheck = 0;
     this->mNearModeComboBox->GetCurrentSelection(theObject->mNearMode);
     unsigned long theValue;
     this->mNearObjectComboBox->GetCurrentSelection(theValue);
-    if (theValue != -1)
+    if (!UIsNone32(theValue))
         theObject->mNearObject = theValue;
     else
         theObject->mNearCheck = 0;
@@ -1176,7 +1176,7 @@ void EESETSObject::UpdateSelection()
             if (this->mUnitsRadio->GetIsChecked() == true) {
                 if (theEditor->GetSelectedUnitCount() > 0) {
                     gResource->GetString((theEditor->mSelectedUnits[0])->mUnitClass->mNameStringID, theTypeName);
-                    sprintf(theNumber, "%d", (theEditor->mSelectedUnits[0])->mUnitID % 1000);
+                    sprintf(theNumber, "%ld", (theEditor->mSelectedUnits[0])->mUnitID % 1000);
                     theTypeName = theTypeName + theNumber;
                 } else
                     gResource->GetString(IDS_NONE, theTypeName);

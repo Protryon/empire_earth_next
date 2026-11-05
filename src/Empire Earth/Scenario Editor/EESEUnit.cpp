@@ -330,7 +330,7 @@ void EEUIFSELBUnitList::AddUnitType(long inUnitType)
             theValue = gUnitClassTable[inUnitType]->mFamily;
         else
             theValue = gUnitClassTable[inUnitType]->mEpoch + 1;
-        sprintf(theText, "%d: ", theValue);
+        sprintf(theText, "%ld: ", theValue);
         gResource->GetString(gUnitClassTable[inUnitType]->mNameStringID, theName);
         theText += theName;
     }
