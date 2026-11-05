@@ -98,13 +98,13 @@ def _finish_session(ctx,lines):
 # the same device as the 3D view, so a black game view passed for a long time (x64: a NaN light fade). Regions are
 # fractions of the frame, laid out on the 800x600 game screen: the game view between the top bar and the bottom
 # panel, left of the mini map frame; the mini map's inside. Calibrated on correct x64/i686 frames (view: 78% lit,
-# ~3,000 colours; mini map at the start: 0.7-1.1% terrain pixels) and on the black x64 frames (view: 0.1% lit,
-# 181 colours: the cursor).
+# ~3,000 colours; mini map at the start: 0.8-1.3% terrain pixels, grass and snow maps) and on the black x64 frames
+# (view: 0.1% lit, 181 colours: the cursor; their mini map was right).
 VIEW_REGION=(0.0,0.06,0.80,0.88)        # x0, y0, x1, y1
-MINIMAP_REGION=(0.84,0.73,0.995,0.935)
+MINIMAP_REGION=(0.85,0.74,0.995,0.935)
 VIEW_MIN_LIT=0.30                       # share of pixels with a channel above 24
 VIEW_MIN_COLOURS=512                    # distinct colours at 5 bits per channel (not one uniform fill)
-MINIMAP_MIN_TERRAIN=0.002               # share of coloured, non-grey, non-player-blue/red pixels (~30 at 800x600)
+MINIMAP_MIN_TERRAIN=0.002               # share of lit pixels that are not the white view outline or a blue/red unit dot
 
 
 def frame_regions(pixels):
@@ -122,7 +122,7 @@ def frame_regions(pixels):
                 top=max(red,green,blue)
                 if top>24:lit+=1
                 colours.add((red>>3,green>>3,blue>>3))
-                if top>24 and top-min(red,green,blue)>24 and blue<=2*max(red,green) and red<=2*max(green,blue):terrain+=1
+                if top>24 and min(red,green,blue)<235 and blue<=2*max(red,green) and red<=2*max(green,blue):terrain+=1
         return dict(pixels=n,lit=lit/n,colours=len(colours),terrain=terrain/n)
     return dict(width=w,height=H,view=measure(VIEW_REGION),minimap=measure(MINIMAP_REGION))
 

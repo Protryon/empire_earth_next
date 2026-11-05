@@ -1044,6 +1044,9 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
 - **Rendering gate**: the harness's tour (and random-game) exercise now checks the captured gameplay frame and, after
   `--play-seconds` of at least 10, the play frame (`session_exercise.check_rendering`, evidence `rendering.json`):
   the game view (x 0-80%, y 6-88% of the frame) needs at least 30% pixels with a channel above 24 and 512 colours at
-  5 bits per channel (correct frames: 78%, ~3,000; the black ones: 0.1%, 181, the cursor); the mini map's inside
-  (x 84-99.5%, y 73-93.5%) at least 0.2% coloured, non-grey, non-player-blue/red pixels (correct at the start:
-  0.7-1.1%). A capture used to need only 16 distinct byte values in the whole frame, which the UI alone provides.
+  5 bits per channel (correct frames: 78-79%, ~3,000; the black ones: 0.1%, 181, the cursor); the mini map's inside
+  (x 85-99.5%, y 74-93.5%) at least 0.2% lit pixels that are neither the white view outline nor a blue/red unit dot
+  (correct at the start, grass and snow maps: 0.8-1.3%; the outline and dots alone: 0%). A capture used to need only
+  16 distinct byte values in the whole frame, which the UI alone provides. The mini map was not part of this bug: it
+  is drawn on the CPU and showed the explored start area in the black frames too (it is mostly black at the start
+  because the map is unexplored).
