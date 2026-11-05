@@ -423,7 +423,7 @@ void EECPBuildManager::AssignBuilders()
 }
 
 // FUNCTION: EXE 0x4679d7
-// Cancels every stalled build: requeues it in front, destroys the foundation, refunds its cost and sends
+// Cancels every stalled build: requeues it in front (without its site), destroys the foundation, refunds its cost and sends
 // the builder back to the town centre (or idles it)
 // NEAR (60): the original refuses the request's U2DPoint copy ctor (0x44d28b) and loads the player's vptr first
 void EECPBuildManager::CancelStalledBuilds()
@@ -435,8 +435,6 @@ void EECPBuildManager::CancelStalledBuilds()
         long theID = gUnitClassTable[theClassID] != NULL ? gUnitClassTable[theClassID]->mTechnology
             : 100000;
         long theIndex = EECPBMQueueIndex(theID);
-        this->mQueues[theIndex].push_front(EECPBuildRequest(theClassID,
-            U2DPoint<long>(theGoal->mTarget->mTileX, theGoal->mTarget->mTileY)));
         if (gCPTraceOn) {   // what holds the site: the first blocking unit on the footprint other than the building
             std::vector<U2DPoint<long> > theTiles;
             std::vector<EEUnit*> theBlockers;
@@ -456,6 +454,11 @@ void EECPBuildManager::CancelStalledBuilds()
             EECPTraceOut(this->mPlayer, "build.stalled", "cls=%ld x=%ld y=%ld blocker=%ld owner=%ld", theClassID,
                 (long)theGoal->mTarget->mTileX, (long)theGoal->mTarget->mTileY, theBlocker, theOwner);
         }
+        // Requeued without its site (the original kept the stalled foundation's tile): a blocker that stays (most
+        // often the AI's own earlier foundation at that tile, still dying) stalled every new foundation there, and the
+        // AI ordered the same building at the same tile every 3-4 s for the rest of the game (docs/AI_RESEARCH.md
+        // §8.6: 1,426 of 1,466 stalls in six 60-minute games). FindSite now picks a free site.
+        this->mQueues[theIndex].push_front(EECPBuildRequest(theClassID, U2DPoint<long>(0, 0)));
         theGoal->mTarget->Kill(0, 0, 0);
         for (unsigned long i = 2; i < 7; i++)
             this->mPlayer->AddResource(i, this->mPlayer->ScaleCost(theGoal->mTargetNode->GetCost(i, 0x20, 1.0f)));
