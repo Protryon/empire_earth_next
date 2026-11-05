@@ -77,172 +77,172 @@ EEGraphicObject* gGraphicObjectU4E8440;
 // flag shares a dword with the next state's first flag). +0x00..+0x68 is not read by the loader
 struct EEGraphicObjectRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
-    long mMediaIndex;         // +0x68
+    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
+    int32_t mMediaIndex;      // +0x68
     bool mIsDrawn;            // +0x6c
-    long mUnusedBuildingValue1; // +0x70
-    long mUnusedBuildingValue2; // +0x74
+    int32_t mUnusedBuildingValue1; // +0x70
+    int32_t mUnusedBuildingValue2; // +0x74
     bool mSharesFrames0;      // +0x78
-    unsigned long mFirstFrame0;  // +0x7c
-    unsigned long mLastFrame0;  // +0x80
-    unsigned long mFrameTime0;  // +0x84
+    uint32_t mFirstFrame0;       // +0x7c
+    uint32_t mLastFrame0;       // +0x80
+    uint32_t mFrameTime0;       // +0x84
     bool mLoops0;             // +0x88
-    unsigned long mUnusedHoldTime0; // +0x8c (not read: the loader sets mCamouflageTimer[0] to 300000)
-    unsigned long mSound1Frame0;  // +0x90
-    unsigned long mSound2Frame0;  // +0x94
-    unsigned long mSound1Index0;  // +0x98
-    unsigned long mSound2Index0;  // +0x9c
+    uint32_t mUnusedHoldTime0;      // +0x8c (not read: the loader sets mCamouflageTimer[0] to 300000)
+    uint32_t mSound1Frame0;       // +0x90
+    uint32_t mSound2Frame0;       // +0x94
+    uint32_t mSound1Index0;       // +0x98
+    uint32_t mSound2Index0;       // +0x9c
     bool mIsSpeedScaled0;     // +0xa0
     bool mSharesFrames13;     // +0xa1
-    unsigned long mFirstFrame13;  // +0xa4
-    unsigned long mLastFrame13;  // +0xa8
-    unsigned long mFrameTime13;  // +0xac
+    uint32_t mFirstFrame13;       // +0xa4
+    uint32_t mLastFrame13;       // +0xa8
+    uint32_t mFrameTime13;       // +0xac
     bool mLoops13;            // +0xb0
-    unsigned long mHoldTime13;  // +0xb4
-    unsigned long mSound1Frame13;  // +0xb8
-    unsigned long mSound2Frame13;  // +0xbc
-    unsigned long mSound1Index13;  // +0xc0
-    unsigned long mSound2Index13;  // +0xc4
+    uint32_t mHoldTime13;       // +0xb4
+    uint32_t mSound1Frame13;       // +0xb8
+    uint32_t mSound2Frame13;       // +0xbc
+    uint32_t mSound1Index13;       // +0xc0
+    uint32_t mSound2Index13;       // +0xc4
     bool mIsSpeedScaled13;    // +0xc8
     bool mSharesFrames7;      // +0xc9
-    unsigned long mFirstFrame7;  // +0xcc
-    unsigned long mLastFrame7;  // +0xd0
-    unsigned long mFrameTime7;  // +0xd4
+    uint32_t mFirstFrame7;       // +0xcc
+    uint32_t mLastFrame7;       // +0xd0
+    uint32_t mFrameTime7;       // +0xd4
     bool mLoops7;             // +0xd8
-    unsigned long mHoldTime7;  // +0xdc
-    unsigned long mSound1Frame7;  // +0xe0
-    unsigned long mSound2Frame7;  // +0xe4
-    unsigned long mSound1Index7;  // +0xe8
-    unsigned long mSound2Index7;  // +0xec
+    uint32_t mHoldTime7;       // +0xdc
+    uint32_t mSound1Frame7;       // +0xe0
+    uint32_t mSound2Frame7;       // +0xe4
+    uint32_t mSound1Index7;       // +0xe8
+    uint32_t mSound2Index7;       // +0xec
     bool mIsSpeedScaled7;     // +0xf0
     bool mSharesFrames8;      // +0xf1
-    unsigned long mFirstFrame8;  // +0xf4
-    unsigned long mLastFrame8;  // +0xf8
-    unsigned long mFrameTime8;  // +0xfc
+    uint32_t mFirstFrame8;       // +0xf4
+    uint32_t mLastFrame8;       // +0xf8
+    uint32_t mFrameTime8;       // +0xfc
     bool mLoops8;             // +0x100
-    unsigned long mHoldTime8;  // +0x104
-    unsigned long mSound1Frame8;  // +0x108
-    unsigned long mSound2Frame8;  // +0x10c
-    unsigned long mSound1Index8;  // +0x110
-    unsigned long mSound2Index8;  // +0x114
+    uint32_t mHoldTime8;       // +0x104
+    uint32_t mSound1Frame8;       // +0x108
+    uint32_t mSound2Frame8;       // +0x10c
+    uint32_t mSound1Index8;       // +0x110
+    uint32_t mSound2Index8;       // +0x114
     bool mIsSpeedScaled8;     // +0x118
     bool mSharesFrames4;      // +0x119
-    unsigned long mFirstFrame4;  // +0x11c
-    unsigned long mLastFrame4;  // +0x120
-    unsigned long mFrameTime4;  // +0x124
+    uint32_t mFirstFrame4;       // +0x11c
+    uint32_t mLastFrame4;       // +0x120
+    uint32_t mFrameTime4;       // +0x124
     bool mLoops4;             // +0x128
-    unsigned long mHoldTime4;  // +0x12c
+    uint32_t mHoldTime4;       // +0x12c
     bool mIsSpeedScaled4;     // +0x130
     bool mSharesFrames5;      // +0x131
-    unsigned long mFirstFrame5;  // +0x134
-    unsigned long mLastFrame5;  // +0x138
-    unsigned long mFrameTime5;  // +0x13c
+    uint32_t mFirstFrame5;       // +0x134
+    uint32_t mLastFrame5;       // +0x138
+    uint32_t mFrameTime5;       // +0x13c
     bool mLoops5;             // +0x140
-    unsigned long mHoldTime5;  // +0x144
+    uint32_t mHoldTime5;       // +0x144
     bool mIsSpeedScaled5;     // +0x148
     bool mSharesFrames12;     // +0x149
-    unsigned long mFirstFrame12;  // +0x14c
-    unsigned long mLastFrame12;  // +0x150
-    unsigned long mFrameTime12;  // +0x154
+    uint32_t mFirstFrame12;       // +0x14c
+    uint32_t mLastFrame12;       // +0x150
+    uint32_t mFrameTime12;       // +0x154
     bool mLoops12;            // +0x158
-    unsigned long mHoldTime12;  // +0x15c
-    unsigned long mSound1Frame12;  // +0x160
-    unsigned long mSound2Frame12;  // +0x164
-    unsigned long mSound1Index12;  // +0x168
-    unsigned long mSound2Index12;  // +0x16c
+    uint32_t mHoldTime12;       // +0x15c
+    uint32_t mSound1Frame12;       // +0x160
+    uint32_t mSound2Frame12;       // +0x164
+    uint32_t mSound1Index12;       // +0x168
+    uint32_t mSound2Index12;       // +0x16c
     bool mIsSpeedScaled12;    // +0x170
     bool mSharesFrames11;     // +0x171
-    unsigned long mFirstFrame11;  // +0x174
-    unsigned long mLastFrame11;  // +0x178
-    unsigned long mFrameTime11;  // +0x17c
+    uint32_t mFirstFrame11;       // +0x174
+    uint32_t mLastFrame11;       // +0x178
+    uint32_t mFrameTime11;       // +0x17c
     bool mLoops11;            // +0x180
-    unsigned long mHoldTime11;  // +0x184
-    unsigned long mSound1Frame11;  // +0x188
-    unsigned long mSound2Frame11;  // +0x18c
-    unsigned long mSound1Index11;  // +0x190
-    unsigned long mSound2Index11;  // +0x194
+    uint32_t mHoldTime11;       // +0x184
+    uint32_t mSound1Frame11;       // +0x188
+    uint32_t mSound2Frame11;       // +0x18c
+    uint32_t mSound1Index11;       // +0x190
+    uint32_t mSound2Index11;       // +0x194
     bool mIsSpeedScaled11;    // +0x198
     bool mSharesFrames9;      // +0x199
-    unsigned long mFirstFrame9;  // +0x19c
-    unsigned long mLastFrame9;  // +0x1a0
-    unsigned long mFrameTime9;  // +0x1a4
+    uint32_t mFirstFrame9;       // +0x19c
+    uint32_t mLastFrame9;       // +0x1a0
+    uint32_t mFrameTime9;       // +0x1a4
     bool mLoops9;             // +0x1a8
-    unsigned long mHoldTime9;  // +0x1ac
-    unsigned long mSound1Frame9;  // +0x1b0
-    unsigned long mSound2Frame9;  // +0x1b4
-    unsigned long mSound1Index9;  // +0x1b8
-    unsigned long mSound2Index9;  // +0x1bc
+    uint32_t mHoldTime9;       // +0x1ac
+    uint32_t mSound1Frame9;       // +0x1b0
+    uint32_t mSound2Frame9;       // +0x1b4
+    uint32_t mSound1Index9;       // +0x1b8
+    uint32_t mSound2Index9;       // +0x1bc
     bool mIsSpeedScaled9;     // +0x1c0
     bool mSharesFrames10;     // +0x1c1
-    unsigned long mFirstFrame10;  // +0x1c4
-    unsigned long mLastFrame10;  // +0x1c8
-    unsigned long mFrameTime10;  // +0x1cc
+    uint32_t mFirstFrame10;       // +0x1c4
+    uint32_t mLastFrame10;       // +0x1c8
+    uint32_t mFrameTime10;       // +0x1cc
     bool mLoops10;            // +0x1d0
-    unsigned long mHoldTime10;  // +0x1d4
-    unsigned long mSound1Frame10;  // +0x1d8
-    unsigned long mSound2Frame10;  // +0x1dc
-    unsigned long mSound1Index10;  // +0x1e0
-    unsigned long mSound2Index10;  // +0x1e4
+    uint32_t mHoldTime10;       // +0x1d4
+    uint32_t mSound1Frame10;       // +0x1d8
+    uint32_t mSound2Frame10;       // +0x1dc
+    uint32_t mSound1Index10;       // +0x1e0
+    uint32_t mSound2Index10;       // +0x1e4
     bool mIsSpeedScaled10;    // +0x1e8
     bool mSharesFrames6;      // +0x1e9
-    unsigned long mFirstFrame6;  // +0x1ec
-    unsigned long mLastFrame6;  // +0x1f0
-    unsigned long mFrameTime6;  // +0x1f4
+    uint32_t mFirstFrame6;       // +0x1ec
+    uint32_t mLastFrame6;       // +0x1f0
+    uint32_t mFrameTime6;       // +0x1f4
     bool mLoops6;             // +0x1f8
-    unsigned long mHoldTime6;  // +0x1fc
-    unsigned long mSound1Frame6;  // +0x200
-    unsigned long mSound2Frame6;  // +0x204
-    unsigned long mSound1Index6;  // +0x208
-    unsigned long mSound2Index6;  // +0x20c
+    uint32_t mHoldTime6;       // +0x1fc
+    uint32_t mSound1Frame6;       // +0x200
+    uint32_t mSound2Frame6;       // +0x204
+    uint32_t mSound1Index6;       // +0x208
+    uint32_t mSound2Index6;       // +0x20c
     bool mIsSpeedScaled6;     // +0x210
     bool mSharesFrames3;      // +0x211
-    unsigned long mFirstFrame3;  // +0x214
-    unsigned long mLastFrame3;  // +0x218
-    unsigned long mFrameTime3;  // +0x21c
+    uint32_t mFirstFrame3;       // +0x214
+    uint32_t mLastFrame3;       // +0x218
+    uint32_t mFrameTime3;       // +0x21c
     bool mLoops3;             // +0x220
-    unsigned long mHoldTime3;  // +0x224
-    unsigned long mSound1Frame3;  // +0x228
-    unsigned long mSound2Frame3;  // +0x22c
-    unsigned long mSound1Index3;  // +0x230
-    unsigned long mSound2Index3;  // +0x234
+    uint32_t mHoldTime3;       // +0x224
+    uint32_t mSound1Frame3;       // +0x228
+    uint32_t mSound2Frame3;       // +0x22c
+    uint32_t mSound1Index3;       // +0x230
+    uint32_t mSound2Index3;       // +0x234
     bool mIsSpeedScaled3;     // +0x238
     bool mSharesFrames1;      // +0x239
-    unsigned long mFirstFrame1;  // +0x23c
-    unsigned long mLastFrame1;  // +0x240
-    unsigned long mFrameTime1;  // +0x244
+    uint32_t mFirstFrame1;       // +0x23c
+    uint32_t mLastFrame1;       // +0x240
+    uint32_t mFrameTime1;       // +0x244
     bool mLoops1;             // +0x248
-    unsigned long mHoldTime1;  // +0x24c
-    unsigned long mSound1Frame1;  // +0x250
-    unsigned long mSound2Frame1;  // +0x254
-    unsigned long mSound1Index1;  // +0x258
-    unsigned long mSound2Index1;  // +0x25c
+    uint32_t mHoldTime1;       // +0x24c
+    uint32_t mSound1Frame1;       // +0x250
+    uint32_t mSound2Frame1;       // +0x254
+    uint32_t mSound1Index1;       // +0x258
+    uint32_t mSound2Index1;       // +0x25c
     bool mIsSpeedScaled1;     // +0x260
     bool mSharesFrames2;      // +0x261
-    unsigned long mFirstFrame2;  // +0x264
-    unsigned long mLastFrame2;  // +0x268
-    unsigned long mFrameTime2;  // +0x26c
+    uint32_t mFirstFrame2;       // +0x264
+    uint32_t mLastFrame2;       // +0x268
+    uint32_t mFrameTime2;       // +0x26c
     bool mLoops2;             // +0x270
-    unsigned long mHoldTime2;  // +0x274
-    unsigned long mSound1Frame2;  // +0x278
-    unsigned long mSound2Frame2;  // +0x27c
-    unsigned long mSound1Index2;  // +0x280
-    unsigned long mSound2Index2;  // +0x284
+    uint32_t mHoldTime2;       // +0x274
+    uint32_t mSound1Frame2;       // +0x278
+    uint32_t mSound2Frame2;       // +0x27c
+    uint32_t mSound1Index2;       // +0x280
+    uint32_t mSound2Index2;       // +0x284
     bool mIsSpeedScaled2;     // +0x288
-    long mUnusedIsBuilding;   // +0x28c
+    int32_t mUnusedIsBuilding; // +0x28c
     bool mUnusedIsSprite;     // +0x290
     char _gap291[0x7];
-    long mUnusedDummyValue;   // +0x298
-    long mUnusedBaseGraphic;  // +0x29c
-    long mAlphaReference;     // +0x2a0
-    long mUnusedBuildingIndex; // +0x2a4
+    int32_t mUnusedDummyValue; // +0x298
+    int32_t mUnusedBaseGraphic; // +0x29c
+    int32_t mAlphaReference;  // +0x2a0
+    int32_t mUnusedBuildingIndex; // +0x2a4
     char _gap2A8[0x4];
-    long mKind;               // +0x2ac
+    int32_t mKind;            // +0x2ac
     bool mHasAlpha;           // +0x2b0
     float mOpacity;           // +0x2b4
     char _gap2B8[0x4];
     float mMipMapBias;        // +0x2bc
-    long mNumMipLevelsToDrop;  // +0x2c0
-    long mMaxMipLevelsToDrop;  // +0x2c4
+    int32_t mNumMipLevelsToDrop; // +0x2c0
+    int32_t mMaxMipLevelsToDrop; // +0x2c4
     bool mCreateMipMaps;      // +0x2c8
 };
 static_assert(sizeof(EEGraphicObjectRecord) == 716, "on-disk record: 716 bytes on every target");

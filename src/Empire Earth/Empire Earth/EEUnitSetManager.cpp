@@ -15,11 +15,11 @@
 // One record of the unit set file (sizeof 0xb8: Load's memset and Read; provisional names)
 struct EEUnitSetRecord {
     char mName[0x68];                       // +0x00
-    long mID;                               // +0x68 (0 or less: no set at this index)
-    unsigned long mFamilies[8];             // +0x6c (unit classes; all eight are added)
-    long mUnitTypes[8];                     // +0x8c (only the positive ones are added)
-    long mIncludedSet;                      // +0xac (index of the set's mL30)
-    long mExcludedSet;                      // +0xb0 (index of the set's mL34)
+    int32_t mID;                            // +0x68 (0 or less: no set at this index)
+    uint32_t mFamilies[8];                  // +0x6c (unit classes; all eight are added)
+    int32_t mUnitTypes[8];                  // +0x8c (only the positive ones are added)
+    int32_t mIncludedSet;                   // +0xac (index of the set's mL30)
+    int32_t mExcludedSet;                   // +0xb0 (index of the set's mL34)
     bool mShowInEditor;                     // +0xb4 (the set's mB39)
 };
 static_assert(sizeof(EEUnitSetRecord) == 184, "on-disk record: 184 bytes on every target");

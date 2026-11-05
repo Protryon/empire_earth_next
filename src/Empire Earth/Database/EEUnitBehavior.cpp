@@ -26,8 +26,8 @@ extern float gGameStateGameSpeed;
 // One record of db\dbUnitBehavior.dat (0x7c bytes, read whole). Inferred layout.
 struct EEUnitBehaviorRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
-    long mIndex;                            // +0x68 (negative: no entry)
+    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
+    int32_t mIndex;                         // +0x68 (negative: no entry)
     bool mCanMoveFreely;                    // +0x6c -> +0x04
     bool mCanPursuePastInitialContactLOS;   // +0x6d -> +0x07
     bool mCanTargetEnemies;                 // +0x6e -> +0x08
@@ -42,9 +42,9 @@ static_assert(sizeof(EEUnitBehaviorRecord) == 124, "on-disk record: 124 bytes on
 // One record of db\dbweapontohit.dat (0x84 bytes). Inferred layout.
 struct EEToHitRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
-    long mUnusedIndex;                      // +0x068 the 0-based row index (not read)
-    long mPercents[6];                      // +0x6c (hundredths)
+    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
+    int32_t mUnusedIndex;                   // +0x068 the 0-based row index (not read)
+    int32_t mPercents[6];                   // +0x6c (hundredths)
 };
 static_assert(sizeof(EEToHitRecord) == 132, "on-disk record: 132 bytes on every target");
 

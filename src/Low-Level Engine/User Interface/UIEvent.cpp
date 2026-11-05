@@ -29,10 +29,10 @@
 // One event record of the UI database (0x74 bytes) (provisional names).
 struct UIDbDataEvents {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
-    long mEventID;                          // +0x68 negative: no event
-    unsigned long mOwnerID;                 // +0x6c control table index / form ID
-    unsigned long mEventType;               // +0x70
+    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
+    int32_t mEventID;                       // +0x68 negative: no event
+    uint32_t mOwnerID;                      // +0x6c control table index / form ID
+    uint32_t mEventType;                    // +0x70
 };
 static_assert(sizeof(UIDbDataEvents) == 116, "on-disk record: 116 bytes on every target");
 

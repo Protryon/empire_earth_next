@@ -26,13 +26,13 @@ std::vector<EESoundObject*> gSoundObjects;        // 0x4e8678
 // One record of db\dbsounds.dat (0x84 bytes, read whole). Layout inferred (only the fields LoadTable copies).
 struct EESoundRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
-    long mUnusedIndex;                      // +0x068 the 0-based row index (not read)
-    long mMaxInstances;                     // +0x6c -> +0x1c
-    long mCategory;                         // +0x70 -> +0x20
-    long mUnusedPriority;                   // +0x74 -> +0x24
+    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
+    int32_t mUnusedIndex;                   // +0x068 the 0-based row index (not read)
+    int32_t mMaxInstances;                  // +0x6c -> +0x1c
+    int32_t mCategory;                      // +0x70 -> +0x20
+    int32_t mUnusedPriority;                // +0x74 -> +0x24
     bool mLooping;                          // +0x78 -> +0x2c (looping)
-    long mVolume;                           // +0x7c: percent -> +0x14 (float, * 0.01)
+    int32_t mVolume;                        // +0x7c: percent -> +0x14 (float, * 0.01)
     char _gap80[4];
 };
 static_assert(sizeof(EESoundRecord) == 132, "on-disk record: 132 bytes on every target");

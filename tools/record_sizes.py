@@ -4,7 +4,10 @@
 
 Every unit that does raw record I/O is compiled -fsyntax-only for both targets with clang's complete record-layout
 dump; a record whose size differs would read or write a different number of bytes on x64 (a pointer, size_t or a
-vptr inside it). Prints each record's two sizes; exits 1 if any differ.
+vptr inside it). The x64 dump has canonical field types (typedefs resolved, nested records expanded): a field of
+type long or unsigned long is 8 bytes on LP64 (Linux, macOS) and would change the record there, so the records use
+int32_t/uint32_t. Prints each record's two sizes and its long fields; exits 1 if a size differs or a record holds
+a long.
 """
 import argparse
 import collections
@@ -24,7 +27,8 @@ from ee import CLANG, ROOT
 PRIM = r"(long|unsigned long|short|unsigned short|char|unsigned char|float|double|int|bool|DWORD|WORD|BYTE|wchar_t|" \
        r"unsigned int|GUID)"
 SITE = re.compile(r"(Read|Write|ReadFile|WriteFile|fread|fwrite)\([^;]*sizeof\(([^()]*)\)")
-LAYOUT = re.compile(r"^\s*0 \| (?:class|struct|union) (\S+)\n(?:.*\n)*?\s*\| \[sizeof=(\d+)", re.M)
+LAYOUT = re.compile(r"^\s*0 \| (?:class|struct|union) (\S+)\n((?:.*\n)*?)\s*\| \[sizeof=(\d+)", re.M)
+LONG_FIELD = re.compile(r"\|\s+(?:unsigned )?long(?:\[\d+\])* \w+\s*$", re.M)
 
 
 def record_sites():
@@ -54,7 +58,8 @@ def record_sites():
     return found
 
 
-def layouts(src, target):
+def layouts(src, target, canonical=False):
+    """{record: (size, its long/unsigned long fields: counted in canonical dumps only)}"""
     jobs = {pathlib.Path(s).resolve(): (m, s, f) for m in units.MODULES for m, s, f in units.jobs_for(m)}
     mod, s, flags = jobs[pathlib.Path(src).resolve()]
     flags = verify.unit_flags(s, flags)
@@ -63,10 +68,12 @@ def layouts(src, target):
     base = [("--target=" + target if f.startswith("--target=") else f) for f in clang_build.CLANG_FLAGS
             if f not in ("/c", "/arch:IA32")]
     cmd = [str(CLANG), *base, "/std:c++17", *clang_build.clang_flags(flags, "-O0"), *verify.DEFINES.split(), *iflags,
-           "-fsyntax-only", "-Xclang", "-fdump-record-layouts-complete", str(staged)]
+           "-fsyntax-only", "-Xclang", "-fdump-record-layouts-complete",
+           *(["-Xclang", "-fdump-record-layouts-canonical"] if canonical else []), str(staged)]
     r = subprocess.run(cmd, env=dict(os.environ, INCLUDE=inc), capture_output=True, text=True, errors="replace",
                        creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-    return {name.split("::")[-1]: int(size) for name, size in LAYOUT.findall(r.stdout)}
+    return {name.split("::")[-1]: (int(size), len(LONG_FIELD.findall(body)))
+            for name, body, size in LAYOUT.findall(r.stdout)}
 
 
 def main():
@@ -74,20 +81,22 @@ def main():
     ap.add_argument("-j", type=int, default=os.cpu_count() or 4)
     a = ap.parse_args()
     sites = record_sites()
-    rows, bad = {}, 0
+    rows, bad, longs = {}, 0, 0
     with concurrent.futures.ThreadPoolExecutor(a.j) as ex:
-        futs = {ex.submit(lambda s=s: (layouts(s, "i686-pc-windows-msvc"), layouts(s, "x86_64-pc-windows-msvc"))): s
-                for s in sites}
+        futs = {ex.submit(lambda s=s: (layouts(s, "i686-pc-windows-msvc"),
+                                       layouts(s, "x86_64-pc-windows-msvc", canonical=True))): s for s in sites}
         for fut in concurrent.futures.as_completed(futs):
             x86, x64 = fut.result()
             for t in sites[futs[fut]]:
-                rows[t] = (x86.get(t), x64.get(t), futs[fut].relative_to(ROOT / "src"))
-    for t, (a32, a64, src) in sorted(rows.items()):
+                rows[t] = (x86.get(t, (None, 0))[0], *x64.get(t, (None, 0)), futs[fut].relative_to(ROOT / "src"))
+    for t, (a32, a64, nlong, src) in sorted(rows.items()):
         flag = "" if a32 == a64 and a32 is not None else "  <-- DIFFERS" if a32 and a64 else "  (no layout)"
+        flag += f"  <-- {nlong} long fields (LP64)" if nlong else ""
         bad += a32 != a64
+        longs += nlong > 0
         print(f"{t:32} x86 {a32!s:>6}  x64 {a64!s:>6}  {src}{flag}")
-    print(f"\n{len(rows)} records, {bad} differ")
-    sys.exit(1 if bad else 0)
+    print(f"\n{len(rows)} records, {bad} differ in size, {longs} hold a long")
+    sys.exit(1 if bad or longs else 0)
 
 
 if __name__ == "__main__":

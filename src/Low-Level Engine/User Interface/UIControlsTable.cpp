@@ -77,59 +77,59 @@ struct UIDbControl {
     float mBackgroundOpacity;               // +0x258
     float mTextBoxOpacity;                  // +0x25c
     float mScrollBarBgOpacity;              // +0x260
-    unsigned long mUnused1[5];              // +0x264
+    uint32_t mUnused1[5];                   // +0x264
     float mLeftOffset;                      // +0x278
     float mRightOffset;                     // +0x27c
     float mBottomOffset;                    // +0x280
     float mTopOffset;                       // +0x284
-    long mUnusedDbRecordId;                 // +0x288
-    long mID;                               // +0x28c
-    long mFormID;                           // +0x290
-    unsigned long mGroup;                   // +0x294
-    unsigned long mControlType;             // +0x298
-    long mFormIndex;                        // +0x29c
-    long mBorderThickness;                  // +0x2a0
-    unsigned long mLeftOffsetType;          // +0x2a4
-    unsigned long mRightOffsetType;         // +0x2a8
-    unsigned long mTopOffsetType;           // +0x2ac
-    unsigned long mBottomOffsetType;        // +0x2b0
-    unsigned long mBackgroundRed;           // +0x2b4
-    unsigned long mBackgroundGreen;         // +0x2b8
-    unsigned long mBackgroundBlue;          // +0x2bc
-    long mStringTableBegin;                 // +0x2c0
-    long mStringTableEnd;                   // +0x2c4
-    unsigned long mFontTableIndex;          // +0x2c8
-    unsigned long mTextForegroundRed;       // +0x2cc
-    unsigned long mTextForegroundGreen;     // +0x2d0
-    unsigned long mTextForegroundBlue;      // +0x2d4
-    long mTextAlignment;                    // +0x2d8
-    long mNormalLeft;                       // +0x2dc
-    long mNormalRight;                      // +0x2e0
-    long mNormalTop;                        // +0x2e4
-    long mNormalBottom;                     // +0x2e8
-    long mPressedLeft;                      // +0x2ec
-    long mPressedRight;                     // +0x2f0
-    long mPressedTop;                       // +0x2f4
-    long mPressedBottom;                    // +0x2f8
-    long mFocusedLeft;                      // +0x2fc
-    long mFocusedRight;                     // +0x300
-    long mFocusedTop;                       // +0x304
-    long mFocusedBottom;                    // +0x308
-    long mMaxChars;                         // +0x30c
-    unsigned long mSelectedListBoxRed;      // +0x310
-    unsigned long mSelectedListBoxGreen;    // +0x314
-    unsigned long mSelectedListBoxBlue;     // +0x318
-    long mStartCurrentSelection;            // +0x31c
-    unsigned long mFocusedLineRed;          // +0x320
-    unsigned long mFocusedLineGreen;        // +0x324
-    unsigned long mFocusedLineBlue;         // +0x328
-    long mStartRange;                       // +0x32c
-    long mEndRange;                         // +0x330
-    long mCurrentRange;                     // +0x334
-    long mPageSize;                         // +0x338
-    long mStringTableID;                    // +0x33c
-    long mBlinkRate;                        // +0x340
-    unsigned long mUnused2[3];              // +0x344
+    int32_t mUnusedDbRecordId;              // +0x288
+    int32_t mID;                            // +0x28c
+    int32_t mFormID;                        // +0x290
+    uint32_t mGroup;                        // +0x294
+    uint32_t mControlType;                  // +0x298
+    int32_t mFormIndex;                     // +0x29c
+    int32_t mBorderThickness;               // +0x2a0
+    uint32_t mLeftOffsetType;               // +0x2a4
+    uint32_t mRightOffsetType;              // +0x2a8
+    uint32_t mTopOffsetType;                // +0x2ac
+    uint32_t mBottomOffsetType;             // +0x2b0
+    uint32_t mBackgroundRed;                // +0x2b4
+    uint32_t mBackgroundGreen;              // +0x2b8
+    uint32_t mBackgroundBlue;               // +0x2bc
+    int32_t mStringTableBegin;              // +0x2c0
+    int32_t mStringTableEnd;                // +0x2c4
+    uint32_t mFontTableIndex;               // +0x2c8
+    uint32_t mTextForegroundRed;            // +0x2cc
+    uint32_t mTextForegroundGreen;          // +0x2d0
+    uint32_t mTextForegroundBlue;           // +0x2d4
+    int32_t mTextAlignment;                 // +0x2d8
+    int32_t mNormalLeft;                    // +0x2dc
+    int32_t mNormalRight;                   // +0x2e0
+    int32_t mNormalTop;                     // +0x2e4
+    int32_t mNormalBottom;                  // +0x2e8
+    int32_t mPressedLeft;                   // +0x2ec
+    int32_t mPressedRight;                  // +0x2f0
+    int32_t mPressedTop;                    // +0x2f4
+    int32_t mPressedBottom;                 // +0x2f8
+    int32_t mFocusedLeft;                   // +0x2fc
+    int32_t mFocusedRight;                  // +0x300
+    int32_t mFocusedTop;                    // +0x304
+    int32_t mFocusedBottom;                 // +0x308
+    int32_t mMaxChars;                      // +0x30c
+    uint32_t mSelectedListBoxRed;           // +0x310
+    uint32_t mSelectedListBoxGreen;         // +0x314
+    uint32_t mSelectedListBoxBlue;          // +0x318
+    int32_t mStartCurrentSelection;         // +0x31c
+    uint32_t mFocusedLineRed;               // +0x320
+    uint32_t mFocusedLineGreen;             // +0x324
+    uint32_t mFocusedLineBlue;              // +0x328
+    int32_t mStartRange;                    // +0x32c
+    int32_t mEndRange;                      // +0x330
+    int32_t mCurrentRange;                  // +0x334
+    int32_t mPageSize;                      // +0x338
+    int32_t mStringTableID;                 // +0x33c
+    int32_t mBlinkRate;                     // +0x340
+    uint32_t mUnused2[3];                   // +0x344
     bool mIsVisible;                        // +0x350
     bool mStartChecked;                     // +0x351
     bool mListBoxAlwaysDirty;               // +0x352
@@ -142,6 +142,8 @@ struct UIDbControl {
     bool mScaleToControl;                 // +0x359
     bool mLoopMovie;                 // +0x35a
 };
+
+static_assert(sizeof(UIDbControl) == 860, "on-disk record: 860 bytes on every target");
 
 std::vector<UIControlsTable*> UIControlsTable::sUIControlsArray;
 
@@ -237,12 +239,12 @@ UIControlsTable::UIControlsTable(const UIDbControl& inControl)
                    inControl.mSelectedListBoxBlue);
     this->CalculateColor(this->mFocusedLineColor, inControl.mFocusedLineRed, inControl.mFocusedLineGreen,
                    inControl.mFocusedLineBlue);
-    this->mNormalTextureRect = GERectangle(inControl.mNormalLeft, inControl.mNormalTop, inControl.mNormalRight,
-                                     inControl.mNormalBottom);
-    this->mFocusedTextureRect = GERectangle(inControl.mFocusedLeft, inControl.mFocusedTop, inControl.mFocusedRight,
-                                      inControl.mFocusedBottom);
-    this->mPressedTextureRect = GERectangle(inControl.mPressedLeft, inControl.mPressedTop, inControl.mPressedRight,
-                                      inControl.mPressedBottom);
+    this->mNormalTextureRect = GERectangle(long(inControl.mNormalLeft), long(inControl.mNormalTop), long(inControl.mNormalRight),
+                                     long(inControl.mNormalBottom));   // the long overload (int32_t fields)
+    this->mFocusedTextureRect = GERectangle(long(inControl.mFocusedLeft), long(inControl.mFocusedTop), long(inControl.mFocusedRight),
+                                      long(inControl.mFocusedBottom));   // the long overload (int32_t fields)
+    this->mPressedTextureRect = GERectangle(long(inControl.mPressedLeft), long(inControl.mPressedTop), long(inControl.mPressedRight),
+                                      long(inControl.mPressedBottom));   // the long overload (int32_t fields)
 }
 
 // FUNCTION: LLE 0x10067e8d

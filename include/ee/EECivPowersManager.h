@@ -3,6 +3,8 @@
 // Empire Earth.cpp's init chain constructs it; provisional name). Only what the decompiled units use.
 #ifndef EE_EECIVPOWERSMANAGER_H
 #define EE_EECIVPOWERSMANAGER_H
+
+#include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
 #include "ee/EECivPowerIDs.h"
 class FSFile;
 class UWideString;
@@ -12,19 +14,19 @@ class UWideString;
 struct EECivPower {
     char mLabel[100];                      // +0x00 the power's name, NUL-terminated (dbcivpowers.dat: "Flaming
                                            //  Arrows" .. "Just In Time Manufacturing"; only copied whole)
-    long mUnusedDatabaseID;                // +0x64
-    long mID;                              // +0x68
+    int32_t mUnusedDatabaseID;             // +0x64
+    int32_t mID;                           // +0x68
     float mBonus;                           // +0x6c (EECivilizationManager::Load copies it as a level bonus: a dword move into a float)
-    long mUnitSet;                         // +0x70
-    long mTechnology;                      // +0x74 (EEMResearchTechnology compares it with the node's +0x5c)
-    long mMiningLimit;                     // +0x78
-    long mChance;                          // +0x7c
-    long mUnused1;                         // +0x80
+    int32_t mUnitSet;                      // +0x70
+    int32_t mTechnology;                   // +0x74 (EEMResearchTechnology compares it with the node's +0x5c)
+    int32_t mMiningLimit;                  // +0x78
+    int32_t mChance;                       // +0x7c
+    int32_t mUnused1;                      // +0x80
     float mAmount;                          // +0x84
-    long mUnused2;                         // +0x88
-    long mUnused3;                         // +0x8c
-    long mUnused4;                         // +0x90
-    long mUnitType;                        // +0x94
+    int32_t mUnused2;                      // +0x88
+    int32_t mUnused3;                      // +0x8c
+    int32_t mUnused4;                      // +0x90
+    int32_t mUnitType;                     // +0x94
 };
 static_assert(sizeof(EECivPower) == 152, "on-disk record: 152 bytes on every target");
 

@@ -38,11 +38,11 @@ extern unsigned long gTexturePixelDepth;
 struct EEButtonRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
     char mFileName[0x68];                   // +0x64 -> mName
-    long mID;                               // +0xcc -> +0x30
-    long mRow;                              // +0xd0 -> +0x2c
-    long mColumn;                           // +0xd4 -> +0x28
-    long mPosition;                         // +0xd8 -> +0x20
-    long mHotKey;                           // +0xdc -> +0x24
+    int32_t mID;                            // +0xcc -> +0x30
+    int32_t mRow;                           // +0xd0 -> +0x2c
+    int32_t mColumn;                        // +0xd4 -> +0x28
+    int32_t mPosition;                      // +0xd8 -> +0x20
+    int32_t mHotKey;                        // +0xdc -> +0x24
 };
 static_assert(sizeof(EEButtonRecord) == 224, "on-disk record: 224 bytes on every target");
 

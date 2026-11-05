@@ -7,22 +7,24 @@
 #ifndef EE_EEAMBIENTSOUND_H
 #define EE_EEAMBIENTSOUND_H
 
+#include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
+
 class EESoundObject;
 class SESMInstanceNode;
 
 // the 0x98-byte record Init copies from (EEAmbientSoundManager::Load reads them from the file)
 struct EEAmbientSoundRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
-    long mIndex;                            // +0x68 (the slot; < 0: unused)
-    long mSoundID;                          // +0x6c
+    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
+    int32_t mIndex;                         // +0x68 (the slot; < 0: unused)
+    int32_t mSoundID;                       // +0x6c
     float mMaximumVolume;                   // +0x70
     float mStartVolume;                     // +0x74
     float mFadeUp;                          // +0x78 (Init copies it to +0x28 with a plain mov)
     float mFadeDown;                        // +0x7c (to +0x2c)
     float mProbability;                     // +0x80
     unsigned char _u84[0xc];                // +0x84
-    long mIntervalSeconds;                  // +0x90
+    int32_t mIntervalSeconds;               // +0x90
     unsigned char _u94[0x4];                // +0x94
 };
 static_assert(sizeof(EEAmbientSoundRecord) == 152, "on-disk record: 152 bytes on every target");

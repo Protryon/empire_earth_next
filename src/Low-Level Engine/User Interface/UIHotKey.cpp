@@ -17,11 +17,11 @@
 
 // One hot key record of the UI database (0x7c bytes) (provisional names)
 struct UIDbDataHotKeys {
-    unsigned long mUnused;                  // +0x00
-    long mID;                               // +0x04 negative: no hot key
+    uint32_t mUnused;                       // +0x00
+    int32_t mID;                            // +0x04 negative: no hot key
     char mLabel[0x64];                      // +0x08
-    unsigned long mModifiers[3];            // +0x6c DIK_* codes, 0x7fff: none
-    unsigned long mKey;                     // +0x78
+    uint32_t mModifiers[3];                 // +0x6c DIK_* codes, 0x7fff: none
+    uint32_t mKey;                          // +0x78
 };
 static_assert(sizeof(UIDbDataHotKeys) == 124, "on-disk record: 124 bytes on every target");
 

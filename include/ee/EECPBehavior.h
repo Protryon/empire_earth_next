@@ -5,6 +5,8 @@
 #ifndef EE_EECPBEHAVIOR_H
 #define EE_EECPBEHAVIOR_H
 
+#include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
+
 class FSFileSpec;
 
 struct EECPBehavior {
@@ -12,21 +14,21 @@ struct EECPBehavior {
 
     static long Load(FSFileSpec* inFile);   // 0xd5f97
 
-    long mUnused1;                          // +0x00
-    long mIndex;                            // +0x04 (the slot; records with index <= 0 are skipped)
+    int32_t mUnused1;                       // +0x00
+    int32_t mIndex;                         // +0x04 (the slot; records with index <= 0 are skipped)
     // +0x08..+0x2c: the "set AI attribute" editor (EESETSETSetAIAttribute::ShowAttributeRanges 0x18d020)
     // reads three slider ranges (+0x08/+0x0c, +0x14/+0x18, +0x24/+0x28) and a scale (+0x2c, 0 -> 1; the third
     // slider's value is the float effect value times it); +0x10/+0x1c/+0x20 unread there. Names by offset.
-    long mIntValue1Min;                     // +0x08
-    long mIntValue1Max;                     // +0x0c
-    long mIntValue1;                        // +0x10
-    long mIntValue2Min;                     // +0x14
-    long mIntValue2Max;                     // +0x18
-    long mIntValue2;                        // +0x1c
-    long mUnused2;                          // +0x20
-    long mFloatSliderMin;                   // +0x24
-    long mFloatSliderMax;                   // +0x28
-    long mFloatSliderScale;                 // +0x2c
+    int32_t mIntValue1Min;                  // +0x08
+    int32_t mIntValue1Max;                  // +0x0c
+    int32_t mIntValue1;                     // +0x10
+    int32_t mIntValue2Min;                  // +0x14
+    int32_t mIntValue2Max;                  // +0x18
+    int32_t mIntValue2;                     // +0x1c
+    int32_t mUnused2;                       // +0x20
+    int32_t mFloatSliderMin;                // +0x24
+    int32_t mFloatSliderMax;                // +0x28
+    int32_t mFloatSliderScale;              // +0x2c
     float mFloatValue;                      // +0x30 (squared after loading, for record 48 only)
     bool mIsSettable;                       // +0x34
 };

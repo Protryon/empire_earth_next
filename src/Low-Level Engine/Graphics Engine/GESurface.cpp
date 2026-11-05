@@ -41,6 +41,7 @@ struct GETGAHeader {
     unsigned char mDescriptor;          // +0x11: bit 4 right-to-left, bit 5 top-down
 };
 #include <poppack.h>
+static_assert(sizeof(GETGAHeader) == 18, "on-disk record: 18 bytes on every target");
 
 // FUNCTION: LLE 0x1002534b
 // Always fails: loading BMP files is not supported

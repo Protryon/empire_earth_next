@@ -7,6 +7,8 @@
 #ifndef EE_EEAREAEFFECTTEMPLATE_H
 #define EE_EEAREAEFFECTTEMPLATE_H
 
+#include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
+
 class EEGraphicEffect;
 class EEMedia;
 class EEComplexUnit;
@@ -17,19 +19,19 @@ class GE2DPoint;
 // fill (Init 0x27c489). Provisional name; layout inferred.
 struct EEAreaEffectData {
     char mName[0x68];                       // +0x00
-    long mID;                               // +0x68
-    long mKind;                             // +0x6c (> 0 for a template: EEAEManager::Load skips the others)
-    long mShape;                            // +0x70
-    long mGraphicEffect;                    // +0x74 (EEGraphicEffect::Get index, none if <= 0)
-    long mUnitSet;                          // +0x78
-    long mMode;                             // +0x7c
-    long mGraphicEffect18;                  // +0x80 (EEGraphicEffect::Get index)
-    long mMedia;                            // +0x84 (EEMedia::Get index)
-    long mMaxLevel;                         // +0x88
-    long mLevel;                            // +0x8c
-    long mUnusedValue1;                     // +0x90
-    long mUnusedValue2;                     // +0x94
-    long mUnusedValue3;                     // +0x98
+    int32_t mID;                            // +0x68
+    int32_t mKind;                          // +0x6c (> 0 for a template: EEAEManager::Load skips the others)
+    int32_t mShape;                         // +0x70
+    int32_t mGraphicEffect;                 // +0x74 (EEGraphicEffect::Get index, none if <= 0)
+    int32_t mUnitSet;                       // +0x78
+    int32_t mMode;                          // +0x7c
+    int32_t mGraphicEffect18;               // +0x80 (EEGraphicEffect::Get index)
+    int32_t mMedia;                         // +0x84 (EEMedia::Get index)
+    int32_t mMaxLevel;                      // +0x88
+    int32_t mLevel;                         // +0x8c
+    int32_t mUnusedValue1;                  // +0x90
+    int32_t mUnusedValue2;                  // +0x94
+    int32_t mUnusedValue3;                  // +0x98
     float mRadius;                          // +0x9c
     float mRed;                             // +0xa0
     float mGreen;                           // +0xa4

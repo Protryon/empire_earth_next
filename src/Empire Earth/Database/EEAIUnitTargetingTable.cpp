@@ -12,21 +12,21 @@
 // One record of the file (0xa0 bytes, read whole; Load keeps ten of its fields; inferred layout, provisional names)
 struct EEAIUnitTargetingRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
-    long mUnusedIndex;                      // +0x068 the 0-based row index (not read)
-    long mAttackerBonus;                    // +0x6c
-    long mUnusedWeight;                     // +0x70
-    long mInRangeBonus;                     // +0x74
-    long mFasterTargetBonus;                // +0x78
-    long mStrongerTargetBonus;              // +0x7c
-    long mPreferredUnitType;                // +0x80
-    long mToHitWeight;                      // +0x84
-    long mProximityWeight;                  // +0x88
-    long mImmobileTargetBonus;              // +0x8c
-    long mUnused1;                          // +0x90
-    long mUnused2;                          // +0x94
-    long mUnused3;                          // +0x98
-    long mMaxValue;                         // +0x9c
+    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
+    int32_t mUnusedIndex;                   // +0x068 the 0-based row index (not read)
+    int32_t mAttackerBonus;                 // +0x6c
+    int32_t mUnusedWeight;                  // +0x70
+    int32_t mInRangeBonus;                  // +0x74
+    int32_t mFasterTargetBonus;             // +0x78
+    int32_t mStrongerTargetBonus;           // +0x7c
+    int32_t mPreferredUnitType;             // +0x80
+    int32_t mToHitWeight;                   // +0x84
+    int32_t mProximityWeight;               // +0x88
+    int32_t mImmobileTargetBonus;           // +0x8c
+    int32_t mUnused1;                       // +0x90
+    int32_t mUnused2;                       // +0x94
+    int32_t mUnused3;                       // +0x98
+    int32_t mMaxValue;                      // +0x9c
 };
 static_assert(sizeof(EEAIUnitTargetingRecord) == 160, "on-disk record: 160 bytes on every target");
 

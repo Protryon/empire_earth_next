@@ -7,6 +7,8 @@
 #ifndef LLE_UIFORM_H
 #define LLE_UIFORM_H
 
+#include <stdint.h>   // int32_t/uint32_t: the on-disk fields' fixed widths
+
 #include <vector>
 #include <deque>
 
@@ -33,22 +35,22 @@ class UITextLabel;
 struct UIDbDataForms {
     char mLabel[0x64];                      // +0x000
     char mMusicFile[0x64];                  // +0x064 "none" stops the music
-    long mUnusedID;                         // +0x0c8 (provisional name)
-    long mFormID;                           // +0x0cc 0 or less: no form
-    unsigned long mControlCount;            // +0x0d0
-    unsigned long mControlGroupCount;       // +0x0d4
+    int32_t mUnusedID;                      // +0x0c8 (provisional name)
+    int32_t mFormID;                        // +0x0cc 0 or less: no form
+    uint32_t mControlCount;                 // +0x0d0
+    uint32_t mControlGroupCount;            // +0x0d4
     float mLeftOffset;                      // +0x0d8
     float mRightOffset;                     // +0x0dc
     float mBottomOffset;                    // +0x0e0
     float mTopOffset;                       // +0x0e4
-    unsigned long mDesignedWidth;           // +0x0e8
-    unsigned long mDesignedHeight;          // +0x0ec
-    unsigned long mHelpTextTimeDelay;       // +0x0f0
-    unsigned long mUnused;                  // +0x0f4 (provisional name)
-    unsigned long mLeftOffsetType;          // +0x0f8
-    unsigned long mRightOffsetType;         // +0x0fc
-    unsigned long mTopOffsetType;           // +0x100
-    unsigned long mBottomOffsetType;        // +0x104
+    uint32_t mDesignedWidth;                // +0x0e8
+    uint32_t mDesignedHeight;               // +0x0ec
+    uint32_t mHelpTextTimeDelay;            // +0x0f0
+    uint32_t mUnused;                       // +0x0f4 (provisional name)
+    uint32_t mLeftOffsetType;               // +0x0f8
+    uint32_t mRightOffsetType;              // +0x0fc
+    uint32_t mTopOffsetType;                // +0x100
+    uint32_t mBottomOffsetType;             // +0x104
     bool mTabbingOn;                        // +0x108
     bool mUseToolTips;                      // +0x109
     bool mUseExclusiveCoords;               // +0x10a

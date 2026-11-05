@@ -19,28 +19,28 @@ extern std::vector<EEMedia*> gMediaTable;
 // One record of db\dbAnimals.dat (0x110 bytes, read whole). Inferred layout (only the fields Load copies).
 struct EEAnimalRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
-    long mAnimalID;                         // +0x68 -> +0x3c
-    long mUnitType;                         // +0x6c -> +0x38
-    long mMinHerdSize;                      // +0x70 -> +0x40
-    long mMaxHerdSize;                      // +0x74 -> +0x44
+    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
+    int32_t mAnimalID;                      // +0x68 -> +0x3c
+    int32_t mUnitType;                      // +0x6c -> +0x38
+    int32_t mMinHerdSize;                   // +0x70 -> +0x40
+    int32_t mMaxHerdSize;                   // +0x74 -> +0x44
     bool mBreeds;                           // +0x78 -> +0x85
-    long mMinBirthInterval;                 // +0x7c -> +0x48 (s)
-    long mMaxBirthInterval;                 // +0x80 -> +0x4c (s)
+    int32_t mMinBirthInterval;              // +0x7c -> +0x48 (s)
+    int32_t mMaxBirthInterval;              // +0x80 -> +0x4c (s)
     bool mHasLeader;                        // +0x84 -> +0x87
     bool mUnusedFlag1;                      // +0x85 -> +0x88
-    long mUnusedListValue1;                 // +0x88 -> mL04
-    long mUnusedListValue2;                 // +0x8c -> mL04
-    long mUnusedListValue3;                 // +0x90 -> mL04
-    long mUnusedListValue4;                 // +0x94 -> mL04
+    int32_t mUnusedListValue1;              // +0x88 -> mL04
+    int32_t mUnusedListValue2;              // +0x8c -> mL04
+    int32_t mUnusedListValue3;              // +0x90 -> mL04
+    int32_t mUnusedListValue4;              // +0x94 -> mL04
     bool mUnusedIsPredator;                 // +0x98 -> +0x89
     float mUnusedFactor;                    // +0x9c -> +0x28 (copied with mov in the original)
-    long mMinHuntInterval;                  // +0xa0 -> +0x50 (s)
-    long mMaxHuntInterval;                  // +0xa4 -> +0x54 (s)
-    long mMinRoamMargin;                    // +0xa8 -> +0x58
-    long mMaxRoamMargin;                    // +0xac -> +0x5c
-    long mMinGrazeTime;                     // +0xb0 -> +0x60 (s)
-    long mMaxGrazeTime;                     // +0xb4 -> +0x64 (s)
+    int32_t mMinHuntInterval;               // +0xa0 -> +0x50 (s)
+    int32_t mMaxHuntInterval;               // +0xa4 -> +0x54 (s)
+    int32_t mMinRoamMargin;                 // +0xa8 -> +0x58
+    int32_t mMaxRoamMargin;                 // +0xac -> +0x5c
+    int32_t mMinGrazeTime;                  // +0xb0 -> +0x60 (s)
+    int32_t mMaxGrazeTime;                  // +0xb4 -> +0x64 (s)
     bool mUnusedIsFlightless;               // +0xb8 -> +0x84
     bool mIsPredator;                       // +0xb9 -> +0x86
     bool mUnusedFightsBack;                 // +0xba -> +0x83
@@ -49,17 +49,17 @@ struct EEAnimalRecord {
     bool mHasGroupFlee;                     // +0xbd -> +0x82
     float mNewbornGrowth;                   // +0xc0 -> +0x30
     float mGrowthStep;                      // +0xc4 -> +0x34
-    long mGrowInterval;                     // +0xc8 -> +0x6c (s)
-    long mHerdRadius;                       // +0xcc -> +0x68
-    long mMinRestInterval;                  // +0xd0 -> +0x70 (s)
-    long mMaxRestInterval;                  // +0xd4 -> +0x74 (s)
-    long mUnusedPredatorFleeChance;         // +0xd8 -> +0x2c
-    long mMinFollowInterval;                // +0xdc -> +0x78 (s)
-    long mMaxFollowInterval;                // +0xe0 -> +0x7c (s)
-    long mMedia;                            // +0xe4 -> +0x24 (EEMedia::Get)
-    long mSound1;                           // +0xe8 -> mSounds
-    long mSound2;                           // +0xec -> mSounds
-    long mSound3;                           // +0xf0 -> mSounds
+    int32_t mGrowInterval;                  // +0xc8 -> +0x6c (s)
+    int32_t mHerdRadius;                    // +0xcc -> +0x68
+    int32_t mMinRestInterval;               // +0xd0 -> +0x70 (s)
+    int32_t mMaxRestInterval;               // +0xd4 -> +0x74 (s)
+    int32_t mUnusedPredatorFleeChance;      // +0xd8 -> +0x2c
+    int32_t mMinFollowInterval;             // +0xdc -> +0x78 (s)
+    int32_t mMaxFollowInterval;             // +0xe0 -> +0x7c (s)
+    int32_t mMedia;                         // +0xe4 -> +0x24 (EEMedia::Get)
+    int32_t mSound1;                        // +0xe8 -> mSounds
+    int32_t mSound2;                        // +0xec -> mSounds
+    int32_t mSound3;                        // +0xf0 -> mSounds
     char _gapF4[0x1c];
 };
 static_assert(sizeof(EEAnimalRecord) == 272, "on-disk record: 272 bytes on every target");

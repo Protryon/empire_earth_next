@@ -65,9 +65,9 @@
 struct GETextureFileHeader {
     unsigned char mIsCompressed;            // +0x00
     unsigned char mMipLevelCount;           // +0x01 Save writes 1
-    unsigned long mFrameCount;              // +0x02
-    unsigned long mWidth;                   // +0x06
-    unsigned long mHeight;                  // +0x0a
+    uint32_t mFrameCount;                   // +0x02
+    uint32_t mWidth;                        // +0x06
+    uint32_t mHeight;                       // +0x0a
 };
 static_assert(sizeof(GETextureFileHeader) == 14, "on-disk record: 14 bytes on every target");
 #pragma pack(pop)

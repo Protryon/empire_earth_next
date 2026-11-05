@@ -25,12 +25,12 @@ unsigned long gU4E8718;
 // One record of db\dbterrainType.dat (0x80 bytes, read whole). Inferred layout.
 struct EETerrainTypeRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
-    long mID;                               // +0x68 -> +0x08
-    long mFirstColor;                       // +0x6c -> +0x0c
-    long mLastColor;                        // +0x70 -> +0x10
-    long mNameID;                           // +0x74 -> +0x14
-    long mUnusedPaletteIndex;               // +0x78 -> +0x18
+    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
+    int32_t mID;                            // +0x68 -> +0x08
+    int32_t mFirstColor;                    // +0x6c -> +0x0c
+    int32_t mLastColor;                     // +0x70 -> +0x10
+    int32_t mNameID;                        // +0x74 -> +0x14
+    int32_t mUnusedPaletteIndex;            // +0x78 -> +0x18
     bool mIsInEditor;                       // +0x7c -> +0x1c
 };
 static_assert(sizeof(EETerrainTypeRecord) == 128, "on-disk record: 128 bytes on every target");
@@ -142,9 +142,9 @@ float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned 
 // One record of the damage tables' file (0x17c bytes, read whole): 0x44 damage values from +0x6c. Inferred layout.
 struct EEDamageTableRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
-    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
-    long mUnusedIndex;                      // +0x068 the 0-based row index (not read)
-    long mDamage[0x44];                     // +0x6c (scaled by kHeightEpsilon into gU4E8708's row)
+    int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
+    int32_t mUnusedIndex;                   // +0x068 the 0-based row index (not read)
+    int32_t mDamage[0x44];                  // +0x6c (scaled by kHeightEpsilon into gU4E8708's row)
 };
 static_assert(sizeof(EEDamageTableRecord) == 380, "on-disk record: 380 bytes on every target");
 
