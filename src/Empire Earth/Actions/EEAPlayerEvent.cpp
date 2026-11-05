@@ -80,3 +80,9 @@ void EEAPlayerEvent::Virtual4()
     gMiniMap->Refresh();
     gCameraFollowing = false;
 }
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEAPlayerEvent::Virtual8()
+{
+}

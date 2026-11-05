@@ -74,3 +74,9 @@ void EEALasso::SelectUnits(const GERectangle& inRectangle, long inFlags, unsigne
 
 // SYNTHETIC: EXE 0x402a68
 // (the scalar deleting destructor)
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEALasso::Virtual8()
+{
+}

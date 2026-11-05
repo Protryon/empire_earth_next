@@ -74,7 +74,7 @@
 #include "ee/EECPCombatManager.h"
 void Fn5B397(long inChunkSize, long inMaxChunks);  // 0x45b397 (cdecl; 0x200, 0x19 from the ctor) (provisional name)
 float Fn102F3D(float inMinimum, float inMaximum);   // 0x502f3d (cdecl; a value in [inMinimum, inMaximum]) (provisional name)
-extern long gDCGameSpeed;                   // 0x530d24 (EECPDefenseCommander.cpp's name; EpochReached: >= 250) (provisional name)
+extern long& gDCGameSpeed;                   // 0x530d24 (EECPDefenseCommander.cpp's name; EpochReached: >= 250) (provisional name)
 // 0x563938 = gUnitClassTable[0xa3] (EpochReached: its technology must be researched)
 // 0x56420c = gUnitClassTable[0x2d8] (Attack: a transport class whose technology must be researched)
 

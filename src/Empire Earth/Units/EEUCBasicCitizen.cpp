@@ -708,3 +708,20 @@ bool EEUCBasicCitizen::HasGatherPoint(EEComplexUnit* inUnit, EEUnit* inResource)
     this->FindGatherPoint(inUnit, theX, theY, inResource->mUnitClass->GetTileSize(), inResource->mUnitClass->GetTileSize(), theLocation);
     return !(UMFloor(theLocation.GetX()) == theX && UMFloor(theLocation.GetY()) == theY);
 }
+
+// ICF-FOLDED: EXE 0x60da7a
+// Sets up a new priest like any unit
+// (no address of its own: the same body as EEUCBasicPriest::UnitCreated, which ICF kept)
+void EEUCBasicCitizen::UnitCreated(EEComplexUnit* inUnit)
+{
+    EEUnitClass::UnitCreated(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x60d361
+// Runs the work timer (working the gather or repair goal when it expires), then finishes a due unit research
+// (instant build: at once); a kind-3 tech tied to the Bundeswehr power goes through EEPlayUnitEffect
+// (no address of its own: the same body as EEUCBasicCitizen::UpdateCitizen, which ICF kept: a call of it)
+void EEUCBasicCitizen::Update(EEComplexUnit* inUnit)
+{
+    this->UpdateCitizen(inUnit);
+}

@@ -27,7 +27,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 
-extern EEEffectManager* gEffectManager;
+extern EEEffectManager*& gEffectManager;
 extern EEWorld gWorld;
 extern EEUnitSetManager gUnitSetManager;
 

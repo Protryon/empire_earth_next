@@ -21,6 +21,9 @@
 #include "ee/EEWorld.h"
 #include "ee/EEUCSubmergedNaval.h"
 #include "ee/EEUCSeaAnimal.h"
+#include "ee/EEMedia.h"
+#include "ee/EEGraphicEffect.h"
+#include "ee/EmpireEarth.h"
 
 // the depths a sea animal swims at (provisional names)
 const float kSeaAnimalBottomClearance = 0.09f;
@@ -102,4 +105,13 @@ void EEUCSeaAnimal::AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& io
 void EEUCSeaAnimal::Update(EEComplexUnit* inUnit)
 {
     EEUCSubmergedNaval::Update(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x60d336
+// Updates a living citizen's water ripples when the effect detail allows them
+// (no address of its own: the same body as EEUCBasicCitizen::UpdateEffects, which ICF kept)
+void EEUCSeaAnimal::UpdateEffects(EEComplexUnit* inUnit)
+{
+    if (this->mRippleEffect != NULL && inUnit->mHitPoints != 0 && (unsigned long)this->mRippleEffect->mDetailLevel <= gEffectDetail)
+        this->UpdateRipples(inUnit);
 }

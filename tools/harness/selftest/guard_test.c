@@ -1,5 +1,5 @@
-/* TEST ONLY: the target of the harness self test (selftest.py). Built for i686 and x86_64 with mingw gcc; run only
- * under exe_boot(64).exe in build/boot/selftest_stage. EE_SELFTEST_CASE names the case: each calls the guarded
+/* TEST ONLY: the target of the harness self test (selftest.py). Built for x86_64 with mingw64 gcc; run only
+ * under exe_boot.exe in build/boot/selftest_stage. EE_SELFTEST_CASE names the case: each calls the guarded
  * APIs the case is about and reports what came back with OutputDebugString ("SELFTEST ..."), which the harness logs.
  * Stand-ins for the game functions the harness hooks by RVA (seed pin, no-human-defeat, mutex bypass, mp skip/checksum,
  * rng trace, the static exe's engine/runtime/renderer checkpoints) are defined here; selftest.py finds them with nm.
@@ -15,11 +15,6 @@
 #include <stdlib.h>
 #include <ddraw.h>
 
-#ifdef _WIN64
-#define THISCALL
-#else
-#define THISCALL __attribute__((thiscall))
-#endif
 #define HOOK __attribute__((noinline, used))
 
 static void say(const char *fmt, ...)
@@ -35,32 +30,32 @@ static void say(const char *fmt, ...)
 }
 
 /* ---- stand-ins for the hooked game functions ---- */
-typedef struct { void *pad[5]; unsigned long seed; } Loading;                 /* seed at 5 pointers (x86 0x14) */
+typedef struct { void *pad[5]; unsigned long seed; } Loading;                 /* seed at 5 pointers */
 typedef struct { void *vt; long state; } Player;
 typedef struct { void *pad[2]; Player *players[17]; unsigned long current; } World;   /* players at 2 pointers */
 typedef struct { unsigned long seed; } Random;
-typedef struct { void *pad[6]; Random random; } Physics;                       /* random at 6 pointers (x86 0x18) */
+typedef struct { void *pad[6]; Random random; } Physics;                       /* random at 6 pointers */
 World selftest_world;
 Player selftest_players[4];
 Physics selftest_physics_object;
 Physics *selftest_physics = &selftest_physics_object;
 volatile long selftest_out_calls, selftest_result_calls, selftest_skip_calls;
 
-HOOK void THISCALL selftest_execute(Loading *self) { say("seed %lu", self->seed); }
-HOOK void THISCALL selftest_out(World *self, unsigned char victorious, unsigned long player)
+HOOK void selftest_execute(Loading *self) { say("seed %lu", self->seed); }
+HOOK void selftest_out(World *self, unsigned char victorious, unsigned long player)
 {
     (void)self;
     selftest_out_calls++;
     say("out ran (victorious %u player %lu)", victorious, player);
 }
-HOOK void THISCALL selftest_result(Player *self, long state) { selftest_result_calls++; self->state = state; say("result ran (state %ld)", state); }
-HOOK float THISCALL selftest_generate(Random *self) { self->seed = self->seed * 1103515245u + 12345u; return (float)(self->seed >> 8); }
-HOOK unsigned long THISCALL selftest_next(Random *self) { return ++self->seed; }
+HOOK void selftest_result(Player *self, long state) { selftest_result_calls++; self->state = state; say("result ran (state %ld)", state); }
+HOOK float selftest_generate(Random *self) { self->seed = self->seed * 1103515245u + 12345u; return (float)(self->seed >> 8); }
+HOOK unsigned long selftest_next(Random *self) { return ++self->seed; }
 HOOK void selftest_skip(void) { selftest_skip_calls++; say("skip target ran"); }
 HOOK unsigned char selftest_sounds(void) { return 1; }                          /* EEInitializeSounds */
-HOOK long THISCALL selftest_activate(void *self, unsigned long a, void *b, void *c, unsigned long d, unsigned char e, unsigned long f)
+HOOK long selftest_activate(void *self, unsigned long a, void *b, void *c, unsigned long d, unsigned char e, unsigned long f)
 { (void)self; (void)a; (void)b; (void)c; (void)d; (void)e; (void)f; return 0; }   /* ActivateScreen */
-HOOK long THISCALL selftest_show(void *self, unsigned long a) { (void)self; (void)a; return 0; }   /* ShowScene */
+HOOK long selftest_show(void *self, unsigned long a) { (void)self; (void)a; return 0; }   /* ShowScene */
 HOOK unsigned long selftest_native_error(unsigned long code) { return code; }   /* ESRecordNativeError */
 HOOK void selftest_abort(void) { say("abort ran"); ExitProcess(3); }
 HOOK int selftest_traced(int x) { return x + 1; }
@@ -77,27 +72,20 @@ HOOK int selftest_instance_mutex(void)
 /* the mutex bypass guards the `test eax,eax` after GetLastError; the mp checksum guard the store of eax */
 unsigned long selftest_mutex_probe(unsigned long last);
 unsigned long selftest_checksum_probe(unsigned long value);
-#ifdef _WIN64
 __asm__(".text\n.globl selftest_mutex_probe\nselftest_mutex_probe:\n mov %ecx,%eax\n.globl selftest_mutex_at\n"
         "selftest_mutex_at:\n test %eax,%eax\n ret\n"
         ".globl selftest_checksum_probe\nselftest_checksum_probe:\n mov %ecx,%eax\n.globl selftest_checksum_at\n"
         "selftest_checksum_at:\n ret\n");
-#else
-__asm__(".text\n.globl _selftest_mutex_probe\n_selftest_mutex_probe:\n mov 4(%esp),%eax\n.globl _selftest_mutex_at\n"
-        "_selftest_mutex_at:\n test %eax,%eax\n ret\n"
-        ".globl _selftest_checksum_probe\n_selftest_checksum_probe:\n mov 4(%esp),%eax\n.globl _selftest_checksum_at\n"
-        "_selftest_checksum_at:\n ret\n");
-#endif
 /* calls through volatile pointers: never inlined or folded */
-static void (THISCALL *volatile pExecute)(Loading *) = selftest_execute;
-static void (THISCALL *volatile pOut)(World *, unsigned char, unsigned long) = selftest_out;
-static void (THISCALL *volatile pResult)(Player *, long) = selftest_result;
-static float (THISCALL *volatile pGenerate)(Random *) = selftest_generate;
-static unsigned long (THISCALL *volatile pNext)(Random *) = selftest_next;
+static void (*volatile pExecute)(Loading *) = selftest_execute;
+static void (*volatile pOut)(World *, unsigned char, unsigned long) = selftest_out;
+static void (*volatile pResult)(Player *, long) = selftest_result;
+static float (*volatile pGenerate)(Random *) = selftest_generate;
+static unsigned long (*volatile pNext)(Random *) = selftest_next;
 static void (*volatile pSkip)(void) = selftest_skip;
 static unsigned char (*volatile pSounds)(void) = selftest_sounds;
-static long (THISCALL *volatile pActivate)(void *, unsigned long, void *, void *, unsigned long, unsigned char, unsigned long) = selftest_activate;
-static long (THISCALL *volatile pShow)(void *, unsigned long) = selftest_show;
+static long (*volatile pActivate)(void *, unsigned long, void *, void *, unsigned long, unsigned char, unsigned long) = selftest_activate;
+static long (*volatile pShow)(void *, unsigned long) = selftest_show;
 static unsigned long (*volatile pNative)(unsigned long) = selftest_native_error;
 static void (*volatile pAbort)(void) = selftest_abort;
 static int (*volatile pTraced)(int) = selftest_traced;

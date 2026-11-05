@@ -37,6 +37,7 @@
 #include "ee/EEEffectManager.h"
 #include "ee/EEUCSpaceship.h"
 #include "ee/EEUCSpaceTransport.h"
+#include "ee/EEUnitUtilities.h"
 
 // the spaceship unit's kSpaceshipHeight (0x447358): the bodies below are the class's own copies of EEUCSpaceship's
 static const float kSpaceTransportHeight = 12.0f;
@@ -269,4 +270,64 @@ long EEUCSpaceTransport::SpaceshipVirtualA0(EEComplexUnit* inUnit, unsigned long
     if (theDone)
         theResult = 1;
     return theResult;
+}
+
+// ICF-FOLDED: EXE 0x618d33
+// Finds where a unit boards the transport (the base transport's rule)
+// (no address of its own: the same body as EEUCNavalTransport::FindBoardingLocation, which ICF kept)
+bool EEUCSpaceTransport::FindBoardingLocation(EEComplexUnit* inUnit, EEComplexUnit* inTransport, GE3DPoint& inLocation,
+                                   GE3DPoint& outLocation)
+{
+    return EEUCTransport::FindBoardingLocation(inUnit, inTransport, inLocation, outLocation);
+}
+
+// ICF-FOLDED: EXE 0x618a5f
+// Finds where the transport unloads for a destination: shore and landing tiles, then the destination when in range
+// and reachable, else the last good tile on the line from the landing tile (the first one if none is good)
+// (no address of its own: the same body as EEUCNavalTransport::FindUnloadTiles, which ICF kept)
+void EEUCSpaceTransport::FindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination,
+                                   U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile,
+                                   U2DPoint<long>* outTile)
+{
+    std::vector<EEUnit*> theUnits;
+    std::vector<U2DPoint<long> > theTiles;
+    float theRadius = this->mUnloadRange;
+    float theRange = theRadius * theRadius;
+    EETileCoordinate theFrom = inTransport->GetTile();
+    this->FindShoreTile(inTransport, theFrom, inDestination, inDestination, true, outUnloadTile);
+    this->FindLandingTile(inTransport, outUnloadTile, inDestination, outFirstCargoTile);
+    if (outUnloadTile->DistanceToSquaredF(*inDestination) < theRange
+        && this->CanUnloadNear(NULL, inTransport->GetCargo(0), outUnloadTile, outFirstCargoTile, inDestination)) {
+        if (this->CanUnloadNear(NULL, *(inTransport->mCargo.begin() + 0), outUnloadTile, outFirstCargoTile, inDestination))
+            *outTile = *inDestination;
+        else
+            *outTile = *outFirstCargoTile;
+    } else {
+        EEGetTileLine(outFirstCargoTile->GetX(), outFirstCargoTile->GetY(), inDestination->GetX(),
+                   inDestination->GetY(), &theTiles, 1, 0);
+        std::vector<U2DPoint<long> >::iterator theTile = theTiles.begin();
+        while (theTile != theTiles.end()) {
+            U2DPoint<long>* thePoint = &(*theTile);
+            float theDistance = outUnloadTile->DistanceToSquaredF(*thePoint);
+            EEMapTile* theMapTile = ::gWorld.mMap->GetTile(thePoint->GetX(), thePoint->GetY());
+            if (thePoint == NULL || theDistance > theRange
+                || EEGetBlockingUnits(inTransport->GetPlayer(), this->GetUnitType(), theMapTile, 0, theUnits)
+                || !this->CanUnloadNear(NULL, inTransport->mCargo[0], outUnloadTile, outFirstCargoTile, thePoint))
+                break;
+            theTile++;
+        }
+        if (theTile != theTiles.begin() && theTiles.size() > 0)
+            theTile--;
+        if (theTile != theTiles.end())
+            *outTile = *theTile;
+        else
+            *outTile = *outFirstCargoTile;
+    }
+}
+
+// ICF-FOLDED: EXE 0x6135bc
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCSpaceTransport::HasRoom(class EEComplexUnit *,class EEComplexUnit *)
+{
+    return true;
 }

@@ -72,7 +72,6 @@
 
 extern EEWorld gWorld;
 extern EEUIManager* gUIManager;
-extern GETransformation gRenderCameraInverse;  // 0x4e8ff8: the camera transformation the 3D points are mapped through (provisional name)
 
 // the falloff of a graphic object's frame sound (own .rdata copy 0x4421fc: a named const, as kCalamitySoundFalloff)
 static const float kGraphicSoundFalloff = 4.0f;
@@ -258,7 +257,7 @@ void EEGetCameraPoint(const GE3DPoint& inPoint, GE3DPoint& outScreen, float& out
     GE3DPoint theCamera;
     GE3DPoint theNormalized;
     float theDepth;
-    gRenderCameraInverse.Apply(inPoint, theCamera);
+    gU4E8F08.GetCameraInverse().Apply(inPoint, theCamera);
     if (!gOrthographicView)
         gU4E8F08.NormalizePerspectiveCameraPoint(theCamera, theNormalized, theDepth);
     else

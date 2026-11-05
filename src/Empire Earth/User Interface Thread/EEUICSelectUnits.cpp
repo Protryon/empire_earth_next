@@ -64,7 +64,6 @@
 #include "lle/GELine.h"
 #include "ee/EEUICSelectUnits.h"
 
-extern GERectangle gRenderViewRectangle;    // 0x4e8f18 (the game view viewport's view rectangle; EEROEffects.h)
 
 static GEColor sSelectBoxColor(1.0f, 1.0f, 1.0f);   // 0x564580
 static GEColor sSelectShadowColor(0.0f, 0.0f, 0.0f);    // 0x564570
@@ -165,7 +164,7 @@ long EEUICSelectUnits::MouseLButtonDoublePressed()
     long theResult;
     EEUnit* theUnit = gUnitPicker.PickUnit(gMouse->mPosition, 0);
     if (theUnit != NULL && theUnit->GetHitPoints() > 0 && theUnit->GetPlayer() == gWorld.GetCurrentPlayer()) {
-        this->mLasso->SelectUnits(gRenderViewRectangle, theModifiers, theUnit->GetUnitClass()->mUnitType, theUnit->mUnitID);
+        this->mLasso->SelectUnits(gU4E8F08.GetViewRectangle(), theModifiers, theUnit->GetUnitClass()->mUnitType, theUnit->mUnitID);
         gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));
         this->SetDisplayMode(kDisplayModeHidden);
         this->ReleaseCapturedMouse();

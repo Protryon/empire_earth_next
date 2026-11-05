@@ -109,3 +109,11 @@ void EESavedGroup::Validate()
         gUserInterface->PostRefreshSavedGroup(this->mIndex);
 }
 
+// ICF-FOLDED: EXE 0x608ef3
+// A saved group takes the given (selected) group's units (EEMSavedGroupCreate: the player's saved group and its
+// active group)
+// (no address of its own: the same body as EESavedGroup::Assign, which ICF kept: run as that one)
+void EEGroup::Assign(EEGroup* inGroup)
+{
+    static_cast<EESavedGroup*>(this)->Assign(static_cast<EESelectedGroup*>(inGroup));
+}

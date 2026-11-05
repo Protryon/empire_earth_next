@@ -1,16 +1,18 @@
-"""Build the game from source: one statically linked EE-AOC.exe (clang-cl + lld-link, 32-bit or 64-bit, the MSVC
-STL and the static UCRT).
+"""Build the game from source: one statically linked x86_64 EE-AOC.exe (clang-cl + lld-link, the MSVC STL and the
+static UCRT).
 
-  python -I tools/build.py [-j N] [--out DIR] [--opt X] [--x64] [--test-profile windowed-software]
+  python -I tools/build.py [-j N] [--out DIR] [--opt X] [--test-profile windowed-software]
                            [--sanitize-null] [--compile-only]
 
--> <out>/exe/EE-AOC.exe with its .map (8-digit addresses) and .pdb (default out: build/clang). --x64: an x86_64
-exe (default out build/clang-x64-exe; with --test-profile build/clang-test-x64), linked at the 32-bit image base
-0x400000 (the member aliases are absolute symbols, whose COFF value is 32 bits wide). The exe holds the
-game with its image libraries (libpng/zlib/libjpeg), the engine, the plug-ins the original loaded as DLLs (TCP
+-> <out>/exe/EE-AOC.exe with its .map and .pdb (default out: build/clang), linked at the fixed image base 0x400000
+(as the x64 build has always run). x86_64 is the only target (--x64 is accepted and ignored). The exe holds the game
+with its image libraries (libpng/zlib/libjpeg), the engine, the plug-ins the original loaded as DLLs (TCP
 protocol, the mixer, the Default random map generator, the DX7 T&L renderer; registered in PIMModule.cpp) and the
 language resources, with miniaudio, dmusic and pl_mpeg for sound, music and movies. Only Windows system DLLs are
-imported. Every unit is compiled first (tools/clang_build.py, objects in <out>/obj), then linked.
+imported. Every unit is compiled first (tools/clang_build.py, objects in <out>/obj), then linked: one plain lld-link
+of every object, the image libraries (an archive), the Windows SDK import libraries (DINPUT.dll's DirectInputCreateA
+from a one-line .def: the SDK has no DirectInput 7 library), the static libraries and runtime, and the resources.
+Every symbol is defined in source (the WON library's stand-ins: src/Empire Earth/WONAPI/WONAPIStubs.cpp).
 
 --test-profile windowed-software (TEST ONLY; default out build/clang-test): images for the headless live-game
 harness (tools/harness). The windowed and 32-bit display policy is compiled into the exe by text rules on the
@@ -21,9 +23,7 @@ every function the harness hooks at its entry is kept out of line (HARNESS_HOOKS
 UBSan checks in recover mode and tools/harness/ubsan_minimal.c's handlers in every image: each distinct site the
 game reaches is logged once ("EE-UBSAN <check> <module>+<rva>").
 
-The exe links stubs for what the source does not define yet (the WON library; tools/exe_fulllink.py). Data the
-original placed inside other objects (link/exe/fulllink_members.tsv, VC6 offsets) is placed at the same member's
-offset in this build, from the build's record layouts (tools/harness/layout_gen.py, written to build/harness).
+The build also writes <out>/layout.json (the record layouts the harness reads offsets from; tools/harness/layout_gen.py).
 """
 import argparse
 import concurrent.futures
@@ -40,7 +40,7 @@ import clang_build
 import units
 import verify
 import ee
-from ee import CLANG, LINK_DIR, LLD_LINK, MODULE_FLAGS, ROOT, module_units
+from ee import CLANG, LLD_LINK, LLVM_LIB, MODULE_FLAGS, ROOT, RUNTIME_LIBS, lib_paths, module_units
 
 TEST_PROFILES = {
     "windowed-software": {
@@ -109,29 +109,6 @@ def compile_all(targets, out, opt, jobs, overlays=None, extra=()):
     return objs
 
 
-def member_offsets(out):
-    """exe_fulllink.link_exe's member_offsets: the member table's VC6 offset -> the same member's offset in this
-    build (tools/harness/layout.py translate; the container's class from its mangled name). A Dinkum vector's _First
-    (+4) is this library's first-element pointer (+0). Offset 0 and tables of pointers stay (x64: an element of a
-    table of pointers is 8 bytes wide, so its offset doubles)."""
-    sys.path.insert(0, str(ROOT / "tools" / "harness"))
-    import layout as L
-    lay = L.Layout(out)
-
-    def translate(cont, off):
-        if off == 0 or re.match(r"\?[^@]+@(?:[^@]+@)*@[23]P", cont):
-            if ee.is_x64() and off and re.match(r"\?[^@]+@(?:[^@]+@)*@[23]PA[PQ]E", cont):
-                return off * 2
-            return off
-        m = re.match(r"\?[^@]+@(?:[^@]+@)*@[23]([VU])([A-Za-z_0-9]+)@@", cont)
-        if m:
-            return lay.translate(m.group(2), off)
-        if "?$vector@" in cont and off == 4:
-            return 0
-        raise SystemExit(f"member alias container {cont}+{off:#x}: no translation for this build's layout")
-    return translate
-
-
 def static_libs():
     """System libraries the engine and the renderer linked statically (dinput8: the c_dfDI* data formats), then the
     renderer's wgpu-native of the target (static, tools/fetch_wgpu.py) with the system libraries its DX12/Vulkan
@@ -143,42 +120,70 @@ def static_libs():
             "dwmapi.lib"]
 
 
+LINK_FLAGS = ["/INCREMENTAL:NO", "/OPT:REF", "/OPT:ICF", "/MACHINE:X64", "/SUBSYSTEM:WINDOWS", "/NODEFAULTLIB",
+              "/FIXED", "/BASE:0x400000", "/HIGHENTROPYVA:NO", "/ENTRY:WinMainCRTStartup", "/ERRORLIMIT:0", "/DEBUG"]
+# Windows system DLLs the game imports (the Windows SDK's import libraries), in the order of the original images'
+# import tables: a name both WSOCK32 (Winsock 1.1: the TCP protocol's) and WS2_32 export resolves to WSOCK32's
+SDK_LIBS = ["imm32.lib", "kernel32.lib", "user32.lib", "gdi32.lib", "shell32.lib", "ole32.lib", "wsock32.lib",
+            "advapi32.lib", "winmm.lib", "iphlpapi.lib", "ws2_32.lib"]
+# DirectInput 7's DirectInputCreateA (the SDK ships only dinput8.lib)
+DINPUT_DEF = 'LIBRARY "DINPUT.dll"\nEXPORTS\n    DirectInputCreateA\n'
+
+
+def run(cmd, cwd):
+    r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
+                       creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+    return r.returncode, (r.stdout + r.stderr).strip()
+
+
 def link_exe(out, objs, extra_libs):
-    import exe_fulllink
+    """One lld-link of the exe: every object (the engine's and the plug-ins' first: global constructors run in
+    object order, and the game's use engine globals, as when the engine DLL loaded first), the image libraries as an
+    archive (only the members the game uses), the import and static libraries, the resources and the static
+    runtime -> 0 when it links with no unresolved and no duplicate symbol."""
     import rsrc_rebuild
     print("--- exe: link", flush=True)
     dst = out / "exe"
-    dst.mkdir(parents=True, exist_ok=True)
-    items = []
+    lib = dst / "lib"
+    shutil.rmtree(lib, ignore_errors=True)
+    lib.mkdir(parents=True)
+    game, img = [], []
     for mod in ("exe", "exeimg"):
-        for lo, hi, p in module_units(mod):
+        for _, _, p in module_units(mod):
             if mod == "exeimg" and units.rel_src(p).parts[1] == "libjpeg":
                 continue   # the engine's libjpeg (module jpeg, every file) serves the game too
-            items.append({"mod": mod, "lo": lo, "hi": hi, "path": p, "flags": MODULE_FLAGS[mod],
-                          "rel": str(units.rel_src(p)), "obj": objs(p, MODULE_FLAGS[mod])})
-    # the rest of the game: every unit of the engine (with libjpeg) and the plug-ins, and their library units
+            (game if mod == "exe" else img).append(objs(p, MODULE_FLAGS[mod]))
     rest = [m for m in units.TARGET_MODULES["exe"] if m not in ("exe", "exeimg")]
-    others = [objs(j[1], j[2]) for m in rest for j in units.jobs_for(m)] +              [objs(j[1], j[2]) for j in units.lib_jobs(rest)]
-    # the game's new units (units.EXTRA_UNITS: no original address, so not in its units.txt)
-    others += [objs(ROOT / "src" / rel, MODULE_FLAGS["exe"]) for rel in units.EXTRA_UNITS.get("exe", [])]
-    exe_fulllink.EXTRA_LIBS = [str(o) for o in others] + list(extra_libs) + static_libs()
-    exe_fulllink.IMPORT_MODULES = [m for m in units.TARGET_MODULES["exe"] if (LINK_DIR / m / "imports.txt").exists()]
-    exe_fulllink.EXTRA_RES = [rsrc_rebuild.compile_rc(ROOT / "src" / units.LANGUAGE_RC, out / "rsrc-language")]
-    rep, _ = exe_fulllink.link_exe(dst, items, {}, members=units.EXE_MEMBERS, member_offsets=member_offsets(out))
-    import json
-    (dst / "link_report.json").write_text(json.dumps(rep, indent=1, default=str))
-    p1 = rep.get("pass1", {}).get("unresolved", {})
-    traps = sorted(s for s, v in p1.items() if v.get("class") not in ("won", "icf", "vslot", "pure", "data", "library"))
-    if traps:
-        print(f"exe: {len(traps)} unresolved first-party symbol(s) (trap stubs): {traps[:5]}")
-    p2 = rep.get("pass2", {})
-    ma = rep.get("member_alias", {"exit": 0, "unresolved": {}, "duplicates_link": []})
-    for k in ("unresolved", "duplicates_link", "other"):
-        if p2.get(k):
-            print(f"pass 2 {k}: {list(p2[k])[:15]}")
-    ok = (p2.get("exit") == 0 and not p2.get("unresolved") and not p2.get("duplicates_link")
-          and ma["exit"] == 0 and not ma["unresolved"] and not ma["duplicates_link"])
-    print(f"exe: {'ok' if ok else 'FAILED'} -> {dst / 'EE-AOC.exe'}", flush=True)
+    first = [objs(j[1], j[2]) for m in rest for j in units.jobs_for(m)] + [objs(j[1], j[2]) for j in units.lib_jobs(rest)]
+    game += [objs(ROOT / "src" / rel, MODULE_FLAGS["exe"]) for rel in units.EXTRA_UNITS.get("exe", [])]
+    (lib / "exeimg.rsp").write_text("".join(f'"{o}"\n' for o in img))
+    (lib / "DINPUT.def").write_text(DINPUT_DEF)
+    for cmd in ([str(LLVM_LIB), "/nologo", "/out:exeimg.lib", "@exeimg.rsp"],
+                [str(LLVM_LIB), "/nologo", "/machine:x64", "/def:DINPUT.def", "/out:DINPUT.lib"]):
+        code, log = run(cmd, lib)
+        if code:
+            sys.exit(f"{cmd[-1]}: {log}")
+    res = [rsrc_rebuild.compile_rc(units.EXE_RC, out / "rsrc"),
+           rsrc_rebuild.compile_rc(ROOT / "src" / units.LANGUAGE_RC, out / "rsrc-language")]
+    inputs = [*first, *[x for x in extra_libs if str(x).lower().endswith(".obj")], *game, lib / "exeimg.lib",
+              lib / "DINPUT.lib", *SDK_LIBS, *[x for x in extra_libs if not str(x).lower().endswith(".obj")],
+              *static_libs(), *res, *RUNTIME_LIBS]
+    rsp = dst / "link.rsp"
+    rsp.write_text("".join(f'"{x}"\n' for x in inputs))
+    exe = dst / "EE-AOC.exe"
+    exe.unlink(missing_ok=True)
+    code, log = run([str(LLD_LINK), "/nologo", *LINK_FLAGS, f"/OUT:{exe.name}", f"/MAP:{exe.stem}.map",
+                     f"/PDB:{exe.stem}.pdb", *lib_paths(), f"@{rsp.name}"], dst)
+    log = "\n".join(l for l in log.splitlines() if "ignoring section .debug$S with unrecognized magic" not in l)
+    (dst / "link.log").write_text(log)
+    unresolved = sorted(set(re.findall(r"undefined symbol: (.+)", log)))
+    duplicates = sorted(set(re.findall(r"duplicate symbol: (.+)", log)))
+    for kind, names in (("unresolved", unresolved), ("duplicate", duplicates)):
+        if names:
+            print(f"exe: {len(names)} {kind} symbol(s): " + "; ".join(names[:20]))
+    ok = code == 0 and not unresolved and not duplicates and exe.exists()
+    print(f"exe: {'ok' if ok else 'FAILED (' + str(dst / 'link.log') + ')'}: {len(inputs)} inputs, "
+          f"{len(unresolved)} unresolved, {len(duplicates)} duplicates -> {exe}", flush=True)
     return 0 if ok else 1
 
 
@@ -186,7 +191,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--out", help="output root (default build/clang, build/clang-test with --test-profile)")
     ap.add_argument("--opt", default="-O1", help="clang-cl optimisation (default -O1)")
-    ap.add_argument("--x64", action="store_true", help="an x86_64 exe (see the module doc)")
+    ap.add_argument("--x64", action="store_true", help=argparse.SUPPRESS)   # x86_64 is the only target
     ap.add_argument("-j", type=int, default=os.cpu_count() or 4)
     ap.add_argument("--test-profile", choices=sorted(TEST_PROFILES), help="TEST ONLY: see the module doc")
     ap.add_argument("--sanitize-null", action="store_true", help="TEST ONLY: see the module doc")
@@ -195,12 +200,9 @@ def main():
     for tool in (CLANG, LLD_LINK):
         if not tool.exists():
             sys.exit(f"{tool} is missing: install LLVM (winget install LLVM.LLVM) or set EE_LLVM")
-    if a.x64:
-        ee.set_arch("x64")
-        clang_build.set_target(x64=True)
-        if not (ee.wgpu_dir() / "lib" / "wgpu_native.lib").exists():
-            sys.exit(f"{ee.wgpu_dir()} is missing: python -I tools/fetch_wgpu.py")
-    kind = ("clang-test" if a.test_profile else "clang") + ("-x64" + ("" if a.test_profile else "-exe") if a.x64 else "")
+    if not (ee.wgpu_dir() / "lib" / "wgpu_native.lib").exists():
+        sys.exit(f"{ee.wgpu_dir()} is missing: python -I tools/fetch_wgpu.py")
+    kind = "clang-test" if a.test_profile else "clang"
     out = pathlib.Path(a.out or ROOT / "build" / (kind + ("-nullsan" if a.sanitize_null else ""))).resolve()
     out.mkdir(parents=True, exist_ok=True)
     overlays = TEST_PROFILES.get(a.test_profile)
@@ -209,8 +211,7 @@ def main():
         extra = (f"-fsanitize={SANITIZE_CHECKS}", "-fsanitize-minimal-runtime",
                  f"-fsanitize-recover={SANITIZE_CHECKS}")
         ubsan = out / "ubsan_minimal.obj"
-        target = "x86_64-pc-windows-msvc" if a.x64 else "i686-pc-windows-msvc"
-        r = subprocess.run([str(CLANG), f"--target={target}", "/nologo", "/c", "/O1", "/Zl", "/GS-",
+        r = subprocess.run([str(CLANG), "--target=x86_64-pc-windows-msvc", "/nologo", "/c", "/O1", "/Zl", "/GS-",
                             str(ROOT / "tools" / "harness" / "ubsan_minimal.c"), f"/Fo{ubsan}"],
                            capture_output=True, text=True)
         if r.returncode:
@@ -220,10 +221,10 @@ def main():
     objs = compile_all(units.TARGETS, out, a.opt, a.j, overlays, extra)
     if a.compile_only:
         return
-    sys.path.insert(0, str(ROOT / "tools" / "harness"))   # the link places the member aliases by the record layouts
+    result = link_exe(out, objs, extra_libs)
+    sys.path.insert(0, str(ROOT / "tools" / "harness"))   # the record layouts the harness reads offsets from
     import layout_gen
     layout_gen.generate(out, overlays, extra)
-    result = link_exe(out, objs, extra_libs)
     print(f"built in {time.time() - t0:.0f} s -> {out}")
     sys.exit(result)
 

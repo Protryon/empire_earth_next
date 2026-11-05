@@ -22,7 +22,7 @@
 
 extern EEWorld gWorld;
 extern EEPhysics* gPhysics;
-extern bool gInCinematic;                   // 0x5318e0 (no wonder victory while set; provisional name)
+extern bool& gInCinematic;                   // 0x5318e0 (no wonder victory while set; provisional name)
 
 // one standing wonder: its player and when it was built; ordered by the time, then the player (provisional names)
 struct EEVCWonderEntry {

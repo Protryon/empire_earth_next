@@ -98,7 +98,7 @@ def run_ai_game(stage,evidence,addresses,options,ui,results,play_seconds):
     addresses=dict(addresses or {})
     if options is not None and getattr(options,'fulllink',None):
         from fulllink_locator import LinkMap
-        addresses['physics']=LinkMap(pathlib.Path(options.fulllink).resolve().with_suffix('.map')).address('?gPhysics@@3PAVEEPhysics@@A')
+        addresses['physics']=LinkMap(pathlib.Path(options.fulllink).resolve().with_suffix('.map')).address('?gPhysics@@3PEAVEEPhysics@@EA')
     log=evidence/'ai_game.log'
     def note(text):
         print(text,flush=True)

@@ -279,7 +279,7 @@ long EEAIGetTileKind(const EETileLocation& inTile);     // 0x1ed2c (EEAIContinen
 long EEAIGetTileWallID(const EETileLocation& inTile);   // 0x1eea9 (EEAIContinentManager.cpp)
 void EEAIBuildChokePoints(EEMap* inMap, long inKind);   // 0x1c949 (the terrain pass before PruneChokePoints; body elsewhere)
 long EEGetRandomInt(long inMin, long inMax, URandom& inRandom);  // 0x2491c9 (a random index in [inMin, inMax]; body elsewhere) (provisional name)
-extern long gEEAIRegionSize;                            // 0x52fd80 (0x20b48 sets it by map size: 8..0x12) (provisional name)
+extern long& gEEAIRegionSize;                            // 0x52fd80 (0x20b48 sets it by map size: 8..0x12) (provisional name)
 
 // 0x273c9/0x273f1 (COMDATs; inline: every caller needs the definition)
 inline EEAIPathSubSector* EEAIContinentManager::GetPathSubSectorAt(long inX, long inY)

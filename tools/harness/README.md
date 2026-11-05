@@ -26,29 +26,20 @@ python -I tools/harness/game_session.py --exercise ai-game --ai-players 2 --map-
        --max-game-seconds 600 --time-factor 32 --no-render --seed 2 --pt-rate 40 --timeout 2400000
 ```
 
-Requirements: the game install (its data, Miles and Bink are staged from it), MSYS2 `mingw-w64-i686-gcc`
-(`C:\msys64\mingw32`; the debugger harness, the bridge and the time shim are built with it), pip `pefile capstone`.
+Requirements: the game install (its data is staged from it), MSYS2 `mingw-w64-x86_64-gcc` (`C:\msys64\mingw64`;
+the debugger harness `exe_boot.exe`, the bridge and the time shim are built with it), pip `pefile capstone`.
 
-**x64.** The same sessions on the x64 build: build it with `python -I build.py --x64 --test-profile
-windowed-software` (-> `build/clang-test-x64`) and add `--x64` (or pass `--build-dir`; the architecture is read from
-the exe). The harness pieces are built for the exe's architecture from the same sources: `exe_boot64.exe`
-(`exe_boot.c`), the bridge and the time shim with MSYS2 `mingw-w64-x86_64-gcc` (`C:\msys64\mingw64`). The harness
-names the game's symbols by their i686 decorations; an x64 map answers for them (`x64names.py`). Offsets come from the
-build's `layout.json` (x86_64 record layouts; `hbuild` refuses a 32-bit one). Exe addresses are passed as RVAs, so
-an ASLR image works too. Not on x64 yet: `differential/` (`--pt-sync`, `--pt-hash`, `--pt-watch` are refused).
-
-```
-python -I build.py --x64 --test-profile windowed-software
-python -I tools/harness/game_session.py --x64 --exercise tour --play-seconds 120 --timeout 480000
-python -I tools/harness/game_session.py --x64 --exercise ai-game --ai-players 2 --map-size Small --difficulty Hard \
-       --max-game-seconds 600 --time-factor 32 --no-render --seed 2 --pt-rate 40 --timeout 2400000
-```
+**x86_64 only.** The exe and every harness piece are x86_64 (`hbuild` refuses another image; `--x64` is accepted and
+ignored). The harness names the game's symbols by their x64 decorations (`?gWorld@@3VEEWorld@@A`,
+`?Enter@TSCriticalSection@@QEAAXXZ`, `GXTestReadFrame`). Offsets come from the build's `layout.json` (`hbuild`
+checks it has 8-byte pointers). Exe addresses are passed as RVAs, so an ASLR image works too. Not ported:
+`differential/` (VC6 layouts with 32-bit pointers; `--pt-sync`, `--pt-hash`, `--pt-watch` are refused).
 
 **Self test** (no game; ~1 min): `python -I tools/harness/selftest/selftest.py` runs 40 guard cases (every guarded API:
-files, registry, windows, processes, display, sockets, the test interventions) under `exe_boot.exe` and
-`exe_boot64.exe` and requires the same decisions from both (and from main's i686 harness, `--legacy`), then the time
-shim, the bridge, the telemetry probe and the session plumbing on small exes of both architectures. It writes only
-below `build/boot/selftest*`, `build/boot/windowed_o_32` and `HKCU\Software\EE-harness-selftest*`.
+files, registry, windows, processes, display, sockets, the test interventions) under `exe_boot.exe` and checks each
+case's decisions and STOP, then the time shim, the bridge, the telemetry probe and the session plumbing on small x64
+exes. It writes only below `build/boot/selftest*`, `build/boot/windowed_o_32` and
+`HKCU\Software\EE-harness-selftest*`.
 
 ## Status
 
@@ -56,10 +47,10 @@ below `build/boot/selftest*`, `build/boot/windowed_o_32` and `HKCU\Software\EE-h
 |---|---|
 | staging, registry, `exe_boot.c`, presentation bridge, silent mixer, RDP proxy, telemetry (`game_state_probe.py`), `--exercise tour/settings/random-game`, `--play-seconds` | ported |
 | `--exercise ai-game`, `--time-factor`/`--no-render` (time shim), `--seed`, `--no-human-defeat` | ported |
-| all of the above on x64 (`--x64`) | ported, self-tested; tour + 120 s play and the seeded 2-AI game pass on the x64 game |
+| all of the above, x86_64 only | self-tested; tour + 120 s play and the seeded 2-AI game pass |
 | `human/` (`human_input.c`: ~90 offsets, Dinkum deque internals read raw) and so `--human-script` / `EE_HUMAN_LOCKSTEP` | not yet |
 | `differential/` (`layout.py`, `ptsync.h`, `ai_layout.py`, `sampler.py`) | not yet |
-| `mp_game.py`, `save_load.py`, `scenario_game.py`, `synth_scenario.py`, `game_batch.py`, `play.py` | not yet |
+| `mp_game.py`, `save_load.py`, `scenario_game.py`, `synth_scenario.py`, `game_batch.py`, `play.py` | not yet (they still name i686 symbols and VC6 addresses) |
 | `ubsan_minimal.c` | the recovering handlers of `build.py --sanitize-null` builds |
 
 `fulllink_locator.py` and `windowed_overlay.py` remain only for their helpers (`LinkMap`, `test_output`).

@@ -144,6 +144,8 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUnitCollector.h"
 #include "ee/EEStringIDs.h"
+
+extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 extern EEToHitTable gToHitTable;           // 0x5318e8 (as EECPAttackSubGroupUnit.cpp declares it)
 
 // The unit's named float constants (.rdata 0x449b54..0x449ba0, around the vtable 0x449ba8) (provisional names)
@@ -2901,7 +2903,7 @@ void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float
 {
     GE3DPoint theCamera;
     GE3DPoint theScreen;
-    float theHeight = gViewportYClippingPlane;
+    float theHeight = gViewport.GetYClippingPlane();
     float theScale = 1.0f;
     float theVertical = 1.0f;
     float thePan = 0.0f;
@@ -2931,7 +2933,7 @@ void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float
             theScale = 1.0f - (theScreen.GetX() - 1.0f) * gF56451C;
         if (-theHeight > theScreen.mY)
             theVertical = 1.0f - (-theScreen.GetY() - theHeight) * gF56451C;
-        else if (gViewportYClippingPlane < theScreen.mY)
+        else if (gViewport.GetYClippingPlane() < theScreen.mY)
             theVertical = 1.0f - (theScreen.GetY() - theHeight) * gF56451C;
         if (theVertical < theScale)
             theScale = theVertical;
@@ -7055,3 +7057,26 @@ void EECreateSpaceGateEnergyWall(EEComplexUnit* inUnit)
 // TEMPLATE: EXE 0x6543ad
 // TEMPLATE: EXE 0x6543ec
 // TEMPLATE: EXE 0x654420
+
+// ICF-FOLDED: EXE 0x620a18
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEFOFindNewTargetScreenBase::Virtual04(class EEComplexUnit *)
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x620a18
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEFOFindNewTargetScreenBase::Virtual08(class EEComplexUnit *)
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x64edf6
+// Makes the units on the footprint of a unit of inClass placed at inTile (or of inUnit) step aside for it
+// (no address of its own: the same body as EEStepAsideFromSite, which ICF kept; that one only reads the tile)
+void EEPlaceUnit(EEComplexUnit* inUnit, EEUnitClass* inClass, EEPlayer* inPlayer, const U2DPoint<long>& inTile, bool inArg)
+{
+    EETileCoordinate theTile(inTile);
+    EEStepAsideFromSite(inUnit, inClass, inPlayer, theTile, inArg);
+}

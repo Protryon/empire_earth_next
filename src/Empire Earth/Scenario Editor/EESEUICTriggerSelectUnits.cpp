@@ -92,7 +92,7 @@ long EESEUICTriggerSelectUnits::MouseLButtonDoublePressed()
     if (theUnit)
     {
         if (theUnit->mComplexUnit)
-            this->mLasso->SelectUnits(gRenderViewRectangle, 1, theUnit->mUnitClass->mUnitType, theUnit->mUnitID);
+            this->mLasso->SelectUnits(gU4E8F08.GetViewRectangle(), 1, theUnit->mUnitClass->mUnitType, theUnit->mUnitID);
         theUnit->Dereference();
     }
     gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));

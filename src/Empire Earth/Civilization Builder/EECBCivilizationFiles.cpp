@@ -801,3 +801,10 @@ void Fn28130F(UIForm* inForm)
 // FUNCTION: EXE 0x6813be
 // Creates the action that resets the given players' info (the out-of-line inline constructor)
 // (EEAResetAllPlayerInfo's inline ctor, out of line after its first user Fn2802EF)
+
+// ICF-FOLDED: EXE 0x4fca98
+// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEUnitGoal::GetOutOfSynchChecksum)
+long EECBTrace(bool)
+{
+    return 0;
+}

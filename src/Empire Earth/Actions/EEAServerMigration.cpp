@@ -73,7 +73,7 @@
 #include "ee/EEAction.h"
 #include "ee/EEAServerMigration.h"
 #include "ee/EEStringIDs.h"
-extern unsigned short gLagStatus;           // 0x5318d4 (cleared after a migration; provisional name)
+extern unsigned short& gLagStatus;           // 0x5318d4 (cleared after a migration; provisional name)
 
 // FUNCTION: EXE 0x404a0b
 // Creates the host migration action
@@ -205,3 +205,9 @@ void EEAServerMigration::Virtual4()
 // FUNCTION: EXE 0x405017
 // Rotates the slot map's tree right around a node
 // (map<unsigned char, unsigned char>::_Rrotate)
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEAServerMigration::Virtual8()
+{
+}

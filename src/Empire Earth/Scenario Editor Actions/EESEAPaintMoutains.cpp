@@ -181,3 +181,9 @@ bool EESEAPaintMoutains::SetArea(long inLeft, long inTop, long inRight, long inB
 
 // FUNCTION: EXE 0x5a8ce9
 // Sifts a value up a heap of the units to remove (path points first) (std::_Push_heap)
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EESEAPaintMoutains::Virtual8()
+{
+}

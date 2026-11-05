@@ -167,10 +167,10 @@
 
 
 class UIFileListBox;
-extern bool gGameStateIsMultiplayer;        // 0x52fa88 (cleared when the scenario editor starts) (provisional name)
-extern bool gLoadingSavedGame;              // 0x5318d8
+extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when the scenario editor starts) (provisional name)
+extern bool& gLoadingSavedGame;              // 0x5318d8
 extern UString gSavedGameExtension;         // 0x530ba8
-extern unsigned long gTexturePixelDepth;    // 0x5308b4
+extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 extern FSPath* gDataPath;                   // 0x531908
 void EEPostF9Key();                         // 0x27a7f5
 
@@ -1645,3 +1645,60 @@ long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
 // FUNCTION: EXE 0x675389
 // Copies callback vector elements (std::vector::_Ucopy, ICF-shared)
 // (std::vector<long>::_Ucopy (ICF))
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
+void EEUIManager::FnE123D()
+{
+}
+
+// ICF-FOLDED: EXE 0x67cf38
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEUIECECampaignNameChanged::ProcessEvent(class UIForm *,class UIEntity *)
+{
+    return 0;
+}
+
+// ICF-FOLDED: EXE 0x67cf38
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEUIECEClose::ProcessEvent(class UIForm *,class UIEntity *)
+{
+    return 0;
+}
+
+// ICF-FOLDED: EXE 0x67cf38
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEUIEMSETestButton::ProcessEvent(class UIForm *,class UIEntity *)
+{
+    return 0;
+}
+
+// ICF-FOLDED: EXE 0x67cf38
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEUIESPELearningScenarios::ProcessEvent(class UIForm *,class UIEntity *)
+{
+    return 0;
+}
+
+// ICF-FOLDED: EXE 0x5d6811
+// Returns to the main menu
+// (no address of its own: the same body as EEUIEEEEMainMenu::ProcessEvent, which ICF kept)
+long EEUIESPLECancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+{
+    inForm->GetManager()->Pop();
+    return kErrorOK;
+}
+
+// ICF-FOLDED: EXE 0x67cf38
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEUISIEMouseOutButton::ProcessEvent(class UIForm *,class UIEntity *)
+{
+    return 0;
+}
+
+// ICF-FOLDED: EXE 0x67cf38
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEUISIEMouseOverButton::ProcessEvent(class UIForm *,class UIEntity *)
+{
+    return 0;
+}

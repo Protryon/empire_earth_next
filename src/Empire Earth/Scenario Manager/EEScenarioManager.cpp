@@ -91,7 +91,7 @@ template<class T> long EESMSaveVector(unsigned long inMajorVersion, unsigned lon
 static const float kTriggerInterval = 500.0f;  // 0x445fcc (trigger interval, ms: Update, ApplyPendingEffects; unit .rdata; provisional name)
 static const float kSMZero = 0.0f;           // 0x445fd0 (Update's mTriggerTimer test while mIsMovingCamera; unit .rdata; provisional name)
 extern float gF4BE374;                       // 0x4be374 (= 1.0f; Update ends the cinematic when it is 1; provisional name)
-extern float gSideScrollSpeed;               // 0x530828 (MoveCameraToStart's camera step scale; provisional name)
+extern float& gSideScrollSpeed;               // 0x530828 (MoveCameraToStart's camera step scale; provisional name)
 
 // the stable_sort predicates (empty function objects passed by value: 0x1b5e77..0x1b5f7b; provisional names)
 struct EESMTimedEffectLess {

@@ -124,13 +124,13 @@
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
 extern bool gLocalPlayerOut;                // 0x4e6099 (ee/EEMessage.h)
 extern bool gSightUpdatesEnabled;           // 0x4c76ec
-extern bool gAmbientSoundEnabled;           // 0x5308de (the ambient sound switch)
-extern bool gDisplayWeatherEffects;         // 0x5308e6
+extern bool& gAmbientSoundEnabled;           // 0x5308de (the ambient sound switch)
+extern bool& gDisplayWeatherEffects;         // 0x5308e6
 extern long gL4E5E40;                       // 0x4e5e40 (only use: cleared with `and dword ptr, 0`: an integer)
 extern float gViewportHalfWidth;            // 0x530b5c
 extern float gViewportXCenter;              // 0x530b64
 extern float gViewportYCenter;              // 0x530b68
-extern UWideString gWonPlayerName;          // 0x53077c (the WON player name)
+extern UWideString& gWonPlayerName;          // 0x53077c (the WON player name)
 extern UString gDefaultCampaignUser;        // 0x52a170 ("default"; defined below, its init chain mid-file)
 extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
 void EEStopAllSounds();                     // 0x140ceb
@@ -392,9 +392,9 @@ void EEWorld::Clear()
     this->mClearing = true;
     if (!UShutdownInProgress() && this->mMap != NULL) {
         this->RecordStatistics();
-        gUnitPickerLock->Enter();
+        gUnitPicker.GetLock()->Enter();
         gUnitPicker.Reset();
-        gUnitPickerLock->Leave();
+        gUnitPicker.GetLock()->Leave();
     }
     if (gUIManager != NULL && gUIManager->mScenarioEditorForm != NULL)
         gUIManager->mScenarioEditorForm->ClearSelection();
@@ -1034,9 +1034,9 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
     gAmbientSoundManager.Restart();
     gGraphics->PostReleaseScene();
     gGraphics->PostInitialiseScene();
-    gUnitPickerLock->Enter();
+    gUnitPicker.GetLock()->Enter();
     gUnitPicker.Reset();
-    gUnitPickerLock->Leave();
+    gUnitPicker.GetLock()->Leave();
     gMiniMap->Refresh();
     gPathManager.RequestPendingPaths(this->mMap);
     gUserInterface->SetLoadProgress(kWorldLoadProgress27);
@@ -2294,3 +2294,37 @@ EETeam::EETeam(const std::vector<unsigned long>& inPlayers)
 // TEMPLATE: EXE 0x53d36d
 // TEMPLATE: EXE 0x53e451
 // TEMPLATE: EXE 0x53d059
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEWorld::CameraChanged(class GETransformation const &)
+{
+}
+
+// ICF-FOLDED: EXE 0x548024
+// Returns the player's index in the world, -1 if absent
+// (no address of its own: the same body as RTSWorld::GetPlayerIndex, which ICF kept)
+long EEWorld::GetPlayerIndex(EEPlayer* inPlayer)
+{
+    long theResult = -1;
+    for (unsigned long i = 0; i < this->mNumPlayers; i++) {
+        if (this->mPlayers[i] == inPlayer) {
+            theResult = i;
+        }
+    }
+    return theResult;
+}
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
+void EEWorld::TeamsChanged()
+{
+}
+
+// ICF-FOLDED: EXE 0x54804f
+// Returns the unit with the id (its top byte is the player), 0 if none
+// (no address of its own: the same body as RTSWorld::GetUnit, which ICF kept)
+EEUnit* EEWorld::GetUnit(unsigned long inUnitID)
+{
+    return static_cast<EEUnit*>(this->RTSWorld::GetUnit(inUnitID));
+}

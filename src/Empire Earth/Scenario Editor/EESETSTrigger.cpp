@@ -1049,3 +1049,9 @@ void EESETSTrigger::Show()
 
 // SYNTHETIC: EXE 0x596e93
 // (EESEETriggerRemove's scalar deleting destructor)
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EESETSTrigger::Deactivate()
+{
+}

@@ -9,7 +9,7 @@ class GEBitmap;
 class EEUIFScenarioEditor;
 
 // 0x5318cc: the world's player count the editor's player tab sets (EESEAChangeWorldPlayerCount; provisional name)
-extern unsigned long gMaxPlayers;
+extern unsigned long& gMaxPlayers;
 
 // RTTI EESERBUnitTypes > UIRadioButton; vtable 0x44303c; sizeof 0x114 (no members). The out-of-line ctor 0x173218
 // (`ret 0x2c`) builds the rectangle (location, width, height; unsigned: fild qword) and passes inScaleBitmap false.

@@ -18,8 +18,8 @@ public:
     virtual ~EEPCalamityHelper();           // +0x10 (??_G 0x149826)
     virtual FSPersistent* CreateDefault() const;   // +0x14 0x149977
     virtual void Virtual1C(long inArg);     // +0x1c (ICF-folded `ret 4`)
-    virtual void Virtual20();               // +0x20 (0x1498c2 is operator=, not this slot)
-    EEPCalamityHelper& operator=(const EEPCalamityHelper& inOther);   // 0x1498c2 (ret 4, returns this)
+    // +0x20 0x1498c2 (ret 4, returns this): the vtable slot holds operator= (was declared Virtual20())
+    virtual EEPCalamityHelper& operator=(const EEPCalamityHelper& inOther);
     void ClearCalamities();                 // 0x149860 (deletes mL08; provisional name)
     void ClearContagionManager();           // 0x149880 (deletes mContagionManager; provisional name)
     void Reset();                           // 0x149897 (both, then a new EEContagionManager; EEGameState 0x13181d)

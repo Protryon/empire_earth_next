@@ -66,6 +66,10 @@
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
 #include "ee/EEAIPathGoalModifiers.h"
 #include "ee/EECPCombatManager.h"
+#include "ee/EECPASGSpaceship.h"
+#include "ee/EECPUnitSelector.h"
+#include "ee/EECPPersonnel.h"
+#include "ee/EETown.h"
 
 // FUNCTION: EXE 0x44dc37
 // Creates a naval attack sub-group belonging to the given attack group
@@ -637,4 +641,35 @@ void EECPASGSea::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
     std::map<unsigned short, std::vector<EECPAttackSubGroupUnit*>*>::iterator theGroup;
     for (theGroup = theGroups.begin(); theGroup != theGroups.end(); ++theGroup)
         delete theGroup->second;
+}
+
+// ICF-FOLDED: EXE 0x441976
+// Replaces the sub-group's personnel request with a town request (at the town's centre) or a continent request
+// for the given classes; during a wonder race the request expires after 300 s
+// (no address of its own: the same body as EECPASGAir::RequestUnits, which ICF kept)
+void EECPASGSea::RequestUnits(std::vector<long>& inClasses, std::vector<long>& inUnitIDs, long inContinent, long inTownID)
+{
+    if (this->mRequest != NULL) {
+        this->mGroup->mCommander->mPersonnel->ReleaseRequest(this->mRequest->mID);
+        this->mRequest->Dereference();
+    }
+    EETown* theTown = NULL;
+    if (inTownID != 0)
+        theTown = this->mPlayer->GetTownByID(inTownID);
+    if (theTown == NULL)
+        this->mRequest = this->mGroup->mCommander->mPersonnel->NewContinentRequest(inClasses, inUnitIDs, inContinent);
+    else {
+        EECPPersonnel* thePersonnel = this->mGroup->mCommander->mPersonnel;
+        this->mRequest = thePersonnel->NewTownRequest(inClasses, inUnitIDs, inTownID, theTown->mHull.GetCenter());
+    }
+    if (this->mRequest != NULL && this->mPlayer2->mCombatManager->mIsWonderRace)
+        this->mRequest->mDeadline = gPhysics->mGameTime + 300000;
+}
+
+// ICF-FOLDED: EXE 0x44dfe6
+// Tests whether the sub-group is at the location (the result is dropped)
+// (no address of its own: the same body as EECPASGSea::IsAtLocation, which ICF kept)
+void EECPASGSpaceship::IsAtLocation(const EECPILocation& inLocation)
+{
+    EECPAttackSubGroup::IsAt(inLocation);
 }

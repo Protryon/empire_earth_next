@@ -170,3 +170,10 @@ void EEComplexUnit::UpdateWheels()
     for (unsigned long i = 0; i < theCount; i++)
         this->mWheels[i]->Update(this);
 }
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCLand::CanAttackMove()
+{
+    return true;
+}

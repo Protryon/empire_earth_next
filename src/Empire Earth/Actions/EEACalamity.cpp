@@ -146,3 +146,9 @@ long EEACalamity::Check(const GE2DPoint& inLocation)
 
 // SYNTHETIC: EXE 0x401dc5
 // (the scalar deleting destructor)
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEACalamity::Virtual8()
+{
+}

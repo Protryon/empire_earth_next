@@ -338,3 +338,33 @@ void EECPASGSpaceFighter::Disband()
     }
     EECPAttackSubGroup::Disband();
 }
+
+// ICF-FOLDED: EXE 0x4423d4
+// Recalls every active unit (zeroes its flight time or clears its holder's goals), clears its goals, asks for removal
+// (no address of its own: the same body as EECPASGAir::RequestRemoval, which ICF kept)
+void EECPASGSpaceFighter::RequestRemoval()
+{
+    for (long i = this->mUnits.size() - 1; i >= 0; i--) {
+        if (this->mUnits[i]->IsDone())
+            continue;
+        if (this->mUnits[i]->GetUnit()->mContainer == NULL)
+            this->mUnits[i]->GetUnit()->SetFlightTime(0);
+        else
+            this->mUnits[i]->GetUnit()->mContainer->ClearGoalQueue(0);
+        this->mUnits[i]->GetUnit()->ClearGoalQueue(0);
+    }
+    EECPAttackSubGroup::RequestRemoval();
+  /* LOST-DEBUG: none: exact only (lostdebug_search, smallest n) */ }
+
+// ICF-FOLDED: EXE 0x441ef8
+// Launches the sub-group: every unit retargets now and needs orders, then all fly to the task location if active
+// (no address of its own: the same body as EECPASGAir::Launch, which ICF kept)
+void EECPASGSpaceFighter::Launch(long inTime)
+{
+    for (long i = this->mUnits.size() - 1; i >= 0; i--) {
+        this->mUnits[i]->mNextRetargetTime = inTime;
+        this->mUnits[i]->mNeedsOrders = true;
+    }
+    if (this->mTask.mIsActive)
+        this->SetDestination(this->mTask.mLocation);
+}

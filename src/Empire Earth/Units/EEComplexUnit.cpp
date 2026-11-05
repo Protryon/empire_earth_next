@@ -4620,3 +4620,21 @@ unsigned long EEGraphicObject::GetWheelCount() const
 // TEMPLATE: EXE 0x601d01
 
 // TEMPLATE: EXE 0x601d51
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEComplexUnit::DescribeLong(class UWideString &)
+{
+}
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
+void EEComplexUnit::FnE123D()
+{
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEComplexUnit::ResearchCompleted(unsigned long)
+{
+}

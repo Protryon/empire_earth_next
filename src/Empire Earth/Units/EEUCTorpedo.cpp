@@ -23,6 +23,9 @@
 #include "ee/EEUGAttackGround.h"
 #include "ee/EEUCMissile.h"
 #include "ee/EEUCTorpedo.h"
+#include "ee/EEMedia.h"
+#include "ee/EEGraphicEffect.h"
+#include "ee/EmpireEarth.h"
 
 // FUNCTION: EXE 0x61b163
 // When the torpedo has reached ground at or above sea level, gives it an attack-ground goal there and returns
@@ -72,4 +75,20 @@ void EEUCTorpedo::Update(EEComplexUnit* inUnit)
     theTransformation = inUnit->mPhysicalModel.GetLocation();
     theTransformation.SetZ(0.0f);
     inUnit->SetTransformation(theTransformation, true);
+}
+
+// ICF-FOLDED: EXE 0x69059d
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEUCTorpedo::CheckWaterImpact(class EEComplexUnit *)
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x60d336
+// Updates a living citizen's water ripples when the effect detail allows them
+// (no address of its own: the same body as EEUCBasicCitizen::UpdateEffects, which ICF kept)
+void EEUCTorpedo::UpdateEffects(EEComplexUnit* inUnit)
+{
+    if (this->mRippleEffect != NULL && inUnit->mHitPoints != 0 && (unsigned long)this->mRippleEffect->mDetailLevel <= gEffectDetail)
+        this->UpdateRipples(inUnit);
 }

@@ -51,6 +51,10 @@ public:
     void Reset();                           // 0x119f7c: Clear, the main viewport, the camera mode (provisional name)
     // 0x119ffb: one drawn unit (EEROUnits) (provisional name)
     void AddUnit(EEUnit* inUnit, const GETransformation& inTransformation, float inPixelSize);
+#ifdef LLE_GEVIEWPORT_H
+    // the picker's lock (the original addressed mLock as a global, gUnitPickerLock 0x529014)
+    TSCriticalSection* GetLock() const { return this->mLock; }
+#endif
 private:
     // 0x118eaf: PickUnits' worker for one unit type (provisional name)
     void PickUnitsOfType(const GERectangle& inRectangle, EEPlayer* inPlayer, long inType,

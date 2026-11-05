@@ -1269,3 +1269,10 @@ SaveFinalFields:
 
 // TEMPLATE: EXE 0x5f57ab
 // std::vector<EEPathManagerPending>::_Ucopy
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEComplexDoppelganger::IsComplex()
+{
+    return true;
+}

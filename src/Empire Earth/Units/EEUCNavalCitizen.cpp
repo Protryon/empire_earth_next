@@ -135,3 +135,24 @@ void EEUCNavalCitizen::Update(EEComplexUnit* inUnit)
     }
     this->UpdateCitizen(inUnit);
 }
+
+// ICF-FOLDED: EXE 0x618909
+// Creates a priest ship at a placement on the water plane (z 0)
+// (no address of its own: the same body as EEUCNavalPriest::CreateUnitAt, which ICF kept)
+EEUnit* EEUCNavalCitizen::CreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
+                                      EEUnit* inCreator)
+{
+    GETransformation theTransformation(inTransformation);
+    theTransformation.SetX(theTransformation.GetX());
+    theTransformation.SetZ(0.0f);
+    return EEUnitClass::CreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+}
+
+// ICF-FOLDED: EXE 0x618a45
+// Raises a location below the water plane to z 0
+// (no address of its own: the same body as EEUCNavalTransport::GroundLocation, which ICF kept)
+void EEUCNavalCitizen::GroundLocation(GE3DPoint& ioLocation)
+{
+    if (ioLocation.GetZ() < 0.0f)
+        ioLocation.SetZ(0.0f);
+}

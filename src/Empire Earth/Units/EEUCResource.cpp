@@ -57,3 +57,27 @@ void EEUCResource::AddToTile(EEUnit* inUnit)
     }
 }
 
+// ICF-FOLDED: EXE 0x60bbd0
+// Removes the unit from every map tile of its footprint, its own tile first
+// (no address of its own: the same body as EEUCAmbient::RemoveFromTile, which ICF kept)
+void EEUCResource::RemoveFromTile(EEUnit* inUnit)
+{
+    long theSize = this->GetTileSize();
+    EEMap* theMap = ::gWorld.mMap;
+    long theX = inUnit->mTileX;
+    long theY = inUnit->mTileY;
+    long theEndX = theX + theSize;
+    long theEndY = theY + theSize;
+    EEMapTile* theTile = theMap->GetTile(theX, theY);
+    if (theTile != NULL)
+        theTile->RemoveUnit(inUnit);
+    for (long i = theX; i < theEndX; i++) {
+        for (long j = theY; j < theEndY; j++) {
+            if (i == theX && j == theY)
+                continue;
+            EEMapTile* theOther = theMap->GetTile(i, j);
+            if (theOther != NULL)
+                theOther->RemoveUnit(inUnit);
+        }
+    }
+}

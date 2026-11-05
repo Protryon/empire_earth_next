@@ -96,7 +96,7 @@ public:
     long mUnitType;                         // +0x18
 };
 
-extern long gNumPlayers;                    // 0x530e0c, the world's player count (as EECPAttackCommander.cpp declares it; provisional name)
+extern long& gNumPlayers;                    // 0x530e0c, the world's player count (as EECPAttackCommander.cpp declares it; provisional name)
 
 static bool EECPMayDraft(EEUnitClass* inClass);   // 0x86fc1 (defined after its first user DraftUnit; provisional name)
 

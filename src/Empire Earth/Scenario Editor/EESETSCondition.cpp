@@ -361,3 +361,9 @@ void EESETSCondition::Show()
 
 // SYNTHETIC: EXE 0x57eef3
 // (EESETSConditionType's scalar deleting destructor, shared by the vptr-only types)
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EESETSCondition::Deactivate()
+{
+}

@@ -27,7 +27,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 
-extern EEEffectManager* gEffectManager;
+extern EEEffectManager*& gEffectManager;
 
 // FUNCTION: EXE 0x4ac7b9
 // Creates the extra-damage area functor for a unit set and damage mode; the flag picks the pulse cannon effect

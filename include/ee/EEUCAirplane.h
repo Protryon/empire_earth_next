@@ -24,7 +24,7 @@ public:
     virtual void Update(EEComplexUnit* inUnit);      // +0xb8 0x20b9f0 trivial: push dword ptr [esp + 4]; call 0x616a11; ret 4 (ICF: EEUCPlanetSpaceship)
     virtual void UpdateEffects(EEComplexUnit*); // +0xbc 0x20b9b4
     // +0xe4 0x21b361 (ICF: EEUCAirAnimal, EEUCHelicopterTransport...): as EEUCTransport's +0xe8 (EEUGUnloadTransport 0x228739)
-    virtual long FindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination, U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile, U2DPoint<long>* outTile);
+    virtual void FindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<long>* inDestination, U2DPoint<long>* outUnloadTile, U2DPoint<long>* outFirstCargoTile, U2DPoint<long>* outTile);
     void FlyOffMap(EEComplexUnit* inUnit);  // 0x20b824 (Virtual74's command 0x3ff: off the map edge) (provisional name)
     // members OPEN: a base's sizeof is unknown (no new site), so this class's own members cannot be placed yet
 };

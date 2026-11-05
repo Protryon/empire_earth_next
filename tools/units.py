@@ -18,11 +18,15 @@ TARGETS = ["exe"]
 TARGET_MODULES = {"exe": ["exe", "exeimg", "lle", "jpeg", "tcp", "mixer", "default", "dx7hrtnl"]}
 PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/)
-# with the engine, and new game units that have no address in the original (the db text loader)
+# with the engine, and new game units that have no address in the original (the db text loader, the WON library's
+# stand-ins)
 PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatThread.cpp", "Platform/Win32/PlatString.cpp",
                   "Platform/Win32/PlatPreferences.cpp", "Platform/Win32/PlatFile.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS,
-               "exe": ["Empire Earth/Database/EEDataText.cpp", "Empire Earth/Database/EEDataTextFile.cpp"]}
+               "exe": ["Empire Earth/Database/EEDataText.cpp", "Empire Earth/Database/EEDataTextFile.cpp",
+                       "Empire Earth/WONAPI/WONAPIStubs.cpp",
+                       # a unit with no code range of its own (every member was ICF-folded into another unit's)
+                       "Empire Earth/Calamities/EEGlobalCalamityClass.cpp"]}
 LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c", "pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
              "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c"}
 # dmusic (DirectMusic reimplementation, src/ThirdParty/dmusic): every source but the POSIX thread shim
@@ -33,7 +37,6 @@ LIB_MEMBERS = {"mixer": ["miniaudio"], "dx7hrtnl": ["pl_mpeg"], "lle": ["implode
     n for n in LIB_UNITS if n.startswith("dmusic-"))}
 LANGUAGE_RC = pathlib.PurePosixPath("Empire Earth/Language/Language.rc")
 EXE_RC = ROOT / "src" / "Empire Earth" / "EE-AOC.rc"
-EXE_MEMBERS = LINK_DIR / "exe" / "fulllink_members.tsv"
 
 
 def rel_src(path):

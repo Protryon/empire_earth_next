@@ -25,7 +25,7 @@ public:
     virtual void TabbedTo();                // +0x74
     virtual void TabbedFrom();              // +0x78
     virtual long UpdateKeyboard();          // +0x7c
-    virtual EESEAPaint* CreatePaintAction();  // +0x88 (the new paint action)
+    virtual EESEAPaint* CreatePaintAction() = 0;  // +0x88 (the new paint action; pure in the vtable)
     // 0x1a3ff7 (EESEAPaintElevation::Virtual4 calls it on the form's control 0xa1) (provisional name)
     void StoreMouseTile();
 

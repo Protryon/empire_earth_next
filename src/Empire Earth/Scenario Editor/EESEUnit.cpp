@@ -137,7 +137,7 @@ void EEPreviewWall(std::vector<EETileCoordinate>& inTiles, long inTechnology, lo
 void EEClearGateHighlights(EEPlayer* inPlayer, long inUnitType);  // 0x21176e: restores the colour of inPlayer's walls
 bool EEFindGateWall(const EETileCoordinate& inTile, long& ioDirection);  // 0x2116a2: a gate fits on inTile's wall
 void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (the ghost at the mouse)
-extern unsigned long gTexturePixelDepth;
+extern unsigned long& gTexturePixelDepth;
 
 // The upgrade panel is a real 0x60-byte class (new at 0x59b976 in the tab's ctor); both its ctor counters
 // are mutable

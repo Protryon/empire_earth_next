@@ -235,3 +235,15 @@ void EEROGroundShadows::ReleaseShadowModel()
 {
     sShadowModel->Dereference();
 }
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEROGroundShadows::FrameDone()
+{
+}
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEROGroundShadows::SceneStarting()
+{
+}

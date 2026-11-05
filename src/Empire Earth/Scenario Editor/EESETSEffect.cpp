@@ -322,3 +322,9 @@ void EESETSEffect::Hide()
 
 // SYNTHETIC: EXE 0x582daf
 // (EESEEChangeEffectType's scalar deleting destructor)
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EESETSEffect::Deactivate()
+{
+}

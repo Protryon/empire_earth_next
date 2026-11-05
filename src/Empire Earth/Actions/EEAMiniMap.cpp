@@ -189,3 +189,9 @@ void EEAMiniMap::CenterCamera()
 // FUNCTION: EXE 0x402f85
 // Returns the map tile at a tile position, or NULL off the map
 // (EEMap::GetTile, inline in ee/EEMap.h: its out-of-line copy, first called here)
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEAMiniMap::Virtual8()
+{
+}

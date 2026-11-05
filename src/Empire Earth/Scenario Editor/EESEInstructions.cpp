@@ -496,3 +496,9 @@ void EEABuild::Virtual8()
 
 // FUNCTION: EXE 0x57210f
 // Creates an empty list of wide strings (vector<UWideString> default constructor, template COMDAT)
+
+// ICF-FOLDED: EXE 0x556dd8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EESEInstructions::MouseMove(class GE2DPoint const &)
+{
+}

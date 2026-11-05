@@ -64,9 +64,9 @@
 #include "ee/EEAMouseClick.h"
 #include "ee/EEUICCommandUnits.h"
 
-extern unsigned long gTexturePixelDepth;    // 0x5308b4
+extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 extern GEViewport gU4E8F08;                 // 0x4e8f08 the game view viewport (provisional name)
-extern float gCameraZoom;                   // 0x5317f0 (the arrow scale less 0.5) (provisional name)
+extern float& gCameraZoom;                   // 0x5317f0 (the arrow scale less 0.5) (provisional name)
 
 static const float kCommandUnitsDragFraction = 0.02f;   // 0x449e84 (a unit-local constant)
 

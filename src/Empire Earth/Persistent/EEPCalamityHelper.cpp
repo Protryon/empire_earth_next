@@ -187,3 +187,15 @@ long EEPCalamityHelper::Save(unsigned long inMajorVersion, unsigned long inMinor
     }
     return theResult;
 }
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEPCalamityHelper::GetChecksum(class ESChecksum &) const
+{
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEPCalamityHelper::Virtual1C(long)
+{
+}

@@ -83,7 +83,7 @@ long EEEffect2D::Queue(EEEffectQueue* inQueues)
         return 10;
     if (!theTile->IsSeenBy(gWorld.GetCurrentPlayer()) && !gFreeCamera)
         return 10;
-    gViewportCameraInverse.Apply(theLocation, theCameraPoint);
+    gViewport.GetCameraInverse().Apply(theLocation, theCameraPoint);
     float theW;
 
     thePoint.SetX(theCameraPoint.GetX() + theRadius);
@@ -110,7 +110,7 @@ long EEEffect2D::Queue(EEEffectQueue* inQueues)
         gViewport.NormalizePerspectiveCameraPoint(thePoint, theScreenPoint, theW);
     else
         gViewport.NormalizeOrthographicCameraPoint(thePoint, theScreenPoint, theW);
-    if (theW == 0.0f || theScreenPoint.GetY() / theW < -gViewportYClippingPlane)
+    if (theW == 0.0f || theScreenPoint.GetY() / theW < -gViewport.GetYClippingPlane())
         return 10;
 
     thePoint.SetZ(theCameraPoint.GetZ() - theRadius);
@@ -118,7 +118,7 @@ long EEEffect2D::Queue(EEEffectQueue* inQueues)
         gViewport.NormalizePerspectiveCameraPoint(thePoint, theScreenPoint, theW);
     else
         gViewport.NormalizeOrthographicCameraPoint(thePoint, theScreenPoint, theW);
-    if (theW == 0.0f || theScreenPoint.GetY() / theW > (double)gViewportYClippingPlane)  // owner-approved stand-in (2026-10-26): the original compares against the global loaded onto the x87 stack (fld; fcompp)
+    if (theW == 0.0f || theScreenPoint.GetY() / theW > (double)gViewport.GetYClippingPlane())  // owner-approved stand-in (2026-10-26): the original compares against the global loaded onto the x87 stack (fld; fcompp)
         return 10;
 
     thePoint.SetZ(theCameraPoint.GetZ());
@@ -378,4 +378,12 @@ inline EEEffect2DPart::EEEffect2DPart(const GE3DPoint& inPosition, EEGraphicObje
     this->mDrawFrame = 0;
     this->mTime = 0.0f;
     this->mIsDone = false;
+}
+
+// ICF-FOLDED: EXE 0x4e8eb1
+// Repairs the effect's unit pointer (a `jmp` to EEEffect::RepairPointers)
+// (no address of its own: the same body as EEEffect3D::RepairPointers, which ICF kept)
+long EEEffect2D::RepairPointers()
+{
+    return EEEffect::RepairPointers();
 }

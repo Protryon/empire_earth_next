@@ -47,7 +47,7 @@ def null_tests(fn):
         return 0
     import capstone
     if _MD is None:
-        _MD = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_32)
+        _MD = capstone.Cs(capstone.CS_ARCH_X86, capstone.CS_MODE_64)
     ins = list(_MD.disasm(fn[0], 0))
     n = 0
     for i, j in zip(ins, ins[1:]):

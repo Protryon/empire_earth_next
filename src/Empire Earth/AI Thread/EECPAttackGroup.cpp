@@ -90,7 +90,7 @@
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include <EEAIFunctionObjects.h>
 
-extern long gDCGameSpeed;                   // 0x530d24 (EECPDefenseCommander.cpp's name; FindLandTransport: > 0 for a sea transport) (provisional name)
+extern long& gDCGameSpeed;                   // 0x530d24 (EECPDefenseCommander.cpp's name; FindLandTransport: > 0 for a sea transport) (provisional name)
 
 static const float kAGNearDistance = 324.0f;    // 0x43bca8
 

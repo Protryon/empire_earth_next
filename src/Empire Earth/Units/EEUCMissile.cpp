@@ -343,3 +343,15 @@ void EEUCMissile::Update(EEComplexUnit* inUnit)
         theTime = 0;
     inUnit->mCloaked = theTime;
 }
+
+// ICF-FOLDED: EXE 0x556dd8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUCMissile::AddToRegion(class EEUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x556dd8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUCMissile::RemoveFromRegion(class EEUnit *)
+{
+}

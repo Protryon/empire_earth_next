@@ -33,7 +33,7 @@ def build(out, jobs):
             sys.exit(f'{src.name}: {r.stdout}{r.stderr}')
         objs.append(str(obj))
     exe = out / 'eedata_gate.exe'
-    r = subprocess.run([str(LLD_LINK), '/nologo', '/subsystem:console', '/machine:x86', f'/out:{exe}', *objs,
+    r = subprocess.run([str(LLD_LINK), '/nologo', '/subsystem:console', '/machine:x64', f'/out:{exe}', *objs,
                         *lib_paths(), *RUNTIME_LIBS], capture_output=True, text=True)
     if r.returncode:
         sys.exit(f'link: {r.stdout}{r.stderr}')

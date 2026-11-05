@@ -1,9 +1,9 @@
-"""Build and run the wgpu phase-0 probe (probe.c) for x86_64 and i686 against the pinned wgpu-native static library.
+"""Build and run the wgpu phase-0 probe (probe.c) for x86_64 against the pinned wgpu-native static library.
 
-  python -I tools/wgpu_probe/build.py [--arch x86_64|i686|all] [--run] [-- probe arguments]
+  python -I tools/wgpu_probe/build.py [--run] [-- probe arguments]
 
 Compiles with clang-cl and links with lld-link and the static C runtime (/MT, as the game), into
-build/wgpu_probe/<arch>/probe.exe; --run runs it (arguments after --). Needs tools/fetch_wgpu.py first.
+build/wgpu_probe/x86_64/probe.exe; --run runs it (arguments after --). Needs tools/fetch_wgpu.py first.
 """
 import argparse
 import os
@@ -16,7 +16,7 @@ ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 from ee import CLANG, LLD_LINK, TOOLCHAIN, modern_dirs   # noqa: E402
 
-TARGETS = {"x86_64": ("x86_64-pc-windows-msvc", "x64", "X64"), "i686": ("i686-pc-windows-msvc", "x86", "X86")}
+TARGETS = {"x86_64": ("x86_64-pc-windows-msvc", "x64", "X64")}
 # the static runtime, then what the Rust standard library and wgpu's DX12/Vulkan/GL backends link against
 LIBS = ["libcmt.lib", "libvcruntime.lib", "libucrt.lib", "oldnames.lib", "kernel32.lib", "user32.lib", "gdi32.lib",
         "advapi32.lib", "ws2_32.lib", "userenv.lib", "ntdll.lib", "bcrypt.lib", "ole32.lib", "oleaut32.lib",
@@ -60,11 +60,10 @@ def main():
     probe_args = argv[argv.index("--") + 1:] if "--" in argv else []
     argv = argv[:argv.index("--")] if "--" in argv else argv
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--arch", choices=["x86_64", "i686", "all"], default="all")
     ap.add_argument("--run", action="store_true")
     a = ap.parse_args(argv)
     failed = 0
-    for arch in (TARGETS if a.arch == "all" else [a.arch]):
+    for arch in TARGETS:
         exe = build(arch)
         if a.run:
             r = subprocess.run([str(exe), *probe_args], capture_output=True, text=True, timeout=120)

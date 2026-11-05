@@ -403,3 +403,22 @@ void EEUCAirAnimal::Update(EEComplexUnit* inUnit)
     }
     }
 }
+
+// ICF-FOLDED: EXE 0x4ac9f3
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEUCAirAnimal::CanAttackMove()
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUCAirAnimal::GroundLocation(class GE3DPoint &)
+{
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUCAirAnimal::UpdateEffects(class EEComplexUnit *)
+{
+}

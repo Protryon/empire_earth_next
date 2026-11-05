@@ -85,3 +85,9 @@ void EEAResetAllPlayerInfo::Virtual4()
 
 // SYNTHETIC: EXE 0x4045f7
 // (the scalar deleting destructor)
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEAResetAllPlayerInfo::Virtual8()
+{
+}

@@ -16,6 +16,5 @@ public:
 
 // a zero rectangle in .data (0x4e8f18; copied by value before ClearZBuffer here and in 4 other units: 0x11673f,
 // 0x118813, 0x197429, 0x259b5a). Provisional name, type and home
-extern GERectangle gRenderViewRectangle;
 
 #endif

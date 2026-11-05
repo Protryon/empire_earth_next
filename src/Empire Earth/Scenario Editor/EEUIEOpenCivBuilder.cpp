@@ -162,7 +162,7 @@ extern GEFont* gU531938;                    // 0x531938
 #include "ee/EESETriggerScreen.h"
 #include "ee/EESEInstructions.h"
 #include "ee/EESEAQuickSaveLoad.h"
-extern unsigned long gTexturePixelDepth; // 0x5308b4 (Empire Earth.cpp)
+extern unsigned long& gTexturePixelDepth; // 0x5308b4 (Empire Earth.cpp)
 extern bool gSightUpdatesEnabled;
 extern GEViewport gViewport;
 

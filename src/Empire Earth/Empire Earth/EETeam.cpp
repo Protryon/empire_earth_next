@@ -102,3 +102,9 @@ long EETeam::GetVictoryState()
 {
     return this->mVictoryCondition->GetVictoryState();
 }
+
+// ICF-FOLDED: EXE 0x556dd8
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EETeam::GetChecksum(class ESChecksum &) const
+{
+}

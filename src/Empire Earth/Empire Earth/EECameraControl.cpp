@@ -77,8 +77,8 @@
 // Constructs the game version string "2002.8.17.v1.00" and registers its destructor to run at exit
 UWideString gGameVersion("2002.8.17.v1.00");
 
-extern bool gFarRearClipping;               // 0x5308d2 (set: the far rear clipping distance; provisional name)
-extern bool gInCinematic;                   // 0x5318e0 (set: scrolling keeps the free camera mode; provisional name)
+extern bool& gFarRearClipping;               // 0x5308d2 (set: the far rear clipping distance; provisional name)
+extern bool& gInCinematic;                   // 0x5318e0 (set: scrolling keeps the free camera mode; provisional name)
 
 // the camera's limits (unit-local .rdata 0x441e48..0x441eb8, before the vtable; provisional names)
 static const float kCameraOrthographicWidth = 800.0f;

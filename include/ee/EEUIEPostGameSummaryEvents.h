@@ -132,7 +132,7 @@ struct EEPGSPlayerReport {
 
 // Globals of other units the summary reads (provisional names; no evidence beyond these reads)
 extern GEFont* gFontTahoma8;                // 0x531990 (the status bars' font; Empire Earth.cpp)
-extern long gGameResources;                 // 0x53123c (0x2ec52 compares it with 4)
+extern long& gGameResources;                 // 0x53123c (0x2ec52 compares it with 4)
 // 0x1318e6 EEGetResourceLevel, the vector 0x4e8690 (EEStartingResources::sTable) and 0x1304cc
 // EEGetNumberOfResourceLevels are declared in ee/EEStartingResources.h
 #endif

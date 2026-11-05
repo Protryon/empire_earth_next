@@ -189,3 +189,42 @@ void EEUCSpaceship::Update(EEComplexUnit* inUnit)
         this->Regenerate(inUnit);
     this->Fn157269(inUnit);
 }
+
+// ICF-FOLDED: EXE 0x61aaa9
+// Adds the transport to its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::AddToTile, which ICF kept)
+void EEUCSpaceship::AddToTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->mUnits = theTile->AddUnit(theUnit, theTile->mUnits);
+}
+
+// ICF-FOLDED: EXE 0x60afe9
+// Animates the animal like any unit
+// (no address of its own: the same body as EEUCAirAnimal::Animate, which ICF kept)
+long EEUCSpaceship::Animate(EEComplexUnit* inUnit)
+{
+    return EEUnitClass::Animate(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCSpaceship::CanAttackMove()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x61aaf5
+// Removes the transport from its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::RemoveFromTile, which ICF kept)
+void EEUCSpaceship::RemoveFromTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->RemoveUnit(theUnit);
+}

@@ -32,7 +32,7 @@ std::vector<EEButtonObject*> EEButtonObject::sTable;
 #include <EEDatabase.h>
 
 // 0x5308b4: the pixel depth textures are loaded with (16 or 32; provisional name)
-extern unsigned long gTexturePixelDepth;
+extern unsigned long& gTexturePixelDepth;
 
 // One record of db\dbButtons.dat (0xe0 bytes, read whole). Inferred layout.
 struct EEButtonRecord {

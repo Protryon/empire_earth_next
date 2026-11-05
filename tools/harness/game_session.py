@@ -24,13 +24,13 @@ sys.path.insert(0,str(HERE))
 import exe_boot as boot
 
 
-SEED_SYMBOL='?Execute@EEMStartLoading@@UAEXXZ'
+SEED_SYMBOL='?Execute@EEMStartLoading@@UEAAXXZ'
 SEED_RVA_ORIGINAL=0xc7cdc   # original/experimental layout (orig 0x4c7cdc)
-PHYSICS_SYMBOL='?gPhysics@@3PAVEEPhysics@@A'
+PHYSICS_SYMBOL='?gPhysics@@3PEAVEEPhysics@@EA'
 PHYSICS_VA_ORIGINAL=0x9318f0
 MUTEX_SYMBOL='?EECreateInstanceMutex@@YA_NXZ'
 MUTEX_RVA_ORIGINAL=0x14398d   # original/experimental layout (orig 0x54398d)
-MUTEX_GETLASTERROR='__imp__GetLastError@0'
+MUTEX_GETLASTERROR='__imp_GetLastError'
 MUTEX_GETLASTERROR_ORIGINAL=0x837148
 PORT_STEP=16   # --instance K: TCP Protocol's fixed ports 33334/33335 move to +16*K (exe_boot.c --port-offset)
 BASE_EXERCISES=['settings','random-game','tour']
@@ -74,10 +74,9 @@ def session_verdict(lines,hit_ok,exercise_mode,exercise_result,extra_required=No
 def mutex_bypass_rva(image_bytes,linkmap):
     """RVA of the `test eax,eax` after EECreateInstanceMutex's GetLastError call (original layout fixed, full link by map
     name); the function body and its IAT slot are checked so the guard can only land on that instruction.
-    A build by map (this fork's clang builds, i686 or x64): the instruction right after the one `call [slot]` (i686:
-    absolute; x64: rip-relative) to the GetLastError slot in the function's first 0x80 bytes: eax is the call's
-    result there, whatever the compiler does with it next (the i686 clang build starts `xor eax,eax; push`, not VC6's
-    `push`, and an x64 build may move eax away first)."""
+    A build by map (this fork's x64 builds): the instruction right after the one rip-relative `call [slot]` to the
+    GetLastError slot in the function's first 0x80 bytes: eax is the call's result there, whatever the compiler does
+    with it next (it may move eax away first)."""
     import pefile
     pe=pefile.PE(data=image_bytes,fast_load=True)
     start=linkmap.rva(MUTEX_SYMBOL) if linkmap else MUTEX_RVA_ORIGINAL
@@ -86,8 +85,8 @@ def mutex_bypass_rva(image_bytes,linkmap):
         body=pe.get_data(start,0x80);hits=[]
         for k in range(len(body)-6):
             if body[k:k+2]!=b'\xff\x15':continue
-            field=int.from_bytes(body[k+2:k+6],'little',signed=linkmap.x64)
-            if (linkmap.base+start+k+6+field if linkmap.x64 else field)==slot:hits.append(k+6)
+            field=int.from_bytes(body[k+2:k+6],'little',signed=True)
+            if linkmap.base+start+k+6+field==slot:hits.append(k+6)
         if len(hits)!=1:
             raise ValueError(f'EECreateInstanceMutex at rva {start:#x}: {len(hits)} GetLastError calls in {body.hex()}; refusing mutex bypass')
         return start+hits[0]
@@ -104,9 +103,7 @@ def main():
     ap=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('--build-dir',type=pathlib.Path,
                     help='the build under test: a test-profile build (default build/clang-test; tools/harness/hbuild.py)')
-    ap.add_argument('--x64',action='store_true',
-                    help='the x64 test-profile build (default: the first of hbuild.X64_DIRS with an exe); the 64-bit '
-                         'harness (exe_boot64.exe) and helpers. A --build-dir of either architecture is detected anyway')
+    ap.add_argument('--x64',action='store_true',help=argparse.SUPPRESS)   # accepted: x86_64 is the only target
     ap.add_argument('--timeout',type=int,default=300000)
     ap.add_argument('--exercise',choices=BASE_EXERCISES+[m for m in getattr(exercise_module,'EXERCISES',[]) if m not in BASE_EXERCISES])
     ap.add_argument('--play-seconds',type=int,default=0,help='opt-in: after the gameplay milestone keep the game running N s (telemetry every 10 s), then a final capture')
@@ -139,7 +136,7 @@ def main():
     if a.instance is not None and not 1<=a.instance<=32:ap.error('--instance must be 1..32')
     if a.registry_managed_by_batch and a.instance is None:ap.error('--registry-managed-by-batch requires --instance')
     import hbuild
-    build=hbuild.Build(a.build_dir,x64=a.x64)
+    build=hbuild.Build(a.build_dir)
     import layout;layout.use(build.dir)   # every VC6 offset the plugins read is translated for this build
     # the rest of the session (plugins, telemetry) runs on ee's full-link path: everything by map name
     a.fulllink=str(build.exe);a.original=False;a.engine=None;a.tcp=None;a.default_dll=None;a.experimental=None;a.hotfix=[]
@@ -148,19 +145,19 @@ def main():
     image=build.exe
     fulllink_map=build.exe_map_path
     manifest=None
-    harness=boot.build_harness(build.arch)
+    harness=boot.build_harness()
     print(f'build {build.dir} ({build.arch}); harness {harness.name}',flush=True)
     stage=boot.stage(name,build)
     engine_sha=tcp_sha=default_sha=None
     linkmap0=build.map('exe')
-    globals_={n:dict(va=hex(linkmap0.address(n))) for n in ('?gCommunications@@3PAVNESynchronousCommunications@@A',
-              '?gWorld@@3VEEWorld@@A','?gUIManager@@3PAVEEUIManager@@A','?gMouse@@3PAVEEMouse@@A')}
+    globals_={n:dict(va=hex(linkmap0.address(n))) for n in ('?gCommunications@@3PEAVNESynchronousCommunications@@EA',
+              '?gWorld@@3VEEWorld@@A','?gUIManager@@3PEAVEEUIManager@@EA','?gMouse@@3PEAVEEMouse@@EA')}
     located=dict(globals=globals_,audio_entry_rva=hex(linkmap0.rva('?EEInitializeSounds@@YA_NXZ')),arch=build.arch,
                  image_base=hex(linkmap0.base))
     (stage/'EE-AOC.windowed.json').write_text(json.dumps(dict(test_only=True,kind='clang-build-v1',build=str(build.dir),
         **located),indent=2)+'\n',encoding='utf-8')
     g=located['globals']
-    addresses=dict(communications=int(g['?gCommunications@@3PAVNESynchronousCommunications@@A']['va'],16),
+    addresses=dict(communications=int(g['?gCommunications@@3PEAVNESynchronousCommunications@@EA']['va'],16),
                    world=int(g['?gWorld@@3VEEWorld@@A']['va'],16),victory_detail=bool(a.trace_symbol),
                    image_base=linkmap0.base)   # game_state_probe relocates the VAs to the running image
     activate,present=build.renderer_guards()
@@ -178,7 +175,7 @@ def main():
     if a.seed is not None:   # opt-in test intervention; the image is not patched
         seed_rva=(LinkMap(fulllink_map).rva(SEED_SYMBOL) if a.fulllink else SEED_RVA_ORIGINAL)
         harness_extra=tuple(harness_extra)+('--seed-pin',f'{seed_rva:x}',f"{layout.off('EEMStartLoading',0x14):x}",str(a.seed))
-        print(f"TEST seed pin {a.seed} at {SEED_SYMBOL} rva {seed_rva:#x} [{'rcx' if build.arch=='x64' else 'ecx'}+"
+        print(f"TEST seed pin {a.seed} at {SEED_SYMBOL} rva {seed_rva:#x} [rcx+"
               f"{layout.off('EEMStartLoading',0x14):#x}]",flush=True)
     reg_subtree=None;mutex_rva=None
     if a.instance is not None:   # round 39 opt-in: parallel instance; the image is not patched

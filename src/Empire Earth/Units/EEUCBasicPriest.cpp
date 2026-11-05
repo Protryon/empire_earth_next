@@ -448,3 +448,19 @@ void EEUCBasicPriest::HideConversionEffects(EEComplexUnit* inUnit)
     gWorld.GetEffectManager()->DestroyEffect(theHandle);
     inUnit->SetGrowTime(0);
 }
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCBasicPriest::CanAttackMove()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x60d336
+// Updates a living citizen's water ripples when the effect detail allows them
+// (no address of its own: the same body as EEUCBasicCitizen::UpdateEffects, which ICF kept)
+void EEUCBasicPriest::UpdateEffects(EEComplexUnit* inUnit)
+{
+    if (this->mRippleEffect != NULL && inUnit->mHitPoints != 0 && (unsigned long)this->mRippleEffect->mDetailLevel <= gEffectDetail)
+        this->UpdateRipples(inUnit);
+}

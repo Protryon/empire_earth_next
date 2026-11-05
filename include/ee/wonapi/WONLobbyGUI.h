@@ -711,6 +711,8 @@ public:
 
 // a lobby change of a client (RTTI LobbyChangeEvent > LobbyEvent; r23)
 class LobbyChangeEvent : public LobbyEvent {
+public:
+    LobbyChangeEvent(int inType, long inParam) : LobbyEvent(inType, inParam) {}
 };
 
 // a client's team changed (RTTI PlayerTeamChangedEvent > LobbyChangeEvent, vtable 0x851bf8; 0x28 bytes; r23)

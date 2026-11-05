@@ -63,3 +63,12 @@ long EEUIEWNSOpen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     }
     return kErrorOK;
 }
+
+// ICF-FOLDED: EXE 0x6547cf
+// Closes the debug sound panel by popping the top form
+// (no address of its own: the same body as EEDSUIHideDebugSoundPanel::ProcessEvent, which ICF kept)
+long EEUIEWNSCancel::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+{
+    gUIManager->Pop();
+    return kErrorOK;
+}

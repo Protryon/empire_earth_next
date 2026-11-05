@@ -401,7 +401,7 @@ void EEGraphics::RenderTo(EEScreenCapture* inCapture)
 
         theTransformation = gWorld.mTransformation;
         theRowStep.mX = theViewWidth * kHalf;
-        theRowStep.mZ = gViewportYClippingPlane * theViewHeight * kMinusHalf;
+        theRowStep.mZ = gViewport.GetYClippingPlane() * theViewHeight * kMinusHalf;
         theTransformation.Apply(theRowStep, theLocation);
         theLine.SetStart(gWorld.mLine.GetStart());
         theLine.SetDirection(gWorld.mLine.GetDirection());
@@ -455,7 +455,7 @@ void EEGraphics::RenderTo(EEScreenCapture* inCapture)
             gWorld.mCameraControl.SetLocation(theLocation, false, true);
             gWorld.mCameraControl.SetChanged();
             gWorld.mCameraControl.Update(0.0f);
-            theRowStep.mZ = gViewportYClippingPlane * (theRow + kHalf) * theViewHeight * kMinusOne;
+            theRowStep.mZ = gViewport.GetYClippingPlane() * (theRow + kHalf) * theViewHeight * kMinusOne;
             theTransformation = gWorld.mTransformation;
             theTransformation.Apply(theRowStep, theLocation);
             theLine = gWorld.mLine;

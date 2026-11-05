@@ -277,3 +277,9 @@ void EEAWonNet::Virtual4()
 // FUNCTION: EXE 0x405d2d
 // Returns the games box's first displayed line
 // (UIListBox<EEUICWNGBLine>::GetDisplayLine: inline, first user)
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEAWonNet::Virtual8()
+{
+}

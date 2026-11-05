@@ -1,11 +1,11 @@
 """Prepare a directory to play the build: the exe, a copy of the game data, the db tables as text and the movies
 converted for the build's player.
 
-  python -I tools/make_play_dir.py OUT [--exe PATH | --x64] [--install DIR] [--movies DIR ...] [--binary-db]
+  python -I tools/make_play_dir.py OUT [--exe PATH] [--install DIR] [--movies DIR ...] [--binary-db]
                                        [--force]
 
 OUT gets:
-  - EE-AOC.exe (default: build/clang/exe/EE-AOC.exe; --x64: build/clang-x64-exe/exe/EE-AOC.exe; --exe for another);
+  - EE-AOC.exe (default: build/clang/exe/EE-AOC.exe; --exe for another);
   - a copy of the installed game's files the build reads (Data, Users, redist, WONLobby.cfg, zzWONVersion.cfg) from
     --install (default: the Art of Conquest install); the install is only read;
   - Data/db: every db table as clean text (tools/eedata install), which the game prefers over data.ssa
@@ -97,16 +97,16 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("out", type=pathlib.Path)
     ap.add_argument("--exe", type=pathlib.Path)
-    ap.add_argument("--x64", action="store_true", help="the x86_64 build (build/clang-x64-exe)")
+    ap.add_argument("--x64", action="store_true", help=argparse.SUPPRESS)   # x86_64 is the only target
     ap.add_argument("--install", type=pathlib.Path, default=INSTALL)
     ap.add_argument("--movies", type=pathlib.Path, action="append", default=[],
                     help="a directory with .bik movies (repeatable)")
     ap.add_argument("--binary-db", action="store_true", help="keep the db tables in data.ssa (no text tables)")
     ap.add_argument("--force", action="store_true", help="replace an existing OUT")
     a = ap.parse_args()
-    exe = a.exe or ROOT / "build" / ("clang-x64-exe" if a.x64 else "clang") / "exe" / "EE-AOC.exe"
+    exe = a.exe or ROOT / "build" / "clang" / "exe" / "EE-AOC.exe"
     if not exe.exists():
-        sys.exit(f"{exe} does not exist: build it first (python -I build.py{' --x64' if a.x64 else ''})")
+        sys.exit(f"{exe} does not exist: build it first (python -I build.py)")
     if not (a.install / "Data").is_dir():
         sys.exit(f"{a.install} has no Data folder: pass --install")
     out = check_out(a.out, a.install)

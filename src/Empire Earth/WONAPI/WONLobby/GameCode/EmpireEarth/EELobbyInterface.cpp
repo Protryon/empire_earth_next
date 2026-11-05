@@ -90,7 +90,7 @@ void EELobbyFn296B06(EEGameOptionsPlayer& outMyPlayer);
 void EELobbyFn296EAC(EEGameOptionsPlayer& outMyPlayer);
 void EELobbyFn2970E3();
 extern char gU4E5B98[];                     // 0x4e5b98 (pooled ""; as EEWonNet.cpp declares it)
-extern EEGameOptions gLobbyGameOptions;     // 0x53030c (the lobby defaults; as EEGameOptions.cpp declares it)
+extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (the lobby defaults; as EEGameOptions.cpp declares it)
 extern HINSTANCE gInstance;                 // 0x5319d8 (as Empire Earth.cpp declares it)
 void EELobbyInit();                         // 0x295511 (EELobbyInit.cpp)
 UWideString EELobbyFn296C32(const GUIString& inText);

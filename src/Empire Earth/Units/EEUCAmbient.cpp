@@ -120,3 +120,10 @@ void EEUCAmbient::Update(EEComplexUnit* inUnit)
     for (EEComplexUnit* theUnit = inUnit->mNextPart; theUnit != NULL; theUnit = theUnit->mNextPart)
         theUnit->SetRottingAwayTime(theTime);
 }
+
+// ICF-FOLDED: EXE 0x67c0b4
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEUCAmbient::IsPickable()
+{
+    return false;
+}

@@ -34,7 +34,7 @@ public:
     virtual bool IsTerritoryTaskValid(long inArg1);  // +0x1c4 0x4e240
     virtual bool IsLocationTaskValid(long inArg1);  // +0x1cc 0x4e26a
     virtual bool IsUnitTaskValid(long inTime);  // +0x1d4 0x4e42f
-    virtual void IsAtLocation(long inArg1);  // +0x1dc 0x4dfe6 (`push dword ptr [esp + 4]; call 0x45e430; ret`)
+    virtual void IsAtLocation(const EECPILocation& inLocation);  // +0x1dc 0x4dfe6 (`push dword ptr [esp + 4]; call 0x45e430; ret`)
 };
 
 #endif

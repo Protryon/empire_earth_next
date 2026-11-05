@@ -577,3 +577,19 @@ void EEPMHelicopter::AfterStep(EEComplexUnit* inUnit)
 {
     EEPhysicsModel::AfterStep(inUnit);
 }
+
+// ICF-FOLDED: EXE 0x5600dc
+// Pushes another unit as the base physics model does; returns whether it handled the contact
+// (no address of its own: the same body as EEPMSubmergedNaval::Push, which ICF kept)
+bool EEPMHelicopter::Push(EEComplexUnit* inUnit, EEComplexUnit* inOther)
+{
+    return EEPhysicsModel::Push(inUnit, inOther);
+}
+
+// ICF-FOLDED: EXE 0x5600cc
+// Resolves a moving submarine running into another as the base physics model does
+// (no address of its own: the same body as EEPMSubmergedNaval::PushMoving, which ICF kept)
+bool EEPMHelicopter::PushMoving(EEComplexUnit* inUnit, EEComplexUnit* inOther)
+{
+    return EEPhysicsModel::PushMoving(inUnit, inOther);
+}

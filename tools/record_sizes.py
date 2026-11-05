@@ -1,10 +1,12 @@
-"""Compare the sizes of the records the game reads and writes raw (Read/Write(&x, sizeof(x))) between x86 and x64.
+"""Check the sizes of the records the game reads and writes raw (Read/Write(&x, sizeof(x))) against their pins.
 
   python -I tools/record_sizes.py [-j N]
 
-Every unit that does raw record I/O is compiled -fsyntax-only for both targets with clang's complete record-layout
-dump; a record whose size differs would read or write a different number of bytes on x64 (a pointer, size_t or a
-vptr inside it). Prints each record's two sizes; exits 1 if any differ.
+A raw record's size is its file format: every one is pinned in source by a `static_assert(sizeof(T) == N, ...)`
+(the size the original's files have). Every unit that does raw record I/O is compiled -fsyntax-only with the
+build's flags and clang's complete record-layout dump; a record whose size is not its pin, or that has no pin,
+would read or write another number of bytes than the files hold (a pointer, size_t, long on LP64 or a vptr inside
+it). Prints each record's size and pin; exits 1 if any differs or is unpinned.
 """
 import argparse
 import collections
@@ -23,6 +25,7 @@ from ee import CLANG, ROOT
 
 PRIM = r"(long|unsigned long|short|unsigned short|char|unsigned char|float|double|int|bool|DWORD|WORD|BYTE|wchar_t|" \
        r"unsigned int|GUID)"
+PIN = re.compile(r"static_assert\(sizeof\((\w+)\)\s*==\s*(\d+)\s*,")
 SITE = re.compile(r"(Read|Write|ReadFile|WriteFile|fread|fwrite)\([^;]*sizeof\(([^()]*)\)")
 LAYOUT = re.compile(r"^\s*0 \| (?:class|struct|union) (\S+)\n(?:.*\n)*?\s*\| \[sizeof=(\d+)", re.M)
 
@@ -54,14 +57,24 @@ def record_sites():
     return found
 
 
-def layouts(src, target):
+def pins():
+    """{record type name: pinned size} of every `static_assert(sizeof(T) == N, ...)` in src/ and include/."""
+    out = {}
+    for d in ("src", "include"):
+        for p in (ROOT / d).rglob("*"):
+            if p.suffix.lower() in (".cpp", ".h", ".c") and "ThirdParty" not in p.parts:
+                for name, size in PIN.findall(p.read_text(encoding="latin-1")):
+                    out[name] = int(size)
+    return out
+
+
+def layouts(src):
     jobs = {pathlib.Path(s).resolve(): (m, s, f) for m in units.MODULES for m, s, f in units.jobs_for(m)}
     mod, s, flags = jobs[pathlib.Path(src).resolve()]
     flags = verify.unit_flags(s, flags)
     staged = verify.stage_source(s)
     iflags, inc = verify.include_paths(staged)
-    base = [("--target=" + target if f.startswith("--target=") else f) for f in clang_build.CLANG_FLAGS
-            if f not in ("/c", "/arch:IA32")]
+    base = [f for f in clang_build.CLANG_FLAGS if f != "/c"]
     cmd = [str(CLANG), *base, "/std:c++17", *clang_build.clang_flags(flags, "-O0"), *verify.DEFINES.split(), *iflags,
            "-fsyntax-only", "-Xclang", "-fdump-record-layouts-complete", str(staged)]
     r = subprocess.run(cmd, env=dict(os.environ, INCLUDE=inc), capture_output=True, text=True, errors="replace",
@@ -74,19 +87,20 @@ def main():
     ap.add_argument("-j", type=int, default=os.cpu_count() or 4)
     a = ap.parse_args()
     sites = record_sites()
+    pinned = pins()
     rows, bad = {}, 0
     with concurrent.futures.ThreadPoolExecutor(a.j) as ex:
-        futs = {ex.submit(lambda s=s: (layouts(s, "i686-pc-windows-msvc"), layouts(s, "x86_64-pc-windows-msvc"))): s
-                for s in sites}
+        futs = {ex.submit(layouts, s): s for s in sites}
         for fut in concurrent.futures.as_completed(futs):
-            x86, x64 = fut.result()
+            sizes = fut.result()
             for t in sites[futs[fut]]:
-                rows[t] = (x86.get(t), x64.get(t), futs[fut].relative_to(ROOT / "src"))
-    for t, (a32, a64, src) in sorted(rows.items()):
-        flag = "" if a32 == a64 and a32 is not None else "  <-- DIFFERS" if a32 and a64 else "  (no layout)"
-        bad += a32 != a64
-        print(f"{t:32} x86 {a32!s:>6}  x64 {a64!s:>6}  {src}{flag}")
-    print(f"\n{len(rows)} records, {bad} differ")
+                rows[t] = (sizes.get(t), pinned.get(t), futs[fut].relative_to(ROOT / "src"))
+    for t, (size, pin, src) in sorted(rows.items()):
+        flag = "" if size == pin and size is not None else "  (no layout)" if size is None else \
+            "  <-- NOT PINNED" if pin is None else "  <-- DIFFERS"
+        bad += size != pin
+        print(f"{t:32} size {size!s:>6}  pin {pin!s:>6}  {src}{flag}")
+    print(f"\n{len(rows)} records, {bad} not at their pinned size")
     sys.exit(1 if bad else 0)
 
 

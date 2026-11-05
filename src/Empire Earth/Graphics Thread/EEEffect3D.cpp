@@ -54,7 +54,7 @@ long EEEffect3D::Queue(EEEffectQueue* inQueues)
         return 10;
     if (this->IsTileVisible(theTile) != true && gFreeCamera == false)
         return 10;
-    gViewportCameraInverse.Apply(theLocation, theCameraPoint);
+    gViewport.GetCameraInverse().Apply(theLocation, theCameraPoint);
     float theW;
 
     thePoint.SetX(theCameraPoint.GetX() + theRadius);
@@ -81,7 +81,7 @@ long EEEffect3D::Queue(EEEffectQueue* inQueues)
         gViewport.NormalizePerspectiveCameraPoint(thePoint, theScreenPoint, theW);
     else
         gViewport.NormalizeOrthographicCameraPoint(thePoint, theScreenPoint, theW);
-    if (theW == 0.0f || theScreenPoint.GetY() / theW < -gViewportYClippingPlane)
+    if (theW == 0.0f || theScreenPoint.GetY() / theW < -gViewport.GetYClippingPlane())
         return 10;
 
     thePoint.SetZ(theCameraPoint.GetZ() - theRadius);
@@ -89,7 +89,7 @@ long EEEffect3D::Queue(EEEffectQueue* inQueues)
         gViewport.NormalizePerspectiveCameraPoint(thePoint, theScreenPoint, theW);
     else
         gViewport.NormalizeOrthographicCameraPoint(thePoint, theScreenPoint, theW);
-    if (theW == 0.0f || theScreenPoint.GetY() / theW > (double)gViewportYClippingPlane)  // owner-approved stand-in (2026-10-26): the original compares against the global loaded onto the x87 stack (fld; fcompp)
+    if (theW == 0.0f || theScreenPoint.GetY() / theW > (double)gViewport.GetYClippingPlane())  // owner-approved stand-in (2026-10-26): the original compares against the global loaded onto the x87 stack (fld; fcompp)
         return 10;
 
     thePoint.SetZ(theCameraPoint.GetZ());

@@ -146,7 +146,7 @@ void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChe
 #include "ee/EEPMultiplayerHelper.h"
 #include "ee/EECameraControl.h"
 
-extern unsigned long gMaxPlayers;       // 0x5318cc (EESERBUnitTypes.h's declaration; the save header's mL4E8)
+extern unsigned long& gMaxPlayers;       // 0x5318cc (EESERBUnitTypes.h's declaration; the save header's mL4E8)
 
 // FUNCTION: EXE 0x54c7a7
 // Builds the list of chunks a save writes, in chunk order (each chunk new; the game objects are only borrowed)

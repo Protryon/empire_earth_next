@@ -23,6 +23,8 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEROEffects.h"
 
+extern GEViewport gU4E8F08;                 // 0x4e8f08 (EERenderObject.cpp; the render viewport)
+
 
 // FUNCTION: EXE 0x511d3d
 // Creates the effects' render object
@@ -50,7 +52,7 @@ void EEROEffects::FrameStarting()
 // Clears the z buffer of the game view before the effects draw
 void EEROEffects::SceneStarting()
 {
-    GERectangle theRectangle = gRenderViewRectangle;
+    GERectangle theRectangle = gU4E8F08.GetViewRectangle();
     gRasterizer->ClearZBuffer(1.0f, theRectangle, gScreenIndex);
 }
 

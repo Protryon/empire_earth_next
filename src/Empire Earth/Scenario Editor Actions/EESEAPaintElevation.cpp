@@ -181,3 +181,9 @@ bool EESEAPaintElevation::SetArea(long inLeft, long inTop, long inRight, long in
 // FUNCTION: EXE 0x5a85f1
 // Grows the block map of the elevation area queue (deque<EESEAPaintRegion>::_Growmap; ICF-shared with
 // deque<EEComplexUnitWaypoint>'s)
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EESEAPaintElevation::Virtual8()
+{
+}

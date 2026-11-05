@@ -87,7 +87,7 @@ void EEROUserInterface::FrameStarting()
 // world draws behind them (not with the free camera or in UI state 0x11)
 void EEROUserInterface::SceneStarting()
 {
-    GERectangle theZero = gRenderViewRectangle;
+    GERectangle theZero = gU4E8F08.GetViewRectangle();
     GERectangle theRectangle;
     if (gFreeCamera || gUIManager->mMainGameForm->mUIState == 0x11)
         return;

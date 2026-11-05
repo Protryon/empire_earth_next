@@ -37,9 +37,9 @@ std::vector<EEMedia*> gMediaTable;          // 0x4e8448 (EEMedia::Get/GetCount r
 #include "ee/EESoundObject.h"
 #include "ee/EEGlobalConstants.h"
 
-extern unsigned long gTexturePixelDepth;     // 0x5308b4
-extern unsigned long gTextureMipLevelsToDrop; // 0x530894 (provisional name)
-extern bool gTrilinearFilter;
+extern unsigned long& gTexturePixelDepth;     // 0x5308b4
+extern unsigned long& gTextureMipLevelsToDrop; // 0x530894 (provisional name)
+extern bool& gTrilinearFilter;
 
 // 0x43e584: the tag-point kind names, one per graphic-effect kind (0x48 of 0x40 chars; the last two empty). .rdata
 // after EEGraphicEffect.cpp's vtables, so this unit defines it; initializer from the original bytes

@@ -871,3 +871,23 @@ void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlay
         return;
     }
 }
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEClient::HandleStopGame()
+{
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEClient::IsClient()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x4ac9f3
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEClient::IsServer()
+{
+    return false;
+}

@@ -295,3 +295,16 @@ void RTSUnit::Clear()
 // SYNTHETIC: EXE 0x63d893
 // SYNTHETIC: EXE 0x63d8a4
 // SYNTHETIC: EXE 0x63d8b0
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body of EECCAreaEffect::Reset)
+void RTSUnit::CopyFrom(class RTSUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x67cf38
+// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEUIECSSEFormClose::ProcessEvent)
+long RTSUnit::RepairPointers(unsigned long,unsigned long)
+{
+    return 0;
+}

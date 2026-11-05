@@ -86,28 +86,17 @@ def modern_dirs():
     return msvc, sdk_inc, kits / "Lib" / sdk_inc.name, kits / "bin" / sdk_inc.name
 
 
-# the target of the build: "x86" (i686, the default) or "x64" (x86_64; tools/build.py --x64 calls set_arch)
-ARCH = "x86"
-
-
-def set_arch(arch):
-    global ARCH
-    if arch not in ("x86", "x64"):
-        raise SystemExit(f"unknown architecture {arch!r}")
-    ARCH = arch
-
-
-def is_x64():
-    return ARCH == "x64"
+# the one target of the build: x86_64 (the MSVC and Windows SDK library directories are named "x64")
+ARCH = "x64"
 
 
 def wgpu_dir():
-    """wgpu-native of the target (tools/fetch_wgpu.py): toolchain/wgpu/i686 or toolchain/wgpu/x86_64."""
-    return TOOLCHAIN / "wgpu" / ("x86_64" if is_x64() else "i686")
+    """wgpu-native x86_64 (tools/fetch_wgpu.py): toolchain/wgpu/x86_64."""
+    return TOOLCHAIN / "wgpu" / "x86_64"
 
 
 def lib_paths():
-    """The /LIBPATH: arguments for the MSVC runtime and the Windows SDK (of the target, ARCH)."""
+    """The /LIBPATH: arguments for the x64 MSVC runtime and Windows SDK libraries."""
     msvc, _, sdk_lib, _ = modern_dirs()
     return [f"/LIBPATH:{msvc / 'lib' / ARCH}", f"/LIBPATH:{sdk_lib / 'ucrt' / ARCH}",
             f"/LIBPATH:{sdk_lib / 'um' / ARCH}"]
@@ -115,13 +104,6 @@ def lib_paths():
 
 # the static runtime: MSVC CRT + vcruntime + UCRT + the MSVC STL (+ kernel32, which their startup code imports)
 RUNTIME_LIBS = ["libcmt.lib", "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", "kernel32.lib"]
-# system DLLs the images import, linked against the Windows SDK's import libraries (by DLL stem, upper case)
-SDK_IMPORT_LIBS = {n: n.lower() + ".lib" for n in ("KERNEL32", "USER32", "GDI32", "ADVAPI32", "OLE32", "WINMM",
-                                                    "IMM32", "WS2_32", "SHELL32", "WSOCK32", "IPHLPAPI", "DDRAW")}
-# DLLs the original images imported that are not linked at all: the VC6 build's Dinkum C++ library (the MSVC STL
-# replaces it), the VC6 CRT (the static runtime replaces it), and the game's own DLLs (linked into the exe)
-DROPPED_IMPORTS = {"SXLRT233", "MSVCRT", "LOW-LEVEL ENGINE", "TCP PROTOCOL", "MILES SOUND SYSTEM MIXER", "DEFAULT",
-                   "DX7HRDISPLAY", "DX7HRTNLDISPLAY"}
 
 
 def module_filename(mod):

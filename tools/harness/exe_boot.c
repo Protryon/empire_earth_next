@@ -26,14 +26,14 @@
  *     gamma ramps, networking, process creation, file writes outside the staging directory.
  *   - the process is killed at the first STOP or at the timeout; the exit code is 3 if any window of it survives.
  *
- * Two builds of this one source (tools/harness/exe_boot.py): exe_boot.exe (mingw32, i686) for 32-bit targets and
- * exe_boot64.exe (mingw64, x86_64) for 64-bit targets. The harness is always native to its target, so every Windows
- * structure it reads from the target (UNICODE_STRING, OBJECT_ATTRIBUTES, PE headers, DDSURFACEDESC2) has the harness's
- * own layout. What differs is the calling convention at a guarded entry (the "arch layer" below): x86 stdcall/cdecl
- * arguments are on the stack above the return address, x64's first four in RCX, RDX, R8, R9 and the rest above the
- * 32-byte home area; a stdcall callee pops its arguments on x86 only. The policy (what is allowed, refused or stopped)
- * is the same code for both.
+ * Built as an x86_64 program (tools/harness/exe_boot.py, mingw64 gcc) for the x86_64 game: the harness is native to
+ * its target, so every Windows structure it reads from the target (UNICODE_STRING, OBJECT_ATTRIBUTES, PE headers,
+ * DDSURFACEDESC2) has the harness's own layout. The calling convention at a guarded entry is the "arch layer" below:
+ * the first four arguments in RCX, RDX, R8, R9 and the rest above the 32-byte home area; the caller pops.
  */
+#ifndef _WIN64
+#error "exe_boot.c is the x86_64 harness: build it with mingw64 gcc (tools/harness/exe_boot.py)"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
@@ -45,7 +45,6 @@
 
 /* ---- arch layer: target addresses, registers and arguments at a function entry ---- */
 typedef ULONG_PTR TADDR;   /* a target address (the harness is native to its target) */
-#ifdef _WIN64
 #define PTR 8
 #define AFMT "%016llx"
 #define AV(x) ((unsigned long long)(TADDR)(x))
@@ -55,60 +54,36 @@ typedef ULONG_PTR TADDR;   /* a target address (the harness is native to its tar
 #define R_THIS(c) ((c)->Rcx)   /* member functions: this is the first argument */
 #define R_FP(c) ((c)->Rbp)
 #define ARCH_NAME "x64"
-#else
-#define PTR 4
-#define AFMT "%08lx"
-#define AV(x) ((unsigned long)(TADDR)(x))
-#define R_IP(c) ((c)->Eip)
-#define R_SP(c) ((c)->Esp)
-#define R_AX(c) ((c)->Eax)
-#define R_THIS(c) ((c)->Ecx)   /* thiscall */
-#define R_FP(c) ((c)->Ebp)
-#define ARCH_NAME "x86"
-#endif
 #define KEEP_RESULT ((TADDR)0x5eed5eed)   /* fake_return: leave the result register as is */
 static BOOL rd(TADDR a, void *p, SIZE_T n);
 static TADDR rdp(TADDR a);
 static BOOL wrp(TADDR a, TADDR v);
-/* integer/pointer argument n (1-based) of a stdcall/cdecl/COM function at its entry (the return address at [sp]):
-   x86 [esp+4n]; x64 RCX, RDX, R8, R9, then [rsp+8n] (above the home area) */
+/* integer/pointer argument n (1-based) of a function at its entry (the return address at [sp]): RCX, RDX, R8, R9,
+   then [rsp+8n] (above the home area) */
 static TADDR arg_n(const CONTEXT *c, int n)
 {
-#ifdef _WIN64
     switch (n) { case 1: return c->Rcx; case 2: return c->Rdx; case 3: return c->R8; case 4: return c->R9; }
-#endif
     return rdp(R_SP(c) + (TADDR)PTR * n);
 }
-/* replace argument n before the call runs (x64: a register, applied by the caller's SetThreadContext) */
+/* replace argument n before the call runs (a register: applied by the caller's SetThreadContext) */
 static BOOL set_arg(CONTEXT *c, int n, TADDR v)
 {
-#ifdef _WIN64
     switch (n) { case 1: c->Rcx = v; return TRUE; case 2: c->Rdx = v; return TRUE;
                  case 3: c->R8 = v; return TRUE; case 4: c->R9 = v; return TRUE; }
-#endif
     return wrp(R_SP(c) + (TADDR)PTR * n, v);
 }
-/* argument n (1-based, after this) of a member function: x86 thiscall (this in ecx, the rest on the stack), x64 (this
-   in rcx, the rest from rdx) */
+/* argument n (1-based, after this) of a member function: this in rcx, the rest from rdx */
 static TADDR marg_n(const CONTEXT *c, int n)
 {
-#ifdef _WIN64
     return arg_n(c, n + 1);
-#else
-    return arg_n(c, n);
-#endif
 }
-/* return to the caller from the entry of a function with nargs stack-passed arguments the callee pops (x86 stdcall
-   and thiscall; 0 for cdecl). x64 callees pop nothing. result: the return register (KEEP_RESULT: unchanged) */
+/* return to the caller from the entry of a function (nargs: its argument count; x64 callees pop nothing). result: the
+   return register (KEEP_RESULT: unchanged) */
 static void fake_return(CONTEXT *c, int nargs, TADDR result)
 {
     R_IP(c) = rdp(R_SP(c));
-#ifdef _WIN64
     (void)nargs;
     R_SP(c) += 8;
-#else
-    R_SP(c) += 4 + 4 * nargs;
-#endif
     if (result != KEEP_RESULT) R_AX(c) = result;
 }
 
@@ -479,10 +454,6 @@ static int target_guard(TADDR address, const char *name, gkind kind)
     return 1;
 }
 
-#ifndef _WIN64
-#include "differential/ptsync.h"   /* TEST ONLY (round 39, agent hash): opt-in --pt-sync RVA NAME */
-#include "differential/ptwatch.h"  /* TEST ONLY (round 39, agent dbg4): opt-in --pt-watch FROM TO CFG */
-#else
 /* The per-PT hasher and the PT watch read VC6-layout game state with 32-bit pointers (differential/, not ported to
    this fork's builds yet): the x64 harness refuses their options and arms nothing. */
 static struct { unsigned long last_key; int keyed; } pth;
@@ -504,7 +475,6 @@ static void ptwatch_env(const char *stage) { (void)stage; if (getenv("EE_PTWATCH
 static void ptwatch_tick(unsigned long key) { (void)key; }
 static void ptwatch_hit(TADDR a, CONTEXT *c, DWORD tid) { (void)a; (void)c; (void)tid; }
 static int ptwatch_single_step(HANDLE th, DWORD tid) { (void)th; (void)tid; return 0; }
-#endif
 #include "differential/coverage.h" /* TEST ONLY (round 39, agent cov): opt-in --coverage LIST OUT / EE_COVERAGE */
 
 static TADDR target_export(TADDR base, const char *name)
@@ -546,30 +516,12 @@ static int draw_iid(TADDR address)
 static int d3d_iid(TADDR address) { GUID g;return rd(address,&g,sizeof g) && !memcmp(&g,&IID_IDirect3D7,sizeof g); }
 static struct {TADDR at; DWORD tid; TADDR out;int type;} dd_returns[32];
 static int ndd_returns;
-/* x86 on ARM64: the system DLLs are CHPE hybrids whose load config lists native ARM64 code ranges
-   (CHPE metadata: version, range table RVA, count; range = start RVA | 1 for ARM64, length). An int3 there
-   would corrupt an ARM64 instruction. */
+/* An address in native ARM64 code of a CHPE system DLL (x86 emulation on ARM64; an int3 there would corrupt an
+   ARM64 instruction). x64 on ARM64 is ARM64EC, not CHPE: the x64 harness does not run there, so never. */
 static int chpe_arm64(TADDR va)
 {
-    int i;
-#ifdef _WIN64
-    (void)va; (void)i;
-    return 0;   /* x64 on ARM64 is ARM64EC, not CHPE: the x64 harness does not run there */
-#else
-    for (i = 0; i < nmods; i++) {
-        DWORD base = mods[i].base, lc, meta, ranges, n, k;
-        if (va < base || va >= base + mods[i].size) continue;
-        lc = rd32(base + rd32(base + 0x3c) + 0x18 + 0x60 + 10 * 8);   /* DataDirectory[LOAD_CONFIG] */
-        if (!lc || rd32(base + lc) < 0x80 || !(meta = rd32(base + lc + 0x7c))) return 0;
-        ranges = rd32(meta + 4); n = rd32(meta + 8);
-        for (k = 0; k < n && k < 4096; k++) {
-            DWORD start = rd32(base + ranges + 8 * k), len = rd32(base + ranges + 8 * k + 4);
-            if ((start & 1) && va - base >= (start & ~3u) && va - base < (start & ~3u) + len) return 1;
-        }
-        return 0;
-    }
+    (void)va;
     return 0;
-#endif
 }
 
 static int watch_dd_return(CONTEXT *c, DWORD tid, TADDR out, int type)
@@ -625,8 +577,8 @@ static void guard_module(const char *base, TADDR at, const char *full_path)
     if(windowed_test && !_stricmp(base,"Low-Level Engine.dll"))
         target_guard(target_export(at,"?ESRecordNativeError@@YAKK@Z"),"ESRecordNativeError",G_NATIVE_ERROR);
     if(rng_trace_physics && !_stricmp(base,"Low-Level Engine.dll")) {
-        rng_trace_entries[0]=target_export(at,"?Generate@URandom@@QAEMXZ");
-        rng_trace_entries[1]=target_export(at,"?NextInSeries@URandom@@AAEKXZ");
+        rng_trace_entries[0]=target_export(at,"?Generate@URandom@@QEAAMXZ");
+        rng_trace_entries[1]=target_export(at,"?NextInSeries@URandom@@AEAAKXZ");
         printf("TEST rng trace resolved %08lx %08lx (gPhysics %08lx)\n",(unsigned long)rng_trace_entries[0],
                (unsigned long)rng_trace_entries[1],(unsigned long)rng_trace_physics);
     }
@@ -993,9 +945,7 @@ int main(int argc, char **argv)
     coverage_env(argv[1]);  /* TEST ONLY (cov): EE_COVERAGE="LIST_ORIGINAL LIST_FULLLINK OUTDIR" */
     if (nexperimental_entries > 8 && !trace_once) { fprintf(stderr, "too many experimental trace entries\n"); return 2; }
     if (windowed_test) printf("TEST native-windowed overlay; isolated DirectDraw bookkeeping; display guards retained\n");
-#ifdef _WIN64
-    printf("harness " ARCH_NAME "\n");   /* the 32-bit log is unchanged */
-#endif
+    printf("harness " ARCH_NAME "\n");
     if (strcmp(regRootRel, "Software\\Mad Doc Software")) printf("TEST registry policy root HKCU\\%s\n", regRootRel);
     snprintf(path, sizeof path, "%s\\%s", argv[1], argv[2]);
     snprintf(cmd, sizeof cmd, "\"%s\"", argv[2]);
@@ -1052,15 +1002,10 @@ int main(int argc, char **argv)
                         DWORD previous=SuspendThread(threads[t]);CONTEXT context;char module[128];
                         if(previous==(DWORD)-1)continue;
                         ZeroMemory(&context,sizeof context);
-#ifdef _WIN64
                         context.ContextFlags=CONTEXT_FULL;
-#else
-                        context.ContextFlags=CONTEXT_CONTROL;
-#endif
                         if(GetThreadContext(threads[t],&context)) {
                             mod_of(R_IP(&context),module,sizeof module);
                             printf("diagnostic thread %lu suspended=%lu at %s\n",(unsigned long)tids[t],(unsigned long)previous,module);
-#ifdef _WIN64
                             /* x64 code keeps no frame-pointer chain: unwind with the modules' .pdata (dbghelp) */
                             static int sym_ready;
                             if(!sym_ready){SymSetOptions(SYMOPT_DEFERRED_LOADS);sym_ready=SymInitialize(hProc,NULL,TRUE)?1:-1;}
@@ -1075,7 +1020,6 @@ int main(int argc, char **argv)
                                     mod_of((TADDR)frame.AddrPC.Offset,module,sizeof module);printf("  frame %s\n",module);
                                 }
                             } else
-#endif
                             for(int s=0;s<4;s++){mod_of(rdp(R_SP(&context)+PTR*s),module,sizeof module);printf("  stack %s\n",module);}
                         }
                         ResumeThread(threads[t]);
@@ -1102,7 +1046,7 @@ int main(int argc, char **argv)
                 IMAGE_DOS_HEADER d; IMAGE_FILE_HEADER fh;
                 WORD want = PTR == 8 ? IMAGE_FILE_MACHINE_AMD64 : IMAGE_FILE_MACHINE_I386;
                 if (!rd(exeBase, &d, sizeof d) || !rd(exeBase + d.e_lfanew + 4, &fh, sizeof fh) || fh.Machine != want) {
-                    printf("STOP target machine %04x does not match the " ARCH_NAME " harness (exe_boot.exe: i686, exe_boot64.exe: x86_64)\n",
+                    printf("STOP target machine %04x does not match the " ARCH_NAME " harness (exe_boot.exe: x86_64)\n",
                            (unsigned)fh.Machine);
                     done = 1;
                 }
@@ -1262,14 +1206,8 @@ int main(int argc, char **argv)
                     if (th) {   /* the top of the stack, for locating the caller of a bad jump */
                         c.ContextFlags = CONTEXT_FULL;
                         GetThreadContext(th, &c);
-#ifdef _WIN64
                         printf("   rax %016llx rcx %016llx rdx %016llx rbx %016llx\n   rsi %016llx rdi %016llx r8 %016llx r9 %016llx\n",
                                AV(c.Rax), AV(c.Rcx), AV(c.Rdx), AV(c.Rbx), AV(c.Rsi), AV(c.Rdi), AV(c.R8), AV(c.R9));
-#else
-                        printf("   eax %08lx ecx %08lx edx %08lx ebx %08lx esi %08lx edi %08lx\n",
-                               (unsigned long)c.Eax, (unsigned long)c.Ecx, (unsigned long)c.Edx,
-                               (unsigned long)c.Ebx, (unsigned long)c.Esi, (unsigned long)c.Edi);
-#endif
                         for (k = 0; k < 12; k++) {
                             mod_of(rdp(R_SP(&c) + PTR * k), m, sizeof m);
                             printf("   [%s+%02x] %s\n", PTR == 8 ? "rsp" : "esp", k * PTR, m);
@@ -1448,15 +1386,9 @@ int main(int argc, char **argv)
                 } else if(guards[g].kind==G_RNG_TRACE) {
                     TADDR physics=rdp(rng_trace_physics);
                     if(physics && R_THIS(&c)==physics+rng_trace_offset) {
-#ifdef _WIN64
                         /* no frame-pointer chain in x64 code: the caller frame's return and first argument are not logged (0) */
                         printf("rng %lu ret " AFMT " up %08lx tid %lu arg %08lx id %ld\n",(unsigned long)rd32(R_THIS(&c)),AV(rdp(R_SP(&c))),
                                0UL,(unsigned long)ev.dwThreadId,0UL,0L);
-#else
-                        printf("rng %lu ret %08lx up %08lx tid %lu arg %08lx id %ld\n",(unsigned long)rd32(c.Ecx),(unsigned long)rd32(c.Esp),
-                               (unsigned long)rd32(c.Ebp+4),(unsigned long)ev.dwThreadId,(unsigned long)rd32(c.Ebp+8),
-                               (long)(rd32(c.Ebp+8)>0x10000 ? rd32(rd32(c.Ebp+8)+0x24) : 0));   /* caller frame's first argument; +0x24 = RTSUnit::mUnitID when it is a unit */
-#endif
                     }
                     allow=1;
                 } else if(guards[g].kind==G_PT_SYNC) {
@@ -1493,7 +1425,7 @@ int main(int argc, char **argv)
                            out?"out Fn1391F2":"result Fn16AF5C",(long)id,out?"victorious":"state",
                            (unsigned long)(out?(m1&0xff):m1),(unsigned long)current,(unsigned long)(ret-exeBase),
                            pth.keyed?(unsigned long)pth.last_key:0UL,skip?"":" (not the local player's defeat)");
-                    if(skip) {   /* return at the entry: thiscall, callee pops (ret 8 / ret 4; x64: plain ret); the guard stays armed */
+                    if(skip) {   /* return at the entry (plain ret); the guard stays armed */
                         fake_return(&c,out?2:1,KEEP_RESULT);
                         if(!SetThreadContext(th,&c)){printf("STOP no-human-defeat skip failed\n");done=1;}
                         break;

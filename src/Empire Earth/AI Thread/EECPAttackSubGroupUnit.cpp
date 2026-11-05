@@ -69,7 +69,7 @@
 #include "ee/EEAIKindIDs.h"
 
 extern EEToHitTable gToHitTable;           // 0x5318e8
-extern long gNumPlayers;                    // 0x530e0c (provisional name)
+extern long& gNumPlayers;                    // 0x530e0c (provisional name)
 
 static const float kASGURange0 = 256.0f;    // 0x43bf38
 static const float kASGURange1 = 400.0f;    // 0x43bf3c

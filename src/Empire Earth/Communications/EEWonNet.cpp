@@ -66,7 +66,7 @@ wchar_t* kWonCommunityName = L"EmpireEarth";                    // 0x4bba80
 extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
 unsigned long gWonClientId;                 // 0x4e60b8 (RegisterCallback stores the server's client id)
 wchar_t gEmptyWideString[2];         // 0x4e60bc (L"": zero .bss right after gWonClientId; size = the gap to 0x4e60c0)
-extern unsigned long gU5308A0;              // 0x5308a0 (the adapter of the local address)
+extern unsigned long& gU5308A0;              // 0x5308a0 (the adapter of the local address)
 
 static const unsigned short kEEWonNetGameInfoVersion = 1;   // 0x43e480 (ExportGameInfo's record version)
 
@@ -1769,3 +1769,9 @@ static void CloseMessageCallback(UIForm* inForm)
 // (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
 // TEMPLATE: EXE 0x4d3b23
 // (r25pre-won-2: emitted by the DEAD-IN-AOC MOTD request (GetHTTPDocumentOp / tracker) or server list)
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
+void EEWonNet::PlayerJoined()
+{
+}

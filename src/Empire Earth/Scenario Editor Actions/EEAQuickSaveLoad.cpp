@@ -149,3 +149,9 @@ void EEAQuickSaveLoad::SaveToFile(const UString& inName)
         theFile.Close();
     }
 }
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEAQuickSaveLoad::Virtual8()
+{
+}

@@ -737,3 +737,17 @@ void EESETSETMaintainObject::VirtualC(EESETSEffectControls* inControls)
     inControls->mLabels[3]->SetDisplayMode(kDisplayModeHidden);
     inControls->mScenarioComboBoxes[1]->SetDisplayMode(kDisplayModeHidden);
 }
+
+// ICF-FOLDED: EXE 0x582f6a
+// Switches the AI effect to the action picked in the combo: hides the old type's controls, shows and fills the new one
+// (no address of its own: the same body as EESETSETAI::ChangeAction, which ICF kept)
+void EESETSETGame::ChangeAction(EESMEffect* inEffect, EESETSEffectControls* inControls)
+{
+    unsigned long theSelection;
+    this->mTypes[this->mCurrentType]->VirtualC(inControls);
+    inControls->mComboBoxes[0]->GetCurrentSelection(theSelection);
+    this->mCurrentType = theSelection;
+    this->mTypes[this->mCurrentType]->Show(inControls);
+    this->mTypes[this->mCurrentType]->Load(inEffect, inControls);
+    this->UpdateName(inEffect, inControls);
+}

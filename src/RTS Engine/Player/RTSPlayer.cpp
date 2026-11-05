@@ -356,3 +356,9 @@ long RTSPlayer::SaveUnits(unsigned long inMajorVersion, unsigned long inMinorVer
 // SYNTHETIC: EXE 0x56f05c
 // SYNTHETIC: EXE 0x56f06d
 // SYNTHETIC: EXE 0x56f079
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body of EEE2DMarchingIcons::PrepareQueue)
+void RTSPlayer::Clear()
+{
+}

@@ -51,7 +51,7 @@ def main():
     ap.add_argument("--out", default=str(ROOT / "build" / "clang"))
     a = ap.parse_args()
     objdir = (pathlib.Path(a.out) / "obj").resolve()
-    rsp = pathlib.Path(a.out) / "exe" / "link_pass2.rsp"   # the objects the exe really links (obj/ keeps stale ones)
+    rsp = pathlib.Path(a.out) / "exe" / "link.rsp"   # the objects the exe really links (obj/ keeps stale ones)
     linked = [pathlib.Path(ln.strip().strip('"')) for ln in rsp.read_text().splitlines() if ln.strip()]
     linked = [p if p.is_absolute() else rsp.parent / p for p in linked]
     variants = collections.defaultdict(lambda: collections.defaultdict(list))

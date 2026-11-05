@@ -152,3 +152,34 @@ long EECalamityClass::CanCastAt(EEComplexUnit* inUnit, GE3DPoint& inLocation, un
     }
     return theResult;
 }
+
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+class EEContagionFunctor * EECalamityClass::GetContagionFunctor()
+{
+    return NULL;
+}
+
+// ICF-FOLDED: EXE 0x563d6f
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EECalamityClass::LoadMedia(class EEPlayer *,bool)
+{
+}
+
+// ICF-FOLDED: EXE 0x6907a3
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EECalamityClass::Place(class EEUnit *,unsigned long,unsigned long)
+{
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EECalamityClass::PlaySoundA(class EECalamity *)
+{
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EECalamityClass::UnloadMedia(class EEPlayer *)
+{
+}

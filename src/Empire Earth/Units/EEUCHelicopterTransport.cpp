@@ -30,6 +30,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUCTransport.h"
 #include "ee/EEUCHelicopterTransport.h"
+#include "ee/EEUCSpaceship.h"
 
 // 0x447030: the highest a transport helicopter flies (one .rdata copy per unit: a named const) (provisional name)
 static const float kHelicopterTransportCeiling = 12.0f;
@@ -200,4 +201,68 @@ void EEUCHelicopterTransport::Update(EEComplexUnit* inUnit)
 {
     EEUCTransport::Update(inUnit);
     inUnit->UpdateOrbitals();
+}
+
+// ICF-FOLDED: EXE 0x61aaa9
+// Adds the transport to its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::AddToTile, which ICF kept)
+void EEUCHelicopterTransport::AddToTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->mUnits = theTile->AddUnit(theUnit, theTile->mUnits);
+}
+
+// ICF-FOLDED: EXE 0x60afe9
+// Animates the animal like any unit
+// (no address of its own: the same body as EEUCAirAnimal::Animate, which ICF kept)
+long EEUCHelicopterTransport::Animate(EEComplexUnit* inUnit)
+{
+    return EEUnitClass::Animate(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCHelicopterTransport::CanAttackMove()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x618d33
+// Finds where a unit boards the transport (the base transport's rule)
+// (no address of its own: the same body as EEUCNavalTransport::FindBoardingLocation, which ICF kept)
+bool EEUCHelicopterTransport::FindBoardingLocation(EEComplexUnit* inUnit, EEComplexUnit* inTransport, GE3DPoint& inLocation,
+                                   GE3DPoint& outLocation)
+{
+    return EEUCTransport::FindBoardingLocation(inUnit, inTransport, inLocation, outLocation);
+}
+
+// ICF-FOLDED: EXE 0x61a404
+// Returns a sound's volume, pan and pitch, with a doppler shift
+// (no address of its own: the same body as EEUCSpaceship::GetSoundParameters, which ICF kept)
+void EEUCHelicopterTransport::GetSoundParameters(EEUnit* inUnit, EESoundObject* inSound, float* outVolume, float* outPan,
+                              float* outPitch)
+{
+    EEUnitClass::GetSoundParameters(inUnit, inSound, outVolume, outPan, outPitch);
+    EEGetDopplerPitch(inUnit, inSound, outVolume, outPan, outPitch);
+}
+
+// ICF-FOLDED: EXE 0x61aaf5
+// Removes the transport from its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::RemoveFromTile, which ICF kept)
+void EEUCHelicopterTransport::RemoveFromTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->RemoveUnit(theUnit);
+}
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUCHelicopterTransport::UpdateEffects(class EEComplexUnit *)
+{
 }

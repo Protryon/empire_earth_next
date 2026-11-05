@@ -46,6 +46,7 @@
 #include "lle/NESynchronousCommunications.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "ee/EEScenarioManager.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMessage.h"
@@ -87,21 +88,15 @@
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEUIFMGStatusButton.h"
 #include "ee/EEStringIDs.h"
-extern float gSavedGameSpeed;               // 0x5318b0 (the cinematic's end time) (provisional name)
+extern float& gSavedGameSpeed;               // 0x5318b0 (the cinematic's end time) (provisional name)
 extern unsigned short gFortressUnloadCost;   // 0x4c8fa4 (= 100, a word: EEUCFortress.cpp defines it)
-extern long gGameResources;                 // 0x53123c (4: a game kind that delays JIT manufacturing) (provisional name)
+extern long& gGameResources;                 // 0x53123c (4: a game kind that delays JIT manufacturing) (provisional name)
 // 0x20d571 / 0x20da86: EEGetConversionCost / EECanConvert (ee/EEAreaUtilities.h; EEUCBasicPriest.cpp)
 
 long EEModeAirport(void* inLocation, void* inForm, long inCommand, long inKind);
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);  // 0x23cc42 (EEMessage.cpp's)
 void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (the calamity's ghost at the mouse) (provisional name)
 
-// the object at 0x531864 (only +0x238 is read, by the cinematic keyboard test 0x27115c) (provisional names)
-struct EEU531864 {
-    unsigned char _gap000[0x238];
-    bool mB238;                             // +0x238
-};
-extern EEU531864* gScenarioManager;
 
 static bool sB5652F0;                       // 0x5652f0 (the airport commands' shift state)
 static bool sB5652F1;                       // 0x5652f1 (the rally point's shift state)
@@ -1586,7 +1581,7 @@ bool EEModeKeyboardCinematic(void* inForm)
         UIEvent* theEvent = new EEUIEndCinematicModeEvent;
         gUserInterface->PostEvent(theEvent, NULL);
         theEvent->Dereference();
-    } else if (gISKeyboard->GetEntity(kKeyF3, theKey) == 0 && theKey->JustPressed() && !gScenarioManager->mB238) {
+    } else if (gISKeyboard->GetEntity(kKeyF3, theKey) == 0 && theKey->JustPressed() && !gWorld.GetScenarioManager()->mIsEndingCinematic) {
         UIEvent* theEvent = new EEUIEMGPauseGame;
         gUserInterface->PostEvent(theEvent, NULL);
         theEvent->Dereference();

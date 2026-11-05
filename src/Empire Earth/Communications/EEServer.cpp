@@ -1255,3 +1255,23 @@ bool EEServer::GetDebugOOSHandling()
 // TEMPLATE: EXE 0x4cd4c5
 // TEMPLATE: EXE 0x4cd449
 // TEMPLATE: EXE 0x4cd377
+
+// ICF-FOLDED: EXE 0x4e123d
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEServer::BeforeRemovingPlayers()
+{
+}
+
+// ICF-FOLDED: EXE 0x4ac9f3
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+bool EEServer::IsClient()
+{
+    return false;
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEServer::IsServer()
+{
+    return true;
+}

@@ -117,12 +117,70 @@ GEViewport gViewport;
 // SYNTHETIC: EXE 0x53eae0   (dtor)
 // chain at 0x53eaeb (wrapper)
 EEGamePreferences gGamePreferences;
+// data the original placed inside gGamePreferences (it addressed them as globals): references to the members
+EEGameOptions& gLobbyGameOptions = gGamePreferences.mSettings.mGameOptions;   // +0x4
+long& gDifficultyLevel2 = reinterpret_cast<long&>(gGamePreferences.mSettings.mGameOptions.mDifficulty);   // +0x3fc
+UWideString& gPlayerName = gGamePreferences.mSettings.mPlayerName;   // +0x460
+UWideString& gWonPlayerName = gGamePreferences.mSettings.mSierraUserID;   // +0x474
+UWideString& gHostedGameName = gGamePreferences.mSettings.mSierraGameName;   // +0x488
+UString& gLoadSavedGameName = gGamePreferences.mSettings.mLastGameFile;   // +0x4ec
+UString& gLoadScenarioName = gGamePreferences.mSettings.mLastScenarioFile;   // +0x4fc
+float& gSideScrollSpeed = gGamePreferences.mSettings.mSideScrollSpeed;   // +0x520
+float& gMasterVolume = gGamePreferences.mSettings.mSoundVolume;   // +0x528
+float& gZoomLock = gGamePreferences.mSettings.mZoomLock;   // +0x538
+long& gDifficultyLevel = gGamePreferences.mSettings.mComputerPlayerDifficultyLevel;   // +0x568
+unsigned long& gGameWindowHeight = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mGameWindowHeight);   // +0x570
+unsigned long& gGameWindowWidth = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mGameWindowWidth);   // +0x574
+unsigned long& gTextureMipLevelsToDrop = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mMIPLevelsToDrop);   // +0x58c
+long& gModelDetail = gGamePreferences.mSettings.mModelDetail;   // +0x590
+unsigned long& gEffectDetail = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mEffectDetail);   // +0x594
+unsigned long& gU5308A0 = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mNetworkAdapter);   // +0x598
+unsigned long& gScreenIndex = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mScreenID);   // +0x5a0
+unsigned long& gTerrainMIPLevelsToDrop = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mTerrainMIPLevelsToDrop);   // +0x5a8
+unsigned long& gTexturePixelDepth = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mTextureBitDepth);   // +0x5ac
+long& gAutoSaveCount = reinterpret_cast<long&>(gGamePreferences.mSettings.mNumberOfAutoSaves);   // +0x5b0
+long& gHiddenUnitsMode = gGamePreferences.mSettings.mL5BC;   // +0x5c0
+bool& gZoomEnabled = gGamePreferences.mSettings.mZoomEnabled;   // +0x5c5
+bool& gInterpolateFrames = gGamePreferences.mSettings.mAnimationSmoothing;   // +0x5c7
+bool& gFarRearClipping = gGamePreferences.mSettings.mB5C6;   // +0x5ca
+bool& gDrawClouds = gGamePreferences.mSettings.mDisplayClouds;   // +0x5cb
+bool& gDrawGroundShadows = gGamePreferences.mSettings.mDisplayShadows;   // +0x5cc
+bool& gAmbientEffectsEnabled = gGamePreferences.mSettings.mDisplayBattlefieldAmbients;   // +0x5cd
+bool& gTrilinearFilter = gGamePreferences.mSettings.mTrilinearFilter;   // +0x5d2
+bool& gAmbientSoundEnabled = gGamePreferences.mSettings.mAmbientSounds;   // +0x5d6
+bool& gDrawBlood = gGamePreferences.mSettings.mShowBlood;   // +0x5d7
+bool& gMusicFollowsBattle = gGamePreferences.mSettings.mMusicEnabled;   // +0x5d8
+bool& gOrthographicView = gGamePreferences.mSettings.mB5D6;   // +0x5da
+bool& gUnitLighting = gGamePreferences.mSettings.mUnitLighting;   // +0x5db
+bool& gDisplayWeatherEffects = gGamePreferences.mSettings.mDisplayWeatherEffects;   // +0x5de
+bool& gTakeJPGScreenshots = gGamePreferences.mSettings.mTakeJPGScreenshots;   // +0x5e0
+bool& gAntiAliasing = gGamePreferences.mSettings.mAntiAliasing;   // +0x5e1
 // SYNTHETIC: EXE 0x53eaeb   (wrapper)
 // SYNTHETIC: EXE 0x53eaf5   (ctor)
 // SYNTHETIC: EXE 0x53eaff   (registrar)
 // SYNTHETIC: EXE 0x53eb0b   (dtor)
 // chain at 0x53eb15 (wrapper)
 EEWorld gWorld;
+// data the original placed inside gWorld (it addressed them as globals): references to the members
+long& gNumPlayers = reinterpret_cast<long&>(gWorld.mNumPlayers);   // +0xcc
+long& gGameResources = reinterpret_cast<long&>(gWorld.mGameOptions.mResources);   // +0x4fc
+bool& gAllowCustomCivs = gWorld.mGameOptions.mAllowCustomCivs;   // +0x516
+bool& gIsScenarioGame = gWorld.mGameOptions.mIsScenarioGame;   // +0x519
+EEGameOptions& gGameOptions = gWorld.mLobbyOptions;   // +0x51c
+float& gCameraZoom = gWorld.mCameraControl.mZoom;   // +0xab0
+EEEffectManager*& gEffectManager = gWorld.mEffectManager;   // +0xb1c
+float& gSavedGameSpeed = gWorld.mSavedGameSpeed;   // +0xb70
+unsigned long& gMaxPlayers = reinterpret_cast<unsigned long&>(gWorld.mMaxPlayers);   // +0xb8c
+unsigned long& gStartTime = reinterpret_cast<unsigned long&>(gWorld.mStartTime);   // +0xb90
+unsigned short& gLagStatus = gWorld.mLagStatus;   // +0xb94
+bool& gGameScreenActive = gWorld.mGameScreenActive;   // +0xb97
+bool& gLoadingSavedGame = gWorld.mLoadingSavedGame;   // +0xb98
+bool& gWorldClearing = gWorld.mClearing;   // +0xb99
+bool& gUnitImprovementsAllowed = gWorld.mUnitImprovementsAllowed;   // +0xb9b
+bool& gShowCollisionSpheres = gWorld.mShowCollisionSpheres;   // +0xb9c
+bool& gInCinematic = gWorld.mInCinematic;   // +0xba0
+bool& gLoadingPlayerMedia = gWorld.mLoadingPlayerMedia;   // +0xba3
+bool& gUsingCarbon = gWorld.mUsingCarbon;   // +0xba4
 // SYNTHETIC: EXE 0x53eb15   (wrapper)
 // SYNTHETIC: EXE 0x53eb1f   (ctor)
 // SYNTHETIC: EXE 0x53eb29   (registrar)
@@ -163,12 +221,21 @@ EEAIUnitTargetingTable gAIUnitTargetingTable;
 // SYNTHETIC: EXE 0x53ec27   (dtor)
 // chain at 0x53ec32 (wrapper)
 EEPathManager gPathManager;
+// data the original placed inside gPathManager (it addressed them as globals): references to the members
+long& gEEAIRegionSize = gPathManager.mLC8;   // +0xc8
 // SYNTHETIC: EXE 0x53ec32   (wrapper)
 // SYNTHETIC: EXE 0x53ec3c   (ctor)
 // SYNTHETIC: EXE 0x53ec46   (registrar)
 // SYNTHETIC: EXE 0x53ec52   (dtor)
 // chain at 0x53ec5c (wrapper)
 EEAIContinentManager gContinentManager;
+// data the original placed inside gContinentManager (it addressed them as globals): references to the members
+unsigned long& gContinentManagerChecksum = reinterpret_cast<unsigned long&>(gContinentManager.mChecksum);   // +0x120
+long& gDCGameSpeed = gContinentManager.mNumWaterTiles;   // +0x134
+long& gNumSpaceTiles = gContinentManager.mNumSpaceTiles;   // +0x13c
+unsigned long& gMapWidth = reinterpret_cast<unsigned long&>(gContinentManager.mWidth);   // +0x144
+unsigned long& gMapHeight = reinterpret_cast<unsigned long&>(gContinentManager.mHeight);   // +0x148
+bool& gContinentManagerClearing = gContinentManager.mClearing;   // +0x14c
 // SYNTHETIC: EXE 0x53ec5c   (wrapper)
 // SYNTHETIC: EXE 0x53ec66   (ctor)
 // SYNTHETIC: EXE 0x53ec70   (registrar)
@@ -205,6 +272,10 @@ EERandomMapTable gRandomMapTable;
 // SYNTHETIC: EXE 0x53ed66   (dtor)
 // chain at 0x53ed71 (wrapper)
 EEGameState gGameState;
+// data the original placed inside gGameState (it addressed them as globals): references to the members
+long& gGameStateLoadType = reinterpret_cast<long&>(gGameState.mGameOptions.mLoadType);   // +0x3e0
+bool& gGameStateIsMultiplayer = gGameState.mGameOptions.mIsMultiplayer;   // +0x410
+float& gGameStateGameSpeed = gGameState.mGameSpeed;   // +0x4dc
 // SYNTHETIC: EXE 0x53ed71   (wrapper)
 // SYNTHETIC: EXE 0x53ed7b   (ctor)
 // SYNTHETIC: EXE 0x53ed85   (registrar)
@@ -2700,3 +2771,10 @@ void EEDeleteDatabase(bool inShutdown)
 // TEMPLATE: EXE 0x547d8a
 // TODO 0x547da5, 0x547dcd,
 // 0x547dd9, 0x547de5, 0x547df1: COMDATs not emitted/named yet
+
+// ICF-FOLDED: EXE 0x4fca98
+// (no address of its own: folded into the shared `xor eax, eax; ret` body of EEUnitGoal::GetOutOfSynchChecksum)
+long EEFn0FCA98()
+{
+    return 0;
+}

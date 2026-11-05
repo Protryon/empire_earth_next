@@ -15,8 +15,9 @@ git merge upstream/fixes-all
 ```
 
 Source changes merge normally. The build tooling is this fork's own: upstream's VC6 build files (`tools/build.py`,
-`relink.py`, `exe_roundtrip.py` (both deleted here), `implib.py`, `exe_fulllink.py`, `rsrc_rebuild.py`, `verify.py`, `ee.py`, the fetch scripts,
-`include/dinkum/`) were rewritten or deleted here. When upstream changes one of them, keep this fork's version
+`relink.py`, `exe_roundtrip.py`, `implib.py`, `exe_fulllink.py`, `exe_units.py` (deleted here), `rsrc_rebuild.py`, `verify.py`, `ee.py`,
+the fetch scripts, `include/dinkum/`) and the exe's link tables (`link/exe/*.tsv`, `names.txt`, every `imports.txt`:
+deleted here, keep them deleted) were rewritten or deleted here. When upstream changes one of them, keep this fork's version
 (`git checkout --ours <file>`) and port anything relevant by hand. Upstream's matching stand-ins
 (`include/LostDebug.h`, `EE_LOST_*`) are deleted here too: resolve new uses by dropping them.
 
@@ -35,21 +36,24 @@ Source changes merge normally. The build tooling is this fork's own: upstream's 
 4. **One static exe** (plan step 1 below, done): every game DLL and the language resources are linked into
    `EE-AOC.exe` with the static runtime; the plug-ins are a static registry. Tour, play and a 2-AI game to the time
    cap pass, also under full page heap.
+5. **x86_64 only** (2026-11-05): the exe, wgpu-native and the harness are x86_64; the i686 build is gone
+   (PORT_LEARNINGS.md "x64 only").
+6. **A plain link** (2026-11-05): every symbol the exe uses is defined in source (member aliases are references to
+   the members, the ICF/vtable-slot aliases are bodies, the WON library is a unit of stand-ins); the exe is one
+   lld-link with no stubs and no link tables (PORT_LEARNINGS.md "Plain link").
 
 ## Rules of the build
 
-- Compiler flags (`tools/clang_build.py`): i686, MSVC 19.44 compatibility, C++17, `/arch:IA32` (x87), `/GS-`,
+- Compiler flags (`tools/clang_build.py`): x86_64 (SSE2 floating point), MSVC 19.44 compatibility, C++17, `/GS-`,
   `-fno-strict-aliasing -fwrapv`. The last two tame undefined behaviour the code relies on; removing them is planned
   work (`-fno-delete-null-pointer-checks` went once the sanitizer games came back clean) (`tools/clang_ubdiff.py`, `build.py --sanitize-null`; see
   PORT_LEARNINGS.md).
-- One image: every module's objects go into the exe link (engine and plug-ins first), the import libraries come from
-  every module's original import table minus the game's own DLLs, the VC6 CRT and Dinkum. The engine and renderer
+- One image, one plain lld-link: every module's objects (engine and plug-ins first), the image libraries, the
+  Windows SDK import libraries (and a one-line .def for DINPUT.dll), the static libraries and runtime. The engine and renderer
   units still declare their classes `dllexport` (clang-cl's vector deleting destructors; PORT_LEARNINGS.md "One
   static exe"), so the exe has an export table. A unit's `// UNIT-FLAGS:` line only adds its defines now.
-- `link/` holds the original images' import and export tables and the exe's link tables (WON stubs, member aliases).
-  The exe's member aliases (data the original placed inside other objects) carry VC6 offsets. The build moves them to
-  this build's layout by member name, through the frozen VC6 layout reference `tools/harness/vc6_layout.json.gz`.
-  Making them real members in source is a pending cleanup.
+- `link/` holds only the units' lists (`<module>/units.txt`, link order). The frozen VC6 layout reference
+  `tools/harness/vc6_layout.json.gz` serves the harness (VC6 offsets translated by member name).
 - Test-only builds (`--test-profile`, `--sanitize-null`) change only staged copies of a few units; `src/` is never
   edited by a build.
 
@@ -84,15 +88,18 @@ Steps:
    arguments from RCX/RDX/R8/R9 and the stack's home area; breakpoints and context use Rip/Rsp), the presentation
    bridge, time shim and seed pin as x64 DLLs/offsets from the build's layouts. Tested first against a small x64
    test program calling every guarded API, then on the x64 exe.
-3. **Switch**: tour + AI games on x64 (done, 2026-11-05, branch x64run): the x64 test-profile build passes the
+3. **Switch** (done, 2026-11-05): tour + AI games on x64 (branch x64run), then x64 became the only target (branch
+   plainlink): `python -I build.py` builds the x86_64 exe (build/clang, test profile build/clang-test), the i686
+   build paths, the i686 wgpu-native pin, the 32-bit harness (mingw32 exe_boot.exe, the x86 arch layer, thiscall
+   typedefs, the i686 self-test half, i686 symbol names translated by x64names.py) are removed, CI builds x64
+   (PORT_LEARNINGS.md "x64 only"). Before that: the x64 test-profile build passes the
    settings tour + 120 s of play and the seeded 2-AI Hard game to its time cap, with the binary and the text db
    tables. Bugs found: functions the link aliased to a VC6 ICF twin of another class whose members moved on x64
    (eight bodies written in source; `tools/alias_layouts.py` checks the rest), and wrong-class printf arguments in
    traces (format checking on the engine's formatters). 32 vs 64 bit: identical map generation; the AI's trace is
    identical to an i686 `/arch:SSE2` build to about game second 290 and both differ from the x87 i686 build from
    ~256 s, so the outcome gap to the shipped i686 build is the floating-point model (PORT_LEARNINGS.md "x64
-   runtime"). Left: x64 becomes the only target (i686 builds, the i686 wgpu pin and the 32-bit harness paths are
-   removed, CI builds x64); the differential tooling, human driver and save/load sessions on x64.
+   runtime"). Left: the differential tooling, human driver and save/load sessions on x64.
 4. **macOS/Linux**: the platform layer's POSIX implementation (PORT.md "Cross-platform"), windowing/input on a
    small portable layer (SDL3 or winit-style C library, decision then), GDI text replaced (FreeType/stb_truetype or
    a font atlas), Winsock -> BSD sockets, `long` is 64-bit there (FSFile::Read(long&) and record members: switch
@@ -203,7 +210,7 @@ Phases (each gated by the harness, with the DX7 renderer kept in the build until
    draws, pixel centres, GDI text both ways, presentation) in both bitnesses: PASS. The exe imports no DDRAW.
    Gates: settings tour + 60 s of play complete, menus and the 3D scene match the DX7 build's screenshots
    (`tools/harness`: the bridge dumps frames through GX's test hook instead of patching ShowScene).
-   Both architectures pin wgpu-native **v24.0.3.1** (v25+ fail every i686 DX12 pipeline; with v29 the x86_64
+   Both architectures pinned wgpu-native **v24.0.3.1** (now x86_64 only) (v25+ fail every i686 DX12 pipeline; with v29 the x86_64
    game's read-backs never complete; PORT_LEARNINGS.md).
    Open: GXSurface::DrawText's bounds for unusual fonts, sampling the primary surface (falls back to white; seen 3x
    per session), DXT1 surfaces (unused by the game), wireframe fill mode, 16-bit dithering.
@@ -297,6 +304,7 @@ harness's time shim hooks those imports), and is linked with the engine (`tools/
 
 - Remove the clang dialect bridges: the `#ifdef __clang__` `const T&` forwarding overloads become `const` parameters,
   the `theTempN` call-site locals go.
-- Member aliases in source instead of link tables; the WON library's source (PORT_LEARNINGS.md "For WONAPI/WONLobby").
+- The WON library's source, to replace its stand-ins (PORT_LEARNINGS.md "For WONAPI/WONLobby").
+- Drop `/FIXED /BASE:0x400000` (ASLR, a high image base): nothing needs a 32-bit base since the plain link.
 - Port the rest of the harness (human driver, per-PT differential) where still useful.
 - The platform layer's next steps ("Cross-platform: census and plan" above), then 64-bit and other platforms.

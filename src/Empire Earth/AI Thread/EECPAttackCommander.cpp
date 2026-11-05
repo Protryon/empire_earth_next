@@ -44,7 +44,7 @@
 #include "ee/EECPCombatStrategy.h"
 #include "ee/EECPAttackCommander.h"
 
-extern long gNumPlayers;                    // 0x530e0c (EECPAttackSubGroupUnit.cpp declares it too) (provisional name)
+extern long& gNumPlayers;                    // 0x530e0c (EECPAttackSubGroupUnit.cpp declares it too) (provisional name)
 
 // FUNCTION: EXE 0x45198e
 // Creates the computer player's attack commander with no groups and 35 group updates per tick

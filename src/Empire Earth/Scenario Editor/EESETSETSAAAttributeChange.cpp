@@ -729,3 +729,15 @@ void EESETSETSetObjectOwner::Show(EESETSEffectControls* inControls)
     inControls->mPlayers[0]->SetFlags(0xe7);
     inControls->mPlayers[0]->SetDisplayMode(kDisplayModeShown);
 }
+
+// ICF-FOLDED: EXE 0x58daaa
+// Hides the attribute label, attribute and mode combos, percent check box and amount box
+// (no address of its own: the same body as EESETSETSetObjectAttribute::VirtualC, which ICF kept)
+void EESETSETSetObjectClassAttribute::VirtualC(EESETSEffectControls* inControls)
+{
+    inControls->mEffectComboBoxes[1]->SetDisplayMode(kDisplayModeHidden);
+    inControls->mEffectComboBoxes[0]->SetDisplayMode(kDisplayModeHidden);
+    inControls->mLabels[3]->SetDisplayMode(kDisplayModeHidden);
+    inControls->mCheckBoxes[0]->SetDisplayMode(kDisplayModeHidden);
+    inControls->mEditBoxes[0]->SetDisplayMode(kDisplayModeHidden);
+}

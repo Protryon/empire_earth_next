@@ -78,6 +78,6 @@ public:
     EEGraphicalGoalManager mGoals;          // +0x24 (ctor 0x10779d; sizeof 0x10)
 };
 
-extern EEEffectManager* gEffectManager;     // 0x53185c
+extern EEEffectManager*& gEffectManager;     // 0x53185c
 
 #endif

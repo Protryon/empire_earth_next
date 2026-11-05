@@ -32,6 +32,9 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEEffectManager.h"
 #include "ee/EEUCNaval.h"
+#include "ee/EEGraphicEffect.h"
+#include "ee/EEMap.h"
+#include "ee/EmpireEarth.h"
 
 // 0x23df77 (cdecl, void; in EEFOFindNewTargetNearOldTarget.cpp's range): the naval path smoothing the naval classes'
 // Virtual0C forward to; no header declares it yet (provisional name)
@@ -202,4 +205,91 @@ void EEUCNaval::Update(EEComplexUnit* inUnit)
     }
     }
     this->Fn157269(inUnit);
+}
+
+// ICF-FOLDED: EXE 0x61aaa9
+// Adds the transport to its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::AddToTile, which ICF kept)
+void EEUCNaval::AddToTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->mUnits = theTile->AddUnit(theUnit, theTile->mUnits);
+}
+
+// ICF-FOLDED: EXE 0x418aa9
+// (no address of its own: folded into the shared `mov al, 1; ret` body the vtable slot points at)
+bool EEUCNaval::CanAttackMove()
+{
+    return true;
+}
+
+// ICF-FOLDED: EXE 0x618605
+// Creates a fishing boat on a tile at sea level
+// (no address of its own: the same body as EEUCNavalCitizen::CreateUnit, which ICF kept)
+EEUnit* EEUCNaval::CreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator)
+{
+    GETransformation theTransformation;
+    theTransformation.SetX((float)inX);
+    theTransformation.SetY((float)inY);
+    theTransformation.SetZ(0.0f);
+    return EEUnitClass::CreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+}
+
+// ICF-FOLDED: EXE 0x618909
+// Creates a priest ship at a placement on the water plane (z 0)
+// (no address of its own: the same body as EEUCNavalPriest::CreateUnitAt, which ICF kept)
+EEUnit* EEUCNaval::CreateUnitAt(GETransformation& inTransformation, long inPlayer, bool inIsFoundation,
+                                      EEUnit* inCreator)
+{
+    GETransformation theTransformation(inTransformation);
+    theTransformation.SetX(theTransformation.GetX());
+    theTransformation.SetZ(0.0f);
+    return EEUnitClass::CreateUnitAt(theTransformation, inPlayer, inIsFoundation, inCreator);
+}
+
+// ICF-FOLDED: EXE 0x618a45
+// Raises a location below the water plane to z 0
+// (no address of its own: the same body as EEUCNavalTransport::GroundLocation, which ICF kept)
+void EEUCNaval::GroundLocation(GE3DPoint& ioLocation)
+{
+    if (ioLocation.GetZ() < 0.0f)
+        ioLocation.SetZ(0.0f);
+}
+
+// ICF-FOLDED: EXE 0x618490
+// Returns the tile under a location along the camera line, at sea level
+// (no address of its own: the same body as EEUCNavalCitizen::LocationToTile, which ICF kept)
+void EEUCNaval::LocationToTile(const GE3DPoint& inLocation, long& outX, long& outY)
+{
+    GE3DPoint thePoint;
+    GE3DLine theLine(::gWorld.mLine);
+    theLine.SetStart(inLocation);
+    float theT;
+    theLine.SolveForZ(0.0f, theT, thePoint);
+    outX = UMFloor(thePoint.GetX());
+    outY = UMFloor(thePoint.GetY());
+}
+
+// ICF-FOLDED: EXE 0x61aaf5
+// Removes the transport from its own tile only
+// (no address of its own: the same body as EEUCSpaceTransport::RemoveFromTile, which ICF kept)
+void EEUCNaval::RemoveFromTile(EEUnit* inUnit)
+{
+    EEMap* theMap = ::gWorld.mMap;
+    EEUnit* theUnit = inUnit->mComplexUnit;
+    EEMapTile* theTile = theMap->GetTile(inUnit->mTileX, inUnit->mTileY);
+    if (theTile != NULL)
+        theTile->RemoveUnit(theUnit);
+}
+
+// ICF-FOLDED: EXE 0x60d336
+// Updates a living citizen's water ripples when the effect detail allows them
+// (no address of its own: the same body as EEUCBasicCitizen::UpdateEffects, which ICF kept)
+void EEUCNaval::UpdateEffects(EEComplexUnit* inUnit)
+{
+    if (this->mRippleEffect != NULL && inUnit->mHitPoints != 0 && (unsigned long)this->mRippleEffect->mDetailLevel <= gEffectDetail)
+        this->UpdateRipples(inUnit);
 }

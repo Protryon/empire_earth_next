@@ -35,6 +35,9 @@
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEUUUnitFunctor.h"
 #include "ee/EEUnitUtilities.h"
+#include "ee/EEMedia.h"
+#include "ee/EEGraphicEffect.h"
+#include "ee/EmpireEarth.h"
 
 // unit-local constants (provisional names)
 static const float kTransportNoPath = 10000.0f;   // 0x44736c (EEGetPathLengthTo: no path)
@@ -645,3 +648,18 @@ void EEUCTransport::Update(EEComplexUnit* inUnit)
 
 // TEMPLATE: EXE 0x61ce09
 // std::_Push_heap (operator() only)
+
+// ICF-FOLDED: EXE 0x557269
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUCTransport::BadlyHurt(class EEUnit *)
+{
+}
+
+// ICF-FOLDED: EXE 0x60d336
+// Updates a living citizen's water ripples when the effect detail allows them
+// (no address of its own: the same body as EEUCBasicCitizen::UpdateEffects, which ICF kept)
+void EEUCTransport::UpdateEffects(EEComplexUnit* inUnit)
+{
+    if (this->mRippleEffect != NULL && inUnit->mHitPoints != 0 && (unsigned long)this->mRippleEffect->mDetailLevel <= gEffectDetail)
+        this->UpdateRipples(inUnit);
+}

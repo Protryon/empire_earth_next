@@ -1,4 +1,5 @@
-"""Read-only telemetry for a staged EE-AOC test process (i686 or x86_64); no input injection.
+"""Read-only telemetry for a staged EE-AOC test process (x86_64; the pointer size is read from the process); no input
+injection.
 
 The process's bitness decides the pointer size (IsWow64Process); member offsets come from the build's layouts
 (layout.off). addresses['image_base'] (opt-in): the map's preferred load address the given VAs refer to; they are

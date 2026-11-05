@@ -615,8 +615,8 @@ void Fn11A130(const GE3DPoint& inLocation, unsigned long inFog, float& outValue)
     if (inFog == 1) {
         gRasterizer->GetFogAttributes(theAttributes, theScreen);
         gRasterizer->SetFog(0, theScreen);
-        float theDistance = inLocation.GetY() * gRenderViewPlane.GetY() + inLocation.GetZ() * gRenderViewPlane.GetZ() +
-                            inLocation.GetX() * gRenderViewPlane.GetX() + gRenderViewPlane.GetW();
+        float theDistance = inLocation.GetY() * gU4E8F08.GetCameraInverse().GetElement(1, 1) + inLocation.GetZ() * gU4E8F08.GetCameraInverse().GetElement(1, 2) +
+                            inLocation.GetX() * gU4E8F08.GetCameraInverse().GetElement(1, 0) + gU4E8F08.GetCameraInverse().GetElement(1, 3);
         if (theDistance <= theAttributes.mStart)
             outValue = 1.0f;
         else if (theDistance <= theAttributes.mEnd)

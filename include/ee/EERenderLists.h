@@ -206,10 +206,9 @@ extern float gSpaceTurretHeight;
 extern float gSpaceStationHeight;
 // EERenderObject::FillRenderLists's lock around the tile walk (0x529014; TSCriticalSection*) (provisional name and
 // owner)
-extern TSCriticalSection* gUnitPickerLock;
-extern bool gMusicFollowsBattle;            // 0x5308e0 (the music follows the battle intensity) (provisional name)
-extern bool gUnitLighting;                  // 0x5308e3 (the second light set: Fn10F8DE..Fn10FB74) (provisional name)
-extern float gZoomLock;                     // 0x530840 (Fn10F60F's fog band) (provisional name)
+extern bool& gMusicFollowsBattle;            // 0x5308e0 (the music follows the battle intensity) (provisional name)
+extern bool& gUnitLighting;                  // 0x5308e3 (the second light set: Fn10F8DE..Fn10FB74) (provisional name)
+extern float& gZoomLock;                     // 0x530840 (Fn10F60F's fog band) (provisional name)
 // the game's render objects (0x565350..0x565360; Empire Earth.cpp creates them; EEPostGraphicsAll/EEResetGraphicsValues push them)
 // (provisional names)
 extern RTSRenderObject* gU565350;

@@ -72,7 +72,7 @@
 #include "ee/EESaveLoad.h"
 #include "ee/EESaveGameFiles.h"
 
-extern bool gGameStateIsMultiplayer;        // 0x52fa88 (cleared when a local server starts; provisional name)
+extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when a local server starts; provisional name)
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);  // 0x14cfb1
 void Fn1030AB();                            // 0x1030ab (EEEffect.cpp)
 

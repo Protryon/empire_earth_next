@@ -76,7 +76,7 @@
 #include "ee/EEGameOptions.h"
 
 extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
-extern EEGameOptions gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
+extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
 unsigned long EEGetNumberOfResourceLevels();
 
 // 0x529b38: the empty slot every constructor and SetDefaults copies into the sixteen players

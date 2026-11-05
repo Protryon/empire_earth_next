@@ -212,3 +212,22 @@ long EEUIFSEPaint::MouseMove(const GE2DPoint& inLocation)
     gUIManager->mScenarioEditorForm->mBrushGroup->SetHighlight(thePointX, thePointY, this->mIsCentered);
     return 0;
 }
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUIFSEPaint::TabbedFrom()
+{
+}
+
+// ICF-FOLDED: EXE 0x5720c6
+// (no address of its own: folded into the shared `ret` body the vtable slot points at)
+void EEUIFSEPaint::TabbedTo()
+{
+}
+
+// ICF-FOLDED: EXE 0x5ad67e
+// (no address of its own: folded into the shared `xor eax, eax; ret` body the vtable slot points at)
+long EEUIFSEPaint::UpdateKeyboard()
+{
+    return 0;
+}

@@ -38,9 +38,8 @@ void Fn103F64();                            // 0x103f64: draws what the batches 
 // the camera plane the fog distance is measured from (0x4e9008; declared in EEEffect.cpp, read by Fn11A130)
 // (provisional name)
 class GEQuaternion;
-extern GEQuaternion gRenderViewPlane;
-extern long gHiddenUnitsMode;
-extern bool gDrawGroundShadows;             // 0x5308d4 (the ground shadows are drawn; provisional name)
+extern long& gHiddenUnitsMode;
+extern bool& gDrawGroundShadows;             // 0x5308d4 (the ground shadows are drawn; provisional name)
 
                        // 0x5308c8 (EEUnitPicker::Reset copies it; provisional name; types inferred)
 
