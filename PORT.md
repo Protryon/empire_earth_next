@@ -57,11 +57,40 @@ Source changes merge normally. The build tooling is this fork's own: upstream's 
 
 - The remaining UB flags: `-fwrapv` (`clang_ubdiff.py` + `-fsanitize=signed-integer-overflow` games), then
   `-fno-strict-aliasing`.
-- x64: what is left is the `-Wshorten-64-to-32` class (1,274 sites, 1,139 of them `size()` into `long`, e.g.
+- x64 only, then macOS/Linux: the plan below. What is left of the census is the `-Wshorten-64-to-32` class (1,274 sites, 1,139 of them `size()` into `long`, e.g.
   reverse loops). They are benign (no container approaches 2^31 elements) and the code is headed for a Rust
   rewrite, so they stay unless a site turns out to matter. Saved games and network messages are fine on x64:
   loaders read typed 32-bit ids and rebuild pointers, messages copy `long`/`float` members, and every raw on-disk
   record has the same size on both targets (`tools/record_sizes.py`; each is pinned by a `static_assert`).
+
+## Plan: x64 only, then macOS and Linux (owner, 2026-11-04)
+
+Goal: the exe is built and tested as x86_64 only; the i686 build (and wgpu-native's i686 v24 pin) goes. Then the
+same source builds on macOS and Linux.
+
+State (2026-11-04): all 858 units compile for x86_64 (`clang_build.py --x64`), only `-Wshorten-64-to-32` remains
+(1,278 sites, benign). Raw on-disk records are size-pinned and equal on both targets; saved-game ids and network
+messages are x64-safe (PORT_LEARNINGS "64-bit census").
+
+Steps:
+1. **x64 link** (`build.py --x64`, worktree agent): lld /MACHINE:X64 with the x86_64 runtime/SDK libraries and
+   wgpu-native v29 x86_64. `exe_fulllink.py`'s pass-1 stub classes (WON library traps/stubs, ICF aliases, vtable-slot
+   aliases, pure, data and member aliases) are keyed by 32-bit mangled names and VC6 addresses: match x64 names to
+   them by demangled signature (x64 adds `__ptr64`, has one calling convention), and take member offsets from the x64
+   build's own record layouts. Gate: 0 unresolved / 0 duplicates, the same stub census as i686.
+2. **x64 harness** (worktree agent, in parallel): `exe_boot.c` as a native x64 debugger (guarded APIs read their
+   arguments from RCX/RDX/R8/R9 and the stack's home area; breakpoints and context use Rip/Rsp), the presentation
+   bridge, time shim and seed pin as x64 DLLs/offsets from the build's layouts. Tested first against a small x64
+   test program calling every guarded API, then on the x64 exe.
+3. **Switch**: tour + AI games on x64 (and a 32-bit vs 64-bit comparison of seeded AI games: the simulation is
+   integer/float code that should not change with pointer size), then x64 becomes the only target: i686 builds,
+   the i686 wgpu pin and the 32-bit harness paths are removed, CI builds x64.
+4. **macOS/Linux**: the platform layer's POSIX implementation (PORT.md "Cross-platform"), windowing/input on a
+   small portable layer (SDL3 or winit-style C library, decision then), GDI text replaced (FreeType/stb_truetype or
+   a font atlas), Winsock -> BSD sockets, `long` is 64-bit there (FSFile::Read(long&) and record members: switch
+   to fixed-width types first, on Windows, with the record-size asserts as the gate), case-insensitive paths over
+   the game data. wgpu covers rendering (Metal, Vulkan). Builds: clang + CMake or the Python build with a target
+   triple; CI runners for both.
 
 ## Plan: one static exe, no proprietary third-party code (owner, 2026-11-04)
 
