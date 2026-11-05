@@ -742,11 +742,12 @@ the stub report reaches 0 with no new traps.
   `tools/objdiff.py`: the same tree compiled before and after a change, compared function by function (bytes and
   relocation offsets/types). Retyping `long` as `int32_t` where both are 32 bits must give identical code; every
   commit lists the few functions that changed and why.
-- **Census by category** (sites; before -> after): `-Wformat` 535 -> 0; `sizeof(long)` 586 -> 22 (all consistent
+- **Census by category** (sites; before -> after): `-Wformat` 535 -> 0; `sizeof(long)` 586 -> 21 (all consistent
   in-memory sizes: arrays allocated and copied with the same `sizeof(long)`, the random-map parser's own `long`);
   memcpy/memset through `long*` 325 -> 21 (same, plus four float fraction words packed into `long` members between
   Load and FinishLoad: little-endian, the low four bytes round-trip); unsigned long compared with -1/0xffffffff 145 ->
-  0 (`UIsNone32`, below; the platform layer's own results stay as they are); raw records holding a long 37 -> 0;
+  2 (`UIsNone32`, below; the two left compare Win32 results: GetFileAttributes, ResumeThread); raw records
+  holding a long 37 -> 0;
   shifts 1,062 and bitwise ops 1,555 on long reviewed by file: masks, flags, colour packing and small coordinates,
   width-independent except the rotates and sums fixed below.
 - **File I/O**: the `FSFile` value overloads are `int32_t`/`uint32_t` virtuals; `long`/`unsigned long` go through
