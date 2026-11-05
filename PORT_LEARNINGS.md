@@ -877,12 +877,12 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   does). Events share one condition variable (WaitAny exact, every set wakes every waiter: cheap for a dozen
   threads). Threads cannot be suspended or killed with pthreads: only a not-yet-started thread can be (the engine
   never does either to a running thread). WSAEventSelect is a poll thread that disarms a socket when it signals and
-  re-arms it on the next receive/accept (Winsock's re-enabling rule). Preferences: one INI-like file per root in
-  `$XDG_CONFIG_HOME/empire-earth-aoc` or `~/Library/Application Support/Empire Earth AoC` (`EE_PREFS_DIR`
-  overrides), rewritten through a rename on every change.
-- **Win32 registry quirks the tests found**: a REG_SZ value written without its terminator can come back one byte
-  longer through RegQueryValueExA; and the Win32 store reports `GetLastError()` after a failed Reg* call (as
-  URegistry did), which is not the Reg* result. The tests accept both on Windows only.
+  re-arms it on the next receive/accept (Winsock's re-enabling rule). Preferences were one INI-like file per root
+  in the user's configuration directory (`EE_PREFS_DIR`); since branch nossa every system uses one config.ini in
+  the game's directory instead ("No data.ssa, no original install, no registry").
+- **Win32 registry quirks the tests found** (gone with the registry, branch nossa): a REG_SZ value written without
+  its terminator can come back one byte longer through RegQueryValueExA; and the Win32 store reported
+  `GetLastError()` after a failed Reg* call (as URegistry did), which is not the Reg* result.
 - **Fonts: metric-compatible is not GDI-identical.** Liberation Sans has Arial's advance widths and
   usWinAscent/usWinDescent, but Arial also carries VDMX and hdmx tables (GDI's hinted ascent/descent and per-size
   integer widths) and GDI hints; stb_truetype has no hinter. `tools/xbuild.py fonttest` on Windows measures both
@@ -1176,3 +1176,49 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
 - **CI without game data**: `--smoke-test` exercises what is portable and observable without the retail files: the
   window system, a window, the wgpu device on the runner's GPU path (lavapipe under Xvfb, Metal on macOS), 30 colour
   fills read back and presented; the normal start must stop with the "game data not found" message (exit 3).
+
+## No data.ssa, no original install, no registry (branch nossa)
+
+- **The data is one loose tree** (`tools/open_data.py build`): the game now searches only its own `Data\` (plus a
+  `Data\data.ssa` when one is present). The tree merges the four places of the original data path (AoC Data, base
+  Data, AoC data.ssa, base data.ssa; first wins, names without case): 4,565 archive entries and 718 loose files
+  give 5,746 files (open form) / 4,770 (binary). Clashes: 201 base loose files under AoC loose, 125 base archive
+  entries under the AoC archive, 242 base archive entries under the base game's own loose files; none between the
+  base game's loose files and the AoC archive, so "AoC wins over the original" holds everywhere. Directory spelling
+  is unified (archive `sounds\` -> loose `Sounds\`, archive-only `civilizations\` -> `Civilizations\`), so a
+  case-sensitive file system gets one folder per name.
+- **Every archive entry is used as is or converted**: 37 db tables -> text (dbrandommap, dbterraingraytextures and the
+  base archive's `copy of dbgamevariant.dat`, `converteroutput.log`, `converterverification.log` stay as they are),
+  862 model names -> 861 glTF (one skipped, below), 2,505 texture names -> PNG (2,666 files with the `@<i>` frames), the rest copied:
+  sounds (.wav 891, .mp3 10), .tai 72, .civ 23, music (.sgt/.sty/.dls 8 each, from the original game's loose
+  Data\Music), .rmv 94. The `.scc` files are Visual SourceSafe markers (`vssver.scc`), not data. Conversion is not
+  worth it for .civ (a 2 KB record the civilization builder writes) and .scc.
+- **The one model eemodel skips** is `Data\Models\amb_rock.cem` of both installs: a 24-byte text stub ("9E527E...",
+  an SSMF tag it is not). The game fails to load it as well and no archive has a real copy; it is shipped as is.
+- **Textures read around the texture manager**: ColorPalette.tga, Volcano.tga and the mouse pointers are loaded with
+  `GESurface::Load(kImageFileTGA)` from a file the caller finds itself. `GEFindTargaFile` serves the PNG's Targa (the
+  one frame of `PngToSst` minus its 15 header bytes), so no .tga has to stay next to its PNG.
+- **Campaign packages stay archives.** A campaign's identity is the archive: name, description, author, password and
+  required civilization are archive tags, the campaign editor writes .ssa, the built-in campaigns are validated by the
+  archive file's checksum (EECampaignFormManager::UpdateChecksum) and the progress files are keyed by it. Loose
+  campaigns would be a new format for four files. The original game's own campaigns are left out of the tree: AoC
+  lists only its own Data\Campaigns, so merged in they would have appeared as custom campaigns.
+- **The original's install and the registry are gone** (owner decision): the base path is the game's own directory,
+  so the four-place search path became one folder, the requires-original check went, and the music folder is
+  `Data\Music`. The settings went from the registry to `config.ini` in the data root (`platform/PlatConfig.h`, one
+  implementation in `src/Platform/Common`; `EE_CONFIG` overrides; the user's configuration directory when the game's
+  directory is read-only). `URegistry` became `UConfig`; EEPreferences.cpp keeps its 231 reads and writes, now
+  `GetValue/SetValue(section, name, value)`; the `Installed From Volume/Directory` values are no longer stored (a
+  play folder can move). Values are untyped text: an integer read of a string fails as a missing value did.
+- **The game enters the data root on Windows too** (`PlatPathEnterDataRoot` before `FSInitialize`): it used the
+  current directory, so a shortcut with another working directory found no data.
+- **Multiplayer checksum**: with no archive mounted the archives' `Timestamp` tags add nothing; the loose text
+  tables and glTF models are summed instead. Peers need the same tree.
+- **Harness**: a fresh `config.ini` per run replaces the registry snapshot/restore (and the per-instance registry
+  subtrees: every instance has its own stage). `exe_boot.c` stops a run on any registry write. The stage gets the
+  tree by hard links (5,700 files in a few seconds); only Saved Games and Scenarios, which the game writes into, are
+  copied. The file-open log of every run is the evidence that no data.ssa and nothing of either install is opened.
+- **Windows tooling traps met here**: Python's `write_text` writes CRLF on Windows and the repository stores every
+  file byte for byte (`* -text`), so a script edit turned whole files into CRLF diffs: write bytes. Git Bash rewrites
+  arguments that start with `/` (`reg export KEY FILE /y` fails): call reg.exe from PowerShell or set
+  `MSYS_NO_PATHCONV=1`.
