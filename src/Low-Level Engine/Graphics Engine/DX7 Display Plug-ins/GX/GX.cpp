@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include <algorithm>
+#include <string>
 
 #include "GXInternal.h"
 

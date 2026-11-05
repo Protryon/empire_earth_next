@@ -196,10 +196,21 @@ Steps:
       that; Empire Earth.cpp's and GESurface.cpp's remaining DCs (bitmap loading) -> surface locks. Gate: menu
       screenshots against the GDI build (expected: the hinting differences of PORT_LEARNINGS) and the tour's text
       layouts (no new wraps).
+      **Done (branch xgame, 2026-11-05)**: GEFont/GEText/GEFontBitmap and the renderer's text on PlatFont, one
+      GXSurface::DrawText path (premultiplied coverage onto GPU-resident targets, a 32-bit copy of the CPU pixels
+      otherwise), GetDC/ReleaseDC/DIBs and GEDeviceContext gone, Liberation built in (#embed / generated arrays).
+      Gates: tour + 120 s with --input-check (78.1% lit), AI game to the time cap (PT 14,406); menu screenshots differ
+      in the glyphs only (1.5-4% of the pixels), same layouts. Not done: the fullscreen start screen (Win32-only
+      window with a GDI bitmap; no splash elsewhere); GESurface.cpp has no DC left.
    6. **Input method**: EEUserInterface's IMM calls (ImmGetContext, composition strings, candidate lists: 39 sites),
       UIEditBox (18) and UIIMECandidate (5) -> PLAT_EVENT_TEXT_EDITING and PlatTextInputStart(edit area); the
       system draws the candidate list. CJK text needs the multibyte encoding decision first (UTF-8 PlatString with
       the fonts), so Western text input comes first.
+      **Done for Western text (branch xgame, 2026-11-05)**: no IMM call is left; the edit box shows the composition
+      from TEXT_EDITING (SDL_HINT_IME_IMPLEMENTED_UI "composition"), the committed text is the result string, the
+      system draws the candidate list, PlatTextInputCancel replaces CPS_CANCEL, the clipboard goes through
+      PlatClipboard*. CJK: not done (text is Windows-1252 through the window layer; the encoding decision is open),
+      and the IME paths are not exercised by the harness (no IME on the VM).
    7. **The POSIX game**: `xbuild.py game --target linux-x86_64|macos-arm64` links every unit with src/Platform/Posix,
       SDL and Common, SDL3 and wgpu (a macOS .app bundle: Contents/Resources is the data root); the platform
       layer's data root (`EE_DATA_ROOT` or the executable's directory) replaces the install path. CI runs it to the

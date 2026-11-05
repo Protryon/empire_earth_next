@@ -1122,3 +1122,31 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   window travels the real path (SDL, PlatInputEvent, ISDeviceInput, the main form's hot keys) without being the
   foreground window. `--input-check` presses F3 twice and requires the pause flag to go on and off. Posted mouse
   messages would not test relative mode (raw input), so the mouse path is covered by code review and play only.
+
+## The POSIX game, part 4: text without GDI, the input method (branch xgame)
+
+- **One text path for every surface.** GDI text reached surfaces two ways: a DC on the CPU copy (TextLock, the glyph
+  atlases) and, for GPU-resident targets, two scratch DIBs drawn on black and white grounds to recover the coverage.
+  PlatFont gives coverage directly, so GXSurface::DrawText now takes a PlatFont callback: on a GPU-resident surface
+  the callback draws onto a transparent target in premultiplied colour (PLAT_FONT_TARGET_PREMULTIPLIED: alpha
+  accumulates the coverage, an opaque background cell is alpha 255), which is blended with the existing
+  premultiplied blit; on a CPU-side surface it draws onto a 32-bit copy of the pixels and the changed ones are
+  written back in the surface's format (what the old 32-bit GetDC copy did for formats GDI cannot draw). TextLock
+  is a flag now.
+- **A new surface has no CPU memory yet**: the CPU path must allocate it (GX allocates lazily on the first Lock);
+  tools/gx_test's 565 text check found it.
+- **Fonts are built in.** Liberation Sans/Serif/Mono are compiled into the program (#embed with clang 19+, generated
+  C arrays for older clang and Apple clang), registered under the names the game's font table uses; Tahoma (the
+  table's fourth face) and MS Sans Serif are aliases of Arial. UIFontTable sized fonts by the screen's LOGPIXELSY:
+  the original was DPI-unaware (96), the SDL process is DPI-aware, so the 96 is now a constant.
+- **What changes on screen**: only the glyphs (1.5-4% of a menu's pixels): stb_truetype draws Liberation unhinted
+  and antialiased where GDI drew hinted Arial; stems look a little heavier at small sizes and text sits a pixel
+  higher in places. The layouts did not move and no text wrapped differently in the tour's screens.
+- **The input method's composition stays the game's.** With SDL_HINT_IME_IMPLEMENTED_UI "composition" SDL sends
+  the composition as text-editing events and lets the system draw the candidate list. The game's edit box showed the
+  composition before (WM_IME_COMPOSITION GCS_COMPSTR), so TEXT_EDITING drives the same UIManager calls; the result
+  string comes as a text event while composing (no WM_CHAR bytes follow it, as before). The game's own candidate
+  window (UIIMECandidate) is no longer fed. Text crosses the window layer as Windows-1252, so CJK input (double-byte
+  ANSI code pages before) needs the encoding decision PORT.md describes; Western input is complete.
+- **PostQuitMessage has no reader now**: the thread queue is TSThread's own, so the two remaining PostQuitMessage
+  calls (the lobby's Sierra Update, the window close) post WM_QUIT (0x12) to the UI thread's TSThread instead.
