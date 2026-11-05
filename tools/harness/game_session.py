@@ -216,7 +216,7 @@ def main():
                 if handle is not None:started[key]=handle
     try:
         lines=boot.run(harness,stage,'run',a.timeout,str(path)+'.bmp',
-                       ['Game Bit Depth=dword:32','Texture Bit Depth=dword:32','Music Enabled=dword:0']+reg_pins+plugin_pins,
+                       ['Game Bit Depth=dword:32','Texture Bit Depth=dword:32','Music Enabled=dword:1']+reg_pins+plugin_pins,
                        str(path)+'.reg',windowed=True,checkpoint='session',trace_functions=trace,live_log=str(path)+'.raw.txt',loopback=True,
                        harness_extra=harness_extra,registry='batch' if a.registry_managed_by_batch else 'self',
                        reg_subtree=reg_subtree,on_start=start_plugins)

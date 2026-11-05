@@ -15,7 +15,7 @@ One statically linked `EE-AOC.exe` with the static C runtime. The original's DLL
 (`Low-Level Engine.dll`, with libjpeg and the DCL), the TCP protocol, the mixer, the Default random map generator
 and the DX7 hardware T&L renderer (the plug-ins are registered in `src/Low-Level Engine/PIMModule.cpp` instead of
 being loaded from DLLs), and the language strings of `Language.dll`. The non-T&L renderer `DX7HRDisplay.dll` is
-gone. Sound goes through miniaudio (vendored, statically linked). Only Windows system DLLs are imported, plus Bink
+gone. Sound goes through miniaudio and music through dmusic (both vendored, statically linked). Only Windows system DLLs are imported, plus Bink
 (`binkw32.dll`) until its replacement lands (`PORT.md`, "Plan").
 
 | Module | Was | Source |

@@ -1,64 +1,27 @@
 // C:\EEX\Low-Level Engine\Sound Engine\SEScore.cpp
-// Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
+// A music score on dmusic (see lle/SEScore.h).
 #include <windows.h>
-#include <dmusici.h>
+#include <dmusic.h>
 
 #include "lle/LowLevelEngine.h"
-#include "lle/SEMixer.h"
 #include "lle/SEScore.h"
 
-// Compiler-generated for this unit (names in analysis/lle/names.txt):
-
-// FUNCTION: LLE 0x1004eef6
-// Destroys the score: deletes its motif scores, unloads its segment and releases it (motifs are not released)
+// Destroys the score, releasing its segment
 SEScore::~SEScore()
 {
     for (unsigned long i = 0; i < this->mSecondaryScores.size(); i++)
         delete this->mSecondaryScores[i];
-    this->mSegment->SetParam(GUID_Unload, 0xffffffff, 0, 0, SEMixer::GetActiveMixer()->GetConductor().GetPerformance());
-    if (!this->mIsSecondaryScore)
-        this->mSegment->Release();
+    DmSegment_release(this->mSegment);
 }
 
-// FUNCTION: LLE 0x1004ef63
-// Creates a secondary score for every motif of the segment's style (main scores only)
-// NEAR: the original tests EnumMotif's result with `cmp eax, ebx` (the zero register) instead of `test eax, eax`
-void SEScore::CreateSecondaryScores()
-{
-    IDirectMusicStyle* theStyle;
-    IDirectMusicSegment* theMotif;
-    WCHAR theName[MAX_PATH];
-    DWORD theIndex = 0;
-    bool theDone = false;
-    if (this->mIsSecondaryScore ||
-        !SUCCEEDED(this->mSegment->GetParam(GUID_IDirectMusicStyle, 0xffffffff, 0, 0, NULL, &theStyle)))
-        return;
-    do {
-        if (theStyle->EnumMotif(theIndex, theName) == S_OK) {
-            if (theStyle->GetMotif(theName, &theMotif) == S_OK)
-                this->mSecondaryScores.push_back(new SEScore(theMotif, true));
-        } else
-            theDone = true;
-        theIndex++;
-    } while (!theDone);
-}
-
-// FUNCTION: LLE 0x1004f034
-// Returns how many times the score repeats (0 on failure)
+// Returns how many times the score repeats
 unsigned long SEScore::GetRepeatCount()
 {
-    DWORD theCount;
-    if (FAILED(this->mSegment->GetRepeats(&theCount)))
-        theCount = 0;
-    return theCount;
+    return DmSegment_getRepeats(this->mSegment);
 }
 
-// FUNCTION: LLE 0x1004f052
-// Sets how many times the score repeats
+// Sets how many times the score repeats (the game loops a score with a large count)
 void SEScore::SetRepeatCount(unsigned long inCount)
 {
-    this->mSegment->SetRepeats(inCount);
+    DmSegment_setRepeats(this->mSegment, inCount);
 }
-
-// Template COMDATs emitted in this unit (markers at the end):
-// TEMPLATE: LLE 0x1004f062

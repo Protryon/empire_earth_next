@@ -12,8 +12,15 @@ from ee import LINK_DIR, EEX_INCLUDE_DIRS, ORIG_SRC_ROOT, ROOT, TOOLCHAIN, moder
 DEFINES = "-DWIN32 -DNDEBUG -D_WINDOWS"
 
 
+THIRD_PARTY = ROOT / "src" / "ThirdParty"
+
+
 def stage_source(src):
+    """The path a unit compiles from: the game's units are copied under C:\\EEX (with their sibling headers);
+    third-party libraries compile in place (their own relative includes)."""
     src = pathlib.Path(src).resolve()
+    if src.is_relative_to(THIRD_PARTY):
+        return src
     try:
         rel = src.relative_to(ROOT / "src")
     except ValueError:
@@ -50,8 +57,16 @@ def include_paths(src=None):
     dx7 = pathlib.Path(os.environ.get("EE_DX7SDK", str(TOOLCHAIN / "dx7sdk" / "include")))
     use_dx7 = src is not None and ("DX7 Display Plug-ins" in str(src) or "dx7sdk" in unit_includes(src)) \
         and dx7.exists()
-    # include/winsdk last: headers the Windows SDK dropped (dmusici.h, the 2001 iphlpapi.h)
-    inc = os.pathsep.join([str(incdir), *([str(dx7)] if use_dx7 else []),
+    # a third-party library's own include directories (src/ThirdParty/<lib>/include_dirs.txt, relative to the library)
+    own = []
+    if src is not None and pathlib.Path(src).resolve().is_relative_to(THIRD_PARTY):
+        lib = THIRD_PARTY / pathlib.Path(src).resolve().relative_to(THIRD_PARTY).parts[0]
+        if (lib / "include_dirs.txt").exists():
+            own = [str(lib / d.strip()) for d in (lib / "include_dirs.txt").read_text().splitlines() if d.strip()]
+    # public headers of vendored libraries that live with their sources
+    public = [str(THIRD_PARTY / "dmusic" / "include")]
+    # include/winsdk last: headers the Windows SDK dropped (the 2001 iphlpapi.h)
+    inc = os.pathsep.join([*own, str(incdir), *public, *([str(dx7)] if use_dx7 else []),
                            str(msvc / "include"), str(sdk / "ucrt"), str(sdk / "um"), str(sdk / "shared"),
                            str(ROOT / "include" / "winsdk")])
     return flags, inc

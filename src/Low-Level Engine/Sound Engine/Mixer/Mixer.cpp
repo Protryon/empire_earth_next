@@ -68,7 +68,11 @@ static HWND gWindowHandle;
 static bool gActive;
 static ma_context gContext;
 static ma_device gDevice;
-static LPDIRECTSOUND gDirectSound;          // for the DirectMusic and Bink players until they are replaced
+static LPDIRECTSOUND gDirectSound;          // for the Bink player until it is replaced
+// the music (the conductor's renderer): adds interleaved stereo float frames at the device rate
+static void (*gMusicSource)(void* inContext, float* outFrames, unsigned long inCount);
+static void* gMusicContext;
+static std::vector<float> gMusicBuffer;
 static CRITICAL_SECTION gLock;              // the channels, between the game's threads and the device thread
 static struct LockInit {
     LockInit() { InitializeCriticalSection(&gLock); }
@@ -146,8 +150,16 @@ static void MixerCallback(ma_device* inDevice, void* outFrames, const void* inIn
             theChannel.mPosition += theChannel.mStep;
         }
     }
+    // the effects take the master volume; the music has its own (the conductor's)
+    bool theMusic = gMusicSource != NULL;
+    if (theMusic) {
+        if (gMusicBuffer.size() < 2 * inCount)
+            gMusicBuffer.resize(2 * inCount);
+        memset(&gMusicBuffer[0], 0, 2 * inCount * sizeof(float));
+        gMusicSource(gMusicContext, &gMusicBuffer[0], inCount);
+    }
     for (ma_uint32 i = 0; i < 2 * inCount; i++) {
-        float v = theOut[i] * gVolume;
+        float v = theOut[i] * gVolume + (theMusic ? gMusicBuffer[i] : 0.0f);
         theOut[i] = v > 1.0f ? 1.0f : v < -1.0f ? -1.0f : v;
     }
 }
@@ -246,7 +258,7 @@ extern "C" long SPIMActivateMixer()
     }
     if (!theOpen)
         return kSPIMNativeError;
-    // the DirectMusic and Bink players still take a DirectSound object from the mixer (optional for both)
+    // the Bink player still takes a DirectSound object from the mixer (optional)
     if (DirectSoundCreate(NULL, &gDirectSound, NULL) == DS_OK &&
         gDirectSound->SetCooperativeLevel(gWindowHandle ? gWindowHandle : GetDesktopWindow(), DSSCL_PRIORITY) != DS_OK) {
         gDirectSound->Release();
@@ -337,6 +349,20 @@ extern "C" float SPIMGetCPUUsage()
 extern "C" LPDIRECTSOUND SPIMGetDirectSoundInterface()
 {
     return gDirectSound;
+}
+
+// The device's sample rate (0 while the mixer is not active): the music renders at it
+extern "C" unsigned long SPIMGetOutputRate()
+{
+    return gActive ? gDevice.sampleRate : 0;
+}
+
+// Sets (or clears, NULL) the music source the device thread mixes in
+extern "C" void SPIMSetMusicSource(void (*inSource)(void*, float*, unsigned long), void* inContext)
+{
+    Guard theGuard;
+    gMusicSource = inSource;
+    gMusicContext = inContext;
 }
 
 extern "C" long SPIMGetHighestTimerDelay()
@@ -600,6 +626,7 @@ static const PIMEntry sEntries[] = {
     PIM_ENTRY(SPIMGetDirectSoundInterface),
     PIM_ENTRY(SPIMGetHighestTimerDelay),
     PIM_ENTRY(SPIMGetMaximumChannelCount),
+    PIM_ENTRY(SPIMGetOutputRate),
     PIM_ENTRY(SPIMGetSampleOffset),
     PIM_ENTRY(SPIMGetSamplePlayBackTime),
     PIM_ENTRY(SPIMGetVolume),
@@ -611,6 +638,7 @@ static const PIMEntry sEntries[] = {
     PIM_ENTRY(SPIMProcessMessage),
     PIM_ENTRY(SPIMSetChannelSample),
     PIM_ENTRY(SPIMSetLatency),
+    PIM_ENTRY(SPIMSetMusicSource),
     PIM_ENTRY(SPIMSetSampleLooping),
     PIM_ENTRY(SPIMSetSampleOffset),
     PIM_ENTRY(SPIMSetSamplePan),

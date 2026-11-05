@@ -30,7 +30,7 @@ MODULE_FLAGS = {
     "tcp": "-MT -GR -DEE_STATIC",
     "mixer": "-MT -GR -DEE_STATIC",
     "default": "-MT -GR -DEE_STATIC",
-    "lle": "-MT -GR -DEE_STATIC -DLOWLEVELENGINE_EXPORTS",
+    "lle": "-MT -GR -DEE_STATIC -DLOWLEVELENGINE_EXPORTS -DDM_STATIC",
     "dx7hrtnl": "-MT -GR -DEE_STATIC -DLLE_CURRENT_HEADERS",
     "exe": "-MT -GR -DEE_STATIC -DLLE_CURRENT_HEADERS -DLLE_EXE_HEADERS",
     "jpeg": "-MT",

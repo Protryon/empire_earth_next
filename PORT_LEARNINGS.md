@@ -394,6 +394,23 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
   Pentium has it); x87 stays.
 - The game insists on a mixer ("requires a sound card"): any mixer activation failure ends the game at startup.
 
+## DirectMusic -> dmusic (the music)
+
+- The game's music manager uses little of DirectMusic: load a segment by file name, play, stop, an automatic
+  transition (groove on a measure), the master groove level as "intensity", a port volume in hundredths of a dB
+  (an amplitude of volume^(ln 10 / 2)), reverb parameters and a large repeat count to loop. It registers no
+  notification callback and plays no motif. Read the callers before porting a whole COM surface.
+- dmusic's public API lacked two of those (repeat count, master groove level); small additions to the vendored copy
+  are cheaper than working around them, and its README lists them.
+- The performance renders PCM on request: the mixer's device thread pulls it after mixing the effects (the mixer's
+  master volume applies to effects only, as Miles' did; the music has the conductor's volume). The conductor clears
+  the mixer's music source before releasing the performance, so the device thread never renders a freed one, and the
+  render callback takes no conductor lock (no lock-order cycle with the mixer's).
+- Third-party sources now compile in place (no staging), and a library can list its own include directories
+  (`src/ThirdParty/<lib>/include_dirs.txt`, passed through `INCLUDE`, which copes with spaces in paths).
+- The harness used to switch music off (DirectMusic needed a real device); with music on the null device it now
+  plays in every session (Honor.sgt with its style and DLS bank, peaks 0.14-0.26).
+
 ## For WONAPI/WONLobby later
 
 The WON library is carved or stubbed (`won` class in the stub report) in both builds. When its source arrives, expect
