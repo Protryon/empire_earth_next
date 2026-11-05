@@ -901,7 +901,38 @@ void GXSurfaceData::Present(GXSurfaceData* inSource, bool inWait)
     if (theClientWidth <= 0 || theClientHeight <= 0)
         return;
     RECT theClient = {0, 0, theClientWidth, theClientHeight};
+    static unsigned long sLastWidth, sLastHeight;
+    if (inSource->mWidth != sLastWidth || inSource->mHeight != sLastHeight) {
+        GXLog("GX: presenting %lux%lu frames into a %dx%d window", inSource->mWidth, inSource->mHeight, theClientWidth,
+              theClientHeight);
+        sLastWidth = inSource->mWidth;
+        sLastHeight = inSource->mHeight;
+    }
     inSource->ForGPURead();
+    static const bool sCheck = getenv("EE_GX_CHECK_PRESENT") != NULL;
+    if (sCheck && inSource->mCPUValid && inSource->mMemory) {
+        // diagnostic: the GPU copy about to be presented against the CPU copy (both are marked valid, so they must
+        // be equal); logs the differing pixels' count and bounds, then keeps the CPU copy as it was
+        static unsigned long sFrame;
+        std::vector<unsigned char> theCPU(inSource->mMemory, inSource->mMemory + (size_t)inSource->mPitch * inSource->mHeight);
+        inSource->mCPUValid = false;
+        inSource->Download();
+        unsigned long theBytes = inSource->mFormat.mBits / 8, theCount = 0;
+        long theL = 1 << 30, theT = 1 << 30, theR = -1, theB = -1;
+        for (unsigned long y = 0; y < inSource->mHeight; y++)
+            for (unsigned long x = 0; x < inSource->mWidth; x++) {
+                size_t i = (size_t)y * inSource->mPitch + x * theBytes;
+                if (memcmp(&theCPU[i], inSource->mMemory + i, theBytes)) {
+                    theCount++;
+                    theL = std::min<long>(theL, x); theT = std::min<long>(theT, y);
+                    theR = std::max<long>(theR, x); theB = std::max<long>(theB, y);
+                }
+            }
+        memcpy(inSource->mMemory, &theCPU[0], theCPU.size());
+        if (theCount || (sFrame++ % 200) == 0)
+            GXLog("GX: present check: %lu pixels of %lux%lu differ GPU vs CPU (bounds %ld,%ld-%ld,%ld)", theCount,
+                  inSource->mWidth, inSource->mHeight, theL, theT, theR, theB);
+    }
     if (!this->mSwapChain) {
         // the wgpu surface of the window's native kind (Win32 HWND, X11 Window, Wayland surface, Metal layer)
         WGPUSurfaceDescriptor theDescriptor = {};
@@ -1015,6 +1046,11 @@ GXSurface::GXSurface() : mData(new GXSurfaceData)
     this->mData->mOwner = this;
 }
 
+GXSurface* GXSurfaceData::NewSurface()
+{
+    return new GXSurface;
+}
+
 GXSurface::~GXSurface()
 {
     GXSurfaceData* theData = this->mData;
@@ -1023,6 +1059,10 @@ GXSurface::~GXSurface()
         theCore.EndPass();
     for (size_t i = 0; i < theData->mAttached.size(); i++)
         theData->mAttached[i]->Release();
+    if (theData->mLastFrame)
+        theData->mLastFrame->Release();
+    if (theData->mWindowImage)
+        theData->mWindowImage->Release();
     for (std::map<unsigned long, WGPUBindGroup>::iterator i = theData->mGroups.begin(); i != theData->mGroups.end(); ++i)
         wgpuBindGroupRelease(i->second);
     free(theData->mMemory);
@@ -1162,6 +1202,82 @@ static RECT Clip(const RECT& inRect, GXSurfaceData* inSurface)
     return theRect;
 }
 
+// A blit to the window (the primary surface). A whole frame (the back buffer at the client origin) is presented as it
+// is and remembered. Anything smaller (the mouse pointer the game draws straight onto the screen while a mode change
+// has no frame yet) goes onto a copy of the last frame at its place, and that copy is presented: as DirectDraw drew
+// it into the visible screen, instead of stretching the small source over the whole window.
+static GXRESULT PrimaryBlt(GXSurfaceData* inPrimary, RECT* inDestination, GXSurface* inSource, RECT* inSourceRect,
+                           bool inKeyed)
+{
+    GXSurfaceData* theSource = inSource->mData;
+    RECT theSourceRect = inSourceRect ? *inSourceRect : Whole(theSource);
+    long theWidth = theSourceRect.right - theSourceRect.left, theHeight = theSourceRect.bottom - theSourceRect.top;
+    // a frame fills the window (the back buffer is the client size; at least half of it in each direction, so a
+    // window resized before the next mode change still counts); the pointer is a whole 32x32 source, not a frame
+    int32_t theClientWidth = 0, theClientHeight = 0;
+    if (inPrimary->mWindow)
+        PlatWindowGetClientSize(inPrimary->mWindow, &theClientWidth, &theClientHeight);
+    bool theFrame = theSourceRect.left == 0 && theSourceRect.top == 0 && theWidth == (long)theSource->mWidth &&
+                    theHeight == (long)theSource->mHeight && theWidth * 2 >= theClientWidth &&
+                    theHeight * 2 >= theClientHeight;
+    if (theFrame) {
+        if (inDestination) {
+            inPrimary->mOriginX = inDestination->left;
+            inPrimary->mOriginY = inDestination->top;
+        }
+        inSource->AddRef();
+        if (inPrimary->mLastFrame)
+            inPrimary->mLastFrame->Release();
+        inPrimary->mLastFrame = inSource;
+        inPrimary->mWindowImageCurrent = false;
+        inPrimary->Present(theSource, true);
+        return GX_OK;
+    }
+    GXSurfaceData* theLast = inPrimary->mLastFrame ? inPrimary->mLastFrame->mData : NULL;
+    if (!theLast || theWidth <= 0 || theHeight <= 0)
+        return GX_OK;   // nothing shown yet to draw into
+    GXSurfaceData* theImage = inPrimary->mWindowImage ? inPrimary->mWindowImage->mData : NULL;
+    if (!theImage || theImage->mWidth != theLast->mWidth || theImage->mHeight != theLast->mHeight) {
+        if (inPrimary->mWindowImage)
+            inPrimary->mWindowImage->Release();
+        GXSurface* theSurface = GXSurfaceData::NewSurface();
+        theImage = theSurface->mData;
+        theImage->mWidth = theLast->mWidth;
+        theImage->mHeight = theLast->mHeight;
+        GXPIXELFORMAT theFormat = {sizeof(GXPIXELFORMAT), GXPF_RGB | GXPF_ALPHAPIXELS, 0, 32, 0xff0000, 0xff00, 0xff,
+                                   0xff000000};
+        theImage->mPixelFormat = theFormat;
+        theImage->mFormat.Set(theFormat);
+        theImage->mIsRenderTarget = true;
+        if (!theImage->CreateTexture()) {
+            theSurface->Release();
+            inPrimary->mWindowImage = NULL;
+            return GX_OK;
+        }
+        theImage->mCPUValid = false;
+        theImage->mGPUValid = true;
+        inPrimary->mWindowImage = theSurface;
+        inPrimary->mWindowImageCurrent = false;
+    }
+    if (!inPrimary->mWindowImageCurrent) {
+        RECT theAll = Whole(theLast);
+        GXBlit(theImage, Whole(theImage), theLast, &theAll, kGXBlitCopy, NULL, 0.0f, false);
+        inPrimary->mWindowImageCurrent = true;
+    }
+    RECT theDestination = inDestination ? *inDestination : Whole(theImage);
+    if (inDestination) {   // screen coordinates -> the frame's
+        theDestination.left -= inPrimary->mOriginX;
+        theDestination.right -= inPrimary->mOriginX;
+        theDestination.top -= inPrimary->mOriginY;
+        theDestination.bottom -= inPrimary->mOriginY;
+    }
+    if (theSource != theImage)
+        GXBlit(theImage, theDestination, theSource, &theSourceRect, inKeyed ? kGXBlitKeyed : kGXBlitCopy, NULL, 0.0f,
+               false);
+    inPrimary->Present(theImage, true);
+    return GX_OK;
+}
+
 GXRESULT GXSurface::Blt(RECT* inDestination, GXSurface* inSource, RECT* inSourceRect, unsigned long inFlags, GXBLTFX* inFX)
 {
     GX_GUARD;
@@ -1191,10 +1307,8 @@ GXRESULT GXSurface::Blt(RECT* inDestination, GXSurface* inSource, RECT* inSource
     if (!inSource)
         return GXERR_INVALIDPARAMS;
     GXSurfaceData* theSource = inSource->mData;
-    if (theTarget->mIsPrimary) {   // windowed presentation: the back buffer to the window
-        theTarget->Present(theSource, true);
-        return GX_OK;
-    }
+    if (theTarget->mIsPrimary)   // windowed presentation
+        return PrimaryBlt(theTarget, inDestination, inSource, inSourceRect, (inFlags & GXBLT_KEYSRC) && theSource->mHasKey);
     RECT theSourceRect = inSourceRect ? *inSourceRect : Whole(theSource);
     RECT theDestination = inDestination ? *inDestination : Whole(theTarget);
     bool theKeyed = (inFlags & GXBLT_KEYSRC) && theSource->mHasKey;

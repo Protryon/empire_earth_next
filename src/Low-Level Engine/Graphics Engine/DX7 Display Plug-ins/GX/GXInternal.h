@@ -131,6 +131,12 @@ struct GXSurfaceData {
     unsigned long mSwapWidth = 0, mSwapHeight = 0;
     WGPUTextureFormat mSwapFormat = WGPUTextureFormat_Undefined;
     WGPUPresentMode mSwapMode = WGPUPresentMode_Fifo;
+    // what the window shows (primary surfaces): the last whole frame blitted to it (a held reference), where its
+    // blits place it (the client origin they pass, screen coordinates), and the copy that partial blits draw onto
+    GXSurface* mLastFrame = NULL;
+    GXSurface* mWindowImage = NULL;
+    bool mWindowImageCurrent = false;    // mWindowImage holds the last frame plus the partial blits since
+    long mOriginX = 0, mOriginY = 0;
 
     bool AllocateMemory();
     bool CreateTexture();
@@ -145,6 +151,7 @@ struct GXSurfaceData {
     unsigned long ReadPixel(unsigned long x, unsigned long y) const;
     void WritePixel(unsigned long x, unsigned long y, unsigned long inPixel);
     void Present(GXSurfaceData* inSource, bool inWait);
+    static GXSurface* NewSurface();      // a surface GX makes for itself (the constructor is private to the API)
 };
 
 struct GXDeviceData;   // GXDevice.cpp
