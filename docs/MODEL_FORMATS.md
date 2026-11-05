@@ -246,5 +246,10 @@ levels, Targa footers, IDs, colour map and origin fields, the compressed flag.
   the .gltf): identical pictures for static frames, the same picture up to sub-pixel differences for animated frames
   (TRS animation instead of the exact matrices).
 
-`cppgate`: the C++ loader converts every exported model (with and without EE_model, some as `.glb`), edited models
-and every texture plus PNG variants; its bytes must equal the Python converter's, or both must refuse.
+`cppgate` (about 12 minutes): the C++ loader (`GEOpenFormats.cpp`, built with the game's compiler flags, i686)
+converts 7394 cases; its bytes must equal the Python converter's, or both must refuse. Result: 866/866 models as
+exported, 866/866 without EE_model, 34/34 as `.glb`, 2539 edited models (TRS instead of matrices, `.NNN` names, no
+wrapper, broken EE_model data, animation-sampled transforms with STEP and LINEAR keys between frames: 1906 identical,
+633 refused by both: rotated wrappers, malformed `frameFixes`), 2792/2792 textures, 297 PNG variants (243 identical,
+54 refused by both: bad `ee:surface`, truncated files). C++ conversion time for all of it: models 76 s, textures 24 s
+(about 0.1 s per model on average, dominated by the biggest).

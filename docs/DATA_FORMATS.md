@@ -1965,6 +1965,8 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 ## 5. Other binary formats (not tables; brief)
 
+The models and textures are described in full, with their open forms (glTF, PNG), in docs/MODEL_FORMATS.md.
+
 | Format | Where | Parsed in | Structure (short) |
 |---|---|---|---|
 | `.civ` civilization | `data.ssa: civilizations\*.civ` (23 premade), user `Users\default\Civilizations\*.civ` | `EELoadCivilization` / save in `src/Empire Earth/Civilization Builder/EECBCivilizationFiles.cpp` (~288, ~421) | `u32 nameLen` + name bytes (no NUL), `u32 count`, `count` x `u32` upgrade ids. An id is `(category << 6) / index` into `dbcivilization` (`EECivilizationManager::SplitAttribute`). Tiny and flat: easy to put in YAML. `dbpremadecivs.mChecksum` must match a premade file. |
