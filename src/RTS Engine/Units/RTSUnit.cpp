@@ -84,7 +84,7 @@ void RTSUnit::DescribeLong(UWideString& ioString)
 // Returns a hash of the unit's id and tile
 unsigned long RTSUnit::HashValue()
 {
-    return ((this->mUnitID << 4) + this->mTileY << 4) + this->mTileX;
+    return static_cast<uint32_t>(((this->mUnitID << 4) + this->mTileY << 4) + this->mTileX);   // a 32-bit hash on every data model
 }
 
 // FUNCTION: EXE 0x63da54

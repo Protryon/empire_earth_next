@@ -16,9 +16,11 @@
 #include "lle/LowLevelEngine.h"
 #include "lle/UEncryption.h"
 
+// The blocks are 32-bit words on every data model (LP64: unsigned long is 64-bit): the rotates, the scanned hex
+// words and the checksum sums are uint32_t, so encrypted strings and codes are the same everywhere.
 struct UEKey {
-    unsigned long mShift;
-    unsigned long mKey;
+    uint32_t mShift;
+    uint32_t mKey;
 };
 
 static const UEKey kKeys[4] = {
@@ -35,15 +37,16 @@ static const UEKey kKeys[4] = {
 // Encrypts a value with one of four rotate-and-xor keys into an 8-digit hex block
 static void UEEncryptBlock(unsigned long inValue, unsigned long inKey, UString& outBlock)
 {
+    uint32_t theValue = inValue;
     sprintf(outBlock, "%08X",
-            ((inValue << kKeys[inKey].mShift) | (inValue >> (32 - kKeys[inKey].mShift))) ^ kKeys[inKey].mKey);
+            ((theValue << kKeys[inKey].mShift) | (theValue >> (32 - kKeys[inKey].mShift))) ^ kKeys[inKey].mKey);
 }
 
 // FUNCTION: LLE 0x1005666c
 // Decrypts an 8-digit hex block with one of four rotate-and-xor keys
 static void UEDecryptBlock(UString& inBlock, unsigned long inKey, unsigned long& outValue)
 {
-    unsigned long theValue;
+    uint32_t theValue;
     sscanf(inBlock, "%X", &theValue);
     theValue ^= kKeys[inKey].mKey;
     outValue = (theValue >> kKeys[inKey].mShift) | (theValue << (32 - kKeys[inKey].mShift));
@@ -55,7 +58,7 @@ void UEEncryptAuthorizationCode(UString& inCode, UString& outCode)
 {
     UString theSubstring;
     UString theBlock;
-    unsigned long theValue;
+    uint32_t theValue;
 
     theSubstring = inCode.GetSubstring(0, 8);
     sscanf(theSubstring, "%X", &theValue);
@@ -99,7 +102,7 @@ bool UEDecryptExpiration(const UString& inString, unsigned long& outFirst, unsig
 {
     UString theBlock;
     unsigned long theChecksum = 0;
-    unsigned long theSum;
+    uint32_t theSum;
 
     theBlock = inString.GetSubstring(0, 8);
     UEDecryptBlock(theBlock, 3, outFirst);
@@ -128,12 +131,12 @@ void UEEncryptGUID(unsigned long inValue, UString& inGUID, unsigned long inKey, 
     UEEncryptBlock(inGUID.GetLength(), inKey, theBlock);
     outString = outString + theBlock;
     int i; for (i = 0; i < inGUID.GetLength(); i += 4) {
-        unsigned long theValue =
+        uint32_t theValue =
             (((inGUID[i] << 8 | inGUID[i + 1]) << 8 | inGUID[i + 2]) << 8) | inGUID[i + 3];
         UEEncryptBlock(theValue, inKey, theBlock);
         outString += theBlock;
     }
-    unsigned long theSum = UEByteSum(inValue) + UEByteSum(inGUID.GetLength());
+    uint32_t theSum = UEByteSum(inValue) + UEByteSum(inGUID.GetLength());
     for (i = 0; i < inGUID.GetLength(); i++)
         theSum += inGUID[i];
     UEEncryptBlock(theSum, inKey, theBlock);
@@ -148,7 +151,7 @@ bool UEDecryptGUID(const UString& inString, unsigned long inKey, unsigned long& 
     unsigned long theChecksum = 0;
     unsigned long theLength;
     unsigned long theValue;
-    unsigned long theSum;
+    uint32_t theSum;
 
     theBlock = inString.GetSubstring(0, 8);
     UEDecryptBlock(theBlock, inKey, outValue);
@@ -187,12 +190,12 @@ void UEEncryptUString(const UString& inString, UString& outString)
     UEEncryptBlock(theString.GetLength(), 0, theBlock);
     outString = UString((const char*)UWideString(outString) + UWideString(theBlock));
     int i; for (i = 0; i < theString.GetLength(); i += 4) {
-        unsigned long theValue =
+        uint32_t theValue =
             (((theString[i] << 8 | theString[i + 1]) << 8 | theString[i + 2]) << 8) | theString[i + 3];
         UEEncryptBlock(theValue, 0, theBlock);
         outString = UString((const char*)UWideString(outString) + UWideString(theBlock));
     }
-    unsigned long theSum = UEByteSum(theString.GetLength()) + UEByteSum(inString.GetLength());
+    uint32_t theSum = UEByteSum(theString.GetLength()) + UEByteSum(inString.GetLength());
     for (i = 0; i < theString.GetLength(); i++)
         theSum += theString[i];
     UEEncryptBlock(theSum, 0, theBlock);
@@ -209,7 +212,7 @@ bool UEDecryptUString(const UString& inString, UString& outString)
     unsigned long theLength;
     unsigned long thePaddedLength;
     unsigned long theValue;
-    unsigned long theSum;
+    uint32_t theSum;
 
     theBlock = inString.GetSubstring(0, 8);
     UEDecryptBlock(theBlock, 0, theLength);

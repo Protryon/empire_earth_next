@@ -109,7 +109,7 @@ bool ESChecksum::GetIsVerboseMode() const
 // Returns the sum of every entry's checksum
 unsigned long ESChecksum::GetTotalChecksum() const
 {
-    unsigned long theTotal = 0;
+    uint32_t theTotal = 0;   // 32-bit sum on every data model (the total is saved and compared between peers)
     for (std::vector<ESChecksumEntry>::const_iterator theEntry = this->mEntries.begin(); theEntry != this->mEntries.end();
          ++theEntry)
         theTotal += theEntry->GetChecksum();

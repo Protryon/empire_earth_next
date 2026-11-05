@@ -5,6 +5,8 @@
 #ifndef LLE_URANDOM_H
 #define LLE_URANDOM_H
 
+#include <stdint.h>
+
 class LLE_API URandom {                     // proven sizeof 0x10 (TCP: operator new(0x10))
 public:
     // proven inline (TCP NPIMGetStatus/NPIMActivate): LCG constants stored before the seed; seed 0 -> 1
@@ -45,11 +47,15 @@ private:
     unsigned long NextInSeries();           // exported private ?NextInSeries@URandom@@AAEKXZ
 public:
 
-    unsigned long mSeed;                    // +0x00
-    unsigned long mMultiplier;              // +0x04
-    unsigned long mModulus;                 // +0x08
-    unsigned long mIncrement;               // +0x0c
+    // 32-bit state on every data model: the series is the same on Windows, Linux and macOS (lockstep games and
+    // seeded maps depend on it). The functions keep their unsigned long signatures (the harness finds
+    // NextInSeries/Generate by their mangled names); a seed is taken as its low 32 bits.
+    uint32_t mSeed;                         // +0x00
+    uint32_t mMultiplier;                   // +0x04
+    uint32_t mModulus;                      // +0x08
+    uint32_t mIncrement;                    // +0x0c
 };
+static_assert(sizeof(URandom) == 16, "URandom: four 32-bit words");
 
 class LLE_API URandomIntegers : public URandom {   // proven base: LLE Generate(long,long) 0xde5f calls
 public:                                             // URandom::Generate on the same this

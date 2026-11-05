@@ -1309,19 +1309,19 @@ void EECPAttackSubGroupUnit::ReleaseTarget()
 long EECPAttackSubGroupUnit::Restore(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     this->mLocation.Restore(inMajorVersion, inMinorVersion);
-    if ((long)USavedID(this->GetUnit()) != -1) {
+    if ((int32_t)USavedID(this->GetUnit()) != -1) {
         this->mUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->GetUnit()))));
         if (this->GetUnit() != NULL)
             this->GetUnit()->Reference();
     } else
         this->mUnit = NULL;
-    if ((long)USavedID(this->mTarget) != -1) {
+    if ((int32_t)USavedID(this->mTarget) != -1) {
         this->mTarget = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mTarget))));
         if (this->mTarget != NULL)
             this->mTarget->Reference();
     } else
         this->mTarget = NULL;
-    if ((long)USavedID(this->mEscort) != -1) {
+    if ((int32_t)USavedID(this->mEscort) != -1) {
         this->mEscort = this->mSubGroup->FindUnit(dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mEscort)))));
         if (this->mEscort != NULL)
             this->mEscort->Reference();
