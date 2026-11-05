@@ -95,10 +95,15 @@ Steps:
    removed, CI builds x64); the differential tooling, human driver and save/load sessions on x64.
 4. **macOS/Linux**: the platform layer's POSIX implementation (PORT.md "Cross-platform"), windowing/input on a
    small portable layer (SDL3 or winit-style C library, decision then), GDI text replaced (FreeType/stb_truetype or
-   a font atlas), Winsock -> BSD sockets, `long` is 64-bit there (FSFile::Read(long&) and record members: switch
-   to fixed-width types first, on Windows, with the record-size asserts as the gate), case-insensitive paths over
-   the game data. wgpu covers rendering (Metal, Vulkan). Builds: clang + CMake or the Python build with a target
-   triple; CI runners for both.
+   a font atlas), Winsock -> BSD sockets, case-insensitive paths over the game data. wgpu covers rendering (Metal,
+   Vulkan). Builds: clang + CMake or the Python build with a target triple; CI runners for both.
+   `long` is 64-bit there: done on Windows first (branch lp64, PORT_LEARNINGS.md "LP64"): every value in a file or
+   network message has a fixed width (FSFile's int32_t/uint32_t overloads with 4-byte long adapters, int32_t fields
+   in the 37 raw records and the 133 message members, 32-bit wire locals), the RNG state, checksums, saved ids and
+   "none" sentinels are 32-bit, and printf/scanf formats match their arguments (`-Wformat` clean for x64). Gates:
+   `tools/record_sizes.py` (no record holds a long), `tools/lp64_census.py` (the census), `tools/objdiff.py`
+   (Windows object code unchanged but for the listed functions). Left for the POSIX port itself: wchar_t width,
+   Windows SDK structs read from files, little-endian formats (PORT_LEARNINGS.md "LP64").
 
 ## Plan: one static exe, no proprietary third-party code (owner, 2026-11-04)
 
@@ -287,9 +292,8 @@ harness's time shim hooks those imports), and is linked with the engine (`tools/
    file), MessageBox, GetVersion/UGetOSType, LoadLibrary (left only in the test profile), the floating-point control
    word (`_controlfp`, UMath: x87 precision; becomes a no-op on x64/SSE, but check the determinism it was for).
 6. **LP64 (Linux/macOS 64-bit)**: Windows `long` is 32-bit on both x86 and x64, so the x64 census found the record
-   formats safe; on LP64 `long` is 64-bit. Everything that writes `sizeof(long)` (FSFile::Read(long&)/Write(const
-   long&), the network messages' long members, the `static_assert`ed records holding `long`) must become int32_t
-   before a non-Windows 64-bit build reads a saved game or talks to another player.
+   formats safe; on LP64 `long` is 64-bit. Done (branch lp64): files, records and network messages have fixed
+   widths, sentinels, RNG and checksums are 32-bit, formats match (plan step 4; PORT_LEARNINGS.md "LP64").
 7. Paths: the game builds `C:\...` paths with backslashes (FSFileSpec volume + directory + file); a POSIX PlatFile
    maps them (volume dropped or mapped to a root, separators, case-insensitive lookup of the game data).
 
