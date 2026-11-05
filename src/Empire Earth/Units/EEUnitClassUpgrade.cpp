@@ -262,7 +262,7 @@ void EEUnitClassUpgrade::LoadButtons(EEPlayer* inPlayer)
         this->mButtonLoadCount++;
         sUnitClassUpgradeLock.mLock->Leave();
         while (this->mIsLoadingButtons == true)
-            Sleep(1);
+            PlatSleep(1);
         sUnitClassUpgradeLock.mLock->Enter();
     }
     sUnitClassUpgradeLock.mLock->Leave();
@@ -302,7 +302,7 @@ void EEUnitClassUpgrade::LoadMedia(EEPlayer* inPlayer, long inMediaFlags)
         this->mMediaCount++;
         sDatabaseLock.mLock->Leave();
         while (this->mIsLoadingMedia == true)
-            Sleep(1);
+            PlatSleep(1);
         sDatabaseLock.mLock->Enter();
     }
     sDatabaseLock.mLock->Leave();
@@ -323,7 +323,7 @@ long EEUnitClassUpgrade::Save(unsigned long inMajorVersion, unsigned long inMino
 void EEUnitClassUpgrade::SetAcknowledgeSound(EESoundObject* inSound, long inIndex)
 {
     while (this->mIsLoadingMedia == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount > 0 && this->mAcknowledgeSounds[inIndex] != NULL)
         this->mAcknowledgeSounds[inIndex]->UnloadMedia();
@@ -338,7 +338,7 @@ void EEUnitClassUpgrade::SetAcknowledgeSound(EESoundObject* inSound, long inInde
 void EEUnitClassUpgrade::SetCreationSound(EESoundObject* inSound)
 {
     while (this->mIsLoadingMedia == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount > 0 && this->mCreationSound != NULL)
         this->mCreationSound->UnloadMedia();
@@ -353,7 +353,7 @@ void EEUnitClassUpgrade::SetCreationSound(EESoundObject* inSound)
 void EEUnitClassUpgrade::SetDeathSound(EESoundObject* inSound)
 {
     while (this->mIsLoadingMedia == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount > 0 && this->mDeathSound != NULL)
         this->mDeathSound->UnloadMedia();
@@ -368,7 +368,7 @@ void EEUnitClassUpgrade::SetDeathSound(EESoundObject* inSound)
 void EEUnitClassUpgrade::SetModel(EEModel* inModel)
 {
     while (this->mIsLoadingMedia == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount > 0 && this->mModel != NULL)
         this->mModel->UnloadMedia();
@@ -401,7 +401,7 @@ void EEUnitClassUpgrade::SetMaxVelocity(float inValue)
 void EEUnitClassUpgrade::SetButton(EEButtonObject* inButton)
 {
     while (this->mIsLoadingMedia == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount > 0 && this->mButton != NULL)
         this->mButton->Release();
@@ -436,7 +436,7 @@ void EEUnitClassUpgrade::SetRange(float inValue)
 void EEUnitClassUpgrade::SetSelectionSound(EESoundObject* inSound, long inIndex)
 {
     while (this->mIsLoadingMedia == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount > 0 && this->mSelectionSounds[inIndex] != NULL)
         this->mSelectionSounds[inIndex]->UnloadMedia();
@@ -451,7 +451,7 @@ void EEUnitClassUpgrade::SetSelectionSound(EESoundObject* inSound, long inIndex)
 void EEUnitClassUpgrade::UnloadButtons(EEPlayer* inPlayer)
 {
     while (this->mIsLoadingButtons == true)
-        Sleep(1);
+        PlatSleep(1);
     sUnitClassUpgradeLock.mLock->Enter();
     if (this->mButtonLoadCount == 1) {
         this->mButtonLoadCount = 0;
@@ -466,7 +466,7 @@ void EEUnitClassUpgrade::UnloadButtons(EEPlayer* inPlayer)
 void EEUnitClassUpgrade::UnloadMedia(EEPlayer* inPlayer)
 {
     while (this->mIsLoadingMedia == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount != 0) {
         if (this->mMediaCount == 1) {

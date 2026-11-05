@@ -4030,12 +4030,12 @@ void EEMLoadMainScreen::Execute()
         while (true) {
             if (!gGraphics->mIsPaused)
                 break;
-            Sleep(1);
+            PlatSleep(1);
         }
     } else {
         gGraphics->PostPause();
         for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
-            Sleep(1);
+            PlatSleep(1);
         if (gWorld.mGameScreenActive == true) {
             gUIManager->SwapForm(gUIManager->mMainGameForm);
             gUIManager->mMainGameForm->mInfoBlinking = false;

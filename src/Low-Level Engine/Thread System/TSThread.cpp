@@ -79,7 +79,7 @@ long TSThread::Post(unsigned long inMessage, void* inParameter1, void* inParamet
     do {
         thePosted = PostThreadMessage(this->mThreadID, inMessage, reinterpret_cast<WPARAM>(inParameter1), (LPARAM)inParameter2);
         if (!thePosted)
-            Sleep(1);
+            PlatSleep(1);
     } while (!thePosted);
     if (inQueue != true)
         return kErrorOK;
@@ -156,7 +156,7 @@ long TSThread::StartThread(unsigned long inStackSize)
                                  &theThreadID);
         if (theHandle == NULL) {
             GetLastError();
-            Sleep(1);
+            PlatSleep(1);
         }
     }
     if (theHandle != NULL) {

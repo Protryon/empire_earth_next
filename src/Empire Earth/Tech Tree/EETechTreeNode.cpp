@@ -407,7 +407,7 @@ void EETechTreeNode::LoadMedia(EEPlayer* inPlayer)
                 inPlayer->SetUnitClassMedia(theEffect->mNewUnitClass, 0x7f);
                 break;
             }
-            Sleep(1);
+            PlatSleep(1);
         }
     }
     inPlayer->EpochMediaLoaded(this->mData->mID);

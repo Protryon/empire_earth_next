@@ -255,7 +255,7 @@ void NERecordPlayback::SwitchModes(unsigned char inMode)
         if (this->mPlaybackThread != NULL) {
             if (!this->PlaybackComplete()) {
                 this->mPlaybackThreadQuitEvent->Set();
-                this->mPlaybackThreadExiting->Wait(INFINITE);
+                this->mPlaybackThreadExiting->Wait(kTSWaitInfinite);
             }
             TSScheduler::DestroyThread(this->mPlaybackThread);
             TSScheduler::DestroyEvent(this->mPlaybackThreadQuitEvent);

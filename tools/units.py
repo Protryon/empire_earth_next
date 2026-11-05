@@ -17,8 +17,10 @@ MODULES = ["tcp", "mixer", "default", "lle", "jpeg", "dx7hrtnl", "exeimg", "exe"
 TARGETS = ["exe"]
 TARGET_MODULES = {"exe": ["exe", "exeimg", "lle", "jpeg", "tcp", "mixer", "default", "dx7hrtnl"]}
 PART_OF = {m: "exe" for m in MODULES if m != "exe"}
-# units a module links besides its own (none since the VC6 build's inline-asm _ftol went: clang never calls it)
-EXTRA_UNITS = {}
+# units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/),
+# with the engine
+PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatThread.cpp"]
+EXTRA_UNITS = {"lle": PLATFORM_UNITS}
 LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c", "pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
              "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c"}
 # dmusic (DirectMusic reimplementation, src/ThirdParty/dmusic): every source but the POSIX thread shim

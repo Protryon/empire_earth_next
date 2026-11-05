@@ -3,6 +3,8 @@
 #ifndef LLE_TSREADWRITELOCK_H
 #define LLE_TSREADWRITELOCK_H
 
+#include "platform/PlatThread.h"
+
 class TSCriticalSection;
 class TSEvent;
 
@@ -21,7 +23,7 @@ private:
     TSCriticalSection* mWriteLock;          // +0x00
     TSEvent* mNoReaders;                    // +0x04 auto-reset; set when the last reader leaves
     TSEvent* mReading;                      // +0x08 manual-reset; set while readers hold the lock
-    long mReaderCount;                      // +0x0c (Interlocked)
+    volatile int32_t mReaderCount;          // +0x0c (PlatAtomicIncrement/Decrement)
 };
 
 #endif

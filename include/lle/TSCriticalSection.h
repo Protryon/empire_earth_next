@@ -3,6 +3,8 @@
 #ifndef LLE_TSCRITICALSECTION_H
 #define LLE_TSCRITICALSECTION_H
 
+#include "platform/PlatThread.h"
+
 class LLE_API TSCriticalSection {
     friend class TSScheduler;               // only the scheduler creates/destroys (private ctor/dtor exported)
 public:
@@ -12,7 +14,7 @@ private:
     TSCriticalSection();
     ~TSCriticalSection();
 
-    CRITICAL_SECTION mSection;              // +0x00
+    PlatMutex* mSection;                    // +0x00 (the original held a CRITICAL_SECTION here; platform/PlatThread.h)
     unsigned long mOwnerThread;             // +0x18 thread id while held (set on first Enter)
     unsigned long mLockCount;               // +0x1c recursion count
 };

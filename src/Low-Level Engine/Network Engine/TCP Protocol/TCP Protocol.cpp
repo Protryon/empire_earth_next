@@ -1145,7 +1145,7 @@ extern "C" long NPIMSearchForGame(const UString& inHost, const UString& inName, 
         } else {
             if (gSearcherRunning == true) {
                 gSearcherThreadExitEvent->Set();
-                gSearcherThreadFinishedEvent->Wait(INFINITE);
+                gSearcherThreadFinishedEvent->Wait(kTSWaitInfinite);
                 TSScheduler::DestroyThread(gSearcherThread);
                 TSScheduler::DestroyEvent(gSearcherThreadFinishedEvent);
                 TSScheduler::DestroyEvent(gSearcherThreadExitEvent);
@@ -1330,7 +1330,7 @@ extern "C" long NPIMXferSendTo(TCPServer** inHandle, unsigned long inIndex, char
                 inLength -= theCount;
                 theSent += theCount;
             } else if (WSAGetLastError() == WSAEWOULDBLOCK) {
-                Sleep(1);
+                PlatSleep(1);
             } else {
                 theResult = kNPIMNativeError;
                 break;
@@ -1436,7 +1436,7 @@ static long QueryGames(const UString& inName, hostent* inHost)
                                     gDetectedGames2.push_back(theGame);
                                 }
                             }
-                            Sleep(1);
+                            PlatSleep(1);
                         }
                         gDetectedGamesLock->Enter();
                         gDetectedGames.resize(gDetectedGames2.size());
@@ -1479,22 +1479,22 @@ static unsigned long Searcher(void* inService)
     ESVERIFY_AT(inService != NULL, 2845);
     theName = *static_cast<UString*>(inService);
     delete static_cast<UString*>(inService);
-    HANDLE theExitEvent = gSearcherThreadExitEvent->mHandle;
+    TSEvent* theExitEvent = gSearcherThreadExitEvent;
     UMSetFloatingPointPrecision(_PC_53);
     while (!theDone) {
         if (UMGetFloatingPointPrecision() != _PC_53)
             UMSetFloatingPointPrecision(_PC_53);
         if (UMGetFloatingPointRoundingMode() != _RC_NEAR)
             UMSetFloatingPointRoundingMode(_RC_NEAR);
-        switch (WaitForSingleObject(theExitEvent, 50)) {
-        case WAIT_OBJECT_0:
+        switch (TSEvent::WaitAny(&theExitEvent, 1, 50)) {
+        case 0:
             gSearcherThreadExitEvent->Clear();
             theDone = true;
             break;
-        case WAIT_TIMEOUT:
+        case kTSWaitTimeout:
             QueryGames(theName, NULL);
             break;
-        case WAIT_FAILED:
+        case kTSWaitFailed:
             GetLastError();
             break;
         }

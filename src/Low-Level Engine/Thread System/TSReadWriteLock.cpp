@@ -27,18 +27,18 @@ TSReadWriteLock::~TSReadWriteLock()
 // Takes a read lock: the first reader waits until no writer holds the lock, then readers wait for reading to open
 void TSReadWriteLock::ReadLock()
 {
-    if (InterlockedIncrement(&this->mReaderCount) == 1) {
-        this->mNoReaders->Wait(INFINITE);
+    if (PlatAtomicIncrement(&this->mReaderCount) == 1) {
+        this->mNoReaders->Wait(kTSWaitInfinite);
         this->mReading->Set();
     }
-    this->mReading->Wait(INFINITE);
+    this->mReading->Wait(kTSWaitInfinite);
 }
 
 // FUNCTION: LLE 0x10053e08
 // Releases a read lock: the last reader closes reading and lets writers in
 void TSReadWriteLock::ReadUnlock()
 {
-    if (InterlockedDecrement(&this->mReaderCount) == 0) {
+    if (PlatAtomicDecrement(&this->mReaderCount) == 0) {
         this->mReading->Clear();
         this->mNoReaders->Set();
     }
@@ -49,7 +49,7 @@ void TSReadWriteLock::ReadUnlock()
 void TSReadWriteLock::WriteLock()
 {
     this->mWriteLock->Enter();
-    this->mNoReaders->Wait(INFINITE);
+    this->mNoReaders->Wait(kTSWaitInfinite);
 }
 
 // FUNCTION: LLE 0x10053e41

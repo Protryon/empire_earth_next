@@ -925,7 +925,7 @@ void EEServer::HandleLobbyInput(NEMessage* inMessage)
         gCommunications->SetIsMultiplayerSession(gCommunications->GetNumHumanPlayers() != 1);
         gGraphics->PostResume();
         while (gGraphics->mIsPaused)
-            Sleep(1);
+            PlatSleep(1);
         this->StartGame();
         if (!gGameScreenActive)
             this->PauseGame();
@@ -934,7 +934,7 @@ void EEServer::HandleLobbyInput(NEMessage* inMessage)
             while (true) {
                 if (gPhysics->mTimerRunning)
                     break;
-                Sleep(1);
+                PlatSleep(1);
             }
             gUIManager->mMainGameForm->SetUIState(0);
         }

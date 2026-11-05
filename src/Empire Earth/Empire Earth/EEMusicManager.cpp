@@ -67,7 +67,7 @@ EEMusicManager::EEMusicManager(SEConductor* inConductor, long inThreadPriority)
 
     ESVERIFY_AT(TSScheduler::CreateThread(this->mThread, EEMusicManager::MusicManagerMain, (void*)this) == keseOK, 133);
     ESVERIFY_AT(this->mThread->SetPriority(inThreadPriority) == keseOK, 134);
-    this->mThreadCreated->Wait(INFINITE);
+    this->mThreadCreated->Wait(kTSWaitInfinite);
     this->mThread->SetName(sThreadName);
     this->mConductor->SetIntensity(this->mIntensity, true);
 }
@@ -80,7 +80,7 @@ EEMusicManager::EEMusicManager(SEConductor* inConductor, long inThreadPriority)
 EEMusicManager::~EEMusicManager()
 {
     this->mExit->Set();
-    this->mThreadDone->Wait(INFINITE);
+    this->mThreadDone->Wait(kTSWaitInfinite);
     TSScheduler::DestroyEvent(this->mThreadCreated);
     TSScheduler::DestroyEvent(this->mThreadDone);
     TSScheduler::DestroyEvent(this->mExit);
@@ -100,19 +100,19 @@ unsigned long EEMusicManager::MusicManagerMain(void* inThis)
     EEMusicManager* theThis = static_cast<EEMusicManager*>(inThis);
     bool theDone = false;
     theThis->mThreadCreated->Set();
-    HANDLE theEvents[5];
-    theEvents[0] = theThis->mExit->mHandle;
-    theEvents[1] = theThis->mPause->mHandle;
-    theEvents[2] = theThis->mSetIntensity->mHandle;
-    theEvents[3] = theThis->mStart->mHandle;
-    theEvents[4] = theThis->mStop->mHandle;
+    TSEvent* theEvents[5];
+    theEvents[0] = theThis->mExit;
+    theEvents[1] = theThis->mPause;
+    theEvents[2] = theThis->mSetIntensity;
+    theEvents[3] = theThis->mStart;
+    theEvents[4] = theThis->mStop;
     UMSetFloatingPointPrecision(kFPPrecision53);
     do {
         if (UMGetFloatingPointPrecision() != kFPPrecision53)
             UMSetFloatingPointPrecision(kFPPrecision53);
         if (UMGetFloatingPointRoundingMode() != 0)
             UMSetFloatingPointRoundingMode(0);
-        DWORD theResult = WaitForMultipleObjects(5, theEvents, FALSE, theThis->mTimeToNextSong);
+        long theResult = TSEvent::WaitAny(theEvents, 5, theThis->mTimeToNextSong);
         unsigned long theTime = TMGetTime();
         unsigned long theElapsedTime = theTime - theLastTime;
         theLastTime = theTime;
@@ -121,31 +121,31 @@ unsigned long EEMusicManager::MusicManagerMain(void* inThis)
         else
             theThis->mIntensityDelay -= theElapsedTime;
         switch (theResult) {
-        case WAIT_FAILED:
+        case kTSWaitFailed:
             GetLastError();
             break;
-        case WAIT_TIMEOUT:
+        case kTSWaitTimeout:
             if (theThis->mState == 2)
                 theThis->NextSong();
             break;
-        case WAIT_OBJECT_0 + 4:
+        case 4:
             theThis->DoStop();
             break;
-        case WAIT_OBJECT_0 + 3:
+        case 3:
             if (theThis->mState == 2)
                 theThis->Update(theElapsedTime);
             else
                 theThis->DoStart();
             break;
-        case WAIT_OBJECT_0 + 2:
+        case 2:
             theThis->DoSetIntensity();
             if (theThis->mState == 2)
                 theThis->Update(theElapsedTime);
             break;
-        case WAIT_OBJECT_0 + 1:
+        case 1:
             theThis->DoPause();
             break;
-        case WAIT_OBJECT_0:
+        case 0:
             theThis->DoStop();
             theDone = true;
             break;
@@ -254,7 +254,7 @@ static void FadeIn(SEConductor* inConductor)
     while (theVolume < gGamePreferences.mSettings.GetMusicVolume()) {
         inConductor->SetVolume(theVolume);
         theVolume += sFadeStep * kFadeTime;
-        Sleep(sFadeSleep);
+        PlatSleep(sFadeSleep);
     }
     inConductor->SetVolume(gGamePreferences.mSettings.GetMusicVolume());
 }
@@ -277,7 +277,7 @@ void EEMusicManager::DoStop()
     long theResult;
     do {
         theResult = this->mMusic->UnloadScore();
-        Sleep(1);
+        PlatSleep(1);
     } while (theResult == 5);
     this->mMusic = NULL;
 }
@@ -307,7 +307,7 @@ void EEMusicManager::NextSong()
                 long theResult;
                 do {
                     theResult = theOldMusic->UnloadScore();
-                    Sleep(1);
+                    PlatSleep(1);
                 } while (theResult == 5);
             }
             SEScore* theScore = this->mConductor->GetScore(this->mScoreID);
@@ -339,7 +339,7 @@ static void FadeOut(SEConductor* inConductor)
     while (theVolume > 0.0f) {
         inConductor->SetVolume(theVolume);
         theVolume -= sFadeStep * kFadeTime;
-        Sleep(sFadeSleep);
+        PlatSleep(sFadeSleep);
     }
     inConductor->SetVolume(0.0f);
 }

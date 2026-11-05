@@ -429,7 +429,7 @@ void EEStartScreen::Start()
     gStartScreenPainted = false;
     TSScheduler::CreateThread(this->mThread, EEStartScreen::ThreadMain, this);
     while (gStartScreenPainted == false)
-        Sleep(1);
+        PlatSleep(1);
 }
 
 // FUNCTION: EXE 0x53f331
@@ -439,7 +439,7 @@ void EEStartScreen::Stop()
     if (gGamePreferences.mSettings.GetFullScreen() != true)
         return;
     this->mQuit = true;
-    this->mEndThreadEvent->Wait(INFINITE);
+    this->mEndThreadEvent->Wait(kTSWaitInfinite);
     TSScheduler::DestroyThread(this->mThread);
 }
 
@@ -513,7 +513,7 @@ unsigned long EEStartScreen::ThreadMain(void* inParameter)
                 EESetThreadFloatingPoint("StartScreenMainThread");
                 if (theScreen->mQuit == true)
                     PostQuitMessage(0);
-                Sleep(1);
+                PlatSleep(1);
             } while (theMessage != 0x12);
             theScreen->mEndThreadEvent->Set();
             ReleaseDC(theWindow, sStartScreenDC);
@@ -822,19 +822,19 @@ bool EEInitializePart1()
 inline void RTSMousePointer::Shutdown()
 {
     this->mThread->Post(kThreadMessageQuit, NULL, NULL, true);
-    this->mThreadDone->Wait(INFINITE);
+    this->mThreadDone->Wait(kTSWaitInfinite);
 }
 
 inline void RTSPhysics::Shutdown()
 {
     this->mThread->Post(kThreadMessageQuit, NULL, NULL, true);
-    this->mThreadDone->Wait(INFINITE);
+    this->mThreadDone->Wait(kTSWaitInfinite);
 }
 
 inline void EEDataPreLoading::Shutdown()
 {
     this->mThread->Post(kThreadMessageQuit, NULL, NULL, true);
-    this->mThreadDone->Wait(INFINITE);
+    this->mThreadDone->Wait(kTSWaitInfinite);
 }
 #include "lle/UIControl.h"
 #include "lle/UIForm.h"
@@ -1359,10 +1359,10 @@ void EEClearGame()
 {
     gGraphics->PostPause();
     for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
-        Sleep(1);
+        PlatSleep(1);
     gPhysics->mThread->Post(0x402, NULL, NULL, true);
     while (gPhysics->mTimerRunning)
-        Sleep(1);
+        PlatSleep(1);
     gGraphics->PostReleaseScene();
     gGraphics->PostMessage50AAndWait();
     gDataPreLoading->WaitForMessageQueue();
@@ -1482,7 +1482,7 @@ void EEPlayIntroMovies(bool inSkipMovies)
                 gISMouse->GetEntity(kMouseLeftButton, theEntity);
                 if (theEntity->JustPressed())
                     theResult = 7;
-                Sleep(1);
+                PlatSleep(1);
             } while (theResult != 7);
             gRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f), theRectangle, gGamePreferences.mSettings.GetScreenID());
 
@@ -1662,7 +1662,7 @@ void EEShutdownThreads(bool inShutdown)
 {
     gPhysics->mThread->Post(0x402, NULL, NULL, true);
     while (gPhysics->mTimerRunning)
-        Sleep(1);
+        PlatSleep(1);
     delete gCommunications;
     gCommunications = NULL;
     EEWonNet* theWonNet = gWonNet;
@@ -1670,10 +1670,10 @@ void EEShutdownThreads(bool inShutdown)
     delete theWonNet;
     gMousePointer->mThread->Post(0x402, NULL, NULL, true);
     while (gMousePointer->mIsShown)
-        Sleep(1);
+        PlatSleep(1);
     gGraphics->PostPause();
     for (bool theStarted = gGraphics->mIsPaused; theStarted == false; theStarted = gGraphics->mIsPaused)
-        Sleep(1);
+        PlatSleep(1);
     gPhysics->Shutdown();
     delete gPhysics;
     gPhysics = NULL;

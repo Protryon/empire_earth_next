@@ -39,7 +39,7 @@ public:
     bool IsTerminated() { return this->GetExitCode() != STILL_ACTIVE; }
     void LockMessageQueue() { this->mMessageLock->Enter(); }
     void UnlockMessageQueue() { this->mMessageLock->Leave(); }
-    static void Yield(unsigned long inMilliseconds) { Sleep(inMilliseconds); }
+    static void Yield(unsigned long inMilliseconds) { PlatSleep(inMilliseconds); }
 private:
     TSThread(unsigned long (*inFunction)(void*), void* inParameter, unsigned long inStackSize, bool inSuspended);
     TSThread(HANDLE inHandle, unsigned long inThreadID, bool inSuspended);

@@ -72,7 +72,7 @@ void NELagLossSimulator::EnableLag(unsigned long inMinimum, unsigned long inMaxi
     ESVERIFY_AT(TSScheduler::CreateEvent(this->mLagThreadStarted) == keseOK, 98);
     ESVERIFY_AT(TSScheduler::CreateEvent(this->mLagThreadFinished) == keseOK, 99);
     TSScheduler::CreateThread(this->mLagThread, NELagLossSimulator::LagThreadFunction, this, 0, false);
-    this->mLagThreadStarted->Wait(INFINITE);
+    this->mLagThreadStarted->Wait(kTSWaitInfinite);
     this->mLagThread->SetName(UString("CommLagLoss"));
 }
 
@@ -85,7 +85,7 @@ void NELagLossSimulator::DisableLag(bool inFlush)
     this->mFlushOnDisable = inFlush;
     this->mLagThreadExit->Set();
     this->mLagQueueChanged->Set();
-    this->mLagThreadFinished->Wait(INFINITE);
+    this->mLagThreadFinished->Wait(kTSWaitInfinite);
     TSScheduler::DestroyEvent(this->mLagQueueChanged);
     TSScheduler::DestroyEvent(this->mLagThreadExit);
     TSScheduler::DestroyEvent(this->mLagThreadFinished);
@@ -104,7 +104,7 @@ void NELagLossSimulator::DisableLag(bool inFlush)
 unsigned long NELagLossSimulator::LagThreadFunction(void* inArgument)
 {
     NELagLossSimulator* theSimulator = static_cast<NELagLossSimulator*>(inArgument);
-    unsigned long theTimeout = INFINITE;
+    unsigned long theTimeout = kTSWaitInfinite;
     unsigned long theTime;
     long theResult;
     NETimestampedMessage* theMessage;
@@ -149,7 +149,7 @@ unsigned long NELagLossSimulator::LagThreadFunction(void* inArgument)
             else
                 theTimeout -= theTime;
         } else
-            theTimeout = INFINITE;
+            theTimeout = kTSWaitInfinite;
         theSimulator->mLaggedMessageListLock->Leave();
     } while (theRunning);
     if (theExiting && theSimulator->mFlushOnDisable) {

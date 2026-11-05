@@ -83,7 +83,7 @@ EESELoadThread::EESELoadThread(EEUIFScenarioEditor* inEditor, long inThreadPrior
 
     ESVERIFY_AT(TSScheduler::CreateThread(this->mThread, EESELoadThread::Main, (void*)this) == keseOK, 85);
     ESVERIFY_AT(this->mThread->SetPriority(inThreadPriority) == keseOK, 86);
-    this->mThreadCreated->Wait(INFINITE);
+    this->mThreadCreated->Wait(kTSWaitInfinite);
     this->mThread->SetName(gScenarioEditorThreadName);
     this->mChangeLoadText = new EESEAChangeLoadText;
 }
@@ -223,7 +223,7 @@ unsigned long EESELoadThread::Main(void* inThis)
             UMSetFloatingPointRoundingMode(0);
         if (theResult == kErrorOK)
             theThread->HandleMessage(theMessage, theParameter1, theParameter2);
-        Sleep(1);
+        PlatSleep(1);
     }
     delete theThread;
     return 0;

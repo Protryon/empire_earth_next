@@ -158,7 +158,7 @@ SESoundManager::~SESoundManager()
     unsigned long i;
     unsigned long j;
     this->mScavengerThreadExitEvent->Set();
-    this->mScavengerThreadFinishedEvent->Wait(INFINITE);
+    this->mScavengerThreadFinishedEvent->Wait(kTSWaitInfinite);
     TSScheduler::DestroyThread(this->mScavengerThread);
     TSScheduler::DestroyEvent(this->mScavengerThreadFinishedEvent);
     TSScheduler::DestroyEvent(this->mScavengerThreadExitEvent);
@@ -1149,8 +1149,8 @@ unsigned long SESoundManager::Scavenger(void* inThisObject)
     SESoundManager* theManager = static_cast<SESoundManager*>(inThisObject);
     bool theDone = false;
     ESVERIFY_AT(inThisObject != NULL, 2626);
-    HANDLE theHandles[1];
-    theHandles[0] = theManager->mScavengerThreadExitEvent->mHandle;
+    TSEvent* theHandles[1];
+    theHandles[0] = theManager->mScavengerThreadExitEvent;
     UMSetFloatingPointPrecision(_PC_53);
     do {
         if (UMGetFloatingPointPrecision() != _PC_53)
@@ -1158,12 +1158,12 @@ unsigned long SESoundManager::Scavenger(void* inThisObject)
         if (UMGetFloatingPointRoundingMode() != _RC_NEAR)
             UMSetFloatingPointRoundingMode(_RC_NEAR);
         theManager->UpdateOneShotSounds();
-        switch (WaitForMultipleObjects(1, theHandles, FALSE, 1000)) {
-        case WAIT_OBJECT_0:
+        switch (TSEvent::WaitAny(theHandles, 1, 1000)) {
+        case 0:
             theManager->mScavengerThreadExitEvent->Clear();
             theDone = true;
             break;
-        case WAIT_TIMEOUT: {
+        case kTSWaitTimeout: {
             theManager->mLock->Enter();
             unsigned long theChannelCount = theManager->mAvailableChannels;
             if (theFreeChannels.size() != theChannelCount)
@@ -1279,10 +1279,10 @@ unsigned long SESoundManager::Scavenger(void* inThisObject)
                 }
             }
             theManager->mLock->Leave();
-            Sleep(1);
+            PlatSleep(1);
             break;
         }
-        case WAIT_FAILED:
+        case kTSWaitFailed:
             GetLastError();
             break;
         }

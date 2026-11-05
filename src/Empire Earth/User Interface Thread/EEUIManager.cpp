@@ -1589,7 +1589,7 @@ long EEUIManager::UpdateKeyboard()
     if (theStop && gGraphics->mIsMoviePlaying) {
         gGraphics->PostStopMovie();
         while (gGraphics->mIsMoviePlaying)
-            Sleep(1);
+            PlatSleep(1);
     }
     if (this->GetCurrentForm() != NULL && !this->GetCurrentForm()->GetIsKeyboardCaptured() && !gLoadingSavedGame) {
         gISKeyboard->GetEntity(kKeyF9, theKey);
@@ -1609,7 +1609,7 @@ long EEUIManager::UpdateMouse(const GE2DPoint& inMouseLocation)
     if ((UIManager::GetLMouseButton()->JustPressed() || UIManager::GetRMouseButton()->JustPressed()) && gGraphics->GetIsMoviePlaying()) {
         gGraphics->PostStopMovie();
         while (gGraphics->mIsMoviePlaying)
-            Sleep(1);
+            PlatSleep(1);
     }
     return UIManager::UpdateMouse(inMouseLocation);
 }

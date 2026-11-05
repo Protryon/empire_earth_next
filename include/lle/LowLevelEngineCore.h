@@ -23,6 +23,7 @@
 #include <math.h>     // lrintf (UMFloatToLong)
 #include <stdint.h>   // uintptr_t (USavedID)
 #include <vector>   // UString::Tokenize
+#include "platform/Platform.h"   // the platform layer (time, threads, ...): every engine and game unit sees it
 
 // ---- Error system (ES)
 // proven: "theResult == keseOK" assert text. Other values: codes returned by the Thread/Time System units;
@@ -74,7 +75,7 @@ class UString;
 #define ESVERIFY_AT(expr, line) if (!(expr)) ESVerify(__FILE__, line, #expr)
 
 // ---- Timing (TM): Time Manager unit 0x53701..0x53819 (folder/file name inferred)
-struct TMTime {                             // filled from SYSTEMTIME by TMGetTimeOfDay 0x5376c
+struct TMTime {                             // filled from the local time by TMGetTimeOfDay 0x5376c
     unsigned long mMonth;                   // +0x00 0-based (wMonth - 1)
     unsigned long mDay;                     // +0x04
     unsigned long mYear;                    // +0x08
@@ -84,7 +85,7 @@ struct TMTime {                             // filled from SYSTEMTIME by TMGetTi
 };
 LLE_API long TMInitialize();
 LLE_API unsigned long TMGetTime();
-LLE_API __int64 TMGetMicroTime();
+LLE_API int64_t TMGetMicroTime();
 LLE_API void TMGetTimeOfDay(TMTime& outTime);
 // TMPoll.h / TMTimer.h are NOT included here: every static data member of a class a unit sees consumes a VC6
 // `$E` number (probe: one per member; extern objects consume none), and the plug-ins' $E numbering proves they

@@ -76,7 +76,7 @@ RTSGraphics::RTSGraphics(GERasterizer* inRasterizer, unsigned long inScreen, RTS
 
     ESVERIFY_AT(TSScheduler::CreateThread(this->mThread, RTSGraphics::Main, (void*)this) == keseOK, 111);
     ESVERIFY_AT(this->mThread->SetPriority(inThreadPriority) == keseOK, 112);
-    this->mThreadCreated->Wait(INFINITE);
+    this->mThreadCreated->Wait(kTSWaitInfinite);
     this->mThread->SetName(gGraphicsThreadName);
 }
 
@@ -132,6 +132,8 @@ unsigned long RTSGraphics::Main(void* inGraphics)
             gMouse->mInputLock->Leave();
             theGraphics->Render(true, true);
         }
+        // Win32 Sleep, not PlatSleep: the test harness's time shim caps the frame rate at the Sleep import by the
+        // caller's return address (inside RTSGraphics::Main; tools/harness/timeshim.c), which a wrapper would hide
         Sleep(1);
     }
     theGraphics->mThreadDone->Set();
@@ -213,7 +215,7 @@ void RTSGraphics::HandleMessage(unsigned long inMessage, void* inParameter1, voi
         if (this->mMovie != NULL) {
             this->mMovie->Stop();
             while (this->mMovie->GetIsPlaying()) {
-                Sleep(1);
+                Sleep(1);   // Win32 Sleep (see Main): HandleMessage may be inlined into Main
             }
             this->mIsMoviePlaying = false;
             this->mMovie->Dereference();
@@ -355,7 +357,7 @@ void RTSGraphics::PostClearRenderObjects()
 void RTSGraphics::Shutdown()
 {
     this->mThread->Post(kThreadMessageQuit, NULL, NULL, true);
-    this->mThreadDone->Wait(INFINITE);
+    this->mThreadDone->Wait(kTSWaitInfinite);
 }
 
 // FUNCTION: EXE 0x51a9bd
@@ -363,7 +365,7 @@ void RTSGraphics::Shutdown()
 long RTSGraphics::PostPause()
 {
     while (this->mIsResumePending) {
-        Sleep(1);
+        PlatSleep(1);
     }
     this->mIsPausePending = true;
     return this->mThread->Post(0x402, NULL, NULL, true);
@@ -414,7 +416,7 @@ void RTSGraphics::PostSetFlag54(bool inFlag)
 void RTSGraphics::PostResume()
 {
     while (this->mIsPausePending) {
-        Sleep(1);
+        PlatSleep(1);
     }
     this->mIsResumePending = true;
     this->mThread->Post(0x403, NULL, NULL, true);

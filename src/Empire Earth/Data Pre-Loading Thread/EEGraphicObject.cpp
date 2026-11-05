@@ -850,7 +850,7 @@ long EEGraphicObject::LoadMedia()
         this->mMediaCount++;
         sDatabaseLock.mLock->Leave();
         while (this->mIsLoading == true)
-            Sleep(1);
+            PlatSleep(1);
         sDatabaseLock.mLock->Enter();
     }
     sDatabaseLock.mLock->Leave();
@@ -982,7 +982,7 @@ long EEGraphicObject::UnloadMedia()
     std::map<long, std::map<const GEModel*, EETagPointList*>*>::iterator theKind;
     std::map<const GEModel*, EETagPointList*>::iterator theModel;
     while (this->mIsLoading == true)
-        Sleep(1);
+        PlatSleep(1);
     sDatabaseLock.mLock->Enter();
     if (this->mMediaCount == 1) {
         this->mMediaCount = 0;

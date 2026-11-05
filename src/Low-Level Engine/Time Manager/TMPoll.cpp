@@ -1,12 +1,11 @@
 // C:\EEX\Low-Level Engine\Time Manager\TMPoll.cpp (folder name inferred)
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
-#include <mmsystem.h>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/TMPoll.h"
 
-__int64 TMPoll::sCounterFrequency;
+int64_t TMPoll::sCounterFrequency;
 
 // TMPoll.h's inline members, emitted here (first includer):
 // SYNTHETIC: LLE 0x10053819
@@ -18,12 +17,12 @@ __int64 TMPoll::sCounterFrequency;
 // Creates a poll that fires every delay (ms, or us for unit 1), using the performance counter when there is one
 TMPoll::TMPoll(unsigned long inTimeDelay, unsigned long inTimeUnit, bool inStart)
 {
-    LARGE_INTEGER theFrequency;
     long theDivisor = inTimeUnit ? 1000000 : 1000;
-    if (QueryPerformanceFrequency(&theFrequency)) {
+    int64_t theFrequency = PlatCounterFrequency();
+    if (theFrequency) {
         this->mUseCounter = true;
-        TMPoll::sCounterFrequency = theFrequency.QuadPart / theDivisor;
-        QueryPerformanceCounter(&this->mStartTime);
+        TMPoll::sCounterFrequency = theFrequency / theDivisor;
+        this->mStartTime = PlatCounterTicks();
     } else {
         // Fixed: the delay used to become inTimeDelay / divisor / 1000, i.e. 0 for any realistic delay, and Poll
         // then divided by zero; timeGetTime counts milliseconds, so only a microsecond delay is converted
@@ -32,14 +31,12 @@ TMPoll::TMPoll(unsigned long inTimeDelay, unsigned long inTimeUnit, bool inStart
         if (inTimeDelay == 0)
             inTimeDelay = 1;
         TMPoll::sCounterFrequency = 1;
-        this->mStartTime.LowPart = timeGetTime();
-        this->mStartTime.HighPart = 0;
+        this->mStartTime = PlatTimeMilliseconds();
         this->mUseCounter = false;
     }
-    this->mPauseRemaining.LowPart = 0;
+    this->mPauseRemaining = 0;
     this->mTimeUnit = inTimeUnit;
     this->mRunning = false;
-    this->mPauseRemaining.HighPart = 0;
     this->mTimeDelay = inTimeDelay;
     if (inStart)
         this->Start();
@@ -52,15 +49,15 @@ unsigned long TMPoll::GetTimeLeft() const
     unsigned long theTimeLeft = 0;
     unsigned long theScale = 1;
     if (this->mRunning) {
-        __int64 theNow;
+        int64_t theNow;
         if (this->mUseCounter)
-            QueryPerformanceCounter((LARGE_INTEGER*)&theNow);
+            theNow = PlatCounterTicks();
         else {
-            theNow = timeGetTime();
+            theNow = PlatTimeMilliseconds();
             if (this->mTimeUnit == 1)
                 theScale = 1000;
         }
-        __int64 theElapsed = (theNow - this->mStartTime.QuadPart) / TMPoll::sCounterFrequency;
+        int64_t theElapsed = (theNow - this->mStartTime) / TMPoll::sCounterFrequency;
         if (theElapsed < this->mTimeDelay)
             theTimeLeft = this->mTimeDelay - (unsigned long)theElapsed;
     }
@@ -71,8 +68,7 @@ unsigned long TMPoll::GetTimeLeft() const
 // Pauses the poll, remembering the time already elapsed in the current period
 void TMPoll::Pause()
 {
-    this->mPauseRemaining.HighPart = 0;
-    this->mPauseRemaining.LowPart = this->mTimeDelay - this->GetTimeLeft();
+    this->mPauseRemaining = (uint32_t)(this->mTimeDelay - this->GetTimeLeft());
 }
 
 // FUNCTION: LLE 0x1005398a
@@ -81,21 +77,21 @@ unsigned long TMPoll::Poll()
 {
     unsigned long theCount = 0;
     unsigned long theScale = 1;
-    if (this->mRunning && this->mPauseRemaining.QuadPart == 0) {
-        __int64 theNow;
+    if (this->mRunning && this->mPauseRemaining == 0) {
+        int64_t theNow;
         if (this->mUseCounter)
-            QueryPerformanceCounter((LARGE_INTEGER*)&theNow);
+            theNow = PlatCounterTicks();
         else {
-            theNow = timeGetTime();
+            theNow = PlatTimeMilliseconds();
             if (this->mTimeUnit == 1)
                 theScale = 1000;
         }
-        __int64 theStart = this->mStartTime.QuadPart;
-        __int64 theElapsed = (theNow - theStart) / TMPoll::sCounterFrequency;
+        int64_t theStart = this->mStartTime;
+        int64_t theElapsed = (theNow - theStart) / TMPoll::sCounterFrequency;
         theCount = (unsigned long)(theElapsed / this->mTimeDelay);
         if (theCount) {
             unsigned long theRemainder = (unsigned long)theElapsed - this->mTimeDelay * theCount;
-            this->mStartTime.QuadPart = theStart + (theElapsed - theRemainder) * TMPoll::sCounterFrequency;
+            this->mStartTime = theStart + (theElapsed - theRemainder) * TMPoll::sCounterFrequency;
         }
     }
     return theScale * theCount;
@@ -105,16 +101,16 @@ unsigned long TMPoll::Poll()
 // Resumes a paused poll: the current period continues from the part that had elapsed when it was paused
 void TMPoll::Resume()
 {
-    if (!(this->mPauseRemaining.QuadPart > 0) || !this->mRunning)
+    if (!(this->mPauseRemaining > 0) || !this->mRunning)
         return;
     // Fixed: the elapsed part used to be added to the start time (in counter mode without converting it to counter
     // ticks), so the current period started over; it is subtracted now
     if (this->mUseCounter) {
-        QueryPerformanceCounter(&this->mStartTime);
-        this->mStartTime.QuadPart -= this->mPauseRemaining.QuadPart * TMPoll::sCounterFrequency;
+        this->mStartTime = PlatCounterTicks();
+        this->mStartTime -= this->mPauseRemaining * TMPoll::sCounterFrequency;
     } else
-        this->mStartTime.QuadPart = timeGetTime() - this->mPauseRemaining.QuadPart;
-    this->mPauseRemaining.QuadPart = 0;
+        this->mStartTime = (int64_t)PlatTimeMilliseconds() - this->mPauseRemaining;
+    this->mPauseRemaining = 0;
 }
 
 // FUNCTION: LLE 0x10053aa2
@@ -123,11 +119,10 @@ void TMPoll::Start()
 {
     if (this->mRunning)
         return;
-    this->mPauseRemaining.LowPart = 0;
+    this->mPauseRemaining = 0;
     this->mRunning = true;
-    this->mPauseRemaining.HighPart = 0;
     if (this->mUseCounter)
-        QueryPerformanceCounter(&this->mStartTime);
+        this->mStartTime = PlatCounterTicks();
     else
-        this->mStartTime.QuadPart = timeGetTime();
+        this->mStartTime = PlatTimeMilliseconds();
 }
