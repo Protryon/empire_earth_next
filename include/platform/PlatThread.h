@@ -22,6 +22,7 @@ PlatMutex* PlatMutexCreate(void);
 void PlatMutexDestroy(PlatMutex* inMutex);
 void PlatMutexLock(PlatMutex* inMutex);
 void PlatMutexUnlock(PlatMutex* inMutex);
+int PlatMutexTryLock(PlatMutex* inMutex);   /* nonzero when locked (recursive, like Lock) */
 
 // An event: manual reset (stays set until reset, releases every waiter) or automatic reset (releases one waiter and
 // clears itself). Create -> NULL on failure (PlatGetLastError). Set/Reset -> nonzero on success.

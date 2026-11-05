@@ -114,8 +114,9 @@ static void ui_test(void) {
     void* critical=*(void**)(manager+EE_OFF_UIM_CRITICAL);
     /* UI events can hold this lock while waiting for the render thread. Never
        block that render thread to inspect or enqueue a test command. */
-    if(!TryEnterCriticalSection((CRITICAL_SECTION*)critical))return;
-    enter(critical);
+    typedef unsigned char (__attribute__((thiscall)) *TryEnter)(void*);
+    TryEnter try_enter=(TryEnter)ee_sym("?TryEnter@TSCriticalSection@@QAE_NXZ");
+    if(!try_enter || !try_enter(critical))return;
     BYTE** first=*(BYTE***)(manager+EE_OFF_UIM_FORMS_FIRST);BYTE** end=*(BYTE***)(manager+EE_OFF_UIM_FORMS_LAST);
     if(end>first) {
         BYTE* form=end[-1];unsigned long count=*(DWORD*)(form+EE_OFF_FORM_COUNT);
@@ -202,7 +203,6 @@ static void ui_test(void) {
         }
     }
     leave(critical);
-    LeaveCriticalSection((CRITICAL_SECTION*)critical);
 }
 #endif   /* EE_PLAY_ONLY: test-only UI fixture state above */
 

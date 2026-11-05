@@ -473,6 +473,11 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
   ShowScene and locking DirectDraw surfaces. `--no-render` (accelerated AI games) used to null Direct3D's vtable
   slots from the time shim; it is now GX's own test switch, `EE_GX_NULL3D=<key ms>` (device draws and clears skipped
   except one scene per key interval), set by timeshim.py in the environment the game inherits.
+- **Harness and the platform layer**: TSCriticalSection now holds a pointer to an opaque PlatMutex, so test code
+  may no longer treat it as a CRITICAL_SECTION. The bridge's UI fixture calls the new
+  `TSCriticalSection::TryEnter` instead (it silently never wrote ui-state.txt before, so accelerated AI games
+  timed out at the main menu). tools/harness/human/human_input.c (not ported yet) still reads the raw layout and
+  must switch to TryEnter/Enter/Leave when it is ported.
 
 ## Text db tables (tools/eedata and the text loader)
 

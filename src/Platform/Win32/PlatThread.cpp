@@ -52,6 +52,11 @@ extern "C" void PlatMutexUnlock(PlatMutex* inMutex)
     LeaveCriticalSection(&inMutex->mSection);
 }
 
+extern "C" int PlatMutexTryLock(PlatMutex* inMutex)
+{
+    return TryEnterCriticalSection(&inMutex->mSection) ? 1 : 0;
+}
+
 extern "C" PlatEvent* PlatEventCreate(int inManualReset, int inInitiallySet)
 {
     return reinterpret_cast<PlatEvent*>(CreateEventA(NULL, inManualReset ? TRUE : FALSE,

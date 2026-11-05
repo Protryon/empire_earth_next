@@ -10,6 +10,7 @@ class LLE_API TSCriticalSection {
 public:
     void Enter();
     void Leave();
+    bool TryEnter();   // port: Enter without waiting; false when another thread holds it (the test harness)
 private:
     TSCriticalSection();
     ~TSCriticalSection();

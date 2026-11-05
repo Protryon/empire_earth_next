@@ -40,3 +40,15 @@ void TSCriticalSection::Leave()
         this->mOwnerThread = 0;
     PlatMutexUnlock(this->mSection);
 }
+
+// Port addition: enters the critical section only if no other thread holds it (tools/harness's UI fixture must never
+// block the render thread); records the owner as Enter does
+bool TSCriticalSection::TryEnter()
+{
+    if (!PlatMutexTryLock(this->mSection))
+        return false;
+    this->mLockCount++;
+    if (this->mLockCount == 1)
+        this->mOwnerThread = PlatCurrentThreadId();
+    return true;
+}
