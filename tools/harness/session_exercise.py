@@ -94,6 +94,54 @@ def _finish_session(ctx,lines):
     return dict(no_human_defeat=dict(hits=rec['hits'],skips=rec['skips']))
 
 
+# Rendering gate (tour/random-game): a capture only proves that some frame was presented, and the UI draws through
+# the same device as the 3D view, so a black game view passed for a long time (x64: a NaN light fade). Regions are
+# fractions of the frame, laid out on the 800x600 game screen: the game view between the top bar and the bottom
+# panel, left of the mini map frame; the mini map's inside. Calibrated on correct x64/i686 frames (view: 78% lit,
+# ~3,000 colours; mini map at the start: 0.8-1.3% terrain pixels, grass and snow maps) and on the black x64 frames
+# (view: 0.1% lit, 181 colours: the cursor; their mini map was right).
+VIEW_REGION=(0.0,0.06,0.80,0.88)        # x0, y0, x1, y1
+MINIMAP_REGION=(0.85,0.74,0.995,0.935)
+VIEW_MIN_LIT=0.30                       # share of pixels with a channel above 24
+VIEW_MIN_COLOURS=512                    # distinct colours at 5 bits per channel (not one uniform fill)
+MINIMAP_MIN_TERRAIN=0.002               # share of lit pixels that are not the white view outline or a blue/red unit dot
+
+
+def frame_regions(pixels):
+    """Measures the game view and the mini map of a 24/32-bit BMP (bytes): lit share, colours, terrain share."""
+    off=struct.unpack_from('<I',pixels,10)[0];w,h=struct.unpack_from('<ii',pixels,18);bpp=struct.unpack_from('<H',pixels,28)[0]
+    if bpp not in (24,32):raise RuntimeError(f'Rendering check: unsupported {bpp}-bit frame')
+    b=bpp//8;stride=(w*b+3)&~3;H=abs(h)
+    def measure(region):
+        x0,y0,x1,y1=int(region[0]*w),int(region[1]*H),int(region[2]*w),int(region[3]*H)
+        n=lit=terrain=0;colours=set()
+        for y in range(y0,y1):
+            row=off+((H-1-y) if h>0 else y)*stride
+            for x in range(x0,x1):
+                blue,green,red=pixels[row+x*b:row+x*b+3];n+=1
+                top=max(red,green,blue)
+                if top>24:lit+=1
+                colours.add((red>>3,green>>3,blue>>3))
+                if top>24 and min(red,green,blue)<235 and blue<=2*max(red,green) and red<=2*max(green,blue):terrain+=1
+        return dict(pixels=n,lit=lit/n,colours=len(colours),terrain=terrain/n)
+    return dict(width=w,height=H,view=measure(VIEW_REGION),minimap=measure(MINIMAP_REGION))
+
+
+def check_rendering(pixels,label,minimap):
+    """Fails the session when the game view is black or uniform (and, after play, when the mini map shows no terrain)."""
+    found=frame_regions(pixels);view=found['view'];problems=[]
+    if view['lit']<VIEW_MIN_LIT or view['colours']<VIEW_MIN_COLOURS:
+        problems.append(f"game view black or uniform: {view['lit']:.1%} lit (need {VIEW_MIN_LIT:.0%}), "
+                        f"{view['colours']} colours (need {VIEW_MIN_COLOURS})")
+    if minimap and found['minimap']['terrain']<MINIMAP_MIN_TERRAIN:
+        problems.append(f"mini map shows no terrain: {found['minimap']['terrain']:.2%} terrain pixels (need {MINIMAP_MIN_TERRAIN:.1%})")
+    print(f"RENDER CHECK {label}: view {view['lit']:.1%} lit, {view['colours']} colours; mini map "
+          f"{found['minimap']['terrain']:.2%} terrain{'' if minimap else ' (not checked)'}: {'FAIL' if problems else 'ok'}",flush=True)
+    found.update(label=label,minimap_checked=minimap,problems=problems)
+    if problems:raise RuntimeError(f'Rendering check failed on {label}: '+'; '.join(problems))
+    return found
+
+
 def exercise(stage,evidence,mode,addresses=None,play_seconds=0,options=None):
     stage,evidence=pathlib.Path(stage),pathlib.Path(evidence)
     evidence.mkdir(parents=True,exist_ok=True)
@@ -132,6 +180,7 @@ def exercise(stage,evidence,mode,addresses=None,play_seconds=0,options=None):
         results.append(dict(milestone=label,form=found[0],command=seq))
         (evidence/'milestones.json').write_text(json.dumps(results,indent=2)+'\n',encoding='utf-8')
         print(f'UI MILESTONE {label}: form {found[0]}',flush=True)
+        return pixels
     def trigger(control,expected,label):
         nonlocal seq
         seq+=1;(stage/'test.command').write_text(f'{seq} {control}\n',encoding='ascii')
@@ -172,7 +221,7 @@ def exercise(stage,evidence,mode,addresses=None,play_seconds=0,options=None):
             if after['world_players']>=2 and after['world_map']!='0x0' and after['physics_ticks_processed']>before['physics_ticks_processed']:break
         else:raise RuntimeError('Loaded gameplay/physics-processing telemetry did not advance')
         (evidence/'simulation.json').write_text(json.dumps(dict(samples=[before,after],physics_advanced=True),indent=2)+'\n',encoding='utf-8')
-        capture('gameplay',11)
+        rendered=[check_rendering(capture('gameplay',11),'gameplay',False)]
         print('GAME LAUNCHED: world rendered; physics-processing counter advanced; physical input and unit orders not tested',flush=True)
         if play_seconds:   # opt-in: keep the unattended game running, sampling the read-only telemetry every 10 s
             # the civilization timer (240/270/300 game s) opens a civilization form over the game and pauses it; a
@@ -192,7 +241,9 @@ def exercise(stage,evidence,mode,addresses=None,play_seconds=0,options=None):
                 print(f"PLAY t+{len(samples)*10-10}s physics_ticks={samples[-1]['physics_ticks_processed']} paused={samples[-1]['paused']}",flush=True)
             (evidence/'play.json').write_text(json.dumps(dict(seconds=play_seconds,samples=samples),indent=2)+'\n',encoding='utf-8')
             time.sleep(2);dismiss()   # the form may open between the last sample and the capture
-            capture('play',11)
+            # the mini map shows the explored terrain around the start once the game has run (checked from 10 s of play)
+            rendered.append(check_rendering(capture('play',11),'play',play_seconds>=10))
+        (evidence/'rendering.json').write_text(json.dumps(rendered,indent=2)+'\n',encoding='utf-8')
         (stage/'stop.request').write_text('exercise complete\n',encoding='ascii')
     else:
         (stage/'stop.request').write_text('exercise complete\n',encoding='ascii')
