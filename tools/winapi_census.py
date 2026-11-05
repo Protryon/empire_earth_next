@@ -10,7 +10,8 @@ per family; every site goes to the TSV (default build/winapi_census.tsv: file, l
 
 --family F lists one family's names by count with their top files. --md prints the family table as Markdown (the
 PORT.md cross-platform section is written from it). Areas marked [out] are owned by other work (the DX7 renderer,
-the Input System, the GE screen/surface/window classes) and are catalogued only.
+the Input System, the GE screen/surface/window classes) and are catalogued only; the platform layer's OS
+implementation (src/Platform/<os>/, [impl]) is where Windows calls belong: neither counts as "in scope".
 
 Heuristics: a name after `.`, `->` or `Class::` is a first-party member, not a Win32 use. Names that first-party
 classes also use as members (TSScheduler::CreateEvent, UIControl::DrawTextA, ...; listed at the end) count only
@@ -297,7 +298,7 @@ AREAS = [
     ("include/lle/U", "engine utilities"),
     ("src/Low-Level Engine/", "engine (other)"),
     ("include/lle/", "engine headers (other)"),
-    ("src/Platform/", "platform layer"),
+    ("src/Platform/", "platform layer, OS implementation [impl]"),
     ("include/platform/", "platform layer"),
     ("src/Empire Earth/Random Map/", "game: random map"),
     ("src/Empire Earth/User Interface Thread/", "game: UI thread / lobby"),
@@ -467,7 +468,7 @@ def main():
         return
 
     def in_scope(s):
-        return "[out]" not in s[4]
+        return "[out]" not in s[4] and "[impl]" not in s[4]
     fam_rows = []
     for f in order:
         rows = by_fam.get(f, [])
