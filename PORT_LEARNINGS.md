@@ -564,3 +564,43 @@ the stub report reaches 0 with no new traps.
 - Process: a Git Bash heredoc lost backslashes in Python string literals here (a doubled backslash arrived single);
   write edit scripts with the editor tool. Edits that touch included headers must wait until a running compile has
   finished: units are restaged and `include/` is read live while it runs.
+
+## x64 harness (branch harness64)
+
+- One debugger source, two builds: `exe_boot.exe` (mingw32) and `exe_boot64.exe` (mingw64). The harness must be
+  native to its target (a 32-bit debugger cannot debug a 64-bit process; the x64 build stops at a machine mismatch),
+  and being native it reads every Windows structure of the target (UNICODE_STRING, OBJECT_ATTRIBUTES, LARGE_STRING,
+  PE headers, DDSURFACEDESC2) in its own layout: no per-arch struct offsets. What differs is only the calling
+  convention at a guarded entry, isolated in an arch layer: `arg_n(c, n)` (x86 `[esp+4n]`; x64 RCX, RDX, R8, R9,
+  then `[rsp+8n]` above the home area), `marg_n` (member functions: thiscall on x86, `this` = first argument on x64),
+  `set_arg` (x64: a register, applied by the step-over's SetThreadContext) and `fake_return(c, nargs, status)` (x86
+  stdcall/thiscall callees pop `4*nargs`, x64 callees pop nothing). Arguments that are ULONG are compared truncated:
+  the upper half of an x64 register (or stack slot) is undefined.
+- The self test is the gate (`tools/harness/selftest/selftest.py`): 40 cases, both harnesses, plus main's i686
+  harness on the 36 cases it supports: identical decision logs after masking addresses, handles, thread ids and the
+  system-DLL noise (WOW64 opens SysWOW64, native System32). Findings it made on the way (all three harnesses agree):
+  handle-relative creates (`CreateFile("x")` from the stage as the current directory: `<rel>\x`) are not "below the
+  stage" and stop; a console target stops at `\Device\ConDrv\Connect` (the game is GUI); `RegCreateKeyEx` of a key
+  whose parent is missing walks up with MAXIMUM_ALLOWED and stops (the game's key exists); `accept` makes an AFD
+  endpoint the loopback policy only allows with `--mp-loopback`; `socket()` reaches the guards twice (socket ->
+  WSASocketW).
+- Symbols: the harness keeps the i686 decorated names; `LinkMap` answers for them in an x64 map (`x64names.py`:
+  `QAE` -> `QEAA`, `PAV` -> `PEAV`, pointer data `...@@EA`, C names without `_`/`@N`; else a unique match of the
+  undecorated signature without `__ptr64`/conventions). All 46 names the session plumbing uses resolve mechanically
+  in the x64 branch's map. The x64 exe is `/FIXED` at 0x400000, so its map has 8-digit addresses: an x64 map is told
+  by its exe's PE header, not the address width.
+- Addresses: everything the harness hands on is an RVA from the map's preferred base (bridge `ee_sym`, gUIManager,
+  the time shim's frame-cap range); the absolute VAs exe_boot takes (`--rng-trace`, `--no-human-defeat`'s world)
+  are moved by `--image-base`; game_state_probe relocates by the running exe's base and takes the pointer size from
+  the process. Fixed today, but an ASLR x64 exe (the self test's are) works unchanged.
+- Offsets: layout_gen dumps x86_64 layouts when clang_build targets x86_64 (or `--x64`); hbuild refuses a
+  layout.json whose vector pointers are 4 apart for an x64 exe. Examples: EEMStartLoading seed +0x14 -> +0x24,
+  EEPhysics::mRandom +0x18 -> +0x30, EEWorld::mPlayers +0x74 -> +0x88, sizeof(UWideString) 0x14 -> 0x20.
+- The mutex bypass of a build by map guards the instruction right after the `call [GetLastError]` (eax is its result
+  there whatever comes next); VC6's exact `push ...; call; test eax,eax; jnz` pattern also refused the i686 clang
+  build (`xor eax,eax; push`).
+- The time shim's Direct3D 7 null-device hooks are gone (GX: `EE_GX_NULL3D`); its x64 build has no stdcall
+  decorations (`.def` names, entry `DllMain`) and needs `-fno-tree-loop-distribute-patterns` (gcc turned a copy loop
+  into a memcpy the `-nostdlib` DLL cannot link).
+- Not on x64: `differential/` (ptsync.h/ptwatch.h read VC6 layouts with 32-bit pointers; the x64 harness refuses
+  their options), the rng trace's caller-frame fields (no frame-pointer chain: logged as 0).
