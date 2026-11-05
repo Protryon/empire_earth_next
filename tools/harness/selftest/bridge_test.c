@@ -2,7 +2,7 @@
  * image: the GX test hooks (GXTestSetPresentHook / GXTestReadFrame), a UI manager with one form of two controls (a
  * plain control with a 0x3f0 trigger event and a check box), and the member functions the bridge calls by RVA
  * (TSCriticalSection::TryEnter/Leave, UIControl::GetTriggerEvent/FireTriggerEvent, UICheckBox::SetChecked/
- * GetIsChecked; thiscall on x86). selftest_inproc.py compiles TestPresentation.dll with this exe's RVAs (nm) and
+ * GetIsChecked). selftest_inproc.py compiles TestPresentation.dll with this exe's RVAs (nm) and
  * offsets (`bridge_test.exe --offsets`), then runs it in build/boot/selftest_stage: the exe loads the bridge, presents
  * two frames and checks what the bridge did. */
 #include <windows.h>
@@ -10,11 +10,6 @@
 #include <stddef.h>
 #include <string.h>
 
-#ifdef _WIN64
-#define THISCALL
-#else
-#define THISCALL __attribute__((thiscall))
-#endif
 #define HOOK __attribute__((noinline, used))
 
 typedef struct { void **vtbl; int checked; int trigger; } Control;
@@ -38,13 +33,13 @@ static Form *form_stack[1] = { &form };
 static Manager manager = { NULL, &critical_object, {0}, form_stack, form_stack + 1, form_stack + 1 };
 Manager *selftest_ui_manager = &manager;   /* gUIManager */
 
-HOOK unsigned char THISCALL selftest_try_enter(void *self) { if (self != &critical_object) return 0; critical_depth++; return 1; }
-HOOK void THISCALL selftest_enter(void *self) { (void)self; critical_depth++; }
-HOOK void THISCALL selftest_leave(void *self) { if (self == &critical_object) critical_depth--; }
-HOOK void *THISCALL selftest_get_trigger(Control *self, unsigned long id) { return self->trigger && id == 0x3f0 ? &trigger_event : NULL; }
-HOOK void THISCALL selftest_fire_trigger(Control *self, unsigned long id) { fired = (int)(self - controls) + 1; fired_id = (int)id; }
-HOOK void THISCALL selftest_set_checked(Control *self, unsigned char on) { self->checked = on; }
-HOOK unsigned char THISCALL selftest_get_checked(Control *self) { return (unsigned char)self->checked; }
+HOOK unsigned char selftest_try_enter(void *self) { if (self != &critical_object) return 0; critical_depth++; return 1; }
+HOOK void selftest_enter(void *self) { (void)self; critical_depth++; }
+HOOK void selftest_leave(void *self) { if (self == &critical_object) critical_depth--; }
+HOOK void *selftest_get_trigger(Control *self, unsigned long id) { return self->trigger && id == 0x3f0 ? &trigger_event : NULL; }
+HOOK void selftest_fire_trigger(Control *self, unsigned long id) { fired = (int)(self - controls) + 1; fired_id = (int)id; }
+HOOK void selftest_set_checked(Control *self, unsigned char on) { self->checked = on; }
+HOOK unsigned char selftest_get_checked(Control *self) { return (unsigned char)self->checked; }
 
 typedef void (*PresentHook)(HWND, void *);
 static PresentHook present;

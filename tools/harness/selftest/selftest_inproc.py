@@ -1,10 +1,10 @@
-"""TEST ONLY: the in-process parts of the self test (selftest.py), each for one architecture, each returning
+"""TEST ONLY: the in-process parts of the self test (selftest.py), each for the x64 harness, each returning
 (ok, detail):
   shim      the time shim (timeshim.stage_timeshim) loaded by shim_test.exe staged as EE-AOC.exe (WINMM renamed)
   bridge    the presentation bridge (presentation_bridge.compile_bridge) loaded by bridge_test.exe
-  probe     game_state_probe.sample on probe_test.exe laid out by the architecture's record layouts
-  plumbing  hbuild.Build on a stand-in build (the guard test exe, a lld-format map of the game's names as the
-            architecture decorates them, the real layouts): bridge defines, renderer/static-exe RVAs, the production
+  probe     game_state_probe.sample on probe_test.exe laid out by the x64 record layouts
+  plumbing  hbuild.Build on a stand-in build (the guard test exe, a lld-format map of the game's x64 names, the real
+            layouts): bridge defines, renderer/static-exe RVAs, the production
             bridge build (build_presentation_bridge), the no-human-defeat and mutex-bypass locators, the frame-cap range
 Stages: build/boot/selftest_stage and (probe, plumbing: the paths those tools accept) build/boot/windowed_o_32."""
 import pathlib
@@ -20,16 +20,16 @@ sys.path.insert(0, str(HERE))
 import selftest as st          # noqa: E402
 
 BRIDGE_NAMES = {
-    "?Enter@TSCriticalSection@@QAEXXZ": "selftest_enter",
-    "?Leave@TSCriticalSection@@QAEXXZ": "selftest_leave",
-    "?TryEnter@TSCriticalSection@@QAE_NXZ": "selftest_try_enter",
-    "?GetTriggerEvent@UIControl@@QAEPAVUIEvent@@K@Z": "selftest_get_trigger",
-    "?FireTriggerEvent@UIControl@@QAEXK@Z": "selftest_fire_trigger",
+    "?Enter@TSCriticalSection@@QEAAXXZ": "selftest_enter",
+    "?Leave@TSCriticalSection@@QEAAXXZ": "selftest_leave",
+    "?TryEnter@TSCriticalSection@@QEAA_NXZ": "selftest_try_enter",
+    "?GetTriggerEvent@UIControl@@QEAAPEAVUIEvent@@K@Z": "selftest_get_trigger",
+    "?FireTriggerEvent@UIControl@@QEAAXK@Z": "selftest_fire_trigger",
     "??_7UICheckBox@@6B@": "selftest_checkbox_vtbl",
-    "?SetChecked@UICheckBox@@QAEX_N@Z": "selftest_set_checked",
-    "?GetIsChecked@UICheckBox@@QBE_NXZ": "selftest_get_checked",
-    "_GXTestSetPresentHook": "selftest_set_present_hook",
-    "_GXTestReadFrame": "selftest_read_frame",
+    "?SetChecked@UICheckBox@@QEAAX_N@Z": "selftest_set_checked",
+    "?GetIsChecked@UICheckBox@@QEBA_NXZ": "selftest_get_checked",
+    "GXTestSetPresentHook": "selftest_set_present_hook",
+    "GXTestReadFrame": "selftest_read_frame",
 }
 
 
@@ -42,10 +42,9 @@ def fresh_stage():
     return st.STAGE
 
 
-def lld_map(path, base, symbols, x64):
+def lld_map(path, base, symbols):
     """A minimal lld-link map (the format LinkMap reads) of symbols {name: rva}."""
-    w = 16 if x64 else 8
-    rows = "".join(f" 0001:{rva - 0x1000:08x}       {name} {base + rva:0{w}x}     selftest.obj\n"
+    rows = "".join(f" 0001:{rva - 0x1000:08x}       {name} {base + rva:016x}     selftest.obj\n"
                    for name, rva in sorted(symbols.items(), key=lambda kv: kv[1]))
     pathlib.Path(path).write_text(f" EE-AOC\n\n Preferred load address is {base:016x}\n\n"
                                   "  Address         Publics by Value              Rva+Base               Lib:Object\n\n"
@@ -59,11 +58,10 @@ def shim(arch, d):
     stage = fresh_stage()
     baseline = subprocess.run([str(exe)], capture_output=True, text=True, timeout=60, cwd=stage).stdout.strip()
     shutil.copy(exe, stage / "EE-AOC.exe")
-    # the frame cap's range comes from the map by RTSGraphics::Main's i686 name (an x64 map has the x64 name)
-    main = "?Main@RTSGraphics@@SAKPEAX@Z" if arch == "x64" else "?Main@RTSGraphics@@SAKPAX@Z"
-    lld_map(stage / "EE-AOC.map", base, {main: syms["render_main"], "?End@@YAXXZ": syms["render_main_end"]}, arch == "x64")
+    # the frame cap's range comes from the map by RTSGraphics::Main's name
+    lld_map(stage / "EE-AOC.map", base, {timeshim.RENDER_MAIN: syms["render_main"], "?End@@YAXXZ": syms["render_main_end"]})
     # the DLL is built under the self test's own directory, staged by stage_timeshim as the sessions do
-    timeshim.BUILD = st.SELF / "timeshim"
+    timeshim.BUILD = st.SELF / "timeshim" / "x64"
     m = timeshim.stage_timeshim(stage, 8, frame_ms=40, fulllink_map=stage / "EE-AOC.map")
     out = subprocess.run([str(stage / "EE-AOC.exe")], capture_output=True, text=True, timeout=60, cwd=stage).stdout.strip()
     v = dict(re.findall(r"(\w+) ([\d.]+)", out))
@@ -114,12 +112,11 @@ PROBE_FIELDS = {   # define: (class, VC6 offset) as game_state_probe.py reads th
 
 
 def layout_dir(arch):
-    """The record layouts of this checkout for arch (layout_gen.py, cached under build/boot/selftest/<arch>)."""
+    """The record layouts of this checkout (layout_gen.py, cached under build/boot/selftest/<arch>)."""
     d = st.SELF / arch / "layout"
     if not (d / "layout.json").exists():
         d.mkdir(parents=True, exist_ok=True)
-        subprocess.run([sys.executable, "-I", str(HARNESS / "layout_gen.py"), "--out", str(d)]
-                       + (["--x64"] if arch == "x64" else []), check=True)
+        subprocess.run([sys.executable, "-I", str(HARNESS / "layout_gen.py"), "--out", str(d)], check=True)
     return d
 
 
@@ -153,7 +150,7 @@ def probe(arch, d):
         proc.wait()
         L._CURRENT = None
     rows = {r["index"]: r for r in s["player_rows"]}
-    p = 8 if arch == "x64" else 4
+    p = 8
     ok = (s["pointer_size"] == p and s["last_tick_received"] == 1234 and s["physics_ticks_processed"] == 5678
           and s["paused"] and not s["multiplayer"] and s["world_players"] == 3 and s["world_map"] != "0x0"
           and s["game_ms"] == 4321 and s["game_over_be6"] == 0 and s["pt_ub4"] == 99 and s["local_player"] == 1
@@ -171,36 +168,32 @@ def plumbing(arch, d):
     """The session plumbing on a stand-in build of arch (no game)."""
     import hbuild
     import layout as L
-    import x64names
     import presentation_bridge as pb
     import no_human_defeat
     import timeshim
     sys.path.insert(0, str(HARNESS))
     import game_session
-    x64 = arch == "x64"
     exe = d / "guard_test.exe"   # built by selftest.build_all
     syms, base = st.symbols(arch, exe)
     fake = d / "fakebuild"
     (fake / "exe").mkdir(parents=True, exist_ok=True)
     shutil.copy(exe, fake / "exe" / "EE-AOC.exe")
     shutil.copy(layout_dir(arch) / "layout.json", fake / "layout.json")
-    # every game name the session plumbing looks up, decorated as the architecture's compiler does (x64: the forms
-    # x64names resolves to, checked against the x86_64 objects), at distinct stand-in RVAs
+    # every game name the session plumbing looks up, at distinct stand-in RVAs
     names = set(pb.symbol_names()) | {hbuild.SHOWSCENE, hbuild.ACTIVATE, hbuild.NATIVE_ERROR, hbuild.ABORT,
                                       hbuild.RNG_GENERATE, hbuild.RNG_NEXT, no_human_defeat.OUT_SYMBOL,
                                       no_human_defeat.RESULT_SYMBOL, no_human_defeat.WORLD_SYMBOL, timeshim.RENDER_MAIN,
-                                      "?gUIManager@@3PAVEEUIManager@@A", "?gMouse@@3PAVEEMouse@@A",
+                                      "?gUIManager@@3PEAVEEUIManager@@EA", "?gMouse@@3PEAVEEMouse@@EA",
                                       game_session.SEED_SYMBOL, game_session.PHYSICS_SYMBOL}
-    table = {(x64names.mechanical(n) if x64 else n): 0x10000 + 0x10 * k for k, n in enumerate(sorted(names))}
-    table[game_session.MUTEX_SYMBOL if not x64 else x64names.mechanical(game_session.MUTEX_SYMBOL)] = syms["selftest_instance_mutex"]
-    imp = "__imp_GetLastError" if x64 else "__imp__GetLastError@0"
-    table[imp] = syms[imp if x64 else imp[1:]]
-    lld_map(fake / "exe" / "EE-AOC.map", base, table, x64)
-    b = hbuild.Build(fake, x64=x64)
+    table = {n: 0x10000 + 0x10 * k for k, n in enumerate(sorted(names))}
+    table[game_session.MUTEX_SYMBOL] = syms["selftest_instance_mutex"]
+    table[game_session.MUTEX_GETLASTERROR] = syms[game_session.MUTEX_GETLASTERROR]
+    lld_map(fake / "exe" / "EE-AOC.map", base, table)
+    b = hbuild.Build(fake)
     problems = []
-    if (b.arch, b.ptr, b.base) != (arch, 8 if x64 else 4, base):
+    if (b.arch, b.ptr, b.base) != (arch, 8, base):
         problems.append(f"arch {b.arch} ptr {b.ptr} base {b.base:#x}")
-    want = lambda n: table[x64names.mechanical(n) if x64 else n]   # noqa: E731
+    want = lambda n: table[n]   # noqa: E731
     if b.renderer_guards() != (want(hbuild.ACTIVATE), want(hbuild.SHOWSCENE)):
         problems.append(f"renderer guards {b.renderer_guards()}")
     if b.static_exe_args()[1:] != [f"{want(n):x}" for n in (hbuild.NATIVE_ERROR, hbuild.ABORT, hbuild.RNG_GENERATE, hbuild.RNG_NEXT)]:
@@ -217,8 +210,8 @@ def plumbing(arch, d):
     if hbuild.machine(out) != arch:
         problems.append(f"bridge machine {hbuild.machine(out)}")
     h = (PROBE_STAGE / "presentation-build" / "bridge_syms.h").read_text()
-    if f'{{"_GXTestReadFrame", {want("_GXTestReadFrame"):#x}}}' not in h:
-        problems.append("bridge_syms.h lacks the translated _GXTestReadFrame RVA")
+    if f'{{"GXTestReadFrame", {want("GXTestReadFrame"):#x}}}' not in h:
+        problems.append("bridge_syms.h lacks the GXTestReadFrame RVA")
     L.use(fake)
     try:
         (o, r, w), extra = no_human_defeat.harness_args(PROBE_STAGE, fake / "exe" / "EE-AOC.map")
@@ -231,7 +224,7 @@ def plumbing(arch, d):
     if lo != want(timeshim.RENDER_MAIN) or hi <= lo:
         problems.append(f"render range {lo:#x}..{hi:#x}")
     mutex = None
-    # by map: the instruction after the GetLastError call (i686 absolute, x64 rip-relative)
+    # by map: the instruction after the rip-relative GetLastError call
     mutex = game_session.mutex_bypass_rva(exe.read_bytes(), b.map("exe"))
     body = exe.read_bytes()
     import pefile

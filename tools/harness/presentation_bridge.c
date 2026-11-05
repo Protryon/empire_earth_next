@@ -9,9 +9,8 @@
 #include <string.h>
 
 /* The build's engine members by map RVA (presentation_bridge.py writes bridge_syms.h and passes it with -include):
-   the engine, the renderer and the game are one image, which exports nothing. Names are the i686 decorated ones
-   (the x64 map's own names are looked up for them at build time); addresses are RVAs from the map's preferred base,
-   added to the exe's actual base (an ASLR image works). One source for the i686 and the x86_64 DLL. */
+   the engine, the renderer and the game are one image, which exports nothing. Names are the x64 decorated ones;
+   addresses are RVAs from the map's preferred base, added to the exe's actual base (an ASLR image works). */
 struct BridgeSym { const char* name; uintptr_t rva; };
 static const struct BridgeSym kBridgeSyms[] = { EE_BRIDGE_SYMS { 0, 0 } };
 static BYTE* exe_base(void) { return (BYTE*)GetModuleHandleA(NULL); }
@@ -21,12 +20,7 @@ static void* ee_sym(const char* name)
         if (!strcmp(s->name, name)) return exe_base() + s->rva;
     return NULL;
 }
-/* member functions: x86 thiscall (this in ecx); x64 has one convention (this is the first argument) */
-#ifdef _WIN64
-#define EE_THISCALL
-#else
-#define EE_THISCALL __attribute__((thiscall))
-#endif
+/* member functions are called as plain functions: x64 has one convention (this is the first argument) */
 #ifndef EE_SIZE_UWIDESTRING
 #define EE_SIZE_UWIDESTRING 0x14   /* sizeof(UWideString) in the build's layout (presentation_bridge.py) */
 #endif
@@ -37,17 +31,17 @@ static DWORD last_command;
 static void stage_path(char* path,const char* filename) {
     GetModuleFileNameA(self_module,path,MAX_PATH);char* tail=strrchr(path,'\\');if(tail)strcpy(tail+1,filename);
 }
-typedef void (EE_THISCALL *Critical)(void*);
-typedef void* (EE_THISCALL *GetEvent)(void*,unsigned long);
-typedef void (EE_THISCALL *FireEvent)(void*,unsigned long);
-typedef void (EE_THISCALL *SetIndex)(void*,unsigned long);
-typedef long (EE_THISCALL *GetIndexOut)(void*,unsigned long*);
-typedef void* (EE_THISCALL *GetPointer)(void*);
-typedef unsigned long (EE_THISCALL *GetCount)(void*);
-typedef void* (EE_THISCALL *GetLine)(void*,unsigned long);
-typedef const char* (EE_THISCALL *GetChars)(void*);
-typedef void (EE_THISCALL *SetBool)(void*,unsigned char);
-typedef unsigned char (EE_THISCALL *GetBool)(void*);
+typedef void (*Critical)(void*);
+typedef void* (*GetEvent)(void*,unsigned long);
+typedef void (*FireEvent)(void*,unsigned long);
+typedef void (*SetIndex)(void*,unsigned long);
+typedef long (*GetIndexOut)(void*,unsigned long*);
+typedef void* (*GetPointer)(void*);
+typedef unsigned long (*GetCount)(void*);
+typedef void* (*GetLine)(void*,unsigned long);
+typedef const char* (*GetChars)(void*);
+typedef void (*SetBool)(void*,unsigned char);
+typedef unsigned char (*GetBool)(void*);
 static void print_text(FILE* out,const char* text) {
     /* the UWideString's narrow view; anything that could break the line format is escaped */
     for(int k=0;text && text[k] && k<80;k++) {
@@ -88,21 +82,21 @@ static void ui_test(void) {
 #define EE_UI_MANAGER_RVA 0x53191c /* gUIManager (retail 0x93191c); the session passes its map RVA */
 #endif
     BYTE* manager=*(BYTE**)(exe_base()+EE_UI_MANAGER_RVA);if(!manager)return;
-    Critical enter=(Critical)ee_sym("?Enter@TSCriticalSection@@QAEXXZ");
-    Critical leave=(Critical)ee_sym("?Leave@TSCriticalSection@@QAEXXZ");
-    GetEvent get=(GetEvent)ee_sym("?GetTriggerEvent@UIControl@@QAEPAVUIEvent@@K@Z");
-    FireEvent fire=(FireEvent)ee_sym("?FireTriggerEvent@UIControl@@QAEXK@Z");
+    Critical enter=(Critical)ee_sym("?Enter@TSCriticalSection@@QEAAXXZ");
+    Critical leave=(Critical)ee_sym("?Leave@TSCriticalSection@@QEAAXXZ");
+    GetEvent get=(GetEvent)ee_sym("?GetTriggerEvent@UIControl@@QEAAPEAVUIEvent@@K@Z");
+    FireEvent fire=(FireEvent)ee_sym("?FireTriggerEvent@UIControl@@QEAAXK@Z");
     if(!enter || !leave || !get || !fire){OutputDebugStringA("TEST UI API unavailable\n");return;}
     void* combo_vtbl=(void*)ee_sym("??_7UIComboBox@@6B@");
     void* check_vtbl=(void*)ee_sym("??_7UICheckBox@@6B@");
-    SetIndex combo_set=(SetIndex)ee_sym("?SetCurrentSelection@UIComboBox@@QAEXK@Z");
-    GetIndexOut combo_get=(GetIndexOut)ee_sym("?GetCurrentSelection@UIComboBox@@QBEJAAK@Z");
-    GetPointer combo_list=(GetPointer)ee_sym("?GetListBox@UIComboBox@@QBEPBVUILBString@@XZ");
-    GetCount list_count=(GetCount)ee_sym("?GetLineCount@?$UIListBox@VUWideString@@@@QBEKXZ");
-    GetLine list_data=(GetLine)ee_sym("?GetData@?$UIListBox@VUWideString@@@@QBEABVUWideString@@K@Z");
-    GetChars chars=(GetChars)ee_sym("??BUWideString@@QBEPBDXZ");
-    SetBool check_set=(SetBool)ee_sym("?SetChecked@UICheckBox@@QAEX_N@Z");
-    GetBool check_get=(GetBool)ee_sym("?GetIsChecked@UICheckBox@@QBE_NXZ");
+    SetIndex combo_set=(SetIndex)ee_sym("?SetCurrentSelection@UIComboBox@@QEAAXK@Z");
+    GetIndexOut combo_get=(GetIndexOut)ee_sym("?GetCurrentSelection@UIComboBox@@QEBAJAEAK@Z");
+    GetPointer combo_list=(GetPointer)ee_sym("?GetListBox@UIComboBox@@QEBAPEBVUILBString@@XZ");
+    GetCount list_count=(GetCount)ee_sym("?GetLineCount@?$UIListBox@VUWideString@@@@QEBAKXZ");
+    GetLine list_data=(GetLine)ee_sym("?GetData@?$UIListBox@VUWideString@@@@QEBAAEBVUWideString@@K@Z");
+    GetChars chars=(GetChars)ee_sym("??BUWideString@@QEBAPEBDXZ");
+    SetBool check_set=(SetBool)ee_sym("?SetChecked@UICheckBox@@QEAAX_N@Z");
+    GetBool check_get=(GetBool)ee_sym("?GetIsChecked@UICheckBox@@QEBA_NXZ");
     int combos=combo_vtbl && combo_set && combo_get && combo_list && list_count && list_data && chars;
     int checks=check_vtbl && check_set && check_get;
     /* round 39 saveload: edit boxes (`text`) and file list boxes (`lselect`); the save/load screens */
@@ -110,24 +104,24 @@ static void ui_test(void) {
     void* flist_vtbl=(void*)ee_sym("??_7UIFileListBox@@6B@");
     /* final validation (lane scen): string list boxes too (the campaign scenario list, form 33 control 2) */
     void* lbs_vtbl=(void*)ee_sym("??_7UILBString@@6B@");
-    typedef void (EE_THISCALL *SetWide)(void*,const void*);
-    typedef void (EE_THISCALL *WideFromChars)(void*,const char*);
-    typedef const char* (EE_THISCALL *EditLine)(void*,unsigned long);
-    typedef void (EE_THISCALL *ChangeSelection)(void*,unsigned long,unsigned char,unsigned char);
-    SetWide edit_set=(SetWide)ee_sym("?SetText@UIEditBox@@QAEXABVUWideString@@@Z");
-    EditLine edit_get=(EditLine)ee_sym("?GetText@UIEditBox@@QBEPBDK@Z");
-    GetCount edit_lines=(GetCount)ee_sym("?GetLineCount@UIEditBox@@QBEKXZ");
-    WideFromChars wide_ctor=(WideFromChars)ee_sym("??0UWideString@@QAE@PBD@Z");
-    Critical wide_dtor=(Critical)ee_sym("??1UWideString@@UAE@XZ");
-    ChangeSelection list_change=(ChangeSelection)ee_sym("?ChangeSelectionIndex@?$UIListBox@VUWideString@@@@UAEXK_N0@Z");
-    GetIndexOut list_get=(GetIndexOut)ee_sym("?GetCurrentSelection@?$UIListBox@VUWideString@@@@QBEJAAK@Z");
+    typedef void (*SetWide)(void*,const void*);
+    typedef void (*WideFromChars)(void*,const char*);
+    typedef const char* (*EditLine)(void*,unsigned long);
+    typedef void (*ChangeSelection)(void*,unsigned long,unsigned char,unsigned char);
+    SetWide edit_set=(SetWide)ee_sym("?SetText@UIEditBox@@QEAAXAEBVUWideString@@@Z");
+    EditLine edit_get=(EditLine)ee_sym("?GetText@UIEditBox@@QEBAPEBDK@Z");
+    GetCount edit_lines=(GetCount)ee_sym("?GetLineCount@UIEditBox@@QEBAKXZ");
+    WideFromChars wide_ctor=(WideFromChars)ee_sym("??0UWideString@@QEAA@PEBD@Z");
+    Critical wide_dtor=(Critical)ee_sym("??1UWideString@@UEAA@XZ");
+    ChangeSelection list_change=(ChangeSelection)ee_sym("?ChangeSelectionIndex@?$UIListBox@VUWideString@@@@UEAAXK_N0@Z");
+    GetIndexOut list_get=(GetIndexOut)ee_sym("?GetCurrentSelection@?$UIListBox@VUWideString@@@@QEBAJAEAK@Z");
     int edits=edit_vtbl && edit_set && edit_get && edit_lines && wide_ctor && wide_dtor;
     int flists=flist_vtbl && list_change && list_get && list_count && list_data && chars;
     void* critical=*(void**)(manager+EE_OFF_UIM_CRITICAL);
     /* UI events can hold this lock while waiting for the render thread. Never
        block that render thread to inspect or enqueue a test command. */
-    typedef unsigned char (EE_THISCALL *TryEnter)(void*);
-    TryEnter try_enter=(TryEnter)ee_sym("?TryEnter@TSCriticalSection@@QAE_NXZ");
+    typedef unsigned char (*TryEnter)(void*);
+    TryEnter try_enter=(TryEnter)ee_sym("?TryEnter@TSCriticalSection@@QEAA_NXZ");
     if(!try_enter || !try_enter(critical))return;
     BYTE** first=*(BYTE***)(manager+EE_OFF_UIM_FORMS_FIRST);BYTE** end=*(BYTE***)(manager+EE_OFF_UIM_FORMS_LAST);
     if(end>first) {
@@ -185,7 +179,7 @@ static void ui_test(void) {
                     BYTE* control=(a==form_id && b<count)?controls[b]:NULL;
                     if(!strcmp(op,"click") && fields>=4 && control && get(control,0x3f0)) {
                         if(form_id==5 && b>=1 && b<=3) {
-                            Critical check=(Critical)ee_sym("?Check@UIRadioButton@@UAEXXZ");
+                            Critical check=(Critical)ee_sym("?Check@UIRadioButton@@UEAAXXZ");
                             if(check)check(control);
                         }
                         fire(control,0x3f0);verdict="triggered";
@@ -420,7 +414,7 @@ static void gx_present(HWND hwnd, void* frame)
     static unsigned char* pixels;
     static unsigned long capacity;
     unsigned long width = 0, height = 0;
-    ReadFrame read = (ReadFrame)ee_sym("_GXTestReadFrame");
+    ReadFrame read = (ReadFrame)ee_sym("GXTestReadFrame");
 #ifndef EE_PLAY_ONLY   /* play.py: no test telemetry (frame dump, UI state/commands, human/lobby helpers) */
     if (GetTickCount() - last_dump > 1000) {
         read(frame, NULL, 0, &width, &height);
@@ -484,7 +478,7 @@ BOOL WINAPI DllMain(HINSTANCE module,DWORD reason,LPVOID reserved)
         InitializeCriticalSection(&mouse_lock);
         if(!mouse_install())OutputDebugStringA("TEST mouse shim: DirectInputCreateA import not found\n");
 #endif
-        ((SetPresentHook)ee_sym("_GXTestSetPresentHook"))(gx_present);
+        ((SetPresentHook)ee_sym("GXTestSetPresentHook"))(gx_present);
     }
     return TRUE;
 }

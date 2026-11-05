@@ -3,25 +3,25 @@
 Ported from ee tools/boot/presentation_bridge.py. There the bridge serves the retail renderer and the VC6/Dinkum
 layouts; here it is compiled for the build under test (hbuild.Build): every object offset it reads and the
 renderer's ShowScene entry come from that build's record layouts and maps (presentation_bridge.c's EE_OFF_*/
-EE_SHOWSCENE_RVA defines; their defaults are VC6's). x64 builds get the x86_64 DLL (mingw64 gcc, build.gcc); the
-game's symbols are named as the i686 build decorates them (LinkMap translates for an x64 map) and passed as RVAs.
+EE_SHOWSCENE_RVA defines; their defaults are VC6's). The DLL is x86_64 (mingw64 gcc, build.gcc); the game's
+symbols are named by their x64 decorations and passed as RVAs.
 """
 import hashlib, json, os, pathlib, subprocess, sys
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from windowed_overlay import test_output   # noqa: E402
 
-GCC = pathlib.Path('C:/msys64/mingw32/bin/gcc.exe')   # i686 builds (an x64 build: build.gcc)
+GCC = pathlib.Path('C:/msys64/mingw64/bin/gcc.exe')   # MSYS2 mingw-w64-x86_64-gcc (= build.gcc)
 
 
 def symbol_names(source=HERE / 'presentation_bridge.c'):
-    """Every ee_sym("...") name of the bridge source (i686 decorations)."""
+    """Every ee_sym("...") name of the bridge source."""
     import re
     return sorted(set(re.findall(r'ee_sym\("([^"]+)"\)', pathlib.Path(source).read_text(encoding='latin-1'))))
 
 
 def compile_bridge(output, defines, rvas, gcc=GCC, play_only=False, work=None):
-    """Compile presentation_bridge.c into output: defines {NAME: int}, rvas {i686 name: RVA} (bridge_syms.h)."""
+    """Compile presentation_bridge.c into output: defines {NAME: int}, rvas {name: RVA} (bridge_syms.h)."""
     output = pathlib.Path(output)
     work = pathlib.Path(work or output.parent / 'presentation-build'); work.mkdir(exist_ok=True)
     source = HERE / 'presentation_bridge.c'
@@ -44,9 +44,9 @@ def build_presentation_bridge(directory, build, play_only=False, mouse=False):
     test_output(build.image('exe'), output)
     source = HERE / 'presentation_bridge.c'
     defines = build.bridge_defines()
-    defines['EE_UI_MANAGER_RVA'] = build.rva('exe', '?gUIManager@@3PAVEEUIManager@@A')
+    defines['EE_UI_MANAGER_RVA'] = build.rva('exe', '?gUIManager@@3PEAVEEUIManager@@EA')
     if mouse:
-        defines['EE_MOUSE_RVA'] = build.rva('exe', '?gMouse@@3PAVEEMouse@@A')
+        defines['EE_MOUSE_RVA'] = build.rva('exe', '?gMouse@@3PEAVEEMouse@@EA')
     rvas = {n: build.rva('exe', n) for n in symbol_names(source)}
     compile_bridge(output, defines, rvas, build.gcc, play_only, directory / 'presentation-build')
     output.with_suffix('.presentation.json').write_text(json.dumps(dict(

@@ -57,12 +57,12 @@ def build_proxy(directory):
                                                             sdk/'um', sdk/'shared', ROOT/'include/winsdk']))
     source = pathlib.Path(__file__).with_suffix('.c')
     obj = work/'rdp_modes.obj'
-    subprocess.run([str(CLANG), '--target=i686-pc-windows-msvc', '/nologo', '/c', '/O1', '/MD', '/GS-', '-Wno-everything',
+    subprocess.run([str(CLANG), '--target=x86_64-pc-windows-msvc', '/nologo', '/c', '/O1', '/MT', '/GS-', '-Wno-everything',
                     str(source), '/Fo'+str(obj)], env=env, cwd=work, check=True, capture_output=True)
     definition = work/'rdp_modes.def'
     definition.write_text('LIBRARY "DDRDP"\nEXPORTS\nDirectDrawCreateEx\nDirectDrawEnumerateA\nDirectDrawEnumerateExA\n',
                           encoding='ascii')
-    subprocess.run([str(LLD_LINK), '/nologo', '/DLL', '/NODEFAULTLIB', '/MACHINE:X86', '/SAFESEH:NO', '/ENTRY:DllMain@12',
+    subprocess.run([str(LLD_LINK), '/nologo', '/DLL', '/NODEFAULTLIB', '/MACHINE:X64', '/ENTRY:DllMain',
                     '/OUT:'+str(output), '/DEF:'+str(definition), str(obj), 'user32.lib', *RUNTIME_LIBS, *lib_paths()],
                    cwd=work, check=True, capture_output=True)
     manifest = dict(test_only=True, kind='rdp-mode-proxy-v1', source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),

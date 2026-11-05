@@ -29,7 +29,7 @@ ROOT = HERE.parent.parent
 BOOT = ROOT / "build" / "boot"
 
 
-HARNESS_SOURCES = ["exe_boot.c", "differential/ptsync.h", "differential/ptwatch.h", "differential/coverage.h"]   # ptsync.h: agent hash's opt-in --pt-sync (round 39)
+HARNESS_SOURCES = ["exe_boot.c", "differential/coverage.h"]
 
 
 def _harness_stale(exe):
@@ -37,26 +37,25 @@ def _harness_stale(exe):
                                    for n in HARNESS_SOURCES if (HERE / n).exists())
 
 
-# the debugger harness is native to its target: exe_boot.exe (mingw32 gcc) runs 32-bit builds, exe_boot64.exe
-# (mingw64 gcc, MSYS2 mingw-w64-x86_64-gcc) runs 64-bit builds; one source, exe_boot.c
-HARNESS_ARCH = {"x86": ("exe_boot", pathlib.Path(r"C:\msys64\mingw32\bin\gcc.exe")),
-                "x64": ("exe_boot64", pathlib.Path(r"C:\msys64\mingw64\bin\gcc.exe"))}
+# the debugger harness is native to its target, the x86_64 exe: exe_boot.exe from exe_boot.c with mingw64 gcc (MSYS2
+# mingw-w64-x86_64-gcc)
+HARNESS_GCC = pathlib.Path(r"C:\msys64\mingw64\bin\gcc.exe")
 
 
-def build_harness(arch="x86", out_dir=None):
-    """Rebuild exe_boot.exe (arch x86) / exe_boot64.exe (x64) when a source is newer. Parallel sessions (round 39):
-    built under a lock file into a temporary name and renamed, so no session ever starts a half-written harness.
-    out_dir: default build/boot (the self test builds into its own directory)."""
+def build_harness(out_dir=None):
+    """Rebuild exe_boot.exe when a source is newer. Parallel sessions (round 39): built under a lock file into a
+    temporary name and renamed, so no session ever starts a half-written harness. out_dir: default build/boot (the
+    self test builds into its own directory)."""
     import os
     import time
-    stem, gcc = HARNESS_ARCH[arch]
+    stem, gcc = "exe_boot", HARNESS_GCC
     boot = pathlib.Path(out_dir) if out_dir else BOOT
     exe = boot / f"{stem}.exe"
     if not _harness_stale(exe):
         return exe
     if not gcc.exists():
         raise SystemExit(f"{gcc} is missing: C:\\msys64\\usr\\bin\\bash -lc \"pacman -S --noconfirm "
-                         f"mingw-w64-{'i686' if arch == 'x86' else 'x86_64'}-gcc\"")
+                         f"mingw-w64-x86_64-gcc\"")
     boot.mkdir(parents=True, exist_ok=True)
     lock = boot / f"{stem}.build.lock"
     end = time.monotonic() + 300

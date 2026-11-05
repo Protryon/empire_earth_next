@@ -21,35 +21,34 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
-GCC = {'x86': pathlib.Path(r'C:\msys64\mingw32\bin\gcc.exe'), 'x64': pathlib.Path(r'C:\msys64\mingw64\bin\gcc.exe')}
+GCC = pathlib.Path(r'C:\msys64\mingw64\bin\gcc.exe')   # MSYS2 mingw-w64-x86_64-gcc
 SHIM = 'EETMS.dll'
 ENGINE = 'EE-AOC.exe'   # the engine is inside the exe
 MAGIC = b'EE-TIMESHIM-CFG\0'
 FORWARDED = ['mciSendCommandA', 'auxGetVolume', 'mixerGetControlDetailsA', 'auxSetVolume', 'mixerSetControlDetails',
              'mixerGetLineControlsA', 'mixerGetLineInfoA', 'mixerGetDevCapsA', 'mixerGetNumDevs', 'auxGetDevCapsA',
              'auxGetNumDevs', 'timeBeginPeriod', 'timeEndPeriod']
-OWN = {'timeGetTime': 'ShimTimeGetTime@0', 'timeSetEvent': 'ShimTimeSetEvent@20', 'timeKillEvent': 'ShimTimeKillEvent@4'}
-BUILD = ROOT/'build/boot/timeshim'   # i686: EETMS.dll here; x86_64: build/boot/timeshim/x64/EETMS.dll
+OWN = {'timeGetTime': 'ShimTimeGetTime', 'timeSetEvent': 'ShimTimeSetEvent', 'timeKillEvent': 'ShimTimeKillEvent'}
+BUILD = ROOT/'build/boot/timeshim/x64'
 
 
-def build_dll(arch='x86', out_dir=None):
-    """Compile once per source change into build/boot/timeshim[/x64]/EETMS.dll (factor 1/1). arch: the exe's ('x86'
-    i686 with stdcall decorations, 'x64' x86_64: one convention, no decorations)."""
+def build_dll(out_dir=None):
+    """Compile once per source change into build/boot/timeshim/x64/EETMS.dll (factor 1/1; x86_64: one calling
+    convention, no decorations)."""
     source = HERE/'timeshim.c'
-    build = pathlib.Path(out_dir) if out_dir else (BUILD if arch == 'x86' else BUILD/'x64')
+    build = pathlib.Path(out_dir) if out_dir else BUILD
     out = build/SHIM
     build.mkdir(parents=True, exist_ok=True)
     if out.exists() and out.stat().st_mtime > source.stat().st_mtime and out.stat().st_mtime > pathlib.Path(__file__).stat().st_mtime:
         return out
-    gcc = GCC[arch]
+    gcc = GCC
     if not gcc.exists():
-        raise SystemExit(f'{gcc} is missing (MSYS2 mingw-w64-{"i686" if arch == "x86" else "x86_64"}-gcc)')
+        raise SystemExit(f'{gcc} is missing (MSYS2 mingw-w64-x86_64-gcc)')
     tag = str(os.getpid())   # parallel sessions: private temporaries, atomic rename into place
     definition, temp = build/f'timeshim.{tag}.def', build/f'EETMS.{tag}.tmp'
-    own = OWN if arch == 'x86' else {k: v.split('@')[0] for k, v in OWN.items()}
-    definition.write_text('LIBRARY "EETMS.dll"\nEXPORTS\n' + ''.join(f'{k}={v}\n' for k, v in own.items())
+    definition.write_text('LIBRARY "EETMS.dll"\nEXPORTS\n' + ''.join(f'{k}={v}\n' for k, v in OWN.items())
                           + ''.join(f'{n}=winmm.{n}\n' for n in FORWARDED), encoding='ascii')
-    entry = ['-Wl,-e,_DllMain@12', '-Wl,--enable-stdcall-fixup'] if arch == 'x86' else ['-Wl,-e,DllMain']
+    entry = ['-Wl,-e,DllMain']
     subprocess.run([str(gcc), '-O2', '-Wall', '-fno-tree-loop-distribute-patterns', '-shared', '-nostdlib', '-o', str(temp), str(source), str(definition),
                     *entry, '-lkernel32', '-lwinmm', '-luser32', '-lgcc'],
                    check=True, env={'PATH': str(gcc.parent), 'SYSTEMROOT': r'C:\Windows', 'TEMP': str(build)})
@@ -84,7 +83,7 @@ def rename_import(engine):
     raise ValueError(f'{engine}: no WINMM.dll import')
 
 
-RENDER_MAIN = '?Main@RTSGraphics@@SAKPAX@Z'
+RENDER_MAIN = '?Main@RTSGraphics@@SAKPEAX@Z'
 RENDER_MAIN_ORIGINAL = (0x51a3d5, 0x51a4c9)   # analysis/exe/names.txt 0x11a3d5; next function 0x11a4c9
 
 
@@ -99,7 +98,7 @@ def render_main_extent(fulllink_map=None):
 
 
 def image_arch(path):
-    """'x86' / 'x64' from the PE header (hbuild.machine)."""
+    """'x64' for the x86_64 exe; refuses any other image (hbuild.machine)."""
     sys.path.insert(0, str(HERE))
     import hbuild
     return hbuild.machine(path)
@@ -113,7 +112,7 @@ def stage_timeshim(stage, factor=1, null_render=False, key_ms=1000, frame_ms=0, 
         raise ValueError('time shim stages only into build/boot/<stage>')
     f = parse_factor(factor)
     arch = image_arch(stage/ENGINE)
-    dll = bytearray(build_dll(arch).read_bytes())
+    dll = bytearray(build_dll().read_bytes())
     at = dll.find(MAGIC)
     assert at > 0 and dll.find(MAGIC, at+1) < 0
     lo, hi = render_main_extent(fulllink_map) if frame_ms else (0, 0)

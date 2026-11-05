@@ -16,8 +16,8 @@ checked (length, ret n, the mCurrentPlayer/mPlayers operands, the +0xa28 store) 
 """
 import pathlib
 
-OUT_SYMBOL='?RemovePlayerFromGame@EEWorld@@QAEX_NK@Z'
-RESULT_SYMBOL='?SetGameResult@EEPlayer@@QAEXJ@Z'
+OUT_SYMBOL='?RemovePlayerFromGame@EEWorld@@QEAAX_NK@Z'
+RESULT_SYMBOL='?SetGameResult@EEPlayer@@QEAAXJ@Z'
 WORLD_SYMBOL='?gWorld@@3VEEWorld@@A'
 OUT_RVA_ORIGINAL=0x1391f2
 RESULT_RVA_ORIGINAL=0x16af5c

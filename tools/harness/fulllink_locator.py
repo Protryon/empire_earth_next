@@ -48,17 +48,17 @@ BASE = 0x400000
 
 # original function RVA -> its symbol (names.txt). Extents are windowed_overlay.FUNCTIONS'.
 FUNCTION_NAMES = {
-    0x1324F8: '??0EEGameSettings@@QAE@XZ',
-    0x1328DD: '?Load@EEGamePreferences@@QAEJXZ',
+    0x1324F8: '??0EEGameSettings@@QEAA@XZ',
+    0x1328DD: '?Load@EEGamePreferences@@QEAAJXZ',
     0x143557: '?EEInitializeSounds@@YA_NXZ',
     0x1444D0: '?EEInitializeDisplay@@YA_NXZ',
 }
 # telemetry/UI globals the session helpers read (original VA -> symbol)
 GLOBAL_NAMES = {
-    0x93191C: '?gUIManager@@3PAVEEUIManager@@A',
-    0x9319C8: '?gCommunications@@3PAVNESynchronousCommunications@@A',
+    0x93191C: '?gUIManager@@3PEAVEEUIManager@@EA',
+    0x9319C8: '?gCommunications@@3PEAVNESynchronousCommunications@@EA',
     0x930D40: '?gWorld@@3VEEWorld@@A',
-    0x931924: '?gMouse@@3PAVEEMouse@@A',   # play.py's mouse shim (presentation_bridge.c, EE_MOUSE_VA)
+    0x931924: '?gMouse@@3PEAVEEMouse@@EA',   # play.py's mouse shim (presentation_bridge.c, EE_MOUSE_VA)
 }
 SOFTWARE_EXE_PATCHES = [
     (0x14460A, bytes.fromhex('6a10'), bytes.fromhex('6a20'),
@@ -79,17 +79,15 @@ def sha(data):
 
 class LinkMap:
     """Publics and statics of a LINK 6 / lld-link map: name -> VA, plus sorted VAs for nearest-name lookups.
-    An x64 map also answers for i686 decorated names (x64names.py): the harness names the game's symbols as the 32-bit
-    build decorates them. x64: the image next to the map is PE32+ (else: 16-digit addresses, or x64 member-function
-    decorations; the fork's x64 exe is /FIXED at 0x400000, so its map has 8-digit addresses). base: the map's preferred
-    load address (rva = address - base)."""
+    The harness names the game's symbols by the x64 build's decorations. base: the map's preferred load address
+    (rva = address - base)."""
     LINE = re.compile(r'^ ([0-9a-f]{4}):([0-9a-f]{8})\s+(\S+)\s+([0-9a-f]{16}|[0-9a-f]{8})\s+(f\s+)?(i\s+)?(\S+)?', re.I)
     PREFERRED = re.compile(r'^\s*Preferred load address is ([0-9a-f]+)', re.I)
 
     def __init__(self, path):
         self.path = pathlib.Path(path)
         self.by_name, self.rows = {}, []
-        self.base, self.x64, self._resolver = BASE, False, None
+        self.base = BASE
         for line in self.path.read_text(encoding='latin-1').splitlines():
             p = self.PREFERRED.match(line)
             if p:
@@ -99,32 +97,16 @@ class LinkMap:
             if not m:
                 continue
             va, name = int(m.group(4), 16), m.group(3)
-            self.x64 |= len(m.group(4)) == 16
             if va < self.base:
                 continue
             self.by_name.setdefault(name, va)
             self.rows.append((va, name, bool(m.group(5)), m.group(7) or ''))
-        image = self.path.with_suffix('.exe')
-        if image.exists():
-            data = image.read_bytes()[:0x400]
-            pe = int.from_bytes(data[0x3c:0x40], 'little')
-            self.x64 = data[pe:pe + 4] == b'PE\0\0' and int.from_bytes(data[pe + 4:pe + 6], 'little') == 0x8664
-        elif not self.x64:
-            self.x64 = any(re.search(r'@@[QAIUEM]E[AB]A', n) for n in itertools.islice(self.by_name, 0, 20000))
         self.rows.sort()
         self.vas = [r[0] for r in self.rows]
 
     def name(self, name):
-        """The map's own name for name (an i686 decorated name is translated for an x64 map)."""
-        if name in self.by_name or not self.x64:
-            return name
-        if self._resolver is None:
-            import x64names
-            self._resolver = x64names.Resolver(self.by_name)
-        try:
-            return self._resolver.resolve(name)
-        except KeyError as error:
-            raise ValueError(f'{name} is not in {self.path}: {error}') from None
+        """The map's own name for name (the harness names symbols as the map does)."""
+        return name
 
     def address(self, name):
         name = self.name(name)

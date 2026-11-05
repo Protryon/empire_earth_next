@@ -1,20 +1,18 @@
-"""TEST ONLY: the harness's self test without the game. Checks that exe_boot64.exe (the x64 debugger harness) allows,
-refuses and stops every guarded API exactly as exe_boot.exe (i686) does, and that the time shim and the presentation
-bridge load and patch an x64 exe as they do an i686 one.
+"""TEST ONLY: the harness's self test without the game. Checks that exe_boot.exe (the x64 debugger harness) allows,
+refuses and stops every guarded API as its policy says, and that the time shim and the presentation bridge load and
+patch an x64 exe.
 
-  python -I tools/harness/selftest/selftest.py [--only CASE,..] [--legacy REV|none] [-v]
+  python -I tools/harness/selftest/selftest.py [--only CASE,..] [-v]
 
-guard_test.c (built for both targets) calls the guarded APIs, one case per run (EE_SELFTEST_CASE), under each harness
-in build/boot/selftest_stage. For every case the harness log must hold the case's expected decisions and STOP, and
-the decision lines of the i686 and x64 runs, with addresses and system-DLL noise masked, must be identical. --legacy
-REV (default main) also runs the i686 harness of that revision (git show) on the cases it supports: the port must
-not change a 32-bit decision. shim_test.c checks the time shim (IAT patch of QPC/Sleep/waits, the renamed WINMM
-import, timeSetEvent) and bridge_test.c the presentation bridge (ee_sym by RVA, the GX present hook and frame dump,
-the UI fixture's form state and a click through thiscall/x64 member calls) on both targets.
+guard_test.c (x86_64) calls the guarded APIs, one case per run (EE_SELFTEST_CASE), under the harness in
+build/boot/selftest_stage. For every case the harness log must hold the case's expected decisions and STOP.
+shim_test.c checks the time shim (IAT patch of QPC/Sleep/waits, the renamed WINMM import, timeSetEvent) and
+bridge_test.c the presentation bridge (ee_sym by RVA, the GX present hook and frame dump, the UI fixture's form state
+and a click through member calls).
 
 Nothing outside build/boot/selftest*, HKCU\\Software\\EE-harness-selftest* and %LOCALAPPDATA%\\D3DSCache (refused) is
-touched: every run passes --reg-root Software\\EE-harness-selftest (the legacy harness, which has no --reg-root, only
-runs cases that create no key), so the game's HKCU\\Software\\Mad Doc Software is never written.
+touched: every run passes --reg-root Software\\EE-harness-selftest, so the game's HKCU\\Software\\Mad Doc Software is
+never written.
 """
 import argparse
 import os
@@ -35,14 +33,13 @@ import exe_boot as boot      # noqa: E402
 BOOT = ROOT / "build" / "boot"
 SELF = BOOT / "selftest"
 STAGE = BOOT / "selftest_stage"
-GCC = boot.HARNESS_ARCH
 REG_ROOT = r"Software\EE-harness-selftest"
 REG_KEYS = [REG_ROOT, REG_ROOT + "-outside", REG_ROOT + "-victim"]
-ARCHES = ("x86", "x64")
+ARCHES = ("x64",)
 
 
-def gcc(arch):
-    return GCC[arch][1]
+def gcc(arch="x64"):
+    return boot.HARNESS_GCC
 
 
 def compile_c(arch, out, sources, libs=(), extra=()):
@@ -63,8 +60,7 @@ def symbols(arch, exe):
     for line in out.splitlines():
         parts = line.split()
         if len(parts) == 3:
-            name = parts[2][1:] if arch == "x86" and parts[2].startswith("_") else parts[2]
-            syms[name] = int(parts[0], 16) - base
+            syms[parts[2]] = int(parts[0], 16) - base
     return syms, base
 
 
@@ -119,7 +115,7 @@ def reg_subkeys(path):
 
 # ---- the cases ----
 def P(ctx):
-    return 8 if ctx["arch"] == "x64" else 4
+    return 8
 
 
 def static_args(ctx):
@@ -147,17 +143,14 @@ def live_args(ctx):
 def rng_args(ctx):
     (STAGE / "rng.arm").write_text("arm\n", encoding="ascii")
     s = ctx["syms"]
-    a = ["--live-session", "--rng-trace", f"{ctx['base'] + s['selftest_physics']:x}"] + static_args(ctx)
-    if not ctx["legacy"]:
-        a += ["--image-base", f"{ctx['base']:x}", "--rng-offset", f"{6 * P(ctx):x}"]
-    return a
+    return (["--live-session", "--rng-trace", f"{ctx['base'] + s['selftest_physics']:x}"] + static_args(ctx)
+            + ["--image-base", f"{ctx['base']:x}", "--rng-offset", f"{6 * P(ctx):x}"])
 
 
 def nhd_args(ctx):
     s, p = ctx["syms"], P(ctx)
-    a = ["--no-human-defeat", f"{s['selftest_out']:x}", f"{s['selftest_result']:x}",
-         f"{ctx['base'] + s['selftest_world']:x}", f"{2 * p:x}", f"{2 * p + 17 * p:x}"]
-    return a if ctx["legacy"] else a + ["--image-base", f"{ctx['base']:x}"]
+    return ["--no-human-defeat", f"{s['selftest_out']:x}", f"{s['selftest_result']:x}",
+            f"{ctx['base'] + s['selftest_world']:x}", f"{2 * p:x}", f"{2 * p + 17 * p:x}", "--image-base", f"{ctx['base']:x}"]
 
 
 def victim_kept():
@@ -363,7 +356,7 @@ def run_case(harness, exe, case, ctx, timeout_ms=30000):
     (BOOT / "selftest_victim.txt").write_text("victim\n", encoding="ascii")
     reg_reset()
     mode = {"mode_oep": "oep", "mode_winmain": "winmain"}.get(name, "run")
-    args = (opts(ctx) if opts else []) + ([] if ctx["legacy"] else ["--reg-root", REG_ROOT])
+    args = (opts(ctx) if opts else []) + ["--reg-root", REG_ROOT]
     cmd = [str(harness), str(STAGE), "guard_test.exe", mode, str(timeout_ms), str(STAGE / "shot.bmp"), *args]
     env = dict(os.environ, EE_SELFTEST_CASE=name)
     t0 = time.monotonic()
@@ -378,82 +371,52 @@ def run_case(harness, exe, case, ctx, timeout_ms=30000):
     return lines, problems, time.monotonic() - t0
 
 
-def build_all(arches, legacy):
+def build_all(arches):
     SELF.mkdir(parents=True, exist_ok=True)
     out = {}
     for arch in arches:
         d = SELF / arch
         d.mkdir(exist_ok=True)
-        harness = boot.build_harness(arch, d)
-        exe = compile_c(arch, d / "guard_test.exe", [HERE / "guard_test.c"], ["-lws2_32", "-ldxguid", "-lgdi32", "-mwindows"],   # GUI, as the game: no console
-                        ["-Wl,--disable-dynamicbase"] if arch == "x86" else [])   # x86 fixed like the game; x64 ASLR
+        harness = boot.build_harness(d)
+        exe = compile_c(arch, d / "guard_test.exe", [HERE / "guard_test.c"],
+                        ["-lws2_32", "-ldxguid", "-lgdi32", "-mwindows"])   # GUI, as the game: no console; ASLR
         syms, base = symbols(arch, exe)
         out[arch] = dict(harness=harness, exe=exe, syms=syms, base=base)
-    if legacy:
-        d = SELF / "legacy"
-        src = d / "src"
-        (src / "differential").mkdir(parents=True, exist_ok=True)
-        for rel in ("exe_boot.c", "differential/ptsync.h", "differential/ptwatch.h", "differential/coverage.h"):
-            data = subprocess.run(["git", "-C", str(ROOT), "show", f"{legacy}:tools/harness/{rel}"], capture_output=True,
-                                  check=True).stdout
-            (src / rel).write_bytes(data)
-        g = gcc("x86")
-        exe = d / "exe_boot_legacy.exe"
-        subprocess.run([str(g), "-O1", "-Wall", "-Wno-format-truncation", "-static", "-o", str(exe), str(src / "exe_boot.c"),
-                        "-lgdi32", "-ldxguid", "-ldbghelp"], check=True,
-                       env={"PATH": str(g.parent), "SYSTEMROOT": r"C:\Windows", "TEMP": str(d)})
-        out["legacy"] = dict(out["x86"], harness=exe)
     return out
 
 
-def guard_suite(builds, only, verbose, legacy):
+def guard_suite(builds, only, verbose):
     results, failures = {}, 0
-    runs = [a for a in ARCHES if a in builds] + (["legacy"] if legacy else [])
     for case in CASES:
         name = case[0]
         if only and name not in only:
             continue
         per = {}
-        for run in runs:
-            if run == "legacy" and not case[5]:
-                continue
+        for run in ARCHES:
             b = builds[run]
-            ctx = dict(arch="x86" if run == "legacy" else run, syms=b["syms"], base=b["base"], legacy=run == "legacy")
+            ctx = dict(arch=run, syms=b["syms"], base=b["base"])
             lines, problems, secs = run_case(b["harness"], b["exe"], case, ctx)
             per[run] = (decisions(lines), problems, lines)
             if verbose or problems:
                 print(f"--- {name} [{run}] {secs:.1f} s" + ("" if not problems else f": {problems}"))
-                if verbose or problems:
-                    print("\n".join("    " + ln for ln in lines if not ln.startswith("load ")))
-        same = {}
-        base = per.get("x86")
-        for run, (d, _, _) in per.items():
-            if run != "x86" and base is not None:
-                same[run] = d == base[0]
-                if not same[run]:
-                    print(f"--- {name}: {run} decisions differ from x86:")
-                    import difflib
-                    print("\n".join("    " + x for x in difflib.unified_diff(base[0], d, "x86", run, lineterm="", n=1)))
-        ok = all(not p for _, p, _ in per.values()) and all(same.values())
+                print("\n".join("    " + ln for ln in lines if not ln.startswith("load ")))
+        ok = all(not p for _, p, _ in per.values())
         failures += not ok
-        results[name] = dict(ok=ok, runs={r: not p for r, (_, p, _) in per.items()}, same=same)
+        results[name] = dict(ok=ok, runs={r: not p for r, (_, p, _) in per.items()})
         cells = " ".join(f"{r}:{'ok' if not p else 'FAIL'}" for r, (_, p, _) in per.items())
-        eq = " ".join(f"{r}=x86" if v else f"{r}!=x86" for r, v in same.items())
-        print(f"{'PASS' if ok else 'FAIL'} {name:22} {cells}  {eq}", flush=True)
+        print(f"{'PASS' if ok else 'FAIL'} {name:22} {cells}", flush=True)
     return results, failures
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--only", help="comma-separated case names (guard cases, 'shim', 'bridge')")
-    ap.add_argument("--legacy", default="main", help="also run this revision's i686 harness (git show; 'none': skip)")
     ap.add_argument("-v", action="store_true")
     a = ap.parse_args()
     only = set(a.only.split(",")) if a.only else None
-    legacy = None if a.legacy == "none" else a.legacy
     madoc_before = reg_subkeys(r"Software\Mad Doc Software\EE-AOC")
-    builds = build_all(ARCHES, legacy)
-    results, failures = guard_suite(builds, only, a.v, legacy)
+    builds = build_all(ARCHES)
+    results, failures = guard_suite(builds, only, a.v)
     sys.path.insert(0, str(HERE))
     import selftest_inproc
     for part in ("shim", "bridge", "probe", "plumbing"):

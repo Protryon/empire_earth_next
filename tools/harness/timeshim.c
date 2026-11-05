@@ -28,7 +28,7 @@
 #include <mmsystem.h>
 
 /* patched by timeshim.py: magic, factor num/den, RTSGraphics::Main [lo, hi) as RVAs of the exe, frame cap ms, null 3D,
-   key ms. One source for the i686 and the x86_64 DLL (timeshim.py builds the one of the exe's architecture). */
+   key ms. An x86_64 DLL (timeshim.py builds it with mingw64 gcc). */
 volatile struct { char mMagic[16]; LONG mNum; LONG mDen; DWORD mRenderLo, mRenderHi, mFrameMs, mNull3D, mKeyMs; } kConfig =
     { "EE-TIMESHIM-CFG", 1, 1, 0, 0, 0, 0, 0 };
 
