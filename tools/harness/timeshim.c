@@ -27,7 +27,8 @@
 #include <windows.h>
 #include <mmsystem.h>
 
-/* patched by timeshim.py: magic, factor num/den, RTSGraphics::Main [lo, hi), frame cap ms, null 3D, key ms */
+/* patched by timeshim.py: magic, factor num/den, RTSGraphics::Main [lo, hi) as RVAs of the exe, frame cap ms, null 3D,
+   key ms. One source for the i686 and the x86_64 DLL (timeshim.py builds the one of the exe's architecture). */
 volatile struct { char mMagic[16]; LONG mNum; LONG mDen; DWORD mRenderLo, mRenderHi, mFrameMs, mNull3D, mKeyMs; } kConfig =
     { "EE-TIMESHIM-CFG", 1, 1, 0, 0, 0, 0, 0 };
 
@@ -176,162 +177,21 @@ MMRESULT WINAPI ShimTimeKillEvent(UINT id)
     return TIMERR_NOERROR;
 }
 
-/* ---- null 3D device (opt-in, mNull3D) ----
- * The staged renderer (DX7HRDisplay.dll, loaded by the engine through LoadLibraryA/ExA) is left unchanged on disk:
- * scene building, transforms, lighting, vertex-buffer fills, textures and the present all still run. Only the device's
- * rasterising calls are skipped: IDirect3DDevice7::Clear, DrawPrimitive*, DrawIndexedPrimitive* return D3D_OK without
- * drawing. Every mKeyMs REAL ms one scene (BeginScene..) is drawn normally so the presented framebuffer (UI fixture
- * evidence, render.bmp) stays current; mKeyMs 0 = never draw. Hooks: the renderer's IAT slot for DirectDrawCreateEx,
- * then the IDirect3D7::CreateDevice and IDirect3DDevice7 vtable slots (shared per class, patched once). */
-static const GUID kIID_IDirectDraw7 = { 0x15e65ec0, 0x3b9c, 0x11d2, { 0xb9, 0x2f, 0x00, 0x60, 0x97, 0x97, 0xea, 0x5b } };
-static const GUID kIID_IDirect3D7 = { 0xf5049e77, 0x4861, 0x11d2, { 0xa4, 0x07, 0x00, 0xa0, 0xc9, 0x06, 0x29, 0xa8 } };
-typedef HRESULT (WINAPI *ddcreate_t)(GUID *, void **, REFIID, void *);
-typedef HRESULT (WINAPI *qi_t)(void *, REFIID, void **);
-typedef ULONG (WINAPI *rel_t)(void *);
-typedef HRESULT (WINAPI *createdev_t)(void *, REFCLSID, void *, void **);
-typedef HRESULT (WINAPI *scene_t)(void *);
-static ddcreate_t sRealCreateEx;
-static volatile LONG sDrawScene = 1;
-static LONGLONG sNextKey;
-static volatile LONG sNullCalls, sKeyScenes, sScenes;
-
-/* The real slot values, per vtable: device classes (RGB/HAL/T&L) have distinct vtables, and d3dim may be reloaded at
- * another address; a hook finds the original through the calling object's own vtable. */
-#define kMaxTables 16
-static struct { void **mTable; void *mReal[49]; } sTables[kMaxTables];
-static void *RealSlot(void *object, int index)
-{
-    void **t = *(void ***)object;
-    int i;
-    for (i = 0; i < kMaxTables; i++) if (sTables[i].mTable == t) return sTables[i].mReal[index];
-    return NULL;
-}
-
-static int SlotSwap(void **slot, void *to, void **save)
-{
-    DWORD old;
-    if (*slot == to) return 0;
-    if (!VirtualProtect(slot, sizeof(void *), PAGE_READWRITE, &old)) return 0;
-    if (save) *save = *slot;
-    *slot = to;
-    VirtualProtect(slot, sizeof(void *), old, &old);
-    return 1;
-}
-
-static int HookTable(void **t, int index, void *to)
-{
-    int i;
-    EnterCriticalSection(&sLock);
-    for (i = 0; i < kMaxTables && sTables[i].mTable && sTables[i].mTable != t; i++) ;
-    if (i < kMaxTables) {
-        sTables[i].mTable = t;
-        if (t[index] != to) sTables[i].mReal[index] = t[index];
-    }
-    LeaveCriticalSection(&sLock);
-    return i < kMaxTables ? SlotSwap(&t[index], to, NULL) : 0;
-}
-
-static HRESULT WINAPI NullBeginScene(void *dev)
-{
-    LONGLONG now = RealNow();
-    sScenes++;
-    if (kConfig.mKeyMs && now >= sNextKey) {
-        sDrawScene = 1; sKeyScenes++;
-        sNextKey = now + (LONGLONG)kConfig.mKeyMs * sFreq / 1000;
-    } else
-        sDrawScene = 0;
-    return ((scene_t)RealSlot(dev, 5))(dev);
-}
-
-#define NULL_DRAW(index, args, params) \
-    static HRESULT WINAPI NullDraw##index params \
-    { if (sDrawScene) return ((HRESULT (WINAPI *) params)RealSlot(d, index)) args; sNullCalls++; return 0; }
-NULL_DRAW(10, (d, a, b, c, e, f, g), (void *d, DWORD a, void *b, DWORD c, DWORD e, float f, DWORD g))      /* Clear */
-NULL_DRAW(25, (d, a, b, c, e, f), (void *d, DWORD a, DWORD b, void *c, DWORD e, DWORD f))                   /* DrawPrimitive */
-NULL_DRAW(26, (d, a, b, c, e, f, g, h), (void *d, DWORD a, DWORD b, void *c, DWORD e, void *f, DWORD g, DWORD h)) /* DrawIndexedPrimitive */
-NULL_DRAW(29, (d, a, b, c, e, f), (void *d, DWORD a, DWORD b, void *c, DWORD e, DWORD f))                   /* DrawPrimitiveStrided */
-NULL_DRAW(30, (d, a, b, c, e, f, g, h), (void *d, DWORD a, DWORD b, void *c, DWORD e, void *f, DWORD g, DWORD h)) /* DrawIndexedPrimitiveStrided */
-NULL_DRAW(31, (d, a, b, c, e, f), (void *d, DWORD a, void *b, DWORD c, DWORD e, DWORD f))                   /* DrawPrimitiveVB */
-NULL_DRAW(32, (d, a, b, c, e, f, g, h), (void *d, DWORD a, void *b, DWORD c, DWORD e, void *f, DWORD g, DWORD h)) /* DrawIndexedPrimitiveVB */
-
-static HRESULT WINAPI NullCreateDevice(void *d3d, REFCLSID cls, void *surface, void **out)
-{
-    HRESULT r = ((createdev_t)RealSlot(d3d, 4))(d3d, cls, surface, out);
-    if (SUCCEEDED(r) && *out) {
-        void **t = *(void ***)*out;
-        char m[128];
-        int n = HookTable(t, 5, (void *)NullBeginScene);
-        n += HookTable(t, 10, (void *)NullDraw10);
-        n += HookTable(t, 25, (void *)NullDraw25);
-        n += HookTable(t, 26, (void *)NullDraw26);
-        n += HookTable(t, 29, (void *)NullDraw29);
-        n += HookTable(t, 30, (void *)NullDraw30);
-        n += HookTable(t, 31, (void *)NullDraw31);
-        n += HookTable(t, 32, (void *)NullDraw32);
-        wsprintfA(m, "EE-TEST-TIMESHIM null-3d device %p vtable %p newly hooked %d key-ms %lu\n", *out, t, n, kConfig.mKeyMs);
-        OutputDebugStringA(m);
-    }
-    return r;
-}
-
-static HRESULT WINAPI NullCreateEx(GUID *guid, void **out, REFIID iid, void *outer)
-{
-    HRESULT r = sRealCreateEx(guid, out, iid, outer);
-    if (SUCCEEDED(r) && *out && IsEqualGUID(iid, &kIID_IDirectDraw7)) {
-        void *d3d = NULL;
-        if (SUCCEEDED(((qi_t)(*(void ***)*out)[0])(*out, &kIID_IDirect3D7, &d3d)) && d3d) {
-            HookTable(*(void ***)d3d, 4, (void *)NullCreateDevice);
-            ((rel_t)(*(void ***)d3d)[2])(d3d);
-        }
-    }
-    return r;
-}
-
-static int PatchSlot(HMODULE m, const char *name, void *to, void **save)
-{
-    BYTE *base = (BYTE *)m;
-    IMAGE_NT_HEADERS *nt = (IMAGE_NT_HEADERS *)(base + ((IMAGE_DOS_HEADER *)base)->e_lfanew);
-    IMAGE_DATA_DIRECTORY *dir = &nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-    IMAGE_IMPORT_DESCRIPTOR *d;
-    if (!dir->VirtualAddress) return 0;
-    for (d = (IMAGE_IMPORT_DESCRIPTOR *)(base + dir->VirtualAddress); d->Name; d++) {
-        IMAGE_THUNK_DATA *names = (IMAGE_THUNK_DATA *)(base + (d->OriginalFirstThunk ? d->OriginalFirstThunk : d->FirstThunk));
-        IMAGE_THUNK_DATA *slots = (IMAGE_THUNK_DATA *)(base + d->FirstThunk);
-        for (; names->u1.AddressOfData; names++, slots++)
-            if (!IMAGE_SNAP_BY_ORDINAL(names->u1.Ordinal)
-                && !lstrcmpA((const char *)((IMAGE_IMPORT_BY_NAME *)(base + names->u1.AddressOfData))->Name, name))
-                return SlotSwap((void **)&slots->u1.Function, to, save);
-    }
-    return 0;
-}
-
-static void HookRenderer(HMODULE m)
-{
-    char path[MAX_PATH], msg[160], *b;
-    if (!m || !kConfig.mNull3D || sRealCreateEx) return;
-    GetModuleFileNameA(m, path, MAX_PATH);
-    b = path + lstrlenA(path);
-    while (b > path && b[-1] != '\\') b--;
-    if (PatchSlot(m, "DirectDrawCreateEx", (void *)NullCreateEx, (void **)&sRealCreateEx)) {
-        wsprintfA(msg, "EE-TEST-TIMESHIM null-3d hooked %s\n", b);
-        OutputDebugStringA(msg);
-    }
-}
-static HMODULE (WINAPI *rLoadLibraryA)(LPCSTR);
-static HMODULE (WINAPI *rLoadLibraryExA)(LPCSTR, HANDLE, DWORD);
-static HMODULE WINAPI ShimLoadLibraryA(LPCSTR n) { HMODULE m = rLoadLibraryA(n); HookRenderer(m); return m; }
-static HMODULE WINAPI ShimLoadLibraryExA(LPCSTR n, HANDLE f, DWORD fl) { HMODULE m = rLoadLibraryExA(n, f, fl); HookRenderer(m); return m; }
+/* ---- null 3D: not here ----
+ * The renderer runs on GX (wgpu); its null 3D device is GX's own test switch (EE_GX_NULL3D, set by timeshim.py in the
+ * environment the game inherits). kConfig.mNull3D/mKeyMs stay in the block (timeshim.py fills them; informational).
+ * The earlier Direct3D 7 vtable hooks (IDirect3DDevice7 Clear/Draw*) are gone with the DX7 renderer. */
 
 /* ---- render frame cap (exe IAT Sleep, only for calls returning into RTSGraphics::Main) ----
  * RTSGraphics::Main renders a frame and calls Sleep(1) in every loop iteration; the software renderer then holds the
  * world lock for most of the wall time. With mFrameMs set, a Sleep(1) whose return address lies in
- * [mRenderLo, mRenderHi) (RTSGraphics::Main of the running image; timeshim.py locates it per build) waits until
+ * [mRenderLo, mRenderHi) (RVAs of RTSGraphics::Main in the running exe; timeshim.py locates it per build) waits until
  * mFrameMs REAL ms after the previous frame. All other Sleep calls pass through unchanged. */
 static LONGLONG sNextFrame;
 static volatile LONG sCapped;
 static __attribute__((noinline)) VOID WINAPI ShimExeSleep(DWORD ms)
 {
-    DWORD from = (DWORD)__builtin_return_address(0);
+    ULONG_PTR from = (ULONG_PTR)__builtin_return_address(0) - (ULONG_PTR)GetModuleHandleA(NULL);   /* an RVA */
     if (kConfig.mFrameMs && from >= kConfig.mRenderLo && from < kConfig.mRenderHi) {
         LONGLONG now = RealNow(), frame = (LONGLONG)kConfig.mFrameMs * sFreq / 1000;
         HANDLE timer;
@@ -372,8 +232,6 @@ static int PatchImports(HMODULE m, int exe)
             else if (!lstrcmpA(n, "Sleep")) to = kConfig.mFrameMs ? (void *)ShimExeSleep : (void *)ShimSleep;
             else if (!lstrcmpA(n, "WaitForSingleObject")) to = (void *)ShimWFSO;
             else if (!lstrcmpA(n, "WaitForMultipleObjects")) to = (void *)ShimWFMO;
-            else if (kConfig.mNull3D && !lstrcmpA(n, "LoadLibraryA")) to = (void *)ShimLoadLibraryA;
-            else if (kConfig.mNull3D && !lstrcmpA(n, "LoadLibraryExA")) to = (void *)ShimLoadLibraryExA;
             if (!to) continue;
             VirtualProtect(&slots->u1.Function, sizeof(void *), PAGE_READWRITE, &old);
             slots->u1.Function = (DWORD_PTR)to;
@@ -384,14 +242,14 @@ static int PatchImports(HMODULE m, int exe)
     return count;
 }
 
-/* every 10 real s: scenes begun, scenes drawn (keyframes), skipped device calls, frame-capped sleeps */
+/* every 10 real s: frame-capped sleeps */
 static DWORD WINAPI Stats(LPVOID unused)
 {
     char m[160];
+    (void)unused;
     for (;;) {
         rSleep(10000);
-        wsprintfA(m, "EE-TEST-TIMESHIM stats scenes %ld drawn %ld nulled-calls %ld capped-sleeps %ld\n", sScenes, sKeyScenes,
-                  sNullCalls, sCapped);
+        wsprintfA(m, "EE-TEST-TIMESHIM stats capped-sleeps %ld\n", sCapped);
         OutputDebugStringA(m);
     }
     return 0;
@@ -409,8 +267,6 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved)
         rSleep = (void *)GetProcAddress(k, "Sleep");
         rWFSO = (void *)GetProcAddress(k, "WaitForSingleObject");
         rWFMO = (void *)GetProcAddress(k, "WaitForMultipleObjects");
-        rLoadLibraryA = (void *)GetProcAddress(k, "LoadLibraryA");
-        rLoadLibraryExA = (void *)GetProcAddress(k, "LoadLibraryExA");
         pCreateWaitableTimerExW = (void *)GetProcAddress(k, "CreateWaitableTimerExW");
         sTimerTls = TlsAlloc();
         InitializeCriticalSection(&sLock);
@@ -422,12 +278,11 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved)
         engine = GetModuleHandleA(NULL);   /* the engine, the renderer and the game are one image */
         patched = engine ? PatchImports(engine, 0) : -1;
         exeslots = patched;
-        HookRenderer(engine);
-        wsprintfA(msg, "EE-TEST-TIMESHIM factor %ld/%ld engine %p kernel32 slots %d hires %d frame-ms %lu render %08lx..%08lx "
+        wsprintfA(msg, "EE-TEST-TIMESHIM factor %ld/%ld engine %p kernel32 slots %d hires %d frame-ms %lu render rva %08lx..%08lx "
                   "exe slots %d null-3d %lu key-ms %lu\n", sNum, sDen, engine, patched, pCreateWaitableTimerExW != NULL,
                   kConfig.mFrameMs, kConfig.mRenderLo, kConfig.mRenderHi, exeslots, kConfig.mNull3D, kConfig.mKeyMs);
         OutputDebugStringA(msg);
-        if (kConfig.mNull3D || kConfig.mFrameMs) CloseHandle(CreateThread(NULL, 0, Stats, NULL, 0, NULL));
+        if (kConfig.mFrameMs) CloseHandle(CreateThread(NULL, 0, Stats, NULL, 0, NULL));
     }
     return TRUE;
 }

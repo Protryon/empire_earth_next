@@ -8,16 +8,28 @@
 #include <stdio.h>
 #include <string.h>
 
-/* The build's engine members by map address (presentation_bridge.py writes bridge_syms.h and passes it with
-   -include): the engine, the renderer and the game are one image, which exports nothing. */
-struct BridgeSym { const char* name; DWORD va; };
+/* The build's engine members by map RVA (presentation_bridge.py writes bridge_syms.h and passes it with -include):
+   the engine, the renderer and the game are one image, which exports nothing. Names are the i686 decorated ones
+   (the x64 map's own names are looked up for them at build time); addresses are RVAs from the map's preferred base,
+   added to the exe's actual base (an ASLR image works). One source for the i686 and the x86_64 DLL. */
+struct BridgeSym { const char* name; uintptr_t rva; };
 static const struct BridgeSym kBridgeSyms[] = { EE_BRIDGE_SYMS { 0, 0 } };
+static BYTE* exe_base(void) { return (BYTE*)GetModuleHandleA(NULL); }
 static void* ee_sym(const char* name)
 {
     for (const struct BridgeSym* s = kBridgeSyms; s->name; s++)
-        if (!strcmp(s->name, name)) return (void*)(uintptr_t)s->va;
+        if (!strcmp(s->name, name)) return exe_base() + s->rva;
     return NULL;
 }
+/* member functions: x86 thiscall (this in ecx); x64 has one convention (this is the first argument) */
+#ifdef _WIN64
+#define EE_THISCALL
+#else
+#define EE_THISCALL __attribute__((thiscall))
+#endif
+#ifndef EE_SIZE_UWIDESTRING
+#define EE_SIZE_UWIDESTRING 0x14   /* sizeof(UWideString) in the build's layout (presentation_bridge.py) */
+#endif
 static HMODULE self_module;
 #ifndef EE_PLAY_ONLY
 static DWORD last_dump;
@@ -25,17 +37,17 @@ static DWORD last_command;
 static void stage_path(char* path,const char* filename) {
     GetModuleFileNameA(self_module,path,MAX_PATH);char* tail=strrchr(path,'\\');if(tail)strcpy(tail+1,filename);
 }
-typedef void (__attribute__((thiscall)) *Critical)(void*);
-typedef void* (__attribute__((thiscall)) *GetEvent)(void*,unsigned long);
-typedef void (__attribute__((thiscall)) *FireEvent)(void*,unsigned long);
-typedef void (__attribute__((thiscall)) *SetIndex)(void*,unsigned long);
-typedef long (__attribute__((thiscall)) *GetIndexOut)(void*,unsigned long*);
-typedef void* (__attribute__((thiscall)) *GetPointer)(void*);
-typedef unsigned long (__attribute__((thiscall)) *GetCount)(void*);
-typedef void* (__attribute__((thiscall)) *GetLine)(void*,unsigned long);
-typedef const char* (__attribute__((thiscall)) *GetChars)(void*);
-typedef void (__attribute__((thiscall)) *SetBool)(void*,unsigned char);
-typedef unsigned char (__attribute__((thiscall)) *GetBool)(void*);
+typedef void (EE_THISCALL *Critical)(void*);
+typedef void* (EE_THISCALL *GetEvent)(void*,unsigned long);
+typedef void (EE_THISCALL *FireEvent)(void*,unsigned long);
+typedef void (EE_THISCALL *SetIndex)(void*,unsigned long);
+typedef long (EE_THISCALL *GetIndexOut)(void*,unsigned long*);
+typedef void* (EE_THISCALL *GetPointer)(void*);
+typedef unsigned long (EE_THISCALL *GetCount)(void*);
+typedef void* (EE_THISCALL *GetLine)(void*,unsigned long);
+typedef const char* (EE_THISCALL *GetChars)(void*);
+typedef void (EE_THISCALL *SetBool)(void*,unsigned char);
+typedef unsigned char (EE_THISCALL *GetBool)(void*);
 static void print_text(FILE* out,const char* text) {
     /* the UWideString's narrow view; anything that could break the line format is escaped */
     for(int k=0;text && text[k] && k<80;k++) {
@@ -55,7 +67,7 @@ static void print_text(FILE* out,const char* text) {
    ui-state.txt (written atomically): form/command/pid, the form stack, 0x3f0 controls, combos (selection and
    lines) and check boxes of the top form. */
 static void ui_test(void) {
-#ifndef EE_UI_MANAGER_VA
+#ifndef EE_UI_MANAGER_RVA
 /* Offsets into the game's objects. Defaults: VC6/Dinkum layout (the original). The fork's harness passes each build's
    own values, looked up by member name in its record layouts (tools/harness/layout.py). */
 #ifndef EE_OFF_UIM_CRITICAL
@@ -73,9 +85,9 @@ static void ui_test(void) {
 #define EE_OFF_SURFACE_DD 0x48          /* DX7Surface::mSurface */
 #define EE_SHOWSCENE_RVA 0xc99e         /* DX7Rasterizer::ShowScene in the retail DX7HRDisplay.dll */
 #endif
-#define EE_UI_MANAGER_VA 0x93191c /* gUIManager; a full-link session passes its map address */
+#define EE_UI_MANAGER_RVA 0x53191c /* gUIManager (retail 0x93191c); the session passes its map RVA */
 #endif
-    BYTE* manager=*(BYTE**)EE_UI_MANAGER_VA;if(!manager)return;
+    BYTE* manager=*(BYTE**)(exe_base()+EE_UI_MANAGER_RVA);if(!manager)return;
     Critical enter=(Critical)ee_sym("?Enter@TSCriticalSection@@QAEXXZ");
     Critical leave=(Critical)ee_sym("?Leave@TSCriticalSection@@QAEXXZ");
     GetEvent get=(GetEvent)ee_sym("?GetTriggerEvent@UIControl@@QAEPAVUIEvent@@K@Z");
@@ -98,10 +110,10 @@ static void ui_test(void) {
     void* flist_vtbl=(void*)ee_sym("??_7UIFileListBox@@6B@");
     /* final validation (lane scen): string list boxes too (the campaign scenario list, form 33 control 2) */
     void* lbs_vtbl=(void*)ee_sym("??_7UILBString@@6B@");
-    typedef void (__attribute__((thiscall)) *SetWide)(void*,const void*);
-    typedef void (__attribute__((thiscall)) *WideFromChars)(void*,const char*);
-    typedef const char* (__attribute__((thiscall)) *EditLine)(void*,unsigned long);
-    typedef void (__attribute__((thiscall)) *ChangeSelection)(void*,unsigned long,unsigned char,unsigned char);
+    typedef void (EE_THISCALL *SetWide)(void*,const void*);
+    typedef void (EE_THISCALL *WideFromChars)(void*,const char*);
+    typedef const char* (EE_THISCALL *EditLine)(void*,unsigned long);
+    typedef void (EE_THISCALL *ChangeSelection)(void*,unsigned long,unsigned char,unsigned char);
     SetWide edit_set=(SetWide)ee_sym("?SetText@UIEditBox@@QAEXABVUWideString@@@Z");
     EditLine edit_get=(EditLine)ee_sym("?GetText@UIEditBox@@QBEPBDK@Z");
     GetCount edit_lines=(GetCount)ee_sym("?GetLineCount@UIEditBox@@QBEKXZ");
@@ -114,7 +126,7 @@ static void ui_test(void) {
     void* critical=*(void**)(manager+EE_OFF_UIM_CRITICAL);
     /* UI events can hold this lock while waiting for the render thread. Never
        block that render thread to inspect or enqueue a test command. */
-    typedef unsigned char (__attribute__((thiscall)) *TryEnter)(void*);
+    typedef unsigned char (EE_THISCALL *TryEnter)(void*);
     TryEnter try_enter=(TryEnter)ee_sym("?TryEnter@TSCriticalSection@@QAE_NXZ");
     if(!try_enter || !try_enter(critical))return;
     BYTE** first=*(BYTE***)(manager+EE_OFF_UIM_FORMS_FIRST);BYTE** end=*(BYTE***)(manager+EE_OFF_UIM_FORMS_LAST);
@@ -187,7 +199,7 @@ static void ui_test(void) {
                            the save screen's Save button reads the box) */
                         char word[64]={0};unsigned long s2,a2,b2;char op2[32];
                         if(sscanf(line,"%lu %31s %lu %lu %63s",&s2,op2,&a2,&b2,word)==5) {
-                            __attribute__((aligned(8))) unsigned char wide[0x40];   /* UWideString is 0x14 bytes */
+                            __attribute__((aligned(16))) unsigned char wide[EE_SIZE_UWIDESTRING+0x40];   /* a UWideString */
                             wide_ctor(wide,word);edit_set(control,wide);wide_dtor(wide);verdict="text-set";
                         }
                     } else if(!strcmp(op,"lselect") && fields>=5 && control && flists && (*(void**)control==flist_vtbl || (lbs_vtbl && *(void**)control==lbs_vtbl))) {
@@ -206,8 +218,8 @@ static void ui_test(void) {
 }
 #endif   /* EE_PLAY_ONLY: test-only UI fixture state above */
 
-#ifdef EE_MOUSE_VA
-/* PLAY ONLY (-DEE_MOUSE_VA=<gMouse VA>, tools/boot/play.py): mouse for a VM whose pointer is an absolute tablet.
+#ifdef EE_MOUSE_RVA
+/* PLAY ONLY (-DEE_MOUSE_RVA=<gMouse RVA>, tools/boot/play.py): mouse for a VM whose pointer is an absolute tablet.
    The engine reads GUID_SysMouse through DirectInput in exclusive mode and moves its own cursor by relative deltas;
    with a tablet that yields nothing. The engine's DirectInputCreateA import is redirected so the system mouse
    device is wrapped: non-exclusive, buttons and wheel come from the game window's own messages (queued, so a click
@@ -369,10 +381,10 @@ static BOOL mouse_install(void)
             if (IMAGE_SNAP_BY_ORDINAL(names->u1.Ordinal)) continue;
             if (strcmp((char*)((IMAGE_IMPORT_BY_NAME*)(engine + names->u1.AddressOfData))->Name, "DirectInputCreateA")) continue;
             DWORD old;
-            if (!VirtualProtect(&slots->u1.Function, 4, PAGE_READWRITE, &old)) return FALSE;
+            if (!VirtualProtect(&slots->u1.Function, sizeof slots->u1.Function, PAGE_READWRITE, &old)) return FALSE;
             real_di_create = (void*)slots->u1.Function;
-            slots->u1.Function = (DWORD)(uintptr_t)hook_di_create;
-            VirtualProtect(&slots->u1.Function, 4, old, &old);
+            slots->u1.Function = (ULONG_PTR)hook_di_create;
+            VirtualProtect(&slots->u1.Function, sizeof slots->u1.Function, old, &old);
             return TRUE;
         }
     }
@@ -382,7 +394,7 @@ static BOOL mouse_install(void)
 /* every presented frame: the game cursor follows the Windows cursor (clamped to the client area) */
 static void mouse_follow(HWND hwnd, const RECT* client, DWORD width, DWORD height)
 {
-    BYTE* mouse = *(BYTE**)EE_MOUSE_VA;
+    BYTE* mouse = *(BYTE**)(exe_base() + EE_MOUSE_RVA);
     POINT at;
     if (!mouse || hwnd != mouse_window || GetForegroundWindow() != hwnd || client->right <= 0 || client->bottom <= 0
         || !GetCursorPos(&at) || !ScreenToClient(hwnd, &at))
@@ -432,7 +444,7 @@ static void gx_present(HWND hwnd, void* frame)
         last_dump = GetTickCount();
     }
 #endif
-#ifdef EE_MOUSE_VA
+#ifdef EE_MOUSE_RVA
     if (!width) read(frame, NULL, 0, &width, &height);
     RECT client; GetClientRect(hwnd, &client);
     mouse_follow(hwnd, &client, width, height);
@@ -468,7 +480,7 @@ BOOL WINAPI DllMain(HINSTANCE module,DWORD reason,LPVOID reserved)
         HMODULE pinned=NULL;
         if(!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_PIN,
                               (LPCSTR)(uintptr_t)gx_present,&pinned))return FALSE;
-#ifdef EE_MOUSE_VA
+#ifdef EE_MOUSE_RVA
         InitializeCriticalSection(&mouse_lock);
         if(!mouse_install())OutputDebugStringA("TEST mouse shim: DirectInputCreateA import not found\n");
 #endif
