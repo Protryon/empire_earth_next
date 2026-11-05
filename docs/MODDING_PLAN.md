@@ -670,4 +670,10 @@ hot-reload of content in single player for modders.
      data has, titles come from the registry. Music: epochs past the 15 dbmusic flags have no songs.
   Tests: `eedata.py extra` (30 unit classes past 871; every tech-tree event and effect moved above rows 1499/1999;
   a 16th epoch in the middle), compiled by both loaders, and an AI game on those tables (gates).
-  Left: 3 (terrain types, families x attack kinds, civ-builder categories/levels), 5, 6 (see the report).
+  3 (part): families: dbfamily may have more than 60 rows. Left: terrain types (17 in a 32-bit mask), attack kinds
+  (68: the dbfamily record's fixed column count), civ-builder categories/levels (35/60, the .civ 6-bit packing),
+  4.5 (weapon/armour kinds, resources, AI behaviours, scenario variables, difficulty, map sizes/speeds), 4.6 players.
+  Gates (2026-11-05, test profile, seed 2 Small Hard 2 AI to the time cap): binary tree tour + 120 s and AI game
+  (units 56/39), text + open tree tour and AI game (56/39), the extra tables (878 unit rows, 3,076 effects, 1,794
+  events, 16 epochs) tour + 60 s and AI game (56/39); the game's own content dump of the extra tables equals the
+  CLI's (37/37 tables); dump(binary tree) == dump(open tree) through the game's code.
