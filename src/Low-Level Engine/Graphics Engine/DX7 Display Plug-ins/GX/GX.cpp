@@ -846,7 +846,8 @@ void GXBlit(GXSurfaceData* inTarget, const RECT& inDestination, GXSurfaceData* i
 
 // TEST ONLY (tools/harness/presentation_bridge.c finds these by map address): a callback before every presented
 // frame, and a read-back of a frame as 32-bit BGRA rows. Kept by /include so the linker does not drop them.
-typedef void (*GXTestPresentHook)(HWND inWindow, GXSurface* inFrame);
+// (inWindow: the window's native handle, an HWND on Win32)
+typedef void (*GXTestPresentHook)(void* inWindow, GXSurface* inFrame);
 static GXTestPresentHook sTestPresentHook;
 #if defined(_M_IX86)
 #pragma comment(linker, "/include:_GXTestSetPresentHook")
@@ -891,18 +892,48 @@ void GXSurfaceData::Present(GXSurfaceData* inSource, bool inWait)
     if (!this->mWindow || !inSource)
         return;
     if (sTestPresentHook)
-        sTestPresentHook(this->mWindow, inSource->mOwner);
-    RECT theClient;
-    if (!GetClientRect(this->mWindow, &theClient) || theClient.right <= 0 || theClient.bottom <= 0)
+        sTestPresentHook(this->mNative.mWindow, inSource->mOwner);
+    int32_t theClientWidth = 0, theClientHeight = 0;
+    PlatWindowGetClientSize(this->mWindow, &theClientWidth, &theClientHeight);
+    if (theClientWidth <= 0 || theClientHeight <= 0)
         return;
+    RECT theClient = {0, 0, theClientWidth, theClientHeight};
     inSource->ForGPURead();
     if (!this->mSwapChain) {
-        WGPUSurfaceSourceWindowsHWND theSource = {};
-        theSource.chain.sType = WGPUSType_SurfaceSourceWindowsHWND;
-        theSource.hinstance = GetModuleHandleA(NULL);
-        theSource.hwnd = this->mWindow;
+        // the wgpu surface of the window's native kind (Win32 HWND, X11 Window, Wayland surface, Metal layer)
         WGPUSurfaceDescriptor theDescriptor = {};
-        theDescriptor.nextInChain = &theSource.chain;
+        WGPUSurfaceSourceWindowsHWND theWin32 = {};
+        WGPUSurfaceSourceXlibWindow theX11 = {};
+        WGPUSurfaceSourceWaylandSurface theWayland = {};
+        WGPUSurfaceSourceMetalLayer theMetal = {};
+        const PlatNativeWindow& n = this->mNative;
+        switch (n.mKind) {
+        case PLAT_NATIVE_WIN32:
+            theWin32.chain.sType = WGPUSType_SurfaceSourceWindowsHWND;
+            theWin32.hinstance = n.mDisplay;
+            theWin32.hwnd = n.mWindow;
+            theDescriptor.nextInChain = &theWin32.chain;
+            break;
+        case PLAT_NATIVE_X11:
+            theX11.chain.sType = WGPUSType_SurfaceSourceXlibWindow;
+            theX11.display = n.mDisplay;
+            theX11.window = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(n.mWindow));
+            theDescriptor.nextInChain = &theX11.chain;
+            break;
+        case PLAT_NATIVE_WAYLAND:
+            theWayland.chain.sType = WGPUSType_SurfaceSourceWaylandSurface;
+            theWayland.display = n.mDisplay;
+            theWayland.surface = n.mWindow;
+            theDescriptor.nextInChain = &theWayland.chain;
+            break;
+        case PLAT_NATIVE_METAL:
+            theMetal.chain.sType = WGPUSType_SurfaceSourceMetalLayer;
+            theMetal.layer = n.mWindow;
+            theDescriptor.nextInChain = &theMetal.chain;
+            break;
+        default:
+            return;
+        }
         this->mSwapChain = wgpuInstanceCreateSurface(theCore.mInstance, &theDescriptor);
         if (!this->mSwapChain)
             return;
@@ -1511,8 +1542,10 @@ static const GXPIXELFORMAT kRGB565 = {sizeof(GXPIXELFORMAT), GXPF_RGB, 0, 16, 0x
 
 static void DesktopSize(unsigned long& outWidth, unsigned long& outHeight)
 {
-    outWidth = (unsigned long)GetSystemMetrics(SM_CXSCREEN);
-    outHeight = (unsigned long)GetSystemMetrics(SM_CYSCREEN);
+    int32_t theWidth = 0, theHeight = 0;
+    PlatWindowGetDisplaySize(NULL, &theWidth, &theHeight);   // the primary display (the window system is started)
+    outWidth = (unsigned long)theWidth;
+    outHeight = (unsigned long)theHeight;
     if (!outWidth || !outHeight) {
         outWidth = 1024;
         outHeight = 768;
@@ -1542,7 +1575,8 @@ GXRESULT GXDirectDrawEnumerateEx(GXDDENUMCALLBACKEX inCallback, void* inContext,
 {
     char theDescription[] = "wgpu display";
     char theName[] = "display";
-    inCallback(NULL, theDescription, theName, inContext, MonitorFromPoint(POINT(), MONITOR_DEFAULTTOPRIMARY));
+    static char sPrimaryDisplay;   // the token of the one display (DirectDraw's HMONITOR)
+    inCallback(NULL, theDescription, theName, inContext, &sPrimaryDisplay);
     return GX_OK;
 }
 
@@ -1644,7 +1678,7 @@ GXRESULT GXDirectDraw::SetDisplayMode(unsigned long inWidth, unsigned long inHei
     return GX_OK;
 }
 
-GXRESULT GXDirectDraw::SetCooperativeLevel(HWND inWindow, unsigned long inFlags)
+GXRESULT GXDirectDraw::SetCooperativeLevel(PlatWindow* inWindow, unsigned long inFlags)
 {
     this->mWindow = inWindow;
     this->mCooperativeFlags = inFlags;
@@ -1669,6 +1703,8 @@ GXRESULT GXDirectDraw::CreateSurface(GXSURFACEDESC* inDescription, GXSurface** o
         theData->mHeight = this->mModeHeight;
         theData->mPixelFormat = this->mModeBitCount == 16 ? kRGB565 : kXRGB32;
         theData->mWindow = this->mWindow;
+        if (this->mWindow)
+            PlatWindowGetNative(this->mWindow, &theData->mNative);
     } else {
         theData->mWidth = inDescription->dwWidth;
         theData->mHeight = inDescription->dwHeight;

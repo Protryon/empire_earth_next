@@ -14,7 +14,6 @@
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
 #include "dx7/DX7Movie.h"
-#include "dx7/DX7Multimon.h"
 
 // The U2D key init chains:
 // SYNTHETIC: DX7HR 0x100091aa
@@ -79,21 +78,17 @@ HRESULT CALLBACK DX7EnumDevicesCallback(LPSTR inDescription, LPSTR inName, GXDEV
 // DirectDraw enumeration callback (Windows 98/2000): creates a screen for each 3D-capable device, primary from the
 // monitor flags, and adds it when it has a hardware rasterizer (else deletes it)
 BOOL WINAPI DX7DirectDrawEnumerateExCallback(GUID* inGUID, LPSTR inDescription, LPSTR inName, LPVOID inContext,
-                                             HMONITOR inMonitor)
+                                             void* inMonitor)
 {
     unsigned long* theCounter = (unsigned long*)inContext;
     DX7Screen* theScreen;
     bool theIsAttached = (inGUID == NULL && inMonitor == NULL) || inMonitor != NULL ? TRUE : FALSE;
     GXDirectDraw* theDDraw;
     bool theIsPrimaryDevice;
-    MONITORINFO theInfo;
     HRESULT theStatus;
     GXCAPS theCaps;
-    theInfo.cbSize = sizeof(theInfo);
-    if (DX7GetMonitorInfo(inMonitor, &theInfo))
-        theIsPrimaryDevice = (theInfo.dwFlags & MONITORINFOF_PRIMARY) == MONITORINFOF_PRIMARY;
-    else
-        theIsPrimaryDevice = inGUID == NULL;
+    // GX reports one display, the primary one (the original asked the monitor for MONITORINFOF_PRIMARY)
+    theIsPrimaryDevice = inMonitor != NULL || inGUID == NULL;
     (*theCounter)++;
     theStatus = GXDirectDrawCreate(inGUID, &theDDraw);
     if (theStatus == GX_OK) {
@@ -143,7 +138,6 @@ long DX7Rasterizer::ActivateRasterizer()
     HRESULT theStatus = GX_OK;
     unsigned long theNumberOfScreens = 0;
     unsigned long theOSType = UGetOSType();
-    DX7InitializeMultimon(theOSType);
     gEnumeratingRasterizer = this;
     switch (theOSType) {
     default:

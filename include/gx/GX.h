@@ -19,6 +19,7 @@
 #include <stdint.h>
 
 typedef long GXRESULT;
+struct PlatWindow;   // platform/PlatWindow.h: the window the primary surface presents in
 
 // ---- results
 #define GX_OK 0
@@ -282,8 +283,9 @@ typedef GXRESULT (CALLBACK* GXENUMMODESCALLBACK)(GXSURFACEDESC* inMode, void* in
 typedef GXRESULT (CALLBACK* GXENUMDEVICESCALLBACK)(char* inDescription, char* inName, GXDEVICEDESC* inCaps,
                                                    void* inContext);
 typedef GXRESULT (CALLBACK* GXENUMPIXELFORMATSCALLBACK)(GXPIXELFORMAT* inFormat, void* inContext);
+// inMonitor: an opaque token of the display (non-NULL: the primary display; DirectDraw's HMONITOR)
 typedef BOOL (WINAPI* GXDDENUMCALLBACKEX)(GUID* inGUID, char* inDescription, char* inName, void* inContext,
-                                          HMONITOR inMonitor);
+                                          void* inMonitor);
 
 // The display device of one monitor (IDirectDraw7 + IDirect3D7)
 class GXDirectDraw {
@@ -297,7 +299,7 @@ public:
     GXRESULT GetDisplayMode(GXSURFACEDESC* outMode);
     GXRESULT SetDisplayMode(unsigned long inWidth, unsigned long inHeight, unsigned long inBitCount,
                             unsigned long inRefreshRate, unsigned long inFlags);
-    GXRESULT SetCooperativeLevel(HWND inWindow, unsigned long inFlags);
+    GXRESULT SetCooperativeLevel(PlatWindow* inWindow, unsigned long inFlags);   // an HWND in DirectDraw
     GXRESULT CreateSurface(GXSURFACEDESC* inDescription, GXSurface** outSurface, void* inOuter);
     GXRESULT GetAvailableVidMem(GXSCAPS* inCaps, unsigned long* outTotal, unsigned long* outFree);
     GXRESULT GetDeviceIdentifier(GXDEVICEIDENTIFIER* outIdentifier, unsigned long inFlags);
@@ -314,7 +316,7 @@ private:
     ~GXDirectDraw();
     friend GXRESULT GXDirectDrawCreate(GUID* inGUID, GXDirectDraw** outDirectDraw);
     unsigned long mReferences;
-    HWND mWindow;
+    PlatWindow* mWindow;
     unsigned long mCooperativeFlags;
     unsigned long mModeWidth, mModeHeight, mModeBitCount;
 };

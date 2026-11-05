@@ -23,7 +23,7 @@
 #include "lle/GEModel.h"
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
-#include "dx7/DX7Multimon.h"
+#include "platform/PlatWindow.h"
 #include "lle/GERenderState.h"
 
 // The pixel formats the GE pixel format numbers stand for, as GXPIXELFORMAT fields after dwSize (.data 0x100166fc,
@@ -90,7 +90,7 @@ bool DX7Screen::sFirstCaptureWasAttachedToDesktop;
 // FUNCTION: DX7HR 0x1000d271
 // Creates a screen for a DirectDraw device: lists its display modes, finds the current one, probes 32-bit support
 // and registers it; the filter-cap tests use | instead of &, so both surface filters are always reported available
-DX7Screen::DX7Screen(HMONITOR__* inMonitor, GXDirectDraw* inDirectDraw, const UString& inName,
+DX7Screen::DX7Screen(void* inMonitor, GXDirectDraw* inDirectDraw, const UString& inName,
                      bool inAttachedToDesktop, bool inSharesPrimary)
     : mMonitor(inMonitor), mAttachedToDesktop(inAttachedToDesktop), mIsFullScreen(false),
       mSharesPrimary(inSharesPrimary), mCanMagFilterSurfaces(false), mCanMinFilterSurfaces(false)
@@ -205,44 +205,30 @@ long DX7Screen::Capture(const GEWindow* inWindow, bool inToClipboard)
 }
 
 // FUNCTION: DX7HR 0x1000d622
-// Creates a window: style 1 is an overlapped window sized to its client area, else a topmost popup (child of inParent)
+// Creates a window (a platform window: platform/PlatWindow.h): style 1 is a framed, resizable window with an
+// inWidth x inHeight client area, else a topmost borderless one at inOrigin (the original's popup), which is the
+// full screen (borderless, no mode change) when it covers the display. The class name and the parent are unused.
 long DX7Screen::CreateAWindow(const GE2DPoint& inOrigin, unsigned long inWidth, unsigned long inHeight,
                               UString& inClassName, UString& inTitle, GEWindow*& outWindow, unsigned long inStyle,
                               GEWindow* inParent)
 {
     long theResult = kErrorOK;
-    HWND theParent = NULL;
-    unsigned long theWindowStyle = WS_POPUP | WS_VISIBLE;
-    bool theHasMenu = false;
-    HWND theWindow;
-    if (inStyle == 1) {
-        WNDCLASSEX theClass;
-        theClass.cbSize = sizeof(theClass);
-        GetClassInfoEx(GEScreen::GetInstance(), inClassName, &theClass);
-        if (theClass.lpszMenuName != NULL)
-            theHasMenu = true;
-        RECT theRect;
-        theRect.left = UMFloatToLong(inOrigin.GetX());
-        theRect.top = UMFloatToLong(inOrigin.GetY());
-        theRect.right = UMFloatToLong(inOrigin.GetX() + inWidth);
-        theRect.bottom = UMFloatToLong(inOrigin.GetY() + inHeight);
-        AdjustWindowRect(&theRect, WS_OVERLAPPEDWINDOW, theHasMenu);
-        theWindow = CreateWindowEx(0, inClassName, inTitle, WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-                                   UMFloatToLong(inOrigin.GetX()), UMFloatToLong(inOrigin.GetY()),
-                                   theRect.right - theRect.left, theRect.bottom - theRect.top, NULL, NULL,
-                                   GEScreen::GetInstance(), NULL);
-    } else {
-        if (inParent != NULL) {
-            theParent = inParent->mWindow;
-            theWindowStyle = WS_POPUP | WS_VISIBLE | WS_CHILD;
-        }
-        theWindow = CreateWindowEx(WS_EX_TOPMOST, inClassName, inTitle, theWindowStyle,
-                                   UMFloatToLong(inOrigin.GetX()), UMFloatToLong(inOrigin.GetY()), inWidth, inHeight,
-                                   theParent, NULL, GEScreen::GetInstance(), NULL);
-    }
-    if (theWindow != NULL)
+    int32_t theDisplayWidth = 0, theDisplayHeight = 0;
+    PlatWindowGetDisplaySize(NULL, &theDisplayWidth, &theDisplayHeight);
+    PlatWindow* theWindow;
+    if (inStyle == 1)
+        theWindow = PlatWindowCreate(inTitle, (int32_t)inWidth, (int32_t)inHeight, PLAT_WINDOW_RESIZABLE);
+    else if ((int32_t)inWidth >= theDisplayWidth && (int32_t)inHeight >= theDisplayHeight)
+        theWindow = PlatWindowCreate(inTitle, (int32_t)inWidth, (int32_t)inHeight, PLAT_WINDOW_FULLSCREEN);
+    else
+        theWindow = PlatWindowCreateAt(inTitle, UMFloatToLong(inOrigin.GetX()), UMFloatToLong(inOrigin.GetY()),
+                                       (int32_t)inWidth, (int32_t)inHeight, PLAT_WINDOW_BORDERLESS | PLAT_WINDOW_TOPMOST);
+    if (theWindow != NULL) {
+        PlatCursorShow(0);   // the game draws its own pointer over its windows (WM_SETCURSOR's SetCursor(NULL))
+        TSThread::DispatchWindowEvents();   // the messages CreateWindowEx sent (the window is not the game's yet)
         outWindow = new GEWindow(theWindow, inWidth, inHeight, inStyle, true);
-    else {
+    } else {
+        ESDebugOut("CreateAWindow: %s\n", PlatWindowLastError());
         ESRecordNativeError(PlatGetLastError());
         ESGetNativeError();
         theResult = kErrorNativeError;
@@ -444,33 +430,14 @@ long __stdcall DX7Screen::EnumVideoModeCallback(GXSURFACEDESC* inDescription, vo
 }
 
 // FUNCTION: DX7HR 0x1000dce2
-// Returns the screen's desktop rectangle: the monitor rectangle where available, else 0,0 to the current mode's size
-// (on other OS types it is left unchanged)
+// Returns the screen's desktop rectangle: 0,0 to the current mode's size (the display's: GX never changes the mode;
+// the original asked the monitor where it had one, and the screens are created without one)
 const GERectangle& DX7Screen::GetDesktopRectangle()
 {
-    switch (UGetOSType()) {
-    case kOSWindows95:
-        this->mDesktopRectangle.SetTop(0.0f);
-        this->mDesktopRectangle.SetLeft(0.0f);
-        this->mDesktopRectangle.SetRight((float)this->mModes[this->mCurrentModeIndex].mWidth);
-        this->mDesktopRectangle.SetBottom((float)this->mModes[this->mCurrentModeIndex].mHeight);
-        break;
-    case kOSWindows98:
-    case kOSWindowsNT5:
-        MONITORINFO theInfo;
-        theInfo.cbSize = sizeof(theInfo);
-        if (DX7GetMonitorInfo(this->mMonitor, &theInfo)) {
-            GERectangle theRectangle(theInfo.rcMonitor);
-            this->mDesktopRectangle = theRectangle;
-        }
-        else {
-            this->mDesktopRectangle.SetTop(0.0f);
-            this->mDesktopRectangle.SetLeft(0.0f);
-            this->mDesktopRectangle.SetRight((float)this->mModes[this->mCurrentModeIndex].mWidth);
-            this->mDesktopRectangle.SetBottom((float)this->mModes[this->mCurrentModeIndex].mHeight);
-        }
-        break;
-    }
+    this->mDesktopRectangle.SetTop(0.0f);
+    this->mDesktopRectangle.SetLeft(0.0f);
+    this->mDesktopRectangle.SetRight((float)this->mModes[this->mCurrentModeIndex].mWidth);
+    this->mDesktopRectangle.SetBottom((float)this->mModes[this->mCurrentModeIndex].mHeight);
     return this->mDesktopRectangle;
 }
 
@@ -539,20 +506,6 @@ void DX7Screen::Test32BitSupport()
     GESurface* theSurface = NULL;
     GESurface* theTexture = NULL;
     GEWindow* theWindow = NULL;
-    WNDCLASSEX theClass;
-    theClass.cbSize = sizeof(theClass);
-    theClass.style = CS_HREDRAW | CS_VREDRAW;
-    theClass.lpfnWndProc = DX7Screen::TestWindowProc;
-    theClass.cbClsExtra = 0;
-    theClass.cbWndExtra = 0;
-    theClass.hInstance = GEScreen::GetInstance();
-    theClass.hIcon = NULL;
-    theClass.hCursor = LoadCursor(NULL, IDC_ARROW);
-    theClass.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
-    theClass.lpszMenuName = NULL;
-    theClass.lpszClassName = "TestWindowClass";
-    theClass.hIconSm = NULL;
-    RegisterClassEx(&theClass);
     GE2DPoint theOrigin(0.0f, 0.0f);
     UString theClassName("TestWindowClass");
     UString theTitle("");
@@ -620,18 +573,13 @@ void DX7Screen::Test32BitSupport()
             this->m32BitTextureSupport = false;
         }
         delete theWindow;
+        // the activation the probe's destruction gives back to the game window (Win32 sent it during DestroyWindow:
+        // the game centres its pointer on it)
+        TSThread::DispatchWindowEvents();
     } else {
         this->m32BitDeviceSupport = false;
         this->m32BitTextureSupport = false;
     }
-    UnregisterClass("TestWindowClass", GEScreen::GetInstance());
-}
-
-// FUNCTION: DX7HR 0x1000e1af
-// Window procedure of the 32-bit probe window: default handling only
-LRESULT CALLBACK DX7Screen::TestWindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam)
-{
-    return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
 }
 
 // COMDATs this unit is the first (link order) to instantiate, then the template-static init chain head (it calls the

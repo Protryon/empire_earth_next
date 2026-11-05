@@ -8,6 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "platform/PlatMessage.h"
+#include "platform/PlatWindow.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
@@ -450,12 +451,13 @@ long gAOCPacificChecksum = 1;
 long gAOCAsianChecksum = 1;
 long gEEDemoChecksum = 1;
 long gEELearningChecksum = 1;
+#ifdef _WIN32
 static char sStartScreenClassName[] = "Loading Game Window";
 static HBITMAP sStartScreenBitmap;
 static BITMAP sStartScreenBitmapInfo;
 static HDC sStartScreenDC;
+#endif
 static TMTimer* sTimer;                     // 0x5319ec (EECreateGameTimer's assert names it)
-static HHOOK sCallWndProcHook;             // 0x5319e0 (the start-up's SetWindowsHookEx(WH_CALLWNDPROC, ...))
 extern HINSTANCE gInstance;                 // 0x5319d8 (WinMain's instance, set by 0x540d73)
 volatile bool gStartScreenPainted;              // 0x5319f0 (the start screen's first WM_PAINT sets it)
 char gGameWindowTitle[4];                   // 0x5319f4 the start screen's title (only use 0x13f520 pushes it; never written; size 1..4 inferred)
@@ -470,7 +472,9 @@ public:
     ~EEStartScreen();
     void Start();
     void Stop();
+#ifdef _WIN32
     static LRESULT CALLBACK WindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam);
+#endif
     static unsigned long ThreadMain(void* inParameter);
     HINSTANCE mInstance;                    // +0x00
     TSThread* mThread;                      // +0x04
@@ -495,26 +499,33 @@ EEStartScreen::~EEStartScreen()
 
 // FUNCTION: EXE 0x53f2f6
 // In full screen only: starts the splash screen thread and waits until it has painted the splash bitmap
+// (Win32 only: elsewhere there is no splash window yet; PORT.md step 4)
 void EEStartScreen::Start()
 {
+#ifdef _WIN32
     if (gGamePreferences.mSettings.GetFullScreen() != true)
         return;
     gStartScreenPainted = false;
     TSScheduler::CreateThread(this->mThread, EEStartScreen::ThreadMain, this);
     while (gStartScreenPainted == false)
         PlatSleep(1);
+#endif
 }
 
 // FUNCTION: EXE 0x53f331
 // In full screen only: tells the splash screen thread to quit, waits for it to end and destroys it
 void EEStartScreen::Stop()
 {
+#ifdef _WIN32
     if (gGamePreferences.mSettings.GetFullScreen() != true)
         return;
     this->mQuit = true;
     this->mEndThreadEvent->Wait(kTSWaitInfinite);
     TSScheduler::DestroyThread(this->mThread);
+#endif
 }
+
+#ifdef _WIN32
 
 // FUNCTION: EXE 0x53f358
 // Splash window procedure: hides the cursor, skips background erases and paints the splash bitmap (flagging it painted)
@@ -581,8 +592,15 @@ unsigned long EEStartScreen::ThreadMain(void* inParameter)
             HDC theDC = GetDC(theWindow);
             sStartScreenDC = CreateCompatibleDC(theDC);
             ReleaseDC(theWindow, theDC);
+            // the splash window's own message pump (TSThread::Receive no longer dispatches Win32 messages)
             do {
-                theScreen->mThread->Receive(theMessage, theParameter1, theParameter2);
+                MSG theWin32Message;
+                theMessage = 0;
+                if (PeekMessage(&theWin32Message, NULL, 0, 0, PM_REMOVE)) {
+                    theMessage = theWin32Message.message;
+                    TranslateMessage(&theWin32Message);
+                    DispatchMessage(&theWin32Message);
+                }
                 EESetThreadFloatingPoint("StartScreenMainThread");
                 if (theScreen->mQuit == true)
                     PostQuitMessage(0);
@@ -595,6 +613,7 @@ unsigned long EEStartScreen::ThreadMain(void* inParameter)
     }
     return 0;
 }
+#endif   // _WIN32: the start screen's window
 
 // FUNCTION: EXE 0x53f5be
 // Puts the calling thread's FPU into 53-bit precision and round-to-nearest mode (the thread name is unused)
@@ -862,7 +881,7 @@ bool EEInitializePart1()
         ESVERIFY_AT(theResult == keseOK, 823);
         EESetThreadFloatingPoint("EEInitializePart1:ISInitialize");
         if (EEInitializeSounds() == false) {
-            ShowWindow(gGameWindow->GetOSRepresentation(), SW_HIDE);
+            PlatWindowShow(gGameWindow->GetOSRepresentation(), 0);
             UWideString theMessage;
             UWideString theTitle;
             gResource->GetString(IDS_EMPIRE_EARTH_ART_OF_CONQUEST_REQUIRES_SOUND, theMessage);
@@ -1459,17 +1478,6 @@ void EEClearGame()
     gWorld.mLock->WriteUnlock();
 }
 
-// FUNCTION: EXE 0x54126f
-// Window hook that swallows WM_SETCURSOR messages and passes everything else on
-// (the WH_CALLWNDPROC hook)
-LRESULT CALLBACK EECallWndProcHook(int inCode, WPARAM inWParam, LPARAM inLParam)
-{
-    CWPSTRUCT* theMessage = (CWPSTRUCT*)inLParam;
-    if (inCode >= 0 && (theMessage == NULL || theMessage->message == WM_SETCURSOR))
-        return 0;
-    return CallNextHookEx(sCallWndProcHook, inCode, inWParam, inLParam);
-}
-
 // FUNCTION: EXE 0x541481
 // Creates the game threads and registers the saved game's persistent sections
 void EEInitializePart2()
@@ -1526,7 +1534,7 @@ void EEPlayIntroMovies(bool inSkipMovies)
     GERectangle theRectangle(0.0f, 0.0f, 640.0f, 480.0f);
     long thePriority = TSScheduler::GetCurrentThread()->GetPriority();
     TSScheduler::GetCurrentThread()->SetPriority(PLAT_PRIORITY_NORMAL);
-    SetFocus(gGameWindow->GetOSRepresentation());
+    PlatWindowRaise(gGameWindow->GetOSRepresentation());
     gRasterizer->SetWaitForVSync(true, gGamePreferences.mSettings.GetScreenID());
     gISMouse->Resume();
     gISKeyboard->Resume();
@@ -1947,20 +1955,8 @@ bool EEInitializeDisplay()
     }
     gGamePreferences.Save();
     Fn10269C();
-    WNDCLASSEXA theClass;
-    theClass.cbSize = sizeof(theClass);
-    theClass.style = CS_HREDRAW | CS_VREDRAW;
-    theClass.lpfnWndProc = EEUserInterface::WindowProc;
-    theClass.cbClsExtra = 0;
-    theClass.cbWndExtra = 0;
-    theClass.hInstance = gInstance;
-    theClass.hIcon = LoadIcon(gInstance, MAKEINTRESOURCE(0x66));
-    theClass.hCursor = LoadCursor(gInstance, MAKEINTRESOURCE(0x68));
-    theClass.hbrBackground = (HBRUSH)GetStockObject(NULL_BRUSH);
-    theClass.lpszMenuName = NULL;
-    theClass.lpszClassName = "Empire Earth Expansion";
-    theClass.hIconSm = NULL;
-    RegisterClassExA(&theClass);
+    // the window class (name, icon 0x66) is the platform window system's (PlatWindowSetAppName in WinMain); its
+    // events go to EEUserInterface::HandleEvent (TSThread::SetEventPump)
     GERectangle theDesktop = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->GetDesktopRectangle();
     theScreen = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID());
     theOrigin.SetXY(theDesktop.GetLeft(), theDesktop.GetTop());
@@ -1974,6 +1970,8 @@ bool EEInitializeDisplay()
     }
 
     ESVERIFY_AT(theResult == keseOK, 3523);
+    // typed text always arrives (WM_CHAR did): the window's text input is on from the start
+    PlatTextInputStart(gGameWindow->GetOSRepresentation(), 0, 0, 0, 0);
     theResult = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->Capture(gGameWindow, gGamePreferences.mSettings.GetFullScreen());
 
     ESVERIFY_AT(theResult == keseOK, 3527);
@@ -1997,7 +1995,17 @@ int WINAPI WinMain(HINSTANCE inInstance, HINSTANCE inPreviousInstance, LPSTR inC
     EEStartScreen theStartScreen(inInstance);
     FSFileSpec theRecordingFile;
     if (EECreateInstanceMutex()) {
-        sCallWndProcHook = SetWindowsHookExA(WH_CALLWNDPROC, EECallWndProcHook, NULL, 0);
+        // the window system (platform/PlatWindow.h): the window class "Empire Earth Expansion" with the game's icon,
+        // its events pumped by the UI thread's TSThread::Receive (this thread: EEUserInterface::Run runs on it)
+        PlatWindowSetAppName("Empire Earth Expansion", 0x66);
+        if (!PlatWindowSystemStart()) {
+            PlatMessageShow("Empire Earth", PlatWindowLastError(), PLAT_MESSAGE_ERROR);
+            return 1;
+        }
+        TSThread::SetEventPump(EEPumpWindowEvent, PlatCurrentThreadId());
+#ifdef _WIN32
+        PlatWindowSetNativeMessageHook(EENativeMessageHook);
+#endif
         HRESULT theHResult = CoInitialize(NULL);
 
         ESVERIFY_AT(theHResult == S_OK || theHResult == S_FALSE, 3600);
@@ -2025,7 +2033,7 @@ int WINAPI WinMain(HINSTANCE inInstance, HINSTANCE inPreviousInstance, LPSTR inC
                 gResource->GetString(IDS_ERROR_CANT_RUN, theTitle);
                 PlatMessageShow(theTitle, theMessage, 0);
                 CoUninitialize();
-                UnhookWindowsHookEx(sCallWndProcHook);
+                PlatWindowSystemStop();
                 return 1;
             }
             EELoadNetworkSettings();
@@ -2055,7 +2063,7 @@ int WINAPI WinMain(HINSTANCE inInstance, HINSTANCE inPreviousInstance, LPSTR inC
             }
         }
         CoUninitialize();
-        UnhookWindowsHookEx(sCallWndProcHook);
+        PlatWindowSystemStop();
     }
     return 0;
 }

@@ -412,14 +412,14 @@ void EELobbyFn2972C6()
     if (gGamePreferences.mSettings.mFullScreen)
         theStyle = 0x22;
     gEELobbyPlatformWindow->mStyle = theStyle;
-    GetWindowTextA(gGameWindow->GetOSRepresentation(), theText, 256);
+    GetWindowTextA((HWND)gGameWindow->GetNativeHandle(), theText, 256);
     gEELobbyPlatformWindow->SetTitle(theText);
     if (gGamePreferences.mSettings.mFullScreen)
-        LobbyFn3D08C0(gGameWindow->GetOSRepresentation());
+        LobbyFn3D08C0((HWND)gGameWindow->GetNativeHandle());
     WONRectangle theRect(0, 0, 100, 100);
     gEELobbyPlatformWindow->Create(theRect);
     LobbyFn3D08C0(NULL);
-    if (GetClassNameA(gGameWindow->GetOSRepresentation(), theText, 256) &&
+    if (GetClassNameA((HWND)gGameWindow->GetNativeHandle(), theText, 256) &&
         GetClassInfoA(gInstance, theText, &theClass) && theClass.hIcon != NULL)
         gEELobbyPlatformWindow->SetIcon(new MSNativeIcon(gEELobbyPlatformWindow->mDisplayContext, theClass.hIcon));
     RootContainer* theRoot = gEELobbyPlatformWindow->mRoot;
@@ -451,7 +451,7 @@ void EELobbyFn29754D(bool inFlag)
     if (gEELobbyShown || gEELobbyPlatformWindow.mPtr == NULL)
         return;
     RECT theRect;
-    GetWindowRect(gGameWindow->GetOSRepresentation(), &theRect);
+    GetWindowRect((HWND)gGameWindow->GetNativeHandle(), &theRect);
     GE2DPoint theCursor(0.0f, 0.0f);
     sEELobbyWidth = theRect.right - theRect.left;
     sEELobbyHeight = theRect.bottom - theRect.top;
@@ -465,7 +465,7 @@ void EELobbyFn29754D(bool inFlag)
         POINT thePoint;
         thePoint.x = 0;
         thePoint.y = 0;
-        ClientToScreen(gGameWindow->GetOSRepresentation(), &thePoint);
+        ClientToScreen((HWND)gGameWindow->GetNativeHandle(), &thePoint);
         SetCursorPos(thePoint.x + theCursor.mX, thePoint.y + (double)theCursor.mY);
     }
     Fn297F15();
@@ -478,7 +478,7 @@ void EELobbyFn29754D(bool inFlag)
         if (inFlag)
             ((GXDirectDraw*)*(DX7Screen*)gRasterizer->GetScreen(gScreenIndex))->FlipToGDISurface();
     } else {
-        ShowWindow(gGameWindow->GetOSRepresentation(), SW_HIDE);
+        ShowWindow((HWND)gGameWindow->GetNativeHandle(), SW_HIDE);
     }
     Fn297F21();
     for (int theCount = 1 - ShowCursor(TRUE); theCount > 0; theCount--)
@@ -603,7 +603,7 @@ void EELobbyFn297AC9()
     if (!gGamePreferences.mSettings.mFullScreen && gEELobbyPlatformWindow->Virtual4C()) {
         WONRectangle theRect;
         gEELobbyPlatformWindow->GetRect(theRect, false);
-        MoveWindow(gGameWindow->GetOSRepresentation(), theRect.x, theRect.y, sEELobbyWidth, sEELobbyHeight, FALSE);
+        MoveWindow((HWND)gGameWindow->GetNativeHandle(), theRect.x, theRect.y, sEELobbyWidth, sEELobbyHeight, FALSE);
     }
     gUIManager->RedrawAll();
     if (gGamePreferences.mSettings.mFullScreen) {
@@ -612,7 +612,7 @@ void EELobbyFn297AC9()
         if (gISMouse != NULL)
             gISMouse->Resume();
     } else {
-        ShowWindow(gGameWindow->GetOSRepresentation(), SW_RESTORE);
+        ShowWindow((HWND)gGameWindow->GetNativeHandle(), SW_RESTORE);
     }
     if (gMouse != NULL) {
         POINT theCursor;
@@ -620,7 +620,7 @@ void EELobbyFn297AC9()
         POINT thePoint;
         thePoint.x = 0;
         thePoint.y = 0;
-        ClientToScreen(gGameWindow->GetOSRepresentation(), &thePoint);
+        ClientToScreen((HWND)gGameWindow->GetNativeHandle(), &thePoint);
         gMouse->SetPosition(GE2DPoint(thePoint.x, thePoint.y));
         gMouse->mPointer = 0;
     }

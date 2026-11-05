@@ -8,6 +8,7 @@
 #include <string>
 #include <list>
 #include "lle/LowLevelEngine.h"
+#include "platform/PlatWindow.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
@@ -1757,46 +1758,40 @@ void EEUserInterface::ResumeGraphics()
 }
 
 // FUNCTION: EXE 0x6798ce
-// Handles the game window's messages: creation, close, size, activation (minimizing and suspending input while
-// inactive), keys, IME and the lobby's custom messages
-LRESULT CALLBACK EEUserInterface::WindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam)
+// Handles the game window's events (platform/PlatWindow.h; the original's window procedure, case by case): close,
+// minimise and restore (muting while minimised), focus (the game minimises itself and suspends input while inactive),
+// the Control/AltGr state and typed text. The window's cursor is hidden at creation (WM_SETCURSOR's SetCursor(NULL)),
+// and the screen saver / Alt-Tab system commands need no handling. Input method composition: PORT.md step 4.6.
+void EEUserInterface::HandleEvent(const PlatInputEvent& inEvent)
 {
     static float sMasterVolume = gSoundManager != NULL ? gSoundManager->GetMasterVolume() : 0.0f;
     static float sMusicVolume = gConductor != NULL ? gConductor->GetConductor().GetVolume() : 0.0f;
-    if (Fn297ED0() && inMessage != WM_SIZE)
-        return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-    switch (inMessage) {
-    case WM_CREATE: {
-        HIMC theContext = ImmGetContext(inWindow);
-        if (theContext != NULL) {
-            ImmSetOpenStatus(theContext, TRUE);
-            ImmReleaseContext(inWindow, theContext);
-        }
-        return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-    }
-    case WM_DESTROY:
-    case WM_CLOSE:
+    if (Fn297ED0() && inEvent.mType != PLAT_EVENT_MINIMIZED && inEvent.mType != PLAT_EVENT_RESTORED
+        && inEvent.mType != PLAT_EVENT_RESIZED)
+        return;
+    switch (inEvent.mType) {
+    case PLAT_EVENT_QUIT:
+    case PLAT_EVENT_CLOSE:   // WM_CLOSE / WM_DESTROY: PostQuitMessage to the UI thread
         if (EEIsLobbyOpen())
             EELobbyShutdown();
-        PostQuitMessage(0);
+        if (gUserInterface != NULL)
+            gUserInterface->mThread->Post(0x12, NULL, NULL, false);   // WM_QUIT
         break;
-    case WM_MOVE:
-        RedrawWindow(GetDesktopWindow(), NULL, NULL, RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN | RDW_UPDATENOW);
-        return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-    case WM_SIZE:
-        if (inWParam == SIZE_MINIMIZED) {
-            if (!sMinimized) {
-                if (gConductor != NULL) {
-                    sMusicVolume = gConductor->GetConductor().GetVolume();
-                    gConductor->GetConductor().SetVolume(0.0f);
-                }
-                if (gSoundManager != NULL) {
-                    sMasterVolume = gSoundManager->GetMasterVolume();
-                    gSoundManager->SetMasterVolume(0.0f);
-                }
-                sMinimized = true;
+    case PLAT_EVENT_MINIMIZED:   // WM_SIZE SIZE_MINIMIZED
+        if (!sMinimized) {
+            if (gConductor != NULL) {
+                sMusicVolume = gConductor->GetConductor().GetVolume();
+                gConductor->GetConductor().SetVolume(0.0f);
             }
-        } else if (inWParam == SIZE_RESTORED && sMinimized == true) {
+            if (gSoundManager != NULL) {
+                sMasterVolume = gSoundManager->GetMasterVolume();
+                gSoundManager->SetMasterVolume(0.0f);
+            }
+            sMinimized = true;
+        }
+        break;
+    case PLAT_EVENT_RESTORED:   // WM_SIZE SIZE_RESTORED
+        if (sMinimized == true) {
             if (gConductor != NULL)
                 gConductor->GetConductor().SetVolume(sMusicVolume);
             if (gSoundManager != NULL)
@@ -1804,154 +1799,103 @@ LRESULT CALLBACK EEUserInterface::WindowProc(HWND inWindow, UINT inMessage, WPAR
             sMinimized = false;
         }
         break;
-    case WM_ACTIVATE:
-        if (LOWORD(inWParam) != WA_INACTIVE) {
-            WINDOWPLACEMENT thePlacement;
-            memset(&thePlacement, 0, sizeof(thePlacement));
-            thePlacement.length = sizeof(thePlacement);
-            GetWindowPlacement(inWindow, &thePlacement);
-            if (thePlacement.showCmd != SW_SHOWMINIMIZED) {
-                if (gISKeyboard != NULL)
-                    gISKeyboard->Resume();
-                if (gISMouse != NULL)
-                    gISMouse->Resume();
-                if (gGameWindow != NULL && gMouse != NULL) {
-                    gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1),
-                                                    (float)(gGameWindow->GetHeight() >> 1)));
-                }
-                if (gMousePointer != NULL)
-                    gMousePointer->mThread->Post(0x404, NULL, NULL, true);
-            }
+    case PLAT_EVENT_FOCUS_GAINED:   // WM_ACTIVATEAPP TRUE (and WM_ACTIVATE, which did the same once not minimised)
+        if (gISKeyboard != NULL)
+            gISKeyboard->Resume();
+        if (gISMouse != NULL)
+            gISMouse->Resume();
+        if (gGameWindow != NULL && gMouse != NULL) {
+            gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1),
+                                            (float)(gGameWindow->GetHeight() >> 1)));
+        }
+        if (gMousePointer != NULL)
+            gMousePointer->mThread->Post(0x404, NULL, NULL, true);
+        break;
+    case PLAT_EVENT_FOCUS_LOST:   // WM_ACTIVATEAPP FALSE
+        if (gUserInterface != NULL && !gUserInterface->mIsQuitting && gGameWindow != NULL)
+            PlatWindowMinimize(gGameWindow->GetOSRepresentation());   // CloseWindow
+        if (gISKeyboard != NULL)
+            gISKeyboard->Suspend();
+        if (gISMouse != NULL)
+            gISMouse->Suspend();
+        if (gGameWindow != NULL && gMouse != NULL) {
+            gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1),
+                                            (float)(gGameWindow->GetHeight() >> 1)));
+        }
+        if (gMousePointer != NULL) {
+            gMousePointer->mThread->Post(0x402, NULL, NULL, true);
+            while (gMousePointer->mIsShown)
+                PlatSleep(1);
         }
         break;
-    case WM_PAINT:
-    case WM_ERASEBKGND:
-        break;
-    case WM_ACTIVATEAPP:
-        if (inWParam == FALSE) {
-            if (gUserInterface != NULL && !gUserInterface->mIsQuitting)
-                CloseWindow(inWindow);
-            if (gISKeyboard != NULL)
-                gISKeyboard->Suspend();
-            if (gISMouse != NULL)
-                gISMouse->Suspend();
-            if (gGameWindow != NULL && gMouse != NULL) {
-                gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1),
-                                                (float)(gGameWindow->GetHeight() >> 1)));
-            }
-            if (gMousePointer != NULL) {
-                gMousePointer->mThread->Post(0x402, NULL, NULL, true);
-                while (gMousePointer->mIsShown)
-                    PlatSleep(1);
-            }
-        } else {
-            if (gISKeyboard != NULL)
-                gISKeyboard->Resume();
-            if (gISMouse != NULL)
-                gISMouse->Resume();
-            if (gGameWindow != NULL && gMouse != NULL) {
-                gMouse->SetPosition(GE2DPoint((float)(gGameWindow->GetWidth() >> 1),
-                                                (float)(gGameWindow->GetHeight() >> 1)));
-            }
-            if (gMousePointer != NULL)
-                gMousePointer->mThread->Post(0x404, NULL, NULL, true);
-        }
-        break;
-    case WM_SETCURSOR:
-        SetCursor(NULL);
-        break;
-    case WM_KEYDOWN:
+    case PLAT_EVENT_KEY_DOWN: {   // WM_KEYDOWN: Control, and AltGr (Control + Alt: the one Alt WM_KEYDOWN sees)
+        uint32_t theKey = inEvent.mKey.mVirtualKey;
         if (!sControlDown)
-            sControlDown = inWParam == VK_CONTROL;
+            sControlDown = theKey == VK_CONTROL || theKey == VK_LCONTROL || theKey == VK_RCONTROL;
         if (!sAltDown)
-            sAltDown = inWParam == VK_MENU;
-        return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-    case WM_KEYUP:
+            sAltDown = theKey == VK_MENU || theKey == VK_RMENU;
+        break;
+    }
+    case PLAT_EVENT_KEY_UP: {
+        uint32_t theKey = inEvent.mKey.mVirtualKey;
         if (sControlDown == true)
-            sControlDown = inWParam != VK_CONTROL;
+            sControlDown = !(theKey == VK_CONTROL || theKey == VK_LCONTROL || theKey == VK_RCONTROL);
         if (sAltDown == true)
-            sAltDown = inWParam != VK_MENU;
-        return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-    case WM_CHAR:
+            sAltDown = !(theKey == VK_MENU || theKey == VK_RMENU);
+        break;
+    }
+    case PLAT_EVENT_TEXT:   // WM_CHAR, one per byte (Windows-1252)
         if (!sControlDown || sAltDown == true) {
-            char theKey = (char)inWParam;
-            if (theKey != '\t' && theKey != 0x1b && theKey != '\b' && theKey != '\r')
-                gUIManager->UpdateTranslatedKey(reinterpret_cast<const char*>(&inWParam), (short)inLParam);
+            for (const char* p = inEvent.mText.mText; *p; p++) {
+                char theKey[4] = {*p, 0, 0, 0};   // WM_CHAR's wParam
+                if (theKey[0] != '\t' && theKey[0] != 0x1b && theKey[0] != '\b' && theKey[0] != '\r')
+                    gUIManager->UpdateTranslatedKey(theKey, 1);
+            }
         }
         break;
-    case WM_IME_STARTCOMPOSITION:
-        gUserInterface->OpenIMECompositionString(inWindow);
+    default:
         break;
-    case WM_IME_ENDCOMPOSITION:
-        gUserInterface->CloseIMECompositionString();
-        break;
-    case WM_IME_COMPOSITION:
-        if (inLParam & GCS_RESULTSTR)
-            gUserInterface->AddIMEResultString(inWindow);
-        else if (inLParam & (GCS_COMPSTR | GCS_CURSORPOS))
-            gUserInterface->UpdateIMECompositionString(inWindow);
-        break;
-    case WM_SYSCOMMAND:
-        if (inWParam == SC_SCREENSAVE || inWParam == SC_MONITORPOWER)
-            break;
-        return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-    case WM_IME_SETCONTEXT:
-        return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-    case WM_IME_NOTIFY:
-        switch (inWParam) {
-        case IMN_CLOSESTATUSWINDOW:
-            return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-        case IMN_OPENSTATUSWINDOW:
-            return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-        case IMN_CHANGECANDIDATE:
-            gUserInterface->UpdateIMECandidateList(inWindow);
-            break;
-        case IMN_CLOSECANDIDATE:
-            gUserInterface->CloseIMECandidateWindow();
-            break;
-        case IMN_OPENCANDIDATE:
-            gUIManager->LockUIForCopyData();
-            gUserInterface->OpenIMECandidateWindow();
-            gUserInterface->UpdateIMECandidateList(inWindow);
-            gUIManager->UnlockUIForCopyData();
-            break;
-        case IMN_SETCONVERSIONMODE:
-            return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-        case IMN_SETSENTENCEMODE:
-            return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-        case IMN_SETOPENSTATUS:
-            break;
-        case IMN_GUIDELINE:
-            return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-        default:
-            return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-        }
-        break;
-    case WM_IME_CONTROL:
-        return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-    case WM_IME_COMPOSITIONFULL:
-        return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-    case WM_IME_SELECT:
-        return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
-    case WM_IME_CHAR:
-        break;
+    }
+}
+
+// Receive's window event pump on the window thread (TSThread::SetEventPump): one event per call
+bool EEPumpWindowEvent()
+{
+    PlatInputEvent theEvent;
+    if (!PlatWindowPollEvent(&theEvent))
+        return false;
+    static const bool sLog = getenv("EE_WINDOW_EVENT_LOG") != NULL;   // opt-in: every event as a debug string
+    if (sLog)
+        ESDebugOut("EE-WINDOW-EVENT %u (key %u/%u, text '%s') ui %d window %lux%lu\n", (unsigned)theEvent.mType,
+                   (unsigned)theEvent.mKey.mScanCode, (unsigned)theEvent.mKey.mVirtualKey,
+                   theEvent.mType == PLAT_EVENT_TEXT ? theEvent.mText.mText : "", gUserInterface != NULL,
+                   gGameWindow ? gGameWindow->GetWidth() : 0, gGameWindow ? gGameWindow->GetHeight() : 0);
+    EEUserInterface::HandleEvent(theEvent);
+    return true;
+}
+
+#ifdef _WIN32
+// The Win32 messages that are not window events (PlatWindowSetNativeMessageHook): CD audio's MCI notifications and
+// the WON lobby's two messages, handled as the window procedure did; nonzero drops the message
+int EENativeMessageHook(void* inWindow, uint32_t inMessage, uint64_t inWParam, int64_t inLParam)
+{
+    switch (inMessage) {
     case MM_MCINOTIFY:
-        SECD::Notify(inWParam, inLParam);
-        break;
+        SECD::Notify((unsigned int)inWParam, (long)inLParam);
+        return 1;
     case 0x433:
-        PostMessage(gGameWindow->GetOSRepresentation(), 0x434, 0, 0);
+        PostMessageA((HWND)inWindow, 0x434, 0, 0);
         if (gWonNet != NULL)
             gWonNet->FnCFFDD(0);
-        break;
+        return 1;
     case 0x434:
         if (gWonNet != NULL)
             gWonNet->FnCFFF2();
-        break;
-    default:
-        return DefWindowProc(inWindow, inMessage, inWParam, inLParam);
+        return 1;
     }
     return 0;
 }
+#endif
 
 // FUNCTION: EXE 0x679fbc
 // Shows a loading text on the splash form

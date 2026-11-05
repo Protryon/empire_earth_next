@@ -16,7 +16,7 @@ class DX7_API DX7Screen : public GEScreen {
     friend class DX7TnLRasterizer;
     // the rasterizer's DirectDraw enumeration callbacks create and delete the screens (DX7Rasterizer.cpp)
     friend BOOL WINAPI DX7DirectDrawEnumerateExCallback(GUID* inGUID, LPSTR inDescription, LPSTR inName,
-                                                        LPVOID inContext, HMONITOR inMonitor);
+                                                        LPVOID inContext, void* inMonitor);
 public:
     operator GXDirectDraw*() { return this->mDirectDraw; }
 
@@ -45,19 +45,18 @@ public:
     virtual long SetMode(unsigned long inIndex);
 
 private:
-    DX7Screen(HMONITOR__* inMonitor, GXDirectDraw* inDirectDraw, const UString& inName, bool inAttachedToDesktop,
+    DX7Screen(void* inMonitor, GXDirectDraw* inDirectDraw, const UString& inName, bool inAttachedToDesktop,
               bool inSharesPrimary);
     virtual ~DX7Screen();
     static long __stdcall EnumTextureFormatCallback(GXPIXELFORMAT* inFormat, void* inContext);
     static long __stdcall EnumVideoModeCallback(GXSURFACEDESC* inDescription, void* inContext);
     void Test32BitSupport();
-    static LRESULT CALLBACK TestWindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam);
 
     std::vector<GEVideoMode> mModes;        // +0x0c
     GERectangle mDesktopRectangle;          // +0x1c
     UString* mName;                         // +0x2c
     GXDirectDraw* mDirectDraw;              // +0x30
-    HMONITOR__* mMonitor;                   // +0x34
+    void* mMonitor;                         // +0x34 (an HMONITOR; always NULL)
     unsigned long mCurrentModeIndex;        // +0x38
     bool mAttachedToDesktop;                // +0x3c
     bool mIsFullScreen;                     // +0x3d

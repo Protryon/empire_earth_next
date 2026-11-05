@@ -1525,10 +1525,10 @@ void UIEditBox::ReleaseCapturedKeyboard()
     GEWindow* theWindow = this->GetRasterizer()->GetWindow(this->GetScreenIndex());
     if (this->mIMEActive == true) {
         this->RemoveIMECompositionString();
-        HIMC theContext = ImmGetContext(theWindow->GetOSRepresentation());
+        HIMC theContext = ImmGetContext((HWND)theWindow->GetNativeHandle());
         if (theContext) {
             ImmNotifyIME(theContext, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
-            ImmReleaseContext(theWindow->GetOSRepresentation(), theContext);
+            ImmReleaseContext((HWND)theWindow->GetNativeHandle(), theContext);
         }
         this->mIMEActive = false;
     }
@@ -1656,10 +1656,10 @@ void UIEditBox::TabbedFrom()
     this->mScrollBarCaptured = false;
     this->ReleaseCapturedKeyboard();
     this->ReleaseCapturedMouse();
-    HIMC theContext = ImmGetContext(theWindow->GetOSRepresentation());
+    HIMC theContext = ImmGetContext((HWND)theWindow->GetNativeHandle());
     if (theContext) {
         ImmNotifyIME(theContext, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
-        ImmReleaseContext(theWindow->GetOSRepresentation(), theContext);
+        ImmReleaseContext((HWND)theWindow->GetNativeHandle(), theContext);
     }
     this->SetDirty(true);
 }
@@ -1673,10 +1673,10 @@ void UIEditBox::TabbedTo()
     this->mSavedBgOpacity = this->GetBgOpacity();
     this->SetBgOpacity(1.0f);
     this->SetupKeyboardForCapture();
-    HIMC theContext = ImmGetContext(theWindow->GetOSRepresentation());
+    HIMC theContext = ImmGetContext((HWND)theWindow->GetNativeHandle());
     if (theContext) {
         ImmNotifyIME(theContext, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
-        ImmReleaseContext(theWindow->GetOSRepresentation(), theContext);
+        ImmReleaseContext((HWND)theWindow->GetNativeHandle(), theContext);
     }
     this->SetDirty(true);
 }

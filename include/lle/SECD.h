@@ -56,7 +56,7 @@ public:
     bool GetHasVolumeControl() { return this->mVolume.mType != kSECDNoVolumeControl; }
     bool IsBusy() const { return this->mBusy; }
 #if defined(LOWLEVELENGINE_EXPORTS) || defined(LLE_CURRENT_HEADERS)   // the exe stores __imp_sWindow inline (0x1437d1)
-    static void SetNotificationRecipient(GEWindow* inWindow) { SECD::sWindow = inWindow->GetOSRepresentation(); }
+    static void SetNotificationRecipient(GEWindow* inWindow) { SECD::sWindow = (HWND)inWindow->GetNativeHandle(); }
 #else
     static void SetNotificationRecipient(GEWindow* inWindow);
 #endif

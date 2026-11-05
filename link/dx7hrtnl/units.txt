@@ -1,4 +1,3 @@
-01000 0105d Common/DX7 Multimon.cpp
 0105d 01fbe DX7HRTnLDisplay/DX7HRTnLDisplay.cpp
 01fbe 029dc Common/DX7Movie.cpp
 029dc 02b83 Common/DX7PolygonArray.cpp

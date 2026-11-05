@@ -143,7 +143,7 @@ long SECD::Play()
 {
     if (!this->mBusy) {
         MCI_PLAY_PARMS theParms;
-        theParms.dwCallback = MAKELONG(SECD::sWindow, 0);
+        theParms.dwCallback = (DWORD_PTR)SECD::sWindow;
         theParms.dwTo = this->mEnd;
         MCIERROR theError = mciSendCommand(this->mDevice, MCI_PLAY, MCI_NOTIFY | MCI_TO, (DWORD_PTR)&theParms);
         if (theError == 0) {

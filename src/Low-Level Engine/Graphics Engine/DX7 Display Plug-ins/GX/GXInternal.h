@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "gx/GX.h"
+#include "platform/PlatWindow.h"
 #include "platform/PlatString.h"   // PLAT_PRINTF_FORMAT
 #include "webgpu/webgpu.h"
 #include "webgpu/wgpu.h"
@@ -97,7 +98,8 @@ struct GXSurfaceData {
     unsigned long mWidth = 0, mHeight = 0;
     GXPIXELFORMAT mPixelFormat = {};
     GXFormat mFormat = {};
-    HWND mWindow = NULL;                 // primary: the window it shows in
+    PlatWindow* mWindow = NULL;          // primary: the window it shows in
+    PlatNativeWindow mNative = {};       // its native handles (taken on the window's thread: macOS' Metal layer)
     bool mIsPrimary = false, mIsZ = false, mIsTexture = false, mIsRenderTarget = false;
 
     // CPU copy

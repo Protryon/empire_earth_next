@@ -179,10 +179,10 @@ void UIIMECandidate::OpenCandidateWindow(const GERectangle& inScreenRectangle, c
         }
         this->mCandidateRectangle.And(inScreenRectangle);
     }
-    HIMC theContext = ImmGetContext(theWindow->GetOSRepresentation());
+    HIMC theContext = ImmGetContext((HWND)theWindow->GetNativeHandle());
     if (theContext) {
         ImmNotifyIME(theContext, NI_SETCANDIDATE_PAGESIZE, 0, thePageSize);
-        ImmReleaseContext(theWindow->GetOSRepresentation(), theContext);
+        ImmReleaseContext((HWND)theWindow->GetNativeHandle(), theContext);
     }
 }
 

@@ -17,6 +17,7 @@ class EEUIFMainGame;
 class FSFile;
 class FSFileSpec;
 struct HWND__;
+struct PlatInputEvent;
 class GEColor;
 class TSCriticalSection;
 class TSEvent;
@@ -116,8 +117,8 @@ public:
     // the parameters are the thread message's void* (pointers for most messages): LONG_PTR keeps them whole on x64
     // (and is long on x86, the original's type)
     void HandleMessage(unsigned long inMessage, LONG_PTR inParam1, LONG_PTR inParam2);  // 0x27828f (void: no result in eax) (the 0x401..0x443 switch)
-    // 0x2798ce (address taken at 0x144747; calls the members below through gUserInterface)
-    static LRESULT CALLBACK WindowProc(HWND inWindow, UINT inMessage, WPARAM inWParam, LPARAM inLParam);
+    // 0x2798ce: the window procedure (address taken at 0x144747), now the game window's event handler
+    static void HandleEvent(const PlatInputEvent& inEvent);
     void ChangeRasterizer(long inRasterizer, long inScreen);  // 0x276804 (switches gRasterizer; message 0x41e)
     // 0x2768fe: resizes the game window (Empire Earth.cpp 0x140306) when the size changes or inForce
     void ResizeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inForce, bool inFlag);
@@ -172,5 +173,11 @@ public:
 
 // 0x27fa40 (no arguments; returns a status): what EEUIEProcessTimerExpired's event does (provisional name)
 long EEProcessTimerExpired();
+
+
+bool EEPumpWindowEvent();   // TSThread::SetEventPump's pump: one window event per call (EEUserInterface.cpp)
+#ifdef _WIN32
+int EENativeMessageHook(void* inWindow, uint32_t inMessage, uint64_t inWParam, int64_t inLParam);
+#endif
 
 #endif

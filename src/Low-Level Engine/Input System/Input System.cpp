@@ -31,7 +31,7 @@ long ISInitialize(HINSTANCE inInstance, GEWindow* inWindow, UResourceFile* inRes
                   unsigned long inDoublePressTimeDelta)
 {
     DIPROPDWORD theProperty;
-    HWND theWindow = inWindow->GetOSRepresentation();
+    HWND theWindow = (HWND)inWindow->GetNativeHandle();   // DirectInput takes the HWND (until PORT.md step 4.4)
     IDirectInputDevice* theMouse = NULL;
     IDirectInputDevice* theKeyboard = NULL;
     long theResult = kErrorOK;
