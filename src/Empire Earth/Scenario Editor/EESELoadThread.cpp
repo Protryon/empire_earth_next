@@ -337,6 +337,13 @@ void EESELoadThread::Post406(void* inParameter1, void* inParameter2)
     this->mThread->Post(0x406, inParameter1, inParameter2, true);
 }
 
+// ICF-FOLDED: EXE 0x51aa6c
+// Asks the loading thread to apply a player's start epoch (folded with RTSGraphics::PostSetRasterizer in the original)
+void EESELoadThread::Post407(void* inParameter1, void* inParameter2)
+{
+    this->mThread->Post(0x407, inParameter1, inParameter2, true);
+}
+
 // FUNCTION: EXE 0x572a55
 // Asks the loading thread to reload a player's tech tree
 void EESELoadThread::Post403(void* inParameter, bool inFlag)

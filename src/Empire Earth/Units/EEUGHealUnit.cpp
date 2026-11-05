@@ -37,6 +37,13 @@ EEUGHealUnit::EEUGHealUnit(bool inArg)
     this->mKind = kGoalHealUnit;
 }
 
+// ICF-FOLDED: EXE 0x52c734
+// Returns the unit being healed (folded with EECCAreaEffect::GetContagionFunctor in the original: `mov eax,[ecx+0x38]`)
+EEComplexUnit* EEUGHealUnit::GetTarget()
+{
+    return this->mTarget;
+}
+
 // FUNCTION: EXE 0x6252f9
 // Returns turn-to-face-healee as the first action
 long EEUGHealUnit::GetStartAction()

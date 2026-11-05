@@ -547,6 +547,15 @@ void EESETriggerScreen::HideText()
     this->mTextLabel->SetDisplayMode(kDisplayModeHidden);
 }
 
+// ICF-FOLDED: EXE 0x582d69
+// Shows the description label and edit box (folded with EESETSEffect::Show in the original: the same two member
+// offsets)
+void EESETriggerScreen::ShowText()
+{
+    this->mTextEditBox->SetDisplayMode(kDisplayModeShown);
+    this->mTextLabel->SetDisplayMode(kDisplayModeShown);
+}
+
 // FUNCTION: EXE 0x57c5f2
 // Hides the alphabetical sort button
 void EESETriggerScreen::HideAlphaSort()

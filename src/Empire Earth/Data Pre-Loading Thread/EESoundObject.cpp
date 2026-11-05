@@ -142,6 +142,14 @@ long EESoundObject::LoadMedia()
     return theResult;
 }
 
+// ICF-FOLDED: EXE 0x4b62d3
+// Sets the sound's volume (folded with EEContagionHelper::SetFunctor in the original: the store to +0x14; a float
+// argument and a pointer argument are passed in different registers on x64)
+void EESoundObject::SetVolume(float inVolume)
+{
+    this->mVolume = inVolume;
+}
+
 // FUNCTION: EXE 0x4da891
 // Plays the sound once at full volume, centred, normal pitch
 void EESoundObject::Play()
