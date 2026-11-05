@@ -99,6 +99,12 @@ def stage_timeshim(stage, factor=1, null_render=False, key_ms=1000, frame_ms=0, 
     lo, hi = render_main_extent(fulllink_map) if frame_ms else (0, 0)
     dll[at+16:at+44] = struct.pack('<iiIIIII', f.numerator, f.denominator, lo, hi, frame_ms, int(bool(null_render)), key_ms)
     (stage/SHIM).write_bytes(bytes(dll))
+    # the renderer runs on GX (wgpu), not Direct3D 7: its null 3D device is GX's own test switch, read from the
+    # environment the game inherits (exe_boot.exe is started from this process)
+    if null_render:
+        os.environ['EE_GX_NULL3D'] = str(key_ms)
+    else:
+        os.environ.pop('EE_GX_NULL3D', None)
     engine = stage/ENGINE
     before = hashlib.sha256(engine.read_bytes()).hexdigest()
     renamed = rename_import(engine)
@@ -111,7 +117,7 @@ def stage_timeshim(stage, factor=1, null_render=False, key_ms=1000, frame_ms=0, 
                     owner='2026-11-01 round 39: test-only timer shim, identical factor in both builds',
                     scope='staged engine only: timeGetTime/timeSetEvent/timeKillEvent (EETMS.dll) and KERNEL32 '
                           'QueryPerformanceCounter/Sleep/WaitForSingleObject/WaitForMultipleObjects (IAT, in memory); '
-                          'null render: the renderer IDirect3DDevice7 Clear/Draw*Primitive* (vtable, in memory); '
+                          'null render: GX (the wgpu renderer) skips its 3D draws and clears (EE_GX_NULL3D); '
                           'frame cap: the exe Sleep IAT slot, acting only for calls from RTSGraphics::Main')
     (stage/'EETMS.timeshim.json').write_text(json.dumps(manifest, indent=2)+'\n', encoding='utf-8')
     return manifest

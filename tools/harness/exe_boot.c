@@ -180,6 +180,12 @@ static int nexc;
 static HANDLE threads[256]; static DWORD tids[256]; static int held[256]; static int nth;
 static char sandbox[MAX_PATH + 8];   /* "\??\<staging dir>\\": writes below it are allowed */
 static int in_sandbox(const char *p) { return sandbox[0] && !_strnicmp(p, sandbox, strlen(sandbox)) && !strstr(p, ".."); }
+/* below %LOCALAPPDATA%\D3DSCache (the D3D12 shader cache): refused with ACCESS_DENIED instead of a STOP */
+static int shader_cache(const char *p) {
+    static const char kCache[] = "\\appdata\\local\\d3dscache";
+    for (; *p; p++) if (!_strnicmp(p, kCache, sizeof kCache - 1)) return 1;
+    return 0;
+}
 static DWORD stepper;   /* the thread stepping over a guard; every other thread is suspended meanwhile */
 
 static void hold_others(DWORD tid, int suspend)
@@ -1387,6 +1393,15 @@ int main(int argc, char **argv)
                         if(!SetThreadContext(th,&c)){printf("STOP mp refusal failed\n");done=1;}
                         break;
                     }
+                    if(!allow && shader_cache(s)) {
+                        /* the D3D12 runtime's shader cache (the renderer runs on wgpu's DX12 backend): refused, so
+                           nothing persistent is written; D3D12 then works without a disk cache. Logged. */
+                        DWORD ret=rd32(c.Esp);c.Eax=0xC0000022;c.Eip=ret;
+                        c.Esp+=4+(guards[g].kind==G_FILE_CREATE?11:6)*4;
+                        printf("refused %s %s (D3D shader cache, from %s): STATUS_ACCESS_DENIED\n",guards[g].name,s,m);
+                        if(!SetThreadContext(th,&c)){printf("STOP shader cache refusal failed\n");done=1;}
+                        break;
+                    }
                     printf("%s %s access %08lx disp %lu: %s (from %s)\n", ro ? "open" : allow ? "write" : "STOP",
                            guards[g].name,
                            (unsigned long)arg2, (unsigned long)disp, s, m);
@@ -1417,6 +1432,12 @@ int main(int argc, char **argv)
                     allow = 1;
                     printf("window CreateWindow class \"%s\" name \"%s\" style %08lx parent %08lx (from %s)\n",
                            cls, name, (unsigned long)style, (unsigned long)parent, m);
+                    /* the renderer (GX on wgpu) never takes the display (no exclusive mode, no mode change; it
+                       presents into the window), so the game window is the windowed capture */
+                    if (windowed_test && !strcmp(cls, "Empire Earth Expansion") && !game_windowed_capture) {
+                        game_windowed_capture = 1;
+                        printf("checkpoint game window uses nonexclusive capture\n");
+                    }
                 } else if (guards[g].kind == G_REG_CREATE) {
                     /* NtCreateKey(&h, access, oa, titleindex, class, options, &disposition) */
                     char root[600] = "", nm[600] = "", full[1200];

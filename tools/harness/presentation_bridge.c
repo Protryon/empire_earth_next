@@ -1,9 +1,9 @@
-/* TEST ONLY: present real RGB D3D7 back-buffer pixels through a window DC.
-   Original renderer still draws; this replaces only its unsupported primary Blt.
-   Layout offsets are proven by DX7HR ShowScene and the reconstructed headers. */
+/* TEST ONLY: the harness's helper inside the game process. The renderer (GX on wgpu) presents its frames itself;
+   before each one it calls gx_present, which dumps the frame (render.bmp), runs the UI test fixture and, for play,
+   moves the game cursor with the Windows cursor. */
 #define COBJMACROS
 #include <windows.h>
-#include <ddraw.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
@@ -19,7 +19,6 @@ static void* ee_sym(const char* name)
     return NULL;
 }
 static HMODULE self_module;
-static HRESULT last_lock;
 #ifndef EE_PLAY_ONLY
 static DWORD last_dump;
 static DWORD last_command;
@@ -400,51 +399,44 @@ static void mouse_follow(HWND hwnd, const RECT* client, DWORD width, DWORD heigh
 }
 #endif
 
-__declspec(dllexport) long __fastcall TestPresentWindowed(void* object,void* unused,unsigned long index)
+/* the renderer (GX on wgpu) presents for real; before each frame it calls this hook (GXTestSetPresentHook) */
+typedef void (*PresentHook)(HWND, void*);
+typedef void (*SetPresentHook)(PresentHook);
+typedef long (*ReadFrame)(void*, void*, unsigned long, unsigned long*, unsigned long*);
+static void gx_present(HWND hwnd, void* frame)
 {
-    (void)unused;
-    BYTE** states=*(BYTE***)((BYTE*)object+EE_OFF_RAST_STATES_FIRST);
-    BYTE* state=states[index];
-    BYTE* secondary=*(BYTE**)(state+EE_OFF_STATE_SECONDARY);
-    BYTE* window=*(BYTE**)(state+EE_OFF_STATE_WINDOW);
-    if(!secondary || !window)return 1;
-    HWND hwnd=*(HWND*)window;
-    LPDIRECTDRAWSURFACE7 surface=*(LPDIRECTDRAWSURFACE7*)(secondary+EE_OFF_SURFACE_DD);
-    DDSURFACEDESC2 desc;ZeroMemory(&desc,sizeof desc);desc.dwSize=sizeof desc;
-    last_lock=IDirectDrawSurface7_Lock(surface,NULL,&desc,DDLOCK_WAIT|DDLOCK_READONLY,NULL);
-    if(FAILED(last_lock)){char s[120];snprintf(s,sizeof s,"TEST GDI present Lock failed %08lx\n",(unsigned long)last_lock);OutputDebugStringA(s);return 1;}
-    long result=1;
-    if(desc.ddpfPixelFormat.dwRGBBitCount==32 && desc.lPitch>0) {
-        BITMAPINFO info;ZeroMemory(&info,sizeof info);
-        info.bmiHeader.biSize=sizeof(BITMAPINFOHEADER);info.bmiHeader.biWidth=desc.lPitch/4;
-        info.bmiHeader.biHeight=-(LONG)desc.dwHeight;info.bmiHeader.biPlanes=1;info.bmiHeader.biBitCount=32;
-        info.bmiHeader.biCompression=BI_RGB;
+    static unsigned char* pixels;
+    static unsigned long capacity;
+    unsigned long width = 0, height = 0;
+    ReadFrame read = (ReadFrame)ee_sym("_GXTestReadFrame");
 #ifndef EE_PLAY_ONLY   /* play.py: no test telemetry (frame dump, UI state/commands, human/lobby helpers) */
-        if(GetTickCount()-last_dump>1000) {
-            char path[MAX_PATH];GetModuleFileNameA(self_module,path,sizeof path);
-            char* tail=strrchr(path,'\\');if(tail)strcpy(tail+1,"render.bmp");
-            BITMAPFILEHEADER header;ZeroMemory(&header,sizeof header);header.bfType=0x4d42;
-            header.bfOffBits=sizeof header+sizeof(BITMAPINFOHEADER);
-            header.bfSize=header.bfOffBits+desc.lPitch*desc.dwHeight;
-            FILE* file=fopen(path,"wb");
-            if(file){fwrite(&header,1,sizeof header,file);fwrite(&info.bmiHeader,1,sizeof(BITMAPINFOHEADER),file);
-                fwrite(desc.lpSurface,1,desc.lPitch*desc.dwHeight,file);fclose(file);}
-            last_dump=GetTickCount();
+    if (GetTickCount() - last_dump > 1000) {
+        read(frame, NULL, 0, &width, &height);
+        if (width * height * 4 > capacity) {
+            free(pixels);
+            capacity = width * height * 4;
+            pixels = (unsigned char*)malloc(capacity);
         }
-#endif
-        RECT client;GetClientRect(hwnd,&client);
-        HDC dc=GetDC(hwnd);
-        if(dc) {
-            int rows=StretchDIBits(dc,0,0,client.right,client.bottom,0,0,desc.dwWidth,desc.dwHeight,
-                                  desc.lpSurface,&info,DIB_RGB_COLORS,SRCCOPY);
-            if(rows!=0 && rows!=GDI_ERROR)result=0;
-            ReleaseDC(hwnd,dc);
+        if (pixels && read(frame, pixels, capacity, &width, &height) == 0) {
+            BITMAPINFOHEADER info; ZeroMemory(&info, sizeof info);
+            info.biSize = sizeof info; info.biWidth = (LONG)width; info.biHeight = -(LONG)height; info.biPlanes = 1;
+            info.biBitCount = 32; info.biCompression = BI_RGB;
+            char path[MAX_PATH]; GetModuleFileNameA(self_module, path, sizeof path);
+            char* tail = strrchr(path, '\\'); if (tail) strcpy(tail + 1, "render.bmp");
+            BITMAPFILEHEADER header; ZeroMemory(&header, sizeof header); header.bfType = 0x4d42;
+            header.bfOffBits = sizeof header + sizeof info; header.bfSize = header.bfOffBits + width * height * 4;
+            FILE* file = fopen(path, "wb");
+            if (file) { fwrite(&header, 1, sizeof header, file); fwrite(&info, 1, sizeof info, file);
+                fwrite(pixels, 1, width * height * 4, file); fclose(file); }
         }
-#ifdef EE_MOUSE_VA
-        mouse_follow(hwnd,&client,desc.dwWidth,desc.dwHeight);
-#endif
+        last_dump = GetTickCount();
     }
-    HRESULT unlocked=IDirectDrawSurface7_Unlock(surface,NULL);
+#endif
+#ifdef EE_MOUSE_VA
+    if (!width) read(frame, NULL, 0, &width, &height);
+    RECT client; GetClientRect(hwnd, &client);
+    mouse_follow(hwnd, &client, width, height);
+#endif
 #ifndef EE_PLAY_ONLY
     static DWORD last_ui;
     if(GetTickCount()-last_ui>1000){last_ui=GetTickCount();ui_test();
@@ -463,7 +455,6 @@ __declspec(dllexport) long __fastcall TestPresentWindowed(void* object,void* unu
                 HMODULE lobby=LoadLibraryA(path);FARPROC start=lobby?GetProcAddress(lobby,"TestLobbyStart"):NULL;
                 OutputDebugStringA(start && ((int(*)(void))start)()?"TEST LOBBY bridge started\n":"TEST LOBBY bridge start FAILED\n");}}}
 #endif
-    return FAILED(unlocked)?1:result;
 }
 
 BOOL WINAPI DllMain(HINSTANCE module,DWORD reason,LPVOID reserved)
@@ -476,18 +467,12 @@ BOOL WINAPI DllMain(HINSTANCE module,DWORD reason,LPVOID reserved)
            the installed method target stays valid for the complete test process. */
         HMODULE pinned=NULL;
         if(!GetModuleHandleExA(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS|GET_MODULE_HANDLE_EX_FLAG_PIN,
-                              (LPCSTR)(uintptr_t)TestPresentWindowed,&pinned))return FALSE;
+                              (LPCSTR)(uintptr_t)gx_present,&pinned))return FALSE;
 #ifdef EE_MOUSE_VA
         InitializeCriticalSection(&mouse_lock);
         if(!mouse_install())OutputDebugStringA("TEST mouse shim: DirectInputCreateA import not found\n");
 #endif
-        HMODULE renderer=GetModuleHandleA(NULL);   /* the renderer is inside the exe */
-        BYTE* entry=(BYTE*)renderer+EE_SHOWSCENE_RVA;
-        DWORD old;
-        if(!renderer || !VirtualProtect(entry,5,PAGE_EXECUTE_READWRITE,&old))return FALSE;
-        entry[0]=0xe9;*(LONG*)(entry+1)=(LONG)((BYTE*)(uintptr_t)TestPresentWindowed-entry-5);
-        FlushInstructionCache(GetCurrentProcess(),entry,5);
-        VirtualProtect(entry,5,old,&old);
+        ((SetPresentHook)ee_sym("_GXTestSetPresentHook"))(gx_present);
     }
     return TRUE;
 }
