@@ -360,6 +360,7 @@ public:
 };
 class AsyncOpTracker {
 public:
+    AsyncOpTracker() : mMaps(true, false) {}   // the maps as WONAPI builds them (0x2d9d20(1, 0))
     CriticalSection mLock;                  // +0x00
     AsyncOpTrackerMaps mMaps;               // +0x18
 };
