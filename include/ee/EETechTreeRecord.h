@@ -39,7 +39,8 @@ struct EETechTreeRecord {
     int32_t mRequiredStatisticValue;        // +0xc8 -> mU08->mRequiredStatisticValue
     int32_t mCalamity;                      // +0xcc -> mU08->mFirstNodeID
     int32_t mHotKey;                        // +0xd0 -> mU08->mHotKey
-    int32_t mUnused5;                       // +0xd4
+    int32_t mTitleID;                       // +0xd4 epoch records: the epoch's title string (0: 30145 + the epoch;
+                                            // unused in the original, 0 in its data)
     int32_t mUnused6;                       // +0xd8
     int32_t mUnused7;                       // +0xdc
     int32_t mUnused8;                       // +0xe0

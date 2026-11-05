@@ -183,6 +183,8 @@ EEMusicObject* EEMusicObject::GetRandom(long inEpoch)
 {
     std::vector<EEMusicObject*> theSongs;
     EEMusicObject* theResult;
+    if (inEpoch < 0 || inEpoch >= 15)   // the music table flags 15 epochs (epochs.yaml's music slot: the follow-up)
+        return NULL;
     if (EEMusicObject::sShuffled[inEpoch].size() == 0 && EEMusicObject::sSongs[inEpoch].size() > 0) {
         for (unsigned long i = 0; i < EEMusicObject::sSongs[inEpoch].size(); i++)
             theSongs.push_back(EEMusicObject::sSongs[inEpoch][i]);

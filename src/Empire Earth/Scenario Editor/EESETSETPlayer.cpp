@@ -680,7 +680,7 @@ void EESETSETPlayerTechnology::Show(EESETSEffectControls* inControls)
     // flag left a later editor session with an empty list).
     if (this->mTechnologies.empty()) {
         gTechTree.GetNodeIDs(this->mTechnologies);
-        for (unsigned long theEpoch = 0; theEpoch < 15; theEpoch++)
+        for (unsigned long theEpoch = 0; theEpoch < (unsigned long)EEEpochCount(); theEpoch++)
             this->mTechnologies.push_back((long)theEpoch);
         unsigned long theIndex = 0;
         while (theIndex < this->mTechnologies.size()) {

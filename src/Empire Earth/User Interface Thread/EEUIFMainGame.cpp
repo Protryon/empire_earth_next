@@ -218,7 +218,7 @@ EEUIFMGUnitHack::EEUIFMGUnitHack(EEUIFMainGame* inForm)
     theCount = 0;
     this->mMode = 0;
     this->mForm = inForm;
-    for (i = 0; i < 0x366; i++) {
+    for (i = 0; i < EEUnitClassCount(); i++) {
         EEUnitClass* theClass = gUnitClassTable[i];
         if (theClass == NULL || !theClass->mIsEnabled)
             continue;
@@ -1331,7 +1331,7 @@ void EEUIFMainGame::Open()
     this->GetEntityGroup(3)->Enable();
     this->FnE123D();
     if (gWorld.GetCurrentPlayer() != NULL && gWorld.GetCurrentPlayer()->mTechnologies != NULL)
-        gResource->GetString(gWorld.GetCurrentPlayer()->mTechnologies->mCurrentEpoch + IDS_EPOCH_NAME_FIRST, theText);
+        gResource->GetString(EEEpochTitleID(gWorld.GetCurrentPlayer()->mTechnologies->mCurrentEpoch), theText);
     else
         theText = "";
     this->SetStatusText(theText);

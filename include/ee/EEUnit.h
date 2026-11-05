@@ -1026,7 +1026,15 @@ enum EEUnitClassWeapon { kWeaponTotal = 6, keeucwTotal = kWeaponTotal /* spelled
 
 // 0x5636ac..0x564448 (871; loops end at 0x964448): every unit class by index (provisional name); constant-index reads
 // like [827] (0x241419) are elements
-extern EEUnitClass* gUnitClassTable[871];
+extern std::vector<EEUnitClass*> gUnitClassTable;
+// The number of unit class slots: one per unit type, sized from dbobjects by EEUnitClass::CreateUnitClasses (the
+// original's fixed 0x367 = 871 slots; vanilla AoC fills 848). Every "for each unit class" loop and every unit type
+// range check uses this.
+inline unsigned long EEUnitClassCount() { return (unsigned long)gUnitClassTable.size(); }
+// "no unit class" in the fields that used the old table size 0x367 as that value (EEPlayer::mHackUnitClass,
+// EEMHackANewUnit's "the sender's chosen class"), and "any unit type" for EEALasso::SelectUnits (was 0x366)
+const unsigned long kNoUnitClass = 0xffffffffUL;
+const unsigned long kAnyUnitType = 0xffffffffUL;
 // 0x531d58: the EEPM* physics model singletons (EEPMLand.cpp; the EEUC* ctors pass one to EEUnitClass) (provisional
 // name)
 extern EEPhysicsModel* gPhysicsModels[12];

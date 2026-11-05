@@ -94,6 +94,9 @@ TABLES = {
     'dbsounds': dict(struct='EESoundRecord', container='lead', format='csv', lead=['mSampleName']),
     'dbstartingresources': dict(struct='EEStartingResourcesRecord', container='count', format='csv'),
     'dbtechtree': dict(struct='EETechTreeRecord', container='techtree', format='yaml', list=('parents', 'u32')),
+    # the epoch registry: text only (techtree.py); it compiles with dbtechtree.yaml into db\dbtechtree.dat
+    'epochs': dict(struct='EETechTreeRecord', container='epochs', format='yaml', list=('parents', 'u32'),
+                   text_only=True),
     'dbterrain': dict(struct='EETerrainRecord', container='lead', format='csv', lead=['mTextureName']),
     'dbterraintype': dict(struct='EETerrainTypeRecord', container='count', format='csv'),
     'dbuiback': dict(struct='UIDbDataBackgrounds', container='count', format='csv'),
@@ -231,6 +234,116 @@ WORLD_ROWS = {
     94: ('deathmatchJitManufacturingDelay', 'L'),       # s until the deathmatch JIT buttons open (EEPhysics::Tick)
 }
 WORLD_VALUES = {'F': 'mFloatValue', 'F2': 'mFloatValue2', 'L': 'mLongValue', 'L2': 'mLongValue2'}
-# Text-only row labels (checked: a label must match its row) and the fields each row's readers use.
-ROW_NAMES = {'dbworld': {k: n for k, (n, _) in WORLD_ROWS.items()}}
+
+
+def snake(name):
+    """camelCase -> snake_case (the ids of named constants: unitLimitRange -> unit_limit_range)."""
+    import re
+    return re.sub(r'(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])', '_', name).lower()
+
+
+# dbworld: each row's id is its constant's name (checked: the id must match its row; these become the define names)
+# and the fields each row's readers use.
+ROW_NAMES = {'dbworld': {k: snake(n) for k, (n, _) in WORLD_ROWS.items()}}
 ROW_FIELDS = {'dbworld': {k: [WORLD_VALUES[v] for v in u.split()] for k, (_, u) in WORLD_ROWS.items()}}
+
+
+# ---------------------------------------------------------------- ids and references (format 3)
+# Every listed row carries an `id`: a stable, unique, lowercase ASCII key (ids.py generates it once from the row's
+# name; after that the text owns it). References between tables are written as the target row's id; an integer is
+# kept only where it names no row of the target (the "none" values: -1, 0 where row 0 is a hole, 100000, ...).
+# The runtime integer of a row (its key) is its row position, except dbtechtree, whose key is mID (nodes are found
+# by id, EETechTreeEpoch.cpp). The evidence for every reference: docs/DATA_FORMATS.md 8.6 (loader -> consumer).
+
+KEYS = {'dbtechtree': 'mID', 'epochs': 'position'}
+
+# epochs.yaml: the epoch record fields that follow from the epoch's position p (value = a * p + b): left out where
+# they do (techtree.py)
+DERIVED = {'epochs': {'mID': (1, 0), 'mEpoch': (1, 0), 'mNextEpoch': (1, 1), 'mFirstNodeID': (1000, 1000)}}
+
+# Fields that hold the row's own key (+ an offset): the text leaves them out when they are equal, the importer
+# writes key + offset. dbcivpowers: GetPower(id) reads row id - 0x26.
+SELF = {
+    'dbobjects': ('mUnitType', 0), 'dbareaeffect': ('mID', 0), 'dbbuttons': ('mID', 0), 'dbcalamity': ('mID', 0),
+    'dbcivpowers': ('mID', 0x26), 'dbgfxeffects': ('mID', 0), 'dbunitset': ('mID', 0), 'dbanimals': ('mAnimalID', 0),
+    'dbupgrade': ('mIndex', 0), 'dbunitbehavior': ('mIndex', 0), 'dbcpbehavior': ('mIndex', 0),
+    'dbterrain': ('mID', 0), 'dbterraintype': ('mID', 0), 'dbgraphics': ('mMediaIndex', 0),
+    'dbcliffterrain': ('mIndex', 0), 'dbgamevariant': ('mIndex', 0), 'dbpremadecivs': ('mIndex', 0),
+    'dbstartingresources': ('mIndex', 0), 'dbambientsounds': ('mIndex', 0), 'dbuihotkey': ('mID', 0),
+    'dbuicontrols': ('mID', 0), 'dbuiforms': ('mFormID', 0),
+}
+
+_UT, _TECH, _SET, _GFX, _SND, _MEDIA = 'dbobjects', 'dbtechtree', 'dbunitset', 'dbgfxeffects', 'dbsounds', 'dbgraphics'
+_GFXFIELDS = ['mDeathEffect', 'mDamageEffect', 'mMuzzleFlashEffect', 'mTrailEffect', 'mRippleEffect', 'mSplashEffect',
+              'mHealEffect', 'mImpactSparksEffect', 'mImpactBloodEffect', 'mAttachedEffect', 'mCreationEffect',
+              'mSpecialAttackEffect', 'mShotEffect', 'mLeprosyEffect', 'mPlagueEffect', 'mMoraleEffect',
+              'mPulseCannonEffect', 'mBattleCryEffect', 'mShellHoleEffect', 'mBloodStainEffect']
+_ANIMS = [0, 13, 7, 8, 12, 11, 9, 10, 6, 3, 1, 2]   # the dbgraphics animation slots that carry sounds
+
+# table -> {field: target table}; '@list' is the table's trailing list. {'table': t, 'none': [v]}: values that mean
+# "none" although they are a key of the target; they stay integers.
+REFS = {
+    'dbobjects': {
+        'mFamily': 'dbfamily', 'mWeapon': 'dbweapontohit', 'mButton': 'dbbuttons', 'mGraphic': _MEDIA,
+        **{k: _UT for k in ('mProjectileType', 'mScaffoldingType', 'mDeathType', 'mDeathSpawnType', 'mPackedType',
+                            'mRemainsType')},
+        **{k: _SND for k in ('mCreationSound', 'mAcknowledgeSound1', 'mAcknowledgeSound2', 'mSelectionSound1',
+                             'mSelectionSound2', 'mDeathSound')},
+        **{k: _GFX for k in _GFXFIELDS},
+        'mUpgradeTableIndex': 'dbupgrade', 'mBehavior': 'dbunitbehavior',
+        **{f'mAreaEffectTemplate{k}': 'dbareaeffect' for k in range(4)},
+        'mTechnology': _TECH, 'mGarrisonTechnology': _TECH, 'mAttributes': _TECH,
+        'mOverlapUnitSet': _SET, 'mWonderUnitSet': _SET, 'mMiniMapColor': 'dbcolortable',
+        'mEpoch': {'table': 'epochs', 'never': True},   # 15 (the original's epoch count) on a few: no epoch
+    },
+    'dbtechtree': {
+        'mResearchedEvent': 'dbevents', 'mObsoleteEvent': 'dbevents',
+        **{f'mPrerequisite{k}': {'table': _TECH, 'none': [0]} for k in range(1, 5)},   # 0: pre-ticked (none)
+        'mUnitClass': _UT, 'mDefaultUnitClass': _UT, '@list': _UT, 'mButton': 'dbbuttons',
+        'mCalamity': 'dbcalamity', 'mHotKey': 'dbuihotkey',
+        # a tech's epoch fields: epochs (mObsoleteEpoch's "never" is the epoch count: the original's 15)
+        'mEpoch': 'epochs', 'mObsoleteEpoch': {'table': 'epochs', 'never': True},
+    },
+    'dbevents': {'@list': 'dbeffects'},
+    'dbeffects': {
+        'mUnitClass': _UT, 'mNewUnitClass': _UT, 'mUnitSet': _SET, 'mMediaIndex': _MEDIA, 'mTechnology': _TECH,
+        'mSoundID': _SND, 'mButton': 'dbbuttons', 'mAreaEffect': 'dbareaeffect',
+    },
+    'dbgraphics': {f'mSound{s}Index{a}': _SND for a in _ANIMS for s in (1, 2)},
+    'dbgfxeffects': {'mMediaIndex': _MEDIA, **{f'mLinkedEffectIndex{k}': _GFX for k in (1, 2, 3)}},
+    'dbanimals': {'mUnitType': _UT, 'mMedia': _MEDIA, **{f'mSound{k}': _MEDIA for k in (1, 2, 3)}},
+    'dbambientsounds': {'mSoundID': _SND},
+    'dbaiunittargeting': {'mPreferredUnitType': _UT},
+    'dbareaeffect': {'mGraphicEffect': _GFX, 'mGraphicEffect18': _GFX, 'mUnitSet': _SET, 'mMedia': _MEDIA},
+    'dbbuttons': {'mHotKey': 'dbuihotkey'},
+    'dbcalamity': {**{f'mGraphicEffectID{k}': _GFX for k in (1, 2, 3, 4)}, 'mSoundID': _SND,
+                   'mSecondarySoundID': _SND, 'mUnitClassIndex': _UT, 'mUnitSet': _SET},
+    'dbcivpowers': {'mUnitSet': _SET, 'mTechnology': _TECH, 'mUnitType': _UT},
+    'dbcivilization': {'mUnitSet': _SET},
+    'dbgamevariant': {**{f'mSet{k}': _SET for k in range(10)}, 'mCostSet': _SET},
+    'dbunitset': {'mFamilies': 'dbfamily', 'mUnitTypes': _UT, 'mIncludedSet': _SET, 'mExcludedSet': _SET},
+    'dbterrain': {'mFirst': _UT, 'mLast': _UT, 'mColorType': 'dbterraintype'},
+    'dbcliffterrain': {'mFirstTerrain': 'dbterrain', 'mLastTerrain': 'dbterrain'},
+    'dbuicontrols': {'mFormID': 'dbuiforms', 'mFontTableIndex': 'dbuifonts'},
+    'dbuicontrolevents': {'mOwnerID': 'dbuicontrols'},
+    'dbuiformevents': {'mOwnerID': 'dbuiforms'},
+    'dbuiback': {'mFormID': 'dbuiforms'},
+}
+REFS['epochs'] = dict(REFS['dbtechtree'])
+
+# Where ids.py takes a row's name from (the first non-empty of these text keys); '@world' and '@cpbehavior' are the
+# readers' names (WORLD_ROWS, include/ee/EECPBehavior.h), '@effects' the first event that lists the effect.
+ID_NAMES = {
+    'dbworld': ['@world'], 'dbcpbehavior': ['@cpbehavior'], 'dbeffects': ['@effects'],
+    'dbobjects': ['mName'], 'dbgraphics': ['rowName', 'label'], 'dbsounds': ['label', 'mSampleName'],
+    'dbareaeffect': ['mName'], 'dbcliffterrain': ['mName'], 'dbterrain': ['mName'], 'dbuiback': ['mName'],
+    'dbunitset': ['mName'], 'dbuifonts': ['mFontName'], 'dbpremadecivs': ['mFileName'],
+}
+ID_DEFAULT = ['label']
+# Names that make a better id than the row's own (table -> {key: name}).
+_EPOCHS = ['prehistoric_age', 'stone_age', 'copper_age', 'bronze_age', 'dark_age', 'middle_ages', 'renaissance',
+           'imperial_age', 'industrial_age', 'atomic_age_ww1', 'atomic_age_ww2', 'atomic_age_modern', 'digital_age',
+           'nano_age', 'space_age']   # the epochs' titles (Language.rc 30145..30159)
+ID_OVERRIDES = {'dbtechtree': dict(enumerate(_EPOCHS)),
+                'dbweapontohit': {0: 'shock'},   # "Defender: Shock": the row is the shock weapon kind
+                'dbareaeffect': {0: 'none'}}      # "None (don't delete!!!!)": the no-area-effect row

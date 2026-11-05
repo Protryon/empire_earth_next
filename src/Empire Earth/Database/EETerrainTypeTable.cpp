@@ -148,9 +148,15 @@ struct EEDamageTableRecord {
 };
 static_assert(sizeof(EEDamageTableRecord) == 380, "on-disk record: 380 bytes on every target");
 
+// The number of unit families: the rows of dbfamily (the original refused a file of more than 60)
+unsigned long EEFamilyCount()
+{
+    return gU4E8714;
+}
+
 // FUNCTION: EXE 0x4dbf11
-// Loads up to 60 rows of 0x44 damage factors (percent to fraction) and builds the two twin tables scaled by world
-// constant 0x59's two values; returns the last read status
+// Loads every row of 0x44 damage factors (percent to fraction; the original: up to 60 rows) and builds the two twin
+// tables scaled by world constant 0x59's two values; returns the last read status
 // (the base row is written one statement per column)
 long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
 {
@@ -161,7 +167,7 @@ long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
         EETerrainTypeTable::ClearDamageTables();
     inFile->Open(kFileAccessRead);
     long theResult = inFile->Read(theCount);
-    if (theResult == kErrorOK && theCount <= 60) {
+    if (theResult == kErrorOK) {
         gU4E8714 = theCount;
         gU4E8708 = new float*[theCount];
         gU4E870C = new float*[theCount];

@@ -100,22 +100,31 @@ def run(a, spec, load_db):
             cls_fields[f['cls']] += 1
             cls_bytes[f['cls']] += SIZES[f['type']] * f['count']
     junk_total = 0
-    for n in sorted(spec['tables']):
+    try:   # (a) every table at once: the references name rows of the others
+        texts = tables.export_all(db, spec)
+        c = tables.Content(texts, spec)
+        comp = {n: c.build(n) for n in tables.binary_tables(spec)}
+        ids = {n: {k: i for i, k in c.index(n).items()} for n in texts}   # the text's ids, not regenerated
+        texts2 = tables.export_all(comp, spec, ids)
+        c2 = tables.Content(texts2, spec)
+        comp2 = {n: c2.build(n) for n in tables.binary_tables(spec)}
+    except Exception as e:
+        print(f'(a) FAIL: {type(e).__name__}: {e}')
+        return 1
+    binary = tables.binary_tables(spec)
+    if textdir:   # the text-only epoch registry
+        (textdir / 'epochs.yaml').write_bytes(texts['epochs'])
+    if texts2.get('epochs') != texts['epochs']:
+        print('(a) FAIL epochs: the text does not survive text -> db -> text')
+        ok = False
+    for n in binary:
         b = db[n]
         tspec = spec['tables'][n]
         st = spec['structs'][tspec['struct']]
         fields = st['fields']
         exp = binfmt.exported(fields)
         # (a)
-        try:
-            text = tables.export(n, b, spec)
-            cb = tables.import_(n, text, spec)
-            text2 = tables.export(n, cb, spec)
-            cb2 = tables.import_(n, text2, spec)
-        except Exception as e:   # report every table
-            print(f'(a) FAIL {n}: {type(e).__name__}: {e}')
-            ok = False
-            continue
+        text, cb, text2, cb2 = texts[n], comp[n], texts2[n], comp2[n]
         if text2 != text or cb2 != cb:
             print(f'(a) FAIL {n}: the text does not survive text -> db -> text')
             ok = False
@@ -128,7 +137,7 @@ def run(a, spec, load_db):
         tmpl = binfmt.retail_template(tr)
         tc = binfmt.parse(n, cb, spec)
         rr, rc = _rows(tr), _rows(tc)
-        names = tables._row_names(spec, n)
+        names = tables._row_names(spec, n)   # dbworld: its unread rows are not compared
         only = tables._row_fields(tspec)
         bad = None
         junk = collections.Counter()
@@ -152,6 +161,8 @@ def run(a, spec, load_db):
                 vx, vy = binfmt.field_value(f, x.rec), binfmt.field_value(f, y.rec)
                 if f['type'] == 'str':
                     vx, vy = vx[0], vy[0]
+                if n == 'dbtechtree' and kind == 'epoch' and f['name'] == 'mTitleID' and vx == 0:
+                    vx = 30145 + sum(1 for k, _ in rr[:i] if k == 'epoch')   # the original's rule, now data
                 if vx != vy:
                     if hole and _junk(f, x.rec):
                         junk[f['name']] += 1
@@ -166,10 +177,10 @@ def run(a, spec, load_db):
         junk_total += sum(junk.values())
         print(f'  {n:24s} {len(b):9,d} B -> {len(text):9,d} B text, {len(rc) - holes:5d} rows + {holes:4d} holes or unread'
               + (f'; 0xCC fill in hole rows (not loaded as values): {", ".join(sorted(junk))}' if junk else ''))
-    print(f'(a) {na}/{len(spec["tables"])} tables: text -> db -> text identical')
-    print(f'(b) {nb}/{len(spec["tables"])} tables: every game-read value equals retail ({junk_total:,d} hole-row '
+    print(f'(a) {na}/{len(binary)} db files (+ epochs.yaml): text -> db -> text identical')
+    print(f'(b) {nb}/{len(binary)} db files: every game-read value equals retail ({junk_total:,d} hole-row '
           f'fields were 0xCC fill)')
     print('fields by class (all record layouts): ' + ', '.join(
         f'{k} {cls_fields[k]} ({cls_bytes[k]:,d} B)' for k in ('named', 'label', 'unused', 'pad')))
     print(f'{"PASS" if ok else "FAIL"} in {time.time() - t0:.0f} s')
-    return 0 if ok and na == nb == len(spec['tables']) else 1
+    return 0 if ok and na == nb == len(binary) else 1

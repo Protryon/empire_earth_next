@@ -388,7 +388,7 @@ void EEComputerPlayer::GetScreenedTypesByLine(std::map<long, std::vector<long>*>
     EEUnitClass* theClass;
     long theValue;
     long theType;
-    for (i = 0; i < 0x367; i++) {
+    for (i = 0; i < EEUnitClassCount(); i++) {
         theClass = gUnitClassTable[i];
         if (theClass != NULL && theClass->mIsEnabled && inScreener.Screen(theClass)) {
             theValue = theClass->mAIKind;
@@ -462,7 +462,7 @@ EEAIFOFavoriteUnitScreener::EEAIFOFavoriteUnitScreener(EEComputerPlayer* inPlaye
     bool inAllowSpace, long inEpoch, long inEpochSpan)
     : EEAIFOUnitSelectionScreener(), mPlayer(inPlayer), mEpochSpan(inEpochSpan), mAllowAir(inAllowAir), mAllowSea(inAllowSea), mAllowLand(inAllowLand), mAllowSpace(inAllowSpace)
 {
-    if (inEpoch >= 0 && inEpoch < 15)
+    if (inEpoch >= 0 && inEpoch < EEEpochCount())
         this->mEpoch = inEpoch;
     else
         this->mEpoch = 0;
@@ -946,7 +946,7 @@ bool EEComputerPlayer::IsIslandExpansionDue()
 unsigned long EEComputerPlayer::GetBuildableTypes(long inCategory, std::vector<long>& outTypes)
 {
     EEAIFOCurrentlyBuildableUnitScreener theScreener(this);
-    for (long i = 0; i < 0x367; i++) {
+    for (long i = 0; i < EEUnitClassCount(); i++) {
         EEUnitClass* theClass = gUnitClassTable[i];
         if (theClass != NULL && theClass->mCategory == inCategory && theClass->mIsEnabled && theScreener.Screen(theClass)) {
             long theType = theClass->mUnitType;
@@ -1038,7 +1038,7 @@ EECPResourceCenter* EEComputerPlayer::GetResourceCenterOf(EEUnit* inUnit)
 // Returns true for epoch technologies; otherwise asks the player whether it can afford the cost
 bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
 {
-    if (this->mTechnologies != NULL && inTechnology->mData->mID >= kTechEpochPrehistoric && inTechnology->mData->mID < kTechEpochAll)
+    if (this->mTechnologies != NULL && EEIsEpochID(inTechnology->mData->mID))
         return true;
     return EEPlayer::CanAfford(inTechnology, inUnitType, inCount);
 }
@@ -4571,7 +4571,7 @@ long EEComputerPlayer::Load(unsigned long inMajorVersion, unsigned long inMinorV
 // Loads the epoch's kind-7 tech-tree media for a real epoch, then the player's own epoch media
 void EEComputerPlayer::EpochMediaLoaded(long inEpoch)
 {
-    if (inEpoch >= kTechEpochPrehistoric && inEpoch < kTechEpochAll)
+    if (EEIsEpochID(inEpoch))
         static_cast<EETechTreeEpoch*>(this->mTechnologies->Get(inEpoch))->LoadMediaOfKind(7);
     EEPlayer::EpochMediaLoaded(inEpoch);
 }
@@ -4843,7 +4843,7 @@ void EEComplexUnit::QueueGoal(EEUnitGoal* inGoal, long inItem)
 void EEComputerPlayer::EpochReached(long inEpoch)
 {
     this->mCivilizationManager->mResearchManager->EpochReached(inEpoch);
-    if (inEpoch >= kTechEpochPrehistoric && inEpoch < kTechEpochAll)
+    if (EEIsEpochID(inEpoch))
         this->EnterEpoch(inEpoch);
     EEPlayer::EpochReached(inEpoch);
 }
@@ -5437,7 +5437,7 @@ void EEComputerPlayer::TakeResource(long inIndex, long inAmount)
 // Pays for a technology, except epoch advances, which are free for the computer player
 void EEComputerPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction)
 {
-    if (inTechnology->mData->mID < kTechEpochPrehistoric || inTechnology->mData->mID >= kTechEpochAll)
+    if (!EEIsEpochID(inTechnology->mData->mID))
         EEPlayer::Pay(inTechnology, inUnitType, inFraction);
 }
 
@@ -5552,7 +5552,7 @@ void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit)
 // Unloads the epoch's kind-7 tech-tree media for a real epoch, then the player's own epoch media
 void EEComputerPlayer::EpochMediaUnloaded(long inEpoch)
 {
-    if (inEpoch >= kTechEpochPrehistoric && inEpoch < kTechEpochAll)
+    if (EEIsEpochID(inEpoch))
         static_cast<EETechTreeEpoch*>(this->mTechnologies->Get(inEpoch))->UnloadMediaOfKind(7);
     EEPlayer::EpochMediaUnloaded(inEpoch);
 }

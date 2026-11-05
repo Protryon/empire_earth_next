@@ -3,15 +3,20 @@
 #ifndef EE_DATATEXTSPECS_H
 #define EE_DATATEXTSPECS_H
 
-#define EEDT_FORMAT_VERSION 2
+#define EEDT_FORMAT_VERSION 3
 
 enum EEDTType { kEEDT_s8, kEEDT_u8, kEEDT_bool, kEEDT_s16, kEEDT_u16, kEEDT_s32, kEEDT_u32, kEEDT_f32, kEEDT_pair_f32, kEEDT_str };
-enum EEDTContainer { kEEDTC_count, kEEDTC_lead, kEEDTC_fixed, kEEDTC_events, kEEDTC_techtree };
+enum EEDTContainer { kEEDTC_count, kEEDTC_lead, kEEDTC_fixed, kEEDTC_events, kEEDTC_techtree, kEEDTC_epochs };
 
 struct EEDTField { const char* mName; unsigned short mOffset; unsigned short mCount; unsigned char mType; };
 struct EEDTStruct { const char* mName; unsigned long mSize; const EEDTField* mFields; unsigned long mFieldCount;
                    const char* mBase; };   // the record every row starts from (zero + defaults; 0: all zero)
-struct EEDTRowName { long mRow; const char* mName; };
+struct EEDTRowName { long mRow; const char* mName; const char* mFields; };   // mFields: the fields its readers use
+// a reference: the field (or "@list", the trailing list) holds a row of mTable, written as its id; mNone: values
+// that stay integers although they are a key of the target
+struct EEDTRef { const char* mField; const char* mTable; const long* mNone; unsigned long mNoneCount;
+                 bool mNever; };   // mNever: "never" is the target's row count (no row: an epoch never reached)
+struct EEDTDerived { const char* mField; long mA; long mB; };   // epochs.yaml: a * position + b where left out
 struct EEDTTable {
     const char* mName;            // file stem (db\<name>.dat)
     unsigned char mContainer;     // EEDTContainer
@@ -21,9 +26,17 @@ struct EEDTTable {
     unsigned long mLeadCount;
     const char* mListName;        // trailing list (events, techtree) or 0
     bool mListSigned;
-    const EEDTRowName* mRowNames; // text-only checked row labels
+    const EEDTRowName* mRowNames; // dbworld: the id each row must have (the name of its readers)
     unsigned long mRowNameCount;
     const char* mHole;            // the record of an unlisted row (an empty database row; 0: all zero)
+    const char* mKeyField;        // the runtime integer of a row: this field (dbtechtree mID), or 0: its row position
+    const char* mSelfField;       // the field that holds the row key + mSelfOffset (left out of the text), or 0
+    long mSelfOffset;
+    const EEDTRef* mRefs;         // the references to rows of other tables
+    unsigned long mRefCount;
+    const EEDTDerived* mDerived;  // fields that follow from the position (epochs)
+    unsigned long mDerivedCount;
+    bool mTextOnly;               // no db file of its own (epochs: compiles into dbtechtree)
 };
 
 // record sizes (EEDataTextFile.cpp static_asserts them against the structs the loaders read)
@@ -752,6 +765,7 @@ static const EEDTField kEEDTFields_EETechTreeRecord[] = {
     {"mRequiredStatisticValue", 0x0c8, 1, kEEDT_s32},
     {"mCalamity", 0x0cc, 1, kEEDT_s32},
     {"mHotKey", 0x0d0, 1, kEEDT_s32},
+    {"mTitleID", 0x0d4, 1, kEEDT_s32},
     {"mFactor1", 0x0e4, 1, kEEDT_f32},
     {"mFactor2", 0x0e8, 1, kEEDT_f32},
     {"mFactor3", 0x0ec, 1, kEEDT_f32},
@@ -1148,87 +1162,309 @@ static const EEDTStruct kEEDTStructs[] = {
      0},
 };
 
+static const EEDTRef kEEDTRefs_dbaiunittargeting[] = {
+    {"mPreferredUnitType", "dbobjects", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbambientsounds[] = {
+    {"mSoundID", "dbsounds", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbanimals[] = {
+    {"mUnitType", "dbobjects", 0, 0, false},
+    {"mMedia", "dbgraphics", 0, 0, false},
+    {"mSound1", "dbgraphics", 0, 0, false},
+    {"mSound2", "dbgraphics", 0, 0, false},
+    {"mSound3", "dbgraphics", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbareaeffect[] = {
+    {"mGraphicEffect", "dbgfxeffects", 0, 0, false},
+    {"mGraphicEffect18", "dbgfxeffects", 0, 0, false},
+    {"mUnitSet", "dbunitset", 0, 0, false},
+    {"mMedia", "dbgraphics", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbbuttons[] = {
+    {"mHotKey", "dbuihotkey", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbcalamity[] = {
+    {"mGraphicEffectID1", "dbgfxeffects", 0, 0, false},
+    {"mGraphicEffectID2", "dbgfxeffects", 0, 0, false},
+    {"mGraphicEffectID3", "dbgfxeffects", 0, 0, false},
+    {"mGraphicEffectID4", "dbgfxeffects", 0, 0, false},
+    {"mSoundID", "dbsounds", 0, 0, false},
+    {"mSecondarySoundID", "dbsounds", 0, 0, false},
+    {"mUnitClassIndex", "dbobjects", 0, 0, false},
+    {"mUnitSet", "dbunitset", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbcivilization[] = {
+    {"mUnitSet", "dbunitset", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbcivpowers[] = {
+    {"mUnitSet", "dbunitset", 0, 0, false},
+    {"mTechnology", "dbtechtree", 0, 0, false},
+    {"mUnitType", "dbobjects", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbcliffterrain[] = {
+    {"mFirstTerrain", "dbterrain", 0, 0, false},
+    {"mLastTerrain", "dbterrain", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbeffects[] = {
+    {"mUnitClass", "dbobjects", 0, 0, false},
+    {"mNewUnitClass", "dbobjects", 0, 0, false},
+    {"mUnitSet", "dbunitset", 0, 0, false},
+    {"mMediaIndex", "dbgraphics", 0, 0, false},
+    {"mTechnology", "dbtechtree", 0, 0, false},
+    {"mSoundID", "dbsounds", 0, 0, false},
+    {"mButton", "dbbuttons", 0, 0, false},
+    {"mAreaEffect", "dbareaeffect", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbevents[] = {
+    {"@list", "dbeffects", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbgamevariant[] = {
+    {"mSet0", "dbunitset", 0, 0, false},
+    {"mSet1", "dbunitset", 0, 0, false},
+    {"mSet2", "dbunitset", 0, 0, false},
+    {"mSet3", "dbunitset", 0, 0, false},
+    {"mSet4", "dbunitset", 0, 0, false},
+    {"mSet5", "dbunitset", 0, 0, false},
+    {"mSet6", "dbunitset", 0, 0, false},
+    {"mSet7", "dbunitset", 0, 0, false},
+    {"mSet8", "dbunitset", 0, 0, false},
+    {"mSet9", "dbunitset", 0, 0, false},
+    {"mCostSet", "dbunitset", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbgfxeffects[] = {
+    {"mMediaIndex", "dbgraphics", 0, 0, false},
+    {"mLinkedEffectIndex1", "dbgfxeffects", 0, 0, false},
+    {"mLinkedEffectIndex2", "dbgfxeffects", 0, 0, false},
+    {"mLinkedEffectIndex3", "dbgfxeffects", 0, 0, false},
+};
 static const char* const kEEDTLead_dbgraphics[] = {"rowName", "mFileName", "mTextureName", "mTextureNames|mModelNames[14]", "mShadowModelName", "mShadowTextureName"};
+static const EEDTRef kEEDTRefs_dbgraphics[] = {
+    {"mSound1Index0", "dbsounds", 0, 0, false},
+    {"mSound2Index0", "dbsounds", 0, 0, false},
+    {"mSound1Index13", "dbsounds", 0, 0, false},
+    {"mSound2Index13", "dbsounds", 0, 0, false},
+    {"mSound1Index7", "dbsounds", 0, 0, false},
+    {"mSound2Index7", "dbsounds", 0, 0, false},
+    {"mSound1Index8", "dbsounds", 0, 0, false},
+    {"mSound2Index8", "dbsounds", 0, 0, false},
+    {"mSound1Index12", "dbsounds", 0, 0, false},
+    {"mSound2Index12", "dbsounds", 0, 0, false},
+    {"mSound1Index11", "dbsounds", 0, 0, false},
+    {"mSound2Index11", "dbsounds", 0, 0, false},
+    {"mSound1Index9", "dbsounds", 0, 0, false},
+    {"mSound2Index9", "dbsounds", 0, 0, false},
+    {"mSound1Index10", "dbsounds", 0, 0, false},
+    {"mSound2Index10", "dbsounds", 0, 0, false},
+    {"mSound1Index6", "dbsounds", 0, 0, false},
+    {"mSound2Index6", "dbsounds", 0, 0, false},
+    {"mSound1Index3", "dbsounds", 0, 0, false},
+    {"mSound2Index3", "dbsounds", 0, 0, false},
+    {"mSound1Index1", "dbsounds", 0, 0, false},
+    {"mSound2Index1", "dbsounds", 0, 0, false},
+    {"mSound1Index2", "dbsounds", 0, 0, false},
+    {"mSound2Index2", "dbsounds", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbobjects[] = {
+    {"mFamily", "dbfamily", 0, 0, false},
+    {"mWeapon", "dbweapontohit", 0, 0, false},
+    {"mButton", "dbbuttons", 0, 0, false},
+    {"mGraphic", "dbgraphics", 0, 0, false},
+    {"mProjectileType", "dbobjects", 0, 0, false},
+    {"mScaffoldingType", "dbobjects", 0, 0, false},
+    {"mDeathType", "dbobjects", 0, 0, false},
+    {"mDeathSpawnType", "dbobjects", 0, 0, false},
+    {"mPackedType", "dbobjects", 0, 0, false},
+    {"mRemainsType", "dbobjects", 0, 0, false},
+    {"mCreationSound", "dbsounds", 0, 0, false},
+    {"mAcknowledgeSound1", "dbsounds", 0, 0, false},
+    {"mAcknowledgeSound2", "dbsounds", 0, 0, false},
+    {"mSelectionSound1", "dbsounds", 0, 0, false},
+    {"mSelectionSound2", "dbsounds", 0, 0, false},
+    {"mDeathSound", "dbsounds", 0, 0, false},
+    {"mDeathEffect", "dbgfxeffects", 0, 0, false},
+    {"mDamageEffect", "dbgfxeffects", 0, 0, false},
+    {"mMuzzleFlashEffect", "dbgfxeffects", 0, 0, false},
+    {"mTrailEffect", "dbgfxeffects", 0, 0, false},
+    {"mRippleEffect", "dbgfxeffects", 0, 0, false},
+    {"mSplashEffect", "dbgfxeffects", 0, 0, false},
+    {"mHealEffect", "dbgfxeffects", 0, 0, false},
+    {"mImpactSparksEffect", "dbgfxeffects", 0, 0, false},
+    {"mImpactBloodEffect", "dbgfxeffects", 0, 0, false},
+    {"mAttachedEffect", "dbgfxeffects", 0, 0, false},
+    {"mCreationEffect", "dbgfxeffects", 0, 0, false},
+    {"mSpecialAttackEffect", "dbgfxeffects", 0, 0, false},
+    {"mShotEffect", "dbgfxeffects", 0, 0, false},
+    {"mLeprosyEffect", "dbgfxeffects", 0, 0, false},
+    {"mPlagueEffect", "dbgfxeffects", 0, 0, false},
+    {"mMoraleEffect", "dbgfxeffects", 0, 0, false},
+    {"mPulseCannonEffect", "dbgfxeffects", 0, 0, false},
+    {"mBattleCryEffect", "dbgfxeffects", 0, 0, false},
+    {"mShellHoleEffect", "dbgfxeffects", 0, 0, false},
+    {"mBloodStainEffect", "dbgfxeffects", 0, 0, false},
+    {"mUpgradeTableIndex", "dbupgrade", 0, 0, false},
+    {"mBehavior", "dbunitbehavior", 0, 0, false},
+    {"mAreaEffectTemplate0", "dbareaeffect", 0, 0, false},
+    {"mAreaEffectTemplate1", "dbareaeffect", 0, 0, false},
+    {"mAreaEffectTemplate2", "dbareaeffect", 0, 0, false},
+    {"mAreaEffectTemplate3", "dbareaeffect", 0, 0, false},
+    {"mTechnology", "dbtechtree", 0, 0, false},
+    {"mGarrisonTechnology", "dbtechtree", 0, 0, false},
+    {"mAttributes", "dbtechtree", 0, 0, false},
+    {"mOverlapUnitSet", "dbunitset", 0, 0, false},
+    {"mWonderUnitSet", "dbunitset", 0, 0, false},
+    {"mMiniMapColor", "dbcolortable", 0, 0, false},
+    {"mEpoch", "epochs", 0, 0, true},
+};
 static const char* const kEEDTLead_dbsounds[] = {"mSampleName"};
+static const long kEEDTNone_dbtechtree_mPrerequisite1[] = {0};
+static const long kEEDTNone_dbtechtree_mPrerequisite2[] = {0};
+static const long kEEDTNone_dbtechtree_mPrerequisite3[] = {0};
+static const long kEEDTNone_dbtechtree_mPrerequisite4[] = {0};
+static const EEDTRef kEEDTRefs_dbtechtree[] = {
+    {"mResearchedEvent", "dbevents", 0, 0, false},
+    {"mObsoleteEvent", "dbevents", 0, 0, false},
+    {"mPrerequisite1", "dbtechtree", kEEDTNone_dbtechtree_mPrerequisite1, 1, false},
+    {"mPrerequisite2", "dbtechtree", kEEDTNone_dbtechtree_mPrerequisite2, 1, false},
+    {"mPrerequisite3", "dbtechtree", kEEDTNone_dbtechtree_mPrerequisite3, 1, false},
+    {"mPrerequisite4", "dbtechtree", kEEDTNone_dbtechtree_mPrerequisite4, 1, false},
+    {"mUnitClass", "dbobjects", 0, 0, false},
+    {"mDefaultUnitClass", "dbobjects", 0, 0, false},
+    {"@list", "dbobjects", 0, 0, false},
+    {"mButton", "dbbuttons", 0, 0, false},
+    {"mCalamity", "dbcalamity", 0, 0, false},
+    {"mHotKey", "dbuihotkey", 0, 0, false},
+    {"mEpoch", "epochs", 0, 0, false},
+    {"mObsoleteEpoch", "epochs", 0, 0, true},
+};
+static const long kEEDTNone_epochs_mPrerequisite1[] = {0};
+static const long kEEDTNone_epochs_mPrerequisite2[] = {0};
+static const long kEEDTNone_epochs_mPrerequisite3[] = {0};
+static const long kEEDTNone_epochs_mPrerequisite4[] = {0};
+static const EEDTRef kEEDTRefs_epochs[] = {
+    {"mResearchedEvent", "dbevents", 0, 0, false},
+    {"mObsoleteEvent", "dbevents", 0, 0, false},
+    {"mPrerequisite1", "dbtechtree", kEEDTNone_epochs_mPrerequisite1, 1, false},
+    {"mPrerequisite2", "dbtechtree", kEEDTNone_epochs_mPrerequisite2, 1, false},
+    {"mPrerequisite3", "dbtechtree", kEEDTNone_epochs_mPrerequisite3, 1, false},
+    {"mPrerequisite4", "dbtechtree", kEEDTNone_epochs_mPrerequisite4, 1, false},
+    {"mUnitClass", "dbobjects", 0, 0, false},
+    {"mDefaultUnitClass", "dbobjects", 0, 0, false},
+    {"@list", "dbobjects", 0, 0, false},
+    {"mButton", "dbbuttons", 0, 0, false},
+    {"mCalamity", "dbcalamity", 0, 0, false},
+    {"mHotKey", "dbuihotkey", 0, 0, false},
+    {"mEpoch", "epochs", 0, 0, false},
+    {"mObsoleteEpoch", "epochs", 0, 0, true},
+};
+static const EEDTDerived kEEDTDerived_epochs[] = {{"mID", 1, 0}, {"mEpoch", 1, 0}, {"mNextEpoch", 1, 1}, {"mFirstNodeID", 1000, 1000}};
 static const char* const kEEDTLead_dbterrain[] = {"mTextureName"};
+static const EEDTRef kEEDTRefs_dbterrain[] = {
+    {"mFirst", "dbobjects", 0, 0, false},
+    {"mLast", "dbobjects", 0, 0, false},
+    {"mColorType", "dbterraintype", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbuiback[] = {
+    {"mFormID", "dbuiforms", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbuicontrolevents[] = {
+    {"mOwnerID", "dbuicontrols", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbuicontrols[] = {
+    {"mFormID", "dbuiforms", 0, 0, false},
+    {"mFontTableIndex", "dbuifonts", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbuiformevents[] = {
+    {"mOwnerID", "dbuiforms", 0, 0, false},
+};
+static const EEDTRef kEEDTRefs_dbunitset[] = {
+    {"mFamilies", "dbfamily", 0, 0, false},
+    {"mUnitTypes", "dbobjects", 0, 0, false},
+    {"mIncludedSet", "dbunitset", 0, 0, false},
+    {"mExcludedSet", "dbunitset", 0, 0, false},
+};
 static const EEDTRowName kEEDTRows_dbworld[] = {
-    {21, "conversionsStatisticMax"},
-    {22, "gatherersPerResourceMax"},
-    {25, "chatLogDisplayTime"},
-    {26, "unitLimitRange"},
-    {27, "unitLimitDefault"},
-    {34, "wonderVictoryTime"},
-    {35, "areaConversionRadius"},
-    {36, "wonderPopulationBonus"},
-    {37, "wonderHealAmount"},
-    {42, "gameSpeedDefault"},
-    {43, "gameSpeedRange"},
-    {44, "gameSpeedStep"},
-    {45, "deleteRefundFactor"},
-    {46, "conversionFaithCost"},
-    {47, "unitImprovementPointsMax"},
-    {48, "startingCitizensDefault"},
-    {49, "groupSpeedCapFactor"},
-    {50, "wonderHitPointBonus"},
-    {51, "wonderHealEpochFactor"},
-    {52, "wonderHealEpochStep"},
-    {53, "highGroundHeight"},
-    {54, "lowGroundHeight"},
-    {55, "highGroundAttackFactor"},
-    {56, "lowGroundAttackFactor"},
-    {57, "improvementTimeAreaEffect"},
-    {58, "improvementTimeAttack"},
-    {59, "improvementTimeArrowArmor"},
-    {60, "improvementTimeGunArmor"},
-    {61, "improvementTimeLaserArmor"},
-    {62, "improvementTimeMissileArmor"},
-    {63, "improvementTimePierceArmor"},
-    {64, "improvementTimeShockArmor"},
-    {65, "improvementTimeFlightTimeOrPower"},
-    {66, "improvementTimeHitPoints"},
-    {67, "improvementTimeLeadership"},
-    {68, "improvementTimeRange"},
-    {69, "improvementTimeRepair"},
-    {70, "improvementTimeKind13"},
-    {71, "improvementTimeSpeed"},
-    {72, "improvementTimeTransport"},
-    {74, "wonderSightRadius"},
-    {75, "refusalMessageInterval"},
-    {76, "civilizationBuilderPoints"},
-    {77, "wondersForVictoryMax"},
-    {78, "tileStrayDistance"},
-    {79, "trampleMinDistanceSquared"},
-    {80, "unitEpochCostFactor"},
-    {81, "gameSpeedSlowNormal"},
-    {82, "gameSpeedFastFastest"},
-    {83, "acknowledgementDelay"},
-    {84, "aiSpecialAttackChance"},
-    {85, "camouflageTiming"},
-    {86, "specialPowersCategoryCost"},
-    {87, "reloadTimeRandomRange"},
-    {88, "fanaticism"},
-    {89, "difficultyDamageScale"},
-    {90, "jitManufacturingCostFactor"},
-    {91, "tradeRateStoneIron"},
-    {92, "tradeRateFoodWood"},
-    {93, "jitManufacturingCostFactorDeathmatch"},
-    {94, "deathmatchJitManufacturingDelay"},
+    {21, "conversions_statistic_max", "mLongValue"},
+    {22, "gatherers_per_resource_max", "mLongValue"},
+    {25, "chat_log_display_time", "mLongValue"},
+    {26, "unit_limit_range", "mLongValue mLongValue2"},
+    {27, "unit_limit_default", "mLongValue"},
+    {34, "wonder_victory_time", "mLongValue"},
+    {35, "area_conversion_radius", "mFloatValue"},
+    {36, "wonder_population_bonus", "mFloatValue mFloatValue2"},
+    {37, "wonder_heal_amount", "mLongValue"},
+    {42, "game_speed_default", "mFloatValue"},
+    {43, "game_speed_range", "mFloatValue mFloatValue2"},
+    {44, "game_speed_step", "mFloatValue"},
+    {45, "delete_refund_factor", "mFloatValue"},
+    {46, "conversion_faith_cost", "mLongValue"},
+    {47, "unit_improvement_points_max", "mLongValue"},
+    {48, "starting_citizens_default", "mLongValue"},
+    {49, "group_speed_cap_factor", "mFloatValue"},
+    {50, "wonder_hit_point_bonus", "mFloatValue"},
+    {51, "wonder_heal_epoch_factor", "mFloatValue"},
+    {52, "wonder_heal_epoch_step", "mLongValue"},
+    {53, "high_ground_height", "mFloatValue"},
+    {54, "low_ground_height", "mFloatValue"},
+    {55, "high_ground_attack_factor", "mFloatValue"},
+    {56, "low_ground_attack_factor", "mFloatValue"},
+    {57, "improvement_time_area_effect", "mLongValue mLongValue2"},
+    {58, "improvement_time_attack", "mLongValue mLongValue2"},
+    {59, "improvement_time_arrow_armor", "mLongValue mLongValue2"},
+    {60, "improvement_time_gun_armor", "mLongValue mLongValue2"},
+    {61, "improvement_time_laser_armor", "mLongValue mLongValue2"},
+    {62, "improvement_time_missile_armor", "mLongValue mLongValue2"},
+    {63, "improvement_time_pierce_armor", "mLongValue mLongValue2"},
+    {64, "improvement_time_shock_armor", "mLongValue mLongValue2"},
+    {65, "improvement_time_flight_time_or_power", "mLongValue mLongValue2"},
+    {66, "improvement_time_hit_points", "mLongValue mLongValue2"},
+    {67, "improvement_time_leadership", "mLongValue mLongValue2"},
+    {68, "improvement_time_range", "mLongValue mLongValue2"},
+    {69, "improvement_time_repair", "mLongValue mLongValue2"},
+    {70, "improvement_time_kind13", "mLongValue mLongValue2"},
+    {71, "improvement_time_speed", "mLongValue mLongValue2"},
+    {72, "improvement_time_transport", "mLongValue mLongValue2"},
+    {74, "wonder_sight_radius", "mFloatValue"},
+    {75, "refusal_message_interval", "mLongValue"},
+    {76, "civilization_builder_points", "mLongValue"},
+    {77, "wonders_for_victory_max", "mLongValue"},
+    {78, "tile_stray_distance", "mFloatValue"},
+    {79, "trample_min_distance_squared", "mFloatValue"},
+    {80, "unit_epoch_cost_factor", "mFloatValue"},
+    {81, "game_speed_slow_normal", "mFloatValue mFloatValue2"},
+    {82, "game_speed_fast_fastest", "mFloatValue mFloatValue2"},
+    {83, "acknowledgement_delay", "mLongValue"},
+    {84, "ai_special_attack_chance", "mFloatValue mFloatValue2"},
+    {85, "camouflage_timing", "mFloatValue mLongValue mLongValue2"},
+    {86, "special_powers_category_cost", "mLongValue"},
+    {87, "reload_time_random_range", "mFloatValue mFloatValue2"},
+    {88, "fanaticism", "mFloatValue mFloatValue2 mLongValue"},
+    {89, "difficulty_damage_scale", "mFloatValue mFloatValue2"},
+    {90, "jit_manufacturing_cost_factor", "mFloatValue"},
+    {91, "trade_rate_stone_iron", "mFloatValue mFloatValue2"},
+    {92, "trade_rate_food_wood", "mFloatValue mFloatValue2"},
+    {93, "jit_manufacturing_cost_factor_deathmatch", "mFloatValue"},
+    {94, "deathmatch_jit_manufacturing_delay", "mLongValue"},
 };
 
 static const EEDTTable kEEDTTables[] = {
     {"dbaiunittargeting", kEEDTC_count, false, &kEEDTStructs[0], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, 0, 0, kEEDTRefs_dbaiunittargeting, 1, 0, 0, false},
     {"dbambientsounds", kEEDTC_count, false, &kEEDTStructs[1], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mIndex", 0, kEEDTRefs_dbambientsounds, 1, 0, 0, false},
     {"dbanimals", kEEDTC_count, false, &kEEDTStructs[2], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mAnimalID", 0, kEEDTRefs_dbanimals, 5, 0, 0, false},
     {"dbareaeffect", kEEDTC_count, false, &kEEDTStructs[3], 0, 0, 0, false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+     0, "mID", 0, kEEDTRefs_dbareaeffect, 4, 0, 0, false},
     {"dbbuttons", kEEDTC_count, false, &kEEDTStructs[4], 0, 0, 0, false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -1236,29 +1472,40 @@ static const EEDTTable kEEDTTables[] = {
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff"},
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff",
+     0, "mID", 0, kEEDTRefs_dbbuttons, 1, 0, 0, false},
     {"dbcalamity", kEEDTC_count, false, &kEEDTStructs[5], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mID", 0, kEEDTRefs_dbcalamity, 8, 0, 0, false},
     {"dbcivilization", kEEDTC_count, true, &kEEDTStructs[6], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, 0, 0, kEEDTRefs_dbcivilization, 1, 0, 0, false},
     {"dbcivpowers", kEEDTC_count, false, &kEEDTStructs[7], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mID", 38, kEEDTRefs_dbcivpowers, 3, 0, 0, false},
     {"dbcliffterrain", kEEDTC_count, false, &kEEDTStructs[8], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mIndex", 0, kEEDTRefs_dbcliffterrain, 2, 0, 0, false},
     {"dbcolortable", kEEDTC_count, false, &kEEDTStructs[9], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, 0, 0, 0, 0, 0, 0, false},
     {"dbcpbehavior", kEEDTC_count, false, &kEEDTStructs[10], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mIndex", 0, 0, 0, 0, 0, false},
     {"dbeffects", kEEDTC_fixed, false, &kEEDTStructs[11], 0, 0, 0, false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
      "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+     0, 0, 0, kEEDTRefs_dbeffects, 8, 0, 0, false},
     {"dbevents", kEEDTC_events, true, &kEEDTStructs[12], 0, 0, "effects", true, 0, 0,
-     0},
+     0,
+     0, 0, 0, kEEDTRefs_dbevents, 1, 0, 0, false},
     {"dbfamily", kEEDTC_count, false, &kEEDTStructs[13], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, 0, 0, 0, 0, 0, 0, false},
     {"dbgamevariant", kEEDTC_count, false, &kEEDTStructs[14], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mIndex", 0, kEEDTRefs_dbgamevariant, 11, 0, 0, false},
     {"dbgfxeffects", kEEDTC_count, false, &kEEDTStructs[15], 0, 0, 0, false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -1267,7 +1514,8 @@ static const EEDTTable kEEDTTables[] = {
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff"
      "\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x00\x00"},
+     "\x00\x00\x00\x00\x00\x00\x00\x00",
+     0, "mID", 0, kEEDTRefs_dbgfxeffects, 4, 0, 0, false},
     {"dbgraphics", kEEDTC_lead, true, &kEEDTStructs[16], kEEDTLead_dbgraphics, 6, 0, false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -1291,9 +1539,11 @@ static const EEDTTable kEEDTTables[] = {
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x80\x3f\x00\x00\x00\x00\x00\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+     0, "mMediaIndex", 0, kEEDTRefs_dbgraphics, 24, 0, 0, false},
     {"dbmusic", kEEDTC_count, false, &kEEDTStructs[17], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, 0, 0, 0, 0, 0, 0, false},
     {"dbobjects", kEEDTC_count, true, &kEEDTStructs[18], 0, 0, 0, false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -1356,13 +1606,17 @@ static const EEDTTable kEEDTTables[] = {
      "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
      "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
      "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
-     "\xff\xff\xff\xff\x00\x00\x00\x00"},
+     "\xff\xff\xff\xff\x00\x00\x00\x00",
+     0, "mUnitType", 0, kEEDTRefs_dbobjects, 49, 0, 0, false},
     {"dbpremadecivs", kEEDTC_count, false, &kEEDTStructs[19], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mIndex", 0, 0, 0, 0, 0, false},
     {"dbsounds", kEEDTC_lead, false, &kEEDTStructs[20], kEEDTLead_dbsounds, 1, 0, false, 0, 0,
-     0},
+     0,
+     0, 0, 0, 0, 0, 0, 0, false},
     {"dbstartingresources", kEEDTC_count, false, &kEEDTStructs[21], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mIndex", 0, 0, 0, 0, 0, false},
     {"dbtechtree", kEEDTC_techtree, true, &kEEDTStructs[22], 0, 0, "parents", false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -1372,7 +1626,11 @@ static const EEDTTable kEEDTTables[] = {
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+     "mID", 0, 0, kEEDTRefs_dbtechtree, 14, 0, 0, false},
+    {"epochs", kEEDTC_epochs, true, &kEEDTStructs[22], 0, 0, "parents", false, 0, 0,
+     0,
+     0, 0, 0, kEEDTRefs_epochs, 14, kEEDTDerived_epochs, 4, true},
     {"dbterrain", kEEDTC_lead, false, &kEEDTStructs[23], kEEDTLead_dbterrain, 1, 0, false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -1380,9 +1638,11 @@ static const EEDTTable kEEDTTables[] = {
      "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+     0, "mID", 0, kEEDTRefs_dbterrain, 3, 0, 0, false},
     {"dbterraintype", kEEDTC_count, false, &kEEDTStructs[24], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mID", 0, 0, 0, 0, 0, false},
     {"dbuiback", kEEDTC_count, false, &kEEDTStructs[25], 0, 0, 0, false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -1393,12 +1653,14 @@ static const EEDTTable kEEDTTables[] = {
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x80\x3f\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+     0, 0, 0, kEEDTRefs_dbuiback, 1, 0, 0, false},
     {"dbuicontrolevents", kEEDTC_count, false, &kEEDTStructs[26], 0, 0, 0, false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"},
+     "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff",
+     0, 0, 0, kEEDTRefs_dbuicontrolevents, 1, 0, 0, false},
     {"dbuicontrols", kEEDTC_count, false, &kEEDTStructs[27], 0, 0, 0, false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -1426,11 +1688,14 @@ static const EEDTTable kEEDTTables[] = {
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+     0, "mID", 0, kEEDTRefs_dbuicontrols, 2, 0, 0, false},
     {"dbuifonts", kEEDTC_count, false, &kEEDTStructs[28], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, 0, 0, 0, 0, 0, 0, false},
     {"dbuiformevents", kEEDTC_count, false, &kEEDTStructs[26], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, 0, 0, kEEDTRefs_dbuiformevents, 1, 0, 0, false},
     {"dbuiforms", kEEDTC_count, false, &kEEDTStructs[29], 0, 0, 0, false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
@@ -1440,24 +1705,31 @@ static const EEDTTable kEEDTTables[] = {
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00",
+     0, "mFormID", 0, 0, 0, 0, 0, false},
     {"dbuihotkey", kEEDTC_count, false, &kEEDTStructs[30], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mID", 0, 0, 0, 0, 0, false},
     {"dbunitbehavior", kEEDTC_count, false, &kEEDTStructs[31], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mIndex", 0, 0, 0, 0, 0, false},
     {"dbunitset", kEEDTC_count, false, &kEEDTStructs[32], 0, 0, 0, false, 0, 0,
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
      "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
      "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
-     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00"},
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00",
+     0, "mID", 0, kEEDTRefs_dbunitset, 4, 0, 0, false},
     {"dbupgrade", kEEDTC_count, false, &kEEDTStructs[33], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, "mIndex", 0, 0, 0, 0, 0, false},
     {"dbweapontohit", kEEDTC_count, false, &kEEDTStructs[34], 0, 0, 0, false, 0, 0,
-     0},
+     0,
+     0, 0, 0, 0, 0, 0, 0, false},
     {"dbworld", kEEDTC_count, false, &kEEDTStructs[35], 0, 0, 0, false, kEEDTRows_dbworld, 61,
-     0},
+     0,
+     0, 0, 0, 0, 0, 0, 0, false},
 };
 static const unsigned long kEEDTTableCount = sizeof(kEEDTTables) / sizeof(EEDTTable);
 

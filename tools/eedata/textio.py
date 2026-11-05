@@ -360,7 +360,7 @@ def emit_csv(directives, header, rows):
 
 
 def parse_csv(text):
-    """-> (directives {name: value}, header [str], rows [[str]], first data line number)."""
+    """-> (directives {name: value}, header [str], rows [[str]], the line number each row starts on)."""
     if text.startswith('﻿'):
         text = text[1:]
     directives = {}
@@ -375,8 +375,13 @@ def parse_csv(text):
             directives[name] = val.strip()
         k += 1
     rd = csv.reader(io.StringIO('\n'.join(lines[k:])), strict=True)
+    rows, starts = [], []
     try:
-        rows = [r for r in rd]
+        prev = 0
+        for r in rd:
+            rows.append(r)
+            starts.append(k + prev + 1)
+            prev = rd.line_num
     except csv.Error as e:
         raise TextError(f'CSV: {e}') from None
     while rows and not rows[-1]:
@@ -386,11 +391,12 @@ def parse_csv(text):
     header = rows[0]
     if len(set(header)) != len(header):
         raise TextError('CSV: duplicate column names')
-    body = []
-    for n, r in enumerate(rows[1:], 2):
+    body, body_lines = [], []
+    for n, r in enumerate(rows[1:], 1):
         if not r:
             continue
         if len(r) != len(header):
-            raise TextError(f'CSV row {n - 1}: {len(r)} cells, the header has {len(header)}')
+            raise TextError(f'line {starts[n]}: {len(r)} cells, the header has {len(header)}')
         body.append(r)
-    return directives, header, body, k + 2
+        body_lines.append(starts[n])
+    return directives, header, body, body_lines

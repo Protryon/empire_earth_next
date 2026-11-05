@@ -103,7 +103,7 @@ void EEUIFMGGStatistics::Select()
     sprintf(theText, "%-18.18s  %4.4ld", (const char*)theLabel, gWorld.mNumberOfWondersToWin);
     static_cast<UITextLabel*>(this->mOwner->GetControl(kMainGameWondersToWin))->SetText(theText);
     gResource->GetString(IDS_WONDERS_AVAILABLE_IN, theLabel);
-    gResource->GetString(gWorld.GetCurrentPlayer()->GetTechTree()->GetShownEpoch() + IDS_EPOCH_NAME_FIRST, theEpoch);
+    gResource->GetString(EEEpochTitleID(gWorld.GetCurrentPlayer()->GetTechTree()->GetShownEpoch()), theEpoch);
     sprintf(theText, "%-18.18s %-18.18s", (const char*)theLabel, (const char*)theEpoch);
     static_cast<UITextLabel*>(this->mOwner->GetControl(kMainGameWondersAvailable))->SetText(theText);
     this->Refresh();

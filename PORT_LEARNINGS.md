@@ -1177,6 +1177,25 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   window system, a window, the wgpu device on the runner's GPU path (lavapipe under Xvfb, Metal on macOS), 30 colour
   fills read back and presented; the normal start must stop with the "game data not found" message (exit 3).
 
+## Ids for the db tables (branch ids)
+
+- **References are integers of two kinds**: a row position (almost every table) or a key field (dbtechtree: nodes are
+  found by `mID`, `id / 1000 - 1` names the epoch block; dbcivpowers: row = `mID - 0x26`). A retail reference that
+  names no row (-1, 0 into a hole row, 100000, 0xFFFFFFFF, a dangling 1153) is a "none" value: it stays an integer.
+  Only one field needed an explicit none list: `mPrerequisite1..4` uses 0 for "pre-ticked", and 0 is also the first
+  epoch's tech id.
+- **Text owns the ids after the first export**: the round-trip gate re-exports with the ids the importer indexed
+  (not regenerated from names), so a renamed id survives text -> db -> text.
+- **The resolver needs the other tables**: a table compiled alone cannot resolve its references, so the game's seam
+  holds one `Content` for all db lookups and reads a referenced table's text through the same data path. dbobjects
+  (5 MB of YAML) is parsed once, early (the tech tree references it), and freed when it is built.
+- **Python text-mode writes on Windows turn LF into CRLF**: an edit script that uses `read_text`/`write_text` rewrote
+  whole files (`.gitattributes` has `-text`). Use bytes.
+- **Gate G1 needs the loaders' skip rules**: the retail .dat files hold the converter's 0xCC fill in rows the
+  loaders skip (disabled dbobjects rows, dbuiforms `mFormID <= 0`, dbterrain `mID < 0`, dbtechtree `mFirstNodeID`
+  outside epoch records), so the dump writes those rows as skipped; then retail and text dump identically.
+
+
 ## No data.ssa, no original install, no registry (branch nossa)
 
 - **The data is one loose tree** (`tools/open_data.py build`): the game now searches only its own `Data\` (plus a
@@ -1228,6 +1247,18 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   Every run: 0 opens of a data.ssa, 0 of either install, no registry write, the key still absent afterwards, a
   config.ini of 76 values written by the game ([Game] and [Game Options]). plat_test 209/209 on Windows; the Linux
   game cross-builds (846/846 units). Bundle: 5,761 files, a 327 MB zip of the 426 MB tree.
+
+## Caps from the data (branch ids)
+
+- **A tech id named its epoch**: every node id is (block + 1) x 1000 + slot in the retail data, and the code found a
+  node with `id / 1000 - 1`. Inserting an epoch then renumbers every later tech (and breaks `kTech*`). A map from
+  node id to the block it was loaded in (filled by the epoch's Load) frees the ids; the epochs keep their tech ids
+  0..count - 1 by position.
+- **"15" had three meanings**: the epoch count, "never obsolete" (mObsoleteEpoch 15, dbobjects mEpoch 15 on 18
+  rows) and "random start epoch" in the game options. With 16 epochs a stored 15 becomes a real epoch: the text
+  writes `never` for the first two (compiled to the count) and the options use the count for random.
+- **The two event hooks past the table** (0x7d1 on every research, 0x7d2 on every epoch availability) ran nothing
+  only because 1500 < 2001; a table sized from the data would have run rows 2001/2002. They are named negative ids.
 
 ## Window presentation and harness races (2026-11-05)
 

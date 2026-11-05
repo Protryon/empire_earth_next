@@ -17,6 +17,7 @@
 #include "ee/EEMessage.h"
 #include "ee/EEAction.h"
 #include "ee/EEALasso.h"
+#include "ee/EEUnit.h"   // EEUnitClassCount
 #include "lle/ISModifierState.h"
 
 // FUNCTION: EXE 0x40289f
@@ -41,7 +42,7 @@ void EEALasso::Virtual4()
 // Builds the selection message for a lasso rectangle and modifiers (select, add, toggle, patrol group or by type)
 void EEALasso::SelectUnits(const GERectangle& inRectangle, long inFlags, unsigned long inUnitType, long inPatrolGroup)
 {
-    if (inUnitType < 0x366) {
+    if (inUnitType < EEUnitClassCount()) {   // else any type (kAnyUnitType; the original: 0x366)
         if (inUnitType == 0xdf)
             this->mMessage = (EEMSelectUnits*)new EEMSelectPatrolGroup(inPatrolGroup);
         else if (inFlags == 0)

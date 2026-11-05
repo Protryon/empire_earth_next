@@ -419,7 +419,7 @@ void EEWorld::Clear()
     this->mTeams.clear();
     USingleton<EECalamityManager>::GetInstance()->DestroyCalamities();
     for (unsigned long i = 1; i < this->mNumPlayers; i++) {
-        if (this->mPlayers[i] == NULL || !(this->mPlayers[i]->mHackUnitClass < 0x367))
+        if (this->mPlayers[i] == NULL || !(this->mPlayers[i]->mHackUnitClass < EEUnitClassCount()))
             continue;
         for (unsigned long j = 1; j < this->mNumPlayers; j++) {
             if (this->mPlayers[j] != NULL) {
@@ -427,7 +427,7 @@ void EEWorld::Clear()
                 this->mPlayers[j]->UnloadUnitClassButtons(this->mPlayers[i]->mHackUnitClass);
             }
         }
-        this->mPlayers[i]->SetHackUnitClass(0x367);
+        this->mPlayers[i]->SetHackUnitClass(kNoUnitClass);
     }
     RTSWorld::Clear();
     if (gUserInterface != NULL)
@@ -1164,7 +1164,7 @@ void EEWorld::CreatePlayers(EEGameState* inState)
         if (inState->mIsLoadedGame && thePlayer->GetPlayerID() < inState->mMap->mU19561C)
             inState->mMap->FogSeen(thePlayer);
         theTechTree->ApplySavedState(gLoadingSavedGame, true);
-        for (unsigned long k = 0; k < 0x367; k++) {
+        for (unsigned long k = 0; k < EEUnitClassCount(); k++) {
             EEUnitClassUpgrade* theUpgrade = thePlayer->mUnitClassUpgrades[k];
             if (theUpgrade == NULL)
                 continue;

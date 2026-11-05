@@ -85,7 +85,7 @@ public:
     void Update(unsigned long inTime);      // 0x95929 (ret 4)
 
     std::map<long, std::deque<EEComplexUnit*>*> mUnits;   // +0x00
-    std::deque<EECPUMRequest> mRequests[15];   // +0x0c the requests by epoch (ctor 0x935e6's loop of 15; 0x93893/0x948e6)
+    EEEpochArray<std::deque<EECPUMRequest>> mRequests;   // +0x0c the requests by epoch (the original: 15)
     // +0x138 count per unit class (0x948e6: insert(pair(class, 0)).first->second += n; Load/Save read and write key and
     // value as unsigned long; its dtor COMDAT 0x95e70 is ~_Tree<unsigned long, unsigned long>)
     std::map<unsigned long, unsigned long> mWaitingCounts;

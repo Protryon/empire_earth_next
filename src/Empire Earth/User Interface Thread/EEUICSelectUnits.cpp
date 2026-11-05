@@ -198,7 +198,7 @@ long EEUICSelectUnits::MouseLButtonUp()
             theRectangle.SetTop(theRectangle.GetBottom());
             theRectangle.SetBottom(theTop);
         }
-        this->mLasso->SelectUnits(theRectangle, theModifiers, 0x366, 0);
+        this->mLasso->SelectUnits(theRectangle, theModifiers, kAnyUnitType, 0);
     } else if (gViewport.GetViewRectangle().Contains(this->GetMouseLocation()))
         this->mClick->SelectAtMouse(theModifiers);
     gMouse->SetBounds(GERectangle(0.0f, 0.0f, (float)gGameWindow->GetWidth(), (float)gGameWindow->GetHeight()));

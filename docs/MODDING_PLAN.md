@@ -1,7 +1,10 @@
 # Empire Earth: AoC data-driven content and modding plan
 
-Status: research plan only. No repository file was changed. Repository: `C:\Users\max\Desktop\empire_earth_next`
-(clang/C++17 port, fork of the `empire_earth` reconstruction, based on `fixes-all`). Paths below are relative to it.
+Status (2026-11-05): phases 1 and 2 are built (clean text tables, the game reads them); gate G1 (the content dump)
+exists; the keys of 3.2 exist in the text: every db row has an `id` and every cross-table reference is an id, resolved
+by one Content (DATA_FORMATS.md 8.6). Phase 4: unit classes, events/effects and epochs (epochs.yaml) are sized from
+the data; the mod layer (phase 3) and the other caps are open. See the "Progress" section at the end. Repository: `C:\Users\max\Desktop\empire_earth_next` (clang/C++17 port, fork of the
+`empire_earth` reconstruction, based on `fixes-all`). Paths below are relative to it.
 `src/EE` stands for `src/Empire Earth`. Identifiers and comments are provisional: they come from reverse engineering.
 
 Update 2026-11-04: phases 1 and 2 are built in clean form (docs/DATA_FORMATS.md section 8; owner decision: retail
@@ -643,3 +646,34 @@ hot-reload of content in single player for modders.
 - **`.tai`/`.rmv` vocabulary**: new triggers/actions/map commands still need code until the scripting phase.
 - **Native behaviour classes**: total conversions that need new unit *categories* (new C++ behaviour) cannot be done
   in data; the unified effect language plus `.tai` covers most needs but not all.
+
+---
+
+## Progress
+
+- **Ids and references (3.2), 2026-11-05.** Format 3 of the text tables: every row has an `id`, references are ids,
+  vanilla rows keep their retail keys (row position; dbtechtree `mID`), new rows go above. One resolver
+  (`tables.Content`, `EEDataText::Content`) parses, indexes and resolves; a duplicate id or a dangling reference is a
+  load error naming file, line and id. The mod merge step of phase 3 feeds this resolver. dbworld's ids are the
+  constants' names (`unit_limit_range`), ready to become the defines of phase 5.1. Saves keep integer unit and tech
+  ids (deterministic keys). DATA_FORMATS.md 8.6.
+- **G1 (phase 0), 2026-11-05.** `EEDataDump.cpp`: the content dump; `eedata.py cppgate` checks dump(retail .dat) ==
+  dump(text tables); the game writes it with `EE_DUMP_CONTENT=<file>`.
+- **Caps lifted (phase 4), 2026-11-05.**
+  1. Unit classes 871 -> sized from dbobjects (`gUnitClassTable` a vector, `EEUnitClassCount()` at all 57 sites;
+     the link pass pairs each class with its own record; sentinels `kNoUnitClass`/`kAnyUnitType`).
+  2. Event effects 2000 / events 1500 -> as many as the files have (`gEventEffects`, `EEEvent::sEvents` vectors;
+     the tech tree's two hook events 0x7d1/0x7d2 no longer name rows). Effects stay a table referenced by id (an
+     event's `effects: [ids]`): the list per event is already uncapped; inline effects are a syntax for later.
+  4. Epochs 15 -> the entries of `Data/db/epochs.yaml` (the epoch registry; DATA_FORMATS.md 8.7). Every [15]
+     tech tree, player and AI structure is per epoch (`EEEpochArray`), the lobby and editors list the epochs the
+     data has, titles come from the registry. Music: epochs past the 15 dbmusic flags have no songs.
+  Tests: `eedata.py extra` (30 unit classes past 871; every tech-tree event and effect moved above rows 1499/1999;
+  a 16th epoch in the middle), compiled by both loaders, and an AI game on those tables (gates).
+  3 (part): families: dbfamily may have more than 60 rows. Left: terrain types (17 in a 32-bit mask), attack kinds
+  (68: the dbfamily record's fixed column count), civ-builder categories/levels (35/60, the .civ 6-bit packing),
+  4.5 (weapon/armour kinds, resources, AI behaviours, scenario variables, difficulty, map sizes/speeds), 4.6 players.
+  Gates (2026-11-05, test profile, seed 2 Small Hard 2 AI to the time cap): binary tree tour + 120 s and AI game
+  (units 56/39), text + open tree tour and AI game (56/39), the extra tables (878 unit rows, 3,076 effects, 1,794
+  events, 16 epochs) tour + 60 s and AI game (56/39); the game's own content dump of the extra tables equals the
+  CLI's (37/37 tables); dump(binary tree) == dump(open tree) through the game's code.

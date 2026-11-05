@@ -821,7 +821,7 @@ void LobbyUpdateForm()
     gGameOptions.mLock->ReadLock();
     LobbyUpdateEpochEnd();
     long theEnd = gGameOptions.mEpochEnd;
-    if (gGameOptions.mEpochStart != kTechEpochAll)
+    if (gGameOptions.mEpochStart != EEEpochCount())
         theEnd -= gGameOptions.mEpochStart;
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyEpochEndCombo))->SetCurrentSelection(theEnd);
     for (unsigned char i = 0; i < 16; i++)
@@ -1772,7 +1772,7 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
         theForm->GetControl(kLobbyResourcesCombo)->SetDisplayMode(kDisplayModeHidden);
         theForm->GetControl(kLobbyResourcesLabel2)->SetDisplayMode(kDisplayModeShown);
     }
-    gResource->GetString(IDS_EPOCH_NAME_FIRST + inOptions.GetEpochStart(), theText);
+    gResource->GetString(EEEpochTitleID(inOptions.GetEpochStart()), theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyEpochStartLabel2))->SetText(theText);
     if (static_cast<UIComboBox*>(theForm->GetControl(kLobbyEpochStartCombo))->GetCurrentSelection(theSelection) != kErrorOK)
         (static_cast<UIComboBox*>(theForm->GetControl(kLobbyEpochStartCombo)))->SetCurrentSelection(inOptions.GetEpochStart());
@@ -1783,7 +1783,7 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
         theForm->GetControl(kLobbyEpochStartCombo)->SetDisplayMode(kDisplayModeHidden);
         theForm->GetControl(kLobbyEpochStartLabel2)->SetDisplayMode(kDisplayModeShown);
     }
-    gResource->GetString(IDS_EPOCH_NAME_FIRST + inOptions.GetEpochEnd(), theText);
+    gResource->GetString(EEEpochTitleID(inOptions.GetEpochEnd()), theText);
     static_cast<UITextLabel*>(theForm->GetControl(kLobbyEpochEndLabel2))->SetText(theText);
     if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
         theForm->GetControl(kLobbyEpochEndCombo)->SetDisplayMode(kDisplayModeShown);
@@ -2011,14 +2011,14 @@ void LobbyUpdateEpochEnd()
     unsigned long theSelection;
     if (theStart->GetCurrentSelection(theSelection) == kErrorOK) {
         UIComboBox* theEnd = static_cast<UIComboBox*>(theStart->GetForm()->GetControl(185));
-        long theFirst = theSelection == 15 ? 0 : theSelection;
-        long theLimit = 15 - theEnd->GetListBox()->GetLineCount();
+        long theFirst = theSelection == (unsigned long)EEEpochCount() ? 0 : theSelection;   // random: every epoch
+        long theLimit = EEEpochCount() - theEnd->GetListBox()->GetLineCount();
         if (theFirst > theLimit) {
             for (long i = theLimit; i < theFirst; i++)
                 theEnd->DeleteLine(0);
         } else if (theFirst < theLimit) {
             for (long i = theLimit - 1; i >= theFirst; i--) {
-                gResource->GetString(IDS_EPOCH_NAME_FIRST + i, theText);
+                gResource->GetString(EEEpochTitleID(i), theText);
                 theEnd->InsertLine(theText, 0);
             }
         }
@@ -2136,12 +2136,12 @@ void LobbyOpen(UIForm* inForm)
         gResource->GetString(EEGetResourceLevel(j)->GetNameID(), theText);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyResourcesCombo))->AppendLine(theText);
     }
-    for (j = 0; j <= 15; j++) {
-        gResource->GetString(IDS_EPOCH_NAME_FIRST + j, theText);
+    for (j = 0; j <= (unsigned long)EEEpochCount(); j++) {   // every epoch, then "Random Epoch"
+        gResource->GetString(EEEpochTitleID(j), theText);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyEpochStartCombo))->AppendLine(theText);
     }
-    for (j = 0; j < 15; j++) {
-        gResource->GetString(IDS_EPOCH_NAME_FIRST + j, theText);
+    for (j = 0; j < (unsigned long)EEEpochCount(); j++) {
+        gResource->GetString(EEEpochTitleID(j), theText);
         static_cast<UIComboBox*>(inForm->GetControl(kLobbyEpochEndCombo))->AppendLine(theText);
     }
     for (j = gWorldTable.GetLongValue(26); j <= gWorldTable.GetLongValue2(26); j += 50) {
@@ -2503,7 +2503,7 @@ long EEUIELEEpochEnd::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     if (theBox->GetCurrentSelection(theSelection) != kErrorOK)
         return kErrorOK;
     gGameOptions.mLock->WriteLock();
-    if (gGameOptions.mEpochStart != kTechEpochAll)
+    if (gGameOptions.mEpochStart != EEEpochCount())
         theSelection += gGameOptions.mEpochStart;
     if (theSelection != gGameOptions.mEpochEnd) {
         NEMessage* theMessage = new EEMGameOptions(5, theSelection, UWideString(""));
@@ -2527,7 +2527,7 @@ long EEUIELEGameEpochStart::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
             NEMessage* theMessage = new EEMGameOptions(4, theSelection, UWideString(""));
             gCommunications->ProcessGuaranteedLocalUserInput(theMessage, kSlotNone);
             gGameOptions.mEpochStart = theSelection;
-            if (theSelection >= 15)
+            if (theSelection >= (unsigned long)EEEpochCount())   // random
                 theSelection = 0;
             if (gGameOptions.mEpochEnd < theSelection) {
                 theMessage = new EEMGameOptions(5, theSelection, UWideString(""));

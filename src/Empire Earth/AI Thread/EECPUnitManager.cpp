@@ -106,7 +106,7 @@ EECPUnitManager::~EECPUnitManager()
 bool EECPUnitManager::IsRequested(long inUnitClass)
 {
     bool theFound = false;
-    for (long i = 0; i < 15 && !theFound; i++) {
+    for (long i = 0; i < EEEpochCount() && !theFound; i++) {
         std::deque<EECPUMRequest>& theRequests = this->mRequests[i];
         for (std::deque<EECPUMRequest>::iterator it = theRequests.begin(); it != theRequests.end() && !theFound; ++it)
             theFound = (*it).mUnitClass == inUnitClass;
@@ -172,7 +172,7 @@ bool EECPUnitManager::CancelRequest(long inUnitClass, unsigned long inCount, lon
     EETechTree* theTree = this->mPlayer->mTechnologies;
     long theID = gUnitClassTable[inUnitClass] != NULL ? gUnitClassTable[inUnitClass]->mTechnology : 100000;
     EETechTreeNode* theNode = theTree->Get(theID);
-    for (unsigned long i = 0; i < 15; i++) {
+    for (unsigned long i = 0; i < EEEpochCount(); i++) {
         if (theLeft == 0)
             goto done;
         std::deque<EECPUMRequest>& theRequests = this->mRequests[i];
@@ -537,7 +537,7 @@ long EECPUnitManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     EECPUMRequest theRequest;
     unsigned long theClass;
     unsigned long theValue;
-    for (i = 0; i < 15; i++) {
+    for (i = 0; i < EEEpochCount(); i++) {
         if (theResult != 0)
             return theResult;
         if (inMajorVersion == 0 && inMinorVersion < 0xea && i == 14)
@@ -580,7 +580,7 @@ long EECPUnitManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
 bool EECPUnitManager::HasLaterEpochRequests()
 {
     bool theFound = false;
-    for (long i = this->mPlayer->mTechnologies->mCurrentEpoch + 1; i < 15; i++) {
+    for (long i = this->mPlayer->mTechnologies->mCurrentEpoch + 1; i < EEEpochCount(); i++) {
         if (theFound)
             break;
         if (this->mRequests[i].size() > 0)
@@ -656,11 +656,9 @@ void EECPUnitManager::RequestUnits(long inUnitClass, long inCount, long inTownID
     theRequest.mTownID = inTownID;
     EETechTree* theTree = this->mPlayer->mTechnologies;
     long theID = gUnitClassTable[inUnitClass] != NULL ? gUnitClassTable[inUnitClass]->mTechnology : 100000;
-    long theIndex;
-    if (theID >= kTechEpochPrehistoric && theID < kTechEpochAll)
-        theIndex = theID;
-    else
-        theIndex = theID / 1000 - 1;
+    long theIndex = EETechTreeEpochOf(theID);
+    if (theIndex < 0)
+        return;   // a class with no tech (the original indexed past its 15 request lists)
     EETechTreeNode* theNode = theTree->Get(theID);
     unsigned long i;
     bool theFound = false;
@@ -731,7 +729,7 @@ void EECPUnitManager::RequestUnits(long inUnitClass, long inCount, long inTownID
 void EECPUnitManager::Reset()
 {
     this->ReleaseUnits();
-    for (long i = 0; i < 15; i++)   // every epoch's requests (was the first 7)
+    for (long i = 0; i < EEEpochCount(); i++)   // every epoch's requests (was the first 7)
         this->mRequests[i].clear();
     this->mWaitingCounts.clear();
 }
@@ -774,7 +772,7 @@ long EECPUnitManager::Save(unsigned long inMajorVersion, unsigned long inMinorVe
     std::deque<EECPUMRequest>::iterator it;
     std::map<unsigned long, unsigned long>::iterator theEntry;
     unsigned long theCount;
-    for (unsigned long i = 0; i < 15; i++) {
+    for (unsigned long i = 0; i < EEEpochCount(); i++) {
         if (theResult != 0)
             return theResult;
         std::deque<EECPUMRequest>& theRequests = this->mRequests[i];
@@ -990,7 +988,7 @@ void EECPUnitManager::UnitLost(EEUnit* inUnit)
     theContinent = gContinentManager.GetContinentID(theUnit);
     for (unsigned long i = 0; i < theUnit->GetBuildQueueSize(); i++) {
         long theID = (*(theUnit->mBuildQueue.begin() + i)).mTechnology;
-        if (!(theID < kTechEpochPrehistoric) && !(theID >= kTechEpochAll))
+        if (EEIsEpochID(theID))
             continue;
         EETechTreeNode* theNode = theTree->Get(theID);
         if (!theNode || !theNode->mData->mMakesUnit)
@@ -1002,7 +1000,7 @@ void EECPUnitManager::UnitLost(EEUnit* inUnit)
     long theID = theUnit->mCurrentResearch;
     if (theID == kTechNone)
         return;
-    if (theID >= kTechEpochPrehistoric && theID < kTechEpochAll) {
+    if (EEIsEpochID(theID)) {
         this->mManager->mAdvancingEpoch = false;
         this->mManager->mScheduleEpochAdvance = true;
         this->mManager->SetNextEpochAdvanceTime(gPhysics->mGameTime, true);
@@ -1052,7 +1050,7 @@ void EECPUnitManager::Update(unsigned long inTime)
     }
     unsigned long i;
     long theMade;
-    for (i = 0; i < 15; i++) {
+    for (i = 0; i < EEEpochCount(); i++) {
         if (theDone)
             break;
         std::deque<EECPUMRequest>& theRequests = this->mRequests[i];

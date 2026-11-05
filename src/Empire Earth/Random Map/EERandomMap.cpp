@@ -384,7 +384,7 @@ void EERandomMap::PlaceFeatures()
         for (j = 0; j < theNumFeatures; j++) {
             theFeature = this->mData.mFeatures[j];
             theEntry = this->mData.mUnitNames[theFeature.mUnitType];
-            if (theFeature.mIsHerd || theEntry.mUnitClass >= 0x367)
+            if (theFeature.mIsHerd || theEntry.mUnitClass >= EEUnitClassCount())
                 continue;
             theClass = gUnitClassTable[theEntry.mUnitClass];
             if (dynamic_cast<EEUCLandCitizen*>(theClass)) {
@@ -456,7 +456,7 @@ void EERandomMap::PlaceFeatures()
         }
         for (j = 0; j < theNumWalls; j++) {
             theEntry = this->mData.mUnitNames[this->mData.mWalls[j].mUnitType];
-            if (theEntry.mUnitClass >= 0x367)
+            if (theEntry.mUnitClass >= EEUnitClassCount())
                 continue;
             theClass = gUnitClassTable[theEntry.mUnitClass];
             if (theClass == NULL || !theClass->mIsWall)
@@ -471,7 +471,7 @@ void EERandomMap::PlaceFeatures()
     for (j = 0; j < theNumFeatures; j++) {
         theFeature = this->mData.mFeatures[j];
         theEntry = this->mData.mUnitNames[theFeature.mUnitType];
-        if (theFeature.mIsHerd != true || theEntry.mUnitClass >= 0x367)
+        if (theFeature.mIsHerd != true || theEntry.mUnitClass >= EEUnitClassCount())
             continue;
         theClass = gUnitClassTable[theEntry.mUnitClass];
         if (theClass == NULL)
@@ -951,7 +951,7 @@ void EERandomMap::InitializeValues(unsigned long inSeed)
         this->mData.mMapSize = 5;
     else
         ESVERIFY_AT(false, 1735);
-    for (i = 0; i < 0x367; i++) {
+    for (i = 0; i < EEUnitClassCount(); i++) {
         EEUnitClass* theClass = gUnitClassTable[i];
         if (theClass == NULL || !theClass->mIsEnabled)
             continue;
@@ -1291,7 +1291,7 @@ void EERandomMap::Fn288426()
         default:
             continue;
         }
-        if (theClass == 0 || theClass >= 0x367)
+        if (theClass == 0 || theClass >= EEUnitClassCount())
             continue;
         unsigned long theX = UMFloor(theObject->mLocation.GetX());
         unsigned long theY = UMFloor(theObject->mLocation.GetY());

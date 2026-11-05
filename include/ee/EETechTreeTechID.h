@@ -4,11 +4,11 @@
 #ifndef EE_EETECHTREETECHID_H
 #define EE_EETECHTREETECHID_H
 
-// The tech ids (EETechTree.cpp's assert "theNumEpochs <= keettidEpochAll": 15; ids below 15 are the epochs)
-// (provisional name)
+#include <vector>
+
+// The tech ids (provisional name). The epoch constants are the vanilla epochs' positions (epochs.yaml order); the
+// epoch count is EEEpochCount(), from the data (the original fixed it at 15: kTechEpochAll / keettidEpochAll).
 enum EETechTreeTechID {
-    kTechEpochAll = 15,
-    keettidEpochAll = kTechEpochAll,  // spelled this way in the original's assert strings
     kTechEpochPrehistoric = 0,              // dbtechtree.dat epoch 0 record 'Epoch Paleo' (id +0x68 = 0); its mNameID 9065 'Epoch Prehistoric' (Language.rc); epoch title 30145 'Prehistoric Age'
     kTechEpochStone = 1,                    // dbtechtree.dat epoch 1 record 'Epoch Stone' (id +0x68 = 1); its mNameID 9168 'Epoch Stone' (Language.rc); epoch title 30146 'Stone Age'
     kTechEpochCopper = 2,                   // dbtechtree.dat epoch 2 record 'Epoch Copper' (id +0x68 = 2); its mNameID 9167 'Epoch Copper' (Language.rc); epoch title 30147 'Copper Age'
@@ -70,6 +70,23 @@ enum EETechPrerequisiteFlag {
     kPrerequisitePrerequisite3 = 8,   // SetPrerequisite / Load: mData->mPrerequisite3 (provisional name)
     kPrerequisitePrerequisite4 = 0x10,  // SetPrerequisite / Load: mData->mPrerequisite4 (provisional name)
     kPrerequisiteAll = kPrerequisiteEpoch | kPrerequisitePrerequisite1 | kPrerequisitePrerequisite2 | kPrerequisitePrerequisite3 | kPrerequisitePrerequisite4,          // every bit: SetPrerequisite makes the node available (provisional name)
+};
+
+// The epochs (epochs.yaml; the dbtechtree file's epoch blocks): their count is set when gTechTree loads (15, the
+// original's, until then). An epoch's tech id is its position 0..count-1; node ids are 1000 and up (kTechFirstNodeID),
+// and a node's epoch is the block it was loaded in (EETechTreeEpochOf), not id / 1000 - 1 as in the original, so an
+// epoch inserted in the middle keeps every other tech's id.
+extern long gEpochCount;
+inline long EEEpochCount() { return gEpochCount; }
+inline bool EEIsEpochID(long inID) { return inID >= 0 && inID < gEpochCount; }
+const long kTechFirstNodeID = 1000;
+long EETechTreeEpochOf(long inID);          // the epoch of a tech id (an epoch's own id; a node's block); -1: none
+long EEEpochTitleID(long inEpoch);          // the epoch's title string ("Bronze Age"; epochs.yaml mTitleID); for
+                                            // EEEpochCount(), the game options' "Random Epoch"
+// one element per epoch (sized when it is made: after the database is loaded)
+template <class T> class EEEpochArray : public std::vector<T> {
+public:
+    EEEpochArray() : std::vector<T>(gEpochCount) {}
 };
 
 #endif // EE_EETECHTREETECHID_H

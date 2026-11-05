@@ -372,7 +372,7 @@ long EESMObject::PickUnitType()
         if (this->GetClass() != 0)
             theResult = this->GetClass();
         else {
-            for (long i = 0; i < 0x367; i++) {
+            for (long i = 0; i < EEUnitClassCount(); i++) {
                 EEUnitClass* theClass = gUnitClassTable[i];
                 if (theClass == NULL)
                     continue;

@@ -169,8 +169,9 @@ static float gF5636A0 = k447ADC * 0.5f;          // 0x5636a0 (provisional name)
 // SYNTHETIC: EXE 0x62f2bb
 static float gF56369C = k447ADC * 4.0f;          // 0x56369c (provisional name)
 
-// the unit classes by type (0x5636ac: 0x367 entries up to sUnitTypes at 0x564448; ee/EEUnit.h)
-EEUnitClass* gUnitClassTable[871];
+// the unit classes by type (0x5636ac in the original: 0x367 entries up to sUnitTypes at 0x564448; ee/EEUnit.h)
+// (the original's fixed EEUnitClassCount() slots; now one per unit type, sized by CreateUnitClasses: EEUnitClassCount() empty slots until then)
+std::vector<EEUnitClass*> gUnitClassTable(EEUnitClassCount());
 // .data 0x4cc9fc/0x4cca00 (= 0.7, 1.5; this unit's data follows: ee/EERenderLists.h, EERenderObject.cpp reads them)
 float gSpaceTurretHeight = 0.7f;
 float gSpaceStationHeight = 1.5f;
@@ -1857,7 +1858,7 @@ void EEUnitClass::LevelRunwayNegX(EEComplexUnit* inUnit)
 // Releases every unit class in the class table
 void EEUnitClass::ReleaseUnitClasses()
 {
-    for (unsigned long i = 0; i < 0x367; i++)
+    for (unsigned long i = 0; i < EEUnitClassCount(); i++)
         EEUnitClass::ReleaseUnitClass(i);
 }
 
@@ -2485,7 +2486,7 @@ long EEUnitClass::GetNumGoalQueues()
 void EEUnitClass::GetClassesInSet(unsigned long inSet, std::vector<EEUnitClass*>& outClasses)
 {
     outClasses.clear();
-    for (long i = 0; i < 0x367; i++) {
+    for (long i = 0; i < EEUnitClassCount(); i++) {
         EEUnitClass* theClass = gUnitClassTable[i];
         if (theClass != NULL && gUnitSetManager.Contains(theClass->GetUnitType(), inSet) == true)
             outClasses.push_back(theClass);
@@ -2897,7 +2898,7 @@ struct EEUnitClassNameLess {
 
 // FUNCTION: EXE 0x6358b1
 // Builds every unit class from dbobjects by category, links the related classes and set flags, sorts sUnitTypes by
-// name (the linking pass pairs class table slot i with database record i)
+// name (the class table has a slot per unit type, sized from the records)
 // The cases are in the order the original lays their bodies out
 void EEUnitClass::CreateUnitClasses()
 {
@@ -2909,8 +2910,14 @@ void EEUnitClass::CreateUnitClasses()
     ESVERIFY_AT(theResult == keseOK, 5713);
     if (theDbFile != NULL)
         delete theDbFile;
-    for (unsigned long theIndex = 0; theIndex < 0x367; theIndex++)
-        gUnitClassTable[theIndex] = NULL;
+    // one class slot per unit type: as many as dbobjects has records, or the highest unit type + 1
+    unsigned long theSlots = gDatabaseObjects.GetCount();
+    for (unsigned long r = 0; r < gDatabaseObjects.GetCount(); r++) {
+        EEUnitClassRecord* theRecord = (EEUnitClassRecord*)gDatabaseObjects.GetEntry(r)->mRecord;
+        if (theRecord->mIsEnabled && theRecord->mUnitType >= 0 && (unsigned long)theRecord->mUnitType >= theSlots)
+            theSlots = (unsigned long)theRecord->mUnitType + 1;
+    }
+    gUnitClassTable.assign(theSlots, NULL);
     unsigned long theCounts[0x23];
     for (unsigned long theCategory = 0; theCategory < 0x23; theCategory++)
         theCounts[theCategory] = 0;
@@ -3061,13 +3068,16 @@ void EEUnitClass::CreateUnitClasses()
         if (theClass != NULL)
             theClass->Dereference();
     }
-    EEUnitClass** theEntry = gUnitClassTable;
-    for (i = 0; i < theCount; i++, theEntry++) {
-        EEUnitClass* theClass = *theEntry;
-        if (theClass == NULL)
-            continue;
+    // links each class to its related classes, from its own record (the original paired class table slot i with
+    // record i, right only while every unit type equals its record's row)
+    for (i = 0; i < theCount; i++) {
         EEDbObject* theObject = gDatabaseObjects.GetEntry(i);
         EEUnitClassRecord* theRecord = (EEUnitClassRecord*)theObject->mRecord;
+        if (!theRecord->mIsEnabled || theRecord->mUnitType < 0)
+            continue;
+        EEUnitClass* theClass = gUnitClassTable[theRecord->mUnitType];
+        if (theClass == NULL)
+            continue;
         if (theRecord->mProjectileType > 0) {
             theClass->mProjectileClass = gUnitClassTable[theRecord->mProjectileType];
             theClass->mProjectileClass->Reference();

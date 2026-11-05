@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <memory>
 #include "lle/GEColor.h"
 #include "ee/EECivilization.h"          // held by value (+0x468)
 #include "ee/EEResourceType.h"
@@ -320,7 +321,7 @@ struct RTSTechTreeNodeData {
     unsigned long GetCalamity() const { return this->mCalamity; }
     unsigned long mCalamity;                // +0x44 (a calamity's EECalamityEnum: the cast-calamity goal; unsigned: StartCalamity 0x66662d `jbe`)
     long mKind;                             // +0x48 the kind (3, 4, 5; the logic bomb's 4)
-    long mID;                               // +0x4c the node's id (< 15: an epoch; else epoch = id / 1000 - 1)
+    long mID;                               // +0x4c the node's id (an epoch: its position; else >= 1000, EETechTreeEpochOf)
     long mResearchedEvent;                  // +0x50 EEEvent id run when it is researched (Virtual14/1C load/unload it)
     long mObsoleteEvent;                    // +0x54 EEEvent id run when it becomes obsolete
     long mBuildTime;                        // +0x58 (Virtual10)
@@ -468,20 +469,38 @@ public:
     long mCurrentSOL;                       // +0x48
     long mNextEpoch;                        // +0x4c
     bool mIsCountingSOL;                    // +0x50
+    long mTitleID;                          // the title string (epochs.yaml; 0 in the original's data: 30145 + epoch)
 };
 
 #include "ee/EETechTreeTechID.h"   // EETechTreeTechID (own header: ee/EETechTreeTechID.h)
+
+// A tree's epochs, one per epoch of the tech tree file (the original: a member array of 15). The epochs stay where
+// they are made (a vector of owners), and mEpochs[i] reads as before.
+class EETechTreeEpochList {
+public:
+    EETechTreeEpoch& operator[](long inIndex) { return *this->mItems[inIndex]; }
+    const EETechTreeEpoch& operator[](long inIndex) const { return *this->mItems[inIndex]; }
+    long size() const { return (long)this->mItems.size(); }
+    void Resize(long inCount)
+    {
+        while (this->size() < inCount)
+            this->mItems.emplace_back(new EETechTreeEpoch);
+    }
+
+private:
+    std::vector<std::unique_ptr<EETechTreeEpoch>> mItems;
+};
 
 class EETechTree : public RTSTechTree {
 public:
     EETechTree();                           // 0x1cbcc2
     virtual ~EETechTree();                  // +0x00 0x1cbd99 (??_G 0x1cbd7d)
     // inline in the real header (the COMDAT 0x18a4 sits in EEABuild.cpp, its first user; every caller calls it
-    // out of line). Ids below 15 are epochs, the rest divide by 1000.
+    // out of line). An epoch's id is its position; a node is found in its epoch (EETechTreeEpochOf).
     EETechTreeNode* Get(long inID)
     {
-        long theEpoch = (inID >= kTechEpochPrehistoric && inID < kTechEpochAll) ? inID : inID / 1000 - 1;
-        if ((unsigned long)theEpoch < kTechEpochAll)
+        long theEpoch = EETechTreeEpochOf(inID);
+        if (theEpoch >= 0 && theEpoch < this->mEpochs.size())
             return this->mEpochs[theEpoch].Get(inID);
         return NULL;
     }
@@ -490,7 +509,7 @@ public:
     // 0x5aa0d1, 0x59721b): the tech's node data. Provisional name.
     RTSTechTreeNodeData* GetData(long inID) { return this->Get(inID)->mData; }
     bool GetTechIDState(long inTechID, bool& outIsResearched, bool& outIsObsolete, bool& outScenEditorObsoleted);   // 0x1cbc87 (the asserts name it)
-    long Load(FSFile& inFile);              // 0x1cbdf0 (the database)
+    long Load(FSFileSpec& inFile);          // 0x1cbdf0 (the database: every epoch block of the file)
     static void BuildUnitClassInfo();       // 0x1cbe4a (gTechTree's events by unit class)
     void UnloadAll();                       // 0x1cc282
     void ApplySavedResearch();              // 0x1cc29a
@@ -538,7 +557,7 @@ public:
     static const UString sEndEpoch;         // "EETechTree-EndEpoch"
 
     // Layout (from the ctor 0x1cbcc2; provisional names)
-    EETechTreeEpoch mEpochs[15];            // +0x008 (the ids below 15)
+    EETechTreeEpochList mEpochs;            // +0x008 one per epoch (the original: 15, the ids below 15)
     std::vector<long> mResearchedIDs;       // +0x4f4
     std::vector<long> mObsoleteIDs;         // +0x504
     std::vector<long> mScenEditorObsoletedIDs;  // +0x514
@@ -815,7 +834,7 @@ public:
     // 0x16ae11: with inUnit and inFlag set, calls slot 0x24 of +0x9ac; the hot-key events call it with (0, true)
     // (provisional name)
     void UpdateSelection(EEUnit* inUnit, bool inFlag);
-    // per unit class (+0x888, 0x367 entries; the meteor storm's Virtual28/Virtual34 with its meteor class)
+    // per unit class (+0x888, one per unit class; the meteor storm's Virtual28/Virtual34 with its meteor class)
     // (provisional names)
     void LoadUnitClassMedia(long inUnitClass);              // 0x16c776
     void GetHerdsOfType(std::vector<EEHerd*>& outHerds, long inUnitType);  // 0x164e78 (the herds of inUnitType's animal; EESMObject 0x1c8e37; provisional name)
@@ -998,7 +1017,7 @@ public:
     long GetNumHeroes(bool inFirst, bool inSecond);   // 0x164223 (mNumHeroes and/or mNumHeroesInProduction; provisional name)
     long GetWonderTime(long inIndex) const;  // 0x165644 (mWonders's unit inIndex's mCloaked; provisional name)
     unsigned long GetNumWonderUnits() const;   // 0x16565f: mWonders->GetSize() (provisional name)
-    // per unit class (mUnitClassUpgrades[inUnitClass] when inUnitClass < 0x367; provisional names)
+    // per unit class (mUnitClassUpgrades[inUnitClass] when inUnitClass < EEUnitClassCount(); provisional names)
     EEUnitClassUpgrade* GetUpgrade(long inUnitClass) { return this->mUnitClassUpgrades[inUnitClass]; }  // inline COMDAT 0x1bcae9
     void SwapClassButtonMedia(unsigned long inUnitClass, EEButtonObject* inFirst, EEButtonObject* inSecond);  // 0x163d72
     void SetClassAcknowledgeSound(unsigned long inUnitClass, EESoundObject* inSound, long inIndex);  // 0x163db9
@@ -1029,7 +1048,7 @@ public:
     std::vector<EEGroup*> mPendingGroups;   // +0x854 (the command messages push their new EEActiveGroups)
     std::vector<EEGroup*> mFinishedGroups;  // +0x864 (EEActiveGroup::Finish pushes itself)
     std::vector<EEPPatrolGroup*> mPatrolGroups;  // +0x874 (AddPatrolGroup: push_back 0x16c986)
-    std::vector<EEUnitClassUpgrade*> mUnitClassUpgrades; // +0x884 (resized to 0x367 by Reset: one per unit class; the forwarders
+    std::vector<EEUnitClassUpgrade*> mUnitClassUpgrades; // +0x884 (resized to EEUnitClassCount() by Reset: one per unit class; the forwarders
                                             // 0x163db9.. index it
     std::vector<EEPlayer*> mAllies;         // +0x894 (EEPPlayerHelper push_backs into it; EEMSendFlare copies it with
                                             // vector<EEPlayer*>::operator= 0x1119ec and flares each)
@@ -1064,7 +1083,7 @@ public:
     unsigned long mChatType;                // +0x9d8 0..3 (the chat form's radio buttons 3, 2, 4, 5; saved)
     unsigned long mEnemies[17];             // +0x9dc non-zero: at war with that player (calamity targets; unsigned: Save writes it with Write(const unsigned long&))
     unsigned long mCombatState;             // +0xa20 (saved)
-    unsigned long mHackUnitClass;           // +0xa24 (= 0x367: none; a gUnitClassTable index, compared unsigned: EEMLoadUnitData)
+    unsigned long mHackUnitClass;           // +0xa24 (kNoUnitClass: none (the original: 0x367); a gUnitClassTable index, compared unsigned: EEMLoadUnitData)
     unsigned long mGameResult;              // +0xa28 (saved)
     float mConversionFactor;                // +0xa2c (= 1)
     float mTributeFee;                      // +0xa30 (the tribute fee: the diplomacy form loads it with fld)

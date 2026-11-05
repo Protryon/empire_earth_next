@@ -1359,7 +1359,7 @@ void EESEUnit::RefreshUnitList()
     this->mUnitList->SetSortMode(theSort);
     this->mUnitList->mUnitTypes.clear();
     this->mUnitList->DeleteAllEntries();
-    for (long i = 0; i < 0x367; i++) {
+    for (long i = 0; i < EEUnitClassCount(); i++) {
         EEUnitClass* theClass = gUnitClassTable[i];
         if (theClass == NULL || !theClass->mIsScenarioSelectable ||
             ((theLayer != 0 || !theClass->mIsGaiaPlaceable) && (theLayer != 1 || !theClass->mIsPlayerPlaceable)))

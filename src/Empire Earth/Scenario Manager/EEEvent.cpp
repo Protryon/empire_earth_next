@@ -17,6 +17,7 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEButtonObject.h"
 #include "lle/FSFile.h"
+#include "lle/FSFileSpec.h"
 #include "ee/EEEvent.h"
 #include "ee/EEGameVariant.h"
 #include "lle/UResourceFile.h"
@@ -34,7 +35,7 @@ public:
 
 // this unit's globals (ee/EEEvent.h): the effect table (.bss 0x531ff8, 0x532018.. are this unit's) and the switch
 // (.data 0x4c5a84 = 1, between EESMObject's and EETechTree's data)
-EEEventEffect gEventEffects[2000];
+std::vector<EEEventEffect> gEventEffects;
 bool gEventsEnabled = true;
 
 // chain at 0x5ca4ee (wrapper)
@@ -68,7 +69,7 @@ EEEvent::~EEEvent()
     }
 }
 
-EEEvent EEEvent::sEvents[1500];
+std::vector<std::unique_ptr<EEEvent>> EEEvent::sEvents;
 
 // FUNCTION: EXE 0x5ca591
 // Returns an event effect applied to a float stat: base + offset, value * factor + base, or the set value (else 0)
@@ -99,24 +100,35 @@ long EEApplyEventEffect(long inValue, long inBase, EEEventEffect* inEffect)
 }
 
 // FUNCTION: EXE 0x5ca63b
-// Loads the 2000 event effects and the 1500 events with their effect lists; returns the last read's result
-long EEEvent::LoadEvents(FSFile& inEvents, FSFile& inEffects)
+// Loads every event effect and every event with its effect list (as many as the files hold: the original read
+// exactly 2000 effects and 1500 events); returns the last read's result
+long EEEvent::LoadEvents(FSFileSpec& inEvents, FSFileSpec& inEffects)
 {
     unsigned long theRead = 0;
-    long theResult;
+    long theResult = kErrorOK;
     char theName[100];
     inEvents.Open(kFileAccessRead);
     inEffects.Open(kFileAccessRead);
-    inEffects.Read((char*)gEventEffects, sizeof(gEventEffects), theRead);
-    for (long i = 0; i < 1500; i++) {
+    unsigned long theLength = 0;
+    inEffects.GetLength(theLength);
+    gEventEffects.assign(theLength / sizeof(EEEventEffect), EEEventEffect());
+    if (!gEventEffects.empty())
+        inEffects.Read((char*)&gEventEffects[0], (unsigned long)(gEventEffects.size() * sizeof(EEEventEffect)), theRead);
+    inEvents.GetLength(theLength);
+    EEEvent::sEvents.clear();
+    unsigned long thePosition = 0;
+    while (thePosition + 108 <= theLength) {
+        EEEvent* theEvent = new EEEvent;
+        EEEvent::sEvents.emplace_back(theEvent);
         inEvents.Read(theName, 100, theRead);
-        inEvents.Read(EEEvent::sEvents[i].mID);
-        theResult = inEvents.Read(EEEvent::sEvents[i].mNumEffects);
-        if (EEEvent::sEvents[i].mNumEffects > 0) {
-            EEEvent::sEvents[i].mEffects = new int32_t[EEEvent::sEvents[i].mNumEffects];
-            theResult = inEvents.Read(reinterpret_cast<char*>(EEEvent::sEvents[i].mEffects), EEEvent::sEvents[i].mNumEffects * 4, theRead);
+        inEvents.Read(theEvent->mID);
+        theResult = inEvents.Read(theEvent->mNumEffects);
+        thePosition += 108 + 4 * theEvent->mNumEffects;
+        if (theEvent->mNumEffects > 0) {
+            theEvent->mEffects = new int32_t[theEvent->mNumEffects];
+            theResult = inEvents.Read(reinterpret_cast<char*>(theEvent->mEffects), theEvent->mNumEffects * 4, theRead);
         } else
-            EEEvent::sEvents[i].mEffects = NULL;
+            theEvent->mEffects = NULL;
     }
     return theResult;
 }
@@ -162,10 +174,9 @@ long EEEvent::Trigger(long inEvent, long inPlayerIndex, long inID, EEPlayer* inP
 {
     long theResult = 0;
     long thePlayerIndex = inPlayer != NULL ? inPlayer->mPlayerID : inPlayerIndex;
-    // the range test written out (Get()'s inline form keeps a NULL path the original threads away); the table
-    // holds events 0..1499 (event 1500 used to read one entry past it)
-    if (inEvent >= 0 && inEvent < 1500) {
-        EEEvent* theEvent = &EEEvent::sEvents[inEvent];
+    // every dbevents row is an event (the original: 0..1499; event 1500 used to read one entry past it)
+    if (inEvent >= 0 && (unsigned long)inEvent < EEEvent::sEvents.size()) {
+        EEEvent* theEvent = EEEvent::sEvents[inEvent].get();
         if (theEvent != NULL && theEvent->mEffects != NULL) {
             for (unsigned long i = 0; i < theEvent->mNumEffects; i++)
                 theResult = EEEvent::RunEffect(theEvent->mEffects[i], thePlayerIndex, inID, inPlayer, inUnit);
@@ -195,7 +206,7 @@ long EEEvent::RunEffect(unsigned long inEffect, long inPlayerIndex, long inID, E
 {
     long theResult = 9;
     long thePlayerIndex = inPlayer != NULL ? inPlayer->mPlayerID : inPlayerIndex;
-    if (inEffect < 2000 && (!gLoadingSavedGame || gEventEffects[inEffect].mRunOnLoad == 1)) {
+    if (inEffect < gEventEffects.size() && (!gLoadingSavedGame || gEventEffects[inEffect].mRunOnLoad == 1)) {
         switch (gEventEffects[inEffect].mKind) {
         case 2:
             theResult = Fn1CAEA4(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
@@ -656,7 +667,7 @@ long Fn1CAEA4(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlayer)
 // Allows or forbids the terrain type in the player's upgrade of a unit type; always continues the set walk
 bool EEUnitSetFunctorModifyPathfindingBehavior::Execute(long inUnitType)
 {
-    if ((unsigned long)inUnitType < 0x367) {
+    if ((unsigned long)inUnitType < EEUnitClassCount()) {
         EEUnitClassUpgrade* theUpgrade = this->mPlayer->GetUpgrade(inUnitType);
         if (theUpgrade != NULL) {
             if (this->mEnabled) {

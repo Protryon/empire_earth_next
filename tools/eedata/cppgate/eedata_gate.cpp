@@ -3,9 +3,12 @@
 // expected db file bytes.
 //   eedata_gate <text dir> <expected .dat dir>
 // Prints one line per table; exits 0 when every table present compiles to identical bytes.
-//   eedata_gate --batch <dir>
+//   eedata_gate --batch <dir> <text dir>
 // Compiles every <case>__<table>.<ext> in dir to <case>.out (the bytes) or <case>.err (the message): the parity
-// cases, compared with the Python importer by cppgate.py.
+// cases, compared with the Python importer by cppgate.py (the other tables, which references name, from text dir).
+//   eedata_gate --dump-text <text dir> <out.json>     the content dump of every table compiled from its text
+//   eedata_gate --dump-dat <db dir> <out.json>        the content dump of every .dat (the binary load)
+// (EEDataDump.cpp: canonical JSON of what the loaders read; the two must be identical.)
 #include <chrono>
 #include <filesystem>
 #include <cstdio>
@@ -13,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "EEDataDump.h"
 #include "EEDataText.h"
 #include "EEDataTextSpecs.h"
 
@@ -30,7 +34,59 @@ static bool ReadFile(const std::string& inPath, std::string& outData)
     return true;
 }
 
-static int Batch(const char* inDir)
+static EEDataText::Content::Reader TextReader(const std::string& inDir)
+{
+    return [inDir](const char* inTable, std::string& outText) {
+        const char* ext = EEDataText::TextExtension(inTable);
+        return ext && ReadFile(inDir + "/" + inTable + ext, outText);
+    };
+}
+
+static int Dump(bool inText, const char* inDir, const char* inOut)
+{
+    EEDataText::Content c(TextReader(inDir));
+    std::string json = "{";
+    bool first = true;
+    for (unsigned long i = 0; i < kEEDTTableCount; i++) {
+        const EEDTTable& t = kEEDTTables[i];
+        if (t.mTextOnly)
+            continue;   // epochs: compiles into dbtechtree
+        std::vector<unsigned char> data;
+        std::string err, raw;
+        if (inText) {
+            if (!c.Compile(t.mName, data, err)) {
+                fprintf(stderr, "%s\n", err.c_str());
+                return 1;
+            }
+        } else {
+            if (!ReadFile(std::string(inDir) + "/" + t.mName + ".dat", raw)) {
+                fprintf(stderr, "%s.dat: cannot be read\n", t.mName);
+                return 1;
+            }
+            data.assign(raw.begin(), raw.end());
+        }
+        if (!first)
+            json += ",\n";
+        first = false;
+        if (!EEDataText::DumpTable(t.mName, data.empty() ? nullptr : &data[0], data.size(), json, err)) {
+            fprintf(stderr, "%s\n", err.c_str());
+            return 1;
+        }
+    }
+    json += "}\n";
+    FILE* f = fopen(inOut, "wb");
+    if (!f)
+        return 2;
+    fwrite(json.data(), 1, json.size(), f);
+    fclose(f);
+    unsigned long theDumped = 0;
+    for (unsigned long i = 0; i < kEEDTTableCount; i++)
+        theDumped += kEEDTTables[i].mTextOnly ? 0 : 1;
+    printf("%lu tables -> %s (%zu bytes)\n", theDumped, inOut, json.size());
+    return 0;
+}
+
+static int Batch(const char* inDir, const char* inTextDir)
 {
     int n = 0;
     for (const std::filesystem::directory_entry& e : std::filesystem::directory_iterator(inDir)) {
@@ -43,7 +99,18 @@ static int Batch(const char* inDir)
             return 2;
         std::vector<unsigned char> got;
         std::string err;
-        bool ok = EEDataText::Compile(table.c_str(), text.data(), (unsigned long)text.size(), got, err);
+        EEDataText::Content::Reader others = TextReader(inTextDir);
+        EEDataText::Content c([&](const char* inTable, std::string& outText) {
+            if (table == inTable) {
+                outText = text;
+                return true;
+            }
+            return others(inTable, outText);
+        });
+        bool textOnly = false;
+        for (unsigned long i = 0; i < kEEDTTableCount; i++)
+            textOnly = textOnly || (table == kEEDTTables[i].mName && kEEDTTables[i].mTextOnly);
+        bool ok = c.Compile(textOnly ? "dbtechtree" : table.c_str(), got, err);   // epochs compiles into dbtechtree
         std::string out = (std::filesystem::path(inDir) / (name + (ok ? ".out" : ".err"))).string();
         FILE* f = fopen(out.c_str(), "wb");
         if (!f)
@@ -61,16 +128,23 @@ static int Batch(const char* inDir)
 
 int main(int argc, char** argv)
 {
-    if (argc == 3 && strcmp(argv[1], "--batch") == 0)
-        return Batch(argv[2]);
+    if (argc == 4 && strcmp(argv[1], "--batch") == 0)
+        return Batch(argv[2], argv[3]);
+    if (argc == 4 && (strcmp(argv[1], "--dump-text") == 0 || strcmp(argv[1], "--dump-dat") == 0))
+        return Dump(strcmp(argv[1], "--dump-text") == 0, argv[2], argv[3]);
     if (argc != 3) {
         fprintf(stderr, "usage: eedata_gate <text dir> <expected .dat dir>\n");
         return 2;
     }
     int same = 0, bad = 0, missing = 0;
     double total = 0;
+    EEDataText::Content c(TextReader(argv[1]));
+    unsigned long theTables = 0;
     for (unsigned long i = 0; i < kEEDTTableCount; i++) {
         const EEDTTable& t = kEEDTTables[i];
+        if (t.mTextOnly)
+            continue;   // epochs: compiled with dbtechtree
+        theTables++;
         std::string text, want;
         std::string tp = std::string(argv[1]) + "/" + t.mName + EEDataText::TextExtension(t.mName);
         if (!ReadFile(tp, text) || !ReadFile(std::string(argv[2]) + "/" + t.mName + ".dat", want)) {
@@ -81,7 +155,7 @@ int main(int argc, char** argv)
         std::vector<unsigned char> got;
         std::string err;
         auto t0 = std::chrono::steady_clock::now();
-        bool ok = EEDataText::Compile(t.mName, text.data(), (unsigned long)text.size(), got, err);
+        bool ok = c.Compile(t.mName, got, err);
         double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
         total += ms;
         if (!ok) {
@@ -99,6 +173,6 @@ int main(int argc, char** argv)
         }
     }
     printf("%d/%lu tables compile to identical bytes (%d differ or fail, %d missing; %.0f ms in all)\n", same,
-           kEEDTTableCount, bad, missing, total);
+           theTables, bad, missing, total);
     return bad || missing ? 1 : 0;
 }

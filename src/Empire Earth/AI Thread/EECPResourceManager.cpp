@@ -1484,7 +1484,7 @@ void EECPResourceManager::Update(unsigned long inTime)
     EEComputerPlayer* thePlayer = this->mManager->mPlayer;
     unsigned long i;
     if (!this->mInitialized) {
-        for (i = 0; i < 0x367; i++) {
+        for (i = 0; i < EEUnitClassCount(); i++) {
             EEUnitClass* theClass = gUnitClassTable[i];
             if (theClass != NULL && (theClass->IsDropSite() || theClass->mUnitType == kUnitTypeDock || theClass->mUnitType == kUnitTypeNavyYard))
                 this->mDropSiteClasses[theClass->mResourceType].push_back(i);

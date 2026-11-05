@@ -1,5 +1,5 @@
 {
- "format": 2,
+ "format": 3,
  "generator": "tools/eedata/specgen.py",
  "tables": {
   "dbaiunittargeting": {
@@ -7,19 +7,73 @@
    "container": "count",
    "format": "csv",
    "fixed_rows": 3,
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "refs": {
+    "mPreferredUnitType": {
+     "table": "dbobjects",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbambientsounds": {
    "struct": "EEAmbientSoundRecord",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mIndex",
+    0
+   ],
+   "refs": {
+    "mSoundID": {
+     "table": "dbsounds",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbanimals": {
    "struct": "EEAnimalRecord",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mAnimalID",
+    0
+   ],
+   "refs": {
+    "mUnitType": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mMedia": {
+     "table": "dbgraphics",
+     "none": []
+    },
+    "mSound1": {
+     "table": "dbgraphics",
+     "none": []
+    },
+    "mSound2": {
+     "table": "dbgraphics",
+     "none": []
+    },
+    "mSound3": {
+     "table": "dbgraphics",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbareaeffect": {
    "struct": "EEAreaEffectData",
@@ -27,7 +81,33 @@
    "format": "csv",
    "hole": {
     "mID": -1
-   }
+   },
+   "key": "row",
+   "self": [
+    "mID",
+    0
+   ],
+   "refs": {
+    "mGraphicEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mGraphicEffect18": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mUnitSet": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mMedia": {
+     "table": "dbgraphics",
+     "none": []
+    }
+   },
+   "id_names": [
+    "mName"
+   ]
   },
   "dbbuttons": {
    "struct": "EEButtonRecord",
@@ -36,43 +116,163 @@
    "hole": {
     "mID": -1,
     "mHotKey": -1
-   }
+   },
+   "key": "row",
+   "self": [
+    "mID",
+    0
+   ],
+   "refs": {
+    "mHotKey": {
+     "table": "dbuihotkey",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbcalamity": {
    "struct": "EECalamityData",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mID",
+    0
+   ],
+   "refs": {
+    "mGraphicEffectID1": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mGraphicEffectID2": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mGraphicEffectID3": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mGraphicEffectID4": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mSoundID": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSecondarySoundID": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mUnitClassIndex": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mUnitSet": {
+     "table": "dbunitset",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbcivilization": {
    "struct": "EECivilizationCategoryEntry",
    "container": "count",
    "format": "yaml",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "refs": {
+    "mUnitSet": {
+     "table": "dbunitset",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbcivpowers": {
    "struct": "EECivPower",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mID",
+    38
+   ],
+   "refs": {
+    "mUnitSet": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mTechnology": {
+     "table": "dbtechtree",
+     "none": []
+    },
+    "mUnitType": {
+     "table": "dbobjects",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbcliffterrain": {
    "struct": "EECliffTerrainRecord",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mIndex",
+    0
+   ],
+   "refs": {
+    "mFirstTerrain": {
+     "table": "dbterrain",
+     "none": []
+    },
+    "mLastTerrain": {
+     "table": "dbterrain",
+     "none": []
+    }
+   },
+   "id_names": [
+    "mName"
+   ]
   },
   "dbcolortable": {
    "struct": "EEColorTableRecord",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "refs": {},
+   "id_names": [
+    "label"
+   ]
   },
   "dbcpbehavior": {
    "struct": "EECPBehavior",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mIndex",
+    0
+   ],
+   "refs": {},
+   "id_names": [
+    "@cpbehavior"
+   ]
   },
   "dbeffects": {
    "struct": "EEEventEffect",
@@ -90,7 +290,45 @@
     "mSoundID": -1,
     "mButton": -1,
     "mAreaEffect": -1
-   }
+   },
+   "key": "row",
+   "refs": {
+    "mUnitClass": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mNewUnitClass": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mUnitSet": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mMediaIndex": {
+     "table": "dbgraphics",
+     "none": []
+    },
+    "mTechnology": {
+     "table": "dbtechtree",
+     "none": []
+    },
+    "mSoundID": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mButton": {
+     "table": "dbbuttons",
+     "none": []
+    },
+    "mAreaEffect": {
+     "table": "dbareaeffect",
+     "none": []
+    }
+   },
+   "id_names": [
+    "@effects"
+   ]
   },
   "dbevents": {
    "struct": "EEEventRow",
@@ -101,19 +339,88 @@
     "s32"
    ],
    "fixed_rows": 1500,
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "refs": {
+    "@list": {
+     "table": "dbeffects",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbfamily": {
    "struct": "EEDamageTableRecord",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "refs": {},
+   "id_names": [
+    "label"
+   ]
   },
   "dbgamevariant": {
    "struct": "EEGameVariantData",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mIndex",
+    0
+   ],
+   "refs": {
+    "mSet0": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mSet1": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mSet2": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mSet3": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mSet4": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mSet5": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mSet6": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mSet7": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mSet8": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mSet9": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mCostSet": {
+     "table": "dbunitset",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbgfxeffects": {
    "struct": "EEGraphicEffectRecord",
@@ -129,7 +436,33 @@
     "mLinkedEffectIndex1": -1,
     "mLinkedEffectIndex2": -1,
     "mLinkedEffectIndex3": -1
-   }
+   },
+   "key": "row",
+   "self": [
+    "mID",
+    0
+   ],
+   "refs": {
+    "mMediaIndex": {
+     "table": "dbgraphics",
+     "none": []
+    },
+    "mLinkedEffectIndex1": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mLinkedEffectIndex2": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mLinkedEffectIndex3": {
+     "table": "dbgfxeffects",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbgraphics": {
    "struct": "EEGraphicObjectRecord",
@@ -170,13 +503,125 @@
     "mSound2Index2": 4294967295,
     "mKind": -1,
     "mOpacity": 1065353216
-   }
+   },
+   "key": "row",
+   "self": [
+    "mMediaIndex",
+    0
+   ],
+   "refs": {
+    "mSound1Index0": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound2Index0": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound1Index13": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound2Index13": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound1Index7": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound2Index7": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound1Index8": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound2Index8": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound1Index12": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound2Index12": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound1Index11": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound2Index11": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound1Index9": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound2Index9": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound1Index10": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound2Index10": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound1Index6": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound2Index6": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound1Index3": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound2Index3": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound1Index1": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound2Index1": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound1Index2": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSound2Index2": {
+     "table": "dbsounds",
+     "none": []
+    }
+   },
+   "id_names": [
+    "rowName",
+    "label"
+   ]
   },
   "dbmusic": {
    "struct": "EEMusicRecord",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "refs": {},
+   "id_names": [
+    "label"
+   ]
   },
   "dbobjects": {
    "struct": "EEUnitClassRecord",
@@ -248,13 +693,229 @@
     "mTechnology": 100000,
     "mBlocksTile": 1,
     "mAttributes": 4294967295
-   }
+   },
+   "key": "row",
+   "self": [
+    "mUnitType",
+    0
+   ],
+   "refs": {
+    "mFamily": {
+     "table": "dbfamily",
+     "none": []
+    },
+    "mWeapon": {
+     "table": "dbweapontohit",
+     "none": []
+    },
+    "mButton": {
+     "table": "dbbuttons",
+     "none": []
+    },
+    "mGraphic": {
+     "table": "dbgraphics",
+     "none": []
+    },
+    "mProjectileType": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mScaffoldingType": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mDeathType": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mDeathSpawnType": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mPackedType": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mRemainsType": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mCreationSound": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mAcknowledgeSound1": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mAcknowledgeSound2": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSelectionSound1": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mSelectionSound2": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mDeathSound": {
+     "table": "dbsounds",
+     "none": []
+    },
+    "mDeathEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mDamageEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mMuzzleFlashEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mTrailEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mRippleEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mSplashEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mHealEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mImpactSparksEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mImpactBloodEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mAttachedEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mCreationEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mSpecialAttackEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mShotEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mLeprosyEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mPlagueEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mMoraleEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mPulseCannonEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mBattleCryEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mShellHoleEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mBloodStainEffect": {
+     "table": "dbgfxeffects",
+     "none": []
+    },
+    "mUpgradeTableIndex": {
+     "table": "dbupgrade",
+     "none": []
+    },
+    "mBehavior": {
+     "table": "dbunitbehavior",
+     "none": []
+    },
+    "mAreaEffectTemplate0": {
+     "table": "dbareaeffect",
+     "none": []
+    },
+    "mAreaEffectTemplate1": {
+     "table": "dbareaeffect",
+     "none": []
+    },
+    "mAreaEffectTemplate2": {
+     "table": "dbareaeffect",
+     "none": []
+    },
+    "mAreaEffectTemplate3": {
+     "table": "dbareaeffect",
+     "none": []
+    },
+    "mTechnology": {
+     "table": "dbtechtree",
+     "none": []
+    },
+    "mGarrisonTechnology": {
+     "table": "dbtechtree",
+     "none": []
+    },
+    "mAttributes": {
+     "table": "dbtechtree",
+     "none": []
+    },
+    "mOverlapUnitSet": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mWonderUnitSet": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mMiniMapColor": {
+     "table": "dbcolortable",
+     "none": []
+    },
+    "mEpoch": {
+     "table": "epochs",
+     "none": [],
+     "never": true
+    }
+   },
+   "id_names": [
+    "mName"
+   ]
   },
   "dbpremadecivs": {
    "struct": "EECivilizationEntry",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mIndex",
+    0
+   ],
+   "refs": {},
+   "id_names": [
+    "mFileName"
+   ]
   },
   "dbsounds": {
    "struct": "EESoundRecord",
@@ -263,13 +924,28 @@
    "lead": [
     "mSampleName"
    ],
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "refs": {},
+   "id_names": [
+    "label",
+    "mSampleName"
+   ]
   },
   "dbstartingresources": {
    "struct": "EEStartingResourcesRecord",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mIndex",
+    0
+   ],
+   "refs": {},
+   "id_names": [
+    "label"
+   ]
   },
   "dbtechtree": {
    "struct": "EETechTreeRecord",
@@ -287,7 +963,178 @@
     "mButton": 1,
     "mAvailableWithEpoch": 1,
     "mResearchedWithEpoch": 1
-   }
+   },
+   "key": "mID",
+   "refs": {
+    "mResearchedEvent": {
+     "table": "dbevents",
+     "none": []
+    },
+    "mObsoleteEvent": {
+     "table": "dbevents",
+     "none": []
+    },
+    "mPrerequisite1": {
+     "table": "dbtechtree",
+     "none": [
+      0
+     ]
+    },
+    "mPrerequisite2": {
+     "table": "dbtechtree",
+     "none": [
+      0
+     ]
+    },
+    "mPrerequisite3": {
+     "table": "dbtechtree",
+     "none": [
+      0
+     ]
+    },
+    "mPrerequisite4": {
+     "table": "dbtechtree",
+     "none": [
+      0
+     ]
+    },
+    "mUnitClass": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mDefaultUnitClass": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "@list": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mButton": {
+     "table": "dbbuttons",
+     "none": []
+    },
+    "mCalamity": {
+     "table": "dbcalamity",
+     "none": []
+    },
+    "mHotKey": {
+     "table": "dbuihotkey",
+     "none": []
+    },
+    "mEpoch": {
+     "table": "epochs",
+     "none": []
+    },
+    "mObsoleteEpoch": {
+     "table": "epochs",
+     "none": [],
+     "never": true
+    }
+   },
+   "id_names": [
+    "label"
+   ]
+  },
+  "epochs": {
+   "struct": "EETechTreeRecord",
+   "container": "epochs",
+   "format": "yaml",
+   "list": [
+    "parents",
+    "u32"
+   ],
+   "text_only": true,
+   "hole": {},
+   "key": "position",
+   "derived": {
+    "mID": [
+     1,
+     0
+    ],
+    "mEpoch": [
+     1,
+     0
+    ],
+    "mNextEpoch": [
+     1,
+     1
+    ],
+    "mFirstNodeID": [
+     1000,
+     1000
+    ]
+   },
+   "refs": {
+    "mResearchedEvent": {
+     "table": "dbevents",
+     "none": []
+    },
+    "mObsoleteEvent": {
+     "table": "dbevents",
+     "none": []
+    },
+    "mPrerequisite1": {
+     "table": "dbtechtree",
+     "none": [
+      0
+     ]
+    },
+    "mPrerequisite2": {
+     "table": "dbtechtree",
+     "none": [
+      0
+     ]
+    },
+    "mPrerequisite3": {
+     "table": "dbtechtree",
+     "none": [
+      0
+     ]
+    },
+    "mPrerequisite4": {
+     "table": "dbtechtree",
+     "none": [
+      0
+     ]
+    },
+    "mUnitClass": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mDefaultUnitClass": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "@list": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mButton": {
+     "table": "dbbuttons",
+     "none": []
+    },
+    "mCalamity": {
+     "table": "dbcalamity",
+     "none": []
+    },
+    "mHotKey": {
+     "table": "dbuihotkey",
+     "none": []
+    },
+    "mEpoch": {
+     "table": "epochs",
+     "none": []
+    },
+    "mObsoleteEpoch": {
+     "table": "epochs",
+     "none": [],
+     "never": true
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbterrain": {
    "struct": "EETerrainRecord",
@@ -298,13 +1145,44 @@
    ],
    "hole": {
     "mID": -1
-   }
+   },
+   "key": "row",
+   "self": [
+    "mID",
+    0
+   ],
+   "refs": {
+    "mFirst": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mLast": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mColorType": {
+     "table": "dbterraintype",
+     "none": []
+    }
+   },
+   "id_names": [
+    "mName"
+   ]
   },
   "dbterraintype": {
    "struct": "EETerrainTypeRecord",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mID",
+    0
+   ],
+   "refs": {},
+   "id_names": [
+    "label"
+   ]
   },
   "dbuiback": {
    "struct": "UIDbDataBackgrounds",
@@ -315,7 +1193,17 @@
     "mBackgroundID": 4294967295,
     "mFormID": 4294967295,
     "mDrawPriority": 1
-   }
+   },
+   "key": "row",
+   "refs": {
+    "mFormID": {
+     "table": "dbuiforms",
+     "none": []
+    }
+   },
+   "id_names": [
+    "mName"
+   ]
   },
   "dbuicontrolevents": {
    "struct": "UIDbDataEvents",
@@ -325,7 +1213,17 @@
     "mEventID": -1,
     "mOwnerID": 4294967295,
     "mEventType": 4294967295
-   }
+   },
+   "key": "row",
+   "refs": {
+    "mOwnerID": {
+     "table": "dbuicontrols",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbuicontrols": {
    "struct": "UIDbControl",
@@ -339,19 +1237,52 @@
     "mControlType": 4294967295,
     "mStringTableBegin": -1,
     "mStringTableEnd": -1
-   }
+   },
+   "key": "row",
+   "self": [
+    "mID",
+    0
+   ],
+   "refs": {
+    "mFormID": {
+     "table": "dbuiforms",
+     "none": []
+    },
+    "mFontTableIndex": {
+     "table": "dbuifonts",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbuifonts": {
    "struct": "UIDbDataFonts",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "refs": {},
+   "id_names": [
+    "mFontName"
+   ]
   },
   "dbuiformevents": {
    "struct": "UIDbDataEvents",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "refs": {
+    "mOwnerID": {
+     "table": "dbuiforms",
+     "none": []
+    }
+   },
+   "id_names": [
+    "label"
+   ]
   },
   "dbuiforms": {
    "struct": "UIDbDataForms",
@@ -360,19 +1291,46 @@
    "hole": {
     "mFormID": -1,
     "mHelpTextTimeDelay": 1
-   }
+   },
+   "key": "row",
+   "self": [
+    "mFormID",
+    0
+   ],
+   "refs": {},
+   "id_names": [
+    "label"
+   ]
   },
   "dbuihotkey": {
    "struct": "UIDbDataHotKeys",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mID",
+    0
+   ],
+   "refs": {},
+   "id_names": [
+    "label"
+   ]
   },
   "dbunitbehavior": {
    "struct": "EEUnitBehaviorRecord",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mIndex",
+    0
+   ],
+   "refs": {},
+   "id_names": [
+    "label"
+   ]
   },
   "dbunitset": {
    "struct": "EEUnitSetRecord",
@@ -384,20 +1342,60 @@
     "mUnitTypes": -1,
     "mIncludedSet": -1,
     "mExcludedSet": -1
-   }
+   },
+   "key": "row",
+   "self": [
+    "mID",
+    0
+   ],
+   "refs": {
+    "mFamilies": {
+     "table": "dbfamily",
+     "none": []
+    },
+    "mUnitTypes": {
+     "table": "dbobjects",
+     "none": []
+    },
+    "mIncludedSet": {
+     "table": "dbunitset",
+     "none": []
+    },
+    "mExcludedSet": {
+     "table": "dbunitset",
+     "none": []
+    }
+   },
+   "id_names": [
+    "mName"
+   ]
   },
   "dbupgrade": {
    "struct": "EEUCUpgradeRecord",
    "container": "count",
    "format": "csv",
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "self": [
+    "mIndex",
+    0
+   ],
+   "refs": {},
+   "id_names": [
+    "label"
+   ]
   },
   "dbweapontohit": {
    "struct": "EEToHitRecord",
    "container": "count",
    "format": "csv",
    "fixed_rows": 6,
-   "hole": {}
+   "hole": {},
+   "key": "row",
+   "refs": {},
+   "id_names": [
+    "label"
+   ]
   },
   "dbworld": {
    "struct": "EEWorldTableEntry",
@@ -618,72 +1616,77 @@
     "94": [
      "mLongValue"
     ]
-   }
+   },
+   "key": "row",
+   "refs": {},
+   "id_names": [
+    "@world"
+   ]
   }
  },
  "row_names": {
   "dbworld": {
-   "21": "conversionsStatisticMax",
-   "22": "gatherersPerResourceMax",
-   "25": "chatLogDisplayTime",
-   "26": "unitLimitRange",
-   "27": "unitLimitDefault",
-   "34": "wonderVictoryTime",
-   "35": "areaConversionRadius",
-   "36": "wonderPopulationBonus",
-   "37": "wonderHealAmount",
-   "42": "gameSpeedDefault",
-   "43": "gameSpeedRange",
-   "44": "gameSpeedStep",
-   "45": "deleteRefundFactor",
-   "46": "conversionFaithCost",
-   "47": "unitImprovementPointsMax",
-   "48": "startingCitizensDefault",
-   "49": "groupSpeedCapFactor",
-   "50": "wonderHitPointBonus",
-   "51": "wonderHealEpochFactor",
-   "52": "wonderHealEpochStep",
-   "53": "highGroundHeight",
-   "54": "lowGroundHeight",
-   "55": "highGroundAttackFactor",
-   "56": "lowGroundAttackFactor",
-   "57": "improvementTimeAreaEffect",
-   "58": "improvementTimeAttack",
-   "59": "improvementTimeArrowArmor",
-   "60": "improvementTimeGunArmor",
-   "61": "improvementTimeLaserArmor",
-   "62": "improvementTimeMissileArmor",
-   "63": "improvementTimePierceArmor",
-   "64": "improvementTimeShockArmor",
-   "65": "improvementTimeFlightTimeOrPower",
-   "66": "improvementTimeHitPoints",
-   "67": "improvementTimeLeadership",
-   "68": "improvementTimeRange",
-   "69": "improvementTimeRepair",
-   "70": "improvementTimeKind13",
-   "71": "improvementTimeSpeed",
-   "72": "improvementTimeTransport",
-   "74": "wonderSightRadius",
-   "75": "refusalMessageInterval",
-   "76": "civilizationBuilderPoints",
-   "77": "wondersForVictoryMax",
-   "78": "tileStrayDistance",
-   "79": "trampleMinDistanceSquared",
-   "80": "unitEpochCostFactor",
-   "81": "gameSpeedSlowNormal",
-   "82": "gameSpeedFastFastest",
-   "83": "acknowledgementDelay",
-   "84": "aiSpecialAttackChance",
-   "85": "camouflageTiming",
-   "86": "specialPowersCategoryCost",
-   "87": "reloadTimeRandomRange",
+   "21": "conversions_statistic_max",
+   "22": "gatherers_per_resource_max",
+   "25": "chat_log_display_time",
+   "26": "unit_limit_range",
+   "27": "unit_limit_default",
+   "34": "wonder_victory_time",
+   "35": "area_conversion_radius",
+   "36": "wonder_population_bonus",
+   "37": "wonder_heal_amount",
+   "42": "game_speed_default",
+   "43": "game_speed_range",
+   "44": "game_speed_step",
+   "45": "delete_refund_factor",
+   "46": "conversion_faith_cost",
+   "47": "unit_improvement_points_max",
+   "48": "starting_citizens_default",
+   "49": "group_speed_cap_factor",
+   "50": "wonder_hit_point_bonus",
+   "51": "wonder_heal_epoch_factor",
+   "52": "wonder_heal_epoch_step",
+   "53": "high_ground_height",
+   "54": "low_ground_height",
+   "55": "high_ground_attack_factor",
+   "56": "low_ground_attack_factor",
+   "57": "improvement_time_area_effect",
+   "58": "improvement_time_attack",
+   "59": "improvement_time_arrow_armor",
+   "60": "improvement_time_gun_armor",
+   "61": "improvement_time_laser_armor",
+   "62": "improvement_time_missile_armor",
+   "63": "improvement_time_pierce_armor",
+   "64": "improvement_time_shock_armor",
+   "65": "improvement_time_flight_time_or_power",
+   "66": "improvement_time_hit_points",
+   "67": "improvement_time_leadership",
+   "68": "improvement_time_range",
+   "69": "improvement_time_repair",
+   "70": "improvement_time_kind13",
+   "71": "improvement_time_speed",
+   "72": "improvement_time_transport",
+   "74": "wonder_sight_radius",
+   "75": "refusal_message_interval",
+   "76": "civilization_builder_points",
+   "77": "wonders_for_victory_max",
+   "78": "tile_stray_distance",
+   "79": "trample_min_distance_squared",
+   "80": "unit_epoch_cost_factor",
+   "81": "game_speed_slow_normal",
+   "82": "game_speed_fast_fastest",
+   "83": "acknowledgement_delay",
+   "84": "ai_special_attack_chance",
+   "85": "camouflage_timing",
+   "86": "special_powers_category_cost",
+   "87": "reload_time_random_range",
    "88": "fanaticism",
-   "89": "difficultyDamageScale",
-   "90": "jitManufacturingCostFactor",
-   "91": "tradeRateStoneIron",
-   "92": "tradeRateFoodWood",
-   "93": "jitManufacturingCostFactorDeathmatch",
-   "94": "deathmatchJitManufacturingDelay"
+   "89": "difficulty_damage_scale",
+   "90": "jit_manufacturing_cost_factor",
+   "91": "trade_rate_stone_iron",
+   "92": "trade_rate_food_wood",
+   "93": "jit_manufacturing_cost_factor_deathmatch",
+   "94": "deathmatch_jit_manufacturing_delay"
   }
  },
  "structs": {
@@ -2725,7 +3728,7 @@
      "type": "s32",
      "count": 1,
      "cls": "named",
-     "comment": "+0x14 a gUnitClassTable index (< 0x367)"
+     "comment": "+0x14 a gUnitClassTable index (< EEUnitClassCount())"
     },
     {
      "name": "mNewUnitClass",
@@ -8609,13 +9612,13 @@
      "comment": "+0xd0 -> mU08->mHotKey"
     },
     {
-     "name": "mUnused5",
-     "member": "mUnused5",
+     "name": "mTitleID",
+     "member": "mTitleID",
      "off": 212,
-     "type": "raw",
-     "count": 4,
-     "cls": "unused",
-     "comment": "+0xd4"
+     "type": "s32",
+     "count": 1,
+     "cls": "named",
+     "comment": "+0xd4 epoch records: the epoch's title string (0: 30145 + the epoch;"
     },
     {
      "name": "mUnused6",
@@ -9448,7 +10451,7 @@
    "source": "src/Low-Level Engine/User Interface/UIControlsTable.cpp",
    "size_check": [
     860,
-    "comment"
+    "static_assert"
    ],
    "fields": [
     {
