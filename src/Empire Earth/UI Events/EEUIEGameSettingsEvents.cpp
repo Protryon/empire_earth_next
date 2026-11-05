@@ -190,6 +190,43 @@ template <size_t N> static void PortRead(UIForm* inForm, unsigned long inIndex, 
         outValue = inValues[theSelection];
 }
 
+static unsigned long GetGraphicsQuality(UIForm* inForm);
+static void SetGraphicsQuality(UIForm* inForm, unsigned long inQuality);
+static bool sPortQualityGuard;   // the quality combo box and the detail controls set each other
+
+// The quality combo box shows the preset the detail controls match (5: Custom)
+static void PortShowQuality(UIForm* inForm)
+{
+    UIComboBox* theBox = static_cast<UIComboBox*>(inForm->GetControl(kGameSettingsQualityComboBox));
+    if (!theBox || sPortQualityGuard)
+        return;
+    // the controls' events are queued: only a different selection is set, or the two would set each other forever
+    unsigned long theQuality = GetGraphicsQuality(inForm), theSelection;
+    if (theBox->GetCurrentSelection(theSelection) == kErrorOK && theSelection == theQuality)
+        return;
+    sPortQualityGuard = true;
+    theBox->SetCurrentSelection(theQuality);
+    sPortQualityGuard = false;
+}
+
+// The quality combo box's selection: a preset sets the detail controls (Custom leaves them)
+class EEUIEGSEPortQuality : public UIEvent {
+public:
+    virtual ~EEUIEGSEPortQuality() {}
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+    {
+        UIComboBox* theBox = static_cast<UIComboBox*>(inForm->GetControl(kGameSettingsQualityComboBox));
+        unsigned long theQuality;
+        if (sPortQualityGuard || !theBox || theBox->GetCurrentSelection(theQuality) != kErrorOK || theQuality >= 5 ||
+            GetGraphicsQuality(inForm) == theQuality)   // already that preset (queued events: no ping-pong)
+            return kErrorOK;
+        sPortQualityGuard = true;
+        SetGraphicsQuality(inForm, theQuality);
+        sPortQualityGuard = false;
+        return kErrorOK;
+    }
+};
+
 static void PortShowVideo(UIForm* inForm, const EEGameSettings& inSettings)
 {
     // the controls these replace (the video card, the 3D acceleration, the resolution list, the "Hi-Res" and v-sync
@@ -201,6 +238,14 @@ static void PortShowVideo(UIForm* inForm, const EEGameSettings& inSettings)
     for (size_t i = 0; i < sizeof(kReplaced) / sizeof(kReplaced[0]); i++)
         if (inForm->GetControl(kReplaced[i]))
             inForm->GetControl(kReplaced[i])->SetDisplayMode(kDisplayModeHidden);
+    // the graphics quality's radio buttons, slider and labels (the quality combo box drives them, hidden)
+    for (unsigned long i = 14; i <= 22; i++)
+        if (i != 18 && i != 19 && inForm->GetControl(i))
+            inForm->GetControl(i)->SetDisplayMode(kDisplayModeHidden);
+    for (unsigned long i = kGameSettingsGQRadio1Lowest; i <= kGameSettingsGQRadio6Custom + 1; i++)
+        if (inForm->GetControl(i))
+            inForm->GetControl(i)->SetDisplayMode(kDisplayModeHidden);
+    PortShowQuality(inForm);
     PortSelect(inForm, kGameSettingsWindowModeComboBox, kWindowModes, inSettings.mWindowMode);
     PortSelect(inForm, kGameSettingsUIScaleComboBox, kUIScales, inSettings.mUIScale);
     PortSelect(inForm, kGameSettingsRenderResolutionComboBox, kRenderResolutions, inSettings.mRenderResolution);
@@ -235,6 +280,10 @@ static void PortShowAudio(UIForm* inForm, const EEGameSettings& inSettings)
 
 static void PortShowInterface(UIForm* inForm, const EEGameSettings& inSettings)
 {
+    // the network adapter section (the label, the selection label, the combo box): not a choice any more
+    for (unsigned long i = 107; i <= kGameSettingsAdaptorSeletionComboBox; i++)
+        if (inForm->GetControl(i))
+            inForm->GetControl(i)->SetDisplayMode(kDisplayModeHidden);
     PortSelect(inForm, kGameSettingsMaximumZoomOutComboBox, kZoomOuts, inSettings.mMaximumZoomOut);
 }
 
@@ -616,6 +665,7 @@ long EEUIEGSEAdvancedGraphicsSettingsChanged::ProcessEvent(UIForm* inForm, UIEnt
             theQuality0->Check();
         break;
     }
+    PortShowQuality(inForm);   // port: the quality combo box
     return kErrorOK;
 }
 
@@ -939,7 +989,10 @@ static void OpenSettingsForm(UIForm* inForm)
     theEvent = new UIESliderChange(static_cast<UITextLabel*>(inForm->GetControl(kGameSettingsAutosavesToKeepNumberLabel)), 1.0f, 0);
     inForm->GetControl(kGameSettingsAutosavesToKeepSlider)->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
     theEvent->Dereference();
-    // port: the display combo boxes (an in-game open hides them again after this)
+    // port: the quality combo box's event, and the display combo boxes (an in-game open hides them again after this)
+    UIEvent* theQualityEvent = new EEUIEGSEPortQuality;
+    inForm->GetControl(kGameSettingsQualityComboBox)->SetTriggerEvent(kControlTriggerSelectionChanged, theQualityEvent);
+    theQualityEvent->Dereference();
     inForm->GetControl(kGameSettingsWindowModeComboBox)->SetDisplayMode(kDisplayModeShown);
     inForm->GetControl(kGameSettingsUIScaleComboBox)->SetDisplayMode(kDisplayModeShown);
     inForm->GetControl(kGameSettingsRenderResolutionComboBox)->SetDisplayMode(kDisplayModeShown);

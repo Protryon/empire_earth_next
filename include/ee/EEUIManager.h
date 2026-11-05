@@ -305,6 +305,7 @@ enum EEGameSettingsControl {
     kGameSettingsMasterVolumeSlider = 120,
     kGameSettingsOutputDeviceComboBox = 121,
     kGameSettingsMuteInBackgroundCheckBox = 122,
+    kGameSettingsQualityComboBox = 123,            // port: the graphics quality preset (replaces the 5 radio buttons)
     kGameSettingsBattlefieldAmbientsCheckBox = 110,  // dbuicontrols form 5 index 110 id 3400 'GS Battlefield Ambients Check Box' (type 2); site form via UICheckBox* theCheck110 = (UICheckBox*)i
 };
 

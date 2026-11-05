@@ -263,6 +263,7 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
         {183, kGameSettingsMasterVolumeSlider, 2, 0.2473f, 0.4614f, 0.587f, -1, 0, 0, 33157},
         {151, kGameSettingsOutputDeviceComboBox, 2, 0.5400f, 0.7540f, 0.587f, 6, 33148, 33148, 33158},
         {804, kGameSettingsMuteInBackgroundCheckBox, 2, 0.5400f, 0.7540f, 0.535f, -1, 33149, 0, 33159},
+        {151, kGameSettingsQualityComboBox, 1, 0.3130f, 0.5270f, 0.490f, 6, 33160, 33165, 33166},
     };
     for (size_t i = 0; i < sizeof(kPortControls) / sizeof(kPortControls[0]); i++) {
         const PortControl& c = kPortControls[i];

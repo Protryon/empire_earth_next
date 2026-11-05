@@ -4,7 +4,7 @@
 #include "lle/UResourceStrings.h"
 
 extern const unsigned short gResourceStringsLanguage = 0x409;
-extern const unsigned long gResourceStringCount = 3761;
+extern const unsigned long gResourceStringCount = 3768;
 extern const UResourceString gResourceStrings[] = {
     {0, "FONTS"},
     {1, "Arial"},
@@ -3767,4 +3767,11 @@ extern const UResourceString gResourceStrings[] = {
     {33157, "The volume of everything: sound effects and music."},
     {33158, "The device the game plays sound through. (Note: changes to this option take effect only if you exit and restart Empire Earth: Art of Conquest.)"},
     {33159, "Silence the game while another application is in front."},
+    {33160, "Quality: Lowest"},
+    {33161, "Quality: Low"},
+    {33162, "Quality: Medium"},
+    {33163, "Quality: High"},
+    {33164, "Quality: Highest"},
+    {33165, "Quality: Custom"},
+    {33166, "A preset for the detail settings below: models, effects, shadows, clouds and battlefield ambients. Changing one of them makes it Custom."},
 };

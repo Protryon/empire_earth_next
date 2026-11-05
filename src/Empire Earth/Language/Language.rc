@@ -5068,4 +5068,11 @@ BEGIN
     33157, L"The volume of everything: sound effects and music."
     33158, L"The device the game plays sound through. (Note: changes to this option take effect only if you exit and restart Empire Earth: Art of Conquest.)"
     33159, L"Silence the game while another application is in front."
+    33160, L"Quality: Lowest"
+    33161, L"Quality: Low"
+    33162, L"Quality: Medium"
+    33163, L"Quality: High"
+    33164, L"Quality: Highest"
+    33165, L"Quality: Custom"
+    33166, L"A preset for the detail settings below: models, effects, shadows, clouds and battlefield ambients. Changing one of them makes it Custom."
 END

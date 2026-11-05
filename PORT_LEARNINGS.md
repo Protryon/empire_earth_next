@@ -1381,3 +1381,21 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   with a font made that much larger (`PlatFontScaled`, `PlatFontTarget::mScale`), CPU access goes through a
   logical-size intermediate (`UploadScaled`/`DownloadScaled`). So the menus' controls and the game's HUD are drawn at
   the display's resolution: sharp text now, and sharp art once the textures are upscaled.
+
+## Settings UI for modern displays (2026-11-05)
+
+- **The settings form's new controls are copies of table rows** (`UIControlsTable::AddControlLike`: a template row's
+  type and look, a new id, form index, group, proportional rectangle and string range; combo box lines are their
+  strings, e.g. "UI Scale: 150%"), so no data format changes. A form's control arrays are made with the form at
+  start-up, `mControlCount` long: indices past the table's need `UIForm::ReserveControlIndex`, which grows them
+  (a write past them crashed in `SetTabbing`).
+- **Control events are queued**, not run inside the call that fires them: a re-entrancy flag cannot stop two
+  controls that set each other (the quality combo box and the detail check boxes looped forever). Set a control only
+  when its value differs, and apply a preset only when the details do not already match it.
+- **Replaced controls are hidden, not removed** (`SetDisplayMode(kDisplayModeHidden)` survives the tab groups'
+  `Enable`): the quality preset still drives the hidden "Hi-Res" check boxes, and `ApplySettings` still reads them.
+- **The game's resolution is the UI scale's** (`GXGameSize`): the display's logical size over the scale (Auto: its
+  height over 1080 lines), windowed a fixed window of 80% of the display; GX lists every such size as a mode
+  because the game only switches to listed modes. Out of a game a window mode, UI scale or render resolution
+  change applies at once (the window, then `ResizeGameScreen` at the menu size).
+- A stopped (lldb-attached) game blocks the next start: the single-instance check makes it exit 0 at once.
