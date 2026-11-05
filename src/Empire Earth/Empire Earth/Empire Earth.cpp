@@ -1066,6 +1066,9 @@ void EEInitializeNetwork()
     unsigned long theChecksum = EEGetFileChecksum(theFile, theExeName != NULL ? theExeName + 1 : theExePath, 0);
     theFile.SetDirectory(gStartupDirectory + "Data\\Db\\");
     theChecksum += EEGetFileChecksum(theFile, "*.dat", 0);
+    // the db tables' text forms (EEDbFindFile loads them in place of the .dat); 0 when there are none
+    theChecksum += EEGetFileChecksum(theFile, "*.csv", 0);
+    theChecksum += EEGetFileChecksum(theFile, "*.yaml", 0);
     theFile.SetDirectory(gStartupDirectory + "Data\\Unit AI Scripts\\");
     theChecksum += EEGetFileChecksum(theFile, "*.tai", 0);
     theFile.SetDirectory(gStartupDirectory + "Data\\Models\\");
