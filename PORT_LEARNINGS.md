@@ -424,6 +424,18 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
 - pl_mpeg.h names `FILE` before including `<stdio.h>`: include it first.
 - With movies on pl_mpeg nothing uses DirectSound, and the exe's imports are Windows system DLLs only.
 
+## DirectX -> wgpu: phase 0
+
+- wgpu-native's release packages carry a static `wgpu_native.lib` (no default-library directives) for
+  windows-x86_64-msvc and windows-i686-msvc; it links with clang-cl/lld-link and the static CRT (/MT) as is, plus
+  the system libraries the Rust standard library and the backends need (d3d12, dxgi, d3dcompiler, userenv, ntdll,
+  bcrypt, ws2_32, ole32/oleaut32, propsys, runtimeobject, synchronization, opengl32, ...).
+- On a machine without a GPU the DX12 backend runs on WARP (adapter type CPU) without being asked; that keeps the
+  headless harness viable for the new renderer.
+- webgpu.h v29 style: callback-info structs (mode AllowProcessEvents + wgpuInstanceProcessEvents), WGPUStringView
+  strings (length WGPU_STRLEN = NUL-terminated), chained structs for the HWND surface and the native instance
+  extras (backends).
+
 ## For WONAPI/WONLobby later
 
 The WON library is carved or stubbed (`won` class in the stub report) in both builds. When its source arrives, expect

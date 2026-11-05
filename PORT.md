@@ -147,10 +147,12 @@ Design:
   shares, so a later Rust renderer can keep the design and drop the C layer.
 
 Phases (each gated by the harness, with the DX7 renderer kept in the build until phase 4 for comparisons):
-0. **Probe**: tools/fetch_wgpu.py downloads the pinned wgpu-native release (x86_64 and i686, sha256-pinned, into
-   toolchain/). A test program links wgpu_native.lib with the static CRT (find the system libraries it needs: d3d12,
-   dxgi, d3dcompiler, user32, ws2_32, userenv, ntdll, bcrypt, ...), opens a window, clears and presents, on this VM
-   through WARP, in both bitnesses. Settles the CRT pairing, the libraries and the binary size.
+0. **Probe** (done, 2026-11-04): `tools/fetch_wgpu.py` fetches wgpu-native v29.0.0.0 (x86_64 and i686,
+   sha256-pinned, into toolchain/wgpu/). `tools/wgpu_probe/` (probe.c, build.py) links wgpu_native.lib statically
+   with the static CRT on the first try (system libraries in build.py's LIBS), opens a window, presents 60 cleared
+   frames and reads an offscreen clear back exactly, in both bitnesses: PASS, 7.0 MB (x86_64) / 5.6 MB (i686). On
+   this GPU-less VM wgpu picks DX12 on WARP ("Microsoft Basic Render Driver") by itself; Vulkan and GL have no
+   driver here.
 1. **2D skeleton**: the WGPU plug-in registered beside DX7 (preference "Rasterizer Name" picks it): screens and
    modes, surfaces with shadows, Clear/CopyTo/Flip/ShowScene. Gate: the menus render; the settings tour passes.
    The harness's presentation bridge (it hooks DX7 ShowScene and reads DirectDraw surfaces) gets a wgpu path:
