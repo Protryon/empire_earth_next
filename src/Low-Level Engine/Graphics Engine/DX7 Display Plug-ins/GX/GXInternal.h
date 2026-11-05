@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "gx/GX.h"
+#include "platform/PlatString.h"   // PLAT_PRINTF_FORMAT
 #include "webgpu/webgpu.h"
 #include "webgpu/wgpu.h"
 
@@ -17,7 +18,7 @@
 std::recursive_mutex& GXLock();
 #define GX_GUARD std::lock_guard<std::recursive_mutex> theGuard(GXLock())
 
-void GXLog(const char* inFormat, ...);
+void GXLog(const char* inFormat, ...) PLAT_PRINTF_FORMAT(1, 2);
 
 // A pixel format as channel masks (DirectDraw's description of a surface's memory)
 struct GXFormat {

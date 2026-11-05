@@ -25,7 +25,7 @@ void UReferenceCounter::DumpAllLeakedReferences(FSFileSpec& inFile)
     for (theLine = UReferenceCounter::sReferenceDebugInfo.begin(); theLine != UReferenceCounter::sReferenceDebugInfo.end(); theLine++) {
         fprintf(inFile, "The following Unique ID %d Has Memory Leaks:\n", theLine->first);
         for (theCounter = theLine->second->begin(); theCounter != theLine->second->end(); theCounter++) {
-            fprintf(inFile, "\tThe following Pointer Address %d Has Memory Leaks:\n", theCounter->first);
+            fprintf(inFile, "\tThe following Pointer Address %p Has Memory Leaks:\n", (void*)theCounter->first);
             for (theFile = theCounter->second->begin(); theFile != theCounter->second->end(); theFile++)
                 fprintf(inFile,
                         "\t\tThe following %s with a count of %d (Real reference count of %d)is a memory leak.\n",

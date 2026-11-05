@@ -58,13 +58,13 @@ enum ESError {
 LLE_API void ESVerify(const char* inFile, unsigned long inLine, const char* inExpression);
 LLE_API unsigned long ESRecordNativeError(unsigned long inError);
 LLE_API unsigned long ESGetNativeError();
-LLE_API void ESDebugOut(const char* inFormat, ...);   // proven ?ESDebugOut@@YAXPBDZZ (Default.dll)
+LLE_API void ESDebugOut(const char* inFormat, ...) PLAT_PRINTF_FORMAT(1, 2);   // proven ?ESDebugOut@@YAXPBDZZ (Default.dll)
 class FSFileSpec;
 LLE_API long ESBeginRecording(FSFileSpec& inSpec);    // proven ?ESBeginRecording@@YAJAAVFSFileSpec@@@Z (exe import)
 LLE_API long ESEndRecording();                        // proven ?ESEndRecording@@YAJXZ (exe import)
 LLE_API void ESInitialize(HINSTANCE inInstance);      // proven ?ESInitialize@@YAXPAUHINSTANCE__@@@Z (exe import)
 LLE_API void ESDumpStack(unsigned long inDepth);       // exported ?ESDumpStack@@YAXK@Z (empty; provisional parameter name)
-LLE_API void ESReportMessage(const char* inFormat, ...);   // exported ?ESReportMessage@@YAXPBDZZ (empty)
+LLE_API void ESReportMessage(const char* inFormat, ...) PLAT_PRINTF_FORMAT(1, 2);   // exported ?ESReportMessage@@YAXPBDZZ (empty)
 
 class UString;
 

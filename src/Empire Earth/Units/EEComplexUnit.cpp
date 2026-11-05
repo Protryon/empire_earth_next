@@ -1640,7 +1640,7 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
     fprintf(inFile, "OUT OF SYNCH DUMP:  Base Work Rate:     %6d\n", this->GetUnitClass()->mWorkRate);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Fire While Moving:  %2d\n", (unsigned long)this->GetUnitClass()->mFiresWhileMoving);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Combat Reaction:    %6d\n", this->GetUnitClass()->mCombatReaction);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Cnvert %% per sec:   %6d\n", (double)this->GetStats()->mConversionRate);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Cnvert %% per sec:   %6.6f\n", (double)this->GetStats()->mConversionRate);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Cruise Altitude:    %6.6f\n", (double)this->mComplexUnit->mHeight);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Inner Coll Sphere:  %6.6f\n", (double)this->GetUnitClass()->GetInnerCollisionSphere());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Min Range:          %6.6f\n", (double)this->GetUnitClass()->mMinRange);

@@ -112,6 +112,6 @@ LLE_API bool operator>(const UWideString& inLeft, const UWideString& inRight);
 LLE_API bool operator>(const UWideString& inLeft, const char* inRight);
 LLE_API bool operator>=(const UWideString& inLeft, const UWideString& inRight);
 LLE_API bool operator>=(const UWideString& inLeft, const char* inRight);
-LLE_API long sprintf(UWideString& outString, const char* inFormat, ...);
+LLE_API long sprintf(UWideString& outString, const char* inFormat, ...) PLAT_PRINTF_FORMAT(2, 3);
 
 #endif

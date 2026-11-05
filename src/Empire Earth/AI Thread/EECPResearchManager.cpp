@@ -516,7 +516,7 @@ void EECPResearchManager::SetNextRandomResearchTime(unsigned long inTime)
     theDelay = UMFloatToLong(this->mPlayer->GetResearchFrequencyModifier() * theDelay);
     this->mNextTime = theDelay * 1000 + inTime;
     ESDebugOut("EECPResearchManager::SetNextRandomResearchTime  setting next research time to %d (%f)\n", this->mNextTime,
-               theDelay);
+               (double)theDelay);
 }
 
 // FUNCTION: EXE 0x48b24e
