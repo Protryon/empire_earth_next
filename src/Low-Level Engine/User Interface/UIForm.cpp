@@ -1825,3 +1825,22 @@ long UIForm::UpdateTranslatedKey(const char* inKey, short inRepeat)
 // TEMPLATE: LLE 0x10075155
 // TEMPLATE: LLE 0x100751ac
 // TEMPLATE: LLE 0x1007528e
+
+// port: see the header
+void UIForm::ReserveControlIndex(unsigned long inIndex)
+{
+    if ((long)inIndex < this->mControlCount)
+        return;
+    long theCount = (long)inIndex + 1;
+    UIControl** theControls = new UIControl*[theCount];
+    UIControl** theDrawControls = new UIControl*[theCount];
+    for (long i = 0; i < theCount; i++) {
+        theControls[i] = i < this->mControlCount && this->mControls ? this->mControls[i] : NULL;
+        theDrawControls[i] = i < this->mControlCount && this->mDrawControls ? this->mDrawControls[i] : NULL;
+    }
+    delete[] this->mControls;
+    delete[] this->mDrawControls;
+    this->mControls = theControls;
+    this->mDrawControls = theDrawControls;
+    this->mControlCount = theCount;
+}

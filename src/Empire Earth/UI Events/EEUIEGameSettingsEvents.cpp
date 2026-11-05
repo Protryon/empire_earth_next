@@ -86,6 +86,17 @@
 #include "ee/EEUIManager.h"
 #include "ee/EEUIEGameSettingsEvents.h"
 #include "ee/EEStringIDs.h"
+#include "platform/PlatWindow.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string>
+#include <vector>
+
+// port: the display and audio settings' engine side
+void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
+extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned long inCapacity);   // lle/SEMixer.h
+unsigned long EEMenuWidth();   // Empire Earth.cpp
+unsigned long EEMenuHeight();
 static UWideString sMusicFileName;          // 0x562f78 (init chain 0x1d6b94): the form's music while it is open
 static bool sInGame;                        // 0x562f8c: opened from the game (InGameOpen), not the main screen
 
@@ -146,6 +157,139 @@ static void ShowScreens(UIForm* inForm, EEGameSettings inSettings);
 static void ShowResolutions(UIForm* inForm, EEGameSettings inSettings);
 static void ShowRasterizers(UIForm* inForm, EEGameSettings inSettings);
 static void ShowGraphics(UIForm* inForm, EEGameSettings inSettings);
+
+// ---- port: the modern display and audio settings (EEGameSettings mUIScale..mAudioDevice; config.ini)
+// Each combo box line is a value; the selection is the line whose value is nearest the setting.
+static const long kWindowModes[] = {0, 1};
+static const long kUIScales[] = {0, 100, 125, 150, 175, 200, 250, 300};
+static const long kRenderResolutions[] = {100, 75, 67, 50};
+static const long kFrameRates[] = {0, 60, 120, -1};
+static const long kTextureFilterings[] = {0, 1, 2};
+static const long kBrightnesses[] = {70, 80, 90, 100, 110, 120, 130};
+static const long kZoomOuts[] = {100, 125, 150, 175, 200, 225, 250, 275, 300};
+static std::vector<std::string> sOutputDevices;
+static bool sPortDisplayChanged;   // ApplySettings -> OutOfGameOk   // the output device combo's lines after "System Default"
+
+template <size_t N> static void PortSelect(UIForm* inForm, unsigned long inIndex, const long (&inValues)[N], long inValue)
+{
+    UIComboBox* theBox = static_cast<UIComboBox*>(inForm->GetControl(inIndex));
+    if (!theBox)
+        return;
+    size_t theBest = 0;
+    for (size_t i = 1; i < N; i++)
+        if (labs(inValues[i] - inValue) < labs(inValues[theBest] - inValue))
+            theBest = i;
+    theBox->SetCurrentSelection((unsigned long)theBest);
+}
+
+template <size_t N> static void PortRead(UIForm* inForm, unsigned long inIndex, const long (&inValues)[N], long& outValue)
+{
+    UIComboBox* theBox = static_cast<UIComboBox*>(inForm->GetControl(inIndex));
+    unsigned long theSelection;
+    if (theBox && theBox->GetCurrentSelection(theSelection) == kErrorOK && theSelection < N)
+        outValue = inValues[theSelection];
+}
+
+static void PortShowVideo(UIForm* inForm, const EEGameSettings& inSettings)
+{
+    // the controls these replace (the video card, the 3D acceleration, the resolution list, the "Hi-Res" and v-sync
+    // check boxes; the quality preset still sets the check boxes underneath)
+    static const unsigned long kReplaced[] = {kGameSettingsVideoCardLabel, kGameSettingsVideoCardComboBox,
+        kGameSettings3DRenderingSysLabel, kGameSettingsRenderingSysListBox, kGameSettingsScreenResLabel,
+        kGameSettingsScreenResListBox, kGameSettingsCantChangeResInGameWarning, kGameSettingsHiResFilterCheckbox,
+        kGameSettingsHiResLightingCheckbox, kGameSettingsHiResTexturesCheckbox, kGameSettingsVsyncCheckbox};
+    for (size_t i = 0; i < sizeof(kReplaced) / sizeof(kReplaced[0]); i++)
+        if (inForm->GetControl(kReplaced[i]))
+            inForm->GetControl(kReplaced[i])->SetDisplayMode(kDisplayModeHidden);
+    PortSelect(inForm, kGameSettingsWindowModeComboBox, kWindowModes, inSettings.mWindowMode);
+    PortSelect(inForm, kGameSettingsUIScaleComboBox, kUIScales, inSettings.mUIScale);
+    PortSelect(inForm, kGameSettingsRenderResolutionComboBox, kRenderResolutions, inSettings.mRenderResolution);
+    PortSelect(inForm, kGameSettingsFrameRateComboBox, kFrameRates, inSettings.mFrameRateLimit);
+    PortSelect(inForm, kGameSettingsTextureFilteringComboBox, kTextureFilterings, inSettings.mTextureFiltering);
+    PortSelect(inForm, kGameSettingsBrightnessComboBox, kBrightnesses, inSettings.mBrightness);
+}
+
+static void PortShowAudio(UIForm* inForm, const EEGameSettings& inSettings)
+{
+    if (UISlider* theMaster = static_cast<UISlider*>(inForm->GetControl(kGameSettingsMasterVolumeSlider)))
+        theMaster->SetCurrentRangeValue(inSettings.mMasterVolume);
+    if (UICheckBox* theMute = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsMuteInBackgroundCheckBox)))
+        theMute->SetChecked(inSettings.mMuteInBackground);
+    UIComboBox* theDevices = static_cast<UIComboBox*>(inForm->GetControl(kGameSettingsOutputDeviceComboBox));
+    if (!theDevices)
+        return;
+    if (sOutputDevices.empty()) {   // once per run: the devices there are, after "System Default"
+        char theNames[16][128];
+        unsigned long theCount = SPIMGetOutputDevices(theNames, 16);
+        for (unsigned long i = 0; i < theCount; i++) {
+            sOutputDevices.push_back(theNames[i]);
+            theDevices->InsertLine(UWideString(theNames[i]), i + 1);
+        }
+    }
+    unsigned long theSelection = 0;
+    for (size_t i = 0; i < sOutputDevices.size(); i++)
+        if (sOutputDevices[i] == inSettings.mAudioDevice)
+            theSelection = (unsigned long)i + 1;
+    theDevices->SetCurrentSelection(theSelection);
+}
+
+static void PortShowInterface(UIForm* inForm, const EEGameSettings& inSettings)
+{
+    PortSelect(inForm, kGameSettingsMaximumZoomOutComboBox, kZoomOuts, inSettings.mMaximumZoomOut);
+}
+
+// Reads the controls into the settings; -> whether the window mode, the UI scale or the render resolution changed
+static bool PortApply(UIForm* inForm, EEGameSettings& ioSettings)
+{
+    long theWindowMode = ioSettings.mWindowMode, theUIScale = ioSettings.mUIScale;
+    long theRenderResolution = ioSettings.mRenderResolution;
+    PortRead(inForm, kGameSettingsWindowModeComboBox, kWindowModes, ioSettings.mWindowMode);
+    PortRead(inForm, kGameSettingsUIScaleComboBox, kUIScales, ioSettings.mUIScale);
+    PortRead(inForm, kGameSettingsRenderResolutionComboBox, kRenderResolutions, ioSettings.mRenderResolution);
+    PortRead(inForm, kGameSettingsFrameRateComboBox, kFrameRates, ioSettings.mFrameRateLimit);
+    PortRead(inForm, kGameSettingsTextureFilteringComboBox, kTextureFilterings, ioSettings.mTextureFiltering);
+    PortRead(inForm, kGameSettingsBrightnessComboBox, kBrightnesses, ioSettings.mBrightness);
+    PortRead(inForm, kGameSettingsMaximumZoomOutComboBox, kZoomOuts, ioSettings.mMaximumZoomOut);
+    if (UISlider* theMaster = static_cast<UISlider*>(inForm->GetControl(kGameSettingsMasterVolumeSlider)))
+        ioSettings.mMasterVolume = theMaster->GetCurrentRangeValue();
+    if (UICheckBox* theMute = static_cast<UICheckBox*>(inForm->GetControl(kGameSettingsMuteInBackgroundCheckBox)))
+        ioSettings.mMuteInBackground = theMute->GetIsChecked();
+    UIComboBox* theDevices = static_cast<UIComboBox*>(inForm->GetControl(kGameSettingsOutputDeviceComboBox));
+    unsigned long theDevice;
+    if (theDevices && theDevices->GetCurrentSelection(theDevice) == kErrorOK)
+        snprintf(ioSettings.mAudioDevice, sizeof(ioSettings.mAudioDevice), "%s",
+                 theDevice > 0 && theDevice <= sOutputDevices.size() ? sOutputDevices[theDevice - 1].c_str() : "");
+    ioSettings.mFullScreen = ioSettings.mWindowMode == 0;
+    ioSettings.mWaitForVSync = ioSettings.mFrameRateLimit == 0;
+    // the game's size follows the UI scale (32 bits: the bit depth is no setting any more)
+    GXGameSize((unsigned long)ioSettings.mUIScale, ioSettings.mWindowMode != 0,
+               reinterpret_cast<unsigned long*>(&ioSettings.mGameWindowWidth),
+               reinterpret_cast<unsigned long*>(&ioSettings.mGameWindowHeight));
+    ioSettings.mGameBitDepth = 32;
+    ioSettings.mTextureBitDepth = 32;
+    EEApplyPortSettings(ioSettings);
+    return theWindowMode != ioSettings.mWindowMode || theUIScale != ioSettings.mUIScale ||
+           theRenderResolution != ioSettings.mRenderResolution;
+}
+
+// Puts a new window mode into effect (the window's state; the caller resizes the game)
+static void PortApplyWindowMode(const EEGameSettings& inSettings)
+{
+    PlatWindow* theWindow = gGameWindow ? gGameWindow->GetOSRepresentation() : NULL;
+    if (!theWindow)
+        return;
+    if (inSettings.mWindowMode == 0) {
+        PlatWindowSetFixedSize(theWindow, 0);
+        PlatWindowSetFullscreen(theWindow, 1);
+    } else {
+        int32_t theWidth = 0, theHeight = 0;
+        PlatWindowSetFullscreen(theWindow, 0);
+        PlatWindowSetFixedSize(theWindow, 0);
+        if (PlatWindowGetDisplayLogicalSize(NULL, &theWidth, &theHeight) && theWidth > 0)
+            PlatWindowSetSize(theWindow, theWidth * 4 / 5, theHeight * 4 / 5);
+        PlatWindowSetFixedSize(theWindow, 1);
+    }
+}
 
 // FUNCTION: EXE 0x5d6bc0
 // Shows the audio tab of the settings form
@@ -237,7 +381,11 @@ long EEUIEGSEInGameOpen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     inForm->GetControl(kGameSettings3DRenderingSysLabel)->SetDisplayMode(kDisplayModeHidden);
     inForm->GetControl(kGameSettingsScreenResListBox)->SetDisplayMode(kDisplayModeHidden);
     inForm->GetControl(kGameSettingsScreenResLabel)->SetDisplayMode(kDisplayModeHidden);
-    inForm->GetControl(kGameSettingsCantChangeResInGameWarning)->SetDisplayMode(kDisplayModeShown);
+    // port: in a game the display combo boxes stay hidden, as the resolution list was (no warning: nothing it
+    // refers to is shown); the frame rate, filtering, brightness and textures still change
+    inForm->GetControl(kGameSettingsWindowModeComboBox)->SetDisplayMode(kDisplayModeHidden);
+    inForm->GetControl(kGameSettingsUIScaleComboBox)->SetDisplayMode(kDisplayModeHidden);
+    inForm->GetControl(kGameSettingsRenderResolutionComboBox)->SetDisplayMode(kDisplayModeHidden);
     sInGame = true;
     return kErrorOK;
 }
@@ -294,6 +442,10 @@ long EEUIEGSEOutOfGameOk::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     unsigned long theModeIndex;
     long theResult = ApplySettings(inForm, theModeIndex);
     inForm->GetManager()->Pop();
+    if (sPortDisplayChanged) {   // port: the window mode, the UI scale or the render resolution at once
+        PortApplyWindowMode(gGamePreferences.GetSettings());
+        gUserInterface->ResizeGameScreen(EEMenuWidth(), EEMenuHeight(), true, false);
+    }
     return theResult;
 }
 
@@ -675,13 +827,17 @@ static long ApplySettings(UIForm* inForm, unsigned long& outModeIndex)
         gGamePreferences.GetSettings().mRasterizerName = theName;
         gGamePreferences.GetSettings().mScreenID = theScreen;
     }
-    theResolutionList->GetCurrentSelection(outModeIndex);
+    // port: the game's size is the UI scale's (PortApply), not the resolution list's (hidden); the mode index is
+    // the matching mode's (InGameOk compares it with the current mode)
+    sPortDisplayChanged = PortApply(inForm, gGamePreferences.GetSettings());
     FillModes(theRasterizer, theScreen, theModes);
-    GEVideoMode theMode = theModes[outModeIndex];
-    gGamePreferences.GetSettings().mGameWindowWidth = theMode.mWidth;
-    gGamePreferences.GetSettings().mGameWindowHeight = theMode.mHeight;
-    gGamePreferences.GetSettings().mGameBitDepth = theMode.mBitCount;
-    gGamePreferences.GetSettings().mTextureBitDepth = theMode.mBitCount;
+    outModeIndex = 0;
+    for (unsigned long i = 0; i < theModes.size(); i++)
+        if (theModes[i].mWidth == gGamePreferences.GetSettings().mGameWindowWidth &&
+            theModes[i].mHeight == gGamePreferences.GetSettings().mGameWindowHeight &&
+            theModes[i].mBitCount == gGamePreferences.GetSettings().mGameBitDepth)
+            outModeIndex = i;
+    (void)theResolutionList;
     theViewRectangle.SetBottom(kGameViewBottom);
     theViewRectangle.SetLeft(kGameViewLeft);
     theViewRectangle.SetRight(kGameViewRight);
@@ -752,7 +908,7 @@ static long ApplySettings(UIForm* inForm, unsigned long& outModeIndex)
     gGamePreferences.GetSettings().mRightHandMouseOrientation = theRight;
     gGamePreferences.GetSettings().mAutoSaveInMilliseconds = theAutoSaveTime->GetCurrentRangeValue() * 60000;
     gGamePreferences.GetSettings().mNumberOfAutoSaves = theAutoSaveCount->GetCurrentRangeValue();
-    gGamePreferences.GetSettings().mWaitForVSync = theWaitForVSync->GetIsChecked();
+    (void)theWaitForVSync;   // port: the frame rate combo box decides v-sync (PortApply)
     long theResult = gGamePreferences.Save();
     return theResult;
 }
@@ -783,6 +939,10 @@ static void OpenSettingsForm(UIForm* inForm)
     theEvent = new UIESliderChange(static_cast<UITextLabel*>(inForm->GetControl(kGameSettingsAutosavesToKeepNumberLabel)), 1.0f, 0);
     inForm->GetControl(kGameSettingsAutosavesToKeepSlider)->SetTriggerEvent(kControlTriggerRangeChanged, theEvent);
     theEvent->Dereference();
+    // port: the display combo boxes (an in-game open hides them again after this)
+    inForm->GetControl(kGameSettingsWindowModeComboBox)->SetDisplayMode(kDisplayModeShown);
+    inForm->GetControl(kGameSettingsUIScaleComboBox)->SetDisplayMode(kDisplayModeShown);
+    inForm->GetControl(kGameSettingsRenderResolutionComboBox)->SetDisplayMode(kDisplayModeShown);
     ShowAudio(inForm, gGamePreferences.GetSettings());
     ShowInterface(inForm, gGamePreferences.GetSettings());
     ShowVideo(inForm, gGamePreferences.GetSettings());
@@ -807,6 +967,7 @@ static void ShowVideo(UIForm* inForm, EEGameSettings inSettings)
     theCheck13->SetChecked(inSettings.mShowBlood);
     theCheck13->SetDisplayMode(gGamePreferences.IsNotKorean() ? 1 : 0);
     ShowGraphics(inForm, inSettings);
+    PortShowVideo(inForm, inSettings);   // port
 }
 
 // FUNCTION: EXE 0x5d8728
@@ -836,6 +997,7 @@ static void ShowAudio(UIForm* inForm, EEGameSettings inSettings)
     if (!inSettings.mMusicEnabled)
         theMusicOff->Check();
     theAmbientSounds->SetChecked(inSettings.mAmbientSounds);
+    PortShowAudio(inForm, inSettings);   // port
 }
 
 // FUNCTION: EXE 0x5d8861
@@ -878,6 +1040,7 @@ static void ShowInterface(UIForm* inForm, EEGameSettings inSettings)
     theAutoSaveCount->SetCurrentRangeValue(inSettings.mNumberOfAutoSaves);
     static_cast<UITextLabel*>(inForm->GetControl(kGameSettingsAutosaveFreqNumberLabel))->SetText((long)(inSettings.mAutoSaveInMilliseconds / 60000));
     static_cast<UITextLabel*>(inForm->GetControl(kGameSettingsAutosavesToKeepNumberLabel))->SetText(inSettings.mNumberOfAutoSaves);
+    PortShowInterface(inForm, inSettings);   // port
 }
 
 // FUNCTION: EXE 0x5d8a51

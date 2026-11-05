@@ -325,6 +325,7 @@ long UIControlsTable::AddControlLike(UIManager* inManager, long inTemplateID, lo
     theEntry.mControl = NULL;
     theEntry.mTableIndex = UIControlsTable::sUIControlsArray.size();
     UIControlsTable::sUIControlsArray.push_back(theTable);
+    inManager->GetFormByID(theTable->mFormID)->ReserveControlIndex((unsigned long)inFormIndex);
     inManager->GetFormByID(theTable->mFormID)->AddDatabaseControl(theEntry);
     return kErrorOK;
 }

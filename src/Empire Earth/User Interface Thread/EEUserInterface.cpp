@@ -3,6 +3,7 @@
 // HandleMessage (the 0x401..0x443 switch), the Post* members, the window procedure, then the template COMDATs of
 // the message vector. Unit flags: the exe module set. Names are provisional unless the header says otherwise.
 #include <windows.h>
+extern "C" void SPIMSetMuted(bool inMuted);   // port: the mixer plug-in (lle/SEMixer.h)
 unsigned long EEMenuWidth();    // port: the menus' resolution (Empire Earth.cpp)
 unsigned long EEMenuHeight();
 #include <mbstring.h>
@@ -1761,6 +1762,7 @@ void EEUserInterface::HandleEvent(const PlatInputEvent& inEvent)
         }
         break;
     case PLAT_EVENT_FOCUS_GAINED:   // WM_ACTIVATEAPP TRUE (and WM_ACTIVATE, which did the same once not minimised)
+        SPIMSetMuted(false);   // port: "Mute in Background"
         if (gISKeyboard != NULL)
             gISKeyboard->Resume();
         if (gISMouse != NULL)
@@ -1773,7 +1775,11 @@ void EEUserInterface::HandleEvent(const PlatInputEvent& inEvent)
             gMousePointer->mThread->Post(0x404, NULL, NULL, true);
         break;
     case PLAT_EVENT_FOCUS_LOST:   // WM_ACTIVATEAPP FALSE
-        if (gUserInterface != NULL && !gUserInterface->mIsQuitting && gGameWindow != NULL)
+        if (gGamePreferences.mSettings.mMuteInBackground)   // port
+            SPIMSetMuted(true);
+        // port: a windowed game stays on screen in the background (the original's full screen minimised)
+        if (gUserInterface != NULL && !gUserInterface->mIsQuitting && gGameWindow != NULL &&
+            gGamePreferences.mSettings.GetFullScreen())
             PlatWindowMinimize(gGameWindow->GetOSRepresentation());   // CloseWindow
         if (gISKeyboard != NULL)
             gISKeyboard->Suspend();

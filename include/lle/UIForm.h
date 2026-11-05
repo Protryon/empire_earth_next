@@ -115,6 +115,9 @@ public:
     void AddClipRectangle(const GERectangle& inRectangle);
     void AddControl(UIControl* inControl, unsigned long inGroup);
     void AddDatabaseControl(const UICDatabase& inControl) { this->mDatabaseControls.push_back(inControl); }
+    // port: makes room for a control at inIndex (the controls the table did not have: UIControlsTable::AddControlLike);
+    // grows the control arrays (made with the form, mControlCount long)
+    void ReserveControlIndex(unsigned long inIndex);
     void AddDrawControl(unsigned long inIndex);
     void AddEvent(const UIEventData& inEvent) { this->mEventData.push_back(inEvent); }
     void AddHotKey(const UIHotKey& inHotKey, unsigned long inGroup);

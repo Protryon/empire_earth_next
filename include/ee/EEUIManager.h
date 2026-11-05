@@ -293,6 +293,18 @@ enum EEGameSettingsControl {
     // port: not in the database (EEUIManager's ctor adds it: UIControlsTable::AddControlLike, a copy of the video
     // card combo box; strings kTextureResolutionOriginalString..)
     kGameSettingsTextureResolutionComboBox = 111,
+    // port: the modern display and audio settings (EEUIManager.cpp AddControlLike; EEUIEGameSettingsEvents.cpp)
+    kGameSettingsWindowModeComboBox = 112,
+    kGameSettingsUIScaleComboBox = 113,
+    kGameSettingsRenderResolutionComboBox = 114,
+    kGameSettingsFrameRateComboBox = 115,
+    kGameSettingsTextureFilteringComboBox = 116,
+    kGameSettingsBrightnessComboBox = 117,
+    kGameSettingsMaximumZoomOutComboBox = 118,
+    kGameSettingsMasterVolumeLabel = 119,
+    kGameSettingsMasterVolumeSlider = 120,
+    kGameSettingsOutputDeviceComboBox = 121,
+    kGameSettingsMuteInBackgroundCheckBox = 122,
     kGameSettingsBattlefieldAmbientsCheckBox = 110,  // dbuicontrols form 5 index 110 id 3400 'GS Battlefield Ambients Check Box' (type 2); site form via UICheckBox* theCheck110 = (UICheckBox*)i
 };
 

@@ -244,8 +244,32 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     // port: the settings' texture resolution combo box (EEUIEGameSettingsEvents.cpp), in the video tab's right column
     // below the weather effects check box; a copy of the video card combo box (id 151) with the strings 33100..33102
     UIControlsTable::AddControlLike(this, 151, kTextureResolutionControlID, kGameSettingsTextureResolutionComboBox, 1,
-                                    0.5767351f, 0.7614858f, 0.88657105f, 0.99f, kTextureResolutionOriginalString,
+                                    0.2473f, 0.4614f, 0.325f, 0.325f + 0.025f + 3 * 0.022f, kTextureResolutionOriginalString,
                                     kTextureResolutionOriginalString + 2, kTextureResolutionHelpString);
+    // port: the modern display settings in the video tab's top block (where the video card, the 3D acceleration and
+    // the resolution list were; those are hidden), the zoom-out in the interface tab, the master volume, the output
+    // device and the background mute in the audio tab. Combo boxes are copies of the video card's (id 151): their
+    // lines are their strings, the rectangles include the open list.
+    struct PortControl { long mTemplate, mIndex; unsigned long mGroup; float mL, mR, mT, mLines; long mBegin, mEnd, mHelp; };
+    static const PortControl kPortControls[] = {
+        {151, kGameSettingsWindowModeComboBox, 1, 0.2473f, 0.4614f, 0.160f, 2, 33110, 33111, 33150},
+        {151, kGameSettingsUIScaleComboBox, 1, 0.2473f, 0.4614f, 0.215f, 8, 33112, 33119, 33151},
+        {151, kGameSettingsRenderResolutionComboBox, 1, 0.2473f, 0.4614f, 0.270f, 4, 33120, 33123, 33152},
+        {151, kGameSettingsFrameRateComboBox, 1, 0.5400f, 0.7540f, 0.160f, 4, 33124, 33127, 33153},
+        {151, kGameSettingsTextureFilteringComboBox, 1, 0.5400f, 0.7540f, 0.215f, 3, 33128, 33130, 33154},
+        {151, kGameSettingsBrightnessComboBox, 1, 0.5400f, 0.7540f, 0.270f, 7, 33131, 33137, 33155},
+        {151, kGameSettingsMaximumZoomOutComboBox, 3, 0.2473f, 0.4614f, 0.340f, 9, 33138, 33146, 33156},
+        {182, kGameSettingsMasterVolumeLabel, 2, 0.2473f, 0.4614f, 0.560f, -1, 33147, 0, 33157},
+        {183, kGameSettingsMasterVolumeSlider, 2, 0.2473f, 0.4614f, 0.587f, -1, 0, 0, 33157},
+        {151, kGameSettingsOutputDeviceComboBox, 2, 0.5400f, 0.7540f, 0.587f, 6, 33148, 33148, 33158},
+        {804, kGameSettingsMuteInBackgroundCheckBox, 2, 0.5400f, 0.7540f, 0.535f, -1, 33149, 0, 33159},
+    };
+    for (size_t i = 0; i < sizeof(kPortControls) / sizeof(kPortControls[0]); i++) {
+        const PortControl& c = kPortControls[i];
+        float theBottom = c.mLines >= 0 ? c.mT + 0.025f + c.mLines * 0.022f : c.mT + 0.0245f;
+        UIControlsTable::AddControlLike(this, c.mTemplate, kTextureResolutionControlID + 1 + (long)i, c.mIndex, c.mGroup,
+                                        c.mL, c.mR, c.mT, theBottom, c.mBegin, c.mEnd, c.mHelp);
+    }
     this->mMainGameForm = static_cast<EEUIFMainGame*>(this->GetFormByID(kFormMainGame));
     this->mInScenarioEditor = false;
     this->mScenarioEditorForm = NULL;
