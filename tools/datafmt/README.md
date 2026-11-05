@@ -8,4 +8,5 @@ of the build. They read an extracted data.ssa (never committed: game data):
 - `analyze.py <db dir>`: parse every db table with those layouts and print per-field statistics;
   `gen.py`/`assemble.py` build the DATA_FORMATS.md tables from the results.
 
-The converter proposed in docs/DATA_FORMATS.md ("Recommendation") starts from these.
+The converter proposed in docs/DATA_FORMATS.md ("Recommendation") is tools/eedata (section 8 there); these
+scripts are kept as the survey's record.

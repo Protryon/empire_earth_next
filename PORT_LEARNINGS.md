@@ -436,6 +436,42 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
   strings (length WGPU_STRLEN = NUL-terminated), chained structs for the HWND surface and the native instance
   extras (backends).
 
+## Text db tables (tools/eedata and the text loader)
+
+The 39 db tables convert losslessly to CSV/YAML (`tools/eedata/eedata.py`; formats in docs/DATA_FORMATS.md
+section 8), and the game reads the text form when it is on the data path.
+
+- **Specs come from the sources, not from the survey's tables.** `specgen.py` parses the record structs, lays
+  them out with MSVC x86 natural alignment and checks each size against the source's `static_assert` (two structs
+  state their size only in a comment). The survey's data-derived knowledge (which gap bytes are the row name, db
+  id, row index; the containers; the three structs without a source) lives in `overlay.py`. `cppgen.py` turns the
+  same `specs.json` into the C++ header, and `eedata.py check` fails when either generated file is stale, so the
+  Python and C++ sides cannot drift.
+- **Hole rows.** The most frequent record among rows without lead strings or list entries is the table's hole
+  template when it occurs twice or more and holds 0xCC fill (or is a tenth of the rows). That reproduces the
+  survey's real-row counts exactly (dbtechtree 793, dbobjects 738, dbuicontrols 1372, ...). The rule only decides
+  what the text shows: a hole is written back as the stored template, so it is lossless whatever it picks.
+- **Floats.** Shortest decimal that rounds back to the same float32 bits, rounded *correctly* (Python: exact
+  `Fraction` -> round half to even; C++: `std::from_chars`). Parsing through a double first can double-round, so
+  never use `struct.pack('<f', float(s))` for text input. Out-of-range decimals are refused rather than turned
+  into inf/0 (the two runtimes report them differently).
+- **Strict scalar grammar on both sides.** Python's `str.isdigit()` accepts Unicode digits, `bytes.fromhex()`
+  accepts spaces and `int()` accepts underscores; the C++ side does none of that. Both now use one ASCII grammar
+  (regexes in scalars.py, hand-written matchers in EEDataText.cpp). The parity gate (114 edited texts, valid and
+  broken) is what found these.
+- **CP-1252 has five undefined bytes** (0x81 0x8d 0x8f 0x90 0x9d). They map to the C1 code points of the same
+  value, so every byte string has a text form; the C++ table is generated from Python's decoder.
+- **Exceptions.** The game units build without `/EH`. The text compiler is the one unit that throws (internally;
+  `Compile` returns false with a message): `// UNIT-FLAGS: -EHsc`, which `verify.unit_flags` now passes through.
+- **New units without an original address** go into `units.EXTRA_UNITS['exe']`; `build.py` links them (it used
+  to link only the exe's units.txt units).
+- **Building in a second worktree:** set `EE_TOOLCHAIN` to the main checkout's `toolchain/` and
+  `EE_ORIG_SRC_ROOT` to a private staging root (the default `C:\EEX` is shared with the main checkout's builds).
+- **The multiplayer checksum** summed only `Data\Db\*.dat`; it now adds the loose `*.csv`/`*.yaml` too (0 when
+  there are none), since a text table replaces its .dat.
+- Cost: compiling all 39 exact tables takes about 0.8 s at -O1 (dbobjects' 7 MB of YAML 0.35 s, dbgraphics
+  0.2 s). The modding plan's compiled cache would remove it.
+
 ## For WONAPI/WONLobby later
 
 The WON library is carved or stubbed (`won` class in the stub report) in both builds. When its source arrives, expect
