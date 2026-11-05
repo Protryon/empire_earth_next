@@ -1,6 +1,7 @@
 # Empire Earth AoC computer-player AI: research and modernisation plan
 
-Status: research only. No engine code has changed. Started 2026-11-05.
+Status: stage 0 under way on the `new-ai` branch (§8: the trace, the cheat switches, the benchmark and the first
+numbers). Started 2026-11-05.
 `AI` stands for `src/Empire Earth/AI Thread/`. Method names come from the reconstruction and are often provisional:
 AI has 86 `provisional` markers and about 115 unnamed members. **[inferred]** marks reasoning rather than reading.
 ⚠ marks external claims taken from forums or secondary sources only.
@@ -247,6 +248,7 @@ The candidate seams, from lowest to highest level:
 | OpenRA | C# modules + YAML | Pure data personalities | Safe | Data-driven personalities give most of the modding value |
 | Warcraft III | JASS with cooperative threads | Whole AI | | `common.ai` unchanged for 15 years ⚠ |
 | PA (TA heir) | JSON build conditions + small neural net | Data | | |
+| EE "Age of AI" mod | C++ DLL hooking the retail exe; ini + `.eeai` personality files | Fixes and features inside the stock AI | n/a | The closest prior work on this very AI (§8.4) |
 
 Sources:
 - AoE2: https://airef.github.io/
@@ -665,4 +667,150 @@ original Hard AI.
 
 ## 7. Sources
 
-External sources are inline in §3. The code references were gathered on 2026-11-05 against `main` at `6cd4a34`.
+External sources are inline in §3 and §8.4. The code references were gathered on 2026-11-05 against `main` at
+`6cd4a34`.
+
+## 8. Stage 0 results
+
+### 8.1 What exists
+
+- **Decision trace** (`include/ee/EECPTrace.h`, `src/Empire Earth/AI Thread/EECPTrace.cpp`). `EE_AI_TRACE=1` in the
+  environment turns it on; it costs one bool test per site when off. One `EE-AI` debug string per decision:
+  ```
+  EE-AI <game ms> p<player> <manager> <event> key=value ... | f= w= s= g= i=
+  ```
+  - events: `start` (difficulty, cheats, `ScaleCost(100)`, extra resources, aggression), `build.queue`,
+    `build.start`, `train.request`, `research.request`, `research.start`, `epoch.advance`, `attack.group`, and
+    `stats` every 30 game s (epoch, population, pop cap, game limit, citizens, idle citizens, buildings, other
+    units);
+  - `<manager>` is the manager running when the decision was made (`civ`, `unit`, `build`, `research`,
+    `resource`, `wall`, `combat`, `explore`, `cp`);
+  - `EE-AIPROF` lines hold the real time per CP update (every 60 game s); they vary per run and are never compared.
+- **Cheat switches.** `EE_AI_CHEATS` lists the cheats that stay on: `cost`, `reveal`, `epochs`, `extra`, `popband`,
+  `catchup`, `retire`, or `none`. Unset means all of them, which is the original behaviour. This is TEST ONLY: an
+  environment variable is per machine, so stage 1 moves the switches into the rules data. `omniscient_intel` has no
+  switch yet, because turning it off needs the stage 2 perception module.
+- **Tools:**
+  - `tools/harness/ai_trace.py extract|compare|summary`: `compare` cuts both traces at the earlier run's end;
+  - `tools/harness/ai_bench.py`: a matrix of seeded headless games with the trace on, writing
+    `build/boot/ai_bench/<name>/results.{json,csv}`; `--repeat 2` compares the traces.
+
+### 8.2 Checks done
+
+- **Q1, the cost cheat: confirmed at runtime.** The `start` line on Hard prints `cheating=1 cost100=1`, and the first
+  building costs the AI 2 wood. With `EE_AI_CHEATS=none` it prints `cost100=100`.
+- **Determinism gate: passes.** Seeds 2 and 3, Hard, Small, 2 AIs, cheats `all` and `none`, two runs each: all four
+  pairs print identical traces (144-262 lines in the compared window).
+- **Latent sync risks (stage 0 step 5): neither is a risk, so the code is unchanged.**
+  - `gGameScreenActive` is world state. It is set true under the world write lock when loading starts
+    (`EEUserInterface::HandleMessage` 0x407, `TestScenario`, `SaveAndTestScenario`, `RestartGame`), before any PT
+    runs, and false only by `EEWorld` construction and the leave-map clear. Within a game it is constant on every
+    peer. In the scenario editor it is what keeps the AI from drafting units.
+  - The address-ordered `std::set<EEAIPathArea*>` in `EEAIAStarPathAreaGoal::AssignKindIDs` only decides the order in
+    which continents receive *the same* `mNextKindID`. Each continent's id list comes out the same in any order.
+- **Q3, profile: first numbers.** On this machine, one CP update takes a mean of 12-21 ms with the cheats on and
+  38-42 ms with them off. The first update takes 0.8-8.4 s, which is the map analysis. **[inferred]** The no-cheat
+  cost is probably exploration and placement failing over unexplored map. With 15 CPs, 40 ms each comes to 0.6 s
+  of real time per game second, so a script budget has to be small next to the C++ that is already there.
+
+### 8.3 First benchmark (2026-11-05)
+
+Seeds 2 and 3, Hard, Small, Continental, 2 AIs plus the idle human. The games end at the harness time cap, at about
+860-905 game s. Values are at the end of the run, per AI:
+
+| Cheats | Citizens | Other units | Buildings | Unspent | Pop cap | Epoch advances |
+|---|---|---|---|---|---|---|
+| all | 36-52 | 5-17 | 9-21 | 3,100-3,600 | 112-115 | 0 |
+| none | 28-49 | 4-6 | 8 | 820-930 | 560 | 0 |
+
+Readings:
+- **No AI advances an epoch in 15 minutes, cheats on or off.** Row 28 (`epoch_frequency`) sets the timer to 50-70
+  minutes, scaled by difficulty (§8.4). The 15-minute gate game therefore measures only the first epoch. **The
+  benchmark needs games of 60 minutes or more** (§8.5).
+- **The pop-cap rubber band works against the AI in harness games.** The idle human has a handful of units, and
+  rows 92/93 (weights 2.4 for the human, 0.6 for the AI's own limit) pull the cap down to about 112. Without
+  `popband` the cap is 400 × 1.4 (Hard, row 98) = 560, which is not clamped to the game limit. Every AI-vs-AI result
+  with an idle human is shaped by this, so the benchmark should run with `popband` off, or later with an observer
+  slot.
+- **Without the cheats the economy stalls.** Buildings stay at 8 (against 9-21), the military stays at 4-6 units,
+  and 4 builds start in 15 minutes (against 13-17). Citizens are about the same. This is the scarcity weakness
+  predicted in §2.4.
+
+### 8.4 Prior work: the "Age of AI" mod
+
+https://github.com/Grille/Empire-Earth-Age-of-AI (GPL-3.0, active, last update 2026-11-05). It is a DLL that hooks
+the retail 1.04 exe in memory, and since 2026-11-05 also this port's `EE-AOC.exe`. It is configured by
+`config/ageofai.ini` per difficulty and has `.eeai` personality files. Its notes (`docs/ai-analysis.md`,
+`docs/engine-notes.md`, `docs/economy.md`, `docs/testing.md`, `docs/experiments.md`) are the best existing analysis
+of this AI. **Use:** facts and ideas only. Its code and text are GPL-3.0 and are not copied here.
+
+It agrees with this document on:
+- the 1% cost cheat (stock 1 / 1 / 1.0, active only while the Cheat toggle is on);
+- the map knowledge: every human unit has visibility floor 1, so the AI sees everything;
+- the pop-cap formula (and its unclamped row 98 multiplier);
+- the empty diplomacy manager.
+
+Facts it adds, to check against this code as each stage gets to them:
+- **Epoch timing.** Row 28 gives 50-70 minutes × difficulty, doubled when the AI is ahead of the humans and halved
+  when it is behind. Shortening it hides the economy problems. They reverted their own row 28 change for that reason.
+- **The economy without the cheat.** The AI spends about 14.5k food against 1.3k gathered in 20 minutes, never
+  budgets finite wild food, and stalls in the Stone Age.
+- **Food search.** It rejects berries as "enemy near" and aborts at the first unexplored site.
+- **Mines.** Leftover citizens go to any mine on the map, including mines under enemy towers.
+- **The build queue is blocked for the whole game** by an unplaceable "Single Player Settlement" (type 395), with
+  about 1,000 failed placements per game.
+- **The epoch timer decides, not the economy.** A requirement-tech request is never retried, and the fallback
+  requests unplaceable statues.
+- **Economy buildings.** Gathering upgrades are rarely researched, one granary is used all game, and fields are not
+  rebuilt.
+- **Military.**
+  - No home army between attacks; siege is never taken along.
+  - Routing ignores walls, walks through tower lines, and counts influence from unseen units.
+  - Attacks continue on a player after peace or alliance.
+- **Other.** Phantom "in production" units eat the pop cap; defeated AIs linger for 20-40 minutes; the scenario
+  `Set AI Variable` case for row 96 writes the epoch-frequency fields.
+- **Testing lessons.** Use many fixed-seed repeats with standard errors, and test both seats. A short epoch timer
+  hides economy bugs. AI-vs-AI cannot test tower handling.
+- **Their results.** On Hard, 60-minute 1v1 games:
+  - their AI won 0 games against the cheating stock AI;
+  - against the stock AI with the cheat off, it won Continental 22-6;
+  - home guard: 87 → 272 soldiers trained per AI;
+  - build-queue fix: 43 → 97 soldiers trained;
+  - Stone Age reached at minutes 17-23 instead of 52-71.
+
+  Two experiment results stand out: more soldiers alone gave more losses, and decisions per unit beat decisions per
+  army.
+
+Their fix list is effectively a ready-made backlog for stage 2 (§5). Each item should first be confirmed in this
+source with the trace.
+
+### 8.6 First 60-minute pair (seed 2, Hard, Small, 2 AIs)
+
+| Cheats | End | Epoch advance requested (game s) | Epoch at end | Pop / cap at end | Unspent at end |
+|---|---|---|---|---|---|
+| all | time cap, 3,882 s | 2,771 and 3,093 | 1 and 1 | 51/112 and 54/112 | 6,773 and 7,572 |
+| none | game end, 3,425 s: the idle human was defeated | 2,771 and 3,093 | 0 and 0 | 32/560 and 115/560 | 1,365 and 3,055 |
+
+Readings:
+- **The epoch timer, not the economy, sets the epoch time.** Both runs request the advance at exactly the same game
+  times. With the cheats on, the advance is free and happens at 46 and 52 minutes. With them off, neither AI
+  manages to pay for it: one is at food 0 when the game ends.
+- **The cheating AI lives at about 50 population for the whole hour.** The rubber band holds the cap at 112, and
+  its stock grows unspent to 7k. Without `popband`, one honest AI reaches 104 citizens.
+- **A stuck build loop (stage 2 backlog).** In the cheating run, p2 orders a House at the same tile (20, 63) every
+  4 s from 460 s to the end: 681 `build.start` events, never finished. Each order pays 1% of the cost again. This
+  matches the class of bug that §8.4 reports for type 395. Next step: trace why that site never completes
+  (`StartBuilding` → `EEMakeBuilding` → `EEUGBuildRepair`).
+- **The idle human is not a neutral observer.** The AIs prefer human targets (§2.2), so the honest run ends when
+  they defeat it. Benchmarks need `--no-human-defeat`, or an observer slot.
+
+### 8.5 Next
+
+1. Benchmark games of 60 minutes or more, many seeds, `popband` off, with standard errors (§8.4 lessons). §8.6 has
+   the first 60-minute pair.
+2. Trace the remaining decision points: resource-manager gatherer assignment, failed `FindSite` placements (to test
+   the type-395 claim) and the target choice in `EECPCombatManager::Update`.
+3. Q2 (an AI hash in the out-of-sync check) remains open, and so do `game_batch.py` and `save_load.py`, which still
+   need porting.
+4. Then stage 1, or stage 2 first if a fair opponent is wanted sooner (§5 "Ordering"). The Age of AI findings make
+   stage 2 better scoped than §5 assumed.

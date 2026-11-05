@@ -1381,3 +1381,21 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   with a font made that much larger (`PlatFontScaled`, `PlatFontTarget::mScale`), CPU access goes through a
   logical-size intermediate (`UploadScaled`/`DownloadScaled`). So the menus' controls and the game's HUD are drawn at
   the display's resolution: sharp text now, and sharp art once the textures are upscaled.
+
+## The AI decision trace and benchmark (branch new-ai, 2026-11-05)
+
+- **Debug strings are the trace channel.** The harness debugger copies each `OutputDebugString` into the session log
+  as `debugstring ...`, but only its first 255 bytes (`exe_boot.c`, `OUTPUT_DEBUG_STRING_EVENT`). `EE-AI` lines are
+  kept well under that. The game writes no trace file: the harness guards file writes.
+- **The trace must not touch the simulation.** The stats line only reads (`GetTotalPopulation`, `GetIdleCitizens`,
+  the unit list). Real time is measured only around `EEComputerPlayer::Update` (`std::chrono::steady_clock`) and goes
+  into separate `EE-AIPROF` lines that the comparison skips. Two runs of one seed print identical traces with
+  the trace on (4/4 pairs, cheats on and off).
+- **The ai-game time cap is coarse.** `--max-game-seconds 240` and `600` both stopped at about 860-905 game s
+  (PT ~13,700, as the gate); 3600 stopped at 3,882 s. So `ai_trace.py compare` cuts both traces at the earlier run's
+  last game ms.
+- **"Idle" citizens.** `EECPUnitManager::GetIdleCitizens` returns the citizens free for building, gatherers included.
+  The trace counts `idle` (no active goal) and `free` (that list) separately.
+- **Harness AI games have an idle human in slot 0.** The pop-cap rubber band (rows 92/93) and the human-first target
+  choice both react to it: the cap is ~112 instead of 400 × 1.4, and an honest AI game can end when the AIs defeat
+  the human (docs/AI_RESEARCH.md §8).
