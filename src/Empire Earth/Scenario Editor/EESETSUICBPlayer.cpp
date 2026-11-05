@@ -157,7 +157,7 @@
 #include "lle/UITriStateCheckBox.h"
 #include "lle/UMFastMath.h"
 #include "lle/URandom.h"
-#include "lle/URegistry.h"
+#include "lle/UConfig.h"
 #include "lle/UResourceFile.h"
 #include "lle/UString.h"
 #include "lle/UWideString.h"

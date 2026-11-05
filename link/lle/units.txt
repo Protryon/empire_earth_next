@@ -138,7 +138,7 @@
 805c4 80c07 User Interface/UITriStateCheckBox.cpp
 80c07 8104b Utilities/UMath.cpp
 8104b 81d93 Utilities/UReferenceCounter.cpp
-81d93 8268d Utilities/URegistry.cpp
+81d93 8268d Utilities/UConfig.cpp
 8268d 82871 Utilities/UResourceFile.cpp
 82871 82c43 User Interface/User Interface.cpp
 82c43 837ad Utilities/UString.cpp

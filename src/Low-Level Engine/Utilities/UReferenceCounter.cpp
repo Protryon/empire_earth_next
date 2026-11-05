@@ -3,7 +3,7 @@
 //
 // 0x1008104b..0x10081d93: the sReferenceDebugInfo init chain (guarded atexit dtor), then the reference-tracking
 // members (DumpAllLeakedReferences, DereferenceWithoutDecrementingCount, Dereference, Reference, GetBucketMap), then
-// the map COMDATs. The inline members are emitted by File System.cpp (0x1000436c..). URegistry.cpp starts at
+// the map COMDATs. The inline members are emitted by File System.cpp (0x1000436c..). URegistry.cpp (now UConfig.cpp) starts at
 // 0x10081d93.
 #define LLE_UREFERENCECOUNTER_CPP   // sReferenceDebugInfo is visible here only (see lle/LowLevelEngine.h) (provisional name)
 #include <windows.h>

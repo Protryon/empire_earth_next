@@ -12,7 +12,7 @@
 #include "platform/PlatFile.h"
 #include "platform/PlatMessage.h"
 #include "platform/PlatPath.h"
-#include "platform/PlatPreferences.h"
+#include "platform/PlatConfig.h"
 #include "platform/PlatSocket.h"
 #include "platform/PlatString.h"
 #include "platform/PlatThread.h"
@@ -463,49 +463,54 @@ static void TestFiles()
 #endif
 }
 
-// ---- preferences
+// ---- the configuration file
 
-static void TestPreferences()
+static std::string ReadText(const char* inPath)
 {
-    Section("preferences");
-    char theKey[96];
-    snprintf(theKey, sizeof(theKey), "Software\\EmpireEarthNext\\PlatTest%d", static_cast<int>(PLAT_TEST_GETPID()));
-    PlatPrefRoot r = kPlatPrefCurrentUser;
-    CHECK(!PlatPrefSetInt32(r, theKey, "Width", 1024));   // values go into existing keys only
-    CHECK(PlatPrefCreateKey(r, theKey));
-    CHECK(PlatPrefSetInt32(r, theKey, "Width", 1024));
-    CHECK(PlatPrefSetInt32(r, theKey, "Negative", -7));
-    const char theString[] = "C:\\Games\\Empire Earth \"AoC\"";
-    CHECK(PlatPrefSetString(r, theKey, "Path", theString, sizeof(theString)));   // with its zero
-    CHECK(PlatPrefSetString(r, theKey, "Raw", "abc", 3));                     // without
+    std::string theText;
+    FILE* f = fopen(inPath, "rb");
+    if (f) {
+        int c;
+        while ((c = fgetc(f)) != EOF)
+            theText += static_cast<char>(c);
+        fclose(f);
+    }
+    return theText;
+}
+
+static void TestConfig(const std::string& inPath)
+{
+    Section("config");
+    char thePath[512];
+    CHECK(PlatConfigGetPath(thePath, sizeof(thePath)) && inPath == thePath);   // EE_CONFIG names the file
     int32_t theValue = 0;
-    CHECK(PlatPrefGetInt32(r, theKey, "width", &theValue) && theValue == 1024);   // names ignore case
-    CHECK(PlatPrefGetInt32(r, theKey, "Negative", &theValue) && theValue == -7);
+    CHECK(!PlatConfigGetInt("Game", "Width", &theValue));   // no file yet: empty
+    CHECK(PlatConfigSetInt("Game", "Width", 1024));
+    CHECK(PlatConfigSetInt("Game", "Negative", -7));
+    const char theString[] = "C:\Games\Empire Earth \"AoC\"";
+    CHECK(PlatConfigSetString("Game", "Path", theString));
+    CHECK(PlatConfigSetString("Game Options", "Blank", " padded\t"));
+    CHECK(PlatConfigSetString("Game Options", "Empty", ""));
+    CHECK(PlatConfigGetInt("GAME", "width", &theValue) && theValue == 1024);   // sections and names ignore case
+    CHECK(PlatConfigGetInt("Game", "Negative", &theValue) && theValue == -7);
     char theBuffer[128];
-    uint32_t theSize = sizeof(theBuffer);
-    CHECK(PlatPrefGetString(r, theKey, "PATH", theBuffer, &theSize) && theSize == sizeof(theString)
-          && memcmp(theBuffer, theString, sizeof(theString)) == 0);
-    theSize = 2;
-    CHECK(!PlatPrefGetString(r, theKey, "Raw", theBuffer, &theSize));   // too small
-    theSize = sizeof(theBuffer);
-    // (the registry's ANSI view may add the terminator a string was stored without: 3 or 4 bytes)
-    CHECK(PlatPrefGetString(r, theKey, "Raw", theBuffer, &theSize) && (theSize == 3 || theSize == 4)
-          && memcmp(theBuffer, "abc", 3) == 0);
-    CHECK(!PlatPrefGetInt32(r, theKey, "Missing", &theValue));
-#if !defined(_WIN32)   // the Win32 store records GetLastError after a Reg* call, as URegistry did (not the result)
-    CHECK(PlatGetLastError() == 2);
-#endif
-    std::string theParent = std::string(theKey).substr(0, std::string(theKey).rfind('\\'));
-    CHECK(!PlatPrefDeleteKey(r, theParent.c_str()));   // has a subkey
-    CHECK(PlatPrefDeleteValue(r, theKey, "Raw"));
-    CHECK(!PlatPrefDeleteValue(r, theKey, "Raw"));
-    std::string theUpper = theKey;
-    for (char& c : theUpper)
-        c = static_cast<char>(c >= 'a' && c <= 'z' ? c - 32 : c);
-    CHECK(PlatPrefGetInt32(r, theUpper.c_str(), "WIDTH", &theValue) && theValue == 1024);   // keys ignore case
-    CHECK(PlatPrefDeleteKey(r, theKey));
-    CHECK(!PlatPrefGetInt32(r, theKey, "Width", &theValue));
-    PlatPrefDeleteKey(r, theParent.c_str());   // the test's parent, if nothing else lives there
+    CHECK(PlatConfigGetString("Game", "PATH", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, theString) == 0);
+    CHECK(!PlatConfigGetString("Game", "Path", theBuffer, 4));   // too small
+    CHECK(!PlatConfigGetInt("Game", "Path", &theValue));         // not an integer
+    CHECK(PlatConfigGetString("Game", "Width", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, "1024") == 0);
+    CHECK(PlatConfigGetString("game options", "Blank", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, " padded\t") == 0);
+    CHECK(PlatConfigGetString("Game Options", "Empty", theBuffer, sizeof(theBuffer)) && theBuffer[0] == 0);
+    CHECK(!PlatConfigGetInt("Game", "Missing", &theValue));
+    // the file: plain "Name = value" lines, a string quoted only when it needs it
+    std::string theText = ReadText(inPath.c_str());
+    CHECK(theText == "[Game]\nWidth = 1024\nNegative = -7\nPath = C:\Games\Empire Earth \"AoC\"\n\n"
+                     "[Game Options]\nBlank = \" padded\t\"\nEmpty = \n");
+    CHECK(PlatConfigDelete("Game", "Negative"));
+    CHECK(!PlatConfigDelete("Game", "Negative"));
+    CHECK(PlatConfigDelete("Game Options", NULL));
+    CHECK(!PlatConfigGetString("Game Options", "Blank", theBuffer, sizeof(theBuffer)));
+    CHECK(ReadText(inPath.c_str()) == "[Game]\nWidth = 1024\nPath = C:\Games\Empire Earth \"AoC\"\n");
+    remove(inPath.c_str());
 }
 
 // ---- sockets
@@ -629,17 +634,21 @@ static void TestMessages()
 
 int main(int argc, char** argv)
 {
-#if !defined(_WIN32)
-    // the preferences go to a scratch directory, not the user's configuration
-    std::string thePrefs = std::string(getenv("TMPDIR") ? getenv("TMPDIR") : "/tmp") + "/plat_test_prefs";
-    setenv("EE_PREFS_DIR", thePrefs.c_str(), 1);
+    // the configuration goes to a scratch file, not the program's directory
+    std::string theConfig = std::string(getenv("TMPDIR") ? getenv("TMPDIR") : getenv("TEMP") ? getenv("TEMP") : "/tmp")
+                            + "/plat_test_config.ini";
+    remove(theConfig.c_str());
+#if defined(_WIN32)
+    _putenv_s("EE_CONFIG", theConfig.c_str());
+#else
+    setenv("EE_CONFIG", theConfig.c_str(), 1);
 #endif
     bool theNetwork = !(argc > 1 && strcmp(argv[1], "--no-network") == 0);
     TestTime();
     TestThreads();
     TestStrings();
     TestFiles();
-    TestPreferences();
+    TestConfig(theConfig);
     if (theNetwork)
         TestSockets();
     TestMessages();

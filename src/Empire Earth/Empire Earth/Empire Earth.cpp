@@ -1257,8 +1257,11 @@ FSPath* gDataPath;
 FSPath* gCivilizationDataPath; // 0x53190c (provisional name)
 
 // FUNCTION: EXE 0x53fe97
-// Builds the data search path (data archive and folder of this install, then of the original game) and the
-// civilization path, replacing the previous ones
+// Builds the data search path and the civilization path, replacing the previous ones. The data is the game's own
+// Data folder (the data root's: the executable's directory), holding the content of both retail archives and the
+// original game's loose data (tools/open_data.py). The original searched four places: this install's Data\data.ssa
+// and Data\, then the original Empire Earth's (its install path from the registry); the original game is no longer
+// needed. A Data\data.ssa is still mounted when present (an install copy), behind the folder as before.
 void EEShowSinglePlayerScreen()
 {
     FSArchive theArchive;
@@ -1269,18 +1272,12 @@ void EEShowSinglePlayerScreen()
     theArchiveFile.SetVolume(gStartupVolume);
     theArchiveFile.SetDirectory(gStartupDirectory + "data\\");
     theArchiveFile.SetFile("data" + gU530B88);
-    theArchive.SetArchive(theArchiveFile);
-    theDataPath->AddArchive(theArchive, true);
-    theArchiveFile.SetVolume(gGamePreferences.mSettings.mOriginalInstalledFromVolume);
-    theArchiveFile.SetDirectory(gGamePreferences.mSettings.mOriginalInstalledFromDirectory + "data\\");
-    theArchiveFile.SetFile("data" + gU530B88);
-    theArchive.SetArchive(theArchiveFile);
-    theDataPath->AddArchive(theArchive, true);
+    if (PlatPathGetAttributes(gStartupVolume + gStartupDirectory + "data\\data" + gU530B88) != PLAT_ATTR_INVALID) {
+        theArchive.SetArchive(theArchiveFile);
+        theDataPath->AddArchive(theArchive, true);
+    }
     theDirectory.SetVolume(gStartupVolume);
     theDirectory.SetDirectory(gStartupDirectory + "data\\");
-    theDataPath->AddDirectory(theDirectory, true);
-    theDirectory.SetVolume(gGamePreferences.mSettings.mOriginalInstalledFromVolume);
-    theDirectory.SetDirectory(gGamePreferences.mSettings.mOriginalInstalledFromDirectory + "data\\");
     theDataPath->AddDirectory(theDirectory, true);
     theDirectory.SetVolume(gStartupVolume);
     theDirectory.SetDirectory(EEGetCivilizationDirectory(true));
@@ -2036,6 +2033,10 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
         if (EEParseCommandLineFirstPass(inCommandLine, theShowMovies)) {
             gInstance = inInstance;
             ESInitialize(inInstance);
+            // the game's directory is the data root (the executable's directory, or EE_DATA_ROOT), wherever it was
+            // started from: its Data, Users and config.ini are found relative to it (the original used the current
+            // directory)
+            PlatPathEnterDataRoot();
             FSInitialize(UString(""));
             theRecordingFile.SetVolume(gStartupVolume);
             theRecordingFile.SetDirectory(gStartupDirectory);
@@ -2047,18 +2048,6 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
             long theResult = gGamePreferences.Load();
 
             ESVERIFY_AT(theResult == keseOK, 3637);
-            if (gGamePreferences.mSettings.mOriginalInstalledFromDirectory == "") {
-                UWideString theMessage;
-                UWideString theTitle;
-                gResource->GetString(IDS_EMPIRE_EARTH_ART_OF_CONQUEST_REQUIRES_ORIGINAL, theMessage);
-                gResource->GetString(IDS_ERROR_CANT_RUN, theTitle);
-                PlatMessageShow(theTitle, theMessage, 0);
-#ifdef _WIN32
-                CoUninitialize();
-#endif
-                PlatWindowSystemStop();
-                return 1;
-            }
             EELoadNetworkSettings();
             EEShowSinglePlayerScreen();
             theStartScreen.Start();
@@ -2502,8 +2491,8 @@ bool EEInitializeSounds()
     if (gGamePreferences.mSettings.mReverbEnabled) gConductor->GetConductor().SetReverb(1); else gConductor->GetConductor().SetReverb(0);
     gConductor->GetConductor().SetVolume(gGamePreferences.mSettings.mMusicVolume);
     gConductor->GetConductor().SetIntensity(0, false);
-    sprintf(theMusicDirectory, "%s%s%s", (const char*)gGamePreferences.mSettings.mOriginalInstalledFromVolume,
-            (const char*)gGamePreferences.mSettings.mOriginalInstalledFromDirectory, "Data\\Music\\");
+    // the music is the game's own Data\Music (the original read the original Empire Earth's)
+    sprintf(theMusicDirectory, "%s%s%s", (const char*)gStartupVolume, (const char*)gStartupDirectory, "Data\\Music\\");
     theResult = gConductor->GetConductor().SetMusicFolder(theMusicDirectory);
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x7a4, "theResult == keseOK");
     gSoundManager = new SESoundManager(gDataPath, gConductor, 50, 0);
