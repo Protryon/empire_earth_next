@@ -84,9 +84,15 @@ Steps:
    arguments from RCX/RDX/R8/R9 and the stack's home area; breakpoints and context use Rip/Rsp), the presentation
    bridge, time shim and seed pin as x64 DLLs/offsets from the build's layouts. Tested first against a small x64
    test program calling every guarded API, then on the x64 exe.
-3. **Switch**: tour + AI games on x64 (and a 32-bit vs 64-bit comparison of seeded AI games: the simulation is
-   integer/float code that should not change with pointer size), then x64 becomes the only target: i686 builds,
-   the i686 wgpu pin and the 32-bit harness paths are removed, CI builds x64.
+3. **Switch**: tour + AI games on x64 (done, 2026-11-05, branch x64run): the x64 test-profile build passes the
+   settings tour + 120 s of play and the seeded 2-AI Hard game to its time cap, with the binary and the text db
+   tables. Bugs found: functions the link aliased to a VC6 ICF twin of another class whose members moved on x64
+   (eight bodies written in source; `tools/alias_layouts.py` checks the rest), and wrong-class printf arguments in
+   traces (format checking on the engine's formatters). 32 vs 64 bit: identical map generation; the AI's trace is
+   identical to an i686 `/arch:SSE2` build to about game second 290 and both differ from the x87 i686 build from
+   ~256 s, so the outcome gap to the shipped i686 build is the floating-point model (PORT_LEARNINGS.md "x64
+   runtime"). Left: x64 becomes the only target (i686 builds, the i686 wgpu pin and the 32-bit harness paths are
+   removed, CI builds x64); the differential tooling, human driver and save/load sessions on x64.
 4. **macOS/Linux**: the platform layer's POSIX implementation (PORT.md "Cross-platform"), windowing/input on a
    small portable layer (SDL3 or winit-style C library, decision then), GDI text replaced (FreeType/stb_truetype or
    a font atlas), Winsock -> BSD sockets, `long` is 64-bit there (FSFile::Read(long&) and record members: switch
