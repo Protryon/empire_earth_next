@@ -49,6 +49,8 @@ def crop(a, p, scale):
 
 # ------------------------------------------------------------------------------------------------- alpha --
 
+HIDDEN_FLAT_STD = 4.0 / 255   # colour under alpha 0 flatter than this (mean channel std) is a fill, not content
+
 
 def bleed(rgb, alpha, threshold=0.5 / 255, iterations=64):
     """Fills the colour of fully transparent pixels (alpha 0) from their neighbours (repeated 3x3 averaging of
@@ -58,6 +60,11 @@ def bleed(rgb, alpha, threshold=0.5 / 255, iterations=64):
     overwrote it: effects lost up to 62/255 of their colour; fixed 2026-11-05.)"""
     known = alpha >= threshold
     if known.all() or not known.any():
+        return rgb
+    # Only junk is replaced: a flat fill under alpha 0 (black, magenta...). Real image content there is kept: in
+    # many textures the alpha channel is not used for drawing (terrain such as rockysand_1, cliffedge_*: dbterrain
+    # mHasAlpha 0) or the hidden colour is part of the art; refilling it smeared visible texture.
+    if rgb[~known].std(axis=0).mean() > HIDDEN_FLAT_STD:
         return rgb
     out = rgb.copy()
     out[~known] = 0
