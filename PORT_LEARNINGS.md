@@ -1105,3 +1105,20 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   SDL_StopTextInput. The game window starts text input when it is created (PlatTextInputStart).
 - **macOS needs the Metal layer from the main thread**: GX takes the window's native handles when the primary surface
   is created (on the window thread) and keeps them; the render thread only reads the client size.
+
+## The POSIX game, part 3: input without DirectInput (branch xgame)
+
+- **Keep DirectInput's contract, change its source.** ISKeyboard and ISMouse were written against DirectInput's
+  buffered data (GetDeviceData: changes only, 256 records, DI_BUFFEROVERFLOW once records were lost) and its device
+  state (GetDeviceState: the keyboard's 256 bytes; the mouse's relative motion since the last state read). A small
+  per-device buffer (ISDeviceInput) gives exactly that from the window events, so the two classes changed in their
+  calls only: double presses, the shift/control/alt state, the overflow re-read and the "buffered movement" switch
+  work as before. Auto-repeat is dropped (DirectInput never reported it), a focus loss releases held keys and buttons
+  (a foreground device lost them too), and the mouse's buttons are renumbered from the window layer's (1 left,
+  2 middle, 3 right) to DirectInput's (0 left, 1 right, 2 middle).
+- **The exclusive mouse is relative mode.** DirectInput's exclusive foreground mouse hid the pointer and gave raw
+  motion; ISMouse::Resume/Suspend switch SDL's relative mode on and off.
+- **Testing input under the harness**: the window layer reads keys from WM_KEYDOWN/UP, so a key posted to the game
+  window travels the real path (SDL, PlatInputEvent, ISDeviceInput, the main form's hot keys) without being the
+  foreground window. `--input-check` presses F3 twice and requires the pause flag to go on and off. Posted mouse
+  messages would not test relative mode (raw input), so the mouse path is covered by code review and play only.

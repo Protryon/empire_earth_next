@@ -182,6 +182,10 @@ Steps:
       from mDeltaX/mDeltaY (relative mode via PlatMouseSetRelative where DirectInput was exclusive), lZ from
       mWheel x 120, the buttons. UIEditBox/UIForm key-state reads are PlatKeyIsDown/PlatKeyIsToggled (UIForm done).
       DINPUT goes from the imports, compat/dinput.h from the tree. Gate: the harness's input fuzzing.
+      **Done (branch xgame, 2026-11-05)**: ISDeviceInput keeps DirectInput's buffer/state contract, fed by the window
+      thread (ISHandleEvent); the exe imports no DirectX DLL. The input fuzzing needs the human driver, which is not
+      ported to x64: the gate is `--input-check` (F3 posted to the window pauses and resumes the game) with the tour
+      and the AI game (PT 13,571).
    5. **Text** (GDI out): fonts registered at start-up (Liberation, embedded or from the data root's fonts/
       directory; aliases for the dbfonts face names); GEFont (GEFont.cpp: CreateFont + GetTextMetrics) ->
       PlatFontCreate/PlatFontGetMetrics, GEFont::GetOSFont returns PlatFont*; GEText's GetTextExtentPoint32 ->
