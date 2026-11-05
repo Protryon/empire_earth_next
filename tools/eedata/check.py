@@ -3,7 +3,8 @@
 (a) exact: every table round-trips db -> text -> db byte-identical (and the text re-exports identically).
 (b) clean: the clean text compiles to a db file whose every field value equals the exact file's, except the junk
     the clean mode drops (bytes after a string's NUL, alignment padding); the hole rows stay holes.
-(c) specs: specs.json equals what specgen.py makes from the sources now, and every struct's size equals its
+(c) specs: specs.json equals what specgen.py makes from the sources now (and the C++ EEDataTextSpecs.h what
+    cppgen.py makes from specs.json), and every struct's size equals its
     static_assert (or the size its source states, for the two without one).
 """
 import collections
@@ -44,6 +45,10 @@ def run(a, spec, load_db):
     new = specgen.dumps(specgen.generate())
     if specgen.SPECS.read_bytes() != new:
         print('(c) FAIL specs.json is stale: run eedata.py specs')
+        ok = False
+    import cppgen
+    if not cppgen.OUT.exists() or cppgen.OUT.read_bytes() != cppgen.generate(spec):
+        print(f'(c) FAIL {cppgen.OUT.name} is stale: run eedata.py cppgen')
         ok = False
     nsize = 0
     for s in spec['structs'].values():
