@@ -6315,7 +6315,7 @@ void EEMResearchTechnology::Execute()
                             theOther->mComplexUnit->StartAction(kActionIdle);
                             theOther->mUnitClass->ActionChanged(theOther->mComplexUnit);
                         }
-                        theOther->mComplexUnit->QueueResearch(this->mTechnology, (this->mTechnology >= kTechEpochPrehistoric && this->mTechnology < kTechEpochAll) || thePower2);
+                        theOther->mComplexUnit->QueueResearch(this->mTechnology, (EEIsEpochID(this->mTechnology)) || thePower2);
                     }
                 }
             }
@@ -6328,7 +6328,7 @@ void EEMResearchTechnology::Execute()
                     theBest->mComplexUnit->StartAction(kActionIdle);
                     theBest->mUnitClass->ActionChanged(theBest->mComplexUnit);
                 }
-                theBest->mComplexUnit->QueueResearch(this->mTechnology, (this->mTechnology >= kTechEpochPrehistoric && this->mTechnology < kTechEpochAll) || thePower2);
+                theBest->mComplexUnit->QueueResearch(this->mTechnology, (EEIsEpochID(this->mTechnology)) || thePower2);
             }
         }
     }

@@ -214,7 +214,7 @@ bool EECPBuildManager::HasWallNear(long inX, long inY, float inRadius)
 bool EECPBuildManager::IsQueued(long inUnitClass)
 {
     bool theFound = false;
-    for (unsigned long i = 0; i < 15 && !theFound; i++) {
+    for (unsigned long i = 0; i < EEEpochCount() && !theFound; i++) {
         if (this->mQueues[i].size() > 0) {
             for (EECPBuildQueue::iterator it = this->mQueues[i].begin(); it != this->mQueues[i].end() && !theFound; ++it)
                 theFound = (*it).first == inUnitClass;
@@ -224,13 +224,10 @@ bool EECPBuildManager::IsQueued(long inUnitClass)
 }
 
 
-// The queue a class goes to: its tech tree id (+0x1e4) when it is an epoch (0..14), else id / 1000 - 1 (every user
-// expands it) (provisional name)
+// The queue a class goes to: the epoch of its tech (an epoch's own id; a node's epoch) (provisional name)
 static inline long EECPBMQueueIndex(long inTechTreeID)
 {
-    if (inTechTreeID < 0 || inTechTreeID >= kTechEpochAll)
-        return inTechTreeID / 1000 - 1;
-    return inTechTreeID;
+    return EETechTreeEpochOf(inTechTreeID);
 }
 
 // FUNCTION: EXE 0x467356
@@ -1377,7 +1374,7 @@ long EECPBuildManager::Load(unsigned long inMajorVersion, unsigned long inMinorV
 {
     long theResult = 0;
     U2DPoint<long> theTile;
-    for (unsigned long i = 0; i < 15; i++) {
+    for (unsigned long i = 0; i < EEEpochCount(); i++) {
         if (theResult != 0)
             break;
         this->mQueues[i].clear();
@@ -1456,7 +1453,7 @@ bool EECPBuildManager::HasLaterEpochRequests()
 {
     long theEpoch = this->mPlayer->GetTechTree()->mCurrentEpoch;
     bool theFound = false;
-    for (long i = theEpoch + 1; i < 15 && !theFound; i++) {
+    for (long i = theEpoch + 1; i < EEEpochCount() && !theFound; i++) {
         if (this->mQueues[i].size() > 0)
             theFound = true;
     }
@@ -1475,11 +1472,9 @@ void EECPBuildManager::QueueBuilding(unsigned long inUnitClass, bool inAppend, b
     EECPBuildRequest theRequest;
     EETechTree* theTechTree = this->mPlayer->GetTechTree();
     long theID = gUnitClassTable[inUnitClass] != NULL ? gUnitClassTable[inUnitClass]->mTechnology : 100000;
-    long theIndex;
-    if (theID >= kTechEpochPrehistoric && theID < kTechEpochAll)
-        theIndex = theID;
-    else
-        theIndex = theID / 1000 - 1;
+    long theIndex = EETechTreeEpochOf(theID);
+    if (theIndex < 0)
+        return;   // a class with no tech (the original indexed past its 15 queues)
     if (inAppend)
         this->mQueues[theIndex].push_back(std::make_pair(inUnitClass, theTile));
     else {
@@ -1508,11 +1503,9 @@ void EECPBuildManager::QueueBuildingAt(long inUnitClass, long inX, long inY)
 {
     EETechTree* theTechTree = this->mPlayer->GetTechTree();
     long theID = gUnitClassTable[inUnitClass] != NULL ? gUnitClassTable[inUnitClass]->mTechnology : 100000;
-    long theIndex;
-    if (theID >= kTechEpochPrehistoric && theID < kTechEpochAll)
-        theIndex = theID;
-    else
-        theIndex = theID / 1000 - 1;
+    long theIndex = EETechTreeEpochOf(theID);
+    if (theIndex < 0)
+        return;   // a class with no tech (the original indexed past its 15 queues)
     this->mQueues[theIndex].push_back(EECPBuildRequest(inUnitClass, U2DPoint<long>(inX, inY)));
     this->mManager->GetResourceManager()->AddCosts(theTechTree->Get(theID), 1);
 }
@@ -1547,7 +1540,7 @@ void EECPBuildManager::BuildingAbandoned(EEComplexUnit* inUnit)
 // Forgets every queued request's site, the town centre tile and the update time
 void EECPBuildManager::Reset()
 {
-    for (unsigned long i = 0; i < 15; i++) {
+    for (unsigned long i = 0; i < EEEpochCount(); i++) {
         for (EECPBuildQueue::iterator it = this->mQueues[i].begin(); it != this->mQueues[i].end(); ++it) {
             (*it).second = U2DPoint<long>(0, 0);
         }
@@ -1596,7 +1589,7 @@ long EECPBuildManager::Save(unsigned long inMajorVersion, unsigned long inMinorV
     EECPBuildQueue::iterator it;
     unsigned long theCount;
     long theResult = 0;
-    for (unsigned long i = 0; i < 15 && theResult == 0; i++) {
+    for (unsigned long i = 0; i < EEEpochCount() && theResult == 0; i++) {
         theCount = this->mQueues[i].size();
         theResult = outFile.Write(theCount);
         if (theResult != 0)

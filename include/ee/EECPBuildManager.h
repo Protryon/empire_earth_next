@@ -98,7 +98,7 @@ public:
     bool CanBuildAt(unsigned short inContinent, long inUnitClass, EETileCoordinate& inTile, long inSize, bool inArg5,
         bool inArg6, long inX, long inY);
 
-    EECPBuildQueue mQueues[15];             // +0x004 by the class's +0x1e4 (0..14; else / 1000 - 1)
+    EEEpochArray<EECPBuildQueue> mQueues;   // +0x004 one per epoch: the class's tech's epoch (EETechTreeEpochOf)
     std::vector<U2DPoint<long> > mWaterSites;  // +0x130 (CollectSiteTiles(2))
     std::vector<U2DPoint<long> > mSpaceSites;  // +0x140 (CollectSiteTiles(4))
     U2DPoint<long> mTownCenterTile;         // +0x150 (U2DPoint<long>: Load/Save call its Load/Save; the ctor zeroes it) (-10000: none) (provisional name)

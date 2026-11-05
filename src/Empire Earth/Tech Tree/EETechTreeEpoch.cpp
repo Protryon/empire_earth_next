@@ -107,6 +107,8 @@ long EETechTreeEpoch::GetBuildTime()
 
 // FUNCTION: EXE 0x5ce10e
 // Reads the epoch's record and its tech nodes from the tech tree file (nodes with epoch ids are dropped)
+void EERegisterTechNode(long inID, long inEpoch);   // EETechTree.cpp
+
 long EETechTreeEpoch::Load(FSFile& inFile, EETechTree* inTree)
 {
     unsigned long theRead = 0;
@@ -144,6 +146,7 @@ long EETechTreeEpoch::Load(FSFile& inFile, EETechTree* inTree)
     this->mFirstNodeID = theRecord.mFirstNodeID;
     this->mData->mDefaultUnitClass = theRecord.mDefaultUnitClass;
     this->mNextEpoch = theRecord.mNextEpoch;
+    this->mTitleID = theRecord.mTitleID;
     this->mData->mNameID = theRecord.mNameID;
     this->mData->mCountsTowardEpoch = theRecord.mCountsTowardEpoch;
     this->mCurrentSOL = 0;
@@ -165,7 +168,10 @@ long EETechTreeEpoch::Load(FSFile& inFile, EETechTree* inTree)
                 break;
             EETechTreeNode* theNode = new EETechTreeNode;
             theResult = theNode->Load(inFile, this->mTree);
-            if (theResult == kErrorOK && theNode->mData->mID > kTechEpochAll) {
+            if (theResult == kErrorOK && theNode->mData->mID >= kTechFirstNodeID) {
+                // the node belongs to the epoch whose block holds it (the original: id / 1000 - 1)
+                theNode->mEpoch = this->mData->mID;
+                EERegisterTechNode(theNode->mData->mID, this->mData->mID);
                 this->mNodes.insert(std::map<long, EETechTreeNode*>::value_type(theNode->mData->mID, theNode));
             } else {
                 theNode->Unload();

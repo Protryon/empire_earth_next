@@ -1591,9 +1591,9 @@ long EESEEChangeStartEpoch::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     this->mEndEpochComboBox->GetCurrentSelection(theEnd);
     if (UIsNone32(theEnd))
         return kErrorOK;
-    theEnd += 15 - this->mEndEpochComboBox->GetListBox()->GetLineCount();
-    for (unsigned long i = theStart; i < 15; i++) {
-        gResource->GetString(i + IDS_EPOCH_NAME_FIRST, theText);
+    theEnd += EEEpochCount() - this->mEndEpochComboBox->GetListBox()->GetLineCount();
+    for (unsigned long i = theStart; i < (unsigned long)EEEpochCount(); i++) {
+        gResource->GetString(EEEpochTitleID(i), theText);
         theNames.push_back(theText);
     }
     this->mEndEpochComboBox->DeleteAllEntries();
@@ -1649,9 +1649,9 @@ EESEPlayerRow::EESEPlayerRow(unsigned long& ioID, float inY, GEFont* inFont,
         ++ioIndex;
         ++ioID;
     }
-    theEpochNames.resize(15);
-    for (unsigned long theEpoch = 0; theEpoch < 15; ++theEpoch)
-        gResource->GetString(IDS_EPOCH_NAME_FIRST + theEpoch, theEpochNames[theEpoch]);
+    theEpochNames.resize(EEEpochCount());
+    for (unsigned long theEpoch = 0; theEpoch < (unsigned long)EEEpochCount(); ++theEpoch)
+        gResource->GetString(EEEpochTitleID(theEpoch), theEpochNames[theEpoch]);
     theLocation.SetXY(620.0f, inY);
     this->mEndEpoch = new UIComboBox(ioID, 1, theEpochNames, inFont,
         GERectangle(theLocation, 175.0f, 20.0f), 400, inForm, ioIndex, 0, 2);
@@ -1999,8 +1999,8 @@ void EESEPlayerRow::Load(unsigned long inPlayer)
         this->mCPUOnlyCheckBox->SetChecked(theOptions.mB36);
         this->mSharedLOSCheckBox->SetChecked(thePlayer->mSharedLOS);
         this->mStartEpoch->SetCurrentSelection(thePlayer->GetTechTree()->mCurrentEpoch);
-        for (unsigned long theEpoch = thePlayer->GetTechTree()->mCurrentEpoch; theEpoch < kTechEpochAll; theEpoch++) {
-            gResource->GetString(theEpoch + IDS_EPOCH_NAME_FIRST, theNumber);
+        for (unsigned long theEpoch = thePlayer->GetTechTree()->mCurrentEpoch; theEpoch < EEEpochCount(); theEpoch++) {
+            gResource->GetString(EEEpochTitleID(theEpoch), theNumber);
             theEpochs.push_back(theNumber);
         }
         this->mEndEpoch->DeleteAllEntries();

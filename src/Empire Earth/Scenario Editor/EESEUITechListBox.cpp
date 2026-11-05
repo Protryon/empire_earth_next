@@ -124,7 +124,7 @@
 // predicate as an inline expression (every use recomputes it) (provisional name)
 inline long EESETLGetEpoch(long inID)
 {
-    return (inID >= kTechEpochPrehistoric && inID < kTechEpochAll) ? inID : inID / 1000 - 1;
+    return EETechTreeEpochOf(inID);
 }
 
 // The four sorts of Rebuild (std::sort over mTechs; each operator() is a refused inline COMDAT after its sort's

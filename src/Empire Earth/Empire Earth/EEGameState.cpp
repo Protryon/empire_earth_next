@@ -423,7 +423,7 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
         if (inOptions.mLoadType == 3)
             this->mNumPlayersMade = 3;
         this->mGameOptions = inOptions;
-        if (inOptions.mEpochStart == kTechEpochAll) {
+        if (inOptions.mEpochStart == EEEpochCount()) {   // random
             theRandom.SetSeed(gUserInterface->mRandomSeed);
             this->mGameOptions.mEpochStart = theRandom.Generate(0, inOptions.mEpochEnd);
         }

@@ -183,7 +183,7 @@ bool EESMCondition::Evaluate()
                 EEPlayer* thePlayer = gWorld.mPlayers[thePlayers[i]];
                 if (thePlayer != NULL) {
                     long theTech = this->mTechnology;
-                    if (theTech < kTechEpochAll)
+                    if (theTech < EEEpochCount())
                         thePlayerResult = theTech <= thePlayer->GetTechTree()->mCurrentEpoch;
                     else {
                         EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(theTech);

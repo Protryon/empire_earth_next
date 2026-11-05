@@ -120,14 +120,14 @@ void EESELoadThread::Handle406(unsigned long inPlayer, unsigned long inCount)
     gWorld.mLock->ReadUnlock();
     gResource->GetString(IDS_LOADING_EPOCH_FOR_PLAYER, theFormat);
     if (theFormat.GetLength() > 0) {
-        gResource->GetString(IDS_PREHISTORIC_AGE, theName);
+        gResource->GetString(EEEpochTitleID(0), theName);
         sprintf(theText, theFormat, (const char*)theName, inPlayer);
     }
     this->mChangeLoadText->Post(theText);
     thePlayer->LoadAllClassMedia();
     for (unsigned long i = 0; i < inCount; i++) {
         if (theFormat.GetLength() > 0) {
-            gResource->GetString(IDS_EPOCH_NAME_FIRST + i, theName);
+            gResource->GetString(EEEpochTitleID(i), theName);
             sprintf(theText, theFormat, (const char*)theName, inPlayer);
         }
         this->mChangeLoadText->Post(theText);

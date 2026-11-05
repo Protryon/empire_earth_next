@@ -242,7 +242,7 @@ void EECPCivilizationManager::AttemptEpochAdvance(unsigned long inTime)
     if (!(theEpoch < gWorld.mGameOptions.mEpochEnd))
         return;
     long theNext = theEpoch + 1;
-    EETechTreeEpoch* theNode = (theNext >= 0 && theNext < 15) ? &theTree->mEpochs[theNext] : NULL;
+    EETechTreeEpoch* theNode = (theNext >= 0 && theNext < theTree->mEpochs.size()) ? &theTree->mEpochs[theNext] : NULL;
     if (!(inTime >= this->mNextEpochAdvanceTime))
         return;
     long theMissing = theNode->GetRequiredSOL() - theNode->GetCurrentSOL();

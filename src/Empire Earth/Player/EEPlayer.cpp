@@ -3242,7 +3242,7 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
 // When a human player reaches a valid epoch, lets every computer player catch up to it
 void EEPlayer::EpochReached(long inEpoch)
 {
-    if (!this->IsHuman() || !(inEpoch >= kTechEpochPrehistoric) || !(inEpoch < kTechEpochAll))
+    if (!this->IsHuman() || !EEIsEpochID(inEpoch))
         return;
     for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {
         EEPlayer* theOther = gWorld.mPlayers[i];

@@ -1041,7 +1041,7 @@ void EESMEffect::Execute(bool inIsCinematic)
                 EEPlayer* thePlayer = gWorld.GetPlayer(thePlayers[i]);
                 if (thePlayer != NULL) {
                     if (this->mIsAddTechnology) {
-                        if (this->mTechnology < kTechEpochAll) {
+                        if (this->mTechnology < EEEpochCount()) {
                             if (thePlayer->GetTechTree()->mEndEpoch < this->mTechnology)
                                 thePlayer->GetTechTree()->ResetEpochRange(thePlayer->GetTechTree()->mStartEpoch, this->mTechnology);
                             thePlayer->GetTechTree()->Get(this->mTechnology)->MakeAvailable();
@@ -1049,7 +1049,7 @@ void EESMEffect::Execute(bool inIsCinematic)
                             EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(this->mTechnology);
                             theNode->MakeAvailable();
                             theNode->mEpoch = 0;
-                            theNode->mObsoleteEpoch = kTechEpochAll;
+                            theNode->mObsoleteEpoch = EEEpochCount();
                             theNode->SetScenEditorObsoleted(false, false);
                             theNode->SetObsolete(false, false);
                             if (theNode->NeedsUnitMedia() == true && !theNode->mIsUnitMediaLoaded) {

@@ -204,7 +204,7 @@ long EECPResearchManager::Load(unsigned long inMajorVersion, unsigned long inMin
         }
     }
     if (theResult == kErrorOK) {
-        for (i = 0; i < 15 && theResult == kErrorOK; i++) {
+        for (i = 0; i < EEEpochCount() && theResult == kErrorOK; i++) {
             if (inMajorVersion == 0 && inMinorVersion < 0xea && i == 14)
                 continue;
             theResult = inFile.Read(theCount);
@@ -235,7 +235,7 @@ long EECPResearchManager::Load(unsigned long inMajorVersion, unsigned long inMin
 bool EECPResearchManager::HasLaterEpochIDs()
 {
     bool theResult = false;
-    for (long i = this->mEpoch + 1; i < 15 && !theResult; i++) {
+    for (long i = this->mEpoch + 1; i < EEEpochCount() && !theResult; i++) {
         if (this->mEpochIDs[i].size() > 0)
             theResult = true;
     }
@@ -275,12 +275,12 @@ void EECPResearchManager::Research(long inID)
         if (!theDone)
             return;
     }
-    long theEpoch = (inID >= kTechEpochPrehistoric && inID < kTechEpochAll) ? inID - 1 : inID / 1000 - 1;
-    if (inID >= kTechEpochPrehistoric && inID < kTechEpochAll)
+    long theEpoch = EEIsEpochID(inID) ? inID - 1 : EETechTreeEpochOf(inID);
+    if (EEIsEpochID(inID))
         this->mEpochIDs[theEpoch].insert(this->mEpochIDs[theEpoch].begin(), inID);
     else
         this->mEpochIDs[theEpoch].push_back(inID);
-    if (inID < kTechEpochPrehistoric || inID >= kTechEpochAll)
+    if (!EEIsEpochID(inID))
         this->mManager->mResourceManager->AddCosts(theNode, 1);
 }
 
@@ -351,7 +351,7 @@ void EECPResearchManager::ResearchCheapest(unsigned long inCount)
     if (theEntries.empty()) {
         EETechTreeEpoch* theEpoch = NULL;
         long theNext = this->mTechTree->mCurrentEpoch + 1;
-        if (theNext >= 0 && theNext < 15)
+        if (theNext >= 0 && theNext < EEEpochCount())
             theEpoch = &this->mTechTree->mEpochs[theNext];
         // in the last epoch there is no next one to credit
         for (unsigned long n = 0; theEpoch != NULL && n < inCount; n++)
@@ -440,7 +440,7 @@ bool EECPResearchManager::TryResearch(long inID)
                     continue;
                 long theCount = theUnits->size();
                 if (theCount == 0) {
-                    if (inID >= kTechEpochPrehistoric && inID < kTechEpochAll) {
+                    if (EEIsEpochID(inID)) {
                         this->mManager->mAdvancingEpoch = false;
                         this->mManager->mScheduleEpochAdvance = true;
                     } else if (gUnitClassTable[theClass]->IsLandBuilding())
@@ -455,7 +455,7 @@ bool EECPResearchManager::TryResearch(long inID)
                             if (((theUnit->mCommand ? theUnit->mCommand->mType : 0) == kActionIdle
                                  || (theUnit->mCommand ? theUnit->mCommand->mType : 0) == kActionWaitForGarrisonCost)
                                 && theUnit->mIsBuilt) {
-                                theUnit->QueueResearch(inID, inID >= kTechEpochPrehistoric && inID < kTechEpochAll);
+                                theUnit->QueueResearch(inID, EEIsEpochID(inID));
                                 theResult = true;
                             }
                             ++theIterator;
@@ -463,7 +463,7 @@ bool EECPResearchManager::TryResearch(long inID)
                     } else {
                         EEComplexUnit* theUnit = *theIterator;
                         if (theUnit->mIsBuilt) {
-                            theUnit->QueueResearch(inID, inID >= kTechEpochPrehistoric && inID < kTechEpochAll);
+                            theUnit->QueueResearch(inID, EEIsEpochID(inID));
                             theResult = true;
                         }
                     }
@@ -490,7 +490,7 @@ long EECPResearchManager::Save(unsigned long inMajorVersion, unsigned long inMin
             theResult = outFile.Write(this->mCandidates[i]);
     }
     if (theResult == kErrorOK) {
-        for (unsigned long j = 0; j < 15 && theResult == kErrorOK; j++) {
+        for (unsigned long j = 0; j < EEEpochCount() && theResult == kErrorOK; j++) {
             theCount = this->mEpochIDs[j].size();
             theResult = outFile.Write(theCount);
             if (theResult == kErrorOK) {
@@ -524,7 +524,7 @@ void EECPResearchManager::SetNextRandomResearchTime(unsigned long inTime)
 // SOL count
 void EECPResearchManager::EpochReached(long inEpoch)
 {
-    if (!(inEpoch >= kTechEpochPrehistoric) || !(inEpoch < kTechEpochAll))
+    if (!EEIsEpochID(inEpoch))
         return;
     if (!gLoadingSavedGame) {
         EECPCivilizationManager* theManager = this->mManager;
@@ -549,7 +549,7 @@ bool EECPResearchManager::IsWanted(long inID)
     for (unsigned long i = 0; i < theNode->GetNumUnitClasses() && !theResult; i++) {
         long theClass = theNode->GetUnitClass(i);
         EETechTreeNode* theOther = theTree->Get(gUnitClassTable[theClass] ? gUnitClassTable[theClass]->mTechnology : 100000);
-        if (theOther != NULL && (theOther->mData->mID < kTechEpochPrehistoric || theOther->mData->mID >= kTechEpochAll) && theClass != kUnitTypeCitizen
+        if (theOther != NULL && (!EEIsEpochID(theOther->mData->mID)) && theClass != kUnitTypeCitizen
             && theClass != kUnitTypeFemaleCitizen)
             theResult = true;
         else

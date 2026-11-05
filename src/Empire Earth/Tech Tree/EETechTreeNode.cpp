@@ -260,7 +260,7 @@ long EETechTreeNode::Load(FSFile& inFile, EETechTree* inTree)
     }
     if (this->mData->mObsoletedByDefault == true)
         this->mScenEditorObsoleted = true;
-    this->mEpoch = (this->mData->mID >= kTechEpochPrehistoric && this->mData->mID < kTechEpochAll) ? this->mData->mID : this->mData->mID / 1000 - 1;
+    this->mEpoch = EETechTreeEpochOf(this->mData->mID);   // a node's: set by its epoch's Load (the block holding it)
     this->mButton = EEButtonObject::Get(theRecord.mButton);
     this->mPrerequisiteFlags = 0;
     if (this->mData->mPrerequisite1 == 0)
@@ -420,7 +420,7 @@ void EETechTreeNode::SetPrerequisite(long inID)
 {
     if (this->mIsAvailable || this->mIsObsolete)
         return;
-    if (inID >= kTechEpochPrehistoric && inID < kTechEpochAll)
+    if (EEIsEpochID(inID))
         this->mPrerequisiteFlags |= kPrerequisiteEpoch;
     else if (inID == this->mData->mPrerequisite1)
         this->mPrerequisiteFlags |= kPrerequisitePrerequisite1;

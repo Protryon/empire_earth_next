@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <memory>
 #include "lle/GEColor.h"
 #include "ee/EECivilization.h"          // held by value (+0x468)
 #include "ee/EEResourceType.h"
@@ -320,7 +321,7 @@ struct RTSTechTreeNodeData {
     unsigned long GetCalamity() const { return this->mCalamity; }
     unsigned long mCalamity;                // +0x44 (a calamity's EECalamityEnum: the cast-calamity goal; unsigned: StartCalamity 0x66662d `jbe`)
     long mKind;                             // +0x48 the kind (3, 4, 5; the logic bomb's 4)
-    long mID;                               // +0x4c the node's id (< 15: an epoch; else epoch = id / 1000 - 1)
+    long mID;                               // +0x4c the node's id (an epoch: its position; else >= 1000, EETechTreeEpochOf)
     long mResearchedEvent;                  // +0x50 EEEvent id run when it is researched (Virtual14/1C load/unload it)
     long mObsoleteEvent;                    // +0x54 EEEvent id run when it becomes obsolete
     long mBuildTime;                        // +0x58 (Virtual10)
@@ -468,20 +469,38 @@ public:
     long mCurrentSOL;                       // +0x48
     long mNextEpoch;                        // +0x4c
     bool mIsCountingSOL;                    // +0x50
+    long mTitleID;                          // the title string (epochs.yaml; 0 in the original's data: 30145 + epoch)
 };
 
 #include "ee/EETechTreeTechID.h"   // EETechTreeTechID (own header: ee/EETechTreeTechID.h)
+
+// A tree's epochs, one per epoch of the tech tree file (the original: a member array of 15). The epochs stay where
+// they are made (a vector of owners), and mEpochs[i] reads as before.
+class EETechTreeEpochList {
+public:
+    EETechTreeEpoch& operator[](long inIndex) { return *this->mItems[inIndex]; }
+    const EETechTreeEpoch& operator[](long inIndex) const { return *this->mItems[inIndex]; }
+    long size() const { return (long)this->mItems.size(); }
+    void Resize(long inCount)
+    {
+        while (this->size() < inCount)
+            this->mItems.emplace_back(new EETechTreeEpoch);
+    }
+
+private:
+    std::vector<std::unique_ptr<EETechTreeEpoch>> mItems;
+};
 
 class EETechTree : public RTSTechTree {
 public:
     EETechTree();                           // 0x1cbcc2
     virtual ~EETechTree();                  // +0x00 0x1cbd99 (??_G 0x1cbd7d)
     // inline in the real header (the COMDAT 0x18a4 sits in EEABuild.cpp, its first user; every caller calls it
-    // out of line). Ids below 15 are epochs, the rest divide by 1000.
+    // out of line). An epoch's id is its position; a node is found in its epoch (EETechTreeEpochOf).
     EETechTreeNode* Get(long inID)
     {
-        long theEpoch = (inID >= kTechEpochPrehistoric && inID < kTechEpochAll) ? inID : inID / 1000 - 1;
-        if ((unsigned long)theEpoch < kTechEpochAll)
+        long theEpoch = EETechTreeEpochOf(inID);
+        if (theEpoch >= 0 && theEpoch < this->mEpochs.size())
             return this->mEpochs[theEpoch].Get(inID);
         return NULL;
     }
@@ -490,7 +509,7 @@ public:
     // 0x5aa0d1, 0x59721b): the tech's node data. Provisional name.
     RTSTechTreeNodeData* GetData(long inID) { return this->Get(inID)->mData; }
     bool GetTechIDState(long inTechID, bool& outIsResearched, bool& outIsObsolete, bool& outScenEditorObsoleted);   // 0x1cbc87 (the asserts name it)
-    long Load(FSFile& inFile);              // 0x1cbdf0 (the database)
+    long Load(FSFileSpec& inFile);          // 0x1cbdf0 (the database: every epoch block of the file)
     static void BuildUnitClassInfo();       // 0x1cbe4a (gTechTree's events by unit class)
     void UnloadAll();                       // 0x1cc282
     void ApplySavedResearch();              // 0x1cc29a
@@ -538,7 +557,7 @@ public:
     static const UString sEndEpoch;         // "EETechTree-EndEpoch"
 
     // Layout (from the ctor 0x1cbcc2; provisional names)
-    EETechTreeEpoch mEpochs[15];            // +0x008 (the ids below 15)
+    EETechTreeEpochList mEpochs;            // +0x008 one per epoch (the original: 15, the ids below 15)
     std::vector<long> mResearchedIDs;       // +0x4f4
     std::vector<long> mObsoleteIDs;         // +0x504
     std::vector<long> mScenEditorObsoletedIDs;  // +0x514

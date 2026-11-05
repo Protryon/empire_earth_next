@@ -726,7 +726,7 @@ long EEGamePreferences::LoadGameOptions()
     if (theResult == 0) {
         this->mSettings.mGameOptions.mEpochEnd = theValue;
     } else {
-        theValue = this->mSettings.mGameOptions.mEpochEnd = kTechEpochSpace;
+        theValue = this->mSettings.mGameOptions.mEpochEnd = EEEpochCount() - 1;
         this->mConfig.SetValue(kEEGameOptionsSection, "Ending Epoch", theValue);
     }
     theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Game Unit Limit", theValue);

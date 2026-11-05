@@ -187,8 +187,8 @@ EEGameOptions::EEGameOptions()
     this->mLoadType = 0;
     this->mResources = 0;
     this->mVariant = 0;
-    this->mEpochStart = kTechEpochAll;
-    this->mEpochEnd = kTechEpochSpace;
+    this->mEpochStart = EEEpochCount();
+    this->mEpochEnd = EEEpochCount() - 1;
     this->mMapType = gU4E5B98;
     this->mCampaignName = gU4E5B98;
     this->mScenarioName = gU4E5B98;
@@ -245,11 +245,11 @@ EEGameOptions& EEGameOptions::operator=(const EEGameOptions& inOther)
         this->mVariant = inOther.mVariant;
     else
         this->mVariant = 0;
-    if (inOther.mEpochStart <= kTechEpochAll)
+    if (inOther.mEpochStart <= EEEpochCount())
         this->mEpochStart = inOther.mEpochStart;
     else
         this->mEpochStart = 0;
-    if (inOther.mEpochEnd < kTechEpochAll && (inOther.mEpochStart == kTechEpochAll || inOther.mEpochEnd >= inOther.mEpochStart))
+    if (inOther.mEpochEnd < EEEpochCount() && (inOther.mEpochStart == EEEpochCount() || inOther.mEpochEnd >= inOther.mEpochStart))
         this->mEpochEnd = inOther.mEpochEnd;
     else
         this->mEpochEnd = this->mEpochStart;
@@ -365,8 +365,8 @@ void EEGameOptions::SetDefaults()
     this->mLoadType = 0;
     this->mResources = EEGetNumberOfResourceLevels() - 1;
     this->mVariant = 0;
-    this->mEpochStart = kTechEpochAll;
-    this->mEpochEnd = kTechEpochSpace;
+    this->mEpochStart = EEEpochCount();
+    this->mEpochEnd = EEEpochCount() - 1;
     this->mMapType = EERMGetNumberOfGenerators() > 0 ? EERMGetGeneratorName(0) : UWideString(gU4E5B98);
     this->mCampaignName = gU4E5B98;
     this->mScenarioName = gU4E5B98;

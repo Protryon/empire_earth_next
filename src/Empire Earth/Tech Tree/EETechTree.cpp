@@ -107,12 +107,39 @@ bool EETechTree::GetTechIDState(long inTechID, bool& outIsResearched, bool& outI
     return theResult;
 }
 
+long gEpochCount = 15;
+// the epoch of each node id: the block gTechTree loaded it in
+static std::map<long, long> sNodeEpochs;
+
+long EETechTreeEpochOf(long inID)
+{
+    if (EEIsEpochID(inID))
+        return inID;
+    std::map<long, long>::const_iterator it = sNodeEpochs.find(inID);
+    return it != sNodeEpochs.end() ? it->second : -1;
+}
+
+void EERegisterTechNode(long inID, long inEpoch)
+{
+    sNodeEpochs[inID] = inEpoch;
+}
+
+long EEEpochTitleID(long inEpoch)
+{
+    if (EEIsEpochID(inEpoch) && inEpoch < gTechTree.mEpochs.size() && gTechTree.mEpochs[inEpoch].mTitleID != 0)
+        return gTechTree.mEpochs[inEpoch].mTitleID;
+    if (inEpoch == EEEpochCount())   // the game options' random start epoch
+        return IDS_RANDOM_EPOCH;
+    return IDS_EPOCH_NAME_FIRST + inEpoch;
+}
+
 // FUNCTION: EXE 0x5cbcc2
-// Creates an empty tech tree spanning the prehistoric to the space epoch
+// Creates an empty tech tree spanning every epoch
 EETechTree::EETechTree()
-    : mPlayer(NULL), mCurrentEpoch(kTechEpochPrehistoric), mStartEpoch(kTechEpochPrehistoric), mEndEpoch(kTechEpochSpace), mMediaID(0), mEpochNameID(IDS_PREHISTORIC_AGE), mIsLoaded(false)
+    : mPlayer(NULL), mCurrentEpoch(kTechEpochPrehistoric), mStartEpoch(kTechEpochPrehistoric), mEndEpoch(gEpochCount - 1), mMediaID(0), mEpochNameID(IDS_PREHISTORIC_AGE), mIsLoaded(false)
 {
     this->mEpochsBeforeWonders = 1;
+    this->mEpochs.Resize(gEpochCount);
 }
 
 // SYNTHETIC: EXE 0x5cbd7d
@@ -125,16 +152,26 @@ EETechTree::~EETechTree()
 }
 
 // FUNCTION: EXE 0x5cbdf0
-// Reads the fifteen epochs' nodes from the tech tree file and resets the epoch range to all epochs
-long EETechTree::Load(FSFile& inFile)
+// Reads every epoch block of the tech tree file (the original: exactly 15), sets the epoch count, and resets the
+// epoch range to all epochs
+long EETechTree::Load(FSFileSpec& inFile)
 {
-    long theResult;
+    long theResult = kErrorOK;
     inFile.Open(kFileAccessRead);
-    for (long i = 0; i < 15; i++)
-        theResult = this->mEpochs[i].Load(inFile, this);
+    unsigned long theLength = 0;
+    inFile.GetLength(theLength);
+    long thePosition = 0;
+    long theCount = 0;
+    sNodeEpochs.clear();
+    while (theResult == kErrorOK && inFile.GetPosition(thePosition) == kErrorOK && (unsigned long)thePosition < theLength) {
+        this->mEpochs.Resize(theCount + 1);
+        theResult = this->mEpochs[theCount].Load(inFile, this);
+        theCount++;
+    }
+    gEpochCount = theCount;
     this->mStartEpoch = kTechEpochPrehistoric;
     this->mIsLoaded = false;
-    this->mEndEpoch = kTechEpochSpace;
+    this->mEndEpoch = theCount - 1;
     inFile.Close();
     return theResult;
 }
@@ -145,7 +182,7 @@ long EETechTree::Load(FSFile& inFile)
 void EETechTree::BuildUnitClassInfo()
 {
     std::vector<long> theIDs;
-    for (long theEpoch = 0; theEpoch < 15; theEpoch++) {
+    for (long theEpoch = 0; theEpoch < EEEpochCount(); theEpoch++) {
         theIDs.clear();
         gTechTree.GetEpochNodeIDs(theEpoch, theIDs);
         theIDs.push_back(theEpoch);
@@ -207,7 +244,7 @@ void EETechTree::BuildUnitClassInfo()
 // Unloads every epoch's media
 void EETechTree::UnloadAll()
 {
-    for (long i = 0; i < 15; i++) {
+    for (long i = 0; i < this->mEpochs.size(); i++) {
         this->mEpochs[i].Unload();
     }
 }
@@ -266,7 +303,7 @@ void EETechTree::ApplySavedScenEditorObsoleted()
 // Collects the ids of every node of every epoch
 void EETechTree::GetNodeIDs(std::vector<long>& outIDs)
 {
-    for (long i = 0; i < 15; i++) {
+    for (long i = 0; i < this->mEpochs.size(); i++) {
         this->GetEpochNodeIDs(i, outIDs);
     }
 }
@@ -275,7 +312,7 @@ void EETechTree::GetNodeIDs(std::vector<long>& outIDs)
 // Collects the node ids of one epoch
 void EETechTree::GetEpochNodeIDs(long inEpoch, std::vector<long>& outIDs)
 {
-    if (inEpoch >= kTechEpochPrehistoric && inEpoch < kTechEpochAll) {
+    if (inEpoch >= kTechEpochPrehistoric && inEpoch < this->mEpochs.size()) {
         this->mEpochs[inEpoch].GetNodeIDs(outIDs);
     }
 }
@@ -290,8 +327,8 @@ void EETechTree::GetChecksum(ESChecksum& ioChecksum)
     bool theCurrentNodeIsResearched = false;
     bool theScenEditorObsoleted = false;
     this->GetNodeIDs(theIDs);
-    long theWeight = 15;
-    for (long i = 0; i < 15; i++) {
+    long theWeight = 15;   // the original's start weight (its epoch count; kept: the checksum's values)
+    for (long i = 0; i < this->mEpochs.size(); i++) {
         long theID = this->mEpochs[i].mData->mID;
         theIDs.push_back(theID);
     }
@@ -441,10 +478,10 @@ void EETechTree::ApplySavedState(bool inApplyObsoleted, bool inApplyResearch)
     if (inApplyResearch)
         this->ApplySavedResearch();
     for (std::vector<EETileCoordinate>::iterator theEntry = this->mSavedSOLs.begin(); theEntry != this->mSavedSOLs.end(); theEntry++) {
-        if (theEntry->mX >= 0 && theEntry->mX < 15)
+        if (theEntry->mX >= 0 && theEntry->mX < this->mEpochs.size())
             this->mEpochs[theEntry->mX].mCurrentSOL = theEntry->mY;
     }
-    for (long i = 0; i < 15; i++) {
+    for (long i = 0; i < this->mEpochs.size(); i++) {
         this->mEpochs[i].UpdateAvailability();
         this->mEpochs[i].mIsCountingSOL = true;
     }
@@ -472,7 +509,7 @@ long EETechTree::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
         theResult = inFile.Read(this->mEpochsBeforeWonders);
         if (theResult == kErrorOK) {
             this->mIsLoaded = true;
-            ESVERIFY_AT(theNumEpochs <= keettidEpochAll, 926);
+            ESVERIFY_AT(theNumEpochs <= this->mEpochs.size(), 926);
             theResult = inFile.Read(theNumTechIDs);
             if (theResult == kErrorOK) {
                 for (long i = 0; i < theNumTechIDs; i++) {
@@ -492,10 +529,10 @@ long EETechTree::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
                     if (theResult == kErrorOK)
                         theResult = inFile.Read(this->mEndEpoch);
                 }
-                long theEpochs = 15;
+                long theEpochs = theNumEpochs;   // the saved tree's epochs (the original: 15)
                 if (inMajorVersion == 0 && inMinorVersion < 0xea)
                     theEpochs = 14;
-                for (theEpoch = 0; theEpoch < theEpochs; theEpoch++)
+                for (theEpoch = 0; theEpoch < theEpochs && theEpoch < this->mEpochs.size(); theEpoch++)
                     this->mEpochs[theEpoch].Load(inMajorVersion, inMinorVersion, inFile);
                 for (theEpoch = this->mCurrentEpoch; theEpoch >= 0; theEpoch--)
                     this->mResearchedIDs.insert(this->mResearchedIDs.begin(), theEpoch);
@@ -523,8 +560,8 @@ void EETechTree::OnResearched(long inID, EEComplexUnit* inUnit)
 // Makes a tech or epoch obsolete in its epoch
 void EETechTree::MakeObsolete(long inID)
 {
-    long theEpoch = (inID >= kTechEpochPrehistoric && inID < kTechEpochAll) ? inID : inID / 1000 - 1;
-    if (theEpoch >= kTechEpochPrehistoric && theEpoch < kTechEpochAll) {
+    long theEpoch = EETechTreeEpochOf(inID);
+    if (theEpoch >= kTechEpochPrehistoric && theEpoch < this->mEpochs.size()) {
         this->mEpochs[theEpoch].MakeObsolete(inID);
     }
 }
@@ -542,8 +579,8 @@ void EETechTree::ObsoleteOutdatedNodes()
 // Sets a prerequisite of a tech in its epoch
 void EETechTree::SetPrerequisite(long inID, long inPrerequisite)
 {
-    long theEpoch = (inID >= kTechEpochPrehistoric && inID < kTechEpochAll) ? inID : inID / 1000 - 1;
-    if (theEpoch >= kTechEpochPrehistoric && theEpoch < kTechEpochAll) {
+    long theEpoch = EETechTreeEpochOf(inID);
+    if (theEpoch >= kTechEpochPrehistoric && theEpoch < this->mEpochs.size()) {
         this->mEpochs[theEpoch].SetPrerequisite(inID, inPrerequisite);
     }
 }
@@ -574,18 +611,18 @@ void EETechTree::AddScenEditorObsoletedID(long inID)
 // updates statistics series 0xc
 void EETechTree::Research(long inID, EEComplexUnit* inUnit)
 {
-    long theEpoch = (inID >= kTechEpochPrehistoric && inID < kTechEpochAll) ? inID : inID / 1000 - 1;
+    long theEpoch = EETechTreeEpochOf(inID);
     long theNextEpoch = this->mCurrentEpoch + 1;
-    if (!(theEpoch >= kTechEpochPrehistoric) || !(theEpoch < kTechEpochAll))
+    if (!(theEpoch >= kTechEpochPrehistoric) || !(theEpoch < this->mEpochs.size()))
         return;
     long theResult = this->mEpochs[theEpoch].Research(inID, inUnit);
     if (theResult != 2 && theResult != 0)
         return;
-    if (inID >= kTechEpochPrehistoric && inID < kTechEpochAll) {
+    if (EEIsEpochID(inID)) {
         this->mPlayer->mSavedGroups.Reset(0xc, 1);
     } else {
         EETechTreeNode* theNode = this->Get(inID);
-        if (theNode != NULL && theNode->mData->mCountsTowardEpoch && theNextEpoch >= 0 && theNextEpoch < 15)
+        if (theNode != NULL && theNode->mData->mCountsTowardEpoch && theNextEpoch >= 0 && theNextEpoch < this->mEpochs.size())
             this->mEpochs[theNextEpoch].AddSOL();
     }
 }
@@ -596,13 +633,13 @@ void EETechTree::Research(long inID, EEComplexUnit* inUnit)
 void EETechTree::ResearchToEpoch(long inEpoch)
 {
     gEventsEnabled = false;
-    if (inEpoch >= kTechEpochPrehistoric && inEpoch < kTechEpochAll) {
+    if (inEpoch >= kTechEpochPrehistoric && inEpoch < this->mEpochs.size()) {
         if (inEpoch != kTechEpochPrehistoric) {
             if (inEpoch > kTechEpochPrehistoric) {
                 for (long i = 0; i < inEpoch; i++) {
                     this->mEpochs[i].Unlock();
                     this->mEpochs[i].ResearchAll(false);
-                    if (i + 1 == inEpoch && i + 1 < 15) {
+                    if (i + 1 == inEpoch && i + 1 < this->mEpochs.size()) {
                         this->mEpochs[i + 1].Unlock();
                         this->mEpochs[i + 1].ResearchSelf();
                     }
@@ -614,7 +651,7 @@ void EETechTree::ResearchToEpoch(long inEpoch)
         }
         this->mEpochs[inEpoch].ResearchKind(7, true);
         if (gWorld.mPlayers[this->mPlayerIndex] == gWorld.GetCurrentPlayer()) {
-            this->mEpochNameID = this->mEpochs[inEpoch].mData->mID + 30145;
+            this->mEpochNameID = EEEpochTitleID(this->mEpochs[inEpoch].mData->mID);
             gUserInterface->PostShowEpochName();
             if (gUIManager->mMainGameForm != NULL)
                 gUIManager->mMainGameForm->mRefreshGroup = true;
@@ -634,14 +671,14 @@ long EETechTree::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     bool theCurrentNodeIsObsolete = false;
     bool theScenEditorObsoleted = false;
     long theCurrentTechID = 0;
-    long theNumEpochs = 15;
+    long theNumEpochs = this->mEpochs.size();
     std::vector<long>::iterator theIterator;
     long theResult = outFile.Write(theNumEpochs);
     if (theResult == 0) {
         theResult = outFile.Write(this->mEpochsBeforeWonders);
         if (theResult == 0) {
             this->GetNodeIDs(theIDs);
-            for (long i = 0; i < 15; i++) {
+            for (long i = 0; i < this->mEpochs.size(); i++) {
                 theCurrentTechID = this->mEpochs[i].mData->mID;
                 theIDs.push_back(theCurrentTechID);
             }
@@ -649,7 +686,7 @@ long EETechTree::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
             while (theIterator != theIDs.end()) {
                 ESVERIFY_AT(this->GetTechIDState(*theIterator, theCurrentNodeIsResearched, theCurrentNodeIsObsolete,theScenEditorObsoleted), 1319);
                 if ((!theCurrentNodeIsResearched
-                        || ((*theIterator >= 0 && *theIterator < 15) ? *theIterator : *theIterator / 1000 - 1)
+                        || EETechTreeEpochOf(*theIterator)
                             < this->mStartEpoch)
                     && !theCurrentNodeIsObsolete && !theScenEditorObsoleted)
                     theIterator = theIDs.erase(theIterator);
@@ -686,7 +723,7 @@ long EETechTree::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
         }
     }
 
-    for (theCurrentTechID = 0; theCurrentTechID < 15; theCurrentTechID++) {
+    for (theCurrentTechID = 0; theCurrentTechID < this->mEpochs.size(); theCurrentTechID++) {
         theResult = this->mEpochs[theCurrentTechID].Save(inMajorVersion, inMinorVersion, outFile);
         ESVERIFY_AT(theResult == keseOK, 1381);
     }
@@ -697,7 +734,7 @@ long EETechTree::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
 // Moves the tree forward to an epoch (never back), recording it in statistics series 0xc and researching up to it
 void EETechTree::SetEpoch(long inEpoch)
 {
-    if (!(inEpoch >= kTechEpochPrehistoric) || !(inEpoch < kTechEpochAll) || !(inEpoch >= this->mCurrentEpoch))
+    if (!(inEpoch >= kTechEpochPrehistoric) || !(inEpoch < this->mEpochs.size()) || !(inEpoch >= this->mCurrentEpoch))
         return;
     this->mCurrentEpoch = inEpoch;
     if (inEpoch != kTechEpochPrehistoric)
@@ -751,7 +788,7 @@ void EETechTree::UpdateInterface(bool inEpochChanged)
     if (theCurrentPlayer == NULL || this->mPlayerIndex != theCurrentPlayer->mPlayerID)
         return;
     if (inEpochChanged) {
-        this->mEpochNameID = this->mCurrentEpoch + 30145;
+        this->mEpochNameID = EEEpochTitleID(this->mCurrentEpoch);
         gUserInterface->PostShowEpochName();
     }
     if (gUIManager->mMainGameForm != NULL)
@@ -767,7 +804,8 @@ EETechTree& EETechTree::operator=(const EETechTree& inOther)
     this->mEndEpoch = inOther.mEndEpoch;
     this->mPlayerIndex = inOther.mPlayerIndex;
     this->mPlayer = inOther.mPlayer;
-    for (long i = 0; i < 15; i++) {
+    this->mEpochs.Resize(inOther.mEpochs.size());
+    for (long i = 0; i < inOther.mEpochs.size(); i++) {
         this->mEpochs[i].mTree = this;
         this->mEpochs[i] = inOther.mEpochs[i];
     }

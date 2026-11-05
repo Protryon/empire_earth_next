@@ -46,7 +46,7 @@ public:
     static const UString sData;             // "EECPResearchManager-Data" (guarded chain 0x89fc4)
 
     std::vector<long> mCandidates;          // +0x004
-    std::vector<long> mEpochIDs[15];        // +0x014 per epoch (the ctor's 15-step loop)
+    EEEpochArray<std::vector<long>> mEpochIDs;   // +0x014 per epoch (the original: 15)
     std::vector<EECPRMHistoryEntry> mHistory;   // +0x104
     EECPCivilizationManager* mManager;      // +0x114
     EEComputerPlayer* mPlayer;              // +0x118 (mManager->mPlayer)
