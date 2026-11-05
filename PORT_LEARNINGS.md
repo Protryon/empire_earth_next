@@ -411,6 +411,19 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
 - The harness used to switch music off (DirectMusic needed a real device); with music on the null device it now
   plays in every session (Honor.sgt with its style and DLS bank, peaks 0.14-0.26).
 
+## Bink -> pl_mpeg (the movies)
+
+- Bink has no permissive decoder; converting the movies once (ffmpeg, outside the game) to MPEG-1/MP2 keeps every
+  line of decoder code in the binary MIT. MPEG-1 allows only standard frame rates (23.976..60): Bink's usual 15 fps
+  must be resampled (`-r 30`), or the encoder refuses to open.
+- The game finds movies through its data path by their `.bik` names before it creates a player, so the converted
+  file lives next to the original rather than replacing it.
+- pl_mpeg's `plm_decode(elapsed)` with video and audio callbacks does the A/V pacing; the sound waits in a small ring
+  that the mixer's device thread pulls with linear resampling (44.1 kHz movie audio into a 48 kHz device). The
+  player clears the mixer's movie source before it frees anything.
+- pl_mpeg.h names `FILE` before including `<stdio.h>`: include it first.
+- With movies on pl_mpeg nothing uses DirectSound, and the exe's imports are Windows system DLLs only.
+
 ## For WONAPI/WONLobby later
 
 The WON library is carved or stubbed (`won` class in the stub report) in both builds. When its source arrives, expect

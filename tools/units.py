@@ -19,13 +19,13 @@ TARGET_MODULES = {"exe": ["exe", "exeimg", "lle", "jpeg", "tcp", "mixer", "defau
 PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own (none since the VC6 build's inline-asm _ftol went: clang never calls it)
 EXTRA_UNITS = {}
-LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c",
+LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c", "pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
              "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c"}
 # dmusic (DirectMusic reimplementation, src/ThirdParty/dmusic): every source but the POSIX thread shim
 _DMUSIC = sorted(p for p in (ROOT / "src" / "ThirdParty" / "dmusic").rglob("*.c") if p.name != "Thread.Posix.c")
 LIB_UNITS.update({"dmusic-" + p.relative_to(ROOT / "src" / "ThirdParty" / "dmusic").with_suffix("").as_posix()
                   .replace("/", "-"): p.relative_to(ROOT / "src").as_posix() for p in _DMUSIC})
-LIB_MEMBERS = {"mixer": ["miniaudio"], "lle": ["implode", "explode"] + sorted(
+LIB_MEMBERS = {"mixer": ["miniaudio"], "dx7hrtnl": ["pl_mpeg"], "lle": ["implode", "explode"] + sorted(
     n for n in LIB_UNITS if n.startswith("dmusic-"))}
 LANGUAGE_RC = pathlib.PurePosixPath("Empire Earth/Language/Language.rc")
 EXE_RC = ROOT / "src" / "Empire Earth" / "EE-AOC.rc"

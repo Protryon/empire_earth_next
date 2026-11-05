@@ -162,13 +162,3 @@ SetBkMode	462
 GetStockObject	351
 GetTextExtentPoint32A	366
 SetBkColor	461
-[binkw32.dll]
-_BinkCopyToBuffer@28	17
-_BinkDDSurfaceType@4	18
-_BinkDoFrame@4	19
-_BinkWait@4	52
-_BinkOpen@8	33
-_BinkSetSoundSystem@8	48
-_BinkOpenDirectSound@4	34
-_BinkClose@4	15
-_BinkNextFrame@4	32

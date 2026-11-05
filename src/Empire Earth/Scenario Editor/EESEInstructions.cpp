@@ -291,7 +291,7 @@ EESEInstructions::EESEInstructions(unsigned long& ioIndex, UIForm* inForm, GEFon
     inForm->AddControl(this->mMapComboBox, 7);
     ioIndex++;
     theLocation.SetX(437.0f);
-    this->mMovieComboBox = new EEUIFileComboBox(theMoviesPath, UString("*") + ".bik", 0x44f, 1, std::vector<UWideString>(), inFont,
+    this->mMovieComboBox = new EEUIFileComboBox(theMoviesPath, UString("*") + ".mpg", 0x44f, 1, std::vector<UWideString>(), inFont,
                                 theLocation, 150, 400, inForm, ioIndex, 0, 2, true);
     theGEText = this->mMovieComboBox->GetGEText();
     theGEText->SetFgColor(GEColor(0.99607843f, 0.96862745f, 0.1254902f));

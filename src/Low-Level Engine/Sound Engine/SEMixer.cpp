@@ -50,6 +50,8 @@ SEMixer::SEMixer(PIMModule* inModule, GEWindow* inWindow)
     this->mGetOutputRate = (unsigned long (*)())inModule->GetEntry("SPIMGetOutputRate");
     this->mSetMusicSource = (void (*)(void (*)(void*, float*, unsigned long), void*))inModule->GetEntry(
         "SPIMSetMusicSource");
+    this->mSetMovieSource = (void (*)(void (*)(void*, float*, unsigned long), void*))inModule->GetEntry(
+        "SPIMSetMovieSource");
     this->InitializeMixer(inWindow);
     this->mConductor.SetMixer(this);
 }

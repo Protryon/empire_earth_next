@@ -1,11 +1,10 @@
 // Low-Level Engine\Sound Engine\Mixer\Mixer.cpp
 // The sound mixer plug-in (' snd'; the original was "Miles Sound System Mixer.dll", built on Miles 6). The game's
-// sample channels are mixed in software into one miniaudio playback device (WASAPI, DirectSound or waveOut, and a
+// sample channels, the music and a movie's sound are mixed in software into one miniaudio playback device (WASAPI, DirectSound or waveOut, and a
 // null device when the machine has no audio output). Samples are decoded whole when they are loaded (WAV, MP3,
 // FLAC through miniaudio's decoders) and shared, reference-counted, by a sample and its duplicates. The SPIM entry
 // points and their result codes are the original plug-in's.
 #include <windows.h>
-#include <dsound.h>
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -68,10 +67,11 @@ static HWND gWindowHandle;
 static bool gActive;
 static ma_context gContext;
 static ma_device gDevice;
-static LPDIRECTSOUND gDirectSound;          // for the Bink player until it is replaced
-// the music (the conductor's renderer): adds interleaved stereo float frames at the device rate
+// the music (the conductor's renderer) and a movie's sound: each adds interleaved stereo float frames at the device rate
 static void (*gMusicSource)(void* inContext, float* outFrames, unsigned long inCount);
 static void* gMusicContext;
+static void (*gMovieSource)(void* inContext, float* outFrames, unsigned long inCount);
+static void* gMovieContext;
 static std::vector<float> gMusicBuffer;
 static CRITICAL_SECTION gLock;              // the channels, between the game's threads and the device thread
 static struct LockInit {
@@ -151,12 +151,15 @@ static void MixerCallback(ma_device* inDevice, void* outFrames, const void* inIn
         }
     }
     // the effects take the master volume; the music has its own (the conductor's)
-    bool theMusic = gMusicSource != NULL;
+    bool theMusic = gMusicSource != NULL || gMovieSource != NULL;
     if (theMusic) {
         if (gMusicBuffer.size() < 2 * inCount)
             gMusicBuffer.resize(2 * inCount);
         memset(&gMusicBuffer[0], 0, 2 * inCount * sizeof(float));
-        gMusicSource(gMusicContext, &gMusicBuffer[0], inCount);
+        if (gMusicSource)
+            gMusicSource(gMusicContext, &gMusicBuffer[0], inCount);
+        if (gMovieSource)
+            gMovieSource(gMovieContext, &gMusicBuffer[0], inCount);
     }
     for (ma_uint32 i = 0; i < 2 * inCount; i++) {
         float v = theOut[i] * gVolume + (theMusic ? gMusicBuffer[i] : 0.0f);
@@ -258,12 +261,6 @@ extern "C" long SPIMActivateMixer()
     }
     if (!theOpen)
         return kSPIMNativeError;
-    // the Bink player still takes a DirectSound object from the mixer (optional)
-    if (DirectSoundCreate(NULL, &gDirectSound, NULL) == DS_OK &&
-        gDirectSound->SetCooperativeLevel(gWindowHandle ? gWindowHandle : GetDesktopWindow(), DSSCL_PRIORITY) != DS_OK) {
-        gDirectSound->Release();
-        gDirectSound = NULL;
-    }
     gMaximumChannelCount = kMaximumChannels;
     gActive = true;
     SPIMChannelInfo theInfo;
@@ -292,10 +289,6 @@ extern "C" long SPIMDeactivateMixer()
     SPIMDestroyChannels();
     ma_device_uninit(&gDevice);
     ma_context_uninit(&gContext);
-    if (gDirectSound) {
-        gDirectSound->Release();
-        gDirectSound = NULL;
-    }
     gMaximumChannelCount = 0;
     gActive = false;
     return kSPIMOK;
@@ -346,9 +339,10 @@ extern "C" float SPIMGetCPUUsage()
     return 0.0f;
 }
 
-extern "C" LPDIRECTSOUND SPIMGetDirectSoundInterface()
+// The original handed out Miles' DirectSound object (for DirectMusic and Bink); nothing uses DirectSound any more
+extern "C" void* SPIMGetDirectSoundInterface()
 {
-    return gDirectSound;
+    return NULL;
 }
 
 // The device's sample rate (0 while the mixer is not active): the music renders at it
@@ -363,6 +357,14 @@ extern "C" void SPIMSetMusicSource(void (*inSource)(void*, float*, unsigned long
     Guard theGuard;
     gMusicSource = inSource;
     gMusicContext = inContext;
+}
+
+// Sets (or clears, NULL) the movie's sound source the device thread mixes in
+extern "C" void SPIMSetMovieSource(void (*inSource)(void*, float*, unsigned long), void* inContext)
+{
+    Guard theGuard;
+    gMovieSource = inSource;
+    gMovieContext = inContext;
 }
 
 extern "C" long SPIMGetHighestTimerDelay()
@@ -638,6 +640,7 @@ static const PIMEntry sEntries[] = {
     PIM_ENTRY(SPIMProcessMessage),
     PIM_ENTRY(SPIMSetChannelSample),
     PIM_ENTRY(SPIMSetLatency),
+    PIM_ENTRY(SPIMSetMovieSource),
     PIM_ENTRY(SPIMSetMusicSource),
     PIM_ENTRY(SPIMSetSampleLooping),
     PIM_ENTRY(SPIMSetSampleOffset),

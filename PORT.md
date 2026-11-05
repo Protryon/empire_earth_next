@@ -82,17 +82,21 @@ crate can replace.
    waveOut, else the null device); samples are decoded whole on load (WAV/MP3/FLAC). miniaudio 0.11.21 is vendored
    (`include/miniaudio/`, options in `ee_miniaudio.h`, implementation `src/ThirdParty/miniaudio/miniaudio.c`).
    `Mss32.dll`, the Miles headers and `redist\win32` are gone, and so is the harness's silent mixer (the null device
-   serves). Still open: the mixer hands a DirectSound object to the Bink player (step 4).
+   serves).
 3. **Music: GothicKit/dmusic** (done). Vendored at `src/ThirdParty/dmusic` (MIT; commit b73b270, with two additions:
    `DmSegment_setRepeats`, `DmPerformance_setMasterGrooveLevel`; see its README). `SEConductor`/`SEScore` are
    rewritten on it with their public interface unchanged; the performance renders at the mixer's rate into its
    device thread (`SPIMGetOutputRate`, `SPIMSetMusicSource`). Not carried over: motifs (dmusic has none; the game
    never plays them), notifications (the game registers none), reverb (TinySoundFont has none), end-and-intro
    transitions (dmusic plays the end pattern). The DirectMusic COM code, its GUIDs and `dmusici.h` are gone.
-4. **Movies: pl_mpeg** (MIT, single header) decodes MPEG-1 video and MP2 audio; `DX7Movie` blits frames to its
-   DirectDraw surface and feeds audio to miniaudio. `tools/convert_movies.py` turns the retail `.bik` files
-   (Movies\, scenario cinematics) into `.mpg` with a user-installed ffmpeg; the game looks for `.mpg` first.
-   `binkw32.dll` goes.
+4. **Movies: pl_mpeg** (done). pl_mpeg (MIT, commit c871f2b) is vendored (`include/pl_mpeg/`,
+   `src/ThirdParty/pl_mpeg/pl_mpeg.c`). `DX7Movie` decodes on its thread at pl_mpeg's clock, converts frames into
+   the back buffer's pixel format, and its sound goes through a ring into the mixer (`SPIMSetMovieSource`,
+   resampled). A movie the game names `X.bik` plays from `X.mpg` beside it (keep the `.bik`: the game looks it up
+   first); `tools/convert_movies.py <game dir>` converts with a user-installed ffmpeg (MPEG-1 at 30 fps, MP2). The
+   scenario editor lists `.mpg` files. `binkw32.dll`, the Bink header and the mixer's DirectSound bridge are gone:
+   the exe imports only Windows system DLLs. Fixed on the way: a movie created with a rectangle ignored it (the
+   original reset the flag), and the playback thread started before its events existed.
 5. Then: DirectDraw/D3D7 and DirectInput (Microsoft system components, not in this pass), Winsock.
 
 Each step ends with the harness gates and a PORT_LEARNINGS.md entry.

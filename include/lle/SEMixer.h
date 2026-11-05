@@ -22,7 +22,6 @@ void SEShutdown(bool inForced);
 class LLE_API SEMixer {                     // proven sizeof 0x100
     friend long SEInitializeMixers(const FSFileSpec& inDirectory, GEWindow* inWindow);   // creates the mixers
     friend void SEShutdown(bool inForced);  // deletes them
-    friend class SEConductor;               // the music: GetOutputRate, SetMusicSource
     friend class SESample;
     friend class SESoundManager;
 public:
@@ -47,6 +46,13 @@ public:
     bool ProcessMessage(unsigned long inMessage, void* inParameter1, void* inParameter2)
         { return (*this->mProcessMessage)(inMessage, inParameter1, inParameter2); }
     static long UseMixer(SEMixer* inMixer);
+    // this port's additions: the mixer's output rate, and the music (the conductor) and movie sound sources its
+    // device thread mixes in (interleaved stereo float frames added at the output rate)
+    unsigned long GetOutputRate() const { return this->mGetOutputRate ? (*this->mGetOutputRate)() : 0; }
+    void SetMusicSource(void (*inSource)(void*, float*, unsigned long), void* inContext)
+        { if (this->mSetMusicSource) (*this->mSetMusicSource)(inSource, inContext); }
+    void SetMovieSource(void (*inSource)(void*, float*, unsigned long), void* inContext)
+        { if (this->mSetMovieSource) (*this->mSetMovieSource)(inSource, inContext); }
 private:
     long ActivateMixer() { return (*this->mActivateMixer)(); }
     long CreateChannels(unsigned long inCount, SEChannelDescription* outChannels)
@@ -59,7 +65,6 @@ private:
     unsigned long GetChannelCount() const { return (*this->mGetChannelCount)(); }
     unsigned long GetHighestTimerDelay() const { return (*this->mGetHighestTimerDelay)(); }
     unsigned long GetMaximumChannelCount() const { return (*this->mGetMaximumChannelCount)(); }
-    unsigned long GetOutputRate() const { return this->mGetOutputRate ? (*this->mGetOutputRate)() : 0; }
     long GetSamplePlayBackTime(SESample* inSample, long& outTotal, long& outRemaining)
         { return (*this->mGetSamplePlayBackTime)(inSample, &outTotal, &outRemaining); }
     unsigned long GetSampleOffset(SESample* inSample) { return (*this->mGetSampleOffset)(inSample); }
@@ -71,8 +76,6 @@ private:
     long PlayChannel(unsigned long inChannel) { return (*this->mPlayChannel)(inChannel); }
     long SetChannelSample(unsigned long inChannel, SESample* inSample) { return (*this->mSetChannelSample)(inChannel, inSample); }
     long SetLatency(unsigned long inMilliseconds) { return (*this->mSetLatency)(inMilliseconds); }
-    void SetMusicSource(void (*inSource)(void*, float*, unsigned long), void* inContext)
-        { if (this->mSetMusicSource) (*this->mSetMusicSource)(inSource, inContext); }
     void SetSampleLooping(SESample* inSample, bool inLooping) { (*this->mSetSampleLooping)(inSample, inLooping); }
     long SetSampleOffset(SESample* inSample, unsigned long inOffset) { return (*this->mSetSampleOffset)(inSample, inOffset); }
     long SetSamplePan(SESample* inSample, float inPan) { return (*this->mSetSamplePan)(inSample, inPan); }
@@ -118,9 +121,10 @@ private:
     long (*mSetVolume)(float);
     long (*mStopAllChannels)();
     long (*mStopChannel)(unsigned long);    // +0xfc
-    // this port's additions: the mixer's output rate and the music source its device thread mixes in
+    // this port's additions (see GetOutputRate)
     unsigned long (*mGetOutputRate)();
     void (*mSetMusicSource)(void (*)(void*, float*, unsigned long), void*);
+    void (*mSetMovieSource)(void (*)(void*, float*, unsigned long), void*);
 
     // Inferred engine-only visibility: the mixer plug-in sees SEMixer through SESample (a static data member
     // consumes a VC6 `$E` number in every unit that sees the class; see TSScheduler.h)

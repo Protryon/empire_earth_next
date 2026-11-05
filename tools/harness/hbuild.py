@@ -21,7 +21,7 @@ from fulllink_locator import LinkMap                 # noqa: E402
 
 INSTALL = pathlib.Path(r"C:\Program Files (x86)\Empire Earth\Empire Earth - The Art of Conquest")
 TARGET_FILES = {"exe": "EE-AOC.exe"}
-THIRD_PARTY = ["binkw32.dll"]
+THIRD_PARTY = []                                     # every library is linked into the exe
 BASE = 0x400000                                      # the exe's fixed base
 SHOWSCENE = "?ShowScene@DX7Rasterizer@@UAEJK@Z"
 ACTIVATE = "?ActivateScreen@DX7Rasterizer@@UAEJKPAVGETextureManager@@PAVGEWindow@@K_NK@Z"

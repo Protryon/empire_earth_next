@@ -164,7 +164,7 @@ def member_offsets(out):
 
 
 # system libraries the engine and the renderer linked statically (dinput8: the c_dfDI* data formats)
-STATIC_LIBS = ["dxguid.lib", "dinput8.lib", "dsound.lib", "ole32.lib", "winmm.lib", "user32.lib"]
+STATIC_LIBS = ["dxguid.lib", "dinput8.lib", "ole32.lib", "winmm.lib", "user32.lib"]
 
 
 def link_exe(out, objs, extra_libs):
