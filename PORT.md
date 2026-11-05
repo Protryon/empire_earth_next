@@ -93,12 +93,89 @@ Steps:
    ~256 s, so the outcome gap to the shipped i686 build is the floating-point model (PORT_LEARNINGS.md "x64
    runtime"). Left: x64 becomes the only target (i686 builds, the i686 wgpu pin and the 32-bit harness paths are
    removed, CI builds x64); the differential tooling, human driver and save/load sessions on x64.
-4. **macOS/Linux**: the platform layer's POSIX implementation (PORT.md "Cross-platform"), windowing/input on a
-   small portable layer (SDL3 or winit-style C library, decision then), GDI text replaced (FreeType/stb_truetype or
-   a font atlas), Winsock -> BSD sockets, `long` is 64-bit there (FSFile::Read(long&) and record members: switch
-   to fixed-width types first, on Windows, with the record-size asserts as the gate), case-insensitive paths over
-   the game data. wgpu covers rendering (Metal, Vulkan). Builds: clang + CMake or the Python build with a target
-   triple; CI runners for both.
+4. **macOS/Linux** (infrastructure and portable layers done on branch posix, 2026-11-05; the plan below).
+   Decisions: SDL3 (zlib, static, 3.4.18) for windows, events, keyboard/mouse, clipboard, text input and the native
+   handles wgpu needs, behind `platform/PlatWindow.h` (a Rust port can put winit behind the same interface);
+   stb_truetype with Liberation Sans/Serif/Mono (OFL) registered as Arial/Times New Roman/Courier New behind
+   `platform/PlatFont.h`, one implementation on every system (FreeType if GDI's hinted metrics turn out to matter:
+   PORT_LEARNINGS "Linux and macOS"); `<windows.h>` off Windows is `platform/wintypes.h`, types and macros only,
+   found through `include/compat/` on POSIX compiles; Linux is cross-compiled here against a Debian 11 sysroot and
+   built natively in CI; macOS is built in CI only (the Xcode SDK may not leave Apple hardware); one build entry
+   point beside build.py (`tools/xbuild.py`), CI in `.github/workflows/posix.yml` (branch `posix-ci`).
+   State: the POSIX platform layer (time, threads, files with case-insensitive paths, preferences, strings,
+   sockets, messages) passes its tests on Windows (205 checks, Win32 implementation), ubuntu-latest and
+   macos-latest arm64 (217: plus the volume mapping); PlatFont's test and the SDL3 window test (window -> native
+   handle -> wgpu surface, GPU clear and PlatFont text read back exact, frames presented) pass on Windows (WARP),
+   Linux (Xvfb + lavapipe, X11) and macOS (Metal on the runner's paravirtual GPU). The Linux census compiles 455
+   (CI's libstdc++ 13: 456) of 862 units, 324 more fail only on the LP64 record asserts; macOS (libc++) is behind:
+   105 with -fms-compatibility (it retypes `va_list` against the SDK's), plus old zlib/libpng's classic-Mac
+   checks, see PORT_LEARNINGS. The steps, each gated by the Windows harness (tour, AI game) where
+   it changes the Windows game, and by `xbuild.py census` / CI elsewhere:
+   1. **LP64** (branch lp64): fixed-width types in the records, FSFile reads/writes and network messages; then
+      `DWORD*`/`unsigned long*` mismatches the census lists ("cannot initialize a parameter"). Gate: census
+      779/862 (the 324 assert-only units compile).
+   2. **The rest of the direct Win32 calls in shared code**: EEWonNet.h (29 units: compile the WON client out off
+      Windows, or PlatMutex/PlatAtomic/PlatSockAddrIn), TCP Protocol.cpp onto PlatSocket (mechanical: `socket` ->
+      PlatSocketOpen, `WSAEventSelect(s, *ev, FD_READ)` -> PlatSocketSelectEvent with the TSEvent's PlatEvent,
+      `sockaddr_in` -> PlatSockAddrIn (same 16 bytes), the `gethostbyname` loops -> PlatSocketResolveIPv4,
+      GetAdaptersInfo -> PlatSocketGetAdapters; gate: the harness's loopback multiplayer session), the three
+      MessageBoxA -> PlatMessageShow, GX's Sleep/GetTickCount64/OutputDebugStringA and the sound engine's
+      GetLastError -> Plat*, `_snprintf`/`_stricmp` leftovers, the x87 control word (`_controlfp`, UMath: a no-op on
+      SSE targets), UResourceFile's string resources (FindResource/LoadString on the exe) -> a table generated from
+      Language.rc. Gate: the census lists only the window/input/text units below.
+   3. **Window and messages** (one switch: the window changes owner). SDL3 is linked into the Windows exe first
+      (build.py: SDL3-static.lib and its system libraries; nothing calls it yet), then in this order:
+      a. `GEWindow`/`GEDeviceContext` (GEWindow.cpp): GEWindow holds a PlatWindow*; GetOSRepresentation returns it;
+         ClientToScreen/GetClientRect -> PlatWindowGetClientSize. The HDC map goes with GDI (step 5).
+      b. The game window and the start screen (Empire Earth.cpp: RegisterClassExA/CreateWindowEx at WinMain's
+         setup ~1887, EEStartScreen::WindowProc/Start 449-520 with its bitmap DC, the WH_CALLWNDPROC hook):
+         PlatWindowSystemStart + PlatWindowCreate; the start screen's bitmap is presented through GX.
+      c. The message loop: EEUserInterface::WindowProc (EEUserInterface.cpp 1762-1950) becomes
+         EEUserInterface::HandleEvent(const PlatInputEvent&) with the same bodies: WM_CLOSE/WM_DESTROY ->
+         PLAT_EVENT_CLOSE/QUIT, WM_SIZE (minimise mutes, sMinimized) -> RESIZED/MINIMIZED/RESTORED,
+         WM_ACTIVATE/WM_ACTIVATEAPP (input suspend/resume) -> FOCUS_GAINED/LOST, WM_KEYDOWN/UP -> KEY_DOWN/UP
+         (mVirtualKey), WM_CHAR -> TEXT (one event per byte as before), WM_IME_* -> TEXT_EDITING (step 6),
+         WM_SETCURSOR -> PlatCursorShow, WM_SYSCOMMAND (Alt+Tab/screen saver) -> nothing. TSThread::Receive
+         (TSThread.cpp 83-90: PeekMessage/DispatchMessage) pumps PlatWindowPollEvent on the UI thread, which is
+         WinMain's (EEUserInterface::Run runs on it: macOS requires the main thread). TSThread::Post's
+         PostThreadMessage (TSThread.cpp 65) becomes a per-thread queue (PlatMutex + deque + PlatEvent), no
+         window involved.
+      d. The screen (DX7Screen.cpp, DX7Screen.h: SetWindowPos/AdjustWindowRect/ShowWindow, display modes):
+         PlatWindowSetSize/PlatWindowSetFullscreen (borderless), the mode list from PlatWindowGetDisplaySize.
+      e. GX's window handle: `GXDirectDraw::SetCooperativeLevel(HWND)` (GX.h 300, GX.cpp 1641) becomes
+         `SetWindow(const PlatNativeWindow&)`; GXSurfaceData::Present (GX.cpp ~880) builds the wgpu surface from
+         the PlatNativeWindow kind (Win32 HWND, X11 Window, Wayland surface, Metal layer: the code is
+         tools/sdl_test's CreateSurface) and sizes it from PlatWindowGetClientSize instead of GetClientRect; the
+         test present hook takes a PlatWindow*. GX.h then needs no `<windows.h>` (RECT -> GXRECT, HANDLE -> void*,
+         HDC callbacks go in step 5).
+      f. The WON lobby (EELobbyInterface.cpp, WONLobbyGUI.h: FlipToGDISurface, GDI child windows): compiled out off
+         Windows (the services are gone); on Windows unchanged until WON's source exists.
+      Gate: tour + AI game on Windows with the SDL window, screenshots equal to the Win32-window build.
+   4. **Input**: the Input System (Input System.cpp, ISKeyboard.cpp, ISMouse.cpp: DirectInput 7 devices and buffered
+      data) is fed from PlatInputEvent: ISKeyboard keeps its DIK-indexed keys and reads KEY_DOWN/UP's mScanCode
+      from a queue the UI thread fills (Acquire/Unacquire become focus changes; DI_BUFFEROVERFLOW stays the queue's
+      overflow); ISMouse keeps its state struct (DIMOUSESTATE moves into ISMouse.h as the engine's own type): lX/lY
+      from mDeltaX/mDeltaY (relative mode via PlatMouseSetRelative where DirectInput was exclusive), lZ from
+      mWheel x 120, the buttons. UIEditBox/UIForm key-state reads are PlatKeyIsDown/PlatKeyIsToggled (UIForm done).
+      DINPUT goes from the imports, compat/dinput.h from the tree. Gate: the harness's input fuzzing.
+   5. **Text** (GDI out): fonts registered at start-up (Liberation, embedded or from the data root's fonts/
+      directory; aliases for the dbfonts face names); GEFont (GEFont.cpp: CreateFont + GetTextMetrics) ->
+      PlatFontCreate/PlatFontGetMetrics, GEFont::GetOSFont returns PlatFont*; GEText's GetTextExtentPoint32 ->
+      PlatFontMeasure; the renderer's DX7DrawTextGDI ("DX7Rasterizer Draw2D.cpp" 240-330: SelectObject,
+      SetTextColor/SetBkColor, ExtTextOutA) -> PlatFontDraw on the surface's CPU copy (Lock instead of GetDC);
+      GXSurface::DrawText's GPU-resident path (two scratch DCs to recover coverage) -> PlatFontDraw into a scratch
+      buffer, uploaded (PlatFont gives the coverage directly); GEFontBitmap's glyph atlas is unchanged on top of
+      that; Empire Earth.cpp's and GESurface.cpp's remaining DCs (bitmap loading) -> surface locks. Gate: menu
+      screenshots against the GDI build (expected: the hinting differences of PORT_LEARNINGS) and the tour's text
+      layouts (no new wraps).
+   6. **Input method**: EEUserInterface's IMM calls (ImmGetContext, composition strings, candidate lists: 39 sites),
+      UIEditBox (18) and UIIMECandidate (5) -> PLAT_EVENT_TEXT_EDITING and PlatTextInputStart(edit area); the
+      system draws the candidate list. CJK text needs the multibyte encoding decision first (UTF-8 PlatString with
+      the fonts), so Western text input comes first.
+   7. **The POSIX game**: `xbuild.py game --target linux-x86_64|macos-arm64` links every unit with src/Platform/Posix,
+      SDL and Common, SDL3 and wgpu (a macOS .app bundle: Contents/Resources is the data root); the platform
+      layer's data root (`EE_DATA_ROOT` or the executable's directory) replaces the install path. CI runs it to the
+      main menu under Xvfb/lavapipe (Linux) and Metal (macOS); the harness itself stays Windows-only.
 
 ## Plan: one static exe, no proprietary third-party code (owner, 2026-11-04)
 
@@ -265,6 +342,15 @@ harness's time shim hooks those imports), and is linked with the engine (`tools/
 | PlatString.h | _stricmp/_strnicmp/_itoa/_strdup and the 19 _mbs*/_ismb* multibyte functions | UString, UWideString, the UI text controls, the game (292 sites) |
 | PlatPreferences.h | key/value store under roots (the registry on Win32) | URegistry (no HKEY in its interface) |
 | PlatFile.h | files, directory search, attributes, temp files, read-only file mapping | FSFileSpec, FSBasicFile, FSDebugFile, FSMemoryFile, FSArchive, File System.cpp |
+| PlatPath.h | game paths on the native file system (volumes, separators, case-insensitive lookup), the data root | (POSIX PlatFile; the POSIX game's start-up) |
+| PlatSocket.h | IPv4 sockets, readiness events (WSAEventSelect), name lookups, adapters; Winsock error numbers | not yet: TCP Protocol.cpp (step 4.2) |
+| PlatMessage.h | message box, debugger output | the three MessageBoxA, UMemoryPool::DumpStats |
+| PlatWindow.h | window, events, key/mouse state, cursor, clipboard, text input, native handles for wgpu (SDL3) | UIForm::GetNumLockOff (PlatKeyIsToggled); the rest in step 4.3-4.6 |
+| PlatFont.h | TrueType fonts, GDI-style metrics and text drawing (stb_truetype, every system) | not yet: GEFont/GEText/the renderer's text (step 4.5) |
+
+Implementations: src/Platform/Win32 (the game's), src/Platform/Posix (Linux, macOS; tests/platform pass on all
+three), src/Platform/SDL (PlatWindow), src/Platform/Common (PlatFont). `platform/wintypes.h` and
+`platform/PlatKeys.h` give the Windows types and the key numbering off Windows (types and macros only).
 
 ### What is left, in the order to take it
 

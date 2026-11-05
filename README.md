@@ -68,6 +68,12 @@ To play, copy `EE-AOC.exe` into a copy of the game's install directory (none of 
 need converting once: `python -I tools/convert_movies.py <game directory>` (needs ffmpeg) writes an `.mpg` next to
 every `.bik`.
 
+Linux and macOS (in progress, PORT.md step 4): `tools/fetch_posix.py` fetches the pinned dependencies (a Debian
+sysroot for cross-compiling to Linux, wgpu-native, SDL3 sources, Liberation fonts) and `tools/xbuild.py` builds the
+platform layer's tests, the window/text test programs and the compile census for `linux-x86_64`, `macos-arm64` and
+`macos-x86_64` (`python -I tools/xbuild.py targets` says what this machine can build). The game itself does not
+build there yet.
+
 ## Testing
 
 `tools/harness/` is a headless live-game harness (ported from the reconstruction project): it stages a test build

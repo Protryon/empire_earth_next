@@ -726,3 +726,103 @@ the stub report reaches 0 with no new traps.
   idle human by ~600 s and end with 37-59 units per AI. The split is the floating-point model, not pointer size:
   an SSE2 i686 build lands with x64. Locating what remains between x64 and i686 SSE2 (candidates: the x86 and x64
   UCRT math functions, anything ordered by pointer value) needs the per-PT differential tooling, not ported to x64.
+
+## Linux and macOS (branch posix)
+
+- **Entry points**: `tools/fetch_posix.py` (sha256-pinned: the Debian 11 sysroot, wgpu-native v24.0.3.1 for Linux
+  and macOS, SDL 3.4.18 sources, Liberation Fonts 2.1.5) and `tools/xbuild.py` (targets windows-x86_64,
+  linux-x86_64, macos-arm64, macos-x86_64; commands test, fonttest, sdl3, sdltest, census, targets). Both stand
+  beside `tools/build.py`, which they do not touch. CI: `.github/workflows/posix.yml` (ubuntu-latest, macos-latest)
+  runs on pushes to the branch `posix-ci`.
+- **Linux from Windows works with stock LLVM.** `clang --target=x86_64-linux-gnu --sysroot=<Debian 11>` plus
+  `-fuse-ld=lld` compiles and links C++17 against libstdc++ 10 and glibc 2.31 with no other tool; CMake cross-builds
+  SDL3 with a ten-line toolchain file (X11 only: Wayland needs the host's `wayland-scanner`, so the cross build has
+  `-DSDL_WAYLAND=OFF`; CI builds both). The sysroot is Chromium's (one pinned tarball, 17,665 files). Unpacked on
+  NTFS, symbolic links become copies and nine members are skipped (names that differ only in case, e.g.
+  netfilter's `xt_CONNMARK.h` / `xt_connmark.h`; nothing the game includes).
+- **libstdc++ 10 is old for C++17 corners**: `std::from_chars` for `double` (EEDataText.cpp) arrived in GCC 11 (and
+  in libc++ with macOS 13.3/Xcode 14.3). The cross census flags it, Ubuntu 24.04's libstdc++ 13 does not. A newer
+  sysroot (Debian 12) or a `strtod` fallback removes it.
+- **macOS: CI only.** The Xcode SDK's license allows its use on Apple-branded computers only; osxcross-style SDK
+  repacks are not redistributable and not fetched here. macOS builds and tests run natively on `macos-latest`
+  (`xcrun --show-sdk-path`, `-arch arm64` / `-arch x86_64` from the same SDK). Without an SDK, a local
+  `--target=arm64-apple-macos11` compile has no system headers at all, so there is no macOS census on Windows.
+- **The Microsoft dialect on a GNU target breaks standard headers.** `-fms-compatibility` stops clang defining
+  `__STDC__` and the `__GCC_ATOMIC_*` macros: zlib's `zconf.h` then types `voidpf` as `unsigned char*` and
+  libstdc++'s `<atomic>` does not compile; miniaudio's SSE intrinsics fail too. So the census keeps the game's C++
+  units in the dialect the Windows build uses (`-fms-extensions -fms-compatibility -fdelayed-template-parsing`,
+  `--dialect ms`) and compiles C, the vendored libraries and the platform layer as standard code; `--dialect gnu`
+  measures what the game's own code still needs from the Microsoft dialect.
+- **libstdc++ undefines `min` and `max`** (`<bits/c++config.h>`), so `<windows.h>`'s macros cannot be emulated by
+  macros: every standard header included later removes them (324 units failed on that first). `platform/wintypes.h`
+  declares them as two-type function templates returning the `?:` type; with `using namespace std` the one-type
+  `std::min`/`std::max` stay preferred (partial ordering), so nothing becomes ambiguous.
+- **`<windows.h>` off Windows: types and macros only.** `include/compat/windows.h` (on the include path of POSIX
+  compiles only) maps every `#include <windows.h>` to `platform/wintypes.h`: Windows' integer types with Windows'
+  sizes (DWORD and LONG are `uint32_t`/`int32_t`, not `unsigned long`/`long`), STRICT handle types, RECT/POINT/
+  SIZE/LARGE_INTEGER/FILETIME/GUID, MAKEWORD & co., the calling-convention keywords as nothing, and the game's key
+  numbering (`platform/PlatKeys.h`: DIK_* scan codes and VK_* virtual keys, which stay the game's codes on every
+  system). No function: every remaining Win32 call fails to compile and shows up in the census. `compat/mbstring.h`
+  (the includes are vestigial: every call goes through PlatString) and `compat/dinput.h` (the Input System headers'
+  data types only) are the other two.
+- **Census (linux-x86_64, Microsoft dialect)**: 455 of 862 units compile (every module but exe, lle, dx7hrtnl,
+  tcp is complete: jpeg 44/44, exeimg 44/44, default 12/12, mixer 1/1, the vendored libraries 27/27, the POSIX
+  platform layer 9/9), and 324 more fail only on the on-disk record `static_assert`s (`long` is 64-bit on LP64:
+  the lp64 branch's work). That leaves 83 units with real blockers, by header: EEWonNet.h (29 units: Winsock
+  `sockaddr_in`, `CRITICAL_SECTION`, `Interlocked*` in the WON client), the LP64 type mismatches (`unsigned long*`
+  where `DWORD*` is now `uint32_t*`), and one or two units each for the Win32 windowing/GDI/IME/DirectInput code
+  of the window switch (EEUserInterface, Empire Earth.cpp, DX7Screen, GEFont/GEFontBitmap/GEText, UIEditBox,
+  Input System), Winsock (TCP Protocol.cpp), GetLastError/Sleep/GetTickCount64 left in GX and the sound engine,
+  `_snprintf`/`_stricmp` leftovers and the x87 control word (`_PC_53`). Before the two header fixes below, 234
+  units stopped on `GetKeyState` in `UIForm.h` and 8 on `OutputDebugString` in `UMemoryPool.h`.
+- **Header-inline Win32 calls fan out**: one inline function in a widely included header (UIForm::GetNumLockOff)
+  blocked 234 units. Such calls go to the platform layer first (PlatKeyIsToggled, PlatDebugOutput); the Win32
+  implementations call the same functions (GetKeyState, OutputDebugStringA).
+- **POSIX platform layer decisions**: PlatGetLastError keeps Win32 error numbers (errno mapped: ENOENT 2, missing
+  parent 3, EACCES 5, EEXIST 183, ...; others 0x20000000|errno) because the engine records and a few callers compare
+  them; PlatSocket keeps Winsock's numbering for the same reason. Directory searches return a sorted snapshot in
+  NTFS's case-insensitive order (readdir's order is arbitrary; the game lists saved games and scenarios through
+  them). Paths: a volume letter maps to a native root (all to "/" by default), components are matched exactly first
+  and by an ASCII case-insensitive scan only on a miss, Win32's trailing dot/space trimming and textual ".."
+  apply, and paths handed back are in the game's form (`C:\home\u\ee\`), so FSFileSpec's volume + directory + file
+  model round-trips. A read-only file is one without owner write permission (DeleteFile refuses it, as Win32
+  does). Events share one condition variable (WaitAny exact, every set wakes every waiter: cheap for a dozen
+  threads). Threads cannot be suspended or killed with pthreads: only a not-yet-started thread can be (the engine
+  never does either to a running thread). WSAEventSelect is a poll thread that disarms a socket when it signals and
+  re-arms it on the next receive/accept (Winsock's re-enabling rule). Preferences: one INI-like file per root in
+  `$XDG_CONFIG_HOME/empire-earth-aoc` or `~/Library/Application Support/Empire Earth AoC` (`EE_PREFS_DIR`
+  overrides), rewritten through a rename on every change.
+- **Win32 registry quirks the tests found**: a REG_SZ value written without its terminator can come back one byte
+  longer through RegQueryValueExA; and the Win32 store reports `GetLastError()` after a failed Reg* call (as
+  URegistry did), which is not the Reg* result. The tests accept both on Windows only.
+- **Fonts: metric-compatible is not GDI-identical.** Liberation Sans has Arial's advance widths and
+  usWinAscent/usWinDescent, but Arial also carries VDMX and hdmx tables (GDI's hinted ascent/descent and per-size
+  integer widths) and GDI hints; stb_truetype has no hinter. `tools/xbuild.py fonttest` on Windows measures both
+  for 28 requests (8-72 px, regular/bold): every one differs, the cell height by 1-2 px at most sizes (Arial -12:
+  GDI tmHeight 15 / tmAscent 12, PlatFont 14 / 11) and a 44-character line by up to 6 px. Closing it needs
+  FreeType's TrueType interpreter (v35 is GDI-like) on Liberation's own hints, or per-size metric tables; until
+  then layouts can shift by a pixel and line wraps can move.
+- **SDL3 static with clang-cl**: CMake needs forward slashes in `-D` paths (backslashes are escapes in its cache
+  files), and SDL's Windows core includes `roapi.h` from the SDK's `winrt` directory (missing from the build's
+  INCLUDE until added). SDL3 3.4.18 static, video/events/clipboard/message box only (audio stays on miniaudio):
+  4.7 MB `SDL3-static.lib` (Linux X11: 3.9 MB `libSDL3.a`). `tools/sdl_test` (SDL window -> HWND -> wgpu
+  surface on WARP, offscreen clear and PlatFont text read back, 120 frames, clipboard round trip through UTF-8)
+  passes on the first build.
+- **The Microsoft dialect is the other half of the census.** Compiled as standard C++ (`--dialect gnu`), only 148
+  units pass: 445 stop on a missing `typename` before a dependent name, 435 on member access into an incomplete
+  type and 154 on declarations parsed early (both from `-fdelayed-template-parsing`: templates in headers use
+  classes declared later), 142 on `__declspec` without `-fms-extensions`. clang keeps those extensions on every
+  target, so the POSIX build uses the same dialect flags as Windows; making the code standard is a separate
+  cleanup (it is also what a Rust port's C++ interop needs least).
+- **CI, first run**: every test passes on ubuntu-latest (217 checks; sdl_test on Xvfb's X11 with lavapipe,
+  "llvmpipe" via Vulkan) and macos-latest arm64 (217 checks; sdl_test on Metal, "Apple Paravirtual device": the
+  hosted macOS runners do have a GPU and a window server), x86_64 macOS built from the same SDK without running.
+- **macOS census: three blockers Linux does not have.** (1) `-fms-compatibility` on Darwin makes clang's
+  `va_list` a `char*`-style type that conflicts with the SDK's `__darwin_va_list` (609 units); `--dialect msext`
+  (`-fms-extensions -fdelayed-template-parsing` without it) avoids that and costs 86 units on Linux (693 vs 779
+  with the LP64-only ones), so the macOS build needs either the missing `typename`s fixed or the va_list conflict
+  worked around. (2) A forward declaration `namespace std { template <...> struct pair; }` (EEAreaUtilities.h)
+  declares another class under libc++'s inline `std::__1`: "reference to 'pair' is ambiguous" (181 units);
+  replaced by `#include <utility>`. (3) The vendored zlib 1.1.3 / libpng 1.0.12 (the 2001 originals) take
+  macOS's `TARGET_OS_MAC` for classic Mac OS (`<fp.h>`, no `Byte` typedef): 19 image-library units; updating both
+  libraries (also for their security fixes) is the clean way.
