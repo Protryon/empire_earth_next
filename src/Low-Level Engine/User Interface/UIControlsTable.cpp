@@ -142,6 +142,7 @@ struct UIDbControl {
     bool mScaleToControl;                 // +0x359
     bool mLoopMovie;                 // +0x35a
 };
+static_assert(sizeof(UIDbControl) == 860, "on-disk record: 860 bytes on every target");
 
 std::vector<UIControlsTable*> UIControlsTable::sUIControlsArray;
 

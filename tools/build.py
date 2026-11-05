@@ -1,12 +1,12 @@
-"""Build the game from source: one statically linked EE-AOC.exe (clang-cl + lld-link, 32-bit or 64-bit, the MSVC
-STL and the static UCRT).
+"""Build the game from source: one statically linked x86_64 EE-AOC.exe (clang-cl + lld-link, the MSVC STL and the
+static UCRT).
 
-  python -I tools/build.py [-j N] [--out DIR] [--opt X] [--x64] [--test-profile windowed-software]
+  python -I tools/build.py [-j N] [--out DIR] [--opt X] [--test-profile windowed-software]
                            [--sanitize-null] [--compile-only]
 
--> <out>/exe/EE-AOC.exe with its .map (8-digit addresses) and .pdb (default out: build/clang). --x64: an x86_64
-exe (default out build/clang-x64-exe; with --test-profile build/clang-test-x64), linked at the 32-bit image base
-0x400000 (the member aliases are absolute symbols, whose COFF value is 32 bits wide). The exe holds the
+-> <out>/exe/EE-AOC.exe with its .map (8-digit addresses) and .pdb (default out: build/clang), linked at the
+32-bit image base 0x400000 (the member aliases are absolute symbols, whose COFF value is 32 bits wide). x86_64 is
+the only target (--x64 is accepted and ignored). The exe holds the
 game with its image libraries (libpng/zlib/libjpeg), the engine, the plug-ins the original loaded as DLLs (TCP
 protocol, the mixer, the Default random map generator, the DX7 T&L renderer; registered in PIMModule.cpp) and the
 language resources, with miniaudio, dmusic and pl_mpeg for sound, music and movies. Only Windows system DLLs are
@@ -120,7 +120,7 @@ def member_offsets(out):
 
     def translate(cont, off):
         if off == 0 or re.match(r"\?[^@]+@(?:[^@]+@)*@[23]P", cont):
-            if ee.is_x64() and off and re.match(r"\?[^@]+@(?:[^@]+@)*@[23]PA[PQ]E", cont):
+            if off and re.match(r"\?[^@]+@(?:[^@]+@)*@[23]PA[PQ]E", cont):
                 return off * 2
             return off
         m = re.match(r"\?[^@]+@(?:[^@]+@)*@[23]([VU])([A-Za-z_0-9]+)@@", cont)
@@ -186,7 +186,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--out", help="output root (default build/clang, build/clang-test with --test-profile)")
     ap.add_argument("--opt", default="-O1", help="clang-cl optimisation (default -O1)")
-    ap.add_argument("--x64", action="store_true", help="an x86_64 exe (see the module doc)")
+    ap.add_argument("--x64", action="store_true", help=argparse.SUPPRESS)   # x86_64 is the only target
     ap.add_argument("-j", type=int, default=os.cpu_count() or 4)
     ap.add_argument("--test-profile", choices=sorted(TEST_PROFILES), help="TEST ONLY: see the module doc")
     ap.add_argument("--sanitize-null", action="store_true", help="TEST ONLY: see the module doc")
@@ -195,12 +195,9 @@ def main():
     for tool in (CLANG, LLD_LINK):
         if not tool.exists():
             sys.exit(f"{tool} is missing: install LLVM (winget install LLVM.LLVM) or set EE_LLVM")
-    if a.x64:
-        ee.set_arch("x64")
-        clang_build.set_target(x64=True)
-        if not (ee.wgpu_dir() / "lib" / "wgpu_native.lib").exists():
-            sys.exit(f"{ee.wgpu_dir()} is missing: python -I tools/fetch_wgpu.py")
-    kind = ("clang-test" if a.test_profile else "clang") + ("-x64" + ("" if a.test_profile else "-exe") if a.x64 else "")
+    if not (ee.wgpu_dir() / "lib" / "wgpu_native.lib").exists():
+        sys.exit(f"{ee.wgpu_dir()} is missing: python -I tools/fetch_wgpu.py")
+    kind = "clang-test" if a.test_profile else "clang"
     out = pathlib.Path(a.out or ROOT / "build" / (kind + ("-nullsan" if a.sanitize_null else ""))).resolve()
     out.mkdir(parents=True, exist_ok=True)
     overlays = TEST_PROFILES.get(a.test_profile)
@@ -209,8 +206,7 @@ def main():
         extra = (f"-fsanitize={SANITIZE_CHECKS}", "-fsanitize-minimal-runtime",
                  f"-fsanitize-recover={SANITIZE_CHECKS}")
         ubsan = out / "ubsan_minimal.obj"
-        target = "x86_64-pc-windows-msvc" if a.x64 else "i686-pc-windows-msvc"
-        r = subprocess.run([str(CLANG), f"--target={target}", "/nologo", "/c", "/O1", "/Zl", "/GS-",
+        r = subprocess.run([str(CLANG), "--target=x86_64-pc-windows-msvc", "/nologo", "/c", "/O1", "/Zl", "/GS-",
                             str(ROOT / "tools" / "harness" / "ubsan_minimal.c"), f"/Fo{ubsan}"],
                            capture_output=True, text=True)
         if r.returncode:

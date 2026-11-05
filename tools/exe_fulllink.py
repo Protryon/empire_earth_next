@@ -9,12 +9,11 @@ aliases of defined functions, data the original placed inside other objects (mem
 (objects and libraries the caller adds to every link), IMPORT_MODULES (the modules whose original import tables
 name the system and third-party DLLs to link against), EXTRA_RES (more compiled resources: the language strings).
 
-x64 (ee.ARCH "x64", tools/build.py --x64): the link tables hold the original's 32-bit names. After pass 1 every
-name of the tables is mapped to the x64 name of the same entity (translate_x64: the demangled signature without
-calling convention and __ptr64, then also with size_t's width folded; C names without their x86 decoration), so
-the classes and the stub census are the i686 ones. The stubs are x64 code (Stubs64), vtable slots are 8 bytes, and
-the image is linked at the 32-bit base 0x400000: member aliases are absolute symbols (a COFF symbol value is 32
-bits)."""
+The image is x86_64. The link tables hold the original's 32-bit names: after pass 1 every name of the tables is
+mapped to the x64 name of the same entity (translate_x64: the demangled signature without calling convention and
+__ptr64, then also with size_t's width folded; C names without their x86 decoration). The stubs are x64 code
+(Stubs64), vtable slots are 8 bytes, and the image is linked at the 32-bit base 0x400000: member aliases are
+absolute symbols (a COFF symbol value is 32 bits)."""
 import bisect
 import collections
 import pathlib
@@ -34,10 +33,8 @@ GAME = (0x1000, 0x29d080)
 WON = [(0x29deb0, 0x3fe220), (0x416e00, 0x437000)]
 RDATA, DATA = (0x437000, 0x4b4000), (0x4b4000, 0x4b4000 + 0xb31e4)
 DATA_RAW_END = 0x4b4000 + 0x32000
-LINK_FLAGS = ("/INCREMENTAL:NO /OPT:REF /OPT:ICF /MACHINE:X86 /SUBSYSTEM:WINDOWS /NODEFAULTLIB /FIXED "
-              "/ENTRY:WinMainCRTStartup /SAFESEH:NO /ERRORLIMIT:0 /DEMANGLE:NO")
-LINK_FLAGS_X64 = ("/INCREMENTAL:NO /OPT:REF /OPT:ICF /MACHINE:X64 /SUBSYSTEM:WINDOWS /NODEFAULTLIB /FIXED "
-                  "/BASE:0x400000 /HIGHENTROPYVA:NO /ENTRY:WinMainCRTStartup /ERRORLIMIT:0 /DEMANGLE:NO")
+LINK_FLAGS = ("/INCREMENTAL:NO /OPT:REF /OPT:ICF /MACHINE:X64 /SUBSYSTEM:WINDOWS /NODEFAULTLIB /FIXED "
+              "/BASE:0x400000 /HIGHENTROPYVA:NO /ENTRY:WinMainCRTStartup /ERRORLIMIT:0 /DEMANGLE:NO")
 EXTRA_LIBS = []
 IMPORT_MODULES = ["exe"]
 EXTRA_RES = []
@@ -46,7 +43,7 @@ ODS64, IDP64, EXITP64 = "__imp_OutputDebugStringA", "__imp_IsDebuggerPresent", "
 
 
 def machine():
-    return 0x8664 if ee.is_x64() else 0x14C
+    return 0x8664
 CLASSES = ("won", "icf", "vslot", "pure", "mismatch", "compile", "unwritten", "unregistered", "unbound", "data",
            "library")
 
@@ -199,7 +196,7 @@ def coff_symbols(path):
         if sec["chars"] & 0x20:
             data = vc.section_data(i)
             for va, sym, typ in vc.relocs(i):
-                if typ == (REL32_64 if ee.is_x64() else REL32) and va > 0 and data[va - 1] in (0xE8, 0xE9):
+                if typ == REL32_64 and va > 0 and data[va - 1] in (0xE8, 0xE9):
                     called.add(sym["name"])
     for n, f in undef.items():
         if not f and not n.startswith("__imp_"):
@@ -216,7 +213,7 @@ def link(out, objs, libs, res, debug, tag):
     rest = [p for p in EXTRA_LIBS if p not in first]
     rsp.write_text("\n".join(f'"{pathlib.Path(p).relative_to(out) if pathlib.Path(p).is_relative_to(out) else p}"'
                              for p in [*first, *objs, *libs, *rest, *res, *RUNTIME_LIBS]) + "\n")
-    cmd = [str(LLD_LINK), "/nologo", *(LINK_FLAGS_X64 if ee.is_x64() else LINK_FLAGS).split(),
+    cmd = [str(LLD_LINK), "/nologo", *LINK_FLAGS.split(),
            *(["/DEBUG"] if debug else []),
            f"/OUT:{target.name}", f"/MAP:{target.stem}.map", f"/PDB:{target.stem}.pdb", *lib_paths(), f"@{rsp.name}"]
     if target.exists():
@@ -401,7 +398,7 @@ def infer_addresses(unresolved, objs, at, of, vtables):
             later = [sy["value"] for sy in c.syms.values() if sy["sec"] == secno and sy["value"] > value]
             end = min(later) if later else sec["size"]
             vrva = min(of[vt])
-            ptr, abs_type = (8, ADDR64) if ee.is_x64() else (4, DIR32)
+            ptr, abs_type = 8, ADDR64
             for _, va, si, typ in c.relocs(sec):
                 tgt = c.syms[si]["name"]
                 if typ != abs_type or not value <= va < end or tgt not in want:
@@ -894,24 +891,23 @@ def link_exe(out, items, fails, debug=True, members=None, stubs_pass=True, patch
     X64_OF.clear()
     X86_OF.clear()
     report_x64 = None
-    if ee.is_x64():
-        known = set(defined) | set(refs) | set(unres1)
-        members_x86 = [l.split("\t")[0] for l in pathlib.Path(members).read_text(encoding="utf-8").splitlines()
-                       if l.strip() and not l.startswith("#")] if members else []
-        tr, left = translate_x64(sorted(set(of) | set(thunks.values()) | set(members_x86)), known)
-        X64_OF.update(tr)
-        X86_OF.update({v: k for k, v in tr.items()})
-        at = collections.defaultdict(list, {r: [tr.get(n, n) for n in ns] for r, ns in at.items()})
-        of2 = collections.defaultdict(set)
-        for n, rs in of.items():
-            of2[tr.get(n, n)] |= rs
-        of = of2
-        thunks = {r: tr.get(n, n) for r, n in thunks.items()}
-        report_x64 = {"translated": sum(1 for k, v in tr.items() if k != v),
-                      "same": sum(1 for k, v in tr.items() if k == v), "unmatched": len(left),
-                      "unmatched_names": left}
-        print(f"x64 names: {report_x64['translated']} link-table names translated, {report_x64['same']} spelled the "
-              f"same, {len(left)} without an x64 counterpart (not referenced by this build)", flush=True)
+    known = set(defined) | set(refs) | set(unres1)
+    members_x86 = [l.split("\t")[0] for l in pathlib.Path(members).read_text(encoding="utf-8").splitlines()
+                   if l.strip() and not l.startswith("#")] if members else []
+    tr, left = translate_x64(sorted(set(of) | set(thunks.values()) | set(members_x86)), known)
+    X64_OF.update(tr)
+    X86_OF.update({v: k for k, v in tr.items()})
+    at = collections.defaultdict(list, {r: [tr.get(n, n) for n in ns] for r, ns in at.items()})
+    of2 = collections.defaultdict(set)
+    for n, rs in of.items():
+        of2[tr.get(n, n)] |= rs
+    of = of2
+    thunks = {r: tr.get(n, n) for r, n in thunks.items()}
+    report_x64 = {"translated": sum(1 for k, v in tr.items() if k != v),
+                  "same": sum(1 for k, v in tr.items() if k == v), "unmatched": len(left),
+                  "unmatched_names": left}
+    print(f"x64 names: {report_x64['translated']} link-table names translated, {report_x64['same']} spelled the "
+          f"same, {len(left)} without an x64 counterpart (not referenced by this build)", flush=True)
     units_sorted = sorted((it for it in items if it["mod"] == "exe"), key=lambda it: it["lo"])
     ulo = [it["lo"] for it in units_sorted]
 
@@ -946,7 +942,7 @@ def link_exe(out, items, fails, debug=True, members=None, stubs_pass=True, patch
     values, by3_obj, data_stub_rvas = {}, {}, {}
     if stubs_pass:
         bounds = sorted(set(at))
-        stubs = (Stubs64 if ee.is_x64() else Stubs)(initialised)
+        stubs = Stubs64(initialised)
         stubbed = set(unres1)
 
         def resolve(tgt):
@@ -997,8 +993,7 @@ def link_exe(out, items, fails, debug=True, members=None, stubs_pass=True, patch
                 nxt = bounds[k] if k < len(bounds) else DATA[1]
                 sec_end = RDATA[1] if rva < RDATA[1] else DATA_RAW_END if rva < DATA_RAW_END else DATA[1]
                 size = max(4, min(nxt, sec_end, rva + 0x10000) - rva)
-                if ee.is_x64():
-                    size *= 2   # the original's 32-bit layout: room for its pointers at 8 bytes
+                size *= 2   # the original's 32-bit layout: room for its pointers at 8 bytes
             slots = 64 if s.startswith("??_7") else 0
             data_stub_rvas[s] = rva
             fallback.update(stubs.data(s, rva, size, resolve, slots))

@@ -1,15 +1,14 @@
-"""Compile the game's units with clang-cl: 32-bit, MSVC ABI, the MSVC STL and the UCRT (VS 2022 Build Tools).
+"""Compile the game's units with clang-cl: x86_64, MSVC ABI, the MSVC STL and the UCRT (VS 2022 Build Tools).
 
-  python -I tools/clang_build.py [-j N] [--out DIR] [--opt X] [--only TEXT] [--x64] [module ...]     compile census
+  python -I tools/clang_build.py [-j N] [--out DIR] [--opt X] [--only TEXT] [--census] [module ...]
 
 The units, their order and their defines come from link/<module>/units.txt and tools/ee.py. Flags:
-  - clang-cl --target=i686-pc-windows-msvc, MSVC 19.44 compatibility, C++17 (C units: C), native wchar_t;
-  - /arch:IA32 (x87 floating point) with cmpxchg8b (+cx8: 64-bit atomics inline, as every Pentium has it),
-    /GS- (no stack cookies);
+  - clang-cl --target=x86_64-pc-windows-msvc (SSE2 floating point), MSVC 19.44 compatibility, C++17 (C units: C),
+    native wchar_t, /GS- (no stack cookies);
   - -fno-strict-aliasing -fwrapv: the code relies on both (the original compiler never exploited that undefined
     behaviour; PORT_LEARNINGS.md has the plan to drop them; -fno-delete-null-pointer-checks is gone);
-  - --x64 (set_target): --target=x86_64-pc-windows-msvc without /arch:IA32, plus the census warnings (the x64
-    build, tools/build.py --x64, uses the same target without them);
+  - --census (alias --x64): the pointer-size warnings on (X64_WARNINGS), every diagnostic to
+    <out>/x64_census.tsv (default out build/clang-census);
   - a unit's `// UNIT-FLAGS:` line adds its defines to the module flags (its VC6 code-generation switches are
     ignored).
 Every unit is staged under C:\\EEX (tools/verify.py) before it is compiled.
@@ -33,12 +32,10 @@ import units
 import verify
 from ee import CLANG, ROOT
 
-CLANG_FLAGS = ["--target=i686-pc-windows-msvc", "/nologo", "/c", "-fms-compatibility", "-fms-extensions",
-               "-fms-compatibility-version=19.44", "/Zc:wchar_t", "-fdelayed-template-parsing", "/arch:IA32", "/GS-",
-               "-Xclang", "-target-feature", "-Xclang", "+cx8",
+CLANG_FLAGS = ["--target=x86_64-pc-windows-msvc", "/nologo", "/c", "-fms-compatibility", "-fms-extensions",
+               "-fms-compatibility-version=19.44", "/Zc:wchar_t", "-fdelayed-template-parsing", "/GS-",
                "-fno-strict-aliasing", "-fwrapv",
                "-Wno-everything", "-ferror-limit=0", "-fno-color-diagnostics"]
-CLANG_FLAGS_I686 = list(CLANG_FLAGS)
 # old code-generation switches a `// UNIT-FLAGS:` line may still carry (the build's --opt decides)
 DROP = re.compile(r"^[-/](G[3-7B]|Zm\d+|Zi|Z7|O[12dsxty]|Ob\d|Og|Gy|Gf|GF)$")
 ERROR = re.compile(r"^(.*?)\((\d+),\d+\)\s*:\s*error: (.*)$", re.M)
@@ -109,15 +106,10 @@ X64_WARNINGS = ["-Wpointer-to-int-cast", "-Wvoid-pointer-to-int-cast", "-Wint-to
                 "-Wint-to-void-pointer-cast", "-Wshorten-64-to-32"]
 
 
-def set_target(x64, census=False):
-    """Select the target of every later compile (this module's CLANG_FLAGS, which tools/harness/layout_gen.py's
-    record dumps read too): i686 (the default) or x86_64 (no /arch:IA32: SSE2 floating point); census adds the
-    pointer-size warnings (X64_WARNINGS) for the 64-bit census."""
+def set_census():
+    """Turn the pointer-size warnings (X64_WARNINGS) on for every later compile (the 64-bit census)."""
     global CLANG_FLAGS
-    base = [f for f in CLANG_FLAGS_I686 if f != "/arch:IA32"] if x64 else list(CLANG_FLAGS_I686)
-    if x64:
-        base = [("--target=x86_64-pc-windows-msvc" if f.startswith("--target=") else f) for f in base]
-    CLANG_FLAGS = base + (X64_WARNINGS if census else [])
+    CLANG_FLAGS = CLANG_FLAGS + [w for w in X64_WARNINGS if w not in CLANG_FLAGS]
 
 
 DIAG = re.compile(r"^(.*?)\((\d+),\d+\)\s*:\s*(warning|error): (.*?)(?: \[(-W[\w-]+)\])?$", re.M)
@@ -158,16 +150,16 @@ def main():
     ap.add_argument("--out", default=str(ROOT / "build" / "clang"))
     ap.add_argument("--opt", default="-O1", help="clang-cl optimisation (default -O1)")
     ap.add_argument("--only", help="compile only units whose path contains this text")
-    ap.add_argument("--x64", action="store_true",
-                    help="64-bit census (default out build/clang-x64): compile for x86_64 with the pointer-size "
-                         "warnings on; every diagnostic goes to <out>/x64_census.tsv (see X64_WARNINGS)")
+    ap.add_argument("--census", "--x64", action="store_true", dest="census",
+                    help="64-bit census (default out build/clang-census): the pointer-size warnings on; every "
+                         "diagnostic goes to <out>/x64_census.tsv (see X64_WARNINGS)")
     a = ap.parse_args()
     if not CLANG.exists():
         sys.exit(f"{CLANG} is missing: install LLVM (winget install LLVM.LLVM) or set EE_LLVM")
-    if a.x64:
-        set_target(x64=True, census=True)
+    if a.census:
+        set_census()
         if a.out == str(ROOT / "build" / "clang"):
-            a.out = str(ROOT / "build" / "clang-x64")
+            a.out = str(ROOT / "build" / "clang-census")
     mods = a.names or units.MODULES
     jobs = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
     if a.only:
@@ -194,7 +186,7 @@ def main():
         print(f"{m:9} {ok:4} compiled  {bad:3} failed")
     n_bad = sum(b for _, b in done.values())
     print(f"{len(jobs) - n_bad}/{len(jobs)} units compiled in {time.time() - t0:.0f} s -> {out / 'obj'}")
-    if a.x64:
+    if a.census:
         x64_census(out, logs)
     if errors:
         print("\nmost frequent errors (file, message with names masked):")

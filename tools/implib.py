@@ -6,8 +6,8 @@ System DLLs are linked against the Windows SDK's import libraries (ee.SDK_IMPORT
 linked (ee.DROPPED_IMPORTS). For every other DLL (DirectInput 7, Miles, Bink, the engine) a .def is written from the
 import table and turned into an import library by llvm-lib: C names are matched to the objects' references for
 their decoration, C++ data is marked DATA, and the import-name type and hint of each member are set as the table
-records them (fix_members). x64 (ee.ARCH): C names carry no decoration, so a decorated name of the table
-(name@n, an x86 stdcall export) is listed by its plain name.
+records them (fix_members). x64 C names carry no decoration, so a decorated name of the table (name@n, an x86
+stdcall export of the original) is listed by its plain name.
 """
 import collections
 import os
@@ -86,9 +86,6 @@ def make_import_libs(module, out, objs):
     out = pathlib.Path(out)
     out.mkdir(parents=True, exist_ok=True)
     refs, defs = object_symbols(objs)
-    by_plain = {}
-    for s in refs:
-        by_plain.setdefault(plain(s), s)
     libs = []
     for dll, imports in read_imports(module):
         stem = pathlib.Path(dll).stem
@@ -98,19 +95,11 @@ def make_import_libs(module, out, objs):
             libs.append(SDK_IMPORT_LIBS[stem.upper()])
             continue
         lines = [f'LIBRARY "{dll}"', "EXPORTS"]
-        hints, as_is = {}, set()
+        hints = {}
         for imp in imports:
             ordinal = f" @{imp.ordinal} NONAME" if imp.import_by_ordinal else ""
             name = imp.name
-            if ee.is_x64():
-                sym = plain(name) if is_decorated_import(name) else name
-            elif is_decorated_import(name):
-                sym = name
-                as_is.add(sym.encode())
-            else:
-                sym = by_plain.get(name, name if name.startswith("?") else "_" + name)
-            # llvm-lib adds the x86 underscore to plain C names but not to stdcall names (name@n)
-            entry = sym if ee.is_x64() or sym.startswith("?") or "@" in sym else sym[1:]
+            sym = entry = plain(name) if is_decorated_import(name) else name
             data = name in C_DATA or sym in defs or (name.startswith("?") and is_cpp_data(name))
             lines.append(f"    {entry}{ordinal}{' DATA' if data else ''}")
             if not imp.import_by_ordinal:
@@ -121,29 +110,18 @@ def make_import_libs(module, out, objs):
                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
         if r.returncode:
             sys.exit(f"llvm-lib {stem}.def: {r.stdout}{r.stderr}")
-        fix_members(out / f"{stem}.lib", hints, as_is)
+        fix_members(out / f"{stem}.lib", hints)
         libs.append(str(out / f"{stem}.lib"))
     return libs
 
 
-def fix_members(lib, hints, as_is=()):
-    """Short import members: the import-name type (NAME for imports recorded decorated, UNDECORATE for other
-    stdcall names) and the hint the original import table records."""
+def fix_members(lib, hints):
+    """Short import members: the hint the original import table records (x64 names carry no decoration)."""
     b = bytearray(lib.read_bytes())
     i = 0
     while (i := b.find(b"\x00\x00\xff\xff", i)) >= 0:
-        _, _, _, machine, _, _, _, typ = struct.unpack_from("<HHHHIIHH", b, i)
-        if machine == 0x8664:   # x64: no decorated names, only the hint
+        if struct.unpack_from("<H", b, i + 6)[0] == 0x8664:
             name = bytes(b[i + 20:b.index(b"\0", i + 20)])
-            if name in hints:
-                struct.pack_into("<H", b, i + 16, hints[name])
-        elif machine == 0x14C:
-            name = bytes(b[i + 20:b.index(b"\0", i + 20)])
-            by_ordinal = (typ >> 2) & 7 == 0
-            if not by_ordinal and name in as_is:
-                struct.pack_into("<H", b, i + 18, (typ & ~0x1C) | (1 << 2))
-            elif not by_ordinal and not name.startswith(b"?") and re.search(rb"@\d+$", name):
-                struct.pack_into("<H", b, i + 18, (typ & ~0x1C) | (3 << 2))
             if name in hints:
                 struct.pack_into("<H", b, i + 16, hints[name])
         i += 4

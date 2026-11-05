@@ -86,28 +86,17 @@ def modern_dirs():
     return msvc, sdk_inc, kits / "Lib" / sdk_inc.name, kits / "bin" / sdk_inc.name
 
 
-# the target of the build: "x86" (i686, the default) or "x64" (x86_64; tools/build.py --x64 calls set_arch)
-ARCH = "x86"
-
-
-def set_arch(arch):
-    global ARCH
-    if arch not in ("x86", "x64"):
-        raise SystemExit(f"unknown architecture {arch!r}")
-    ARCH = arch
-
-
-def is_x64():
-    return ARCH == "x64"
+# the one target of the build: x86_64 (the MSVC and Windows SDK library directories are named "x64")
+ARCH = "x64"
 
 
 def wgpu_dir():
-    """wgpu-native of the target (tools/fetch_wgpu.py): toolchain/wgpu/i686 or toolchain/wgpu/x86_64."""
-    return TOOLCHAIN / "wgpu" / ("x86_64" if is_x64() else "i686")
+    """wgpu-native x86_64 (tools/fetch_wgpu.py): toolchain/wgpu/x86_64."""
+    return TOOLCHAIN / "wgpu" / "x86_64"
 
 
 def lib_paths():
-    """The /LIBPATH: arguments for the MSVC runtime and the Windows SDK (of the target, ARCH)."""
+    """The /LIBPATH: arguments for the x64 MSVC runtime and Windows SDK libraries."""
     msvc, _, sdk_lib, _ = modern_dirs()
     return [f"/LIBPATH:{msvc / 'lib' / ARCH}", f"/LIBPATH:{sdk_lib / 'ucrt' / ARCH}",
             f"/LIBPATH:{sdk_lib / 'um' / ARCH}"]
