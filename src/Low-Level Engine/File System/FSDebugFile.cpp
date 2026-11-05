@@ -2,6 +2,7 @@
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 // Members in alphabetical order (as the original lays them out), private helpers last.
 #include <windows.h>
+#include "platform/PlatFile.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -93,7 +94,7 @@ long FSDebugFile::Open(unsigned long inAccess)
         }
         if (theResult == kErrorOK) {
         thePath = this->mVolume + this->mDirectory + this->mFile;
-        this->mStream = fopen(thePath, theMode);
+        this->mStream = PlatFOpen(thePath, theMode);
         if (this->mStream == NULL) {
             this->mIsOpen = false;
             theResult = kErrorNativeError;

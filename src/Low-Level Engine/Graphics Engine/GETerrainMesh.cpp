@@ -245,6 +245,7 @@
 // TEMPLATE: LLE 0x10032a9a
 #define LLE_GETERRAINMESH_CPP
 #include <windows.h>
+#include <stdint.h>
 #include <float.h>
 #include <math.h>
 #include <string.h>
@@ -1589,8 +1590,8 @@ void GETerrainMesh::GetTileRowsInVolume(const std::vector<GE3DPoint>& inVolume,
     long theMinimumX = 0x7fffffff;
     long theMinimumY = 0x7fffffff;
     std::map<long, std::pair<long, long> >::iterator theIterator;
-    long theMaximumX = 0x80000000;
-    long theMaximumY = 0x80000000;
+    long theMaximumX = INT32_MIN;   // the 32-bit original's 0x80000000 (LP64: a positive long, so no row lowered it)
+    long theMaximumY = INT32_MIN;
     unsigned long i;
     long theY;
     long theFirst;

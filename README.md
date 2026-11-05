@@ -114,7 +114,18 @@ OUT/run.sh                                         # sets EE_DATA_ROOT=OUT
 
 Status: the Linux and macOS builds are checked by CI (`.github/workflows/posix.yml`, branch `posix-ci`: the game is
 built and run with `--smoke-test` under Xvfb + lavapipe and on Metal, and without data it must exit with the "game
-data not found" message). Nothing has been played on Linux or macOS with real game data yet (PORT.md step 4.7).
+data not found" message). On macOS (arm64, Metal) the game runs with the data bundle: menus, the lobby and AI games
+(PORT_LEARNINGS.md "The POSIX game with real data"). Linux with real data is not tried yet.
+
+`tools/harness/posix_game.py` drives the POSIX game the way the Windows harness does (the menus, the lobby, an AI
+game, telemetry and, on macOS, window captures), through a UI fixture the game carries (on only with `EE_TEST_UI`):
+
+```
+python -I tools/harness/posix_game.py --exercise random-game --play-seconds 60     # evidence: build/posix_game/<time>/
+python -I tools/harness/posix_game.py --exercise ai-game --ai-players 2 --max-game-seconds 1800 --capture-every 120
+python -I tools/xbuild.py game --sanitize address                                  # -> build/xbuild/<target>/game-address/
+python -I tools/harness/posix_game.py --exe build/xbuild/macos-arm64/game-address/ee-aoc --exercise ai-game --play-seconds 120
+```
 
 ## Testing
 

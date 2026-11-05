@@ -1,6 +1,7 @@
 // C:\EEX\Low-Level Engine\File System\FSMemoryFile.cpp
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 #include <windows.h>
+#include "platform/PlatFile.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -157,9 +158,9 @@ long FSMemoryFile::Copy(const UString& inDestination, bool inFailIfExists, bool 
 {
     long theResult;
     FILE* theFile;
-    if (inFailIfExists && (theFile = fopen(inDestination, "r")) != NULL)
+    if (inFailIfExists && (theFile = PlatFOpen(inDestination, "r")) != NULL)
         theResult = kErrorAlreadyExists;
-    else if ((theFile = fopen(inDestination, "wb")) != NULL) {
+    else if ((theFile = PlatFOpen(inDestination, "wb")) != NULL) {
         theResult = this->Compact();
         if (theResult == kErrorOK) {
             this->mCurrent = this->mStart;
@@ -246,7 +247,7 @@ long FSMemoryFile::FOpen(char* inMode)
     this->mIsOpen = true;
     if (PlatGetTempDirectory(theDirectory, 256) && PlatCreateTempFile(theDirectory, thePrefix, theName)) {   // 256: _MAX_FNAME
         this->mTemporaryFileName = UWideString(theName);
-        this->mStream = fopen(this->mTemporaryFileName, "w+b");
+        this->mStream = PlatFOpen(this->mTemporaryFileName, "w+b");
         if (this->mStream) {
             theResult = this->Compact();
             if (theResult == kErrorOK) {
@@ -257,7 +258,7 @@ long FSMemoryFile::FOpen(char* inMode)
                 }
             }
             fclose(this->mStream);
-            this->mStream = fopen(this->mTemporaryFileName, inMode);
+            this->mStream = PlatFOpen(this->mTemporaryFileName, inMode);
             if (this->mStream)
                 theOpened = true;
             else

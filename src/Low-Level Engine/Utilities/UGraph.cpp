@@ -6,6 +6,7 @@
 // (vector<U2DPoint<long> >/vector<UGraphSeries>/vector<unsigned long> members, the data point sort). The library
 // __ftol object sits between UEncryption.cpp and this unit (0x10057218). UIBackground.cpp starts at 0x10058d38.
 #include <windows.h>
+#include <stdint.h>
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
@@ -74,7 +75,7 @@ void UGraphSeries::ClearAllDataPoints()
 {
     this->mDataPoints.clear();
     this->mMinY = this->mMinX = 0x7fffffff;
-    this->mMaxY = this->mMaxX = 0x80000000;
+    this->mMaxY = this->mMaxX = INT32_MIN;   // 0x80000000 in the 32-bit original (LP64: positive)
 }
 
 // FUNCTION: LLE 0x100574f8
@@ -96,7 +97,7 @@ void UGraphSeries::RemoveDataPoint(unsigned long inIndex)
 void UGraphSeries::RecomputeMinMaxValues()
 {
     this->mMinY = this->mMinX = 0x7fffffff;
-    this->mMaxY = this->mMaxX = 0x80000000;
+    this->mMaxY = this->mMaxX = INT32_MIN;   // 0x80000000 in the 32-bit original (LP64: positive)
     for (std::vector<U2DPoint<long> >::iterator i = this->mDataPoints.begin(); i != this->mDataPoints.end(); i++) {
         if (i->mX < this->mMinX)
             this->mMinX = i->mX;
@@ -161,7 +162,7 @@ void UGraph::ClearAllSeries()
 {
     this->mSeries.clear();
     this->mMinY = this->mMinX = 0x7fffffff;
-    this->mMaxY = this->mMaxX = 0x80000000;
+    this->mMaxY = this->mMaxX = INT32_MIN;   // 0x80000000 in the 32-bit original (LP64: positive)
 }
 
 // FUNCTION: LLE 0x100576e1
@@ -307,7 +308,7 @@ void UGraph::SetIsSeriesEnabled(unsigned long inIndex, bool inIsEnabled)
 void UGraph::RecomputeMinMaxValues()
 {
     this->mMinY = this->mMinX = 0x7fffffff;
-    this->mMaxY = this->mMaxX = 0x80000000;
+    this->mMaxY = this->mMaxX = INT32_MIN;   // 0x80000000 in the 32-bit original (LP64: positive)
     for (std::vector<UGraphSeries>::iterator i = this->mSeries.begin(); i != this->mSeries.end(); i++) {
         if (i->GetMinX() < this->mMinX)
             this->mMinX = i->GetMinX();

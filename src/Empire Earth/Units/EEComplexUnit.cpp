@@ -4,6 +4,7 @@
 // classes EEUnitAreaEffectList, EEOrbital, EEMReplantFarms; the unit's template COMDATs close it.
 
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <algorithm>
@@ -1889,13 +1890,13 @@ long EEComplexUnit::GetChecksum(unsigned long inFlags)
         EEComplexUnit* theUnit = this->mComplexUnit;
         theSum += theUnit->mTimesUpdated;
         float theValue = theUnit->mPhysicalModel.GetLocation().GetX();
-        theSum += (theUnit->mActiveGroup != NULL) + (theUnit->mCommand ? theUnit->mCommand->mType : 0) + *reinterpret_cast<long*>(&theValue);
+        theSum += (theUnit->mActiveGroup != NULL) + (theUnit->mCommand ? theUnit->mCommand->mType : 0) + *reinterpret_cast<int32_t*>(&theValue);
         theValue = theUnit->mPhysicalModel.GetLocation().GetY();
-        theSum += *reinterpret_cast<long*>(&theValue);
+        theSum += *reinterpret_cast<int32_t*>(&theValue);
         theValue = theUnit->mPhysicalModel.GetLocation().GetZ();
-        theSum += *reinterpret_cast<long*>(&theValue);
+        theSum += *reinterpret_cast<int32_t*>(&theValue);
         theValue = theUnit->mHeight;
-        theSum += *reinterpret_cast<long*>(&theValue);
+        theSum += *reinterpret_cast<int32_t*>(&theValue);
     }
     if (inFlags & 0x20) {
         for (unsigned long i = 0; i < this->mComplexUnit->GetNumGoalQueues(); i++) {

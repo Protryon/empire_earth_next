@@ -886,6 +886,12 @@ long EEMap::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSF
 // Switches the map to another cliff terrain and re-runs cliff detection over the whole map
 void EEMap::SetCliffTexture(long inCliffTexture)
 {
+    // Fixed: a random map script without CliffTexture (Continental and most others) passes -1, which indexed the cliff
+    // table at [-1] (the 32-bit original read the heap word before it as a table pointer). As Load does with a bad
+    // saved index, it takes the first cliff terrain.
+    if (inCliffTexture < 0 || (unsigned long)inCliffTexture >= EETerrainTable::GetNumCliffTerrains() ||
+        EETerrainTable::sCliffTable[inCliffTexture] == NULL)
+        inCliffTexture = gFirstCliffTerrain;
     this->mU19565C = inCliffTexture;
     this->UpdateCliffs(0, this->mSize, 0, this->mSize);
 }

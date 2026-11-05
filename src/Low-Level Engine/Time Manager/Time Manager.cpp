@@ -3,6 +3,7 @@
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 // The clocks come from the platform layer (platform/PlatTime.h: the performance counter and timeGetTime on Win32).
 #include <windows.h>
+#include <stdint.h>
 
 #include "lle/LowLevelEngine.h"
 
@@ -19,7 +20,9 @@ bool gHasPerformanceCounter;                // 0x12dee5
 unsigned long TMGetTime()
 {
     if (gHasPerformanceCounter)
-        return (unsigned long)(PlatCounterTicks() / gCounterFrequency);
+        // 32-bit milliseconds on every data model: the times go into 32-bit message fields and are subtracted from
+        // them (LP64 kept the full count, which passes 2^32 after 49.7 days of uptime; macOS counts sleep too)
+        return (uint32_t)(PlatCounterTicks() / gCounterFrequency);
     return PlatTimeMilliseconds();
 }
 

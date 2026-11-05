@@ -3,6 +3,7 @@
 // also EEUGAttackGround's (ICF keeps this copy); its Virtual28/Virtual54 are folded into EEUGAttackGround.cpp's.
 
 #include <windows.h>
+#include <stdint.h>
 #include <stdio.h>
 
 #include "lle/LowLevelEngine.h"
@@ -186,11 +187,11 @@ long EEUGAttackUnit::GetOutOfSynchChecksum()
 {
     long theChecksum = 0;
     float theValue = this->mLocation.GetX();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mLocation.GetY();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mLocation.GetZ();
-    theChecksum += *reinterpret_cast<long*>(&theValue);
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theChecksum += this->mAttacker ? this->mAttacker->mUnitID : 0;
     theChecksum += this->mTarget ? this->mTarget->mUnitID : 0;
     theChecksum += this->mTargetTileX + this->mTargetTileY;

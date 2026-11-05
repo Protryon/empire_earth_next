@@ -56,6 +56,13 @@ case's decisions and STOP, then the time shim, the bridge, the telemetry probe a
 exes. It writes only below `build/boot/selftest*`, `build/boot/windowed_o_32` and
 `HKCU\Software\EE-harness-selftest*`.
 
+**Linux and macOS** (`posix_game.py`): neither the debugger harness nor the bridge exists there; the game carries the
+bridge's UI fixture itself (`src/Empire Earth/Empire Earth/EETestFixture.cpp`, on only when `EE_TEST_UI` names a
+directory) with the same ui-state.txt / test.command formats plus game telemetry. `posix_game.py --exercise
+menu|random-game|ai-game` reuses ai_game.py's lobby options and dismiss table, plays in real time (no time shim; the
+lobby's Very Fast speed), writes the game's settings to its own config.ini (`EE_CONFIG`) and, on macOS, captures the
+game window (`macos_window.swift` + `screencapture -l`). See its docstring.
+
 ## Status
 
 | Part | State |

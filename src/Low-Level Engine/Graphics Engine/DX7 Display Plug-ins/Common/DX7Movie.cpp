@@ -5,6 +5,7 @@
 // the back buffer; the decoded sound waits in a ring that the mixer's device thread pulls (MixSound), resampled to
 // the device rate. The game names movies X.bik; the player reads X.mpg next to it (tools/convert_movies.py).
 #include <windows.h>
+#include <stdint.h>
 #include "gx/GX.h"
 #include <stdio.h>
 #include <string.h>
@@ -153,7 +154,7 @@ long DX7Movie::RenderFrame()
 static void PackRow(const unsigned char* inBGRA, unsigned char* outRow, unsigned long inWidth, unsigned long inFormat)
 {
     unsigned short* the16 = reinterpret_cast<unsigned short*>(outRow);
-    unsigned long* the32 = reinterpret_cast<unsigned long*>(outRow);
+    uint32_t* the32 = reinterpret_cast<uint32_t*>(outRow);
     for (unsigned long x = 0; x < inWidth; x++, inBGRA += 4) {
         unsigned long b = inBGRA[0], g = inBGRA[1], r = inBGRA[2];
         switch (inFormat) {

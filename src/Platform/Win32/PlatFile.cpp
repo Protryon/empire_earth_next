@@ -77,6 +77,11 @@ extern "C" PlatFile* PlatFileOpen(const char* inPath, uint32_t inAccess)
     return theHandle == INVALID_HANDLE_VALUE ? NULL : reinterpret_cast<PlatFile*>(theHandle);
 }
 
+extern "C" FILE* PlatFOpen(const char* inPath, const char* inMode)
+{
+    return fopen(inPath, inMode);
+}
+
 extern "C" PlatFileResult PlatFileCreateNew(const char* inPath)
 {
     HANDLE theHandle = CreateFileA(inPath, 0, 0, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);

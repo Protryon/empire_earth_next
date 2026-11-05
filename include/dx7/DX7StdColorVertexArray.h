@@ -17,10 +17,11 @@ struct GXVERTEX_STD_COLOR {
     float nx;                            // +0x0c
     float ny;
     float nz;
-    unsigned long color;                         // +0x18 ARGB
+    uint32_t color;                      // +0x18 ARGB (32-bit on every data model: the GPU's vertex stride is 0x24)
     float tu;                            // +0x1c
     float tv;
 };
+static_assert(sizeof(GXVERTEX_STD_COLOR) == 0x24, "GXVERTEX_STD_COLOR: the GX vertex layout");
 
 class DX7_API DX7StdColorVertexArray : public GEVertexArray {
 public:

@@ -5,6 +5,7 @@
 // FLAC through miniaudio's decoders) and shared, reference-counted, by a sample and its duplicates. The SPIM entry
 // points and their result codes are the original plug-in's.
 #include <windows.h>
+#include "platform/PlatFile.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -321,7 +322,8 @@ extern "C" long SPIMDuplicateSample(SESample* inSample, SESample** outSample)
 {
     UReferenceCounter* theWaveData = static_cast<UReferenceCounter*>(inSample->GetData());
     SESample* theSample = new SESample(*inSample);
-    theWaveData->Reference();
+    if (theWaveData)   // the original sample's wave did not load: the copy is silent too
+        theWaveData->Reference();
     theSample->SetData(theWaveData);
     *outSample = theSample;
     return kSPIMOK;
@@ -433,7 +435,7 @@ extern "C" long SPIMLoadWaveData(FSFileSpec* inSpec, SESample* ioSample)
     if (theMemoryFile == NULL) {
         char thePath[MAX_PATH];
         sprintf(thePath, "%s", (const char*)(inSpec->GetVolume() + inSpec->GetDirectory() + inSpec->GetFile()));
-        FILE* theStream = fopen(thePath, "rb");
+        FILE* theStream = PlatFOpen(thePath, "rb");
         if (theStream == NULL)
             return kSPIMNativeError;
         fseek(theStream, 0, SEEK_END);

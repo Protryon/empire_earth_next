@@ -2,6 +2,7 @@
 // 0xdae63..0xdb169 (the class static table's init chain first; EEStartingResources ends at 0xdae63, the next unit's
 // chain starts at 0xdb169). Unit flags: the exe's module set. Data: the vtable 0x43f7d8, the scale 0x43f7dc.
 #include <windows.h>
+#include <stdint.h>
 #include <vector>
 
 #include "lle/LowLevelEngine.h"
@@ -62,7 +63,7 @@ long EETerrainColorTable::Load()
     if (theFile != NULL)
         delete theFile;
     theSurface->Lock();
-    unsigned long* thePixels = reinterpret_cast<unsigned long*>(theSurface->GetMemoryAddress());
+    uint32_t* thePixels = reinterpret_cast<uint32_t*>(theSurface->GetMemoryAddress());
     unsigned long theRowLength = theSurface->GetBytesPerRow() / 4;
     if (theResult == kErrorOK) {
         unsigned long theCount = theSurface->GetWidth() * theSurface->GetHeight();
