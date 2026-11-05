@@ -10,7 +10,8 @@ libraries are LP64-clean upstream), compiled for x86_64 with the build's own fla
 format   every -Wformat diagnostic (a printf/scanf argument whose type does not match its conversion: `%d` of a
          long reads half of it on LP64, `sscanf("%d", long*)` writes half of it). --fix inserts the length modifier
          the argument's type needs (`l` for long/unsigned long, `z` for size_t) and keeps the conversion letter (so
-         `%d` of an unsigned long becomes `%ld`, printing what Windows printed). Sites -> <out>/format.tsv.
+         `%d` of an unsigned long becomes `%ld`, printing what Windows printed); an `l` given to an int (a field
+         retyped as int32_t) is dropped. Sites -> <out>/format.tsv.
 ast      clang-query matchers (QUERIES): sizeof of long, memcpy/memset/memcmp through a long*, casts to and from
          long pointers (type punning a byte buffer), shifts and bitwise operators on long, `~` on long, comparisons
          with 0xffffffff, unions holding a long, mixed long/unsigned int arithmetic (unsigned long on Windows, long
@@ -41,11 +42,13 @@ LONGISH = ('qualType(hasCanonicalType(anyOf(asString("long"), asString("unsigned
            'asString("unsigned long")))))))))')
 IO = ('callee(functionDecl(hasAnyName("memcpy", "memmove", "memcmp", "memset", "Read", "Write", "fread", "fwrite", '
       '"ReadFile", "WriteFile", "send", "recv", "sendto", "recvfrom", "ReadPayload", "WritePayload")))')
+MINUS1 = 'unaryOperator(hasOperatorName("-"), hasUnaryOperand(integerLiteral(equals(1))))'
+ALLONES = (f'hasEitherOperand(ignoringParenImpCasts(anyOf(integerLiteral(equals(4294967295)), {MINUS1}, '
+           f'explicitCastExpr(hasSourceExpression(ignoringParenImpCasts({MINUS1}))))))')
 QUERIES = {
     "sizeof-long": f'unaryExprOrTypeTraitExpr(ofKind("UETT_SizeOf"), hasArgumentOfType({LONGISH}))',
     "sizeof-record-io": f'unaryExprOrTypeTraitExpr(ofKind("UETT_SizeOf"), '
-                        f'hasArgumentOfType(qualType(hasCanonicalType(anyOf(recordType(), '
-                        f'constantArrayType(hasElementType(qualType(hasCanonicalType(recordType())))))))), '
+                        f'hasArgumentOfType(qualType(hasCanonicalType(hasDeclaration(cxxRecordDecl())))), '
                         f'hasAncestor(callExpr({IO})))',
     "mem-long-ptr": f'callExpr(callee(functionDecl(hasAnyName("memcpy", "memmove", "memcmp", "memset"))), '
                     f'hasAnyArgument(ignoringParenImpCasts(hasType(pointerType(pointee({LONG}))))))',
@@ -56,8 +59,14 @@ QUERIES = {
     "shift-long": f'binaryOperator(hasAnyOperatorName("<<", ">>", "<<=", ">>="), hasLHS(hasType({LONG})))',
     "bitop-long": f'binaryOperator(hasAnyOperatorName("^", "&", "|", "^=", "&=", "|="), hasType({LONG}))',
     "not-long": f'unaryOperator(hasOperatorName("~"), hasType({LONG}))',
-    "cmp-ffffffff": f'binaryOperator(isComparisonOperator(), hasEitherOperand(ignoringParenImpCasts('
-                    f'integerLiteral(equals(4294967295)))))',
+    # all-ones sentinels: an unsigned long set to -1 in memory has 64 bits set on LP64, one read from a file or
+    # message (4 bytes) 32; a long compared with 0xffffffff is converted to unsigned long on Windows, the literal to
+    # long on LP64
+    "sentinel-ulong": f'binaryOperator(isComparisonOperator(), hasEitherOperand(ignoringParenImpCasts(hasType('
+                      f'qualType(hasCanonicalType(asString("unsigned long")))))), {ALLONES})',
+    "sentinel-long": f'binaryOperator(isComparisonOperator(), hasEitherOperand(ignoringParenImpCasts(hasType('
+                     f'qualType(hasCanonicalType(asString("long")))))), '
+                     f'hasEitherOperand(ignoringParenImpCasts(integerLiteral(equals(4294967295)))))',
     "union-long": f'fieldDecl(hasType({LONGISH}), hasParent(recordDecl(isUnion())))',
     "long-uint-mix": 'binaryOperator(unless(hasAnyOperatorName("=", ",")), '
                      'hasEitherOperand(ignoringParenImpCasts(hasType(qualType(hasCanonicalType(asString("long")))))), '
@@ -172,7 +181,8 @@ CONV = re.compile(r"%([-+ #0]*)(\*|\d+)?(?:\.(\*|\d+))?(hh|h|ll|l|I64|I32|z|j|t|
 
 
 def modifier_for(msg):
-    """The length modifier the argument's type needs, or None when it is not a pure width mismatch."""
+    """The length modifier the argument's type needs ("l", "z", or "" for none), or None when the diagnostic is not
+    a pure width mismatch between int and long (or size_t)."""
     m = ARG.search(msg)
     if not m:
         return None
@@ -180,11 +190,16 @@ def modifier_for(msg):
     aka = re.search(r"aka '([^']*)'", msg)
     canon = (aka.group(1) if aka else have).replace(" *", "*")
     base = want.replace(" *", "*")
-    if re.fullmatch(r"(unsigned )?int\*?", base) is None:
+    if re.fullmatch(r"(unsigned )?(long )?int\*?|(unsigned )?long\*?", base) is None:
         return None
     ptr = base.endswith("*")
-    if canon.rstrip("*") in ("long", "unsigned long") and canon.endswith("*") == ptr:
+    if canon.endswith("*") != ptr:
+        return None
+    arg = canon.rstrip("*")
+    if arg in ("long", "unsigned long"):
         return "l"
+    if arg in ("int", "unsigned int"):
+        return ""
     if have.startswith(("size_t", "__size_t")) and not ptr:
         return "z"
     return None
@@ -215,10 +230,10 @@ def apply_fixes(rows):
             s = text[fl - 1]
             spec = s[c0 - 1:c1 - 1]
             m = CONV.fullmatch(spec)
-            if not m or m.group(4):
+            if not m or (m.group(4) or "") not in ("", "l"):
                 manual.append((f, fl, c0, f"unexpected conversion {spec!r}"))
                 continue
-            new = spec[:-1] + mod + spec[-1]
+            new = spec[:m.start(4) if m.group(4) else -1] + mod + spec[-1]
             text[fl - 1] = s[:c0 - 1] + new + s[c1 - 1:]
             changed += 1
         path.write_bytes(("\r\n" if crlf else "\n").join(text).encode("latin-1"))
