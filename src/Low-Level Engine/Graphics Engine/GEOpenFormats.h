@@ -40,4 +40,10 @@ long GEFindModelFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile
 // "<name>.sst"; otherwise FSPath::FindFile. outIsOpenFormat says which: the caller then keys the texture by the .sst name.
 long GEFindTextureFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile, bool& outIsOpenFormat);
 
+// The lookup of a picture read as a Targa through GESurface, around the texture manager (textures\ColorPalette.tga,
+// textures\Volcano.tga, the mouse pointers): when "<name>.png" is on the path, returns it converted to the Targa bytes
+// (as GEFindTextureFile's frame) as a new FSMemoryFile named "<name>.tga"; otherwise FSPath::FindFile. Declared for the
+// game in lle/GETextureManager.h.
+long GEFindTargaFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile);
+
 #endif

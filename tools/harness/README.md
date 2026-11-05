@@ -32,8 +32,17 @@ the play frame: the game view must be lit and varied, the mini map must show ter
 `EE_GX_STATS=<n>` in the environment makes GX log a summary of the 3D draws every n scenes (debug strings in the
 session log).
 
-Requirements: the game install (its data is staged from it), MSYS2 `mingw-w64-x86_64-gcc` (`C:\msys64\mingw64`;
-the debugger harness `exe_boot.exe`, the bridge and the time shim are built with it), pip `pefile capstone`.
+Requirements: the two game installs (Art of Conquest and the original Empire Earth; only read), MSYS2
+`mingw-w64-x86_64-gcc` (`C:\msys64\mingw64`; the debugger harness `exe_boot.exe`, the bridge and the time shim are
+built with it), pip `pefile capstone`.
+
+**Data and settings.** Every run stages the unified data tree of `tools/open_data.py` (built from the installs into
+`build/open_data/` the first time; hard links, the folders the game writes into are copied): by default the binary
+tree (`tree-binary`: the .dat/.cem/.sst/.tga as shipped, loose), with `EE_HARNESS_OPEN_DATA=1` (or
+`EE_HARNESS_TEXT_DB=1 EE_HARNESS_OPEN_ASSETS=1`) the open one (`tree`: db text, glTF, PNG; `EE_HARNESS_OPEN_DATA=DIR`
+names another tree). No data.ssa and no original install is staged. The game's settings are a fresh `config.ini` in
+the stage per run, holding the run's pins (`Game Bit Depth = 32`, `--pt-rate`); the file the game leaves is kept as
+`build/boot/<stage>.session.config.ini`. The game uses no registry: `exe_boot.c` stops a run on any registry write.
 
 **x86_64 only.** The exe and every harness piece are x86_64 (`hbuild` refuses another image; `--x64` is accepted and
 ignored). The harness names the game's symbols by their x64 decorations (`?gWorld@@3VEEWorld@@A`,

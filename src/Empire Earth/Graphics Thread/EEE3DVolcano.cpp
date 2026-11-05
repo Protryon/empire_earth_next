@@ -170,7 +170,7 @@ long EEE3DVolcano::BuildModel()
     ESVERIFY_AT(theResult == keseOK, 233);
 
     theFileName = UString("textures\\Volcano.tga");
-    theResult = gTextureManager->GetTexturePath()->FindFile(theFileName, theFile);
+    theResult = GEFindTargaFile(gTextureManager->GetTexturePath(), theFileName, theFile);   // or its .png
     ESVERIFY_AT(theResult == keseOK, 238);
     ESVERIFY_AT(theFile != NULL, 239);
     theSurface->Load(*theFile, kImageFileTGA);

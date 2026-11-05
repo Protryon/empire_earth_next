@@ -98,8 +98,11 @@ typedef enum { G_STOP, G_FILE_CREATE, G_FILE_OPEN, G_SETINFO, G_SPI, G_MSGBOX_A,
                G_NET_SOCKET, G_NET_ADDRESS, G_NET_LISTEN, G_NET_CLOSE, G_NET_IOCTL, G_SEED_PIN, G_RNG_TRACE,
                G_MUTEX_BYPASS, G_REG_OPEN, G_REG_OPEN_EX, G_PT_SYNC, G_PT_WATCH, G_NHD_OUT, G_NHD_RESULT, G_MP_SKIP, G_MP_ACCEPT, G_MP_CHECKSUM } gkind;
 
-/* ---- registry policy (owner decision 2026-10-23): writes only below HKCU\Software\Mad Doc Software\EE-AOC (the
-   Mad Doc Software key itself may be created); key paths are resolved from the target's handles */
+/* ---- registry policy: the game keeps its settings in config.ini (no registry), so every registry write STOPs the run.
+   Only the harness's own self test (--reg-root, tools/harness/selftest) still allows writes below its test root
+   (HKCU\Software\<root>\EE-AOC; the root key itself may be created) to exercise the policy; key paths are resolved
+   from the target's handles */
+static int reg_test_writes;   /* --reg-root given */
 typedef struct { USHORT Length, MaximumLength; PWSTR Buffer; } USTR;
 typedef LONG (WINAPI *NtQueryObject_t)(HANDLE, int, PVOID, ULONG, PULONG);
 typedef struct { ULONG Length; HANDLE RootDirectory; USTR *ObjectName; ULONG Attributes; PVOID sd, sqos; } OBJATTR;
@@ -141,7 +144,7 @@ static void reg_init(void)
 static int reg_class(const char *p)
 {
     size_t n = strlen(regMadDoc);
-    if (!regMadDoc[0] || _strnicmp(p, regMadDoc, n)) return 0;
+    if (!reg_test_writes || !regMadDoc[0] || _strnicmp(p, regMadDoc, n)) return 0;
     if (!p[n]) return 1;
     if (!_strnicmp(p + n, "\\EE-AOC", 7) && (p[n + 7] == 0 || p[n + 7] == '\\')) return 2;
     return 0;
@@ -317,7 +320,7 @@ static int redirect_ddraw_key(const char *path, CONTEXT *c, TADDR handle_out, TA
     static int input_seeded;
     snprintf(input_path,sizeof input_path,"%s\\System\\CurrentControlSet\\Control\\MediaProperties\\PrivateProperties\\DirectInput",regUser);
     snprintf(input_recent,sizeof input_recent,"%s\\Software\\Microsoft\\DirectInput\\MostRecentApplication",regUser);
-    if (!windowed_test) return 0;
+    if (!windowed_test || !reg_test_writes) return 0;   /* the game uses no registry: such a write STOPs */
     reg_private(dd_private, sizeof dd_private, "windowed-test DirectDraw\\MostRecentApplication");
     reg_private(d3d_private, sizeof d3d_private, "windowed-test Direct3D\\MostRecentApplication");
     reg_private(di_private, sizeof di_private, "windowed-test DirectInput\\MostRecentApplication");
@@ -888,6 +891,7 @@ int main(int argc, char **argv)
             }
             snprintf(regRootRel, sizeof regRootRel, "%s", argv[option]);
             snprintf(regGameRel, sizeof regGameRel, "%s\\EE-AOC", regRootRel);
+            reg_test_writes = 1;
         }
         else if (!strcmp(argv[option], "--seed-pin") && option+3<argc) {
             seed_pin=1;seed_pin_rva=strtoul(argv[++option],NULL,16);
@@ -1259,7 +1263,16 @@ int main(int argc, char **argv)
                 int type;
                 BYTE saved=guards[g].orig;
                 for (k=ndd_returns-1;k>=0;k--) if(dd_returns[k].at==a && dd_returns[k].tid==ev.dwThreadId) {pending=k;break;}
-                if (pending<0) { printf("STOP unmatched DirectDraw return\n"); done=1; break; }
+                if (pending<0) {
+                    /* Another thread returns through an address a watched call of a DIFFERENT thread waits at (the
+                       same function called concurrently, e.g. two threads saving config.ini): not this guard's call.
+                       Step it over the original byte and re-arm, as a re-armed guard does; the watch stays pending. */
+                    for(k=0;k<ndd_returns && dd_returns[k].at!=a;k++);
+                    if(k==ndd_returns) { printf("STOP unmatched DirectDraw return\n"); done=1; break; }
+                    wr8(a,saved);R_IP(&c)=a;c.EFlags|=0x100;rearm=a;stepper=ev.dwThreadId;hold_others(stepper,1);
+                    SetThreadContext(th,&c);
+                    break;
+                }
                 type=dd_returns[pending].type;
                 if(type==11) {
                     int thread=net_thread(ev.dwThreadId);if(thread>=0)net_creating[thread].depth--;

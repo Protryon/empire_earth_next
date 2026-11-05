@@ -1,5 +1,5 @@
 // C:\EEX\Low-Level Engine\Utilities\UMath.cpp (file name inferred: the UM* functions sort between the UI* units and
-// URegistry.cpp; Rich has one more C++ object than the units named so far)
+// URegistry.cpp (now UConfig.cpp); Rich has one more C++ object than the units named so far)
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
 // 0x10080c07..0x1008104b: UMFastMath::BuildSqrtTable (empty), then the UM functions alphabetical. Its .data is the two

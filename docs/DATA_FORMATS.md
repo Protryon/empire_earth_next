@@ -93,6 +93,10 @@ Not loaded although they are present or referenced:
 * `gDataPath` is an `FSPath`: a list of directories plus archives. `FSPath::FindFile` searches **the directories
   first** (`FSPath.cpp` header comment), so a loose `Data\db\dbobjects.dat` overrides the copy in the archive. A
   converter can therefore write loose files and never needs to rebuild `data.ssa`.
+* **This port** (branch nossa) reads one loose `Data` folder in the game's own directory: `tools/open_data.py build`
+  merges both installs' archives and loose data into it (the original's search order; the tables as text, models as
+  glTF, textures as PNG). The original game's install is no longer on the path; a `Data\data.ssa` is mounted only
+  when present. With no archive mounted the checksum below gets no `Timestamp` (0): peers with the same tree agree.
 * Multiplayer consistency: `Empire Earth.cpp` (around line 1067) sums `EEGetFileChecksum` over every loose
   `Data\Db\*.dat`, `Data\Unit AI Scripts\*.tai` and `Data\Models\*.cem` (file contents, sorted by name). For an
   archive it adds only its `Timestamp` tag (`data.ssa`: "4035612"). The sum becomes `gBinaryChecksum` and the

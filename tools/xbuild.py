@@ -48,11 +48,11 @@ IS_LINUX = sys.platform.startswith("linux")
 IS_MACOS = sys.platform == "darwin"
 
 PLATFORM_HEADERS = ROOT / "include"
-POSIX_IMPL = ["PlatTime.cpp", "PlatThread.cpp", "PlatFile.cpp", "PlatPath.cpp", "PlatPreferences.cpp",
+POSIX_IMPL = ["PlatTime.cpp", "PlatThread.cpp", "PlatFile.cpp", "PlatPath.cpp",
               "PlatString.cpp", "PlatSocket.cpp", "PlatMessage.cpp"]
-WIN32_IMPL = ["PlatTime.cpp", "PlatThread.cpp", "PlatFile.cpp", "PlatPath.cpp", "PlatPreferences.cpp",
+WIN32_IMPL = ["PlatTime.cpp", "PlatThread.cpp", "PlatFile.cpp", "PlatPath.cpp",
               "PlatString.cpp", "PlatSocket.cpp", "PlatMessage.cpp"]
-COMMON_IMPL = ["PlatFont.cpp"]   # src/Platform/Common: the same code on every system
+COMMON_IMPL = ["PlatFont.cpp", "PlatConfig.cpp"]   # src/Platform/Common: the same code on every system
 WIN32_SYSLIBS = ["kernel32.lib", "user32.lib", "advapi32.lib", "ole32.lib", "winmm.lib", "ws2_32.lib",
                  "iphlpapi.lib", "shell32.lib", "gdi32.lib", "imm32.lib", "version.lib", "setupapi.lib",
                  "oleaut32.lib", "uuid.lib", "cfgmgr32.lib", "propsys.lib", "d3d12.lib", "dxgi.lib",
