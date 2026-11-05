@@ -2,7 +2,7 @@
 
 These notes record what it took to move the reconstruction from VC6 to clang-cl (phase 1 of `PORT.md`): what broke, why,
 and the fix that was kept. Use them as the checklist for code that is ported later, the WON libraries first
-(WONAPI/WONLobby: still stubs in the exe link, see "Linking the exe").
+(WONAPI/WONLobby: stand-ins in source, see "Plain link").
 
 Order that worked: compile census → STL headers → stock-header patches → mechanical source passes → header bridges →
 one-off sources → DLL links → exe link → stub audit against VC6.
@@ -19,7 +19,7 @@ gone, and their roles appear below only as history. Kept for the WON port: `clan
 | Tool | Use |
 |---|---|
 | `tools/clang_build.py [-j N] [--opt X] [module ...]` | compile census. Per-unit logs go to `build/clang/log/`, and the summary ranks the most frequent errors (names masked). Rerun it after every fix batch. |
-| `tools/build.py` (`build.py`) | the build: compiles everything up front, then links the one exe (`exe_fulllink.py`) with lld-link (the DLL links of `relink.py` are gone with the DLLs). Writes `build/clang/exe/link_report.json`. `--test-profile windowed-software`: harness images; `--sanitize-null`: UBSan builds. |
+| `tools/build.py` (`build.py`) | the build: compiles everything up front, then links the one exe with one plain lld-link (`exe/link.rsp`, `exe/link.log`). `--test-profile windowed-software`: harness images; `--sanitize-null`: UBSan builds. |
 | `tools/clang_forscope.py [--apply]` | hoists for-init variables used after their loop. |
 | `tools/clang_reftemp.py [--apply]` | names temporaries passed to non-const references at plain call sites. |
 | `tools/clang_ubdiff.py` | functions whose code depends on a UB-taming flag (with/without, `/Gy`). |
@@ -151,7 +151,7 @@ Clang inlines every local use and emits nothing, so the other units' references 
   (the modern MSVC rule). VC6 instantiated non-exported specialisations locally. Keep the attribute only on the
   explicit instantiation that crosses the DLL boundary (`UIListBox`: `UILISTBOX_API` is empty under clang).
 
-## Linking the exe (exe_fulllink with lld)
+## Linking the exe (exe_fulllink with lld; replaced by the plain link, see "Plain link")
 
 - `exe_fulllink` parses the linker log, so lld output needs `lld_parse_log`. lld's `/MAP` is MSVC format except for
   16-digit addresses (`MAP_RE`).
@@ -591,10 +591,9 @@ text carries what the game reads, nothing else.
 
 ## For WONAPI/WONLobby later
 
-The WON library is carved or stubbed (`won` class in the stub report) in both builds. When its source arrives, expect
-the same sequence. Apply the dialect passes and header bridges first, then check the exports/imports both ways
-(WON is linked into the exe, not a DLL, so the ODR/inline section matters most). Then make sure the `won` count in
-the stub report reaches 0 with no new traps.
+The WON library is stood in for by `src/Empire Earth/WONAPI/WONAPIStubs.cpp` ("Plain link"). When its source
+arrives, apply the dialect passes and header bridges first; WON is linked into the exe, not a DLL, so the ODR/inline
+section matters most. Then delete the stand-ins it defines (a duplicate symbol names each), with no new fatal ones.
 
 ## Cross-platform: the platform layer (branch xplat)
 
@@ -752,3 +751,66 @@ the stub report reaches 0 with no new traps.
   (binary PT 14,040, units 0/56/39; text db PT 14,149, 0/56/40). The same game before the switch: PT 15,199 / 15,059,
   0/58/40 both. The end PT and the last unit or two move with the wall-time-dependent civilization preempt (form 7
   opened at PT 4,970 / 5,684 in the baseline runs), as between the earlier x64 runs.
+
+## Plain link (branch plainlink)
+
+The exe link used to be `exe_fulllink.py`: pass 1 linked, every unresolved symbol was classified by what the
+original image had at its VC6 address (`link/exe/names.txt`, `vtable_slots.tsv`, `import_thunks.tsv`,
+`fulllink_members.tsv`, VC6-mangled and translated to x64 names), a generated `stubs.obj` answered them (WON stubs
+and traps, jumps to ICF twins, absolute member-alias symbols), pass 2 linked with it and pass 3 placed the member
+aliases. Census at the start: won 304 (278 graceful + 13 traps + 13 data), icf 31, vslot 259, pure 11, data 75.
+ELF and Mach-O have neither MSVC names nor COFF absolute symbols, so all of it became source, and the exe is one
+lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
+
+- **Member aliases (75)**: globals the original addressed inside other objects. Each is a reference to its member,
+  defined after the container (`long& gNumPlayers = gWorld.mNumPlayers;`, 66 in Empire Earth.cpp), and every
+  `extern` says `T&` (117 declarations; a declaration left without `&` would not link: `?g@@3JA` vs `?g@@3AEAJEA`).
+  The member names came from the VC6 layout reference, but its dotted paths nest siblings under the first record
+  member (`mRegistry.mSettings.X` is `mSettings.X`): write paths from the class declarations, not the dump.
+  Sign-mismatched members (18: `unsigned long` global over a `long` member and back) go through `reinterpret_cast`
+  (corresponding signed/unsigned types may alias). Those in private members of engine classes (GEViewport: the
+  render and main viewports' view rectangle, camera inverse, centre, y clipping plane; the camera inverse's row 1
+  was read as a GEQuaternion "view plane") use the class's public accessors at their uses (23 lines); the picker lock got
+  `EEUnitPicker::GetLock`. A reference whose initializer has a `reinterpret_cast` is dynamically initialised (not a
+  constant expression); no static initializer reads these, so the order does not matter here.
+- **A latent x64 bug the stand-in hid**: `gScenarioManager` was read through a local `struct EEU531864 { char
+  _gap[0x238]; bool mB238; }`, i.e. byte +0x238 of an x64 EEScenarioManager, whose mIsEndingCinematic is at +0x300
+  (the cinematic F3 test read a byte of mMediaStrings). Now `gWorld.GetScenarioManager()->mIsEndingCinematic`.
+- **ICF / vtable-slot aliases (290)**: 264 `// ICF-FOLDED:` bodies in the alias class's unit, generated from the
+  twin: a trivial twin body in the linked exe (`ret`, `xor eax,eax; ret`, `mov al,1; ret`, `mov eax,N; ret`) gives
+  `{}` / `return 0 (false, NULL)` / `return true` / `return N` (152); otherwise the twin's source with the class
+  renamed (111), only where the signatures agree. Checks that mattered: (1) every `this->m` member of a copy at the
+  same x64 offset in both classes' dumps (45 copies read members; one did not: EEUGBuildRepair::GetGoalLocation's
+  twin reads its `mTarget` point, the alias's `mTarget` is a unit pointer, its point is `mTargetLocation`, VC6 +0x20 in
+  both); (2) qualified base calls: the twin's `EECPASGSpaceship::Load` / `EECPASGAir::Restore` are not bases of the
+  alias, the VC6 bytes called one ICF body, so the alias calls its own base (EECPASGSea::Load) or the common one
+  (EECPAttackSubGroup::Restore); (3) a twin in the same class (GetHeroCount = GetNumHeroes, ...) becomes a call of
+  it; (4) the copied body needs the twin unit's includes, in their order (headers are not self-contained: EEMedia.h
+  before EEGraphicEffect.h, EECPUnitSelector.h before EECPPersonnel.h). Signatures differing from the twin were
+  wrong declarations: EEUCAirplane::FindUnloadTiles returns void like the other overrides, EECPASGSpaceship::
+  IsAtLocation takes an EECPILocation, EEPCalamityHelper's slot +0x20 is a virtual operator= (the vtable entry
+  pointed at it). The remaining aliases: 2 bodies already in EEGlobalCalamityClass.cpp, a unit with no code range
+  of its own that no module compiled (now an extra unit); 23 in WON classes (below).
+- **Pure (11)**: the slots that held `_purecall` are `= 0` (EEMedia, RTSPlayer, EEGroup::Validate,
+  EEUIFSEPaint::CreatePaintAction); nothing instantiates the abstract classes.
+- **WON (304 + 23 vtable slots)**: `src/Empire Earth/WONAPI/WONAPIStubs.cpp`, generated from the demangled names
+  (dbghelp with UNDNAME_NO_MS_KEYWORDS | NO_ACCESS_SPECIFIERS | NO_MEMBER_TYPE gives a definition head nearly as
+  is), then kept as source: a stand-in logs `EE-WON-STUB <signature>` once and returns 0/false/NULL or a static empty
+  object for a reference; the 13 by-value class returns/arguments stop with `EE-WON-FATAL` and `abort()` (the
+  harness reports `STOP abort`). Defining constructors emits the classes' vtables, which need every virtual: 48 more
+  than the stubs had (iterate: link, take the undefined names, generate, relink). Two constructors the headers
+  lacked (AsyncOpTracker, LobbyChangeEvent) were added.
+- **Import libraries**: every import is a system DLL now: the Windows SDK's libraries, plus a one-line .def for
+  DINPUT.dll's DirectInputCreateA (the SDK has dinput8.lib only). Keep the original tables' order: wsock32.lib
+  before ws2_32.lib, or the names both export (Winsock 1.1 `getsockopt`/`setsockopt` number some options
+  differently) bind to WS2_32. With that order the 306 imported names are the same as before.
+- Kept: `/FIXED /BASE:0x400000 /HIGHENTROPYVA:NO` (the absolute member aliases needed a 32-bit base; the build has
+  only been tested so: dropping it, and ASLR, is a separate step).
+- **Upstream merges**: upstream keeps `link/exe/*.tsv`, `names.txt` and `imports.txt`; here they are deleted
+  (modify/delete conflicts: keep them deleted). A new ICF alias, member alias or WON reference upstream shows up as
+  an unresolved symbol of the plain link: write it in source as above.
+- **Gates**: plain link 0 unresolved / 0 duplicates; tour + 120 s pass; seeded 2-AI Hard game to the time cap,
+  binary PT 14,680 (units 0/59/39), text db PT 14,683 (0/59/39); before (part 1) 14,040 (0/56/39) / 14,149
+  (0/56/40). The game's AI trace lines (epoch and research timing, deaths, building checks) are identical to the
+  runs before and to the baseline up to where each run stops; the end PT and the last units follow the
+  wall-time-dependent civilization preempt (PT 3,374 / 3,234 here, 3,948 / 3,304 before).

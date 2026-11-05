@@ -15,8 +15,9 @@ git merge upstream/fixes-all
 ```
 
 Source changes merge normally. The build tooling is this fork's own: upstream's VC6 build files (`tools/build.py`,
-`relink.py`, `exe_roundtrip.py` (both deleted here), `implib.py`, `exe_fulllink.py`, `rsrc_rebuild.py`, `verify.py`, `ee.py`, the fetch scripts,
-`include/dinkum/`) were rewritten or deleted here. When upstream changes one of them, keep this fork's version
+`relink.py`, `exe_roundtrip.py`, `implib.py`, `exe_fulllink.py`, `exe_units.py` (deleted here), `rsrc_rebuild.py`, `verify.py`, `ee.py`,
+the fetch scripts, `include/dinkum/`) and the exe's link tables (`link/exe/*.tsv`, `names.txt`, every `imports.txt`:
+deleted here, keep them deleted) were rewritten or deleted here. When upstream changes one of them, keep this fork's version
 (`git checkout --ours <file>`) and port anything relevant by hand. Upstream's matching stand-ins
 (`include/LostDebug.h`, `EE_LOST_*`) are deleted here too: resolve new uses by dropping them.
 
@@ -37,6 +38,9 @@ Source changes merge normally. The build tooling is this fork's own: upstream's 
    cap pass, also under full page heap.
 5. **x86_64 only** (2026-11-05): the exe, wgpu-native and the harness are x86_64; the i686 build is gone
    (PORT_LEARNINGS.md "x64 only").
+6. **A plain link** (2026-11-05): every symbol the exe uses is defined in source (member aliases are references to
+   the members, the ICF/vtable-slot aliases are bodies, the WON library is a unit of stand-ins); the exe is one
+   lld-link with no stubs and no link tables (PORT_LEARNINGS.md "Plain link").
 
 ## Rules of the build
 
@@ -44,14 +48,12 @@ Source changes merge normally. The build tooling is this fork's own: upstream's 
   `-fno-strict-aliasing -fwrapv`. The last two tame undefined behaviour the code relies on; removing them is planned
   work (`-fno-delete-null-pointer-checks` went once the sanitizer games came back clean) (`tools/clang_ubdiff.py`, `build.py --sanitize-null`; see
   PORT_LEARNINGS.md).
-- One image: every module's objects go into the exe link (engine and plug-ins first), the import libraries come from
-  every module's original import table minus the game's own DLLs, the VC6 CRT and Dinkum. The engine and renderer
+- One image, one plain lld-link: every module's objects (engine and plug-ins first), the image libraries, the
+  Windows SDK import libraries (and a one-line .def for DINPUT.dll), the static libraries and runtime. The engine and renderer
   units still declare their classes `dllexport` (clang-cl's vector deleting destructors; PORT_LEARNINGS.md "One
   static exe"), so the exe has an export table. A unit's `// UNIT-FLAGS:` line only adds its defines now.
-- `link/` holds the original images' import and export tables and the exe's link tables (WON stubs, member aliases).
-  The exe's member aliases (data the original placed inside other objects) carry VC6 offsets. The build moves them to
-  this build's layout by member name, through the frozen VC6 layout reference `tools/harness/vc6_layout.json.gz`.
-  Making them real members in source is a pending cleanup.
+- `link/` holds only the units' lists (`<module>/units.txt`, link order). The frozen VC6 layout reference
+  `tools/harness/vc6_layout.json.gz` serves the harness (VC6 offsets translated by member name).
 - Test-only builds (`--test-profile`, `--sanitize-null`) change only staged copies of a few units; `src/` is never
   edited by a build.
 
@@ -302,6 +304,7 @@ harness's time shim hooks those imports), and is linked with the engine (`tools/
 
 - Remove the clang dialect bridges: the `#ifdef __clang__` `const T&` forwarding overloads become `const` parameters,
   the `theTempN` call-site locals go.
-- Member aliases in source instead of link tables; the WON library's source (PORT_LEARNINGS.md "For WONAPI/WONLobby").
+- The WON library's source, to replace its stand-ins (PORT_LEARNINGS.md "For WONAPI/WONLobby").
+- Drop `/FIXED /BASE:0x400000` (ASLR, a high image base): nothing needs a 32-bit base since the plain link.
 - Port the rest of the harness (human driver, per-PT differential) where still useful.
 - The platform layer's next steps ("Cross-platform: census and plan" above), then 64-bit and other platforms.
