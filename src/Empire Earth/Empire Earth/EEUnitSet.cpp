@@ -27,10 +27,13 @@ EEUnitSet::~EEUnitSet()
 }
 
 // FUNCTION: EXE 0x536dee
-// Adds a unit family to the set (valid families only) and marks the set as family based
+unsigned long EEFamilyCount();   // the rows of dbfamily (EETerrainTypeTable.cpp)
+
+// Adds a unit family to the set (valid families only: 1 .. the family count - 1; the original: < 60) and marks the
+// set as family based
 void EEUnitSet::AddFamily(unsigned long inUnitClass)
 {
-    if (inUnitClass > 0 && inUnitClass < 0x3c) {
+    if (inUnitClass > 0 && inUnitClass < EEFamilyCount()) {
         this->mFamilies.insert(inUnitClass);
         this->mHasFamilies = true;
     }
