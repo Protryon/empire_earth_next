@@ -26,6 +26,7 @@ Images it writes are test artifacts: never verifier inputs, never matching credi
 """
 import argparse
 import bisect
+import itertools
 import hashlib
 import json
 import pathlib
@@ -78,8 +79,10 @@ def sha(data):
 
 class LinkMap:
     """Publics and statics of a LINK 6 / lld-link map: name -> VA, plus sorted VAs for nearest-name lookups.
-    An x64 map (16-digit addresses) also answers for i686 decorated names (x64names.py): the harness names the game's
-    symbols as the 32-bit build decorates them. base: the map's preferred load address (rva = address - base)."""
+    An x64 map also answers for i686 decorated names (x64names.py): the harness names the game's symbols as the 32-bit
+    build decorates them. x64: the image next to the map is PE32+ (else: 16-digit addresses, or x64 member-function
+    decorations; the fork's x64 exe is /FIXED at 0x400000, so its map has 8-digit addresses). base: the map's preferred
+    load address (rva = address - base)."""
     LINE = re.compile(r'^ ([0-9a-f]{4}):([0-9a-f]{8})\s+(\S+)\s+([0-9a-f]{16}|[0-9a-f]{8})\s+(f\s+)?(i\s+)?(\S+)?', re.I)
     PREFERRED = re.compile(r'^\s*Preferred load address is ([0-9a-f]+)', re.I)
 
@@ -101,6 +104,13 @@ class LinkMap:
                 continue
             self.by_name.setdefault(name, va)
             self.rows.append((va, name, bool(m.group(5)), m.group(7) or ''))
+        image = self.path.with_suffix('.exe')
+        if image.exists():
+            data = image.read_bytes()[:0x400]
+            pe = int.from_bytes(data[0x3c:0x40], 'little')
+            self.x64 = data[pe:pe + 4] == b'PE\0\0' and int.from_bytes(data[pe + 4:pe + 6], 'little') == 0x8664
+        elif not self.x64:
+            self.x64 = any(re.search(r'@@[QAIUEM]E[AB]A', n) for n in itertools.islice(self.by_name, 0, 20000))
         self.rows.sort()
         self.vas = [r[0] for r in self.rows]
 
