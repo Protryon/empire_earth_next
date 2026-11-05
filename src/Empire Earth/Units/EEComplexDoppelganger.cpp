@@ -447,7 +447,7 @@ long EEComplexUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVers
         goto LoadFlags;
     this->mLauncherClass = theValue == 0 || theValue == (unsigned long)-1 ? NULL : gUnitClassTable[theValue];
     theResult = inFile.Read(theValue);
-    this->mPatrolGroup = reinterpret_cast<EEPPatrolGroup*>(theValue);
+    this->mPatrolGroup = USavedPointer<EEPPatrolGroup>(theValue);
     if (theResult != 0)
         goto LoadFlags;
     theResult = inFile.Read(theValue);
@@ -565,7 +565,7 @@ LoadLegacy:
     this->mOwner = NULL;
     if (theResult == 0) {
         theResult = inFile.Read(theValue);
-        this->mOwner = reinterpret_cast<EEComplexUnit*>(theValue);
+        this->mOwner = USavedPointer<EEComplexUnit>(theValue);
         if (theResult == 0) {
             theResult = inFile.Read(theFraction);
             memcpy(&this->mGarrisonCount, &theFraction, sizeof(theFraction));
@@ -578,7 +578,7 @@ LoadLegacy:
     this->mMine = (EEUnit*)-1;
     if (theResult == 0) {
         theResult = inFile.Read(theValue);
-        this->mMine = reinterpret_cast<EEUnit*>(theValue);
+        this->mMine = USavedPointer<EEUnit>(theValue);
         if (theResult == 0 && (theResult = this->mU0DC.Load(inFile)) == 0
             && (theResult = inFile.Read(this->mIsDetachedFromAI)) == 0 && (theResult = this->mColor.Load(inFile)) == 0
             && (theResult = inFile.Read(this->mIsTinted)) == 0 && (theResult = inFile.Read(this->mIsLocked)) == 0
@@ -599,7 +599,7 @@ LoadLegacy:
     theValue = (unsigned long)-1;
     if (theResult == 0) {
         inFile.Read(theValue);
-        this->mHolder = reinterpret_cast<EEComplexUnit*>(theValue);
+        this->mHolder = USavedPointer<EEComplexUnit>(theValue);
     }
     theCount = 0;
     theResult = inFile.Read(theCount);
