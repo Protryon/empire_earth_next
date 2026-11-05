@@ -35,6 +35,7 @@ import inventory  # noqa: E402
 TC = pathlib.Path(os.environ.get("EE_TOOLCHAIN", ROOT / "toolchain"))
 MODELS_DIR = TC / "upscale-models"
 PAD = 8   # source pixels of context around every image (wrapped for tileable ones)
+COLOR_KEY_MIN = 0.005   # an RGB image with more exact pure blue (0,0,255) than this is colour-keyed (pointers)
 
 # The pilot's verdict (2026-11-05, docs/UPSCALE_PLAN.md 6): skin, terrain, button, ui and background are a blend
 # of 70% nomos8k_dat + 30% ultrasharp (two `run`s, then `blend`); fx and shadow Lanczos; exclude copied.
@@ -206,6 +207,19 @@ def upscale_image(img, method, scale, wrap, args):
     h, w, ch = img.shape
     if method == "copy":
         return img
+    # Colour-keyed images (the mouse pointers: RTSMouse draws them with pure blue as transparent) must keep the
+    # key exact: any upscaled blue that is off by one shows as a blue box. The key becomes alpha for processing
+    # and is written back exactly where the result is transparent (a hard edge, as a colour key needs).
+    # (`rally point pointer` has both an alpha channel and the key: the key also forces alpha 0 there.)
+    keyed = (img[:, :, 0] == 0) & (img[:, :, 1] == 0) & (img[:, :, 2] == 1.0)
+    keyed_alpha = ch == 4
+    if keyed.mean() > COLOR_KEY_MIN:
+        a0 = img[:, :, 3] if keyed_alpha else np.ones((h, w), np.float32)
+        a0 = np.where(keyed, 0.0, a0).astype(np.float32)
+        img = np.concatenate([img[:, :, :3], a0[:, :, None]], axis=2)
+        ch = 4
+    else:
+        keyed = None
     rgb = img[:, :, :3]
     alpha = img[:, :, 3:4] if ch == 4 else None
     if alpha is not None:
@@ -232,6 +246,16 @@ def upscale_image(img, method, scale, wrap, args):
         if args.back_project:
             a = P.back_project(a, alpha)
         out = np.concatenate([out, np.clip(a, 0, 1)], axis=2)
+    if keyed is not None:
+        solid = out[:, :, 3] >= 0.5
+        res = out[:, :, :3].copy()
+        res[~solid] = (0.0, 0.0, 1.0)
+        # an opaque pixel must never be the key by accident
+        clash = solid & (res[:, :, 0] < 0.5 / 255) & (res[:, :, 1] < 0.5 / 255) & (res[:, :, 2] > 254.5 / 255)
+        res[clash, 2] = 254 / 255
+        if keyed_alpha:
+            return np.concatenate([res, np.where(solid, out[:, :, 3], 0.0)[:, :, None]], axis=2)
+        return res
     return out
 
 
@@ -403,7 +427,15 @@ def cmd_blend(args):
             ib = P.load(b / "Data" / "Textures" / f)
             if ia.shape != ib.shape:
                 raise SystemExit(f"{f}: the trees differ in size or channels")
-            P.save(out / "Data" / "Textures" / f, np.clip(w * ia + (1 - w) * ib, 0, 1),
+            mix = np.clip(w * ia + (1 - w) * ib, 0, 1)
+            # colour-keyed (pointers, see upscale_image): A decides where the exact key is; where only B is keyed,
+            # A's pixel (a mix with the key's blue would show as a blue fringe)
+            ka = (ia[:, :, 0] == 0) & (ia[:, :, 1] == 0) & (ia[:, :, 2] == 1.0)
+            kb = (ib[:, :, 0] == 0) & (ib[:, :, 1] == 0) & (ib[:, :, 2] == 1.0)
+            if ka.mean() > COLOR_KEY_MIN:
+                mix[ka] = ia[ka]
+                mix[~ka & kb] = ia[~ka & kb]
+            P.save(out / "Data" / "Textures" / f, mix,
                    {"ee:upscale": f"{ma['method']} {w:g} + {mb['method']} {1 - w:g} x{ma['scale']}"})
         same = e["method"] == mb["units"][uid]["method"]
         units[uid] = {**e, "method": e["method"] if same else f"{e['method']}*{w:g}+{mb['units'][uid]['method']}"}
