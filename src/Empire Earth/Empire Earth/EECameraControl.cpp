@@ -488,7 +488,7 @@ void EECameraControl::GetUnitTurn(EEUnit* inUnit, GETransformation& outTransform
 {
     EEComplexUnit* theUnit = inUnit->mComplexUnit;
     float thePitch = EECameraControl::GetPitch(this->mZoom, this->mMode);
-    if (theUnit != NULL && !inUnit->mUnitClass->mB2F6) {
+    if (theUnit != NULL && !inUnit->mUnitClass->mFacesCamera) {
         GETransformation theLocation(false);
         theLocation = theUnit->mPhysicalModel.GetLocation();
         theLocation.SetPosition(0.0f, 0.0f, 0.0f);

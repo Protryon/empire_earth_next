@@ -29,26 +29,26 @@ enum EECalamityKind {
 };
 
 struct EECalamityData {
-    char mName[100];                        // +0x00 ("Undefined", "Global Warming", ... "Special Location")
+    char mLabel[100];                       // +0x00 ("Undefined", "Global Warming", ... "Special Location")
     float mFloatParam1;                     // +0x64 (line of sight: the bonus)
     float mFloatParam2;                     // +0x68 (plague: functor argument)
-    float mFloatParam3;                     // +0x6c (earthquake Initialize 0xb0765)
-    float mFloatParam4;                     // +0x70 (earthquake Initialize)
-    float mF74;                             // +0x74 (0 in every record)
+    float mQuakeMinimumStrength;            // +0x6c (earthquake Initialize 0xb0765)
+    float mQuakeStrength;                   // +0x70 (earthquake Initialize)
+    float mUnused1;                         // +0x74 (0 in every record)
     float mRange;                           // +0x78 -> EECalamityClass +0x1c (rounded)
-    long mDatabaseID;                       // +0x7c (128..: the record's id)
+    long mUnusedDatabaseID;                 // +0x7c (128..: the record's id)
     EECalamityKind mID;                     // +0x80 -> +0x18 (an enum, as the class member it fills)
     long mClassEnum;                        // +0x84 -> +0x08
-    long mTargetKind;                       // +0x88
+    long mUnusedTargetKind;                 // +0x88
     long mLifeTime;                         // +0x8c -> +0x04 (as float)
-    long mL90;                              // +0x90 (1 in every record)
+    long mUnused2;                          // +0x90 (1 in every record)
     long mGraphicEffectID1;                 // +0x94 EEGraphicEffect table index (area effects: +0x28)
     long mGraphicEffectID2;                 // +0x98 (area effects: +0x2c)
     long mGraphicEffectID3;                 // +0x9c (mind control: +0x30)
     long mGraphicEffectID4;                 // +0xa0 (time warp: +0x34)
-    long mLA4;                              // +0xa4 (0 in every record)
-    long mLA8;                              // +0xa8 (0)
-    long mLAC;                              // +0xac (0)
+    long mUnused3;                          // +0xa4 (0 in every record)
+    long mUnused4;                          // +0xa8 (0)
+    long mUnused5;                          // +0xac (0)
     long mUnitClassIndex;                   // +0xb0 (drop object: the unit class to drop)
     long mIntParam1;                        // +0xb4 (area effects: +0x44)
     long mIntParam2;                        // +0xb8 (area effects: +0x3c)
@@ -56,10 +56,10 @@ struct EECalamityData {
     long mIntParam4;                        // +0xc0 (fire: functor argument)
     long mIntParam5;                        // +0xc4 (earthquake Initialize)
     long mIntParam6;                        // +0xc8 (hurricane: the map area its location needs)
-    bool mBCC;                              // +0xcc (1 in 31 of 36 records)
+    bool mUnused6;                          // +0xcc (1 in 31 of 36 records)
     bool mBoolParam1;                       // +0xcd (extra damage: functor argument)
-    bool mBCE;                              // +0xce (0 in every record)
-    bool mBCF;                              // +0xcf (0)
+    bool mUnused7;                          // +0xce (0 in every record)
+    bool mUnused8;                          // +0xcf (0)
     bool mIsCastByAllSelected;              // +0xd0 -> +0x26
     bool mIsBlockedByImmunity;              // +0xd1 -> +0x25
     long mSoundID;                          // +0xd4 EESoundObject table index (area effects: +0x34)
@@ -67,7 +67,7 @@ struct EECalamityData {
     long mCost;                             // +0xdc -> +0x20
     unsigned long mUnitSet;                 // +0xe0 -> +0x10
     long mNameID;                           // +0xe4 -> +0x14
-    bool mBE8;                              // +0xe8 -> +0x24
+    bool mUnusedClassFlag;                  // +0xe8 -> +0x24
 };
 
 static_assert(sizeof(EECalamityData) == 236, "on-disk record: 236 bytes on every target");

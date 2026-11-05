@@ -28,7 +28,8 @@
 
 // One event record of the UI database (0x74 bytes) (provisional names).
 struct UIDbDataEvents {
-    unsigned long mUnknown00[0x68 / 4];     // +0x00 PROVISIONAL (unused here)
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
+    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
     long mEventID;                          // +0x68 negative: no event
     unsigned long mOwnerID;                 // +0x6c control table index / form ID
     unsigned long mEventType;               // +0x70

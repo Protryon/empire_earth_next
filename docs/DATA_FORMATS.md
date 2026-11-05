@@ -8,16 +8,17 @@ table below was parsed end to end with the layout from the source: **all 39 db f
 full length**, so the containers and record sizes are confirmed. Field *meanings* are only as good as the source names. The
 "class" column below says how far each field is decoded.
 
-Field classes used in the tables:
+Field classes used in the tables (2026-11-04: every record member is named from its readers; a compile census,
+`tools/eedata/eedata.py census`, lists every read of every member, and section 8.4 lists the evidence):
 
-* **named**: the source gives the field a semantic name (from the loader's copy into a named member, an assert text
-  or an export). The name can still be provisional, but the role is known.
-* **inferred**: the source leaves it as a gap (`_gap00`, `mUndecoded08`, `mUnknown00`). I identified it from the
-  data: the row name, the database row id or the 0-based row index. These are safe to label, but no code reads them.
-* **provisional**: the field has an offset-only name (`mL70`, `mB2DC`, `mU124`, `mParam3`, `mIntParam2`...). Its type
-  is known (from the loader's loads) and it is often copied somewhere, but its meaning is not.
-* **unknown**: gaps, padding and `mUnknown*`. Nothing reads them. The "observed" column says whether the value is
-  constant (then it is safe to keep as a default) or varies (then the bytes have to be kept as they are).
+* **named** (shown as "named" in the tables, "read" in the summary): a member the game reads. Its name comes from its
+  readers (what it is compared with, what it scales, which function consumes it). These are the text's fields.
+* **label**: the row's name where no code reads it (`mLabel`). The text keeps it as `label` so that rows can be
+  told apart; it is written back to the same bytes and has no effect on the game.
+* **unused**: a member nothing reads (`mUnused*`, and the remaining unread gaps), including members a loader only
+  copies into a class member that nothing reads (dead copies, section 8.4). Not in the text; the importer writes
+  zero or the spec's default.
+* **pad**: alignment padding (some explicit in the original source, now left to the compiler). Zero.
 
 The "observed" column summarises the AoC retail values: the range and number of distinct values, and how many
 records hold the `0xCC` fill (see section 2.4).
@@ -26,45 +27,45 @@ records hold the `0xCC` fill (see section 2.4).
 
 ## 1. Summary table
 
-| # | File (inside data.ssa) | Loader | Record type | Record bytes | AoC rows (real) | File bytes | named / inferred / provisional / unknown % | Suggested |
+| # | File (inside data.ssa) | Loader | Record type | Record bytes | AoC rows (real) | File bytes | read / label / unused / padding % | Suggested |
 |---|---|---|---|---|---|---|---|---|
-| 3.1 | `db\dbobjects.dat` | `EEUnitClass::CreateUnitClasses` 0x6358b1 -> `EEDatabase::Load` 0x4d60ae / `EEDbObject::Load` 0x4d689b | `EEUnitClassRecord` | 1960 | 848 (738) | 1,662,084 | 76 / 0 / 8 / 17 | YAML |
-| 3.2 | `db\dbgraphics.dat` | `EEGraphicObject::LoadTable` 0x4d7833 + `EELoadGraphicObjectRecord` 0x4d7b37 | `EEGraphicObjectRecord` | 716 | 991 (968) | 936,188 | 68 / 15 / 3 / 14 | YAML |
-| 3.3 | `db\dbsounds.dat` | `EESoundObject::LoadTable` 0x4da680 | `EESoundRecord` | 132 | 1087 (872) | 166,734 | 10 / 82 / 3 / 5 | CSV |
-| 3.4 | `db\dbgfxeffects.dat` | `EEGraphicEffect::LoadTable` 0x4d6e9e, ctor 0x4d6ceb | `EEGraphicEffectRecord` | 232 | 292 (288) | 67,748 | 26 / 45 / 28 / 1 | CSV |
-| 3.5 | `db\dbmusic.dat` | `EEMusicObject::LoadTable` 0x4d9f6c | `EEMusicRecord` | 196 | 9 (9) | 1,768 | 42 / 55 / 0 / 3 | CSV |
-| 3.6 | `db\dbtechtree.dat` | `EETechTree::Load` 0x5cbdf0 -> `EETechTreeEpoch::Load` 0x5ce10e -> `EETechTreeNode::Load` 0x5cf370 | `EETechTreeRecord` | 268 | 4494 (793) | 1,226,932 | 89 / 0 / 11 / 0 | YAML |
-| 3.7 | `db\dbevents.dat` | `EEEvent::LoadEvents` 0x5ca63b | `inline` | var | 1500 (317) | 166,680 | 100 / 0 / 0 / 0 | YAML |
-| 3.8 | `db\dbeffects.dat` | same `EEEvent::LoadEvents` | `EEEventEffect` | 88 | 2000 (1193) | 176,000 | 69 / 0 / 31 / 0 | YAML (with events) or CSV |
+| 3.1 | `db\dbobjects.dat` | `EEUnitClass::CreateUnitClasses` 0x6358b1 -> `EEDatabase::Load` 0x4d60ae / `EEDbObject::Load` 0x4d689b | `EEUnitClassRecord` | 1960 | 848 (738) | 1,662,084 | 80 / 0 / 18 / 2 | YAML |
+| 3.2 | `db\dbgraphics.dat` | `EEGraphicObject::LoadTable` 0x4d7833 + `EELoadGraphicObjectRecord` 0x4d7b37 | `EEGraphicObjectRecord` | 716 | 991 (968) | 936,188 | 68 / 14 / 7 / 12 | YAML |
+| 3.3 | `db\dbsounds.dat` | `EESoundObject::LoadTable` 0x4da680 | `EESoundRecord` | 132 | 1087 (872) | 166,734 | 10 / 76 / 12 / 2 | CSV |
+| 3.4 | `db\dbgfxeffects.dat` | `EEGraphicEffect::LoadTable` 0x4d6e9e, ctor 0x4d6ceb | `EEGraphicEffectRecord` | 232 | 292 (288) | 67,748 | 54 / 43 / 2 / 1 | CSV |
+| 3.5 | `db\dbmusic.dat` | `EEMusicObject::LoadTable` 0x4d9f6c | `EEMusicRecord` | 196 | 9 (9) | 1,768 | 42 / 51 / 7 / 0 | CSV |
+| 3.6 | `db\dbtechtree.dat` | `EETechTree::Load` 0x5cbdf0 -> `EETechTreeEpoch::Load` 0x5ce10e -> `EETechTreeNode::Load` 0x5cf370 | `EETechTreeRecord` | 268 | 4494 (793) | 1,226,932 | 50 / 39 / 11 / 0 | YAML |
+| 3.7 | `db\dbevents.dat` | `EEEvent::LoadEvents` 0x5ca63b | `inline` | var | 1500 (317) | 166,680 | 0 / 96 / 4 / 0 | YAML |
+| 3.8 | `db\dbeffects.dat` | same `EEEvent::LoadEvents` | `EEEventEffect` | 88 | 2000 (1193) | 176,000 | 65 / 0 / 35 / 0 | YAML (with events) or CSV |
 | 3.9 | `db\dbbuttons.dat` | `EEButtonObject::Load` 0x4d5500 | `EEButtonRecord` | 224 | 1549 (1138) | 346,980 | 55 / 45 / 0 / 0 | CSV |
-| 3.10 | `db\dbfamily.dat` | `EETerrainTypeTable::LoadDamageTables` 0x4dbf11 | `EEDamageTableRecord` | 380 | 60 (60) | 22,804 | 72 / 28 / 0 / 0 | CSV (matrix) |
-| 3.11 | `db\dbweapontohit.dat` | `EEToHitTable::Load` 0x4dcaad | `EEToHitRecord` | 132 | 6 (6) | 796 | 18 / 82 / 0 / 0 | CSV (matrix) |
-| 3.12 | `db\dbworld.dat` | `EEWorldTable::Load` 0x4dcb79 | `EEWorldTableEntry` | 28 | 95 (95) | 2,664 | 86 / 0 / 14 / 0 | CSV |
-| 3.13 | `db\dbunitbehavior.dat` | `EEUnitBehavior::Load` 0x4dc973 | `EEUnitBehaviorRecord` | 124 | 8 (8) | 996 | 9 / 84 / 0 / 7 | CSV |
-| 3.14 | `db\dbstartingresources.dat` | `EEStartingResources::Load` 0x4daa05 | `EEStartingResourcesRecord` | 132 | 6 (6) | 796 | 18 / 79 / 3 / 0 | CSV |
-| 3.15 | `db\dbanimals.dat` | `EEAnimal::Load` 0x4d4a5d | `EEAnimalRecord` | 272 | 14 (14) | 3,812 | 35 / 38 / 13 / 14 | CSV |
-| 3.16 | `db\dbcolortable.dat` | `EEColorTable::Load` 0x4d5d91 | `EEColorTableRecord` | 168 | 69 (69) | 11,596 | 21 / 64 / 0 / 14 | CSV |
-| 3.17 | `db\dbaiunittargeting.dat` | `EEAIUnitTargetingTable::Load` 0x4d47a1 | `EEAIUnitTargetingRecord` | 160 | 3 (3) | 484 | 20 / 68 / 12 / 0 | CSV |
-| 3.18 | `db\dbterrain.dat` | `EETerrainTable::Load` 0x4db2ce | `EETerrainRecord` | 204 | 93 (77) | 21,167 | 84 / 0 / 8 / 8 | CSV |
-| 3.19 | `db\dbterraintype.dat` | `EETerrainTypeTable::Load` 0x4dbd2e | `EETerrainTypeRecord` | 128 | 68 (68) | 8,708 | 13 / 81 / 3 / 2 | CSV |
+| 3.10 | `db\dbfamily.dat` | `EETerrainTypeTable::LoadDamageTables` 0x4dbf11 | `EEDamageTableRecord` | 380 | 60 (60) | 22,804 | 72 / 26 / 2 / 0 | CSV (matrix) |
+| 3.11 | `db\dbweapontohit.dat` | `EEToHitTable::Load` 0x4dcaad | `EEToHitRecord` | 132 | 6 (6) | 796 | 18 / 76 / 6 / 0 | CSV (matrix) |
+| 3.12 | `db\dbworld.dat` | `EEWorldTable::Load` 0x4dcb79 | `EEWorldTableEntry` | 28 | 95 (95) | 2,664 | 57 / 0 / 43 / 0 | CSV |
+| 3.13 | `db\dbunitbehavior.dat` | `EEUnitBehavior::Load` 0x4dc973 | `EEUnitBehaviorRecord` | 124 | 8 (8) | 996 | 9 / 81 / 10 / 0 | CSV |
+| 3.14 | `db\dbstartingresources.dat` | `EEStartingResources::Load` 0x4daa05 | `EEStartingResourcesRecord` | 132 | 6 (6) | 796 | 21 / 76 / 3 / 0 | CSV |
+| 3.15 | `db\dbanimals.dat` | `EEAnimal::Load` 0x4d4a5d | `EEAnimalRecord` | 272 | 14 (14) | 3,812 | 38 / 37 / 22 / 4 | CSV |
+| 3.16 | `db\dbcolortable.dat` | `EEColorTable::Load` 0x4d5d91 | `EEColorTableRecord` | 168 | 69 (69) | 11,596 | 21 / 60 / 19 / 0 | CSV |
+| 3.17 | `db\dbaiunittargeting.dat` | `EEAIUnitTargetingTable::Load` 0x4d47a1 | `EEAIUnitTargetingRecord` | 160 | 3 (3) | 484 | 22 / 62 / 15 / 0 | CSV |
+| 3.18 | `db\dbterrain.dat` | `EETerrainTable::Load` 0x4db2ce | `EETerrainRecord` | 204 | 93 (77) | 21,167 | 92 / 0 / 7 / 0 | CSV |
+| 3.19 | `db\dbterraintype.dat` | `EETerrainTypeTable::Load` 0x4dbd2e | `EETerrainTypeRecord` | 128 | 68 (68) | 8,708 | 13 / 78 / 6 / 2 | CSV |
 | 3.20 | `db\dbcliffterrain.dat` | `EECliffTerrainTable::Load` 0x4dbb22 | `EECliffTerrainRecord` | 124 | 3 (3) | 376 | 94 / 0 / 4 / 2 | CSV |
-| 3.21 | `db\dbcivpowers.dat` | `EECivPowersManager::Load` 0x683124 | `EECivPower` | 152 | 23 (23) | 3,500 | 89 / 0 / 11 / 0 | CSV |
-| 3.22 | `db\dbcivilization.dat` | `EECivilizationManager::Load` 0x681514 | `EECivilizationCategoryEntry` | 600 | 29 (27) | 17,404 | 83 / 17 / 1 / 0 | YAML or CSV (long format) |
-| 3.23 | `db\dbpremadecivs.dat` | `EECivilizationManager::LoadPremadeCivilizations` 0x681672 | `EECivilizationEntry` | 120 | 23 (23) | 2,764 | 100 / 0 / 0 / 0 | CSV |
-| 3.24 | `db\dbcalamity.dat` | `EECalamityManager::LoadCalamityClasses` 0x4ae070 | `EECalamityData` | 236 | 36 (36) | 8,500 | 69 / 0 / 29 / 2 | CSV |
+| 3.21 | `db\dbcivpowers.dat` | `EECivPowersManager::Load` 0x683124 | `EECivPower` | 152 | 23 (23) | 3,500 | 21 / 66 / 13 / 0 | CSV |
+| 3.22 | `db\dbcivilization.dat` | `EECivilizationManager::Load` 0x681514 | `EECivilizationCategoryEntry` | 600 | 29 (27) | 17,404 | 83 / 17 / 0 / 0 | YAML or CSV (long format) |
+| 3.23 | `db\dbpremadecivs.dat` | `EECivilizationManager::LoadPremadeCivilizations` 0x681672 | `EECivilizationEntry` | 120 | 23 (23) | 2,764 | 97 / 0 / 3 / 0 | CSV |
+| 3.24 | `db\dbcalamity.dat` | `EECalamityManager::LoadCalamityClasses` 0x4ae070 | `EECalamityData` | 236 | 36 (36) | 8,500 | 42 / 42 / 14 / 2 | CSV |
 | 3.25 | `db\dbunitset.dat` | `EEUnitSetManager::Load` 0x536fa9 | `EEUnitSetRecord` | 184 | 173 (170) | 31,836 | 98 / 0 / 0 / 2 | CSV (list columns) or YAML |
-| 3.26 | `db\dbareaeffect.dat` | `EEAEManager::Load` 0x67b079 | `EEAreaEffectData` | 188 | 50 (46) | 9,404 | 85 / 0 / 13 / 2 | CSV |
+| 3.26 | `db\dbareaeffect.dat` | `EEAEManager::Load` 0x67b079 | `EEAreaEffectData` | 188 | 50 (46) | 9,404 | 87 / 0 / 11 / 2 | CSV |
 | 3.27 | `db\dbupgrade.dat` | `EEUCUpgradeTable::Load` 0x4dc6f0 | `EEUCUpgradeRecord` | 240 | 76 (76) | 18,244 | 52 / 42 / 5 / 1 | CSV |
 | 3.28 | `db\dbcpbehavior.dat` | `EECPBehavior::Load` 0x4d5f97 | `EECPBehavior` | 56 | 126 (126) | 7,060 | 80 / 0 / 14 / 5 | CSV |
-| 3.29 | `db\dbgamevariant.dat` | `EEGameVariant::Load` 0x4d693c | `EEGameVariantData` | 276 | 3 (3) | 832 | 83 / 0 / 16 / 1 | CSV |
-| 3.30 | `db\dbambientsounds.dat` | `EEAmbientSoundManager::Load` 0x525012 | `EEAmbientSoundRecord` | 152 | 28 (28) | 4,260 | 21 / 68 / 0 / 11 | CSV |
-| 3.31 | `db\dbuifonts.dat` | `UIFontTable::Create` 0x1007011f | `UIDbDataFonts` | 128 | 61 (57) | 7,812 | 97 / 0 / 3 / 0 | CSV |
-| 3.32 | `db\dbuiforms.dat` | `UIForm::Create` 0x100716c0 | `UIDbDataForms` | 268 | 40 (38) | 10,724 | 98 / 0 / 0 / 2 | CSV |
-| 3.33 | `db\dbuiback.dat` | `UIBackgroundTable::Create` 0x1005c631 | `UIDbDataBackgrounds` | 308 | 167 (92) | 51,440 | 98 / 0 / 1 / 1 | CSV |
-| 3.34 | `db\dbuicontrols.dat` | `UIControlsTable::Create` 0x10067ee6, record ctor 0x1006796f | `UIDbControl` | 860 | 3401 (1372) | 2,924,864 | 95 / 0 / 0 / 4 | CSV (wide) or YAML by form |
-| 3.35 | `db\dbuicontrolevents.dat` | `UIEvent::CreateControlEvents` 0x1006f398 | `UIDbDataEvents` | 116 | 252 (234) | 29,236 | 10 / 90 / 0 / 0 | CSV |
-| 3.36 | `db\dbuiformevents.dat` | `UIEvent::CreateFormEvents` 0x1006f42a | `UIDbDataEvents` | 116 | 21 (21) | 2,440 | 10 / 90 / 0 / 0 | CSV |
-| 3.37 | `db\dbuihotkey.dat` | `UIHotKey::CreateHotKeys` 0x10076fa8 | `UIDbDataHotKeys` | 124 | 32 (32) | 3,972 | 97 / 3 / 0 / 0 | CSV |
+| 3.29 | `db\dbgamevariant.dat` | `EEGameVariant::Load` 0x4d693c | `EEGameVariantData` | 276 | 3 (3) | 832 | 45 / 36 / 17 / 1 | CSV |
+| 3.30 | `db\dbambientsounds.dat` | `EEAmbientSoundManager::Load` 0x525012 | `EEAmbientSoundRecord` | 152 | 28 (28) | 4,260 | 21 / 66 / 13 / 0 | CSV |
+| 3.31 | `db\dbuifonts.dat` | `UIFontTable::Create` 0x1007011f | `UIDbDataFonts` | 128 | 61 (57) | 7,812 | 98 / 0 / 0 / 2 | CSV |
+| 3.32 | `db\dbuiforms.dat` | `UIForm::Create` 0x100716c0 | `UIDbDataForms` | 268 | 40 (38) | 10,724 | 59 / 37 / 3 / 0 | CSV |
+| 3.33 | `db\dbuiback.dat` | `UIBackgroundTable::Create` 0x1005c631 | `UIDbDataBackgrounds` | 308 | 167 (92) | 51,440 | 99 / 0 / 0 / 1 | CSV |
+| 3.34 | `db\dbuicontrols.dat` | `UIControlsTable::Create` 0x10067ee6, record ctor 0x1006796f | `UIDbControl` | 860 | 3401 (1372) | 2,924,864 | 84 / 12 / 4 / 0 | CSV (wide) or YAML by form |
+| 3.35 | `db\dbuicontrolevents.dat` | `UIEvent::CreateControlEvents` 0x1006f398 | `UIDbDataEvents` | 116 | 252 (234) | 29,236 | 10 / 86 / 3 / 0 | CSV |
+| 3.36 | `db\dbuiformevents.dat` | `UIEvent::CreateFormEvents` 0x1006f42a | `UIDbDataEvents` | 116 | 21 (21) | 2,440 | 10 / 86 / 3 / 0 | CSV |
+| 3.37 | `db\dbuihotkey.dat` | `UIHotKey::CreateHotKeys` 0x10076fa8 | `UIDbDataHotKeys` | 124 | 32 (32) | 3,972 | 16 / 81 / 3 / 0 | CSV |
 
 Counts are AoC retail (`data.ssa` Timestamp 4035612). The % columns are bytes per record by field class (section header). For dbevents the % is per row structure. "real" = rows that are not hole/filler rows.
 
@@ -190,41 +191,41 @@ u32   reserved = 0
 
 ### 2.5 How the `0xCC` and index columns let a converter shrink the text
 
-| Table | rows | hole rows (identical) | stored as |
+| Table | rows | hole rows (identical) | text form (section 8) |
 |---|---|---|---|
 | dbaiunittargeting | 3 | 0 | rows as they are |
 | dbambientsounds | 28 | 0 | rows as they are |
 | dbanimals | 14 | 0 | rows as they are |
-| dbareaeffect | 50 | 4 | one template + list of hole positions (or implied by gaps in `index`) |
-| dbbuttons | 1549 | 411 | one template + list of hole positions (or implied by gaps in `index`) |
+| dbareaeffect | 50 | 4 | not listed in the text (the importer writes the hole record) |
+| dbbuttons | 1549 | 411 | not listed in the text (the importer writes the hole record) |
 | dbcalamity | 36 | 0 | rows as they are |
-| dbcivilization | 29 | 2 | one template + list of hole positions (or implied by gaps in `index`) |
+| dbcivilization | 29 | 2 | not listed in the text (the importer writes the hole record) |
 | dbcivpowers | 23 | 0 | rows as they are |
 | dbcliffterrain | 3 | 0 | rows as they are |
 | dbcolortable | 69 | 0 | rows as they are |
 | dbcpbehavior | 126 | 0 | rows as they are |
-| dbeffects | 2000 | 807 | one template + list of hole positions (or implied by gaps in `index`) |
+| dbeffects | 2000 | 807 | not listed in the text (the importer writes the hole record) |
 | dbfamily | 60 | 0 | rows as they are |
 | dbgamevariant | 3 | 0 | rows as they are |
-| dbgfxeffects | 292 | 4 | one template + list of hole positions (or implied by gaps in `index`) |
-| dbgraphics | 991 | 23 | one template + list of hole positions (or implied by gaps in `index`) |
+| dbgfxeffects | 292 | 4 | not listed in the text (the importer writes the hole record) |
+| dbgraphics | 991 | 23 | not listed in the text (the importer writes the hole record) |
 | dbmusic | 9 | 0 | rows as they are |
-| dbobjects | 848 | 110 | one template + list of hole positions (or implied by gaps in `index`) |
+| dbobjects | 848 | 110 | not listed in the text (the importer writes the hole record) |
 | dbpremadecivs | 23 | 0 | rows as they are |
-| dbsounds | 1087 | 215 | one template + list of hole positions (or implied by gaps in `index`) |
+| dbsounds | 1087 | 215 | not listed in the text (the importer writes the hole record) |
 | dbstartingresources | 6 | 0 | rows as they are |
-| dbtechtree | 4494 | 3701 | one template + list of hole positions (or implied by gaps in `index`) |
-| dbterrain | 93 | 16 | one template + list of hole positions (or implied by gaps in `index`) |
+| dbtechtree | 4494 | 3701 | not listed in the text (the importer writes the hole record) |
+| dbterrain | 93 | 16 | not listed in the text (the importer writes the hole record) |
 | dbterraintype | 68 | 0 | rows as they are |
-| dbuiback | 167 | 75 | one template + list of hole positions (or implied by gaps in `index`) |
-| dbuicontrolevents | 252 | 18 | one template + list of hole positions (or implied by gaps in `index`) |
-| dbuicontrols | 3401 | 2029 | one template + list of hole positions (or implied by gaps in `index`) |
-| dbuifonts | 61 | 4 | one template + list of hole positions (or implied by gaps in `index`) |
+| dbuiback | 167 | 75 | not listed in the text (the importer writes the hole record) |
+| dbuicontrolevents | 252 | 18 | not listed in the text (the importer writes the hole record) |
+| dbuicontrols | 3401 | 2029 | not listed in the text (the importer writes the hole record) |
+| dbuifonts | 61 | 4 | not listed in the text (the importer writes the hole record) |
 | dbuiformevents | 21 | 0 | rows as they are |
-| dbuiforms | 40 | 2 | one template + list of hole positions (or implied by gaps in `index`) |
+| dbuiforms | 40 | 2 | not listed in the text (the importer writes the hole record) |
 | dbuihotkey | 32 | 0 | rows as they are |
 | dbunitbehavior | 8 | 0 | rows as they are |
-| dbunitset | 173 | 3 | one template + list of hole positions (or implied by gaps in `index`) |
+| dbunitset | 173 | 3 | not listed in the text (the importer writes the hole record) |
 | dbupgrade | 76 | 0 | rows as they are |
 | dbweapontohit | 6 | 0 | rows as they are |
 | dbworld | 95 | 0 | rows as they are |
@@ -258,17 +259,17 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 * **Loader:** `EEUnitClass::CreateUnitClasses` 0x6358b1 -> `EEDatabase::Load` 0x4d60ae / `EEDbObject::Load` 0x4d689b (src/Empire Earth/Database/EEDatabase.cpp, EEDbObject.cpp); fields consumed by `EEUnitClass::EEUnitClass` 0x62f317 (src/Empire Earth/Units/EEUnitClass.cpp) and the `EEUC*` subclass ctors. Layout: include/ee/EEUnitClassRecord.h
 * **Container:** `u32 count` + count x 1960-byte `EEUnitClassRecord` (read whole into `EEDbObject::mRecord[0x7a8]`).
-* **AoC data:** 848 records, 1,662,084 bytes unpacked. Decoded bytes per record: named 76%, inferred 0%, provisional 8%, unknown 17%.
-* **Semantics:** Rows with `mIsEnabled == 0` or `mUnitType == -1` are skipped. The class factory switches on `mCategory` (0..0x22: ambient, resource, building, airplane, naval, land, citizen, helicopter, projectile, bomb, missile, priest, torpedo...). `gUnitClassTable[mUnitType]` is the class (0x367 slots). Bugs kept by the port: terrain slot 5 copies `mB2DC` again, so `mC2E0`/`mC2E1` are never read. +0x3b4..+0x47b (`mU3B4..mU478`, 200 bytes) is unread and holds stale converter heap values. In the "ctor ->" notes, the left side is the `EEUnitClass` member the field is copied into. Subclass ctors may read more fields.
-* **Cross-references:** `mFamily` -> dbfamily row (damage table); `mButton` -> dbbuttons; `mGraphic` -> dbgraphics (media index); `mL150` (creation sound), `mAcknowledgeSound1/2`, `mSelectionSound1/2`, `mDeathSound` -> dbsounds; `mL24C..mL2BC`, `mCreationEffect`, `mLeprosyEffect`, `mPlagueEffect`, `mMoraleEffect` -> dbgfxeffects; `mAreaEffectTemplate0..3` -> dbareaeffect; `mUpgradeTableIndex` -> dbupgrade; `mBehavior` -> dbunitbehavior; `mTechnology`, `mGarrisonTechnology`, `mAttributes[0..mNumAttributes)` -> dbtechtree node ids; `mOverlapUnitSet`, `mWonderUnitSet` -> dbunitset; `mAIScriptName` -> `Unit AI Scripts\<name>.tai`; `mNameStringID` -> Language.dll; `mUnitType`, `mDeathSpawnType`, `mPackedType` -> unit type ids.
+* **AoC data:** 848 records, 1,662,084 bytes unpacked. Bytes per record: read 80%, label 0%, unused 18%, padding 2%.
+* **Semantics:** Rows with `mIsEnabled == 0` or `mUnitType == -1` are skipped. The class factory switches on `mCategory` (0..0x22: ambient, resource, building, airplane, naval, land, citizen, helicopter, projectile, bomb, missile, priest, torpedo...). `gUnitClassTable[mUnitType]` is the class (0x367 slots). Bugs kept by the port: terrain slot 5 copies `mCanMoveOnLand` again, so `mUnusedFlag2`/`mUnusedFlag3` (+0x2e0/+0x2e1) are never read. +0x3b4..+0x47b (`mUnusedConverterScratch`, 200 bytes) is unread and holds stale converter heap values. In the "ctor ->" notes, the left side is the `EEUnitClass` member the field is copied into. Subclass ctors may read more fields.
+* **Cross-references:** `mFamily` -> dbfamily row (damage table); `mButton` -> dbbuttons; `mGraphic` -> dbgraphics (media index); `mCreationSound`, `mAcknowledgeSound1/2`, `mSelectionSound1/2`, `mDeathSound` -> dbsounds; `mDeathEffect`..`mBloodStainEffect`, `mCreationEffect`, `mLeprosyEffect`, `mPlagueEffect`, `mMoraleEffect` -> dbgfxeffects; `mAreaEffectTemplate0..3` -> dbareaeffect; `mUpgradeTableIndex` -> dbupgrade; `mBehavior` -> dbunitbehavior; `mTechnology`, `mGarrisonTechnology`, `mAttributes[0..mNumAttributes)` -> dbtechtree node ids; `mOverlapUnitSet`, `mWonderUnitSet` -> dbunitset; `mAIScriptName` -> `Unit AI Scripts\<name>.tai`; `mNameStringID` -> Language.dll; `mUnitType`, `mDeathSpawnType`, `mPackedType` -> unit type ids.
 * **Suggested text form:** YAML
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
 | 0x000 | char[100] | `mName` | named | +0x000 the unit name (UString::Copy into mName) | text 738/848, max len 39, junk after NUL in 124, e.g. "Priest" |
-| 0x064 | s32 | `mRowID` | named | +0x064 | 0..973 (739 distinct) |
+| 0x064 | s32 | `mUnusedRowID` | unused | +0x064 | 0..973 (739 distinct) |
 | 0x068 | s32 | `mFamily` | named | +0x068; ctor -> mFamily | -1..59 (59 distinct) |
-| 0x06c | s32 | `mL06C` | provisional | +0x06c; ctor -> mL208 | -1..32 (30 distinct) |
+| 0x06c | s32 | `mUnusedUnitGroup` | unused | +0x06c; ctor -> mL208 | -1..32 (30 distinct) |
 | 0x070 | s32 | `mEpoch` | named | +0x070; ctor -> mEpoch | 0..15 (16 distinct) |
 | 0x074 | s32 | `mUnitType` | named | +0x074; ctor -> mUnitType | -1..847 (739 distinct) |
 | 0x078 | s32 | `mHitPoints` | named | +0x078; ctor -> mHitPoints | 0..99000 (190 distinct) |
@@ -284,16 +285,16 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x0a0 | f32 | `mMaxAngularVelocity` | named | +0x0a0; ctor -> mMaxAngularVelocity | 0..13.9626 (28 distinct) |
 | 0x0a4 | f32 | `mTurretMaxAngularVelocity` | named | +0x0a4; ctor -> mTurretMaxAngularVelocity | 0..12.2173 (12 distinct) |
 | 0x0a8 | bool | `mCanFly` | named | +0x0a8; ctor -> mCanFly | 0..1 (2 distinct) |
-| 0x0a9 | s8 | `mC0A9` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x0aa | s8 | `mC0AA` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x0ab | s8 | `mC0AB` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x0a9 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x0aa | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x0ab | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 | 0x0ac | s32 | `mFlightTime` | named | +0x0ac; ctor -> mFlightTime | 0..1000 (21 distinct) |
 | 0x0b0 | f32 | `mFacingOffset` | named | +0x0b0; ctor -> mFacingOffset | 0..6.2832 (4 distinct) |
 | 0x0b4 | f32 | `mFiringArc` | named | +0x0b4; ctor -> mFiringArc | 0..6.2832 (14 distinct) |
 | 0x0b8 | bool | `mFiresBroadside` | named | +0x0b8; ctor -> mFiresBroadside | 0..1 (2 distinct) |
-| 0x0b9 | s8 | `mC0B9` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x0ba | s8 | `mC0BA` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x0bb | s8 | `mC0BB` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x0b9 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x0ba | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x0bb | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 | 0x0bc | s32 | `mWeapon` | named | +0x0bc; ctor -> mWeapon | -1..5 (7 distinct) |
 | 0x0c0 | s32 | `mAttack` | named | +0x0c0; ctor -> mAttack | 0..20000 (98 distinct) |
 | 0x0c4 | s32 | `mShockArmor` | named | +0x0c4; ctor -> mArmor[0] | 0..75 (14 distinct) |
@@ -305,13 +306,13 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x0dc | s32 | `mProjectileType` | named | +0x0dc | -1..839 (44 distinct) |
 | 0x0e0 | s32 | `mAmmoType` | named | +0x0e0; ctor -> mAmmoType | -1..65 (63 distinct) |
 | 0x0e4 | bool | `mIsEnabled` | named | +0x0e4; ctor -> mIsEnabled | 0..1 (2 distinct) |
-| 0x0e5 | s8 | `mC0E5` | unknown | padding byte (0, or 0xCC in holes); not read | -52..16 (3 distinct) |
-| 0x0e6 | s8 | `mC0E6` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x0e7 | s8 | `mC0E7` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x0e5 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..16 (3 distinct) |
+| 0x0e6 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x0e7 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 | 0x0e8 | f32 | `mScale` | named | +0x0e8; ctor -> mScale | 0..7 (124 distinct) |
 | 0x0ec | char[52] | `mAIScriptName` | named | +0x0ec a name (UString::Copy into mAIScriptName) | text 773/848, max len 52, junk after NUL in 7, e.g. "ÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌ" |
 | 0x120 | s32 | `mCategory` | named | +0x120; ctor -> mCategory | -1..34 (32 distinct) |
-| 0x124 | s32 | `mU124` | unknown | +0x124; not read by the EEUnitClass ctor | const 0 |
+| 0x124 | s32 | `mUnused1` | unused | +0x124; not read by the EEUnitClass ctor | const 0 |
 | 0x128 | s32 | `mButton` | named | +0x128; ctor -> mButton via EEButtonObject::Get | -1..1548 (415 distinct) |
 | 0x12c | s32 | `mGraphic` | named | +0x12c; ctor -> mModel via (EEModel*)EEMedia::Get | -1..990 (663 distinct) |
 | 0x130 | f32 | `mWorkRate` | named | +0x130; ctor -> mWorkRate | 0..1000 (2 distinct) |
@@ -322,7 +323,7 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x144 | f32 | `mWoodGatherTime` | named | +0x144; ctor -> mGatherTimes[0] | 0..4400 (2 distinct) |
 | 0x148 | f32 | `mHuntGatherTime` | named | +0x148; ctor -> mGatherTimes[4] | 0..3500 (7 distinct) |
 | 0x14c | f32 | `mForageGatherTime` | named | +0x14c; ctor -> mGatherTimes[5] | 0..5200 (2 distinct) |
-| 0x150 | s32 | `mL150` | provisional | +0x150; ctor -> mCreationSound via EESoundObject::Get | -1..991 (30 distinct) |
+| 0x150 | s32 | `mCreationSound` | named | +0x150; ctor -> mCreationSound via EESoundObject::Get | -1..991 (30 distinct) |
 | 0x154 | s32 | `mAcknowledgeSound1` | named | +0x154; ctor -> mAcknowledgeSounds[0] via EESoundObject::Get | -1..1081 (192 distinct) |
 | 0x158 | s32 | `mAcknowledgeSound2` | named | +0x158; ctor -> mAcknowledgeSounds[1] via EESoundObject::Get | -1..1082 (185 distinct) |
 | 0x15c | s32 | `mSelectionSound1` | named | +0x15c; ctor -> mSelectionSounds[0] via EESoundObject::Get | -1..1083 (200 distinct) |
@@ -338,15 +339,15 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x184 | s32 | `mCommand6` | named | +0x184; ctor -> mCommands[6] | -1..29 (2 distinct) |
 | 0x188 | s32 | `mCommand7` | named | +0x188; ctor -> mCommands[7] | -1..30 (2 distinct) |
 | 0x18c | s32 | `mCommand8` | named | +0x18c; ctor -> mCommands[8] | const -1 |
-| 0x190 | s32 | `mU190` | unknown | +0x190; not read by the EEUnitClass ctor | const -1 |
+| 0x190 | s32 | `mUnused2` | unused | +0x190; not read by the EEUnitClass ctor | const -1 |
 | 0x194 | s32 | `mTileSize` | named | +0x194; ctor -> mTileSize | 0..6 (7 distinct) |
 | 0x198 | s32 | `mResourceType` | named | +0x198; ctor -> mResourceType | 0..6 (7 distinct) |
 | 0x19c | f32 | `mResourceAmount` | named | +0x19c; ctor -> mResourceAmount | 0..300000 (12 distinct) |
-| 0x1a0 | bool | `mB1A0` | provisional | +0x1a0; ctor -> mB2F6 | 0..1 (2 distinct) |
-| 0x1a1 | s8 | `mC1A1` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x1a2 | s8 | `mC1A2` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x1a3 | s8 | `mC1A3` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x1a4 | s32 | `mU1A4` | unknown | +0x1a4; not read by the EEUnitClass ctor | -1..43 (3 distinct) |
+| 0x1a0 | bool | `mFacesCamera` | named | +0x1a0; ctor -> mB2F6 | 0..1 (2 distinct) |
+| 0x1a1 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x1a2 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x1a3 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x1a4 | s32 | `mUnused3` | unused | +0x1a4; not read by the EEUnitClass ctor | -1..43 (3 distinct) |
 | 0x1a8 | f32 | `mRottingTime` | named | +0x1a8; ctor -> mRottingTime | 0..40 (11 distinct) |
 | 0x1ac | s32 | `mTransportSize` | named | +0x1ac; ctor -> mWeight | 0..5 (4 distinct) |
 | 0x1b0 | s32 | `mTransportCapacity` | named | +0x1b0; ctor -> mTransportCapacity | 0..40 (12 distinct) |
@@ -359,17 +360,17 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x1ba | bool | `mCanUpgradeGunArmor` | named | +0x1ba; ctor -> mUpgradesGunArmor | 0..1 (2 distinct) |
 | 0x1bb | bool | `mCanUpgradeMissileArmor` | named | +0x1bb; ctor -> mUpgradesMissileArmor | const 0 |
 | 0x1bc | bool | `mCanUpgradeRange` | named | +0x1bc; ctor -> mUpgradesRange | 0..1 (2 distinct) |
-| 0x1bd | s8 | `mC1BD` | unknown | padding byte (0, or 0xCC in holes); not read | -52..16 (3 distinct) |
-| 0x1be | s8 | `mC1BE` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x1bf | s8 | `mC1BF` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x1bd | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..16 (3 distinct) |
+| 0x1be | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x1bf | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 | 0x1c0 | s32 | `mLeadership` | named | +0x1c0; ctor -> mLeadership | 0..5 (4 distinct) |
-| 0x1c4 | s32 | `mU1C4` | unknown | +0x1c4; not read by the EEUnitClass ctor | 0..3 (2 distinct) |
+| 0x1c4 | s32 | `mUnused4` | unused | +0x1c4; not read by the EEUnitClass ctor | 0..3 (2 distinct) |
 | 0x1c8 | bool | `mPitchesWithTerrain` | named | +0x1c8; ctor -> mPitchesWithTerrain | 0..1 (2 distinct) |
 | 0x1c9 | bool | `mRollsWithTerrain` | named | +0x1c9; ctor -> mRollsWithTerrain | 0..1 (2 distinct) |
-| 0x1ca | s8 | `mC1CA` | unknown | padding byte (0, or 0xCC in holes); not read | -52..69 (3 distinct) |
-| 0x1cb | s8 | `mC1CB` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x1ca | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..69 (3 distinct) |
+| 0x1cb | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 | 0x1cc | f32 | `mMaxRoll` | named | +0x1cc; ctor -> mMaxRoll | 0..1.1345 (9 distinct) |
-| 0x1d0 | s32 | `mU1D0` | unknown | +0x1d0; not read by the EEUnitClass ctor | const -1 |
+| 0x1d0 | s32 | `mUnused5` | unused | +0x1d0; not read by the EEUnitClass ctor | const -1 |
 | 0x1d4 | f32 | `mCruiseAltitude` | named | +0x1d4; ctor -> mCruiseAltitude | -0.5..3 (17 distinct) |
 | 0x1d8 | s32 | `mNameStringID` | named | +0x1d8; ctor -> mNameStringID | 0..999999 (642 distinct) |
 | 0x1dc | s32 | `mTargetSearchInterval` | named | +0x1dc; ctor -> mTargetSearchInterval | 0..5000000 (14 distinct) |
@@ -378,21 +379,21 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x1e8 | bool | `mCanEnterLandTransports` | named | +0x1e8; ctor -> mCanEnterLandTransports | 0..1 (2 distinct) |
 | 0x1e9 | bool | `mCanEnterAirTransports` | named | +0x1e9; ctor -> mCanEnterAirTransports | 0..1 (2 distinct) |
 | 0x1ea | bool | `mCanEnterSeaTransports` | named | +0x1ea; ctor -> mCanEnterSpaceTransports = mCanEnterSeaTransports | 0..1 (2 distinct) |
-| 0x1eb | s8 | `mC1EB` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x1ec | s32 | `mU1EC` | unknown | +0x1ec; not read by the EEUnitClass ctor | 0..9 (10 distinct) |
+| 0x1eb | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x1ec | s32 | `mUnused6` | unused | +0x1ec; not read by the EEUnitClass ctor | 0..9 (10 distinct) |
 | 0x1f0 | bool | `mFiresWhileMoving` | named | +0x1f0; ctor -> mFiresWhileMoving | 0..1 (2 distinct) |
-| 0x1f1 | s8 | `mC1F1` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x1f2 | s8 | `mC1F2` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x1f3 | s8 | `mC1F3` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x1f1 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x1f2 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x1f3 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 | 0x1f4 | f32 | `mSelectionSize` | named | +0x1f4 (-> EEUnitClass::mSelectionSize, a mov copy); ctor -> mSelectionSize | 0..6 (32 distinct) |
 | 0x1f8 | f32 | `mShadowScale` | named | +0x1f8 (EEUnitClass mL16C, a float); ctor -> mShadowScale | 0..9.5 (37 distinct) |
-| 0x1fc | f32 | `mL1FC` | provisional | +0x1fc (EEUnitClass mL170, a float); ctor -> mL170 | const 0 |
+| 0x1fc | f32 | `mUnusedShadowOffset` | unused | +0x1fc (EEUnitClass mL170, a float); ctor -> mL170 | const 0 |
 | 0x200 | f32 | `mOuterCollisionSphere` | named | +0x200; ctor -> mOuterCollisionSphere | 0..6 (32 distinct) |
 | 0x204 | f32 | `mInnerCollisionSphere` | named | +0x204; ctor -> mInnerCollisionSphere | 0..6 (33 distinct) |
 | 0x208 | bool | `mIsCollidable` | named | +0x208; ctor -> mIsCollidable | 0..1 (2 distinct) |
-| 0x209 | bool | `mB209` | provisional | +0x209; ctor -> mB305 | 0..1 (2 distinct) |
-| 0x20a | s8 | `mC20A` | unknown | padding byte (0, or 0xCC in holes); not read | -52..77 (3 distinct) |
-| 0x20b | s8 | `mC20B` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x209 | bool | `mUnusedGroundFlag` | unused | +0x209; ctor -> mB305 | 0..1 (2 distinct) |
+| 0x20a | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..77 (3 distinct) |
+| 0x20b | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 | 0x20c | f32 | `mMissileDelayTime` | named | +0x20c; ctor -> mMissileDelayTime | 0..100 (13 distinct) |
 | 0x210 | f32 | `mLaunchPitch` | named | +0x210; ctor -> mLaunchPitch | 0..90 (8 distinct) |
 | 0x214 | s32 | `mAmmunition` | named | +0x214; ctor -> mAmmunition | 0..8 (6 distinct) |
@@ -400,102 +401,102 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x219 | bool | `mCanFireOverWalls` | named | +0x219; ctor -> mCanFireOverWalls | 0..1 (2 distinct) |
 | 0x21a | bool | `mIsAffectedByGravity` | named | +0x21a; ctor -> mIsAffectedByGravity | 0..1 (2 distinct) |
 | 0x21b | bool | `mShootsHigh` | named | +0x21b; ctor -> mShootsHigh | 0..1 (2 distinct) |
-| 0x21c | s32 | `mL21C` | provisional | +0x21c; ctor -> mL284 | -1..0 (2 distinct) |
-| 0x220 | s32 | `mL220` | provisional | +0x220; ctor -> mL180 | const 0 |
+| 0x21c | s32 | `mUnusedReference` | unused | +0x21c; ctor -> mL284 | -1..0 (2 distinct) |
+| 0x220 | s32 | `mUnusedValue` | unused | +0x220; ctor -> mL180 | const 0 |
 | 0x224 | s32 | `mAIKind` | named | +0x224; ctor -> mAIKind | 0..39 (38 distinct) |
 | 0x228 | s32 | `mCounterKind1` | named | +0x228; ctor -> mCounterKind1 | 0..38 (23 distinct) |
 | 0x22c | s32 | `mCounterKind2` | named | +0x22c; ctor -> mCounterKind2 | 0..40 (26 distinct) |
 | 0x230 | s32 | `mCounterKind3` | named | +0x230; ctor -> mCounterKind3 | 0..37 (26 distinct) |
 | 0x234 | bool | `mCanSetRallyPoint` | named | +0x234; ctor -> mCanSetRallyPoint | 0..1 (2 distinct) |
-| 0x235 | s8 | `mC235` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x236 | s8 | `mC236` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x237 | s8 | `mC237` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x235 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x236 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x237 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 | 0x238 | s32 | `mUpgradeTableIndex` | named | +0x238 | 0..75 (65 distinct) |
 | 0x23c | s32 | `mConversionRate` | named | +0x23c; ctor -> mConversionRate | 0..95 (5 distinct) |
 | 0x240 | f32 | `mConversionResistance` | named | +0x240 (a float: EEUnitClass::mConversionResistance's source); ctor -> mConversionResistance | 0..1 (12 distinct) |
 | 0x244 | bool | `mIsPlayerPlaceable` | named | +0x244; ctor -> mIsPlayerPlaceable | 0..1 (2 distinct) |
 | 0x245 | bool | `mIsGaiaPlaceable` | named | +0x245; ctor -> mIsGaiaPlaceable | 0..1 (2 distinct) |
 | 0x246 | bool | `mIsVital` | named | +0x246; ctor -> mIsVital | 0..1 (2 distinct) |
-| 0x247 | s8 | `mC247` | unknown | padding byte (0, or 0xCC in holes); not read | 0..1 (2 distinct) |
+| 0x247 | s8 | `mUnusedFlag1` | unused | padding byte (0, or 0xCC in holes); not read | 0..1 (2 distinct) |
 | 0x248 | bool | `mIsDeletable` | named | +0x248; ctor -> mIsDeletable | 0..1 (2 distinct) |
 | 0x249 | bool | `mIsDecoration` | named | +0x249; ctor -> mIsDecoration | 0..1 (2 distinct) |
-| 0x24a | s8 | `mC24A` | unknown | padding byte (0, or 0xCC in holes); not read | -52..85 (3 distinct) |
-| 0x24b | s8 | `mC24B` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x24c | s32 | `mL24C` | provisional | +0x24c; ctor -> mDeathEffect via EEGraphicEffect::Get | -1..290 (19 distinct) |
-| 0x250 | s32 | `mL250` | provisional | +0x250; ctor -> mDamageEffect via EEGraphicEffect::Get | -1..278 (5 distinct) |
-| 0x254 | s32 | `mL254` | provisional | +0x254; ctor -> mMuzzleFlashEffect via EEGraphicEffect::Get | -1..205 (7 distinct) |
-| 0x258 | s32 | `mL258` | provisional | +0x258; ctor -> mTrailEffect via EEGraphicEffect::Get | -1..22 (3 distinct) |
-| 0x25c | s32 | `mL25C` | provisional | +0x25c; ctor -> mRippleEffect via EEGraphicEffect::Get | -1..13 (4 distinct) |
-| 0x260 | s32 | `mL260` | provisional | +0x260; ctor -> mSplashEffect via EEGraphicEffect::Get | -1..126 (3 distinct) |
-| 0x264 | s32 | `mL264` | provisional | +0x264; ctor -> mHealEffect via EEGraphicEffect::Get | -1..150 (3 distinct) |
-| 0x268 | s32 | `mL268` | provisional | +0x268; ctor -> mFireTrailEffect via EEGraphicEffect::Get | -1..7 (2 distinct) |
-| 0x26c | s32 | `mL26C` | provisional | +0x26c; ctor -> mImpactSparksEffect via EEGraphicEffect::Get | -1..276 (3 distinct) |
-| 0x270 | s32 | `mL270` | provisional | +0x270; ctor -> mImpactBloodEffect via EEGraphicEffect::Get | -1..16 (2 distinct) |
-| 0x274 | s32 | `mL274` | provisional | +0x274; ctor -> mAttachedEffect via EEGraphicEffect::Get | -1..242 (8 distinct) |
-| 0x278 | s32 | `mL278` | provisional | +0x278; ctor -> mEffect090 via EEGraphicEffect::Get | const -1 |
+| 0x24a | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..85 (3 distinct) |
+| 0x24b | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x24c | s32 | `mDeathEffect` | named | +0x24c; ctor -> mDeathEffect via EEGraphicEffect::Get | -1..290 (19 distinct) |
+| 0x250 | s32 | `mDamageEffect` | named | +0x250; ctor -> mDamageEffect via EEGraphicEffect::Get | -1..278 (5 distinct) |
+| 0x254 | s32 | `mMuzzleFlashEffect` | named | +0x254; ctor -> mMuzzleFlashEffect via EEGraphicEffect::Get | -1..205 (7 distinct) |
+| 0x258 | s32 | `mTrailEffect` | named | +0x258; ctor -> mTrailEffect via EEGraphicEffect::Get | -1..22 (3 distinct) |
+| 0x25c | s32 | `mRippleEffect` | named | +0x25c; ctor -> mRippleEffect via EEGraphicEffect::Get | -1..13 (4 distinct) |
+| 0x260 | s32 | `mSplashEffect` | named | +0x260; ctor -> mSplashEffect via EEGraphicEffect::Get | -1..126 (3 distinct) |
+| 0x264 | s32 | `mHealEffect` | named | +0x264; ctor -> mHealEffect via EEGraphicEffect::Get | -1..150 (3 distinct) |
+| 0x268 | s32 | `mUnusedFireTrailEffect` | unused | +0x268; ctor -> mFireTrailEffect via EEGraphicEffect::Get | -1..7 (2 distinct) |
+| 0x26c | s32 | `mImpactSparksEffect` | named | +0x26c; ctor -> mImpactSparksEffect via EEGraphicEffect::Get | -1..276 (3 distinct) |
+| 0x270 | s32 | `mImpactBloodEffect` | named | +0x270; ctor -> mImpactBloodEffect via EEGraphicEffect::Get | -1..16 (2 distinct) |
+| 0x274 | s32 | `mAttachedEffect` | named | +0x274; ctor -> mAttachedEffect via EEGraphicEffect::Get | -1..242 (8 distinct) |
+| 0x278 | s32 | `mUnusedEffect1` | unused | +0x278; ctor -> mEffect090 via EEGraphicEffect::Get | const -1 |
 | 0x27c | s32 | `mCreationEffect` | named | +0x27c; ctor -> mCreationEffect via EEGraphicEffect::Get | -1..252 (6 distinct) |
-| 0x280 | s32 | `mL280` | provisional | +0x280; ctor -> mEffect098 via EEGraphicEffect::Get | const -1 |
-| 0x284 | s32 | `mL284` | provisional | +0x284; ctor -> mEffect09C via EEGraphicEffect::Get | const -1 |
-| 0x288 | s32 | `mL288` | provisional | +0x288; ctor -> mEffect0A0 via EEGraphicEffect::Get | const -1 |
-| 0x28c | s32 | `mL28C` | provisional | +0x28c; ctor -> mEffect0A4 via EEGraphicEffect::Get | const -1 |
-| 0x290 | s32 | `mL290` | provisional | +0x290; ctor -> mEffect0A8 via EEGraphicEffect::Get | const -1 |
-| 0x294 | s32 | `mL294` | provisional | +0x294; ctor -> mSpecialAttackEffect via EEGraphicEffect::Get | -1..282 (2 distinct) |
-| 0x298 | s32 | `mL298` | provisional | +0x298; ctor -> mEffect0B0 via EEGraphicEffect::Get | -1..0 (2 distinct) |
-| 0x29c | s32 | `mL29C` | provisional | +0x29c; ctor -> mShotEffect via EEGraphicEffect::Get | -1..251 (26 distinct) |
+| 0x280 | s32 | `mUnusedEffect2` | unused | +0x280; ctor -> mEffect098 via EEGraphicEffect::Get | const -1 |
+| 0x284 | s32 | `mUnusedEffect3` | unused | +0x284; ctor -> mEffect09C via EEGraphicEffect::Get | const -1 |
+| 0x288 | s32 | `mUnusedEffect4` | unused | +0x288; ctor -> mEffect0A0 via EEGraphicEffect::Get | const -1 |
+| 0x28c | s32 | `mUnusedEffect5` | unused | +0x28c; ctor -> mEffect0A4 via EEGraphicEffect::Get | const -1 |
+| 0x290 | s32 | `mUnusedEffect6` | unused | +0x290; ctor -> mEffect0A8 via EEGraphicEffect::Get | const -1 |
+| 0x294 | s32 | `mSpecialAttackEffect` | named | +0x294; ctor -> mSpecialAttackEffect via EEGraphicEffect::Get | -1..282 (2 distinct) |
+| 0x298 | s32 | `mUnusedEffect7` | unused | +0x298; ctor -> mEffect0B0 via EEGraphicEffect::Get | -1..0 (2 distinct) |
+| 0x29c | s32 | `mShotEffect` | named | +0x29c; ctor -> mShotEffect via EEGraphicEffect::Get | -1..251 (26 distinct) |
 | 0x2a0 | s32 | `mLeprosyEffect` | named | +0x2a0; ctor -> mLeprosyEffect via EEGraphicEffect::Get | -1..190 (5 distinct) |
 | 0x2a4 | s32 | `mPlagueEffect` | named | +0x2a4; ctor -> mPlagueEffect via EEGraphicEffect::Get | -1..190 (5 distinct) |
 | 0x2a8 | s32 | `mMoraleEffect` | named | +0x2a8; ctor -> mMoraleEffect via EEGraphicEffect::Get | -1..153 (2 distinct) |
-| 0x2ac | s32 | `mL2AC` | provisional | +0x2ac; ctor -> mPulseCannonEffect via EEGraphicEffect::Get | -1..196 (3 distinct) |
-| 0x2b0 | s32 | `mL2B0` | provisional | +0x2b0; ctor -> mBattleCryEffect via EEGraphicEffect::Get | -1..221 (2 distinct) |
-| 0x2b4 | s32 | `mL2B4` | provisional | +0x2b4; ctor -> mShellHoleEffect via EEGraphicEffect::Get | -1..270 (3 distinct) |
-| 0x2b8 | s32 | `mL2B8` | provisional | +0x2b8; ctor -> mEffect0D0 via EEGraphicEffect::Get | const -1 |
-| 0x2bc | s32 | `mL2BC` | provisional | +0x2bc; ctor -> mBloodStainEffect via EEGraphicEffect::Get | -1..261 (2 distinct) |
-| 0x2c0 | s32 | `mU2C0` | unknown | +0x2c0; not read by the EEUnitClass ctor | const -1 |
-| 0x2c4 | s32 | `mU2C4` | unknown | +0x2c4; not read by the EEUnitClass ctor | -1..0 (2 distinct) |
+| 0x2ac | s32 | `mPulseCannonEffect` | named | +0x2ac; ctor -> mPulseCannonEffect via EEGraphicEffect::Get | -1..196 (3 distinct) |
+| 0x2b0 | s32 | `mBattleCryEffect` | named | +0x2b0; ctor -> mBattleCryEffect via EEGraphicEffect::Get | -1..221 (2 distinct) |
+| 0x2b4 | s32 | `mShellHoleEffect` | named | +0x2b4; ctor -> mShellHoleEffect via EEGraphicEffect::Get | -1..270 (3 distinct) |
+| 0x2b8 | s32 | `mUnusedEffect8` | unused | +0x2b8; ctor -> mEffect0D0 via EEGraphicEffect::Get | const -1 |
+| 0x2bc | s32 | `mBloodStainEffect` | named | +0x2bc; ctor -> mBloodStainEffect via EEGraphicEffect::Get | -1..261 (2 distinct) |
+| 0x2c0 | s32 | `mUnused7` | unused | +0x2c0; not read by the EEUnitClass ctor | const -1 |
+| 0x2c4 | s32 | `mUnused8` | unused | +0x2c4; not read by the EEUnitClass ctor | -1..0 (2 distinct) |
 | 0x2c8 | f32 | `mBobPitch` | named | +0x2c8; ctor -> mBobPitch | 0..2 (2 distinct) |
-| 0x2cc | s32 | `mU2CC` | unknown | +0x2cc; not read by the EEUnitClass ctor | const 0 |
-| 0x2d0 | s32 | `mU2D0` | unknown | +0x2d0; not read by the EEUnitClass ctor | const 0 |
-| 0x2d4 | s32 | `mU2D4` | unknown | +0x2d4; not read by the EEUnitClass ctor | const 0 |
-| 0x2d8 | s32 | `mU2D8` | unknown | +0x2d8; not read by the EEUnitClass ctor | const 0 |
-| 0x2dc | bool | `mB2DC` | provisional | +0x2dc; ctor -> mTerrainTypes[0] | 0..1 (2 distinct) |
-| 0x2dd | bool | `mB2DD` | provisional | +0x2dd; ctor -> mTerrainTypes[kTerrainDeepWater] | 0..1 (2 distinct) |
-| 0x2de | bool | `mB2DE` | provisional | +0x2de; ctor -> mTerrainTypes[2] | 0..1 (2 distinct) |
-| 0x2df | bool | `mB2DF` | provisional | +0x2df; ctor -> mTerrainTypes[3] | 0..1 (2 distinct) |
-| 0x2e0 | s8 | `mC2E0` | unknown | padding byte (0, or 0xCC in holes); not read | 0..1 (2 distinct) |
-| 0x2e1 | s8 | `mC2E1` | unknown | padding byte (0, or 0xCC in holes); not read | 0..1 (2 distinct) |
-| 0x2e2 | bool | `mB2E2` | provisional | +0x2e2; ctor -> mTerrainTypes[4] | 0..1 (2 distinct) |
+| 0x2cc | s32 | `mUnused9` | unused | +0x2cc; not read by the EEUnitClass ctor | const 0 |
+| 0x2d0 | s32 | `mUnused10` | unused | +0x2d0; not read by the EEUnitClass ctor | const 0 |
+| 0x2d4 | s32 | `mUnused11` | unused | +0x2d4; not read by the EEUnitClass ctor | const 0 |
+| 0x2d8 | s32 | `mUnused12` | unused | +0x2d8; not read by the EEUnitClass ctor | const 0 |
+| 0x2dc | bool | `mCanMoveOnLand` | named | +0x2dc; ctor -> mTerrainTypes[0] | 0..1 (2 distinct) |
+| 0x2dd | bool | `mCanMoveOnDeepWater` | named | +0x2dd; ctor -> mTerrainTypes[kTerrainDeepWater] | 0..1 (2 distinct) |
+| 0x2de | bool | `mCanMoveOnRock` | named | +0x2de; ctor -> mTerrainTypes[2] | 0..1 (2 distinct) |
+| 0x2df | bool | `mCanMoveOnTerrainType3` | named | +0x2df; ctor -> mTerrainTypes[3] | 0..1 (2 distinct) |
+| 0x2e0 | s8 | `mUnusedFlag2` | unused | padding byte (0, or 0xCC in holes); not read | 0..1 (2 distinct) |
+| 0x2e1 | s8 | `mUnusedFlag3` | unused | padding byte (0, or 0xCC in holes); not read | 0..1 (2 distinct) |
+| 0x2e2 | bool | `mCanMoveOnMud` | named | +0x2e2; ctor -> mTerrainTypes[4] | 0..1 (2 distinct) |
 | 0x2e3 | bool | `mCanEnterFortresses` | named | +0x2e3; ctor -> mCanEnterFortresses | 0..1 (2 distinct) |
-| 0x2e4 | bool | `mB2E4` | provisional | +0x2e4; ctor -> mTerrainTypes[6] | 0..1 (2 distinct) |
-| 0x2e5 | bool | `mB2E5` | provisional | +0x2e5; ctor -> mTerrainTypes[7] | 0..1 (2 distinct) |
-| 0x2e6 | bool | `mB2E6` | provisional | +0x2e6; ctor -> mTerrainTypes[8] | 0..1 (2 distinct) |
-| 0x2e7 | bool | `mB2E7` | provisional | +0x2e7; ctor -> mTerrainTypes[kTerrainCliff] | 0..1 (2 distinct) |
-| 0x2e8 | bool | `mB2E8` | provisional | +0x2e8; ctor -> mTerrainTypes[kTerrainShallowWater] | 0..1 (2 distinct) |
-| 0x2e9 | s8 | `mC2E9` | unknown | padding byte (0, or 0xCC in holes); not read | 0..1 (2 distinct) |
-| 0x2ea | bool | `mB2EA` | provisional | +0x2ea; ctor -> mTerrainTypes[11] | 0..1 (2 distinct) |
-| 0x2eb | bool | `mB2EB` | provisional | +0x2eb; ctor -> mTerrainTypes[kTerrainSpace] | 0..1 (2 distinct) |
+| 0x2e4 | bool | `mCanMoveOnRoughGrass` | named | +0x2e4; ctor -> mTerrainTypes[6] | 0..1 (2 distinct) |
+| 0x2e5 | bool | `mCanMoveOnTerrainType7` | named | +0x2e5; ctor -> mTerrainTypes[7] | 0..1 (2 distinct) |
+| 0x2e6 | bool | `mCanMoveOnPavement` | named | +0x2e6; ctor -> mTerrainTypes[8] | 0..1 (2 distinct) |
+| 0x2e7 | bool | `mCanMoveOnCliffs` | named | +0x2e7; ctor -> mTerrainTypes[kTerrainCliff] | 0..1 (2 distinct) |
+| 0x2e8 | bool | `mCanMoveOnShallowWater` | named | +0x2e8; ctor -> mTerrainTypes[kTerrainShallowWater] | 0..1 (2 distinct) |
+| 0x2e9 | s8 | `mUnusedFlag4` | unused | padding byte (0, or 0xCC in holes); not read | 0..1 (2 distinct) |
+| 0x2ea | bool | `mCanMoveOnSand` | named | +0x2ea; ctor -> mTerrainTypes[11] | 0..1 (2 distinct) |
+| 0x2eb | bool | `mCanMoveInSpace` | named | +0x2eb; ctor -> mTerrainTypes[kTerrainSpace] | 0..1 (2 distinct) |
 | 0x2ec | bool | `mIsAttackUnit` | named | +0x2ec; ctor -> mIsAttackUnit | 0..1 (2 distinct) |
 | 0x2ed | bool | `mIsDefenseUnit` | named | +0x2ed; ctor -> mIsDefenseUnit | 0..1 (2 distinct) |
-| 0x2ee | s8 | `mC2EE` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x2ef | s8 | `mC2EF` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x2ee | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x2ef | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 | 0x2f0 | s32 | `mAreaEffectTemplate0` | named | +0x2f0; ctor -> mAreaEffectTemplates[0] | -1..49 (18 distinct) |
 | 0x2f4 | s32 | `mAreaEffectTemplate1` | named | +0x2f4; ctor -> mAreaEffectTemplates[1] | -1..7 (3 distinct) |
 | 0x2f8 | s32 | `mAreaEffectTemplate2` | named | +0x2f8; ctor -> mAreaEffectTemplates[2] | -1..0 (2 distinct) |
 | 0x2fc | s32 | `mAreaEffectTemplate3` | named | +0x2fc; ctor -> mAreaEffectTemplates[3] | -1..0 (2 distinct) |
-| 0x300 | s32 | `mU300` | unknown | +0x300; not read by the EEUnitClass ctor | const 0 |
-| 0x304 | s32 | `mU304` | unknown | +0x304; not read by the EEUnitClass ctor | const 0 |
-| 0x308 | s32 | `mU308` | unknown | +0x308; not read by the EEUnitClass ctor | const 0 |
+| 0x300 | s32 | `mUnused13` | unused | +0x300; not read by the EEUnitClass ctor | const 0 |
+| 0x304 | s32 | `mUnused14` | unused | +0x304; not read by the EEUnitClass ctor | const 0 |
+| 0x308 | s32 | `mUnused15` | unused | +0x308; not read by the EEUnitClass ctor | const 0 |
 | 0x30c | f32 | `mCarryAmount` | named | +0x30c; ctor -> mCarryAmount | 0..20 (3 distinct) |
-| 0x310 | s32 | `mU310` | unknown | +0x310; not read by the EEUnitClass ctor | 0..2 (2 distinct) |
+| 0x310 | s32 | `mUnused16` | unused | +0x310; not read by the EEUnitClass ctor | 0..2 (2 distinct) |
 | 0x314 | s32 | `mMaxObjectCarry` | named | +0x314; ctor -> mMaxObjectCarry | const 0 |
 | 0x318 | bool | `mIsScenarioSelectable` | named | +0x318; ctor -> mIsScenarioSelectable | 0..1 (2 distinct) |
-| 0x319 | bool | `mB319` | provisional | +0x319; ctor -> mB2FA | const 0 |
+| 0x319 | bool | `mUnusedFlag6` | unused | +0x319; ctor -> mB2FA | const 0 |
 | 0x31a | bool | `mBuildsOnElevation` | named | +0x31a; ctor -> mBuildsOnElevation | 0..1 (2 distinct) |
-| 0x31b | s8 | `mC31B` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x31c | s32 | `mU31C` | unknown | +0x31c; not read by the EEUnitClass ctor | 0..4 (5 distinct) |
-| 0x320 | s32 | `mU320` | unknown | +0x320; not read by the EEUnitClass ctor | 0..50 (4 distinct) |
+| 0x31b | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x31c | s32 | `mUnused17` | unused | +0x31c; not read by the EEUnitClass ctor | 0..4 (5 distinct) |
+| 0x320 | s32 | `mUnused18` | unused | +0x320; not read by the EEUnitClass ctor | 0..50 (4 distinct) |
 | 0x324 | s32 | `mScaffoldingType` | named | +0x324 | 0..827 (5 distinct) |
 | 0x328 | s32 | `mDeathType` | named | +0x328 | 0..364 (4 distinct) |
-| 0x32c | s32 | `mL32C` | provisional | +0x32c; ctor -> mL294 | 0..250 (3 distinct) |
+| 0x32c | s32 | `mUnusedSelectionValue` | unused | +0x32c; ctor -> mL294 | 0..250 (3 distinct) |
 | 0x330 | s32 | `mCloakRadius` | named | +0x330; ctor -> mCloakRadius | 0..14 (5 distinct) |
 | 0x334 | s32 | `mMiniMapColor` | named | +0x334; ctor -> mMiniMapColor | 0..68 (8 distinct) |
 | 0x338 | s32 | `mGarrisonCapacity` | named | +0x338; ctor -> mGarrisonCapacity | 0..50 (6 distinct) |
@@ -505,27 +506,27 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x348 | s32 | `mOverlapUnitSet` | named | +0x348; ctor -> mOverlapUnitSet | 0..109 (3 distinct) |
 | 0x34c | s32 | `mWonderBonus` | named | +0x34c; ctor -> mWonderBonus | 0..6 (7 distinct) |
 | 0x350 | s32 | `mWonderUnitSet` | named | +0x350; ctor -> mWonderUnitSet | 0..101 (6 distinct) |
-| 0x354 | f32 | `mF354` | provisional | +0x354; ctor -> mF18C | 0..1 (4 distinct) |
+| 0x354 | f32 | `mSlopeSpeedPenalty` | named | +0x354; ctor -> mF18C | 0..1 (4 distinct) |
 | 0x358 | f32 | `mBobHeight` | named | +0x358 (EEUnitClass +0x190); ctor -> mBobHeight | 0..0.12 (10 distinct) |
 | 0x35c | f32 | `mFriendlyDamageFactor` | named | +0x35c (a float: EEUnitClass::mFriendlyDamageFactor's source); ctor -> mFriendlyDamageFactor | 0..1 (4 distinct) |
 | 0x360 | f32 | `mGarrisonBonus` | named | +0x360 (-> EEUnitClass::mGarrisonBonus); ctor -> mGarrisonBonus | 0..0.05 (5 distinct) |
-| 0x364 | s32 | `mU364` | unknown | +0x364; not read by the EEUnitClass ctor | 0..1087373312 (17 distinct) |
-| 0x368 | f32 | `mF368` | provisional | +0x368; ctor -> mF19C | const 0 |
+| 0x364 | s32 | `mUnused19` | unused | +0x364; not read by the EEUnitClass ctor | 0..1087373312 (17 distinct) |
+| 0x368 | f32 | `mUnusedDefaultedValue` | unused | +0x368; ctor -> mF19C | const 0 |
 | 0x36c | bool | `mIsInactive` | named | +0x36c; ctor -> mIsInactive | 0..1 (2 distinct) |
-| 0x36d | s8 | `mC36D` | unknown | padding byte (0, or 0xCC in holes); not read | -52..16 (3 distinct) |
-| 0x36e | s8 | `mC36E` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x36f | s8 | `mC36F` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x36d | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..16 (3 distinct) |
+| 0x36e | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x36f | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 | 0x370 | s32 | `mInfluence` | named | +0x370; ctor -> mInfluence | 0..600000 (67 distinct) |
 | 0x374 | s32 | `mNumAttributes` | named | +0x374 | 0..115 (26 distinct) |
 | 0x378 | s32 | `mTechnology` | named | +0x378; ctor -> mTechnology | 92..100000 (468 distinct) |
 | 0x37c | bool | `mBlocksTile` | named | +0x37c; ctor -> mBlocksTile | 0..1 (2 distinct) |
 | 0x37d | bool | `mIsCloakable` | named | +0x37d; ctor -> mIsCloakable | 0..1 (2 distinct) |
-| 0x37e | bool | `mB37E` | provisional | +0x37e; ctor -> mB30C | 0..1 (2 distinct) |
+| 0x37e | bool | `mIsExpansionUnit` | named | +0x37e; ctor -> mB30C | 0..1 (2 distinct) |
 | 0x37f | bool | `mCanEnterAirports` | named | +0x37f; ctor -> mCanEnterAirports | 0..1 (2 distinct); 0xCC in 110 |
 | 0x380 | bool | `mCanEnterCarriers` | named | +0x380; ctor -> mCanEnterCarriers | 0..1 (2 distinct); 0xCC in 110 |
-| 0x381 | s8 | `mC381` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x381 | s8 | `mUnusedFlag5` | unused | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 | 0x382 | bool | `mCanGarrison` | named | +0x382; ctor -> mCanGarrison | 0..1 (2 distinct); 0xCC in 110 |
-| 0x383 | s8 | `mC383` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x383 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 | 0x384 | s32 | `mDeathSpawnType` | named | +0x384 | 0..662 (2 distinct) |
 | 0x388 | s32 | `mPower` | named | +0x388; ctor -> mPower | 0..150 (3 distinct) |
 | 0x38c | s32 | `mPowerRegeneration` | named | +0x38c; ctor -> mPowerRegeneration | 0..6 (7 distinct) |
@@ -536,110 +537,110 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x3a0 | f32 | `mHealThreshold` | named | +0x3a0; ctor -> mHealThreshold | 0..1 (2 distinct) |
 | 0x3a4 | f32 | `mLoadRange` | named | +0x3a4; ctor -> mLoadRange | 0..3 (4 distinct) |
 | 0x3a8 | f32 | `mUnloadRange` | named | +0x3a8; ctor -> mUnloadRange | 0..99 (6 distinct) |
-| 0x3ac | bool | `mB3AC` | provisional | +0x3ac; ctor -> mB315 | 0..1 (2 distinct) |
+| 0x3ac | bool | `mCanCrossForest` | named | +0x3ac; ctor -> mB315 | 0..1 (2 distinct) |
 | 0x3ad | bool | `mCanDisband` | named | +0x3ad; ctor -> mCanDisband | const 0 |
 | 0x3ae | bool | `mIsObstacle` | named | +0x3ae; ctor -> mIsObstacle | 0..1 (2 distinct) |
 | 0x3af | bool | `mCanAttackGround` | named | +0x3af; ctor -> mCanAttackGround | 0..1 (2 distinct) |
 | 0x3b0 | bool | `mIsMelee` | named | +0x3b0; ctor -> mIsMelee | 0..1 (2 distinct) |
-| 0x3b1 | s8 | `mC3B1` | unknown | padding byte (0, or 0xCC in holes); not read | 0..122 (3 distinct) |
-| 0x3b2 | s8 | `mC3B2` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x3b3 | s8 | `mC3B3` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x3b4 | s32 | `mU3B4` | unknown | +0x3b4; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x3b8 | s32 | `mU3B8` | unknown | +0x3b8; not read by the EEUnitClass ctor | 0..8585728 (2 distinct); 0xCC in 110 |
-| 0x3bc | s32 | `mU3BC` | unknown | +0x3bc; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
-| 0x3c0 | s32 | `mU3C0` | unknown | +0x3c0; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x3c4 | s32 | `mU3C4` | unknown | +0x3c4; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x3c8 | s32 | `mU3C8` | unknown | +0x3c8; not read by the EEUnitClass ctor | 0..8716800 (2 distinct); 0xCC in 110 |
-| 0x3cc | s32 | `mU3CC` | unknown | +0x3cc; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
-| 0x3d0 | s32 | `mU3D0` | unknown | +0x3d0; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x3d4 | s32 | `mU3D4` | unknown | +0x3d4; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x3d8 | s32 | `mU3D8` | unknown | +0x3d8; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x3dc | s32 | `mU3DC` | unknown | +0x3dc; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x3e0 | s32 | `mU3E0` | unknown | +0x3e0; not read by the EEUnitClass ctor | 0..8913408 (2 distinct); 0xCC in 110 |
-| 0x3e4 | s32 | `mU3E4` | unknown | +0x3e4; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
-| 0x3e8 | s32 | `mU3E8` | unknown | +0x3e8; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x3ec | s32 | `mU3EC` | unknown | +0x3ec; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x3f0 | s32 | `mU3F0` | unknown | +0x3f0; not read by the EEUnitClass ctor | 0..9044480 (2 distinct); 0xCC in 110 |
-| 0x3f4 | s32 | `mU3F4` | unknown | +0x3f4; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
-| 0x3f8 | s32 | `mU3F8` | unknown | +0x3f8; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x3fc | s32 | `mU3FC` | unknown | +0x3fc; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x400 | s32 | `mU400` | unknown | +0x400; not read by the EEUnitClass ctor | 0..9175552 (2 distinct); 0xCC in 110 |
-| 0x404 | s32 | `mU404` | unknown | +0x404; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
-| 0x408 | s32 | `mU408` | unknown | +0x408; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x40c | s32 | `mU40C` | unknown | +0x40c; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x410 | s32 | `mU410` | unknown | +0x410; not read by the EEUnitClass ctor | 0..9306624 (2 distinct); 0xCC in 110 |
-| 0x414 | s32 | `mU414` | unknown | +0x414; not read by the EEUnitClass ctor | -859045684..2038003968 (113 distinct) |
-| 0x418 | s32 | `mU418` | unknown | +0x418; not read by the EEUnitClass ctor | 0..544108388 (14 distinct); 0xCC in 110 |
-| 0x41c | s32 | `mU41C` | unknown | +0x41c; not read by the EEUnitClass ctor | 0..1702259020 (2 distinct); 0xCC in 110 |
-| 0x420 | s32 | `mU420` | unknown | +0x420; not read by the EEUnitClass ctor | 0..9437696 (3 distinct); 0xCC in 110 |
-| 0x424 | s32 | `mU424` | unknown | +0x424; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
-| 0x428 | s32 | `mU428` | unknown | +0x428; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x42c | s32 | `mU42C` | unknown | +0x42c; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x430 | s32 | `mU430` | unknown | +0x430; not read by the EEUnitClass ctor | 0..9568768 (2 distinct); 0xCC in 110 |
-| 0x434 | s32 | `mU434` | unknown | +0x434; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
-| 0x438 | s32 | `mU438` | unknown | +0x438; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x43c | s32 | `mU43C` | unknown | +0x43c; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x440 | s32 | `mU440` | unknown | +0x440; not read by the EEUnitClass ctor | 0..9699840 (2 distinct); 0xCC in 110 |
-| 0x444 | s32 | `mU444` | unknown | +0x444; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
-| 0x448 | s32 | `mU448` | unknown | +0x448; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x44c | s32 | `mU44C` | unknown | +0x44c; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x450 | s32 | `mU450` | unknown | +0x450; not read by the EEUnitClass ctor | 0..9830912 (2 distinct); 0xCC in 110 |
-| 0x454 | s32 | `mU454` | unknown | +0x454; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
-| 0x458 | s32 | `mU458` | unknown | +0x458; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x45c | s32 | `mU45C` | unknown | +0x45c; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x460 | s32 | `mU460` | unknown | +0x460; not read by the EEUnitClass ctor | 0..9961984 (2 distinct); 0xCC in 110 |
-| 0x464 | s32 | `mU464` | unknown | +0x464; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
-| 0x468 | s32 | `mU468` | unknown | +0x468; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x46c | s32 | `mU46C` | unknown | +0x46c; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
-| 0x470 | s32 | `mU470` | unknown | +0x470; not read by the EEUnitClass ctor | 0..10093056 (2 distinct); 0xCC in 110 |
-| 0x474 | s32 | `mU474` | unknown | +0x474; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
-| 0x478 | s32 | `mU478` | unknown | +0x478; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x3b1 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | 0..122 (3 distinct) |
+| 0x3b2 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x3b3 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x3b4 | s32 | `mUnusedConverterScratch` | unused | +0x3b4; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x3b8 | s32 | `mUnusedConverterScratch+0x4` | unused | +0x3b8; not read by the EEUnitClass ctor | 0..8585728 (2 distinct); 0xCC in 110 |
+| 0x3bc | s32 | `mUnusedConverterScratch+0x8` | unused | +0x3bc; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
+| 0x3c0 | s32 | `mUnusedConverterScratch+0xc` | unused | +0x3c0; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x3c4 | s32 | `mUnusedConverterScratch+0x10` | unused | +0x3c4; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x3c8 | s32 | `mUnusedConverterScratch+0x14` | unused | +0x3c8; not read by the EEUnitClass ctor | 0..8716800 (2 distinct); 0xCC in 110 |
+| 0x3cc | s32 | `mUnusedConverterScratch+0x18` | unused | +0x3cc; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
+| 0x3d0 | s32 | `mUnusedConverterScratch+0x1c` | unused | +0x3d0; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x3d4 | s32 | `mUnusedConverterScratch+0x20` | unused | +0x3d4; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x3d8 | s32 | `mUnusedConverterScratch+0x24` | unused | +0x3d8; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x3dc | s32 | `mUnusedConverterScratch+0x28` | unused | +0x3dc; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x3e0 | s32 | `mUnusedConverterScratch+0x2c` | unused | +0x3e0; not read by the EEUnitClass ctor | 0..8913408 (2 distinct); 0xCC in 110 |
+| 0x3e4 | s32 | `mUnusedConverterScratch+0x30` | unused | +0x3e4; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
+| 0x3e8 | s32 | `mUnusedConverterScratch+0x34` | unused | +0x3e8; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x3ec | s32 | `mUnusedConverterScratch+0x38` | unused | +0x3ec; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x3f0 | s32 | `mUnusedConverterScratch+0x3c` | unused | +0x3f0; not read by the EEUnitClass ctor | 0..9044480 (2 distinct); 0xCC in 110 |
+| 0x3f4 | s32 | `mUnusedConverterScratch+0x40` | unused | +0x3f4; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
+| 0x3f8 | s32 | `mUnusedConverterScratch+0x44` | unused | +0x3f8; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x3fc | s32 | `mUnusedConverterScratch+0x48` | unused | +0x3fc; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x400 | s32 | `mUnusedConverterScratch+0x4c` | unused | +0x400; not read by the EEUnitClass ctor | 0..9175552 (2 distinct); 0xCC in 110 |
+| 0x404 | s32 | `mUnusedConverterScratch+0x50` | unused | +0x404; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
+| 0x408 | s32 | `mUnusedConverterScratch+0x54` | unused | +0x408; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x40c | s32 | `mUnusedConverterScratch+0x58` | unused | +0x40c; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x410 | s32 | `mUnusedConverterScratch+0x5c` | unused | +0x410; not read by the EEUnitClass ctor | 0..9306624 (2 distinct); 0xCC in 110 |
+| 0x414 | s32 | `mUnusedConverterScratch+0x60` | unused | +0x414; not read by the EEUnitClass ctor | -859045684..2038003968 (113 distinct) |
+| 0x418 | s32 | `mUnusedConverterScratch+0x64` | unused | +0x418; not read by the EEUnitClass ctor | 0..544108388 (14 distinct); 0xCC in 110 |
+| 0x41c | s32 | `mUnusedConverterScratch+0x68` | unused | +0x41c; not read by the EEUnitClass ctor | 0..1702259020 (2 distinct); 0xCC in 110 |
+| 0x420 | s32 | `mUnusedConverterScratch+0x6c` | unused | +0x420; not read by the EEUnitClass ctor | 0..9437696 (3 distinct); 0xCC in 110 |
+| 0x424 | s32 | `mUnusedConverterScratch+0x70` | unused | +0x424; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
+| 0x428 | s32 | `mUnusedConverterScratch+0x74` | unused | +0x428; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x42c | s32 | `mUnusedConverterScratch+0x78` | unused | +0x42c; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x430 | s32 | `mUnusedConverterScratch+0x7c` | unused | +0x430; not read by the EEUnitClass ctor | 0..9568768 (2 distinct); 0xCC in 110 |
+| 0x434 | s32 | `mUnusedConverterScratch+0x80` | unused | +0x434; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
+| 0x438 | s32 | `mUnusedConverterScratch+0x84` | unused | +0x438; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x43c | s32 | `mUnusedConverterScratch+0x88` | unused | +0x43c; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x440 | s32 | `mUnusedConverterScratch+0x8c` | unused | +0x440; not read by the EEUnitClass ctor | 0..9699840 (2 distinct); 0xCC in 110 |
+| 0x444 | s32 | `mUnusedConverterScratch+0x90` | unused | +0x444; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
+| 0x448 | s32 | `mUnusedConverterScratch+0x94` | unused | +0x448; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x44c | s32 | `mUnusedConverterScratch+0x98` | unused | +0x44c; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x450 | s32 | `mUnusedConverterScratch+0x9c` | unused | +0x450; not read by the EEUnitClass ctor | 0..9830912 (2 distinct); 0xCC in 110 |
+| 0x454 | s32 | `mUnusedConverterScratch+0xa0` | unused | +0x454; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
+| 0x458 | s32 | `mUnusedConverterScratch+0xa4` | unused | +0x458; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x45c | s32 | `mUnusedConverterScratch+0xa8` | unused | +0x45c; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x460 | s32 | `mUnusedConverterScratch+0xac` | unused | +0x460; not read by the EEUnitClass ctor | 0..9961984 (2 distinct); 0xCC in 110 |
+| 0x464 | s32 | `mUnusedConverterScratch+0xb0` | unused | +0x464; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
+| 0x468 | s32 | `mUnusedConverterScratch+0xb4` | unused | +0x468; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x46c | s32 | `mUnusedConverterScratch+0xb8` | unused | +0x46c; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
+| 0x470 | s32 | `mUnusedConverterScratch+0xbc` | unused | +0x470; not read by the EEUnitClass ctor | 0..10093056 (2 distinct); 0xCC in 110 |
+| 0x474 | s32 | `mUnusedConverterScratch+0xc0` | unused | +0x474; not read by the EEUnitClass ctor | 0..4098 (3 distinct); 0xCC in 110 |
+| 0x478 | s32 | `mUnusedConverterScratch+0xc4` | unused | +0x478; not read by the EEUnitClass ctor | const 0; 0xCC in 110 |
 | 0x47c | s32 | `mPackedType` | named | +0x47c | const 0 |
-| 0x480 | s32 | `mL480` | unknown | +0x480; not read by the EEUnitClass ctor | const 0 |
+| 0x480 | s32 | `mRemainsType` | named | +0x480; not read by the EEUnitClass ctor | const 0 |
 | 0x484 | u32[200] | `mAttributes` | named | +0x484 mNumAttributes technology ids (the ctor copies them into mResearchTechnologies); ctor -> mResearchTechnologies[i] | [0]: 1019..4294967295 (69 distinct) |
 | 0x7a4 | bool | `mHasSpecialAttack` | named | +0x7a4; ctor -> mHasSpecialAttack | 0..1 (2 distinct) |
-| 0x7a5 | s8 | `mC7A5` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x7a6 | s8 | `mC7A6` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
-| 0x7a7 | s8 | `mC7A7` | unknown | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x7a5 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x7a6 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
+| 0x7a7 | s8 | `(padding)` | pad | padding byte (0, or 0xCC in holes); not read | -52..0 (2 distinct) |
 
 ### 3.2 `db\dbgraphics.dat`: Graphic objects (models + textures + animation states)
 
 * **Loader:** `EEGraphicObject::LoadTable` 0x4d7833 + `EELoadGraphicObjectRecord` 0x4d7b37 (src/Empire Earth/Data Pre-Loading Thread/EEGraphicObject.cpp)
 * **Container:** `u32 count`; per entry: **33 strings** (`u32 len` + bytes, no NUL): [0] row name (discarded), [1] model file (`mFileName`, e.g. `models\gun_80mmAA_10`), [2] texture (`mTextureName`), then 14 x ([texture, model] for animation state k), then shadow model and shadow texture. These are followed by the 716-byte `EEGraphicObjectRecord`.
-* **AoC data:** 991 records, 936,188 bytes unpacked. Decoded bytes per record: named 68%, inferred 15%, provisional 3%, unknown 14%.
+* **AoC data:** 991 records, 936,188 bytes unpacked. Bytes per record: read 68%, label 14%, unused 7%, padding 12%.
 * **Semantics:** Entries with `mMediaIndex == 0` are deleted after loading (23 rows). The 14 state blocks are stored in the order 0, 13, 7, 8, 4, 5, 12, 11, 9, 10, 6, 3, 1, 2. Each block holds sharesFrames, firstFrame, lastFrame, frameTime, loops, holdTime, then 2 x (sound frame, sound index), then isSpeedScaled; blocks 4 and 5 have no sound fields. The flags of neighbouring blocks share dwords, so the field order is irregular. The meaning of the state slots is not decoded; the model names suggest: 0 hunt/attack, 1 build, 2 carry, 3 chop, 4/5 death (`gen_deathT`), 6 farm, 7/8 idle/fidget, 9 mine/gate, 10 forage/diagonal, 11 attack, 12 unused, 13 walk (walls reuse the slots for wall pieces). `mHoldTime0` is replaced by 300000 at load. Graphic-effect tag-point kinds are named in `gTagPointKindNames[0x48]`.
 * **Cross-references:** `mSound1IndexN`/`mSound2IndexN` -> dbsounds (-1 = none); model/texture strings -> `models\*.cem`, `textures\*.sst|.tga`; referenced by dbobjects `mGraphic`, dbgfxeffects `mMediaIndex`, dbeffects `mMediaIndex`, dbareaeffect `mMedia`, dbanimals `mMedia`.
 * **Suggested text form:** YAML
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 968/991, max len 44, junk after NUL in 41, e.g. "AA Gun 88" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 0..1328 (969 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 968/991, max len 44, junk after NUL in 41, e.g. "AA Gun 88" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 0..1328 (969 distinct) |
 | 0x068 | s32 | `mMediaIndex` | named | +0x68 | 0..990 (969 distinct) |
 | 0x06c | bool | `mIsDrawn` | named | +0x6c | 0..1 (2 distinct) |
-| 0x06d | pad | `(pad)` | unknown | alignment padding | bytes 000000x968, ccccccx23 |
-| 0x070 | s32 | `mL70` | provisional | +0x70 | 0..127 (10 distinct) |
-| 0x074 | s32 | `mL74` | provisional | +0x74 | 0..385 (8 distinct) |
+| 0x06d | pad | `(padding)` | pad | alignment padding | bytes 000000x968, ccccccx23 |
+| 0x070 | s32 | `mUnusedBuildingValue1` | unused | +0x70 | 0..127 (10 distinct) |
+| 0x074 | s32 | `mUnusedBuildingValue2` | unused | +0x74 | 0..385 (8 distinct) |
 | 0x078 | bool | `mSharesFrames0` | named | +0x78 | 0..1 (2 distinct) |
-| 0x079 | pad | `(pad)` | unknown | alignment padding | bytes 000000x960, ccccccx23 |
+| 0x079 | pad | `(padding)` | pad | alignment padding | bytes 000000x960, ccccccx23 |
 | 0x07c | u32 | `mFirstFrame0` | named | +0x7c | 0..46 (26 distinct) |
 | 0x080 | u32 | `mLastFrame0` | named | +0x80 | 0..59 (44 distinct) |
 | 0x084 | u32 | `mFrameTime0` | named | +0x84 | 0..300000 (45 distinct) |
 | 0x088 | bool | `mLoops0` | named | +0x88 | 0..1 (2 distinct) |
-| 0x089 | pad | `(pad)` | unknown | alignment padding | bytes 000000x968, ccccccx23 |
-| 0x08c | u32 | `mHoldTime0` | named | +0x8c (not read: the loader sets mCamouflageTimer[0] to 300000) | 0..60000 (7 distinct) |
+| 0x089 | pad | `(padding)` | pad | alignment padding | bytes 000000x968, ccccccx23 |
+| 0x08c | u32 | `mUnusedHoldTime0` | unused | +0x8c (not read: the loader sets mCamouflageTimer[0] to 300000) | 0..60000 (7 distinct) |
 | 0x090 | u32 | `mSound1Frame0` | named | +0x90 | 0..54 (42 distinct) |
 | 0x094 | u32 | `mSound2Frame0` | named | +0x94 | 0..39 (2 distinct) |
 | 0x098 | u32 | `mSound1Index0` | named | +0x98 | 2..4294967295 (71 distinct) |
 | 0x09c | u32 | `mSound2Index0` | named | +0x9c | 238..4294967295 (4 distinct) |
 | 0x0a0 | bool | `mIsSpeedScaled0` | named | +0xa0 | 0..1 (2 distinct) |
 | 0x0a1 | bool | `mSharesFrames13` | named | +0xa1 | 0..1 (2 distinct) |
-| 0x0a2 | pad | `(pad)` | unknown | alignment padding | bytes 0000x961, ccccx23 |
+| 0x0a2 | pad | `(padding)` | pad | alignment padding | bytes 0000x961, ccccx23 |
 | 0x0a4 | u32 | `mFirstFrame13` | named | +0xa4 | 0..1 (2 distinct) |
 | 0x0a8 | u32 | `mLastFrame13` | named | +0xa8 | 0..34 (16 distinct) |
 | 0x0ac | u32 | `mFrameTime13` | named | +0xac | 0..420 (54 distinct) |
 | 0x0b0 | bool | `mLoops13` | named | +0xb0 | 0..1 (2 distinct) |
-| 0x0b1 | pad | `(pad)` | unknown | alignment padding | bytes 000000x968, ccccccx23 |
+| 0x0b1 | pad | `(padding)` | pad | alignment padding | bytes 000000x968, ccccccx23 |
 | 0x0b4 | u32 | `mHoldTime13` | named | +0xb4 | const 0 |
 | 0x0b8 | u32 | `mSound1Frame13` | named | +0xb8 | 0..7 (5 distinct) |
 | 0x0bc | u32 | `mSound2Frame13` | named | +0xbc | 0..22 (6 distinct) |
@@ -647,12 +648,12 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x0c4 | u32 | `mSound2Index13` | named | +0xc4 | 166..4294967295 (3 distinct) |
 | 0x0c8 | bool | `mIsSpeedScaled13` | named | +0xc8 | 0..1 (2 distinct) |
 | 0x0c9 | bool | `mSharesFrames7` | named | +0xc9 | 0..1 (2 distinct) |
-| 0x0ca | pad | `(pad)` | unknown | alignment padding | bytes 0000x968, ccccx23 |
+| 0x0ca | pad | `(padding)` | pad | alignment padding | bytes 0000x968, ccccx23 |
 | 0x0cc | u32 | `mFirstFrame7` | named | +0xcc | 0..58 (21 distinct) |
 | 0x0d0 | u32 | `mLastFrame7` | named | +0xd0 | 0..71 (34 distinct) |
 | 0x0d4 | u32 | `mFrameTime7` | named | +0xd4 | 0..400 (30 distinct) |
 | 0x0d8 | bool | `mLoops7` | named | +0xd8 | 0..1 (2 distinct) |
-| 0x0d9 | pad | `(pad)` | unknown | alignment padding | bytes 000000x968, ccccccx23 |
+| 0x0d9 | pad | `(padding)` | pad | alignment padding | bytes 000000x968, ccccccx23 |
 | 0x0dc | u32 | `mHoldTime7` | named | +0xdc | 0..50000 (25 distinct) |
 | 0x0e0 | u32 | `mSound1Frame7` | named | +0xe0 | 0..43 (8 distinct) |
 | 0x0e4 | u32 | `mSound2Frame7` | named | +0xe4 | const 0 |
@@ -660,12 +661,12 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x0ec | u32 | `mSound2Index7` | named | +0xec | const 4294967295 |
 | 0x0f0 | bool | `mIsSpeedScaled7` | named | +0xf0 | const 0 |
 | 0x0f1 | bool | `mSharesFrames8` | named | +0xf1 | 0..1 (2 distinct) |
-| 0x0f2 | pad | `(pad)` | unknown | alignment padding | bytes 0000x968, ccccx23 |
+| 0x0f2 | pad | `(padding)` | pad | alignment padding | bytes 0000x968, ccccx23 |
 | 0x0f4 | u32 | `mFirstFrame8` | named | +0xf4 | 0..58 (26 distinct) |
 | 0x0f8 | u32 | `mLastFrame8` | named | +0xf8 | 0..71 (37 distinct) |
 | 0x0fc | u32 | `mFrameTime8` | named | +0xfc | 0..400 (30 distinct) |
 | 0x100 | bool | `mLoops8` | named | +0x100 | 0..1 (2 distinct) |
-| 0x101 | pad | `(pad)` | unknown | alignment padding | bytes 000000x961, ccccccx23 |
+| 0x101 | pad | `(padding)` | pad | alignment padding | bytes 000000x961, ccccccx23 |
 | 0x104 | u32 | `mHoldTime8` | named | +0x104 | 0..50000 (20 distinct) |
 | 0x108 | u32 | `mSound1Frame8` | named | +0x108 | 0..45 (19 distinct) |
 | 0x10c | u32 | `mSound2Frame8` | named | +0x10c | const 0 |
@@ -673,30 +674,30 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x114 | u32 | `mSound2Index8` | named | +0x114 | const 4294967295 |
 | 0x118 | bool | `mIsSpeedScaled8` | named | +0x118 | const 0 |
 | 0x119 | bool | `mSharesFrames4` | named | +0x119 | 0..1 (2 distinct) |
-| 0x11a | pad | `(pad)` | unknown | alignment padding | bytes 0000x968, ccccx23 |
+| 0x11a | pad | `(padding)` | pad | alignment padding | bytes 0000x968, ccccx23 |
 | 0x11c | u32 | `mFirstFrame4` | named | +0x11c | 0..81 (49 distinct) |
 | 0x120 | u32 | `mLastFrame4` | named | +0x120 | 0..95 (54 distinct) |
 | 0x124 | u32 | `mFrameTime4` | named | +0x124 | 0..320 (53 distinct) |
 | 0x128 | bool | `mLoops4` | named | +0x128 | 0..1 (2 distinct) |
-| 0x129 | pad | `(pad)` | unknown | alignment padding | bytes 000000x968, ccccccx23 |
+| 0x129 | pad | `(padding)` | pad | alignment padding | bytes 000000x968, ccccccx23 |
 | 0x12c | u32 | `mHoldTime4` | named | +0x12c | const 0 |
 | 0x130 | bool | `mIsSpeedScaled4` | named | +0x130 | const 0 |
 | 0x131 | bool | `mSharesFrames5` | named | +0x131 | 0..1 (2 distinct) |
-| 0x132 | pad | `(pad)` | unknown | alignment padding | bytes 0000x968, ccccx23 |
+| 0x132 | pad | `(padding)` | pad | alignment padding | bytes 0000x968, ccccx23 |
 | 0x134 | u32 | `mFirstFrame5` | named | +0x134 | 0..98 (54 distinct) |
 | 0x138 | u32 | `mLastFrame5` | named | +0x138 | 0..98 (55 distinct) |
 | 0x13c | u32 | `mFrameTime5` | named | +0x13c | 0..1000 (9 distinct) |
 | 0x140 | bool | `mLoops5` | named | +0x140 | 0..1 (2 distinct) |
-| 0x141 | pad | `(pad)` | unknown | alignment padding | bytes 000000x959, ccccccx23 |
+| 0x141 | pad | `(padding)` | pad | alignment padding | bytes 000000x959, ccccccx23 |
 | 0x144 | u32 | `mHoldTime5` | named | +0x144 | 0..100 (2 distinct) |
 | 0x148 | bool | `mIsSpeedScaled5` | named | +0x148 | const 0 |
 | 0x149 | bool | `mSharesFrames12` | named | +0x149 | 0..1 (2 distinct) |
-| 0x14a | pad | `(pad)` | unknown | alignment padding | bytes 0000x968, ccccx23 |
+| 0x14a | pad | `(padding)` | pad | alignment padding | bytes 0000x968, ccccx23 |
 | 0x14c | u32 | `mFirstFrame12` | named | +0x14c | const 0 |
 | 0x150 | u32 | `mLastFrame12` | named | +0x150 | const 0 |
 | 0x154 | u32 | `mFrameTime12` | named | +0x154 | const 0 |
 | 0x158 | bool | `mLoops12` | named | +0x158 | const 0 |
-| 0x159 | pad | `(pad)` | unknown | alignment padding | bytes 000000x968, ccccccx23 |
+| 0x159 | pad | `(padding)` | pad | alignment padding | bytes 000000x968, ccccccx23 |
 | 0x15c | u32 | `mHoldTime12` | named | +0x15c | const 0 |
 | 0x160 | u32 | `mSound1Frame12` | named | +0x160 | const 0 |
 | 0x164 | u32 | `mSound2Frame12` | named | +0x164 | const 0 |
@@ -704,12 +705,12 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x16c | u32 | `mSound2Index12` | named | +0x16c | const 4294967295 |
 | 0x170 | bool | `mIsSpeedScaled12` | named | +0x170 | const 0 |
 | 0x171 | bool | `mSharesFrames11` | named | +0x171 | 0..1 (2 distinct) |
-| 0x172 | pad | `(pad)` | unknown | alignment padding | bytes 0000x968, ccccx23 |
+| 0x172 | pad | `(padding)` | pad | alignment padding | bytes 0000x968, ccccx23 |
 | 0x174 | u32 | `mFirstFrame11` | named | +0x174 | 0..53 (16 distinct) |
 | 0x178 | u32 | `mLastFrame11` | named | +0x178 | 0..61 (19 distinct) |
 | 0x17c | u32 | `mFrameTime11` | named | +0x17c | 0..300 (24 distinct) |
 | 0x180 | bool | `mLoops11` | named | +0x180 | 0..1 (2 distinct) |
-| 0x181 | pad | `(pad)` | unknown | alignment padding | bytes 000000x963, ccccccx23 |
+| 0x181 | pad | `(padding)` | pad | alignment padding | bytes 000000x963, ccccccx23 |
 | 0x184 | u32 | `mHoldTime11` | named | +0x184 | 0..100000 (14 distinct) |
 | 0x188 | u32 | `mSound1Frame11` | named | +0x188 | 0..51 (17 distinct) |
 | 0x18c | u32 | `mSound2Frame11` | named | +0x18c | const 0 |
@@ -717,12 +718,12 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x194 | u32 | `mSound2Index11` | named | +0x194 | const 4294967295 |
 | 0x198 | bool | `mIsSpeedScaled11` | named | +0x198 | const 0 |
 | 0x199 | bool | `mSharesFrames9` | named | +0x199 | 0..1 (2 distinct) |
-| 0x19a | pad | `(pad)` | unknown | alignment padding | bytes 0000x968, ccccx23 |
+| 0x19a | pad | `(padding)` | pad | alignment padding | bytes 0000x968, ccccx23 |
 | 0x19c | u32 | `mFirstFrame9` | named | +0x19c | 0..67 (6 distinct) |
 | 0x1a0 | u32 | `mLastFrame9` | named | +0x1a0 | 0..80 (8 distinct) |
 | 0x1a4 | u32 | `mFrameTime9` | named | +0x1a4 | 0..200 (8 distinct) |
 | 0x1a8 | bool | `mLoops9` | named | +0x1a8 | 0..1 (2 distinct) |
-| 0x1a9 | pad | `(pad)` | unknown | alignment padding | bytes 000000x963, ccccccx23 |
+| 0x1a9 | pad | `(padding)` | pad | alignment padding | bytes 000000x963, ccccccx23 |
 | 0x1ac | u32 | `mHoldTime9` | named | +0x1ac | 0..1000 (8 distinct) |
 | 0x1b0 | u32 | `mSound1Frame9` | named | +0x1b0 | 0..72 (9 distinct) |
 | 0x1b4 | u32 | `mSound2Frame9` | named | +0x1b4 | const 0 |
@@ -730,12 +731,12 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x1bc | u32 | `mSound2Index9` | named | +0x1bc | const 4294967295 |
 | 0x1c0 | bool | `mIsSpeedScaled9` | named | +0x1c0 | const 0 |
 | 0x1c1 | bool | `mSharesFrames10` | named | +0x1c1 | 0..1 (2 distinct) |
-| 0x1c2 | pad | `(pad)` | unknown | alignment padding | bytes 0000x967, ccccx23 |
+| 0x1c2 | pad | `(padding)` | pad | alignment padding | bytes 0000x967, ccccx23 |
 | 0x1c4 | u32 | `mFirstFrame10` | named | +0x1c4 | 0..31 (2 distinct) |
 | 0x1c8 | u32 | `mLastFrame10` | named | +0x1c8 | 0..41 (3 distinct) |
 | 0x1cc | u32 | `mFrameTime10` | named | +0x1cc | 0..166 (8 distinct) |
 | 0x1d0 | bool | `mLoops10` | named | +0x1d0 | 0..1 (2 distinct) |
-| 0x1d1 | pad | `(pad)` | unknown | alignment padding | bytes 000000x968, ccccccx23 |
+| 0x1d1 | pad | `(padding)` | pad | alignment padding | bytes 000000x968, ccccccx23 |
 | 0x1d4 | u32 | `mHoldTime10` | named | +0x1d4 | 0..1000 (2 distinct) |
 | 0x1d8 | u32 | `mSound1Frame10` | named | +0x1d8 | 0..31 (3 distinct) |
 | 0x1dc | u32 | `mSound2Frame10` | named | +0x1dc | const 0 |
@@ -743,12 +744,12 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x1e4 | u32 | `mSound2Index10` | named | +0x1e4 | const 4294967295 |
 | 0x1e8 | bool | `mIsSpeedScaled10` | named | +0x1e8 | const 0 |
 | 0x1e9 | bool | `mSharesFrames6` | named | +0x1e9 | 0..1 (2 distinct) |
-| 0x1ea | pad | `(pad)` | unknown | alignment padding | bytes 0000x965, ccccx23 |
+| 0x1ea | pad | `(padding)` | pad | alignment padding | bytes 0000x965, ccccx23 |
 | 0x1ec | u32 | `mFirstFrame6` | named | +0x1ec | 0..48 (8 distinct) |
 | 0x1f0 | u32 | `mLastFrame6` | named | +0x1f0 | 0..61 (8 distinct) |
 | 0x1f4 | u32 | `mFrameTime6` | named | +0x1f4 | 0..500 (9 distinct) |
 | 0x1f8 | bool | `mLoops6` | named | +0x1f8 | 0..1 (2 distinct) |
-| 0x1f9 | pad | `(pad)` | unknown | alignment padding | bytes 000000x968, ccccccx23 |
+| 0x1f9 | pad | `(padding)` | pad | alignment padding | bytes 000000x968, ccccccx23 |
 | 0x1fc | u32 | `mHoldTime6` | named | +0x1fc | 0..500 (5 distinct) |
 | 0x200 | u32 | `mSound1Frame6` | named | +0x200 | 0..57 (9 distinct) |
 | 0x204 | u32 | `mSound2Frame6` | named | +0x204 | const 0 |
@@ -756,12 +757,12 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x20c | u32 | `mSound2Index6` | named | +0x20c | const 4294967295 |
 | 0x210 | bool | `mIsSpeedScaled6` | named | +0x210 | const 0 |
 | 0x211 | bool | `mSharesFrames3` | named | +0x211 | 0..1 (2 distinct) |
-| 0x212 | pad | `(pad)` | unknown | alignment padding | bytes 0000x968, ccccx23 |
+| 0x212 | pad | `(padding)` | pad | alignment padding | bytes 0000x968, ccccx23 |
 | 0x214 | u32 | `mFirstFrame3` | named | +0x214 | 0..41 (6 distinct) |
 | 0x218 | u32 | `mLastFrame3` | named | +0x218 | 0..57 (12 distinct) |
 | 0x21c | u32 | `mFrameTime3` | named | +0x21c | 0..400 (22 distinct) |
 | 0x220 | bool | `mLoops3` | named | +0x220 | 0..1 (2 distinct) |
-| 0x221 | pad | `(pad)` | unknown | alignment padding | bytes 000000x968, ccccccx23 |
+| 0x221 | pad | `(padding)` | pad | alignment padding | bytes 000000x968, ccccccx23 |
 | 0x224 | u32 | `mHoldTime3` | named | +0x224 | 0..50000 (13 distinct) |
 | 0x228 | u32 | `mSound1Frame3` | named | +0x228 | 0..29 (7 distinct) |
 | 0x22c | u32 | `mSound2Frame3` | named | +0x22c | const 0 |
@@ -769,12 +770,12 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x234 | u32 | `mSound2Index3` | named | +0x234 | const 4294967295 |
 | 0x238 | bool | `mIsSpeedScaled3` | named | +0x238 | const 0 |
 | 0x239 | bool | `mSharesFrames1` | named | +0x239 | 0..1 (2 distinct) |
-| 0x23a | pad | `(pad)` | unknown | alignment padding | bytes 0000x968, ccccx23 |
+| 0x23a | pad | `(padding)` | pad | alignment padding | bytes 0000x968, ccccx23 |
 | 0x23c | u32 | `mFirstFrame1` | named | +0x23c | 0..41 (6 distinct) |
 | 0x240 | u32 | `mLastFrame1` | named | +0x240 | 0..57 (6 distinct) |
 | 0x244 | u32 | `mFrameTime1` | named | +0x244 | 0..200 (11 distinct) |
 | 0x248 | bool | `mLoops1` | named | +0x248 | 0..1 (2 distinct) |
-| 0x249 | pad | `(pad)` | unknown | alignment padding | bytes 000000x960, ccccccx23 |
+| 0x249 | pad | `(padding)` | pad | alignment padding | bytes 000000x960, ccccccx23 |
 | 0x24c | u32 | `mHoldTime1` | named | +0x24c | 0..250 (3 distinct) |
 | 0x250 | u32 | `mSound1Frame1` | named | +0x250 | 0..43 (7 distinct) |
 | 0x254 | u32 | `mSound2Frame1` | named | +0x254 | const 0 |
@@ -782,74 +783,74 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x25c | u32 | `mSound2Index1` | named | +0x25c | const 4294967295 |
 | 0x260 | bool | `mIsSpeedScaled1` | named | +0x260 | const 0 |
 | 0x261 | bool | `mSharesFrames2` | named | +0x261 | 0..1 (2 distinct) |
-| 0x262 | pad | `(pad)` | unknown | alignment padding | bytes 0000x968, ccccx23 |
+| 0x262 | pad | `(padding)` | pad | alignment padding | bytes 0000x968, ccccx23 |
 | 0x264 | u32 | `mFirstFrame2` | named | +0x264 | 0..18 (2 distinct) |
 | 0x268 | u32 | `mLastFrame2` | named | +0x268 | 0..24 (3 distinct) |
 | 0x26c | u32 | `mFrameTime2` | named | +0x26c | 0..180 (9 distinct) |
 | 0x270 | bool | `mLoops2` | named | +0x270 | 0..1 (2 distinct) |
-| 0x271 | pad | `(pad)` | unknown | alignment padding | bytes 000000x968, ccccccx23 |
+| 0x271 | pad | `(padding)` | pad | alignment padding | bytes 000000x968, ccccccx23 |
 | 0x274 | u32 | `mHoldTime2` | named | +0x274 | 0..1 (2 distinct) |
 | 0x278 | u32 | `mSound1Frame2` | named | +0x278 | 0..8 (2 distinct) |
 | 0x27c | u32 | `mSound2Frame2` | named | +0x27c | 0..15 (3 distinct) |
 | 0x280 | u32 | `mSound1Index2` | named | +0x280 | 39..4294967295 (6 distinct) |
 | 0x284 | u32 | `mSound2Index2` | named | +0x284 | 39..4294967295 (5 distinct) |
 | 0x288 | bool | `mIsSpeedScaled2` | named | +0x288 | const 0 |
-| 0x289 | pad | `(pad)` | unknown | alignment padding | bytes 000000x961, ccccccx23 |
-| 0x28c | s32 | `mL28C` | provisional | +0x28c | 0..1 (2 distinct) |
-| 0x290 | bool | `mB290` | provisional | +0x290 | 0..1 (2 distinct) |
-| 0x291 | s32 | `(unknown)` | unknown | undecoded | -1778384896..1677721600 (8 distinct) |
-| 0x295 | pad | `(unknown)` | unknown | undecoded | bytes 000000x990, 930400x1 |
-| 0x298 | s32 | `mL298` | provisional | +0x298 | 0..100 (2 distinct) |
-| 0x29c | s32 | `mL29C` | provisional | +0x29c | -1..938 (78 distinct) |
+| 0x289 | pad | `(padding)` | pad | alignment padding | bytes 000000x961, ccccccx23 |
+| 0x28c | s32 | `mUnusedIsBuilding` | unused | +0x28c | 0..1 (2 distinct) |
+| 0x290 | bool | `mUnusedIsSprite` | unused | +0x290 | 0..1 (2 distinct) |
+| 0x291 | s32 | `(unused gap)` | unused | undecoded | -1778384896..1677721600 (8 distinct) |
+| 0x295 | pad | `(unused gap)` | unused | undecoded | bytes 000000x990, 930400x1 |
+| 0x298 | s32 | `mUnusedDummyValue` | unused | +0x298 | 0..100 (2 distinct) |
+| 0x29c | s32 | `mUnusedBaseGraphic` | unused | +0x29c | -1..938 (78 distinct) |
 | 0x2a0 | s32 | `mAlphaReference` | named | +0x2a0 | 0..100 (6 distinct) |
-| 0x2a4 | s32 | `mL2A4` | provisional | +0x2a4 | 0..246 (46 distinct) |
-| 0x2a8 | s32 | `(unknown)` | unknown | undecoded | const -1 |
+| 0x2a4 | s32 | `mUnusedBuildingIndex` | unused | +0x2a4 | 0..246 (46 distinct) |
+| 0x2a8 | s32 | `(unused gap)` | unused | undecoded | const -1 |
 | 0x2ac | s32 | `mKind` | named | +0x2ac | -1..70 (20 distinct) |
 | 0x2b0 | bool | `mHasAlpha` | named | +0x2b0 | 0..1 (2 distinct) |
-| 0x2b1 | pad | `(pad)` | unknown | alignment padding | bytes 000000x961, ccccccx23 |
+| 0x2b1 | pad | `(padding)` | pad | alignment padding | bytes 000000x961, ccccccx23 |
 | 0x2b4 | f32 | `mOpacity` | named | +0x2b4 | 0.0001..416.81 (141 distinct) |
-| 0x2b8 | s32 | `(unknown)` | unknown | undecoded | 0..4000000 (91 distinct) |
+| 0x2b8 | s32 | `(unused gap)` | unused | undecoded | 0..4000000 (91 distinct) |
 | 0x2bc | f32 | `mMipMapBias` | named | +0x2bc | -1..0 (4 distinct) |
 | 0x2c0 | s32 | `mNumMipLevelsToDrop` | named | +0x2c0 | const 0 |
 | 0x2c4 | s32 | `mMaxMipLevelsToDrop` | named | +0x2c4 | 0..12 (4 distinct) |
 | 0x2c8 | bool | `mCreateMipMaps` | named | +0x2c8 | 0..1 (2 distinct) |
-| 0x2c9 | pad | `(pad)` | unknown | tail padding | bytes 000000x966, ccccccx23 |
+| 0x2c9 | pad | `(padding)` | pad | tail padding | bytes 000000x966, ccccccx23 |
 
 ### 3.3 `db\dbsounds.dat`: Sounds
 
 * **Loader:** `EESoundObject::LoadTable` 0x4da680 (src/Empire Earth/Data Pre-Loading Thread/EESoundObject.cpp)
 * **Container:** `u32 count`; per entry: one string (`u32 len` + bytes, no NUL) = sample file (e.g. `sounds\heligun1-8.wav`), then a 132-byte `EESoundRecord`.
-* **AoC data:** 1087 records, 166,734 bytes unpacked. Decoded bytes per record: named 10%, inferred 82%, provisional 3%, unknown 5%.
+* **AoC data:** 1087 records, 166,734 bytes unpacked. Bytes per record: read 10%, label 76%, unused 12%, padding 2%.
 * **Semantics:** Every row becomes an object, holes included (215 rows with an empty file name). `mVolume` is a percentage (x 0.01 at load). `mCategory` is the sound-manager category.
 * **Cross-references:** Referenced by dbobjects, dbgraphics, dbcalamity, dbambientsounds, dbeffects (`mSoundID`) and dbanimals by row position.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 872/1087, max len 33, junk after NUL in 234, e.g. "Sci-fi4" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 0..1183 (873 distinct) |
-| 0x068 | s32 | `(index)` | inferred | INFERRED: equals the 0-based row index | -1..1086 (873 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 872/1087, max len 33, junk after NUL in 234, e.g. "Sci-fi4" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 0..1183 (873 distinct) |
+| 0x068 | s32 | `mUnusedIndex` | unused | INFERRED: equals the 0-based row index | -1..1086 (873 distinct) |
 | 0x06c | s32 | `mMaxInstances` | named | +0x6c -> +0x1c | 0..4 (5 distinct) |
 | 0x070 | s32 | `mCategory` | named | +0x70 -> +0x20 | 0..6 (7 distinct) |
-| 0x074 | s32 | `mL74` | provisional | +0x74 -> +0x24 | 0..50 (5 distinct) |
+| 0x074 | s32 | `mUnusedPriority` | unused | +0x74 -> +0x24 | 0..50 (5 distinct) |
 | 0x078 | bool | `mLooping` | named | +0x78 -> +0x2c (looping) | 0..1 (2 distinct) |
-| 0x079 | pad | `(pad)` | unknown | alignment padding | bytes 000000x872, ccccccx215 |
+| 0x079 | pad | `(padding)` | pad | alignment padding | bytes 000000x872, ccccccx215 |
 | 0x07c | s32 | `mVolume` | named | +0x7c: percent -> +0x14 (float, * 0.01) | 0..100 (27 distinct) |
-| 0x080 | s32 | `(unknown)` | unknown | undecoded | const 0 |
+| 0x080 | s32 | `(unused gap)` | unused | undecoded | const 0 |
 
 ### 3.4 `db\dbgfxeffects.dat`: Graphic effects
 
 * **Loader:** `EEGraphicEffect::LoadTable` 0x4d6e9e, ctor 0x4d6ceb (src/Empire Earth/Data Pre-Loading Thread/EEGraphicEffect.cpp)
 * **Container:** `u32 count` + count x 232-byte `EEGraphicEffectRecord`.
-* **AoC data:** 292 records, 67,748 bytes unpacked. Decoded bytes per record: named 26%, inferred 45%, provisional 28%, unknown 1%.
+* **AoC data:** 292 records, 67,748 bytes unpacked. Bytes per record: read 54%, label 43%, unused 2%, padding 1%.
 * **Semantics:** A row with `mID > 0` makes an effect; row 0 ("None") and the holes stay NULL. `mLinkedEffectIndex1..3` are row indices, resolved to pointers after loading. `mKind` selects the effect class; `mParam1..12` and `mL90..mL98` are class-specific parameters (provisional).
 * **Cross-references:** `mMediaIndex` -> dbgraphics; `mLinkedEffectIndex1..3` -> dbgfxeffects; `mNameStringId` -> Language.dll; `mTagPointKind` -> `gTagPointKindNames` (0x48 kinds). Referenced by dbobjects (20+ slots), dbcalamity, dbareaeffect.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 288/292, max len 48, junk after NUL in 9, e.g. "None" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 0..324 (289 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 288/292, max len 48, junk after NUL in 9, e.g. "None" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 0..324 (289 distinct) |
 | 0x068 | s32 | `mID` | named | +0x68 -> +0x60 (> 0: a real record) | -1..291 (289 distinct) |
 | 0x06c | s32 | `mKind` | named | +0x6c -> +0x58 | -1..71 (60 distinct) |
 | 0x070 | s32 | `mTagPointKind` | named | +0x70 -> +0x5c | -1..21 (3 distinct) |
@@ -860,69 +861,69 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x084 | s32 | `mTime1` | named | +0x84 -> +0x70 | 0..10000 (19 distinct) |
 | 0x088 | s32 | `mTime2` | named | +0x88 -> +0x74 | 0..20000 (18 distinct) |
 | 0x08c | s32 | `mDuration` | named | +0x8c -> +0x78 | 0..1000000 (47 distinct) |
-| 0x090 | s32 | `mL90` | provisional | +0x90 -> +0x64 | 0..99999 (29 distinct) |
-| 0x094 | s32 | `mL94` | provisional | +0x94 -> +0x68 | 0..443 (13 distinct) |
-| 0x098 | s32 | `mL98` | provisional | +0x98 -> +0x6c | 0..442 (12 distinct) |
+| 0x090 | s32 | `mIntParam1` | named | +0x90 -> +0x64 | 0..99999 (29 distinct) |
+| 0x094 | s32 | `mIntParam2` | named | +0x94 -> +0x68 | 0..443 (13 distinct) |
+| 0x098 | s32 | `mIntParam3` | named | +0x98 -> +0x6c | 0..442 (12 distinct) |
 | 0x09c | s32 | `mLinkedEffectIndex1` | named | +0x9c -> +0x10 (an index until Load links it) | -1..283 (65 distinct) |
 | 0x0a0 | s32 | `mLinkedEffectIndex2` | named | +0xa0 -> +0x14 | -1..285 (24 distinct) |
 | 0x0a4 | s32 | `mLinkedEffectIndex3` | named | +0xa4 -> +0x18 | -1..291 (6 distinct) |
 | 0x0a8 | s32 | `mNameStringId` | named | +0xa8 -> +0x7c | 0..8817 (116 distinct) |
-| 0x0ac | f32 | `mParam1` | provisional | +0xac -> +0x28 | -30..20000 (41 distinct) |
-| 0x0b0 | f32 | `mParam2` | provisional | +0xb0 -> +0x2c | 0..1200 (24 distinct) |
-| 0x0b4 | f32 | `mParam3` | provisional | +0xb4 -> +0x30 | -2.8..3.1415 (23 distinct) |
-| 0x0b8 | f32 | `mParam4` | provisional | +0xb8 -> +0x34 | 0..6.3 (21 distinct) |
-| 0x0bc | f32 | `mParam5` | provisional | +0xbc -> +0x38 | 0..3 (23 distinct) |
-| 0x0c0 | f32 | `mParam6` | provisional | +0xc0 -> +0x3c | 0..300 (16 distinct) |
-| 0x0c4 | f32 | `mParam7` | provisional | +0xc4 -> +0x40 | 0..1000 (10 distinct) |
-| 0x0c8 | f32 | `mParam8` | provisional | +0xc8 -> +0x44 | -0.4..2 (7 distinct) |
-| 0x0cc | f32 | `mParam9` | provisional | +0xcc -> +0x48 | 0..250 (8 distinct) |
-| 0x0d0 | f32 | `mParam10` | provisional | +0xd0 -> +0x4c | 0..3000 (4 distinct) |
-| 0x0d4 | f32 | `mParam11` | provisional | +0xd4 -> +0x50 | 0..4 (6 distinct) |
-| 0x0d8 | f32 | `mParam12` | provisional | +0xd8 -> +0x54 | 0..3 (10 distinct) |
-| 0x0dc | bool | `mBDC` | provisional | +0xdc -> +0x88 | 0..1 (2 distinct) |
-| 0x0dd | bool | `mBDD` | provisional | +0xdd -> +0x89 | 0..1 (2 distinct) |
+| 0x0ac | f32 | `mParam1` | named | +0xac -> +0x28 | -30..20000 (41 distinct) |
+| 0x0b0 | f32 | `mParam2` | named | +0xb0 -> +0x2c | 0..1200 (24 distinct) |
+| 0x0b4 | f32 | `mParam3` | named | +0xb4 -> +0x30 | -2.8..3.1415 (23 distinct) |
+| 0x0b8 | f32 | `mParam4` | named | +0xb8 -> +0x34 | 0..6.3 (21 distinct) |
+| 0x0bc | f32 | `mParam5` | named | +0xbc -> +0x38 | 0..3 (23 distinct) |
+| 0x0c0 | f32 | `mParam6` | named | +0xc0 -> +0x3c | 0..300 (16 distinct) |
+| 0x0c4 | f32 | `mParam7` | named | +0xc4 -> +0x40 | 0..1000 (10 distinct) |
+| 0x0c8 | f32 | `mParam8` | named | +0xc8 -> +0x44 | -0.4..2 (7 distinct) |
+| 0x0cc | f32 | `mParam9` | named | +0xcc -> +0x48 | 0..250 (8 distinct) |
+| 0x0d0 | f32 | `mParam10` | named | +0xd0 -> +0x4c | 0..3000 (4 distinct) |
+| 0x0d4 | f32 | `mParam11` | named | +0xd4 -> +0x50 | 0..4 (6 distinct) |
+| 0x0d8 | f32 | `mEmitPositionSpread` | named | +0xd8 -> +0x54 | 0..3 (10 distinct) |
+| 0x0dc | bool | `mFlag1` | named | +0xdc -> +0x88 | 0..1 (2 distinct) |
+| 0x0dd | bool | `mFlag2` | named | +0xdd -> +0x89 | 0..1 (2 distinct) |
 | 0x0de | bool | `mIsScenarioListed` | named | +0xde -> +0x8b | 0..1 (2 distinct) |
-| 0x0df | bool | `mBDF` | provisional | +0xdf -> +0x8c | 0..1 (2 distinct) |
-| 0x0e0 | bool | `mBE0` | provisional | +0xe0 -> +0x8a | 0..1 (2 distinct) |
-| 0x0e1 | pad | `(pad)` | unknown | alignment padding | bytes 000000x287, ccccccx4 |
+| 0x0df | bool | `mIsEmitFlat` | named | +0xdf -> +0x8c | 0..1 (2 distinct) |
+| 0x0e0 | bool | `mEndsWithUnitOrDuration` | named | +0xe0 -> +0x8a | 0..1 (2 distinct) |
+| 0x0e1 | pad | `(padding)` | pad | alignment padding | bytes 000000x287, ccccccx4 |
 | 0x0e4 | s32 | `mDetailLevel` | named | +0xe4 -> +0x84 | 0..2 (3 distinct) |
 
 ### 3.5 `db\dbmusic.dat`: Music (songs per epoch)
 
 * **Loader:** `EEMusicObject::LoadTable` 0x4d9f6c (src/Empire Earth/Data Pre-Loading Thread/EEMusicObject.cpp)
 * **Container:** `u32 count` + count x 196-byte `EEMusicRecord`. Row layout: dbId, index, name, then the file name.
-* **AoC data:** 9 records, 1,768 bytes unpacked. Decoded bytes per record: named 42%, inferred 55%, provisional 0%, unknown 3%.
+* **AoC data:** 9 records, 1,768 bytes unpacked. Bytes per record: read 42%, label 51%, unused 7%, padding 0%.
 * **Semantics:** Row 0 is a hole that still gets loaded (all epoch flags are 0, so it is never played). `mFileName` + ".sgt" is the DirectMusic segment. The space epoch reuses the nano flag. If `Data\Music\New Music.txt` exists, it replaces the table (section 4). +0xb4 is an unread bool, perhaps an epoch slot.
 * **Cross-references:** none (file names point at `Data\Music`).
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | -1..9 (9 distinct) |
-| 0x004 | s32 | `(index)` | inferred | INFERRED: equals the 0-based row index | -1..8 (9 distinct) |
-| 0x008 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 8/9, max len 7, junk after NUL in 1, e.g. "Pawns" |
+| 0x000 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | -1..9 (9 distinct) |
+| 0x004 | s32 | `mUnusedIndex` | unused | INFERRED: equals the 0-based row index | -1..8 (9 distinct) |
+| 0x008 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 8/9, max len 7, junk after NUL in 1, e.g. "Pawns" |
 | 0x06c | char[52] | `mFileName` | named | +0x6c (a plain name; the song object appends ".sgt") | text 8/9, max len 7, junk after NUL in 1, e.g. "Pawns" |
 | 0x0a0 | f32 | `mReverbGain` | named | +0xa0 | const 0 |
 | 0x0a4 | f32 | `mReverbHighFreqRTRatio` | named | +0xa4 | 0..0.45 (8 distinct) |
 | 0x0a8 | f32 | `mReverbMix` | named | +0xa8 | -9..0 (4 distinct) |
 | 0x0ac | f32 | `mReverbTime` | named | +0xac | 0..2800 (9 distinct) |
-| 0x0b0 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x0b4 | pad | `(unknown)` | unknown | undecoded | bytes 00x9 |
+| 0x0b0 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x0b4 | pad | `(unused gap)` | unused | undecoded | bytes 00x9 |
 | 0x0b5 | bool[14] | `mInEpoch` | named | +0xb5..+0xc2 | [0]: 0..1 (2 distinct) |
-| 0x0c3 | s8 | `_gapC3` | unknown |  | -52..0 (2 distinct) |
+| 0x0c3 | s8 | `(unused gap)` | unused |  | -52..0 (2 distinct) |
 
 ### 3.6 `db\dbtechtree.dat`: Tech tree (epochs and nodes)
 
 * **Loader:** `EETechTree::Load` 0x5cbdf0 -> `EETechTreeEpoch::Load` 0x5ce10e -> `EETechTreeNode::Load` 0x5cf370 (src/Empire Earth/Tech Tree/); record in include/ee/EETechTreeRecord.h
 * **Container:** No global count. **15 epoch blocks**, each: `u32 nodeCount`, the epoch's own 268-byte record, `u32 n` + n x `u32` parent unit types, then nodeCount x (268-byte record + `u32 n` + n x `u32`). In AoC the epochs have 929/55/201/111/202/901/103/93/95/205/921/113/210/301/39 node slots (4,494 records in all). Only 793 are real: each epoch is a dense id range (e.g. epoch 0 ids 1004..1928), and the empty ids are 0xCC hole records with id 0.
-* **AoC data:** 4494 records, 1,226,932 bytes unpacked. Decoded bytes per record: named 89%, inferred 0%, provisional 11%, unknown 0%.
+* **AoC data:** 4494 records, 1,226,932 bytes unpacked. Bytes per record: read 50%, label 39%, unused 11%, padding 0%.
 * **Semantics:** Nodes with `mID <= 15` (`kTechEpochAll`) are dropped. Node epoch = id / 1000 - 1. The trailing list is the unit types offering the node (the converter log calls them "Parents"); costs are scaled per parent by `mFactor1..4` (parents 2..5). The `mCost2..6` names follow the resource slots: Food=mCost2, Wood=mCost3, Stone=mCost4, Gold=mCost5, Iron=mCost6. The 0xCC words at `mUD4..mUE0`, `mUF8`, `mFirstNodeID` and in `mBB6/mBB7` appear in hole rows only.
 * **Cross-references:** `mResearchedEvent`/`mObsoleteEvent` -> dbevents; `mButton` -> dbbuttons; `mUnitClass`, `mDefaultUnitClass`, parent lists -> unit types; `mPrerequisite1..4` -> node ids; `mCalamity` -> dbcalamity; `mHotKey` -> dbuihotkey; `mNameID` -> Language.dll. Referenced by dbobjects `mAttributes[]`, dbeffects `mTechnology`, dbcivpowers `mTechnology`.
 * **Suggested text form:** YAML
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[104] | `mName` | named | +0x00 (not read: the name?) | text 793/4494, max len 41, junk after NUL in 4494, e.g. "Epoch Paleo" |
+| 0x000 | char[104] | `label` | label | +0x00 (not read: the name?) | text 793/4494, max len 41, junk after NUL in 4494, e.g. "Epoch Paleo" |
 | 0x068 | s32 | `mID` | named | +0x68 -> mU08->mU4C | 0..15038 (793 distinct) |
 | 0x06c | s32 | `mEpoch` | named | +0x6c -> the epoch's mL14 | 0..14 (15 distinct) |
 | 0x070 | s32 | `mObsoleteEpoch` | named | +0x70 -> mL18 | 1..15 (13 distinct) |
@@ -930,9 +931,9 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x078 | s32 | `mObsoleteEvent` | named | +0x78 -> mU08->mObsoleteEvent | -1..0 (2 distinct) |
 | 0x07c | s32 | `mCost3` | named | +0x7c -> mU08->mCosts[3] | 0..100000 (48 distinct) |
 | 0x080 | s32 | `mCost4` | named | +0x80 -> mU08->mCosts[4] | 0..100000 (14 distinct) |
-| 0x084 | s32 | `mU84` | provisional | +0x84 | 0..100000 (2 distinct) |
+| 0x084 | s32 | `mUnused1` | unused | +0x84 | 0..100000 (2 distinct) |
 | 0x088 | s32 | `mCost5` | named | +0x88 -> mU08->mCosts[5] | 0..100000 (53 distinct) |
-| 0x08c | s32 | `mU8C` | provisional | +0x8c | const 0 |
+| 0x08c | s32 | `mUnused2` | unused | +0x8c | const 0 |
 | 0x090 | s32 | `mCost6` | named | +0x90 -> mU08->mCosts[6] | 0..100000 (54 distinct) |
 | 0x094 | s32 | `mCost2` | named | +0x94 -> mU08->mCosts[2] | 0..100000 (59 distinct) |
 | 0x098 | s32 | `mBuildTime` | named | +0x98 -> mU08->mU58 | 0..900000 (52 distinct) |
@@ -944,8 +945,8 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x0b0 | s32 | `mButton` | named | +0xb0 EEButtonObject::Get -> mButton | 1..1542 (685 distinct) |
 | 0x0b4 | bool | `mMakesUnit` | named | +0xb4 -> mU08->mB7C | 0..1 (2 distinct) |
 | 0x0b5 | bool | `mCountsTowardEpoch` | named | +0xb5 -> mU08->mB7D | 0..1 (2 distinct) |
-| 0x0b6 | bool | `mBB6` | provisional | +0xb6 | const 0; 0xCC in 3701 |
-| 0x0b7 | bool | `mBB7` | provisional | +0xb7 | const 0; 0xCC in 3701 |
+| 0x0b6 | bool | `mUnused3` | unused | +0xb6 | const 0; 0xCC in 3701 |
+| 0x0b7 | bool | `mUnused4` | unused | +0xb7 | const 0; 0xCC in 3701 |
 | 0x0b8 | s32 | `mNameID` | named | +0xb8 -> mU08->mU74 | 0..32836 (334 distinct) |
 | 0x0bc | s32 | `mKind` | named | +0xbc -> mU08->mU48 | 0..9 (9 distinct) |
 | 0x0c0 | s32 | `mCostResource` | named | +0xc0 -> mU08->mU38 | 0..4 (2 distinct) |
@@ -953,10 +954,10 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x0c8 | s32 | `mRequiredStatisticValue` | named | +0xc8 -> mU08->mRequiredStatisticValue | const 0 |
 | 0x0cc | s32 | `mCalamity` | named | +0xcc -> mU08->mFirstNodeID | 0..35 (29 distinct) |
 | 0x0d0 | s32 | `mHotKey` | named | +0xd0 -> mU08->mHotKey | -1..31 (32 distinct) |
-| 0x0d4 | s32 | `mUD4` | provisional | +0xd4 | 0..2163200 (2 distinct); 0xCC in 3701 |
-| 0x0d8 | s32 | `mUD8` | provisional | +0xd8 | 0..4100 (2 distinct); 0xCC in 3701 |
-| 0x0dc | s32 | `mUDC` | provisional | +0xdc | const 0; 0xCC in 3701 |
-| 0x0e0 | s32 | `mUE0` | provisional | +0xe0 | const 0; 0xCC in 3701 |
+| 0x0d4 | s32 | `mUnused5` | unused | +0xd4 | 0..2163200 (2 distinct); 0xCC in 3701 |
+| 0x0d8 | s32 | `mUnused6` | unused | +0xd8 | 0..4100 (2 distinct); 0xCC in 3701 |
+| 0x0dc | s32 | `mUnused7` | unused | +0xdc | const 0; 0xCC in 3701 |
+| 0x0e0 | s32 | `mUnused8` | unused | +0xe0 | const 0; 0xCC in 3701 |
 | 0x0e4 | f32 | `mFactor1` | named | +0xe4 the node Load's cost factor of its second unit class | 0..1 (2 distinct) |
 | 0x0e8 | f32 | `mFactor2` | named | +0xe8 (third) | 0..1 (2 distinct) |
 | 0x0ec | f32 | `mFactor3` | named | +0xec (fourth) | 0..1 (2 distinct) |
@@ -965,7 +966,7 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x0f5 | bool | `mObsoletedByDefault` | named | +0xf5 -> mU08->mB7F | 0..1 (2 distinct) |
 | 0x0f6 | bool | `mAvailableWithEpoch` | named | +0xf6 -> mU08->mHasParentalVengeance | 0..1 (2 distinct) |
 | 0x0f7 | bool | `mResearchedWithEpoch` | named | +0xf7 -> mU08->mHasGroupAttack | 0..1 (2 distinct) |
-| 0x0f8 | s32 | `mUF8` | provisional | +0xf8 | -872415232..0 (2 distinct) |
+| 0x0f8 | s32 | `mUnused9` | unused | +0xf8 | -872415232..0 (2 distinct) |
 | 0x0fc | s32 | `mNextEpoch` | named | +0xfc -> the epoch's mU4C | 0..15 (16 distinct) |
 | 0x100 | s32 | `mRequiredSOL` | named | +0x100 -> the epoch's mU40 | 0..2 (2 distinct) |
 | 0x104 | s32 | `mFirstNodeID` | named | +0x104 -> the epoch's mFirstNodeID | 0..2556416 (17 distinct); 0xCC in 3701 |
@@ -975,15 +976,15 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 * **Loader:** `EEEvent::LoadEvents` 0x5ca63b (src/Empire Earth/Scenario Manager/EEEvent.cpp)
 * **Container:** No count: **exactly 1500 rows**, each `char name[100]`, `u32 id`, `u32 numEffects`, numEffects x `s32 effect index`. (The first dword is the name's first bytes, not a count.)
-* **AoC data:** 1500 records, 166,680 bytes unpacked. Decoded bytes per record: named 100%, inferred 0%, provisional 0%, unknown 0%.
+* **AoC data:** 1500 records, 166,680 bytes unpacked. Bytes per record: read 4%, label 96%, unused 0%, padding 0%.
 * **Semantics:** Event i is `EEEvent::sEvents[i]`. Triggers run the listed effects (`gEventEffects[idx]`). The names are never used by the game.
 * **Cross-references:** effect indices -> dbeffects row; event ids <- dbtechtree `mResearchedEvent`/`mObsoleteEvent`, scenario triggers.
 * **Suggested text form:** YAML
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `name` | named | event name (unused by the game) | 317/1500 non-empty |
-| 0x064 | u32 | `mID` | named | stored in EEEvent::mID | |
+| 0x000 | char[100] | `label` | label | event name (unused by the game) | 317/1500 non-empty |
+| 0x064 | u32 | `mUnusedID` | unused | stored in EEEvent::mID | |
 | 0x068 | u32 | `mNumEffects` | named | count of the list that follows | 0..59, 1170 effect refs in all |
 | 0x06c | s32[n] | `mEffects` | named | indices into dbeffects | |
 
@@ -991,15 +992,15 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 * **Loader:** same `EEEvent::LoadEvents` (one `Read` of `sizeof(gEventEffects)`)
 * **Container:** No count: a raw array of **exactly 2000** 88-byte `EEEventEffect` (176,000 bytes).
-* **AoC data:** 2000 records, 176,000 bytes unpacked. Decoded bytes per record: named 69%, inferred 0%, provisional 31%, unknown 0%.
+* **AoC data:** 2000 records, 176,000 bytes unpacked. Bytes per record: read 65%, label 0%, unused 35%, padding 0%.
 * **Semantics:** 1193 real effects; 807 holes (`mKind = -1`, 0xCC in padding and `mL54`). `mKind` selects the action in `EEEvent::RunEffect` 0x5ca7cf: 1 button, 2 area effect, 6 model, 7, 8, 9 tech, 10, 11, 12..14 tech-tree background, 15..18/20/21 sounds, 19 unit, 22. The value is the absolute value when offset and factor are 0. `mRunOnLoad` = run while loading a save.
 * **Cross-references:** `mUnitClass`, `mNewUnitClass` -> unit types; `mUnitSet` -> dbunitset; `mMediaIndex` -> dbgraphics; `mTechnology` -> dbtechtree; `mSoundID` -> dbsounds; `mButton` -> dbbuttons; `mAreaEffect` -> dbareaeffect; `mAttribute` -> attribute id (0x28 = area effect).
 * **Suggested text form:** YAML (with events) or CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | s32 | `mL00` | provisional |  | 0..1809 (1194 distinct) |
-| 0x004 | s32 | `mID` | named |  | 0..1565 (1194 distinct) |
+| 0x000 | s32 | `mUnused1` | unused |  | 0..1809 (1194 distinct) |
+| 0x004 | s32 | `mUnusedID` | unused |  | 0..1565 (1194 distinct) |
 | 0x008 | f32 | `mValue` | named | +0x08 the absolute value (0x1ca591/0x1ca5df: used when +0x0c/+0x10 are 0) | 0..5544 (7 distinct) |
 | 0x00c | f32 | `mOffset` | named | +0x0c the offset added to the base | -1.5..10 (10 distinct) |
 | 0x010 | f32 | `mFactor` | named | +0x10 the factor of the value | -0.15..1.89 (18 distinct) |
@@ -1014,27 +1015,27 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x034 | s32 | `mButton` | named | +0x34 an EEButtonObject index (kind 1) | -1..1534 (103 distinct) |
 | 0x038 | s32 | `mAreaEffect` | named | +0x38 an EEAEManager index (kind 2) | -1..47 (19 distinct) |
 | 0x03c | s32 | `mTerrainType` | named |  | 0..14 (3 distinct) |
-| 0x040 | s32 | `mL40` | provisional |  | const 0 |
+| 0x040 | s32 | `mUnused2` | unused |  | const 0 |
 | 0x044 | u8 | `mRunOnLoad` | named | +0x44 (RunEffect 0x1ca7cf: while loading (gLoadingSavedGame) only effects with 1 run) | 0..1 (2 distinct) |
-| 0x045 | u8 | `mB45` | provisional |  | 0..16 (2 distinct); 0xCC in 807 |
-| 0x046 | u16 | `mU46` | provisional |  | 0..52428 (2 distinct) |
-| 0x048 | s32 | `mL48` | provisional |  | const 0 |
-| 0x04c | s32 | `mL4C` | provisional |  | const 0 |
-| 0x050 | s32 | `mL50` | provisional |  | const 0 |
-| 0x054 | s32 | `mL54` | provisional | (sizeof 0x58) | -859045888..0 (2 distinct) |
+| 0x045 | u8 | `mUnused3` | unused |  | 0..16 (2 distinct); 0xCC in 807 |
+| 0x046 | u16 | `mUnused4` | unused |  | 0..52428 (2 distinct) |
+| 0x048 | s32 | `mUnused5` | unused |  | const 0 |
+| 0x04c | s32 | `mUnused6` | unused |  | const 0 |
+| 0x050 | s32 | `mUnused7` | unused |  | const 0 |
+| 0x054 | s32 | `mUnused8` | unused | (sizeof 0x58) | -859045888..0 (2 distinct) |
 
 ### 3.9 `db\dbbuttons.dat`: Buttons (UI icon cells)
 
 * **Loader:** `EEButtonObject::Load` 0x4d5500 (src/Empire Earth/Database/EEButtonObject.cpp)
 * **Container:** `u32 count` + count x 224-byte `EEButtonRecord`: name[100], texture file[0x68], id, row, column, position, hot key.
-* **AoC data:** 1549 records, 346,980 bytes unpacked. Decoded bytes per record: named 55%, inferred 45%, provisional 0%, unknown 0%.
+* **AoC data:** 1549 records, 346,980 bytes unpacked. Bytes per record: read 55%, label 45%, unused 0%, padding 0%.
 * **Semantics:** Every row becomes an object (holes included). The texture is loaded on demand; ids below 50 get alpha. `mRow`/`mColumn` are the cell in a sheet (nearly always 0).
 * **Cross-references:** `mHotKey` -> dbuihotkey index; referenced by dbobjects/dbtechtree `mButton`, dbeffects `mButton`.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 1138/1549, max len 34, junk after NUL in 433, e.g. "Upgrade Citizen - Nano" |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 1138/1549, max len 34, junk after NUL in 433, e.g. "Upgrade Citizen - Nano" |
 | 0x064 | char[104] | `mFileName` | named | +0x64 -> mName | text 1138/1549, max len 45, junk after NUL in 1549, e.g. "textures\but_citizen_15t" |
 | 0x0cc | s32 | `mID` | named | +0xcc -> +0x30 | -1..1548 (1139 distinct) |
 | 0x0d0 | s32 | `mRow` | named | +0xd0 -> +0x2c | 0..5 (2 distinct) |
@@ -1046,40 +1047,40 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 * **Loader:** `EETerrainTypeTable::LoadDamageTables` 0x4dbf11 (src/Empire Earth/Database/EETerrainTypeTable.cpp); lookup `EEToHitTable::GetAttackFactor` 0x4dbe44
 * **Container:** `u32 count` (<= 60) + count x 380-byte `EEDamageTableRecord`: name, dbId, index, then `s32 damage[68]`.
-* **AoC data:** 60 records, 22,804 bytes unpacked. Decoded bytes per record: named 72%, inferred 28%, provisional 0%, unknown 0%.
+* **AoC data:** 60 records, 22,804 bytes unpacked. Bytes per record: read 72%, label 26%, unused 2%, padding 0%.
 * **Semantics:** The values are percentages (x 0.01) into `table[family][kind]`. Two scaled copies are made with world constant 0x59; which copy applies depends on difficulty and human/AI. The row is the unit's `mFamily`; the column is the attack kind. Which unit field picks the column is not traced (probably `mWeapon` or the projectile class).
 * **Cross-references:** Rows <- dbobjects `mFamily`, dbunitset `mFamilies[]`.
 * **Suggested text form:** CSV (matrix)
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 60/60, max len 24, junk after NUL in 2, e.g. "No Family" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 100..520 (60 distinct) |
-| 0x068 | s32 | `(index)` | inferred | INFERRED: equals the 0-based row index | 0..59 (60 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 60/60, max len 24, junk after NUL in 2, e.g. "No Family" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 100..520 (60 distinct) |
+| 0x068 | s32 | `mUnusedIndex` | unused | INFERRED: equals the 0-based row index | 0..59 (60 distinct) |
 | 0x06c | s32[68] | `mDamage` | named | +0x6c (scaled by kHeightEpsilon into gU4E8708's row) | [0]: 0..100 (5 distinct) |
 
 ### 3.11 `db\dbweapontohit.dat`: Weapon to-hit matrix
 
 * **Loader:** `EEToHitTable::Load` 0x4dcaad (src/Empire Earth/Database/EEUnitBehavior.cpp)
 * **Container:** `u32 count` (**must be 6**) + 6 x 132-byte `EEToHitRecord`: name, dbId, index, `s32 percent[6]`.
-* **AoC data:** 6 records, 796 bytes unpacked. Decoded bytes per record: named 18%, inferred 82%, provisional 0%, unknown 0%.
+* **AoC data:** 6 records, 796 bytes unpacked. Bytes per record: read 18%, label 76%, unused 6%, padding 0%.
 * **Semantics:** Rows and columns: shock, arrow, pierce, gun, laser, missile (row 0 is named "Defender: Shock"). Percent x 0.01 into `gWeaponToHitFactors[6][6]`.
 * **Cross-references:** none
 * **Suggested text form:** CSV (matrix)
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 6/6, max len 15, e.g. "Defender: Shock" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 100..126 (6 distinct) |
-| 0x068 | s32 | `(index)` | inferred | INFERRED: equals the 0-based row index | 0..5 (6 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 6/6, max len 15, e.g. "Defender: Shock" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 100..126 (6 distinct) |
+| 0x068 | s32 | `mUnusedIndex` | unused | INFERRED: equals the 0-based row index | 0..5 (6 distinct) |
 | 0x06c | s32[6] | `mPercents` | named | +0x6c (hundredths) | [0]: 100..150 (2 distinct) |
 
 ### 3.12 `db\dbworld.dat`: World constants
 
 * **Loader:** `EEWorldTable::Load` 0x4dcb79 (src/Empire Earth/Database/EEUnitBehavior.cpp); struct in include/ee/EEDatabaseTables.h
 * **Container:** `u32 count` + count x 28-byte `EEWorldTableEntry` (no name column).
-* **AoC data:** 95 records, 2,664 bytes unpacked. Decoded bytes per record: named 86%, inferred 0%, provisional 14%, unknown 0%.
-* **Semantics:** There are 95 constants, read as `gWorldTable.mEntries[k].field` from about 65 sites. Examples: entry 42 float = game speed, entry 26 = lobby unit limit, 0x56 = civ-powers category cost, 0x59 = damage scale factors. No index has a source name. A converter should add a hand-maintained `name` column; per-index meanings have to be collected from the call sites.
+* **AoC data:** 95 records, 2,664 bytes unpacked. Bytes per record: read 57%, label 0%, unused 43%, padding 0%.
+* **Semantics:** There are 95 constants, read as `gWorldTable.mEntries[k].field` from about 65 sites. Examples: entry 42 float = game speed, entry 26 = lobby unit limit, 0x56 = civ-powers category cost, 0x59 = damage scale factors. The 61 rows with a reader are named in section 8.3 (the text's checked `label`); the other 34 rows are unread.
 * **Cross-references:** Indexed by position from code.
 * **Suggested text form:** CSV
 
@@ -1087,25 +1088,25 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 |---|---|---|---|---|---|
 | 0x000 | f32 | `mFloatValue` | named | +0x00 | 0..70 (21 distinct) |
 | 0x004 | f32 | `mFloatValue2` | named | +0x04 | 0..3 (8 distinct) |
-| 0x008 | s32 | `mDatabaseID` | named | +0x08 | 0..99 (95 distinct) |
-| 0x00c | s32 | `mIndex` | named | +0x0c | -1..94 (95 distinct) |
+| 0x008 | s32 | `mUnusedDatabaseID` | unused | +0x08 | 0..99 (95 distinct) |
+| 0x00c | s32 | `mUnusedIndex` | unused | +0x0c | -1..94 (95 distinct) |
 | 0x010 | s32 | `mLongValue` | named | +0x10 (signed: EECPIntelligence 0x480f9b `fidiv dword [eax+0x10]`; TYPE CENSUS) | 0..90000 (23 distinct) |
 | 0x014 | u32 | `mLongValue2` | named | +0x14 | 0..112500 (8 distinct) |
-| 0x018 | s32 | `mL18` | provisional | +0x18 (entry 31: 1, entry 48: 0x50200; otherwise 0) | -858993664..328192 (4 distinct) |
+| 0x018 | s32 | `mUnused` | unused | +0x18 (entry 31: 1, entry 48: 0x50200; otherwise 0) | -858993664..328192 (4 distinct) |
 
 ### 3.13 `db\dbunitbehavior.dat`: Unit stances
 
 * **Loader:** `EEUnitBehavior::Load` 0x4dc973 (src/Empire Earth/Database/EEUnitBehavior.cpp)
 * **Container:** `u32 count` + count x 124-byte `EEUnitBehaviorRecord`.
-* **AoC data:** 8 records, 996 bytes unpacked. Decoded bytes per record: named 9%, inferred 84%, provisional 0%, unknown 7%.
+* **AoC data:** 8 records, 996 bytes unpacked. Bytes per record: read 9%, label 81%, unused 10%, padding 0%.
 * **Semantics:** Scout, Stand Ground, Guard, Harass, Cautious, Aggressive... Seven permission bools.
 * **Cross-references:** <- dbobjects `mBehavior`.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 8/8, max len 12, junk after NUL in 2, e.g. "Scout" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 1..8 (8 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 8/8, max len 12, junk after NUL in 2, e.g. "Scout" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 1..8 (8 distinct) |
 | 0x068 | s32 | `mIndex` | named | +0x68 (negative: no entry) | 0..7 (8 distinct) |
 | 0x06c | bool | `mCanMoveFreely` | named | +0x6c -> +0x04 | 0..1 (2 distinct) |
 | 0x06d | bool | `mCanPursuePastInitialContactLOS` | named | +0x6d -> +0x07 | 0..1 (2 distinct) |
@@ -1114,26 +1115,26 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x070 | bool | `mCanFlee` | named | +0x70 -> +0x0a | 0..1 (2 distinct) |
 | 0x071 | bool | `mMeleeCanMoveFreely` | named | +0x71 -> +0x05 | 0..1 (2 distinct) |
 | 0x072 | bool | `mRangedCanMoveFreely` | named | +0x72 -> +0x06 | const 0 |
-| 0x073 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x077 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x07b | pad | `(unknown)` | unknown | undecoded | bytes 00x8 |
+| 0x073 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x077 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x07b | pad | `(unused gap)` | unused | undecoded | bytes 00x8 |
 
 ### 3.14 `db\dbstartingresources.dat`: Starting resources presets
 
 * **Loader:** `EEStartingResources::Load` 0x4daa05 (src/Empire Earth/Database/EEStartingResources.cpp)
 * **Container:** `u32 count` + count x 132-byte `EEStartingResourcesRecord`.
-* **AoC data:** 6 records, 796 bytes unpacked. Decoded bytes per record: named 18%, inferred 79%, provisional 3%, unknown 0%.
+* **AoC data:** 6 records, 796 bytes unpacked. Bytes per record: read 21%, label 76%, unused 3%, padding 0%.
 * **Semantics:** Rows with index < 0 are skipped.
 * **Cross-references:** `mNameID` -> Language.dll.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 5/6, max len 22, junk after NUL in 1, e.g. "Tournament - Low" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | -1..7 (6 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 5/6, max len 22, junk after NUL in 1, e.g. "Tournament - Low" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | -1..7 (6 distinct) |
 | 0x068 | s32 | `mIndex` | named | +0x68 (negative: skipped) | -1..5 (6 distinct) |
 | 0x06c | s32 | `mNameID` | named | +0x6c -> +0x18 | 0..7151 (6 distinct) |
-| 0x070 | s32 | `mFood` | provisional | +0x70 -> +0x04 | 0..15000 (5 distinct) |
+| 0x070 | s32 | `mFood` | named | +0x70 -> +0x04 | 0..15000 (5 distinct) |
 | 0x074 | s32 | `mWood` | named | +0x74 -> +0x08 | 0..15000 (5 distinct) |
 | 0x078 | s32 | `mStone` | named | +0x78 -> +0x0c | 0..5000 (6 distinct) |
 | 0x07c | s32 | `mGold` | named | +0x7c -> +0x10 | 0..10000 (3 distinct) |
@@ -1143,81 +1144,81 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 * **Loader:** `EEAnimal::Load` 0x4d4a5d (src/Empire Earth/Database/EEAnimal.cpp)
 * **Container:** `u32 count` + count x 272-byte `EEAnimalRecord`.
-* **AoC data:** 14 records, 3,812 bytes unpacked. Decoded bytes per record: named 35%, inferred 38%, provisional 13%, unknown 14%.
+* **AoC data:** 14 records, 3,812 bytes unpacked. Bytes per record: read 38%, label 37%, unused 22%, padding 4%.
 * **Semantics:** Every row is loaded. Intervals are in seconds (x 1000 at load). +0xf4..+0x10f is zero in every row.
 * **Cross-references:** `mUnitType` -> unit type; `mMedia` -> dbgraphics; `mSound1..3` -> dbsounds.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 14/14, max len 18, junk after NUL in 1, e.g. "Res - Deer" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 1..19 (14 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 14/14, max len 18, junk after NUL in 1, e.g. "Res - Deer" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 1..19 (14 distinct) |
 | 0x068 | s32 | `mAnimalID` | named | +0x68 -> +0x3c | 0..13 (14 distinct) |
 | 0x06c | s32 | `mUnitType` | named | +0x6c -> +0x38 | 261..661 (14 distinct) |
 | 0x070 | s32 | `mMinHerdSize` | named | +0x70 -> +0x40 | 1..2 (2 distinct) |
 | 0x074 | s32 | `mMaxHerdSize` | named | +0x74 -> +0x44 | 2..8 (4 distinct) |
 | 0x078 | bool | `mBreeds` | named | +0x78 -> +0x85 | 0..1 (2 distinct) |
-| 0x079 | pad | `(pad)` | unknown | alignment padding | bytes 000000x14 |
+| 0x079 | pad | `(padding)` | pad | alignment padding | bytes 000000x14 |
 | 0x07c | s32 | `mMinBirthInterval` | named | +0x7c -> +0x48 (s) | 90..999999 (7 distinct) |
 | 0x080 | s32 | `mMaxBirthInterval` | named | +0x80 -> +0x4c (s) | 90..9999999 (7 distinct) |
 | 0x084 | bool | `mHasLeader` | named | +0x84 -> +0x87 | const 0 |
-| 0x085 | bool | `mB85` | provisional | +0x85 -> +0x88 | const 0 |
-| 0x086 | pad | `(pad)` | unknown | alignment padding | bytes 0000x14 |
-| 0x088 | s32 | `mL88` | provisional | +0x88 -> mL04 | 1..9 (8 distinct) |
-| 0x08c | s32 | `mL8C` | provisional | +0x8c -> mL04 | -1..9 (5 distinct) |
-| 0x090 | s32 | `mL90` | provisional | +0x90 -> mL04 | -1..6 (4 distinct) |
-| 0x094 | s32 | `mL94` | provisional | +0x94 -> mL04 | -1..2 (2 distinct) |
-| 0x098 | bool | `mB98` | provisional | +0x98 -> +0x89 | 0..1 (2 distinct) |
-| 0x099 | pad | `(pad)` | unknown | alignment padding | bytes 000000x14 |
-| 0x09c | f32 | `mF9C` | provisional | +0x9c -> +0x28 (copied with mov in the original) | 0.1..0.8 (7 distinct) |
+| 0x085 | bool | `mUnusedFlag1` | unused | +0x85 -> +0x88 | const 0 |
+| 0x086 | pad | `(padding)` | pad | alignment padding | bytes 0000x14 |
+| 0x088 | s32 | `mUnusedListValue1` | unused | +0x88 -> mL04 | 1..9 (8 distinct) |
+| 0x08c | s32 | `mUnusedListValue2` | unused | +0x8c -> mL04 | -1..9 (5 distinct) |
+| 0x090 | s32 | `mUnusedListValue3` | unused | +0x90 -> mL04 | -1..6 (4 distinct) |
+| 0x094 | s32 | `mUnusedListValue4` | unused | +0x94 -> mL04 | -1..2 (2 distinct) |
+| 0x098 | bool | `mUnusedIsPredator` | unused | +0x98 -> +0x89 | 0..1 (2 distinct) |
+| 0x099 | pad | `(padding)` | pad | alignment padding | bytes 000000x14 |
+| 0x09c | f32 | `mUnusedFactor` | unused | +0x9c -> +0x28 (copied with mov in the original) | 0.1..0.8 (7 distinct) |
 | 0x0a0 | s32 | `mMinHuntInterval` | named | +0xa0 -> +0x50 (s) | 120..2000 (9 distinct) |
 | 0x0a4 | s32 | `mMaxHuntInterval` | named | +0xa4 -> +0x54 (s) | 200..10000 (9 distinct) |
 | 0x0a8 | s32 | `mMinRoamMargin` | named | +0xa8 -> +0x58 | 2..10 (2 distinct) |
 | 0x0ac | s32 | `mMaxRoamMargin` | named | +0xac -> +0x5c | 2..50 (3 distinct) |
 | 0x0b0 | s32 | `mMinGrazeTime` | named | +0xb0 -> +0x60 (s) | 0..90 (5 distinct) |
 | 0x0b4 | s32 | `mMaxGrazeTime` | named | +0xb4 -> +0x64 (s) | 0..180 (3 distinct) |
-| 0x0b8 | bool | `mBB8` | provisional | +0xb8 -> +0x84 | 0..1 (2 distinct) |
+| 0x0b8 | bool | `mUnusedIsFlightless` | unused | +0xb8 -> +0x84 | 0..1 (2 distinct) |
 | 0x0b9 | bool | `mIsPredator` | named | +0xb9 -> +0x86 | 0..1 (2 distinct) |
-| 0x0ba | bool | `mBBA` | provisional | +0xba -> +0x83 | 0..1 (2 distinct) |
+| 0x0ba | bool | `mUnusedFightsBack` | unused | +0xba -> +0x83 | 0..1 (2 distinct) |
 | 0x0bb | bool | `mHasParentalVengeance` | named | +0xbb -> +0x80 | const 0 |
 | 0x0bc | bool | `mHasGroupAttack` | named | +0xbc -> +0x81 | 0..1 (2 distinct) |
 | 0x0bd | bool | `mHasGroupFlee` | named | +0xbd -> +0x82 | const 0 |
-| 0x0be | pad | `(pad)` | unknown | alignment padding | bytes 0000x14 |
+| 0x0be | pad | `(padding)` | pad | alignment padding | bytes 0000x14 |
 | 0x0c0 | f32 | `mNewbornGrowth` | named | +0xc0 -> +0x30 | 0.4..0.6 (5 distinct) |
 | 0x0c4 | f32 | `mGrowthStep` | named | +0xc4 -> +0x34 | const 0.005 |
 | 0x0c8 | s32 | `mGrowInterval` | named | +0xc8 -> +0x6c (s) | 3..15 (5 distinct) |
 | 0x0cc | s32 | `mHerdRadius` | named | +0xcc -> +0x68 | const 20 |
-| 0x0d0 | s32 | `mLD0` | provisional | +0xd0 -> +0x70 (s) | const 300 |
-| 0x0d4 | s32 | `mLD4` | provisional | +0xd4 -> +0x74 (s) | const 900 |
-| 0x0d8 | s32 | `mLD8` | provisional | +0xd8 -> +0x2c | const 1061158912 |
+| 0x0d0 | s32 | `mMinRestInterval` | named | +0xd0 -> +0x70 (s) | const 300 |
+| 0x0d4 | s32 | `mMaxRestInterval` | named | +0xd4 -> +0x74 (s) | const 900 |
+| 0x0d8 | s32 | `mUnusedPredatorFleeChance` | unused | +0xd8 -> +0x2c | const 1061158912 |
 | 0x0dc | s32 | `mMinFollowInterval` | named | +0xdc -> +0x78 (s) | const 120 |
 | 0x0e0 | s32 | `mMaxFollowInterval` | named | +0xe0 -> +0x7c (s) | const 260 |
 | 0x0e4 | s32 | `mMedia` | named | +0xe4 -> +0x24 (EEMedia::Get) | const -1 |
 | 0x0e8 | s32 | `mSound1` | named | +0xe8 -> mSounds | const -1 |
 | 0x0ec | s32 | `mSound2` | named | +0xec -> mSounds | const -1 |
 | 0x0f0 | s32 | `mSound3` | named | +0xf0 -> mSounds | const -1 |
-| 0x0f4 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x0f8 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x0fc | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x100 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x104 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x108 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x10c | s32 | `(unknown)` | unknown | undecoded | const 0 |
+| 0x0f4 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x0f8 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x0fc | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x100 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x104 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x108 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x10c | s32 | `(unused gap)` | unused | undecoded | const 0 |
 
 ### 3.16 `db\dbcolortable.dat`: Player colours
 
 * **Loader:** `EEColorTable::Load` 0x4d5d91 (src/Empire Earth/Database/EEColorTable.cpp)
 * **Container:** `u32 count` + count x 168-byte `EEColorTableRecord`: name, dbId, index, three RGB float triples, 24 zero bytes.
-* **AoC data:** 69 records, 11,596 bytes unpacked. Decoded bytes per record: named 21%, inferred 64%, provisional 0%, unknown 14%.
+* **AoC data:** 69 records, 11,596 bytes unpacked. Bytes per record: read 21%, label 60%, unused 19%, padding 0%.
 * **Semantics:** Colour 2 also yields a 60% dark shade. "Color 3" is missing between colour 2 and colour 4; the gap at +0x90 (zero) may be it, or a 5th/6th colour.
 * **Cross-references:** Index = colour slot (players, "Nocolor" 68).
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 69/69, max len 31, junk after NUL in 2, e.g. "Player 1 (Blue)" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 1..70 (69 distinct) |
-| 0x068 | s32 | `(index)` | inferred | INFERRED: equals the 0-based row index | 0..68 (69 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 69/69, max len 31, junk after NUL in 2, e.g. "Player 1 (Blue)" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 1..70 (69 distinct) |
+| 0x068 | s32 | `mUnusedIndex` | unused | INFERRED: equals the 0-based row index | 0..68 (69 distinct) |
 | 0x06c | f32 | `mColorRed` | named | +0x6c | 0..1 (11 distinct) |
 | 0x070 | f32 | `mColorGreen` | named | +0x70 | 0..1 (10 distinct) |
 | 0x074 | f32 | `mColorBlue` | named | +0x74 | 0..1 (11 distinct) |
@@ -1227,46 +1228,46 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x084 | f32 | `mColor4Red` | named | +0x84 | 0..1 (5 distinct) |
 | 0x088 | f32 | `mColor4Green` | named | +0x88 | 0..1 (5 distinct) |
 | 0x08c | f32 | `mColor4Blue` | named | +0x8c | 0..1 (3 distinct) |
-| 0x090 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x094 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x098 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x09c | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x0a0 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x0a4 | s32 | `(unknown)` | unknown | undecoded | const 0 |
+| 0x090 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x094 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x098 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x09c | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x0a0 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x0a4 | s32 | `(unused gap)` | unused | undecoded | const 0 |
 
 ### 3.17 `db\dbaiunittargeting.dat`: AI unit targeting weights
 
 * **Loader:** `EEAIUnitTargetingTable::Load` 0x4d47a1 (src/Empire Earth/Database/EEAIUnitTargetingTable.cpp)
 * **Container:** `u32 count` (**must be 3**) + 3 x 160-byte `EEAIUnitTargetingRecord`.
-* **AoC data:** 3 records, 484 bytes unpacked. Decoded bytes per record: named 20%, inferred 68%, provisional 12%, unknown 0%.
+* **AoC data:** 3 records, 484 bytes unpacked. Bytes per record: read 22%, label 62%, unused 15%, padding 0%.
 * **Semantics:** Rows: Melee, Short Range, Long Range. Each yields 10 weights. `mL90..mL98` are not kept.
 * **Cross-references:** none
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 3/3, max len 11, e.g. "Melee" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 1..3 (3 distinct) |
-| 0x068 | s32 | `(index)` | inferred | INFERRED: equals the 0-based row index | 0..2 (3 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 3/3, max len 11, e.g. "Melee" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 1..3 (3 distinct) |
+| 0x068 | s32 | `mUnusedIndex` | unused | INFERRED: equals the 0-based row index | 0..2 (3 distinct) |
 | 0x06c | s32 | `mAttackerBonus` | named | +0x6c | 2..15 (3 distinct) |
-| 0x070 | s32 | `mL70` | provisional | +0x70 | 1..20 (3 distinct) |
+| 0x070 | s32 | `mUnusedWeight` | unused | +0x70 | 1..20 (3 distinct) |
 | 0x074 | s32 | `mInRangeBonus` | named | +0x74 | 30..50 (2 distinct) |
 | 0x078 | s32 | `mFasterTargetBonus` | named | +0x78 | 1..6 (3 distinct) |
 | 0x07c | s32 | `mStrongerTargetBonus` | named | +0x7c | 1..6 (3 distinct) |
-| 0x080 | s32 | `mL80` | provisional | +0x80 | const 0 |
+| 0x080 | s32 | `mPreferredUnitType` | named | +0x80 | const 0 |
 | 0x084 | s32 | `mToHitWeight` | named | +0x84 | const 1 |
 | 0x088 | s32 | `mProximityWeight` | named | +0x88 | 0..50 (3 distinct) |
 | 0x08c | s32 | `mImmobileTargetBonus` | named | +0x8c | const -500 |
-| 0x090 | s32 | `mL90` | provisional | +0x90 | 0..2 (3 distinct) |
-| 0x094 | s32 | `mL94` | provisional | +0x94 | 0..2 (3 distinct) |
-| 0x098 | s32 | `mL98` | provisional | +0x98 | 0..2 (3 distinct) |
+| 0x090 | s32 | `mUnused1` | unused | +0x90 | 0..2 (3 distinct) |
+| 0x094 | s32 | `mUnused2` | unused | +0x94 | 0..2 (3 distinct) |
+| 0x098 | s32 | `mUnused3` | unused | +0x98 | 0..2 (3 distinct) |
 | 0x09c | s32 | `mMaxValue` | named | +0x9c | 15..50 (2 distinct) |
 
 ### 3.18 `db\dbterrain.dat`: Terrains
 
 * **Loader:** `EETerrainTable::Load` 0x4db2ce (src/Empire Earth/Database/EETerrainTable.cpp)
 * **Container:** `u32 count`; per entry: one string (texture base, e.g. `textures\BaseGrass_1.sst`, no NUL) + 204-byte `EETerrainRecord`.
-* **AoC data:** 93 records, 21,167 bytes unpacked. Decoded bytes per record: named 84%, inferred 0%, provisional 8%, unknown 8%.
+* **AoC data:** 93 records, 21,167 bytes unpacked. Bytes per record: read 92%, label 0%, unused 7%, padding 0%.
 * **Semantics:** Texture ids are numbered cumulatively (`columns x rows` per terrain). The first named terrain with `mID != -1` becomes the default terrain. Colour is 0..255 per channel (x 1/255). `mFirst[k]..mLast[k]` (k < 3) are inclusive unit-type ranges of ambient units.
 * **Cross-references:** `mTerrainType` -> dbterraintype; `mFirst/mLast` -> unit types; `mColorType` -> terrain colour palette; `mNameID` -> Language.dll; referenced by dbcliffterrain.
 * **Suggested text form:** CSV
@@ -1284,48 +1285,48 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x084 | bool | `mIsWater` | named | +0x84 -> +0x84 | 0..1 (2 distinct) |
 | 0x085 | bool | `mHasAlpha` | named | +0x85 -> +0x86 | const 0 |
 | 0x086 | bool | `mIsInEditor` | named | +0x86 -> +0x85 | 0..1 (2 distinct) |
-| 0x087 | pad | `(pad)` | unknown | alignment padding | bytes 00x77, ccx16 |
+| 0x087 | pad | `(padding)` | pad | alignment padding | bytes 00x77, ccx16 |
 | 0x088 | s32 | `mColorType` | named | +0x88 -> +0x68 | 0..67 (39 distinct) |
 | 0x08c | u32[3] | `mFirst` | named | +0x8c: unit class ranges [mFirst[k], mLast[k]] -> mUnitClasses | [0]: 0..691 (16 distinct) |
-| 0x098 | u32[3] | `mLast` | provisional | +0x98 | [0]: 0..696 (16 distinct) |
+| 0x098 | u32[3] | `mLast` | named | +0x98 | [0]: 0..696 (16 distinct) |
 | 0x0a4 | s32 | `mAmbientUnitChance` | named | +0xa4 -> +0x7c | 0..100 (7 distinct) |
 | 0x0a8 | s32 | `mWaterAnimationPeriod` | named | +0xa8 -> +0x44 | 0..100 (2 distinct) |
 | 0x0ac | s32 | `mWaterDepth` | named | +0xac -> +0x80 | 0..4 (2 distinct) |
 | 0x0b0 | s32 | `mRed` | named | +0xb0 (0..255) | 0..255 (23 distinct); 0xCC in 16 |
 | 0x0b4 | s32 | `mGreen` | named | +0xb4 | 0..255 (27 distinct); 0xCC in 16 |
-| 0x0b8 | s32 | `mBlue` | provisional | +0xb8 | 0..255 (29 distinct); 0xCC in 16 |
-| 0x0bc | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x0c0 | s32 | `(unknown)` | unknown | undecoded | 0..1102158234 (2 distinct) |
-| 0x0c4 | s32 | `(unknown)` | unknown | undecoded | 0..1107637043 (2 distinct) |
-| 0x0c8 | pad | `(unknown)` | unknown | undecoded | bytes 000000x93 |
+| 0x0b8 | s32 | `mBlue` | named | +0xb8 | 0..255 (29 distinct); 0xCC in 16 |
+| 0x0bc | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x0c0 | s32 | `(unused gap)` | unused | undecoded | 0..1102158234 (2 distinct) |
+| 0x0c4 | s32 | `(unused gap)` | unused | undecoded | 0..1107637043 (2 distinct) |
+| 0x0c8 | pad | `(unused gap)` | unused | undecoded | bytes 000000x93 |
 | 0x0cb | bool | `mIsAmbientsOnly` | named | +0xcb -> +0x87 | 0..1 (2 distinct) |
 
 ### 3.19 `db\dbterraintype.dat`: Terrain types
 
 * **Loader:** `EETerrainTypeTable::Load` 0x4dbd2e (src/Empire Earth/Database/EETerrainTypeTable.cpp)
 * **Container:** `u32 count` + count x 128-byte `EETerrainTypeRecord`.
-* **AoC data:** 68 records, 8,708 bytes unpacked. Decoded bytes per record: named 13%, inferred 81%, provisional 3%, unknown 2%.
+* **AoC data:** 68 records, 8,708 bytes unpacked. Bytes per record: read 13%, label 78%, unused 6%, padding 2%.
 * **Semantics:** Every row is loaded. `mL78` is often 999999999.
 * **Cross-references:** `mFirstColor..mLastColor` -> entries of the 256-colour `textures\ColorPalette.tga` palette; `mNameID` -> Language.dll.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 68/68, max len 34, junk after NUL in 1, e.g. "Grass" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 1..69 (68 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 68/68, max len 34, junk after NUL in 1, e.g. "Grass" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 1..69 (68 distinct) |
 | 0x068 | s32 | `mID` | named | +0x68 -> +0x08 | 0..67 (68 distinct) |
 | 0x06c | s32 | `mFirstColor` | named | +0x6c -> +0x0c | 0..255 (48 distinct) |
 | 0x070 | s32 | `mLastColor` | named | +0x70 -> +0x10 | 7..255 (49 distinct) |
 | 0x074 | s32 | `mNameID` | named | +0x74 -> +0x14 | 5801..22017 (68 distinct) |
-| 0x078 | s32 | `mL78` | provisional | +0x78 -> +0x18 | 0..999999999 (16 distinct) |
+| 0x078 | s32 | `mUnusedPaletteIndex` | unused | +0x78 -> +0x18 | 0..999999999 (16 distinct) |
 | 0x07c | bool | `mIsInEditor` | named | +0x7c -> +0x1c | const 1 |
-| 0x07d | pad | `(pad)` | unknown | tail padding | bytes 000000x67, 720000x1 |
+| 0x07d | pad | `(padding)` | pad | tail padding | bytes 000000x67, 720000x1 |
 
 ### 3.20 `db\dbcliffterrain.dat`: Cliff terrains
 
 * **Loader:** `EECliffTerrainTable::Load` 0x4dbb22 (src/Empire Earth/Database/EETerrainTable.cpp)
 * **Container:** `u32 count` + count x 124-byte `EECliffTerrainRecord`.
-* **AoC data:** 3 records, 376 bytes unpacked. Decoded bytes per record: named 94%, inferred 0%, provisional 4%, unknown 2%.
+* **AoC data:** 3 records, 376 bytes unpacked. Bytes per record: read 94%, label 0%, unused 4%, padding 2%.
 * **Semantics:** Rows with a negative index stay NULL. The first valid row is `gFirstCliffTerrain`.
 * **Cross-references:** `mFirstTerrain..mLastTerrain` -> dbterrain ids.
 * **Suggested text form:** CSV
@@ -1336,41 +1337,41 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x068 | s32 | `mIndex` | named | +0x68 (negative: no entry) | 0..2 (3 distinct) |
 | 0x06c | s32 | `mFirstTerrain` | named | +0x6c -> +0x14 | 50..77 (3 distinct) |
 | 0x070 | s32 | `mLastTerrain` | named | +0x70 -> +0x18 | 51..78 (3 distinct) |
-| 0x074 | s32 | `mL74` | provisional | +0x74 -> +0x1c | const 0 |
-| 0x078 | bool | `mB78` | provisional | +0x78 -> +0x20 | const 1 |
-| 0x079 | pad | `(pad)` | unknown | tail padding | bytes 000000x3 |
+| 0x074 | s32 | `mUnusedValue` | unused | +0x74 -> +0x1c | const 0 |
+| 0x078 | bool | `mUnusedFlag` | unused | +0x78 -> +0x20 | const 1 |
+| 0x079 | pad | `(padding)` | pad | tail padding | bytes 000000x3 |
 
 ### 3.21 `db\dbcivpowers.dat`: Civilization powers
 
 * **Loader:** `EECivPowersManager::Load` 0x683124 (src/Empire Earth/Civilization Builder/EECivPowersManager.cpp)
 * **Container:** `u32 count` + count x 152-byte `EECivPower`.
-* **AoC data:** 23 records, 3,500 bytes unpacked. Decoded bytes per record: named 89%, inferred 0%, provisional 11%, unknown 0%.
+* **AoC data:** 23 records, 3,500 bytes unpacked. Bytes per record: read 21%, label 66%, unused 13%, padding 0%.
 * **Semantics:** Power ids start at 0x26 (`GetPower(id)` indexes id - 0x26). Each power's bonus becomes a level of the synthetic "special powers" category in dbcivilization.
 * **Cross-references:** `mTechnology` -> dbtechtree; `mUnitSet` -> dbunitset; `mUnitType` -> unit type.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `mName` | named | +0x00 the power's name, NUL-terminated (dbcivpowers.dat: "Flaming | text 23/23, max len 26, e.g. "Flaming Arrows" |
-| 0x064 | s32 | `mDatabaseID` | named | +0x64 | 1..26 (23 distinct) |
+| 0x000 | char[100] | `label` | label | +0x00 the power's name, NUL-terminated (dbcivpowers.dat: "Flaming | text 23/23, max len 26, e.g. "Flaming Arrows" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | +0x64 | 1..26 (23 distinct) |
 | 0x068 | s32 | `mID` | named | +0x68 | 38..60 (23 distinct) |
 | 0x06c | f32 | `mBonus` | named | +0x6c (EECivilizationManager::Load copies it as a level bonus: a dword move into a float) | 0.05..0.3 (6 distinct) |
 | 0x070 | s32 | `mUnitSet` | named | +0x70 | 0..162 (4 distinct) |
 | 0x074 | s32 | `mTechnology` | named | +0x74 (EEMResearchTechnology compares it with the node's +0x5c) | -1..1088 (14 distinct) |
 | 0x078 | s32 | `mMiningLimit` | named | +0x78 | 0..7 (2 distinct) |
 | 0x07c | s32 | `mChance` | named | +0x7c | 0..50 (2 distinct) |
-| 0x080 | s32 | `mL80` | provisional | +0x80 | const 0 |
+| 0x080 | s32 | `mUnused1` | unused | +0x80 | const 0 |
 | 0x084 | f32 | `mAmount` | named | +0x84 | 0..50 (3 distinct) |
-| 0x088 | s32 | `mL88` | provisional | +0x88 | const 0 |
-| 0x08c | s32 | `mL8C` | provisional | +0x8c | const 0 |
-| 0x090 | s32 | `mL90` | provisional | +0x90 | const 0 |
+| 0x088 | s32 | `mUnused2` | unused | +0x88 | const 0 |
+| 0x08c | s32 | `mUnused3` | unused | +0x8c | const 0 |
+| 0x090 | s32 | `mUnused4` | unused | +0x90 | const 0 |
 | 0x094 | s32 | `mUnitType` | named | +0x94 | -1..725 (2 distinct) |
 
 ### 3.22 `db\dbcivilization.dat`: Civilization builder categories
 
 * **Loader:** `EECivilizationManager::Load` 0x681514 (src/Empire Earth/Civilization Builder/EECivilizationManager.cpp)
 * **Container:** `u32 count` + count x 600-byte `EECivilizationCategoryEntry`: dbId, index, name[100] (at +0x08), name id, cost, unit set, then 60 x (f32 value, f32 bonus).
-* **AoC data:** 29 records, 17,404 bytes unpacked. Decoded bytes per record: named 83%, inferred 17%, provisional 1%, unknown 0%.
+* **AoC data:** 29 records, 17,404 bytes unpacked. Bytes per record: read 83%, label 17%, unused 0%, padding 0%.
 * **Semantics:** Rows with `index <= 0` are skipped. A 36th "special powers" category is synthesised from dbcivpowers. Upgrade ids are `(category << 6) / level` (level 1..60). The hole rows hold 0xCC level pairs.
 * **Cross-references:** `mUnitSet` -> dbunitset; `mNameID` -> Language.dll; `.civ` files store upgrade ids into this table.
 * **Suggested text form:** YAML or CSV (long format)
@@ -1379,9 +1380,9 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 |---|---|---|---|---|---|
 | 0x000 | s32 | `mDatabaseID` | named | +00, loader preserves/increments | 0..30 (28 distinct) |
 | 0x004 | s32 | `mIndex` | named | +04, loader preserves/increments | 0..28 (28 distinct) |
-| 0x008 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 29/29, max len 100, junk after NUL in 1, e.g. "ÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌ" |
+| 0x008 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 29/29, max len 100, junk after NUL in 1, e.g. "ÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌÌ" |
 | 0x06c | s32 | `mNameID` | named | +6c, actual name reader281c92 | 0..31524 (28 distinct) |
-| 0x070 | s32 | `mCost` | provisional | +70, actual long281873 | 0..6 (6 distinct) |
+| 0x070 | s32 | `mCost` | named | +70, actual long281873 | 0..6 (6 distinct) |
 | 0x074 | s32 | `mUnitSet` | named | +74, actual loader writes102 | 0..172 (27 distinct) |
 | 0x078 | pair_f32[60] | `mLevels` | named | +78, actual1..<61 float-pair enumeration | [0]: 0..0.3 (4 distinct) |
 
@@ -1389,14 +1390,14 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 * **Loader:** `EECivilizationManager::LoadPremadeCivilizations` 0x681672
 * **Container:** `u32 count` + count x 120-byte `EECivilizationEntry`: dbId, index, file name[100] (at +0x08), checksum, name id, era name id.
-* **AoC data:** 23 records, 2,764 bytes unpacked. Decoded bytes per record: named 100%, inferred 0%, provisional 0%, unknown 0%.
+* **AoC data:** 23 records, 2,764 bytes unpacked. Bytes per record: read 97%, label 0%, unused 3%, padding 0%.
 * **Semantics:** Sorted by index after loading; the distinct era ids form the era list. `mChecksum` identifies an unmodified premade `.civ`.
 * **Cross-references:** `mFileName` -> `civilizations\<name>.civ`; `mNameID`, `mEraNameID` -> Language.dll.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | s32 | `mDatabaseID` | named | +0x00 | 1..23 (23 distinct) |
+| 0x000 | s32 | `mUnusedDatabaseID` | unused | +0x00 | 1..23 (23 distinct) |
 | 0x004 | s32 | `mIndex` | named | +0x04 | 0..22 (23 distinct) |
 | 0x008 | char[100] | `mFileName` | named | +0x08 the civilization's file (EEUIEPDCS: the selected entry's file) | text 23/23, max len 17, e.g. "Classical Greece" |
 | 0x06c | s32 | `mChecksum` | named | +0x6c actual281bc5 filename/checksum record | 10254..19926 (23 distinct) |
@@ -1407,60 +1408,60 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 * **Loader:** `EECalamityManager::LoadCalamityClasses` 0x4ae070 (src/Empire Earth/Calamities/EECalamityManager.cpp); record include/ee/EECalamityClass.h
 * **Container:** `u32 count` + count x 236-byte `EECalamityData`.
-* **AoC data:** 36 records, 8,500 bytes unpacked. Decoded bytes per record: named 69%, inferred 0%, provisional 29%, unknown 2%.
+* **AoC data:** 36 records, 8,500 bytes unpacked. Bytes per record: read 42%, label 42%, unused 14%, padding 2%.
 * **Semantics:** Here dbId (+0x7c) and index (+0x80, `mID`) follow the name and six floats. `mClassEnum` (kCalamity*: 3 earthquake, 4 hurricane, 7 plague, 8 leprosy, 9 volcano, 10 fire, 13 morale, 14 time warp, 15 teleport, 16 area effect, 17 AE extra damage, 18 special attack, 19 mind control, 20 conscription, 21 logic bomb, 22 drop object, 23 cloaking, 24 meteor storm, 25 line of sight, 26 special location) selects the C++ class. The parameter slots mean different things per class.
 * **Cross-references:** `mGraphicEffectID1..4` -> dbgfxeffects; `mSoundID`, `mSecondarySoundID` -> dbsounds; `mUnitSet` -> dbunitset; `mUnitClassIndex` -> unit type; `mNameID` -> Language.dll; <- dbtechtree `mCalamity`.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `mName` | named | +0x00 ("Undefined", "Global Warming", ... "Special Location") | text 36/36, max len 21, junk after NUL in 1, e.g. "Undefined" |
-| 0x064 | f32 | `mFloatParam1` | provisional | +0x64 (line of sight: the bonus) | 0..6 (8 distinct) |
-| 0x068 | f32 | `mFloatParam2` | provisional | +0x68 (plague: functor argument) | 0..2 (6 distinct) |
-| 0x06c | f32 | `mFloatParam3` | provisional | +0x6c (earthquake Initialize 0xb0765) | 0..0.05 (2 distinct) |
-| 0x070 | f32 | `mFloatParam4` | provisional | +0x70 (earthquake Initialize) | 0..0.3 (2 distinct) |
-| 0x074 | f32 | `mF74` | provisional | +0x74 (0 in every record) | const 0 |
+| 0x000 | char[100] | `label` | label | +0x00 ("Undefined", "Global Warming", ... "Special Location") | text 36/36, max len 21, junk after NUL in 1, e.g. "Undefined" |
+| 0x064 | f32 | `mFloatParam1` | named | +0x64 (line of sight: the bonus) | 0..6 (8 distinct) |
+| 0x068 | f32 | `mFloatParam2` | named | +0x68 (plague: functor argument) | 0..2 (6 distinct) |
+| 0x06c | f32 | `mQuakeMinimumStrength` | named | +0x6c (earthquake Initialize 0xb0765) | 0..0.05 (2 distinct) |
+| 0x070 | f32 | `mQuakeStrength` | named | +0x70 (earthquake Initialize) | 0..0.3 (2 distinct) |
+| 0x074 | f32 | `mUnused1` | unused | +0x74 (0 in every record) | const 0 |
 | 0x078 | f32 | `mRange` | named | +0x78 -> EECalamityClass +0x1c (rounded) | 0..10000 (9 distinct) |
-| 0x07c | s32 | `mDatabaseID` | named | +0x7c (128..: the record's id) | 127..165 (36 distinct) |
+| 0x07c | s32 | `mUnusedDatabaseID` | unused | +0x7c (128..: the record's id) | 127..165 (36 distinct) |
 | 0x080 | s32 | `mID` | named | +0x80 -> +0x18 (an enum, as the class member it fills) | 0..35 (36 distinct) |
 | 0x084 | s32 | `mClassEnum` | named | +0x84 -> +0x08 | 0..26 (27 distinct) |
-| 0x088 | s32 | `mTargetKind` | named | +0x88 | 0..3 (4 distinct) |
+| 0x088 | s32 | `mUnusedTargetKind` | unused | +0x88 | 0..3 (4 distinct) |
 | 0x08c | s32 | `mLifeTime` | named | +0x8c -> +0x04 (as float) | 0..300000 (18 distinct) |
-| 0x090 | s32 | `mL90` | provisional | +0x90 (1 in every record) | const 1 |
+| 0x090 | s32 | `mUnused2` | unused | +0x90 (1 in every record) | const 1 |
 | 0x094 | s32 | `mGraphicEffectID1` | named | +0x94 EEGraphicEffect table index (area effects: +0x28) | 0..254 (15 distinct) |
 | 0x098 | s32 | `mGraphicEffectID2` | named | +0x98 (area effects: +0x2c) | 0..239 (12 distinct) |
 | 0x09c | s32 | `mGraphicEffectID3` | named | +0x9c (mind control: +0x30) | 0..257 (8 distinct) |
 | 0x0a0 | s32 | `mGraphicEffectID4` | named | +0xa0 (time warp: +0x34) | 0..201 (3 distinct) |
-| 0x0a4 | s32 | `mLA4` | provisional | +0xa4 (0 in every record) | const 0 |
-| 0x0a8 | s32 | `mLA8` | provisional | +0xa8 (0) | const 0 |
-| 0x0ac | s32 | `mLAC` | provisional | +0xac (0) | const 0 |
+| 0x0a4 | s32 | `mUnused3` | unused | +0xa4 (0 in every record) | const 0 |
+| 0x0a8 | s32 | `mUnused4` | unused | +0xa8 (0) | const 0 |
+| 0x0ac | s32 | `mUnused5` | unused | +0xac (0) | const 0 |
 | 0x0b0 | s32 | `mUnitClassIndex` | named | +0xb0 (drop object: the unit class to drop) | 0..805 (6 distinct) |
-| 0x0b4 | s32 | `mIntParam1` | provisional | +0xb4 (area effects: +0x44) | 0..2000 (9 distinct) |
-| 0x0b8 | s32 | `mIntParam2` | provisional | +0xb8 (area effects: +0x3c) | 0..10000 (13 distinct) |
-| 0x0bc | s32 | `mIntParam3` | provisional | +0xbc (area effects: functor argument) | 0..2000 (9 distinct) |
-| 0x0c0 | s32 | `mIntParam4` | provisional | +0xc0 (fire: functor argument) | 0..4000 (6 distinct) |
-| 0x0c4 | s32 | `mIntParam5` | provisional | +0xc4 (earthquake Initialize) | 0..700 (4 distinct) |
-| 0x0c8 | s32 | `mIntParam6` | provisional | +0xc8 (hurricane: the map area its location needs) | 0..6 (3 distinct) |
-| 0x0cc | bool | `mBCC` | provisional | +0xcc (1 in 31 of 36 records) | 0..1 (2 distinct) |
+| 0x0b4 | s32 | `mIntParam1` | named | +0xb4 (area effects: +0x44) | 0..2000 (9 distinct) |
+| 0x0b8 | s32 | `mIntParam2` | named | +0xb8 (area effects: +0x3c) | 0..10000 (13 distinct) |
+| 0x0bc | s32 | `mIntParam3` | named | +0xbc (area effects: functor argument) | 0..2000 (9 distinct) |
+| 0x0c0 | s32 | `mIntParam4` | named | +0xc0 (fire: functor argument) | 0..4000 (6 distinct) |
+| 0x0c4 | s32 | `mIntParam5` | named | +0xc4 (earthquake Initialize) | 0..700 (4 distinct) |
+| 0x0c8 | s32 | `mIntParam6` | named | +0xc8 (hurricane: the map area its location needs) | 0..6 (3 distinct) |
+| 0x0cc | bool | `mUnused6` | unused | +0xcc (1 in 31 of 36 records) | 0..1 (2 distinct) |
 | 0x0cd | bool | `mBoolParam1` | named | +0xcd (extra damage: functor argument) | 0..1 (2 distinct) |
-| 0x0ce | bool | `mBCE` | provisional | +0xce (0 in every record) | const 0 |
-| 0x0cf | bool | `mBCF` | provisional | +0xcf (0) | const 0 |
+| 0x0ce | bool | `mUnused7` | unused | +0xce (0 in every record) | const 0 |
+| 0x0cf | bool | `mUnused8` | unused | +0xcf (0) | const 0 |
 | 0x0d0 | bool | `mIsCastByAllSelected` | named | +0xd0 -> +0x26 | 0..1 (2 distinct) |
 | 0x0d1 | bool | `mIsBlockedByImmunity` | named | +0xd1 -> +0x25 | 0..1 (2 distinct) |
-| 0x0d2 | pad | `(pad)` | unknown | alignment padding | bytes 0000x36 |
+| 0x0d2 | pad | `(padding)` | pad | alignment padding | bytes 0000x36 |
 | 0x0d4 | s32 | `mSoundID` | named | +0xd4 EESoundObject table index (area effects: +0x34) | -1..1071 (19 distinct) |
 | 0x0d8 | s32 | `mSecondarySoundID` | named | +0xd8 (plague: its second sound) | -1..516 (2 distinct) |
-| 0x0dc | s32 | `mCost` | provisional | +0xdc -> +0x20 | 0..100 (10 distinct) |
+| 0x0dc | s32 | `mCost` | named | +0xdc -> +0x20 | 0..100 (10 distinct) |
 | 0x0e0 | u32 | `mUnitSet` | named | +0xe0 -> +0x10 | 0..105 (16 distinct) |
 | 0x0e4 | s32 | `mNameID` | named | +0xe4 -> +0x14 | 0..32818 (24 distinct) |
-| 0x0e8 | bool | `mBE8` | provisional | +0xe8 -> +0x24 | 0..1 (2 distinct) |
-| 0x0e9 | pad | `(pad)` | unknown | tail padding | bytes 000000x36 |
+| 0x0e8 | bool | `mUnusedClassFlag` | unused | +0xe8 -> +0x24 | 0..1 (2 distinct) |
+| 0x0e9 | pad | `(padding)` | pad | tail padding | bytes 000000x36 |
 
 ### 3.25 `db\dbunitset.dat`: Unit sets
 
 * **Loader:** `EEUnitSetManager::Load` 0x536fa9 (src/Empire Earth/Empire Earth/EEUnitSetManager.cpp)
 * **Container:** `u32 count` + count x 184-byte `EEUnitSetRecord`.
-* **AoC data:** 173 records, 31,836 bytes unpacked. Decoded bytes per record: named 98%, inferred 0%, provisional 0%, unknown 2%.
+* **AoC data:** 173 records, 31,836 bytes unpacked. Bytes per record: read 98%, label 0%, unused 0%, padding 2%.
 * **Semantics:** Rows with `mID <= 0` are NULL. A set is the union of 8 families and 8 unit types, plus an included set and an excluded set (row indices).
 * **Cross-references:** `mFamilies[]` -> dbfamily rows; `mUnitTypes[]` -> unit types; `mIncludedSet`/`mExcludedSet` -> dbunitset; referenced by dbcalamity, dbareaeffect, dbcivilization, dbcivpowers, dbgamevariant, dbeffects, dbobjects.
 * **Suggested text form:** CSV (list columns) or YAML
@@ -1474,13 +1475,13 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x0ac | s32 | `mIncludedSet` | named | +0xac (index of the set's mL30) | -1..169 (65 distinct) |
 | 0x0b0 | s32 | `mExcludedSet` | named | +0xb0 (index of the set's mL34) | -1..170 (8 distinct) |
 | 0x0b4 | bool | `mShowInEditor` | named | +0xb4 (the set's mB39) | 0..1 (2 distinct) |
-| 0x0b5 | pad | `(pad)` | unknown | tail padding | bytes 000000x170, ccccccx3 |
+| 0x0b5 | pad | `(padding)` | pad | tail padding | bytes 000000x170, ccccccx3 |
 
 ### 3.26 `db\dbareaeffect.dat`: Area effect templates
 
 * **Loader:** `EEAEManager::Load` 0x67b079 (src/Empire Earth/Civilization Builder/EEAEManager.cpp); record include/ee/EEAreaEffectTemplate.h
 * **Container:** `u32 count` + count x 188-byte `EEAreaEffectData`.
-* **AoC data:** 50 records, 9,404 bytes unpacked. Decoded bytes per record: named 85%, inferred 0%, provisional 13%, unknown 2%.
+* **AoC data:** 50 records, 9,404 bytes unpacked. Bytes per record: read 87%, label 0%, unused 11%, padding 2%.
 * **Semantics:** Rows with `mID > 0` become templates; `mKind` picks the area-effect class (economy, healing, morale, cloaking...).
 * **Cross-references:** `mGraphicEffect`, `mGraphicEffect18` -> dbgfxeffects; `mUnitSet` -> dbunitset; `mMedia` -> dbgraphics; <- dbobjects `mAreaEffectTemplate0..3`, dbeffects `mAreaEffect`.
 * **Suggested text form:** CSV
@@ -1498,34 +1499,34 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x084 | s32 | `mMedia` | named | +0x84 (EEMedia::Get index) | 0..338 (2 distinct) |
 | 0x088 | s32 | `mMaxLevel` | named | +0x88 | 0..5 (5 distinct) |
 | 0x08c | s32 | `mLevel` | named | +0x8c | 0..40 (11 distinct) |
-| 0x090 | s32 | `mL90` | provisional | +0x90 | const 0 |
-| 0x094 | s32 | `mL94` | provisional | +0x94 | const 0 |
-| 0x098 | s32 | `mL98` | provisional | +0x98 | const 0 |
+| 0x090 | s32 | `mUnusedValue1` | unused | +0x90 | const 0 |
+| 0x094 | s32 | `mUnusedValue2` | unused | +0x94 | const 0 |
+| 0x098 | s32 | `mUnusedValue3` | unused | +0x98 | const 0 |
 | 0x09c | f32 | `mRadius` | named | +0x9c | -1..13 (15 distinct) |
 | 0x0a0 | f32 | `mRed` | named | +0xa0 | 0..1 (3 distinct) |
 | 0x0a4 | f32 | `mGreen` | named | +0xa4 | 0..1 (2 distinct) |
-| 0x0a8 | f32 | `mBlue` | provisional | +0xa8 | 0..1 (3 distinct) |
+| 0x0a8 | f32 | `mBlue` | named | +0xa8 | 0..1 (3 distinct) |
 | 0x0ac | f32 | `mAlpha` | named | +0xac | 0..0.14 (2 distinct) |
-| 0x0b0 | f32 | `mFB0` | provisional | +0xb0 | const 0 |
-| 0x0b4 | bool | `mBB4` | provisional | +0xb4 | const 0 |
-| 0x0b5 | bool | `mBB5` | provisional | +0xb5 | const 0 |
-| 0x0b6 | bool | `mBB6` | provisional | +0xb6 | const 0 |
-| 0x0b7 | bool | `mBB7` | provisional | +0xb7 | const 0 |
-| 0x0b8 | bool | `mBB8` | provisional | +0xb8 | const 0 |
-| 0x0b9 | pad | `(pad)` | unknown | tail padding | bytes 000000x46, ccccccx4 |
+| 0x0b0 | f32 | `mUnusedFloat` | unused | +0xb0 | const 0 |
+| 0x0b4 | bool | `mUnusedFlag1` | unused | +0xb4 | const 0 |
+| 0x0b5 | bool | `mUnusedFlag2` | unused | +0xb5 | const 0 |
+| 0x0b6 | bool | `mUnusedFlag3` | unused | +0xb6 | const 0 |
+| 0x0b7 | bool | `mUnusedFlag4` | unused | +0xb7 | const 0 |
+| 0x0b8 | bool | `mUnusedFlag5` | unused | +0xb8 | const 0 |
+| 0x0b9 | pad | `(padding)` | pad | tail padding | bytes 000000x46, ccccccx4 |
 
 ### 3.27 `db\dbupgrade.dat`: Unit upgrade (improvement) tables
 
 * **Loader:** `EEUCUpgradeTable::Load` 0x4dc6f0 (src/Empire Earth/Database/EEUCUpgradeTable.cpp)
 * **Container:** `u32 count` + count x 240-byte `EEUCUpgradeRecord`: name[100], 14 step floats, 15 cost floats, max level, ?, index, ?, ?, repair flag.
-* **AoC data:** 76 records, 18,244 bytes unpacked. Decoded bytes per record: named 52%, inferred 42%, provisional 5%, unknown 1%.
+* **AoC data:** 76 records, 18,244 bytes unpacked. Bytes per record: read 52%, label 42%, unused 5%, padding 1%.
 * **Semantics:** This table puts its index late, at +0xe0, after the data. +0xdc (`mLDC`) looks like the db id. Factor 13 is never filled (a source slip kept by the port).
 * **Cross-references:** <- dbobjects `mUpgradeTableIndex`.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 75/76, max len 21, junk after NUL in 3, e.g. "Air Transport WW2" |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 75/76, max len 21, junk after NUL in 3, e.g. "Air Transport WW2" |
 | 0x064 | f32 | `mAttackStep` | named | +0x64 | 0..0.15 (2 distinct) |
 | 0x068 | f32 | `mHitPointsStep` | named | +0x68 | 0..0.15 (2 distinct) |
 | 0x06c | f32 | `mSpeedStep` | named | +0x6c | 0..0.15 (3 distinct) |
@@ -1556,25 +1557,25 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x0d0 | f32 | `mAreaEffectCost` | named | +0xd0 | 0..1.5 (6 distinct) |
 | 0x0d4 | f32 | `mTransportCost` | named | +0xd4 | const 0 |
 | 0x0d8 | s32 | `mMaxLevel` | named | +0xd8 | 0..2 (3 distinct) |
-| 0x0dc | s32 | `mLDC` | provisional | +0xdc | 0..420 (76 distinct) |
+| 0x0dc | s32 | `mUnused1` | unused | +0xdc | 0..420 (76 distinct) |
 | 0x0e0 | s32 | `mIndex` | named | +0xe0 (negative: no entry) | 0..75 (76 distinct) |
-| 0x0e4 | s32 | `mLE4` | provisional | +0xe4 | 0..475 (15 distinct) |
-| 0x0e8 | s32 | `mLE8` | provisional | +0xe8 | 0..15 (15 distinct) |
+| 0x0e4 | s32 | `mUnused2` | unused | +0xe4 | 0..475 (15 distinct) |
+| 0x0e8 | s32 | `mUnused3` | unused | +0xe8 | 0..15 (15 distinct) |
 | 0x0ec | bool | `mHasRepairStep` | named | +0xec | const 0 |
-| 0x0ed | pad | `(pad)` | unknown | tail padding | bytes 000000x75, ccccccx1 |
+| 0x0ed | pad | `(padding)` | pad | tail padding | bytes 000000x75, ccccccx1 |
 
 ### 3.28 `db\dbcpbehavior.dat`: Computer-player behaviour values
 
 * **Loader:** `EECPBehavior::Load` 0x4d5f97 (src/Empire Earth/Database/EECPBehaviorTable.cpp); record include/ee/EECPBehavior.h
 * **Container:** `u32 count` + count x 56-byte `EECPBehavior` (**no name column**; +0x00 = dbId, +0x04 = slot index).
-* **AoC data:** 126 records, 7,060 bytes unpacked. Decoded bytes per record: named 80%, inferred 0%, provisional 14%, unknown 5%.
+* **AoC data:** 126 records, 7,060 bytes unpacked. Bytes per record: read 80%, label 0%, unused 14%, padding 5%.
 * **Semantics:** Stored into `gCPBehaviors[index]` (129 slots). The names come from Language.rc 28000+index and from the `EECPBehaviorID` enum (114 named ids). Slot 48 (maximum attack response range) is squared after loading.
 * **Cross-references:** none
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | s32 | `mL00` | provisional | +0x00 | 1..133 (126 distinct) |
+| 0x000 | s32 | `mUnused1` | unused | +0x00 | 1..133 (126 distinct) |
 | 0x004 | s32 | `mIndex` | named | +0x04 (the slot; records with index <= 0 are skipped) | 0..125 (126 distinct) |
 | 0x008 | s32 | `mIntValue1Min` | named | +0x08 | 0..1 (2 distinct) |
 | 0x00c | s32 | `mIntValue1Max` | named | +0x0c | 0..9999 (6 distinct) |
@@ -1582,27 +1583,27 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x014 | s32 | `mIntValue2Min` | named | +0x14 | 0..1 (2 distinct) |
 | 0x018 | s32 | `mIntValue2Max` | named | +0x18 | 0..9999 (5 distinct) |
 | 0x01c | s32 | `mIntValue2` | named | +0x1c | -1..400 (27 distinct) |
-| 0x020 | s32 | `mL20` | provisional | +0x20 | -1..0 (2 distinct) |
+| 0x020 | s32 | `mUnused2` | unused | +0x20 | -1..0 (2 distinct) |
 | 0x024 | s32 | `mFloatSliderMin` | named | +0x24 | 0..1 (2 distinct) |
 | 0x028 | s32 | `mFloatSliderMax` | named | +0x28 | 0..999 (4 distinct) |
 | 0x02c | s32 | `mFloatSliderScale` | named | +0x2c | 0..100 (3 distinct) |
 | 0x030 | f32 | `mFloatValue` | named | +0x30 (squared after loading, for record 48 only) | -1..200 (36 distinct) |
 | 0x034 | bool | `mIsSettable` | named | +0x34 | 0..1 (2 distinct) |
-| 0x035 | pad | `(pad)` | unknown | tail padding | bytes 000000x126 |
+| 0x035 | pad | `(padding)` | pad | tail padding | bytes 000000x126 |
 
 ### 3.29 `db\dbgamevariant.dat`: Game variants
 
 * **Loader:** `EEGameVariant::Load` 0x4d693c (src/Empire Earth/Database/EEGameVariant.cpp); record include/ee/EEGameVariant.h
 * **Container:** `u32 count` + count x 276-byte `EEGameVariantData`.
-* **AoC data:** 3 records, 832 bytes unpacked. Decoded bytes per record: named 83%, inferred 0%, provisional 16%, unknown 1%.
+* **AoC data:** 3 records, 832 bytes unpacked. Bytes per record: read 45%, label 36%, unused 17%, padding 1%.
 * **Semantics:** Standard / Tournament / Scenarios: 10 (unit set, factor) pairs plus cost and work-time factors.
 * **Cross-references:** `mSet0..9`, `mCostSet` -> dbunitset; `mNameID` -> Language.dll.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `mName` | named | +0x00 | text 3/3, max len 10, e.g. "Scenarios" |
-| 0x064 | s32 | `mDatabaseID` | named | +0x64 | 1..5 (3 distinct) |
+| 0x000 | char[100] | `label` | label | +0x00 | text 3/3, max len 10, e.g. "Scenarios" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | +0x64 | 1..5 (3 distinct) |
 | 0x068 | s32 | `mIndex` | named | +0x68 (the loader skips a record whose index is negative) -> +0x70 | 0..2 (3 distinct) |
 | 0x06c | f32 | `mFactor0` | named | +0x6c -> +0x04 (factor 0) | -0.5..0 (2 distinct) |
 | 0x070 | s32 | `mSet0` | named | +0x70 -> +0x48 (then (long, float) pairs: +0x70/+0x74 .. +0xb8/+0xbc) | 42..141 (2 distinct) |
@@ -1634,33 +1635,33 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x0d8 | f32 | `mCostSetFactor` | named | +0xd8 -> +0x40 | 1..2 (3 distinct) |
 | 0x0dc | s32 | `mCostSet` | named | +0xdc -> +0x7c | 108..132 (2 distinct) |
 | 0x0e0 | f32 | `mEarthquakeDamageFactor` | named | +0xe0 -> +0x44 | 1..2.86 (2 distinct) |
-| 0x0e4 | s32 | `mLE4` | provisional | +0xe4 (0 in every record; not copied) | const 0 |
-| 0x0e8 | s32 | `mLE8` | provisional | +0xe8 | const 0 |
-| 0x0ec | s32 | `mLEC` | provisional | +0xec | const 0 |
-| 0x0f0 | s32 | `mLF0` | provisional | +0xf0 | const 0 |
-| 0x0f4 | s32 | `mLF4` | provisional | +0xf4 | const 0 |
-| 0x0f8 | s32 | `mLF8` | provisional | +0xf8 | const 0 |
-| 0x0fc | s32 | `mLFC` | provisional | +0xfc | const 0 |
-| 0x100 | s32 | `mL100` | provisional | +0x100 | const 0 |
-| 0x104 | s32 | `mL104` | provisional | +0x104 | const 0 |
-| 0x108 | s32 | `mL108` | provisional | +0x108 | const 0 |
+| 0x0e4 | s32 | `mUnused1` | unused | +0xe4 (0 in every record; not copied) | const 0 |
+| 0x0e8 | s32 | `mUnused2` | unused | +0xe8 | const 0 |
+| 0x0ec | s32 | `mUnused3` | unused | +0xec | const 0 |
+| 0x0f0 | s32 | `mUnused4` | unused | +0xf0 | const 0 |
+| 0x0f4 | s32 | `mUnused5` | unused | +0xf4 | const 0 |
+| 0x0f8 | s32 | `mUnused6` | unused | +0xf8 | const 0 |
+| 0x0fc | s32 | `mUnused7` | unused | +0xfc | const 0 |
+| 0x100 | s32 | `mUnused8` | unused | +0x100 | const 0 |
+| 0x104 | s32 | `mUnused9` | unused | +0x104 | const 0 |
+| 0x108 | s32 | `mUnused10` | unused | +0x108 | const 0 |
 | 0x10c | bool | `mSelectable` | named | +0x10c -> +0x80 | 0..1 (2 distinct) |
-| 0x10d | pad | `(pad)` | unknown | alignment padding | bytes 000000x3 |
-| 0x110 | s32 | `mL110` | provisional | +0x110 (0 in every record) | const 0 |
+| 0x10d | pad | `(padding)` | pad | alignment padding | bytes 000000x3 |
+| 0x110 | s32 | `mUnused11` | unused | +0x110 (0 in every record) | const 0 |
 
 ### 3.30 `db\dbambientsounds.dat`: Ambient sounds
 
 * **Loader:** `EEAmbientSoundManager::Load` 0x525012 (src/Empire Earth/Empire Earth/EEAmbientSoundManager.cpp); record include/ee/EEAmbientSound.h
 * **Container:** `u32 count` + count x 152-byte `EEAmbientSoundRecord`.
-* **AoC data:** 28 records, 4,260 bytes unpacked. Decoded bytes per record: named 21%, inferred 68%, provisional 0%, unknown 11%.
+* **AoC data:** 28 records, 4,260 bytes unpacked. Bytes per record: read 21%, label 66%, unused 13%, padding 0%.
 * **Semantics:** Each record is stored at `mSounds[mIndex]`. Index < 0 is skipped. Slots 7 (wind) and 9 (birds) are used by fixed index.
 * **Cross-references:** `mSoundID` -> dbsounds.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 27/28, max len 18, junk after NUL in 2, e.g. "Day Town" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 0..28 (28 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 27/28, max len 18, junk after NUL in 2, e.g. "Day Town" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 0..28 (28 distinct) |
 | 0x068 | s32 | `mIndex` | named | +0x68 (the slot; < 0: unused) | -1..27 (28 distinct) |
 | 0x06c | s32 | `mSoundID` | named | +0x6c | -1..1070 (24 distinct) |
 | 0x070 | f32 | `mMaximumVolume` | named | +0x70 | 0..0.7 (14 distinct) |
@@ -1668,17 +1669,17 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x078 | f32 | `mFadeUp` | named | +0x78 (Init copies it to +0x28 with a plain mov) | 0..1.35 (4 distinct) |
 | 0x07c | f32 | `mFadeDown` | named | +0x7c (to +0x2c) | 0..0.85 (2 distinct) |
 | 0x080 | f32 | `mProbability` | named | +0x80 | 0..1 (12 distinct) |
-| 0x084 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x088 | s32 | `(unknown)` | unknown | undecoded | const 0 |
-| 0x08c | s32 | `(unknown)` | unknown | undecoded | const 0 |
+| 0x084 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x088 | s32 | `(unused gap)` | unused | undecoded | const 0 |
+| 0x08c | s32 | `(unused gap)` | unused | undecoded | const 0 |
 | 0x090 | s32 | `mIntervalSeconds` | named | +0x90 | 0..40 (11 distinct) |
-| 0x094 | s32 | `(unknown)` | unknown | undecoded | const 0 |
+| 0x094 | s32 | `(unused gap)` | unused | undecoded | const 0 |
 
 ### 3.31 `db\dbuifonts.dat`: UI fonts
 
 * **Loader:** `UIFontTable::Create` 0x1007011f (src/Low-Level Engine/User Interface/UIFontTable.cpp); loaded first by `UIManager::LoadDatabase` 0x1007a78a
 * **Container:** `u32 count` + count x 128-byte `UIDbDataFonts`.
-* **AoC data:** 61 records, 7,812 bytes unpacked. Decoded bytes per record: named 97%, inferred 0%, provisional 3%, unknown 0%.
+* **AoC data:** 61 records, 7,812 bytes unpacked. Bytes per record: read 98%, label 0%, unused 0%, padding 2%.
 * **Semantics:** A row with an empty name is NULL. The face name comes from the UI string table (`mStringID`), not from the record name.
 * **Cross-references:** <- dbuicontrols `mFontTableIndex`.
 * **Suggested text form:** CSV
@@ -1689,27 +1690,27 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x06c | u32 | `mStringID` | named | +0x6c face name in the string table | 0..4 (5 distinct) |
 | 0x070 | u32 | `mSize` | named | +0x70 | 0..36 (14 distinct) |
 | 0x074 | u32 | `mQuality` | named | +0x74 | 0..2 (2 distinct) |
-| 0x078 | bool | `mBold` | provisional | +0x78 style bit 0x01 | 0..1 (2 distinct) |
+| 0x078 | bool | `mBold` | named | +0x78 style bit 0x01 | 0..1 (2 distinct) |
 | 0x079 | bool | `mItalic` | named | +0x79 style bit 0x02 | const 0 |
 | 0x07a | bool | `mUnderline` | named | +0x7a style bit 0x04 | 0..1 (2 distinct) |
 | 0x07b | bool | `mStyle10` | named | +0x7b style bit 0x10 | 0..1 (2 distinct) |
 | 0x07c | bool | `mStyle08` | named | +0x7c style bit 0x08 | const 0 |
-| 0x07d | char[3] | `mPad` | provisional |  | text 4/61, max len 3, e.g. "ÌÌÌ" |
+| 0x07d | char[3] | `(padding)` | pad |  | text 4/61, max len 3, e.g. "ÌÌÌ" |
 
 ### 3.32 `db\dbuiforms.dat`: UI forms (screens)
 
 * **Loader:** `UIForm::Create` 0x100716c0 (src/Low-Level Engine/User Interface/UIForm.cpp); record include/lle/UIForm.h (exported type `UIDbDataForms`)
 * **Container:** `u32 count` + count x 268-byte `UIDbDataForms`.
-* **AoC data:** 40 records, 10,724 bytes unpacked. Decoded bytes per record: named 98%, inferred 0%, provisional 0%, unknown 2%.
+* **AoC data:** 40 records, 10,724 bytes unpacked. Bytes per record: read 59%, label 37%, unused 3%, padding 0%.
 * **Semantics:** Here the form name and music file come first and the ids follow at +0xc8/+0xcc. `mFormID <= 0` means no form.
 * **Cross-references:** <- dbuicontrols/dbuiback `mFormID`, dbuiformevents `mOwnerID`.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `mName` | named | +0x000 | text 38/40, max len 38, junk after NUL in 2, e.g. "Test form" |
+| 0x000 | char[100] | `label` | label | +0x000 | text 38/40, max len 38, junk after NUL in 2, e.g. "Test form" |
 | 0x064 | char[100] | `mMusicFile` | named | +0x064 "none" stops the music | text 38/40, max len 20, junk after NUL in 3, e.g. "sounds\G7_99.mp3" |
-| 0x0c8 | s32 | `mID` | named | +0x0c8 (provisional name) | 0..45 (39 distinct) |
+| 0x0c8 | s32 | `mUnusedID` | unused | +0x0c8 (provisional name) | 0..45 (39 distinct) |
 | 0x0cc | s32 | `mFormID` | named | +0x0cc 0 or less: no form | -1..39 (39 distinct) |
 | 0x0d0 | u32 | `mControlCount` | named | +0x0d0 | 4..2200 (24 distinct); 0xCC in 2 |
 | 0x0d4 | u32 | `mControlGroupCount` | named | +0x0d4 | 1..11 (7 distinct); 0xCC in 2 |
@@ -1720,7 +1721,7 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x0e8 | u32 | `mDesignedWidth` | named | +0x0e8 | 0..1600 (4 distinct) |
 | 0x0ec | u32 | `mDesignedHeight` | named | +0x0ec | 0..1200 (4 distinct) |
 | 0x0f0 | u32 | `mHelpTextTimeDelay` | named | +0x0f0 | 0..2000 (8 distinct) |
-| 0x0f4 | u32 | `mUnknownF4` | unknown | +0x0f4 (provisional name) | const 0 |
+| 0x0f4 | u32 | `mUnused` | unused | +0x0f4 (provisional name) | const 0 |
 | 0x0f8 | u32 | `mLeftOffsetType` | named | +0x0f8 | 0..4 (2 distinct) |
 | 0x0fc | u32 | `mRightOffsetType` | named | +0x0fc | 0..4 (3 distinct) |
 | 0x100 | u32 | `mTopOffsetType` | named | +0x100 | 0..4 (2 distinct) |
@@ -1728,13 +1729,13 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x108 | bool | `mTabbingOn` | named | +0x108 | 0..1 (2 distinct) |
 | 0x109 | bool | `mUseToolTips` | named | +0x109 | 0..1 (2 distinct) |
 | 0x10a | bool | `mUseExclusiveCoords` | named | +0x10a | 0..1 (2 distinct) |
-| 0x10b | pad | `(pad)` | unknown | tail padding | bytes 00x38, ccx2 |
+| 0x10b | pad | `(padding)` | pad | tail padding | bytes 00x38, ccx2 |
 
 ### 3.33 `db\dbuiback.dat`: UI backgrounds
 
 * **Loader:** `UIBackgroundTable::Create` 0x1005c631 (src/Low-Level Engine/User Interface/UIBackgroundTable.cpp); record include/lle/UIBackgroundTable.h
 * **Container:** `u32 count` + count x 308-byte `UIDbDataBackgrounds`.
-* **AoC data:** 167 records, 51,440 bytes unpacked. Decoded bytes per record: named 98%, inferred 0%, provisional 1%, unknown 1%.
+* **AoC data:** 167 records, 51,440 bytes unpacked. Bytes per record: read 99%, label 0%, unused 0%, padding 1%.
 * **Semantics:** An empty name leaves the slot NULL (75 holes). The tile percentages hold `inf` in 39 rows.
 * **Cross-references:** `mFormID` -> dbuiforms; texture file -> textures.
 * **Suggested text form:** CSV
@@ -1767,26 +1768,26 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x11c | s32 | `mDrawPriority` | named | +0x11c at least 1 | 0..6 (7 distinct) |
 | 0x120 | s32 | `mRed` | named | +0x120 0..255 | 0..75 (2 distinct) |
 | 0x124 | s32 | `mGreen` | named | +0x124 | 0..75 (2 distinct) |
-| 0x128 | s32 | `mBlue` | provisional | +0x128 | 0..75 (3 distinct) |
+| 0x128 | s32 | `mBlue` | named | +0x128 | 0..75 (3 distinct) |
 | 0x12c | bool | `mVisible` | named | +0x12c | 0..1 (2 distinct) |
 | 0x12d | bool | `mHasAlpha` | named | +0x12d | 0..1 (2 distinct) |
 | 0x12e | bool | `mAttribute1` | named | +0x12e | 0..1 (2 distinct) |
 | 0x12f | bool | `mAttribute2` | named | +0x12f | 0..1 (2 distinct) |
 | 0x130 | bool | `mAttribute3` | named | +0x130 | 0..1 (2 distinct) |
-| 0x131 | pad | `(pad)` | unknown | tail padding | bytes 000000x91, ccccccx75 |
+| 0x131 | pad | `(padding)` | pad | tail padding | bytes 000000x91, ccccccx75 |
 
 ### 3.34 `db\dbuicontrols.dat`: UI controls
 
 * **Loader:** `UIControlsTable::Create` 0x10067ee6, record ctor 0x1006796f (src/Low-Level Engine/User Interface/UIControlsTable.cpp)
 * **Container:** `u32 count` + count x 860-byte `UIDbControl`.
-* **AoC data:** 3401 records, 2,924,864 bytes unpacked. Decoded bytes per record: named 95%, inferred 0%, provisional 0%, unknown 4%.
+* **AoC data:** 3401 records, 2,924,864 bytes unpacked. Bytes per record: read 84%, label 12%, unused 4%, padding 0%.
 * **Semantics:** This is the largest file (2.9 MB, 60% holes). A row with `mID >= 0` is added to its form (`GetFormByID(mFormID)`). `mControlType` selects the control class (bitmap, button, list box, slider...). There are three rectangles each for the normal, pressed and focused texture. No static_assert pins it in this tree, but the parse confirms 860 bytes (0x35c, with one tail pad byte).
 * **Cross-references:** `mFormID` -> dbuiforms; `mFontTableIndex` -> dbuifonts; `mStringTableBegin/End/ID` -> UI string table (Language.dll); file names -> textures, sounds; <- dbuicontrolevents `mOwnerID` (row index).
 * **Suggested text form:** CSV (wide) or YAML by form
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `mName` | named | +0x000 | text 1372/3401, max len 40, junk after NUL in 2056, e.g. "Save Screen Title" |
+| 0x000 | char[100] | `label` | label | +0x000 | text 1372/3401, max len 40, junk after NUL in 2056, e.g. "Save Screen Title" |
 | 0x064 | char[100] | `mNormalFileName` | named | +0x064 | text 234/3401, max len 33, junk after NUL in 2061, e.g. "textures\civ buttons_01.sst" |
 | 0x0c8 | char[100] | `mPressedFileName` | named | +0x0c8 | text 202/3401, max len 34, junk after NUL in 2060, e.g. "textures\civ buttons_01.sst" |
 | 0x12c | char[100] | `mFocusedFileName` | named | +0x12c | text 0/3401, max len 0, junk after NUL in 2065 |
@@ -1795,12 +1796,12 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x258 | f32 | `mBackgroundOpacity` | named | +0x258 | 0..1 (15 distinct) |
 | 0x25c | f32 | `mTextBoxOpacity` | named | +0x25c | 0..1 (4 distinct) |
 | 0x260 | f32 | `mScrollBarBgOpacity` | named | +0x260 | 0..1 (5 distinct) |
-| 0x264 | u32[5] | `mUnknown264` | unknown | +0x264 | [0]: const 0 |
+| 0x264 | u32[5] | `mUnused1` | unused | +0x264 | [0]: const 0 |
 | 0x278 | f32 | `mLeftOffset` | named | +0x278 | 0..349 (315 distinct) |
 | 0x27c | f32 | `mRightOffset` | named | +0x27c | 0..299 (347 distinct) |
 | 0x280 | f32 | `mBottomOffset` | named | +0x280 | 0..504 (360 distinct) |
 | 0x284 | f32 | `mTopOffset` | named | +0x284 | 0..421 (329 distinct) |
-| 0x288 | s32 | `mUnknown288` | unknown | +0x288 | 0..1945 (1373 distinct) |
+| 0x288 | s32 | `mUnusedDbRecordId` | unused | +0x288 | 0..1945 (1373 distinct) |
 | 0x28c | s32 | `mID` | named | +0x28c | -1..3400 (1373 distinct) |
 | 0x290 | s32 | `mFormID` | named | +0x290 | 0..39 (38 distinct) |
 | 0x294 | u32 | `mGroup` | named | +0x294 | 0..9 (10 distinct) |
@@ -1847,7 +1848,7 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x338 | s32 | `mPageSize` | named | +0x338 | 0..30 (6 distinct) |
 | 0x33c | s32 | `mStringTableID` | named | +0x33c | 0..32816 (147 distinct) |
 | 0x340 | s32 | `mBlinkRate` | named | +0x340 | 0..500 (2 distinct) |
-| 0x344 | u32[3] | `mUnknown344` | unknown | +0x344 | [0]: 0..4294967295 (3 distinct) |
+| 0x344 | u32[3] | `mUnused2` | unused | +0x344 | [0]: 0..4294967295 (3 distinct) |
 | 0x350 | bool | `mIsVisible` | named | +0x350 | 0..1 (2 distinct) |
 | 0x351 | bool | `mStartChecked` | named | +0x351 | 0..1 (2 distinct) |
 | 0x352 | bool | `mListBoxAlwaysDirty` | named | +0x352 | 0..1 (2 distinct) |
@@ -1856,24 +1857,24 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 | 0x355 | bool | `mPressedHasAlpha` | named | +0x355 | 0..1 (2 distinct) |
 | 0x356 | bool | `mNormalHasAlpha` | named | +0x356 | 0..1 (2 distinct) |
 | 0x357 | bool | `mAlwaysDirty` | named | +0x357 | 0..1 (2 distinct) |
-| 0x358 | bool | `mBoolPlaceholder2` | provisional | +0x358 | 0..1 (2 distinct) |
-| 0x359 | bool | `mBoolPlaceholder3` | provisional | +0x359 | 0..1 (2 distinct) |
-| 0x35a | bool | `mBoolPlaceholder4` | provisional | +0x35a | 0..1 (2 distinct) |
-| 0x35b | pad | `(pad)` | unknown | tail padding | bytes 00x3401 |
+| 0x358 | bool | `mFitRectToText` | named | +0x358 | 0..1 (2 distinct) |
+| 0x359 | bool | `mScaleToControl` | named | +0x359 | 0..1 (2 distinct) |
+| 0x35a | bool | `mLoopMovie` | named | +0x35a | 0..1 (2 distinct) |
+| 0x35b | pad | `(padding)` | pad | tail padding | bytes 00x3401 |
 
 ### 3.35 `db\dbuicontrolevents.dat`: UI control events
 
 * **Loader:** `UIEvent::CreateControlEvents` 0x1006f398 (src/Low-Level Engine/User Interface/UIEvent.cpp)
 * **Container:** `u32 count` + count x 116-byte `UIDbDataEvents`: name[100], dbId, event id, owner, event type.
-* **AoC data:** 252 records, 29,236 bytes unpacked. Decoded bytes per record: named 10%, inferred 90%, provisional 0%, unknown 0%.
+* **AoC data:** 252 records, 29,236 bytes unpacked. Bytes per record: read 10%, label 86%, unused 3%, padding 0%.
 * **Semantics:** Rows with event id < 0 are skipped.
 * **Cross-references:** `mOwnerID` -> dbuicontrols row index; `mEventID` -> the exe's event classes (EEUIManager switch).
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 234/252, max len 48, junk after NUL in 23, e.g. "Load Delete" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 0..368 (235 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 234/252, max len 48, junk after NUL in 23, e.g. "Load Delete" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 0..368 (235 distinct) |
 | 0x068 | s32 | `mEventID` | named | +0x68 negative: no event | -1..251 (235 distinct) |
 | 0x06c | u32 | `mOwnerID` | named | +0x6c control table index / form ID | 133..4294967295 (191 distinct) |
 | 0x070 | u32 | `mEventType` | named | +0x70 | 0..4294967295 (13 distinct) |
@@ -1882,15 +1883,15 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 * **Loader:** `UIEvent::CreateFormEvents` 0x1006f42a
 * **Container:** Same layout as dbuicontrolevents.
-* **AoC data:** 21 records, 2,440 bytes unpacked. Decoded bytes per record: named 10%, inferred 90%, provisional 0%, unknown 0%.
+* **AoC data:** 21 records, 2,440 bytes unpacked. Bytes per record: read 10%, label 86%, unused 3%, padding 0%.
 * **Semantics:** Rows with event id < 0 are skipped.
 * **Cross-references:** `mOwnerID` -> form id (dbuiforms `mFormID`).
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | char[100] | `(name)` | inferred | INFERRED from data: the row name (char[100], NUL-terminated) | text 20/21, max len 23, junk after NUL in 2, e.g. "Main Screen Open" |
-| 0x064 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 0..21 (21 distinct) |
+| 0x000 | char[100] | `label` | label | INFERRED from data: the row name (char[100], NUL-terminated) | text 20/21, max len 23, junk after NUL in 2, e.g. "Main Screen Open" |
+| 0x064 | s32 | `mUnusedDatabaseID` | unused | INFERRED: unique per row, gappy: the database row id | 0..21 (21 distinct) |
 | 0x068 | s32 | `mEventID` | named | +0x68 negative: no event | -1..20 (21 distinct) |
 | 0x06c | u32 | `mOwnerID` | named | +0x6c control table index / form ID | 5..29 (12 distinct); 0xCC in 1 |
 | 0x070 | u32 | `mEventType` | named | +0x70 | 0..8 (4 distinct); 0xCC in 1 |
@@ -1899,16 +1900,16 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 * **Loader:** `UIHotKey::CreateHotKeys` 0x10076fa8 (src/Low-Level Engine/User Interface/UIHotKey.cpp)
 * **Container:** `u32 count` + count x 124-byte `UIDbDataHotKeys`: dbId, index, name[100] at +0x08, 3 modifier DIK codes (0x7fff = none), key DIK code.
-* **AoC data:** 32 records, 3,972 bytes unpacked. Decoded bytes per record: named 97%, inferred 3%, provisional 0%, unknown 0%.
+* **AoC data:** 32 records, 3,972 bytes unpacked. Bytes per record: read 16%, label 81%, unused 3%, padding 0%.
 * **Semantics:** Index < 0 = NULL.
 * **Cross-references:** <- dbbuttons/dbtechtree `mHotKey`.
 * **Suggested text form:** CSV
 
 | Off | Type | Field | Class | Source comment | Observed (AoC) |
 |---|---|---|---|---|---|
-| 0x000 | s32 | `(db id)` | inferred | INFERRED: unique per row, gappy: the database row id | 0..33 (32 distinct) |
+| 0x000 | s32 | `mUnused` | unused | INFERRED: unique per row, gappy: the database row id | 0..33 (32 distinct) |
 | 0x004 | s32 | `mID` | named | +0x04 negative: no hot key | -1..31 (32 distinct) |
-| 0x008 | char[100] | `mName` | named | +0x08 | text 31/32, max len 13, junk after NUL in 2, e.g. "A key" |
+| 0x008 | char[100] | `label` | label | +0x08 | text 31/32, max len 13, junk after NUL in 2, e.g. "A key" |
 | 0x06c | u32[3] | `mModifiers` | named | +0x6c DIK_* codes, 0x7fff: none | [0]: 32767..4294967295 (2 distinct) |
 | 0x078 | u32 | `mKey` | named | +0x78 | 16..4294967295 (32 distinct) |
 
@@ -1979,6 +1980,9 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 ---
 
 ## 6. Recommendation for the text conversion
+
+This section is the plan as written before the converter existed (it still describes an exact mode). What was built,
+and the owner's decision for clean text only (2026-11-04), is section 8.
 
 ### 6.1 CSV or YAML per table
 
@@ -2091,33 +2095,31 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 ## 7. Open questions
 
-1. **dbobjects provisional block.** What are +0x06c (`mL06C`, 30 values; -> `EEUnitClass::mL208`), +0x1a4, +0x1c4, +0x1ec, +0x21c/+0x220, +0x2c4, +0x310, +0x31c/+0x320, +0x32c, +0x354, +0x364 (holds float
-   bit patterns, so probably a float) and +0x368? Is +0x3b4..+0x47b (200 bytes) a dead fixed buffer in the exporter (it
-   looks like stale memory)? Tracing the `EEUnitClass` members (`mL208`, `mL294`, `mF18C`, `mB2F6`...) to their readers
-   would name them.
+1. **dbobjects provisional block.** Answered (section 8.4): every read member is named from its readers; the rest
+   (+0x124, +0x190, +0x1a4, +0x1c4, +0x1d0, +0x1ec, +0x2c0..+0x2d8, +0x300..+0x310, +0x31c/+0x320, +0x364, the
+   200-byte block +0x3b4..+0x47b and the dead copies such as +0x06c -> `EEUnitClass::mL208`) is unread.
 2. **Animation state slots** of dbgraphics: the 14 indices have no enum. Their order in the record (0, 13, 7, 8, 4, 5,
    12, 11, 9, 10, 6, 3, 1, 2) suggests database column order. The names from model files are a guess.
 3. **Attack-kind columns of dbfamily (68).** Which unit field chooses the column (`mWeapon`, `mProjectileType` or
    `mAmmoType`)? What is each column's name? The source DB had them as columns, but the export keeps only numbers.
-4. **dbworld index names.** 95 constants have no source names. 58 are now named from their readers
-   (`tools/eedata/overlay.py` ROW_NAMES, the `label` column; section 8.4). Rows 0..20, 23, 24, 28..33, 38..41, 73, 78,
-   79 and 87 are still unnamed: 0..20 and 73 have no literal reader, 78/79/87 have readers whose meaning is unclear.
-5. **Effect kinds** in dbeffects: kinds 7, 8, 10, 11, 22 and the meaning of `mL00` (looks like a db id, 0..1809), `mB45`,
-   `mU46`, `mL48..mL54` are not decoded.
-6. **dbgfxeffects class parameters** (`mParam1..12`, `mL90..mL98`, the four bools): their meaning depends on `mKind`
-   (60 kinds used). This is a per-class decode job in the `EEE*` effect classes.
-7. **dbcalamity parameter slots** (`mIntParam1..6`, `mFloatParam1..4`, `mBCC`, `mBE8`): per-calamity meanings, partly
-   given in the comments.
+4. **dbworld index names.** Answered (section 8.3): the 61 rows with a reader are named from it
+   (`tools/eedata/overlay.py` WORLD_ROWS); rows 0..20, 23, 24, 28..33, 38..41 and 73 have no reader (source and
+   retail binary checked, the only computed index is improvement + 57), and +0x08, +0x0c, +0x18 of every row are
+   unread.
+5. **Effect kinds** in dbeffects: kinds 7, 8, 10, 11, 22 are not decoded. `mL00`, `mID`, `mL40`, `mB45`, `mU46`,
+   `mL48..mL54` are unread (now `mUnused1..8`, `mUnusedID`).
+6. **dbgfxeffects class parameters**: kind-dependent by design; the per-kind meanings are in section 8.4. Only
+   `mEmitPositionSpread`, `mIsEmitFlat` and `mEndsWithUnitOrDuration` have one reader and so one name.
+7. **dbcalamity parameter slots**: kind-dependent; per-calamity meanings in section 8.4 (`mFloatParam3/4` are the
+   earthquake's alone: `mQuakeMinimumStrength`, `mQuakeStrength`; `mBCC..`, `mBE8` are unread).
 8. **dbrandommap**: the meaning of the last six columns and of the header dword `10`. Is the table dead in AoC because
    of the framing bug, or does `Default.dll` have another reader? (No reader was found in `src/`.)
 9. **dbcolortable +0x90..+0xa7** (24 zero bytes): a missing colour 3 and a 5th colour? dbambientsounds +0x84..+0x8f
    and +0x94. dbunitbehavior +0x73.. These are zero everywhere, so they are harmless as defaults.
-10. **dbtechtree `mU84`, `mU8C`, `mBB6/mBB7`, `mUD4..mUE0`, `mUF8`.** In real rows they are 0 except for two rows with
-    `mU84 = 100000` and two with `mUD4/mUD8` = 2163200/4100, which look like stale data. Are they Access columns that
-    were never used?
-11. **Byte-exactness of `0xCC` and junk.** The text format should keep a row's tail and padding bytes so that the
-    multiplayer checksum survives. Does the owner want that (*exact* mode), or only *clean* functional equivalence?
-    Both modes exist (`eedata.py export --mode exact|clean`, exact is the default); the decision is still open.
+10. **dbtechtree `mU84`, `mU8C`, `mBB6/mBB7`, `mUD4..mUE0`, `mUF8`.** Unread (now `mUnused1..9`). In real rows
+    they are 0 except for two rows with 100000 and two with 2163200/4100: Access columns that were never used.
+11. **Byte-exactness of `0xCC` and junk.** Decided (owner, 2026-11-04): clean only. Compatibility with retail data
+    and the multiplayer checksum is no longer a goal; exact mode is gone (section 8).
 12. **Base-game format.** The base game's `dbobjects.dat` uses 1948-byte records. If base-game data is ever wanted,
     its layout has to be derived separately (the base exe is out of scope).
 
@@ -2125,85 +2127,210 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
 
 ## 8. The converter (`tools/eedata`) and the text loader
 
-Built from section 6 (2026-11-04). `python -I tools/eedata/eedata.py -h` lists the commands; the scratch scripts in
-`tools/datafmt/` are superseded.
+Built from section 6 (2026-11-04); clean text only since the owner's decision of the same day (compatibility with
+retail data and the multiplayer checksum is no longer a goal). `python -I tools/eedata/eedata.py -h` lists the
+commands; the scratch scripts in `tools/datafmt/` are superseded.
 
-### 8.1 What was confirmed or corrected
+### 8.1 What the text carries
 
-* **Hole rows:** every table's hole rows are one identical template, as 2.4 says. A detection rule (the most
-  frequent record among rows without lead strings or list entries, at least twice, with 0xCC fill or a tenth of
-  the rows) gives exactly the "real" counts of section 1 for all 39 tables, e.g. dbevents 317 real / 1,183 holes,
-  dbtechtree 793 / 3,701, dbgraphics 968 / 23 (`mMediaIndex == 0` rows), dbcivilization 27 / 2. Tables with a
-  single 0xCC-filled row (dbmusic row 0, dbstartingresources, dbambientsounds, dbuihotkey, dbuiformevents,
-  dbterraingraytextures) keep it as an ordinary row.
-* **Strings:** no real row holds a `char[N]` string without a NUL; NUL-less fields occur only in hole rows. So the
-  text form requires room for the NUL (at most N-1 bytes), and a NUL-less field exports as `<field>~raw` (hex).
-* **Bools** other than 0/1 occur only in hole rows (dbtechtree `mBB6/mBB7` 0xCC); the text keeps the raw byte
-  anyway.
-* **Junk in real rows** (bytes after a string's NUL, non-zero padding), the bytes *exact* mode keeps and *clean*
-  mode zeroes: string tails in 1,160 dbbuttons strings, in every dbtechtree, dbterrain, dbuifonts, dbunitset and
-  dbareaeffect row, in 197 dbuicontrols rows, 18-21 in dbgraphics/dbsounds/dbobjects and a few elsewhere; non-zero
-  padding in 69 dbgraphics rows and one row each of dbgfxeffects, dbterraintype, dbuiback and dbupgrade. In all,
-  clean mode changes 1,848,710 bytes of the 7.79 MB (mostly in the copies of the hole templates).
-* **Record sizes:** 35 source structs, all equal to their `static_assert` (EEUnitClassRecord and UIDbControl, which
-  have none, to the size their source states in a comment). The three layouts without a source struct (the dbevents
-  row head, dbrandommap, dbterraingraytextures) are decoded from the data as in 3.7, 3.38 and 3.39.
+The text carries what the game reads, and nothing else:
 
-### 8.2 Text forms
+* **Fields:** every record member the game reads, under its source name (`mHitPoints`), in record order. Members
+  no code reads (`mUnused*`, the unread gaps) are not in the text; the importer writes zero, or the spec's default
+  (`overlay.DEFAULTS`: dbobjects' eight unread effect slots and `mUnusedFireTrailEffect` are -1, because the unit
+  class still loads the media of the effect row they name). Padding is zero.
+* **Labels:** where the game never reads a row's name, the name is kept as `label` (text only: it is written back to
+  the same unread bytes, so the round trip holds, and has no effect on the game). dbworld's labels are the
+  constants' names (8.3) and are checked: a label must match its row.
+* **Rows:** `row` is the row position (references between tables are row positions; it must increase, empty means
+  "the next one"). Empty database rows (holes) are not listed. The importer writes the table's hole record at every
+  unlisted position below `rows`: the struct's base record plus `overlay.HOLES`, the values the retail empty rows
+  hold in the fields the game reads (-1 ids, 1.0 opacities, ...), so a hole loads exactly as before and every
+  position and reference stays valid. A row the game sees exactly as the hole record is written as a hole.
+* **Lead strings** (dbsounds `mSampleName`, dbterrain `mTextureName`, dbgraphics' 33 file names) and **lists**
+  (dbevents `effects`, dbtechtree `parents`) as before.
+* **Gone:** exact mode, string tails, `~raw` fields, padding and `u_0x` fields, the hole template, the `#mode` and
+  `#hole` directives, the junk bytes (text after a string's NUL, the converter's 0xCC fill). The files therefore
+  differ from retail; every value the game reads does not (8.2).
+* **Tables without a text form:** dbrandommap (its loader throws every record away, 3.38) and dbterraingraytextures
+  (no AoC code opens it, 3.39). The game reads them from data.ssa as before. 37 tables have a text form.
 
-One file per db file, named like it with `.csv` or `.yaml`. The format per table follows 6.1: YAML for dbobjects,
-dbgraphics, dbtechtree, dbevents and dbcivilization; CSV for the rest, dbeffects included. UTF-8, LF.
+Format (`#format 2`): one file per db file, named like it with `.csv` or `.yaml` (YAML: dbobjects, dbgraphics,
+dbtechtree, dbevents, dbcivilization). UTF-8, LF. CSV files start with `#eedata <table>`, `#format 2`, `#rows N`;
+YAML files have `eedata`, `format`, `rows` at the top and `records:` (dbtechtree: `epochs: - slots: N, epoch: {...},
+nodes: [...]`). Arrays are YAML flow sequences (trailing zeros left out) or CSV columns `name[i]` (pairs
+`name[i][j]`). A missing key or an empty cell is zero. Values: integers in decimal (0x... accepted as the bit
+pattern); floats as the shortest decimal that rounds back to the same bits, `.inf`/`-.inf`/`.nan`, other NaNs as
+`0x<8 hex>`; bools 0/1 (true/false accepted); strings as CP-1252 text (the five undefined bytes as the C1 code points
+of the same value). YAML subset: block mappings and sequences, one-line flow sequences, plain/single/double-quoted
+scalars, comments; no anchors, aliases, tags, block scalars, flow mappings or multi-line scalars; duplicate keys and
+tabs in indentation are errors (`tools/eedata/textio.py`).
 
-* **Keys/columns** are the source field names (`mHitPoints`), in record order. Gap pieces the survey identified are
-  `name`, `dbId`, `index`; undecoded bytes are `u_0x<off>` (a dword as s32, an unaligned run as hex); compiler
-  padding is `pad_0x<off>` (hex; written only when not zero). A string field has `<field>~tail` (hex of the bytes
-  after the NUL; exact mode, only when not zero). Lead strings get the names of the members they load into
-  (dbgraphics: `rowName`, `mFileName`, `mTextureName`, `mTextureNames[14]`, `mModelNames[14]`, `mShadowModelName`,
-  `mShadowTextureName`; dbsounds `mSampleName`; dbterrain `mTextureName`; graytextures `textureName`). Trailing
-  lists: dbevents `effects`, dbtechtree `parents`.
-* **Rows** carry `row`, the row position. References between tables are row positions, so it is checked: it must
-  increase, and empty means "the next one". Rows not listed are holes, written back as the `hole` template (hex).
-  `rows` gives the total (default: the last row + 1). dbtechtree is `epochs: - slots: N, epoch: {...}, nodes:
-  [...]`; dbrandommap keeps its first word as `header`.
-* **Header:** CSV files start with directive lines (`#eedata dbworld`, `#format 1`, `#mode exact`, `#rows 95`,
-  `#hole ...`); YAML files have the same keys at the top.
-* **Values:** integers in decimal by the field's signedness (0x... is accepted as the bit pattern); floats as the
-  shortest decimal that rounds back to the same bits, `.inf`/`-.inf`/`.nan`, other NaNs as `0x<8 hex>`; bools as
-  the raw byte (true/false accepted); strings as CP-1252 text (the five undefined bytes as the C1 code points of
-  the same value). A missing key or an empty cell is zero.
-* **YAML subset:** block mappings and sequences, one-line flow sequences, plain/single/double-quoted scalars,
-  comments. No anchors, aliases, tags, block scalars, flow mappings or multi-line scalars; duplicate keys and tabs
-  in indentation are errors (`tools/eedata/textio.py`).
+### 8.2 Gates (AoC retail data)
 
-### 8.3 Gates (AoC retail data)
+* `eedata.py check`: (a) 37/37 tables: retail -> text -> db -> text gives the same text, and the db file is a fixed
+  point; (b) 37/37 tables: the compiled db file holds the retail value of every field the game reads in every row,
+  and the same lead strings and lists; hole rows compile to the hole record, whose game-read fields equal the retail
+  ones except 4,303 fields that are the converter's 0xCC fill in rows the loaders skip (dbobjects: `mIsEnabled == 0
+  || mUnitType == -1` before the class ctor; dbtechtree `mFirstNodeID` is read from epoch records only; dbuiforms:
+  `mFormID > 0`; dbterrain: `EETerrainTable::Get` refuses `mID < 0`);
+  dbworld: the values each constant's readers use; (c) 35/35 struct sizes match their sources, specs.json and the
+  C++ `EEDataTextSpecs.h` are current.
+* `eedata.py cppgate`: the game's C++ loader compiles the text of all 37 tables to the Python importer's bytes; 117
+  edited texts (valid and broken) give the same bytes or an error in both implementations.
+* `eedata.py census` (about 6 minutes): renames every record member, compiles every unit syntax-only and collects
+  each use site; fails when a field the text carries has no reader.
+* `specgen.py` refuses an offset-only or placeholder name (`mL70`, `mU124`, `mUnknown*`, `mBoolPlaceholder*`) on a
+  field the text carries.
+* Field classes over the 36 layouts: named (read) 848 fields (6,201 bytes), label 25 (2,504), unused 172 (900), pad 69
+  (175). Before (exact mode): named 799, inferred 43, provisional 282, unknown 41, pad 52. Of the old fields 779 named
+  kept their class, 69 provisional became named (50 renamed from their readers, 19 kept as kind-dependent parameter
+  names), 25 became the label, 241 became unused (172 provisional, 37 unknown, 20 inferred, 12 named) and 41
+  explicit padding bytes of dbobjects became compiler padding; the 10 fields of the two dropped tables are gone.
+  Text size: 10.4 MB for 7.8 MB of binary (dbobjects 5.2 MB, dbgraphics 3.6 MB of YAML).
 
-* `eedata.py check`: (a) 39/39 tables round-trip db -> text -> db byte-identical in exact mode (and re-export
-  identically); (b) 39/39 clean texts compile to files whose every field value equals the exact file's; (c) 35/35
-  struct sizes match their sources, and `specs.json` and the C++ `EEDataTextSpecs.h` are current.
-* `eedata.py cppgate`: the game's C++ loader compiles the exact text of all 39 tables to the original .dat bytes
-  and the clean text to the Python importer's bytes (39/39 each). 114 edited texts (valid and broken) give the
-  same bytes or an error in both implementations.
-* Field classes over all 38 layouts: named 799 fields (6,843 bytes), inferred 43 (1,996), provisional 282 (862),
-  unknown 41 (197), padding 52 (134).
+### 8.3 dbworld constants
 
-### 8.4 dbworld names
+The 95 rows are read only as `gWorldTable.Get*Value(k)` / `gWorldTable.mEntries[k]` (source and retail binary
+checked; the only computed index is improvement kind + 57). 61 rows have a reader and are named
+(`tools/eedata/overlay.py` WORLD_ROWS, with the reader of each); the text gives each only the values its readers use
+(F `mFloatValue`, F2 `mFloatValue2`, L `mLongValue`, L2 `mLongValue2`). Rows 0..20, 23, 24, 28..33, 38..41 and 73 have
+no reader: not in the text, zero. `+0x08` (database id), `+0x0c` (index) and `+0x18` are unread in every row.
 
-`label` column, text only, checked against the list when filled in: 21 conversionsShownMax, 22 miningLimit,
-25 chatMessageTime, 26 unitLimitRange, 27 unitLimitDefault, 34 wonderVictoryTime, 35 conversionSearchRadius,
-36 shareBonus, 37 healAmount, 42 gameSpeedDefault, 43 gameSpeedRange, 44 gameSpeedStep, 45 killRefundFactor,
-46 conversionCost, 47 improvementPointLimit, 48 startingCitizens, 49 groupCapFactor, 50 wonderPowerAmount,
-51 healEpochFactor, 52 healEpochDivisor, 53 elevationHighThreshold, 54 elevationLowThreshold, 55 elevationHighBonus,
-56 elevationLowFactor, 57..72 improvementTime0..15, 74 complexUnitSight, 75 upgradeButtonDelay,
-76 civilizationPoints, 77 wondersForVictoryMax, 80 unitEpochCostFactor, 81 gameSpeedOption01, 82 gameSpeedOption23,
-83 acknowledgementDelay, 84 aiAttackChance, 85 camouflage, 86 civPowerCost, 88 fanatic, 89 damageTableScale,
-90 unitCostScale, 91 tradeRate46, 92 tradeRate23, 93 unitCostScaleResources4, 94 resourceTime. The reader of each
-is noted next to it in `overlay.py`.
+| Row | Name | Values: meaning (reader) |
+|---|---|---|
+| 21 | conversionsStatisticMax | L: the "max" of the statistics panel's conversions n/max (EEUIFMGGStatistics::Refresh) |
+| 22 | gatherersPerResourceMax | L -> EEPlayer::mMiningLimit, gatherers on one resource (EEPlayer::Reset) |
+| 25 | chatLogDisplayTime | L: chat log entry lifetime, ms; x2 notices, x3 console lines (EEUserInterface, EEClient) |
+| 26 | unitLimitRange | L / L2: smallest / largest unit limit choice, step 50 (EEGameOptions, lobby) |
+| 27 | unitLimitDefault | L: the default unit limit (EEGameOptions::SetDefaults) |
+| 34 | wonderVictoryTime | L: wonder victory countdown, s; the AI's victory percentage (EEVCWonder, EECPIntelligence) |
+| 35 | areaConversionRadius | F: radius of the extra conversions around a converted unit, wonder power 1 (priests) |
+| 36 | wonderPopulationBonus | F / F2: population limit fraction added / removed, wonder power 4 (EEWorld) |
+| 37 | wonderHealAmount | L: hit points healed per interval by wonder power 6 (EEPlayer::UpdatePlayer) |
+| 42 | gameSpeedDefault | F -> gGameStateGameSpeed (EEWorldTable::Load) |
+| 43 | gameSpeedRange | F / F2: lowest / highest in-game speed (EEUIEMGChangeGameSpeed) |
+| 44 | gameSpeedStep | F: speed change per key press |
+| 45 | deleteRefundFactor | F: cost share refunded when an unfinished unit is deleted (EEMKillUnit::Execute) |
+| 46 | conversionFaithCost | L: faith a conversion costs (EEUCBasicPriest, EEGetConversionCost) |
+| 47 | unitImprovementPointsMax | L: cap on a unit type's improvement points (EEPlayer::CanImprove, EEUICPortrait) |
+| 48 | startingCitizensDefault | L -> mStartingCitizens / mMaxStartingCitizens (EEServer, EEPlayer::Reset) |
+| 49 | groupSpeedCapFactor | F -> EEActiveGroup::mCapFactor: group averages capped at F x the slowest unit's |
+| 50 | wonderHitPointBonus | F: hit points added by wonder power 2 (EEPlayer::AddWonderPower) |
+| 51 | wonderHealEpochFactor | F: heal = L37 + (epoch / L52) x F x L37 (EEPlayer::UpdatePlayer) |
+| 52 | wonderHealEpochStep | L: epochs per heal step |
+| 53, 54 | highGroundHeight, lowGroundHeight | F x tile height: counts as high / low ground (EEUnitClass::GetElevationFactor) |
+| 55, 56 | highGroundAttackFactor, lowGroundAttackFactor | F: attack factor from high / low ground |
+| 57..72 | improvementTime<kind> | L / L2: research ms of an improvement's first / later levels (EEPlayer::AdvanceImprovement: kind + 57; kinds AreaEffect, Attack, ArrowArmor, GunArmor, LaserArmor, MissileArmor, PierceArmor, ShockArmor, FlightTimeOrPower, HitPoints, Leadership, Range, Repair, Kind13, Speed, Transport) |
+| 74 | wonderSightRadius | F: sight radius around a wonder with bonus 3 (EEComplexUnit::SightOn/SightOff) |
+| 75 | refusalMessageInterval | L: ms between repeated "cannot" messages (EEUIBUpgrade, EEUIFMGStatusButton) |
+| 76 | civilizationBuilderPoints | L: the civilization builder's point budget (EEGameState::Create, editors) |
+| 77 | wondersForVictoryMax | L: the wonders-for-victory choices 1..n (EEGameOptions, lobby) |
+| 78 | tileStrayDistance | F: LocationWayOffMap fires when a unit is farther than F from its tile centre (EEUnitAI); MoveToTileCentre's offset (EEUnitClass) |
+| 79 | trampleMinDistanceSquared | F -> gPhysicsModelsF: a moving unit pushing a stopped enemy tramples it only beyond this squared distance (EEPhysicsModel) |
+| 80 | unitEpochCostFactor | F: unit cost growth per epoch past the node's own (EETechTreeNode::GetCost) |
+| 81, 82 | gameSpeedSlowNormal, gameSpeedFastFastest | F / F2: the speeds of game speed options 0, 1 / 2, 3 (EEGameState::Create) |
+| 83 | acknowledgementDelay | L: ms between acknowledgement sounds (EEPlayer::PlayAcknowledgement) |
+| 84 | aiSpecialAttackChance | F: chance an AI flaming-arrow archer attacks a building specially; F2: chance an AI unit goes fanatic (EECPAttackSubGroup) |
+| 85 | camouflageTiming | L: idle ms before Camouflage cloaks a unit; L2: ms the cloak lasts; F: detection radius x range (EEPlayer, EEComplexUnit, EEUnitClass) |
+| 86 | specialPowersCategoryCost | L: the civ builder's special powers category cost (EECivilizationManager::Load) |
+| 87 | reloadTimeRandomRange | F / F2: min / max random factor on each reload time (EEComplexUnit) |
+| 88 | fanaticism | L: fanatic duration ms; F: hit point share lost on going fanatic; F2: damage factor while fanatic |
+| 89 | difficultyDamageScale | F / F2: the two scaled damage tables, picked by difficulty and side (EETerrainTypeTable::LoadDamageTables) |
+| 90 | jitManufacturingCostFactor | F: rally-point unit cost factor with Just In Time Manufacturing (EETechTreeNode::GetCost) |
+| 91, 92 | tradeRateStoneIron, tradeRateFoodWood | F / F2: base market rates (EEGetTradePrice) |
+| 93 | jitManufacturingCostFactorDeathmatch | F: the same factor with resources option 4 |
+| 94 | deathmatchJitManufacturingDelay | L, s: deathmatch Just In Time buttons stay closed until then (EEPhysics::Tick) |
+
+### 8.4 Field names: evidence and what stays uncertain
+
+A compile census renamed every member of every record struct and compiled all 858 units syntax-only: 1,595 use
+sites. A member with no use site is unused. A member whose only use is the loader's copy into a class member was
+followed one step further with a second census (the class members renamed): when nothing reads that class member
+either, the field is a dead copy and unused too. Read members got names from their readers; the class members they
+fill were renamed where they had offset names (`mFacesCamera`, `mSlopeSpeedPenalty`, `mIsExpansionUnit`,
+`mCanCrossForest`, `mEmitPositionSpread`, `mIsEmitFlat`, `mEndsWithUnitOrDuration`, `UIControlsTable`'s
+`mFitRectToText`/`mScaleToControl`/`mLoopMovie`).
+
+New names of read fields (record member: evidence):
+
+* dbobjects: `mCreationSound` (played when a unit is created or a building finished: EEMessage, EEUGBuildRepair),
+  `mFacesCamera` (the model turns to the camera yaw: EERenderObject, EECameraControl), the effect slots
+  `mDeathEffect`, `mDamageEffect` (below the effect's health fraction: EEUnit), `mMuzzleFlashEffect`, `mTrailEffect`,
+  `mRippleEffect`, `mSplashEffect`, `mHealEffect`, `mImpactSparksEffect`, `mImpactBloodEffect`, `mAttachedEffect`
+  (attached at creation), `mSpecialAttackEffect` (Capital Ship / Yamato beam), `mShotEffect` (tracers),
+  `mPulseCannonEffect`, `mBattleCryEffect` (EEAEExtraDamageFunctor), `mShellHoleEffect`, `mBloodStainEffect`
+  (ground decals); the terrain passability flags feeding `mTerrainTypes[]` (`mCanMoveOnLand` type 0, also copied to
+  type 5 snow (an original quirk: `mUnusedFlag2`/`3` at +0x2e0/+0x2e1, which look like the intended snow flags, are
+  never read), `mCanMoveOnDeepWater`, `mCanMoveOnRock`, `mCanMoveOnMud`, `mCanMoveOnRoughGrass`, `mCanMoveOnPavement`,
+  `mCanMoveOnCliffs`, `mCanMoveOnShallowWater`, `mCanMoveOnSand`, `mCanMoveInSpace`), `mSlopeSpeedPenalty` (SpeedMode
+  brakes above (1 - slope x value) x max velocity: EEPhysicsModel), `mIsExpansionUnit` (the units Art of Conquest
+  added; EECPUnitSelector), `mCanCrossForest` (terrain bit 14, wood passable: EEUnit::IsPassableBy, pathfinding),
+  `mRemainsType` (the unit type CreateRemainsUnit places; retail 0 everywhere, so never used by the shipped data).
+* dbgfxeffects: `mIntParam1..3` (the record's +0x90..+0x98 land in EEGraphicEffect::mIntParam1..3), `mFlag1/2`,
+  `mEmitPositionSpread`, `mIsEmitFlat`, `mEndsWithUnitOrDuration` (the particle emitter is their only reader).
+* dbuicontrols: `mFitRectToText` (UITextLabel::SetFitRectToText), `mScaleToControl` (fonts scaled to the control;
+  check box bitmaps), `mLoopMovie` (CreateMovie's loop argument).
+* dbaiunittargeting: `mPreferredUnitType` (a target of this unit type is taken at once: EEFOFindNewTargetNearOldTarget).
+* dbanimals: `mMinRestInterval`, `mMaxRestInterval` (the herd's random rest after an attack: EEHerd::UpdateAttacking).
+* dbcalamity: `mQuakeMinimumStrength`, `mQuakeStrength` (the earthquake is the only reader of +0x6c/+0x70).
+
+Uncertain or kind-dependent (the name says what the code does with the field):
+
+* `mCanMoveOnTerrainType3`, `mCanMoveOnTerrainType7` (dbobjects +0x2df, +0x2e5): passability of terrain types 3
+  and 7. No AoC dbterrain record has those types; only the event terrain-mask effect (EEEvent.cpp) can set them.
+* `improvementTimeKind13` (dbworld row 70): read through improvement kind + 57, but the improvement enum has no
+  kind 13.
+* dbgfxeffects `mIntParam1..3`, `mParam1..11`, `mFlag1/2`: one slot, a meaning per effect class (EEGraphicEffect copies
+  them 1:1; each EEE* class reads the slot its own way). The particle classes dominate: `mParam1` opacity, `mParam2`
+  size (also the damage effects' health threshold), `mParam3` size spread, `mParam4` vertical drift, `mParam5..7`
+  colour red/green/blue, `mParam8` gravity, `mParam9` wind factor, `mParam10` bounce elasticity, `mParam11` drag;
+  `mIntParam1` spawn interval (emitters), `mIntParam2` its spread, `mIntParam3` particles per burst; `mFlag1`
+  constant opacity / attached to the tag point / loops, `mFlag2` bounces off terrain / ends on unit death. Other
+  classes reuse the slots (tracer beam fade times, rain fall speed and density, icon offsets, cloak colours).
+* dbcalamity `mFloatParam1/2`, `mIntParam1..6`: per calamity class (each class's Initialize). `mFloatParam1`: spread
+  or reach radius (fire, plague, hurricane/AMS), scatter size (meteor storm), the earthquake's minimum strength
+  before the cracks, the sight bonus (line of sight), the hit point factor after a teleport. `mFloatParam2`: spread
+  chance (fire, plague), the earthquake's approach strength. `mIntParam1`: radius in tiles (area effects, mind
+  control, leprosy), the placement search range (teleport, time warp), damage per tick (hurricane, plague), the
+  earthquake's falloff distance. `mIntParam2`: damage per tick (area effect, leprosy, earthquake), burn % (fire),
+  tick time (hurricane), damage interval (plague), minimum launch interval (meteor storm). `mIntParam3`: update
+  interval (area effect), spread interval (leprosy), maximum launch interval (meteor storm), camera shake (earthquake),
+  damage per update (fire). `mIntParam4`: shakes per second (earthquake), spread interval (fire), minimum eruption
+  radius (volcano). `mIntParam5`: damage tick (earthquake), maximum eruption radius (volcano). `mIntParam6`: crack
+  count (earthquake), the half size an area needs on the map (hurricane/AMS).
+* dbworld 78 `tileStrayDistance`: the second reader (MoveToTileCentre's offset 1 - F) is not understood; 89
+  `difficultyDamageScale`: which side gets which table depends on what EEPlayer::IsHuman returns.
+
+Unused, with the evidence (all named `mUnused*`; the guessed meaning is in the name where the data shows one):
+
+* Dead copies (the loader copies the field into a class member nothing reads; second census): dbobjects
+  `mUnusedUnitGroup` (+0x06c -> EEUnitClass::mL208), `mUnusedShadowOffset` (+0x1fc -> mL170 -> render lists nothing
+  reads), `mUnusedGroundFlag` (+0x209 -> mB305), `mUnusedReference`, `mUnusedValue` (+0x21c/+0x220 -> mL284/mL180),
+  `mUnusedFlag6` (+0x319 -> mB2FA), `mUnusedSelectionValue` (+0x32c -> mL294 -> EEUIFMGMainGroup::mL20, only
+  written), `mUnusedDefaultedValue` (+0x368 -> mF19C), and nine effect slots whose effect is only loaded and unloaded,
+  never played: `mUnusedFireTrailEffect`, `mUnusedEffect1..8` (default -1, see 8.1); dbgraphics +0x70, +0x74,
+  +0x28c, +0x290, +0x298, +0x29c, +0x2a4 (-> EEGraphicObject mL318, mL31C, mL4B4, mB4CE, mL4B0, mL2FC, mL320);
+  dbsounds `mUnusedPriority` (-> EESoundObject::mL24); dbareaeffect +0x90..+0xb8 (-> EEAreaEffectTemplate
+  mL44..mB68); dbcliffterrain +0x74/+0x78 (-> mL1C/mB20); dbterraintype `mUnusedPaletteIndex` (-> mL18);
+  dbuicontrols `mUnusedDbRecordId` (-> mUnknown100); dbaiunittargeting `mUnusedWeight` (-> sTable[i][1], never
+  indexed); dbanimals +0x85, +0x88..+0x94 (-> the never-read vector mL04), +0x98, +0x9c, +0xb8, +0xba, +0xd8;
+  dbcalamity `mUnusedClassFlag` (-> EECalamityClass::mB24).
+* dbevents: the row's id is read into `EEEvent::mID`, a private member nothing reads (`mUnusedID`).
+* No use site at all: every other `mUnused*` member, the database ids and row indices of every table, the names
+  where `mLabel` is used, dbobjects +0x3b4..+0x47b (`mUnusedConverterScratch`, stale converter heap values), and
+  dbgraphics `mUnusedHoldTime0`: the loader hard-codes animation slot 0's hold time (`mHoldTimes[0] = 300000`,
+  EEGraphicObject.cpp; the original's loader 0x4d7b37 does the same), so the 50000 that 185 retail rows set is
+  never used.
 
 ### 8.5 The game reads the text
 
 `EEDbFindFile` (`src/Empire Earth/Database/EEDataTextFile.cpp`) replaces `FSPath::FindFile` at the 38 db lookups
 (EEInitializeDatabase, EEUnitClass::CreateUnitClasses, UIManager::LoadDatabase). When `db\<table>.csv|.yaml` is on
 the data path, `EEDataText.cpp` compiles it to the binary record stream and serves it as an `FSMemoryFile`; the
-loaders are unchanged. A loose `Data\db\` file wins over the archive, and a text table over a loose .dat. A text
-that does not compile stops the game with its message (file, row, field). `eedata.py install GAMEDIR` writes the
-text tables into a copy of the game. The multiplayer checksum adds the loose `Data\Db\*.csv`/`*.yaml`.
+loaders are unchanged. Every record starts from the struct's base record (zero plus the defaults of unread fields),
+an unlisted row is the table's hole record (both generated into `EEDataTextSpecs.h`). A loose `Data\db\` file wins
+over the archive, and a text table over a loose .dat. A text that does not compile stops the game with its message
+(file, row, field). `eedata.py install GAMEDIR` writes the text tables into a copy of the game. The multiplayer
+checksum adds the loose `Data\Db\*.csv`/`*.yaml` (clean text gives a different checksum than retail; every peer
+needs the same tables).

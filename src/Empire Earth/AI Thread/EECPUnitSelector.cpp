@@ -605,7 +605,7 @@ void EECPUnitSelector::AllocateCounterUnits(EECPUnitSelectionGroup* inGroup, EEC
             for (j = theFamilies.size() - 1; j >= 0; j--) {
                 if (theClass->mAIKind != (*(theFamilies.begin() + j)).first)
                     continue;
-                if (theClass->mIsMedic && !theClass->mIsCyber && !theClass->mB30C)
+                if (theClass->mIsMedic && !theClass->mIsCyber && !theClass->mIsExpansionUnit)
                     theChoices.push_back(theClass->mUnitType);
                 else {
                     theChoices.insert(theChoices.end(), (*(theFamilies.begin() + j)).second,

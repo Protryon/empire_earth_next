@@ -4,6 +4,11 @@ Status: research plan only. No repository file was changed. Repository: `C:\User
 (clang/C++17 port, fork of the `empire_earth` reconstruction, based on `fixes-all`). Paths below are relative to it.
 `src/EE` stands for `src/Empire Earth`. Identifiers and comments are provisional: they come from reverse engineering.
 
+Update 2026-11-04: phases 1 and 2 are built in clean form (docs/DATA_FORMATS.md section 8; owner decision: retail
+data and multiplayer compatibility are no longer kept). `tools/eedata` converts the 37 tables the game reads to text
+that carries only the fields the game reads, every field named from its readers; the "byte-exact" gates below became
+"every game-read value equals retail" plus a text -> db -> text round trip.
+
 Companion document: the field-level inventory of the binary `db\*.dat` formats is being written separately to
 docs/DATA_FORMATS.md. It did not exist yet when this plan was written. This plan refers to the tables by
 name and covers the logic side, the load flow, the caps and the architecture.

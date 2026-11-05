@@ -43,7 +43,8 @@ extern std::vector<EEMedia*> gMediaTable;   // 0x4e8448 (EEAnimal.cpp)
 
 // One record of db\dbgfxeffects.dat (0xe8 bytes, read whole). Layout inferred (only the fields the ctor copies).
 struct EEGraphicEffectRecord {
-    char _gap00[0x68];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
+    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
     long mID;                               // +0x68 -> +0x60 (> 0: a real record)
     long mKind;                             // +0x6c -> +0x58
     long mTagPointKind;                     // +0x70 -> +0x5c
@@ -54,9 +55,9 @@ struct EEGraphicEffectRecord {
     long mTime1;                            // +0x84 -> +0x70
     long mTime2;                            // +0x88 -> +0x74
     long mDuration;                         // +0x8c -> +0x78
-    long mL90;                              // +0x90 -> +0x64
-    long mL94;                              // +0x94 -> +0x68
-    long mL98;                              // +0x98 -> +0x6c
+    long mIntParam1;                        // +0x90 -> +0x64
+    long mIntParam2;                        // +0x94 -> +0x68
+    long mIntParam3;                        // +0x98 -> +0x6c
     long mLinkedEffectIndex1;               // +0x9c -> +0x10 (an index until Load links it)
     long mLinkedEffectIndex2;               // +0xa0 -> +0x14
     long mLinkedEffectIndex3;               // +0xa4 -> +0x18
@@ -72,12 +73,12 @@ struct EEGraphicEffectRecord {
     float mParam9;                          // +0xcc -> +0x48
     float mParam10;                         // +0xd0 -> +0x4c
     float mParam11;                         // +0xd4 -> +0x50
-    float mParam12;                          // +0xd8 -> +0x54
-    bool mBDC;                              // +0xdc -> +0x88
-    bool mBDD;                              // +0xdd -> +0x89
+    float mEmitPositionSpread;                          // +0xd8 -> +0x54
+    bool mFlag1;                            // +0xdc -> +0x88
+    bool mFlag2;                            // +0xdd -> +0x89
     bool mIsScenarioListed;                 // +0xde -> +0x8b
-    bool mBDF;                              // +0xdf -> +0x8c
-    bool mBE0;                              // +0xe0 -> +0x8a
+    bool mIsEmitFlat;                       // +0xdf -> +0x8c
+    bool mEndsWithUnitOrDuration;           // +0xe0 -> +0x8a
     long mDetailLevel;                      // +0xe4 -> +0x84
 };
 static_assert(sizeof(EEGraphicEffectRecord) == 232, "on-disk record: 232 bytes on every target");
@@ -99,9 +100,9 @@ EEGraphicEffect::EEGraphicEffect(EEGraphicEffectRecord* inRecord)
     this->mLinkedEffect1 = reinterpret_cast<EEGraphicEffect*>(inRecord->mLinkedEffectIndex1);
     this->mLinkedEffect2 = reinterpret_cast<EEGraphicEffect*>(inRecord->mLinkedEffectIndex2);
     this->mLinkedEffect3 = reinterpret_cast<EEGraphicEffect*>(inRecord->mLinkedEffectIndex3);
-    this->mIntParam1 = inRecord->mL90;
-    this->mIntParam2 = inRecord->mL94;
-    this->mIntParam3 = inRecord->mL98;
+    this->mIntParam1 = inRecord->mIntParam1;
+    this->mIntParam2 = inRecord->mIntParam2;
+    this->mIntParam3 = inRecord->mIntParam3;
     this->mParam1 = inRecord->mParam1;
     this->mParam2 = inRecord->mParam2;
     this->mParam3 = inRecord->mParam3;
@@ -113,11 +114,11 @@ EEGraphicEffect::EEGraphicEffect(EEGraphicEffectRecord* inRecord)
     this->mParam9 = inRecord->mParam9;
     this->mParam10 = inRecord->mParam10;
     this->mParam11 = inRecord->mParam11;
-    this->mParam12 = inRecord->mParam12;
-    this->mFlag1 = inRecord->mBDC;
-    this->mFlag2 = inRecord->mBDD;
-    this->mFlag3 = inRecord->mBE0;
-    this->mFlag4 = inRecord->mBDF;
+    this->mEmitPositionSpread = inRecord->mEmitPositionSpread;
+    this->mFlag1 = inRecord->mFlag1;
+    this->mFlag2 = inRecord->mFlag2;
+    this->mEndsWithUnitOrDuration = inRecord->mEndsWithUnitOrDuration;
+    this->mIsEmitFlat = inRecord->mIsEmitFlat;
     this->mIsScenarioListed = inRecord->mIsScenarioListed;
     this->mNameStringId = inRecord->mNameStringId;
     this->mDetailLevel = inRecord->mDetailLevel;

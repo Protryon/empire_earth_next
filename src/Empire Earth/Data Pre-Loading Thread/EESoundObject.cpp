@@ -25,10 +25,12 @@ std::vector<EESoundObject*> gSoundObjects;        // 0x4e8678
 
 // One record of db\dbsounds.dat (0x84 bytes, read whole). Layout inferred (only the fields LoadTable copies).
 struct EESoundRecord {
-    char _gap00[0x6c];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
+    long mUnusedDatabaseID;                 // +0x064 the database row id (not read)
+    long mUnusedIndex;                      // +0x068 the 0-based row index (not read)
     long mMaxInstances;                     // +0x6c -> +0x1c
     long mCategory;                         // +0x70 -> +0x20
-    long mL74;                              // +0x74 -> +0x24
+    long mUnusedPriority;                   // +0x74 -> +0x24
     bool mLooping;                          // +0x78 -> +0x2c (looping)
     long mVolume;                           // +0x7c: percent -> +0x14 (float, * 0.01)
     char _gap80[4];
@@ -80,7 +82,7 @@ long EESoundObject::LoadTable(FSFile* inFile)
             theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
             theSound->mMaxInstances = theRecord.mMaxInstances;
             theSound->mCategory = theRecord.mCategory;
-            theSound->mL24 = theRecord.mL74;
+            theSound->mL24 = theRecord.mUnusedPriority;
             theSound->mLooping = theRecord.mLooping;
             theSound->mVolume = theRecord.mVolume * 0.01f;
             gSoundObjects[i] = theSound;

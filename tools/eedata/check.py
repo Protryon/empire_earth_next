@@ -1,11 +1,14 @@
 """The converter gates (eedata.py check).
 
-(a) exact: every table round-trips db -> text -> db byte-identical (and the text re-exports identically).
-(b) clean: the clean text compiles to a db file whose every field value equals the exact file's, except the junk
-    the clean mode drops (bytes after a string's NUL, alignment padding); the hole rows stay holes.
+(a) round trip: every table's text (exported from the retail file) compiles to a db file that exports to the same
+    text again, and that db file is a fixed point (text -> db -> text -> db gives the same bytes).
+(b) game-visible values: the compiled db file holds, in every row, the retail value of every field the game reads,
+    and the same lead strings and lists. Hole rows (the retail database's empty rows) compile to the table's hole
+    record; their game-read fields equal the retail ones except where the retail bytes are the converter's 0xCC
+    fill (counted and listed). dbworld: the values each constant's readers use.
 (c) specs: specs.json equals what specgen.py makes from the sources now (and the C++ EEDataTextSpecs.h what
-    cppgen.py makes from specs.json), and every struct's size equals its
-    static_assert (or the size its source states, for the two without one).
+    cppgen.py makes from specs.json), and every struct's size equals its static_assert (or the size its source
+    states, for the one without one).
 """
 import collections
 import pathlib
@@ -22,20 +25,45 @@ def _rows(t):
     if t.epochs is not None:
         out = []
         for e in t.epochs:
-            out.append(e.epoch)
-            out += e.nodes
+            out.append(('epoch', e.epoch))
+            out += [('node', r) for r in e.nodes]
         return out
-    return t.rows
+    return [('row', r) for r in t.rows]
 
 
-def _values(fields, r):
-    out = []
-    for f in fields:
-        if f['type'] == 'pad':
+def _junk(f, rec):
+    b = rec[f['off']:f['off'] + SIZES[f['type']] * f['count']]
+    return len(b) > 0 and set(b) == {0xCC}
+
+
+def hole_values(n, data, spec):
+    """The retail hole template's game-read values that differ from the struct's base record (0xCC fill left out):
+    the table's overlay.HOLES entry."""
+    tspec = spec['tables'][n]
+    st = spec['structs'][tspec['struct']]
+    tmpl = binfmt.retail_template(binfmt.parse(n, data, spec))
+    if tmpl is None:
+        return {}
+    base = binfmt.base_record(st)
+    out = {}
+    for f in binfmt.exported(st['fields']):
+        if _junk(f, tmpl):
             continue
-        v = binfmt.field_value(f, r.rec)
-        out.append(v[0] if f['type'] == 'str' else v)
-    return out, r.lead, r.lst
+        v, b = binfmt.field_value(f, tmpl), binfmt.field_value(f, base)
+        if f['type'] == 'str':
+            v, b = v[0], b[0]
+            if v != b:
+                out[f['name']] = v.decode('latin-1')
+            continue
+        if v != b:
+            if f['type'] == 'f32':
+                import struct
+                conv = lambda x: struct.unpack('<f', struct.pack('<I', x))[0]
+                v = [conv(x) for x in v] if isinstance(v, list) else conv(v)
+            if isinstance(v, list) and len(set(map(str, v))) == 1:
+                v = v[0]
+            out[f['name']] = v
+    return out
 
 
 def run(a, spec, load_db):
@@ -59,9 +87,7 @@ def run(a, spec, load_db):
         if want != s['size']:
             print(f'(c) FAIL {s["name"]}: layout {s["size"]} bytes, {how} says {want}')
             ok = False
-    virtual = sorted(s['name'] for s in spec['structs'].values() if not s['size_check'])
-    print(f'(c) {nsize} struct sizes match their sources ({sum(1 for s in spec["structs"].values() if s["size_check"] and s["size_check"][1] == "comment")} by '
-          f'the size comment); {len(virtual)} layouts decoded from the data ({", ".join(virtual)}) are checked by '
+    print(f'(c) {nsize} struct sizes match their sources; the dbevents row head (no source struct) is checked by '
           f'parsing to the end of the file')
     db = load_db(a, spec)
     textdir = pathlib.Path(a.text).resolve() if a.text else None
@@ -73,63 +99,77 @@ def run(a, spec, load_db):
         for f in s['fields']:
             cls_fields[f['cls']] += 1
             cls_bytes[f['cls']] += SIZES[f['type']] * f['count']
-    total_junk = 0
+    junk_total = 0
     for n in sorted(spec['tables']):
         b = db[n]
         tspec = spec['tables'][n]
-        fields = spec['structs'][tspec['struct']]['fields']
+        st = spec['structs'][tspec['struct']]
+        fields = st['fields']
+        exp = binfmt.exported(fields)
         # (a)
         try:
-            text = tables.export(n, b, spec, 'exact')
-            back = tables.import_(n, text, spec)
+            text = tables.export(n, b, spec)
+            cb = tables.import_(n, text, spec)
+            text2 = tables.export(n, cb, spec)
+            cb2 = tables.import_(n, text2, spec)
         except Exception as e:   # report every table
             print(f'(a) FAIL {n}: {type(e).__name__}: {e}')
             ok = False
             continue
-        if back != b:
-            k = next((i for i in range(min(len(b), len(back))) if b[i] != back[i]), min(len(b), len(back)))
-            print(f'(a) FAIL {n}: {len(back)} bytes back for {len(b)}; first difference at {k}')
-            ok = False
-            continue
-        if tables.export(n, back, spec, 'exact') != text:
-            print(f'(a) FAIL {n}: the text does not re-export identically')
+        if text2 != text or cb2 != cb:
+            print(f'(a) FAIL {n}: the text does not survive text -> db -> text')
             ok = False
             continue
         na += 1
         if textdir:
             (textdir / (n + ('.yaml' if tspec['format'] == 'yaml' else '.csv'))).write_bytes(text)
         # (b)
-        try:
-            cb = tables.import_(n, tables.export(n, b, spec, 'clean'), spec)
-        except Exception as e:
-            print(f'(b) FAIL {n}: {type(e).__name__}: {e}')
-            ok = False
-            continue
-        te = binfmt.detect_holes(binfmt.parse(n, b, spec), spec)
+        tr = binfmt.parse(n, b, spec)
+        tmpl = binfmt.retail_template(tr)
         tc = binfmt.parse(n, cb, spec)
-        tc.hole = binfmt.clean_record(fields, te.hole) if te.hole is not None else None
-        re_, rc = _rows(te), _rows(tc)
+        rr, rc = _rows(tr), _rows(tc)
+        names = tables._row_names(spec, n)
+        only = tables._row_fields(tspec)
         bad = None
-        if len(re_) != len(rc) or te.header != tc.header:
-            bad = 'row count/header'
-        else:
-            for i, (x, y) in enumerate(zip(re_, rc)):
-                x = x or binfmt.Row(te.hole, [b''] * binfmt.lead_count(tspec), [])
-                if _values(fields, x) != _values(fields, y):
-                    bad = f'row {i}'
+        junk = collections.Counter()
+        holes = 0
+        if len(rr) != len(rc):
+            bad = f'{len(rc)} rows for {len(rr)}'
+        for i, ((kind, x), (_, y)) in enumerate(zip(rr, rc)):
+            if bad:
+                break
+            if names and i not in names:
+                holes += 1
+                continue   # a dbworld row nobody reads
+            hole = tmpl is not None and x.rec == tmpl and not any(x.lead) and not x.lst
+            holes += hole
+            if x.lead != y.lead or x.lst != y.lst:
+                bad = f'{kind} {i}: lead strings or list'
+                break
+            for f in exp:
+                if f['cls'] == 'label' or (only and f['name'] not in only.get(i, ())):
+                    continue
+                vx, vy = binfmt.field_value(f, x.rec), binfmt.field_value(f, y.rec)
+                if f['type'] == 'str':
+                    vx, vy = vx[0], vy[0]
+                if vx != vy:
+                    if hole and _junk(f, x.rec):
+                        junk[f['name']] += 1
+                        continue
+                    bad = f'{kind} {i}: {f["name"]} {vx!r} -> {vy!r}'
                     break
         if bad:
-            print(f'(b) FAIL {n}: clean changes a field value ({bad})')
+            print(f'(b) FAIL {n}: a game-read value changes ({bad})')
             ok = False
             continue
-        junk = sum(1 for i in range(len(b)) if b[i] != cb[i]) if len(b) == len(cb) else None
-        total_junk += junk or 0
         nb += 1
-        print(f'  {n:24s} {len(b):9,d} B  exact ok  clean ok ({junk:,d} junk bytes zeroed)')
-    print(f'(a) {na}/{len(spec["tables"])} tables round-trip byte-identical in exact mode')
-    print(f'(b) {nb}/{len(spec["tables"])} tables: clean keeps every field value '
-          f'({total_junk:,d} junk bytes zeroed in all)')
+        junk_total += sum(junk.values())
+        print(f'  {n:24s} {len(b):9,d} B -> {len(text):9,d} B text, {len(rc) - holes:5d} rows + {holes:4d} holes or unread'
+              + (f'; 0xCC fill in hole rows (not loaded as values): {", ".join(sorted(junk))}' if junk else ''))
+    print(f'(a) {na}/{len(spec["tables"])} tables: text -> db -> text identical')
+    print(f'(b) {nb}/{len(spec["tables"])} tables: every game-read value equals retail ({junk_total:,d} hole-row '
+          f'fields were 0xCC fill)')
     print('fields by class (all record layouts): ' + ', '.join(
-        f'{k} {cls_fields[k]} ({cls_bytes[k]:,d} B)' for k in ('named', 'inferred', 'provisional', 'unknown', 'pad')))
+        f'{k} {cls_fields[k]} ({cls_bytes[k]:,d} B)' for k in ('named', 'label', 'unused', 'pad')))
     print(f'{"PASS" if ok else "FAIL"} in {time.time() - t0:.0f} s')
     return 0 if ok and na == nb == len(spec['tables']) else 1

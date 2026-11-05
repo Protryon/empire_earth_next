@@ -232,7 +232,7 @@ void EEUnitClassUpgrade::Init()
         if ((theBit & this->mTerrainMask) == 0)
             this->mTerrainMask |= theBit;
     }
-    if (this->mUnitClass->mB315 && ((this->mTerrainMask >> 0xe) & 1) == 0)
+    if (this->mUnitClass->mCanCrossForest && ((this->mTerrainMask >> 0xe) & 1) == 0)
         this->mTerrainMask |= 0x4000;
 }
 

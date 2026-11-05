@@ -1,8 +1,8 @@
 """Hand-maintained knowledge the source structs do not carry (docs/DATA_FORMATS.md is the evidence for each entry).
 
 specgen.py combines this with the record structs parsed from the sources into specs.json. Nothing here repeats a
-field layout the source defines: the struct name points at the source, SPLITS names the pieces of the source's
-undecoded gaps that the survey identified from the data, and the TABLES rows describe each file's container.
+field layout the source defines: the struct name points at the source, DEFAULTS and HOLES give the values the
+importer writes where the text has none, and the TABLES rows describe each file's container.
 """
 
 # Source files of the on-disk record structs (relative to the repository root).
@@ -48,41 +48,11 @@ STRUCT_SOURCES = {
 # (EEUnitClassRecord.h: "EEDbObject::mRecord, 0x7a8 bytes"; UIControlsTable.cpp: "0x35c bytes each").
 COMMENT_SIZES = {'EEUnitClassRecord': 0x7a8, 'UIDbControl': 0x35c}
 
-# Pieces of the source's undecoded gaps identified from the data by the survey (DATA_FORMATS.md, "inferred"):
-# struct -> {offset: kind}; kind 'name' is a NUL-terminated char[100], 'dbId' the database row id, 'index' the
-# 0-based row index. The rest of every gap becomes explicit raw fields (u_0x<off>), never dropped.
-SPLITS = {
-    'EEAIUnitTargetingRecord': {0x00: 'name', 0x64: 'dbId', 0x68: 'index'},
-    'EEAmbientSoundRecord': {0x00: 'name', 0x64: 'dbId'},
-    'EEAnimalRecord': {0x00: 'name', 0x64: 'dbId'},
-    'EEButtonRecord': {0x00: 'name'},
-    'EECivilizationCategoryEntry': {0x08: 'name'},
-    'EEColorTableRecord': {0x00: 'name', 0x64: 'dbId', 0x68: 'index'},
-    'EEDamageTableRecord': {0x00: 'name', 0x64: 'dbId', 0x68: 'index'},
-    'EEGraphicEffectRecord': {0x00: 'name', 0x64: 'dbId'},
-    'EEGraphicObjectRecord': {0x00: 'name', 0x64: 'dbId'},
-    'EEMusicRecord': {0x00: 'dbId', 0x04: 'index', 0x08: 'name'},
-    'EESoundRecord': {0x00: 'name', 0x64: 'dbId', 0x68: 'index'},
-    'EEStartingResourcesRecord': {0x00: 'name', 0x64: 'dbId'},
-    'EETerrainTypeRecord': {0x00: 'name', 0x64: 'dbId'},
-    'UIDbDataEvents': {0x00: 'name', 0x64: 'dbId'},
-    'EEUnitBehaviorRecord': {0x00: 'name', 0x64: 'dbId'},
-    'EEToHitRecord': {0x00: 'name', 0x64: 'dbId', 0x68: 'index'},
-    'EEUCUpgradeRecord': {0x00: 'name'},
-}
-
-# Records with no source struct (the game does not load these files, or loads them field by field). Layouts
-# decoded from the data (DATA_FORMATS.md 3.7, 3.38, 3.39). Fields: (name, type, count, class).
+# Records with no source struct (loaded field by field). Fields: (name, type, count, class).
 VIRTUAL_STRUCTS = {
-    # dbevents.dat row head; the u32 effect count and the effect list follow (EEEvent::LoadEvents)
-    'EEEventRow': [('name', 'str', 100, 'named'), ('mID', 'u32', 1, 'named')],
-    # dbrandommap.dat (mis-framed by EERandomMapTable::Load; dead data)
-    'RandomMapRecord': [('dbId', 's32', 1, 'inferred'), ('group', 's32', 1, 'inferred'),
-                        ('name', 'str', 100, 'inferred'), ('u_0x06c', 's32', 1, 'unknown'),
-                        ('u_0x070', 's32', 1, 'unknown'), ('u_0x074', 's32', 4, 'unknown')],
-    # dbterraingraytextures.dat (not loaded by AoC)
-    'TerrainGrayTextureRecord': [('name', 'str', 100, 'inferred'), ('dbId', 's32', 1, 'inferred'),
-                                 ('index', 's32', 1, 'inferred'), ('u_0x06c', 's32', 3, 'unknown')],
+    # dbevents.dat row head; the u32 effect count and the effect list follow (EEEvent::LoadEvents reads the name into
+    # a local it never uses, the id into EEEvent::mID, which is private and read by nothing)
+    'EEEventRow': [('mLabel', 'str', 100, 'label'), ('mUnusedID', 'raw', 4, 'unused')],
 }
 
 # Tables: file stem (inside db\ of data.ssa) -> container and text form.
@@ -91,11 +61,12 @@ VIRTUAL_STRUCTS = {
 #              'fixed'    records only, no count (the loader reads a fixed number)
 #              'events'   rows of EEEventRow + u32 n + n x s32 until the end of the file
 #              'techtree' epoch blocks until the end: u32 nodeCount, epoch record + list, nodeCount x (record + list)
-#              'header'   u32 header word + u32 count + records (dbrandommap)
 #   lead: names of the leading strings, in file order; 'Name[14]' expands to a list of 14 strings, 'A|B[14]' is a
 #         pair of interleaved lists (A0, B0, A1, B1, ...).
 #   list: name of the trailing u32-counted list (events, techtree) and its element type.
 #   fixed_rows: the row count the loader expects (export warns when the file differs; import writes what it has).
+# dbrandommap.dat (mis-framed by EERandomMapTable::Load: every record is thrown away) and dbterraingraytextures.dat
+# (no AoC code opens it) have no text form: the game reads nothing of them.
 TABLES = {
     'dbaiunittargeting': dict(struct='EEAIUnitTargetingRecord', container='count', format='csv', fixed_rows=3),
     'dbambientsounds': dict(struct='EEAmbientSoundRecord', container='count', format='csv'),
@@ -120,13 +91,10 @@ TABLES = {
     'dbmusic': dict(struct='EEMusicRecord', container='count', format='csv'),
     'dbobjects': dict(struct='EEUnitClassRecord', container='count', format='yaml'),
     'dbpremadecivs': dict(struct='EECivilizationEntry', container='count', format='csv'),
-    'dbrandommap': dict(struct='RandomMapRecord', container='header', format='csv'),
     'dbsounds': dict(struct='EESoundRecord', container='lead', format='csv', lead=['mSampleName']),
     'dbstartingresources': dict(struct='EEStartingResourcesRecord', container='count', format='csv'),
     'dbtechtree': dict(struct='EETechTreeRecord', container='techtree', format='yaml', list=('parents', 'u32')),
     'dbterrain': dict(struct='EETerrainRecord', container='lead', format='csv', lead=['mTextureName']),
-    'dbterraingraytextures': dict(struct='TerrainGrayTextureRecord', container='lead', format='csv',
-                                  lead=['textureName']),
     'dbterraintype': dict(struct='EETerrainTypeRecord', container='count', format='csv'),
     'dbuiback': dict(struct='UIDbDataBackgrounds', container='count', format='csv'),
     'dbuicontrolevents': dict(struct='UIDbDataEvents', container='count', format='csv'),
@@ -142,53 +110,127 @@ TABLES = {
     'dbworld': dict(struct='EEWorldTableEntry', container='count', format='csv'),
 }
 
-# Text-only row labels (checked aliases; the binary has no name column): table -> {row position: name}.
-# dbworld: names from the call sites of gWorldTable.Get*Value(k) (docs/DATA_FORMATS.md 3.12).
-# Each name says what the reading code does with the row (file, function); rows without a clear reader stay
-# unnamed. Long/Long2 and Float/Float2 are the entry's two values of that type (mLongValue, mLongValue2, ...).
-ROW_NAMES = {'dbworld': {
-    21: 'conversionsShownMax',        # Long: the statistics' conversions n/max (EEUIFMGGStatistics::Refresh)
-    22: 'miningLimit',                # Long -> EEPlayer::mMiningLimit (EEPlayer::Reset)
-    25: 'chatMessageTime',            # Long: chat log entry time, ms (x2, x3 for system lines; EEUserInterface)
-    26: 'unitLimitRange',             # Long..Long2: the unit limit choices, step 50 (EEGameOptions, lobby)
-    27: 'unitLimitDefault',           # Long: EEGameOptions::SetDefaults mUnitLimit
-    34: 'wonderVictoryTime',          # Long: wonder victory countdown, s (EEVictoryCondition::GetWonderCountdown)
-    35: 'conversionSearchRadius',     # Float: priest ConvertTarget's EEGetUnitsNear radius
-    36: 'shareBonus',                 # Float/Float2 x population limit (EEWorld::ApplyShareBonus/RemoveShareBonus)
-    37: 'healAmount',                 # Long: heal base and factor (EEPlayer::UpdatePlayer)
-    42: 'gameSpeedDefault',           # Float -> gGameStateGameSpeed (EEWorldTable::Load)
-    43: 'gameSpeedRange',             # Float..Float2: the in-game speed limits (EEUIEMGChangeGameSpeed)
-    44: 'gameSpeedStep',              # Float: the in-game speed step (EEUIEMGChangeGameSpeed)
-    45: 'killRefundFactor',           # Float: RefundTechnology factor (EEMKillUnit::Execute)
-    46: 'conversionCost',             # Long: EEGetConversionCost base
-    47: 'improvementPointLimit',      # Long: improvement cost cap (EEPlayer::CanImprove, EEUICPortrait::Update)
-    48: 'startingCitizens',           # Long -> mStartingCitizens / mMaxStartingCitizens (EEServer, EEPlayer::Reset)
-    49: 'groupCapFactor',             # Float -> EEActiveGroup::mCapFactor
-    50: 'wonderPowerAmount',          # Float: EEPlayer::AddWonderPower/RemoveWonderPower
-    51: 'healEpochFactor',            # Float: heal per epoch step (EEPlayer::UpdatePlayer)
-    52: 'healEpochDivisor',           # Long: epochs per heal step (EEPlayer::UpdatePlayer)
-    53: 'elevationHighThreshold',     # Float x tile height (EEUnitClass::GetElevationFactor)
-    54: 'elevationLowThreshold',      # Float x tile height (EEUnitClass::GetElevationFactor)
-    55: 'elevationHighBonus',         # Float: added to the uphill factor (EEUnitClass::GetElevationFactor)
-    56: 'elevationLowFactor',         # Float: the downhill factor (EEUnitClass::GetElevationFactor)
-    **{57 + k: f'improvementTime{k}' for k in range(16)},   # Long: first level, Long2: later levels, ms
-                                                             # (EEPlayer::AdvanceImprovement: improvement + 57)
-    74: 'complexUnitSight',           # Float: EEComplexUnit::SightOn/SightOff radius
-    75: 'upgradeButtonDelay',         # Long, ms (EEUIBUpgrade::ButtonUp, EEUIFMGStatusButton::ButtonUp)
-    76: 'civilizationPoints',         # Long: civilization builder points (EEGameState::Create, editors)
-    77: 'wondersForVictoryMax',       # Long: the wonders-for-victory choices 1..n (EEGameOptions, lobby)
-    80: 'unitEpochCostFactor',        # Float: unit cost growth per epoch behind (EETechTreeNode::GetCost, kind 4)
-    81: 'gameSpeedOption01',          # Float: game speed option 0, Float2: option 1 (EEGameState::Create)
-    82: 'gameSpeedOption23',          # Float: game speed option 2, Float2: option 3 (EEGameState::Create)
-    83: 'acknowledgementDelay',       # Long, ms (EEPlayer::PlayAcknowledgement)
-    84: 'aiAttackChance',             # Float/Float2: random thresholds (EECPAttackSubGroup::AttackWith)
-    85: 'camouflage',                 # Long/Long2: camouflage timers, Float: cloak detection range factor
-    86: 'civPowerCost',               # Long -> the civ powers category cost (EECivilizationManager::Load)
-    88: 'fanatic',                    # Long: duration ms, Float: hit point loss, Float2: damage factor (GoFanatic)
-    89: 'damageTableScale',           # Float/Float2: the two scaled damage tables (LoadDamageTables)
-    90: 'unitCostScale',              # Float: unit cost factor (EETechTreeNode::GetCost, resources option != 4)
-    91: 'tradeRate46',                # Float: trade rate case 4, Float2: case 6 (EEGetTradePrice)
-    92: 'tradeRate23',                # Float: trade rate case 2, Float2: case 3 (EEGetTradePrice)
-    93: 'unitCostScaleResources4',    # Float: unit cost factor with resources option 4 (EETechTreeNode::GetCost)
-    94: 'resourceTime',               # Long, s (EEPhysics::Tick, resources option 4)
-}}
+
+# Values the importer writes into fields the text does not carry (struct -> {member: value}); every other unread
+# byte is zero. The unread effect slots of dbobjects are effect row numbers whose media the class still loads: -1
+# (none) keeps it from loading effect row 0 for every unit.
+DEFAULTS = {
+    'EEUnitClassRecord': {**{f'mUnusedEffect{k}': -1 for k in range(1, 9)}, 'mUnusedFireTrailEffect': -1},
+}
+
+# Hole rows: positions the text does not list. The importer writes the table's hole record there: DEFAULTS, then
+# these values (table -> {field: value}: the database's empty-row values, i.e. what the retail hole rows hold in the
+# fields the game reads, so a hole loads exactly as before); everything else zero, lead strings empty, lists empty.
+# Generated once from the retail data (eedata.py holes prints it); check.py proves it against the retail holes.
+HOLES = {
+    'dbareaeffect': {
+        'mID': -1},
+    'dbbuttons': {
+        'mID': -1, 'mHotKey': -1},
+    'dbeffects': {
+        'mUnitClass': -1, 'mNewUnitClass': -1, 'mUnitSet': -1, 'mKind': -1, 'mMediaIndex': -1, 'mTechnology':
+        -1, 'mAttribute': -1, 'mSoundID': -1, 'mButton': -1, 'mAreaEffect': -1},
+    'dbgfxeffects': {
+        'mID': -1, 'mKind': -1, 'mTagPointKind': -1, 'mMediaIndex': -1, 'mStartSize': 1.0, 'mHeight': 1.0,
+        'mLinkedEffectIndex1': -1, 'mLinkedEffectIndex2': -1, 'mLinkedEffectIndex3': -1},
+    'dbgraphics': {
+        'mSound1Index0': 4294967295, 'mSound2Index0': 4294967295, 'mSound1Index13': 4294967295,
+        'mSound2Index13': 4294967295, 'mSound1Index7': 4294967295, 'mSound2Index7': 4294967295, 'mSound1Index8':
+        4294967295, 'mSound2Index8': 4294967295, 'mSound1Index12': 4294967295, 'mSound2Index12': 4294967295,
+        'mSound1Index11': 4294967295, 'mSound2Index11': 4294967295, 'mSound1Index9': 4294967295,
+        'mSound2Index9': 4294967295, 'mSound1Index10': 4294967295, 'mSound2Index10': 4294967295,
+        'mSound1Index6': 4294967295, 'mSound2Index6': 4294967295, 'mSound1Index3': 4294967295, 'mSound2Index3':
+        4294967295, 'mSound1Index1': 4294967295, 'mSound2Index1': 4294967295, 'mSound1Index2': 4294967295,
+        'mSound2Index2': 4294967295, 'mKind': -1, 'mOpacity': 1.0},
+    'dbobjects': {
+        'mFamily': -1, 'mUnitType': -1, 'mWeapon': -1, 'mProjectileType': -1, 'mAmmoType': -1, 'mCategory': -1,
+        'mButton': -1, 'mGraphic': -1, 'mCreationSound': -1, 'mAcknowledgeSound1': -1, 'mAcknowledgeSound2': -1,
+        'mSelectionSound1': -1, 'mSelectionSound2': -1, 'mDeathSound': -1, 'mCommand0': -1, 'mCommand1': -1,
+        'mCommand2': -1, 'mCommand3': -1, 'mCommand4': -1, 'mCommand5': -1, 'mCommand6': -1, 'mCommand7': -1,
+        'mCommand8': -1, 'mCanSetRallyPoint': 1, 'mIsPlayerPlaceable': 1, 'mDeathEffect': -1, 'mDamageEffect':
+        -1, 'mMuzzleFlashEffect': -1, 'mTrailEffect': -1, 'mRippleEffect': -1, 'mSplashEffect': -1,
+        'mHealEffect': -1, 'mImpactSparksEffect': -1, 'mImpactBloodEffect': -1, 'mAttachedEffect': -1,
+        'mCreationEffect': -1, 'mSpecialAttackEffect': -1, 'mShotEffect': -1, 'mLeprosyEffect': -1,
+        'mPlagueEffect': -1, 'mMoraleEffect': -1, 'mPulseCannonEffect': -1, 'mBattleCryEffect': -1,
+        'mShellHoleEffect': -1, 'mBloodStainEffect': -1, 'mCanMoveOnLand': 1, 'mCanMoveOnDeepWater': 1,
+        'mCanMoveOnRock': 1, 'mCanMoveOnTerrainType3': 1, 'mCanMoveOnMud': 1, 'mCanEnterFortresses': 1,
+        'mCanMoveOnRoughGrass': 1, 'mCanMoveOnTerrainType7': 1, 'mCanMoveOnPavement': 1, 'mCanMoveOnCliffs': 1,
+        'mCanMoveOnShallowWater': 1, 'mCanMoveOnSand': 1, 'mAreaEffectTemplate0': -1, 'mAreaEffectTemplate1':
+        -1, 'mAreaEffectTemplate2': -1, 'mAreaEffectTemplate3': -1, 'mGarrisonTechnology': -1, 'mTechnology':
+        100000, 'mBlocksTile': 1, 'mAttributes': 4294967295},
+    'dbtechtree': {
+        'mObsoleteEpoch': 15, 'mResearchedEvent': -1, 'mObsoleteEvent': -1, 'mUnitClass': -1, 'mButton': 1,
+        'mAvailableWithEpoch': 1, 'mResearchedWithEpoch': 1},
+    'dbterrain': {
+        'mID': -1},
+    'dbuiback': {
+        'mOpacity': 1.0, 'mBackgroundID': 4294967295, 'mFormID': 4294967295, 'mDrawPriority': 1},
+    'dbuicontrolevents': {
+        'mEventID': -1, 'mOwnerID': 4294967295, 'mEventType': 4294967295},
+    'dbuicontrols': {
+        'mBackgroundOpacity': 1.0, 'mTextBoxOpacity': 1.0, 'mScrollBarBgOpacity': 1.0, 'mID': -1,
+        'mControlType': 4294967295, 'mStringTableBegin': -1, 'mStringTableEnd': -1},
+    'dbuiforms': {
+        'mFormID': -1, 'mHelpTextTimeDelay': 1},
+    'dbunitset': {
+        'mID': -1, 'mFamilies': 4294967295, 'mUnitTypes': -1, 'mIncludedSet': -1, 'mExcludedSet': -1},
+}
+
+# dbworld: the constants by row (names from their readers, docs/DATA_FORMATS.md 3.12; the reader of each is noted).
+# Value letters: F mFloatValue, F2 mFloatValue2, L mLongValue, L2 mLongValue2: the values the game reads (the text
+# leaves the others empty). Rows not listed have no reader: the text leaves them out, the importer writes zeros.
+WORLD_ROWS = {
+    21: ('conversionsStatisticMax', 'L'),       # the "max" of the statistics' conversions n/max (EEUIFMGGStatistics)
+    22: ('gatherersPerResourceMax', 'L'),       # -> EEPlayer::mMiningLimit: gatherers on one resource (EEPlayer::Reset)
+    25: ('chatLogDisplayTime', 'L'),            # chat log entry lifetime, ms (x2 notices, x3 console; EEUserInterface)
+    26: ('unitLimitRange', 'L L2'),             # smallest / largest unit limit choice, step 50 (EEGameOptions, lobby)
+    27: ('unitLimitDefault', 'L'),              # EEGameOptions::SetDefaults mUnitLimit
+    34: ('wonderVictoryTime', 'L'),             # wonder victory countdown, s (EEVCWonder; EECPIntelligence's percentage)
+    35: ('areaConversionRadius', 'F'),          # extra conversions around a converted unit (wonder power 1; priests)
+    36: ('wonderPopulationBonus', 'F F2'),      # population limit fraction added / removed (EEWorld::ApplyShareBonus)
+    37: ('wonderHealAmount', 'L'),              # heal per interval of wonder power 6 (EEPlayer::UpdatePlayer)
+    42: ('gameSpeedDefault', 'F'),              # -> gGameStateGameSpeed (EEWorldTable::Load)
+    43: ('gameSpeedRange', 'F F2'),             # lowest / highest in-game speed (EEUIEMGChangeGameSpeed)
+    44: ('gameSpeedStep', 'F'),                 # speed change per key press (EEUIEMGChangeGameSpeed)
+    45: ('deleteRefundFactor', 'F'),            # cost share refunded for a deleted unfinished unit (EEMKillUnit)
+    46: ('conversionFaithCost', 'L'),           # faith a conversion costs (EEUCBasicPriest, EEGetConversionCost)
+    47: ('unitImprovementPointsMax', 'L'),      # cap on a unit type's improvement points (EEPlayer::CanImprove)
+    48: ('startingCitizensDefault', 'L'),       # -> mStartingCitizens / mMaxStartingCitizens (EEServer, EEPlayer)
+    49: ('groupSpeedCapFactor', 'F'),           # -> EEActiveGroup::mCapFactor: x the slowest unit's speed
+    50: ('wonderHitPointBonus', 'F'),           # hit points added by wonder power 2 (EEPlayer::AddWonderPower)
+    51: ('wonderHealEpochFactor', 'F'),         # heal growth per epoch step (EEPlayer::UpdatePlayer)
+    52: ('wonderHealEpochStep', 'L'),           # epochs per heal step (EEPlayer::UpdatePlayer)
+    53: ('highGroundHeight', 'F'),              # x tile height: counts as high ground (EEUnitClass::GetElevationFactor)
+    54: ('lowGroundHeight', 'F'),               # x tile height: counts as low ground (EEUnitClass::GetElevationFactor)
+    55: ('highGroundAttackFactor', 'F'),        # attack factor from high ground (+ the player's bonus)
+    56: ('lowGroundAttackFactor', 'F'),         # attack factor from low ground
+    **{57 + k: (f'improvementTime{n}', 'L L2') for k, n in enumerate(   # first level / later levels, ms
+        ['AreaEffect', 'Attack', 'ArrowArmor', 'GunArmor', 'LaserArmor', 'MissileArmor', 'PierceArmor',
+         'ShockArmor', 'FlightTimeOrPower', 'HitPoints', 'Leadership', 'Range', 'Repair', 'Kind13', 'Speed',
+         'Transport'])},                        # (EEPlayer::AdvanceImprovement: improvement kind + 57)
+    74: ('wonderSightRadius', 'F'),             # sight around a wonder with bonus 3 (EEComplexUnit::SightOn/SightOff)
+    75: ('refusalMessageInterval', 'L'),        # ms between repeated "cannot" messages (EEUIBUpgrade, status buttons)
+    76: ('civilizationBuilderPoints', 'L'),     # civilization builder points (EEGameState::Create, editors)
+    77: ('wondersForVictoryMax', 'L'),          # the wonders-for-victory choices 1..n (EEGameOptions, lobby)
+    78: ('tileStrayDistance', 'F'),             # LocationWayOffMap trigger distance; MoveToTileCentre offset (EEUnitAI)
+    79: ('trampleMinDistanceSquared', 'F'),     # -> gPhysicsModelsF: squared distance for a trample hit
+    80: ('unitEpochCostFactor', 'F'),           # unit cost growth per epoch past the node's (EETechTreeNode::GetCost)
+    81: ('gameSpeedSlowNormal', 'F F2'),        # speed of game speed option 0 / option 1 (EEGameState::Create)
+    82: ('gameSpeedFastFastest', 'F F2'),       # speed of option 2 / option 3 (EEGameState::Create)
+    83: ('acknowledgementDelay', 'L'),          # ms between acknowledgements (EEPlayer::PlayAcknowledgement)
+    84: ('aiSpecialAttackChance', 'F F2'),      # AI flaming arrows on buildings / AI fanaticism (EECPAttackSubGroup)
+    85: ('camouflageTiming', 'F L L2'),         # L idle ms before cloaking, L2 ms the cloak lasts, F detection x range
+    86: ('specialPowersCategoryCost', 'L'),     # the civ builder's special powers category (EECivilizationManager)
+    87: ('reloadTimeRandomRange', 'F F2'),      # min / max random factor on each reload time (EEComplexUnit)
+    88: ('fanaticism', 'F F2 L'),               # L duration ms, F hit point share lost, F2 damage factor (GoFanatic)
+    89: ('difficultyDamageScale', 'F F2'),      # the two scaled damage tables (EETerrainTypeTable::LoadDamageTables)
+    90: ('jitManufacturingCostFactor', 'F'),    # rally-point unit cost factor (EETechTreeNode::GetCost)
+    91: ('tradeRateStoneIron', 'F F2'),         # stone / iron base market rate (EEGetTradePrice)
+    92: ('tradeRateFoodWood', 'F F2'),          # food / wood base market rate (EEGetTradePrice)
+    93: ('jitManufacturingCostFactorDeathmatch', 'F'),  # the same with resources option 4 (EETechTreeNode::GetCost)
+    94: ('deathmatchJitManufacturingDelay', 'L'),       # s until the deathmatch JIT buttons open (EEPhysics::Tick)
+}
+WORLD_VALUES = {'F': 'mFloatValue', 'F2': 'mFloatValue2', 'L': 'mLongValue', 'L2': 'mLongValue2'}
+# Text-only row labels (checked: a label must match its row) and the fields each row's readers use.
+ROW_NAMES = {'dbworld': {k: n for k, (n, _) in WORLD_ROWS.items()}}
+ROW_FIELDS = {'dbworld': {k: [WORLD_VALUES[v] for v in u.split()] for k, (_, u) in WORLD_ROWS.items()}}

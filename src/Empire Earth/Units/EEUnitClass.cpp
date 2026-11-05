@@ -204,12 +204,12 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
     this->mUnitType = inRecord->mUnitType;
     this->mResourceType = inRecord->mResourceType;
     this->mFamily = inRecord->mFamily;
-    this->mL208 = inRecord->mL06C;
-    this->mL294 = inRecord->mL32C;
+    this->mL208 = inRecord->mUnusedUnitGroup;
+    this->mL294 = inRecord->mUnusedSelectionValue;
     this->mTechnology = inRecord->mTechnology;
     this->mButton = EEButtonObject::Get(inRecord->mButton);
     this->mModel = (EEModel*)EEMedia::Get(inRecord->mGraphic);
-    this->mCreationSound = EESoundObject::Get(inRecord->mL150);
+    this->mCreationSound = EESoundObject::Get(inRecord->mCreationSound);
     this->mAcknowledgeSounds[0] = EESoundObject::Get(inRecord->mAcknowledgeSound1);
     this->mAcknowledgeSounds[1] = EESoundObject::Get(inRecord->mAcknowledgeSound2);
     this->mSelectionSounds[0] = EESoundObject::Get(inRecord->mSelectionSound1);
@@ -273,21 +273,21 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
     this->mLoadRange = inRecord->mLoadRange;
     this->mUnloadRange = inRecord->mUnloadRange;
     memset(this->mTerrainTypes, 0, sizeof(this->mTerrainTypes));
-    this->mB315 = inRecord->mB3AC;
-    this->mTerrainTypes[0] = inRecord->mB2DC;
-    this->mTerrainTypes[kTerrainDeepWater] = inRecord->mB2DD;
-    this->mTerrainTypes[2] = inRecord->mB2DE;
-    this->mTerrainTypes[3] = inRecord->mB2DF;
-    this->mTerrainTypes[4] = inRecord->mB2E2;
-    this->mTerrainTypes[kTerrainSnow] = inRecord->mB2DC;
-    this->mTerrainTypes[6] = inRecord->mB2E4;
-    this->mTerrainTypes[7] = inRecord->mB2E5;
-    this->mTerrainTypes[8] = inRecord->mB2E6;
-    this->mTerrainTypes[kTerrainCliff] = inRecord->mB2E7;
-    this->mTerrainTypes[kTerrainShallowWater] = inRecord->mB2E8;
-    this->mTerrainTypes[11] = inRecord->mB2EA;
-    this->mTerrainTypes[kTerrainSpace] = inRecord->mB2EB;
-    this->mTerrainTypes[14] = inRecord->mB3AC;
+    this->mCanCrossForest = inRecord->mCanCrossForest;
+    this->mTerrainTypes[0] = inRecord->mCanMoveOnLand;
+    this->mTerrainTypes[kTerrainDeepWater] = inRecord->mCanMoveOnDeepWater;
+    this->mTerrainTypes[2] = inRecord->mCanMoveOnRock;
+    this->mTerrainTypes[3] = inRecord->mCanMoveOnTerrainType3;
+    this->mTerrainTypes[4] = inRecord->mCanMoveOnMud;
+    this->mTerrainTypes[kTerrainSnow] = inRecord->mCanMoveOnLand;
+    this->mTerrainTypes[6] = inRecord->mCanMoveOnRoughGrass;
+    this->mTerrainTypes[7] = inRecord->mCanMoveOnTerrainType7;
+    this->mTerrainTypes[8] = inRecord->mCanMoveOnPavement;
+    this->mTerrainTypes[kTerrainCliff] = inRecord->mCanMoveOnCliffs;
+    this->mTerrainTypes[kTerrainShallowWater] = inRecord->mCanMoveOnShallowWater;
+    this->mTerrainTypes[11] = inRecord->mCanMoveOnSand;
+    this->mTerrainTypes[kTerrainSpace] = inRecord->mCanMoveInSpace;
+    this->mTerrainTypes[14] = inRecord->mCanCrossForest;
     this->mIsDecoration = inRecord->mIsDecoration;
     this->mFiresBroadside = inRecord->mFiresBroadside;
     this->mCanFireOverWalls = inRecord->mCanFireOverWalls;
@@ -296,10 +296,10 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
     this->mCanDisband = inRecord->mCanDisband;
     this->mIsScenarioSelectable = inRecord->mIsScenarioSelectable;
     this->mIsEnabled = inRecord->mIsEnabled;
-    this->mB2F6 = inRecord->mB1A0;
+    this->mFacesCamera = inRecord->mFacesCamera;
     this->mFiresWhileMoving = inRecord->mFiresWhileMoving;
     this->mCanFly = inRecord->mCanFly;
-    this->mB2FA = inRecord->mB319;
+    this->mB2FA = inRecord->mUnusedFlag6;
     this->mBuildsOnElevation = inRecord->mBuildsOnElevation;
     this->mTransportCapacity = inRecord->mTransportCapacity;
     this->mWeight = inRecord->mTransportSize;
@@ -315,7 +315,7 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
     this->mUpgradesRepair = inRecord->mCanUpgradeRepair;
     this->mUpgradesShockArmor = inRecord->mCanUpgradeShockArmor;
     this->mAIScriptName.Copy(inRecord->mAIScriptName, 0, strlen(inRecord->mAIScriptName), 0, true);
-    this->mF19C = inRecord->mF368;
+    this->mF19C = inRecord->mUnusedDefaultedValue;
     if (this->mF19C == 0.0f)
         this->mF19C = -20.0f;
     this->mMaxRoll = inRecord->mMaxRoll;
@@ -329,7 +329,7 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
     this->mCanEnterSpaceTransports = this->mCanEnterSeaTransports = inRecord->mCanEnterSeaTransports;
     this->mCanEnterFortresses = inRecord->mCanEnterFortresses;
     this->mSelectionSize = inRecord->mSelectionSize;
-    this->mL170 = inRecord->mL1FC;
+    this->mL170 = inRecord->mUnusedShadowOffset;
     this->mShadowScale = inRecord->mShadowScale;
     this->mOuterCollisionSphere = inRecord->mOuterCollisionSphere;
     this->mInnerCollisionSphere = inRecord->mInnerCollisionSphere;
@@ -338,8 +338,8 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
     this->mUsesAmmunition = inRecord->mUsesAmmunition;
     this->mIsAffectedByGravity = inRecord->mIsAffectedByGravity;
     this->mShootsHigh = inRecord->mShootsHigh;
-    this->mL284 = inRecord->mL21C;
-    this->mL180 = inRecord->mL220;
+    this->mL284 = inRecord->mUnusedReference;
+    this->mL180 = inRecord->mUnusedValue;
     this->mMissileDelayTime = (long)(inRecord->mMissileDelayTime * 1000.0f);
     this->mLaunchPitch = inRecord->mLaunchPitch * 0.017453292f;  // NEAR: the original multiplies by DAT_446094 (a named const)
     this->mCanSetRallyPoint = inRecord->mCanSetRallyPoint;
@@ -347,19 +347,19 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
     this->mCounterKind1 = inRecord->mCounterKind1;
     this->mCounterKind2 = inRecord->mCounterKind2;
     this->mCounterKind3 = inRecord->mCounterKind3;
-    this->mB305 = inRecord->mB209;
+    this->mB305 = inRecord->mUnusedGroundFlag;
     this->mIsGaiaPlaceable = inRecord->mIsGaiaPlaceable;
     this->mConvertsBuildings = false;
     this->mConvertsPriests = false;
     this->mName.Copy(inRecord->mName, 0, strlen(inRecord->mName), 0, true);
     this->mConversionResistance = inRecord->mConversionResistance;
     this->mConversionRate = (float)inRecord->mConversionRate * 0.01f;
-    this->mF18C = inRecord->mF354;
+    this->mSlopeSpeedPenalty = inRecord->mSlopeSpeedPenalty;
     this->mBobHeight = inRecord->mBobHeight;
     this->mBobPitch = inRecord->mBobPitch * 0.017453292f;
     this->mIsCloakable = inRecord->mIsCloakable;
     this->mCloakRadius = inRecord->mCloakRadius;
-    this->mB30C = inRecord->mB37E;
+    this->mIsExpansionUnit = inRecord->mIsExpansionUnit;
     this->mCanEnterCarriers = inRecord->mCanEnterCarriers;
     this->mCanEnterAirports = inRecord->mCanEnterAirports;
     if (this->mUnitType == kUnitTypeCatalina)
@@ -525,67 +525,67 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
         this->mKindFlags |= kUnitKindCanEnterFortresses;
     if (this->mCanEnterSpaceTransports)
         this->mKindFlags |= kUnitKindCanEnterSpaceTransports;
-    this->mDeathEffect = EEGraphicEffect::Get(inRecord->mL24C);
+    this->mDeathEffect = EEGraphicEffect::Get(inRecord->mDeathEffect);
     if (this->mDeathEffect != NULL)
         this->mDeathEffect->Reference();
-    this->mDamageEffect = EEGraphicEffect::Get(inRecord->mL250);
+    this->mDamageEffect = EEGraphicEffect::Get(inRecord->mDamageEffect);
     if (this->mDamageEffect != NULL)
         this->mDamageEffect->Reference();
-    this->mHealEffect = EEGraphicEffect::Get(inRecord->mL264);
+    this->mHealEffect = EEGraphicEffect::Get(inRecord->mHealEffect);
     if (this->mHealEffect != NULL)
         this->mHealEffect->Reference();
-    this->mFireTrailEffect = EEGraphicEffect::Get(inRecord->mL268);
+    this->mFireTrailEffect = EEGraphicEffect::Get(inRecord->mUnusedFireTrailEffect);
     if (this->mFireTrailEffect != NULL)
         this->mFireTrailEffect->Reference();
-    this->mTrailEffect = EEGraphicEffect::Get(inRecord->mL258);
+    this->mTrailEffect = EEGraphicEffect::Get(inRecord->mTrailEffect);
     if (this->mTrailEffect != NULL)
         this->mTrailEffect->Reference();
-    this->mMuzzleFlashEffect = EEGraphicEffect::Get(inRecord->mL254);
+    this->mMuzzleFlashEffect = EEGraphicEffect::Get(inRecord->mMuzzleFlashEffect);
     if (this->mMuzzleFlashEffect != NULL)
         this->mMuzzleFlashEffect->Reference();
-    this->mRippleEffect = EEGraphicEffect::Get(inRecord->mL25C);
+    this->mRippleEffect = EEGraphicEffect::Get(inRecord->mRippleEffect);
     if (this->mRippleEffect != NULL)
         this->mRippleEffect->Reference();
-    this->mSplashEffect = EEGraphicEffect::Get(inRecord->mL260);
+    this->mSplashEffect = EEGraphicEffect::Get(inRecord->mSplashEffect);
     if (this->mSplashEffect != NULL)
         this->mSplashEffect->Reference();
-    this->mImpactSparksEffect = EEGraphicEffect::Get(inRecord->mL26C);
+    this->mImpactSparksEffect = EEGraphicEffect::Get(inRecord->mImpactSparksEffect);
     if (this->mImpactSparksEffect != NULL)
         this->mImpactSparksEffect->Reference();
-    this->mImpactBloodEffect = EEGraphicEffect::Get(inRecord->mL270);
+    this->mImpactBloodEffect = EEGraphicEffect::Get(inRecord->mImpactBloodEffect);
     if (this->mImpactBloodEffect != NULL)
         this->mImpactBloodEffect->Reference();
-    this->mAttachedEffect = EEGraphicEffect::Get(inRecord->mL274);
+    this->mAttachedEffect = EEGraphicEffect::Get(inRecord->mAttachedEffect);
     if (this->mAttachedEffect != NULL)
         this->mAttachedEffect->Reference();
-    this->mEffect090 = EEGraphicEffect::Get(inRecord->mL278);
+    this->mEffect090 = EEGraphicEffect::Get(inRecord->mUnusedEffect1);
     if (this->mEffect090 != NULL)
         this->mEffect090->Reference();
     this->mCreationEffect = EEGraphicEffect::Get(inRecord->mCreationEffect);
     if (this->mCreationEffect != NULL)
         this->mCreationEffect->Reference();
-    this->mEffect098 = EEGraphicEffect::Get(inRecord->mL280);
+    this->mEffect098 = EEGraphicEffect::Get(inRecord->mUnusedEffect2);
     if (this->mEffect098 != NULL)
         this->mEffect098->Reference();
-    this->mEffect09C = EEGraphicEffect::Get(inRecord->mL284);
+    this->mEffect09C = EEGraphicEffect::Get(inRecord->mUnusedEffect3);
     if (this->mEffect09C != NULL)
         this->mEffect09C->Reference();
-    this->mEffect0A0 = EEGraphicEffect::Get(inRecord->mL288);
+    this->mEffect0A0 = EEGraphicEffect::Get(inRecord->mUnusedEffect4);
     if (this->mEffect0A0 != NULL)
         this->mEffect0A0->Reference();
-    this->mEffect0A4 = EEGraphicEffect::Get(inRecord->mL28C);
+    this->mEffect0A4 = EEGraphicEffect::Get(inRecord->mUnusedEffect5);
     if (this->mEffect0A4 != NULL)
         this->mEffect0A4->Reference();
-    this->mEffect0A8 = EEGraphicEffect::Get(inRecord->mL290);
+    this->mEffect0A8 = EEGraphicEffect::Get(inRecord->mUnusedEffect6);
     if (this->mEffect0A8 != NULL)
         this->mEffect0A8->Reference();
-    this->mSpecialAttackEffect = EEGraphicEffect::Get(inRecord->mL294);
+    this->mSpecialAttackEffect = EEGraphicEffect::Get(inRecord->mSpecialAttackEffect);
     if (this->mSpecialAttackEffect != NULL)
         this->mSpecialAttackEffect->Reference();
-    this->mEffect0B0 = EEGraphicEffect::Get(inRecord->mL298);
+    this->mEffect0B0 = EEGraphicEffect::Get(inRecord->mUnusedEffect7);
     if (this->mEffect0B0 != NULL)
         this->mEffect0B0->Reference();
-    this->mShotEffect = EEGraphicEffect::Get(inRecord->mL29C);
+    this->mShotEffect = EEGraphicEffect::Get(inRecord->mShotEffect);
     if (this->mShotEffect != NULL)
         this->mShotEffect->Reference();
     this->mLeprosyEffect = EEGraphicEffect::Get(inRecord->mLeprosyEffect);
@@ -594,22 +594,22 @@ EEUnitClass::EEUnitClass(long inIsComplex, EEUnitClassRecord* inRecord, EEPhysic
     this->mPlagueEffect = EEGraphicEffect::Get(inRecord->mPlagueEffect);
     if (this->mPlagueEffect != NULL)
         this->mPlagueEffect->Reference();
-    this->mPulseCannonEffect = EEGraphicEffect::Get(inRecord->mL2AC);
+    this->mPulseCannonEffect = EEGraphicEffect::Get(inRecord->mPulseCannonEffect);
     if (this->mPulseCannonEffect != NULL)
         this->mPulseCannonEffect->Reference();
     this->mMoraleEffect = EEGraphicEffect::Get(inRecord->mMoraleEffect);
     if (this->mMoraleEffect != NULL)
         this->mMoraleEffect->Reference();
-    this->mBattleCryEffect = EEGraphicEffect::Get(inRecord->mL2B0);
+    this->mBattleCryEffect = EEGraphicEffect::Get(inRecord->mBattleCryEffect);
     if (this->mBattleCryEffect != NULL)
         this->mBattleCryEffect->Reference();
-    this->mShellHoleEffect = EEGraphicEffect::Get(inRecord->mL2B4);
+    this->mShellHoleEffect = EEGraphicEffect::Get(inRecord->mShellHoleEffect);
     if (this->mShellHoleEffect != NULL)
         this->mShellHoleEffect->Reference();
-    this->mEffect0D0 = EEGraphicEffect::Get(inRecord->mL2B8);
+    this->mEffect0D0 = EEGraphicEffect::Get(inRecord->mUnusedEffect8);
     if (this->mEffect0D0 != NULL)
         this->mEffect0D0->Reference();
-    this->mBloodStainEffect = EEGraphicEffect::Get(inRecord->mL2BC);
+    this->mBloodStainEffect = EEGraphicEffect::Get(inRecord->mBloodStainEffect);
     if (this->mBloodStainEffect != NULL)
         this->mBloodStainEffect->Reference();
     this->mFriendlyDamageFactor = inRecord->mFriendlyDamageFactor;
@@ -1202,7 +1202,7 @@ void EEUnitClass::GetTerrainFlags(EEComplexUnit* inUnit, EECPASGFlags& outFlags)
         }
         if (inUnit != NULL)
             outFlags.mFlags[kAITileForest] = (inUnit->mStats->mTerrainMask >> 14) & 1;
-        else if (this->mB315)
+        else if (this->mCanCrossForest)
             outFlags.mFlags[kAITileForest] = true;
         if (theSet->Contains(this->mUnitType))
             outFlags.mFlags[kAITileGate] = true;
@@ -3088,8 +3088,8 @@ void EEUnitClass::CreateUnitClasses()
             theClass->mPackedClass = gUnitClassTable[theRecord->mPackedType];
             theClass->mPackedClass->Reference();
         }
-        if (theRecord->mL480 > 0) {
-            theClass->mRemainsClass = gUnitClassTable[theRecord->mL480];
+        if (theRecord->mRemainsType > 0) {
+            theClass->mRemainsClass = gUnitClassTable[theRecord->mRemainsType];
             theClass->mRemainsClass->Reference();
         }
         theClass->mIsWall = gUnitSetManager.Contains(theClass->mUnitType, 9);

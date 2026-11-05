@@ -6,17 +6,28 @@ loader and the Python converter read one layout description.
 import pathlib
 import sys
 
+import binfmt
 import scalars
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 OUT = ROOT / 'src' / 'Empire Earth' / 'Database' / 'EEDataTextSpecs.h'
-TYPES = ['s8', 'u8', 'bool', 's16', 'u16', 's32', 'u32', 'f32', 'pair_f32', 'str', 'raw', 'pad']
-CONTAINERS = ['count', 'lead', 'fixed', 'events', 'techtree', 'header']
+TYPES = ['s8', 'u8', 'bool', 's16', 'u16', 's32', 'u32', 'f32', 'pair_f32', 'str']
+CONTAINERS = ['count', 'lead', 'fixed', 'events', 'techtree']
 
 
 def _c(s):
     return '"' + s.replace('\\', '\\\\').replace('"', '\\"') + '"'
+
+
+def _bytes(b, indent):
+    """A byte string as C string literals, 32 bytes a line (the literal's own NUL is not part of it)."""
+    return ('\n' + indent).join('"' + ''.join(f'\\x{x:02x}' for x in b[i:i + 32]) + '"' for i in range(0, len(b), 32))
+
+
+def _record(b):
+    """A record's bytes for the header: 0 when they are all zero."""
+    return _bytes(b, '     ') if any(b) else '0'
 
 
 def generate(spec):
@@ -32,7 +43,8 @@ def generate(spec):
     o.append('enum EEDTContainer { ' + ', '.join(f'kEEDTC_{c}' for c in CONTAINERS) + ' };')
     o.append('')
     o.append('struct EEDTField { const char* mName; unsigned short mOffset; unsigned short mCount; unsigned char mType; };')
-    o.append('struct EEDTStruct { const char* mName; unsigned long mSize; const EEDTField* mFields; unsigned long mFieldCount; };')
+    o.append('struct EEDTStruct { const char* mName; unsigned long mSize; const EEDTField* mFields; unsigned long mFieldCount;')
+    o.append('                   const char* mBase; };   // the record every row starts from (zero + defaults; 0: all zero)')
     o.append('struct EEDTRowName { long mRow; const char* mName; };')
     o.append('struct EEDTTable {')
     o.append('    const char* mName;            // file stem (db\\<name>.dat)')
@@ -45,6 +57,7 @@ def generate(spec):
     o.append('    bool mListSigned;')
     o.append('    const EEDTRowName* mRowNames; // text-only checked row labels')
     o.append('    unsigned long mRowNameCount;')
+    o.append('    const char* mHole;            // the record of an unlisted row (an empty database row; 0: all zero)')
     o.append('};')
     o.append('')
     o.append('// record sizes (EEDataTextFile.cpp static_asserts them against the structs the loaders read)')
@@ -57,7 +70,7 @@ def generate(spec):
     for sname, s in spec['structs'].items():
         sym = 'kEEDTFields_' + sname
         o.append(f'static const EEDTField {sym}[] = {{')
-        for f in s['fields']:
+        for f in binfmt.exported(s['fields']):
             o.append(f'    {{{_c(f["name"])}, 0x{f["off"]:03x}, {f["count"]}, kEEDT_{f["type"]}}},')
         o.append('};')
         sidx[sname] = len(sidx)
@@ -65,7 +78,8 @@ def generate(spec):
     o.append('static const EEDTStruct kEEDTStructs[] = {')
     for sname, s in spec['structs'].items():
         o.append(f'    {{{_c(sname)}, {s["size"]}, kEEDTFields_{sname}, '
-                 f'sizeof(kEEDTFields_{sname}) / sizeof(EEDTField)}},')
+                 f'sizeof(kEEDTFields_{sname}) / sizeof(EEDTField),')
+        o.append('     ' + _record(binfmt.base_record(s)) + '},')
     o.append('};')
     o.append('')
     for name, t in spec['tables'].items():
@@ -85,7 +99,8 @@ def generate(spec):
         rn = spec.get('row_names', {}).get(name)
         rows = f'kEEDTRows_{name}, {len(rn)}' if rn else '0, 0'
         o.append(f'    {{{_c(name)}, kEEDTC_{t["container"]}, {"true" if t["format"] == "yaml" else "false"}, '
-                 f'&kEEDTStructs[{sidx[t["struct"]]}], {lead}, {lst}, {rows}}},')
+                 f'&kEEDTStructs[{sidx[t["struct"]]}], {lead}, {lst}, {rows},')
+        o.append('     ' + _record(binfmt.hole_record(t, spec['structs'][t['struct']])) + '},')
     o.append('};')
     o.append('static const unsigned long kEEDTTableCount = sizeof(kEEDTTables) / sizeof(EEDTTable);')
     o.append('')

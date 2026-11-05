@@ -1,9 +1,9 @@
 """The binary side: the containers of the db files, record field decoding/encoding and hole detection.
 
-A table in memory: Table(name, rows, hole, header, epochs). A row is Row(rec, lead, lst): the record bytes, the
-leading strings (bytes; dbsounds/dbterrain/dbgraphics/dbterraingraytextures) and the trailing list (ints;
-dbevents/dbtechtree). None in a row list is a hole: a row equal to the table's hole template (record = hole bytes,
-no lead text, empty list). dbtechtree keeps its rows in epochs: [Epoch(record row, slots: [Row|None])].
+A table in memory: Table(name, rows, epochs). A row is Row(rec, lead, lst): the record bytes, the leading strings
+(bytes; dbsounds/dbterrain/dbgraphics) and the trailing list (ints; dbevents/dbtechtree). None in a row list is a
+hole: an empty database row, written as the table's hole record (hole_record: the struct's defaults plus the table's
+hole values, no lead text, empty list). dbtechtree keeps its rows in epochs: [Epoch(record row, slots: [Row|None])].
 """
 import collections
 import struct
@@ -37,8 +37,6 @@ class Epoch:
 class Table:
     name: str
     rows: list = None          # [Row | None] (all containers but techtree)
-    hole: bytes = None         # the hole template (record bytes), or None when the table has no holes
-    header: int = None         # dbrandommap's first word
     epochs: list = None        # [Epoch] (techtree)
 
 
@@ -89,9 +87,6 @@ def parse(name, data, spec):
     signed = tspec.get('list', ('', 's32'))[1] == 's32'
     if kind == 'count':
         t.rows = [Row(r.take(size)) for _ in range(r.u32())]
-    elif kind == 'header':
-        t.header = r.u32()
-        t.rows = [Row(r.take(size)) for _ in range(r.u32())]
     elif kind == 'lead':
         k = lead_count(tspec)
         t.rows = []
@@ -129,39 +124,89 @@ def _all_row_lists(t):
     return [e.nodes for e in t.epochs] if t.epochs is not None else [t.rows]
 
 
-def detect_holes(t, spec):
-    """Replace the rows equal to the hole template by None. The template is the most frequent record among the
-    rows with no lead text and an empty list, if it occurs at least twice and holds some 0xCC fill (the converter's
-    uninitialised struct, DATA_FORMATS.md 2.4) or makes up a tenth of the rows. Lossless whatever it picks."""
+def exported(fields):
+    return [f for f in fields if f['cls'] in ('named', 'label')]
+
+
+def _put_raw_int(f, buf, v):
+    n = SIZES[f['type']] * f['count']
+    buf[f['off']:f['off'] + n] = (v & ((1 << (8 * n)) - 1)).to_bytes(n, 'little')
+
+
+def base_record(st):
+    """The record the importer starts every row from: zero, plus the struct's defaults for unread fields."""
+    buf = bytearray(st['size'])
+    for f in st['fields']:
+        if f['name'] in st['defaults']:
+            v = st['defaults'][f['name']]
+            if f['type'] == 'raw':
+                _put_raw_int(f, buf, v)
+            else:
+                put_field(f, buf, v if f['count'] == 1 or isinstance(v, list) else [v] * f['count'])
+    return bytes(buf)
+
+
+def hole_record(tspec, st):
+    """An empty database row: the base record plus the table's hole values (a scalar for an array fills it)."""
+    buf = bytearray(base_record(st))
+    for f in st['fields']:
+        if f['name'] in tspec['hole']:
+            v = tspec['hole'][f['name']]
+            if f['type'] == 'str':
+                v = (scalars.encode_str(v), b'')
+            elif f['count'] > 1 and not isinstance(v, list):
+                v = [v] * f['count']
+            put_field(f, buf, v)
+    return bytes(buf)
+
+
+def project(fields, r):
+    """What the game can see of a row: the exported fields' values (strings up to the NUL), lead strings, list."""
+    out = []
+    for f in exported(fields):
+        v = field_value(f, r.rec)
+        out.append(v[0] if f['type'] == 'str' else v)
+    return out, list(r.lead), list(r.lst)
+
+
+def retail_template(t):
+    """The retail files' hole template: the most frequent record among the rows with no lead text and an empty
+    list, if it occurs at least twice and holds some 0xCC fill (the converter's uninitialised struct,
+    DATA_FORMATS.md 2.4) or makes up a tenth of the rows. None when the table has no holes."""
     cnt = collections.Counter(r.rec for rows in _all_row_lists(t) for r in rows
-                              if not any(r.lead) and not r.lst)
+                              if r is not None and not any(r.lead) and not r.lst)
     total = sum(len(rows) for rows in _all_row_lists(t))
-    t.hole = None
     for rec, n in cnt.most_common(1):
         if n >= 2 and (rec.count(0xCC) >= 4 or n * 10 >= total):
-            t.hole = rec
-    if t.hole is None:
-        return t
+            return rec
+    return None
+
+
+def detect_holes(t, spec):
+    """Replace the hole rows by None: rows equal to the retail template, or rows the game sees exactly as the
+    table's hole record."""
+    tspec = spec['tables'][t.name]
+    st = spec['structs'][tspec['struct']]
+    tmpl = retail_template(t)
+    empty = project(st['fields'], Row(hole_record(tspec, st), [b''] * lead_count(tspec), []))
     for rows in _all_row_lists(t):
         for i, r in enumerate(rows):
-            if r is not None and r.rec == t.hole and not any(r.lead) and not r.lst:
+            if r is None or any(r.lead) or r.lst:
+                continue
+            if r.rec == tmpl or project(st['fields'], r) == empty:
                 rows[i] = None
     return t
-
-
-def _hole_row(t, tspec):
-    if t.hole is None:
-        raise FormatError(f'{t.name}: a hole row but no hole template')
-    return Row(t.hole, [b''] * lead_count(tspec), [])
 
 
 def serialize(t, spec):
     """Table -> the db file bytes."""
     tspec = spec['tables'][t.name]
-    size = spec['structs'][tspec['struct']]['size']
+    st = spec['structs'][tspec['struct']]
+    size = st['size']
     kind = tspec['container']
     signed = tspec.get('list', ('', 's32'))[1] == 's32'
     out = bytearray()
+    hole = Row(hole_record(tspec, st), [b''] * lead_count(tspec), [])
 
     def rec(r):
         if len(r.rec) != size:
@@ -178,15 +223,13 @@ def serialize(t, spec):
             rec(e.epoch)
             lst(e.epoch)
             for r in e.nodes:
-                r = r or _hole_row(t, tspec)
+                r = r or hole
                 rec(r)
                 lst(r)
         return bytes(out)
-    rows = [r or _hole_row(t, tspec) for r in t.rows]
+    rows = [r or hole for r in t.rows]
     if kind in ('count', 'lead'):
         out.extend(struct.pack('<I', len(rows)))
-    elif kind == 'header':
-        out.extend(struct.pack('<II', t.header, len(rows)))
     k = lead_count(tspec)
     for r in rows:
         if kind == 'lead':
@@ -251,26 +294,3 @@ def put_field(f, buf, v):
             if not lo <= x <= hi:
                 raise FormatError(f'{f["name"]}: {x} out of range for {t}')
         struct.pack_into('<%d%s' % (n, INT_FMT[t]), buf, o, *vals)
-
-
-def clean_record(fields, b):
-    """The record with its junk zeroed: bytes after a string's NUL and alignment padding (field values kept)."""
-    buf = bytearray(b)
-    for f in fields:
-        if f['type'] == 'pad':
-            buf[f['off']:f['off'] + f['count']] = bytes(f['count'])
-        elif f['type'] == 'str':
-            text, tail = field_value(f, b)
-            put_field(f, buf, (text, bytes(len(tail))))
-    return bytes(buf)
-
-
-def clean_table(t, spec):
-    fields = spec['structs'][spec['tables'][t.name]['struct']]['fields']
-    t.hole = clean_record(fields, t.hole) if t.hole is not None else None
-    lists = [[e.epoch for e in t.epochs]] + [e.nodes for e in t.epochs] if t.epochs is not None else [t.rows]
-    for rows in lists:
-        for i, r in enumerate(rows):
-            if r is not None:
-                rows[i] = Row(clean_record(fields, r.rec), r.lead, r.lst)
-    return t

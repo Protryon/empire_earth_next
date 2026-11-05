@@ -73,8 +73,8 @@ struct EECliffTerrainRecord {
     long mIndex;                            // +0x68 (negative: no entry)
     long mFirstTerrain;                     // +0x6c -> +0x14
     long mLastTerrain;                      // +0x70 -> +0x18
-    long mL74;                              // +0x74 -> +0x1c
-    bool mB78;                              // +0x78 -> +0x20
+    long mUnusedValue;                      // +0x74 -> +0x1c
+    bool mUnusedFlag;                       // +0x78 -> +0x20
 };
 static_assert(sizeof(EECliffTerrainRecord) == 124, "on-disk record: 124 bytes on every target");
 
@@ -393,8 +393,8 @@ long EECliffTerrainTable::Load(FSFileSpec* inFile)
                 theCliff->mName = theRecord.mName;
                 theCliff->mFirstTerrain = theRecord.mFirstTerrain;
                 theCliff->mLastTerrain = theRecord.mLastTerrain;
-                theCliff->mB20 = theRecord.mB78;
-                theCliff->mL1C = theRecord.mL74;
+                theCliff->mB20 = theRecord.mUnusedFlag;
+                theCliff->mL1C = theRecord.mUnusedValue;
                 if (!theFound) {
                     gFirstCliffTerrain = i;
                     theFound = true;

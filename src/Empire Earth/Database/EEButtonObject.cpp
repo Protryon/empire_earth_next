@@ -36,7 +36,7 @@ extern unsigned long gTexturePixelDepth;
 
 // One record of db\dbButtons.dat (0xe0 bytes, read whole). Inferred layout.
 struct EEButtonRecord {
-    char _gap00[0x64];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
     char mFileName[0x68];                   // +0x64 -> mName
     long mID;                               // +0xcc -> +0x30
     long mRow;                              // +0xd0 -> +0x2c

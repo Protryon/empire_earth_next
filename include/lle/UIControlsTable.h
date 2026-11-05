@@ -84,7 +84,7 @@ public:
     bool GetPressedHasAlpha() const { return this->mPressedHasAlpha; }
     bool GetNormalHasAlpha() const { return this->mNormalHasAlpha; }
     bool GetAlwaysDirty() const { return this->mAlwaysDirty; }
-    bool GetBoolPlaceholder4() const { return this->mBoolPlaceholder4; }
+    bool GetLoopMovie() const { return this->mLoopMovie; }
     void RelayoutControl(UIControl* inControl, UIManager* inManager);
     void SetupFont(UIManager* inManager, const GERectangle& inRectangle, bool inScaleToWindow);
     void SetupGEText(GEText* inText) const;
@@ -160,9 +160,9 @@ private:
     bool mPressedHasAlpha;                  // +0x151
     bool mNormalHasAlpha;                   // +0x152
     bool mAlwaysDirty;                      // +0x153
-    bool mBoolPlaceholder2;                 // +0x154 provisional name (UITextLabel::SetFitRectToText)
-    bool mBoolPlaceholder3;                 // +0x155 provisional name (scaled fonts; check boxes/radio buttons)
-    bool mBoolPlaceholder4;                 // +0x156 (UIMovie: loop)
+    bool mFitRectToText;                 // +0x154 provisional name (UITextLabel::SetFitRectToText)
+    bool mScaleToControl;                 // +0x155 provisional name (scaled fonts; check boxes/radio buttons)
+    bool mLoopMovie;                 // +0x156 (UIMovie: loop)
 #ifdef LOWLEVELENGINE_EXPORTS
     // Inferred guard (see LowLevelEngine.h: a static data member costs every includer a $E number)
     static std::vector<UIControlsTable*> sUIControlsArray;   // 0x1012e3c0

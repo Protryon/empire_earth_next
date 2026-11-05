@@ -1390,7 +1390,7 @@ UIControl* EEUIManager::CreateUserDefinedControl(UIControlsTable& inTable)
     case kDbControlMainGameStatusBar:
         theControl = new EEUIFMGStatusBar(inTable.GetFormID(), inTable.GetFormIndex(),
                                     (UILayoutUtility*)&inTable.GetLayout(), 800, 600, theRectangle, theForm,
-                                    false, true, inTable.GetBoolPlaceholder4());
+                                    false, true, inTable.GetLoopMovie());
         break;
     case kDbControlSelectUnits:
         theControl = new EEUICSelectUnits(theForm, inTable.GetID(), inTable.GetFormIndex(),

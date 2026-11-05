@@ -1417,7 +1417,7 @@ public:
     float GetConversionRate() const { return this->mConversionRate; }
     float mConversionResistance;            // +0x184 the ctor stores it (a float: EEUnitClassUpgrade::Init 0x63ba8f fld's it)
     float mConversionRate;                  // +0x188 the ctor stores it
-    float mF18C;                            // +0x18c the ctor stores it (a float: EEPhysicsModel::SpeedMode 0x554cb2 reads it)
+    float mSlopeSpeedPenalty;                            // +0x18c the ctor stores it (a float: EEPhysicsModel::SpeedMode 0x554cb2 reads it)
     float mBobHeight;                       // +0x190 the ctor stores it (the helicopter's bob height: EEPMHelicopter 0x158ce3)
     float GetBobHeight() const { return this->mBobHeight; }  // inline (EEPMHelicopter::ApplyBob 0x558ce3 loads it as a value: fld; fmul st(2)) (provisional name)
     float mBobPitch;                        // +0x194 the ctor stores it
@@ -1514,7 +1514,7 @@ public:
     bool mCanFireOverWalls;                 // +0x2f3 the ctor stores it
     bool mIsScenarioSelectable;             // +0x2f4 the ctor stores it
     bool mIsEnabled;                        // +0x2f5 the ctor stores it
-    bool mB2F6;                             // +0x2f6 the ctor stores it
+    bool mFacesCamera;                             // +0x2f6 the ctor stores it
     bool mIsDecoration;                     // +0x2f7 the ctor stores it
     bool mFiresWhileMoving;                 // +0x2f8 the ctor stores it
     bool mCanFly;                           // +0x2f9 the ctor stores it
@@ -1536,7 +1536,7 @@ public:
     bool mIsPlayerPlaceable;                // +0x309 the ctor stores it
     bool mIsVital;                          // +0x30a the ctor stores it
     bool mIsCloakable;                      // +0x30b the ctor stores it
-    bool mB30C;                             // +0x30c the ctor stores it
+    bool mIsExpansionUnit;                             // +0x30c the ctor stores it
     bool mCanEnterAirports;                 // +0x30d the ctor stores it
     bool mCanEnterCarriers;                 // +0x30e the ctor stores it
     bool mCanEnterNavyYards;                // +0x30f the ctor stores it
@@ -1545,7 +1545,7 @@ public:
     bool mIsInactive;                       // +0x312 the ctor stores it
     bool mIsAttackUnit;                     // +0x313 the ctor stores it
     bool mIsDefenseUnit;                    // +0x314 the ctor stores it
-    bool mB315;                             // +0x315 the ctor stores it
+    bool mCanCrossForest;                             // +0x315 the ctor stores it
     bool mIsObstacle;                       // +0x316 the ctor stores it
     bool mIsTree;                           // +0x317 the ctor stores it
     bool mIsMelee;                          // +0x318 the ctor stores it

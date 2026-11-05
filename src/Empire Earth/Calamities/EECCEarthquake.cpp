@@ -204,8 +204,8 @@ void EECCEarthquake::Initialize(EECalamityData* inData)
     this->mRadius = this->mGraphicEffect1->GetSize();
     this->mMinimumFactor = inData->mFloatParam1;
     this->mVolume = inData->mFloatParam2;
-    this->mQuakeMinimumFactor = inData->mFloatParam3;
-    this->mQuakeVolume = inData->mFloatParam4;
+    this->mQuakeMinimumFactor = inData->mQuakeMinimumStrength;
+    this->mQuakeVolume = inData->mQuakeStrength;
     this->mSourceSpeed = this->mGraphicEffect2->mDuration * 0.01f;
     this->mFalloff = 1.0f / inData->mIntParam1;
     this->mDamage = inData->mIntParam2;

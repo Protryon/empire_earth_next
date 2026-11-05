@@ -13,7 +13,7 @@
 
 // One record of db\dbupgrade.dat (0xf0 bytes, read whole). Inferred layout.
 struct EEUCUpgradeRecord {
-    char _gap00[0x64];
+    char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
     float mAttackStep;                      // +0x64
     float mHitPointsStep;                   // +0x68
     float mSpeedStep;                       // +0x6c
@@ -44,10 +44,10 @@ struct EEUCUpgradeRecord {
     float mAreaEffectCost;                  // +0xd0
     float mTransportCost;                   // +0xd4
     long mMaxLevel;                         // +0xd8
-    long mLDC;                              // +0xdc
+    long mUnused1;                          // +0xdc
     long mIndex;                            // +0xe0 (negative: no entry)
-    long mLE4;                              // +0xe4
-    long mLE8;                              // +0xe8
+    long mUnused2;                          // +0xe4
+    long mUnused3;                          // +0xe8
     bool mHasRepairStep;                    // +0xec
 };
 static_assert(sizeof(EEUCUpgradeRecord) == 240, "on-disk record: 240 bytes on every target");

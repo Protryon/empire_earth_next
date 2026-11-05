@@ -31,9 +31,9 @@ class UITextLabel;
 // The form record of the UI database (0x10c bytes; UIForm::Create 0x100716c0 reads it). Exported parameter type
 // (??0UIForm@@QAE@PAVUIManager@@ABUUIDbDataForms@@_N@Z); field names are provisional, offsets proven by that ctor.
 struct UIDbDataForms {
-    char mName[0x64];                       // +0x000
+    char mLabel[0x64];                      // +0x000
     char mMusicFile[0x64];                  // +0x064 "none" stops the music
-    long mID;                               // +0x0c8 (provisional name)
+    long mUnusedID;                         // +0x0c8 (provisional name)
     long mFormID;                           // +0x0cc 0 or less: no form
     unsigned long mControlCount;            // +0x0d0
     unsigned long mControlGroupCount;       // +0x0d4
@@ -44,7 +44,7 @@ struct UIDbDataForms {
     unsigned long mDesignedWidth;           // +0x0e8
     unsigned long mDesignedHeight;          // +0x0ec
     unsigned long mHelpTextTimeDelay;       // +0x0f0
-    unsigned long mUnknownF4;               // +0x0f4 (provisional name)
+    unsigned long mUnused;                  // +0x0f4 (provisional name)
     unsigned long mLeftOffsetType;          // +0x0f8
     unsigned long mRightOffsetType;         // +0x0fc
     unsigned long mTopOffsetType;           // +0x100

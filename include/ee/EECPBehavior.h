@@ -12,7 +12,7 @@ struct EECPBehavior {
 
     static long Load(FSFileSpec* inFile);   // 0xd5f97
 
-    long mL00;                              // +0x00
+    long mUnused1;                          // +0x00
     long mIndex;                            // +0x04 (the slot; records with index <= 0 are skipped)
     // +0x08..+0x2c: the "set AI attribute" editor (EESETSETSetAIAttribute::ShowAttributeRanges 0x18d020)
     // reads three slider ranges (+0x08/+0x0c, +0x14/+0x18, +0x24/+0x28) and a scale (+0x2c, 0 -> 1; the third
@@ -23,7 +23,7 @@ struct EECPBehavior {
     long mIntValue2Min;                     // +0x14
     long mIntValue2Max;                     // +0x18
     long mIntValue2;                        // +0x1c
-    long mL20;                              // +0x20
+    long mUnused2;                          // +0x20
     long mFloatSliderMin;                   // +0x24
     long mFloatSliderMax;                   // +0x28
     long mFloatSliderScale;                 // +0x2c

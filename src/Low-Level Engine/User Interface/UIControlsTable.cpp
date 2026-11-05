@@ -68,7 +68,7 @@
 // One record of the controls database file (Create reads them with FSFileSpec::Read, 0x35c bytes each). The
 // offsets are proven by the UIDbControl ctor 0x1006796f (provisional field names).
 struct UIDbControl {
-    char mName[100];                        // +0x000
+    char mLabel[100];                       // +0x000
     char mNormalFileName[100];              // +0x064
     char mPressedFileName[100];             // +0x0c8
     char mFocusedFileName[100];             // +0x12c
@@ -77,12 +77,12 @@ struct UIDbControl {
     float mBackgroundOpacity;               // +0x258
     float mTextBoxOpacity;                  // +0x25c
     float mScrollBarBgOpacity;              // +0x260
-    unsigned long mUnknown264[5];           // +0x264
+    unsigned long mUnused1[5];              // +0x264
     float mLeftOffset;                      // +0x278
     float mRightOffset;                     // +0x27c
     float mBottomOffset;                    // +0x280
     float mTopOffset;                       // +0x284
-    long mUnknown288;                       // +0x288
+    long mUnusedDbRecordId;                 // +0x288
     long mID;                               // +0x28c
     long mFormID;                           // +0x290
     unsigned long mGroup;                   // +0x294
@@ -129,7 +129,7 @@ struct UIDbControl {
     long mPageSize;                         // +0x338
     long mStringTableID;                    // +0x33c
     long mBlinkRate;                        // +0x340
-    unsigned long mUnknown344[3];           // +0x344
+    unsigned long mUnused2[3];              // +0x344
     bool mIsVisible;                        // +0x350
     bool mStartChecked;                     // +0x351
     bool mListBoxAlwaysDirty;               // +0x352
@@ -138,9 +138,9 @@ struct UIDbControl {
     bool mPressedHasAlpha;                  // +0x355
     bool mNormalHasAlpha;                   // +0x356
     bool mAlwaysDirty;                      // +0x357
-    bool mBoolPlaceholder2;                 // +0x358
-    bool mBoolPlaceholder3;                 // +0x359
-    bool mBoolPlaceholder4;                 // +0x35a
+    bool mFitRectToText;                 // +0x358
+    bool mScaleToControl;                 // +0x359
+    bool mLoopMovie;                 // +0x35a
 };
 
 std::vector<UIControlsTable*> UIControlsTable::sUIControlsArray;
@@ -187,7 +187,7 @@ UIControlsTable::UIControlsTable(const UIDbControl& inControl)
     this->mBackgroundOpacity = inControl.mBackgroundOpacity;
     this->mTextBoxOpacity = inControl.mTextBoxOpacity;
     this->mScrollBarBgOpacity = inControl.mScrollBarBgOpacity;
-    this->mUnknown100 = inControl.mUnknown288;
+    this->mUnknown100 = inControl.mUnusedDbRecordId;
     this->mID = inControl.mID;
     this->mFormID = inControl.mFormID;
     this->mGroup = inControl.mGroup;
@@ -215,12 +215,12 @@ UIControlsTable::UIControlsTable(const UIDbControl& inControl)
     this->mPressedHasAlpha = inControl.mPressedHasAlpha;
     this->mNormalHasAlpha = inControl.mNormalHasAlpha;
     this->mAlwaysDirty = inControl.mAlwaysDirty;
-    this->mBoolPlaceholder2 = inControl.mBoolPlaceholder2;
-    this->mBoolPlaceholder3 = inControl.mBoolPlaceholder3;
+    this->mFitRectToText = inControl.mFitRectToText;
+    this->mScaleToControl = inControl.mScaleToControl;
     this->mFontTableIndex = inControl.mFontTableIndex;
     this->mPageSize = inControl.mPageSize;
     this->mBlinkRate = inControl.mBlinkRate;
-    this->mBoolPlaceholder4 = inControl.mBoolPlaceholder4;
+    this->mLoopMovie = inControl.mLoopMovie;
     if (inControl.mStringTableID > 0)
         this->mStringTableID = inControl.mStringTableID;
     else
@@ -398,7 +398,7 @@ UIControl* UIControlsTable::CreateCheckBox(UIManager* inManager, const GERectang
     else
         theText = "";
     UICheckBox* theCheckBox = new UICheckBox(this->mID, theText, this->mFont, inRectangle, theForm, this->mFormIndex,
-                                             this->mBorderThickness, this->mBoolPlaceholder3);
+                                             this->mBorderThickness, this->mScaleToControl);
     this->SetupGEText(theCheckBox->GetTextLabel()->GetGEText());
     if (this->mStartChecked)
         theCheckBox->SetChecked(true);
@@ -419,7 +419,7 @@ UIControl* UIControlsTable::CreateComboBox(UIManager* inManager, const GERectang
     this->SetupStringArray(inManager, theStrings);
     theListRectangle.SetTopLeft(inRectangle.GetTopLeft());
     theListRectangle.SetRight(inRectangle.GetRight());
-    if (this->mBoolPlaceholder3)
+    if (this->mScaleToControl)
         theListRectangle.SetBottom(inRectangle.GetTop() + (this->mFont->GetHeight() + this->mBorderThickness * 2.0f));
     else
         theListRectangle.SetBottom(inRectangle.GetTop() + kScrollBarWidth);
@@ -708,7 +708,7 @@ UIControl* UIControlsTable::CreateMovie(UIManager* inManager, GERectangle inRect
     FSFileSpec theFile;
     UString theFileName;
     UIForm* theForm = inManager->GetFormByID(this->mFormID);
-    bool theLoop = this->mBoolPlaceholder4;
+    bool theLoop = this->mLoopMovie;
     theFile.SetVolume(gStartupVolume);
     theFile.SetDirectory(gStartupDirectory);
     theFileName = this->GetNormalFileName();
@@ -735,11 +735,11 @@ UIControl* UIControlsTable::CreateRadioButton(UIManager* inManager, const GERect
     switch (this->mControlType) {
     case kDbControlRadioButton:
         theRadioButton = new UIRadioButton(this->mID, theText, this->mFont, inRectangle, theForm, this->mFormIndex, this->mBorderThickness,
-                                           false, this->mStartChecked, this->mBoolPlaceholder3);
+                                           false, this->mStartChecked, this->mScaleToControl);
         break;
     case kDbControlRadioTab:
         theRadioButton = new UIRadioButton(this->mID, theText, this->mFont, inRectangle, theForm, this->mFormIndex, this->mBorderThickness,
-                                           true, this->mStartChecked, this->mBoolPlaceholder3);
+                                           true, this->mStartChecked, this->mScaleToControl);
         break;
     default:
         theRadioButton = NULL;
@@ -884,7 +884,7 @@ UIControl* UIControlsTable::CreateTextLabel(UIManager* inManager, const GERectan
         theLabel->SetText(this->mStringTableBegin);
     theLabel->SetAlignment(this->mTextAlignment);
     theLabel->SetScrollBarBgOpacity(this->mScrollBarBgOpacity);
-    theLabel->SetFitRectToText(this->mBoolPlaceholder2);
+    theLabel->SetFitRectToText(this->mFitRectToText);
     return theLabel;
 }
 
@@ -932,7 +932,7 @@ void UIControlsTable::SetupFont(UIManager* inManager, const GERectangle& inRecta
     if (this->mFont)
         this->mFont->Dereference();
     if (this->mFontTableIndex > 0) {
-        if (this->mBoolPlaceholder3 == true) {
+        if (this->mScaleToControl == true) {
             long theSize;
             bool theScale = inScaleToWindow;
             if (!theScale) {

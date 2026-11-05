@@ -282,7 +282,7 @@ long EEE3DParticleEmitter::Step()
             if (this->mGraphicEffect->mFlag2) {
                 if (theUnit->GetCommandType() == kActionDead)
                     theResult = 7;
-            } else if (this->mGraphicEffect->mFlag3) {
+            } else if (this->mGraphicEffect->mEndsWithUnitOrDuration) {
                 if (theUnit->GetHitPoints() <= 0 || this->mGraphicEffect->mDuration < this->mTime)
                     theResult = 7;
             } else if (this->mGraphicEffect->mDuration < this->mTime)
@@ -296,7 +296,7 @@ long EEE3DParticleEmitter::Step()
             if (this->mGraphicEffect->mFlag2) {
                 if (this->mUnit->GetHitPoints() <= 0)
                     theResult = 7;
-            } else if (this->mGraphicEffect->mFlag3) {
+            } else if (this->mGraphicEffect->mEndsWithUnitOrDuration) {
                 if (this->mUnit->GetHitPoints() <= 0 || this->mGraphicEffect->mDuration < this->mTime)
                     theResult = 7;
             } else if (this->mGraphicEffect->mDuration < this->mTime)
@@ -321,12 +321,12 @@ long EEE3DParticleEmitter::Step()
             unsigned long theCount = this->mGraphicEffect->mIntParam3;
             for (unsigned long i = theCount; i > 0; i--) {
                 GE3DPoint thePosition = theLocation;
-                float theSpreadX = this->mGraphicEffect->mParam12;
+                float theSpreadX = this->mGraphicEffect->mEmitPositionSpread;
                 thePosition.SetX((0.5f - EEEffect::GetRandom()) * theSpreadX + thePosition.mX);
-                float theSpreadY = this->mGraphicEffect->mParam12;
+                float theSpreadY = this->mGraphicEffect->mEmitPositionSpread;
                 thePosition.SetY((0.5f - EEEffect::GetRandom()) * theSpreadY + thePosition.mY);
-                if (!this->mGraphicEffect->mFlag4) {
-                    float theSpreadZ = this->mGraphicEffect->mParam12;
+                if (!this->mGraphicEffect->mIsEmitFlat) {
+                    float theSpreadZ = this->mGraphicEffect->mEmitPositionSpread;
                     thePosition.SetZ((0.5f - EEEffect::GetRandom()) * theSpreadZ + thePosition.mZ);
                 }
                 float thePitch = EEEffect::GetRandomSpread(this->mGraphicEffect->GetParam2(), this->mGraphicEffect->GetParam1());

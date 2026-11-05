@@ -3,13 +3,14 @@
 #ifndef EE_DATATEXTSPECS_H
 #define EE_DATATEXTSPECS_H
 
-#define EEDT_FORMAT_VERSION 1
+#define EEDT_FORMAT_VERSION 2
 
-enum EEDTType { kEEDT_s8, kEEDT_u8, kEEDT_bool, kEEDT_s16, kEEDT_u16, kEEDT_s32, kEEDT_u32, kEEDT_f32, kEEDT_pair_f32, kEEDT_str, kEEDT_raw, kEEDT_pad };
-enum EEDTContainer { kEEDTC_count, kEEDTC_lead, kEEDTC_fixed, kEEDTC_events, kEEDTC_techtree, kEEDTC_header };
+enum EEDTType { kEEDT_s8, kEEDT_u8, kEEDT_bool, kEEDT_s16, kEEDT_u16, kEEDT_s32, kEEDT_u32, kEEDT_f32, kEEDT_pair_f32, kEEDT_str };
+enum EEDTContainer { kEEDTC_count, kEEDTC_lead, kEEDTC_fixed, kEEDTC_events, kEEDTC_techtree };
 
 struct EEDTField { const char* mName; unsigned short mOffset; unsigned short mCount; unsigned char mType; };
-struct EEDTStruct { const char* mName; unsigned long mSize; const EEDTField* mFields; unsigned long mFieldCount; };
+struct EEDTStruct { const char* mName; unsigned long mSize; const EEDTField* mFields; unsigned long mFieldCount;
+                   const char* mBase; };   // the record every row starts from (zero + defaults; 0: all zero)
 struct EEDTRowName { long mRow; const char* mName; };
 struct EEDTTable {
     const char* mName;            // file stem (db\<name>.dat)
@@ -22,6 +23,7 @@ struct EEDTTable {
     bool mListSigned;
     const EEDTRowName* mRowNames; // text-only checked row labels
     unsigned long mRowNameCount;
+    const char* mHole;            // the record of an unlisted row (an empty database row; 0: all zero)
 };
 
 // record sizes (EEDataTextFile.cpp static_asserts them against the structs the loaders read)
@@ -46,12 +48,10 @@ enum EEDTRecordSize {
     kEEDTSize_EEMusicRecord = 196,
     kEEDTSize_EEUnitClassRecord = 1960,
     kEEDTSize_EECivilizationEntry = 120,
-    kEEDTSize_RandomMapRecord = 132,
     kEEDTSize_EESoundRecord = 132,
     kEEDTSize_EEStartingResourcesRecord = 132,
     kEEDTSize_EETechTreeRecord = 268,
     kEEDTSize_EETerrainRecord = 204,
-    kEEDTSize_TerrainGrayTextureRecord = 120,
     kEEDTSize_EETerrainTypeRecord = 128,
     kEEDTSize_UIDbDataBackgrounds = 308,
     kEEDTSize_UIDbDataEvents = 116,
@@ -67,26 +67,19 @@ enum EEDTRecordSize {
 };
 
 static const EEDTField kEEDTFields_EEAIUnitTargetingRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
-    {"index", 0x068, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mAttackerBonus", 0x06c, 1, kEEDT_s32},
-    {"mL70", 0x070, 1, kEEDT_s32},
     {"mInRangeBonus", 0x074, 1, kEEDT_s32},
     {"mFasterTargetBonus", 0x078, 1, kEEDT_s32},
     {"mStrongerTargetBonus", 0x07c, 1, kEEDT_s32},
-    {"mL80", 0x080, 1, kEEDT_s32},
+    {"mPreferredUnitType", 0x080, 1, kEEDT_s32},
     {"mToHitWeight", 0x084, 1, kEEDT_s32},
     {"mProximityWeight", 0x088, 1, kEEDT_s32},
     {"mImmobileTargetBonus", 0x08c, 1, kEEDT_s32},
-    {"mL90", 0x090, 1, kEEDT_s32},
-    {"mL94", 0x094, 1, kEEDT_s32},
-    {"mL98", 0x098, 1, kEEDT_s32},
     {"mMaxValue", 0x09c, 1, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EEAmbientSoundRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mIndex", 0x068, 1, kEEDT_s32},
     {"mSoundID", 0x06c, 1, kEEDT_s32},
     {"mMaximumVolume", 0x070, 1, kEEDT_f32},
@@ -94,66 +87,40 @@ static const EEDTField kEEDTFields_EEAmbientSoundRecord[] = {
     {"mFadeUp", 0x078, 1, kEEDT_f32},
     {"mFadeDown", 0x07c, 1, kEEDT_f32},
     {"mProbability", 0x080, 1, kEEDT_f32},
-    {"u_0x084", 0x084, 1, kEEDT_s32},
-    {"u_0x088", 0x088, 1, kEEDT_s32},
-    {"u_0x08c", 0x08c, 1, kEEDT_s32},
     {"mIntervalSeconds", 0x090, 1, kEEDT_s32},
-    {"u_0x094", 0x094, 1, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EEAnimalRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mAnimalID", 0x068, 1, kEEDT_s32},
     {"mUnitType", 0x06c, 1, kEEDT_s32},
     {"mMinHerdSize", 0x070, 1, kEEDT_s32},
     {"mMaxHerdSize", 0x074, 1, kEEDT_s32},
     {"mBreeds", 0x078, 1, kEEDT_bool},
-    {"pad_0x079", 0x079, 3, kEEDT_pad},
     {"mMinBirthInterval", 0x07c, 1, kEEDT_s32},
     {"mMaxBirthInterval", 0x080, 1, kEEDT_s32},
     {"mHasLeader", 0x084, 1, kEEDT_bool},
-    {"mB85", 0x085, 1, kEEDT_bool},
-    {"pad_0x086", 0x086, 2, kEEDT_pad},
-    {"mL88", 0x088, 1, kEEDT_s32},
-    {"mL8C", 0x08c, 1, kEEDT_s32},
-    {"mL90", 0x090, 1, kEEDT_s32},
-    {"mL94", 0x094, 1, kEEDT_s32},
-    {"mB98", 0x098, 1, kEEDT_bool},
-    {"pad_0x099", 0x099, 3, kEEDT_pad},
-    {"mF9C", 0x09c, 1, kEEDT_f32},
     {"mMinHuntInterval", 0x0a0, 1, kEEDT_s32},
     {"mMaxHuntInterval", 0x0a4, 1, kEEDT_s32},
     {"mMinRoamMargin", 0x0a8, 1, kEEDT_s32},
     {"mMaxRoamMargin", 0x0ac, 1, kEEDT_s32},
     {"mMinGrazeTime", 0x0b0, 1, kEEDT_s32},
     {"mMaxGrazeTime", 0x0b4, 1, kEEDT_s32},
-    {"mBB8", 0x0b8, 1, kEEDT_bool},
     {"mIsPredator", 0x0b9, 1, kEEDT_bool},
-    {"mBBA", 0x0ba, 1, kEEDT_bool},
     {"mHasParentalVengeance", 0x0bb, 1, kEEDT_bool},
     {"mHasGroupAttack", 0x0bc, 1, kEEDT_bool},
     {"mHasGroupFlee", 0x0bd, 1, kEEDT_bool},
-    {"pad_0x0be", 0x0be, 2, kEEDT_pad},
     {"mNewbornGrowth", 0x0c0, 1, kEEDT_f32},
     {"mGrowthStep", 0x0c4, 1, kEEDT_f32},
     {"mGrowInterval", 0x0c8, 1, kEEDT_s32},
     {"mHerdRadius", 0x0cc, 1, kEEDT_s32},
-    {"mLD0", 0x0d0, 1, kEEDT_s32},
-    {"mLD4", 0x0d4, 1, kEEDT_s32},
-    {"mLD8", 0x0d8, 1, kEEDT_s32},
+    {"mMinRestInterval", 0x0d0, 1, kEEDT_s32},
+    {"mMaxRestInterval", 0x0d4, 1, kEEDT_s32},
     {"mMinFollowInterval", 0x0dc, 1, kEEDT_s32},
     {"mMaxFollowInterval", 0x0e0, 1, kEEDT_s32},
     {"mMedia", 0x0e4, 1, kEEDT_s32},
     {"mSound1", 0x0e8, 1, kEEDT_s32},
     {"mSound2", 0x0ec, 1, kEEDT_s32},
     {"mSound3", 0x0f0, 1, kEEDT_s32},
-    {"u_0x0f4", 0x0f4, 1, kEEDT_s32},
-    {"u_0x0f8", 0x0f8, 1, kEEDT_s32},
-    {"u_0x0fc", 0x0fc, 1, kEEDT_s32},
-    {"u_0x100", 0x100, 1, kEEDT_s32},
-    {"u_0x104", 0x104, 1, kEEDT_s32},
-    {"u_0x108", 0x108, 1, kEEDT_s32},
-    {"u_0x10c", 0x10c, 1, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EEAreaEffectData[] = {
     {"mName", 0x000, 104, kEEDT_str},
@@ -167,24 +134,14 @@ static const EEDTField kEEDTFields_EEAreaEffectData[] = {
     {"mMedia", 0x084, 1, kEEDT_s32},
     {"mMaxLevel", 0x088, 1, kEEDT_s32},
     {"mLevel", 0x08c, 1, kEEDT_s32},
-    {"mL90", 0x090, 1, kEEDT_s32},
-    {"mL94", 0x094, 1, kEEDT_s32},
-    {"mL98", 0x098, 1, kEEDT_s32},
     {"mRadius", 0x09c, 1, kEEDT_f32},
     {"mRed", 0x0a0, 1, kEEDT_f32},
     {"mGreen", 0x0a4, 1, kEEDT_f32},
     {"mBlue", 0x0a8, 1, kEEDT_f32},
     {"mAlpha", 0x0ac, 1, kEEDT_f32},
-    {"mFB0", 0x0b0, 1, kEEDT_f32},
-    {"mBB4", 0x0b4, 1, kEEDT_bool},
-    {"mBB5", 0x0b5, 1, kEEDT_bool},
-    {"mBB6", 0x0b6, 1, kEEDT_bool},
-    {"mBB7", 0x0b7, 1, kEEDT_bool},
-    {"mBB8", 0x0b8, 1, kEEDT_bool},
-    {"pad_0x0b9", 0x0b9, 3, kEEDT_pad},
 };
 static const EEDTField kEEDTFields_EEButtonRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
+    {"label", 0x000, 100, kEEDT_str},
     {"mFileName", 0x064, 104, kEEDT_str},
     {"mID", 0x0cc, 1, kEEDT_s32},
     {"mRow", 0x0d0, 1, kEEDT_s32},
@@ -193,26 +150,19 @@ static const EEDTField kEEDTFields_EEButtonRecord[] = {
     {"mHotKey", 0x0dc, 1, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EECalamityData[] = {
-    {"mName", 0x000, 100, kEEDT_str},
+    {"label", 0x000, 100, kEEDT_str},
     {"mFloatParam1", 0x064, 1, kEEDT_f32},
     {"mFloatParam2", 0x068, 1, kEEDT_f32},
-    {"mFloatParam3", 0x06c, 1, kEEDT_f32},
-    {"mFloatParam4", 0x070, 1, kEEDT_f32},
-    {"mF74", 0x074, 1, kEEDT_f32},
+    {"mQuakeMinimumStrength", 0x06c, 1, kEEDT_f32},
+    {"mQuakeStrength", 0x070, 1, kEEDT_f32},
     {"mRange", 0x078, 1, kEEDT_f32},
-    {"mDatabaseID", 0x07c, 1, kEEDT_s32},
     {"mID", 0x080, 1, kEEDT_s32},
     {"mClassEnum", 0x084, 1, kEEDT_s32},
-    {"mTargetKind", 0x088, 1, kEEDT_s32},
     {"mLifeTime", 0x08c, 1, kEEDT_s32},
-    {"mL90", 0x090, 1, kEEDT_s32},
     {"mGraphicEffectID1", 0x094, 1, kEEDT_s32},
     {"mGraphicEffectID2", 0x098, 1, kEEDT_s32},
     {"mGraphicEffectID3", 0x09c, 1, kEEDT_s32},
     {"mGraphicEffectID4", 0x0a0, 1, kEEDT_s32},
-    {"mLA4", 0x0a4, 1, kEEDT_s32},
-    {"mLA8", 0x0a8, 1, kEEDT_s32},
-    {"mLAC", 0x0ac, 1, kEEDT_s32},
     {"mUnitClassIndex", 0x0b0, 1, kEEDT_s32},
     {"mIntParam1", 0x0b4, 1, kEEDT_s32},
     {"mIntParam2", 0x0b8, 1, kEEDT_s32},
@@ -220,44 +170,33 @@ static const EEDTField kEEDTFields_EECalamityData[] = {
     {"mIntParam4", 0x0c0, 1, kEEDT_s32},
     {"mIntParam5", 0x0c4, 1, kEEDT_s32},
     {"mIntParam6", 0x0c8, 1, kEEDT_s32},
-    {"mBCC", 0x0cc, 1, kEEDT_bool},
     {"mBoolParam1", 0x0cd, 1, kEEDT_bool},
-    {"mBCE", 0x0ce, 1, kEEDT_bool},
-    {"mBCF", 0x0cf, 1, kEEDT_bool},
     {"mIsCastByAllSelected", 0x0d0, 1, kEEDT_bool},
     {"mIsBlockedByImmunity", 0x0d1, 1, kEEDT_bool},
-    {"pad_0x0d2", 0x0d2, 2, kEEDT_pad},
     {"mSoundID", 0x0d4, 1, kEEDT_s32},
     {"mSecondarySoundID", 0x0d8, 1, kEEDT_s32},
     {"mCost", 0x0dc, 1, kEEDT_s32},
     {"mUnitSet", 0x0e0, 1, kEEDT_u32},
     {"mNameID", 0x0e4, 1, kEEDT_s32},
-    {"mBE8", 0x0e8, 1, kEEDT_bool},
-    {"pad_0x0e9", 0x0e9, 3, kEEDT_pad},
 };
 static const EEDTField kEEDTFields_EECivilizationCategoryEntry[] = {
     {"mDatabaseID", 0x000, 1, kEEDT_s32},
     {"mIndex", 0x004, 1, kEEDT_s32},
-    {"name", 0x008, 100, kEEDT_str},
+    {"label", 0x008, 100, kEEDT_str},
     {"mNameID", 0x06c, 1, kEEDT_s32},
     {"mCost", 0x070, 1, kEEDT_s32},
     {"mUnitSet", 0x074, 1, kEEDT_s32},
     {"mLevels", 0x078, 60, kEEDT_pair_f32},
 };
 static const EEDTField kEEDTFields_EECivPower[] = {
-    {"mName", 0x000, 100, kEEDT_str},
-    {"mDatabaseID", 0x064, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mID", 0x068, 1, kEEDT_s32},
     {"mBonus", 0x06c, 1, kEEDT_f32},
     {"mUnitSet", 0x070, 1, kEEDT_s32},
     {"mTechnology", 0x074, 1, kEEDT_s32},
     {"mMiningLimit", 0x078, 1, kEEDT_s32},
     {"mChance", 0x07c, 1, kEEDT_s32},
-    {"mL80", 0x080, 1, kEEDT_s32},
     {"mAmount", 0x084, 1, kEEDT_f32},
-    {"mL88", 0x088, 1, kEEDT_s32},
-    {"mL8C", 0x08c, 1, kEEDT_s32},
-    {"mL90", 0x090, 1, kEEDT_s32},
     {"mUnitType", 0x094, 1, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EECliffTerrainRecord[] = {
@@ -265,14 +204,9 @@ static const EEDTField kEEDTFields_EECliffTerrainRecord[] = {
     {"mIndex", 0x068, 1, kEEDT_s32},
     {"mFirstTerrain", 0x06c, 1, kEEDT_s32},
     {"mLastTerrain", 0x070, 1, kEEDT_s32},
-    {"mL74", 0x074, 1, kEEDT_s32},
-    {"mB78", 0x078, 1, kEEDT_bool},
-    {"pad_0x079", 0x079, 3, kEEDT_pad},
 };
 static const EEDTField kEEDTFields_EEColorTableRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
-    {"index", 0x068, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mColorRed", 0x06c, 1, kEEDT_f32},
     {"mColorGreen", 0x070, 1, kEEDT_f32},
     {"mColorBlue", 0x074, 1, kEEDT_f32},
@@ -282,15 +216,8 @@ static const EEDTField kEEDTFields_EEColorTableRecord[] = {
     {"mColor4Red", 0x084, 1, kEEDT_f32},
     {"mColor4Green", 0x088, 1, kEEDT_f32},
     {"mColor4Blue", 0x08c, 1, kEEDT_f32},
-    {"u_0x090", 0x090, 1, kEEDT_s32},
-    {"u_0x094", 0x094, 1, kEEDT_s32},
-    {"u_0x098", 0x098, 1, kEEDT_s32},
-    {"u_0x09c", 0x09c, 1, kEEDT_s32},
-    {"u_0x0a0", 0x0a0, 1, kEEDT_s32},
-    {"u_0x0a4", 0x0a4, 1, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EECPBehavior[] = {
-    {"mL00", 0x000, 1, kEEDT_s32},
     {"mIndex", 0x004, 1, kEEDT_s32},
     {"mIntValue1Min", 0x008, 1, kEEDT_s32},
     {"mIntValue1Max", 0x00c, 1, kEEDT_s32},
@@ -298,17 +225,13 @@ static const EEDTField kEEDTFields_EECPBehavior[] = {
     {"mIntValue2Min", 0x014, 1, kEEDT_s32},
     {"mIntValue2Max", 0x018, 1, kEEDT_s32},
     {"mIntValue2", 0x01c, 1, kEEDT_s32},
-    {"mL20", 0x020, 1, kEEDT_s32},
     {"mFloatSliderMin", 0x024, 1, kEEDT_s32},
     {"mFloatSliderMax", 0x028, 1, kEEDT_s32},
     {"mFloatSliderScale", 0x02c, 1, kEEDT_s32},
     {"mFloatValue", 0x030, 1, kEEDT_f32},
     {"mIsSettable", 0x034, 1, kEEDT_bool},
-    {"pad_0x035", 0x035, 3, kEEDT_pad},
 };
 static const EEDTField kEEDTFields_EEEventEffect[] = {
-    {"mL00", 0x000, 1, kEEDT_s32},
-    {"mID", 0x004, 1, kEEDT_s32},
     {"mValue", 0x008, 1, kEEDT_f32},
     {"mOffset", 0x00c, 1, kEEDT_f32},
     {"mFactor", 0x010, 1, kEEDT_f32},
@@ -323,28 +246,17 @@ static const EEDTField kEEDTFields_EEEventEffect[] = {
     {"mButton", 0x034, 1, kEEDT_s32},
     {"mAreaEffect", 0x038, 1, kEEDT_s32},
     {"mTerrainType", 0x03c, 1, kEEDT_s32},
-    {"mL40", 0x040, 1, kEEDT_s32},
     {"mRunOnLoad", 0x044, 1, kEEDT_u8},
-    {"mB45", 0x045, 1, kEEDT_u8},
-    {"mU46", 0x046, 1, kEEDT_u16},
-    {"mL48", 0x048, 1, kEEDT_s32},
-    {"mL4C", 0x04c, 1, kEEDT_s32},
-    {"mL50", 0x050, 1, kEEDT_s32},
-    {"mL54", 0x054, 1, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EEEventRow[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"mID", 0x064, 1, kEEDT_u32},
+    {"label", 0x000, 100, kEEDT_str},
 };
 static const EEDTField kEEDTFields_EEDamageTableRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
-    {"index", 0x068, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mDamage", 0x06c, 68, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EEGameVariantData[] = {
-    {"mName", 0x000, 100, kEEDT_str},
-    {"mDatabaseID", 0x064, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mIndex", 0x068, 1, kEEDT_s32},
     {"mFactor0", 0x06c, 1, kEEDT_f32},
     {"mSet0", 0x070, 1, kEEDT_s32},
@@ -376,23 +288,10 @@ static const EEDTField kEEDTFields_EEGameVariantData[] = {
     {"mCostSetFactor", 0x0d8, 1, kEEDT_f32},
     {"mCostSet", 0x0dc, 1, kEEDT_s32},
     {"mEarthquakeDamageFactor", 0x0e0, 1, kEEDT_f32},
-    {"mLE4", 0x0e4, 1, kEEDT_s32},
-    {"mLE8", 0x0e8, 1, kEEDT_s32},
-    {"mLEC", 0x0ec, 1, kEEDT_s32},
-    {"mLF0", 0x0f0, 1, kEEDT_s32},
-    {"mLF4", 0x0f4, 1, kEEDT_s32},
-    {"mLF8", 0x0f8, 1, kEEDT_s32},
-    {"mLFC", 0x0fc, 1, kEEDT_s32},
-    {"mL100", 0x100, 1, kEEDT_s32},
-    {"mL104", 0x104, 1, kEEDT_s32},
-    {"mL108", 0x108, 1, kEEDT_s32},
     {"mSelectable", 0x10c, 1, kEEDT_bool},
-    {"pad_0x10d", 0x10d, 3, kEEDT_pad},
-    {"mL110", 0x110, 1, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EEGraphicEffectRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mID", 0x068, 1, kEEDT_s32},
     {"mKind", 0x06c, 1, kEEDT_s32},
     {"mTagPointKind", 0x070, 1, kEEDT_s32},
@@ -403,9 +302,9 @@ static const EEDTField kEEDTFields_EEGraphicEffectRecord[] = {
     {"mTime1", 0x084, 1, kEEDT_s32},
     {"mTime2", 0x088, 1, kEEDT_s32},
     {"mDuration", 0x08c, 1, kEEDT_s32},
-    {"mL90", 0x090, 1, kEEDT_s32},
-    {"mL94", 0x094, 1, kEEDT_s32},
-    {"mL98", 0x098, 1, kEEDT_s32},
+    {"mIntParam1", 0x090, 1, kEEDT_s32},
+    {"mIntParam2", 0x094, 1, kEEDT_s32},
+    {"mIntParam3", 0x098, 1, kEEDT_s32},
     {"mLinkedEffectIndex1", 0x09c, 1, kEEDT_s32},
     {"mLinkedEffectIndex2", 0x0a0, 1, kEEDT_s32},
     {"mLinkedEffectIndex3", 0x0a4, 1, kEEDT_s32},
@@ -421,43 +320,33 @@ static const EEDTField kEEDTFields_EEGraphicEffectRecord[] = {
     {"mParam9", 0x0cc, 1, kEEDT_f32},
     {"mParam10", 0x0d0, 1, kEEDT_f32},
     {"mParam11", 0x0d4, 1, kEEDT_f32},
-    {"mParam12", 0x0d8, 1, kEEDT_f32},
-    {"mBDC", 0x0dc, 1, kEEDT_bool},
-    {"mBDD", 0x0dd, 1, kEEDT_bool},
+    {"mEmitPositionSpread", 0x0d8, 1, kEEDT_f32},
+    {"mFlag1", 0x0dc, 1, kEEDT_bool},
+    {"mFlag2", 0x0dd, 1, kEEDT_bool},
     {"mIsScenarioListed", 0x0de, 1, kEEDT_bool},
-    {"mBDF", 0x0df, 1, kEEDT_bool},
-    {"mBE0", 0x0e0, 1, kEEDT_bool},
-    {"pad_0x0e1", 0x0e1, 3, kEEDT_pad},
+    {"mIsEmitFlat", 0x0df, 1, kEEDT_bool},
+    {"mEndsWithUnitOrDuration", 0x0e0, 1, kEEDT_bool},
     {"mDetailLevel", 0x0e4, 1, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EEGraphicObjectRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mMediaIndex", 0x068, 1, kEEDT_s32},
     {"mIsDrawn", 0x06c, 1, kEEDT_bool},
-    {"pad_0x06d", 0x06d, 3, kEEDT_pad},
-    {"mL70", 0x070, 1, kEEDT_s32},
-    {"mL74", 0x074, 1, kEEDT_s32},
     {"mSharesFrames0", 0x078, 1, kEEDT_bool},
-    {"pad_0x079", 0x079, 3, kEEDT_pad},
     {"mFirstFrame0", 0x07c, 1, kEEDT_u32},
     {"mLastFrame0", 0x080, 1, kEEDT_u32},
     {"mFrameTime0", 0x084, 1, kEEDT_u32},
     {"mLoops0", 0x088, 1, kEEDT_bool},
-    {"pad_0x089", 0x089, 3, kEEDT_pad},
-    {"mHoldTime0", 0x08c, 1, kEEDT_u32},
     {"mSound1Frame0", 0x090, 1, kEEDT_u32},
     {"mSound2Frame0", 0x094, 1, kEEDT_u32},
     {"mSound1Index0", 0x098, 1, kEEDT_u32},
     {"mSound2Index0", 0x09c, 1, kEEDT_u32},
     {"mIsSpeedScaled0", 0x0a0, 1, kEEDT_bool},
     {"mSharesFrames13", 0x0a1, 1, kEEDT_bool},
-    {"pad_0x0a2", 0x0a2, 2, kEEDT_pad},
     {"mFirstFrame13", 0x0a4, 1, kEEDT_u32},
     {"mLastFrame13", 0x0a8, 1, kEEDT_u32},
     {"mFrameTime13", 0x0ac, 1, kEEDT_u32},
     {"mLoops13", 0x0b0, 1, kEEDT_bool},
-    {"pad_0x0b1", 0x0b1, 3, kEEDT_pad},
     {"mHoldTime13", 0x0b4, 1, kEEDT_u32},
     {"mSound1Frame13", 0x0b8, 1, kEEDT_u32},
     {"mSound2Frame13", 0x0bc, 1, kEEDT_u32},
@@ -465,12 +354,10 @@ static const EEDTField kEEDTFields_EEGraphicObjectRecord[] = {
     {"mSound2Index13", 0x0c4, 1, kEEDT_u32},
     {"mIsSpeedScaled13", 0x0c8, 1, kEEDT_bool},
     {"mSharesFrames7", 0x0c9, 1, kEEDT_bool},
-    {"pad_0x0ca", 0x0ca, 2, kEEDT_pad},
     {"mFirstFrame7", 0x0cc, 1, kEEDT_u32},
     {"mLastFrame7", 0x0d0, 1, kEEDT_u32},
     {"mFrameTime7", 0x0d4, 1, kEEDT_u32},
     {"mLoops7", 0x0d8, 1, kEEDT_bool},
-    {"pad_0x0d9", 0x0d9, 3, kEEDT_pad},
     {"mHoldTime7", 0x0dc, 1, kEEDT_u32},
     {"mSound1Frame7", 0x0e0, 1, kEEDT_u32},
     {"mSound2Frame7", 0x0e4, 1, kEEDT_u32},
@@ -478,12 +365,10 @@ static const EEDTField kEEDTFields_EEGraphicObjectRecord[] = {
     {"mSound2Index7", 0x0ec, 1, kEEDT_u32},
     {"mIsSpeedScaled7", 0x0f0, 1, kEEDT_bool},
     {"mSharesFrames8", 0x0f1, 1, kEEDT_bool},
-    {"pad_0x0f2", 0x0f2, 2, kEEDT_pad},
     {"mFirstFrame8", 0x0f4, 1, kEEDT_u32},
     {"mLastFrame8", 0x0f8, 1, kEEDT_u32},
     {"mFrameTime8", 0x0fc, 1, kEEDT_u32},
     {"mLoops8", 0x100, 1, kEEDT_bool},
-    {"pad_0x101", 0x101, 3, kEEDT_pad},
     {"mHoldTime8", 0x104, 1, kEEDT_u32},
     {"mSound1Frame8", 0x108, 1, kEEDT_u32},
     {"mSound2Frame8", 0x10c, 1, kEEDT_u32},
@@ -491,30 +376,24 @@ static const EEDTField kEEDTFields_EEGraphicObjectRecord[] = {
     {"mSound2Index8", 0x114, 1, kEEDT_u32},
     {"mIsSpeedScaled8", 0x118, 1, kEEDT_bool},
     {"mSharesFrames4", 0x119, 1, kEEDT_bool},
-    {"pad_0x11a", 0x11a, 2, kEEDT_pad},
     {"mFirstFrame4", 0x11c, 1, kEEDT_u32},
     {"mLastFrame4", 0x120, 1, kEEDT_u32},
     {"mFrameTime4", 0x124, 1, kEEDT_u32},
     {"mLoops4", 0x128, 1, kEEDT_bool},
-    {"pad_0x129", 0x129, 3, kEEDT_pad},
     {"mHoldTime4", 0x12c, 1, kEEDT_u32},
     {"mIsSpeedScaled4", 0x130, 1, kEEDT_bool},
     {"mSharesFrames5", 0x131, 1, kEEDT_bool},
-    {"pad_0x132", 0x132, 2, kEEDT_pad},
     {"mFirstFrame5", 0x134, 1, kEEDT_u32},
     {"mLastFrame5", 0x138, 1, kEEDT_u32},
     {"mFrameTime5", 0x13c, 1, kEEDT_u32},
     {"mLoops5", 0x140, 1, kEEDT_bool},
-    {"pad_0x141", 0x141, 3, kEEDT_pad},
     {"mHoldTime5", 0x144, 1, kEEDT_u32},
     {"mIsSpeedScaled5", 0x148, 1, kEEDT_bool},
     {"mSharesFrames12", 0x149, 1, kEEDT_bool},
-    {"pad_0x14a", 0x14a, 2, kEEDT_pad},
     {"mFirstFrame12", 0x14c, 1, kEEDT_u32},
     {"mLastFrame12", 0x150, 1, kEEDT_u32},
     {"mFrameTime12", 0x154, 1, kEEDT_u32},
     {"mLoops12", 0x158, 1, kEEDT_bool},
-    {"pad_0x159", 0x159, 3, kEEDT_pad},
     {"mHoldTime12", 0x15c, 1, kEEDT_u32},
     {"mSound1Frame12", 0x160, 1, kEEDT_u32},
     {"mSound2Frame12", 0x164, 1, kEEDT_u32},
@@ -522,12 +401,10 @@ static const EEDTField kEEDTFields_EEGraphicObjectRecord[] = {
     {"mSound2Index12", 0x16c, 1, kEEDT_u32},
     {"mIsSpeedScaled12", 0x170, 1, kEEDT_bool},
     {"mSharesFrames11", 0x171, 1, kEEDT_bool},
-    {"pad_0x172", 0x172, 2, kEEDT_pad},
     {"mFirstFrame11", 0x174, 1, kEEDT_u32},
     {"mLastFrame11", 0x178, 1, kEEDT_u32},
     {"mFrameTime11", 0x17c, 1, kEEDT_u32},
     {"mLoops11", 0x180, 1, kEEDT_bool},
-    {"pad_0x181", 0x181, 3, kEEDT_pad},
     {"mHoldTime11", 0x184, 1, kEEDT_u32},
     {"mSound1Frame11", 0x188, 1, kEEDT_u32},
     {"mSound2Frame11", 0x18c, 1, kEEDT_u32},
@@ -535,12 +412,10 @@ static const EEDTField kEEDTFields_EEGraphicObjectRecord[] = {
     {"mSound2Index11", 0x194, 1, kEEDT_u32},
     {"mIsSpeedScaled11", 0x198, 1, kEEDT_bool},
     {"mSharesFrames9", 0x199, 1, kEEDT_bool},
-    {"pad_0x19a", 0x19a, 2, kEEDT_pad},
     {"mFirstFrame9", 0x19c, 1, kEEDT_u32},
     {"mLastFrame9", 0x1a0, 1, kEEDT_u32},
     {"mFrameTime9", 0x1a4, 1, kEEDT_u32},
     {"mLoops9", 0x1a8, 1, kEEDT_bool},
-    {"pad_0x1a9", 0x1a9, 3, kEEDT_pad},
     {"mHoldTime9", 0x1ac, 1, kEEDT_u32},
     {"mSound1Frame9", 0x1b0, 1, kEEDT_u32},
     {"mSound2Frame9", 0x1b4, 1, kEEDT_u32},
@@ -548,12 +423,10 @@ static const EEDTField kEEDTFields_EEGraphicObjectRecord[] = {
     {"mSound2Index9", 0x1bc, 1, kEEDT_u32},
     {"mIsSpeedScaled9", 0x1c0, 1, kEEDT_bool},
     {"mSharesFrames10", 0x1c1, 1, kEEDT_bool},
-    {"pad_0x1c2", 0x1c2, 2, kEEDT_pad},
     {"mFirstFrame10", 0x1c4, 1, kEEDT_u32},
     {"mLastFrame10", 0x1c8, 1, kEEDT_u32},
     {"mFrameTime10", 0x1cc, 1, kEEDT_u32},
     {"mLoops10", 0x1d0, 1, kEEDT_bool},
-    {"pad_0x1d1", 0x1d1, 3, kEEDT_pad},
     {"mHoldTime10", 0x1d4, 1, kEEDT_u32},
     {"mSound1Frame10", 0x1d8, 1, kEEDT_u32},
     {"mSound2Frame10", 0x1dc, 1, kEEDT_u32},
@@ -561,12 +434,10 @@ static const EEDTField kEEDTFields_EEGraphicObjectRecord[] = {
     {"mSound2Index10", 0x1e4, 1, kEEDT_u32},
     {"mIsSpeedScaled10", 0x1e8, 1, kEEDT_bool},
     {"mSharesFrames6", 0x1e9, 1, kEEDT_bool},
-    {"pad_0x1ea", 0x1ea, 2, kEEDT_pad},
     {"mFirstFrame6", 0x1ec, 1, kEEDT_u32},
     {"mLastFrame6", 0x1f0, 1, kEEDT_u32},
     {"mFrameTime6", 0x1f4, 1, kEEDT_u32},
     {"mLoops6", 0x1f8, 1, kEEDT_bool},
-    {"pad_0x1f9", 0x1f9, 3, kEEDT_pad},
     {"mHoldTime6", 0x1fc, 1, kEEDT_u32},
     {"mSound1Frame6", 0x200, 1, kEEDT_u32},
     {"mSound2Frame6", 0x204, 1, kEEDT_u32},
@@ -574,12 +445,10 @@ static const EEDTField kEEDTFields_EEGraphicObjectRecord[] = {
     {"mSound2Index6", 0x20c, 1, kEEDT_u32},
     {"mIsSpeedScaled6", 0x210, 1, kEEDT_bool},
     {"mSharesFrames3", 0x211, 1, kEEDT_bool},
-    {"pad_0x212", 0x212, 2, kEEDT_pad},
     {"mFirstFrame3", 0x214, 1, kEEDT_u32},
     {"mLastFrame3", 0x218, 1, kEEDT_u32},
     {"mFrameTime3", 0x21c, 1, kEEDT_u32},
     {"mLoops3", 0x220, 1, kEEDT_bool},
-    {"pad_0x221", 0x221, 3, kEEDT_pad},
     {"mHoldTime3", 0x224, 1, kEEDT_u32},
     {"mSound1Frame3", 0x228, 1, kEEDT_u32},
     {"mSound2Frame3", 0x22c, 1, kEEDT_u32},
@@ -587,12 +456,10 @@ static const EEDTField kEEDTFields_EEGraphicObjectRecord[] = {
     {"mSound2Index3", 0x234, 1, kEEDT_u32},
     {"mIsSpeedScaled3", 0x238, 1, kEEDT_bool},
     {"mSharesFrames1", 0x239, 1, kEEDT_bool},
-    {"pad_0x23a", 0x23a, 2, kEEDT_pad},
     {"mFirstFrame1", 0x23c, 1, kEEDT_u32},
     {"mLastFrame1", 0x240, 1, kEEDT_u32},
     {"mFrameTime1", 0x244, 1, kEEDT_u32},
     {"mLoops1", 0x248, 1, kEEDT_bool},
-    {"pad_0x249", 0x249, 3, kEEDT_pad},
     {"mHoldTime1", 0x24c, 1, kEEDT_u32},
     {"mSound1Frame1", 0x250, 1, kEEDT_u32},
     {"mSound2Frame1", 0x254, 1, kEEDT_u32},
@@ -600,58 +467,37 @@ static const EEDTField kEEDTFields_EEGraphicObjectRecord[] = {
     {"mSound2Index1", 0x25c, 1, kEEDT_u32},
     {"mIsSpeedScaled1", 0x260, 1, kEEDT_bool},
     {"mSharesFrames2", 0x261, 1, kEEDT_bool},
-    {"pad_0x262", 0x262, 2, kEEDT_pad},
     {"mFirstFrame2", 0x264, 1, kEEDT_u32},
     {"mLastFrame2", 0x268, 1, kEEDT_u32},
     {"mFrameTime2", 0x26c, 1, kEEDT_u32},
     {"mLoops2", 0x270, 1, kEEDT_bool},
-    {"pad_0x271", 0x271, 3, kEEDT_pad},
     {"mHoldTime2", 0x274, 1, kEEDT_u32},
     {"mSound1Frame2", 0x278, 1, kEEDT_u32},
     {"mSound2Frame2", 0x27c, 1, kEEDT_u32},
     {"mSound1Index2", 0x280, 1, kEEDT_u32},
     {"mSound2Index2", 0x284, 1, kEEDT_u32},
     {"mIsSpeedScaled2", 0x288, 1, kEEDT_bool},
-    {"pad_0x289", 0x289, 3, kEEDT_pad},
-    {"mL28C", 0x28c, 1, kEEDT_s32},
-    {"mB290", 0x290, 1, kEEDT_bool},
-    {"u_0x291", 0x291, 3, kEEDT_raw},
-    {"u_0x294", 0x294, 1, kEEDT_s32},
-    {"mL298", 0x298, 1, kEEDT_s32},
-    {"mL29C", 0x29c, 1, kEEDT_s32},
     {"mAlphaReference", 0x2a0, 1, kEEDT_s32},
-    {"mL2A4", 0x2a4, 1, kEEDT_s32},
-    {"u_0x2a8", 0x2a8, 1, kEEDT_s32},
     {"mKind", 0x2ac, 1, kEEDT_s32},
     {"mHasAlpha", 0x2b0, 1, kEEDT_bool},
-    {"pad_0x2b1", 0x2b1, 3, kEEDT_pad},
     {"mOpacity", 0x2b4, 1, kEEDT_f32},
-    {"u_0x2b8", 0x2b8, 1, kEEDT_s32},
     {"mMipMapBias", 0x2bc, 1, kEEDT_f32},
     {"mNumMipLevelsToDrop", 0x2c0, 1, kEEDT_s32},
     {"mMaxMipLevelsToDrop", 0x2c4, 1, kEEDT_s32},
     {"mCreateMipMaps", 0x2c8, 1, kEEDT_bool},
-    {"pad_0x2c9", 0x2c9, 3, kEEDT_pad},
 };
 static const EEDTField kEEDTFields_EEMusicRecord[] = {
-    {"dbId", 0x000, 1, kEEDT_s32},
-    {"index", 0x004, 1, kEEDT_s32},
-    {"name", 0x008, 100, kEEDT_str},
+    {"label", 0x008, 100, kEEDT_str},
     {"mFileName", 0x06c, 52, kEEDT_str},
     {"mReverbGain", 0x0a0, 1, kEEDT_f32},
     {"mReverbHighFreqRTRatio", 0x0a4, 1, kEEDT_f32},
     {"mReverbMix", 0x0a8, 1, kEEDT_f32},
     {"mReverbTime", 0x0ac, 1, kEEDT_f32},
-    {"u_0x0b0", 0x0b0, 1, kEEDT_s32},
-    {"u_0x0b4", 0x0b4, 1, kEEDT_raw},
     {"mInEpoch", 0x0b5, 14, kEEDT_bool},
-    {"u_0x0c3", 0x0c3, 1, kEEDT_raw},
 };
 static const EEDTField kEEDTFields_EEUnitClassRecord[] = {
     {"mName", 0x000, 100, kEEDT_str},
-    {"mRowID", 0x064, 1, kEEDT_s32},
     {"mFamily", 0x068, 1, kEEDT_s32},
-    {"mL06C", 0x06c, 1, kEEDT_s32},
     {"mEpoch", 0x070, 1, kEEDT_s32},
     {"mUnitType", 0x074, 1, kEEDT_s32},
     {"mHitPoints", 0x078, 1, kEEDT_s32},
@@ -667,16 +513,10 @@ static const EEDTField kEEDTFields_EEUnitClassRecord[] = {
     {"mMaxAngularVelocity", 0x0a0, 1, kEEDT_f32},
     {"mTurretMaxAngularVelocity", 0x0a4, 1, kEEDT_f32},
     {"mCanFly", 0x0a8, 1, kEEDT_bool},
-    {"mC0A9", 0x0a9, 1, kEEDT_s8},
-    {"mC0AA", 0x0aa, 1, kEEDT_s8},
-    {"mC0AB", 0x0ab, 1, kEEDT_s8},
     {"mFlightTime", 0x0ac, 1, kEEDT_s32},
     {"mFacingOffset", 0x0b0, 1, kEEDT_f32},
     {"mFiringArc", 0x0b4, 1, kEEDT_f32},
     {"mFiresBroadside", 0x0b8, 1, kEEDT_bool},
-    {"mC0B9", 0x0b9, 1, kEEDT_s8},
-    {"mC0BA", 0x0ba, 1, kEEDT_s8},
-    {"mC0BB", 0x0bb, 1, kEEDT_s8},
     {"mWeapon", 0x0bc, 1, kEEDT_s32},
     {"mAttack", 0x0c0, 1, kEEDT_s32},
     {"mShockArmor", 0x0c4, 1, kEEDT_s32},
@@ -688,13 +528,9 @@ static const EEDTField kEEDTFields_EEUnitClassRecord[] = {
     {"mProjectileType", 0x0dc, 1, kEEDT_s32},
     {"mAmmoType", 0x0e0, 1, kEEDT_s32},
     {"mIsEnabled", 0x0e4, 1, kEEDT_bool},
-    {"mC0E5", 0x0e5, 1, kEEDT_s8},
-    {"mC0E6", 0x0e6, 1, kEEDT_s8},
-    {"mC0E7", 0x0e7, 1, kEEDT_s8},
     {"mScale", 0x0e8, 1, kEEDT_f32},
     {"mAIScriptName", 0x0ec, 52, kEEDT_str},
     {"mCategory", 0x120, 1, kEEDT_s32},
-    {"mU124", 0x124, 1, kEEDT_s32},
     {"mButton", 0x128, 1, kEEDT_s32},
     {"mGraphic", 0x12c, 1, kEEDT_s32},
     {"mWorkRate", 0x130, 1, kEEDT_f32},
@@ -705,7 +541,7 @@ static const EEDTField kEEDTFields_EEUnitClassRecord[] = {
     {"mWoodGatherTime", 0x144, 1, kEEDT_f32},
     {"mHuntGatherTime", 0x148, 1, kEEDT_f32},
     {"mForageGatherTime", 0x14c, 1, kEEDT_f32},
-    {"mL150", 0x150, 1, kEEDT_s32},
+    {"mCreationSound", 0x150, 1, kEEDT_s32},
     {"mAcknowledgeSound1", 0x154, 1, kEEDT_s32},
     {"mAcknowledgeSound2", 0x158, 1, kEEDT_s32},
     {"mSelectionSound1", 0x15c, 1, kEEDT_s32},
@@ -721,15 +557,10 @@ static const EEDTField kEEDTFields_EEUnitClassRecord[] = {
     {"mCommand6", 0x184, 1, kEEDT_s32},
     {"mCommand7", 0x188, 1, kEEDT_s32},
     {"mCommand8", 0x18c, 1, kEEDT_s32},
-    {"mU190", 0x190, 1, kEEDT_s32},
     {"mTileSize", 0x194, 1, kEEDT_s32},
     {"mResourceType", 0x198, 1, kEEDT_s32},
     {"mResourceAmount", 0x19c, 1, kEEDT_f32},
-    {"mB1A0", 0x1a0, 1, kEEDT_bool},
-    {"mC1A1", 0x1a1, 1, kEEDT_s8},
-    {"mC1A2", 0x1a2, 1, kEEDT_s8},
-    {"mC1A3", 0x1a3, 1, kEEDT_s8},
-    {"mU1A4", 0x1a4, 1, kEEDT_s32},
+    {"mFacesCamera", 0x1a0, 1, kEEDT_bool},
     {"mRottingTime", 0x1a8, 1, kEEDT_f32},
     {"mTransportSize", 0x1ac, 1, kEEDT_s32},
     {"mTransportCapacity", 0x1b0, 1, kEEDT_s32},
@@ -742,17 +573,10 @@ static const EEDTField kEEDTFields_EEUnitClassRecord[] = {
     {"mCanUpgradeGunArmor", 0x1ba, 1, kEEDT_bool},
     {"mCanUpgradeMissileArmor", 0x1bb, 1, kEEDT_bool},
     {"mCanUpgradeRange", 0x1bc, 1, kEEDT_bool},
-    {"mC1BD", 0x1bd, 1, kEEDT_s8},
-    {"mC1BE", 0x1be, 1, kEEDT_s8},
-    {"mC1BF", 0x1bf, 1, kEEDT_s8},
     {"mLeadership", 0x1c0, 1, kEEDT_s32},
-    {"mU1C4", 0x1c4, 1, kEEDT_s32},
     {"mPitchesWithTerrain", 0x1c8, 1, kEEDT_bool},
     {"mRollsWithTerrain", 0x1c9, 1, kEEDT_bool},
-    {"mC1CA", 0x1ca, 1, kEEDT_s8},
-    {"mC1CB", 0x1cb, 1, kEEDT_s8},
     {"mMaxRoll", 0x1cc, 1, kEEDT_f32},
-    {"mU1D0", 0x1d0, 1, kEEDT_s32},
     {"mCruiseAltitude", 0x1d4, 1, kEEDT_f32},
     {"mNameStringID", 0x1d8, 1, kEEDT_s32},
     {"mTargetSearchInterval", 0x1dc, 1, kEEDT_s32},
@@ -761,21 +585,12 @@ static const EEDTField kEEDTFields_EEUnitClassRecord[] = {
     {"mCanEnterLandTransports", 0x1e8, 1, kEEDT_bool},
     {"mCanEnterAirTransports", 0x1e9, 1, kEEDT_bool},
     {"mCanEnterSeaTransports", 0x1ea, 1, kEEDT_bool},
-    {"mC1EB", 0x1eb, 1, kEEDT_s8},
-    {"mU1EC", 0x1ec, 1, kEEDT_s32},
     {"mFiresWhileMoving", 0x1f0, 1, kEEDT_bool},
-    {"mC1F1", 0x1f1, 1, kEEDT_s8},
-    {"mC1F2", 0x1f2, 1, kEEDT_s8},
-    {"mC1F3", 0x1f3, 1, kEEDT_s8},
     {"mSelectionSize", 0x1f4, 1, kEEDT_f32},
     {"mShadowScale", 0x1f8, 1, kEEDT_f32},
-    {"mL1FC", 0x1fc, 1, kEEDT_f32},
     {"mOuterCollisionSphere", 0x200, 1, kEEDT_f32},
     {"mInnerCollisionSphere", 0x204, 1, kEEDT_f32},
     {"mIsCollidable", 0x208, 1, kEEDT_bool},
-    {"mB209", 0x209, 1, kEEDT_bool},
-    {"mC20A", 0x20a, 1, kEEDT_s8},
-    {"mC20B", 0x20b, 1, kEEDT_s8},
     {"mMissileDelayTime", 0x20c, 1, kEEDT_f32},
     {"mLaunchPitch", 0x210, 1, kEEDT_f32},
     {"mAmmunition", 0x214, 1, kEEDT_s32},
@@ -783,102 +598,65 @@ static const EEDTField kEEDTFields_EEUnitClassRecord[] = {
     {"mCanFireOverWalls", 0x219, 1, kEEDT_bool},
     {"mIsAffectedByGravity", 0x21a, 1, kEEDT_bool},
     {"mShootsHigh", 0x21b, 1, kEEDT_bool},
-    {"mL21C", 0x21c, 1, kEEDT_s32},
-    {"mL220", 0x220, 1, kEEDT_s32},
     {"mAIKind", 0x224, 1, kEEDT_s32},
     {"mCounterKind1", 0x228, 1, kEEDT_s32},
     {"mCounterKind2", 0x22c, 1, kEEDT_s32},
     {"mCounterKind3", 0x230, 1, kEEDT_s32},
     {"mCanSetRallyPoint", 0x234, 1, kEEDT_bool},
-    {"mC235", 0x235, 1, kEEDT_s8},
-    {"mC236", 0x236, 1, kEEDT_s8},
-    {"mC237", 0x237, 1, kEEDT_s8},
     {"mUpgradeTableIndex", 0x238, 1, kEEDT_s32},
     {"mConversionRate", 0x23c, 1, kEEDT_s32},
     {"mConversionResistance", 0x240, 1, kEEDT_f32},
     {"mIsPlayerPlaceable", 0x244, 1, kEEDT_bool},
     {"mIsGaiaPlaceable", 0x245, 1, kEEDT_bool},
     {"mIsVital", 0x246, 1, kEEDT_bool},
-    {"mC247", 0x247, 1, kEEDT_s8},
     {"mIsDeletable", 0x248, 1, kEEDT_bool},
     {"mIsDecoration", 0x249, 1, kEEDT_bool},
-    {"mC24A", 0x24a, 1, kEEDT_s8},
-    {"mC24B", 0x24b, 1, kEEDT_s8},
-    {"mL24C", 0x24c, 1, kEEDT_s32},
-    {"mL250", 0x250, 1, kEEDT_s32},
-    {"mL254", 0x254, 1, kEEDT_s32},
-    {"mL258", 0x258, 1, kEEDT_s32},
-    {"mL25C", 0x25c, 1, kEEDT_s32},
-    {"mL260", 0x260, 1, kEEDT_s32},
-    {"mL264", 0x264, 1, kEEDT_s32},
-    {"mL268", 0x268, 1, kEEDT_s32},
-    {"mL26C", 0x26c, 1, kEEDT_s32},
-    {"mL270", 0x270, 1, kEEDT_s32},
-    {"mL274", 0x274, 1, kEEDT_s32},
-    {"mL278", 0x278, 1, kEEDT_s32},
+    {"mDeathEffect", 0x24c, 1, kEEDT_s32},
+    {"mDamageEffect", 0x250, 1, kEEDT_s32},
+    {"mMuzzleFlashEffect", 0x254, 1, kEEDT_s32},
+    {"mTrailEffect", 0x258, 1, kEEDT_s32},
+    {"mRippleEffect", 0x25c, 1, kEEDT_s32},
+    {"mSplashEffect", 0x260, 1, kEEDT_s32},
+    {"mHealEffect", 0x264, 1, kEEDT_s32},
+    {"mImpactSparksEffect", 0x26c, 1, kEEDT_s32},
+    {"mImpactBloodEffect", 0x270, 1, kEEDT_s32},
+    {"mAttachedEffect", 0x274, 1, kEEDT_s32},
     {"mCreationEffect", 0x27c, 1, kEEDT_s32},
-    {"mL280", 0x280, 1, kEEDT_s32},
-    {"mL284", 0x284, 1, kEEDT_s32},
-    {"mL288", 0x288, 1, kEEDT_s32},
-    {"mL28C", 0x28c, 1, kEEDT_s32},
-    {"mL290", 0x290, 1, kEEDT_s32},
-    {"mL294", 0x294, 1, kEEDT_s32},
-    {"mL298", 0x298, 1, kEEDT_s32},
-    {"mL29C", 0x29c, 1, kEEDT_s32},
+    {"mSpecialAttackEffect", 0x294, 1, kEEDT_s32},
+    {"mShotEffect", 0x29c, 1, kEEDT_s32},
     {"mLeprosyEffect", 0x2a0, 1, kEEDT_s32},
     {"mPlagueEffect", 0x2a4, 1, kEEDT_s32},
     {"mMoraleEffect", 0x2a8, 1, kEEDT_s32},
-    {"mL2AC", 0x2ac, 1, kEEDT_s32},
-    {"mL2B0", 0x2b0, 1, kEEDT_s32},
-    {"mL2B4", 0x2b4, 1, kEEDT_s32},
-    {"mL2B8", 0x2b8, 1, kEEDT_s32},
-    {"mL2BC", 0x2bc, 1, kEEDT_s32},
-    {"mU2C0", 0x2c0, 1, kEEDT_s32},
-    {"mU2C4", 0x2c4, 1, kEEDT_s32},
+    {"mPulseCannonEffect", 0x2ac, 1, kEEDT_s32},
+    {"mBattleCryEffect", 0x2b0, 1, kEEDT_s32},
+    {"mShellHoleEffect", 0x2b4, 1, kEEDT_s32},
+    {"mBloodStainEffect", 0x2bc, 1, kEEDT_s32},
     {"mBobPitch", 0x2c8, 1, kEEDT_f32},
-    {"mU2CC", 0x2cc, 1, kEEDT_s32},
-    {"mU2D0", 0x2d0, 1, kEEDT_s32},
-    {"mU2D4", 0x2d4, 1, kEEDT_s32},
-    {"mU2D8", 0x2d8, 1, kEEDT_s32},
-    {"mB2DC", 0x2dc, 1, kEEDT_bool},
-    {"mB2DD", 0x2dd, 1, kEEDT_bool},
-    {"mB2DE", 0x2de, 1, kEEDT_bool},
-    {"mB2DF", 0x2df, 1, kEEDT_bool},
-    {"mC2E0", 0x2e0, 1, kEEDT_s8},
-    {"mC2E1", 0x2e1, 1, kEEDT_s8},
-    {"mB2E2", 0x2e2, 1, kEEDT_bool},
+    {"mCanMoveOnLand", 0x2dc, 1, kEEDT_bool},
+    {"mCanMoveOnDeepWater", 0x2dd, 1, kEEDT_bool},
+    {"mCanMoveOnRock", 0x2de, 1, kEEDT_bool},
+    {"mCanMoveOnTerrainType3", 0x2df, 1, kEEDT_bool},
+    {"mCanMoveOnMud", 0x2e2, 1, kEEDT_bool},
     {"mCanEnterFortresses", 0x2e3, 1, kEEDT_bool},
-    {"mB2E4", 0x2e4, 1, kEEDT_bool},
-    {"mB2E5", 0x2e5, 1, kEEDT_bool},
-    {"mB2E6", 0x2e6, 1, kEEDT_bool},
-    {"mB2E7", 0x2e7, 1, kEEDT_bool},
-    {"mB2E8", 0x2e8, 1, kEEDT_bool},
-    {"mC2E9", 0x2e9, 1, kEEDT_s8},
-    {"mB2EA", 0x2ea, 1, kEEDT_bool},
-    {"mB2EB", 0x2eb, 1, kEEDT_bool},
+    {"mCanMoveOnRoughGrass", 0x2e4, 1, kEEDT_bool},
+    {"mCanMoveOnTerrainType7", 0x2e5, 1, kEEDT_bool},
+    {"mCanMoveOnPavement", 0x2e6, 1, kEEDT_bool},
+    {"mCanMoveOnCliffs", 0x2e7, 1, kEEDT_bool},
+    {"mCanMoveOnShallowWater", 0x2e8, 1, kEEDT_bool},
+    {"mCanMoveOnSand", 0x2ea, 1, kEEDT_bool},
+    {"mCanMoveInSpace", 0x2eb, 1, kEEDT_bool},
     {"mIsAttackUnit", 0x2ec, 1, kEEDT_bool},
     {"mIsDefenseUnit", 0x2ed, 1, kEEDT_bool},
-    {"mC2EE", 0x2ee, 1, kEEDT_s8},
-    {"mC2EF", 0x2ef, 1, kEEDT_s8},
     {"mAreaEffectTemplate0", 0x2f0, 1, kEEDT_s32},
     {"mAreaEffectTemplate1", 0x2f4, 1, kEEDT_s32},
     {"mAreaEffectTemplate2", 0x2f8, 1, kEEDT_s32},
     {"mAreaEffectTemplate3", 0x2fc, 1, kEEDT_s32},
-    {"mU300", 0x300, 1, kEEDT_s32},
-    {"mU304", 0x304, 1, kEEDT_s32},
-    {"mU308", 0x308, 1, kEEDT_s32},
     {"mCarryAmount", 0x30c, 1, kEEDT_f32},
-    {"mU310", 0x310, 1, kEEDT_s32},
     {"mMaxObjectCarry", 0x314, 1, kEEDT_s32},
     {"mIsScenarioSelectable", 0x318, 1, kEEDT_bool},
-    {"mB319", 0x319, 1, kEEDT_bool},
     {"mBuildsOnElevation", 0x31a, 1, kEEDT_bool},
-    {"mC31B", 0x31b, 1, kEEDT_s8},
-    {"mU31C", 0x31c, 1, kEEDT_s32},
-    {"mU320", 0x320, 1, kEEDT_s32},
     {"mScaffoldingType", 0x324, 1, kEEDT_s32},
     {"mDeathType", 0x328, 1, kEEDT_s32},
-    {"mL32C", 0x32c, 1, kEEDT_s32},
     {"mCloakRadius", 0x330, 1, kEEDT_s32},
     {"mMiniMapColor", 0x334, 1, kEEDT_s32},
     {"mGarrisonCapacity", 0x338, 1, kEEDT_s32},
@@ -888,27 +666,20 @@ static const EEDTField kEEDTFields_EEUnitClassRecord[] = {
     {"mOverlapUnitSet", 0x348, 1, kEEDT_s32},
     {"mWonderBonus", 0x34c, 1, kEEDT_s32},
     {"mWonderUnitSet", 0x350, 1, kEEDT_s32},
-    {"mF354", 0x354, 1, kEEDT_f32},
+    {"mSlopeSpeedPenalty", 0x354, 1, kEEDT_f32},
     {"mBobHeight", 0x358, 1, kEEDT_f32},
     {"mFriendlyDamageFactor", 0x35c, 1, kEEDT_f32},
     {"mGarrisonBonus", 0x360, 1, kEEDT_f32},
-    {"mU364", 0x364, 1, kEEDT_s32},
-    {"mF368", 0x368, 1, kEEDT_f32},
     {"mIsInactive", 0x36c, 1, kEEDT_bool},
-    {"mC36D", 0x36d, 1, kEEDT_s8},
-    {"mC36E", 0x36e, 1, kEEDT_s8},
-    {"mC36F", 0x36f, 1, kEEDT_s8},
     {"mInfluence", 0x370, 1, kEEDT_s32},
     {"mNumAttributes", 0x374, 1, kEEDT_s32},
     {"mTechnology", 0x378, 1, kEEDT_s32},
     {"mBlocksTile", 0x37c, 1, kEEDT_bool},
     {"mIsCloakable", 0x37d, 1, kEEDT_bool},
-    {"mB37E", 0x37e, 1, kEEDT_bool},
+    {"mIsExpansionUnit", 0x37e, 1, kEEDT_bool},
     {"mCanEnterAirports", 0x37f, 1, kEEDT_bool},
     {"mCanEnterCarriers", 0x380, 1, kEEDT_bool},
-    {"mC381", 0x381, 1, kEEDT_s8},
     {"mCanGarrison", 0x382, 1, kEEDT_bool},
-    {"mC383", 0x383, 1, kEEDT_s8},
     {"mDeathSpawnType", 0x384, 1, kEEDT_s32},
     {"mPower", 0x388, 1, kEEDT_s32},
     {"mPowerRegeneration", 0x38c, 1, kEEDT_s32},
@@ -919,103 +690,32 @@ static const EEDTField kEEDTFields_EEUnitClassRecord[] = {
     {"mHealThreshold", 0x3a0, 1, kEEDT_f32},
     {"mLoadRange", 0x3a4, 1, kEEDT_f32},
     {"mUnloadRange", 0x3a8, 1, kEEDT_f32},
-    {"mB3AC", 0x3ac, 1, kEEDT_bool},
+    {"mCanCrossForest", 0x3ac, 1, kEEDT_bool},
     {"mCanDisband", 0x3ad, 1, kEEDT_bool},
     {"mIsObstacle", 0x3ae, 1, kEEDT_bool},
     {"mCanAttackGround", 0x3af, 1, kEEDT_bool},
     {"mIsMelee", 0x3b0, 1, kEEDT_bool},
-    {"mC3B1", 0x3b1, 1, kEEDT_s8},
-    {"mC3B2", 0x3b2, 1, kEEDT_s8},
-    {"mC3B3", 0x3b3, 1, kEEDT_s8},
-    {"mU3B4", 0x3b4, 1, kEEDT_s32},
-    {"mU3B8", 0x3b8, 1, kEEDT_s32},
-    {"mU3BC", 0x3bc, 1, kEEDT_s32},
-    {"mU3C0", 0x3c0, 1, kEEDT_s32},
-    {"mU3C4", 0x3c4, 1, kEEDT_s32},
-    {"mU3C8", 0x3c8, 1, kEEDT_s32},
-    {"mU3CC", 0x3cc, 1, kEEDT_s32},
-    {"mU3D0", 0x3d0, 1, kEEDT_s32},
-    {"mU3D4", 0x3d4, 1, kEEDT_s32},
-    {"mU3D8", 0x3d8, 1, kEEDT_s32},
-    {"mU3DC", 0x3dc, 1, kEEDT_s32},
-    {"mU3E0", 0x3e0, 1, kEEDT_s32},
-    {"mU3E4", 0x3e4, 1, kEEDT_s32},
-    {"mU3E8", 0x3e8, 1, kEEDT_s32},
-    {"mU3EC", 0x3ec, 1, kEEDT_s32},
-    {"mU3F0", 0x3f0, 1, kEEDT_s32},
-    {"mU3F4", 0x3f4, 1, kEEDT_s32},
-    {"mU3F8", 0x3f8, 1, kEEDT_s32},
-    {"mU3FC", 0x3fc, 1, kEEDT_s32},
-    {"mU400", 0x400, 1, kEEDT_s32},
-    {"mU404", 0x404, 1, kEEDT_s32},
-    {"mU408", 0x408, 1, kEEDT_s32},
-    {"mU40C", 0x40c, 1, kEEDT_s32},
-    {"mU410", 0x410, 1, kEEDT_s32},
-    {"mU414", 0x414, 1, kEEDT_s32},
-    {"mU418", 0x418, 1, kEEDT_s32},
-    {"mU41C", 0x41c, 1, kEEDT_s32},
-    {"mU420", 0x420, 1, kEEDT_s32},
-    {"mU424", 0x424, 1, kEEDT_s32},
-    {"mU428", 0x428, 1, kEEDT_s32},
-    {"mU42C", 0x42c, 1, kEEDT_s32},
-    {"mU430", 0x430, 1, kEEDT_s32},
-    {"mU434", 0x434, 1, kEEDT_s32},
-    {"mU438", 0x438, 1, kEEDT_s32},
-    {"mU43C", 0x43c, 1, kEEDT_s32},
-    {"mU440", 0x440, 1, kEEDT_s32},
-    {"mU444", 0x444, 1, kEEDT_s32},
-    {"mU448", 0x448, 1, kEEDT_s32},
-    {"mU44C", 0x44c, 1, kEEDT_s32},
-    {"mU450", 0x450, 1, kEEDT_s32},
-    {"mU454", 0x454, 1, kEEDT_s32},
-    {"mU458", 0x458, 1, kEEDT_s32},
-    {"mU45C", 0x45c, 1, kEEDT_s32},
-    {"mU460", 0x460, 1, kEEDT_s32},
-    {"mU464", 0x464, 1, kEEDT_s32},
-    {"mU468", 0x468, 1, kEEDT_s32},
-    {"mU46C", 0x46c, 1, kEEDT_s32},
-    {"mU470", 0x470, 1, kEEDT_s32},
-    {"mU474", 0x474, 1, kEEDT_s32},
-    {"mU478", 0x478, 1, kEEDT_s32},
     {"mPackedType", 0x47c, 1, kEEDT_s32},
-    {"mL480", 0x480, 1, kEEDT_s32},
+    {"mRemainsType", 0x480, 1, kEEDT_s32},
     {"mAttributes", 0x484, 200, kEEDT_u32},
     {"mHasSpecialAttack", 0x7a4, 1, kEEDT_bool},
-    {"mC7A5", 0x7a5, 1, kEEDT_s8},
-    {"mC7A6", 0x7a6, 1, kEEDT_s8},
-    {"mC7A7", 0x7a7, 1, kEEDT_s8},
 };
 static const EEDTField kEEDTFields_EECivilizationEntry[] = {
-    {"mDatabaseID", 0x000, 1, kEEDT_s32},
     {"mIndex", 0x004, 1, kEEDT_s32},
     {"mFileName", 0x008, 100, kEEDT_str},
     {"mChecksum", 0x06c, 1, kEEDT_s32},
     {"mNameID", 0x070, 1, kEEDT_s32},
     {"mEraNameID", 0x074, 1, kEEDT_s32},
 };
-static const EEDTField kEEDTFields_RandomMapRecord[] = {
-    {"dbId", 0x000, 1, kEEDT_s32},
-    {"group", 0x004, 1, kEEDT_s32},
-    {"name", 0x008, 100, kEEDT_str},
-    {"u_0x06c", 0x06c, 1, kEEDT_s32},
-    {"u_0x070", 0x070, 1, kEEDT_s32},
-    {"u_0x074", 0x074, 4, kEEDT_s32},
-};
 static const EEDTField kEEDTFields_EESoundRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
-    {"index", 0x068, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mMaxInstances", 0x06c, 1, kEEDT_s32},
     {"mCategory", 0x070, 1, kEEDT_s32},
-    {"mL74", 0x074, 1, kEEDT_s32},
     {"mLooping", 0x078, 1, kEEDT_bool},
-    {"pad_0x079", 0x079, 3, kEEDT_pad},
     {"mVolume", 0x07c, 1, kEEDT_s32},
-    {"u_0x080", 0x080, 1, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EEStartingResourcesRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mIndex", 0x068, 1, kEEDT_s32},
     {"mNameID", 0x06c, 1, kEEDT_s32},
     {"mFood", 0x070, 1, kEEDT_s32},
@@ -1025,7 +725,7 @@ static const EEDTField kEEDTFields_EEStartingResourcesRecord[] = {
     {"mIron", 0x080, 1, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EETechTreeRecord[] = {
-    {"mName", 0x000, 104, kEEDT_str},
+    {"label", 0x000, 104, kEEDT_str},
     {"mID", 0x068, 1, kEEDT_s32},
     {"mEpoch", 0x06c, 1, kEEDT_s32},
     {"mObsoleteEpoch", 0x070, 1, kEEDT_s32},
@@ -1033,9 +733,7 @@ static const EEDTField kEEDTFields_EETechTreeRecord[] = {
     {"mObsoleteEvent", 0x078, 1, kEEDT_s32},
     {"mCost3", 0x07c, 1, kEEDT_s32},
     {"mCost4", 0x080, 1, kEEDT_s32},
-    {"mU84", 0x084, 1, kEEDT_s32},
     {"mCost5", 0x088, 1, kEEDT_s32},
-    {"mU8C", 0x08c, 1, kEEDT_s32},
     {"mCost6", 0x090, 1, kEEDT_s32},
     {"mCost2", 0x094, 1, kEEDT_s32},
     {"mBuildTime", 0x098, 1, kEEDT_s32},
@@ -1047,8 +745,6 @@ static const EEDTField kEEDTFields_EETechTreeRecord[] = {
     {"mButton", 0x0b0, 1, kEEDT_s32},
     {"mMakesUnit", 0x0b4, 1, kEEDT_bool},
     {"mCountsTowardEpoch", 0x0b5, 1, kEEDT_bool},
-    {"mBB6", 0x0b6, 1, kEEDT_bool},
-    {"mBB7", 0x0b7, 1, kEEDT_bool},
     {"mNameID", 0x0b8, 1, kEEDT_s32},
     {"mKind", 0x0bc, 1, kEEDT_s32},
     {"mCostResource", 0x0c0, 1, kEEDT_s32},
@@ -1056,10 +752,6 @@ static const EEDTField kEEDTFields_EETechTreeRecord[] = {
     {"mRequiredStatisticValue", 0x0c8, 1, kEEDT_s32},
     {"mCalamity", 0x0cc, 1, kEEDT_s32},
     {"mHotKey", 0x0d0, 1, kEEDT_s32},
-    {"mUD4", 0x0d4, 1, kEEDT_s32},
-    {"mUD8", 0x0d8, 1, kEEDT_s32},
-    {"mUDC", 0x0dc, 1, kEEDT_s32},
-    {"mUE0", 0x0e0, 1, kEEDT_s32},
     {"mFactor1", 0x0e4, 1, kEEDT_f32},
     {"mFactor2", 0x0e8, 1, kEEDT_f32},
     {"mFactor3", 0x0ec, 1, kEEDT_f32},
@@ -1068,7 +760,6 @@ static const EEDTField kEEDTFields_EETechTreeRecord[] = {
     {"mObsoletedByDefault", 0x0f5, 1, kEEDT_bool},
     {"mAvailableWithEpoch", 0x0f6, 1, kEEDT_bool},
     {"mResearchedWithEpoch", 0x0f7, 1, kEEDT_bool},
-    {"mUF8", 0x0f8, 1, kEEDT_s32},
     {"mNextEpoch", 0x0fc, 1, kEEDT_s32},
     {"mRequiredSOL", 0x100, 1, kEEDT_s32},
     {"mFirstNodeID", 0x104, 1, kEEDT_s32},
@@ -1086,7 +777,6 @@ static const EEDTField kEEDTFields_EETerrainRecord[] = {
     {"mIsWater", 0x084, 1, kEEDT_bool},
     {"mHasAlpha", 0x085, 1, kEEDT_bool},
     {"mIsInEditor", 0x086, 1, kEEDT_bool},
-    {"pad_0x087", 0x087, 1, kEEDT_pad},
     {"mColorType", 0x088, 1, kEEDT_s32},
     {"mFirst", 0x08c, 3, kEEDT_u32},
     {"mLast", 0x098, 3, kEEDT_u32},
@@ -1096,28 +786,15 @@ static const EEDTField kEEDTFields_EETerrainRecord[] = {
     {"mRed", 0x0b0, 1, kEEDT_s32},
     {"mGreen", 0x0b4, 1, kEEDT_s32},
     {"mBlue", 0x0b8, 1, kEEDT_s32},
-    {"u_0x0bc", 0x0bc, 1, kEEDT_s32},
-    {"u_0x0c0", 0x0c0, 1, kEEDT_s32},
-    {"u_0x0c4", 0x0c4, 1, kEEDT_s32},
-    {"u_0x0c8", 0x0c8, 3, kEEDT_raw},
     {"mIsAmbientsOnly", 0x0cb, 1, kEEDT_bool},
 };
-static const EEDTField kEEDTFields_TerrainGrayTextureRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
-    {"index", 0x068, 1, kEEDT_s32},
-    {"u_0x06c", 0x06c, 3, kEEDT_s32},
-};
 static const EEDTField kEEDTFields_EETerrainTypeRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mID", 0x068, 1, kEEDT_s32},
     {"mFirstColor", 0x06c, 1, kEEDT_s32},
     {"mLastColor", 0x070, 1, kEEDT_s32},
     {"mNameID", 0x074, 1, kEEDT_s32},
-    {"mL78", 0x078, 1, kEEDT_s32},
     {"mIsInEditor", 0x07c, 1, kEEDT_bool},
-    {"pad_0x07d", 0x07d, 3, kEEDT_pad},
 };
 static const EEDTField kEEDTFields_UIDbDataBackgrounds[] = {
     {"mName", 0x000, 100, kEEDT_str},
@@ -1152,17 +829,15 @@ static const EEDTField kEEDTFields_UIDbDataBackgrounds[] = {
     {"mAttribute1", 0x12e, 1, kEEDT_bool},
     {"mAttribute2", 0x12f, 1, kEEDT_bool},
     {"mAttribute3", 0x130, 1, kEEDT_bool},
-    {"pad_0x131", 0x131, 3, kEEDT_pad},
 };
 static const EEDTField kEEDTFields_UIDbDataEvents[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mEventID", 0x068, 1, kEEDT_s32},
     {"mOwnerID", 0x06c, 1, kEEDT_u32},
     {"mEventType", 0x070, 1, kEEDT_u32},
 };
 static const EEDTField kEEDTFields_UIDbControl[] = {
-    {"mName", 0x000, 100, kEEDT_str},
+    {"label", 0x000, 100, kEEDT_str},
     {"mNormalFileName", 0x064, 100, kEEDT_str},
     {"mPressedFileName", 0x0c8, 100, kEEDT_str},
     {"mFocusedFileName", 0x12c, 100, kEEDT_str},
@@ -1171,12 +846,10 @@ static const EEDTField kEEDTFields_UIDbControl[] = {
     {"mBackgroundOpacity", 0x258, 1, kEEDT_f32},
     {"mTextBoxOpacity", 0x25c, 1, kEEDT_f32},
     {"mScrollBarBgOpacity", 0x260, 1, kEEDT_f32},
-    {"mUnknown264", 0x264, 5, kEEDT_u32},
     {"mLeftOffset", 0x278, 1, kEEDT_f32},
     {"mRightOffset", 0x27c, 1, kEEDT_f32},
     {"mBottomOffset", 0x280, 1, kEEDT_f32},
     {"mTopOffset", 0x284, 1, kEEDT_f32},
-    {"mUnknown288", 0x288, 1, kEEDT_s32},
     {"mID", 0x28c, 1, kEEDT_s32},
     {"mFormID", 0x290, 1, kEEDT_s32},
     {"mGroup", 0x294, 1, kEEDT_u32},
@@ -1223,7 +896,6 @@ static const EEDTField kEEDTFields_UIDbControl[] = {
     {"mPageSize", 0x338, 1, kEEDT_s32},
     {"mStringTableID", 0x33c, 1, kEEDT_s32},
     {"mBlinkRate", 0x340, 1, kEEDT_s32},
-    {"mUnknown344", 0x344, 3, kEEDT_u32},
     {"mIsVisible", 0x350, 1, kEEDT_bool},
     {"mStartChecked", 0x351, 1, kEEDT_bool},
     {"mListBoxAlwaysDirty", 0x352, 1, kEEDT_bool},
@@ -1232,10 +904,9 @@ static const EEDTField kEEDTFields_UIDbControl[] = {
     {"mPressedHasAlpha", 0x355, 1, kEEDT_bool},
     {"mNormalHasAlpha", 0x356, 1, kEEDT_bool},
     {"mAlwaysDirty", 0x357, 1, kEEDT_bool},
-    {"mBoolPlaceholder2", 0x358, 1, kEEDT_bool},
-    {"mBoolPlaceholder3", 0x359, 1, kEEDT_bool},
-    {"mBoolPlaceholder4", 0x35a, 1, kEEDT_bool},
-    {"pad_0x35b", 0x35b, 1, kEEDT_pad},
+    {"mFitRectToText", 0x358, 1, kEEDT_bool},
+    {"mScaleToControl", 0x359, 1, kEEDT_bool},
+    {"mLoopMovie", 0x35a, 1, kEEDT_bool},
 };
 static const EEDTField kEEDTFields_UIDbDataFonts[] = {
     {"mFontName", 0x000, 108, kEEDT_str},
@@ -1247,12 +918,10 @@ static const EEDTField kEEDTFields_UIDbDataFonts[] = {
     {"mUnderline", 0x07a, 1, kEEDT_bool},
     {"mStyle10", 0x07b, 1, kEEDT_bool},
     {"mStyle08", 0x07c, 1, kEEDT_bool},
-    {"pad_0x07d", 0x07d, 3, kEEDT_pad},
 };
 static const EEDTField kEEDTFields_UIDbDataForms[] = {
-    {"mName", 0x000, 100, kEEDT_str},
+    {"label", 0x000, 100, kEEDT_str},
     {"mMusicFile", 0x064, 100, kEEDT_str},
-    {"mID", 0x0c8, 1, kEEDT_s32},
     {"mFormID", 0x0cc, 1, kEEDT_s32},
     {"mControlCount", 0x0d0, 1, kEEDT_u32},
     {"mControlGroupCount", 0x0d4, 1, kEEDT_u32},
@@ -1263,7 +932,6 @@ static const EEDTField kEEDTFields_UIDbDataForms[] = {
     {"mDesignedWidth", 0x0e8, 1, kEEDT_u32},
     {"mDesignedHeight", 0x0ec, 1, kEEDT_u32},
     {"mHelpTextTimeDelay", 0x0f0, 1, kEEDT_u32},
-    {"mUnknownF4", 0x0f4, 1, kEEDT_u32},
     {"mLeftOffsetType", 0x0f8, 1, kEEDT_u32},
     {"mRightOffsetType", 0x0fc, 1, kEEDT_u32},
     {"mTopOffsetType", 0x100, 1, kEEDT_u32},
@@ -1271,18 +939,15 @@ static const EEDTField kEEDTFields_UIDbDataForms[] = {
     {"mTabbingOn", 0x108, 1, kEEDT_bool},
     {"mUseToolTips", 0x109, 1, kEEDT_bool},
     {"mUseExclusiveCoords", 0x10a, 1, kEEDT_bool},
-    {"pad_0x10b", 0x10b, 1, kEEDT_pad},
 };
 static const EEDTField kEEDTFields_UIDbDataHotKeys[] = {
-    {"mUnknown00", 0x000, 1, kEEDT_u32},
     {"mID", 0x004, 1, kEEDT_s32},
-    {"mName", 0x008, 100, kEEDT_str},
+    {"label", 0x008, 100, kEEDT_str},
     {"mModifiers", 0x06c, 3, kEEDT_u32},
     {"mKey", 0x078, 1, kEEDT_u32},
 };
 static const EEDTField kEEDTFields_EEUnitBehaviorRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mIndex", 0x068, 1, kEEDT_s32},
     {"mCanMoveFreely", 0x06c, 1, kEEDT_bool},
     {"mCanPursuePastInitialContactLOS", 0x06d, 1, kEEDT_bool},
@@ -1291,9 +956,6 @@ static const EEDTField kEEDTFields_EEUnitBehaviorRecord[] = {
     {"mCanFlee", 0x070, 1, kEEDT_bool},
     {"mMeleeCanMoveFreely", 0x071, 1, kEEDT_bool},
     {"mRangedCanMoveFreely", 0x072, 1, kEEDT_bool},
-    {"u_0x073", 0x073, 1, kEEDT_raw},
-    {"u_0x074", 0x074, 1, kEEDT_s32},
-    {"u_0x078", 0x078, 1, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EEUnitSetRecord[] = {
     {"mName", 0x000, 104, kEEDT_str},
@@ -1303,10 +965,9 @@ static const EEDTField kEEDTFields_EEUnitSetRecord[] = {
     {"mIncludedSet", 0x0ac, 1, kEEDT_s32},
     {"mExcludedSet", 0x0b0, 1, kEEDT_s32},
     {"mShowInEditor", 0x0b4, 1, kEEDT_bool},
-    {"pad_0x0b5", 0x0b5, 3, kEEDT_pad},
 };
 static const EEDTField kEEDTFields_EEUCUpgradeRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
+    {"label", 0x000, 100, kEEDT_str},
     {"mAttackStep", 0x064, 1, kEEDT_f32},
     {"mHitPointsStep", 0x068, 1, kEEDT_f32},
     {"mSpeedStep", 0x06c, 1, kEEDT_f32},
@@ -1337,175 +998,466 @@ static const EEDTField kEEDTFields_EEUCUpgradeRecord[] = {
     {"mAreaEffectCost", 0x0d0, 1, kEEDT_f32},
     {"mTransportCost", 0x0d4, 1, kEEDT_f32},
     {"mMaxLevel", 0x0d8, 1, kEEDT_s32},
-    {"mLDC", 0x0dc, 1, kEEDT_s32},
     {"mIndex", 0x0e0, 1, kEEDT_s32},
-    {"mLE4", 0x0e4, 1, kEEDT_s32},
-    {"mLE8", 0x0e8, 1, kEEDT_s32},
     {"mHasRepairStep", 0x0ec, 1, kEEDT_bool},
-    {"pad_0x0ed", 0x0ed, 3, kEEDT_pad},
 };
 static const EEDTField kEEDTFields_EEToHitRecord[] = {
-    {"name", 0x000, 100, kEEDT_str},
-    {"dbId", 0x064, 1, kEEDT_s32},
-    {"index", 0x068, 1, kEEDT_s32},
+    {"label", 0x000, 100, kEEDT_str},
     {"mPercents", 0x06c, 6, kEEDT_s32},
 };
 static const EEDTField kEEDTFields_EEWorldTableEntry[] = {
     {"mFloatValue", 0x000, 1, kEEDT_f32},
     {"mFloatValue2", 0x004, 1, kEEDT_f32},
-    {"mDatabaseID", 0x008, 1, kEEDT_s32},
-    {"mIndex", 0x00c, 1, kEEDT_s32},
     {"mLongValue", 0x010, 1, kEEDT_s32},
     {"mLongValue2", 0x014, 1, kEEDT_u32},
-    {"mL18", 0x018, 1, kEEDT_s32},
 };
 
 static const EEDTStruct kEEDTStructs[] = {
-    {"EEAIUnitTargetingRecord", 160, kEEDTFields_EEAIUnitTargetingRecord, sizeof(kEEDTFields_EEAIUnitTargetingRecord) / sizeof(EEDTField)},
-    {"EEAmbientSoundRecord", 152, kEEDTFields_EEAmbientSoundRecord, sizeof(kEEDTFields_EEAmbientSoundRecord) / sizeof(EEDTField)},
-    {"EEAnimalRecord", 272, kEEDTFields_EEAnimalRecord, sizeof(kEEDTFields_EEAnimalRecord) / sizeof(EEDTField)},
-    {"EEAreaEffectData", 188, kEEDTFields_EEAreaEffectData, sizeof(kEEDTFields_EEAreaEffectData) / sizeof(EEDTField)},
-    {"EEButtonRecord", 224, kEEDTFields_EEButtonRecord, sizeof(kEEDTFields_EEButtonRecord) / sizeof(EEDTField)},
-    {"EECalamityData", 236, kEEDTFields_EECalamityData, sizeof(kEEDTFields_EECalamityData) / sizeof(EEDTField)},
-    {"EECivilizationCategoryEntry", 600, kEEDTFields_EECivilizationCategoryEntry, sizeof(kEEDTFields_EECivilizationCategoryEntry) / sizeof(EEDTField)},
-    {"EECivPower", 152, kEEDTFields_EECivPower, sizeof(kEEDTFields_EECivPower) / sizeof(EEDTField)},
-    {"EECliffTerrainRecord", 124, kEEDTFields_EECliffTerrainRecord, sizeof(kEEDTFields_EECliffTerrainRecord) / sizeof(EEDTField)},
-    {"EEColorTableRecord", 168, kEEDTFields_EEColorTableRecord, sizeof(kEEDTFields_EEColorTableRecord) / sizeof(EEDTField)},
-    {"EECPBehavior", 56, kEEDTFields_EECPBehavior, sizeof(kEEDTFields_EECPBehavior) / sizeof(EEDTField)},
-    {"EEEventEffect", 88, kEEDTFields_EEEventEffect, sizeof(kEEDTFields_EEEventEffect) / sizeof(EEDTField)},
-    {"EEEventRow", 104, kEEDTFields_EEEventRow, sizeof(kEEDTFields_EEEventRow) / sizeof(EEDTField)},
-    {"EEDamageTableRecord", 380, kEEDTFields_EEDamageTableRecord, sizeof(kEEDTFields_EEDamageTableRecord) / sizeof(EEDTField)},
-    {"EEGameVariantData", 276, kEEDTFields_EEGameVariantData, sizeof(kEEDTFields_EEGameVariantData) / sizeof(EEDTField)},
-    {"EEGraphicEffectRecord", 232, kEEDTFields_EEGraphicEffectRecord, sizeof(kEEDTFields_EEGraphicEffectRecord) / sizeof(EEDTField)},
-    {"EEGraphicObjectRecord", 716, kEEDTFields_EEGraphicObjectRecord, sizeof(kEEDTFields_EEGraphicObjectRecord) / sizeof(EEDTField)},
-    {"EEMusicRecord", 196, kEEDTFields_EEMusicRecord, sizeof(kEEDTFields_EEMusicRecord) / sizeof(EEDTField)},
-    {"EEUnitClassRecord", 1960, kEEDTFields_EEUnitClassRecord, sizeof(kEEDTFields_EEUnitClassRecord) / sizeof(EEDTField)},
-    {"EECivilizationEntry", 120, kEEDTFields_EECivilizationEntry, sizeof(kEEDTFields_EECivilizationEntry) / sizeof(EEDTField)},
-    {"RandomMapRecord", 132, kEEDTFields_RandomMapRecord, sizeof(kEEDTFields_RandomMapRecord) / sizeof(EEDTField)},
-    {"EESoundRecord", 132, kEEDTFields_EESoundRecord, sizeof(kEEDTFields_EESoundRecord) / sizeof(EEDTField)},
-    {"EEStartingResourcesRecord", 132, kEEDTFields_EEStartingResourcesRecord, sizeof(kEEDTFields_EEStartingResourcesRecord) / sizeof(EEDTField)},
-    {"EETechTreeRecord", 268, kEEDTFields_EETechTreeRecord, sizeof(kEEDTFields_EETechTreeRecord) / sizeof(EEDTField)},
-    {"EETerrainRecord", 204, kEEDTFields_EETerrainRecord, sizeof(kEEDTFields_EETerrainRecord) / sizeof(EEDTField)},
-    {"TerrainGrayTextureRecord", 120, kEEDTFields_TerrainGrayTextureRecord, sizeof(kEEDTFields_TerrainGrayTextureRecord) / sizeof(EEDTField)},
-    {"EETerrainTypeRecord", 128, kEEDTFields_EETerrainTypeRecord, sizeof(kEEDTFields_EETerrainTypeRecord) / sizeof(EEDTField)},
-    {"UIDbDataBackgrounds", 308, kEEDTFields_UIDbDataBackgrounds, sizeof(kEEDTFields_UIDbDataBackgrounds) / sizeof(EEDTField)},
-    {"UIDbDataEvents", 116, kEEDTFields_UIDbDataEvents, sizeof(kEEDTFields_UIDbDataEvents) / sizeof(EEDTField)},
-    {"UIDbControl", 860, kEEDTFields_UIDbControl, sizeof(kEEDTFields_UIDbControl) / sizeof(EEDTField)},
-    {"UIDbDataFonts", 128, kEEDTFields_UIDbDataFonts, sizeof(kEEDTFields_UIDbDataFonts) / sizeof(EEDTField)},
-    {"UIDbDataForms", 268, kEEDTFields_UIDbDataForms, sizeof(kEEDTFields_UIDbDataForms) / sizeof(EEDTField)},
-    {"UIDbDataHotKeys", 124, kEEDTFields_UIDbDataHotKeys, sizeof(kEEDTFields_UIDbDataHotKeys) / sizeof(EEDTField)},
-    {"EEUnitBehaviorRecord", 124, kEEDTFields_EEUnitBehaviorRecord, sizeof(kEEDTFields_EEUnitBehaviorRecord) / sizeof(EEDTField)},
-    {"EEUnitSetRecord", 184, kEEDTFields_EEUnitSetRecord, sizeof(kEEDTFields_EEUnitSetRecord) / sizeof(EEDTField)},
-    {"EEUCUpgradeRecord", 240, kEEDTFields_EEUCUpgradeRecord, sizeof(kEEDTFields_EEUCUpgradeRecord) / sizeof(EEDTField)},
-    {"EEToHitRecord", 132, kEEDTFields_EEToHitRecord, sizeof(kEEDTFields_EEToHitRecord) / sizeof(EEDTField)},
-    {"EEWorldTableEntry", 28, kEEDTFields_EEWorldTableEntry, sizeof(kEEDTFields_EEWorldTableEntry) / sizeof(EEDTField)},
+    {"EEAIUnitTargetingRecord", 160, kEEDTFields_EEAIUnitTargetingRecord, sizeof(kEEDTFields_EEAIUnitTargetingRecord) / sizeof(EEDTField),
+     0},
+    {"EEAmbientSoundRecord", 152, kEEDTFields_EEAmbientSoundRecord, sizeof(kEEDTFields_EEAmbientSoundRecord) / sizeof(EEDTField),
+     0},
+    {"EEAnimalRecord", 272, kEEDTFields_EEAnimalRecord, sizeof(kEEDTFields_EEAnimalRecord) / sizeof(EEDTField),
+     0},
+    {"EEAreaEffectData", 188, kEEDTFields_EEAreaEffectData, sizeof(kEEDTFields_EEAreaEffectData) / sizeof(EEDTField),
+     0},
+    {"EEButtonRecord", 224, kEEDTFields_EEButtonRecord, sizeof(kEEDTFields_EEButtonRecord) / sizeof(EEDTField),
+     0},
+    {"EECalamityData", 236, kEEDTFields_EECalamityData, sizeof(kEEDTFields_EECalamityData) / sizeof(EEDTField),
+     0},
+    {"EECivilizationCategoryEntry", 600, kEEDTFields_EECivilizationCategoryEntry, sizeof(kEEDTFields_EECivilizationCategoryEntry) / sizeof(EEDTField),
+     0},
+    {"EECivPower", 152, kEEDTFields_EECivPower, sizeof(kEEDTFields_EECivPower) / sizeof(EEDTField),
+     0},
+    {"EECliffTerrainRecord", 124, kEEDTFields_EECliffTerrainRecord, sizeof(kEEDTFields_EECliffTerrainRecord) / sizeof(EEDTField),
+     0},
+    {"EEColorTableRecord", 168, kEEDTFields_EEColorTableRecord, sizeof(kEEDTFields_EEColorTableRecord) / sizeof(EEDTField),
+     0},
+    {"EECPBehavior", 56, kEEDTFields_EECPBehavior, sizeof(kEEDTFields_EECPBehavior) / sizeof(EEDTField),
+     0},
+    {"EEEventEffect", 88, kEEDTFields_EEEventEffect, sizeof(kEEDTFields_EEEventEffect) / sizeof(EEDTField),
+     0},
+    {"EEEventRow", 104, kEEDTFields_EEEventRow, sizeof(kEEDTFields_EEEventRow) / sizeof(EEDTField),
+     0},
+    {"EEDamageTableRecord", 380, kEEDTFields_EEDamageTableRecord, sizeof(kEEDTFields_EEDamageTableRecord) / sizeof(EEDTField),
+     0},
+    {"EEGameVariantData", 276, kEEDTFields_EEGameVariantData, sizeof(kEEDTFields_EEGameVariantData) / sizeof(EEDTField),
+     0},
+    {"EEGraphicEffectRecord", 232, kEEDTFields_EEGraphicEffectRecord, sizeof(kEEDTFields_EEGraphicEffectRecord) / sizeof(EEDTField),
+     0},
+    {"EEGraphicObjectRecord", 716, kEEDTFields_EEGraphicObjectRecord, sizeof(kEEDTFields_EEGraphicObjectRecord) / sizeof(EEDTField),
+     0},
+    {"EEMusicRecord", 196, kEEDTFields_EEMusicRecord, sizeof(kEEDTFields_EEMusicRecord) / sizeof(EEDTField),
+     0},
+    {"EEUnitClassRecord", 1960, kEEDTFields_EEUnitClassRecord, sizeof(kEEDTFields_EEUnitClassRecord) / sizeof(EEDTField),
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00"},
+    {"EECivilizationEntry", 120, kEEDTFields_EECivilizationEntry, sizeof(kEEDTFields_EECivilizationEntry) / sizeof(EEDTField),
+     0},
+    {"EESoundRecord", 132, kEEDTFields_EESoundRecord, sizeof(kEEDTFields_EESoundRecord) / sizeof(EEDTField),
+     0},
+    {"EEStartingResourcesRecord", 132, kEEDTFields_EEStartingResourcesRecord, sizeof(kEEDTFields_EEStartingResourcesRecord) / sizeof(EEDTField),
+     0},
+    {"EETechTreeRecord", 268, kEEDTFields_EETechTreeRecord, sizeof(kEEDTFields_EETechTreeRecord) / sizeof(EEDTField),
+     0},
+    {"EETerrainRecord", 204, kEEDTFields_EETerrainRecord, sizeof(kEEDTFields_EETerrainRecord) / sizeof(EEDTField),
+     0},
+    {"EETerrainTypeRecord", 128, kEEDTFields_EETerrainTypeRecord, sizeof(kEEDTFields_EETerrainTypeRecord) / sizeof(EEDTField),
+     0},
+    {"UIDbDataBackgrounds", 308, kEEDTFields_UIDbDataBackgrounds, sizeof(kEEDTFields_UIDbDataBackgrounds) / sizeof(EEDTField),
+     0},
+    {"UIDbDataEvents", 116, kEEDTFields_UIDbDataEvents, sizeof(kEEDTFields_UIDbDataEvents) / sizeof(EEDTField),
+     0},
+    {"UIDbControl", 860, kEEDTFields_UIDbControl, sizeof(kEEDTFields_UIDbControl) / sizeof(EEDTField),
+     0},
+    {"UIDbDataFonts", 128, kEEDTFields_UIDbDataFonts, sizeof(kEEDTFields_UIDbDataFonts) / sizeof(EEDTField),
+     0},
+    {"UIDbDataForms", 268, kEEDTFields_UIDbDataForms, sizeof(kEEDTFields_UIDbDataForms) / sizeof(EEDTField),
+     0},
+    {"UIDbDataHotKeys", 124, kEEDTFields_UIDbDataHotKeys, sizeof(kEEDTFields_UIDbDataHotKeys) / sizeof(EEDTField),
+     0},
+    {"EEUnitBehaviorRecord", 124, kEEDTFields_EEUnitBehaviorRecord, sizeof(kEEDTFields_EEUnitBehaviorRecord) / sizeof(EEDTField),
+     0},
+    {"EEUnitSetRecord", 184, kEEDTFields_EEUnitSetRecord, sizeof(kEEDTFields_EEUnitSetRecord) / sizeof(EEDTField),
+     0},
+    {"EEUCUpgradeRecord", 240, kEEDTFields_EEUCUpgradeRecord, sizeof(kEEDTFields_EEUCUpgradeRecord) / sizeof(EEDTField),
+     0},
+    {"EEToHitRecord", 132, kEEDTFields_EEToHitRecord, sizeof(kEEDTFields_EEToHitRecord) / sizeof(EEDTField),
+     0},
+    {"EEWorldTableEntry", 28, kEEDTFields_EEWorldTableEntry, sizeof(kEEDTFields_EEWorldTableEntry) / sizeof(EEDTField),
+     0},
 };
 
 static const char* const kEEDTLead_dbgraphics[] = {"rowName", "mFileName", "mTextureName", "mTextureNames|mModelNames[14]", "mShadowModelName", "mShadowTextureName"};
 static const char* const kEEDTLead_dbsounds[] = {"mSampleName"};
 static const char* const kEEDTLead_dbterrain[] = {"mTextureName"};
-static const char* const kEEDTLead_dbterraingraytextures[] = {"textureName"};
 static const EEDTRowName kEEDTRows_dbworld[] = {
-    {21, "conversionsShownMax"},
-    {22, "miningLimit"},
-    {25, "chatMessageTime"},
+    {21, "conversionsStatisticMax"},
+    {22, "gatherersPerResourceMax"},
+    {25, "chatLogDisplayTime"},
     {26, "unitLimitRange"},
     {27, "unitLimitDefault"},
     {34, "wonderVictoryTime"},
-    {35, "conversionSearchRadius"},
-    {36, "shareBonus"},
-    {37, "healAmount"},
+    {35, "areaConversionRadius"},
+    {36, "wonderPopulationBonus"},
+    {37, "wonderHealAmount"},
     {42, "gameSpeedDefault"},
     {43, "gameSpeedRange"},
     {44, "gameSpeedStep"},
-    {45, "killRefundFactor"},
-    {46, "conversionCost"},
-    {47, "improvementPointLimit"},
-    {48, "startingCitizens"},
-    {49, "groupCapFactor"},
-    {50, "wonderPowerAmount"},
-    {51, "healEpochFactor"},
-    {52, "healEpochDivisor"},
-    {53, "elevationHighThreshold"},
-    {54, "elevationLowThreshold"},
-    {55, "elevationHighBonus"},
-    {56, "elevationLowFactor"},
-    {57, "improvementTime0"},
-    {58, "improvementTime1"},
-    {59, "improvementTime2"},
-    {60, "improvementTime3"},
-    {61, "improvementTime4"},
-    {62, "improvementTime5"},
-    {63, "improvementTime6"},
-    {64, "improvementTime7"},
-    {65, "improvementTime8"},
-    {66, "improvementTime9"},
-    {67, "improvementTime10"},
-    {68, "improvementTime11"},
-    {69, "improvementTime12"},
-    {70, "improvementTime13"},
-    {71, "improvementTime14"},
-    {72, "improvementTime15"},
-    {74, "complexUnitSight"},
-    {75, "upgradeButtonDelay"},
-    {76, "civilizationPoints"},
+    {45, "deleteRefundFactor"},
+    {46, "conversionFaithCost"},
+    {47, "unitImprovementPointsMax"},
+    {48, "startingCitizensDefault"},
+    {49, "groupSpeedCapFactor"},
+    {50, "wonderHitPointBonus"},
+    {51, "wonderHealEpochFactor"},
+    {52, "wonderHealEpochStep"},
+    {53, "highGroundHeight"},
+    {54, "lowGroundHeight"},
+    {55, "highGroundAttackFactor"},
+    {56, "lowGroundAttackFactor"},
+    {57, "improvementTimeAreaEffect"},
+    {58, "improvementTimeAttack"},
+    {59, "improvementTimeArrowArmor"},
+    {60, "improvementTimeGunArmor"},
+    {61, "improvementTimeLaserArmor"},
+    {62, "improvementTimeMissileArmor"},
+    {63, "improvementTimePierceArmor"},
+    {64, "improvementTimeShockArmor"},
+    {65, "improvementTimeFlightTimeOrPower"},
+    {66, "improvementTimeHitPoints"},
+    {67, "improvementTimeLeadership"},
+    {68, "improvementTimeRange"},
+    {69, "improvementTimeRepair"},
+    {70, "improvementTimeKind13"},
+    {71, "improvementTimeSpeed"},
+    {72, "improvementTimeTransport"},
+    {74, "wonderSightRadius"},
+    {75, "refusalMessageInterval"},
+    {76, "civilizationBuilderPoints"},
     {77, "wondersForVictoryMax"},
+    {78, "tileStrayDistance"},
+    {79, "trampleMinDistanceSquared"},
     {80, "unitEpochCostFactor"},
-    {81, "gameSpeedOption01"},
-    {82, "gameSpeedOption23"},
+    {81, "gameSpeedSlowNormal"},
+    {82, "gameSpeedFastFastest"},
     {83, "acknowledgementDelay"},
-    {84, "aiAttackChance"},
-    {85, "camouflage"},
-    {86, "civPowerCost"},
-    {88, "fanatic"},
-    {89, "damageTableScale"},
-    {90, "unitCostScale"},
-    {91, "tradeRate46"},
-    {92, "tradeRate23"},
-    {93, "unitCostScaleResources4"},
-    {94, "resourceTime"},
+    {84, "aiSpecialAttackChance"},
+    {85, "camouflageTiming"},
+    {86, "specialPowersCategoryCost"},
+    {87, "reloadTimeRandomRange"},
+    {88, "fanaticism"},
+    {89, "difficultyDamageScale"},
+    {90, "jitManufacturingCostFactor"},
+    {91, "tradeRateStoneIron"},
+    {92, "tradeRateFoodWood"},
+    {93, "jitManufacturingCostFactorDeathmatch"},
+    {94, "deathmatchJitManufacturingDelay"},
 };
 
 static const EEDTTable kEEDTTables[] = {
-    {"dbaiunittargeting", kEEDTC_count, false, &kEEDTStructs[0], 0, 0, 0, false, 0, 0},
-    {"dbambientsounds", kEEDTC_count, false, &kEEDTStructs[1], 0, 0, 0, false, 0, 0},
-    {"dbanimals", kEEDTC_count, false, &kEEDTStructs[2], 0, 0, 0, false, 0, 0},
-    {"dbareaeffect", kEEDTC_count, false, &kEEDTStructs[3], 0, 0, 0, false, 0, 0},
-    {"dbbuttons", kEEDTC_count, false, &kEEDTStructs[4], 0, 0, 0, false, 0, 0},
-    {"dbcalamity", kEEDTC_count, false, &kEEDTStructs[5], 0, 0, 0, false, 0, 0},
-    {"dbcivilization", kEEDTC_count, true, &kEEDTStructs[6], 0, 0, 0, false, 0, 0},
-    {"dbcivpowers", kEEDTC_count, false, &kEEDTStructs[7], 0, 0, 0, false, 0, 0},
-    {"dbcliffterrain", kEEDTC_count, false, &kEEDTStructs[8], 0, 0, 0, false, 0, 0},
-    {"dbcolortable", kEEDTC_count, false, &kEEDTStructs[9], 0, 0, 0, false, 0, 0},
-    {"dbcpbehavior", kEEDTC_count, false, &kEEDTStructs[10], 0, 0, 0, false, 0, 0},
-    {"dbeffects", kEEDTC_fixed, false, &kEEDTStructs[11], 0, 0, 0, false, 0, 0},
-    {"dbevents", kEEDTC_events, true, &kEEDTStructs[12], 0, 0, "effects", true, 0, 0},
-    {"dbfamily", kEEDTC_count, false, &kEEDTStructs[13], 0, 0, 0, false, 0, 0},
-    {"dbgamevariant", kEEDTC_count, false, &kEEDTStructs[14], 0, 0, 0, false, 0, 0},
-    {"dbgfxeffects", kEEDTC_count, false, &kEEDTStructs[15], 0, 0, 0, false, 0, 0},
-    {"dbgraphics", kEEDTC_lead, true, &kEEDTStructs[16], kEEDTLead_dbgraphics, 6, 0, false, 0, 0},
-    {"dbmusic", kEEDTC_count, false, &kEEDTStructs[17], 0, 0, 0, false, 0, 0},
-    {"dbobjects", kEEDTC_count, true, &kEEDTStructs[18], 0, 0, 0, false, 0, 0},
-    {"dbpremadecivs", kEEDTC_count, false, &kEEDTStructs[19], 0, 0, 0, false, 0, 0},
-    {"dbrandommap", kEEDTC_header, false, &kEEDTStructs[20], 0, 0, 0, false, 0, 0},
-    {"dbsounds", kEEDTC_lead, false, &kEEDTStructs[21], kEEDTLead_dbsounds, 1, 0, false, 0, 0},
-    {"dbstartingresources", kEEDTC_count, false, &kEEDTStructs[22], 0, 0, 0, false, 0, 0},
-    {"dbtechtree", kEEDTC_techtree, true, &kEEDTStructs[23], 0, 0, "parents", false, 0, 0},
-    {"dbterrain", kEEDTC_lead, false, &kEEDTStructs[24], kEEDTLead_dbterrain, 1, 0, false, 0, 0},
-    {"dbterraingraytextures", kEEDTC_lead, false, &kEEDTStructs[25], kEEDTLead_dbterraingraytextures, 1, 0, false, 0, 0},
-    {"dbterraintype", kEEDTC_count, false, &kEEDTStructs[26], 0, 0, 0, false, 0, 0},
-    {"dbuiback", kEEDTC_count, false, &kEEDTStructs[27], 0, 0, 0, false, 0, 0},
-    {"dbuicontrolevents", kEEDTC_count, false, &kEEDTStructs[28], 0, 0, 0, false, 0, 0},
-    {"dbuicontrols", kEEDTC_count, false, &kEEDTStructs[29], 0, 0, 0, false, 0, 0},
-    {"dbuifonts", kEEDTC_count, false, &kEEDTStructs[30], 0, 0, 0, false, 0, 0},
-    {"dbuiformevents", kEEDTC_count, false, &kEEDTStructs[28], 0, 0, 0, false, 0, 0},
-    {"dbuiforms", kEEDTC_count, false, &kEEDTStructs[31], 0, 0, 0, false, 0, 0},
-    {"dbuihotkey", kEEDTC_count, false, &kEEDTStructs[32], 0, 0, 0, false, 0, 0},
-    {"dbunitbehavior", kEEDTC_count, false, &kEEDTStructs[33], 0, 0, 0, false, 0, 0},
-    {"dbunitset", kEEDTC_count, false, &kEEDTStructs[34], 0, 0, 0, false, 0, 0},
-    {"dbupgrade", kEEDTC_count, false, &kEEDTStructs[35], 0, 0, 0, false, 0, 0},
-    {"dbweapontohit", kEEDTC_count, false, &kEEDTStructs[36], 0, 0, 0, false, 0, 0},
-    {"dbworld", kEEDTC_count, false, &kEEDTStructs[37], 0, 0, 0, false, kEEDTRows_dbworld, 58},
+    {"dbaiunittargeting", kEEDTC_count, false, &kEEDTStructs[0], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbambientsounds", kEEDTC_count, false, &kEEDTStructs[1], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbanimals", kEEDTC_count, false, &kEEDTStructs[2], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbareaeffect", kEEDTC_count, false, &kEEDTStructs[3], 0, 0, 0, false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+    {"dbbuttons", kEEDTC_count, false, &kEEDTStructs[4], 0, 0, 0, false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff"},
+    {"dbcalamity", kEEDTC_count, false, &kEEDTStructs[5], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbcivilization", kEEDTC_count, true, &kEEDTStructs[6], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbcivpowers", kEEDTC_count, false, &kEEDTStructs[7], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbcliffterrain", kEEDTC_count, false, &kEEDTStructs[8], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbcolortable", kEEDTC_count, false, &kEEDTStructs[9], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbcpbehavior", kEEDTC_count, false, &kEEDTStructs[10], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbeffects", kEEDTC_fixed, false, &kEEDTStructs[11], 0, 0, 0, false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+    {"dbevents", kEEDTC_events, true, &kEEDTStructs[12], 0, 0, "effects", true, 0, 0,
+     0},
+    {"dbfamily", kEEDTC_count, false, &kEEDTStructs[13], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbgamevariant", kEEDTC_count, false, &kEEDTStructs[14], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbgfxeffects", kEEDTC_count, false, &kEEDTStructs[15], 0, 0, 0, false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x80\x3f\x00\x00\x80\x3f"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00"},
+    {"dbgraphics", kEEDTC_lead, true, &kEEDTStructs[16], kEEDTLead_dbgraphics, 6, 0, false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x80\x3f\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+    {"dbmusic", kEEDTC_count, false, &kEEDTStructs[17], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbobjects", kEEDTC_count, true, &kEEDTStructs[18], 0, 0, 0, false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x01\x01"
+     "\x00\x00\x01\x01\x01\x01\x01\x01\x01\x00\x01\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa0\x86\x01\x00\x01\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\x00\x00\x00\x00"},
+    {"dbpremadecivs", kEEDTC_count, false, &kEEDTStructs[19], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbsounds", kEEDTC_lead, false, &kEEDTStructs[20], kEEDTLead_dbsounds, 1, 0, false, 0, 0,
+     0},
+    {"dbstartingresources", kEEDTC_count, false, &kEEDTStructs[21], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbtechtree", kEEDTC_techtree, true, &kEEDTStructs[22], 0, 0, "parents", false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0f\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x01\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+    {"dbterrain", kEEDTC_lead, false, &kEEDTStructs[23], kEEDTLead_dbterrain, 1, 0, false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+    {"dbterraintype", kEEDTC_count, false, &kEEDTStructs[24], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbuiback", kEEDTC_count, false, &kEEDTStructs[25], 0, 0, 0, false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x80\x3f\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+    {"dbuicontrolevents", kEEDTC_count, false, &kEEDTStructs[26], 0, 0, 0, false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"},
+    {"dbuicontrols", kEEDTC_count, false, &kEEDTStructs[27], 0, 0, 0, false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x80\x3f\x00\x00\x80\x3f"
+     "\x00\x00\x80\x3f\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+    {"dbuifonts", kEEDTC_count, false, &kEEDTStructs[28], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbuiformevents", kEEDTC_count, false, &kEEDTStructs[26], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbuiforms", kEEDTC_count, false, &kEEDTStructs[29], 0, 0, 0, false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"},
+    {"dbuihotkey", kEEDTC_count, false, &kEEDTStructs[30], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbunitbehavior", kEEDTC_count, false, &kEEDTStructs[31], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbunitset", kEEDTC_count, false, &kEEDTStructs[32], 0, 0, 0, false, 0, 0,
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+     "\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff"
+     "\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x00\x00\x00\x00"},
+    {"dbupgrade", kEEDTC_count, false, &kEEDTStructs[33], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbweapontohit", kEEDTC_count, false, &kEEDTStructs[34], 0, 0, 0, false, 0, 0,
+     0},
+    {"dbworld", kEEDTC_count, false, &kEEDTStructs[35], 0, 0, 0, false, kEEDTRows_dbworld, 61,
+     0},
 };
 static const unsigned long kEEDTTableCount = sizeof(kEEDTTables) / sizeof(EEDTTable);
 
