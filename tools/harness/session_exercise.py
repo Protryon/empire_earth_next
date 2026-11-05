@@ -136,11 +136,16 @@ def press_key(hwnd,vk,scan):
     user.PostMessageW(hwnd,0x101,vk,1|(scan<<16)|0xC0000000)
 
 
-def input_check(pid,addresses):
-    """F3 (the main game form's pause hot key) twice: paused, then running again -> evidence dict; raises on failure"""
+def input_check(pid,addresses,dismiss=None):
+    """F3 (the main game form's pause hot key) twice: paused, then running again -> evidence dict; raises on failure.
+    The game must be running first (a civilization form the timer opened is cancelled by dismiss)."""
     from game_state_probe import sample
     hwnd=game_window(pid)
     if not hwnd:raise RuntimeError('input check: no visible game window')
+    end=time.monotonic()+30
+    while sample(pid,addresses)['paused'] and time.monotonic()<end:
+        if dismiss:dismiss()
+        time.sleep(1)
     states=[sample(pid,addresses)['paused']]
     for _ in range(2):
         press_key(hwnd,0x72,0x3d)   # VK_F3, scan code DIK_F3
@@ -293,7 +298,7 @@ def exercise(stage,evidence,mode,addresses=None,play_seconds=0,options=None):
             # the mini map shows the explored terrain around the start once the game has run (checked from 10 s of play)
             rendered.append(check_rendering(capture('play',11),'play',play_seconds>=10))
             if getattr(options,'input_check',False):
-                (evidence/'input.json').write_text(json.dumps(input_check(pid,addresses),indent=2)+'\n',encoding='utf-8')
+                (evidence/'input.json').write_text(json.dumps(input_check(pid,addresses,dismiss),indent=2)+'\n',encoding='utf-8')
         (evidence/'rendering.json').write_text(json.dumps(rendered,indent=2)+'\n',encoding='utf-8')
         (stage/'stop.request').write_text('exercise complete\n',encoding='ascii')
     else:
