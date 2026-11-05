@@ -175,11 +175,23 @@ def exercise(stage,evidence,mode,addresses=None,play_seconds=0,options=None):
         capture('gameplay',11)
         print('GAME LAUNCHED: world rendered; physics-processing counter advanced; physical input and unit orders not tested',flush=True)
         if play_seconds:   # opt-in: keep the unattended game running, sampling the read-only telemetry every 10 s
+            # the civilization timer (240/270/300 game s) opens a civilization form over the game and pauses it; a
+            # long play reaches it: cancel it as the AI game does (ai_game.DISMISS: no simulation input)
+            from ai_game import DISMISS
+
+            def dismiss():
+                nonlocal seq
+                found=state()
+                if found and found[0] in DISMISS:
+                    seq+=1;(stage/'test.command').write_text(f'{seq} {DISMISS[found[0]]}\n',encoding='ascii')
+                    wait(11,seq,timeout=30)
+                    print(f'PLAY civilization form {found[0]} cancelled',flush=True)
             samples=[after];end=time.monotonic()+play_seconds
             while time.monotonic()<end:
-                time.sleep(10);samples.append(sample(pid,addresses))
+                time.sleep(10);dismiss();samples.append(sample(pid,addresses))
                 print(f"PLAY t+{len(samples)*10-10}s physics_ticks={samples[-1]['physics_ticks_processed']} paused={samples[-1]['paused']}",flush=True)
             (evidence/'play.json').write_text(json.dumps(dict(seconds=play_seconds,samples=samples),indent=2)+'\n',encoding='utf-8')
+            time.sleep(2);dismiss()   # the form may open between the last sample and the capture
             capture('play',11)
         (stage/'stop.request').write_text('exercise complete\n',encoding='ascii')
     else:

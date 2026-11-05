@@ -15,6 +15,16 @@
 
 #include <stddef.h>
 
+// printf-style argument checking for the engine's variadic formatters (format string argument f, first value a);
+// a varargs value of the wrong class (an integer for %f, a pointer for %d) reads another register or slot on x64
+#ifndef PLAT_PRINTF_FORMAT
+#if defined(__clang__) || defined(__GNUC__)
+#define PLAT_PRINTF_FORMAT(f, a) __attribute__((format(printf, f, a)))
+#else
+#define PLAT_PRINTF_FORMAT(f, a)
+#endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -201,6 +201,17 @@ void EECalamity::ReleaseSound()
     this->mSound = NULL;
 }
 
+// ICF-FOLDED: EXE 0x4dfd80
+// Stops the calamity's secondary sound and releases it (folded with EEE2DFire::StopSound in the original, whose
+// mSound sat at the same offset)
+void EECalamity::StopSecondarySound()
+{
+    if (this->mSecondarySound) {
+        gSoundManager->Stop(this->mSecondarySound, false);
+        this->ReleaseSecondarySound();
+    }
+}
+
 // FUNCTION: EXE 0x4ad2ad
 // Releases the calamity's secondary sound without stopping it
 void EECalamity::ReleaseSecondarySound()

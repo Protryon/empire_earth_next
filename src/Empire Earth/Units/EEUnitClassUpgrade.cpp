@@ -158,6 +158,14 @@ void EEUnitClassUpgrade::ChangeLevel(long inImprovement, long inDelta)
     this->mImprovement.ChangeLevel(this->mUnitClass, this, inImprovement, inDelta);
 }
 
+// ICF-FOLDED: EXE 0x5f1f81
+// Returns the unit class this copy belongs to (the original folded it with EEComplexDoppelganger::GetTileX, the same
+// `mov eax,[ecx+0x60]`; written out so the member is read at this build's offset)
+EEUnitClass* EEUnitClassUpgrade::GetUnitClass()
+{
+    return this->mUnitClass;
+}
+
 // FUNCTION: EXE 0x63b891
 // Resets the copy to its unit class: media, button, stats and inverse speeds, area-effect templates and terrain mask
 // (flag 0x4000 added when the class's +0x315 is set), then reapplies the improvement levels

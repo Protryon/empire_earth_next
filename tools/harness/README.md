@@ -56,7 +56,7 @@ below `build/boot/selftest*`, `build/boot/windowed_o_32` and `HKCU\Software\EE-h
 |---|---|
 | staging, registry, `exe_boot.c`, presentation bridge, silent mixer, RDP proxy, telemetry (`game_state_probe.py`), `--exercise tour/settings/random-game`, `--play-seconds` | ported |
 | `--exercise ai-game`, `--time-factor`/`--no-render` (time shim), `--seed`, `--no-human-defeat` | ported |
-| all of the above on x64 (`--x64`) | ported, self-tested; not yet run on the x64 game |
+| all of the above on x64 (`--x64`) | ported, self-tested; tour + 120 s play and the seeded 2-AI game pass on the x64 game |
 | `human/` (`human_input.c`: ~90 offsets, Dinkum deque internals read raw) and so `--human-script` / `EE_HUMAN_LOCKSTEP` | not yet |
 | `differential/` (`layout.py`, `ptsync.h`, `ai_layout.py`, `sampler.py`) | not yet |
 | `mp_game.py`, `save_load.py`, `scenario_game.py`, `synth_scenario.py`, `game_batch.py`, `play.py` | not yet |

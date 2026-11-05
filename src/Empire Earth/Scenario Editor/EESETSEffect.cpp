@@ -307,6 +307,15 @@ void EESETSEffect::Show()
     this->mTitleLabel->SetDisplayMode(kDisplayModeShown);
 }
 
+// ICF-FOLDED: EXE 0x57c5d9
+// Hides the effect page's type combo and title (folded with EESETriggerScreen::HideText in the original: the same
+// two member offsets)
+void EESETSEffect::Hide()
+{
+    this->mTypeComboBox->SetDisplayMode(kDisplayModeHidden);
+    this->mTitleLabel->SetDisplayMode(kDisplayModeHidden);
+}
+
 // FUNCTION: EXE 0x582d82
 // Returns the scenario effect with the given index (EEScenarioManager::GetEffect)
 // (inline, ee/EEScenarioManager.h)

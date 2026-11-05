@@ -678,3 +678,51 @@ the stub report reaches 0 with no new traps.
   into a memcpy the `-nostdlib` DLL cannot link).
 - Not on x64: `differential/` (ptsync.h/ptwatch.h read VC6 layouts with 32-bit pointers; the x64 harness refuses
   their options), the rng trace's caller-frame fields (no frame-pointer chain: logged as 0).
+
+## x64 runtime (branch x64run)
+
+- **Symptom of the first bug**: after "Single Player", `EEWorld::CreatePlayers` crashed on
+  `theUpgrade->GetUnitClass()` returning 0x00000000baadf00d (the heap's uninitialised fill, read as 32 bits).
+  `EEUnitClassUpgrade::GetUnitClass` has no body in source: the exe link aliases it to the function the original's
+  ICF folded it with, `EEComplexDoppelganger::GetTileX` (`mov eax,[ecx+0x60]` in VC6). On x64 that twin reads its
+  own `mTileX` (a 32-bit load at +0x74), not `mUnitClass` (+0x78). On i686 both members still sat at +0x60.
+- **Bug class: ICF aliases across classes.** Every referenced but unwritten function the link resolves to its VC6
+  ICF twin (`icf`, `vslot`, `mismatch` in link_report.json) is only right while both classes keep the twin's
+  members at the same offsets, and while the arguments travel the same way: on x64 a float argument is in XMM1
+  where a pointer twin reads RDX (`EESoundObject::SetVolume` ran `EEContagionHelper::SetFunctor`). Fixed by
+  writing the bodies in source (`// ICF-FOLDED:` next to the class's members): GetUnitClass, EEUGHealUnit::GetTarget,
+  EESoundObject::SetVolume, EECalamity::StopSecondarySound (every calamity's end ran EEE2DFire::StopSound on the
+  calamity), EESELoadThread::Post407, EESETSEffect::Hide, EESETriggerScreen::ShowText,
+  EEUIMiniMap::MouseLButtonDown. `tools/alias_layouts.py` finds them: it reads each alias target's body from the
+  linked exe (trivial `ret`/constant bodies are fine), dumps both classes' layouts for x86 and x64 and reports
+  aliases whose classes have a common x86 offset holding members at different x64 offsets (now 0; 16 free-function,
+  same-class or layout-less aliases are listed for review: they use only base members or arguments). The
+  remaining 31 icf and 259 vslot aliases pass. Run it after any upstream merge that changes the link tables.
+- **The member aliases** (`fulllink_members.tsv`, data the original placed inside other objects: 75) were checked
+  by name: each VC6 offset resolves through the VC6 layout reference to the intended member (gWorld+0xcc
+  `mNumPlayers` -> +0x12c, gUnitPicker+0x29c `mLock` -> +0x2a8, ...); tables of pointers double their offsets.
+- **Varargs**: the engine's own formatters (ESDebugOut, ESReportMessage, sprintf into UString/UWideString, GXLog)
+  had no format attribute, so nothing checked them. With `PLAT_PRINTF_FORMAT` a `-Wformat` census over every unit
+  for x64 gives 434 sites: 396 `%d` of long/unsigned long (same size on Windows; they matter on LP64 Linux/macOS),
+  12 `%d` of size_t (Win64 passes each vararg in an 8-byte slot; `%d` reads its low half, right for these counts),
+  and three of the wrong class (a long for `%f`, a double for `%d`, a pointer for `%d`), fixed. All in debug traces
+  and dumps. `sscanf("%d", long*)` in the random map parser is right on Windows only (step 4).
+- **What did not break**: saved-id sentinels, thread-message pointers and x87 precision control were fixed in the
+  link step ("x64 link"). The tour, play and AI games found no other x64 fault: no traps, the same native-error
+  set as i686, wgpu-native v24.0.3.1 renders and reads back on x64.
+- **Harness, not x64**: `--play-seconds 120` reaches the civilization timer (240-300 game s), whose form 7 pauses
+  the game and blocked the final capture on i686 and x64 alike; the tour's play loop now cancels it as the AI game
+  does.
+- **Gates (x64 test profile)**: tour + 120 s play pass; seeded 2-AI Hard game to the time cap with the binary and
+  the text db tables (PT 13,882 / 13,633, units 0/56/39 and 0/57/38: the same game up to the wall-time-dependent
+  civilization preempt). i686 after the same changes: tour + 60 s and + 120 s pass, the AI game reaches the cap
+  (PT 13,214, units 5/16/36).
+- **32 vs 64 bit**: random map generation (the Default generator's land/water/tree reports) is identical on i686
+  and x64 for the pinned seed. The AI trace lines (epoch timing, research timing, deaths) are identical between
+  x64 runs (binary and text tables too), identical between i686 runs, and identical between x64 and an i686 build
+  with `/arch:SSE2` until about game second 290 (the first unit deaths), while the x87 build leaves both at about
+  256 s, its float formatting already differing in the last digit at the start. The shipped i686 build (x87) plays
+  seed 2 as a quiet game (human keeps 5 units, AIs 14 and 35 units at the cap); x64 and i686 SSE2 both wipe the
+  idle human by ~600 s and end with 37-59 units per AI. The split is the floating-point model, not pointer size:
+  an SSE2 i686 build lands with x64. Locating what remains between x64 and i686 SSE2 (candidates: the x86 and x64
+  UCRT math functions, anything ordered by pointer value) needs the per-PT differential tooling, not ported to x64.

@@ -345,6 +345,14 @@ long EEUIMiniMap::MouseRButtonDown()
 
 // NEAR: the original's frame has a zeroed dword at -4 (not identified) and builds the message's tile in the
 // tile's slot after operator new
+// ICF-FOLDED: EXE 0x65ae3b
+// Captures the mouse on a left press (folded with EEUICUnitIconBar::MouseRButtonDown in the original)
+long EEUIMiniMap::MouseLButtonDown()
+{
+    this->CaptureMouse();
+    return 0;
+}
+
 // FUNCTION: EXE 0x675f72
 // On a left release: in flare mode sends a flare at the clicked tile and leaves flare mode, otherwise centres
 // the camera there
