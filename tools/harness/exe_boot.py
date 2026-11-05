@@ -181,6 +181,15 @@ def stage(name, build, data=True, silent_audio=True):
             if r.returncode:
                 raise RuntimeError(f"eedata install failed:\n{r.stdout}{r.stderr}")
             print(f"data: db text tables installed ({len(list((d / 'Data' / 'db').glob('*.*')))} files)", flush=True)
+        if os.environ.get("EE_HARNESS_OPEN_ASSETS"):
+            # TEST: every model as glTF and every texture as PNG (tools/eemodel) in the staged copy's Data\Models and
+            # Data\Textures; the game prefers them over the .cem/.sst/.tga
+            r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "eemodel" / "eemodel.py"), "install", str(d)],
+                               capture_output=True, text=True)
+            if r.returncode:
+                raise RuntimeError(f"eemodel install failed:\n{r.stdout}{r.stderr}")
+            print(f"data: open models/textures installed ({r.stdout.strip().splitlines()[-1] if r.stdout.strip() else ''})",
+                  flush=True)
     return d
 
 
