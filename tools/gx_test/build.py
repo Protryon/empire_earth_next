@@ -1,5 +1,8 @@
 """Build and run the GX self-test (gx_test.cpp + the renderer's GX layer) against the pinned wgpu-native.
 
+The window comes from the platform layer on SDL3 (src/Platform/SDL/PlatWindow.cpp; tools/xbuild.py sdl3) and the
+text from PlatFont with the built-in fonts (src/Platform/Common; toolchain/fonts, embedded with #embed).
+
   python -I tools/gx_test/build.py [--run] [-- test arguments]
 
 -> build/gx_test/x86_64/gx_test.exe (clang-cl, lld-link, static runtime as the game). Needs tools/fetch_wgpu.py.
@@ -14,11 +17,16 @@ HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT / "tools" / "wgpu_probe"))
-from ee import CLANG, LLD_LINK, TOOLCHAIN, modern_dirs   # noqa: E402
+from ee import CLANG, LLD_LINK, TOOLCHAIN, modern_dirs, sdl3_dir   # noqa: E402
 from build import LIBS, TARGETS   # noqa: E402  (tools/wgpu_probe/build.py)
 
 GX = ROOT / "src" / "Low-Level Engine" / "Graphics Engine" / "DX7 Display Plug-ins" / "GX"
-SOURCES = [HERE / "gx_test.cpp", GX / "GX.cpp", GX / "GXDevice.cpp"]
+PLATFORM = ROOT / "src" / "Platform"
+SOURCES = [HERE / "gx_test.cpp", GX / "GX.cpp", GX / "GXDevice.cpp", PLATFORM / "SDL" / "PlatWindow.cpp",
+           *[PLATFORM / "Win32" / f for f in ("PlatMessage.cpp", "PlatString.cpp", "PlatThread.cpp", "PlatTime.cpp")],
+           PLATFORM / "Common" / "PlatFont.cpp", PLATFORM / "Common" / "PlatFontData.c"]
+# what SDL3 (static) imports besides LIBS
+SDL_LIBS = ["setupapi.lib", "version.lib", "cfgmgr32.lib", "imm32.lib"]
 
 
 def build(arch):
@@ -27,13 +35,19 @@ def build(arch):
     msvc, sdk_inc, sdk_lib, _ = modern_dirs()
     out = ROOT / "build" / "gx_test" / arch
     out.mkdir(parents=True, exist_ok=True)
-    inc = os.pathsep.join([str(ROOT / "include"), str(GX), str(wgpu / "include"), str(msvc / "include"),
+    sdl3 = sdl3_dir()
+    if not (sdl3 / "lib" / "SDL3-static.lib").exists():
+        sys.exit(f"{sdl3} is missing: python -I tools/xbuild.py sdl3")
+    inc = os.pathsep.join([str(ROOT / "include"), str(GX), str(wgpu / "include"), str(sdl3 / "include"),
+                           str(ROOT / "src" / "ThirdParty" / "stb"), str(msvc / "include"),
                            str(sdk_inc / "ucrt"), str(sdk_inc / "um"), str(sdk_inc / "shared")])
     objs = []
     for src in SOURCES:
         obj = out / (src.stem + ".obj")
-        r = subprocess.run([str(CLANG), f"--target={triple}", "/nologo", "/c", "/O1", "/MT", "/GS-", "/EHsc",
-                            "/std:c++17", "/W3", str(src), f"/Fo{obj}"],
+        lang = ["/std:c11", "/clang:-Wno-c23-extensions", f"/clang:--embed-dir={TOOLCHAIN / 'fonts'}"] \
+            if src.suffix == ".c" else ["/EHsc", "/std:c++17"]
+        r = subprocess.run([str(CLANG), f"--target={triple}", "/nologo", "/c", "/O1", "/MT", "/GS-", *lang,
+                            "/W3", str(src), f"/Fo{obj}"],
                            env=dict(os.environ, INCLUDE=inc), capture_output=True, text=True)
         if r.returncode:
             sys.exit(f"{arch}: {src.name} failed\n{r.stdout}{r.stderr}")
@@ -42,7 +56,8 @@ def build(arch):
         objs.append(obj)
     exe = out / "gx_test.exe"
     cmd = [str(LLD_LINK), "/nologo", f"/MACHINE:{machine}", "/SUBSYSTEM:CONSOLE", "/NODEFAULTLIB", "/INCREMENTAL:NO",
-           "/OPT:REF", f"/OUT:{exe}", *map(str, objs), str(wgpu / "lib" / "wgpu_native.lib"), "libcpmt.lib", *LIBS,
+           "/OPT:REF", f"/OUT:{exe}", *map(str, objs), str(wgpu / "lib" / "wgpu_native.lib"),
+           str(sdl3 / "lib" / "SDL3-static.lib"), "libcpmt.lib", *LIBS, *SDL_LIBS,
            f"/LIBPATH:{msvc / 'lib' / libarch}", f"/LIBPATH:{sdk_lib / 'ucrt' / libarch}",
            f"/LIBPATH:{sdk_lib / 'um' / libarch}"]
     r = subprocess.run(cmd, capture_output=True, text=True)

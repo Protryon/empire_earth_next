@@ -1355,7 +1355,7 @@ GXRESULT GXSurface::DrawText(const RECT& inBounds, TextCallback inDraw, void* in
     }
     // the CPU copy: the text draws onto a 32-bit copy of the bounds and the pixels it changed are written back in the
     // surface's format (alpha opaque), as the original's GDI text on the surface's DC
-    if (!theTarget->mMemory)
+    if (!theTarget->AllocateMemory())   // a new CPU-side surface has no memory until first used
         return GXERR_OUTOFMEMORY;
     for (long y = 0; y < theHeight; y++)
         for (long x = 0; x < theWidth; x++)
