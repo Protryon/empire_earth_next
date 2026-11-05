@@ -29,10 +29,10 @@ std::vector<EECliffTerrainTable*> EETerrainTable::sCliffTable;
 
 // 0x4e86d0: the first loaded terrain's +0x50 (-1 until one with a name loads); 0x4e86e8: the first cliff index
 // (provisional names)
-extern unsigned long gTexturePixelDepth;     // 0x5308b4
+extern unsigned long& gTexturePixelDepth;     // 0x5308b4
 // 0x5308b0: the terrain textures' mip levels to drop (LoadTexture; provisional name)
-extern unsigned long gTerrainMIPLevelsToDrop;
-extern bool gTrilinearFilter;               // 0x5308da (mip filtering on)
+extern unsigned long& gTerrainMIPLevelsToDrop;
+extern bool& gTrilinearFilter;               // 0x5308da (mip filtering on)
 extern GETextureManager* gTextureManager;  // 0x531918 (ee/EmpireEarth.h)
 
 long gDefaultTerrain;

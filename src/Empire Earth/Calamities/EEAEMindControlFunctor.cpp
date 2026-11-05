@@ -25,7 +25,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 
-extern EEEffectManager* gEffectManager;
+extern EEEffectManager*& gEffectManager;
 
 // FUNCTION: EXE 0x4ac891
 // Creates the mind-control area functor for a unit set and mode, with the effect shown on caught units

@@ -73,7 +73,7 @@
 #include "ee/EEAction.h"
 #include "ee/EEAServerMigration.h"
 #include "ee/EEStringIDs.h"
-extern unsigned short gLagStatus;           // 0x5318d4 (cleared after a migration; provisional name)
+extern unsigned short& gLagStatus;           // 0x5318d4 (cleared after a migration; provisional name)
 
 // FUNCTION: EXE 0x404a0b
 // Creates the host migration action

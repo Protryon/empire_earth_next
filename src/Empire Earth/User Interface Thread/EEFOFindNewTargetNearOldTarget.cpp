@@ -144,6 +144,8 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEUnitCollector.h"
 #include "ee/EEStringIDs.h"
+
+extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 extern EEToHitTable gToHitTable;           // 0x5318e8 (as EECPAttackSubGroupUnit.cpp declares it)
 
 // The unit's named float constants (.rdata 0x449b54..0x449ba0, around the vtable 0x449ba8) (provisional names)
@@ -2901,7 +2903,7 @@ void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float
 {
     GE3DPoint theCamera;
     GE3DPoint theScreen;
-    float theHeight = gViewportYClippingPlane;
+    float theHeight = gViewport.GetYClippingPlane();
     float theScale = 1.0f;
     float theVertical = 1.0f;
     float thePan = 0.0f;
@@ -2931,7 +2933,7 @@ void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float
             theScale = 1.0f - (theScreen.GetX() - 1.0f) * gF56451C;
         if (-theHeight > theScreen.mY)
             theVertical = 1.0f - (-theScreen.GetY() - theHeight) * gF56451C;
-        else if (gViewportYClippingPlane < theScreen.mY)
+        else if (gViewport.GetYClippingPlane() < theScreen.mY)
             theVertical = 1.0f - (theScreen.GetY() - theHeight) * gF56451C;
         if (theVertical < theScale)
             theScale = theVertical;

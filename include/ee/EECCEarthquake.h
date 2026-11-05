@@ -14,7 +14,6 @@ class GETransformation;
 
 // 0x5309e0: a global transformation the earthquake maps its target location through before it measures the distance
 // to the origin (the view? provisional name; owner header inferred; also read at 0x10440b/0x10520c/0x10f5af)
-extern GETransformation gViewportCameraInverse;
 
 class EECCEarthquake : public EELocationCalamityClass {
 public:

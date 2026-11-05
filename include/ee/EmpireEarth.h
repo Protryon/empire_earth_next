@@ -12,18 +12,17 @@ extern UResourceFile* gResource;            // 0x5318ec ("::gResource->GetString
 extern EEUserInterface* gUserInterface;     // 0x5318f8 (new EEUserInterface, 0x60 bytes, at 0x141448)
 // 0x5308cd: set by the game-settings form (0x1d812e); the hot-key zoom (0x1d9cc8) and the wheel zoom (0x1e9f46) do
 // nothing while it is clear. Provisional name; probably a field of a game-options global
-extern bool gZoomEnabled;
+extern bool& gZoomEnabled;
 // 0x4e917c: the cursor location the unit picker and the aircraft hot keys use (provisional name)
-extern GE2DPoint gCursorLocation;
 // 0x529067: cleared when the unit hot keys move the camera (24 users; provisional name)
 extern bool gCameraFollowing;
 // 0x5308e8 / 0x5308e9 (after gGamePreferences): EEGraphics saves screen shots as jpg while the first is set and
 // redraws the whole UI every frame while the second is set (provisional names)
-extern bool gTakeJPGScreenshots;
-extern bool gAntiAliasing;
+extern bool& gTakeJPGScreenshots;
+extern bool& gAntiAliasing;
 // 0x52fa88 is not a global: gGameState.mGameOptions.mIsMultiplayer (ee/EEGameState.h); the main screen sets it
 bool Fn14A09E();                            // 0x14a09e: returns the byte 0x531a40 (EEScenarioManager::Load drops the mPendingEffects effects while set; provisional name)
-extern long gGameStateLoadType;            // 0x52fa58 (= 2 when a local server starts a game: SPLE LoadFile, 0x12ccd0; provisional name)
+extern long& gGameStateLoadType;            // 0x52fa58 (= 2 when a local server starts a game: SPLE LoadFile, 0x12ccd0; provisional name)
 // game functions the EEM* messages call (provisional names and argument types)
 class EEComplexUnit;
 class EEUnitClass;
@@ -51,18 +50,18 @@ class UString;
 // chains 0x13ea01 ".ees" / 0x13ea33 ".scn"; the lobby reads and assigns the two names)
 extern UString gSavedGameExtension;        // 0x530ba8 ".ees"
 extern UString gScenarioExtension;         // 0x530b98 ".scn"
-extern UString gLoadSavedGameName;         // 0x5307f4
-extern UString gLoadScenarioName;          // 0x530804
-extern long gDifficultyLevel;              // 0x530870 (the lobby difficulty also sets it; provisional name)
+extern UString& gLoadSavedGameName;         // 0x5307f4
+extern UString& gLoadScenarioName;          // 0x530804
+extern long& gDifficultyLevel;              // 0x530870 (the lobby difficulty also sets it; provisional name)
 // 0x5319e8: the free camera is on (the mouse revolve/rotate events need it; 10+ users around 0xeda02..0x109eee;
 // provisional name)
 extern bool gFreeCamera;
-extern UWideString gPlayerName;            // 0x530768 the single player's name (the SP screen's edit box 8; provisional name)
+extern UWideString& gPlayerName;            // 0x530768 the single player's name (the SP screen's edit box 8; provisional name)
 extern UWideString gGameVersion;           // 0x529a08 (the version a client sends with its connection request; provisional name)
 extern unsigned long gBinaryChecksum;      // 0x5319e4 (likewise, the binary checksum; provisional name)
-extern unsigned long gU5308A0;             // 0x5308a0 (passed to the local server's ctor by the SP random map; provisional name)
-extern long gDifficultyLevel2;             // 0x530704 (likewise; provisional name)
-extern unsigned long gStartTime;           // 0x5318d0 (EEClient 0xb80ef/EEServer 0xcc34e: NEMStartGame's offset start time; provisional name)
+extern unsigned long& gU5308A0;             // 0x5308a0 (passed to the local server's ctor by the SP random map; provisional name)
+extern long& gDifficultyLevel2;             // 0x530704 (likewise; provisional name)
+extern unsigned long& gStartTime;           // 0x5318d0 (EEClient 0xb80ef/EEServer 0xcc34e: NEMStartGame's offset start time; provisional name)
 
 // 0x27a432 (User Interface Thread): the text of a resource reference through gResource->GetString, else a copy
 // (provisional name and meaning; the campaign editor shows its fields through it)
@@ -119,7 +118,7 @@ extern long gEELearningChecksum;
 // screen index passed with it (170 functions)
 class GERasterizer;
 extern GERasterizer* gRasterizer;          // 0x531910
-extern unsigned long gScreenIndex;         // 0x5308a8
+extern unsigned long& gScreenIndex;         // 0x5308a8
 // the managers Empire Earth.cpp's start-up news (0x14265e: asserts "gTextureManager != NULL", "gModelManager !=
 // NULL")
 class GETextureManager;
@@ -138,12 +137,12 @@ void EESetGameViewRectangle(const GERectangle& inRectangle);
 // (provisional names): what EEDataPreLoading::LoadGame (0xd439f) reads and calls
 void EELoadGameMedia();                    // 0x13fcbc (six resets in a row; when the first argument is false)
 void EECreateGameTimer();                  // 0x13fc7c (EEPhysics::CreateGameTimer; provisional name)
-extern bool gLoadingSavedGame;             // 0x5318d8
-extern bool gWorldClearing;                // 0x5318d9 (EETown 0xac573 tests it after gLoadingSavedGame; provisional name)
-extern unsigned long gEffectDetail;        // 0x53089c (compared with an effect's +0x84 before it plays: a detail level? EEUCProjectile::UpdateEffects; provisional name)
-extern bool gLoadingPlayerMedia;           // 0x5318e3 (EECPCombatManager 0x475047 tests it after gLoadingSavedGame; provisional name)
-extern bool gGameScreenActive;             // 0x5318d7 (24 users; the save/load events test it with gUIManager->mInScenarioEditor)
-extern bool gContinentManagerClearing;     // 0x530d3c (EECPPersonnel::DraftUnit: draft through the attack commander when clear) (provisional name)
+extern bool& gLoadingSavedGame;             // 0x5318d8
+extern bool& gWorldClearing;                // 0x5318d9 (EETown 0xac573 tests it after gLoadingSavedGame; provisional name)
+extern unsigned long& gEffectDetail;        // 0x53089c (compared with an effect's +0x84 before it plays: a detail level? EEUCProjectile::UpdateEffects; provisional name)
+extern bool& gLoadingPlayerMedia;           // 0x5318e3 (EECPCombatManager 0x475047 tests it after gLoadingSavedGame; provisional name)
+extern bool& gGameScreenActive;             // 0x5318d7 (24 users; the save/load events test it with gUIManager->mInScenarioEditor)
+extern bool& gContinentManagerClearing;     // 0x530d3c (EECPPersonnel::DraftUnit: draft through the attack commander when clear) (provisional name)
 // 0x13fcda (cdecl): loads a ".wav"/".mp3" sound file (SIE SoundOver: (name, 0x31, theSample, sSoundID, 0), then
 // RegisterOneShotSound(theSample, sSoundID)) (provisional name and parameter names)
 void EELoadSound(const UString& inName, unsigned long inType, unsigned long& outSample, unsigned long& outInstance,
@@ -174,7 +173,7 @@ extern GEFont* gFontTahoma10;              // 0x531998 (EEE3DGoal's countdown; p
 extern GEFont* gFontTahoma12;              // 0x53199c
 extern GEFont* gFontTahoma14;              // 0x5319a0
 extern GEFont* gFontTahoma16;              // 0x5319a4
-extern bool gUnitImprovementsAllowed;      // 0x5318db (EEUIBUpgrade only acts when it is true; provisional name)
+extern bool& gUnitImprovementsAllowed;      // 0x5318db (EEUIBUpgrade only acts when it is true; provisional name)
 
 // 0x13f736 (cdecl; Empire Earth.cpp): a checksum of the file inFile in inDirectory (EECampaignEditorBehavior::Reset
 // compares it with the archived scenario's byte sum; name and the third argument provisional name)

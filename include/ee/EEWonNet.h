@@ -321,7 +321,7 @@ public:
 };
 
 extern EEWonNet* gWonNet;                   // 0x5319cc
-extern UWideString gHostedGameName;         // 0x530790 (HostGame stores the name; the game room screen shows it)
+extern UWideString& gHostedGameName;         // 0x530790 (HostGame stores the name; the game room screen shows it)
 
 // 0x27c3 (first unit; provisional name): the user/game name is acceptable
 bool EEIsValidName(const UWideString& inName);

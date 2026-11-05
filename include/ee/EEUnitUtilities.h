@@ -74,7 +74,6 @@ EEUnit* EESearchTargetAlongList(EEComplexUnit* inUnit, long inX, long inY, float
 EEUnit* EEFindTargetNear(EEComplexUnit* inUnit, long inX, long inY, float inScale);
 // 0x148992 (cdecl): inPoint in camera space (outScreen) and its depth provisional name and meaning
 void EEGetCameraPoint(const GE3DPoint& inPoint, GE3DPoint& outScreen, float& outDepth);
-extern float gViewportYClippingPlane;       // 0x530b6c
 extern float gF564518;                      // 0x564518 (sound: behind-the-camera falloff) (provisional name)
 extern float gF56451C;                      // 0x56451c (sound: off-screen falloff) (provisional name)
 extern float gF564520;                      // 0x564520 (sound: pan scale) (provisional name)

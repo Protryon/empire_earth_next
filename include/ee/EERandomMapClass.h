@@ -103,7 +103,7 @@ public:
 bool EERMArePlayersConnected(EERandomMapData& inMap, EEMap* inGameMap);   // 0x284701
 
 // other units' functions the random map calls (cdecl; provisional names)
-extern bool gUsingCarbon;                   // 0x5318e4 (= mU3D8 bit 0x10 while a map is generated)
+extern bool& gUsingCarbon;                   // 0x5318e4 (= mU3D8 bit 0x10 while a map is generated)
 class EEComplexUnit;
 template <class T> class U2DPoint; typedef U2DPoint<long> EETileCoordinate;
 void EEDropDiagonalCorners(std::vector<EETileCoordinate>& ioTiles);  // 0x2457a3 (the wall's tile line)

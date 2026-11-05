@@ -61,7 +61,7 @@
 #include "ee/EEAMiniMap.h"
 #include "ee/EEUIMiniMap.h"
 
-extern unsigned long gTexturePixelDepth;    // 0x5308b4
+extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 
 // (EEMSendFlare's inline ctor: ee/EEMessage.h)
 

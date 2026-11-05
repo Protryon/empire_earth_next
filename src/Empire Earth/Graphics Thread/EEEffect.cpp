@@ -75,7 +75,6 @@ GEModel* gEffect2DModel;                    // 0x4e8df8
 void Fn103DB7();
 // the camera plane (a, b, c, d) the fog distance is measured from (also RTSGraphics.cpp 0x11a130; read through
 // inline accessors: `fld; fld; fmulp`; a GEQuaternion by its x, y, z, w accessors) (provisional name; type inferred)
-extern GEQuaternion gRenderViewPlane;
 void Fn103EA6();
 
 // FUNCTION: EXE 0x50258e
@@ -491,7 +490,7 @@ void EEEffect::LoadMedia(bool inIsOnDemand)
         this->mGraphicEffect->Load(inIsOnDemand);
 }
 
-// NEAR: block layout of the three returns, and `GetX() * gRenderViewPlane.GetX()` folds into `fmul [mem]` in ours
+// NEAR: block layout of the three returns, and `GetX() * gU4E8F08.GetCameraInverse().GetElement(1, 0)` folds into `fmul [mem]` in ours
 // FUNCTION: EXE 0x5030c8
 // Returns the fog visibility of a point: 1 unless the fog mode is linear, else fades from 1 at the fog start to 0
 // at the fog end, by the distance to the camera plane 0x4e9008
@@ -501,8 +500,8 @@ float Fn1030C8(const GE3DPoint& inPoint, unsigned long inFog)
     if (inFog != 1)
         return 1.0f;
     gRasterizer->GetFogAttributes(theAttributes, gScreenIndex);
-    float theDistance = inPoint.GetY() * gRenderViewPlane.GetY() + inPoint.GetZ() * gRenderViewPlane.GetZ() +
-                        inPoint.GetX() * gRenderViewPlane.GetX() + gRenderViewPlane.GetW();
+    float theDistance = inPoint.GetY() * gU4E8F08.GetCameraInverse().GetElement(1, 1) + inPoint.GetZ() * gU4E8F08.GetCameraInverse().GetElement(1, 2) +
+                        inPoint.GetX() * gU4E8F08.GetCameraInverse().GetElement(1, 0) + gU4E8F08.GetCameraInverse().GetElement(1, 3);
     if (theDistance <= theAttributes.mStart)
         return 1.0f;
     if (theDistance <= theAttributes.mEnd) {

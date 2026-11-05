@@ -133,7 +133,7 @@
 #include "ee/EESEEHideUI.h"
 #include "ee/EEStringIDs.h"
 extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
-extern unsigned long gTexturePixelDepth;    // 0x5308b4
+extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's fonts)
 extern GEFont* gU531934;                    // 0x531934
 extern GEFont* gU531938;                    // 0x531938
@@ -604,7 +604,6 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
 #include "ee/EESEEditorTab.h"
 #include "ee/EEMouse.h"
 
-extern GERectangle gEditorViewRectangle;     // 0x530900 (the editor's game view rectangle; EESETS* units test the mouse in it)
 void EEPreviewPlacement(const GE2DPoint& inLocation);  // 0x204aba (EEGhostUnit.cpp: the ghost at the mouse)
 
 // FUNCTION: EXE 0x59e2d2
@@ -729,7 +728,7 @@ void EEUIFScenarioEditor::Close()
 // updates the current tab group and the edge scroll (unless full view or a control holds the mouse)
 long EEUIFScenarioEditor::CopyData()
 {
-    GERectangle theRectangle = gEditorViewRectangle;
+    GERectangle theRectangle = gViewport.GetViewRectangle();
     if (!sEditorTabs[this->mCurrentTab].mFullView) {
         theRectangle.SetRight(theRectangle.GetRight() - 1.0f);
         theRectangle.SetBottom(theRectangle.GetBottom() - 1.0f);
@@ -1003,7 +1002,7 @@ extern GEFont* gU531938;                    // 0x531938
 #include "ee/EESETriggerScreen.h"
 #include "ee/EESEInstructions.h"
 #include "ee/EESEAQuickSaveLoad.h"
-extern unsigned long gTexturePixelDepth; // 0x5308b4 (Empire Earth.cpp)
+extern unsigned long& gTexturePixelDepth; // 0x5308b4 (Empire Earth.cpp)
 extern bool gSightUpdatesEnabled;
 extern GEViewport gViewport;
 

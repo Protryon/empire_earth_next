@@ -4,7 +4,7 @@
 #ifndef EE_EEMAPDIMENSIONS_H
 #define EE_EEMAPDIMENSIONS_H
 
-extern unsigned long gMapWidth;             // 0x530d34
-extern unsigned long gMapHeight;            // 0x530d38
+extern unsigned long& gMapWidth;             // 0x530d34
+extern unsigned long& gMapHeight;            // 0x530d38
 
 #endif

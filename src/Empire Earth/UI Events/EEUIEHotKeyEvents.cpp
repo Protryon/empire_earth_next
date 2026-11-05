@@ -71,6 +71,8 @@
 #include "ee/EESoundObject.h"
 #include "ee/EEUIEHotKeyEvents.h"
 
+extern GEViewport gU4E8F08;                 // 0x4e8f08 (EERenderObject.cpp; the render viewport)
+
 // one candidate of the unit selection hot keys (file-local; provisional name)
 struct EEUIEHKUnitEntry {
     EEComplexUnit* mUnit;                   // +0x00
@@ -281,7 +283,7 @@ long EEUIEHKUnitSelection::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // hot-key alarm when there is none
 long EEUIESelectClosestAircraft::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    GE2DPoint theCursor(gCursorLocation.GetX(), gCursorLocation.GetY());
+    GE2DPoint theCursor(gU4E8F08.GetXCenter(), gU4E8F08.GetYCenter());
     EEUnit* theClosest = NULL;
     GE3DPoint theTarget;
     GE3DPoint theLocation;

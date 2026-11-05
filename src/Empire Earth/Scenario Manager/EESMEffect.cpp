@@ -915,7 +915,7 @@ void EESMEffect::CreateUnits()
 #include "ee/EEUISCIFormManager.h"
 #include "ee/EECalamityClass.h"
 
-extern bool gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
+extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
 
 // Plain (non-folded) .rdata floats of this unit in the original (0x44608c, 0x446090, 0x446098), each read by one

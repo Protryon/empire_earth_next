@@ -148,7 +148,7 @@ class EEMiniMap;
 EEMiniMap* gMiniMap;                        // 0x564888 (ee/EEMiniMap.h; .bss between this unit's statics and EEUIFMGStatusBox's)
 bool gUnitSelected;                         // 0x56488c (a unit is selected: the main form draws backgrounds 0x6f..0x71)
 extern RTSRenderObject* gU56534C;           // 0x56534c (the render object pushed when the form closes)
-extern float gMasterVolume;                 // 0x530830 (the master volume Open restores)
+extern float& gMasterVolume;                 // 0x530830 (the master volume Open restores)
 
 // the information panel's message (ShowInformation 0x26533e; layout from its reads) (provisional name)
 class EEUIFMGInformation {

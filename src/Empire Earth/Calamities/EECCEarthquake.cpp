@@ -37,6 +37,9 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEAIKindIDs.h"
+#include "lle/GEViewport.h"
+
+extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
 
 
 
@@ -234,7 +237,7 @@ void EECCEarthquake::UpdateEpicenterFactor(EECalamity* inCalamity)
     GE3DPoint theTarget;
     inCalamity->GetTargetLocation(theTarget);
     GE3DPoint theOrigin;
-    gViewportCameraInverse.Apply(theTarget, theViewLocation);
+    gViewport.GetCameraInverse().Apply(theTarget, theViewLocation);
     theViewLocation.SetY(0.0f);
     float theDistance = theViewLocation.DistanceTo(theOrigin);
     float theFactor = inCalamity->mBoolPlaceHolder1 ? this->mQuakeVolume : this->mVolume;

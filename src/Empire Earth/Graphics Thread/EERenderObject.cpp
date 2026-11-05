@@ -1533,7 +1533,7 @@ void EERenderObject::FillRenderLists()
             theInfo.mPickedUnit->Dereference();
             theInfo.mPickedUnit = NULL;
         }
-        gUnitPickerLock->Enter();
+        gUnitPicker.GetLock()->Enter();
         gUnitPicker.Reset();
         unsigned long theRows = theMap->mTerrainMesh.GetNumVisibleTileRows();
         for (unsigned long theRow = 0; theRow < theRows; theRow++) {
@@ -1607,7 +1607,7 @@ void EERenderObject::FillRenderLists()
                 }
             }
         }
-        gUnitPickerLock->Leave();
+        gUnitPicker.GetLock()->Leave();
         this->FillGhostRecords();
         gB529068 = true;
         if (gMusicFollowsBattle && theTime - sU529090 >= 0xfa) {

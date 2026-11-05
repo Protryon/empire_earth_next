@@ -71,17 +71,15 @@ extern bool gB529068;                       // 0x529068 (likewise)
 // Virtual24's globals (provisional names). Virtual24 saves and restores gOrthographicView/gB529065 and
 // tiles the capture at the window size (unsigned: fild qword).
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
-extern bool gOrthographicView;              // 0x5308e2 (= true while the tiles render)
+extern bool& gOrthographicView;              // 0x5308e2 (= true while the tiles render)
 extern bool gB529065;                       // 0x529065 (= true while Virtual24 runs)
-extern bool gAmbientEffectsEnabled;         // 0x5308d5 (EEE2DBattlefieldAmbient: the ambient effects run) (provisional name)
-extern bool gDrawBlood;                     // 0x5308df (EEE2DImpactBlood draws only when set) (provisional name)
-extern unsigned long gGameWindowWidth;      // 0x53087c (1024 with the free camera)
-extern unsigned long gGameWindowHeight;     // 0x530878 (768 with the free camera)
-extern float gViewportYClippingPlane;       // 0x530b6c (scales the row step)
+extern bool& gAmbientEffectsEnabled;         // 0x5308d5 (EEE2DBattlefieldAmbient: the ambient effects run) (provisional name)
+extern bool& gDrawBlood;                     // 0x5308df (EEE2DImpactBlood draws only when set) (provisional name)
+extern unsigned long& gGameWindowWidth;      // 0x53087c (1024 with the free camera)
+extern unsigned long& gGameWindowHeight;     // 0x530878 (768 with the free camera)
 // 0x5309e0: the camera transformation (also EECCEarthquake.h; the 3D effects map their position through it,
 // EEEffect3D::Queue 0x10520b) (provisional name)
 class GETransformation;
-extern GETransformation gViewportCameraInverse;
 // 0x4e8f08: the viewport the 3D effects reset the depth range of around their draws (SetDepthRange(0, 0), then
 // (0, 1); EEE3DScreenFlash::DrawPass6 0xf8f1d) (provisional name)
 extern GEViewport gU4E8F08;

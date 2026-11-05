@@ -51,10 +51,10 @@
 #include "ee/EERenderLists.h"
 #include "ee/EEROTerrain.h"
 
-extern unsigned long gTexturePixelDepth;    // 0x5308b4
-extern unsigned long gTextureMipLevelsToDrop; // 0x530894 (provisional name)
-extern bool gDrawClouds;                    // 0x5308d3 (the clouds are drawn; provisional name)
-extern bool gTrilinearFilter;               // 0x5308da (the sky textures use mip filtering; provisional name)
+extern unsigned long& gTexturePixelDepth;    // 0x5308b4
+extern unsigned long& gTextureMipLevelsToDrop; // 0x530894 (provisional name)
+extern bool& gDrawClouds;                    // 0x5308d3 (the clouds are drawn; provisional name)
+extern bool& gTrilinearFilter;               // 0x5308da (the sky textures use mip filtering; provisional name)
 
 // one vertex of the cloud/star models: a corner of the map square (index into the corner table) and a height
 // (.rdata 0x441a18.. / 0x441ab8..) (provisional name)

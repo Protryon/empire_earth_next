@@ -240,7 +240,7 @@ static const float kDCOwnArmyFactor = 1.0f / 225.0f;   // 0x43c0f4 (ComputeTownT
 static const float kDCOwnArmyRange = 225.0f;   // 0x43c0f8 (ComputeTownThreat)
 
 // unit-local globals (provisional names)
-extern long gDCGameSpeed;                   // 0x530d24 (> 0x32: the naval maintenance)
+extern long& gDCGameSpeed;                   // 0x530d24 (> 0x32: the naval maintenance)
 #include "ee/EEUnitUtilities.h" // Fn4EEF9, the shared pointer shuffle (eight callers in the original)
 long EEGetPlayerUnitsOfType(long inUnitType, long inPlayerID, std::vector<EEUnit*>& outUnits);   // 0x64c395
 

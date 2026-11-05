@@ -53,10 +53,10 @@
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEROUnits.h"
 
-extern bool gShowCollisionSpheres;          // 0x5318dc (the units' collision spheres are drawn; provisional name)
-extern bool gInCinematic;                   // 0x5318e0 (no rings, bars or labels; provisional name)
-extern bool gInterpolateFrames;             // 0x5308cf (the frames are interpolated; provisional name)
-extern long gModelDetail;                   // 0x530898 (0: full opacity, 1: half, else opaque; provisional name)
+extern bool& gShowCollisionSpheres;          // 0x5318dc (the units' collision spheres are drawn; provisional name)
+extern bool& gInCinematic;                   // 0x5318e0 (no rings, bars or labels; provisional name)
+extern bool& gInterpolateFrames;             // 0x5308cf (the frames are interpolated; provisional name)
+extern long& gModelDetail;                   // 0x530898 (0: full opacity, 1: half, else opaque; provisional name)
 extern bool gUnitPanelActive;               // 0x5297a0 (EEROUserInterface.cpp)
 extern GEFont* gU531994;                    // 0x531994 (the labels' default font; before gFontTahoma10; provisional name)
 // 0x4e5b98: an empty string (EEHumanPlayer's ctors assign it too); zero bytes in the original's initialised .data.

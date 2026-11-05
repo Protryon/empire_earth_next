@@ -167,10 +167,10 @@
 
 
 class UIFileListBox;
-extern bool gGameStateIsMultiplayer;        // 0x52fa88 (cleared when the scenario editor starts) (provisional name)
-extern bool gLoadingSavedGame;              // 0x5318d8
+extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when the scenario editor starts) (provisional name)
+extern bool& gLoadingSavedGame;              // 0x5318d8
 extern UString gSavedGameExtension;         // 0x530ba8
-extern unsigned long gTexturePixelDepth;    // 0x5308b4
+extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 extern FSPath* gDataPath;                   // 0x531908
 void EEPostF9Key();                         // 0x27a7f5
 

@@ -4241,7 +4241,7 @@ void EEMLoadOrSaveGameResponse::Execute()
 {
 }
 
-extern long gAutoSaveCount;                 // 0x5308b8 (the auto-save count LoadOrSave passes on; provisional name)
+extern long& gAutoSaveCount;                 // 0x5308b8 (the auto-save count LoadOrSave passes on; provisional name)
 // (0x14cbc7 Fn14CBC7: ee/EESaveLoad.h)
 
 // FUNCTION: EXE 0x4c1052

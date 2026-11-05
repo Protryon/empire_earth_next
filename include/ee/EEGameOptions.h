@@ -104,7 +104,7 @@ public:
     bool mIsScenarioGame;                   // +0x409 (gWorld+0x519: the options menu hides Resign when set)
 };
 
-extern EEGameOptions gGameOptions;          // 0x53125c
+extern EEGameOptions& gGameOptions;          // 0x53125c
 
 class GEColor;
 // 0x1318bd (another unit; provisional name): the colour of player colour inIndex (a vector<...*> at 0x4e610c, the

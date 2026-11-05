@@ -25,7 +25,7 @@
 #include "ee/EEAreaEffectTemplate.h"
 #include "ee/EEAEHealing.h"
 
-extern bool gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
+extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 
 // FUNCTION: EXE 0x67ace1
 // Creates a healing area effect from its template

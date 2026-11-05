@@ -101,7 +101,7 @@ extern UString gCampaignUser;              // 0x531cd0 (defined at the end of th
 unsigned long EEGetCivTimerLimit();         // 0x27ffae (cdecl: 300000; the civ timer limits, EEUIFMainGame.cpp's range)
 unsigned long EEGetCivTimerSecondWarning();  // 0x27ffba (270000) (provisional names)
 unsigned long EEGetCivTimerFirstWarning();  // 0x27ffb4 (240000)
-extern unsigned long gContinentManagerChecksum;  // 0x530d10 (the continent manager's checksum; provisional name)
+extern unsigned long& gContinentManagerChecksum;  // 0x530d10 (the continent manager's checksum; provisional name)
 extern unsigned long gCollisionPeriod;      // 0x4c237c (.data = 1 after gCollisionDetectionUnit; provisional name)
 // SYNTHETIC: EXE 0x551c28   (wrapper)
 // SYNTHETIC: EXE 0x551c32   (ctor)

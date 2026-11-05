@@ -92,8 +92,8 @@
 #include "ee/EEUIFMGStatusBox.h"
 #include "ee/EEStringIDs.h"
 long EEGetTradePrice(EEPlayer* inPlayer, long inResource, unsigned char inBuy);  // 0x23cc42 (EEMessage.cpp's)
-extern bool gUsingCarbon;  // Existing EERandomMapClass global; selected-unit resource icon variant
-extern unsigned long gTexturePixelDepth;    // 0x5308b4
+extern bool& gUsingCarbon;  // Existing EERandomMapClass global; selected-unit resource icon variant
+extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 
 // the attribute icon cells of the three unit-improvement textures (provisional names): the cell's texture rectangle
 // corners, the bitmap's texture size and whether it is in texture 3 (0x26c4fe)

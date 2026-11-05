@@ -21,7 +21,7 @@
 // EEToHitTable 0x5318e8; EEPhysicsModel::Push reads both)
 float gWeaponToHitFactors[6][6];
 // 0x52fb54: world table entry 42's float, cached after the load (provisional name)
-extern float gGameStateGameSpeed;
+extern float& gGameStateGameSpeed;
 
 // One record of db\dbUnitBehavior.dat (0x7c bytes, read whole). Inferred layout.
 struct EEUnitBehaviorRecord {

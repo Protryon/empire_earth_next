@@ -48,8 +48,8 @@
 #include "ee/EECPExplorationManager.h"
 #include "ee/EEAIKindIDs.h"
 
-extern long gDCGameSpeed;                   // 0x530d24 (> 0: sea explorers; EECPDefenseCommander.cpp's name) (provisional name)
-extern long gNumSpaceTiles;                 // 0x530d2c (> 0: space explorers) (provisional name)
+extern long& gDCGameSpeed;                   // 0x530d24 (> 0: sea explorers; EECPDefenseCommander.cpp's name) (provisional name)
+extern long& gNumSpaceTiles;                 // 0x530d2c (> 0: space explorers) (provisional name)
 
 // FUNCTION: EXE 0x47ed38
 // Creates the computer player's exploration manager, disabled and with no explorers

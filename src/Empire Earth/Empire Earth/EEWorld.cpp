@@ -124,13 +124,13 @@
 // Unit-local declarations of functions and globals no header declares yet (provisional names)
 extern bool gLocalPlayerOut;                // 0x4e6099 (ee/EEMessage.h)
 extern bool gSightUpdatesEnabled;           // 0x4c76ec
-extern bool gAmbientSoundEnabled;           // 0x5308de (the ambient sound switch)
-extern bool gDisplayWeatherEffects;         // 0x5308e6
+extern bool& gAmbientSoundEnabled;           // 0x5308de (the ambient sound switch)
+extern bool& gDisplayWeatherEffects;         // 0x5308e6
 extern long gL4E5E40;                       // 0x4e5e40 (only use: cleared with `and dword ptr, 0`: an integer)
 extern float gViewportHalfWidth;            // 0x530b5c
 extern float gViewportXCenter;              // 0x530b64
 extern float gViewportYCenter;              // 0x530b68
-extern UWideString gWonPlayerName;          // 0x53077c (the WON player name)
+extern UWideString& gWonPlayerName;          // 0x53077c (the WON player name)
 extern UString gDefaultCampaignUser;        // 0x52a170 ("default"; defined below, its init chain mid-file)
 extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
 void EEStopAllSounds();                     // 0x140ceb
@@ -392,9 +392,9 @@ void EEWorld::Clear()
     this->mClearing = true;
     if (!UShutdownInProgress() && this->mMap != NULL) {
         this->RecordStatistics();
-        gUnitPickerLock->Enter();
+        gUnitPicker.GetLock()->Enter();
         gUnitPicker.Reset();
-        gUnitPickerLock->Leave();
+        gUnitPicker.GetLock()->Leave();
     }
     if (gUIManager != NULL && gUIManager->mScenarioEditorForm != NULL)
         gUIManager->mScenarioEditorForm->ClearSelection();
@@ -1034,9 +1034,9 @@ void EEWorld::StartGame(EEGameState* inState, bool inLocked)
     gAmbientSoundManager.Restart();
     gGraphics->PostReleaseScene();
     gGraphics->PostInitialiseScene();
-    gUnitPickerLock->Enter();
+    gUnitPicker.GetLock()->Enter();
     gUnitPicker.Reset();
-    gUnitPickerLock->Leave();
+    gUnitPicker.GetLock()->Leave();
     gMiniMap->Refresh();
     gPathManager.RequestPendingPaths(this->mMap);
     gUserInterface->SetLoadProgress(kWorldLoadProgress27);

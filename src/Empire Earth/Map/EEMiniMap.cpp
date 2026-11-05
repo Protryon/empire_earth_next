@@ -48,7 +48,7 @@
 #include "lle/GERenderState.h"
 
 extern GEViewport gViewport;                // 0x5308f0 (Empire Earth.cpp)
-extern bool gOrthographicView;              // 0x5308e2 (orthographic camera; EEGraphics)
+extern bool& gOrthographicView;              // 0x5308e2 (orthographic camera; EEGraphics)
 
 // chain at 0x51e36e (wrapper)
 //   object 0x9297d0  ctor (GEVector's three fldz) 0x11e378

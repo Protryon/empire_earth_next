@@ -4445,7 +4445,7 @@ float EEComplexUnit::GetInverseMaxVelocity()
 // Ticks a building: finishes its production countdown (a unit, retried in 5 seconds when it cannot be placed,
 // or a technology), then its orbitals, camouflage, effects, rotting, production queue and garrison healing
 // EEUCBuilding::Update; production is instant under the player's mInstantBuild
-extern bool gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
+extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
 
 void EEUnitClass::UpdateBuilding(EEComplexUnit* inUnit)
 {
@@ -4637,7 +4637,7 @@ void EEUnitClass::RegeneratePower(EEComplexUnit* inUnit)
 }
 
 extern GEViewport gViewport;
-extern bool gOrthographicView;
+extern bool& gOrthographicView;
 
 // FUNCTION: EXE 0x639b47
 // Updates the volume, pan and pitch of a unit's animation sound every third tick (off-screen every 21st)

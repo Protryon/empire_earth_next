@@ -19,7 +19,7 @@ extern UString gDefaultUserFolder;          // 0x565508 "default"
 extern unsigned long gU5654E4;              // 0x5654e4 the button sound (SESoundManager::Load of "sounds\button1.wav")
 extern long gL5654B8;                       // 0x5654b8 (EESetCivBuilderButtonBlinking clears it)
 extern bool gB565566;                       // 0x565566 (the upgrade lists are read-only)
-extern bool gAllowCustomCivs;               // 0x531256 (a scenario game: the timer opens the builder itself)
+extern bool& gAllowCustomCivs;               // 0x531256 (a scenario game: the timer opens the builder itself)
 extern UString gLastCivilizationFile;       // 0x5654a8 (EECivilizationBuilder.cpp) the last civilization file
 
 // EECivilizationBuilder.cpp
@@ -55,7 +55,7 @@ long Fn27FD5A(unsigned short inUpgrade);
 long Fn27FDAB(unsigned short inUpgrade);
 
 // the unit at 0x27fdfe (EECBCivilizationFiles.cpp)
-extern bool gIsScenarioGame;                // 0x531259 (with gAllowCustomCivs: no premade-civilization check)
+extern bool& gIsScenarioGame;                // 0x531259 (with gAllowCustomCivs: no premade-civilization check)
 extern unsigned long gU5654E0;              // 0x5654e0 the refused sound ("sounds\button2.wav")
 extern bool gB565564;                       // 0x565564 the builder paused the game
 extern bool gB565565;                       // 0x565565 the players using the saved file reload it

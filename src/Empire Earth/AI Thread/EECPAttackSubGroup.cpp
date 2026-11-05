@@ -94,7 +94,7 @@ UMemoryPool<EECPASTargetUnit> EECPAttackSubGroup::sTargetPool;
 // SYNTHETIC: EXE 0x45ac6b
 // SYNTHETIC: EXE 0x45ac77
 // Declared as in EECPAttackCommander.cpp and EECPAttackSubGroupUnit.cpp; the global is bound at 0x530e0c
-extern long gNumPlayers;
+extern long& gNumPlayers;
 
 // 0x43bf0c (.rdata; both neighbours are this unit's constants): declared extern in ee/EEGlobalConstants.h
 const float kHeightEpsilon = 0.01f;
