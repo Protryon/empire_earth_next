@@ -1176,3 +1176,22 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
 - **CI without game data**: `--smoke-test` exercises what is portable and observable without the retail files: the
   window system, a window, the wgpu device on the runner's GPU path (lavapipe under Xvfb, Metal on macOS), 30 colour
   fills read back and presented; the normal start must stop with the "game data not found" message (exit 3).
+
+## Ids for the db tables (branch ids)
+
+- **References are integers of two kinds**: a row position (almost every table) or a key field (dbtechtree: nodes are
+  found by `mID`, `id / 1000 - 1` names the epoch block; dbcivpowers: row = `mID - 0x26`). A retail reference that
+  names no row (-1, 0 into a hole row, 100000, 0xFFFFFFFF, a dangling 1153) is a "none" value: it stays an integer.
+  Only one field needed an explicit none list: `mPrerequisite1..4` uses 0 for "pre-ticked", and 0 is also the first
+  epoch's tech id.
+- **Text owns the ids after the first export**: the round-trip gate re-exports with the ids the importer indexed
+  (not regenerated from names), so a renamed id survives text -> db -> text.
+- **The resolver needs the other tables**: a table compiled alone cannot resolve its references, so the game's seam
+  holds one `Content` for all db lookups and reads a referenced table's text through the same data path. dbobjects
+  (5 MB of YAML) is parsed once, early (the tech tree references it), and freed when it is built.
+- **Python text-mode writes on Windows turn LF into CRLF**: an edit script that uses `read_text`/`write_text` rewrote
+  whole files (`.gitattributes` has `-text`). Use bytes.
+- **Gate G1 needs the loaders' skip rules**: the retail .dat files hold the converter's 0xCC fill in rows the
+  loaders skip (disabled dbobjects rows, dbuiforms `mFormID <= 0`, dbterrain `mID < 0`, dbtechtree `mFirstNodeID`
+  outside epoch records), so the dump writes those rows as skipped; then retail and text dump identically.
+

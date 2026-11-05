@@ -2144,8 +2144,9 @@ The text carries what the game reads, and nothing else:
 * **Labels:** where the game never reads a row's name, the name is kept as `label` (text only: it is written back to
   the same unread bytes, so the round trip holds, and has no effect on the game). dbworld's labels are the
   constants' names (8.3) and are checked: a label must match its row.
-* **Rows:** `row` is the row position (references between tables are row positions; it must increase, empty means
-  "the next one"). Empty database rows (holes) are not listed. The importer writes the table's hole record at every
+* **Rows:** `row` is the row position, the row's runtime integer (it must increase; a record without one takes the
+  next free position above every listed row and the `rows` count: new rows go above). Every row has an `id` (8.6);
+  references between tables are ids. Empty database rows (holes) are not listed. The importer writes the table's hole record at every
   unlisted position below `rows`: the struct's base record plus `overlay.HOLES`, the values the retail empty rows
   hold in the fields the game reads (-1 ids, 1.0 opacities, ...), so a hole loads exactly as before and every
   position and reference stays valid. A row the game sees exactly as the hole record is written as a hole.
@@ -2157,8 +2158,8 @@ The text carries what the game reads, and nothing else:
 * **Tables without a text form:** dbrandommap (its loader throws every record away, 3.38) and dbterraingraytextures
   (no AoC code opens it, 3.39). The game reads them from data.ssa as before. 37 tables have a text form.
 
-Format (`#format 2`): one file per db file, named like it with `.csv` or `.yaml` (YAML: dbobjects, dbgraphics,
-dbtechtree, dbevents, dbcivilization). UTF-8, LF. CSV files start with `#eedata <table>`, `#format 2`, `#rows N`;
+Format (`#format 3`; 8.6 adds the ids and references to format 2): one file per db file, named like it with `.csv` or `.yaml` (YAML: dbobjects, dbgraphics,
+dbtechtree, dbevents, dbcivilization). UTF-8, LF. CSV files start with `#eedata <table>`, `#format 3`, `#rows N`;
 YAML files have `eedata`, `format`, `rows` at the top and `records:` (dbtechtree: `epochs: - slots: N, epoch: {...},
 nodes: [...]`). Arrays are YAML flow sequences (trailing zeros left out) or CSV columns `name[i]` (pairs
 `name[i][j]`). A missing key or an empty cell is zero. Values: integers in decimal (0x... accepted as the bit
@@ -2170,13 +2171,17 @@ tabs in indentation are errors (`tools/eedata/textio.py`).
 
 ### 8.2 Gates (AoC retail data)
 
+* `eedata.py cppgate` also runs gate G1, the content dump (8.6): the retail .dat files and the text tables compiled by
+  the game's loader (ids resolved) dump to the same canonical JSON, 17.4 MB, byte-identical.
+
 * `eedata.py check`: (a) 37/37 tables: retail -> text -> db -> text gives the same text, and the db file is a fixed
   point; (b) 37/37 tables: the compiled db file holds the retail value of every field the game reads in every row,
   and the same lead strings and lists; hole rows compile to the hole record, whose game-read fields equal the retail
   ones except 4,303 fields that are the converter's 0xCC fill in rows the loaders skip (dbobjects: `mIsEnabled == 0
   || mUnitType == -1` before the class ctor; dbtechtree `mFirstNodeID` is read from epoch records only; dbuiforms:
   `mFormID > 0`; dbterrain: `EETerrainTable::Get` refuses `mID < 0`);
-  dbworld: the values each constant's readers use; (c) 35/35 struct sizes match their sources, specs.json and the
+  dbworld: the values each constant's readers use (dbworld's ids are the constants' names, 8.3, as snake_case:
+  `unit_limit_range`; an id must match its row); (c) 35/35 struct sizes match their sources, specs.json and the
   C++ `EEDataTextSpecs.h` are current.
 * `eedata.py cppgate`: the game's C++ loader compiles the text of all 37 tables to the Python importer's bytes; 117
   edited texts (valid and broken) give the same bytes or an error in both implementations.
@@ -2336,3 +2341,76 @@ over the archive, and a text table over a loose .dat. A text that does not compi
 (file, row, field). `eedata.py install GAMEDIR` writes the text tables into a copy of the game. The multiplayer
 checksum adds the loose `Data\Db\*.csv`/`*.yaml` (clean text gives a different checksum than retail; every peer
 needs the same tables).
+
+### 8.6 Ids and references (format 3)
+
+Every listed row of every table has an `id`: a stable, unique, lowercase ASCII key (`[a-z][a-z0-9_]*`). The
+converter (`tools/eedata/ids.py`) generates it once from the row's name, with `_2`, `_3` ... where two rows would get
+the same one; from then on the text owns it, and a row's name or label is display text. Sources: dbobjects `mName`
+(`priest`, `citizen`, `female_citizen`, `inf02_spearman`), dbgraphics `rowName`, dbsounds/dbtechtree/most tables the
+label (`human_anatomy_researched`, `flaming_arrows`), dbworld the constants' names (`unit_limit_range`; they become
+the define names), dbcpbehavior the `kCPBehavior*` enumerators (`initial_attack_delay`), dbeffects the first event
+that lists the effect (`human_anatomy_researched_1`); a row with no name `<table>_<key>` (`startingresources_0`);
+overrides in `overlay.ID_OVERRIDES` (dbweapontohit `shock`, dbareaeffect `none`).
+
+**Keys.** A row's runtime integer is its key: its row position (`row`), except dbtechtree, whose key is `mID` (the
+tech tree finds nodes by id). Vanilla rows keep their retail positions, so every code constant (`kUnitType*`, tech
+ids, `kCPBehavior*`, sound and effect rows) keeps working. A table's self field (`mUnitType`, `mID`, `mIndex`, ...;
+dbcivpowers: `mID` = row + 0x26) is left out of the text where it equals the key; the importer writes it.
+
+**References** (`overlay.REFS`, 196 fields over 25 tables) are written as the target row's id. An integer stays only
+where it names no listed row of the target (the "none" values: -1, 0 where row 0 is a hole, 100000, 0xFFFFFFFF), or
+is one of the field's declared none values (dbtechtree `mPrerequisite1..4`: 0 is "pre-ticked", although 0 is also the
+first epoch's id). On import every id is resolved to the target's key; an unknown id, an integer that names a row
+("write its id"), a missing, malformed or duplicate id are load errors naming the file, line and id
+(`dbcivpowers line 5 (id flaming_arrows): mUnitSet: 'no_such_set' is not an id of dbunitset`).
+
+`tables.Content` (Python) and `EEDataText::Content` (C++, the game) are the single place the tables meet: they hold
+every table's text, parse each once, assign the keys, index the ids and resolve the references. The game's
+`EEDbFindFile` serves every db table through one Content, which reads a referenced table's text through the data path
+when it first needs its ids. A later mod merge step feeds the Content merged entries instead of files.
+
+**Gates.** (a) and (b) of `eedata.py check` hold with ids; the compiled .dat files are byte-identical to format 2's
+(checked against the previous importer); `cppgate`: 37/37 tables compile in C++ to the Python bytes, 137 parity cases
+(ids, dangling references, row numbers where an id belongs, duplicates, new rows) agree, and G1: the content dump
+(`EEDataDump.cpp`: every game-read field of every row, floats as bits, rows the loaders skip as skipped) of the retail
+.dat files equals the dump of the text tables. The game writes the same dump of every table it loads, text or
+binary, with `EE_DUMP_CONTENT=<file>` (test use).
+
+Saves keep integer unit and tech ids: runtime keys are deterministic (vanilla keeps the retail numbers, new rows go
+above in file order), so a save made with the same tables loads; a save made with other tables is not protected.
+
+The references, with the evidence (loader -> consumer; `EE` = src/Empire Earth):
+
+| Table.field | Target (key) | None | Evidence |
+|---|---|---|---|
+| dbobjects mProjectileType, mScaffoldingType, mDeathType, mDeathSpawnType, mPackedType, mRemainsType | dbobjects | 0, -1 (row 0 is a hole) | EE/Units/EEUnitClass.cpp CreateUnitClasses link pass |
+| dbobjects mFamily | dbfamily | - | EETerrainTypeTable.cpp damage table row; EEUnitSet.cpp |
+| dbobjects mWeapon | dbweapontohit (also the armour slot) | -1 | EEPhysicsModel.cpp, EEUnitClass.cpp ApplyHit |
+| dbobjects mButton, dbtechtree mButton, dbeffects mButton | dbbuttons | -1 | EEUnitClass.cpp, EETechTreeNode.cpp, EEEvent.cpp kind 1 |
+| dbobjects mGraphic, dbeffects mMediaIndex, dbgfxeffects mMediaIndex, dbareaeffect mMedia, dbanimals mMedia, mSound1..3 | dbgraphics | -1, 0 | EEUnitClass.cpp; EEEvent.cpp kinds 6, 12-14; EEGraphicEffect.cpp; EEAnimal.cpp (EEMedia::Get) |
+| dbobjects the six sounds, dbeffects mSoundID, dbgraphics mSound1/2IndexN, dbambientsounds, dbcalamity mSoundID, mSecondarySoundID | dbsounds | -1 | EEUnitClass.cpp, EEEvent.cpp, EEGraphicObject.cpp, EEAmbientSound.cpp, EECC*.cpp |
+| dbobjects the 20 *Effect slots, dbgfxeffects mLinkedEffectIndex1..3, dbareaeffect mGraphicEffect, mGraphicEffect18, dbcalamity mGraphicEffectID1..4 | dbgfxeffects | -1 | EEUnitClass.cpp, EEGraphicEffect.cpp, EEAreaEffectTemplate.cpp, EECCAreaEffect.cpp |
+| dbobjects mUpgradeTableIndex | dbupgrade | 0 (a hole) | EEUnitClass.cpp |
+| dbobjects mBehavior | dbunitbehavior | - | EEUnitClass.cpp |
+| dbobjects mAreaEffectTemplate0..3, dbeffects mAreaEffect | dbareaeffect | - | EEComplexUnit.cpp, EEAEManager.cpp, EEEvent.cpp kind 2 attr 40 |
+| dbobjects mTechnology, mGarrisonTechnology, mAttributes[], dbeffects mTechnology, dbcivpowers mTechnology | dbtechtree (mID) | 100000, -1 | EEUnitClass.cpp, EEUGLoadGarrison.cpp, EEEvent.cpp kinds 1, 8-10, EECivPowersManager.cpp |
+| dbobjects mOverlapUnitSet, mWonderUnitSet, dbeffects mUnitSet, dbareaeffect, dbcalamity, dbcivpowers, dbcivilization mUnitSet, dbgamevariant mSet0..9, mCostSet, dbunitset mIncludedSet, mExcludedSet | dbunitset | 0, -1 (row 0 is a hole) | EEGhostUnit.cpp, EEPlayer.cpp, EEEvent.cpp, EEUnitSetManager.cpp, EEGameVariant.cpp, EETechTreeNode.cpp |
+| dbobjects mMiniMapColor | dbcolortable | - | EEMiniMap.cpp |
+| dbtechtree mResearchedEvent, mObsoleteEvent | dbevents | 0, -1 | EETechTree.cpp, EETechTreeEpoch.cpp |
+| dbtechtree mPrerequisite1..4 | dbtechtree (mID; compared with the firing node's id) | 0 (declared) | EETechTreeNode.cpp |
+| dbtechtree mUnitClass, mDefaultUnitClass, parents; dbeffects mUnitClass, mNewUnitClass; dbanimals mUnitType; dbaiunittargeting mPreferredUnitType; dbcalamity mUnitClassIndex; dbcivpowers mUnitType; dbunitset mUnitTypes[]; dbterrain mFirst[], mLast[] | dbobjects | 0, -1 | EETechTreeNode.cpp, EEEvent.cpp, EEAnimal.cpp, EEFOFindNewTargetNearOldTarget.cpp, EECCDropObject.cpp, EEUnitSet.cpp, EETerrainTable.cpp |
+| dbtechtree mCalamity | dbcalamity | - | EECPASGUProphet.cpp, EECalamityManager.cpp |
+| dbtechtree mHotKey, dbbuttons mHotKey | dbuihotkey | -1 | EEUIFMGMainGroup.cpp |
+| dbevents effects | dbeffects | out of range | EEEvent.h GetEffect |
+| dbunitset mFamilies[] | dbfamily | 0xFFFFFFFF | EEUnitSet.cpp |
+| dbterrain mColorType | dbterraintype | - | EEMap.cpp |
+| dbcliffterrain mFirstTerrain, mLastTerrain | dbterrain | - | stored only |
+| dbuicontrols mFormID, dbuiback mFormID, dbuiformevents mOwnerID | dbuiforms (key = mFormID = row) | - | UIManager.cpp, UIEvent.cpp |
+| dbuicontrols mFontTableIndex | dbuifonts | - | UIControlsTable.cpp |
+| dbuicontrolevents mOwnerID | dbuicontrols | - | UIEvent.cpp |
+
+Not references (they stay integers): enums with fixed C++ meanings (unit categories, AI kinds, `mCommand0..8` command
+ids, effect kinds and attributes, calamity class kinds, UI event ids, `mTerrainType` movement-terrain bits),
+Language.rc string ids, and two implicit spaces without a table: the attack kinds (dbobjects `mAmmoType`, the
+dbfamily column) and the epochs (dbobjects `mEpoch`, dbtechtree `mEpoch`/`mObsoleteEpoch`/`mNextEpoch`).

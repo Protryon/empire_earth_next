@@ -1,7 +1,10 @@
 # Empire Earth: AoC data-driven content and modding plan
 
-Status: research plan only. No repository file was changed. Repository: `C:\Users\max\Desktop\empire_earth_next`
-(clang/C++17 port, fork of the `empire_earth` reconstruction, based on `fixes-all`). Paths below are relative to it.
+Status (2026-11-05): phases 1 and 2 are built (clean text tables, the game reads them); gate G1 (the content dump)
+exists; the keys of 3.2 exist in the text: every db row has an `id` and every cross-table reference is an id, resolved
+by one Content (DATA_FORMATS.md 8.6). The mod layer (phase 3) and the cap lifts (phase 4) are in progress; see the
+"Progress" section at the end. Repository: `C:\Users\max\Desktop\empire_earth_next` (clang/C++17 port, fork of the
+`empire_earth` reconstruction, based on `fixes-all`). Paths below are relative to it.
 `src/EE` stands for `src/Empire Earth`. Identifiers and comments are provisional: they come from reverse engineering.
 
 Update 2026-11-04: phases 1 and 2 are built in clean form (docs/DATA_FORMATS.md section 8; owner decision: retail
@@ -643,3 +646,17 @@ hot-reload of content in single player for modders.
 - **`.tai`/`.rmv` vocabulary**: new triggers/actions/map commands still need code until the scripting phase.
 - **Native behaviour classes**: total conversions that need new unit *categories* (new C++ behaviour) cannot be done
   in data; the unified effect language plus `.tai` covers most needs but not all.
+
+---
+
+## Progress
+
+- **Ids and references (3.2), 2026-11-05.** Format 3 of the text tables: every row has an `id`, references are ids,
+  vanilla rows keep their retail keys (row position; dbtechtree `mID`), new rows go above. One resolver
+  (`tables.Content`, `EEDataText::Content`) parses, indexes and resolves; a duplicate id or a dangling reference is a
+  load error naming file, line and id. The mod merge step of phase 3 feeds this resolver. dbworld's ids are the
+  constants' names (`unit_limit_range`), ready to become the defines of phase 5.1. Saves keep integer unit and tech
+  ids (deterministic keys). DATA_FORMATS.md 8.6.
+- **G1 (phase 0), 2026-11-05.** `EEDataDump.cpp`: the content dump; `eedata.py cppgate` checks dump(retail .dat) ==
+  dump(text tables); the game writes it with `EE_DUMP_CONTENT=<file>`.
+
