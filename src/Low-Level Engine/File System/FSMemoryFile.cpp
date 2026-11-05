@@ -409,13 +409,13 @@ long FSMemoryFile::Read(float& outValue)
     return this->Read(reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), theRead);
 }
 
-long FSMemoryFile::Read(long& outValue)
+long FSMemoryFile::Read(int32_t& outValue)
 {
     unsigned long theRead;
     return this->Read(reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), theRead);
 }
 
-long FSMemoryFile::Read(unsigned long& outValue)
+long FSMemoryFile::Read(uint32_t& outValue)
 {
     unsigned long theRead;
     return this->Read(reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), theRead);
@@ -559,13 +559,13 @@ long FSMemoryFile::Write(const float& inValue)
     return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);
 }
 
-long FSMemoryFile::Write(const long& inValue)
+long FSMemoryFile::Write(const int32_t& inValue)
 {
     unsigned long theWritten;
     return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);
 }
 
-long FSMemoryFile::Write(const unsigned long& inValue)
+long FSMemoryFile::Write(const uint32_t& inValue)
 {
     unsigned long theWritten;
     return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);

@@ -541,7 +541,7 @@ long FSFileSpec::Read(float& outValue)
     return theResult;
 }
 
-long FSFileSpec::Read(long& outValue)
+long FSFileSpec::Read(int32_t& outValue)
 {
     unsigned long theRead = 0;
     long theResult = this->Read(reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), theRead);
@@ -550,7 +550,7 @@ long FSFileSpec::Read(long& outValue)
     return theResult;
 }
 
-long FSFileSpec::Read(unsigned long& outValue)
+long FSFileSpec::Read(uint32_t& outValue)
 {
     unsigned long theRead = 0;
     long theResult = this->Read(reinterpret_cast<unsigned char*>(&outValue), sizeof(outValue), theRead);
@@ -740,13 +740,13 @@ long FSFileSpec::Write(const float& inValue)
     return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);
 }
 
-long FSFileSpec::Write(const long& inValue)
+long FSFileSpec::Write(const int32_t& inValue)
 {
     unsigned long theWritten = 0;
     return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);
 }
 
-long FSFileSpec::Write(const unsigned long& inValue)
+long FSFileSpec::Write(const uint32_t& inValue)
 {
     unsigned long theWritten = 0;
     return this->Write(reinterpret_cast<const unsigned char*>(&inValue), sizeof(inValue), theWritten);

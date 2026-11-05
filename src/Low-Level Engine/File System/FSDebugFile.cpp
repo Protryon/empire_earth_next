@@ -281,14 +281,14 @@ long FSDebugFile::Read(char* outData, unsigned long inLength, unsigned long& out
 
 // FUNCTION: LLE 0x1000851d
 // Reads an unsigned long from the delegate file
-long FSDebugFile::Read(unsigned long& outValue)
+long FSDebugFile::Read(uint32_t& outValue)
 {
     return this->mDelegate->Read(outValue);
 }
 
 // FUNCTION: LLE 0x1000852c
 // Reads a long from the delegate file
-long FSDebugFile::Read(long& outValue)
+long FSDebugFile::Read(int32_t& outValue)
 {
     return this->mDelegate->Read(outValue);
 }
@@ -612,14 +612,14 @@ long FSDebugFile::Write(const char* inData, unsigned long inLength, unsigned lon
 
 // FUNCTION: LLE 0x100089ac
 // Writes an unsigned long to the delegate file
-long FSDebugFile::Write(const unsigned long& inValue)
+long FSDebugFile::Write(const uint32_t& inValue)
 {
     return this->mDelegate->Write(inValue);
 }
 
 // FUNCTION: LLE 0x100089be
 // Writes a long to the delegate file
-long FSDebugFile::Write(const long& inValue)
+long FSDebugFile::Write(const int32_t& inValue)
 {
     return this->mDelegate->Write(inValue);
 }
