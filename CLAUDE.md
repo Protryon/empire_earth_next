@@ -29,6 +29,48 @@ python -I tools/clang_build.py [-j N] [module ...]                 # compile cen
   - `xbuild.py targets` lists what this machine can build.
   - `posix_game.py` drives the game (see README.md).
 
+## macOS (and Linux)
+
+The owner also develops on an Apple Silicon Mac. There the Windows build, its harness (`tools/harness/game_session.py`,
+a Win32 debugger) and `tools/gates.sh` cannot run; the POSIX tooling below stands in for them.
+
+- Setup: `brew install cmake ninja python@3.12`. The system `python3` is 3.9: run every tool with
+  `/opt/homebrew/bin/python3.12 -I ...`. Then `fetch_posix.py wgpu sdl3 fonts` (above).
+- Build: `python3.12 -I tools/xbuild.py game -j 12` -> `build/xbuild/macos-arm64/game/ee-aoc` and `Empire Earth AoC.app`
+  (about 40 s).
+  - `--sanitize address` (or `undefined`) builds into `game-address/`. Run it first for any crash: ASan stops at the
+    first bad access, which found most of the macOS bugs.
+  - `--incremental` keeps objects newer than their `.cpp`; it does not track headers, so after a header change do a full build.
+  - Don't relink the exe while a game runs from it. For a compile check meanwhile, set
+    `EE_XBUILD_OUT=$PWD/build/xbuild-check`.
+- Data: the repository's `data/` (gitignored) holds the latest `open-data-<sha>` release, unzipped
+  (`gh release download <tag> -p '*.zip'`). Replace it when a data release changes the format. Run with
+  `EE_DATA_ROOT=$PWD/data build/xbuild/macos-arm64/game/ee-aoc`.
+- Live tests: `tools/harness/posix_game.py --exercise menu|random-game|ai-game`. Evidence goes to `build/posix_game/<time>/`:
+  `game.log`, `summary.json`, `samples.json`, window captures. Useful options:
+  - `--exe` (e.g. the ASan build), `--play-seconds`, `--max-game-seconds`;
+  - `--capture-every`, `--zoom-captures 100 200`, `--lobby-check 215=1` (Reveal Map), `--ai-players`.
+  - It drives the game's own UI fixture (`src/Empire Earth/Empire Earth/EETestFixture.cpp`, on only with `EE_TEST_UI`):
+    the presentation bridge's `ui-state.txt` / `test.command` formats plus telemetry and a `zoom` command. The
+    fixture directory must be absolute (the game changes into its data root).
+  - Captures: `macos_window.swift` + `screencapture -l` (the terminal needs Screen Recording permission). One
+    game at a time: captures find the window by process name.
+  - A game started from a background shell is never made the active application, so macOS keeps it out of full
+    screen: harness runs are windowed. Full screen can only be checked by a manual launch.
+  - Before pushing from the Mac: a full build, `--sanitize address`, and an ASan `ai-game` run with no
+    `ERROR: AddressSanitizer` in `game.log`. Say that the Windows gates did not run.
+- Diagnostics:
+  - `EE_GX_STATS=<n>`: draw summaries; it found the vertex-stride bug from "clip x 3e20".
+  - `EE_GX_RENDER_SCALE=1`: no render scale. `EE_WINDOW_EVENT_LOG=1`: window events.
+  - `EE_CONFIG=<file>`: a scratch `config.ini`. `lldb --batch -o run -k "bt"` for crashes.
+  - lldb regex breakpoints are too slow on this binary; a temporary `fprintf` is faster (remove it before
+    committing).
+- Bug patterns found here (PORT_LEARNINGS.md "The POSIX game with real data", "macOS: sound, full screen..."):
+  - LP64 leftovers: `long` in GPU structs, pixel pointers, float bits, 0x80000000 sentinels, 32-bit sums;
+  - Windows CRT behaviour: CR LF text mode and `C:\` paths, now both in `PlatFOpen`;
+  - arm64 float->int saturation;
+  - UB that the 32-bit original survived.
+
 ## Building the data
 
 The game reads one loose `Data` folder next to the exe:
