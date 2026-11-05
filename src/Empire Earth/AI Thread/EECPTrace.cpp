@@ -36,6 +36,9 @@
 #include "ee/EEWorld.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPUnitManager.h"
+#include "ee/EECPBuildManager.h"
+#include "ee/EECPCombatManager.h"
+#include "ee/EECPAttackCommander.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGGather.h"
 #include "ee/EECPTrace.h"
@@ -202,4 +205,37 @@ void EECPTraceProfile(EEComputerPlayer* inPlayer, unsigned long inTime, long lon
     sProfileSum[theID] = 0;
     sProfileMax[theID] = 0;
     sProfileCount[theID] = 0;
+}
+
+// The computer players' share of the out-of-synch checksum (EEPhysics::GetOutOfSynchChecksum; docs/AI_RESEARCH.md
+// Q2). The original's checksum covers the units, the map, the continents and the shared random seed, but none of the
+// AI's own state, so AI state that drifts between peers showed only later, through the random seed or the units.
+// This adds every player's resources and, per computer player, its pop cap, epoch timer, queue lengths and groups.
+unsigned long EECPOutOfSynchChecksum()
+{
+    unsigned long theChecksum = 0;
+    for (unsigned long i = 0; i < gWorld.mNumPlayers; i++) {
+        EEPlayer* thePlayer = gWorld.mPlayers[i];
+        if (thePlayer == NULL)
+            continue;
+        unsigned long theSum = 0;
+        for (long r = kResourceFood; r <= kResourceIron; r++)
+            theSum = theSum * 31 + (unsigned long)thePlayer->mResourceCaps[r];
+        EEComputerPlayer* theCP = thePlayer->mComputerPlayer;
+        if (theCP != NULL) {
+            theSum = theSum * 31 + (unsigned long)theCP->mPopulationCap;
+            if (EECPCivilizationManager* theCiv = theCP->mCivilizationManager) {
+                theSum = theSum * 31 + theCiv->mNextEpochAdvanceTime;
+                if (theCiv->mBuildManager != NULL)
+                    for (long e = 0; e < EEEpochCount(); e++)
+                        theSum = theSum * 31 + (unsigned long)theCiv->mBuildManager->mQueues[e].size();
+                if (theCiv->mUnitManager != NULL)
+                    theSum = theSum * 31 + (unsigned long)theCiv->mUnitManager->mNumWaiting;
+            }
+            if (theCP->mCombatManager != NULL && theCP->mCombatManager->mAttackCommander != NULL)
+                theSum = theSum * 31 + (unsigned long)theCP->mCombatManager->mAttackCommander->mGroups.size();
+        }
+        theChecksum += theSum * (thePlayer->mPlayerID + 1);
+    }
+    return theChecksum;
 }
