@@ -2,8 +2,8 @@
 
 Status (2026-11-05): phases 1 and 2 are built (clean text tables, the game reads them); gate G1 (the content dump)
 exists; the keys of 3.2 exist in the text: every db row has an `id` and every cross-table reference is an id, resolved
-by one Content (DATA_FORMATS.md 8.6). The mod layer (phase 3) and the cap lifts (phase 4) are in progress; see the
-"Progress" section at the end. Repository: `C:\Users\max\Desktop\empire_earth_next` (clang/C++17 port, fork of the
+by one Content (DATA_FORMATS.md 8.6). Phase 4: unit classes, events/effects and epochs (epochs.yaml) are sized from
+the data; the mod layer (phase 3) and the other caps are open. See the "Progress" section at the end. Repository: `C:\Users\max\Desktop\empire_earth_next` (clang/C++17 port, fork of the
 `empire_earth` reconstruction, based on `fixes-all`). Paths below are relative to it.
 `src/EE` stands for `src/Empire Earth`. Identifiers and comments are provisional: they come from reverse engineering.
 
@@ -659,4 +659,15 @@ hot-reload of content in single player for modders.
   ids (deterministic keys). DATA_FORMATS.md 8.6.
 - **G1 (phase 0), 2026-11-05.** `EEDataDump.cpp`: the content dump; `eedata.py cppgate` checks dump(retail .dat) ==
   dump(text tables); the game writes it with `EE_DUMP_CONTENT=<file>`.
-
+- **Caps lifted (phase 4), 2026-11-05.**
+  1. Unit classes 871 -> sized from dbobjects (`gUnitClassTable` a vector, `EEUnitClassCount()` at all 57 sites;
+     the link pass pairs each class with its own record; sentinels `kNoUnitClass`/`kAnyUnitType`).
+  2. Event effects 2000 / events 1500 -> as many as the files have (`gEventEffects`, `EEEvent::sEvents` vectors;
+     the tech tree's two hook events 0x7d1/0x7d2 no longer name rows). Effects stay a table referenced by id (an
+     event's `effects: [ids]`): the list per event is already uncapped; inline effects are a syntax for later.
+  4. Epochs 15 -> the entries of `Data/db/epochs.yaml` (the epoch registry; DATA_FORMATS.md 8.7). Every [15]
+     tech tree, player and AI structure is per epoch (`EEEpochArray`), the lobby and editors list the epochs the
+     data has, titles come from the registry. Music: epochs past the 15 dbmusic flags have no songs.
+  Tests: `eedata.py extra` (30 unit classes past 871; every tech-tree event and effect moved above rows 1499/1999;
+  a 16th epoch in the middle), compiled by both loaders, and an AI game on those tables (gates).
+  Left: 3 (terrain types, families x attack kinds, civ-builder categories/levels), 5, 6 (see the report).

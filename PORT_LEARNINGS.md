@@ -1247,3 +1247,12 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   Every run: 0 opens of a data.ssa, 0 of either install, no registry write, the key still absent afterwards, a
   config.ini of 76 values written by the game ([Game] and [Game Options]). plat_test 209/209 on Windows; the Linux
   game cross-builds (846/846 units). Bundle: 5,761 files, a 327 MB zip of the 426 MB tree.
+- **A tech id named its epoch**: every node id is (block + 1) x 1000 + slot in the retail data, and the code found a
+  node with `id / 1000 - 1`. Inserting an epoch then renumbers every later tech (and breaks `kTech*`). A map from
+  node id to the block it was loaded in (filled by the epoch's Load) frees the ids; the epochs keep their tech ids
+  0..count - 1 by position.
+- **"15" had three meanings**: the epoch count, "never obsolete" (mObsoleteEpoch 15, dbobjects mEpoch 15 on 18
+  rows) and "random start epoch" in the game options. With 16 epochs a stored 15 becomes a real epoch: the text
+  writes `never` for the first two (compiled to the count) and the options use the count for random.
+- **The two event hooks past the table** (0x7d1 on every research, 0x7d2 on every epoch availability) ran nothing
+  only because 1500 < 2001; a table sized from the data would have run rows 2001/2002. They are named negative ids.

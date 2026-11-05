@@ -2418,3 +2418,33 @@ Not references (they stay integers): enums with fixed C++ meanings (unit categor
 ids, effect kinds and attributes, calamity class kinds, UI event ids, `mTerrainType` movement-terrain bits),
 Language.rc string ids, and two implicit spaces without a table: the attack kinds (dbobjects `mAmmoType`, the
 dbfamily column) and the epochs (dbobjects `mEpoch`, dbtechtree `mEpoch`/`mObsoleteEpoch`/`mNextEpoch`).
+
+### 8.7 The epoch registry: epochs.yaml (format 3)
+
+The tech tree's text is two files that compile together into `db\dbtechtree.dat` (`tools/eedata/techtree.py`, and
+the game's `EEDataText::Content`):
+
+* **`Data\db\epochs.yaml`**: every epoch, in order; the number of entries is the number of epochs (the game reads
+  as many epoch blocks as the file has: there is no 15 in the code any more). An entry: `id` (`prehistoric_age`,
+  `stone_age`, `copper_age`, `bronze_age`, `dark_age`, `middle_ages`, `renaissance`, `imperial_age`,
+  `industrial_age`, `atomic_age_ww1`, `atomic_age_ww2`, `atomic_age_modern`, `digital_age`, `nano_age`,
+  `space_age`), `label`, `slots` (its block's node slots), `music: []` and `citizen_models: []` (named slots the
+  game does not read yet: today the songs come from dbmusic's per-epoch flags and the citizen models from code),
+  then the epoch record: `mTitleID` (the title string, the start-epoch option's label: the original data has 0 and
+  the code used 30145 + the epoch, the text writes the string), the advance's costs `mCost2..6`, `mBuildTime`,
+  `mPrerequisite1..4`, `mResearchedEvent`, `mButton`, `mHotKey`, `mNameID`, `mRequiredSOL` (techs needed),
+  `mDefaultUnitClass`, `parents` ... `mID`, `mEpoch` (= position), `mNextEpoch` (+ 1) and `mFirstNodeID` ((position
+  + 1) x 1000) follow from the position and are left out.
+* **`Data\db\dbtechtree.yaml`**: the techs, each with `epoch: <epoch id>` (the block it goes in), `row` (its slot
+  there), `id` and its fields; `mID` is its key (a new tech without one gets (position + 1) x 1000 + slot).
+
+Runtime ids: an epoch's tech id is its position (0..count - 1, as the original's 0..14); techs keep their mID, and
+a tech's epoch is the block it was loaded in (`EETechTreeEpochOf`), no longer `id / 1000 - 1`: an epoch inserted in
+the middle moves the later epochs up one place and keeps every tech's id, so the code's tech constants (`kTech*`)
+keep working. References to a tech may name an epoch (`mPrerequisite1: bronze_age`); tech and unit epoch fields
+(`mEpoch`, `mObsoleteEpoch`) reference epochs, `never` is the epoch count (the original's 15). The code's epoch
+constants (`kTechEpochBronze` ...) are the vanilla positions: an inserted epoch shifts what the code's per-epoch
+rules (AI tables, citizen models by epoch) mean for the epochs after it, until those rules are data.
+
+`eedata.py doc epochs TEXTDIR [OUT.md]` writes a readable table of it (the YAML is the source of truth);
+`eedata.py extra --epoch` inserts a 16th epoch for the tests.
