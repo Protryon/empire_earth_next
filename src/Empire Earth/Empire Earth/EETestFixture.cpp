@@ -6,11 +6,15 @@
 // Every 250 ms a thread of its own (never the render or UI thread) takes the UI manager's lock and
 //   - writes <dir>/ui-state.txt (atomically: .tmp + rename) in the bridge's format: "form <id> controls <n>",
 //     "command <seq>", "pid <pid>", "stack <ids>", "control <i>" (controls with a 0x3f0 trigger event),
-//     "combo <i> sel <s> lines <n> a|b|..", "check <i> <0|1>", "list <i> sel <s> lines <n> a|b|.."; plus the
+//     "combo <i> sel <s> lines <n> a|b|..", "check <i> <0|1>", "list <i> sel <s> lines <n> a|b|..",
+//     "window <w> <h>", "mouseover <i>" (the control under the game's pointer, -1 for none: the form's own hit test); plus the
 //     game telemetry: "game ms <t> ticks <n> over <0|1> players <n> map <0|1> local <i>" and one
 //     "player <i> observer <0|1> result <r> population <n> victory <n>" per world player;
 //   - executes the newest line of <dir>/test.command, "<seq> click|select|check|lselect <form> <control> [<k>]"
-//     (or "<seq> zoom <form> 0 <percent>", the camera zoom),
+//     (or "<seq> zoom <form> 0 <percent>", the camera zoom, or "<seq> pointer <form> <x> <y>", the game's pointer
+//     moved to a window position and the UI updated: hover through the controls' real hit test, or
+//     "<seq> lclick <form> <x> <y>", the same and then a left button press and release as the platform's mouse
+//     events deliver them (ISHandleEvent): a click through the real hit test),
 //     through the controls' own methods (the events go to the application's UI queue, as a player's input does),
 //     once per sequence number, only while <form> is on top; the verdict goes to stderr ("TEST UI ...").
 #include <windows.h>
@@ -53,6 +57,8 @@
 #include "lle/Input System.h"
 #include "lle/ISKeyboard.h"
 #include "lle/ISMouse.h"
+#include "lle/ISDeviceInput.h"
+#include "platform/PlatWindow.h"
 #include "lle/UIControl.h"
 #include "lle/UIEvent.h"
 #include "lle/UIEntityGroup.h"
@@ -86,6 +92,7 @@
 #include "lle/NESynchronousServer.h"
 #include "lle/FSRestorable.h"
 #include "ee/EmpireEarth.h"
+#include "ee/EEMouse.h"
 #include "ee/EEAction.h"
 #include "ee/EEARemovePlayer.h"
 #include "ee/EEMessage.h"
@@ -194,6 +201,27 @@ void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFor
         // "<seq> zoom <form> 0 <percent>": the camera zoom (100 = the original's farthest)
         gWorld.mCameraControl.SetZoom(c / 100.0f);
         theVerdict = "zoomed";
+    } else if (!strcmp(theOp, "pointer") && theFields >= 5 && a == inFormID && gMouse) {
+        // "<seq> pointer <form> <x> <y>": the pointer where a player's mouse would put it (UIManager::UpdateUI
+        // hit-tests the form's controls at it on the next UI update)
+        gMouse->SetPosition(GE2DPoint((float)b, (float)c));
+        gUIManager->ForceUIUpdate();
+        theVerdict = "pointer-moved";
+    } else if (!strcmp(theOp, "lclick") && theFields >= 5 && a == inFormID && gMouse) {
+        gMouse->SetPosition(GE2DPoint((float)b, (float)c));
+        gUIManager->ForceUIUpdate();
+        std::thread([]() {   // not under the UI lock: the UI thread reads the button between the two
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+            PlatInputEvent theEvent;
+            memset(&theEvent, 0, sizeof(theEvent));
+            theEvent.mType = PLAT_EVENT_MOUSE_DOWN;
+            theEvent.mMouse.mButton = 1;
+            ISHandleEvent(theEvent);
+            std::this_thread::sleep_for(std::chrono::milliseconds(200));
+            theEvent.mType = PLAT_EVENT_MOUSE_UP;
+            ISHandleEvent(theEvent);
+        }).detach();
+        theVerdict = "clicked";
     } else if (theControl && !strcmp(theOp, "lselect") && theFields >= 5) {
         UILBString* theList = dynamic_cast<UILBString*>(theControl);
         if (theList && c < theList->GetLineCount()) {
@@ -231,6 +259,11 @@ void Poll(const std::string& inDirectory)
                 fprintf(theState, " %lu", theStacked->GetFormID());
         }
         fprintf(theState, "\n");
+        UIControl* theOver = theForm ? theForm->GetMouseOverControl() : NULL;
+        fprintf(theState, "mouseover %ld\n", theOver ? (long)theOver->GetIndex() : -1L);
+        GEWindow* theWindow = theManager->GetRasterizer()->GetWindow(theManager->GetScreen());
+        if (theWindow)   // the window's size in the game's (logical) pixels: the pointer's coordinates
+            fprintf(theState, "window %lu %lu\n", (unsigned long)theWindow->GetWidth(), (unsigned long)theWindow->GetHeight());
         for (unsigned long i = 0; i < theCount && i < 2000; i++) {
             UIControl* theControl = theForm->GetControl(i);
             if (!theControl)

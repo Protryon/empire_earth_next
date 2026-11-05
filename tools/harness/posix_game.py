@@ -6,11 +6,20 @@ EE_TEST_UI names a directory): it writes ui-state.txt (the bridge's format plus 
 newest line of test.command through the controls' own methods. The lobby options, the dismiss table and the state
 parser are ai_game.py's.
 
-  python -I tools/harness/posix_game.py [--exe EXE] [--data DIR] [--out DIR] --exercise menu|random-game|ai-game
+  python -I tools/harness/posix_game.py [--exe EXE] [--data DIR] [--out DIR]
+         --exercise menu|settings|ui-captures|random-game|ai-game [--config NAME=VALUE ...]
+         [--settings-select CONTROL=INDEX ...]
          [--ai-players N] [--map-size Small] [--map-type Continental] [--difficulty Easy] [--game-speed 'Very Fast']
          [--play-seconds S] [--max-game-seconds S] [--capture-every S] [--timeout S] [--zoom-captures P ...]
 
   menu         main menu reached, captured; the game is closed
+  settings     main menu -> game settings (video tab) captured; each --settings-select sets a combo box, then OK
+               (the settings are saved: summary.json has the config.ini the game wrote) and the menu is captured
+  ui-captures  the same screens every run, through the real pointer hit test (the fixture's "pointer"/"lclick": the
+               game's pointer moved to window fractions, a left click as the platform delivers it), the pointer parked
+               at the same place for each capture: menu, menu_hover (the settings button under the pointer), settings
+               (opened by clicking that button), then a random map and game (the town centre at the window's centre
+               clicked: its command buttons and status box); summary.json has the hover/click results
   random-game  single player -> random map -> Start with the lobby's defaults (session_exercise's random-game);
                gameplay captured, the physics ticks must advance; --play-seconds S plays on
   ai-game      the lobby set up as ai_game.py does (the human idles in slot 0, N computers), Start, the civilization
@@ -19,7 +28,8 @@ parser are ai_game.py's.
 
 Evidence goes to --out (default build/posix_game/<time>): game.log, ui/ (the fixture's files), <name>.png (macOS:
 screencapture of the game window; Linux: none), samples.json and summary.json. The game's settings go to a fresh
-config.ini there (EE_CONFIG), so the data root is not written. Exit 0 on PASS.
+config.ini there (EE_CONFIG), so the data root is not written; --config NAME=VALUE seeds its [Game] section. Exit 0
+on PASS.
 """
 import argparse
 import json
@@ -37,7 +47,8 @@ ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
 from ai_game import CITIZENS, DEFAULTS, DISMISS, LOBBY, GAME, NAMED, PLAYER_TYPE, TEAM, VISIBLE_SLOTS, parse_state, resolve
 
-MAIN, SINGLE = 12, 6
+MAIN, SINGLE, SETTINGS = 12, 6, 5
+SETTINGS_BUTTON, SETTINGS_OK = 3, 18   # main menu 'Game Settings Button', settings 'GS OK Button'
 GAME_SPEED = 209
 
 
@@ -64,6 +75,11 @@ class Game:
             f.unlink()
         self.seq = 0
         self.log_lines = []
+        if a.config:   # seeds the fresh config.ini's [Game] section (platform/PlatConfig.h)
+            (self.out / 'config.ini').write_text('[Game]\n' + ''.join(f'{n.strip()} = {v.strip()}\n' for n, _, v in
+                                                                      (c.partition('=') for c in a.config)))
+        elif (self.out / 'config.ini').exists():
+            (self.out / 'config.ini').unlink()
         env = dict(os.environ, EE_TEST_UI=str(self.ui), EE_DATA_ROOT=str(pathlib.Path(a.data).resolve()),
                    EE_CONFIG=str(self.out / 'config.ini'))
         self.log = open(self.out / 'game.log', 'wb')
@@ -80,6 +96,12 @@ class Game:
         return self.proc.poll() is None
 
     def check_alive(self):
+        # a failed verification (a db load error at startup, ...) fails the run even while the process lingers
+        # (stopped in a debugger or a crash reporter)
+        log = (self.out / 'game.log').read_bytes().decode('latin-1')
+        if 'Verification failure' in log:
+            line = next(v for v in log.splitlines() if 'Verification failure' in v)
+            raise RuntimeError(f'the game failed a verification: {line}')
         if not self.alive():
             tail = (self.out / 'game.log').read_bytes()[-3000:].decode('latin-1')
             raise RuntimeError(f'the game exited with {self.proc.returncode}; log tail:\n{tail}')
@@ -144,13 +166,17 @@ class Game:
         if not helper.exists() or helper.stat().st_mtime < source.stat().st_mtime:
             helper.parent.mkdir(parents=True, exist_ok=True)
             subprocess.run(['swiftc', '-O', str(source), '-o', str(helper)], check=True, capture_output=True)
-        r = subprocess.run([str(helper), 'ee-aoc'], capture_output=True, text=True)
-        if r.returncode or not r.stdout.split():
-            self.note(f'CAPTURE {name} failed: no game window')
-            return None
-        subprocess.run(['screencapture', '-x', '-o', '-l', r.stdout.split()[0], str(path)], check=True)
-        self.note(f'CAPTURE {name} -> {path}')
-        return str(path)
+        for attempt in range(3):   # the window id can go stale while the game switches forms or modes
+            r = subprocess.run([str(helper), 'ee-aoc'], capture_output=True, text=True)
+            if r.returncode or not r.stdout.split():
+                self.note(f'CAPTURE {name} failed: no game window')
+                return None
+            if subprocess.run(['screencapture', '-x', '-o', '-l', r.stdout.split()[0], str(path)]).returncode == 0:
+                self.note(f'CAPTURE {name} -> {path}')
+                return str(path)
+            time.sleep(1)
+        self.note(f'CAPTURE {name} failed: screencapture')
+        return None
 
     def stop(self):
         if self.alive():
@@ -161,6 +187,68 @@ class Game:
                 os.killpg(self.proc.pid, signal.SIGKILL)
                 self.proc.wait()
         self.log.close()
+
+
+def window_state(g):
+    """The fixture's 'window <w> <h>' and 'mouseover <i>' lines"""
+    out = dict(window=None, mouseover=None)
+    for line in g.raw().splitlines():
+        part = line.split()
+        if part[:1] == ['window'] and len(part) == 3:
+            out['window'] = (int(part[1]), int(part[2]))
+        elif part[:1] == ['mouseover'] and len(part) == 2:
+            out['mouseover'] = int(part[1])
+    return out
+
+
+PARK = (0.08, 0.2)   # where the pointer waits during captures (window fractions)
+
+
+def pointer(g, form, fx, fy, op='pointer'):
+    st = window_state(g)
+    if not st['window']:
+        raise RuntimeError('the fixture reports no window size')
+    x, y = int(fx * st['window'][0]), int(fy * st['window'][1])
+    seq = g.command(f'{op} {form} {x} {y}')
+    g.wait(lambda s: s['command'] >= seq, f'{op} {x},{y}', 30)
+    time.sleep(1.0)
+    after = window_state(g)
+    g.note(f'POINTER {op} form {form} at {x},{y} (window {st["window"]}): mouseover {after["mouseover"]}')
+    return dict(op=op, form=form, x=x, y=y, window=st['window'], mouseover=after['mouseover'])
+
+
+def ui_captures(g, a, summary):
+    caps, checks = summary['captures'], []
+    summary['pointer_checks'] = checks
+    pointer(g, MAIN, *PARK)
+    caps['menu'] = g.capture('menu')
+    hover = pointer(g, MAIN, 0.5, 0.75)   # the main menu's 'Game Settings Button' (form index 3)
+    checks.append(dict(what='hover settings button', expect=SETTINGS_BUTTON, **hover))
+    caps['menu_hover'] = g.capture('menu_hover')
+    click = pointer(g, MAIN, 0.5, 0.75, 'lclick')
+    st = g.wait(lambda s: s['form'] == SETTINGS, 'settings opened by a click', 30)
+    checks.append(dict(what='click settings button', expect_form=SETTINGS, form_after=st['form'], **click))
+    time.sleep(1.5)
+    pointer(g, SETTINGS, *PARK)
+    caps['settings'] = g.capture('settings')
+    click = pointer(g, SETTINGS, 0.131, 0.971, 'lclick')   # 'GS OK Button'
+    st = g.wait(lambda s: s['form'] == MAIN, 'menu again by clicking OK', 30)
+    checks.append(dict(what='click settings OK', expect_form=MAIN, form_after=st['form'], **click))
+    g.click(MAIN, 0, SINGLE, 'single player')
+    g.click(SINGLE, 1, LOBBY, 'random map setup')
+    time.sleep(5)
+    g.click(LOBBY, 10, GAME, 'start game', timeout=300)
+    first = g.state()['telemetry']
+    g.wait(lambda s: s['telemetry'].get('ticks', 0) > first.get('ticks', 0) and s['telemetry'].get('map'),
+           'physics ticks advancing', 120)
+    time.sleep(3)
+    click = pointer(g, GAME, 0.44, 0.47, 'lclick')   # the town centre the camera starts on
+    checks.append(dict(what='click the town centre', **click))
+    time.sleep(1.5)
+    pointer(g, GAME, *PARK)
+    caps['game'] = g.capture('game')
+    summary['result'] = 'PASS'
+    return summary
 
 
 def dismiss(g, st):
@@ -217,6 +305,27 @@ def run(a):
         time.sleep(2)
         summary['captures'] = {'menu': g.capture('menu')}
         if a.exercise == 'menu':
+            summary['result'] = 'PASS'
+            return summary
+        if a.exercise == 'ui-captures':
+            return ui_captures(g, a, summary)
+        if a.exercise == 'settings':
+            g.click(MAIN, SETTINGS_BUTTON, SETTINGS, 'game settings')
+            time.sleep(2)
+            summary['captures']['settings'] = g.capture('settings')
+            summary['combos_before'] = g.state()['combos']
+            for item in a.settings_select:
+                control, _, index = item.partition('=')
+                control, index = int(control), int(index)
+                seq = g.command(f'select {SETTINGS} {control} {index}')
+                g.wait(lambda s: s['command'] >= seq and s['combos'].get(control, {}).get('sel') == index,
+                       f'combo {control} = {index}', 30)
+                g.note(f'SETTINGS combo {control} = {index} {g.state()["combos"][control]["lines"][index]!r}')
+            time.sleep(1)
+            summary['captures']['settings_selected'] = g.capture('settings_selected')
+            g.click(SETTINGS, SETTINGS_OK, MAIN, 'settings OK')
+            time.sleep(1)
+            summary['config'] = (g.out / 'config.ini').read_text(encoding='latin-1')
             summary['result'] = 'PASS'
             return summary
         g.click(MAIN, 0, SINGLE, 'single player')
@@ -315,7 +424,11 @@ def main():
     ap.add_argument('--exe', type=pathlib.Path, default=ROOT / 'build' / 'xbuild' / host / 'game' / 'ee-aoc')
     ap.add_argument('--data', default=os.environ.get('EE_DATA_ROOT', str(ROOT / 'data')))
     ap.add_argument('--out', default=str(ROOT / 'build' / 'posix_game' / time.strftime('%Y%m%d-%H%M%S')))
-    ap.add_argument('--exercise', choices=['menu', 'random-game', 'ai-game'], default='ai-game')
+    ap.add_argument('--exercise', choices=['menu', 'settings', 'ui-captures', 'random-game', 'ai-game'],
+                    default='ai-game')
+    ap.add_argument('--config', action='append', default=[], help="NAME=VALUE in the fresh config.ini's [Game]")
+    ap.add_argument('--settings-select', action='append', default=[],
+                    help='settings: CONTROL=INDEX, a combo box of the settings form selected before OK')
     ap.add_argument('--ai-players', type=int, default=2)
     ap.add_argument('--map-size', default='Small')
     ap.add_argument('--map-type', default='Continental')
