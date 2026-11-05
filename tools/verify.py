@@ -92,8 +92,9 @@ def unit_includes(src):
 
 
 def unit_flags(src, flags):
-    """The module flags plus the defines of a unit's `// UNIT-FLAGS:` line. The rest of such a line was the VC6
-    build's per-unit code generation (optimisation, runtime): the build decides those for every unit now."""
+    """The module flags plus the defines (and an exception-handling switch, -EHsc) of a unit's `// UNIT-FLAGS:`
+    line. The rest of such a line was the VC6 build's per-unit code generation (optimisation, runtime): the build
+    decides those for every unit now."""
     try:
         head = "".join(pathlib.Path(src).read_text(errors="replace").splitlines(keepends=True)[:30])
     except OSError:
@@ -102,7 +103,7 @@ def unit_flags(src, flags):
     if not m:
         return flags
     have = flags.split()
-    return " ".join(have + [f for f in m.group(1).split() if f.startswith(("-D", "/D")) and f not in have])
+    return " ".join(have + [f for f in m.group(1).split() if f.startswith(("-D", "/D", "-EH", "/EH")) and f not in have])
 
 
 class Coff:

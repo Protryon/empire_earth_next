@@ -17,11 +17,12 @@ MODULES = ["tcp", "mixer", "default", "lle", "jpeg", "dx7hrtnl", "exeimg", "exe"
 TARGETS = ["exe"]
 TARGET_MODULES = {"exe": ["exe", "exeimg", "lle", "jpeg", "tcp", "mixer", "default", "dx7hrtnl"]}
 PART_OF = {m: "exe" for m in MODULES if m != "exe"}
-# units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/),
-# with the engine
+# units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/)
+# with the engine, and new game units that have no address in the original (the db text loader)
 PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatThread.cpp", "Platform/Win32/PlatString.cpp",
                   "Platform/Win32/PlatPreferences.cpp", "Platform/Win32/PlatFile.cpp"]
-EXTRA_UNITS = {"lle": PLATFORM_UNITS}
+EXTRA_UNITS = {"lle": PLATFORM_UNITS,
+               "exe": ["Empire Earth/Database/EEDataText.cpp", "Empire Earth/Database/EEDataTextFile.cpp"]}
 LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c", "pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
              "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c"}
 # dmusic (DirectMusic reimplementation, src/ThirdParty/dmusic): every source but the POSIX thread shim

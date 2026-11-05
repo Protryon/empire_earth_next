@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include "ee/EEUCUpgradeTable.h"
 #include "lle/LowLevelEngine.h"
+#include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GEVector.h"
@@ -2901,7 +2902,7 @@ struct EEUnitClassNameLess {
 void EEUnitClass::CreateUnitClasses()
 {
     FSFileSpec* theDbFile = NULL;
-    long theResult = gDataPath->FindFile(kDbObjectsFile, theDbFile);
+    long theResult = EEDbFindFile(gDataPath, kDbObjectsFile, theDbFile);
     ESVERIFY_AT(theResult == keseOK, 5710);
     ESVERIFY_AT(theDbFile != NULL, 5711);
     theResult = gDatabaseObjects.Load(theDbFile);

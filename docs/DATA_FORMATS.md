@@ -2099,8 +2099,9 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
    12, 11, 9, 10, 6, 3, 1, 2) suggests database column order. The names from model files are a guess.
 3. **Attack-kind columns of dbfamily (68).** Which unit field chooses the column (`mWeapon`, `mProjectileType` or
    `mAmmoType`)? What is each column's name? The source DB had them as columns, but the export keeps only numbers.
-4. **dbworld index names.** 95 constants have no names. About 65 call sites read specific indices. A name list has to
-   be collected by hand from those sites.
+4. **dbworld index names.** 95 constants have no source names. 58 are now named from their readers
+   (`tools/eedata/overlay.py` ROW_NAMES, the `label` column; section 8.4). Rows 0..20, 23, 24, 28..33, 38..41, 73, 78,
+   79 and 87 are still unnamed: 0..20 and 73 have no literal reader, 78/79/87 have readers whose meaning is unclear.
 5. **Effect kinds** in dbeffects: kinds 7, 8, 10, 11, 22 and the meaning of `mL00` (looks like a db id, 0..1809), `mB45`,
    `mU46`, `mL48..mL54` are not decoded.
 6. **dbgfxeffects class parameters** (`mParam1..12`, `mL90..mL98`, the four bools): their meaning depends on `mKind`
@@ -2116,6 +2117,93 @@ are 1948 bytes, not 1960, and the row counts differ. A converter must be per-gam
     were never used?
 11. **Byte-exactness of `0xCC` and junk.** The text format should keep a row's tail and padding bytes so that the
     multiplayer checksum survives. Does the owner want that (*exact* mode), or only *clean* functional equivalence?
+    Both modes exist (`eedata.py export --mode exact|clean`, exact is the default); the decision is still open.
 12. **Base-game format.** The base game's `dbobjects.dat` uses 1948-byte records. If base-game data is ever wanted,
     its layout has to be derived separately (the base exe is out of scope).
 
+---
+
+## 8. The converter (`tools/eedata`) and the text loader
+
+Built from section 6 (2026-11-04). `python -I tools/eedata/eedata.py -h` lists the commands; the scratch scripts in
+`tools/datafmt/` are superseded.
+
+### 8.1 What was confirmed or corrected
+
+* **Hole rows:** every table's hole rows are one identical template, as 2.4 says. A detection rule (the most
+  frequent record among rows without lead strings or list entries, at least twice, with 0xCC fill or a tenth of
+  the rows) gives exactly the "real" counts of section 1 for all 39 tables, e.g. dbevents 317 real / 1,183 holes,
+  dbtechtree 793 / 3,701, dbgraphics 968 / 23 (`mMediaIndex == 0` rows), dbcivilization 27 / 2. Tables with a
+  single 0xCC-filled row (dbmusic row 0, dbstartingresources, dbambientsounds, dbuihotkey, dbuiformevents,
+  dbterraingraytextures) keep it as an ordinary row.
+* **Strings:** no real row holds a `char[N]` string without a NUL; NUL-less fields occur only in hole rows. So the
+  text form requires room for the NUL (at most N-1 bytes), and a NUL-less field exports as `<field>~raw` (hex).
+* **Bools** other than 0/1 occur only in hole rows (dbtechtree `mBB6/mBB7` 0xCC); the text keeps the raw byte
+  anyway.
+* **Junk in real rows** (bytes after a string's NUL, non-zero padding), the bytes *exact* mode keeps and *clean*
+  mode zeroes: string tails in 1,160 dbbuttons strings, in every dbtechtree, dbterrain, dbuifonts, dbunitset and
+  dbareaeffect row, in 197 dbuicontrols rows, 18-21 in dbgraphics/dbsounds/dbobjects and a few elsewhere; non-zero
+  padding in 69 dbgraphics rows and one row each of dbgfxeffects, dbterraintype, dbuiback and dbupgrade. In all,
+  clean mode changes 1,848,710 bytes of the 7.79 MB (mostly in the copies of the hole templates).
+* **Record sizes:** 35 source structs, all equal to their `static_assert` (EEUnitClassRecord and UIDbControl, which
+  have none, to the size their source states in a comment). The three layouts without a source struct (the dbevents
+  row head, dbrandommap, dbterraingraytextures) are decoded from the data as in 3.7, 3.38 and 3.39.
+
+### 8.2 Text forms
+
+One file per db file, named like it with `.csv` or `.yaml`. The format per table follows 6.1: YAML for dbobjects,
+dbgraphics, dbtechtree, dbevents and dbcivilization; CSV for the rest, dbeffects included. UTF-8, LF.
+
+* **Keys/columns** are the source field names (`mHitPoints`), in record order. Gap pieces the survey identified are
+  `name`, `dbId`, `index`; undecoded bytes are `u_0x<off>` (a dword as s32, an unaligned run as hex); compiler
+  padding is `pad_0x<off>` (hex; written only when not zero). A string field has `<field>~tail` (hex of the bytes
+  after the NUL; exact mode, only when not zero). Lead strings get the names of the members they load into
+  (dbgraphics: `rowName`, `mFileName`, `mTextureName`, `mTextureNames[14]`, `mModelNames[14]`, `mShadowModelName`,
+  `mShadowTextureName`; dbsounds `mSampleName`; dbterrain `mTextureName`; graytextures `textureName`). Trailing
+  lists: dbevents `effects`, dbtechtree `parents`.
+* **Rows** carry `row`, the row position. References between tables are row positions, so it is checked: it must
+  increase, and empty means "the next one". Rows not listed are holes, written back as the `hole` template (hex).
+  `rows` gives the total (default: the last row + 1). dbtechtree is `epochs: - slots: N, epoch: {...}, nodes:
+  [...]`; dbrandommap keeps its first word as `header`.
+* **Header:** CSV files start with directive lines (`#eedata dbworld`, `#format 1`, `#mode exact`, `#rows 95`,
+  `#hole ...`); YAML files have the same keys at the top.
+* **Values:** integers in decimal by the field's signedness (0x... is accepted as the bit pattern); floats as the
+  shortest decimal that rounds back to the same bits, `.inf`/`-.inf`/`.nan`, other NaNs as `0x<8 hex>`; bools as
+  the raw byte (true/false accepted); strings as CP-1252 text (the five undefined bytes as the C1 code points of
+  the same value). A missing key or an empty cell is zero.
+* **YAML subset:** block mappings and sequences, one-line flow sequences, plain/single/double-quoted scalars,
+  comments. No anchors, aliases, tags, block scalars, flow mappings or multi-line scalars; duplicate keys and tabs
+  in indentation are errors (`tools/eedata/textio.py`).
+
+### 8.3 Gates (AoC retail data)
+
+* `eedata.py check`: (a) 39/39 tables round-trip db -> text -> db byte-identical in exact mode (and re-export
+  identically); (b) 39/39 clean texts compile to files whose every field value equals the exact file's; (c) 35/35
+  struct sizes match their sources, and `specs.json` and the C++ `EEDataTextSpecs.h` are current.
+* `eedata.py cppgate`: the game's C++ loader compiles the exact text of all 39 tables to the original .dat bytes
+  and the clean text to the Python importer's bytes (39/39 each). 114 edited texts (valid and broken) give the
+  same bytes or an error in both implementations.
+* Field classes over all 38 layouts: named 799 fields (6,843 bytes), inferred 43 (1,996), provisional 282 (862),
+  unknown 41 (197), padding 52 (134).
+
+### 8.4 dbworld names
+
+`label` column, text only, checked against the list when filled in: 21 conversionsShownMax, 22 miningLimit,
+25 chatMessageTime, 26 unitLimitRange, 27 unitLimitDefault, 34 wonderVictoryTime, 35 conversionSearchRadius,
+36 shareBonus, 37 healAmount, 42 gameSpeedDefault, 43 gameSpeedRange, 44 gameSpeedStep, 45 killRefundFactor,
+46 conversionCost, 47 improvementPointLimit, 48 startingCitizens, 49 groupCapFactor, 50 wonderPowerAmount,
+51 healEpochFactor, 52 healEpochDivisor, 53 elevationHighThreshold, 54 elevationLowThreshold, 55 elevationHighBonus,
+56 elevationLowFactor, 57..72 improvementTime0..15, 74 complexUnitSight, 75 upgradeButtonDelay,
+76 civilizationPoints, 77 wondersForVictoryMax, 80 unitEpochCostFactor, 81 gameSpeedOption01, 82 gameSpeedOption23,
+83 acknowledgementDelay, 84 aiAttackChance, 85 camouflage, 86 civPowerCost, 88 fanatic, 89 damageTableScale,
+90 unitCostScale, 91 tradeRate46, 92 tradeRate23, 93 unitCostScaleResources4, 94 resourceTime. The reader of each
+is noted next to it in `overlay.py`.
+
+### 8.5 The game reads the text
+
+`EEDbFindFile` (`src/Empire Earth/Database/EEDataTextFile.cpp`) replaces `FSPath::FindFile` at the 38 db lookups
+(EEInitializeDatabase, EEUnitClass::CreateUnitClasses, UIManager::LoadDatabase). When `db\<table>.csv|.yaml` is on
+the data path, `EEDataText.cpp` compiles it to the binary record stream and serves it as an `FSMemoryFile`; the
+loaders are unchanged. A loose `Data\db\` file wins over the archive, and a text table over a loose .dat. A text
+that does not compile stops the game with its message (file, row, field). `eedata.py install GAMEDIR` writes the
+text tables into a copy of the game. The multiplayer checksum adds the loose `Data\Db\*.csv`/`*.yaml`.
