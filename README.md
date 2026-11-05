@@ -50,6 +50,7 @@ Then:
 
 ```
 python -I build.py                  # -> build/clang/exe/EE-AOC.exe
+python -I build.py --x64            # -> build/clang-x64-exe/exe/EE-AOC.exe (x86_64; not played yet)
 python -I tools/clang_build.py      # compile only, with a ranked error census (--x64: the 64-bit census)
 ```
 
