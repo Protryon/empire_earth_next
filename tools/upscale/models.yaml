@@ -1,0 +1,43 @@
+# Upscaling models for tools/upscale (fetched into toolchain/upscale-models/ by `upscale.py fetch`).
+# Each model: url, sha256 (pinned after the first fetch; a mismatch is refused), scale, licence, and what it is for.
+# Files are loaded with spandrel (safe tensor loading; pickled code is never executed).
+
+realesrgan_x4plus:
+  file: RealESRGAN_x4plus.pth
+  url: https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth
+  sha256: 4fa0d38905f75ac06eb49a7951b426670021be3018265fd191d2125df9d682f1
+  scale: 4
+  licence: BSD-3-Clause
+  use: general photographic baseline
+
+realesrgan_x4plus_anime:
+  file: RealESRGAN_x4plus_anime_6B.pth
+  url: https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth
+  sha256: f872d837d3c90ed2e05227bed711af5671a6fd1c9f7d7e91c911a61f155e99da
+  scale: 4
+  licence: BSD-3-Clause
+  use: flat / illustrated UI art
+
+ultrasharp:
+  file: 4x-UltraSharp.pth
+  url: https://huggingface.co/lokCX/4x-Ultrasharp/resolve/main/4x-UltraSharp.pth
+  sha256: a5812231fc936b42af08a5edba784195495d303d5b3248c24489ef0c4021fe01
+  scale: 4
+  licence: CC-BY-NC-SA-4.0
+  use: painted game art (skins, terrain)
+
+siax:
+  file: 4x_NMKD-Siax_200k.pth
+  url: https://huggingface.co/gemasai/4x_NMKD-Siax_200k/resolve/main/4x_NMKD-Siax_200k.pth
+  sha256: 560424d9f68625713fc47e9e7289a98aabe1d744e1cd6a9ae5a35e9957fd127e
+  scale: 4
+  licence: WTFPL
+  use: painted game art, less sharpening than UltraSharp
+
+nomos8k_dat:
+  file: 4xNomos8kDAT.pth
+  url: https://github.com/Phhofm/models/releases/download/4xNomos8kDAT/4xNomos8kDAT.pth
+  sha256: 2926aa419b6f47edfec125d5314af172b6c4ef16f483e44e0d2428bc0632d0f4
+  scale: 4
+  licence: CC-BY-4.0
+  use: transformer (DAT), slow, clean detail
