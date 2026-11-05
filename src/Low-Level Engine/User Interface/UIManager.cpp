@@ -10,6 +10,7 @@
 #include <algorithm>
 
 #include "lle/LowLevelEngine.h"
+#include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
@@ -605,21 +606,21 @@ void UIManager::LoadDatabase(FSPath* inPath, const UString& inDirectory)
     FSFileSpec* theDbFile = NULL;
     long theResult;
 
-    theResult = inPath->FindFile(inDirectory + gDbUIFontsFileName, theDbFile);
+    theResult = EEDbFindFile(inPath, inDirectory + gDbUIFontsFileName, theDbFile);
     ESVERIFY_AT(theResult == keseOK, 1081);
     ESVERIFY_AT(theDbFile != NULL, 1082);
     theResult = UIFontTable::Create(*theDbFile, this);
     ESVERIFY_AT(theResult == keseOK, 1084);
     delete theDbFile;
 
-    theResult = inPath->FindFile(inDirectory + gDbUIFormsFileName, theDbFile);
+    theResult = EEDbFindFile(inPath, inDirectory + gDbUIFormsFileName, theDbFile);
     ESVERIFY_AT(theResult == keseOK, 1089);
     ESVERIFY_AT(theDbFile != NULL, 1090);
     theResult = UIForm::Create(*theDbFile, this);
     ESVERIFY_AT(theResult == keseOK, 1092);
     delete theDbFile;
 
-    theResult = inPath->FindFile(inDirectory + gDbUIBackgroundFileName, theDbFile);
+    theResult = EEDbFindFile(inPath, inDirectory + gDbUIBackgroundFileName, theDbFile);
     ESVERIFY_AT(theResult == keseOK, 1097);
     ESVERIFY_AT(theDbFile != NULL, 1098);
     theResult = UIBackgroundTable::Create(*theDbFile);
@@ -627,25 +628,25 @@ void UIManager::LoadDatabase(FSPath* inPath, const UString& inDirectory)
     this->CreateBackgrounds();
     delete theDbFile;
 
-    theResult = inPath->FindFile(inDirectory + gDbUIControlsFileName, theDbFile);
+    theResult = EEDbFindFile(inPath, inDirectory + gDbUIControlsFileName, theDbFile);
     ESVERIFY_AT(theResult == keseOK, 1106);
     ESVERIFY_AT(theDbFile != NULL, 1107);
     UIControlsTable::Create(*theDbFile, this);
     delete theDbFile;
 
-    theResult = inPath->FindFile(inDirectory + gDbUIControlEventsFileName, theDbFile);
+    theResult = EEDbFindFile(inPath, inDirectory + gDbUIControlEventsFileName, theDbFile);
     ESVERIFY_AT(theResult == keseOK, 1113);
     ESVERIFY_AT(theDbFile != NULL, 1114);
     UIEvent::CreateControlEvents(*theDbFile);
     delete theDbFile;
 
-    theResult = inPath->FindFile(inDirectory + gDbUIFormEventsFileName, theDbFile);
+    theResult = EEDbFindFile(inPath, inDirectory + gDbUIFormEventsFileName, theDbFile);
     ESVERIFY_AT(theResult == keseOK, 1120);
     ESVERIFY_AT(theDbFile != NULL, 1121);
     UIEvent::CreateFormEvents(*theDbFile, this);
     delete theDbFile;
 
-    theResult = inPath->FindFile(inDirectory + gDbUIHotKeyFileName, theDbFile);
+    theResult = EEDbFindFile(inPath, inDirectory + gDbUIHotKeyFileName, theDbFile);
     ESVERIFY_AT(theResult == keseOK, 1127);
     ESVERIFY_AT(theDbFile != NULL, 1128);
     UIHotKey::CreateHotKeys(*theDbFile);

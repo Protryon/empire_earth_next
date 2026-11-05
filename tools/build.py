@@ -183,6 +183,8 @@ def link_exe(out, objs, extra_libs):
     # the rest of the game: every unit of the engine (with libjpeg) and the plug-ins, and their library units
     rest = [m for m in units.TARGET_MODULES["exe"] if m not in ("exe", "exeimg")]
     others = [objs(j[1], j[2]) for m in rest for j in units.jobs_for(m)] +              [objs(j[1], j[2]) for j in units.lib_jobs(rest)]
+    # the game's new units (units.EXTRA_UNITS: no original address, so not in its units.txt)
+    others += [objs(ROOT / "src" / rel, MODULE_FLAGS["exe"]) for rel in units.EXTRA_UNITS.get("exe", [])]
     exe_fulllink.EXTRA_LIBS = [str(o) for o in others] + list(extra_libs) + STATIC_LIBS
     exe_fulllink.IMPORT_MODULES = [m for m in units.TARGET_MODULES["exe"] if (LINK_DIR / m / "imports.txt").exists()]
     exe_fulllink.EXTRA_RES = [rsrc_rebuild.compile_rc(ROOT / "src" / units.LANGUAGE_RC, out / "rsrc-language")]
