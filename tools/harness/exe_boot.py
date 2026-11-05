@@ -126,7 +126,15 @@ def data_tree(kind):
         tree = pathlib.Path(env)
     else:
         tree = OPEN_DATA / ("tree" if kind == "open" else "tree-binary")
-    if not (tree / "open_data.json").exists():
+    stale = False
+    if (tree / "open_data.json").exists() and tree.parent == OPEN_DATA:   # our own trees: rebuilt when stale
+        sys.path.insert(0, str(ROOT / "tools"))
+        import open_data
+        made = json.loads((tree / "open_data.json").read_text()).get("converters")
+        stale = made != open_data.converters_hash()
+        if stale:
+            print(f"data: {tree} was built by other converter code: rebuilding it", flush=True)
+    if stale or not (tree / "open_data.json").exists():
         print(f"data: building {tree} (tools/open_data.py build)", flush=True)
         cmd = [sys.executable, "-I", str(ROOT / "tools" / "open_data.py"), "build", str(tree), "--force"]
         if kind == "binary":

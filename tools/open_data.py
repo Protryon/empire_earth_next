@@ -42,6 +42,17 @@ import sources   # noqa: E402  (tools/eemodel: the game's data path)
 import ssa       # noqa: E402
 
 TREE = ROOT / 'build' / 'open_data' / 'tree'
+
+
+def converters_hash():
+    """A hash of the code that decides a tree's content (this tool, eedata, eemodel): a tree built by other code is
+    stale (e.g. the db text format changed) and the harness rebuilds it."""
+    import hashlib
+    h = hashlib.sha256()
+    for p in sorted([pathlib.Path(__file__).resolve(), *(ROOT / 'tools' / 'eedata').glob('*.py'),
+                     *(ROOT / 'tools' / 'eedata').glob('*.json'), *(ROOT / 'tools' / 'eemodel').glob('*.py')]):
+        h.update(p.name.encode() + b'\0' + p.read_bytes().replace(b'\r\n', b'\n'))
+    return h.hexdigest()[:16]
 FONTS = ROOT / 'toolchain' / 'fonts'
 SKIP_DIRS = {'dxm'}                       # Data\dxm: a community mod
 # the original game's own campaigns: Art of Conquest never lists them (its campaign screen lists its own
@@ -186,7 +197,7 @@ def cmd_build(a, out=None):
     spelled = canonical_dirs(plcs)
     data = out / 'Data'
     data.mkdir(parents=True)
-    report = dict(made=time.strftime('%Y-%m-%d %H:%M:%S'), binary=bool(a.binary),
+    report = dict(made=time.strftime('%Y-%m-%d %H:%M:%S'), binary=bool(a.binary), converters=converters_hash(),
                   sources=[dict(place=p.label, files=len(p.names), tags=dict(p.tags)) for p in plcs],
                   shadowed={f'{k[1]} under {k[0]}': v for k, v in sorted(clashes.items())})
     converted = set()   # lower names replaced by an open form
