@@ -1,10 +1,11 @@
 """Compare class layouts between the header views of two units (one-definition-rule check for the one-image link).
 
-  python -I tools/layout_views.py <unit.cpp> <unit.cpp> [...]
+  python -I tools/layout_views.py [--x64] <unit.cpp> <unit.cpp> [...]
 
 Each unit is compiled -fsyntax-only with its own module's flags (its header view) and clang's record-layout dump;
 every record name the units share is compared by size. A class whose size differs between views breaks the one
-link: objects built by one module's inline code are used by another module's code with other offsets.
+link: objects built by one module's inline code are used by another module's code with other offsets. --x64:
+compare the x86_64 layouts (the x64 build).
 """
 import pathlib
 import sys
@@ -15,8 +16,10 @@ from ee import ROOT
 
 
 def main():
-    units = [pathlib.Path(u) if pathlib.Path(u).is_absolute() else ROOT / "src" / u for u in sys.argv[1:]]
-    dumps = {u: record_sizes.layouts(u, "i686-pc-windows-msvc") for u in units}
+    args = sys.argv[1:]
+    target = "x86_64-pc-windows-msvc" if "--x64" in args else "i686-pc-windows-msvc"
+    units = [pathlib.Path(u) if pathlib.Path(u).is_absolute() else ROOT / "src" / u for u in args if u != "--x64"]
+    dumps = {u: record_sizes.layouts(u, target) for u in units}
     common = set.intersection(*(set(d) for d in dumps.values()))
     bad = 0
     for name in sorted(common):
