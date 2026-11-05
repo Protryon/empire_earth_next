@@ -705,7 +705,7 @@ void EEMAddRemoveResources::Execute()
     EEPlayer* thePlayer = gWorld.mPlayers[this->mPlayerID];
     if (this->mAdd)
         thePlayer->AddResource(this->mResourceType, this->mAmount);
-    else if (this->mAmount > 0 && this->mAmount <= thePlayer->mResourceCaps[this->mResourceType])
+    else if (this->mAmount > 0 && this->mAmount <= static_cast<uint32_t>(thePlayer->mResourceCaps[this->mResourceType]))   // unsigned, as on Windows
         thePlayer->TakeResource(this->mResourceType, this->mAmount);
 }
 

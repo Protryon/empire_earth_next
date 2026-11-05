@@ -810,7 +810,7 @@ void EEComplexUnit::ClearContacts()
 void EEComplexUnit::ReleaseConversionEffect()
 {
     EEEffectHandle theHandle = this->mConversionEffect;
-    if (theHandle.mValue != -1) {
+    if (!UIsNone32(theHandle.mValue)) {
         gEffectManager->DestroyEffect(theHandle);
         this->mConversionEffect.mValue = -1;
     }
@@ -840,7 +840,7 @@ void EEComplexUnit::ClearGoalQueue(unsigned long inIndex)
 void EEComplexUnit::ReleaseHealEffect()
 {
     EEEffectHandle theHandle = this->mHealEffect;
-    if (theHandle.mValue != -1) {
+    if (!UIsNone32(theHandle.mValue)) {
         gEffectManager->DestroyEffect(theHandle);
         this->mHealEffect.mValue = -1;
     }

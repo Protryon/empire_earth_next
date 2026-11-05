@@ -487,7 +487,7 @@ void EEServer::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
                 sSample = gSoundManager->Load(UString("sounds\\OutOfSynch.wav"), 0x31, 1);
             else
                 sSample = gSoundManager->Load(UString("sounds\\Booted.wav"), 0x31, 1);
-            if (sSample != (unsigned long)-1)
+            if (!UIsNone32(sSample))
                 gSoundManager->Play(sSample, 1.0f, 0.0f, 1.0f, false, NULL);
         }
     }

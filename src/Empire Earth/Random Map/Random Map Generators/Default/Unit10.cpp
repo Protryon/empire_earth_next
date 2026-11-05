@@ -349,12 +349,12 @@ static void ParseNumber(const UString& inText, long inType, void* outValue, long
 {
     switch (inType) {
     case kRMFloat:
-        if (inSize == sizeof(float) && sscanf(inText, "%f", outValue) != 1 && gReportErrors)
+        if (inSize == sizeof(float) && sscanf(inText, "%f", static_cast<float*>(outValue)) != 1 && gReportErrors)
             printf("%s (%d) : ERROR, unknown float value, \"%s\"\n",
                    (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)inText);
         break;
     case kRMLong:
-        if (inSize == sizeof(long) && sscanf(inText, "%d", outValue) != 1 && gReportErrors)
+        if (inSize == sizeof(long) && sscanf(inText, "%ld", static_cast<long*>(outValue)) != 1 && gReportErrors)
             printf("%s (%d) : ERROR, unknown integer value, \"%s\"\n",
                    (const char*)gFileNames.back(), gLineNumbers.back(), (const char*)inText);
         break;

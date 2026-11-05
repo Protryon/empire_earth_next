@@ -1163,10 +1163,10 @@ void EESMObject::RenumberAreas(unsigned long inOldIndex, unsigned long inNewInde
 {
     unsigned long theIndex = this->mArea;
     if (theIndex == inOldIndex) {
-        this->mArea = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mArea = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mArea = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mArea = theIndex - 1;
     }
 }
@@ -1177,18 +1177,18 @@ void EESMObject::RenumberObjects(unsigned long inOldIndex, unsigned long inNewIn
 {
     unsigned long theIndex = this->mParent;
     if (theIndex == inOldIndex) {
-        this->mParent = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mParent = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mParent = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mParent = theIndex - 1;
     }
     theIndex = this->mNearObject;
     if (theIndex == inOldIndex) {
-        this->mNearObject = (inNewIndex != 0xffffffff) ? inNewIndex : 0;
+        this->mNearObject = (!UIsNone32(inNewIndex)) ? inNewIndex : 0;
     } else if (theIndex == inNewIndex) {
         this->mNearObject = inOldIndex;
-    } else if (inNewIndex == 0xffffffff && theIndex > inOldIndex) {
+    } else if (UIsNone32(inNewIndex) && theIndex > inOldIndex) {
         this->mNearObject = theIndex - 1;
     }
 }
@@ -1964,7 +1964,7 @@ long EESMTrigger::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
     for (i = 0; i < theCount; i++) {
         if ((theResult = inFile.Read(theNot)) == 0 && (theResult = inFile.Read(theOperator)) == 0)
             theResult = inFile.Read(theValue);
-        if (theValue == (unsigned long)-1)
+        if (UIsNone32(theValue))
             theValue = 0;
         if (theResult != 0)
             return theResult;
@@ -1976,7 +1976,7 @@ long EESMTrigger::Load(unsigned long inMajorVersion, unsigned long inMinorVersio
         for (i = 0; i < theCount; i++) {
             if ((theResult = inFile.Read(theDelay)) == 0 && (theResult = inFile.Read(theOperator)) == 0)
                 theResult = inFile.Read(theValue);
-            if (theValue == (unsigned long)-1)
+            if (UIsNone32(theValue))
                 theValue = 0;
             if (theResult != 0)
                 return theResult;
@@ -1994,13 +1994,13 @@ void EESMTConditionWrapper::Virtual4(unsigned long inOld, unsigned long inNew)
 {
     unsigned long theValue = this->mValue;
     if (theValue == inOld) {
-        inNew = (inNew != 0xffffffff) ? inNew : 0;
+        inNew = (!UIsNone32(inNew)) ? inNew : 0;
     } else {
         if (theValue == inNew) {
             this->mValue = inOld;
             return;
         }
-        if (inNew != 0xffffffff) {
+        if (!UIsNone32(inNew)) {
             return;
         }
         if (theValue <= inOld) {
@@ -2024,14 +2024,14 @@ void EESMTEffectWrapper::Virtual4(unsigned long inOld, unsigned long inNew)
 {
     unsigned long theCurrent = this->mEffectIndex;
     if (theCurrent == inOld) {
-        this->mEffectIndex = (inNew != 0xffffffff) ? inNew : 0;
+        this->mEffectIndex = (!UIsNone32(inNew)) ? inNew : 0;
         return;
     }
     if (theCurrent == inNew) {
         this->mEffectIndex = inOld;
         return;
     }
-    if (inNew != 0xffffffff) {
+    if (!UIsNone32(inNew)) {
         return;
     }
     if (theCurrent > inOld) {

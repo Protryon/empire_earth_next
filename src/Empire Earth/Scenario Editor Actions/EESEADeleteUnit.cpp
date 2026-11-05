@@ -146,7 +146,7 @@ void EESEADeleteUnit::Virtual4()
     unsigned long i;
 
     this->mUpdateSelection = false;
-    if (this->mUnitId != -1) {
+    if (!UIsNone32(this->mUnitId)) {
         theUnit = static_cast<EEUnit*>(thePlayer->GetUnit(this->mUnitId));
         theUnits.push_back(theUnit);
         if (theUnit->mIsEditorSelected)

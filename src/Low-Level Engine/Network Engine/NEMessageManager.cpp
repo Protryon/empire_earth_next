@@ -545,7 +545,7 @@ unsigned long NEMessageManager::SendToAllAndWait(NEMessage* inMessage, unsigned 
                                                  unsigned long inRetries)
 {
     unsigned long theResult = this->Send(inMessage, true);
-    if (theResult != 0xffffffff) {
+    if (!UIsNone32(theResult)) {
         this->mServer->mSendToAllAndWaitMessageNumber = theResult;
         this->mServer->mSendToAllAndWaitType = inMessage->GetType();
         this->mServer->mSendToAllAndWaitTimeout = inTimeout;

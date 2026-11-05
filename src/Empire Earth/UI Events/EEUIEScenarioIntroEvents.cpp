@@ -369,7 +369,7 @@ long EEUIESIEClose::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         theManager->mIsInGame = false;
         theManager->mIsLoadingFromGame = false;
     }
-    if (sSoundID != -1) {
+    if (!UIsNone32(sSoundID)) {
         gSoundManager->Stop(sSoundID, false);
         gSoundManager->SetLatency(200);
     }
@@ -466,7 +466,7 @@ long EEUIESIESoundOver::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     FSFileSpec theSound;
     unsigned long theSample;
     UIForm* theForm = gUIManager->GetFormByID(kFormScenarioIntro);
-    if (sSoundID != -1)
+    if (!UIsNone32(sSoundID))
         gSoundManager->Stop(sSoundID, false);
     EEUISCIFormManager* theManager = EEUISCIFormManager::Get();
     if (theManager) {

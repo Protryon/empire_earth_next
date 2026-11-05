@@ -659,7 +659,7 @@ long FSFileSpec::SetPosition(long inOffset, unsigned long inOrigin, bool inExten
                 uint32_t thePosition = PlatFileSeek(theFile, 0, theMethod);
                 if (thePosition != 0xffffffff) {
                     // past the end only when asked to extend a file opened for writing
-                    if (thePosition + inOffset > theLength
+                    if (static_cast<uint32_t>(thePosition + inOffset) > theLength   // 32-bit wrap, as on Windows
                         && !(inExtend && (this->mFileAccess & (kFileAccessWrite | kFileAccessAppend)) != 0))
                         theResult = kErrorBeyondEnd;
                     else if (PlatFileSeek(theFile, (int32_t)inOffset, theMethod) == 0xffffffff) {

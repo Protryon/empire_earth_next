@@ -513,7 +513,7 @@ void EEUCBuilding::ReleaseUnit(EEComplexUnit* inUnit)
     std::deque<EEUnitGoal*>::iterator theIterator;
     long theQueue = 0;
     unsigned long theCargoID = inUnit->mExitingUnitID;
-    if (theCargoID == (unsigned long)-1)
+    if (UIsNone32(theCargoID))
         return;
     bool theWaterExit = inUnit->mUnitClass->mAirTrafficType == 3;
     thePosition.SetX((float)inUnit->GetTileX() + (float)this->mTileSize * 0.5f);

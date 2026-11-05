@@ -130,6 +130,14 @@ template <class T> inline T* USavedPointer(unsigned long inID)
 {
     return reinterpret_cast<T*>(static_cast<intptr_t>(static_cast<int32_t>(inID)));
 }
+// The "none" id, index, channel or sample of an unsigned long (or long): all 32 bits set (written -1, (unsigned
+// long)-1 or 0xffffffff). On LP64 a value set to -1 in memory has 64 bits set while one read from a file or message
+// (4 bytes) has 32, so the test looks at the low 32 bits; both are "none" on every data model (on Windows this is
+// `inValue == 0xffffffff`).
+inline bool UIsNone32(unsigned long inValue)
+{
+    return static_cast<uint32_t>(inValue) == 0xffffffffu;
+}
 // Provisional name. Rounds in the current rounding mode (to nearest), as the VC6 build's fld/fistp did.
 inline long UMFloatToLong(float inValue)
 {

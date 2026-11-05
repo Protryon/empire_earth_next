@@ -527,7 +527,7 @@ bool EEScenarioManager::DeleteArea(unsigned long inIndex)
         EESMArea* theArea = this->GetArea(inIndex);
         this->mAreas.erase(this->mAreas.begin() + inIndex);
         delete theArea;
-        this->RenumberAreas(inIndex, (unsigned long)-1);
+        this->RenumberAreas(inIndex, 0xffffffffUL);   // "deleted": 32 bits set, as the indices read from a scenario
         return true;
     }
     return false;
@@ -542,7 +542,7 @@ bool EEScenarioManager::DeleteCondition(unsigned long inIndex)
         EESMCondition* theCondition = this->GetCondition(inIndex);
         this->mConditions.erase(this->mConditions.begin() + inIndex);
         delete theCondition;
-        this->RenumberConditions(inIndex, (unsigned long)-1);
+        this->RenumberConditions(inIndex, 0xffffffffUL);   // "deleted": 32 bits set, as the indices read from a scenario
         theResult = true;
     }
     return theResult;
@@ -558,7 +558,7 @@ bool EEScenarioManager::DeleteEffect(unsigned long inIndex)
         this->RemoveTimedEffects(inIndex);
         this->mEffects.erase(this->mEffects.begin() + inIndex);
         delete theEffect;
-        this->RenumberEffects(inIndex, (unsigned long)-1);
+        this->RenumberEffects(inIndex, 0xffffffffUL);   // "deleted": 32 bits set, as the indices read from a scenario
         theResult = true;
     }
     return theResult;
@@ -581,7 +581,7 @@ bool EEScenarioManager::DeleteObject(unsigned long inIndex)
                 break;
             }
         }
-        this->RenumberObjects(inIndex, (unsigned long)-1);
+        this->RenumberObjects(inIndex, 0xffffffffUL);   // "deleted": 32 bits set, as the indices read from a scenario
     } else
         theResult = false;
     return theResult;
@@ -594,7 +594,7 @@ bool EEScenarioManager::DeleteTrigger(unsigned long inIndex)
     EESMTrigger* theTrigger = this->GetTrigger(inIndex);
     this->mTriggers.erase(this->mTriggers.begin() + inIndex);
     delete theTrigger;
-    this->RenumberTriggers(inIndex, (unsigned long)-1);
+    this->RenumberTriggers(inIndex, 0xffffffffUL);   // "deleted": 32 bits set, as the indices read from a scenario
     return true;
 }
 
@@ -1183,7 +1183,7 @@ void EEScenarioManager::RenumberEffects(unsigned long inOld, unsigned long inNew
     for (i = 0; i < this->mTimedEffects.size(); i++) {
         if (this->mTimedEffects[i].mEffectIndex != inOld)
             continue;
-        if (inNew == (unsigned long)-1) {
+        if (UIsNone32(inNew)) {
             this->mTimedEffects.erase(this->mTimedEffects.begin() + i);
             i--;
         } else

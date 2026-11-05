@@ -1586,10 +1586,10 @@ long EESEEChangeStartEpoch::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     unsigned long theStart;
     unsigned long theEnd;
     static_cast<UIComboBox*>(inEntity)->GetCurrentSelection(theStart);
-    if (theStart == -1)
+    if (UIsNone32(theStart))
         return kErrorOK;
     this->mEndEpochComboBox->GetCurrentSelection(theEnd);
-    if (theEnd == -1)
+    if (UIsNone32(theEnd))
         return kErrorOK;
     theEnd += 15 - this->mEndEpochComboBox->GetListBox()->GetLineCount();
     for (unsigned long i = theStart; i < 15; i++) {
@@ -1840,13 +1840,13 @@ void EESEPlayerRow::CopyFrom(EESEPlayerRow* inSource)
     unsigned long theSourceControl;
     this->mStartEpoch->GetCurrentSelection(theDestinationEpoch);
     inSource->mStartEpoch->GetCurrentSelection(theSourceEpoch);
-    if (theSourceEpoch != (unsigned long)-1 && this->mStartEpoch->GetDisplayMode() == kDisplayModeShown)
+    if (!UIsNone32(theSourceEpoch) && this->mStartEpoch->GetDisplayMode() == kDisplayModeShown)
         this->mStartEpoch->SetCurrentSelection(theSourceEpoch);
     inSource->mEndEpoch->GetCurrentSelection(theSourceEnd);
-    if (theSourceEnd != (unsigned long)-1 && this->mEndEpoch->GetDisplayMode() == kDisplayModeShown)
+    if (!UIsNone32(theSourceEnd) && this->mEndEpoch->GetDisplayMode() == kDisplayModeShown)
         this->mEndEpoch->SetCurrentSelection(theSourceEnd - theDestinationEpoch + theSourceEpoch);
     inSource->mControl->GetCurrentSelection(theSourceControl);
-    if (theSourceControl != (unsigned long)-1 && this->mControl->GetDisplayMode() == kDisplayModeShown)
+    if (!UIsNone32(theSourceControl) && this->mControl->GetDisplayMode() == kDisplayModeShown)
         this->mControl->SetCurrentSelection(theSourceControl);
     if (inSource->mName && this->mName) this->mName->SetText(inSource->mName->GetText(0));
     if (inSource->mCPUOnlyCheckBox && this->mCPUOnlyCheckBox && this->mCPUOnlyCheckBox->GetDisplayMode() == kDisplayModeShown)

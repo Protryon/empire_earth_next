@@ -134,7 +134,7 @@ bool EECPPersonnelRequest::TryAssign(EEComplexUnit* inUnit)
     bool theResult = false;
     long i;
     for (i = this->mUnits.size() - 1; i >= 0; i--) {
-        if (this->mUnits[i].mUnitID == 0xffffffff || this->mUnits[i].mUnit != NULL || this->mUnits[i].mUnitID != inUnit->mUnitID)
+        if (UIsNone32(this->mUnits[i].mUnitID) || this->mUnits[i].mUnit != NULL || this->mUnits[i].mUnitID != inUnit->mUnitID)
             continue;
         inUnit->Reference();
         this->mUnits[i].mUnit = inUnit;
@@ -589,11 +589,11 @@ void EECPPersonnel::FillRequest(EECPPersonnelRequest* inRequest)
     long theTownID = inRequest->GetTownID();
     for (long i = inRequest->mUnits.size() - 1; i >= 0; i--) {
         bool theIsClassSlot = (inRequest->mUnits[i]).mClass != 0 &&
-                              (inRequest->mUnits[i]).mUnitID == -1;
+                              UIsNone32((inRequest->mUnits[i]).mUnitID);
         bool theDrop = false;
         bool theFound = false;
         bool theUseClass = true;
-        if (!theIsClassSlot && (inRequest->mUnits[i]).mUnitID != -1) {
+        if (!theIsClassSlot && !UIsNone32((inRequest->mUnits[i]).mUnitID)) {
             for (it = this->mUnits.begin(); it != this->mUnits.end();) {
                 if (it->second->mUnitID == (inRequest->mUnits[i]).mUnitID &&
                     (theFound = inRequest->TryAssign((EEComplexUnit*)it->second)) != false) {

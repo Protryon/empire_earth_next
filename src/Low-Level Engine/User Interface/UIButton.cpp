@@ -79,9 +79,9 @@ UIButton::~UIButton()
         this->mFocusedBitmap->Dereference();
     if (this->mCopiedBitmap)
         this->mCopiedBitmap->Dereference();
-    if (this->mButtonDownSound != -1)
+    if (!UIsNone32(this->mButtonDownSound))
         this->GetSoundManager()->Unload(this->mButtonDownSound);
-    if (this->mButtonUpSound != -1)
+    if (!UIsNone32(this->mButtonUpSound))
         this->GetSoundManager()->Unload(this->mButtonUpSound);
 }
 
@@ -96,7 +96,7 @@ void UIButton::ButtonDown()
         this->mState = kButtonStatePressed;
         this->SetDirty(true);
     }
-    if (this->mButtonDownSound != -1)
+    if (!UIsNone32(this->mButtonDownSound))
         this->GetSoundManager()->Play(this->mButtonDownSound, 1.0f, 0.0f, 1.0f, false, NULL);
 }
 
@@ -114,7 +114,7 @@ void UIButton::ButtonUp()
         this->SetDirty(true);
     }
     this->mBorderType = 1;
-    if (this->mButtonUpSound != -1)   // Fixed: used to play the button-down sound here
+    if (!UIsNone32(this->mButtonUpSound))   // Fixed: used to play the button-down sound here
         this->GetSoundManager()->Play(this->mButtonUpSound, 1.0f, 0.0f, 1.0f, false, NULL);
 }
 
@@ -264,7 +264,7 @@ void UIButton::MouseOver()
 // Loads the button-down sound, unloading the previous one
 void UIButton::SetButtonDownSound(const UString& inName)
 {
-    if (this->mButtonDownSound != -1)
+    if (!UIsNone32(this->mButtonDownSound))
         this->GetSoundManager()->Unload(this->mButtonDownSound);
     this->mButtonDownSound = this->GetSoundManager()->Load(inName, 0, 1);
 }
@@ -273,7 +273,7 @@ void UIButton::SetButtonDownSound(const UString& inName)
 // Loads the button-up sound, unloading the previous one
 void UIButton::SetButtonUpSound(const UString& inName)
 {
-    if (this->mButtonUpSound != -1)
+    if (!UIsNone32(this->mButtonUpSound))
         this->GetSoundManager()->Unload(this->mButtonUpSound);
     this->mButtonUpSound = this->GetSoundManager()->Load(inName, 0, 1);
 }

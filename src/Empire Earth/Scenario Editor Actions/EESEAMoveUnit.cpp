@@ -182,7 +182,7 @@ void EESEAMoveUnit::Virtual4()
 void EESEAMoveUnit::PickUp(unsigned long inUnitID)
 {
     EESEAMoveUnitEntry theEntry;
-    if (inUnitID == -1)
+    if (UIsNone32(inUnitID))
         return;
     EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(inUnitID));
     if (theUnit == NULL)

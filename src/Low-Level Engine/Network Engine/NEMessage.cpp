@@ -1108,7 +1108,7 @@ void NEMWorldDatabaseChecksumResponse::ImportMessage(unsigned char* inPayloadPoi
 // Returns the exported size of any file transfer message: header, ID, data size and the full 1 KB data block
 unsigned long NEMXferMessage::StaticExportSize()
 {
-    return 4 + sizeof(unsigned char) + sizeof(unsigned long) + 0x400;
+    return 4 + sizeof(unsigned char) + sizeof(uint32_t) + 0x400;   // the data size is 4 bytes on the wire
 }
 
 unsigned long NEMXferMessage::ExportSize()

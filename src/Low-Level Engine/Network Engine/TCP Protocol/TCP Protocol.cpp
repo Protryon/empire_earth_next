@@ -26,7 +26,7 @@ struct TCPConnection {                    // proven sizeof 0x18 (operator new(0x
 
 struct TCPHost {
     unsigned char _provisional_pad_00[0x08];
-    unsigned long mAddress;               // proven +0x08 (sin_addr in NPIMConnectForXfer)
+    uint32_t mAddress;                    // proven +0x08 (sin_addr in NPIMConnectForXfer; an IPv4 address)
 };
 
 struct DetectedGame {                     // proven sizeof 0x54 (vector size() divides by 0x54)
@@ -489,7 +489,7 @@ static long ResolveAddress(const UString& inName, const UString& inHost, const U
         } else {
             hostent* theHost = gethostbyname(inName);
             if (theHost == NULL) {
-                unsigned long theAddress = inet_addr(inName);
+                uint32_t theAddress = inet_addr(inName);   // an IPv4 address (in_addr_t)
                 if (theAddress == INADDR_NONE)
                     theHost = NULL;
                 else
@@ -605,7 +605,7 @@ static unsigned long FindAdapterAddressIndex(unsigned long inAdapter)
     if (GetAdaptersInfo(theAdapter, &theSize) == ERROR_SUCCESS) {
         for (unsigned long i = 1; theAdapter != NULL && i < inAdapter; i++)
             theAdapter = theAdapter->Next;
-        unsigned long theAddress;
+        uint32_t theAddress;    // an IPv4 address (in_addr_t)
         char theHostName[0x400];
         hostent* theHost;
         sockaddr_in theHostAddress;
@@ -1205,7 +1205,7 @@ extern "C" long NPIMSend(TCPConnection** inHandle, char* ioData, unsigned long i
 extern "C" long NPIMSendSingle(const UString& inHost, unsigned long inPort, char* inData, unsigned long inLength)
 {
     long theResult = kNPIMOK;
-    unsigned long theAddress;
+    uint32_t theAddress;    // an IPv4 address (in_addr_t)
     sockaddr_in theTo;
     sockaddr_in theLocal;
     SOCKET theSocket = socket(AF_INET, SOCK_DGRAM, 0);

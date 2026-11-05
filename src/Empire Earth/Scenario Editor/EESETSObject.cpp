@@ -972,7 +972,7 @@ void EESETSObject::Store()
     theObject->mFamily = theGroup;
     unsigned long theType;
     this->mTypeComboBox->GetCurrentSelection(theType);
-    if (theType == -1)
+    if (UIsNone32(theType))
         theType = 0;
     theObject->mClass = this->mUnitTypes[theType];
     unsigned long theParent;
@@ -986,14 +986,14 @@ void EESETSObject::Store()
     theObject->mSelectedByCheck = this->mSelectedByCheck->GetCheckState();
     unsigned long theArea;
     this->mAreaComboBox->GetCurrentSelection(theArea);
-    if (theArea != -1)
+    if (!UIsNone32(theArea))
         theObject->mArea = theArea;
     else
         theObject->mInAreaCheck = 0;
     this->mNearModeComboBox->GetCurrentSelection(theObject->mNearMode);
     unsigned long theValue;
     this->mNearObjectComboBox->GetCurrentSelection(theValue);
-    if (theValue != -1)
+    if (!UIsNone32(theValue))
         theObject->mNearObject = theValue;
     else
         theObject->mNearCheck = 0;

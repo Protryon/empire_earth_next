@@ -177,7 +177,7 @@ EECalamity::~EECalamity()
 {
     this->StopSound();
     this->StopSecondarySound();
-    if (this->mOriginatingUnitID == -1 || this->mCasterUnit != NULL)
+    if (UIsNone32(this->mOriginatingUnitID) || this->mCasterUnit != NULL)
         this->mClass->UnloadMedia(this->mCasterUnit != NULL ? this->mCasterUnit->mPlayer : ::gWorld.mPlayers[0]);
     this->Reset();
 }

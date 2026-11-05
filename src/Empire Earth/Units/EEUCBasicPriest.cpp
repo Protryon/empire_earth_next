@@ -74,7 +74,7 @@ void EEUCBasicPriest::UpdateConversion(EEComplexUnit* inUnit)
         this->ActionChanged(inUnit);
         return;
     }
-    if (inUnit->mConversionEffect.mValue == -1) {
+    if (UIsNone32(inUnit->mConversionEffect.mValue)) {
         EEEffectManager* theManager = gWorld.GetEffectManager();
         EEEffectHandle theHandle;
         if (theManager->CreateUnitEffect(theTarget, EEGraphicEffect::Get(kGraphicEffectPriestConversionIndiator), &theHandle, 0, 0, 0) == 0 &&

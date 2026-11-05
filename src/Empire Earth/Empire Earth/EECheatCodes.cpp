@@ -416,7 +416,7 @@ void EECheatCodes::ParseCheatCode(const UWideString& inText, long& outCode, long
                 long thePlayer = atoi(theTokens[1]);
                 theID = (thePlayer << 24) + atoi(theTokens[2]);
             }
-            if (theID != (unsigned long)-1) {
+            if (!UIsNone32(theID)) {
                 RTSUnit* theUnit = gWorld.GetUnit(theID);
                 if (theUnit != NULL) {
                     gWorld.mCameraControl.GetLocation(gWorld.mCameraControl.mFraction, theLocation);

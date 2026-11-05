@@ -125,7 +125,7 @@ long EESoundObject::LoadMedia()
         sDatabaseLock.mLock->Leave();
         if (this->mName.GetLength() > 0) {
             this->mSampleID = gSoundManager->Load(this->mName, this->mCategory, this->mMaxInstances);
-            theResult = this->mSampleID != (unsigned long)-1 ? 0 : 9;
+            theResult = !UIsNone32(this->mSampleID) ? 0 : 9;
         } else {
             theResult = 9;
         }
@@ -164,13 +164,13 @@ long EESoundObject::Play(float inVolume, float inPan, float inPitch)
     long theResult = 0;
     if (this->mName.GetLength() > 0) {
         this->mSampleID = gSoundManager->Load(this->mName, this->mCategory, this->mMaxInstances);
-        if (this->mSampleID == (unsigned long)-1)
+        if (UIsNone32(this->mSampleID))
             theResult = 9;
     } else
         theResult = 9;
     if (theResult == 0) {
         unsigned long theHandle = gSoundManager->Play(this->mSampleID, inVolume, inPan, inPitch, false, NULL);
-        if (theHandle != (unsigned long)-1) {
+        if (!UIsNone32(theHandle)) {
             gSoundManager->RegisterOneShotSound(this->mSampleID, theHandle);
         } else {
             theResult = 9;

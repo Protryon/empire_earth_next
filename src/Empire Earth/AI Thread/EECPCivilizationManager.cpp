@@ -980,7 +980,7 @@ long EECPCivilizationManager::Restore(unsigned long inMajorVersion, unsigned lon
             this->mNextEpochAdvanceTime += gPhysics->mGameTime;
         unsigned long theID = USavedID(this->mGarrison);
         this->mGarrison = NULL;
-        if (theID != (unsigned long)-1) {
+        if (!UIsNone32(theID)) {
             EEComplexUnit* theGarrison = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theID));
             if (theGarrison != NULL) {
                 this->mGarrison = theGarrison;
@@ -989,7 +989,7 @@ long EECPCivilizationManager::Restore(unsigned long inMajorVersion, unsigned lon
         }
         theID = USavedID(this->mFortress);
         this->mFortress = NULL;
-        if (theID != (unsigned long)-1) {
+        if (!UIsNone32(theID)) {
             EEComplexUnit* theFortress = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theID));
             if (theFortress != NULL) {
                 this->mFortress = theFortress;

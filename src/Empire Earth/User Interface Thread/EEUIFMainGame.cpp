@@ -308,7 +308,7 @@ void EEUIFMGUnitHack::LoadUnitData()
     unsigned long theSelection;
 
     this->FnE123D();
-    if (static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->GetCurrentSelection(theSelection), theSelection != -1)
+    if (static_cast<UIComboBox*>(this->mForm->GetControl(kMainGameTempObjectList))->GetCurrentSelection(theSelection), !UIsNone32(theSelection))
         gCommunications->ProcessLocalUserInput(new EEMLoadUnitData(this->mClassIDs[theSelection], true), kSlotNone);
 }
 
@@ -963,7 +963,7 @@ void EEUIFMainGame::ShowInformation(EEUIFMGInformation* inInformation)
             }
         }
         EELoadSound("Sounds\\" + UString((const char*)inInformation->mSound), 0x31, theSampleID, theLength, 1);
-        if (theLength != -1)
+        if (!UIsNone32(theLength))
             theText->ScrollText(gSoundManager->GetTotalPlayTimeInMilli(theSampleID) + 300, inInformation->mTime);
         else
             theText->ScrollText(inInformation->mTime, 0);

@@ -1582,7 +1582,7 @@ void EEWorld::UpdateActiveUnits()
 // Queues a unit for activation unless it is NULL, has no id, is a path point or is already queued
 void EEWorld::ActivateUnit(EEComplexUnit* inUnit)
 {
-    if (inUnit == NULL || inUnit->mUnitID == (unsigned long)-1 || inUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
+    if (inUnit == NULL || UIsNone32(inUnit->mUnitID) || inUnit->mUnitClass->mUnitType == kUnitTypePathPoint)
         return;
     std::deque<EEComplexUnit*>::iterator it = std::find(this->mActivateQueue.begin(), this->mActivateQueue.end(), inUnit);
     if (it == this->mActivateQueue.end()) {
