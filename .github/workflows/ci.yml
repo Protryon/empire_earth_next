@@ -26,9 +26,9 @@ jobs:
           path: toolchain
           key: wgpu-${{ hashFiles('tools/fetch_wgpu.py') }}
 
-      # the renderer's static wgpu-native (sha256-pinned GitHub release; 7-Zip is on the runner)
+      # the renderer's static wgpu-native x86_64 (sha256-pinned GitHub release; 7-Zip is on the runner)
       - name: Fetch wgpu-native
         run: python -I tools/fetch_wgpu.py
 
-      - name: Build every image
+      - name: Build the x86_64 exe
         run: python -I build.py -j 4

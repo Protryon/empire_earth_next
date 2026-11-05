@@ -726,3 +726,29 @@ the stub report reaches 0 with no new traps.
   idle human by ~600 s and end with 37-59 units per AI. The split is the floating-point model, not pointer size:
   an SSE2 i686 build lands with x64. Locating what remains between x64 and i686 SSE2 (candidates: the x86 and x64
   UCRT math functions, anything ordered by pointer value) needs the per-PT differential tooling, not ported to x64.
+
+## x64 only (branch plainlink)
+
+- **One target.** `ee.ARCH` is fixed to x64 (the MSVC/SDK library directory name), `clang_build.CLANG_FLAGS` targets
+  x86_64 (no `/arch:IA32`, no `+cx8`: x86-64 has cmpxchg8b), `build.py` writes build/clang and build/clang-test
+  (`--x64` is accepted and ignored, as in `make_play_dir.py`, `layout_gen.py`, `layout_views.py`, `game_session.py`).
+  The census is `clang_build.py --census` (old spelling `--x64`), out build/clang-census. `fetch_wgpu.py` fetches only
+  the x86_64 package; wgpu_probe and gx_test build x86_64 only.
+- **Checks that compared the two targets** were made target-independent: `record_sizes.py` now checks every raw
+  record (Read/Write with `sizeof`) against its `static_assert(sizeof(T) == N)` pin, the on-disk size, instead of
+  x86 == x64; two records had no pin (GETGAHeader 18, UIDbControl 860) and got one. That is also the check LP64 needs
+  (a `long` member changes the size there). `layout_views.py` compares two units' views on the one target.
+  `alias_layouts.py` (i686 vs x64 layouts of ICF alias pairs) went with its subject (see "Plain link").
+- **Harness**: one `exe_boot.exe` (mingw64). Resolving the `_WIN64` conditionals mechanically (keep the x64 side,
+  nesting-aware) left the arch layer as plain functions over RCX/RDX/R8/R9 and the stack; an `#error` refuses a
+  32-bit compile. The symbol names the harness looks up were i686 decorations translated for an x64 map at run time
+  (x64names.py): they were rewritten once to the x64 names the x64 map holds (46 literals; C names lose their `_`:
+  `GXTestReadFrame`, `abort`, `__imp_GetLastError`), and LinkMap no longer translates. A stale literal fails loudly
+  (`... is not in EE-AOC.map`). The unported tools (human/, differential/, save_load, mp_game, play) still carry
+  i686 names and VC6 addresses: they need porting anyway.
+- **Self test**: without a second harness the decision logs are checked only against each case's expectations (they
+  were also compared x86 against x64 and against main's i686 harness); all 40 cases and the four in-process parts pass.
+- Gates after the switch (x64 test profile): tour + 120 s pass; the seeded 2-AI Hard game reaches the time cap
+  (binary PT 14,040, units 0/56/39; text db PT 14,149, 0/56/40). The same game before the switch: PT 15,199 / 15,059,
+  0/58/40 both. The end PT and the last unit or two move with the wall-time-dependent civilization preempt (form 7
+  opened at PT 4,970 / 5,684 in the baseline runs), as between the earlier x64 runs.
