@@ -8,6 +8,8 @@
 #include <string.h>
 
 #include <algorithm>
+#include <chrono>
+#include <thread>
 #include <string>
 
 #include "GXInternal.h"
@@ -160,7 +162,10 @@ struct V { @builtin(position) p: vec4f, @location(0) uv: vec2f };
     let c = textureSampleLevel(t, s, v.uv, 0.0);
     if (b.mode.x == 2u) { return b.color; }
     if (b.mode.x == 1u && all(abs(c.rgb - b.key.rgb) < vec3f(0.002))) { discard; }
-    if (b.mode.y == 1u) { return vec4f(c.rgb, 1.0); }   // presentation: opaque
+    if (b.mode.y == 1u) {   // presentation: opaque, with the brightness gamma (misc.y; 0 or 1: none)
+        if (b.misc.y > 0.0 && b.misc.y != 1.0) { return vec4f(pow(c.rgb, vec3f(1.0 / b.misc.y)), 1.0); }
+        return vec4f(c.rgb, 1.0);
+    }
     return c;
 }
 )WGSL";
@@ -395,9 +400,43 @@ void GXCore::Wait()
     wgpuDevicePoll(this->mDevice, 1, NULL);
 }
 
+// port: the display settings (GXSetRenderPercent and the others, gx/GX.h)
+static unsigned long sRenderPercent = 100;
+static long sFrameLimit = 0;
+static unsigned long sTextureFiltering = 0;
+static float sBrightness = 1.0f;
+
+void GXSetRenderPercent(unsigned long inPercent)
+{
+    sRenderPercent = inPercent < 50 ? 50 : inPercent > 100 ? 100 : inPercent;
+}
+
+void GXSetFrameLimit(long inFramesPerSecond)
+{
+    sFrameLimit = inFramesPerSecond;
+}
+
+void GXSetTextureFiltering(unsigned long inMode)
+{
+    sTextureFiltering = inMode > 2 ? 2 : inMode;
+}
+
+void GXSetBrightness(float inGamma)
+{
+    sBrightness = inGamma > 0.25f && inGamma < 4.0f ? inGamma : 1.0f;
+}
+
 unsigned long GXSamplerKey(unsigned long inAddress, unsigned long inMin, unsigned long inMag, unsigned long inMip)
 {
-    return (inAddress & 3) | ((inMin & 3) << 2) | ((inMag & 3) << 4) | ((inMip & 3) << 6);
+    // the texture filtering setting on mip-mapped sampling: trilinear, then anisotropic (bit 8; all linear)
+    unsigned long theAnisotropic = 0;
+    if (inMip != GXTFP_NONE && inMip != 0 && inMin >= GXTFN_LINEAR) {
+        if (sTextureFiltering >= 1)
+            inMip = GXTFP_LINEAR;
+        if (sTextureFiltering >= 2)
+            theAnisotropic = 1;
+    }
+    return (inAddress & 3) | ((inMin & 3) << 2) | ((inMag & 3) << 4) | ((inMip & 3) << 6) | (theAnisotropic << 8);
 }
 
 WGPUSampler GXCore::Sampler(unsigned long inKey)
@@ -420,6 +459,11 @@ WGPUSampler GXCore::Sampler(unsigned long inKey)
     theDescriptor.lodMinClamp = 0.0f;
     theDescriptor.lodMaxClamp = theMip == GXTFP_NONE || theMip == 0 ? 0.0f : 32.0f;
     theDescriptor.maxAnisotropy = 1;
+    if (inKey & 0x100) {   // anisotropic (GXSamplerKey): every filter linear, as WebGPU requires
+        theDescriptor.minFilter = theDescriptor.magFilter = WGPUFilterMode_Linear;
+        theDescriptor.mipmapFilter = WGPUMipmapFilterMode_Linear;
+        theDescriptor.maxAnisotropy = 8;
+    }
     WGPUSampler theSampler = wgpuDeviceCreateSampler(this->mDevice, &theDescriptor);
     this->mSamplers[inKey] = theSampler;
     return theSampler;
@@ -835,6 +879,7 @@ static unsigned long BlitUniform(unsigned long inWidth, unsigned long inHeight, 
     theUniform.mMode[0] = inMode == kGXBlitKeyed ? 1 : inMode == kGXBlitFill || inMode == kGXBlitDepth ? 2 : 0;
     theUniform.mMisc[0] = inDepth;
     theUniform.mMode[1] = inOpaque ? 1 : 0;
+    theUniform.mMisc[1] = inOpaque ? sBrightness : 0.0f;   // presentation: the brightness gamma
     return theCore.Ring(theCore.mUniformRing, theCore.mUniformOffset, GXCore::kUniformRingSize - 2048, &theUniform,
                         sizeof(theUniform), 256);
 }
@@ -937,6 +982,44 @@ static void DownloadScaled(GXSurfaceData* inSurface)
     FreeTemporary(theTemporary, true);
 }
 
+static void LogicalDisplaySize(unsigned long& outWidth, unsigned long& outHeight)
+{
+    int32_t theWidth = 0, theHeight = 0;
+    if (!PlatWindowGetDisplayLogicalSize(NULL, &theWidth, &theHeight) || theWidth <= 0 || theHeight <= 0) {
+        theWidth = 1024;
+        theHeight = 768;
+    }
+    outWidth = (unsigned long)theWidth;
+    outHeight = (unsigned long)theHeight;
+}
+
+unsigned long GXAutoUIScale()
+{
+    unsigned long theWidth, theHeight;
+    LogicalDisplaySize(theWidth, theHeight);
+    unsigned long thePercent = (theHeight * 100 / 1080 + 12) / 25 * 25;   // to the scale steps (25%)
+    return thePercent < 100 ? 100 : thePercent > 300 ? 300 : thePercent;
+}
+
+void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight)
+{
+    unsigned long theWidth, theHeight;
+    LogicalDisplaySize(theWidth, theHeight);
+    if (inWindowed) {
+        theWidth = theWidth * 4 / 5;
+        theHeight = theHeight * 4 / 5;
+    }
+    unsigned long thePercent = inPercent ? inPercent : GXAutoUIScale();
+    if (thePercent < 50)
+        thePercent = 50;
+    *outWidth = (theWidth * 100 / thePercent) & ~1UL;
+    *outHeight = (theHeight * 100 / thePercent) & ~1UL;
+    if (*outHeight < 600) {   // the game's smallest layout
+        *outWidth = *outWidth * 600 / (*outHeight ? *outHeight : 1) & ~1UL;
+        *outHeight = 600;
+    }
+}
+
 float GXRenderScale(unsigned long inModeHeight)
 {
     static const char* sOverride = getenv("EE_GX_RENDER_SCALE");
@@ -947,7 +1030,7 @@ float GXRenderScale(unsigned long inModeHeight)
     int32_t theWidth = 0, theHeight = 0;
     if (!inModeHeight || !PlatWindowGetDisplaySize(NULL, &theWidth, &theHeight) || theHeight <= 0)
         return 1.0f;
-    float theScale = (float)theHeight / (float)inModeHeight;
+    float theScale = (float)theHeight * sRenderPercent / 100.0f / (float)inModeHeight;
     return theScale < 1.05f ? 1.0f : theScale > 4.0f ? 4.0f : theScale;
 }
 
@@ -1077,7 +1160,7 @@ void GXSurfaceData::Present(GXSurfaceData* inSource, bool inWait)
             return;
     }
     WGPUPresentMode theMode = WGPUPresentMode_Fifo;
-    if (!inWait || getenv("EE_GX_NOVSYNC")) {
+    if (!inWait || sFrameLimit != 0 || getenv("EE_GX_NOVSYNC")) {   // port: the frame rate setting (not v-sync)
         WGPUSurfaceCapabilities theCaps = {};
         wgpuSurfaceGetCapabilities(this->mSwapChain, theCore.mAdapter, &theCaps);
         for (size_t i = 0; i < theCaps.presentModeCount; i++)
@@ -1141,6 +1224,16 @@ void GXSurfaceData::Present(GXSurfaceData* inSource, bool inWait)
              theLinear, theOffset);
     theCore.Submit();
     wgpuSurfacePresent(this->mSwapChain);
+    if (sFrameLimit > 0) {   // port: at most sFrameLimit frames a second
+        static std::chrono::steady_clock::time_point sNext;
+        std::chrono::steady_clock::time_point theNow = std::chrono::steady_clock::now();
+        std::chrono::microseconds thePeriod(1000000 / sFrameLimit);
+        if (sNext > theNow && sNext - theNow < thePeriod * 2)
+            std::this_thread::sleep_until(sNext);
+        else
+            sNext = theNow;
+        sNext += thePeriod;
+    }
     wgpuTextureViewRelease(theView);
     wgpuTextureRelease(theTexture.texture);
 }
@@ -1756,6 +1849,14 @@ GXRESULT GXDirectDraw::EnumDisplayModes(unsigned long inFlags, GXSURFACEDESC* in
     int32_t theLogicalWidth = 0, theLogicalHeight = 0;
     if (PlatWindowGetDisplayLogicalSize(NULL, &theLogicalWidth, &theLogicalHeight) && theLogicalWidth > 0)
         theSizes.push_back(std::make_pair((unsigned long)theLogicalWidth, (unsigned long)theLogicalHeight));
+    // the game sizes of the UI scales, full screen and windowed (GXGameSize)
+    static const unsigned long kUIScales[] = {0, 100, 125, 150, 175, 200, 250, 300};
+    for (int theWindowed = 0; theWindowed < 2; theWindowed++)
+        for (size_t i = 0; i < sizeof(kUIScales) / sizeof(kUIScales[0]); i++) {
+            unsigned long theWidth, theHeight;
+            GXGameSize(kUIScales[i], theWindowed != 0, &theWidth, &theHeight);
+            theSizes.push_back(std::make_pair(theWidth, theHeight));
+        }
     // the menus' size for each of them (EEMenuWidth / EEMenuHeight: 768 lines at the game resolution's aspect ratio)
     for (size_t i = 0, n = theSizes.size(); i < n; i++) {
         unsigned long theWidth = theSizes[i].first, theHeight = theSizes[i].second;

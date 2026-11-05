@@ -32,6 +32,7 @@ struct PlatWindow {
     SDL_Window* mWindow;
     SDL_MetalView mMetalView;
     bool mFullscreen;   // asked to be full screen (SDL's flag follows asynchronously on macOS)
+    bool mFixedSize;    // a windowed game window: its size is the player's, not the game mode's
 };
 
 namespace {
@@ -473,6 +474,7 @@ extern "C" PlatWindow* PlatWindowCreateAt(const char* inTitle, int32_t inX, int3
     theResult->mWindow = theWindow;
     theResult->mMetalView = NULL;
     theResult->mFullscreen = (inFlags & PLAT_WINDOW_FULLSCREEN) != 0;
+    theResult->mFixedSize = false;
 #ifdef __APPLE__
     // full screen at creation is asynchronous on macOS and can be refused (another application in front, the previous
     // instance's full screen still closing): wait for it, and ask once more
@@ -521,11 +523,16 @@ extern "C" int PlatWindowSetFullscreen(PlatWindow* inWindow, int inFullscreen)
     return SDL_SetWindowFullscreen(inWindow->mWindow, inFullscreen != 0) ? 1 : 0;
 }
 
+extern "C" void PlatWindowSetFixedSize(PlatWindow* inWindow, int inFixed)
+{
+    inWindow->mFixedSize = inFixed != 0;
+}
+
 extern "C" void PlatWindowSetSize(PlatWindow* inWindow, int32_t inWidth, int32_t inHeight)
 {
     // a full screen window keeps the display's size: the game's mode is its render size, which GX scales to the
     // window (macOS left full screen for a titled window of the mode's size at every mode change)
-    if (inWindow->mFullscreen || (SDL_GetWindowFlags(inWindow->mWindow) & SDL_WINDOW_FULLSCREEN))
+    if (inWindow->mFullscreen || inWindow->mFixedSize || (SDL_GetWindowFlags(inWindow->mWindow) & SDL_WINDOW_FULLSCREEN))
         return;
     SDL_SetWindowSize(inWindow->mWindow, inWidth, inHeight);
 }

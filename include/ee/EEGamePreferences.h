@@ -124,11 +124,25 @@ public:
     // port (not in the original's 0x5e0 bytes): "Texture Resolution" 0 (the original textures), 2 or 4 (the
     // Data/Textures-4x pack, drawn at half size for 2); EESetTextureResolution applies it
     long mTextureResolution;
+    // port: the modern display and audio settings (config.ini; EEApplyPortSettings applies them)
+    long mUIScale;                          // "UI Scale" percent; 0 Auto (GXAutoUIScale): the game size is the display's
+    long mRenderResolution;                 // "Render Resolution" percent of the display's pixels (50..100)
+    long mWindowMode;                       // "Window Mode" 0 full screen (borderless), 1 windowed
+    long mFrameRateLimit;                   // "Frame Rate Limit" 0 v-sync, -1 unlimited, else frames a second
+    long mTextureFiltering;                 // "Texture Filtering" 0 bilinear, 1 trilinear, 2 anisotropic
+    long mBrightness;                       // "Brightness" percent (100 unchanged)
+    long mMasterVolume;                     // "Master Volume" percent
+    bool mMuteInBackground;                 // "Mute in Background"
+    long mMaximumZoomOut;                   // "Maximum Zoom Out" percent of the original's farthest (100..300)
+    char mAudioDevice[128];                 // "Audio Device" (empty: the system's default)
 };
 
 // port: makes the texture manager load the world's textures at inResolution (0, 2 or 4: EEGameSettings::
 // mTextureResolution); textures already loaded keep theirs until released (EEPreferences.cpp)
 void EESetTextureResolution(long inResolution);
+
+// port: puts a settings' modern display and audio settings into effect (camera, GX, mixer; EEPreferences.cpp)
+void EEApplyPortSettings(const EEGameSettings& inSettings);
 
 class EEGamePreferences {
 public:

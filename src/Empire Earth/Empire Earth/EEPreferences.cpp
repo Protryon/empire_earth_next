@@ -4,6 +4,7 @@
 // the resource defaults, Load (+ the "Game Options" key), Save (+ the "Game Options" key) and SetLastGameOptions.
 // The settings file calls go through the UConfig member (the original's URegistry at +0).
 #include <windows.h>
+#include "gx/GX.h"
 
 #include "lle/LowLevelEngine.h"
 #include "platform/PlatFile.h"
@@ -43,6 +44,21 @@ void EESetTextureResolution(long inResolution)
         GETextureManager::SetTexturePack(NULL, 0, 0);
 }
 extern float gCameraMaxZoom;     // port: EECameraControl.cpp
+
+extern "C" void SPIMSetMasterVolume(float inVolume);   // the mixer plug-in (lle/SEMixer.h)
+extern "C" void SPIMSetOutputDevice(const char* inName);
+
+// port: see EEGamePreferences.h
+void EEApplyPortSettings(const EEGameSettings& inSettings)
+{
+    gCameraMaxZoom = inSettings.mMaximumZoomOut / 100.0f;
+    GXSetRenderPercent((unsigned long)inSettings.mRenderResolution);
+    GXSetFrameLimit(inSettings.mFrameRateLimit);
+    GXSetTextureFiltering((unsigned long)inSettings.mTextureFiltering);
+    GXSetBrightness(inSettings.mBrightness / 100.0f);
+    SPIMSetMasterVolume(inSettings.mMasterVolume / 100.0f);
+    SPIMSetOutputDevice(inSettings.mAudioDevice);
+}
 
 // FUNCTION: EXE 0x532466
 // Destroys the game settings (members only)
@@ -141,6 +157,16 @@ EEGameSettings::EEGameSettings()
     this->mL5B8 = 0;
     this->mComputerPlayerDifficultyLevel = 1;
     this->mTextureResolution = 0;
+    this->mUIScale = 0;
+    this->mRenderResolution = 100;
+    this->mWindowMode = 0;
+    this->mFrameRateLimit = 0;
+    this->mTextureFiltering = 2;
+    this->mBrightness = 100;
+    this->mMasterVolume = 100;
+    this->mMuteInBackground = true;
+    this->mMaximumZoomOut = 200;
+    this->mAudioDevice[0] = 0;
 }
 
 // FUNCTION: EXE 0x53281e
@@ -259,13 +285,45 @@ long EEGamePreferences::Load()
         theValue = this->mSettings.mGameWindowWidth;
         this->mConfig.SetValue(kEEGameSection, "Game Window Width", theValue);
     }
-    // port: how far the camera zooms out, in percent of the original's farthest zoom (EECameraControl)
-    theResult = this->mConfig.GetValue(kEEGameSection, "Maximum Zoom Out", theValue);
-    if (theResult != 0) {
-        theValue = 200;
-        this->mConfig.SetValue(kEEGameSection, "Maximum Zoom Out", theValue);
+    // port: the modern display and audio settings (EEGameSettings; EEApplyPortSettings)
+    struct { const char* mName; long* mField; long mMinimum, mMaximum; } thePortValues[] = {
+        {"UI Scale", &this->mSettings.mUIScale, 0, 300},
+        {"Render Resolution", &this->mSettings.mRenderResolution, 50, 100},
+        {"Window Mode", &this->mSettings.mWindowMode, 0, 1},
+        {"Frame Rate Limit", &this->mSettings.mFrameRateLimit, -1, 1000},
+        {"Texture Filtering", &this->mSettings.mTextureFiltering, 0, 2},
+        {"Brightness", &this->mSettings.mBrightness, 50, 200},
+        {"Master Volume", &this->mSettings.mMasterVolume, 0, 100},
+        {"Maximum Zoom Out", &this->mSettings.mMaximumZoomOut, 100, 300},
+    };
+    const EEGameSettings& theDefaults = EEGamePreferences::sDefaultSettings;
+    for (size_t i = 0; i < sizeof(thePortValues) / sizeof(thePortValues[0]); i++) {
+        long* theField = thePortValues[i].mField;
+        const long theDefault = *(const long*)((const char*)&theDefaults + ((const char*)theField - (const char*)&this->mSettings));
+        theResult = this->mConfig.GetValue(kEEGameSection, thePortValues[i].mName, theValue);
+        if (theResult == 0 && theValue >= thePortValues[i].mMinimum && theValue <= thePortValues[i].mMaximum)
+            *theField = theValue;
+        else {
+            *theField = theDefault;
+            theValue = theDefault;
+            this->mConfig.SetValue(kEEGameSection, thePortValues[i].mName, theValue);
+        }
     }
-    gCameraMaxZoom = (theValue < 100 ? 100 : theValue > 300 ? 300 : theValue) / 100.0f;
+    theResult = this->mConfig.GetValue(kEEGameSection, "Mute in Background", theValue);
+    if (theResult != 0) {
+        theValue = 1;
+        this->mConfig.SetValue(kEEGameSection, "Mute in Background", theValue);
+    }
+    this->mSettings.mMuteInBackground = theValue != 0;
+    UWideString theDevice;
+    this->mSettings.mAudioDevice[0] = 0;
+    if (this->mConfig.GetValue(kEEGameSection, "Audio Device", theDevice) == 0)
+        snprintf(this->mSettings.mAudioDevice, sizeof(this->mSettings.mAudioDevice), "%s", (const char*)theDevice);
+    else
+        this->mConfig.SetValue(kEEGameSection, "Audio Device", UWideString(""));
+    this->mSettings.mFullScreen = this->mSettings.mWindowMode == 0;
+    this->mSettings.mWaitForVSync = this->mSettings.mFrameRateLimit == 0;
+    EEApplyPortSettings(this->mSettings);
     // port: which textures the world loads: 0 the originals, 2 or 4 the texture pack (EESetTextureResolution)
     theResult = this->mConfig.GetValue(kEEGameSection, "Texture Resolution", theValue);
     if (theResult == 0 && (theValue == 0 || theValue == 2 || theValue == 4)) {
@@ -301,7 +359,9 @@ long EEGamePreferences::Load()
         theValue = this->mSettings.mWaitForVSync != false;
         this->mConfig.SetValue(kEEGameSection, "Wait for VSync", theValue);
     }
-    this->mSettings.mFullScreen = true;
+    // port: full screen or windowed is the "Window Mode" setting; the frame rate setting decides v-sync
+    this->mSettings.mFullScreen = this->mSettings.mWindowMode == 0;
+    this->mSettings.mWaitForVSync = this->mSettings.mFrameRateLimit == 0;
     this->mSettings.mL5B8 = 0;
     this->mSettings.mShowAutoWaypoints = false;
     // the game's own location is where it runs from (the data root), never a stored path: a play folder can move
@@ -957,6 +1017,17 @@ long EEGamePreferences::Save()
     this->mConfig.SetValue(kEEGameSection, "Terrain MIP Levels to Drop", theValue);
     theValue = this->mSettings.mTextureResolution;   // port
     this->mConfig.SetValue(kEEGameSection, "Texture Resolution", theValue);
+    // port: the modern display and audio settings
+    this->mConfig.SetValue(kEEGameSection, "UI Scale", this->mSettings.mUIScale);
+    this->mConfig.SetValue(kEEGameSection, "Render Resolution", this->mSettings.mRenderResolution);
+    this->mConfig.SetValue(kEEGameSection, "Window Mode", this->mSettings.mWindowMode);
+    this->mConfig.SetValue(kEEGameSection, "Frame Rate Limit", this->mSettings.mFrameRateLimit);
+    this->mConfig.SetValue(kEEGameSection, "Texture Filtering", this->mSettings.mTextureFiltering);
+    this->mConfig.SetValue(kEEGameSection, "Brightness", this->mSettings.mBrightness);
+    this->mConfig.SetValue(kEEGameSection, "Master Volume", this->mSettings.mMasterVolume);
+    this->mConfig.SetValue(kEEGameSection, "Maximum Zoom Out", this->mSettings.mMaximumZoomOut);
+    this->mConfig.SetValue(kEEGameSection, "Mute in Background", (long)(this->mSettings.mMuteInBackground ? 1 : 0));
+    this->mConfig.SetValue(kEEGameSection, "Audio Device", UWideString(this->mSettings.mAudioDevice));
     theValue = this->mSettings.mZoomLock * 100.0f;
     this->mConfig.SetValue(kEEGameSection, "Zoom Lock", theValue);
     theValue = this->mSettings.mEffectDetail;

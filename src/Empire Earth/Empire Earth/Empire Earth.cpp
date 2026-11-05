@@ -11,6 +11,7 @@
 void EETestFixtureStart();   // EETestFixture.cpp (TEST ONLY)
 unsigned long EEMenuWidth();    // port: the menus' resolution (below)
 unsigned long EEMenuHeight();
+void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
 #include "platform/PlatWindow.h"
 #include "platform/PlatFile.h"
 #include <stdio.h>
@@ -1977,14 +1978,10 @@ bool EEInitializeDisplay()
         || (gGamePreferences.mSettings.mTextureBitDepth == 32 && !gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->Get32BitTextureSupport()))
         gGamePreferences.mSettings.mTextureBitDepth = 16;
     GEScreen* theScreen = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID());
-    // port: the first full screen start (no saved size) plays at the display's size (macOS: in points), not 800x600
-    extern bool gGameWindowSizeDefaulted;
-    int32_t theDisplayWidth = 0, theDisplayHeight = 0;
-    if (gGameWindowSizeDefaulted && gGamePreferences.mSettings.GetFullScreen() &&
-        PlatWindowGetDisplayLogicalSize(NULL, &theDisplayWidth, &theDisplayHeight) && theDisplayWidth > 0) {
-        gGameWindowWidth = (unsigned long)theDisplayWidth;
-        gGameWindowHeight = (unsigned long)theDisplayHeight;
-    }
+    // port: the game's resolution follows the UI scale (the display's logical size divided by it; windowed: of a
+    // window of 80% of the display), not a resolution list: the render scale fills the display's pixels
+    GXGameSize((unsigned long)gGamePreferences.mSettings.mUIScale, !gGamePreferences.mSettings.GetFullScreen(),
+               &gGameWindowWidth, &gGameWindowHeight);
     unsigned long theMode;
     for (theMode = 0; theMode < theScreen->GetModeCount(); theMode++) {
         if (theScreen->GetMode(theMode).mWidth == gGameWindowWidth
@@ -2005,8 +2002,20 @@ bool EEInitializeDisplay()
     theScreen = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID());
     theOrigin.SetXY(theDesktop.GetLeft(), theDesktop.GetTop());
     if (gGamePreferences.mSettings.GetFullScreen() == false) {
-        theResult = theScreen->CreateAWindow(theOrigin, 640, 480, UString("Empire Earth Expansion"),
+        // port: windowed, a window of 80% of the display that keeps its size (GXGameSize; the frames scale to it)
+        int32_t theWindowWidth = 0, theWindowHeight = 0;
+        if (!PlatWindowGetDisplayLogicalSize(NULL, &theWindowWidth, &theWindowHeight) || theWindowWidth <= 0) {
+            theWindowWidth = 800;
+            theWindowHeight = 600;
+        } else {
+            theWindowWidth = theWindowWidth * 4 / 5;
+            theWindowHeight = theWindowHeight * 4 / 5;
+        }
+        theResult = theScreen->CreateAWindow(theOrigin, (unsigned long)theWindowWidth, (unsigned long)theWindowHeight,
+                                             UString("Empire Earth Expansion"),
                                              UString("Empire Earth: The Art of Conquest"), gGameWindow, 1, NULL);
+        if (theResult == keseOK)
+            PlatWindowSetFixedSize(gGameWindow->GetOSRepresentation(), 1);
     } else {
         theResult = theScreen->CreateAWindow(theOrigin, (unsigned long)theDesktop.GetWidth(),
                                              (unsigned long)theDesktop.GetHeight(), UString("Empire Earth Expansion"),

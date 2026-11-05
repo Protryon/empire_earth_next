@@ -46,6 +46,8 @@ void PlatWindowSetTitle(PlatWindow* inWindow, const char* inTitle);
 void PlatWindowShow(PlatWindow* inWindow, int inShow);
 int PlatWindowSetFullscreen(PlatWindow* inWindow, int inFullscreen);
 void PlatWindowSetSize(PlatWindow* inWindow, int32_t inWidth, int32_t inHeight);
+// a window whose size the game's mode changes leave alone (a windowed game: the frames scale to the window)
+void PlatWindowSetFixedSize(PlatWindow* inWindow, int inFixed);
 // the client area's origin in desktop pixels (ClientToScreen of 0, 0), and moving it there
 void PlatWindowGetPosition(PlatWindow* inWindow, int32_t* outX, int32_t* outY);
 void PlatWindowSetPosition(PlatWindow* inWindow, int32_t inX, int32_t inY);

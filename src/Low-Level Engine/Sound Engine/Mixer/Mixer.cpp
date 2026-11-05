@@ -7,6 +7,7 @@
 #include <windows.h>
 #include "platform/PlatFile.h"
 #include <math.h>
+#include <string>
 #include <stdio.h>
 #include <string.h>
 #include <vector>
@@ -117,6 +118,44 @@ static void SetStep(MixerChannel& ioChannel, float inPitch)
                           ? (double)ioChannel.mData->mRate * inPitch / gDevice.sampleRate : 0.0;
 }
 
+// port: the audio settings (SEMixer.h): a master gain over everything, a mute (the game in the background) and the
+// output device by name (taken when the mixer opens)
+static float gMasterVolume = 1.0f;
+static bool gMuted = false;
+static std::string gOutputDevice;
+
+extern "C" void SPIMSetMasterVolume(float inVolume)
+{
+    gMasterVolume = inVolume < 0.0f ? 0.0f : inVolume > 1.0f ? 1.0f : inVolume;
+}
+
+extern "C" void SPIMSetMuted(bool inMuted)
+{
+    gMuted = inMuted;
+}
+
+extern "C" void SPIMSetOutputDevice(const char* inName)
+{
+    gOutputDevice = inName ? inName : "";
+}
+
+extern "C" unsigned long SPIMGetOutputDevices(char (*outNames)[128], unsigned long inCapacity)
+{
+    ma_context theContext;
+    if (ma_context_init(NULL, 0, NULL, &theContext) != MA_SUCCESS)
+        return 0;
+    ma_device_info* theDevices = NULL;
+    ma_uint32 theCount = 0;
+    unsigned long theResult = 0;
+    if (ma_context_get_devices(&theContext, &theDevices, &theCount, NULL, NULL) == MA_SUCCESS)
+        for (ma_uint32 i = 0; i < theCount && theResult < inCapacity; i++) {
+            snprintf(outNames[theResult], 128, "%s", theDevices[i].name);
+            theResult++;
+        }
+    ma_context_uninit(&theContext);
+    return theResult;
+}
+
 // The device thread: mixes every playing channel (linear interpolation) into the stereo float output
 static void MixerCallback(ma_device* inDevice, void* outFrames, const void* inInput, ma_uint32 inCount)
 {
@@ -162,8 +201,9 @@ static void MixerCallback(ma_device* inDevice, void* outFrames, const void* inIn
         if (gMovieSource)
             gMovieSource(gMovieContext, &gMusicBuffer[0], inCount);
     }
+    float theMaster = gMuted ? 0.0f : gMasterVolume;
     for (ma_uint32 i = 0; i < 2 * inCount; i++) {
-        float v = theOut[i] * gVolume + (theMusic ? gMusicBuffer[i] : 0.0f);
+        float v = (theOut[i] * gVolume + (theMusic ? gMusicBuffer[i] : 0.0f)) * theMaster;
         theOut[i] = v > 1.0f ? 1.0f : v < -1.0f ? -1.0f : v;
     }
 }
@@ -257,6 +297,19 @@ extern "C" long SPIMActivateMixer()
     for (unsigned long b = 0; b < sizeof(theBackends) / sizeof(theBackends[0]) && !theOpen; b++) {
         if (ma_context_init(&theBackends[b], 1, NULL, &gContext) != MA_SUCCESS)
             continue;
+        // port: the chosen output device (by name; the system's default when it is not there)
+        ma_device_id theDeviceID;
+        theConfig.playback.pDeviceID = NULL;
+        if (!gOutputDevice.empty()) {
+            ma_device_info* theDevices = NULL;
+            ma_uint32 theCount = 0;
+            if (ma_context_get_devices(&gContext, &theDevices, &theCount, NULL, NULL) == MA_SUCCESS)
+                for (ma_uint32 d = 0; d < theCount; d++)
+                    if (gOutputDevice == theDevices[d].name) {
+                        theDeviceID = theDevices[d].id;
+                        theConfig.playback.pDeviceID = &theDeviceID;
+                    }
+        }
         if (ma_device_init(&gContext, &theConfig, &gDevice) == MA_SUCCESS) {
             if (ma_device_start(&gDevice) == MA_SUCCESS)
                 theOpen = true;

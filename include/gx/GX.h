@@ -378,6 +378,21 @@ private:
     unsigned long mReferences;
 };
 
+// port: the display settings (EEApplyDisplaySettings, the settings form's video tab; config.ini)
+// the render scale's share of the display's pixels, 50..100 percent (GXRenderScale)
+void GXSetRenderPercent(unsigned long inPercent);
+// 0 presents on v-sync, -1 as fast as possible, else at most that many frames a second (no v-sync)
+void GXSetFrameLimit(long inFramesPerSecond);
+// texture sampling: 0 as the game asks (bilinear), 1 trilinear mip maps, 2 trilinear and 8x anisotropic
+void GXSetTextureFiltering(unsigned long inMode);
+// a gamma applied when presenting (1 unchanged; above 1 brighter)
+void GXSetBrightness(float inGamma);
+// the game's resolution for a UI scale in percent (0: GXAutoUIScale) in full screen (the display's logical size
+// divided by the scale) or windowed (a window of 80% of it); GX lists every such size as a display mode
+void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);
+// the UI scale "Auto" stands for: the display's logical height over 1080 lines, at least 100 percent
+unsigned long GXAutoUIScale();
+
 // A fixed-function 3D device rendering into a target surface (IDirect3DDevice7)
 class GXDevice {
 public:
