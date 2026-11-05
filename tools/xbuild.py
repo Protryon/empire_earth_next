@@ -509,15 +509,16 @@ def cmd_census(a):
         for job, ok, log in ex.map(lambda j: census_job(t, j, a.dialect, inc, logdir), jobs):
             results.append((job, ok, log))
     rows, errs = [], []
-    by_class, by_name, by_header = {}, {}, {}
+    by_class, by_name, by_header, by_file = {}, {}, {}, {}
     mod_counts = {}
+    lp64_only = 0   # units whose only errors are the record-size asserts (the LP64 work, PORT.md)
     for job, ok, log in results:
         rel = units.rel_src(job[1]).as_posix()
         mc = mod_counts.setdefault(job[0], [0, 0])
         mc[0 if ok else 1] += 1
         diags = DIAG.findall(log)
         first = ""
-        names, classes = set(), set()
+        names, classes, files = set(), set(), set()
         for f, line, col, kind, msg in diags:
             fp = pathlib.Path(f)
             try:
@@ -528,6 +529,7 @@ def cmd_census(a):
             if not first:
                 first = f"{pathlib.Path(frel).name}:{line}: {msg}"
             classes.add(classify(msg))
+            files.add(frel)
             m = UNDECLARED.search(msg)
             if m:
                 names.add(next(g for g in m.groups() if g))
@@ -537,6 +539,11 @@ def cmd_census(a):
             by_class[c] = by_class.get(c, 0) + 1
         for n in names:
             by_name[n] = by_name.get(n, 0) + 1
+        for fl in files:
+            by_file[fl] = by_file.get(fl, 0) + 1
+        if not ok and classes and all(c.startswith("static assertion failed") and "on-disk record" in c
+                                      for c in classes):
+            lp64_only += 1
         if not ok:
             (logdir / (rel.replace("/", "__") + ".log")).parent.mkdir(parents=True, exist_ok=True)
             (logdir / (rel.replace("/", "__") + ".log")).write_text(log, encoding="utf-8")
@@ -550,6 +557,10 @@ def cmd_census(a):
           f"({time.time() - t0:.0f} s) -> {out}")
     for m, (ok, bad) in sorted(mod_counts.items()):
         print(f"  {m:9} {ok:4} compile  {bad:4} fail")
+    print(f"  {lp64_only} more fail only on the on-disk record size asserts (long is 64-bit: the LP64 work)")
+    print("\nfiles the errors are in (units; first 25):")
+    for fl, k in sorted(by_file.items(), key=lambda kv: -kv[1])[:25]:
+        print(f"  {k:5}  {fl}")
     print("\nmissing names (units they stop; first 40):")
     for n, k in sorted(by_name.items(), key=lambda kv: -kv[1])[:40]:
         print(f"  {k:5}  {n}")
@@ -562,9 +573,13 @@ def cmd_census(a):
             print(f"  {k:5}  {h}")
     summary = out / "summary.txt"
     with open(summary, "w", encoding="utf-8") as f:
-        f.write(f"{t.name} {a.dialect}: {n_ok}/{len(rows)} units compile\n")
+        f.write(f"{t.name} {a.dialect}: {n_ok}/{len(rows)} units compile, {lp64_only} more fail only on the "
+                f"record-size asserts\n")
         for m, (ok, bad) in sorted(mod_counts.items()):
             f.write(f"{m}\t{ok}\t{bad}\n")
+        f.write("\n# files the errors are in\n")
+        for fl, k in sorted(by_file.items(), key=lambda kv: -kv[1]):
+            f.write(f"{k}\t{fl}\n")
         f.write("\n# missing names\n")
         for n, k in sorted(by_name.items(), key=lambda kv: -kv[1]):
             f.write(f"{k}\t{n}\n")
