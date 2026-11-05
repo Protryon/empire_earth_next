@@ -33,7 +33,7 @@ public:
         { return this->mFrameFormat == 0 ? this->mFrames[inFrame] : this->mFrames[0]; }
     const GETextureCoordinate& GetFrameTopLeftCorner() const { return this->mFrameTopLeftCorner; }
     float GetFrameWidth() const { return this->GetFrameSurface()->GetWidth() * this->mFrameUVSize; }
-    unsigned long GetHeight() const { return this->mSurface->GetHeight(); }
+    unsigned long GetHeight() const { return this->mSurface->GetHeight(); }   // logical (GESurface::GetLogicalShift)
     bool GetIsCompressed() const { return this->mFrameTexture->mIsCompressed; }
     bool GetIsPromoted() const { return this->mFrameTexture->mIsPromoted; }
     unsigned long GetPixelFormat() const { return this->mFrameTexture->mSurface->GetPixelFormat(); }
@@ -86,6 +86,8 @@ private:
     long Load(FSFileSpec& inFile, GESurfaceDescription& inDescription, GEScreen* inScreen, bool inCreateMIPMaps,
               long inNumMipLevelsToDrop, unsigned long inFrameFormat);
     void SetIsPromoted(bool inIsPromoted) { this->mIsPromoted = inIsPromoted; }
+    // port: the logical shift of every frame's surface (GESurface::GetLogicalShift; a texture pack's texture)
+    void SetLogicalShift(unsigned long inShift);
 
     bool mIsManaged;                        // +0x08 set by GETextureManager (Dereference then calls RemoveTexture)
     GETStage mStage;                        // +0x0c
@@ -107,6 +109,8 @@ private:
     bool mIsPromoted;                       // +0x69
     bool mHasChanged;                       // +0x6a
     bool mCreateMIPMaps;                    // +0x6b
+    bool mIsFromTexturePack;                // port: loaded from the texture pack (GETextureManager::SetTexturePack)
+    long mTexturePackMipLevels;             // port: the MIP levels the pack dropped on top of mNumMipLevelsToDrop
 
     static GERasterizer* sRasterizer;       // exported ?sRasterizer@GETexture@@0PAVGERasterizer@@A
 };

@@ -290,7 +290,18 @@ enum EEGameSettingsControl {
     kGameSettingsFullscreenAntialiasCheckbox = 105,  // dbuicontrols form 5 index 105 id 3287 'GS Fullscreen Antialias Checkbox' (type 2); site form via UICheckBox* theCheck105 = (UICheckBox*)i
     kGameSettingsCantChangeResInGameWarning = 106,  // dbuicontrols form 5 index 106 id 3355 'GS Can't Change Res in Game Warning' (type 16); site form via inForm
     kGameSettingsAdaptorSeletionComboBox = 109,    // dbuicontrols form 5 index 109 id 3372 'GS Adaptor Seletion Combo Box' (type 4); site form via UIComboBox* theAdapterBox = (UIComboBox*
+    // port: not in the database (EEUIManager's ctor adds it: UIControlsTable::AddControlLike, a copy of the video
+    // card combo box; strings kTextureResolutionOriginalString..)
+    kGameSettingsTextureResolutionComboBox = 111,
     kGameSettingsBattlefieldAmbientsCheckBox = 110,  // dbuicontrols form 5 index 110 id 3400 'GS Battlefield Ambients Check Box' (type 2); site form via UICheckBox* theCheck110 = (UICheckBox*)i
+};
+
+// port: the texture resolution combo box (kGameSettingsTextureResolutionComboBox): its control id (past the
+// database's) and its strings (Language.rc)
+enum EETextureResolutionControl {
+    kTextureResolutionControlID = 90001,
+    kTextureResolutionOriginalString = 33100,   // "Textures: Original", then 2x (33101) and 4x (33102)
+    kTextureResolutionHelpString = 33103,
 };
 
 // Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 4 'In Game

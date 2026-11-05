@@ -26,7 +26,8 @@ public:
     virtual GESurface* GetAttachedSurface(unsigned long inIndex) { return this->mAttachedSurfaces[inIndex]; }
     virtual unsigned long GetAttachedSurfaceCount() { return this->mAttachedSurfaces.size(); }
     virtual unsigned long GetBytesPerRow() const { return this->mBytesPerRow; }
-    virtual unsigned long GetHeight() const { return this->mDescription.mHeight; }
+    // port: the logical size (GESurface::GetLogicalShift); never below 1
+    virtual unsigned long GetHeight() const { return LogicalSize(this->mDescription.mHeight); }
     virtual bool GetIs3DRenderable() const { return this->mDescription.mIs3DRenderable; }
     virtual bool GetIsTextLocked() const { return this->mIsTextLocked; }
     virtual bool GetIsTransparencyEnabled() const { return this->mDescription.mIsTransparencyEnabled; }
@@ -38,7 +39,7 @@ public:
     virtual const GESurfaceDescription& GetSurfaceDescription() const { return this->mDescription; }
     virtual const GEColor& GetTransparencyColor() const { return this->mTransparencyColor; }
     virtual unsigned long GetType() const { return this->mDescription.mType; }
-    virtual unsigned long GetWidth() const { return this->mDescription.mWidth; }
+    virtual unsigned long GetWidth() const { return LogicalSize(this->mDescription.mWidth); }
     virtual long Lock();
     virtual long RestoreSurface();
     virtual void SetTransparencyColor(GEColor& inColor);
@@ -51,6 +52,8 @@ protected:
 private:
     DX7Surface(GXSurface* inSurface, const GESurfaceDescription& inDescription, GEScreen* inParentScreen);
     long Copy16BitWithFilter(DX7Surface* inTarget, GERectangle& inSource, GERectangle& inDestination);
+    unsigned long LogicalSize(unsigned long inPixels) const
+        { return this->mLogicalShift == 0 || (inPixels >> this->mLogicalShift) == 0 ? inPixels : inPixels >> this->mLogicalShift; }
     long Copy32BitWithFilter(DX7Surface* inTarget, GERectangle& inSource, GERectangle& inDestination);
 
     GESurfaceDescription mDescription;      // +0x08

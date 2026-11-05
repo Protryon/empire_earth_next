@@ -71,6 +71,16 @@ public:
     static long GetImageFileAttributes(FSFileSpec& inFile, unsigned char inType, unsigned long& outWidth,
                                        unsigned long& outHeight, unsigned long& outDepth);
 
+    // port: a surface's two sizes (docs/DATA_FORMATS.md "Texture packs"). GetWidth/GetHeight are its LOGICAL size,
+    // the one every layout, source rectangle, UV and hot spot of the game is computed in; its PIXEL size (what its
+    // memory and GPU copy hold) is that times 1 << the logical shift: 0 for every surface but a texture pack's (2:
+    // 4x pixels, 1: 2x). The surface converts at the bottom: CopyTo, CopyWithFilter and Clear take logical
+    // rectangles; Lock/GetMemoryAddress/GetBytesPerRow address pixels (CPU code reads GetPixelWidth/Height).
+    unsigned long GetLogicalShift() const { return this->mLogicalShift; }
+    void SetLogicalShift(unsigned long inShift) { this->mLogicalShift = inShift; }
+    unsigned long GetPixelWidth() const { return this->GetSurfaceDescription().mWidth; }
+    unsigned long GetPixelHeight() const { return this->GetSurfaceDescription().mHeight; }
+
 protected:  // the per-format members are exported protected (?LoadBMP@GESurface@@IAE.., ..@@KAJ..)
     long LoadBMP(FSFileSpec& inFile);
     long LoadJPG(FSFileSpec& inFile);
@@ -88,6 +98,8 @@ protected:  // the per-format members are exported protected (?LoadBMP@GESurface
                                       unsigned long& outDepth);
     static long GetTGAFileAttributes(FSFileSpec& inFile, unsigned long& outWidth, unsigned long& outHeight,
                                      unsigned long& outDepth);
+
+    unsigned long mLogicalShift = 0;        // port: see GetLogicalShift
 };
 
 // GESurface::Load/Save/GetImageFileAttributes inType: the per-format exported member each case calls

@@ -702,6 +702,14 @@ static long ApplySettings(UIForm* inForm, unsigned long& outModeIndex)
         gGamePreferences.GetSettings().mMIPLevelsToDrop = 1;
         gGamePreferences.GetSettings().mTerrainMIPLevelsToDrop = 1;
     }
+    // port: the texture resolution combo box (Original, 2x, 4x); world textures loaded from now on use it
+    UIComboBox* theTextureResolution = static_cast<UIComboBox*>(inForm->GetControl(kGameSettingsTextureResolutionComboBox));
+    unsigned long theTextureSelection;
+    if (theTextureResolution && theTextureResolution->GetCurrentSelection(theTextureSelection) == kErrorOK
+        && theTextureSelection < 3) {
+        gGamePreferences.GetSettings().mTextureResolution = theTextureSelection == 0 ? 0 : theTextureSelection == 1 ? 2 : 4;
+        EESetTextureResolution(gGamePreferences.GetSettings().mTextureResolution);
+    }
     gGamePreferences.GetSettings().mDisplayShadows = theCheck86->GetIsChecked();
     gGamePreferences.GetSettings().mDisplayClouds = theCheck87->GetIsChecked();
     gGamePreferences.GetSettings().mDisplayBattlefieldAmbients = theCheck110->GetIsChecked();
@@ -992,6 +1000,9 @@ static void ShowGraphics(UIForm* inForm, EEGameSettings inSettings)
         theCheck84->SetChecked(true);
     else
         theCheck84->SetChecked(false);
+    UIComboBox* theTextureResolution = static_cast<UIComboBox*>(inForm->GetControl(kGameSettingsTextureResolutionComboBox));
+    if (theTextureResolution)   // port
+        theTextureResolution->SetCurrentSelection(inSettings.mTextureResolution == 4 ? 2 : inSettings.mTextureResolution == 2 ? 1 : 0);
     if (inSettings.mDisplayShadows)
         theCheck86->SetChecked(true);
     else

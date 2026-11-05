@@ -121,7 +121,14 @@ public:
     bool mAntiAliasing;                     // +0x5dd
     bool mTakeEndGameScreenshots;           // +0x5de
     bool mShowAutoWaypoints;                // +0x5df
+    // port (not in the original's 0x5e0 bytes): "Texture Resolution" 0 (the original textures), 2 or 4 (the
+    // Data/Textures-4x pack, drawn at half size for 2); EESetTextureResolution applies it
+    long mTextureResolution;
 };
+
+// port: makes the texture manager load the world's textures at inResolution (0, 2 or 4: EEGameSettings::
+// mTextureResolution); textures already loaded keep theirs until released (EEPreferences.cpp)
+void EESetTextureResolution(long inResolution);
 
 class EEGamePreferences {
 public:

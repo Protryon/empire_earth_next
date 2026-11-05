@@ -2,6 +2,8 @@
 // 0x11ab55..0x11b54e (the transparency colour's init chain, the ctor .. Update; RTSMousePointer.cpp opens the next
 // unit at 0x11b54e). Unit flags: the exe's module set.
 #include <windows.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 #include "lle/LowLevelEngine.h"
 #include "platform/PlatWindow.h"
@@ -145,6 +147,74 @@ GESurface* RTSMouse::GetPointerSurface(unsigned long inIndex)
     return inIndex < 10 ? this->mPointerSurfaces[inIndex] : NULL;
 }
 
+// port: a pointer from the texture pack (GETextureManager::SetTexturePack): its file is 32x32 << the pack's scale;
+// the surface holds it at its pixel size (halved for the pack's extra MIP drop: nearest, so the blue colour key stays
+// exact) and keeps 32x32 as its logical size (GESurface::GetLogicalShift), which the save-under and the drawing use.
+// -> kErrorOK with *ioSurface replaced; an error (and *ioSurface untouched) when the pack has no such pointer.
+static long LoadPackPointer(const char* inFile, GEScreen* inScreen, const GESurfaceDescription& inDescription,
+                            GESurface** ioSurface)
+{
+    UString thePackName;
+    FSFileSpec* theFile = NULL;
+    long theShift = GETextureManager::GetTexturePackLogicalShift();
+    long theDrop = GETextureManager::GetTexturePackMipLevelsToDrop();
+    if (theShift <= 0 || !GETextureManager::GetTexturePackName(UString(inFile), thePackName)
+        || GEFindTargaFile(inScreen->GetTextureManager()->GetTexturePath(), thePackName, theFile) != kErrorOK
+        || theFile == NULL)
+        return kErrorNotFound;
+    unsigned long theWidth = 0, theHeight = 0, theDepth = 0;
+    // open across both reads (an in-memory file reopened keeps its position): the header, then the whole file
+    long theResult = theFile->Open(kFileAccessRead);
+    if (theResult == kErrorOK)
+        theResult = GESurface::GetImageFileAttributes(*theFile, kImageFileTGA, theWidth, theHeight, theDepth);
+    if (theResult == kErrorOK)
+        theResult = theFile->SetPosition(0, kFileOriginBegin, true);
+    unsigned long theSize = inDescription.mWidth << (theShift + theDrop);
+    if (theResult == kErrorOK && (theWidth != theSize || theHeight != theSize))
+        theResult = kErrorFailed;   // not a 32x32 pointer at the pack's scale
+    GESurfaceDescription theDescription = inDescription;
+    theDescription.mWidth = theWidth;
+    theDescription.mHeight = theHeight;
+    GESurface* theFull = NULL;
+    if (theResult == kErrorOK)
+        theResult = inScreen->CreateSurface(theDescription, &theFull);
+    if (theResult == kErrorOK)
+        theResult = theFull->Load(*theFile, kImageFileTGA);
+    theFile->Close();
+    delete theFile;
+    GESurface* theSurface = theFull;
+    if (theResult == kErrorOK && theDrop > 0) {
+        theDescription.mWidth = theWidth >> theDrop;
+        theDescription.mHeight = theHeight >> theDrop;
+        theSurface = NULL;
+        theResult = inScreen->CreateSurface(theDescription, &theSurface);
+        if (theResult == kErrorOK) {
+            GERectangle theSource(0.0f, 0.0f, (float)theWidth, (float)theHeight);
+            GERectangle theDestination(0.0f, 0.0f, (float)theDescription.mWidth, (float)theDescription.mHeight);
+            theResult = theFull->CopyTo(theSurface, theSource, theDestination, false);
+        }
+        theFull->Dereference();
+    }
+    if (theResult != kErrorOK) {
+        if (getenv("EE_TEXTURE_PACK_LOG"))
+            fprintf(stderr, "texture pack: %s not used (%lux%lu, error %ld)\n", (const char*)thePackName, theWidth,
+                    theHeight, theResult);
+        if (theSurface)
+            theSurface->Dereference();
+        return theResult;
+    }
+    theSurface->SetLogicalShift(theShift);
+    theSurface->SetTransparencyColor(sTransparencyColor);
+    if (*ioSurface)
+        (*ioSurface)->Dereference();
+    *ioSurface = theSurface;
+    if (getenv("EE_TEXTURE_PACK_LOG"))
+        fprintf(stderr, "texture pack: %s logical %lux%lu pixels %lux%lu (pointer)\n", (const char*)thePackName,
+                theSurface->GetWidth(), theSurface->GetHeight(), theSurface->GetPixelWidth(),
+                theSurface->GetPixelHeight());
+    return kErrorOK;
+}
+
 // FUNCTION: EXE 0x51af66
 // Loads a 32x32 TGA pointer texture from the texture path into a surface (created if needed), blue transparent;
 // returns the first error of finding, loading and closing the file
@@ -163,6 +233,13 @@ long RTSMouse::LoadPointer(const char* inFile, GEScreen* inScreen, GESurface** i
     theDescription.mPixelDepth = theMode.mBitCount;
     theDescription.mIs3DRenderable = false;
     theDescription.mIsTransparencyEnabled = true;
+    // port: the texture pack's pointer when it has one (docs/DATA_FORMATS.md "Texture packs")
+    if (LoadPackPointer(inFile, inScreen, theDescription, ioSurface) == kErrorOK)
+        return kErrorOK;
+    if (*ioSurface != NULL && (*ioSurface)->GetLogicalShift() != 0) {   // was a pack pointer: back to 32x32 pixels
+        (*ioSurface)->Dereference();
+        *ioSurface = NULL;
+    }
     if (*ioSurface == NULL)
         inScreen->CreateSurface(theDescription, ioSurface);
     // its .png in place of the .tga when the data has one (open formats)

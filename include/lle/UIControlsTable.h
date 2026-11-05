@@ -26,6 +26,14 @@ public:
     virtual ~UIControlsTable();
     void AddEvent(const UIEventData& inEvent) { this->mEventData.push_back(inEvent); }
     static long Create(FSFileSpec& inFile, UIManager* inManager);
+    // port: adds a control the database does not have (after Create), described as a copy of the database control
+    // inTemplateID (its type, font, colours, sounds and offset types; not its events) with its own id, form index,
+    // group, rectangle (fractions of the window: offset type 4), string range and help string; registered with the
+    // template's form as Create registers a record. -> kErrorOK; kErrorNotFound without the template or when the
+    // id or the form index is taken
+    static long AddControlLike(UIManager* inManager, long inTemplateID, long inID, long inFormIndex,
+                               unsigned long inGroup, float inLeft, float inRight, float inTop, float inBottom,
+                               long inStringTableBegin, long inStringTableEnd, unsigned long inHelpStringID);
     GEBitmap* CreateBitmap(UIManager* inManager, const GERectangle& inRectangle, const UString& inFileName,
                            bool inHasAlpha, const GERectangle& inTextureRectangle) const;
     UIControl* CreateControl(UIManager* inManager);
