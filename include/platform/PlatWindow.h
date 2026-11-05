@@ -164,6 +164,8 @@ char* PlatClipboardGetText(void);
 // input method places its candidate window by.
 void PlatTextInputStart(PlatWindow* inWindow, int32_t inX, int32_t inY, int32_t inWidth, int32_t inHeight);
 void PlatTextInputStop(PlatWindow* inWindow);
+// Cancels the input method's open composition (ImmNotifyIME(NI_COMPOSITIONSTR, CPS_CANCEL)): the edit box lost focus
+void PlatTextInputCancel(PlatWindow* inWindow);
 
 #ifdef __cplusplus
 }

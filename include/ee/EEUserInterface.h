@@ -143,12 +143,12 @@ public:
     void ShowCivilizationBuilder(long inX, bool inFlag1, bool inFlag2);  // 0x277c1f (messages 0x41f/0x420)
     void PauseGraphics();                   // 0x277e63 (waits for the graphics thread's +0x56 flag)
     void ProcessActions();                  // 0x277f21 (runs the queued actions)
-    void UpdateIMECandidateList(HWND__* inWindow);  // 0x278040 (the IME candidate list)
-    void UpdateIMECompositionString(HWND__* inWindow);  // 0x2780d3 (the IME composition string)
-    void AddIMEResultString(HWND__* inWindow);  // 0x2781da (the IME result string)
+    // the input method's composition (PLAT_EVENT_TEXT_EDITING) and result (PLAT_EVENT_TEXT while composing)
+    void UpdateIMECompositionString(const char* inText, long inCursor, long inLength);  // 0x2780d3
+    void AddIMEResultString(const char* inText);  // 0x2781da
     void UpdateInterface();                 // 0x278ed3 (input, UpdateUI, the actions)
     void OpenIMECandidateWindow();          // 0x278f90 (IMN_OPENCANDIDATE)
-    void OpenIMECompositionString(HWND__* inWindow);  // 0x278fc0 (WM_IME_STARTCOMPOSITION)
+    void OpenIMECompositionString();        // 0x278fc0 (WM_IME_STARTCOMPOSITION)
     void RestartGame();                     // 0x279013 (message 0x428)
     void ShowLagStatus(unsigned long inPlayer, bool inLagging);  // 0x27977c (message 0x442; the caller passes (unsigned short))
     void ResumeGraphics();                  // 0x2798a3

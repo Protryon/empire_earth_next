@@ -5,7 +5,6 @@
 // order. The implicit copy members and ??_E are emitted by UIForm.cpp (first includer of UIIMECandidate.h).
 // UILayoutUtility.cpp starts at 0x10077f75.
 #include <windows.h>
-#include <imm.h>
 #include <mbstring.h>
 
 #include "lle/LowLevelEngine.h"
@@ -179,11 +178,8 @@ void UIIMECandidate::OpenCandidateWindow(const GERectangle& inScreenRectangle, c
         }
         this->mCandidateRectangle.And(inScreenRectangle);
     }
-    HIMC theContext = ImmGetContext((HWND)theWindow->GetNativeHandle());
-    if (theContext) {
-        ImmNotifyIME(theContext, NI_SETCANDIDATE_PAGESIZE, 0, thePageSize);
-        ImmReleaseContext((HWND)theWindow->GetNativeHandle(), theContext);
-    }
+    // (the page size went to the IME with ImmNotifyIME(NI_SETCANDIDATE_PAGESIZE); the system draws the list now)
+    (void)thePageSize;
 }
 
 // FUNCTION: LLE 0x10077d28

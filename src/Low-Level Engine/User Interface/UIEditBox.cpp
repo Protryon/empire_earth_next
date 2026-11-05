@@ -6,12 +6,12 @@
 // first user). The header-inline members, the implicit copy members and ??_E are emitted first by UIComboBox.cpp.
 // UIEMouseWheelScroll.cpp starts at 0x1006de9d.
 #include <windows.h>
-#include <imm.h>
 #include <mbstring.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "lle/LowLevelEngine.h"
+#include "platform/PlatWindow.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
 #include "lle/GETextureCoordinate.h"
@@ -448,24 +448,14 @@ void UIEditBox::ComputeDrawingIndex()
 }
 
 // FUNCTION: LLE 0x1006b122
-// Copies the selected text to the Windows clipboard; the memory block leaks when the clipboard cannot be opened
+// Copies the selected text to the clipboard (platform/PlatWindow.h; Win32's CF_TEXT before)
 void UIEditBox::Copy()
 {
     if (!this->mIsTextSelected)
         return;
     UWideString theText("");
     this->GetSelectedText(theText);
-    HGLOBAL theMemory = GlobalAlloc(GMEM_MOVEABLE | GMEM_ZEROINIT, theText.GetAllocatedLength() + 1);
-    char* theBuffer = (char*)GlobalLock(theMemory);
-    strcpy(theBuffer, theText);
-    GlobalUnlock(theMemory);
-    if (!OpenClipboard(NULL)) {
-        GlobalFree(theMemory);   // Fixed: the block used to leak when the clipboard could not be opened
-        return;
-    }
-    EmptyClipboard();
-    SetClipboardData(CF_TEXT, theMemory);
-    CloseClipboard();
+    PlatClipboardSetText(theText);
 }
 
 // FUNCTION: LLE 0x1006b1a0
@@ -1033,22 +1023,14 @@ void UIEditBox::IncrementCaretPos(long inCount)
 }
 
 // FUNCTION: LLE 0x1006c9f3
-// Inserts the clipboard text at the caret; the copy buffer is never freed
+// Inserts the clipboard's text at the caret (platform/PlatWindow.h; Win32's CF_TEXT before)
 void UIEditBox::Paste()
 {
-    if (!IsClipboardFormatAvailable(CF_TEXT) || !OpenClipboard(NULL))
+    char* theText = PlatClipboardGetText();
+    if (theText == NULL)
         return;
-    HANDLE theData = GetClipboardData(CF_TEXT);
-    char* theText = new char[GlobalSize(theData)];
-    char* theLocked = (char*)GlobalLock(theData);
-    if (theLocked)
-        strcpy(theText, theLocked);
-    GlobalUnlock(theData);
-    CloseClipboard();
-    // Fixed: the copy used to leak, and an uninitialised buffer was added when the clipboard could not be locked
-    if (theLocked)
-        this->AddChar(theText);
-    delete[] theText;
+    this->AddChar(theText);
+    free(theText);
 }
 
 // FUNCTION: LLE 0x1006ca57
@@ -1525,11 +1507,7 @@ void UIEditBox::ReleaseCapturedKeyboard()
     GEWindow* theWindow = this->GetRasterizer()->GetWindow(this->GetScreenIndex());
     if (this->mIMEActive == true) {
         this->RemoveIMECompositionString();
-        HIMC theContext = ImmGetContext((HWND)theWindow->GetNativeHandle());
-        if (theContext) {
-            ImmNotifyIME(theContext, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
-            ImmReleaseContext((HWND)theWindow->GetNativeHandle(), theContext);
-        }
+        PlatTextInputCancel(theWindow->GetOSRepresentation());   // ImmNotifyIME(NI_COMPOSITIONSTR, CPS_CANCEL)
         this->mIMEActive = false;
     }
     this->SetAlwaysDirty(this->mSavedAlwaysDirty);
@@ -1656,11 +1634,7 @@ void UIEditBox::TabbedFrom()
     this->mScrollBarCaptured = false;
     this->ReleaseCapturedKeyboard();
     this->ReleaseCapturedMouse();
-    HIMC theContext = ImmGetContext((HWND)theWindow->GetNativeHandle());
-    if (theContext) {
-        ImmNotifyIME(theContext, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
-        ImmReleaseContext((HWND)theWindow->GetNativeHandle(), theContext);
-    }
+    PlatTextInputCancel(theWindow->GetOSRepresentation());   // ImmNotifyIME(NI_COMPOSITIONSTR, CPS_CANCEL)
     this->SetDirty(true);
 }
 
@@ -1673,11 +1647,7 @@ void UIEditBox::TabbedTo()
     this->mSavedBgOpacity = this->GetBgOpacity();
     this->SetBgOpacity(1.0f);
     this->SetupKeyboardForCapture();
-    HIMC theContext = ImmGetContext((HWND)theWindow->GetNativeHandle());
-    if (theContext) {
-        ImmNotifyIME(theContext, NI_COMPOSITIONSTR, CPS_CANCEL, 0);
-        ImmReleaseContext((HWND)theWindow->GetNativeHandle(), theContext);
-    }
+    PlatTextInputCancel(theWindow->GetOSRepresentation());   // ImmNotifyIME(NI_COMPOSITIONSTR, CPS_CANCEL)
     this->SetDirty(true);
 }
 

@@ -79,7 +79,6 @@
 #include "ee/EEUIBSavedGroup.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEUIFMGMainGroup.h"
-#include <imm.h>
 #include <locale.h>
 #include "lle/UICheckBox.h"
 #include "lle/UIStatusBar.h"
@@ -156,8 +155,6 @@ static const float kGameViewLeft = 0.0f, kGameViewRight = 1600.0f;  // the game 
 static const float kGameViewTop = 35.0f, kGameViewBottom = 1085.0f; // 0x44ba2c..0x44ba38: separate words)
 
 // the IME strings' buffer (0x56536c, its size 0x565368; grown in 0x100-byte steps)
-static long sIMEBufferSize;
-static char* sIMEBuffer;
 static unsigned long sLastLoadPercent;      // 0x565370 (SetLoadProgress)
 static bool sMinimized;                     // 0x565374 (WM_SIZE: the volumes are muted)
 static bool sControlDown;                   // 0x565375
@@ -847,67 +844,27 @@ void EEUserInterface::ProcessActions()
     gUIManager->UnlockUIForCopyData();
 }
 
-// FUNCTION: EXE 0x678040
-// Passes the IME candidate list to the UI when the candidate window option is on
-void EEUserInterface::UpdateIMECandidateList(HWND inWindow)
-{
-    if (gGamePreferences.mSettings.mUseCandidateWindow != true)
-        return;
-    HIMC theContext = ImmGetContext(inWindow);
-    if (theContext == NULL)
-        return;
-    long theSize = ImmGetCandidateListA(theContext, 0, NULL, 0);
-    if (theSize >= sIMEBufferSize) {
-        delete sIMEBuffer;
-        sIMEBufferSize = (theSize / 0x100 + 1) * 0x100;
-        sIMEBuffer = new char[sIMEBufferSize];
-    }
-    ImmGetCandidateListA(theContext, 0, (LPCANDIDATELIST)sIMEBuffer, sIMEBufferSize);
-    gUIManager->ChangeIMECandidateWindow(*reinterpret_cast<UIIMECandidateList*>(sIMEBuffer));
-    ImmReleaseContext(inWindow, theContext);
-}
-
 // FUNCTION: EXE 0x6780d3
-// Passes the IME composition string, its attributes and cursor to the UI
-void EEUserInterface::UpdateIMECompositionString(HWND inWindow)
+// Passes the input method's composition string (PLAT_EVENT_TEXT_EDITING; the original read it with
+// ImmGetCompositionStringA), its attributes (the edited part as the target clause, the rest as input: IMM's
+// ATTR_TARGET_CONVERTED / ATTR_INPUT) and the cursor to the UI
+void EEUserInterface::UpdateIMECompositionString(const char* inText, long inCursor, long inLength)
 {
-    UWideString theString;
-    HIMC theContext = ImmGetContext(inWindow);
-    if (theContext != NULL) {
-        long theCursor = ImmGetCompositionStringA(theContext, GCS_CURSORPOS, NULL, 0);
-        long theSize = ImmGetCompositionStringA(theContext, GCS_COMPSTR, NULL, 0);
-        if (theSize >= sIMEBufferSize) {
-            delete sIMEBuffer;
-            sIMEBufferSize = (theSize / 0x100 + 1) * 0x100;
-            sIMEBuffer = new char[sIMEBufferSize];
-        }
-        theSize = ImmGetCompositionStringA(theContext, GCS_COMPSTR, sIMEBuffer, sIMEBufferSize);
-        sIMEBuffer[theSize] = 0;
-        theString = sIMEBuffer;
-        theSize = ImmGetCompositionStringA(theContext, GCS_COMPATTR, sIMEBuffer, sIMEBufferSize);
-        sIMEBuffer[theSize] = 0;
-        gUIManager->ChangeIMECompositionString(theString, UString(sIMEBuffer), theCursor);
-        ImmReleaseContext(inWindow, theContext);
-    }
+    UWideString theString(inText);
+    unsigned long theCount = (unsigned long)strlen(inText);
+    std::string theAttributes(theCount, '\2');   // ATTR_CONVERTED (non-zero: the attribute string ends at a 0)
+    for (unsigned long i = 0; i < theCount; i++)
+        if ((long)i >= inCursor && (long)i < inCursor + inLength)
+            theAttributes[i] = 1;
+    gUIManager->ChangeIMECompositionString(theString, UString(theAttributes.c_str()),
+                                          (unsigned long)(inCursor < 0 ? 0 : inCursor));
 }
 
 // FUNCTION: EXE 0x6781da
-// Passes the IME result string to the UI
-void EEUserInterface::AddIMEResultString(HWND inWindow)
+// Passes the input method's result string to the UI (the committed composition)
+void EEUserInterface::AddIMEResultString(const char* inText)
 {
-    HIMC theContext = ImmGetContext(inWindow);
-    if (theContext == NULL)
-        return;
-    long theSize = ImmGetCompositionStringA(theContext, GCS_RESULTSTR, NULL, 0);
-    if (theSize >= sIMEBufferSize) {
-        delete sIMEBuffer;
-        sIMEBufferSize = (theSize / 0x100 + 1) * 0x100;
-        sIMEBuffer = new char[sIMEBufferSize];
-    }
-    theSize = ImmGetCompositionStringA(theContext, GCS_RESULTSTR, sIMEBuffer, sIMEBufferSize);
-    sIMEBuffer[theSize] = 0;
-    gUIManager->AddIMEResultString(sIMEBuffer);
-    ImmReleaseContext(inWindow, theContext);
+    gUIManager->AddIMEResultString(inText);
 }
 
 // FUNCTION: EXE 0x67828f
@@ -1327,7 +1284,7 @@ void EEUserInterface::OpenIMECandidateWindow()
 
 // FUNCTION: EXE 0x678fc0
 // Opens the IME composition string
-void EEUserInterface::OpenIMECompositionString(HWND inWindow)
+void EEUserInterface::OpenIMECompositionString()
 {
     gUIManager->OpenIMECompositionString();
 }
@@ -1760,10 +1717,12 @@ void EEUserInterface::ResumeGraphics()
 // FUNCTION: EXE 0x6798ce
 // Handles the game window's events (platform/PlatWindow.h; the original's window procedure, case by case): close,
 // minimise and restore (muting while minimised), focus (the game minimises itself and suspends input while inactive),
-// the Control/AltGr state and typed text. The window's cursor is hidden at creation (WM_SETCURSOR's SetCursor(NULL)),
-// and the screen saver / Alt-Tab system commands need no handling. Input method composition: PORT.md step 4.6.
+// the Control/AltGr state, typed text and the input method's composition (shown by the edit box; the system draws
+// its candidate list). The window's cursor is hidden at creation (WM_SETCURSOR's SetCursor(NULL)), and the screen
+// saver / Alt-Tab system commands need no handling.
 void EEUserInterface::HandleEvent(const PlatInputEvent& inEvent)
 {
+    static bool sComposing;   // an input method composition is open (the edit box shows it)
     static float sMasterVolume = gSoundManager != NULL ? gSoundManager->GetMasterVolume() : 0.0f;
     static float sMusicVolume = gConductor != NULL ? gConductor->GetConductor().GetVolume() : 0.0f;
     if (Fn297ED0() && inEvent.mType != PLAT_EVENT_MINIMIZED && inEvent.mType != PLAT_EVENT_RESTORED
@@ -1844,7 +1803,28 @@ void EEUserInterface::HandleEvent(const PlatInputEvent& inEvent)
             sAltDown = !(theKey == VK_MENU || theKey == VK_RMENU);
         break;
     }
-    case PLAT_EVENT_TEXT:   // WM_CHAR, one per byte (Windows-1252)
+    case PLAT_EVENT_TEXT_EDITING:   // WM_IME_STARTCOMPOSITION / WM_IME_COMPOSITION (GCS_COMPSTR) / WM_IME_ENDCOMPOSITION
+        if (gUserInterface == NULL || gUIManager == NULL)
+            break;
+        if (inEvent.mText.mText[0] != 0) {
+            if (!sComposing) {
+                gUserInterface->OpenIMECompositionString();
+                sComposing = true;
+            }
+            gUserInterface->UpdateIMECompositionString(inEvent.mText.mText, inEvent.mText.mCursor,
+                                                       inEvent.mText.mLength);
+        } else if (sComposing) {
+            gUserInterface->CloseIMECompositionString();
+            sComposing = false;
+        }
+        break;
+    case PLAT_EVENT_TEXT:   // WM_CHAR, one per byte (Windows-1252); a composition's result: GCS_RESULTSTR
+        if (sComposing && gUserInterface != NULL && gUIManager != NULL) {
+            gUserInterface->AddIMEResultString(inEvent.mText.mText);
+            gUserInterface->CloseIMECompositionString();
+            sComposing = false;
+            break;
+        }
         if (!sControlDown || sAltDown == true) {
             for (const char* p = inEvent.mText.mText; *p; p++) {
                 char theKey[4] = {*p, 0, 0, 0};   // WM_CHAR's wParam

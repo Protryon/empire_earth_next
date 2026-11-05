@@ -398,6 +398,9 @@ extern "C" int PlatWindowSystemStart(void)
 {
     // the game minimizes itself when it loses the focus (EEUserInterface); SDL must not do it a second time
     SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0");
+    // the game shows the input method's composition in its edit box (PLAT_EVENT_TEXT_EDITING); the system draws the
+    // candidate list
+    SDL_SetHint(SDL_HINT_IME_IMPLEMENTED_UI, "composition");
     if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
         sLastError = SDL_GetError();
         return 0;
@@ -731,4 +734,10 @@ extern "C" void PlatTextInputStart(PlatWindow* inWindow, int32_t inX, int32_t in
 extern "C" void PlatTextInputStop(PlatWindow* inWindow)
 {
     SDL_StopTextInput(inWindow->mWindow);
+}
+
+extern "C" void PlatTextInputCancel(PlatWindow* inWindow)
+{
+    if (inWindow)
+        SDL_ClearComposition(inWindow->mWindow);
 }
