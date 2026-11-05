@@ -54,6 +54,13 @@ python -I build.py --x64            # -> build/clang-x64-exe/exe/EE-AOC.exe (x86
 python -I tools/clang_build.py      # compile only, with a ranked error census (--x64: the 64-bit census)
 ```
 
+To play, prepare a directory with the exe, a copy of the installed game's data, the db tables as text and the movies
+converted for the build's player (`--movies DIR` points at `.bik` files, e.g. an extracted retail disc; ffmpeg):
+
+```
+python -I tools/make_play_dir.py C:\EE-play [--x64] [--movies DIR]    # then run C:\EE-play\EE-AOC.exe
+```
+
 The exe comes with its `.map` and `.pdb`. Sources are staged under `C:\EEX\` before they are compiled (env
 `EE_ORIG_SRC_ROOT` moves it). A full build takes about two minutes on a 12-core machine.
 
