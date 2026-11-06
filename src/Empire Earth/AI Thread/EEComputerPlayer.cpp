@@ -5622,6 +5622,31 @@ void EEComputerPlayer::EpochMediaUnloaded(long inEpoch)
     EEPlayer::EpochMediaUnloaded(inEpoch);
 }
 
+// New (docs/AI_RESEARCH.md §8.13, the owner's military pressure): keeps a standing army of the personality's
+// standing_army per worker (aipersonalities.yaml), up to the original's military share of the pop cap, by requesting
+// the favourite land unit (at most 5 at a time; the requests count as army). The original raised military units
+// only for attack groups and defense build-ups: honest armies stayed at 10-30 while iron piled up to 2,000.
+void EEComputerPlayer::KeepStandingArmy()
+{
+    EECPUnitManager* theUnits = this->mCivilizationManager != NULL ? this->mCivilizationManager->mUnitManager : NULL;
+    if (theUnits == NULL || this->mCombatManager == NULL || this->mFavoriteLandType <= 0 || !this->mCanBuild)
+        return;
+    long theWorkers = (long)theUnits->GetNumWorkers();
+    long theArmy = theUnits->CountMilitaryUnits(false, true);
+    long theTarget = UMFloatToLong(EECPPersonality(this).mStandingArmy * (float)theWorkers);
+    long theRoom = this->mCombatManager->GetUnitsAvailable();
+    long theWanted = theTarget - theArmy;
+    if (theWanted > theRoom)
+        theWanted = theRoom;
+    if (theWanted > 5)
+        theWanted = 5;
+    if (theWanted <= 0)
+        return;
+    EE_CP_TRACE(this, "army.request", "cls=%ld n=%ld army=%ld target=%ld", this->mFavoriteLandType, theWanted, theArmy,
+        theTarget);
+    theUnits->RequestUnits(this->mFavoriteLandType, theWanted, 0, 0);
+}
+
 // FUNCTION: EXE 0x43f175
 // Runs the AI tick: one-time start-up on the first call, then the enable, attack-state, population and
 // expansion timers and the manager updates; finally kills the units queued as stranded
@@ -5692,6 +5717,8 @@ void EEComputerPlayer::Update(unsigned long inTime)
             EECPTraceScope theExploration("explore");
             this->mExplorationManager->Update(inTime);
         }
+        if (inTime % 30000 < 1000)   // every 30 game s (each computer player updates once a game second)
+            this->KeepStandingArmy();
         EECPTraceStats(this, inTime);
     } else if (this->mCombatManager != NULL)
         this->mCombatManager->DeleteGroups();

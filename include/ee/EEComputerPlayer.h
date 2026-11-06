@@ -97,6 +97,7 @@ public:
     void Update(unsigned long inTime);      // 0x3f175 (gArtificialIntelligence's round robin; provisional name)
     // 0x2eca0: 1.0, or +0xe44/+0xe48 times a constant depending on +0xbd8 (0 or 2) (provisional name)
     float GetResearchFrequencyModifier();
+    void KeepStandingArmy();                // new: the personality's standing army (docs/AI_RESEARCH.md §8.13)
     float GetEpochFrequencyModifier();      // 0x2ec0a (EECPCivilizationManager::SetNextEpochAdvanceTime scales by it) (provisional name)
     // inline (SetNextEpochAdvanceTime 0x70b43 loads both into registers before its fild spills) (provisional name)
     // inline (its COMDAT 0x68849 sits in EECPBuildManager.cpp's range; the civilization manager calls it out of line)

@@ -317,14 +317,22 @@ EEAIPersonalityRules::EEAIPersonalityRules()
     theTall.mID = "tall";
     theTall.mEpochPressureStart = 0.15f;
     theTall.mEpochPressureFull = 0.5f;
+    theTall.mStandingArmy = 0.2f;
     EEAIPersonalityRule theWide;            // boom: grows its workforce, advances late
     theWide.mID = "wide";
     theWide.mEpochPressureStart = 0.6f;
     theWide.mEpochPressureFull = 1.0f;
     theWide.mMaxCitizenShare = 0.8f;
+    theWide.mStandingArmy = 0.15f;
+    EEAIPersonalityRule theAggressive;      // rush: a large standing army, a middling epoch pace
+    theAggressive.mID = "aggressive";
+    theAggressive.mEpochPressureStart = 0.4f;
+    theAggressive.mEpochPressureFull = 0.9f;
+    theAggressive.mStandingArmy = 0.5f;
     this->mPersonalities.push_back(theBalanced);
     this->mPersonalities.push_back(theTall);
     this->mPersonalities.push_back(theWide);
+    this->mPersonalities.push_back(theAggressive);
     this->mAssign.push_back(0);
 }
 
@@ -931,6 +939,13 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
                 y.Int("moves_per_cycle", p.mMovesPerCycle);
                 y.Done();
             }
+            if (const Node* s = x.Sub("military")) {
+                Map y(*s, doc, "military");
+                y.Float("standing_army", p.mStandingArmy);
+                y.Done();
+                if (!(p.mStandingArmy >= 0.0f))
+                    Fail(y.Where() + ": military: standing_army must be 0 or more");
+            }
             x.Done();
             r.mPersonalities.push_back(p);
         }
@@ -1227,6 +1242,7 @@ void EERules::Dump(std::string& outJson) const
             j.Float("max_citizen_share", p.mMaxCitizenShare);
             j.Int("wood_slots", p.mWoodSlots);
             j.Int("moves_per_cycle", p.mMovesPerCycle);
+            j.Float("standing_army", p.mStandingArmy);
             j.Close('}');
         }
         j.Close(']');
