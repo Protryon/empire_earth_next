@@ -224,7 +224,18 @@ done:
 long EECPUnitManager::GetWantedCitizens()
 {
     long theCount = this->mPlayer->GetPopulationLimit(0);
-    return UMFloatToLong(theCount * this->mPlayer->GetCitizenPercentage());
+    long theWanted = UMFloatToLong(theCount * this->mPlayer->GetCitizenPercentage());
+    // new (docs/AI_RESEARCH.md §8.8, owner: use what you hold): enough citizens to work the held resource sites, up
+    // to 70% of the pop cap; the original's pop cap x citizen percentage (row 3, 0.45) stays the floor
+    if (this->mManager->mResourceManager != NULL) {
+        long theCapacity = (long)this->mManager->mResourceManager->GetGatherCapacity();
+        long theCeiling = UMFloatToLong(theCount * 0.7f);
+        if (theCapacity > theCeiling)
+            theCapacity = theCeiling;
+        if (theCapacity > theWanted)
+            theWanted = theCapacity;
+    }
+    return theWanted;
 }
 
 // FUNCTION: EXE 0x493b20

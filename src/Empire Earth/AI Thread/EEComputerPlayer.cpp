@@ -1041,7 +1041,7 @@ EECPResourceCenter* EEComputerPlayer::GetResourceCenterOf(EEUnit* inUnit)
 }
 
 // New: the epoch advance the research manager has queued and not yet started (kTechNone: none)
-static long EECPPendingEpoch(EEComputerPlayer* inPlayer)
+long EECPPendingEpoch(EEComputerPlayer* inPlayer)
 {
     if (inPlayer->mCivilizationManager == NULL || inPlayer->mCivilizationManager->mResearchManager == NULL)
         return kTechNone;

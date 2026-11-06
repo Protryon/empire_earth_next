@@ -58,6 +58,8 @@
 #include "ee/EECPPersonnel.h"
 #include "ee/EEWheel.h"
 #include "ee/EEUGAttackUnit.h"
+#include "ee/EECPResearchManager.h"
+#include "ee/EECPTrace.h"
 
 const UString EECPResourceManager::sData("EECPResourceManager-Data");
 // SYNTHETIC: EXE 0x48e702   (wrapper)
@@ -196,16 +198,23 @@ void EECPResourceManager::AssignIdleGatherers(std::deque<EEComplexUnit*>& ioUnit
         else
             it = ioUnits.erase(it, it + 1);
     }
+    // new: the most under-served resource first (wanted minus listed; the original's fixed order, gold, iron, stone,
+    // wood, broke ties), so leftover citizens no longer pile up on gold and iron while wood is short
     for (it = ioUnits.begin(); it != ioUnits.end(); ++it) {
-        EEUnit* theResource = this->FindResourceTarget(5, *it, false);
-        if (theResource == NULL) {
-            theResource = this->FindResourceTarget(6, *it, false);
-            if (theResource == NULL) {
-                theResource = this->FindResourceTarget(4, *it, false);
-                if (theResource == NULL)
-                    theResource = this->FindForestTarget(1, *it);
+        long theOrder[4] = {5, 6, 4, 3};
+        for (long i = 1; i < 4; i++)
+            for (long k = i; k > 0; k--) {
+                long a = theOrder[k - 1], b = theOrder[k];
+                long theA = (long)this->mWantedGatherers[a] - (long)this->mGatherers[a].size();
+                long theB = (long)this->mWantedGatherers[b] - (long)this->mGatherers[b].size();
+                if (theB > theA) {
+                    theOrder[k - 1] = b;
+                    theOrder[k] = a;
+                }
             }
-        }
+        EEUnit* theResource = NULL;
+        for (long i = 0; i < 4 && theResource == NULL; i++)
+            theResource = theOrder[i] == 3 ? this->FindForestTarget(1, *it) : this->FindResourceTarget(theOrder[i], *it, false);
         if (theResource != NULL)
             this->SendToGather(*it, theResource, NULL);
     }
@@ -310,6 +319,7 @@ void EECPResourceManager::AssignGatherers()
             theTownContinent = gContinentManager.GetContinentID(theTown.mX, theTown.mY);
     } else
         theAcross = false;
+    this->RebalanceGatherers();   // new
 
     for (it = this->mGatherers[0].begin(); it != this->mGatherers[0].end(); ++it) {
         theUnit = *it;
@@ -1414,6 +1424,99 @@ void EECPResourceManager::RemoveCosts(EETechTreeNode* inNode, long inCount)
     }
 }
 
+// New (docs/AI_RESEARCH.md §8.7-8.8; the original, 0x491b78, split the gatherers by mNeeds, a ledger of queued costs
+// minus what was gathered or started that ignored the stock and only grew: 85-90% of the citizens wanted on food all
+// game, stone and gold left unworked, iron piled up). The economy's tuning, to move into the AI rules data with the
+// personalities. Each resource's weight is a small base share plus its shortfall: what the AI has asked for and not
+// yet paid (its build queues, unit requests, queued research and the citizens it still wants; all saved state,
+// recomputed each time) minus its stock, per kShortfallUnit; a stock more than kSurplus above what is asked for weighs
+// kSurplusCut times; each share is capped by what the held sites take.
+struct EECPEconomyTuning {
+    float mShare[7];                        // by resource index (2 food .. 6 iron)
+    float mShortfallUnit;                   // a shortfall of this many adds 1 to the weight
+    float mSurplusCut;
+    long mSurplus;
+    float mMaxCitizenShare;                 // GetWantedCitizens: at most this share of the pop cap
+    unsigned long mWoodSlots;               // wood's capacity (trees are not resource-center units)
+    unsigned long mMovesPerCycle;           // RebalanceGatherers: gatherers freed per 10 s
+};
+static const EECPEconomyTuning kEconomy = { {0.0f, 0.0f, 0.20f, 0.15f, 0.05f, 0.05f, 0.05f}, 500.0f, 0.3f, 1500, 0.7f, 15, 3 };
+
+// What the computer player has asked for and not yet paid, per resource (scaled costs)
+[[maybe_unused]] static void EECPRMPendingCosts(EECPCivilizationManager* inManager, long* outCosts)
+{
+    EEComputerPlayer* thePlayer = inManager->mPlayer;
+    EETechTree* theTree = thePlayer->mTechnologies;
+    for (long r = 0; r < 7; r++)
+        outCosts[r] = 0;
+    if (theTree == NULL)
+        return;
+    struct Local {
+        static void Add(EEComputerPlayer* inPlayer, EETechTreeNode* inNode, long inCount, long* ioCosts)
+        {
+            if (inNode == NULL || inCount <= 0)
+                return;
+            for (long r = 2; r < 7; r++)
+                ioCosts[r] += inPlayer->ScaleCost(inNode->GetCost(r, kUnitTypeTownCenter, 1.0f)) * inCount;
+        }
+        static EETechTreeNode* ClassNode(EETechTree* inTree, unsigned long inClass)
+        {
+            EEUnitClass* theClass = inClass < EEUnitClassCount() ? gUnitClassTable[inClass] : NULL;
+            return theClass != NULL ? inTree->Get(theClass->mTechnology) : NULL;
+        }
+    };
+    for (long e = 0; e < EEEpochCount(); e++) {
+        if (inManager->mBuildManager != NULL)
+            for (unsigned long k = 0; k < inManager->mBuildManager->mQueues[e].size(); k++)
+                Local::Add(thePlayer, Local::ClassNode(theTree, inManager->mBuildManager->mQueues[e][k].first), 1, outCosts);
+        if (inManager->mUnitManager != NULL)
+            for (unsigned long k = 0; k < inManager->mUnitManager->mRequests[e].size(); k++) {
+                const EECPUMRequest& theRequest = inManager->mUnitManager->mRequests[e][k];
+                Local::Add(thePlayer, Local::ClassNode(theTree, theRequest.mUnitClass), (long)theRequest.mCount, outCosts);
+            }
+        if (inManager->mResearchManager != NULL)
+            for (unsigned long k = 0; k < inManager->mResearchManager->mEpochIDs[e].size(); k++)
+                Local::Add(thePlayer, theTree->Get(inManager->mResearchManager->mEpochIDs[e][k]), 1, outCosts);
+    }
+    if (inManager->mUnitManager != NULL) {
+        long theMissing = inManager->mUnitManager->GetWantedCitizens() - (long)inManager->mUnitManager->GetNumWorkers();
+        if (theMissing > 10)
+            theMissing = 10;   // the next ten citizens
+        Local::Add(thePlayer, Local::ClassNode(theTree, kUnitTypeCitizen), theMissing, outCosts);
+    }
+}
+
+unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
+{
+    EEComputerPlayer* thePlayer = this->mManager->mPlayer;
+    unsigned long theSites[7] = {0, 0, 0, 0, 0, 0, 0};
+    unsigned long theActive = 0;
+    for (int thePass = 0; thePass < 2 && theActive == 0; thePass++) {   // the active centers; all when none is
+        for (unsigned long k = 0; k < thePlayer->GetNumResourceCenters(); k++) {
+            EECPResourceCenter* theCenter = thePlayer->GetResourceCenter(k);
+            if (thePass == 0 && !theCenter->mIsActive)
+                continue;
+            theActive++;
+            for (unsigned long u = 0; u < theCenter->mUnits.size(); u++) {
+                unsigned long theType = theCenter->mUnits[u]->mResourceType;
+                if (theType >= 2 && theType < 7 && theCenter->mUnits[u]->mHitPoints > 0)
+                    theSites[theType]++;
+            }
+        }
+    }
+    unsigned long theLimit = thePlayer->mMiningLimit > 0 ? (unsigned long)thePlayer->mMiningLimit : 1;
+    unsigned long theTotal = 0;
+    for (long r = 2; r < 7; r++) {
+        unsigned long theCapacity = r == 3 ? kEconomy.mWoodSlots : theSites[r] * theLimit;
+        if (r == 2)
+            theCapacity += this->mGatherers[2].size();   // farms and fish are not center units: what works there now
+        if (r == inResource)
+            return theCapacity;
+        theTotal += theCapacity;
+    }
+    return theTotal;
+}
+
 // FUNCTION: EXE 0x491b78
 // Splits the gatherers over the resources by their needs, capped by the resource units available; returns true
 // if any wanted count changed
@@ -1474,6 +1577,36 @@ bool EECPResourceManager::UpdateWantedGatherers()
         }
     }
     return theChanged;
+}
+
+// New: frees up to kEconomy.mMovesPerCycle gatherers of resources with more than one over their wanted count while
+// another resource is short (the original only placed idle citizens, so a split once made never changed); AssignGatherers
+// places them on its next pass
+void EECPResourceManager::RebalanceGatherers()
+{
+    bool theShort = false;
+    for (long r = 2; r < 7; r++)
+        if (this->mGatherers[r].size() < this->mWantedGatherers[r])
+            theShort = true;
+    if (!theShort)
+        return;
+    unsigned long theMoves = 0;
+    for (long r = 2; r < 7 && theMoves < kEconomy.mMovesPerCycle; r++) {
+        while (theMoves < kEconomy.mMovesPerCycle && this->mGatherers[r].size() > this->mWantedGatherers[r] + 1) {
+            EEComplexUnit* theUnit = this->mGatherers[r].back();
+            if (theUnit->mIsDisabled || theUnit->mIsDetachedFromAI || theUnit->mCitizenBuildQueue.size() != 0
+                || theUnit->GetUnitClass()->mCategory == kUnitCategoryNavalCitizen)
+                break;
+            theUnit->Reference();
+            this->AddIdleGatherer(theUnit);   // off this resource's list, onto the idle list
+            theUnit->ClearGoalQueue(0);
+            theUnit->StartAction(kActionIdle);
+            theUnit->GetUnitClass()->ActionChanged(theUnit);
+            EE_CP_TRACE(this->mManager->mPlayer, "gather.move", "from=%ld unit=%lu", r, theUnit->GetUnitID());
+            theUnit->Dereference();
+            theMoves++;
+        }
+    }
 }
 
 // FUNCTION: EXE 0x491d34

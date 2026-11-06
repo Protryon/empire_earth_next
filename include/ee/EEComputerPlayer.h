@@ -461,4 +461,8 @@ enum EECPManagerKind {
     kCPManagerMoraleBuildings = 9,  // CanEnableManager case 9 uses mEnableStockBuild; EnableManagers case 9 sets EECPCivilizationManager::mMoraleBuildingsEnabled (QueueMoraleBuilding timer) (provisional name)
 };
 
+// New (docs/AI_RESEARCH.md §8.7): the epoch advance the player's research manager has queued and not yet started
+// (kTechNone: none); without the free-epochs cheat its cost is reserved
+long EECPPendingEpoch(EEComputerPlayer* inPlayer);
+
 #endif
