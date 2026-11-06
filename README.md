@@ -133,6 +133,25 @@ python -I tools/harness/posix_game.py --exe build/xbuild/macos-arm64/game-addres
 (`python -I build.py --test-profile windowed-software`), drives the menus, plays AI games with a time shim and
 records telemetry, all on a GPU-less VM. See `tools/harness/README.md`.
 
+**Headless simulation** (TEST ONLY; AI benchmarks and parameter sweeps): `python -I build.py --sim` also links
+`build/clang/exe/EE-SIM.exe`, the game's own code (every unit of EE-AOC.exe) with the front end stubbed: a hidden
+window, no rendering, no sound, the menus and lobby driven in-process the way the harness drives them, and the
+physics thread sending its own communications ticks back to back instead of waiting for the clock. A seeded 2-AI
+Hard Small game of 45 game minutes takes 13-17 s (4-7 s of it the game itself) instead of the harness's ~170 s,
+and prints the harness's `EE-AI` trace for the same seed (`platform/PlatSim.h`, `src/Empire Earth/Empire Earth/EESim.cpp`):
+
+```
+python -I tools/sim.py -- --seed 3 --difficulty Hard --game-seconds 2700 --cheats none --report r.json --ai-trace --trace t.txt
+python -I tools/sim.py -- --seed 3 --set aipersonalities.balanced.military.army_floor=0.2 --report r.json
+python -I tools/sim_bench.py --name base --seeds 2-7 --repeat 2 --jobs 2      # build/sim/bench/base/results.csv
+python -I tools/sim_bench.py --name floor --seeds 2-7 --vary aipersonalities.balanced.military.army_floor=0.1,0.2,0.3
+```
+
+`tools/sim.py` stages the data tree per slot (`build/sim/stage/<slot>`: hard links, the tree is only read) and passes
+EE-SIM.exe its options (`EE-SIM.exe --help`). The report (JSON) holds the outcome, the game time and per player the
+epoch, citizens, army, buildings, population and resources every `--sample-seconds`. See PORT_LEARNINGS.md "The
+headless simulation" for what it shares with the game and where it differs.
+
 ## Upstream
 
 The `upstream` remote is the `empire_earth` reconstruction. Its `fixes-all` branch is merged in, never rebased (see
