@@ -878,18 +878,54 @@ Readings:
   costs 1,122. Candidates: hunting and fishing, forage site choice (§8.4: berries rejected as "enemy near"), and
   drop-site placement.
 
+### 8.11 Lost builders and the stock correction (2026-11-05)
+
+- **Lost builders.**
+  - The trace (`food`, `builders` lines) showed 11 of 30 honest citizens at 20 minutes sitting on a finished building.
+    They had a stale build goal and were waiting in the citizen script's `TaskSmartCitizen` state (action 4028).
+  - The AI only takes citizens with no goal, or with a gather goal, so it never used them again.
+  - Fix: `RebalanceGatherers` frees them every 10 s.
+  - Effect: honest citizens at 20/30/40 min went from 30/36/40 to 35/39/45, and buildings at 40 min from 12 to 16.
+- **Stock correction of the original split.**
+  - A resource with more than 1,000 in stock gets half its share.
+  - A resource with less than 150 gets at least a floor share: wood 25%, food 10%, the others 5%.
+  - Effect: honest citizens went to 38/46/49, and the Stone Age went from 10 of 12 to 12 of 12 (at 37 min).
+
+### 8.12 Personalities as data (stage 1, 2026-11-05)
+
+**`aipersonalities.yaml`** is a new rules document (DATA_FORMATS.md).
+- Per personality, it holds the epoch pressure (`start`, `full`) and the economy tuning of §8.10-8.11.
+- `assign` names the personality each computer player takes.
+- The defaults are `balanced` (today's tuning, assigned to everyone), `tall` and `wide`.
+- `EE_AI_PERSONALITY` overrides the assignment (TEST ONLY), and `ai_bench --personality tall+wide` sets it.
+
+Six 60-minute honest games per set (seeds 2-7, Hard):
+
+| Personality | Citizens at 20 / 40 min | Stone Age | Copper Age | Head-to-head |
+|---|---|---|---|---|
+| tall (0.15 / 0.5) | 24 / 29 | 11 of 12, at 25.5 min | 2 of 12 | loses to wide 10 of 12 |
+| balanced (0.3 / 0.8) | 38 / 49 | 12 of 12, at 36.7 min | 0 | |
+| wide (0.6 / 1.0, citizens 80%) | 42 / 53 | 9 of 12, at 45.8 min | 0 | beats tall from either seat |
+
+Readings:
+- **The stage 1 gate is met:** the personalities differ measurably.
+- **On a Small map, the tall rush does not pay.** Reaching the Stone Age 20 minutes earlier on half the workforce
+  loses to the boom. Military pressure, the third slider, does not exist yet; that is the obvious next weight.
+- **Seat asymmetry.** Over 89 honest games where both AIs had the same personality, p2 dominated in 39, p3 in 24,
+  and 26 were close. Candidates: the round-robin update order (p2 always first) and the start positions. Head-to-head
+  tests have to swap the seats.
+
 ### 8.9 Next
 
-Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2.
+Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
+pressure, the stock correction, the lost builders, and personalities as data.
 
-1. **Economy by capacity (§8.8, owner).**
-   - The worker target is the capacity of the held resource sites.
-   - The gatherer split is by shortfall against the stock and the reserves, not by the needs ledger.
-   - A few busy gatherers move each cycle, so the split can rebalance.
-   - Leftover citizens go to the most-needed resource, not the fixed gold → iron → stone → wood order.
-   - Wild food is budgeted until farms exist.
-2. **Epoch pressure instead of the fixed timer** (§8.8), with personality weights as data (stage 1).
-3. **Combat:** the target choice trace in `EECPCombatManager::Update`, and why the honest games are so lopsided:
-   one AI usually wipes out the other, and p2 wins far more often than p3.
-4. **Still to port:** `save_load.py` (save gate) and `game_batch.py`, or use `ai_bench`.
-5. **Before any merge:** `tools/gates.sh`, and the macOS/Linux builds.
+1. **Military pressure.** It is the third personality weight (owner, §8.8). First, a target choice and
+   attack-timing trace in `EECPCombatManager::Update`, to see why most honest games end in a wipe-out.
+2. **Food before farms.** Hunting and fishing, forage site choice (§8.4), and drop sites. Then the Copper Age farm
+   economy, where "use what you hold" (granaries, farm plots) starts to bind.
+3. **Seat asymmetry** (§8.12): test the update-order hypothesis by rotating the round-robin start.
+4. **Lobby:** a personality per AI slot, and a fair-Hard difficulty row (`ai_cheats: []`) shipped as data.
+5. **Still to port:** `save_load.py` (save gate) and `game_batch.py`, or use `ai_bench`.
+6. **Before any merge:** `tools/gates.sh`, the macOS/Linux builds, and republishing the data bundle (new rules
+   document).
