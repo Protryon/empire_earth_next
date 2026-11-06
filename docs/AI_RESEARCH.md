@@ -804,13 +804,66 @@ Readings:
 - **The idle human is not a neutral observer.** The AIs prefer human targets (§2.2), so the honest run ends when
   they defeat it. Benchmarks need `--no-human-defeat`, or an observer slot.
 
-### 8.5 Next
+### 8.7 Stage 2 fixes so far (2026-11-05)
 
-1. Benchmark games of 60 minutes or more, many seeds, `popband` off, with standard errors (§8.4 lessons). §8.6 has
-   the first 60-minute pair.
-2. Trace the remaining decision points: resource-manager gatherer assignment, failed `FindSite` placements (to test
-   the type-395 claim) and the target choice in `EECPCombatManager::Update`.
-3. Q2 (an AI hash in the out-of-sync check) remains open, and so do `game_batch.py` and `save_load.py`, which still
-   need porting.
-4. Then stage 1, or stage 2 first if a fair opponent is wanted sooner (§5 "Ordering"). The Age of AI findings make
-   stage 2 better scoped than §5 assumed.
+Benchmark: `ai_bench.py --jobs 6` (six 60-minute games in about 3 minutes), Hard, Small, 2 AIs, the idle human
+kept in (`--no-human-defeat`). Each fix is its own commit on `new-ai`.
+
+| Fix | Evidence | Effect |
+|---|---|---|
+| **Stuck build loop.** A stalled build is requeued without its site (`CancelStalledBuilds`). | `build.stalled ... blocker=37 owner=<self>`: 1,426 of 1,466 stalls were the AI's own dying foundation. | Stalls per AI 237 → 4 with the cheats on; buildings at 60 min 31 → 34 with the cheats, 15 → 18.5 without. |
+| **Wasted build slots.** Up to 4 producible requests are tried per 3 s update, until one starts. | `build.nosite cls=47`: the Paleolithic guard tower found no site about 2,500 times per AI per hour, and used up the update each time. | Honest AIs: buildings 18.5 → 21.5, build starts 12 → 14. With the cheats on: unchanged. |
+| **Honest epoch advances.** An unaffordable research stays queued (`TryResearch`); the epoch's cost counts in the needs; a pending epoch reserves its cost (`EEComputerPlayer::CanAfford`). | The original treated an unaffordable epoch research as started and dropped it, and `mAdvancingEpoch` then blocked every later attempt. Stone Age costs 1,122 food, and food never rose above about 70. | Honest AIs reaching the Stone Age within 60 minutes: 0 of 24 → 9 of 24. They reach it 6-12 minutes after the epoch timer asks (at 37-52 minutes). |
+| **Pop cap clamp.** The AI's pop cap never exceeds the game's population limit. | Row 98 on Hard is 140%: 560 of 400 without `popband`. | Owner request. |
+
+Also:
+- **Cheats as rules data.** `gameoptions.yaml` difficulties take `ai_cheats` (DATA_FORMATS.md). A fair Hard is now a
+  data row, and it is multiplayer-safe.
+- **Q2 done.** The out-of-sync checksum now includes every player's resources and the AI's state.
+
+**Determinism.** The trace has a "sim hash" line every 10 game s. Within 20 game minutes, same-seed pairs are
+identical, including 4 parallel games. Over 40-60 minutes, about half of the pairs diverge at 25-27 game minutes,
+also on the trace-only build. That is pre-existing, and the units, the RNG and the AI all diverge in the same 10 s.
+Owner decision (2026-11-05): lockstep stays. Keep the current determinism, and fix old desyncs only when it is easy.
+
+**Root causes found for the honest economy, still open:**
+- **No farms before the Copper Age.** Farms and granaries are Copper Age, two epochs after the start. Until then,
+  food comes only from wild sources, which run out. No honest AI queued a single granary in 60 minutes.
+- **The needs ledger only grows.** The gatherer split follows `mNeeds`, which is the queued costs minus what has been
+  gathered or started. It ignores the stock and counts costs twice. Food need goes from 12.6k to 21.6k over the
+  game, so the split wants 85-90% of citizens on food.
+- **Busy gatherers never move.** `AssignGatherers` places idle citizens only. Leftovers go to gold → iron → stone →
+  wood in a fixed order, never to food. After an hour: iron 3,300 and gold 1,500 unused, food 15.
+- **The epoch timer, not the economy, decides when to advance.** Row 28 sets it to 50-70 minutes.
+
+### 8.8 Design input from the owner (2026-11-05)
+
+- **Use what you hold.** The AI should always fully work its claimed and defended resources: granaries, farm plots,
+  mines, woods near drop sites. The worker target should come from the capacity of those sites, not from pop cap ×
+  citizen percentage (`GetWantedCitizens`). Food is sometimes needed for something more urgent than citizens, but
+  saturation is the standing goal.
+- **A maximum pop cap.** The AI never goes above the game's population limit (done, §8.7).
+- **Personality as competing pressures.** Three pressures compete for resources: epoch up (tall), resource gathering
+  and expansion (wide), and military buildup.
+  - Each personality weights them.
+  - **Epoch pressure rises with time**: since the last advance, and against the opponents' epochs.
+  - This replaces the fixed epoch timer (row 28).
+  - The epoch reserve of §8.7 is the first instance: how much of the reserve is enforced should come from the epoch
+    pressure.
+  - These are the utility weights of §4.1 and stage 3. They go in as data from stage 1 on.
+
+### 8.9 Next
+
+Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2.
+
+1. **Economy by capacity (§8.8, owner).**
+   - The worker target is the capacity of the held resource sites.
+   - The gatherer split is by shortfall against the stock and the reserves, not by the needs ledger.
+   - A few busy gatherers move each cycle, so the split can rebalance.
+   - Leftover citizens go to the most-needed resource, not the fixed gold → iron → stone → wood order.
+   - Wild food is budgeted until farms exist.
+2. **Epoch pressure instead of the fixed timer** (§8.8), with personality weights as data (stage 1).
+3. **Combat:** the target choice trace in `EECPCombatManager::Update`, and why the honest games are so lopsided:
+   one AI usually wipes out the other, and p2 wins far more often than p3.
+4. **Still to port:** `save_load.py` (save gate) and `game_batch.py`, or use `ai_bench`.
+5. **Before any merge:** `tools/gates.sh`, and the macOS/Linux builds.
