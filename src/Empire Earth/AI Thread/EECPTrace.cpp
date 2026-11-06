@@ -37,6 +37,7 @@
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPBuildManager.h"
+#include "ee/EECPResourceManager.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPAttackCommander.h"
 #include "ee/EEUnitGoal.h"
@@ -182,6 +183,18 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         inPlayer->EEPlayer::GetPopulationLimit(0), theCitizens, theIdle, (unsigned long)theFree.size(),
         theGatherers[kResourceFood], theGatherers[kResourceWood], theGatherers[kResourceStone],
         theGatherers[kResourceGold], theGatherers[kResourceIron], theGatherers[0], theBuildings, theUnfinished, theOther);
+    // the resource manager's model: the gatherers it wants per resource, the ones it has listed, and its needs
+    // ledger (queued costs earned minus what was gathered or started; UpdateWantedGatherers splits by it)
+    if (inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mResourceManager != NULL) {
+        EECPResourceManager* theRM = inPlayer->mCivilizationManager->mResourceManager;
+        EECPTraceOut(inPlayer, "econ", "want=%lu/%lu/%lu/%lu/%lu listed=%lu/%lu/%lu/%lu/%lu/%lu need=%ld/%ld/%ld/%ld/%ld",
+            theRM->mWantedGatherers[2], theRM->mWantedGatherers[3], theRM->mWantedGatherers[4],
+            theRM->mWantedGatherers[5], theRM->mWantedGatherers[6], (unsigned long)theRM->mGatherers[2].size(),
+            (unsigned long)theRM->mGatherers[3].size(), (unsigned long)theRM->mGatherers[4].size(),
+            (unsigned long)theRM->mGatherers[5].size(), (unsigned long)theRM->mGatherers[6].size(),
+            (unsigned long)theRM->mGatherers[0].size(), theRM->mNeeds[2], theRM->mNeeds[3], theRM->mNeeds[4],
+            theRM->mNeeds[5], theRM->mNeeds[6]);
+    }
     gCPTraceManager = theSaved;
 }
 
