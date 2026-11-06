@@ -58,7 +58,7 @@ The game reads its data as one loose `Data` folder in its own directory: the con
 archives (*Art of Conquest* and the original *Empire Earth*) and the original game's loose data, merged in the game's
 search order, with the db tables as text (CSV/YAML), the models as glTF and the textures as PNG. Neither a `data.ssa`
 nor an installation of the original game is needed. `tools/open_data.py` makes that tree from the two installs (only
-read) and packs it as a bundle (private: it is derived from the retail game):
+read) and packs it as a bundle (it is derived from the retail game):
 
 ```
 python -I tools/open_data.py build build/open_data/tree       # the tree (about 4 minutes; --binary: unconverted)

@@ -134,9 +134,9 @@ Before merging or pushing any code change, all of these are required:
 ## Data and release rules
 
 - Never commit retail game data or bulk derivatives of it. The `.gitignore` covers `build/` and `toolchain/`.
-- Data bundles go only to **private GitHub Releases** of this repository (no git, no LFS). Notes must say "Private,
-  do not redistribute." Create them with `gh release create ... -R Protryon/empire_earth_next --target main`
-  (always `-R`: with the upstream remote present, gh may pick the wrong repository).
+- Data bundles go only to **GitHub Releases** of this repository (no git, no LFS). Create them with
+  `gh release create ... -R Protryon/empire_earth_next --target main` (always `-R`: with the upstream remote present,
+  gh may pick the wrong repository).
 - The data ships in three parts that unzip into one folder, each its own release (`tools/fetch_data.py` pulls them):
   - `open-media-<sha>`: `ee_open_media-<sha>.zip` (`pack --part media`: models, original textures, sounds, fonts);
   - `open-textures-4x-<sha>`: `ee_textures_4x-<sha>.zip` (`Data/Textures-4x`, tools/upscale);

@@ -72,7 +72,7 @@ EMPTY_DIRS = ['Saved Games', 'Scenarios', 'Unit AI Scripts', 'Movies', 'Music']
 README = """Empire Earth: The Art of Conquest - open data bundle
 ====================================================
 
-Derived from the retail game: private, do not redistribute.
+Derived from the retail game.
 
 What this is
   The data a playthrough of the empire_earth_next build of Empire Earth: The Art of Conquest needs, as one loose
