@@ -15,6 +15,8 @@ python -I tools/fetch_wgpu.py                                      # once: wgpu-
 python -I build.py -j 10                                           # -> build/clang/exe/EE-AOC.exe (+ .map, .pdb)
 python -I build.py -j 10 --test-profile windowed-software          # -> build/clang-test/exe/EE-AOC.exe (harness image)
 python -I build.py --compile-only                                  # compile every unit, link nothing
+python -I build.py -j 10 --sim                                     # + build/clang/exe/EE-SIM.exe (headless simulation)
+python -I tools/sim_bench.py --name X --seeds 2-7 --jobs 2         # EE-SIM games: seeds x settings (README "Testing")
 python -I tools/clang_build.py [-j N] [module ...]                 # compile census, ranked error summary
 ```
 
@@ -76,7 +78,7 @@ a Win32 debugger) and `tools/gates.sh` cannot run; the POSIX tooling below stand
 The game reads one loose `Data` folder next to the exe:
 - db tables as text (CSV/YAML, with an `id` on every row);
 - the rules documents in `Data/db`: `combat.yaml`, `gameoptions.yaml`, `civbuilder.yaml`, `civpowers.yaml`,
-  `epochs.yaml`;
+  `aipersonalities.yaml`, `epochs.yaml`;
 - models as glTF, textures as PNG.
 
 There is no `data.ssa` and no registry. Settings live in `config.ini` next to the exe (`EE_CONFIG` overrides it).

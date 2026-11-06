@@ -33,6 +33,7 @@
 #include "ee/EEAIRandom.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
+#include "ee/EECPTrace.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
@@ -237,8 +238,12 @@ void EEComputerPlayer::WorkOutPopulation()
                         theMax = theCount;
                 }
             }
+            if (!EECPCheatOn(this, kAICheatPopBand))
+                theMax = theOwn;   // EE_AI_CHEATS without popband: no pull toward the human population
             this->mPopulationCap = UMFloatToLong((theOwn * theOwnWeight + theMax * theOtherWeight) / (theOwnWeight + theOtherWeight));
             this->mPopulationCap = UMFloatToLong(this->GetPopLimitAdjustment() * this->mPopulationCap);
+            if (this->mPopulationCap > theOwn)
+                this->mPopulationCap = theOwn;   // new: never above the game's population limit (Hard's row 98 is 140%)
         } else
             this->mPopulationCap = theOwn;
     }
@@ -1035,19 +1040,76 @@ EECPResourceCenter* EEComputerPlayer::GetResourceCenterOf(EEUnit* inUnit)
     return theResult;
 }
 
+// New: the epoch advance the research manager has queued and not yet started (kTechNone: none)
+long EECPPendingEpoch(EEComputerPlayer* inPlayer)
+{
+    if (inPlayer->mCivilizationManager == NULL || inPlayer->mCivilizationManager->mResearchManager == NULL)
+        return kTechNone;
+    EECPResearchManager* theManager = inPlayer->mCivilizationManager->mResearchManager;
+    for (long j = 0; j < EEEpochCount(); j++)
+        for (unsigned long k = 0; k < theManager->mEpochIDs[j].size(); k++)
+            if (EEIsEpochID(theManager->mEpochIDs[j][k]))
+                return theManager->mEpochIDs[j][k];
+    return kTechNone;
+}
+
+unsigned long EECPEpochTimerSpan(EEComputerPlayer* inPlayer)
+{
+    float theSpan = (inPlayer->GetEpochFrequencyMin() + inPlayer->GetEpochFrequencyMax()) * 0.5f
+        * inPlayer->GetEpochFrequencyModifier() * 60000.0f;
+    return theSpan > 60000.0f ? (unsigned long)UMFloatToLong(theSpan) : 60000UL;
+}
+
+float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime)
+{
+    if (inPlayer->mCivilizationManager == NULL)
+        return 0.0f;
+    unsigned long theSpan = EECPEpochTimerSpan(inPlayer);
+    unsigned long theDue = inPlayer->mCivilizationManager->mNextEpochAdvanceTime;
+    long long theLeft = (long long)theDue - (long long)inTime;
+    float thePressure = 1.0f - (float)theLeft / (float)theSpan;
+    return thePressure < 0.0f ? 0.0f : thePressure;
+}
+
 // FUNCTION: EXE 0x42f033
 // Returns true for epoch technologies; otherwise asks the player whether it can afford the cost
+// New (docs/AI_RESEARCH.md §8.7): without the free-epochs cheat, a pending epoch advance reserves its cost: anything
+// else that needs one of its resources is affordable only from what is left above it (citizens too: like a player
+// saving for the advance, the AI pauses what competes for the reserved resources while its gatherers fill it).
 bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
 {
-    if (this->mTechnologies != NULL && EEIsEpochID(inTechnology->mData->mID))
+    if (this->mTechnologies != NULL && EEIsEpochID(inTechnology->mData->mID) && EECPCheatOn(this, kAICheatEpochs))
         return true;
-    return EEPlayer::CanAfford(inTechnology, inUnitType, inCount);
+    if (!EEPlayer::CanAfford(inTechnology, inUnitType, inCount))
+        return false;
+    if (this->mTechnologies == NULL || EECPCheatOn(this, kAICheatEpochs) || EEIsEpochID(inTechnology->mData->mID))
+        return true;
+    long theEpoch = EECPPendingEpoch(this);
+    EETechTreeNode* theReserved = theEpoch != kTechNone ? this->mTechnologies->Get(theEpoch) : NULL;
+    if (theReserved == NULL)
+        return true;
+    const EEAIPersonalityRule& thePersonality = EECPPersonality(this);
+    float theShare = (EECPEpochPressure(this, gPhysics->mGameTime) - thePersonality.mEpochPressureStart)
+        / (thePersonality.mEpochPressureFull - thePersonality.mEpochPressureStart);   // the reserve grows with the pressure
+    if (theShare > 1.0f)
+        theShare = 1.0f;
+    if (theShare <= 0.0f)
+        return true;
+    for (long i = kResourceFood; i <= kResourceIron; i++) {
+        long theCost = this->ScaleCost(inTechnology->GetCost(i, inUnitType, 1.0f)) * inCount;
+        long theReserve = UMFloatToLong(theShare * this->ScaleCost(theReserved->GetCost(i, kUnitTypeTownCenter, 1.0f)));
+        if (theCost > 0 && theReserve > 0 && this->mResourceCaps[i] - theCost < theReserve)
+            return false;
+    }
+    return true;
 }
 
 // FUNCTION: EXE 0x42f064
 // When another player is in a later epoch, pulls the AI's next epoch advance forward to a random catch-up time
 void EEComputerPlayer::CatchUpEpoch(EEPlayer* inPlayer)
 {
+    if (!EECPCheatOn(this, kAICheatCatchUp))
+        return;
     unsigned long theNext = this->mCivilizationManager->mNextEpochAdvanceTime;
     unsigned long theNow = gPhysics->mGameTime;
     long theMinimum;
@@ -1320,7 +1382,7 @@ void EEComputerPlayer::Init()
     this->mLF20 = -1;
     this->mDropOffDistance = UMFloatToLong((float)sqrt(this->mDropOffDistance));
     this->mCanBuild = true;
-    this->mIsCheating = true;
+    this->mIsCheating = EECPCheatOn(this, kAICheatCost);   // EE_AI_CHEATS (the original: always true)
     this->mCanDefend = true;
     this->mBF4E = true;
     this->mCanExplore = true;
@@ -5438,7 +5500,7 @@ void EEComputerPlayer::TakeResource(long inIndex, long inAmount)
 // Pays for a technology, except epoch advances, which are free for the computer player
 void EEComputerPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction)
 {
-    if (!EEIsEpochID(inTechnology->mData->mID))
+    if (!EEIsEpochID(inTechnology->mData->mID) || !EECPCheatOn(this, kAICheatEpochs))
         EEPlayer::Pay(inTechnology, inUnitType, inFraction);
 }
 
@@ -5510,6 +5572,8 @@ void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
 {
     EEPlayer::UnitTaken(inUnit, inSwapped);
     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    if (gCPTraceOn && !inSwapped)
+        EECPTraceUnitLost(this, theUnit);
     if (this->mActive)
         this->mCivilizationManager->UnitLost(theUnit, inSwapped);
     if (this->mCombatManager != NULL)
@@ -5558,6 +5622,31 @@ void EEComputerPlayer::EpochMediaUnloaded(long inEpoch)
     EEPlayer::EpochMediaUnloaded(inEpoch);
 }
 
+// New (docs/AI_RESEARCH.md §8.13, the owner's military pressure): keeps a standing army of the personality's
+// standing_army per worker (aipersonalities.yaml), up to the original's military share of the pop cap, by requesting
+// the favourite land unit (at most 5 at a time; the requests count as army). The original raised military units
+// only for attack groups and defense build-ups: honest armies stayed at 10-30 while iron piled up to 2,000.
+void EEComputerPlayer::KeepStandingArmy()
+{
+    EECPUnitManager* theUnits = this->mCivilizationManager != NULL ? this->mCivilizationManager->mUnitManager : NULL;
+    if (theUnits == NULL || this->mCombatManager == NULL || this->mFavoriteLandType <= 0 || !this->mCanBuild)
+        return;
+    long theWorkers = (long)theUnits->GetNumWorkers();
+    long theArmy = theUnits->CountMilitaryUnits(false, true);
+    long theTarget = UMFloatToLong(EECPPersonality(this).mStandingArmy * (float)theWorkers);
+    long theRoom = this->mCombatManager->GetUnitsAvailable();
+    long theWanted = theTarget - theArmy;
+    if (theWanted > theRoom)
+        theWanted = theRoom;
+    if (theWanted > 5)
+        theWanted = 5;
+    if (theWanted <= 0)
+        return;
+    EE_CP_TRACE(this, "army.request", "cls=%ld n=%ld army=%ld target=%ld", this->mFavoriteLandType, theWanted, theArmy,
+        theTarget);
+    theUnits->RequestUnits(this->mFavoriteLandType, theWanted, 0, 0);
+}
+
 // FUNCTION: EXE 0x43f175
 // Runs the AI tick: one-time start-up on the first call, then the enable, attack-state, population and
 // expansion timers and the manager updates; finally kills the units queued as stranded
@@ -5565,8 +5654,13 @@ void EEComputerPlayer::Update(unsigned long inTime)
 {
     UWideString theUnused1;
     UWideString theUnused2;
+    EECPTraceScope theScope("cp");
     if (!this->mIsStarted) {
-        gWorld.mMap->ExploreUnseen(this);
+        if (EECPCheatOn(this, kAICheatReveal))
+            gWorld.mMap->ExploreUnseen(this);
+        EE_CP_TRACE(this, "start", "difficulty=%lu personality=%s cheats=%s cheating=%d cost100=%ld extra=%ld aggression=%ld demand=%d",
+            this->mDifficulty, EECPPersonality(this).mID.c_str(), EECPCheatNames(this), this->mIsCheating ? 1 : 0, this->ScaleCost(100),
+            EECPCheatOn(this, kAICheatExtra) ? this->mExtraResources : 0L, (long)this->mComputerAggression, EECPDemandSplitOn(this) ? 1 : 0);
         this->EnableManagers(inTime);
         this->SetEnableTime(inTime);
         this->SetNextAttackTime(inTime);
@@ -5576,7 +5670,7 @@ void EEComputerPlayer::Update(unsigned long inTime)
             this->Regroup();
         if (gGameOptions.mLoadType == 0)
             this->ChooseCivilization();
-        const long& theBonus = this->mExtraResources;
+        const long theBonus = EECPCheatOn(this, kAICheatExtra) ? this->mExtraResources : 0;
         this->mResourceCaps[kResourceGold] += theBonus;
         this->mResourceCaps[kResourceIron] += theBonus;
         this->mIsStarted = true;
@@ -5610,10 +5704,22 @@ void EEComputerPlayer::Update(unsigned long inTime)
             this->FlagGroup();
             this->SetNextExpansionTime(inTime);
         }
-        this->mCivilizationManager->Update(inTime);
+        {
+            EECPTraceScope theCivilization("civ");
+            this->mCivilizationManager->Update(inTime);
+        }
         this->mDiplomacyManager->Update(inTime);
-        this->mCombatManager->Tick(inTime);
-        this->mExplorationManager->Update(inTime);
+        {
+            EECPTraceScope theCombat("combat");
+            this->mCombatManager->Tick(inTime);
+        }
+        {
+            EECPTraceScope theExploration("explore");
+            this->mExplorationManager->Update(inTime);
+        }
+        if (inTime % 30000 < 1000)   // every 30 game s (each computer player updates once a game second)
+            this->KeepStandingArmy();
+        EECPTraceStats(this, inTime);
     } else if (this->mCombatManager != NULL)
         this->mCombatManager->DeleteGroups();
     if (this->mUnitsToKill.size() != 0) {

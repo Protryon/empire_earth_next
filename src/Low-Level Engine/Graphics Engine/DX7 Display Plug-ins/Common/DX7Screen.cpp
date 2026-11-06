@@ -24,6 +24,7 @@
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Screen.h"
 #include "platform/PlatWindow.h"
+#include "platform/PlatSim.h"
 #include "lle/GERenderState.h"
 
 // The pixel formats the GE pixel format numbers stand for, as GXPIXELFORMAT fields after dwSize (.data 0x100166fc,
@@ -217,7 +218,9 @@ long DX7Screen::CreateAWindow(const GE2DPoint& inOrigin, unsigned long inWidth, 
     // window sizes are in the display's own units (macOS: points), not its pixels
     PlatWindowGetDisplayLogicalSize(NULL, &theDisplayWidth, &theDisplayHeight);
     PlatWindow* theWindow;
-    if (inStyle == 1)
+    if (gPlatSimMode)   // the headless simulation (platform/PlatSim.h): never shown
+        theWindow = PlatWindowCreate(inTitle, (int32_t)inWidth, (int32_t)inHeight, PLAT_WINDOW_HIDDEN | PLAT_WINDOW_BORDERLESS);
+    else if (inStyle == 1)
         theWindow = PlatWindowCreate(inTitle, (int32_t)inWidth, (int32_t)inHeight, PLAT_WINDOW_RESIZABLE);
     else if (inStyle == 2)   // port: a hidden window (Test32BitSupport's probe)
         theWindow = PlatWindowCreate(inTitle, (int32_t)inWidth, (int32_t)inHeight, PLAT_WINDOW_HIDDEN | PLAT_WINDOW_BORDERLESS);

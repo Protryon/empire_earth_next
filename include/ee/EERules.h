@@ -83,6 +83,22 @@ struct EESpeedRule {
     EERuleNumber mFactor;                   // the game speed
 };
 
+// The computer players' cheats a difficulty keeps (EEDifficultyRule::mAICheats; gameoptions.yaml `ai_cheats`, a list
+// of these names; docs/AI_RESEARCH.md). The original keeps every one at every difficulty.
+enum EEAICheat {
+    kAICheatCost = 1 << 0,      // cost: the difficulty's unit cost modifier (dbcpbehavior rows 67/96; stock 1%)
+    kAICheatReveal = 1 << 1,    // reveal: the whole map explored at the start
+    kAICheatEpochs = 1 << 2,    // epochs: epoch advances are free and always affordable
+    kAICheatExtra = 1 << 3,     // extra: computer_player_extra_resources (row 101) gold and iron at the start
+    kAICheatPopBand = 1 << 4,   // popband: the pop cap pulled toward the largest human population (rows 92/93)
+    kAICheatCatchUp = 1 << 5,   // catchup: the epoch rubber band (pulled forward when behind, held back when ahead of every human)
+    kAICheatRetire = 1 << 6,    // retire: obsolete units no human sees are deleted
+    kAICheatAll = (1 << 7) - 1,
+};
+extern const char* const kEEAICheatNames[];   // by bit position
+extern const unsigned long kEEAICheatCount;
+long EEAICheatBit(const std::string& inName);  // 0: not a cheat name
+
 struct EEDifficultyRule {
     std::string mID;
     long mNameID;
@@ -90,6 +106,7 @@ struct EEDifficultyRule {
     // the damage table scale when exactly one side is "human" (EEPlayer::IsHuman, not player 0; provisional name):
     EERuleNumber mScaleHumanTarget;         // ... the target
     EERuleNumber mScaleHumanAttacker;       // ... the attacker
+    long mAICheats = kAICheatAll;           // the computer players' cheats (EEAICheat bits)
 };
 
 struct EEGameOptionRules {
@@ -210,6 +227,42 @@ struct EEEpochMedia {
     long mRemovalThunderEvery = 0;          // a thunder when the unit id is a multiple of this (0: never)
 };
 
+// ------------------------------------------------------------------------------------------------ aipersonalities.yaml
+
+// A computer player's personality (docs/AI_RESEARCH.md §8.8): the tuning of its decisions that is not in dbcpbehavior.
+// The defaults are "balanced", the tuning the benchmarks of §8.10-8.11 settled on.
+struct EEAIPersonalityRule {
+    std::string mID;
+    // epoch pressure (the elapsed share of the epoch timer's span): a paid advance is asked for from mEpochPressureStart;
+    // its reserve grows from nothing there to the whole cost at mEpochPressureFull. Low: tall (tech); high: wide.
+    float mEpochPressureStart = 0.3f;
+    float mEpochPressureFull = 0.8f;
+    // the economy (EECPResourceManager): the gatherer split's stock correction, the citizen target, rebalancing
+    long mSurplus = 1000;                   // a resource with more in stock ...
+    float mSurplusCut = 0.5f;               // ... gets this share of its gatherers
+    long mLowStock = 150;                   // a resource with less in stock ...
+    float mFloor[5] = {0.10f, 0.25f, 0.05f, 0.05f, 0.05f};   // ... at least this share (food, wood, stone, gold, iron)
+    float mMaxCitizenShare = 0.7f;          // the citizen target is at most this share of the pop cap
+    long mWoodSlots = 15;                   // wood's gatherer capacity (trees are not resource-center units)
+    long mMovesPerCycle = 3;                // busy gatherers moved to a short resource per 10 s
+    // the gatherer split: by the tiered demand less the stock (EECPResourceManager.cpp EECPRMSplitByDemand; docs/AI_RESEARCH.md
+    // §8.21), or false: the original's needs ledger with the stock correction above
+    bool mDemandSplit = true;
+    // military pressure: the standing army the player keeps, per worker (citizens and fishing boats); up to the
+    // original's military share of the pop cap
+    float mStandingArmy = 0.25f;
+    // while the standing army is short of its target, the floor share of the gatherers on what its unit costs rises by
+    // up to this much (by the shortfall, split by the unit's cost): more army, less economy
+    float mArmyFloor = 0.1f;
+};
+struct EEAIPersonalityRules {
+    std::vector<EEAIPersonalityRule> mPersonalities;
+    std::vector<long> mAssign;              // positions in mPersonalities; computer player n takes mAssign[(n - 1) % size]
+    EEAIPersonalityRules();
+    const EEAIPersonalityRule& ForPlayer(unsigned long inPlayerID) const;
+    long Find(const std::string& inID) const;   // the position, -1 when none
+};
+
 // ------------------------------------------------------------------------------------------------ all of them
 
 struct EERules {
@@ -217,6 +270,7 @@ struct EERules {
     EEGameOptionRules mGameOptions;
     EECivBuilderRules mCivBuilder;
     EECivPowerRules mCivPowers;
+    EEAIPersonalityRules mAIPersonalities;
     std::vector<EEEpochMedia> mEpochs;      // by epoch position (the original's 15 by default)
     bool mEpochMusicFromText = false;       // the songs came from epochs.yaml (else dbmusic's flags)
 
@@ -241,9 +295,19 @@ EERules& EEGetRules();
 
 // the computer players' level (0 easy .. 2 hard: their records' values) of a game option difficulty
 long EEDifficultyAILevel(unsigned long inDifficulty);
+// the computer players' cheats (EEAICheat bits) of a game option difficulty
+long EEDifficultyAICheats(unsigned long inDifficulty);
 
 // unit category names (the data's category ids): kUnitCategory* by value
 extern const char* const kEERuleCategoryNames[];
 extern const unsigned long kEERuleCategoryCount;
+
+// TEST ONLY (EE-SIM.exe --set, the headless simulation): a rules document's value changed as the document is read,
+// "doc.key.key=value". A key may name a list entry by its id: "aipersonalities.balanced.military.army_floor=0.2" is
+// the personalities entry with id balanced (the list may also be named: aipersonalities.personalities.balanced...).
+// Only an existing scalar is changed. False, with the reason, when the spec is malformed.
+bool EERulesAddOverride(const std::string& inSpec, std::string& outError);
+// the overrides that changed nothing (the document is not in the data, or the key is not in it), each with the reason
+std::vector<std::string> EERulesOverrideProblems();
 
 #endif

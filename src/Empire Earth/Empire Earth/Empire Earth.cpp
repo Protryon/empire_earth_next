@@ -9,6 +9,9 @@
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "platform/PlatMessage.h"
 void EETestFixtureStart();   // EETestFixture.cpp (TEST ONLY)
+void EESimPreferences();     // EESim.cpp (TEST ONLY: the headless simulation, platform/PlatSim.h)
+void EESimStart();
+#include "platform/PlatSim.h"
 unsigned long EEMenuWidth();    // port: the menus' resolution (below)
 unsigned long EEMenuHeight();
 void GXGameSize(unsigned long inPercent, bool inWindowed, unsigned long* outWidth, unsigned long* outHeight);   // gx/GX.h
@@ -2049,7 +2052,7 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
 {
     EEStartScreen theStartScreen(inInstance);
     FSFileSpec theRecordingFile;
-    if (EECreateInstanceMutex()) {
+    if (gPlatSimMode || EECreateInstanceMutex()) {   // the simulation: any number of copies at once
         // the window system (platform/PlatWindow.h): the window class "Empire Earth Expansion" with the game's icon,
         // its events pumped by the UI thread's TSThread::Receive (this thread: EEUserInterface::Run runs on it)
         PlatWindowSetAppName("Empire Earth Expansion", 0x66);
@@ -2087,15 +2090,21 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
             long theResult = gGamePreferences.Load();
 
             ESVERIFY_AT(theResult == keseOK, 3637);
+            if (gPlatSimMode)
+                EESimPreferences();
             EELoadNetworkSettings();
             EEShowSinglePlayerScreen();
-            theStartScreen.Start();
+            if (!gPlatSimMode)   // the simulation shows no splash window
+                theStartScreen.Start();
             bool theInitialized = EEInitializePart1();
-            theStartScreen.Stop();
+            if (!gPlatSimMode)
+                theStartScreen.Stop();
             if (theInitialized) {
-                EEPlayIntroMovies(theShowMovies == false);
+                EEPlayIntroMovies(gPlatSimMode || theShowMovies == false);
                 EEInitializePart2();
                 EETestFixtureStart();   // TEST ONLY: nothing unless EE_TEST_UI is set (EETestFixture.cpp)
+                if (gPlatSimMode)
+                    EESimStart();       // TEST ONLY: the simulation's driver (EESim.cpp)
                 if (EEParseCommandLine(inCommandLine)) {
                     long theResult;
                     {
@@ -2239,9 +2248,18 @@ static int EESmokeTest()
     return theFailed ? 1 : 0;
 }
 
+int EESimMain(int argc, char** argv);   // EESim.cpp (TEST ONLY): the headless simulation, "ee-aoc --sim ..."
+void EESimGameEnded(int inResult);
+
 int main(int argc, char** argv)
 {
     std::string theCommandLine;
+    if (argc > 1 && !strcmp(argv[1], "--sim")) {
+        int theResult = EESimMain(argc - 1, argv + 1);
+        if (theResult != -1)
+            return theResult;
+        argc = 1;   // the simulation's own options are not the game's command line
+    }
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--smoke-test"))
             return EESmokeTest();
@@ -2261,7 +2279,10 @@ int main(int argc, char** argv)
     }
     std::vector<char> theBuffer(theCommandLine.begin(), theCommandLine.end());
     theBuffer.push_back(0);
-    return EERun(NULL, &theBuffer[0]);
+    int theResult = EERun(NULL, &theBuffer[0]);
+    if (gPlatSimMode)
+        EESimGameEnded(theResult);   // (does not return)
+    return theResult;
 }
 #endif
 #pragma optimize("g", on)   // ??_GUResourceFile 0x54494d (no-/Og in the original) is emitted under WinMain's state

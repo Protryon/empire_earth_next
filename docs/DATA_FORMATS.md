@@ -2545,6 +2545,7 @@ and the scenario editor's lists, `EEGameState::Create`, `EERandomMap`, `EEToHitT
         ai_level: 0                    # the computer players' records: 0 easy, 1 medium, 2 hard
         damage_scale_human_target: difficulty_damage_scale.F     # the damage table scale when only the target is
         damage_scale_human_attacker: difficulty_damage_scale.F2  # "human" (EEPlayer::IsHuman) / only the attacker
+        ai_cheats: [cost, reveal, epochs, extra, popband, catchup, retire]   # the computer players' cheats kept
       ...                              # medium: 1.0 and 1.0 (the base table), hard: .F2 and .F
     unit_limit: {minimum: unit_limit_range.L, maximum: unit_limit_range.L2, step: 50, default: unit_limit_default.L}
     wonders_for_victory: {maximum: wonders_for_victory_max.L, default: 3}
@@ -2552,7 +2553,12 @@ and the scenario editor's lists, `EEGameState::Create`, `EERandomMap`, `EEToHitT
 (`unit_limit` and `wonders_for_victory` are block mappings in the file.) The counts of the lists replace the
 original's limits (map size < 6, speed < 4, difficulty < 3); an out-of-range option falls back to the default entry
 (difficulty: the first). The damage table by difficulty is computed at the lookup (the scale x the base table) instead
-of two pre-scaled copies: the same float product. Load types stay the code's (`kLoadTypeCount`, 6: new game,
+of two pre-scaled copies: the same float product. `ai_cheats` lists the computer players' cheats a difficulty keeps
+(`EEAICheat`, ee/EERules.h; every one by default, as the original; `[]` makes a fair difficulty): `cost` (the unit
+cost modifier, dbcpbehavior rows 67/96, 1% stock), `reveal` (the map explored at the start), `epochs` (free epoch
+advances), `extra` (row 101's gold and iron), `popband` (the pop cap pulled toward the largest human population),
+`catchup` (the epoch rubber band: hurried when behind a human, held back and slowed when ahead of every human) and `retire` (unseen obsolete units deleted); see docs/AI_RESEARCH.md. A new difficulty
+entry with `ai_level: 2` and `ai_cheats: []` is a fair Hard. Load types stay the code's (`kLoadTypeCount`, 6: new game,
 scenario, saved game ...: each is a code path).
 
 **civbuilder.yaml** (`EECivBuilderRules`; `EECivilizationManager::ApplyUpgradeLevel`, `Load`'s special powers
@@ -2630,6 +2636,38 @@ the binary tables it writes the legacy form). Legacy binary .civ files (the prem
                                            # mMiningLimit), enable_camouflage, allow_tech, disallow_tech (tech)
 
 The powers' other behaviour stays where it is (C++ primitives that test `HasPower`: fanaticism, insurance, ...).
+
+**aipersonalities.yaml** (`EEAIPersonalityRules`; the computer players: `EECPPersonality`, docs/AI_RESEARCH.md
+§8.8-8.12): the tuning of a computer player's decisions that is not in dbcpbehavior, by personality, and which
+computer player gets which. New in this port (no original values: the defaults are what the benchmarks settled on).
+
+    personalities:
+      - id: balanced
+        epoch_pressure:            # the elapsed share of the epoch timer (dbcpbehavior rows 28/29); paid epochs only
+          start: 0.3               # the advance is asked for from here (1: the original timer) ...
+          full: 0.8                # ... and its cost is wholly reserved from here (the reserve grows in between)
+        economy:                   # EECPResourceManager
+          surplus: 1000            # a resource with more in stock gets surplus_cut of its gatherer share
+          surplus_cut: 0.5
+          low_stock: 150           # one with less gets at least its floor share of the gatherers
+          floor: {food, wood, stone, gold, iron shares}   # (block mapping in the file) 0.1, 0.25, 0.05, 0.05, 0.05
+          max_citizen_share: 0.7   # the citizen target (the held sites' capacity) is at most this share of the pop cap
+          wood_slots: 15           # wood's gatherer capacity
+          moves_per_cycle: 3       # busy gatherers moved to a short resource per 10 s
+          demand_split: true       # the gatherers by the tiered demand less the stock (docs/AI_RESEARCH.md §8.21);
+                                   # false: the original's needs ledger with the stock correction above
+        military:
+          standing_army: 0.25      # the army kept per worker (every 30 game s, the favourite land unit; up to the
+                                   # original's military share of the pop cap)
+          army_floor: 0.1          # while the army is short: up to this much more floor share of the gatherers on
+                                   # its unit's costs (by the shortfall)
+      - id: tall ...               # epoch_pressure 0.15 / 0.5, standing_army 0.2
+      - id: wide ...               # epoch_pressure 0.6 / 1.0, max_citizen_share 0.8, standing_army 0.15
+      - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5
+    assign: [balanced]             # computer player n takes entry (n - 1) mod the count
+
+A key left out keeps the default; `assign` names personalities. TEST ONLY: `EE_AI_PERSONALITY` in the environment
+overrides the assignment (one id, or a comma list taken in turn).
 
 **epochs.yaml media** (`EEEpochMedia`; `EEMusicObject::LoadTable`, `EEPlayUnitEffect`, `EEUGGather`,
 `EEUnitClass`): per epoch

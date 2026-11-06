@@ -43,6 +43,7 @@
 #include "ee/EECPUnitRequirement.h"
 #include "ee/EECPCombatStrategy.h"
 #include "ee/EECPAttackCommander.h"
+#include "ee/EECPTrace.h"
 
 extern long& gNumPlayers;                    // 0x530e0c (EECPAttackSubGroupUnit.cpp declares it too) (provisional name)
 
@@ -160,7 +161,11 @@ EECPAttackGroup* EECPAttackCommander::CreateGroup(EECPAGTask& inTask, long inKin
     }
     theStrategy.mRequirements.push_back(theRequirement);
     theGroup->MakePlan(theStrategy, theUnitIDs);
-    if (!theGroup->IsSpent())
+    bool theKept = !theGroup->IsSpent();
+    EE_CP_TRACE(this->mPlayer, "attack.group", "target=%ld type=%ld mode=%ld x=%ld y=%ld kind=%ld units=%lu kept=%d",
+        inTask.GetPlayerID(), inTask.mType, inTask.mMode, (long)inTask.mLocation.mTile.mX, (long)inTask.mLocation.mTile.mY,
+        inKind, (unsigned long)theUnitIDs.size(), theKept ? 1 : 0);
+    if (theKept)
         this->mGroups.push_back(theGroup);
     else {
         delete theGroup;
@@ -204,6 +209,9 @@ EECPAttackGroup* EECPAttackCommander::CreateGroupFromStrategy(EECPAGTask& inTask
     EECPAttackGroup* theGroup = new EECPAttackGroup(this);
     theGroup->mTask = inTask;
     theGroup->MakePlan(theStrategy, outUnitIDs);
+    EE_CP_TRACE(this->mPlayer, "attack.group", "target=%ld type=%ld mode=%ld x=%ld y=%ld kind=strategy units=%lu kept=%d",
+        inTask.GetPlayerID(), inTask.mType, inTask.mMode, (long)inTask.mLocation.mTile.mX, (long)inTask.mLocation.mTile.mY,
+        (unsigned long)outUnitIDs.size(), theGroup->IsSpent() ? 0 : 1);
     if (!theGroup->IsSpent())
         this->mGroups.push_back(theGroup);
     else {

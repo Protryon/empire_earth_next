@@ -1,6 +1,5 @@
-# Empire Earth AoC computer-player AI: research and modernisation plan
-
-Status: research only. No engine code has changed. Started 2026-11-05.
+Status: stages 0 and 1 done, and stage 2 under way on the `new-ai` branch. §8 covers the trace and benchmark, the
+fixes and personalities as data, and the experiments, kept and dropped. Started 2026-11-05.
 `AI` stands for `src/Empire Earth/AI Thread/`. Method names come from the reconstruction and are often provisional:
 AI has 86 `provisional` markers and about 115 unnamed members. **[inferred]** marks reasoning rather than reading.
 ⚠ marks external claims taken from forums or secondary sources only.
@@ -247,6 +246,7 @@ The candidate seams, from lowest to highest level:
 | OpenRA | C# modules + YAML | Pure data personalities | Safe | Data-driven personalities give most of the modding value |
 | Warcraft III | JASS with cooperative threads | Whole AI | | `common.ai` unchanged for 15 years ⚠ |
 | PA (TA heir) | JSON build conditions + small neural net | Data | | |
+| EE "Age of AI" mod | C++ DLL hooking the retail exe; ini + `.eeai` personality files | Fixes and features inside the stock AI | n/a | The closest prior work on this very AI (§8.4) |
 
 Sources:
 - AoE2: https://airef.github.io/
@@ -665,4 +665,455 @@ original Hard AI.
 
 ## 7. Sources
 
-External sources are inline in §3. The code references were gathered on 2026-11-05 against `main` at `6cd4a34`.
+External sources are inline in §3 and §8.4. The code references were gathered on 2026-11-05 against `main` at
+`6cd4a34`.
+
+## 8. Stage 0 results
+
+### 8.1 What exists
+
+- **Decision trace** (`include/ee/EECPTrace.h`, `src/Empire Earth/AI Thread/EECPTrace.cpp`). `EE_AI_TRACE=1` in the
+  environment turns it on; it costs one bool test per site when off. One `EE-AI` debug string per decision:
+  ```
+  EE-AI <game ms> p<player> <manager> <event> key=value ... | f= w= s= g= i=
+  ```
+  - events: `start` (difficulty, cheats, `ScaleCost(100)`, extra resources, aggression), `build.queue`,
+    `build.start`, `train.request`, `research.request`, `research.start`, `epoch.advance`, `attack.group`, and
+    `stats` every 30 game s (epoch, population, pop cap, game limit, citizens, idle citizens, buildings, other
+    units);
+  - `<manager>` is the manager running when the decision was made (`civ`, `unit`, `build`, `research`,
+    `resource`, `wall`, `combat`, `explore`, `cp`);
+  - `EE-AIPROF` lines hold the real time per CP update (every 60 game s); they vary per run and are never compared.
+- **Cheat switches.** `EE_AI_CHEATS` lists the cheats that stay on: `cost`, `reveal`, `epochs`, `extra`, `popband`,
+  `catchup`, `retire`, or `none`. Unset means all of them, which is the original behaviour. This is TEST ONLY: an
+  environment variable is per machine, so stage 1 moves the switches into the rules data. `omniscient_intel` has no
+  switch yet, because turning it off needs the stage 2 perception module.
+- **Tools:**
+  - `tools/harness/ai_trace.py extract|compare|summary`: `compare` cuts both traces at the earlier run's end;
+  - `tools/harness/ai_bench.py`: a matrix of seeded headless games with the trace on, writing
+    `build/boot/ai_bench/<name>/results.{json,csv}`; `--repeat 2` compares the traces.
+
+### 8.2 Checks done
+
+- **Q1, the cost cheat: confirmed at runtime.** The `start` line on Hard prints `cheating=1 cost100=1`, and the first
+  building costs the AI 2 wood. With `EE_AI_CHEATS=none` it prints `cost100=100`.
+- **Determinism gate: passes.** Seeds 2 and 3, Hard, Small, 2 AIs, cheats `all` and `none`, two runs each: all four
+  pairs print identical traces (144-262 lines in the compared window).
+- **Latent sync risks (stage 0 step 5): neither is a risk, so the code is unchanged.**
+  - `gGameScreenActive` is world state. It is set true under the world write lock when loading starts
+    (`EEUserInterface::HandleMessage` 0x407, `TestScenario`, `SaveAndTestScenario`, `RestartGame`), before any PT
+    runs, and false only by `EEWorld` construction and the leave-map clear. Within a game it is constant on every
+    peer. In the scenario editor it is what keeps the AI from drafting units.
+  - The address-ordered `std::set<EEAIPathArea*>` in `EEAIAStarPathAreaGoal::AssignKindIDs` only decides the order in
+    which continents receive *the same* `mNextKindID`. Each continent's id list comes out the same in any order.
+- **Q3, profile: first numbers.** On this machine, one CP update takes a mean of 12-21 ms with the cheats on and
+  38-42 ms with them off. The first update takes 0.8-8.4 s, which is the map analysis. **[inferred]** The no-cheat
+  cost is probably exploration and placement failing over unexplored map. With 15 CPs, 40 ms each comes to 0.6 s
+  of real time per game second, so a script budget has to be small next to the C++ that is already there.
+
+### 8.3 First benchmark (2026-11-05)
+
+Seeds 2 and 3, Hard, Small, Continental, 2 AIs plus the idle human. The games end at the harness time cap, at about
+860-905 game s. Values are at the end of the run, per AI:
+
+| Cheats | Citizens | Other units | Buildings | Unspent | Pop cap | Epoch advances |
+|---|---|---|---|---|---|---|
+| all | 36-52 | 5-17 | 9-21 | 3,100-3,600 | 112-115 | 0 |
+| none | 28-49 | 4-6 | 8 | 820-930 | 560 | 0 |
+
+Readings:
+- **No AI advances an epoch in 15 minutes, cheats on or off.** Row 28 (`epoch_frequency`) sets the timer to 50-70
+  minutes, scaled by difficulty (§8.4). The 15-minute gate game therefore measures only the first epoch. **The
+  benchmark needs games of 60 minutes or more** (§8.5).
+- **The pop-cap rubber band works against the AI in harness games.** The idle human has a handful of units, and
+  rows 92/93 (weights 2.4 for the human, 0.6 for the AI's own limit) pull the cap down to about 112. Without
+  `popband` the cap is 400 × 1.4 (Hard, row 98) = 560, which is not clamped to the game limit. Every AI-vs-AI result
+  with an idle human is shaped by this, so the benchmark should run with `popband` off, or later with an observer
+  slot.
+- **Without the cheats the economy stalls.** Buildings stay at 8 (against 9-21), the military stays at 4-6 units,
+  and 4 builds start in 15 minutes (against 13-17). Citizens are about the same. This is the scarcity weakness
+  predicted in §2.4.
+
+### 8.4 Prior work: the "Age of AI" mod
+
+https://github.com/Grille/Empire-Earth-Age-of-AI (GPL-3.0, active, last update 2026-11-05). It is a DLL that hooks
+the retail 1.04 exe in memory, and since 2026-11-05 also this port's `EE-AOC.exe`. It is configured by
+`config/ageofai.ini` per difficulty and has `.eeai` personality files. Its notes (`docs/ai-analysis.md`,
+`docs/engine-notes.md`, `docs/economy.md`, `docs/testing.md`, `docs/experiments.md`) are the best existing analysis
+of this AI. **Use:** facts and ideas only. Its code and text are GPL-3.0 and are not copied here.
+
+It agrees with this document on:
+- the 1% cost cheat (stock 1 / 1 / 1.0, active only while the Cheat toggle is on);
+- the map knowledge: every human unit has visibility floor 1, so the AI sees everything;
+- the pop-cap formula (and its unclamped row 98 multiplier);
+- the empty diplomacy manager.
+
+Facts it adds, to check against this code as each stage gets to them:
+- **Epoch timing.** Row 28 gives 50-70 minutes × difficulty, doubled when the AI is ahead of the humans and halved
+  when it is behind. Shortening it hides the economy problems. They reverted their own row 28 change for that reason.
+- **The economy without the cheat.** The AI spends about 14.5k food against 1.3k gathered in 20 minutes, never
+  budgets finite wild food, and stalls in the Stone Age.
+- **Food search.** It rejects berries as "enemy near" and aborts at the first unexplored site.
+- **Mines.** Leftover citizens go to any mine on the map, including mines under enemy towers.
+- **The build queue is blocked for the whole game** by an unplaceable "Single Player Settlement" (type 395), with
+  about 1,000 failed placements per game.
+- **The epoch timer decides, not the economy.** A requirement-tech request is never retried, and the fallback
+  requests unplaceable statues.
+- **Economy buildings.** Gathering upgrades are rarely researched, one granary is used all game, and fields are not
+  rebuilt.
+- **Military.**
+  - No home army between attacks; siege is never taken along.
+  - Routing ignores walls, walks through tower lines, and counts influence from unseen units.
+  - Attacks continue on a player after peace or alliance.
+- **Other.** Phantom "in production" units eat the pop cap; defeated AIs linger for 20-40 minutes; the scenario
+  `Set AI Variable` case for row 96 writes the epoch-frequency fields.
+- **Testing lessons.** Use many fixed-seed repeats with standard errors, and test both seats. A short epoch timer
+  hides economy bugs. AI-vs-AI cannot test tower handling.
+- **Their results.** On Hard, 60-minute 1v1 games:
+  - their AI won 0 games against the cheating stock AI;
+  - against the stock AI with the cheat off, it won Continental 22-6;
+  - home guard: 87 → 272 soldiers trained per AI;
+  - build-queue fix: 43 → 97 soldiers trained;
+  - Stone Age reached at minutes 17-23 instead of 52-71.
+
+  Two experiment results stand out: more soldiers alone gave more losses, and decisions per unit beat decisions per
+  army.
+
+Their fix list is effectively a ready-made backlog for stage 2 (§5). Each item should first be confirmed in this
+source with the trace.
+
+### 8.6 First 60-minute pair (seed 2, Hard, Small, 2 AIs)
+
+| Cheats | End | Epoch advance requested (game s) | Epoch at end | Pop / cap at end | Unspent at end |
+|---|---|---|---|---|---|
+| all | time cap, 3,882 s | 2,771 and 3,093 | 1 and 1 | 51/112 and 54/112 | 6,773 and 7,572 |
+| none | game end, 3,425 s: the idle human was defeated | 2,771 and 3,093 | 0 and 0 | 32/560 and 115/560 | 1,365 and 3,055 |
+
+Readings:
+- **The epoch timer, not the economy, sets the epoch time.** Both runs request the advance at exactly the same game
+  times. With the cheats on, the advance is free and happens at 46 and 52 minutes. With them off, neither AI
+  manages to pay for it: one is at food 0 when the game ends.
+- **The cheating AI lives at about 50 population for the whole hour.** The rubber band holds the cap at 112, and
+  its stock grows unspent to 7k. Without `popband`, one honest AI reaches 104 citizens.
+- **A stuck build loop (stage 2 backlog).** In the cheating run, p2 orders a House at the same tile (20, 63) every
+  4 s from 460 s to the end: 681 `build.start` events, never finished. Each order pays 1% of the cost again. This
+  matches the class of bug that §8.4 reports for type 395. Next step: trace why that site never completes
+  (`StartBuilding` → `EEMakeBuilding` → `EEUGBuildRepair`).
+- **The idle human is not a neutral observer.** The AIs prefer human targets (§2.2), so the honest run ends when
+  they defeat it. Benchmarks need `--no-human-defeat`, or an observer slot.
+
+### 8.7 Stage 2 fixes so far (2026-11-05)
+
+Benchmark: `ai_bench.py --jobs 6` (six 60-minute games in about 3 minutes), Hard, Small, 2 AIs, the idle human
+kept in (`--no-human-defeat`). Each fix is its own commit on `new-ai`.
+
+| Fix | Evidence | Effect |
+|---|---|---|
+| **Stuck build loop.** A stalled build is requeued without its site (`CancelStalledBuilds`). | `build.stalled ... blocker=37 owner=<self>`: 1,426 of 1,466 stalls were the AI's own dying foundation. | Stalls per AI 237 → 4 with the cheats on; buildings at 60 min 31 → 34 with the cheats, 15 → 18.5 without. |
+| **Wasted build slots.** Up to 4 producible requests are tried per 3 s update, until one starts. | `build.nosite cls=47`: the Paleolithic guard tower found no site about 2,500 times per AI per hour, and used up the update each time. | Honest AIs: buildings 18.5 → 21.5, build starts 12 → 14. With the cheats on: unchanged. |
+| **Honest epoch advances.** An unaffordable research stays queued (`TryResearch`); the epoch's cost counts in the needs; a pending epoch reserves its cost (`EEComputerPlayer::CanAfford`). | The original treated an unaffordable epoch research as started and dropped it, and `mAdvancingEpoch` then blocked every later attempt. Stone Age costs 1,122 food, and food never rose above about 70. | Honest AIs reaching the Stone Age within 60 minutes: 0 of 24 → 9 of 24. They reach it 6-12 minutes after the epoch timer asks (at 37-52 minutes). |
+| **Pop cap clamp.** The AI's pop cap never exceeds the game's population limit. | Row 98 on Hard is 140%: 560 of 400 without `popband`. | Owner request. |
+
+Also:
+- **Cheats as rules data.** `gameoptions.yaml` difficulties take `ai_cheats` (DATA_FORMATS.md). A fair Hard is now a
+  data row, and it is multiplayer-safe.
+- **Q2 done.** The out-of-sync checksum now includes every player's resources and the AI's state.
+
+**Determinism.** The trace has a "sim hash" line every 10 game s. Within 20 game minutes, same-seed pairs are
+identical, including 4 parallel games. Over 40-60 minutes, about half of the pairs diverge at 25-27 game minutes,
+also on the trace-only build. That is pre-existing, and the units, the RNG and the AI all diverge in the same 10 s.
+Owner decision (2026-11-05): lockstep stays. Keep the current determinism, and fix old desyncs only when it is easy.
+
+**Root causes found for the honest economy, still open:**
+- **No farms before the Copper Age.** Farms and granaries are Copper Age, two epochs after the start. Until then,
+  food comes only from wild sources, which run out. No honest AI queued a single granary in 60 minutes.
+- **The needs ledger only grows.** The gatherer split follows `mNeeds`, which is the queued costs minus what has been
+  gathered or started. It ignores the stock and counts costs twice. Food need goes from 12.6k to 21.6k over the
+  game, so the split wants 85-90% of citizens on food.
+- **Busy gatherers never move.** `AssignGatherers` places idle citizens only. Leftovers go to gold → iron → stone →
+  wood in a fixed order, never to food. After an hour: iron 3,300 and gold 1,500 unused, food 15.
+- **The epoch timer, not the economy, decides when to advance.** Row 28 sets it to 50-70 minutes.
+
+### 8.8 Design input from the owner (2026-11-05)
+
+- **Use what you hold.** The AI should always fully work its claimed and defended resources: granaries, farm plots,
+  mines, woods near drop sites. The worker target should come from the capacity of those sites, not from pop cap ×
+  citizen percentage (`GetWantedCitizens`). Food is sometimes needed for something more urgent than citizens, but
+  saturation is the standing goal.
+- **A maximum pop cap.** The AI never goes above the game's population limit (done, §8.7).
+- **Personality as competing pressures.** Three pressures compete for resources: epoch up (tall), resource gathering
+  and expansion (wide), and military buildup.
+  - Each personality weights them.
+  - **Epoch pressure rises with time**: since the last advance, and against the opponents' epochs.
+  - This replaces the fixed epoch timer (row 28).
+  - The epoch reserve of §8.7 is the first instance: how much of the reserve is enforced should come from the epoch
+    pressure.
+  - These are the utility weights of §4.1 and stage 3. They go in as data from stage 1 on.
+
+### 8.10 Economy and epoch experiments (2026-11-05)
+
+Each row is 6 to 12 sixty-minute games (seeds 2-7, Hard, 2 AIs), compared at fixed game times. End-of-game numbers
+mislead here: in most honest games one AI wipes out the other.
+
+| Build | Honest citizens at 20 / 30 / 40 min | Honest AIs in the Stone Age |
+|---|---|---|
+| epoch fix (§8.7), original gatherer split | 32 / 44 / 54 | 7 of 12, at 53 min |
+| gatherer split by base shares and the epoch reserve | 26 / 31 / 34 | 3 of 12 |
+| gatherer split by pending-cost shortfall | 29 / 31 / 41 | 6 of 12 |
+| original split + capacity citizen target, rebalancing, leftovers to the most-needed resource (kept) | 33 / 46 / 55 | 7 of 12, at 55 min |
+| + epoch pressure, full reserve from 30% of the timer | 26 / 28 / 34 | 9 of 12, at 28 min |
+| + epoch pressure, reserve growing 30% → 80% (kept) | 30 / 36 / 40 | 8 of 12, at 37 min |
+
+Readings:
+- **The original food-heavy gatherer split is right for the first epochs.** Food is citizens, and citizens are
+  growth. Both replacements were slower and are not used. A better split has to model the spending rate, not only
+  the queues.
+- **The capacity target, rebalancing and the leftover order are neutral today.** Food income binds first. They are
+  the groundwork for "use what you hold" once farms exist (Copper Age).
+- **The epoch timer is a tall/wide slider.** Two thresholds, where the request starts and where the reserve is full,
+  trade growth against epoch speed. They become personality weights (§8.8).
+- **Food income is the next bottleneck.** About 15 foragers make roughly 110 food per minute, and the Stone Age
+  costs 1,122. Candidates: hunting and fishing, forage site choice (§8.4: berries rejected as "enemy near"), and
+  drop-site placement.
+
+### 8.11 Lost builders and the stock correction (2026-11-05)
+
+- **Lost builders.**
+  - The trace (`food`, `builders` lines) showed 11 of 30 honest citizens at 20 minutes sitting on a finished building.
+    They had a stale build goal and were waiting in the citizen script's `TaskSmartCitizen` state (action 4028).
+  - The AI only takes citizens with no goal, or with a gather goal, so it never used them again.
+  - Fix: `RebalanceGatherers` frees them every 10 s.
+  - Effect: honest citizens at 20/30/40 min went from 30/36/40 to 35/39/45, and buildings at 40 min from 12 to 16.
+- **Stock correction of the original split.**
+  - A resource with more than 1,000 in stock gets half its share.
+  - A resource with less than 150 gets at least a floor share: wood 25%, food 10%, the others 5%.
+  - Effect: honest citizens went to 38/46/49, and the Stone Age went from 10 of 12 to 12 of 12 (at 37 min).
+
+### 8.12 Personalities as data (stage 1, 2026-11-05)
+
+**`aipersonalities.yaml`** is a new rules document (DATA_FORMATS.md).
+- Per personality, it holds the epoch pressure (`start`, `full`) and the economy tuning of §8.10-8.11.
+- `assign` names the personality each computer player takes.
+- The defaults are `balanced` (today's tuning, assigned to everyone), `tall` and `wide`.
+- `EE_AI_PERSONALITY` overrides the assignment (TEST ONLY), and `ai_bench --personality tall+wide` sets it.
+
+Six 60-minute honest games per set (seeds 2-7, Hard):
+
+| Personality | Citizens at 20 / 40 min | Stone Age | Copper Age | Head-to-head |
+|---|---|---|---|---|
+| tall (0.15 / 0.5) | 24 / 29 | 11 of 12, at 25.5 min | 2 of 12 | loses to wide 10 of 12 |
+| balanced (0.3 / 0.8) | 38 / 49 | 12 of 12, at 36.7 min | 0 | |
+| wide (0.6 / 1.0, citizens 80%) | 42 / 53 | 9 of 12, at 45.8 min | 0 | beats tall from either seat |
+
+Readings:
+- **The stage 1 gate is met:** the personalities differ measurably.
+- **On a Small map, the tall rush does not pay.** Reaching the Stone Age 20 minutes earlier on half the workforce
+  loses to the boom. Military pressure, the third slider, does not exist yet; that is the obvious next weight.
+- **Seat asymmetry.** Over 89 honest games where both AIs had the same personality, p2 dominated in 39, p3 in 24,
+  and 26 were close. Candidates: the round-robin update order (p2 always first) and the start positions. Head-to-head
+  tests have to swap the seats.
+
+### 8.13 Military pressure, first version (2026-11-05)
+
+What the trace shows (`losses` lines, six honest 60-minute games):
+- **Armies stay tiny.** Both AIs keep 10-30 military units while iron piles up to 1,400-2,200.
+- **The loser bleeds citizens.** It loses 11-19 citizens per 5 minutes to raids of a few units, from about minute 20.
+  The winner barely loses any.
+- **Military units come only from attack groups and defense build-ups.** Nothing turns the stock into an army.
+
+The new `military.standing_army` (per worker) is the third personality pressure. Every 30 game s the AI requests its
+favourite land unit up to that target, within the original's military share of the pop cap.
+
+| Set | Military at 20 / 30 / 40 min (balanced) | Result |
+|---|---|---|
+| before (pers-60m) | 7.3 / 11.2 / 12.6 | |
+| standing army 0.25 | 7.8 / 11.7 / 15.4 | aggressive (0.5) against balanced: 6-6 over both seats |
+
+**The effect is modest, because the army competes with citizens for food.** The unit manager trains requests in
+order, and only when they are affordable, and a citizen request is almost always outstanding. Later in the game, once
+iron and gold pile up, the standing army does use them; one AI had 97 units at 60 minutes. A real military pressure
+needs arbitration between citizens, army and epoch: stage 2's queue manager (§5), with the personality weights
+setting the shares.
+
+### 8.14 Arbitration and defense: tried, not kept (2026-11-06)
+
+Each experiment is 18 honest 60-minute games: seeds 2-7, sets `balanced`, `aggressive+balanced` and
+`balanced+aggressive`. The code of both is in the session notes, not on the branch.
+
+- **Citizen/army arbitration in `CanAfford`.** When both are below their targets, the side further behind keeps one
+  unit's cost in reserve against the other.
+  - Result: no change. Balanced armies at 20/30/40 min were 7.8/10.8/15.3, against 7.8/11.7/15.4.
+  - Reason: food was not what blocked the army. Iron was (§8.16).
+- **A defense reflex.** Military units near the town center attack raiders within 15 tiles (version A). Version B
+  also covers the last attackers of citizens and buildings.
+  - Result: citizens lost were the same (444 against 440). The balanced economy got worse: citizens at 40 min 38
+    against 60.
+  - Reason: pulling soldiers out of their groups weakens the AI's own attacks, and a home army of 8-10 units cannot
+    beat a raiding group.
+- **What the trace showed:**
+  - Most citizen losses are far from the town center: more than 30 tiles for about 55% of them, under 15 tiles for
+    about 25%.
+  - Other players' units kill nearly all of them; wild animals kill 0-5 per game.
+
+### 8.15 The army waits on iron (2026-11-06)
+
+The `pending` trace line (every 30 s: the non-citizen requests, with count, affordable now, built producers, and the
+production room) showed the cause for an aggressive AI:
+- 33 clubmen pending at 30 minutes.
+- Never affordable, with 450 food, 300 wood and 235 gold in stock.
+- The clubman costs 30 food and 30 iron, and iron sat at 10-25.
+
+The gatherer split gave iron about 17%, while food took about 70%. That share comes from food's need in the ledger:
+- `EECPCivilizationManager::Update` adds every wanted citizen's cost once at the start (180 × 50 food).
+- Each citizen request then adds its own cost again.
+
+**Removing that lump collapsed the honest economy.** Citizens stuck at about 19, against 37-57. The double-counted
+food is in effect the AI's citizen-growth drive, so it stays (reverted).
+
+`in_production` (the phantom-unit theory of §8.4) stayed at 0-12 the whole game, so no phantom units build up here.
+
+### 8.16 Military pressure, part 2: the army floor (2026-11-06)
+
+`military.army_floor` (per personality): while the standing army is short of its target, the gatherer floor on what
+its unit costs rises by up to this share. It scales with the shortfall and is split by the unit's cost.
+
+| Set | Army at 20 / 30 / 40 min | Citizens at 20 / 30 / 40 min |
+|---|---|---|
+| balanced, no floor (36 AIs, seeds 2-19, 45 min) | 8.3 / 11.7 / 14.9 | 34.7 / 41.4 / 58.4 |
+| balanced, floor 0.2 (same seeds) | 9.8 / 13.0 / 18.2 | 35.7 / 37.8 / 52.6 |
+
+- **It is a pressure, not a free gain.** About 20% more army costs about 10% fewer citizens. Epoch reach and survival
+  are within noise.
+- **So it is a personality weight:** balanced, tall and wide 0.1, aggressive 0.3.
+- **Aggressive against balanced** (seeds 2-13, both seats): aggressive wins 16, balanced 7, 1 close. Before the
+  floor it was 6-6.
+
+### 8.17 Seat asymmetry: not the update order (2026-11-06)
+
+Balanced against balanced, seeds 2-19, 45 minutes, on the build of §8.16:
+
+| Round robin | p2 wins | p3 wins | Close |
+|---|---|---|---|
+| normal order (p2 updates first) | 7 | 7 | 4 |
+| reversed (p3 first; a TEST ONLY switch, not kept) | 8 | 5 | 5 |
+
+- **The update order does not explain the seat advantage.** Reversing it did not move the advantage to p3.
+- **There is no measurable seat effect left.** The 39-24 of §8.12 came from older builds, over several sets.
+- **Head-to-head tests still swap the seats.**
+
+### 8.18 Gatherers out of enemy land: tried, not kept (2026-11-06)
+
+`FindResourceTarget` rejects sites within 10 tiles of another player's area, but its loop skips enemies. So it keeps
+citizens off allied and neutral land and not off enemy land. Adding enemy areas, with a 15-tile margin, changed
+nothing measurable.
+
+| Build (balanced against balanced, seeds 2-19, 45 min) | Citizens lost per AI | Citizens at 40 min | Army at 40 min |
+|---|---|---|---|
+| before | 20.0 | 58.6 | 17.4 |
+| with the enemy margin | 20.1 | 55.2 | 19.1 |
+
+**Not kept.** The far deaths are raids that reach the AI's own outer resource centers, not trips into enemy land.
+
+### 8.19 Honest against cheating (2026-11-06)
+
+`EE_AI_CHEATS` now takes one set per player (`/` between sets, in turn from player 1, the idle human: `none/all` makes
+p2 cheat and p3 honest; TEST ONLY). Balanced against balanced, Hard, Small, seeds 2-7, both seats, 45 minutes:
+
+| Cheater's set | Cheater wins | Honest wins | Close | Notes |
+|---|---|---|---|---|
+| all (Hard's default) | 12 | 0 | 0 | every game over at 22-35 min; the honest AI stops gathering by 15 min |
+| reveal, extra, popband, catchup, retire (no `cost`, no `epochs`) | 6 | 5 | 1 | all to the time cap; p2 won 7, p3 4 |
+
+- **`cost` and `epochs` decide it.** On Hard, `cost` makes everything cost 1% (`cost100=1`), and `epochs` makes epoch
+  advances free. The other five cheats together are worth about nothing against the current honest AI.
+- **A fair Hard is close.** The honest AI holds even with a cheater that only sees the map and gets the resource
+  bonus. Beating the full cheater would need about a hundredfold economy: not a goal. The goal is a fair Hard
+  (`ai_cheats` without `cost` and `epochs`, or none) that plays as well as today's cheating Hard does against a human.
+- **Both are slow.** At 45 minutes every AI in the second set was still in the Prehistoric or Stone Age (epoch 0
+  or 1).
+
+### 8.20 Settlements by the resources (2026-11-06)
+
+The trace's `trips` line (every 30 s) gives, per resource, the mean distance from each gatherer's resource to the
+nearest built drop site that takes it, and how many are past the drop-off distance (6 here), where
+`BuildSettlementFor` orders a settlement. Honest balanced AIs, seeds 2-7, 45 minutes (12 AIs):
+
+| Game min | Food | Wood | Stone | Gold | Iron | Settlements | Gatherers |
+|---|---|---|---|---|---|---|---|
+| 10 | 7.2 (39% far) | 4.3 (23%) | 8.6 (43%) | 8.8 (51%) | 7.5 (30%) | 2.9 | 29 |
+| 20 | 8.0 (41%) | 3.9 (5%) | 4.5 (7%) | 7.4 (49%) | 8.3 (40%) | 4.3 | 37 |
+| 40 | 8.8 (40%) | 4.4 (18%) | 5.1 (15%) | 7.1 (50%) | 8.2 (40%) | 5.6 | 46 |
+
+- **The AI does build settlements by its resources.** There were 80 `settlement.order` events (about 7 per AI, all
+  five resources), and about 5 settlements stand per AI by 30 minutes. `BuildSettlementFor` orders them straight from
+  the gather goal, outside the build queue, so `build.queue` never shows them.
+- **Wood and stone are close** (about 4-5, 5-15% far).
+- **Food, gold and iron are not: 40-55% work past the drop-off distance.** The trips are not long (a mean of 7-9
+  against 6). Candidates:
+  - hunting is excluded;
+  - one queued settlement per resource at a time;
+  - no settlement within 0.75 of the radius of a town center.
+- **No granary** was ever built: the AI did not reach the farm epochs.
+
+### 8.21 The demand split (2026-11-06)
+
+`EE_AI_DEMAND=1` (TEST ONLY; per player in turn with `/`, as `EE_AI_CHEATS`) replaces the needs ledger's gatherer
+split (`EECPRMSplitByDemand`, `EECPResourceManager.cpp`). The AI's wants come in tiers, each a cost per resource:
+
+1. **Growth:** the next 15 missing citizens, the standing army's shortfall (up to 15 of its favourite land unit), and
+   the first two buildings of each epoch's build queue.
+2. **The pending epoch advance,** by its pressure (as the reserve in `CanAfford`).
+3. **The rest** (counted at half): the other unit requests, the queued research, and the rest of the build queues.
+
+Each resource's shortfall is its demand less its stock. Each resource first gets half of the personality's floor
+share. The rest of the gatherers go by shortfall, plus a quarter of the demand, capped by what the claimed resource
+units hold, with the overflow passed on to resources that have room.
+
+| Version (seeds 2-7, both AIs on it) | Citizens at 20 / 30 / 40 min | Stone Age |
+|---|---|---|
+| ledger (today) | 35.8 / 39.6 / 42.1 | 9/12 |
+| v1: no floors, next 5 citizens | 26.2 / 24.4 / 29.8 | 8/12 |
+| v2: full floors | 27.0 / 25.8 / 22.8 | 11/12 |
+| v3: half floors, next 15 citizens | 30.3 / 23.8 / 25.2 | 9/12 |
+
+- **v1 starved wood.** Nothing asks for wood: buildings outside the queues and upkeep never reach the demand. The
+  floors bring back that base income.
+- **Symmetric games mislead.** One side usually gets wiped out, so the means mix economy with combat.
+
+**Head to head** (v3 against the ledger, balanced, honest, Hard, seeds 2-13, both seats; 24 games):
+
+| | Demand | Ledger |
+|---|---|---|
+| Wins (close: 2) | **16** | 6 |
+| Stone Age | 20/24 at 36 min | 13/24 at 38 min |
+| Citizens / army at 20 min | 31.3 / 12.0 | 32.1 / 7.9 |
+| Citizens / army at 40 min | 41.0 / 19.5 | 28.5 / 11.2 |
+| Citizens lost by 20 min | 4.0 | 6.1 |
+
+- **Same economy, more army, earlier epoch.** The demand split matches the ledger's citizens and is ahead on army and
+  epoch at 20 minutes. The army is in tier 1, while the ledger let the army wait on iron (§8.15).
+- **Seats were even:** p2 won 12 and p3 10.
+- **Next:**
+  - make it the default as data (an `economy` field in `aipersonalities.yaml`), with the tier weights per
+    personality;
+  - check it against `aggressive` (also an army push) and on the cheat sets;
+  - look at the wanted gatherers that are never filled: iron wanted 6-7 with 9 sites listed and 0 gathering (seed 3).
+
+### 8.9 Next
+
+Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
+pressure, the stock correction, the lost builders, and personalities as data.
+
+1. **Raids on gatherers.** Most citizen deaths happen more than 30 tiles from the town center (§8.14). Candidates:
+   - keep gatherers on sites the AI can defend (distance, towers);
+   - let citizens flee to or garrison in the nearest building;
+   - escort the far resource centers.
+
+   A defense reflex that pulled soldiers out of their groups did not help.
+2. **Food before farms.** Hunting and fishing, forage site choice (§8.4), and drop sites. Then the Copper Age farm
+   economy, where "use what you hold" (granaries, farm plots) starts to bind.
+3. **Seat asymmetry:** resolved; nothing measurable on the current build (§8.17).
+4. **Lobby:** a personality per AI slot, and a fair-Hard difficulty row (`ai_cheats: []`) shipped as data.
+5. **Still to port:** `save_load.py` (save gate) and `game_batch.py`, or use `ai_bench`.
+6. **Before any merge:** `tools/gates.sh`, the macOS/Linux builds, and republishing the data bundle (new rules
+   document).

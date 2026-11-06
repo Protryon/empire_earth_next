@@ -59,6 +59,7 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include "ee/EEAIFOSubGroupFilter.h"
+#include "ee/EECPTrace.h"
 #include <EEAIFunctionObjects.h>
 
 const UString EECPUnitManager::sData("EECPUnitManager-Data");
@@ -223,7 +224,19 @@ done:
 long EECPUnitManager::GetWantedCitizens()
 {
     long theCount = this->mPlayer->GetPopulationLimit(0);
-    return UMFloatToLong(theCount * this->mPlayer->GetCitizenPercentage());
+    long theWanted = UMFloatToLong(theCount * this->mPlayer->GetCitizenPercentage());
+    // new (docs/AI_RESEARCH.md §8.8, owner: use what you hold): enough citizens to work the held resource sites, up
+    // to the personality's max_citizen_share of the pop cap; the original's pop cap x citizen percentage (row 3,
+    // 0.45) stays the floor
+    if (this->mManager->mResourceManager != NULL) {
+        long theCapacity = (long)this->mManager->mResourceManager->GetGatherCapacity();
+        long theCeiling = UMFloatToLong(theCount * EECPPersonality(this->mPlayer).mMaxCitizenShare);
+        if (theCapacity > theCeiling)
+            theCapacity = theCeiling;
+        if (theCapacity > theWanted)
+            theWanted = theCapacity;
+    }
+    return theWanted;
 }
 
 // FUNCTION: EXE 0x493b20
@@ -668,6 +681,7 @@ void EECPUnitManager::RequestUnits(long inUnitClass, long inCount, long inTownID
         if (theFound)
             return;
         if (theRequests[i].mUnitClass == inUnitClass) {
+            EE_CP_TRACE(this->mPlayer, "train.request", "cls=%ld n=%ld town=%ld added=1", inUnitClass, inCount, inTownID);
             this->mManager->GetResourceManager()->AddCosts(theNode, inCount);
             theRequests[i].mCount += inCount;
             this->mWaitingCounts[inUnitClass] += inCount;
@@ -716,6 +730,7 @@ void EECPUnitManager::RequestUnits(long inUnitClass, long inCount, long inTownID
         }
         if (theDone) {
         add:
+            EE_CP_TRACE(this->mPlayer, "train.request", "cls=%ld n=%ld town=%ld added=0", inUnitClass, inCount, inTownID);
             this->mManager->GetResourceManager()->AddCosts(theNode, inCount);
             theRequests.push_back(theRequest);
             this->mWaitingCounts[inUnitClass] += inCount;

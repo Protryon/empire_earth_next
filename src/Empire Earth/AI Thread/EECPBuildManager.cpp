@@ -59,6 +59,7 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPIntelligence.h"
 #include "ee/EEUnitCollector.h"
+#include "ee/EECPTrace.h"
 
 // the class key (0x4e5d00, guard 0x4e5cf8 bit 1)
 const UString EECPBuildManager::sData("EECPBuildManager-Data");
@@ -302,7 +303,11 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
             if (theHasTile || this->FindSite(theClassID, theTile)) {
                 EECPUnitManager* theManager = theThis->mManager->mUnitManager;
                 theWorker = theManager->FindBuilderForTile(theTile, theClassID);
-            }
+                if (theWorker == NULL)
+                    EE_CP_TRACE(this->mPlayer, "build.nobuilder", "cls=%ld x=%ld y=%ld", theClassID, (long)theTile.mX,
+                        (long)theTile.mY);
+            } else
+                EE_CP_TRACE(this->mPlayer, "build.nosite", "cls=%ld", theClassID);
             if (theWorker != NULL) {
                 EEUnit* theTarget;
                 if (theClassID == kUnitTypeFarm || theClassID == kUnitTypeRoboticFarm) {
@@ -325,6 +330,8 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
                     theWorker->SetGoal(theGoal, 0, 0);
                     theWorker->StartAction(kActionMoveToRepairSite);
                     theWorker->mUnitClass->ActionChanged(theWorker);
+                    EE_CP_TRACE(this->mPlayer, "build.start", "cls=%ld x=%ld y=%ld", theClassID, (long)theTile.mX,
+                        (long)theTile.mY);
                 }
                 theResult = true;
             } else {
@@ -416,7 +423,7 @@ void EECPBuildManager::AssignBuilders()
 }
 
 // FUNCTION: EXE 0x4679d7
-// Cancels every stalled build: requeues it in front, destroys the foundation, refunds its cost and sends
+// Cancels every stalled build: requeues it in front (without its site), destroys the foundation, refunds its cost and sends
 // the builder back to the town centre (or idles it)
 // NEAR (60): the original refuses the request's U2DPoint copy ctor (0x44d28b) and loads the player's vptr first
 void EECPBuildManager::CancelStalledBuilds()
@@ -428,8 +435,30 @@ void EECPBuildManager::CancelStalledBuilds()
         long theID = gUnitClassTable[theClassID] != NULL ? gUnitClassTable[theClassID]->mTechnology
             : 100000;
         long theIndex = EECPBMQueueIndex(theID);
-        this->mQueues[theIndex].push_front(EECPBuildRequest(theClassID,
-            U2DPoint<long>(theGoal->mTarget->mTileX, theGoal->mTarget->mTileY)));
+        if (gCPTraceOn) {   // what holds the site: the first blocking unit on the footprint other than the building
+            std::vector<U2DPoint<long> > theTiles;
+            std::vector<EEUnit*> theBlockers;
+            long theBlocker = -1;
+            long theOwner = -1;
+            EEGetFootprintTiles(theGoal->mTarget, theTiles);
+            for (unsigned long i = 0; i < theTiles.size() && theBlocker < 0; i++) {
+                theBlockers.clear();
+                EEGetBlockingUnits(this->mPlayer, theClassID, gWorld.mMap->GetTile(theTiles[i].GetX(), theTiles[i].GetY()), 0,
+                    theBlockers);
+                for (unsigned long j = 0; j < theBlockers.size() && theBlocker < 0; j++)
+                    if (theBlockers[j] != theGoal->mTarget) {
+                        theBlocker = theBlockers[j]->mUnitClass->mUnitType;
+                        theOwner = theBlockers[j]->mPlayer != NULL ? (long)theBlockers[j]->mPlayer->mPlayerID : -1;
+                    }
+            }
+            EECPTraceOut(this->mPlayer, "build.stalled", "cls=%ld x=%ld y=%ld blocker=%ld owner=%ld", theClassID,
+                (long)theGoal->mTarget->mTileX, (long)theGoal->mTarget->mTileY, theBlocker, theOwner);
+        }
+        // Requeued without its site (the original kept the stalled foundation's tile): a blocker that stays (most
+        // often the AI's own earlier foundation at that tile, still dying) stalled every new foundation there, and the
+        // AI ordered the same building at the same tile every 3-4 s for the rest of the game (docs/AI_RESEARCH.md
+        // §8.6: 1,426 of 1,466 stalls in six 60-minute games). FindSite now picks a free site.
+        this->mQueues[theIndex].push_front(EECPBuildRequest(theClassID, U2DPoint<long>(0, 0)));
         theGoal->mTarget->Kill(0, 0, 0);
         for (unsigned long i = 2; i < 7; i++)
             this->mPlayer->AddResource(i, this->mPlayer->ScaleCost(theGoal->mTargetNode->GetCost(i, 0x20, 1.0f)));
@@ -1494,6 +1523,7 @@ void EECPBuildManager::QueueBuilding(unsigned long inUnitClass, bool inAppend, b
         } else
             return;
     }
+    EE_CP_TRACE(this->mPlayer, "build.queue", "cls=%lu front=%d", inUnitClass, inFront ? 1 : 0);
     this->mManager->GetResourceManager()->AddCosts(theTechTree->Get(theID), 1);
 }
 
@@ -1507,6 +1537,7 @@ void EECPBuildManager::QueueBuildingAt(long inUnitClass, long inX, long inY)
     if (theIndex < 0)
         return;   // a class with no tech (the original indexed past its 15 queues)
     this->mQueues[theIndex].push_back(EECPBuildRequest(inUnitClass, U2DPoint<long>(inX, inY)));
+    EE_CP_TRACE(this->mPlayer, "build.queue", "cls=%ld x=%ld y=%ld", inUnitClass, inX, inY);
     this->mManager->GetResourceManager()->AddCosts(theTechTree->Get(theID), 1);
 }
 
@@ -1629,29 +1660,36 @@ void EECPBuildManager::Update(unsigned long inTime)
         this->CollectSiteTiles(4);
     }
     this->CancelStalledBuilds();
-    for (long i = 0; i <= theEpoch; i++) {
-        if (this->mQueues[i].size() <= 0)
-            continue;
-        theRequest = this->mQueues[i].front();
-        long theID = gUnitClassTable[theRequest.first] != NULL ? gUnitClassTable[theRequest.first]->mTechnology
-            : 100000;
-        EETechTreeNode* theNode = theTechTree->Get(theID);
-        if (theNode == NULL || !theNode->GetIsObsolete()) {
-            if (this->mPlayer->CanProduceUnitType(theRequest.first, 0x20, NULL)) {
-                this->mQueues[i].pop_front();
-                if (this->StartBuilding(theRequest)) {
-                    long theID2 = gUnitClassTable[theRequest.first] != NULL
-                        ? gUnitClassTable[theRequest.first]->mTechnology : 100000;
-                    EETechTreeNode* theNode2 = theTechTree->Get(theID2);
-                    this->mManager->mResourceManager->RemoveCosts(theNode2, 1);
-                } else
-                    this->mQueues[i].push_back(theRequest);
-                break;
+    // One start per update, as the original, but a request that cannot start (no site, no builder) no longer uses up
+    // the update: up to kStartAttempts producible requests are tried in queue order (the original tried one, so a
+    // tower with no site took every other update for the whole game; docs/AI_RESEARCH.md §8.7)
+    const long kStartAttempts = 4;
+    long theAttempts = 0;
+    bool theStarted = false;
+    for (long i = 0; i <= theEpoch && !theStarted && theAttempts < kStartAttempts; i++) {
+        for (unsigned long theLeft = this->mQueues[i].size(); theLeft > 0 && !theStarted && theAttempts < kStartAttempts;
+             theLeft--) {
+            theRequest = this->mQueues[i].front();
+            long theID = gUnitClassTable[theRequest.first] != NULL ? gUnitClassTable[theRequest.first]->mTechnology
+                : 100000;
+            EETechTreeNode* theNode = theTechTree->Get(theID);
+            this->mQueues[i].pop_front();
+            if (theNode != NULL && theNode->GetIsObsolete())
+                continue;   // dropped
+            if (!this->mPlayer->CanProduceUnitType(theRequest.first, 0x20, NULL)) {
+                this->mQueues[i].push_back(theRequest);
+                break;   // as the original: the next epoch's queue
             }
-            this->mQueues[i].pop_front();
-            this->mQueues[i].push_back(theRequest);
-        } else
-            this->mQueues[i].pop_front();
+            theAttempts++;
+            if (this->StartBuilding(theRequest)) {
+                long theID2 = gUnitClassTable[theRequest.first] != NULL
+                    ? gUnitClassTable[theRequest.first]->mTechnology : 100000;
+                EETechTreeNode* theNode2 = theTechTree->Get(theID2);
+                this->mManager->mResourceManager->RemoveCosts(theNode2, 1);
+                theStarted = true;
+            } else
+                this->mQueues[i].push_back(theRequest);
+        }
     }
     if (inTime > this->mNextBuilderCheckTime) {
         if (this->mNextBuilderCheckTime > 0)

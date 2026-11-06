@@ -97,6 +97,7 @@ public:
     void Update(unsigned long inTime);      // 0x3f175 (gArtificialIntelligence's round robin; provisional name)
     // 0x2eca0: 1.0, or +0xe44/+0xe48 times a constant depending on +0xbd8 (0 or 2) (provisional name)
     float GetResearchFrequencyModifier();
+    void KeepStandingArmy();                // new: the personality's standing army (docs/AI_RESEARCH.md §8.13)
     float GetEpochFrequencyModifier();      // 0x2ec0a (EECPCivilizationManager::SetNextEpochAdvanceTime scales by it) (provisional name)
     // inline (SetNextEpochAdvanceTime 0x70b43 loads both into registers before its fild spills) (provisional name)
     // inline (its COMDAT 0x68849 sits in EECPBuildManager.cpp's range; the civilization manager calls it out of line)
@@ -460,5 +461,16 @@ enum EECPManagerKind {
     kCPManagerCombat = 8,         // setrilo case 8 enableStockCombat_; EnableManagers case 8 sets EECPCombatManager::mImprovementsEnabled
     kCPManagerMoraleBuildings = 9,  // CanEnableManager case 9 uses mEnableStockBuild; EnableManagers case 9 sets EECPCivilizationManager::mMoraleBuildingsEnabled (QueueMoraleBuilding timer) (provisional name)
 };
+
+// New (docs/AI_RESEARCH.md §8.7): the epoch advance the player's research manager has queued and not yet started
+// (kTechNone: none); without the free-epochs cheat its cost is reserved
+long EECPPendingEpoch(EEComputerPlayer* inPlayer);
+
+// New (docs/AI_RESEARCH.md §8.8): the epoch pressure, the elapsed share of the epoch timer's span (dbcpbehavior rows
+// 28/29, the mean of the range times the difficulty's modifier): 0 when the timer starts, 1 when it is due (the
+// original's only advance time); a paid advance is asked for from the personality's epoch_pressure start, and its
+// reserve grows from nothing there to the whole cost at its full (aipersonalities.yaml; tall low, wide high).
+float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime);
+unsigned long EECPEpochTimerSpan(EEComputerPlayer* inPlayer);   // ms
 
 #endif

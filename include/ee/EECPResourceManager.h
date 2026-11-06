@@ -57,6 +57,10 @@ public:
     void TransportIdle(EEComplexUnit* inUnit);  // 0x91965 (ret 4; EEComputerPlayer 0x3f072)
     void RemoveCosts(EETechTreeNode* inNode, long inCount);  // 0x91b26 (ret 8; EECPBuildManager 0x6b07d, EECPUnitManager 0x93acc): AddCosts's Spend twin
     bool UpdateWantedGatherers();           // 0x91b78: the wanted gatherers per resource; true if one changed
+    // new (docs/AI_RESEARCH.md §8.8): the gatherers the held resource sites take (the active resource centers'
+    // resource units x the mining limit; wood a fixed allowance), in all or for one resource
+    unsigned long GetGatherCapacity(long inResource = -1);
+    void RebalanceGatherers();              // new: frees a few gatherers of over-served resources for AssignGatherers
     void Update(unsigned long inTime);      // 0x91d34
 
     static const UString sData;             // "EECPResourceManager-Data" (0x4e5d78, guard 0x4e5d70; chain 0x8e702)

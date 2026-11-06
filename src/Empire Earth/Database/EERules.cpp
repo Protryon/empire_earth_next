@@ -309,6 +309,70 @@ EERules& EEGetRules()
     return sRules;
 }
 
+EEAIPersonalityRules::EEAIPersonalityRules()
+{
+    EEAIPersonalityRule theBalanced;
+    theBalanced.mID = "balanced";
+    EEAIPersonalityRule theTall;            // tech: saves for the next epoch early and hard
+    theTall.mID = "tall";
+    theTall.mEpochPressureStart = 0.15f;
+    theTall.mEpochPressureFull = 0.5f;
+    theTall.mStandingArmy = 0.2f;
+    EEAIPersonalityRule theWide;            // boom: grows its workforce, advances late
+    theWide.mID = "wide";
+    theWide.mEpochPressureStart = 0.6f;
+    theWide.mEpochPressureFull = 1.0f;
+    theWide.mMaxCitizenShare = 0.8f;
+    theWide.mStandingArmy = 0.15f;
+    EEAIPersonalityRule theAggressive;      // rush: a large standing army, a middling epoch pace
+    theAggressive.mID = "aggressive";
+    theAggressive.mEpochPressureStart = 0.4f;
+    theAggressive.mEpochPressureFull = 0.9f;
+    theAggressive.mStandingArmy = 0.5f;
+    theAggressive.mArmyFloor = 0.3f;
+    this->mPersonalities.push_back(theBalanced);
+    this->mPersonalities.push_back(theTall);
+    this->mPersonalities.push_back(theWide);
+    this->mPersonalities.push_back(theAggressive);
+    this->mAssign.push_back(0);
+}
+
+const EEAIPersonalityRule& EEAIPersonalityRules::ForPlayer(unsigned long inPlayerID) const
+{
+    static const EEAIPersonalityRule kNone = [] { EEAIPersonalityRule r; r.mID = "balanced"; return r; }();
+    if (this->mPersonalities.empty())
+        return kNone;
+    long k = 0;
+    if (!this->mAssign.empty())
+        k = this->mAssign[(inPlayerID > 0 ? inPlayerID - 1 : 0) % this->mAssign.size()];
+    return this->mPersonalities[k >= 0 && (size_t)k < this->mPersonalities.size() ? k : 0];
+}
+
+long EEAIPersonalityRules::Find(const std::string& inID) const
+{
+    for (size_t k = 0; k < this->mPersonalities.size(); k++)
+        if (this->mPersonalities[k].mID == inID)
+            return (long)k;
+    return -1;
+}
+
+const char* const kEEAICheatNames[] = {"cost", "reveal", "epochs", "extra", "popband", "catchup", "retire"};
+const unsigned long kEEAICheatCount = sizeof(kEEAICheatNames) / sizeof(kEEAICheatNames[0]);
+
+long EEAICheatBit(const std::string& inName)
+{
+    for (unsigned long i = 0; i < kEEAICheatCount; i++)
+        if (inName == kEEAICheatNames[i])
+            return 1L << i;
+    return 0;
+}
+
+long EEDifficultyAICheats(unsigned long inDifficulty)
+{
+    const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
+    return inDifficulty < theList.size() ? theList[inDifficulty].mAICheats : (long)kAICheatAll;
+}
+
 long EEDifficultyAILevel(unsigned long inDifficulty)
 {
     const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
@@ -601,6 +665,16 @@ void LoadGameOptions(const Node& d, EEGameOptionRules& r)
                 Fail(x.Where() + ": ai_level is 0 (easy), 1 (medium) or 2 (hard): the computer players' records");
             x.Number("damage_scale_human_target", s.mScaleHumanTarget);
             x.Number("damage_scale_human_attacker", s.mScaleHumanAttacker);
+            if (const Node* c = x.List("ai_cheats")) {
+                s.mAICheats = 0;
+                for (const Node& n : c->mItems) {
+                    const std::string& t = EEDataText::NodeScalar(&n, x.Where(n), "ai_cheats");
+                    long theBit = EEAICheatBit(t);
+                    if (theBit == 0)
+                        Fail(x.Where(n) + ": ai_cheats: '" + t + "' is not cost, reveal, epochs, extra, popband, catchup or retire");
+                    s.mAICheats |= theBit;
+                }
+            }
             x.Done();
             r.mDifficulties.push_back(s);
         }
@@ -830,6 +904,71 @@ void LoadEpochs(EEDataText::Content& c, const Node& d, EERules& r)
     r.mEpochMusicFromText = true;
 }
 
+void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
+{
+    const char* doc = "aipersonalities";
+    Map m(d, doc, "the document");
+    Head(m);
+    if (const Node* v = m.List("personalities")) {
+        r.mPersonalities.clear();
+        for (const Node& e : v->mItems) {
+            Map x(e, doc, "a personality");
+            EEAIPersonalityRule p;
+            p.mID = Id(x);
+            if (const Node* s = x.Sub("epoch_pressure")) {
+                Map y(*s, doc, "epoch_pressure");
+                y.Float("start", p.mEpochPressureStart);
+                y.Float("full", p.mEpochPressureFull);
+                y.Done();
+                if (!(p.mEpochPressureStart >= 0.0f && p.mEpochPressureFull > p.mEpochPressureStart))
+                    Fail(y.Where() + ": epoch_pressure: 0 <= start < full");
+            }
+            if (const Node* s = x.Sub("economy")) {
+                Map y(*s, doc, "economy");
+                y.Int("surplus", p.mSurplus);
+                y.Float("surplus_cut", p.mSurplusCut);
+                y.Int("low_stock", p.mLowStock);
+                if (const Node* f = y.Sub("floor")) {
+                    Map z(*f, doc, "floor");
+                    const char* kNames[5] = {"food", "wood", "stone", "gold", "iron"};
+                    for (int i = 0; i < 5; i++)
+                        z.Float(kNames[i], p.mFloor[i]);
+                    z.Done();
+                }
+                y.Float("max_citizen_share", p.mMaxCitizenShare);
+                y.Int("wood_slots", p.mWoodSlots);
+                y.Int("moves_per_cycle", p.mMovesPerCycle);
+                y.Bool("demand_split", p.mDemandSplit);
+                y.Done();
+            }
+            if (const Node* s = x.Sub("military")) {
+                Map y(*s, doc, "military");
+                y.Float("standing_army", p.mStandingArmy);
+                y.Float("army_floor", p.mArmyFloor);
+                y.Done();
+                if (!(p.mStandingArmy >= 0.0f))
+                    Fail(y.Where() + ": military: standing_army must be 0 or more");
+            }
+            x.Done();
+            r.mPersonalities.push_back(p);
+        }
+        CheckUnique(r.mPersonalities, m.Where(*v), "personality");
+        if (r.mPersonalities.empty())
+            Fail(m.Where(*v) + ": personalities is empty");
+    }
+    if (const Node* v = m.List("assign")) {
+        r.mAssign.clear();
+        for (const Node& e : v->mItems) {
+            const std::string& t = EEDataText::NodeScalar(&e, m.Where(e), "assign");
+            long k = r.Find(t);
+            if (k < 0)
+                Fail(m.Where(e) + ": assign: '" + t + "' is not a personality");
+            r.mAssign.push_back(k);
+        }
+    }
+    m.Done();
+}
+
 }  // namespace
 
 bool EERules::Load(EEDataText::Content& inContent, std::string& outError)
@@ -848,6 +987,8 @@ bool EERules::Load(EEDataText::Content& inContent, std::string& outError)
             LoadCivPowers(inContent, d, this->mCivPowers);
         if (inContent.Document("epochs", d))
             LoadEpochs(inContent, d, *this);
+        if (inContent.Document("aipersonalities", d))
+            LoadAIPersonalities(d, this->mAIPersonalities);
     } catch (Failure& e) {
         outError = e.mText;
         return false;
@@ -988,6 +1129,7 @@ void EERules::Dump(std::string& outJson) const
             j.Int("ai_level", m.mAILevel);
             j.Number("damage_scale_human_target", m.mScaleHumanTarget);
             j.Number("damage_scale_human_attacker", m.mScaleHumanAttacker);
+            j.Int("ai_cheats", m.mAICheats);
             j.Close('}');
         }
         j.Close(']');
@@ -1085,6 +1227,32 @@ void EERules::Dump(std::string& outJson) const
             j.Close('}');
         }
         s += "]\n";
+    }
+    {
+        Json j{s};
+        s += "\"rules.aipersonalities\":{";
+        j.Open("personalities", '[');
+        for (const EEAIPersonalityRule& p : this->mAIPersonalities.mPersonalities) {
+            j.Open(nullptr, '{');
+            j.Str("id", p.mID);
+            j.Float("epoch_pressure_start", p.mEpochPressureStart);
+            j.Float("epoch_pressure_full", p.mEpochPressureFull);
+            j.Int("surplus", p.mSurplus);
+            j.Float("surplus_cut", p.mSurplusCut);
+            j.Int("low_stock", p.mLowStock);
+            for (int i = 0; i < 5; i++)
+                j.Float(("floor" + std::to_string(i)).c_str(), p.mFloor[i]);
+            j.Float("max_citizen_share", p.mMaxCitizenShare);
+            j.Int("wood_slots", p.mWoodSlots);
+            j.Int("moves_per_cycle", p.mMovesPerCycle);
+            j.Int("demand_split", p.mDemandSplit ? 1 : 0);
+            j.Float("standing_army", p.mStandingArmy);
+            j.Float("army_floor", p.mArmyFloor);
+            j.Close('}');
+        }
+        j.Close(']');
+        j.List("assign", this->mAIPersonalities.mAssign);
+        s += "}\n";
     }
     outJson += s;
 }

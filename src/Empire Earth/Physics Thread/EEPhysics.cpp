@@ -84,6 +84,7 @@
 #include "ee/EEArtificialIntelligence.h"
 #include "ee/EEMap.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EECPTrace.h"
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 UString gPhysicsDataKey("EEPhysics Data");
@@ -340,6 +341,7 @@ unsigned long EEPhysics::GetOutOfSynchChecksum(bool inDump, unsigned long inFlag
         theChecksum += thePlayer->mAirTraffic[3]->GetChecksum();
     }
     theChecksum += this->mCurrentTick + this->mRandom.GetSeed() + gU531CF0;
+    theChecksum += EECPOutOfSynchChecksum();   // new: the players' resources and the AI's state (ee/EECPTrace.h)
     if (inFlags & 4)
         theChecksum += gWorld.mMap->ComputeChecksum();
     if (inFlags & 0x100)

@@ -8,6 +8,7 @@ defaults and the vanilla documents dump identically.
   gameoptions.yaml  map sizes, speeds, difficulties (with the damage table rule), unit limit, wonders
   civbuilder.yaml   what each civilization builder attribute raises; the special powers category
   civpowers.yaml    what granting each civ power does
+  aipersonalities.yaml  the computer players' personalities (epoch pressure, economy tuning) and their assignment
 
 The code constants the vanilla values name (kUnitType*, kTech*, kSound*, kGraphicEffect*, IDS_*) are read from the
 C++ headers, so the two sides cannot name different rows.
@@ -21,7 +22,7 @@ from textio import Scalar, TextError, parse_yaml
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 INC = ROOT / 'include' / 'ee'
 
-DOCS = ['combat', 'gameoptions', 'civbuilder', 'civpowers']
+DOCS = ['combat', 'gameoptions', 'civbuilder', 'civpowers', 'aipersonalities']
 
 CATEGORIES = ['ambient', 'resource', 'building', 'airplane', 'naval', 'land', 'land_citizen', 'helicopter', 'land8',
               'projectile', 'submerged_naval', 'bomb', 'missile', 'land_priest', 'naval_priest', 'land15',
@@ -99,6 +100,10 @@ ticks:
 """
 
 
+# the computer players' cheats (ee/EERules.h EEAICheat, by bit): a difficulty's ai_cheats lists the ones it keeps
+AI_CHEATS = ('cost', 'reveal', 'epochs', 'extra', 'popband', 'catchup', 'retire')
+
+
 def gameoptions(ids, spec):
     s = _consts('EEStringIDs.h', 'IDS_')
     sizes = [('tiny', 42), ('small', 58), ('medium', 75), ('large', 105), ('huge', 160), ('gigantic', 220)]
@@ -125,7 +130,9 @@ def gameoptions(ids, spec):
             ('hard', 'IDS_LOBBY_HARD', 2, 'difficulty_damage_scale.F2', 'difficulty_damage_scale.F')]:
         out.append(f'  - id: {sid}\n    name: {s[name]}\n    ai_level: {level}                    '
                    f'# the computer players\' records: 0 easy, 1 medium, 2 hard\n'
-                   f'    damage_scale_human_target: {target}\n    damage_scale_human_attacker: {attacker}\n')
+                   f'    damage_scale_human_target: {target}\n    damage_scale_human_attacker: {attacker}\n'
+                   f'    ai_cheats: [{", ".join(AI_CHEATS)}]   # the computer players\' cheats this '
+                   f'difficulty keeps (docs/AI_RESEARCH.md; [] for none)\n')
     out.append('unit_limit:\n  minimum: unit_limit_range.L\n  maximum: unit_limit_range.L2\n  step: 50\n'
                '  default: unit_limit_default.L\n')
     out.append('wonders_for_victory:\n  maximum: wonders_for_victory_max.L\n  default: 3\n')
@@ -266,7 +273,48 @@ powers:
     return ''.join(out)
 
 
-GENERATORS = {'combat': combat, 'gameoptions': gameoptions, 'civbuilder': civbuilder, 'civpowers': civpowers}
+# the personalities the game defaults to (ee/EERules.h EEAIPersonalityRules): (id, comment, epoch start, epoch full,
+# max citizen share, standing army, army floor); the rest is the balanced economy for all of them
+AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.16)', '0.3', '0.8', '0.7', '0.25', '0.1'),
+                    ('tall', 'tech: saves for the next epoch early and hard', '0.15', '0.5', '0.7', '0.2', '0.1'),
+                    ('wide', 'boom: grows its workforce, advances late', '0.6', '1.0', '0.8', '0.15', '0.1'),
+                    ('aggressive', 'rush: a large standing army, a middling epoch pace', '0.4', '0.9', '0.7', '0.5', '0.3')]
+AI_FLOOR = ('food', 'wood', 'stone', 'gold', 'iron')
+
+
+def aipersonalities(ids, spec):
+    out = [HEAD.format(name='aipersonalities', format=spec['format'],
+                       what="The computer players' personalities: the tuning of their decisions outside dbcpbehavior.")]
+    lines = ['personalities:']
+    for pid, what, start, full, citizens, army, floor in AI_PERSONALITIES:
+        lines += [f'  - id: {pid:<24}# {what}',
+                  '    epoch_pressure:              # the elapsed share of the epoch timer (dbcpbehavior rows 28/29)',
+                  f'      start: {start:<22}# a paid epoch advance is asked for from here ...',
+                  f'      full: {full:<23}# ... and its cost is wholly reserved from here',
+                  '    economy:',
+                  '      surplus: 1000                # a resource with more in stock ...',
+                  '      surplus_cut: 0.5             # ... gets this share of its gatherers',
+                  '      low_stock: 150               # a resource with less in stock ...',
+                  '      floor:                       # ... at least this share of the gatherers',
+                  '        food: 0.1',
+                  '        wood: 0.25',
+                  '        stone: 0.05',
+                  '        gold: 0.05',
+                  '        iron: 0.05',
+                  f'      max_citizen_share: {citizens:<10}# the citizen target: at most this share of the pop cap',
+                  '      wood_slots: 15               # the gatherers wood takes (trees are not resource-center units)',
+                  '      moves_per_cycle: 3           # busy gatherers moved to a short resource per 10 s',
+                  '      demand_split: true           # gatherers by the tiered demand less the stock (false: the needs ledger)',
+                  '    military:',
+                  f'      standing_army: {army:<14}# the army kept per worker (up to the military share of the pop cap)',
+                  f'      army_floor: {floor:<17}# while it is short: up to this much more floor share on its unit\'s costs']
+    lines.append('assign: [balanced]                 # computer player n takes entry (n - 1) mod the count')
+    out.append('\n'.join(lines) + '\n')
+    return ''.join(out)
+
+
+GENERATORS = {'combat': combat, 'gameoptions': gameoptions, 'civbuilder': civbuilder, 'civpowers': civpowers,
+              'aipersonalities': aipersonalities}
 
 
 def export(ids, spec):
@@ -445,6 +493,9 @@ def validate(name, text, content, spec):
             for k in ('damage_scale_human_target', 'damage_scale_human_attacker'):
                 if x.get(k) is not None:
                     _number(x.get(k), x.where(), k, spec)
+            for c in _list(x.get('ai_cheats'), x.where(), 'ai_cheats'):
+                if str(c) not in AI_CHEATS:
+                    raise TextError(f'{x.where()}: ai_cheats: {c!r} is not one of {", ".join(AI_CHEATS)}')
             return x.get('id')
         lists = {}
         for k, fn in (('map_sizes', size), ('speeds', speed), ('difficulties', difficulty)):
@@ -512,6 +563,49 @@ def validate(name, text, content, spec):
             if x.get('level_value') is not None:
                 _float(x.get('level_value'), x.where(), 'level_value')
         sub(top, 'powers_category', powers)
+    elif name == 'aipersonalities':
+        def personality(x):
+            e = x.get('epoch_pressure')
+            if e is not None:
+                y = _Map(e, name, 'epoch_pressure')
+                st = _float(y.get('start'), y.where(), 'start') if y.get('start') is not None else 0.3
+                fu = _float(y.get('full'), y.where(), 'full') if y.get('full') is not None else 0.8
+                if not (st >= 0 and fu > st):
+                    raise TextError(f'{y.where()}: epoch_pressure: 0 <= start < full')
+                y.done()
+            c = x.get('economy')
+            if c is not None:
+                y = _Map(c, name, 'economy')
+                for k in ('surplus', 'low_stock', 'wood_slots', 'moves_per_cycle'):
+                    if y.get(k) is not None:
+                        _int(y.get(k), y.where(), k)
+                for k in ('surplus_cut', 'max_citizen_share'):
+                    if y.get(k) is not None:
+                        _float(y.get(k), y.where(), k)
+                if y.get('demand_split') is not None and str(y.get('demand_split')) not in ('0', '1', 'true', 'false'):
+                    raise TextError(f'{y.where()}: demand_split: true or false')
+                f = y.get('floor')
+                if f is not None:
+                    z = _Map(f, name, 'floor')
+                    for k in AI_FLOOR:
+                        if z.get(k) is not None:
+                            _float(z.get(k), z.where(), k)
+                    z.done()
+                y.done()
+            m = x.get('military')
+            if m is not None:
+                y = _Map(m, name, 'military')
+                if y.get('standing_army') is not None and _float(y.get('standing_army'), y.where(), 'standing_army') < 0:
+                    raise TextError(f'{y.where()}: military: standing_army must be 0 or more')
+                if y.get('army_floor') is not None:
+                    _float(y.get('army_floor'), y.where(), 'army_floor')
+                y.done()
+            return x.get('id')
+        found = entries(top, 'personalities', personality)
+        _check_entries(found, top.where(), 'personalities')
+        for a in _list(top.get('assign'), top.where(), 'assign'):
+            if found and a not in found:
+                raise TextError(f'{top.where(a)}: assign: {a!r} is not a personality')
     elif name == 'civpowers':
         refs = {'tech': 'dbtechtree', 'if_researched': 'dbtechtree', 'sound': 'dbsounds', 'effect': 'dbgfxeffects',
                 'unit_type': 'dbobjects'}

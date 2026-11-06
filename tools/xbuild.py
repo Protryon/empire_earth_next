@@ -52,7 +52,7 @@ POSIX_IMPL = ["PlatTime.cpp", "PlatThread.cpp", "PlatFile.cpp", "PlatPath.cpp",
               "PlatString.cpp", "PlatSocket.cpp", "PlatMessage.cpp"]
 WIN32_IMPL = ["PlatTime.cpp", "PlatThread.cpp", "PlatFile.cpp", "PlatPath.cpp",
               "PlatString.cpp", "PlatSocket.cpp", "PlatMessage.cpp"]
-COMMON_IMPL = ["PlatFont.cpp", "PlatConfig.cpp"]   # src/Platform/Common: the same code on every system
+COMMON_IMPL = ["PlatFont.cpp", "PlatConfig.cpp", "PlatSim.cpp"]   # src/Platform/Common: the same code on every system
 WIN32_SYSLIBS = ["kernel32.lib", "user32.lib", "advapi32.lib", "ole32.lib", "winmm.lib", "ws2_32.lib",
                  "iphlpapi.lib", "shell32.lib", "gdi32.lib", "imm32.lib", "version.lib", "setupapi.lib",
                  "oleaut32.lib", "uuid.lib", "cfgmgr32.lib", "propsys.lib", "d3d12.lib", "dxgi.lib",
@@ -783,6 +783,10 @@ def game_dialect_flags(t, cxx_game):
     # -fms-compatibility does not define); otherwise it calls an out-of-line operator== the library does not export
     f = ["-fms-extensions", "-fdelayed-template-parsing", *MS_DIALECT_LENIENCE, "-D__GXX_TYPEINFO_EQUALITY_INLINE=1",
          "-fms-compatibility", "-fms-compatibility-version=19.44", *MACOS_GNUC(t)]
+    # Linux: -fms-compatibility also hides the __GCC_ATOMIC_* macros; libstdc++ 10's atomic_flag (reached through
+    # <memory>) needs __GCC_ATOMIC_TEST_AND_SET_TRUEVAL, which is 1 on x86_64
+    if t.os == "linux":
+        f += ["-D__GCC_ATOMIC_TEST_AND_SET_TRUEVAL=1"]
     return f
 
 

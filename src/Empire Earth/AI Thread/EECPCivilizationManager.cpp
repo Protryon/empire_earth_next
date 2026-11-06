@@ -49,6 +49,7 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPBehavior.h"
+#include "ee/EECPTrace.h"
 
 const UString EECPCivilizationManager::sData("EECPCivilizationManager-Data");
 // SYNTHETIC: EXE 0x46e8d4   (wrapper)
@@ -243,7 +244,16 @@ void EECPCivilizationManager::AttemptEpochAdvance(unsigned long inTime)
         return;
     long theNext = theEpoch + 1;
     EETechTreeEpoch* theNode = (theNext >= 0 && theNext < theTree->mEpochs.size()) ? &theTree->mEpochs[theNext] : NULL;
-    if (!(inTime >= this->mNextEpochAdvanceTime))
+    unsigned long theDue = this->mNextEpochAdvanceTime;
+    if (!EECPCheatOn(this->mPlayer, kAICheatEpochs)) {
+        // New (docs/AI_RESEARCH.md §8.8, owner: epoch pressure rises with time): a paid advance is asked for once the
+        // epoch pressure passes the personality's epoch_pressure start (aipersonalities.yaml); the pending epoch then
+        // reserves a growing share of its cost (EEComputerPlayer::CanAfford) while the gatherers fill it
+        unsigned long theEarly = (unsigned long)UMFloatToLong((1.0f - EECPPersonality(this->mPlayer).mEpochPressureStart)
+            * (float)EECPEpochTimerSpan(this->mPlayer));
+        theDue = theDue > theEarly ? theDue - theEarly : 0;
+    }
+    if (!(inTime >= theDue))
         return;
     long theMissing = theNode->GetRequiredSOL() - theNode->GetCurrentSOL();
     if (theMissing > 0) {
@@ -261,11 +271,16 @@ void EECPCivilizationManager::AttemptEpochAdvance(unsigned long inTime)
             ESDebugOut("EECPCivilizationManager::AttemptEpochAdvance meeting SOL requirements(2)\n");
             this->mResearchManager->ResearchCheapest(theMissing);
             this->mEpochResearchRequested = true;
-        } else if (!this->mPlayer->mIgnoreOthers && theEpoch > this->GetMaxEpoch()) {
+        } else if (!this->mPlayer->mIgnoreOthers && theEpoch > this->GetMaxEpoch() && EECPCheatOn(this->mPlayer, kAICheatCatchUp)) {
+            // (held back while ahead of every human: the epoch rubber band, with CatchUpEpoch the catchup cheat)
             this->SetNextEpochAdvanceTime(inTime + 60000, true);
         } else {
             this->mResearchManager->Research(theNode->mData->mID);
             ESDebugOut("EECPCivilizationManager::AttemptEpochAdvance advancing epoch at time %ld\n", inTime);
+            EE_CP_TRACE(this->mPlayer, "epoch.advance", "from=%ld to=%ld cost=%ld/%ld/%ld/%ld/%ld", theEpoch, theNext,
+                (long)theNode->GetCost(kResourceFood, kUnitTypeTownCenter, 1.0f), (long)theNode->GetCost(kResourceWood, kUnitTypeTownCenter, 1.0f),
+                (long)theNode->GetCost(kResourceStone, kUnitTypeTownCenter, 1.0f), (long)theNode->GetCost(kResourceGold, kUnitTypeTownCenter, 1.0f),
+                (long)theNode->GetCost(kResourceIron, kUnitTypeTownCenter, 1.0f));
             this->mAdvancingEpoch = true;
         }
     }
@@ -1099,7 +1114,7 @@ void EECPCivilizationManager::SetNextEpochAdvanceTime(unsigned long inTime, bool
         float theMaximum = this->mPlayer->GetEpochFrequencyMax();
         float theMinutes = gPhysics->GetRandom(theMinimum, theMaximum);
         theMinutes = this->mPlayer->GetEpochFrequencyModifier() * theMinutes;
-        if (!this->mPlayer->mIgnoreOthers) {
+        if (!this->mPlayer->mIgnoreOthers && EECPCheatOn(this->mPlayer, kAICheatCatchUp)) {   // the epoch rubber band (catchup)
             long theMax = this->GetMaxEpoch();
             if (theEpoch > theMax)
                 theMinutes = theMinutes * theScale;
@@ -1239,11 +1254,26 @@ void EECPCivilizationManager::Update(unsigned long inTime)
         this->SetNextEpochAdvanceTime(inTime, false);
         this->mScheduleEpochAdvance = false;
     }
-    this->mUnitManager->Update(inTime);
-    this->mResourceManager->Update(inTime);
-    this->mBuildManager->Update(inTime);
-    this->mResearchManager->Update(inTime);
-    this->mWallManager->Update(inTime);
+    {
+        EECPTraceScope theScope("unit");
+        this->mUnitManager->Update(inTime);
+    }
+    {
+        EECPTraceScope theScope("resource");
+        this->mResourceManager->Update(inTime);
+    }
+    {
+        EECPTraceScope theScope("build");
+        this->mBuildManager->Update(inTime);
+    }
+    {
+        EECPTraceScope theScope("research");
+        this->mResearchManager->Update(inTime);
+    }
+    {
+        EECPTraceScope theScope("wall");
+        this->mWallManager->Update(inTime);
+    }
     if (!this->mAdvancingEpoch && (this->mBuildManager->HasLaterEpochRequests() || this->mResearchManager->HasLaterEpochIDs() || this->mUnitManager->HasLaterEpochRequests()
             || this->IsBehindInEpoch()))
         this->AttemptEpochAdvance(inTime);
