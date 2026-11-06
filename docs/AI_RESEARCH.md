@@ -937,17 +937,86 @@ iron and gold pile up, the standing army does use them; one AI had 97 units at 6
 needs arbitration between citizens, army and epoch: stage 2's queue manager (§5), with the personality weights
 setting the shares.
 
+### 8.14 Arbitration and defense: tried, not kept (2026-11-06)
+
+Each experiment is 18 honest 60-minute games: seeds 2-7, sets `balanced`, `aggressive+balanced` and
+`balanced+aggressive`. The code of both is in the session notes, not on the branch.
+
+- **Citizen/army arbitration in `CanAfford`.** When both are below their targets, the side further behind keeps one
+  unit's cost in reserve against the other.
+  - Result: no change. Balanced armies at 20/30/40 min were 7.8/10.8/15.3, against 7.8/11.7/15.4.
+  - Reason: food was not what blocked the army. Iron was (§8.16).
+- **A defense reflex.** Military units near the town center attack raiders within 15 tiles (version A). Version B
+  also covers the last attackers of citizens and buildings.
+  - Result: citizens lost were the same (444 against 440). The balanced economy got worse: citizens at 40 min 38
+    against 60.
+  - Reason: pulling soldiers out of their groups weakens the AI's own attacks, and a home army of 8-10 units cannot
+    beat a raiding group.
+- **What the trace showed:**
+  - Most citizen losses are far from the town center: more than 30 tiles for about 55% of them, under 15 tiles for
+    about 25%.
+  - Other players' units kill nearly all of them; wild animals kill 0-5 per game.
+
+### 8.15 The army waits on iron (2026-11-06)
+
+The `pending` trace line (every 30 s: the non-citizen requests, with count, affordable now, built producers, and the
+production room) showed the cause for an aggressive AI:
+- 33 clubmen pending at 30 minutes.
+- Never affordable, with 450 food, 300 wood and 235 gold in stock.
+- The clubman costs 30 food and 30 iron, and iron sat at 10-25.
+
+The gatherer split gave iron about 17%, while food took about 70%. That share comes from food's need in the ledger:
+- `EECPCivilizationManager::Update` adds every wanted citizen's cost once at the start (180 × 50 food).
+- Each citizen request then adds its own cost again.
+
+**Removing that lump collapsed the honest economy.** Citizens stuck at about 19, against 37-57. The double-counted
+food is in effect the AI's citizen-growth drive, so it stays (reverted).
+
+`in_production` (the phantom-unit theory of §8.4) stayed at 0-12 the whole game, so no phantom units build up here.
+
+### 8.16 Military pressure, part 2: the army floor (2026-11-06)
+
+`military.army_floor` (per personality): while the standing army is short of its target, the gatherer floor on what
+its unit costs rises by up to this share. It scales with the shortfall and is split by the unit's cost.
+
+| Set | Army at 20 / 30 / 40 min | Citizens at 20 / 30 / 40 min |
+|---|---|---|
+| balanced, no floor (36 AIs, seeds 2-19, 45 min) | 8.3 / 11.7 / 14.9 | 34.7 / 41.4 / 58.4 |
+| balanced, floor 0.2 (same seeds) | 9.8 / 13.0 / 18.2 | 35.7 / 37.8 / 52.6 |
+
+- **It is a pressure, not a free gain.** About 20% more army costs about 10% fewer citizens. Epoch reach and survival
+  are within noise.
+- **So it is a personality weight:** balanced, tall and wide 0.1, aggressive 0.3.
+- **Aggressive against balanced** (seeds 2-13, both seats): aggressive wins 16, balanced 7, 1 close. Before the
+  floor it was 6-6.
+
+### 8.17 Seat asymmetry: not the update order (2026-11-06)
+
+Balanced against balanced, seeds 2-19, 45 minutes, on the build of §8.16:
+
+| Round robin | p2 wins | p3 wins | Close |
+|---|---|---|---|
+| normal order (p2 updates first) | 7 | 7 | 4 |
+| reversed (p3 first; a TEST ONLY switch, not kept) | 8 | 5 | 5 |
+
+- **The update order does not explain the seat advantage.** Reversing it did not move the advantage to p3.
+- **There is no measurable seat effect left.** The 39-24 of §8.12 came from older builds, over several sets.
+- **Head-to-head tests still swap the seats.**
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
 pressure, the stock correction, the lost builders, and personalities as data.
 
-1. **Resource arbitration (stage 2 queue manager).** Citizens, the standing army and the epoch reserve share the
-   budget by the personality's weights, so military pressure gets its share (§8.13). Then defense: why a raid of a
-   few units kills 10-20 citizens of the loser in 5 minutes.
+1. **Raids on gatherers.** Most citizen deaths happen more than 30 tiles from the town center (§8.14). Candidates:
+   - keep gatherers on sites the AI can defend (distance, towers);
+   - let citizens flee to or garrison in the nearest building;
+   - escort the far resource centers.
+
+   A defense reflex that pulled soldiers out of their groups did not help.
 2. **Food before farms.** Hunting and fishing, forage site choice (§8.4), and drop sites. Then the Copper Age farm
    economy, where "use what you hold" (granaries, farm plots) starts to bind.
-3. **Seat asymmetry** (§8.12): test the update-order hypothesis by rotating the round-robin start.
+3. **Seat asymmetry:** resolved; nothing measurable on the current build (§8.17).
 4. **Lobby:** a personality per AI slot, and a fair-Hard difficulty row (`ai_cheats: []`) shipped as data.
 5. **Still to port:** `save_load.py` (save gate) and `game_batch.py`, or use `ai_bench`.
 6. **Before any merge:** `tools/gates.sh`, the macOS/Linux builds, and republishing the data bundle (new rules
