@@ -62,6 +62,9 @@ a Win32 debugger) and `tools/gates.sh` cannot run; the POSIX tooling below stand
     screen: harness runs are windowed. Full screen can only be checked by a manual launch.
   - Before pushing from the Mac: a full build, `--sanitize address`, and an ASan `ai-game` run with no
     `ERROR: AddressSanitizer` in `game.log`. Say that the Windows gates did not run.
+- Playtesting: `python3.12 -I tools/play_posix.py [--fast] [--build]` plays under lldb (default: the ASan build).
+  Each session goes to `build/playtest/<time>/`: `game.log`, and after a crash `crash.txt` (every thread's
+  backtrace, the registers), a stack-only `core` and any `asan.*` report.
 - Diagnostics:
   - `EE_GX_STATS=<n>`: draw summaries; it found the vertex-stride bug from "clip x 3e20".
   - `EE_GX_RENDER_SCALE=1`: no render scale. `EE_WINDOW_EVENT_LOG=1`: window events.
