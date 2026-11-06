@@ -14,6 +14,7 @@
 #include "ee/EEResourceType.h"
 
 class EEPlayer;
+void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount);   // ee/EEGameLog.h
 
 class EEComplexUnit;
 class EEAIArea;                             // ee/EEAIArea.h (GetNearestArea)
@@ -774,7 +775,8 @@ public:
     virtual void RefundTechnology(EETechnology* inTechnology, long inUnitType, float inFraction);
     // +0x48..+0xa8: inline in the real header (their bodies 0xa5486/0xa549a/0xa54a1/0xa54a7 sit in
     // EEHumanPlayer.cpp, the first unit in link order that emits EEPlayer's vtable without overriding them)
-    virtual void AddResource(long inIndex, long inAmount) { this->mResourceCaps[inIndex] += inAmount; }  // +0x48 0xa5486
+    // +0x48 0xa5486; port: counted into the game log (ee/EEGameLog.h)
+    virtual void AddResource(long inIndex, long inAmount) { this->mResourceCaps[inIndex] += inAmount; EEGameLogIncome(this, inIndex, inAmount); }
     virtual void DetachUnitFromAI(EEComplexUnit* inUnit);  // +0x4c 0x16367b (sets the unit's mIsDetachedFromAI)
     // +0x50 (EEComplexUnit::QueueResearch compares GetHeroCount(1, 1) with mHeroLimit: a count) (provisional name)
     virtual long GetHeroCount(bool inByClass, bool inRequests);    // (bools: 0x164223 reads bytes; EEComputerPlayer 0x2e248 stores them as bytes)

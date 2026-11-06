@@ -20,6 +20,7 @@
 
 class EEComputerPlayer;
 
+extern bool gCPTraceHashOn;                 // EE_AI_TRACE set: the sim hash lines too (EEArtificialIntelligence)
 extern bool gCPTraceOn;                     // EE_AI_TRACE set (read at the first EECPTraceInit)
 extern const char* gCPTraceManager;         // the manager running now (EEComputerPlayer::Update sets it)
 

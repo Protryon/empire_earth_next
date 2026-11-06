@@ -166,6 +166,7 @@ EEGameSettings::EEGameSettings()
     this->mMasterVolume = 100;
     this->mMuteInBackground = true;
     this->mMaximumZoomOut = 200;
+    this->mGameLog = 1;
     this->mAudioDevice[0] = 0;
 }
 
@@ -295,6 +296,7 @@ long EEGamePreferences::Load()
         {"Brightness", &this->mSettings.mBrightness, 50, 200},
         {"Master Volume", &this->mSettings.mMasterVolume, 0, 100},
         {"Maximum Zoom Out", &this->mSettings.mMaximumZoomOut, 100, 300},
+        {"Game Log", &this->mSettings.mGameLog, 0, 1},
     };
     const EEGameSettings& theDefaults = EEGamePreferences::sDefaultSettings;
     for (size_t i = 0; i < sizeof(thePortValues) / sizeof(thePortValues[0]); i++) {
@@ -1026,6 +1028,7 @@ long EEGamePreferences::Save()
     this->mConfig.SetValue(kEEGameSection, "Brightness", this->mSettings.mBrightness);
     this->mConfig.SetValue(kEEGameSection, "Master Volume", this->mSettings.mMasterVolume);
     this->mConfig.SetValue(kEEGameSection, "Maximum Zoom Out", this->mSettings.mMaximumZoomOut);
+    this->mConfig.SetValue(kEEGameSection, "Game Log", this->mSettings.mGameLog);
     this->mConfig.SetValue(kEEGameSection, "Mute in Background", (long)(this->mSettings.mMuteInBackground ? 1 : 0));
     this->mConfig.SetValue(kEEGameSection, "Audio Device", UWideString(this->mSettings.mAudioDevice));
     theValue = this->mSettings.mZoomLock * 100.0f;

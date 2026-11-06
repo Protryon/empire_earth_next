@@ -134,6 +134,13 @@ python -I tools/harness/posix_game.py --exe build/xbuild/macos-arm64/game-addres
 
 ## Testing
 
+**Game logs.** Every game writes `Logs/game-<date>-<time>.log` in the data root (config.ini `[Game]` `Game Log=0`
+turns it off). It holds every player's state every 30 game seconds, human and computer alike: epoch, citizens and
+what they do, army, buildings, towers, stock, income and losses, with who caused them. Epoch times and the computer
+players' decision trace are in the same file. `python -I tools/game_log.py [LOG]` summarises the newest one (under
+`data/` by default; `--data ROOT` for another data root, `--every MIN` for the timeline step). The log only reads the
+game: a game plays the same with it on or off.
+
 `tools/harness/` is a headless live-game harness (ported from the reconstruction project): it stages a test build
 (`python -I build.py --test-profile windowed-software`), drives the menus, plays AI games with a time shim and
 records telemetry, all on a GPU-less VM. See `tools/harness/README.md`.

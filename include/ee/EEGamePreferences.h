@@ -134,6 +134,7 @@ public:
     long mMasterVolume;                     // "Master Volume" percent
     bool mMuteInBackground;                 // "Mute in Background"
     long mMaximumZoomOut;                   // "Maximum Zoom Out" percent of the original's farthest (100..300)
+    long mGameLog;                          // "Game Log": 1 writes Logs/game-*.log for every game (ee/EEGameLog.h)
     char mAudioDevice[128];                 // "Audio Device" (empty: the system's default)
 };
 

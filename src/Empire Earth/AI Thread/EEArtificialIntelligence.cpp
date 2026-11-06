@@ -24,6 +24,7 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEArtificialIntelligence.h"
 #include "ee/EECPTrace.h"
+#include "ee/EEGameLog.h"
 
 // FUNCTION: EXE 0x42cc87
 // Returns a unit type's weight: 3 for the space fighter, 1 otherwise
@@ -70,7 +71,8 @@ void EEArtificialIntelligence::CollectComputerPlayers()
 void EEArtificialIntelligence::Update()
 {
     unsigned long theTime = gPhysics->mGameTime;
-    if (gCPTraceOn && this->mComputerPlayers.size() > 0)
+    EEGameLogTick(theTime);   // port: the game log (ee/EEGameLog.h), for every game
+    if (gCPTraceHashOn && this->mComputerPlayers.size() > 0)
         EECPTraceHash(theTime);
     if (!(theTime >= this->mNextUpdateTime) || this->mComputerPlayers.size() <= 0)
         return;

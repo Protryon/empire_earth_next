@@ -25,6 +25,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
+#include "ee/EEGameLog.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/EEMiniMap.h"
@@ -4227,6 +4228,8 @@ void EEPlayer::UnitPlaced(EEComplexUnit* inUnit)
 void EEPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
 {
     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    if (!inSwapped)
+        EEGameLogUnitLost(this, theUnit);   // port: the game log (ee/EEGameLog.h)
     this->mPopulationCount -= theUnit->mUnitClass->GetPopulationCost();
     if (!theUnit->mUnitClass->IsLandBuilding() || theUnit->GetComplexUnit() == NULL || theUnit->GetComplexUnit()->mIsBuilt) {
         if (theUnit->mUnitClass->mIsVital

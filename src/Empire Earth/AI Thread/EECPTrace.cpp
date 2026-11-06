@@ -46,9 +46,11 @@
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EECPTrace.h"
+#include "ee/EEGameLog.h"
 #include <math.h>
 
 bool gCPTraceOn = false;
+bool gCPTraceHashOn = false;
 const char* gCPTraceManager = "-";
 
 static bool sInitialized = false;
@@ -75,6 +77,7 @@ void EECPTraceInit()
     sInitialized = true;
     const char* theTrace = getenv("EE_AI_TRACE");
     gCPTraceOn = theTrace != NULL && theTrace[0] != '\0' && strcmp(theTrace, "0") != 0;
+    gCPTraceHashOn = gCPTraceOn;   // the sim hash only with EE_AI_TRACE (the game log turns gCPTraceOn on alone)
     const char* thePersonality = getenv("EE_AI_PERSONALITY");
     if (thePersonality != NULL && thePersonality[0] != 0) {
         std::string theList(thePersonality);
@@ -233,9 +236,13 @@ void EECPTraceOut(EEComputerPlayer* inPlayer, const char* inEvent, const char* i
     vsnprintf(theText, sizeof(theText), inFormat, theArguments);
     va_end(theArguments);
     const long* theResources = inPlayer->mResourceCaps;
-    ESDebugOut("EE-AI %lu p%lu %s %s %s | f=%ld w=%ld s=%ld g=%ld i=%ld\n", gPhysics->mGameTime, inPlayer->mPlayerID,
-        gCPTraceManager, inEvent, theText, theResources[kResourceFood], theResources[kResourceWood],
+    char theLine[800];
+    snprintf(theLine, sizeof(theLine), "EE-AI %lu p%lu %s %s %s | f=%ld w=%ld s=%ld g=%ld i=%ld\n", gPhysics->mGameTime,
+        inPlayer->mPlayerID, gCPTraceManager, inEvent, theText, theResources[kResourceFood], theResources[kResourceWood],
         theResources[kResourceStone], theResources[kResourceGold], theResources[kResourceIron]);
+    ESDebugOut("%s", theLine);
+    if (EEGameLogOn())
+        EEGameLogLine(theLine);
 }
 
 static bool EECPIsBuildingCategory(long inCategory)
