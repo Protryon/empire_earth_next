@@ -190,14 +190,21 @@ unsigned long RTSPhysics::Main(void* inPointer)
                 continue;
             }
             theServer->SimCommunicationsTick();
-            thePhysics->Lock();
-            do {
+            while (true) {
+                thePhysics->Lock();
                 thePhysics->Tick();
                 thePhysics->mTicksRun++;
-            } while (theEEPhysics->mTicksToProcess > 0 && thePhysics->mTimerRunning && !thePhysics->mStopThread);
-            if (gPlatSimAfterTick)
-                gPlatSimAfterTick();
-            thePhysics->Unlock();
+                bool theMore = theEEPhysics->mTicksToProcess > 0 && thePhysics->mTimerRunning && !thePhysics->mStopThread;
+                if (!theMore && gPlatSimAfterTick)
+                    gPlatSimAfterTick();
+                thePhysics->Unlock();
+                if (!theMore)
+                    break;
+                // one of the thread's messages after each physics tick, as the timer loop handles them (a message a
+                // tick sent, e.g. the autosave, takes effect at the same tick as in the game)
+                if (thePhysics->mThread->Receive(theMessage, theParameter1, theParameter2) == kErrorOK)
+                    thePhysics->HandleMessage(theMessage, theParameter1, theParameter2);
+            }
         } else if (thePhysics->mTimerRunning && !thePhysics->mStopThread) {
             unsigned long theTicks = (TMGetTime() - theLastTime) / thePhysics->mTimerInterval;
             if (theTicks > 1)

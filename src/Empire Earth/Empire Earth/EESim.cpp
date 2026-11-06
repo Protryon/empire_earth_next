@@ -171,6 +171,7 @@ struct Options {
     std::vector<std::string> mSets;                      // --set doc.key=value
     std::string mCheats, mPersonality;
     long mPortOffset = -1;                               // -1: a free pair found at start
+    long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     bool mQuiet = false;
 };
 
@@ -854,6 +855,7 @@ const char* kUsage =
     "  --trace FILE           the EE-AI trace lines (with EE_AI_TRACE=1 or --ai-trace; default stdout)\n"
     "  --ai-trace             EE_AI_TRACE=1\n"
     "  --log FILE             every debug string of the game\n"
+    "  --autosave-ms N        the game's autosave period in PT time (default 0: none; the game and the harness: 600000)\n"
     "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: a free pair from 35334 up)\n"
     "  --quiet                no progress on stderr\n";
 
@@ -911,9 +913,9 @@ void EESimPreferences()
     gGamePreferences.mSettings.mTextureBitDepth = 32;
     gGamePreferences.mSettings.mGameWindowWidth = 800;
     gGamePreferences.mSettings.mGameWindowHeight = 600;
-    gGamePreferences.mSettings.mAutoSaveInMilliseconds = 0;
     gGamePreferences.mSettings.mMinPTsPerSecond = sOptions.mPTRate;
     gGamePreferences.mSettings.mMaxPTsPerSecond = sOptions.mPTRate;
+    gGamePreferences.mSettings.mAutoSaveInMilliseconds = (unsigned long)sOptions.mAutoSaveMs;
     gGamePreferences.mSettings.mMusicEnabled = false;
     gGamePreferences.mSettings.mWaitForVSync = false;
 }
@@ -999,6 +1001,8 @@ int EESimMain(int argc, char** argv)
             sOptions.mQuiet = true;
         else if (a == "--port-offset")
             sOptions.mPortOffset = atol(value().c_str());
+        else if (a == "--autosave-ms")
+            sOptions.mAutoSaveMs = atol(value().c_str());
         else {
             fprintf(stderr, "EE-SIM: unknown option %s (--help)\n", a.c_str());
             return 64;
