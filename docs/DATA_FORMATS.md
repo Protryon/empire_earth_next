@@ -2630,8 +2630,12 @@ computer player gets which. New in this port (no original values: the defaults a
           max_citizen_share: 0.7   # the citizen target (the held sites' capacity) is at most this share of the pop cap
           wood_slots: 15           # wood's gatherer capacity
           moves_per_cycle: 3       # busy gatherers moved to a short resource per 10 s
-      - id: tall ...               # epoch_pressure 0.15 / 0.5
-      - id: wide ...               # epoch_pressure 0.6 / 1.0, max_citizen_share 0.8
+        military:
+          standing_army: 0.25      # the army kept per worker (every 30 game s, the favourite land unit; up to the
+                                   # original's military share of the pop cap)
+      - id: tall ...               # epoch_pressure 0.15 / 0.5, standing_army 0.2
+      - id: wide ...               # epoch_pressure 0.6 / 1.0, max_citizen_share 0.8, standing_army 0.15
+      - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5
     assign: [balanced]             # computer player n takes entry (n - 1) mod the count
 
 A key left out keeps the default; `assign` names personalities. TEST ONLY: `EE_AI_PERSONALITY` in the environment

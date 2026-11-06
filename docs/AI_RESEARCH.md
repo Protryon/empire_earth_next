@@ -915,13 +915,36 @@ Readings:
   and 26 were close. Candidates: the round-robin update order (p2 always first) and the start positions. Head-to-head
   tests have to swap the seats.
 
+### 8.13 Military pressure, first version (2026-11-05)
+
+What the trace shows (`losses` lines, six honest 60-minute games):
+- **Armies stay tiny.** Both AIs keep 10-30 military units while iron piles up to 1,400-2,200.
+- **The loser bleeds citizens.** It loses 11-19 citizens per 5 minutes to raids of a few units, from about minute 20.
+  The winner barely loses any.
+- **Military units come only from attack groups and defense build-ups.** Nothing turns the stock into an army.
+
+The new `military.standing_army` (per worker) is the third personality pressure. Every 30 game s the AI requests its
+favourite land unit up to that target, within the original's military share of the pop cap.
+
+| Set | Military at 20 / 30 / 40 min (balanced) | Result |
+|---|---|---|
+| before (pers-60m) | 7.3 / 11.2 / 12.6 | |
+| standing army 0.25 | 7.8 / 11.7 / 15.4 | aggressive (0.5) against balanced: 6-6 over both seats |
+
+**The effect is modest, because the army competes with citizens for food.** The unit manager trains requests in
+order, and only when they are affordable, and a citizen request is almost always outstanding. Later in the game, once
+iron and gold pile up, the standing army does use them; one AI had 97 units at 60 minutes. A real military pressure
+needs arbitration between citizens, army and epoch: stage 2's queue manager (§5), with the personality weights
+setting the shares.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
 pressure, the stock correction, the lost builders, and personalities as data.
 
-1. **Military pressure.** It is the third personality weight (owner, §8.8). First, a target choice and
-   attack-timing trace in `EECPCombatManager::Update`, to see why most honest games end in a wipe-out.
+1. **Resource arbitration (stage 2 queue manager).** Citizens, the standing army and the epoch reserve share the
+   budget by the personality's weights, so military pressure gets its share (§8.13). Then defense: why a raid of a
+   few units kills 10-20 citizens of the loser in 5 minutes.
 2. **Food before farms.** Hunting and fishing, forage site choice (§8.4), and drop sites. Then the Copper Age farm
    economy, where "use what you hold" (granaries, farm plots) starts to bind.
 3. **Seat asymmetry** (§8.12): test the update-order hypothesis by rotating the round-robin start.
