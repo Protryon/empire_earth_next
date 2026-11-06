@@ -598,7 +598,7 @@ void SetUpLobby()
                 return false;
         return ComboState(177, l, s) && ComboState(179, l, s) && ComboState(207, l, s);
     });
-    SimSleep(3000);   // the local server's readiness and queued lobby updates (as the harness)
+    SimSleep(1500);   // the local server's readiness and queued lobby updates (the harness waits 3 s)
     // (control, value, label), applied in order, absolutely (ai_game.py)
     std::vector<std::pair<long, std::string>> theOptions = {
         {175, "Random Map"}, {177, "Small"}, {179, "Continental"}, {181, "Standard - High"},
@@ -636,7 +636,7 @@ void SetUpLobby()
         Select(kPlayerType + s, s <= n ? "Computer" : "Open", "slot " + std::to_string(s));
     for (auto& o : theOptions)
         Select(o.first, o.second, "control " + std::to_string(o.first));
-    SimSleep(2000);
+    SimSleep(1000);
     for (const Chosen& c : sChosen) {
         std::vector<std::string> l;
         long s = -1;
@@ -893,6 +893,24 @@ long FreePortOffset()
 #endif
 }
 
+// a path made absolute now (the game moves the current directory to its data root at start)
+std::string Absolute(const std::string& inPath)
+{
+    if (inPath.empty() || inPath == "-")
+        return inPath;
+#ifdef _WIN32
+    char theFull[4096];
+    if (_fullpath(theFull, inPath.c_str(), sizeof(theFull)))
+        return theFull;
+    return inPath;
+#else
+    if (inPath[0] == '/')
+        return inPath;
+    char theDirectory[4096];
+    return getcwd(theDirectory, sizeof(theDirectory)) ? std::string(theDirectory) + "/" + inPath : inPath;
+#endif
+}
+
 void SetEnv(const char* inName, const std::string& inValue)
 {
 #ifdef _WIN32
@@ -925,6 +943,29 @@ void EESimStart()
 {
     std::thread(Drive).detach();
 }
+
+#ifdef _WIN32
+// a fault in the simulation: the code, the place and the return addresses (exe addresses: EE-SIM.map) on stderr
+static LONG CALLBACK EESimFault(EXCEPTION_POINTERS* inInfo)
+{
+    DWORD theCode = inInfo->ExceptionRecord->ExceptionCode;
+    if (theCode < 0xC0000000UL || theCode == 0xE06D7363UL)   // not a fault (thread names, debug strings, C++)
+        return EXCEPTION_CONTINUE_SEARCH;
+    static volatile LONG sOnce = 0;
+    if (InterlockedExchange(&sOnce, 1))
+        return EXCEPTION_CONTINUE_SEARCH;
+    void* theFrames[48];
+    USHORT theCount = RtlCaptureStackBackTrace(0, 48, theFrames, NULL);
+    char theText[2048];
+    int n = snprintf(theText, sizeof(theText), "EE-SIM FAULT %08lx at %p thread %lu; frames:", (unsigned long)theCode,
+                     inInfo->ExceptionRecord->ExceptionAddress, (unsigned long)GetCurrentThreadId());
+    for (USHORT k = 0; k < theCount && n < (int)sizeof(theText) - 24; k++)
+        n += snprintf(theText + n, sizeof(theText) - n, " %p", theFrames[k]);
+    fprintf(stderr, "%s\n", theText);
+    fflush(stderr);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
 
 // EESimMain: EE-SIM.exe's entry (EESimMain.cpp's main): the options, the switches, then the game's own WinMain
 int EESimMain(int argc, char** argv)
@@ -986,17 +1027,17 @@ int EESimMain(int argc, char** argv)
             }
             sOptions.mSets.push_back(v);
         } else if (a == "--data")
-            theData = value();
+            theData = Absolute(value());
         else if (a == "--config")
-            theConfig = value();
+            theConfig = Absolute(value());
         else if (a == "--report")
-            sOptions.mReport = value();
+            sOptions.mReport = Absolute(value());
         else if (a == "--trace")
-            sOptions.mTrace = value();
+            sOptions.mTrace = Absolute(value());
         else if (a == "--ai-trace")
             theTraceOn = true;
         else if (a == "--log")
-            sOptions.mLog = value();
+            sOptions.mLog = Absolute(value());
         else if (a == "--quiet")
             sOptions.mQuiet = true;
         else if (a == "--port-offset")
@@ -1038,6 +1079,9 @@ int EESimMain(int argc, char** argv)
     gPlatSimNoHumanDefeat = sOptions.mNoHumanDefeat ? 1 : 0;
     gPlatSimPortOffset = sOptions.mPortOffset >= 0 ? (int)sOptions.mPortOffset : (int)FreePortOffset();
     PlatDebugSetHandler(DebugHandler);
+#ifdef _WIN32
+    AddVectoredExceptionHandler(1, EESimFault);
+#endif
     Note("EE-SIM seed %lu, %ld computers, cap %.0f game s, ports %d/%d", sOptions.mSeed, sOptions.mComputers,
          sOptions.mGameSeconds, 33334 + gPlatSimPortOffset, 33335 + gPlatSimPortOffset);
 #ifdef _WIN32
