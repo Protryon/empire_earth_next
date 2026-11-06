@@ -44,6 +44,14 @@ def data_tree(kind):
             tree = main / "build" / "open_data" / name
     if not (tree / "Data").is_dir():
         sys.exit(f"{tree}: no Data folder (python -I tools/open_data.py build ...)")
+    # a tree built by other converter code may not load in this build (the text db and rules formats change with the
+    # code; the harness rebuilds such a tree, this tool only reads it)
+    sys.path.insert(0, str(ROOT / "tools"))
+    import open_data  # noqa: E402
+    made = json.loads((tree / "open_data.json").read_text()).get("converters") if (tree / "open_data.json").exists() else None
+    if made != open_data.converters_hash():
+        print(f"sim: warning: {tree} was built by other converter code ({made} != {open_data.converters_hash()}) "
+              f"or is being built", file=sys.stderr)
     return tree.resolve()
 
 
