@@ -1660,29 +1660,36 @@ void EECPBuildManager::Update(unsigned long inTime)
         this->CollectSiteTiles(4);
     }
     this->CancelStalledBuilds();
-    for (long i = 0; i <= theEpoch; i++) {
-        if (this->mQueues[i].size() <= 0)
-            continue;
-        theRequest = this->mQueues[i].front();
-        long theID = gUnitClassTable[theRequest.first] != NULL ? gUnitClassTable[theRequest.first]->mTechnology
-            : 100000;
-        EETechTreeNode* theNode = theTechTree->Get(theID);
-        if (theNode == NULL || !theNode->GetIsObsolete()) {
-            if (this->mPlayer->CanProduceUnitType(theRequest.first, 0x20, NULL)) {
-                this->mQueues[i].pop_front();
-                if (this->StartBuilding(theRequest)) {
-                    long theID2 = gUnitClassTable[theRequest.first] != NULL
-                        ? gUnitClassTable[theRequest.first]->mTechnology : 100000;
-                    EETechTreeNode* theNode2 = theTechTree->Get(theID2);
-                    this->mManager->mResourceManager->RemoveCosts(theNode2, 1);
-                } else
-                    this->mQueues[i].push_back(theRequest);
-                break;
+    // One start per update, as the original, but a request that cannot start (no site, no builder) no longer uses up
+    // the update: up to kStartAttempts producible requests are tried in queue order (the original tried one, so a
+    // tower with no site took every other update for the whole game; docs/AI_RESEARCH.md §8.7)
+    const long kStartAttempts = 4;
+    long theAttempts = 0;
+    bool theStarted = false;
+    for (long i = 0; i <= theEpoch && !theStarted && theAttempts < kStartAttempts; i++) {
+        for (unsigned long theLeft = this->mQueues[i].size(); theLeft > 0 && !theStarted && theAttempts < kStartAttempts;
+             theLeft--) {
+            theRequest = this->mQueues[i].front();
+            long theID = gUnitClassTable[theRequest.first] != NULL ? gUnitClassTable[theRequest.first]->mTechnology
+                : 100000;
+            EETechTreeNode* theNode = theTechTree->Get(theID);
+            this->mQueues[i].pop_front();
+            if (theNode != NULL && theNode->GetIsObsolete())
+                continue;   // dropped
+            if (!this->mPlayer->CanProduceUnitType(theRequest.first, 0x20, NULL)) {
+                this->mQueues[i].push_back(theRequest);
+                break;   // as the original: the next epoch's queue
             }
-            this->mQueues[i].pop_front();
-            this->mQueues[i].push_back(theRequest);
-        } else
-            this->mQueues[i].pop_front();
+            theAttempts++;
+            if (this->StartBuilding(theRequest)) {
+                long theID2 = gUnitClassTable[theRequest.first] != NULL
+                    ? gUnitClassTable[theRequest.first]->mTechnology : 100000;
+                EETechTreeNode* theNode2 = theTechTree->Get(theID2);
+                this->mManager->mResourceManager->RemoveCosts(theNode2, 1);
+                theStarted = true;
+            } else
+                this->mQueues[i].push_back(theRequest);
+        }
     }
     if (inTime > this->mNextBuilderCheckTime) {
         if (this->mNextBuilderCheckTime > 0)
