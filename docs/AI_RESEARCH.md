@@ -1164,6 +1164,33 @@ Head to head:
 for a unit whose attack target is still out of reach when another unit hits it. Determinism holds (12/12 repeat
 pairs).
 
+### 8.23 Economy experiments: defence is the bottleneck (2026-11-06, EE-SIM)
+
+Head to head, 48 games each, both seats (`--env-vary EE_AI_EXP=x/-,-/x`; `+` joins experiments in one set):
+
+| Experiment | Result | Notes |
+|---|---|---|
+| `boom25` / `boom35`: until 25 workers or 12 min (35 or 15), citizens skip the epoch reserve and no standing army | lost 16-58 (both) | the same citizens at 10 minutes, then fewer soldiers and more citizens lost |
+| `epochplan`: the next epoch's wood, stone, gold and iron count whole in tier 2 from the start of an epoch | 22-25, 90 min: 22-26 | at 40 min 6.1 gold and 5.9 iron gatherers against 5.2 and 3.4; Copper 18/48 at 73 min against 19/48 at 75 min |
+| `payback`: citizens skip the reserve while the epoch timer has more than 8 minutes to run | lost 11-35 | citizens 37 against 33 at 20 min, then about 1 soldier, 63 citizens lost against 24, Stone Age at 47 min |
+
+- **Early growth is capped by training.** Citizens train only at the Town Center or Capitol, 28 s each. The
+  Prehistoric allows one of them, and the queue holds 6-8 for the first 8 minutes.
+- **The stall comes at 15-20 minutes.** The AI holds 600-1,000 food with no citizen in training while it fills the
+  Stone Age's 1,122.
+- **Freeing that food for citizens loses.** It starves the army, and the opponent's raids then take more citizens
+  than the extra ones are worth.
+- **The Copper Age:** 19-29 of 48 AIs reach it, at about 75 minutes, about 40 minutes after the Stone Age.
+- **`noattack`** (no attack groups of its own) is not a clean economy race. Retaliation still sends units: 40
+  attack groups formed in a game with both sides on it.
+
+**Next.** Make defence cheaper, so that a smaller army keeps the economy safe:
+- towers and the raid response against computer players too (v5 of §8.22 was 20-24);
+- a home army that guards the worked resource centres.
+
+Then retry `payback` and the boom on top. A sparring opponent that does not rush (a complete `noattack`) and the
+owner's playtests judge the economy changes the rush meta hides.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
