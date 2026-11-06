@@ -2533,7 +2533,7 @@ of two pre-scaled copies: the same float product. `ai_cheats` lists the computer
 (`EEAICheat`, ee/EERules.h; every one by default, as the original; `[]` makes a fair difficulty): `cost` (the unit
 cost modifier, dbcpbehavior rows 67/96, 1% stock), `reveal` (the map explored at the start), `epochs` (free epoch
 advances), `extra` (row 101's gold and iron), `popband` (the pop cap pulled toward the largest human population),
-`catchup` (epoch catch-up) and `retire` (unseen obsolete units deleted); see docs/AI_RESEARCH.md. A new difficulty
+`catchup` (the epoch rubber band: hurried when behind a human, held back and slowed when ahead of every human) and `retire` (unseen obsolete units deleted); see docs/AI_RESEARCH.md. A new difficulty
 entry with `ai_level: 2` and `ai_cheats: []` is a fair Hard. Load types stay the code's (`kLoadTypeCount`, 6: new game,
 scenario, saved game ...: each is a code path).
 

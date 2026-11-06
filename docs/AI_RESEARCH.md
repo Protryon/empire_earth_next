@@ -852,6 +852,32 @@ Owner decision (2026-11-05): lockstep stays. Keep the current determinism, and f
     pressure.
   - These are the utility weights of §4.1 and stage 3. They go in as data from stage 1 on.
 
+### 8.10 Economy and epoch experiments (2026-11-05)
+
+Each row is 6 to 12 sixty-minute games (seeds 2-7, Hard, 2 AIs), compared at fixed game times. End-of-game numbers
+mislead here: in most honest games one AI wipes out the other.
+
+| Build | Honest citizens at 20 / 30 / 40 min | Honest AIs in the Stone Age |
+|---|---|---|
+| epoch fix (§8.7), original gatherer split | 32 / 44 / 54 | 7 of 12, at 53 min |
+| gatherer split by base shares and the epoch reserve | 26 / 31 / 34 | 3 of 12 |
+| gatherer split by pending-cost shortfall | 29 / 31 / 41 | 6 of 12 |
+| original split + capacity citizen target, rebalancing, leftovers to the most-needed resource (kept) | 33 / 46 / 55 | 7 of 12, at 55 min |
+| + epoch pressure, full reserve from 30% of the timer | 26 / 28 / 34 | 9 of 12, at 28 min |
+| + epoch pressure, reserve growing 30% → 80% (kept) | 30 / 36 / 40 | 8 of 12, at 37 min |
+
+Readings:
+- **The original food-heavy gatherer split is right for the first epochs.** Food is citizens, and citizens are
+  growth. Both replacements were slower and are not used. A better split has to model the spending rate, not only
+  the queues.
+- **The capacity target, rebalancing and the leftover order are neutral today.** Food income binds first. They are
+  the groundwork for "use what you hold" once farms exist (Copper Age).
+- **The epoch timer is a tall/wide slider.** Two thresholds, where the request starts and where the reserve is full,
+  trade growth against epoch speed. They become personality weights (§8.8).
+- **Food income is the next bottleneck.** About 15 foragers make roughly 110 food per minute, and the Stone Age
+  costs 1,122. Candidates: hunting and fishing, forage site choice (§8.4: berries rejected as "enemy near"), and
+  drop-site placement.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2.

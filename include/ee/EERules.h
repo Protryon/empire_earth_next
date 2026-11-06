@@ -91,7 +91,7 @@ enum EEAICheat {
     kAICheatEpochs = 1 << 2,    // epochs: epoch advances are free and always affordable
     kAICheatExtra = 1 << 3,     // extra: computer_player_extra_resources (row 101) gold and iron at the start
     kAICheatPopBand = 1 << 4,   // popband: the pop cap pulled toward the largest human population (rows 92/93)
-    kAICheatCatchUp = 1 << 5,   // catchup: the next epoch advance pulled forward when another player is ahead
+    kAICheatCatchUp = 1 << 5,   // catchup: the epoch rubber band (pulled forward when behind, held back when ahead of every human)
     kAICheatRetire = 1 << 6,    // retire: obsolete units no human sees are deleted
     kAICheatAll = (1 << 7) - 1,
 };
