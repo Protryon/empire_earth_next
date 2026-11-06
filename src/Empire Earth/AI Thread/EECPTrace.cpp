@@ -38,6 +38,7 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPBuildManager.h"
 #include "ee/EECPResourceManager.h"
+#include "ee/EECPResourceCenter.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPAttackCommander.h"
 #include "ee/EEUnitGoal.h"
@@ -187,6 +188,22 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
     // ledger (queued costs earned minus what was gathered or started; UpdateWantedGatherers splits by it)
     if (inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mResourceManager != NULL) {
         EECPResourceManager* theRM = inPlayer->mCivilizationManager->mResourceManager;
+        // the resource units the player's resource centers hold, by resource, and the gatherers they take
+        // (mMiningLimit per unit); "centers" the resource centers
+        unsigned long theSites[kResourceIron + 1] = {0};
+        for (unsigned long k = 0; k < inPlayer->GetNumResourceCenters(); k++) {
+            std::vector<EEUnit*>& theUnits = inPlayer->GetResourceCenter(k)->mUnits;
+            for (unsigned long u = 0; u < theUnits.size(); u++) {
+                unsigned long theType = theUnits[u]->mResourceType;
+                if (theType >= kResourceFood && theType <= kResourceIron && theUnits[u]->mHitPoints > 0)
+                    theSites[theType]++;
+            }
+        }
+        EECPTraceOut(inPlayer, "sites", "units=%lu/%lu/%lu/%lu/%lu limit=%ld centers=%lu wanted_citizens=%ld workers=%lu",
+            theSites[kResourceFood], theSites[kResourceWood], theSites[kResourceStone], theSites[kResourceGold],
+            theSites[kResourceIron], inPlayer->mMiningLimit, (unsigned long)inPlayer->GetNumResourceCenters(),
+            inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetWantedCitizens() : -1L,
+            inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetNumWorkers() : 0UL);
         EECPTraceOut(inPlayer, "econ", "want=%lu/%lu/%lu/%lu/%lu listed=%lu/%lu/%lu/%lu/%lu/%lu need=%ld/%ld/%ld/%ld/%ld",
             theRM->mWantedGatherers[2], theRM->mWantedGatherers[3], theRM->mWantedGatherers[4],
             theRM->mWantedGatherers[5], theRM->mWantedGatherers[6], (unsigned long)theRM->mGatherers[2].size(),
