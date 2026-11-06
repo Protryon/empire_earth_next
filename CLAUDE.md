@@ -15,6 +15,8 @@ python -I tools/fetch_wgpu.py                                      # once: wgpu-
 python -I build.py -j 10                                           # -> build/clang/exe/EE-AOC.exe (+ .map, .pdb)
 python -I build.py -j 10 --test-profile windowed-software          # -> build/clang-test/exe/EE-AOC.exe (harness image)
 python -I build.py --compile-only                                  # compile every unit, link nothing
+python -I build.py -j 10 --sim                                     # + build/clang/exe/EE-SIM.exe (headless simulation)
+python -I tools/sim_bench.py --name X --seeds 2-7 --jobs 2         # EE-SIM games: seeds x settings (README "Testing")
 python -I tools/clang_build.py [-j N] [module ...]                 # compile census, ranked error summary
 ```
 

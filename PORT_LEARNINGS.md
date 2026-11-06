@@ -1399,3 +1399,69 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Harness AI games have an idle human in slot 0.** The pop-cap rubber band (rows 92/93) and the human-first target
   choice both react to it: the cap is ~112 instead of 400 × 1.4, and an honest AI game can end when the AIs defeat
   the human (docs/AI_RESEARCH.md §8).
+
+## The headless simulation (branch headless-sim, 2026-11-06)
+
+`EE-SIM.exe` (`build.py --sim`, README "Testing") is EE-AOC.exe's objects plus a console entry. The switches are in
+`platform/PlatSim.h` (all off in the game); the driver is `src/Empire Earth/Empire Earth/EESim.cpp`.
+
+- **Keep the start-up, replace the player.** The path from the lobby to a running world goes through the local
+  server's messages (EEMStartLoading, the preloading thread's EEMStartLoadingResponse, EEMLoadMainScreen and its
+  response, NEMStartGame, which also draws one number from the physics random generator) and through the UI, graphics
+  and physics threads answering each other (pause/resume, the physics start). Re-implementing it would fork the game;
+  so the sim runs the game's own WinMain and UI loop, and a driver thread clicks the menus and sets the lobby combos
+  through the controls' own methods, as the harness's UI fixture does (the same controls, defaults and order as
+  ai_game.py). Only the front end is stubbed: the window is created hidden (DX7Screen::CreateAWindow), the graphics
+  thread answers its messages but renders nothing (RTSGraphics::Main), the mixer opens miniaudio's null device, the
+  splash screen, intro movies and the single-instance mutex are skipped, message boxes go to stderr.
+- **The clock is the communications tick.** In the game the server's send thread sends a communications tick (CT)
+  every send interval (350 ms) with `PTsPerCT` physics ticks (14 at the harness's pinned 40 PTs per second) and the
+  pending inputs, and the physics thread runs them on its timer. A physics tick depends only on the CT stream, not on
+  the wall clock, so the sim's physics thread sends the next CT itself as soon as it has run the last
+  (`NESynchronousServer::SimCommunicationsTick`, with the rate the pin gives and no wall-clock tuning) and the send
+  thread sends none once the game runs. One of the thread's messages is handled after each physics tick, as the timer
+  loop does. Single player sends a CT synchronously (NEMessageManager::Send -> HandleSentMessage ->
+  EEServer::ProcessSystemMessage queues the physics tick), so this needs no thread hand-off.
+- **Same seed, same game, same trace as the harness.** The driver pins the start seed where the harness does
+  (EEMStartLoading::Execute), keeps the idle human in (the harness's --no-human-defeat: RemovePlayerFromGame and
+  SetGameResult(2) for the local player do nothing) and sets the human's civilization flags as the harness's
+  pre-empt leaves them (mCivilizationChosen, mCivilizationLocked) before the first physics tick. Seeds 2-7, Hard,
+  Small, 2 AIs, honest, balanced: two sim runs of a seed print identical traces (6/6), and the sim's trace equals the
+  harness's (build/boot/ai_bench/trips-honest, the same commit) for the whole 2700 game s for seeds 2-6. The `pt=`
+  of the hash lines matches too (14 PTs per CT); only `inputs=` differs (the harness's civilization-timer messages
+  land at wall-time-dependent CTs; the sim has 3 inputs, the harness 4).
+- **The autosave changes the game.** Seed 7 differs from the harness from 1520 game s. The harness game autosaved
+  at ~1503 s (AutoSave In Milliseconds 600000 counts PT time: 24,000 PTs = 1500 game s); the sim has the autosave off
+  by default. `EECPCivilizationManager::Save` sets `mBuildingCountsChecked = true` before writing it: saving changes
+  the computer player's state. With `--autosave-ms 600000` the sim saves too and its hash lines (units, random seed)
+  agree with the harness's again, but the civilization manager's next build-queue line comes 1-2 s earlier: where the
+  save lands depends on which CT carries the save request (SendToAllAndWait), which in the harness depends on the wall
+  clock. So harness games are not reproducible past their first autosave either (the harness's determinism pairs were
+  15-minute games). Not fixed here (a game change): writing `true` without setting the member would make saving
+  side-effect free.
+- **Several at once.** Two sims crashed on start: the TCP protocol's fixed ports 33334/33335 (the local server binds
+  them in single player too). The sim moves them by `--port-offset` (default: a free pair from 35334 up; the
+  harness's parallel instances use 33334 + 16 k).
+- **A file lookup race in the game, found by the speed.** 2 of ~40 sim games died of heap corruption at ~60 game s
+  (seed 7): the physics thread, loading a finished building's media (EEUGBuildRepair::Work -> EEComplexUnit::LoadMedia
+  -> GEFindTextureFile -> FSPath::FindFile), and the preloading thread, loading a unit class's, searched the shared
+  data path at once. FSPath::FindFile ran the search on the path's own directory spec, whose single search handle
+  both threads then closed (PlatFindClose twice). It searches with a copy of the spec now (FindFile and ListFiles);
+  0 of 66 games failed after. The same race is in the game at normal speed, only rarer.
+- **The UI loop competes for the world lock.** EEUserInterface::Run updates the interface every millisecond under
+  the world's read lock; while the sim's game runs it does so every 20 ms. A 45-minute game's game part went from
+  8-11 s to 4-7 s with identical traces.
+- **Where the time goes.** A 45-minute 2-AI Hard Small game: ~2 s to the main menu, ~5 s of lobby (the driver waits
+  for each combo's update to come back through the local server's lobby ticks), ~3.5 s loading, 4-7 s of game
+  (400-600x real time) -> 13-17 s per game, two at once on this machine; the harness took ~172 s.
+- **The game moves the current directory** to its data root at start (PlatPathEnterDataRoot): the sim makes its
+  report, trace and log paths absolute first. The game is built without exceptions: the driver reports a failure and
+  exits (no throw).
+- **The binary tree has no rules documents.** `--set` changes a value as the document is parsed (EERulesAddOverride
+  in EEDataText::Content::Document; a list entry by its id). With the binary tree, tools/sim.py writes the document
+  into the stage from tools/eedata/rules.py (only those without db references: aipersonalities, gameoptions); a run
+  with a value equal to the default prints the same trace as a run without the document. A tree built by other
+  converter code (open_data.json `converters`) may not load: the main checkout's open tree had an aipersonalities key
+  (`demand_split`) this branch does not know, and the game stops on an unknown key; tools/sim.py warns.
+- **POSIX**: `ee-aoc --sim <EE-SIM options>` runs the same driver from the game's main (EESimMain returns -1 and
+  main goes on with the game). It compiles for linux-x86_64 with the game's flags; it has not been run there.

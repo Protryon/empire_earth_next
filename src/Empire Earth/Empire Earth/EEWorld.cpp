@@ -5,6 +5,7 @@
 // chains (0x13e967). EEVoting.cpp ends at 0x137ba3. Unit flags: the exe's module set. Names are provisional unless a
 // header names them.
 #include <windows.h>
+#include "platform/PlatSim.h"
 #include <stdio.h>
 #include <string.h>
 #include <deque>
@@ -691,6 +692,12 @@ void EEWorld::DumpMedia(FSFileSpec& inFile, bool inLeaks)
 // scenario), stamps their end time and ends any cinematic; for the local player it redraws the minimap
 void EEWorld::RemovePlayerFromGame(bool inHasWon, unsigned long inPlayerID)
 {
+    // TEST ONLY: the headless simulation keeps the idle local human in (platform/PlatSim.h; the harness's
+    // --no-human-defeat)
+    if (gPlatSimNoHumanDefeat && !inHasWon && inPlayerID == this->mCurrentPlayer) {
+        gPlatSimNoHumanDefeatHits++;
+        return;
+    }
     EEPlayer* thePlayer = this->mPlayers[inPlayerID];
     this->MarkPlayerOut(inPlayerID);
     this->RemovePlayerFromTeams(inPlayerID);

@@ -1879,6 +1879,75 @@ bool Content::Compile(const char* inTable, std::vector<unsigned char>& outData, 
     return Run([&] { this->mImpl->mResolver.Build(*t, outData); }, inTable, outError);
 }
 
+// TEST ONLY (EE-SIM.exe --set): the rules overrides (ee/EERules.h), applied to each document as it is parsed
+struct RuleOverride {
+    std::string mDoc;
+    std::vector<std::string> mPath;
+    std::string mValue;
+    std::string mProblem = "its document was not read";
+    bool mApplied = false;
+};
+
+std::vector<RuleOverride>& RuleOverrides()
+{
+    static std::vector<RuleOverride> sOverrides;
+    return sOverrides;
+}
+
+// a map's child by key, or a list's (or a map's list child's) entry by id
+static Node* OverrideStep(Node& inNode, const std::string& inKey)
+{
+    if (inNode.mKind == Node::kMap)
+        for (size_t i = 0; i < inNode.mKeys.size(); i++)
+            if (inNode.mKeys[i] == inKey)
+                return &inNode.mItems[i];
+    auto byId = [&](Node& inList) -> Node* {
+        for (Node& e : inList.mItems)
+            if (e.mKind == Node::kMap) {
+                const Node* id = e.Find("id");
+                if (id && id->mKind == Node::kScalar && id->mText == inKey)
+                    return &e;
+            }
+        return nullptr;
+    };
+    if (inNode.mKind == Node::kList)
+        return byId(inNode);
+    if (inNode.mKind == Node::kMap)
+        for (Node& c : inNode.mItems)
+            if (c.mKind == Node::kList)
+                if (Node* e = byId(c))
+                    return e;
+    return nullptr;
+}
+
+static void ApplyOverrides(const char* inName, Node& ioDoc)
+{
+    for (RuleOverride& o : RuleOverrides()) {
+        if (o.mDoc != inName)
+            continue;
+        Node* n = &ioDoc;
+        std::string where = o.mDoc;
+        for (const std::string& k : o.mPath) {
+            n = OverrideStep(*n, k);
+            where += "." + k;
+            if (!n)
+                break;
+        }
+        if (!n) {
+            o.mProblem = where + ": not in the document";
+            continue;
+        }
+        if (n->mKind != Node::kScalar) {
+            o.mProblem = where + ": not a single value";
+            continue;
+        }
+        n->mText = o.mValue;
+        n->mQuoted = false;
+        o.mApplied = true;
+        o.mProblem.clear();
+    }
+}
+
 bool Content::Document(const char* inName, Node& outDoc)
 {
     std::string text;
@@ -1898,6 +1967,7 @@ bool Content::Document(const char* inName, Node& outDoc)
     if (format && !format->IsMissing() && (format->mKind != Node::kScalar || format->mText != Num(EEDT_FORMAT_VERSION)))
         Fail(std::string(inName) + ": format " + (format->mKind == Node::kScalar ? format->mText : "") +
              ", the game reads format " + Num(EEDT_FORMAT_VERSION));
+    ApplyOverrides(inName, outDoc);
     return true;
 }
 
@@ -1939,3 +2009,47 @@ bool Compile(const char* inTable, const char* inText, unsigned long inLength, st
 }
 
 }  // namespace EEDataText
+
+bool EERulesAddOverride(const std::string& inSpec, std::string& outError)
+{
+    size_t eq = inSpec.find('=');
+    if (eq == std::string::npos || eq == 0) {
+        outError = "'" + inSpec + "': expected doc.key...=value";
+        return false;
+    }
+    EEDataText::RuleOverride o;
+    o.mValue = inSpec.substr(eq + 1);
+    std::string path = inSpec.substr(0, eq);
+    size_t start = 0;
+    std::vector<std::string> parts;
+    while (true) {
+        size_t dot = path.find('.', start);
+        parts.push_back(path.substr(start, dot == std::string::npos ? std::string::npos : dot - start));
+        if (dot == std::string::npos)
+            break;
+        start = dot + 1;
+    }
+    for (const std::string& p : parts)
+        if (p.empty()) {
+            outError = "'" + inSpec + "': an empty key";
+            return false;
+        }
+    if (parts.size() < 2) {
+        outError = "'" + inSpec + "': expected doc.key...=value";
+        return false;
+    }
+    o.mDoc = parts[0];
+    o.mPath.assign(parts.begin() + 1, parts.end());
+    EEDataText::RuleOverrides().push_back(o);
+    return true;
+}
+
+std::vector<std::string> EERulesOverrideProblems()
+{
+    std::vector<std::string> out;
+    for (const EEDataText::RuleOverride& o : EEDataText::RuleOverrides())
+        if (!o.mApplied)
+            out.push_back(o.mDoc + ": " + o.mProblem);
+    return out;
+}
+

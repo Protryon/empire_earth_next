@@ -27,7 +27,9 @@ PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatThread.cpp"
                   # the window, its events and input (SDL3; PORT.md step 4.3)
                   "Platform/SDL/PlatWindow.cpp",
                   # text (stb_truetype) with the fonts built in (PORT.md step 4.5)
-                  "Platform/Common/PlatFont.cpp", "Platform/Common/PlatFontData.c"]
+                  "Platform/Common/PlatFont.cpp", "Platform/Common/PlatFontData.c",
+                  # the headless simulation's switches (EE-SIM.exe; all off in the game)
+                  "Platform/Common/PlatSim.cpp"]
 OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormats.cpp",
                      "Low-Level Engine/Graphics Engine/GEOpenFormatsFile.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
@@ -36,6 +38,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
                        "Empire Earth/WONAPI/WONAPIStubs.cpp",
                        # the computer-player decision trace and cheat switches (docs/AI_RESEARCH.md stage 0)
                        "Empire Earth/AI Thread/EECPTrace.cpp",
+                       # TEST ONLY: the headless simulation's driver (EE-SIM.exe: build.py --sim links its entry)
+                       "Empire Earth/Empire Earth/EESim.cpp",
                        # TEST ONLY: the POSIX test driver's in-process UI fixture (EE_TEST_UI; tools/harness/posix_game.py)
                        "Empire Earth/Empire Earth/EETestFixture.cpp",
                        # the language strings, generated from Language.rc (tools/lang_strings.py)

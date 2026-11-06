@@ -19,6 +19,9 @@ harness (tools/harness). The windowed and 32-bit display policy is compiled into
 staged copies of a few units (TEST_PROFILES, each refusing unless it matches its expected count), and
 every function the harness hooks at its entry is kept out of line (HARNESS_HOOKS). src/ is never changed.
 
+--sim (TEST ONLY): also links <out>/exe/EE-SIM.exe, the headless simulation: the same objects plus its console
+entry (src/Empire Earth/Empire Earth/EESimMain.cpp -> EESim.cpp; platform/PlatSim.h). tools/sim.py runs it.
+
 --sanitize-null (TEST ONLY; out gains -nullsan): with the null-pointer and pointer-overflow
 UBSan checks in recover mode and tools/harness/ubsan_minimal.c's handlers in every image: each distinct site the
 game reaches is logged once ("EE-UBSAN <check> <module>+<rva>").
@@ -81,10 +84,13 @@ for _unit, _decl in HARNESS_HOOKS:
 SANITIZE_CHECKS = "null,pointer-overflow,nonnull-attribute,returns-nonnull-attribute"
 
 
-def compile_all(targets, out, opt, jobs, overlays=None, extra=()):
+SIM_MAIN = ROOT / "src" / "Empire Earth" / "Empire Earth" / "EESimMain.cpp"   # EE-SIM.exe's entry (--sim)
+
+
+def compile_all(targets, out, opt, jobs, overlays=None, extra=(), more=()):
     """Compile every unit the targets link, in parallel -> objs(source, flags) -> object path; exits on a failure."""
     mods = [m for t in targets for m in units.TARGET_MODULES.get(t, [t])]
-    work = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods)
+    work = [j for m in mods for j in units.jobs_for(m)] + units.lib_jobs(mods) + list(more)
     for j in work:
         verify.include_paths(verify.stage_source(j[1]))
     table, failed = {}, []
@@ -138,15 +144,15 @@ def run(cmd, cwd):
     return r.returncode, (r.stdout + r.stderr).strip()
 
 
-def link_exe(out, objs, extra_libs):
+def link_exe(out, objs, extra_libs, name="EE-AOC", entry=None):
     """One lld-link of the exe: every object (the engine's and the plug-ins' first: global constructors run in
     object order, and the game's use engine globals, as when the engine DLL loaded first), the image libraries as an
     archive (only the members the game uses), the import and static libraries, the resources and the static
     runtime -> 0 when it links with no unresolved and no duplicate symbol."""
     import rsrc_rebuild
-    print("--- exe: link", flush=True)
+    print(f"--- exe: link {name}.exe", flush=True)
     dst = out / "exe"
-    lib = dst / "lib"
+    lib = dst / ("lib" if name == "EE-AOC" else f"lib-{name}")
     shutil.rmtree(lib, ignore_errors=True)
     lib.mkdir(parents=True)
     game, img = [], []
@@ -175,21 +181,27 @@ def link_exe(out, objs, extra_libs):
     inputs = [*first, *[x for x in extra_libs if str(x).lower().endswith(".obj")], *game, lib / "exeimg.lib",
               *SDK_LIBS, *[x for x in extra_libs if not str(x).lower().endswith(".obj")],
               *static_libs(), *res, *RUNTIME_LIBS]
-    rsp = dst / "link.rsp"
+    if entry is not None:   # --sim: the console entry first among the game's objects
+        inputs.insert(len(first), entry)
+    tag = "" if name == "EE-AOC" else f"-{name}"
+    rsp = dst / f"link{tag}.rsp"
     rsp.write_text("".join(f'"{x}"\n' for x in inputs))
-    exe = dst / "EE-AOC.exe"
+    exe = dst / f"{name}.exe"
     exe.unlink(missing_ok=True)
-    code, log = run([str(LLD_LINK), "/nologo", *LINK_FLAGS, f"/OUT:{exe.name}", f"/MAP:{exe.stem}.map",
+    flags = LINK_FLAGS if entry is None else [
+        {"/SUBSYSTEM:WINDOWS": "/SUBSYSTEM:CONSOLE", "/ENTRY:WinMainCRTStartup": "/ENTRY:mainCRTStartup"}.get(f, f)
+        for f in LINK_FLAGS]
+    code, log = run([str(LLD_LINK), "/nologo", *flags, f"/OUT:{exe.name}", f"/MAP:{exe.stem}.map",
                      f"/PDB:{exe.stem}.pdb", *lib_paths(), f"@{rsp.name}"], dst)
     log = "\n".join(l for l in log.splitlines() if "ignoring section .debug$S with unrecognized magic" not in l)
-    (dst / "link.log").write_text(log)
+    (dst / f"link{tag}.log").write_text(log)
     unresolved = sorted(set(re.findall(r"undefined symbol: (.+)", log)))
     duplicates = sorted(set(re.findall(r"duplicate symbol: (.+)", log)))
     for kind, names in (("unresolved", unresolved), ("duplicate", duplicates)):
         if names:
             print(f"exe: {len(names)} {kind} symbol(s): " + "; ".join(names[:20]))
     ok = code == 0 and not unresolved and not duplicates and exe.exists()
-    print(f"exe: {'ok' if ok else 'FAILED (' + str(dst / 'link.log') + ')'}: {len(inputs)} inputs, "
+    print(f"exe: {'ok' if ok else 'FAILED (' + str(dst / f'link{tag}.log') + ')'}: {len(inputs)} inputs, "
           f"{len(unresolved)} unresolved, {len(duplicates)} duplicates -> {exe}", flush=True)
     return 0 if ok else 1
 
@@ -203,6 +215,7 @@ def main():
     ap.add_argument("--test-profile", choices=sorted(TEST_PROFILES), help="TEST ONLY: see the module doc")
     ap.add_argument("--sanitize-null", action="store_true", help="TEST ONLY: see the module doc")
     ap.add_argument("--compile-only", action="store_true", help="compile every unit, link nothing")
+    ap.add_argument("--sim", action="store_true", help="TEST ONLY: also link EE-SIM.exe (see the module doc)")
     a = ap.parse_args()
     for tool in (CLANG, LLD_LINK):
         if not tool.exists():
@@ -230,10 +243,13 @@ def main():
             sys.exit(f"ubsan_minimal.c: {r.stdout}{r.stderr}")
         extra_libs.append(str(ubsan))
     t0 = time.time()
-    objs = compile_all(units.TARGETS, out, a.opt, a.j, overlays, extra)
+    sim_job = ("exe", SIM_MAIN, MODULE_FLAGS["exe"])
+    objs = compile_all(units.TARGETS, out, a.opt, a.j, overlays, extra, more=[sim_job] if a.sim else [])
     if a.compile_only:
         return
     result = link_exe(out, objs, extra_libs)
+    if a.sim and result == 0:
+        result = link_exe(out, objs, extra_libs, name="EE-SIM", entry=objs(SIM_MAIN, MODULE_FLAGS["exe"]))
     sys.path.insert(0, str(ROOT / "tools" / "harness"))   # the record layouts the harness reads offsets from
     import layout_gen
     layout_gen.generate(out, overlays, extra)

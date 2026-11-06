@@ -14,6 +14,14 @@
 
 #include "lle/LowLevelEngine.h"
 #include "TCPPacketType.h"
+#include "platform/PlatSim.h"
+
+// the game's fixed ports, 33334 (messages) and 33335 (file transfers); TEST ONLY: the headless simulation moves them
+// (platform/PlatSim.h gPlatSimPortOffset), so several simulations and a harness game run at once
+static inline unsigned short TCPPort(unsigned short inPort)
+{
+    return (unsigned short)(inPort + gPlatSimPortOffset);
+}
 // ---- Result codes returned by the NPIM entry points (provisional names); values proven by codegen.
 enum {
     kNPIMOK = 0,
@@ -455,7 +463,7 @@ extern "C" long NPIMConnectForXfer(TCPHost** inHost, long inMode, TSEvent* inEve
     if (gXferSocket != PLAT_SOCKET_INVALID) {
         PlatSockAddrIn theAddress;
         theAddress.mFamily = PLAT_AF_INET;
-        theAddress.mPort = PlatHostToNet16(33335);
+        theAddress.mPort = PlatHostToNet16(TCPPort(33335));
         theAddress.mAddress = theHost->mAddress;
         if (PlatSocketConnect(gXferSocket, &theAddress)) {
             TCPConnection* theConnection = new TCPConnection;
@@ -498,7 +506,7 @@ static long ResolveAddress(const UString& inName, const UString& inHost, const U
                     memcpy(outAddress, &gDetectedGames[theIndex].mStreamAddress, sizeof(PlatSockAddrIn));
                 else
                     memcpy(outAddress, &gDetectedGames[theIndex].mDatagramAddress, sizeof(PlatSockAddrIn));
-                outAddress->mPort = PlatHostToNet16(33334);
+                outAddress->mPort = PlatHostToNet16(TCPPort(33334));
                 *outSocket = theSocket;
                 theResult = kNPIMOK;
             } else {
@@ -519,7 +527,7 @@ static long ResolveAddress(const UString& inName, const UString& inHost, const U
                 *outSocket = theSocket;
                 memset(outAddress, 0, sizeof(PlatSockAddrIn));
                 outAddress->mFamily = PLAT_AF_INET;
-                outAddress->mPort = PlatHostToNet16(33334);
+                outAddress->mPort = PlatHostToNet16(TCPPort(33334));
                 outAddress->mAddress = theHostAddress;
                 theResult = kNPIMOK;
             } else {
@@ -716,7 +724,7 @@ extern "C" long NPIMGetStatus(const UWideString& inName, unsigned long inPort)
     long theResult = kNPIMOK;
     theName = inName;
     if (theName == inName) {
-        unsigned short thePort = inPort != 0 ? (unsigned short)(inPort >> 16) : PlatHostToNet16(33334);
+        unsigned short thePort = inPort != 0 ? (unsigned short)(inPort >> 16) : PlatHostToNet16(TCPPort(33334));
         unsigned long theSeed = 0xffffffff;
         if (gRandomBuffer == NULL)
             gRandomBuffer = new char[kRandomBufferSize];
@@ -760,7 +768,7 @@ extern "C" long NPIMPublish(const UString& inName, const UWideString& inAddress,
     UString theName;
     UString theHost;
     UWideString theAddress;
-    unsigned long thePort = PlatHostToNet16(33334);
+    unsigned long thePort = PlatHostToNet16(TCPPort(33334));
     bool theFound = false;
     if (!inFlag55 && QueryGames(inName, NULL) == 0) {
         unsigned long theCount = NPIMGetDetectedGameCount();
@@ -808,7 +816,7 @@ extern "C" long NPIMPublish(const UString& inName, const UWideString& inAddress,
                 PlatSockAddrIn theLocal;
                 memset(&theLocal, 0, sizeof(theLocal));
                 theLocal.mFamily = PLAT_AF_INET;
-                theLocal.mPort = PlatHostToNet16(33335);
+                theLocal.mPort = PlatHostToNet16(TCPPort(33335));
                 if (PlatSocketBind(gSocket7280, &theLocal) &&
                     PlatSocketListen(gSocket7280, PLAT_SOCKET_MAX_BACKLOG)) {
                     PlatSocketSelectEvent(gSocket7280, inListenEvent->mHandle, PLAT_SOCKET_EVENT_READ);
@@ -1052,7 +1060,7 @@ extern "C" long NPIMReceiveFrom(TCPServer** inHandle, unsigned long inSize, char
                         theKey = (unsigned char)(gRandom->Generate() * 254.0f + 1.0f);
                         memcpy(&thePacket, &theKey, 1);
                         Encipher(&thePacket.mType, sizeof(thePacket) - 1, theKey);
-                        theFrom.mPort = PlatHostToNet16(33334);
+                        theFrom.mPort = PlatHostToNet16(TCPPort(33334));
                         if (PlatSocketSendTo(theSocket, &thePacket, sizeof(thePacket), &theFrom) == -1) {
                             ESRecordNativeError(PlatSocketLastError());
                             ESGetNativeError();
@@ -1392,7 +1400,7 @@ static long QueryGames(const UString& inName, const uint32_t* inHostAddresses)
             PlatSockAddrIn theTo;
             memset(&theTo, 0, sizeof(theTo));
             theTo.mFamily = PLAT_AF_INET;
-            theTo.mPort = PlatHostToNet16(33334);
+            theTo.mPort = PlatHostToNet16(TCPPort(33334));
             if (inHostAddresses == NULL)
                 theTo.mAddress = PlatHostToNet32(PLAT_INADDR_BROADCAST);
             else
@@ -1401,7 +1409,7 @@ static long QueryGames(const UString& inName, const uint32_t* inHostAddresses)
                 PlatSockAddrIn theLocal;
                 memset(&theLocal, 0, sizeof(theLocal));
                 theLocal.mFamily = PLAT_AF_INET;
-                theLocal.mPort = PlatHostToNet16(33334);
+                theLocal.mPort = PlatHostToNet16(TCPPort(33334));
                 theReceiveSocket = PlatSocketOpen(PLAT_SOCKET_DGRAM);
                 if (PlatSocketBind(theReceiveSocket, &theLocal) &&
                     PlatSocketSetNonBlocking(theReceiveSocket, 1)) {

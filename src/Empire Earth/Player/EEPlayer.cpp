@@ -2,6 +2,7 @@
 // init chains first, then EEWUnitsOffMapInfo, EEPlayer in definition order, the selected-group and functor helpers it
 // defines, and its template COMDATs). Unit flags: the exe's module set. Data: the vtable 0x4429e0.
 #include <windows.h>
+#include "platform/PlatSim.h"
 #include <vector>
 #include <algorithm>
 
@@ -3905,6 +3906,11 @@ void EEPlayer::RefreshTerrainVisibility()
 // Sets the player's game result; a new victory or defeat of another player is announced in the chat log
 void EEPlayer::SetGameResult(long inState)
 {
+    // TEST ONLY: the headless simulation never defeats the idle local human (platform/PlatSim.h)
+    if (gPlatSimNoHumanDefeat && inState == 2 && gWorld.mPlayers[gWorld.mCurrentPlayer] == this) {
+        gPlatSimNoHumanDefeatHits++;
+        return;
+    }
     GEColor theColor(1.0f, 1.0f, 1.0f);
     UWideString theText;
     UWideString theReason;

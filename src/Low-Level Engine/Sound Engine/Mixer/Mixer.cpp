@@ -6,6 +6,7 @@
 // points and their result codes are the original plug-in's.
 #include <windows.h>
 #include "platform/PlatFile.h"
+#include "platform/PlatSim.h"
 #include <math.h>
 #include <stdio.h>
 #include <string.h>
@@ -248,14 +249,21 @@ extern "C" long SPIMActivateMixer()
 #else
     ma_backend theBackends[] = { ma_backend_pulseaudio, ma_backend_alsa, ma_backend_null };
 #endif
+    ma_backend theNull[] = { ma_backend_null };
+    ma_backend* theList = theBackends;
+    unsigned long theCount = sizeof(theBackends) / sizeof(theBackends[0]);
+    if (gPlatSimMode) {   // the headless simulation (platform/PlatSim.h): no output
+        theList = theNull;
+        theCount = 1;
+    }
     ma_device_config theConfig = ma_device_config_init(ma_device_type_playback);
     theConfig.playback.format = ma_format_f32;
     theConfig.playback.channels = 2;
     theConfig.sampleRate = 0;                   // the device's own
     theConfig.dataCallback = MixerCallback;
     bool theOpen = false;
-    for (unsigned long b = 0; b < sizeof(theBackends) / sizeof(theBackends[0]) && !theOpen; b++) {
-        if (ma_context_init(&theBackends[b], 1, NULL, &gContext) != MA_SUCCESS)
+    for (unsigned long b = 0; b < theCount && !theOpen; b++) {
+        if (ma_context_init(&theList[b], 1, NULL, &gContext) != MA_SUCCESS)
             continue;
         if (ma_device_init(&gContext, &theConfig, &gDevice) == MA_SUCCESS) {
             if (ma_device_start(&gDevice) == MA_SUCCESS)

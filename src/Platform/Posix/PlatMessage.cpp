@@ -11,6 +11,7 @@
 #include <initializer_list>
 
 #include "platform/PlatMessage.h"
+#include "platform/PlatSim.h"
 
 namespace {
 std::atomic<PlatMessageHandler> sHandler(nullptr);
@@ -64,6 +65,10 @@ extern "C" void PlatMessageSetHandler(PlatMessageHandler inHandler)
 
 extern "C" void PlatDebugOutput(const char* inText)
 {
+    if (PlatDebugHandler theHandler = PlatDebugGetHandler()) {
+        theHandler(inText);
+        return;
+    }
     fputs(inText ? inText : "", stderr);
 }
 
