@@ -248,6 +248,9 @@ struct EEAIPersonalityRule {
     // military pressure: the standing army the player keeps, per worker (citizens and fishing boats); up to the
     // original's military share of the pop cap
     float mStandingArmy = 0.25f;
+    // while the standing army is short of its target, the floor share of the gatherers on what its unit costs rises by
+    // up to this much (by the shortfall, split by the unit's cost): more army, less economy
+    float mArmyFloor = 0.1f;
 };
 struct EEAIPersonalityRules {
     std::vector<EEAIPersonalityRule> mPersonalities;

@@ -2633,6 +2633,8 @@ computer player gets which. New in this port (no original values: the defaults a
         military:
           standing_army: 0.25      # the army kept per worker (every 30 game s, the favourite land unit; up to the
                                    # original's military share of the pop cap)
+          army_floor: 0.1          # while the army is short: up to this much more floor share of the gatherers on
+                                   # its unit's costs (by the shortfall)
       - id: tall ...               # epoch_pressure 0.15 / 0.5, standing_army 0.2
       - id: wide ...               # epoch_pressure 0.6 / 1.0, max_citizen_share 0.8, standing_army 0.15
       - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5

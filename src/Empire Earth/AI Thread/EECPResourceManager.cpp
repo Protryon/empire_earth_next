@@ -1564,7 +1564,31 @@ bool EECPResourceManager::UpdateWantedGatherers()
             }
         }
     }
-    // new: the stock correction (the personality's economy; see above)
+    // new: the stock correction (the personality's economy; see above). A standing army short of its target
+    // (EEComputerPlayer::KeepStandingArmy) raises the floor of what its unit costs by up to the personality's
+    // army_floor of the gatherers, split by the unit's cost (docs/AI_RESEARCH.md §8.15-8.16: the army waited on iron
+    // while food took 70%)
+    const float kArmyFloor = EECPPersonality(thePlayer).mArmyFloor;
+    float theArmyFloor[7] = {0, 0, 0, 0, 0, 0, 0};
+    if (theGatherers > 0 && this->mManager->mUnitManager != NULL) {
+        long theFavorite = thePlayer->mFavoriteLandType;
+        EEUnitClass* theClass = theFavorite > 0 && (unsigned long)theFavorite < EEUnitClassCount() ? gUnitClassTable[theFavorite] : NULL;
+        EETechTreeNode* theNode = theClass != NULL ? thePlayer->mTechnologies->Get(theClass->mTechnology) : NULL;
+        long theTarget = UMFloatToLong(EECPPersonality(thePlayer).mStandingArmy * (float)this->mManager->mUnitManager->GetNumWorkers());
+        long theArmy = this->mManager->mUnitManager->CountMilitaryUnits(false, false);
+        if (theNode != NULL && theTarget > 0 && theArmy < theTarget) {
+            float theShort = 1.0f - (float)theArmy / (float)theTarget;
+            float theCost[7] = {0, 0, 0, 0, 0, 0, 0};
+            float theSum = 0.0f;
+            for (long r = 2; r < 7; r++) {
+                theCost[r] = (float)thePlayer->ScaleCost(theNode->GetCost(r, theFavorite, 1.0f));
+                theSum += theCost[r];
+            }
+            if (theSum > 0.0f)
+                for (long r = 2; r < 7; r++)
+                    theArmyFloor[r] = kArmyFloor * theShort * theCost[r] / theSum;
+        }
+    }
     if (theGatherers > 0) {
         for (unsigned long r = 2; r < 7; r++) {
             unsigned long theWanted = this->mWantedGatherers[r];
@@ -1573,7 +1597,7 @@ bool EECPResourceManager::UpdateWantedGatherers()
             if (theStock > theTuning.mSurplus)
                 theWanted = (unsigned long)UMFloatToLong(theWanted * theTuning.mSurplusCut);
             else if (theStock < theTuning.mLowStock) {
-                unsigned long theFloor = (unsigned long)UMFloatToLong(theTuning.mFloor[r - 2] * (float)theGatherers);
+                unsigned long theFloor = (unsigned long)UMFloatToLong((theTuning.mFloor[r - 2] + theArmyFloor[r]) * (float)theGatherers);
                 if (r == 2 && thePlayer->mTechnologies->mCurrentEpoch > kTechEpochNano)
                     theFloor = 0;
                 if (theWanted < theFloor)

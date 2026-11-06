@@ -329,6 +329,7 @@ EEAIPersonalityRules::EEAIPersonalityRules()
     theAggressive.mEpochPressureStart = 0.4f;
     theAggressive.mEpochPressureFull = 0.9f;
     theAggressive.mStandingArmy = 0.5f;
+    theAggressive.mArmyFloor = 0.3f;
     this->mPersonalities.push_back(theBalanced);
     this->mPersonalities.push_back(theTall);
     this->mPersonalities.push_back(theWide);
@@ -942,6 +943,7 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
             if (const Node* s = x.Sub("military")) {
                 Map y(*s, doc, "military");
                 y.Float("standing_army", p.mStandingArmy);
+                y.Float("army_floor", p.mArmyFloor);
                 y.Done();
                 if (!(p.mStandingArmy >= 0.0f))
                     Fail(y.Where() + ": military: standing_army must be 0 or more");
@@ -1243,6 +1245,7 @@ void EERules::Dump(std::string& outJson) const
             j.Int("wood_slots", p.mWoodSlots);
             j.Int("moves_per_cycle", p.mMovesPerCycle);
             j.Float("standing_army", p.mStandingArmy);
+            j.Float("army_floor", p.mArmyFloor);
             j.Close('}');
         }
         j.Close(']');

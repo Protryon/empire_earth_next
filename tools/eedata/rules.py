@@ -274,11 +274,11 @@ powers:
 
 
 # the personalities the game defaults to (ee/EERules.h EEAIPersonalityRules): (id, comment, epoch start, epoch full,
-# max citizen share, standing army); the rest is the balanced economy for all of them
-AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.13)', '0.3', '0.8', '0.7', '0.25'),
-                    ('tall', 'tech: saves for the next epoch early and hard', '0.15', '0.5', '0.7', '0.2'),
-                    ('wide', 'boom: grows its workforce, advances late', '0.6', '1.0', '0.8', '0.15'),
-                    ('aggressive', 'rush: a large standing army, a middling epoch pace', '0.4', '0.9', '0.7', '0.5')]
+# max citizen share, standing army, army floor); the rest is the balanced economy for all of them
+AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.16)', '0.3', '0.8', '0.7', '0.25', '0.1'),
+                    ('tall', 'tech: saves for the next epoch early and hard', '0.15', '0.5', '0.7', '0.2', '0.1'),
+                    ('wide', 'boom: grows its workforce, advances late', '0.6', '1.0', '0.8', '0.15', '0.1'),
+                    ('aggressive', 'rush: a large standing army, a middling epoch pace', '0.4', '0.9', '0.7', '0.5', '0.3')]
 AI_FLOOR = ('food', 'wood', 'stone', 'gold', 'iron')
 
 
@@ -286,7 +286,7 @@ def aipersonalities(ids, spec):
     out = [HEAD.format(name='aipersonalities', format=spec['format'],
                        what="The computer players' personalities: the tuning of their decisions outside dbcpbehavior.")]
     lines = ['personalities:']
-    for pid, what, start, full, citizens, army in AI_PERSONALITIES:
+    for pid, what, start, full, citizens, army, floor in AI_PERSONALITIES:
         lines += [f'  - id: {pid:<24}# {what}',
                   '    epoch_pressure:              # the elapsed share of the epoch timer (dbcpbehavior rows 28/29)',
                   f'      start: {start:<22}# a paid epoch advance is asked for from here ...',
@@ -305,7 +305,8 @@ def aipersonalities(ids, spec):
                   '      wood_slots: 15               # the gatherers wood takes (trees are not resource-center units)',
                   '      moves_per_cycle: 3           # busy gatherers moved to a short resource per 10 s',
                   '    military:',
-                  f'      standing_army: {army:<14}# the army kept per worker (up to the military share of the pop cap)']
+                  f'      standing_army: {army:<14}# the army kept per worker (up to the military share of the pop cap)',
+                  f'      army_floor: {floor:<17}# while it is short: up to this much more floor share on its unit\'s costs']
     lines.append('assign: [balanced]                 # computer player n takes entry (n - 1) mod the count')
     out.append('\n'.join(lines) + '\n')
     return ''.join(out)
@@ -593,6 +594,8 @@ def validate(name, text, content, spec):
                 y = _Map(m, name, 'military')
                 if y.get('standing_army') is not None and _float(y.get('standing_army'), y.where(), 'standing_army') < 0:
                     raise TextError(f'{y.where()}: military: standing_army must be 0 or more')
+                if y.get('army_floor') is not None:
+                    _float(y.get('army_floor'), y.where(), 'army_floor')
                 y.done()
             return x.get('id')
         found = entries(top, 'personalities', personality)
