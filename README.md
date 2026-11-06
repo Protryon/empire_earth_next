@@ -65,6 +65,11 @@ python -I tools/open_data.py build build/open_data/tree       # the tree (about 
 python -I tools/open_data.py pack build/ee-aoc-data.zip       # the bundle: the tree, fonts/, README.txt
 ```
 
+The private releases ship it in three parts that unzip into one folder: the media (`pack --part media`: models, the
+original textures, sounds, music, fonts), the 4x textures (`Data/Textures-4x`, tools/upscale) and the db
+(`pack --part db`: the tables and the rules documents, the part that changes most). `python -I tools/fetch_data.py`
+pulls the newest of each into `data/` and skips the ones already current.
+
 To play, prepare a directory with the exe, that data and the movies converted for the build's player (`--movies DIR`
 points at `.bik` files, e.g. an extracted retail disc; ffmpeg):
 

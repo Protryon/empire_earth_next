@@ -1,14 +1,16 @@
 """Prepare a directory to play the build: the exe, the unified open game data (tools/open_data.py) and the movies
 converted for the build's player.
 
-  python -I tools/make_play_dir.py OUT [--exe PATH | --posix-exe PATH] [--data TREE|BUNDLE.zip] [--movies DIR ...]
+  python -I tools/make_play_dir.py OUT [--exe PATH | --posix-exe PATH] [--data TREE|BUNDLE.zip|DIR ...] [--movies DIR ...]
                                        [--force]
 
 OUT gets:
   - EE-AOC.exe (default: build/clang/exe/EE-AOC.exe; --exe for another);
   - the game data: Data (one loose tree: db tables as text, models as glTF, textures as PNG, the rest as shipped),
     Users, WONLobby.cfg and zzWONVersion.cfg, from --data: a tree made by `tools/open_data.py build` or the bundle
-    made by `tools/open_data.py pack` (default: build/open_data/tree, built from the two installs when missing). No
+    made by `tools/open_data.py pack` (default: build/open_data/tree, built from the two installs when missing).
+    --data repeats, each copied over the ones before: the media, 4x textures and db parts of the releases, or the
+    folder tools/fetch_data.py unzipped them into. No
     data.ssa and nothing of the original Empire Earth's install is needed or referenced;
   - Data/Movies: every Bink movie (.bik) found in the --movies directories (an extracted retail disc, an installation
     that has Data\\Movies) converted to MPEG-1 (.mpg, tools/convert_movies.py, needs ffmpeg). Encodes are cached in
@@ -54,7 +56,7 @@ def copy_data(data, out):
     else:
         for item in data.iterdir():
             if item.is_dir():
-                shutil.copytree(item, out / item.name)
+                shutil.copytree(item, out / item.name, dirs_exist_ok=True)
             else:
                 shutil.copy2(item, out / item.name)
     made = out / "open_data.json"
@@ -117,8 +119,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("out", type=pathlib.Path)
     ap.add_argument("--exe", type=pathlib.Path)
-    ap.add_argument("--data", type=pathlib.Path,
-                    help="the unified data: a tools/open_data.py tree or bundle (default build/open_data/tree)")
+    ap.add_argument("--data", type=pathlib.Path, action="append",
+                    help="the unified data: a tools/open_data.py tree or bundle (default build/open_data/tree); "
+                         "repeatable, each over the ones before")
     ap.add_argument("--movies", type=pathlib.Path, action="append", default=[],
                     help="a directory with .bik movies (repeatable)")
     ap.add_argument("--force", action="store_true", help="replace an existing OUT")
@@ -128,14 +131,15 @@ def main():
     exe = a.posix_exe or a.exe or ROOT / "build" / "clang" / "exe" / "EE-AOC.exe"
     if not exe.exists():
         sys.exit(f"{exe} does not exist: build it first (python -I build.py)")
-    data = a.data or TREE
+    datas = a.data or [TREE]
     if a.data is None and not (TREE / "open_data.json").exists():
         print(f"data: building {TREE} from the installs (tools/open_data.py build)", flush=True)
         r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "open_data.py"), "build", str(TREE), "--force"])
         if r.returncode:
             sys.exit("tools/open_data.py build failed")
-    if not data.exists():
-        sys.exit(f"{data} does not exist: make it with tools/open_data.py build or pack")
+    for data in datas:
+        if not data.exists():
+            sys.exit(f"{data} does not exist: make it with tools/open_data.py build or pack")
     out = check_out(a.out)
     if out.exists():
         if not a.force:
@@ -145,15 +149,17 @@ def main():
         shutil.rmtree(out)
     out.mkdir(parents=True)
     t0 = time.time()
-    print(f"game data from {data}", flush=True)
-    info = copy_data(data, out)
+    info = {}
+    for data in datas:
+        print(f"game data from {data}", flush=True)
+        info = copy_data(data, out) or info
     if a.posix_exe:
         posix_files(exe, out)
     else:
         shutil.copy2(exe, out / "EE-AOC.exe")
     count = movies(out, a.movies)
     (out / "play.json").write_bytes((json.dumps(dict(
-        exe=str(exe), data=str(data), data_binary=bool(info.get("binary")), movies=count,
+        exe=str(exe), data=[str(d) for d in datas], data_binary=bool(info.get("binary")), movies=count,
         made=time.strftime("%Y-%m-%d %H:%M:%S")), indent=2) + "\n").encode())
     print(f"ready in {time.time() - t0:.0f} s: run {out / ('run.sh' if a.posix_exe else 'EE-AOC.exe')}")
 

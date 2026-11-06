@@ -5,9 +5,15 @@
         order; db tables as text (tools/eedata), models as glTF (tools/eemodel), textures as PNG (tools/eemodel);
         OUT/Users (the install's), OUT/WONLobby.cfg, OUT/zzWONVersion.cfg, OUT/open_data.json (what was built).
         --binary: the same tree with the binary forms (.dat, .cem, .sst/.tga) unconverted (a test variant).
-  python -I tools/open_data.py pack OUT.zip [--tree DIR] [--game DIR] [--base DIR]
+  python -I tools/open_data.py pack OUT.zip [--part all|media|db] [--tree DIR] [--game DIR] [--base DIR]
         the bundle: the open tree (built into build/open_data/tree unless --tree names one), fonts/ (Liberation, with
         its LICENSE and AUTHORS) and README.txt. OUT must be under build/ or outside the repository.
+        --part: the releases ship it in parts that unzip into one folder (tools/fetch_data.py pulls them):
+          media  everything but Data/db and open_data.json: models, the original textures, sounds, music, scripts,
+                 fonts (large; changes rarely)
+          db     Data/db and open_data.json: the tables and the rules documents, the tweakables (small; republished
+                 whenever the data format changes)
+        The third part, Data/Textures-4x, comes from tools/upscale.
   python -I tools/open_data.py check DIR
         counts per folder of a tree or bundle and the rules it must keep (no data.ssa, no dxm, no binary file that has
         an open replacement)
@@ -91,6 +97,22 @@ Contents
   fonts/           Liberation fonts 2.1.5 (SIL Open Font License, see fonts/LICENSE), the build's text fonts
   WONLobby.cfg, zzWONVersion.cfg   the online lobby's configuration (the WON services no longer exist)
   open_data.json   what the bundle was built from
+"""
+
+
+README_MEDIA = """
+This part
+  The media part: everything above but Data/db and open_data.json, which are the db part (ee_open_db-<sha>.zip,
+  small, republished whenever the tables or rules change). The 4x textures (ee_textures_4x-<sha>.zip,
+  Data/Textures-4x) are the third, optional part. Unzip the parts into one folder; tools/fetch_data.py in the source
+  repository does that.
+"""
+
+README_DB = """
+This part
+  The db part: Data/db (the tables as text and the rules documents, what a mod tweaks) and open_data.json. It needs
+  the media part (ee_open_media-<sha>.zip: models, textures, sounds, fonts) in the same folder: unzip this one over
+  it (tools/fetch_data.py in the source repository does that).
 """
 
 
@@ -331,8 +353,17 @@ def cmd_check(a):
     return 1 if problems else 0
 
 
+def pack_part(rel, part):
+    """whether a tree file or folder (its path relative to the tree) belongs to the --part"""
+    if part == 'all':
+        return True
+    is_db = rel.parts[:2] == ('Data', 'db') or rel.as_posix() == 'open_data.json'
+    return (part == 'db') == is_db
+
+
 def cmd_pack(a):
     zip_path = outside_repo(a.out)
+    part = a.part
     if a.tree:
         tree = pathlib.Path(a.tree)
     else:
@@ -351,16 +382,21 @@ def cmd_pack(a):
     n = 0
     with zipfile.ZipFile(tmp, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as z:
         for p in sorted(tree.rglob('*')):
+            rel = p.relative_to(tree)
+            if not pack_part(rel, part):
+                continue
             if p.is_file():
-                z.write(p, p.relative_to(tree).as_posix())
+                z.write(p, rel.as_posix())
                 n += 1
             elif p.is_dir() and not any(p.iterdir()):
-                z.write(p, p.relative_to(tree).as_posix() + '/')   # an empty folder the game expects
-        for p in sorted(FONTS.iterdir()):
-            if p.is_file() and not p.name.startswith('.'):
-                z.write(p, 'fonts/' + p.name)
-                n += 1
-        z.writestr('README.txt', README.replace('\n', '\r\n'))
+                z.write(p, rel.as_posix() + '/')   # an empty folder the game expects
+        if part != 'db':
+            for p in sorted(FONTS.iterdir()):
+                if p.is_file() and not p.name.startswith('.'):
+                    z.write(p, 'fonts/' + p.name)
+                    n += 1
+        readme = README + {'all': '', 'media': README_MEDIA, 'db': README_DB}[part]
+        z.writestr('README.txt' if part == 'all' else f'README-{part}.txt', readme.replace('\n', '\r\n'))
         n += 1
     tmp.replace(zip_path)
     print(f'{zip_path}: {n} files, {zip_path.stat().st_size / 1e6:.1f} MB in {time.time() - t0:.0f} s')
@@ -381,6 +417,8 @@ def main():
             p.add_argument('--force', action='store_true')
         else:
             p.add_argument('--tree')
+            p.add_argument('--part', choices=('all', 'media', 'db'), default='all',
+                           help='media: all but Data/db; db: Data/db and open_data.json (default all)')
     p = sub.add_parser('check')
     p.add_argument('dir')
     a = ap.parse_args()

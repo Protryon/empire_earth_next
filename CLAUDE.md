@@ -45,8 +45,9 @@ a Win32 debugger) and `tools/gates.sh` cannot run; the POSIX tooling below stand
   - `--incremental` keeps objects newer than their `.cpp`; it does not track headers, so after a header change do a full build.
   - Don't relink the exe while a game runs from it. For a compile check meanwhile, set
     `EE_XBUILD_OUT=$PWD/build/xbuild-check`.
-- Data: the repository's `data/` (gitignored) holds the latest `open-data-<sha>` release, unzipped
-  (`gh release download <tag> -p '*.zip'`). Replace it when a data release changes the format. Run with
+- Data: the repository's `data/` (gitignored) holds the latest release of each data part, unzipped into one folder
+  by `python3 -I tools/fetch_data.py` (it skips the parts already current; `--without textures-4x` leaves the 1.3 GB
+  part out). Rerun it when a data release changes the format. Run with
   `EE_DATA_ROOT=$PWD/data build/xbuild/macos-arm64/game/ee-aoc`.
 - Live tests: `tools/harness/posix_game.py --exercise menu|random-game|ai-game`. Evidence goes to `build/posix_game/<time>/`:
   `game.log`, `summary.json`, `samples.json`, window captures. Useful options:
@@ -86,9 +87,11 @@ There is no `data.ssa` and no registry. Settings live in `config.ini` next to th
 ```
 python -I tools/open_data.py build build/open_data/tree [--force]  # from the two installs (read only), ~4 min
 python -I tools/open_data.py build build/open_data/tree-binary --binary   # same tree, binary forms unconverted
-python -I tools/open_data.py pack build/ee_open_data-<sha>.zip     # the bundle: tree + fonts/ + README.txt
+python -I tools/open_data.py pack build/ee_open_media-<sha>.zip --part media   # release part: all but Data/db
+python -I tools/open_data.py pack build/ee_open_db-<sha>.zip --part db         # release part: Data/db (the tweakables)
+python -I tools/fetch_data.py [OUT] [--without textures-4x]      # pull the release parts into one folder (data/)
 python -I tools/open_data.py check build/open_data/tree
-python -I tools/make_play_dir.py C:\EE-play [--data TREE|ZIP] [--movies DIR]   # exe + data + converted movies
+python -I tools/make_play_dir.py C:\EE-play [--data TREE|ZIP|DIR ...] [--movies DIR]   # exe + data + movies
 ```
 
 The db converter is `tools/eedata/eedata.py`. Run `-h` for the full list.
@@ -132,8 +135,14 @@ Before merging or pushing any code change, all of these are required:
 
 - Never commit retail game data or bulk derivatives of it. The `.gitignore` covers `build/` and `toolchain/`.
 - Data bundles go only to **private GitHub Releases** of this repository (no git, no LFS). Notes must say "Private,
-  do not redistribute." Tag `open-data-<sha>`, created with `gh release create ... --target main`.
-- Republish the bundle whenever the data format changes (tables, rules documents, converters).
+  do not redistribute." Create them with `gh release create ... -R Protryon/empire_earth_next --target main`
+  (always `-R`: with the upstream remote present, gh may pick the wrong repository).
+- The data ships in three parts that unzip into one folder, each its own release (`tools/fetch_data.py` pulls them):
+  - `open-media-<sha>`: `ee_open_media-<sha>.zip` (`pack --part media`: models, original textures, sounds, fonts);
+  - `open-textures-4x-<sha>`: `ee_textures_4x-<sha>.zip` (`Data/Textures-4x`, tools/upscale);
+  - `open-db-<sha>`: `ee_open_db-<sha>.zip` (`pack --part db`: `Data/db` and `open_data.json`).
+- Republish the db part whenever the tables, rules documents or db converters change; the media part only when
+  the models, textures or other converters change; the 4x part when tools/upscale's output changes.
 - The original game's campaigns stay out of the bundle.
 
 ## Git
