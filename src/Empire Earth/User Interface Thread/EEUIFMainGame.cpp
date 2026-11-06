@@ -476,6 +476,9 @@ EEUIFMainGame::EEUIFMainGame(UIManager* inManager, const UIDbDataForms& inData) 
     this->AddHotKey(kKeyShift, kKeyNone, kKeyNone, kKeyNone, new EEUIEMGEnterShiftMode, NULL, new EEUIEMGExitShiftMode, NULL, 0, true);
     this->AddHotKey(kKeyDelete, kKeyNone, kKeyNone, kKeyNone, new EEUIEMGKillUnits(false), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyDelete, kKeyShift, kKeyNone, kKeyNone, new EEUIEMGKillUnits(true), NULL, NULL, NULL, 0, false);
+    // New: Backspace deletes too (a Mac keyboard's "delete" key is Backspace; it has no forward Delete key)
+    this->AddHotKey(kKeyBack, kKeyNone, kKeyNone, kKeyNone, new EEUIEMGKillUnits(false), NULL, NULL, NULL, 0, false);
+    this->AddHotKey(kKeyBack, kKeyShift, kKeyNone, kKeyNone, new EEUIEMGKillUnits(true), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyAdd, kKeyNone, kKeyNone, kKeyNone, new EEUIEMGChangeGameSpeed(true), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeySubtract, kKeyNone, kKeyNone, kKeyNone, new EEUIEMGChangeGameSpeed(false), NULL, NULL, NULL, 0, false);
     this->AddHotKey(kKeyEscape, kKeyNone, kKeyNone, kKeyNone, new EEUIEMGCancelUpdateState, NULL, NULL, NULL, 0, false);
