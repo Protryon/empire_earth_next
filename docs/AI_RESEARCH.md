@@ -1,7 +1,5 @@
-# Empire Earth AoC computer-player AI: research and modernisation plan
-
-Status: stage 0 under way on the `new-ai` branch (§8: the trace, the cheat switches, the benchmark and the first
-numbers). Started 2026-11-05.
+Status: stages 0 and 1 done, and stage 2 under way on the `new-ai` branch. §8 covers the trace and benchmark, the
+fixes and personalities as data, and the experiments, kept and dropped. Started 2026-11-05.
 `AI` stands for `src/Empire Earth/AI Thread/`. Method names come from the reconstruction and are often provisional:
 AI has 86 `provisional` markers and about 115 unnamed members. **[inferred]** marks reasoning rather than reading.
 ⚠ marks external claims taken from forums or secondary sources only.
@@ -1002,6 +1000,19 @@ Balanced against balanced, seeds 2-19, 45 minutes, on the build of §8.16:
 - **The update order does not explain the seat advantage.** Reversing it did not move the advantage to p3.
 - **There is no measurable seat effect left.** The 39-24 of §8.12 came from older builds, over several sets.
 - **Head-to-head tests still swap the seats.**
+
+### 8.18 Gatherers out of enemy land: tried, not kept (2026-11-06)
+
+`FindResourceTarget` rejects sites within 10 tiles of another player's area, but its loop skips enemies. So it keeps
+citizens off allied and neutral land and not off enemy land. Adding enemy areas, with a 15-tile margin, changed
+nothing measurable.
+
+| Build (balanced against balanced, seeds 2-19, 45 min) | Citizens lost per AI | Citizens at 40 min | Army at 40 min |
+|---|---|---|---|
+| before | 20.0 | 58.6 | 17.4 |
+| with the enemy margin | 20.1 | 55.2 | 19.1 |
+
+**Not kept.** The far deaths are raids that reach the AI's own outer resource centers, not trips into enemy land.
 
 ### 8.9 Next
 
