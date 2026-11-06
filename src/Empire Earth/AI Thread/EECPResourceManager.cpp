@@ -1424,23 +1424,24 @@ void EECPResourceManager::RemoveCosts(EETechTreeNode* inNode, long inCount)
     }
 }
 
-// New (docs/AI_RESEARCH.md §8.7-8.8; the original, 0x491b78, split the gatherers by mNeeds, a ledger of queued costs
-// minus what was gathered or started that ignored the stock and only grew: 85-90% of the citizens wanted on food all
-// game, stone and gold left unworked, iron piled up). The economy's tuning, to move into the AI rules data with the
-// personalities. Each resource's weight is a small base share plus its shortfall: what the AI has asked for and not
-// yet paid (its build queues, unit requests, queued research and the citizens it still wants; all saved state,
-// recomputed each time) minus its stock, per kShortfallUnit; a stock more than kSurplus above what is asked for weighs
-// kSurplusCut times; each share is capped by what the held sites take.
+// New (docs/AI_RESEARCH.md §8.8-8.11): the economy's tuning, to move into the AI rules data with the personalities.
+// UpdateWantedGatherers keeps the original's split by mNeeds (a ledger of queued costs minus what was gathered or
+// started; food-heavy, which suits the first epochs: food is citizens) and then corrects it by the stock: a resource
+// with more than mSurplus in stock gets half its share; one with less than mLowStock at least mFloor of the gatherers.
+// (Two replacements of the split itself grew the honest economy more slowly: §8.10.)
 struct EECPEconomyTuning {
-    float mShare[7];                        // by resource index (2 food .. 6 iron)
-    float mShortfallUnit;                   // a shortfall of this many adds 1 to the weight
+    float mShare[7];                        // unused (the replaced split's base shares)
+    float mShortfallUnit;                   // unused (the replaced split's shortfall unit)
     float mSurplusCut;
     long mSurplus;
     float mMaxCitizenShare;                 // GetWantedCitizens: at most this share of the pop cap
     unsigned long mWoodSlots;               // wood's capacity (trees are not resource-center units)
     unsigned long mMovesPerCycle;           // RebalanceGatherers: gatherers freed per 10 s
+    long mLowStock;
+    float mFloor[7];                        // by resource index (2 food .. 6 iron)
 };
-static const EECPEconomyTuning kEconomy = { {0.0f, 0.0f, 0.20f, 0.15f, 0.05f, 0.05f, 0.05f}, 500.0f, 0.3f, 1500, 0.7f, 15, 3 };
+static const EECPEconomyTuning kEconomy = { {0.0f, 0.0f, 0.20f, 0.15f, 0.05f, 0.05f, 0.05f}, 500.0f, 0.5f, 1000, 0.7f,
+    15, 3, 150, {0.0f, 0.0f, 0.10f, 0.25f, 0.05f, 0.05f, 0.05f} };
 
 // What the computer player has asked for and not yet paid, per resource (scaled costs)
 [[maybe_unused]] static void EECPRMPendingCosts(EECPCivilizationManager* inManager, long* outCosts)
@@ -1573,6 +1574,26 @@ bool EECPResourceManager::UpdateWantedGatherers()
                 this->mWantedGatherers[j] = 0;
                 if (this->mGatherers[j].size() != 0)
                     theChanged = true;
+            }
+        }
+    }
+    // new: the stock correction (kEconomy above)
+    if (theGatherers > 0) {
+        for (unsigned long r = 2; r < 7; r++) {
+            unsigned long theWanted = this->mWantedGatherers[r];
+            long theStock = thePlayer->mResourceCaps[r];
+            if (theStock > kEconomy.mSurplus)
+                theWanted = (unsigned long)UMFloatToLong(theWanted * kEconomy.mSurplusCut);
+            else if (theStock < kEconomy.mLowStock) {
+                unsigned long theFloor = (unsigned long)UMFloatToLong(kEconomy.mFloor[r] * (float)theGatherers);
+                if (r == 2 && thePlayer->mTechnologies->mCurrentEpoch > kTechEpochNano)
+                    theFloor = 0;
+                if (theWanted < theFloor)
+                    theWanted = theFloor;
+            }
+            if (theWanted != this->mWantedGatherers[r]) {
+                this->mWantedGatherers[r] = theWanted;
+                theChanged = true;
             }
         }
     }
