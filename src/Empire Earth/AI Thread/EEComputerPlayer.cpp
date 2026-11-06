@@ -242,6 +242,8 @@ void EEComputerPlayer::WorkOutPopulation()
                 theMax = theOwn;   // EE_AI_CHEATS without popband: no pull toward the human population
             this->mPopulationCap = UMFloatToLong((theOwn * theOwnWeight + theMax * theOtherWeight) / (theOwnWeight + theOtherWeight));
             this->mPopulationCap = UMFloatToLong(this->GetPopLimitAdjustment() * this->mPopulationCap);
+            if (this->mPopulationCap > theOwn)
+                this->mPopulationCap = theOwn;   // new: never above the game's population limit (Hard's row 98 is 140%)
         } else
             this->mPopulationCap = theOwn;
     }
