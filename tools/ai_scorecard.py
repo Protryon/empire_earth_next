@@ -3,7 +3,7 @@ every epoch, the economy and army over time and the citizens lost.
 
   python -I tools/ai_scorecard.py build/sim/bench/NAME [more bench dirs] [--key demand] [--json OUT]
 
-The computer players are told apart by a field of their trace start line (`--key`: demand, personality, cheats; by
+The computer players are told apart by a field of their trace start line (`--key`: exp, demand, personality, cheats; by
 default the first of those that differs between the players of a game, else "all": one variant). In a game of two
 variants a side wins when the other has no citizens left or its citizens + army are at least 1.5 times the other's,
 else the game is close. Epochs: how many of the variant's players reached each epoch and the median and mean game
@@ -18,7 +18,7 @@ import re
 import statistics
 import sys
 
-KEYS = ("demand", "personality", "cheats")
+KEYS = ("exp", "demand", "personality", "cheats")
 MARKS = (10, 20, 30, 40)
 
 
@@ -62,11 +62,17 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0], epilog=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("bench", nargs="+", type=pathlib.Path)
-    ap.add_argument("--key", choices=KEYS)
+    ap.add_argument("--key", choices=KEYS + ("variant",),
+                    help="variant: group by the bench's --vary/--env-vary values (both players alike)")
     ap.add_argument("--json", type=pathlib.Path)
     a = ap.parse_args()
     games = []
     for d in a.bench:
+        variants = {}
+        if (d / "results.json").exists():
+            for run in json.loads((d / "results.json").read_text()).get("runs", []):
+                tag = " ".join(run.get("variant", []) + [f"{k}={v}" for k, v in sorted(run.get("env", {}).items())])
+                variants[run["id"]] = tag or "-"
         for rep in sorted((d / "runs").glob("*.json")):
             trace = rep.with_name(rep.stem + ".trace.txt")
             if not trace.exists():
@@ -75,6 +81,9 @@ def main():
             fields = start_fields(trace)
             if not fields:
                 continue
+            if a.key == "variant":
+                for f in fields.values():
+                    f["variant"] = variants.get(rep.stem, "-")
             key = a.key or next((k for k in KEYS if len({f.get(k) for f in fields.values()}) > 1), None)
             games.append(dict(id=rep.stem, report=r, fields=fields, key=key, losses=losses(trace)))
     if not games:

@@ -52,6 +52,10 @@ unsigned long EECPOutOfSynchChecksum();
 // the computer player's personality (aipersonalities.yaml; ee/EERules.h). TEST ONLY: EE_AI_PERSONALITY in the
 // environment names one for every computer player, or a comma list they take in turn by player id
 const EEAIPersonalityRule& EECPPersonality(const EEComputerPlayer* inPlayer);
+// TEST ONLY: EE_AI_EXP names experiments, "a,b" for every computer player or "set/set/..." in turn from player 1
+// (as EE_AI_CHEATS): code behind EECPExperiment(player, "a") is tried head to head before it becomes data
+bool EECPExperiment(const EEComputerPlayer* inPlayer, const char* inName);
+const char* EECPExperimentNames(const EEComputerPlayer* inPlayer);   // ",a,b," or "-" (the start line's exp=)
 bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer);   // the personality's economy.demand_split; TEST ONLY: EE_AI_DEMAND
                                            // overrides it (0 or 1, or per player in turn from player 1, "0/1")
 

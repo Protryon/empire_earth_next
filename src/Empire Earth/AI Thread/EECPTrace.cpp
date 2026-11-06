@@ -52,6 +52,7 @@ bool gCPTraceOn = false;
 const char* gCPTraceManager = "-";
 
 static bool sInitialized = false;
+static std::vector<std::string> sExperiments;   // EE_AI_EXP (TEST ONLY): ",a,b," per player in turn
 static std::vector<bool> sDemandSplit;     // EE_AI_DEMAND (TEST ONLY): overrides economy.demand_split, per player in turn ('/' between)
 static std::vector<long> sCheats;          // EE_AI_CHEATS (TEST ONLY): the cheats it lets through, per player in turn
 static char sCheatNames[128];
@@ -131,6 +132,40 @@ void EECPTraceInit()
             theSetStart = theSetEnd + 1;
         }
     }
+    // the named experiments, "a,b" for every computer player or "set/set/..." in turn by player ("-" or "": none)
+    const char* theExperiments = getenv("EE_AI_EXP");
+    if (theExperiments != NULL && theExperiments[0] != '\0') {
+        std::string theSets(theExperiments);
+        size_t theSetStart = 0;
+        while (theSetStart <= theSets.size()) {
+            size_t theSetEnd = theSets.find('/', theSetStart);
+            if (theSetEnd == std::string::npos)
+                theSetEnd = theSets.size();
+            std::string theSet = "," + theSets.substr(theSetStart, theSetEnd - theSetStart) + ",";
+            sExperiments.push_back(theSet);
+            theSetStart = theSetEnd + 1;
+        }
+    }
+}
+
+bool EECPExperiment(const EEComputerPlayer* inPlayer, const char* inName)
+{
+    EECPTraceInit();
+    if (sExperiments.empty())
+        return false;
+    unsigned long theID = inPlayer->mPlayerID;
+    const std::string& theSet = sExperiments[(theID > 0 ? theID - 1 : 0) % sExperiments.size()];
+    return theSet.find("," + std::string(inName) + ",") != std::string::npos;
+}
+
+const char* EECPExperimentNames(const EEComputerPlayer* inPlayer)
+{
+    EECPTraceInit();
+    if (sExperiments.empty())
+        return "-";
+    unsigned long theID = inPlayer->mPlayerID;
+    const std::string& theSet = sExperiments[(theID > 0 ? theID - 1 : 0) % sExperiments.size()];
+    return theSet.size() > 2 ? theSet.c_str() : "-";
 }
 
 bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer)
