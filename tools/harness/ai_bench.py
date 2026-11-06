@@ -49,6 +49,10 @@ def run_one(args, run, out, instance=None):
         env.pop('EE_AI_CHEATS', None)
     else:
         env['EE_AI_CHEATS'] = cheats
+    if run.get('personality', '-') != '-':   # aipersonalities ids, '+' joined: taken in turn by player
+        env['EE_AI_PERSONALITY'] = run['personality'].replace('+', ',')
+    else:
+        env.pop('EE_AI_PERSONALITY', None)
     cmd = [sys.executable, '-I', str(HERE / 'game_session.py'), '--exercise', 'ai-game',
            '--ai-players', str(run['ai']), '--map-size', run['size'], '--difficulty', run['difficulty'],
            '--max-game-seconds', str(args.game_seconds), '--time-factor', str(args.time_factor), '--no-render',
@@ -97,7 +101,7 @@ def collect(run, out, rc=None, wall_s=None):
 
 def write_reports(out, results):
     (out / 'results.json').write_text(json.dumps(results, indent=2) + '\n', encoding='utf-8')
-    fields = ['run', 'seed', 'map', 'size', 'difficulty', 'ai', 'cheats', 'repeat', 'outcome', 'game_s', 'player',
+    fields = ['run', 'seed', 'map', 'size', 'difficulty', 'ai', 'cheats', 'personality', 'repeat', 'outcome', 'game_s', 'player',
               'units', 'epoch_final', 'epoch_advances', 'first_epoch_s', 'last_epoch_s', 'first_attack_s',
               'pop', 'cap', 'citizens', 'idle', 'gather_food', 'gather_wood', 'gather_stone', 'gather_gold',
               'gather_iron', 'buildings', 'other', 'unspent_final', 'mean_unspent', 'mean_idle',
@@ -112,7 +116,7 @@ def write_reports(out, results):
                 epochs = p['epoch_advances']
                 units = r.get('units') or []
                 w.writerow(dict(run=r['id'], seed=r['seed'], map=r['map'], size=r['size'], difficulty=r['difficulty'],
-                                ai=r['ai'], cheats=r['cheats'], repeat=r['repeat'], outcome=r.get('outcome'),
+                                ai=r['ai'], cheats=r['cheats'], personality=r.get('personality', '-'), repeat=r['repeat'], outcome=r.get('outcome'),
                                 game_s=(r.get('game_ms') or 0) // 1000, player=pid,
                                 units=units[int(pid) - 1] if 0 < int(pid) <= len(units) else '',
                                 epoch_final=last.get('epoch'), epoch_advances=len(epochs),
@@ -159,6 +163,9 @@ def main():
     ap.add_argument('--difficulty', default='Hard', help='comma separated: Easy, Medium, Hard')
     ap.add_argument('--ai', default='2', help='computer player counts, comma separated')
     ap.add_argument('--cheats', default='all', help="cheat sets, comma separated; '+' joins cheats in one set")
+    ap.add_argument('--personality', default='-',
+                    help="personality sets, comma separated ('-': the rules' assignment); '+' joins the ones the computer "
+                         "players take in turn (EE_AI_PERSONALITY), e.g. tall+wide")
     ap.add_argument('--repeat', type=int, default=1, help='runs per cell; with 2+ the traces are compared')
     ap.add_argument('--game-seconds', type=int, default=600)
     ap.add_argument('--time-factor', default='32')
@@ -186,7 +193,8 @@ def main():
             m = re.match(r's(\d+)-(.*)-(\w+)-(Easy|Medium|Hard)-(\d+)ai-(.+)-r(\d+)$', rid)
             run = old.get(rid) or dict(id=rid, seed=int(m[1]), map=m[2] or '-', size=m[3], difficulty=m[4],
                                        ai=int(m[5]), cheats=m[6], repeat=int(m[7]))
-            run = {k: run[k] for k in ('id', 'seed', 'map', 'size', 'difficulty', 'ai', 'cheats', 'repeat')}
+            run = {k: run.get(k, '-') for k in ('id', 'seed', 'map', 'size', 'difficulty', 'ai', 'cheats', 'personality',
+                                                'repeat')}
             results.append(collect(run, a.rescan))
         write_reports(a.rescan, results)
         report(a.rescan)
@@ -194,12 +202,20 @@ def main():
     out = OUT / a.name
     (out / 'runs').mkdir(parents=True, exist_ok=True)
     cells = list(itertools.product([int(s, 0) for s in split(a.seeds)], split(a.maps), split(a.sizes),
-                                   split(a.difficulty), [int(n) for n in split(a.ai)], split(a.cheats)))
+                                   split(a.difficulty), [int(n) for n in split(a.ai)], split(a.cheats),
+                                   split(a.personality)))
     runs = []
-    for (seed, map_type, size, difficulty, ai, cheats), k in itertools.product(cells, range(a.repeat)):
-        rid = f"s{seed}-{map_type.replace(' ', '_')}-{size}-{difficulty}-{ai}ai-{cheats}-r{k}".replace('--', '-')
-        runs.append(dict(id=rid, seed=seed, map=map_type, size=size, difficulty=difficulty, ai=ai, cheats=cheats, repeat=k))
+    for (seed, map_type, size, difficulty, ai, cheats, pers), k in itertools.product(cells, range(a.repeat)):
+        rid = f"s{seed}-{map_type.replace(' ', '_')}-{size}-{difficulty}-{ai}ai-{cheats}"               + (f"-{pers}" if pers != '-' else '') + f"-r{k}"
+        runs.append(dict(id=rid.replace('--', '-'), seed=seed, map=map_type, size=size, difficulty=difficulty, ai=ai,
+                         cheats=cheats, personality=pers, repeat=k))
     results = [None] * len(runs)
+    if a.jobs > 1:
+        # the data tree once, before the parallel sessions: a tree made by other converter code is rebuilt, and
+        # parallel sessions rebuilding the shared tree at once break it
+        import exe_boot
+        text_db, open_assets = os.environ.get('EE_HARNESS_TEXT_DB'), os.environ.get('EE_HARNESS_OPEN_ASSETS')
+        exe_boot.data_tree('open' if os.environ.get('EE_HARNESS_OPEN_DATA') or (text_db and open_assets) else 'binary')
     if a.jobs <= 1:
         for n, run in enumerate(runs):
             results[n] = run_one(a, run, out)
