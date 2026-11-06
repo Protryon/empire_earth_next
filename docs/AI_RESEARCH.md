@@ -1055,6 +1055,50 @@ nearest built drop site that takes it, and how many are past the drop-off distan
   - no settlement within 0.75 of the radius of a town center.
 - **No granary** was ever built: the AI did not reach the farm epochs.
 
+### 8.21 The demand split (2026-11-06)
+
+`EE_AI_DEMAND=1` (TEST ONLY; per player in turn with `/`, as `EE_AI_CHEATS`) replaces the needs ledger's gatherer
+split (`EECPRMSplitByDemand`, `EECPResourceManager.cpp`). The AI's wants come in tiers, each a cost per resource:
+
+1. **Growth:** the next 15 missing citizens, the standing army's shortfall (up to 15 of its favourite land unit), and
+   the first two buildings of each epoch's build queue.
+2. **The pending epoch advance,** by its pressure (as the reserve in `CanAfford`).
+3. **The rest** (counted at half): the other unit requests, the queued research, and the rest of the build queues.
+
+Each resource's shortfall is its demand less its stock. Each resource first gets half of the personality's floor
+share. The rest of the gatherers go by shortfall, plus a quarter of the demand, capped by what the claimed resource
+units hold, with the overflow passed on to resources that have room.
+
+| Version (seeds 2-7, both AIs on it) | Citizens at 20 / 30 / 40 min | Stone Age |
+|---|---|---|
+| ledger (today) | 35.8 / 39.6 / 42.1 | 9/12 |
+| v1: no floors, next 5 citizens | 26.2 / 24.4 / 29.8 | 8/12 |
+| v2: full floors | 27.0 / 25.8 / 22.8 | 11/12 |
+| v3: half floors, next 15 citizens | 30.3 / 23.8 / 25.2 | 9/12 |
+
+- **v1 starved wood.** Nothing asks for wood: buildings outside the queues and upkeep never reach the demand. The
+  floors bring back that base income.
+- **Symmetric games mislead.** One side usually gets wiped out, so the means mix economy with combat.
+
+**Head to head** (v3 against the ledger, balanced, honest, Hard, seeds 2-13, both seats; 24 games):
+
+| | Demand | Ledger |
+|---|---|---|
+| Wins (close: 2) | **16** | 6 |
+| Stone Age | 20/24 at 36 min | 13/24 at 38 min |
+| Citizens / army at 20 min | 31.3 / 12.0 | 32.1 / 7.9 |
+| Citizens / army at 40 min | 41.0 / 19.5 | 28.5 / 11.2 |
+| Citizens lost by 20 min | 4.0 | 6.1 |
+
+- **Same economy, more army, earlier epoch.** The demand split matches the ledger's citizens and is ahead on army and
+  epoch at 20 minutes. The army is in tier 1, while the ledger let the army wait on iron (§8.15).
+- **Seats were even:** p2 won 12 and p3 10.
+- **Next:**
+  - make it the default as data (an `economy` field in `aipersonalities.yaml`), with the tier weights per
+    personality;
+  - check it against `aggressive` (also an army push) and on the cheat sets;
+  - look at the wanted gatherers that are never filled: iron wanted 6-7 with 9 sites listed and 0 gathering (seed 3).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
