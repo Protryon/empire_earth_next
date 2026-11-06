@@ -3,6 +3,7 @@
 // HandleMessage (the 0x401..0x443 switch), the Post* members, the window procedure, then the template COMDATs of
 // the message vector. Unit flags: the exe module set. Names are provisional unless the header says otherwise.
 #include <windows.h>
+#include "platform/PlatSim.h"
 unsigned long EEMenuWidth();    // port: the menus' resolution (Empire Earth.cpp)
 unsigned long EEMenuHeight();
 #include <mbstring.h>
@@ -722,7 +723,9 @@ long EEUserInterface::Run(void* inParameter)
             gWorld.mCameraControl.Update((theTime - sLastTime) * 0.001f);
             sLastTime = theTime;
         }
-        PlatSleep(1);
+        // the headless simulation (platform/PlatSim.h): while its game runs, the interface (whose update takes the
+        // world's read lock) is updated 50 times a second instead of every millisecond
+        PlatSleep(gPlatSimRun ? 20 : 1);
     }
     return 0;
 }
