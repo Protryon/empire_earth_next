@@ -12,6 +12,9 @@ results.json and results.csv (one row per run and player). With --repeat 2 the r
   python -I tools/sim_bench.py --name det --seeds 2 --repeat 2
 
 --set DOC.KEY=VALUE applies to every run; each --vary DOC.KEY=V1,V2,... adds a dimension (one run per value).
+--env NAME=VALUE sets an environment variable for every run; each --env-vary NAME=V1,V2,... adds a dimension, e.g.
+--env-vary EE_AI_DEMAND=1/0,0/1 plays a per-player switch from both seats (the per-player sets of ee/EECPTrace.h).
+tools/ai_scorecard.py scores the result (wins, time to each epoch, economy and army over time).
 --sim-arg passes an option to EE-SIM.exe as it is (e.g. --sim-arg=--lobby --sim-arg=181=#0).
 """
 import argparse
@@ -19,6 +22,7 @@ import concurrent.futures
 import csv
 import itertools
 import json
+import os
 import pathlib
 import subprocess
 import sys
@@ -69,8 +73,10 @@ def run_one(run, args, slots, out):
             opts += ["--set", s]
         opts += args.sim_arg
         t0 = time.monotonic()
+        env = dict(os.environ, **run["env"])
         with open(err, "w", encoding="utf-8") as f:
-            rc = subprocess.run(sim.command(args.exe, stage, opts, cfg), stdout=subprocess.DEVNULL, stderr=f).returncode
+            rc = subprocess.run(sim.command(args.exe, stage, opts, cfg), stdout=subprocess.DEVNULL, stderr=f,
+                                env=env).returncode
         wall = time.monotonic() - t0
         try:
             rep = json.loads(report.read_text())
@@ -96,6 +102,8 @@ def main():
     ap.add_argument("--personality", default="balanced", help="EE_AI_PERSONALITY values, ';' between variants")
     ap.add_argument("--set", action="append", default=[], help="DOC.KEY=VALUE for every run")
     ap.add_argument("--vary", action="append", default=[], help="DOC.KEY=V1,V2,...: one dimension")
+    ap.add_argument("--env", action="append", default=[], help="NAME=VALUE for every run")
+    ap.add_argument("--env-vary", action="append", default=[], help="NAME=V1,V2,...: one dimension")
     ap.add_argument("--repeat", type=int, default=1)
     ap.add_argument("--jobs", type=int, default=2)
     ap.add_argument("--game-seconds", type=int, default=2700)
@@ -115,16 +123,26 @@ def main():
         if not values:
             sys.exit(f"--vary {v}: expected DOC.KEY=V1,V2,...")
         variants = [old + [f"{key}={x}"] for old in variants for x in values.split(",")]
+    envs = [{}]
+    for v in a.env_vary:
+        key, _, values = v.partition("=")
+        if not values:
+            sys.exit(f"--env-vary {v}: expected NAME=V1,V2,...")
+        envs = [dict(old, **{key: x}) for old in envs for x in values.split(",")]
+    fixed = dict(e.split("=", 1) for e in a.env)
     cells = list(itertools.product([int(s, 0) for s in split(a.seeds)], split(a.sizes), split(a.maps),
                                    split(a.difficulty), [int(x) for x in split(a.ai)], split(a.cheats),
-                                   [p for p in a.personality.split(";") if p] or ["-"], range(len(variants))))
+                                   [p for p in a.personality.split(";") if p] or ["-"], range(len(variants)),
+                                   range(len(envs))))
     runs = []
-    for (seed, size, map_type, difficulty, ai, cheats, pers, v), k in itertools.product(cells, range(a.repeat)):
-        tag = "-".join(s.split(".")[-1] + "=" + s.split("=", 1)[1] for s in variants[v])
+    for (seed, size, map_type, difficulty, ai, cheats, pers, v, ev), k in itertools.product(cells, range(a.repeat)):
+        tag = "-".join([s.split(".")[-1] + "=" + s.split("=", 1)[1] for s in variants[v]] +
+                       [n + "=" + x.replace("/", "~") for n, x in envs[ev].items()])
         rid = (f"s{seed}-{map_type.replace(' ', '_')}-{size}-{difficulty}-{ai}ai-{cheats.replace('/', '~')}"
                f"-{pers.replace(',', '+')}" + (f"-{tag}" if tag else "") + f"-r{k}").replace("--", "-")
         runs.append(dict(id=rid, seed=seed, size=size, map=map_type, difficulty=difficulty, ai=ai, cheats=cheats,
-                         personality=pers, variant=variants[v], sets=a.set + variants[v], repeat=k))
+                         personality=pers, variant=variants[v], sets=a.set + variants[v], repeat=k,
+                         env=dict(fixed, **envs[ev])))
     out = BENCH / a.name / "runs"
     out.mkdir(parents=True, exist_ok=True)
     print(f"{len(runs)} runs, {a.jobs} at once -> {out.parent}", flush=True)

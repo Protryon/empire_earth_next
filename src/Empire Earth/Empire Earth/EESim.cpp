@@ -290,6 +290,7 @@ std::string sOutcome;
 std::vector<Sample> sSamples;
 std::vector<Defeat> sDefeats;
 std::vector<unsigned long> sResults;   // per world player, the last result seen
+std::vector<std::vector<long> > sEpochMs;   // per world player: the game ms each epoch was first reached (-1: not)
 long sNextSampleMs = 0;
 long sStandingSince = -1;              // game ms the last-computer-standing condition holds from
 
@@ -361,6 +362,18 @@ void AfterTick()
     for (unsigned long i = 1; i < theCount; i++) {
         EEPlayer* thePlayer = gWorld.GetPlayer(i);
         unsigned long theResult = thePlayer ? thePlayer->mGameResult : 0;
+        long theEpoch = thePlayer && thePlayer->mTechnologies ? thePlayer->mTechnologies->mCurrentEpoch : -1;
+        if (theEpoch >= 0) {
+            std::lock_guard<std::mutex> theGuard(sStateLock);
+            if (sEpochMs.size() < theCount)
+                sEpochMs.resize(theCount);
+            std::vector<long>& theTimes = sEpochMs[i];
+            if ((long)theTimes.size() <= theEpoch)
+                theTimes.resize(theEpoch + 1, -1);
+            for (long e = 0; e <= theEpoch; e++)   // an advance reaches every epoch up to it (a skip counts for each)
+                if (theTimes[e] < 0)
+                    theTimes[e] = theTime;
+        }
         if (theResult != sResults[i]) {
             sResults[i] = theResult;
             if (theResult == 2)
@@ -722,6 +735,20 @@ void WriteReport(int inCode, const std::string& inError)
         return o + "]";
     };
     j += "  \"players\": " + (theLast ? players(*theLast) : std::string("[]")) + ",\n";
+    // per world player, the game ms each epoch was first reached (index: the epoch; the start epoch and those below
+    // it: the first tick's; an epoch never reached is missing from the end)
+    j += "  \"epoch_ms\": {";
+    bool theFirst = true;
+    for (size_t i = 1; i < sEpochMs.size(); i++) {
+        if (sEpochMs[i].empty())
+            continue;
+        j += std::string(theFirst ? "" : ", ") + "\"" + std::to_string(i) + "\": [";
+        theFirst = false;
+        for (size_t e = 0; e < sEpochMs[i].size(); e++)
+            j += (e ? ", " : "") + std::to_string(sEpochMs[i][e]);
+        j += "]";
+    }
+    j += "},\n";
     j += "  \"samples\": [\n";
     for (size_t k = 0; k < sSamples.size(); k++) {
         snprintf(buf, sizeof(buf), "    {\"game_ms\": %ld, \"pt\": %lu, \"wall\": %.2f, \"players\": ", sSamples[k].mGameMs,
