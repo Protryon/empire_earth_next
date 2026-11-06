@@ -1597,6 +1597,20 @@ static void EECPRMGetDemand(EECPResourceManager* inManager, EECPRMDemand& outDem
         if (theShare > 0.0f)
             EECPRMAddCost(thePlayer, theTree->Get(theEpoch), kUnitTypeTownCenter, theShare, outDemand.mTier[1]);
     }
+    // the experiment "epochplan": the next epoch's wood, stone, gold and iron count whole from the start of an epoch
+    // (queued or not, whatever the pressure: those stocks take long to fill with few gatherers, and only food
+    // competes with the citizens); the pressure share above keeps the food
+    if (EECPExperiment(thePlayer, "epochplan") && !EECPCheatOn(thePlayer, kAICheatEpochs)) {
+        long theNext = theTree->mCurrentEpoch + 1;
+        EETechTreeNode* theNode = theNext < EEEpochCount() ? theTree->Get(theNext) : NULL;
+        if (theNode != NULL) {
+            long theCosts[7] = {0, 0, 0, 0, 0, 0, 0};
+            EECPRMAddCost(thePlayer, theNode, kUnitTypeTownCenter, 1.0f, theCosts);
+            for (long r = 3; r < 7; r++)
+                if (theCosts[r] > outDemand.mTier[1][r])
+                    outDemand.mTier[1][r] = theCosts[r];
+        }
+    }
 }
 
 static bool EECPRMSplitByDemand(EECPResourceManager* inManager)

@@ -938,6 +938,8 @@ unsigned long EEComputerPlayer::GetIslandExpansionTimer()
 // Returns true when the AI may attack and its next attack time has come
 bool EEComputerPlayer::IsAttackDue(unsigned long inTime)
 {
+    if (EECPExperiment(this, "noattack"))
+        return false;   // the experiment "noattack": an economy race (docs/AI_RESEARCH.md §8.23)
     return this->mCanAttack && inTime >= this->mNextAttackTime;
 }
 
@@ -1105,6 +1107,13 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
         return true;
     if (inTechnology->mData->mID == kTechCitizen && EECPBooming(this))
         return true;   // the boom opening: citizens first
+    if (inTechnology->mData->mID == kTechCitizen && EECPExperiment(this, "payback") && this->mCivilizationManager != NULL) {
+        // the experiment "payback": a citizen pays its food back in about 8 game minutes (6 food a minute), so one
+        // trained earlier than that before the epoch timer is due speeds the advance up instead of holding it back
+        long long theLeft = (long long)this->mCivilizationManager->mNextEpochAdvanceTime - (long long)gPhysics->mGameTime;
+        if (theLeft > 8LL * 60000LL)
+            return true;
+    }
     long theEpoch = EECPPendingEpoch(this);
     EETechTreeNode* theReserved = theEpoch != kTechNone ? this->mTechnologies->Get(theEpoch) : NULL;
     if (theReserved == NULL)

@@ -142,6 +142,9 @@ void EECPTraceInit()
             if (theSetEnd == std::string::npos)
                 theSetEnd = theSets.size();
             std::string theSet = "," + theSets.substr(theSetStart, theSetEnd - theSetStart) + ",";
+            for (size_t c = 0; c < theSet.size(); c++)
+                if (theSet[c] == '+')
+                    theSet[c] = ',';   // "a+b" joins experiments too (a comma-separated --env-vary value cannot hold ',')
             sExperiments.push_back(theSet);
             theSetStart = theSetEnd + 1;
         }
