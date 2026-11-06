@@ -53,6 +53,7 @@ const char* gCPTraceManager = "-";
 static bool sInitialized = false;
 static long sCheats = kAICheatAll;         // EE_AI_CHEATS (TEST ONLY): the cheats it lets through
 static char sCheatNames[128];
+static std::vector<long> sPersonalities;   // EE_AI_PERSONALITY (TEST ONLY): positions in the rules' personalities
 static const long kMaxTracedPlayers = 64;
 static unsigned long sNextStats[kMaxTracedPlayers];
 static unsigned long sNextProfile[kMaxTracedPlayers];
@@ -67,6 +68,23 @@ void EECPTraceInit()
     sInitialized = true;
     const char* theTrace = getenv("EE_AI_TRACE");
     gCPTraceOn = theTrace != NULL && theTrace[0] != '\0' && strcmp(theTrace, "0") != 0;
+    const char* thePersonality = getenv("EE_AI_PERSONALITY");
+    if (thePersonality != NULL && thePersonality[0] != 0) {
+        std::string theList(thePersonality);
+        size_t theStart = 0;
+        while (theStart <= theList.size()) {
+            size_t theEnd = theList.find(',', theStart);
+            if (theEnd == std::string::npos)
+                theEnd = theList.size();
+            std::string theName = theList.substr(theStart, theEnd - theStart);
+            long k = EEGetRules().mAIPersonalities.Find(theName);
+            if (k >= 0)
+                sPersonalities.push_back(k);
+            else
+                ESDebugOut("EE-AI EE_AI_PERSONALITY: unknown personality '%s' ignored\n", theName.c_str());
+            theStart = theEnd + 1;
+        }
+    }
     const char* theCheats = getenv("EE_AI_CHEATS");
     if (theCheats != NULL && theCheats[0] != '\0' && strcmp(theCheats, "all") != 0) {
         sCheats = 0;
@@ -84,6 +102,19 @@ void EECPTraceInit()
             theStart = theEnd + 1;
         }
     }
+}
+
+const EEAIPersonalityRule& EECPPersonality(const EEComputerPlayer* inPlayer)
+{
+    EECPTraceInit();
+    const EEAIPersonalityRules& theRules = EEGetRules().mAIPersonalities;
+    if (!sPersonalities.empty()) {
+        unsigned long theID = inPlayer->mPlayerID;
+        long k = sPersonalities[(theID > 0 ? theID - 1 : 0) % sPersonalities.size()];
+        if (k >= 0 && (size_t)k < theRules.mPersonalities.size())
+            return theRules.mPersonalities[k];
+    }
+    return theRules.ForPlayer(inPlayer->mPlayerID);
 }
 
 // The game's difficulty's cheats (gameoptions.yaml ai_cheats), narrowed by EE_AI_CHEATS

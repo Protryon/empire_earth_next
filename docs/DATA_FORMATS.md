@@ -2613,6 +2613,30 @@ the binary tables it writes the legacy form). Legacy binary .civ files (the prem
 
 The powers' other behaviour stays where it is (C++ primitives that test `HasPower`: fanaticism, insurance, ...).
 
+**aipersonalities.yaml** (`EEAIPersonalityRules`; the computer players: `EECPPersonality`, docs/AI_RESEARCH.md
+§8.8-8.12): the tuning of a computer player's decisions that is not in dbcpbehavior, by personality, and which
+computer player gets which. New in this port (no original values: the defaults are what the benchmarks settled on).
+
+    personalities:
+      - id: balanced
+        epoch_pressure:            # the elapsed share of the epoch timer (dbcpbehavior rows 28/29); paid epochs only
+          start: 0.3               # the advance is asked for from here (1: the original timer) ...
+          full: 0.8                # ... and its cost is wholly reserved from here (the reserve grows in between)
+        economy:                   # EECPResourceManager
+          surplus: 1000            # a resource with more in stock gets surplus_cut of its gatherer share
+          surplus_cut: 0.5
+          low_stock: 150           # one with less gets at least its floor share of the gatherers
+          floor: {food, wood, stone, gold, iron shares}   # (block mapping in the file) 0.1, 0.25, 0.05, 0.05, 0.05
+          max_citizen_share: 0.7   # the citizen target (the held sites' capacity) is at most this share of the pop cap
+          wood_slots: 15           # wood's gatherer capacity
+          moves_per_cycle: 3       # busy gatherers moved to a short resource per 10 s
+      - id: tall ...               # epoch_pressure 0.15 / 0.5
+      - id: wide ...               # epoch_pressure 0.6 / 1.0, max_citizen_share 0.8
+    assign: [balanced]             # computer player n takes entry (n - 1) mod the count
+
+A key left out keeps the default; `assign` names personalities. TEST ONLY: `EE_AI_PERSONALITY` in the environment
+overrides the assignment (one id, or a comma list taken in turn).
+
 **epochs.yaml media** (`EEEpochMedia`; `EEMusicObject::LoadTable`, `EEPlayUnitEffect`, `EEUGGather`,
 `EEUnitClass`): per epoch
 

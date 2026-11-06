@@ -34,7 +34,7 @@ python -I tools/clang_build.py [-j N] [module ...]                 # compile cen
 The game reads one loose `Data` folder next to the exe:
 - db tables as text (CSV/YAML, with an `id` on every row);
 - the rules documents in `Data/db`: `combat.yaml`, `gameoptions.yaml`, `civbuilder.yaml`, `civpowers.yaml`,
-  `epochs.yaml`;
+  `aipersonalities.yaml`, `epochs.yaml`;
 - models as glTF, textures as PNG.
 
 There is no `data.ssa` and no registry. Settings live in `config.ini` next to the exe (`EE_CONFIG` overrides it).

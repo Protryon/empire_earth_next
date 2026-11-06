@@ -1725,7 +1725,7 @@ bool Run(const std::function<void()>& inBody, const char* inTable, std::string& 
 
 }  // namespace
 
-const char* const kRuleDocuments[] = {"combat", "gameoptions", "civbuilder", "civpowers"};
+const char* const kRuleDocuments[] = {"combat", "gameoptions", "civbuilder", "civpowers", "aipersonalities"};
 const unsigned long kRuleDocumentCount = sizeof(kRuleDocuments) / sizeof(kRuleDocuments[0]);
 
 const char* TextExtension(const char* inTable)

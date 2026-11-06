@@ -1088,8 +1088,9 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
     EETechTreeNode* theReserved = theEpoch != kTechNone ? this->mTechnologies->Get(theEpoch) : NULL;
     if (theReserved == NULL)
         return true;
-    float theShare = (EECPEpochPressure(this, gPhysics->mGameTime) - kEECPEpochPressureStart)
-        / (kEECPEpochPressureFull - kEECPEpochPressureStart);   // the reserve grows with the epoch pressure
+    const EEAIPersonalityRule& thePersonality = EECPPersonality(this);
+    float theShare = (EECPEpochPressure(this, gPhysics->mGameTime) - thePersonality.mEpochPressureStart)
+        / (thePersonality.mEpochPressureFull - thePersonality.mEpochPressureStart);   // the reserve grows with the pressure
     if (theShare > 1.0f)
         theShare = 1.0f;
     if (theShare <= 0.0f)
@@ -5630,8 +5631,8 @@ void EEComputerPlayer::Update(unsigned long inTime)
     if (!this->mIsStarted) {
         if (EECPCheatOn(kAICheatReveal))
             gWorld.mMap->ExploreUnseen(this);
-        EE_CP_TRACE(this, "start", "difficulty=%lu cheats=%s cheating=%d cost100=%ld extra=%ld aggression=%ld",
-            this->mDifficulty, EECPCheatNames(), this->mIsCheating ? 1 : 0, this->ScaleCost(100),
+        EE_CP_TRACE(this, "start", "difficulty=%lu personality=%s cheats=%s cheating=%d cost100=%ld extra=%ld aggression=%ld",
+            this->mDifficulty, EECPPersonality(this).mID.c_str(), EECPCheatNames(), this->mIsCheating ? 1 : 0, this->ScaleCost(100),
             EECPCheatOn(kAICheatExtra) ? this->mExtraResources : 0L, (long)this->mComputerAggression);
         this->EnableManagers(inTime);
         this->SetEnableTime(inTime);

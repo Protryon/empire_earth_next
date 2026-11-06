@@ -247,9 +247,10 @@ void EECPCivilizationManager::AttemptEpochAdvance(unsigned long inTime)
     unsigned long theDue = this->mNextEpochAdvanceTime;
     if (!EECPCheatOn(kAICheatEpochs)) {
         // New (docs/AI_RESEARCH.md §8.8, owner: epoch pressure rises with time): a paid advance is asked for once the
-        // epoch pressure passes kEECPEpochPressureStart (ee/EEComputerPlayer.h); the pending epoch then reserves a
-        // growing share of its cost (EEComputerPlayer::CanAfford) while the gatherers fill it
-        unsigned long theEarly = (unsigned long)UMFloatToLong((1.0f - kEECPEpochPressureStart) * (float)EECPEpochTimerSpan(this->mPlayer));
+        // epoch pressure passes the personality's epoch_pressure start (aipersonalities.yaml); the pending epoch then
+        // reserves a growing share of its cost (EEComputerPlayer::CanAfford) while the gatherers fill it
+        unsigned long theEarly = (unsigned long)UMFloatToLong((1.0f - EECPPersonality(this->mPlayer).mEpochPressureStart)
+            * (float)EECPEpochTimerSpan(this->mPlayer));
         theDue = theDue > theEarly ? theDue - theEarly : 0;
     }
     if (!(inTime >= theDue))

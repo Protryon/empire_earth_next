@@ -227,6 +227,33 @@ struct EEEpochMedia {
     long mRemovalThunderEvery = 0;          // a thunder when the unit id is a multiple of this (0: never)
 };
 
+// ------------------------------------------------------------------------------------------------ aipersonalities.yaml
+
+// A computer player's personality (docs/AI_RESEARCH.md §8.8): the tuning of its decisions that is not in dbcpbehavior.
+// The defaults are "balanced", the tuning the benchmarks of §8.10-8.11 settled on.
+struct EEAIPersonalityRule {
+    std::string mID;
+    // epoch pressure (the elapsed share of the epoch timer's span): a paid advance is asked for from mEpochPressureStart;
+    // its reserve grows from nothing there to the whole cost at mEpochPressureFull. Low: tall (tech); high: wide.
+    float mEpochPressureStart = 0.3f;
+    float mEpochPressureFull = 0.8f;
+    // the economy (EECPResourceManager): the gatherer split's stock correction, the citizen target, rebalancing
+    long mSurplus = 1000;                   // a resource with more in stock ...
+    float mSurplusCut = 0.5f;               // ... gets this share of its gatherers
+    long mLowStock = 150;                   // a resource with less in stock ...
+    float mFloor[5] = {0.10f, 0.25f, 0.05f, 0.05f, 0.05f};   // ... at least this share (food, wood, stone, gold, iron)
+    float mMaxCitizenShare = 0.7f;          // the citizen target is at most this share of the pop cap
+    long mWoodSlots = 15;                   // wood's gatherer capacity (trees are not resource-center units)
+    long mMovesPerCycle = 3;                // busy gatherers moved to a short resource per 10 s
+};
+struct EEAIPersonalityRules {
+    std::vector<EEAIPersonalityRule> mPersonalities;
+    std::vector<long> mAssign;              // positions in mPersonalities; computer player n takes mAssign[(n - 1) % size]
+    EEAIPersonalityRules();
+    const EEAIPersonalityRule& ForPlayer(unsigned long inPlayerID) const;
+    long Find(const std::string& inID) const;   // the position, -1 when none
+};
+
 // ------------------------------------------------------------------------------------------------ all of them
 
 struct EERules {
@@ -234,6 +261,7 @@ struct EERules {
     EEGameOptionRules mGameOptions;
     EECivBuilderRules mCivBuilder;
     EECivPowerRules mCivPowers;
+    EEAIPersonalityRules mAIPersonalities;
     std::vector<EEEpochMedia> mEpochs;      // by epoch position (the original's 15 by default)
     bool mEpochMusicFromText = false;       // the songs came from epochs.yaml (else dbmusic's flags)
 

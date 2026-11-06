@@ -45,6 +45,10 @@ struct EECPTraceScope {
 // the computer players' share of the out-of-synch checksum (EEPhysics::GetOutOfSynchChecksum; not a trace: always on)
 unsigned long EECPOutOfSynchChecksum();
 
+// the computer player's personality (aipersonalities.yaml; ee/EERules.h). TEST ONLY: EE_AI_PERSONALITY in the
+// environment names one for every computer player, or a comma list they take in turn by player id
+const EEAIPersonalityRule& EECPPersonality(const EEComputerPlayer* inPlayer);
+
 bool EECPCheatOn(long inCheat);             // whether that cheat stays on (the difficulty's ai_cheats, EE_AI_CHEATS)
 const char* EECPCheatNames();               // the cheats that are on, for the trace ("cost,reveal,..." or "none")
 
