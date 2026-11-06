@@ -1014,6 +1014,47 @@ nothing measurable.
 
 **Not kept.** The far deaths are raids that reach the AI's own outer resource centers, not trips into enemy land.
 
+### 8.19 Honest against cheating (2026-11-06)
+
+`EE_AI_CHEATS` now takes one set per player (`/` between sets, in turn from player 1, the idle human: `none/all` makes
+p2 cheat and p3 honest; TEST ONLY). Balanced against balanced, Hard, Small, seeds 2-7, both seats, 45 minutes:
+
+| Cheater's set | Cheater wins | Honest wins | Close | Notes |
+|---|---|---|---|---|
+| all (Hard's default) | 12 | 0 | 0 | every game over at 22-35 min; the honest AI stops gathering by 15 min |
+| reveal, extra, popband, catchup, retire (no `cost`, no `epochs`) | 6 | 5 | 1 | all to the time cap; p2 won 7, p3 4 |
+
+- **`cost` and `epochs` decide it.** On Hard, `cost` makes everything cost 1% (`cost100=1`), and `epochs` makes epoch
+  advances free. The other five cheats together are worth about nothing against the current honest AI.
+- **A fair Hard is close.** The honest AI holds even with a cheater that only sees the map and gets the resource
+  bonus. Beating the full cheater would need about a hundredfold economy: not a goal. The goal is a fair Hard
+  (`ai_cheats` without `cost` and `epochs`, or none) that plays as well as today's cheating Hard does against a human.
+- **Both are slow.** At 45 minutes every AI in the second set was still in the Prehistoric or Stone Age (epoch 0
+  or 1).
+
+### 8.20 Settlements by the resources (2026-11-06)
+
+The trace's `trips` line (every 30 s) gives, per resource, the mean distance from each gatherer's resource to the
+nearest built drop site that takes it, and how many are past the drop-off distance (6 here), where
+`BuildSettlementFor` orders a settlement. Honest balanced AIs, seeds 2-7, 45 minutes (12 AIs):
+
+| Game min | Food | Wood | Stone | Gold | Iron | Settlements | Gatherers |
+|---|---|---|---|---|---|---|---|
+| 10 | 7.2 (39% far) | 4.3 (23%) | 8.6 (43%) | 8.8 (51%) | 7.5 (30%) | 2.9 | 29 |
+| 20 | 8.0 (41%) | 3.9 (5%) | 4.5 (7%) | 7.4 (49%) | 8.3 (40%) | 4.3 | 37 |
+| 40 | 8.8 (40%) | 4.4 (18%) | 5.1 (15%) | 7.1 (50%) | 8.2 (40%) | 5.6 | 46 |
+
+- **The AI does build settlements by its resources.** There were 80 `settlement.order` events (about 7 per AI, all
+  five resources), and about 5 settlements stand per AI by 30 minutes. `BuildSettlementFor` orders them straight from
+  the gather goal, outside the build queue, so `build.queue` never shows them.
+- **Wood and stone are close** (about 4-5, 5-15% far).
+- **Food, gold and iron are not: 40-55% work past the drop-off distance.** The trips are not long (a mean of 7-9
+  against 6). Candidates:
+  - hunting is excluded;
+  - one queued settlement per resource at a time;
+  - no settlement within 0.75 of the radius of a town center.
+- **No granary** was ever built: the AI did not reach the farm epochs.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
