@@ -1073,6 +1073,23 @@ float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime)
     return thePressure < 0.0f ? 0.0f : thePressure;
 }
 
+bool EECPBooming(EEComputerPlayer* inPlayer)
+{
+    long theWorkers = 0, theMinutes = 0;
+    if (EECPExperiment(inPlayer, "boom25")) {
+        theWorkers = 25;
+        theMinutes = 12;
+    } else if (EECPExperiment(inPlayer, "boom35")) {
+        theWorkers = 35;
+        theMinutes = 15;
+    } else
+        return false;
+    if (inPlayer->mCivilizationManager == NULL || inPlayer->mCivilizationManager->mUnitManager == NULL)
+        return false;
+    return gPhysics->mGameTime < (unsigned long)theMinutes * 60000
+        && (long)inPlayer->mCivilizationManager->mUnitManager->GetNumWorkers() < theWorkers;
+}
+
 // FUNCTION: EXE 0x42f033
 // Returns true for epoch technologies; otherwise asks the player whether it can afford the cost
 // New (docs/AI_RESEARCH.md §8.7): without the free-epochs cheat, a pending epoch advance reserves its cost: anything
@@ -1086,6 +1103,8 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
         return false;
     if (this->mTechnologies == NULL || EECPCheatOn(this, kAICheatEpochs) || EEIsEpochID(inTechnology->mData->mID))
         return true;
+    if (inTechnology->mData->mID == kTechCitizen && EECPBooming(this))
+        return true;   // the boom opening: citizens first
     long theEpoch = EECPPendingEpoch(this);
     EETechTreeNode* theReserved = theEpoch != kTechNone ? this->mTechnologies->Get(theEpoch) : NULL;
     if (theReserved == NULL)
@@ -5640,7 +5659,8 @@ void EEComputerPlayer::EpochMediaUnloaded(long inEpoch)
 void EEComputerPlayer::KeepStandingArmy()
 {
     EECPUnitManager* theUnits = this->mCivilizationManager != NULL ? this->mCivilizationManager->mUnitManager : NULL;
-    if (theUnits == NULL || this->mCombatManager == NULL || this->mFavoriteLandType <= 0 || !this->mCanBuild)
+    if (theUnits == NULL || this->mCombatManager == NULL || this->mFavoriteLandType <= 0 || !this->mCanBuild
+        || EECPBooming(this))
         return;
     long theWorkers = (long)theUnits->GetNumWorkers();
     long theArmy = theUnits->CountMilitaryUnits(false, true);

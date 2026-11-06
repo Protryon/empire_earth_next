@@ -1561,7 +1561,7 @@ static void EECPRMGetDemand(EECPResourceManager* inManager, EECPRMDemand& outDem
         EECPRMAddCost(thePlayer, EECPRMClassNode(theTree, kUnitTypeCitizen), kUnitTypeCitizen, (float)theMissing, outDemand.mTier[0]);
         long theFavorite = thePlayer->mFavoriteLandType;
         long theTarget = UMFloatToLong(EECPPersonality(thePlayer).mStandingArmy * (float)theUnits->GetNumWorkers());
-        long theShort = theTarget - theUnits->CountMilitaryUnits(false, false);
+        long theShort = EECPBooming(thePlayer) ? 0 : theTarget - theUnits->CountMilitaryUnits(false, false);
         if (theShort > kDemandNext)
             theShort = kDemandNext;
         if (theFavorite > 0)

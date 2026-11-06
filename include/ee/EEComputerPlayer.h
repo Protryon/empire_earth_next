@@ -471,6 +471,9 @@ long EECPPendingEpoch(EEComputerPlayer* inPlayer);
 // original's only advance time); a paid advance is asked for from the personality's epoch_pressure start, and its
 // reserve grows from nothing there to the whole cost at its full (aipersonalities.yaml; tall low, wide high).
 float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime);
+// The boom opening (the experiments "boom25": until 25 workers or 12 game minutes, "boom35": 35 or 15): citizens skip the
+// epoch reserve and the standing army waits
+bool EECPBooming(EEComputerPlayer* inPlayer);
 unsigned long EECPEpochTimerSpan(EEComputerPlayer* inPlayer);   // ms
 
 #endif
