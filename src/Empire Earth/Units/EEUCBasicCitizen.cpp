@@ -528,7 +528,12 @@ long EEUCBasicCitizen::EvaluateCondition(EEComplexUnit* inUnit, unsigned long in
         theTrue = inUnit->mCitizenBuildQueue.size() == 0;
         break;
     case kTriggerSmartTaskNotAssigned:
-        theTrue = inUnit->mGoalState == NULL;
+        // True while the citizen still has a goal, as in the original: "not assigned" means the smart task gave it
+        // no new job, so it still holds its finished build goal. A smart task that found work has already moved the
+        // citizen out of TaskSmartCitizen (FindNextWork starts an action), so this only fires for the leftovers, whose
+        // Idle clears the stale goal. Inverting it (== NULL) left every such citizen in TaskSmartCitizen for good,
+        // still in its work animation beside the finished building.
+        theTrue = inUnit->mGoalState != NULL;
         break;
     case kTriggerGoalIsRepairSite:
         if (inUnit->mActiveGoal != NULL && inUnit->mActiveGoal->mKind == kGoalBuildRepair)
