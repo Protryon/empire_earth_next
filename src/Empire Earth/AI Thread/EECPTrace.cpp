@@ -65,6 +65,7 @@ static unsigned long sProfileCount[kMaxTracedPlayers];
 static long sLost[kMaxTracedPlayers][3];   // since the last stats line: citizens, buildings, other units
 static long sLostNear[kMaxTracedPlayers][3];   // citizens lost by distance from the town center: <15, 15-30, more tiles
 static long sLostBy[kMaxTracedPlayers][3];     // citizens lost by their last attacker: a player's unit, a wild one (player 0), none
+static long sIncome[kMaxTracedPlayers][kResourceIron + 1];   // resources got since the last income line
 
 void EECPTraceInit()
 {
@@ -207,6 +208,14 @@ static bool EECPIsBuildingCategory(long inCategory)
         || inCategory == kUnitCategorySpaceBuilding;
 }
 
+// A resource amount the player got (EEComputerPlayer::AddResource), for the next income line
+void EECPTraceIncome(EEComputerPlayer* inPlayer, long inResource, long inAmount)
+{
+    unsigned long theID = inPlayer->mPlayerID;
+    if (theID < kMaxTracedPlayers && inResource >= 0 && inResource <= kResourceIron && inAmount > 0)
+        sIncome[theID][inResource] += inAmount;
+}
+
 // A unit leaving the player (not swapped: killed, converted or deleted), by kind, for the next stats line
 void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
 {
@@ -256,6 +265,9 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
     long theOtherAction = -1;                     // the first "other" builder's action and its target's hit points share
     long theOtherHealth = -1;
     std::vector<EEUnit*> theGathered;             // each gatherer's resource (the trips line)
+    std::map<long, long> theOtherActs;            // the other actions by id (the gatheract line's most common)
+    long theActs[7] = {0, 0, 0, 0, 0, 0, 0};      // gatherers by action: gather, drop off, to the resource, to storage,
+                                                  // waiting, idle, other (the gatheract line)
     std::vector<EEComplexUnit*> theStores;        // the player's built drop sites
     long theDropSites[3] = {0, 0, 0};             // built settlements, town centers/capitols, granaries
     for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
@@ -290,6 +302,13 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
                 theGatherers[theType >= kResourceFood && theType <= kResourceIron ? theType : 0]++;
                 if (theResource != NULL && theType >= kResourceFood && theType <= kResourceIron)
                     theGathered.push_back(theResource);
+                long theAct = theUnit->mComplexUnit->mCommand ? theUnit->mComplexUnit->mCommand->mType : 0;
+                theActs[theAct == kActionGatherResource ? 0 : theAct == kActionDropoffResource ? 1
+                        : theAct == kActionMoveToResource ? 2 : theAct == kActionMoveToStorage ? 3
+                        : theAct == kActionMoveToWaitingArea ? 4 : theAct == kActionIdle || theAct == 0 ? 5 : 6]++;
+                if (theAct != kActionGatherResource && theAct != kActionDropoffResource && theAct != kActionMoveToResource
+                    && theAct != kActionMoveToStorage && theAct != kActionMoveToWaitingArea && theAct != kActionIdle && theAct != 0)
+                    theOtherActs[theAct]++;
                 if (theType == kResourceFood) {
                     long theClass = theResource->mUnitClass->mUnitType;
                     unsigned long theFamily = theResource->mUnitClass->GetFamily();
@@ -389,6 +408,19 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
             theTrips[kResourceFood], theTrips[kResourceWood], theTrips[kResourceStone], theTrips[kResourceGold], theTrips[kResourceIron],
             theFar[kResourceFood], theFar[kResourceWood], theFar[kResourceStone], theFar[kResourceGold], theFar[kResourceIron],
             inPlayer->mDropOffDistance, theDropSites[0], theDropSites[1], theDropSites[2]);
+        // what came in since the last income line, by resource (EEComputerPlayer::AddResource: the gatherers'
+        // deposits, plus refunds and tributes), and the gatherers on each now
+        long theTopOther = -1, theTopCount = 0;
+        for (std::map<long, long>::iterator it = theOtherActs.begin(); it != theOtherActs.end(); ++it)
+            if (it->second > theTopCount) { theTopCount = it->second; theTopOther = it->first; }
+        EECPTraceOut(inPlayer, "gatheract", "gather=%ld dropoff=%ld to_resource=%ld to_storage=%ld waiting=%ld idle=%ld other=%ld top_other=%ld",
+            theActs[0], theActs[1], theActs[2], theActs[3], theActs[4], theActs[5], theActs[6], theTopOther);
+        EECPTraceOut(inPlayer, "income", "got=%ld/%ld/%ld/%ld/%ld gatherers=%ld/%ld/%ld/%ld/%ld",
+            sIncome[theID][kResourceFood], sIncome[theID][kResourceWood], sIncome[theID][kResourceStone],
+            sIncome[theID][kResourceGold], sIncome[theID][kResourceIron], theTrips[kResourceFood], theTrips[kResourceWood],
+            theTrips[kResourceStone], theTrips[kResourceGold], theTrips[kResourceIron]);
+        for (long r = 0; r <= kResourceIron; r++)
+            sIncome[theID][r] = 0;
         EECPTraceOut(inPlayer, "food", "bush=%ld hunt=%ld fish=%ld farm=%ld other=%ld goals gather=%ld build=%ld move=%ld attack=%ld garrison=%ld none=%ld",
             theFood[0], theFood[1], theFood[2], theFood[3], theFood[4], theGoals[kGoalGather], theGoals[kGoalBuildRepair],
             theGoals[kGoalLocation], theGoals[kGoalAttackUnit], theGoals[kGoalLoadGarrison], theGoals[0]);

@@ -30,6 +30,7 @@ void EECPTraceOut(EEComputerPlayer* inPlayer, const char* inEvent, const char* i
 #endif
     ;
 void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime);   // every 30 game s per player
+void EECPTraceIncome(EEComputerPlayer* inPlayer, long inResource, long inAmount);   // counted into the next income line
 void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit);       // counted into the next stats line
 void EECPTraceHash(unsigned long inTime);   // every 10 game s: the out-of-synch checksum's parts ("sim hash")
 void EECPTraceProfile(EEComputerPlayer* inPlayer, unsigned long inTime, long long inMicroseconds);

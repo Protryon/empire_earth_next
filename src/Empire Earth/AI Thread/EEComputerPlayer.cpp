@@ -205,6 +205,8 @@ void EEComputerPlayer::AddResource(long inIndex, long inAmount)
 {
     EEPlayer::AddResource(inIndex, inAmount);
     this->mCivilizationManager->mResourceManager->Spend(inIndex, inAmount);
+    if (gCPTraceOn)
+        EECPTraceIncome(this, inIndex, inAmount);
 }
 
 // FUNCTION: EXE 0x42d1c7
