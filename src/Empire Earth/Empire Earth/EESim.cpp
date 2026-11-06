@@ -27,7 +27,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <atomic>
 #include <chrono>
 #include <condition_variable>
 #include <functional>
@@ -970,7 +969,10 @@ static LONG CALLBACK EESimFault(EXCEPTION_POINTERS* inInfo)
 }
 #endif
 
-// EESimMain: EE-SIM.exe's entry (EESimMain.cpp's main): the options, the switches, then the game's own WinMain
+void EESimGameEnded(int inResult);
+
+// EESimMain: EE-SIM.exe's entry (EESimMain.cpp's main): the options, the switches, then the game's own WinMain. On
+// POSIX the game's main calls it for "ee-aoc --sim ..." and goes on with the game when it returns -1.
 int EESimMain(int argc, char** argv)
 {
     sStartWall = std::chrono::steady_clock::now();
@@ -1089,12 +1091,15 @@ int EESimMain(int argc, char** argv)
          sOptions.mGameSeconds, 33334 + gPlatSimPortOffset, 33335 + gPlatSimPortOffset);
 #ifdef _WIN32
     char theEmpty[1] = {0};
-    int theResult = WinMain(GetModuleHandleA(NULL), NULL, theEmpty, SW_HIDE);
-    // the game's UI loop ended before the driver did (the game was quit or failed to start)
-    WriteReport(4, "the game ended before the simulation (start-up failed?)");
-    Quit(theResult ? theResult : 4);
+    EESimGameEnded(WinMain(GetModuleHandleA(NULL), NULL, theEmpty, SW_HIDE));
 #else
-    fprintf(stderr, "EE-SIM: not built for this system yet\n");
-    return 70;
+    return -1;   // the POSIX main goes on with the game (Empire Earth.cpp: ee-aoc --sim ...)
 #endif
+}
+
+// EESimGameEnded: the game's own start-up returned before the driver ended the run (it was quit, or failed to start)
+void EESimGameEnded(int inResult)
+{
+    WriteReport(4, "the game ended before the simulation (start-up failed?)");
+    Quit(inResult ? inResult : 4);
 }

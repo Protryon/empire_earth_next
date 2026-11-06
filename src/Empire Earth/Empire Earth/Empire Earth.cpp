@@ -2239,9 +2239,18 @@ static int EESmokeTest()
     return theFailed ? 1 : 0;
 }
 
+int EESimMain(int argc, char** argv);   // EESim.cpp (TEST ONLY): the headless simulation, "ee-aoc --sim ..."
+void EESimGameEnded(int inResult);
+
 int main(int argc, char** argv)
 {
     std::string theCommandLine;
+    if (argc > 1 && !strcmp(argv[1], "--sim")) {
+        int theResult = EESimMain(argc - 1, argv + 1);
+        if (theResult != -1)
+            return theResult;
+        argc = 1;   // the simulation's own options are not the game's command line
+    }
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "--smoke-test"))
             return EESmokeTest();
@@ -2261,7 +2270,10 @@ int main(int argc, char** argv)
     }
     std::vector<char> theBuffer(theCommandLine.begin(), theCommandLine.end());
     theBuffer.push_back(0);
-    return EERun(NULL, &theBuffer[0]);
+    int theResult = EERun(NULL, &theBuffer[0]);
+    if (gPlatSimMode)
+        EESimGameEnded(theResult);   // (does not return)
+    return theResult;
 }
 #endif
 #pragma optimize("g", on)   // ??_GUResourceFile 0x54494d (no-/Og in the original) is emitted under WinMain's state
