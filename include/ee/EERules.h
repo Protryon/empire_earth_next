@@ -307,7 +307,9 @@ extern const unsigned long kEERuleCategoryCount;
 // the personalities entry with id balanced (the list may also be named: aipersonalities.personalities.balanced...).
 // Only an existing scalar is changed. False, with the reason, when the spec is malformed.
 bool EERulesAddOverride(const std::string& inSpec, std::string& outError);
-// the overrides that changed nothing (the document is not in the data, or the key is not in it), each with the reason
-std::vector<std::string> EERulesOverrideProblems();
+// the overrides that changed nothing (the document is not in the data, or the key is not in it), each with the reason.
+// An out parameter, not a return value: on Linux a returned std::string container carries libstdc++'s [abi:cxx11]
+// tag in the defining unit's mangled name but not in the Microsoft-dialect caller's, and the link failed
+void EERulesOverrideProblems(std::vector<std::string>& out);
 
 #endif

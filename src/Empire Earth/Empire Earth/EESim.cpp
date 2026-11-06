@@ -787,7 +787,8 @@ void Drive()
     int theCode = 0;
     std::string theError;
     {
-        std::vector<std::string> theProblems = EERulesOverrideProblems();
+        std::vector<std::string> theProblems;
+        EERulesOverrideProblems(theProblems);
         if (!theProblems.empty()) {
             std::string theText;
             for (const std::string& p : theProblems)

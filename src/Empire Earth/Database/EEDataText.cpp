@@ -2044,12 +2044,11 @@ bool EERulesAddOverride(const std::string& inSpec, std::string& outError)
     return true;
 }
 
-std::vector<std::string> EERulesOverrideProblems()
+void EERulesOverrideProblems(std::vector<std::string>& out)
 {
-    std::vector<std::string> out;
+    out.clear();
     for (const EEDataText::RuleOverride& o : EEDataText::RuleOverrides())
         if (!o.mApplied)
             out.push_back(o.mDoc + ": " + o.mProblem);
-    return out;
 }
 
