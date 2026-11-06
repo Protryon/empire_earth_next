@@ -51,6 +51,8 @@ unsigned long EECPOutOfSynchChecksum();
 // the computer player's personality (aipersonalities.yaml; ee/EERules.h). TEST ONLY: EE_AI_PERSONALITY in the
 // environment names one for every computer player, or a comma list they take in turn by player id
 const EEAIPersonalityRule& EECPPersonality(const EEComputerPlayer* inPlayer);
+bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer);   // TEST ONLY: EE_AI_DEMAND=1 (or per player in turn from player 1,
+                                           // "0/1"): split the gatherers by the tiered demand (EECPResourceManager.cpp)
 
 bool EECPCheatOn(const EEComputerPlayer* inPlayer, long inCheat);          // whether that cheat stays on (the difficulty's ai_cheats, EE_AI_CHEATS)
 const char* EECPCheatNames(const EEComputerPlayer* inPlayer);               // the cheats that are on, for the trace ("cost,reveal,..." or "none")

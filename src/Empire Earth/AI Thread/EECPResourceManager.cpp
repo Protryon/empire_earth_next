@@ -1506,11 +1506,176 @@ unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
     return theTotal;
 }
 
+// New (docs/AI_RESEARCH.md Â§8.21; TEST ONLY for now: EE_AI_DEMAND, ee/EECPTrace.h): the demand split. The AI's wants in
+// tiers, each a cost per resource:
+//   1  growth: the next citizens (up to 15 of the missing ones), the standing army's shortfall (up to 15 of its
+//      favourite land unit), and the first two buildings of every epoch's build queue;
+//   2  the pending epoch advance, by its pressure (as the reserve in EEComputerPlayer::CanAfford);
+//   3  the rest: the other unit requests, the queued research, the rest of the build queues.
+// The demand is tier 1 + tier 2 + kDemandTier3 x tier 3; a resource's shortfall is its demand less its stock. Every
+// resource first gets kDemandBase of the personality's floor share of the gatherers (economy.floor: the base income that unqueued
+// buildings, upkeep and the next wants need); the rest go by shortfall, plus kDemandFlow of the demand so that a
+// resource in demand keeps a flow while its stock covers it. A share past what the claimed resource units hold
+// (GetGatherCapacity) goes to the others that have room.
+static const float kDemandTier3 = 0.5f;
+static const float kDemandFlow = 0.25f;
+static const long kDemandNext = 15;
+static const float kDemandBase = 0.5f;   // of the personality's floor shares
+
+struct EECPRMDemand {
+    long mTier[3][7];
+};
+
+static EETechTreeNode* EECPRMClassNode(EETechTree* inTree, unsigned long inClass)
+{
+    EEUnitClass* theClass = inClass < EEUnitClassCount() ? gUnitClassTable[inClass] : NULL;
+    return theClass != NULL ? inTree->Get(theClass->mTechnology) : NULL;
+}
+
+static void EECPRMAddCost(EEComputerPlayer* inPlayer, EETechTreeNode* inNode, long inUnitType, float inCount, long* ioCosts)
+{
+    if (inNode == NULL || !(inCount > 0.0f))
+        return;
+    for (long r = 2; r < 7; r++)
+        ioCosts[r] += UMFloatToLong((float)inPlayer->ScaleCost(inNode->GetCost(r, inUnitType, 1.0f)) * inCount);
+}
+
+static void EECPRMGetDemand(EECPResourceManager* inManager, EECPRMDemand& outDemand)
+{
+    EECPCivilizationManager* theManager = inManager->mManager;
+    EEComputerPlayer* thePlayer = theManager->mPlayer;
+    EETechTree* theTree = thePlayer->mTechnologies;
+    for (long t = 0; t < 3; t++)
+        for (long r = 0; r < 7; r++)
+            outDemand.mTier[t][r] = 0;
+    if (theTree == NULL)
+        return;
+    EECPUnitManager* theUnits = theManager->mUnitManager;
+    if (theUnits != NULL) {
+        long theMissing = theUnits->GetWantedCitizens() - (long)theUnits->GetNumWorkers();
+        if (theMissing > kDemandNext)
+            theMissing = kDemandNext;
+        EECPRMAddCost(thePlayer, EECPRMClassNode(theTree, kUnitTypeCitizen), kUnitTypeCitizen, (float)theMissing, outDemand.mTier[0]);
+        long theFavorite = thePlayer->mFavoriteLandType;
+        long theTarget = UMFloatToLong(EECPPersonality(thePlayer).mStandingArmy * (float)theUnits->GetNumWorkers());
+        long theShort = theTarget - theUnits->CountMilitaryUnits(false, false);
+        if (theShort > kDemandNext)
+            theShort = kDemandNext;
+        if (theFavorite > 0)
+            EECPRMAddCost(thePlayer, EECPRMClassNode(theTree, (unsigned long)theFavorite), theFavorite, (float)theShort, outDemand.mTier[0]);
+        for (long e = 0; e < EEEpochCount(); e++)
+            for (unsigned long k = 0; k < theUnits->mRequests[e].size(); k++) {
+                const EECPUMRequest& theRequest = theUnits->mRequests[e][k];
+                if (theRequest.mUnitClass != kUnitTypeCitizen)
+                    EECPRMAddCost(thePlayer, EECPRMClassNode(theTree, theRequest.mUnitClass), (long)theRequest.mUnitClass,
+                                  (float)theRequest.mCount, outDemand.mTier[2]);
+            }
+    }
+    if (theManager->mBuildManager != NULL)
+        for (long e = 0; e < EEEpochCount(); e++)
+            for (unsigned long k = 0; k < theManager->mBuildManager->mQueues[e].size(); k++) {
+                unsigned long theClass = theManager->mBuildManager->mQueues[e][k].first;
+                EECPRMAddCost(thePlayer, EECPRMClassNode(theTree, theClass), kUnitTypeTownCenter, 1.0f, outDemand.mTier[k < 2 ? 0 : 2]);
+            }
+    if (theManager->mResearchManager != NULL)
+        for (long e = 0; e < EEEpochCount(); e++)
+            for (unsigned long k = 0; k < theManager->mResearchManager->mEpochIDs[e].size(); k++) {
+                long theID = theManager->mResearchManager->mEpochIDs[e][k];
+                if (!EEIsEpochID(theID))
+                    EECPRMAddCost(thePlayer, theTree->Get(theID), kUnitTypeTownCenter, 1.0f, outDemand.mTier[2]);
+            }
+    long theEpoch = EECPCheatOn(thePlayer, kAICheatEpochs) ? kTechNone : EECPPendingEpoch(thePlayer);
+    if (theEpoch != kTechNone) {
+        const EEAIPersonalityRule& thePersonality = EECPPersonality(thePlayer);
+        float theShare = (EECPEpochPressure(thePlayer, gPhysics->mGameTime) - thePersonality.mEpochPressureStart)
+            / (thePersonality.mEpochPressureFull - thePersonality.mEpochPressureStart);
+        if (theShare > 1.0f)
+            theShare = 1.0f;
+        if (theShare > 0.0f)
+            EECPRMAddCost(thePlayer, theTree->Get(theEpoch), kUnitTypeTownCenter, theShare, outDemand.mTier[1]);
+    }
+}
+
+static bool EECPRMSplitByDemand(EECPResourceManager* inManager)
+{
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    long theGatherers = (long)inManager->mGatherers[0].size();
+    for (long r = 2; r < 7; r++)
+        theGatherers += (long)inManager->mGatherers[r].size();
+    EECPRMDemand theDemand;
+    EECPRMGetDemand(inManager, theDemand);
+    bool theNoFood = thePlayer->mTechnologies->mCurrentEpoch > kTechEpochNano;
+    float theWeight[7] = {0, 0, 0, 0, 0, 0, 0};
+    float theTotal = 0.0f;
+    long theShortfall[7] = {0, 0, 0, 0, 0, 0, 0};
+    for (long r = 2; r < 7; r++) {
+        if (r == 2 && theNoFood)
+            continue;
+        float theWant = (float)(theDemand.mTier[0][r] + theDemand.mTier[1][r]) + kDemandTier3 * (float)theDemand.mTier[2][r];
+        float theShort = theWant - (float)thePlayer->mResourceCaps[r];
+        theShortfall[r] = theShort > 0.0f ? UMFloatToLong(theShort) : 0;
+        theWeight[r] = (theShort > 0.0f ? theShort : 0.0f) + kDemandFlow * theWant;
+        theTotal += theWeight[r];
+    }
+    unsigned long theWanted[7] = {0, 0, 0, 0, 0, 0, 0};
+    if (theGatherers > 0) {
+        unsigned long theRoom[7] = {0, 0, 0, 0, 0, 0, 0};
+        long theLeft = theGatherers;
+        const EEAIPersonalityRule& theTuning = EECPPersonality(thePlayer);
+        float theFloorSum = 0.0f;
+        for (long r = 2; r < 7; r++)
+            if (!(r == 2 && theNoFood))
+                theFloorSum += kDemandBase * theTuning.mFloor[r - 2];
+        if (theFloorSum > 1.0f)
+            theFloorSum = 1.0f;
+        for (long r = 2; r < 7; r++) {
+            theRoom[r] = inManager->GetGatherCapacity(r);
+            float theBase = r == 2 && theNoFood ? 0.0f : kDemandBase * theTuning.mFloor[r - 2];
+            unsigned long theShare = (unsigned long)UMFloatToLong((theBase + (theTotal > 0.0f ? (1.0f - theFloorSum) * theWeight[r] / theTotal : 0.0f)) * (float)theGatherers);
+            if (theShare > theRoom[r])
+                theShare = theRoom[r];
+            if (theShare == 0 && theWeight[r] > 0.0f && theRoom[r] > 0)
+                theShare = 1;
+            theWanted[r] = theShare;
+            theLeft -= (long)theShare;
+        }
+        // what the capacity caps left over: to the resources in demand with room, the heaviest first, one at a time
+        while (theLeft > 0) {
+            long theBest = -1;
+            for (long r = 2; r < 7; r++)
+                if (theWeight[r] > 0.0f && theWanted[r] < theRoom[r]
+                    && (theBest < 0 || theWeight[r] / (float)(theWanted[r] + 1) > theWeight[theBest] / (float)(theWanted[theBest] + 1)))
+                    theBest = r;
+            if (theBest < 0)
+                break;
+            theWanted[theBest]++;
+            theLeft--;
+        }
+    }
+    bool theChanged = false;
+    for (long r = 2; r < 7; r++)
+        if (theWanted[r] != inManager->mWantedGatherers[r]) {
+            inManager->mWantedGatherers[r] = theWanted[r];
+            theChanged = true;
+        }
+    if (gCPTraceOn && gPhysics->mGameTime % 30000 < 5000)
+        EE_CP_TRACE(thePlayer, "demand", "t1=%ld/%ld/%ld/%ld/%ld t2=%ld/%ld/%ld/%ld/%ld t3=%ld/%ld/%ld/%ld/%ld short=%ld/%ld/%ld/%ld/%ld "
+            "wanted=%lu/%lu/%lu/%lu/%lu of=%ld",
+            theDemand.mTier[0][2], theDemand.mTier[0][3], theDemand.mTier[0][4], theDemand.mTier[0][5], theDemand.mTier[0][6],
+            theDemand.mTier[1][2], theDemand.mTier[1][3], theDemand.mTier[1][4], theDemand.mTier[1][5], theDemand.mTier[1][6],
+            theDemand.mTier[2][2], theDemand.mTier[2][3], theDemand.mTier[2][4], theDemand.mTier[2][5], theDemand.mTier[2][6],
+            theShortfall[2], theShortfall[3], theShortfall[4], theShortfall[5], theShortfall[6],
+            theWanted[2], theWanted[3], theWanted[4], theWanted[5], theWanted[6], theGatherers);
+    return theChanged;
+}
+
 // FUNCTION: EXE 0x491b78
 // Splits the gatherers over the resources by their needs, capped by the resource units available; returns true
 // if any wanted count changed
 bool EECPResourceManager::UpdateWantedGatherers()
 {
+    if (EECPDemandSplitOn(this->mManager->mPlayer))   // TEST ONLY (EE_AI_DEMAND): the demand split above
+        return EECPRMSplitByDemand(this);
     long theTotal = 0;
     EEComputerPlayer* thePlayer = this->mManager->mPlayer;
     unsigned long theLimit = thePlayer->mMiningLimit;

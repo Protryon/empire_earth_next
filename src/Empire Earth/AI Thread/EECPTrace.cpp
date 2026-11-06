@@ -52,6 +52,7 @@ bool gCPTraceOn = false;
 const char* gCPTraceManager = "-";
 
 static bool sInitialized = false;
+static std::vector<bool> sDemandSplit;     // EE_AI_DEMAND (TEST ONLY): per player in turn ('/' between)
 static std::vector<long> sCheats;          // EE_AI_CHEATS (TEST ONLY): the cheats it lets through, per player in turn
 static char sCheatNames[128];
 static std::vector<long> sPersonalities;   // EE_AI_PERSONALITY (TEST ONLY): positions in the rules' personalities
@@ -89,6 +90,19 @@ void EECPTraceInit()
             theStart = theEnd + 1;
         }
     }
+    const char* theDemand = getenv("EE_AI_DEMAND");
+    if (theDemand != NULL && theDemand[0] != '\0') {
+        std::string theList(theDemand);
+        size_t theStart = 0;
+        while (theStart <= theList.size()) {
+            size_t theEnd = theList.find('/', theStart);
+            if (theEnd == std::string::npos)
+                theEnd = theList.size();
+            std::string theValue = theList.substr(theStart, theEnd - theStart);
+            sDemandSplit.push_back(!theValue.empty() && theValue != "0");
+            theStart = theEnd + 1;
+        }
+    }
     const char* theCheats = getenv("EE_AI_CHEATS");
     // "a,b": one set for every computer player; "set/set/...": the sets taken in turn by player (as EE_AI_PERSONALITY)
     if (theCheats != NULL && theCheats[0] != '\0') {
@@ -116,6 +130,15 @@ void EECPTraceInit()
             theSetStart = theSetEnd + 1;
         }
     }
+}
+
+bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer)
+{
+    EECPTraceInit();
+    if (sDemandSplit.empty())
+        return false;
+    unsigned long theID = inPlayer->mPlayerID;
+    return sDemandSplit[(theID > 0 ? theID - 1 : 0) % sDemandSplit.size()];
 }
 
 const EEAIPersonalityRule& EECPPersonality(const EEComputerPlayer* inPlayer)
