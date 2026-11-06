@@ -341,7 +341,9 @@ long EEUIEMGPauseGame::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 }
 
 // FUNCTION: EXE 0x6605ba
-// Cancels the current main-game mode (clearing ghost units and the pointer), or shows the dialog when there is none
+// Cancels the current main-game mode (clearing ghost units and the pointer); with no mode, dismisses a showing
+// scenario message, else opens the in-game menu (divergence: the original only posted the scenario-dialog message,
+// so Escape never opened the menu; the menu's own Escape hot key closes it again, see EEUIEMGOEOpenOptionsScreen)
 long EEUIEMGCancelUpdateState::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     EEUIFMainGame* theForm = static_cast<EEUIFMainGame*>(inForm);
@@ -352,9 +354,15 @@ long EEUIEMGCancelUpdateState::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         theForm->SetUIState(0);
         gMouse->mPointer = 0;
         theForm->mIsCursorLocked = false;
-    } else
-        gPhysics->PostShowDialogMessage();
-    return kErrorOK;
+        return kErrorOK;
+    }
+    UIControl* theMessage = theForm->GetControl(kMainGameDialogMessage);
+    if ((theMessage != NULL && theMessage->GetDisplayMode() == kDisplayModeShown) || gWorld.mInCinematic)
+        return gPhysics->PostShowDialogMessage();
+    UIEvent* theOpen = new EEUIEMGDisplayOptions;
+    long theResult = theOpen->ProcessEvent(inForm, inEntity);
+    theOpen->Dereference();
+    return theResult;
 }
 
 // FUNCTION: EXE 0x66061c

@@ -285,6 +285,10 @@ long EEUIEMGOEOpenOptionsScreen::ProcessEvent(UIForm* inForm, UIEntity* inEntity
     UIEvent* theEvent = new EEUIEMGOECloseOptions;
     inForm->SetFormCloseEvent(theEvent);
     theEvent->Dereference();
+    // divergence: Escape closes the menu, the other half of the main game's Escape toggle (EEUIEMGCancelUpdateState).
+    // The form keeps its hot keys between openings and has none of its own, so drop the previous opening's first.
+    inForm->RemoveAllHotKeys();
+    inForm->AddHotKey(kKeyEscape, kKeyNone, kKeyNone, kKeyNone, new EEUIEMGOEReturnToGame, NULL, NULL, NULL, 0, false);
     theEvent = new EEUIEMGOEReturnToGame;
     inForm->GetControl(kGameOptionsReturnToGameButton)->SetTriggerEvent(kControlTriggerButtonUp, theEvent);
     theEvent->Dereference();
