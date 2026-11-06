@@ -2944,8 +2944,13 @@ void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float
             theVertical = 0.0f;
         else
             theVertical = 1.0f - gF564518 * theBehind;
-    } else if (theDepth >= kUUFarStart) {
-        theVertical = (kUUFarEnd - theDepth) * kUUFarScale;
+    } else {
+        // port: past the original's farthest zoom (Maximum Zoom Out above 100%) the camera's distance grows with the
+        // zoom, so the far fade does too; with the original's fixed 27..35 the whole view went silent zoomed out
+        float theZoom = ::gWorld.mCameraControl.GetZoom();
+        float theReach = theZoom > 1.0f ? theZoom : 1.0f;
+        if (theDepth >= kUUFarStart * theReach)
+            theVertical = (kUUFarEnd * theReach - theDepth) * (kUUFarScale / theReach);
     }
     if (theVertical < theScale)
         theScale = theVertical;
