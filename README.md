@@ -137,7 +137,8 @@ python -I tools/harness/posix_game.py --exe build/xbuild/macos-arm64/game-addres
 **Game logs.** Every game writes `Logs/game-<date>-<time>.log` in the data root (config.ini `[Game]` `Game Log=0`
 turns it off). It holds every player's state every 30 game seconds, human and computer alike: epoch, citizens and
 what they do, army, buildings, towers, stock, income and losses, with who caused them. Epoch times and the computer
-players' decision trace are in the same file. `python -I tools/game_log.py [LOG]` summarises the newest one (under
+players' decision trace are in the same file, and every chat line with its game time: type notes
+in the chat while playing. `python -I tools/game_log.py [LOG]` summarises the newest one (under
 `data/` by default; `--data ROOT` for another data root, `--every MIN` for the timeline step). The log only reads the
 game: a game plays the same with it on or off.
 

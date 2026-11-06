@@ -5,6 +5,7 @@
 //   sample   every 30 game s per player: epoch, population, citizens (idle, gathering per resource, building),
 //            army, buildings, towers, stock, what came in and what was lost since the last sample
 //   epoch    a player reached an epoch
+//   chat     a chat line, the text last ("text=" to the end of the line): notes typed while playing
 //   end      the game's last sample (the log closes with the next game or the program)
 // With the log on, the computer players' decision trace (ee/EECPTrace.h, the "EE-AI" lines) goes into it too.
 // The log only reads the game; it never changes it (lockstep stays intact).
@@ -20,5 +21,6 @@ void EEGameLogTick(unsigned long inGameTime);               // every physics tic
 void EEGameLogLine(const char* inText);                     // a whole line, newline included (the AI trace)
 void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount);   // EEPlayer::AddResource
 void EEGameLogUnitLost(EEPlayer* inPlayer, EEUnit* inUnit);  // EEPlayer::UnitTaken (not swapped)
+void EEGameLogChat(unsigned long inPlayer, const char* inText);   // EEMInGameChat::Execute: a chat line (notes while playing)
 
 #endif

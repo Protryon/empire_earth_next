@@ -66,6 +66,7 @@
 #include "ee/EECheatCodes.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEUserInterface.h"
+#include "ee/EEGameLog.h"
 #include "ee/EEMessage.h"
 #include "ee/EECommunications.h"
 #include "ee/EEClient.h"
@@ -3573,6 +3574,8 @@ void EEMInGameChat::Execute()
     UWideString theType;
     EEPlayer* theSender = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
     EEPlayer* theLocal = gWorld.GetCurrentPlayer();
+    if (theSender)   // port: the game log (ee/EEGameLog.h), every in-game chat line (notes typed while playing)
+        EEGameLogChat(theSender->mPlayerID, (const char*)this->mText);
     if (theSender && theLocal) {
         if (theLocal == theSender
             || (theSender->mSlot != kSlotNone

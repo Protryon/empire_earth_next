@@ -272,6 +272,18 @@ void EEGameLogIncome(EEPlayer* inPlayer, long inResource, long inAmount)
         sIncome[theID][inResource] += inAmount;
 }
 
+void EEGameLogChat(unsigned long inPlayer, const char* inText)
+{
+    std::lock_guard<std::mutex> theGuard(sLock);
+    if (sFile == NULL || inText == NULL)
+        return;
+    std::string theText(inText);
+    for (char& c : theText)
+        if (c == '\n' || c == '\r')
+            c = ' ';
+    Write("EE-GAME %lu p%lu chat text=%s\n", gPhysics != NULL ? gPhysics->mGameTime : 0UL, inPlayer, theText.c_str());
+}
+
 void EEGameLogUnitLost(EEPlayer* inPlayer, EEUnit* inUnit)
 {
     if (sFile == NULL || inPlayer == NULL || inUnit == NULL || inUnit->mUnitClass == NULL || inUnit->mComplexUnit == NULL)

@@ -6,7 +6,8 @@
 With no LOG, the newest log under --data's Logs (default: data/, then build/boot/windowed_f) is read. Per player: who
 it is (human or computer, the AI's personality and cheats), the minute it reached every epoch, and a timeline every
 --every minutes (default 2): epoch, citizens (idle, gatherers per resource f/w/s/g/i, builders), army, buildings and
-towers, stock, income per minute and losses (citizens/army/buildings, and by a human's or a computer's units). The
+towers, stock, income per minute and losses (citizens/army/buildings, and by a human's or a computer's units), and
+every chat line with its game minute (notes typed while playing). The
 computer players' decision trace (the "EE-AI" lines) is in the same file for tools/harness/ai_trace.py and grep.
 """
 import argparse
@@ -29,7 +30,7 @@ def five(text):
 
 def read(path):
     players, samples, epochs = {}, collections.defaultdict(list), collections.defaultdict(dict)
-    head, end, ai_lines = {}, None, 0
+    head, end, ai_lines, chats = {}, None, 0, []
     for line in open(path, encoding="utf-8", errors="replace"):
         if line.startswith("EE-AI "):
             ai_lines += 1
@@ -38,7 +39,9 @@ def read(path):
         if not m:
             continue
         t, p, ev, rest = int(m[1]), int(m[2]), m[3], m[4]
-        if ev == "start":
+        if ev == "chat":
+            chats.append((t, p, rest[5:] if rest.startswith("text=") else rest))
+        elif ev == "start":
             head = kv(rest)
         elif ev == "player":
             players[p] = kv(rest)
@@ -48,7 +51,7 @@ def read(path):
             epochs[p][int(kv(rest)["to"])] = t
         elif ev == "end":
             end = t
-    return head, players, samples, epochs, end, ai_lines
+    return head, players, samples, epochs, end, ai_lines, chats
 
 
 def main():
@@ -68,12 +71,16 @@ def main():
         logs = [found[-1]]
     out = []
     for path in logs:
-        head, players, samples, epochs, end, ai_lines = read(path)
+        head, players, samples, epochs, end, ai_lines, chats = read(path)
         last = max((s[-1][0] for s in samples.values() if s), default=0)
         print(f"== {path.name}: map {head.get('map', '?')} size {head.get('size', '?')} difficulty {head.get('difficulty', '?')}, "
               f"{last / 60000:.1f} game minutes{'' if end is not None else ' (no end line: the game was still running or crashed)'}"
               f", {ai_lines} AI trace lines")
-        record = dict(log=str(path), head=head, players={})
+        record = dict(log=str(path), head=head, players={}, chat=[dict(min=round(t / 60000, 1), player=p, text=x) for t, p, x in chats])
+        if chats:
+            print("\nchat (notes):")
+            for t, p, x in chats:
+                print(f"  {t / 60000:6.1f}m p{p}: {x}")
         for p in sorted(samples):
             info = players.get(p, {})
             who = info.get("kind", "?")
