@@ -60,6 +60,7 @@ static unsigned long sNextProfile[kMaxTracedPlayers];
 static long long sProfileSum[kMaxTracedPlayers];
 static long long sProfileMax[kMaxTracedPlayers];
 static unsigned long sProfileCount[kMaxTracedPlayers];
+static long sLost[kMaxTracedPlayers][3];   // since the last stats line: citizens, buildings, other units
 
 void EECPTraceInit()
 {
@@ -165,6 +166,21 @@ static bool EECPIsBuildingCategory(long inCategory)
         || inCategory == kUnitCategorySpaceBuilding;
 }
 
+// A unit leaving the player (not swapped: killed, converted or deleted), by kind, for the next stats line
+void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
+{
+    unsigned long theID = inPlayer->mPlayerID;
+    if (theID >= kMaxTracedPlayers || inUnit == NULL || inUnit->mUnitClass == NULL || inUnit->mComplexUnit == NULL)
+        return;
+    long theCategory = inUnit->mUnitClass->mCategory;
+    if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
+        sLost[theID][0]++;
+    else if (EECPIsBuildingCategory(theCategory))
+        sLost[theID][1]++;
+    else if (theCategory != kUnitCategoryProjectile)
+        sLost[theID][2]++;
+}
+
 // One "stats" line per player every 30 game s: epoch, population and its caps, citizens (idle: no goal; free: the
 // ones the unit manager would hand out to build), buildings, other units; the benchmark (tools/harness/ai_bench.py) reads them.
 void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
@@ -242,6 +258,8 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
     long theEpoch = inPlayer->mTechnologies != NULL ? inPlayer->mTechnologies->mCurrentEpoch : -1;
     const char* theSaved = gCPTraceManager;
     gCPTraceManager = "cp";
+    EECPTraceOut(inPlayer, "losses", "citizens=%ld buildings=%ld other=%ld", sLost[theID][0], sLost[theID][1], sLost[theID][2]);
+    sLost[theID][0] = sLost[theID][1] = sLost[theID][2] = 0;
     EECPTraceOut(inPlayer, "stats", "epoch=%ld pop=%ld cap=%ld limit=%ld citizens=%ld idle=%ld free=%lu gather=%ld/%ld/%ld/%ld/%ld/%ld "
         "buildings=%ld unfinished=%ld other=%ld",
         theEpoch, inPlayer->GetTotalPopulation(true, true), inPlayer->mPopulationCap,

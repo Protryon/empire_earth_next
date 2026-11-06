@@ -5572,6 +5572,8 @@ void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
 {
     EEPlayer::UnitTaken(inUnit, inSwapped);
     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    if (gCPTraceOn && !inSwapped)
+        EECPTraceUnitLost(this, theUnit);
     if (this->mActive)
         this->mCivilizationManager->UnitLost(theUnit, inSwapped);
     if (this->mCombatManager != NULL)
