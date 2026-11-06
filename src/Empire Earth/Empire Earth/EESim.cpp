@@ -265,7 +265,7 @@ struct PlayerSample {
     long mPopulation = 0;       // EEPlayer::mPopulationCount (the harness's units_lb14)
     long mVictoryUnits = 0;     // EEPlayer::mEndOfGameCount (victory_units_lb18)
     long mCitizens = 0;
-    long mArmy = 0;             // live units that are neither citizens nor buildings
+    long mArmy = 0;             // live units that are neither citizens nor buildings (priests and heroes too)
     long mBuildings = 0;
     long mResources[5] = {0, 0, 0, 0, 0};
     unsigned long mResult = 0;  // EEPlayer::mGameResult: 1 victorious, 2 defeated
@@ -326,6 +326,9 @@ Sample TakeSample()
             if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0))
                 continue;
             long theCategory = theUnit->mUnitClass->mCategory;
+            if (theCategory == kUnitCategoryAmbient || theCategory == kUnitCategoryResource
+                || theCategory == kUnitCategoryProjectile)
+                continue;   // the AI's path points (ambient units), resources, shots
             if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
                 p.mCitizens++;
             else if (IsBuildingCategory(theCategory))
