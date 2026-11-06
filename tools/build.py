@@ -47,11 +47,12 @@ from ee import CLANG, LLD_LINK, LLVM_LIB, MODULE_FLAGS, ROOT, RUNTIME_LIBS, lib_
 
 TEST_PROFILES = {
     "windowed-software": {
-        # windowed: the settings default and EEGamePreferences::Load keep mFullScreen false
+        # windowed: the settings default keeps mFullScreen false, and the "Window Mode" setting (which decides it in
+        # EEGamePreferences::Load and ApplySettings) is overridden to windowed
         "Empire Earth/Empire Earth/EEPreferences.cpp": [
             ("    this->mFullScreen = true;", "    this->mFullScreen = false;   // TEST PROFILE windowed", 1),
-            ("    this->mSettings.mFullScreen = true;",
-             "    this->mSettings.mFullScreen = false;   // TEST PROFILE windowed", 1)],
+            ("    this->mSettings.mFullScreen = this->mSettings.mWindowMode == 0;",
+             "    this->mSettings.mFullScreen = false;   // TEST PROFILE windowed", 2)],
         # 32-bit display: the bit-depth checks accept and store 32 where they accepted/stored 16, and the
         # no-matching-mode fallback is 32 (the renderer runs on wgpu, WARP on a machine without a GPU); WinMain
         # loads the harness's presentation bridge when it is staged (the DLL builds' plug-in scan loaded every DLL
