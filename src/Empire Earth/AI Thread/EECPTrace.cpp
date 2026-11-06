@@ -61,6 +61,8 @@ static long long sProfileSum[kMaxTracedPlayers];
 static long long sProfileMax[kMaxTracedPlayers];
 static unsigned long sProfileCount[kMaxTracedPlayers];
 static long sLost[kMaxTracedPlayers][3];   // since the last stats line: citizens, buildings, other units
+static long sLostNear[kMaxTracedPlayers][3];   // citizens lost by distance from the town center: <15, 15-30, more tiles
+static long sLostBy[kMaxTracedPlayers][3];     // citizens lost by their last attacker: a player's unit, a wild one (player 0), none
 
 void EECPTraceInit()
 {
@@ -175,6 +177,15 @@ void EECPTraceUnitLost(EEComputerPlayer* inPlayer, EEUnit* inUnit)
     long theCategory = inUnit->mUnitClass->mCategory;
     if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
         sLost[theID][0]++;
+        EEComplexUnit* theKiller = inUnit->mComplexUnit->mLastAttacker;
+        sLostBy[theID][theKiller == NULL ? 2 : theKiller->mPlayer != NULL && theKiller->mPlayer->mPlayerID != 0 ? 0 : 1]++;
+        U2DPoint<long> theCenter = inPlayer->mCivilizationManager != NULL && inPlayer->mCivilizationManager->mBuildManager != NULL
+            ? inPlayer->mCivilizationManager->mBuildManager->mTownCenterTile : U2DPoint<long>(-10000, -10000);
+        if (theCenter.mX != -10000) {
+            long theDX = inUnit->mTileX - theCenter.mX, theDY = inUnit->mTileY - theCenter.mY;
+            long theSquared = theDX * theDX + theDY * theDY;
+            sLostNear[theID][theSquared < 225 ? 0 : theSquared < 900 ? 1 : 2]++;
+        }
     else if (EECPIsBuildingCategory(theCategory))
         sLost[theID][1]++;
     else if (theCategory != kUnitCategoryProjectile)
@@ -258,8 +269,12 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
     long theEpoch = inPlayer->mTechnologies != NULL ? inPlayer->mTechnologies->mCurrentEpoch : -1;
     const char* theSaved = gCPTraceManager;
     gCPTraceManager = "cp";
-    EECPTraceOut(inPlayer, "losses", "citizens=%ld buildings=%ld other=%ld", sLost[theID][0], sLost[theID][1], sLost[theID][2]);
+    EECPTraceOut(inPlayer, "losses", "citizens=%ld buildings=%ld other=%ld citizens_by_distance=%ld/%ld/%ld citizens_by_killer=%ld/%ld/%ld",
+        sLost[theID][0], sLost[theID][1], sLost[theID][2], sLostNear[theID][0], sLostNear[theID][1], sLostNear[theID][2],
+        sLostBy[theID][0], sLostBy[theID][1], sLostBy[theID][2]);
     sLost[theID][0] = sLost[theID][1] = sLost[theID][2] = 0;
+    sLostNear[theID][0] = sLostNear[theID][1] = sLostNear[theID][2] = 0;
+    sLostBy[theID][0] = sLostBy[theID][1] = sLostBy[theID][2] = 0;
     EECPTraceOut(inPlayer, "stats", "epoch=%ld pop=%ld cap=%ld limit=%ld citizens=%ld idle=%ld free=%lu gather=%ld/%ld/%ld/%ld/%ld/%ld "
         "buildings=%ld unfinished=%ld other=%ld",
         theEpoch, inPlayer->GetTotalPopulation(true, true), inPlayer->mPopulationCap,
@@ -281,11 +296,12 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
                     theSites[theType]++;
             }
         }
-        EECPTraceOut(inPlayer, "sites", "units=%lu/%lu/%lu/%lu/%lu limit=%ld centers=%lu wanted_citizens=%ld workers=%lu",
+        EECPTraceOut(inPlayer, "sites", "units=%lu/%lu/%lu/%lu/%lu limit=%ld centers=%lu wanted_citizens=%ld workers=%lu in_production=%ld",
             theSites[kResourceFood], theSites[kResourceWood], theSites[kResourceStone], theSites[kResourceGold],
             theSites[kResourceIron], inPlayer->mMiningLimit, (unsigned long)inPlayer->GetNumResourceCenters(),
             inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetWantedCitizens() : -1L,
-            inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetNumWorkers() : 0UL);
+            inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetNumWorkers() : 0UL,
+            inPlayer->mCivilizationManager->mUnitManager != NULL ? (long)inPlayer->mCivilizationManager->mUnitManager->mNumInProduction : -1L);
         EECPTraceOut(inPlayer, "food", "bush=%ld hunt=%ld fish=%ld farm=%ld other=%ld goals gather=%ld build=%ld move=%ld attack=%ld garrison=%ld none=%ld",
             theFood[0], theFood[1], theFood[2], theFood[3], theFood[4], theGoals[kGoalGather], theGoals[kGoalBuildRepair],
             theGoals[kGoalLocation], theGoals[kGoalAttackUnit], theGoals[kGoalLoadGarrison], theGoals[0]);
