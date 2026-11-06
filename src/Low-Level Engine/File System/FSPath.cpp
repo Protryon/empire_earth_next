@@ -153,15 +153,21 @@ long FSPath::FindFile(const UString& inName, FSFileSpec*& outFile, FSFileSpec& o
     FSFileSpec theFile;
     long theResult = kErrorNotFound;
     unsigned long i;
+    // Fixed: the search ran on the path's own directory spec, whose search handle every thread shares (the physics
+    // thread loads a finished building's media while the preloading thread loads a unit class's: both closed one
+    // handle, a double free). A copy of the spec searches with a handle of its own (its copy constructor starts
+    // closed; its destructor closes the handle).
     if (this->mDirectories.size() > 0)
-        for (i = 0; i < this->mDirectories.size(); i++)
-            if (this->mDirectories[i].GetFirstFile(inName, theFile) == kErrorOK) {
+        for (i = 0; i < this->mDirectories.size(); i++) {
+            FSFileSpec theDirectory(this->mDirectories[i]);
+            if (theDirectory.GetFirstFile(inName, theFile) == kErrorOK) {
                 outFile = new FSFileSpec(theFile);
                 outDirectory = theFile;
-                this->mDirectories[i].CloseSearchHandle();
+                theDirectory.CloseSearchHandle();
                 theResult = kErrorOK;
                 break;
             }
+        }
     if (theResult != kErrorOK && this->mArchives.size() > 0)
         for (i = 0; i < this->mArchives.size(); i++)
             if (this->mArchives[i].FindFile(inName, theMemoryFile) == kErrorOK) {
@@ -244,7 +250,8 @@ long FSPath::ListFiles(const UString& inPattern, std::set<UString>& outFiles)
         theResult = this->mArchives[i].ListFiles(inPattern, outFiles, false);
     for (i = 0; i < this->mDirectories.size(); i++) {
         theRoot = this->mDirectories[i].GetVolume() + this->mDirectories[i].GetDirectory();
-        theResult = this->mDirectories[i].GetFirstFile(inPattern, theFile);
+        FSFileSpec theDirectory(this->mDirectories[i]);   // a search handle of its own (FindFile)
+        theResult = theDirectory.GetFirstFile(inPattern, theFile);
         while (theResult == kErrorOK) {
             thePath = theFile.GetVolume() + theFile.GetDirectory() + theFile.GetFile();
             // one GetLength of the root: a third inline site would leave the first operator[] of each loop too little
@@ -252,7 +259,7 @@ long FSPath::ListFiles(const UString& inPattern, std::set<UString>& outFiles)
             unsigned long theStart = theRoot.GetLength();
             theName.Copy(thePath, theStart, thePath.GetLength() - theStart, 0, false);
             outFiles.insert(theName);
-            theResult = this->mDirectories[i].GetNextFile(theFile);
+            theResult = theDirectory.GetNextFile(theFile);
         }
     }
     return theResult;
