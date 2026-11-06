@@ -184,6 +184,10 @@ UWideString::~UWideString()
 // Copies another string, growing to its capacity or shrinking to whole 256-byte blocks when much smaller
 UWideString& UWideString::operator=(const UWideString& inString)
 {
+    // divergence: self-assignment returns at once (the original strcpy'd the buffer onto itself, UB that ASan stops on:
+    // the post-game summary assigns a status bar's GEText to itself in AddStatusBar)
+    if (this == &inString)
+        return *this;
     if (inString.mLength == 0) {
         this->mString[0] = 0;
         this->mLength = 0;

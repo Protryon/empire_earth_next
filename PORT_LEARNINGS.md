@@ -1347,7 +1347,9 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   unquoted `#include`) read the destroyed second element of a cleared vector (libc++ frees it);
   a script without `CliffTexture` (Continental and most others) passes -1 to `EEMap::SetCliffTexture`, which indexed
   the cliff table at [-1] (the original read the heap word before it as a table pointer). Both fixed (an empty value;
-  the first cliff terrain, as `EEMap::Load` does with a bad saved index).
+  the first cliff terrain, as `EEMap::Load` does with a bad saved index). Quitting a game opens the post-game
+  summary, whose `AddStatusBar` assigns a status bar's `GEText` to itself; `UWideString::operator=` then strcpy'd
+  the buffer onto itself (ASan: strcpy-param-overlap). Self-assignment now returns at once.
 - **The test driver** (`tools/harness/posix_game.py`): the Windows harness's debugger and presentation bridge do not
   exist off Windows, so the game carries the bridge's UI fixture itself (`EETestFixture.cpp`, only with `EE_TEST_UI`):
   the same ui-state.txt and test.command formats, the controls' own methods, plus game telemetry (game time, ticks,
