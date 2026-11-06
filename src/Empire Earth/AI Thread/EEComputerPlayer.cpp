@@ -1053,6 +1053,24 @@ long EECPPendingEpoch(EEComputerPlayer* inPlayer)
     return kTechNone;
 }
 
+unsigned long EECPEpochTimerSpan(EEComputerPlayer* inPlayer)
+{
+    float theSpan = (inPlayer->GetEpochFrequencyMin() + inPlayer->GetEpochFrequencyMax()) * 0.5f
+        * inPlayer->GetEpochFrequencyModifier() * 60000.0f;
+    return theSpan > 60000.0f ? (unsigned long)UMFloatToLong(theSpan) : 60000UL;
+}
+
+float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime)
+{
+    if (inPlayer->mCivilizationManager == NULL)
+        return 0.0f;
+    unsigned long theSpan = EECPEpochTimerSpan(inPlayer);
+    unsigned long theDue = inPlayer->mCivilizationManager->mNextEpochAdvanceTime;
+    long long theLeft = (long long)theDue - (long long)inTime;
+    float thePressure = 1.0f - (float)theLeft / (float)theSpan;
+    return thePressure < 0.0f ? 0.0f : thePressure;
+}
+
 // FUNCTION: EXE 0x42f033
 // Returns true for epoch technologies; otherwise asks the player whether it can afford the cost
 // New (docs/AI_RESEARCH.md §8.7): without the free-epochs cheat, a pending epoch advance reserves its cost: anything
@@ -1070,9 +1088,15 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
     EETechTreeNode* theReserved = theEpoch != kTechNone ? this->mTechnologies->Get(theEpoch) : NULL;
     if (theReserved == NULL)
         return true;
+    float theShare = (EECPEpochPressure(this, gPhysics->mGameTime) - kEECPEpochPressureStart)
+        / (kEECPEpochPressureFull - kEECPEpochPressureStart);   // the reserve grows with the epoch pressure
+    if (theShare > 1.0f)
+        theShare = 1.0f;
+    if (theShare <= 0.0f)
+        return true;
     for (long i = kResourceFood; i <= kResourceIron; i++) {
         long theCost = this->ScaleCost(inTechnology->GetCost(i, inUnitType, 1.0f)) * inCount;
-        long theReserve = this->ScaleCost(theReserved->GetCost(i, kUnitTypeTownCenter, 1.0f));
+        long theReserve = UMFloatToLong(theShare * this->ScaleCost(theReserved->GetCost(i, kUnitTypeTownCenter, 1.0f)));
         if (theCost > 0 && theReserve > 0 && this->mResourceCaps[i] - theCost < theReserve)
             return false;
     }

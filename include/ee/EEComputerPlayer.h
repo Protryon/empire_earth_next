@@ -465,4 +465,13 @@ enum EECPManagerKind {
 // (kTechNone: none); without the free-epochs cheat its cost is reserved
 long EECPPendingEpoch(EEComputerPlayer* inPlayer);
 
+// New (docs/AI_RESEARCH.md §8.8): the epoch pressure, the elapsed share of the epoch timer's span (dbcpbehavior rows
+// 28/29, the mean of the range times the difficulty's modifier): 0 when the timer starts, 1 when it is due (the
+// original's only advance time); a paid advance is asked for from kEECPEpochPressureStart, and its reserve grows from
+// nothing there to the whole cost at kEECPEpochPressureFull. To become personality weights (tall low, wide high).
+const float kEECPEpochPressureStart = 0.3f;
+const float kEECPEpochPressureFull = 0.8f;
+float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime);
+unsigned long EECPEpochTimerSpan(EEComputerPlayer* inPlayer);   // ms
+
 #endif
