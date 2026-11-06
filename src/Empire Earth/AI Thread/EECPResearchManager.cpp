@@ -281,7 +281,7 @@ void EECPResearchManager::Research(long inID)
         this->mEpochIDs[theEpoch].insert(this->mEpochIDs[theEpoch].begin(), inID);
     else
         this->mEpochIDs[theEpoch].push_back(inID);
-    if (!EEIsEpochID(inID) || !EECPCheatOn(kAICheatEpochs))   // a paid epoch advance counts in the needs too
+    if (!EEIsEpochID(inID) || !EECPCheatOn(this->mPlayer, kAICheatEpochs))   // a paid epoch advance counts in the needs too
         this->mManager->mResourceManager->AddCosts(theNode, 1);
     EE_CP_TRACE(this->mPlayer, "research.request", "tech=%ld epoch=%ld", inID, theEpoch);
 }

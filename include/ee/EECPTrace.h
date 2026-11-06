@@ -9,7 +9,9 @@
 //
 // Cheats: the game's difficulty sets which computer-player cheats stay on (gameoptions.yaml `ai_cheats`,
 // ee/EERules.h EEAICheat; every one by default, as the original). TEST ONLY: EE_AI_CHEATS in the environment narrows
-// that further to the cheats it names, comma separated ("none": every one off; unset or "all": no change). An
+// that further to the cheats it names, comma separated ("none": every one off; unset or "all": no change); sets
+// separated by '/' are taken in turn by player id from player 1 (the human slot), as EE_AI_PERSONALITY: with two
+// computer players (p2, p3), "none/all" makes p2 cheat and p3 honest. An
 // environment variable is per machine, so peers of a multiplayer game with different values would desync.
 #ifndef EE_EECPTRACE_H
 #define EE_EECPTRACE_H
@@ -50,7 +52,7 @@ unsigned long EECPOutOfSynchChecksum();
 // environment names one for every computer player, or a comma list they take in turn by player id
 const EEAIPersonalityRule& EECPPersonality(const EEComputerPlayer* inPlayer);
 
-bool EECPCheatOn(long inCheat);             // whether that cheat stays on (the difficulty's ai_cheats, EE_AI_CHEATS)
-const char* EECPCheatNames();               // the cheats that are on, for the trace ("cost,reveal,..." or "none")
+bool EECPCheatOn(const EEComputerPlayer* inPlayer, long inCheat);          // whether that cheat stays on (the difficulty's ai_cheats, EE_AI_CHEATS)
+const char* EECPCheatNames(const EEComputerPlayer* inPlayer);               // the cheats that are on, for the trace ("cost,reveal,..." or "none")
 
 #endif

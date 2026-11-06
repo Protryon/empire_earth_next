@@ -245,7 +245,7 @@ void EECPCivilizationManager::AttemptEpochAdvance(unsigned long inTime)
     long theNext = theEpoch + 1;
     EETechTreeEpoch* theNode = (theNext >= 0 && theNext < theTree->mEpochs.size()) ? &theTree->mEpochs[theNext] : NULL;
     unsigned long theDue = this->mNextEpochAdvanceTime;
-    if (!EECPCheatOn(kAICheatEpochs)) {
+    if (!EECPCheatOn(this->mPlayer, kAICheatEpochs)) {
         // New (docs/AI_RESEARCH.md §8.8, owner: epoch pressure rises with time): a paid advance is asked for once the
         // epoch pressure passes the personality's epoch_pressure start (aipersonalities.yaml); the pending epoch then
         // reserves a growing share of its cost (EEComputerPlayer::CanAfford) while the gatherers fill it
@@ -271,7 +271,7 @@ void EECPCivilizationManager::AttemptEpochAdvance(unsigned long inTime)
             ESDebugOut("EECPCivilizationManager::AttemptEpochAdvance meeting SOL requirements(2)\n");
             this->mResearchManager->ResearchCheapest(theMissing);
             this->mEpochResearchRequested = true;
-        } else if (!this->mPlayer->mIgnoreOthers && theEpoch > this->GetMaxEpoch() && EECPCheatOn(kAICheatCatchUp)) {
+        } else if (!this->mPlayer->mIgnoreOthers && theEpoch > this->GetMaxEpoch() && EECPCheatOn(this->mPlayer, kAICheatCatchUp)) {
             // (held back while ahead of every human: the epoch rubber band, with CatchUpEpoch the catchup cheat)
             this->SetNextEpochAdvanceTime(inTime + 60000, true);
         } else {
@@ -1114,7 +1114,7 @@ void EECPCivilizationManager::SetNextEpochAdvanceTime(unsigned long inTime, bool
         float theMaximum = this->mPlayer->GetEpochFrequencyMax();
         float theMinutes = gPhysics->GetRandom(theMinimum, theMaximum);
         theMinutes = this->mPlayer->GetEpochFrequencyModifier() * theMinutes;
-        if (!this->mPlayer->mIgnoreOthers && EECPCheatOn(kAICheatCatchUp)) {   // the epoch rubber band (catchup)
+        if (!this->mPlayer->mIgnoreOthers && EECPCheatOn(this->mPlayer, kAICheatCatchUp)) {   // the epoch rubber band (catchup)
             long theMax = this->GetMaxEpoch();
             if (theEpoch > theMax)
                 theMinutes = theMinutes * theScale;

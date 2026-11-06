@@ -238,7 +238,7 @@ void EEComputerPlayer::WorkOutPopulation()
                         theMax = theCount;
                 }
             }
-            if (!EECPCheatOn(kAICheatPopBand))
+            if (!EECPCheatOn(this, kAICheatPopBand))
                 theMax = theOwn;   // EE_AI_CHEATS without popband: no pull toward the human population
             this->mPopulationCap = UMFloatToLong((theOwn * theOwnWeight + theMax * theOtherWeight) / (theOwnWeight + theOtherWeight));
             this->mPopulationCap = UMFloatToLong(this->GetPopLimitAdjustment() * this->mPopulationCap);
@@ -1078,11 +1078,11 @@ float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime)
 // saving for the advance, the AI pauses what competes for the reserved resources while its gatherers fill it).
 bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
 {
-    if (this->mTechnologies != NULL && EEIsEpochID(inTechnology->mData->mID) && EECPCheatOn(kAICheatEpochs))
+    if (this->mTechnologies != NULL && EEIsEpochID(inTechnology->mData->mID) && EECPCheatOn(this, kAICheatEpochs))
         return true;
     if (!EEPlayer::CanAfford(inTechnology, inUnitType, inCount))
         return false;
-    if (this->mTechnologies == NULL || EECPCheatOn(kAICheatEpochs) || EEIsEpochID(inTechnology->mData->mID))
+    if (this->mTechnologies == NULL || EECPCheatOn(this, kAICheatEpochs) || EEIsEpochID(inTechnology->mData->mID))
         return true;
     long theEpoch = EECPPendingEpoch(this);
     EETechTreeNode* theReserved = theEpoch != kTechNone ? this->mTechnologies->Get(theEpoch) : NULL;
@@ -1108,7 +1108,7 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
 // When another player is in a later epoch, pulls the AI's next epoch advance forward to a random catch-up time
 void EEComputerPlayer::CatchUpEpoch(EEPlayer* inPlayer)
 {
-    if (!EECPCheatOn(kAICheatCatchUp))
+    if (!EECPCheatOn(this, kAICheatCatchUp))
         return;
     unsigned long theNext = this->mCivilizationManager->mNextEpochAdvanceTime;
     unsigned long theNow = gPhysics->mGameTime;
@@ -1382,7 +1382,7 @@ void EEComputerPlayer::Init()
     this->mLF20 = -1;
     this->mDropOffDistance = UMFloatToLong((float)sqrt(this->mDropOffDistance));
     this->mCanBuild = true;
-    this->mIsCheating = EECPCheatOn(kAICheatCost);   // EE_AI_CHEATS (the original: always true)
+    this->mIsCheating = EECPCheatOn(this, kAICheatCost);   // EE_AI_CHEATS (the original: always true)
     this->mCanDefend = true;
     this->mBF4E = true;
     this->mCanExplore = true;
@@ -5500,7 +5500,7 @@ void EEComputerPlayer::TakeResource(long inIndex, long inAmount)
 // Pays for a technology, except epoch advances, which are free for the computer player
 void EEComputerPlayer::Pay(EETechnology* inTechnology, long inUnitType, float inFraction)
 {
-    if (!EEIsEpochID(inTechnology->mData->mID) || !EECPCheatOn(kAICheatEpochs))
+    if (!EEIsEpochID(inTechnology->mData->mID) || !EECPCheatOn(this, kAICheatEpochs))
         EEPlayer::Pay(inTechnology, inUnitType, inFraction);
 }
 
@@ -5656,11 +5656,11 @@ void EEComputerPlayer::Update(unsigned long inTime)
     UWideString theUnused2;
     EECPTraceScope theScope("cp");
     if (!this->mIsStarted) {
-        if (EECPCheatOn(kAICheatReveal))
+        if (EECPCheatOn(this, kAICheatReveal))
             gWorld.mMap->ExploreUnseen(this);
         EE_CP_TRACE(this, "start", "difficulty=%lu personality=%s cheats=%s cheating=%d cost100=%ld extra=%ld aggression=%ld",
-            this->mDifficulty, EECPPersonality(this).mID.c_str(), EECPCheatNames(), this->mIsCheating ? 1 : 0, this->ScaleCost(100),
-            EECPCheatOn(kAICheatExtra) ? this->mExtraResources : 0L, (long)this->mComputerAggression);
+            this->mDifficulty, EECPPersonality(this).mID.c_str(), EECPCheatNames(this), this->mIsCheating ? 1 : 0, this->ScaleCost(100),
+            EECPCheatOn(this, kAICheatExtra) ? this->mExtraResources : 0L, (long)this->mComputerAggression);
         this->EnableManagers(inTime);
         this->SetEnableTime(inTime);
         this->SetNextAttackTime(inTime);
@@ -5670,7 +5670,7 @@ void EEComputerPlayer::Update(unsigned long inTime)
             this->Regroup();
         if (gGameOptions.mLoadType == 0)
             this->ChooseCivilization();
-        const long theBonus = EECPCheatOn(kAICheatExtra) ? this->mExtraResources : 0;
+        const long theBonus = EECPCheatOn(this, kAICheatExtra) ? this->mExtraResources : 0;
         this->mResourceCaps[kResourceGold] += theBonus;
         this->mResourceCaps[kResourceIron] += theBonus;
         this->mIsStarted = true;

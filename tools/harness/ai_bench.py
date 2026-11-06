@@ -14,7 +14,7 @@ the session log and the game's summary, and writes:
   python -I tools/harness/ai_bench.py --report build/boot/ai_bench/baseline     # the summary table again
 
 --cheats takes cheat sets separated by spaces or commas between sets with '+' inside one set ("all", "none",
-"reveal+extra"; EE_AI_CHEATS in ee/EECPTrace.h). The local human idles in slot 0 (ai_game.py). By default the runs
+"reveal+extra"; '/' between per-player sets taken in turn, "none/all"; EE_AI_CHEATS in ee/EECPTrace.h). The local human idles in slot 0 (ai_game.py). By default the runs
 pass --no-human-defeat, which keeps it in, so the computers play on once it has lost its units (--human-defeat:
 the game ends there). Its population still pulls the AI pop cap down unless the cheat set leaves out popband.
 """
@@ -206,7 +206,7 @@ def main():
                                    split(a.personality)))
     runs = []
     for (seed, map_type, size, difficulty, ai, cheats, pers), k in itertools.product(cells, range(a.repeat)):
-        rid = f"s{seed}-{map_type.replace(' ', '_')}-{size}-{difficulty}-{ai}ai-{cheats}"               + (f"-{pers}" if pers != '-' else '') + f"-r{k}"
+        rid = f"s{seed}-{map_type.replace(' ', '_')}-{size}-{difficulty}-{ai}ai-{cheats.replace('/', '~')}"               + (f"-{pers}" if pers != '-' else '') + f"-r{k}"
         runs.append(dict(id=rid.replace('--', '-'), seed=seed, map=map_type, size=size, difficulty=difficulty, ai=ai,
                          cheats=cheats, personality=pers, repeat=k))
     results = [None] * len(runs)

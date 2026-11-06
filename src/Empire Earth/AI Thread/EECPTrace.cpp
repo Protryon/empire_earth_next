@@ -51,7 +51,7 @@ bool gCPTraceOn = false;
 const char* gCPTraceManager = "-";
 
 static bool sInitialized = false;
-static long sCheats = kAICheatAll;         // EE_AI_CHEATS (TEST ONLY): the cheats it lets through
+static std::vector<long> sCheats;          // EE_AI_CHEATS (TEST ONLY): the cheats it lets through, per player in turn
 static char sCheatNames[128];
 static std::vector<long> sPersonalities;   // EE_AI_PERSONALITY (TEST ONLY): positions in the rules' personalities
 static const long kMaxTracedPlayers = 64;
@@ -89,20 +89,30 @@ void EECPTraceInit()
         }
     }
     const char* theCheats = getenv("EE_AI_CHEATS");
-    if (theCheats != NULL && theCheats[0] != '\0' && strcmp(theCheats, "all") != 0) {
-        sCheats = 0;
-        std::string theList(theCheats);
-        size_t theStart = 0;
-        while (theStart <= theList.size()) {
-            size_t theEnd = theList.find(',', theStart);
-            if (theEnd == std::string::npos)
-                theEnd = theList.size();
-            std::string theName = theList.substr(theStart, theEnd - theStart);
-            long theBit = EEAICheatBit(theName);
-            if (theBit == 0 && theName != "none" && !theName.empty())
-                ESDebugOut("EE-AI EE_AI_CHEATS: unknown cheat '%s' ignored\n", theName.c_str());
-            sCheats |= theBit;
-            theStart = theEnd + 1;
+    // "a,b": one set for every computer player; "set/set/...": the sets taken in turn by player (as EE_AI_PERSONALITY)
+    if (theCheats != NULL && theCheats[0] != '\0') {
+        std::string theSets(theCheats);
+        size_t theSetStart = 0;
+        while (theSetStart <= theSets.size()) {
+            size_t theSetEnd = theSets.find('/', theSetStart);
+            if (theSetEnd == std::string::npos)
+                theSetEnd = theSets.size();
+            std::string theList = theSets.substr(theSetStart, theSetEnd - theSetStart);
+            long theSet = 0;
+            size_t theStart = 0;
+            while (theStart <= theList.size()) {
+                size_t theEnd = theList.find(',', theStart);
+                if (theEnd == std::string::npos)
+                    theEnd = theList.size();
+                std::string theName = theList.substr(theStart, theEnd - theStart);
+                long theBit = theName == "all" ? (long)kAICheatAll : EEAICheatBit(theName);
+                if (theBit == 0 && theName != "none" && !theName.empty())
+                    ESDebugOut("EE-AI EE_AI_CHEATS: unknown cheat '%s' ignored\n", theName.c_str());
+                theSet |= theBit;
+                theStart = theEnd + 1;
+            }
+            sCheats.push_back(theSet);
+            theSetStart = theSetEnd + 1;
         }
     }
 }
@@ -120,21 +130,26 @@ const EEAIPersonalityRule& EECPPersonality(const EEComputerPlayer* inPlayer)
     return theRules.ForPlayer(inPlayer->mPlayerID);
 }
 
-// The game's difficulty's cheats (gameoptions.yaml ai_cheats), narrowed by EE_AI_CHEATS
-static long EECPCheats()
+// The game's difficulty's cheats (gameoptions.yaml ai_cheats), narrowed by EE_AI_CHEATS (the player's set)
+static long EECPCheats(const EEComputerPlayer* inPlayer)
 {
     EECPTraceInit();
-    return EEDifficultyAICheats(gWorld.mLobbyOptions.mDifficulty) & sCheats;
+    long theMask = kAICheatAll;
+    if (!sCheats.empty()) {
+        unsigned long theID = inPlayer != NULL ? inPlayer->mPlayerID : 1;
+        theMask = sCheats[(theID > 0 ? theID - 1 : 0) % sCheats.size()];
+    }
+    return EEDifficultyAICheats(gWorld.mLobbyOptions.mDifficulty) & theMask;
 }
 
-bool EECPCheatOn(long inCheat)
+bool EECPCheatOn(const EEComputerPlayer* inPlayer, long inCheat)
 {
-    return (EECPCheats() & inCheat) != 0;
+    return (EECPCheats(inPlayer) & inCheat) != 0;
 }
 
-const char* EECPCheatNames()
+const char* EECPCheatNames(const EEComputerPlayer* inPlayer)
 {
-    long theCheats = EECPCheats();
+    long theCheats = EECPCheats(inPlayer);
     sCheatNames[0] = '\0';
     for (unsigned long i = 0; i < kEEAICheatCount; i++)
         if (theCheats & (1L << i)) {
