@@ -330,8 +330,10 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
                     theWorker->SetGoal(theGoal, 0, 0);
                     theWorker->StartAction(kActionMoveToRepairSite);
                     theWorker->mUnitClass->ActionChanged(theWorker);
-                    EE_CP_TRACE(this->mPlayer, "build.start", "cls=%ld x=%ld y=%ld", theClassID, (long)theTile.mX,
-                        (long)theTile.mY);
+                    EE_CP_TRACE(this->mPlayer, "build.start", "cls=%ld x=%ld y=%ld tc=%ld", theClassID, (long)theTile.mX,
+                        (long)theTile.mY, this->mTownCenterTile.mX == -10000 ? -1L
+                        : (long)sqrt((double)((theTile.mX - this->mTownCenterTile.mX) * (theTile.mX - this->mTownCenterTile.mX)
+                                              + (theTile.mY - this->mTownCenterTile.mY) * (theTile.mY - this->mTownCenterTile.mY))));
                 }
                 theResult = true;
             } else {
@@ -1100,10 +1102,21 @@ bool EECPBuildManager::FindTowerSite(long inUnitClass, long inSize, EETileCoordi
             }
         }
         if (!theResult) {
-            for (i = 0; i < this->mPlayer->mResourceCenters.size() && !theResult; i++) {
+            // port: the resource centres the gatherers work first, the nearest the town centre first (the original
+            // took them in list order: a tower at a far, unworked mine guarded nothing the raiders went for)
+            std::vector<std::pair<long long, unsigned long> > theOrder;
+            for (i = 0; i < this->mPlayer->mResourceCenters.size(); i++) {
                 EECPResourceCenter* theResourceCenter = this->mPlayer->GetResourceCenter(i);
-                if (theResourceCenter == NULL)
+                if (theResourceCenter == NULL || theResourceCenter->mUnit == NULL)
                     continue;
+                long long theDX = theResourceCenter->mUnit->GetTileX() - this->mTownCenterTile.mX;
+                long long theDY = theResourceCenter->mUnit->GetTileY() - this->mTownCenterTile.mY;
+                theOrder.push_back(std::pair<long long, unsigned long>(
+                    (theResourceCenter->mIsActive ? 0LL : 1LL << 40) + theDX * theDX + theDY * theDY, i));
+            }
+            std::sort(theOrder.begin(), theOrder.end());
+            for (j = 0; j < theOrder.size() && !theResult; j++) {
+                EECPResourceCenter* theResourceCenter = this->mPlayer->GetResourceCenter(theOrder[j].second);
                 theResult = theResourceCenter->FindBuildSite(inUnitClass, theSite);
                 if (theResult) {
                     outTile.mX = theSite.mX;

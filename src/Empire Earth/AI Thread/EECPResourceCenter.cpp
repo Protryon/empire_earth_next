@@ -247,7 +247,10 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
         theContinent = gContinentManager.GetContinent(U2DPoint<long>(this->mUnit->GetTileX(), this->mUnit->GetTileY()), kAIPathLandMass);
         for (i = 0, theCount = this->mUnits.size(); i < theCount && !theFound; i++) {
             EEUnit* theUnit = this->mUnits[i];
-            if (theUnit->mResourceType != kResourceGold && theUnit->mResourceType != kResourceIron)
+            // port: also by the food of a worked centre (the forage and hunting grounds the early raids go for); the
+            // original guarded only gold and iron
+            if (theUnit->mResourceType != kResourceGold && theUnit->mResourceType != kResourceIron
+                && !(theUnit->mResourceType == kResourceFood && this->mIsActive))
                 continue;
             for (long theRing = 2; theRing < UMFloatToLong(theFactor) && !theFound; theRing++) {
                 Fn2492C2(theUnit->GetTileX(), theUnit->GetTileY(), theRing, theTiles);
