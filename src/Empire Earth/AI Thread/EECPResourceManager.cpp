@@ -1584,6 +1584,31 @@ bool EECPResourceManager::UpdateWantedGatherers()
 // places them on its next pass
 void EECPResourceManager::RebalanceGatherers()
 {
+    // New (docs/AI_RESEARCH.md §8.11): a citizen that finished its building keeps the build goal and waits in the
+    // citizen script's TaskSmartCitizen state for good; the AI takes only goal-less or gathering citizens, so these
+    // were lost (11 of 30 citizens at 20 minutes). They are freed for this pass.
+    std::vector<EEComplexUnit*> theCitizens;
+    if (this->mManager->mUnitManager != NULL)
+        this->mManager->mUnitManager->GetCitizens(theCitizens);
+    unsigned long theFreed = 0;
+    for (unsigned long i = 0; i < theCitizens.size(); i++) {
+        EEComplexUnit* theUnit = theCitizens[i];
+        EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(theUnit->mActiveGoal);
+        if (theGoal == NULL || theUnit->mIsDetachedFromAI || theUnit->mIsDisabled || !(theUnit->mHitPoints > 0)
+            || (theUnit->mCommand ? theUnit->mCommand->mType : 0) != kActionTaskSmartCitizen)
+            continue;
+        EEComplexUnit* theTarget = theGoal->mTarget != NULL ? theGoal->mTarget->mComplexUnit : NULL;
+        if (theTarget != NULL && !theTarget->mIsBuilt)
+            continue;
+        theUnit->ClearGoalQueue(0);
+        theUnit->StartAction(kActionIdle);
+        theUnit->GetUnitClass()->ActionChanged(theUnit);
+        this->AddIdleGatherer(theUnit);
+        theFreed++;
+    }
+    if (theFreed > 0)
+        EE_CP_TRACE(this->mManager->mPlayer, "citizen.freed", "n=%lu", theFreed);
+
     bool theShort = false;
     for (long r = 2; r < 7; r++)
         if (this->mGatherers[r].size() < this->mWantedGatherers[r])
