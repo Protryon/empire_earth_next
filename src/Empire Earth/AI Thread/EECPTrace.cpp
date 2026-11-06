@@ -43,6 +43,8 @@
 #include "ee/EECPAttackCommander.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGGather.h"
+#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUnitAction.h"
 #include "ee/EECPTrace.h"
 
 bool gCPTraceOn = false;
@@ -150,6 +152,12 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
     long theUnfinished = 0;
     long theIdle = 0;
     long theGatherers[kResourceIron + 1] = {0};   // by the target's resource type (0: unknown)
+    long theFood[5] = {0, 0, 0, 0, 0};            // food gatherers by source: forage bush, animal (hunting), fish, farm, other
+    long theGoals[16] = {0};                      // citizens by active goal kind (EEUnitGoalKind; 0 none)
+    long theBuilders[6] = {0, 0, 0, 0, 0, 0};     // build/repair goals: target unbuilt, built; action build, repair,
+    long theBuildClass = -1;                      // move to the site, other; the first unbuilt target's class
+    long theOtherAction = -1;                     // the first "other" builder's action and its target's hit points share
+    long theOtherHealth = -1;
     for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0))
             continue;
@@ -157,13 +165,38 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen) {
             theCitizens++;
             EEUnitGoal* theGoal = theUnit->mComplexUnit->mActiveGoal;
+            theGoals[theGoal == NULL ? 0 : theGoal->mKind >= 0 && theGoal->mKind < 16 ? theGoal->mKind : 15]++;
+            if (theGoal != NULL && theGoal->mKind == kGoalBuildRepair) {
+                EEUnit* theTarget = static_cast<EEUGBuildRepair*>(theGoal)->mTarget;
+                EEComplexUnit* theComplex = theTarget != NULL ? theTarget->mComplexUnit : NULL;
+                bool theBuilt = theComplex != NULL && theComplex->mIsBuilt;
+                theBuilders[theBuilt ? 1 : 0]++;
+                if (!theBuilt && theBuildClass < 0 && theTarget != NULL)
+                    theBuildClass = theTarget->mUnitClass->mUnitType;
+                long theAction = theUnit->mComplexUnit->mCommand ? theUnit->mComplexUnit->mCommand->mType : 0;
+                theBuilders[theAction == kActionBuildBuilding ? 2 : theAction == kActionRepairBuilding ? 3
+                            : theAction == kActionMoveToRepairSite ? 4 : 5]++;
+                if (theAction != kActionBuildBuilding && theAction != kActionRepairBuilding && theAction != kActionMoveToRepairSite
+                    && theOtherAction < 0 && theTarget != NULL) {
+                    theOtherAction = theAction;
+                    theOtherHealth = UMFloatToLong(theTarget->mHitPoints);
+                }
+            }
             if (theGoal == NULL)
                 theIdle++;
             else if (theGoal->mKind == kGoalGather) {
                 EEUnit* theResource = static_cast<EEUGGather*>(theGoal)->mResource;
                 unsigned long theType = theResource != NULL ? theResource->mResourceType : 0;
                 theGatherers[theType >= kResourceFood && theType <= kResourceIron ? theType : 0]++;
-            }
+                if (theType == kResourceFood) {
+                    long theClass = theResource->mUnitClass->mUnitType;
+                    unsigned long theFamily = theResource->mUnitClass->GetFamily();
+                    theFood[theClass == kUnitTypeResForageBush ? 0 : theFamily == kUnitFamilyAnimal ? 1
+                            : theFamily == kUnitFamilyFish || theClass == kUnitTypeResFish ? 2
+                            : theClass == kUnitTypeFarm || theClass == kUnitTypeRoboticFarm ? 3 : 4]++;
+                }
+            } else if (theGoal->mKind == kGoalAttackUnit)
+                theFood[1]++;   // a citizen attacking: hunting (the AI's citizens attack only animals)
         }
         else if (EECPIsBuildingCategory(theCategory)) {
             theBuildings++;
@@ -204,6 +237,12 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
             theSites[kResourceIron], inPlayer->mMiningLimit, (unsigned long)inPlayer->GetNumResourceCenters(),
             inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetWantedCitizens() : -1L,
             inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetNumWorkers() : 0UL);
+        EECPTraceOut(inPlayer, "food", "bush=%ld hunt=%ld fish=%ld farm=%ld other=%ld goals gather=%ld build=%ld move=%ld attack=%ld garrison=%ld none=%ld",
+            theFood[0], theFood[1], theFood[2], theFood[3], theFood[4], theGoals[kGoalGather], theGoals[kGoalBuildRepair],
+            theGoals[kGoalLocation], theGoals[kGoalAttackUnit], theGoals[kGoalLoadGarrison], theGoals[0]);
+        EECPTraceOut(inPlayer, "builders", "unbuilt=%ld built=%ld act build=%ld repair=%ld move=%ld other=%ld cls=%ld other_action=%ld other_hp=%ld",
+            theBuilders[0], theBuilders[1], theBuilders[2], theBuilders[3], theBuilders[4], theBuilders[5], theBuildClass,
+            theOtherAction, theOtherHealth);
         EECPTraceOut(inPlayer, "econ", "want=%lu/%lu/%lu/%lu/%lu listed=%lu/%lu/%lu/%lu/%lu/%lu need=%ld/%ld/%ld/%ld/%ld",
             theRM->mWantedGatherers[2], theRM->mWantedGatherers[3], theRM->mWantedGatherers[4],
             theRM->mWantedGatherers[5], theRM->mWantedGatherers[6], (unsigned long)theRM->mGatherers[2].size(),
