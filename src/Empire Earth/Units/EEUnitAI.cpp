@@ -459,8 +459,13 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
             if (theGoal->mKind != kGoalAttackUnit)
                 break;
             EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
-            if (!theTarget->mUnitClass->IsLandBuilding())
+            if (!theTarget->mUnitClass->IsLandBuilding()) {
+                // port: a unit still on its way to its target (not yet in reach of it) fights back against another
+                // unit that hits it (Generic Attack.tai UnderAttack retaliates only when this holds); the original
+                // kept walking and took the hits
+                theFlag = inUnit->mLastAttacker != NULL && inUnit->mLastAttacker != theTarget && !inUnit->IsInReach(theTarget);
                 break;
+            }
             if (theTarget->mStats->mAttack != 0.0f) {
                 EEUnitClass* theClass = inUnit->mUnitClass;
                 long theColumn = theTarget->mUnitClass->mAmmoType;
