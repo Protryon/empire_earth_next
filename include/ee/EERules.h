@@ -245,6 +245,9 @@ struct EEAIPersonalityRule {
     float mMaxCitizenShare = 0.7f;          // the citizen target is at most this share of the pop cap
     long mWoodSlots = 15;                   // wood's gatherer capacity (trees are not resource-center units)
     long mMovesPerCycle = 3;                // busy gatherers moved to a short resource per 10 s
+    // the gatherer split: by the tiered demand less the stock (EECPResourceManager.cpp EECPRMSplitByDemand; docs/AI_RESEARCH.md
+    // §8.21), or false: the original's needs ledger with the stock correction above
+    bool mDemandSplit = true;
     // military pressure: the standing army the player keeps, per worker (citizens and fishing boats); up to the
     // original's military share of the pop cap
     float mStandingArmy = 0.25f;

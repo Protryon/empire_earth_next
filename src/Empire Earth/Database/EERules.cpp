@@ -938,6 +938,7 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
                 y.Float("max_citizen_share", p.mMaxCitizenShare);
                 y.Int("wood_slots", p.mWoodSlots);
                 y.Int("moves_per_cycle", p.mMovesPerCycle);
+                y.Bool("demand_split", p.mDemandSplit);
                 y.Done();
             }
             if (const Node* s = x.Sub("military")) {
@@ -1244,6 +1245,7 @@ void EERules::Dump(std::string& outJson) const
             j.Float("max_citizen_share", p.mMaxCitizenShare);
             j.Int("wood_slots", p.mWoodSlots);
             j.Int("moves_per_cycle", p.mMovesPerCycle);
+            j.Int("demand_split", p.mDemandSplit ? 1 : 0);
             j.Float("standing_army", p.mStandingArmy);
             j.Float("army_floor", p.mArmyFloor);
             j.Close('}');

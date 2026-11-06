@@ -304,6 +304,7 @@ def aipersonalities(ids, spec):
                   f'      max_citizen_share: {citizens:<10}# the citizen target: at most this share of the pop cap',
                   '      wood_slots: 15               # the gatherers wood takes (trees are not resource-center units)',
                   '      moves_per_cycle: 3           # busy gatherers moved to a short resource per 10 s',
+                  '      demand_split: true           # gatherers by the tiered demand less the stock (false: the needs ledger)',
                   '    military:',
                   f'      standing_army: {army:<14}# the army kept per worker (up to the military share of the pop cap)',
                   f'      army_floor: {floor:<17}# while it is short: up to this much more floor share on its unit\'s costs']
@@ -581,6 +582,8 @@ def validate(name, text, content, spec):
                 for k in ('surplus_cut', 'max_citizen_share'):
                     if y.get(k) is not None:
                         _float(y.get(k), y.where(), k)
+                if y.get('demand_split') is not None and str(y.get('demand_split')) not in ('0', '1', 'true', 'false'):
+                    raise TextError(f'{y.where()}: demand_split: true or false')
                 f = y.get('floor')
                 if f is not None:
                     z = _Map(f, name, 'floor')

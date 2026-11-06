@@ -2630,6 +2630,8 @@ computer player gets which. New in this port (no original values: the defaults a
           max_citizen_share: 0.7   # the citizen target (the held sites' capacity) is at most this share of the pop cap
           wood_slots: 15           # wood's gatherer capacity
           moves_per_cycle: 3       # busy gatherers moved to a short resource per 10 s
+          demand_split: true       # the gatherers by the tiered demand less the stock (docs/AI_RESEARCH.md §8.21);
+                                   # false: the original's needs ledger with the stock correction above
         military:
           standing_army: 0.25      # the army kept per worker (every 30 game s, the favourite land unit; up to the
                                    # original's military share of the pop cap)

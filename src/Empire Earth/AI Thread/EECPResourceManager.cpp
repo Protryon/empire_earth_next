@@ -1506,8 +1506,8 @@ unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
     return theTotal;
 }
 
-// New (docs/AI_RESEARCH.md Â§8.21; TEST ONLY for now: EE_AI_DEMAND, ee/EECPTrace.h): the demand split. The AI's wants in
-// tiers, each a cost per resource:
+// New (docs/AI_RESEARCH.md §8.21; the personality's economy.demand_split, EE_AI_DEMAND overrides it): the demand
+// split. The AI's wants in tiers, each a cost per resource:
 //   1  growth: the next citizens (up to 15 of the missing ones), the standing army's shortfall (up to 15 of its
 //      favourite land unit), and the first two buildings of every epoch's build queue;
 //   2  the pending epoch advance, by its pressure (as the reserve in EEComputerPlayer::CanAfford);
@@ -1674,7 +1674,7 @@ static bool EECPRMSplitByDemand(EECPResourceManager* inManager)
 // if any wanted count changed
 bool EECPResourceManager::UpdateWantedGatherers()
 {
-    if (EECPDemandSplitOn(this->mManager->mPlayer))   // TEST ONLY (EE_AI_DEMAND): the demand split above
+    if (EECPDemandSplitOn(this->mManager->mPlayer))   // economy.demand_split (EE_AI_DEMAND): the demand split above
         return EECPRMSplitByDemand(this);
     long theTotal = 0;
     EEComputerPlayer* thePlayer = this->mManager->mPlayer;

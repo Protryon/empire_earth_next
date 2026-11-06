@@ -52,7 +52,7 @@ bool gCPTraceOn = false;
 const char* gCPTraceManager = "-";
 
 static bool sInitialized = false;
-static std::vector<bool> sDemandSplit;     // EE_AI_DEMAND (TEST ONLY): per player in turn ('/' between)
+static std::vector<bool> sDemandSplit;     // EE_AI_DEMAND (TEST ONLY): overrides economy.demand_split, per player in turn ('/' between)
 static std::vector<long> sCheats;          // EE_AI_CHEATS (TEST ONLY): the cheats it lets through, per player in turn
 static char sCheatNames[128];
 static std::vector<long> sPersonalities;   // EE_AI_PERSONALITY (TEST ONLY): positions in the rules' personalities
@@ -136,7 +136,7 @@ bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer)
 {
     EECPTraceInit();
     if (sDemandSplit.empty())
-        return false;
+        return EECPPersonality(inPlayer).mDemandSplit;
     unsigned long theID = inPlayer->mPlayerID;
     return sDemandSplit[(theID > 0 ? theID - 1 : 0) % sDemandSplit.size()];
 }
