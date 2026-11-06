@@ -299,4 +299,12 @@ long EEDifficultyAICheats(unsigned long inDifficulty);
 extern const char* const kEERuleCategoryNames[];
 extern const unsigned long kEERuleCategoryCount;
 
+// TEST ONLY (EE-SIM.exe --set, the headless simulation): a rules document's value changed as the document is read,
+// "doc.key.key=value". A key may name a list entry by its id: "aipersonalities.balanced.military.army_floor=0.2" is
+// the personalities entry with id balanced (the list may also be named: aipersonalities.personalities.balanced...).
+// Only an existing scalar is changed. False, with the reason, when the spec is malformed.
+bool EERulesAddOverride(const std::string& inSpec, std::string& outError);
+// the overrides that changed nothing (the document is not in the data, or the key is not in it), each with the reason
+std::vector<std::string> EERulesOverrideProblems();
+
 #endif
