@@ -104,3 +104,22 @@ Siax 58 s, Real-ESRGAN 59 s, Real-ESRGAN anime 23 s, Nomos8k DAT 266 s, Lanczos 
 = 70% DAT + 30% UltraSharp per pixel (`blend`; equal to blending inside the pipeline, as back-projection is affine);
 fx, shadow = Lanczos; exclude = copied. Chosen on a comparison page with a live mix slider; the 70/30 blend keeps
 DAT's faithfulness and some of UltraSharp's bite.
+
+## 7. What the full pass taught (2026-11-05)
+
+Checks over the whole output (sizes, colour/alpha error weighted by visibility against the originals) and the first
+in-game runs found four pipeline bugs; all are fixed in the code, so `full_pass.sh` now gives the shipped result:
+
+* Two units with one id (`splash_<r>_<c>` grid and `splash.png` frames): the grid's 12 tiles fell out of the blend.
+  Ids are unique now; `compose` picks by file set.
+* The alpha bleed refilled pixels under alpha 0.5: visible colour of glows and soft edges was lost (up to 62/255).
+  Only alpha 0 is refilled.
+* ...and only when the colour there is a flat fill: terrain such as `rockysand_1` (one opaque tile, three alpha-0
+  tiles; dbterrain mHasAlpha 0) and many skins keep real art under alpha 0. Refilling it smeared desert terrain into
+  a checkerboard of streaks.
+* The mouse pointers are colour-keyed (pure blue = transparent): upscaling moved the key by a few levels and the
+  pointer showed on a blue box. The key is now handled as alpha and written back exactly.
+
+After the fixes: 2,666 files, all at 4x (the excluded at 1x), visibility-weighted error median 4.2/255, p99 18,
+max 33 (fine stripes of `fx_arrowt`, dither removed from grainy terrain). The pack (`upscale.py pack`): 2,636
+textures, 1.3 GB.
