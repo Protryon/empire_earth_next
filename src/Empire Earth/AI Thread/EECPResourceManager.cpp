@@ -660,6 +660,7 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
                                     EEUnit* theTarget = EEMakeBuilding(thePlayer, 0x2b, theSite.mCenter.mX, theSite.mCenter.GetY());
                                     inUnit->SetGoal(new EEUGBuildRepair(thePlayer, theTarget, false), 1, 0);
                                     inUnit->StartAction(kActionMoveToRepairSite);
+                                    EE_CP_TRACE(thePlayer, "settlement.order", "resource=%lu x=%ld y=%ld", (unsigned long)theResource->mResourceType, (long)theSite.mCenter.mX, (long)theSite.mCenter.GetY());
                                     inUnit->GetUnitClass()->ActionChanged(inUnit);
                                 }
                             }

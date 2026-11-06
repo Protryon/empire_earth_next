@@ -46,6 +46,7 @@
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EECPTrace.h"
+#include <math.h>
 
 bool gCPTraceOn = false;
 const char* gCPTraceManager = "-";
@@ -231,6 +232,10 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
     long theBuildClass = -1;                      // move to the site, other; the first unbuilt target's class
     long theOtherAction = -1;                     // the first "other" builder's action and its target's hit points share
     long theOtherHealth = -1;
+    double theTrip[kResourceIron + 1] = {0};      // gatherers' resource-to-drop-site distances, by resource (the trips line)
+    long theTrips[kResourceIron + 1] = {0};
+    long theNoStorage = 0;
+    long theDropSites[3] = {0, 0, 0};             // built settlements, town centers/capitols, granaries
     for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0))
             continue;
@@ -261,6 +266,14 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
                 EEUnit* theResource = static_cast<EEUGGather*>(theGoal)->mResource;
                 unsigned long theType = theResource != NULL ? theResource->mResourceType : 0;
                 theGatherers[theType >= kResourceFood && theType <= kResourceIron ? theType : 0]++;
+                EEUnit* theStorage = static_cast<EEUGGather*>(theGoal)->mStorage;
+                if (theResource != NULL && theType >= kResourceFood && theType <= kResourceIron) {
+                    if (theStorage != NULL && theStorage->mComplexUnit != NULL) {
+                        theTrip[theType] += sqrt(theStorage->mComplexUnit->DistanceSquaredToUnit(theResource));
+                        theTrips[theType]++;
+                    } else
+                        theNoStorage++;
+                }
                 if (theType == kResourceFood) {
                     long theClass = theResource->mUnitClass->mUnitType;
                     unsigned long theFamily = theResource->mUnitClass->GetFamily();
@@ -273,6 +286,15 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         }
         else if (EECPIsBuildingCategory(theCategory)) {
             theBuildings++;
+            long theType = theUnit->mUnitClass->mUnitType;
+            if (theUnit->mComplexUnit->mIsBuilt) {
+                if (theType == kUnitTypeSettlement)
+                    theDropSites[0]++;
+                else if (theType == kUnitTypeTownCenter || theType == kUnitTypeCapitol)
+                    theDropSites[1]++;
+                else if (theType == kUnitTypeGranary)
+                    theDropSites[2]++;
+            }
             if (!theUnit->mComplexUnit->mIsBuilt)
                 theUnfinished++;
         } else
@@ -317,6 +339,15 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
             inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetWantedCitizens() : -1L,
             inPlayer->mCivilizationManager->mUnitManager != NULL ? inPlayer->mCivilizationManager->mUnitManager->GetNumWorkers() : 0UL,
             inPlayer->mCivilizationManager->mUnitManager != NULL ? (long)inPlayer->mCivilizationManager->mUnitManager->mNumInProduction : -1L);
+        // the mean distance a gatherer carries over (its resource to its drop site), by resource, against the drop-off
+        // distance past which BuildSettlementFor asks for a settlement; the player's built drop sites
+        long theMean[kResourceIron + 1];
+        for (long r = 0; r <= kResourceIron; r++)
+            theMean[r] = theTrips[r] > 0 ? (long)(theTrip[r] / theTrips[r] + 0.5) : -1;
+        EECPTraceOut(inPlayer, "trips", "mean=%ld/%ld/%ld/%ld/%ld n=%ld/%ld/%ld/%ld/%ld no_storage=%ld dropoff=%ld settlements=%ld towncenters=%ld granaries=%ld",
+            theMean[kResourceFood], theMean[kResourceWood], theMean[kResourceStone], theMean[kResourceGold], theMean[kResourceIron],
+            theTrips[kResourceFood], theTrips[kResourceWood], theTrips[kResourceStone], theTrips[kResourceGold], theTrips[kResourceIron],
+            theNoStorage, inPlayer->mDropOffDistance, theDropSites[0], theDropSites[1], theDropSites[2]);
         EECPTraceOut(inPlayer, "food", "bush=%ld hunt=%ld fish=%ld farm=%ld other=%ld goals gather=%ld build=%ld move=%ld attack=%ld garrison=%ld none=%ld",
             theFood[0], theFood[1], theFood[2], theFood[3], theFood[4], theGoals[kGoalGather], theGoals[kGoalBuildRepair],
             theGoals[kGoalLocation], theGoals[kGoalAttackUnit], theGoals[kGoalLoadGarrison], theGoals[0]);
