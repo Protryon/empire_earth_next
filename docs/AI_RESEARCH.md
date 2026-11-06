@@ -1099,6 +1099,71 @@ units hold, with the overflow passed on to resources that have room.
   - check it against `aggressive` (also an army push) and on the cheat sets;
   - look at the wanted gatherers that are never filled: iron wanted 6-7 with 9 sites listed and 0 gathering (seed 3).
 
+### 8.22 Epoch pace, towers and raids (2026-11-06, EE-SIM)
+
+The scorecard (`tools/ai_scorecard.py` over `tools/sim_bench.py` runs) now gives time to every epoch, from the sim's
+`epoch_ms`. Test-only experiments go in behind `EE_AI_EXP` (per player, as `EE_AI_CHEATS`) and are tried head to
+head with `--env-vary EE_AI_EXP=x/-,-/x`. Honest balanced AIs on the demand split, Hard, Small, 60 minutes: 18/24
+reach the Stone Age at a median of 37 minutes, and none the Copper Age.
+
+**Income.** The trace's `income` line counts what `EEComputerPlayer::AddResource` brings in, per resource.
+- About 6 per gatherer per minute: food 6, wood 6.5, stone 4-5, gold and iron 4-5.
+- `gatheract`: gatherers spend 80% in the gather action and 18% walking (`Advance`).
+- The citizen's data (forage 5.2 s per unit, 15 carried) allows about 11.5 per minute at the bush. So, walking
+  included, the rate is about what the game intends.
+- What is small is the workforce: about 25-30 gatherers from 15 to 50 minutes.
+
+**The epoch reserve.** Head to head, 48 games each:
+
+| Experiment | Result | What happened |
+|---|---|---|
+| citizens exempt from the reserve | lost 7-37 | 2/48 reach the Stone Age; the food goes to citizens; armies collapse |
+| exempt below 30 / 40 / 50 workers | lost 14-18 / 12-20 / 7-25 | more citizens, smaller armies, 2-3x the citizens lost |
+
+The reserve is the right trade under AI-vs-AI pressure.
+
+**Pressure timing.** A `--vary` sweep of `epoch_pressure` start 0 / 0.15 / 0.3 and full 0.4 / 0.6 / 0.8 (8 seeds):
+- An earlier full brings the Stone Age forward: 21 minutes at start 0 / full 0.4, against 37 minutes.
+- The cost is economy: citizens stay about 17 instead of about 30.
+- The Copper Age stays out of reach in every cell (0-3/16).
+- Its cost is 1,584 food, 844 gold and 844 iron, with 3-4 gatherers on each of gold and iron.
+
+**Next for epoch pace:** gold and iron income before the Copper Age, through the demand model's tier 2 (the epoch
+advance's cost) as soon as the Stone Age is in.
+
+**Towers** (playtest: they stood too far out). `FindTowerSite` took the resource centres in list order and placed
+by gold or iron only. Now:
+- worked centres come first, nearest the town centre first;
+- a worked centre's food counts too.
+
+Head to head 19-22 (7 close). Median distance from the town centre was 10 tiles before and 9 after. In the sim,
+44/58 towers stood within 15 tiles before and 51/61 after, so the playtest complaint may be about tower range rather
+than distance.
+
+**Raids** (playtest: citizens stayed on a patch a raider camped on). The experiment "flee":
+- Trigger: an enemy player's unit hits a citizen.
+- Effect: a 30 s danger zone. Gatherers within 8 tiles run home, and none are assigned within 10 tiles.
+
+Head to head:
+
+| Version | Result |
+|---|---|
+| v1: flee from any enemy soldier within 8 tiles | lost 12-33 |
+| v2: zones from hits | lost 12-36 |
+| v3: not within 12 tiles of the town centre | lost 17-28 |
+| v4: at most 2 raiders | lost 17-28 |
+| v5: v4 plus up to 4 free soldiers within 30 tiles go for the raider | 20-24 (3 close) |
+
+- **Shipped:** v5, for raids by human players only. Against an AI attack group, running costs more work than it
+  saves lives.
+- **Testing:** the experiment "flee" turns it on against computer players.
+- **Not measurable here:** the human case cannot be measured AI-vs-AI.
+
+**Retaliation** (playtest: a clubman walking to its target took hits without answering). `Generic Attack.tai`'s
+`UnderAttack` retaliates only while `UnitIdleOrAttackingDefenselessBuilding` holds. That condition now also holds
+for a unit whose attack target is still out of reach when another unit hits it. Determinism holds (12/12 repeat
+pairs).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
