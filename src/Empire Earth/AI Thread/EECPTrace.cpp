@@ -308,6 +308,38 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         EECPTraceOut(inPlayer, "builders", "unbuilt=%ld built=%ld act build=%ld repair=%ld move=%ld other=%ld cls=%ld other_action=%ld other_hp=%ld",
             theBuilders[0], theBuilders[1], theBuilders[2], theBuilders[3], theBuilders[4], theBuilders[5], theBuildClass,
             theOtherAction, theOtherHealth);
+        // the pending unit requests other than citizens: class, count, affordable now, built producers, room
+        if (inPlayer->mCivilizationManager->mUnitManager != NULL && inPlayer->mTechnologies != NULL) {
+            EECPUnitManager* theUM = inPlayer->mCivilizationManager->mUnitManager;
+            char theList[200];
+            theList[0] = '\0';
+            size_t theUsed = 0;
+            long theShown = 0;
+            for (long e = 0; e < EEEpochCount() && theShown < 4; e++)
+                for (unsigned long k = 0; k < theUM->mRequests[e].size() && theShown < 4; k++) {
+                    const EECPUMRequest& theRequest = theUM->mRequests[e][k];
+                    long theClass = (long)theRequest.mUnitClass;
+                    if (theClass == kUnitTypeCitizen || theClass == kUnitTypeFemaleCitizen || gUnitClassTable[theClass] == NULL)
+                        continue;
+                    EETechTreeNode* theNode = inPlayer->mTechnologies->Get(gUnitClassTable[theClass]->mTechnology);
+                    long theProducers = 0;
+                    if (theNode != NULL)
+                        for (unsigned long u = 0; u < theNode->GetNumUnitClasses(); u++) {
+                            std::deque<EEComplexUnit*>* theBuilt = theUM->GetUnits(theNode->GetUnitClass(u));
+                            if (theBuilt != NULL && gUnitClassTable[theNode->GetUnitClass(u)]->IsBuilding())
+                                for (unsigned long b = 0; b < theBuilt->size(); b++)
+                                    theProducers += (*theBuilt)[b]->mIsBuilt ? 1 : 0;
+                        }
+                    int theAfford = theNode != NULL && inPlayer->CanAfford(theNode, theClass, 1) ? 1 : 0;
+                    int n = snprintf(theList + theUsed, sizeof(theList) - theUsed, " %ld:%lu:%d:%ld", theClass,
+                        (unsigned long)theRequest.mCount, theAfford, theProducers);
+                    if (n > 0 && theUsed + n < sizeof(theList))
+                        theUsed += n;
+                    theShown++;
+                }
+            long theRoom = inPlayer->GetPopulationLimit(0) - theUM->mNumInProduction - inPlayer->GetTotalPopulation(true, false);
+            EECPTraceOut(inPlayer, "pending", "room=%ld cls:n:afford:producers%s", theRoom, theList);
+        }
         EECPTraceOut(inPlayer, "econ", "want=%lu/%lu/%lu/%lu/%lu listed=%lu/%lu/%lu/%lu/%lu/%lu need=%ld/%ld/%ld/%ld/%ld",
             theRM->mWantedGatherers[2], theRM->mWantedGatherers[3], theRM->mWantedGatherers[4],
             theRM->mWantedGatherers[5], theRM->mWantedGatherers[6], (unsigned long)theRM->mGatherers[2].size(),
