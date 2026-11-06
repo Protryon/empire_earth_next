@@ -281,7 +281,7 @@ void EECPResearchManager::Research(long inID)
         this->mEpochIDs[theEpoch].insert(this->mEpochIDs[theEpoch].begin(), inID);
     else
         this->mEpochIDs[theEpoch].push_back(inID);
-    if (!EEIsEpochID(inID))
+    if (!EEIsEpochID(inID) || !EECPCheatOn(kAICheatEpochs))   // a paid epoch advance counts in the needs too
         this->mManager->mResourceManager->AddCosts(theNode, 1);
     EE_CP_TRACE(this->mPlayer, "research.request", "tech=%ld epoch=%ld", inID, theEpoch);
 }
@@ -457,6 +457,12 @@ bool EECPResearchManager::TryResearch(long inID)
                             if (((theUnit->mCommand ? theUnit->mCommand->mType : 0) == kActionIdle
                                  || (theUnit->mCommand ? theUnit->mCommand->mType : 0) == kActionWaitForGarrisonCost)
                                 && theUnit->mIsBuilt) {
+                                // an unaffordable tech stays queued for a later update (the original counted it as
+                                // started: QueueResearch returns without queuing, and the id was dropped; an epoch
+                                // advance was then never tried again: docs/AI_RESEARCH.md §8.7)
+                                if (!this->mPlayer->CanAfford(theNode, theUnit->GetUnitClass()->GetUnitType(), 1)) {
+                                    break;
+                                }
                                 theUnit->QueueResearch(inID, EEIsEpochID(inID));
                                 EE_CP_TRACE(this->mPlayer, "research.start", "tech=%ld at=%ld", inID, theClass);
                                 theResult = true;
@@ -466,6 +472,9 @@ bool EECPResearchManager::TryResearch(long inID)
                     } else {
                         EEComplexUnit* theUnit = *theIterator;
                         if (theUnit->mIsBuilt) {
+                            if (!this->mPlayer->CanAfford(theNode, theUnit->GetUnitClass()->GetUnitType(), 1)) {
+                                break;   // stays queued (see above)
+                            }
                             theUnit->QueueResearch(inID, EEIsEpochID(inID));
                             EE_CP_TRACE(this->mPlayer, "research.start", "tech=%ld at=%ld", inID, theClass);
                             theResult = true;

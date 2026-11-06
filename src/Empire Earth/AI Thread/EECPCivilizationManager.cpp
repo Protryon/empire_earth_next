@@ -267,7 +267,10 @@ void EECPCivilizationManager::AttemptEpochAdvance(unsigned long inTime)
         } else {
             this->mResearchManager->Research(theNode->mData->mID);
             ESDebugOut("EECPCivilizationManager::AttemptEpochAdvance advancing epoch at time %ld\n", inTime);
-            EE_CP_TRACE(this->mPlayer, "epoch.advance", "from=%ld to=%ld", theEpoch, theNext);
+            EE_CP_TRACE(this->mPlayer, "epoch.advance", "from=%ld to=%ld cost=%ld/%ld/%ld/%ld/%ld", theEpoch, theNext,
+                (long)theNode->GetCost(kResourceFood, kUnitTypeTownCenter, 1.0f), (long)theNode->GetCost(kResourceWood, kUnitTypeTownCenter, 1.0f),
+                (long)theNode->GetCost(kResourceStone, kUnitTypeTownCenter, 1.0f), (long)theNode->GetCost(kResourceGold, kUnitTypeTownCenter, 1.0f),
+                (long)theNode->GetCost(kResourceIron, kUnitTypeTownCenter, 1.0f));
             this->mAdvancingEpoch = true;
         }
     }
