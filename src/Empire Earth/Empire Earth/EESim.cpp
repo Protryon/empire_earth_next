@@ -17,6 +17,11 @@
 //   4. the report (JSON) and an exit without the game's shutdown.
 // EE_AI_TRACE=1: the EE-AI debug strings go to --trace (default stdout) as "debugstring EE-AI ..." lines, the
 // harness's session-log form (tools/harness/ai_trace.py extract/compare/summary read the file as it is).
+#ifdef _WIN32
+#include <winsock2.h>
+#else
+#include <unistd.h>
+#endif
 #include <windows.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -165,6 +170,7 @@ struct Options {
     std::string mLog;                                    // every debug string
     std::vector<std::string> mSets;                      // --set doc.key=value
     std::string mCheats, mPersonality;
+    long mPortOffset = -1;                               // -1: a free pair found at start
     bool mQuiet = false;
 };
 
@@ -848,7 +854,42 @@ const char* kUsage =
     "  --trace FILE           the EE-AI trace lines (with EE_AI_TRACE=1 or --ai-trace; default stdout)\n"
     "  --ai-trace             EE_AI_TRACE=1\n"
     "  --log FILE             every debug string of the game\n"
+    "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: a free pair from 35334 up)\n"
     "  --quiet                no progress on stderr\n";
+
+// a port offset whose TCP and UDP ports 33334/33335 are free now, from one the process id picks (the harness's
+// parallel games use 33334 + 16 k, k <= 32)
+long FreePortOffset()
+{
+#ifdef _WIN32
+    long theOffset = 2000 + 2 * (long)(GetCurrentProcessId() % 8000);
+    WSADATA theData;
+    if (WSAStartup(MAKEWORD(2, 2), &theData) != 0)
+        return theOffset;
+    for (int k = 0; k < 400; k++, theOffset = 2000 + (theOffset - 2000 + 2) % 16000) {
+        bool theFree = true;
+        for (int p = 0; p < 2 && theFree; p++)
+            for (int theType = SOCK_STREAM; theType <= SOCK_DGRAM && theFree; theType++) {
+                SOCKET s = socket(AF_INET, theType, 0);
+                if (s == INVALID_SOCKET)
+                    continue;
+                sockaddr_in a = {};
+                a.sin_family = AF_INET;
+                a.sin_port = htons((u_short)(33334 + p + theOffset));
+                a.sin_addr.s_addr = htonl(INADDR_ANY);
+                if (bind(s, (sockaddr*)&a, sizeof(a)) != 0)
+                    theFree = false;
+                closesocket(s);
+            }
+        if (theFree)
+            break;
+    }
+    WSACleanup();
+    return theOffset;
+#else
+    return 2000 + 2 * (long)(getpid() % 8000);
+#endif
+}
 
 void SetEnv(const char* inName, const std::string& inValue)
 {
@@ -870,9 +911,9 @@ void EESimPreferences()
     gGamePreferences.mSettings.mTextureBitDepth = 32;
     gGamePreferences.mSettings.mGameWindowWidth = 800;
     gGamePreferences.mSettings.mGameWindowHeight = 600;
+    gGamePreferences.mSettings.mAutoSaveInMilliseconds = 0;
     gGamePreferences.mSettings.mMinPTsPerSecond = sOptions.mPTRate;
     gGamePreferences.mSettings.mMaxPTsPerSecond = sOptions.mPTRate;
-    gGamePreferences.mSettings.mAutoSaveInMilliseconds = 0;
     gGamePreferences.mSettings.mMusicEnabled = false;
     gGamePreferences.mSettings.mWaitForVSync = false;
 }
@@ -956,6 +997,8 @@ int EESimMain(int argc, char** argv)
             sOptions.mLog = value();
         else if (a == "--quiet")
             sOptions.mQuiet = true;
+        else if (a == "--port-offset")
+            sOptions.mPortOffset = atol(value().c_str());
         else {
             fprintf(stderr, "EE-SIM: unknown option %s (--help)\n", a.c_str());
             return 64;
@@ -989,8 +1032,10 @@ int EESimMain(int argc, char** argv)
     gPlatSimSeedSet = 1;
     gPlatSimSeed = (uint32_t)sOptions.mSeed;
     gPlatSimNoHumanDefeat = sOptions.mNoHumanDefeat ? 1 : 0;
+    gPlatSimPortOffset = sOptions.mPortOffset >= 0 ? (int)sOptions.mPortOffset : (int)FreePortOffset();
     PlatDebugSetHandler(DebugHandler);
-    Note("EE-SIM seed %lu, %ld computers, cap %.0f game s", sOptions.mSeed, sOptions.mComputers, sOptions.mGameSeconds);
+    Note("EE-SIM seed %lu, %ld computers, cap %.0f game s, ports %d/%d", sOptions.mSeed, sOptions.mComputers,
+         sOptions.mGameSeconds, 33334 + gPlatSimPortOffset, 33335 + gPlatSimPortOffset);
 #ifdef _WIN32
     char theEmpty[1] = {0};
     int theResult = WinMain(GetModuleHandleA(NULL), NULL, theEmpty, SW_HIDE);

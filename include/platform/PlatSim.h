@@ -32,6 +32,8 @@ extern uint32_t gPlatSimSeed;
 // the idle local human is never taken out of the game nor defeated (the harness's --no-human-defeat):
 // EEWorld::RemovePlayerFromGame(false, local player) and EEPlayer::SetGameResult(2) on the local player do nothing
 extern int gPlatSimNoHumanDefeat;
+// added to the TCP protocol's fixed ports 33334/33335 (0 in the game), so simulations do not share them
+extern int gPlatSimPortOffset;
 extern volatile long gPlatSimNoHumanDefeatHits;
 
 // Where PlatDebugOutput's lines go: a handler instead of the debugger / stderr (NULL: the default)
