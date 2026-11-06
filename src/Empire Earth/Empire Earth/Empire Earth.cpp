@@ -9,6 +9,9 @@
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "platform/PlatMessage.h"
 void EETestFixtureStart();   // EETestFixture.cpp (TEST ONLY)
+void EESimPreferences();     // EESim.cpp (TEST ONLY: the headless simulation, platform/PlatSim.h)
+void EESimStart();
+#include "platform/PlatSim.h"
 unsigned long EEMenuWidth();    // port: the menus' resolution (below)
 unsigned long EEMenuHeight();
 #include "platform/PlatWindow.h"
@@ -2040,7 +2043,7 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
 {
     EEStartScreen theStartScreen(inInstance);
     FSFileSpec theRecordingFile;
-    if (EECreateInstanceMutex()) {
+    if (gPlatSimMode || EECreateInstanceMutex()) {   // the simulation: any number of copies at once
         // the window system (platform/PlatWindow.h): the window class "Empire Earth Expansion" with the game's icon,
         // its events pumped by the UI thread's TSThread::Receive (this thread: EEUserInterface::Run runs on it)
         PlatWindowSetAppName("Empire Earth Expansion", 0x66);
@@ -2078,15 +2081,21 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
             long theResult = gGamePreferences.Load();
 
             ESVERIFY_AT(theResult == keseOK, 3637);
+            if (gPlatSimMode)
+                EESimPreferences();
             EELoadNetworkSettings();
             EEShowSinglePlayerScreen();
-            theStartScreen.Start();
+            if (!gPlatSimMode)   // the simulation shows no splash window
+                theStartScreen.Start();
             bool theInitialized = EEInitializePart1();
-            theStartScreen.Stop();
+            if (!gPlatSimMode)
+                theStartScreen.Stop();
             if (theInitialized) {
-                EEPlayIntroMovies(theShowMovies == false);
+                EEPlayIntroMovies(gPlatSimMode || theShowMovies == false);
                 EEInitializePart2();
                 EETestFixtureStart();   // TEST ONLY: nothing unless EE_TEST_UI is set (EETestFixture.cpp)
+                if (gPlatSimMode)
+                    EESimStart();       // TEST ONLY: the simulation's driver (EESim.cpp)
                 if (EEParseCommandLine(inCommandLine)) {
                     long theResult;
                     {

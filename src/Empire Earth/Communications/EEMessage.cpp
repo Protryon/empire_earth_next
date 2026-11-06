@@ -4,6 +4,7 @@
 // (`EEMxxx(unsigned char*)`) and some labels are inline in ee/EEMessage.h: their out-of-line copies follow the message
 // factory (0xba41b..0xbadd0; SYNTHETIC markers at the end). ESVERIFY_AT carries the original's __LINE__.
 #include <windows.h>
+#include "platform/PlatSim.h"
 #include <string.h>
 #include <stdlib.h>
 #include <map>
@@ -8065,6 +8066,8 @@ void EEMStartLoading::Execute()
 {
     FSFileSpec theFile;
     UString theName;
+    if (gPlatSimSeedSet)   // TEST ONLY: the headless simulation's seed (platform/PlatSim.h; the harness's --seed pin)
+        this->mSeed = (long)gPlatSimSeed;
     gGameOptions.mLock->ReadLock();
     gGameOptions.Fn130272();
     gGameOptions.mLock->ReadUnlock();

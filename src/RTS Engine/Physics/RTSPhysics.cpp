@@ -13,6 +13,8 @@
 #include "lle/TMTimer.h"
 #include "lle/NEMessage.h"
 #include "lle/NESynchronousCommunications.h"
+#include "lle/NESynchronousServer.h"
+#include "platform/PlatSim.h"
 
 #include "ee/RTSGraphics.h"
 #include "ee/EEPhysics.h"
@@ -178,7 +180,25 @@ unsigned long RTSPhysics::Main(void* inPointer)
             UMSetFloatingPointRoundingMode(0);
         if (theResult == kErrorOK)
             thePhysics->HandleMessage(theMessage, theParameter1, theParameter2);
-        if (thePhysics->mTimerRunning && !thePhysics->mStopThread) {
+        if (thePhysics->mTimerRunning && !thePhysics->mStopThread && gPlatSimMode) {
+            // TEST ONLY: the headless simulation (platform/PlatSim.h) runs the game as fast as it goes: the next
+            // communications tick is sent at once (no timer, no send interval) and its physics ticks run back to back
+            EEPhysics* theEEPhysics = dynamic_cast<EEPhysics*>(thePhysics);
+            NESynchronousServer* theServer = dynamic_cast<NESynchronousServer*>(gCommunications);
+            if (!gPlatSimRun || theEEPhysics == NULL || theServer == NULL) {
+                PlatSleep(1);
+                continue;
+            }
+            theServer->SimCommunicationsTick();
+            thePhysics->Lock();
+            do {
+                thePhysics->Tick();
+                thePhysics->mTicksRun++;
+            } while (theEEPhysics->mTicksToProcess > 0 && thePhysics->mTimerRunning && !thePhysics->mStopThread);
+            if (gPlatSimAfterTick)
+                gPlatSimAfterTick();
+            thePhysics->Unlock();
+        } else if (thePhysics->mTimerRunning && !thePhysics->mStopThread) {
             unsigned long theTicks = (TMGetTime() - theLastTime) / thePhysics->mTimerInterval;
             if (theTicks > 1)
                 thePhysics->mTicksOwed += theTicks - 1;

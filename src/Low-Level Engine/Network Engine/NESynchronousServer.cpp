@@ -11,6 +11,7 @@
 #include "lle/NESynchronousServer.h"
 #include "lle/NEServer.h"
 #include "lle/NEMessageManager.h"
+#include "platform/PlatSim.h"
 
 // Release-build trace: compiled out, but its arguments are still evaluated
 inline void NESSTrace(unsigned long inA) {}
@@ -668,6 +669,20 @@ void NESynchronousServer::SendCommunicationsTick(bool inGenerateChecksum, bool i
     this->mSendCommunicationsTickLock->Leave();
 }
 
+// TEST ONLY (platform/PlatSim.h): the headless simulation's next communications tick, sent by the physics thread as
+// soon as it has run the last one. The rate is the configured maximum (what TuneForSlowCPU settles on when Min = Max
+// PTs per Second, the harness's --pt-rate pin) and the PTs per tick those of the default send interval (14 at 40 PTs
+// per second and 350 ms), never tuned by wall-clock response times, so every run cuts the game into the same ticks.
+void NESynchronousServer::SimCommunicationsTick()
+{
+    this->mSendCommunicationsTickLock->Enter();
+    this->mPTsPerSecond = (unsigned char)this->mMaxPhysicsTicksPerSecond;
+    unsigned long thePTs = (unsigned long)(this->mPTsPerSecond / (1000.0f / this->mDefaultSendInterval));
+    this->mPTsPerCT = thePTs < 0xff ? (unsigned char)thePTs : 0xfe;
+    this->mSendCommunicationsTickLock->Leave();
+    this->SendCommunicationsTick(false, false);
+}
+
 // FUNCTION: LLE 0x10048e31
 // Sends a message to one client slot
 long NESynchronousServer::SendMessageTo(unsigned char inSlot, NEMessage* inMessage, bool inGuaranteed)
@@ -1236,7 +1251,8 @@ unsigned long NESynchronousServer::Send(void* inServerObject)
             return 0;
         case 2:
             theServer->mSendThreadForceCTEvent->Clear();
-            theServer->SendCommunicationsTick(false, true);
+            if (!(gPlatSimMode && theServer->SimGameRunning()))   // the simulation's physics thread sends them
+                theServer->SendCommunicationsTick(false, true);
             theServer->mMessageManager->mForceCTWhenAllResponded = false;
             if (theSendInterval == kTSWaitInfinite)
                 theTimeout = kTSWaitInfinite;
@@ -1248,6 +1264,11 @@ unsigned long NESynchronousServer::Send(void* inServerObject)
             theLastTime = theNow;
             break;
         case kTSWaitTimeout:
+            if (gPlatSimMode && theServer->SimGameRunning()) {   // the simulation's physics thread sends them
+                theTimeout = 50;
+                theLastTime = theNow;
+                break;
+            }
             if (theServer->mCurrentCommunicationsTick >= theServer->mNextChecksumCT) {
                 theServer->SendCommunicationsTick(true, true);
                 theServer->mNextChecksumCT += theServer->mChecksumInterval;
