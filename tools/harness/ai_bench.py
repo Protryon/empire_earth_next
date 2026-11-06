@@ -66,9 +66,15 @@ def run_one(args, run, out, instance=None):
     log = out / 'runs' / f"{run['id']}.harness.log"
     with log.open('w', encoding='utf-8') as stream:
         rc = subprocess.run(cmd, stdout=stream, stderr=subprocess.STDOUT, env=env, cwd=ROOT).returncode
+    return collect(run, out, rc, round(time.monotonic() - t0))
+
+
+def collect(run, out, rc=None, wall_s=None):
+    """A run's result from its harness log (runs/<id>.harness.log) and evidence: the game's summary and the trace's."""
+    log = out / 'runs' / f"{run['id']}.harness.log"
     text = log.read_text(encoding='utf-8', errors='replace')
     m = re.search(r'^EVIDENCE (.+)$', text, re.M)
-    result = dict(run, returncode=rc, wall_s=round(time.monotonic() - t0), evidence=m and m[1].strip())
+    result = dict(run, returncode=rc, wall_s=wall_s, evidence=m and m[1].strip())
     if not m:
         result['error'] = 'no EVIDENCE line (see the harness log)'
         return result
@@ -164,9 +170,26 @@ def main():
     ap.add_argument('--jobs', type=int, default=1,
                     help='games at once (game_session --instance 1..N; 32 at most); the machine needs a core or two per game')
     ap.add_argument('--report', type=pathlib.Path, help='print the summary of an earlier benchmark and exit')
+    ap.add_argument('--rescan', type=pathlib.Path,
+                    help='rebuild results.json/csv of an earlier benchmark from its kept logs (no games), then report')
     a = ap.parse_args()
     if a.report:
         report(a.report)
+        return
+    if a.rescan:
+        old = {}
+        if (a.rescan / 'results.json').exists():
+            old = {r['id']: r for r in json.loads((a.rescan / 'results.json').read_text(encoding='utf-8'))}
+        results = []
+        for log in sorted((a.rescan / 'runs').glob('*.harness.log')):
+            rid = log.name[:-len('.harness.log')]
+            m = re.match(r's(\d+)-(.*)-(\w+)-(Easy|Medium|Hard)-(\d+)ai-(.+)-r(\d+)$', rid)
+            run = old.get(rid) or dict(id=rid, seed=int(m[1]), map=m[2] or '-', size=m[3], difficulty=m[4],
+                                       ai=int(m[5]), cheats=m[6], repeat=int(m[7]))
+            run = {k: run[k] for k in ('id', 'seed', 'map', 'size', 'difficulty', 'ai', 'cheats', 'repeat')}
+            results.append(collect(run, a.rescan))
+        write_reports(a.rescan, results)
+        report(a.rescan)
         return
     out = OUT / a.name
     (out / 'runs').mkdir(parents=True, exist_ok=True)
@@ -191,8 +214,12 @@ def main():
             with lock:
                 instance = slots.pop()
             try:
-                time.sleep(3 * (n % a.jobs) if n < a.jobs else 0)
-                return n, run_one(a, runs[n], out, instance)
+                time.sleep(10 * (n % a.jobs) if n < a.jobs else 0)
+                result = run_one(a, runs[n], out, instance)
+                if not result.get('outcome'):   # a session that failed before the game (seen: a message form over
+                    print(f"== {runs[n]['id']}: no outcome, retried once", flush=True)   # the main menu at start)
+                    result = run_one(a, runs[n], out, instance)
+                return n, result
             finally:
                 with lock:
                     slots.append(instance)

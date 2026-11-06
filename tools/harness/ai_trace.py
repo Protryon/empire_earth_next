@@ -118,7 +118,8 @@ def summary(path):
         if e['event'] == 'start':
             p['start'] = dict(e['fields'], t=e['t'])
         elif e['event'] == 'epoch.advance':
-            p['epochs'].append(dict(t=e['t'], **{k: int(v) for k, v in e['fields'].items()}))
+            p['epochs'].append(dict(t=e['t'], **{k: int(v) if re.fullmatch(r'-?\d+', v) else v
+                                                 for k, v in e['fields'].items()}))
         elif e['event'] == 'attack.group' and e['fields'].get('kept') == '1' and p['first_attack_ms'] is None:
             p['first_attack_ms'] = e['t']
         elif e['event'] == 'stats':
