@@ -49,6 +49,12 @@ def split(text):
     return out
 
 
+def slots_index(slot):
+    """the slot's number (NAME-k -> k; a single slot -> 0)"""
+    tail = slot.rsplit("-", 1)[-1]
+    return int(tail) if tail.isdigit() else 0
+
+
 def run_one(run, args, slots, out):
     slot = slots.get()
     try:
@@ -72,16 +78,24 @@ def run_one(run, args, slots, out):
         for s in run["sets"]:
             opts += ["--set", s]
         opts += args.sim_arg
+        # each slot its own TCP ports (sims picking a free pair at once could both take one, and the local server
+        # then failed to publish: a crash at the main menu)
+        if not any(o == "--port-offset" for o in args.sim_arg):
+            opts += ["--port-offset", str(2000 + 64 * slots_index(slot))]
         t0 = time.monotonic()
         env = dict(os.environ, **run["env"])
-        with open(err, "w", encoding="utf-8") as f:
-            rc = subprocess.run(sim.command(args.exe, stage, opts, cfg), stdout=subprocess.DEVNULL, stderr=f,
-                                env=env).returncode
+        for attempt in range(2):   # one retry of a run that died without a report (a start-up fault)
+            report.unlink(missing_ok=True)
+            with open(err, "w", encoding="utf-8") as f:
+                rc = subprocess.run(sim.command(args.exe, stage, opts, cfg), stdout=subprocess.DEVNULL, stderr=f,
+                                    env=env).returncode
+            try:
+                rep = json.loads(report.read_text())
+                break
+            except (OSError, ValueError):
+                rep = dict(outcome="no-report")
+                print(f"== {rid} [slot {slot}]: rc {rc}, no report" + (": retrying" if attempt == 0 else ""), flush=True)
         wall = time.monotonic() - t0
-        try:
-            rep = json.loads(report.read_text())
-        except (OSError, ValueError):
-            rep = dict(outcome="no-report")
         print(f"== {rid} [slot {slot}]: rc {rc} {rep.get('outcome')} game s {rep.get('game_ms', 0) // 1000} "
               f"in {wall:.1f} s (game part {rep.get('wall_seconds_game', 0):.1f} s)", flush=True)
         return dict(run, rc=rc, wall=round(wall, 2), report=rep)
