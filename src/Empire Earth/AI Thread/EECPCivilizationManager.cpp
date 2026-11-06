@@ -1063,8 +1063,11 @@ long EECPCivilizationManager::Save(unsigned long inMajorVersion, unsigned long i
     theResult = outFile.Write(this->mLastCountCheck);
     if (theResult != kErrorOK)
         return theResult;
-    this->mBuildingCountsChecked = true;
-    theResult = outFile.Write(this->mBuildingCountsChecked);
+    // port: the original set mBuildingCountsChecked here before writing it, so saving changed the game (the next
+    // Update skipped the building-count check and moved its timer: a saved game played on differently from an unsaved
+    // one; PORT_LEARNINGS "The headless simulation"). The file still gets true; the running game is left alone.
+    bool theChecked = true;
+    theResult = outFile.Write(theChecked);
     if (theResult != kErrorOK)
         return theResult;
     theResult = outFile.Write(this->mEpochAdvanceEnabled);
