@@ -111,7 +111,7 @@ def summary(path):
                                                    prof_max_us=0))
     for line in trace(path):
         e = parse(line)
-        if e is None:
+        if e is None or e['manager'] == 'sim':   # the sim hash lines (p0) are for compare only
             continue
         p = players[e['player']]
         p['events'][e['event']] += 1

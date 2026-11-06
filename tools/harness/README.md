@@ -37,10 +37,12 @@ game write one `EE-AI` debug string per computer-player decision (`ee/EECPTrace.
 named AI cheats (`none` turns every one off; TEST ONLY). `ai_trace.py extract|compare|summary` reads them from a
 session log; `compare` is the determinism check (two runs of one seed must print the same lines).
 `ai_bench.py` runs a matrix of seeded headless AI games with the trace on and writes `build/boot/ai_bench/<name>/`
-(`results.json`, `results.csv`, the session logs; `--repeat 2` also compares the traces):
+(`results.json`, `results.csv`, the session logs; `--repeat 2` also compares the traces). `--jobs N` runs N games
+at once as `game_session.py --instance 1..N` (own stage, config.ini and ports each): 8 15-minute games take ~3.5 min
+with 4 jobs instead of ~13, and same-seed pairs still match:
 
 ```
-python -I tools/harness/ai_bench.py --name stage0 --seeds 2,3 --cheats all,none --repeat 2
+python -I tools/harness/ai_bench.py --name stage0 --seeds 2,3 --cheats all,none --repeat 2 --jobs 4
 ```
 
 Requirements: the two game installs (Art of Conquest and the original Empire Earth; only read), MSYS2

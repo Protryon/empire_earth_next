@@ -19,6 +19,7 @@ pass --no-human-defeat, which keeps it in, so the computers play on once it has 
 the game ends there). Its population still pulls the AI pop cap down unless the cheat set leaves out popband.
 """
 import argparse
+import concurrent.futures
 import csv
 import itertools
 import json
@@ -41,7 +42,7 @@ def split(value, sep=','):
     return [v.strip() for v in value.split(sep) if v.strip()]
 
 
-def run_one(args, run, out):
+def run_one(args, run, out, instance=None):
     env = dict(os.environ, EE_AI_TRACE='1')
     cheats = run['cheats'].replace('+', ',')
     if cheats == 'all':
@@ -58,7 +59,9 @@ def run_one(args, run, out):
         cmd.append('--no-human-defeat')
     if args.build_dir:
         cmd += ['--build-dir', str(args.build_dir)]
-    print(f"== {run['id']}: {' '.join(cmd[3:])} (EE_AI_CHEATS={env.get('EE_AI_CHEATS', 'all')})", flush=True)
+    if instance is not None:   # --jobs: game_session's parallel instance (own stage, config.ini, ports, mutex bypass)
+        cmd += ['--instance', str(instance)]
+    print(f"== {run['id']}{f' [instance {instance}]' if instance else ''}: {' '.join(cmd[3:])} (EE_AI_CHEATS={env.get('EE_AI_CHEATS', 'all')})", flush=True)
     t0 = time.monotonic()
     log = out / 'runs' / f"{run['id']}.harness.log"
     with log.open('w', encoding='utf-8') as stream:
@@ -158,6 +161,8 @@ def main():
     ap.add_argument('--human-defeat', action='store_true',
                     help='let the idle human be defeated (that ends the game); default: --no-human-defeat')
     ap.add_argument('--build-dir', type=pathlib.Path)
+    ap.add_argument('--jobs', type=int, default=1,
+                    help='games at once (game_session --instance 1..N; 32 at most); the machine needs a core or two per game')
     ap.add_argument('--report', type=pathlib.Path, help='print the summary of an earlier benchmark and exit')
     a = ap.parse_args()
     if a.report:
@@ -167,12 +172,34 @@ def main():
     (out / 'runs').mkdir(parents=True, exist_ok=True)
     cells = list(itertools.product([int(s, 0) for s in split(a.seeds)], split(a.maps), split(a.sizes),
                                    split(a.difficulty), [int(n) for n in split(a.ai)], split(a.cheats)))
-    results = []
+    runs = []
     for (seed, map_type, size, difficulty, ai, cheats), k in itertools.product(cells, range(a.repeat)):
         rid = f"s{seed}-{map_type.replace(' ', '_')}-{size}-{difficulty}-{ai}ai-{cheats}-r{k}".replace('--', '-')
-        run = dict(id=rid, seed=seed, map=map_type, size=size, difficulty=difficulty, ai=ai, cheats=cheats, repeat=k)
-        results.append(run_one(a, run, out))
-        write_reports(out, results)
+        runs.append(dict(id=rid, seed=seed, map=map_type, size=size, difficulty=difficulty, ai=ai, cheats=cheats, repeat=k))
+    results = [None] * len(runs)
+    if a.jobs <= 1:
+        for n, run in enumerate(runs):
+            results[n] = run_one(a, run, out)
+            write_reports(out, [r for r in results if r])
+    else:
+        # parallel instances 1..jobs, each a free slot taken by the next run; the starts are staggered so the
+        # sessions do not stage at the same moment
+        slots = list(range(a.jobs, 0, -1))
+        lock = __import__('threading').Lock()
+
+        def work(n):
+            with lock:
+                instance = slots.pop()
+            try:
+                time.sleep(3 * (n % a.jobs) if n < a.jobs else 0)
+                return n, run_one(a, runs[n], out, instance)
+            finally:
+                with lock:
+                    slots.append(instance)
+        with concurrent.futures.ThreadPoolExecutor(a.jobs) as ex:
+            for n, result in ex.map(work, range(len(runs))):
+                results[n] = result
+                write_reports(out, [r for r in results if r])
     determinism = {}
     if a.repeat > 1:
         by_cell = {}
