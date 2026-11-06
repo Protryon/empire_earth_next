@@ -1143,8 +1143,17 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
     this->mLastDamagedTime = gPhysics->mGameTime;
     if (inUnit->mUnitClass->IsLandBuilding())
         this->mBuildingDamaged = true;
-    if (theCategory == kUnitCategoryNavalCitizen || theCategory == kUnitCategoryLandCitizen)
+    if (theCategory == kUnitCategoryNavalCitizen || theCategory == kUnitCategoryLandCitizen) {
         this->mCitizenDamaged = true;
+        // new: a hit by a human player's unit marks a danger zone the gatherers run from (EECPResourceManager.cpp
+        // EECPRMNoteDanger; against computer players only with the experiment "flee": docs/AI_RESEARCH.md §8.22)
+        if (inPlayer > 0 && theCategory == kUnitCategoryLandCitizen
+            && this->mCivilizationManager != NULL && this->mCivilizationManager->mResourceManager != NULL
+            && (unsigned long)inPlayer < gWorld.mNumPlayers && gWorld.mPlayers[inPlayer] != NULL
+            && !this->IsAlly(gWorld.mPlayers[inPlayer])
+            && (gWorld.mPlayers[inPlayer]->IsHuman() || EECPExperiment(this, "flee")))
+            EECPRMNoteDanger(this->mCivilizationManager->mResourceManager, inUnit, (unsigned long)inPlayer);
+    }
 }
 
 // FUNCTION: EXE 0x42f1c8

@@ -41,6 +41,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGGather.h"
+#include "ee/EEUGLocation.h"
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUGLoadContainer.h"
 #include "ee/EEUGLoadGarrison.h"
@@ -1015,6 +1016,8 @@ EEUnit* EECPResourceManager::FindResourceTarget(long inResource, EEComplexUnit* 
             if (theUnit != NULL && static_cast<EETile*>(theUnit->mTile)->IsVisibleTo(thePlayer) && gWorld.GetResourceUsers(theUnit) < theLimit
                 && theUnit->mResourceAmount > 0 && theUnit->mTile->mTerrainType != kTerrainDeepWater) {
                 theOK = !theBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY());
+                if (theOK)
+                    theOK = !EECPRMResourceInDanger(this, theUnit->GetTileX(), theUnit->GetTileY());
                 if (theOK) {
                     EEPlayer** thePlayers = gWorld.mPlayers;
                     for (unsigned long j = 0; j < gWorld.mNumPlayers && theOK; j++, thePlayers++) {
@@ -1834,6 +1837,141 @@ void EECPResourceManager::RebalanceGatherers()
     }
 }
 
+// New (docs/AI_RESEARCH.md §8.22): gatherers run from a harassing raid. Where a human player's unit (a computer
+// player's only with the experiment "flee") hits a citizen (EEComputerPlayer::DamageTaken -> EECPRMNoteDanger) is a danger zone for
+// kDangerMs: the gatherers within kFleeRange tiles of it go back towards the town centre and onto the idle list, and
+// FindResourceTarget sends nobody to a resource within kDangerRange tiles of it until it expires.
+static const long kFleeRange = 8;
+static const long kDangerRange = 10;
+static const unsigned long kDangerMs = 30000;
+static const long kHomeRange = 12;
+static const long kMaxRaiders = 2;
+static const long kDefendRange = 30;
+static const unsigned long kDefenders = 4;
+
+static bool EECPRMInDanger(EECPResourceManager* inManager, long inX, long inY, long inRange);
+
+void EECPRMNoteDanger(EECPResourceManager* inManager, EEUnit* inCitizen, unsigned long inAttacker)
+{
+    // a harassing raid only (kMaxRaiders soldiers of the attacker's within kDangerRange): against an attack group
+    // running costs more work than it saves lives (docs/AI_RESEARCH.md §8.22)
+    if (inAttacker == 0 || inAttacker >= gWorld.mNumPlayers || gWorld.mPlayers[inAttacker] == NULL)
+        return;
+    long theRaiders = 0;
+    for (EEUnit* theUnit = gWorld.mPlayers[inAttacker]->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0) || theUnit->mStats->mAttack == 0.0f
+            || theUnit->mUnitClass->IsLandBuilding())
+            continue;
+        long theCategory = theUnit->mUnitClass->mCategory;
+        if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen || theCategory == kUnitCategoryAmbient
+            || theCategory == kUnitCategoryResource || theCategory == kUnitCategoryProjectile)
+            continue;
+        long theDX = theUnit->GetTileX() - inCitizen->GetTileX(), theDY = theUnit->GetTileY() - inCitizen->GetTileY();
+        if (theDX * theDX + theDY * theDY <= kDangerRange * kDangerRange && ++theRaiders > kMaxRaiders)
+            return;
+    }
+    EECPBuildManager* theBuildManager = inManager->mManager->mBuildManager;
+    if (theBuildManager != NULL && theBuildManager->mTownCenterTile.mX != -10000) {
+        long theDX = inCitizen->GetTileX() - theBuildManager->mTownCenterTile.mX;
+        long theDY = inCitizen->GetTileY() - theBuildManager->mTownCenterTile.mY;
+        if (theDX * theDX + theDY * theDY < kHomeRange * kHomeRange)
+            return;   // at home: the town's defence answers, the gatherers keep working
+    }
+    bool theNew = !EECPRMInDanger(inManager, inCitizen->GetTileX(), inCitizen->GetTileY(), kDangerRange);
+    inManager->mDangerZones.push_back(std::pair<U2DPoint<long>, unsigned long>(
+        U2DPoint<long>(inCitizen->GetTileX(), inCitizen->GetTileY()), gPhysics->mGameTime));
+    // a new zone: up to kDefenders of the nearest soldiers within kDefendRange tiles that are not attacking already
+    // go for the raider (the town defence plans its aid by town threat, on a timer: a raider on an outer patch went
+    // unanswered for minutes)
+    EEComplexUnit* theRaider = inCitizen->mComplexUnit != NULL ? inCitizen->mComplexUnit->mLastAttacker : NULL;
+    if (!theNew || theRaider == NULL || !(theRaider->mHitPoints > 0))
+        return;
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    std::vector<std::pair<long, EEComplexUnit*> > theNear;
+    for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        if (theComplex == NULL || !(theUnit->mHitPoints > 0) || theUnit->mStats->mAttack == 0.0f
+            || theUnit->mUnitClass->IsLandBuilding() || theComplex->mIsDisabled || theComplex->mIsDetachedFromAI)
+            continue;
+        long theCategory = theUnit->mUnitClass->mCategory;
+        if (theCategory != kUnitCategoryLand && theCategory != kUnitCategoryLandMilitaryHero)
+            continue;
+        if (theComplex->mActiveGoal != NULL && theComplex->mActiveGoal->mKind == kGoalAttackUnit)
+            continue;
+        long theDX = theUnit->GetTileX() - theRaider->GetTileX(), theDY = theUnit->GetTileY() - theRaider->GetTileY();
+        long theDistance = theDX * theDX + theDY * theDY;
+        if (theDistance <= kDefendRange * kDefendRange)
+            theNear.push_back(std::pair<long, EEComplexUnit*>(theDistance, theComplex));
+    }
+    std::stable_sort(theNear.begin(), theNear.end(),
+                     [](const std::pair<long, EEComplexUnit*>& a, const std::pair<long, EEComplexUnit*>& b) { return a.first < b.first; });
+    unsigned long theSent = 0;
+    for (unsigned long k = 0; k < theNear.size() && theSent < kDefenders; k++, theSent++) {
+        EEComplexUnit* theUnit = theNear[k].second;
+        theUnit->ClearGoalQueue(0);
+        theUnit->SetGoal(new EEUGAttackUnit(theUnit, theRaider, false, false), 0, 0);
+        theUnit->StartAction(kActionPrepareToMove);
+        theUnit->GetUnitClass()->ActionChanged(theUnit);
+    }
+    EE_CP_TRACE(thePlayer, "raid.defend", "sent=%lu near=%lu raider=%lu", theSent, (unsigned long)theNear.size(),
+                (unsigned long)theRaider->GetUnitID());
+}
+
+static bool EECPRMInDanger(EECPResourceManager* inManager, long inX, long inY, long inRange)
+{
+    for (unsigned long z = 0; z < inManager->mDangerZones.size(); z++) {
+        long theDX = inManager->mDangerZones[z].first.mX - inX, theDY = inManager->mDangerZones[z].first.mY - inY;
+        if (theDX * theDX + theDY * theDY <= inRange * inRange)
+            return true;
+    }
+    return false;
+}
+
+bool EECPRMResourceInDanger(EECPResourceManager* inManager, long inX, long inY)
+{
+    return EECPRMInDanger(inManager, inX, inY, kDangerRange);
+}
+
+static void EECPRMFleeRaids(EECPResourceManager* inManager)
+{
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    EECPBuildManager* theBuildManager = inManager->mManager->mBuildManager;
+    std::vector<std::pair<U2DPoint<long>, unsigned long> >& theZones = inManager->mDangerZones;
+    for (unsigned long z = 0; z < theZones.size();)
+        if (gPhysics->mGameTime - theZones[z].second > kDangerMs)
+            theZones.erase(theZones.begin() + z);
+        else
+            z++;
+    if (theZones.empty() || theBuildManager == NULL || theBuildManager->mTownCenterTile.mX == -10000)
+        return;
+    GE2DPoint theHome((float)theBuildManager->mTownCenterTile.mX, (float)theBuildManager->mTownCenterTile.mY);
+    unsigned long theFled = 0;
+    for (long r = 2; r < 7; r++) {
+        std::vector<EEComplexUnit*> theRun;
+        for (unsigned long k = 0; k < inManager->mGatherers[r].size(); k++) {
+            EEComplexUnit* theUnit = inManager->mGatherers[r][k];
+            if (theUnit->mIsDisabled || theUnit->mIsDetachedFromAI || !(theUnit->mHitPoints > 0)
+                || theUnit->GetUnitClass()->mCategory != kUnitCategoryLandCitizen)
+                continue;
+            if (EECPRMInDanger(inManager, theUnit->GetTileX(), theUnit->GetTileY(), kFleeRange))
+                theRun.push_back(theUnit);
+        }
+        for (unsigned long k = 0; k < theRun.size(); k++) {
+            EEComplexUnit* theUnit = theRun[k];
+            theUnit->Reference();
+            inManager->AddIdleGatherer(theUnit);   // off this resource's list, onto the idle list
+            theUnit->ClearGoalQueue(0);
+            theUnit->SetGoal(new EEUGLocation(theHome, true, true, false, 0.0f, false, false), 0, 0);
+            theUnit->StartAction(kActionPrepareToMove);
+            theUnit->GetUnitClass()->ActionChanged(theUnit);
+            theUnit->Dereference();
+            theFled++;
+        }
+    }
+    if (theFled > 0)
+        EE_CP_TRACE(thePlayer, "flee", "n=%lu zones=%lu", theFled, (unsigned long)theZones.size());
+}
+
 // FUNCTION: EXE 0x491d34
 // Periodically recomputes the wanted gatherers, reassigns gatherers and prunes depleted animals and fish;
 // initialises the drop site classes and timers on the first call
@@ -1862,6 +2000,7 @@ void EECPResourceManager::Update(unsigned long inTime)
             this->UpdateWantedGatherers();
         this->mNextWantedGatherersTime = inTime + 5000;
     }
+    EECPRMFleeRaids(this);   // a no-op without danger zones
     if (inTime >= this->mNextAssignGatherersTime) {
         if (this->mNextAssignGatherersTime > 0)
             this->AssignGatherers();

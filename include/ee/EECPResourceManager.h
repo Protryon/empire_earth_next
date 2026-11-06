@@ -81,6 +81,14 @@ public:
     bool mB180[7];                          // +0x180 per resource (Reset clears it)
     bool mInitialized;                      // +0x187 (Restore clears it)
     bool mSettlementsEnabled;               // +0x188
+    // new (the experiment "flee"): where an enemy player's unit hit one of the citizens, and the game ms it did (not
+    // saved: a loaded game starts with none)
+    std::vector<std::pair<U2DPoint<long>, unsigned long> > mDangerZones;
 };
+
+// new (the experiment "flee", EECPResourceManager.cpp): a citizen hit by an enemy player's unit marks a danger zone;
+// whether a resource tile lies in one (FindResourceTarget skips it)
+void EECPRMNoteDanger(EECPResourceManager* inManager, EEUnit* inCitizen, unsigned long inAttacker);
+bool EECPRMResourceInDanger(EECPResourceManager* inManager, long inX, long inY);
 
 #endif
