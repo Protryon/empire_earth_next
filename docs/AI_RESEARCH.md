@@ -1228,6 +1228,39 @@ Fixes, checked in EE-SIM (Small Hard, 2 AIs, seeds 2-13, 45 and 90 min, against 
 **Next:** the town defends itself without an army. Garrison the citizens, or pull them back, when an attack group
 reaches the base.
 
+### 8.25 The militia (2026-11-06, EE-SIM)
+
+Garrisoning is no hiding place: `EEComplexUnit::GarrisonUnit` uses the citizen up. The town centre has no attack
+of its own. A citizen is about a third of a clubman: 65 hit points and attack 5, against 135 and 8. So the town
+defends itself with its citizens.
+
+**The militia** (`EECPRMMilitia`; `aipersonalities.yaml` `military.militia`, on by default). When enemy soldiers
+hit a citizen, the AI acts at most once every 4 s:
+- it takes the attackers within 10 tiles;
+- it calls the soldiers within 30 tiles that are not attacking already;
+- it adds the nearest citizens within 10 tiles, as many as needed for 1.5 times the attackers' strength
+  (strength = summed hit points x summed attack);
+- if that much can be raised, they fight, each defender taking the nearest attacker;
+- if not, the citizens run: to the town centre, or, when the attack is there, to the drop site farthest from it.
+  The spot becomes a §8.22 danger zone.
+
+It replaces the §8.22 flee and raid response, and it acts against computer attackers too.
+`EE_AI_EXP=nomilitia` turns it off.
+
+Head to head, both seats:
+
+| Version | Seeds | Result | Citizens lost (all / by 20 min) |
+|---|---|---|---|
+| v1: every citizen within 10 tiles fights | 2-25 | lost 18-25, 5 close | 13.5 against 17.6 / 1.5 against 4.8 |
+| v2: soldiers first, then only the citizens the odds need | 2-25 | won 29-16, 3 close | 14.3 against 24.5 / 2.0 against 5.9 |
+| v2 | 26-49 | won 25-14, 9 close | 11.9 against 23.6 / 1.9 against 4.5 |
+
+- **v1 fought 2,151 times in 48 games:** whole work crews chased single scouts and lost the gathering time.
+- **v2 at 40 min:** 42.7-45.0 citizens and 9.8-11.2 soldiers, against 29.4-33.4 and 4.6-6.1.
+- **v2 reaches the Stone Age more often:** 36 of 48 and 41 of 48 players, against 31 and 31.
+
+Defence was the bottleneck (§8.23). Next: retry `payback` and the boom with the militia on.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
