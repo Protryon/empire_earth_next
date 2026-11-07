@@ -755,6 +755,37 @@ bool EECPBuildManager::FindAntiAirSite(EETileCoordinate& outTile)
 
 // FindCenterSite's sort of the resource centres (8 bytes by value to std::sort 0x6c120; its operator() sits among the sort
 // COMDATs) (provisional name)
+// New: a resource centre's squared tile distance from the town centre (1 << 40 with no town centre or unit)
+static long long EECPBMHomeDistance2(EECPBuildManager* inManager, EECPResourceCenter* inCenter)
+{
+    EEUnit* theUnit = inCenter->mUnit != NULL ? static_cast<EEUnit*>(inCenter->mUnit)
+        : inCenter->mUnits.empty() ? NULL : inCenter->mUnits[0];
+    if (theUnit == NULL || inManager->mTownCenterTile.mX == -10000)
+        return 1LL << 40;
+    long long theDX = theUnit->GetTileX() - inManager->mTownCenterTile.mX;
+    long long theDY = theUnit->GetTileY() - inManager->mTownCenterTile.mY;
+    return theDX * theDX + theDY * theDY;
+}
+
+// New: the tiles from the town centre within which FindCenterSite fills the centres first
+static const long long kHomeSiteRange = 20;
+
+// New: orders resource centres by their squared tile distance from the town centre (stable: equal distances
+// keep their order; centres with no unit go last)
+static void EECPBMNearestHomeFirst(EECPBuildManager* inManager, std::vector<EECPResourceCenter*>& ioCenters)
+{
+    if (inManager->mTownCenterTile.mX == -10000)
+        return;
+    std::vector<std::pair<long long, unsigned long> > theOrder;
+    for (unsigned long i = 0; i < ioCenters.size(); i++)
+        theOrder.push_back(std::pair<long long, unsigned long>(EECPBMHomeDistance2(inManager, ioCenters[i]), i));
+    std::sort(theOrder.begin(), theOrder.end());
+    std::vector<EECPResourceCenter*> theSorted;
+    for (unsigned long i = 0; i < theOrder.size(); i++)
+        theSorted.push_back(ioCenters[theOrder[i].second]);
+    ioCenters.swap(theSorted);
+}
+
 struct EECPBMCenterLess {
     EECPBMCenterLess(long inResource, long inPlayerID) : mResource(inResource), mPlayerID(inPlayerID) {}
     // inline (COMDAT 0x6d510 among the sort COMDATs): the centre whose units stand in fewer area effects of kind
@@ -835,7 +866,14 @@ bool EECPBuildManager::FindCenterSite(long inUnitClass, EETileCoordinate& outTil
         }
         unsigned long theCount = theCenters.size();
         if (theCount != 0) {
-            std::sort(theCenters.begin(), theCenters.end(), EECPBMCenterLess(theResource, this->mPlayer->mPlayerID));
+            // port: the centres within kHomeSiteRange tiles of the town centre first, then the rest, each by the
+            // original's area-effect order and nearest first among equals (the original spread temples over every
+            // centre: they stood 30+ tiles out, undefended; playtest 2026-11-06)
+            EECPBMNearestHomeFirst(this, theCenters);
+            std::vector<EECPResourceCenter*>::iterator theFar = std::stable_partition(theCenters.begin(), theCenters.end(),
+                [this](EECPResourceCenter* inCenter) { return EECPBMHomeDistance2(this, inCenter) <= kHomeSiteRange * kHomeSiteRange; });
+            std::stable_sort(theCenters.begin(), theFar, EECPBMCenterLess(theResource, this->mPlayer->mPlayerID));
+            std::stable_sort(theFar, theCenters.end(), EECPBMCenterLess(theResource, this->mPlayer->mPlayerID));
             for (unsigned long j = 0; j < theCount && !theResult; j++) {
                 theCenter = theCenters[j];
                 theResult = theCenter->FindBuildSite(inUnitClass, theTile);
@@ -893,24 +931,19 @@ bool EECPBuildManager::FindGranarySite(EETileCoordinate& outTile)
 // Common found result and loop exit preserve the original 117-byte body.
 bool EECPBuildManager::FindProductionSite(long inUnitClass, EETileCoordinate& outTile)
 {
-    unsigned long theIndex = this->mNextResourceCenter;
-    unsigned long theCount = this->mPlayer->GetNumResourceCenters();
-    bool theFound = false;
-    for (unsigned long i = 0; i < theCount; i++) {
-        EECPResourceCenter* theCenter = this->mPlayer->GetResourceCenter(theIndex);
-        if (theCenter != NULL && theCenter->mIsActive && theCenter->FindBuildSite(inUnitClass, outTile))
-            theFound = true;
-        else
-            theFound = false;
-        theIndex++;
-        if (theIndex == theCount)
-            theIndex = 0;
-        if (theFound) {
-            this->mNextResourceCenter = theIndex;
-            break;
-        }
+    // port: the active resource centres nearest the town centre first (the original went round robin through all
+    // of them: barracks and archery ranges stood 30+ tiles out at an undefended mine, playtest 2026-11-06)
+    std::vector<EECPResourceCenter*> theCenters;
+    for (unsigned long i = 0; i < this->mPlayer->GetNumResourceCenters(); i++) {
+        EECPResourceCenter* theCenter = this->mPlayer->GetResourceCenter(i);
+        if (theCenter != NULL && theCenter->mIsActive)
+            theCenters.push_back(theCenter);
     }
-    return theFound;
+    EECPBMNearestHomeFirst(this, theCenters);
+    for (unsigned long i = 0; i < theCenters.size(); i++)
+        if (theCenters[i]->FindBuildSite(inUnitClass, outTile))
+            return true;
+    return false;
 }
 
 // FUNCTION: EXE 0x468a45
