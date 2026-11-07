@@ -15,6 +15,86 @@
 #include "ee/EEMap.h"
 #include "ee/RTSDummyHeader.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+// New: the unit chain check (ee/RTSDummyHeader.h)
+static bool RTSCheckUnitListFromEnvironment()
+{
+    const char* theValue = getenv("EE_CHECK_UNIT_LIST");
+    bool theOn = theValue != NULL && theValue[0] != '\0' && strcmp(theValue, "0") != 0;
+    if (theOn)
+        fprintf(stderr, "EE-UNITLIST: checking the unit chains (EE_CHECK_UNIT_LIST)\n");
+    return theOn;
+}
+bool gRTSCheckUnitList = RTSCheckUnitListFromEnvironment();
+
+static void RTSUnitListFailed(const char* inWhere, const char* inWhat, const RTSUnit* inUnit, const RTSUnit* inOther)
+{
+    fprintf(stderr, "EE-UNITLIST FAILED in %s: %s; unit %p id %08lx x %ld y %ld valid %d node %p prev %p next %p",
+            inWhere, inWhat, (const void*)inUnit, inUnit ? inUnit->mUnitID : 0UL, inUnit ? inUnit->mTileX : 0L,
+            inUnit ? inUnit->mTileY : 0L, inUnit ? (int)inUnit->mIsValid : -1, inUnit ? (void*)inUnit->mTileNode : NULL,
+            inUnit && inUnit->mTileNode ? (void*)inUnit->mTileNode->mPrev : NULL,
+            inUnit && inUnit->mTileNode ? (void*)inUnit->mTileNode->mNext : NULL);
+    if (inOther != NULL && RTSDummyHead(const_cast<RTSUnit*>(inOther)) == NULL)
+        fprintf(stderr, "; other %p id %08lx x %ld valid %d prev %p next %p", (const void*)inOther, inOther->mUnitID,
+                inOther->mTileX, (int)inOther->mIsValid, inOther->mTileNode ? (void*)inOther->mTileNode->mPrev : NULL,
+                inOther->mTileNode ? (void*)inOther->mTileNode->mNext : NULL);
+    else if (inOther != NULL)
+        fprintf(stderr, "; other: the chain's head %p", (const void*)inOther);
+    fprintf(stderr, "\n");
+    fflush(stderr);
+    abort();
+}
+
+// Whether a unit (or a chain head) is in a chain: a head always is; a unit has a previous link (a unit or the head)
+static bool RTSIsInChain(const RTSUnit* inUnit)
+{
+    return RTSDummyHead(const_cast<RTSUnit*>(inUnit)) != NULL
+        || (inUnit->mTileNode != NULL && inUnit->mTileNode->mPrev != NULL);
+}
+
+// The unit's neighbours point back at it (a unit in no chain passes)
+static void RTSCheckNeighbours(const RTSUnit* inUnit, const char* inWhere)
+{
+    RTSUnit* thePrev = inUnit->mTileNode->mPrev;
+    RTSUnit* theNext = inUnit->mTileNode->mNext;
+    if (thePrev == NULL) {
+        if (theNext != NULL)
+            RTSUnitListFailed(inWhere, "a next link without a previous one", inUnit, theNext);
+        return;
+    }
+    if (RTSDummyHead(thePrev) != NULL) {
+        if (RTSDummyHead(thePrev)->mFirst != inUnit)
+            RTSUnitListFailed(inWhere, "the head's first unit is another", inUnit, thePrev);
+    } else if (thePrev->mTileNode == NULL || thePrev->mTileNode->mNext != inUnit)
+        RTSUnitListFailed(inWhere, "the previous unit's next is another", inUnit, thePrev);
+    else if (!RTSIsInChain(thePrev))
+        RTSUnitListFailed(inWhere, "the previous unit is in no chain", inUnit, thePrev);
+    if (theNext != NULL && (theNext->mTileNode == NULL || theNext->mTileNode->mPrev != inUnit))
+        RTSUnitListFailed(inWhere, "the next unit's previous is another", inUnit, theNext);
+}
+
+void RTSCheckUnitList(const RTSDummyUnit* inHead, const char* inWhere)
+{
+    if (!gRTSCheckUnitList || inHead == NULL)
+        return;
+    const RTSUnit* thePrev = reinterpret_cast<const RTSUnit*>(inHead);
+    unsigned long theCount = 0;
+    for (const RTSUnit* theUnit = inHead->mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext) {
+        if (theUnit->mTileNode == NULL)
+            RTSUnitListFailed(inWhere, "a unit in the chain has no node", theUnit, thePrev);
+        if (theUnit->mTileNode->mPrev != thePrev)
+            RTSUnitListFailed(inWhere, "a unit's previous is not the unit before it", theUnit, thePrev);
+        if (!theUnit->mIsValid)
+            RTSUnitListFailed(inWhere, "an invalid (removed) unit is in the chain", theUnit, thePrev);
+        if (++theCount > (1UL << 22))
+            RTSUnitListFailed(inWhere, "the chain loops (over 4M units)", theUnit, thePrev);
+        thePrev = theUnit;
+    }
+}
+
 const UString RTSUnit::sUnitID("RTSUnit-UnitID");
 const UString RTSUnit::sTileX("RTSUnit-TileX");
 const UString RTSUnit::sTileY("RTSUnit-TileY");
@@ -139,6 +219,10 @@ void RTSUnit::InsertAfter(RTSUnit* inUnit)
 void RTSUnit::Link(RTSUnit* inUnit)
 {
     this->Unlink();
+    if (gRTSCheckUnitList && !this->mIsValid)
+        RTSUnitListFailed("RTSUnit::Link", "linking a removed (invalid) unit", this, inUnit);
+    if (gRTSCheckUnitList && !RTSIsInChain(inUnit))
+        RTSUnitListFailed("RTSUnit::Link", "linking after a unit that is in no chain", this, inUnit);
     RTSDummyUnit* theHead = RTSDummyHead(inUnit);
     if (theHead != NULL) {
         this->mTileNode->mNext = theHead->mFirst;
@@ -152,6 +236,8 @@ void RTSUnit::Link(RTSUnit* inUnit)
     if (this->mTileNode->mNext != NULL) {
         this->mTileNode->mNext->mTileNode->mPrev = this;
     }
+    if (gRTSCheckUnitList)
+        RTSCheckNeighbours(this, "RTSUnit::Link (after)");
 }
 
 // FUNCTION: EXE 0x63db49
@@ -203,6 +289,8 @@ void RTSUnit::RemoveFromList()
 // Unlinks the unit from its tile's unit chain
 void RTSUnit::Unlink()
 {
+    if (gRTSCheckUnitList)
+        RTSCheckNeighbours(this, "RTSUnit::Unlink (before)");
     if (this->mTileNode->mNext != NULL) {
         this->mTileNode->mNext->mTileNode->mPrev = this->mTileNode->mPrev;
     }

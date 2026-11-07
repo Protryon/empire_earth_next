@@ -33,4 +33,10 @@ inline RTSDummyUnit* RTSDummyHead(T* inLink)
     return inLink != NULL && typeid(*inLink) == typeid(RTSDummyUnit) ? reinterpret_cast<RTSDummyUnit*>(inLink) : NULL;
 }
 
+// New (debugging, RTSUnit.cpp): EE_CHECK_UNIT_LIST=1 checks the x-sorted unit chains (RTSUnit::Link/Unlink) at every
+// link and unlink, and RTSCheckUnitList walks a whole chain; the first inconsistency is printed and the game aborts
+// there (under tools/play_posix.py: crash.txt has the backtrace of the code that broke it). Off: no cost but a test.
+extern bool gRTSCheckUnitList;
+void RTSCheckUnitList(const RTSDummyUnit* inHead, const char* inWhere);
+
 #endif
