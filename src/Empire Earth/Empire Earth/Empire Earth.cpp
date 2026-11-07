@@ -2076,7 +2076,7 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
             gInstance = inInstance;
             ESInitialize(inInstance);
             // the game's directory is the data root (the executable's directory, or EE_DATA_ROOT), wherever it was
-            // started from: its Data, Users and config.ini are found relative to it (the original used the current
+            // started from: its Data, Users and config.yaml are found relative to it (the original used the current
             // directory)
             PlatPathEnterDataRoot();
             FSInitialize(UString(""));

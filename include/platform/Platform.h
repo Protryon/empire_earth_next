@@ -8,7 +8,7 @@
 //   platform/PlatTime.h         clocks, the high-resolution counter, sleep, local time, system timers
 //   platform/PlatThread.h       mutexes, events (wait one / wait any), atomics, thread ids, the last native error
 //   platform/PlatString.h       case-insensitive compares, integer formatting, the multibyte (_mbs*) string functions
-//   platform/PlatConfig.h       the configuration file (config.ini; one implementation in src/Platform/Common/)
+//   platform/PlatConfig.h       the configuration file (config.yaml; one implementation in src/Platform/Common/)
 //   platform/PlatFile.h         files, directory search, temporary files, file mapping (included where used)
 //   platform/PlatPath.h         the game's Windows paths on the native file system, the data root
 //   platform/PlatSocket.h       IPv4 sockets, readiness events, name lookups, network adapters (Winsock subset)

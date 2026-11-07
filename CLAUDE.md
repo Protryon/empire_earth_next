@@ -68,7 +68,7 @@ a Win32 debugger) and `tools/gates.sh` cannot run; the POSIX tooling below stand
 - Diagnostics:
   - `EE_GX_STATS=<n>`: draw summaries; it found the vertex-stride bug from "clip x 3e20".
   - `EE_GX_RENDER_SCALE=1`: no render scale. `EE_WINDOW_EVENT_LOG=1`: window events.
-  - `EE_CONFIG=<file>`: a scratch `config.ini`. `lldb --batch -o run -k "bt"` for crashes.
+  - `EE_CONFIG=<file>`: a scratch `config.yaml`. `lldb --batch -o run -k "bt"` for crashes.
   - lldb regex breakpoints are too slow on this binary; a temporary `fprintf` is faster (remove it before
     committing).
 - Bug patterns found here (PORT_LEARNINGS.md "The POSIX game with real data", "macOS: sound, full screen..."):
@@ -85,7 +85,7 @@ The game reads one loose `Data` folder next to the exe:
   `aipersonalities.yaml`, `epochs.yaml`;
 - models as glTF, textures as PNG.
 
-There is no `data.ssa` and no registry. Settings live in `config.ini` next to the exe (`EE_CONFIG` overrides it).
+There is no `data.ssa` and no registry. Settings live in `config.yaml` next to the exe (`EE_CONFIG` overrides it).
 
 ```
 python -I tools/open_data.py build build/open_data/tree [--force]  # from the two installs (read only), ~4 min

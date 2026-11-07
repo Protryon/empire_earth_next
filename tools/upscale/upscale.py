@@ -490,7 +490,7 @@ PACK_DEFAULT = "skin,terrain,fx,shadow,button,ui,background"
 def cmd_deploy(args):
     """A play directory for EE_DATA_ROOT: symlinks to the original data root's entries, Data/ and Data/Textures/
     as real directories, and the upscaled textures of the chosen categories in place of the originals. Users/ and
-    config.ini are copied (the game writes them). Rebuilt from scratch each time."""
+    config.yaml are copied (the game writes them). Rebuilt from scratch each time."""
     import shutil
     src = data_root(args).resolve()
     tree = pathlib.Path(args.tree).resolve()
@@ -542,7 +542,7 @@ def cmd_deploy(args):
 def cmd_pack(args):
     """The shipped pack: DATA_ROOT/Data/Textures-4x/ (or --into DIR) with the tree's textures of the chosen
     categories, copied (a pack must stand alone), plus pack.json naming what is in it. The game reads it when the
-    texture resolution setting is 2x or 4x (config.ini [Game] Texture Resolution; 2x halves the 4x file at load)
+    texture resolution setting is 2x or 4x (config.yaml graphics: texture_resolution; 2x halves the 4x file at load)
     and falls back to Data/Textures per file. All categories but `exclude` by default (PACK_DEFAULT): the excluded
     textures are data (palettes) or not worth it, and must never come from the pack."""
     import shutil

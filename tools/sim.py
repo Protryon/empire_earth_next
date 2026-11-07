@@ -133,7 +133,7 @@ def prepare(data="binary", slot="default", sets=()):
 
 
 def command(exe, stage, args, config=None):
-    cfg = config or (stage / "config.ini")
+    cfg = config or (stage / "config.yaml")
     return [str(exe), "--data", str(stage), "--config", str(cfg), *args]
 
 
@@ -179,8 +179,8 @@ def main():
         sys.exit(f"{a.exe} is missing: python -I build.py --sim")
     sets = [args[k + 1] for k, v in enumerate(args) if v == "--set" and k + 1 < len(args)]
     stage = prepare(a.data, a.slot, sets)
-    cfg = stage / "config.ini"
-    cfg.unlink(missing_ok=True)   # a fresh config.ini per run
+    cfg = stage / "config.yaml"
+    cfg.unlink(missing_ok=True)   # a fresh config.yaml per run
     sys.exit(subprocess.run(command(a.exe, stage, args, cfg)).returncode)
 
 

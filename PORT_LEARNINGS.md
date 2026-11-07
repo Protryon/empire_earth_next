@@ -1507,3 +1507,16 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **The game log was never written on POSIX**: `PlatPathGetDataRoot` returns the game's `C:\` form there, which
   `PlatCreateDirectory` translates but plain `fopen` does not. Any file opened under the data root goes through
   `PlatFOpen`.
+
+## config.ini -> config.yaml (2026-11-07)
+
+- The settings file is YAML now (`platform/PlatConfig.h`: a block path such as `display.resolution` plus a key in
+  place of the INI section and name; `PlatConfigSetBool`, `UConfig::GetFlag`/`SetFlag`). `EEGamePreferences::Load`
+  and `Save` go through one table of rows (`EESettingRows`) instead of a hand-written read and write per value, and
+  the obsolete values are no longer stored (docs/DATA_FORMATS.md 2.1a). An old `config.ini` is ignored.
+- **`EEGameOptions::operator=` reads the world rules** (`EERuleLong`): copying a whole `EEGameSettings` before the
+  database is loaded crashes (null `gWorldTable`, fault address 0x87c). `Load` runs before it, so the defaults are a
+  default-constructed `EEGameSettings` plus the resource names, never a copy of `sDefaultSettings`.
+- The test profile's `windowed-software` patch matches `mFullScreen = mWindowMode == 0` once in Load now (tools/build.py).
+- Harness pins are `block.key=value` (`tools/harness/config_yaml.py`); the bit-depth pins are gone (Load sets 32).
+

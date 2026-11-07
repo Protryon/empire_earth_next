@@ -84,7 +84,7 @@ What this is
 
 How to use it
   Unpack it next to the game program (EE-AOC.exe on Windows, ee-aoc on Linux/macOS) so that the program, Data and
-  Users are in one folder, and run the program. The game keeps its settings in config.ini in that folder (it
+  Users are in one folder, and run the program. The game keeps its settings in config.yaml in that folder (it
   creates the file). On Linux/macOS the data may also live elsewhere: set EE_DATA_ROOT to the unpacked folder.
   tools/make_play_dir.py in the source repository prepares such a folder from this bundle.
 

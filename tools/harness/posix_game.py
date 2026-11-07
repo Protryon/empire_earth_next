@@ -7,14 +7,14 @@ newest line of test.command through the controls' own methods. The lobby options
 parser are ai_game.py's.
 
   python -I tools/harness/posix_game.py [--exe EXE] [--data DIR] [--out DIR]
-         --exercise menu|settings|ui-captures|random-game|ai-game [--config NAME=VALUE ...]
+         --exercise menu|settings|ui-captures|random-game|ai-game [--config block.key=VALUE ...]
          [--settings-select CONTROL=INDEX ...]
          [--ai-players N] [--map-size Small] [--map-type Continental] [--difficulty Easy] [--game-speed 'Very Fast']
          [--play-seconds S] [--max-game-seconds S] [--capture-every S] [--timeout S] [--zoom-captures P ...]
 
   menu         main menu reached, captured; the game is closed
   settings     main menu -> game settings (video tab) captured; each --settings-select sets a combo box, then OK
-               (the settings are saved: summary.json has the config.ini the game wrote) and the menu is captured
+               (the settings are saved: summary.json has the config.yaml the game wrote) and the menu is captured
   ui-captures  the same screens every run, through the real pointer hit test (the fixture's "pointer"/"lclick": the
                game's pointer moved to window fractions, a left click as the platform delivers it), the pointer parked
                at the same place for each capture: menu, menu_hover (the settings button under the pointer), settings
@@ -28,7 +28,7 @@ parser are ai_game.py's.
 
 Evidence goes to --out (default build/posix_game/<time>): game.log, ui/ (the fixture's files), <name>.png (macOS:
 screencapture of the game window; Linux: none), samples.json and summary.json. The game's settings go to a fresh
-config.ini there (EE_CONFIG), so the data root is not written; --config NAME=VALUE seeds its [Game] section. Exit 0
+config.yaml there (EE_CONFIG), so the data root is not written; --config block.key=VALUE seeds it. Exit 0
 on PASS.
 """
 import argparse
@@ -45,6 +45,7 @@ import time
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 sys.path.insert(0, str(HERE))
+import config_yaml
 from ai_game import CITIZENS, DEFAULTS, DISMISS, LOBBY, GAME, NAMED, PLAYER_TYPE, TEAM, VISIBLE_SLOTS, parse_state, resolve
 
 MAIN, SINGLE, SETTINGS = 12, 6, 5
@@ -75,13 +76,12 @@ class Game:
             f.unlink()
         self.seq = 0
         self.log_lines = []
-        if a.config:   # seeds the fresh config.ini's [Game] section (platform/PlatConfig.h)
-            (self.out / 'config.ini').write_text('[Game]\n' + ''.join(f'{n.strip()} = {v.strip()}\n' for n, _, v in
-                                                                      (c.partition('=') for c in a.config)))
-        elif (self.out / 'config.ini').exists():
-            (self.out / 'config.ini').unlink()
+        if a.config:   # seeds the fresh config.yaml (platform/PlatConfig.h; config_yaml.py)
+            (self.out / 'config.yaml').write_text(config_yaml.config_text(a.config))
+        elif (self.out / 'config.yaml').exists():
+            (self.out / 'config.yaml').unlink()
         env = dict(os.environ, EE_TEST_UI=str(self.ui), EE_DATA_ROOT=str(pathlib.Path(a.data).resolve()),
-                   EE_CONFIG=str(self.out / 'config.ini'))
+                   EE_CONFIG=str(self.out / 'config.yaml'))
         self.log = open(self.out / 'game.log', 'wb')
         self.proc = subprocess.Popen([str(a.exe)], env=env, stdout=self.log, stderr=subprocess.STDOUT,
                                      start_new_session=True)
@@ -325,7 +325,7 @@ def run(a):
             summary['captures']['settings_selected'] = g.capture('settings_selected')
             g.click(SETTINGS, SETTINGS_OK, MAIN, 'settings OK')
             time.sleep(1)
-            summary['config'] = (g.out / 'config.ini').read_text(encoding='latin-1')
+            summary['config'] = (g.out / 'config.yaml').read_text(encoding='latin-1')
             summary['result'] = 'PASS'
             return summary
         g.click(MAIN, 0, SINGLE, 'single player')
@@ -426,7 +426,7 @@ def main():
     ap.add_argument('--out', default=str(ROOT / 'build' / 'posix_game' / time.strftime('%Y%m%d-%H%M%S')))
     ap.add_argument('--exercise', choices=['menu', 'settings', 'ui-captures', 'random-game', 'ai-game'],
                     default='ai-game')
-    ap.add_argument('--config', action='append', default=[], help="NAME=VALUE in the fresh config.ini's [Game]")
+    ap.add_argument('--config', action='append', default=[], help="block.key=VALUE in the fresh config.yaml (e.g. audio.music.enabled=false)")
     ap.add_argument('--settings-select', action='append', default=[],
                     help='settings: CONTROL=INDEX, a combo box of the settings form selected before OK')
     ap.add_argument('--ai-players', type=int, default=2)

@@ -41,7 +41,7 @@ as `0/1`) overrides the personalities' `economy.demand_split` (TEST ONLY). `EE_A
 session log; `compare` is the determinism check (two runs of one seed must print the same lines).
 `ai_bench.py` runs a matrix of seeded headless AI games with the trace on and writes `build/boot/ai_bench/<name>/`
 (`results.json`, `results.csv`, the session logs; `--repeat 2` also compares the traces). `--jobs N` runs N games
-at once as `game_session.py --instance 1..N` (own stage, config.ini and ports each): 8 15-minute games take ~3.5 min
+at once as `game_session.py --instance 1..N` (own stage, config.yaml and ports each): 8 15-minute games take ~3.5 min
 with 4 jobs instead of ~13, and same-seed pairs still match:
 
 ```
@@ -56,9 +56,9 @@ built with it), pip `pefile capstone`.
 `build/open_data/` the first time; hard links, the folders the game writes into are copied): by default the binary
 tree (`tree-binary`: the .dat/.cem/.sst/.tga as shipped, loose), with `EE_HARNESS_OPEN_DATA=1` (or
 `EE_HARNESS_TEXT_DB=1 EE_HARNESS_OPEN_ASSETS=1`) the open one (`tree`: db text, glTF, PNG; `EE_HARNESS_OPEN_DATA=DIR`
-names another tree). No data.ssa and no original install is staged. The game's settings are a fresh `config.ini` in
-the stage per run, holding the run's pins (`Game Bit Depth = 32`, `--pt-rate`); the file the game leaves is kept as
-`build/boot/<stage>.session.config.ini`. The game uses no registry: `exe_boot.c` stops a run on any registry write.
+names another tree). No data.ssa and no original install is staged. The game's settings are a fresh `config.yaml` in
+the stage per run, holding the run's pins (`audio.music.enabled=true`, `--pt-rate`; `config_yaml.py`); the file the game leaves is kept as
+`build/boot/<stage>.session.config.yaml`. The game uses no registry: `exe_boot.c` stops a run on any registry write.
 
 **x86_64 only.** The exe and every harness piece are x86_64 (`hbuild` refuses another image; `--x64` is accepted and
 ignored). The harness names the game's symbols by their x64 decorations (`?gWorld@@3VEEWorld@@A`,
@@ -76,7 +76,7 @@ exes. It writes only below `build/boot/selftest*`, `build/boot/windowed_o_32` an
 bridge's UI fixture itself (`src/Empire Earth/Empire Earth/EETestFixture.cpp`, on only when `EE_TEST_UI` names a
 directory) with the same ui-state.txt / test.command formats plus game telemetry. `posix_game.py --exercise
 menu|random-game|ai-game` reuses ai_game.py's lobby options and dismiss table, plays in real time (no time shim; the
-lobby's Very Fast speed), writes the game's settings to its own config.ini (`EE_CONFIG`) and, on macOS, captures the
+lobby's Very Fast speed), writes the game's settings to its own config.yaml (`EE_CONFIG`) and, on macOS, captures the
 game window (`macos_window.swift` + `screencapture -l`). See its docstring.
 
 ## Status

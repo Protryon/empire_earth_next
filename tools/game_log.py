@@ -1,5 +1,5 @@
-"""Summarise a game log (ee/EEGameLog.h: <data root>/Logs/game-*.log, written by every game unless config.ini [Game]
-"Game Log" is 0), for the human and the computer players alike.
+"""Summarise a game log (ee/EEGameLog.h: <data root>/Logs/game-*.log, written by every game unless config.yaml's
+debug: game_log is false), for the human and the computer players alike.
 
   python -I tools/game_log.py [LOG ...] [--every MIN] [--data ROOT] [--json OUT]
 

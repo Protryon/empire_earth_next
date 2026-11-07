@@ -104,7 +104,7 @@ Not loaded although they are present or referenced:
   same files.
 * **Texture packs** (port): an optional `Data\Textures-4x\` next to `Data\Textures\` holds upscaled textures with
   the same names and format (PNG) at 4x the original's pixel size. It may hold any subset; a missing folder or file
-  means the original is used, with no error. config.ini `[Game] Texture Resolution` (0, 2 or 4; the settings' video
+  means the original is used, with no error. config.yaml `graphics: texture_resolution` (0, 2 or 4; the settings' video
   tab "Textures: Original / 2x Upscale / 4x Upscale") picks the set: 0 loads only `Data\Textures`; 4 loads
   `textures-4x\<name>` when it is on the path, else `textures\<name>`; 2 loads the same pack file with one more MIP
   level dropped, so the GPU surface is half its size (a 2x2 box filter, `DX7Surface::CopyWithFilter`). The texture
@@ -126,6 +126,37 @@ Not loaded although they are present or referenced:
   The setting applies to textures loaded after it changes. Textures already cached keep theirs until they are
   released, so the settings screen says to restart. `GETextureManager::SetTexturePack`, `EESetTextureResolution`
   (EEPreferences.cpp); `EE_TEXTURE_PACK_LOG=1` prints every pack texture and pointer loaded with both sizes.
+
+### 2.1a The settings file `config.yaml` (port)
+
+The game's settings live in `config.yaml` in the data root (`EE_CONFIG` names another file; a read-only data root
+moves it to the user's configuration directory). It replaces the original's registry keys and this port's earlier
+`config.ini`; an old `config.ini` is not read. The format is a YAML subset (nested blocks of `key: value`, two-space
+indents; strings, integers, `true`/`false`), specified in `include/platform/PlatConfig.h`. The game writes every
+missing value with its default on start and rewrites the whole file on every change, so comments are lost. The keys
+are the rows of `EESettingRows` (`src/Empire Earth/Empire Earth/EEPreferences.cpp`):
+
+| block | keys |
+|---|---|
+| `player` | `name`, `computer_difficulty` (campaigns and the lobby's computer players) |
+| `display` | `screen`, `window_mode` (0 full screen, 1 windowed), `resolution: {width, height}` (the game size), `ui_scale` (percent, 0 Auto), `render_resolution` (50-100 percent), `frame_rate_limit` (0 v-sync, -1 none), `brightness` (percent) |
+| `graphics` | `texture_resolution` (0, 2, 4), `texture_filtering` (0 bilinear, 1 trilinear, 2 anisotropic), `trilinear_filter`, `mip_levels_to_drop: {textures, terrain}`, `model_detail`, `effect_detail` (0-2), `unit_lighting`, `animation_smoothing`, `shadows`, `clouds`, `battlefield_ambients`, `show_blood` |
+| `audio` | `device` (empty: the system's default), `master_volume`, `sound_volume`, `music: {enabled, volume}`, `reverb`, `ambient_sounds`, `max_sounds` (percent), `mute_in_background` |
+| `input` | `mouse_sensitivity`, `right_hand_mouse`, `scroll: {side_speed, grab_speed}` (percent) |
+| `camera` | `maximum_zoom_out` (100-300 percent), `zoom_style`, `zoom_lock` |
+| `autosave` | `interval_ms`, `count` |
+| `network` | `host_game_name`, `adapter`, `pt_rate: {min, max, tuning_threshold}`, `ct_send_interval: {max, step_down, step_up}` |
+| `screenshots` | `jpg`, `end_game` |
+| `debug` | `game_log` (`Logs/game-*.log`), `oos_handling` |
+| `recent` | `game_file`, `scenario_file`, `quick_save`, `auto_save`, `post_game_stats_page` |
+| `game_options` | the last random map's options: `map: {size, type}`, `starting_resources`, `epochs: {start, end}`, `unit_limit`, `wonders_for_victory`, `variant`, `difficulty`, `speed`, `record_game`, `reveal_map`, `allow_custom_civs`, `lock_teams`, `lock_speed`, `cheat_codes`, `victory_allowed` |
+
+A value out of its range is replaced by the default (or clamped, for the detail levels, volumes and speeds). Not
+stored any more, so fixed at their defaults: the rasterizer name (one renderer), the bit depths (always 32),
+`Wait for VSync` (from `frame_rate_limit`), the WON password and Sierra.com names, the IME candidate window, and the
+values nothing read (unit scale factor, animal herds, area effect overlays, button MIP levels, auto waypoints,
+keyboard layout, load game name). The harness writes a fresh file per run from `block.key=value` pins
+(`tools/harness/config_yaml.py`; `posix_game.py --config audio.music.enabled=false`).
 
 ### 2.2 The `.ssa` archive (`FSArchive`, `src/Low-Level Engine/File System/FSArchive.cpp`)
 

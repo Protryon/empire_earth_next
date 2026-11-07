@@ -478,38 +478,72 @@ static std::string ReadText(const char* inPath)
     return theText;
 }
 
+static void WriteText(const char* inPath, const char* inText)
+{
+    FILE* f = fopen(inPath, "wb");
+    if (f) {
+        fputs(inText, f);
+        fclose(f);
+    }
+}
+
 static void TestConfig(const std::string& inPath)
 {
     Section("config");
+    // a hand-written file, read on first use: comments, quotes, CR LF, blank lines, other indents
+    WriteText(inPath.c_str(), "\xef\xbb\xbf# settings\r\n---\r\nhand:   # a block\r\n    a: 1  # one\r\n\r\n"
+                              "    b: 'it''s # here'\r\n    inner:\r\n        c: \"x\\ty\\x41\"\r\n    d: yes\r\n"
+                              "    url: http://x#y\r\n    e: ~\r\nother: plain text: no\r\n");
     char thePath[512];
     CHECK(PlatConfigGetPath(thePath, sizeof(thePath)) && inPath == thePath);   // EE_CONFIG names the file
     int32_t theValue = 0;
-    CHECK(!PlatConfigGetInt("Game", "Width", &theValue));   // no file yet: empty
-    CHECK(PlatConfigSetInt("Game", "Width", 1024));
-    CHECK(PlatConfigSetInt("Game", "Negative", -7));
-    const char theString[] = "C:\\Games\\Empire Earth \"AoC\"";
-    CHECK(PlatConfigSetString("Game", "Path", theString));
-    CHECK(PlatConfigSetString("Game Options", "Blank", " padded\t"));
-    CHECK(PlatConfigSetString("Game Options", "Empty", ""));
-    CHECK(PlatConfigGetInt("GAME", "width", &theValue) && theValue == 1024);   // sections and names ignore case
-    CHECK(PlatConfigGetInt("Game", "Negative", &theValue) && theValue == -7);
     char theBuffer[128];
-    CHECK(PlatConfigGetString("Game", "PATH", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, theString) == 0);
-    CHECK(!PlatConfigGetString("Game", "Path", theBuffer, 4));   // too small
-    CHECK(!PlatConfigGetInt("Game", "Path", &theValue));         // not an integer
-    CHECK(PlatConfigGetString("Game", "Width", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, "1024") == 0);
-    CHECK(PlatConfigGetString("game options", "Blank", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, " padded\t") == 0);
-    CHECK(PlatConfigGetString("Game Options", "Empty", theBuffer, sizeof(theBuffer)) && theBuffer[0] == 0);
-    CHECK(!PlatConfigGetInt("Game", "Missing", &theValue));
-    // the file: plain "Name = value" lines, a string quoted only when it needs it
+    CHECK(PlatConfigGetInt("hand", "a", &theValue) && theValue == 1);
+    CHECK(PlatConfigGetString("hand", "b", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, "it's # here") == 0);
+    CHECK(PlatConfigGetString("hand.inner", "c", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, "x\tyA") == 0);
+    CHECK(PlatConfigGetInt("hand", "d", &theValue) && theValue == 1);
+    CHECK(PlatConfigGetString("hand", "url", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, "http://x#y") == 0);
+    CHECK(PlatConfigGetString("hand", "e", theBuffer, sizeof(theBuffer)) && theBuffer[0] == 0);
+    CHECK(PlatConfigGetString("", "other", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, "plain text: no") == 0);
+    CHECK(PlatConfigDelete("hand", NULL));
+    CHECK(PlatConfigDelete(NULL, "other"));
+    CHECK(!PlatConfigGetInt("hand", "a", &theValue));
+    CHECK(!PlatConfigGetInt("display", "width", &theValue));   // the rest starts empty
+    CHECK(PlatConfigSetInt("display.resolution", "width", 1024));
+    CHECK(PlatConfigSetInt("display", "negative", -7));
+    const char theString[] = "C:\\Games\\Empire Earth \"AoC\"";
+    CHECK(PlatConfigSetString("player", "path", theString));
+    CHECK(PlatConfigSetString("player", "blank", " padded\t"));
+    CHECK(PlatConfigSetString("player", "empty", ""));
+    CHECK(PlatConfigSetString("player", "number", "12"));      // a string that looks like a number: quoted
+    CHECK(PlatConfigSetString("player", "name", "Unknown"));
+    CHECK(PlatConfigSetBool("audio", "music", 1));
+    CHECK(PlatConfigSetInt(NULL, "top", 3));
+    CHECK(PlatConfigGetInt("DISPLAY.Resolution", "WIDTH", &theValue) && theValue == 1024);   // keys ignore case
+    CHECK(PlatConfigGetInt("display", "negative", &theValue) && theValue == -7);
+    CHECK(PlatConfigGetInt("audio", "music", &theValue) && theValue == 1);   // true: 1
+    CHECK(PlatConfigGetInt("", "top", &theValue) && theValue == 3);
+    CHECK(!PlatConfigGetInt("display", "resolution", &theValue));   // a block is no value
+    CHECK(PlatConfigGetString("player", "PATH", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, theString) == 0);
+    CHECK(!PlatConfigGetString("player", "path", theBuffer, 4));   // too small
+    CHECK(!PlatConfigGetInt("player", "path", &theValue));         // not an integer
+    CHECK(PlatConfigGetString("display.resolution", "width", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, "1024") == 0);
+    CHECK(PlatConfigGetString("player", "blank", theBuffer, sizeof(theBuffer)) && strcmp(theBuffer, " padded\t") == 0);
+    CHECK(PlatConfigGetString("player", "empty", theBuffer, sizeof(theBuffer)) && theBuffer[0] == 0);
+    CHECK(!PlatConfigGetInt("player", "missing", &theValue));
+    // the file: nested blocks, a string quoted only when it needs it, blocks in their first-written order
     std::string theText = ReadText(inPath.c_str());
-    CHECK(theText == "[Game]\nWidth = 1024\nNegative = -7\nPath = C:\\Games\\Empire Earth \"AoC\"\n\n"
-                     "[Game Options]\nBlank = \" padded\\t\"\nEmpty = \n");
-    CHECK(PlatConfigDelete("Game", "Negative"));
-    CHECK(!PlatConfigDelete("Game", "Negative"));
-    CHECK(PlatConfigDelete("Game Options", NULL));
-    CHECK(!PlatConfigGetString("Game Options", "Blank", theBuffer, sizeof(theBuffer)));
-    CHECK(ReadText(inPath.c_str()) == "[Game]\nWidth = 1024\nPath = C:\\Games\\Empire Earth \"AoC\"\n");
+    const char* theHeader = "# Empire Earth AoC settings. The game rewrites this file whenever a setting changes (comments"
+                            " are not kept).\n";
+    CHECK(theText == std::string(theHeader) + "display:\n  resolution:\n    width: 1024\n  negative: -7\n\n"
+                     "player:\n  path: C:\\Games\\Empire Earth \"AoC\"\n  blank: \" padded\\t\"\n  empty: \"\"\n"
+                     "  number: \"12\"\n  name: Unknown\n\naudio:\n  music: true\ntop: 3\n");
+    CHECK(PlatConfigDelete("display", "negative"));
+    CHECK(!PlatConfigDelete("display", "negative"));
+    CHECK(PlatConfigDelete("player", NULL));
+    CHECK(PlatConfigDelete("audio", "music"));   // an empty block is not written
+    CHECK(!PlatConfigGetString("player", "blank", theBuffer, sizeof(theBuffer)));
+    CHECK(ReadText(inPath.c_str()) == std::string(theHeader) + "display:\n  resolution:\n    width: 1024\ntop: 3\n");
     remove(inPath.c_str());
 }
 
@@ -636,7 +670,7 @@ int main(int argc, char** argv)
 {
     // the configuration goes to a scratch file, not the program's directory
     std::string theConfig = std::string(getenv("TMPDIR") ? getenv("TMPDIR") : getenv("TEMP") ? getenv("TEMP") : "/tmp")
-                            + "/plat_test_config.ini";
+                            + "/plat_test_config.yaml";
     remove(theConfig.c_str());
 #if defined(_WIN32)
     _putenv_s("EE_CONFIG", theConfig.c_str());

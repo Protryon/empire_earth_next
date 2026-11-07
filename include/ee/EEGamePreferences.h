@@ -1,5 +1,5 @@
 // (RECONSTRUCTION; file name inferred; class and member names are provisional). The
-// game settings at 0x530308, kept in config.ini (the original: the registry; vptr URegistry's after its inline ctor 0x13281e; an EEGameOptions at +4;
+// game settings at 0x530308, kept in config.yaml (the original: the registry; vptr URegistry's after its inline ctor 0x13281e; an EEGameOptions at +4;
 // init chain 0x13eaeb). The lobby's Start stores the started game's options (0x136b49: copies them when it is a new
 // game, then saves).
 #ifndef EE_EEGAMEPREFERENCES_H
@@ -124,7 +124,7 @@ public:
     // port (not in the original's 0x5e0 bytes): "Texture Resolution" 0 (the original textures), 2 or 4 (the
     // Data/Textures-4x pack, drawn at half size for 2); EESetTextureResolution applies it
     long mTextureResolution;
-    // port: the modern display and audio settings (config.ini; EEApplyPortSettings applies them)
+    // port: the modern display and audio settings (config.yaml; EEApplyPortSettings applies them)
     long mUIScale;                          // "UI Scale" percent; 0 Auto (GXAutoUIScale): the game size is the display's
     long mRenderResolution;                 // "Render Resolution" percent of the display's pixels (50..100)
     long mWindowMode;                       // "Window Mode" 0 full screen (borderless), 1 windowed
@@ -158,11 +158,11 @@ public:
     // 0x132848: false when the resource language or the OS language is Korean (0x412); the video tab shows check box
     // 13 only when true (provisional name)
     bool IsNotKorean();
-    long Save();                            // 0x135943: writes the settings to config.ini (the settings' Ok
+    long Save();                            // 0x135943: writes the settings to config.yaml (the settings' Ok
                                             // returns its result)
     // (provisional names)
-    long Load();                            // 0x1328dd: reads the settings from config.ini (defaults where missing)
-    long LoadGameOptions();                 // 0x13505e: the [Game Options] section (Load's tail)
+    long Load();                            // 0x1328dd: reads the settings from config.yaml (defaults where missing)
+    long LoadGameOptions();                 // 0x13505e: the game_options block (Load's tail)
     long SaveGameOptions();                 // 0x13670d (Save's tail)
 
     // +0x000 in the original: a URegistry member, not a base (the ctor 0x13281e and dtor 0x132834 store only its vptr);

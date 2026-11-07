@@ -8,7 +8,7 @@ is forwarded to every job's game_session.py (e.g. --exercise random-game --pt-ra
 options --time-factor F / --exercise ai-game --ai-players 4 / --diff-sampler ...). --jobs FILE: a JSON list of
 {"image": ..., "seed": N, "label": "...", "args": [...], "timeout": S}; a job's own args come after the shared ones.
 
-Settings: the game keeps them in config.ini in its stage (no registry), so the parallel sessions (--instance K, own
+Settings: the game keeps them in config.yaml in its stage (no registry), so the parallel sessions (--instance K, own
 stage dirs) share nothing; exe_boot.batch_begin/batch_end are no-ops kept for this script. If the runner is killed, the
 next batch kills the sessions it left on its instances, by command-line/executable-path filter (own stage dirs only).
 --instance-base B: instances B..B+P-1 (disjoint ranges for batches at once).

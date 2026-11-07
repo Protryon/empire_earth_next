@@ -59,7 +59,7 @@ def run_one(run, args, slots, out):
     slot = slots.get()
     try:
         stage = sim.prepare(args.data, slot, run["sets"])
-        cfg = stage / "config.ini"
+        cfg = stage / "config.yaml"
         cfg.unlink(missing_ok=True)
         rid = run["id"]
         report, trace, err = out / f"{rid}.json", out / f"{rid}.trace.txt", out / f"{rid}.err.txt"

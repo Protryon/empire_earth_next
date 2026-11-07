@@ -77,7 +77,7 @@ points at `.bik` files, e.g. an extracted retail disc; ffmpeg):
 python -I tools/make_play_dir.py C:\EE-play [--data TREE|BUNDLE.zip] [--movies DIR]   # then run C:\EE-play\EE-AOC.exe
 ```
 
-The game keeps its settings in `config.ini` in its directory (it creates the file; `EE_CONFIG` names another file).
+The game keeps its settings in `config.yaml` in its directory (it creates the file; `EE_CONFIG` names another file).
 It uses no registry and no other settings store; when its directory is not writable, the file goes to the user's
 configuration directory (`%APPDATA%\Empire Earth AoC`, `~/.config/empire-earth-aoc`, `~/Library/Application
 Support/Empire Earth AoC`).
@@ -108,7 +108,7 @@ build/xbuild/<target>/game/ee-aoc --smoke-test     # window + wgpu device + 30 f
 
 The game needs the game data (the bundle above; never committed here). It reads it from the data root: `EE_DATA_ROOT`
 if set, else the program's directory (a macOS app bundle: its `Contents/Resources`). Without it the game stops with
-"game data not found". Its settings go to `config.ini` in the data root (a read-only app bundle: the user's
+"game data not found". Its settings go to `config.yaml` in the data root (a read-only app bundle: the user's
 configuration directory, see above). `tools/make_play_dir.py` prepares a complete directory (anywhere: it needs only
 the data tree or bundle):
 
@@ -134,7 +134,7 @@ python -I tools/harness/posix_game.py --exe build/xbuild/macos-arm64/game-addres
 
 ## Testing
 
-**Game logs.** Every game writes `Logs/game-<date>-<time>.log` in the data root (config.ini `[Game]` `Game Log=0`
+**Game logs.** Every game writes `Logs/game-<date>-<time>.log` in the data root (config.yaml `debug: game_log: false`
 turns it off). It holds every player's state every 30 game seconds, human and computer alike: epoch, citizens and
 what they do, army, buildings, towers, stock, income and losses, with who caused them. Epoch times and the computer
 players' decision trace are in the same file, and every chat line with its game time: type notes
