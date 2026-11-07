@@ -1191,6 +1191,43 @@ Head to head, 48 games each, both seats (`--env-vary EE_AI_EXP=x/-,-/x`; `+` joi
 Then retry `payback` and the boom on top. A sparring opponent that does not rush (a complete `noattack`) and the
 owner's playtests judge the economy changes the rush meta hides.
 
+### 8.24 First playtest with the game log (2026-11-06)
+
+The owner against one Medium AI (balanced, no cheats) on Continental, 51-91 minutes logged (the game log, `tools/game_log.py`):
+
+- **The AI was half the owner's size before any fighting.** At 56 min: 48 citizens against 89. It reached the
+  Stone Age at 57.9 min; the owner reached the Copper Age at 59.3 min and the Bronze Age at 83.1 min.
+- **Food.** The advance took the AI's food, and the owner's raids on its food gatherers kept it near 0. It had no
+  farms: they are Copper Age. Every soldier it queued stayed unaffordable, and its attack groups formed with 0 units.
+- **No raid response.** Most of its citizens were lost within 15 tiles of the main town centre, to groups of more
+  than 2. Those are exactly the hits that the §8.22 flee and raid response leave to the town defence, and the town
+  had no soldiers.
+- **Owner's notes:**
+  - "Guard stance doesn't respond to being attacked."
+  - "All buildings and citizens have to be destroyed for an AI to be out." At 90 min the AI had 0 citizens,
+    0 soldiers and 3 buildings.
+  - "Random barracks and temples, undefended, far away." The trace has barracks 33-35 tiles from the main town
+    centre and a temple at 36.
+
+Fixes, checked in EE-SIM (Small Hard, 2 AIs, seeds 2-13, 45 and 90 min, against the commit before):
+
+- **Guard:** a unit on guard closes on the unit that hit it, then returns (`EEUnitAI.cpp` CanIMoveFreely). Guard's
+  ranged units (`mRangedCanMoveFreely` 0) stood still under fire from beyond their range.
+- **Production sites:** barracks, ranges and the like try the active resource centres nearest the main town centre
+  first, not round robin. Ranges more than 20 tiles out: 6 of 25 in 90 minutes before, 0 of 25 after. Temples fill
+  the centres within 20 tiles first. They still spread out once those centres are taken, because the original
+  rule wants one per centre.
+- **Defeat:** `gameoptions.yaml` `defeat_without_recovery` (default on). A player is out when it has no citizens,
+  no other units, and no finished town centre or capitol with a citizen's cost in stock. Random maps only.
+- **The beaten AI's dead end.** With few citizens left it spent its last food on macemen, then lost the citizens.
+  With 10-15 food it could train nothing, and its town centres stood empty for 40-50 minutes. Below 12 workers it
+  now trains citizens whatever the epoch reserve, and nothing else may spend a citizen's cost.
+- **Strength at 45 min:** the same. Citizens 32.6 against 32.2 per AI, army 7.0 against 5.9. AIs collapsed to 0
+  citizens: 4 against 7.
+
+**Next:** the town defends itself without an army. Garrison the citizens, or pull them back, when an attack group
+reaches the base.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
