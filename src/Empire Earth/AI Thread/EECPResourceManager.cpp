@@ -54,6 +54,7 @@
 #include "ee/EECPResourceManager.h"
 #include "ee/EECPResourceCenter.h"
 #include "ee/EECPUnitManager.h"
+#include "ee/EECPUMGatherUnitsScreenBase.h"
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPUnitSelector.h"
 #include "ee/EECPPersonnel.h"
@@ -86,6 +87,9 @@ struct EECPRMUnitDistanceLess {
 
     EETileCoordinate mCenter;
 };
+
+static bool EECPRMFishes(EECPResourceManager* inManager);        // economy.coast_fishing (below GetGatherCapacity)
+static void EECPRMRequestBoats(EECPResourceManager* inManager);
 
 // The units within a distance of a tile (FindFish's find_if: COMDATs 0x921d0/0x921f7) (provisional name)
 struct EECPRMUnitWithin : public EETileDistanceLess {
@@ -360,9 +364,9 @@ void EECPResourceManager::AssignGatherers()
             if (this->mWantedGatherers[theResource] <= this->mGatherers[theResource].size())
                 continue;
             unsigned long theWanted = this->mWantedGatherers[theResource] - this->mGatherers[theResource].size();
-            if (theResource == 2 && theWanted > 0 && thePlayer->mUsesFishing && theBoats.size() < 8
+            if (theResource == 2 && theWanted > 0 && EECPRMFishes(this) && theBoats.size() < 8
                 && gPhysics->mGameTime >= this->mNextFishingBoatTime) {
-                this->mManager->mUnitManager->RequestFishingBoats(1);
+                EECPRMRequestBoats(this);
                 this->mNextFishingBoatTime = gPhysics->mGameTime + 30000;
             }
             if (theWanted >= theIdle.size() + theBoats.size())
@@ -479,10 +483,10 @@ void EECPResourceManager::AssignGatherers()
                                                     theWanted--;
                                                 }
                                             }
-                                            if (theWanted > 0 && thePlayer->mUsesFishing) {
+                                            if (theWanted > 0 && EECPRMFishes(this)) {
                                                 if (this->mWantedGatherers[theResource] - this->mGatherers[theResource].size() > theBoats.size()
                                                     && theBoats.size() < 8 && gPhysics->mGameTime >= this->mNextFishingBoatTime) {
-                                                    this->mManager->mUnitManager->RequestFishingBoats(1);
+                                                    EECPRMRequestBoats(this);
                                                     this->mNextFishingBoatTime = gPhysics->mGameTime + 30000;
                                                 }
                                                 unsigned long theBoatCount = theBoats.size();
@@ -1478,6 +1482,77 @@ void EECPResourceManager::RemoveCosts(EETechTreeNode* inNode, long inCount)
     }
 }
 
+// New (docs/AI_RESEARCH.md §8.26; aipersonalities.yaml economy.coast_fishing): fishing off any coast. The original fished only on island
+// maps (mUsesFishing, where it also gives up farms) and with one boat at a time, so on a continent its food before
+// the Copper Age farms was the bushes and the first animals. From the Stone Age (the first fishing boat) the fish
+// within kCoastFishRange tiles of the town centre take up to kCoastBoatsPerFish boats each, kCoastBoats at most,
+// worked from the player's built dock (one is queued while there is none); farms stay as they are.
+static const long kCoastFishRange = 30;
+static const unsigned long kCoastBoats = 8;
+static const unsigned long kCoastBoatsPerFish = 2;
+
+static unsigned long EECPRMCoastFish(EECPResourceManager* inManager)
+{
+    EECPBuildManager* theBuild = inManager->mManager->mBuildManager;
+    if (theBuild == NULL || theBuild->mTownCenterTile.mX == -10000)
+        return 0;
+    long theX = theBuild->mTownCenterTile.mX;
+    long theY = theBuild->mTownCenterTile.mY;
+    unsigned long theCount = 0;
+    for (unsigned long k = 0; k < inManager->mFish.size(); k++) {
+        EEComplexUnit* theFish = inManager->mFish[k];
+        if (!(theFish->mResourceAmount > 0) || !(theFish->mHitPoints > 0))
+            continue;
+        long theDX = theFish->GetTileX() - theX;
+        long theDY = theFish->GetTileY() - theY;
+        if (theDX * theDX + theDY * theDY <= kCoastFishRange * kCoastFishRange)
+            theCount++;
+    }
+    return theCount;
+}
+
+static unsigned long EECPRMCoastBoatsWanted(EECPResourceManager* inManager)
+{
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    if (thePlayer->mUsesFishing || !EECPCoastFishingOn(thePlayer) || thePlayer->mTechnologies == NULL
+        || thePlayer->mTechnologies->mCurrentEpoch < kTechEpochStone)
+        return 0;
+    unsigned long theBoats = EECPRMCoastFish(inManager) * kCoastBoatsPerFish;
+    return theBoats < kCoastBoats ? theBoats : kCoastBoats;
+}
+
+static bool EECPRMFishes(EECPResourceManager* inManager)
+{
+    return inManager->mManager->mPlayer->mUsesFishing || EECPRMCoastBoatsWanted(inManager) > 0;
+}
+
+// the coast's boats: a dock first, then one boat request at a time up to the wanted count; the island rule keeps
+// the original's single request
+static void EECPRMRequestBoats(EECPResourceManager* inManager)
+{
+    EECPCivilizationManager* theManager = inManager->mManager;
+    unsigned long theWanted = EECPRMCoastBoatsWanted(inManager);
+    if (theWanted == 0) {
+        theManager->mUnitManager->RequestFishingBoats(1);
+        return;
+    }
+    std::vector<EEUnit*> theDocks;
+    EEGetPlayerUnitsOfType(kUnitTypeDock, theManager->mPlayer->mPlayerID, theDocks);
+    bool theBuilt = false;
+    for (unsigned long k = 0; k < theDocks.size() && !theBuilt; k++)
+        theBuilt = theDocks[k]->mComplexUnit != NULL && theDocks[k]->mComplexUnit->mIsBuilt && theDocks[k]->mHitPoints > 0;
+    if (!theBuilt) {
+        if (theManager->mBuildManager != NULL)
+            theManager->mBuildManager->QueueBuilding(kUnitTypeDock, false, true);
+        return;
+    }
+    long theClass = theManager->GetFishingBoatClass();
+    EECPUGatherSpecialUnitsCount theCount(theManager->mPlayer, theClass, 0, false);
+    theManager->mUnitManager->GatherUnits(theCount);
+    if (theCount.mRequested == 0 && (unsigned long)theCount.mUnits < theWanted)
+        theManager->mUnitManager->RequestUnits(theClass, 1, 0, 0);
+}
+
 unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
 {
     EEComputerPlayer* thePlayer = this->mManager->mPlayer;
@@ -1500,8 +1575,15 @@ unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
     unsigned long theTotal = 0;
     for (long r = 2; r < 7; r++) {
         unsigned long theCapacity = r == 3 ? (unsigned long)EECPPersonality(thePlayer).mWoodSlots : theSites[r] * theLimit;
-        if (r == 2)
+        if (r == 2) {
             theCapacity += this->mGatherers[2].size();   // farms and fish are not center units: what works there now
+            unsigned long theBoats = EECPRMCoastBoatsWanted(this);   // and the coast's boats still to come
+            if (theBoats > 0) {
+                unsigned long theHave = (unsigned long)this->mManager->mUnitManager->GetCount(this->mManager->GetFishingBoatClass());
+                if (theBoats > theHave)
+                    theCapacity += theBoats - theHave;
+            }
+        }
         if (r == inResource)
             return theCapacity;
         theTotal += theCapacity;
@@ -1871,6 +1953,7 @@ static bool EECPRMInDanger(EECPResourceManager* inManager, long inX, long inY, l
 // kMilitiaOdds times the attackers' within kMilitiaRange; else the citizens run to the town centre, or when the
 // attack is there to the drop site farthest from it. At most once every kMilitiaMs per player.
 static const long kMilitiaRange = 10;
+static const long kMilitiaTowerRange = 12;   // military.militia_towers
 static const float kMilitiaOdds = 1.5f;
 static const unsigned long kMilitiaMs = 4000;
 
@@ -1927,6 +2010,29 @@ static void EECPRMMilitia(EECPResourceManager* inManager, EEUnit* inCitizen, uns
             theAttack += theUnit->mStats->mAttack;
         }
     }
+    // military.militia_towers (docs/AI_RESEARCH.md §8.26; the owner: towers are strong until the Bronze Age, a boom
+    // lives behind them): the own built towers within kMilitiaTowerRange tiles count in the defence, and a raid the
+    // town cannot fight sends the citizens to the nearest tower within kDefendRange instead of the far drop site
+    bool theTowerRule = EECPMilitiaTowersOn(thePlayer);
+    EEUnit* theTower = NULL;
+    if (theTowerRule) {
+        long theBest = -1;
+        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            if (theUnit->mComplexUnit == NULL || !theUnit->mUnitClass->mIsTower || !(theUnit->mHitPoints > 0)
+                || !theUnit->mComplexUnit->mIsBuilt || theUnit->mStats->mAttack == 0.0f)
+                continue;
+            if (EECPRMNear(theUnit, theX, theY, kMilitiaTowerRange)) {
+                theHP += (float)theUnit->mHitPoints;
+                theAttack += theUnit->mStats->mAttack;
+            }
+            long theDX = theUnit->GetTileX() - inCitizen->GetTileX(), theDY = theUnit->GetTileY() - inCitizen->GetTileY();
+            long theDistance = theDX * theDX + theDY * theDY;
+            if (theDistance <= kDefendRange * kDefendRange && (theBest < 0 || theDistance < theBest)) {
+                theBest = theDistance;
+                theTower = theUnit;
+            }
+        }
+    }
     bool theFight = theHP * theAttack >= kMilitiaOdds * theRaiderHP * theRaiderAttack;
     if (theFight) {
         // the soldiers first, then only as many of the nearest citizens as the odds need
@@ -1977,7 +2083,10 @@ static void EECPRMMilitia(EECPResourceManager* inManager, EEUnit* inCitizen, uns
         bool theHaveHome = theBuildManager != NULL && theBuildManager->mTownCenterTile.mX != -10000;
         GE2DPoint theHome(0.0f, 0.0f);
         bool theRun = false;
-        if (theHaveHome && !EECPRMNear(inCitizen, theBuildManager->mTownCenterTile.mX, theBuildManager->mTownCenterTile.mY, kHomeRange)) {
+        if (theTower != NULL && !EECPRMNear(theTower, theX, theY, 3)) {
+            theHome = GE2DPoint((float)theTower->GetTileX(), (float)theTower->GetTileY());
+            theRun = true;
+        } else if (theHaveHome && !EECPRMNear(inCitizen, theBuildManager->mTownCenterTile.mX, theBuildManager->mTownCenterTile.mY, kHomeRange)) {
             theHome = GE2DPoint((float)theBuildManager->mTownCenterTile.mX, (float)theBuildManager->mTownCenterTile.mY);
             theRun = true;
         } else {
@@ -2016,9 +2125,9 @@ static void EECPRMMilitia(EECPResourceManager* inManager, EEUnit* inCitizen, uns
         if (!theCitizens.empty())
             inManager->mDangerZones.push_back(std::pair<U2DPoint<long>, unsigned long>(U2DPoint<long>(theX, theY), gPhysics->mGameTime));
     }
-    EE_CP_TRACE(thePlayer, "militia", "%s citizens=%lu soldiers=%lu raiders=%lu odds=%.2f", theFight ? "fight" : "run",
+    EE_CP_TRACE(thePlayer, "militia", "%s citizens=%lu soldiers=%lu raiders=%lu odds=%.2f tower=%d", theFight ? "fight" : "run",
                 (unsigned long)theCitizens.size(), (unsigned long)theSoldiers.size(), (unsigned long)theRaiders.size(),
-                theRaiderHP * theRaiderAttack > 0.0f ? theHP * theAttack / (theRaiderHP * theRaiderAttack) : 0.0f);
+                theRaiderHP * theRaiderAttack > 0.0f ? theHP * theAttack / (theRaiderHP * theRaiderAttack) : 0.0f, theTower != NULL ? 1 : 0);
 }
 
 void EECPRMNoteDanger(EECPResourceManager* inManager, EEUnit* inCitizen, unsigned long inAttacker)

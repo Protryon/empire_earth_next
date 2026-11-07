@@ -1096,6 +1096,74 @@ bool EECPBooming(EEComputerPlayer* inPlayer)
 // cost (CanAfford)
 static const unsigned long kCPRecoveryCitizens = 12;
 
+// military.prehistoric_army's answer to a rush (docs/AI_RESEARCH.md §8.26; the owner: "if I scout a rush, I scramble
+// and build up an army as needed"): enemy soldiers within kCPThreatRange tiles of the town centre stronger (hit
+// points x attack) than its own army lift the cap for kCPThreatMs; checked every kCPThreatCheckMs
+static const long kCPThreatRange = 40;
+static const unsigned long kCPThreatMs = 240000;
+static const unsigned long kCPThreatCheckMs = 5000;
+
+static bool EECPIsSoldier(EEUnit* inUnit)
+{
+    if (inUnit->mComplexUnit == NULL || !(inUnit->mHitPoints > 0) || inUnit->mStats->mAttack == 0.0f
+        || inUnit->mUnitClass->IsLandBuilding())
+        return false;
+    long theCategory = inUnit->mUnitClass->mCategory;
+    return theCategory == kUnitCategoryLand || theCategory == kUnitCategoryLandMilitaryHero;
+}
+
+// the player's living land soldiers (EECPUnitManager::CountMilitaryUnits misses the units the combat manager holds)
+static long EECPCountSoldiers(EEComputerPlayer* inPlayer)
+{
+    long theCount = 0;
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+        if (EECPIsSoldier(theUnit))
+            theCount++;
+    return theCount;
+}
+
+static bool EECPArmyThreat(EEComputerPlayer* inPlayer)
+{
+    static unsigned long sChecked[64];
+    static unsigned long sUntil[64];
+    unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
+    unsigned long theNow = gPhysics->mGameTime;
+    if (sChecked[theID] != 0 && theNow >= sChecked[theID] && theNow - sChecked[theID] < kCPThreatCheckMs)
+        return theNow < sUntil[theID];
+    sChecked[theID] = theNow;
+    if (sUntil[theID] > theNow + kCPThreatMs)
+        sUntil[theID] = 0;   // a new game (the clock started over)
+    EECPBuildManager* theBuild = inPlayer->mCivilizationManager != NULL ? inPlayer->mCivilizationManager->mBuildManager : NULL;
+    if (theBuild == NULL || theBuild->mTownCenterTile.mX == -10000)
+        return theNow < sUntil[theID];
+    long theX = theBuild->mTownCenterTile.mX, theY = theBuild->mTownCenterTile.mY;
+    float theOwn[2] = {0.0f, 0.0f}, theEnemy[2] = {0.0f, 0.0f};
+    for (unsigned long p = 1; p < gWorld.mNumPlayers; p++) {
+        EEPlayer* theOther = gWorld.mPlayers[p];
+        if (theOther == NULL)
+            continue;
+        bool theMine = theOther == inPlayer;
+        if (!theMine && inPlayer->IsAlly(theOther))
+            continue;
+        for (EEUnit* theUnit = theOther->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            if (!EECPIsSoldier(theUnit))
+                continue;
+            long theDX = theUnit->GetTileX() - theX, theDY = theUnit->GetTileY() - theY;
+            if (!theMine && theDX * theDX + theDY * theDY > kCPThreatRange * kCPThreatRange)
+                continue;
+            float* theSum = theMine ? theOwn : theEnemy;
+            theSum[0] += (float)theUnit->mHitPoints;
+            theSum[1] += theUnit->mStats->mAttack;
+        }
+    }
+    if (theEnemy[0] > 0.0f && theEnemy[0] * theEnemy[1] > theOwn[0] * theOwn[1]) {
+        if (theNow >= sUntil[theID])
+            EE_CP_TRACE(inPlayer, "threat", "enemy=%.0f own=%.0f", theEnemy[0] * theEnemy[1], theOwn[0] * theOwn[1]);
+        sUntil[theID] = theNow + kCPThreatMs;
+    }
+    return theNow < sUntil[theID];
+}
+
 // FUNCTION: EXE 0x42f033
 // Returns true for epoch technologies; otherwise asks the player whether it can afford the cost
 // New (docs/AI_RESEARCH.md §8.7): without the free-epochs cheat, a pending epoch advance reserves its cost: anything
@@ -1118,6 +1186,19 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
         && this->mCivilizationManager->mUnitManager->GetNumWorkers() < kCPRecoveryCitizens;
     if (inTechnology->mData->mID == kTechCitizen && theFewWorkers)
         return true;
+    // military.prehistoric_army (docs/AI_RESEARCH.md §8.26): in the Prehistoric the army is a mobile defence force of
+    // that many, as the owner plays it (sacrificed when the Stone Age units come); the food goes to the economy
+    long thePrehistoricArmy = EECPPrehistoricArmy(this);
+    if (thePrehistoricArmy > 0 && this->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric
+        && this->mCombatManager != NULL && this->mCivilizationManager != NULL
+        && this->mCivilizationManager->mUnitManager != NULL) {
+        long theClass = inUnitType;   // the class being made (the unit manager passes its request's class)
+        EEUnitClass* theUnitClass = theClass >= 0 && (unsigned long)theClass < EEUnitClassCount() ? gUnitClassTable[theClass] : NULL;
+        if (theUnitClass != NULL && this->mCombatManager->IsMilitaryClass(theUnitClass)
+            && EECPCountSoldiers(this) >= thePrehistoricArmy
+            && !EECPArmyThreat(this))
+            return false;
+    }
     // ... and nothing else spends the next citizen's cost (soldiers took the last food of a beaten AI's ten
     // citizens; when those died, 15 food bought none and the town centres stood empty for 40 minutes)
     if (inTechnology->mData->mID != kTechCitizen && theFewWorkers) {

@@ -252,6 +252,9 @@ struct EEAIPersonalityRule {
     // the gatherer split: by the tiered demand less the stock (EECPResourceManager.cpp EECPRMSplitByDemand; docs/AI_RESEARCH.md
     // §8.21), or false: the original's needs ledger with the stock correction above
     bool mDemandSplit = true;
+    // fishing off any coast from the Stone Age (EECPResourceManager.cpp EECPRMCoastBoatsWanted; docs/AI_RESEARCH.md
+    // §8.26): a dock, up to 8 boats, at most 2 docks from the build lists; the original fished only on island maps
+    bool mCoastFishing = true;
     // military pressure: the standing army the player keeps, per worker (citizens and fishing boats); up to the
     // original's military share of the pop cap
     float mStandingArmy = 0.25f;
@@ -261,6 +264,12 @@ struct EEAIPersonalityRule {
     // the town's answer to an attack group on its citizens (EECPResourceManager.cpp EECPRMMilitia; docs/AI_RESEARCH.md
     // §8.25): the nearby soldiers and as many of the nearest citizens as the odds need fight, or the citizens run
     bool mMilitia = true;
+    // the militia counts the built towers near the attack, and citizens that cannot fight run to the nearest tower
+    // (docs/AI_RESEARCH.md §8.26)
+    bool mMilitiaTowers = true;
+    // the Prehistoric army is a mobile defence force of at most this many soldiers, unless enemy soldiers near the town
+    // are stronger than it (EEComputerPlayer.cpp CanAfford; docs/AI_RESEARCH.md §8.26); 0: no cap (the rush)
+    long mPrehistoricArmy = 8;
 };
 struct EEAIPersonalityRules {
     std::vector<EEAIPersonalityRule> mPersonalities;

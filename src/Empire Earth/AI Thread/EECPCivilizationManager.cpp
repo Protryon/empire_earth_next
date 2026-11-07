@@ -406,6 +406,8 @@ void EECPCivilizationManager::CheckBuildingCounts()
             theWanted++;
         if (theMax > 0 && theWanted > theMax)
             theWanted = theMax;
+        if (theType == kUnitTypeDock && theWanted > 2 && EECPCoastFishingOn(this->mPlayer))
+            theWanted = 2;   // economy.coast_fishing (docs/AI_RESEARCH.md §8.26): one or two docks, as the owner builds (it built six)
         if (theKey == 0x2a) {
             if (this->mPlayer->mUsesFishing)
                 theHave = theWanted;

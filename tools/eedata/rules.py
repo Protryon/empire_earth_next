@@ -276,11 +276,11 @@ powers:
 
 
 # the personalities the game defaults to (ee/EERules.h EEAIPersonalityRules): (id, comment, epoch start, epoch full,
-# max citizen share, standing army, army floor); the rest is the balanced economy for all of them
-AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.16)', '0.3', '0.8', '0.7', '0.25', '0.1'),
-                    ('tall', 'tech: saves for the next epoch early and hard', '0.15', '0.5', '0.7', '0.2', '0.1'),
-                    ('wide', 'boom: grows its workforce, advances late', '0.6', '1.0', '0.8', '0.15', '0.1'),
-                    ('aggressive', 'rush: a large standing army, a middling epoch pace', '0.4', '0.9', '0.7', '0.5', '0.3')]
+# max citizen share, standing army, army floor, Prehistoric army); the rest is the balanced economy for all of them
+AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.26)', '0.3', '0.8', '0.7', '0.25', '0.1', '8'),
+                    ('tall', 'tech: saves for the next epoch early and hard', '0.15', '0.5', '0.7', '0.2', '0.1', '8'),
+                    ('wide', 'boom: grows its workforce, advances late', '0.6', '1.0', '0.8', '0.15', '0.1', '8'),
+                    ('aggressive', 'rush: a large standing army, a middling epoch pace', '0.4', '0.9', '0.7', '0.5', '0.3', '0')]
 AI_FLOOR = ('food', 'wood', 'stone', 'gold', 'iron')
 
 
@@ -288,7 +288,7 @@ def aipersonalities(ids, spec):
     out = [HEAD.format(name='aipersonalities', format=spec['format'],
                        what="The computer players' personalities: the tuning of their decisions outside dbcpbehavior.")]
     lines = ['personalities:']
-    for pid, what, start, full, citizens, army, floor in AI_PERSONALITIES:
+    for pid, what, start, full, citizens, army, floor, prearmy in AI_PERSONALITIES:
         lines += [f'  - id: {pid:<24}# {what}',
                   '    epoch_pressure:              # the elapsed share of the epoch timer (dbcpbehavior rows 28/29)',
                   f'      start: {start:<22}# a paid epoch advance is asked for from here ...',
@@ -307,11 +307,14 @@ def aipersonalities(ids, spec):
                   '      wood_slots: 15               # the gatherers wood takes (trees are not resource-center units)',
                   '      moves_per_cycle: 3           # busy gatherers moved to a short resource per 10 s',
                   '      demand_split: true           # gatherers by the tiered demand less the stock (false: the needs ledger)',
+                  '      coast_fishing: true          # from the Stone Age: a dock and up to 8 fishing boats off any coast',
                   '    military:',
                   f'      standing_army: {army:<14}# the army kept per worker (up to the military share of the pop cap)',
                   f'      army_floor: {floor:<17}# while it is short: up to this much more floor share on its unit\'s costs',
                   '      militia: true                # an attack group on the citizens: nearby soldiers and citizens fight '
-                  'when the odds allow, else the citizens run']
+                  'when the odds allow, else the citizens run',
+                  '      militia_towers: true         # ... the built towers near the attack count, and citizens run to a tower',
+                  f'      prehistoric_army: {prearmy:<11}# the Prehistoric army cap unless a stronger enemy is near (0: none)']
     lines.append('assign: [balanced]                 # computer player n takes entry (n - 1) mod the count')
     out.append('\n'.join(lines) + '\n')
     return ''.join(out)
@@ -589,8 +592,9 @@ def validate(name, text, content, spec):
                 for k in ('surplus_cut', 'max_citizen_share'):
                     if y.get(k) is not None:
                         _float(y.get(k), y.where(), k)
-                if y.get('demand_split') is not None and str(y.get('demand_split')) not in ('0', '1', 'true', 'false'):
-                    raise TextError(f'{y.where()}: demand_split: true or false')
+                for k in ('demand_split', 'coast_fishing'):
+                    if y.get(k) is not None and str(y.get(k)) not in ('0', '1', 'true', 'false'):
+                        raise TextError(f'{y.where()}: {k}: true or false')
                 f = y.get('floor')
                 if f is not None:
                     z = _Map(f, name, 'floor')
@@ -606,8 +610,11 @@ def validate(name, text, content, spec):
                     raise TextError(f'{y.where()}: military: standing_army must be 0 or more')
                 if y.get('army_floor') is not None:
                     _float(y.get('army_floor'), y.where(), 'army_floor')
-                if y.get('militia') is not None and str(y.get('militia')) not in ('0', '1', 'true', 'false'):
-                    raise TextError(f'{y.where()}: militia: true or false')
+                for k in ('militia', 'militia_towers'):
+                    if y.get(k) is not None and str(y.get(k)) not in ('0', '1', 'true', 'false'):
+                        raise TextError(f'{y.where()}: {k}: true or false')
+                if y.get('prehistoric_army') is not None and _int(y.get('prehistoric_army'), y.where(), 'prehistoric_army') < 0:
+                    raise TextError(f'{y.where()}: military: prehistoric_army must be 0 or more')
                 y.done()
             return x.get('id')
         found = entries(top, 'personalities', personality)

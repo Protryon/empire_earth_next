@@ -2660,6 +2660,8 @@ computer player gets which. New in this port (no original values: the defaults a
           moves_per_cycle: 3       # busy gatherers moved to a short resource per 10 s
           demand_split: true       # the gatherers by the tiered demand less the stock (docs/AI_RESEARCH.md §8.21);
                                    # false: the original's needs ledger with the stock correction above
+          coast_fishing: true      # from the Stone Age, fish within 30 tiles of the town centre: a dock and up to
+                                   # 2 boats a fish (8 at most); the build lists' docks capped at 2 (§8.26)
         military:
           standing_army: 0.25      # the army kept per worker (every 30 game s, the favourite land unit; up to the
                                    # original's military share of the pop cap)
@@ -2668,9 +2670,13 @@ computer player gets which. New in this port (no original values: the defaults a
           militia: true            # soldiers hit a citizen: the soldiers within 30 tiles and the nearest citizens
                                    # the odds need fight (strength 1.5 x the attackers'), else the citizens run
                                    # (docs/AI_RESEARCH.md §8.25)
+          militia_towers: true     # the built towers within 12 tiles count in those odds, and citizens that run go
+                                   # to the nearest tower within 30 tiles (§8.26)
+          prehistoric_army: 8      # the Prehistoric army: at most this many soldiers unless enemy soldiers within
+                                   # 40 tiles of the town are stronger (then 4 min uncapped); 0: no cap (§8.26)
       - id: tall ...               # epoch_pressure 0.15 / 0.5, standing_army 0.2
       - id: wide ...               # epoch_pressure 0.6 / 1.0, max_citizen_share 0.8, standing_army 0.15
-      - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5
+      - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5, prehistoric_army 0
     assign: [balanced]             # computer player n takes entry (n - 1) mod the count
 
 A key left out keeps the default; `assign` names personalities. TEST ONLY: `EE_AI_PERSONALITY` in the environment

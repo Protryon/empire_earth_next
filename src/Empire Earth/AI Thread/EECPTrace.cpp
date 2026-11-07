@@ -179,6 +179,21 @@ bool EECPMilitiaOn(const EEComputerPlayer* inPlayer)
     return EECPPersonality(inPlayer).mMilitia && !EECPExperiment(inPlayer, "nomilitia");
 }
 
+bool EECPCoastFishingOn(const EEComputerPlayer* inPlayer)
+{
+    return EECPPersonality(inPlayer).mCoastFishing && !EECPExperiment(inPlayer, "nofish");
+}
+
+bool EECPMilitiaTowersOn(const EEComputerPlayer* inPlayer)
+{
+    return EECPPersonality(inPlayer).mMilitiaTowers && !EECPExperiment(inPlayer, "nomtower");
+}
+
+long EECPPrehistoricArmy(const EEComputerPlayer* inPlayer)
+{
+    return EECPExperiment(inPlayer, "noprearmy") ? 0 : EECPPersonality(inPlayer).mPrehistoricArmy;
+}
+
 bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer)
 {
     EECPTraceInit();

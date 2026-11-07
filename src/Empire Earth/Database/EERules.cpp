@@ -330,6 +330,7 @@ EEAIPersonalityRules::EEAIPersonalityRules()
     theAggressive.mEpochPressureFull = 0.9f;
     theAggressive.mStandingArmy = 0.5f;
     theAggressive.mArmyFloor = 0.3f;
+    theAggressive.mPrehistoricArmy = 0;     // the rush keeps its early army
     this->mPersonalities.push_back(theBalanced);
     this->mPersonalities.push_back(theTall);
     this->mPersonalities.push_back(theWide);
@@ -940,6 +941,7 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
                 y.Int("wood_slots", p.mWoodSlots);
                 y.Int("moves_per_cycle", p.mMovesPerCycle);
                 y.Bool("demand_split", p.mDemandSplit);
+                y.Bool("coast_fishing", p.mCoastFishing);
                 y.Done();
             }
             if (const Node* s = x.Sub("military")) {
@@ -947,9 +949,13 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
                 y.Float("standing_army", p.mStandingArmy);
                 y.Float("army_floor", p.mArmyFloor);
                 y.Bool("militia", p.mMilitia);
+                y.Bool("militia_towers", p.mMilitiaTowers);
+                y.Int("prehistoric_army", p.mPrehistoricArmy);
                 y.Done();
                 if (!(p.mStandingArmy >= 0.0f))
                     Fail(y.Where() + ": military: standing_army must be 0 or more");
+                if (p.mPrehistoricArmy < 0)
+                    Fail(y.Where() + ": military: prehistoric_army must be 0 or more");
             }
             x.Done();
             r.mPersonalities.push_back(p);
@@ -1249,9 +1255,12 @@ void EERules::Dump(std::string& outJson) const
             j.Int("wood_slots", p.mWoodSlots);
             j.Int("moves_per_cycle", p.mMovesPerCycle);
             j.Int("demand_split", p.mDemandSplit ? 1 : 0);
+            j.Int("coast_fishing", p.mCoastFishing ? 1 : 0);
             j.Float("standing_army", p.mStandingArmy);
             j.Float("army_floor", p.mArmyFloor);
             j.Int("militia", p.mMilitia ? 1 : 0);
+            j.Int("militia_towers", p.mMilitiaTowers ? 1 : 0);
+            j.Int("prehistoric_army", p.mPrehistoricArmy);
             j.Close('}');
         }
         j.Close(']');
