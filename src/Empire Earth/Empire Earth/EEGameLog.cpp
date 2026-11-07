@@ -51,6 +51,7 @@
 #include "ee/EEGamePreferences.h"
 #include "ee/EECPTrace.h"
 #include "ee/EEGameLog.h"
+#include "ee/EEColorTable.h"
 
 namespace {
 
@@ -66,7 +67,8 @@ unsigned long sNextSample = 0;
 long sEpoch[kMaxPlayers];
 long sIncome[kMaxPlayers][7];
 long sLost[kMaxPlayers][3];    // citizens, army, buildings since the last sample
-long sLostBy[kMaxPlayers][3];  // all losses by the killer: a human's unit, a computer player's, none or wild
+long sLostBy[kMaxPlayers][3];
+std::string sCiv[kMaxPlayers];   // the civilization name last written  // all losses by the killer: a human's unit, a computer player's, none or wild
 
 bool IsBuilding(EEUnit* inUnit)
 {
@@ -155,10 +157,13 @@ void Open()
         if (p == NULL)
             continue;
         EEComputerPlayer* ai = p->mComputerPlayer;
-        Write("EE-GAME 0 p%lu player kind=%s name=%s civ=%s personality=%s cheats=%s\n", i,
+        // color: the dbcolortable row (tools/game_log.py names it from the data); rgb its colour
+        Write("EE-GAME 0 p%lu player kind=%s name=%s color=%lu rgb=%.2f/%.2f/%.2f civ=%s personality=%s cheats=%s\n", i,
               p->IsHuman() ? "human" : ai != NULL ? "computer" : "other", Narrow(p->mName).c_str(),
+              (unsigned long)EEColorTable::FindIndex(p->mColor), p->mColor.mRed, p->mColor.mGreen, p->mColor.mBlue,
               Narrow(p->mCivilization.GetName()).c_str(), ai != NULL ? EECPPersonality(ai).mID.c_str() : "-",
               ai != NULL ? EECPCheatNames(ai) : "-");
+        sCiv[i] = Narrow(p->mCivilization.GetName());
     }
     // the computer players' decision trace into the log too (EECPTraceOut; the sim hash stays EE_AI_TRACE's)
     gCPTraceOn = true;
@@ -170,6 +175,11 @@ void Sample(unsigned long inTime)
         EEPlayer* p = gWorld.mPlayers[i];
         if (p == NULL)
             continue;
+        std::string theCiv = Narrow(p->mCivilization.GetName());
+        if (theCiv != sCiv[i]) {   // chosen after the start (the civilization screen opens in the game)
+            Write("EE-GAME %lu p%lu civ name=%s\n", inTime, i, theCiv.c_str());
+            sCiv[i] = theCiv;
+        }
         long theCitizens = 0, theIdle = 0, theBuilders = 0, theArmy = 0, theBuildings = 0, theUnfinished = 0, theTowers = 0;
         long theGather[7] = {0, 0, 0, 0, 0, 0, 0};
         for (EEUnit* u = p->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext)) {

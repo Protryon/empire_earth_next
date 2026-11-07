@@ -20,6 +20,26 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
 
+# the first player colours (Data/db/dbcolortable.csv labels; read from the data when it is at hand)
+COLORS = ["Blue", "Red", "Yellow", "Bright Purple", "Burnt Orange", "Lime Green", "Cyan", "Dark Red", "Lt. Brown",
+          "Dark Purple", "Gray", "Light Gray"]
+
+
+def color_names(roots):
+    for r in roots:
+        f = pathlib.Path(r) / "Data" / "db" / "dbcolortable.csv"
+        if f.exists():
+            names = {}
+            for line in open(f, encoding="utf-8", errors="replace"):
+                parts = line.rstrip("\n").split(",")
+                if parts and parts[0].isdigit() and len(parts) > 2:
+                    label = parts[2]
+                    names[int(parts[0])] = label[label.find("(") + 1:label.rfind(")")] if "(" in label else label
+            if names:
+                return names
+    return dict(enumerate(COLORS))
+
+
 def kv(text):
     return dict(x.split("=", 1) for x in text.split() if "=" in x)
 
@@ -47,6 +67,8 @@ def read(path):
             players[p] = kv(rest)
         elif ev == "sample":
             samples[p].append((t, kv(rest)))
+        elif ev == "civ":
+            players.setdefault(p, {})["civ"] = kv(rest).get("name", "-")
         elif ev == "epoch":
             epochs[p][int(kv(rest)["to"])] = t
         elif ev == "end":
@@ -70,6 +92,8 @@ def main():
             sys.exit("no game log found: pass LOG or --data ROOT")
         logs = [found[-1]]
     out = []
+    colors = color_names([a.data or ROOT / "data", ROOT / "build" / "open_data" / "tree",
+                          ROOT / "build" / "open_data" / "tree-binary"])
     for path in logs:
         head, players, samples, epochs, end, ai_lines, chats = read(path)
         last = max((s[-1][0] for s in samples.values() if s), default=0)
@@ -87,7 +111,8 @@ def main():
             if who == "computer":
                 who += f" {info.get('personality', '-')} cheats={info.get('cheats', '-')}"
             reached = ", ".join(f"e{e} {t / 60000:.1f}m" for e, t in sorted(epochs[p].items())) or "none"
-            print(f"\np{p} {who} civ={info.get('civ', '-')}: epochs {reached}")
+            color = colors.get(int(info["color"]), f"color {info['color']}") if info.get("color", "").isdigit() else "?"
+            print(f"\np{p} {color} {who} civ={info.get('civ', '-')}: epochs {reached}")
             print("   min ep  cit idle  gather f/w/s/g/i  bld  army  bldg tow  stock f/w/s/g/i           income/min f/w/s/g/i  lost c/a/b by h/c")
             step = a.every * 60000
             next_t, window = 0.0, collections.Counter()
