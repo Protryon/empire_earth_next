@@ -275,12 +275,21 @@ powers:
     return ''.join(out)
 
 
-# the personalities the game defaults to (ee/EERules.h EEAIPersonalityRules): (id, comment, epoch start, epoch full,
-# max citizen share, standing army, army floor, Prehistoric army); the rest is the balanced economy for all of them
-AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.27)', '0.3', '0.8', '0.7', '0.25', '0.1', '4'),
-                    ('tall', 'tech: saves for the next epoch early and hard', '0.15', '0.5', '0.7', '0.2', '0.1', '4'),
-                    ('wide', 'boom: grows its workforce, advances late', '0.6', '1.0', '0.8', '0.15', '0.1', '4'),
-                    ('aggressive', 'rush: a large standing army, a middling epoch pace', '0.4', '0.9', '0.7', '0.5', '0.3', '0')]
+# the personalities the game defaults to (ee/EERules.h EEAIPersonalityRules): (id, comment, what differs from
+# AI_DEFAULTS, the balanced values)
+AI_DEFAULTS = dict(start='0.3', full='0.8', stone_span='30', surplus='1000', low_stock='150', citizens='0.7', moves='3',
+                   demand_split='true', coast_fishing='true', forage_patches='true', claim_needed='true', army='0.25',
+                   floor='0.1', militia='true', militia_towers='true', prearmy='4', attacks='false', naval_flee='true')
+AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.27)', {}),
+                    ('tall', 'tech: saves for the next epoch early and hard', dict(start='0.15', full='0.5', army='0.2')),
+                    ('wide', 'boom: grows its workforce, advances late', dict(start='0.6', full='1.0', citizens='0.8', army='0.15')),
+                    ('aggressive', 'rush: a large standing army, a middling epoch pace',
+                     dict(start='0.4', full='0.9', army='0.5', floor='0.3', prearmy='0', attacks='true')),
+                    ('classic', 'TEMPORARY: the original\'s decisions where a rule holds them (docs/AI_RESEARCH.md 8.28)',
+                     dict(start='1.0', full='100.0', stone_span='0', surplus='100000000', low_stock='0', citizens='0.0', moves='0',
+                          demand_split='false', coast_fishing='false', forage_patches='false', claim_needed='false',
+                          army='0.0', floor='0.0', militia='false', militia_towers='false', prearmy='0', attacks='true',
+                          naval_flee='false'))]
 AI_FLOOR = ('food', 'wood', 'stone', 'gold', 'iron')
 
 
@@ -288,16 +297,18 @@ def aipersonalities(ids, spec):
     out = [HEAD.format(name='aipersonalities', format=spec['format'],
                        what="The computer players' personalities: the tuning of their decisions outside dbcpbehavior.")]
     lines = ['personalities:']
-    for pid, what, start, full, citizens, army, floor, prearmy in AI_PERSONALITIES:
+    for pid, what, differs in AI_PERSONALITIES:
+        v = dict(AI_DEFAULTS, **differs)
+        start, full, citizens, army, floor, prearmy = v['start'], v['full'], v['citizens'], v['army'], v['floor'], v['prearmy']
         lines += [f'  - id: {pid:<24}# {what}',
                   '    epoch_pressure:              # the elapsed share of the epoch timer (dbcpbehavior rows 28/29)',
                   f'      start: {start:<22}# a paid epoch advance is asked for from here ...',
                   f'      full: {full:<23}# ... and its cost is wholly reserved from here',
-                  '      stone_span: 30               # the Prehistoric instead: the game time over this many minutes (0: the timer)',
+                  f'      stone_span: {v["stone_span"]:<17}# the Prehistoric instead: the game time over this many minutes (0: the timer)',
                   '    economy:',
-                  '      surplus: 1000                # a resource with more in stock ...',
+                  f'      surplus: {v["surplus"]:<20}# a resource with more in stock ...',
                   '      surplus_cut: 0.5             # ... gets this share of its gatherers',
-                  '      low_stock: 150               # a resource with less in stock ...',
+                  f'      low_stock: {v["low_stock"]:<18}# a resource with less in stock ...',
                   '      floor:                       # ... at least this share of the gatherers',
                   '        food: 0.1',
                   '        wood: 0.25',
@@ -306,20 +317,20 @@ def aipersonalities(ids, spec):
                   '        iron: 0.05',
                   f'      max_citizen_share: {citizens:<10}# the citizen target: at most this share of the pop cap',
                   '      wood_slots: 15               # the gatherers wood takes (trees are not resource-center units)',
-                  '      moves_per_cycle: 3           # busy gatherers moved to a short resource per 10 s',
-                  '      demand_split: true           # gatherers by the tiered demand less the stock (false: the needs ledger)',
-                  '      coast_fishing: true          # from the Stone Age: a dock and up to 8 fishing boats off any coast',
-                  '      forage_patches: true         # about mining_limit a patch, settlements on patches, hunting, 16 boats',
-                  '      claim_needed: true           # claim the next epoch\'s missing stone/gold/iron; no reserve when unreachable',
+                  f'      moves_per_cycle: {v["moves"]:<12}# busy gatherers moved to a short resource per 10 s',
+                  f'      demand_split: {v["demand_split"]:<15}# gatherers by the tiered demand less the stock (false: the needs ledger)',
+                  f'      coast_fishing: {v["coast_fishing"]:<14}# from the Stone Age: a dock and up to 8 fishing boats off any coast',
+                  f'      forage_patches: {v["forage_patches"]:<13}# about mining_limit a patch, settlements on patches, hunting, 16 boats',
+                  f'      claim_needed: {v["claim_needed"]:<15}# claim the next epoch\'s missing stone/gold/iron; no reserve when unreachable',
                   '    military:',
                   f'      standing_army: {army:<14}# the army kept per worker (up to the military share of the pop cap)',
                   f'      army_floor: {floor:<17}# while it is short: up to this much more floor share on its unit\'s costs',
-                  '      militia: true                # an attack group on the citizens: nearby soldiers and citizens fight '
+                  f'      militia: {v["militia"]:<20}# an attack group on the citizens: nearby soldiers and citizens fight '
                   'when the odds allow, else the citizens run',
-                  '      militia_towers: true         # ... the built towers near the attack count, and citizens run to a tower',
+                  f'      militia_towers: {v["militia_towers"]:<13}# ... the built towers near the attack count, and citizens run to a tower',
                   f'      prehistoric_army: {prearmy:<11}# the Prehistoric army cap unless a stronger enemy is near (0: none)',
-                  f'      prehistoric_attacks: {"true" if prearmy == "0" else "false":<8}# attack groups against an enemy in the Prehistoric',
-                  '      naval_flee: true             # units under warship fire they cannot answer leave']
+                  f'      prehistoric_attacks: {v["attacks"]:<8}# attack groups against an enemy in the Prehistoric',
+                  f'      naval_flee: {v["naval_flee"]:<17}# units under warship fire they cannot answer leave']
     lines.append('assign: [balanced]                 # computer player n takes entry (n - 1) mod the count')
     out.append('\n'.join(lines) + '\n')
     return ''.join(out)

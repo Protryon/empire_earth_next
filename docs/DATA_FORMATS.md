@@ -2692,6 +2692,10 @@ computer player gets which. New in this port (no original values: the defaults a
       - id: wide ...               # epoch_pressure 0.6 / 1.0, max_citizen_share 0.8, standing_army 0.15
       - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5, prehistoric_army 0,
                                    # prehistoric_attacks true
+      - id: classic ...            # TEMPORARY (until the new AI beats it): every rule at the original's setting
+                                   # (epoch_pressure 1.0 / 100, stone_span 0, no stock correction, max_citizen_share
+                                   # 0, moves_per_cycle 0, the needs ledger, every new behaviour off, no standing
+                                   # army); EE_AI_PERSONALITY gives it to a seat (docs/AI_RESEARCH.md §8.28)
     assign: [balanced]             # computer player n takes entry (n - 1) mod the count
 
 A key left out keeps the default; `assign` names personalities. TEST ONLY: `EE_AI_PERSONALITY` in the environment
