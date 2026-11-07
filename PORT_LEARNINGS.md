@@ -1485,3 +1485,25 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   (`demand_split`) this branch does not know, and the game stops on an unknown key; tools/sim.py warns.
 - **POSIX**: `ee-aoc --sim <EE-SIM options>` runs the same driver from the game's main (EESimMain returns -1 and
   main goes on with the game). It compiles for linux-x86_64 with the game's flags; it has not been run there.
+
+## macOS playtesting under lldb and ASan (2026-11-06)
+
+- **Play under the debugger.** `tools/play_posix.py` runs the ASan build under `lldb --batch`; a crash, a sanitizer
+  stop or a kill leaves `crash.txt` (every thread), a stack core and `asan.*` in `build/playtest/<time>/`. A freeze
+  leaves nothing by itself: `sample <pid> 3` reads the stacks of a running (even debugged) game without stopping it.
+- **A dead unit in the x-sorted unit list** (`gWorld.mUnits`, the RTSUnitLink chain): one crash
+  (`EEWorld::ResortUnit` read a null `mPrev`, fault address 0x38 = `mTileX`) and two freezes (`ResortUnit` looping
+  for good on the physics thread, the UI and graphics threads waiting on the world lock). `ResortUnit` ends on any
+  well-formed chain, sorted or not, so the chain itself was broken.
+  - `EE_CHECK_UNIT_LIST=1` (play_posix.py's default) checks the chain at every `Link`/`Unlink` and walks it once
+    per physics flush; it caught a removed unit (`mIsValid` false) still linked.
+  - Cause: `EEWorld::PlaceQueuedUnits` placed queued units without testing `mIsValid`. A unit removed between its
+    creation and the next flush keeps its node (freed only by `FreeNode`), so it was linked as a dead unit. In
+    practice: the PathPoint markers of a player's move orders, created and replaced within one tick. Fix: such a
+    unit is skipped (logged `EE-UNITLIST: placement skips a removed unit`), and a creator that left the list is no
+    longer used as the insertion point. Original-game bug; the 32-bit game presumably survived it more often.
+- **`GETerrainMesh::UpdateFogOfWar`** read the row headers of rows -1 and count + 1 at the map's edges (ASan heap
+  overflow after loading a save). Harmless junk reads on 32-bit Windows; only existing rows are read now.
+- **The game log was never written on POSIX**: `PlatPathGetDataRoot` returns the game's `C:\` form there, which
+  `PlatCreateDirectory` translates but plain `fopen` does not. Any file opened under the data root goes through
+  `PlatFOpen`.

@@ -1964,6 +1964,21 @@ void EEWorld::PlaceQueuedUnits()
     for (unsigned long i = 0; i < theCount; i++) {
         EEUnit* theUnit = static_cast<EEUnit*>(this->mQueuedPlacements[i].mUnit);
         RTSUnit* theAt = this->mQueuedPlacements[i].mInsertAfter;
+        // port: a unit removed between its creation and this placement (Invalidate keeps its node until the node is
+        // freed) was linked into the x-sorted list as a dead unit, and the list broke later (ResortUnit read a null
+        // link or looped for good: the macOS playtests' crash and freezes). It is not placed.
+        if (!theUnit->mIsValid) {
+            fprintf(stderr, "EE-UNITLIST: placement skips a removed unit (id %08lx, %s, tile %ld,%ld)\n",
+                    theUnit->mUnitID, (const char*)theUnit->mUnitClass->mName, theUnit->mTileX, theUnit->mTileY);
+            continue;
+        }
+        // likewise the unit to place it after (its creator) may have left the list: search from the head instead
+        if (theAt != NULL && RTSDummyHead(theAt) == NULL && (!theAt->mIsValid || theAt->mTileNode == NULL
+                                                              || theAt->mTileNode->mPrev == NULL)) {
+            fprintf(stderr, "EE-UNITLIST: placement after a unit no longer in the list (id %08lx), from the head\n",
+                    theAt->mUnitID);
+            theAt = NULL;
+        }
         long theX = theUnit->mTileX;
         theUnit->mUnitClass->AddToTile(theUnit);
         gMiniMap->MoveUnit(theUnit, -10000, -10000, theUnit->mTileX, theUnit->mTileY);
