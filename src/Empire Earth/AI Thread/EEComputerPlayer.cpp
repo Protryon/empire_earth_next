@@ -1092,6 +1092,10 @@ bool EECPBooming(EEComputerPlayer* inPlayer)
         && (long)inPlayer->mCivilizationManager->mUnitManager->GetNumWorkers() < theWorkers;
 }
 
+// new: below this many workers citizens are trained whatever the epoch reserve, and nothing else spends a citizen's
+// cost (CanAfford)
+static const unsigned long kCPRecoveryCitizens = 12;
+
 // FUNCTION: EXE 0x42f033
 // Returns true for epoch technologies; otherwise asks the player whether it can afford the cost
 // New (docs/AI_RESEARCH.md §8.7): without the free-epochs cheat, a pending epoch advance reserves its cost: anything
@@ -1107,6 +1111,24 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
         return true;
     if (inTechnology->mData->mID == kTechCitizen && EECPBooming(this))
         return true;   // the boom opening: citizens first
+    // new: a player down to its last few workers trains citizens whatever the epoch reserve (the reserve held the
+    // food for the advance, and with no citizens nothing ever filled it: a beaten AI kept two town centres and 580
+    // food for 50 minutes and never trained one; playtest and sim, 2026-11-06)
+    bool theFewWorkers = this->mCivilizationManager != NULL && this->mCivilizationManager->mUnitManager != NULL
+        && this->mCivilizationManager->mUnitManager->GetNumWorkers() < kCPRecoveryCitizens;
+    if (inTechnology->mData->mID == kTechCitizen && theFewWorkers)
+        return true;
+    // ... and nothing else spends the next citizen's cost (soldiers took the last food of a beaten AI's ten
+    // citizens; when those died, 15 food bought none and the town centres stood empty for 40 minutes)
+    if (inTechnology->mData->mID != kTechCitizen && theFewWorkers) {
+        EETechTreeNode* theCitizen = this->mTechnologies->Get(kTechCitizen);
+        for (long i = kResourceFood; theCitizen != NULL && i <= kResourceIron; i++) {
+            long theCost = this->ScaleCost(inTechnology->GetCost(i, inUnitType, 1.0f)) * inCount;
+            long theKeep = this->ScaleCost(theCitizen->GetCost(i, kUnitTypeCitizen, 1.0f));
+            if (theCost > 0 && theKeep > 0 && this->mResourceCaps[i] - theCost < theKeep)
+                return false;
+        }
+    }
     if (inTechnology->mData->mID == kTechCitizen && EECPExperiment(this, "payback") && this->mCivilizationManager != NULL) {
         // the experiment "payback": a citizen pays its food back in about 8 game minutes (6 food a minute), so one
         // trained earlier than that before the epoch timer is due speeds the advance up instead of holding it back
