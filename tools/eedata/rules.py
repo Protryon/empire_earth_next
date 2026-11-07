@@ -277,9 +277,9 @@ powers:
 
 # the personalities the game defaults to (ee/EERules.h EEAIPersonalityRules): (id, comment, epoch start, epoch full,
 # max citizen share, standing army, army floor, Prehistoric army); the rest is the balanced economy for all of them
-AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.26)', '0.3', '0.8', '0.7', '0.25', '0.1', '8'),
-                    ('tall', 'tech: saves for the next epoch early and hard', '0.15', '0.5', '0.7', '0.2', '0.1', '8'),
-                    ('wide', 'boom: grows its workforce, advances late', '0.6', '1.0', '0.8', '0.15', '0.1', '8'),
+AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.27)', '0.3', '0.8', '0.7', '0.25', '0.1', '4'),
+                    ('tall', 'tech: saves for the next epoch early and hard', '0.15', '0.5', '0.7', '0.2', '0.1', '4'),
+                    ('wide', 'boom: grows its workforce, advances late', '0.6', '1.0', '0.8', '0.15', '0.1', '4'),
                     ('aggressive', 'rush: a large standing army, a middling epoch pace', '0.4', '0.9', '0.7', '0.5', '0.3', '0')]
 AI_FLOOR = ('food', 'wood', 'stone', 'gold', 'iron')
 
@@ -293,6 +293,7 @@ def aipersonalities(ids, spec):
                   '    epoch_pressure:              # the elapsed share of the epoch timer (dbcpbehavior rows 28/29)',
                   f'      start: {start:<22}# a paid epoch advance is asked for from here ...',
                   f'      full: {full:<23}# ... and its cost is wholly reserved from here',
+                  '      stone_span: 30               # the Prehistoric instead: the game time over this many minutes (0: the timer)',
                   '    economy:',
                   '      surplus: 1000                # a resource with more in stock ...',
                   '      surplus_cut: 0.5             # ... gets this share of its gatherers',
@@ -308,13 +309,17 @@ def aipersonalities(ids, spec):
                   '      moves_per_cycle: 3           # busy gatherers moved to a short resource per 10 s',
                   '      demand_split: true           # gatherers by the tiered demand less the stock (false: the needs ledger)',
                   '      coast_fishing: true          # from the Stone Age: a dock and up to 8 fishing boats off any coast',
+                  '      forage_patches: true         # about mining_limit a patch, settlements on patches, hunting, 16 boats',
+                  '      claim_needed: true           # claim the next epoch\'s missing stone/gold/iron; no reserve when unreachable',
                   '    military:',
                   f'      standing_army: {army:<14}# the army kept per worker (up to the military share of the pop cap)',
                   f'      army_floor: {floor:<17}# while it is short: up to this much more floor share on its unit\'s costs',
                   '      militia: true                # an attack group on the citizens: nearby soldiers and citizens fight '
                   'when the odds allow, else the citizens run',
                   '      militia_towers: true         # ... the built towers near the attack count, and citizens run to a tower',
-                  f'      prehistoric_army: {prearmy:<11}# the Prehistoric army cap unless a stronger enemy is near (0: none)']
+                  f'      prehistoric_army: {prearmy:<11}# the Prehistoric army cap unless a stronger enemy is near (0: none)',
+                  f'      prehistoric_attacks: {"true" if prearmy == "0" else "false":<8}# attack groups against an enemy in the Prehistoric',
+                  '      naval_flee: true             # units under warship fire they cannot answer leave']
     lines.append('assign: [balanced]                 # computer player n takes entry (n - 1) mod the count')
     out.append('\n'.join(lines) + '\n')
     return ''.join(out)
@@ -582,6 +587,8 @@ def validate(name, text, content, spec):
                 fu = _float(y.get('full'), y.where(), 'full') if y.get('full') is not None else 0.8
                 if not (st >= 0 and fu > st):
                     raise TextError(f'{y.where()}: epoch_pressure: 0 <= start < full')
+                if y.get('stone_span') is not None and _float(y.get('stone_span'), y.where(), 'stone_span') < 0:
+                    raise TextError(f'{y.where()}: epoch_pressure: stone_span must be 0 or more')
                 y.done()
             c = x.get('economy')
             if c is not None:
@@ -592,7 +599,7 @@ def validate(name, text, content, spec):
                 for k in ('surplus_cut', 'max_citizen_share'):
                     if y.get(k) is not None:
                         _float(y.get(k), y.where(), k)
-                for k in ('demand_split', 'coast_fishing'):
+                for k in ('demand_split', 'coast_fishing', 'forage_patches', 'claim_needed'):
                     if y.get(k) is not None and str(y.get(k)) not in ('0', '1', 'true', 'false'):
                         raise TextError(f'{y.where()}: {k}: true or false')
                 f = y.get('floor')
@@ -610,7 +617,7 @@ def validate(name, text, content, spec):
                     raise TextError(f'{y.where()}: military: standing_army must be 0 or more')
                 if y.get('army_floor') is not None:
                     _float(y.get('army_floor'), y.where(), 'army_floor')
-                for k in ('militia', 'militia_towers'):
+                for k in ('militia', 'militia_towers', 'prehistoric_attacks', 'naval_flee'):
                     if y.get(k) is not None and str(y.get(k)) not in ('0', '1', 'true', 'false'):
                         raise TextError(f'{y.where()}: {k}: true or false')
                 if y.get('prehistoric_army') is not None and _int(y.get('prehistoric_army'), y.where(), 'prehistoric_army') < 0:

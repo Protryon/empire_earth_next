@@ -44,6 +44,7 @@
 #include "ee/EECPCombatStrategy.h"
 #include "ee/EECPAttackCommander.h"
 #include "ee/EECPTrace.h"
+#include "ee/EETechTreeTechID.h"
 
 extern long& gNumPlayers;                    // 0x530e0c (EECPAttackSubGroupUnit.cpp declares it too) (provisional name)
 
@@ -120,8 +121,21 @@ bool EECPAttackCommander::TakeUnit(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x451bb9
 // Creates an attack group for a task with a default strategy of the given kind (special plus counter units, or
 // already-defined units for kind 3); keeps it unless the plan leaves it spent, then returns NULL
+// the experiment "prepeace" (docs/AI_RESEARCH.md §8.27; the owner: "I don't focus at all on attacks" before the Stone
+// Age): no attack group against an enemy in the Prehistoric; the defence commander's groups still form
+static bool EECPACPrehistoricPeace(EEComputerPlayer* inPlayer, EECPAGTask& inTask)
+{
+    if (!EECPPrehistoricPeaceOn(inPlayer) || inPlayer->mTechnologies == NULL
+        || inPlayer->mTechnologies->mCurrentEpoch > kTechEpochPrehistoric || inTask.mMode == kAGModeDefense)
+        return false;
+    EEPlayer* theTarget = inTask.GetPlayer();
+    return theTarget != NULL && theTarget != inPlayer && !inPlayer->IsAlly(theTarget);
+}
+
 EECPAttackGroup* EECPAttackCommander::CreateGroup(EECPAGTask& inTask, long inKind)
 {
+    if (EECPACPrehistoricPeace(this->mPlayer, inTask))
+        return NULL;
     EECPCombatStrategy theStrategy;
     EECPUnitRequirement theRequirement;
     std::vector<long> theUnitIDs;
@@ -205,6 +219,8 @@ void EECPUnitRequirement::Clear()
 EECPAttackGroup* EECPAttackCommander::CreateGroupFromStrategy(EECPAGTask& inTask, const EECPCombatStrategy& inStrategy,
     std::vector<long>& outUnitIDs)
 {
+    if (EECPACPrehistoricPeace(this->mPlayer, inTask))
+        return NULL;
     EECPCombatStrategy theStrategy(inStrategy);
     EECPAttackGroup* theGroup = new EECPAttackGroup(this);
     theGroup->mTask = inTask;

@@ -637,7 +637,7 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
         // the experiment "foodeco" (docs/AI_RESEARCH.md §8.27; the owner builds on the patch "so citizens move as little
         // as possible"): a forage patch with no drop site within kPatchDropRange tiles gets a settlement in the rings
         // round the patch itself (the original waited for the full drop-off distance and searched round the centre)
-        bool thePatch = theResource != NULL && EECPExperiment(thePlayer, "foodeco") && theResource->mResourceType == kResourceFood
+        bool thePatch = theResource != NULL && EECPForagePatchesOn(thePlayer) && theResource->mResourceType == kResourceFood
             && theResource->GetUnitClass()->mFamily != kUnitFamilyAnimal && theResource->GetUnitClass()->mFamily != kUnitFamilyFish
             && theResource->GetUnitClass()->GetUnitType() != EEGetFarmType(thePlayer);
         if (thePatch)
@@ -912,7 +912,7 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
 // the experiment "navalflee": fish in a danger zone (a warship's attack, EECPRMNavalFlee) are skipped
 static bool EECPRMFishInDanger(EECPResourceManager* inManager, EEUnit* inFish)
 {
-    return EECPExperiment(inManager->mManager->mPlayer, "navalflee")
+    return EECPNavalFleeOn(inManager->mManager->mPlayer)
         && EECPRMResourceInDanger(inManager, inFish->GetTileX(), inFish->GetTileY());
 }
 
@@ -1532,6 +1532,7 @@ void EECPResourceManager::RemoveCosts(EETechTreeNode* inNode, long inCount)
 // worked from the player's built dock (one is queued while there is none); farms stay as they are.
 static const long kCoastFishRange = 30;
 static const unsigned long kCoastBoats = 8;
+static const unsigned long kCoastBoatsLater = 16;   // the experiment "foodeco": "then lots of fishing boats" (the owner)
 static const unsigned long kCoastBoatsPerFish = 2;
 
 static unsigned long EECPRMCoastFish(EECPResourceManager* inManager)
@@ -1561,7 +1562,8 @@ static unsigned long EECPRMCoastBoatsWanted(EECPResourceManager* inManager)
         || thePlayer->mTechnologies->mCurrentEpoch < kTechEpochStone)
         return 0;
     unsigned long theBoats = EECPRMCoastFish(inManager) * kCoastBoatsPerFish;
-    return theBoats < kCoastBoats ? theBoats : kCoastBoats;
+    unsigned long theMax = EECPForagePatchesOn(thePlayer) ? kCoastBoatsLater : kCoastBoats;
+    return theBoats < theMax ? theBoats : theMax;
 }
 
 static bool EECPRMFishes(EECPResourceManager* inManager)
@@ -1600,9 +1602,10 @@ static void EECPRMRequestBoats(EECPResourceManager* inManager)
 // hunting, then many fishing boats). The food capacity past the centres' bushes: the gatherers working farms, fish
 // or game now, and 1 more per living animal within kHuntRange tiles of the town centre (kHuntSlots at most). The
 // original added every food gatherer, so the capacity grew with each one sent: 25 citizens queued at one patch.
-static const long kHuntRange = 30;
-static const unsigned long kHuntSlots = 8;
-static const unsigned long kPatchesWanted = 3;   // the forage patches kept in the active centres
+static const long kHuntRange = 45;
+static const unsigned long kHuntSlots = 12;
+static const unsigned long kPatchesWanted = 3;   // the forage patches kept in the active centres (Prehistoric) ...
+static const unsigned long kPatchesWantedLater = 5;   // ... and from the Stone Age (more gatherers later)
 
 static unsigned long EECPRMFoodOutsideCenters(EECPResourceManager* inManager)
 {
@@ -1664,7 +1667,7 @@ unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
     unsigned long theTotal = 0;
     for (long r = 2; r < 7; r++) {
         unsigned long theCapacity = r == 3 ? (unsigned long)EECPPersonality(thePlayer).mWoodSlots : theSites[r] * theLimit;
-        if (r == 2 && EECPExperiment(thePlayer, "foodeco"))
+        if (r == 2 && EECPForagePatchesOn(thePlayer))
             theCapacity += EECPRMFoodOutsideCenters(this);   // farms, fish and the hunt: what works there, and the game near home
         else if (r == 2)
             theCapacity += this->mGatherers[2].size();   // farms and fish are not center units: what works there now
@@ -1800,7 +1803,7 @@ static void EECPRMActivateNeeded(EECPResourceManager* inManager)
     // the experiment "foodeco": at least kPatchesWanted forage patches in the active centres (the owner works 2 with
     // 6 each and hunts with the rest); the original's active patches ran out over the game (5.4 held at 5-10 min,
     // 2.4 at 75-90 in the sim) and none was claimed again
-    if (EECPExperiment(thePlayer, "foodeco")) {
+    if (EECPForagePatchesOn(thePlayer)) {
         unsigned long thePatches = 0;
         for (unsigned long k = 0; k < thePlayer->GetNumResourceCenters(); k++) {
             EECPResourceCenter* theCenter = thePlayer->GetResourceCenter(k);
@@ -1812,7 +1815,8 @@ static void EECPRMActivateNeeded(EECPResourceManager* inManager)
                     && theCenter->mUnits[u]->GetUnitClass()->mUnitType == kUnitTypeResForageBush)
                     thePatches++;
         }
-        if (thePatches < kPatchesWanted) {
+        unsigned long theWantedPatches = thePlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric ? kPatchesWanted : kPatchesWantedLater;
+        if (thePatches < theWantedPatches) {
             EECPResourceCenter* theBest = NULL;
             long long theBestDistance = 0;
             for (unsigned long k = 0; k < thePlayer->GetNumResourceCenters(); k++) {
@@ -1837,7 +1841,7 @@ static void EECPRMActivateNeeded(EECPResourceManager* inManager)
             }
         }
     }
-    if (!EECPExperiment(thePlayer, "goldfix"))
+    if (!EECPClaimNeededOn(thePlayer))
         return;
     long theNext = thePlayer->mTechnologies->mCurrentEpoch + 1;
     EETechTreeNode* theNode = theNext < EEEpochCount() ? thePlayer->mTechnologies->Get(theNext) : NULL;

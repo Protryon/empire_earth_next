@@ -62,7 +62,14 @@ bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer);
 bool EECPMilitiaOn(const EEComputerPlayer* inPlayer);
 bool EECPCoastFishingOn(const EEComputerPlayer* inPlayer);  // economy.coast_fishing; TEST ONLY: EE_AI_EXP nofish
 bool EECPMilitiaTowersOn(const EEComputerPlayer* inPlayer); // military.militia_towers; TEST ONLY: EE_AI_EXP nomtower
-long EECPPrehistoricArmy(const EEComputerPlayer* inPlayer); // military.prehistoric_army (0: none); TEST ONLY: EE_AI_EXP noprearmy       // the personality's military.militia; TEST ONLY: EE_AI_EXP nomilitia   // the personality's economy.demand_split; TEST ONLY: EE_AI_DEMAND
+long EECPPrehistoricArmy(const EEComputerPlayer* inPlayer); // military.prehistoric_army (0: none); TEST ONLY: EE_AI_EXP noprearmy
+// the §8.27 rules; TEST ONLY: EE_AI_EXP turns each on (foodeco, goldfix, navalflee, prepeace, stone22/stone30) or off
+// (nofoodeco, nogoldfix, nonavalflee, noprepeace, nostone)
+bool EECPForagePatchesOn(const EEComputerPlayer* inPlayer);   // economy.forage_patches
+bool EECPClaimNeededOn(const EEComputerPlayer* inPlayer);     // economy.claim_needed
+bool EECPNavalFleeOn(const EEComputerPlayer* inPlayer);       // military.naval_flee
+bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer);   // not military.prehistoric_attacks
+float EECPStoneSpan(const EEComputerPlayer* inPlayer);        // epoch_pressure.stone_span in minutes (0: the timer)       // the personality's military.militia; TEST ONLY: EE_AI_EXP nomilitia   // the personality's economy.demand_split; TEST ONLY: EE_AI_DEMAND
                                            // overrides it (0 or 1, or per player in turn from player 1, "0/1")
 
 bool EECPCheatOn(const EEComputerPlayer* inPlayer, long inCheat);          // whether that cheat stays on (the difficulty's ai_cheats, EE_AI_CHEATS)

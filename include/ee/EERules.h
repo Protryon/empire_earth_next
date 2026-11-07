@@ -241,6 +241,9 @@ struct EEAIPersonalityRule {
     // its reserve grows from nothing there to the whole cost at mEpochPressureFull. Low: tall (tech); high: wide.
     float mEpochPressureStart = 0.3f;
     float mEpochPressureFull = 0.8f;
+    // the Prehistoric's pressure instead: the game time over this many minutes, so the Stone Age is asked for and
+    // reserved on that schedule (docs/AI_RESEARCH.md §8.27; 30: the Stone Age at about 25 minutes); 0: the epoch timer
+    float mStoneSpan = 30.0f;
     // the economy (EECPResourceManager): the gatherer split's stock correction, the citizen target, rebalancing
     long mSurplus = 1000;                   // a resource with more in stock ...
     float mSurplusCut = 0.5f;               // ... gets this share of its gatherers
@@ -255,6 +258,13 @@ struct EEAIPersonalityRule {
     // fishing off any coast from the Stone Age (EECPResourceManager.cpp EECPRMCoastBoatsWanted; docs/AI_RESEARCH.md
     // §8.26): a dock, up to 8 boats, at most 2 docks from the build lists; the original fished only on island maps
     bool mCoastFishing = true;
+    // forage patches (docs/AI_RESEARCH.md §8.27): about mining_limit gatherers a patch (the food capacity no longer
+    // counts the bush gatherers), a settlement on a patch with no drop site within 4 tiles, hunting slots by the game
+    // near home, 3 patches kept claimed in the Prehistoric and 5 later, up to 16 fishing boats
+    bool mForagePatches = true;
+    // a centre claimed for the next epoch's missing stone, gold or iron, and no epoch reserve while an advance cannot
+    // be reached (docs/AI_RESEARCH.md §8.27)
+    bool mClaimNeeded = true;
     // military pressure: the standing army the player keeps, per worker (citizens and fishing boats); up to the
     // original's military share of the pop cap
     float mStandingArmy = 0.25f;
@@ -269,7 +279,11 @@ struct EEAIPersonalityRule {
     bool mMilitiaTowers = true;
     // the Prehistoric army is a mobile defence force of at most this many soldiers, unless enemy soldiers near the town
     // are stronger than it (EEComputerPlayer.cpp CanAfford; docs/AI_RESEARCH.md §8.26); 0: no cap (the rush)
-    long mPrehistoricArmy = 8;
+    long mPrehistoricArmy = 4;
+    // attack groups against an enemy in the Prehistoric (false: none, the defence still forms; docs/AI_RESEARCH.md §8.27)
+    bool mPrehistoricAttacks = false;
+    // units hit by a warship they cannot answer leave (boats to the farthest dock, citizens and melee inland)
+    bool mNavalFlee = true;
 };
 struct EEAIPersonalityRules {
     std::vector<EEAIPersonalityRule> mPersonalities;

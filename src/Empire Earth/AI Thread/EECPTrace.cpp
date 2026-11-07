@@ -191,7 +191,45 @@ bool EECPMilitiaTowersOn(const EEComputerPlayer* inPlayer)
 
 long EECPPrehistoricArmy(const EEComputerPlayer* inPlayer)
 {
+    if (EECPExperiment(inPlayer, "prearmy4"))
+        return 4;   // TEST ONLY: the owner's "maybe 4 clubmen before stone"
     return EECPExperiment(inPlayer, "noprearmy") ? 0 : EECPPersonality(inPlayer).mPrehistoricArmy;
+}
+
+static bool EECPRuleOn(const EEComputerPlayer* inPlayer, bool inRule, const char* inOn, const char* inOff)
+{
+    if (EECPExperiment(inPlayer, inOn))
+        return true;
+    return inRule && !EECPExperiment(inPlayer, inOff);
+}
+
+bool EECPForagePatchesOn(const EEComputerPlayer* inPlayer)
+{
+    return EECPRuleOn(inPlayer, EECPPersonality(inPlayer).mForagePatches, "foodeco", "nofoodeco");
+}
+
+bool EECPClaimNeededOn(const EEComputerPlayer* inPlayer)
+{
+    return EECPRuleOn(inPlayer, EECPPersonality(inPlayer).mClaimNeeded, "goldfix", "nogoldfix");
+}
+
+bool EECPNavalFleeOn(const EEComputerPlayer* inPlayer)
+{
+    return EECPRuleOn(inPlayer, EECPPersonality(inPlayer).mNavalFlee, "navalflee", "nonavalflee");
+}
+
+bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer)
+{
+    return EECPRuleOn(inPlayer, !EECPPersonality(inPlayer).mPrehistoricAttacks, "prepeace", "noprepeace");
+}
+
+float EECPStoneSpan(const EEComputerPlayer* inPlayer)
+{
+    if (EECPExperiment(inPlayer, "stone22"))
+        return 22.0f;
+    if (EECPExperiment(inPlayer, "stone30"))
+        return 30.0f;
+    return EECPExperiment(inPlayer, "nostone") ? 0.0f : EECPPersonality(inPlayer).mStoneSpan;
 }
 
 bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer)

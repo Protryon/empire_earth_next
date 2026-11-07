@@ -2651,6 +2651,8 @@ computer player gets which. New in this port (no original values: the defaults a
         epoch_pressure:            # the elapsed share of the epoch timer (dbcpbehavior rows 28/29); paid epochs only
           start: 0.3               # the advance is asked for from here (1: the original timer) ...
           full: 0.8                # ... and its cost is wholly reserved from here (the reserve grows in between)
+          stone_span: 30           # the Prehistoric instead: the game time over this many minutes (the Stone Age at
+                                   # about 25 min; 0: the epoch timer; docs/AI_RESEARCH.md §8.27)
         economy:                   # EECPResourceManager
           surplus: 1000            # a resource with more in stock gets surplus_cut of its gatherer share
           surplus_cut: 0.5
@@ -2663,6 +2665,13 @@ computer player gets which. New in this port (no original values: the defaults a
                                    # false: the original's needs ledger with the stock correction above
           coast_fishing: true      # from the Stone Age, fish within 30 tiles of the town centre: a dock and up to
                                    # 2 boats a fish (8 at most); the build lists' docks capped at 2 (§8.26)
+          forage_patches: true     # the food capacity: mining_limit a forage patch (not every food gatherer), the
+                                   # workers on farms, fish and game, 1 hunter per animal within 45 tiles (12 at
+                                   # most); a settlement on a patch with no drop site within 4 tiles; 3 patches kept
+                                   # claimed in the Prehistoric, 5 later; 16 boats at most (§8.27)
+          claim_needed: true       # the next epoch's stone, gold or iron short with no active centre holding any:
+                                   # the nearest centre with it is claimed; an advance that cannot be reached (a
+                                   # resource short with no gatherer) reserves nothing (§8.27)
         military:
           standing_army: 0.25      # the army kept per worker (every 30 game s, the favourite land unit; up to the
                                    # original's military share of the pop cap)
@@ -2673,11 +2682,16 @@ computer player gets which. New in this port (no original values: the defaults a
                                    # (docs/AI_RESEARCH.md §8.25)
           militia_towers: true     # the built towers within 12 tiles count in those odds, and citizens that run go
                                    # to the nearest tower within 30 tiles (§8.26)
-          prehistoric_army: 8      # the Prehistoric army: at most this many soldiers unless enemy soldiers within
+          prehistoric_army: 4      # the Prehistoric army: at most this many soldiers unless enemy soldiers within
                                    # 40 tiles of the town are stronger (then 4 min uncapped); 0: no cap (§8.26)
+          prehistoric_attacks: false   # attack groups against an enemy in the Prehistoric (false: none; the
+                                   # defence still forms) (§8.27)
+          naval_flee: true         # hit by a warship it cannot answer: boats go to the dock farthest from it,
+                                   # citizens and melee units within 12 tiles to the town centre (§8.27)
       - id: tall ...               # epoch_pressure 0.15 / 0.5, standing_army 0.2
       - id: wide ...               # epoch_pressure 0.6 / 1.0, max_citizen_share 0.8, standing_army 0.15
-      - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5, prehistoric_army 0
+      - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5, prehistoric_army 0,
+                                   # prehistoric_attacks true
     assign: [balanced]             # computer player n takes entry (n - 1) mod the count
 
 A key left out keeps the default; `assign` names personalities. TEST ONLY: `EE_AI_PERSONALITY` in the environment
