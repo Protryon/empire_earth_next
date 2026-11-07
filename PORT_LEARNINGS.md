@@ -1507,3 +1507,12 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **The game log was never written on POSIX**: `PlatPathGetDataRoot` returns the game's `C:\` form there, which
   `PlatCreateDirectory` translates but plain `fopen` does not. Any file opened under the data root goes through
   `PlatFOpen`.
+
+## A transport's unload line off the map (EE-SIM, 2026-11-07)
+
+- **Crash:** `EEGetBlockingUnits` read `inTile->mUnits` through a NULL tile. `EEUCSpaceTransport::FindUnloadTiles`
+  (and `EEUCNavalTransport`'s copy) walks a tile line from the cargo's tile toward the unload destination and asks
+  `EEMap::GetTile` for each point; past the map edge that is NULL. The 32-bit original read through it without a
+  fault. Found by a 150-minute EE-SIM game (frames resolved with `tools/sim.py resolve`).
+- **Fix:** the line ends at the first tile off the map, and `EEGetBlockingUnits` treats a NULL tile as holding no
+  units (its other callers pass `GetTile` results too).

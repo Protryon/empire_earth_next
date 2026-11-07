@@ -425,6 +425,8 @@ bool EEGetBlockingUnits(EEPlayer* inPlayer, long inUnitType, EETile* inTile, boo
                std::vector<EEUnit*>& outUnits)
 {
     outUnits.clear();
+    if (inTile == NULL)
+        return false;   // port: a tile off the map (GetTile's NULL) holds no units; the original read through it
     for (RTSTileUnitNode* theNode = inTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
         EEUnit* theUnit = theNode->mUnit;
         if (theUnit != NULL && EEGetTileUnitStanding(theUnit, inPlayer, inUnitType, inIgnoreOwner) == 2)
