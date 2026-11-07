@@ -4,6 +4,7 @@
 #include <deque>
 #include <map>
 #include <cstdarg>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -139,9 +140,12 @@ void Open()
 #endif
     char theName[64];
     strftime(theName, sizeof(theName), "/game-%Y%m%d-%H%M%S.log", &theLocal);
-    sFile = fopen((theDir + theName).c_str(), "w");
-    if (sFile == NULL)
+    sFile = PlatFOpen((theDir + theName).c_str(), "w");   // the data root is in the game's C:\ form on POSIX too
+    if (sFile == NULL) {
+        fprintf(stderr, "EE-GAME: cannot write the game log %s%s: %s\n", theDir.c_str(), theName, strerror(errno));
         return;
+    }
+    fprintf(stderr, "EE-GAME: the game log is %s%s\n", theDir.c_str(), theName);
     sEnded = false;
     memset(sEpoch, -1, sizeof(sEpoch));
     memset(sIncome, 0, sizeof(sIncome));

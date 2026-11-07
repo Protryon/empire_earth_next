@@ -7,6 +7,8 @@ Every session gets a folder build/playtest/<time>/:
   asan.*        AddressSanitizer reports (ASAN_OPTIONS log_path), when the sanitizer build stops
   session.json  exe, build time, git revision and dirty state, data root, exit status
 A clean exit leaves only game.log and session.json.
+The unit chain check is on (EE_CHECK_UNIT_LIST=1, include/ee/RTSDummyHeader.h): the game stops at the first broken
+link of the world's x-sorted unit list, with the backtrace of the code that broke it.
 
 Default: the AddressSanitizer build (build/xbuild/<target>/game-address/ee-aoc), which stops at the first bad
 memory access instead of crashing later from its damage; it runs about half as fast as the plain build.
@@ -67,6 +69,8 @@ def main():
 
     env = dict(os.environ)
     env['EE_DATA_ROOT'] = str(data)
+    # the unit chain check (include/ee/RTSDummyHeader.h): stops at the first broken link; EE_CHECK_UNIT_LIST=0 to skip
+    env.setdefault('EE_CHECK_UNIT_LIST', '1')
     # abort_on_error: the sanitizer's stop becomes a SIGABRT that lldb catches (crash.txt gets the backtraces)
     env['ASAN_OPTIONS'] = ':'.join(filter(None, [env.get('ASAN_OPTIONS'),
                                                  f'log_path={out}/asan', 'abort_on_error=1', 'print_summary=1']))

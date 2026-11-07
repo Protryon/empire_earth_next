@@ -180,6 +180,7 @@ void EEPhysics::ClearServerMessages()
 void EEPhysics::FlushWorld()
 {
     unsigned long theNumPlayers = gWorld.mNumPlayers;
+    RTSCheckUnitList(&gWorld.mUnits, "EEPhysics::FlushWorld (start)");   // EE_CHECK_UNIT_LIST (ee/RTSDummyHeader.h)
     gWorld.FlushQueuedPlacements();
     unsigned long i;
     for (i = 0; i < theNumPlayers; i++) {

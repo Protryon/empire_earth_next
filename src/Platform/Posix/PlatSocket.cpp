@@ -118,8 +118,10 @@ struct Registration {
     bool mArmed;
 };
 
-std::mutex sPollLock;
-std::map<int, Registration> sRegistrations;
+// never destroyed: the detached poll thread keeps reading them while exit() runs the static destructors (ASan:
+// heap-use-after-free on the map's nodes as the game quit), as PlatTime.cpp's timers
+std::mutex& sPollLock = *new std::mutex;
+std::map<int, Registration>& sRegistrations = *new std::map<int, Registration>;
 int sWakePipe[2] = {-1, -1};
 bool sPollStarted;
 

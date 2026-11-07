@@ -1843,8 +1843,13 @@ void GETerrainMesh::UpdateFogOfWar(bool inAllVisible)
         return;
     if (!inAllVisible) {
         for (theY = this->mVisibleBottomLeftY, j = 0; theY < theEndY; theY++, j++) {
-            thePreviousRow = this->mTileRows[theY - 1].mTiles - this->mTileRows[theY - 1].mStart;
-            theRow = this->mTileRows[theY].mTiles - this->mTileRows[theY].mStart;
+            // port: the loop runs a row past the view on each side, so at the map's bottom and top edges theY - 1
+            // and theY leave mTileRows (row -1, row mTileRowCount + 1). The original read those row headers past
+            // its array, harmless on 32-bit Windows; only rows that exist are looked up now (every tile read below is
+            // behind GetIsValidTile, which rejects the others)
+            thePreviousRow = theY - 1 < this->mTileRowCount
+                ? this->mTileRows[theY - 1].mTiles - this->mTileRows[theY - 1].mStart : NULL;
+            theRow = theY < this->mTileRowCount ? this->mTileRows[theY].mTiles - this->mTileRows[theY].mStart : NULL;
             for (theX = this->mVisibleBottomLeftX, i = 0; theX < theEndX; theX++, i++) {
                 if (!this->mTerrainPointVisibility[i][j])
                     continue;
