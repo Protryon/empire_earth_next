@@ -1261,6 +1261,67 @@ Head to head, both seats:
 
 Defence was the bottleneck (§8.23). Next: retry `payback` and the boom with the militia on.
 
+### 8.26 The boom (2026-11-07, full-game playtest and EE-SIM)
+
+**The playtest** (Continental, Medium, Standard - High resources, 104 minutes, logged from minute 0). The AI
+(Carthage) led for half an hour: 60 citizens and 27 soldiers at 30 min, against the owner's 38 and 6. It then
+starved:
+- **No fish.** `mUsesFishing` holds only on island maps, so on a continent its food before the Copper Age farms was
+  bushes and the first animals: 16-24 citizens on food at most, then 1 once the bushes near home were gone or under
+  the owner's towers. Food per gatherer was the same as the owner's.
+- **31 minutes lost on the Stone Age.** It asked for the advance at 26 min with 19 food and paid for it at 57.
+  Meanwhile the food went to citizens and soldiers, and the citizens it could not put on food went to wood and gold
+  (17 on wood where it wanted 8; 1,370 gold unspent).
+- **The militia ran at home.** 22-36 citizens met 13 raiders at odds 0.7-1.3, short of 1.5. Every check said run,
+  past the raiders to the far drop site: 17 citizens died in 2 minutes.
+- **The army melted away.** 27 soldiers were down to 0 by minute 42; attack plans went on with `units=0`, and new
+  soldiers left one by one.
+
+The owner's notes on play:
+- Prehistoric and Stone live on food, with wood and iron behind; gold serves the two ranged units and the Copper Age
+  (2-3 citizens on gold, about 6 on iron in the Prehistoric).
+- The Prehistoric army is a small mobile defence force, sacrificed when the Stone Age units come.
+- A boom player who scouts a rush scrambles and builds an army as needed; rush beats a boom taken too far.
+- Towers are strong until the Bronze Age (no siege), so a boom needs towers, and raiders avoid crowded towers.
+- One or two docks.
+
+**Three rules** (`aipersonalities.yaml`; on by default, off in `aggressive` for the Prehistoric army):
+- `economy.coast_fishing` (`EECPRMCoastBoatsWanted`, `EECPRMRequestBoats`): from the Stone Age (the first fishing
+  boat), the fish within 30 tiles of the town centre count 2 boats each, 8 at most, in the food capacity. A dock is
+  queued while there is no built one; boats are requested one at a time up to the count; farms stay (the island rule
+  gives them up); the build lists' docks are capped at 2 (they built up to 6). `EE_AI_EXP=nofish` turns it off.
+- `military.militia_towers` (`EECPRMMilitia`): the built towers within 12 tiles of the attack count in the militia's
+  odds, and citizens that cannot fight run to the nearest tower within 30 tiles. `nomtower`.
+- `military.prehistoric_army` (8; `EEComputerPlayer::CanAfford`): in the Prehistoric, no soldier is affordable while
+  the player has that many, unless enemy soldiers within 40 tiles of the town centre are stronger (hit points x
+  attack) than its army; then the cap is off for 4 minutes (trace `threat`). `noprearmy`.
+
+`EECPUnitManager::CountMilitaryUnits(false, false)` returns 0 (it misses the units the combat manager holds), so the
+cap counts the soldiers directly. The demand split's standing-army shortfall uses that same count, so it always plans
+for the whole target; left as it is for now.
+
+Head to head against the AI without them, seeds 2-13, both seats, Medium, Small:
+
+| Variant | Length | Result | Stone (median) | Copper | Citizens / army at 40 min |
+|---|---|---|---|---|---|
+| the citizen cap alone (30 Prehistoric, 50 Stone) | 90 min | lost 3-17 | 45 min | 3/24 | 31 / 16 |
+| fishing | 90 min | won 14-8 | 50 min | 5/24 | 57 / 17 |
+| the tower militia | 90 min | 9-10 | 50 min | 2/24 | 53 / 16 |
+| the army cap | 90 min | 9-9 | 49 min | 1/24 | 60 / 9 |
+| all three (the boom) | 90 min | **won 12-7** | 50 min | 3/24 | 56 / 9 |
+| the boom + citizen cap (Prehistoric 30) | 90 min | 10-11 | **36 min** | 11/24 | 35 / 9 |
+| the boom | 150 min | **won 17-7**, none close | 50 min | 17/24 | Bronze 10/24 against 2/24 |
+| the boom + citizen cap (Prehistoric 30) | 150 min | 10-11 | 36 min | 17/24 at 83 min | Bronze 10/24 at 123 min |
+
+- **The citizen cap** (experiments `citcap`, `citpre`, `citpre40`, TEST ONLY) reaches the epochs much earlier but
+  stalls after them (the next epoch's reserve holds the food), and breaks even at best. Left out.
+- **"Citizens lost" counts fishing boats** with the citizens: 65-130 in the fishing variants.
+
+All three are on by default; the game log of the next playtest decides what comes next. Open:
+- the gold and iron supply for the Copper Age (a capped AI sat on 3,000 food with no gold coming in);
+- the standing-army count above;
+- the Stone Age pace (the citizen cap shows 13 minutes are there).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
