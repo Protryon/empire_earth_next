@@ -60,6 +60,7 @@
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include "ee/EEAIFOSubGroupFilter.h"
 #include "ee/EECPTrace.h"
+#include "ee/EETechTreeTechID.h"
 #include <EEAIFunctionObjects.h>
 
 const UString EECPUnitManager::sData("EECPUnitManager-Data");
@@ -235,6 +236,16 @@ long EECPUnitManager::GetWantedCitizens()
             theCapacity = theCeiling;
         if (theCapacity > theWanted)
             theWanted = theCapacity;
+    }
+    // the experiment "citcap" (docs/AI_RESEARCH.md §8.26): the early epochs live on food, so the citizens stop where
+    // the owner's do (about 30 in the Prehistoric, 50 in the Stone Age) and the food goes to the epoch
+    bool theCitPre = EECPExperiment(this->mPlayer, "citpre") || EECPExperiment(this->mPlayer, "citpre40");   // the Prehistoric only (30 or 40)
+    if ((EECPExperiment(this->mPlayer, "citcap") || theCitPre) && this->mPlayer->mTechnologies != NULL) {
+        long theEpoch = this->mPlayer->mTechnologies->mCurrentEpoch;
+        long theCap = theEpoch <= kTechEpochPrehistoric ? (EECPExperiment(this->mPlayer, "citpre40") ? 40 : 30)
+            : theEpoch == kTechEpochStone && !theCitPre ? 50 : 0;
+        if (theCap > 0 && theWanted > theCap)
+            theWanted = theCap;
     }
     return theWanted;
 }
