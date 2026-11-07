@@ -90,5 +90,8 @@ public:
 // whether a resource tile lies in one (FindResourceTarget skips it)
 void EECPRMNoteDanger(EECPResourceManager* inManager, EEUnit* inCitizen, unsigned long inAttacker);
 bool EECPRMResourceInDanger(EECPResourceManager* inManager, long inX, long inY);
+// the experiment "navalflee" (docs/AI_RESEARCH.md §8.27): a unit hit by a ship it cannot answer moves away (fishing
+// boats to a dock clear of the attacker, land units inland to the town centre)
+void EECPRMNavalFlee(EECPResourceManager* inManager, EEUnit* inVictim, EEComplexUnit* inAttacker);
 
 #endif

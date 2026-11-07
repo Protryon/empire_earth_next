@@ -1228,6 +1228,16 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
         theShare = 1.0f;
     if (theShare <= 0.0f)
         return true;
+    // the experiment "goldfix" (docs/AI_RESEARCH.md §8.27): an advance that cannot be reached reserves nothing. A
+    // resource it needs is short and has no gatherer (a playtest AI had no gold site from minute 34: its Copper
+    // reserve held the food and iron for 70 minutes, and it trained no soldiers)
+    if (EECPExperiment(this, "goldfix") && this->mCivilizationManager != NULL && this->mCivilizationManager->mResourceManager != NULL) {
+        EECPResourceManager* theResources = this->mCivilizationManager->mResourceManager;
+        for (long i = kResourceFood; i <= kResourceIron; i++)
+            if (this->ScaleCost(theReserved->GetCost(i, kUnitTypeTownCenter, 1.0f)) > this->mResourceCaps[i]
+                && theResources->mGatherers[i].size() == 0)
+                return true;
+    }
     for (long i = kResourceFood; i <= kResourceIron; i++) {
         long theCost = this->ScaleCost(inTechnology->GetCost(i, inUnitType, 1.0f)) * inCount;
         long theReserve = UMFloatToLong(theShare * this->ScaleCost(theReserved->GetCost(i, kUnitTypeTownCenter, 1.0f)));
@@ -1274,6 +1284,12 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
     this->mLastDamagedTime = gPhysics->mGameTime;
     if (inUnit->mUnitClass->IsLandBuilding())
         this->mBuildingDamaged = true;
+    // the experiment "navalflee" (docs/AI_RESEARCH.md §8.27; the owner: units should leave a bombardment they cannot
+    // answer, fishing boats should run): EECPResourceManager.cpp EECPRMNavalFlee
+    if (inPlayer > 0 && EECPExperiment(this, "navalflee") && !inUnit->mUnitClass->IsLandBuilding()
+        && inUnit->mComplexUnit != NULL && this->mCivilizationManager != NULL && this->mCivilizationManager->mResourceManager != NULL
+        && (unsigned long)inPlayer < gWorld.mNumPlayers && gWorld.mPlayers[inPlayer] != NULL && !this->IsAlly(gWorld.mPlayers[inPlayer]))
+        EECPRMNavalFlee(this->mCivilizationManager->mResourceManager, inUnit, inUnit->mComplexUnit->mLastAttacker);
     if (theCategory == kUnitCategoryNavalCitizen || theCategory == kUnitCategoryLandCitizen) {
         this->mCitizenDamaged = true;
         // new: a hit by a human player's unit marks a danger zone the gatherers run from (EECPResourceManager.cpp
