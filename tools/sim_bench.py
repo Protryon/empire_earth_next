@@ -153,7 +153,7 @@ def main():
         tag = "-".join([s.split(".")[-1] + "=" + s.split("=", 1)[1] for s in variants[v]] +
                        [n + "=" + x.replace("/", "~") for n, x in envs[ev].items()])
         rid = (f"s{seed}-{map_type.replace(' ', '_')}-{size}-{difficulty}-{ai}ai-{cheats.replace('/', '~')}"
-               f"-{pers.replace(',', '+')}" + (f"-{tag}" if tag else "") + f"-r{k}").replace("--", "-")
+               f"-{pers.replace(',', '+').replace('/', '~')}" + (f"-{tag}" if tag else "") + f"-r{k}").replace("--", "-")
         runs.append(dict(id=rid, seed=seed, size=size, map=map_type, difficulty=difficulty, ai=ai, cheats=cheats,
                          personality=pers, variant=variants[v], sets=a.set + variants[v], repeat=k,
                          env=dict(fixed, **envs[ev])))

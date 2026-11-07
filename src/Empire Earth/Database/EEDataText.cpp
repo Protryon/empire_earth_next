@@ -1937,6 +1937,19 @@ static void ApplyOverrides(const char* inName, Node& ioDoc)
             o.mProblem = where + ": not in the document";
             continue;
         }
+        if (n->mKind == Node::kList && !o.mValue.empty() && o.mValue[0] == '[') {
+            // a list value ("[a, b]", "[]") replaces a list (e.g. a difficulty's ai_cheats)
+            Node theParsed = ParseYaml("value: " + o.mValue + "\n");
+            const Node* theValue = theParsed.Find("value");
+            if (theValue == nullptr || theValue->mKind != Node::kList) {
+                o.mProblem = where + ": not a list: " + o.mValue;
+                continue;
+            }
+            *n = *theValue;
+            o.mApplied = true;
+            o.mProblem.clear();
+            continue;
+        }
         if (n->mKind != Node::kScalar) {
             o.mProblem = where + ": not a single value";
             continue;

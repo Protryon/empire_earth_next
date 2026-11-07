@@ -9,10 +9,12 @@ harness stages it (tools/harness/exe_boot.py stage_tree). A stage is kept and re
   python -I tools/sim.py [--data binary|open|DIR] [--slot NAME] [--exe EXE] -- [EE-SIM options]
   python -I tools/sim.py -- --seed 3 --ai 2 --difficulty Hard --game-seconds 2700 --report r.json --ai-trace --trace t.txt
 
---set doc.key=value overrides a rules document (db/<doc>.yaml). The binary tree has no rules documents (the game
-plays with the code's defaults, which equal the documents tools/eedata/rules.py writes), so for an override the
-stage gets that document written by rules.py from the same constants (python -I tools/eedata/eedata.py check
-keeps them equal).
+--set doc.key=value overrides a rules document (db/<doc>.yaml); a value "[a, b]" replaces a list, e.g.
+--set "gameoptions.hard.ai_cheats=[cost, reveal, epochs, extra, popband, catchup, retire]" (the original's cheats,
+for every computer player of that difficulty; EE_AI_CHEATS narrows them per player). The binary tree has no rules
+documents (the game plays with the code's defaults, which equal the documents tools/eedata/rules.py writes), so for
+an override the stage gets that document written by rules.py from the same constants (python -I
+tools/eedata/eedata.py check keeps them equal).
 """
 import argparse
 import json
