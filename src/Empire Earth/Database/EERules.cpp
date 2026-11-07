@@ -371,7 +371,7 @@ long EEAICheatBit(const std::string& inName)
 long EEDifficultyAICheats(unsigned long inDifficulty)
 {
     const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
-    return inDifficulty < theList.size() ? theList[inDifficulty].mAICheats : (long)kAICheatAll;
+    return inDifficulty < theList.size() ? theList[inDifficulty].mAICheats : 0L;   // none (the original: all)
 }
 
 long EEDifficultyAILevel(unsigned long inDifficulty)

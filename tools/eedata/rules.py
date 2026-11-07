@@ -131,8 +131,8 @@ def gameoptions(ids, spec):
         out.append(f'  - id: {sid}\n    name: {s[name]}\n    ai_level: {level}                    '
                    f'# the computer players\' records: 0 easy, 1 medium, 2 hard\n'
                    f'    damage_scale_human_target: {target}\n    damage_scale_human_attacker: {attacker}\n'
-                   f'    ai_cheats: [{", ".join(AI_CHEATS)}]   # the computer players\' cheats this '
-                   f'difficulty keeps (docs/AI_RESEARCH.md; [] for none)\n')
+                   f'    ai_cheats: []                  # the computer players\' cheats this difficulty keeps '
+                   f'(docs/AI_RESEARCH.md; none: a fair game; any of {", ".join(AI_CHEATS)})\n')
     out.append('unit_limit:\n  minimum: unit_limit_range.L\n  maximum: unit_limit_range.L2\n  step: 50\n'
                '  default: unit_limit_default.L\n')
     out.append('wonders_for_victory:\n  maximum: wonders_for_victory_max.L\n  default: 3\n')

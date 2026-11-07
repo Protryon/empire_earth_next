@@ -84,7 +84,7 @@ struct EESpeedRule {
 };
 
 // The computer players' cheats a difficulty keeps (EEDifficultyRule::mAICheats; gameoptions.yaml `ai_cheats`, a list
-// of these names; docs/AI_RESEARCH.md). The original keeps every one at every difficulty.
+// of these names; docs/AI_RESEARCH.md). The original keeps every one at every difficulty; here none is kept by default.
 enum EEAICheat {
     kAICheatCost = 1 << 0,      // cost: the difficulty's unit cost modifier (dbcpbehavior rows 67/96; stock 1%)
     kAICheatReveal = 1 << 1,    // reveal: the whole map explored at the start
@@ -106,7 +106,7 @@ struct EEDifficultyRule {
     // the damage table scale when exactly one side is "human" (EEPlayer::IsHuman, not player 0; provisional name):
     EERuleNumber mScaleHumanTarget;         // ... the target
     EERuleNumber mScaleHumanAttacker;       // ... the attacker
-    long mAICheats = kAICheatAll;           // the computer players' cheats (EEAICheat bits)
+    long mAICheats = 0;                     // the computer players' cheats (EEAICheat bits); none by default (the original: all)
 };
 
 struct EEGameOptionRules {

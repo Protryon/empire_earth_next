@@ -8,7 +8,8 @@
 // the comparison skips. Off, every trace site costs one bool test.
 //
 // Cheats: the game's difficulty sets which computer-player cheats stay on (gameoptions.yaml `ai_cheats`,
-// ee/EERules.h EEAICheat; every one by default, as the original). TEST ONLY: EE_AI_CHEATS in the environment narrows
+// ee/EERules.h EEAICheat; none by default, the original kept every one: a cheat test needs a gameoptions.yaml whose
+// difficulty lists them). TEST ONLY: EE_AI_CHEATS in the environment narrows
 // that further to the cheats it names, comma separated ("none": every one off; unset or "all": no change); sets
 // separated by '/' are taken in turn by player id from player 1 (the human slot), as EE_AI_PERSONALITY: with two
 // computer players (p2, p3), "none/all" makes p2 cheat and p3 honest. An
