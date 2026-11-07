@@ -2549,8 +2549,12 @@ and the scenario editor's lists, `EEGameState::Create`, `EERandomMap`, `EEToHitT
       ...                              # medium: 1.0 and 1.0 (the base table), hard: .F2 and .F
     unit_limit: {minimum: unit_limit_range.L, maximum: unit_limit_range.L2, step: 50, default: unit_limit_default.L}
     wonders_for_victory: {maximum: wonders_for_victory_max.L, default: 3}
+    defeat_without_recovery: true      # out with no citizens, no other units and no built town centre or capitol
 
-(`unit_limit` and `wonders_for_victory` are block mappings in the file.) The counts of the lists replace the
+(`unit_limit` and `wonders_for_victory` are block mappings in the file.) `defeat_without_recovery` (new) defeats a
+player who cannot come back: no citizens, no other mobile units, and no finished town centre or capitol with a
+citizen's cost in stock, whatever other buildings are left. `false` keeps the original rule (every vital unit and finished vital building gone,
+`EEPlayer::mEndOfGameCount`). Scenarios keep the original rule. The counts of the lists replace the
 original's limits (map size < 6, speed < 4, difficulty < 3); an out-of-range option falls back to the default entry
 (difficulty: the first). The damage table by difficulty is computed at the lookup (the scale x the base table) instead
 of two pre-scaled copies: the same float product. `ai_cheats` lists the computer players' cheats a difficulty keeps

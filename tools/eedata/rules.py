@@ -136,6 +136,8 @@ def gameoptions(ids, spec):
     out.append('unit_limit:\n  minimum: unit_limit_range.L\n  maximum: unit_limit_range.L2\n  step: 50\n'
                '  default: unit_limit_default.L\n')
     out.append('wonders_for_victory:\n  maximum: wonders_for_victory_max.L\n  default: 3\n')
+    out.append('defeat_without_recovery: true      # out with no citizens, no other units and no built town centre '
+               'or capitol to train one (false: every vital unit and building gone, the original)\n')
     return ''.join(out)
 
 
@@ -520,6 +522,9 @@ def validate(name, text, content, spec):
                 _int(x.get('default'), x.where(), 'default')
         sub(top, 'unit_limit', limit)
         sub(top, 'wonders_for_victory', wonders)
+        if top.get('defeat_without_recovery') is not None and str(top.get('defeat_without_recovery')) not in (
+                '0', '1', 'true', 'false'):
+            raise TextError(f'{top.where()}: defeat_without_recovery: true or false')
     elif name == 'civbuilder':
         levels = set()
 

@@ -64,6 +64,9 @@
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
+#include "ee/EERules.h"
+#include "ee/EEUnitClassIDs.h"
+#include "ee/EETechTreeTechID.h"
 #include "ee/EEUnit.h"
 #include "ee/EEGhostUnit.h"
 #include "ee/EEHumanPlayer.h"
@@ -2104,6 +2107,26 @@ struct EEWorldGameResult {
     long mResult;
 };
 
+// New (gameoptions.yaml defeat_without_recovery): whether a player can still come back: a living unit that is
+// not a building (a citizen, a soldier, a ship), or a finished town centre or capitol and the means to train a
+// citizen there (a beaten AI kept its town centres with 10 food and no income for 50 minutes)
+static bool EEWorldCanRecover(EEPlayer* inPlayer)
+{
+    EETechTreeNode* theCitizen = inPlayer->mTechnologies != NULL ? inPlayer->mTechnologies->Get(kTechCitizen) : NULL;
+    bool theCanTrain = theCitizen == NULL || inPlayer->EEPlayer::CanAfford(theCitizen, kUnitTypeCitizen, 1);
+    EEComplexUnit* theUnit = NULL;
+    while ((theUnit = inPlayer->GetNextComplexUnit(theUnit)) != NULL) {
+        if (!(theUnit->mHitPoints > 0) || theUnit->mPreviousPart != NULL || !theUnit->mUnitClass->mIsVital)
+            continue;
+        if (!theUnit->mUnitClass->IsLandBuilding())
+            return true;
+        long theType = theUnit->mUnitClass->mUnitType;
+        if (theCanTrain && theUnit->mIsBuilt && (theType == kUnitTypeTownCenter || theType == kUnitTypeCapitol))
+            return true;
+    }
+    return false;
+}
+
 // FUNCTION: EXE 0x53c9b4
 // Ends the game when decided: applies team victories, defeats players out of units and lets a last team win; returns
 // 2 when someone won, 1 when no human (or only one player) is left, else 0
@@ -2138,7 +2161,11 @@ long EEWorld::CheckGameOver()
         EEPlayer* thePlayer = this->mPlayers[i];
         if (thePlayer != NULL) {
             if (!thePlayer->mObserverMode) {
-                if (this->mVictoryEnabled && thePlayer->mEndOfGameCount <= 0) {
+                // port: also out when it cannot come back (gameoptions.yaml defeat_without_recovery; random maps
+                // only, scenarios keep the original rule): the original kept a player with a last house in the game
+                if (this->mVictoryEnabled && (thePlayer->mEndOfGameCount <= 0
+                    || (EEGetRules().mGameOptions.mDefeatWithoutRecovery && !this->mGameOptions.mIsScenarioGame
+                        && thePlayer->mGameResult == 0 && !EEWorldCanRecover(thePlayer)))) {
                     this->RemovePlayerFromGame(false, i);
                     thePlayer->SetGameResult(2);
                 }

@@ -698,6 +698,7 @@ void LoadGameOptions(const Node& d, EEGameOptionRules& r)
         x.Int("default", r.mWondersDefault);
         x.Done();
     }
+    m.Bool("defeat_without_recovery", r.mDefeatWithoutRecovery);
     m.Done();
 }
 
@@ -1139,6 +1140,7 @@ void EERules::Dump(std::string& outJson) const
         j.Number("unit_limit_default", r.mUnitLimitDefault);
         j.Number("wonders_maximum", r.mWondersMaximum);
         j.Int("wonders_default", r.mWondersDefault);
+        j.Int("defeat_without_recovery", r.mDefeatWithoutRecovery ? 1 : 0);
         s += "}\n";
     }
     {

@@ -121,6 +121,10 @@ struct EEGameOptionRules {
     EERuleNumber mUnitLimitDefault = EERuleNumber::World(27, 2);
     EERuleNumber mWondersMaximum = EERuleNumber::World(77, 2);
     long mWondersDefault = 3;
+    // new: a player with no citizens, no other units, and no built town centre or capitol with a citizen's cost in
+    // stock is defeated (it cannot come back; random maps); false: the original rule, every vital unit and building
+    // gone (EEWorld::CheckGameOver)
+    bool mDefeatWithoutRecovery = true;
 
     EEGameOptionRules();
 };
