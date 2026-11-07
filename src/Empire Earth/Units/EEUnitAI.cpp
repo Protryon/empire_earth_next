@@ -410,6 +410,14 @@ long EEUnitClass::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEvent
         break;
     case kTriggerCanIMoveFreely:
         theFlag = inUnit->mBehavior->CanMoveFreely(inUnit) || EEIsLocationGoalQueued(inUnit);
+        // port: a guard (a stance that returns to its initial contact location) closes on the unit that hit it,
+        // then goes back (CanIPursuePastInitialContactLOS and ReturnsToInitialContactLocation still apply); the
+        // original's ranged guards (dbunitbehavior guard mRangedCanMoveFreely 0) stood and took hits from beyond
+        // their weapon range
+        if (!theFlag && inUnit->mBehavior->mReturnsToInitialContactLocation && inUnit->mBehavior->mCanTargetEnemies
+            && theGoal != NULL && theGoal->mKind == kGoalAttackUnit && inUnit->mLastAttacker != NULL
+            && static_cast<EEUGAttackUnit*>(theGoal)->mTarget == inUnit->mLastAttacker && inUnit->mLastAttacker->mHitPoints > 0)
+            theFlag = true;
         break;
     case kTriggerCanIPursuePastInitialContactLOS:
         theFlag = inUnit->mBehavior->mCanPursuePastInitialContactLOS || EEIsLocationGoalQueued(inUnit);
