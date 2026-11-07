@@ -174,6 +174,11 @@ const char* EECPExperimentNames(const EEComputerPlayer* inPlayer)
     return theSet.size() > 2 ? theSet.c_str() : "-";
 }
 
+bool EECPMilitiaOn(const EEComputerPlayer* inPlayer)
+{
+    return EECPPersonality(inPlayer).mMilitia && !EECPExperiment(inPlayer, "nomilitia");
+}
+
 bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer)
 {
     EECPTraceInit();

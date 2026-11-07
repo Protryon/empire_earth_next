@@ -1201,7 +1201,7 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
             && this->mCivilizationManager != NULL && this->mCivilizationManager->mResourceManager != NULL
             && (unsigned long)inPlayer < gWorld.mNumPlayers && gWorld.mPlayers[inPlayer] != NULL
             && !this->IsAlly(gWorld.mPlayers[inPlayer])
-            && (gWorld.mPlayers[inPlayer]->IsHuman() || EECPExperiment(this, "flee")))
+            && (gWorld.mPlayers[inPlayer]->IsHuman() || EECPExperiment(this, "flee") || EECPMilitiaOn(this)))
             EECPRMNoteDanger(this->mCivilizationManager->mResourceManager, inUnit, (unsigned long)inPlayer);
     }
 }

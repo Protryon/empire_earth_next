@@ -946,6 +946,7 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
                 Map y(*s, doc, "military");
                 y.Float("standing_army", p.mStandingArmy);
                 y.Float("army_floor", p.mArmyFloor);
+                y.Bool("militia", p.mMilitia);
                 y.Done();
                 if (!(p.mStandingArmy >= 0.0f))
                     Fail(y.Where() + ": military: standing_army must be 0 or more");
@@ -1250,6 +1251,7 @@ void EERules::Dump(std::string& outJson) const
             j.Int("demand_split", p.mDemandSplit ? 1 : 0);
             j.Float("standing_army", p.mStandingArmy);
             j.Float("army_floor", p.mArmyFloor);
+            j.Int("militia", p.mMilitia ? 1 : 0);
             j.Close('}');
         }
         j.Close(']');

@@ -309,7 +309,9 @@ def aipersonalities(ids, spec):
                   '      demand_split: true           # gatherers by the tiered demand less the stock (false: the needs ledger)',
                   '    military:',
                   f'      standing_army: {army:<14}# the army kept per worker (up to the military share of the pop cap)',
-                  f'      army_floor: {floor:<17}# while it is short: up to this much more floor share on its unit\'s costs']
+                  f'      army_floor: {floor:<17}# while it is short: up to this much more floor share on its unit\'s costs',
+                  '      militia: true                # an attack group on the citizens: nearby soldiers and citizens fight '
+                  'when the odds allow, else the citizens run']
     lines.append('assign: [balanced]                 # computer player n takes entry (n - 1) mod the count')
     out.append('\n'.join(lines) + '\n')
     return ''.join(out)
@@ -604,6 +606,8 @@ def validate(name, text, content, spec):
                     raise TextError(f'{y.where()}: military: standing_army must be 0 or more')
                 if y.get('army_floor') is not None:
                     _float(y.get('army_floor'), y.where(), 'army_floor')
+                if y.get('militia') is not None and str(y.get('militia')) not in ('0', '1', 'true', 'false'):
+                    raise TextError(f'{y.where()}: militia: true or false')
                 y.done()
             return x.get('id')
         found = entries(top, 'personalities', personality)

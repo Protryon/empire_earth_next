@@ -1865,11 +1865,173 @@ static const unsigned long kDefenders = 4;
 
 static bool EECPRMInDanger(EECPResourceManager* inManager, long inX, long inY, long inRange);
 
+// New (docs/AI_RESEARCH.md §8.25; aipersonalities.yaml military.militia, EE_AI_EXP "nomilitia" turns it off): the town's answer to an attack group on its citizens
+// when no army does it. The citizens within kMilitiaRange tiles of the hit one, with the soldiers within
+// kDefendRange that are not attacking, fight when their strength (summed hit points x summed attack) is at least
+// kMilitiaOdds times the attackers' within kMilitiaRange; else the citizens run to the town centre, or when the
+// attack is there to the drop site farthest from it. At most once every kMilitiaMs per player.
+static const long kMilitiaRange = 10;
+static const float kMilitiaOdds = 1.5f;
+static const unsigned long kMilitiaMs = 4000;
+
+static bool EECPRMIsSoldier(EEUnit* inUnit)
+{
+    if (inUnit->mComplexUnit == NULL || !(inUnit->mHitPoints > 0) || inUnit->mStats->mAttack == 0.0f
+        || inUnit->mUnitClass->IsLandBuilding())
+        return false;
+    long theCategory = inUnit->mUnitClass->mCategory;
+    return theCategory == kUnitCategoryLand || theCategory == kUnitCategoryLandMilitaryHero;
+}
+
+static bool EECPRMNear(EEUnit* inUnit, long inX, long inY, long inRange)
+{
+    long theDX = inUnit->GetTileX() - inX, theDY = inUnit->GetTileY() - inY;
+    return theDX * theDX + theDY * theDY <= inRange * inRange;
+}
+
+static void EECPRMMilitia(EECPResourceManager* inManager, EEUnit* inCitizen, unsigned long inAttacker)
+{
+    static unsigned long sLast[64];
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    unsigned long theID = thePlayer->mPlayerID < 64 ? thePlayer->mPlayerID : 63;
+    if (sLast[theID] != 0 && gPhysics->mGameTime >= sLast[theID] && gPhysics->mGameTime - sLast[theID] < kMilitiaMs)
+        return;
+    sLast[theID] = gPhysics->mGameTime;
+    long theX = inCitizen->GetTileX(), theY = inCitizen->GetTileY();
+    std::vector<EEComplexUnit*> theRaiders;
+    float theRaiderHP = 0.0f, theRaiderAttack = 0.0f;
+    for (EEUnit* theUnit = gWorld.mPlayers[inAttacker]->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+        if (EECPRMIsSoldier(theUnit) && EECPRMNear(theUnit, theX, theY, kMilitiaRange)) {
+            theRaiders.push_back(theUnit->mComplexUnit);
+            theRaiderHP += (float)theUnit->mHitPoints;
+            theRaiderAttack += theUnit->mStats->mAttack;
+        }
+    if (theRaiders.empty())
+        return;
+    std::vector<EEComplexUnit*> theCitizens, theSoldiers;
+    float theHP = 0.0f, theAttack = 0.0f;
+    for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        if (theComplex == NULL || !(theUnit->mHitPoints > 0) || theComplex->mIsDisabled || theComplex->mIsDetachedFromAI
+            || theComplex->mContainer != NULL)
+            continue;
+        if (theUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen && EECPRMNear(theUnit, theX, theY, kMilitiaRange)
+            && theComplex->mCitizenBuildQueue.size() == 0) {
+            theCitizens.push_back(theComplex);
+            theHP += (float)theUnit->mHitPoints;
+            theAttack += theUnit->mStats->mAttack;
+        } else if (EECPRMIsSoldier(theUnit) && EECPRMNear(theUnit, theX, theY, kDefendRange)
+                   && (theComplex->mActiveGoal == NULL || theComplex->mActiveGoal->mKind != kGoalAttackUnit)) {
+            theSoldiers.push_back(theComplex);
+            theHP += (float)theUnit->mHitPoints;
+            theAttack += theUnit->mStats->mAttack;
+        }
+    }
+    bool theFight = theHP * theAttack >= kMilitiaOdds * theRaiderHP * theRaiderAttack;
+    if (theFight) {
+        // the soldiers first, then only as many of the nearest citizens as the odds need
+        std::vector<EEComplexUnit*> theAll(theSoldiers);
+        float theNeedHP = 0.0f, theNeedAttack = 0.0f;
+        for (unsigned long i = 0; i < theSoldiers.size(); i++) {
+            theNeedHP += (float)theSoldiers[i]->mHitPoints;
+            theNeedAttack += theSoldiers[i]->mStats->mAttack;
+        }
+        std::vector<std::pair<long, EEComplexUnit*> > theByDistance;
+        for (unsigned long i = 0; i < theCitizens.size(); i++) {
+            long theDX = theCitizens[i]->GetTileX() - theX, theDY = theCitizens[i]->GetTileY() - theY;
+            theByDistance.push_back(std::pair<long, EEComplexUnit*>(theDX * theDX + theDY * theDY, theCitizens[i]));
+        }
+        std::stable_sort(theByDistance.begin(), theByDistance.end(),
+            [](const std::pair<long, EEComplexUnit*>& x, const std::pair<long, EEComplexUnit*>& y) { return x.first < y.first; });
+        theCitizens.clear();
+        for (unsigned long i = 0; i < theByDistance.size()
+             && theNeedHP * theNeedAttack < kMilitiaOdds * theRaiderHP * theRaiderAttack; i++) {
+            theCitizens.push_back(theByDistance[i].second);
+            theAll.push_back(theByDistance[i].second);
+            theNeedHP += (float)theByDistance[i].second->mHitPoints;
+            theNeedAttack += theByDistance[i].second->mStats->mAttack;
+        }
+        for (unsigned long i = 0; i < theAll.size(); i++) {
+            EEComplexUnit* theUnit = theAll[i];
+            EEComplexUnit* theTarget = NULL;
+            long theBest = 0;
+            for (unsigned long r = 0; r < theRaiders.size(); r++) {
+                long theDX = theRaiders[r]->GetTileX() - theUnit->GetTileX(), theDY = theRaiders[r]->GetTileY() - theUnit->GetTileY();
+                long theDistance = theDX * theDX + theDY * theDY;
+                if (theTarget == NULL || theDistance < theBest) {
+                    theTarget = theRaiders[r];
+                    theBest = theDistance;
+                }
+            }
+            theUnit->Reference();
+            if (theUnit->mUnitClass->mCategory == kUnitCategoryLandCitizen)
+                inManager->AddIdleGatherer(theUnit);   // off its resource's list: reassigned once the fight is over
+            theUnit->ClearGoalQueue(0);
+            theUnit->SetGoal(new EEUGAttackUnit(theUnit, theTarget, false, false), 0, 0);
+            theUnit->StartAction(kActionPrepareToMove);
+            theUnit->GetUnitClass()->ActionChanged(theUnit);
+            theUnit->Dereference();
+        }
+    } else {
+        EECPBuildManager* theBuildManager = inManager->mManager->mBuildManager;
+        bool theHaveHome = theBuildManager != NULL && theBuildManager->mTownCenterTile.mX != -10000;
+        GE2DPoint theHome(0.0f, 0.0f);
+        bool theRun = false;
+        if (theHaveHome && !EECPRMNear(inCitizen, theBuildManager->mTownCenterTile.mX, theBuildManager->mTownCenterTile.mY, kHomeRange)) {
+            theHome = GE2DPoint((float)theBuildManager->mTownCenterTile.mX, (float)theBuildManager->mTownCenterTile.mY);
+            theRun = true;
+        } else {
+            // the attack is at the town centre: to the drop site farthest from it
+            EEComplexUnit* theRefuge = NULL;
+            long theFarthest = -1;
+            for (unsigned long c = 0; c < thePlayer->GetNumResourceCenters(); c++) {
+                EECPResourceCenter* theCenter = thePlayer->GetResourceCenter(c);
+                if (theCenter == NULL || theCenter->mUnit == NULL || !theCenter->mUnit->mUnitClass->IsLandBuilding()
+                    || !(theCenter->mUnit->mHitPoints > 0))
+                    continue;
+                long theDX = theCenter->mUnit->GetTileX() - theX, theDY = theCenter->mUnit->GetTileY() - theY;
+                long theDistance = theDX * theDX + theDY * theDY;
+                if (theDistance > theFarthest) {
+                    theFarthest = theDistance;
+                    theRefuge = theCenter->mUnit;
+                }
+            }
+            if (theRefuge != NULL && theFarthest > kMilitiaRange * kMilitiaRange) {
+                theHome = GE2DPoint((float)theRefuge->GetTileX(), (float)theRefuge->GetTileY());
+                theRun = true;
+            }
+        }
+        if (!theRun)
+            theCitizens.clear();   // nowhere to run: they keep working
+        for (unsigned long i = 0; i < theCitizens.size(); i++) {
+            EEComplexUnit* theUnit = theCitizens[i];
+            theUnit->Reference();
+            inManager->AddIdleGatherer(theUnit);
+            theUnit->ClearGoalQueue(0);
+            theUnit->SetGoal(new EEUGLocation(theHome, true, true, false, 0.0f, false, false), 0, 0);
+            theUnit->StartAction(kActionPrepareToMove);
+            theUnit->GetUnitClass()->ActionChanged(theUnit);
+            theUnit->Dereference();
+        }
+        if (!theCitizens.empty())
+            inManager->mDangerZones.push_back(std::pair<U2DPoint<long>, unsigned long>(U2DPoint<long>(theX, theY), gPhysics->mGameTime));
+    }
+    EE_CP_TRACE(thePlayer, "militia", "%s citizens=%lu soldiers=%lu raiders=%lu odds=%.2f", theFight ? "fight" : "run",
+                (unsigned long)theCitizens.size(), (unsigned long)theSoldiers.size(), (unsigned long)theRaiders.size(),
+                theRaiderHP * theRaiderAttack > 0.0f ? theHP * theAttack / (theRaiderHP * theRaiderAttack) : 0.0f);
+}
+
 void EECPRMNoteDanger(EECPResourceManager* inManager, EEUnit* inCitizen, unsigned long inAttacker)
 {
     // a harassing raid only (kMaxRaiders soldiers of the attacker's within kDangerRange): against an attack group
     // running costs more work than it saves lives (docs/AI_RESEARCH.md §8.22)
     if (inAttacker == 0 || inAttacker >= gWorld.mNumPlayers || gWorld.mPlayers[inAttacker] == NULL)
+        return;
+    if (EECPMilitiaOn(inManager->mManager->mPlayer)) {
+        EECPRMMilitia(inManager, inCitizen, inAttacker);
+        return;
+    }
+    if (!gWorld.mPlayers[inAttacker]->IsHuman() && !EECPExperiment(inManager->mManager->mPlayer, "flee"))
         return;
     long theRaiders = 0;
     for (EEUnit* theUnit = gWorld.mPlayers[inAttacker]->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {

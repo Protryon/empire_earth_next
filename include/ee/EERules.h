@@ -258,6 +258,9 @@ struct EEAIPersonalityRule {
     // while the standing army is short of its target, the floor share of the gatherers on what its unit costs rises by
     // up to this much (by the shortfall, split by the unit's cost): more army, less economy
     float mArmyFloor = 0.1f;
+    // the town's answer to an attack group on its citizens (EECPResourceManager.cpp EECPRMMilitia; docs/AI_RESEARCH.md
+    // §8.25): the nearby soldiers and as many of the nearest citizens as the odds need fight, or the citizens run
+    bool mMilitia = true;
 };
 struct EEAIPersonalityRules {
     std::vector<EEAIPersonalityRule> mPersonalities;

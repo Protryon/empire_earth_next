@@ -57,7 +57,8 @@ const EEAIPersonalityRule& EECPPersonality(const EEComputerPlayer* inPlayer);
 // (as EE_AI_CHEATS): code behind EECPExperiment(player, "a") is tried head to head before it becomes data
 bool EECPExperiment(const EEComputerPlayer* inPlayer, const char* inName);
 const char* EECPExperimentNames(const EEComputerPlayer* inPlayer);   // ",a,b," or "-" (the start line's exp=)
-bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer);   // the personality's economy.demand_split; TEST ONLY: EE_AI_DEMAND
+bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer);
+bool EECPMilitiaOn(const EEComputerPlayer* inPlayer);       // the personality's military.militia; TEST ONLY: EE_AI_EXP nomilitia   // the personality's economy.demand_split; TEST ONLY: EE_AI_DEMAND
                                            // overrides it (0 or 1, or per player in turn from player 1, "0/1")
 
 bool EECPCheatOn(const EEComputerPlayer* inPlayer, long inCheat);          // whether that cheat stays on (the difficulty's ai_cheats, EE_AI_CHEATS)

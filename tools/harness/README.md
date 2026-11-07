@@ -37,7 +37,7 @@ game write one `EE-AI` debug string per computer-player decision (`ee/EECPTrace.
 named AI cheats (`none` turns every one off; sets separated by `/` go to the players in turn from player 1, the idle
 human, so `none/all` makes p2 cheat and p3 honest; TEST ONLY). `EE_AI_DEMAND` (`0`, `1`, or per player
 as `0/1`) overrides the personalities' `economy.demand_split` (TEST ONLY). `EE_AI_EXP` names experiments per player the same way (`EECPExperiment`;
-`ai_scorecard.py --key exp`). `ai_trace.py extract|compare|summary` reads them from a
+`ai_scorecard.py --key exp`; `nomilitia` turns off the personalities' `military.militia`). `ai_trace.py extract|compare|summary` reads them from a
 session log; `compare` is the determinism check (two runs of one seed must print the same lines).
 `ai_bench.py` runs a matrix of seeded headless AI games with the trace on and writes `build/boot/ai_bench/<name>/`
 (`results.json`, `results.csv`, the session logs; `--repeat 2` also compares the traces). `--jobs N` runs N games

@@ -2665,6 +2665,9 @@ computer player gets which. New in this port (no original values: the defaults a
                                    # original's military share of the pop cap)
           army_floor: 0.1          # while the army is short: up to this much more floor share of the gatherers on
                                    # its unit's costs (by the shortfall)
+          militia: true            # soldiers hit a citizen: the soldiers within 30 tiles and the nearest citizens
+                                   # the odds need fight (strength 1.5 x the attackers'), else the citizens run
+                                   # (docs/AI_RESEARCH.md §8.25)
       - id: tall ...               # epoch_pressure 0.15 / 0.5, standing_army 0.2
       - id: wide ...               # epoch_pressure 0.6 / 1.0, max_citizen_share 0.8, standing_army 0.15
       - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5
