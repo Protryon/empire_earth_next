@@ -1068,6 +1068,12 @@ float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime)
 {
     if (inPlayer->mCivilizationManager == NULL)
         return 0.0f;
+    // the experiments "stone22" and "stone30" (docs/AI_RESEARCH.md §8.27; the owner reaches the Stone Age at 21 min,
+    // the AI's timer at about 48): in the Prehistoric the pressure is the game time over a 22 (30) minute span, so
+    // the advance is asked for from 0.3 of it and wholly reserved from 0.8; the later epochs keep the timer
+    if (inPlayer->mTechnologies != NULL && inPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric
+        && EECPStoneSpan(inPlayer) > 0.0f)
+        return (float)inTime / (EECPStoneSpan(inPlayer) * 60000.0f);
     unsigned long theSpan = EECPEpochTimerSpan(inPlayer);
     unsigned long theDue = inPlayer->mCivilizationManager->mNextEpochAdvanceTime;
     long long theLeft = (long long)theDue - (long long)inTime;
@@ -1228,6 +1234,16 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
         theShare = 1.0f;
     if (theShare <= 0.0f)
         return true;
+    // the experiment "goldfix" (docs/AI_RESEARCH.md §8.27): an advance that cannot be reached reserves nothing. A
+    // resource it needs is short and has no gatherer (a playtest AI had no gold site from minute 34: its Copper
+    // reserve held the food and iron for 70 minutes, and it trained no soldiers)
+    if (EECPClaimNeededOn(this) && this->mCivilizationManager != NULL && this->mCivilizationManager->mResourceManager != NULL) {
+        EECPResourceManager* theResources = this->mCivilizationManager->mResourceManager;
+        for (long i = kResourceFood; i <= kResourceIron; i++)
+            if (this->ScaleCost(theReserved->GetCost(i, kUnitTypeTownCenter, 1.0f)) > this->mResourceCaps[i]
+                && theResources->mGatherers[i].size() == 0)
+                return true;
+    }
     for (long i = kResourceFood; i <= kResourceIron; i++) {
         long theCost = this->ScaleCost(inTechnology->GetCost(i, inUnitType, 1.0f)) * inCount;
         long theReserve = UMFloatToLong(theShare * this->ScaleCost(theReserved->GetCost(i, kUnitTypeTownCenter, 1.0f)));
@@ -1274,6 +1290,12 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
     this->mLastDamagedTime = gPhysics->mGameTime;
     if (inUnit->mUnitClass->IsLandBuilding())
         this->mBuildingDamaged = true;
+    // the experiment "navalflee" (docs/AI_RESEARCH.md §8.27; the owner: units should leave a bombardment they cannot
+    // answer, fishing boats should run): EECPResourceManager.cpp EECPRMNavalFlee
+    if (inPlayer > 0 && EECPNavalFleeOn(this) && !inUnit->mUnitClass->IsLandBuilding()
+        && inUnit->mComplexUnit != NULL && this->mCivilizationManager != NULL && this->mCivilizationManager->mResourceManager != NULL
+        && (unsigned long)inPlayer < gWorld.mNumPlayers && gWorld.mPlayers[inPlayer] != NULL && !this->IsAlly(gWorld.mPlayers[inPlayer]))
+        EECPRMNavalFlee(this->mCivilizationManager->mResourceManager, inUnit, inUnit->mComplexUnit->mLastAttacker);
     if (theCategory == kUnitCategoryNavalCitizen || theCategory == kUnitCategoryLandCitizen) {
         this->mCitizenDamaged = true;
         // new: a hit by a human player's unit marks a danger zone the gatherers run from (EECPResourceManager.cpp

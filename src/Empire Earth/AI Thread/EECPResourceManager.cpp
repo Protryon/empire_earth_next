@@ -59,6 +59,7 @@
 #include "ee/EECPUnitSelector.h"
 #include "ee/EECPPersonnel.h"
 #include "ee/EEWheel.h"
+#include "ee/EECPIntelligence.h"
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPTrace.h"
@@ -591,6 +592,29 @@ void EECPResourceManager::AddIdleGatherer(EEComplexUnit* inUnit)
         this->AddGatherer(inUnit, 0);
 }
 
+// the experiment "foodeco": the settlement site nearest a forage patch, in the rings round it (BuildSettlementFor)
+static const long kPatchDropRange = 4;
+
+static bool EECPRMPatchSite(EECPResourceManager* inManager, EEUnit* inPatch, EETileCoordinate& outTile)
+{
+    EECPBuildManager* theBuild = inManager->mManager->mBuildManager;
+    EEUnitClass* theClass = gUnitClassTable[kUnitTypeSettlement];
+    if (theBuild == NULL || theClass == NULL)
+        return false;
+    long theX = inPatch->GetTileX(), theY = inPatch->GetTileY();
+    unsigned short theContinent = gContinentManager.GetContinent(U2DPoint<long>(theX, theY), kAIPathLandMass);
+    std::vector<EETileCoordinate> theTiles;
+    for (long theRing = 2; theRing <= kPatchDropRange + 2; theRing++) {
+        Fn2492C2(theX, theY, theRing, theTiles);
+        for (unsigned long k = 0; k < theTiles.size(); k++)
+            if (theBuild->CanBuildAt(theContinent, kUnitTypeSettlement, theTiles[k], theClass->mTileSize, true, true, theX, theY)) {
+                outTile = theTiles[k];
+                return true;
+            }
+    }
+    return false;
+}
+
 // FUNCTION: EXE 0x48fd38
 // Orders a gatherer far from its drop site to build a settlement near its resource when allowed and no other
 // settlement or town center is queued or near; returns true if it did
@@ -610,6 +634,14 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
     if (thePlayer->mCanBuild && this->mSettlementsEnabled && thePlayer->CanProduceUnitType(kUnitTypeSettlement, 0x20, NULL)) {
         EEUnit* theResource = theGoal->mResource;
         EEUnit* theStorage = theGoal->mStorage;
+        // the experiment "foodeco" (docs/AI_RESEARCH.md §8.27; the owner builds on the patch "so citizens move as little
+        // as possible"): a forage patch with no drop site within kPatchDropRange tiles gets a settlement in the rings
+        // round the patch itself (the original waited for the full drop-off distance and searched round the centre)
+        bool thePatch = theResource != NULL && EECPForagePatchesOn(thePlayer) && theResource->mResourceType == kResourceFood
+            && theResource->GetUnitClass()->mFamily != kUnitFamilyAnimal && theResource->GetUnitClass()->mFamily != kUnitFamilyFish
+            && theResource->GetUnitClass()->GetUnitType() != EEGetFarmType(thePlayer);
+        if (thePatch)
+            theRange = kPatchDropRange * kPatchDropRange;
         if (theResource != NULL
             && (theStorage == NULL || static_cast<EEComplexUnit*>(theStorage)->DistanceSquaredToUnit(theResource) > (float)theRange)) {
             theResult = theGoal->FindUnfinishedFarm(inUnit) == NULL;
@@ -639,7 +671,11 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
                         if (theResult) {
                             if (theResource->mResourceType != kResourceWood && theKind != kUnitFamilyAnimal) {
                                 EECPResourceCenter* theCenter = thePlayer->GetResourceCenterOf(theResource);
-                                if (theCenter == NULL || !theCenter->FindBuildSite(kUnitTypeSettlement, theSite.mCenter))
+                                if (thePatch) {
+                                    if (!EECPRMPatchSite(this, theResource, theSite.mCenter))
+                                        return false;
+                                    theRange = theRadius * theRadius;   // the site check below: within the drop-off distance
+                                } else if (theCenter == NULL || !theCenter->FindBuildSite(kUnitTypeSettlement, theSite.mCenter))
                                     return false;
                                 EETileCoordinate theTile;
                                 theTile.mX = theResource->mTileX;
@@ -873,6 +909,13 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
     return theResult;
 }
 
+// the experiment "navalflee": fish in a danger zone (a warship's attack, EECPRMNavalFlee) are skipped
+static bool EECPRMFishInDanger(EECPResourceManager* inManager, EEUnit* inFish)
+{
+    return EECPNavalFleeOn(inManager->mManager->mPlayer)
+        && EECPRMResourceInDanger(inManager, inFish->GetTileX(), inFish->GetTileY());
+}
+
 // FUNCTION: EXE 0x490819
 // Returns the nearest fish to a unit that is not crowded, preferring fish more than 8 tiles from every own dock
 EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
@@ -885,7 +928,7 @@ EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
     unsigned long i;
     for (i = 0; i < this->mFish.size() && theResult == NULL; i++) {
         EEComplexUnit* theUnit = this->mFish[i];
-        if (theUnit->mResourceAmount > 0 && gWorld.GetResourceUsers(theUnit) < theLimit) {
+        if (theUnit->mResourceAmount > 0 && gWorld.GetResourceUsers(theUnit) < theLimit && !EECPRMFishInDanger(this, theUnit)) {
             if (std::find_if(theUnits.begin(), theUnits.end(), EECPRMUnitWithin(theUnit->GetTile(), 64.0f)) == theUnits.end())
                 theResult = theUnit;
         }
@@ -895,7 +938,7 @@ EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
     unsigned long j;
     for (j = 0; j < this->mFish.size() && theResult == NULL; j++) {
         EEComplexUnit* theUnit = this->mFish[j];
-        if (theUnit->mResourceAmount > 0 && gWorld.GetResourceUsers(theUnit) < theLimit)
+        if (theUnit->mResourceAmount > 0 && gWorld.GetResourceUsers(theUnit) < theLimit && !EECPRMFishInDanger(this, theUnit))
             theResult = theUnit;
     }
     return theResult;
@@ -1489,6 +1532,7 @@ void EECPResourceManager::RemoveCosts(EETechTreeNode* inNode, long inCount)
 // worked from the player's built dock (one is queued while there is none); farms stay as they are.
 static const long kCoastFishRange = 30;
 static const unsigned long kCoastBoats = 8;
+static const unsigned long kCoastBoatsLater = 16;   // the experiment "foodeco": "then lots of fishing boats" (the owner)
 static const unsigned long kCoastBoatsPerFish = 2;
 
 static unsigned long EECPRMCoastFish(EECPResourceManager* inManager)
@@ -1518,7 +1562,8 @@ static unsigned long EECPRMCoastBoatsWanted(EECPResourceManager* inManager)
         || thePlayer->mTechnologies->mCurrentEpoch < kTechEpochStone)
         return 0;
     unsigned long theBoats = EECPRMCoastFish(inManager) * kCoastBoatsPerFish;
-    return theBoats < kCoastBoats ? theBoats : kCoastBoats;
+    unsigned long theMax = EECPForagePatchesOn(thePlayer) ? kCoastBoatsLater : kCoastBoats;
+    return theBoats < theMax ? theBoats : theMax;
 }
 
 static bool EECPRMFishes(EECPResourceManager* inManager)
@@ -1553,6 +1598,53 @@ static void EECPRMRequestBoats(EECPResourceManager* inManager)
         theManager->mUnitManager->RequestUnits(theClass, 1, 0, 0);
 }
 
+// The experiment "foodeco" (docs/AI_RESEARCH.md §8.27; the owner: a settlement on the patch, 6 per patch, the rest
+// hunting, then many fishing boats). The food capacity past the centres' bushes: the gatherers working farms, fish
+// or game now, and 1 more per living animal within kHuntRange tiles of the town centre (kHuntSlots at most). The
+// original added every food gatherer, so the capacity grew with each one sent: 25 citizens queued at one patch.
+static const long kHuntRange = 45;
+static const unsigned long kHuntSlots = 12;
+static const unsigned long kPatchesWanted = 3;   // the forage patches kept in the active centres (Prehistoric) ...
+static const unsigned long kPatchesWantedLater = 5;   // ... and from the Stone Age (more gatherers later)
+
+static unsigned long EECPRMFoodOutsideCenters(EECPResourceManager* inManager)
+{
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    long theFarm = EEGetFarmType(thePlayer);
+    unsigned long theCount = 0, theHunters = 0;
+    for (unsigned long k = 0; k < inManager->mGatherers[2].size(); k++) {
+        EEComplexUnit* theUnit = inManager->mGatherers[2][k];
+        if (theUnit->GetUnitClass()->mCategory == kUnitCategoryNavalCitizen) {
+            theCount++;
+            continue;
+        }
+        EEUGGather* theGoal = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
+        EEUnit* theResource = theGoal != NULL ? theGoal->mResource : NULL;
+        if (theResource == NULL)
+            continue;
+        if (theResource->mUnitClass->GetUnitType() == theFarm)
+            theCount++;
+        else if (theResource->mUnitClass->mFamily == kUnitFamilyAnimal)
+            theHunters++;
+    }
+    unsigned long theGame = 0;
+    EECPBuildManager* theBuild = inManager->mManager->mBuildManager;
+    if (theBuild != NULL && theBuild->mTownCenterTile.mX != -10000)
+        for (unsigned long k = 0; k < inManager->mMines.size(); k++) {
+            EEComplexUnit* theAnimal = inManager->mMines[k];
+            if (!(theAnimal->mHitPoints > 0) || !(theAnimal->mResourceAmount > 0)
+                || theAnimal->mUnitClass->mFamily != kUnitFamilyAnimal)
+                continue;
+            long theDX = theAnimal->GetTileX() - theBuild->mTownCenterTile.mX;
+            long theDY = theAnimal->GetTileY() - theBuild->mTownCenterTile.mY;
+            if (theDX * theDX + theDY * theDY <= kHuntRange * kHuntRange)
+                theGame++;
+        }
+    if (theGame > kHuntSlots)
+        theGame = kHuntSlots;
+    return theCount + (theHunters > theGame ? theHunters : theGame);
+}
+
 unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
 {
     EEComputerPlayer* thePlayer = this->mManager->mPlayer;
@@ -1575,8 +1667,11 @@ unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
     unsigned long theTotal = 0;
     for (long r = 2; r < 7; r++) {
         unsigned long theCapacity = r == 3 ? (unsigned long)EECPPersonality(thePlayer).mWoodSlots : theSites[r] * theLimit;
-        if (r == 2) {
+        if (r == 2 && EECPForagePatchesOn(thePlayer))
+            theCapacity += EECPRMFoodOutsideCenters(this);   // farms, fish and the hunt: what works there, and the game near home
+        else if (r == 2)
             theCapacity += this->mGatherers[2].size();   // farms and fish are not center units: what works there now
+        if (r == 2) {
             unsigned long theBoats = EECPRMCoastBoatsWanted(this);   // and the coast's boats still to come
             if (theBoats > 0) {
                 unsigned long theHave = (unsigned long)this->mManager->mUnitManager->GetCount(this->mManager->GetFishingBoatClass());
@@ -1695,9 +1790,94 @@ static void EECPRMGetDemand(EECPResourceManager* inManager, EECPRMDemand& outDem
     }
 }
 
+// the experiment "goldfix" (docs/AI_RESEARCH.md §8.27): when the next epoch costs stone, gold or iron that the stock
+// does not cover and no active resource centre holds any, the nearest centre to the town centre that does is
+// activated (its gatherers then order their settlement); the original activated centres only by distance at the
+// start, so an AI whose near gold ran out never had gold again
+static void EECPRMActivateNeeded(EECPResourceManager* inManager)
+{
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    EECPBuildManager* theBuild = inManager->mManager->mBuildManager;
+    if (thePlayer->mTechnologies == NULL || theBuild == NULL || theBuild->mTownCenterTile.mX == -10000)
+        return;
+    // the experiment "foodeco": at least kPatchesWanted forage patches in the active centres (the owner works 2 with
+    // 6 each and hunts with the rest); the original's active patches ran out over the game (5.4 held at 5-10 min,
+    // 2.4 at 75-90 in the sim) and none was claimed again
+    if (EECPForagePatchesOn(thePlayer)) {
+        unsigned long thePatches = 0;
+        for (unsigned long k = 0; k < thePlayer->GetNumResourceCenters(); k++) {
+            EECPResourceCenter* theCenter = thePlayer->GetResourceCenter(k);
+            if (theCenter == NULL || !theCenter->mIsActive)
+                continue;
+            for (unsigned long u = 0; u < theCenter->mUnits.size(); u++)
+                if (theCenter->mUnits[u]->mResourceType == kResourceFood && theCenter->mUnits[u]->mHitPoints > 0
+                    && theCenter->mUnits[u]->mResourceAmount > 0
+                    && theCenter->mUnits[u]->GetUnitClass()->mUnitType == kUnitTypeResForageBush)
+                    thePatches++;
+        }
+        unsigned long theWantedPatches = thePlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric ? kPatchesWanted : kPatchesWantedLater;
+        if (thePatches < theWantedPatches) {
+            EECPResourceCenter* theBest = NULL;
+            long long theBestDistance = 0;
+            for (unsigned long k = 0; k < thePlayer->GetNumResourceCenters(); k++) {
+                EECPResourceCenter* theCenter = thePlayer->GetResourceCenter(k);
+                if (theCenter == NULL || theCenter->mIsActive)
+                    continue;
+                EEUnit* theUnit = theCenter->FindResourceUnit(kResourceFood);
+                if (theUnit == NULL || !(theUnit->mHitPoints > 0) || theUnit->GetUnitClass()->mUnitType != kUnitTypeResForageBush
+                    || EECPRMResourceInDanger(inManager, theUnit->GetTileX(), theUnit->GetTileY()))
+                    continue;
+                long long theDX = theUnit->GetTileX() - theBuild->mTownCenterTile.mX;
+                long long theDY = theUnit->GetTileY() - theBuild->mTownCenterTile.mY;
+                if (theBest == NULL || theDX * theDX + theDY * theDY < theBestDistance) {
+                    theBest = theCenter;
+                    theBestDistance = theDX * theDX + theDY * theDY;
+                }
+            }
+            if (theBest != NULL) {
+                theBest->SetActive(true, 0);
+                EE_CP_TRACE(thePlayer, "center.activate", "resource=%ld distance=%.0f patches=%lu", (long)kResourceFood,
+                            sqrt((double)theBestDistance), thePatches);
+            }
+        }
+    }
+    if (!EECPClaimNeededOn(thePlayer))
+        return;
+    long theNext = thePlayer->mTechnologies->mCurrentEpoch + 1;
+    EETechTreeNode* theNode = theNext < EEEpochCount() ? thePlayer->mTechnologies->Get(theNext) : NULL;
+    if (theNode == NULL)
+        return;
+    for (long r = kResourceStone; r <= kResourceIron; r++) {
+        if (thePlayer->ScaleCost(theNode->GetCost(r, kUnitTypeTownCenter, 1.0f)) <= thePlayer->mResourceCaps[r]
+            || inManager->GetGatherCapacity(r) > 0)
+            continue;
+        EECPResourceCenter* theBest = NULL;
+        long long theBestDistance = 0;
+        for (unsigned long k = 0; k < thePlayer->GetNumResourceCenters(); k++) {
+            EECPResourceCenter* theCenter = thePlayer->GetResourceCenter(k);
+            if (theCenter == NULL || theCenter->mIsActive)
+                continue;
+            EEUnit* theUnit = theCenter->FindResourceUnit(r);
+            if (theUnit == NULL || !(theUnit->mHitPoints > 0) || EECPRMResourceInDanger(inManager, theUnit->GetTileX(), theUnit->GetTileY()))
+                continue;
+            long long theDX = theUnit->GetTileX() - theBuild->mTownCenterTile.mX;
+            long long theDY = theUnit->GetTileY() - theBuild->mTownCenterTile.mY;
+            if (theBest == NULL || theDX * theDX + theDY * theDY < theBestDistance) {
+                theBest = theCenter;
+                theBestDistance = theDX * theDX + theDY * theDY;
+            }
+        }
+        if (theBest != NULL) {
+            theBest->SetActive(true, 0);
+            EE_CP_TRACE(thePlayer, "center.activate", "resource=%ld distance=%.0f", r, sqrt((double)theBestDistance));
+        }
+    }
+}
+
 static bool EECPRMSplitByDemand(EECPResourceManager* inManager)
 {
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    EECPRMActivateNeeded(inManager);
     long theGatherers = (long)inManager->mGatherers[0].size();
     for (long r = 2; r < 7; r++)
         theGatherers += (long)inManager->mGatherers[r].size();
@@ -2128,6 +2308,77 @@ static void EECPRMMilitia(EECPResourceManager* inManager, EEUnit* inCitizen, uns
     EE_CP_TRACE(thePlayer, "militia", "%s citizens=%lu soldiers=%lu raiders=%lu odds=%.2f tower=%d", theFight ? "fight" : "run",
                 (unsigned long)theCitizens.size(), (unsigned long)theSoldiers.size(), (unsigned long)theRaiders.size(),
                 theRaiderHP * theRaiderAttack > 0.0f ? theHP * theAttack / (theRaiderHP * theRaiderAttack) : 0.0f, theTower != NULL ? 1 : 0);
+}
+
+static const long kNavalFleeRange = 12;      // the own units round the victim that leave with it
+static const unsigned long kNavalFleeMs = 4000;
+
+void EECPRMNavalFlee(EECPResourceManager* inManager, EEUnit* inVictim, EEComplexUnit* inAttacker)
+{
+    static unsigned long sLast[64];
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    if (inAttacker == NULL || !(inAttacker->mHitPoints > 0))
+        return;
+    long theAttackerCategory = inAttacker->mUnitClass->mCategory;
+    if (theAttackerCategory != kUnitCategoryNaval)
+        return;   // warships only (not boats, not land units on the shore)
+    unsigned long theID = thePlayer->mPlayerID < 64 ? thePlayer->mPlayerID : 63;
+    if (sLast[theID] != 0 && gPhysics->mGameTime >= sLast[theID] && gPhysics->mGameTime - sLast[theID] < kNavalFleeMs)
+        return;
+    sLast[theID] = gPhysics->mGameTime;
+    long theX = inVictim->GetTileX(), theY = inVictim->GetTileY();
+    bool theBoat = inVictim->mUnitClass->mCategory == kUnitCategoryNavalCitizen;
+    GE2DPoint theRefuge(0.0f, 0.0f);
+    if (theBoat) {
+        // the own built dock farthest from the attacker (the nearest one is often where it shoots)
+        std::vector<EEUnit*> theDocks;
+        EEGetPlayerUnitsOfType(kUnitTypeDock, thePlayer->mPlayerID, theDocks);
+        long theBest = -1;
+        for (unsigned long k = 0; k < theDocks.size(); k++) {
+            if (theDocks[k]->mComplexUnit == NULL || !theDocks[k]->mComplexUnit->mIsBuilt || !(theDocks[k]->mHitPoints > 0))
+                continue;
+            long theDX = theDocks[k]->GetTileX() - inAttacker->GetTileX(), theDY = theDocks[k]->GetTileY() - inAttacker->GetTileY();
+            if (theDX * theDX + theDY * theDY > theBest) {
+                theBest = theDX * theDX + theDY * theDY;
+                theRefuge = GE2DPoint((float)theDocks[k]->GetTileX(), (float)theDocks[k]->GetTileY());
+            }
+        }
+        if (theBest < 0)
+            return;
+    } else {
+        EECPBuildManager* theBuild = inManager->mManager->mBuildManager;
+        if (theBuild == NULL || theBuild->mTownCenterTile.mX == -10000)
+            return;
+        theRefuge = GE2DPoint((float)theBuild->mTownCenterTile.mX, (float)theBuild->mTownCenterTile.mY);
+    }
+    unsigned long theCount = 0;
+    for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        EEComplexUnit* theComplex = theUnit->mComplexUnit;
+        if (theComplex == NULL || !(theUnit->mHitPoints > 0) || theComplex->mIsDisabled || theComplex->mIsDetachedFromAI
+            || theComplex->mContainer != NULL || !EECPRMNear(theUnit, theX, theY, kNavalFleeRange))
+            continue;
+        long theCategory = theUnit->mUnitClass->mCategory;
+        bool theLeaves;
+        if (theBoat)
+            theLeaves = theCategory == kUnitCategoryNavalCitizen;
+        else   // the land units that cannot answer a ship: citizens and melee soldiers
+            theLeaves = theCategory == kUnitCategoryLandCitizen
+                || ((theCategory == kUnitCategoryLand || theCategory == kUnitCategoryLandMilitaryHero) && theUnit->mStats->mRange < 3.0f);
+        if (!theLeaves)
+            continue;
+        theComplex->Reference();
+        if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
+            inManager->AddIdleGatherer(theComplex);
+        theComplex->ClearGoalQueue(0);
+        theComplex->SetGoal(new EEUGLocation(theRefuge, true, true, false, 0.0f, false, false), 0, 0);
+        theComplex->StartAction(kActionPrepareToMove);
+        theComplex->GetUnitClass()->ActionChanged(theComplex);
+        theComplex->Dereference();
+        theCount++;
+    }
+    if (theCount > 0)
+        inManager->mDangerZones.push_back(std::pair<U2DPoint<long>, unsigned long>(U2DPoint<long>(theX, theY), gPhysics->mGameTime));
+    EE_CP_TRACE(thePlayer, "navalflee", "%s units=%lu", theBoat ? "boats" : "land", theCount);
 }
 
 void EECPRMNoteDanger(EECPResourceManager* inManager, EEUnit* inCitizen, unsigned long inAttacker)

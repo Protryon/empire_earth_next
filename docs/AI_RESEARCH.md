@@ -1322,6 +1322,68 @@ All three are on by default; the game log of the next playtest decides what come
 - the standing-army count above;
 - the Stone Age pace (the citizen cap shows 13 minutes are there).
 
+### 8.27 Food, gold and the Stone Age (2026-11-07, second full-game playtest and EE-SIM)
+
+**The playtest** (Continental, Medium, the AI Babylon, 106 min). The AI kept pace for 16 minutes (31 citizens and 7
+soldiers against the owner's 30 and 5), fished, and its citizens' response to raids was "perfect". It still reached
+the Stone Age at 55 min (the owner: 21) and never left it:
+- **Food capacity.** `GetGatherCapacity` added every food gatherer to the food capacity (meant for farm and fish
+  workers, which are not resource-centre units), so the capacity grew with each one sent: 23-28 citizens on 1-2
+  forage patches of about 6 places each, queueing or walking to far bushes (mean trip 18 tiles). Food came in at
+  about 2 a gatherer per 30 s, the owner's at 3.6-4.2.
+- **Gold.** It settled gold once, at 7 min. From 34 min no active centre held gold, so it wanted no gold gatherers
+  and none ever ordered a settlement: gold stayed at 11-26. The Copper reserve then held the food and iron for an
+  advance it could not pay, and it trained almost no soldiers (0-8): "no military response".
+- **Warships.** The owner's single battleship sank its fishing; boats and units under fire stayed.
+
+The owner's play, as the target: a settlement right on the patch, 6 citizens a patch, the rest hunting, then many
+fishing boats; in the Prehistoric only citizens, about 4 clubmen unless attacked and towers, no attacks. Food per
+30 s (the game log's `got`; the gatherer counts include boats):
+
+| Minutes | Owner | Per gatherer | AI (playtest) | Per gatherer |
+|---|---|---|---|---|
+| 5-10 | 48 | 3.0 | 30 | 2.6 |
+| 10-20 | 65-68 | 3.6-3.8 | 37 | 1.7-2.5 |
+| 30-60 | 101-109 | 3.7-4.0 | 35-59 | 1.7-2.2 |
+
+**The rules** (`aipersonalities.yaml`, on by default; EE_AI_EXP `no...` turns each off):
+- `economy.forage_patches` (`EECPRMFoodOutsideCenters`, `EECPRMPatchSite`, `EECPRMActivateNeeded`): the food capacity
+  is the patches' places plus the workers on farms, fish and game, plus a hunter for each animal within 45 tiles
+  (12 at most); a patch with no drop site within 4 tiles gets a settlement in the rings round it; 3 patches stay
+  claimed in the Prehistoric and 5 later (the nearest inactive centre with a forage bush); up to 16 fishing boats.
+- `economy.claim_needed`: the next epoch's stone, gold or iron short with no active centre holding any claims the
+  nearest centre with it; an advance with a short resource that nobody gathers reserves nothing.
+- `military.naval_flee` (`EECPRMNavalFlee`): hit by a warship, the boats within 12 tiles go to the own dock farthest
+  from it, the citizens and melee units to the town centre; the spot is a danger zone for 30 s (fish there skipped).
+- `military.prehistoric_attacks: false` (`EECPACPrehistoricPeace`): no attack group against an enemy in the
+  Prehistoric (the defence still forms); `military.prehistoric_army` 8 -> 4. `aggressive` keeps both.
+- `epoch_pressure.stone_span: 30` (`EECPEpochPressure`, `AttemptEpochAdvance`): in the Prehistoric the pressure is the
+  game time over 30 minutes instead of the epoch timer (50-70 min on Medium), so the Stone Age is asked for from
+  9 min and wholly reserved from 24. The later epochs keep the timer.
+
+Head to head against the AI without them (seeds 2-13, both seats, Medium, Small; food per 30 s at 10-30 / 40-60 min):
+
+| Variant | Length | Result | Stone | Copper | Food |
+|---|---|---|---|---|---|
+| forage patches, first (no patch claiming) | 90 min | lost 1-19 | 51.5 min | 4/24 | |
+| forage patches | 90 min | 5-7, 12 close | 49.7 | 3/24 | 57-65 / 58-65 |
+| claim_needed alone | 90 min | 4-7, 13 close (no effect: gold near home) | 49.5 | 7/24 | |
+| naval_flee alone | 90 min | 7-7 (sim AIs rarely field warships) | 49.5 | 8/24 | |
+| + Prehistoric peace, 4 clubmen | 90 min | 4-8, 12 close | 49.3 | 4/24 | 46-64 / 54-62 |
+| + Stone span 22 | 90 min | 4-9 | 20.8 | 16/24 | 37-45 / 70-77 |
+| + Stone span 22 + citizen cap 30 | 90 min | 2-12 | 21.2 | 16/24 | |
+| **+ Stone span 30** | 90 min | **7-7**, 10 close | **25.0** | **20/24** | 45-50 / 78-87 |
+| + Stone span 22 | 150 min | lost 5-17 | 20.8 | 17/23 | Bronze 6/23 |
+| **+ Stone span 30** | 150 min | **11-10** | 25.0 | 21/24 | Bronze 14/24 against 9/24, Dark 3/24 |
+| the rules as shipped | 90 min | 5-5, 14 close | 25.0 | 19/24 | |
+
+- **Patches run out.** The near land holds about 2 patches; the claimed ones lie 49-54 tiles out. The owner's extra
+  food is hunting and fish; the AI keeps 1-4 hunters. Still open, with the Copper farms.
+- **A Stone Age at 21 min costs too much** (span 22): the reserve stops the citizens at 20 for the advance. At 30 the
+  AI reaches it at 25 and holds even.
+- **A crash** in a 150-minute game: an AI transport's unload line ran off the map (PORT_LEARNINGS.md "A transport's
+  unload line off the map").
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

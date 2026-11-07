@@ -1520,3 +1520,11 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - The test profile's `windowed-software` patch matches `mFullScreen = mWindowMode == 0` once in Load now (tools/build.py).
 - Harness pins are `block.key=value` (`tools/harness/config_yaml.py`); the bit-depth pins are gone (Load sets 32).
 
+## A transport's unload line off the map (EE-SIM, 2026-11-07)
+
+- **Crash:** `EEGetBlockingUnits` read `inTile->mUnits` through a NULL tile. `EEUCSpaceTransport::FindUnloadTiles`
+  (and `EEUCNavalTransport`'s copy) walks a tile line from the cargo's tile toward the unload destination and asks
+  `EEMap::GetTile` for each point; past the map edge that is NULL. The 32-bit original read through it without a
+  fault. Found by a 150-minute EE-SIM game (frames resolved with `tools/sim.py resolve`).
+- **Fix:** the line ends at the first tile off the map, and `EEGetBlockingUnits` treats a NULL tile as holding no
+  units (its other callers pass `GetTile` results too).

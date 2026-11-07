@@ -2576,7 +2576,8 @@ and the scenario editor's lists, `EEGameState::Create`, `EERandomMap`, `EEToHitT
         ai_level: 0                    # the computer players' records: 0 easy, 1 medium, 2 hard
         damage_scale_human_target: difficulty_damage_scale.F     # the damage table scale when only the target is
         damage_scale_human_attacker: difficulty_damage_scale.F2  # "human" (EEPlayer::IsHuman) / only the attacker
-        ai_cheats: [cost, reveal, epochs, extra, popband, catchup, retire]   # the computer players' cheats kept
+        ai_cheats: []                  # the computer players' cheats kept (none; any of cost, reveal, epochs,
+                                       # extra, popband, catchup, retire)
       ...                              # medium: 1.0 and 1.0 (the base table), hard: .F2 and .F
     unit_limit: {minimum: unit_limit_range.L, maximum: unit_limit_range.L2, step: 50, default: unit_limit_default.L}
     wonders_for_victory: {maximum: wonders_for_victory_max.L, default: 3}
@@ -2589,11 +2590,11 @@ citizen's cost in stock, whatever other buildings are left. `false` keeps the or
 original's limits (map size < 6, speed < 4, difficulty < 3); an out-of-range option falls back to the default entry
 (difficulty: the first). The damage table by difficulty is computed at the lookup (the scale x the base table) instead
 of two pre-scaled copies: the same float product. `ai_cheats` lists the computer players' cheats a difficulty keeps
-(`EEAICheat`, ee/EERules.h; every one by default, as the original; `[]` makes a fair difficulty): `cost` (the unit
+(`EEAICheat`, ee/EERules.h; none by default, a fair game; the original kept every one at every difficulty): `cost` (the unit
 cost modifier, dbcpbehavior rows 67/96, 1% stock), `reveal` (the map explored at the start), `epochs` (free epoch
 advances), `extra` (row 101's gold and iron), `popband` (the pop cap pulled toward the largest human population),
-`catchup` (the epoch rubber band: hurried when behind a human, held back and slowed when ahead of every human) and `retire` (unseen obsolete units deleted); see docs/AI_RESEARCH.md. A new difficulty
-entry with `ai_level: 2` and `ai_cheats: []` is a fair Hard. Load types stay the code's (`kLoadTypeCount`, 6: new game,
+`catchup` (the epoch rubber band: hurried when behind a human, held back and slowed when ahead of every human) and `retire` (unseen obsolete units deleted); see docs/AI_RESEARCH.md. Every difficulty
+is fair by default; a cheating one lists its cheats (all seven: the original's). Load types stay the code's (`kLoadTypeCount`, 6: new game,
 scenario, saved game ...: each is a code path).
 
 **civbuilder.yaml** (`EECivBuilderRules`; `EECivilizationManager::ApplyUpgradeLevel`, `Load`'s special powers
@@ -2681,6 +2682,8 @@ computer player gets which. New in this port (no original values: the defaults a
         epoch_pressure:            # the elapsed share of the epoch timer (dbcpbehavior rows 28/29); paid epochs only
           start: 0.3               # the advance is asked for from here (1: the original timer) ...
           full: 0.8                # ... and its cost is wholly reserved from here (the reserve grows in between)
+          stone_span: 30           # the Prehistoric instead: the game time over this many minutes (the Stone Age at
+                                   # about 25 min; 0: the epoch timer; docs/AI_RESEARCH.md §8.27)
         economy:                   # EECPResourceManager
           surplus: 1000            # a resource with more in stock gets surplus_cut of its gatherer share
           surplus_cut: 0.5
@@ -2693,6 +2696,13 @@ computer player gets which. New in this port (no original values: the defaults a
                                    # false: the original's needs ledger with the stock correction above
           coast_fishing: true      # from the Stone Age, fish within 30 tiles of the town centre: a dock and up to
                                    # 2 boats a fish (8 at most); the build lists' docks capped at 2 (§8.26)
+          forage_patches: true     # the food capacity: mining_limit a forage patch (not every food gatherer), the
+                                   # workers on farms, fish and game, 1 hunter per animal within 45 tiles (12 at
+                                   # most); a settlement on a patch with no drop site within 4 tiles; 3 patches kept
+                                   # claimed in the Prehistoric, 5 later; 16 boats at most (§8.27)
+          claim_needed: true       # the next epoch's stone, gold or iron short with no active centre holding any:
+                                   # the nearest centre with it is claimed; an advance that cannot be reached (a
+                                   # resource short with no gatherer) reserves nothing (§8.27)
         military:
           standing_army: 0.25      # the army kept per worker (every 30 game s, the favourite land unit; up to the
                                    # original's military share of the pop cap)
@@ -2703,11 +2713,16 @@ computer player gets which. New in this port (no original values: the defaults a
                                    # (docs/AI_RESEARCH.md §8.25)
           militia_towers: true     # the built towers within 12 tiles count in those odds, and citizens that run go
                                    # to the nearest tower within 30 tiles (§8.26)
-          prehistoric_army: 8      # the Prehistoric army: at most this many soldiers unless enemy soldiers within
+          prehistoric_army: 4      # the Prehistoric army: at most this many soldiers unless enemy soldiers within
                                    # 40 tiles of the town are stronger (then 4 min uncapped); 0: no cap (§8.26)
+          prehistoric_attacks: false   # attack groups against an enemy in the Prehistoric (false: none; the
+                                   # defence still forms) (§8.27)
+          naval_flee: true         # hit by a warship it cannot answer: boats go to the dock farthest from it,
+                                   # citizens and melee units within 12 tiles to the town centre (§8.27)
       - id: tall ...               # epoch_pressure 0.15 / 0.5, standing_army 0.2
       - id: wide ...               # epoch_pressure 0.6 / 1.0, max_citizen_share 0.8, standing_army 0.15
-      - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5, prehistoric_army 0
+      - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5, prehistoric_army 0,
+                                   # prehistoric_attacks true
     assign: [balanced]             # computer player n takes entry (n - 1) mod the count
 
 A key left out keeps the default; `assign` names personalities. TEST ONLY: `EE_AI_PERSONALITY` in the environment

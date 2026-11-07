@@ -8,7 +8,8 @@
 // the comparison skips. Off, every trace site costs one bool test.
 //
 // Cheats: the game's difficulty sets which computer-player cheats stay on (gameoptions.yaml `ai_cheats`,
-// ee/EERules.h EEAICheat; every one by default, as the original). TEST ONLY: EE_AI_CHEATS in the environment narrows
+// ee/EERules.h EEAICheat; none by default, the original kept every one: a cheat test needs a gameoptions.yaml whose
+// difficulty lists them). TEST ONLY: EE_AI_CHEATS in the environment narrows
 // that further to the cheats it names, comma separated ("none": every one off; unset or "all": no change); sets
 // separated by '/' are taken in turn by player id from player 1 (the human slot), as EE_AI_PERSONALITY: with two
 // computer players (p2, p3), "none/all" makes p2 cheat and p3 honest. An
@@ -61,7 +62,14 @@ bool EECPDemandSplitOn(const EEComputerPlayer* inPlayer);
 bool EECPMilitiaOn(const EEComputerPlayer* inPlayer);
 bool EECPCoastFishingOn(const EEComputerPlayer* inPlayer);  // economy.coast_fishing; TEST ONLY: EE_AI_EXP nofish
 bool EECPMilitiaTowersOn(const EEComputerPlayer* inPlayer); // military.militia_towers; TEST ONLY: EE_AI_EXP nomtower
-long EECPPrehistoricArmy(const EEComputerPlayer* inPlayer); // military.prehistoric_army (0: none); TEST ONLY: EE_AI_EXP noprearmy       // the personality's military.militia; TEST ONLY: EE_AI_EXP nomilitia   // the personality's economy.demand_split; TEST ONLY: EE_AI_DEMAND
+long EECPPrehistoricArmy(const EEComputerPlayer* inPlayer); // military.prehistoric_army (0: none); TEST ONLY: EE_AI_EXP noprearmy
+// the §8.27 rules; TEST ONLY: EE_AI_EXP turns each on (foodeco, goldfix, navalflee, prepeace, stone22/stone30) or off
+// (nofoodeco, nogoldfix, nonavalflee, noprepeace, nostone)
+bool EECPForagePatchesOn(const EEComputerPlayer* inPlayer);   // economy.forage_patches
+bool EECPClaimNeededOn(const EEComputerPlayer* inPlayer);     // economy.claim_needed
+bool EECPNavalFleeOn(const EEComputerPlayer* inPlayer);       // military.naval_flee
+bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer);   // not military.prehistoric_attacks
+float EECPStoneSpan(const EEComputerPlayer* inPlayer);        // epoch_pressure.stone_span in minutes (0: the timer)       // the personality's military.militia; TEST ONLY: EE_AI_EXP nomilitia   // the personality's economy.demand_split; TEST ONLY: EE_AI_DEMAND
                                            // overrides it (0 or 1, or per player in turn from player 1, "0/1")
 
 bool EECPCheatOn(const EEComputerPlayer* inPlayer, long inCheat);          // whether that cheat stays on (the difficulty's ai_cheats, EE_AI_CHEATS)

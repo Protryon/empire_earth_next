@@ -330,7 +330,8 @@ EEAIPersonalityRules::EEAIPersonalityRules()
     theAggressive.mEpochPressureFull = 0.9f;
     theAggressive.mStandingArmy = 0.5f;
     theAggressive.mArmyFloor = 0.3f;
-    theAggressive.mPrehistoricArmy = 0;     // the rush keeps its early army
+    theAggressive.mPrehistoricArmy = 0;     // the rush keeps its early army ...
+    theAggressive.mPrehistoricAttacks = true;   // ... and its early attacks
     this->mPersonalities.push_back(theBalanced);
     this->mPersonalities.push_back(theTall);
     this->mPersonalities.push_back(theWide);
@@ -371,7 +372,7 @@ long EEAICheatBit(const std::string& inName)
 long EEDifficultyAICheats(unsigned long inDifficulty)
 {
     const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
-    return inDifficulty < theList.size() ? theList[inDifficulty].mAICheats : (long)kAICheatAll;
+    return inDifficulty < theList.size() ? theList[inDifficulty].mAICheats : 0L;   // none (the original: all)
 }
 
 long EEDifficultyAILevel(unsigned long inDifficulty)
@@ -921,9 +922,12 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
                 Map y(*s, doc, "epoch_pressure");
                 y.Float("start", p.mEpochPressureStart);
                 y.Float("full", p.mEpochPressureFull);
+                y.Float("stone_span", p.mStoneSpan);
                 y.Done();
                 if (!(p.mEpochPressureStart >= 0.0f && p.mEpochPressureFull > p.mEpochPressureStart))
                     Fail(y.Where() + ": epoch_pressure: 0 <= start < full");
+                if (!(p.mStoneSpan >= 0.0f))
+                    Fail(y.Where() + ": epoch_pressure: stone_span must be 0 or more");
             }
             if (const Node* s = x.Sub("economy")) {
                 Map y(*s, doc, "economy");
@@ -942,6 +946,8 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
                 y.Int("moves_per_cycle", p.mMovesPerCycle);
                 y.Bool("demand_split", p.mDemandSplit);
                 y.Bool("coast_fishing", p.mCoastFishing);
+                y.Bool("forage_patches", p.mForagePatches);
+                y.Bool("claim_needed", p.mClaimNeeded);
                 y.Done();
             }
             if (const Node* s = x.Sub("military")) {
@@ -951,6 +957,8 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
                 y.Bool("militia", p.mMilitia);
                 y.Bool("militia_towers", p.mMilitiaTowers);
                 y.Int("prehistoric_army", p.mPrehistoricArmy);
+                y.Bool("prehistoric_attacks", p.mPrehistoricAttacks);
+                y.Bool("naval_flee", p.mNavalFlee);
                 y.Done();
                 if (!(p.mStandingArmy >= 0.0f))
                     Fail(y.Where() + ": military: standing_army must be 0 or more");
@@ -1246,6 +1254,7 @@ void EERules::Dump(std::string& outJson) const
             j.Str("id", p.mID);
             j.Float("epoch_pressure_start", p.mEpochPressureStart);
             j.Float("epoch_pressure_full", p.mEpochPressureFull);
+            j.Float("stone_span", p.mStoneSpan);
             j.Int("surplus", p.mSurplus);
             j.Float("surplus_cut", p.mSurplusCut);
             j.Int("low_stock", p.mLowStock);
@@ -1256,11 +1265,15 @@ void EERules::Dump(std::string& outJson) const
             j.Int("moves_per_cycle", p.mMovesPerCycle);
             j.Int("demand_split", p.mDemandSplit ? 1 : 0);
             j.Int("coast_fishing", p.mCoastFishing ? 1 : 0);
+            j.Int("forage_patches", p.mForagePatches ? 1 : 0);
+            j.Int("claim_needed", p.mClaimNeeded ? 1 : 0);
             j.Float("standing_army", p.mStandingArmy);
             j.Float("army_floor", p.mArmyFloor);
             j.Int("militia", p.mMilitia ? 1 : 0);
             j.Int("militia_towers", p.mMilitiaTowers ? 1 : 0);
             j.Int("prehistoric_army", p.mPrehistoricArmy);
+            j.Int("prehistoric_attacks", p.mPrehistoricAttacks ? 1 : 0);
+            j.Int("naval_flee", p.mNavalFlee ? 1 : 0);
             j.Close('}');
         }
         j.Close(']');
