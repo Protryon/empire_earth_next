@@ -332,6 +332,9 @@ EEAIPersonalityRules::EEAIPersonalityRules()
     theAggressive.mArmyFloor = 0.3f;
     theAggressive.mPrehistoricArmy = 0;     // the rush keeps its early army ...
     theAggressive.mPrehistoricAttacks = true;   // ... and its early attacks
+    theAggressive.mStoneAttacks = true;
+    theAggressive.mSafeBonus = 0.0f;        // the rush does not dash for the epoch ...
+    theAggressive.mEarlyTrainers = 0;       // ... and trains from as many buildings as it likes
     // TEMPORARY (until the new AI beats it; docs/AI_RESEARCH.md §8.28): the original's decisions where a rule holds
     // them; EE_AI_PERSONALITY gives it to a seat
     EEAIPersonalityRule theClassic;
@@ -339,6 +342,7 @@ EEAIPersonalityRules::EEAIPersonalityRules()
     theClassic.mEpochPressureStart = 1.0f;  // the advance asked for when the epoch timer is due ...
     theClassic.mEpochPressureFull = 100.0f; // ... and (next to) no reserve
     theClassic.mStoneSpan = 0.0f;
+    theClassic.mSafeBonus = 0.0f;
     theClassic.mSurplus = 100000000;        // no stock correction
     theClassic.mLowStock = 0;
     theClassic.mMaxCitizenShare = 0.0f;     // the citizen target: the pop cap x the citizen percentage only
@@ -347,12 +351,16 @@ EEAIPersonalityRules::EEAIPersonalityRules()
     theClassic.mCoastFishing = false;
     theClassic.mForagePatches = false;
     theClassic.mClaimNeeded = false;
+    theClassic.mEarlyTownCenters = 0;
+    theClassic.mEarlyTrainers = 0;
+    theClassic.mPatchExpand = false;
     theClassic.mStandingArmy = 0.0f;
     theClassic.mArmyFloor = 0.0f;
     theClassic.mMilitia = false;
     theClassic.mMilitiaTowers = false;
     theClassic.mPrehistoricArmy = 0;
     theClassic.mPrehistoricAttacks = true;
+    theClassic.mStoneAttacks = true;
     theClassic.mNavalFlee = false;
     this->mPersonalities.push_back(theBalanced);
     this->mPersonalities.push_back(theTall);
@@ -946,11 +954,14 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
                 y.Float("start", p.mEpochPressureStart);
                 y.Float("full", p.mEpochPressureFull);
                 y.Float("stone_span", p.mStoneSpan);
+                y.Float("safe_bonus", p.mSafeBonus);
                 y.Done();
                 if (!(p.mEpochPressureStart >= 0.0f && p.mEpochPressureFull > p.mEpochPressureStart))
                     Fail(y.Where() + ": epoch_pressure: 0 <= start < full");
                 if (!(p.mStoneSpan >= 0.0f))
                     Fail(y.Where() + ": epoch_pressure: stone_span must be 0 or more");
+                if (!(p.mSafeBonus >= 0.0f))
+                    Fail(y.Where() + ": epoch_pressure: safe_bonus must be 0 or more");
             }
             if (const Node* s = x.Sub("economy")) {
                 Map y(*s, doc, "economy");
@@ -971,7 +982,12 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
                 y.Bool("coast_fishing", p.mCoastFishing);
                 y.Bool("forage_patches", p.mForagePatches);
                 y.Bool("claim_needed", p.mClaimNeeded);
+                y.Int("early_town_centers", p.mEarlyTownCenters);
+                y.Int("early_trainers", p.mEarlyTrainers);
+                y.Bool("patch_expand", p.mPatchExpand);
                 y.Done();
+                if (p.mEarlyTownCenters < 0 || p.mEarlyTrainers < 0)
+                    Fail(y.Where() + ": economy: early_town_centers and early_trainers must be 0 or more");
             }
             if (const Node* s = x.Sub("military")) {
                 Map y(*s, doc, "military");
@@ -981,6 +997,7 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
                 y.Bool("militia_towers", p.mMilitiaTowers);
                 y.Int("prehistoric_army", p.mPrehistoricArmy);
                 y.Bool("prehistoric_attacks", p.mPrehistoricAttacks);
+                y.Bool("stone_attacks", p.mStoneAttacks);
                 y.Bool("naval_flee", p.mNavalFlee);
                 y.Done();
                 if (!(p.mStandingArmy >= 0.0f))
@@ -1278,6 +1295,7 @@ void EERules::Dump(std::string& outJson) const
             j.Float("epoch_pressure_start", p.mEpochPressureStart);
             j.Float("epoch_pressure_full", p.mEpochPressureFull);
             j.Float("stone_span", p.mStoneSpan);
+            j.Float("safe_bonus", p.mSafeBonus);
             j.Int("surplus", p.mSurplus);
             j.Float("surplus_cut", p.mSurplusCut);
             j.Int("low_stock", p.mLowStock);
@@ -1290,12 +1308,16 @@ void EERules::Dump(std::string& outJson) const
             j.Int("coast_fishing", p.mCoastFishing ? 1 : 0);
             j.Int("forage_patches", p.mForagePatches ? 1 : 0);
             j.Int("claim_needed", p.mClaimNeeded ? 1 : 0);
+            j.Int("early_town_centers", p.mEarlyTownCenters);
+            j.Int("early_trainers", p.mEarlyTrainers);
+            j.Int("patch_expand", p.mPatchExpand ? 1 : 0);
             j.Float("standing_army", p.mStandingArmy);
             j.Float("army_floor", p.mArmyFloor);
             j.Int("militia", p.mMilitia ? 1 : 0);
             j.Int("militia_towers", p.mMilitiaTowers ? 1 : 0);
             j.Int("prehistoric_army", p.mPrehistoricArmy);
             j.Int("prehistoric_attacks", p.mPrehistoricAttacks ? 1 : 0);
+            j.Int("stone_attacks", p.mStoneAttacks ? 1 : 0);
             j.Int("naval_flee", p.mNavalFlee ? 1 : 0);
             j.Close('}');
         }

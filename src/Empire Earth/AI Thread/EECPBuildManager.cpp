@@ -1558,8 +1558,6 @@ bool EECPBuildManager::HasLaterEpochRequests()
     return theFound;
 }
 
-static const unsigned long kEarlyTrainers = 2;   // the experiment "fewbarracks": barracks, archery ranges
-
 // FUNCTION: EXE 0x46a9c1
 // Queues a building class in its epoch's queue (appended, or once only and not while one is unfinished,
 // at the front or back) and reserves its cost
@@ -1572,17 +1570,18 @@ void EECPBuildManager::QueueBuilding(unsigned long inUnitClass, bool inAppend, b
     if (inUnitClass == kUnitTypeHouse && EECPClaimRangeOn(this->mPlayer) && this->mPlayer->mTechnologies != NULL
         && this->mPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric)
         return;
-    // the experiment "fewbarracks" (docs/AI_RESEARCH.md §8.29; the owner: "the AI builds too much. no more than 2
-    // barracks and 2 archery ranges pre-copper"; dbcpbehavior wants 7 and 6): before the Copper Age at most
-    // kEarlyTrainers of each, built or building
-    if (EECPExperiment(this->mPlayer, "fewbarracks") && this->mPlayer->mTechnologies != NULL
+    // economy.early_trainers (docs/AI_RESEARCH.md §8.29; the owner: "the AI builds too much. no more than 2 barracks
+    // and 2 archery ranges pre-copper"; dbcpbehavior wants 7 and 6): before the Copper Age at most that many of each,
+    // built or building
+    long theTrainers = EECPEarlyTrainers(this->mPlayer);
+    if (theTrainers > 0 && this->mPlayer->mTechnologies != NULL
         && this->mPlayer->mTechnologies->mCurrentEpoch < kTechEpochCopper && inUnitClass < EEUnitClassCount()
         && gUnitClassTable[inUnitClass] != NULL) {
         long theType = gUnitClassTable[inUnitClass]->mUnitType;
         if (theType == kUnitTypeBarracks || theType == kUnitTypeArcheryRange) {
             std::vector<EEUnit*> theHave;
             EEGetPlayerUnitsOfType(theType, this->mPlayer->mPlayerID, theHave);
-            if (theHave.size() >= kEarlyTrainers)
+            if ((long)theHave.size() >= theTrainers)
                 return;
         }
     }

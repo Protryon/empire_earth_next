@@ -1326,8 +1326,6 @@ void EECPCivilizationManager::Update(unsigned long inTime)
     this->mNextMoraleBuildingTime = inTime + 59000;
 }
 
-static const unsigned long kEarlyTownCenters = 2;   // the experiment "noupgrade": town centres before the Bronze Age
-
 // FUNCTION: EXE 0x4711ac
 // Picks a random connected settlement to garrison (on island maps one with enough available citizens) when none is
 // held and no citizen is requested, then fills it if there are enough workers or it can afford the citizens
@@ -1346,15 +1344,16 @@ void EECPCivilizationManager::ChooseGarrison()
         this->ReleaseGarrison();
     if (this->mGarrison != NULL || this->mUnitManager->IsRequested(0x20) || this->mUnitManager->IsRequested(0x1e0))
         return;
-    // the experiment "noupgrade" (docs/AI_RESEARCH.md §8.29; the owner: "upgrading a settlement to a capitol early game
+    // economy.early_town_centers (docs/AI_RESEARCH.md §8.29; the owner: "upgrading a settlement to a capitol early game
     // is mostly a waste of food"; the playtest AI garrisoned its first settlement into a town centre at minute 5, and
     // had 4 by 71 minutes; "one or two town centers are okay"): before the Bronze Age a settlement becomes a town
-    // centre only while the player has fewer than kEarlyTownCenters
-    if (EECPExperiment(this->mPlayer, "noupgrade") && theTree->mCurrentEpoch < kTechEpochBronze) {
+    // centre only while the player has fewer than that many
+    long theEarly = EECPEarlyTownCenters(this->mPlayer);
+    if (theEarly > 0 && theTree->mCurrentEpoch < kTechEpochBronze) {
         std::vector<EEUnit*> theCenters;
         EEGetPlayerUnitsOfType(kUnitTypeTownCenter, this->mPlayer->mPlayerID, theCenters);
         EEGetPlayerUnitsOfType(kUnitTypeCapitol, this->mPlayer->mPlayerID, theCenters);
-        if (theCenters.size() >= kEarlyTownCenters)
+        if ((long)theCenters.size() >= theEarly)
             return;
     }
     if (theMap != NULL && ((theMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap || (theMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap)) {
@@ -1413,8 +1412,8 @@ void EECPCivilizationManager::ChooseFortress()
         this->ReleaseFortress();
     if (this->mFortress != NULL || this->mUnitManager->IsRequested(0x20) || this->mUnitManager->IsRequested(0x1e0))
         return;
-    // the experiment "noupgrade": no town centre becomes a capitol before the Bronze Age
-    if (EECPExperiment(this->mPlayer, "noupgrade") && theTree->mCurrentEpoch < kTechEpochBronze)
+    // economy.early_town_centers: no town centre becomes a capitol before the Bronze Age
+    if (EECPEarlyTownCenters(this->mPlayer) > 0 && theTree->mCurrentEpoch < kTechEpochBronze)
         return;
     for (unsigned long i = 0; i < this->mPlayer->GetNumResourceCenters() && this->mFortress == NULL; i++) {
         EEComplexUnit* theCenter = this->mPlayer->GetResourceCenter(i)->mUnit;

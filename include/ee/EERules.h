@@ -244,6 +244,9 @@ struct EEAIPersonalityRule {
     // the Prehistoric's pressure instead: the game time over this many minutes, so the Stone Age is asked for and
     // reserved on that schedule (docs/AI_RESEARCH.md §8.27; 30: the Stone Age at about 25 minutes); 0: the epoch timer
     float mStoneSpan = 30.0f;
+    // from the Stone Age, while no stronger enemy army is near the town, the epoch pressure is this much higher: the
+    // advance is asked for sooner and its reserve fills faster; a threat drops it back (docs/AI_RESEARCH.md §8.29)
+    float mSafeBonus = 0.25f;
     // the economy (EECPResourceManager): the gatherer split's stock correction, the citizen target, rebalancing
     long mSurplus = 1000;                   // a resource with more in stock ...
     float mSurplusCut = 0.5f;               // ... gets this share of its gatherers
@@ -265,6 +268,16 @@ struct EEAIPersonalityRule {
     // a centre claimed for the next epoch's missing stone, gold or iron, and no epoch reserve while an advance cannot
     // be reached (docs/AI_RESEARCH.md §8.27)
     bool mClaimNeeded = true;
+    // before the Bronze Age a settlement becomes a town centre only while the player has fewer than this many, and no
+    // town centre becomes a capitol (the owner: "upgrading a settlement to a capitol early game is mostly a waste of
+    // food"; docs/AI_RESEARCH.md §8.29); 0: the original's timers
+    long mEarlyTownCenters = 2;
+    // before the Copper Age at most this many barracks and this many archery ranges (dbcpbehavior asks for 7 and 6;
+    // the owner: "no more than 2 barracks and 2 archery ranges pre-copper"); 0: no cap
+    long mEarlyTrainers = 2;
+    // before the Copper Age (no farms yet) the claim range grows when no forage patch is left in it (a playtest AI had
+    // no food gatherer for 45 minutes and 1399 of the Copper Age's 1584 food; docs/AI_RESEARCH.md §8.29)
+    bool mPatchExpand = true;
     // military pressure: the standing army the player keeps, per worker (citizens and fishing boats); up to the
     // original's military share of the pop cap
     float mStandingArmy = 0.25f;
@@ -282,6 +295,8 @@ struct EEAIPersonalityRule {
     long mPrehistoricArmy = 4;
     // attack groups against an enemy in the Prehistoric (false: none, the defence still forms; docs/AI_RESEARCH.md §8.27)
     bool mPrehistoricAttacks = false;
+    // attack groups against an enemy in the Stone Age (false: none, the defence still forms; docs/AI_RESEARCH.md §8.29)
+    bool mStoneAttacks = false;
     // units hit by a warship they cannot answer leave (boats to the farthest dock, citizens and melee inland)
     bool mNavalFlee = true;
 };

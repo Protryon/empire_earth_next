@@ -218,6 +218,37 @@ bool EECPNavalFleeOn(const EEComputerPlayer* inPlayer)
     return EECPRuleOn(inPlayer, EECPPersonality(inPlayer).mNavalFlee, "navalflee", "nonavalflee");
 }
 
+long EECPEarlyTownCenters(const EEComputerPlayer* inPlayer)
+{
+    if (EECPExperiment(inPlayer, "noupgrade"))
+        return 2;
+    return EECPExperiment(inPlayer, "nonoupgrade") ? 0 : EECPPersonality(inPlayer).mEarlyTownCenters;
+}
+
+long EECPEarlyTrainers(const EEComputerPlayer* inPlayer)
+{
+    if (EECPExperiment(inPlayer, "fewbarracks"))
+        return 2;
+    return EECPExperiment(inPlayer, "manybarracks") ? 0 : EECPPersonality(inPlayer).mEarlyTrainers;
+}
+
+bool EECPPatchExpandOn(const EEComputerPlayer* inPlayer)
+{
+    return EECPRuleOn(inPlayer, EECPPersonality(inPlayer).mPatchExpand, "patchexpand", "nopatchexpand");
+}
+
+float EECPSafeBonus(const EEComputerPlayer* inPlayer)
+{
+    if (EECPExperiment(inPlayer, "safedash"))
+        return 0.25f;
+    return EECPExperiment(inPlayer, "nosafedash") ? 0.0f : EECPPersonality(inPlayer).mSafeBonus;
+}
+
+bool EECPStonePeaceOn(const EEComputerPlayer* inPlayer)
+{
+    return EECPRuleOn(inPlayer, !EECPPersonality(inPlayer).mStoneAttacks, "stonepeace", "nostonepeace");
+}
+
 bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer)
 {
     return EECPRuleOn(inPlayer, !EECPPersonality(inPlayer).mPrehistoricAttacks, "prepeace", "noprepeace");

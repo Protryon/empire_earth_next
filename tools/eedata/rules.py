@@ -279,17 +279,20 @@ powers:
 # AI_DEFAULTS, the balanced values)
 AI_DEFAULTS = dict(start='0.3', full='0.8', stone_span='30', surplus='1000', low_stock='150', citizens='0.7', moves='3',
                    demand_split='true', coast_fishing='true', forage_patches='true', claim_needed='true', army='0.25',
-                   floor='0.1', militia='true', militia_towers='true', prearmy='4', attacks='false', naval_flee='true')
+                   floor='0.1', militia='true', militia_towers='true', prearmy='4', attacks='false', naval_flee='true',
+                   safe_bonus='0.25', town_centers='2', trainers='2', patch_expand='true', stone_attacks='false')
 AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.27)', {}),
                     ('tall', 'tech: saves for the next epoch early and hard', dict(start='0.15', full='0.5', army='0.2')),
                     ('wide', 'boom: grows its workforce, advances late', dict(start='0.6', full='1.0', citizens='0.8', army='0.15')),
                     ('aggressive', 'rush: a large standing army, a middling epoch pace',
-                     dict(start='0.4', full='0.9', army='0.5', floor='0.3', prearmy='0', attacks='true')),
+                     dict(start='0.4', full='0.9', army='0.5', floor='0.3', prearmy='0', attacks='true', stone_attacks='true',
+                          safe_bonus='0', trainers='0')),
                     ('classic', 'TEMPORARY: the original\'s decisions where a rule holds them (docs/AI_RESEARCH.md 8.28)',
                      dict(start='1.0', full='100.0', stone_span='0', surplus='100000000', low_stock='0', citizens='0.0', moves='0',
                           demand_split='false', coast_fishing='false', forage_patches='false', claim_needed='false',
                           army='0.0', floor='0.0', militia='false', militia_towers='false', prearmy='0', attacks='true',
-                          naval_flee='false'))]
+                          naval_flee='false', safe_bonus='0', town_centers='0', trainers='0', patch_expand='false',
+                          stone_attacks='true'))]
 AI_FLOOR = ('food', 'wood', 'stone', 'gold', 'iron')
 
 
@@ -305,6 +308,7 @@ def aipersonalities(ids, spec):
                   f'      start: {start:<22}# a paid epoch advance is asked for from here ...',
                   f'      full: {full:<23}# ... and its cost is wholly reserved from here',
                   f'      stone_span: {v["stone_span"]:<17}# the Prehistoric instead: the game time over this many minutes (0: the timer)',
+                  f'      safe_bonus: {v["safe_bonus"]:<17}# from the Stone Age: this much more while no stronger enemy is near the town',
                   '    economy:',
                   f'      surplus: {v["surplus"]:<20}# a resource with more in stock ...',
                   '      surplus_cut: 0.5             # ... gets this share of its gatherers',
@@ -322,6 +326,9 @@ def aipersonalities(ids, spec):
                   f'      coast_fishing: {v["coast_fishing"]:<14}# from the Stone Age: a dock and up to 8 fishing boats off any coast',
                   f'      forage_patches: {v["forage_patches"]:<13}# about mining_limit a patch, settlements on patches, hunting, 16 boats',
                   f'      claim_needed: {v["claim_needed"]:<15}# claim the next epoch\'s missing stone/gold/iron; no reserve when unreachable',
+                  f'      early_town_centers: {v["town_centers"]:<9}# before Bronze: settlements upgraded below this many town centres, no capitol (0: the timers)',
+                  f'      early_trainers: {v["trainers"]:<13}# before Copper: at most this many barracks and archery ranges each (0: no cap)',
+                  f'      patch_expand: {v["patch_expand"]:<15}# before Copper: the claim range grows when no forage patch is left in it',
                   '    military:',
                   f'      standing_army: {army:<14}# the army kept per worker (up to the military share of the pop cap)',
                   f'      army_floor: {floor:<17}# while it is short: up to this much more floor share on its unit\'s costs',
@@ -330,6 +337,7 @@ def aipersonalities(ids, spec):
                   f'      militia_towers: {v["militia_towers"]:<13}# ... the built towers near the attack count, and citizens run to a tower',
                   f'      prehistoric_army: {prearmy:<11}# the Prehistoric army cap unless a stronger enemy is near (0: none)',
                   f'      prehistoric_attacks: {v["attacks"]:<8}# attack groups against an enemy in the Prehistoric',
+                  f'      stone_attacks: {v["stone_attacks"]:<14}# ... and in the Stone Age',
                   f'      naval_flee: {v["naval_flee"]:<17}# units under warship fire they cannot answer leave']
     lines.append('assign: [balanced]                 # computer player n takes entry (n - 1) mod the count')
     out.append('\n'.join(lines) + '\n')
@@ -600,17 +608,22 @@ def validate(name, text, content, spec):
                     raise TextError(f'{y.where()}: epoch_pressure: 0 <= start < full')
                 if y.get('stone_span') is not None and _float(y.get('stone_span'), y.where(), 'stone_span') < 0:
                     raise TextError(f'{y.where()}: epoch_pressure: stone_span must be 0 or more')
+                if y.get('safe_bonus') is not None and _float(y.get('safe_bonus'), y.where(), 'safe_bonus') < 0:
+                    raise TextError(f'{y.where()}: epoch_pressure: safe_bonus must be 0 or more')
                 y.done()
             c = x.get('economy')
             if c is not None:
                 y = _Map(c, name, 'economy')
+                for k in ('early_town_centers', 'early_trainers'):
+                    if y.get(k) is not None and _int(y.get(k), y.where(), k) < 0:
+                        raise TextError(f'{y.where()}: economy: {k} must be 0 or more')
                 for k in ('surplus', 'low_stock', 'wood_slots', 'moves_per_cycle'):
                     if y.get(k) is not None:
                         _int(y.get(k), y.where(), k)
                 for k in ('surplus_cut', 'max_citizen_share'):
                     if y.get(k) is not None:
                         _float(y.get(k), y.where(), k)
-                for k in ('demand_split', 'coast_fishing', 'forage_patches', 'claim_needed'):
+                for k in ('demand_split', 'coast_fishing', 'forage_patches', 'claim_needed', 'patch_expand'):
                     if y.get(k) is not None and str(y.get(k)) not in ('0', '1', 'true', 'false'):
                         raise TextError(f'{y.where()}: {k}: true or false')
                 f = y.get('floor')
@@ -628,7 +641,7 @@ def validate(name, text, content, spec):
                     raise TextError(f'{y.where()}: military: standing_army must be 0 or more')
                 if y.get('army_floor') is not None:
                     _float(y.get('army_floor'), y.where(), 'army_floor')
-                for k in ('militia', 'militia_towers', 'prehistoric_attacks', 'naval_flee'):
+                for k in ('militia', 'militia_towers', 'prehistoric_attacks', 'stone_attacks', 'naval_flee'):
                     if y.get(k) is not None and str(y.get(k)) not in ('0', '1', 'true', 'false'):
                         raise TextError(f'{y.where()}: {k}: true or false')
                 if y.get('prehistoric_army') is not None and _int(y.get('prehistoric_army'), y.where(), 'prehistoric_army') < 0:

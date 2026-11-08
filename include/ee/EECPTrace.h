@@ -70,6 +70,13 @@ bool EECPClaimNeededOn(const EEComputerPlayer* inPlayer);     // economy.claim_n
 bool EECPNavalFleeOn(const EEComputerPlayer* inPlayer);       // military.naval_flee
 bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer);   // not military.prehistoric_attacks
 float EECPStoneSpan(const EEComputerPlayer* inPlayer);        // epoch_pressure.stone_span in minutes (0: the timer)
+// the §8.29 rules; TEST ONLY: EE_AI_EXP turns each on (noupgrade, fewbarracks, patchexpand, safedash, stonepeace) or
+// off (nonoupgrade, manybarracks, nopatchexpand, nosafedash, nostonepeace)
+long EECPEarlyTownCenters(const EEComputerPlayer* inPlayer);  // economy.early_town_centers (0: the original's timers)
+long EECPEarlyTrainers(const EEComputerPlayer* inPlayer);     // economy.early_trainers (0: no cap)
+bool EECPPatchExpandOn(const EEComputerPlayer* inPlayer);     // economy.patch_expand
+float EECPSafeBonus(const EEComputerPlayer* inPlayer);        // epoch_pressure.safe_bonus
+bool EECPStonePeaceOn(const EEComputerPlayer* inPlayer);      // not military.stone_attacks
 // economy.forage_patches: the land the AI claims and builds its drop sites on, in tiles from its town centre (the
 // owner: "stop claiming land it cannot defend"; docs/AI_RESEARCH.md §8.28): kEECPClaimRange, a step more each time a
 // farm, granary or settlement finds no room ("if no room for stuff like a farm, then expand"), kEECPClaimRangeMax at most

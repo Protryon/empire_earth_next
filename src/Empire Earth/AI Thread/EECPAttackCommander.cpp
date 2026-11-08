@@ -125,10 +125,13 @@ bool EECPAttackCommander::TakeUnit(EEComplexUnit* inUnit)
 // Age): no attack group against an enemy in the Prehistoric; the defence commander's groups still form
 static bool EECPACPrehistoricPeace(EEComputerPlayer* inPlayer, EECPAGTask& inTask)
 {
-    // (the experiment "stonepeace", docs/AI_RESEARCH.md §8.29: through the Stone Age as well)
-    long theLast = EECPExperiment(inPlayer, "stonepeace") ? kTechEpochStone : kTechEpochPrehistoric;
-    if (!EECPPrehistoricPeaceOn(inPlayer) || inPlayer->mTechnologies == NULL
-        || inPlayer->mTechnologies->mCurrentEpoch > theLast || inTask.mMode == kAGModeDefense)
+    // (and military.stone_attacks false, docs/AI_RESEARCH.md §8.29: through the Stone Age as well)
+    if (inPlayer->mTechnologies == NULL || inTask.mMode == kAGModeDefense)
+        return false;
+    long theEpoch = inPlayer->mTechnologies->mCurrentEpoch;
+    bool thePeace = theEpoch <= kTechEpochPrehistoric ? EECPPrehistoricPeaceOn(inPlayer)
+        : theEpoch == kTechEpochStone && EECPStonePeaceOn(inPlayer);
+    if (!thePeace)
         return false;
     EEPlayer* theTarget = inTask.GetPlayer();
     return theTarget != NULL && theTarget != inPlayer && !inPlayer->IsAlly(theTarget);

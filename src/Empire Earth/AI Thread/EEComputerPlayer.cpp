@@ -1217,17 +1217,16 @@ static bool EECPArmyThreat(EEComputerPlayer* inPlayer)
     return theNow < sUntil[theID];
 }
 
-// the experiment "safedash" (docs/AI_RESEARCH.md §8.29): from the Stone Age, while no stronger enemy army has come near
-// the town (EECPArmyThreat: none for its 4 minutes), the epoch pressure is kSafeDashBonus higher: the advance is asked
+// epoch_pressure.safe_bonus (docs/AI_RESEARCH.md §8.29): from the Stone Age, while no stronger enemy army has come near
+// the town (EECPArmyThreat: none for its 4 minutes), the epoch pressure is that much higher: the advance is asked
 // for sooner and its reserve fills faster; a threat drops it back, and the reserve frees the resources for soldiers
-static const float kSafeDashBonus = 0.25f;
-
 float EECPPressureBonus(EEComputerPlayer* inPlayer)
 {
-    if (!EECPExperiment(inPlayer, "safedash") || inPlayer->mTechnologies == NULL
+    float theBonus = EECPSafeBonus(inPlayer);
+    if (!(theBonus > 0.0f) || inPlayer->mTechnologies == NULL
         || inPlayer->mTechnologies->mCurrentEpoch < kTechEpochStone || EECPArmyThreat(inPlayer))
         return 0.0f;
-    return kSafeDashBonus;
+    return theBonus;
 }
 
 // the experiment "stonecap" (§8.29): the Prehistoric army cap carried into the Stone Age at kStoneArmy soldiers, lifted

@@ -2090,9 +2090,9 @@ static void EECPRMActivateNeeded(EECPResourceManager* inManager)
                 theBest->SetActive(true, 0);
                 EE_CP_TRACE(thePlayer, "center.activate", "resource=%ld distance=%.0f patches=%lu", (long)kResourceFood,
                             sqrt((double)theBestDistance), thePatches);
-            } else if (EECPExperiment(thePlayer, "patchexpand") && EECPClaimRangeOn(thePlayer) && thePatches == 0
+            } else if (EECPPatchExpandOn(thePlayer) && EECPClaimRangeOn(thePlayer) && thePatches == 0
                        && thePlayer->mTechnologies->mCurrentEpoch < kTechEpochCopper)
-                // the experiment "patchexpand" (§8.29): before the farms (the Copper Age) the patches are the food; with
+                // economy.patch_expand (§8.29): before the farms (the Copper Age) the patches are the food; with
                 // no patch worked and none left in the claim range it grows (growing whenever fewer than the wanted
                 // patches were held sent the citizens far out: 14-33 with it against 19-26 without) (the playtest AI had no food gatherer for 45 minutes, 1399 of
                 // the Copper Age's 1584 food, and the claim never grew: only a farm or settlement without room grew it)

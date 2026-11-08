@@ -2684,6 +2684,9 @@ computer player gets which. New in this port (no original values: the defaults a
           full: 0.8                # ... and its cost is wholly reserved from here (the reserve grows in between)
           stone_span: 30           # the Prehistoric instead: the game time over this many minutes (the Stone Age at
                                    # about 25 min; 0: the epoch timer; docs/AI_RESEARCH.md §8.27)
+          safe_bonus: 0.25         # from the Stone Age, while no stronger enemy army is near the town: this much
+                                   # more pressure (the advance asked for sooner, its reserve filled faster); a
+                                   # threat drops it back (§8.29)
         economy:                   # EECPResourceManager
           surplus: 1000            # a resource with more in stock gets surplus_cut of its gatherer share
           surplus_cut: 0.5
@@ -2708,6 +2711,12 @@ computer player gets which. New in this port (no original values: the defaults a
           claim_needed: true       # the next epoch's stone, gold or iron short with no active centre holding any:
                                    # the nearest centre with it is claimed; an advance that cannot be reached (a
                                    # resource short with no gatherer) reserves nothing (§8.27)
+          early_town_centers: 2    # before the Bronze Age a settlement becomes a town centre only below this many
+                                   # town centres, and no town centre a capitol; 0: the original's timers (§8.29)
+          early_trainers: 2        # before the Copper Age at most this many barracks and archery ranges each
+                                   # (dbcpbehavior asks for 7 and 6); 0: no cap (§8.29)
+          patch_expand: true       # before the Copper Age (no farms): the claim range grows when no forage patch is
+                                   # left in it (§8.29)
         military:
           standing_army: 0.25      # the army kept per worker (every 30 game s, the favourite land unit; up to the
                                    # original's military share of the pop cap)
@@ -2722,12 +2731,13 @@ computer player gets which. New in this port (no original values: the defaults a
                                    # 40 tiles of the town are stronger (then 4 min uncapped); 0: no cap (§8.26)
           prehistoric_attacks: false   # attack groups against an enemy in the Prehistoric (false: none; the
                                    # defence still forms) (§8.27)
+          stone_attacks: false     # ... and in the Stone Age (§8.29)
           naval_flee: true         # hit by a warship it cannot answer: boats go to the dock farthest from it,
                                    # citizens and melee units within 12 tiles to the town centre (§8.27)
       - id: tall ...               # epoch_pressure 0.15 / 0.5, standing_army 0.2
       - id: wide ...               # epoch_pressure 0.6 / 1.0, max_citizen_share 0.8, standing_army 0.15
       - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5, prehistoric_army 0,
-                                   # prehistoric_attacks true
+                                   # prehistoric_attacks and stone_attacks true, safe_bonus 0, early_trainers 0
       - id: classic ...            # TEMPORARY (until the new AI beats it): every rule at the original's setting
                                    # (epoch_pressure 1.0 / 100, stone_span 0, no stock correction, max_citizen_share
                                    # 0, moves_per_cycle 0, the needs ledger, every new behaviour off, no standing
