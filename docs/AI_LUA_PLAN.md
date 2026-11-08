@@ -298,7 +298,7 @@ Decisions (the owner, 2026-11-08):
 
 1. The owner's decisions: done (§7).
 2. **S0:** the per-seat switch and an idle stub.
-3. **The S1 audit:** a table in this document of every decision buried in the managers' executors, file by file,
+3. **The S1 audit:** done, in [AI_LUA_AUDIT.md](AI_LUA_AUDIT.md): a table of every decision buried in the managers' executors, file by file,
    with where each one ends up (a tactic, a strategy order, or classic only).
 4. **S1:** extract the executors in the order the boom opening needs them: gathering and claims, building and
    placement, production, research and the advance, then groups.
