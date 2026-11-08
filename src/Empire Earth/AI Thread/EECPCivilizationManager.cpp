@@ -254,9 +254,11 @@ void EECPCivilizationManager::AttemptEpochAdvance(unsigned long inTime)
         theDue = theDue > theEarly ? theDue - theEarly : 0;
         // the experiments "stone22" / "stone30" (EECPEpochPressure): the Stone Age is asked for at the personality's
         // start share of a 22 (30) minute span from the game's start
-        if (theEpoch <= kTechEpochPrehistoric && EECPStoneSpan(this->mPlayer) > 0.0f)
-            theDue = (unsigned long)UMFloatToLong(EECPPersonality(this->mPlayer).mEpochPressureStart
-                * EECPStoneSpan(this->mPlayer) * 60000.0f);
+        // (and the experiments span20/span25/span30 for the later epochs: EECPScheduleSpan)
+        float theSchedule = EECPScheduleSpan(this->mPlayer);
+        if (theSchedule > 0.0f)
+            theDue = EECPScheduleStart(this->mPlayer, inTime) + (unsigned long)UMFloatToLong(
+                EECPPersonality(this->mPlayer).mEpochPressureStart * theSchedule * 60000.0f);
     }
     if (!(inTime >= theDue))
         return;

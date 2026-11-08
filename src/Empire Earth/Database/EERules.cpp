@@ -332,10 +332,33 @@ EEAIPersonalityRules::EEAIPersonalityRules()
     theAggressive.mArmyFloor = 0.3f;
     theAggressive.mPrehistoricArmy = 0;     // the rush keeps its early army ...
     theAggressive.mPrehistoricAttacks = true;   // ... and its early attacks
+    // TEMPORARY (until the new AI beats it; docs/AI_RESEARCH.md §8.28): the original's decisions where a rule holds
+    // them; EE_AI_PERSONALITY gives it to a seat
+    EEAIPersonalityRule theClassic;
+    theClassic.mID = "classic";
+    theClassic.mEpochPressureStart = 1.0f;  // the advance asked for when the epoch timer is due ...
+    theClassic.mEpochPressureFull = 100.0f; // ... and (next to) no reserve
+    theClassic.mStoneSpan = 0.0f;
+    theClassic.mSurplus = 100000000;        // no stock correction
+    theClassic.mLowStock = 0;
+    theClassic.mMaxCitizenShare = 0.0f;     // the citizen target: the pop cap x the citizen percentage only
+    theClassic.mMovesPerCycle = 0;          // no busy gatherers moved to a short resource
+    theClassic.mDemandSplit = false;        // the needs ledger
+    theClassic.mCoastFishing = false;
+    theClassic.mForagePatches = false;
+    theClassic.mClaimNeeded = false;
+    theClassic.mStandingArmy = 0.0f;
+    theClassic.mArmyFloor = 0.0f;
+    theClassic.mMilitia = false;
+    theClassic.mMilitiaTowers = false;
+    theClassic.mPrehistoricArmy = 0;
+    theClassic.mPrehistoricAttacks = true;
+    theClassic.mNavalFlee = false;
     this->mPersonalities.push_back(theBalanced);
     this->mPersonalities.push_back(theTall);
     this->mPersonalities.push_back(theWide);
     this->mPersonalities.push_back(theAggressive);
+    this->mPersonalities.push_back(theClassic);
     this->mAssign.push_back(0);
 }
 

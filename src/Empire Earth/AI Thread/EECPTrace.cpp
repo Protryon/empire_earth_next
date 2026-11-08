@@ -223,6 +223,38 @@ bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer)
     return EECPRuleOn(inPlayer, !EECPPersonality(inPlayer).mPrehistoricAttacks, "prepeace", "noprepeace");
 }
 
+static long sClaimSteps[64];
+static unsigned long sClaimLast[64];
+
+long EECPClaimRange(const EEComputerPlayer* inPlayer)
+{
+    unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
+    if (gPhysics->mGameTime < sClaimLast[theID])
+        sClaimSteps[theID] = 0, sClaimLast[theID] = 0;   // a new game (the clock started over)
+    long theRange = kEECPClaimRange + sClaimSteps[theID] * kEECPClaimRangeStep;
+    return theRange < kEECPClaimRangeMax ? theRange : kEECPClaimRangeMax;
+}
+
+void EECPClaimExpand(const EEComputerPlayer* inPlayer)
+{
+    unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
+    unsigned long theNow = gPhysics->mGameTime;
+    if (theNow < sClaimLast[theID])
+        sClaimSteps[theID] = 0, sClaimLast[theID] = 0;
+    if (sClaimLast[theID] != 0 && theNow - sClaimLast[theID] < 120000)
+        return;
+    if (EECPClaimRange(inPlayer) >= kEECPClaimRangeMax)
+        return;
+    sClaimSteps[theID]++;
+    sClaimLast[theID] = theNow;
+    EE_CP_TRACE(const_cast<EEComputerPlayer*>(inPlayer), "claim.expand", "range=%ld", EECPClaimRange(inPlayer));
+}
+
+bool EECPClaimRangeOn(const EEComputerPlayer* inPlayer)
+{
+    return EECPForagePatchesOn(inPlayer) && !EECPExperiment(inPlayer, "oldpatches");
+}
+
 float EECPStoneSpan(const EEComputerPlayer* inPlayer)
 {
     if (EECPExperiment(inPlayer, "stone22"))

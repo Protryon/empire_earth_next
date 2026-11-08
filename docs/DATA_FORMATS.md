@@ -2699,7 +2699,12 @@ computer player gets which. New in this port (no original values: the defaults a
           forage_patches: true     # the food capacity: mining_limit a forage patch (not every food gatherer), the
                                    # workers on farms, fish and game, 1 hunter per animal within 45 tiles (12 at
                                    # most); a settlement on a patch with no drop site within 4 tiles; 3 patches kept
-                                   # claimed in the Prehistoric, 5 later; 16 boats at most (§8.27)
+                                   # claimed in the Prehistoric, 5 later; 16 boats at most (§8.27). The claim
+                                   # range: patches, mines (those within it first), the claims and granaries within
+                                   # 25 tiles of the town centre, 5 more each time a farm, granary or settlement has
+                                   # no room (45 at most); a settlement on each claimed patch and worked mine with no
+                                   # drop site within 3 tiles; a tower at each worked site without one within 8; no
+                                   # houses in the Prehistoric (§8.28)
           claim_needed: true       # the next epoch's stone, gold or iron short with no active centre holding any:
                                    # the nearest centre with it is claimed; an advance that cannot be reached (a
                                    # resource short with no gatherer) reserves nothing (§8.27)
@@ -2723,6 +2728,10 @@ computer player gets which. New in this port (no original values: the defaults a
       - id: wide ...               # epoch_pressure 0.6 / 1.0, max_citizen_share 0.8, standing_army 0.15
       - id: aggressive ...         # epoch_pressure 0.4 / 0.9, standing_army 0.5, prehistoric_army 0,
                                    # prehistoric_attacks true
+      - id: classic ...            # TEMPORARY (until the new AI beats it): every rule at the original's setting
+                                   # (epoch_pressure 1.0 / 100, stone_span 0, no stock correction, max_citizen_share
+                                   # 0, moves_per_cycle 0, the needs ledger, every new behaviour off, no standing
+                                   # army); EE_AI_PERSONALITY gives it to a seat (docs/AI_RESEARCH.md §8.28)
     assign: [balanced]             # computer player n takes entry (n - 1) mod the count
 
 A key left out keeps the default; `assign` names personalities. TEST ONLY: `EE_AI_PERSONALITY` in the environment

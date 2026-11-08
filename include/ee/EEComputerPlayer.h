@@ -471,6 +471,10 @@ long EECPPendingEpoch(EEComputerPlayer* inPlayer);
 // original's only advance time); a paid advance is asked for from the personality's epoch_pressure start, and its
 // reserve grows from nothing there to the whole cost at its full (aipersonalities.yaml; tall low, wide high).
 float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime);
+// the current epoch's schedule in minutes (0: the epoch timer): epoch_pressure.stone_span in the Prehistoric, the
+// experiments span20/span25/span30 after it (docs/AI_RESEARCH.md §8.28); and the game time its schedule counts from
+float EECPScheduleSpan(EEComputerPlayer* inPlayer);
+unsigned long EECPScheduleStart(EEComputerPlayer* inPlayer, unsigned long inTime);
 // The boom opening (the experiments "boom25": until 25 workers or 12 game minutes, "boom35": 35 or 15): citizens skip the
 // epoch reserve and the standing army waits
 bool EECPBooming(EEComputerPlayer* inPlayer);

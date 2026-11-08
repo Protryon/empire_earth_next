@@ -185,12 +185,15 @@ void Sample(unsigned long inTime)
             sCiv[i] = theCiv;
         }
         long theCitizens = 0, theIdle = 0, theBuilders = 0, theArmy = 0, theBuildings = 0, theUnfinished = 0, theTowers = 0;
+        long theBoats = 0;   // the citizens that are fishing (naval citizen) boats
         long theGather[7] = {0, 0, 0, 0, 0, 0, 0};
         for (EEUnit* u = p->mFirstUnit; u != NULL; u = static_cast<EEUnit*>(u->mNext)) {
             if (u->mComplexUnit == NULL || !(u->mHitPoints > 0) || !IsCounted(u))
                 continue;
             if (IsCitizen(u)) {
                 theCitizens++;
+                if (u->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
+                    theBoats++;
                 EEUnitGoal* g = u->mComplexUnit->mActiveGoal;
                 if (g == NULL)
                     theIdle++;
@@ -213,11 +216,11 @@ void Sample(unsigned long inTime)
         long* in = sIncome[i];
         long* lost = sLost[i];
         long* by = sLostBy[i];
-        Write("EE-GAME %lu p%lu sample epoch=%ld pop=%ld citizens=%ld idle=%ld gather=%ld/%ld/%ld/%ld/%ld build=%ld army=%ld "
+        Write("EE-GAME %lu p%lu sample epoch=%ld pop=%ld citizens=%ld boats=%ld idle=%ld gather=%ld/%ld/%ld/%ld/%ld build=%ld army=%ld "
               "buildings=%ld unfinished=%ld towers=%ld stock=%ld/%ld/%ld/%ld/%ld got=%ld/%ld/%ld/%ld/%ld "
               "lost=%ld/%ld/%ld lost_by=%ld/%ld/%ld\n",
               inTime, i, p->mTechnologies != NULL ? p->mTechnologies->mCurrentEpoch : -1L, (long)p->mPopulationCount,
-              theCitizens, theIdle, theGather[kResourceFood], theGather[kResourceWood], theGather[kResourceStone],
+              theCitizens, theBoats, theIdle, theGather[kResourceFood], theGather[kResourceWood], theGather[kResourceStone],
               theGather[kResourceGold], theGather[kResourceIron], theBuilders, theArmy, theBuildings, theUnfinished, theTowers,
               s[kResourceFood], s[kResourceWood], s[kResourceStone], s[kResourceGold], s[kResourceIron],
               in[kResourceFood], in[kResourceWood], in[kResourceStone], in[kResourceGold], in[kResourceIron],

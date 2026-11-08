@@ -306,8 +306,14 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
                 if (theWorker == NULL)
                     EE_CP_TRACE(this->mPlayer, "build.nobuilder", "cls=%ld x=%ld y=%ld", theClassID, (long)theTile.mX,
                         (long)theTile.mY);
-            } else
+            } else {
                 EE_CP_TRACE(this->mPlayer, "build.nosite", "cls=%ld", theClassID);
+                // economy.forage_patches: no room for a farm, granary or settlement: claim more land (the towers follow
+                // the new worked sites, EECPRMGuardSites)
+                if (EECPClaimRangeOn(this->mPlayer)
+                    && (theClassID == kUnitTypeFarm || theClassID == kUnitTypeGranary || theClassID == kUnitTypeSettlement))
+                    EECPClaimExpand(this->mPlayer);
+            }
             if (theWorker != NULL) {
                 EEUnit* theTarget;
                 if (theClassID == kUnitTypeFarm || theClassID == kUnitTypeRoboticFarm) {
@@ -901,8 +907,18 @@ bool EECPBuildManager::FindGranarySite(EETileCoordinate& outTile)
     theSite.mY = 0;
     long theRadius = this->mPlayer->mDropOffDistance;
     long theSize = gUnitClassTable[kUnitTypeGranary]->mTileSize;
-    for (unsigned long i = 0; i < this->mPlayer->GetNumResourceCenters() && !theResult; i++) {
-        EECPResourceCenter* theResourceCenter = this->mPlayer->GetResourceCenter(i);
+    // economy.forage_patches: only round the centres within the claim range, nearest home first, and only sites within
+    // it (the playtest AI's granaries stood far out, undefended: "stop claiming land it cannot defend")
+    bool theClaim = EECPClaimRangeOn(this->mPlayer) && this->mTownCenterTile.mX != -10000;
+    std::vector<EECPResourceCenter*> theCenters;
+    for (unsigned long i = 0; i < this->mPlayer->GetNumResourceCenters(); i++)
+        if (!theClaim || EECPBMHomeDistance2(this, this->mPlayer->GetResourceCenter(i))
+                <= (long long)EECPClaimRange(this->mPlayer) * EECPClaimRange(this->mPlayer))
+            theCenters.push_back(this->mPlayer->GetResourceCenter(i));
+    if (theClaim)
+        EECPBMNearestHomeFirst(this, theCenters);
+    for (unsigned long i = 0; i < theCenters.size() && !theResult; i++) {
+        EECPResourceCenter* theResourceCenter = theCenters[i];
         theResourceCenter->GetCenter(theCenter);
         unsigned short theContinent = gContinentManager.GetContinent(theCenter, kAIPathLandMass);
         for (long r = theRadius + 1; r < theRadius + 0x1e && !theResult; r++) {
@@ -914,6 +930,13 @@ bool EECPBuildManager::FindGranarySite(EETileCoordinate& outTile)
                     continue;
                 theSite.mX = it->mX + theSize;
                 theSite.mY = it->mY + theSize;
+                if (theClaim) {
+                    long theDX = theSite.mX - this->mTownCenterTile.mX, theDY = theSite.mY - this->mTownCenterTile.mY;
+                    if (theDX * theDX + theDY * theDY > EECPClaimRange(this->mPlayer) * EECPClaimRange(this->mPlayer)) {
+                        theResult = false;
+                        continue;
+                    }
+                }
                 theResult = this->CanBuildAt(theContinent, kUnitTypeGranary, theSite, theSize, false, true, theCenter.mX,
                     theCenter.mY);
                 if (theResult) {
@@ -1542,6 +1565,11 @@ bool EECPBuildManager::HasLaterEpochRequests()
 // temporary straight into push_back: first is the element's unsigned long); open: inUnitClass kept in memory, cmp al, bl
 void EECPBuildManager::QueueBuilding(unsigned long inUnitClass, bool inAppend, bool inFront)
 {
+    // economy.forage_patches: no houses in the Prehistoric (the owner: "idk why the ai builds houses so early"; four in
+    // the first four minutes of a playtest): the wood goes to the settlements and the Stone Age
+    if (inUnitClass == kUnitTypeHouse && EECPClaimRangeOn(this->mPlayer) && this->mPlayer->mTechnologies != NULL
+        && this->mPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric)
+        return;
     U2DPoint<long> theTile;
     EECPBuildQueue::iterator it;
     EECPBuildRequest theRequest;
