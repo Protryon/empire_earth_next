@@ -17,6 +17,7 @@
 #include "ee/EEPPlayerHelper.h"
 #include "ee/EEPersistentTag.h"
 #include "ee/EECPEngine.h"
+#include "ee/EECPNext.h"
 
 const UString EEPPlayerHelper::sPlayerCount("EEPPlayerHelper-PlayerCount");
 const UString EEPPlayerHelper::sPlayerNum("EEPPlayerHelper-PlayerNum");
@@ -132,6 +133,22 @@ long EEPPlayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                                 thePlayer->mComputerPlayer->mEngine =
                                     theEngine == kEECPEngineNext ? kEECPEngineNext : kEECPEngineClassic;
                             }
+                            // port: from version 0.252 the next engine's state and its script's memory (ee/EECPNext.h
+                            // EECPNextSaveState; a uint32 length, 0 for none, then the bytes)
+                            if (theResult == kErrorOK && theType == 1 && thePlayer->mComputerPlayer != NULL
+                                && (inMajorVersion > 0 || inMinorVersion >= 252)) {
+                                unsigned long theLength = 0;
+                                theResult = inFile.Read(theLength);
+                                if (theResult == kErrorOK && theLength > 0) {
+                                    std::string theBytes(theLength, '\0');
+                                    unsigned long theRead = 0;
+                                    theResult = theLength > (64u << 20) ? kErrorFailed
+                                        : inFile.Read(&theBytes[0], theLength, theRead);
+                                    if (theResult == kErrorOK && (theRead != theLength
+                                        || !EECPNextLoadState(thePlayer->mComputerPlayer, theBytes)))
+                                        theResult = kErrorFailed;
+                                }
+                            }
                             if (theResult == kErrorOK)
                                 this->mPlayers.push_back(thePlayer);
                         }
@@ -211,6 +228,15 @@ long EEPPlayerHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVe
             theResult = thePlayer->Save(inMajorVersion, inMinorVersion, outFile);
         if (theResult == kErrorOK && theType == 1)   // port: the computer player's engine (Load: from 0.251)
             theResult = outFile.Write(thePlayer->mComputerPlayer->mEngine);
+        if (theResult == kErrorOK && theType == 1) {   // port: the next engine's state (Load: from 0.252)
+            std::string theBytes;
+            EECPNextSaveState(thePlayer->mComputerPlayer, theBytes);   // a script's failure is logged; its state goes
+            unsigned long theLength = (unsigned long)theBytes.size();
+            theResult = outFile.Write(theLength);
+            unsigned long theWritten = 0;
+            if (theResult == kErrorOK && theLength > 0)
+                theResult = outFile.Write(theBytes.data(), theLength, theWritten);
+        }
     }
     return theResult;
     return kErrorFailed;
