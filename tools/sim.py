@@ -8,6 +8,10 @@ harness stages it (tools/harness/exe_boot.py stage_tree). A stage is kept and re
 
   python -I tools/sim.py [--data binary|open|DIR] [--slot NAME] [--exe EXE] -- [EE-SIM options]
   python -I tools/sim.py -- --seed 3 --ai 2 --difficulty Hard --game-seconds 2700 --report r.json --ai-trace --trace t.txt
+  python -I tools/sim.py -- --seed 3 --engine next,classic --report r.json
+
+--engine LIST sets the computer seats' engines (classic, next or random; docs/AI_LUA_PLAN.md S0) through the lobby's
+engine boxes: one for every seat, or a comma list by seat (seat 1 is player 2), taken in turn.
 
 --set doc.key=value overrides a rules document (db/<doc>.yaml); a value "[a, b]" replaces a list, e.g.
 --set "gameoptions.difficulties.hard.ai_cheats=[cost, reveal, epochs, extra, popband, catchup, retire]" (the original's cheats,
