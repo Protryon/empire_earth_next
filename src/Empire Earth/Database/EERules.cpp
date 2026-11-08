@@ -938,6 +938,27 @@ void LoadEpochs(EEDataText::Content& c, const Node& d, EERules& r)
     r.mEpochMusicFromText = true;
 }
 
+// a Lua module name as the runtime's require takes it (EECPLua.cpp ModuleName): letters, digits and _, in segments
+// separated by dots
+bool NextScriptName(const std::string& inName)
+{
+    if (inName.empty() || inName.size() > 96)
+        return false;
+    bool theStart = true;
+    for (char c : inName) {
+        if (c == '.') {
+            if (theStart)
+                return false;
+            theStart = true;
+        } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
+            theStart = false;
+        } else {
+            return false;
+        }
+    }
+    return !theStart;
+}
+
 void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
 {
     const char* doc = "aipersonalities";
@@ -949,6 +970,12 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
             Map x(e, doc, "a personality");
             EEAIPersonalityRule p;
             p.mID = Id(x);
+            if (const Node* v = x.Get("next_script")) {
+                p.mNextScript = EEDataText::NodeScalar(v, x.Where(*v), "next_script");
+                if (!NextScriptName(p.mNextScript))
+                    Fail(x.Where(*v) + ": next_script: '" + p.mNextScript +
+                         "' is not a module name (letters, digits and _, in segments separated by dots)");
+            }
             if (const Node* s = x.Sub("epoch_pressure")) {
                 Map y(*s, doc, "epoch_pressure");
                 y.Float("start", p.mEpochPressureStart);
@@ -1292,6 +1319,7 @@ void EERules::Dump(std::string& outJson) const
         for (const EEAIPersonalityRule& p : this->mAIPersonalities.mPersonalities) {
             j.Open(nullptr, '{');
             j.Str("id", p.mID);
+            j.Str("next_script", p.mNextScript);
             j.Float("epoch_pressure_start", p.mEpochPressureStart);
             j.Float("epoch_pressure_full", p.mEpochPressureFull);
             j.Float("stone_span", p.mStoneSpan);

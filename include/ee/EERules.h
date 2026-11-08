@@ -237,6 +237,10 @@ struct EEEpochMedia {
 // The defaults are "balanced", the tuning the benchmarks of §8.10-8.11 settled on.
 struct EEAIPersonalityRule {
     std::string mID;
+    // the next engine's strategy (docs/AI_LUA_PLAN.md §3): the Lua module a computer seat with the next engine runs,
+    // Data/ai/<name, dots as folders>.lua; the classic engine ignores it. Until stage S3's boom script, the S1 test
+    // opening ported to Lua
+    std::string mNextScript = "test_opening";
     // epoch pressure (the elapsed share of the epoch timer's span): a paid advance is asked for from mEpochPressureStart;
     // its reserve grows from nothing there to the whole cost at mEpochPressureFull. Low: tall (tech); high: wide.
     float mEpochPressureStart = 0.3f;
