@@ -201,6 +201,35 @@ void EECPNextTestStep(EEComputerPlayer* inPlayer, const EECPNextView& inView)
                 }
             }
 
+        // the next epoch's SOL: one building at a time that counts toward it and is not built yet (as the classic
+        // ResearchCheapest: no town centres, settlements or farms), the cheapest first
+        if (theSaving && inView.sol_missing > 0) {
+            const EECPNextClassCost* theBest = NULL;
+            long theBestCost = 0;
+            bool theBuilding = false;
+            for (unsigned long k = 0; k < inView.costs.size(); k++) {
+                const EECPNextClassCost& theCost = inView.costs[k];
+                if (!theCost.building || !theCost.counts_toward_epoch || theCost.type == kUnitTypeTownCenter
+                    || theCost.type == kUnitTypeCapitol || theCost.type == kUnitTypeSettlement || theCost.type == kUnitTypeFarm
+                    || theCost.type == kUnitTypeGranary)
+                    continue;
+                const EECPNextBuildings* theHave = EECPNextFindBuildings(inView, theCost.type);
+                if (theHave != NULL && theHave->unfinished + theHave->queued > 0)
+                    theBuilding = true;
+                if (theHave != NULL && theHave->finished + theHave->unfinished + theHave->queued > 0)
+                    continue;
+                long theSum = 0;
+                for (long i = 0; i < kNextResources; i++)
+                    theSum += theCost.cost[i];
+                if (theBest == NULL || theSum < theBestCost) {
+                    theBest = &theCost;
+                    theBestCost = theSum;
+                }
+            }
+            if (theBest != NULL && !theBuilding)
+                EECPNextBuild(inPlayer, theBest->type, kNextNearTown);
+        }
+
         // from the Stone Age: a dock and fishing boats
         if (inView.epoch >= 1 && !theSaving)
             EECPNextFish(inPlayer, kTestBoats, 1);
