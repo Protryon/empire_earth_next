@@ -241,9 +241,9 @@ void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime)
     theState->mIncomeSteps++;
     if (inTime % 30000 < 1000)
         EE_CP_TRACE(inPlayer, "next.view",
-            "epoch=%ld cit=%ld idle=%ld boats=%ld army=%ld/%ld threat=%ld sites=%lu claim=%ld gat=%ld/%ld/%ld/%ld/%ld "
+            "epoch=%ld sol=%ld adv=%ld cit=%ld idle=%ld boats=%ld army=%ld/%ld threat=%ld sites=%lu claim=%ld gat=%ld/%ld/%ld/%ld/%ld "
             "want=%ld/%ld/%ld/%ld/%ld inc=%ld/%ld/%ld/%ld/%ld res=%ld/%ld/%ld/%ld/%ld",
-            theView.epoch, theView.citizens, theView.idle, theView.boats, theView.army_count, theView.army_strength,
+            theView.epoch, theView.sol_missing, theView.advancing, theView.citizens, theView.idle, theView.boats, theView.army_count, theView.army_strength,
             theView.threat_strength, (unsigned long)theView.sites.size(), theView.claim_range, theView.gatherers[0],
             theView.gatherers[1], theView.gatherers[2], theView.gatherers[3], theView.gatherers[4], theView.wanted[0],
             theView.wanted[1], theView.wanted[2], theView.wanted[3], theView.wanted[4], theView.income[0],
