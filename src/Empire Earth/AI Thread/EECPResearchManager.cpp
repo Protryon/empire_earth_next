@@ -41,6 +41,7 @@
 #include "ee/EECPResearchManager.h"
 #include "ee/EEAIRandom.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPNext.h"
 const UString EECPResearchManager::sData("EECPResearchManager-Data");
 // SYNTHETIC: EXE 0x489fc4   (wrapper)
 // SYNTHETIC: EXE 0x489fce   (ctor)
@@ -445,6 +446,8 @@ bool EECPResearchManager::TryResearch(long inID)
                     if (EEIsEpochID(inID)) {
                         this->mManager->mAdvancingEpoch = false;
                         this->mManager->mScheduleEpochAdvance = true;
+                    } else if (EECPNextEngine(this->mPlayer)) {
+                        // the next engine: no producer is queued on its own (research() refuses with no_producer)
                     } else if (gUnitClassTable[theClass]->IsLandBuilding())
                         this->mManager->mBuildManager->QueueBuilding(theClass, 0, 0);
                     else
@@ -604,7 +607,7 @@ void EECPResearchManager::Update(unsigned long inTime)
             }
         }
     }
-    if (!(inTime > this->mNextTime))
+    if (!(inTime > this->mNextTime) || EECPNextEngine(this->mPlayer))   // the next engine orders research()
         return;
     ESDebugOut("EECPResearchManager::Update  attempting random research at %ld\n", inTime);
     this->ChooseResearch();

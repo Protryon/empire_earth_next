@@ -46,6 +46,7 @@
 #include "ee/EEUGBuildRepair.h"
 #include "ee/EEUnitAction.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPNext.h"
 #include "ee/EEGameLog.h"
 #include <math.h>
 
@@ -259,6 +260,8 @@ static unsigned long sClaimLast[64];
 
 long EECPClaimRange(const EEComputerPlayer* inPlayer)
 {
+    if (EECPNextEngine(inPlayer))
+        return EECPNextClaimRangeOf(inPlayer);   // the next engine: its claim_range (ee/EECPNext.h)
     unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
     if (gPhysics->mGameTime < sClaimLast[theID])
         sClaimSteps[theID] = 0, sClaimLast[theID] = 0;   // a new game (the clock started over)
@@ -268,6 +271,8 @@ long EECPClaimRange(const EEComputerPlayer* inPlayer)
 
 void EECPClaimExpand(const EEComputerPlayer* inPlayer)
 {
+    if (EECPNextEngine(inPlayer))
+        return;   // the next engine's strategy sets the range (claim_range)
     unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
     unsigned long theNow = gPhysics->mGameTime;
     if (theNow < sClaimLast[theID])

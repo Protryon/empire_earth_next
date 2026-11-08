@@ -72,6 +72,7 @@
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPPlayerInteractionManager.h"
 #include "ee/EECPCombatManager.h"
+#include "ee/EECPNext.h"
 void Fn5B397(long inChunkSize, long inMaxChunks);  // 0x45b397 (cdecl; 0x200, 0x19 from the ctor) (provisional name)
 float Fn102F3D(float inMinimum, float inMaximum);   // 0x502f3d (cdecl; a value in [inMinimum, inMaximum]) (provisional name)
 extern long& gDCGameSpeed;                   // 0x530d24 (EECPDefenseCommander.cpp's name; EpochReached: >= 250) (provisional name)
@@ -563,7 +564,8 @@ void EECPCombatManager::NoteThreat(EEComplexUnit* inUnit, bool inUseTarget)
     EETileLocation theKey;
     GE3DPoint theTarget;
     long theCount = 1;
-    if (!inUnit || !gWorld.mInfluenceTable || gLoadingSavedGame || gWorldClearing || !this->mTracksThreats || this->mPlayer->mObserverMode
+    // (the next engine sends no groups on its own: its strategy sees the threats in the view)
+    if (!inUnit || EECPNextEngine(this->mPlayer) || !gWorld.mInfluenceTable || gLoadingSavedGame || gWorldClearing || !this->mTracksThreats || this->mPlayer->mObserverMode
         || inUnit->mTileX == -10000)
         return;
     if (inUseTarget && inUnit->mActiveGoal) {

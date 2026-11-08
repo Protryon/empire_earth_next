@@ -60,6 +60,7 @@
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include "ee/EEAIFOSubGroupFilter.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPNext.h"
 #include "ee/EETechTreeTechID.h"
 #include <EEAIFunctionObjects.h>
 
@@ -727,6 +728,11 @@ void EECPUnitManager::RequestUnits(long inUnitClass, long inCount, long inTownID
                 theClasses.push_back(theClass);
         }
     }
+    if (theClasses.size() > 0 && EECPNextEngine(this->mPlayer)) {
+        // the next engine: no producer is queued on its own (train() refuses with no_producer first)
+        EE_CP_TRACE(this->mPlayer, "train.noproducer", "cls=%ld n=%ld", inUnitClass, inCount);
+        return;
+    }
     if (theClasses.size() > 0) {
         std::sort(theClasses.begin(), theClasses.end(), EECPUMCostLess(theTree));
         for (i = 0; i < theClasses.size(); i++) {
@@ -1017,6 +1023,23 @@ void EECPUnitManager::UnitLost(EEUnit* inUnit)
     }
     if (UShutdownInProgress() || theUnit == NULL || !theUnit->mUnitClass->IsLandBuilding() || !theUnit->mIsBuilt)
         return;
+    if (EECPNextEngine(this->mPlayer)) {
+        // the next engine: what the lost building was making is not asked for again; the strategy sees it
+        for (unsigned long i = 0; i < theUnit->GetBuildQueueSize(); i++) {
+            long theID = (*(theUnit->mBuildQueue.begin() + i)).mTechnology;
+            EETechTreeNode* theNode = EEIsEpochID(theID) ? NULL : theTree->Get(theID);
+            if (theNode == NULL || !theNode->mData->mMakesUnit)
+                continue;
+            EECPNextEventAdd(this->mPlayer, kNextEventProductionLost, theNode->mData->mUnitClass, 1);
+            if (this->mNumInProduction > 0)
+                this->mNumInProduction--;
+        }
+        if (theUnit->mCurrentResearch != kTechNone && EEIsEpochID(theUnit->mCurrentResearch)) {
+            this->mManager->mAdvancingEpoch = false;
+            EECPNextEventAdd(this->mPlayer, kNextEventAdvanceLost, theUnit->mCurrentResearch, 1);
+        }
+        return;
+    }
     theSite = theUnit->FindNearestTown() != NULL ? theUnit->FindNearestTown()->mTownID : 0;
     theContinent = gContinentManager.GetContinentID(theUnit);
     for (unsigned long i = 0; i < theUnit->GetBuildQueueSize(); i++) {
@@ -1070,7 +1093,8 @@ void EECPUnitManager::Update(unsigned long inTime)
     else
         theRequested = false;
     bool theQueued = this->IsInProduction(0x20) || this->IsInProduction(0x1e0);
-    if (theRoom > 0 && this->mProductionEnabled && !theRequested && !theQueued) {
+    if (theRoom > 0 && this->mProductionEnabled && !theRequested && !theQueued
+        && !EECPNextEngine(this->mPlayer)) {   // the next engine trains its citizens with train()
         long theMissing = this->GetWantedCitizens() - this->GetNumWorkers();
         if (theMissing > 0) {
             if (!theSmall) {

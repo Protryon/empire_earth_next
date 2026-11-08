@@ -60,6 +60,7 @@
 #include "ee/EEUnitUtilities.h"
 #include "ee/EEMathInline.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPNext.h"
 
 // RTTI EECPUGatherUnitsOfTypeAndTownAndContinent > EECPUMGatherUnitsScreenBase (vtable 0x43c244: CountRequest 0x85a97,
 // the two empty `xor al, al` slots ICF-folded elsewhere): the town and continent of the last pending request of
@@ -1057,6 +1058,11 @@ long EECPPersonnel::Restore(unsigned long inMajorVersion, unsigned long inMinorV
 // Asks the unit manager to build one unit of a type for a town and continent
 void EECPPersonnel::RequestProduction(long inUnitClass, long inTownID, unsigned short inContinent)
 {
+    if (EECPNextEngine(this->mPlayer)) {
+        // the next engine: a group takes the units there are; what it lacks is reported, not trained
+        EECPNextEventAdd(this->mPlayer, kNextEventGroupWants, inUnitClass, 1);
+        return;
+    }
     this->mPlayer->mCivilizationManager->mUnitManager->RequestUnits(inUnitClass, 1, inTownID, inContinent);
 }
 
