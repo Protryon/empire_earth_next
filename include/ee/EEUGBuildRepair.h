@@ -74,6 +74,7 @@ public:
     static bool TendNextFarm(EEComplexUnit* inUnit, EEComplexUnit* inTarget);  // 0x21ec58
     static bool GatherNearBuilding(EEComplexUnit* inUnit, EEComplexUnit* inTarget);  // 0x21ed5e
     void FindNextWork(EEComplexUnit* inUnit);  // 0x21faa0 (command 0xfbc, for players whose Virtual74 is set)
+    bool IsShiftQueueNext(EEComplexUnit* inUnit);  // port: a shift queue, not FindNextWork, follows the building
     void ClearBuildSite(EEComplexUnit* inUnit);  // 0x21fc1e (EEStepAsideFromSite on the target's tile)
     void BeginRepair(EEComplexUnit* inUnit);  // 0x220216 (command 0xfac)
 

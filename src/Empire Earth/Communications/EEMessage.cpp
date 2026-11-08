@@ -1173,6 +1173,8 @@ void EEMBuildUnit::Execute()
                             EEComplexUnit* theWorker = theActiveGroup->GetUnit(i);
                             if (this->mIsQueued) {
                                 theWorker->AddBuildTarget(theBuilding);
+                                // Port: no smart task after a shift-queued build (EEUGBuildRepair::Step)
+                                theWorker->mHasShiftQueuedBuild = true;
                                 if (theWorker->mGoalState && theWorker->mGoalState->mKind != kGoalBuildRepair) {
                                     theWorker->StartAction(kActionIdle);
                                     theWorker->mUnitClass->ActionChanged(theWorker);
@@ -5835,6 +5837,8 @@ void EEMRepairUnit::Execute()
                 EEComplexUnit* theUnit = (*it)->mComplexUnit;
                 if (this->mIsQueued) {
                     theUnit->AddBuildTarget(theTarget);
+                    // Port: no smart task after a shift-queued repair (EEUGBuildRepair::Step)
+                    theUnit->mHasShiftQueuedBuild = true;
                     ++it;
                 } else {
                     theUnit->OrderRepair(theTarget);

@@ -1541,3 +1541,20 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **Fix:** `mLevels` (and Load's `theOld`) are `int32_t`, pinned by a `static_assert` of 0x40 bytes. Windows
   layout and save format unchanged. A macOS/Linux save written before the fix holds levels 0..7 as eight-byte
   pairs: it loads with its improvement levels shuffled (and some at 0), so such saves are best not reused.
+
+## Shift-queued builds and the smart task (playtest, 2026-11-07)
+
+- **Report:** "if i shift click a worker, they shouldnt do a smart task": a citizen sent with shift to build a
+  settlement and then to a mine went off chopping trees.
+- **Cause:** the citizen script (`citizen.tai`) sends a citizen whose build queue is empty from a finished building to
+  `TaskSmartCitizen`, and for human players `EEUGBuildRepair::Step` runs `FindNextWork` there: it picks a job from the
+  building (a drop site: the nearest resource, often trees). Its `SetGoal` replaces the finished build goal, so a
+  shift-queued goal behind it (a gather at the mine) waited forever behind the endless gather. The original does the
+  same; queued builds in the middle of the queue never took the smart task (`BuildQueueEmpty`).
+- **Change (deliberate divergence):** `EEUGBuildRepair::IsShiftQueueNext` skips the smart task when another goal is
+  queued behind the build goal (the script's `Idle` then starts it), or when the build queue came from a shift-click
+  (`EEComplexUnit::mHasShiftQueuedBuild`, set by `EEMBuildUnit`/`EEMRepairUnit` with shift, cleared by
+  `OrderRepair`, `ClearBuildTargets` and going idle with an empty build queue): the citizen idles after the last
+  queued building. A farm is still worked. A build without shift keeps the smart task. Computer players never take
+  the smart task (`IsHuman`) and never send these messages, so the AI is unchanged. The flag is not saved: after a
+  load the citizen takes the smart task as before.

@@ -423,6 +423,8 @@ void EEComplexUnit::OrderRepair(EEUnit* inTarget)
     else
         this->mCitizenBuildQueue.erase(theIterator);  // the single-iterator erase COMDAT 0x2001b5 (Dinkum deque erase(P))
     this->mCitizenBuildQueue.push_front(inTarget);
+    // Port: an order at once (no shift) brings back the smart task after the build
+    this->mHasShiftQueuedBuild = false;
 }
 
 // FUNCTION: EXE 0x5f61c8
@@ -794,6 +796,7 @@ void EEComplexUnit::ClearBuildTargets()
         this->mCitizenBuildQueue.front()->Dereference();
         this->mCitizenBuildQueue.pop_front();
     }
+    this->mHasShiftQueuedBuild = false;
 }
 
 // FUNCTION: EXE 0x5f6f65
@@ -2458,6 +2461,7 @@ void EEComplexUnit::ResetEEComplexUnit(unsigned long inGoalQueueCount, bool inRa
     this->mU32C = 0;
     this->mPlanetID = 0;
     this->mRoll = 0.0f;
+    this->mHasShiftQueuedBuild = false;
 }
 
 // FUNCTION: EXE 0x5fb18f
