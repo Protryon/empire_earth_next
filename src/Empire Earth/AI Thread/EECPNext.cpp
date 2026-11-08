@@ -43,12 +43,13 @@
 #include "ee/EECPCombatManager.h"
 #include "ee/EECPAttackCommander.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPEngine.h"
 #include "ee/EECPNext.h"
 
 bool EECPNextEngine(const EEComputerPlayer* inPlayer)
 {
-    // stage S0's per-seat choice replaces this test (EECPEngine(inPlayer) == 1)
-    return inPlayer != NULL && EECPExperiment(inPlayer, "next");
+    // the seat's engine (ee/EECPEngine.h: the lobby, EE-SIM --engine, EE_AI_ENGINE)
+    return inPlayer != NULL && EECPEngine(inPlayer) == kEECPEngineNext;
 }
 
 const char* EECPNextCodeName(long inCode)
@@ -177,6 +178,22 @@ void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime)
     EECPCivilizationManager* theCivilization = inPlayer->mCivilizationManager;
     if (theCivilization == NULL || inPlayer->mTechnologies == NULL)
         return;
+    // the bookkeeping the classic tick does first (EEComputerPlayer::Update): new units into resource centres, the
+    // combat state's decay and the population cap (WorkOutPopulation; GetPopulationLimit reads it). EnableManagers
+    // does not run: its flags gate only classic decisions (the next engine's improvements stay off)
+    if (inPlayer->mRegroupPending) {
+        inPlayer->UpdateGroups();
+        inPlayer->mRegroupPending = false;
+    }
+    if (inPlayer->mCombatState == 2 && inPlayer->mNumAttacks == 0 && inTime - inPlayer->mLastDamagedTime > 60000) {
+        inPlayer->SetCombatState(1);
+        inPlayer->mBuildingDamaged = false;
+        inPlayer->mCitizenDamaged = false;
+    }
+    if (inTime >= (unsigned long)inPlayer->mNextPopulationTime) {
+        inPlayer->WorkOutPopulation();
+        inPlayer->mNextPopulationTime = inTime + 60000;
+    }
     if (theState->mEpoch != inPlayer->mTechnologies->mCurrentEpoch) {
         if (theState->mEpoch >= 0)
             theState->mEpochStart = inTime;
@@ -249,4 +266,5 @@ void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime)
         EE_CP_TRACE(inPlayer, "next.sites", "claimed=%ld%s", theCount, theSites);
     }
     EECPNextTestStep(inPlayer, theView);
+    EECPTraceStats(inPlayer, inTime);
 }

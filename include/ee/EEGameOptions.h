@@ -37,6 +37,10 @@ public:
     bool mIsLocal;                          // +0x34
     bool mIsReady;                          // +0x35
     bool mB36;                              // +0x36 (true in the ctor; the host row checks it on scenario loads)
+    // port: a computer slot's engine (ee/EECPEngine.h EECPEngineKind: classic, next or random; the lobby's engine
+    // combo, EEMPlayerInformation field kPlayerInfoEngine). The game's options hold the resolved engine (random
+    // drawn at the start). Saved from version 0.251.
+    unsigned long mEngine;
 };
 
 class EEGameOptions {

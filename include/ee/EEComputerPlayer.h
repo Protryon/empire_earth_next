@@ -439,7 +439,10 @@ public:
     bool mReplaceOnLoad;
     bool mRegroupPending;
     bool mAttackStarted;
-    char _gapF56[0xf58 - 0xf56];
+    // port: the engine (ee/EECPEngine.h: kEECPEngineClassic or kEECPEngineNext; EEGameState::Create sets it from
+    // the lobby, EEPPlayerHelper saves it), in the padding
+    unsigned char mEngine = 0;
+    char _gapF57[0xf58 - 0xf57];
     struct EECPNextState* mNextState;       // new: the next engine's state (ee/EECPNext.h; NULL for the classic engine)
 };
 

@@ -169,7 +169,8 @@ struct Options {
     std::string mLog;                                    // every debug string
     std::vector<std::string> mSets;                      // --set doc.key=value
     std::string mCheats, mPersonality;
-    long mPortOffset = -1;                               // -1: a free pair found at start
+    std::string mEngine;                                 // --engine: the computer seats' engines ("" the lobby's: classic)
+    long mPortOffset = -1;                              // -1: a free pair found at start
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     bool mQuiet = false;
 };
@@ -457,6 +458,7 @@ void AfterTick()
 const unsigned long kTriggerEvent = 0x3f0;
 const unsigned long kFormMain = 12, kFormSingle = 6, kFormLobbyID = 26, kFormGame = 11;
 const long kPlayerType = 30, kTeam = 62, kCitizens = 126;
+const long kEngine = 275;   // the port's engine boxes (ee/EEUIManager.h kLobbyEngineCombo + slot)
 const long kVisibleSlots = 8;
 
 struct UILock {
@@ -656,6 +658,23 @@ void SetUpLobby()
         if (!theCitizens)
             theOptions.push_back({kCitizens + s, "5"});
     }
+    // --engine: each computer seat's engine box (seat s = slot s; a shorter list is taken in turn), unless --lobby
+    // sets that box itself; without --engine the boxes keep the lobby's classic
+    std::vector<std::string> theEngines;
+    for (size_t a = 0; !sOptions.mEngine.empty() && a <= sOptions.mEngine.size();) {
+        size_t b = sOptions.mEngine.find(',', a);
+        if (b == std::string::npos)
+            b = sOptions.mEngine.size();
+        theEngines.push_back(sOptions.mEngine.substr(a, b - a));
+        a = b + 1;
+    }
+    for (long s = 1; s <= n && !theEngines.empty(); s++) {
+        bool theSet = false;
+        for (auto& o : theOptions)
+            theSet = theSet || o.first == kEngine + s;
+        if (!theSet)
+            theOptions.push_back({kEngine + s, theEngines[(size_t)(s - 1) % theEngines.size()]});
+    }
     Select(kPlayerType, "#0", "slot 0 human");
     for (long s = 1; s < kVisibleSlots; s++)
         Select(kPlayerType + s, s <= n ? "Computer" : "Open", "slot " + std::to_string(s));
@@ -682,7 +701,8 @@ void WriteReport(int inCode, const std::string& inError)
          ", \"pt_rate\": " + std::to_string(sOptions.mPTRate) + ", \"no_human_defeat\": " +
          (sOptions.mNoHumanDefeat ? "true" : "false") + ", \"cheats\": " +
          JsonString(sOptions.mCheats.empty() ? "all" : sOptions.mCheats) + ", \"personality\": " +
-         JsonString(sOptions.mPersonality) + ", \"sets\": [";
+         JsonString(sOptions.mPersonality) + ", \"engine\": " +
+         JsonString(sOptions.mEngine.empty() ? "classic" : sOptions.mEngine) + ", \"sets\": [";
     for (size_t k = 0; k < sOptions.mSets.size(); k++)
         j += (k ? ", " : "") + JsonString(sOptions.mSets[k]);
     j += "],\n    \"lobby\": [";
@@ -888,6 +908,8 @@ const char* kUsage =
     "  --human-defeat         let the idle human be defeated (default: kept in, the harness's --no-human-defeat)\n"
     "  --cheats SETS          EE_AI_CHEATS (e.g. none, all, none/all)\n"
     "  --personality NAMES    EE_AI_PERSONALITY (e.g. balanced)\n"
+    "  --engine LIST          the computer seats' engine (classic, next, random) through the lobby's engine boxes:\n"
+    "                         one for every seat or a comma list by seat, taken in turn (e.g. next,classic)\n"
     "  --set DOC.KEY=VALUE    a rules document value (repeatable), e.g. aipersonalities.balanced.military.army_floor=0.2\n"
     "  --data DIR             the data root (EE_DATA_ROOT; default the exe's directory)\n"
     "  --config FILE          the settings file (EE_CONFIG; default <data root>/config.yaml)\n"
@@ -1062,6 +1084,8 @@ int EESimMain(int argc, char** argv)
             sOptions.mCheats = value();
         else if (a == "--personality")
             sOptions.mPersonality = value();
+        else if (a == "--engine")
+            sOptions.mEngine = value();
         else if (a == "--set") {
             std::string v = value(), theError;
             if (!EERulesAddOverride(v, theError)) {

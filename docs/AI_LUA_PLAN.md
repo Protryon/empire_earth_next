@@ -159,6 +159,124 @@ Data/db/aipersonalities.yaml   which script each personality runs, its numbers, 
 
 **Developer loop.** EE-SIM and debug builds reload the scripts when they change, keeping the memory.
 
+### 3.1 Runtime as built (S2)
+
+`include/ee/EECPLua.h` and `src/Empire Earth/AI Thread/EECPLua.cpp`. The runtime knows nothing about the managers:
+the caller passes the view in as a value tree and gets the orders back as one.
+
+**API.**
+- `EECPLuaValue`: nil, bool, integer, string, array (keys 1..n), map (integer and string keys, kept sorted).
+  `EECPLuaKey` orders integers ascending, then strings by bytes. An empty Lua table converts to an empty map.
+- `EECPLuaState(const EECPLuaConfig&)`: one per computer player. The config holds:
+  - `mSeed`: `EECPLuaSeed(game seed, player)`, which is `seed << 32 | player`;
+  - `mMemoryLimit` (32 MB) and `mBudget` (2,000,000 VM instructions a call);
+  - `mRead` (the script reader) and `mWrite` (where `print` goes);
+  - `mCheckMemory`: check after every step that the memory can be saved.
+- `LoadPersonality(module)`: `require(module)` must return a table with `step` and, optionally, `init`.
+- `Init(view, orders)`: a new game. `Step(view, orders)`: `step(view, memory)`.
+- `Run(source, name, result)`: for tests and a console.
+- `Reload()`: the developer loop; the memory and the RNG stay.
+- `SaveMemory(bytes)` / `RestoreMemory(bytes)`: a loaded game calls `LoadPersonality` and then `RestoreMemory`,
+  never `Init`.
+- `GetMemory(value)`.
+- `LastStatus()` returns one of: ok, no state, not loaded, no file, syntax, runtime, budget exceeded, out of
+  memory, bad value. `LastError()` gives the message (with a Lua traceback). `LastInstructions()`, `MemoryUsed()` and
+  `MemoryPeak()` report what a call cost.
+- `EECPLuaReadFromFolder`: the default reader. Its context is the folder that stands for `Data`, and it reads
+  through `PlatFOpen`.
+- Every entry point runs inside `lua_pcall` and returns false on any script error. A failed call keeps whatever it
+  wrote to the memory before the error.
+
+**What a script sees.**
+- **base:** without `dofile`, `loadfile`, `load`, `collectgarbage` and `warn`. Three functions are replaced:
+  - `print` goes to `mWrite`;
+  - `tostring` gives a table, function or userdata without `__tostring` as its type's name, never an address;
+  - `setmetatable` refuses `__gc` and `__mode`, because finalisers and weak tables depend on when the collector runs.
+- **table, utf8.**
+- **string:** without `dump`, `pack`, `packsize` and `unpack` (`l` is 4 bytes on Windows, 8 on POSIX). `format`
+  refuses these, because they print differently by platform:
+  - `%p`, which prints an address;
+  - `%a`, and `%q` of a float, which print hexadecimal floats;
+  - a NaN or an infinity in a float conversion.
+
+  `%s` of a table prints its type's name. Floats may be formatted for display, but nothing stored in the memory may
+  be a float.
+- **math:** these are kept:
+  - `abs`, `ceil`, `floor`, `fmod`, `modf`, `max`, `min`, `tointeger`, `type`, `ult`: integer or exact operations;
+  - `sqrt`: IEEE 754 requires it to be correctly rounded, and every target has a hardware instruction for it;
+  - `huge`, `pi`, `maxinteger`, `mininteger`.
+
+  `random`, `randomseed`, `sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `exp` and `log` are removed: libm does not
+  round them correctly, and its results differ between UCRT, glibc and Apple.
+- **`require(name)`:** loads `Data/ai/<name, with dots as folders>.lua`, once per state.
+  - A name is letters, digits and `_`, in segments separated by dots. Nothing else can name a file, so `..`, `/`,
+    `\` and drive letters never reach the reader.
+  - Text only (mode `"t"`, so bytecode is refused). The chunk name is `@ai/<path>.lua`, so errors read
+    `ai/boom.lua:12: ...`.
+- **`each(t)`:** iterates over the keys in the total order (integers, then strings). The keys are taken when the
+  loop starts, and a key removed during the loop is skipped. A float, boolean or table key is an error.
+  `ai.keys(t)` returns the sorted key array.
+- **`ai.random(n)` / `ai.random(lo, hi)`:** SplitMix64 (64-bit state, golden-gamma step, the reference mix), drawn
+  uniformly by rejection sampling. Its state goes into the memory bytes.
+
+**Determinism in the vendored Lua** (`ee_lua.c` sets macros Lua leaves open; Lua's own files stay unmodified):
+- **The string hash seed** is fixed.
+- **`table.sort`** never randomises its pivot: the original reads `clock()` and `time()`.
+- **`^`** is square-and-multiply for integral exponents (`|y| < 2^53`). Any other exponent is an error, and a
+  constant like `2^0.5` already fails to compile.
+- **Float text** (`tostring`, `..`, `print`) spells NaN and the infinities `nan`, `inf` and `-inf`; UCRT prints
+  `-nan(ind)`. Finite floats keep `%.14g`, which every C library we build with rounds correctly.
+- **Character classes and case mapping** in lauxlib, base and string are ASCII only. The game sets a Windows locale
+  whose ctype knows Latin-1 letters, while POSIX stays in the C locale.
+
+**Budget and memory.**
+- **The budget:** a count hook runs every 1,000 instructions. Past the budget it raises an error, then sets the
+  hook to every instruction and raises again at each one, so a script's `pcall` cannot swallow the abort. The same
+  code costs the same count on every peer. C functions are not counted (a pathological string pattern can still be
+  slow); the memory limit bounds `string.rep` and `table.concat`.
+- **The memory limit:** a counting allocator refuses a block past the limit, and the call then fails as out of
+  memory.
+  - The count uses the sizes Lua asks for. Lua's structs have the same layout on Win64 and LP64 because none of
+    them uses `long`, so the collector runs at the same points on every 64-bit target.
+
+**Memory bytes** (`EECPLuaEncode`/`Decode`): canonical, the same bytes for the same content everywhere.
+- **The header:** `"EELM"`, version 1, then the RNG state as uint64 LE.
+- **The value:**
+  - tag `0` nil, `1` false, `2` true;
+  - `3` int64 LE;
+  - `4` string (uint32 LE length, then the bytes);
+  - `5` table (uint32 LE count, then the key/value pairs in key order).
+- **Decoding** refuses keys out of order, trailing bytes and nesting deeper than 64.
+- **Not storable:** floats (including integral ones like `2.0`), functions, userdata, metatables and cycles. They
+  are errors with a path, e.g. `memory.bad: a float`. The orders follow the same rules.
+
+**C++ and longjmp.** Lua is C and raises its errors with longjmp. No function Lua calls into holds a C++ object with
+a destructor while Lua can raise. The value tree is pushed inside the protected call and read back outside it.
+
+**Tests:** `python -I tools/xbuild.py luatest` (Windows, Linux, macOS) builds `tests/platform/lua_test.cpp` with
+`ee_lua.c`, `EECPLua.cpp` and the platform layer. It runs the 125 checks against the scripts in
+`tests/platform/lua/ai/`, which cover:
+- the sandbox;
+- the budget, including a `pcall` around an endless loop;
+- the memory limit;
+- RNG reproducibility, pinned to SplitMix64's reference output;
+- sorted iteration;
+- the memory round trip, byte-identical and pinned against hand-written bytes;
+- `require` staying inside `ai/`;
+- the value tree round trip;
+- floats refused in the orders and the memory;
+- syntax, runtime and missing-module errors.
+
+**Open.**
+- `-ffp-contract=off` for both C++ builds (RUST_PLAN §2.1) before the Windows/macOS trace gate: today's float paths
+  in the Lua VM are single operations, but nothing stops clang fusing them on arm64.
+- The game side is not wired yet:
+  - a reader over `Data\ai\` from the data root;
+  - `print` into the AI trace (`EE_CP_TRACE`);
+  - the memory in the save;
+  - reload when the files change.
+- The S2 gate (the S1 build order in Lua, identical traces) waits for S1.
+
 ## 4. The first scripts
 
 **Boom**, the owner's own play. Each epoch is a plan table, and a short planner runs it. The numbers come from the
@@ -206,6 +324,43 @@ Each stage ends on a gate. Each one is useful on its own, and the work can stop 
   - the classic engine's traces are byte-identical to today's;
   - the next engine's town stands idle;
   - the full gates pass.
+
+*S0 as built* (2026-11-08). The owner's decision 2 replaced the `gameoptions.yaml` setting: the choice is the lobby's.
+- **The choice:** `EEGameOptionsPlayer::mEngine` per lobby slot, 0 classic (the default, and every reset of a slot),
+  1 next, 2 random (`ee/EECPEngine.h` `EECPEngineKind`).
+- **The lobby:** the engine column sits in the ping column, which a computer row leaves empty, widened to 0.428-0.520
+  of the window. The controls are not in dbuicontrols; `EEUIManager`'s ctor adds them with
+  `UIControlsTable::AddControlLike` (form 26):
+  - 274: the header, a copy of the ping label (2507) shown in its place: "Ping / AI", or "AI" in single player;
+  - 275 + slot: the combo box, a copy of the citizens combo (2629; lines Classic, Next, Random = strings 33170-33172);
+  - 291 + slot: the label, a copy of the citizens label (2645);
+  - control ids 90100-90132; help string 33175.
+  `LobbyShowEngine` (flags 0, 6 and 8 of `LobbyShowPlayer`) shows them on computer rows only: the box to the host
+  until it is ready on a new game, like the citizens box, else the label.
+- **The network:** `EEUIELEChangeEngine` sends `EEMPlayerInformation` field 6 (`kPlayerInfoEngine`).
+  `EEMFullPlayerInformation` carries the engine too (4 more payload bytes), for the join sync and the slot resets.
+  A client's own full record keeps the host's engine for its slot.
+- **Random:** resolved in `EEGameState::Create`, when the computer player is made, by `EECPEngineResolve`. It is a
+  32-bit hash of `gUserInterface->mRandomSeed` (every peer's) and the slot, not one of the game's generators, so the
+  random start epoch and the map draw as before. The resolved engine goes to `EEComputerPlayer::mEngine` (a byte in
+  the class's padding: the size stays 0xf58) and into the game's options.
+- **TEST ONLY:** `EE_AI_ENGINE` (classic/next/random, a comma list in turn by player id from player 1, as
+  `EE_AI_PERSONALITY`) overrides the lobby at that point.
+- **Save games:** version 0.251 (`kSaveGameMinorVersion`; the original wrote 0.250). It adds a `u32` engine after
+  each game options slot and a `u8` engine after each computer player in the players chunk (`EEPPlayerHelper`), so a
+  loaded game keeps its engines. 0.250 saves and scenarios load as classic. The scenario editor's computer players
+  are classic.
+- **The branch point:** `EEComputerPlayer::Update`. The start-up block runs for both engines. Then a next player
+  calls `EECPNextUpdate` (`EECPEngine.cpp`) instead of the original's block (regroup, enable timers, population,
+  expansion, the civilization, diplomacy, combat and exploration managers, the standing army). The unit kill list
+  after it runs for both. The stub only writes the 30 s stats line. S1-S3 replace it with view -> Lua strategy ->
+  tactics.
+- **Classic:** takes the original's path unchanged. Its only new output is ` engine=classic` at the end of the
+  trace's `cp start` line. The game log's player line has `engine=` (tools/game_log.py shows it), and
+  tools/ai_scorecard.py can tell the players apart by it (`--key engine`).
+- **EE-SIM:** `--engine LIST` (one engine for every seat, or a comma list by seat; seat 1 is player 2) selects the
+  engine boxes 275 + seat through the lobby, as `--lobby 276=next` would. The report's setup records it.
+  `sim_bench.py --engine` takes `;` between variants.
 
 **S1, the tactics API** (the largest stage: 1-2 weeks).
 - **Extraction:** take the executors out of the managers (§2), and make the policy cuts listed there.
@@ -297,7 +452,7 @@ Decisions (the owner, 2026-11-08):
 ## 8. First steps
 
 1. The owner's decisions: done (§7).
-2. **S0:** the per-seat switch and an idle stub.
+2. **S0:** the per-seat switch and an idle stub: built (§5, "S0 as built").
 3. **The S1 audit:** done, in [AI_LUA_AUDIT.md](AI_LUA_AUDIT.md): a table of every decision buried in the managers' executors, file by file,
    with where each one ends up (a tactic, a strategy order, or classic only).
 4. **S1:** extract the executors in the order the boom opening needs them: gathering and claims, building and

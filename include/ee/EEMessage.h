@@ -793,6 +793,7 @@ public:
     bool mIsLocal;                          // +0x40
     bool mIsReady;                          // +0x41
     bool mB42;                              // +0x42
+    int32_t mEngine;                        // port: EEGameOptionsPlayer::mEngine (ee/EECPEngine.h; 4 more payload bytes)
 };
 
 // vtable 0x43e020; sizeof 0x2c
@@ -1349,6 +1350,11 @@ public:
     uint32_t mWood;                         // +0x20 (unsigned: the tribute tests)
     unsigned char mReceiver;                // +0x24 the receiver (an index into gWorld.mPlayers)
 };
+
+// The lobby slot fields EEMPlayerInformation updates (mField; Execute): 0 type, 1 ping, 2 colour, 3 team,
+// 4 starting citizens, 5 ready; port: 6 a computer slot's engine (ee/EECPEngine.h). The lobby redraws the row with
+// the field as LobbyShowPlayer's flags.
+const long kPlayerInfoEngine = 6;
 
 // vtable 0x43d654; sizeof 0x20
 class EEMPlayerInformation : public EEMessage {

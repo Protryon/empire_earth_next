@@ -89,6 +89,7 @@ static EEGameOptionsPlayer sEmptyPlayer;
 // SYNTHETIC: EXE 0x52f4d2
 
 #include "ee/EEStartingResources.h"
+#include "ee/EECPEngine.h"
 
 // FUNCTION: EXE 0x52f4dd
 // Creates an empty, closed player slot with no name, colour, team or starting citizens
@@ -106,6 +107,7 @@ EEGameOptionsPlayer::EEGameOptionsPlayer()
     this->mIsReady = false;
     this->mTransferID = 0;
     this->mB36 = true;
+    this->mEngine = kEECPEngineClassic;   // port (ee/EECPEngine.h)
 }
 
 // FUNCTION: EXE 0x52f526
@@ -124,6 +126,7 @@ EEGameOptionsPlayer& EEGameOptionsPlayer::operator=(const EEGameOptionsPlayer& i
     this->mB36 = inOther.mB36;
     this->mLoadedType = inOther.mLoadedType;
     this->mTransferID = inOther.mTransferID;
+    this->mEngine = inOther.mEngine;   // port (ee/EECPEngine.h)
     return *this;
 }
 
@@ -150,6 +153,13 @@ long EEGameOptionsPlayer::Load(unsigned long inMajorVersion, unsigned long inMin
         theResult = inFile.Read(this->mIsReady);
     if (theResult == kErrorOK)
         theResult = inFile.Read(this->mB36);
+    // port: the engine from version 0.251 (ee/EECPEngine.h); older saves and scenarios: classic
+    this->mEngine = kEECPEngineClassic;
+    if (theResult == kErrorOK && (inMajorVersion > 0 || inMinorVersion >= 251)) {
+        theResult = inFile.Read(this->mEngine);
+        if (this->mEngine >= kEECPEngineChoiceCount)
+            this->mEngine = kEECPEngineClassic;
+    }
     this->mLoadedType = this->mType;
     return theResult;
 }
@@ -177,6 +187,8 @@ long EEGameOptionsPlayer::Save(FSFile& outFile)
         theResult = outFile.Write(this->mIsReady);
     if (theResult == 0)
         theResult = outFile.Write(this->mB36);
+    if (theResult == 0)
+        theResult = outFile.Write(this->mEngine);   // port: from version 0.251 (Load)
     return theResult;
 }
 

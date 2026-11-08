@@ -38,6 +38,7 @@
 #include "ee/EECommunications.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEGameOptions.h"
+#include "ee/EECPEngine.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEUIEMainGameEvents.h"
 #include "ee/EEWonNet.h"
@@ -374,6 +375,7 @@ void EEServer::BootPlayer(unsigned char inSlot, bool inWasBooted, bool inGameIsE
                     thePlayer.mTeam = 0;
                     thePlayer.mB36 = false;
                     thePlayer.mStartingCitizens = gWorldTable.GetLongValue(kWorldStartingCitizensDefault);
+                    thePlayer.mEngine = kEECPEngineClassic;   // port
                 }
                 EEMFullPlayerInformation* theInformation = new EEMFullPlayerInformation(thePlayer);
                 theInformation->SetOriginatingSlot(kSlotServer);
@@ -865,6 +867,7 @@ void EEServer::HandleLobbyInput(NEMessage* inMessage)
             thePlayer.mB36 = theUpdate->mB42;
             thePlayer.mSlot = theUpdate->mSlot;
             thePlayer.mTransferID = gGameOptions.mPlayers[thePlayer.mSlot].mTransferID;
+            thePlayer.mEngine = gGameOptions.mPlayers[thePlayer.mSlot].mEngine;   // port: the host's choice
             if (thePlayer.mSlot != 0 && this->GetSendToSlot(thePlayer.mSlot) != kSlotServer)
                 thePlayer.mIsLocal = false;
             else
@@ -1208,6 +1211,7 @@ void EEServer::SendFullPlayerInformation(unsigned char inPlayer, EEGameOptionsPl
     thePlayer.mIsReady = inOptions.mIsReady;
     thePlayer.mSlot = inOptions.mSlot;
     thePlayer.mB36 = inOptions.mB36;
+    thePlayer.mEngine = inOptions.mEngine;   // port
     this->ProcessLocalUserInput(new EEMFullPlayerInformation(thePlayer), kSlotNone);
     gUserInterface->PostLobbyUpdatePlayer(thePlayer.mSlot, 8);
 }

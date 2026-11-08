@@ -383,6 +383,23 @@ enum EELobbyControl {
     kLobbyGameOpCheckBox5Label = 254,    // dbuicontrols form 26 index 254 id 2911 'M-SS Game Op Check Box 5 Label' (type 15); site form via inForm
     kLobbyGameOpCheckBox7Label = 255,    // dbuicontrols form 26 index 255 id 2912 'M-SS Game Op Check Box 7 Label' (type 15); site form via theForm
     kLobbyLagIndicator = 273,            // dbuicontrols form 26 index 273 id 3296 'M-SS Lag Indicator' (type 27); site form via nkingButton* theButton = (UIBlinkingButt
+    // port: not in the database (EEUIManager's ctor adds them: UIControlsTable::AddControlLike). The computer slots'
+    // engine (ee/EECPEngine.h; docs/AI_LUA_PLAN.md S0) in the ping column, which a computer row leaves empty: its
+    // header (a copy of the ping label, shown in place of it), per slot a combo box (a copy of the citizens combo,
+    // the host's before ready) and a label (a copy of the citizens label, everyone else)
+    kLobbyEngineHeader = 274,
+    kLobbyEngineCombo = 275,             // + slot (16)
+    kLobbyEngineLabel = 291,             // + slot (16)
+};
+
+// port: the lobby's engine controls' ids (past the database's and the settings' 90001..) and strings (Language.rc)
+enum EELobbyEngineControl {
+    kLobbyEngineControlID = 90100,      // the header; + 1 + slot the combo boxes, + 17 + slot the labels
+    kLobbyEngineClassicString = 33170,  // "Classic", "Next" (33171), "Random" (33172): the combo's lines, in
+                                        // EECPEngineKind's order
+    kLobbyEngineHeaderString = 33173,   // "AI" (single player)
+    kLobbyEnginePingHeaderString = 33174,   // "Ping / AI" (multiplayer)
+    kLobbyEngineHelpString = 33175,
 };
 
 // Control indices (UIForm::GetControl: the control's index in the form, dbuicontrols +0x29c) of form 11 'Scott Main
