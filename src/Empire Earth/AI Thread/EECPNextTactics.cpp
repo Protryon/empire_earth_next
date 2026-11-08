@@ -315,9 +315,24 @@ EECPNextResult EECPNextFish(EEComputerPlayer* inPlayer, long inBoats, long inDoc
     if (EECPNextClassNode(inPlayer, theClass, theNodeReason) == NULL)
         return EECPNextReport(inPlayer, "fish", kNextRefused, theNodeReason, 0, "boats=%ld docks=%ld cls=%ld", inBoats,
             inDocks, theClass);
-    EECPUGatherSpecialUnitsCount theBoats(inPlayer, theClass, 0, false);
-    theCivilization->mUnitManager->GatherUnits(theBoats);
-    long theHave = (long)(theBoats.mUnits + theBoats.mRequested);
+    // the boats there are (every naval citizen), in production at the docks and requested
+    long theHave = 0;
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0))
+            continue;
+        if (theUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
+            theHave++;
+        else if (theUnit->mUnitClass->IsBuilding())
+            for (unsigned long q = 0; q < theUnit->mComplexUnit->GetBuildQueueSize(); q++) {
+                long theID = (*(theUnit->mComplexUnit->mBuildQueue.begin() + q)).mTechnology;
+                EETechTreeNode* theMade = EEIsEpochID(theID) ? NULL : inPlayer->mTechnologies->Get(theID);
+                if (theMade != NULL && theMade->mData->mMakesUnit && theMade->mData->mUnitClass == theClass)
+                    theHave++;
+            }
+    }
+    std::map<unsigned long, unsigned long>::iterator theWaiting = theCivilization->mUnitManager->mWaitingCounts.find((unsigned long)theClass);
+    if (theWaiting != theCivilization->mUnitManager->mWaitingCounts.end())
+        theHave += (long)theWaiting->second;
     if (theHave < inBoats) {
         theCount = inBoats - theHave;
         theCivilization->mUnitManager->RequestUnits(theClass, theCount, 0, 0);
@@ -506,8 +521,8 @@ EECPNextResult EECPNextDefend(EEComputerPlayer* inPlayer, long inX, long inY, lo
         return EECPNextReport(inPlayer, "defend", kNextRefused, kNextReasonNoUnits, 0, "x=%ld y=%ld want=%ld", inX, inY, inCount);
     for (long i = theGroup->GetNumSubGroups() - 1; i >= 0; i--)
         theGroup->mSubGroups[i]->mMission = 1;
-    return EECPNextReport(inPlayer, "defend", kNextDone, kNextReasonNone, EECPNextGroupUnits(theGroup), "x=%ld y=%ld want=%ld",
-        inX, inY, inCount);
+    return EECPNextReport(inPlayer, "defend", kNextDone, kNextReasonNone, EECPNextGroupUnits(theGroup), "x=%ld y=%ld want=%ld planned=%ld",
+        inX, inY, inCount, theSize);
 }
 
 EECPNextResult EECPNextAttack(EEComputerPlayer* inPlayer, long inTarget, long inCount)
@@ -517,7 +532,8 @@ EECPNextResult EECPNextAttack(EEComputerPlayer* inPlayer, long inTarget, long in
         || theTarget->mFirstUnit == NULL || inCount <= 0 || inCount > kNextMaxCount || inPlayer->mCombatManager == NULL)
         return EECPNextReport(inPlayer, "attack", kNextRefused, kNextReasonBadArgument, 0, "target=%ld want=%ld", inTarget, inCount);
     EECPCombatStrategy theStrategy;
-    if (EECPNextGroupStrategy(inPlayer, inCount, 0, theStrategy) == 0)
+    long theSize = EECPNextGroupStrategy(inPlayer, inCount, 0, theStrategy);
+    if (theSize == 0)
         return EECPNextReport(inPlayer, "attack", kNextRefused, kNextReasonNoUnits, 0, "target=%ld want=%ld", inTarget, inCount);
     // as EECPCombatManager::Update's attack: a task naming the target player
     EECPAGTask theTask;
@@ -526,6 +542,6 @@ EECPNextResult EECPNextAttack(EEComputerPlayer* inPlayer, long inTarget, long in
     EECPAttackGroup* theGroup = inPlayer->mCombatManager->mAttackCommander->CreateGroupFromStrategy(theTask, theStrategy, theIDs);
     if (theGroup == NULL)
         return EECPNextReport(inPlayer, "attack", kNextRefused, kNextReasonNoUnits, 0, "target=%ld want=%ld", inTarget, inCount);
-    return EECPNextReport(inPlayer, "attack", kNextDone, kNextReasonNone, EECPNextGroupUnits(theGroup), "target=%ld want=%ld", inTarget,
-        inCount);
+    return EECPNextReport(inPlayer, "attack", kNextDone, kNextReasonNone, EECPNextGroupUnits(theGroup), "target=%ld want=%ld planned=%ld", inTarget,
+        inCount, theSize);
 }
