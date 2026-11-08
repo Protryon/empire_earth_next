@@ -467,10 +467,10 @@ scenario pictures, backgrounds).
 
 - Remove the clang dialect bridges: the `#ifdef __clang__` `const T&` forwarding overloads become `const` parameters,
   the `theTempN` call-site locals go.
-- The WON lobby on the platform layer (PORT_LEARNINGS.md "The WON library from source"): (2) the lobby GUI toolkit
-  (WONGUI: GDI drawing into Win32 child windows) drawn through GX and fed from PlatInputEvent, so the lobby shows
-  under wgpu and LAN / Direct Connect multiplayer is reachable; (3) WON's sockets, threads and registry on Plat*,
-  the lobby's `#ifdef _WIN32` guards removed, so it builds and runs on Linux and macOS.
+- The WON lobby: done on the platform layer (PORT_LEARNINGS.md "The WON lobby on the platform layer"); left: a LAN
+  and a Direct Connect game between two instances through it (the harness's mp_game.py bypasses the lobby), the
+  lobby at the UI scale's resolution (crisp text, the 4x textures) instead of a scaled 1024x768 frame, and a run on
+  Linux and macOS.
 - Drop `/FIXED /BASE:0x400000` (ASLR, a high image base): nothing needs a 32-bit base since the plain link.
 - Port the rest of the harness (human driver, per-PT differential) where still useful.
 - The platform layer's next steps ("Cross-platform: census and plan" above), then 64-bit and other platforms.

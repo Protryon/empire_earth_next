@@ -630,9 +630,46 @@ the library is module `won` (tools/ee.py, tools/units.py) and `WONAPIStubs.cpp` 
   `mGoalState != NULL` although upstream's FIXES.md lists the inversion as a fix (it strands citizens here);
   EEEffect2D::CreateParts reads the unit's stats inside its NULL test (upstream's order dereferences NULL for an
   effect at a point).
-- **Left:** the lobby's GUI toolkit draws with GDI into Win32 child windows, which does not show under the wgpu
-  renderer; LAN/Direct Connect go through that lobby. Next: WONGUI on GX and PlatInputEvent, then WON on Plat* for
-  POSIX (PORT.md "Other next steps").
+
+### The WON lobby on the platform layer (every OS)
+
+- **WONGUI's backend is ours.** The SDK separates it (WindowManager, Window, Graphics, NativeImage, Font, the RawImage
+  platform calls, Clipboard): `WONGUI/Plat*.cpp` implement it on the platform layer and WON's own software rasteriser
+  (`Surface<DWORD>`, WONSurface.h), with GDI's rules kept where the look depends on them (both line end points,
+  rectangles x..x+w-1, mask blits AND then OR, text at the cell top, MSFont's size and underline). `units.WON_REPLACED`
+  keeps the MS* GDI backend out of every link; `include/ee/wonapi/WONLobbyGUIMS.h` keeps its declarations for merges.
+- **One frame, pulled by the graphics thread.** The window manager composites the lobby's windows into one BGRA frame
+  (a serial per change, its own lock); `RTSGraphics::RenderLobby` copies it into a system-memory surface (the movie's
+  pattern; `GEPackBGRXRow`, include/lle/GEPixelPack.h) and onto the back buffer, then ShowScene. Lock order:
+  EELobbyLock, then the frame lock.
+- **The lobby runs inside a posted action, which holds two locks.** `EEUserInterface::ProcessActions` holds the UI
+  copy lock and the world write lock around every action, and EELobbyOpen's lobby loop never returns while the lobby
+  is open; the graphics thread then blocked in `EEGraphics::FrameStarting` (the original did not care: its lobby was
+  another GDI window). `EELobbyRunLoop` releases both while the lobby runs and takes them back in ProcessActions'
+  order. Found with lldb, not traces: run the play directory's exe outside the harness (one debugger per process),
+  drive it with the UI fixture (EE_TEST_UI, `click 12 1`), `lldb -p PID -o "thread backtrace all"`, and resolve the
+  frames through EE-AOC.map (lldb shows only the nearest export; the exe is linked at 0x400000).
+- **A 1024x768 layout, letterboxed.** The lobby's screens are drawn for 1024x768 (the original switched the display
+  mode): the surface keeps that size and is scaled uniformly into the back buffer, centred (black bars), and
+  `PlatWindowManager::ScaleToSurface` maps the pointer back the same way. `GERectangle(a, b, c, d)` is left, top,
+  RIGHT, BOTTOM: a width there squeezed the image (identical only at the origin).
+- **WON's files get absolute paths.** `WONAPICore::GetDefaultFileDirectory` was "" (the working directory, the data
+  root); it now names the data root, so `_wonHTTPCache` and the other files are absolute (the harness refuses relative
+  creates).
+- **POSIX.** Sockets on PlatSocket (`PlatSocketWait`/`GetError`/`Shutdown`/options added; WSAE* are the PLAT_SOCK_*
+  values), threads and events on PlatThread/PlatEvent (no SEH off Windows), time on `WONTickCount()`, the registry on
+  PlatConfig (`won:` block of config.yaml: the CD key, UseLocalIP), files on PlatFOpen/PlatFile, cp1252 text on
+  `PlatCp1252ToWide`/`PlatWideToCp1252`. Wide strings on the wire and in WON's files are UTF-16 LE per unit
+  (`WideAppendUtf16LE`, WONBuffer.h): wchar_t is 4 bytes there, and ReadRawWString read past its buffer.
+- **libstdc++'s [abi:cxx11] tag on Linux:** in this dialect a function returning std::string mangles with the tag
+  or without it depending on whether glibc's `<string.h>` came before `<string>` in the unit, and two lobby units
+  that start with `<string>` did not link against the definition (`GUIStringData::GetString`). Every game unit on
+  Linux gets `-include string.h` (xbuild.py game_dialect_flags). The census's ms dialect also gets the Linux
+  `__GCC_ATOMIC_TEST_AND_SET_TRUEVAL` define the game build has (it reported 384 phantom failures).
+- **Tests:** `xbuild.py wontest` (tests/won: the wire format byte for byte, the socket layer over loopback; built like
+  game units), the harness's `--exercise lobby` (main menu -> MultiPlayer -> the lobby's frames -> Other Multiplayer
+  -> the LAN screen; `--refuse-autodial`: the lookups of the gone WON servers fail as offline). The lobby owns the UI
+  thread, so the UI fixture does not acknowledge commands while it is open: the exercise waits for presented frames.
 
 ## Cross-platform: the platform layer (branch xplat)
 
