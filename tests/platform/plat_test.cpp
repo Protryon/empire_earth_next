@@ -76,6 +76,12 @@ static void TestTime()
     PlatGetLocalTime(&theNow);
     CHECK(theNow.mYear >= 2020 && theNow.mMonth >= 1 && theNow.mMonth <= 12 && theNow.mDay >= 1 && theNow.mDay <= 31);
     CHECK(theNow.mDayOfWeek <= 6 && theNow.mHour <= 23 && theNow.mMinute <= 59 && theNow.mMilliseconds <= 999);
+    // the wall clock: FILETIME units after 2020-01-01 (132223104000000000), moving with the sleep (it may be set)
+    uint64_t theWall0 = PlatTimeWallClock100ns();
+    PlatSleep(30);
+    uint64_t theWall1 = PlatTimeWallClock100ns();
+    CHECK(theWall0 > 132223104000000000ULL);
+    CHECK(theWall1 >= theWall0 + 200000ULL && theWall1 - theWall0 < 600000000ULL);   // 20 ms .. 60 s
 
     Section("timers");
     sTicks = 0;
@@ -236,7 +242,11 @@ static void TestThreads()
     CHECK(PlatThreadGetExitCode(theThread, &theCode) && theCode == PLAT_THREAD_STILL_ACTIVE);
     CHECK(PlatThreadSetPriority(theThread, PLAT_PRIORITY_BELOW_NORMAL) == 1);
     CHECK(PlatThreadGetPriority(theThread) == PLAT_PRIORITY_BELOW_NORMAL);
+    CHECK(PlatThreadWait(theThread, 0) == PLAT_WAIT_TIMEOUT);   // held, so not ended
+    CHECK(PlatThreadWait(theThread, 30) == PLAT_WAIT_TIMEOUT);
     CHECK(PlatThreadResume(theThread) == 1);
+    CHECK(PlatThreadWait(theThread, 5000) == 0);
+    CHECK(PlatThreadWait(theThread, 0) == 0);   // stays ended
     WaitExit(theThread, theCode);
     CHECK(sStarted == 1 && theCode == 42);
     CHECK(PlatThreadResume(theThread) == 0 || PlatThreadResume(theThread) == 0xFFFFFFFFu);   // not suspended
@@ -296,6 +306,32 @@ static void TestStrings()
     CHECK(PlatIsMbcSpace(' ') && PlatIsMbcSpace('\t') && !PlatIsMbcSpace('x'));
     CHECK(PlatIsMbcDigit('7') && !PlatIsMbcDigit('a'));
     CHECK(!PlatIsMbbLead('A'));
+
+    Section("cp1252");
+    // every byte round-trips (the five undefined ones as the C1 controls)
+    char theAll[256];
+    for (int i = 0; i < 256; i++)
+        theAll[i] = static_cast<char>(i);
+    wchar_t theWide[260];
+    CHECK(PlatCp1252ToWide(theAll, 256, NULL, 0) == 256);
+    CHECK(PlatCp1252ToWide(theAll, 256, theWide, 260) == 256 && theWide[256] == 0);
+    CHECK(theWide[0] == 0 && theWide['A'] == L'A' && theWide[0x80] == 0x20AC && theWide[0x81] == 0x81
+          && theWide[0x9F] == 0x0178 && theWide[0xE9] == 0xE9 && theWide[0xFF] == 0xFF);
+    char theBack[260];
+    CHECK(PlatWideToCp1252(theWide, 256, theBack, 260) == 256 && memcmp(theBack, theAll, 256) == 0
+          && theBack[256] == 0);
+    // terminated texts, capacity, unmappable characters
+    CHECK(PlatCp1252ToWide("caf\xe9 \x80", PLAT_TEXT_TERMINATED, theWide, 260) == 6 && theWide[3] == 0xE9
+          && theWide[5] == 0x20AC && theWide[6] == 0);
+    // no room for the terminator: none written
+    CHECK(PlatCp1252ToWide("abcdef", PLAT_TEXT_TERMINATED, theWide, 3) == 3 && theWide[2] == L'c');
+    const wchar_t theOdd[] = {L'x', 0x4E2D, 0x2122, 0x0153, L'y', 0};
+    CHECK(PlatWideToCp1252(theOdd, PLAT_TEXT_TERMINATED, theBack, 260) == 5
+          && strcmp(theBack, "x?\x99\x9cy") == 0);
+    CHECK(PlatWideToCp1252(theOdd, PLAT_TEXT_TERMINATED, NULL, 0) == 5);
+    CHECK(PlatWideToCp1252(theOdd, PLAT_TEXT_TERMINATED, theBack, 2) == 2 && theBack[0] == 'x' && theBack[1] == '?');
+    const wchar_t thePair[] = {L'a', static_cast<wchar_t>(0xD83D), static_cast<wchar_t>(0xDE00), L'b', 0};
+    CHECK(PlatWideToCp1252(thePair, PLAT_TEXT_TERMINATED, theBack, 260) == 3 && strcmp(theBack, "a?b") == 0);
 }
 
 // ---- files and paths
@@ -640,6 +676,55 @@ static void TestSockets()
     PlatSocket theRefused = PlatSocketOpen(PLAT_SOCKET_STREAM);
     CHECK(!PlatSocketConnect(theRefused, &theBound) && PlatSocketLastError() == PLAT_SOCK_ECONNREFUSED);
     PlatSocketClose(theRefused);
+
+    Section("socket wait");
+    // options, then a non-blocking connect the wait completes
+    theListen = PlatSocketOpen(PLAT_SOCKET_STREAM);
+    CHECK(PlatSocketSetReuseAddress(theListen, 1));
+    theAddress.mPort = 0;
+    CHECK(PlatSocketBind(theListen, &theAddress) && PlatSocketListen(theListen, 4));
+    CHECK(PlatSocketGetName(theListen, &theBound));
+    CHECK(PlatSocketWait(theListen, PLAT_SOCKET_WAIT_READ, 0) == 0);   // nobody connecting yet
+    theClient = PlatSocketOpen(PLAT_SOCKET_STREAM);
+    CHECK(PlatSocketSetNoDelay(theClient, 1));
+    CHECK(PlatSocketSetLinger(theClient, 1, 2));
+    CHECK(PlatSocketSetNonBlocking(theClient, 1));
+    CHECK(PlatSocketConnect(theClient, &theBound) || PlatSocketLastError() == PLAT_SOCK_EWOULDBLOCK);
+    CHECK(PlatSocketWait(theClient, PLAT_SOCKET_WAIT_WRITE | PLAT_SOCKET_WAIT_EXCEPT, 5000)
+          == static_cast<int32_t>(PLAT_SOCKET_WAIT_WRITE));
+    CHECK(PlatSocketGetError(theClient) == 0);
+    CHECK(PlatSocketWait(theListen, PLAT_SOCKET_WAIT_READ, 5000) == static_cast<int32_t>(PLAT_SOCKET_WAIT_READ));
+    theServer = PlatSocketAccept(theListen, NULL);
+    CHECK(theServer != PLAT_SOCKET_INVALID);
+    uint32_t t0 = PlatTimeMilliseconds();
+    CHECK(PlatSocketWait(theServer, PLAT_SOCKET_WAIT_READ, 60) == 0);   // no data: the timeout
+    CHECK(PlatTimeMilliseconds() - t0 >= 40);
+    CHECK(PlatSocketSend(theClient, "abc", 3) == 3);
+    CHECK(PlatSocketWait(theServer, PLAT_SOCKET_WAIT_READ | PLAT_SOCKET_WAIT_WRITE, 5000)
+          == static_cast<int32_t>(PLAT_SOCKET_WAIT_READ | PLAT_SOCKET_WAIT_WRITE));
+    CHECK(PlatSocketRecv(theServer, theBuffer, sizeof(theBuffer)) == 3);
+    // shutdown: the peer reads the end of the stream (readable, then 0 bytes)
+    CHECK(PlatSocketShutdown(theClient, PLAT_SOCKET_SHUT_SEND));
+    CHECK(PlatSocketWait(theServer, PLAT_SOCKET_WAIT_READ, 5000) & PLAT_SOCKET_WAIT_READ);
+    CHECK(PlatSocketRecv(theServer, theBuffer, sizeof(theBuffer)) == 0);
+    CHECK(PlatSocketSend(theServer, "back", 4) == 4);   // the other direction still open
+    CHECK(PlatSocketWait(theClient, PLAT_SOCKET_WAIT_READ, 5000) & PLAT_SOCKET_WAIT_READ);
+    CHECK(PlatSocketRecv(theClient, theBuffer, sizeof(theBuffer)) == 4);
+    CHECK(PlatSocketShutdown(theServer, PLAT_SOCKET_SHUT_BOTH));
+    PlatSocketClose(theClient);
+    PlatSocketClose(theServer);
+    CHECK(PlatSocketClose(theListen));
+    // a refused non-blocking connect: except, with the reason pending
+    theRefused = PlatSocketOpen(PLAT_SOCKET_STREAM);
+    CHECK(PlatSocketSetNonBlocking(theRefused, 1));
+    CHECK(!PlatSocketConnect(theRefused, &theBound));
+    if (PlatSocketLastError() == PLAT_SOCK_EWOULDBLOCK) {   // else refused at once (allowed for loopback)
+        int32_t theReady = PlatSocketWait(theRefused, PLAT_SOCKET_WAIT_WRITE | PLAT_SOCKET_WAIT_EXCEPT, 10000);
+        CHECK(theReady == static_cast<int32_t>(PLAT_SOCKET_WAIT_EXCEPT));
+        CHECK(PlatSocketGetError(theRefused) == PLAT_SOCK_ECONNREFUSED);
+    } else
+        CHECK(PlatSocketLastError() == PLAT_SOCK_ECONNREFUSED);
+    PlatSocketClose(theRefused);
     PlatEventDestroy(theAcceptEvent);
     PlatEventDestroy(theDataEvent);
     PlatSocketCleanup();
@@ -664,6 +749,14 @@ static void TestMessages()
 #else
     (void)Capture;
 #endif
+    // the machine id: the same on every call (a machine without one, e.g. a container lacking /etc/machine-id,
+    // reports that and 0)
+    int theOk = -1, theOkAgain = -1;
+    uint32_t theId = PlatSystemMachineId(&theOk);
+    CHECK(PlatSystemMachineId(&theOkAgain) == theId && theOk == theOkAgain && (theOk == 0 || theOk == 1));
+    CHECK(theOk || theId == 0);
+    CHECK(PlatSystemMachineId(NULL) == theId);
+    printf("   machine id %08x (%s)\n", theId, theOk ? "found" : "none");
 }
 
 int main(int argc, char** argv)

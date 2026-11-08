@@ -180,6 +180,11 @@ extern "C" int PlatThreadGetExitCode(PlatThread* inThread, uint32_t* outExitCode
     return 1;
 }
 
+extern "C" int32_t PlatThreadWait(PlatThread* inThread, uint32_t inTimeoutMs)
+{
+    return WaitResult(WaitForSingleObject(reinterpret_cast<HANDLE>(inThread), inTimeoutMs), 1);
+}
+
 extern "C" int32_t PlatThreadGetPriority(PlatThread* inThread)
 {
     return GetThreadPriority(reinterpret_cast<HANDLE>(inThread));

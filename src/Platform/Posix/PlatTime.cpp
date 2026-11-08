@@ -87,6 +87,15 @@ extern "C" void PlatGetLocalTime(PlatDateTime* outTime)
     outTime->mMilliseconds = static_cast<uint16_t>(theNow.tv_usec / 1000);
 }
 
+extern "C" uint64_t PlatTimeWallClock100ns(void)
+{
+    // the Unix epoch is 11644473600 seconds after 1601-01-01 (FILETIME's)
+    struct timespec theNow;
+    clock_gettime(CLOCK_REALTIME, &theNow);
+    return (static_cast<uint64_t>(theNow.tv_sec) + 11644473600ULL) * 10000000ULL
+        + static_cast<uint64_t>(theNow.tv_nsec) / 100ULL;
+}
+
 // ---- system timers
 
 namespace {

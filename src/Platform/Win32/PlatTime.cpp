@@ -134,3 +134,10 @@ extern "C" int PlatTimerStop(uint32_t inTimerID)
     ReleaseSRWLockExclusive(&sTimerLock);
     return 1;
 }
+
+extern "C" uint64_t PlatTimeWallClock100ns(void)
+{
+    FILETIME theTime;
+    GetSystemTimeAsFileTime(&theTime);
+    return (static_cast<uint64_t>(theTime.dwHighDateTime) << 32) | theTime.dwLowDateTime;
+}

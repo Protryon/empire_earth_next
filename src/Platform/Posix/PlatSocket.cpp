@@ -19,6 +19,7 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <map>
@@ -74,6 +75,38 @@ uint32_t WinsockError(int inErrno)
     case ETIMEDOUT: return PLAT_SOCK_ETIMEDOUT;
     case ECONNREFUSED: return PLAT_SOCK_ECONNREFUSED;
     case EHOSTUNREACH: return PLAT_SOCK_EHOSTUNREACH;
+    case EDESTADDRREQ: return PLAT_SOCK_EDESTADDRREQ;
+    case EPROTOTYPE: return PLAT_SOCK_EPROTOTYPE;
+    case ENOPROTOOPT: return PLAT_SOCK_ENOPROTOOPT;
+    case EPROTONOSUPPORT: return PLAT_SOCK_EPROTONOSUPPORT;
+#if defined(ESOCKTNOSUPPORT)
+    case ESOCKTNOSUPPORT: return PLAT_SOCK_ESOCKTNOSUPPORT;
+#endif
+#if defined(EPFNOSUPPORT)
+    case EPFNOSUPPORT: return PLAT_SOCK_EPFNOSUPPORT;
+#endif
+    case EAFNOSUPPORT: return PLAT_SOCK_EAFNOSUPPORT;
+    case ENETRESET: return PLAT_SOCK_ENETRESET;
+#if defined(ESHUTDOWN)
+    case ESHUTDOWN: return PLAT_SOCK_ESHUTDOWN;
+#endif
+#if defined(ETOOMANYREFS)
+    case ETOOMANYREFS: return PLAT_SOCK_ETOOMANYREFS;
+#endif
+    case ELOOP: return PLAT_SOCK_ELOOP;
+    case ENAMETOOLONG: return PLAT_SOCK_ENAMETOOLONG;
+#if defined(EHOSTDOWN)
+    case EHOSTDOWN: return PLAT_SOCK_EHOSTDOWN;
+#endif
+    case ENOTEMPTY: return PLAT_SOCK_ENOTEMPTY;
+#if defined(EUSERS)
+    case EUSERS: return PLAT_SOCK_EUSERS;
+#endif
+    case EDQUOT: return PLAT_SOCK_EDQUOT;
+    case ESTALE: return PLAT_SOCK_ESTALE;
+#if defined(EREMOTE)
+    case EREMOTE: return PLAT_SOCK_EREMOTE;
+#endif
     default: return PLAT_SOCK_OTHER;
     }
 }
@@ -316,6 +349,96 @@ extern "C" int PlatSocketSetBroadcast(PlatSocket inSocket, int inBroadcast)
 {
     int theValue = inBroadcast ? 1 : 0;
     return setsockopt(Fd(inSocket), SOL_SOCKET, SO_BROADCAST, &theValue, sizeof(theValue)) == 0 ? 1 : FailErrno();
+}
+
+extern "C" int PlatSocketSetLinger(PlatSocket inSocket, int inOn, int inSeconds)
+{
+    linger theValue;
+    theValue.l_onoff = inOn ? 1 : 0;
+    theValue.l_linger = inSeconds;
+    return setsockopt(Fd(inSocket), SOL_SOCKET, SO_LINGER, &theValue, sizeof(theValue)) == 0 ? 1 : FailErrno();
+}
+
+extern "C" int PlatSocketSetReuseAddress(PlatSocket inSocket, int inReuse)
+{
+    int theValue = inReuse ? 1 : 0;
+    return setsockopt(Fd(inSocket), SOL_SOCKET, SO_REUSEADDR, &theValue, sizeof(theValue)) == 0 ? 1 : FailErrno();
+}
+
+extern "C" int PlatSocketSetNoDelay(PlatSocket inSocket, int inNoDelay)
+{
+    int theValue = inNoDelay ? 1 : 0;
+    return setsockopt(Fd(inSocket), IPPROTO_TCP, TCP_NODELAY, &theValue, sizeof(theValue)) == 0 ? 1 : FailErrno();
+}
+
+extern "C" int PlatSocketShutdown(PlatSocket inSocket, int inHow)
+{
+    int theHow = inHow == PLAT_SOCKET_SHUT_RECEIVE ? SHUT_RD : inHow == PLAT_SOCKET_SHUT_SEND ? SHUT_WR : SHUT_RDWR;
+    return shutdown(Fd(inSocket), theHow) == 0 ? 1 : FailErrno();
+}
+
+extern "C" int32_t PlatSocketWait(PlatSocket inSocket, uint32_t inMask, uint32_t inTimeoutMs)
+{
+    pollfd theFd = {Fd(inSocket), 0, 0};
+    if (inMask & PLAT_SOCKET_WAIT_READ)
+        theFd.events |= POLLIN;
+    if (inMask & PLAT_SOCKET_WAIT_WRITE)
+        theFd.events |= POLLOUT;
+    // POLLERR / POLLHUP are always reported; with no condition asked for poll still waits out the timeout (select
+    // with an empty set does the same)
+    timespec theStart;
+    clock_gettime(CLOCK_MONOTONIC, &theStart);
+    int theResult;
+    for (;;) {
+        int theTimeout = -1;
+        if (inTimeoutMs != 0xFFFFFFFFu) {
+            timespec theNow;
+            clock_gettime(CLOCK_MONOTONIC, &theNow);
+            int64_t theElapsed = (static_cast<int64_t>(theNow.tv_sec) - theStart.tv_sec) * 1000
+                + (theNow.tv_nsec - theStart.tv_nsec) / 1000000;
+            int64_t theLeft = static_cast<int64_t>(inTimeoutMs) - theElapsed;
+            theTimeout = theLeft <= 0 ? 0 : theLeft > 0x7fffffff ? 0x7fffffff : static_cast<int>(theLeft);
+        }
+        theResult = poll(&theFd, 1, theTimeout);
+        if (theResult >= 0 || errno != EINTR)
+            break;
+    }
+    if (theResult < 0) {
+        FailErrno();
+        return -1;
+    }
+    if (theResult == 0)
+        return 0;
+    if (theFd.revents & POLLNVAL) {
+        tSocketError = PLAT_SOCK_ENOTSOCK;
+        return -1;
+    }
+    int32_t theReady = 0;
+    if (theFd.revents & POLLIN)
+        theReady |= PLAT_SOCKET_WAIT_READ;
+    if (theFd.revents & POLLOUT)
+        theReady |= PLAT_SOCKET_WAIT_WRITE;
+    if (theFd.revents & (POLLERR | POLLHUP)) {
+        // select reports a reset or closed stream as readable (the receive then tells which). A failed connect is
+        // except only on Winsock, while poll adds POLLOUT: when EXCEPT is asked for it wins over WRITE; otherwise the
+        // socket counts as writable (the send then fails with the reason).
+        theReady |= PLAT_SOCKET_WAIT_READ;
+        if (inMask & PLAT_SOCKET_WAIT_EXCEPT)
+            theReady = (theReady & ~static_cast<int32_t>(PLAT_SOCKET_WAIT_WRITE)) | PLAT_SOCKET_WAIT_EXCEPT;
+        else
+            theReady |= PLAT_SOCKET_WAIT_WRITE;
+    }
+    theReady &= static_cast<int32_t>(inMask);
+    return theReady;
+}
+
+extern "C" uint32_t PlatSocketGetError(PlatSocket inSocket)
+{
+    int theError = 0;
+    socklen_t theLength = sizeof(theError);
+    if (getsockopt(Fd(inSocket), SOL_SOCKET, SO_ERROR, &theError, &theLength) != 0)
+        theError = errno;
+    return theError == 0 ? 0 : WinsockError(theError);
 }
 
 extern "C" int32_t PlatSocketSend(PlatSocket inSocket, const void* inData, uint32_t inLength)

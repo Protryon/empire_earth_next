@@ -2,6 +2,8 @@
 // flags passed through (they are the MB_* values).
 #include <windows.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include "platform/PlatMessage.h"
 #include "platform/PlatSim.h"
@@ -18,6 +20,35 @@ extern "C" uint16_t PlatSystemLanguageId(void)
 extern "C" uint32_t PlatSystemVersion(void)
 {
     return GetVersion();
+}
+
+extern "C" uint32_t PlatSystemMachineId(int* outOk)
+{
+    // CDKey::GetMachineId: the volume of the Windows directory, its serial (0 when GetVolumeInformation fails)
+    char thePath[MAX_PATH];
+    char theDrive[_MAX_DRIVE];
+    char theDirectory[_MAX_DIR];
+    char theName[_MAX_FNAME];
+    char theExtension[_MAX_EXT];
+    if (outOk)
+        *outOk = 1;
+    GetWindowsDirectoryA(thePath, MAX_PATH);
+    _splitpath(thePath, theDrive, theDirectory, theName, theExtension);
+    char theRoot[_MAX_DRIVE + 1];
+    size_t theLength = strlen(theDrive);
+    if (theLength != 0) {
+        memcpy(theRoot, theDrive, theLength + 1);
+        if (theRoot[theLength - 1] != '\\') {
+            theRoot[theLength] = '\\';
+            theRoot[theLength + 1] = 0;
+        }
+        DWORD theSerial = 0;
+        GetVolumeInformationA(theRoot, NULL, 0, &theSerial, NULL, NULL, NULL, 0);
+        return theSerial;
+    }
+    if (outOk)
+        *outOk = 0;
+    return 0;
 }
 
 extern "C" void PlatSystemShutdown(void)

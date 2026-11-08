@@ -58,6 +58,9 @@ void PlatThreadClose(PlatThread* inThread);
 // The exit code, PLAT_THREAD_STILL_ACTIVE while the thread runs -> nonzero on success
 #define PLAT_THREAD_STILL_ACTIVE 259u
 int PlatThreadGetExitCode(PlatThread* inThread, uint32_t* outExitCode);
+// Waits up to inTimeoutMs (PLAT_WAIT_INFINITE: forever) for the thread to end -> 0 when it has ended,
+// PLAT_WAIT_TIMEOUT, or PLAT_WAIT_FAILED (PlatGetLastError). Win32: WaitForSingleObject on the thread handle.
+int32_t PlatThreadWait(PlatThread* inThread, uint32_t inTimeoutMs);
 // Scheduling priority, relative to the process (the Win32 THREAD_PRIORITY_* values); PlatThreadGetPriority ->
 // PLAT_PRIORITY_ERROR on failure, PlatThreadSetPriority -> nonzero on success. Another system maps them as it can.
 #define PLAT_PRIORITY_IDLE (-15)
