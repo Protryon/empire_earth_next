@@ -4,7 +4,7 @@ debug: game_log is false), for the human and the computer players alike.
   python -I tools/game_log.py [LOG ...] [--every MIN] [--data ROOT] [--json OUT]
 
 With no LOG, the newest log under --data's Logs (default: data/, then build/boot/windowed_f) is read. Per player: who
-it is (human or computer, the AI's personality and cheats), the minute it reached every epoch, and a timeline every
+it is (human or computer, the AI's personality, cheats and engine), the minute it reached every epoch, and a timeline every
 --every minutes (default 2): epoch, citizens (the boats among them, idle, gatherers per resource f/w/s/g/i, builders), army, buildings and
 towers, stock, income per minute and losses (citizens/army/buildings, and by a human's or a computer's units), and
 every chat line with its game minute (notes typed while playing). The
@@ -109,7 +109,9 @@ def main():
             info = players.get(p, {})
             who = info.get("kind", "?")
             if who == "computer":
-                who += f" {info.get('personality', '-')} cheats={info.get('cheats', '-')}"
+                # engine: classic or next (ee/EECPEngine.h; older logs have none: classic)
+                who += (f" {info.get('personality', '-')} cheats={info.get('cheats', '-')}"
+                        f" engine={info.get('engine', 'classic')}")
             reached = ", ".join(f"e{e} {t / 60000:.1f}m" for e, t in sorted(epochs[p].items())) or "none"
             color = colors.get(int(info["color"]), f"color {info['color']}") if info.get("color", "").isdigit() else "?"
             print(f"\np{p} {color} {who} civ={info.get('civ', '-')}: epochs {reached}")

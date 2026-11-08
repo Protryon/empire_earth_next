@@ -1,7 +1,7 @@
 """TEST ONLY: a matrix of headless simulations (EE-SIM.exe, tools/sim.py): seeds x settings, several at once.
 
-Every cell of seeds x map sizes x map types x difficulties x AI counts x cheat sets x personalities x rules variants
-is one EE-SIM.exe game (seeded, with the AI trace), `--repeat` times. `--jobs N` runs N games at once, each in its
+Every cell of seeds x map sizes x map types x difficulties x AI counts x cheat sets x personalities x engines x rules
+variants is one EE-SIM.exe game (seeded, with the AI trace), `--repeat` times. `--jobs N` runs N games at once, each in its
 own staged data root (build/sim/stage/<bench>-<k>). Output in build/sim/bench/<name>/: runs/<id>.json (the game's
 report), runs/<id>.trace.txt (its EE-AI lines, the harness's session-log form), runs/<id>.err.txt (progress),
 results.json and results.csv (one row per run and player). With --repeat 2 the repeats' traces are compared
@@ -10,6 +10,7 @@ results.json and results.csv (one row per run and player). With --repeat 2 the r
   python -I tools/sim_bench.py --name base --seeds 2-7 --cheats none --personality balanced --jobs 2
   python -I tools/sim_bench.py --name floor --seeds 2,3 --vary aipersonalities.balanced.military.army_floor=0.1,0.2,0.3
   python -I tools/sim_bench.py --name det --seeds 2 --repeat 2
+  python -I tools/sim_bench.py --name eng --seeds 2-7 --engine "classic;next,classic"   # the engine by seat
 
 --set DOC.KEY=VALUE applies to every run; each --vary DOC.KEY=V1,V2,... adds a dimension (one run per value).
 --env NAME=VALUE sets an environment variable for every run; each --env-vary NAME=V1,V2,... adds a dimension, e.g.
@@ -73,6 +74,8 @@ def run_one(run, args, slots, out):
             opts += ["--cheats", run["cheats"]]
         if run["personality"] != "-":
             opts += ["--personality", run["personality"]]
+        if run["engine"] != "-":
+            opts += ["--engine", run["engine"]]
         if args.human_defeat:
             opts.append("--human-defeat")
         for s in run["sets"]:
@@ -114,6 +117,8 @@ def main():
     ap.add_argument("--ai", default="2")
     ap.add_argument("--cheats", default="none", help="EE_AI_CHEATS sets, comma separated (- unset: all)")
     ap.add_argument("--personality", default="balanced", help="EE_AI_PERSONALITY values, ';' between variants")
+    ap.add_argument("--engine", default="-", help="EE-SIM --engine values (classic, next, random; ',' by seat), "
+                                                  "';' between variants (- the lobby's classic)")
     ap.add_argument("--set", action="append", default=[], help="DOC.KEY=VALUE for every run")
     ap.add_argument("--vary", action="append", default=[], help="DOC.KEY=V1,V2,...: one dimension")
     ap.add_argument("--env", action="append", default=[], help="NAME=VALUE for every run")
@@ -146,16 +151,18 @@ def main():
     fixed = dict(e.split("=", 1) for e in a.env)
     cells = list(itertools.product([int(s, 0) for s in split(a.seeds)], split(a.sizes), split(a.maps),
                                    split(a.difficulty), [int(x) for x in split(a.ai)], split(a.cheats),
-                                   [p for p in a.personality.split(";") if p] or ["-"], range(len(variants)),
+                                   [p for p in a.personality.split(";") if p] or ["-"],
+                                   [e for e in a.engine.split(";") if e] or ["-"], range(len(variants)),
                                    range(len(envs))))
     runs = []
-    for (seed, size, map_type, difficulty, ai, cheats, pers, v, ev), k in itertools.product(cells, range(a.repeat)):
+    for (seed, size, map_type, difficulty, ai, cheats, pers, eng, v, ev), k in itertools.product(cells, range(a.repeat)):
         tag = "-".join([s.split(".")[-1] + "=" + s.split("=", 1)[1] for s in variants[v]] +
                        [n + "=" + x.replace("/", "~") for n, x in envs[ev].items()])
         rid = (f"s{seed}-{map_type.replace(' ', '_')}-{size}-{difficulty}-{ai}ai-{cheats.replace('/', '~')}"
-               f"-{pers.replace(',', '+').replace('/', '~')}" + (f"-{tag}" if tag else "") + f"-r{k}").replace("--", "-")
+               f"-{pers.replace(',', '+').replace('/', '~')}" + (f"-eng={eng.replace(',', '+')}" if eng != "-" else "")
+               + (f"-{tag}" if tag else "") + f"-r{k}").replace("--", "-")
         runs.append(dict(id=rid, seed=seed, size=size, map=map_type, difficulty=difficulty, ai=ai, cheats=cheats,
-                         personality=pers, variant=variants[v], sets=a.set + variants[v], repeat=k,
+                         personality=pers, engine=eng, variant=variants[v], sets=a.set + variants[v], repeat=k,
                          env=dict(fixed, **envs[ev])))
     out = BENCH / a.name / "runs"
     out.mkdir(parents=True, exist_ok=True)
@@ -185,7 +192,7 @@ def main():
                   flush=True)
     (out.parent / "results.json").write_text(json.dumps(dict(test_only=True, runs=results, determinism=checks,
                                                              wall_seconds=round(total, 1)), indent=2) + "\n")
-    fields = ["run", "seed", "size", "map", "difficulty", "ai", "cheats", "personality", "variant", "repeat", "rc",
+    fields = ["run", "seed", "size", "map", "difficulty", "ai", "cheats", "personality", "engine", "variant", "repeat", "rc",
               "outcome", "game_s", "wall", "wall_game", "winner", "player", "human", "result", "epoch", "population",
               "victory_units", "citizens", "army", "buildings", "food", "wood", "stone", "gold", "iron"]
     with open(out.parent / "results.csv", "w", newline="", encoding="utf-8") as f:
@@ -194,7 +201,8 @@ def main():
         for r in results:
             rep = r["report"]
             base = dict(run=r["id"], seed=r["seed"], size=r["size"], map=r["map"], difficulty=r["difficulty"],
-                        ai=r["ai"], cheats=r["cheats"], personality=r["personality"], variant=";".join(r["variant"]),
+                        ai=r["ai"], cheats=r["cheats"], personality=r["personality"], engine=r["engine"],
+                        variant=";".join(r["variant"]),
                         repeat=r["repeat"], rc=r["rc"], outcome=rep.get("outcome"),
                         game_s=rep.get("game_ms", 0) // 1000, wall=r["wall"], wall_game=rep.get("wall_seconds_game"),
                         winner=rep.get("winner"))

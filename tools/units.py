@@ -38,6 +38,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
                        "Empire Earth/WONAPI/WONAPIStubs.cpp",
                        # the computer-player decision trace and cheat switches (docs/AI_RESEARCH.md stage 0)
                        "Empire Earth/AI Thread/EECPTrace.cpp",
+                       # the computer player's engine per seat: classic or next (docs/AI_LUA_PLAN.md S0)
+                       "Empire Earth/AI Thread/EECPEngine.cpp",
                        # the computer player's Lua runtime: the strategy scripts' sandbox (docs/AI_LUA_PLAN.md §3)
                        "Empire Earth/AI Thread/EECPLua.cpp",
                        # the game log: every game, human and computer players (ee/EEGameLog.h)

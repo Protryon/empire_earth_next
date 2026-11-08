@@ -16,6 +16,7 @@
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEPPlayerHelper.h"
 #include "ee/EEPersistentTag.h"
+#include "ee/EECPEngine.h"
 
 const UString EEPPlayerHelper::sPlayerCount("EEPPlayerHelper-PlayerCount");
 const UString EEPPlayerHelper::sPlayerNum("EEPPlayerHelper-PlayerNum");
@@ -123,6 +124,14 @@ long EEPPlayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                                 theResult = kErrorFailed;
                             else
                                 theResult = thePlayer->Load(inMajorVersion, inMinorVersion, inFile);
+                            // port: a computer player's engine from version 0.251 (ee/EECPEngine.h; older: classic)
+                            if (theResult == kErrorOK && theType == 1 && thePlayer->mComputerPlayer != NULL
+                                && (inMajorVersion > 0 || inMinorVersion >= 251)) {
+                                unsigned char theEngine = kEECPEngineClassic;
+                                theResult = inFile.Read(theEngine);
+                                thePlayer->mComputerPlayer->mEngine =
+                                    theEngine == kEECPEngineNext ? kEECPEngineNext : kEECPEngineClassic;
+                            }
                             if (theResult == kErrorOK)
                                 this->mPlayers.push_back(thePlayer);
                         }
@@ -200,6 +209,8 @@ long EEPPlayerHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVe
         theResult = outFile.Write(theType);
         if (theResult == kErrorOK)
             theResult = thePlayer->Save(inMajorVersion, inMinorVersion, outFile);
+        if (theResult == kErrorOK && theType == 1)   // port: the computer player's engine (Load: from 0.251)
+            theResult = outFile.Write(thePlayer->mComputerPlayer->mEngine);
     }
     return theResult;
     return kErrorFailed;

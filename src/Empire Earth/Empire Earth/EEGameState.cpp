@@ -65,6 +65,7 @@
 #include "ee/EETeam.h"
 #include "ee/EEGameState.h"
 #include "ee/EEGameOptions.h"
+#include "ee/EECPEngine.h"
 #include "ee/EEStatisticsRecord.h"
 #include "ee/EEDatabase.h"
 #include "ee/EEDatabaseTables.h"
@@ -308,6 +309,9 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
         this->mPlayers[0] = new EEHumanPlayer(UWideString("World"), 0);
         unsigned long thePlayerID = 1;
         unsigned long theColor = 0;
+        long theEngines[16];   // port: the computer slots' resolved engines (-1: not a computer slot)
+        for (i = 0; i < 16; i++)
+            theEngines[i] = -1;
         for (i = 0; i < 16; i++) {
             theSlot = inOptions.mPlayers[i];
             if (theSlot.mType != 1 && theSlot.mType != 0 && theSlot.mType != 2)
@@ -318,7 +322,12 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
                     theColor++;
                 theSlot.mColor = theColor++;
                 gResource->GetString(IDS_COMPUTER, theComputerName);
-                thePlayer = new EEComputerPlayer(theComputerName, thePlayerID);
+                EEComputerPlayer* theComputer = new EEComputerPlayer(theComputerName, thePlayerID);
+                // port: the slot's engine, random drawn here (the seed is every peer's; ee/EECPEngine.h)
+                theComputer->mEngine = (unsigned char)EECPEngineResolve(theSlot.mEngine, gUserInterface->mRandomSeed,
+                                                                        i, thePlayerID);
+                theEngines[i] = (long)theComputer->mEngine;
+                thePlayer = theComputer;
             } else {
                 if (theSlot.mType == 2) {
                     while (theUsedColors[theColor])
@@ -416,6 +425,9 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
         if (inOptions.mLoadType == 3)
             this->mNumPlayersMade = 3;
         this->mGameOptions = inOptions;
+        for (i = 0; i < 16; i++)   // port: the game's options hold the engines played (a saved game shows them)
+            if (theEngines[i] >= 0)
+                this->mGameOptions.mPlayers[i].mEngine = (unsigned long)theEngines[i];
         if (inOptions.mEpochStart == EEEpochCount()) {   // random
             theRandom.SetSeed(gUserInterface->mRandomSeed);
             this->mGameOptions.mEpochStart = theRandom.Generate(0, inOptions.mEpochEnd);

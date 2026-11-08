@@ -74,6 +74,13 @@ public:
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
 };
 
+// port: the host sets a computer slot's engine from its engine box (kLobbyEngineCombo + slot; ee/EECPEngine.h)
+class EEUIELEChangeEngine : public UIEvent {
+public:
+    virtual ~EEUIELEChangeEngine() {}
+    virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
+};
+
 class EEUIELEGameType : public UIEvent {                // vtable 0x4466d0; ??_G 0x1dbfe8; ProcessEvent 0x1dfff4
 public:
     virtual ~EEUIELEGameType() {}

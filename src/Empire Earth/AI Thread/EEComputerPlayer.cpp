@@ -34,6 +34,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPEngine.h"
 #include "ee/EEUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
@@ -5904,9 +5905,10 @@ void EEComputerPlayer::Update(unsigned long inTime)
     if (!this->mIsStarted) {
         if (EECPCheatOn(this, kAICheatReveal))
             gWorld.mMap->ExploreUnseen(this);
-        EE_CP_TRACE(this, "start", "difficulty=%lu personality=%s cheats=%s cheating=%d cost100=%ld extra=%ld aggression=%ld demand=%d exp=%s",
+        EE_CP_TRACE(this, "start", "difficulty=%lu personality=%s cheats=%s cheating=%d cost100=%ld extra=%ld aggression=%ld demand=%d exp=%s engine=%s",
             this->mDifficulty, EECPPersonality(this).mID.c_str(), EECPCheatNames(this), this->mIsCheating ? 1 : 0, this->ScaleCost(100),
-            EECPCheatOn(this, kAICheatExtra) ? this->mExtraResources : 0L, (long)this->mComputerAggression, EECPDemandSplitOn(this) ? 1 : 0, EECPExperimentNames(this));
+            EECPCheatOn(this, kAICheatExtra) ? this->mExtraResources : 0L, (long)this->mComputerAggression, EECPDemandSplitOn(this) ? 1 : 0, EECPExperimentNames(this),
+            EECPEngineName(EECPEngine(this)));
         this->EnableManagers(inTime);
         this->SetEnableTime(inTime);
         this->SetNextAttackTime(inTime);
@@ -5926,7 +5928,12 @@ void EEComputerPlayer::Update(unsigned long inTime)
                 this->mCombatManager->mDefenseCommander->BuildUp();
         }
     }
-    if (!this->mObserverMode && this->mFirstUnit != NULL) {
+    // port: the engine's branch point (ee/EECPEngine.h; docs/AI_LUA_PLAN.md S0). The next engine's tick replaces
+    // the managers' decisions; the classic engine takes the original's path below, unchanged.
+    if (!this->mObserverMode && this->mFirstUnit != NULL && EECPEngine(this) == kEECPEngineNext) {
+        EECPTraceScope theNext("next");
+        EECPNextUpdate(this, inTime);
+    } else if (!this->mObserverMode && this->mFirstUnit != NULL) {
         if (this->mRegroupPending) {
             this->UpdateGroups();
             this->mRegroupPending = false;

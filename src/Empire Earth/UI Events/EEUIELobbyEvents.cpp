@@ -76,6 +76,7 @@
 #include "ee/EEServer.h"
 #include "ee/EEWonNet.h"
 #include "ee/EEGameOptions.h"
+#include "ee/EECPEngine.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEGamePreferences.h"
@@ -328,6 +329,28 @@ long EEUIELEChangeCitizenBonus::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
             thePlayer.mStartingCitizens = theSelection + 1;
             gCommunications->ProcessGuaranteedLocalUserInput(
                 new EEMPlayerInformation(4, thePlayer.mSlot, thePlayer.mStartingCitizens, 0.0f), kSlotNone);
+            gWorld.GetLobbyOptions().mPlayers[thePlayer.mSlot] = thePlayer;
+        }
+    }
+    gWorld.GetLobbyOptions().mLock->WriteUnlock();
+    return kErrorOK;
+}
+
+// port: sets a computer slot's engine (classic, next, random: the box's lines in EECPEngineKind's order) from its
+// engine box and sends the change (the host's; ee/EECPEngine.h)
+long EEUIELEChangeEngine::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
+{
+    EEGameOptionsPlayer thePlayer;
+    gWorld.GetLobbyOptions().mLock->WriteLock();
+    UIComboBox* theBox = static_cast<UIComboBox*>(inEntity);
+    unsigned long theSelection;
+    if (gCommunications->IsServer() == true && theBox->GetCurrentSelection(theSelection) == kErrorOK
+        && theSelection < kEECPEngineChoiceCount) {
+        thePlayer = gWorld.GetLobbyOptions().GetPlayer(theBox->GetIndex() - kLobbyEngineCombo);
+        if (thePlayer.mType == 0 && thePlayer.mEngine != theSelection) {
+            thePlayer.mEngine = theSelection;
+            gCommunications->ProcessGuaranteedLocalUserInput(
+                new EEMPlayerInformation(kPlayerInfoEngine, thePlayer.mSlot, thePlayer.mEngine, 0.0f), kSlotNone);
             gWorld.GetLobbyOptions().mPlayers[thePlayer.mSlot] = thePlayer;
         }
     }
@@ -715,6 +738,7 @@ void LobbyOnPlayerTypeYes(UIForm* inForm)
     thePlayer.mName = "";
     thePlayer.mPing = 0.0f;
     thePlayer.mTeam = 0;
+    thePlayer.mEngine = kEECPEngineClassic;   // port
     if (gWonNet)
         gWonNet->GetGameInfo(theInfo);
     if (thePlayer.mType != 0)
@@ -895,6 +919,10 @@ void LobbySetHostEvents(UIForm* inForm)
     theEvent->Dereference();
     theEvent = new EEUIELEChangeCitizenBonus;
     for (i = 126; i < 142; i++)
+        inForm->GetControl(i)->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
+    theEvent->Dereference();
+    theEvent = new EEUIELEChangeEngine;   // port: the computer slots' engine boxes
+    for (i = kLobbyEngineCombo; i < kLobbyEngineCombo + 16; i++)
         inForm->GetControl(i)->SetTriggerEvent(kControlTriggerSelectionChanged, theEvent);
     theEvent->Dereference();
 }
@@ -1166,6 +1194,7 @@ long LobbyRebuildPlayers(EEPSaveGameHeader& inHeader)
                 theOthers.back().mColor = theSaved.mColor;
                 theOthers.back().mTeam = theSaved.mTeam;
                 theOthers.back().mB36 = theSaved.mB36;
+                theOthers.back().mEngine = theSaved.mEngine;   // port: the engine the saved game played (shown)
                 gGameOptions.mPlayers[theOthers.back().mSlot] = theOthers.back();
                 theOthers.pop_back();
             }
@@ -1192,6 +1221,7 @@ long LobbyRebuildPlayers(EEPSaveGameHeader& inHeader)
                         theOthers.back().mColor = theSaved.mColor;
                         theOthers.back().mTeam = theSaved.mTeam;
                         theOthers.back().mB36 = theSaved.mB36;
+                        theOthers.back().mEngine = theSaved.mEngine;   // port (shown)
                         gWorld.GetLobbyOptions().mPlayers[theOthers.back().mSlot] = theOthers.back();
                         theOthers.pop_back();
                     } else if (theHumans.size() > 0) {
@@ -1266,6 +1296,34 @@ long LobbyApplySavedGameOptions(EEPSaveGameHeader& inHeader)
     gGameOptions.mVictory = theOptions.mVictory;
     gCommunications->ProcessGuaranteedLocalUserInput(new EEMFullGameOptions(gGameOptions), kSlotNone);
     return 0;
+}
+
+// port: shows a slot's engine (ee/EECPEngine.h) in the engine column: only on a computer row; the host's box until
+// the host is ready on a new game (as the citizens box), the label otherwise
+static void LobbyShowEngine(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& inHost)
+{
+    UWideString theText;
+    UIForm* theForm = gUIManager->GetFormByID(kFormLobby);
+    if (inPlayer.mSlot >= 16)
+        return;
+    UIComboBox* theBox = static_cast<UIComboBox*>(theForm->GetControl(inPlayer.mSlot + kLobbyEngineCombo));
+    UITextLabel* theLabel = static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + kLobbyEngineLabel));
+    unsigned long theEngine = inPlayer.mEngine < kEECPEngineChoiceCount ? inPlayer.mEngine : kEECPEngineClassic;
+    if (inPlayer.mType != 0) {
+        theBox->SetDisplayMode(kDisplayModeHidden);
+        theLabel->SetDisplayMode(kDisplayModeHidden);
+    } else if (gCommunications->IsServer() == true && inHost.mIsReady == false && gGameOptions.mLoadType == 0) {
+        theBox->SetDisplayMode(inPlayer.mSlot < 8);
+        theLabel->SetDisplayMode(kDisplayModeHidden);
+    } else {
+        theBox->SetDisplayMode(kDisplayModeHidden);
+        theLabel->SetDisplayMode(inPlayer.mSlot < 8);
+    }
+    unsigned long theSelection;
+    if (theBox->GetCurrentSelection(theSelection) != kErrorOK || theSelection != theEngine)
+        theBox->SetCurrentSelection(theEngine);
+    gResource->GetString(kLobbyEngineClassicString + theEngine, theText);
+    theLabel->SetText(theText);
 }
 
 // FUNCTION: EXE 0x5dce59
@@ -1375,6 +1433,8 @@ void LobbyShowPlayer(EEGameOptionsPlayer& inPlayer, const EEGameOptionsPlayer& i
         sprintf(theText, "%ld", inPlayer.mStartingCitizens);
         static_cast<UITextLabel*>(theForm->GetControl(inPlayer.mSlot + 142))->SetText(theText);
     }
+    if (inFlags == 0 || inFlags == kPlayerInfoEngine || inFlags == 8)   // port: the engine (with the type: a computer row's)
+        LobbyShowEngine(inPlayer, inHost);
     if (inFlags != 1 && inFlags != 8)
         return;
     if ((inPlayer.mType == 1 || inPlayer.mType == 2) && inPlayer.mSlot != 0)
@@ -2188,6 +2248,16 @@ void LobbyOpen(UIForm* inForm)
     }
     for (i = 0; i < 16; i++)
         sPlayerTypeMenus[i] = 0;
+    // port: the engine column (EEUIManager's ctor adds it): the rows show their engine with LobbyShowPlayer; the
+    // header replaces the ping label ("Ping / AI"; single player: "AI", EEUIELEActivateSinglePlayer)
+    for (i = 0; i < 16; i++) {
+        inForm->GetControl(kLobbyEngineCombo + i)->SetDisplayMode(kDisplayModeHidden);
+        inForm->GetControl(kLobbyEngineLabel + i)->SetDisplayMode(kDisplayModeHidden);
+    }
+    gResource->GetString(kLobbyEnginePingHeaderString, theText);
+    static_cast<UITextLabel*>(inForm->GetControl(kLobbyEngineHeader))->SetText(theText);
+    inForm->GetControl(kLobbyEngineHeader)->SetDisplayMode(kDisplayModeShown);
+    inForm->GetControl(kLobbyPingLabel)->SetDisplayMode(kDisplayModeHidden);
 }
 
 // FUNCTION: EXE 0x5df874
@@ -2236,6 +2306,11 @@ long EEUIELEActivateSinglePlayer::ProcessEvent(UIForm* inForm, UIEntity* inEntit
     inForm->GetControl(kLobbyChatPreviousMessages)->SetDisplayMode(kDisplayModeHidden);
     inForm->GetControl(kLobbyReadyLabel)->SetDisplayMode(kDisplayModeHidden);
     inForm->GetControl(kLobbyPingLabel)->SetDisplayMode(kDisplayModeHidden);
+    {   // port: the engine column's header without the ping (LobbyOpen)
+        UWideString theText;
+        gResource->GetString(kLobbyEngineHeaderString, theText);
+        static_cast<UITextLabel*>(inForm->GetControl(kLobbyEngineHeader))->SetText(theText);
+    }
     inForm->SetFormKeyboardCapturedEvent(NULL);
     inForm->GetControl(kLobbyStartGameButton)->SetDisplayMode(kDisplayModeShown);
     inForm->GetBackgroundByID(0x89)->SetVisibility(false);

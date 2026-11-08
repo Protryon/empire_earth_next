@@ -51,6 +51,7 @@
 #include "platform/PlatSim.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPEngine.h"
 #include "ee/EEGameLog.h"
 #include "ee/EEColorTable.h"
 
@@ -162,11 +163,11 @@ void Open()
             continue;
         EEComputerPlayer* ai = p->mComputerPlayer;
         // color: the dbcolortable row (tools/game_log.py names it from the data); rgb its colour
-        Write("EE-GAME 0 p%lu player kind=%s name=%s color=%lu rgb=%.2f/%.2f/%.2f civ=%s personality=%s cheats=%s\n", i,
+        Write("EE-GAME 0 p%lu player kind=%s name=%s color=%lu rgb=%.2f/%.2f/%.2f civ=%s personality=%s cheats=%s engine=%s\n", i,
               p->IsHuman() ? "human" : ai != NULL ? "computer" : "other", Narrow(p->mName).c_str(),
               (unsigned long)EEColorTable::FindIndex(p->mColor), p->mColor.mRed, p->mColor.mGreen, p->mColor.mBlue,
               Narrow(p->mCivilization.GetName()).c_str(), ai != NULL ? EECPPersonality(ai).mID.c_str() : "-",
-              ai != NULL ? EECPCheatNames(ai) : "-");
+              ai != NULL ? EECPCheatNames(ai) : "-", ai != NULL ? EECPEngineName(EECPEngine(ai)) : "-");
         sCiv[i] = Narrow(p->mCivilization.GetName());
     }
     // the computer players' decision trace into the log too (EECPTraceOut; the sim hash stays EE_AI_TRACE's)

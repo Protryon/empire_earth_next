@@ -1238,7 +1238,9 @@ lld-link of every object (`build.py link_exe`; `exe/link.rsp`, `exe/link.log`).
   tree by hard links (5,700 files in a few seconds); only Saved Games and Scenarios, which the game writes into, are
   copied. The file-open log of every run is the evidence that no data.ssa and nothing of either install is opened.
 - **Windows tooling traps met here**: Python's `write_text` writes CRLF on Windows and the repository stores every
-  file byte for byte (`* -text`), so a script edit turned whole files into CRLF diffs: write bytes. Git Bash rewrites
+  file byte for byte (`* -text`), so a script edit turned whole files into CRLF diffs: write bytes. Git Bash's
+  `sed -i` does the opposite to the few CRLF files (e.g. tools/harness/savefile.py): it writes them back as LF, a
+  whole-file diff (`git ls-files --eol` lists which files are CRLF). Git Bash rewrites
   arguments that start with `/` (`reg export KEY FILE /y` fails): call reg.exe from PowerShell or set
   `MSYS_NO_PATHCONV=1`.
 - **Gates** (test build, game key HKCU Mad Doc Software EE-AOC deleted for the runs and restored after; no data.ssa
