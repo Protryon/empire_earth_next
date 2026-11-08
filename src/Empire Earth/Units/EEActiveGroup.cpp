@@ -1494,12 +1494,14 @@ void EEActiveGroup::SplitCalamityCasters(EECalamityClass* inCalamity, EETechTree
             && theUnit->GetPower() >= inCalamity->GetCost() && inNode->Contains(theUnit->mUnitClass->mUnitType))
             i++;
         else {
+            theUnit->Reference();   // Fix: RemoveUnit may release a dead unit's last reference (RemoveUnit)
             this->RemoveUnit(theUnit);
             if (theUnit->mHitPoints > 0 && theUnit->mStats->mAttack > 0.0f) {
                 if (theGroup == NULL)
                     theGroup = new EEActiveGroup(this->mPlayer);
                 theGroup->Add(theUnit);
             }
+            theUnit->Dereference();
         }
     }
     if (!theGroup)
@@ -1516,22 +1518,26 @@ void EEActiveGroup::SplitCalamityCasters(EECalamityClass* inCalamity, EETechTree
 
 // FUNCTION: EXE 0x5efa05
 // Removes a unit from the group, its reserved destination and its path request (cancelling a request left empty)
+// Fix: EEGroup::RemoveUnit releases the group's reference, the last one of a dead unit (Validate removes those), and
+// the original went on reading the unit (an ASan use-after-free with EE_UNIT_POOL=0, 2026-11-07): held to the end.
 void EEActiveGroup::RemoveUnit(EEComplexUnit* inUnit)
 {
+    inUnit->Reference();
     EEGroup::RemoveUnit(inUnit);
     if (inUnit->mActiveGroup)
         inUnit->mActiveGroup->Dereference();
     inUnit->mActiveGroup = NULL;
     this->mDestinations.erase(inUnit->mUnitID);
     this->ComputeValues();
-    if (this->mPathRequests.size() <= 0)
-        return;
-    EEGroupPathRequest* theRequest = this->FindPathRequest(inUnit);
-    if (!theRequest)
-        return;
-    theRequest->RemoveUnit(inUnit->mUnitID);
-    if (theRequest->mUnitIDs.size() == 0)
-        this->CancelPathRequest(theRequest->mPath->mRequestID);
+    if (this->mPathRequests.size() > 0) {
+        EEGroupPathRequest* theRequest = this->FindPathRequest(inUnit);
+        if (theRequest) {
+            theRequest->RemoveUnit(inUnit->mUnitID);
+            if (theRequest->mUnitIDs.size() == 0)
+                this->CancelPathRequest(theRequest->mPath->mRequestID);
+        }
+    }
+    inUnit->Dereference();
 }
 
 // FUNCTION: EXE 0x5efa8e
