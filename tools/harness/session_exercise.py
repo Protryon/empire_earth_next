@@ -1,8 +1,9 @@
 """Drive the staged game's own UI event queue, without Windows input injection."""
-import json,pathlib,struct,time
+import json,pathlib,re,struct,time
 
-EXERCISES=['ai-game']
-REQUIRED_MILESTONES={'ai-game':{'main-menu','single-player','random-map-setup','ai-lobby','gameplay','ai-game-final'}}
+EXERCISES=['ai-game','lobby']
+REQUIRED_MILESTONES={'ai-game':{'main-menu','single-player','random-map-setup','ai-lobby','gameplay','ai-game-final'},
+                    'lobby':{'main-menu','lobby-open','lobby-later','lobby-other-multiplayer'}}
 
 
 def add_session_arguments(ap):
@@ -79,6 +80,10 @@ def _prepare_session(ctx):
         import os
         os.environ['TMP']=os.environ['TEMP']=str(pathlib.Path(ctx['stage']).resolve())
         print(f'TEST campaign: TMP/TEMP of the game process = {os.environ["TMP"]}',flush=True)
+    if a.exercise=='lobby':
+        # the lobby resolves the WON directory servers (WONLobby.cfg DirServer, gone): gethostbyname's autodial helper
+        # open is refused, so the lookup fails as offline (exe_boot.c --refuse-autodial)
+        return dict(harness_extra=('--refuse-autodial',))
     if not getattr(a,'no_human_defeat',False):return None
     if a.exercise!='ai-game':raise SystemExit('--no-human-defeat requires --exercise ai-game')
     import no_human_defeat
@@ -134,6 +139,23 @@ def press_key(hwnd,vk,scan):
     user.PostMessageW(hwnd,0x100,vk,1|(scan<<16))
     time.sleep(.3)
     user.PostMessageW(hwnd,0x101,vk,1|(scan<<16)|0xC0000000)
+
+
+def click_lobby(hwnd,x,y,width=1024,height=768):
+    """A left click at (x, y) of the WON lobby's layout (width x height, shown letterboxed in the client area:
+    RTSGraphics::RenderLobby, PlatWindowManager::ScaleToSurface), posted as the mouse messages a click makes"""
+    import ctypes,ctypes.wintypes as w
+    user=ctypes.windll.user32
+    r=w.RECT();user.GetClientRect(hwnd,ctypes.byref(r))
+    cw,ch=r.right-r.left,r.bottom-r.top
+    scale=min(cw/width,ch/height)
+    cx=int((cw-width*scale)/2+x*scale);cy=int((ch-height*scale)/2+y*scale)
+    lp=(cy<<16)|(cx&0xffff)
+    user.PostMessageW(hwnd,0x200,0,lp)          # WM_MOUSEMOVE
+    time.sleep(.2)
+    user.PostMessageW(hwnd,0x201,1,lp)          # WM_LBUTTONDOWN (MK_LBUTTON)
+    time.sleep(.15)
+    user.PostMessageW(hwnd,0x202,0,lp)          # WM_LBUTTONUP
 
 
 def input_check(pid,addresses,dismiss=None):
@@ -252,6 +274,43 @@ def exercise(stage,evidence,mode,addresses=None,play_seconds=0,options=None):
         try:
             run_ai_game(stage,evidence,addresses,options,dict(state=state,wait=wait,capture=capture,command=command,
                                                              seq=lambda:seq),results,play_seconds)
+        finally:
+            (stage/'stop.request').write_text('exercise complete\n',encoding='ascii')
+        return results
+    if mode=='lobby':
+        # TEST ONLY: main menu -> MultiPlayer (form 12 control 1: EEUIEMSEMultiPlayer -> EEStartExternalLobby); the WON
+        # lobby draws through RTSGraphics::RenderLobby (WONGUI's platform backend), so its frames are presented frames
+        try:
+            seq+=1;(stage/'test.command').write_text(f'{seq} 1\n',encoding='ascii')
+            print('UI ACTION MultiPlayer queued',flush=True)
+            # the lobby runs its own event loop on the UI thread, so the fixture does not acknowledge the click
+            # while it is open: wait for frames presented after it instead
+            clicked=time.time_ns()
+            def lobby_frame(label,after):
+                end=time.monotonic()+60
+                while time.monotonic()<end:
+                    if (stage/'render.bmp').stat().st_mtime_ns>after:break
+                    time.sleep(.25)
+                else:raise RuntimeError(f'{label}: no frame presented after the click')
+                time.sleep(.5)
+                pixels=(stage/'render.bmp').read_bytes()
+                if len(set(pixels[54:]))<16:raise RuntimeError(f'{label}: the frame is blank')
+                (evidence/(label+'.bmp')).write_bytes(pixels)
+                results.append(dict(milestone=label,form=None,command=seq))
+                (evidence/'milestones.json').write_text(json.dumps(results,indent=2)+'\n',encoding='utf-8')
+                print(f'UI MILESTONE {label}',flush=True)
+            time.sleep(8)   # the lobby's first screen: init, resources, the first composite
+            lobby_frame('lobby-open',clicked)
+            time.sleep(5)
+            lobby_frame('lobby-later',time.time_ns()-1)
+            # Other Multiplayer (the LAN / Direct Connect screen): a click at its place in the lobby's 1024x768 layout
+            pid=int(re.search(r'^pid (\d+)',state()[2],re.M).group(1))
+            hwnd=game_window(pid)
+            if hwnd is None:raise RuntimeError('the game window was not found')
+            click_lobby(hwnd,621,643)
+            print('UI ACTION lobby Other Multiplayer clicked',flush=True)
+            time.sleep(4)
+            lobby_frame('lobby-other-multiplayer',time.time_ns()-1)
         finally:
             (stage/'stop.request').write_text('exercise complete\n',encoding='ascii')
         return results

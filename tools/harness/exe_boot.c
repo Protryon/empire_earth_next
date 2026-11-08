@@ -234,6 +234,7 @@ static DWORD nhd_out_rva, nhd_result_rva, nhd_players_off, nhd_current_off; stat
    game; a destination 127.0.0.A (one of them) keeps its address (the host answers every client at its own address,
    a migrated host is reached at its own), every other non-self destination still goes to 127.0.0.PEER. */
 static DWORD nhd_players_mask, mp_skip_rva, mp_self_ip, mp_peer_ip, mp_more_ip[8]; static int nmp_more_ip;
+static int refuse_autodial;   /* TEST ONLY (--refuse-autodial, the lobby exercise): gethostbyname's RAS helper */
 /* TEST ONLY (round 40, agent mpengine; owner-approved 2026-11-02; opt-in): --mp-checksum RVA DELTA guards the
    `mov [gBinaryChecksum], eax` store in EEInitializeNetwork and adds DELTA to eax there (the byte-sum difference
    between the original engine DLL and the staged one), so a process running our engine computes the original's
@@ -921,6 +922,7 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[option], "--nhd-players") && option+1<argc) nhd_players_mask=strtoul(argv[++option],NULL,0);
         else if (!strcmp(argv[option], "--mp-skip") && option+1<argc) mp_skip_rva=strtoul(argv[++option],NULL,16);
+        else if (!strcmp(argv[option], "--refuse-autodial")) refuse_autodial=1;
         else if (!strcmp(argv[option], "--mp-checksum") && option+2<argc) {
             mp_checksum_rva=strtoul(argv[++option],NULL,16);mp_checksum_delta=strtoul(argv[++option],NULL,16);
         }
@@ -1545,8 +1547,9 @@ int main(int argc, char **argv)
                         int thread=net_thread(ev.dwThreadId);allow=thread>=0 && net_creating[thread].depth>0;
                         printf("%s AFD endpoint within guarded socket creation\n",allow?"loopback":"STOP");
                     }
-                    if(!allow && mp_self_ip && guards[g].kind==G_FILE_CREATE && !_stricmp(s,"\\Device\\RasAcd")) {
-                        /* TEST ONLY (round 40, mp): refuse the autodial helper open of gethostbyname; logged */
+                    if(!allow && (mp_self_ip || refuse_autodial) && guards[g].kind==G_FILE_CREATE && !_stricmp(s,"\\Device\\RasAcd")) {
+                        /* TEST ONLY (round 40, mp; the lobby exercise): refuse the autodial helper open of
+                           gethostbyname, so a name lookup fails as offline; logged */
                         fake_return(&c,11,0xC0000022);   /* NtCreateFile -> STATUS_ACCESS_DENIED */
                         printf("TEST mp refused NtCreateFile %s (gethostbyname autodial helper, from %s): STATUS_ACCESS_DENIED\n",s,m);
                         if(!SetThreadContext(th,&c)){printf("STOP mp refusal failed\n");done=1;}
