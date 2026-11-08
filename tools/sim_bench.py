@@ -86,7 +86,7 @@ def run_one(run, args, slots, out):
         # each slot its own TCP ports (sims picking a free pair at once could both take one, and the local server
         # then failed to publish: a crash at the main menu)
         if not any(o == "--port-offset" for o in args.sim_arg):
-            opts += ["--port-offset", str(2000 + 64 * slots_index(slot))]
+            opts += ["--port-offset", str(args.port_base + 64 * slots_index(slot))]
         t0 = time.monotonic()
         env = dict(os.environ, **run["env"])
         for attempt in range(2):   # one retry of a run that died without a report (a start-up fault)
@@ -134,6 +134,8 @@ def main():
     ap.add_argument("--sample-seconds", type=int, default=30)
     ap.add_argument("--pt-rate", type=int, default=40)
     ap.add_argument("--wall-timeout", type=int, default=3600)
+    ap.add_argument("--port-base", type=int, default=2000,
+                    help="the first slot's port offset (64 more per slot); give benches run at the same time ranges apart, e.g. 2000 and 6000")
     ap.add_argument("--human-defeat", action="store_true", help="let the idle human be defeated")
     ap.add_argument("--data", default="binary")
     ap.add_argument("--exe", type=pathlib.Path, default=sim.DEFAULT_EXE)
