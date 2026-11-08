@@ -94,6 +94,7 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEROUserInterface.h"
 #include "ee/EEGameOptions.h"
+#include "ee/EECPEngine.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EEGameState.h"
 #include "ee/EEDataPreLoading.h"
@@ -270,6 +271,26 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
         float theBottom = c.mLines >= 0 ? c.mT + 0.025f + c.mLines * 0.022f : c.mT + 0.0245f;
         UIControlsTable::AddControlLike(this, c.mTemplate, kTextureResolutionControlID + 1 + (long)i, c.mIndex, c.mGroup,
                                         c.mL, c.mR, c.mT, theBottom, c.mBegin, c.mEnd, c.mHelp);
+    }
+    // port: the lobby's engine column (EELobbyControl kLobbyEngine*; ee/EECPEngine.h) where the ping column is (a
+    // computer row has no ping), widened into the gap before the game options: the header a copy of the ping label
+    // (2507), per slot a combo box like the citizens combo (2629; its lines the strings Classic, Next, Random) and a
+    // label like the citizens label (2645), on the slot rows (the database's rows: 0.1043 + slot * 0.0391)
+    {
+        const float kLeft = 0.4282f, kRight = 0.5200f, kRowTop = 0.10430248f, kRowStep = 0.03911343f;
+        const float kRowHeight = 0.02477184f;
+        UIControlsTable::AddControlLike(this, 2507, kLobbyEngineControlID, kLobbyEngineHeader, 0, kLeft, kRight,
+                                        0.058670145f, 0.102998696f, kLobbyEngineHeaderString, 0, kLobbyEngineHelpString);
+        for (long theSlot = 0; theSlot < 16; theSlot++) {
+            float theTop = kRowTop + theSlot * kRowStep;
+            UIControlsTable::AddControlLike(this, 2629, kLobbyEngineControlID + 1 + theSlot, kLobbyEngineCombo + theSlot, 1,
+                                            kLeft, kRight, theTop, theTop + 0.025f + kEECPEngineChoiceCount * 0.022f,
+                                            kLobbyEngineClassicString, kLobbyEngineClassicString + kEECPEngineChoiceCount - 1,
+                                            kLobbyEngineHelpString);
+            UIControlsTable::AddControlLike(this, 2645, kLobbyEngineControlID + 17 + theSlot, kLobbyEngineLabel + theSlot, 1,
+                                            kLeft, kRight, theTop, theTop + kRowHeight, kLobbyEngineClassicString, 0,
+                                            kLobbyEngineHelpString);
+        }
     }
     this->mMainGameForm = static_cast<EEUIFMainGame*>(this->GetFormByID(kFormMainGame));
     this->mInScenarioEditor = false;

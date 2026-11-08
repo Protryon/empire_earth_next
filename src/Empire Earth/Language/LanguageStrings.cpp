@@ -4,7 +4,7 @@
 #include "lle/UResourceStrings.h"
 
 extern const unsigned short gResourceStringsLanguage = 0x409;
-extern const unsigned long gResourceStringCount = 3768;
+extern const unsigned long gResourceStringCount = 3774;
 extern const UResourceString gResourceStrings[] = {
     {0, "FONTS"},
     {1, "Arial"},
@@ -3774,4 +3774,10 @@ extern const UResourceString gResourceStrings[] = {
     {33164, "Quality: Highest"},
     {33165, "Quality: Custom"},
     {33166, "A preset for the detail settings below: models, effects, shadows, clouds and battlefield ambients. Changing one of them makes it Custom."},
+    {33170, "Classic"},
+    {33171, "Next"},
+    {33172, "Random"},
+    {33173, "AI"},
+    {33174, "Ping / AI"},
+    {33175, "The computer player's AI. Classic is the original computer player; Next is the new one (in development: for now it makes no decisions); Random picks one of them when the game starts."},
 };
