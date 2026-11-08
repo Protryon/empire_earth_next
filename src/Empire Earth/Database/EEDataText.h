@@ -7,6 +7,7 @@
 #define EE_DATATEXT_H
 
 #include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -99,6 +100,9 @@ public:
     long Key(const char* inTable, const Node* inID, const std::string& inWhere, const char* inField);
     // The number of listed rows of inTable (epochs: the epoch count); throws Failure.
     long Count(const char* inTable);
+    // The ids of inTable's listed rows by key (its row position; dbtechtree: the tech id); false with a message when
+    // the table has no text (e.g. a binary data tree) or does not parse. Never throws.
+    bool Ids(const char* inTable, std::map<long, std::string>& outIds, std::string& outError);
 
 private:
     struct Impl;
@@ -119,6 +123,9 @@ class UString;
 // returns that text compiled to the binary db file as a new FSMemoryFile; otherwise the .dat as FindFile does.
 // A text form that does not compile stops the game with its error message.
 long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile);
+// The row ids of dbobjects or dbtechtree by key (the unit class / the tech id), as the last load from text read them
+// (EEDbFindFile); false and empty when that table was loaded from its .dat (no ids).
+bool EEDbRowIds(const char* inTable, std::map<long, std::string>& outIds);
 
 // Reads the rules documents (ee/EERules.h: db\combat.yaml ... and epochs.yaml's media) from the path into
 // EEGetRules(), through the same Content as the db tables (references by id). A missing document keeps the

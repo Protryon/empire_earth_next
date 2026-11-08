@@ -2007,6 +2007,17 @@ long Content::Count(const char* inTable)
     return (long)this->mImpl->mResolver.GetIndex(*t).mKeys.size();
 }
 
+bool Content::Ids(const char* inTable, std::map<long, std::string>& outIds, std::string& outError)
+{
+    outIds.clear();
+    const EEDTTable* t = FindTable(inTable);
+    if (!t) {
+        outError = std::string(inTable) + ": not a db table with a text form";
+        return false;
+    }
+    return Run([&] { outIds = this->mImpl->mResolver.GetIndex(*t).mIds; }, inTable, outError);
+}
+
 bool Compile(const char* inTable, const char* inText, unsigned long inLength, std::vector<unsigned char>& outData,
              std::string& outError)
 {
