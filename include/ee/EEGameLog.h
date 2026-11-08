@@ -1,4 +1,4 @@
-// New (port): the game log. Every game writes <data root>/Logs/game-<date>-<time>.log (config.ini [Game]
+// New (port): the game log. Every game writes <data root>/Logs/game-<date>-<time>.log (config.yaml debug:
 // "Game Log", 1 by default; 0 for none) so a played game can be dug into afterwards, for the human and the computer
 // players alike (tools/game_log.py). One line per record, "EE-GAME <game ms> p<player> <event> key=value ...":
 //   start    the map, difficulty and players (human or computer, colour, civilization, the AI's personality and cheats)

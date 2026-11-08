@@ -1,14 +1,15 @@
 // C:\EEX\Empire Earth\Empire Earth\EEPreferences.cpp (file name inferred: no __FILE__ or RTTI; it sorts between
-// EEMusicManager.cpp and EETeam.cpp). 0x13242b..0x136b6d: the game preferences (config.ini; the original: the registry). EEGamePreferences::sDefaultSettings'
+// EEMusicManager.cpp and EETeam.cpp). 0x13242b..0x136b6d: the game preferences (config.yaml; the original: the registry). EEGamePreferences::sDefaultSettings'
 // init chain first, then EEGameSettings' dtor and ctor (the defaults), EEGamePreferences' ctor/dtor, IsNotKorean,
-// the resource defaults, Load (+ the "Game Options" key), Save (+ the "Game Options" key) and SetLastGameOptions.
+// the resource defaults, Load (+ the game options), Save (+ the game options) and SetLastGameOptions.
 // The settings file calls go through the UConfig member (the original's URegistry at +0).
 #include <windows.h>
 #include "gx/GX.h"
 
+#include <vector>
+
 #include "lle/LowLevelEngine.h"
 #include "platform/PlatFile.h"
-#include "lle/UEncryption.h"
 #include "lle/UResourceFile.h"
 #include "lle/GETextureManager.h"
 
@@ -17,10 +18,8 @@
 #include "ee/EEGamePreferences.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EETechTreeTechID.h"
-// the sections of config.ini (lle/UConfig.h; the original kept these values in the registry keys
+// the settings are kept in config.yaml (lle/UConfig.h; the original kept them in the registry key
 // HKCU\Software\Mad Doc Software\EE-AOC and its "Game Options" subkey)
-#define kEEGameSection "Game"
-#define kEEGameOptionsSection "Game Options"
 
 // 0x529b90 (init chain 0x13242b: ctor 0x132435, atexit 0x13243f, guarded dtor 0x13244b)
 EEGameSettings EEGamePreferences::sDefaultSettings;
@@ -205,898 +204,357 @@ void EEInitializeDefaultSettings()
     EEGamePreferences::sDefaultSettings.mWonNetPassword = "";
 }
 
+// port: the settings of config.yaml, one row each (Load and Save go through the table; docs/DATA_FORMATS.md
+// "config.yaml"). Settings the port does not use any more are not stored: the rasterizer name (one renderer), the
+// bit depths (32), "Wait for VSync" (the frame rate limit decides it), the WON and Sierra.com accounts, the IME
+// candidate window and the values nothing reads (unit scale factor, animal herds, area effect overlays, button MIP
+// levels, auto waypoints, keyboard layout, load game name).
+namespace {
+
+enum EESettingKind {
+    kSettingLong,       // a long or unsigned long
+    kSettingPercent,    // a float, stored as a whole percent
+    kSettingBool,       // a bool, stored true/false
+    kSettingLongFlag,   // a long 0 or 1, stored true/false
+    kSettingWide,       // a UWideString
+    kSettingNarrow,     // a UString
+    kSettingChars,      // a char array (EEGameSettings::mAudioDevice)
+};
+
+struct EESetting {
+    const char* mBlock;     // the block's path in config.yaml
+    const char* mKey;
+    EESettingKind mKind;
+    void* mField;           // the member
+    long mMinimum;          // the integers it may have (the stored percent for kSettingPercent)
+    long mMaximum;
+    bool mClamp;            // a value out of range is the nearest limit (else the default)
+};
+
+const long kAnyMinimum = -0x7fffffffL - 1;
+const long kAnyMaximum = 0x7fffffffL;
+
+// The rows over inSettings: the game settings, or with inGameOptions the last game's options
+void EESettingRows(EEGameSettings& s, bool inGameOptions, std::vector<EESetting>& outRows)
+{
+#define EE_ROW(block, key, kind, field, minimum, maximum, clamp) \
+    outRows.push_back(EESetting{block, key, kind, (void*)&s.field, minimum, maximum, clamp})
+#define EE_INT(block, key, field) EE_ROW(block, key, kSettingLong, field, kAnyMinimum, kAnyMaximum, false)
+#define EE_BOOL(block, key, field) EE_ROW(block, key, kSettingBool, field, 0, 0, false)
+    outRows.clear();
+    if (inGameOptions) {
+        EE_INT("game_options.map", "size", mGameOptions.mMapSize);
+        EE_ROW("game_options.map", "type", kSettingWide, mGameOptions.mMapType, 0, 0, false);
+        EE_INT("game_options", "starting_resources", mGameOptions.mResources);
+        EE_INT("game_options.epochs", "start", mGameOptions.mEpochStart);
+        EE_INT("game_options.epochs", "end", mGameOptions.mEpochEnd);
+        EE_INT("game_options", "unit_limit", mGameOptions.mUnitLimit);
+        EE_INT("game_options", "wonders_for_victory", mGameOptions.mWondersForVictory);
+        EE_INT("game_options", "variant", mGameOptions.mVariant);
+        EE_INT("game_options", "difficulty", mGameOptions.mDifficulty);
+        EE_INT("game_options", "speed", mGameOptions.mGameSpeed);
+        EE_BOOL("game_options", "record_game", mGameOptions.mRecordGames);
+        EE_BOOL("game_options", "reveal_map", mGameOptions.mRevealMap);
+        EE_BOOL("game_options", "allow_custom_civs", mGameOptions.mAllowCustomCivs);
+        EE_BOOL("game_options", "lock_teams", mGameOptions.mLockTeams);
+        EE_BOOL("game_options", "lock_speed", mGameOptions.mLockSpeed);
+        EE_BOOL("game_options", "cheat_codes", mGameOptions.mCheatCodes);
+        EE_BOOL("game_options", "victory_allowed", mGameOptions.mVictory);
+        return;
+    }
+    EE_ROW("player", "name", kSettingWide, mPlayerName, 0, 0, false);
+    EE_INT("player", "computer_difficulty", mComputerPlayerDifficultyLevel);
+
+    EE_ROW("display", "screen", kSettingLong, mScreenID, 0, kAnyMaximum, false);
+    EE_ROW("display", "window_mode", kSettingLong, mWindowMode, 0, 1, false);   // 0 full screen, 1 windowed
+    EE_ROW("display.resolution", "width", kSettingLong, mGameWindowWidth, 1, kAnyMaximum, false);
+    EE_ROW("display.resolution", "height", kSettingLong, mGameWindowHeight, 1, kAnyMaximum, false);
+    EE_ROW("display", "ui_scale", kSettingLong, mUIScale, 0, 300, false);   // percent; 0 Auto
+    EE_ROW("display", "render_resolution", kSettingLong, mRenderResolution, 50, 100, false);   // percent
+    EE_ROW("display", "frame_rate_limit", kSettingLong, mFrameRateLimit, -1, 1000, false);   // 0 v-sync, -1 none
+    EE_ROW("display", "brightness", kSettingLong, mBrightness, 50, 200, false);   // percent
+
+    EE_ROW("graphics", "texture_resolution", kSettingLong, mTextureResolution, 0, 4, false);   // 0, 2 or 4
+    EE_ROW("graphics", "texture_filtering", kSettingLong, mTextureFiltering, 0, 2, false);   // bilinear, trilinear, anisotropic
+    EE_BOOL("graphics", "trilinear_filter", mTrilinearFilter);
+    EE_ROW("graphics.mip_levels_to_drop", "textures", kSettingLong, mMIPLevelsToDrop, 0, 8, true);
+    EE_ROW("graphics.mip_levels_to_drop", "terrain", kSettingLong, mTerrainMIPLevelsToDrop, 0, 8, true);
+    EE_ROW("graphics", "model_detail", kSettingLong, mModelDetail, kAnyMinimum, 2, true);
+    EE_ROW("graphics", "effect_detail", kSettingLong, mEffectDetail, kAnyMinimum, 2, true);
+    EE_BOOL("graphics", "unit_lighting", mUnitLighting);
+    EE_BOOL("graphics", "animation_smoothing", mAnimationSmoothing);
+    EE_BOOL("graphics", "shadows", mDisplayShadows);
+    EE_BOOL("graphics", "clouds", mDisplayClouds);
+    EE_BOOL("graphics", "battlefield_ambients", mDisplayBattlefieldAmbients);
+    EE_BOOL("graphics", "show_blood", mShowBlood);
+
+    EE_ROW("audio", "device", kSettingChars, mAudioDevice, 0, 0, false);   // empty: the system's default
+    EE_ROW("audio", "master_volume", kSettingLong, mMasterVolume, 0, 100, false);
+    EE_ROW("audio", "sound_volume", kSettingPercent, mSoundVolume, 0, 100, true);
+    EE_BOOL("audio.music", "enabled", mMusicEnabled);
+    EE_ROW("audio.music", "volume", kSettingPercent, mMusicVolume, 0, 100, true);
+    EE_BOOL("audio", "reverb", mReverbEnabled);
+    EE_BOOL("audio", "ambient_sounds", mAmbientSounds);
+    EE_ROW("audio", "max_sounds", kSettingPercent, mMaxNumberOfSounds, 0, kAnyMaximum, true);   // percent
+    EE_BOOL("audio", "mute_in_background", mMuteInBackground);
+
+    EE_ROW("input", "mouse_sensitivity", kSettingPercent, mMouseSensitivity, 1, kAnyMaximum, true);
+    EE_BOOL("input", "right_hand_mouse", mRightHandMouseOrientation);
+    EE_ROW("input.scroll", "side_speed", kSettingPercent, mSideScrollSpeed, 1, kAnyMaximum, true);
+    EE_ROW("input.scroll", "grab_speed", kSettingPercent, mGrabScrollSpeed, 1, kAnyMaximum, true);
+
+    EE_ROW("camera", "maximum_zoom_out", kSettingLong, mMaximumZoomOut, 100, 300, false);   // percent
+    EE_INT("camera", "zoom_style", mZoomStyle);
+    EE_ROW("camera", "zoom_lock", kSettingPercent, mZoomLock, kAnyMinimum, kAnyMaximum, false);
+
+    EE_ROW("autosave", "interval_ms", kSettingLong, mAutoSaveInMilliseconds, 0, kAnyMaximum, false);
+    EE_ROW("autosave", "count", kSettingLong, mNumberOfAutoSaves, 0, kAnyMaximum, false);
+
+    EE_ROW("network", "host_game_name", kSettingWide, mHostGameName, 0, 0, false);
+    EE_ROW("network", "adapter", kSettingLong, mNetworkAdapter, 0, kAnyMaximum, false);
+    EE_INT("network.pt_rate", "min", mMinPTsPerSecond);
+    EE_INT("network.pt_rate", "max", mMaxPTsPerSecond);
+    EE_INT("network.pt_rate", "tuning_threshold", mPTRateTuningThreshold);   // percent
+    EE_INT("network.ct_send_interval", "max", mMaxCTSendInterval);
+    EE_INT("network.ct_send_interval", "step_down", mCTSendIntervalStepDown);
+    EE_INT("network.ct_send_interval", "step_up", mCTSendIntervalStepUp);
+
+    EE_BOOL("screenshots", "jpg", mTakeJPGScreenshots);
+    EE_BOOL("screenshots", "end_game", mTakeEndGameScreenshots);
+
+    EE_ROW("debug", "game_log", kSettingLongFlag, mGameLog, 0, 0, false);   // Logs/game-*.log (ee/EEGameLog.h)
+    EE_BOOL("debug", "oos_handling", mDebugOOSHandling);
+
+    EE_ROW("recent", "game_file", kSettingNarrow, mLastGameFile, 0, 0, false);
+    EE_ROW("recent", "scenario_file", kSettingNarrow, mLastScenarioFile, 0, 0, false);
+    EE_ROW("recent", "quick_save", kSettingWide, mLastQuickSave, 0, 0, false);
+    EE_ROW("recent", "auto_save", kSettingWide, mLastAutoSave, 0, 0, false);
+    EE_INT("recent", "post_game_stats_page", mLastOpenPostGameStatsPage);
+#undef EE_BOOL
+#undef EE_INT
+#undef EE_ROW
+}
+
+// Writes one setting's member to the file
+long EEWriteSetting(UConfig& inConfig, const EESetting& inRow)
+{
+    long theValue;
+    switch (inRow.mKind) {
+    case kSettingLong:
+        return inConfig.SetValue(inRow.mBlock, inRow.mKey, *(long*)inRow.mField);
+    case kSettingPercent:
+        theValue = *(float*)inRow.mField * 100.0f;
+        if (inRow.mClamp)
+            theValue = theValue < inRow.mMinimum ? inRow.mMinimum : theValue > inRow.mMaximum ? inRow.mMaximum : theValue;
+        return inConfig.SetValue(inRow.mBlock, inRow.mKey, theValue);
+    case kSettingBool:
+        return inConfig.SetFlag(inRow.mBlock, inRow.mKey, *(bool*)inRow.mField);
+    case kSettingLongFlag:
+        return inConfig.SetFlag(inRow.mBlock, inRow.mKey, *(long*)inRow.mField != 0);
+    case kSettingWide:
+        return inConfig.SetValue(inRow.mBlock, inRow.mKey, *(UWideString*)inRow.mField);
+    case kSettingNarrow:
+        return inConfig.SetValue(inRow.mBlock, inRow.mKey, UWideString(*(UString*)inRow.mField));
+    case kSettingChars:
+        return inConfig.SetValue(inRow.mBlock, inRow.mKey, UWideString((const char*)inRow.mField));
+    }
+    return kErrorNotFound;
+}
+
+// Reads one setting into its member; a missing value (or one out of range) is the default's, written to the file
+void EEReadSetting(UConfig& inConfig, const EESetting& inRow, const EESetting& inDefault)
+{
+    long theValue;
+    bool theFlag;
+    UWideString theString;
+    bool theRead = false;
+    switch (inRow.mKind) {
+    case kSettingLong:
+    case kSettingPercent:
+        if (inConfig.GetValue(inRow.mBlock, inRow.mKey, theValue) == 0) {
+            if (inRow.mClamp)
+                theValue = theValue < inRow.mMinimum ? inRow.mMinimum : theValue > inRow.mMaximum ? inRow.mMaximum : theValue;
+            if (theValue >= inRow.mMinimum && theValue <= inRow.mMaximum) {
+                theRead = true;
+                if (inRow.mKind == kSettingLong)
+                    *(long*)inRow.mField = theValue;
+                else
+                    *(float*)inRow.mField = theValue * 0.01f;
+            }
+        }
+        if (!theRead) {
+            if (inRow.mKind == kSettingLong)
+                *(long*)inRow.mField = *(const long*)inDefault.mField;
+            else
+                *(float*)inRow.mField = *(const float*)inDefault.mField;
+        }
+        break;
+    case kSettingBool:
+    case kSettingLongFlag:
+        theRead = inConfig.GetFlag(inRow.mBlock, inRow.mKey, theFlag) == 0;
+        if (inRow.mKind == kSettingBool)
+            *(bool*)inRow.mField = theRead ? theFlag : *(const bool*)inDefault.mField;
+        else
+            *(long*)inRow.mField = theRead ? (theFlag ? 1 : 0) : *(const long*)inDefault.mField != 0;
+        break;
+    case kSettingWide:
+    case kSettingNarrow:
+    case kSettingChars:
+        theRead = inConfig.GetValue(inRow.mBlock, inRow.mKey, theString) == 0;
+        if (inRow.mKind == kSettingWide)
+            *(UWideString*)inRow.mField = theRead ? theString : *(const UWideString*)inDefault.mField;
+        else if (inRow.mKind == kSettingNarrow)
+            *(UString*)inRow.mField = theRead ? UString(theString) : *(const UString*)inDefault.mField;
+        else
+            snprintf((char*)inRow.mField, sizeof(EEGameSettings::mAudioDevice), "%s",
+                     theRead ? (const char*)theString : (const char*)inDefault.mField);
+        break;
+    }
+    if (!theRead)
+        EEWriteSetting(inConfig, inRow);
+}
+
+// The defaults of the settings (a default-constructed EEGameSettings: not a copy of sDefaultSettings, whose game
+// options' assignment reads the world rules, not loaded yet) and of the last game options (the original's literals)
+void EEDefaultSettings(EEGameSettings& outDefaults)
+{
+    const EEGameSettings& theDefaults = EEGamePreferences::sDefaultSettings;
+    outDefaults.mPlayerName = theDefaults.mPlayerName;       // the names EEInitializeDefaultSettings set
+    outDefaults.mHostGameName = theDefaults.mHostGameName;
+    EEGameOptions& o = outDefaults.mGameOptions;
+    o.mMapSize = 1;
+    o.SetMapType(UWideString("Continental"));
+    o.mResources = 0;
+    o.mEpochStart = kTechEpochPrehistoric;
+    o.mEpochEnd = EEEpochCount() - 1;
+    o.mUnitLimit = 500;
+    o.mWondersForVictory = 3;
+    o.mVariant = 2;
+    o.mDifficulty = 1;
+    o.mGameSpeed = 1;
+    o.mRecordGames = false;
+    o.mRevealMap = false;
+    o.mAllowCustomCivs = true;
+    o.mLockTeams = false;
+    o.mLockSpeed = false;
+    o.mCheatCodes = true;
+    o.mVictory = true;
+}
+
+// Reads the rows of one part of the settings
+void EEReadSettings(UConfig& inConfig, EEGameSettings& ioSettings, bool inGameOptions)
+{
+    EEGameSettings theDefaults;
+    EEDefaultSettings(theDefaults);
+    std::vector<EESetting> theRows, theDefaultRows;
+    EESettingRows(ioSettings, inGameOptions, theRows);
+    EESettingRows(theDefaults, inGameOptions, theDefaultRows);
+    for (size_t i = 0; i < theRows.size(); i++)
+        EEReadSetting(inConfig, theRows[i], theDefaultRows[i]);
+}
+
+// Writes the rows of one part of the settings -> the first failure, else 0
+long EEWriteSettings(UConfig& inConfig, EEGameSettings& inSettings, bool inGameOptions)
+{
+    std::vector<EESetting> theRows;
+    EESettingRows(inSettings, inGameOptions, theRows);
+    long theResult = 0;
+    for (const EESetting& theRow : theRows) {
+        long theWritten = EEWriteSetting(inConfig, theRow);
+        if (theResult == 0)
+            theResult = theWritten;
+    }
+    return theResult;
+}
+
+}   // namespace
+
 // FUNCTION: EXE 0x5328dd
-// Reads every game setting from config.ini, writing the default for each missing value (no blood in Korean),
+// Reads every game setting from config.yaml, writing the default for each missing value (no blood in Korean),
 // then loads the game options; returns their result
 long EEGamePreferences::Load()
 {
-    UWideString theVolume(gStartupVolume);
-    UWideString theDirectory(gStartupDirectory);
-    UWideString theString;
-    UString thePassword;
-    UString theEncryptedPassword;
-    long theValue;
-    long theResult;
-
-    theResult = this->mConfig.GetValue(kEEGameSection, "Rasterizer Name", theString);
-    if (theResult == 0) {
-        this->mSettings.mRasterizerName = theString;
-    } else {
-        this->mSettings.mRasterizerName = EEGamePreferences::sDefaultSettings.mRasterizerName;
-        theString = this->mSettings.mRasterizerName;
-        this->mConfig.SetValue(kEEGameSection, "Rasterizer Name", theString);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Mouse Sensitivity", theValue);
-    if (theResult == 0) {
-        if (theValue <= 1)
-            theValue = 1;
-        this->mSettings.mMouseSensitivity = theValue * 0.01f;
-    } else {
-        this->mSettings.mMouseSensitivity = EEGamePreferences::sDefaultSettings.mMouseSensitivity;
-        theValue = this->mSettings.mMouseSensitivity * 100.0f;
-        this->mConfig.SetValue(kEEGameSection, "Mouse Sensitivity", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Side Scroll Speed", theValue);
-    if (theResult == 0) {
-        this->mSettings.mSideScrollSpeed = theValue * 0.01f;
-    } else {
-        this->mSettings.mSideScrollSpeed = EEGamePreferences::sDefaultSettings.mSideScrollSpeed;
-        theValue = this->mSettings.mSideScrollSpeed * 100.0f;
-        this->mConfig.SetValue(kEEGameSection, "Side Scroll Speed", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Grab Scroll Speed", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGrabScrollSpeed = theValue * 0.01f;
-    } else {
-        this->mSettings.mGrabScrollSpeed = EEGamePreferences::sDefaultSettings.mGrabScrollSpeed;
-        theValue = this->mSettings.mGrabScrollSpeed * 100.0f;
-        this->mConfig.SetValue(kEEGameSection, "Grab Scroll Speed", theValue);
-    }
-    this->mSettings.mScreenMode = EEGamePreferences::sDefaultSettings.mScreenMode;
-    theResult = this->mConfig.GetValue(kEEGameSection, "Game Bit Depth", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameBitDepth = theValue;
-    } else {
-        this->mSettings.mGameBitDepth = EEGamePreferences::sDefaultSettings.mGameBitDepth;
-        theValue = this->mSettings.mGameBitDepth;
-        this->mConfig.SetValue(kEEGameSection, "Game Bit Depth", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Network Adapter", theValue);
-    if (theResult == 0) {
-        this->mSettings.mNetworkAdapter = theValue;
-    } else {
-        this->mSettings.mNetworkAdapter = EEGamePreferences::sDefaultSettings.mNetworkAdapter;
-        theValue = this->mSettings.mNetworkAdapter;
-        this->mConfig.SetValue(kEEGameSection, "Network Adapter", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Game Window Height", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameWindowHeight = theValue;
-    } else {
-        this->mSettings.mGameWindowHeight = EEGamePreferences::sDefaultSettings.mGameWindowHeight;
-        theValue = this->mSettings.mGameWindowHeight;
-        this->mConfig.SetValue(kEEGameSection, "Game Window Height", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Game Window Width", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameWindowWidth = theValue;
-    } else {
-        this->mSettings.mGameWindowWidth = EEGamePreferences::sDefaultSettings.mGameWindowWidth;
-        gGameWindowSizeDefaulted = true;   // port: a full screen game takes the display's size (EEInitializeVideo)
-        theValue = this->mSettings.mGameWindowWidth;
-        this->mConfig.SetValue(kEEGameSection, "Game Window Width", theValue);
-    }
-    // port: the modern display and audio settings (EEGameSettings; EEApplyPortSettings)
-    struct { const char* mName; long* mField; long mMinimum, mMaximum; } thePortValues[] = {
-        {"UI Scale", &this->mSettings.mUIScale, 0, 300},
-        {"Render Resolution", &this->mSettings.mRenderResolution, 50, 100},
-        {"Window Mode", &this->mSettings.mWindowMode, 0, 1},
-        {"Frame Rate Limit", &this->mSettings.mFrameRateLimit, -1, 1000},
-        {"Texture Filtering", &this->mSettings.mTextureFiltering, 0, 2},
-        {"Brightness", &this->mSettings.mBrightness, 50, 200},
-        {"Master Volume", &this->mSettings.mMasterVolume, 0, 100},
-        {"Maximum Zoom Out", &this->mSettings.mMaximumZoomOut, 100, 300},
-        {"Game Log", &this->mSettings.mGameLog, 0, 1},
-    };
     const EEGameSettings& theDefaults = EEGamePreferences::sDefaultSettings;
-    for (size_t i = 0; i < sizeof(thePortValues) / sizeof(thePortValues[0]); i++) {
-        long* theField = thePortValues[i].mField;
-        const long theDefault = *(const long*)((const char*)&theDefaults + ((const char*)theField - (const char*)&this->mSettings));
-        theResult = this->mConfig.GetValue(kEEGameSection, thePortValues[i].mName, theValue);
-        if (theResult == 0 && theValue >= thePortValues[i].mMinimum && theValue <= thePortValues[i].mMaximum)
-            *theField = theValue;
-        else {
-            *theField = theDefault;
-            theValue = theDefault;
-            this->mConfig.SetValue(kEEGameSection, thePortValues[i].mName, theValue);
-        }
+    long theWidth;
+    // port: no saved game size: a full screen game takes the display's size (EEInitializeVideo)
+    gGameWindowSizeDefaulted = this->mConfig.GetValue("display.resolution", "width", theWidth) != 0;
+    EEReadSettings(this->mConfig, this->mSettings, false);
+    if (this->mSettings.mTextureResolution != 0 && this->mSettings.mTextureResolution != 2
+        && this->mSettings.mTextureResolution != 4) {
+        this->mSettings.mTextureResolution = theDefaults.mTextureResolution;
+        this->mConfig.SetValue("graphics", "texture_resolution", this->mSettings.mTextureResolution);
     }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Mute in Background", theValue);
-    if (theResult != 0) {
-        theValue = 1;
-        this->mConfig.SetValue(kEEGameSection, "Mute in Background", theValue);
-    }
-    this->mSettings.mMuteInBackground = theValue != 0;
-    UWideString theDevice;
-    this->mSettings.mAudioDevice[0] = 0;
-    if (this->mConfig.GetValue(kEEGameSection, "Audio Device", theDevice) == 0)
-        snprintf(this->mSettings.mAudioDevice, sizeof(this->mSettings.mAudioDevice), "%s", (const char*)theDevice);
-    else
-        this->mConfig.SetValue(kEEGameSection, "Audio Device", UWideString(""));
-    this->mSettings.mFullScreen = this->mSettings.mWindowMode == 0;
-    this->mSettings.mWaitForVSync = this->mSettings.mFrameRateLimit == 0;
-    EEApplyPortSettings(this->mSettings);
-    // port: which textures the world loads: 0 the originals, 2 or 4 the texture pack (EESetTextureResolution)
-    theResult = this->mConfig.GetValue(kEEGameSection, "Texture Resolution", theValue);
-    if (theResult == 0 && (theValue == 0 || theValue == 2 || theValue == 4)) {
-        this->mSettings.mTextureResolution = theValue;
-    } else {
-        this->mSettings.mTextureResolution = EEGamePreferences::sDefaultSettings.mTextureResolution;
-        theValue = this->mSettings.mTextureResolution;
-        this->mConfig.SetValue(kEEGameSection, "Texture Resolution", theValue);
-    }
-    EESetTextureResolution(this->mSettings.mTextureResolution);
-    theResult = this->mConfig.GetValue(kEEGameSection, "Screen ID", theValue);
-    if (theResult == 0) {
-        this->mSettings.mScreenID = theValue;
-    } else {
-        this->mSettings.mScreenID = EEGamePreferences::sDefaultSettings.mScreenID;
-        theValue = this->mSettings.mScreenID;
-        this->mConfig.SetValue(kEEGameSection, "Screen ID", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Texture Bit Depth", theValue);
-    if (theResult == 0) {
-        this->mSettings.mTextureBitDepth = theValue;
-    } else {
-        this->mSettings.mTextureBitDepth = EEGamePreferences::sDefaultSettings.mTextureBitDepth;
-        theValue = this->mSettings.mTextureBitDepth;
-        this->mConfig.SetValue(kEEGameSection, "Texture Bit Depth", theValue);
-    }
-    this->mSettings.mL5BC = EEGamePreferences::sDefaultSettings.mL5BC;
-    theResult = this->mConfig.GetValue(kEEGameSection, "Wait for VSync", theValue);
-    if (theResult == 0) {
-        this->mSettings.mWaitForVSync = theValue != 0;
-    } else {
-        this->mSettings.mWaitForVSync = EEGamePreferences::sDefaultSettings.mWaitForVSync;
-        theValue = this->mSettings.mWaitForVSync != false;
-        this->mConfig.SetValue(kEEGameSection, "Wait for VSync", theValue);
-    }
-    // port: full screen or windowed is the "Window Mode" setting; the frame rate setting decides v-sync
-    this->mSettings.mFullScreen = this->mSettings.mWindowMode == 0;
-    this->mSettings.mWaitForVSync = this->mSettings.mFrameRateLimit == 0;
+    if (!this->IsNotKorean())
+        this->mSettings.mShowBlood = false;
+
+    // the settings that are not stored
+    this->mSettings.mRasterizerName = theDefaults.mRasterizerName;
+    this->mSettings.mGameBitDepth = 32;
+    this->mSettings.mTextureBitDepth = 32;
+    this->mSettings.mSierraUserID = theDefaults.mSierraUserID;
+    this->mSettings.mSierraGameName = theDefaults.mSierraGameName;
+    this->mSettings.mWonNetPassword = theDefaults.mWonNetPassword;
+    this->mSettings.mUseCandidateWindow = theDefaults.mUseCandidateWindow;
+    this->mSettings.mStartingKeyboardLayout = theDefaults.mStartingKeyboardLayout;
+    this->mSettings.mButtonMIPLevelsToDrop = theDefaults.mButtonMIPLevelsToDrop;
+    this->mSettings.mUnitScaleFactor = theDefaults.mUnitScaleFactor;
+    this->mSettings.mEnableAnimalHerds = theDefaults.mEnableAnimalHerds;
+    this->mSettings.mUseAreaEffectOverlays = theDefaults.mUseAreaEffectOverlays;
+    this->mSettings.mScreenMode = theDefaults.mScreenMode;
+    this->mSettings.mL5BC = theDefaults.mL5BC;
     this->mSettings.mL5B8 = 0;
     this->mSettings.mShowAutoWaypoints = false;
-    // the game's own location is where it runs from (the data root), never a stored path: a play folder can move
-    this->mSettings.mInstalledFromVolume = theVolume;
-    this->mSettings.mInstalledFromVolume.ToUpper();
-    this->mSettings.mInstalledFromDirectory = theDirectory;
-    this->mSettings.mInstalledFromDirectory.ToUpper();
-    theResult = this->mConfig.GetValue(kEEGameSection, "Player Name", theString);
-    if (theResult == 0) {
-        this->mSettings.mPlayerName = theString;
-    } else {
-        this->mSettings.mPlayerName = EEGamePreferences::sDefaultSettings.mPlayerName;
-        this->mConfig.SetValue(kEEGameSection, "Player Name", this->mSettings.mPlayerName);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "WonNet Password", theString);
-    if (theResult == 0 && theString.GetLength() > 0) {
-        theEncryptedPassword = theString;
-        if (UEDecryptUString(theEncryptedPassword, thePassword) == true) {
-            this->mSettings.mWonNetPassword = thePassword;
-            gMultiplayerString = thePassword;
-        }
-    } else {
-        this->mSettings.mWonNetPassword = EEGamePreferences::sDefaultSettings.mWonNetPassword;
-        this->mConfig.SetValue(kEEGameSection, "WonNet Password", UWideString(this->mSettings.mWonNetPassword));
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Host Game Name", theString);
-    if (theResult == 0) {
-        this->mSettings.mHostGameName = theString;
-    } else {
-        this->mSettings.mHostGameName = EEGamePreferences::sDefaultSettings.mHostGameName;
-        this->mConfig.SetValue(kEEGameSection, "Host Game Name", this->mSettings.mHostGameName);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Sierra.com User ID", theString);
-    if (theResult == 0) {
-        this->mSettings.mSierraUserID = theString;
-    } else {
-        this->mSettings.mSierraUserID = EEGamePreferences::sDefaultSettings.mSierraUserID;
-        this->mConfig.SetValue(kEEGameSection, "Sierra.com User ID", this->mSettings.mSierraUserID);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Sierra.com Game Name", theString);
-    if (theResult == 0) {
-        this->mSettings.mSierraGameName = theString;
-    } else {
-        this->mSettings.mSierraGameName = EEGamePreferences::sDefaultSettings.mSierraGameName;
-        this->mConfig.SetValue(kEEGameSection, "Sierra.com Game Name", this->mSettings.mSierraGameName);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Last Quick Save", theString);
-    if (theResult == 0) {
-        this->mSettings.mLastQuickSave = theString;
-    } else {
-        this->mSettings.mLastQuickSave = EEGamePreferences::sDefaultSettings.mLastQuickSave;
-        this->mConfig.SetValue(kEEGameSection, "Last Quick Save", this->mSettings.mLastQuickSave);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Last Auto Save", theString);
-    if (theResult == 0) {
-        this->mSettings.mLastAutoSave = theString;
-    } else {
-        this->mSettings.mLastAutoSave = EEGamePreferences::sDefaultSettings.mLastAutoSave;
-        this->mConfig.SetValue(kEEGameSection, "Last Auto Save", this->mSettings.mLastAutoSave);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Load Game Name", theString);
-    if (theResult == 0) {
-        this->mSettings.mLoadGameName = theString;
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Music Volume", theValue);
-    if (theResult == 0) {
-        this->mSettings.mMusicVolume = theValue * 0.01f;
-    } else {
-        this->mSettings.mMusicVolume = EEGamePreferences::sDefaultSettings.mMusicVolume;
-        theValue = this->mSettings.mMusicVolume * 100.0f;
-        this->mConfig.SetValue(kEEGameSection, "Music Volume", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Sound Volume", theValue);
-    if (theResult == 0) {
-        this->mSettings.mSoundVolume = theValue * 0.01f;
-    } else {
-        this->mSettings.mSoundVolume = EEGamePreferences::sDefaultSettings.mSoundVolume;
-        theValue = this->mSettings.mSoundVolume * 100.0f;
-        this->mConfig.SetValue(kEEGameSection, "Sound Volume", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Reverb Enabled", theValue);
-    if (theResult == 0) {
-        this->mSettings.mReverbEnabled = theValue == 1;
-    } else {
-        this->mSettings.mReverbEnabled = EEGamePreferences::sDefaultSettings.mReverbEnabled;
-        theValue = this->mSettings.mReverbEnabled != false;
-        this->mConfig.SetValue(kEEGameSection, "Reverb Enabled", theValue);
-    }
     this->mSettings.mB5C0 = true;
     this->mSettings.mL53C = 15020;
     this->mSettings.mL540 = 0;
-    theResult = this->mConfig.GetValue(kEEGameSection, "AutoSave In Milliseconds", theValue);
-    if (theResult == 0) {
-        this->mSettings.mAutoSaveInMilliseconds = theValue;
-    } else {
-        this->mSettings.mAutoSaveInMilliseconds = EEGamePreferences::sDefaultSettings.mAutoSaveInMilliseconds;
-        theValue = this->mSettings.mAutoSaveInMilliseconds;
-        this->mConfig.SetValue(kEEGameSection, "AutoSave In Milliseconds", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Number Of AutoSaves", theValue);
-    if (theResult == 0) {
-        this->mSettings.mNumberOfAutoSaves = theValue;
-    } else {
-        this->mSettings.mNumberOfAutoSaves = EEGamePreferences::sDefaultSettings.mNumberOfAutoSaves;
-        theValue = this->mSettings.mNumberOfAutoSaves;
-        this->mConfig.SetValue(kEEGameSection, "Number Of AutoSaves", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Max PTs per Second", theValue);
-    if (theResult == 0) {
-        this->mSettings.mMaxPTsPerSecond = theValue;
-    } else {
-        this->mSettings.mMaxPTsPerSecond = EEGamePreferences::sDefaultSettings.mMaxPTsPerSecond;
-        theValue = this->mSettings.mMaxPTsPerSecond;
-        this->mConfig.SetValue(kEEGameSection, "Max PTs per Second", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Min PTs per Second", theValue);
-    if (theResult == 0) {
-        this->mSettings.mMinPTsPerSecond = theValue;
-    } else {
-        this->mSettings.mMinPTsPerSecond = EEGamePreferences::sDefaultSettings.mMinPTsPerSecond;
-        theValue = this->mSettings.mMinPTsPerSecond;
-        this->mConfig.SetValue(kEEGameSection, "Min PTs per Second", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "PT Rate Tuning Threshold (percent)", theValue);
-    if (theResult == 0) {
-        this->mSettings.mPTRateTuningThreshold = theValue;
-    } else {
-        this->mSettings.mPTRateTuningThreshold = EEGamePreferences::sDefaultSettings.mPTRateTuningThreshold;
-        theValue = this->mSettings.mPTRateTuningThreshold;
-        this->mConfig.SetValue(kEEGameSection, "PT Rate Tuning Threshold (percent)", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Max CT Send Interval", theValue);
-    if (theResult == 0) {
-        this->mSettings.mMaxCTSendInterval = theValue;
-    } else {
-        this->mSettings.mMaxCTSendInterval = EEGamePreferences::sDefaultSettings.mMaxCTSendInterval;
-        theValue = this->mSettings.mMaxCTSendInterval;
-        this->mConfig.SetValue(kEEGameSection, "Max CT Send Interval", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "CT Send Interval Step Down", theValue);
-    if (theResult == 0) {
-        this->mSettings.mCTSendIntervalStepDown = theValue;
-    } else {
-        this->mSettings.mCTSendIntervalStepDown = EEGamePreferences::sDefaultSettings.mCTSendIntervalStepDown;
-        theValue = this->mSettings.mCTSendIntervalStepDown;
-        this->mConfig.SetValue(kEEGameSection, "CT Send Interval Step Down", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "CT Send Interval Step Up", theValue);
-    if (theResult == 0) {
-        this->mSettings.mCTSendIntervalStepUp = theValue;
-    } else {
-        this->mSettings.mCTSendIntervalStepUp = EEGamePreferences::sDefaultSettings.mCTSendIntervalStepUp;
-        theValue = this->mSettings.mCTSendIntervalStepUp;
-        this->mConfig.SetValue(kEEGameSection, "CT Send Interval Step Up", theValue);
-    }
     this->mSettings.mB5C5 = true;
     this->mSettings.mB5C2 = true;
     this->mSettings.mB5CA = true;
     this->mSettings.mB5CB = true;
     this->mSettings.mB5CC = true;
-    theResult = this->mConfig.GetValue(kEEGameSection, "Enable Animal Herds", theValue);
-    if (theResult == 0) {
-        this->mSettings.mEnableAnimalHerds = theValue == 1;
-    } else {
-        this->mSettings.mEnableAnimalHerds = EEGamePreferences::sDefaultSettings.mEnableAnimalHerds;
-        theValue = this->mSettings.mEnableAnimalHerds != false;
-        this->mConfig.SetValue(kEEGameSection, "Enable Animal Herds", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Ambient Sounds", theValue);
-    if (theResult == 0) {
-        this->mSettings.mAmbientSounds = theValue == 1;
-    } else {
-        this->mSettings.mAmbientSounds = EEGamePreferences::sDefaultSettings.mAmbientSounds;
-        theValue = this->mSettings.mAmbientSounds != false;
-        this->mConfig.SetValue(kEEGameSection, "Ambient Sounds", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "UseAreaEffectOverlays", theValue);
-    if (theResult == 0) {
-        this->mSettings.mUseAreaEffectOverlays = theValue == 1;
-    } else {
-        this->mSettings.mUseAreaEffectOverlays = EEGamePreferences::sDefaultSettings.mUseAreaEffectOverlays;
-        theValue = this->mSettings.mUseAreaEffectOverlays != false;
-        this->mConfig.SetValue(kEEGameSection, "UseAreaEffectOverlays", theValue);
-    }
     this->mSettings.mDisplayWeatherEffects = false;
-    theResult = this->mConfig.GetValue(kEEGameSection, "UseCandidateWindow", theValue);
-    if (theResult == 0) {
-        this->mSettings.mUseCandidateWindow = theValue == 1;
-    } else {
-        this->mSettings.mUseCandidateWindow = EEGamePreferences::sDefaultSettings.mUseCandidateWindow;
-        theValue = this->mSettings.mUseCandidateWindow != false;
-        this->mConfig.SetValue(kEEGameSection, "UseCandidateWindow", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Last Game File", theString);
-    if (theResult == 0) {
-        this->mSettings.mLastGameFile = theString;
-    } else {
-        this->mSettings.mLastGameFile = EEGamePreferences::sDefaultSettings.mLastGameFile;
-        theString = this->mSettings.mLastGameFile;
-        this->mConfig.SetValue(kEEGameSection, "Last Game File", theString);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Last Scenario File", theString);
-    if (theResult == 0) {
-        this->mSettings.mLastScenarioFile = theString;
-    } else {
-        this->mSettings.mLastScenarioFile = EEGamePreferences::sDefaultSettings.mLastScenarioFile;
-        theString = this->mSettings.mLastScenarioFile;
-        this->mConfig.SetValue(kEEGameSection, "Last Scenario File", theString);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Show Blood", theValue);
-    if (theResult == 0) {
-        this->mSettings.mShowBlood = theValue == 1;
-    } else {
-        this->mSettings.mShowBlood = EEGamePreferences::sDefaultSettings.mShowBlood;
-        theValue = this->mSettings.mShowBlood != false;
-        this->mConfig.SetValue(kEEGameSection, "Show Blood", theValue);
-    }
-    if (!this->IsNotKorean())
-        this->mSettings.mShowBlood = false;
     this->mSettings.mZoomEnabled = true;
-    theResult = this->mConfig.GetValue(kEEGameSection, "Right Hand Mouse Orientation", theValue);
-    if (theResult == 0) {
-        this->mSettings.mRightHandMouseOrientation = theValue == 1;
-    } else {
-        this->mSettings.mRightHandMouseOrientation = EEGamePreferences::sDefaultSettings.mRightHandMouseOrientation;
-        theValue = this->mSettings.mRightHandMouseOrientation != false;
-        this->mConfig.SetValue(kEEGameSection, "Right Hand Mouse Orientation", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Music Enabled", theValue);
-    if (theResult == 0) {
-        this->mSettings.mMusicEnabled = theValue == 1;
-    } else {
-        this->mSettings.mMusicEnabled = EEGamePreferences::sDefaultSettings.mMusicEnabled;
-        theValue = this->mSettings.mMusicEnabled != false;
-        this->mConfig.SetValue(kEEGameSection, "Music Enabled", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Max Number Of Sounds (percent)", theValue);
-    if (theResult == 0) {
-        this->mSettings.mMaxNumberOfSounds = theValue * 0.01f;
-    } else {
-        this->mSettings.mMaxNumberOfSounds = EEGamePreferences::sDefaultSettings.mMaxNumberOfSounds;
-        theValue = this->mSettings.mMaxNumberOfSounds * 100.0f;
-        this->mConfig.SetValue(kEEGameSection, "Max Number Of Sounds (percent)", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "ZoomStyle", theValue);
-    if (theResult == 0) {
-        this->mSettings.mZoomStyle = theValue;
-    } else {
-        this->mSettings.mZoomStyle = EEGamePreferences::sDefaultSettings.mZoomStyle;
-        theValue = this->mSettings.mZoomStyle;
-        this->mConfig.SetValue(kEEGameSection, "ZoomStyle", theValue);
-    }
     this->mSettings.mB5C4 = this->mSettings.mL560 = this->mSettings.mL55C = this->mSettings.mL558 = this->mSettings.mL554 = this->mSettings.mL550 = this->mSettings.mL54C = 0;
-    theResult = this->mConfig.GetValue(kEEGameSection, "Starting Keyboard Layout", theValue);
-    this->mSettings.mStartingKeyboardLayout = theResult == 0 ? theValue : EEGamePreferences::sDefaultSettings.mStartingKeyboardLayout;
-    theResult = this->mConfig.GetValue(kEEGameSection, "Unit Scale Factor", theValue);
-    if (theResult == 0) {
-        this->mSettings.mUnitScaleFactor = theValue * 0.01f;
-    } else {
-        this->mSettings.mUnitScaleFactor = EEGamePreferences::sDefaultSettings.mUnitScaleFactor;
-        theValue = this->mSettings.mUnitScaleFactor * 100.0f;
-        this->mConfig.SetValue(kEEGameSection, "Unit Scale Factor", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Unit Lighting", theValue);
-    if (theResult == 0) {
-        this->mSettings.mUnitLighting = theValue == 1;
-    } else {
-        this->mSettings.mUnitLighting = EEGamePreferences::sDefaultSettings.mUnitLighting;
-        theValue = this->mSettings.mUnitLighting != false;
-        this->mConfig.SetValue(kEEGameSection, "Unit Lighting", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Model Detail", theValue);
-    if (theResult == 0) {
-        if (theValue > 2)
-            theValue = 2;
-        this->mSettings.mModelDetail = theValue;
-    } else {
-        this->mSettings.mModelDetail = EEGamePreferences::sDefaultSettings.mModelDetail;
-        theValue = this->mSettings.mModelDetail;
-        this->mConfig.SetValue(kEEGameSection, "Model Detail", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "MIP Levels to Drop", theValue);
-    if (theResult == 0) {
-        this->mSettings.mMIPLevelsToDrop = theValue;
-    } else {
-        this->mSettings.mMIPLevelsToDrop = EEGamePreferences::sDefaultSettings.mMIPLevelsToDrop;
-        theValue = this->mSettings.mMIPLevelsToDrop;
-        this->mConfig.SetValue(kEEGameSection, "MIP Levels to Drop", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Zoom Lock", theValue);
-    if (theResult == 0) {
-        this->mSettings.mZoomLock = theValue * 0.01f;
-    } else {
-        this->mSettings.mZoomLock = EEGamePreferences::sDefaultSettings.mZoomLock;
-        theValue = this->mSettings.mZoomLock * 100.0f;
-        this->mConfig.SetValue(kEEGameSection, "Zoom Lock", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Effect Detail", theValue);
-    if (theResult == 0) {
-        if (theValue > 2)
-            theValue = 2;
-        this->mSettings.mEffectDetail = theValue;
-    } else {
-        this->mSettings.mEffectDetail = EEGamePreferences::sDefaultSettings.mEffectDetail;
-        theValue = this->mSettings.mEffectDetail;
-        this->mConfig.SetValue(kEEGameSection, "Effect Detail", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Trilinear Filter", theValue);
-    if (theResult == 0) {
-        this->mSettings.mTrilinearFilter = theValue == 1;
-    } else {
-        this->mSettings.mTrilinearFilter = EEGamePreferences::sDefaultSettings.mTrilinearFilter;
-        theValue = this->mSettings.mTrilinearFilter != false;
-        this->mConfig.SetValue(kEEGameSection, "Trilinear Filter", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Button MIP Levels to Drop", theValue);
-    if (theResult == 0) {
-        this->mSettings.mButtonMIPLevelsToDrop = theValue;
-    } else {
-        this->mSettings.mButtonMIPLevelsToDrop = EEGamePreferences::sDefaultSettings.mButtonMIPLevelsToDrop;
-        theValue = this->mSettings.mButtonMIPLevelsToDrop != 0;
-        this->mConfig.SetValue(kEEGameSection, "Button MIP Levels to Drop", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Terrain MIP Levels to Drop", theValue);
-    if (theResult == 0) {
-        this->mSettings.mTerrainMIPLevelsToDrop = theValue;
-    } else {
-        this->mSettings.mTerrainMIPLevelsToDrop = EEGamePreferences::sDefaultSettings.mTerrainMIPLevelsToDrop;
-        theValue = this->mSettings.mTerrainMIPLevelsToDrop != 0;
-        this->mConfig.SetValue(kEEGameSection, "Terrain MIP Levels to Drop", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Animation Smoothing", theValue);
-    if (theResult == 0) {
-        this->mSettings.mAnimationSmoothing = theValue == 1;
-    } else {
-        this->mSettings.mAnimationSmoothing = EEGamePreferences::sDefaultSettings.mAnimationSmoothing;
-        theValue = this->mSettings.mAnimationSmoothing != false;
-        this->mConfig.SetValue(kEEGameSection, "Animation Smoothing", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Display Shadows", theValue);
-    if (theResult == 0) {
-        this->mSettings.mDisplayShadows = theValue == 1;
-    } else {
-        this->mSettings.mDisplayShadows = EEGamePreferences::sDefaultSettings.mDisplayShadows;
-        theValue = this->mSettings.mDisplayShadows != false;
-        this->mConfig.SetValue(kEEGameSection, "Display Shadows", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Display Clouds", theValue);
-    if (theResult == 0) {
-        this->mSettings.mDisplayClouds = theValue == 1;
-    } else {
-        this->mSettings.mDisplayClouds = EEGamePreferences::sDefaultSettings.mDisplayClouds;
-        theValue = this->mSettings.mDisplayClouds != false;
-        this->mConfig.SetValue(kEEGameSection, "Display Clouds", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Display Battlefield Ambients", theValue);
-    if (theResult == 0) {
-        this->mSettings.mDisplayBattlefieldAmbients = theValue == 1;
-    } else {
-        this->mSettings.mDisplayBattlefieldAmbients = EEGamePreferences::sDefaultSettings.mDisplayBattlefieldAmbients;
-        theValue = this->mSettings.mDisplayBattlefieldAmbients != false;
-        this->mConfig.SetValue(kEEGameSection, "Display Battlefield Ambients", theValue);
-    }
     this->mSettings.mB5C6 = false;
-    theResult = this->mConfig.GetValue(kEEGameSection, "Computer Player Difficulty Level", theValue);
-    if (theResult == 0) {
-        this->mSettings.mComputerPlayerDifficultyLevel = theValue;
-    } else {
-        this->mSettings.mComputerPlayerDifficultyLevel = EEGamePreferences::sDefaultSettings.mComputerPlayerDifficultyLevel;
-        theValue = this->mSettings.mComputerPlayerDifficultyLevel;
-        this->mConfig.SetValue(kEEGameSection, "Computer Player Difficulty Level", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Debug OOS Handling", theValue);
-    if (theResult == 0) {
-        this->mSettings.mDebugOOSHandling = theValue == 1;
-    } else {
-        this->mSettings.mDebugOOSHandling = EEGamePreferences::sDefaultSettings.mDebugOOSHandling;
-        theValue = this->mSettings.mDebugOOSHandling != false;
-        this->mConfig.SetValue(kEEGameSection, "Debug OOS Handling", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Take JPG Screenshots", theValue);
-    if (theResult == 0) {
-        this->mSettings.mTakeJPGScreenshots = theValue == 1;
-    } else {
-        this->mSettings.mTakeJPGScreenshots = EEGamePreferences::sDefaultSettings.mTakeJPGScreenshots;
-        theValue = this->mSettings.mTakeJPGScreenshots != false;
-        this->mConfig.SetValue(kEEGameSection, "Take JPG Screenshots", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Take End Game Screenshots", theValue);
-    if (theResult == 0) {
-        this->mSettings.mTakeEndGameScreenshots = theValue == 1;
-    } else {
-        this->mSettings.mTakeEndGameScreenshots = EEGamePreferences::sDefaultSettings.mTakeEndGameScreenshots;
-        theValue = this->mSettings.mTakeEndGameScreenshots != false;
-        this->mConfig.SetValue(kEEGameSection, "Take End Game Screenshots", theValue);
-    }
     this->mSettings.mAntiAliasing = false;
-    theResult = this->mConfig.GetValue(kEEGameSection, "Show Auto Waypoints", theValue);
-    if (theResult == 0) {
-        this->mSettings.mShowAutoWaypoints = theValue == 1;
-    } else {
-        this->mSettings.mShowAutoWaypoints = EEGamePreferences::sDefaultSettings.mShowAutoWaypoints;
-        theValue = this->mSettings.mShowAutoWaypoints != false;
-        this->mConfig.SetValue(kEEGameSection, "Show Auto Waypoints", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameSection, "Last Open Post Game Stats Page", theValue);
-    if (theResult == 0) {
-        this->mSettings.mLastOpenPostGameStatsPage = theValue;
-    } else {
-        this->mSettings.mLastOpenPostGameStatsPage = EEGamePreferences::sDefaultSettings.mLastOpenPostGameStatsPage;
-        theValue = this->mSettings.mLastOpenPostGameStatsPage;
-        this->mConfig.SetValue(kEEGameSection, "Last Open Post Game Stats Page", theValue);
-    }
+    // the game's own location is where it runs from (the data root), never a stored path: a play folder can move
+    this->mSettings.mInstalledFromVolume = UWideString(gStartupVolume);
+    this->mSettings.mInstalledFromVolume.ToUpper();
+    this->mSettings.mInstalledFromDirectory = UWideString(gStartupDirectory);
+    this->mSettings.mInstalledFromDirectory.ToUpper();
+
+    // port: full screen or windowed is the "window_mode" setting; the frame rate limit decides v-sync
+    this->mSettings.mFullScreen = this->mSettings.mWindowMode == 0;
+    this->mSettings.mWaitForVSync = this->mSettings.mFrameRateLimit == 0;
+    EEApplyPortSettings(this->mSettings);
+    EESetTextureResolution(this->mSettings.mTextureResolution);
 
     return this->LoadGameOptions();
 }
 
 // FUNCTION: EXE 0x53505e
-// Reads the last game options from config.ini's [Game Options] section, writing defaults for missing values;
-// returns 0
+// Reads the last game options from config.yaml's game_options block, writing defaults for missing values; returns 0
 long EEGamePreferences::LoadGameOptions()
 {
-    UWideString theString;
-    long theValue;
-    long theResult;
-
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Map Size", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mMapSize = theValue;
-    } else {
-        theValue = this->mSettings.mGameOptions.mMapSize = 1;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Map Size", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Map Type", theString);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mMapType = theString;
-    } else {
-        // the member and the file both get the default map type
-        theString = "Continental";
-        this->mSettings.mGameOptions.SetMapType(theString);
-        this->mConfig.SetValue(kEEGameOptionsSection, "Map Type", theString);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Starting Resources", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mResources = theValue;
-    } else {
-        theValue = this->mSettings.mGameOptions.mResources = 0;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Starting Resources", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Starting Epoch", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mEpochStart = theValue;
-    } else {
-        theValue = this->mSettings.mGameOptions.mEpochStart = kTechEpochPrehistoric;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Starting Epoch", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Ending Epoch", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mEpochEnd = theValue;
-    } else {
-        theValue = this->mSettings.mGameOptions.mEpochEnd = EEEpochCount() - 1;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Ending Epoch", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Game Unit Limit", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mUnitLimit = theValue;
-    } else {
-        theValue = this->mSettings.mGameOptions.mUnitLimit = 500;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Game Unit Limit", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Wonders For Victory", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mWondersForVictory = theValue;
-    } else {
-        theValue = this->mSettings.mGameOptions.mWondersForVictory = 3;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Wonders For Victory", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Game Variant", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mVariant = theValue;
-    } else {
-        theValue = this->mSettings.mGameOptions.mVariant = 2;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Game Variant", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Difficulty Level", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mDifficulty = theValue;
-    } else {
-        theValue = this->mSettings.mGameOptions.mDifficulty = 1;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Difficulty Level", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Game Speed", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mGameSpeed = theValue;
-    } else {
-        theValue = this->mSettings.mGameOptions.mGameSpeed = 1;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Game Speed", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Record Game", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mRecordGames = theValue == 1;
-    } else {
-        this->mSettings.mGameOptions.mRecordGames = false;
-        theValue = 0;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Record Game", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Reveal Map", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mRevealMap = theValue == 1;
-    } else {
-        this->mSettings.mGameOptions.mRevealMap = false;
-        theValue = 0;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Reveal Map", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Allow Custom Civs", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mAllowCustomCivs = theValue == 1;
-    } else {
-        this->mSettings.mGameOptions.mAllowCustomCivs = true;
-        theValue = 1;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Allow Custom Civs", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Lock Teams", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mLockTeams = theValue == 1;
-    } else {
-        this->mSettings.mGameOptions.mLockTeams = false;
-        theValue = 0;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Lock Teams", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Lock Speed", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mLockSpeed = theValue == 1;
-    } else {
-        this->mSettings.mGameOptions.mLockSpeed = false;
-        theValue = 0;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Lock Speed", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Cheat Codes", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mCheatCodes = theValue == 1;
-    } else {
-        this->mSettings.mGameOptions.mCheatCodes = true;
-        theValue = 1;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Cheat Codes", theValue);
-    }
-    theResult = this->mConfig.GetValue(kEEGameOptionsSection, "Victory Allowed", theValue);
-    if (theResult == 0) {
-        this->mSettings.mGameOptions.mVictory = theValue == 1;
-    } else {
-        this->mSettings.mGameOptions.mVictory = true;
-        theValue = 1;
-        this->mConfig.SetValue(kEEGameOptionsSection, "Victory Allowed", theValue);
-    }
+    EEReadSettings(this->mConfig, this->mSettings, true);
     return 0;
 }
 
 // FUNCTION: EXE 0x535943
-// Writes every game setting to config.ini (the WON password encrypted), then the game options; returns their
-// result
+// Writes every game setting to config.yaml, then the game options; returns the first failure (0 when every value
+// was written)
 long EEGamePreferences::Save()
 {
-    UWideString theRasterizerName(this->mSettings.mRasterizerName);
-    UWideString theLastGameFile(this->mSettings.mLastGameFile);
-    UWideString theLastScenarioFile(this->mSettings.mLastScenarioFile);
-    UWideString theLastQuickSave((const char*)this->mSettings.mLastQuickSave);
-    UWideString theLastAutoSave((const char*)this->mSettings.mLastAutoSave);
-    UString theEncryptedPassword;
-    long theValue = 0;
-
-    this->mConfig.SetValue(kEEGameSection, "Rasterizer Name", theRasterizerName);
-    theValue = this->mSettings.mMouseSensitivity * 100.0f;
-    if (theValue <= 1)
-        theValue = 1;
-    this->mConfig.SetValue(kEEGameSection, "Mouse Sensitivity", theValue);
-    theValue = this->mSettings.mSideScrollSpeed * 100.0f;
-    if (theValue <= 1)
-        theValue = 1;
-    this->mConfig.SetValue(kEEGameSection, "Side Scroll Speed", theValue);
-    theValue = this->mSettings.mGrabScrollSpeed * 100.0f;
-    if (theValue <= 1)
-        theValue = 1;
-    this->mConfig.SetValue(kEEGameSection, "Grab Scroll Speed", theValue);
-    theValue = this->mSettings.mGameBitDepth;
-    this->mConfig.SetValue(kEEGameSection, "Game Bit Depth", theValue);
-    theValue = this->mSettings.mNetworkAdapter;
-    this->mConfig.SetValue(kEEGameSection, "Network Adapter", theValue);
-    theValue = this->mSettings.mGameWindowHeight;
-    this->mConfig.SetValue(kEEGameSection, "Game Window Height", theValue);
-    theValue = this->mSettings.mGameWindowWidth;
-    this->mConfig.SetValue(kEEGameSection, "Game Window Width", theValue);
-    theValue = this->mSettings.mScreenID;
-    this->mConfig.SetValue(kEEGameSection, "Screen ID", theValue);
-    theValue = this->mSettings.mTextureBitDepth;
-    this->mConfig.SetValue(kEEGameSection, "Texture Bit Depth", theValue);
-    theValue = this->mSettings.mWaitForVSync;
-    this->mConfig.SetValue(kEEGameSection, "Wait for VSync", theValue);
-    this->mConfig.SetValue(kEEGameSection, "Player Name", this->mSettings.mPlayerName);
-    if (this->mSettings.mWonNetPassword.GetLength() > 0)
-        UEEncryptUString(this->mSettings.mWonNetPassword, theEncryptedPassword);
-    else
-        theEncryptedPassword = "";
-    this->mConfig.SetValue(kEEGameSection, "WonNet Password", UWideString(theEncryptedPassword));
-    this->mConfig.SetValue(kEEGameSection, "Host Game Name", this->mSettings.mHostGameName);
-    this->mConfig.SetValue(kEEGameSection, "Sierra.com User ID", this->mSettings.mSierraUserID);
-    this->mConfig.SetValue(kEEGameSection, "Sierra.com Game Name", this->mSettings.mSierraGameName);
-    this->mConfig.SetValue(kEEGameSection, "Last Game File", theLastGameFile);
-    this->mConfig.SetValue(kEEGameSection, "Last Scenario File", theLastScenarioFile);
-    theValue = this->mSettings.mMusicVolume * 100.0f;
-    this->mConfig.SetValue(kEEGameSection, "Music Volume", theValue);
-    theValue = this->mSettings.mSoundVolume * 100.0f;
-    this->mConfig.SetValue(kEEGameSection, "Sound Volume", theValue);
-    theValue = this->mSettings.mReverbEnabled != false;
-    this->mConfig.SetValue(kEEGameSection, "Reverb Enabled", theValue);
-    theValue = this->mSettings.mAmbientSounds != false;
-    this->mConfig.SetValue(kEEGameSection, "Ambient Sounds", theValue);
-    theValue = this->mSettings.mUseAreaEffectOverlays != false;
-    this->mConfig.SetValue(kEEGameSection, "UseAreaEffectOverlays", theValue);
-    this->mSettings.mDisplayWeatherEffects = false;
-    theValue = this->mSettings.mAutoSaveInMilliseconds;
-    this->mConfig.SetValue(kEEGameSection, "AutoSave In Milliseconds", theValue);
-    theValue = this->mSettings.mNumberOfAutoSaves;
-    this->mConfig.SetValue(kEEGameSection, "Number Of AutoSaves", theValue);
-    this->mConfig.SetValue(kEEGameSection, "Last Quick Save", theLastQuickSave);
-    this->mConfig.SetValue(kEEGameSection, "Last Auto Save", theLastAutoSave);
-    theValue = this->mSettings.mMaxPTsPerSecond;
-    this->mConfig.SetValue(kEEGameSection, "Max PTs per Second", theValue);
-    theValue = this->mSettings.mMinPTsPerSecond;
-    this->mConfig.SetValue(kEEGameSection, "Min PTs per Second", theValue);
-    theValue = this->mSettings.mPTRateTuningThreshold;
-    this->mConfig.SetValue(kEEGameSection, "PT Rate Tuning Threshold (percent)", theValue);
-    theValue = this->mSettings.mShowBlood != false;
-    this->mConfig.SetValue(kEEGameSection, "Show Blood", theValue);
-    theValue = this->mSettings.mRightHandMouseOrientation != false;
-    this->mConfig.SetValue(kEEGameSection, "Right Hand Mouse Orientation", theValue);
-    theValue = this->mSettings.mMusicEnabled != false;
-    this->mConfig.SetValue(kEEGameSection, "Music Enabled", theValue);
-    theValue = this->mSettings.mMaxNumberOfSounds * 100.0f;
-    this->mConfig.SetValue(kEEGameSection, "Max Number Of Sounds (percent)", theValue);
-    theValue = this->mSettings.mZoomStyle;
-    this->mConfig.SetValue(kEEGameSection, "ZoomStyle", theValue);
-    theValue = this->mSettings.mUnitLighting != false;
-    this->mConfig.SetValue(kEEGameSection, "Unit Lighting", theValue);
-    theValue = this->mSettings.mTrilinearFilter != false;
-    this->mConfig.SetValue(kEEGameSection, "Trilinear Filter", theValue);
-    theValue = this->mSettings.mModelDetail;
-    this->mConfig.SetValue(kEEGameSection, "Model Detail", theValue);
-    theValue = this->mSettings.mMIPLevelsToDrop;
-    this->mConfig.SetValue(kEEGameSection, "MIP Levels to Drop", theValue);
-    theValue = this->mSettings.mButtonMIPLevelsToDrop;
-    this->mConfig.SetValue(kEEGameSection, "Button MIP Levels to Drop", theValue);
-    theValue = this->mSettings.mTerrainMIPLevelsToDrop;
-    this->mConfig.SetValue(kEEGameSection, "Terrain MIP Levels to Drop", theValue);
-    theValue = this->mSettings.mTextureResolution;   // port
-    this->mConfig.SetValue(kEEGameSection, "Texture Resolution", theValue);
-    // port: the modern display and audio settings
-    this->mConfig.SetValue(kEEGameSection, "UI Scale", this->mSettings.mUIScale);
-    this->mConfig.SetValue(kEEGameSection, "Render Resolution", this->mSettings.mRenderResolution);
-    this->mConfig.SetValue(kEEGameSection, "Window Mode", this->mSettings.mWindowMode);
-    this->mConfig.SetValue(kEEGameSection, "Frame Rate Limit", this->mSettings.mFrameRateLimit);
-    this->mConfig.SetValue(kEEGameSection, "Texture Filtering", this->mSettings.mTextureFiltering);
-    this->mConfig.SetValue(kEEGameSection, "Brightness", this->mSettings.mBrightness);
-    this->mConfig.SetValue(kEEGameSection, "Master Volume", this->mSettings.mMasterVolume);
-    this->mConfig.SetValue(kEEGameSection, "Maximum Zoom Out", this->mSettings.mMaximumZoomOut);
-    this->mConfig.SetValue(kEEGameSection, "Game Log", this->mSettings.mGameLog);
-    this->mConfig.SetValue(kEEGameSection, "Mute in Background", (long)(this->mSettings.mMuteInBackground ? 1 : 0));
-    this->mConfig.SetValue(kEEGameSection, "Audio Device", UWideString(this->mSettings.mAudioDevice));
-    theValue = this->mSettings.mZoomLock * 100.0f;
-    this->mConfig.SetValue(kEEGameSection, "Zoom Lock", theValue);
-    theValue = this->mSettings.mEffectDetail;
-    this->mConfig.SetValue(kEEGameSection, "Effect Detail", theValue);
-    theValue = this->mSettings.mAnimationSmoothing != false;
-    this->mConfig.SetValue(kEEGameSection, "Animation Smoothing", theValue);
-    theValue = this->mSettings.mDisplayShadows != false;
-    this->mConfig.SetValue(kEEGameSection, "Display Shadows", theValue);
-    theValue = this->mSettings.mDisplayClouds != false;
-    this->mConfig.SetValue(kEEGameSection, "Display Clouds", theValue);
-    theValue = this->mSettings.mDisplayBattlefieldAmbients != false;
-    this->mConfig.SetValue(kEEGameSection, "Display Battlefield Ambients", theValue);
-    theValue = this->mSettings.mComputerPlayerDifficultyLevel;
-    this->mConfig.SetValue(kEEGameSection, "Computer Player Difficulty Level", theValue);
-    theValue = this->mSettings.mDebugOOSHandling != false;
-    this->mConfig.SetValue(kEEGameSection, "Debug OOS Handling", theValue);
-    theValue = this->mSettings.mTakeJPGScreenshots != false;
-    this->mConfig.SetValue(kEEGameSection, "Take JPG Screenshots", theValue);
-    theValue = this->mSettings.mTakeEndGameScreenshots != false;
-    this->mConfig.SetValue(kEEGameSection, "Take End Game Screenshots", theValue);
-    theValue = this->mSettings.mLastOpenPostGameStatsPage;
-    this->mConfig.SetValue(kEEGameSection, "Last Open Post Game Stats Page", theValue);
-    return this->SaveGameOptions();
+    long theResult = EEWriteSettings(this->mConfig, this->mSettings, false);
+    long theOptions = this->SaveGameOptions();
+    return theResult != 0 ? theResult : theOptions;
 }
 
 // FUNCTION: EXE 0x53670d
-// Writes the last game options to config.ini's [Game Options] section; returns the last write's result
+// Writes the last game options to config.yaml's game_options block; returns the first failure, else 0
 long EEGamePreferences::SaveGameOptions()
 {
-    UWideString theString;
-    long theValue;
-
-    theValue = this->mSettings.mGameOptions.mMapSize;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Map Size", theValue);
-    theString = this->mSettings.mGameOptions.mMapType;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Map Type", theString);
-    theValue = this->mSettings.mGameOptions.mResources;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Starting Resources", theValue);
-    theValue = this->mSettings.mGameOptions.mEpochStart;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Starting Epoch", theValue);
-    theValue = this->mSettings.mGameOptions.mEpochEnd;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Ending Epoch", theValue);
-    theValue = this->mSettings.mGameOptions.mUnitLimit;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Game Unit Limit", theValue);
-    theValue = this->mSettings.mGameOptions.mWondersForVictory;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Wonders For Victory", theValue);
-    theValue = this->mSettings.mGameOptions.mVariant;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Game Variant", theValue);
-    theValue = this->mSettings.mGameOptions.mDifficulty;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Difficulty Level", theValue);
-    theValue = this->mSettings.mGameOptions.mGameSpeed;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Game Speed", theValue);
-    theValue = this->mSettings.mGameOptions.mRecordGames == true;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Record Game", theValue);
-    theValue = this->mSettings.mGameOptions.mRevealMap == true;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Reveal Map", theValue);
-    theValue = this->mSettings.mGameOptions.mAllowCustomCivs == true;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Allow Custom Civs", theValue);
-    theValue = this->mSettings.mGameOptions.mLockTeams == true;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Lock Teams", theValue);
-    theValue = this->mSettings.mGameOptions.mLockSpeed == true;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Lock Speed", theValue);
-    theValue = this->mSettings.mGameOptions.mCheatCodes == true;
-    this->mConfig.SetValue(kEEGameOptionsSection, "Cheat Codes", theValue);
-    theValue = this->mSettings.mGameOptions.mVictory == true;
-    return this->mConfig.SetValue(kEEGameOptionsSection, "Victory Allowed", theValue);
+    return EEWriteSettings(this->mConfig, this->mSettings, true);
 }
 
 // FUNCTION: EXE 0x536b49

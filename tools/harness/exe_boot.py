@@ -2,9 +2,9 @@
 the build under test (stage) and runs it under exe_boot.exe's guards (run). game_session.py is the entry point.
 
 Settings + window:
-  - the game keeps its settings in config.ini in its own directory (platform/PlatConfig.h); the registry is not used.
-    Every run writes a fresh config.ini into the staged copy with the run's pins (config_set: "Name=value" or
-    "Name=dword:N" in the [Game] section, e.g. Game Bit Depth=32) and copies the file the game leaves behind to
+  - the game keeps its settings in config.yaml in its own directory (platform/PlatConfig.h); the registry is not
+    used. Every run writes a fresh config.yaml into the staged copy with the run's pins (config_set:
+    "block.key=value", e.g. audio.music.enabled=true; config_yaml.py) and copies the file the game leaves behind to
     config_out. exe_boot.c refuses every registry write (a run that writes one STOPs).
   - the run mode stages a copy of the game data (Data, Users, redist, *.cfg; copied once from the install, read
     only, into build/boot/aoc_install_copy; or the unified open data, EE_HARNESS_OPEN_DATA), allows windows and the
@@ -20,6 +20,9 @@ import pathlib
 import shutil
 import subprocess
 import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
+import config_yaml   # noqa: E402
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
@@ -92,7 +95,6 @@ INSTALL = pathlib.Path(r"C:\Program Files (x86)\Empire Earth\Empire Earth - The 
 # from there into every staging directory; the community DDraw.dll/dreXmod/discord files are not copied
 GAME_FILES = ["Data", "Users", "redist", "WONLobby.cfg", "zzWONVersion.cfg"]
 CACHE = BOOT / "aoc_install_copy"
-CONFIG_SECTION = "Game"   # the section of config.ini the run pins go to (EEPreferences.cpp kEEGameSection)
 
 
 def install_cache():
@@ -247,18 +249,12 @@ def stage(name, build, data=True, silent_audio=True):
 
 
 def config_text(config_set):
-    """config.ini holding the run's pins: "Name=value" or "Name=dword:N" items (the old registry pin syntax)."""
-    lines = [f"[{CONFIG_SECTION}]"]
-    for item in config_set:
-        name, value = item.split("=", 1)
-        if value.startswith(("dword:", "sz:")):
-            value = value.split(":", 1)[1]
-        lines.append(f"{name.strip()} = {value}")
-    return "\n".join(lines) + "\n"
+    """config.yaml holding the run's pins: "block.key=value" items (config_yaml.py)."""
+    return config_yaml.config_text(config_set)
 
 
 def batch_begin(instances=()):
-    """tools/harness/game_batch.py: nothing to snapshot (every staged copy has its own config.ini)."""
+    """tools/harness/game_batch.py: nothing to snapshot (every staged copy has its own config.yaml)."""
     return dict(lease=None, pruned=[], snapshot=None, existed=False)
 
 
@@ -272,8 +268,8 @@ def shared_recover():
 
 def run(harness, d, mode, timeout, dump=None, config_set=(), config_out=None, windowed=False, checkpoint='frame', trace_functions=None, live_log=None, loopback=False, harness_extra=(),
         registry='self', reg_subtree=None, on_start=None):
-    """config_set: the run's settings pins, written to a fresh config.ini in the staged copy d (config_text);
-    config_out: where the config.ini the game leaves behind is copied. registry and reg_subtree are accepted for
+    """config_set: the run's settings pins, written to a fresh config.yaml in the staged copy d (config_text);
+    config_out: where the config.yaml the game leaves behind is copied. registry and reg_subtree are accepted for
     the callers and ignored (the game uses no registry). on_start(): called right before the harness starts."""
     cmd = [str(harness), str(d), "EE-AOC.exe", mode, str(timeout)] + ([str(dump)] if dump else [])
     if windowed:
@@ -291,8 +287,9 @@ def run(harness, d, mode, timeout, dump=None, config_set=(), config_out=None, wi
     if loopback:
         cmd.append('--loopback-only')
     cmd += list(harness_extra)   # opt-in (full-link layout: --audio-entry RVA)
-    (d / "config.ini").write_bytes(config_text(config_set).encode("cp1252"))
-    (d / "config.ini.new").unlink(missing_ok=True)
+    (d / "config.ini").unlink(missing_ok=True)   # an older build's settings file
+    (d / "config.yaml").write_bytes(config_text(config_set).encode("cp1252"))
+    (d / "config.yaml.new").unlink(missing_ok=True)
     if on_start:
         on_start()
     try:
@@ -309,10 +306,10 @@ def run(harness, d, mode, timeout, dump=None, config_set=(), config_out=None, wi
         out = ((pathlib.Path(live_log).read_text(encoding='utf-8') if live_log else (e.stdout or b'').decode(errors='replace'))
                + '\nSTOP harness timeout (killed)\n')
     if config_out:
-        if (d / "config.ini").exists():
-            shutil.copy(d / "config.ini", config_out)
+        if (d / "config.yaml").exists():
+            shutil.copy(d / "config.yaml", config_out)
         else:
-            pathlib.Path(config_out).write_text("(no config.ini)\n")
+            pathlib.Path(config_out).write_text("(no config.yaml)\n")
     if not any(ln.startswith('STOP ') for ln in out.splitlines()) or 'process gone: yes; windows left: 0' not in out:
         out += '\nHARNESS FAILURE: missing stop/clean process termination\n'
     if not live_log:
@@ -344,7 +341,7 @@ def data_verdict(o1, o2, r, image=(0x400000, 0x400000 + 0x67b000)):
 
 
 def windowed_config(raw, directory):
-    """A run's config.ini for comparison (the staging directory's name masked)."""
+    """A run's config.yaml for comparison (the staging directory's name masked)."""
     text = raw.decode('cp1252', errors='replace')
     return re.sub(re.escape(str(directory)), '<staging>', text, flags=re.I).strip().encode('utf-8')
 

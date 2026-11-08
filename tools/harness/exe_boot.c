@@ -98,7 +98,7 @@ typedef enum { G_STOP, G_FILE_CREATE, G_FILE_OPEN, G_SETINFO, G_SPI, G_MSGBOX_A,
                G_NET_SOCKET, G_NET_ADDRESS, G_NET_LISTEN, G_NET_CLOSE, G_NET_IOCTL, G_SEED_PIN, G_RNG_TRACE,
                G_MUTEX_BYPASS, G_REG_OPEN, G_REG_OPEN_EX, G_PT_SYNC, G_PT_WATCH, G_NHD_OUT, G_NHD_RESULT, G_MP_SKIP, G_MP_ACCEPT, G_MP_CHECKSUM } gkind;
 
-/* ---- registry policy: the game keeps its settings in config.ini (no registry), so every registry write STOPs the run.
+/* ---- registry policy: the game keeps its settings in config.yaml (no registry), so every registry write STOPs the run.
    Only the harness's own self test (--reg-root, tools/harness/selftest) still allows writes below its test root
    (HKCU\Software\<root>\EE-AOC; the root key itself may be created) to exercise the policy; key paths are resolved
    from the target's handles */
@@ -1286,7 +1286,7 @@ int main(int argc, char **argv)
                 for (k=ndd_returns-1;k>=0;k--) if(dd_returns[k].at==a && dd_returns[k].tid==ev.dwThreadId) {pending=k;break;}
                 if (pending<0) {
                     /* Another thread returns through an address a watched call of a DIFFERENT thread waits at (the
-                       same function called concurrently, e.g. two threads saving config.ini): not this guard's call.
+                       same function called concurrently, e.g. two threads saving config.yaml): not this guard's call.
                        Step it over the original byte and re-arm, as a re-armed guard does; the watch stays pending. */
                     for(k=0;k<ndd_returns && dd_returns[k].at!=a;k++);
                     if(k==ndd_returns) { printf("STOP unmatched DirectDraw return\n"); done=1; break; }

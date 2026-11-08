@@ -880,7 +880,7 @@ const char* kUsage =
     "  --personality NAMES    EE_AI_PERSONALITY (e.g. balanced)\n"
     "  --set DOC.KEY=VALUE    a rules document value (repeatable), e.g. aipersonalities.balanced.military.army_floor=0.2\n"
     "  --data DIR             the data root (EE_DATA_ROOT; default the exe's directory)\n"
-    "  --config FILE          the settings file (EE_CONFIG; default <data root>/config.ini)\n"
+    "  --config FILE          the settings file (EE_CONFIG; default <data root>/config.yaml)\n"
     "  --report FILE          the JSON report (default stdout)\n"
     "  --trace FILE           the EE-AI trace lines (with EE_AI_TRACE=1 or --ai-trace; default stdout)\n"
     "  --ai-trace             EE_AI_TRACE=1\n"
@@ -952,7 +952,7 @@ void SetEnv(const char* inName, const std::string& inValue)
 
 }   // namespace
 
-// EESimPreferences: the settings the simulation runs with, over config.ini (EERun, after gGamePreferences.Load): a
+// EESimPreferences: the settings the simulation runs with, over config.yaml (EERun, after gGamePreferences.Load): a
 // window (hidden: DX7Screen::CreateAWindow), the harness's pins (32-bit, Min = Max PTs per Second), no autosave, no music
 void EESimPreferences()
 {

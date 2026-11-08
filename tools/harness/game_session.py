@@ -1,7 +1,7 @@
 """Bounded live game integration session. Request clean harness stop via stage/stop.request.
 
 Round 39 (TEST ONLY, opt-in): --instance K stages build/boot/windowed_{o,f,r}_K with its own logs and evidence, lets
-the harness debugger bypass the single-instance mutex (logged, image unpatched); each stage has its own config.ini
+the harness debugger bypass the single-instance mutex (logged, image unpatched); each stage has its own config.yaml
 (the game's settings, written fresh with this run's pins; --registry-managed-by-batch is accepted and has no effect).
 Plugin hooks (optional files):
 timeshim.py, session_exercise.py, differential/session_hook.py may define add_session_arguments(ap),
@@ -124,10 +124,10 @@ def main():
     ap.add_argument('--instance',type=int,
                     help='TEST ONLY (round 39): parallel instance K (1..32): stage build/boot/windowed_{o,f,r}_K, logs '
                          'build/boot/windowed_*_K.session.*, the harness bypasses the single-instance mutex (logged; image '
-                         'unpatched); the stage has its own config.ini')
+                         'unpatched); the stage has its own config.yaml')
     ap.add_argument('--registry-managed-by-batch',action='store_true',
                     help='TEST ONLY (round 39, with --instance): run from tools/harness/game_batch.py (no effect: the game '
-                         'uses no registry; every stage has its own config.ini)')
+                         'uses no registry; every stage has its own config.yaml)')
     for module in plugins.values():
         if hasattr(module,'add_session_arguments'):module.add_session_arguments(ap)
     a=ap.parse_args()
@@ -182,12 +182,12 @@ def main():
         mutex_rva=mutex_bypass_rva((stage/'EE-AOC.exe').read_bytes(),LinkMap(fulllink_map) if a.fulllink else None)
         harness_extra=tuple(harness_extra)+('--mutex-bypass',f'{mutex_rva:x}','--port-offset',str(PORT_STEP*a.instance))
         print(f'TEST instance {a.instance}: stage {name}; mutex bypass at {MUTEX_SYMBOL} rva {mutex_rva:#x} '
-              f'(GetLastError 183 -> 0); settings in the stage\'s own config.ini',flush=True)
+              f'(GetLastError 183 -> 0); settings in the stage\'s own config.yaml',flush=True)
     if a.trace_once:harness_extra=tuple(harness_extra)+('--trace-once',)
     if a.rng_trace:
         physics_va=LinkMap(fulllink_map).address(PHYSICS_SYMBOL) if a.fulllink else PHYSICS_VA_ORIGINAL
         harness_extra=tuple(harness_extra)+('--rng-trace',f'{physics_va:x}','--rng-offset',f"{layout.off('EEPhysics',0x18):x}")
-    reg_pins=[f'Min PTs per Second={a.pt_rate}',f'Max PTs per Second={a.pt_rate}'] if a.pt_rate else []
+    reg_pins=[f'network.pt_rate.min={a.pt_rate}',f'network.pt_rate.max={a.pt_rate}'] if a.pt_rate else []
     if manifest:
         trace=stage/'experimental.trace'
         trace.write_text(''.join(f'{row["candidate_rva"]:x}\n' for row in manifest['functions']),encoding='ascii')
@@ -231,8 +231,8 @@ def main():
                 if handle is not None:started[key]=handle
     try:
         lines=boot.run(harness,stage,'run',a.timeout,str(path)+'.bmp',
-                       ['Game Bit Depth=32','Texture Bit Depth=32','Music Enabled=1']+reg_pins+plugin_pins,
-                       str(path)+'.config.ini',windowed=True,checkpoint='session',trace_functions=trace,live_log=str(path)+'.raw.txt',loopback=True,
+                       ['audio.music.enabled=true']+reg_pins+plugin_pins,
+                       str(path)+'.config.yaml',windowed=True,checkpoint='session',trace_functions=trace,live_log=str(path)+'.raw.txt',loopback=True,
                        harness_extra=harness_extra,
                        on_start=start_plugins)
     finally:

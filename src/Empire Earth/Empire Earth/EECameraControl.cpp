@@ -108,7 +108,7 @@ static const float kCameraZoomDistanceFree = -42.0f;
 static const float kCameraRearFree = 58.0f;
 
 // port: the farthest zoom (1.0 in the original; the camera's distance grows linearly past it, its pitch stays at the
-// farthest), from config.ini's "Maximum Zoom Out" (EEPreferences)
+// farthest), from config.yaml's camera: maximum_zoom_out (EEPreferences)
 float gCameraMaxZoom = 2.0f;
 
 // FUNCTION: EXE 0x5275b6

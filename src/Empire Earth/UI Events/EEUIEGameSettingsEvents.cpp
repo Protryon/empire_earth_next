@@ -158,7 +158,7 @@ static void ShowResolutions(UIForm* inForm, EEGameSettings inSettings);
 static void ShowRasterizers(UIForm* inForm, EEGameSettings inSettings);
 static void ShowGraphics(UIForm* inForm, EEGameSettings inSettings);
 
-// ---- port: the modern display and audio settings (EEGameSettings mUIScale..mAudioDevice; config.ini)
+// ---- port: the modern display and audio settings (EEGameSettings mUIScale..mAudioDevice; config.yaml)
 // Each combo box line is a value; the selection is the line whose value is nearest the setting.
 static const long kWindowModes[] = {0, 1};
 static const long kUIScales[] = {0, 100, 125, 150, 175, 200, 250, 300};

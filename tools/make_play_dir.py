@@ -16,7 +16,7 @@ OUT gets:
     that has Data\\Movies) converted to MPEG-1 (.mpg, tools/convert_movies.py, needs ffmpeg). Encodes are cached in
     build/play_cache/movies (keyed by file name and size), so a second play directory costs a copy. The build plays
     X.mpg when the game asks for X.bik.
-Run OUT\\EE-AOC.exe. The game keeps its settings in OUT\\config.ini (it creates the file). OUT must be outside the
+Run OUT\\EE-AOC.exe. The game keeps its settings in OUT\\config.yaml (it creates the file). OUT must be outside the
 repository or under its build/ folder (git-ignored). --force replaces an existing OUT made by this script.
 
 Linux and macOS (--posix-exe PATH: the game built by tools/xbuild.py game, e.g.
@@ -106,7 +106,7 @@ def movies(out, sources):
 
 
 def posix_files(exe, out):
-    """The POSIX game and a launcher (the game's directory is its data root; its settings go to config.ini there)"""
+    """The POSIX game and a launcher (the game's directory is its data root; its settings go to config.yaml there)"""
     shutil.copy2(exe, out / "ee-aoc")
     (out / "run.sh").write_bytes(b'#!/bin/sh\n# Empire Earth: The Art of Conquest (tools/make_play_dir.py --posix-exe)\n'
                                  b'here="$(cd "$(dirname "$0")" && pwd)"\n'

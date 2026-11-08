@@ -63,7 +63,7 @@ def run_one(args, run, out, instance=None):
         cmd.append('--no-human-defeat')
     if args.build_dir:
         cmd += ['--build-dir', str(args.build_dir)]
-    if instance is not None:   # --jobs: game_session's parallel instance (own stage, config.ini, ports, mutex bypass)
+    if instance is not None:   # --jobs: game_session's parallel instance (own stage, config.yaml, ports, mutex bypass)
         cmd += ['--instance', str(instance)]
     print(f"== {run['id']}{f' [instance {instance}]' if instance else ''}: {' '.join(cmd[3:])} (EE_AI_CHEATS={env.get('EE_AI_CHEATS', 'all')})", flush=True)
     t0 = time.monotonic()

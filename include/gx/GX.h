@@ -378,7 +378,7 @@ private:
     unsigned long mReferences;
 };
 
-// port: the display settings (EEApplyDisplaySettings, the settings form's video tab; config.ini)
+// port: the display settings (EEApplyDisplaySettings, the settings form's video tab; config.yaml)
 // the render scale's share of the display's pixels, 50..100 percent (GXRenderScale)
 void GXSetRenderPercent(unsigned long inPercent);
 // 0 presents on v-sync, -1 as fast as possible, else at most that many frames a second (no v-sync)
