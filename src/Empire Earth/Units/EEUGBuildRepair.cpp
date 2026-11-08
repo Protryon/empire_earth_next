@@ -536,7 +536,7 @@ void EEUGBuildRepair::Step(EEComplexUnit* inUnit)
         this->AddBuildEvent();
         break;
     case kActionTaskSmartCitizen:
-        if (inUnit->mPlayer->IsHuman())
+        if (inUnit->mPlayer->IsHuman() && !this->IsShiftQueueNext(inUnit))
             this->FindNextWork(inUnit);
         break;
     case kActionConvertToLocationGoal:
@@ -778,6 +778,26 @@ bool EEUGBuildRepair::IsSiteFreeOfUnits()
             theResult = false;
     }
     return theResult;
+}
+
+// Port (not in the original): whether a human's shift queue, not a smart task, decides what the citizen does after
+// this building. True when another goal is queued behind this one (a shift-click on a resource, a move ...): the
+// smart task's SetGoal would replace this goal and leave the queued one waiting behind an endless gather, while the
+// script's Idle (ClearGoals) starts it. Also true when the build queue was shift-queued (EEMBuildUnit, EEMRepairUnit
+// with shift): the citizen idles once the queue is done. A farm is still worked: building one is an order to farm it.
+bool EEUGBuildRepair::IsShiftQueueNext(EEComplexUnit* inUnit)
+{
+    std::deque<EEUnitGoal*>& theGoals = inUnit->GetQueueGoals(0);
+    for (std::deque<EEUnitGoal*>::iterator i = theGoals.begin(); i != theGoals.end(); ++i) {
+        if (*i == this)
+            continue;
+        EEUGLocation* theLocation = (*i)->mKind == kGoalLocation ? static_cast<EEUGLocation*>(*i) : NULL;
+        if (theLocation == NULL || !theLocation->mIsAutoWaypoint)
+            return true;
+    }
+    if (!inUnit->mHasShiftQueuedBuild)
+        return false;
+    return this->mTarget == NULL || this->mTarget->mUnitClass->GetUnitType() != kUnitTypeFarm;
 }
 
 // FUNCTION: EXE 0x61faa0

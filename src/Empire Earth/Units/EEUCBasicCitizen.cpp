@@ -111,6 +111,9 @@ void EEUCBasicCitizen::ActionChanged(EEComplexUnit* inUnit)
         break;
     case kActionIdle:
         inUnit->SetProductionTime(0);
+        // Port: the shift-queued builds are done (EEComplexUnit::mHasShiftQueuedBuild)
+        if (inUnit->mCitizenBuildQueue.size() == 0)
+            inUnit->mHasShiftQueuedBuild = false;
         break;
     }
     EEUnitClass::ActionChanged(inUnit);

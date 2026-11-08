@@ -999,6 +999,10 @@ public:
     unsigned short mU35E;                   // +0x35e (untouched)
     float GetRoll() const { return this->mRoll; }
     float mRoll;                            // +0x360
+    // Port (not in the original, not saved): a human shift-queued a build or repair (EEMBuildUnit, EEMRepairUnit),
+    // so the citizen idles at the end of its build queue instead of taking a smart task (EEUGBuildRepair::Step).
+    // OrderRepair and ClearBuildTargets clear it, and so does going idle with an empty build queue.
+    bool mHasShiftQueuedBuild;
 };
 
 // 0x241419 (cdecl): the model a unit of inClass shows for inPlayer (EEComplexUnit::GetModel when +0x351 is set;
