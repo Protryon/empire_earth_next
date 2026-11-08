@@ -477,6 +477,8 @@ void EEUnitClassImprovement::Reapply(EEUnitClass* inUnitClass, EEUnitClassUpgrad
     }
 }
 
+static_assert(sizeof(EEUnitClassImprovement::mLevels) == 0x40, "saved levels: 16 4-byte words on every target");
+
 // FUNCTION: EXE 0x63b39b
 // Reads the levels (and points spent, recounted) from a saved game and applies them to the upgrade's stats; saves
 // before minor version 0xd9 drop leadership to level 1; returns the read error
@@ -484,7 +486,7 @@ long EEUnitClassImprovement::Load(EEUnitClass* inUnitClass, EEUnitClassUpgrade* 
                                   unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile)
 {
     unsigned long theRead;
-    long theOld[16];
+    int32_t theOld[16];   // 0x40 raw bytes, as mLevels
     long theResult;
     unsigned long i;
     if (inMajorVersion == 0) {
