@@ -1,13 +1,16 @@
 // The WONAPI GUI's fonts on platform/PlatFont.h (WONLobbyPlatform.h), in place of the GDI backend's MSFont.cpp: the
 // same font request (the point size at a fixed 96 dpi as a character height, bold, italic), text drawn with its
 // cell's top-left at x, y in the graphics' colour on a transparent background (TextOut, TA_TOP | TA_LEFT,
-// TRANSPARENT), and MSFont's own underline. Text is converted to Windows-1252 (other characters show as '?').
+// TRANSPARENT), and MSFont's own underline. Text is converted to Windows-1252 (other characters show as '?'). On a
+// surface with a pixel scale (WONLobbyPlatform.h) the text is rasterised at the font size times the scale and
+// smoothed (the metrics and every measurement stay the logical font's, so the layout does not move).
 #include <windows.h>
 #include <string>
 #include <list>
 #include <vector>
 #include <map>
 #include <set>
+#include <math.h>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
@@ -18,7 +21,8 @@
 
 namespace WONAPI {
 
-// The lobby's text as GDI drew it at DEFAULT_QUALITY on the era's systems: small sizes without smoothing
+// The lobby's text as GDI drew it at DEFAULT_QUALITY on the era's systems: small sizes without smoothing (at a pixel
+// scale above 1 the text is smoothed: there are pixels enough for it)
 static const int kPlatGUIFontAntialiased = 0;
 
 std::string PlatGUIToCp1252(const wchar_t* inText, unsigned short inLength)
@@ -40,7 +44,8 @@ static int MulDivRound(int a, int b, int c)
     return (int)((theProduct >= 0 ? theProduct + theHalf : theProduct - theHalf) / c);
 }
 
-PlatGUIFont::PlatGUIFont(DisplayContext* inContext, const FontDescriptor& inDescriptor) : Font(inContext, inDescriptor)
+PlatGUIFont::PlatGUIFont(DisplayContext* inContext, const FontDescriptor& inDescriptor)
+    : Font(inContext, inDescriptor), mScaledFont(NULL), mScaledFontScale(0.0f)
 {
     int theHeight = -MulDivRound(inDescriptor.mSize, 96, 72);
     int theStyle = inDescriptor.mStyle;
@@ -56,8 +61,28 @@ PlatGUIFont::PlatGUIFont(DisplayContext* inContext, const FontDescriptor& inDesc
 
 PlatGUIFont::~PlatGUIFont()
 {
+    if (this->mScaledFont != NULL)
+        PlatFontDestroy(this->mScaledFont);
     if (this->mFont != NULL)
         PlatFontDestroy(this->mFont);
+}
+
+// The font for a surface of pixel scale inScale: the logical font at 1, else the same request with the character
+// height times the scale, smoothed (the last one is kept)
+const PlatFont* PlatGUIFont::FontForScale(float inScale)
+{
+    if (inScale == 1.0f || this->mFont == NULL)
+        return this->mFont;
+    if (this->mScaledFont != NULL && this->mScaledFontScale == inScale)
+        return this->mScaledFont;
+    if (this->mScaledFont != NULL)
+        PlatFontDestroy(this->mScaledFont);
+    int theHeight = -(int)floorf((float)MulDivRound(this->mDescriptor.mSize, 96, 72) * inScale + 0.5f);
+    int theStyle = this->mDescriptor.mStyle;
+    this->mScaledFont = PlatFontCreate(this->mDescriptor.mFace.c_str(), theHeight, (theStyle & FontStyle_Bold) ? 1 : 0,
+                                       (theStyle & FontStyle_Italic) ? 1 : 0, 0, 1);
+    this->mScaledFontScale = inScale;
+    return this->mScaledFont != NULL ? this->mScaledFont : this->mFont;
 }
 
 // Selecting the font into a DC: nothing to do, each string names its font
@@ -72,6 +97,7 @@ void PlatGUIFont::DrawString(DisplayContext* inContext, const GUIString& inText,
         return;
     SurfaceBase* theSurface = inContext->mSurface;
     Graphics* theGraphics = inContext->mGraphics;
+    float theScale = inContext->mPixelScale > 0.0f ? inContext->mPixelScale : 1.0f;
     if (theSurface != NULL && theSurface->GetPixelsBase() != NULL && this->mFont != NULL && inLength != 0) {
         std::string theBytes = PlatGUIToCp1252(inText.mData->mText + inOffset, inLength);
         PlatFontTarget theTarget;
@@ -88,8 +114,9 @@ void PlatGUIFont::DrawString(DisplayContext* inContext, const GUIString& inText,
         theClip.mBottom = theSurface->GetClipY2() + 1;
         if (theClip.mRight > theClip.mLeft && theClip.mBottom > theClip.mTop) {
             uint32_t theColor = theGraphics != NULL ? (theGraphics->mColor & 0x00FFFFFF) : 0;
-            PlatFontDraw(this->mFont, theBytes.data(), (uint32_t)theBytes.size(), x, y, theColor, 0, 0, &theClip,
-                         &theTarget);
+            // scaled: the cell's top-left at the logical point's pixel (its ascent lines up within a pixel)
+            PlatFontDraw(this->FontForScale(theScale), theBytes.data(), (uint32_t)theBytes.size(),
+                         PlatGUIPixels(x, theScale), PlatGUIPixels(y, theScale), theColor, 0, 0, &theClip, &theTarget);
         }
     }
     if (!(this->mDescriptor.mStyle & FontStyle_Underline))

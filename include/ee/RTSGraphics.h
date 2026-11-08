@@ -102,10 +102,17 @@ bool EELobbyIsShown();                      // 0x297ed0: a global flag (the thre
 void EELobbyLock();                         // 0x297f15: enters a global critical section (0x565858) (provisional name)
 void EELobbyUnlock();                       // 0x297f21: leaves it (provisional name)
 // port: the WON lobby's frame for RenderLobby (EELobbyInterface.cpp; the caller holds EELobbyLock): the composited
-// frame, 32-bit pixels 0xFFRRGGBB, inPitch bytes a row, a serial that changes with each frame -> false when the lobby
+// frame, 32-bit pixels 0xFFRRGGBB, outWidth x outHeight pixels, outPitch bytes a row, showing the lobby's
+// outLogicalWidth x outLogicalHeight (1024x768) surface, a serial that changes with each frame -> false when the lobby
 // is not shown or has no frame yet (nothing to unlock then); EELobbyUnlockFrame after copying it.
-bool EELobbyLockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, uint32_t& outSerial);
+bool EELobbyLockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, int& outLogicalWidth,
+                      int& outLogicalHeight, uint32_t& outSerial);
 void EELobbyUnlockFrame();
+// port: the lobby's pixels per logical pixel and where it is shown, as fractions of the back buffer
+// (PlatWindowManager::SetPixelScale, SetPresentRect; the caller holds EELobbyLock), and the logical size it is laid
+// out for
+void EELobbySetPresentation(float inScale, float inLeft, float inTop, float inWidth, float inHeight);
+void EELobbyGetSurfaceSize(int& outWidth, int& outHeight);
 extern UString gGraphicsThreadName;       // 0x52a260 (the thread's name; provisional name)
 
 #endif

@@ -14,6 +14,14 @@
 //  - Drawing: Graphics, images and fonts draw into software surfaces (WONSurface.h, 32-bit 0x00RRGGBB, B G R x in
 //    memory) with GDI's rules (end points, rectangle edges, text cell, mask blits); text through platform/PlatFont.h
 //    (Windows-1252: other characters show as '?').
+//  - Pixel scale: the surface is LOGICAL (the 1024x768 the lobby is laid out for: every window rectangle, event,
+//    hit test and drawing coordinate); the frame and the windows' offscreen images hold k times as many pixels
+//    (SetPixelScale; the game sets k so the frame maps 1:1 onto the window's pixels). DisplayContext::mPixelScale
+//    is a surface's k: PlatGraphics scales coordinates, rectangles, the clip and line widths by it, PlatGUIFont
+//    rasterises at the font size times k, and PlatNativeImage::Draw resamples between images of different scales
+//    (bilinear, never across a transparency mask's edge or out of the source rectangle; the mask itself is applied
+//    at its logical pixels, so transparent edges stay where they were). Images decoded from files are at scale 1,
+//    or at their pack scale when Data/Textures-4x has a larger copy (PlatGUIPackImage).
 //
 // The game's side (EELobbyInterface.cpp, RTSGraphics::RenderLobby) uses only the "game interface" below.
 // Threads: everything runs on the UI thread (the thread that created the manager, the window system's thread) except
@@ -23,6 +31,7 @@
 #define EE_WONAPI_WONLOBBYPLATFORM_H
 
 #include <stdint.h>
+#include <math.h>
 #include <string>
 #include <vector>
 #include "platform/PlatWindow.h"
@@ -46,10 +55,20 @@ public:
     // The lobby surface's size in pixels (the frame LockFrame returns; the screen the windows live on). Windows
     // without a parent follow it. Any thread: applied at once on the UI thread, otherwise at the next GetNextEvent.
     void SetSurfaceSize(int inWidth, int inHeight);
-    // The last composited frame: 32-bit pixels 0xFFRRGGBB (B, G, R, 0xFF in memory), inPitch bytes per row, and a
-    // serial that changes with every new frame -> false when nothing was composited yet (nothing to unlock then).
-    // Holds the frame lock until UnlockFrame: copy the pixels out and unlock. Any thread.
-    bool LockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, uint32_t& outSerial);
+    // The surface's pixels per logical pixel (>= 1; the frame is the surface's size times it, rounded:
+    // PlatGUIPixels). Any thread, as SetSurfaceSize. Windows repaint at the new scale.
+    void SetPixelScale(float inScale);
+    float GetPixelScale() const { return this->mPixelScale; }
+    // Where the game shows the frame in its window, as fractions of the window's client area (left, top, width,
+    // height): the pointer is mapped back through it (ScaleToSurface). Before the first call: the surface scaled
+    // uniformly to fit, centred. Any thread.
+    void SetPresentRect(float inLeft, float inTop, float inWidth, float inHeight);
+    // The last composited frame: 32-bit pixels 0xFFRRGGBB (B, G, R, 0xFF in memory), outWidth x outHeight pixels,
+    // outPitch bytes per row, showing outLogicalWidth x outLogicalHeight of the surface, and a serial that changes
+    // with every new frame -> false when nothing was composited yet (nothing to unlock then). Holds the frame lock
+    // until UnlockFrame: copy the pixels out and unlock. Any thread.
+    bool LockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, int& outLogicalWidth,
+                   int& outLogicalHeight, uint32_t& outSerial);
     void UnlockFrame();
     // The platform events the game must still see while the lobby owns the event loop: QUIT, CLOSE, RESIZED,
     // MINIMIZED, RESTORED, FOCUS_GAINED, FOCUS_LOST, EXPOSED, and KEY_DOWN/KEY_UP when they go to a window that
@@ -86,6 +105,7 @@ public:
 
 protected:
     void ApplySurfaceSize(int inWidth, int inHeight);
+    void ApplyPixelScale(float inScale);
     void HandlePlatEvent(const PlatInputEvent& inEvent);
     void HandleMouse(const PlatInputEvent& inEvent);
     void HandleKey(const PlatInputEvent& inEvent);
@@ -94,9 +114,13 @@ protected:
 
     PlatMutex* mFrameMutex;                     // the frame, its size and serial, the pending surface size
     std::vector<uint32_t> mFrame;
-    int mFrameWidth, mFrameHeight;
+    int mFrameWidth, mFrameHeight;              // pixels
+    int mFrameLogicalWidth, mFrameLogicalHeight;
     uint32_t mFrameSerial;
     int mPendingWidth, mPendingHeight;          // a SetSurfaceSize from another thread (0: none)
+    float mPendingScale;                        // a SetPixelScale from another thread (0: none)
+    float mPixelScale;                          // the frame's and the windows' images' pixels per surface pixel
+    float mPresentRect[4];                      // SetPresentRect's (under the frame lock; width 0: none)
     int mSurfaceWidth, mSurfaceHeight;
     volatile int32_t mWakePending;             // Signals since the loop last ran (PlatAtomicIncrement)
     EventForwardFunc mEventForward;
@@ -144,6 +168,7 @@ public:
     bool HasFrame() const { return this->mParent != NULL && !(this->mStyle & 0x20); }
     void GetClientRect(WONRectangle& outRect);
     void FollowSurface();                       // a window that fills the surface takes its new size
+    void FollowPixelScale();                    // a new offscreen image at the manager's pixel scale, repainted
     void OnPaint();                             // repaints an invalid root into the offscreen image
     void QueueMouse(int inType, int inSurfaceX, int inSurfaceY, int inMod, int inButtonOrAmount);
     PlatWindowManager* GetPlatManager();
@@ -186,7 +211,18 @@ public:
     virtual void SetClipRectHook(int x, int y, int width, int height);
     SurfaceBase* PrepareSurface();          // the surface with the current colour, NULL when there is none
     SurfaceBase* mSurface;                  // the context's, borrowed
+    float mScale;                           // the context's pixel scale (1: GDI's results, pixel for pixel)
+protected:
+    int PX(int v) const;                    // a logical coordinate -> the surface's pixels
+    void FillLogicalRect(SurfaceBase* inSurface, int x, int y, int width, int height);   // pixels covering it
+    void ScaledLine(SurfaceBase* inSurface, int x1, int y1, int x2, int y2);   // a line one logical pixel wide
 };
+
+// a logical coordinate or size at a pixel scale (the one rounding every part of the backend and the game uses)
+inline int PlatGUIPixels(int inLogical, float inScale)
+{
+    return inScale == 1.0f ? inLogical : (int)floorf((float)inLogical * inScale + 0.5f);
+}
 
 // a 1-bit mask (RawImage1's rows: MSB first, rows padded to 4 bytes); a set bit is a transparent pixel
 class PlatNativeMask : public NativeMask {
@@ -202,7 +238,8 @@ public:
 // a 32-bit image in a software surface (MSNativeImage's replacement: a device-dependent bitmap)
 class PlatNativeImage : public NativeImage {
 public:
-    PlatNativeImage(DisplayContext* inContext, int inWidth, int inHeight);  // cleared to black
+    // cleared to black; inWidth x inHeight logical pixels, inScale times as many pixels (DisplayContext::mPixelScale)
+    PlatNativeImage(DisplayContext* inContext, int inWidth, int inHeight, float inScale = 1.0f);
     virtual ~PlatNativeImage();
     virtual Graphics* PlatformGetGraphics();
     virtual void Draw(DisplayContext* inContext, int x, int y, int left, int top, int width, int height);
@@ -212,8 +249,21 @@ public:
     SmartPtr<Cursor> GetCursor(int inHotX, int inHotY);
     uint32_t* GetPixels();
     int GetPitchPixels();
+    int GetPixelWidth() { return this->mSurface->GetWidth(); }
+    int GetPixelHeight() { return this->mSurface->GetHeight(); }
+    float GetScale() const { return this->mScale; }
+    // Draw onto a surface of another pixel scale (or both scaled): logical rectangle, resampled
+    void DrawScaled(SurfaceBase* inDest, float inDestScale, int x, int y, int left, int top, int width, int height);
     SmartPtr<SurfaceBase> mSurface;
+    float mScale;
 };
+
+// An image decoded from inPath with the texture pack's copy when there is one: with the pack on (the Texture
+// Resolution setting, GETextureManager::GetTexturePackLogicalShift), Data/Textures-4x/WONLobby Resources/<the
+// file's path under WONLobby Resources> (the same name, or .png) at an integer multiple of inImage's size becomes
+// an image of inImage's logical size and transparency mask at that pixel scale (halved at the 2x setting). Else
+// inImage itself.
+SmartPtr<NativeImage> PlatGUIPackImage(DisplayContext* inContext, NativeImage* inImage, const char* inPath);
 
 class PlatNativeIcon : public NativeIcon {
 public:
@@ -252,7 +302,10 @@ public:
     virtual int GetHeight();
     virtual int GetAscent();
     virtual int GetDescent();
+    const PlatFont* FontForScale(float inScale);   // mFont rasterised at its size times inScale
     PlatFont* mFont;
+    PlatFont* mScaledFont;                  // the last FontForScale's (owned)
+    float mScaledFontScale;
     int mHeight, mAscent, mDescent;
 };
 

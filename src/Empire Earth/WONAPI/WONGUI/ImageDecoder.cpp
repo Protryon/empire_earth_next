@@ -12,6 +12,7 @@
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyAnimation.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
+#include "ee/wonapi/WONLobbyPlatform.h"
 namespace WONAPI {
 ImageAttributes::ImageAttributes()
 {
@@ -37,10 +38,13 @@ SmartPtr<NativeImage> ImageDecoder::DoDecode(DisplayContext* context)
     if(image.get()!=NULL) return image->GetNative(context);
     return NULL;
 }
+// port: with the texture pack's larger copy of the file when it has one (WONLobbyPlatform.h PlatGUIPackImage)
 SmartPtr<NativeImage> ImageDecoder::Decode(DisplayContext* context,const char* path)
 {
     FileReader reader(path);
-    return this->Decode(context,reader);
+    SmartPtr<NativeImage> image=this->Decode(context,reader);
+    if(image.get()!=NULL) image=PlatGUIPackImage(context,image.get(),path);
+    return image;
 }
 SmartPtr<NativeImage> ImageDecoder::Decode(DisplayContext* context,FileReader& reader)
 {

@@ -345,6 +345,8 @@ public:
     // GX extensions
     // true when the GPU texture holds the newest pixels (a render target that was drawn into)
     bool IsGPUResident() const;
+    // the GPU copy's pixels per surface pixel (GXRenderScale: a back buffer's; 1 for the others)
+    float GetRenderScale() const;
     // draws text (platform/PlatFont.h) inside inBounds: inDraw draws into a 32-bit BGRA target that covers inBounds
     // (surface pixel inOriginX + x, inOriginY + y is the target's x, y). On a GPU-resident surface the target starts
     // transparent and premultiplied (PLAT_FONT_TARGET_PREMULTIPLIED) and is blended onto the GPU copy without a

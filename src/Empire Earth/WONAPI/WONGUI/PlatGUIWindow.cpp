@@ -117,6 +117,22 @@ void PlatGUIWindow::FollowSurface()
     theManager->SetDirty();
 }
 
+// The manager's pixel scale changed: a new offscreen image at it (the old one drawn in until the repaint, as
+// Window::CheckResize does) and the whole root repainted
+void PlatGUIWindow::FollowPixelScale()
+{
+    PlatWindowManager* theManager = this->GetPlatManager();
+    PlatNativeImage* theOld = dynamic_cast<PlatNativeImage*>(this->mOffscreenImage.get());
+    if (theManager == NULL || theOld == NULL || this->mWindowState != WindowState_Open ||
+        theOld->GetScale() == theManager->GetPixelScale())
+        return;
+    SmartPtr<NativeImage> theImage = this->CreateImage(theOld->GetWidth(), theOld->GetHeight());
+    theImage->GetGraphics().DrawImage(theOld, 0, 0);
+    this->mOffscreenImage = theImage;
+    this->mRoot->Invalidate();
+    theManager->SetDirty();
+}
+
 // Moves and resizes the window (-1: keep the width or height); one that fills the surface stays as it is. A size
 // change queues a size event with the client size (WM_SIZE), a move one with the client position (WM_MOVE).
 void PlatGUIWindow::SetPosSize(int x, int y, int width, int height)

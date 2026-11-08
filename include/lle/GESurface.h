@@ -64,6 +64,9 @@ public:
     virtual long TextLock() = 0;
     virtual long TextUnlock() = 0;
     virtual long Unlock() = 0;
+    // port: the pixels the GPU copy of a scaled back buffer holds per logical pixel (the render scale: the GX
+    // renderer draws the game's logical pixels into a larger texture); 1 for every other surface
+    virtual float GetRenderScale() const { return 1.0f; }
 
     // Image files (GESurface.cpp); inType: 0 TGA, 1 BMP, 2 JPG, 3 JPG2 (the switches in Load/Save)
     long Load(FSFileSpec& inFile, unsigned char inType);
@@ -78,6 +81,12 @@ public:
     // rectangles; Lock/GetMemoryAddress/GetBytesPerRow address pixels (CPU code reads GetPixelWidth/Height).
     unsigned long GetLogicalShift() const { return this->mLogicalShift; }
     void SetLogicalShift(unsigned long inShift) { this->mLogicalShift = inShift; }
+    // An explicit logical size for a surface whose pixels are not a power of two times it (the WON lobby's frame:
+    // 1024x768 logical at the window's pixels); 0, 0 goes back to the logical shift
+    void SetLogicalSize(unsigned long inWidth, unsigned long inHeight)
+        { this->mLogicalWidth = inWidth; this->mLogicalHeight = inHeight; }
+    unsigned long GetLogicalWidthSet() const { return this->mLogicalWidth; }
+    unsigned long GetLogicalHeightSet() const { return this->mLogicalHeight; }
     unsigned long GetPixelWidth() const { return this->GetSurfaceDescription().mWidth; }
     unsigned long GetPixelHeight() const { return this->GetSurfaceDescription().mHeight; }
 
@@ -100,6 +109,8 @@ protected:  // the per-format members are exported protected (?LoadBMP@GESurface
                                      unsigned long& outDepth);
 
     unsigned long mLogicalShift = 0;        // port: see GetLogicalShift
+    unsigned long mLogicalWidth = 0;        // port: see SetLogicalSize (0: none)
+    unsigned long mLogicalHeight = 0;
 };
 
 // GESurface::Load/Save/GetImageFileAttributes inType: the per-format exported member each case calls

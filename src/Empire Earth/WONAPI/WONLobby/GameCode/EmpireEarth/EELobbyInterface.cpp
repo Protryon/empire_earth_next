@@ -454,11 +454,28 @@ void EELobbyOpen()
 // port: the lobby's frame for RTSGraphics::RenderLobby (RTSGraphics.h). The caller holds EELobbyLock, under which
 // EELobbyShow and EELobbyHide change gEELobbyShown (and EELobbyClose hides before it lets the manager go), so the
 // manager outlives every locked frame.
-bool EELobbyLockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, uint32_t& outSerial)
+bool EELobbyLockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, int& outLogicalWidth,
+                      int& outLogicalHeight, uint32_t& outSerial)
 {
     if (!gEELobbyShown || gEELobbyRootWindow.get() == NULL)
         return false;
-    return gEELobbyRootWindow->LockFrame(outPixels, outWidth, outHeight, outPitch, outSerial);
+    return gEELobbyRootWindow->LockFrame(outPixels, outWidth, outHeight, outPitch, outLogicalWidth, outLogicalHeight,
+                                         outSerial);
+}
+
+// port: RenderLobby's pixel scale (the lobby at the window's pixels; the caller holds EELobbyLock)
+void EELobbySetPresentation(float inScale, float inLeft, float inTop, float inWidth, float inHeight)
+{
+    if (gEELobbyShown && gEELobbyRootWindow.get() != NULL) {
+        gEELobbyRootWindow->SetPresentRect(inLeft, inTop, inWidth, inHeight);
+        gEELobbyRootWindow->SetPixelScale(inScale);
+    }
+}
+
+void EELobbyGetSurfaceSize(int& outWidth, int& outHeight)
+{
+    outWidth = kEELobbySurfaceWidth;
+    outHeight = kEELobbySurfaceHeight;
 }
 
 void EELobbyUnlockFrame()

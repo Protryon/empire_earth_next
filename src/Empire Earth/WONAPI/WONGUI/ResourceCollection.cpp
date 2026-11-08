@@ -16,6 +16,7 @@
 #include "ee/wonapi/WONResourceCollection.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONStringCompare.h"
+#include "ee/wonapi/WONLobbyPlatform.h"
 #include "platform/PlatString.h"
 using namespace WONAPI;
 using namespace std;
@@ -356,7 +357,13 @@ RefCount* ResourceCollection::DecodeResource(const ResourceEntry *theEntry, Reso
 			if(altDecode)
 				anEntry->mAltData = aDecoder->ImageDecoder::DecodeRaw(*aFileReader);
 			else
-				anEntry->mData = aDecoder->ImageDecoder::Decode(this->mWindow->GetDisplayContext(),*aFileReader);
+			{
+				SmartPtr<NativeImage> anImage = aDecoder->ImageDecoder::Decode(this->mWindow->GetDisplayContext(),*aFileReader);
+				// port: the texture pack's larger copy of a loose file, when it has one (WONLobbyPlatform.h)
+				if(anImage.get()!=NULL && !aFilePath.empty())
+					anImage = PlatGUIPackImage(this->mWindow->GetDisplayContext(),anImage.get(),aFilePath.c_str());
+				anEntry->mData = anImage.get();
+			}
 		}
 		break;
 

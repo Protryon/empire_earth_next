@@ -1,7 +1,7 @@
 // The WONAPI GUI's window manager on the platform layer (WONLobbyPlatform.h), in place of the GDI backend's
 // MSWindowManager.cpp and MSWindow's window procedure: the event loop on PlatInputEvent, the event translation
 // (mouse, keys, text, focus), the standard cursors, the classic colour scheme and the compositor of the lobby
-// surface the game shows.
+// surface the game shows (at the pixel scale the game sets: WONLobbyPlatform.h "Pixel scale").
 #include <windows.h>
 #include <string>
 #include <string.h>
@@ -72,12 +72,13 @@ static uint32_t TickNow() { return (uint32_t)PlatTimeMilliseconds64(); }
 
 // Creates the manager and installs the standard cursors: the WON hand from its bits, the others the system's
 PlatWindowManager::PlatWindowManager()
-    : mFrameMutex(PlatMutexCreate()), mFrameWidth(0), mFrameHeight(0), mFrameSerial(0), mPendingWidth(0),
-      mPendingHeight(0), mSurfaceWidth(kDefaultSurfaceWidth), mSurfaceHeight(kDefaultSurfaceHeight),
+    : mFrameMutex(PlatMutexCreate()), mFrameWidth(0), mFrameHeight(0), mFrameLogicalWidth(0), mFrameLogicalHeight(0),
+      mFrameSerial(0), mPendingWidth(0), mPendingHeight(0), mPendingScale(0.0f), mPixelScale(1.0f), mSurfaceWidth(kDefaultSurfaceWidth), mSurfaceHeight(kDefaultSurfaceHeight),
       mWakePending(0), mEventForward(NULL), mPlatFocusWindow(NULL), mCaptureWindow(NULL), mDragWindow(NULL),
       mDragOffsetX(0), mDragOffsetY(0), mAppActive(true), mDirty(true), mMouseX(0), mMouseY(0), mHaveMouse(false),
       mPlatWindow(NULL), mLastProcessTick(TickNow()), mCaptionFont(NULL)
 {
+    this->mPresentRect[0] = this->mPresentRect[1] = this->mPresentRect[2] = this->mPresentRect[3] = 0.0f;
     std::vector<uint32_t> theHand(32 * 32);
     for (int y = 0; y < 32; y++)
         for (int x = 0; x < 32; x++) {
@@ -132,8 +133,52 @@ void PlatWindowManager::ApplySurfaceSize(int inWidth, int inHeight)
     this->mDirty = true;
 }
 
+// The pixel scale, at least 1 (a smaller lobby is shown scaled down) and at most 4
+void PlatWindowManager::SetPixelScale(float inScale)
+{
+    if (!(inScale >= 1.0f))
+        inScale = 1.0f;
+    if (inScale > 4.0f)
+        inScale = 4.0f;
+    if (PlatCurrentThreadId() == WindowManager::GetThreadId()) {
+        this->ApplyPixelScale(inScale);
+        return;
+    }
+    // (a scale the manager has or is about to take wakes nothing: the game gives it with every frame)
+    PlatMutexLock(this->mFrameMutex);
+    bool theSame = this->mPendingScale > 0.0f ? this->mPendingScale == inScale : this->mPixelScale == inScale;
+    if (!theSame)
+        this->mPendingScale = inScale;
+    PlatMutexUnlock(this->mFrameMutex);
+    if (!theSame)
+        this->Signal();
+}
+
+void PlatWindowManager::SetPresentRect(float inLeft, float inTop, float inWidth, float inHeight)
+{
+    PlatMutexLock(this->mFrameMutex);
+    this->mPresentRect[0] = inLeft;
+    this->mPresentRect[1] = inTop;
+    this->mPresentRect[2] = inWidth;
+    this->mPresentRect[3] = inHeight;
+    PlatMutexUnlock(this->mFrameMutex);
+}
+
+// A new scale: every window repaints into a new offscreen image of that scale, then the frame is composited anew
+void PlatWindowManager::ApplyPixelScale(float inScale)
+{
+    if (inScale == this->mPixelScale)
+        return;
+    PlatMutexLock(this->mFrameMutex);   // SetPixelScale reads it on other threads
+    this->mPixelScale = inScale;
+    PlatMutexUnlock(this->mFrameMutex);
+    for (size_t i = 0; i < this->mZOrder.size(); i++)
+        this->mZOrder[i]->FollowPixelScale();
+    this->mDirty = true;
+}
+
 bool PlatWindowManager::LockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch,
-                                  uint32_t& outSerial)
+                                  int& outLogicalWidth, int& outLogicalHeight, uint32_t& outSerial)
 {
     PlatMutexLock(this->mFrameMutex);
     if (this->mFrameSerial == 0 || this->mFrame.empty()) {
@@ -144,6 +189,8 @@ bool PlatWindowManager::LockFrame(const uint32_t*& outPixels, int& outWidth, int
     outWidth = this->mFrameWidth;
     outHeight = this->mFrameHeight;
     outPitch = this->mFrameWidth * 4;
+    outLogicalWidth = this->mFrameLogicalWidth;
+    outLogicalHeight = this->mFrameLogicalHeight;
     outSerial = this->mFrameSerial;
     return true;
 }
@@ -160,13 +207,18 @@ void PlatWindowManager::GetNextEvent()
 {
     this->mWakePending = 0;
     int thePendingWidth = 0, thePendingHeight = 0;
+    float thePendingScale = 0.0f;
     PlatMutexLock(this->mFrameMutex);
     thePendingWidth = this->mPendingWidth;
     thePendingHeight = this->mPendingHeight;
+    thePendingScale = this->mPendingScale;
     this->mPendingWidth = this->mPendingHeight = 0;
+    this->mPendingScale = 0.0f;
     PlatMutexUnlock(this->mFrameMutex);
     if (thePendingWidth > 0)
         this->ApplySurfaceSize(thePendingWidth, thePendingHeight);
+    if (thePendingScale > 0.0f)
+        this->ApplyPixelScale(thePendingScale);
 
     uint32_t theStart = TickNow();
     uint32_t theElapsed = theStart - this->mLastProcessTick;
@@ -329,7 +381,17 @@ void PlatWindowManager::ScaleToSurface(const PlatInputEvent& inEvent, int& ioX, 
         PlatWindowGetClientSize(theWindow, &theWidth, &theHeight);
     if (theWidth <= 0 || theHeight <= 0 || this->mSurfaceWidth <= 0 || this->mSurfaceHeight <= 0)
         return;
-    // the surface is shown letterboxed: scaled uniformly to fit the window, centred (RTSGraphics::RenderLobby)
+    // the surface is shown letterboxed (RTSGraphics::RenderLobby): in the rectangle the game gave, else scaled
+    // uniformly to fit the window, centred
+    float theRect[4];
+    PlatMutexLock(this->mFrameMutex);
+    memcpy(theRect, this->mPresentRect, sizeof(theRect));
+    PlatMutexUnlock(this->mFrameMutex);
+    if (theRect[2] > 0.0f && theRect[3] > 0.0f) {
+        ioX = (int)floor((ioX - theRect[0] * theWidth) / (theRect[2] * theWidth) * this->mSurfaceWidth);
+        ioY = (int)floor((ioY - theRect[1] * theHeight) / (theRect[3] * theHeight) * this->mSurfaceHeight);
+        return;
+    }
     double theScale = (std::min)((double)theWidth / this->mSurfaceWidth, (double)theHeight / this->mSurfaceHeight);
     double theLeft = (theWidth - this->mSurfaceWidth * theScale) / 2.0;
     double theTop = (theHeight - this->mSurfaceHeight * theScale) / 2.0;
@@ -548,9 +610,17 @@ void PlatWindowManager::PaintAndComposite()
         this->Composite();
 }
 
-static void FrameFill(std::vector<uint32_t>& ioFrame, int inFrameWidth, int inFrameHeight, int x, int y, int width,
-                      int height, uint32_t inColor)
+// Fills the frame pixels of a logical rectangle
+static void FrameFill(std::vector<uint32_t>& ioFrame, int inFrameWidth, int inFrameHeight, float inScale, int x, int y,
+                      int width, int height, uint32_t inColor)
 {
+    if (width <= 0 || height <= 0)
+        return;
+    int theLeft = PlatGUIPixels(x, inScale), theTop = PlatGUIPixels(y, inScale);
+    width = PlatGUIPixels(x + width, inScale) - theLeft;
+    height = PlatGUIPixels(y + height, inScale) - theTop;
+    x = theLeft;
+    y = theTop;
     int theX1 = (std::max)(x, 0), theY1 = (std::max)(y, 0);
     int theX2 = (std::min)(x + width, inFrameWidth), theY2 = (std::min)(y + height, inFrameHeight);
     for (int j = theY1; j < theY2; j++)
@@ -564,30 +634,33 @@ void PlatWindowManager::Composite()
     std::vector<PlatGUIWindow*> theOrder;
     DrawingOrder(this->mZOrder, theOrder);
     PlatMutexLock(this->mFrameMutex);
-    int W = this->mSurfaceWidth, H = this->mSurfaceHeight;
+    float k = this->mPixelScale;
+    int W = PlatGUIPixels(this->mSurfaceWidth, k), H = PlatGUIPixels(this->mSurfaceHeight, k);
     this->mFrameWidth = W;
     this->mFrameHeight = H;
+    this->mFrameLogicalWidth = this->mSurfaceWidth;
+    this->mFrameLogicalHeight = this->mSurfaceHeight;
     this->mFrame.assign((size_t)W * H, 0xFF000000u);
-    for (size_t k = 0; k < theOrder.size(); k++) {
-        PlatGUIWindow* w = theOrder[k];
+    for (size_t n = 0; n < theOrder.size(); n++) {
+        PlatGUIWindow* w = theOrder[n];
         if (!w->mVisible)
             continue;
         if (w->HasFrame()) {
             int x = w->mX, y = w->mY, ww = w->mWidth, hh = w->mHeight;
-            FrameFill(this->mFrame, W, H, x, y, ww, hh, kClassic3DFace);
-            FrameFill(this->mFrame, W, H, x, y, ww, 1, kClassic3DFace);
-            FrameFill(this->mFrame, W, H, x, y, 1, hh, kClassic3DFace);
-            FrameFill(this->mFrame, W, H, x, y + hh - 1, ww, 1, kClassic3DDarkShadow);
-            FrameFill(this->mFrame, W, H, x + ww - 1, y, 1, hh, kClassic3DDarkShadow);
-            FrameFill(this->mFrame, W, H, x + 1, y + 1, ww - 2, 1, kClassic3DHilight);
-            FrameFill(this->mFrame, W, H, x + 1, y + 1, 1, hh - 2, kClassic3DHilight);
-            FrameFill(this->mFrame, W, H, x + 1, y + hh - 2, ww - 2, 1, kClassic3DShadow);
-            FrameFill(this->mFrame, W, H, x + ww - 2, y + 1, 1, hh - 2, kClassic3DShadow);
+            FrameFill(this->mFrame, W, H, k, x, y, ww, hh, kClassic3DFace);
+            FrameFill(this->mFrame, W, H, k, x, y, ww, 1, kClassic3DFace);
+            FrameFill(this->mFrame, W, H, k, x, y, 1, hh, kClassic3DFace);
+            FrameFill(this->mFrame, W, H, k, x, y + hh - 1, ww, 1, kClassic3DDarkShadow);
+            FrameFill(this->mFrame, W, H, k, x + ww - 1, y, 1, hh, kClassic3DDarkShadow);
+            FrameFill(this->mFrame, W, H, k, x + 1, y + 1, ww - 2, 1, kClassic3DHilight);
+            FrameFill(this->mFrame, W, H, k, x + 1, y + 1, 1, hh - 2, kClassic3DHilight);
+            FrameFill(this->mFrame, W, H, k, x + 1, y + hh - 2, ww - 2, 1, kClassic3DShadow);
+            FrameFill(this->mFrame, W, H, k, x + ww - 2, y + 1, 1, hh - 2, kClassic3DShadow);
             bool theActive = w == this->mPlatFocusWindow && this->mAppActive;
             int cx = x + kFrameBorder, cy = y + kFrameBorder, cw = ww - 2 * kFrameBorder;
-            FrameFill(this->mFrame, W, H, cx, cy, cw, kFrameCaption,
+            FrameFill(this->mFrame, W, H, k, cx, cy, cw, kFrameCaption,
                       theActive ? kClassicCaptionActive : kClassicCaptionInactive);
-            const PlatFont* theFont = this->GetCaptionFont();
+            const PlatFont* theFont = PlatFontScaled(this->GetCaptionFont(), k);
             if (theFont != NULL && cw > 4) {
                 std::wstring theWide = w->mTitle;
                 std::string theTitle = PlatGUIToCp1252(theWide.c_str(), (unsigned short)theWide.size());
@@ -600,11 +673,13 @@ void PlatWindowManager::Composite()
                 theTarget.mHeight = H;
                 theTarget.mFlags = 0;
                 theTarget.mScale = 0.0f;
-                PlatFontRect theClip = {(std::max)(cx, 0), (std::max)(cy, 0), (std::min)(cx + cw - 2, W),
-                                        (std::min)(cy + kFrameCaption, H)};
+                int theCaptionTop = PlatGUIPixels(cy, k), theCaptionBottom = PlatGUIPixels(cy + kFrameCaption, k);
+                PlatFontRect theClip = {(std::max)(PlatGUIPixels(cx, k), 0), (std::max)(theCaptionTop, 0),
+                                        (std::min)(PlatGUIPixels(cx + cw - 2, k), W), (std::min)(theCaptionBottom, H)};
                 if (theClip.mRight > theClip.mLeft && theClip.mBottom > theClip.mTop)
-                    PlatFontDraw(theFont, theTitle.data(), (uint32_t)theTitle.size(), cx + 3,
-                                 cy + (kFrameCaption - theMetrics.mHeight) / 2, 0xFFFFFF, 0, 0, &theClip, &theTarget);
+                    PlatFontDraw(theFont, theTitle.data(), (uint32_t)theTitle.size(), PlatGUIPixels(cx + 3, k),
+                                 theCaptionTop + (theCaptionBottom - theCaptionTop - theMetrics.mHeight) / 2, 0xFFFFFF,
+                                 0, 0, &theClip, &theTarget);
             }
         }
         WONRectangle theClient;
@@ -612,14 +687,17 @@ void PlatWindowManager::Composite()
         PlatNativeImage* theImage = dynamic_cast<PlatNativeImage*>(w->mOffscreenImage.get());
         if (theImage == NULL)
             continue;
-        int theWidth = (std::min)((int)theImage->GetWidth(), theClient.width);
-        int theHeight = (std::min)((int)theImage->GetHeight(), theClient.height);
+        // in frame pixels (an image still at another scale, until it repaints, shows with its pixels as they are)
+        int theClientX = PlatGUIPixels(theClient.x, k), theClientY = PlatGUIPixels(theClient.y, k);
+        int theWidth = (std::min)(theImage->GetPixelWidth(), PlatGUIPixels(theClient.x + theClient.width, k) - theClientX);
+        int theHeight =
+            (std::min)(theImage->GetPixelHeight(), PlatGUIPixels(theClient.y + theClient.height, k) - theClientY);
         const uint32_t* thePixels = theImage->GetPixels();
         int thePitch = theImage->GetPitchPixels();
-        int theX1 = (std::max)(theClient.x, 0), theY1 = (std::max)(theClient.y, 0);
-        int theX2 = (std::min)(theClient.x + theWidth, W), theY2 = (std::min)(theClient.y + theHeight, H);
+        int theX1 = (std::max)(theClientX, 0), theY1 = (std::max)(theClientY, 0);
+        int theX2 = (std::min)(theClientX + theWidth, W), theY2 = (std::min)(theClientY + theHeight, H);
         for (int j = theY1; j < theY2; j++) {
-            const uint32_t* theFrom = thePixels + (size_t)(j - theClient.y) * thePitch + (theX1 - theClient.x);
+            const uint32_t* theFrom = thePixels + (size_t)(j - theClientY) * thePitch + (theX1 - theClientX);
             uint32_t* theTo = this->mFrame.data() + (size_t)j * W + theX1;
             for (int i = theX1; i < theX2; i++)
                 *theTo++ = *theFrom++ | 0xFF000000u;

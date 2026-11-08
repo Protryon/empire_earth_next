@@ -1960,10 +1960,13 @@ class DisplayContext : public RefCount {
 public:
     // The port draws into software surfaces (WONSurface.h; the backend: WONLobbyPlatform.h): a context is the
     // surface an image owns, which carries the clip. The original held the GDI device context (HDC) here.
-    DisplayContext(SurfaceBase* surface=NULL) : mSurface(surface),mGraphics(NULL) {}
+    DisplayContext(SurfaceBase* surface=NULL) : mSurface(surface),mGraphics(NULL),mPixelScale(1.0f) {}
     virtual ~DisplayContext() {}
     SurfaceBase* mSurface; // at +0x08, not owned (the owning image keeps it); NULL: nothing to draw into
     Graphics* mGraphics; //0c borrowed
+    // port: the surface's pixels per logical pixel (WONLobbyPlatform.h "Pixel scale"): every coordinate the GUI
+    // draws with is logical; the backend scales it to the surface's pixels
+    float mPixelScale;
     SmartPtr<NativeImage> CreateImage(int,int); //3cedd0, nonvirtual
 };
 class SoundDecoder;

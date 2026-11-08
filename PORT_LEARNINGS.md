@@ -666,6 +666,13 @@ the library is module `won` (tools/ee.py, tools/units.py) and `WONAPIStubs.cpp` 
   that start with `<string>` did not link against the definition (`GUIStringData::GetString`). Every game unit on
   Linux gets `-include string.h` (xbuild.py game_dialect_flags). The census's ms dialect also gets the Linux
   `__GCC_ATOMIC_TEST_AND_SET_TRUEVAL` define the game build has (it reported 384 phantom failures).
+- **The lobby at the display's pixels (the UI round).** The 1024x768 layout, events and hit tests stay logical; the
+  backend draws at a pixel scale k (`PlatWindowManager::SetPixelScale`: window images k times larger, PlatGraphics
+  scales coordinates and clip, fonts rasterised at size x k, images resampled bilinearly with masks kept exact, or
+  the 4x pack's `Data/Textures-4x/WONLobby Resources/...` when present: none yet, tools/upscale covers Data/Textures
+  only). RenderLobby's surface has a 1024x768 logical size over the frame's pixels (`GESurface::SetLogicalSize`), and
+  k = the letterbox box's back-buffer pixels / 768. Windowed GX has render scale 1, so k > 1 shows in full screen;
+  fractional render scales round the copy rectangle to whole logical pixels.
 - **Tests:** `xbuild.py wontest` (tests/won: the wire format byte for byte, the socket layer over loopback; built like
   game units), the harness's `--exercise lobby` (main menu -> MultiPlayer -> the lobby's frames -> Other Multiplayer
   -> the LAN screen; `--refuse-autodial`: the lookups of the gone WON servers fail as offline). The lobby owns the UI
