@@ -11681,7 +11681,7 @@
      "type": "bool",
      "count": 1,
      "cls": "named",
-     "comment": "+0xb4 (the set's mB39)"
+     "comment": "+0xb4 (the set's mKilled)"
     },
     {
      "name": "pad_0x0b5",
