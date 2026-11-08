@@ -13,6 +13,9 @@ harness stages it (tools/harness/exe_boot.py stage_tree). A stage is kept and re
 --engine LIST sets the computer seats' engines (classic, next or random; docs/AI_LUA_PLAN.md S0) through the lobby's
 engine boxes: one for every seat, or a comma list by seat (seat 1 is player 2), taken in turn.
 
+--ai-scripts DIR sets EE_AI_SCRIPTS (absolute): the next engine reads its Lua scripts from DIR before the tree's
+Data/ai (docs/AI_LUA_PLAN.md 3.2), e.g. --ai-scripts ai to play the checkout's scripts on an older tree.
+
 --set doc.key=value overrides a rules document (db/<doc>.yaml); a value "[a, b]" replaces a list, e.g.
 --set "gameoptions.difficulties.hard.ai_cheats=[cost, reveal, epochs, extra, popband, catchup, retire]" (the original's cheats,
 for every computer player of that difficulty; EE_AI_CHEATS narrows them per player). The binary tree has no rules
@@ -58,6 +61,10 @@ def data_tree(kind):
     if made != open_data.converters_hash():
         print(f"sim: warning: {tree} was built by other converter code ({made} != {open_data.converters_hash()}) "
               f"or is being built", file=sys.stderr)
+    ai = json.loads((tree / "open_data.json").read_text()).get("ai") if (tree / "open_data.json").exists() else None
+    if ai != open_data.scripts_hash() and not os.environ.get("EE_AI_SCRIPTS"):
+        print(f"sim: warning: {tree}'s Data/ai is not this checkout's ai/ (python -I tools/open_data.py ai TREE, or "
+              f"--ai-scripts)", file=sys.stderr)
     return tree.resolve()
 
 
@@ -178,12 +185,16 @@ def main():
     ap.add_argument("--data", default="binary", help="binary (default), open, or a tree directory")
     ap.add_argument("--slot", default="default", help="the stage's name (one per concurrent run)")
     ap.add_argument("--exe", type=pathlib.Path, default=DEFAULT_EXE)
+    ap.add_argument("--ai-scripts", type=pathlib.Path, help="EE_AI_SCRIPTS: the next engine's scripts read from this "
+                                                            "folder first (e.g. ai, the checkout's)")
     ap.add_argument("args", nargs=argparse.REMAINDER, help="EE-SIM.exe's options (after --)")
     a = ap.parse_args()
     args = a.args[1:] if a.args[:1] == ["--"] else a.args
     if not a.exe.exists():
         sys.exit(f"{a.exe} is missing: python -I build.py --sim")
     sets = [args[k + 1] for k, v in enumerate(args) if v == "--set" and k + 1 < len(args)]
+    if a.ai_scripts:
+        os.environ["EE_AI_SCRIPTS"] = str(a.ai_scripts.resolve())   # absolute: the game runs in its data root
     stage = prepare(a.data, a.slot, sets)
     cfg = stage / "config.yaml"
     cfg.unlink(missing_ok=True)   # a fresh config.yaml per run

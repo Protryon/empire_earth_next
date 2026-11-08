@@ -5,7 +5,7 @@
 
 Layout (EESaveLoad.cpp Fn14D34B/Fn14CE06/Fn14CCFB, FSChunk, FSMemoryFile::Save, UDataCompression):
   u32 length of the rest; EEPSaveGameHeader::Save (version 0/250 ... date text, chunk tags, media strings, options);
-  then one FSChunk per persistent of Fn14C7A7's list: u32 major (0), minor (250; the port's saves 251), tag, size, size bytes of data.
+  then one FSChunk per persistent of Fn14C7A7's list: u32 major (0), minor (250; the port's saves 251, 252), tag, size, size bytes of data.
   Data is either raw (a short chunk FSMemoryFile::Compress kept) or 'PK01' + u32 raw length + u32 0 + a PKWARE DCL
   implode stream (decompressed here by a port of Mark Adler's blast.c).
 Tags (Fn14C7A7 order): 1 EEPChecksum, 2 gUserInterface->mRandomSeed, 4 EEMap, 3 camera GE3DPoint, 6 EEScenarioManager,
@@ -103,10 +103,10 @@ def parse(path):
     raw=pathlib.Path(path).read_bytes()
     total=struct.unpack_from('<I',raw,0)[0]
     if total!=len(raw)-4:raise ValueError(f'{path}: length field {total} != {len(raw)-4}')
-    # the chunk list starts at the first (0, 250 or 251, tag 1, size) record after the header
+    # the chunk list starts at the first (0, 250, 251 or 252, tag 1, size) record after the header
     start=None
     for p in range(4,len(raw)-16):
-        if raw[p:p+12] in (struct.pack('<III',0,250,1),struct.pack('<III',0,251,1)):start=p;break   # 251: the port's saves
+        if raw[p:p+12] in tuple(struct.pack('<III',0,v,1) for v in (250,251,252)):start=p;break   # 251, 252: the port's saves
     if start is None:raise ValueError('no checksum chunk')
     chunks=[];p=start
     while p<len(raw):

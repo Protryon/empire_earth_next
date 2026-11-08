@@ -94,6 +94,19 @@ static void EEDumpContent(const std::string& inTable, const unsigned char* inDat
     }
 }
 
+// the row ids of the tables loaded from text, by table (EEDbRowIds)
+static std::map<long, std::string>& EERowIdsOf(const std::string& inTable)
+{
+    static std::map<std::string, std::map<long, std::string> > sIds;
+    return sIds[inTable];
+}
+
+bool EEDbRowIds(const char* inTable, std::map<long, std::string>& outIds)
+{
+    outIds = EERowIdsOf(inTable);
+    return !outIds.empty();
+}
+
 long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
 {
     // "db\dbworld.dat" -> directory "db\", table "dbworld"
@@ -123,6 +136,10 @@ long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
                 ESVerify(__FILE__, __LINE__, theError.c_str());
                 outFile = NULL;
                 return kErrorFailed;
+            }
+            if (theStem == "dbobjects" || theStem == "dbtechtree") {   // the ids the computer player's scripts name
+                std::string theIgnored;
+                EETextContent().Ids(theStem.c_str(), EERowIdsOf(theStem), theIgnored);
             }
             unsigned char* theBuffer = new unsigned char[theData.size() ? theData.size() : 1];
             if (!theData.empty())

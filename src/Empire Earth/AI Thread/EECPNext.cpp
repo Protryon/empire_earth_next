@@ -44,6 +44,7 @@
 #include "ee/EECPAttackCommander.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPEngine.h"
+#include "ee/EECPLua.h"
 #include "ee/EECPNext.h"
 
 bool EECPNextEngine(const EEComputerPlayer* inPlayer)
@@ -79,7 +80,7 @@ const char* EECPNextReasonName(long inReason)
 
 EECPNextState::EECPNextState()
     : mClaimRange(kEECPClaimRange), mFoodPrefer(kNextPreferPatch), mFoodLand(0), mEpoch(-1), mEpochStart(0),
-      mNextRepairTime(0), mIncomeSteps(0)
+      mNextRepairTime(0), mIncomeSteps(0), mLua(NULL), mStarted(false), mFailed(false), mRestore(false), mErrors(0), mShadow(NULL)
 {
     memset(this->mReserve, 0, sizeof(this->mReserve));
     memset(this->mIncomeTotal, 0, sizeof(this->mIncomeTotal));
@@ -90,6 +91,12 @@ EECPNextState::EECPNextState()
     for (long i = 0; i < 64; i++)
         this->mSeenTownX[i] = this->mSeenTownY[i] = -1;
     memset(&this->mTest, 0, sizeof(this->mTest));
+}
+
+EECPNextState::~EECPNextState()
+{
+    delete this->mLua;
+    delete this->mShadow;
 }
 
 EECPNextState* EECPNextGetState(EEComputerPlayer* inPlayer)
@@ -265,6 +272,6 @@ void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime)
         }
         EE_CP_TRACE(inPlayer, "next.sites", "claimed=%ld%s", theCount, theSites);
     }
-    EECPNextTestStep(inPlayer, theView);
+    EECPNextStrategyStep(inPlayer, theView);   // the script (or TEST ONLY the C++ test opening)
     EECPTraceStats(inPlayer, inTime);
 }

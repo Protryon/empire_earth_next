@@ -16,6 +16,8 @@ results.json and results.csv (one row per run and player). With --repeat 2 the r
 --env NAME=VALUE sets an environment variable for every run; each --env-vary NAME=V1,V2,... adds a dimension, e.g.
 --env-vary EE_AI_DEMAND=1/0,0/1 plays a per-player switch from both seats (the per-player sets of ee/EECPTrace.h).
 tools/ai_scorecard.py scores the result (wins, time to each epoch, economy and army over time).
+--ai-scripts DIR plays the next engine's Lua scripts from DIR (EE_AI_SCRIPTS, e.g. ai: the checkout's); each run's
+script errors (EE-SIM's "SIM next.error" lines) are counted in lua_errors.
 --sim-arg passes an option to EE-SIM.exe as it is (e.g. --sim-arg=--lobby --sim-arg=181=#0).
 """
 import argparse
@@ -99,9 +101,12 @@ def run_one(run, args, slots, out):
                 rep = dict(outcome="no-report")
                 print(f"== {rid} [slot {slot}]: rc {rc}, no report" + (": retrying" if attempt == 0 else ""), flush=True)
         wall = time.monotonic() - t0
+        # the next engine's script errors (EE-SIM writes "SIM next.error ..." to stderr: a seat without orders that step)
+        lua_errors = sum(1 for x in err.read_text(errors="replace").splitlines() if x.startswith("SIM next.error"))
         print(f"== {rid} [slot {slot}]: rc {rc} {rep.get('outcome')} game s {rep.get('game_ms', 0) // 1000} "
-              f"in {wall:.1f} s (game part {rep.get('wall_seconds_game', 0):.1f} s)", flush=True)
-        return dict(run, rc=rc, wall=round(wall, 2), report=rep)
+              f"in {wall:.1f} s (game part {rep.get('wall_seconds_game', 0):.1f} s)"
+              + (f", {lua_errors} script errors" if lua_errors else ""), flush=True)
+        return dict(run, rc=rc, wall=round(wall, 2), report=rep, lua_errors=lua_errors)
     finally:
         slots.put(slot)
 
@@ -133,6 +138,8 @@ def main():
     ap.add_argument("--data", default="binary")
     ap.add_argument("--exe", type=pathlib.Path, default=sim.DEFAULT_EXE)
     ap.add_argument("--sim-arg", action="append", default=[])
+    ap.add_argument("--ai-scripts", type=pathlib.Path, help="EE_AI_SCRIPTS for every run (made absolute): the next "
+                                                            "engine's scripts from this folder first (e.g. ai)")
     a = ap.parse_args()
     if not a.exe.exists():
         sys.exit(f"{a.exe} is missing: python -I build.py --sim")
@@ -149,6 +156,8 @@ def main():
             sys.exit(f"--env-vary {v}: expected NAME=V1,V2,...")
         envs = [dict(old, **{key: x}) for old in envs for x in values.split(",")]
     fixed = dict(e.split("=", 1) for e in a.env)
+    if a.ai_scripts:
+        os.environ["EE_AI_SCRIPTS"] = fixed["EE_AI_SCRIPTS"] = str(a.ai_scripts.resolve())
     cells = list(itertools.product([int(s, 0) for s in split(a.seeds)], split(a.sizes), split(a.maps),
                                    split(a.difficulty), [int(x) for x in split(a.ai)], split(a.cheats),
                                    [p for p in a.personality.split(";") if p] or ["-"],
@@ -193,7 +202,7 @@ def main():
     (out.parent / "results.json").write_text(json.dumps(dict(test_only=True, runs=results, determinism=checks,
                                                              wall_seconds=round(total, 1)), indent=2) + "\n")
     fields = ["run", "seed", "size", "map", "difficulty", "ai", "cheats", "personality", "engine", "variant", "repeat", "rc",
-              "outcome", "game_s", "wall", "wall_game", "winner", "player", "human", "result", "epoch", "population",
+              "lua_errors", "outcome", "game_s", "wall", "wall_game", "winner", "player", "human", "result", "epoch", "population",
               "victory_units", "citizens", "army", "buildings", "food", "wood", "stone", "gold", "iron"]
     with open(out.parent / "results.csv", "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=fields)
@@ -203,7 +212,7 @@ def main():
             base = dict(run=r["id"], seed=r["seed"], size=r["size"], map=r["map"], difficulty=r["difficulty"],
                         ai=r["ai"], cheats=r["cheats"], personality=r["personality"], engine=r["engine"],
                         variant=";".join(r["variant"]),
-                        repeat=r["repeat"], rc=r["rc"], outcome=rep.get("outcome"),
+                        repeat=r["repeat"], rc=r["rc"], lua_errors=r.get("lua_errors", 0), outcome=rep.get("outcome"),
                         game_s=rep.get("game_ms", 0) // 1000, wall=r["wall"], wall_game=rep.get("wall_seconds_game"),
                         winner=rep.get("winner"))
             players = rep.get("players") or [{}]
@@ -213,7 +222,9 @@ def main():
                                 victory_units=p.get("victory_units"), citizens=p.get("citizens"), army=p.get("army"),
                                 buildings=p.get("buildings"), **(p.get("resources") or {})))
     failed = [r["id"] for r in results if r["rc"]]
-    print(f"done: {len(results)} runs in {total:.0f} s ({len(failed)} failed) -> {out.parent / 'results.csv'}", flush=True)
+    errors = sum(r.get("lua_errors", 0) for r in results)
+    print(f"done: {len(results)} runs in {total:.0f} s ({len(failed)} failed"
+          + (f", {errors} script errors" if errors else "") + f") -> {out.parent / 'results.csv'}", flush=True)
     sys.exit(1 if failed or any(not c["identical"] for c in checks) else 0)
 
 

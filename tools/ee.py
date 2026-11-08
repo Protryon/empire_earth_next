@@ -25,16 +25,19 @@ def module_src(mod):
 
 # per-module flags (clang-cl syntax; the optimisation level comes from the build's --opt). Every module is linked
 # into the one exe: the static runtime (-MT) and EE_STATIC (no dllexport/dllimport). The other defines select the
-# header views the modules were reconstructed with (the engine's, the plug-ins', the game's).
+# header views the modules were reconstructed with (the engine's, the plug-ins', the game's). FP: no floating-point
+# contraction (no fused multiply-add), so a float expression rounds the same on every target (docs/RUST_PLAN.md 2.1;
+# tools/xbuild.py has the POSIX builds' -ffp-contract=off).
+FP = "/clang:-ffp-contract=off"
 MODULE_FLAGS = {
-    "tcp": "-MT -GR -DEE_STATIC",
-    "mixer": "-MT -GR -DEE_STATIC",
-    "default": "-MT -GR -DEE_STATIC",
-    "lle": "-MT -GR -DEE_STATIC -DLOWLEVELENGINE_EXPORTS -DDM_STATIC",
-    "dx7hrtnl": "-MT -GR -DEE_STATIC -DLLE_CURRENT_HEADERS",
-    "exe": "-MT -GR -DEE_STATIC -DLLE_CURRENT_HEADERS -DLLE_EXE_HEADERS",
-    "jpeg": "-MT",
-    "exeimg": "-MT",
+    "tcp": f"-MT -GR {FP} -DEE_STATIC",
+    "mixer": f"-MT -GR {FP} -DEE_STATIC",
+    "default": f"-MT -GR {FP} -DEE_STATIC",
+    "lle": f"-MT -GR {FP} -DEE_STATIC -DLOWLEVELENGINE_EXPORTS -DDM_STATIC",
+    "dx7hrtnl": f"-MT -GR {FP} -DEE_STATIC -DLLE_CURRENT_HEADERS",
+    "exe": f"-MT -GR {FP} -DEE_STATIC -DLLE_CURRENT_HEADERS -DLLE_EXE_HEADERS",
+    "jpeg": f"-MT {FP}",
+    "exeimg": f"-MT {FP}",
 }
 MODULE_FILES = {m: "EE-AOC.exe" for m in MODULE_FLAGS}
 

@@ -144,6 +144,13 @@ def data_tree(kind):
         r = subprocess.run(cmd, capture_output=True, text=True)
         if r.returncode:
             raise RuntimeError(f"open_data build failed:\n{r.stdout}{r.stderr}")
+    elif tree.parent == OPEN_DATA:
+        # the next engine's scripts (the repository's ai/): a changed script refreshes Data/ai, no rebuild
+        sys.path.insert(0, str(ROOT / "tools"))
+        import open_data
+        if json.loads((tree / "open_data.json").read_text()).get("ai") != open_data.scripts_hash():
+            print(f"data: {tree}: refreshing Data/ai (tools/open_data.py ai)", flush=True)
+            open_data.refresh_scripts(tree)
     return tree
 
 

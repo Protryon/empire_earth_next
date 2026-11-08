@@ -1585,3 +1585,25 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **The Stone Age's SOL is not zero.** dbtechtree.yaml's `mRequiredSOL` is 0 on every epoch row, yet the next epoch
   can report SOL missing in the Stone Age (the classic engine meets it through ResearchCheapest): a strategy that
   only saves the cost never advances. The view's `sol_missing` and the costs' `counts_toward_epoch` are there for it.
+
+## The next computer player's Lua strategy (S2 gate, docs/AI_LUA_PLAN.md §3.2, 2026-11-08)
+
+- **Orders after the step play the same game as verbs inside it** only because the C++ test opening reads nothing
+  but the view snapshot taken before its first verb: its verbs never see each other's effects. A script returns the
+  same calls in the same order, so the verbs' trace lines match byte for byte (the gate). A strategy that wants a
+  verb's effect sees it in the next step's view and `results`.
+- **0 is true in Lua.** The C++ view's 0/1 flags (`claimed`, `patch`, `advancing`, ...) are booleans in the script's
+  view; `if site.claimed then` with an integer would always hold.
+- **The db ids exist only while the tables load.** `EEDataText::Content` indexes the ids when it compiles a text
+  table; afterwards nothing in the game keeps them. `EEDbFindFile` now snapshots dbobjects' and dbtechtree's ids
+  (`EEDbRowIds`) when it compiles them; a binary tree has none, and its classes are named `dbobjects_<row>`.
+- **`EE_AI_SCRIPTS` must be absolute**: the game changes into its data root at start, so a relative folder is read
+  from there. sim.py and sim_bench.py `--ai-scripts` make it absolute.
+- **The converters' hash leaves the scripts out**: a script change would otherwise rebuild the 4-minute data tree.
+  `open_data.json` records the scripts' own hash (`ai`), and `open_data.py ai TREE` refreshes only `Data/ai`.
+- **Saving a Lua state means saving its memory, not the state.** A loaded game runs the modules from scratch
+  (`LoadPersonality`) and restores the memory and the RNG (`RestoreMemory`), never `init`; everything else the next
+  engine keeps between steps (the income ring, the scouting, the last step's results) must be in the save too, or the
+  resumed game's first view differs. `EE_AI_SAVE_CHECK=1` proves it in EE-SIM, which cannot load a game: each save's
+  bytes are decoded into a fresh state, re-encoded (same bytes) and restored into a shadow Lua state that runs the
+  next step beside the live one (`next.savecheck step orders=same memory=same`).
