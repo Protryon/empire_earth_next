@@ -1070,6 +1070,8 @@ float EECPScheduleSpan(EEComputerPlayer* inPlayer)
         return 0.0f;
     if (inPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric)
         return EECPStoneSpan(inPlayer);
+    if (EECPExperiment(inPlayer, "span15"))
+        return 15.0f;
     if (EECPExperiment(inPlayer, "span20"))
         return 20.0f;
     if (EECPExperiment(inPlayer, "span25"))
@@ -1106,12 +1108,12 @@ float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime)
     float theSchedule = EECPScheduleSpan(inPlayer);
     if (theSchedule > 0.0f) {
         unsigned long theStart = EECPScheduleStart(inPlayer, inTime);
-        return (float)(inTime - theStart) / (theSchedule * 60000.0f);
+        return (float)(inTime - theStart) / (theSchedule * 60000.0f) + EECPPressureBonus(inPlayer);
     }
     unsigned long theSpan = EECPEpochTimerSpan(inPlayer);
     unsigned long theDue = inPlayer->mCivilizationManager->mNextEpochAdvanceTime;
     long long theLeft = (long long)theDue - (long long)inTime;
-    float thePressure = 1.0f - (float)theLeft / (float)theSpan;
+    float thePressure = 1.0f - (float)theLeft / (float)theSpan + EECPPressureBonus(inPlayer);
     return thePressure < 0.0f ? 0.0f : thePressure;
 }
 
@@ -1215,6 +1217,23 @@ static bool EECPArmyThreat(EEComputerPlayer* inPlayer)
     return theNow < sUntil[theID];
 }
 
+// the experiment "safedash" (docs/AI_RESEARCH.md §8.29): from the Stone Age, while no stronger enemy army has come near
+// the town (EECPArmyThreat: none for its 4 minutes), the epoch pressure is kSafeDashBonus higher: the advance is asked
+// for sooner and its reserve fills faster; a threat drops it back, and the reserve frees the resources for soldiers
+static const float kSafeDashBonus = 0.25f;
+
+float EECPPressureBonus(EEComputerPlayer* inPlayer)
+{
+    if (!EECPExperiment(inPlayer, "safedash") || inPlayer->mTechnologies == NULL
+        || inPlayer->mTechnologies->mCurrentEpoch < kTechEpochStone || EECPArmyThreat(inPlayer))
+        return 0.0f;
+    return kSafeDashBonus;
+}
+
+// the experiment "stonecap" (§8.29): the Prehistoric army cap carried into the Stone Age at kStoneArmy soldiers, lifted
+// by the same threat rule (towers hold the rest)
+static const long kStoneArmy = 10;
+
 // FUNCTION: EXE 0x42f033
 // Returns true for epoch technologies; otherwise asks the player whether it can afford the cost
 // New (docs/AI_RESEARCH.md §8.7): without the free-epochs cheat, a pending epoch advance reserves its cost: anything
@@ -1240,7 +1259,9 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
     // military.prehistoric_army (docs/AI_RESEARCH.md §8.26): in the Prehistoric the army is a mobile defence force of
     // that many, as the owner plays it (sacrificed when the Stone Age units come); the food goes to the economy
     long thePrehistoricArmy = EECPPrehistoricArmy(this);
-    if (thePrehistoricArmy > 0 && this->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric
+    if (this->mTechnologies->mCurrentEpoch == kTechEpochStone)
+        thePrehistoricArmy = EECPExperiment(this, "stonecap") ? kStoneArmy : 0;
+    if (thePrehistoricArmy > 0 && this->mTechnologies->mCurrentEpoch <= kTechEpochStone
         && this->mCombatManager != NULL && this->mCivilizationManager != NULL
         && this->mCivilizationManager->mUnitManager != NULL) {
         long theClass = inUnitType;   // the class being made (the unit manager passes its request's class)
@@ -1268,6 +1289,16 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
         if (theLeft > 8LL * 60000LL)
             return true;
     }
+    // the experiment "goldbank" (§8.29; the Copper Age costs 845 gold, which only the two ranged units compete for): from
+    // the Stone Age the next epoch's whole gold is reserved, asked for or not
+    if (EECPExperiment(this, "goldbank") && this->mTechnologies->mCurrentEpoch >= kTechEpochStone
+        && this->mTechnologies->mCurrentEpoch + 1 < EEEpochCount()) {
+        EETechTreeNode* theNext = this->mTechnologies->Get(this->mTechnologies->mCurrentEpoch + 1);
+        long theCost = this->ScaleCost(inTechnology->GetCost(kResourceGold, inUnitType, 1.0f)) * inCount;
+        long theKeep = theNext != NULL ? this->ScaleCost(theNext->GetCost(kResourceGold, kUnitTypeTownCenter, 1.0f)) : 0;
+        if (theCost > 0 && theKeep > 0 && this->mResourceCaps[kResourceGold] - theCost < theKeep)
+            return false;
+    }
     long theEpoch = EECPPendingEpoch(this);
     EETechTreeNode* theReserved = theEpoch != kTechNone ? this->mTechnologies->Get(theEpoch) : NULL;
     if (theReserved == NULL)
@@ -1279,7 +1310,7 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
         theShare = 1.0f;
     if (theShare <= 0.0f)
         return true;
-    // the experiment "threatspend" (docs/AI_RESEARCH.md §8.28; the owner scrambles an army when he scouts a rush): while
+    // the experiment "threatspend" (docs/AI_RESEARCH.md §8.28; the owner scrambles an army on scouting a rush): while
     // enemy soldiers near the town outmatch its army (EECPArmyThreat), soldiers are not held back by the epoch reserve
     if (EECPExperiment(this, "threatspend") && this->mCombatManager != NULL && inUnitType >= 0
         && (unsigned long)inUnitType < EEUnitClassCount() && gUnitClassTable[inUnitType] != NULL

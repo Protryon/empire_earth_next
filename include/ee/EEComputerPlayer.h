@@ -475,6 +475,8 @@ float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime);
 // experiments span20/span25/span30 after it (docs/AI_RESEARCH.md §8.28); and the game time its schedule counts from
 float EECPScheduleSpan(EEComputerPlayer* inPlayer);
 unsigned long EECPScheduleStart(EEComputerPlayer* inPlayer, unsigned long inTime);
+// the experiment "safedash" (docs/AI_RESEARCH.md §8.29): the epoch pressure added while the town is safe (0: none)
+float EECPPressureBonus(EEComputerPlayer* inPlayer);
 // The boom opening (the experiments "boom25": until 25 workers or 12 game minutes, "boom35": 35 or 15): citizens skip the
 // epoch reserve and the standing army waits
 bool EECPBooming(EEComputerPlayer* inPlayer);

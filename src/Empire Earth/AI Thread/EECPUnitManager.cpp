@@ -222,6 +222,8 @@ done:
 // NEAR: the original multiplies with fimul (float loaded first, the long counted from memory); ours fild + fmul (90.5)
 // FUNCTION: EXE 0x493aee
 // Returns the citizen target: the population limit times the player's citizen percentage
+static const long kStoneCitizens = 90;   // the experiment "stonecit"
+
 long EECPUnitManager::GetWantedCitizens()
 {
     long theCount = this->mPlayer->GetPopulationLimit(0);
@@ -247,6 +249,11 @@ long EECPUnitManager::GetWantedCitizens()
         if (theCap > 0 && theWanted > theCap)
             theWanted = theCap;
     }
+    // the experiment "stonecit" (§8.29; the playtest AI had 135 citizens at 60 minutes against the owner's 85, and its
+    // food never stood above 1400): at most kStoneCitizens in the Stone Age
+    if (EECPExperiment(this->mPlayer, "stonecit") && this->mPlayer->mTechnologies != NULL
+        && this->mPlayer->mTechnologies->mCurrentEpoch == kTechEpochStone && theWanted > kStoneCitizens)
+        theWanted = kStoneCitizens;
     return theWanted;
 }
 

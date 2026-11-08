@@ -91,6 +91,8 @@ struct EECPRMUnitDistanceLess {
 
 static bool EECPRMFishes(EECPResourceManager* inManager);        // economy.coast_fishing (below GetGatherCapacity)
 static void EECPRMRequestBoats(EECPResourceManager* inManager);
+static unsigned long EECPRMHunters(EECPResourceManager* inManager);
+static const unsigned long kHuntFirst = 6;   // the experiment "hunt6": hunters before the patches
 
 // The units within a distance of a tile (FindFish's find_if: COMDATs 0x921d0/0x921f7) (provisional name)
 struct EECPRMUnitWithin : public EETileDistanceLess {
@@ -375,6 +377,25 @@ void EECPResourceManager::AssignGatherers()
             if (theWanted > 0 || (thePlayer->IsIslandExpansionDue() && (theResource == 4 || theResource == 5 || theResource == 6))) {
                 switch (theResource) {
                 case 2: {
+                    // the experiment "hunt6" (docs/AI_RESEARCH.md §8.29; the owner hunts with 6 beside the patches, the AI
+                    // with 1-4): the game near home before the patches while fewer than kHuntFirst hunt
+                    if (EECPExperiment(thePlayer, "hunt6")) {
+                        unsigned long theHunters = EECPRMHunters(this);
+                        if (theHunters < kHuntFirst) {
+                            unsigned long theMore = kHuntFirst - theHunters;
+                            if (theMore > theWanted)
+                                theMore = theWanted;
+                            if (theMore > theIdle.size())
+                                theMore = theIdle.size();
+                            this->FindMines(theMore, true, theFound);
+                            for (unsigned long h = 0; h < theFound.size() && theIdle.size() > 0 && theWanted > 0; h++) {
+                                theUnit = theIdle.front();
+                                theIdle.pop_front();
+                                this->SendToGather(theUnit, theFound[h], NULL);
+                                theWanted--;
+                            }
+                        }
+                    }
                     EEUnit* theTarget = this->FindFarm(true, true, theIdle.size() > 0 ? theIdle.front() : NULL);
                     if (theTarget != NULL) {
                         unsigned long theCount = theWanted < theIdle.size() ? theWanted : theIdle.size();
@@ -1633,6 +1654,7 @@ static bool EECPRMFishes(EECPResourceManager* inManager)
 // the coast's boats: a dock first, then one boat request at a time up to the wanted count; the island rule keeps
 // the original's single request
 static const unsigned long kBoatRushBatch = 4;   // the experiment "boatrush": boats requested at once
+static const unsigned long kBoatHoldMs = 120000;   // the experiment "boatrush2": no boat bought this long after a loss
 
 static bool EECPRMHasBuildManager(EECPCivilizationManager* inManager)
 {
@@ -1653,7 +1675,7 @@ static void EECPRMRequestBoats(EECPResourceManager* inManager)
     for (unsigned long k = 0; k < theDocks.size(); k++)
         if (theDocks[k]->mComplexUnit != NULL && theDocks[k]->mComplexUnit->mIsBuilt && theDocks[k]->mHitPoints > 0)
             theBuilt++;
-    bool theRush = EECPExperiment(theManager->mPlayer, "boatrush");
+    bool theRush = EECPExperiment(theManager->mPlayer, "boatrush") || EECPExperiment(theManager->mPlayer, "boatrush2");
     // the experiment "boatrush": a second dock once the first stands, so two train boats at once
     if (EECPRMHasBuildManager(theManager) && (theBuilt == 0 || (theRush && theBuilt == 1 && theDocks.size() < 2 && theWanted > kBoatRushBatch)))
         theManager->mBuildManager->QueueBuilding(kUnitTypeDock, false, true);
@@ -1666,6 +1688,21 @@ static void EECPRMRequestBoats(EECPResourceManager* inManager)
         // the experiment "boatrush" (the owner: "I spam boats ASAP at stone"): every boat short of the wanted count is
         // requested, kBoatRushBatch at a time
         unsigned long theHave = (unsigned long)(theCount.mUnits + theCount.mRequested);
+        // the experiment "boatrush2" (docs/AI_RESEARCH.md §8.29): boatrush lost 29-45 boats a game to warships by 60
+        // minutes and spent its wood rebuying them; after a boat is lost none is bought for kBoatHoldMs
+        if (EECPExperiment(theManager->mPlayer, "boatrush2")) {
+            static long sBoats[64];
+            static unsigned long sHold[64];
+            unsigned long theID = theManager->mPlayer->mPlayerID < 64 ? theManager->mPlayer->mPlayerID : 63;
+            unsigned long theNow = gPhysics->mGameTime;
+            if (sHold[theID] > theNow + kBoatHoldMs)
+                sHold[theID] = 0;   // a new game
+            if ((long)theCount.mUnits < sBoats[theID])
+                sHold[theID] = theNow + kBoatHoldMs;
+            sBoats[theID] = (long)theCount.mUnits;
+            if (theNow < sHold[theID])
+                return;
+        }
         if (theHave < theWanted) {
             unsigned long theMore = theWanted - theHave;
             theManager->mUnitManager->RequestUnits(theClass, (long)(theMore < kBoatRushBatch ? theMore : kBoatRushBatch), 0, 0);
@@ -1682,6 +1719,19 @@ static const long kHuntRange = 45;
 static const unsigned long kHuntSlots = 12;
 static const unsigned long kPatchesWanted = 3;   // the forage patches kept in the active centres (Prehistoric) ...
 static const unsigned long kPatchesWantedLater = 5;   // ... and from the Stone Age (more gatherers later)
+
+// the food gatherers whose goal is an animal
+static unsigned long EECPRMHunters(EECPResourceManager* inManager)
+{
+    unsigned long theCount = 0;
+    for (unsigned long k = 0; k < inManager->mGatherers[2].size(); k++) {
+        EEUGGather* theGoal = dynamic_cast<EEUGGather*>(inManager->mGatherers[2][k]->GetLoadGoal());
+        EEUnit* theResource = theGoal != NULL ? theGoal->mResource : NULL;
+        if (theResource != NULL && theResource->mUnitClass->mFamily == kUnitFamilyAnimal)
+            theCount++;
+    }
+    return theCount;
+}
 
 static unsigned long EECPRMFoodOutsideCenters(EECPResourceManager* inManager)
 {
@@ -1721,6 +1771,8 @@ static unsigned long EECPRMFoodOutsideCenters(EECPResourceManager* inManager)
     return theCount + (theHunters > theGame ? theHunters : theGame);
 }
 
+static const unsigned long kEarlyWoodSlots = 10;   // the experiment "woodcap"
+
 unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
 {
     EEComputerPlayer* thePlayer = this->mManager->mPlayer;
@@ -1743,6 +1795,11 @@ unsigned long EECPResourceManager::GetGatherCapacity(long inResource)
     unsigned long theTotal = 0;
     for (long r = 2; r < 7; r++) {
         unsigned long theCapacity = r == 3 ? (unsigned long)EECPPersonality(thePlayer).mWoodSlots : theSites[r] * theLimit;
+        // the experiment "woodcap" (docs/AI_RESEARCH.md §8.29; the owner keeps 6-13 on wood until the Copper Age, the
+        // playtest AI 15-42, while the Copper Age needs no wood): at most kEarlyWoodSlots woodcutters before Copper
+        if (r == 3 && theCapacity > kEarlyWoodSlots && EECPExperiment(thePlayer, "woodcap") && thePlayer->mTechnologies != NULL
+            && thePlayer->mTechnologies->mCurrentEpoch < kTechEpochCopper)
+            theCapacity = kEarlyWoodSlots;
         if (r == 2 && EECPForagePatchesOn(thePlayer))
             theCapacity += EECPRMFoodOutsideCenters(this);   // farms, fish and the hunt: what works there, and the game near home
         else if (r == 2)
@@ -1854,6 +1911,14 @@ static void EECPRMGetDemand(EECPResourceManager* inManager, EECPRMDemand& outDem
         if (theShare > 0.0f)
             EECPRMAddCost(thePlayer, theTree->Get(theEpoch), kUnitTypeTownCenter, theShare, outDemand.mTier[1]);
     }
+    // the experiment "goldbank" (EEComputerPlayer::CanAfford): the next epoch's gold counts whole from the Stone Age
+    if (EECPExperiment(thePlayer, "goldbank") && !EECPCheatOn(thePlayer, kAICheatEpochs)
+        && theTree->mCurrentEpoch >= kTechEpochStone && theTree->mCurrentEpoch + 1 < EEEpochCount()) {
+        long theCosts[7] = {0, 0, 0, 0, 0, 0, 0};
+        EECPRMAddCost(thePlayer, theTree->Get(theTree->mCurrentEpoch + 1), kUnitTypeTownCenter, 1.0f, theCosts);
+        if (theCosts[kResourceGold] > outDemand.mTier[1][kResourceGold])
+            outDemand.mTier[1][kResourceGold] = theCosts[kResourceGold];
+    }
     // the experiment "epochplan": the next epoch's wood, stone, gold and iron count whole from the start of an epoch
     // (queued or not, whatever the pressure: those stocks take long to fill with few gatherers, and only food
     // competes with the citizens); the pressure share above keeps the food
@@ -1945,7 +2010,12 @@ static void EECPRMGuardSites(EECPResourceManager* inManager)
     unsigned long theID = thePlayer->mPlayerID < 64 ? thePlayer->mPlayerID : 63;
     if (theBuild == NULL || !thePlayer->mCanBuild)
         return;
-    if (sLast[theID] != 0 && gPhysics->mGameTime >= sLast[theID] && gPhysics->mGameTime - sLast[theID] < kGuardMs)
+    // the experiment "towerdef" (docs/AI_RESEARCH.md §8.29; towers cost stone, which nothing else in the Stone Age
+    // needs): from the Stone Age every active site in range is guarded, worked or not, and twice as often
+    bool theMore = EECPExperiment(thePlayer, "towerdef") && thePlayer->mTechnologies != NULL
+        && thePlayer->mTechnologies->mCurrentEpoch >= kTechEpochStone;
+    if (sLast[theID] != 0 && gPhysics->mGameTime >= sLast[theID]
+        && gPhysics->mGameTime - sLast[theID] < (theMore ? kGuardMs / 2 : kGuardMs))
         return;
     long theTower = inManager->mManager->GetTowerClass();
     if (theTower <= 0 || !thePlayer->CanProduceUnitType(theTower, 0x20, NULL) || theBuild->IsQueued(theTower)
@@ -1957,7 +2027,7 @@ static void EECPRMGuardSites(EECPResourceManager* inManager)
             continue;
         for (long r = kResourceFood; r <= kResourceIron; r++) {
             EEUnit* theUnit = theCenter->FindResourceUnit(r);
-            if (theUnit == NULL || !(theUnit->mHitPoints > 0) || gWorld.GetResourceUsers(theUnit) == 0
+            if (theUnit == NULL || !(theUnit->mHitPoints > 0) || (gWorld.GetResourceUsers(theUnit) == 0 && !theMore)
                 || !EECPRMInClaimRange(inManager, theUnit->GetTileX(), theUnit->GetTileY())
                 || theBuild->HasTowerNear(theUnit->GetTileX(), theUnit->GetTileY(), kGuardRange * kGuardRange))
                 continue;
@@ -2020,7 +2090,13 @@ static void EECPRMActivateNeeded(EECPResourceManager* inManager)
                 theBest->SetActive(true, 0);
                 EE_CP_TRACE(thePlayer, "center.activate", "resource=%ld distance=%.0f patches=%lu", (long)kResourceFood,
                             sqrt((double)theBestDistance), thePatches);
-            }
+            } else if (EECPExperiment(thePlayer, "patchexpand") && EECPClaimRangeOn(thePlayer) && thePatches == 0
+                       && thePlayer->mTechnologies->mCurrentEpoch < kTechEpochCopper)
+                // the experiment "patchexpand" (§8.29): before the farms (the Copper Age) the patches are the food; with
+                // no patch worked and none left in the claim range it grows (growing whenever fewer than the wanted
+                // patches were held sent the citizens far out: 14-33 with it against 19-26 without) (the playtest AI had no food gatherer for 45 minutes, 1399 of
+                // the Copper Age's 1584 food, and the claim never grew: only a farm or settlement without room grew it)
+                EECPClaimExpand(thePlayer);
         }
     }
     if (!EECPClaimNeededOn(thePlayer))
@@ -2062,7 +2138,8 @@ static bool EECPRMSplitByDemand(EECPResourceManager* inManager)
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
     EECPRMActivateNeeded(inManager);
     // the experiment "boatrush": the boats are asked for on every split, not only while a citizen stands idle
-    if (EECPExperiment(thePlayer, "boatrush") && EECPRMCoastBoatsWanted(inManager) > 0)
+    if ((EECPExperiment(thePlayer, "boatrush") || EECPExperiment(thePlayer, "boatrush2"))
+        && EECPRMCoastBoatsWanted(inManager) > 0)
         EECPRMRequestBoats(inManager);
     long theGatherers = (long)inManager->mGatherers[0].size();
     for (long r = 2; r < 7; r++)
