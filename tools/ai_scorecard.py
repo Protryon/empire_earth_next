@@ -6,7 +6,11 @@ every epoch, the economy and army over time and the citizens lost.
 The computer players are told apart by a field of their trace start line (`--key`: exp, demand, personality, cheats; by
 default the first of those that differs between the players of a game, else "all": one variant). In a game of two
 variants a side wins when the other has no citizens left or its citizens + army are at least 1.5 times the other's,
-else the game is close. Epochs: how many of the variant's players reached each epoch and the median and mean game
+else the game is close. `--score mixed` (docs/AI_RESEARCH.md §8.29; the owner: "a mix of factors, economy, military")
+judges by economy, military and tech instead: each a side's share of the pair's total (economy: the cost of its live
+units and buildings plus its stock; military: its army's hit points x attack; tech: its epoch + 1), weighted
+MIXED_WEIGHTS; a side wins with a share of at least MIXED_WIN, or when the other has no citizens left (reports
+from before the samples' strength and value fall back to the body count). Epochs: how many of the variant's players reached each epoch and the median and mean game
 minute (the report's epoch_ms). Samples: the mean citizens and army at 10, 20, 30, 40 minutes (the report's samples;
 a defeated player counts as 0). Losses: citizens lost in the first 20 minutes and in all (the trace's losses lines).
 """
@@ -20,6 +24,18 @@ import sys
 
 KEYS = ("exp", "demand", "personality", "cheats")
 MARKS = (10, 20, 30, 40)
+MIXED_WEIGHTS = (0.4, 0.4, 0.2)   # economy, military, tech
+MIXED_WIN = 0.6
+
+
+def mixed_share(a, b):
+    """Player a's weighted share of economy, military and tech against player b (final report rows)."""
+    def share(x, y):
+        return 0.5 if x + y <= 0 else x / (x + y)
+    eco = lambda p: p.get("value", 0) + sum(p.get("resources", {}).values())
+    parts = (share(eco(a), eco(b)), share(a.get("strength", 0), b.get("strength", 0)),
+             share(a.get("epoch", 0) + 1, b.get("epoch", 0) + 1))
+    return sum(w * s for w, s in zip(MIXED_WEIGHTS, parts))
 
 
 def start_fields(trace):
@@ -65,6 +81,8 @@ def main():
     ap.add_argument("--key", choices=KEYS + ("variant",),
                     help="variant: group by the bench's --vary/--env-vary values (both players alike)")
     ap.add_argument("--json", type=pathlib.Path)
+    ap.add_argument("--score", choices=("bodies", "mixed"), default="bodies",
+                    help="mixed: economy, military and tech shares (see above)")
     a = ap.parse_args()
     games = []
     for d in a.bench:
@@ -117,7 +135,10 @@ def main():
             pa, pb = ais
             ca, aa, cb, ab = final[pa]["citizens"], final[pa]["army"], final[pb]["citizens"], final[pb]["army"]
             sa, sb = ca + aa, cb + ab
-            if (cb == 0 and ca > 0) or sa >= 1.5 * max(sb, 1):
+            if a.score == "mixed" and "strength" in final[pa]:
+                m = mixed_share(final[pa], final[pb])
+                w = pa if (cb == 0 and ca > 0) or (m >= MIXED_WIN and not (ca == 0 and cb > 0)) else                     pb if (ca == 0 and cb > 0) or m <= 1 - MIXED_WIN else None
+            elif (cb == 0 and ca > 0) or sa >= 1.5 * max(sb, 1):
                 w = pa
             elif (ca == 0 and cb > 0) or sb >= 1.5 * max(sa, 1):
                 w = pb

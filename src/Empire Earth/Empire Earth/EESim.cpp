@@ -266,6 +266,8 @@ struct PlayerSample {
     long mCitizens = 0;
     long mArmy = 0;             // live units that are neither citizens nor buildings (priests and heroes too)
     long mBuildings = 0;
+    long mStrength = 0;         // the army's hit points x attack, summed (soldiers, ships, heroes)
+    long mValue = 0;            // the cost of every live unit and building, all resources summed
     long mResources[5] = {0, 0, 0, 0, 0};
     unsigned long mResult = 0;  // EEPlayer::mGameResult: 1 victorious, 2 defeated
 };
@@ -333,8 +335,16 @@ Sample TakeSample()
                 p.mCitizens++;
             else if (IsBuildingCategory(theCategory))
                 p.mBuildings++;
-            else
+            else {
                 p.mArmy++;
+                if (theUnit->mStats != NULL)
+                    p.mStrength += (long)(theUnit->mHitPoints * theUnit->mStats->mAttack);
+            }
+            EETechTreeNode* theNode = thePlayer->mTechnologies != NULL
+                ? thePlayer->mTechnologies->Get(theUnit->mUnitClass->mTechnology) : NULL;
+            if (theNode != NULL && theNode->mData != NULL)
+                for (long r = kResourceFood; r <= kResourceIron; r++)
+                    p.mValue += theNode->GetCost(r, theUnit->mUnitClass->mUnitType, 1.0f);
         }
         s.mPlayers.push_back(p);
     }
@@ -726,9 +736,9 @@ void WriteReport(int inCode, const std::string& inError)
             snprintf(b, sizeof(b),
                      "%s{\"index\": %lu, \"human\": %s, \"result\": %lu, \"epoch\": %ld, \"population\": %ld, "
                      "\"victory_units\": %ld, \"citizens\": %ld, \"army\": %ld, \"buildings\": %ld, "
-                     "\"resources\": {\"food\": %ld, \"wood\": %ld, \"stone\": %ld, \"gold\": %ld, \"iron\": %ld}}",
+                     "\"strength\": %ld, \"value\": %ld, \"resources\": {\"food\": %ld, \"wood\": %ld, \"stone\": %ld, \"gold\": %ld, \"iron\": %ld}}",
                      k ? ", " : "", p.mIndex, p.mHuman ? "true" : "false", p.mResult, p.mEpoch, p.mPopulation,
-                     p.mVictoryUnits, p.mCitizens, p.mArmy, p.mBuildings, p.mResources[0], p.mResources[1],
+                     p.mVictoryUnits, p.mCitizens, p.mArmy, p.mBuildings, p.mStrength, p.mValue, p.mResources[0], p.mResources[1],
                      p.mResources[2], p.mResources[3], p.mResources[4]);
             o += b;
         }
