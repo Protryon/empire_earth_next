@@ -6,6 +6,8 @@
 #ifndef EE_EEUNITCLASSIMPROVEMENT_H
 #define EE_EEUNITCLASSIMPROVEMENT_H
 
+#include <stdint.h>   // int32_t: the levels are saved as 16 raw 4-byte words
+
 // vtable 0x449acc; bases EEUnitClassImprovement; sizeof 0x48; ctor 0x23a5bf; ??_G 0x23a5db; dtor 0x23a5f7
 class EEUnitClass;
 class EEUnitClassUpgrade;
@@ -35,7 +37,9 @@ public:
     long Load(EEUnitClass* inUnitClass, EEUnitClassUpgrade* inUpgrade, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x23b39b
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);   // 0x23b5e4
 
-    long mLevels[16];                       // +0x04 (= 1)
+    // +0x04 (= 1). int32_t, not long: Load and Save move the array as 0x40 raw bytes (16 4-byte words, as on
+    // 32-bit Windows); with an 8-byte long (LP64) only levels 0..7 reached the file and back.
+    int32_t mLevels[16];
     long mTotalCost;                        // +0x44 (= 0)
 };
 

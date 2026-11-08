@@ -1528,3 +1528,16 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   fault. Found by a 150-minute EE-SIM game (frames resolved with `tools/sim.py resolve`).
 - **Fix:** the line ends at the first tile off the map, and `EEGetBlockingUnits` treats a NULL tile as holding no
   units (its other callers pass `GetTile` results too).
+
+## Unit upgrades lost on loading a save, on macOS/Linux (2026-11-08)
+
+- **Symptom** (owner's playtest): after every load of an autosave, units kept some purchased improvements (attack,
+  the armours) but lost others (hit points, range, speed, ...).
+- **Cause:** `EEUnitClassImprovement::Save`/`Load` move `mLevels[16]` as 0x40 raw bytes (16 four-byte words, as the
+  32-bit original). `mLevels` was `long`: on LP64 that is 16 eight-byte values, so only levels 0..7 (area effect,
+  attack, six armours) reached the file and came back; levels 8..15 (flight time/power, hit points, leadership,
+  range, repair, speed, transport) loaded as 1. Windows (LLP64) was unaffected. The LP64 census looked for `long` in
+  raw records read as structs, not in member arrays read through `Read(char*, n)`.
+- **Fix:** `mLevels` (and Load's `theOld`) are `int32_t`, pinned by a `static_assert` of 0x40 bytes. Windows
+  layout and save format unchanged. A macOS/Linux save written before the fix holds levels 0..7 as eight-byte
+  pairs: it loads with its improvement levels shuffled (and some at 0), so such saves are best not reused.
