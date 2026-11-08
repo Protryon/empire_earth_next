@@ -1437,6 +1437,61 @@ tiles; 4 houses in minutes 1-4; 6 soldiers in the Prehistoric (the cap counted o
 Without the drop rule (the experiment `droprule` keeps it): the towers alone are even (11-11), the settlements carry it.
 Dark Age 12/24 against 7/24 in 3 hours.
 
+### 8.29 The Copper Age experiments, and a strategist that failed (2026-11-08, fourth playtest and EE-SIM)
+
+**The fourth playtest** (Continental, Medium, three logs: 0-60, 55-91 and 91-121 min from autosaves). The AI reached
+the Stone Age first (24.6 min against the owner's 26.2) and never the Copper Age: 135 citizens at 60 min (the owner
+85), 8 soldiers (20), 15-42 on wood (9-13), its first settlement made a town centre at minute 5 and 4 by 71. From 76
+min it had no food gatherer for 45 minutes: farms come with the Copper Age, the patches in its claim range were gone,
+the owner's warships had sunk its boats, and it held 1399 of the Copper Age's 1584 food. The Copper Age costs 1584
+food, 845 gold, 845 iron (750/400/400 x the standard variant's 2.64 x 0.8).
+
+**Why the experiments lost head to head.** The epoch reserve fills on the timer (asked for at 0.3, whole at 0.8):
+income above the growing reserve is spent, so an economy idea alone cannot bring the Copper Age sooner, and a faster
+schedule takes the food and iron the soldiers cost. `boatrush` lost its army through the wood bank before the Stone
+Age and 29-45 boats rebought by 60 min. Most of the "losses" by the body count were 1.5x citizens, not defeats; the
+EE-SIM samples now carry `strength` (army hit points x attack) and `value` (the cost of every live unit and
+building), and `ai_scorecard.py --score mixed` judges by economy, military and tech shares (0.4/0.4/0.2).
+
+| Experiment (TEST ONLY), 48 games, 2 hours, mixed score unless noted | Result | Copper (median) |
+|---|---|---|
+| `noop` (both sides unchanged) | 23-23, 21-21 | 74 |
+| `noupgrade` | **26-20** | 75 |
+| `patchexpand` (as first written: grow with fewer than the wanted patches) | 23-22 alone, 5-7 games worse in combinations | |
+| `patchexpand` narrowed (grow only with no patch left) | never fires in the sim; no cost | |
+| `fewbarracks` | 20-21 | 74 |
+| `stonecit` (90 citizens in the Stone Age) | 22-24 alone, **12-30** with the rest | |
+| `safedash` + `stonepeace` | 21-27 | **65.5** (75); Bronze 19/48 at 94 (11/48 at 113) |
+| `noupgrade` + `safedash` + `stonepeace` | 19-26 | 71 |
+| `stonecap`, `towerdef`, `goldbank`, `hunt6`, `epochplan`, `boatrush2` (24 games, body count) | 10-11, 11-10, 4-15, 8-11, 7-13, 1-17 | |
+
+**Rules** (aipersonalities.yaml; aggressive keeps its trainers and attacks, classic every one off):
+- `economy.early_town_centers: 2`: before the Bronze Age a settlement becomes a town centre only below two, and no
+  capitol;
+- `economy.early_trainers: 2`: before the Copper Age at most 2 barracks and 2 archery ranges;
+- `economy.patch_expand: true`: before the Copper Age the claim range grows when no forage patch is left in it;
+- `epoch_pressure.safe_bonus: 0.25`: from the Stone Age, the pressure 0.25 higher while no stronger enemy is near;
+- `military.stone_attacks: false`: no attack group against an enemy in the Stone Age.
+
+TEST ONLY switches: `noupgrade`/`nonoupgrade`, `fewbarracks`/`manybarracks`, `patchexpand`/`nopatchexpand`,
+`safedash`/`nosafedash`, `stonepeace`/`nostonepeace`.
+
+**A strategist, tried and dropped.** One Stone Age plan owning the citizen target (90), the gatherer split (gold and
+iron by the Copper Age cost, 10 wood, 5 stone, 12/18 at most on gold/iron), the spending rule (the next epoch's food,
+gold and iron held from the epoch's start), the building whitelist and caps, a light army of 10 (20 under threat),
+and the advance asked for once paid. Nine 48-game batches against the shipped AI: the Stone-to-Copper time fell to
+29-38 min (the shipped AI's 46-50), but 18-36 of 48 strategists were destroyed and fewer than half reached the
+Copper Age; it never kept an army (2-3 soldiers at 40 min against 13-15). Found on the way: the split starved food
+at a small town; the epoch research asked for early blocks the town centre's citizens; the 40-tile threat reaches the
+enemy's town on small maps; wood starved the archery range of the favourite slingers; temples, universities,
+hospitals and the next epochs' towers clogged the build queue (70-200 retries each); holding citizens for the light
+army deadlocked when no soldier could be made. The owner: a pure rush beats a boom, a boom with towers locks a rush
+out and wins later, hence several personalities.
+
+**EE-SIM notes.** Two benches at once pick the same ports: `Publish` fails, `NESynchronousServer` keeps a NULL
+recorder and the first input faults in `NERecordPlayback::Process` (the original's path). Run names past the Windows
+path limit fail as no-report (long `+` experiment lists).
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
