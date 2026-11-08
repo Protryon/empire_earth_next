@@ -1145,6 +1145,16 @@ bool EECPAttackSubGroupUnit::CanAttack(EECPASTargetUnit* inTarget)
     long theKind = this->GetUnit()->mUnitClass->mAmmoType;
     long theArmor = theClass->mFamily;
     bool theResult = false;
+    // New: an attacker without an ammo type (only the projectile classes have -1) indexed gU4E8708's row at -1 (an ASan
+    // heap-buffer-overflow 74 minutes into a playtest, 2026-11-07). A sub group's unit is referenced, so it should not
+    // be another object; the line names it, and the unit cannot attack anything anyway.
+    if (theKind < 0) {
+        EEComplexUnit* theOwn = this->GetUnit();
+        fprintf(stderr, "EE-AI: attack sub group unit %lu (%s, valid %d, hit points %ld, references %lu) has no ammo type\n",
+                theOwn->GetUnitID() & 0xffffff, (const char*)theOwn->GetUnitClass()->GetName(), (int)theOwn->mIsValid,
+                (long)theOwn->mHitPoints, (unsigned long)theOwn->GetReferenceCount());
+        return false;
+    }
     if (theClass->CanBeAttacked()) {
         if (gU4E8708[theArmor][theKind] != 0.0f) {
             EEComplexUnit* theTarget = inTarget->mUnit;
