@@ -11,9 +11,12 @@
         --part: the releases ship it in parts that unzip into one folder (tools/fetch_data.py pulls them):
           media  everything but Data/db and open_data.json: models, the original textures, sounds, music, scripts,
                  fonts (large; changes rarely)
-          db     Data/db and open_data.json: the tables and the rules documents, the tweakables (small; republished
-                 whenever the data format changes)
+          db     Data/db, Data/ai and open_data.json: the tables, the rules documents and the computer players'
+                 scripts, the tweakables (small; republished whenever the data format or a script changes)
         The third part, Data/Textures-4x, comes from tools/upscale.
+  python -I tools/open_data.py ai TREE
+        refresh a built tree's Data/ai from the repository's ai/ (the next engine's Lua scripts; seconds, no rebuild)
+        and record their hash in its open_data.json ("ai"). A build copies them too.
   python -I tools/open_data.py check DIR
         counts per folder of a tree or bundle and the rules it must keep (no data.ssa, no dxm, no binary file that has
         an open replacement)
@@ -48,6 +51,7 @@ import sources   # noqa: E402  (tools/eemodel: the game's data path)
 import ssa       # noqa: E402
 
 TREE = ROOT / 'build' / 'open_data' / 'tree'
+AI_SCRIPTS = ROOT / 'ai'   # the next engine's Lua scripts (docs/AI_LUA_PLAN.md 3.2): written here, not retail data
 
 
 def converters_hash():
@@ -59,6 +63,39 @@ def converters_hash():
                      *(ROOT / 'tools' / 'eedata').glob('*.json'), *(ROOT / 'tools' / 'eemodel').glob('*.py')]):
         h.update(p.name.encode() + b'\0' + p.read_bytes().replace(b'\r\n', b'\n'))
     return h.hexdigest()[:16]
+
+
+def scripts_hash():
+    """A hash of the repository's ai/ scripts (paths and contents): a tree whose open_data.json records another one
+    has stale scripts (refresh_scripts copies them in seconds; the converters' hash leaves them out)."""
+    import hashlib
+    h = hashlib.sha256()
+    for p in sorted(AI_SCRIPTS.rglob('*.lua')):
+        h.update(p.relative_to(AI_SCRIPTS).as_posix().encode() + b'\0' + p.read_bytes().replace(b'\r\n', b'\n'))
+    return h.hexdigest()[:16]
+
+
+def refresh_scripts(tree):
+    """Data/ai of a tree replaced by the repository's ai/ (*.lua) and its hash recorded in open_data.json -> the hash.
+    The old files are unlinked first, so a staged copy's hard links into another tree are never written through."""
+    tree = pathlib.Path(tree)
+    target = tree / 'Data' / 'ai'
+    if target.exists():
+        shutil.rmtree(target)
+    for p in sorted(AI_SCRIPTS.rglob('*.lua')):
+        dst = target / p.relative_to(AI_SCRIPTS)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))
+    digest = scripts_hash()
+    meta = tree / 'open_data.json'
+    if meta.exists():
+        report = json.loads(meta.read_text())
+        if report.get('ai') != digest:
+            report['ai'] = digest
+            meta.write_bytes((json.dumps(report, indent=2) + '\n').encode())
+    return digest
+
+
 FONTS = ROOT / 'toolchain' / 'fonts'
 SKIP_DIRS = {'dxm'}                       # Data\dxm: a community mod
 # the original game's own campaigns: Art of Conquest never lists them (its campaign screen lists its own
@@ -110,7 +147,8 @@ This part
 
 README_DB = """
 This part
-  The db part: Data/db (the tables as text and the rules documents, what a mod tweaks) and open_data.json. It needs
+  The db part: Data/db (the tables as text and the rules documents, what a mod tweaks), Data/ai (the computer
+  players' Lua scripts) and open_data.json. It needs
   the media part (ee_open_media-<sha>.zip: models, textures, sounds, fonts) in the same folder: unzip this one over
   it (tools/fetch_data.py in the source repository does that).
 """
@@ -276,6 +314,7 @@ def cmd_build(a, out=None):
         copied[pathlib.Path(low).suffix or '(none)'] += 1
     for d in EMPTY_DIRS:
         (data / d).mkdir(exist_ok=True)
+    report['ai'] = refresh_scripts(out)   # the next engine's scripts (the repository's, not retail data)
     report['copied'] = dict(sorted(copied.items()))
     game = dirs[0]
     shutil.copytree(game / 'Users', out / 'Users')
@@ -357,7 +396,7 @@ def pack_part(rel, part):
     """whether a tree file or folder (its path relative to the tree) belongs to the --part"""
     if part == 'all':
         return True
-    is_db = rel.parts[:2] == ('Data', 'db') or rel.as_posix() == 'open_data.json'
+    is_db = rel.parts[:2] in (('Data', 'db'), ('Data', 'ai')) or rel.as_posix() == 'open_data.json'
     return (part == 'db') == is_db
 
 
@@ -421,9 +460,16 @@ def main():
                            help='media: all but Data/db; db: Data/db and open_data.json (default all)')
     p = sub.add_parser('check')
     p.add_argument('dir')
+    p = sub.add_parser('ai')
+    p.add_argument('tree')
     a = ap.parse_args()
     if a.cmd == 'build':
         cmd_build(a)
+        return 0
+    if a.cmd == 'ai':
+        if not (pathlib.Path(a.tree) / 'Data').is_dir():
+            sys.exit(f'{a.tree}: no Data folder')
+        print(f'{a.tree}: Data/ai from {AI_SCRIPTS} ({refresh_scripts(a.tree)})')
         return 0
     return {'pack': cmd_pack, 'check': cmd_check}[a.cmd](a)
 
