@@ -56,7 +56,7 @@ void EEUCSeaAnimal::AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& io
     for (long i = ioPath.size() - 1; i >= 0; i--) {
         float theGround = theMesh.GetMeshZ(ioPath[i].GetX(), ioPath[i].GetY());
         float theTarget;
-        bool theDive = this->mUnitType == kUnitTypeResDolphin;
+        bool theDive = this->GetUnitType() == kUnitTypeResDolphin;
         if (theDive) {
             theDive = i != 0;
             if (theDive) {
@@ -76,7 +76,7 @@ void EEUCSeaAnimal::AdjustPath(EEComplexUnit* inUnit, std::vector<GE3DPoint>& io
             theSurfaced = false;
         float theDistance = UMAbs(theDepth - theTarget);
         float theLimit;
-        if (this->mUnitType == kUnitTypeResDolphin) {
+        if (this->GetUnitType() == kUnitTypeResDolphin) {
             float theStep = gPhysics->GetRandom(0.2f, 1.2f);
             if (theDepth < theTarget)
                 theDepth += theStep;

@@ -63,9 +63,9 @@ bool EEFindPlacement(GE3DPoint* inPoint, EEUnitClass* inClass, unsigned long inX
                      long inRings, bool inCorners, bool inFacePoint, bool inArg11, GETransformation* outTransformation,
                      EEComplexUnit* inTarget);
 // 0x24bb36: the tiles of ring inRing around the inSize square at (inX, inY)
-void EEGetRingTiles(unsigned long inX, unsigned long inY, long inSize, long inRing, long inCorners,
+void EEGetRingTiles(long inX, long inY, long inSize, long inRing, long inCorners,
                 std::vector<U2DPoint<long> >& outTiles);
-float Fn246EA2(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);   // 0x246ea2 (names.txt binds it)
+float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);  // 0x246ea2 (names.txt binds it)
 char EEGetTileUnitStanding(EEUnit* inUnit, EEPlayer* inPlayer, long inUnitType, bool inIgnoreOwner);
 // EEBlockTakes 0x243c7d: ee/EEAreaUtilities.h
 bool EEPlayerBlockTakes(EEPlayer* inPlayer, long inUnitType, long inX, long inY, long inWidth, long inHeight, long inIgnoreOwner);
@@ -117,12 +117,12 @@ bool EEApproachAttachPoint(EEComplexUnit* inUnit, GE3DPoint& outPoint);
 void EEGetSquareRing(long inX, long inY, long inWidth, long inHeight, std::vector<U2DPoint<long> >& outTiles);
 bool EEIsCornerBlocked(unsigned long inX1, unsigned long inY1, unsigned long inX2, unsigned long inY2);
 float EEGetNearestFootprintTile(EEComplexUnit* inUnit, const GE3DPoint& inPoint, long* outX, long* outY);
-// Genuine generic game permutation at original4eef9; nominal Fn4EEF9 identity inferred.
+// Genuine generic game permutation at original4eef9; nominal PermuteValues identity inferred.
 // Independent callers prove vector<T*> instantiations, including nested region-vector pointers.
 // Body: element access through operator[] each time, one temporary for the swaps (U2DPoint: its zeroing ctor first),
 // the signed modulo of the size; exact for vector<EEUnit*> 0x4eef9 (SeaTransport), <ushort> 0x8909e and
 // <U2DPoint<long> > 0x89273 (Personnel).
-template <class Container> void Fn4EEF9(Container& ioValues, long inStart)
+template <class Container> void PermuteValues(Container& ioValues, long inStart)
 {
     typename Container::value_type theTemporary;
     if (ioValues.size() > 1) {
@@ -194,9 +194,9 @@ unsigned long EEGetLeadUnitID(EEPlayer* inPlayer);
 void EEGetAimPoint(EEComplexUnit* inUnit, GE3DPoint* inTarget, GE3DPoint* outPoint);
 void EEGetHelicopterPriestDestination(EEComplexUnit* inUnit, GE3DPoint& outPoint);
 // 0x248fe4 (EEAIAStarPathfindingGoalBase.cpp declares it locally) (provisional name)
-void Fn248FE4(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles, float inMargin);
+void EEGetUnitTiles(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles, float inMargin);
 void EEGetFootprintTiles(EEUnit* inUnit, std::vector<U2DPoint<long> >& outTiles);  // the same body (0x248fe4's types)
-void Fn24B212(const GE3DPoint& inCenter, float inRadius, std::vector<U2DPoint<long> >& outTiles);   // the same body (0x248fe4's types)
+void EEGetTilesNearPoint(const GE3DPoint& inCenter, float inRadius, std::vector<U2DPoint<long> >& outTiles);  // the same body (0x248fe4's types)
 // the sort-and-unique template (0x211ebc; defined in EEUCGate.cpp's range) (provisional name)
 template <class V, class L, class E> void EESortUnique(V& ioValues, L inLess, E inEqual);
 void EEGetFanTiles(const GE2DPoint& inCenter, float inRadius, float inFrom, float inTo, long inSteps, std::vector<U2DPoint<long> >& outTiles);

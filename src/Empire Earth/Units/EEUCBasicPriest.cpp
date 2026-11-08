@@ -134,7 +134,7 @@ void EEUCBasicPriest::ConvertTarget(EEComplexUnit* inUnit, EEComplexUnit* inTarg
             }
         }
     }
-    inUnit->SetPower(inUnit->GetPower() - EEGetConversionCost(inUnit));
+    inUnit->SetPower(inUnit->mPower - EEGetConversionCost(inUnit));
     if (inUnit->mConversionStartTime != 0)
         inUnit->mConversionStartTime = 0;
     EESoundObject* theSound = theStats->mCreationSound;

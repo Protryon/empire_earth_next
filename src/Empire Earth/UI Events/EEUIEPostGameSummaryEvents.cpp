@@ -1100,8 +1100,8 @@ static void ShowName(UIForm* inForm, const UWideString& inName, const GEColor& i
     UITextLabel* theValue = static_cast<UITextLabel*>(inForm->GetControl(inPlayer + 0x5eb));
     theName->SetText(inName);
     theName->SetBgColor(inColor);
-    if (theRecord.mColorIndex > 0) {
-        theValue->SetText((long)theRecord.mColorIndex);
+    if (theRecord.mTeam > 0) {
+        theValue->SetText((long)theRecord.mTeam);
         theValue->SetDisplayMode(kDisplayModeShown);
         theValue->SetDirty(true);
     }

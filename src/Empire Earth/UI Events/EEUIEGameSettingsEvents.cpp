@@ -730,7 +730,7 @@ static unsigned long GetGraphicsQuality(UIForm* inForm)
     UIRadioButton* theRadio79 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsEffectsDetailHigh));
     UIRadioButton* theRadio80 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsEffectsDetailMed));
     UIRadioButton* theRadio81 = static_cast<UIRadioButton*>(inForm->GetControl(kGameSettingsEffectsDetailLow));
-    for (theQuality = 0; theQuality < 5; theQuality++) {
+    for (theQuality = 0; 5 > theQuality; theQuality++) {
         if (theCheck82->GetIsChecked() == kQualityCheck82[theQuality]
             && theCheck83->GetIsChecked() == kQualityCheck83[theQuality]
             && theCheck84->GetIsChecked() == kQualityCheck84[theQuality]

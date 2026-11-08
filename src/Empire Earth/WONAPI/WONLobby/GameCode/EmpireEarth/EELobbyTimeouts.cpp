@@ -1,6 +1,7 @@
-// C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbyTimeouts.cpp (file and every name PROVISIONAL: no
-// __FILE__, no RTTI). The last GameCode unit before WONAPI proper: one global settings object (0x9659d8; no code
-// references it) with its init chain, out-of-line dtor and ctor: 0x29cfda..0x29d080 (r12-misc-h2, round 12).
+// C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbyTimeouts.cpp (file name inferred: no __FILE__)
+// The last game-code unit before the WON libraries: one global settings object at 0x9659d8 (no code references it)
+// with its init chain, out-of-line destructor and constructor (0x69cfda..0x69d080). Every name here is inferred
+// (no RTTI).
 #include <windows.h>
 #include <mbstring.h>
 #include <string>
@@ -58,7 +59,7 @@
 
 #include "ee/EmpireEarth.h"
 
-// 0x5c bytes: three counts/times (3, 2000, 45000), two lists and a name
+// 0x5c bytes: three counts/times (3, 2000, 45000), two vectors and a name (provisional names)
 struct EELobbyTimeouts {
     EELobbyTimeouts();
     ~EELobbyTimeouts();
@@ -79,11 +80,13 @@ struct EELobbyTimeouts {
 EELobbyTimeouts gEELobbyTimeouts;
 
 // FUNCTION: EXE 0x69d004
+// Destroys the global lobby timeout settings, releasing their name and both vectors
 EELobbyTimeouts::~EELobbyTimeouts()
 {
 }
 
 // FUNCTION: EXE 0x69d022
+// Creates the lobby timeout settings with defaults 3, 2000 and 45000 and empty vectors
 EELobbyTimeouts::EELobbyTimeouts()
     : mL00(3), mL04(2000), mL08(45000), mS1C(1), mL30(0), mB44(false), mL58(0)
 {

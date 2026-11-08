@@ -56,7 +56,8 @@ void EEPMAirplane::Step0(EEComplexUnit* inUnit)
         else if (theLocation.GetZ() >= 0.0f) {
             float theScale = theLocation.GetZ() / theClass->GetCruiseAltitude() * 0.5f;
             theScale += 0.5f;
-            theModel.SetScale(theScale * inUnit->mStats->GetScale());
+            theScale *= inUnit->mStats->GetScale();
+            theModel.SetScale(theScale);
         } else
             theModel.SetScale(inUnit->mStats->GetScale() * 0.5f);
     }
@@ -110,7 +111,8 @@ void EEPMAirplane::Step0(EEComplexUnit* inUnit)
     }
     theTransformation.SetPosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
     float theBank = this->ComputePitch(inUnit, thePitch);
-    theTransformation.SetOrientationYPR(theYaw, theBank, inUnit->mRoll + this->ComputeRoll(inUnit, theYawRate));
+    float theRollOffset = this->ComputeRoll(inUnit, theYawRate);
+    theTransformation.SetOrientationYPR(theYaw, theBank, inUnit->GetRoll() + theRollOffset);
     long theTileX;
     long theTileY;
     EEUpdateUnitTile(&theTransformation, inUnit, &theTileX, &theTileY);
@@ -193,11 +195,11 @@ void EEPMAirplane::Step1(EEComplexUnit* inUnit)
 // Keeps a docked plane on its carrier's deck between the deck tag points, at its path distance
 void EEPMAirplane::FollowCarrier(EEComplexUnit* inUnit)
 {
-    GETransformation theTransformation(inUnit->mHomeBase->mPhysicalModel.GetLocation());
     GE3DPoint thePosition;
     GE3DPoint theNext;
     GE3DPoint theStart;
     EEComplexUnit* theCarrier = inUnit->mHomeBase;
+    GETransformation theTransformation(inUnit->mHomeBase->mPhysicalModel.GetLocation());
     EEUnitClassUpgrade* theStats = theCarrier->mStats;
     EETagPointList* theTags = theCarrier->GetModel()->mTagPoints[theCarrier->mAnimation];
     float theScale = theStats->GetScale();
@@ -384,7 +386,8 @@ bool EEPMAirplane::IsDocked(EEComplexUnit* inUnit)
         inUnit->GetPathStart(theNext, theIndex);
         if (theTags) {
             theTags->Scale(theTransformation, theCarrier->mStats->mScale);
-            theTags->mPoints[2]->GetPoint(theCarrier->mPhysicalModel.GetFrame(), theTransformation, theDeck);
+            const std::vector<EETagPoint*>& thePoints = theTags->mPoints;
+            thePoints[2]->GetPoint(theCarrier->mPhysicalModel.GetFrame(), theTransformation, theDeck);
         } else {
             theDeck.mX = theTransformation.GetX();
             theDeck.mY = theTransformation.GetY();
@@ -442,7 +445,8 @@ void EEPMAirplane::Step4(EEComplexUnit* inUnit)
         else if (theLocation.GetZ() >= 0.0f) {
             float theScale = theLocation.GetZ() / theClass->GetCruiseAltitude() * 0.5f;
             theScale += 0.5f;
-            theModel.SetScale(theScale * inUnit->mStats->GetScale());
+            theScale *= inUnit->mStats->GetScale();
+            theModel.SetScale(theScale);
         } else
             theModel.SetScale(inUnit->mStats->GetScale() * 0.5f);
     }
@@ -491,7 +495,8 @@ void EEPMAirplane::Step4(EEComplexUnit* inUnit)
     theLocation += theResult;
     theRotation.SetPosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
     float theBank = this->ComputePitch(inUnit, 0.0f);
-    theRotation.SetOrientationYPR(theNewHeading, theBank, inUnit->mRoll + this->ComputeRoll(inUnit, theYawRate));
+    float theRollOffset = this->ComputeRoll(inUnit, theYawRate);
+    theRotation.SetOrientationYPR(theNewHeading, theBank, inUnit->GetRoll() + theRollOffset);
     EEUpdateUnitTile(&theRotation, inUnit, &theTileX, &theTileY);
 }
 

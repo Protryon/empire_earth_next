@@ -305,7 +305,7 @@ EEUIFSELBUnitList::EEUIFSELBUnitList(unsigned long inID, std::vector<UWideString
 // Picks the clicked unit class for placement on the map, then fires the list's button-up event
 void EEUIFSELBUnitList::ButtonUp()
 {
-    EESEUnit* theScreen = (EESEUnit*)(static_cast<EEUIFScenarioEditor*>(this->mForm))->mTabGroups[kEditorTabUnits];
+    EESEUnit* theScreen = (static_cast<EEUIFScenarioEditor*>(this->mForm))->GetUnitScreen();
     theScreen->SelectUnitType(this->mForm->GetMouseLocation());
     this->FireTriggerEvent(kControlTriggerButtonUp);
 }
@@ -398,7 +398,7 @@ long EEUIFSELBUnitList::UpdateKeyboard()
 {
     long theResult = UILBString::UpdateKeyboard();
     if (UIControl::sEnterKey->GetValue()) {
-        EESEUnit* theScreen = (EESEUnit*)(static_cast<EEUIFScenarioEditor*>(this->mForm))->mTabGroups[kEditorTabUnits];
+        EESEUnit* theScreen = (static_cast<EEUIFScenarioEditor*>(this->mForm))->GetUnitScreen();
         theScreen->SelectUnitType(this->mForm->GetMouseLocation());
     }
     return theResult;

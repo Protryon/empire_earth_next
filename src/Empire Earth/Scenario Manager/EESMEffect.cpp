@@ -916,7 +916,7 @@ void EESMEffect::CreateUnits()
 #include "ee/EECalamityClass.h"
 
 extern bool& gInCinematic;                   // 0x5318e0 (EECameraControl.cpp's free-camera flag; provisional name)
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // Plain (non-folded) .rdata floats of this unit in the original (0x44608c, 0x446090, 0x446098), each read by one
 // function; the pooled __real copies of the same values are separate (provisional names)
@@ -1163,7 +1163,7 @@ void EESMEffect::Execute(bool inIsCinematic)
             if (gWorld.mGameOptions.mCampaignName.GetLength() > 0 && gWorld.mGameOptions.mCampaignChecksum > 0)
                 thePath = gU52A280;
             else
-                thePath = gU4E5B98;
+                thePath = gEmptyString;
             unsigned long theInstance;
             EELoadSound("Sounds\\" + thePath + UString(this->mFileName), 0x31, theSample, theInstance, 0);
             if (!UIsNone32(theInstance))
@@ -1177,19 +1177,19 @@ void EESMEffect::Execute(bool inIsCinematic)
             switch (this->mTextObject) {
             case kSMMediaTextHints:
                 if (this->mIsClearText == true)
-                    theManager->mMediaStrings.mHints = UWideString(gU4E5B98);
+                    theManager->mMediaStrings.mHints = UWideString(gEmptyString);
                 else
                     theManager->mMediaStrings.mHints = theManager->mMediaStrings.mHints + theMediaText;
                 break;
             case kSMMediaTextInstructions:
                 if (this->mIsClearText == true)
-                    theManager->mMediaStrings.mInstructions = UWideString(gU4E5B98);
+                    theManager->mMediaStrings.mInstructions = UWideString(gEmptyString);
                 else
                     theManager->mMediaStrings.mInstructions = theManager->mMediaStrings.mInstructions + theMediaText;
                 break;
             case kSMMediaTextHistory:
                 if (this->mIsClearText == true)
-                    theManager->mMediaStrings.mHistory = UWideString(gU4E5B98);
+                    theManager->mMediaStrings.mHistory = UWideString(gEmptyString);
                 else
                     theManager->mMediaStrings.mHistory = theManager->mMediaStrings.mHistory + theMediaText;
                 break;
@@ -1222,7 +1222,7 @@ void EESMEffect::Execute(bool inIsCinematic)
                     if (gWorld.mGameOptions.mCampaignName.GetLength() > 0 && gWorld.mGameOptions.mCampaignChecksum > 0)
                         thePath = gU52A280;
                     else
-                        thePath = gU4E5B98;
+                        thePath = gEmptyString;
                     theMessage.mSound = (const char*)(thePath + (const char*)this->mFileName);
                     gWorld.mScenarioManager->AddMessage(theMessage);
                 } else
@@ -3743,9 +3743,9 @@ void EESMEffect::TaskUnitsToArea()
                            && theComplex->mContainer != NULL)) {
                 theUnits[gWorld.GetPlayerIndex(theUnit->GetPlayer())].push_back(theUnit);
             } else {
-                unsigned long theSaved68 = theObject->mInAreaCheck;
-                unsigned long theSaved3C = theObject->mArea;
-                unsigned long theSaved6C = theObject->mNearCheck;
+                unsigned long theSaved68 = theObject->GetInAreaCheck();
+                unsigned long theSaved3C = theObject->GetArea();
+                unsigned long theSaved6C = theObject->GetNearCheck();
                 theObject->mInAreaCheck = 1;
                 theObject->mArea = this->mTaskArea;
                 theObject->mNearCheck = 0;

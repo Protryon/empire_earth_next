@@ -103,7 +103,6 @@ static bool sB5652F1;                       // 0x5652f1 (the rally point's shift
 
 // FUNCTION: EXE 0x66de97
 // Creates a main game command button with its icon, dither and queue count text
-// NEAR: the original copies GetTopLeft() through the imported GE2DPoint copy ctor and keeps a 0x40 frame (description/UString slots)
 EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle& inRectangle, UIControlsTable& inTable)
     : UIButton(inTable.GetID(), NULL, NULL, NULL, inRectangle, inManager->GetFormByID(inTable.GetFormID()),
                inTable.GetFormIndex(), 0)
@@ -136,15 +135,16 @@ EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle
     this->mF138 = this->mF134 = 40.0f;
     this->mIcon = new GEBitmap;
     this->mIcon->SetLocation(this->GetRectangle().GetTopLeft());
-    GE2DPoint theLocation = this->GetRectangle().GetTopLeft();
+    GE2DPoint theLocation;
+    theLocation = this->GetRectangle().GetTopLeft();
     theLocation.SetX(theLocation.GetX() + 3.0f);
     theLocation.SetY(theLocation.GetY() + 1.0f);
     this->mBuildQueue = new GEText(inTable.GetFont());
     ESVERIFY_AT(this->mBuildQueue, 195);
     this->mBuildQueue->SetLocation(theLocation);
     inTable.SetupGEText(this->mBuildQueue);
-    theDescription.mPixelDepth = inManager->GetUITextureBitDepth();
     theDescription.mHasAlpha = true;
+    theDescription.mPixelDepth = inManager->GetUITextureBitDepth();
     GETexture* theTexture = theManager->LoadTexture("textures\\Dither", theDescription);
     if (theTexture) {
         theTexture->SetStageAlphaMode(kStageOpModulate, -1);
@@ -157,8 +157,8 @@ EEUIFMGStatusButton::EEUIFMGStatusButton(UIManager* inManager, const GERectangle
         this->mDither = new GEBitmap;
         this->mDither->SetTexture(theTexture, inManager->GetScreen());
         unsigned long theScreen = inManager->GetScreen();
-        long theWidth = theTexture->GetSurface()->GetWidth();
-        long theHeight = theTexture->GetSurface()->GetHeight();
+        unsigned long theHeight = theTexture->GetSurface()->GetHeight();
+        unsigned long theWidth = theTexture->GetSurface()->GetWidth();
         GERectangle theTextureRectangle(0.0f, 0.0f, (float)theWidth, (float)theHeight);
         this->mDither->ComputeStretchedCoordsAndScale(inRectangle, inRectangle, theTextureRectangle, theScreen);
     }
@@ -278,23 +278,32 @@ void EEUIFMGStatusButton::ReleaseButton()
 // FUNCTION: EXE 0x66e734
 // Snapshots the button for drawing: whether it is available, its icon and the queued count
 // The availability of the button: a command button by its own test (mB148), else its technology through the
-// player's Virtual54, or for a calamity with a cost whether a selected unit can pay it (each branch stores
+// player's WriteDetailsHook, or for a calamity with a cost whether a selected unit can pay it (each branch stores
 // mAvailable; VC6 merges the stores)
 long EEUIFMGStatusButton::CopyData()
 {
     UWideString theString;
     bool theFound = false;
+    unsigned long theButton;
+    EESelectedGroup* theGroup;
+    unsigned long theCount;
+    unsigned long i;
+    EEComplexUnit* theUnit;
+    EETechTreeNode* theNode;
+    RTSTechTreeNodeData* theData;
+    EECalamityClass* theClass;
+    GEBitmap* theBitmap;
     this->mShowCount = false;
     if (this->mIsCommand) {
-        unsigned long theButton = this->mButton;
+        theButton = this->mButton;
         if (theButton == 0x28) {
-            EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
+            theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
             if (theGroup) {
-                unsigned long theCount = theGroup->GetNumUnits();
-                for (unsigned long i = 0; i < theCount; i++) {
+                theCount = theGroup->GetNumUnits();
+                for (i = 0; i < theCount; i++) {
                     if (theFound)
                         break;
-                    EEComplexUnit* theUnit = theGroup->GetUnit(i);
+                    theUnit = theGroup->GetUnit(i);
                     if (theUnit && gUnitSetManager.GetSet(0x2f)->Contains(theUnit->GetUnitClass()->GetUnitType()) &&
                         !theUnit->IsCloaked())
                         theFound = true;
@@ -304,13 +313,13 @@ long EEUIFMGStatusButton::CopyData()
             }
             this->mAvailable = theFound;
         } else if (theButton == 2) {
-            EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
+            theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
             if (theGroup) {
-                unsigned long theCount = theGroup->GetNumUnits();
-                for (unsigned long i = 0; i < theCount; i++) {
+                theCount = theGroup->GetNumUnits();
+                for (i = 0; i < theCount; i++) {
                     if (theFound)
                         break;
-                    EEComplexUnit* theUnit = theGroup->GetUnit(i);
+                    theUnit = theGroup->GetUnit(i);
                     if (theUnit == NULL ||
                         (theUnit->GetUnitClass()->GetUnitType() == kUnitTypeTeleporter && theUnit->GetPower() < gFortressUnloadCost))
                         theFound = false;
@@ -322,32 +331,29 @@ long EEUIFMGStatusButton::CopyData()
         } else if (theButton >= 0x5dc && theButton <= 0x5e3) {
             this->mAvailable = EECanAffordTrade(theButton);
         } else if (theButton == 0x29 || theButton == 0x2a) {
-            if (gGameResources == 4 && gPhysics->GetGameClock() < (float)(long)(gWorldTable.GetLongValue(kWorldDeathmatchJitManufacturingDelay) * 1000))
-                this->mAvailable = false;
-            else
-                this->mAvailable = true;
+            this->mAvailable = gGameResources == 4 && gPhysics->GetGameClock() < (float)(long)(gWorldTable.GetLongValue(kWorldDeathmatchJitManufacturingDelay) * 1000) ? false : true;
         } else {
             this->mAvailable = true;
         }
     } else {
-        EETechTreeNode* theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(this->mTechnology);
+        theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(this->mTechnology);
         if (this->mCount) {
             sprintf(theString, "%ld", this->mCount);
             this->mBuildQueue->SetText(theString);
             this->mShowCount = true;
         }
-        RTSTechTreeNodeData* theData = theNode->mData;
+        theData = theNode->mData;
         if (theData->mKind == 5 && theData->GetCalamity()) {
             EECalamityEnum theCalamity = (EECalamityEnum)theData->GetCalamity();
-            EECalamityClass* theClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theCalamity);
+            theClass = USingleton<EECalamityManager>::GetInstance()->GetCalamityClass(theCalamity);
             if (theClass->GetCost()) {
-                EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
+                theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
                 if (theGroup) {
-                    unsigned long theCount = theGroup->GetNumUnits();
-                    for (unsigned long i = 0; i < theCount; i++) {
+                    theCount = theGroup->GetNumUnits();
+                    for (i = 0; i < theCount; i++) {
                         if (theFound)
                             break;
-                        EEComplexUnit* theUnit = theGroup->GetUnit(i);
+                        theUnit = theGroup->GetUnit(i);
                         if (theUnit && theUnit->GetPower() >= theClass->GetCost() &&
                             theNode->Contains(theUnit->GetUnitClass()->GetUnitType()))
                             theFound = true;
@@ -368,14 +374,14 @@ long EEUIFMGStatusButton::CopyData()
     if (this->mButtonObject == NULL || this->mButton == 0x1d || this->mButton == 0x1e) {
         this->mDrawIcon = false;
     } else {
-        GEBitmap* theBitmap = NULL;
+        theBitmap = NULL;
         if (this->mState == kButtonStateNormal)
-            theBitmap = this->mNormalBitmap;
+            theBitmap = this->GetNormalBitmap();
         else if (this->mState == kButtonStateFocused)
-            theBitmap = this->mFocusedBitmap;
+            theBitmap = this->GetFocusedBitmap();
         else if (this->mState == kButtonStatePressed)
-            theBitmap = this->mPressedBitmap;
-        if (theBitmap == this->mPressedBitmap)
+            theBitmap = this->GetPressedBitmap();
+        if (theBitmap == this->GetPressedBitmap())
             this->mButtonObject->SetPressedBitmap(this->mIcon, this->GetRectangle(), this->GetScreenIndex());
         else
             this->mButtonObject->SetFaceBitmap(this->mIcon, this->GetRectangle(), this->GetScreenIndex());
@@ -579,6 +585,7 @@ void EEUIFMGStatusButton::Command()
 {
     EEUIFMainGame* theForm;
     unsigned long theButton = this->mButton;
+    EEComplexUnit* theTransport;
     {
         switch (theButton) {
         case 0:
@@ -606,7 +613,6 @@ void EEUIFMGStatusButton::Command()
             if (!theFound)
                 break;
             theForm = static_cast<EEUIFMainGame*>(this->GetForm());
-            EEComplexUnit* theTransport;
             if (EEGetFirstSelectedUnit(theTransport) == true && theTransport->GetUnitClass()->mCategory == kUnitCategoryFortress &&
                 theTransport->GetUnitClass()->mUnitType != kUnitTypeTeleporter) {
                 gCommunications->ProcessLocalUserInput(
@@ -1047,10 +1053,7 @@ long EEModeAttackGround(void* inLocation, void* inForm)
         if (EEPointUnitOrTile(theLocation, theTile, thePoint, true)) {
             if (theTile->IsSeenBy(thePlayer)) {
                 if (EEGetFirstSelectedUnit(theUnit) == true) {
-                    if (theUnit->mComplexUnit->DistanceSquared3D(thePoint) >= UMSquare(theUnit->GetUnitClass()->mMinRange))
-                        gMouse->mPointer = 1;
-                    else
-                        gMouse->mPointer = 3;
+                    gMouse->mPointer = theUnit->mComplexUnit->DistanceSquared3D(thePoint) >= UMSquare(theUnit->GetUnitClass()->mMinRange) ? 1 : 3;
                 } else {
                     gMouse->mPointer = 0;
                 }
@@ -1199,16 +1202,11 @@ long EEModeGarrison(void* inLocation, void* inForm)
     if (!EEPointUnitOrTileXY(theLocation, theTile, theX, theY, true))
         return false;
     EEUnit* theTarget = gUnitPicker.PickUnit(theLocation, 0);
-    if (theTarget == NULL) {
-        U2DPoint<long> thePoint;
-        thePoint.mX = theX;
-        thePoint.mY = theY;
-        gWorld.GetCurrentPlayer()->mEvents.AddEvent(thePoint, 2, gWorld.GetCurrentPlayer(), 0x7c41, false);
-    } else {
+    if (theTarget != NULL) {
         EEComplexUnit* theComplex = theTarget->mComplexUnit;
         if (EEGetFirstSelectedUnit(theUnit) == true) {
             EEComplexUnit* theOwn = theUnit->mComplexUnit;
-            if (theOwn && theComplex && theComplex->mIsBuilt && theComplex->mPlayer == theOwn->mPlayer &&
+            if (theOwn && theComplex && theComplex->mIsBuilt && theOwn->mPlayer == theComplex->mPlayer &&
                 theComplex->GetUnitClass()->mGarrisonCapacity != theComplex->mGarrisonCount) {
                 gCommunications->ProcessLocalUserInput(
                     new EEMLoadGarrison(theTarget->GetUnitID(), theOwn->mUnitID, 0), kSlotNone);
@@ -1230,6 +1228,11 @@ long EEModeGarrison(void* inLocation, void* inForm)
         }
     done:
         theTarget->Dereference();
+    } else {
+        U2DPoint<long> thePoint;
+        thePoint.mX = theX;
+        thePoint.mY = theY;
+        gWorld.GetCurrentPlayer()->mEvents.AddEvent(thePoint, 2, gWorld.GetCurrentPlayer(), 0x7c41, false);
     }
     theForm->SetUIState(0);
     gMouse->mPointer = 0;

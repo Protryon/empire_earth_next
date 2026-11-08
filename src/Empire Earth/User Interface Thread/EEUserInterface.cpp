@@ -128,7 +128,7 @@ unsigned long EEMenuHeight();
 #include "lle/FSMemoryFile.h"
 #include "ee/EEAQuickSaveLoad.h"
 // free functions of other units (declared where they are used, as their own units do) (provisional names)
-void Fn102E1B();                            // 0x102e1b (before the rasterizer is deactivated)
+void DeleteEffectBatchBuffers();            // 0x102e1b (before the rasterizer is deactivated)
 void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFlag);  // 0x140306 (Empire Earth.cpp)
 void EEUnloadGameMedia();                   // 0x140d1e
 void EEUpdateLandContinents();              // 0x23d76c
@@ -137,7 +137,7 @@ bool EEIsLobbyOpen();                       // 0x297eca (the external lobby is r
 void EESetQuitFlag();                       // 0x297ed6
 void EEResetGraphicsValues();               // 0x10fc7e (before a screen capture without the cursor)
 void EEPostGraphicsAll();                   // 0x10fc0c
-// Fn280FAF 0x280faf, Fn280FFD 0x280ffd: ee/EECivilizationBuilder.h; EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h
+// CivBuilderEditCivilization 0x280faf, CivBuilderCreateCivilization 0x280ffd: ee/EECivilizationBuilder.h; EESetCivBuilderButtonBlinking 0x27fcf0: ee/EmpireEarth.h
 void EELobbyShutdown();                     // 0x295bd2
 void LobbyUpdatePlayer(long inSlot, long inFlags);   // 0x1ddd8c
 void LobbyUpdateGameOptions();              // 0x1deefb
@@ -210,7 +210,7 @@ void EEUserInterface::ChangeRasterizer(long inRasterizer, long inScreen)
         PlatSleep(1);
     for (unsigned long i = 0; i < gRasterizer->GetScreenCount(); i++)
         gRasterizer->GetScreen(i)->Release(gGameWindow);
-    Fn102E1B();
+    DeleteEffectBatchBuffers();
     theResult = gRasterizer->Deactivate();
     ESVERIFY_AT(theResult == keseOK, 252);
     gRasterizer = GERasterizer::GetRasterizer(inRasterizer);
@@ -758,10 +758,10 @@ void EEUserInterface::ShowCivilizationBuilder(long inX, bool inFlag1, bool inFla
             theEvent->Dereference();
             gUIManager->Push(theForm);
         } else {
-            Fn280FAF();
+            CivBuilderEditCivilization();
         }
     } else {
-        Fn280FFD(reinterpret_cast<EECivilization*>(inX), inFlag1);
+        CivBuilderCreateCivilization(reinterpret_cast<EECivilization*>(inX), inFlag1);
     }
     gUIManager->GetFormByID(kFormCivBuilder)->SetMusicFileName(theMusic);
     gWorld.mLock->WriteUnlock();
@@ -829,7 +829,7 @@ void EEUserInterface::ProcessActions()
         theLast = NULL;
     else
         theLast = this->PeekBack(this->mUndoQueue, this->mUndoLock);
-    while (this->GetQueueSize(this->mActionQueue, this->mActionLock) > 0) {
+    while (this->GetQueueSize(this->mActionQueue, this->GetActionLock()) > 0) {
         EEAction* theAction = this->PopFront(this->mActionQueue, this->mActionLock);
         theAction->Virtual4();
         if (!theAction->mIsUndoable)
@@ -1254,7 +1254,7 @@ void EEUserInterface::UpdateInterface()
     gMouse->Update();
     gMouse->mInputLock->Leave();
     gWorld.mLock->ReadLock();
-    if (!Fn297ED0())
+    if (!EELobbyIsShown())
         gUIManager->UpdateUI(gMouse->mPosition);
     gWorld.mLock->ReadUnlock();
     this->ProcessActions();
@@ -1731,7 +1731,7 @@ void EEUserInterface::HandleEvent(const PlatInputEvent& inEvent)
     static bool sComposing;   // an input method composition is open (the edit box shows it)
     static float sMasterVolume = gSoundManager != NULL ? gSoundManager->GetMasterVolume() : 0.0f;
     static float sMusicVolume = gConductor != NULL ? gConductor->GetConductor().GetVolume() : 0.0f;
-    if (Fn297ED0() && inEvent.mType != PLAT_EVENT_MINIMIZED && inEvent.mType != PLAT_EVENT_RESTORED
+    if (EELobbyIsShown() && inEvent.mType != PLAT_EVENT_MINIMIZED && inEvent.mType != PLAT_EVENT_RESTORED
         && inEvent.mType != PLAT_EVENT_RESIZED)
         return;
     switch (inEvent.mType) {

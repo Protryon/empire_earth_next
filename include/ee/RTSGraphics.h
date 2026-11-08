@@ -88,9 +88,9 @@ public:
 
 class SEMixer;
 extern SEMixer* gConductor;             // 0x5319c0 (the mixer; its conductor at +0 is muted for a movie) (provisional name)
-bool Fn297ED0();                            // 0x297ed0: a global flag (the thread skips the frame while it is set) (provisional name)
-void Fn297F15();                            // 0x297f15: enters a global critical section (0x565858) (provisional name)
-void Fn297F21();                            // 0x297f21: leaves it (provisional name)
+bool EELobbyIsShown();                      // 0x297ed0: a global flag (the thread skips the frame while it is set) (provisional name)
+void EELobbyLock();                         // 0x297f15: enters a global critical section (0x565858) (provisional name)
+void EELobbyUnlock();                       // 0x297f21: leaves it (provisional name)
 extern UString gGraphicsThreadName;       // 0x52a260 (the thread's name; provisional name)
 
 #endif

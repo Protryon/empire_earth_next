@@ -238,8 +238,8 @@ static bool EEAIChokeGetTileSerial(EETile* inTile, long inX, long inY, long* out
     bool theResult = inTile == NULL;
     *outSerial = 0;
     if (!theResult) {
-        EEAIContinent* theContinent = gContinentManager.mContinents[gContinentManager.GetContinentID(inX, inY)];
-        if (theContinent->mCategory != kContinentCategoryLand && theContinent->mCategory != kContinentCategoryCliff) {
+        EEAIContinent* theContinent = gContinentManager.GetContinentFromID(gContinentManager.GetContinentID(inX, inY));
+        if (theContinent->GetCategory() != kContinentCategoryLand && theContinent->GetCategory() != kContinentCategoryCliff) {
             theResult = true;
             *outSerial = theContinent->mSerial;
         } else {

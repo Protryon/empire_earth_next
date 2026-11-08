@@ -152,11 +152,13 @@ void EEEffect2D::CreateParts(GE3DPoint& outPosition, float& outHeight, float inO
     float theMaximum = 0.0f;
     float theHeight = 1.0f;
     EEUnit* theUnit = this->mUnit;
+    // The original reads the stats above the null test ([unit+0x34] before the je); a unitless effect (an
+    // explosion at a point) has no unit, so ours reads them inside it.
     if (theUnit) {
-        EEUnitClassUpgrade* theStats = theUnit->mStats;
-        EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
+        EEUnitClassUpgrade* theStats = theUnit->GetStats();
+        EEComplexUnit* theComplexUnit = theUnit->GetComplexUnit();
         EETagPointList* theList = theUnit->GetModel()->GetTagPoints(theComplexUnit ? theComplexUnit->mAnimation : 0,
-                                                                this->mGraphicEffect->mKind);
+                                                                this->GetGraphicEffect()->GetKind());
         unsigned long theY = UMFloorUnsigned(thePosition.GetY());
         unsigned long theX = UMFloorUnsigned(thePosition.GetX());
         if (theMesh->GetIsValidPoint(theX, theY)) {
@@ -164,7 +166,7 @@ void EEEffect2D::CreateParts(GE3DPoint& outPosition, float& outHeight, float inO
             if (thePosition.GetZ() < theZ)
                 thePosition.SetZ(theZ + inOffset);
         }
-        if (theList && theList->mPoints.size() != 0) {
+        if (theList && theList->GetNumTagPoints() != 0) {
             GETransformation theTransformation(false);
             float theScale;
             unsigned long theFrame;
@@ -176,24 +178,24 @@ void EEEffect2D::CreateParts(GE3DPoint& outPosition, float& outHeight, float inO
                 theTransformation.MakeIdentity();
                 theTransformation.SetPosition(thePosition.GetX(), thePosition.GetY(), thePosition.GetZ());
                 theFrame = 0;
-                theScale = theStats->mScale;
+                theScale = theStats->GetScale();
             }
             EETagPointList::Scale(theTransformation, theScale);
-            for (unsigned long i = 0; i < theList->mPoints.size(); i++) {
+            for (unsigned long i = 0; i < theList->GetNumTagPoints(); i++) {
                 EEGraphicObject* theObject = this->GetGraphicObject();
                 theObject->LoadMedia();
-                theList->mPoints[i]->GetPoint(theFrame, theTransformation, theTagPoint);
+                theList->GetTagPoint(i)->GetPoint(theFrame, theTransformation, theTagPoint);
                 this->mParts.push_back(EEEffect2DPart(theTagPoint, theObject, i));
                 float theDistance = thePosition.DistanceToSquared(theTagPoint);
                 if (theDistance > theMaximum)
                     theMaximum = theDistance;
             }
-            theHeight = (float)sqrt(theMaximum) + this->mGraphicEffect->GetSize();
+            theHeight = (float)sqrt(theMaximum) + this->GetGraphicEffect()->GetSize();
         } else {
             EEGraphicObject* theObject = this->GetGraphicObject();
             theObject->LoadMedia();
             this->mParts.push_back(EEEffect2DPart(thePosition, theObject, 10000));
-            theHeight = this->mGraphicEffect->GetSize();
+            theHeight = this->GetGraphicEffect()->GetSize();
         }
     }
     outPosition = thePosition;

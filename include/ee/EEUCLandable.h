@@ -55,7 +55,7 @@ public:
 };
 
 // cdecl helpers of the flying classes (provisional names; types inferred)
-void Fn24B212(const GE3DPoint& inPoint, float inDistance, std::vector<EETileCoordinate>& outTiles);   // 0x24b212 (EEMap.cpp's range)
+void EEGetTilesNearPoint(const GE3DPoint& inPoint, float inDistance, std::vector<EETileCoordinate>& outTiles);  // 0x24b212 (EEMap.cpp's range)
 // 0x24939d: EEFindDropLocation (ee/EEUnit.h)
 float EEGetHitDistanceSquared(EEComplexUnit* inUnit, EEUnit* inTarget, float inArg3, float inArg4);  // 0x2494cb
 

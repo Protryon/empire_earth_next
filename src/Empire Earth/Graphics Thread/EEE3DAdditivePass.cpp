@@ -143,10 +143,10 @@ long EEE3DAdditivePass::DrawPass5()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     this->mDrawTransformation.GetPosition(thePosition);
     float theLight;
-    Fn11A130(thePosition, theFog, theLight);
+    GetFogFactor(thePosition, theFog, theLight);
     GEColor theColor(theLight, theLight, theLight);
     gRasterizer->SetAmbientColor(theColor, theScreen);
     theModel->GetMaterial(0)->SetTexture(this->mGraphicObject->mTextures[0], theScreen);

@@ -36,9 +36,13 @@ public:
     void RefreshPatrolGroup();                  // 0xac4b6 (EEPlayer 0x1646e7/0x169509/0x16be34; mPatrolGroup rebuilt)
     static bool IsTownUnit(EEUnit* inUnit);     // 0xac2b6 (cdecl, 1 argument; EEPlayer 0x16316e; type inferred)
 
+    EEPlayer* GetPlayer() const { return this->mPlayer; }
     EEPlayer* mPlayer;                      // +0x68 (ctor argument 1)
+    EEPPatrolGroup* GetPatrolGroup() const { return this->mPatrolGroup; }
     EEPPatrolGroup* mPatrolGroup;           // +0x6c (0: 0xabc27 creates one and registers it with mPlayer; Reset Dereferences it)
+    unsigned short GetContinent() const { return this->mContinent; }
     unsigned short mContinent;              // +0x70 (ctor 0; 0xabfda passes it to gContinentManager 0x21e22 as a sector id)
+    long GetTownID() const { return this->mTownID; }
     long mTownID;                           // +0x74 (ctor argument 2)
     unsigned long mValue;                   // +0x78 (0xabc27 adds the unit's value; unsigned: sorts 0x47db9c ja / 0x45a8ad jb)
     long mNumWalls;                         // +0x7c

@@ -284,7 +284,7 @@ bool EEUnit::IsPassableBy(EEComplexUnit* inUnit)
 {
     EEUnitClass* theClass = this->mUnitClass;
     return !theClass->mBlocksTile || (this->mHitPoints == 0 && theClass->mCategory != kUnitCategoryResource)
-        || (theClass->mResourceType == kResourceWood && inUnit != NULL && ((inUnit->mStats->mTerrainMask >> 14) & 1));
+        || (theClass->mResourceType == kResourceWood && inUnit != NULL && (bool)((inUnit->mStats->mTerrainMask >> 14) & 1));
 }
 
 // FUNCTION: EXE 0x62930f

@@ -279,8 +279,10 @@ void EEComplexUnit::IgnoreTarget(EEComplexUnit* inTarget)
         theAttacker.mUnitID = inTarget->mUnitID;
         theAttacker.mTime = gPhysics->mGameTime + 30000;
         this->mIgnoredTargets.push_front(theAttacker);  // newest first: 0x2000f9 is deque::push_front (_Myoff ? _Myoff : _Mapsize * 0xaa, then --); IsTargetIgnored erases from an expired entry to the end
-    } else
-        (*theIterator).mTime = gPhysics->mGameTime + 30000;
+    } else {
+        long theTime = gPhysics->mGameTime;
+        (*theIterator).mTime = theTime + 30000;
+    }
 }
 
 // FUNCTION: EXE 0x5f5d8b
@@ -509,7 +511,7 @@ bool gSightUpdatesEnabled = true;           // 0x4c76ec (.data = 1; just before 
 // Refunds part of the unit's cost as insurance and tells the local player when a refund threshold is passed
 // Original 0x4c76f0: the notification thresholds, used in ascending order.
 static const long kResourceRefundThresholds[11] = {100, 200, 300, 400, 500, 1000, 2000, 3000, 4000, 5000, 10000};
-extern char gU4E5B98[];
+extern char gEmptyString[];
 
 void EEComplexUnit::PayInsurance(float inFraction)
 {
@@ -558,7 +560,7 @@ void EEComplexUnit::PayInsurance(float inFraction)
         theText += thePart;
         gResource->GetString(IDS_IN_INSURANCE, thePart);
         theText += thePart;
-        gUserInterface->AddChatLogEntry(thePlayer->mColor, UWideString(gU4E5B98), theText, 5000, 2);
+        gUserInterface->AddChatLogEntry(thePlayer->mColor, UWideString(gEmptyString), theText, 5000, 2);
         EESoundObject* theSound = EESoundObject::Get(kSoundInsuranceCollected);
         if (theSound != NULL)
             theSound->Play(theSound->GetVolume(), 0.0f, 1.0f);
@@ -834,7 +836,6 @@ void EEComplexUnit::ClearGoalQueue(unsigned long inIndex)
         this->RefreshGoals();
         this->RefreshActiveGoal();
     }
-    // mGoalQueues[0] / mGoalQueues[inIndex]; 8 units at the end make it exact
 }
 
 // FUNCTION: EXE 0x5f709c
@@ -1252,7 +1253,7 @@ bool EEComplexUnit::UpdateHidden()
         this->mPlayer->mEnemies[::gWorld.GetCurrentPlayer()->GetPlayerID()] == 0) && this->GetTileX() != -10000) {
         if (!::gWorld.mInCinematic) {
             if ((this->mHiddenFlags & kHiddenFlagMoved) == kHiddenFlagMoved) {
-                EEMap* theMap = ::gWorld.GetMap();
+                EEMap* theMap = ::gWorld.mMap;
                 EETile* theTile = theMap->GetTile(this->GetTileX(), this->GetTileY());
                 unsigned char thePhase = ((gPhysics->mGameTime + 2) / 1000) % 3;
                 {
@@ -1352,7 +1353,7 @@ bool EEComplexUnit::UpdateHidden()
                 }
             } else {
                 theTiles.resize(4);
-                theTiles[0].mX = this->GetTileX();
+                theTiles[0].mX = this->mTileX;
                 theTiles[0].mY = this->GetTileY();
                 theTiles[1].mX = this->GetTileX();
                 (*(theTiles.begin() + 1)).mY = this->GetTileY() + 1;
@@ -1404,7 +1405,9 @@ void EEComplexUnit::ClearGoals(long inIndex)
     this->SetGatheredResource(NULL);
     if (this->mGoalQueues.size() <= (unsigned long)inIndex)
         return;
-    while (this->mGoalQueues[inIndex].mGoals.size() > 0) {
+    while (true) {
+        if (!(this->mGoalQueues[inIndex].mGoals.size() > 0))
+            break;
         this->mGoalQueues[inIndex].GetFront()->Abandon(this);
         this->mGoalQueues[inIndex].PopFront();
         if ((unsigned long)inIndex < 1)
@@ -1556,7 +1559,6 @@ void EEDumpLeakedUnits(FSFileSpec& inFile)
                 (const char*)theUnits[i]->GetUnitClass()->GetName(), theUnits[i]->GetTileX(), theUnits[i]->GetTileY(),
                 theUnits[i]->GetUnitID(), (const char*)EEUnitAction::GetActionName(theUnits[i]->mCommand->mType),
                 theUnits[i]->GetGrowth());
-        // (0x5f8fd6..0x5f9079, a trace the shipping build compiled away)
     }
 }
 
@@ -1567,22 +1569,22 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
     GE3DPoint theLocation;
     std::deque<EEUnitGoal*> theGoals;
     fprintf(inFile, "\n");
-    fprintf(inFile, "OUT OF SYNCH DUMP:  **************  Unit ID: %08lx  *************\n", this->mComplexUnit->mUnitID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Times Updated:      %ld\n", this->mComplexUnit->mTimesUpdated);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  **************  Unit ID: %08lx  *************\n", this->GetComplexUnit()->mUnitID);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Times Updated:      %ld\n", this->GetComplexUnit()->mTimesUpdated);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Owner:              %2ld\n", this->mPlayer->mPlayerID);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Object Type:        %4ld\n", this->GetUnitClass()->GetUnitType());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Tile (x):           %4ld\n", this->GetTileX());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Tile (y):           %4ld\n", this->GetTileY());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Hit Points:         %6ld\n", this->mHitPoints);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Action:             %s(%ld)\n", (const char*)EEUnitAction::GetActionName(this->mComplexUnit->GetCommandType()),
-        this->mComplexUnit->GetCommandType());
-    if (this->mComplexUnit->mActiveGroup == NULL)
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Action:             %s(%ld)\n", (const char*)EEUnitAction::GetActionName(this->GetComplexUnit()->GetCommandType()),
+        this->GetComplexUnit()->GetCommandType());
+    if (this->GetComplexUnit()->mActiveGroup == NULL)
         fprintf(inFile, "OUT OF SYNCH DUMP:  This unit has no active group\n");
     else
-        fprintf(inFile, "OUT OF SYNCH DUMP:  This unit has an active group with an action of %ld\n", this->mComplexUnit->mActiveGroup->mAction);
+        fprintf(inFile, "OUT OF SYNCH DUMP:  This unit has an active group with an action of %ld\n", this->GetComplexUnit()->mActiveGroup->mAction);
     fprintf(inFile, "OUT OF SYNCH DUMP:  **************    GOALS        *************\n");
-    for (unsigned long i = 0; i < this->mComplexUnit->mGoalQueues.size(); ++i) {
-        theGoals = this->mComplexUnit->mGoalQueues[i].mGoals;
+    for (unsigned long i = 0; i < this->GetComplexUnit()->mGoalQueues.size(); ++i) {
+        theGoals = this->GetComplexUnit()->mGoalQueues[i].mGoals;
         fprintf(inFile, "OUT OF SYNCH DUMP:  ************** GOAL Queue(%6ld) Number Of Goals(%6zu) *************\n", i, theGoals.size());
         for (unsigned long j = 0; j < theGoals.size(); ++j) {
             fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Number(%6ld) Has a type of:\t%6d\n", j, (theGoals[j])->mKind);
@@ -1600,36 +1602,36 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
             (theGoals[j])->DumpOutOfSynch(inFile);
         }
     }
-    if (this->mComplexUnit->mGoalState != NULL) {
-        fprintf(inFile, "OUT OF SYNCH DUMP:  Current Goal:\t%6d\n", this->mComplexUnit->mGoalState->mKind);
-        this->mComplexUnit->mGoalState->GetGoalLocation(theLocation);
+    if (this->GetComplexUnit()->mGoalState != NULL) {
+        fprintf(inFile, "OUT OF SYNCH DUMP:  Current Goal:\t%6d\n", this->GetComplexUnit()->mGoalState->mKind);
+        this->GetComplexUnit()->mGoalState->GetGoalLocation(theLocation);
         fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (x): %6.6f\n", (double)theLocation.GetX());
         fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (y): %6.6f\n", (double)theLocation.GetY());
         fprintf(inFile, "OUT OF SYNCH DUMP:  Goal Location (z): %6.6f\n", (double)theLocation.GetZ());
     }
-    fprintf(inFile, "OUT OF SYNCH DUMP:  CurrentPhysicsAction: %2ld\n", this->mComplexUnit->mCurrentPhysicsAction);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  CurrentPhysicsOrder:  %2ld\n", this->mComplexUnit->mCurrentPhysicsOrder);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  CurrentPhysicsAction: %2ld\n", this->GetComplexUnit()->mCurrentPhysicsAction);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  CurrentPhysicsOrder:  %2ld\n", this->GetComplexUnit()->mCurrentPhysicsOrder);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Queued for delete:  %2ld\n", (unsigned long)(this->mIsQueuedForDelete == true));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Ammunition:         %6ld\n", this->mComplexUnit->mAmmunition);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Animation:          %6ld\n", this->mComplexUnit->mAnimation);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Yaw Velocity:       %6.6f\n", (double)this->mComplexUnit->mAngularVelocity.GetYaw());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Pitch Velocity:     %6.6f\n", (double)this->mComplexUnit->mAngularVelocity.GetPitch());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Roll Velocity:      %6.6f\n", (double)this->mComplexUnit->mAngularVelocity.GetRoll());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Blg Queue Count:    %6zu\n", this->mComplexUnit->mBuildQueue.size());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Cit Build Que Size: %6zu\n", this->mComplexUnit->mCitizenBuildQueue.size());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Clearance granted:  %2ld\n", (unsigned long)(this->mComplexUnit->mIsClearanceGranted == true));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Coll Resolut Cnt:   %6.6f\n", (double)this->mComplexUnit->mCollisionResolutionCount);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Collision State:    %6ld\n", (unsigned long)this->mComplexUnit->mCollisionState);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Collision Tile (x): %6ld\n", this->mComplexUnit->mCollisionTile.mX);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Collision Tile (y): %6ld\n", this->mComplexUnit->mCollisionTile.GetY());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Crew Hit Points:    %6ld\n", this->mComplexUnit->mCrewHitPoints);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Current Frame:      %6ld\n", this->mComplexUnit->mPhysicalModel.GetFrame());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Flight Time:        %6ld\n", this->mComplexUnit->mFlightTime);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart X:  %6.6f\n", (double)this->mComplexUnit->mProjectileStart.GetX());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart Y:  %6.6f\n", (double)this->mComplexUnit->mProjectileStart.GetY());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart Z:  %6.6f\n", (double)this->mComplexUnit->mProjectileStart.GetZ());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Rotting Away Time:  %6ld\n", this->mComplexUnit->mRottingAwayTime);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Velocity:           %6.6f\n", (double)this->mComplexUnit->mVelocity);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Ammunition:         %6ld\n", this->GetComplexUnit()->mAmmunition);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Animation:          %6ld\n", this->GetComplexUnit()->mAnimation);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Yaw Velocity:       %6.6f\n", (double)this->GetComplexUnit()->mAngularVelocity.GetYaw());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Pitch Velocity:     %6.6f\n", (double)this->GetComplexUnit()->mAngularVelocity.GetPitch());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Roll Velocity:      %6.6f\n", (double)this->GetComplexUnit()->mAngularVelocity.GetRoll());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Blg Queue Count:    %6zu\n", this->GetComplexUnit()->mBuildQueue.size());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Cit Build Que Size: %6zu\n", this->GetComplexUnit()->mCitizenBuildQueue.size());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Clearance granted:  %2ld\n", (unsigned long)(this->GetComplexUnit()->mIsClearanceGranted == true));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Coll Resolut Cnt:   %6.6f\n", (double)this->GetComplexUnit()->mCollisionResolutionCount);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Collision State:    %6ld\n", (unsigned long)this->GetComplexUnit()->mCollisionState);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Collision Tile (x): %6ld\n", this->GetComplexUnit()->mCollisionTile.mX);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Collision Tile (y): %6ld\n", this->GetComplexUnit()->mCollisionTile.GetY());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Crew Hit Points:    %6ld\n", this->GetComplexUnit()->mCrewHitPoints);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Current Frame:      %6ld\n", this->GetComplexUnit()->mPhysicalModel.GetFrame());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Flight Time:        %6ld\n", this->GetComplexUnit()->mFlightTime);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart X:  %6.6f\n", (double)this->GetComplexUnit()->mProjectileStart.GetX());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart Y:  %6.6f\n", (double)this->GetComplexUnit()->mProjectileStart.GetY());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  ProjectileStart Z:  %6.6f\n", (double)this->GetComplexUnit()->mProjectileStart.GetZ());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Rotting Away Time:  %6ld\n", this->GetComplexUnit()->mRottingAwayTime);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Velocity:           %6.6f\n", (double)this->GetComplexUnit()->mVelocity);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Affected by Grav:   %2ld\n", (unsigned long)this->GetUnitClass()->mIsAffectedByGravity);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Ammunition:         %6ld\n", this->GetUnitClass()->mAmmunition);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Ammo Type:          %6ld\n", this->GetUnitClass()->mAmmoType);
@@ -1656,39 +1658,39 @@ void EEComplexUnit::OutOfSynchDump(FILE* inFile, unsigned long inFlags)
     fprintf(inFile, "OUT OF SYNCH DUMP:  Fire While Moving:  %2ld\n", (unsigned long)this->GetUnitClass()->mFiresWhileMoving);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Combat Reaction:    %6ld\n", this->GetUnitClass()->mCombatReaction);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Cnvert %% per sec:   %6.6f\n", (double)this->GetStats()->mConversionRate);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Cruise Altitude:    %6.6f\n", (double)this->mComplexUnit->mHeight);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Cruise Altitude:    %6.6f\n", (double)this->GetComplexUnit()->mHeight);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Inner Coll Sphere:  %6.6f\n", (double)this->GetUnitClass()->GetInnerCollisionSphere());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Min Range:          %6.6f\n", (double)this->GetUnitClass()->mMinRange);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Missle Delay Time:  %6ld\n", this->GetUnitClass()->mMissileDelayTime);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Outer Coll Sphere:  %6.6f\n", (double)this->GetUnitClass()->mOuterCollisionSphere);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Shoots High:        %2ld\n", (unsigned long)this->GetUnitClass()->mShootsHigh);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Model Location (x): %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetX());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Model Location (y): %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetY());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Model Location (z): %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetZ());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (0,0):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(0, 0));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (0,1):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(0, 1));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (0,2):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(0, 2));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (0,3):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(0, 3));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (1,0):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(1, 0));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (1,1):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(1, 1));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (1,2):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(1, 2));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (1,3):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(1, 3));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (2,0):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(2, 0));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (2,1):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(2, 1));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (2,2):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(2, 2));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (2,3):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(2, 3));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (3,0):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(3, 0));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (3,1):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(3, 1));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (3,2):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(3, 2));
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (3,3):        %6.6f\n", (double)this->mComplexUnit->mPhysicalModel.GetLocation().GetElement(3, 3));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Model Location (x): %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetX());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Model Location (y): %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetY());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Model Location (z): %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetZ());
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (0,0):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(0, 0));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (0,1):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(0, 1));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (0,2):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(0, 2));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (0,3):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(0, 3));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (1,0):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(1, 0));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (1,1):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(1, 1));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (1,2):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(1, 2));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (1,3):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(1, 3));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (2,0):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(2, 0));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (2,1):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(2, 1));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (2,2):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(2, 2));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (2,3):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(2, 3));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (3,0):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(3, 0));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (3,1):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(3, 1));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (3,2):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(3, 2));
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Trans (3,3):        %6.6f\n", (double)this->GetComplexUnit()->mPhysicalModel.GetLocation().GetElement(3, 3));
     fprintf(inFile, "OUT OF SYNCH DUMP:  Is Cloaked?:\t\t%2ld\n", (unsigned long)this->mIsCloaked);
     fprintf(inFile, "OUT OF SYNCH DUMP:\tPlanet ID:          %6ld\n", (unsigned long)this->mPlanetID);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Waypoint Size:%zu\n", this->mComplexUnit->mWaypoints.size());
-    for (unsigned long theWaypoint = 0; theWaypoint < this->mComplexUnit->mWaypoints.size(); ++theWaypoint)
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Waypoint Size:%zu\n", this->GetComplexUnit()->mWaypoints.size());
+    for (unsigned long theWaypoint = 0; theWaypoint < this->GetComplexUnit()->mWaypoints.size(); ++theWaypoint)
         fprintf(inFile, "OUT OF SYNCH DUMP:  Waypoint[%ld]: X:%f, Y:%f, Z:%f\n", theWaypoint,
-            (double)this->mComplexUnit->mWaypoints[theWaypoint].mLocation.GetX(),
-            (double)this->mComplexUnit->mWaypoints[theWaypoint].mLocation.GetY(),
-            (double)this->mComplexUnit->mWaypoints[theWaypoint].mLocation.GetZ());
+            (double)this->GetComplexUnit()->mWaypoints[theWaypoint].mLocation.GetX(),
+            (double)this->GetComplexUnit()->mWaypoints[theWaypoint].mLocation.GetY(),
+            (double)this->GetComplexUnit()->mWaypoints[theWaypoint].mLocation.GetZ());
     fprintf(inFile, "OUT OF SYNCH DUMP:  **************************** Unit Area Effects ********************\n\n");
     if (this->mAffectingAreaEffects.GetSize() != 0) {
         fprintf(inFile, "OUT OF SYNCH DUMP:  **************************** Unit Area Effects Affected By ********************\n");
@@ -1718,7 +1720,7 @@ void EEComplexUnit::ApplyAreaEffects()
         if (theEffectRadius > theRadius)
             theRadius = theEffectRadius;
     }
-    GE2DPoint thePoint(this->mPhysicalModel.GetLocation().GetX(), this->mPhysicalModel.GetLocation().GetY());
+    GE3DPoint thePoint(this->mPhysicalModel.GetLocation().GetX(), this->mPhysicalModel.GetLocation().GetY(), this->mPhysicalModel.GetLocation().GetZ());
     theLocation.SetX(thePoint.GetX());
     theLocation.SetY(thePoint.GetY());
     ::gAEManager.CollectEffects(theRadius, theLocation, thePlayerID, &this->mAreaEffects, this);
@@ -2715,13 +2717,13 @@ bool EEComplexUnit::StepAside(EEPlayer* inPlayer, EEUnitClass* inClass, long inX
 // Finds the unit's waypoint on the given tile (off-map waypoints count at their closest tile); returns true if found
 bool EEComplexUnit::FindWaypointAtTile(long inX, long inY, EEComplexUnitWaypoint*& outWaypoint)
 {
-    // gWorld.mMap is read twice, with no local: the original keeps it in eax, not in a callee-saved register
+    // gWorld.GetMap() is read twice, with no local: the original keeps it in eax, not in a callee-saved register
     bool theFound = false;
     for (unsigned long i = 0; i < this->mWaypoints.size(); i++) {
         long theX = UMFloor(this->mWaypoints[i].mLocation.GetX());
         long theY = UMFloor(this->mWaypoints[i].mLocation.GetY());
-        if (::gWorld.mMap->GetTile(theX, theY) == NULL)
-            ::gWorld.mMap->GetClosestTile(&this->mWaypoints[i].mLocation, &theX, &theY);
+        if (::gWorld.GetMap()->GetTile(theX, theY) == NULL)
+            ::gWorld.GetMap()->GetClosestTile(&this->mWaypoints[i].mLocation, &theX, &theY);
         if (theX != inX || theY != inY)
             continue;
         theFound = true;
@@ -2885,10 +2887,10 @@ void EEComplexUnit::SetGroupPathGoals(std::vector<GE3DPoint>& inPath)
                 else {
                     U2DPoint<long> theStart(theStartSector->mCenter.mX, theStartSector->mCenter.mY);
                     U2DPoint<long> theEnd(theSector->mCenter.mX, theSector->mCenter.mY);
-                    if (theStart.DistanceToSquared(theEnd) >= 2)
-                        theSkip = false;
-                    else
+                    if (!(theStart.DistanceToSquared(theEnd) >= 2))
                         theSkipped++;
+                    else
+                        theSkip = false;
                 }
             }
             if (!theSkip)
@@ -3096,7 +3098,7 @@ void EEComplexUnit::ReleaseCargo(EEComplexUnit* inCargo)
     EEComplexUnit* theCargo = this->mCargo[theIndex];
     this->GetUnitClass()->CargoRemoved(this, theCargo);
     this->mCargo.erase(this->mCargo.begin() + theIndex);
-    this->mCargoRoom += theCargo->mUnitClass->mWeight;
+    this->mCargoRoom += theCargo->GetUnitClass()->mWeight;
     if (this->mPlayer == ::gWorld.GetCurrentPlayer() && this->mPlayer->mActiveGroup->Contains(this))
         gUserInterface->PostMessage424Once();
     theCargo->Dereference();
@@ -3120,9 +3122,7 @@ void EEComplexUnit::UnloadCargoAtTile(long inX, long inY, bool inArg)
         if (this->GetUnitClass()->IsTransport() && (theTransportClass == NULL
             || !theTransportClass->HasRoom(this, theCargo->GetComplexUnit())))
             continue;
-        if (theCargo->mHitPoints < 1) {
-            this->ReleaseCargo(theCargo);
-        } else {
+        if (!(theCargo->mHitPoints < 1)) {
             long theRings = UMFloatToLong(theTransportClass != NULL ? theTransportClass->mUnloadRange : this->GetStats()->mRange);
             if (EEFindPlacement(&thePoint, theCargo, NULL, inX, inY, 1, theRings, inArg,
                 true, false, false, &theTransformation, NULL)) {
@@ -3130,6 +3130,8 @@ void EEComplexUnit::UnloadCargoAtTile(long inX, long inY, bool inArg)
                 if (this->GetUnitClass()->GetUnitType() == kUnitTypeTeleporter)
                     gWorld.GetEffectManager()->CreateUnitEffect(theCargo, EEGraphicEffect::Get(kGraphicEffectCalamityTeleportIn), NULL, false, 0, 0);
             }
+        } else {
+            this->ReleaseCargo(theCargo);
         }
     }
     if (this->GetNumCargoUnits() != 0) {
@@ -3154,7 +3156,7 @@ void EEComplexUnit::CancelQueuedProduction()
         if (theNode->mData->mUnitClass > 0 && gUnitClassTable[theNode->mData->mUnitClass] != NULL
             && gUnitClassTable[theNode->mData->mUnitClass]->mAIKind == kAIKindHero && this->mPlayer->mNumHeroesInProduction > 0)
             this->mPlayer->mNumHeroesInProduction--;
-        this->mPlayer->RefundTechnology(this->mPlayer->mTechnologies->Get(theTechnology), this->GetUnitClass()->GetUnitType(), 1.0f);
+        this->mPlayer->RefundTechnology(this->mPlayer->mTechnologies->Get(theTechnology), this->GetUnitClass()->mUnitType, 1.0f);
     }
 }
 
@@ -3228,7 +3230,7 @@ bool EEComplexUnit::UnloadCargoNow(EEComplexUnit* inCargo)
             long theRings = theTransportClass != NULL ? UMFloatToLong(theTransportClass->mUnloadRange)
                                                    : UMFloatToLong(this->GetStats()->mRange);
             bool theFlag = theTransportClass != NULL ? (theTransportClass->mDomains >> 2) & 1 : false;
-            if (EEFindPlacement(&thePoint, inCargo, NULL, this->GetTileX(), this->GetTileY(), this->GetUnitClass()->GetTileSize(), theRings,
+            if (EEFindPlacement(&thePoint, inCargo, NULL, this->mTileX, this->GetTileY(), this->GetUnitClass()->GetTileSize(), theRings,
                 theSet->Contains(this->GetUnitClass()->GetUnitType()), true, false, theFlag, &theTransformation, NULL)) {
                 this->UnloadCargoAt(theIndex, theTransformation);
                 theResult = true;
@@ -3393,7 +3395,7 @@ void EEComplexUnit::RemoveResearch(long inTechnology, long inRemoveAll)
                 if (theType > 0 && gUnitClassTable[theType] != NULL
                     && gUnitClassTable[theType]->mAIKind == kAIKindHero && this->mPlayer->mNumHeroesInProduction > 0)
                     --this->mPlayer->mNumHeroesInProduction;
-                this->mPlayer->RefundTechnology(this->mPlayer->mTechnologies->Get(theTechnology.mTechnology), this->GetUnitClass()->GetUnitType(), 1.0f);
+                this->mPlayer->RefundTechnology(this->mPlayer->mTechnologies->Get(theTechnology.mTechnology), this->GetUnitClass()->mUnitType, 1.0f);
             }
         }
         this->mBuildQueue = theKept;
@@ -3458,7 +3460,7 @@ void EEComplexUnit::StartProduction()
             return;
         long theTechnology = this->mBuildQueue.front().mTechnology;
         unsigned long theFlags = this->mBuildQueue.front().mFlag;
-        EETechTreeNode* theNode = this->GetPlayer()->mTechnologies->Get(theTechnology);
+        EETechTreeNode* theNode = this->GetPlayer()->GetTechTree()->Get(theTechnology);
         if (theNode->GetIsAvailable() == true) {
             bool theAllowed = thePlayer->CanProduce(theTechnology, this->GetUnitClass()->GetUnitType(), 1, false, 2, NULL);
             if (!theAllowed)
@@ -3478,8 +3480,8 @@ void EEComplexUnit::StartProduction()
                 && gPhysics->mRandom.Generate() >= 0.5f) {
                 // gUnitClassTable[kUnitTypeFemaleCitizen] is a slot of the class-pointer table, not a separate global
                 EEUnitClass* theOther = gUnitClassTable[kUnitTypeFemaleCitizen];
-                if (theOther != NULL && this->GetPlayer()->mTechnologies->Get(theOther->GetTechnology()) != NULL
-                    && this->GetPlayer()->mTechnologies->Get(theOther->GetTechnology())->GetIsAvailable())
+                if (theOther != NULL && this->GetPlayer()->GetTechTree()->Get(theOther->GetTechnology()) != NULL
+                    && this->GetPlayer()->GetTechTree()->Get(theOther->GetTechnology())->GetIsAvailable())
                     theTechnology = theOther->GetTechnology();
             }
             this->PlayEffect(theTechnology);
@@ -3503,7 +3505,7 @@ void EEComplexUnit::StartProduction()
             this->GetPlayer()->RefundTechnology(theNode, this->GetUnitClass()->GetUnitType(), 1.0f);
             if (this->mBuildQueue.empty())
                 break;
-            theNode = this->GetPlayer()->mTechnologies->Get(this->mBuildQueue.front().mTechnology);
+            theNode = this->GetPlayer()->GetTechTree()->Get(this->mBuildQueue.front().mTechnology);
         }
         if (this->mBuildQueue.empty())
             return;
@@ -4580,11 +4582,10 @@ unsigned long EEGraphicObject::GetWheelCount() const
 
 // TEMPLATE: EXE 0x6010ec
 
-// Init chain at 0x6010fd (wrapper): object 0x96700c, ctor 0x546866, dtor 0x54630b (not emitted by ours):
-// UList<EEComplexUnit*>::sNodePool (RTTI .?AV?$UMemoryPool@U?$UListNode@PAVEEComplexUnit@@@@@@, vtable 0x4421b4;
-// a guarded template static, ctor/dtor ICF'd at 0x14624d/0x1462a6): needs the unit to instantiate a UList<EEComplexUnit*>
-// member (mU0C4 is UList<long> in EEUnit.h; dtor 0x200d66)
-// (chain wrapper 0x6010fd, registrar 0x601107; ctor/dtor ICF-kept at 0x54624d/0x5462a6)
+// SYNTHETIC: EXE 0x6010fd
+// SYNTHETIC: EXE 0x601107
+// The chain of UList<EEComplexUnit*>::sNodePool (object 0x96700c): wrapper and registrar; its ctor and dtor are the
+// copies at 0x54624d / 0x5462a6.
 
 // TEMPLATE: EXE 0x601113
 

@@ -17,6 +17,7 @@ public:
     ~EEUIFSEBrushGroup();                   // 0x1a074a, five owned buttons plus title
     // 0x1a0778: the brush outline at tile (inX, inY) (EEUIFSEElevation::MouseMove) (provisional name)
     void SetHighlight(float inX, float inY, bool inIsCentered);
+    void SetIsHighlightShown(bool inValue) { this->mIsHighlightShown = inValue; }
     GERectangle mRectangle;                 // +0x00
     EEUIFSERBBrush* mButtons[5];            // +0x10
     UITextLabel* mTitle;                    // +0x24

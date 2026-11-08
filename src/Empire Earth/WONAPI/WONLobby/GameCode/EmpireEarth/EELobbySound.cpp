@@ -1,7 +1,7 @@
-// C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbySound.cpp (file name PROVISIONAL: no __FILE__; the
+// C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbySound.cpp (file name inferred: no __FILE__; the
 // classes are WONAPI::EELobbyMusic / EELobbySound / EELobbySoundDecoder). The lobby's sounds, played through the
-// engine's sound manager: 0x29ce06..0x29cfda (after EELobbyResource.cpp's GUIString COMDAT; the next unit's init
-// chain starts at 0x29cfda). Unit flags: the exe's module set (r12-misc-h2, round 12).
+// engine's sound manager: 0x69ce06..0x69cfda (after EELobbyResource.cpp's GUIString function; the next unit's static
+// initializers start at 0x69cfda).
 #include <windows.h>
 #include <mbstring.h>
 #include <string>
@@ -68,6 +68,7 @@
 using namespace WONAPI;
 
 // FUNCTION: EXE 0x69ce06
+// Creates the lobby music entry for a sound description
 EELobbyMusic::EELobbyMusic(const SoundDescriptor& inDescriptor) : Sound(inDescriptor)
 {
 }
@@ -76,26 +77,30 @@ EELobbyMusic::EELobbyMusic(const SoundDescriptor& inDescriptor) : Sound(inDescri
 // (compiler-generated; name in analysis/exe/names.txt)
 
 // FUNCTION: EXE 0x69ce46
-void EELobbyMusic::Play()
+// Starts the lobby music by raising the game's music volume to the player's preference
+void EELobbyMusic::PlayHook()
 {
     if (gUIManager != NULL)
         gUIManager->SetMusicVolume(gGamePreferences.mSettings.GetMusicVolume());
 }
 
 // FUNCTION: EXE 0x69ce61
-void EELobbyMusic::Stop()
+// Silences the lobby music by setting the game's music volume to 0
+void EELobbyMusic::StopHook()
 {
     if (gUIManager != NULL)
         gUIManager->SetMusicVolume(0.0f);
 }
 
 // FUNCTION: EXE 0x69ce78
-void EELobbyMusic::Virtual0C()
+// Resumes the lobby music at the player's music volume
+void EELobbyMusic::ResumeHook()
 {
-    Play();
+    this->PlayHook();
 }
 
 // FUNCTION: EXE 0x69ce7d
+// Creates a lobby sound effect for a loaded engine sample, not playing
 EELobbySound::EELobbySound(const SoundDescriptor& inDescriptor, unsigned long inSampleID)
     : Sound(inDescriptor), mSampleID(inSampleID), mInstanceID(-1)
 {
@@ -105,28 +110,32 @@ EELobbySound::EELobbySound(const SoundDescriptor& inDescriptor, unsigned long in
 // (compiler-generated; name in analysis/exe/names.txt)
 
 // FUNCTION: EXE 0x69cebc
+// Destroys the sound effect, unloading its sample from the sound manager
 EELobbySound::~EELobbySound()
 {
     if (gSoundManager != NULL)
-        gSoundManager->Unload(mSampleID);
+        gSoundManager->Unload(this->mSampleID);
 }
 
 // FUNCTION: EXE 0x69ceeb
-void EELobbySound::Play()
+// Plays the sound effect once at full volume, centred, remembering the playing instance
+void EELobbySound::PlayHook()
 {
     if (gSoundManager != NULL)
-        mInstanceID = gSoundManager->Play(mSampleID, 1.0f, 0.0f, 1.0f, false, NULL);
+        this->mInstanceID = gSoundManager->Play(this->mSampleID, 1.0f, 0.0f, 1.0f, false, NULL);
 }
 
 // FUNCTION: EXE 0x69cf1c
-void EELobbySound::Stop()
+// Stops the playing instance of the sound effect, if any
+void EELobbySound::StopHook()
 {
-    if (gSoundManager != NULL && !UIsNone32(mInstanceID))
-        gSoundManager->Stop(mInstanceID, false);
-    mInstanceID = -1;
+    if (gSoundManager != NULL && !UIsNone32(this->mInstanceID))
+        gSoundManager->Stop(this->mInstanceID, false);
+    this->mInstanceID = -1;
 }
 
 // FUNCTION: EXE 0x69cf40
+// Loads a lobby sound file into the engine's sound manager; returns NULL without a sound manager
 SoundPtr EELobbySoundDecoder::Decode(const SoundDescriptor& inDescriptor)
 {
     if (gSoundManager == NULL)

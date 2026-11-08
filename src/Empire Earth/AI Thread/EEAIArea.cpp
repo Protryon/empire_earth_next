@@ -237,6 +237,8 @@ bool EEAIArea::RemoveTile(const U2DPoint<long>& inPoint)
 // TEMPLATE: EXE 0x40dc78
 // TEMPLATE: EXE 0x40dcaa
 // TEMPLATE: EXE 0x40dcbe
+// TEMPLATE: EXE 0x40de5c
+// TEMPLATE: EXE 0x40e01d
 // TEMPLATE: EXE 0x40de7f
 // TEMPLATE: EXE 0x40e043
 // TEMPLATE: EXE 0x40e0b9

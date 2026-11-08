@@ -35,7 +35,7 @@
 #include "ee/EEStatisticsHistory.h"
 #include "ee/EEStatisticsRecord.h"
 
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // SYNTHETIC: EXE 0x56d346
 // SYNTHETIC: EXE 0x56d350
@@ -185,7 +185,7 @@ long EEAddDeadUnitStatistic(EEComplexUnit* inUnit)
 // Clears the statistics; series 12..16 keep their history
 void EEPlayerStatistics::Clear()
 {
-    this->mName = gU4E5B98;
+    this->mName = gEmptyString;
     this->mEndTime = 0;
     for (long i = 0; i < 31; i++)
         this->mSeries[i].Reset();
@@ -298,8 +298,8 @@ void EEStatisticsRecord::Clear()
     this->mColor = GEColor(1.0f, 1.0f, 1.0f);
     this->mIsLocal = false;
     this->mIsHuman = false;
-    this->mName = gU4E5B98;
-    this->mNameSuffix = gU4E5B98;
+    this->mName = gEmptyString;
+    this->mNameSuffix = gEmptyString;
     this->mSlot = 0xff;
     this->mResult = 0;
     this->mScore = 0;
@@ -308,7 +308,7 @@ void EEStatisticsRecord::Clear()
     this->mMilitaryScore = 0;
     this->mTechScore = 0;
     this->mEndTime = 0;
-    this->mColorIndex = 0;
+    this->mTeam = 0;
     for (long i = 0; i < 7; i++)
         this->mResources[i] = 0;
     this->mStatistics.Clear();

@@ -75,7 +75,7 @@
 #include "ee/EECommunications.h"
 #include "ee/EECheatCodes.h"
 #include "ee/EEStringIDs.h"
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // FUNCTION: EXE 0x52a54a
 // Creates the cheat code table from the string resources
@@ -144,7 +144,7 @@ void EECheatCodes::ListCheatCodes()
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
     // the third and fourth lines have four codes: clear the slot they do not set (they used to repeat the line
     // before's first or last code)
-    theA = gU4E5B98;
+    theA = gEmptyString;
     gResource->GetString(IDS_ALL_YOUR_BASE_ARE_BELONG_TO_US, theB);
     gResource->GetString(IDS_BAM, theC);
     gResource->GetString(IDS_BRAINSTORM, theD);
@@ -155,21 +155,21 @@ void EECheatCodes::ListCheatCodes()
     gResource->GetString(IDS_SLIMFAST, theB);
     gResource->GetString(IDS_MINE_YOUR_OWN_BUSINESS, theC);
     gResource->GetString(IDS_GIRLYMAN, theD);
-    theE = gU4E5B98;
+    theE = gEmptyString;
     theLine = theA + "     " + theB + "     " + theC + "     " + theD + "     " + theE;
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
     gResource->GetString(IDS_BIG_DIG, theA);
     gResource->GetString(IDS_MY_NAME_IS_METHOS, theB);
     gResource->GetString(IDS_QUOTABLE_PATELLA, theC);
     gResource->GetString(IDS_DISPLAY_CHEATS, theD);
-    theE = gU4E5B98;
+    theE = gEmptyString;
     theLine = theA + "     " + theB + "     " + theC + "     " + theD + "     " + theE;
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
     gResource->GetString(IDS_I_HAVE_POWER, theA);
     gResource->GetString(IDS_COFFEE_TRAIN, theB);
     gResource->GetString(IDS_AHHHCOOL, theC);
     gResource->GetString(IDS_FRIENDLY_SKIES, theD);
-    theE = gU4E5B98;
+    theE = gEmptyString;
     theLine = theA + "     " + theB + "     " + theC + "     " + theD + "     " + theE;
     gUserInterface->AddChatLogEntry(theTitle + theLine, 0);
 }
@@ -400,8 +400,8 @@ void EECheatCodes::ParseCheatCode(const UWideString& inText, long& outCode, long
             thePoint.SetY((float)atof(theTokens[2]));
             if (gWorld.mMap != NULL && gWorld.mMap->GetClosestTile(&thePoint, &theX, &theY) != NULL) {
                 gWorld.mCameraControl.GetLocation(gWorld.mCameraControl.mFraction, theLocation);
-                theLocation.SetX((float)theX);
-                theLocation.SetY((float)theY);
+                theLocation.mX = (float)theX;
+                theLocation.mY = (float)theY;
                 gWorld.mCameraControl.SetLocation(theLocation, true, true);
             }
         }
@@ -435,7 +435,7 @@ void EECheatCodes::ParseCheatCode(const UWideString& inText, long& outCode, long
             if (outParameter != 0 || PlatMbsCmp(theLast, reinterpret_cast<const unsigned char*>((const char*)UWideString(" 0"))) == 0) {
                 if ((unsigned long)outParameter > 9 && (const char*)theText != reinterpret_cast<const char*>(theLast))
                     theLast = PlatMbsDec(reinterpret_cast<const unsigned char*>((const char*)theText), theLast);
-                strcpy(reinterpret_cast<char*>(theLast), gU4E5B98);
+                strcpy(reinterpret_cast<char*>(theLast), gEmptyString);
             }
         }
         PlatMbsLwr((unsigned char*)(const char*)theText);

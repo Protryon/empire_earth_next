@@ -57,6 +57,7 @@ public:
     GE3DPoint mMapCenter;                   // +0x414 (Create: the map's size * 0.5, z 0)
     ESChecksum mChecksum;                   // +0x420
     FSFileSpec mFileSpec;                   // +0x438
+    EEPlayer* GetPlayersAt(unsigned long inIndex) const { return this->mPlayers[inIndex]; }
     std::vector<EEPlayer*> mPlayers;        // +0x480 the players (Create stores new EEHumanPlayer; Clear deletes via slot 0)
     std::vector<EEPlayer*> mLoadedPlayers;  // +0x490 players (EEWorld 0x13a6c8 calls EEPlayer slot +0x20 RepairPointers; loader 0x14a7ab pushes EEPlayer*)
     std::vector<EETeam> mTeams;             // +0x4a0 (_Buy/_Tidy/erase of vector<EETeam>)

@@ -71,10 +71,22 @@
 extern EEToHitTable gToHitTable;           // 0x5318e8
 extern long& gNumPlayers;                    // 0x530e0c (provisional name)
 
+// Name tables that no function reads: three std::map<long, UString> class statics of two classes (the first
+// with guard byte 0x4e5cc1, the other two sharing 0x4e5cc0). Only the construction and destruction remain.
+struct EECPASGUNameTableA {
+    static std::map<long, UString> sNames;
+};
+struct EECPASGUNameTableB {
+    static std::map<long, UString> sNames;
+    static std::map<long, UString> sTitles;
+};
+std::map<long, UString> EECPASGUNameTableA::sNames;    // 0x4e5ce8
+std::map<long, UString> EECPASGUNameTableB::sNames;    // 0x4e5cd8
+std::map<long, UString> EECPASGUNameTableB::sTitles;   // 0x4e5cc8
+
 static const float kASGURange0 = 256.0f;    // 0x43bf38
 static const float kASGURange1 = 400.0f;    // 0x43bf3c
 static const float kASGURange2 = 576.0f;    // 0x43bf40
-static const float kASGUThree = 3.0f;       // 0x43bf44
 // 0x43bf10 is the pooled `/ 10.0f` literal (RandomizePersonality 0x464f98)
 // 0x43bffc is the pooled 81.0f literal (Virtual0C 0x463b33)
 
@@ -147,14 +159,14 @@ bool EECPAttackSubGroupUnitPrejudice::Matches(EEUnitClass* inClass)
 EECPAttackSubGroupUnit::EECPAttackSubGroupUnit(EEComplexUnit* inUnit, EECPAttackSubGroup* inSubGroup)
     : mL3C(0), mL40(0)
 {
-    EEUnitClass* theClass = inUnit->mUnitClass;
-    EEUnitClassUpgrade* theStats = inUnit->mStats;
+    EEUnitClass* theClass = inUnit->GetUnitClass();
+    EEUnitClassUpgrade* theStats = inUnit->GetStats();
     this->mUnit = inUnit;
     this->mType = kASGUKindDefault;
     this->GetUnit()->Reference();
     this->mSubGroup = inSubGroup;
-    if (this->mSubGroup != NULL)
-        this->mSubGroup->Reference();
+    if (this->GetSubGroup() != NULL)
+        this->GetSubGroup()->Reference();
     this->mTarget = NULL;
     this->mF68 = this->mCourage = this->mAggression = this->mF6C = 0.5f;
     this->mNextRetargetTime = 0;
@@ -167,17 +179,17 @@ EECPAttackSubGroupUnit::EECPAttackSubGroupUnit(EEComplexUnit* inUnit, EECPAttack
     this->mState = kASGUStateIdle;
     this->mEscort = NULL;
     this->mPostAttackMode = 0;
-    this->mImportance = theClass->mInfluence;
+    this->mImportance = theClass->GetInfluence();
     long theFactor = 1;
-    if (theClass->mAIKind == kAIKindHero)
+    if (theClass->GetAIKind() == kAIKindHero)
         theFactor = 0x4c;
-    if (theClass->mAIKind == kAIKindSiege)
+    if (theClass->GetAIKind() == kAIKindSiege)
         theFactor += 3;
-    if (theClass->mHasCalamityPowers)
+    if (theClass->GetHasCalamityPowers())
         theFactor += 5;
-    if (theStats->GetRange() > kASGUThree)
+    if (theStats->GetRange() > 3.0f)
         theFactor += 2;
-    this->mImportance = this->mImportance * theFactor;
+    this->mImportance = this->GetImportance() * theFactor;
     this->RandomizePersonality();
 }
 
@@ -512,16 +524,16 @@ EECPASTargetUnit* EECPAttackSubGroupUnit::ChooseTarget(bool inTakeFirst, EETileC
         theKind = 2;
     while (thePass < 2) {
         std::vector<EECPASTargetUnit*>* theTargets;
-        if (thePass == 0) {
+        if (thePass != 0) {
             if (this->mUnit->GetUnitClass()->mAIKind == kAIKindSiege)
-                theTargets = &this->mSubGroup->mSiegeTargets;
-            else
                 theTargets = &this->mSubGroup->mTargets;
+            else
+                theTargets = &this->mSubGroup->mSiegeTargets;
         } else {
             if (this->mUnit->GetUnitClass()->mAIKind == kAIKindSiege)
-                theTargets = &this->mSubGroup->mTargets;
-            else
                 theTargets = &this->mSubGroup->mSiegeTargets;
+            else
+                theTargets = &this->mSubGroup->mTargets;
         }
         for (long i = theTargets->size() - 1; i >= 0; i--) {
             if (this->mUnit->IsTargetIgnored((*theTargets)[i]->mUnit, true))
@@ -697,20 +709,20 @@ bool EECPAttackSubGroupUnit::Retarget()
     theTile.mX = 0;
     theTile.mY = 0;
     EECPASTargetUnit* theTarget = this->ChooseTarget(false, theTile);
-    if (theTarget != NULL && this->GetUnit()->mUnitClass->FindAction(kActionInitialAttackState) != NULL) {
-        bool theNew = this->mTarget != theTarget->mUnit;
+    if (theTarget != NULL && this->GetUnit()->GetUnitClass()->FindAction(kActionInitialAttackState) != NULL) {
+        bool theNew = this->GetTarget() != theTarget->GetUnit();
         if (!theNew) {
             EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(this->GetUnit()->GetLoadGoal());
             if (theGoal == NULL && this->GetUnit()->mGoalQueues[0].mGoals.size() > 0)
                 theGoal = dynamic_cast<EEUGAttackUnit*>(this->GetUnit()->mGoalQueues[0].mGoals.back());
-            theNew = theGoal == NULL || theGoal->mTarget != theTarget->mUnit;
+            theNew = theGoal == NULL || theGoal->GetTarget() != theTarget->GetUnit();
         }
         if (theNew) {
-            this->SetTarget(theTarget->mUnit);
-            this->mSubGroup->AttackWith(this, this->mTarget->mComplexUnit, &theTile);
+            this->SetTarget(theTarget->GetUnit());
+            this->GetSubGroup()->AttackWith(this, this->GetTarget()->GetComplexUnit(), &theTile);
         }
     }
-    return this->mTarget != NULL;
+    return this->GetTarget() != NULL;
 }
 
 // The unit class's slot +0x40 is called with mUnit here.
@@ -1591,14 +1603,23 @@ bool EECPAttackSubGroupUnit::IsTargetValid()
     return true;
 }
 
-// The three `$E` chains 0x462f8a/0x462fdb/0x46302c construct three unreferenced class statics of type
-// std::map<unsigned long, std::vector<unsigned long> > (0x4e5ce8 guard 0x4e5cc1 bit 1; 0x4e5cd8 and 0x4e5cc8 guard
-// 0x4e5cc0 bits 1/2: two classes), dtor COMDAT 0x46631c. Their declarations belong in a shared header; the
-// definitions go here once declared.
+// The chains of the name tables at the top of the file: wrapper, construction, atexit registration, guarded destruction.
 // SYNTHETIC: EXE 0x462f8a
+// SYNTHETIC: EXE 0x462f94
+// SYNTHETIC: EXE 0x462fb4
+// SYNTHETIC: EXE 0x462fc0
 // SYNTHETIC: EXE 0x462fdb
+// SYNTHETIC: EXE 0x462fe5
+// SYNTHETIC: EXE 0x463005
+// SYNTHETIC: EXE 0x463011
 // SYNTHETIC: EXE 0x46302c
+// SYNTHETIC: EXE 0x463036
+// SYNTHETIC: EXE 0x463056
+// SYNTHETIC: EXE 0x463062
 
+// TEMPLATE: EXE 0x46631c
+// TEMPLATE: EXE 0x4664be
+// TEMPLATE: EXE 0x466916
 // TEMPLATE: EXE 0x466372
 // TEMPLATE: EXE 0x46639d
 // TEMPLATE: EXE 0x466457

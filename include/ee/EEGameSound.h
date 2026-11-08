@@ -14,7 +14,7 @@ class GE3DPoint;
 class EEGraphicObject;
 class SESMInstanceNode;
 // 0x1487a3 (cdecl; also declared in ee/EEEffect3D.h, whose include renumbers the 2D effect units' $E chains)
-SESMInstanceNode* Fn1487A3(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,
+SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,
                            SESMInstanceNode* inSound, unsigned long inFrame, bool inStart);
 
 #endif

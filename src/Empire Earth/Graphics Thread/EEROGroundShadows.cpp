@@ -127,8 +127,8 @@ void EEROGroundShadows::RenderScene()
     EEEffectQueue::iterator theIterator;
     std::deque<EEEffect*>::iterator theEffect;
     unsigned long theScreen = gScreenIndex;
-    Fn10F7C8();
-    Fn10F60F();
+    SetWhiteLighting();
+    SetSceneFog();
     float theAlphaRefValue = gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
     gRasterizer->SetAlphaTestingRefValue(0.0f, gScreenIndex);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
@@ -140,11 +140,11 @@ void EEROGroundShadows::RenderScene()
         this->DrawUnitShadows(EERenderLists::sInstance.mUnits2);
     }
     for (theIterator = gEffectQueues[0].begin(); theIterator != gEffectQueues[0].end(); theIterator++) {
-        Fn102724(theIterator->first);
+        BeginEffectBatches(theIterator->first);
         for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)
             (*theEffect)->DrawPass2();
-        Fn103F64();
-        Fn102F20();
+        FlushEffectBatches();
+        EndEffectBatches();
     }
     gRasterizer->SetAlphaTestingRefValue(theAlphaRefValue, gScreenIndex);
 }
@@ -174,7 +174,7 @@ void EEROGroundShadows::DrawShadows(EERenderShadowMap& inShadows)
     }
 }
 
-static bool Fn11246B(const GE3DPoint& inLocation);
+static bool GetIsOverSpace(const GE3DPoint& inLocation);
 
 // FUNCTION: EXE 0x5122bb
 // Draws each unit's shadow (its own model or the quad) on the ground under it, turned to its heading and
@@ -188,7 +188,7 @@ void EEROGroundShadows::DrawUnitShadows(EERenderUnitMap& inUnits)
     while (theIterator != inUnits.end()) {
         EERenderUnit* theUnit = theIterator->second;
         if (theUnit->mCategory != kUnitCategorySubmergedNaval && theUnit->mShadowScale > 0.0f) {
-            if (!Fn11246B(theUnit->mTransformation.GetPosition())) {
+            if (!GetIsOverSpace(theUnit->mTransformation.GetPosition())) {
                 GEModel* theModel = theUnit->mSource->mShadowModel;
                 if (theModel == NULL)
                     theModel = sShadowModel;
@@ -217,7 +217,7 @@ void EEROGroundShadows::DrawUnitShadows(EERenderUnitMap& inUnits)
 
 // FUNCTION: EXE 0x51246b
 // Returns whether a point is over space on a space map (a space tile, or off the mesh) (inferred)
-static bool Fn11246B(const GE3DPoint& inLocation)
+static bool GetIsOverSpace(const GE3DPoint& inLocation)
 {
     if (!gWorld.mMap->mTerrainMesh.GetIsSpaceMap())
         return false;

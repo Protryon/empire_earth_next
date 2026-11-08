@@ -38,7 +38,9 @@ public:
     static const UString sData;             // "EECPResourceCenter-Data" (guarded chain 0x8bbbf)
 
     EEComputerPlayer* mPlayer;              // +0x00
+    EEUnit* GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
     std::vector<EEUnit*> mUnits;            // +0x04 (Load reads the ids, Restore turns them into referenced units)
+    EEComplexUnit* GetUnit() const { return this->mUnit; }
     EEComplexUnit* mUnit;                   // +0x14 the centre's main unit (referenced)
     bool mIsActive;                         // +0x18 (saved from version 0x8d)
 };

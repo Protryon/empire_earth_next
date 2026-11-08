@@ -293,17 +293,17 @@ bool EECPASGSeaTransport::IsLoadingBlocked()
     bool theResult = false;
     for (long i = this->mUnits.size() - 1; i >= 0 && !theResult; i--) {
         EEComplexUnit* theUnit = this->mUnits[i]->GetUnit();
-        if (this->mUnits[i]->IsDone() || theUnit->mIsDisabled || theUnit->mHitPoints <= 0 || theUnit->mWaypoints.size() != 0)
+        if (this->mUnits[i]->IsDone() || theUnit->GetIsDisabled() || theUnit->GetHitPoints() <= 0 || theUnit->mWaypoints.size() != 0)
             continue;
-        EEUnitGoal* theGoal = theUnit->mActiveGoal;
+        EEUnitGoal* theGoal = theUnit->GetLoadGoal();
         if (theGoal == NULL || theGoal->mKind != kGoalLoadTransport)
             continue;
         EEUGLoadContainer* theLoad = static_cast<EEUGLoadContainer*>(theGoal);
         for (long j = theLoad->mUnits.mItems.size() - 1; j >= 0 && !theResult; j--) {
             EEComplexUnit* theOther = theLoad->mUnits.mItems[j];
-            if (theOther == NULL || theOther->mTileX == -10000 || theOther->mIsDisabled || theOther->mHitPoints <= 0)
+            if (theOther == NULL || theOther->GetTileX() == -10000 || theOther->GetIsDisabled() || theOther->GetHitPoints() <= 0)
                 continue;
-            if (UMAbs(theUnit->mTileX - theOther->mTileX) > 1 || UMAbs(theUnit->mTileY - theOther->mTileY) > 1)
+            if (UMAbs(theUnit->GetTileX() - theOther->GetTileX()) > 1 || UMAbs(theUnit->GetTileY() - theOther->GetTileY()) > 1)
                 continue;
             long theDirection = EEGetDirectionTo(theUnit, theOther);
             EEGetNextTile(theUnit->GetTile(), theTile, EETurnDirection(theDirection, 1, true), 1);
@@ -356,7 +356,7 @@ bool EECPASGSeaTransport::TestCondition(long inState, long inTime)
 
 // GetRallyPoint: moves the rally point to where a ship would dock at one of the player's docks (picked after a
 // shuffle); returns it. ICF-folded into EECPASGSpaceTransport's 0x450af9 (the same body; both vtables' +0x88
-// slot); this unit's copy of the Fn4EEF9<vector<EEUnit*> > COMDAT it instantiates is the one kept
+// slot); this unit's copy of the PermuteValues<vector<EEUnit*> > COMDAT it instantiates is the one kept
 EETileLocation EECPASGSeaTransport::GetRallyPoint(bool inIncludeAllies)
 {
     std::vector<EEUnit*> theUnits;
@@ -366,7 +366,7 @@ EETileLocation EECPASGSeaTransport::GetRallyPoint(bool inIncludeAllies)
     if (theUnits.size() > 0) {
         GETransformation theTransformation;
         GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
-        Fn4EEF9(theUnits, UMFloatToLong(gPhysics->mRandom.GenerateUnit()));
+        PermuteValues(theUnits, UMFloatToLong(gPhysics->mRandom.GenerateUnit()));
         if (EEGetDockShipFacing(&theLocation, this->mUnits.front()->GetUnit()->GetUnitClass(),
                       theUnits.front(), false, &theTransformation)) {
             this->mRallyPoint.mTile = EETileLocation(UMFloor(theTransformation.GetX()), UMFloor(theTransformation.GetY()));
@@ -375,7 +375,7 @@ EETileLocation EECPASGSeaTransport::GetRallyPoint(bool inIncludeAllies)
     return this->mRallyPoint.mTile;
 }
 
-// Fn4EEF9<vector<EEUnit*> > (ee/EEUnitUtilities.h; ICF-shared by AirTransport's EEPlayer*/EETown* calls 0x4432a/0x44392)
+// PermuteValues<vector<EEUnit*> > (ee/EEUnitUtilities.h; ICF-shared by AirTransport's EEPlayer*/EETown* calls 0x4432a/0x44392)
 // TEMPLATE: EXE 0x44eef9
 
 // SYNTHETIC: EXE 0x44f0bb

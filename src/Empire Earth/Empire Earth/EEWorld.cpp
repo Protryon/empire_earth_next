@@ -136,7 +136,7 @@ extern float gViewportXCenter;              // 0x530b64
 extern float gViewportYCenter;              // 0x530b68
 extern UWideString& gWonPlayerName;          // 0x53077c (the WON player name)
 extern UString gDefaultCampaignUser;        // 0x52a170 ("default"; defined below, its init chain mid-file)
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 void EEStopAllSounds();                     // 0x140ceb
 void EEDumpGraphicObjectTable(FSFileSpec& inFile);  // 0xd7acf
 void EEDumpLeakedUnits(FSFileSpec& inFile);  // 0x1f8e7c
@@ -1296,7 +1296,7 @@ void EEWorld::RecordStatistics()
                 theComputerCount++;
                 sprintf(theRecord.mNameSuffix, " #%ld", theComputerCount);
             } else {
-                theRecord.mNameSuffix = gU4E5B98;
+                theRecord.mNameSuffix = gEmptyString;
             }
             for (unsigned long r = 2; r < 7; r++) {
                 long theBase = EEStartingResources::sTable[this->mGameOptions.mResources]->mAmounts[r - 2];
@@ -1350,7 +1350,7 @@ void EEWorld::RecordStatistics()
                 thePlayer->mResourceCaps[r] = theBase - theSpent + theValue;
             }
         } else {
-            theRecord.mNameSuffix = gU4E5B98;
+            theRecord.mNameSuffix = gEmptyString;
         }
         unsigned long theScore = 0;
         long theMilitary = 0;
@@ -1485,10 +1485,10 @@ void EEWorld::RecordStatistics()
         if (theTime == 0)
             theTime = this->mStatistics.mEndTime;
         this->mStatistics.mRecords[theIndex].mEndTime = theTime;
-        if (thePlayer->GetPlayerID() == 0)
-            this->mStatistics.mRecords[theIndex].mColorIndex = 0;
+        if (thePlayer->GetPlayerID() > 0)
+            this->mStatistics.mRecords[theIndex].mTeam = this->mGameOptions.mPlayers[thePlayer->GetPlayerID() - 1].mTeam;
         else
-            this->mStatistics.mRecords[theIndex].mColorIndex = this->mGameOptions.mPlayers[thePlayer->GetPlayerID()].mColor;
+            this->mStatistics.mRecords[theIndex].mTeam = 0;
         for (unsigned long r = 2; r < 7; r++)
             this->mStatistics.mRecords[theIndex].mResources[r] = thePlayer->mResourceCaps[r];
         if (thePlayer->GetPlayerID() == (unsigned long)this->mCurrentPlayer) {

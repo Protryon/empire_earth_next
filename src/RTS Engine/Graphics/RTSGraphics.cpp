@@ -127,7 +127,7 @@ unsigned long RTSGraphics::Main(void* inGraphics)
         if (theResult == kErrorOK)
             theGraphics->HandleMessage(theMessage, theParameter1, theParameter2);
         // the headless simulation (platform/PlatSim.h) draws nothing: the thread only answers its messages
-        if (!gPlatSimMode && !Fn297ED0() && !theGraphics->mIsPaused && !theGraphics->mIsQuitting) {
+        if (!gPlatSimMode && !EELobbyIsShown() && !theGraphics->mIsPaused && !theGraphics->mIsQuitting) {
             gMouse->mInputLock->Enter();
             gISMouse->RefreshXY();
             gMouse->Update();
@@ -291,8 +291,8 @@ void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
             this->mRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f), this->mRasterizer->GetViewport(this->mScreen).GetViewRectangle(),
                                this->mScreen);
         }
-        Fn297F15();
-        if (!Fn297ED0()) {
+        EELobbyLock();
+        if (!EELobbyIsShown()) {
             theResult = this->mRasterizer->BeginScene(this->mSurface, this->mScreen);
             if (theResult == kErrorOK) {
                 this->RenderScene();
@@ -301,7 +301,7 @@ void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
         } else {
             theResult = 5;
         }
-        Fn297F21();
+        EELobbyUnlock();
         this->FrameDone();
         this->mSurface->TextUnlock();
     }
@@ -312,11 +312,11 @@ void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
             this->mMouse->Draw(this->mSurface, theOrigin);
         }
         if (inShowScene) {
-            Fn297F15();
-            if (!Fn297ED0()) {
+            EELobbyLock();
+            if (!EELobbyIsShown()) {
                 this->mRasterizer->ShowScene(this->mScreen);
             }
-            Fn297F21();
+            EELobbyUnlock();
         }
         if (inDrawMouse) {
             this->mMouse->RestoreUnder(this->mU38, theOrigin, this->mIsWindowed);

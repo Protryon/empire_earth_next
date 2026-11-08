@@ -32,6 +32,7 @@ public:
     static const UString sPlayerCode;
     static const UString sScenarioPlayerIndex;
 
+    EEPlayer* GetPlayersAt(unsigned long inIndex) const { return this->mPlayers[inIndex]; }
     std::vector<EEPlayer*> mPlayers;        // +0x08
     unsigned long mLocalPlayerIndex;        // +0x18 (EEWorld +0xb84 mCurrentPlayer; Read/Write(unsigned long&))
     unsigned long mMaxPlayers;              // +0x1c (3; EEWorld +0xb8c; Read/Write(unsigned long&))

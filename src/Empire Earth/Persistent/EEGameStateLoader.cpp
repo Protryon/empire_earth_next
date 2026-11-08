@@ -1,6 +1,6 @@
 // C:\EEX\Empire Earth\Persistent\EEGameStateLoader.cpp (file name inferred: no __FILE__, no RTTI).
 // 0x14a009..0x14ac35: the saved-game loader (EEGameStateLoader, ee/EEGameStateLoader.h; EEGameState::Create and
-// EESaveLoad 0x14d4fd use it), EELoadPersistent, the scenario flag Fn14A09E, EEGameState's map/effect/scenario
+// EESaveLoad 0x14d4fd use it), EELoadPersistent, the scenario flag GetIsLoadingScenario, EEGameState's map/effect/scenario
 // setters and the COMDATs first used here. EEPCalamityHelper.cpp / EEPChecksum.cpp come before it,
 // EEPMultiplayerHelper.cpp after. Unit flags: the exe module set.
 #include <windows.h>
@@ -96,7 +96,7 @@
 
 void EEReportLoadFailure(const UString& inMessage, bool inArg, ESChecksum* inChecksum);  // 0x148362 (EEWorld.cpp's prototype)
 
-// 0x531a40: set while Load reads a scenario (Fn14A09E's byte; provisional name)
+// 0x531a40: set while Load reads a scenario (GetIsLoadingScenario's byte; provisional name)
 static bool sLoadingScenario;
 
 // FUNCTION: EXE 0x54a009
@@ -125,7 +125,7 @@ bool EEIsScenarioFile(const UString& inFile)
 
 // FUNCTION: EXE 0x54a09e
 // Returns whether a scenario file is being loaded right now
-bool Fn14A09E()
+bool GetIsLoadingScenario()
 {
     return sLoadingScenario;
 }
@@ -270,7 +270,7 @@ bool EEGameStateLoader::Load(FSFile& inFile)
     FSDebugFile theDebugFile(&theMemory);
     UString theName;
     bool theResult = false;
-    theName = Fn14C741(inFile.GetFile(), false);
+    theName = GetSaveTextName(inFile.GetFile(), false);
     sLoadingScenario = EEIsScenarioFile(inFile.GetFile());
     if ((inFile.GetIsOpen() || inFile.Open(kFileAccessRead) == kErrorOK) && theMemory.Load(inFile) == kErrorOK) {
         inFile.Close();

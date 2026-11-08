@@ -477,18 +477,18 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerInferno::PickTarget()
 {
     std::vector<EECPASTargetUnit*> theTargets;
     EEComplexUnit* theResult = NULL;
-    this->Gather(theTargets, &EECPASGUPCTargetIsUnitSetScreenOnlySplashUnits(this->mProphet, this, true));
+    this->Gather(theTargets, &EECPASGUPCTargetIsUnitSetScreenOnlySplashUnits(this->GetProphet(), this, true));
     if (!theTargets.empty()) {
-        std::sort(theTargets.begin(), theTargets.end(), EECPAITargetPriority(this->mProphet->GetUnit()->GetTile()));
+        std::sort(theTargets.begin(), theTargets.end(), EECPAITargetPriority(this->GetProphet()->GetUnit()->GetTile()));
         while (!theTargets.empty()) {
-            EETileLocation theTile(theTargets.back()->mUnit->GetTileX(), theTargets.back()->mUnit->mTileY);
-            GE3DPoint theLocation(theTile.GetX() + 0.5f, theTile.mY + 0.5f, 0.0f);
-            if (this->mCalamityClass->CanCastAt(this->mProphet->GetUnit(), theLocation,
-                    theTile.GetX(), theTile.mY, true, theTargets.back()->mUnit) == 0) {
+            EETileLocation theTile(theTargets.back()->GetUnit()->GetTileX(), theTargets.back()->GetUnit()->GetTileY());
+            GE3DPoint theLocation(theTile.GetX() + 0.5f, theTile.GetY() + 0.5f, 0.0f);
+            if (this->GetCalamityClass()->CanCastAt(this->GetProphet()->GetUnit(), theLocation,
+                    theTile.GetX(), theTile.GetY(), true, theTargets.back()->GetUnit()) == 0) {
                 this->mTile.mX = theTile.GetX();
                 this->mTile.mY = theTile.mY;
-                this->SetUnit(theTargets.back()->mUnit);
-                theResult = this->mUnit;
+                this->SetUnit(theTargets.back()->GetUnit());
+                theResult = this->GetUnit();
                 break;
             }
             theTargets.pop_back();
@@ -497,19 +497,19 @@ EEComplexUnit* EECPASGUProphetCalamityAnalyzerInferno::PickTarget()
     if (theResult != NULL)
         return theResult;
     theTargets.clear();
-    this->Gather(theTargets, &EECPASGUPCTargetIsUnitSetScreenRangedOrSpecialUnits(this->mProphet, this, true));
+    this->Gather(theTargets, &EECPASGUPCTargetIsUnitSetScreenRangedOrSpecialUnits(this->GetProphet(), this, true));
     if (theTargets.empty())
         return theResult;
-    std::sort(theTargets.begin(), theTargets.end(), EECPAITargetPriority(this->mProphet->GetUnit()->GetTile()));
+    std::sort(theTargets.begin(), theTargets.end(), EECPAITargetPriority(this->GetProphet()->GetUnit()->GetTile()));
     while (!theTargets.empty()) {
-        EETileLocation theTile(theTargets.back()->mUnit->GetTileX(), theTargets.back()->mUnit->mTileY);
-        GE3DPoint theLocation(theTile.GetX() + 0.5f, theTile.mY + 0.5f, 0.0f);
-        if (this->mCalamityClass->CanCastAt(this->mProphet->GetUnit(), theLocation,
-                theTile.GetX(), theTile.mY, true, theTargets.back()->mUnit) == 0) {
+        EETileLocation theTile(theTargets.back()->GetUnit()->GetTileX(), theTargets.back()->GetUnit()->GetTileY());
+        GE3DPoint theLocation(theTile.GetX() + 0.5f, theTile.GetY() + 0.5f, 0.0f);
+        if (this->GetCalamityClass()->CanCastAt(this->GetProphet()->GetUnit(), theLocation,
+                theTile.GetX(), theTile.GetY(), true, theTargets.back()->GetUnit()) == 0) {
             this->mTile.mX = theTile.GetX();
             this->mTile.mY = theTile.mY;
-            this->SetUnit(theTargets.back()->mUnit);
-            theResult = this->mUnit;
+            this->SetUnit(theTargets.back()->GetUnit());
+            theResult = this->GetUnit();
             break;
         }
         theTargets.pop_back();
@@ -636,15 +636,15 @@ float EECPASGUProphetCalamityAnalyzerShieldBattery::PickAlly(EEComplexUnit*& out
     std::multimap<float, EEComplexUnit*, std::greater<float> > theRanked;
     float theResult = 0.0f;
     outUnit = NULL;
-    if (this->mUnit != NULL) {
-        for (long i = this->mProphet->mSubGroup->GetNumUnits() - 1; i >= 0; --i) {
-            EECPAttackSubGroupUnit* theUnit = this->mProphet->mSubGroup->GetUnitAt(i);
+    if (this->GetUnit() != NULL) {
+        for (long i = this->GetProphet()->GetSubGroup()->GetNumUnits() - 1; i >= 0; --i) {
+            EECPAttackSubGroupUnit* theUnit = this->GetProphet()->GetSubGroup()->GetUnitAt(i);
             if (!this->MayShield(theUnit))
                 continue;
             float theScore = this->ScoreAlly(theUnit);
             // VC6 emits the original's JE (0x407920) here, which also rejects unordered scores
             if (theScore != 0.0f)
-                theRanked.insert(std::multimap<float, EEComplexUnit*, std::greater<float> >::value_type(theScore, theUnit->mUnit));
+                theRanked.insert(std::multimap<float, EEComplexUnit*, std::greater<float> >::value_type(theScore, theUnit->GetUnit()));
         }
         theResult = 0.0f;
         if (!theRanked.empty()) {
@@ -713,21 +713,21 @@ float EECPASGUProphetCalamityAnalyzerShieldBattery::ScoreTarget(EEComplexUnit* i
     float theScore = 0.0f;
     if (inUnit != NULL) {
         GE3DPoint theLocation(inUnit->GetTileX() + 0.5f, inUnit->GetTileY() + 0.5f, 0.0f);
-        if (this->mCalamityClass->CanCastAt(this->mProphet->GetUnit(), theLocation, inUnit->GetTileX(), inUnit->GetTileY(), true, inUnit) == 0) {
-            unsigned short theCount = inUnit->mExperience;
+        if (this->GetCalamityClass()->CanCastAt(this->GetProphet()->GetUnit(), theLocation, inUnit->GetTileX(), inUnit->GetTileY(), true, inUnit) == 0) {
+            unsigned short theCount = inUnit->GetExperience();
             if (theCount > 15)
                 theCount = 15;
             theScore = theCount * 0.05f;
-            if (inUnit->mGoalState == NULL)
+            if (inUnit->GetGoalState() == NULL)
                 return theScore;
             EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetLoadGoal());
-            if (theGoal != NULL && theGoal->mTarget != NULL) {
-                EEComplexUnit* theTarget = theGoal->mTarget->mComplexUnit;
-                if (theTarget != NULL && theTarget->mPlayer == this->mProphet->mUnit->mPlayer) {
-                    EECPAttackSubGroupUnit* theAttacker = this->mProphet->mSubGroup->FindUnit(theTarget);
+            if (theGoal != NULL && theGoal->GetTarget() != NULL) {
+                EEComplexUnit* theTarget = theGoal->GetTarget()->GetComplexUnit();
+                if (theTarget != NULL && theTarget->GetPlayer() == this->GetProphet()->GetUnit()->GetPlayer()) {
+                    EECPAttackSubGroupUnit* theAttacker = this->GetProphet()->GetSubGroup()->FindUnit(theTarget);
                     if (theAttacker != NULL) {
                         theScore += 0.05f;
-                        if (theAttacker->mIsImportant)
+                        if (theAttacker->GetIsImportant())
                             theScore += 0.3f;
                         return theScore;
                     }

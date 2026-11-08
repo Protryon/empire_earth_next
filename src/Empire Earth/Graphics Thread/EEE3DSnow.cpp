@@ -103,22 +103,29 @@ EEE3DSnow::~EEE3DSnow()
 {
 }
 
+// (a tile accessor one level down: the arm order and the 0 register follow the bool)
+static inline bool IsWaterTile(EEMapTile* inTile)
+{
+    return inTile->mTerrainType == kTerrainDeepWater || inTile->mTerrainType == kTerrainShallowWater;
+}
+
 // FUNCTION: EXE 0x4f9caf
 // Adds a snowflake at a random point of a random storm tile at spawn height, falling to the ground (0 over water)
 long EEE3DSnow::AddFlake()
 {
     GE3DPoint thePosition;
-    EETileCoordinate& theTile = this->mTiles[Fn102F57(0, this->mTiles.size() - 1)];
-    float theRandom = Fn102F3D(0.0f, 1.0f);
+    EETileCoordinate& theTile = this->mTiles[GetEffectRandomLong(0, this->mTiles.size() - 1)];
+    float theRandom = GetEffectRandomFloat(0.0f, 1.0f);
     float theX = theTile.GetX() + theRandom;
-    theRandom = Fn102F3D(0.0f, 1.0f);
+    theRandom = GetEffectRandomFloat(0.0f, 1.0f);
+    long theTileY = theTile.GetY();
     thePosition.mX = theX;
-    thePosition.mY = theTile.GetY() + theRandom;
-    thePosition.mZ = this->mSpawnHeight;
+    thePosition.mY = theTileY + theRandom;
+    thePosition.SetZ(this->mSpawnHeight);
     EEMapTile* theMapTile = gWorld.GetMap()->GetTile(theTile.GetX(), theTile.GetY());
-    float theGround = theMapTile->mTerrainType == kTerrainDeepWater || theMapTile->mTerrainType == kTerrainShallowWater
-                          ? 0.0f : gWorld.GetMap()->mTerrainMesh.GetZ(theTile.GetX(), theTile.GetY());
-    this->mFlakes.push_back(EEE3DSnowFlake(thePosition, theGround, theRandom * 6.2831855f));
+    float theGround = IsWaterTile(theMapTile) ? 0.0f : gWorld.GetMap()->mTerrainMesh.GetZ(theTile.GetX(), theTile.GetY());
+    float theAngle = theRandom * 6.2831855f;
+    this->mFlakes.push_back(EEE3DSnowFlake(thePosition, theGround, theAngle));
     return 0;
 }
 
@@ -127,8 +134,8 @@ long EEE3DSnow::AddFlake()
 EEE3DSnowFlake::EEE3DSnowFlake(const GE3DPoint& inPosition, float inGroundZ, float inAngle)
     : mPosition(inPosition), mGroundZ(inGroundZ), mAngle(inAngle)
 {
-    this->mDrift.SetX(Fn102F3D(-1.0f, 1.0f));
-    this->mDrift.SetY(Fn102F3D(-1.0f, 1.0f));
+    this->mDrift.SetX(GetEffectRandomFloat(-1.0f, 1.0f));
+    this->mDrift.SetY(GetEffectRandomFloat(-1.0f, 1.0f));
     this->mDrift.SetZ(0.0f);
 }
 
@@ -265,8 +272,8 @@ long EEE3DSnow::DrawPass6()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10F772();
-    Fn10F60F();
+    SetCloudLighting();
+    SetSceneFog();
     for (std::vector<EE3DSnowDraw>::iterator theDraw = this->mDraws.begin(); theDraw != this->mDraws.end() && theResult == 0;
          theDraw++) {
         theTransformation.SetX(theDraw->mPosition.GetX());
@@ -411,8 +418,8 @@ long EEE3DSnowFlake::Update()
     float theX = this->mPosition.mX;
     float theY = this->mPosition.mY;
     if (EEEffect::GetRandom() < kSnowTurnChance) {
-        this->mDrift.SetX(Fn102F3D(-1.0f, 1.0f));
-        this->mDrift.SetY(Fn102F3D(-1.0f, 1.0f));
+        this->mDrift.SetX(GetEffectRandomFloat(-1.0f, 1.0f));
+        this->mDrift.SetY(GetEffectRandomFloat(-1.0f, 1.0f));
         this->mDrift.SetZ(0.0f);
     }
     this->mPosition.mX = this->mDrift.GetX() * kSnowDrift + theX;

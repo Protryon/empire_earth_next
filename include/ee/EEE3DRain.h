@@ -1,7 +1,7 @@
 // C:\EEX\Empire Earth\Graphics Thread\EEE3DRain.h (RECONSTRUCTION; file name inferred).
 // The rain over a storm's tiles: falling drops (a three-vertex model "EEE3DRainDropModel", textures\raindrop) spawned
 // over random tiles, a splash effect where a drop hits water, the "3DRain" loop and "3D Rain Rumble" sounds
-// (vtable 0x440c04; RTTI EEE3DRain > EEE3DStorm; EEE3DRain.cpp 0xf7394..0xf8ceb: the ctors .. Virtual78, then the two
+// (vtable 0x440c04; RTTI EEE3DRain > EEE3DStorm; EEE3DRain.cpp 0xf7394..0xf8ceb: the ctors .. SetCursor, then the two
 // vectors' template COMDATs). sizeof 0xf0. Names are provisional. Requires ee/EEE3DStorm.h and its requirements.
 #ifndef EE_EEE3DRAIN_H
 #define EE_EEE3DRAIN_H
@@ -10,7 +10,7 @@
 
 class SESMInstanceNode;
 
-// a falling drop (0x18 bytes; Virtual68 builds one, Virtual6C moves it down until it reaches mGroundZ)
+// a falling drop (0x18 bytes; MarkInvalid builds one, AddedToParent moves it down until it reaches mGroundZ)
 struct EE3DRainDrop {
     EE3DRainDrop(const GE3DPoint& inPosition, float inGroundZ, float inAngle, bool inWater)
         : mPosition(inPosition), mGroundZ(inGroundZ), mAngle(inAngle), mWater(inWater) {}
@@ -50,7 +50,7 @@ public:
     virtual long StartSounds();             // +0x78 0xf8195: starts the loop and the rumbles
 
     // the sounds (defined in the .cpp after their first users, so called out of line: 0xf7519.. after the dtor,
-    // 0xf8337/0xf835e after Virtual78)
+    // 0xf8337/0xf835e after SetCursor)
     void StopSound();                       // 0xf7519
     void StopRumble();                      // 0xf753e
     void ReleaseSound();                    // 0xf7563

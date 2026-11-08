@@ -20,7 +20,7 @@
 
 // 0x246ea2 (cdecl, 5 arguments; EEFOFindNewTargetNearOldTarget.cpp): the squared distance from inUnit to tile
 // (inX, inY), the unit's nearest tile out (provisional name)
-float Fn246EA2(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
+float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
 #include "ee/EEUnit.h"
 #include "ee/EEUnitSetManager.h"
 #include "ee/EEPhysics.h"
@@ -29,7 +29,7 @@ float Fn246EA2(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY
 #include "ee/EESMArea.h"
 #include "ee/EEStringIDs.h"
 // 0x246ea2 again, as IsNearTile uses it (provisional name)
-float Fn246EA2(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
+float EEGetFootprintDistance(EEComplexUnit* inUnit, long inX, long inY, long* outX, long* outY);
 
 // FUNCTION: EXE 0x5c5f73
 // Creates an object named None that picks units on the map, owned by and selected by player 7, with no filters
@@ -37,6 +37,7 @@ EESMObject::EESMObject()
 {
     gResource->GetString(IDS_NONE, this->mName);
     this->mUnits.clear();
+    this->mIsSelectOnMap = true;
     this->mOwner = 7;
     this->mSelectedByPlayer = 7;
     this->mFamily = 0;
@@ -58,7 +59,6 @@ EESMObject::EESMObject()
     this->mState = kActionInvalid;
     this->mIsAttributePercent = false;
     this->mL64 = 0;
-    this->mIsSelectOnMap = true;
     this->mMinCount = 1;
     this->mMaxCount = 1;
     this->mIsDynamic = true;
@@ -169,7 +169,7 @@ bool EESMObject::IsNearTile(long inX, long inY, long inMode, bool inEvaluate)
         EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(gWorld.GetUnit(this->mUnits[i]));
         if (theUnit == NULL)
             continue;
-        float theDistance = Fn246EA2(theUnit, inX, inY, &theTileX, &theTileY);
+        float theDistance = EEGetFootprintDistance(theUnit, inX, inY, &theTileX, &theTileY);
         switch (inMode) {
         case 0: {
             float theRange = theUnit->mComplexUnit->GetLineOfSight();
@@ -510,13 +510,13 @@ bool EESMObject::FindPlacement(unsigned long inUnitType, GE2DPoint& outLocation,
                     case 0:
                         if (theUnit->mComplexUnit->GetLineOfSight() > 0.0f) {
                             GE3DPoint thePoint((float)theUnit->GetTileX(),(float)theUnit->GetTileY(),0.0f);
-                            Fn24B212(thePoint,theUnit->mComplexUnit->GetLineOfSight(),theTiles);
+                            EEGetTilesNearPoint(thePoint,theUnit->mComplexUnit->GetLineOfSight(),theTiles);
                         }
                         break;
                     case 1:
                         if (theUnit->mStats->mRange > 0.0f) {
                             GE3DPoint thePoint((float)theUnit->GetTileX(),(float)theUnit->GetTileY(),0.0f);
-                            Fn24B212(thePoint,theUnit->mStats->mRange,theTiles);
+                            EEGetTilesNearPoint(thePoint,theUnit->mStats->mRange,theTiles);
                         }
                         break;
                     case 2:

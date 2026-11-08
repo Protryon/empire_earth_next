@@ -96,10 +96,10 @@ public:
     EESETriggerScreen* GetTriggerScreen() const { return (EESETriggerScreen*)this->mTabGroups[kEditorTabTriggers]; }
     // inline (COMDAT 0x5253 after its first user EEAUpgradeImprovement::Virtual4, which calls it out of line once and
     // expands it once; the unit tab, group 3) (provisional name)
-    EESEUnit* GetUnitScreen() { return (EESEUnit*)*(this->mTabGroups.begin() + 3); }
+    EESEUnit* GetUnitScreen() const { return (EESEUnit*)this->mTabGroups[3]; }
     // inline (COMDAT 0x19787b after its first user EESEUITechListBox::CopyData; Fill expands it with operator[] out of
     // line; the player tab, group 5) (provisional name)
-    EESEPlayerScreen* GetPlayerScreen() { return (EESEPlayerScreen*)this->mTabGroups[kEditorTabPlayers]; }
+    EESEPlayerScreen* GetPlayerScreen() const { return (EESEPlayerScreen*)this->mTabGroups[kEditorTabPlayers]; }
 
     EECivilization mC1A0;                   // +0x1a0 (ctor 0x12c57d; sizeof 0x40)
     GERectangle mR1E0;                      // +0x1e0 (the saved view rectangle; the ctor's inline GERectangle() zeroes it)
@@ -115,6 +115,7 @@ public:
     EEUIMiniMap* mMiniMap;                          // +0x238 (a new object, ctor 0x275459)
     EEUIFSEUndo* mUndoButton;                       // +0x23c
     EEUIFSERedo* mRedoButton;                       // +0x240
+    EEUIFSEBrushGroup* GetBrushGroup() const { return this->mBrushGroup; }
     EEUIFSEBrushGroup* mBrushGroup;         // +0x244 (new 0x30, ctor 0x1a0315; SetPaintArea)
     UIFullBackground* mFullBackground;                   // +0x248
     EEUIEGrabScroll* mGrabScroll;           // +0x24c (the ctor: new EEUIEGrabScroll, the middle button's events)

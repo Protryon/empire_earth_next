@@ -187,7 +187,7 @@ long EEEDamagedEffect::Step()
         for (i = this->mPrimaryEffects.size(); i > 0; i--) {
             gWorld.GetEffectManager()->DestroyEffect(this->mPrimaryEffects.back());
             this->mPrimaryEffects.pop_back();
-            if (this->mGraphicEffect->mLinkedEffect2) {
+            if (this->GetGraphicEffect()->GetLinkedEffect2()) {
                 gWorld.GetEffectManager()->DestroyEffect(this->mSecondaryEffects.back());
                 this->mSecondaryEffects.pop_back();
             }
@@ -201,32 +201,31 @@ long EEEDamagedEffect::Step()
             theUnit = theUnit->mComplexUnit->mPreviousPart;
     }
     if (theUnit->mTileNode) {
-        long theTag = this->mGraphicEffect->mLinkedEffect1->mTagPointKind;
+        long theTag = this->GetGraphicEffect()->GetLinkedEffect1()->mTagPointKind;
         theList = theUnit->GetModel()->GetTagPoints(theUnit->mComplexUnit->GetAnimation(), theTag);
     } else
-        theList = theUnit->GetModel()->GetTagPoints(0, this->mGraphicEffect->mLinkedEffect1->mTagPointKind);
+        theList = theUnit->GetModel()->GetTagPoints(0, this->GetGraphicEffect()->GetLinkedEffect1()->mTagPointKind);
     if (theList)
         theCount = theList->GetNumTagPoints();
     else
         theCount = 1;
-    float theRatio = (float)theUnit->mHitPoints / theUnit->mStats->mMaxHitPoints;
-    if (theRatio <= this->mGraphicEffect->GetParam2() && theUnit->mHitPoints > 0) {
-        float theAmount = (1.0f - theRatio * (1.0f / this->mGraphicEffect->GetParam2())) * theCount;
+    float theRatio = (float)theUnit->GetHitPoints() / theUnit->GetStats()->GetMaxHitPoints();
+    if (theRatio <= this->GetGraphicEffect()->GetParam2() && theUnit->GetHitPoints() > 0) {
+        float theAmount = (1.0f - theRatio * (1.0f / this->GetGraphicEffect()->GetParam2())) * theCount;
         theWanted = UMFloatToLong(theAmount);
         if (theWanted < theAmount)
             theWanted++;
     } else
         theWanted = 0;
-    if (theWanted == 0 && this->mGraphicEffect->GetParam2() < 1.0f)
+    if (theWanted == 0 && this->GetGraphicEffect()->GetParam2() < 1.0f)
         this->mIsFinished = true;
     theDelta = theWanted - this->mPrimaryEffects.size();
-    if (theUnit->mTileNode) {
-        EEComplexUnit* theComplexUnit = theUnit->mComplexUnit;
-        bool theHidden = theComplexUnit->mIsCloakable ? theComplexUnit->mIsCloaked : false;
+    if (theUnit->GetTileNode()) {
+        EEComplexUnit* theComplexUnit = theUnit->GetComplexUnit();
+        bool theHidden = theComplexUnit->GetIsCloaked();
         if (theHidden) {
-            EEPlayer* thePlayer = theComplexUnit->mPlayer;
-            if (thePlayer != gWorld.GetCurrentPlayer()
-                && gWorld.GetCurrentPlayer()->mEnemies[thePlayer->mPlayerID] != 0)
+            EEPlayer* thePlayer = theComplexUnit->GetPlayer();
+            if (!gWorld.GetCurrentPlayer()->IsAlly(thePlayer))
                 theDelta = -(long)this->mPrimaryEffects.size();
         }
     }
@@ -234,10 +233,10 @@ long EEEDamagedEffect::Step()
         return 0;
     if (theDelta > 0) {
         do {
-            gWorld.GetEffectManager()->CreateUnitEffect(this->mUnit, this->mGraphicEffect->mLinkedEffect1, &theHandle, 0, this->mPrimaryEffects.size(), 0);
+            gWorld.GetEffectManager()->CreateUnitEffect(this->GetUnit(), this->GetGraphicEffect()->GetLinkedEffect1(), &theHandle, 0, this->mPrimaryEffects.size(), 0);
             this->mPrimaryEffects.push_back(theHandle);
-            if (this->mGraphicEffect->mLinkedEffect2) {
-                gWorld.GetEffectManager()->CreateUnitEffect(this->mUnit, this->mGraphicEffect->mLinkedEffect2, &theHandle, 0, this->mSecondaryEffects.size(), 0);
+            if (this->GetGraphicEffect()->GetLinkedEffect2()) {
+                gWorld.GetEffectManager()->CreateUnitEffect(this->GetUnit(), this->GetGraphicEffect()->GetLinkedEffect2(), &theHandle, 0, this->mSecondaryEffects.size(), 0);
                 this->mSecondaryEffects.push_back(theHandle);
             }
             theDelta--;
@@ -246,7 +245,7 @@ long EEEDamagedEffect::Step()
         do {
             gWorld.GetEffectManager()->DestroyEffect(this->mPrimaryEffects.back());
             this->mPrimaryEffects.pop_back();
-            if (this->mGraphicEffect->mLinkedEffect2) {
+            if (this->GetGraphicEffect()->GetLinkedEffect2()) {
                 gWorld.GetEffectManager()->DestroyEffect(this->mSecondaryEffects.back());
                 this->mSecondaryEffects.pop_back();
             }

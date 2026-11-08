@@ -48,10 +48,13 @@ public:
     std::vector<long> mCandidates;          // +0x004
     EEEpochArray<std::vector<long>> mEpochIDs;   // +0x014 per epoch (the original: 15)
     std::vector<EECPRMHistoryEntry> mHistory;   // +0x104
+    EECPCivilizationManager* GetManager() const { return this->mManager; }
     EECPCivilizationManager* mManager;      // +0x114
     EEComputerPlayer* mPlayer;              // +0x118 (mManager->mPlayer)
+    EETechTree* GetTechTree() const { return this->mTechTree; }
     EETechTree* mTechTree;                  // +0x11c (mPlayer->mTechnologies)
     unsigned long mNextTime;                // +0x120 (saved)
+    long GetEpoch() const { return this->mEpoch; }
     long mEpoch;                            // +0x124 (-1; saved)
     bool mStarted;                          // +0x128
     bool mRecordsHistory;                   // +0x129

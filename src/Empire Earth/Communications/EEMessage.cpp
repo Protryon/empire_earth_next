@@ -3893,7 +3893,7 @@ void EEMKillUnit::Execute()
             EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(theGroup->GetFirstUnit());
             if (theUnit && (theUnit->mUnitClass->mUnitType == kUnitTypePathPoint || theUnit->mHitPoints > 0) && theUnit->CanDelete()) {
                 if (IsRefundable(theUnit)) {
-                    EETechnology* theTechnology = theUnit->GetPlayer()->mTechnologies->Get(theUnit->GetUnitClass()->mTechnology);
+                    EETechnology* theTechnology = theUnit->GetPlayer()->GetTechTree()->Get(theUnit->GetUnitClass()->GetTechnology());
                     if (theTechnology)
                         theUnit->mPlayer->RefundTechnology(theTechnology, 0x20, gWorldTable.GetFloatValue(kWorldDeleteRefundFactor));
                 }
@@ -3906,7 +3906,7 @@ void EEMKillUnit::Execute()
                 if (theUnit && (theUnit->GetUnitClass()->mUnitType == kUnitTypePathPoint || theUnit->GetHitPoints() > 0)
                     && theUnit->CanDelete()) {
                     if (IsRefundable(theUnit)) {
-                        EETechnology* theTechnology = theUnit->GetPlayer()->mTechnologies->Get(theUnit->GetUnitClass()->mTechnology);
+                        EETechnology* theTechnology = theUnit->GetPlayer()->GetTechTree()->Get(theUnit->GetUnitClass()->GetTechnology());
                         if (theTechnology)
                             theUnit->mPlayer->RefundTechnology(theTechnology, 0x20, gWorldTable.GetFloatValue(kWorldDeleteRefundFactor));
                     }
@@ -4246,7 +4246,7 @@ void EEMLoadOrSaveGameResponse::Execute()
 }
 
 extern long& gAutoSaveCount;                 // 0x5308b8 (the auto-save count LoadOrSave passes on; provisional name)
-// (0x14cbc7 Fn14CBC7: ee/EESaveLoad.h)
+// (0x14cbc7 TrimAutoSaves: ee/EESaveLoad.h)
 
 // FUNCTION: EXE 0x4c1052
 // Saves the game under the requested name, rotates the auto-saves for an auto-save, restores the mouse and reports
@@ -4266,7 +4266,7 @@ long EEMLoadOrSaveGame::LoadOrSave()
     if (this->mIsAutoSave == 1) {
         theDirectory = UString("data\\") + UString("Saved Games\\");
         theName = UString("AutoSave") + UString("*") + gSavedGameExtension;
-        Fn14CBC7(theName, theDirectory, gAutoSaveCount);
+        TrimAutoSaves(theName, theDirectory, gAutoSaveCount);
     }
     if (gCommunications->IsServer() && !this->mIsQuiet && theResult == 0)
         gUserInterface->CloseForm(NULL);
@@ -7908,7 +7908,8 @@ void EEMSmartFarmers::Execute()
     EEPlayer* thePlayer = gWorld.GetPlayerBySlot(this->GetOriginatingSlot());
     EESelectedGroup* theSelection = thePlayer->mActiveGroup;
     EEComplexUnit* theFirstUnit = theSelection->GetFirstUnit();
-    EEComplexUnit* theTarget = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(this->mTargetID));
+    long theTargetID = this->mTargetID;
+    EEComplexUnit* theTarget = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(theTargetID));
     long theIndex = 1;
     if (theFirstUnit == NULL || theTarget == NULL)
         return;
@@ -7926,12 +7927,13 @@ void EEMSmartFarmers::Execute()
         for (long i = 0; i < theCount; i++) {
             EEComplexUnit* theUnit = theGroup->GetUnit(i);
             EEUGGather* theGather = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
-            if (theGather != NULL && theGather->mResource != NULL && theGather->mResource->mUnitClass->mUnitType == kUnitTypeFarm) {
+            if (theGather == NULL || theGather->mResource == NULL || theGather->mResource->mUnitClass->mUnitType != kUnitTypeFarm)
+                theFarm = NULL;
+            else {
                 theFarm = theGather->mResource->mComplexUnit;
                 theOccupants.clear();
                 if (EEGetFarmDropSites(theFarm, theOccupants)) {
-                    EEUnit* theTargetUnit = theTarget;
-                    if (std::find(theOccupants.begin(), theOccupants.end(), theTargetUnit) != theOccupants.end()
+                    if (std::find(theOccupants.begin(), theOccupants.end(), theTarget) != theOccupants.end()
                         && theTarget->CanTake(theUnit, theUnit->mResourceType)) {
                         theUnit->SetGatheredResource(NULL);
                         theUnit->StartAction(kActionMoveToStorage);
@@ -7940,8 +7942,7 @@ void EEMSmartFarmers::Execute()
                     }
                 } else
                     theFarm = NULL;
-            } else
-                theFarm = NULL;
+            }
             if (theFarm == NULL && theFarms.size() > 0) {
                 std::sort(theFarms.begin(), theFarms.end(), EEFarmDistanceGreater(theUnit->GetTile()));
                 theFarm = theFarms.back();
@@ -7955,15 +7956,15 @@ void EEMSmartFarmers::Execute()
                 theUnit->SetGoal(new EEUGGather(NULL, theTarget, true), 0, 0);
                 theUnit->StartAction(kActionMoveToStorage);
             } else {
-                theUnit->SetGoal(new EEUGLocation(GE2DPoint((float)theTarget->mTileX, (float)theTarget->mTileY), true,
+                theUnit->SetGoal(new EEUGLocation(GE2DPoint((float)theTarget->GetTileX(), (float)theTarget->GetTileY()), true,
                                                   true, false, 0.0f, false, 0), 0, 0);
                 theUnit->StartAction(kActionPrepareToMove);
             }
             theUnit->mUnitClass->ActionChanged(theUnit);
         }
+        if (theGroup->GetNumUnits() > 0)
+            thePlayer->PlayAcknowledgement(theGroup->GetUnit(gPhysics->GetRandom(0L, (long)theGroup->GetNumUnits() - 1)));
     }
-    if (theGroup->GetNumUnits() > 0)
-        thePlayer->PlayAcknowledgement(theGroup->GetUnit(gPhysics->GetRandom(0L, (long)theGroup->GetNumUnits() - 1)));
     if (theGroup != NULL) {
         thePlayer->mPendingGroups.push_back(theGroup);
         theGroup->Finish();

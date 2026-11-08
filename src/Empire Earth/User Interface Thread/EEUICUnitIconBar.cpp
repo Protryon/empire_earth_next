@@ -392,6 +392,11 @@ void EEUICUnitIconBar::Update()
 {
     EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
     EEComplexUnit* theFirst;
+    unsigned long i;
+    EEComplexUnit* theUnit;
+    unsigned long j;
+    EEComplexUnit* theCargo;
+    float theHealth;
     theFirst = theGroup->GetNumUnits() > 0 ? theGroup->GetUnit(0) : NULL;
     unsigned long theCount;
     if (theGroup->GetNumUnits() == 1 && theFirst && theFirst->mCargo.size() != 0)
@@ -405,13 +410,13 @@ void EEUICUnitIconBar::Update()
     this->mSelectIDs.clear();
     this->mSelectIcons.clear();
     this->mShowCargo = false;
-    for (unsigned long i = 0; i < theGroup->GetNumUnits(); i++) {
-        EEComplexUnit* theUnit = theGroup->GetUnit(i);
+    for (i = 0; i < theGroup->GetNumUnits(); i++) {
+        theUnit = theGroup->GetUnit(i);
         if (theGroup->GetNumUnits() == 1 && theUnit->GetNumCargoUnits() != 0) {
-            for (unsigned long j = 0; j < theUnit->GetNumCargoUnits(); j++) {
-                EEComplexUnit* theCargo = theUnit->mCargo[j];
+            for (j = 0; j < theUnit->GetNumCargoUnits(); j++) {
+                theCargo = theUnit->mCargo[j];
                 this->mButtons.push_back(theCargo->mStats->mButton);
-                float theHealth = (float)theCargo->GetHitPoints() / theCargo->mStats->mMaxHitPoints;
+                theHealth = (float)theCargo->GetHitPoints() / theCargo->mStats->mMaxHitPoints;
                 this->mHealth.push_back(max(min(theHealth, 1.0f), 0.0f));
                 this->mShowCargo = true;
             }

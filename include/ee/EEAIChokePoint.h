@@ -14,6 +14,7 @@ public:
     // (EEAIContinentManager::AddChokePoint 0x1f1b8): +0x78 its mChokePoints index (also
     // EEAIContinent::AddChokePoint's argument), +0x7c its continent (the mContinents index); +0x68..+0x78 not decoded
     // (the dtor 0x1c740 destroys a vector<long> at +0x68)
+    unsigned long GetAreaSerialsAt(unsigned long inIndex) const { return this->mAreaSerials[inIndex]; }
     std::vector<unsigned long> mAreaSerials;       // +0x68 the serials of the areas it joins (EEAIContinentManager 0x24b31) (provisional name)
     long mIndex;                            // +0x78 (provisional name)
     unsigned short mContinentID;            // +0x7c (provisional name)

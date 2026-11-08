@@ -354,7 +354,7 @@ void EECPASGSpaceFighter::RequestRemoval()
         this->mUnits[i]->GetUnit()->ClearGoalQueue(0);
     }
     EECPAttackSubGroup::RequestRemoval();
-  /* LOST-DEBUG: none: exact only (lostdebug_search, smallest n) */ }
+}
 
 // ICF-FOLDED: EXE 0x441ef8
 // Launches the sub-group: every unit retargets now and needs orders, then all fly to the task location if active

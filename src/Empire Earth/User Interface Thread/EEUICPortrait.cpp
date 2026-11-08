@@ -228,18 +228,18 @@ long EEUICPortrait::MouseLButtonDown()
     if (this->mUnit && this->mUnit->mHitPoints > 0 && this->mUnit->mTileNode) {
         EEComplexUnit* theUnit = this->mUnit->mComplexUnit;
         long theTechnology = theUnit->mCurrentResearch;
-        long theImprovement = theUnit->mPlayer->GetResearchedImprovement(theUnit->GetUnitClass()->mUnitType);
+        long theImprovement = theUnit->GetPlayer()->GetResearchedImprovement(theUnit->GetUnitClass()->GetUnitType());
         if (theTechnology != kTechNone) {
             if (theImprovement != 0x10) {
                 this->GetBarRectangles(theFirst, theSecond);
                 if (this->mShowFirstBar && theSecond.Contains(this->GetMouseLocation())) {
                     if (this->mUnit->GetUnitClass()->IsBuilding()) {
                         gCommunications->ProcessLocalUserInput(
-                            new EEMRemoveTechnology(theUnit->mUnitID, theTechnology, true), kSlotNone);
+                            new EEMRemoveTechnology(theUnit->GetUnitID(), theTechnology, true), kSlotNone);
                         gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
                     }
                 } else if (this->mShowSecondBar) {
-                    gCommunications->ProcessLocalUserInput(new EEMRemoveImprovement(theUnit->mUnitID, theImprovement),
+                    gCommunications->ProcessLocalUserInput(new EEMRemoveImprovement(theUnit->GetUnitID(), theImprovement),
                                                            kSlotNone);
                     gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
                 }
@@ -249,7 +249,7 @@ long EEUICPortrait::MouseLButtonDown()
                 gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
             }
         } else if (theImprovement != 0x10) {
-            gCommunications->ProcessLocalUserInput(new EEMRemoveImprovement(theUnit->mUnitID, theImprovement), kSlotNone);
+            gCommunications->ProcessLocalUserInput(new EEMRemoveImprovement(theUnit->GetUnitID(), theImprovement), kSlotNone);
             gSoundManager->Play(EESoundObject::Get(kSoundButton1)->GetSampleID(), 1.0f, 0.0f, 1.0f, false, NULL);
         }
     }
@@ -301,8 +301,15 @@ void EEUICPortrait::Update()
     GERectangle theRectangle;
     unsigned long theOldLevel = this->mLevel;
     bool theOldSecond = this->mShowSecondBar;
-    bool theOldFirst = this->mShowFirstBar;
     EEComplexUnit* theUnit = this->mUnit->GetComplexUnit();
+    bool theOldFirst = this->mShowFirstBar;
+    long theImprovement;
+    EETechTreeNode* theNode;
+    float theScale;
+    long theTotal;
+    long theMaximum;
+    float theMaximumF;
+    UWideString* theText;
     if (theUnit != NULL) {
         if (theUnit->GetPlayer() == gWorld.GetCurrentPlayer()) {
             if (theUnit->mProductionTime > 0) {
@@ -312,7 +319,7 @@ void EEUICPortrait::Update()
                 this->mShowFirstBar = false;
                 this->SetDirty(true);
             }
-            long theImprovement = theUnit->GetPlayer()->GetResearchedImprovement(theUnit->GetUnitClass()->mUnitType);
+            theImprovement = theUnit->GetPlayer()->GetResearchedImprovement(theUnit->GetUnitClass()->GetUnitType());
             if (theImprovement != 0x10) {
                 this->mShowSecondBar = true;
                 this->SetDirty(true);
@@ -321,13 +328,12 @@ void EEUICPortrait::Update()
                 this->SetDirty(true);
             }
             if (this->mShowSecondBar == true && this->mShowFirstBar == true) {
-                EETechTreeNode* theNode = gWorld.GetCurrentPlayer()->mTechnologies->Get(theUnit->mCurrentResearch);
-                float theScale;
+                theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(theUnit->mCurrentResearch);
                 if (theNode->mData->mMakesUnit && this->mUnit->GetPlayer()->mUnitClassUpgrades[theNode->mData->mUnitClass])
                     theScale = this->mUnit->GetPlayer()->mUnitClassUpgrades[theNode->mData->mUnitClass]->mBuildTimeScale;
                 else
                     theScale = 1.0f;
-                long theTotal = (long)(theNode->GetBuildTime() * theScale + 0.5f);
+                theTotal = (long)(theNode->GetBuildTime() * theScale + 0.5f);
                 GE2DPoint theTopLeft = this->GetRectangle().GetTopLeft();
                 theRectangle.SetTop(theTopLeft.GetY());
                 theRectangle.SetLeft(theTopLeft.GetX());
@@ -335,42 +341,39 @@ void EEUICPortrait::Update()
                 theRectangle.SetRight(this->GetRectangle().GetWidth() * ((float)(theTotal - theUnit->mProductionTime) / theTotal) +
                                       theTopLeft.GetX());
                 this->mFirstBar->SetRectangle(theRectangle);
-                long theMaximum;
-                if (theUnit->mStats->mImprovement.GetLevel(theImprovement) == 1)
+                if (theUnit->GetStats()->mImprovement.GetLevel(theImprovement) == 1)
                     theMaximum = gWorldTable.GetLongValue(EEWorldImprovementTime(theImprovement));
                 else
                     theMaximum = gWorldTable.GetLongValue2(EEWorldImprovementTime(theImprovement));
                 theRectangle.SetLeft(this->GetRectangle().GetLeft());
-                float theMaximumF = theMaximum;
+                theMaximumF = theMaximum;
                 theRectangle.SetRight((theMaximumF - theUnit->GetPlayer()->GetImprovementProgress(
-                                                         theUnit->GetUnitClass()->mUnitType)) / theMaximumF *
+                                                         theUnit->GetUnitClass()->GetUnitType())) / theMaximumF *
                                       this->GetRectangle().GetWidth() + this->GetRectangle().GetLeft() + 1.0f);
                 theRectangle.SetTop(this->GetRectangle().GetHeight() * 0.5f + this->GetRectangle().GetTop());
                 theRectangle.SetBottom(this->GetRectangle().GetBottom() + 1.0f);
                 this->mSecondBar->SetRectangle(theRectangle);
             } else if (this->mShowSecondBar == true) {
-                long theMaximum;
-                if (theUnit->mStats->mImprovement.GetLevel(theImprovement) == 1)
+                if (theUnit->GetStats()->mImprovement.GetLevel(theImprovement) == 1)
                     theMaximum = gWorldTable.GetLongValue(EEWorldImprovementTime(theImprovement));
                 else
                     theMaximum = gWorldTable.GetLongValue2(EEWorldImprovementTime(theImprovement));
                 theRectangle.SetLeft(this->GetRectangle().GetLeft());
-                float theMaximumF = theMaximum;
+                theMaximumF = theMaximum;
                 theRectangle.SetRight((theMaximumF - theUnit->GetPlayer()->GetImprovementProgress(
-                                                         theUnit->GetUnitClass()->mUnitType)) / theMaximumF *
+                                                         theUnit->GetUnitClass()->GetUnitType())) / theMaximumF *
                                       this->GetRectangle().GetWidth() + this->GetRectangle().GetLeft() + 1.0f);
                 theRectangle.SetTop(this->GetRectangle().GetTop());
                 theRectangle.SetBottom(this->GetRectangle().GetBottom() + 1.0f);
                 this->mSecondBar->SetRectangle(theRectangle);
             } else if (this->mShowFirstBar == true) {
-                EETechTreeNode* theNode = gWorld.GetCurrentPlayer()->mTechnologies->Get(theUnit->mCurrentResearch);
+                theNode = gWorld.GetCurrentPlayer()->GetTechTree()->Get(theUnit->mCurrentResearch);
                 if (theNode) {
-                    float theScale;
                     if (theNode->mData->mMakesUnit && this->mUnit->GetPlayer()->mUnitClassUpgrades[theNode->mData->mUnitClass])
                         theScale = this->mUnit->GetPlayer()->mUnitClassUpgrades[theNode->mData->mUnitClass]->mBuildTimeScale;
                     else
                         theScale = 1.0f;
-                    long theTotal = (long)(theNode->GetBuildTime() * theScale + 0.5f);
+                    theTotal = (long)(theNode->GetBuildTime() * theScale + 0.5f);
                     theRectangle.SetTop(this->GetRectangle().GetTop());
                     theRectangle.SetLeft(this->GetRectangle().GetLeft());
                     theRectangle.SetBottom(this->GetRectangle().GetHeight() + theRectangle.GetTop());
@@ -380,13 +383,13 @@ void EEUICPortrait::Update()
                 }
             }
         }
-        this->mLevel = theUnit->mStats->mImprovement.mTotalCost;
+        this->mLevel = theUnit->GetStats()->mImprovement.mTotalCost;
     } else
         this->mLevel = 0;
     if (this->mLevel > gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax))
         this->mLevel = gWorldTable.GetLongValue(kWorldUnitImprovementPointsMax);
     if (this->mLevel != theOldLevel) {
-        UWideString* theText = new UWideString;
+        theText = new UWideString;
         if (this->mLevel > 0)
             sprintf(*theText, "%ld", this->mLevel);
         this->mText->SetText(*theText);

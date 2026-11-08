@@ -22,6 +22,7 @@ extern GEModel* gU4E8DF4;
 // operator=). Names are provisional.
 struct EEEffect2DPart {
     // inline, defined in EEEffect2D.cpp (its only user; COMDATs 0x105089 / 0x1050b0)
+    void SetDrawFrame(unsigned long inFrame) { this->mDrawFrame = inFrame; }  // inline: the 2D effects' Queue loop (0x4df75d)
     EEEffect2DPart();
     EEEffect2DPart(const GE3DPoint& inPosition, EEGraphicObject* inGraphicObject, unsigned long inTag);
 

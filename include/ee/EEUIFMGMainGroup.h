@@ -25,6 +25,7 @@ public:
     virtual void Reset();                   // +0x10 (0x1720c6: empty)
     virtual bool WantsRefresh();            // +0x14 (0xac9f3: false)
 
+    EEUIFMainGame* GetOwner() const { return this->mOwner; }
     EEUIFMainGame* mOwner;                  // +0x04 the main game form
 };
 
@@ -51,6 +52,7 @@ public:
 
     // the ctor 0x267ec8: EEUIFMGGroup(...), the vptr, then these zeroed, +8 = a new object (ctor 0x26ada8)
     EEUIFMGStatusBox* mStatusBox;           // +0x08 (ee/EEUIFMGStatusBox.h)
+    long GetMode() const { return this->mMode; }
     long mMode;                             // +0x0c (not set by the ctor) the mode: 0, 3, 4 (unit type 0x321); 1, 2 tested
     long mHitPoints;                        // +0x10 the unit's hit points
     unsigned long mUnitID;                  // +0x14 the selected unit's id

@@ -14,7 +14,7 @@ public:
     virtual long DrawPass2();               // +0x08 (`return 0`: ICF-folded into 0xfca98)
     virtual long DrawPass4();               // +0x10 (likewise)
     virtual long DrawPass5();               // +0x14 (likewise)
-    virtual long DrawPass6();               // +0x18 0xee41b (the draw: Fn103634; not for a cloaked enemy unit)
+    virtual long DrawPass6();               // +0x18 0xee41b (the draw: AddGroundQuad; not for a cloaked enemy unit)
     virtual long Queue(EEEffectQueue* inQueues);       // +0x24 0xee287 (the corner heights; queue 4)
     virtual void PrepareQueue();            // +0x2c (empty: ICF-folded into 0xe123d)
     virtual long SetUp();                   // +0x30 0xee3a4 (at the unit; loads the graphic)

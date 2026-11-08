@@ -256,34 +256,34 @@ long EEAIAStarPathfindingGoal::GetDefaultCost(long inFromX, long inFromY, long i
     if (!(this->mUnit->GetUnitClass()->mInnerCollisionSphere >= kEEPFGFull))
         return theCost;
     theRange = this->mUnit->mFormationRank;
-    if (!theRange || ((this->mUnit->mStats->mTerrainMask >> 14) & 1) != 0)
+    if (!theRange || (bool)((this->mUnit->mStats->mTerrainMask >> 14) & 1))
         return theCost;
     theMap = gWorld.mMap;
     theX = 0;
     theY = 0;
     EEGetTileInDirection(inX, inY, &theX, &theY, 4, theRange);
     theNeighbor = theMap->GetTile(theX, theY);
-    if (theNeighbor && (theNeighbor->mAIValue || !this->mUnit->GetUnitClass()->CanMoveOnTerrain(this->mUnit, theNeighbor->mTerrainType)
+    if (theNeighbor && (theNeighbor->mAIValue || !this->mUnit->GetUnitClass()->CanMoveOnTerrain(this->mUnit, theNeighbor->GetTerrainType())
                         || this->mContinentID != gContinentManager.GetContinentID(theX, theY)))
         theCost *= 2;
     else {
         EEGetTileInDirection(inX, inY, &theX, &theY, 3, theRange);
         theNeighbor = theMap->GetTile(theX, theY);
-        if (theNeighbor && (theNeighbor->mAIValue || !this->mUnit->GetUnitClass()->CanMoveOnTerrain(this->mUnit, theNeighbor->mTerrainType)
+        if (theNeighbor && (theNeighbor->mAIValue || !this->mUnit->GetUnitClass()->CanMoveOnTerrain(this->mUnit, theNeighbor->GetTerrainType())
                             || this->mContinentID != gContinentManager.GetContinentID(theX, theY)))
             theCost *= 2;
         else {
             EEGetTileInDirection(inX, inY, &theX, &theY, 1, theRange);
             theNeighbor = theMap->GetTile(theX, theY);
             if (theNeighbor && (theNeighbor->mAIValue
-                                || !this->mUnit->GetUnitClass()->CanMoveOnTerrain(this->mUnit, theNeighbor->mTerrainType)
+                                || !this->mUnit->GetUnitClass()->CanMoveOnTerrain(this->mUnit, theNeighbor->GetTerrainType())
                                 || this->mContinentID != gContinentManager.GetContinentID(theX, theY)))
                 theCost *= 2;
             else {
                 EEGetTileInDirection(inX, inY, &theX, &theY, 6, theRange);
                 theNeighbor = theMap->GetTile(theX, theY);
                 if (theNeighbor && (theNeighbor->mAIValue
-                                    || !this->mUnit->GetUnitClass()->CanMoveOnTerrain(this->mUnit, theNeighbor->mTerrainType)
+                                    || !this->mUnit->GetUnitClass()->CanMoveOnTerrain(this->mUnit, theNeighbor->GetTerrainType())
                                     || this->mContinentID != gContinentManager.GetContinentID(theX, theY)))
                     theCost *= 2;
             }

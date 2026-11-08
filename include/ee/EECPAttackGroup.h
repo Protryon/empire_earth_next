@@ -95,6 +95,7 @@ public:
     // EECPASGLand::TakeRequestedUnits 0x47145 pushes an order (2, 7, SetSubGroup(this), mB38) (provisional name)
     std::deque<EECPAGOrder> mOrders;
     EECPAGTask mTask;                       // +0x28
+    EECPAttackCommander* GetCommander() const { return this->mCommander; }
     EECPAttackCommander* mCommander;        // +0x5c (the ctor's first argument)
     // EECPUSGatherUnitsFromDefendingGroups 0x9b24a tests +0x68 (a word) of a sub group's mGroup (provisional name)
     unsigned long mID;                      // +0x60 (the combat manager's counter mU58; Load reads it unsigned)

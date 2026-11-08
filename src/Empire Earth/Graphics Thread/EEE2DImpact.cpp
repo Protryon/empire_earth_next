@@ -174,17 +174,17 @@ long EEE2DImpact::DrawPass6()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     GETexture* theTexture = this->mGraphicObject->mTextures[0];
     theTexture->SetFrame(this->mDrawFrame);
     theMaterial->SetTexture(theTexture, theScreen);
     float theValue;
-    Fn11A130(this->mDrawPosition, theFog, theValue);
+    GetFogFactor(this->mDrawPosition, theFog, theValue);
     gRasterizer->SetAmbientColor(GEColor(theValue, theValue, theValue), theScreen);
     theTransformation.SetPosition(this->mDrawPosition);
     if (this->mGraphicEffect->mIntParam1) {
         GETransformation theRotation(false);
-        theRotation.SetOrientationYPR(0.0f, 0.0f, Fn102F3D(0.0f, 3.1415927f));
+        theRotation.SetOrientationYPR(0.0f, 0.0f, GetEffectRandomFloat(0.0f, 3.1415927f));
         GE3DPoint thePosition(theTransformation);
         theRotation.SetPosition(thePosition.GetX(), thePosition.GetY(), thePosition.GetZ());
         theRotation.SetElement(3, 0, 0.0f);
@@ -279,7 +279,8 @@ void EEE2DImpact::UpdatePosition()
     GETransformation theTransformation(theUnit->mPhysicalModel.GetLocation());
     EETagPointList* theList = theUnit->GetModel()->GetTagPoints(theUnit->GetAnimation(), 6);
     EETagPointList::Scale(theTransformation, theScale);
-    theList->mPoints[this->mTagIndex]->GetPoint(theFrame, theTransformation, this->mStart);
+    const std::vector<EETagPoint*>& thePoints = theList->mPoints;
+    thePoints[this->mTagIndex]->GetPoint(theFrame, theTransformation, this->mStart);
     this->SetPosition(this->mStart);
 }
 
@@ -334,7 +335,7 @@ long EEE2DImpact::Step()
             theChanged = true;
         else
             theChanged = false;
-        this->SetSound(Fn1487A3(theLocation, this->mGraphicObject, 0, this->mSound, theFrame, theChanged));
+        this->SetSound(PlayAnimationSound(theLocation, this->mGraphicObject, 0, this->mSound, theFrame, theChanged));
         if (this->mSound)
             this->mSound->Dereference();
     }

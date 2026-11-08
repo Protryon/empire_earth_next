@@ -415,8 +415,10 @@ UIEvent* EECreateGameSettingsEvent(UIForm* inForm, unsigned long inID)
 // Creates the event a form fires when it opens, closes or activates; NULL for other ids
 UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
 {
-    UIEvent* theEvent;
+    UIEvent* theEvent = NULL;
     switch (inID) {
+    case kFormEventGameSettingsOpen:
+        break;
     case kFormEventMainScreenOpen:
         theEvent = new EEUIEMSEOpen;
         break;
@@ -469,9 +471,6 @@ UIEvent* EECreateFormEvent(UIManager* inManager, unsigned long inID)
     case kFormEventChatLogMLBPressed:
     case kFormEventChatLogMRBPressed:
         theEvent = new EEUIECLEMousePressed;
-        break;
-    default:
-        theEvent = NULL;
         break;
     }
     return theEvent;
@@ -834,6 +833,14 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
     case kControlEventSRMMainGameOptions:
         theEvent = new EEUIEMGDisplayOptions;
         break;
+    case kControlEventSRMLargeCivBuilderAlert:
+    case kControlEventSRMMainGameCivBuilder:
+        theEvent = new EEUIEMGDisplayCivBuilder;
+        break;
+    case kControlEventSRMLargeScenBriefingAlert:
+    case kControlEventSRMGameInfoScenarioIntroduction:
+        theEvent = new EEUIEMGDisplayScenarioIntro;
+        break;
     case kControlEventSRMTempBoxLoadUnit:
         theEvent = new EEUIELoadUnit;
         break;
@@ -863,14 +870,6 @@ UIEvent* EECreateMainGameEvent(UIForm* inForm, unsigned long inID)
         break;
     case kControlEventSRMSetScoutBehavior:
         theEvent = new EEUIEMGUnitBehavior(0);
-        break;
-    case kControlEventSRMLargeCivBuilderAlert:
-    case kControlEventSRMMainGameCivBuilder:
-        theEvent = new EEUIEMGDisplayCivBuilder;
-        break;
-    case kControlEventSRMLargeScenBriefingAlert:
-    case kControlEventSRMGameInfoScenarioIntroduction:
-        theEvent = new EEUIEMGDisplayScenarioIntro;
         break;
     case kControlEventSRMSetStandGroundBehavior:
         theEvent = new EEUIEMGUnitBehavior(1);
@@ -1562,7 +1561,7 @@ void EEUIManager::StartScenarioEditor()
     UWideString theComputerName;
     EEGameOptionsPlayer theHuman;
     EEGameOptionsPlayer theComputer;
-    gWorld.GetLobbyOptions().mLock->WriteLock();
+    gWorld.GetLobbyOptions().GetLock()->WriteLock();
     this->mInScenarioEditor = true;
     gGameStateIsMultiplayer = false;
     if (gCommunications != NULL)
@@ -1597,7 +1596,7 @@ void EEUIManager::StartScenarioEditor()
     static_cast<EEServer*>(gCommunications)->StopPing();
     static_cast<EEServer*>(gCommunications)->mLoadState = 1;
     gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
-    gWorld.GetLobbyOptions().mLock->WriteUnlock();
+    gWorld.GetLobbyOptions().GetLock()->WriteUnlock();
 }
 
 // FUNCTION: EXE 0x6750a9

@@ -361,9 +361,11 @@ void EEActiveGroup::LayOutFormation()
     theFormation->Arrange(this, theSlots);
     unsigned long theNumSlots = theSlots.size();
     unsigned long i;
-    for (i = 0; i < theNumSlots; i++) {
+    i = 0;
+    while (i < theNumSlots) {
         theSlotX += theSlots[i].mPosition.GetX();
         theSlotY += theSlots[i].mPosition.GetY();
+        i++;
     }
     float theSlotCount = (float)theNumSlots;
     theSlotX /= theSlotCount;
@@ -1088,7 +1090,7 @@ void EEActiveGroup::Plan()
 //
         }
         if (theFlag)
-            EESendGroupCommand(this, theGoal->GetTarget(), this->mPlayer->GetPlayerID(), 0xba, 0);
+            EESendGroupCommand(this, theGoal->GetTarget(), this->mPlayer->mPlayerID, 0xba, 0);
         else
             EESendGroupCommand(this, theGoal->GetTarget(), this->mPlayer->GetPlayerID(), 0xb8, 0);
         break;
@@ -1585,7 +1587,7 @@ bool EEActiveGroup::IsCellTaken(const GE3DPoint& inLocation)
         long theInY = (long)inLocation.GetY();
         if (std::pair<long, int>(theX / gWorld.mMap->mUnitRegions->mRegionSize,
                                  theY / gWorld.mMap->mUnitRegions->mRegionSize)
-            == std::pair<long, int>(theInX / gWorld.mMap->mUnitRegions->mRegionSize,
+            == std::pair<long, int>(theInX / gWorld.GetMap()->mUnitRegions->mRegionSize,
                                     theInY / gWorld.mMap->mUnitRegions->mRegionSize))
             theResult = true;
     }

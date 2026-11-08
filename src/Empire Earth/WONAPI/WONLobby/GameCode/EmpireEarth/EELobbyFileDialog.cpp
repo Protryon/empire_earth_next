@@ -1,7 +1,7 @@
 // C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbyFileDialog.cpp (__FILE__ 0x8d0540, InitComponent's
 // lines 37..40). The game room's saved-game dialog: the files of a directory with one extension, loaded or deleted
-// with its buttons: 0x290e89..0x291463 (GUIString's size helpers follow their first user; WONFile's implicit dtor
-// closes it; the SendFileOp unit follows). Module flags (r12-misc-h7, round 12).
+// with its buttons: 0x690e89..0x691463 (GUIString's size helpers follow their first user; WONFile's implicit dtor
+// closes it; the SendFileOp unit follows).
 #include <windows.h>
 #include <string>
 #include <list>
@@ -21,37 +21,41 @@ extern GUIString gEELobbyFileDialog_DeleteTitle;       // 0x965938 (EELobbyResou
 extern GUIString gEELobbyFileDialog_DeleteDetails;     // 0x96599c (EELobbyResource.cpp)
 
 // FUNCTION: EXE 0x690e89
+// Creates the saved-game dialog (members only)
 EELobbyFileDialog::EELobbyFileDialog()
 {
 }
 
 // FUNCTION: EXE 0x690efc
+// Destroys the saved-game dialog (members only)
 EELobbyFileDialog::~EELobbyFileDialog()
 {
 }
 
 // FUNCTION: EXE 0x690f66
+// Looks up the file list and the load, cancel and delete buttons from the dialog's layout
 void EELobbyFileDialog::InitComponent(ComponentInit& inInit)
 {
     if (inInit.mType == 2) {
         ComponentConfig* theConfig = ((ComponentConfigInit&)inInit).mConfig;
-        SafeGetComponent(theConfig, mFileList, "FileList", __FILE__, __LINE__);
-        SafeGetComponent(theConfig, mLoadButton, "LoadButton", __FILE__, __LINE__);
-        SafeGetComponent(theConfig, mCancelButton, "CancelButton", __FILE__, __LINE__);
-        SafeGetComponent(theConfig, mDeleteButton, "DeleteButton", __FILE__, __LINE__);
+        SafeGetComponent(theConfig, this->mFileList, "FileList", __FILE__, 37);
+        SafeGetComponent(theConfig, this->mLoadButton, "LoadButton", __FILE__, 38);
+        SafeGetComponent(theConfig, this->mCancelButton, "CancelButton", __FILE__, 39);
+        SafeGetComponent(theConfig, this->mDeleteButton, "DeleteButton", __FILE__, 40);
     }
 }
 
 // FUNCTION: EXE 0x690fd9
+// Lists the files of a directory with the given extension, shown without the extension
 void EELobbyFileDialog::ListFiles(const std::string& inDirectory, const std::string& inExtension)
 {
-    mFileList->Fn2FAA00();
-    mFileList->Fn2FAA50(true);
-    mDirectory = inDirectory;
-    mExtension = inExtension;
-    if (mDirectory.size() != 0 && mDirectory[mDirectory.size() - 1] != '/' && mDirectory[mDirectory.size() - 1] != '\\')
-        mDirectory += '\\';
-    std::string thePattern = mDirectory + '*' + inExtension;
+    this->mFileList->BeginUpdate();
+    this->mFileList->Clear(true);
+    this->mDirectory = inDirectory;
+    this->mExtension = inExtension;
+    if (this->mDirectory.size() != 0 && this->mDirectory[this->mDirectory.size() - 1] != '/' && this->mDirectory[this->mDirectory.size() - 1] != '\\')
+        this->mDirectory += '\\';
+    std::string thePattern = this->mDirectory + '*' + inExtension;
     PlatFindData theData;
     PlatFind* theFind = PlatFindFirst(thePattern.c_str(), &theData);
     if (theFind != NULL) {
@@ -59,91 +63,98 @@ void EELobbyFileDialog::ListFiles(const std::string& inDirectory, const std::str
             GUIString theName(theData.mName);
             if (theName.length() > inExtension.size()) {
                 theName.resize(theName.length() - inExtension.size());
-                mFileList->InsertString(theName, -1);
+                this->mFileList->InsertString(theName, -1);
             }
         } while (PlatFindNext(theFind, &theData) == PLAT_FILE_OK);
         PlatFindClose(theFind);
     }
-    mFileList->Fn2FAA10();
+    this->mFileList->EndUpdate();
 }
 
 // FUNCTION: EXE 0x69115e
-GUIString::GUIString(const char* inText) : mData(new GUIStringData(inText))
+// Creates a GUI string from narrow text
+inline GUIString::GUIString(const char* inText) : mData(new GUIStringData(inText))
 {
 }
 
 // FUNCTION: EXE 0x69119a
-void GUIString::resize(int inLength)
+// Cuts or extends the string to a length, unsharing its text first
+inline void GUIString::resize(int inLength)
 {
-    CopyOnWrite();
-    GUIStringData* theData = mData.mPtr;
+    this->CopyOnWrite();
+    GUIStringData* theData = this->mData.mPtr;
     theData->Reserve(inLength, false);
     theData->mLength = inLength;
     theData->mText[theData->mLength] = 0;
 }
 
 // FUNCTION: EXE 0x6911c9
-void GUIStringData::Reserve(int inLength, bool inGrow)
+// Makes room for a length plus terminator, doubling it when growing, and keeps the text
+inline void GUIStringData::Reserve(int inLength, bool inGrow)
 {
     inLength++;
-    if (mCapacity < inLength) {
-        wchar_t* theOld = mText;
+    if (this->mCapacity < inLength) {
+        wchar_t* theOld = this->mText;
         if (inGrow)
             inLength += inLength;
-        mText = new wchar_t[inLength];
+        this->mText = new wchar_t[inLength];
         if (theOld != NULL) {
-            memcpy(mText, theOld, (mLength + 1) * sizeof(wchar_t));
+            memcpy(this->mText, theOld, (this->mLength + 1) * sizeof(wchar_t));
             delete[] theOld;
         }
-        mCapacity = inLength;
+        this->mCapacity = inLength;
     }
 }
 
 // FUNCTION: EXE 0x69121b
-void GUIString::CopyOnWrite()
+// Gives the string its own copy of the text when it is shared
+inline void GUIString::CopyOnWrite()
 {
-    if (mData->GetRefCount() > 1)
-        mData = new GUIStringData(*mData.mPtr);
+    if (this->mData->GetRefCount() > 1)
+        this->mData = new GUIStringData(*this->mData.mPtr);
 }
 
 // FUNCTION: EXE 0x691249
+// Loads the selected saved game and closes the dialog with OK when that succeeds
 void EELobbyFileDialog::LoadSelectedFile()
 {
-    std::string theFile = GetSelectedFile();
+    std::string theFile = this->GetSelectedFile();
     if (theFile.size() != 0 && EELobbyLoadSavedGame(theFile.c_str()))
-        GetRoot()->Fn32B0A0(100001, this);
+        this->GetRoot()->EndDialog(100001, this);
 }
 
 // FUNCTION: EXE 0x69129a
+// Returns the full path of the selected saved game, or an empty string with nothing selected
 std::string EELobbyFileDialog::GetSelectedFile()
 {
-    ListItem* theItem = mFileList->mSelItem;
+    ListItem* theItem = this->mFileList->mSelItem;
     if (theItem == NULL)
         return "";
-    std::string theText = ((TextListItem*)theItem)->mText.mData->GetString();
+    std::string theText = static_cast<TextListItem*>(theItem)->mText.mData->GetString();
     std::string theName = theText;
-    return mDirectory + theName + mExtension;
+    return this->mDirectory + theName + this->mExtension;
 }
 
 // FUNCTION: EXE 0x69136a
+// Deletes the selected file after a yes/no prompt, or loads it on Load or a double click
 void EELobbyFileDialog::HandleComponentEvent(ComponentEvent* inEvent)
 {
-    if (inEvent->mType == 15) {
-        if (inEvent->mComponent == mDeleteButton.mPtr) {
+    if (inEvent->mType == ComponentEvent_ButtonPressed) {
+        if (inEvent->mComponent == this->mDeleteButton.mPtr) {
             if (LobbyMessageBoxYesNo(gEELobbyFileDialog_DeleteTitle, gEELobbyFileDialog_DeleteDetails, true) == 100001) {
-                WONFile theFile(GetSelectedFile());
+                WONFile theFile(this->GetSelectedFile());
                 theFile.Delete(true);
-                mFileList->RemoveItem(mFileList->mSelItem);
+                this->mFileList->RemoveItem(this->mFileList->mSelItem);
                 return;
             }
-        } else if (inEvent->mComponent == mLoadButton.mPtr) {
-            LoadSelectedFile();
+        } else if (inEvent->mComponent == this->mLoadButton.mPtr) {
+            this->LoadSelectedFile();
             return;
         }
-    } else if (inEvent->mType == 23) {
-        ListItemClickedEvent* theEvent = (ListItemClickedEvent*)inEvent;
-        if (theEvent->mDoubleClick && theEvent->mParam == 0)
-            LoadSelectedFile();
+    } else if (inEvent->mType == ComponentEvent_ListItemClicked) {
+        ListItemClickedEvent* theEvent = static_cast<ListItemClickedEvent*>(inEvent);
+        if (theEvent->mDoubleClick && theEvent->mButton == 0)
+            this->LoadSelectedFile();
         return;
     }
     Dialog::HandleComponentEvent(inEvent);

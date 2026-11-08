@@ -533,14 +533,12 @@ bool EEPhysicsModel::PushMoving(EEComplexUnit* inUnit, EEComplexUnit* inOther)
     float theLeft = 0.0f;
     float theCrossOtherT;
     const GETransformation& theTransformation = inUnit->mPhysicalModel.GetLocation();
-    const GETransformation& theOtherTransformation = inOther->mPhysicalModel.GetLocation();
     theTransformation.Apply(theForward, theDirection);
+    const GETransformation& theOtherTransformation = inOther->mPhysicalModel.GetLocation();
     theOtherTransformation.Apply(theForward, theOtherDirection);
     theDirection.Normalize();
     theOtherDirection.Normalize();
-    float theAngle = UMArcCos(theDirection.DotProduct(theOtherDirection));
-    if (theAngle < 0.0f)
-        theAngle = -theAngle;
+    float theAngle = UMAbs(UMArcCos(theDirection.DotProduct(theOtherDirection)));
     while (theAngle > 3.1415927f)
         theAngle -= 3.1415927f;
     if (theAngle > 1.5707964f)
@@ -564,9 +562,9 @@ bool EEPhysicsModel::PushMoving(EEComplexUnit* inUnit, EEComplexUnit* inOther)
     bool theCrossing = theLine.IntersectsIn2D(theOtherLine, theT, theOtherT);
     theCrossLine.SetStart(theOtherLine.GetStart());
     theCrossLine.SetDirection(theOtherLine.GetDirection());
-    float theX = theOtherDirection.mX;
-    theOtherDirection.mX = theOtherDirection.mY;
-    theOtherDirection.mY = -theX;
+    float theX = -theOtherDirection.mX;
+    theOtherDirection.mX = theOtherDirection.GetY();
+    theOtherDirection.mY = theX;
     theCrossLine.SetDirection(theOtherDirection);
     bool theNear;
     if (theLine.IntersectsIn2D(theCrossLine, theCrossT, theCrossOtherT)
@@ -598,64 +596,68 @@ bool EEPhysicsModel::PushMoving(EEComplexUnit* inUnit, EEComplexUnit* inOther)
         if (theOtherT < 0.0f)
             theOtherT = -theOtherT;
     }
-    if (!theNear && (!theCrossing || theT >= 0.75f || theOtherT >= 0.75f))
-        return theResult;
-    if (theOtherSpeed <= theSpeed && !theNear && inOther->GetMaxVelocity() > 0.0f) {
-        if (inUnit->GetVelocity() > 0.0f && inOther->GetVelocity() > 0.0f && theSpeed == theOtherSpeed) {
-            if ((long) inOther->mWaypoints.size() > 0)
-                inOther->GetPathLength(theOtherLeft);
-            if ((long) inUnit->mWaypoints.size() > 0)
-                inUnit->GetPathLength(theLeft);
-            if (theLeft > theOtherLeft || (theOtherLeft == theLeft && inOther->mUnitID < inUnit->mUnitID)) {
-                inUnit->SetVelocity(inUnit->GetVelocity() * 0.25f);
-                inUnit->mCollisionResolutionCount = 0.0f;
+    if (theNear || (theCrossing && theT < 0.75f && theOtherT < 0.75f)) {
+        float theDX;
+        if (theOtherSpeed <= theSpeed && !theNear && inOther->GetMaxVelocity() > 0.0f) {
+            if (inUnit->GetVelocity() > 0.0f && inOther->GetVelocity() > 0.0f && theOtherSpeed == theSpeed) {
+                if ((long) inOther->mWaypoints.size() > 0)
+                    inOther->GetPathLength(theOtherLeft);
+                if ((long) inUnit->mWaypoints.size() > 0)
+                    inUnit->GetPathLength(theLeft);
+                if (theLeft > theOtherLeft || (theOtherLeft == theLeft && inOther->mUnitID < inUnit->mUnitID)) {
+                    inUnit->SetVelocity(inUnit->GetVelocity() * 0.25f);
+                    inUnit->mCollisionResolutionCount = 0.0f;
+                }
+            }
+            theDX = theOtherLine.GetDirection().GetX();
+            theDX = inOther->GetMaxVelocity() * (1.25f - theT) * theDX * theOtherSign;
+            float theDirY = theOtherLine.GetDirection().GetY();
+            float theDY = inOther->GetMaxVelocity() * (1.25f - theT) * theDirY * theOtherSign;
+            inOther->SetPushVelocityX(inOther->GetPushVelocityX() + theDX);
+            inOther->SetPushVelocityY(inOther->GetPushVelocityY() + theDY);
+        } else {
+            if (inUnit->GetVelocity() > 0.0f && theNear) {
+                if (inUnit->mCollisionState == 2) {
+                    inUnit->SetBlockingUnit(NULL);
+                    inUnit->mCollisionResolutionCount = 0.0f;
+                    inUnit->SetVelocity(0.0f);
+                    inUnit->SetCurrentPhysicsAction(6);
+                    inUnit->ClearGoalQueue(0);
+                    if (inUnit->mCollisionState != 0)
+                        inUnit->mCollisionState = 0;
+                    theResult = true;
+                    EEUnitGoal* theOwnGoal = inUnit->mGoalState;
+                    if (theOwnGoal && theOwnGoal->mKind == kGoalGather && static_cast<EEUGGather*>(theOwnGoal)->mResource
+                        && static_cast<EEUGGather*>(theOwnGoal)->mResource->mResourceType == kResourceWood)
+                        inUnit->StartAction(kActionFindNewResource);
+                    else
+                        inUnit->StartAction(kActionIdle);
+                    inUnit->mUnitClass->ActionChanged(inUnit);
+                } else if (inUnit->mCollisionState == 0 && inOther->GetVelocity() == 0.0f) {
+                    inUnit->SetBlockingUnit(inOther);
+                } else {
+                    theSlow = (inUnit->GetVelocity() < theT ? theT : inUnit->GetVelocity()) - 0.5f;
+                }
+            }
+            float theSpeedNext = theSlow + 0.5f;
+            theDX = theLine.GetDirection().GetX();
+            theDX = inUnit->GetMaxVelocity() * (theSpeedNext - theT) * theDX * theSign;
+            theOtherSign = theLine.GetDirection().GetY();
+            float theDY = inUnit->GetMaxVelocity() * (theSpeedNext - theT) * theOtherSign * theSign;
+            inUnit->SetPushVelocityX(inUnit->GetPushVelocityX() + theDX);
+            inUnit->SetPushVelocityY(inUnit->GetPushVelocityY() + theDY);
+            if (theSlow > 0.0f) {
+                inUnit->SetVelocity(inUnit->GetVelocity() * 0.5f);
+            } else {
+                inUnit->SetVelocity(0.0f);
+                inUnit->mCollisionResolutionCount += gPhysics->GetTickTime();
+            }
+            float theAbsX = UMAbs(inOther->GetPushVelocityX());
+            if (theAbsX < kPMTurnEpsilon && UMAbs(inOther->GetPushVelocityY()) < kPMTurnEpsilon) {
+                inOther->SetPushVelocityX(kPMTurnEpsilon);
+                inOther->SetPushVelocityY(kPMTurnEpsilon);
             }
         }
-        float theDX = inOther->GetMaxVelocity() * (1.25f - theT) * theOtherLine.GetDirection().GetX() * theOtherSign;
-        float theDY = inOther->GetMaxVelocity();
-        theDY *= (1.25f - theT) * theOtherLine.GetDirection().GetY() * theOtherSign;
-        inOther->SetPushVelocityX(inOther->GetPushVelocityX() + theDX);
-        inOther->SetPushVelocityY(inOther->GetPushVelocityY() + theDY);
-        return theResult;
-    }
-    if (inUnit->GetVelocity() > 0.0f && theNear) {
-        if (inUnit->mCollisionState == 2) {
-            inUnit->SetBlockingUnit(NULL);
-            inUnit->mCollisionResolutionCount = 0.0f;
-            inUnit->SetVelocity(0.0f);
-            inUnit->SetCurrentPhysicsAction(6);
-            inUnit->ClearGoalQueue(0);
-            if (inUnit->mCollisionState != 0)
-                inUnit->mCollisionState = 0;
-            theResult = true;
-            EEUnitGoal* theOwnGoal = inUnit->mGoalState;
-            if (theOwnGoal && theOwnGoal->mKind == kGoalGather && static_cast<EEUGGather*>(theOwnGoal)->mResource
-                && static_cast<EEUGGather*>(theOwnGoal)->mResource->mResourceType == kResourceWood)
-                inUnit->StartAction(kActionFindNewResource);
-            else
-                inUnit->StartAction(kActionIdle);
-            inUnit->mUnitClass->ActionChanged(inUnit);
-        } else if (inUnit->mCollisionState == 0 && inOther->GetVelocity() == 0.0f) {
-            inUnit->SetBlockingUnit(inOther);
-        } else {
-            theSlow = (inUnit->GetVelocity() < theT ? theT : inUnit->GetVelocity()) - 0.5f;
-        }
-    }
-    theSpeed = theSlow + 0.5f;
-    float theDX = inUnit->GetMaxVelocity() * (theSpeed - theT) * theLine.GetDirection().GetX() * theSign;
-    float theDY = inUnit->GetMaxVelocity() * (theSpeed - theT) * theLine.GetDirection().GetY() * theSign;
-    inUnit->SetPushVelocityX(inUnit->GetPushVelocityX() + theDX);
-    inUnit->SetPushVelocityY(inUnit->GetPushVelocityY() + theDY);
-    if (theSlow > 0.0f) {
-        inUnit->SetVelocity(inUnit->GetVelocity() * 0.5f);
-    } else {
-        inUnit->SetVelocity(0.0f);
-        inUnit->mCollisionResolutionCount += gPhysics->GetTickTime();
-    }
-    if ((inOther->GetPushVelocityX() < 0.0f ? -inOther->GetPushVelocityX() : inOther->GetPushVelocityX()) < kPMTurnEpsilon
-        && (inOther->GetPushVelocityY() < 0.0f ? -inOther->GetPushVelocityY() : inOther->GetPushVelocityY()) < kPMTurnEpsilon) {
-        inOther->SetPushVelocityX(kPMTurnEpsilon);
-        inOther->SetPushVelocityY(kPMTurnEpsilon);
     }
     return theResult;
 }
@@ -1063,10 +1065,7 @@ bool EEPhysicsModel::ClipStep(EEComplexUnit* inUnit, const GEVector& inMove, GE3
     if (inMove.GetX() != 0.0f || inMove.GetY() != 0.0f || inMove.GetZ() != 0.0f) {
         theMoveLine.SetStart(ioLocation);
         theMoveLine.SetDirection(inMove);
-        if (!theMap->GetTile(theX, theY)) {
-            theMoveLine.GetPointAt(-1.0f, ioLocation);
-            theResult = false;
-        } else {
+        if (theMap->GetTile(theX, theY)) {
             if (!theMap->GetTile(theX - 1, theY - 1)) {
                 if (theMap->mTerrainMesh.GetLeftPlane().IsPointOnOrBelowPlane(ioLocation)) {
                     theResult = false;
@@ -1138,6 +1137,9 @@ bool EEPhysicsModel::ClipStep(EEComplexUnit* inUnit, const GEVector& inMove, GE3
                     }
                 }
             }
+        } else {
+            theMoveLine.GetPointAt(-1.0f, ioLocation);
+            theResult = false;
         }
     }
     return theResult;

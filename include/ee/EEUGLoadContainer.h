@@ -65,6 +65,7 @@ public:
     bool HasUnit(EEComplexUnit* inUnit);    // 0x226596 (provisional name)
 
     UReferenceContainer<EEComplexUnit*> mUnits;   // +0x20 "Loadable Unit List" (vtable 0x4429d8)
+    unsigned long GetUnitIDsAt(unsigned long inIndex) const { return this->mUnitIDs[inIndex]; }
     std::vector<unsigned long> mUnitIDs;    // +0x34 (the ids between Load and Virtual50)
     GE3DPoint mDestination;                 // +0x44 "Actual Destination"
     EEComplexUnit* mContainer;              // +0x50 "Container Unit" (referenced)

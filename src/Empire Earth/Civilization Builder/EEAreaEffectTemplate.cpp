@@ -115,7 +115,9 @@ bool EEAreaEffectTemplate::CoversUnit(unsigned long inPlayer, EEComplexUnit* inU
     if (gUnitSetManager.Contains(inUnit->mUnitClass->GetUnitType(), this->mUnitSet) && this->AffectsPlayer(inPlayer, theOwner) &&
         inUnit->mIsBuilt) {
         if (this->mRadius > 0.0f) {
-            theLocation = GE2DPoint(inUnit->mPhysicalModel.GetLocation().GetX(), inUnit->mPhysicalModel.GetLocation().GetY());
+            GE3DPoint thePosition = inUnit->mPhysicalModel.GetLocation().GetPosition();
+            theLocation.SetX(thePosition.GetX());
+            theLocation.SetY(thePosition.GetY());
             if (this->IsWithin(theLocation, inPoint, inScale, inUnit))
                 theResult = true;
         } else {
@@ -140,11 +142,11 @@ bool EEAreaEffectTemplate::IsWithin(const GE2DPoint& inCenter, const GE2DPoint& 
         float theDY = (float)fabs(inCenter.GetY() - inPoint.GetY());
         if (theDX > theRange || theDY > theRange)
             return theResult;
-    } else if (this->mShape == 2) {
+    } else if (this->mShape != 2) {
+        return theResult;
+    } else {
         if (inPoint.DistanceTo(inCenter) > theRange)
             return theResult;
-    } else {
-        return theResult;
     }
     theResult = true;
     if (this->mUnitSet != 4) {

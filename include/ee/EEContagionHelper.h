@@ -36,12 +36,14 @@ public:
     void SwapUnit(EEUnit* inOldUnit, EEUnit* inNewUnit);   // 0xb64e8: inNewUnit replaces inOldUnit
     void Update(float inElapsedTime);       // 0xb6552
 
+    EEUnit* GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
     std::vector<EEUnit*> mUnits;            // +0x04 (each referenced)
     EEContagionFunctor* mFunctor;           // +0x14
     EECalamity* mCalamity;                  // +0x18
     long mHelperID;                         // +0x1c
     float mTimeSinceLastSpread;             // +0x20
     float mTimeSinceLastUpdate;             // +0x24
+    unsigned long GetUnitIDsAt(unsigned long inIndex) const { return this->mUnitIDs[inIndex]; }
     std::vector<unsigned long> mUnitIDs;    // +0x28 (Load; RestorePointers turns them into mUnits)
 
     // the save keys (init chains 0xb5b7d..0xb5c89; guard 0x4e6008; not used by Load/Save)

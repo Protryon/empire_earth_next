@@ -103,9 +103,18 @@ public:
     GEBitmap* GetCheckOn() const { return this->mCheckOn; }       // ICF-folded (0x10066094)
     UIForm* GetCurrentForm() const
     {
+#ifdef LLE_EXE_HEADERS
+        // exe view: the original calls the import at all ~50 sites; this body is over the /Os post-check, as the
+        // original's (LobbyShowGameOptions 0x5dde02). The engine's own 0x1005a06d is exact with the plain form below.
+        UIForm* theForm = NULL;
+        if (this->mFormStack.size() > 0)
+            theForm = this->mFormStack.back();
+        return theForm;
+#else
         if (this->mFormStack.size() > 0)
             return this->mFormStack.back();
         return NULL;
+#endif
     }
     bool GetDrawCandidateWindow() const { return this->mDrawCandidateWindow; }
     GEFont* GetFont(unsigned long inIndex) const { return this->mFonts[inIndex]; }

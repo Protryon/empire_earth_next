@@ -399,9 +399,9 @@ void RTSMap::Create(long inWidth, long inHeight, unsigned long inPlayerCount, bo
     this->mL195608 = inHeight - 1;
     this->mL195614 = inWidth;
     this->mSize = inWidth + inHeight;
-    this->mL19560C = this->mSize + inWidth - 1;
     this->mL195610 = inHeight;
     this->mU19561C = inPlayerCount;
+    this->mL19560C = this->mSize + inWidth - 1;
     this->mB195620 = true;
     this->mF1955F8 = 84.0f;
     this->mF1955FC = 42.0f;

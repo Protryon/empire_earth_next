@@ -122,23 +122,23 @@ long EEUIESPLELoadFile::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
         theFileName = theName + this->mExtension;
         if (EEOpenSaveGameFile(theFileName, this->mDirectory, theFile) == kErrorOK && theFile->Open(kFileAccessRead) == kErrorOK) {
             if (EEValidateSaveGameFile(*theFile, theMessage)) {
-                gWorld.GetLobbyOptions().mLock->WriteLock();
+                gWorld.GetLobbyOptions().GetLock()->WriteLock();
                 gWorld.GetLobbyOptions().SetDefaults();
-                gWorld.GetLobbyOptions().mLoadType = 2;
+                gWorld.GetLobbyOptions().SetLoadType(2);
                 gWorld.GetLobbyOptions().SetMapType((const char*)theFile->GetFile());
-                gWorld.GetLobbyOptions().mLock->WriteUnlock();
+                gWorld.GetLobbyOptions().GetLock()->WriteUnlock();
                 gLoadSavedGameName = theFile->GetFile().GetIndexedSubstring(0, theFile->GetFile().GetLength() - 5);
                 if (theFile)
                     delete theFile;
-                gGameState.mGameOptions.mIsMultiplayer = false;
+                gGameState.mGameOptions.SetIsMultiplayer(false);
                 if (gCommunications)
                     delete gCommunications;
                 gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);
                 static_cast<EEServer*>(gCommunications)->StartThreads();
-                static_cast<EEServer*>(gCommunications)->mNumLoadResponses = false;
+                static_cast<EEServer*>(gCommunications)->SetNumLoadResponses(false);
                 gGameStateLoadType = 2;
                 static_cast<EEServer*>(gCommunications)->StopPing();
-                static_cast<EEServer*>(gCommunications)->mLoadState = true;
+                static_cast<EEServer*>(gCommunications)->SetLoadState(true);
                 gCommunications->ProcessLocalUserInput(new EEMStartLoading(1, TMGetTime()), kSlotNone);
             } else {
                 gUIManager->DisplayMessage(theMessage, true, NULL, 0, true);

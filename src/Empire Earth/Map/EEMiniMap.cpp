@@ -124,11 +124,10 @@ EEMiniMap::~EEMiniMap()
 // FUNCTION: EXE 0x51e53b
 // Adds a building's remembered image as a dot in its mini map cell (gaia in its class colour, others in
 // the owner's shade; a resource dot heading the cell stays first); a wall also adds its next three segments
-// NEAR: the original pushes GEPackColor's 1.0f inside both colour arms, after loading the class index into a
-// register; ours hoists the push above the test (if/else, ternary-of-calls and ternary-argument shapes all hoist)
 void EEMiniMap::AddDoppelganger(EEDoppelganger* inDoppelganger, long inX, long inY, bool inIsWall)
 {
     GE3DPoint thePoint;
+    EEMiniMapDot theDot;
     GE3DPoint theMapPoint;
     EEUnitClass* theClass = inDoppelganger->mUnit->mUnitClass;
     long theResourceType = theClass->mResourceType;
@@ -141,7 +140,6 @@ void EEMiniMap::AddDoppelganger(EEDoppelganger* inDoppelganger, long inX, long i
         unsigned long theColor = inDoppelganger->GetPlayer()->mPlayerID == 0
                                      ? GEPackColor(kPixelFormatA4R4G4B4, EEColorTable::GetDarkColor(theClass->GetMiniMapColor()), 1.0f)
                                      : GEPackColor(kPixelFormatA4R4G4B4, inDoppelganger->GetPlayer()->mShadeColor, 1.0f);
-        EEMiniMapDot theDot;
         theDot.mPlayer = (unsigned short)inDoppelganger->GetPlayer()->mPlayerID;
         theDot.mColor = (unsigned short)theColor;
         if (theClass->mCategory == kUnitCategoryResource &&
@@ -624,6 +622,8 @@ void EEMiniMap::RedrawCell(long inX, long inY)
 // FUNCTION: EXE 0x51fc62
 // Recomputes the camera's view trapezoid on the mini map (camera tilted 30 degrees, at least height 5),
 // shortening its sides to the width of its near edge (at least 32)
+// NEAR: the height clamp (the original compares against the constant in memory and reloads it) and the corner
+// pointer registers
 void EEMiniMap::Refresh()
 {
     GEViewport theViewport(gViewport);
@@ -665,15 +665,15 @@ void EEMiniMap::Refresh()
     float theDistance = this->mCorner0.DistanceTo(this->mCorner2);
     if (theDistance > theWidth) {
         float theScale = theWidth / theDistance;
-        this->mCorner2.mX = (this->mCorner2.mX - this->mCorner0.mX) * theScale + this->mCorner0.mX;
-        this->mCorner2.mY = (this->mCorner2.mY - this->mCorner0.mY) * theScale + this->mCorner0.mY;
+        this->mCorner2.SetXY((this->mCorner2.GetX() - this->mCorner0.GetX()) * theScale + this->mCorner0.GetX(),
+                             this->mCorner0.GetY() + (this->mCorner2.GetY() - this->mCorner0.GetY()) * theScale);
     }
     theDistance = this->mCorner1.DistanceTo(this->mCorner3);
     if (!(theDistance > theWidth))
         return;
     float theScale = theWidth / theDistance;
-    this->mCorner3.mX = (this->mCorner3.mX - this->mCorner1.mX) * theScale + this->mCorner1.mX;
-    this->mCorner3.mY = (this->mCorner3.mY - this->mCorner1.mY) * theScale + this->mCorner1.mY;
+    this->mCorner3.SetXY((this->mCorner3.GetX() - this->mCorner1.GetX()) * theScale + this->mCorner1.GetX(),
+                         this->mCorner1.GetY() + (this->mCorner3.GetY() - this->mCorner1.GetY()) * theScale);
 }
 
 // FUNCTION: EXE 0x51ff72

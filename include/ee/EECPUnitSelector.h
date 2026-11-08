@@ -38,16 +38,22 @@ struct EECPUnitSelectionGroup {
     virtual ~EECPUnitSelectionGroup();      // +0x00 (??_G 0x5759f)
 
     std::vector<long> mSelected;            // +0x04 the unit classes chosen (to build or train)
+    long GetUnitIDsAt(unsigned long inIndex) const { return this->mUnitIDs[inIndex]; }
     std::vector<long> mUnitIDs;             // +0x14 the ids of the units taken
     std::map<long, std::vector<long>*> mClassesByKind;   // +0x24 (FreeUnits deletes the vectors)
     EECPAGTask mTask;                       // +0x30
     EEAIFOPAvailablePersonnelGatherer mGatherer;   // +0x64
+    EEUnit* GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
     std::vector<EEUnit*> mUnits;            // +0x74 the candidate units (referenced)
     EECPILocation mLocation;                // +0x84
+    EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;              // +0x9c
     EEPlayer* mTarget;                      // +0xa0
+    EECPIntelligencePlayerFile* GetTargetFile() const { return this->mTargetFile; }
     EECPIntelligencePlayerFile* mTargetFile;   // +0xa4 (GetIntelligenceFiles: the intelligence file of mTarget)
+    EECPIntelligencePlayerFile* GetPlayerFile() const { return this->mPlayerFile; }
     EECPIntelligencePlayerFile* mPlayerFile;   // +0xa8 (... of mPlayer)
+    EECPCombatStrategy* GetStrategy() const { return this->mStrategy; }
     EECPCombatStrategy* mStrategy;          // +0xac (a Clone of the caller's)
 };
 
@@ -89,6 +95,7 @@ public:
     EEAIFOCurrentlyBuildableUnitScreener(EEComputerPlayer* inPlayer) : mPlayer(inPlayer) {}
     virtual bool Screen(EEUnitClass* inClass);   // +0x04 0x2ae09
 
+    EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;              // +0x04
 };
 
@@ -143,6 +150,7 @@ public:
     long GetRandomOfCategory(long inCategory, std::map<long, std::vector<long>*>& inMap);  // 0x9b86b (a random class of that category)
     void FilterByStrategy(EECPUnitSelectionGroup* inGroup);  // 0x9b949
 
+    EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;              // +0x04
 };
 

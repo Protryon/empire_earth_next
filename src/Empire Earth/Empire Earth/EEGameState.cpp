@@ -152,7 +152,7 @@ void EEGameState::Init()
     { ESChecksum theChecksum(false); this->mChecksum = theChecksum; }
 }
 
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern long gDefaultTerrain;                // EETerrainTable.cpp
 
 // FUNCTION: EXE 0x5306f2
@@ -260,7 +260,7 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
                 }
             } else if (inOptions.mLoadType == 4) {
                 if (!inOptions.GetCampaignMapName(theMapName))
-                    theMapName = gU4E5B98;
+                    theMapName = gEmptyString;
                 this->mGameOptions.mCampaignChecksum = inOptions.mCampaignChecksum;
                 this->mGameOptions.mCampaignName = inOptions.mCampaignName;
                 this->mGameOptions.mScenarioName = inOptions.mScenarioName;

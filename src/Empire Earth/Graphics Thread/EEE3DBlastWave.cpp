@@ -108,7 +108,6 @@ long EEE3DBlastWave::DrawPass5()
 
 // FUNCTION: EXE 0x4e904a
 // Moves the wave to the unit's first tag point of type 0x12 (keeping the unit's orientation), else to the unit
-// NEAR: scheduling only (mFirstFrame2 goes through eax; the first tag point is loaded before the pushes)
 // (EEE3DShield's identical copy is ICF-folded into this one)
 void EEE3DBlastWave::FollowUnit()
 {
@@ -119,7 +118,8 @@ void EEE3DBlastWave::FollowUnit()
     EETagPointList* theList = this->mUnit->mComplexUnit->GetModel()->GetTagPoints(this->mUnit->mComplexUnit->GetAnimation(), 0x12);
     if (theList != NULL && !theList->mPoints.empty()) {
         EETagPointList::Scale(theLocation, theScale);
-        theList->mPoints.front()->GetPoint(theFrame, theLocation, thePoint);
+        const std::vector<EETagPoint*>& thePoints = theList->mPoints;
+        thePoints.front()->GetPoint(theFrame, theLocation, thePoint);
         GETransformation theTransformation(false);
         theTransformation = theLocation;
         theTransformation.SetPosition(thePoint.GetX(), thePoint.GetY(), thePoint.GetZ());
@@ -170,10 +170,10 @@ long EEE3DBlastWave::DrawPass6()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     theMaterial->SetTexture(this->mGraphicObject->mTextures[0], theScreen);
     GE3DPoint theLocation(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
-    Fn11A130(theLocation, theFog, theValue);
+    GetFogFactor(theLocation, theFog, theValue);
     theLocation.SetY(theTransformation.GetY());
     theLocation.SetZ(theTransformation.GetZ());
     theTransformation.SetPosition(theTransformation.GetX(), theLocation.GetY(), theLocation.GetZ());

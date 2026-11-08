@@ -1,5 +1,5 @@
 // C:\EEX\Empire Earth\Graphics Thread\EEE3DRain.cpp (no __FILE__; name from the RTTI class). 0xf7394..0xf8ceb: the
-// ctors .. Virtual78 (the sound helpers are inline COMDATs after their first users), then the template COMDATs of the
+// ctors .. SetCursor (the sound helpers are inline COMDATs after their first users), then the template COMDATs of the
 // two drop vectors.
 #include <windows.h>
 
@@ -74,7 +74,8 @@ EEE3DRain::EEE3DRain(const std::vector<EETileCoordinate>& inTiles, EEGraphicEffe
     this->mSound = NULL;
     this->mRumble = NULL;
     this->mDropCount = 0;
-    this->mRumbleDelay = Fn102F3D(0.0f, 0.25f) * kRainRumbleDelay;
+    float theDelay = GetEffectRandomFloat(0.0f, 0.25f) * kRainRumbleDelay;
+    this->mRumbleDelay = theDelay;
 }
 
 // SYNTHETIC: EXE 0x4f7421
@@ -153,10 +154,10 @@ void EEE3DRain::ReleaseRumble()
 // it may splash)
 long EEE3DRain::AddDrop()
 {
-    EETileCoordinate& theTile = this->mTiles[Fn102F57(0, this->mTiles.size() - 1)];
-    float theRandom = Fn102F3D(0.0f, 1.0f);
+    EETileCoordinate& theTile = this->mTiles[GetEffectRandomLong(0, this->mTiles.size() - 1)];
+    float theRandom = GetEffectRandomFloat(0.0f, 1.0f);
     float theX = theTile.mX + theRandom;
-    theRandom = Fn102F3D(0.0f, 1.0f);
+    theRandom = GetEffectRandomFloat(0.0f, 1.0f);
     float theY = theTile.mY + theRandom;
     GE3DPoint thePosition(theX, theY, this->mSpawnHeight);
     EEMapTile* theMapTile = gWorld.GetMap()->GetTile(theTile.mX, theTile.mY);
@@ -267,8 +268,8 @@ long EEE3DRain::DrawPass6()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10F772();
-    Fn10F60F();
+    SetCloudLighting();
+    SetSceneFog();
     for (std::vector<EE3DRainDraw>::iterator theDraw = this->mDraws.begin(); theDraw != this->mDraws.end() && theResult == 0;
          theDraw++) {
         theTransformation.SetX(theDraw->mPosition.GetX());
@@ -397,7 +398,7 @@ long EEE3DRain::UpdateDrops()
         double theZ = theDrop->mPosition.GetZ() + theElapsed * this->mFallSpeed;
         theDrop->mPosition.SetZ(theZ);
         if (theZ < theDrop->mGroundZ) {
-            if (Fn102F57(0, 15) == 0 && theDrop->mWater) {
+            if (GetEffectRandomLong(0, 15) == 0 && theDrop->mWater) {
                 GE3DPoint theSplash(theDrop->mPosition.GetX(), theDrop->mPosition.GetY(), 0.0f);
                 gWorld.GetEffectManager()->CreatePlacedEffect(theSplash, EEGraphicEffect::Get(kGraphicEffectLandRipple), NULL);
             }
@@ -443,14 +444,14 @@ long EEE3DRain::StartSounds()
     }
     this->mRumbleDelay -= gPhysics->GetTickTime();
     if (this->mRumbleDelay <= 0.0f) {
-        EESoundObject* theSound = EESoundObject::Get(Fn102F57(0, 10) > 4 ? this->mRumbleID1 : this->mRumbleID2);
+        EESoundObject* theSound = EESoundObject::Get(GetEffectRandomLong(0, 10) > 4 ? this->mRumbleID1 : this->mRumbleID2);
         if (theSound) {
             this->SetRumble(gSoundManager->PlayAndReturnReferencedNode(theSound->GetSampleID(), theSound->GetVolume(), 0.0f,
                                                                  1.0f, theSound->GetLooping(), "3D Rain Rumble"));
             if (this->mRumble)
                 this->mRumble->Dereference();
         }
-        this->mRumbleDelay = (float)(UMFloor(Fn102F3D(0.0f, 1.0f) * kRainRumbleDelay) + 5000);
+        this->mRumbleDelay = (float)(UMFloor(GetEffectRandomFloat(0.0f, 1.0f) * kRainRumbleDelay) + 5000);
     }
     this->SetSoundLevel(this->mSound, 0.5f);
     this->SetSoundLevel(this->mRumble, 1.0f);

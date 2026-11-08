@@ -122,6 +122,8 @@ public:
     void AddArea(EEAIArea* inArea);         // 0x26f8d: mAreas.insert((its serial, inArea))
     EEAIArea* GetArea(unsigned long inSerial) const;             // 0x26fb3: 0 if not found
     EEAIArea* GetRandomContinent(unsigned char inKind, URandom& inRandom);  // 0x22dc8 (ret 8): a random area of kind inKind (EEHerd 0xa4aa2: 5) (provisional name)
+    // inline twin of GetContinentByID: its undone COMDAT folds with 0x26fdd; at a low share its const operator[] goes out of line
+    EEAIContinent* GetContinentFromID(unsigned short inID) const { return this->mContinents[inID]; }
     EEAIContinent* GetContinentByID(unsigned short inID) const;  // 0x26fdd: mContinents[inID] (lea; mov: const-shaped)
     // inline (out-of-line COMDAT 0xa06ef, EECPWallManager.cpp: lea; mov, const-shaped) (provisional name)
     EEAIPathArea* GetPathAreaByID(unsigned short inID) const { return this->mPathAreas[inID]; }
@@ -140,6 +142,12 @@ public:
         EEAIContinent* theSecond = theContinents[inSecond];
         EEAIContinent* theFirst = theContinents[inFirst];
         return this->AreConnected(theFirst, theSecond, inFlags);
+    }
+    // inline: the two connected-by-id arguments; at a low share the second argument's const operator[] is refused and the first
+    // accessor undone (SendToGather 0x912be, 0x8f40b, 0x8fea6, 0x9055f, 0x90758, 0x6f5ee)
+    bool AreConnectedFromIDs(unsigned short inFirst, unsigned short inSecond, long inFlags)
+    {
+        return this->AreConnected(this->GetContinentFromID(inFirst), this->GetContinentFromID(inSecond), inFlags);
     }
     // area lookups by a tile (bodies read; names and the exact return classes inferred): the continent at the tile
     // (GetContinentAt), then the first of its id list (+0x7c chokes, +0x8c forests, +0xac hills) whose area holds
@@ -234,15 +242,20 @@ public:
     std::map<unsigned short, std::vector<EETileCoordinate> > mSectorTiles;
     std::vector<U2DPoint<long> > mShoreTiles; // +0x1c (sorted with U2DPoint<long>::operator< 0x1308c; Reset clears it)
     std::vector<U2DPoint<long> > mIceShoreTiles; // +0x2c
+    EEAIContinent* GetContinentsAt(unsigned long inIndex) const { return this->mContinents[inIndex]; }
     std::vector<EEAIContinent*> mContinents;               // +0x3c by id (EEAIContinent +0x11c; 0x60c7)
+    EEAIPathSector* GetPathSectorsAt(unsigned long inIndex) const { return this->mPathSectors[inIndex]; }
     std::vector<EEAIPathSector*> mPathSectors;             // +0x4c by id (new 0x4c + ctor 0x2bbd3, vtable 0x43a52c; id +0x48)
+    EEAIPathSubSector* GetPathSubSectorsAt(unsigned long inIndex) const { return this->mPathSubSectors[inIndex]; }
     std::vector<EEAIPathSubSector*> mPathSubSectors;       // +0x5c by id (not owned: Reset only clear()s it)
     // inline: the no-/Og forest sort predicate 0x48e745 reads both forests through it (its nested
     // begin/_Ptrit::operator+ budget: both operator+ out of line) (provisional name)
     EEAIForest* GetForest(unsigned short inID) { return this->mForests[inID]; }
+    EEAIForest* GetForestsAt(unsigned long inIndex) const { return this->mForests[inIndex]; }
     std::vector<EEAIForest*> mForests;      // +0x6c by id (+0x82; continent +0x80: ctor 0x29bcd, vtable 0x43a42c)
     std::vector<EEAIPathArea*> mPathAreas;  // +0x7c by id (+0x7a = NewPathAreaID(); ctor 0x18a03, vtable 0x439fac)
     std::vector<EEAIHill*> mHills;          // +0x8c by id (+0x6a; continent +0x68)
+    EEAIChokePoint* GetChokePointsAt(unsigned long inIndex) const { return this->mChokePoints[inIndex]; }
     std::vector<EEAIChokePoint*> mChokePoints;             // +0x9c by +0x78 (ctor 0x1109a, vtable 0x439d3c)
     std::vector<EEAIRectangleArea*> mRectangleAreas;       // +0xac by +0x8a (0x1f3a0's dynamic_cast)
     std::vector<unsigned short> mFreeSubSectorIDs;         // +0xbc (pop_back in NewSubSectorID)
@@ -250,6 +263,7 @@ public:
     EEAIPathSectorRegionInformation mRegionInformation;    // +0xdc (0x14)
     long* mTileValues;                      // +0xf0 per tile, new long[] (0x1f813; 0x231d7 stores values >= -0x78)
     unsigned short* mContinentIDs;          // +0xf4 per tile (0x60ef reads it; new unsigned short[] in 0x1fa5c)
+    unsigned short* GetPathSubSectorIDs() const { return this->mPathSubSectorIDs; }
     unsigned short* mPathSubSectorIDs;      // +0xf8 per tile (0x20ee1 allocates mHeight * mWidth * 2)
     bool* mTileFlags;                       // +0xfc (mFlagsWidth + 1) * n bytes set to 1 by 0x1fa5c
     unsigned short mNextIDs[7];             // +0x100 per kind < 7 (0x15dd5: `++mNextIDs[kind]`); memset 14 in ctor/Reset
@@ -263,11 +277,16 @@ public:
     long mNextID128;                        // +0x128
     long mNextID12C;                        // +0x12c
     long mNextID130;                        // +0x130
+    long GetNumWaterTiles() const { return this->mNumWaterTiles; }
     long mNumWaterTiles;                    // +0x134 per-kind continent counts (DeleteContinents zeroes them; 0x1f8ae adds)
+    long GetNumLandTiles() const { return this->mNumLandTiles; }
     long mNumLandTiles;                     // +0x138
+    long GetNumSpaceTiles() const { return this->mNumSpaceTiles; }
     long mNumSpaceTiles;                    // +0x13c
     long mFlagsWidth;                       // +0x140 (mTileFlags row stride - 1; 0x1fa5c sets it)
+    unsigned long GetWidth() const { return this->mWidth; }
     unsigned long mWidth;                   // +0x144 tiles (unsigned `jae` against long x in 0x60ef)
+    unsigned long GetHeight() const { return this->mHeight; }
     unsigned long mHeight;                  // +0x148
     bool mClearing;                         // +0x14c (Clear sets it, 0x24a24 resets it, 0x25606 tests it)
 };
