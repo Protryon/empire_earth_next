@@ -71,6 +71,7 @@
 #include "ee/EEGameOptions.h"
 #include "ee/EERules.h"
 #include "ee/EECPBehavior.h"
+#include "ee/EECPNext.h"
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long Fn2806E7(UString& ioName, EEPlayer* inPlayer);
 
@@ -159,6 +160,7 @@ bool EECPUnitTileDistanceLess::operator()(EEUnit* inFirst, EEUnit* inSecond) con
 EEComputerPlayer::EEComputerPlayer(const UWideString& inName, unsigned long inPlayerID)
     : EEPlayer(inName, inPlayerID)
 {
+    this->mNextState = NULL;
     this->Init();
     this->mComputerPlayer = dynamic_cast<EEComputerPlayer*>(this);
 }
@@ -179,6 +181,7 @@ void EEComputerPlayer::SetCombatState(unsigned long inCombatState)
 // Creates an unnamed computer player (for loading) and initialises its AI tuning and managers
 EEComputerPlayer::EEComputerPlayer()
 {
+    this->mNextState = NULL;
     this->Init();
     this->mComputerPlayer = dynamic_cast<EEComputerPlayer*>(this);
 }
@@ -198,6 +201,7 @@ EEComputerPlayer::~EEComputerPlayer()
     delete this->mCivilizationManager;
     delete this->mInteractionManager;
     DeleteVectorContents(this->mResourceCenters);
+    EECPNextDeleteState(this);
 }
 
 // FUNCTION: EXE 0x42d1a5
@@ -208,6 +212,8 @@ void EEComputerPlayer::AddResource(long inIndex, long inAmount)
     this->mCivilizationManager->mResourceManager->Spend(inIndex, inAmount);
     if (gCPTraceOn)
         EECPTraceIncome(this, inIndex, inAmount);
+    if (this->mNextState != NULL)
+        EECPNextIncome(this, inIndex, inAmount);   // the next engine's view (ee/EECPNext.h)
 }
 
 // FUNCTION: EXE 0x42d1c7
@@ -1241,6 +1247,8 @@ static const long kStoneArmy = 10;
 // saving for the advance, the AI pauses what competes for the reserved resources while its gatherers fill it).
 bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, long inCount)
 {
+    if (EECPNextEngine(this))   // the next engine: the plain check and the strategy's reserve (ee/EECPNext.h)
+        return EECPNextCanAfford(this, inTechnology, inUnitType, inCount);
     if (this->mTechnologies != NULL && EEIsEpochID(inTechnology->mData->mID) && EECPCheatOn(this, kAICheatEpochs))
         return true;
     if (!EEPlayer::CanAfford(inTechnology, inUnitType, inCount))
@@ -5820,6 +5828,8 @@ void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
     if (gCPTraceOn && !inSwapped)
         EECPTraceUnitLost(this, theUnit);
+    if (this->mNextState != NULL && !inSwapped && theUnit->mUnitClass != NULL)
+        EECPNextEventAdd(this, kNextEventUnitLost, theUnit->mUnitClass->mUnitType, 1);   // the next engine's view
     if (this->mActive)
         this->mCivilizationManager->UnitLost(theUnit, inSwapped);
     if (this->mCombatManager != NULL)
@@ -5922,7 +5932,7 @@ void EEComputerPlayer::Update(unsigned long inTime)
         this->mResourceCaps[kResourceGold] += theBonus;
         this->mResourceCaps[kResourceIron] += theBonus;
         this->mIsStarted = true;
-        if (this->IsDeathmatch()) {
+        if (this->IsDeathmatch() && !EECPNextEngine(this)) {
             this->mCivilizationManager->CheckBuildingCounts();
             for (long i = 0; i < 3; i++)
                 this->mCombatManager->mDefenseCommander->BuildUp();

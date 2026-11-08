@@ -116,6 +116,117 @@ these, each one an audit item in stage 1:
 
 The classic engine keeps calling these. The next engine never does.
 
+### 2.1 S1 as built (2026-11-08)
+
+Code: `include/ee/EECPNext.h`; `src/Empire Earth/AI Thread/EECPNext.cpp` (switch, state, tick), `EECPNextTactics.cpp`
+(verbs), `EECPNextView.cpp` (view), `EECPNextTest.cpp` (TEST ONLY: the C++ test opening).
+
+**The switch.** `bool EECPNextEngine(const EEComputerPlayer*)` is the one test every gate asks:
+`EECPEngine(player) == kEECPEngineNext` (S0's seat choice; EE-SIM `--engine next,classic`, sim_bench `--engine`).
+`EEComputerPlayer::Update` branches once, at S0's branch point, to `EECPNextUpdate(player, time)`. The first-call
+start-up (Regroup and its first centre activations, the timers, ChooseCivilization) still runs for both engines;
+the next engine's tick then does the regroup, the combat-state decay and WorkOutPopulation (the pop cap) itself, and
+never runs EnableManagers, FlagGroup, `EECPCivilizationManager::Update`, the diplomacy, combat and exploration
+updates or KeepStandingArmy.
+
+**The tick** (`EECPNextUpdate`): the runners (`UnitManager::Update`, `ResourceManager::Update`,
+`BuildManager::Update`, `ResearchManager::Update`), the reflexes (`RepairBuildings` every 31 s, the attack groups'
+state machines through `AttackCommander::Update`; militia, flee and naval flee run on the damage events as before),
+then one strategy step on a fresh view. Not run: the wall manager, the defence commander, Personnel's upkeep (its
+culling), CombatManager::Update and the wonder race.
+
+**The verbs.** Each returns `EECPNextResult {code, reason, count}`: code `done`, `queued` or `refused`; reason
+`no_site`, `no_producer`, `cannot_afford`, `not_in_epoch`, `unknown_class`, `bad_argument`, `no_units`,
+`requirements` (SOL or last epoch), `busy`. Each writes one trace line in the manager `next`:
+`next.order verb=build cls=47 near=site arg=3/0 x=84 y=68 afford=1 result=queued reason=- n=1`.
+
+| Verb | Signature | Carried out by | Results |
+|---|---|---|---|
+| gather | `EECPNextGather(p, resource 0..4, n, prefer = patch\|hunt)` | `mWantedGatherers` (food: n land gatherers plus the boats fishing); AssignGatherers, Rebalance, the finders, SendToGather; `hunt` puts all n food gatherers on the game near home first | done; bad_argument |
+| claim / release | `EECPNextClaim(p, site)`, `EECPNextRelease(p, site)` | `EECPResourceCenter::SetActive` | done (n=0 when it already was); bad_argument |
+| claim_range | `EECPNextClaimRange(p, tiles 25..45)` | the per-player `mClaimRange` (`EECPClaimRange` returns it for the next engine; ClaimExpand does nothing) | done; bad_argument |
+| build | `EECPNextBuild(p, type, near = town\|site\|tile, a1, a2)` | the site is found at order time: town = `FindSite` (the classic placement per class: shore, centre, tower, production site), site = the rings 2..5 round its resource (a settlement, as EECPRMPatchSite) or 2..7 (anything else), tile = the rings 0..6; then `QueueBuildingAt` and the build runner | queued (afford=0/1 in the trace); no_site, not_in_epoch, unknown_class, bad_argument (a unit or a wall) |
+| fish | `EECPNextFish(p, boats, docks)` | a dock (build near town) while fewer stand or are queued, then `RequestUnits(fishing boat)` up to the count | queued, done; no_producer (no dock built yet), the dock's refusal |
+| train | `EECPNextTrain(p, type, n, town = 0)` | `RequestUnits` and the production runner (`StartProduction`: the least busy producer) | queued (afford in the trace); no_producer, not_in_epoch, unknown_class, bad_argument (a building, n out of 1..100) |
+| reserve | `EECPNextReserve(p, f, w, s, g, i)` | `EECPNextCanAfford`: the plain `EEPlayer::CanAfford`, then nothing but the epoch advance may spend below the reserve | done; bad_argument |
+| research | `EECPNextResearch(p, tech)` | `ResearchManager::Research` into mEpochIDs; TryResearch starts it when affordable | queued; no_producer, busy (researched or queued), not_in_epoch, bad_argument (an epoch or a unit), unknown_class |
+| advance | `EECPNextAdvance(p)` | only when the SOL is met and the cost is paid: DropObsoleteRequests, `Research(epoch)`, TryResearch at the town centre | queued; requirements, busy, cannot_afford, no_producer |
+| defend | `EECPNextDefend(p, x, y, n)` (x = y = -1: the town centre) | `CreateGroupFromStrategy`: a defence task at the tile (as CreateDefendGroup), "already defined" requirements of the soldiers there are, up to n | done (n = the units in the group); no_units, bad_argument |
+| attack | `EECPNextAttack(p, player, n)` | `CreateGroupFromStrategy` with a task naming the player (as CombatManager::Update's attack), up to n soldiers | done; no_units, bad_argument |
+
+Not built yet: `upgrade(centre)` (the garrison and fortress choices simply never run), `scout`, `group(units,
+task)` with a mix, `raid`, `retreat`, walls.
+
+**The view** (`EECPNextView`, snake_case fields as the Lua table will have them; resources 0..4 = food, wood,
+stone, gold, iron):
+- `player`, `time`, `epoch`, `epoch_start`, `last_epoch`, `advancing`;
+- `stock[5]`, `income[5]` (gathered in the last 60 steps), `reserve[5]`;
+- `gatherers[5]` (land), `wanted[5]`, `idle`, `citizens`, `boats`, `population`, `population_cap`;
+- `town_x`, `town_y`, `claim_range`;
+- `sites[]`: `index`, `resource`, `units`, `amount`, `room` (units x the mining limit less the workers),
+  `workers`, `x`, `y`, `distance`, `claimed`, `has_drop`, `has_tower`, `danger` (seen enemy strength within 12
+  tiles, +1 in a danger zone), `patch`;
+- `buildings[]`: `type`, `finished`, `unfinished`, `queued` (build queues), `busy`, `queue` (production entries);
+- `soldiers[]` (`type`, `count`, `strength`), `army_count`, `army_strength` (hit points x attack);
+- `threats[]` (by player: `count`, `strength`, nearest `x`, `y`, `distance`) within the claim range, and
+  `threat_strength`;
+- `enemies[]`: `player`, `epoch`, `seen_army`, `seen_strength`, `last_seen`, `town_x`, `town_y`;
+- `next_epoch_cost[5]`, `sol_missing`;
+- `costs[]`: every class the player can make now: `type`, `cost[5]`, `building`, `military`, `producer`,
+  `producers`, `requested`, `in_production`, `counts_toward_epoch`;
+- `events[]` since the last step: `unit_lost`, `production_lost` (the classic re-requested it), `advance_lost`,
+  `no_site` (a queued building found no site when its builder was free: dropped), `group_wants` (a group asked for a
+  unit that is not there; nothing is trained);
+- `groups`.
+
+Fog: other players' units count only while their tile `IsSeenBy` the player (the reveal cheat sees all); the view
+never reads EECPArmyThreat or EECPIntelligence. Every 30 s a `next.view` line and every 60 s a `next.sites` line
+(the claimed sites) go to the trace.
+
+**Classic-only gates** (each `!EECPNextEngine(player)`; the classic path is unchanged):
+- EEComputerPlayer: `CanAfford` (the next engine takes `EECPNextCanAfford`), the deathmatch start-up's
+  CheckBuildingCounts and BuildUp;
+- EECPResourceManager: `UpdateWantedGatherers` (so the demand split, ActivateNeeded, SettlePatches, GuardSites and
+  the split's boat requests), AssignGatherers' two `EECPRMRequestBoats`, `BuildSettlementFor`; the hunt6 test is the
+  `hunt` preference instead;
+- EECPBuildManager: QueueBuilding's two vetoes (no Prehistoric houses, early_trainers); StartBuilding's
+  ClaimExpand: the next engine drops the request and sends `no_site`;
+- EECPUnitManager: the automatic citizen request; RequestUnits' cheapest-producer queue (traced `train.noproducer`);
+  UnitLost's re-requests and epoch rescheduling (events instead);
+- EECPResearchManager: ChooseResearch on its timer; TryResearch's producer queue;
+- EECPPersonnel: `RequestProduction` (a group trains nothing; `group_wants`);
+- EECPAttackCommander: the Prehistoric and Stone peace veto;
+- EECPCombatManager: `NoteThreat`'s groups;
+- EECPTrace: `EECPClaimRange` / `EECPClaimExpand` (the per-player `mClaimRange`).
+
+**State.** `EEComputerPlayer::mNextState` (`EECPNextState`, created on the first next-engine tick): the claim range,
+the reserve, the food preference, the epoch start, the income ring, the scouting per player, the events, the test
+opening's memory. It is a member, not a static array, but not in the save yet (S2 saves it with the strategy's
+memory).
+
+**Gates** (EE-SIM, Small, Medium, 2 AIs, no cheats, balanced; `tools/sim_bench.py`):
+- classic unchanged: seeds 2-5, 1800 game s, before (main `593314d`, before S0 and S2) and after (S1 merged with
+  them); `ai_trace.py compare` on the `.trace.txt` files (every EE-AI line, the sim hash lines included) after
+  dropping S0's ` engine=classic` from the start lines: identical (1842, 1822, 1746 and 1807 lines);
+- next: `--engine next,classic --repeat 2`, 3600 game s, seeds 2 and 3: the two runs of each seed print identical
+  traces (4432 and 4225 lines). The test opening (p2) reached the Stone Age by 19.5 and 21.5 minutes and the Copper
+  Age by 43.0 and 53.0 (the classic p3: Stone by 25.0 and 27.5, no Copper within the hour). Times are the first
+  30-second stats line in the epoch.
+
+**Known gaps for S3** (what the boom script will still need):
+- `defend` and `attack` form their group (the commander keeps it) but report 0 units placed at creation: whether the
+  "already defined" requirements fill from the free soldiers later is not verified; a `group(units, task)` that names
+  the units is the robust form;
+- the Stone Age needs SOL (2 at its start in the runs): the test meets it by building the cheapest building that counts
+  and is not built yet; the view could name the qualifying classes directly;
+- `upgrade(centre)`, `scout` (no exploration runs for the next engine, so `enemies` are only what the town sees),
+  walls, the farm preference of `gather`, island ferries as an order;
+- site indexes are valid for one step only (the centres are re-sorted when new ones form);
+- the state is not saved (S2's memory in the save);
+- the claim's first activations still come from the shared start-up (Regroup); the strategy may release them;
+- the classic bookkeeping still runs inside the executors: the mNeeds ledger (AddCosts/RemoveCosts) and the
+  EnableManagers flags, which the next engine never sets (its improvements stay off).
+
 ## 3. The strategy layer (Lua)
 
 **Runtime: Lua 5.4, vendored** (MIT) under `src/ThirdParty/lua`, built as plain C units for Windows, macOS and Linux

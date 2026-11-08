@@ -1560,3 +1560,28 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   queued building. A farm is still worked. A build without shift keeps the smart task. Computer players never take
   the smart task (`IsHuman`) and never send these messages, so the AI is unchanged. The flag is not saved: after a
   load the citizen takes the smart task as before.
+
+## The next computer player's tactics layer (S1, docs/AI_LUA_PLAN.md §2.1, 2026-11-08)
+
+- **One switch, many gates.** Every classic-only decision asks `EECPNextEngine(player)`; with the switch off each gate
+  is a short-circuited test with no side effect, so a classic game's EE-AI trace (sim hash lines included) is
+  byte-identical to the one before the change. Compare traces, not results: `ai_trace.py compare`.
+- **CanAfford is called from inside the executors.** `EEComplexUnit::QueueResearch`, `EEPlayer::CanProduce` (the
+  build runner's `CanProduceUnitType`) and TryResearch all reach `EEComputerPlayer::CanAfford`, so its single branch
+  to `EECPNextCanAfford` puts the strategy's reserve on every spend; the epoch advance is exempt.
+- **The view must not depend on the trace.** The classic income hook (`EECPTraceIncome`) only counts while the
+  trace is on; the next engine keeps its own income ring in `EECPNextState` (fed by `AddResource`), so a game with and
+  without `EE_AI_TRACE` takes the same orders. Order trace lines are formatted only when the trace is on.
+- **A queued building can be dropped silently.** `StartBuilding` with a tile calls `EEMakeBuilding` and counts the
+  request done even when that fails; `build()` finds its site at order time (and reports `no_site` there), so a site
+  taken in the meantime shows only as a building count that did not rise.
+- **The build runner stops at the first unaffordable request of an epoch** (`CanProduceUnitType` fails: the walk
+  goes on with the next epoch's queue), so the order of builds matters while the strategy saves.
+- **Drop-site distance.** A settlement placed in the rings round a patch (up to kEECPPatchDropRange + 2) can stand
+  further from the patch than kEECPPatchDropRange measured to its centre: the view's `has_drop` uses the placement's
+  reach, or a strategy builds a second settlement at the same patch.
+- **EE_AI_EXP takes sets from player 1**, the idle human: a per-seat experiment for p2 alone is `-/x/-` (`x/-`
+  gives it to p1 and p3). The next engine itself is chosen by S0's `--engine` (seat 1 = p2), not by an experiment.
+- **The Stone Age's SOL is not zero.** dbtechtree.yaml's `mRequiredSOL` is 0 on every epoch row, yet the next epoch
+  can report SOL missing in the Stone Age (the classic engine meets it through ResearchCheapest): a strategy that
+  only saves the cost never advances. The view's `sol_missing` and the costs' `counts_toward_epoch` are there for it.

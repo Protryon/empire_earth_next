@@ -44,6 +44,7 @@
 #include "ee/EECPCombatStrategy.h"
 #include "ee/EECPAttackCommander.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPNext.h"
 #include "ee/EETechTreeTechID.h"
 
 extern long& gNumPlayers;                    // 0x530e0c (EECPAttackSubGroupUnit.cpp declares it too) (provisional name)
@@ -126,8 +127,8 @@ bool EECPAttackCommander::TakeUnit(EEComplexUnit* inUnit)
 static bool EECPACPrehistoricPeace(EEComputerPlayer* inPlayer, EECPAGTask& inTask)
 {
     // (and military.stone_attacks false, docs/AI_RESEARCH.md §8.29: through the Stone Age as well)
-    if (inPlayer->mTechnologies == NULL || inTask.mMode == kAGModeDefense)
-        return false;
+    if (inPlayer->mTechnologies == NULL || inTask.mMode == kAGModeDefense || EECPNextEngine(inPlayer))
+        return false;   // (the next engine's strategy decides when to attack)
     long theEpoch = inPlayer->mTechnologies->mCurrentEpoch;
     bool thePeace = theEpoch <= kTechEpochPrehistoric ? EECPPrehistoricPeaceOn(inPlayer)
         : theEpoch == kTechEpochStone && EECPStonePeaceOn(inPlayer);

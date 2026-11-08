@@ -95,10 +95,4 @@ long EECPEngineResolve(unsigned long inChoice, unsigned long inSeed, unsigned lo
     return inChoice == kEECPEngineNext ? kEECPEngineNext : kEECPEngineClassic;
 }
 
-// S0: the stub. The next engine makes no decisions yet: no gathering assignments, building, training, research or
-// attacks (the classic managers do not run for it); the units' own reflexes (the unit goals, auto attack) still
-// run. Only the 30-second stats line of the trace, so a run shows the idle town.
-void EECPNextUpdate(EEComputerPlayer* inPlayer, unsigned long inTime)
-{
-    EECPTraceStats(inPlayer, inTime);
-}
+// (EECPNextUpdate, the next engine's tick, is in EECPNext.cpp: docs/AI_LUA_PLAN.md §2.1)

@@ -63,6 +63,7 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPNext.h"
 
 const UString EECPResourceManager::sData("EECPResourceManager-Data");
 // SYNTHETIC: EXE 0x48e702   (wrapper)
@@ -327,6 +328,7 @@ void EECPResourceManager::AssignGatherers()
             theTownContinent = gContinentManager.GetContinentID(theTown.mX, theTown.mY);
     } else
         theAcross = false;
+    bool theNext = EECPNextEngine(thePlayer);   // the next engine: no boat requests (fish), the food order of gather
     this->RebalanceGatherers();   // new
 
     for (it = this->mGatherers[0].begin(); it != this->mGatherers[0].end(); ++it) {
@@ -367,7 +369,7 @@ void EECPResourceManager::AssignGatherers()
             if (this->mWantedGatherers[theResource] <= this->mGatherers[theResource].size())
                 continue;
             unsigned long theWanted = this->mWantedGatherers[theResource] - this->mGatherers[theResource].size();
-            if (theResource == 2 && theWanted > 0 && EECPRMFishes(this) && theBoats.size() < 8
+            if (theResource == 2 && theWanted > 0 && !theNext && EECPRMFishes(this) && theBoats.size() < 8
                 && gPhysics->mGameTime >= this->mNextFishingBoatTime) {
                 EECPRMRequestBoats(this);
                 this->mNextFishingBoatTime = gPhysics->mGameTime + 30000;
@@ -379,10 +381,14 @@ void EECPResourceManager::AssignGatherers()
                 case 2: {
                     // the experiment "hunt6" (docs/AI_RESEARCH.md §8.29; the owner hunts with 6 beside the patches, the AI
                     // with 1-4): the game near home before the patches while fewer than kHuntFirst hunt
-                    if (EECPExperiment(thePlayer, "hunt6")) {
+                    // (the next engine's gather(food, n, hunt): all n hunt first)
+                    bool theHuntFirst = theNext ? EECPNextFoodPreference(thePlayer) == kNextPreferHunt
+                        : EECPExperiment(thePlayer, "hunt6");
+                    if (theHuntFirst) {
                         unsigned long theHunters = EECPRMHunters(this);
-                        if (theHunters < kHuntFirst) {
-                            unsigned long theMore = kHuntFirst - theHunters;
+                        unsigned long theFirst = theNext ? this->mWantedGatherers[2] : kHuntFirst;
+                        if (theHunters < theFirst) {
+                            unsigned long theMore = theFirst - theHunters;
                             if (theMore > theWanted)
                                 theMore = theWanted;
                             if (theMore > theIdle.size())
@@ -507,7 +513,7 @@ void EECPResourceManager::AssignGatherers()
                                             }
                                             if (theWanted > 0 && EECPRMFishes(this)) {
                                                 if (this->mWantedGatherers[theResource] - this->mGatherers[theResource].size() > theBoats.size()
-                                                    && theBoats.size() < 8 && gPhysics->mGameTime >= this->mNextFishingBoatTime) {
+                                                    && !theNext && theBoats.size() < 8 && gPhysics->mGameTime >= this->mNextFishingBoatTime) {
                                                     EECPRMRequestBoats(this);
                                                     this->mNextFishingBoatTime = gPhysics->mGameTime + 30000;
                                                 }
@@ -689,7 +695,9 @@ bool EECPResourceManager::BuildSettlementFor(EEComplexUnit* inUnit)
     EESelectedGroup* theGroup = thePlayer->mActiveGroup;
     if (theGroup != NULL && theGroup->GetNumUnits() > 0)
         theGroup->Clear();
-    if (thePlayer->mCanBuild && this->mSettlementsEnabled && thePlayer->CanProduceUnitType(kUnitTypeSettlement, 0x20, NULL)) {
+    // (the next engine's strategy builds its settlements: build(settlement, site))
+    if (thePlayer->mCanBuild && this->mSettlementsEnabled && !EECPNextEngine(thePlayer)
+        && thePlayer->CanProduceUnitType(kUnitTypeSettlement, 0x20, NULL)) {
         EEUnit* theResource = theGoal->mResource;
         EEUnit* theStorage = theGoal->mStorage;
         // the experiment "foodeco" (docs/AI_RESEARCH.md §8.27; the owner builds on the patch "so citizens move as little
@@ -2795,7 +2803,7 @@ void EECPResourceManager::Update(unsigned long inTime)
     if (!thePlayer->mCanGather)
         return;
     if (inTime >= this->mNextWantedGatherersTime) {
-        if (this->mNextWantedGatherersTime > 0)
+        if (this->mNextWantedGatherersTime > 0 && !EECPNextEngine(thePlayer))   // the next engine: gather() sets them
             this->UpdateWantedGatherers();
         this->mNextWantedGatherersTime = inTime + 5000;
     }

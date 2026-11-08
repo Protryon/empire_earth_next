@@ -60,6 +60,7 @@
 #include "ee/EECPIntelligence.h"
 #include "ee/EEUnitCollector.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPNext.h"
 
 // the class key (0x4e5d00, guard 0x4e5cf8 bit 1)
 const UString EECPBuildManager::sData("EECPBuildManager-Data");
@@ -289,6 +290,7 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
     long theID = theClass != NULL ? theClass->mTechnology : 100000;
     long theIndex = EECPBMQueueIndex(theID);
     bool theResult = false;
+    bool theNoSite = false;   // the next engine: no site, the request is dropped
     theTile.mX = inRequest.second.mX;
     theTile.mY = inRequest.second.mY;
     bool theHasTile = theTile.mX != 0 && theTile.mY != 0;
@@ -310,7 +312,12 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
                 EE_CP_TRACE(this->mPlayer, "build.nosite", "cls=%ld", theClassID);
                 // economy.forage_patches: no room for a farm, granary or settlement: claim more land (the towers follow
                 // the new worked sites, EECPRMGuardSites)
-                if (EECPClaimRangeOn(this->mPlayer)
+                if (EECPNextEngine(this->mPlayer)) {
+                    // the next engine: the request is dropped and the strategy told (it decides where else, or to
+                    // claim more land)
+                    EECPNextEventAdd(this->mPlayer, kNextEventNoSite, theClassID, 1);
+                    theNoSite = true;
+                } else if (EECPClaimRangeOn(this->mPlayer)
                     && (theClassID == kUnitTypeFarm || theClassID == kUnitTypeGranary || theClassID == kUnitTypeSettlement))
                     EECPClaimExpand(this->mPlayer);
             }
@@ -354,7 +361,7 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
             }
         }
     }
-    return theResult;
+    return theResult || theNoSite;
 }
 
 // AssignBuilders's two worker tests (find_if 0x6bdbe/0x6be1f; their operator() 0x6bde5/0x6be46 follow among the COMDATs)
@@ -1567,14 +1574,16 @@ void EECPBuildManager::QueueBuilding(unsigned long inUnitClass, bool inAppend, b
 {
     // economy.forage_patches: no houses in the Prehistoric (the owner: "idk why the ai builds houses so early"; four in
     // the first four minutes of a playtest): the wood goes to the settlements and the Stone Age
-    if (inUnitClass == kUnitTypeHouse && EECPClaimRangeOn(this->mPlayer) && this->mPlayer->mTechnologies != NULL
+    // (both vetoes are classic only: the next engine's strategy decides what to build)
+    bool theClassic = !EECPNextEngine(this->mPlayer);
+    if (theClassic && inUnitClass == kUnitTypeHouse && EECPClaimRangeOn(this->mPlayer) && this->mPlayer->mTechnologies != NULL
         && this->mPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric)
         return;
     // economy.early_trainers (docs/AI_RESEARCH.md §8.29; the owner: "the AI builds too much. no more than 2 barracks
     // and 2 archery ranges pre-copper"; dbcpbehavior wants 7 and 6): before the Copper Age at most that many of each,
     // built or building
     long theTrainers = EECPEarlyTrainers(this->mPlayer);
-    if (theTrainers > 0 && this->mPlayer->mTechnologies != NULL
+    if (theClassic && theTrainers > 0 && this->mPlayer->mTechnologies != NULL
         && this->mPlayer->mTechnologies->mCurrentEpoch < kTechEpochCopper && inUnitClass < EEUnitClassCount()
         && gUnitClassTable[inUnitClass] != NULL) {
         long theType = gUnitClassTable[inUnitClass]->mUnitType;
