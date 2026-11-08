@@ -165,6 +165,7 @@ def link_exe(out, objs, extra_libs, name="EE-AOC", entry=None):
     rest = [m for m in units.TARGET_MODULES["exe"] if m not in ("exe", "exeimg")]
     first = [objs(j[1], j[2]) for m in rest for j in units.jobs_for(m)] + [objs(j[1], j[2]) for j in units.lib_jobs(rest)]
     game += [objs(ROOT / "src" / rel, MODULE_FLAGS["exe"]) for rel in units.EXTRA_UNITS.get("exe", [])]
+    game += [objs(j[1], j[2]) for j in units.lib_jobs(["exe"])]   # the game's own libraries (Lua)
     (lib / "exeimg.rsp").write_text("".join(f'"{o}"\n' for o in img))
     for cmd in ([str(LLVM_LIB), "/nologo", "/out:exeimg.lib", "@exeimg.rsp"],):
         code, log = run(cmd, lib)
