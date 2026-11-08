@@ -440,6 +440,7 @@ public:
     bool mRegroupPending;
     bool mAttackStarted;
     char _gapF56[0xf58 - 0xf56];
+    struct EECPNextState* mNextState;       // new: the next engine's state (ee/EECPNext.h; NULL for the classic engine)
 };
 
 // Computer player difficulty (EEComputerPlayer::mDifficulty, from the game options).
