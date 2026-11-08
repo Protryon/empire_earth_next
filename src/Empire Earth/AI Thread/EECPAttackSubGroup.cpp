@@ -1250,15 +1250,26 @@ bool EECPAttackSubGroup::TakeRequestedUnits()
     float theMax = (float)this->mScanRange;
     while (!this->mRequest->IsEmpty()) {
         EEComplexUnit* theUnit = this->mRequest->mUnits.back().mUnit;
+        // Fix: PopSlot releases the request's reference, the last one of a unit that died waiting in the request; the
+        // original then read it and gave it to a sub group unit: a freed pool slot, soon another unit (the sub group
+        // held a projectile, CanAttack read gU4E8708 at -1, and the slot was freed twice when the game ended; an ASan
+        // use-after-free with EE_UNIT_POOL=0, 2026-11-07). Held across PopSlot, and a dead unit is not taken.
+        if (theUnit != NULL)
+            theUnit->Reference();
         this->mRequest->PopSlot();
         if (!theUnit)
             continue;
+        if (!theUnit->mIsValid || theUnit->mHitPoints <= 0) {
+            theUnit->Dereference();
+            continue;
+        }
         float theValue = theFile->GetScanRange(theUnit->GetLineOfSight());
         if (theValue > theMax)
             theMax = theValue;
         EECPAttackSubGroupUnit* theSubGroupUnit = EECPCreateSubGroupUnit(theUnit, this, 0);
         theSubGroupUnit->Virtual48();
         this->mUnits.push_back(theSubGroupUnit);
+        theUnit->Dereference();
     }
     this->mScanRange = (long)theMax;   // the largest scan range found (was never stored)
     this->RankUnits();

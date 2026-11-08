@@ -446,8 +446,12 @@ void EECPExplorationManager::Update(unsigned long inTime)
                         }
                     }
                     this->mUnitIDs.push_back(theNew->GetUnitID());
+                    // Fix: held across PopSlot, which may release a dead unit's last reference (the original then wrote
+                    // its AI state; EECPAttackSubGroup::TakeRequestedUnits)
+                    theNew->Reference();
                     theRequest->PopSlot();
                     theNew->SetAIState(0x46cd1);
+                    theNew->Dereference();
                     this->mPlayer->mCombatManager->mPersonnel->ReleaseRequest(theRequest->mID);
                     theRequest->Dereference();
                     this->mRequests.erase(this->mRequests.begin() + j);

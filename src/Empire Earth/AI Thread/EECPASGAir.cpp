@@ -222,15 +222,24 @@ bool EECPASGAir::TakeRequestedUnits()
     float theValue = this->mScanRange;
     while (!this->mRequest->IsEmpty()) {
         EEComplexUnit* theUnit = this->mRequest->mUnits.back().mUnit;
+        // Fix: held across PopSlot, which releases what may be a dead unit's last reference, and a dead unit is not
+        // taken (EECPAttackSubGroup::TakeRequestedUnits)
+        if (theUnit != NULL)
+            theUnit->Reference();
         this->mRequest->PopSlot();
         if (theUnit == NULL)
             continue;
+        if (!theUnit->mIsValid || theUnit->mHitPoints <= 0) {
+            theUnit->Dereference();
+            continue;
+        }
         float theUnitValue = theFile->GetScanRange(theUnit->GetLineOfSight());
         if (theUnitValue > theValue)
             theValue = theUnitValue;
         EECPAttackSubGroupUnit* theSubUnit = EECPCreateSubGroupUnit(theUnit, this, 0);
         theSubUnit->Virtual48();
         this->mUnits.push_back(theSubUnit);
+        theUnit->Dereference();
     }
     this->mScanRange = theValue;
     this->RankUnits();
