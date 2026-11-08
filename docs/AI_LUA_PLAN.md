@@ -201,8 +201,8 @@ never reads EECPArmyThreat or EECPIntelligence. Every 30 s a `next.view` line an
 
 **State.** `EEComputerPlayer::mNextState` (`EECPNextState`, created on the first next-engine tick): the claim range,
 the reserve, the food preference, the epoch start, the income ring, the scouting per player, the events, the test
-opening's memory. It is a member, not a static array, but not in the save yet (S2 saves it with the strategy's
-memory).
+opening's memory. It is a member, not a static array; from save version 0.252 it is in the save with the
+strategy's memory (§3.2).
 
 **Gates** (EE-SIM, Small, Medium, 2 AIs, no cheats, balanced; `tools/sim_bench.py`):
 - classic unchanged: seeds 2-5, 1800 game s, before (main `593314d`, before S0 and S2) and after (S1 merged with
@@ -222,7 +222,7 @@ memory).
 - `upgrade(centre)`, `scout` (no exploration runs for the next engine, so `enemies` are only what the town sees),
   walls, the farm preference of `gather`, island ferries as an order;
 - site indexes are valid for one step only (the centres are re-sorted when new ones form);
-- the state is not saved (S2's memory in the save);
+- (done in S2, §3.2: the state and the script's memory are in the save);
 - the claim's first activations still come from the shared start-up (Regroup); the strategy may release them;
 - the classic bookkeeping still runs inside the executors: the mNeeds ledger (AddCosts/RemoveCosts) and the
   EnableManagers flags, which the next engine never sets (its improvements stay off).
@@ -378,15 +378,137 @@ a destructor while Lua can raise. The value tree is pushed inside the protected 
 - floats refused in the orders and the memory;
 - syntax, runtime and missing-module errors.
 
-**Open.**
-- `-ffp-contract=off` for both C++ builds (RUST_PLAN §2.1) before the Windows/macOS trace gate: today's float paths
-  in the Lua VM are single operations, but nothing stops clang fusing them on arm64.
-- The game side is not wired yet:
-  - a reader over `Data\ai\` from the data root;
-  - `print` into the AI trace (`EE_CP_TRACE`);
-  - the memory in the save;
-  - reload when the files change.
-- The S2 gate (the S1 build order in Lua, identical traces) waits for S1.
+**Open** (after §3.2): reload when the files change (the developer loop: `Reload` exists, nothing calls it yet); the
+Windows/macOS trace gate.
+
+### 3.2 S2 gate as built (2026-11-08)
+
+Code: `src/Empire Earth/AI Thread/EECPNextLua.cpp` (the glue: view to table, orders to verbs, the state's save),
+`ai/test_opening.lua` and `ai/lib/view.lua` (the scripts), `include/ee/EECPNext.h` (`EECPNextStrategyStep`, the
+state's new fields, the save functions).
+
+**Per computer player.** `EECPNextState::mLua`, created at the next engine's first strategy step:
+- seed `EECPLuaSeed(gUserInterface->mRandomSeed, player id)` (the seed every peer shares; EE-SIM pins it with
+  `--seed`, through `gPlatSimSeed`);
+- the reader: `EE_AI_SCRIPTS` first (TEST ONLY), then `Data\ai\` from the data root through `PlatFOpen`
+  (`EECPLuaReadFromFolder`);
+- `print` -> a `next.print` trace line (manager `next`; line breaks become ` | `);
+- `mCheckMemory` on: a step that leaves something unsaveable in the memory fails like an error;
+- the script: the personality's `next_script` (aipersonalities.yaml, default `test_opening`). TEST ONLY:
+  `EE_AI_NEXT_SCRIPT` names it per player (a comma list by player id from player 1, as `EE_AI_ENGINE`); `c++` there
+  runs the C++ test opening instead (the gate's reference). A `next.script name=...` line records the choice.
+- A new game calls `init(view, memory)` (optional) and then `step(view, memory)` in the first tick; every later tick
+  calls `step` once. The orders of both are carried out in order.
+
+**The script contract.** `require("x")` returns a table with `step` (and optionally `init`); each returns an array of
+orders. The view (a fresh table each step; integers, strings, booleans; arrays 1-based; per-resource values are maps
+keyed `food`, `wood`, `stone`, `gold`, `iron`):
+
+| Field | What |
+|---|---|
+| `player`, `time` (game ms), `epoch` (0 Prehistoric), `epoch_start` (ms), `last_epoch` | |
+| `advancing` | boolean: the epoch advance is queued or under way |
+| `stock`, `income` (last 60 s), `reserve`, `gatherers` (land), `wanted`, `next_epoch_cost` | per-resource maps |
+| `idle`, `citizens`, `boats`, `population`, `population_cap` | |
+| `town_x`, `town_y` (-1: no town centre), `claim_range`, `claim_range_min`, `claim_range_max`, `claim_range_step` | tiles (25, 45, 5 today) |
+| `sites[]` | `index` (its place in `sites`, what `claim`/`release`/`build near="site"` take; valid this step only), `resource` (name; nil when nothing is left), `units`, `amount`, `room`, `workers`, `x`, `y`, `distance`, `danger`; booleans `claimed`, `has_drop`, `has_tower`, `patch` |
+| `buildings[]` | `type`, `finished`, `unfinished`, `queued`, `busy`, `queue` |
+| `soldiers[]` | `type`, `count`, `strength`; and `army_count`, `army_strength` |
+| `threats[]` | `player`, `count`, `strength`, `x`, `y`, `distance`; and `threat_strength` |
+| `enemies[]` | `player`, `epoch`, `seen_army`, `seen_strength`, `last_seen` (ms, 0 never), `town_x`, `town_y` |
+| `sol_missing` | the next epoch's SOL still missing |
+| `costs[]` | every class the player can make now: `type`, `cost` (per-resource map), `producer` (nil: none), `producers`, `requested`, `in_production`; booleans `building`, `military`, `counts_toward_epoch` |
+| `events[]` | `kind` (`unit_lost`, `production_lost`, `advance_lost`, `no_site`, `group_wants`), `type`, `count` |
+| `groups` | the attack commander's groups |
+| `results[]` | the previous step's orders, index for index: `verb`, `code` (`done`, `queued`, `refused`), `reason` (`none`, `no_site`, `no_producer`, `cannot_afford`, `not_in_epoch`, `unknown_class`, `bad_argument`, `no_units`, `requirements`, `busy`), `count` |
+
+**Classes and techs are named by their data ids:** dbobjects' `id` (`citizen`, `b_barracks`, `b_settlement`,
+`b_guard_tower_paleo`, `inf01_clubman`, `s02_fishing_boat_stone`) and dbtechtree's `id` for `research`. The id is
+the row's identity in the text tables (DATA_FORMATS §8.6), so a script keeps working when rows move, and a mod
+that adds a row gives its scripts a name for it. A data tree without the tables' text (the binary tree) has no ids:
+every class is then `dbobjects_<row>` (a tech `dbtechtree_<id>`), the form tools/eedata gives a row without a name.
+`EECPNextClassByName` / `EECPNextClassName` (EECPNextLua.cpp) do the lookups, from the ids EEDbFindFile kept when
+it compiled the tables. `ai/lib/view.lua` has the helpers: `resources`, `cost(view, type)`, `buildings(view, type)`,
+`total(entry)`, `sum(amounts)`.
+
+**The orders** (maps; a missing optional field takes the default shown; an unknown key, a wrong type, an unknown
+name or verb is refused `bad_argument` with a `next.order verb=... (why) result=refused` trace line):
+
+| Order | Verb |
+|---|---|
+| `{verb="gather", resource="food", n=12, prefer="patch"}` (prefer `patch` or `hunt`) | `EECPNextGather` |
+| `{verb="claim", site=3}`, `{verb="release", site=3}` (a `sites[].index`) | `EECPNextClaim` / `Release` |
+| `{verb="claim_range", range=30}` | `EECPNextClaimRange` |
+| `{verb="build", type="b_barracks", near="town"}`; `near="site", site=3`; `near="tile", x=, y=` | `EECPNextBuild` |
+| `{verb="fish", boats=6, docks=1}` | `EECPNextFish` |
+| `{verb="train", type="citizen", n=2, town=0}` | `EECPNextTrain` |
+| `{verb="reserve", food=, wood=, stone=, gold=, iron=}` (each 0 when missing) | `EECPNextReserve` |
+| `{verb="research", tech="<dbtechtree id>"}` | `EECPNextResearch` |
+| `{verb="advance"}` | `EECPNextAdvance` |
+| `{verb="defend", n=4, x=-1, y=-1}` (-1: the town centre) | `EECPNextDefend` |
+| `{verb="attack", player=3, n=4}` | `EECPNextAttack` |
+
+At most 200 orders a step (the rest are dropped, a `next.orders dropped=` line). No orders: return `{}` or nil.
+
+**Memory.** `memory` is the same table every step: integers, strings, booleans and nested tables (no floats; §3.1).
+The save keeps it, with the RNG (below).
+
+**Errors.** A load, init or step that fails (syntax, runtime, budget, out of memory, a bad value, orders that are not
+an array) issues no orders for that step; the tactics' runners and reflexes go on. It writes
+`next.error in=step status=runtime msg=ai/x.lua:12: ...` (status with `_` for spaces: `budget_exceeded`) to the AI
+trace and the game log; EE-SIM also prints `SIM next.error p2 t=... ...` to stderr, and sim_bench counts those per
+run (`lua_errors` in results.csv, "N script errors" on the run's line). A script that does not load stays off for
+the game (one error line).
+
+**Where the scripts live.** The repository's `ai/` (new code, not retail data). `tools/open_data.py build` copies it
+into the tree's `Data/ai/`; `open_data.py ai TREE` refreshes only `Data/ai` (seconds) and records the scripts' hash as
+`ai` in `open_data.json`; the harness (`exe_boot.data_tree`) refreshes its own trees when that hash differs (the
+converters' hash leaves the scripts out, so a script change never rebuilds the 4-minute tree); `tools/sim.py` warns.
+`open_data.py pack --part db` ships `Data/ai` with `Data/db`. TEST ONLY: `EE_AI_SCRIPTS=<absolute dir>` (the dir
+stands for `Data\ai`) is read first; `tools/sim.py --ai-scripts DIR` and `tools/sim_bench.py --ai-scripts DIR` set
+it (made absolute: the game runs in its data root).
+
+**The save** (version 0.252, `kSaveGameMinorVersion`): after each computer player's engine byte a `u32` length and
+the bytes of `EECPNextSaveState` (0: no next state). Saved: the claim range, the reserve, the food preference and
+the land food gatherers, the epoch and its start, the repair timer, the income totals and the 60-step ring, the
+scouting per player id (seen army and strength, last seen, the town seen), the pending events, the C++ test opening's
+memory, the script's name, whether init ran, whether the script failed, the last step's results (the next view's
+`results`) and the Lua memory bytes (`SaveMemory`: the memory table and the RNG state). Not saved: the Lua state
+itself (a loaded game runs the modules from scratch, `LoadPersonality` then `RestoreMemory`, never `init`), the
+class-name tables (rebuilt), the view (built each step). The classic managers' own state (resource centres, queues,
+groups) is the original's save as before. A `next.save bytes= memory= hash=` trace line (FNV-1a of the memory bytes)
+records each save.
+
+**fp contraction.** `/clang:-ffp-contract=off` in every module's flags (tools/ee.py MODULE_FLAGS: all of the Windows
+build) and `-ffp-contract=off` in tools/xbuild.py (the POSIX game, the platform tests, luatest). On Windows x86_64 it changes nothing: the classic engine's traces
+of seeds 2-5 (1800 game s, Medium, `ai_trace.py compare`) are identical before and after the flag (1842, 1822, 1746
+and 1807 lines), as expected, since the x86_64 baseline has no FMA instruction to fuse into. It matters on arm64,
+where clang fuses `a * b + c` by default; the Windows/macOS trace comparison still has to be run on the Mac.
+
+**Gate** (EE-SIM, Small, Medium, 2 AIs, no cheats, balanced; `--engine next,classic`, 3600 game s, seeds 2 and 3,
+`sim_bench.py --env-vary EE_AI_NEXT_SCRIPT=c++,test_opening --repeat 2 --ai-scripts ai`):
+- **Lua = C++:** the trace of the Lua opening equals the C++ opening's after dropping the `next.script` lines (the only
+  lines that name the script): 4432 and 4225 lines identical, with 487 and 334 `next.order` lines (every order, every
+  result). p2 asked for the Stone Age at 18.4 and 20.0 minutes and the Copper Age at 41.7 and 51.9 (the advance
+  orders).
+- **Lua twice:** the two runs of each seed are identical (4433 and 4226 lines; the C++ ones too).
+- **Save:** EE-SIM cannot load a game, so `EE_AI_SAVE_CHECK=1` with `--autosave-ms 600000` (seed 2): both autosaves
+  (game 25 and 50 min) decode to a state that re-encodes to the same bytes, the restored script's next step gives the
+  same orders and the same memory as the live one (`next.savecheck state=same restored=1`, `step orders=same
+  memory=same hash=41919145/41919145`), and the run's trace (save lines dropped) equals the run without saves. The
+  save files are version 0.252 with the `EENS`/`EELM` blocks in the players chunk (`tools/harness/savefile.py`
+  parses them). A real load is a manual test: save a game with a Next seat, load it from the Load Game screen with
+  `EE_AI_TRACE=1`; the trace shows `next.load ... hash=H script=...` (H the `next.save` hash), then `next.script
+  name=... restored=1` at the first tick, and no `init`.
+- **Errors:** a script that raises, loops (the budget) or returns bad orders writes `next.error` (trace, game log,
+  `SIM next.error` on stderr) and the seat goes on with its reflexes; refused orders trace their reason.
+
+**Open after S2:**
+- the scripts are not in the multiplayer checksum (`gBinaryChecksum` covers the db, .tai and .cem files): peers with
+  different `Data/ai` would diverge silently;
+- the Windows/macOS trace gate (with `-ffp-contract=off` now on both);
+- reload on change (the developer loop) is not wired;
+- a real save-load-resume run of EE-SIM (it has no load path; the shadow check stands in).
 
 ## 4. The first scripts
 
