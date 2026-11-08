@@ -112,7 +112,7 @@ void WriteBuffer::AppendBool(bool value)
 void WriteBuffer::AppendShort(short value) { this->AppendBytes(&value,2); }
 // FUNCTION: WON 0x006a8300
 // Appends a 32-bit value
-void WriteBuffer::AppendLong(long value) { this->AppendBytes(&value,4); }
+void WriteBuffer::AppendLong(int32_t value) { this->AppendBytes(&value,4); }
 // FUNCTION: WON 0x006a8310
 // Appends a length as a 1, 2 or 4 byte field; appends nothing for any other size
 void WriteBuffer::AppendLength(unsigned long length,unsigned char size)
@@ -120,7 +120,7 @@ void WriteBuffer::AppendLength(unsigned long length,unsigned char size)
     switch(size) {
     case 1: this->AppendByte(static_cast<unsigned char>(length)); break;
     case 2: this->AppendShort(static_cast<short>(length)); break;
-    case 4: this->AppendLong(static_cast<long>(length)); break;
+    case 4: this->AppendLong(static_cast<int32_t>(length)); break;
     }
 }
 // FUNCTION: WON 0x006a8350
@@ -132,10 +132,13 @@ void WriteBuffer::AppendString(const std::string& text,unsigned char size)
 }
 // FUNCTION: WON 0x006a8390
 // Appends a wide string: a character-count field, then the raw 16-bit characters
+// (UTF-16 little-endian units, converted one by one: wchar_t is 4 bytes outside Windows)
 void WriteBuffer::AppendWString(const std::wstring& text,int size)
 {
-    this->AppendLength(text.length(),static_cast<unsigned char>(size));
-    this->AppendBytes(text.c_str(),text.length()*2);
+    std::string bytes;
+    WideAppendUtf16LE(bytes,text);
+    this->AppendLength(bytes.length()/2,static_cast<unsigned char>(size));
+    this->AppendBytes(bytes.data(),bytes.length());
 }
 // FUNCTION: WON 0x006a83d0
 // Appends a byte buffer with a length field; a NULL buffer writes only a zero length
@@ -163,7 +166,7 @@ void WriteBuffer::SetShort(unsigned long position,short value) { this->SetBytes(
 // Writes the length prefix in front of the data (0xffff + 32-bit for long 2-byte lengths); returns it as a byte buffer
 ConstSmartPtr<ByteBuffer> WriteBuffer::ToByteBuffer(bool release)
 {
-    unsigned long value=this->mLength;
+    uint32_t value=this->mLength; // the length prefix is 32-bit on the wire
     unsigned long length=this->mLength;
     char* data=this->mData;
     switch(this->mLengthFieldSize) {

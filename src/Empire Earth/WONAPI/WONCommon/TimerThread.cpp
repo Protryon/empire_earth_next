@@ -43,7 +43,7 @@ void TimerThread::PurgeOps()
 void TimerThread::AddTimerOp(AsyncOp* op,unsigned long timeout)
 {
     AutoCrit lock(this->mDataCrit);
-    unsigned long now=GetTickCount();
+    unsigned long now=WONTickCount();
     unsigned long untilWrap=0xffffffff-now;
     if(timeout>untilWrap) op->AddToTimerMap(this->mWrapAroundMap,timeout-untilWrap);
     else op->AddToTimerMap(this->mTimerMap,now+timeout);
@@ -61,7 +61,7 @@ void TimerThread::RemoveTimerOp(AsyncOp* op)
 void TimerThread::Pump()
 {
     AutoCrit lock(this->mDataCrit);
-    unsigned long now=GetTickCount();
+    unsigned long now=WONTickCount();
     AsyncOpTimeoutMap::iterator i;
     if(now<this->mLastTick) {
         for(i=this->mTimerMap.begin();i!=this->mTimerMap.end();++i) {
@@ -86,7 +86,7 @@ void TimerThread::Pump()
 unsigned long TimerThread::GetWaitTime()
 {
     AutoCrit lock(this->mDataCrit);
-    unsigned long waitTime=9-this->mLastTick;
+    unsigned long waitTime=(uint32_t)(9-this->mLastTick);
     if(!this->mTimerMap.empty()) {
         unsigned long deadline=this->mTimerMap.begin()->first;
         waitTime=deadline<=this->mLastTick ? 0 : deadline-this->mLastTick;
@@ -97,7 +97,7 @@ unsigned long TimerThread::GetWaitTime()
 // Thread loop: waits for the next deadline or a signal and pumps the timers until stopped
 void TimerThread::ThreadFunc()
 {
-    this->mLastTick=GetTickCount();
+    this->mLastTick=WONTickCount();
     for(;;) {
         this->mSignalEvent.WaitFor(this->GetWaitTime());
         if(this->mStopped) break;

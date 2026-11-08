@@ -15,6 +15,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONRoutingOpTypes.h"
 #include "ee/wonapi/WONStatus.h"
+#include "platform/PlatFile.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006bfb00
 // Creates the smart routing connection with the ignore file under the WON directory and the default chat commands
@@ -739,13 +740,15 @@ void SmartRoutingConnection::LoadIgnoreSet()
 {
     AutoCrit crit(this->mDataCrit);
     if(this->mIgnoreFilePath.empty()) return;
-    FILE* file=fopen(this->mIgnoreFilePath.c_str(),"rb");
+    FILE* file=PlatFOpen(this->mIgnoreFilePath.c_str(),"rb");
     if(file==NULL) return;
     std::wstring name;
     while(!feof(file)) {
-        wchar_t ch=0;
-        if(fread(&ch,sizeof(wchar_t),1,file)!=1) break;
-        if(ch!=0) name+=ch;
+        // UTF-16 little-endian units (wchar_t is 4 bytes outside Windows)
+        unsigned char unit[2];
+        if(fread(unit,1,2,file)!=2) break;
+        uint16_t ch=static_cast<uint16_t>(unit[0]|(unit[1]<<8));
+        if(ch!=0) WideAppendUtf16Unit(name,ch);
         else {
             this->mIgnoreSet.insert(name);
             name.erase();
@@ -759,13 +762,14 @@ void SmartRoutingConnection::SaveIgnoreSet()
 {
     AutoCrit crit(this->mDataCrit);
     if(this->mIgnoreFilePath.empty()) return;
-    FILE* file=fopen(this->mIgnoreFilePath.c_str(),"wb");
+    FILE* file=PlatFOpen(this->mIgnoreFilePath.c_str(),"wb");
     if(file==NULL) return;
     IgnoreSet::iterator i=this->mIgnoreSet.begin();
     while(i!=this->mIgnoreSet.end()) {
-        fwrite(i->c_str(),sizeof(wchar_t),i->length(),file);
-        wchar_t end=0;
-        fwrite(&end,sizeof(wchar_t),1,file);
+        std::string bytes; // UTF-16 little-endian units and a 16-bit NUL (wchar_t is 4 bytes outside Windows)
+        WideAppendUtf16LE(bytes,*i);
+        bytes.append(2,'\0');
+        fwrite(bytes.data(),1,bytes.length(),file);
         ++i;
     }
     fclose(file);

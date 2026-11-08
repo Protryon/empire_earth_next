@@ -57,9 +57,7 @@ Component* ComponentCursor::GetComponent(int& mouseX,int& mouseY)
 // 0x0070a7b0)
 bool ComponentCursor::IsNative() { return false; }
 }
-// FUNCTION: WON 0x007d0320
-// Destroys the Windows cursor, freeing the cursor handle if it owns it
-MSCursor::~MSCursor() { if(this->mDoDestroy) DestroyCursor(this->mNativeCursor); }
+// (MSCursor's destructor, 0x007d0320, went with the GDI backend: PlatCursor is in PlatNativeImage.cpp)
 
 // Compiler-generated and header-inline functions this unit emits:
 // TEMPLATE: WON 0x00726690

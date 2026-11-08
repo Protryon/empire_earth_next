@@ -14,7 +14,7 @@
 #include <time.h>
 #include <ctype.h>
 #include <stdlib.h>
-#include <sys/stat.h>
+#include "platform/PlatFile.h"
 using std::string;
 #include "ee/wonapi/WONLobbyGUI.h"
 using WONAPI::CriticalSection;
@@ -371,8 +371,16 @@ static time_t ParseInternetDateTime(const char* str)
 	timeStruct.tm_wday = 0;
 	timeStruct.tm_yday = 0;
 
-	// Offset result by timezone since value is in GMT.
-	return (mktime(&timeStruct) - _timezone);
+	// The value is in GMT: the original took mktime (standard local time) minus _timezone, i.e. timegm, which has
+	// no portable name: seconds since 1970 from the civil date (proleptic Gregorian)
+	long long y = timeStruct.tm_year + 1900 - (timeStruct.tm_mon < 2 ? 1 : 0);
+	long long era = (y >= 0 ? y : y - 399) / 400;
+	long long yoe = y - era * 400;
+	long long m = timeStruct.tm_mon + 1;
+	long long doy = (153 * (m > 2 ? m - 3 : m + 9) + 2) / 5 + timeStruct.tm_mday - 1;
+	long long doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+	long long days = era * 146097 + doe - 719468;
+	return static_cast<time_t>(days * 86400 + timeStruct.tm_hour * 3600 + timeStruct.tm_min * 60 + timeStruct.tm_sec);
 }
 
 
@@ -404,7 +412,7 @@ void HTTPGetOp::ReadProxyHostFile(bool force)
 
 	checked = true;
 
-	FILE *aFile = fopen(GetProxyHostFileName().c_str(),"r");
+	FILE *aFile = PlatFOpen(GetProxyHostFileName().c_str(),"r");
 	if(aFile==NULL)
 		return;
 
@@ -646,10 +654,10 @@ bool HTTPGetOp::SendRequest()
     else
         aRequest.AppendString("Connection: Keep-Alive\r\n",0);
     if (!this->mLocalPath.empty()) {
-        struct _stat aStat;
-        if (_stat(this->mLocalPath.c_str(),&aStat)==0) {
-            this->mLocalFileSize=aStat.st_size;
-            this->mLocalFileModifyTime=aStat.st_mtime;
+        WONFile aStat(this->mLocalPath);
+        if (aStat.Exists()) {
+            this->mLocalFileSize=aStat.GetSize();
+            this->mLocalFileModifyTime=aStat.GetModifyTime();
             if (this->mLocalFileSize>0) {
                 if (this->mDoRangeResume) {
                     if (!this->mEntityTag.empty())
@@ -657,7 +665,7 @@ bool HTTPGetOp::SendRequest()
                     else
                         aRequest.AppendString("If-Range: "+MakeInternetDateTime(this->mLocalFileModifyTime)+"\r\n",0);
                     aRequest.AppendString("Range: bytes=",0);
-                    _snprintf(aRangeOffset,10,"%d",this->mLocalFileSize);
+                    snprintf(aRangeOffset,10,"%d",static_cast<int>(this->mLocalFileSize));
                     aRequest.AppendString(aRangeOffset,0);
                     aRequest.AppendString("-\r\n",0);
                 }
@@ -1061,9 +1069,9 @@ bool HTTPGetOp::WriteProxyHostFile(const std::string &theHostAndPort)
 	HTTPGetOp::mStaticProxyHost = theHostAndPort;
 
 	if(theHostAndPort.empty())
-		return remove(GetProxyHostFileName().c_str())==0;
+		return PlatDeleteFile(GetProxyHostFileName().c_str())!=0;
 
-	FILE *aFile = fopen(GetProxyHostFileName().c_str(),"w");
+	FILE *aFile = PlatFOpen(GetProxyHostFileName().c_str(),"w");
 	if(aFile==NULL)
 		return false;
 

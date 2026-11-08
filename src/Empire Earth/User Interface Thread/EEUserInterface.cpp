@@ -1731,13 +1731,17 @@ void EEUserInterface::HandleEvent(const PlatInputEvent& inEvent)
     static bool sComposing;   // an input method composition is open (the edit box shows it)
     static float sMasterVolume = gSoundManager != NULL ? gSoundManager->GetMasterVolume() : 0.0f;
     static float sMusicVolume = gConductor != NULL ? gConductor->GetConductor().GetVolume() : 0.0f;
+    // while the lobby is shown it owns the event loop and passes these on (EELobbyForwardEvent)
     if (EELobbyIsShown() && inEvent.mType != PLAT_EVENT_MINIMIZED && inEvent.mType != PLAT_EVENT_RESTORED
-        && inEvent.mType != PLAT_EVENT_RESIZED)
+        && inEvent.mType != PLAT_EVENT_RESIZED && inEvent.mType != PLAT_EVENT_QUIT
+        && inEvent.mType != PLAT_EVENT_CLOSE)
         return;
     switch (inEvent.mType) {
     case PLAT_EVENT_QUIT:
     case PLAT_EVENT_CLOSE:   // WM_CLOSE / WM_DESTROY: PostQuitMessage to the UI thread
-        if (EEIsLobbyOpen())
+        // port: a shown lobby is inside its event loop (the event came through it): it closes its own window, which
+        // ends LobbyRun, and EELobbyRunLoop shuts it down; shutting it down here would free the running manager
+        if (EEIsLobbyOpen() && !EELobbyIsShown())
             EELobbyShutdown();
         if (gUserInterface != NULL)
             gUserInterface->mThread->Post(0x12, NULL, NULL, false);   // WM_QUIT
@@ -1855,6 +1859,8 @@ bool EEPumpWindowEvent()
     PlatInputEvent theEvent;
     if (!PlatWindowPollEvent(&theEvent))
         return false;
+    if (theEvent.mType == PLAT_EVENT_WAKE)   // the WON lobby's wake-up (PlatWindowWake) while it is not running
+        return true;
     static const bool sLog = getenv("EE_WINDOW_EVENT_LOG") != NULL;   // opt-in: every event as a debug string
     if (sLog)
         ESDebugOut("EE-WINDOW-EVENT %u (key %u/%u, text '%s') ui %d window %lux%lu\n", (unsigned)theEvent.mType,

@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "platform/PlatFile.h"
 // FUNCTION: WON 0x006d0e70
 // Returns the document host name (www.sierra.com)
 static std::string& GetHost()
@@ -37,11 +38,11 @@ void GetHTTPDocumentOp::CheckHostAndPath(HTTPDocType inType)
     checked=true;
     // The fopen results are discarded.
     if (inType==HTTPDocType_MOTD)
-        fopen((WONAPICore::GetDefaultFileDirectory()+"_wonmotdpath.txt").c_str(),"r");
+        PlatFOpen((WONAPICore::GetDefaultFileDirectory()+"_wonmotdpath.txt").c_str(),"r");
     else if (inType==HTTPDocType_TOU)
-        fopen((WONAPICore::GetDefaultFileDirectory()+"_wontoupath.txt").c_str(),"r");
+        PlatFOpen((WONAPICore::GetDefaultFileDirectory()+"_wontoupath.txt").c_str(),"r");
     else if (inType==HTTPDocType_ADV)
-        fopen((WONAPICore::GetDefaultFileDirectory()+"_wonadvpath.txt").c_str(),"r");
+        PlatFOpen((WONAPICore::GetDefaultFileDirectory()+"_wonadvpath.txt").c_str(),"r");
 }
 // FUNCTION: WON 0x006d0810
 // Records a finished download and finishes the op when no download is left

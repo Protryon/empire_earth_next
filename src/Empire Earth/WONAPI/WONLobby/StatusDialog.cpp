@@ -13,7 +13,7 @@
 namespace WONAPI {
 // FUNCTION: WON 0x7f91b0
 // Creates the status dialog, remembering when it was created
-StatusDialog::StatusDialog() { this->mStartTick = GetTickCount(); }
+StatusDialog::StatusDialog() { this->mStartTick = WONTickCount(); }
 
 // FUNCTION: WON 0x7f9370
 // Looks up the title, status label, close and cancel buttons, frame and body from the layout
@@ -95,7 +95,7 @@ void StatusDialog::SetText(const GUIString& inTitle, const GUIString& inStatus, 
         aHeightChange = this->mStatusLabel->Height() - anOldStatusHeight;
     }
     this->SetSize(aWidthChange + anOldWidth, aHeightChange + anOldHeight);
-    if (GetTickCount() - this->mStartTick < 50) {
+    if (WONTickCount() - this->mStartTick < 50) {
         this->mStatusLabel->SetSizeAtLeast(anInitialStatusWidth, anInitialStatusHeight);
         this->mDialogComponent->SetSizeAtLeast(anInitialComponentWidth, anInitialComponentHeight);
         this->SetSizeAtLeast(anInitialWidth, anInitialHeight);

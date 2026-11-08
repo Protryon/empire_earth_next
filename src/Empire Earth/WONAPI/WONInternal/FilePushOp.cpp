@@ -11,6 +11,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONFilePush.h"
 #include "ee/wonapi/WONStatus.h"
+#include "platform/PlatFile.h"
 
 
 
@@ -261,7 +262,7 @@ void FilePushOp::RunHook(void)
 {
 	this->mTotalBytesSent = 0;
 	this->mLastBytesSent = 0;
-	FILE *aFile = fopen(this->mFileName.c_str(),"rb");
+	FILE *aFile = PlatFOpen(this->mFileName.c_str(),"rb");
 	this->mFile.Attach(aFile);
 	if(aFile==NULL)
 	{

@@ -36,14 +36,14 @@ void AsyncOpContainer::QueueOp(AsyncOp* op)
     AutoCrit lock(this->mDataCrit);
     if(op==this->mCurPumpOp.get() && (op->mStatus!=WS_Pending || this->mPurging)) return;
     this->mOpQueue.push_back(op);
-    if(this->mOpQueue.size()==1) SetEvent(this->mSignal.mEvent);
+    if(this->mOpQueue.size()==1) this->mSignal.Set();
 }
 // FUNCTION: WON 0x0069fad0
 // Runs and completes queued ops, waiting up to waitTime for work, until maxOps ran or the wait expired
 void AsyncOpContainer::Pump(unsigned long waitTime,int maxOps)
 {
     AutoCrit lock(this->mDataCrit);
-    unsigned long start=GetTickCount();
+    uint32_t start=WONTickCount();
     int remaining=maxOps;
     if(remaining<0) remaining=this->mOpQueue.size();
     if(this->mOpQueue.empty() && waitTime>0) {
@@ -60,7 +60,7 @@ void AsyncOpContainer::Pump(unsigned long waitTime,int maxOps)
         this->mCurPumpOp=NULL;
         lock.Enter();
         if(remaining>0 && --remaining==0) break;
-        if(waitTime>0 && GetTickCount()-start>=waitTime) break;
+        if(waitTime>0 && WONTickCount()-start>=waitTime) break;
     }
     this->mCurPumpOp=NULL;
 }

@@ -3,7 +3,6 @@
 // with its init chain, out-of-line destructor and constructor (0x69cfda..0x69d080). Every name here is inferred
 // (no RTTI).
 #include <windows.h>
-#include <mbstring.h>
 #include <string>
 #include <list>
 

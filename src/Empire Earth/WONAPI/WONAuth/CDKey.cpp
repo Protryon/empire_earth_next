@@ -13,6 +13,8 @@
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONBlowfish.h"
 #include "ee/wonapi/WONCRC16.h"
+#include "platform/PlatFile.h"
+#include "platform/PlatMessage.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x006e3090
@@ -43,29 +45,14 @@ bool CDKey::CalcKeyFromBuffer(const char* raw)
     return this->mValid;
 }
 // FUNCTION: WON 0x006e3320
-// Returns the volume serial number of the Windows drive; reports failure when there is no drive letter
+// Returns the machine's id (Windows: the volume serial number of the Windows drive); reports failure when there is none
 DWORD CDKey::GetMachineId(bool* success)
 {
+    int found = 0;
+    DWORD serial = PlatSystemMachineId(&found);
     if (success != NULL)
-        *success = true;
-    char path[MAX_PATH];
-    char drive[_MAX_DRIVE];
-    char directory[_MAX_DIR];
-    char filename[_MAX_FNAME];
-    char extension[_MAX_EXT];
-    GetWindowsDirectoryA(path, MAX_PATH);
-    _splitpath(path, drive, directory, filename, extension);
-    std::string root = drive;
-    if (!root.empty()) {
-        if (root[root.length()-1] != '\\')
-            root += '\\';
-        DWORD serial = 0;
-        GetVolumeInformationA(root.c_str(), NULL, 0, &serial, NULL, NULL, NULL, 0);
-        return serial;
-    }
-    if (success != NULL)
-        *success = false;
-    return 0;
+        *success = found != 0;
+    return serial;
 }
 // FUNCTION: WON 0x006e35a0
 // Builds the Blowfish key from the product name CRCs, optionally prefixed with the machine id
@@ -454,7 +441,7 @@ bool CDKey::SaveToFile(const std::string &theFileName)
 	if(!this->IsValid())
 		return false;
 	
-	FILE *aFile = fopen(theFileName.c_str(),"wb");
+	FILE *aFile = PlatFOpen(theFileName.c_str(),"wb");
 	if(aFile==NULL)
 		return false;
 
@@ -472,7 +459,7 @@ bool CDKey::SaveToFile(const std::string &theFileName)
 // No original address identified: WON SDK method
 bool CDKey::LoadFromFile(const std::string &theFileName)
 {
-	FILE *aFile = fopen(theFileName.c_str(),"rb");
+	FILE *aFile = PlatFOpen(theFileName.c_str(),"rb");
 	if(aFile==NULL)
 		return false;
 

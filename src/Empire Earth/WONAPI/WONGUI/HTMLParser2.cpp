@@ -16,6 +16,8 @@
 #include "ee/wonapi/WONHTMLParser2.h"
 #include "ee/wonapi/WONLobbyImageDecoder.h"
 #include "ee/wonapi/WONLobbyGIFDecoder.h"
+#include "platform/PlatFile.h"
+#include "platform/PlatString.h"
 
 using namespace WONAPI;
 using namespace std;
@@ -176,15 +178,15 @@ int HTMLParser2::ReadEntity()
 		return anAsciiValue;
 	}
 
-	if(stricmp(anEntity.c_str(),"GT;")==0)
+	if(PlatStrICmp(anEntity.c_str(),"GT;")==0)
 		return '>';
-	if(stricmp(anEntity.c_str(),"LT;")==0)
+	if(PlatStrICmp(anEntity.c_str(),"LT;")==0)
 		return '<';
-	if(stricmp(anEntity.c_str(),"AMP;")==0)
+	if(PlatStrICmp(anEntity.c_str(),"AMP;")==0)
 		return '&';
-	if(stricmp(anEntity.c_str(),"QUOT;")==0)
+	if(PlatStrICmp(anEntity.c_str(),"QUOT;")==0)
 		return '"';
-	if(stricmp(anEntity.c_str(),"NBSP;")==0)
+	if(PlatStrICmp(anEntity.c_str(),"NBSP;")==0)
 		return '\xa0';
 
 		
@@ -469,17 +471,17 @@ bool HTMLParser2::HandleImage()
 	anExt++;
 	SmartPtr<NativeImage> anImage;
 	DisplayContext *aContext = this->mDisplay->GetRoot()->GetDisplayContext();
-	if(stricmp(anExt,"jpg")==0 || stricmp(anExt,"jpeg")==0)
+	if(PlatStrICmp(anExt,"jpg")==0 || PlatStrICmp(anExt,"jpeg")==0)
 	{
 		JPGDecoder aDecoder;
 		anImage = aDecoder.Decode(aContext,aPath.c_str());
 	}
-	else if(stricmp(anExt,"png")==0)
+	else if(PlatStrICmp(anExt,"png")==0)
 	{
 		PNGDecoder aDecoder;
 		anImage = aDecoder.Decode(aContext,aPath.c_str());
 	}
-	else if(stricmp(anExt,"gif")==0)
+	else if(PlatStrICmp(anExt,"gif")==0)
 	{
 		GIFDecoder aDecoder;
 		anImage = aDecoder.Decode(aContext,aPath.c_str());
@@ -652,7 +654,7 @@ bool HTMLParser2::Parse(const char *theFilePath, TextArea *theDisplay)
 		return false;
 
 	this->CloseFile();
-	this->mFile = fopen(theFilePath,"r");
+	this->mFile = PlatFOpen(theFilePath,"r");
 	if(this->mFile==NULL)
 		return false;
 

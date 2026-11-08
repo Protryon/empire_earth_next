@@ -84,7 +84,10 @@ struct ConfigParser::DefineMapContainer : public RefCount {
     GroupDefineMap mGroupDefineMap; // 0x14 (0x0c bytes; 0x20 bytes in all)
 };
 
-// a registry key (RTTI RegKey, three virtual slots; 0x2c bytes on the stack; constructor and destructor out of line)
+// a registry key (RTTI RegKey, three virtual slots; constructor and destructor out of line). The port keeps no
+// registry: a key is a block of config.yaml (platform/PlatConfig.h), "won.<path with \ as .>" (the root is
+// dropped), its values that block's keys: a DWORD an integer, a string a string, binary data a hex string. Opening
+// always succeeds for a non-empty path (a missing key reads as an empty one); keys and values are not enumerated.
 class RegKey {
 public:
     enum GetResult { Ok, NotFound, BadType, NoMore, NoSize };
@@ -107,20 +110,16 @@ public:
     int QueryDWORD(const std::string& inName, DWORD& outValue); // 0x6a4680
     bool OpenNewKey(int inRoot, const std::string& inPath, bool inCreate, bool inNonvolatile); // 0x6a4440
     void CloseKey(); // 0x6a4370
-    DWORD GetToBuf(const std::string& inName, unsigned long& outLength) const; // 0x6a4390
+    // the named value's text -> whether it exists (0x6a4390 read it into a buffer)
+    bool GetToBuf(const std::string& inName, std::string& outText) const;
     int QueryBinary(const std::string& inName, ConstSmartPtr<ByteBuffer>& outValue); // 0x6a46e0
-    bool IsOpen() const { return this->mIsOpen; } // mIsOpen only; the handle itself is not checked
+    bool IsOpen() const { return this->mIsOpen; }
     const std::string& GetLeafName(void) const { return this->mPath; }
-    HKEY mKey;                              // +0x04
-    bool mIsOpen;                           // +0x08
-    std::string mPath;                      // +0x0c
-    mutable char* mBuffer;                          // +0x1c
-    mutable DWORD mBufferLength;                    // registry query/enum buffer management
-    mutable DWORD mSubKeyIndex;
-    mutable DWORD mValueIndex;
+    std::string mBlock;                     // the config.yaml block (was the HKEY)
+    bool mIsOpen;
+    std::string mPath;                      // the path it was opened with
 private:
-    HKEY GetRootHKey(int inRoot); // 0x6a41d0
-    bool OpenNewKey(HKEY inRoot,const std::string& inPath,bool inCreate = false,bool inNonvolatile = true); // 0x6a4470
+    bool OpenBlock(const std::string& inParentBlock,const std::string& inPath); // 0x6a4470 (OpenNewKey on an HKEY)
 };
 
 class LobbyPersistentData;
@@ -128,7 +127,7 @@ class LobbyContainer;
 class AccountLogic; class DialogLogic; class InitLogic; class RoutingLogic;
 class StagingLogic; class LanLogic; class PingLogic; class WindowEventBase;
 class ChatCommandParser;
-enum LobbyStatus; enum LobbyRunMode; enum LobbyGameType;
+enum LobbyStatus : int; enum LobbyRunMode : int; // (values only by number); LobbyGameType: WONLobbyGUI.h
 // the lobby's private state (0x118 bytes; constructor 0x7628c0, destructor 0x7630a0; created by 0x761fb0).
 // This revision has no BigFileList after mInitError (later SDKs add one).
 class WONLobbyPrv : public RefCount {

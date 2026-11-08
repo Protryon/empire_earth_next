@@ -1,7 +1,11 @@
-// WONDebug: crash stack dump to a log file through DbgHelp (WON SDK)
+// WONDebug: crash stack dump to a log file through DbgHelp (WON SDK). Windows only: elsewhere there is no SEH filter
+// to call it and DumpStackToFile does nothing
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
+#include "platform/PlatFile.h"
+#ifdef _WIN32
 #include <imagehlp.h>
+#endif
 #include <string>
 #include <list>
 #include <map>
@@ -21,6 +25,7 @@ const std::string& WONDebug::GetStackFileName()
 {
 	return gStackFileName;
 }
+#ifdef _WIN32
 // x64: DbgHelp's 64-bit API (StackWalk64, SymGetModuleInfo64, ...): addresses are DWORD64
 static LPVOID __stdcall FunctionTableAccess(HANDLE hProcess, DWORD64 dwPCAddress);
 static DWORD64 __stdcall GetModuleBase(HANDLE hProcess, DWORD64 dwReturnAddress);
@@ -266,7 +271,7 @@ public:
 	{ 
 		this->Close();
 		if(!theFileName.empty())
-			this->mFile = fopen(theFileName.c_str(),"a+");
+			this->mFile = PlatFOpen(theFileName.c_str(),"a+");
 
 		return this->mFile!=NULL;
 	}
@@ -413,6 +418,13 @@ int WONDebug::DumpStackToFile(void *theInfo)
 	MyDumpStack((LPEXCEPTION_POINTERS)theInfo);
 	return EXCEPTION_CONTINUE_SEARCH;
 }
+#else
+// No stack dump on this system: 0 is EXCEPTION_CONTINUE_SEARCH
+int WONDebug::DumpStackToFile(void *)
+{
+	return 0;
+}
+#endif
 
 // Compiler-generated and header-inline functions this unit emits:
 // TEMPLATE: WON 0x006a75a0

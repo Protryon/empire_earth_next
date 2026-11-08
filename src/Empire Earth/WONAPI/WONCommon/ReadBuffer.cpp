@@ -2,6 +2,7 @@
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
+#include <string.h>
 #include <list>
 #include <map>
 #include "lle/LowLevelEngine.h"
@@ -43,20 +44,33 @@ bool ReadBuffer::ReadBool() {return this->ReadByte()!=0;}
 unsigned char ReadBuffer::ReadByte() {return *static_cast<const unsigned char*>(this->ReadBytes(1));}
 // FUNCTION: WON 0x006a3d50
 // Reads a 16-bit value
-short ReadBuffer::ReadShort() {return *static_cast<const short*>(this->ReadBytes(2));}
+short ReadBuffer::ReadShort()
+{
+    short value;
+    memcpy(&value,this->ReadBytes(2),2);
+    return value;
+}
 // FUNCTION: WON 0x006a3d60
 // Reads a 32-bit value
-long ReadBuffer::ReadLong() {return *static_cast<const long*>(this->ReadBytes(4));}
+int32_t ReadBuffer::ReadLong()
+{
+    int32_t value;
+    memcpy(&value,this->ReadBytes(4),4);
+    return value;
+}
 // FUNCTION: WON 0x006a3d70
 // Reads a sign-extended 1, 2 or 4 byte length field; returns 0 for any other size
+// (sign-extended to 32 bits, as the original's 32-bit unsigned long, on every OS)
 unsigned long ReadBuffer::ReadLength(unsigned char fieldSize)
 {
+    int32_t length;
     switch(fieldSize) {
-    case 1:return (signed char)this->ReadByte();
-    case 2:return this->ReadShort();
-    case 4:return this->ReadLong();
+    case 1:length=(signed char)this->ReadByte(); break;
+    case 2:length=this->ReadShort(); break;
+    case 4:length=this->ReadLong(); break;
     default:return 0;
     }
+    return static_cast<uint32_t>(length);
 }
 // FUNCTION: WON 0x006a3db0
 // Reads the given number of characters into the string
@@ -72,11 +86,14 @@ void ReadBuffer::ReadString(std::string& text,unsigned char fieldSize)
 {this->ReadRawString(text,this->ReadLength(fieldSize));}
 // FUNCTION: WON 0x006a3f60
 // Reads the given number of 16-bit characters into the wide string
+// (UTF-16 little-endian units, converted one by one: wchar_t is 4 bytes outside Windows)
 void ReadBuffer::ReadRawWString(std::wstring& text,unsigned long length)
 {
     text.erase();
-    const wchar_t* data=static_cast<const wchar_t*>(this->ReadBytes(length*2));
-    text.append(data,length);
+    const unsigned char* data=static_cast<const unsigned char*>(this->ReadBytes(length*2));
+    text.reserve(length);
+    for(unsigned long i=0; i<length; ++i)
+        WideAppendUtf16Unit(text,static_cast<uint16_t>(data[2*i]|(data[2*i+1]<<8)));
 }
 // The field size is passed as int
 // FUNCTION: WON 0x006a40f0

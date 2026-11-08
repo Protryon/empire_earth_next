@@ -1,7 +1,6 @@
 // Resource collection reader: table of contents, lookup by id or name, on-demand decoding of images, fonts and
 // binary data (not identified in the original exe; file name inferred)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-#include <winsock2.h>
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
@@ -17,6 +16,7 @@
 #include "ee/wonapi/WONResourceCollection.h"
 #include "ee/wonapi/WONLobbyParser.h"
 #include "ee/wonapi/WONStringCompare.h"
+#include "platform/PlatString.h"
 using namespace WONAPI;
 using namespace std;
 
@@ -235,13 +235,13 @@ SmartPtr<Font> ResourceCollection::DecodeFont(const GUIString &theDesc)
 		if(aStyleStr.empty())
 			break;
 
-		if(stricmp(aStyleStr.c_str(),"PLAIN")==0)
+		if(PlatStrICmp(aStyleStr.c_str(),"PLAIN")==0)
 			aStyle |= FontStyle_Plain;
-		else if(stricmp(aStyleStr.c_str(),"BOLD")==0)
+		else if(PlatStrICmp(aStyleStr.c_str(),"BOLD")==0)
 			aStyle |= FontStyle_Bold;
-		else if(stricmp(aStyleStr.c_str(),"ITALIC")==0)
+		else if(PlatStrICmp(aStyleStr.c_str(),"ITALIC")==0)
 			aStyle |= FontStyle_Italic;
-		else if(stricmp(aStyleStr.c_str(),"UNDERLINE")==0)
+		else if(PlatStrICmp(aStyleStr.c_str(),"UNDERLINE")==0)
 			aStyle |= FontStyle_Underline;
 	}
 

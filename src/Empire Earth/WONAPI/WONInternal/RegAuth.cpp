@@ -21,8 +21,11 @@ bool WONAPI::ReadAuthSettings(string& theAuthAddressR,
 	if(aKey.IsOpen())
 	{
 		aKey.GetValue(VALUE_AUTHSERVERIP, theAuthAddressR);
-		unsigned long anAuthPort(15200);
-		aKey.QueryDWORD(VALUE_AUTHSERVERPORT, anAuthPort);
+		// QueryDWORD clears the port when the value is missing; a key that does not exist kept 15200, and every
+		// key opens now (config.yaml)
+		DWORD anAuthPort(15200);
+		if(aKey.QueryDWORD(VALUE_AUTHSERVERPORT, anAuthPort) == 1)
+			anAuthPort = 15200;
 		theAuthPortR = anAuthPort;
 		aKey.GetValue(VALUE_USERNAME, theLoginNameR);
 		aKey.GetValue(VALUE_COMMUNITY, theCommunityNameR);

@@ -1,8 +1,8 @@
 // WONAPI AsyncSocket: non-blocking Winsock TCP/UDP socket wrapper (file grouping inferred)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-#include <winsock2.h>
 #include <windows.h>
 #include <time.h>
+#include <string.h>
 #include <string>
 #include <list>
 #include <map>
@@ -10,20 +10,22 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONStatus.h"
+#include "platform/PlatSocket.h"
+#include "platform/PlatTime.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x006b0340
 // Creates a closed socket of the given type (0 stream, 1 datagram) with a 4-byte length field and counts it
 AsyncSocket::AsyncSocket(int inType)
 {
-    this->mSocket = INVALID_SOCKET;
+    this->mSocket = PLAT_SOCKET_INVALID;
     this->mLengthFieldSize = 4;
     this->mType = inType;
     this->mConnected = false;
     this->mOpen = false;
     this->mThreadCloseCallback = NULL;
     this->mFirstBlockedSendTime = 0;
-    this->mLastRecvTime = time(NULL);
+    this->mLastRecvTime = static_cast<long>(time(NULL));
     this->mStatus = WS_None;
     NetStats::IncrementNumConstructedSockets(1);
 }
@@ -93,11 +95,11 @@ WONStatus AsyncSocket::TransformSendMsg(ByteBufferPtr& inMessage)
 }
 
 // FUNCTION: WON 0x006b0890
-// Returns the last Winsock error, mapping would-block/in-progress to WS_TimedOut and recording any other
+// Returns the last socket error (Winsock's numbering), mapping would-block/in-progress to WS_TimedOut and recording any other
 WONStatus AsyncSocket::GetLastSocketError()
 {
-    WONStatus aStatus = WSAGetLastError();
-    if (aStatus == WSAEWOULDBLOCK || aStatus == WSAEINPROGRESS)
+    WONStatus aStatus = static_cast<WONStatus>(PlatSocketLastError());
+    if (aStatus == PLAT_SOCK_EWOULDBLOCK || aStatus == PLAT_SOCK_EINPROGRESS)
         return WS_TimedOut;
     this->mStatus = aStatus;
     return aStatus;
@@ -107,7 +109,7 @@ WONStatus AsyncSocket::GetLastSocketError()
 // Returns whether the socket holds an open Winsock handle
 bool AsyncSocket::IsValid()
 {
-    return this->mSocket != INVALID_SOCKET;
+    return this->mSocket != PLAT_SOCKET_INVALID;
 }
 
 // FUNCTION: WON 0x006b08d0
@@ -133,14 +135,9 @@ void AsyncSocket::WaitForWrite(unsigned long inWaitTime)
     AutoCrit aCrit(this->mDataCrit);
     if (!this->IsValid())
         return;
-    timeval aTime;
-    aTime.tv_sec = inWaitTime / 1000;
-    aTime.tv_usec = (inWaitTime % 1000) * 1000;
-    fd_set aSet;
-    FD_ZERO(&aSet);
-    FD_SET(this->mSocket, &aSet);
+    PlatSocket aSocket = this->mSocket;
     aCrit.Leave();
-    select(FD_SETSIZE, NULL, &aSet, NULL, &aTime);
+    PlatSocketWait(aSocket, PLAT_SOCKET_WAIT_WRITE, static_cast<uint32_t>(inWaitTime));
 }
 
 // FUNCTION: WON 0x006b1410
@@ -152,14 +149,9 @@ void AsyncSocket::WaitForRead(unsigned long inWaitTime)
     AutoCrit aCrit(this->mDataCrit);
     if (!this->IsValid())
         return;
-    timeval aTime;
-    aTime.tv_sec = inWaitTime / 1000;
-    aTime.tv_usec = (inWaitTime % 1000) * 1000;
-    fd_set aSet;
-    FD_ZERO(&aSet);
-    FD_SET(this->mSocket, &aSet);
+    PlatSocket aSocket = this->mSocket;
     aCrit.Leave();
-    select(FD_SETSIZE, &aSet, NULL, NULL, &aTime);
+    PlatSocketWait(aSocket, PLAT_SOCKET_WAIT_READ, static_cast<uint32_t>(inWaitTime));
 }
 
 // Lengths and counts are signed int, as in the original
@@ -171,10 +163,10 @@ WONStatus AsyncSocket::Send(const void* inData, int inLength, int* outSent)
     AutoCrit aCrit(this->mDataCrit);
     if (!this->IsValid())
         return WS_AsyncSocket_InvalidSocket;
-    int aSent = send(this->mSocket, static_cast<const char*>(inData), inLength, 0);
+    int aSent = PlatSocketSend(this->mSocket, inData, static_cast<uint32_t>(inLength));
     if (aSent < 0) {
         if (this->mFirstBlockedSendTime == 0)
-            this->mFirstBlockedSendTime = time(NULL);
+            this->mFirstBlockedSendTime = static_cast<long>(time(NULL));
         return this->GetLastSocketError();
     }
     this->mFirstBlockedSendTime = 0;
@@ -196,13 +188,13 @@ WONStatus AsyncSocket::Recv(void* outData, int inLength, int* outReceived)
     AutoCrit aCrit(this->mDataCrit);
     if (!this->IsValid())
         return WS_AsyncSocket_InvalidSocket;
-    int aReceived = recv(this->mSocket, static_cast<char*>(outData), inLength, 0);
+    int aReceived = PlatSocketRecv(this->mSocket, outData, static_cast<uint32_t>(inLength));
     if (aReceived < 0)
         return this->GetLastSocketError();
     if (aReceived == 0)
         return WS_AsyncSocket_Shutdown;
     NetStats::IncrementBytesReceived(aReceived);
-    this->mLastRecvTime = time(NULL);
+    this->mLastRecvTime = static_cast<long>(time(NULL));
     if (outReceived != NULL)
         *outReceived = aReceived;
     if (aReceived != inLength && this->mType == 0)
@@ -211,20 +203,21 @@ WONStatus AsyncSocket::Recv(void* outData, int inLength, int* outReceived)
 }
 
 // FUNCTION: WON 0x006b1a10
-// Shuts down and closes the Winsock handle (forcing a hard close if it would block) and marks the socket closed
+// Shuts down and closes the handle (forcing a hard close if it would block) and marks the socket closed
 void AsyncSocket::ClosePrv()
 {
     if (this->IsValid()) {
-        shutdown(this->mSocket, 1); // Winsock1 send-only shutdown, 2b1a26
-        if (closesocket(this->mSocket) != 0 && this->GetLastSocketError() == WS_TimedOut) {
-            linger aLinger;
-            aLinger.l_onoff = 1;
-            aLinger.l_linger = 0;
-            setsockopt(this->mSocket, SOL_SOCKET, SO_LINGER,
-                reinterpret_cast<const char*>(&aLinger), sizeof(aLinger));
-            closesocket(this->mSocket);
+        PlatSocketShutdown(this->mSocket, PLAT_SOCKET_SHUT_SEND);
+        // A failed closesocket keeps the Winsock handle; a POSIX close always frees the descriptor, so no retry there
+#ifdef _WIN32
+        if (!PlatSocketClose(this->mSocket) && this->GetLastSocketError() == WS_TimedOut) {
+            PlatSocketSetLinger(this->mSocket, 1, 0);
+            PlatSocketClose(this->mSocket);
         }
-        this->mSocket = INVALID_SOCKET;
+#else
+        PlatSocketClose(this->mSocket);
+#endif
+        this->mSocket = PLAT_SOCKET_INVALID;
         NetStats::IncrementNumOpenSockets(-1);
     }
     this->mConnected = false;
@@ -266,8 +259,7 @@ WONStatus AsyncSocket::SendTo(const void* inData, int inLength, const IPAddr& in
         if (aStatus != 0)
             return aStatus;
     }
-    int aSent = sendto(this->mSocket, static_cast<const char*>(inData), inLength, 0,
-        reinterpret_cast<const sockaddr*>(&inAddress.GetSockAddrIn()), 16);
+    int aSent = PlatSocketSendTo(this->mSocket, inData, static_cast<uint32_t>(inLength), &inAddress.GetSockAddrIn());
     if (aSent < 0)
         return this->GetLastSocketError();
     NetStats::IncrementBytesSent(aSent);
@@ -285,10 +277,9 @@ WONStatus AsyncSocket::RecvFrom(void* outData, int inLength, IPAddr* outAddress,
         return WS_AsyncSocket_StreamNotAllowed;
     if (!this->IsValid())
         return WS_AsyncSocket_InvalidSocket;
-    PlatSockAddrIn aFrom;                   // sockaddr_in's layout
-    int aFromLength = 16;
-    int aReceived = recvfrom(this->mSocket, static_cast<char*>(outData), inLength, 0,
-        reinterpret_cast<sockaddr*>(&aFrom), &aFromLength);
+    PlatSockAddrIn aFrom;
+    memset(&aFrom, 0, sizeof(aFrom));
+    int aReceived = PlatSocketRecvFrom(this->mSocket, outData, static_cast<uint32_t>(inLength), &aFrom);
     if (aReceived >= 0) {
         NetStats::IncrementBytesReceived(aReceived);
         if (outAddress != NULL)
@@ -306,9 +297,10 @@ void AsyncSocket::Disconnect()
 {
     AutoCrit aCrit(this->mDataCrit);
     if (this->mType != 0) {
-        sockaddr_in anAddress;
+        // connecting a datagram socket to the null address dissolves its association
+        PlatSockAddrIn anAddress;
         memset(&anAddress, 0, sizeof(anAddress));
-        if (connect(this->mSocket, reinterpret_cast<const sockaddr*>(&anAddress), 16) != 0)
+        if (!PlatSocketConnect(this->mSocket, &anAddress))
             this->Close();
     }
     else
@@ -324,32 +316,25 @@ WONStatus AsyncSocket::Open()
     this->mOpen = true;
     switch (this->mType) {
     case 0:
-        this->mSocket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+        this->mSocket = PlatSocketOpen(PLAT_SOCKET_STREAM);
         break;
     case 1:
-        this->mSocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+        this->mSocket = PlatSocketOpen(PLAT_SOCKET_DGRAM);
         break;
     }
-    if (this->mSocket == INVALID_SOCKET)
+    if (this->mSocket == PLAT_SOCKET_INVALID)
         return this->GetLastSocketError();
     this->mStatus = WS_None;
     NetStats::IncrementNumOpenSockets(1);
-    linger aLinger;
-    int aBroadcast;
     if (this->mType == 0) {
-        aLinger.l_onoff = 0;
-        if (setsockopt(this->mSocket, SOL_SOCKET, SO_LINGER,
-            reinterpret_cast<const char*>(&aLinger), 4) == SOCKET_ERROR)
+        if (!PlatSocketSetLinger(this->mSocket, 0, 0))
             return this->GetLastSocketError();
     }
     if (this->mType == 1) {
-        aBroadcast = 1;
-        if (setsockopt(this->mSocket, SOL_SOCKET, SO_BROADCAST,
-            reinterpret_cast<const char*>(&aBroadcast), 4) == SOCKET_ERROR)
+        if (!PlatSocketSetBroadcast(this->mSocket, 1))
             return this->GetLastSocketError();
     }
-    unsigned long aNonBlocking = 1;
-    if (ioctlsocket(this->mSocket, FIONBIO, &aNonBlocking) == SOCKET_ERROR)
+    if (!PlatSocketSetNonBlocking(this->mSocket, 1))
         return this->GetLastSocketError();
     this->OpenHook();
     return 0;
@@ -366,12 +351,10 @@ WONStatus AsyncSocket::Bind(const IPAddr& inAddress, bool inReuse)
         if (aStatus != 0) return aStatus;
     }
     if (inReuse) {
-        int aReuse = 1;
-        if (setsockopt(this->mSocket, SOL_SOCKET, SO_REUSEADDR,
-            reinterpret_cast<const char*>(&aReuse), 4) != 0)
+        if (!PlatSocketSetReuseAddress(this->mSocket, 1))
             return this->GetLastSocketError();
     }
-    if (bind(this->mSocket, reinterpret_cast<const sockaddr*>(&inAddress.GetSockAddrIn()), 16) != 0)
+    if (!PlatSocketBind(this->mSocket, &inAddress.GetSockAddrIn()))
         return this->GetLastSocketError();
     return 0;
 }
@@ -385,7 +368,7 @@ WONStatus AsyncSocket::Fn2B0E60(const IPAddr& inAddress)
     AutoCrit aCrit(this->mDataCrit);
     if (this->mType == 0 && this->mConnected)
         this->Disconnect();
-    if (this->mSocket == INVALID_SOCKET) {
+    if (this->mSocket == PLAT_SOCKET_INVALID) {
         WONStatus aStatus = this->Open();
         if (aStatus != 0) return aStatus;
         if (WONAPI::IPAddr::GetLocalHost() != 0) {
@@ -395,7 +378,7 @@ WONStatus AsyncSocket::Fn2B0E60(const IPAddr& inAddress)
     }
     this->mDestAddr = inAddress;
     this->mConnected = true;
-    if (connect(this->mSocket, reinterpret_cast<const sockaddr*>(&inAddress.GetSockAddrIn()), 16) == SOCKET_ERROR)
+    if (!PlatSocketConnect(this->mSocket, &inAddress.GetSockAddrIn()))
         return this->GetLastSocketError();
     return WS_Success;
 }
@@ -407,7 +390,7 @@ WONStatus AsyncSocket::Listen(int inBacklog)
     AutoCrit aCrit(this->mDataCrit);
     if (!this->IsValid()) return WS_AsyncSocket_InvalidSocket;
     if (this->mType == 1) return WS_AsyncSocket_DatagramNotAllowed;
-    if (listen(this->mSocket, inBacklog) != 0)
+    if (!PlatSocketListen(this->mSocket, inBacklog))
         return this->GetLastSocketError();
     return WS_Success;
 }
@@ -417,17 +400,13 @@ WONStatus AsyncSocket::Listen(int inBacklog)
 WONStatus AsyncSocket::Accept(SmartPtr<AsyncSocket>& outSocket)
 {
     AutoCrit aCrit(this->mDataCrit);
-    PlatSockAddrIn aFrom;                   // sockaddr_in's layout
-    int aFromLength = 16;
-    SOCKET aSocket = accept(this->mSocket, reinterpret_cast<sockaddr*>(&aFrom), &aFromLength);
-    if (aSocket == INVALID_SOCKET)
+    PlatSockAddrIn aFrom;
+    memset(&aFrom, 0, sizeof(aFrom));
+    PlatSocket aSocket = PlatSocketAccept(this->mSocket, &aFrom);
+    if (aSocket == PLAT_SOCKET_INVALID)
         return this->GetLastSocketError();
-    linger aLinger;
-    aLinger.l_onoff = 0;
-    setsockopt(aSocket, SOL_SOCKET, SO_LINGER,
-        reinterpret_cast<const char*>(&aLinger), 4);
-    unsigned long aNonBlocking = 1;
-    ioctlsocket(aSocket, FIONBIO, &aNonBlocking);
+    PlatSocketSetLinger(aSocket, 0, 0);
+    PlatSocketSetNonBlocking(aSocket, 1);
     outSocket = this->Duplicate();
     outSocket->mSocket = aSocket;
     outSocket->mDestAddr = IPAddr(aFrom);
@@ -443,25 +422,16 @@ WONStatus AsyncSocket::WaitForConnect(unsigned long inWaitTime)
 {
     AutoCrit aCrit(this->mDataCrit);
     if (!this->IsValid()) return WS_AsyncSocket_InvalidSocket;
-    SOCKET aSocket = this->mSocket;
+    PlatSocket aSocket = this->mSocket;
     aCrit.Leave();
-    timeval aTime;
-    aTime.tv_sec = inWaitTime / 1000;
-    aTime.tv_usec = (inWaitTime % 1000) * 1000;
-    fd_set aWriteSet;
-    fd_set anExceptSet;
-    FD_ZERO(&aWriteSet);
-    FD_ZERO(&anExceptSet);
-    FD_SET(aSocket, &aWriteSet);
-    FD_SET(aSocket, &anExceptSet);
-    int aResult = select(FD_SETSIZE, NULL, &aWriteSet, &anExceptSet, &aTime);
-    int anError = 0;
-    int aLength = 4;
-    if (FD_ISSET(aSocket, &anExceptSet)) {
-        getsockopt(this->mSocket, SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&anError), &aLength);
+    // a failed connect shows as EXCEPT (Win32: the except set; POSIX: POLLERR / POLLHUP), a finished one as WRITE
+    int32_t aReady = PlatSocketWait(aSocket, PLAT_SOCKET_WAIT_WRITE | PLAT_SOCKET_WAIT_EXCEPT,
+        static_cast<uint32_t>(inWaitTime));
+    if (aReady > 0 && (aReady & PLAT_SOCKET_WAIT_EXCEPT) != 0) {
+        WONStatus anError = static_cast<WONStatus>(PlatSocketGetError(aSocket));
         return anError == 0 ? 100021 : anError;
     }
-    if (aResult == 1)
+    if (aReady > 0)
         return WS_Success;
     return WS_TimedOut;
 }
@@ -474,8 +444,8 @@ WONStatus AsyncSocket::Fn2B0D90(unsigned short inPort, bool inReuse)
     PlatSockAddrIn anAddress;
     memset(&anAddress, 0, sizeof(anAddress));
     anAddress.mFamily = PLAT_AF_INET;
-    anAddress.mAddress = htonl(WONAPI::IPAddr::GetLocalHost());
-    anAddress.mPort = htons(inPort);
+    anAddress.mAddress = PlatHostToNet32(static_cast<uint32_t>(WONAPI::IPAddr::GetLocalHost()));
+    anAddress.mPort = PlatHostToNet16(inPort);
     return this->Bind(IPAddr(anAddress), inReuse);
 }
 
@@ -493,20 +463,15 @@ unsigned char AsyncSocket::GetLengthFieldSize() const
 unsigned short AsyncSocket::GetLocalPort()
 {
     if(!this->IsValid()) return 0;
-    sockaddr address;
-    int length=sizeof(address);
-    int result=getsockname(this->mSocket,&address,&length);
-    if(result!=0) return 0;
-    return ntohs(reinterpret_cast<sockaddr_in*>(&address)->sin_port);
+    PlatSockAddrIn address;
+    if(!PlatSocketGetName(this->mSocket,&address)) return 0;
+    return PlatNetToHost16(address.mPort);
 }
 // FUNCTION: WON 0x006b0a50
 // Turns datagram broadcast on or off for the socket
 WONStatus AsyncSocket::SetBroadcast(bool inAllowBroadcast)
 {
-    int option=inAllowBroadcast;
-    int result=setsockopt(this->mSocket,SOL_SOCKET,SO_BROADCAST,
-        reinterpret_cast<const char*>(&option),sizeof(option));
-    if(result==SOCKET_ERROR) return this->GetLastSocketError();
+    if(!PlatSocketSetBroadcast(this->mSocket,inAllowBroadcast)) return this->GetLastSocketError();
     return 0;
 }
 }
@@ -515,7 +480,7 @@ namespace WONAPI {
 // SDK static counter; in the original a zero-initialized DWORD at 565f34, no CRT constructor
 int AsyncSocket::mWinsockStartCount=0;
 // FUNCTION: WON 0x006b0940
-// Starts Winsock 1.1 on first use and counts the user; returns the WSAStartup error
+// Starts the socket system on first use and counts the user; returns the error (Winsock's numbering)
 WONStatus AsyncSocket::StartWinsock()
 {
     if(AsyncSocket::mWinsockStartCount!=0)
@@ -523,19 +488,17 @@ WONStatus AsyncSocket::StartWinsock()
         ++AsyncSocket::mWinsockStartCount;
         return 0;
     }
-    WSADATA data;
-    int result=WSAStartup(MAKEWORD(1,1),&data);
-    if(result!=0) return result;
+    if(!PlatSocketStartup()) return PLAT_SOCK_SYSNOTREADY;
     ++AsyncSocket::mWinsockStartCount;
     return 0;
 }
 // FUNCTION: WON 0x006b0980
-// Releases one Winsock user and cleans Winsock up when the last one goes
+// Releases one user and cleans the socket system up when the last one goes
 WONStatus AsyncSocket::StopWinsock()
 {
     if(AsyncSocket::mWinsockStartCount<=0 || --AsyncSocket::mWinsockStartCount!=0)
         return 0;
-    return WSACleanup();
+    return PlatSocketCleanup() ? 0 : static_cast<WONStatus>(PlatSocketLastError());
 }
 }
 
@@ -562,7 +525,7 @@ AsyncSocket::SocketType AsyncSocket::GetType()
 namespace WONAPI {
 int AsyncSocket::TimeLeft(DWORD theTotalTime, DWORD theStartTime)
 {
-	int deltaTime = GetTickCount() - theStartTime;
+	int deltaTime = WONTickCount() - theStartTime;
 	if(deltaTime >= theTotalTime)
 		return 0;
 	else
@@ -597,10 +560,7 @@ void AsyncSocket::SetType(SocketType theType)
 
 WONStatus AsyncSocket::SetNagling(bool on) 
 {
-	int aVal, aSockOpt = !on;
-	aVal = setsockopt(this->mSocket,IPPROTO_TCP,TCP_NODELAY,(char*) &aSockOpt,sizeof(aSockOpt));
-
-	if(aVal==SOCKET_ERROR) 
+	if(!PlatSocketSetNoDelay(this->mSocket,!on))
 		return this->GetLastSocketError();
 	else
 		return (WONStatus)0;

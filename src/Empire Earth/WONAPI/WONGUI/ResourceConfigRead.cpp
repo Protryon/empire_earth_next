@@ -1,5 +1,6 @@
 // Resource-file value parsers: colors, font styles, fonts, sounds, images and backgrounds
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
+#include "platform/PlatString.h"
 #include <windows.h>
 #include <string>
 #include <list>
@@ -52,32 +53,32 @@ int ResourceConfig::SafeReadColor(StringParser& inParser)
         inParser.IncrementPos(1);
         inParser.ReadString(type,false);
         int color=0;
-        if(_stricmp(type.c_str(),"STD")==0)
+        if(PlatStrICmp(type.c_str(),"STD")==0)
         {
             ResourceConfig::EnsureComma(inParser);
             std::string name;
             inParser.ReadString(name,false);
             const char* aName=name.c_str();
-            if(_stricmp(aName,"3DDarkShadow")==0) color=MakeStdColor(0);
-            else if(_stricmp(aName,"3DFace")==0) color=MakeStdColor(1);
-            else if(_stricmp(aName,"3DHilight")==0) color=MakeStdColor(2);
-            else if(_stricmp(aName,"3DShadow")==0) color=MakeStdColor(3);
-            else if(_stricmp(aName,"Scrollbar")==0) color=MakeStdColor(4);
-            else if(_stricmp(aName,"ButtonText")==0) color=MakeStdColor(5);
-            else if(_stricmp(aName,"GrayText")==0) color=MakeStdColor(6);
-            else if(_stricmp(aName,"Hilight")==0) color=MakeStdColor(7);
-            else if(_stricmp(aName,"HilightText")==0) color=MakeStdColor(8);
-            else if(_stricmp(aName,"ToolTipBack")==0) color=MakeStdColor(9);
-            else if(_stricmp(aName,"ToolTipText")==0) color=MakeStdColor(10);
-            else if(_stricmp(aName,"MenuBack")==0) color=MakeStdColor(11);
-            else if(_stricmp(aName,"MenuText")==0) color=MakeStdColor(12);
-            else if(_stricmp(aName,"Back")==0) color=MakeStdColor(13);
-            else if(_stricmp(aName,"Text")==0) color=MakeStdColor(14);
-            else if(_stricmp(aName,"Link")==0) color=MakeStdColor(15);
-            else if(_stricmp(aName,"LinkDown")==0) color=MakeStdColor(16);
+            if(PlatStrICmp(aName,"3DDarkShadow")==0) color=MakeStdColor(0);
+            else if(PlatStrICmp(aName,"3DFace")==0) color=MakeStdColor(1);
+            else if(PlatStrICmp(aName,"3DHilight")==0) color=MakeStdColor(2);
+            else if(PlatStrICmp(aName,"3DShadow")==0) color=MakeStdColor(3);
+            else if(PlatStrICmp(aName,"Scrollbar")==0) color=MakeStdColor(4);
+            else if(PlatStrICmp(aName,"ButtonText")==0) color=MakeStdColor(5);
+            else if(PlatStrICmp(aName,"GrayText")==0) color=MakeStdColor(6);
+            else if(PlatStrICmp(aName,"Hilight")==0) color=MakeStdColor(7);
+            else if(PlatStrICmp(aName,"HilightText")==0) color=MakeStdColor(8);
+            else if(PlatStrICmp(aName,"ToolTipBack")==0) color=MakeStdColor(9);
+            else if(PlatStrICmp(aName,"ToolTipText")==0) color=MakeStdColor(10);
+            else if(PlatStrICmp(aName,"MenuBack")==0) color=MakeStdColor(11);
+            else if(PlatStrICmp(aName,"MenuText")==0) color=MakeStdColor(12);
+            else if(PlatStrICmp(aName,"Back")==0) color=MakeStdColor(13);
+            else if(PlatStrICmp(aName,"Text")==0) color=MakeStdColor(14);
+            else if(PlatStrICmp(aName,"Link")==0) color=MakeStdColor(15);
+            else if(PlatStrICmp(aName,"LinkDown")==0) color=MakeStdColor(16);
             else throw ConfigObjectException("Invalid standard color: "+type);
         }
-        else if(_stricmp(type.c_str(),"DEC")==0)
+        else if(PlatStrICmp(type.c_str(),"DEC")==0)
         {
             int red,green,blue;
             ResourceConfig::EnsureComma(inParser);
@@ -113,10 +114,10 @@ int ResourceConfig::SafeReadFontStyle(StringParser& inParser)
     {
         inParser.ReadString(name,true);
         if(name.empty()) break;
-        if(_stricmp(name.c_str(),"Bold")==0) style|=1;
-        else if(_stricmp(name.c_str(),"Italic")==0) style|=2;
-        else if(_stricmp(name.c_str(),"Plain")==0) {}
-        else if(_stricmp(name.c_str(),"Underline")==0) style|=4;
+        if(PlatStrICmp(name.c_str(),"Bold")==0) style|=1;
+        else if(PlatStrICmp(name.c_str(),"Italic")==0) style|=2;
+        else if(PlatStrICmp(name.c_str(),"Plain")==0) {}
+        else if(PlatStrICmp(name.c_str(),"Underline")==0) style|=4;
         else throw ConfigObjectException("Unknown font style: "+name);
     }
     return style;
@@ -155,9 +156,9 @@ SmartPtr<Sound> ResourceConfig::SafeReadSound(StringParser& parser)
             std::string flag;
             parser.ReadString(flag,true);
             if(flag.empty()) break;
-            if(_stricmp(flag.c_str(),"Preload")==0) flags|=1;
-            else if(_stricmp(flag.c_str(),"Music")==0) flags|=2;
-            else if(_stricmp(flag.c_str(),"Muted")==0) flags|=4;
+            if(PlatStrICmp(flag.c_str(),"Preload")==0) flags|=1;
+            else if(PlatStrICmp(flag.c_str(),"Music")==0) flags|=2;
+            else if(PlatStrICmp(flag.c_str(),"Muted")==0) flags|=4;
             else throw ConfigObjectException("Unknown sound flag: "+flag);
         }
         desc.SetSoundFlags(flags,true);
@@ -189,31 +190,31 @@ Background ResourceConfig::SafeReadBackground(StringParser& parser)
 {
     std::string type;
     parser.ReadString(type,false);
-    if(_stricmp(type.c_str(),"COLOR")==0)
+    if(PlatStrICmp(type.c_str(),"COLOR")==0)
     {
         ResourceConfig::EnsureComma(parser);
         return Background(ResourceConfig::SafeReadColor(parser));
     }
-    if(_stricmp(type.c_str(),"IMAGE")==0)
+    if(PlatStrICmp(type.c_str(),"IMAGE")==0)
     {
         ResourceConfig::EnsureComma(parser);
         return Background(ResourceConfig::SafeReadImage(parser).get());
     }
-    if(_stricmp(type.c_str(),"STRETCHIMAGE")==0)
+    if(PlatStrICmp(type.c_str(),"STRETCHIMAGE")==0)
     {
         ResourceConfig::EnsureComma(parser);
         Background background(ResourceConfig::SafeReadImage(parser).get());
         background.mStretchImage=true;
         return background;
     }
-    if(_stricmp(type.c_str(),"WATERMARK")==0)
+    if(PlatStrICmp(type.c_str(),"WATERMARK")==0)
     {
         ResourceConfig::EnsureComma(parser);
         Background background(ResourceConfig::SafeReadImage(parser).get());
         background.mUseOffsets=false;
         return background;
     }
-    if(_stricmp(type.c_str(),"NONE")==0) return Background(-1);
+    if(PlatStrICmp(type.c_str(),"NONE")==0) return Background(-1);
     throw ConfigObjectException("Invalid background specification");
 }
 

@@ -14,6 +14,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyHTMLParser.h"
 #include "ee/wonapi/WONLobbyAnimation.h"
+#include "platform/PlatFile.h"
 
 
 using namespace WONAPI;
@@ -908,7 +909,7 @@ bool HTMLParser::ParseFromFile(const GUIString &theFileName)
 		return false;
 
 	std::string aFileName = theFileName;
-	this->mFile=fopen(aFileName.c_str(),"r");
+	this->mFile=PlatFOpen(aFileName.c_str(),"r");
 	if(this->mFile==NULL)
 		return false;
 

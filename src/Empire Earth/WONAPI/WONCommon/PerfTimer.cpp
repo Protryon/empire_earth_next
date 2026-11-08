@@ -1,7 +1,8 @@
-// PerfTimer: global performance timing with rdtsc calibration
+// PerfTimer: global performance timing on the high-resolution counter (the original: rdtsc, calibrated against it)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include "ee/wonapi/WONPerfTimer.h"
+#include "platform/PlatTime.h"
 using namespace WONAPI;
 // The original's state: RVA 565ec0/8, 565ed0/8, 565ed8/8, 565ee0/4, 565ee4/1
 
@@ -10,38 +11,19 @@ static __int64 gPerfResetTick = 0;
 static double gPerfElapsedTime = 0;
 static int gPerfTimerStartCount = 0;
 static bool gPerfTimerStarted = false;
-// 0x6a37f0 (emitted from the list below): reads the CPU time-stamp counter
-// The original SDK wrote this rdtsc read in inline asm
+// 0x6a37f0 (emitted from the list below): reads the CPU time-stamp counter (rdtsc in inline asm); now the
+// platform's high-resolution counter
 static __int64 MyQueryPerformanceCounter()
 {
-    unsigned long x,y;
-    __asm {
-        rdtsc
-        mov x,eax
-        mov y,edx
-    }
-    __int64 result=y;
-    result<<=32;
-    result|=x;
-    return result;
+    return PlatCounterTicks();
 }
 // FUNCTION: WON 0x006a3850
-// Returns the time-stamp counter rate per second, measured once over a 50 ms sleep and cached
+// Returns the counter's rate per second (the original measured rdtsc over a 50 ms sleep), cached
 static __int64 MyQueryPerformanceFrequency()
 {
     static __int64 aFreq=0; //cached frequency, RVA 565ee8/8
     if(aFreq!=0) return aFreq;
-    LARGE_INTEGER s1,e1,f1;
-    __int64 s2,e2,f2;
-    QueryPerformanceCounter(&s1);
-    s2=MyQueryPerformanceCounter();
-    Sleep(50);
-    e2=MyQueryPerformanceCounter();
-    QueryPerformanceCounter(&e1);
-    QueryPerformanceFrequency(&f1);
-    double time=(double)(e1.QuadPart-s1.QuadPart)/f1.QuadPart;
-    f2=(e2-s2)/time;
-    aFreq=f2;
+    aFreq=PlatCounterFrequency();
     return aFreq;
 }
 // FUNCTION: WON 0x006a3820
@@ -70,19 +52,15 @@ void PerfTimer::GlobalStart(const char*)
     gPerfTotalTime=0;
     gPerfTimerStartCount=0;
     gPerfElapsedTime=0;
-    LARGE_INTEGER tick;
-    QueryPerformanceCounter(&tick);
-    gPerfResetTick=tick.QuadPart;
+    gPerfResetTick=PlatCounterTicks();
 }
 // FUNCTION: WON 0x006a3990
 // Ends the global timing run and records its elapsed milliseconds
 void PerfTimer::GlobalStop(const char*)
 {
-    LARGE_INTEGER tick;
-    QueryPerformanceCounter(&tick);
-    LARGE_INTEGER frequency;
-    QueryPerformanceFrequency(&frequency);
-    gPerfElapsedTime=(double)(tick.QuadPart-gPerfResetTick)/frequency.QuadPart*1000.0;
+    int64_t tick=PlatCounterTicks();
+    int64_t frequency=PlatCounterFrequency();
+    gPerfElapsedTime=(double)(tick-gPerfResetTick)/frequency*1000.0;
     gPerfTimerStarted=false;
 }
 

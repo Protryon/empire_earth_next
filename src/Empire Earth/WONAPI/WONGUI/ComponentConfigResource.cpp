@@ -1,5 +1,6 @@
 // ComponentConfig resource lookups, config path lookups and component instructions (file name inferred)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
+#include "platform/PlatString.h"
 #include <windows.h>
 #include <string>
 #include <list>
@@ -493,9 +494,9 @@ std::string ComponentConfig::GetResourceFile(const std::string& inFile)
             return inFile.substr(2);
     }
     else {
-        if(_strnicmp(inFile.c_str(),"\\\\",2)==0)
+        if(PlatStrNICmp(inFile.c_str(),"\\\\",2)==0)
             return inFile;
-        if(_strnicmp(inFile.c_str(),"html",4)==0)
+        if(PlatStrNICmp(inFile.c_str(),"html",4)==0)
             return inFile;
     }
     return ComponentConfig::mResourceFolder+inFile;

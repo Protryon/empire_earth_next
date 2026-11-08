@@ -1,6 +1,7 @@
 // Runs lobby operation completions on the window thread (file name inferred: no __FILE__)
 // The original object of 0x757d70..0x757f24 is unknown: it may be part of the neighbouring chat or config unit
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
+#include "platform/PlatThread.h"
 #include <windows.h>
 #include <string>
 #include <list>
@@ -25,7 +26,7 @@ public:
 void LobbyCompletionBase::Complete(AsyncOpPtr theParam)
 {
     DWORD aThreadId = WONAPI::WindowManager::GetThreadId();
-    if (GetCurrentThreadId() == aThreadId)
+    if (PlatCurrentThreadId() == aThreadId)
         this->Run(theParam.get());
     else {
         WindowManager* aManager = WONAPI::WindowManager::GetDefaultWindowManager();

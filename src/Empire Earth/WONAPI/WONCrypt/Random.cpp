@@ -8,6 +8,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRandom.h"
+#include "ee/wonapi/WONRouting.h" // WONTickCount
 namespace WONAPI {
 long Random::usageCount = 0;
 // The original leaves randomBytesUsed and counter uninitialized
@@ -46,16 +47,18 @@ RawBuffer Random::getSeed(int)
 {
     RawBuffer bytes(8, static_cast<unsigned char>(0));
     long usage = ++Random::usageCount;
-    unsigned long sectorsPerCluster, bytesPerSector, freeClusters, usedClusters;
     __int64 seed = 0;
+#ifdef _WIN32
+    unsigned long sectorsPerCluster, bytesPerSector, freeClusters, usedClusters;
     GetDiskFreeSpaceA(NULL, &sectorsPerCluster, &bytesPerSector, &freeClusters, &usedClusters);
     usedClusters -= freeClusters;
     seed = (usedClusters < freeClusters ? freeClusters : usedClusters) * sectorsPerCluster * bytesPerSector;
-    unsigned long tick = GetTickCount();
+#else
+    seed = PlatCounterTicks();   // no disk-space query in the platform layer: the high-resolution counter instead
+#endif
+    uint32_t tick = WONTickCount();
     *reinterpret_cast<unsigned short*>(&seed) = reinterpret_cast<unsigned short*>(&tick)[1];
-    ULARGE_INTEGER systemTime;
-    GetSystemTimeAsFileTime(reinterpret_cast<FILETIME*>(&systemTime));
-    seed ^= systemTime.QuadPart;
+    seed ^= PlatTimeWallClock100ns();
     seed += usage;
     return bytes.assign(reinterpret_cast<const unsigned char*>(&seed), 8);
 }

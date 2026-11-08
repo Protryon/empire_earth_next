@@ -1,5 +1,6 @@
 // InitLogic: Internet lobby start-up (DNS, directory, version and firewall checks, terms of use, advert)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
+#include "platform/PlatString.h"
 #include <windows.h>
 #include <string>
 #include <list>
@@ -214,12 +215,12 @@ void InitLogic::ParseCrossPromotion(const ByteBuffer* inDocument)
     this->mCrossPromotion = "";
     token = strtok(token,delimiters);
     while (token != NULL) {
-        if (_stricmp(token,"link") == 0) {
+        if (PlatStrICmp(token,"link") == 0) {
             token = strtok(NULL,"\n");
             if (token == NULL)
                 break;
             this->mCrossPromotion = token;
-        } else if (_stricmp(token,"image") == 0) {
+        } else if (PlatStrICmp(token,"image") == 0) {
             token = strtok(NULL,"\n");
             if (token == NULL)
                 break;

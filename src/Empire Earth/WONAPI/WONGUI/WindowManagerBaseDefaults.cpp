@@ -10,10 +10,11 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "platform/PlatTime.h"
 namespace WONAPI {
 // FUNCTION: WON 0x0072e7c0
 // Waits for events: the base version only sleeps 20 ms
-void WindowManager::GetNextEvent() { Sleep(20); }
+void WindowManager::GetNextEvent() { PlatSleep(20); }
 // FUNCTION: WON 0x0072c380
 // Base screen-mode change: changes nothing and returns false
 bool WindowManager::SetScreenResolutionHook(int,int) { return false; }

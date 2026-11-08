@@ -73,7 +73,7 @@ void MultiPingOp::ClearServers()
 ByteBufferPtr MultiPingOp::GetRequest(MultiPingStruct *theStruct)
 {
 	theStruct->mPingId = rand();
-	theStruct->mStartPingTick = GetTickCount();
+	theStruct->mStartPingTick = WONTickCount();
 
 	WriteBuffer aBuf(0,true);
 	aBuf.AppendByte(3);
@@ -102,7 +102,7 @@ MultiPingOp::PingAction MultiPingOp::HandleResponse(MultiPingStruct *theStruct, 
 		if(anId!=theStruct->mPingId)
 			return PingAction_InvalidReply;
 
-		theStruct->mPingTime = GetTickCount()-theStruct->mStartPingTick;
+		theStruct->mPingTime = WONTickCount()-theStruct->mStartPingTick;
 		return PingAction_Done;
 	}
 	catch(ReadBufferException&)
@@ -226,7 +226,7 @@ void MultiPingOp::PingBatchAsync()
 ///////////////////////////////////////////////////////////////////////////////
 DWORD MultiPingOp::ResponseTimeLeft(DWORD theStartTick)
 {
-	DWORD anElapsed = GetTickCount() - theStartTick;
+	DWORD anElapsed = WONTickCount() - theStartTick;
 	if(anElapsed > this->mMaxPingTime)
 		return 0;
 
@@ -287,7 +287,7 @@ WONStatus MultiPingOp::PingBatchBlock()
 		++anItr;
 	}
 
-	DWORD aStartTick = GetTickCount();
+	DWORD aStartTick = WONTickCount();
 	while(this->ResponseTimeLeft(aStartTick)>0 && !this->mPingMap.empty())
 	{
 		ByteBufferPtr aReply;

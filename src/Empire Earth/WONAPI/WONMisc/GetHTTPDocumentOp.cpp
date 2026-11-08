@@ -13,6 +13,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONStatus.h"
+#include "platform/PlatFile.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x006d0170
@@ -67,7 +68,7 @@ void GetHTTPDocumentOp::OpFinished(HTTPGetOp* inOp, int inOwner)
     if (inOp->mStatus != WS_Success) return;
     this->mIsNew[inOwner] = inOp->mContentIsNew;
     if (this->mDocumentType != HTTPDocType_MOTD) return;
-    FILE* file = fopen(this->mDocuments[inOwner].c_str(),"r");
+    FILE* file = PlatFOpen(this->mDocuments[inOwner].c_str(),"r");
     if (file != NULL) {
         int first = fgetc(file);
         if (first == EOF) {
@@ -103,7 +104,7 @@ void GetHTTPDocumentOp::RunHook()
 ByteBufferPtr GetHTTPDocumentOp::GetDocument(HTTPDocOwner inOwner) const
 {
     FILE* file = NULL;
-    if (!this->mDocuments[inOwner].empty()) file = fopen(this->mDocuments[inOwner].c_str(), "r");
+    if (!this->mDocuments[inOwner].empty()) file = PlatFOpen(this->mDocuments[inOwner].c_str(), "r");
     if (file == NULL) return new ByteBuffer("");
     WriteBuffer buffer(0,true);
     if (this->mDocumentType == HTTPDocType_MOTD) {

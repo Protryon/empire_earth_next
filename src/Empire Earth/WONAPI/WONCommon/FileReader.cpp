@@ -9,6 +9,7 @@
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
+#include "platform/PlatFile.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x006a0ce0
@@ -40,7 +41,7 @@ bool FileReader::Open(const char* inPath)
 {
     this->Close();
     if (inPath[0] == 0) return false;
-    this->mFile = fopen(inPath, "rb");
+    this->mFile = PlatFOpen(inPath, "rb");
     this->mMemoryMode = false;
     return this->mFile != NULL;
 }
@@ -50,7 +51,7 @@ bool FileReader::OpenText(const char* inPath)
 {
     this->Close();
     if (inPath[0] == 0) return false;
-    this->mFile = fopen(inPath, "r");
+    this->mFile = PlatFOpen(inPath, "r");
     this->mMemoryMode = false;
     return this->mFile != NULL;
 }
@@ -197,7 +198,7 @@ unsigned short FileReader::ReadShort() { unsigned short value; this->ReadBytes(&
 
 // FUNCTION: WON 0x006a1b60
 // Reads a 32-bit value
-long FileReader::ReadLong() { long value; this->ReadBytes(&value, 4); return value; }
+int32_t FileReader::ReadLong() { int32_t value; this->ReadBytes(&value, 4); return value; }
 // FUNCTION: WON 0x006a1b80
 // Reads a length field of 1, 2 or 4 bytes; returns 0 for any other field size
 int FileReader::ReadLength(int inFieldSize)

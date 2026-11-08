@@ -1,7 +1,12 @@
 // WONAPI socket send and receive ops: raw bytes, length-prefixed messages, datagrams (file grouping inferred)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
+#ifdef _WIN32
 #include <sys/utime.h>
+#else
+#include <utime.h>
+#endif
+#include "platform/PlatFile.h"
 #include <string>
 #include <list>
 #include <map>
@@ -93,9 +98,9 @@ WONStatus RecvBytesOp::StartRecv()
     this->mOwnFile = false;
     if (this->mFile == NULL && !this->mPath.empty()) {
         if (this->mBinary)
-            this->mFile = fopen(this->mPath.c_str(), this->mAppend ? "a+b" : "wb");
+            this->mFile = PlatFOpen(this->mPath.c_str(), this->mAppend ? "a+b" : "wb");
         else
-            this->mFile = fopen(this->mPath.c_str(), this->mAppend ? "a+" : "w");
+            this->mFile = PlatFOpen(this->mPath.c_str(), this->mAppend ? "a+" : "w");
         if (this->mFile == NULL)
             return WS_FailedToOpenFile;
         this->mOwnFile = true;
@@ -252,10 +257,18 @@ WONStatus RecvBytesOp::CloseFile(WONStatus inStatus)
         if (this->mOwnFile && fclose(this->mFile) != 0)
             inStatus = WS_FailedToWriteToFile;
         if (this->mFileModifyTime != 0) {
+#ifdef _WIN32
             struct _utimbuf aTime;
+#else
+            struct utimbuf aTime;   // POSIX's utime: the same fields
+#endif
             aTime.actime = this->mFileModifyTime;
             aTime.modtime = this->mFileModifyTime;
+#ifdef _WIN32
             _utime(this->mPath.c_str(), &aTime);
+#else
+            utime(this->mPath.c_str(), &aTime);
+#endif
         }
         this->mFile = NULL;
     }

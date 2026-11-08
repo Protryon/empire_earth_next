@@ -777,7 +777,7 @@ GUIString LobbyPersistentData::GetDefaultLanName()
     aCRC.Put(&anAddress,4);
     char aNumber[256];
     unsigned short aValue = aCRC.Get() % 10000;
-    _itoa(aValue, aNumber, 10);
+    snprintf(aNumber, sizeof(aNumber), "%u", (unsigned)aValue);
     aName.append(GUIString(aNumber));
     return aName;
 }

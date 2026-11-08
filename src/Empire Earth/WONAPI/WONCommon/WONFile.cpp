@@ -7,12 +7,13 @@
 #include <list>
 #include <stdio.h>
 #include <stdlib.h>
-#include <io.h>
-#include <sys/stat.h>
+#include <stdint.h>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONLobbyResource.h"
+#include "platform/PlatFile.h"
+#include "platform/PlatString.h"
 namespace WONAPI {
 // FUNCTION: WON 0x006a7610
 // Creates a file object for the given path
@@ -56,13 +57,18 @@ bool WONFile::Delete(bool inEvenIfReadOnly)
         if (this->mIsReadOnly)
             this->SetReadOnly(false);
     }
-    return remove(this->mPath.c_str()) == 0;
+    return PlatDeleteFile(this->mPath.c_str()) != 0;
 }
 // FUNCTION: WON 0x006a79b0
 // Sets or clears the file's read-only flag; returns success
 bool WONFile::SetReadOnly(bool inReadOnly)
 {
-    return _chmod(this->mPath.c_str(), inReadOnly ? 0x100 : 0x180) == 0;
+    // _chmod changed only the read-only attribute
+    uint32_t attributes = PlatPathGetAttributes(this->mPath.c_str());
+    if (attributes == PLAT_ATTR_INVALID)
+        return false;
+    attributes = inReadOnly ? (attributes | PLAT_ATTR_READONLY) : (attributes & ~PLAT_ATTR_READONLY);
+    return PlatPathSetAttributes(this->mPath.c_str(), attributes != 0 ? attributes : PLAT_ATTR_NORMAL) != 0;
 }
 
 // FUNCTION: WON 0x006a79e0
@@ -72,14 +78,25 @@ const std::string& WONFile::GetFilePath() { return this->mPath; }
 // Stats the file and caches existence, read-only flag, size, modify time and directory flag
 void WONFile::CalcFileInfo()
 {
-    struct _stat info;
     this->mStatValid = true;
-    if (_stat(this->mPath.c_str(), &info) == 0) {
+    uint32_t attributes = PlatPathGetAttributes(this->mPath.c_str());
+    if (attributes != PLAT_ATTR_INVALID) {
         this->mExists = true;
-        this->mIsReadOnly = (info.st_mode & 2) == 0;
-        this->mSize = info.st_size;
-        this->mModifyTime = info.st_mtime;
-        this->mIsDir = (info.st_mode & 0x4000) != 0;
+        this->mIsReadOnly = (attributes & PLAT_ATTR_READONLY) != 0;
+        this->mIsDir = (attributes & PLAT_ATTR_DIRECTORY) != 0;
+        // _stat's size and modify time (seconds since 1970); a directory has neither here
+        this->mSize = 0;
+        this->mModifyTime = 0;
+        PlatFile* file = this->mIsDir ? NULL : PlatFileOpen(this->mPath.c_str(), PLAT_FILE_READ);
+        if (file != NULL) {
+            uint32_t size = PlatFileGetSize(file);
+            uint64_t time;
+            if (size != 0xFFFFFFFFu)
+                this->mSize = size;
+            if (PlatFileGetWriteTime(file, &time) && time >= 116444736000000000ull)
+                this->mModifyTime = static_cast<long>((time - 116444736000000000ull) / 10000000u);
+            PlatFileClose(file);
+        }
     } else {
         this->mSize = 0;
         this->mModifyTime = 0;
@@ -102,10 +119,33 @@ void WONFile::CalcFileDirectory()
 // Caches the absolute form of the path
 void WONFile::CalcFullPath()
 {
-    char path[260];
-    if (_fullpath(path, this->mPath.c_str(), sizeof(path)) != NULL)
-        this->mFullPath = path;
+    // _fullpath: a path not starting at a volume's root joined to the current directory, "." and ".." resolved
     this->mFullPathValid = true;
+    const std::string& path = this->mPath;
+    std::string full = path;
+    bool hasVolume = path.length() >= 2 && path[1] == ':';
+    bool rooted = path.length() > (hasVolume ? 2u : 0u) && path[hasVolume ? 2 : 0] == '\\';
+    if (!(hasVolume && rooted) && path.compare(0, 2, "\\\\") != 0) {
+        char directory[PLAT_MAX_PATH];
+        uint32_t length = PlatGetCurrentDirectory(directory, sizeof(directory));
+        if (length == 0 || length >= sizeof(directory))
+            return;
+        std::string current(directory, length);
+        if (current.empty() || current[current.length() - 1] != '\\')
+            current += '\\';
+        std::string volume = current.length() >= 2 && current[1] == ':' ? current.substr(0, 2) : std::string();
+        if (rooted)                                     // "\dir": on the current volume
+            full = volume + path;
+        else if (!hasVolume)                            // relative to the current directory
+            full = current + path;
+        else if (PlatStrNICmp(volume.c_str(), path.c_str(), 2) == 0)   // "C:dir" on the current volume
+            full = current + path.substr(2);
+        else                                            // "D:dir": the root of another volume
+            full = path.substr(0, 2) + "\\" + path.substr(2);
+    }
+    WONFile normalized(full);
+    normalized.NormalizePath();
+    this->mFullPath = normalized.mPath;
 }
 // FUNCTION: WON 0x006a7d80
 // Splits the file name at the last dot into the cached extension and base name
@@ -182,12 +222,11 @@ bool WONFile::IsDir()
 bool WONFile::CreateAsDirectory(bool inUnused)
 {
     if (this->Exists()) return this->IsDir();
-    return CreateDirectoryA(this->mPath.c_str(), NULL) != 0;
+    return PlatCreateDirectory(this->mPath.c_str()) == PLAT_FILE_OK;
 }
 }
 
 #include <vector>
-#include <direct.h>
 #include <ctype.h>
 namespace WONAPI {
 using namespace std;
@@ -298,26 +337,17 @@ std::string WONFile::GetRelativePath(const WONFile &theSubFile)
 // No original address identified: WON SDK method
 WONFile WONFile::GetWorkingDirectory()
 {
-#ifdef _XBOX
-	return WONFile();
-#else
-	char aLocalPath[MAX_PATH];
-	_getcwd(aLocalPath, sizeof(aLocalPath));
+	char aLocalPath[PLAT_MAX_PATH];
+	uint32_t aLength = PlatGetCurrentDirectory(aLocalPath, sizeof(aLocalPath));
+	if(aLength == 0 || aLength >= sizeof(aLocalPath))
+		aLocalPath[0] = 0;
 	return WONFile(aLocalPath);
-#endif
 }
 
+// The game's working directory stays its data root (platform/PlatPath.h): never changed (this has no caller)
 // No original address identified: WON SDK method
 bool WONFile::SetWorkingDirectory()
 {
-#ifdef _XBOX
 	return false;
-#else
-	this->GetFileDirectory();
-	if(this->mFileDirectory.empty())
-		return false;
-	else
-		return chdir(this->mFileDirectory.c_str())==0;
-#endif
 }
 }

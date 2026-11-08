@@ -31,7 +31,7 @@ WONStatus PingOp::GetNextRequest()
 	aBuf.AppendByte(3);					// mini message
 	aBuf.AppendByte(1);					// common service
 	aBuf.AppendByte(5);					// ping message
-	aBuf.AppendLong(GetTickCount());	// start tick
+	aBuf.AppendLong(WONTickCount());	// start tick
 	aBuf.AppendBool(this->mExtended);			// extended ping flag
 	this->mRequest = aBuf.ToByteBuffer(true);
 	return (WONStatus)WS_ServerReq_Recv;
@@ -50,7 +50,7 @@ WONStatus PingOp::CheckResponse()
 		return this->InvalidReplyHeader();
 
 	// Read startTick and determine lag
-	this->mLag = GetTickCount() - aMsg.ReadLong();
+	this->mLag = WONTickCount() - aMsg.ReadLong();
 
 	if(aMsg.Available()>0)
 	{

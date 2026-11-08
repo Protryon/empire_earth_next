@@ -1,7 +1,6 @@
 // ThreadBase (0x14 bytes) and the Win32 Thread (0x1c bytes) with its execution hooks
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
-#include <process.h>
 #include <string>
 #include <list>
 #include <map>
@@ -59,51 +58,59 @@ void ThreadBase::WaitForStop()
     if(this->mRunning && !this->InThisThread()) this->WaitForStopHook();
 }
 // FUNCTION: WON 0x006a85e0
-// Thread entry: runs ThreadFunc, marks the thread stopped and auto-deletes it; dumps the stack on a crash
-unsigned __stdcall Thread::StaticThreadFunc(void* data)
+// Thread entry: runs ThreadFunc, marks the thread stopped and auto-deletes it; dumps the stack on a crash (Windows:
+// the SEH filter; elsewhere there is no SEH and a crash is the system's)
+uint32_t Thread::StaticThreadFunc(void* data)
 {
-    __try {
-        Thread* thread=static_cast<Thread*>(data);
-        thread->mThreadId=GetCurrentThreadId();
+    // a member's lambda: ThreadFunc and the state are protected
+    void (*RunThread)(Thread*)=[](Thread* thread) {
+        thread->mThreadId=PlatCurrentThreadId();
         thread->ThreadFunc();
         thread->mRunning=false;
         if(thread->mAutoDelete) delete thread;
+    };
+#ifdef _WIN32
+    __try {
+        RunThread(static_cast<Thread*>(data));
     } __except(WONDebug::DumpStackToFile(GetExceptionInformation())) {
     }
+#else
+    RunThread(static_cast<Thread*>(data));
+#endif
     return 0;
 }
 // FUNCTION: WON 0x006a8670
-// Creates the Win32 thread, suspended first to apply a non-normal priority
+// Creates the thread, suspended first to apply a non-normal priority
 void Thread::StartHook()
 {
-    unsigned threadAddress;
-    int flags=this->mPriority==ThreadPriority_Normal ? 0 : CREATE_SUSPENDED;
-    this->mThreadHandle=(HANDLE)_beginthreadex(NULL,0,Thread::StaticThreadFunc,this,flags,&threadAddress);
-    if(flags) {
+    uint32_t threadAddress;
+    int suspended=this->mPriority==ThreadPriority_Normal ? 0 : 1;
+    this->mThreadHandle=PlatThreadCreate(Thread::StaticThreadFunc,this,0,suspended,&threadAddress);
+    if(suspended) {
         this->SetPriorityHook();
-        ResumeThread(this->mThreadHandle);
+        PlatThreadResume(this->mThreadHandle);
     }
 }
 // The original does not close the thread handle here
 // FUNCTION: WON 0x006a86c0
-// Waits for the Win32 thread to end
-void Thread::WaitForStopHook() {WaitForSingleObject(this->mThreadHandle,INFINITE);}
+// Waits for the thread to end
+void Thread::WaitForStopHook() {PlatThreadWait(this->mThreadHandle,PLAT_WAIT_INFINITE);}
 // FUNCTION: WON 0x006a86d0
 // Returns true when called on this thread
-bool Thread::InThisThreadHook() {return GetCurrentThreadId()==this->mThreadId;}
+bool Thread::InThisThreadHook() {return PlatCurrentThreadId()==this->mThreadId;}
 // FUNCTION: WON 0x006a86f0
-// Applies the thread's priority level to the Win32 thread
+// Applies the thread's priority level to the thread
 void Thread::SetPriorityHook()
 {
-    int priority=THREAD_PRIORITY_NORMAL;
+    int priority=PLAT_PRIORITY_NORMAL;
     switch(this->mPriority) {
-    case ThreadPriority_Highest:priority=THREAD_PRIORITY_HIGHEST;break;
-    case ThreadPriority_High:priority=THREAD_PRIORITY_ABOVE_NORMAL;break;
-    case ThreadPriority_Normal:priority=THREAD_PRIORITY_NORMAL;break;
-    case ThreadPriority_Low:priority=THREAD_PRIORITY_BELOW_NORMAL;break;
-    case ThreadPriority_Lowest:priority=THREAD_PRIORITY_LOWEST;break;
+    case ThreadPriority_Highest:priority=PLAT_PRIORITY_HIGHEST;break;
+    case ThreadPriority_High:priority=PLAT_PRIORITY_ABOVE_NORMAL;break;
+    case ThreadPriority_Normal:priority=PLAT_PRIORITY_NORMAL;break;
+    case ThreadPriority_Low:priority=PLAT_PRIORITY_BELOW_NORMAL;break;
+    case ThreadPriority_Lowest:priority=PLAT_PRIORITY_LOWEST;break;
     }
-    SetThreadPriority(this->mThreadHandle,priority);
+    PlatThreadSetPriority(this->mThreadHandle,priority);
 }
 }
 

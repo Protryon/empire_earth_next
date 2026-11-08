@@ -9,6 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONLobbyPlatform.h" // CreateNativeWindow
 #include "ee/wonapi/WONComponentFlags.h"
 
 using namespace WONAPI;
@@ -102,7 +103,7 @@ void BackgroundGrabber::Paint(Component *theComponent, Graphics &g)
 
 		if(theComponent->ComponentFlagSet(ComponentFlag_DebugBG) && this->mDebugWindow.get()==NULL)
 		{
-			this->mDebugWindow = new MSWindow;
+			this->mDebugWindow = CreateNativeWindow();
 			this->mDebugWindow->SetParent(theComponent->GetRoot());
 			this->mDebugWindow->mStyle=0x40;
 			WONRectangle aRect(0,0,this->mBGImage->GetWidth(),this->mBGImage->GetHeight());

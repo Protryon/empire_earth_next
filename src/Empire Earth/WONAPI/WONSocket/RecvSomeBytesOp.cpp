@@ -40,7 +40,7 @@ WONStatus RecvSomeBytesOp::Start()
 		delete this->mCurRecv;
 	
 	this->mCurRecv = new char[this->mMaxBytes];
-	this->mStartTime = GetTickCount();
+	this->mStartTime = WONTickCount();
 
 	return this->Continue();
 }
@@ -54,7 +54,7 @@ WONStatus RecvSomeBytesOp::Continue()
 	int aRecvLen = 0;
 	WONStatus aStatus;
 
-	if (this->mDoDelay && RecvSomeBytesOp::mInitDelay>0 && GetTickCount()-this->mStartTime<RecvSomeBytesOp::mInitDelay)
+	if (this->mDoDelay && RecvSomeBytesOp::mInitDelay>0 && WONTickCount()-this->mStartTime<RecvSomeBytesOp::mInitDelay)
 		return WS_TimedOut /* SDK WS_TimedOut */;
 	
 	aStatus = this->mSocket->Recv(this->mCurRecv,this->mMaxBytes,&aRecvLen);	

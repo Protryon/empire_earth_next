@@ -9,6 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyConfig.h"
+#include "platform/PlatString.h"
 namespace WONAPI {
 class ConfigDefineScope {
     ConfigParser& mParser;
@@ -296,7 +297,7 @@ bool ConfigObject::HandleInstruction(ConfigParser* parser,const std::string& ins
         } else this->SkipGroup(*parser,true,false);
         std::string token;
         parser->ReadToken(token,false,false);
-        if(_stricmp(token.c_str(),"else")!=0) {
+        if(PlatStrICmp(token.c_str(),"else")!=0) {
             parser->UngetStr(token);
             return true;
         }
@@ -320,7 +321,7 @@ bool ConfigObject::HandleInstruction(ConfigParser* parser,const std::string& ins
         } else this->ParseGroup(*parser,true,false,false,false);
         std::string token;
         parser->ReadToken(token,false,false);
-        if(_stricmp(token.c_str(),"else")!=0) {
+        if(PlatStrICmp(token.c_str(),"else")!=0) {
             parser->UngetStr(token);
             return true;
         }

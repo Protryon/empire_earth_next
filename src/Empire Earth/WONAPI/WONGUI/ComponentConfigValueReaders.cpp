@@ -1,5 +1,6 @@
 // ComponentConfig value readers: strings, fonts, images, cursors and selection colors (file name inferred)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
+#include "platform/PlatString.h"
 #include <windows.h>
 #include <string>
 #include <list>
@@ -43,7 +44,7 @@ SmartPtr<Font> ComponentConfig::ReadFont()
         this->mStringParser->IncrementPos(1);
         std::string type;
         this->mStringParser->ReadString(type,false);
-        if(_stricmp(type.c_str(),"CFG")==0) {
+        if(PlatStrICmp(type.c_str(),"CFG")==0) {
             this->EnsureComma();
             std::string name;
             this->mStringParser->ReadString(name,false);
@@ -75,7 +76,7 @@ SmartPtr<Image> ComponentConfig::GetImageFromStr(const std::string& spec,bool ge
         std::string::size_type split=spec.find('_');
         if(split!=std::string::npos) {
             std::string type=spec.substr(1,split-1);
-            if(_stricmp(type.c_str(),"CFG")==0) {
+            if(PlatStrICmp(type.c_str(),"CFG")==0) {
                 std::string name=spec.substr(split+1);
                 ComponentConfig* current=this;
                 ImageConfig* config=NULL;
@@ -94,7 +95,7 @@ SmartPtr<Image> ComponentConfig::GetImageFromStr(const std::string& spec,bool ge
                 return image;
                 }
             }
-        } else if(_stricmp(spec.c_str(),"@NULL")==0) return NULL;
+        } else if(PlatStrICmp(spec.c_str(),"@NULL")==0) return NULL;
         else return this->GetImageResource(spec.c_str()+1);
         throw ConfigObjectException("Bad Image Specification: "+spec);
     }

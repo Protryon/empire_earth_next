@@ -58,10 +58,17 @@ def _won_extra_units():
             if p.resolve() not in listed and p.name not in WON_NOT_LINKED]
 
 
+# the WON GUI toolkit's Win32/GDI backend (link/won/units.txt lists it): replaced on every OS by the backend on the
+# platform layer (WONGUI/Plat*.cpp, include/ee/wonapi/WONLobbyPlatform.h; PORT_LEARNINGS.md "The WON library from
+# source")
+WON_REPLACED = {"MSWindowManager.cpp", "MSWindow.cpp", "MSGraphics.cpp", "MSNativeImage.cpp", "MSRawImage.cpp",
+                "MSFont.cpp", "DisplayContext.cpp", "BMPDecoderPlatform.cpp", "Clipboard.cpp", "MSSound.cpp"}
 # WONAPI sources not linked: a reconstruction whose every function the original unit StringParser.cpp already defines
 # (same bodies; linking both is a duplicate symbol); WON SDK sources the original exe did not contain and nothing
-# references (the GameSpy query/report support, the Win32 open/save file dialog)
-WON_NOT_LINKED = {"StringParserFormat.cpp", "GameSpySupport.cpp", "MSFileDialog.cpp"}
+# references (the GameSpy query/report support, the Win32 open/save file dialog, the Winsock event-driven socket
+# thread backends: the game runs WON's polling SocketThreadSimple; WinSkin, the Windows desktop-theme reader)
+WON_NOT_LINKED = {"StringParserFormat.cpp", "GameSpySupport.cpp", "MSFileDialog.cpp", "SocketThreadWinsock2.cpp",
+                  "SocketThreadEx_Windows.cpp", "WinSkin.cpp"}
 
 
 EXTRA_UNITS["won"] = _won_extra_units()
@@ -88,6 +95,8 @@ def rel_src(path):
 def jobs_for(mod):
     """[(module, source, flags)] of a module's units (and the shared extra units it links)."""
     paths = [p for _, _, p in module_units(mod)] + [ROOT / "src" / rel for rel in EXTRA_UNITS.get(mod, [])]
+    if mod == "won":
+        paths = [p for p in paths if p.name not in WON_REPLACED]
     for p in paths:
         if not p.exists():
             sys.exit(f"{mod}: unit {p} does not exist")

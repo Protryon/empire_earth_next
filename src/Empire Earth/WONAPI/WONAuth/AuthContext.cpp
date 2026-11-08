@@ -17,6 +17,9 @@
 #include "ee/wonapi/WONMD5.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONBuffer.h"
+#include "platform/PlatFile.h"
+#include "platform/PlatPath.h"
 // File-local lazy critical section: the original's getter is 0x006ddda0 (50 bytes), its atexit cleanup 0x2ddde0
 static WONAPI::CriticalSection& GetVerifierCrit()
 {
@@ -212,7 +215,7 @@ bool AuthContext::LoadSecretList()
 {
     AutoCrit lock(this->mDataCrit);
     this->mSecretList.clear();
-    FILE* file=fopen(this->mLoginSecretFile.c_str(),"rb");
+    FILE* file=PlatFOpen(this->mLoginSecretFile.c_str(),"rb");
     if(file==NULL) return false;
     unsigned char count=static_cast<unsigned char>(fgetc(file));
     int i=0;
@@ -232,7 +235,7 @@ bool AuthContext::LoadSecretList()
 bool AuthContext::SaveSecretList()
 {
     AutoCrit lock(this->mDataCrit);
-    FILE* file=fopen(this->mLoginSecretFile.c_str(),"wb");
+    FILE* file=PlatFOpen(this->mLoginSecretFile.c_str(),"wb");
     if(file==NULL) return false;
     unsigned char count=static_cast<unsigned char>(this->mSecretList.size());
     fwrite(&count,1,1,file);
@@ -377,7 +380,7 @@ void AuthContext::AppendCommunityData(WriteBuffer& output)
             ConstSmartPtr<ByteBuffer> key(community->second.mCDKey.mKey.get());
             if(key.get()!=NULL) {
                 output.AppendByte(1);
-                output.AppendShort(static_cast<short>(community->first.length()*2+key->length()+2));
+                output.AppendShort(static_cast<short>(WideUtf16Length(community->first)*2+key->length()+2));
                 output.AppendWString(community->first,2);
                 output.AppendBytes(key->data(),key->length());
                 ++count;
@@ -390,7 +393,7 @@ void AuthContext::AppendCommunityData(WriteBuffer& output)
         ConstSmartPtr<ByteBuffer> key(joined->second.mKey.get());
         if(key.get()!=NULL) {
             output.AppendByte(7);
-            output.AppendShort(static_cast<short>(joined->first.length()*2+6+key->length()));
+            output.AppendShort(static_cast<short>(WideUtf16Length(joined->first)*2+6+key->length()));
             output.AppendWString(joined->first,2);
             output.AppendLong(0);
             output.AppendBytes(key->data(),key->length());
@@ -403,7 +406,7 @@ void AuthContext::AppendCommunityData(WriteBuffer& output)
         const ByteBuffer* data=userData->second.get();
         if(data!=NULL) {
             output.AppendByte(8);
-            output.AppendShort(static_cast<short>(userData->first.length()*2+6+data->length()));
+            output.AppendShort(static_cast<short>(WideUtf16Length(userData->first)*2+6+data->length()));
             output.AppendWString(userData->first,2);
             output.AppendLong(0);
             output.AppendBuffer(data,0);
@@ -528,11 +531,13 @@ void AuthContext::ClearOneTimeData()
 }
 // FUNCTION: WON 0x006e06d0
 // Hashes the running executable for the community; false when its path is unavailable
+// (GetModuleFileNameA: the data root is the executable's directory, unless EE_DATA_ROOT moves it on POSIX)
 bool AuthContext::SetHashFile(const std::wstring& community)
 {
-    char path[MAX_PATH];
-    if(GetModuleFileNameA(GetModuleHandleA(NULL),path,MAX_PATH)>0)
-        return this->SetHashFile(community,path);
+    char directory[PLAT_MAX_PATH];
+    char name[PLAT_MAX_PATH];
+    if(PlatPathGetDataRoot(directory,PLAT_MAX_PATH)>0 && PlatPathGetExecutableName(name,PLAT_MAX_PATH)>0)
+        return this->SetHashFile(community,std::string(directory)+name);
     return false;
 }
 // FUNCTION: WON 0x006e07f0
@@ -554,7 +559,7 @@ bool AuthContext::SetHashFileList(const std::wstring& community,const std::list<
     int sectionPosition=0;
     std::list<std::string>::const_iterator next=files.begin();
     while(next!=files.end()) {
-        FILE* file=fopen(next->c_str(),"rb");
+        FILE* file=PlatFOpen(next->c_str(),"rb");
         if(file==NULL) return false;
         ++next;
         char buffer[16384];
@@ -632,7 +637,7 @@ void AuthContext::RemoveCommunity(const std::wstring& community)
 bool AuthContext::LoadVerifierKey(const std::string& filename)
 {
     AuthContext::mCheckedVerifierFile=true;
-    FILE* file=fopen(filename.c_str(),"rb");
+    FILE* file=PlatFOpen(filename.c_str(),"rb");
     if(file==NULL) return false;
     unsigned char buffer[1024];
     RawBuffer key;

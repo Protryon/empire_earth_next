@@ -1,6 +1,5 @@
 // WON SDK NetStats static definitions (socket counts and byte/message totals)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-#include <winsock2.h>
 #include <windows.h>
 #include <string>
 #include <list>

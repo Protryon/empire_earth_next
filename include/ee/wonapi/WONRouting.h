@@ -12,6 +12,10 @@
 #include "ee/wonapi/WONStringCompare.h"
 #include <stdio.h> //FILE* member (RecvBytesOp::mFile)
 #include <set> //SmartRoutingConnection IgnoreSet
+#include <stdint.h>
+#include "platform/PlatSocket.h"
+#include "platform/PlatThread.h"
+#include "platform/PlatTime.h"
 
 namespace WONAPI {
 
@@ -23,6 +27,10 @@ enum AuthType { AUTH_TYPE_NONE=0, AUTH_TYPE_SESSION=1, AUTH_TYPE_PERSISTENT=2, A
 
 // 0x29deb0 (WONStatus.cpp, the first WONAPI object): the status text
 const char* WONStatusToString(WONStatus inStatus);
+
+// WON's millisecond tick (was GetTickCount): real time, wraps every 2^32 ms like GetTickCount; compare by unsigned
+// 32-bit difference
+inline uint32_t WONTickCount() { return (uint32_t)PlatTimeMilliseconds64(); }
 
 
 template <class T> class CompletionBase;
@@ -67,7 +75,7 @@ public:
     CriticalSection mLock;                  // +0x08, originalInitialize/DeleteCriticalSection
     SmartPtr<CompletionBase<SmartPtr<AsyncOp> > > mCompletion;     // +0x20
     AsyncOpContainer* mContainer;           // +0x24, nonowning; Queue29f200
-    unsigned long mStartTime;               // +0x28, GetTickCount
+    uint32_t mStartTime;                    // +0x28, WONTickCount (32-bit: elapsed is a wrapping difference)
     unsigned long mTimeout;                 // +0x2c, unsignedelapsed comparison29f700
     bool IsAsync() const { return this->mRunMode==1; }
     long mRunMode;                          // +0x30
@@ -83,17 +91,18 @@ public:
 };
 typedef SmartPtr<AsyncOp> AsyncOpPtr;
 
-// Event: 8 bytes (vptr, HANDLE at 4); 29f7c0, embedded in AsyncOpContainer at 0x1c
+// Event: 8 bytes (vptr, HANDLE at 4); 29f7c0, embedded in AsyncOpContainer at 0x1c. A platform event (the
+// original's alertable wait had no APC user); the timeout is 32-bit as WaitForSingleObjectEx's was
 class Event {
 public:
     explicit Event(bool manualReset=false,bool initiallySet=false)
-        { this->mEvent=CreateEventA(NULL,manualReset,initiallySet,NULL); }
-    virtual ~Event() {CloseHandle(this->mEvent);}
-    void Set() {SetEvent(this->mEvent);}
-    void Reset() {ResetEvent(this->mEvent);}
+        { this->mEvent=PlatEventCreate(manualReset,initiallySet); }
+    virtual ~Event() { if(this->mEvent!=NULL) PlatEventDestroy(this->mEvent); }
+    void Set() {PlatEventSet(this->mEvent);}
+    void Reset() {PlatEventReset(this->mEvent);}
     bool WaitFor(unsigned long milliseconds)
-        {return WaitForSingleObjectEx(this->mEvent,milliseconds,TRUE)==WAIT_OBJECT_0;}
-    HANDLE mEvent; //04
+        {return PlatEventWait(this->mEvent,(uint32_t)milliseconds)==0;}
+    PlatEvent* mEvent; //04
 };
 // AsyncOpContainer: 0x38 bytes, only a virtual destructor. Ctor 29f730, dtor 29f830
 class AsyncOpContainer {
@@ -199,14 +208,14 @@ public:
     void WaitForRead(unsigned long); //2b1410, wait-for-read timeout
     void ClosePrv(); //2b1a10, ClosePrv handle shutdown/close
     WONStatus GetLastSocketError(); //2b0890, socket WSA status mapping
-    bool IsValid();  //2b08c0, handle20 != INVALID_SOCKET
+    bool IsValid();  //2b08c0, handle20 != PLAT_SOCKET_INVALID
     WONStatus TransformRecvMsg(ByteBufferPtr&); //recv transforms reverse-list slot08
     WONStatus TransformSendMsg(ByteBufferPtr&); //send transforms forward-list slot04
     WONStatus SendTo(const void*,int,const IPAddr&);   //sendto
     WONStatus Recv(void*,int,int*);     //recv
 
     CriticalSection mDataCrit; //08..1f
-    SOCKET mSocket; //20
+    PlatSocket mSocket; //20
     int mType; //24, fullDWORD argument/factory forwarding
     IPAddr mDestAddr; //28..4f, complete28
     unsigned char mLengthFieldSize; //50
@@ -2248,14 +2257,14 @@ public:
 };
 class Thread : public ThreadBase {
   private:
-    static unsigned __stdcall StaticThreadFunc(void*); //2a85e0
+    static uint32_t StaticThreadFunc(void*); //2a85e0
   protected:
     virtual void StartHook(); //slot00 2a8670
     virtual void WaitForStopHook(); //slot04 2a86c0
     virtual bool InThisThreadHook(); //slot08 2a86d0
     virtual void SetPriorityHook(); //slot0c 2a86f0
-    HANDLE mThreadHandle; //14
-    DWORD mThreadId; //18, StartHook writes the thread id to a stack variable, not this member, in this version
+    PlatThread* mThreadHandle; //14
+    uint32_t mThreadId; //18, StartHook writes the thread id to a stack variable, not this member, in this version
 public:
     void SetAutoDelete(bool inAutoDelete) { this->mAutoDelete=inAutoDelete; }
 };

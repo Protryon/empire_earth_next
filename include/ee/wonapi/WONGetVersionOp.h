@@ -1,7 +1,6 @@
 // WON SDK version/directory op; no original address identified
 #ifndef __WON_GETVERSIONOP_H__
 #define __WON_GETVERSIONOP_H__
-#include <winsock2.h>
 #include <windows.h>
 #include <string>
 #include <list>

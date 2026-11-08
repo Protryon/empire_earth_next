@@ -6,16 +6,14 @@
 #include <list>
 #include <map>
 #include <vector>
-#include <locale.h>
 #include <stdlib.h>
 #include <string.h>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyConfig.h"
+#include "platform/PlatString.h"
 namespace WONAPI {
-// RVA 565ef0: cached default code page, 0 until first computed
-static int gStringUtilDefaultCodePage=0;
 std::string StringToUpperCase(const std::string& theStr)
 {
 	std::string aNewStr;
@@ -25,40 +23,27 @@ std::string StringToUpperCase(const std::string& theStr)
 
 	return aNewStr;
 }
-// FUNCTION: WON 0x006a63e0
-// Returns the code page named by the CRT LC_CTYPE locale's suffix (not GetACP), 0 when there is none
-static int StringUtilLocaleCodePage()
-{
-    const char* locale=setlocale(LC_CTYPE,NULL);
-    if(locale==NULL) return 0;
-    const char* dot=strchr(locale,'.');
-    if(dot==NULL) return 0;
-    return atoi(dot+1);
-}
-// 0x6a6570: caches the locale code page; a 0 result is retried on the next call
-static int StringUtilDefaultCodePage()
-{
-    if(gStringUtilDefaultCodePage==0) gStringUtilDefaultCodePage=StringUtilLocaleCodePage();
-    return gStringUtilDefaultCodePage;
-}
-// 0x6a6250: converts at most count characters with the ANSI code page into a fixed buffer
+// The original converted with the ANSI code page (MultiByteToWideChar/WideCharToMultiByte), or with the code page
+// of the CRT locale's LC_CTYPE suffix (0x006a63e0/0x6a6570: none in the "C" locale, so the ANSI one again). The
+// game's narrow text is Windows-1252 on every system: every conversion here uses it.
+// 0x6a6250: converts at most count characters into a fixed buffer
 static wchar_t* StringUtilToWideBuffer(wchar_t* out,const char* in,int count)
 {
     if(out==NULL) return NULL;
     *out=0;
-    if(in!=NULL) MultiByteToWideChar(0,0,in,count,out,count);
+    if(in!=NULL) PlatCp1252ToWide(in,count,out,count);
     return out;
 }
-// 0x6a63a0: converts at most count characters to the ANSI code page into a fixed buffer
-static char* StringUtilToNarrowBuffer(char* out,const wchar_t* in,int count)
+// 0x6a63a0: converts at most count characters into a fixed buffer -> the bytes written
+static unsigned int StringUtilToNarrowBuffer(char* out,const wchar_t* in,int count)
 {
-    if(out==NULL) return NULL;
+    if(out==NULL) return 0;
     *out=0;
-    if(in!=NULL) WideCharToMultiByte(0,0,in,count,out,count,NULL,NULL);
-    return out;
+    if(in==NULL) return 0;
+    return PlatWideToCp1252(in,count,out,count);
 }
 // FUNCTION: WON 0x006a6130
-// Converts a string to wide with the ANSI code page, stopping at the first NUL
+// Converts a string to wide, stopping at the first NUL
 // The raw buffer is not guarded while the result string is built
 std::wstring StringToWString(const std::string& in)
 {
@@ -72,42 +57,39 @@ std::wstring StringToWString(const std::string& in)
     return result;
 }
 // FUNCTION: WON 0x006a6280
-// Converts a wide string to narrow with the ANSI code page into a buffer of one byte per character
-// The fixed-size conversion can fail or stop part way; the original ignores the result
+// Converts a wide string to narrow into a buffer of one byte per character
+// (a UTF-16 surrogate pair becomes one '?': the text ends where the conversion did)
 std::string WStringToString(const std::wstring& in)
 {
     unsigned int length=in.length();
     if(length==0) return std::string();
     char* buffer=new char[length+1];
-    StringUtilToNarrowBuffer(buffer,in.c_str(),length);
-    buffer[length]=0;
+    unsigned int written=StringUtilToNarrowBuffer(buffer,in.c_str(),length);
+    buffer[written]=0;
     std::string result(buffer);
     delete [] buffer;
     return result;
 }
 // FUNCTION: WON 0x006a6410
-// Converts a wide string to narrow with the given code page (negative: the locale's), keeping embedded NULs
+// Converts a wide string to narrow (any code page: Windows-1252), keeping embedded NULs
 std::string WStringToString(const std::wstring& in,int codePage)
 {
-    if(codePage<0) codePage=StringUtilDefaultCodePage();
-    int count=WideCharToMultiByte(codePage,0,in.c_str(),in.length(),NULL,0,NULL,NULL);
+    unsigned int count=PlatWideToCp1252(in.c_str(),in.length(),NULL,0);
     std::string result;
     result.reserve(count+1);
     result.resize(count);
-    WideCharToMultiByte(codePage,0,in.c_str(),in.length(),const_cast<char*>(result.data()),result.length(),NULL,NULL);
+    if(count!=0) PlatWideToCp1252(in.c_str(),in.length(),&result[0],count);
     return result;
 }
 // FUNCTION: WON 0x006a6590
-// Converts a string to wide with the given code page (negative: the locale's), keeping embedded NULs
-// Both API calls happen even when the output length is 0
+// Converts a string to wide (any code page: Windows-1252), keeping embedded NULs
 std::wstring StringToWString(const std::string& in,int codePage)
 {
-    if(codePage<0) codePage=StringUtilDefaultCodePage();
-    int count=MultiByteToWideChar(codePage,0,in.c_str(),in.length(),NULL,0);
+    unsigned int count=PlatCp1252ToWide(in.c_str(),in.length(),NULL,0);
     std::wstring result;
     result.reserve(count+1);
     result.resize(count);
-    MultiByteToWideChar(codePage,0,in.c_str(),in.length(),const_cast<wchar_t*>(result.data()),result.length());
+    if(count!=0) PlatCp1252ToWide(in.c_str(),in.length(),&result[0],count);
     return result;
 }
 }

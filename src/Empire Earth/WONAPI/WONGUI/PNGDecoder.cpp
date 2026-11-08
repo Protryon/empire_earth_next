@@ -1,6 +1,7 @@
 // PNG image decoder on libpng 1.0.12 (file name inferred)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
+#define PNG_SKIP_SETJMP_CHECK   // <setjmp.h> comes first here; libpng 1.0 rejects that on Linux
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>

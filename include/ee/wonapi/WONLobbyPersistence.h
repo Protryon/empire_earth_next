@@ -5,6 +5,7 @@
 #include <exception>
 #include <map>
 #include <list>
+#include <stdint.h>
 #include <stdio.h>
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
@@ -48,7 +49,7 @@ public:
     void ReadBytes(void* outData, unsigned long inLength); // 0x6a1460
     unsigned char ReadByte(); // 0x6a1b20
     unsigned short ReadShort(); // 0x6a1b40
-    long ReadLong(); // 0x6a1b60
+    int32_t ReadLong(); // 0x6a1b60 (32-bit on every OS)
     FILE* mFile; // 0x00
     const char* mBuffer; // 0x04 (memory source; delete[] when mOwnBuffer)
     unsigned long mLength; // 0x08
@@ -78,7 +79,7 @@ public:
     void WriteBytes(const void* inData, unsigned long inLength); // 0x6a2400
     void WriteByte(unsigned char inValue); // 0x6a25f0
     void WriteShort(unsigned short inValue); // 0x6a2600
-    void WriteLong(long inValue); // 0x6a2610
+    void WriteLong(int32_t inValue); // 0x6a2610 (32-bit on every OS)
     FILE* mFile; // 0x00
 };
 

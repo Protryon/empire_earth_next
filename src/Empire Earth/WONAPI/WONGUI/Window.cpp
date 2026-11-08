@@ -9,6 +9,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONRouting.h" // WONTickCount
 using namespace WONAPI;
 // FUNCTION: WON 0x0072a020
 // Destroys the window (members only)
@@ -84,7 +85,7 @@ void Window::CheckResize(DWORD theTick)
 	this->mRoot->SetSize(this->mNewWidth, this->mNewHeight);
 	this->mRoot->Invalidate();
 	this->mNeedResize = false;
-	this->mLastResizeTick = GetTickCount();
+	this->mLastResizeTick = WONTickCount();
 }
 
 // FUNCTION: WON 0x0072adc0
@@ -209,7 +210,7 @@ void Window::HandleMouseDown(MouseEvent *theEvent)
 		}
 
 		DWORD &aPrevTick = this->mButtonDownTick[aButton];
-		DWORD aTick = GetTickCount();
+		DWORD aTick = WONTickCount();
 		if(aTick==0) // 0 has special meaning
 			aTick = 1;
 		
@@ -245,7 +246,7 @@ void Window::HandleMouseEvent(MouseEvent *theEvent)
 	switch(theEvent->mEventType)
 	{		
 		case InputEvent_MouseMove:
-			this->mLastMoveTick = GetTickCount();
+			this->mLastMoveTick = WONTickCount();
 			if(this->mDetectDoubleClick && this->mMouseX!=this->mDoubleClickX || this->mMouseY!=this->mDoubleClickY)
 				this->mDetectDoubleClick = false;
 
@@ -303,7 +304,7 @@ void Window::HandleInputEvent(InputEvent *theEvent)
 					this->mNeedResize = true;
 					this->mNewWidth = anEvent->mWidth;
 					this->mNewHeight = anEvent->mHeight;
-					this->CheckResize(GetTickCount());
+					this->CheckResize(WONTickCount());
 				}
 			}
 		}
@@ -334,7 +335,7 @@ bool Window::IdleUpdate()
 		bool force = false;
 		if(this->mMouseIsInClientArea)
 		{
-			DWORD aTick = GetTickCount();
+			DWORD aTick = WONTickCount();
 			if(aTick - this->mLastCheckCursorTick >= 1000)
 			{
 				force = true;
@@ -357,13 +358,13 @@ void Window::TimerEvent(DWORD theElapsed)
 	{
 		if(!this->mMouseIsDown[0] && !this->mMouseIsDown[1] && !this->mMouseIsDown[2])
 		{
-			DWORD anElapsed = GetTickCount() - this->mLastMoveTick;
+			DWORD anElapsed = WONTickCount() - this->mLastMoveTick;
 			if(anElapsed >= 100)
 				this->mRoot->MouseHover(anElapsed);
 		}
 	}
 
-	this->CheckResize(GetTickCount());
+	this->CheckResize(WONTickCount());
 
 	if(this->mRoot->mTimerFlags!=0)
 		this->mRoot->TimerEvent(theElapsed);
@@ -577,7 +578,7 @@ void Window::SuspendRootResize(bool suspend)
         if(this->mSuspendRootResize <= 0)
         {
             this->mSuspendRootResize = 0;
-            this->CheckResize(GetTickCount());
+            this->CheckResize(WONTickCount());
         }
     }
 }

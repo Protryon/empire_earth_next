@@ -70,14 +70,14 @@ AsyncSocket* BlockingSocket::Duplicate()
 
 // No original address identified: WON SDK datagram send/receive calls
 namespace WONAPI {
-WONStatus BlockingSocket::SendBytesTo(const ByteBuffer *theBytes, const IPAddr &theAddr, DWORD theTimeout)
+WONStatus BlockingSocket::SendBytesTo(const ByteBuffer *theBytes, const IPAddr &theAddr, unsigned long theTimeout)
 {
 	SmartPtr<SendBytesToOp> anOp = new SendBytesToOp(theBytes,theAddr,this);
 	anOp->RunBlock(theTimeout);
 	return anOp->GetStatus();
 }
 
-WONStatus BlockingSocket::RecvBytesFrom(ByteBufferPtr &theBytes, unsigned short theMaxBytes, IPAddr &theAddr, DWORD theTimeout)
+WONStatus BlockingSocket::RecvBytesFrom(ByteBufferPtr &theBytes, unsigned short theMaxBytes, IPAddr &theAddr, unsigned long theTimeout)
 {
 	SmartPtr<RecvBytesFromOp> anOp = new RecvBytesFromOp(theMaxBytes,this);
 	if(anOp->RunBlock(theTimeout))

@@ -68,7 +68,7 @@ WONStatus PingGameOp::CheckResponse(ReadBuffer& inBuffer)
     if (inBuffer.ReadShort() != this->mRequestId)
         return WS_None; // the signed ReadShort is compared with the unsigned member
     unsigned long aStart = this->mStartTime;
-    this->mPing = GetTickCount() - aStart;
+    this->mPing = WONTickCount() - aStart;
     this->mReplyFlags = 0;
     if (!(inBuffer.Available() > 0))
         return WS_Success;

@@ -4,9 +4,59 @@
 #ifndef EE_WONAPI_WONBUFFER_H
 #define EE_WONAPI_WONBUFFER_H
 #include <exception>
+#include <stdint.h>
+#include <wchar.h>
 #include <string>
 #include "ee/EEWonNet.h"
 namespace WONAPI {
+
+// WON's wide text is UTF-16 on the wire and in its files (wchar_t of the original Windows build). wchar_t is UTF-32
+// on Linux and macOS, so every byte boundary converts per 16-bit unit, little-endian (characters past U+FFFF as
+// surrogate pairs). On Windows each wchar_t is one unit and the bytes are unchanged.
+template<class Emit> inline void WideForEachUtf16Unit(const std::wstring& inText, Emit inEmit)
+{
+    for(std::wstring::size_type i=0; i<inText.length(); ++i) {
+        uint32_t c=static_cast<uint32_t>(inText[i]);
+#if WCHAR_MAX > 0xffff
+        if(c>0xffff && c<=0x10ffff) {
+            c-=0x10000;
+            inEmit(static_cast<uint16_t>(0xd800+(c>>10)));
+            inEmit(static_cast<uint16_t>(0xdc00+(c&0x3ff)));
+            continue;
+        }
+#endif
+        inEmit(static_cast<uint16_t>(c));
+    }
+}
+// the number of UTF-16 units (the wire's character count) of a wide string
+inline unsigned long WideUtf16Length(const std::wstring& inText)
+{
+    unsigned long count=0;
+    WideForEachUtf16Unit(inText,[&count](uint16_t) { ++count; });
+    return count;
+}
+// the UTF-16 little-endian bytes of a wide string, appended to outBytes
+inline void WideAppendUtf16LE(std::string& outBytes, const std::wstring& inText)
+{
+    WideForEachUtf16Unit(inText,[&outBytes](uint16_t unit) {
+        outBytes+=static_cast<char>(unit&0xff);
+        outBytes+=static_cast<char>(unit>>8);
+    });
+}
+// appends one UTF-16 unit; on UTF-32 systems a low surrogate after a high one joins it into one character
+inline void WideAppendUtf16Unit(std::wstring& ioText, uint16_t inUnit)
+{
+#if WCHAR_MAX > 0xffff
+    if(inUnit>=0xdc00 && inUnit<0xe000 && !ioText.empty()) {
+        uint32_t high=static_cast<uint32_t>(ioText[ioText.length()-1]);
+        if(high>=0xd800 && high<0xdc00) {
+            ioText[ioText.length()-1]=static_cast<wchar_t>(0x10000+((high-0xd800)<<10)+(inUnit-0xdc00));
+            return;
+        }
+    }
+#endif
+    ioText+=static_cast<wchar_t>(inUnit);
+}
 
 // a reference-counted byte buffer (+8 data, +0xc length)
 class ByteBuffer : public RefCount {
@@ -45,7 +95,7 @@ public:
     bool ReadBool();                        // 0x2a3d30
     unsigned char ReadByte();               // 0x2a3d40
     short ReadShort();                      // 0x2a3d50
-    long ReadLong();                        // 0x2a3d60
+    int32_t ReadLong();                     // 0x2a3d60 (32-bit on every OS)
     void ReadWString(std::wstring& outText, int inLengthSize);    // 0x2a40f0
 
     // (SendFileOp's file window: a 0xc-byte ReadBuffer over its buffer; provisional names)
@@ -86,7 +136,7 @@ public:
     void AppendBool(bool inValue);          // 0x2a82d0
     void AppendShort(short inValue);        // 0x2a82f0
     void SetShort(unsigned long inPos, short inValue); // 0x2a8460
-    void AppendLong(long inValue);          // 0x2a8300
+    void AppendLong(int32_t inValue);       // 0x2a8300 (32-bit on every OS)
     void Reserve(unsigned long inNumBytes); // 0x2a81e0, 0x91 bytes
     void ReserveChunk(unsigned long theNumBytesToReserve,unsigned long theMaxSize=0);
     void AppendBuffer(const ByteBuffer* inBuffer, unsigned char inLengthFieldSize = 0); // 0x2a83d0

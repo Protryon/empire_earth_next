@@ -8,14 +8,16 @@
 #include <vector>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
+#include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 namespace WONAPI {
 void FileReader::ReadRawWString(std::wstring &theWStr, int theNumChars)
 {
 	theWStr.erase();
 	theWStr.reserve(theNumChars);
+	// UTF-16 units, converted one by one (wchar_t is 4 bytes outside Windows)
 	for(int i=0; i<theNumChars; i++)
-		theWStr += (wchar_t)this->ReadShort();
+		WideAppendUtf16Unit(theWStr,this->ReadShort());
 }
 
 void FileReader::ReadWString(std::wstring &theWStr, unsigned char theLengthFieldSize)

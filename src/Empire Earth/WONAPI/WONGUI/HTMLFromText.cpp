@@ -14,6 +14,7 @@
 #include "ee/wonapi/WONLobbyHTMLTag.h"
 #include "ee/wonapi/WONLobbyHTMLFromText.h"
 #include "ee/wonapi/WONLobbyHTMLParser.h"
+#include "platform/PlatFile.h"
 // FUNCTION: WON 0x0073f6e0
 // Static initializer: constructs the URL protocol prefix table and registers its destructor
 // (_$E74)
@@ -237,7 +238,7 @@ HTMLDocument* HTMLFromText::GenerateFromFile(const GUIString& path,int flags)
     this->CloseFile();
     if(path.empty()) return NULL;
     std::string narrowPath=path;
-    this->mFile=fopen(narrowPath.c_str(),"r");
+    this->mFile=PlatFOpen(narrowPath.c_str(),"r");
     if(this->mFile==NULL) return NULL;
     bool isHTML=(flags&HTMLDocGenFlag_IsHTML)!=0;
     if(flags&HTMLDocGenFlag_IsOptionalHTML) {

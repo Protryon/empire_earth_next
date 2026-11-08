@@ -10,6 +10,7 @@
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONLobbyPlatform.h" // CreateNativeWindow
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONLobbyCore.h"
 #include "ee/wonapi/WONLobbyDialogs.h"
@@ -170,7 +171,7 @@ void DialogLogic::ShowStatus(const GUIString& inTitle, const GUIString& inStatus
     this->mStatusVisible = true;
     this->mStatusDialog->SetText(inTitle, inStatus, inCancel);
     this->DoDialog(this->mStatusDialog.get());
-    this->mStatusDialog->mStartTick = GetTickCount();
+    this->mStatusDialog->mStartTick = WONTickCount();
     this->mStatusVisible = false;
 }
 // FUNCTION: WON 0x7dce10
@@ -215,7 +216,7 @@ SmartPtr<Window> DialogLogic::GetDialogWindow(bool inReuse)
         return LobbyGetRootWindow();
     if (inReuse && !this->mDialogStack.empty())
         return this->mDialogStack.back().mWindow;
-    SmartPtr<Window> aWindow(new MSWindow);
+    SmartPtr<Window> aWindow(CreateNativeWindow());
     aWindow->mIsOneComponentWindow = true;
     if (!this->mDialogStack.empty())
         aWindow->SetParent(this->mDialogStack.back().mWindow.get());

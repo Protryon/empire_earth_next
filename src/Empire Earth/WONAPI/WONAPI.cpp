@@ -1,6 +1,8 @@
 // WONAPICore: start-up, shutdown and pumping of the WON API's op queue, timer and socket threads
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
+#include "platform/PlatFile.h"
+#include "platform/PlatPath.h"
 #include <stdio.h>
 #include <string>
 #include <list>
@@ -44,10 +46,10 @@ void WONAPICore::WriteVersion()
     if(WONAPICore::mHaveWrittenVersion) return;
     WONAPICore::mHaveWrittenVersion=true;
     std::string path=WONAPICore::GetDefaultFileDirectory()+"_wonapiversion.txt";
-    FILE* file=fopen(path.c_str(),"r");
+    FILE* file=PlatFOpen(path.c_str(),"r");
     if(file!=NULL) {
         fclose(file);
-        file=fopen(path.c_str(),"w");
+        file=PlatFOpen(path.c_str(),"w");
         if(file!=NULL) {
             fprintf(file,"%s\n",this->mVersionString.c_str());
             fclose(file);
@@ -92,7 +94,7 @@ bool WONAPICore::IsStarted() { return WONAPICore::mInstance?WONAPICore::mInstanc
 // Starts and completes queued ops for the given milliseconds; without its own threads also pumps socket and timer ops
 void WONAPICore::Pump(unsigned long milliseconds,int maxOps)
 {
-    DWORD start=GetTickCount();
+    DWORD start=WONTickCount();
     DWORD elapsed=0;
     while(true) {
         DWORD waitTime=milliseconds-elapsed;
@@ -104,16 +106,25 @@ void WONAPICore::Pump(unsigned long milliseconds,int maxOps)
             this->mTimerThread.Pump();
             this->mOpContainer.Pump(0,maxOps);
         }
-        elapsed=GetTickCount()-start;
+        elapsed=WONTickCount()-start;
         if(elapsed>=milliseconds) break;
     }
 }
 // FUNCTION: WON 0x006f2da0
-// Returns the directory the API writes its files to (empty without a core)
+// Returns the directory the API writes its files to. The original returned "" when none was set (no core, or no
+// SetDefaultFileDirectory): files relative to the current directory, which is the game's data root. Here that data
+// root is named explicitly, so every WON file has an absolute path (_wonHTTPCache, _wonlogin.ks, _wonapiversion.txt).
 const std::string& WONAPICore::GetDefaultFileDirectory()
 {
-    static std::string anEmptyStr;
-    return WONAPICore::mInstance==NULL?anEmptyStr:WONAPICore::mInstance->mFileDirectory;
+    static std::string aDataRoot;
+    if (WONAPICore::mInstance!=NULL && !WONAPICore::mInstance->mFileDirectory.empty())
+        return WONAPICore::mInstance->mFileDirectory;
+    if (aDataRoot.empty()) {
+        char aPath[1024];
+        if (PlatPathGetDataRoot(aPath,sizeof(aPath))!=0)
+            aDataRoot=aPath;
+    }
+    return aDataRoot;
 }
 // FUNCTION: WON 0x006f2e60
 // Queues an op for the pump to start, or to complete if finished; before start-up only finished ops are queued

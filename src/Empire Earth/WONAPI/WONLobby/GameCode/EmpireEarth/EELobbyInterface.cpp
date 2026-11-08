@@ -3,8 +3,9 @@
 // game's side of the external lobby: the lobby windows' globals, the game options read back from the lobby game,
 // the local address, opening and closing the lobby through EEALobbyAction, the game-done event: 0x696aaa..0x697ee7
 // (EELobbyOpen 0x6972c6 emits the ??_G of EELobbySoundDecoder 0x697dc5 and MSNativeIcon 0x697531).
-// (EELobbyShow 0x69754d called IDirectDraw7::FlipToGDISurface through the DX7 screen; the renderer's GX layer stands in
-// for it)
+// port: the lobby no longer has windows of its own. Its windows are rectangles of one lobby surface
+// (ee/wonapi/WONLobbyPlatform.h) the size of the back buffer; the graphics thread shows its frames in the game's
+// window while the lobby is shown (RTSGraphics::RenderLobby), on every system.
 #include <windows.h>
 #include <string>
 #include <list>
@@ -69,13 +70,16 @@
 #include "ee/EEStringIDs.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONLobbyPlatform.h"
+#include "ee/RTSGraphics.h"
+#include "platform/PlatWindow.h"
 #include "ee/wonapi/EELobbyGameCode.h"
 #include "ee/wonapi/EELobbySound.h"
 
 using namespace WONAPI;
 
-SmartPtr<MSWindowManager> gEELobbyRootWindow;          // 0x965894
-SmartPtr<MSWindow> gEELobbyPlatformWindow;  // 0x965890
+SmartPtr<PlatWindowManager> gEELobbyRootWindow;          // 0x965894
+SmartPtr<Window> gEELobbyPlatformWindow;  // 0x965890
 
 static WONAPICoreEx* gEELobbyWindowManager;      // 0x965898
 static bool gEELobbyOpen;                   // 0x96589c
@@ -83,6 +87,10 @@ static bool gEELobbyShown;                  // 0x96589d
 static bool gEELobbyClosing;                // 0x96589e
 static long sEELobbyHeight;                 // 0x965888
 static long sEELobbyWidth;                  // 0x96588c
+// port: the lobby's screens are laid out for 1024x768 (the original switched the display mode); its surface keeps
+// that size and RTSGraphics::RenderLobby shows it letterboxed in the window
+static const int kEELobbySurfaceWidth = 1024;
+static const int kEELobbySurfaceHeight = 768;
 static bool gEELobbyGameDone;               // 0x9658a0
 static unsigned long sEELobbyStartTime;     // 0x9658a8
 
@@ -92,7 +100,6 @@ void EELobbyFillGameOptions(EEGameOptionsPlayer& outMyPlayer);
 void EELobbySyncNetworkAdapter();
 extern char gEmptyString[];                 // 0x8e5b98 (pooled ""; as EEWonNet.cpp declares it)
 extern EEGameOptions& gLobbyGameOptions;    // 0x93030c (the lobby defaults; as EEGameOptions.cpp declares it)
-extern HINSTANCE gInstance;                 // 0x9319d8 (as Empire Earth.cpp declares it)
 void EELobbyInit();                         // 0x695511 (EELobbyInit.cpp)
 UWideString EELobbyToWideString(const GUIString& inText);
 void EELobbyOpen();
@@ -395,44 +402,42 @@ void EELobbyPostAction(void (*inFunc)())
 // TEMPLATE: EXE 0x6972c3
 // (EEALobbyAction::Virtual4, inline: its COMDAT follows its first user)
 
+// port: the game window's events the lobby passes on while it owns the event loop (close, quit, size, focus,
+// exposure, the keys of its main window): handled as the game window's own (EEUserInterface::HandleEvent)
+static void EELobbyForwardEvent(const PlatInputEvent& inEvent)
+{
+    EEUserInterface::HandleEvent(inEvent);
+}
+
 // FUNCTION: EXE 0x6972c6
-// Opens the external lobby: WONAPI core, window manager, the lobby window with the game window's title and icon and
-// the lobby screen in it; then shows it and runs it until it is left
-// Not identical: (1) the original loads the window and its vtable before it builds the rectangle (a temporary's
-// shape), but a WONRectangle temporary here moves below theClass in the frame and loses the esi = 0x100 reuse;
-// (2) the original keeps theClass.hIcon in edi from the test on
+// Opens the external lobby: WONAPI core, window manager, the lobby window and the lobby screen in it; then shows it
+// and runs it until it is left
+// port: the window manager and window are the platform backend's (WONLobbyPlatform.h): the lobby window fills the
+// lobby surface (the back buffer's size), so the original's title, icon and owner window are gone
 void EELobbyOpen()
 {
-#ifdef _WIN32   // the lobby's windows are Win32 windows (PORT.md step 4.3f): it does not open elsewhere
-    char theText[256];
-    WNDCLASSA theClass;
     if (gEELobbyOpen)
         return;
     gEELobbyOpen = true;
     gEELobbyWindowManager = new WONAPICoreEx;
     gEELobbyWindowManager->SetDoPumpThread(true);
     gEELobbyWindowManager->Startup();
-    gEELobbyRootWindow = new MSWindowManager(NULL);
+    gEELobbyRootWindow = new PlatWindowManager;
     gEELobbyRootWindow->mBA5 = false;
     JPGDecoder::Add(&gEELobbyRootWindow->mImageDecoder);
     PNGDecoder::Add(&gEELobbyRootWindow->mImageDecoder);
     gEELobbyRootWindow->SetSoundDecoder(new EELobbySoundDecoder);
-    gEELobbyPlatformWindow = new MSWindow;
-    gEELobbyPlatformWindow->mForwardKeyMsgToParent = true;
+    if (GESurface* theSecondary = gRasterizer->GetSecondarySurface(gScreenIndex))
+        gEELobbyRootWindow->SetSurfaceSize(kEELobbySurfaceWidth, kEELobbySurfaceHeight);
+    gEELobbyRootWindow->SetEventForward(EELobbyForwardEvent);
+    gEELobbyPlatformWindow = CreateNativeWindow();
+    static_cast<PlatGUIWindow*>(gEELobbyPlatformWindow.get())->SetForwardKeyMsgToParent(true);
     long theStyle = 2;
     if (gGamePreferences.mSettings.mFullScreen)
         theStyle = 0x22;
     gEELobbyPlatformWindow->mStyle = theStyle;
-    GetWindowTextA((HWND)gGameWindow->GetNativeHandle(), theText, 256);
-    gEELobbyPlatformWindow->SetTitle(theText);
-    if (gGamePreferences.mSettings.mFullScreen)
-        SetMSWindowDefaultOwner((HWND)gGameWindow->GetNativeHandle());
     WONRectangle theRect(0, 0, 100, 100);
     gEELobbyPlatformWindow->Create(theRect);
-    SetMSWindowDefaultOwner(NULL);
-    if (GetClassNameA((HWND)gGameWindow->GetNativeHandle(), theText, 256) &&
-        GetClassInfoA(gInstance, theText, &theClass) && theClass.hIcon != NULL)
-        gEELobbyPlatformWindow->SetIcon(new MSNativeIcon(gEELobbyPlatformWindow->mDisplayContext.get(), theClass.hIcon));
     RootContainer* theRoot = gEELobbyPlatformWindow->mRoot.get();
     EELobbyInit();
     SmartPtr<Container> theScreen = LobbyGetContainer();
@@ -441,74 +446,97 @@ void EELobbyOpen()
     EELobbyShow(true);
     LobbyStart();
     EELobbyRunLoop();
-#endif
 }
 
 // SYNTHETIC: EXE 0x697531
 // (??_GMSNativeIcon: the first user's COMDAT)
 
-// The DX7 screen's declarations come here, not with the other includes: DX7Screen.h declares three class statics
-// (sScreens, sScreensCaptured, sFirstCaptureWasAttachedToDesktop; DX7HRDisplay.dll exports them), and the unit's
-// $E numbers (init chains 0x296aaa.., EEGetLocalAddress's static 0x296d13) show none of them was declared before.
-#include "gx/GX.h"
-#include "dx7/DX7Screen.h"
+// port: the lobby's frame for RTSGraphics::RenderLobby (RTSGraphics.h). The caller holds EELobbyLock, under which
+// EELobbyShow and EELobbyHide change gEELobbyShown (and EELobbyClose hides before it lets the manager go), so the
+// manager outlives every locked frame.
+bool EELobbyLockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, uint32_t& outSerial)
+{
+    if (!gEELobbyShown || gEELobbyRootWindow.get() == NULL)
+        return false;
+    return gEELobbyRootWindow->LockFrame(outPixels, outWidth, outHeight, outPitch, outSerial);
+}
+
+void EELobbyUnlockFrame()
+{
+    if (gEELobbyRootWindow.get() != NULL)
+        gEELobbyRootWindow->UnlockFrame();
+}
 
 // FUNCTION: EXE 0x69754d
-// Puts the lobby window in the game window's place, keeping the cursor where it was, and suspends the game's input
-// (full screen: flips to the GDI surface when asked) or hides the game window
-// STAND-IN (owner-approved, docs/LOST_DEBUG.md): the original adds the cursor's y as fld [y]; fiadd [point.y]
-// (x: fild; fadd). The (double) cast on theCursor.mY in the y sum reproduces that order.
+// Shows the lobby in the game's place, keeping the cursor where it was, and suspends the game's input
+// port: the lobby is drawn into the game's window (RTSGraphics::RenderLobby), so the game window stays; its input is
+// suspended in both modes (the mouse leaves relative mode), the system pointer shows and the lobby gets typed text.
+// inFlag asked the original to flip to the GDI surface (full screen), which has no meaning here.
 void EELobbyShow(bool inFlag)
 {
-#ifdef _WIN32   // the lobby replaces the game window (Win32 only)
-    if (gEELobbyShown || gEELobbyPlatformWindow.mPtr == NULL)
+    (void)inFlag;
+    if (gEELobbyShown || gEELobbyPlatformWindow.get() == NULL)
         return;
-    RECT theRect;
-    GetWindowRect((HWND)gGameWindow->GetNativeHandle(), &theRect);
+    PlatWindow* theWindow = gGameWindow->GetOSRepresentation();
     GE2DPoint theCursor(0.0f, 0.0f);
-    sEELobbyWidth = theRect.right - theRect.left;
-    sEELobbyHeight = theRect.bottom - theRect.top;
     if (gMouse != NULL) {
         theCursor = gMouse->mPosition;
         gMouse->mPointer = 6;
     }
-    gEELobbyPlatformWindow->SetPosSize(theRect.left, theRect.top, sEELobbyWidth, sEELobbyHeight);
-    gEELobbyPlatformWindow->Show(true);
-    if (gMouse != NULL) {
-        POINT thePoint;
-        thePoint.x = 0;
-        thePoint.y = 0;
-        ClientToScreen((HWND)gGameWindow->GetNativeHandle(), &thePoint);
-        SetCursorPos(thePoint.x + theCursor.mX, thePoint.y + (double)theCursor.mY);
+    if (GESurface* theSecondary = gRasterizer->GetSecondarySurface(gScreenIndex)) {
+        sEELobbyWidth = (long)theSecondary->GetWidth();
+        sEELobbyHeight = (long)theSecondary->GetHeight();
+        gEELobbyRootWindow->SetSurfaceSize(kEELobbySurfaceWidth, kEELobbySurfaceHeight);
     }
+    gEELobbyPlatformWindow->Show(true);
     EELobbyLock();
     gEELobbyShown = true;
-    if (gGamePreferences.mSettings.mFullScreen) {
-        if (gISKeyboard != NULL)
-            gISKeyboard->Suspend();
-        if (gISMouse != NULL)
-            gISMouse->Suspend();
-        if (inFlag)
-            ((GXDirectDraw*)*static_cast<DX7Screen*>(gRasterizer->GetScreen(gScreenIndex)))->FlipToGDISurface();
-    } else {
-        ShowWindow((HWND)gGameWindow->GetNativeHandle(), SW_HIDE);
-    }
+    if (gISKeyboard != NULL)
+        gISKeyboard->Suspend();
+    if (gISMouse != NULL)
+        gISMouse->Suspend();
     EELobbyUnlock();
-    for (int theCount = 1 - ShowCursor(TRUE); theCount > 0; theCount--)
-        ShowCursor(TRUE);
+    PlatTextInputStart(theWindow, 0, 0, 0, 0);
+    PlatCursorShow(1);
+    if (gMouse != NULL && theWindow != NULL && sEELobbyWidth > 0 && sEELobbyHeight > 0) {
+        // the game's pointer is in back buffer pixels, the window's in client pixels
+        int32_t theWidth = 0, theHeight = 0;
+        PlatWindowGetClientSize(theWindow, &theWidth, &theHeight);
+        PlatMouseWarp(theWindow, (int32_t)(theCursor.mX * theWidth / sEELobbyWidth),
+                      (int32_t)(theCursor.mY * theHeight / sEELobbyHeight));
+    }
     gEELobbyPlatformWindow->InvalidateRoot();
-#endif
 }
 
 // FUNCTION: EXE 0x6976c7
 // Runs the lobby until the player hosts or joins a game that connects (then shows the game screen) or leaves it
 // (shutting the lobby down, and running Sierra Update when asked)
 // Not identical: loop shape (the original keeps 0 in ebx and jumps back to the LobbyRun call)
+// port: the lobby runs inside a posted action (EELobbyOpen, EELobbyReturnFromGame through EELobbyPostAction), and
+// EEUserInterface::ProcessActions holds the UI manager's copy lock and the world's write lock around every action.
+// The original's lobby was its own GDI window, so a graphics thread blocked on those locks (EEGraphics::FrameStarting)
+// did not matter; here the graphics thread presents the lobby (RTSGraphics::RenderLobby), so they are released while
+// the lobby runs and taken back, in ProcessActions' order, before the action returns.
+class EELobbyActionLocksReleased {
+public:
+    EELobbyActionLocksReleased()
+    {
+        gWorld.mLock->WriteUnlock();
+        gUIManager->UnlockUIForCopyData();
+    }
+    ~EELobbyActionLocksReleased()
+    {
+        gUIManager->LockUIForCopyData();
+        gWorld.mLock->WriteLock();
+    }
+};
+
 void EELobbyRunLoop()
 {
     if (gEELobbyClosing)
         return;
     gEELobbyClosing = true;
+    EELobbyActionLocksReleased theReleased;
     for (;;) {
         int theResult = LobbyRun();
         if (theResult == 2) {
@@ -611,39 +639,39 @@ void EELobbyJoinGame()
 }
 
 // FUNCTION: EXE 0x697ac9
-// Hides the lobby window and puts the game window back in its place, resuming input and the game's cursor
+// Hides the lobby and gives the game back its window, resuming input and the game's cursor
+// port: the reverse of EELobbyShow: the game's pointer goes where the system pointer is, the system pointer hides
+// again (the game draws its own) with its default shape; typed text stays on (the game window always takes it)
 void EELobbyHide()
 {
-#ifdef _WIN32   // back from the lobby (Win32 only)
-    if (!gEELobbyShown || gEELobbyPlatformWindow.mPtr == NULL)
+    if (!gEELobbyShown || gEELobbyPlatformWindow.get() == NULL)
         return;
+    PlatWindow* theWindow = gGameWindow->GetOSRepresentation();
+    int32_t thePointerX = 0, thePointerY = 0, theWidth = 0, theHeight = 0;
+    if (theWindow != NULL) {
+        PlatMouseGetState(theWindow, &thePointerX, &thePointerY);
+        PlatWindowGetClientSize(theWindow, &theWidth, &theHeight);
+    }
+    EELobbyLock();
     gEELobbyShown = false;
-    if (!gGamePreferences.mSettings.mFullScreen && gEELobbyPlatformWindow->PlatformIsVisible()) {
-        WONRectangle theRect;
-        gEELobbyPlatformWindow->GetRect(theRect, false);
-        MoveWindow((HWND)gGameWindow->GetNativeHandle(), theRect.x, theRect.y, sEELobbyWidth, sEELobbyHeight, FALSE);
-    }
+    EELobbyUnlock();
     gUIManager->RedrawAll();
-    if (gGamePreferences.mSettings.mFullScreen) {
-        if (gISKeyboard != NULL)
-            gISKeyboard->Resume();
-        if (gISMouse != NULL)
-            gISMouse->Resume();
-    } else {
-        ShowWindow((HWND)gGameWindow->GetNativeHandle(), SW_RESTORE);
-    }
+    if (gISKeyboard != NULL)
+        gISKeyboard->Resume();
+    if (gISMouse != NULL)
+        gISMouse->Resume();
+    PlatCursorSet(NULL);
+    PlatCursorShow(0);
     if (gMouse != NULL) {
-        POINT theCursor;
-        GetCursorPos(&theCursor);
-        POINT thePoint;
-        thePoint.x = 0;
-        thePoint.y = 0;
-        ClientToScreen((HWND)gGameWindow->GetNativeHandle(), &thePoint);
-        gMouse->SetPosition(GE2DPoint(thePoint.x, thePoint.y));
+        float theX = 0.0f, theY = 0.0f;
+        if (theWidth > 0 && theHeight > 0) {
+            theX = (float)thePointerX * sEELobbyWidth / theWidth;
+            theY = (float)thePointerY * sEELobbyHeight / theHeight;
+        }
+        gMouse->SetPosition(GE2DPoint(theX, theY));
         gMouse->mPointer = 0;
     }
     gEELobbyPlatformWindow->Show(false);
-#endif
 }
 
 // FUNCTION: EXE 0x697be0
@@ -725,6 +753,7 @@ void EELobbyClose()
         gEELobbyWindowManager = NULL;
         gEELobbyPlatformWindow = NULL;
         gEELobbyRootWindow = NULL;
+        PlatCursorShow(0);   // port: closing the lobby's windows shows the system pointer; the game draws its own
         if (gUIManager != NULL)
             gUIManager->SetMusicVolume(gGamePreferences.GetSettings().GetMusicVolume());
     }

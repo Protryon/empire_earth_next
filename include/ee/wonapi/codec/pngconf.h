@@ -242,7 +242,7 @@
 #      define PNG_SAVE_BSD_SOURCE
 #      undef _BSD_SOURCE
 #    endif
-#    ifdef _SETJMP_H
+#    if defined(_SETJMP_H) && !defined(PNG_SKIP_SETJMP_CHECK)
       __png.h__ already includes setjmp.h;
       __dont__ include it again.;
 #    endif

@@ -1,6 +1,7 @@
-// RegKey: a Windows registry key wrapper (open/create, typed queries, delete)
+// RegKey: the WON library's registry key wrapper (open/create, typed queries, delete), kept in config.yaml
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
+#include <stdint.h>
 #include <string>
 #include <list>
 #include <map>
@@ -10,49 +11,85 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONBuffer.h"
+#include "platform/PlatConfig.h"
+
+// The port has no registry (the harness stops on any registry write, and POSIX has none): a key is the config.yaml
+// block "won.<path>", the path's '\' (or '/') separators turned into the block separator '.'. HKEY_CURRENT_USER and
+// HKEY_LOCAL_MACHINE share it (the root is dropped). A value is a key of that block: a DWORD an integer, a string a
+// string, binary data a string of hex digits. Volatile keys persist like the others.
+namespace {
+
+// A name as one config.yaml key: no '.' (the block separator) or ':' and no blanks around it
+std::string ConfigName(const std::string& inName)
+{
+    std::string theName;
+    for (std::string::size_type i = 0; i < inName.length(); ++i) {
+        unsigned char c = static_cast<unsigned char>(inName[i]);
+        theName += (c == '.' || c == ':' || c < 0x20) ? '_' : static_cast<char>(c);
+    }
+    std::string::size_type a = theName.find_first_not_of(' ');
+    if (a == std::string::npos)
+        return "(default)";   // the key's unnamed value
+    return theName.substr(a, theName.find_last_not_of(' ') - a + 1);
+}
+
+// The block of inPath (a registry path) under inParent
+std::string ConfigBlock(const std::string& inParent, const std::string& inPath)
+{
+    std::string theBlock = inParent;
+    std::string::size_type theStart = 0;
+    while (theStart <= inPath.length()) {
+        std::string::size_type theEnd = inPath.find_first_of("\\/", theStart);
+        if (theEnd == std::string::npos)
+            theEnd = inPath.length();
+        if (theEnd > theStart)
+            theBlock += "." + ConfigName(inPath.substr(theStart, theEnd - theStart));
+        theStart = theEnd + 1;
+    }
+    return theBlock;
+}
+
+int HexDigit(char c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+    return -1;
+}
+
+}
+
 namespace WONAPI {
-// 0x6a4260 (emitted from the list below): the original leaves mKey unset before OpenNewKey
+// 0x6a4260 (emitted from the list below)
 RegKey::RegKey(int root,const std::string& path,bool create,bool nonvolatile)
-    :mIsOpen(false),mBuffer(NULL),mBufferLength(0),mSubKeyIndex(0),mValueIndex(0)
+    :mIsOpen(false)
 {
     this->OpenNewKey(root,path,create,nonvolatile);
 }
 // FUNCTION: WON 0x6a42e0
-// Destroys the key wrapper, closing an open key and freeing the value buffer
+// Destroys the key wrapper
 RegKey::~RegKey()
 {
-    if(this->mIsOpen)
-        RegCloseKey(this->mKey);
-    delete [] this->mBuffer;
 }
 // FUNCTION: WON 0x6a4370
 // Closes the key if it is open
 void RegKey::CloseKey()
 {
-    if(this->mIsOpen) {
-        RegCloseKey(this->mKey);
-        this->mIsOpen=false;
-    }
+    this->mIsOpen=false;
 }
-// outLength is the first query's size, not the second's
 // FUNCTION: WON 0x6a4390
-// Reads the named value into the growable buffer; returns its registry type, 0 when it cannot be read
-DWORD RegKey::GetToBuf(const std::string& name,unsigned long& outLength) const
+// Reads the named value's text; false when it is missing
+bool RegKey::GetToBuf(const std::string& name,std::string& outText) const
 {
-    DWORD type;
-    DWORD length;
-    if(RegQueryValueExA(this->mKey,name.c_str(),NULL,&type,NULL,&length)!=ERROR_SUCCESS)
-        return 0;
-    outLength=length;
-    if(this->mBufferLength<length) {
-        delete [] this->mBuffer;
-        this->mBufferLength=length;
-        this->mBuffer=new char[length];
-    }
-    if(RegQueryValueExA(this->mKey,name.c_str(),NULL,&type,
-                       reinterpret_cast<BYTE*>(this->mBuffer),&length)==ERROR_SUCCESS)
-        return type;
-    return 0;
+    std::vector<char> buffer(65536);
+    if(!PlatConfigGetString(this->mBlock.c_str(),ConfigName(name).c_str(),&buffer[0],
+                            static_cast<uint32_t>(buffer.size())))
+        return false;
+    outText=&buffer[0];
+    return true;
 }
 // FUNCTION: WON 0x6a4680
 // Reads a DWORD value; returns 0 on success, 2 for a wrong type, 1 when missing (value is 0 then)
@@ -61,15 +98,13 @@ int RegKey::QueryDWORD(const std::string& name,DWORD& value)
     value=0;
     if(!this->mIsOpen)
         return 1;
-    unsigned long length;
-    DWORD type=this->GetToBuf(name,length);
-    if(type!=0) {
-        if(type!=REG_DWORD)
-            return 2;
-        value=*reinterpret_cast<DWORD*>(this->mBuffer);
+    int32_t number;
+    if(PlatConfigGetInt(this->mBlock.c_str(),ConfigName(name).c_str(),&number)) {
+        value=static_cast<DWORD>(number);
         return 0;
     }
-    return 1;
+    std::string text;
+    return this->GetToBuf(name,text) ? 2 : 1;
 }
 // An empty binary value returns 4 (no size) and leaves the caller's buffer alone
 // FUNCTION: WON 0x6a46e0
@@ -78,18 +113,22 @@ int RegKey::QueryBinary(const std::string& name,ConstSmartPtr<ByteBuffer>& value
 {
     if(!this->mIsOpen)
         return 1;
-    unsigned long length=0;
-    DWORD type=this->GetToBuf(name,length);
-    if(type!=0) {
-        if(type!=REG_BINARY)
+    std::string text;
+    if(!this->GetToBuf(name,text))
+        return 1;
+    if(text.length()%2!=0)
+        return 2;
+    std::string bytes;
+    for(std::string::size_type i=0;i<text.length();i+=2) {
+        int high=HexDigit(text[i]),low=HexDigit(text[i+1]);
+        if(high<0 || low<0)
             return 2;
-        if(length!=0) {
-            value=new ByteBuffer(this->mBuffer,length,false);
-            return 0;
-        }
-        return 4;
+        bytes+=static_cast<char>(high*16+low);
     }
-    return 1;
+    if(bytes.empty())
+        return 4;
+    value=new ByteBuffer(bytes.data(),bytes.length(),false);
+    return 0;
 }
 // FUNCTION: WON 0x6a4830
 // Deletes the named subkey of an open key; returns whether it was deleted
@@ -97,7 +136,7 @@ bool RegKey::DeleteSubKey(const std::string& key)
 {
     if(key.length()<=0 || !this->mIsOpen)
         return false;
-    return RegDeleteKeyA(this->mKey,key.c_str())==ERROR_SUCCESS;
+    return PlatConfigDelete(ConfigBlock(this->mBlock,key).c_str(),NULL)!=0;
 }
 // The child is closed only when this parent is open
 // FUNCTION: WON 0x6a4870
@@ -107,51 +146,34 @@ bool RegKey::DeleteSubKey(RegKey& key)
     if(this->mIsOpen) {
         if(key.mIsOpen)
             key.CloseKey();
-        return RegDeleteKeyA(this->mKey,key.mPath.c_str())==ERROR_SUCCESS;
+        return PlatConfigDelete(ConfigBlock(this->mBlock,key.mPath).c_str(),NULL)!=0;
     }
     return false;
 }
 }
 
 namespace WONAPI {
-// FUNCTION: WON 0x006a41d0
-// Maps a root index (0 classes root .. 6 dyn data) to its predefined HKEY; NULL when out of range
-HKEY RegKey::GetRootHKey(int root)
-{
-    switch(root) {
-    case 0: return HKEY_CLASSES_ROOT;
-    case 1: return HKEY_CURRENT_USER;
-    case 2: return HKEY_LOCAL_MACHINE;
-    case 3: return HKEY_USERS;
-    case 4: return HKEY_PERFORMANCE_DATA;
-    case 5: return HKEY_CURRENT_CONFIG;
-    case 6: return HKEY_DYN_DATA;
-    }
-    return NULL;
-}
-// The root is passed as int
+// The root is passed as int (0 classes root .. 6 dyn data); every root maps to the same "won" block
 // FUNCTION: WON 0x006a4440
 // Opens or creates the key under the root given by index
 bool RegKey::OpenNewKey(int root,const std::string& path,bool create,bool nonvolatile)
 {
-    return this->OpenNewKey(this->GetRootHKey(root),path,create,nonvolatile);
+    if(root<0 || root>6) {
+        this->CloseKey();
+        return false;
+    }
+    return this->OpenBlock("won",path);
 }
+// A block needs no creating (setting a value creates it): opening a missing key succeeds as creating it did
 // FUNCTION: WON 0x006a4470
-// Closes the current key and opens or creates the path under root, remembering the path; returns success
-bool RegKey::OpenNewKey(HKEY root,const std::string& path,bool create,bool nonvolatile)
+// Closes the current key and opens the path under the parent block, remembering the path; returns success
+bool RegKey::OpenBlock(const std::string& parent,const std::string& path)
 {
     this->CloseKey();
     if(path.size()>0) {
-        if(create) {
-            char aClass;
-            DWORD wasCreated;
-            DWORD option=nonvolatile?REG_OPTION_NON_VOLATILE:REG_OPTION_VOLATILE;
-            this->mIsOpen=(RegCreateKeyExA(root,path.c_str(),NULL,&aClass,option,
-                        KEY_ALL_ACCESS,NULL,&this->mKey,&wasCreated)==ERROR_SUCCESS);
-        }
-        else
-            this->mIsOpen=(RegOpenKeyExA(root,path.c_str(),NULL,KEY_ALL_ACCESS,&this->mKey)==ERROR_SUCCESS);
-        if(this->mIsOpen) this->mPath=path;
+        this->mBlock=ConfigBlock(parent,path);
+        this->mIsOpen=true;
+        this->mPath=path;
     }
     return this->mIsOpen;
 }
@@ -161,21 +183,11 @@ namespace WONAPI {
 using namespace std;
 
 // No original address identified: WON SDK registry method
-bool RegKey::SetValue(const string& theName, const string& theValue){
-
+bool RegKey::SetValue(const string& theName, const string& theValue)
+{
 	if(!this->IsOpen())
 		return false;
-
-	if(RegSetValueEx(this->mKey, theName.c_str(), NULL, REG_SZ,
-	                  reinterpret_cast<CONST BYTE*>(theValue.c_str()),
-	                  (theValue.size()+1)) == ERROR_SUCCESS)
-	{
-		return true;
-
-	}
-	else
-		return false;
-
+	return PlatConfigSetString(this->mBlock.c_str(), ConfigName(theName).c_str(), theValue.c_str()) != 0;
 }
 
 // No original address identified: WON SDK registry method
@@ -183,16 +195,9 @@ bool RegKey::SetValue(const string& theName, unsigned long theValue)
 {
 	if(!this->IsOpen())
 		return false;
-	
-	if(RegSetValueEx(this->mKey, theName.c_str(), NULL, REG_DWORD,
-	                  reinterpret_cast<CONST BYTE*>(&theValue),
-	                  sizeof(theValue)) == ERROR_SUCCESS)
-	{
-		return true;
-	}
-	else
-		return false;
-
+	// a REG_DWORD: 32 bits
+	return PlatConfigSetInt(this->mBlock.c_str(), ConfigName(theName).c_str(),
+	                        static_cast<int32_t>(static_cast<uint32_t>(theValue))) != 0;
 }
 
 // No original address identified: WON SDK registry method
@@ -201,15 +206,15 @@ bool RegKey::SetValue(const std::string& theName, const void* theValueP, unsigne
 	if(!this->IsOpen())
 		return false;
 
-	if(RegSetValueEx(this->mKey, theName.c_str(), NULL, REG_BINARY,
-	                 static_cast<const unsigned char*>(theValueP),
-	                 theLength) == ERROR_SUCCESS)
+	static const char kHex[] = "0123456789abcdef";
+	const unsigned char* aByteP = static_cast<const unsigned char*>(theValueP);
+	string aText;
+	for(unsigned long i = 0; i < theLength; i++)
 	{
-		return true;
-
+		aText += kHex[aByteP[i] >> 4];
+		aText += kHex[aByteP[i] & 15];
 	}
-	else
-		return false;
+	return PlatConfigSetString(this->mBlock.c_str(), ConfigName(theName).c_str(), aText.c_str()) != 0;
 }
 
 // No original address identified: WON SDK registry method
@@ -218,145 +223,68 @@ bool RegKey::DeleteValue(const string& theName)
 	if(!this->IsOpen())
 		return false;
 
-	return (RegDeleteValue(this->mKey, theName.c_str()) == ERROR_SUCCESS);
+	return PlatConfigDelete(this->mBlock.c_str(), ConfigName(theName).c_str()) != 0;
 }
 
 // No original address identified: WON SDK registry method
 bool RegKey::OpenSubKey(const std::string& theSubKey, bool createSubKey, bool nonVolatile)
 {
-	bool subkeyOpen(false);
-
-
 	if(theSubKey.size() > 0 && this->mIsOpen)
 	{
-		HKEY aSubKey;
-		
-		if(createSubKey)
-		{
-			char aClass;
-			DWORD wasCreated;
-			DWORD anOptionValue((nonVolatile) ? REG_OPTION_NON_VOLATILE : REG_OPTION_VOLATILE);
-
-			subkeyOpen = (RegCreateKeyEx(this->mKey, theSubKey.c_str(), NULL, &aClass, anOptionValue, KEY_ALL_ACCESS, NULL, &aSubKey, &wasCreated) == ERROR_SUCCESS);
-		}
-		else
-			subkeyOpen = (RegOpenKeyEx(this->mKey, theSubKey.c_str(), NULL, KEY_ALL_ACCESS, &aSubKey) == ERROR_SUCCESS);
-
-		if(subkeyOpen)
-		{
-			this->CloseKey();
-			this->mPath = theSubKey;
-			this->mKey = aSubKey;
-			this->mIsOpen = subkeyOpen;
-		}
+		this->mBlock = ConfigBlock(this->mBlock, theSubKey);
+		this->mPath = theSubKey;
+		return true;
 	}
-
-
-	return subkeyOpen;
+	return false;
 }
 
 // No original address identified: WON SDK registry method
-bool RegKey::GetSubKey(const std::string& theSubKeyName, RegKey& theSubKey, bool createSubKey, bool nonVolatile) const 
+bool RegKey::GetSubKey(const std::string& theSubKeyName, RegKey& theSubKey, bool createSubKey, bool nonVolatile) const
 {
 	if(theSubKeyName.size() > 0 && this->mIsOpen)
-		return theSubKey.OpenNewKey(this->mKey,theSubKeyName, createSubKey, nonVolatile);
+		return theSubKey.OpenBlock(this->mBlock, theSubKeyName);
 
 	return false;
 }
 
 // No original address identified: WON SDK registry method
-RegKey::GetResult RegKey::GetFirstSubKey(RegKey& theSubKey) const 
+RegKey::GetResult RegKey::GetFirstSubKey(RegKey& theSubKey) const
 {
-	this->mSubKeyIndex = 0;
 	return ((this->GetNextSubKey(theSubKey) == NoMore) ? NotFound : Ok);
+}
 
+// config.yaml blocks are not enumerated: no more subkeys
+// No original address identified: WON SDK registry method
+RegKey::GetResult RegKey::GetNextSubKey(RegKey& theSubKey) const
+{
+	return NoMore;
 }
 
 // No original address identified: WON SDK registry method
-RegKey::GetResult RegKey::GetNextSubKey(RegKey& theSubKey) const 
+RegKey::GetResult RegKey::GetFirstValueName(std::string& theName, DataType& theType) const
 {
-	FILETIME aFileTime;
-	char aNameBuffer[256];
-	DWORD aNameLength(sizeof(aNameBuffer));
-	GetResult ret(NoMore);
-
-	if(RegEnumKeyEx(this->mKey, this->mSubKeyIndex, aNameBuffer, &aNameLength, 0, NULL, NULL, &aFileTime) != ERROR_NO_MORE_ITEMS)
-	{
-		this->mSubKeyIndex++;
-		if(theSubKey.OpenNewKey(this->mKey,aNameBuffer))
-			ret = Ok;
-	}
-
-	return ret;
-}
-
-// No original address identified: WON SDK registry method
-RegKey::GetResult RegKey::GetFirstValueName(std::string& theName, DataType& theType) const 
-{
-	this->mValueIndex = 0;
 	return ((this->GetNextValueName(theName, theType) == NoMore) ? NotFound : Ok);
 }
 
+// config.yaml keys are not enumerated: no more values
 // No original address identified: WON SDK registry method
-RegKey::GetResult RegKey::GetNextValueName(std::string& theName, DataType& theType) const 
+RegKey::GetResult RegKey::GetNextValueName(std::string& theName, DataType& theType) const
 {
-	char aNameBuffer[256];
-	DWORD aNameLength(sizeof(aNameBuffer)), aDataType;
-	GetResult ret(NoMore);
-
-	if(RegEnumValue(this->mKey, this->mValueIndex, aNameBuffer, &aNameLength, 0, &aDataType, NULL, NULL) != ERROR_NO_MORE_ITEMS)
-	{
-		switch(aDataType)
-		{
-			case REG_DWORD:
-				theType=Long;
-				break;
-			case REG_SZ:
-				theType=String;
-				break;
-			case REG_BINARY:
-				theType=Binary;
-				break;
-			default:
-				theType=Other;
-				break;
-		}
-		this->mValueIndex++;
-		theName = aNameBuffer;
-		ret = Ok;
-	}
-
-	return ret;
+	return NoMore;
 }
 }
 
 namespace WONAPI {
 using namespace std;
+// Any value reads as a string (config.yaml keeps no types)
 // No original address identified: WON SDK string value reader
 RegKey::GetResult RegKey::GetValue(const string& theName, string& theValR) const
 {
-	GetResult ret = NotFound;
-
 	theValR.erase();
 	if(!this->IsOpen())
 		return NotFound;
 
-	unsigned long aLength;
-	switch (this->GetToBuf(theName, aLength))
-	{
-		case REG_SZ:
-			theValR = reinterpret_cast<char *>(this->mBuffer);
-			ret = Ok;
-			break;
-		case REG_NONE:
-			ret = NotFound;
-			break;
-		default:
-			ret = BadType;
-			break;
-	}
-
-	return ret;
+	return this->GetToBuf(theName, theValR) ? Ok : NotFound;
 }
 }
 

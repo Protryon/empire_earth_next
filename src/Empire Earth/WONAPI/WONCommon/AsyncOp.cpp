@@ -131,7 +131,7 @@ WONStatus AsyncOp::Run(long mode,unsigned long timeout)
     this->mStatus=WS_Pending;
     this->mKilled=false;
     lock.Leave();
-    this->mStartTime=GetTickCount();
+    this->mStartTime=WONTickCount();
     this->mTimeout=timeout;
     this->mRunMode=mode;
     if(mode==1) {
@@ -153,7 +153,7 @@ void AsyncOp::RunAsTimer(unsigned long timeout)
     this->mStatus=WS_Pending;
     this->mKilled=false;
     lock.Leave();
-    this->mStartTime=GetTickCount();
+    this->mStartTime=WONTickCount();
     this->mTimeout=timeout;
     this->mRunMode=OP_MODE_ASYNC;
     WONAPICore::AddTimerOp(this,timeout);
@@ -169,7 +169,7 @@ bool AsyncOp::RunBlock(unsigned long timeout) {return this->Run(2,timeout)==WS_S
 unsigned long AsyncOp::TimeLeft()
 {
     if(this->mRunMode==OP_MODE_ASYNC) return 0;
-    unsigned long elapsed=GetTickCount()-this->mStartTime;
+    unsigned long elapsed=WONTickCount()-this->mStartTime;
     if(elapsed>=this->mTimeout) return 0;
     return this->mTimeout-elapsed;
 }
@@ -179,7 +179,7 @@ unsigned long AsyncOp::TimeLeft()
 namespace WONAPI {
 DWORD AsyncOp::RealTimeLeft()
 {
-	int deltaTime = GetTickCount() - this->mStartTime;
+	int deltaTime = WONTickCount() - this->mStartTime;
 	if(deltaTime >= this->mTimeout)
 		return 0;
 	else

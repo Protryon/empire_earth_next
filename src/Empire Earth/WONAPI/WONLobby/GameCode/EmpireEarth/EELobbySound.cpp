@@ -3,7 +3,6 @@
 // engine's sound manager: 0x69ce06..0x69cfda (after EELobbyResource.cpp's GUIString function; the next unit's static
 // initializers start at 0x69cfda).
 #include <windows.h>
-#include <mbstring.h>
 #include <string>
 #include <list>
 

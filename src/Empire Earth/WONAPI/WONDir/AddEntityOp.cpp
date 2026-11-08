@@ -1,6 +1,5 @@
 // No original address identified: WON SDK directory server add-entity request
 // Expected flags: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-#include <winsock2.h>
 #include <windows.h>
 #include <string>
 #include <list>
@@ -45,7 +44,9 @@ AddEntityOp::AddEntityOp(const IPAddr &theAddr, bool isService) : ServerRequestO
 void AddServiceOp::SetNetAddrPort(unsigned short thePort)
 {
 	WriteBuffer theBuf(0,true);
-	theBuf.AppendShort( htons(thePort) );
+	// the port in network byte order (htons)
+	theBuf.AppendByte( static_cast<unsigned char>(thePort >> 8) );
+	theBuf.AppendByte( static_cast<unsigned char>(thePort & 0xff) );
 
 	this->SetNetAddr(theBuf.ToByteBuffer(true));
 }

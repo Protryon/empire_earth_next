@@ -1,6 +1,7 @@
 // GUI callback templates; the AsyncOpPtr members sit at +0x0c and +0x18.
 #ifndef EE_WONAPI_WONLOBBYGUICOMPLETION_H
 #define EE_WONAPI_WONLOBBYGUICOMPLETION_H
+#include "platform/PlatThread.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 namespace WONAPI {
@@ -25,7 +26,7 @@ public:
 template<class ResultType>
 inline void GUICompletion<ResultType>::Complete(ResultType result)
 {
-    if(GetCurrentThreadId()==WONAPI::WindowManager::GetThreadId())
+    if(PlatCurrentThreadId()==WONAPI::WindowManager::GetThreadId())
         this->mCompletion->Complete(result);
     else
     {

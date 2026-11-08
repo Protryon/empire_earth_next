@@ -14,6 +14,7 @@
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
 #include "ee/wonapi/WONResourceCollection.h"
+#include "platform/PlatFile.h"
 namespace WONAPI {
 using namespace std;
 static const int RESOURCE_VERSION = 1;
@@ -127,7 +128,7 @@ bool ResourceCollectionWriter::ExportToCFG(const GUIString &theName)
 	aWONFile.Delete(true);
 
 
-	FILE *aFile = fopen(aName.c_str(),"w");
+	FILE *aFile = PlatFOpen(aName.c_str(),"w");
 	if(aFile==NULL)
 		return false;
 
@@ -238,7 +239,7 @@ void ResourceCollectionWriter::WriteFileResource(const ResourceEntry *theEntry)
 	if(aFileName.empty()) // prevent assert in MS library for fopen of empty string
 		return;
 
-	FILE *aFile = fopen(aFileName.c_str(),"rb");
+	FILE *aFile = PlatFOpen(aFileName.c_str(),"rb");
 	if(aFile==NULL)
 		return;
 //		throw FileWriterException("Couldn't open file: " + aFileName);
@@ -346,12 +347,12 @@ void ResourceCollectionWriter::WriteHeaderFile()
 	string aName = aFileParse.mFileNameNoExtension + "WRS";
 	string aFileName = aFileParse.GetFileDirectory() + '\\' + aName + ".h";
 
-	FILE *aFile = fopen(aFileName.c_str(),"w");
+	FILE *aFile = PlatFOpen(aFileName.c_str(),"w");
 	if(aFile==NULL)
 	{
 		WONFile aHeaderFile(aFileName);
 		aHeaderFile.SetReadOnly(false);
-		aFile = fopen(aFileName.c_str(),"w");
+		aFile = PlatFOpen(aFileName.c_str(),"w");
 		if(aFile==NULL)
 		{
 			this->mErrorString = "Couldn't open file: " + aFileName;

@@ -7,7 +7,9 @@
 #include <stdio.h>
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
+#include "ee/wonapi/WONBuffer.h"
 #include "ee/wonapi/WONLobbyPersistence.h"
+#include "platform/PlatFile.h"
 namespace WONAPI {
 
 FileWriter::FileWriter() : mFile(NULL) {}
@@ -20,11 +22,11 @@ bool FileWriter::Open(const char* inPath, bool inOpenIfReadOnly)
     this->Close();
     if (inPath[0] == 0)
         return false;
-    this->mFile = fopen(inPath, "wb");
+    this->mFile = PlatFOpen(inPath, "wb");
     if (this->mFile == NULL && inOpenIfReadOnly) {
         WONFile file(inPath);
         file.SetReadOnly(false);
-        this->mFile = fopen(inPath, "wb");
+        this->mFile = PlatFOpen(inPath, "wb");
     }
     return this->mFile != NULL;
 }
@@ -71,7 +73,7 @@ void FileWriter::WriteShort(unsigned short inValue) { this->WriteBytes(&inValue,
 
 // FUNCTION: WON 0x006a2610
 // Writes a 32-bit value
-void FileWriter::WriteLong(long inValue) { this->WriteBytes(&inValue, 4); }
+void FileWriter::WriteLong(int32_t inValue) { this->WriteBytes(&inValue, 4); }
 // FUNCTION: WON 0x006a2620
 // Writes a length as a 1, 2 or 4 byte field; writes nothing for any other size
 void FileWriter::WriteLength(unsigned long inLength, unsigned char inFieldSize)
@@ -79,7 +81,7 @@ void FileWriter::WriteLength(unsigned long inLength, unsigned char inFieldSize)
     switch (inFieldSize) {
     case 1: this->WriteByte((unsigned char)inLength); break;
     case 2: this->WriteShort((unsigned short)inLength); break;
-    case 4: this->WriteLong((long)inLength); break;
+    case 4: this->WriteLong((int32_t)inLength); break;
     }
 }
 
@@ -99,28 +101,18 @@ void FileWriter::WriteString(const std::string& inString, unsigned char inFieldS
 }
 
 namespace WONAPI {
-// WON SDK byte-order helper
-inline bool IsLittleEndian()
-{
-	short aTest = 1;
-	return ((*reinterpret_cast<char*>(&aTest))&1)?true:false;
-}
-
 // No original address identified: WON SDK wide string serialization
+// (UTF-16 little-endian units, converted one by one: wchar_t is 4 bytes outside Windows)
 void FileWriter::WriteRawWString(const std::wstring &theWStr)
 {
-	if(IsLittleEndian() && sizeof(wchar_t)==2)
-		this->WriteBytes(theWStr.data(),theWStr.length()*2);
-	else
-	{
-		for(int i=0; i<theWStr.length(); i++)
-			this->WriteShort(theWStr[i]);
-	}
+	std::string aBytes;
+	WideAppendUtf16LE(aBytes,theWStr);
+	this->WriteBytes(aBytes.data(),aBytes.length());
 }
 
 void FileWriter::WriteWString(const std::wstring &theWStr, unsigned char theLengthFieldSize)
 {
-	this->WriteLength(theWStr.length(),theLengthFieldSize);
+	this->WriteLength(WideUtf16Length(theWStr),theLengthFieldSize);
 	this->WriteRawWString(theWStr);
 }
 }

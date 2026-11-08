@@ -1,6 +1,5 @@
 // WONAPI IPAddr: IPv4 address and port, with DNS lookup and local adapter listing (file grouping inferred)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
-#include <winsock2.h>
 #include <windows.h>
 #include <string>
 #include <list>
@@ -8,13 +7,12 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <memory>
-#include "winsdk/iphlpapi.h"
 #include "lle/LowLevelEngine.h"
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONRouting.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "platform/PlatSocket.h"
 namespace WONAPI {
 
 // FUNCTION: WON 0x006b2660
@@ -23,17 +21,15 @@ bool IPAddr::Fn2B2660(const std::string& inHost,unsigned short inPort)
 {
     memset(&this->mAddr,0,sizeof(this->mAddr));
     this->mIsValid=false;
-    uint32_t aHost=inet_addr(inHost.c_str());
-    if (aHost==INADDR_NONE) {
-        hostent* aEntry=gethostbyname(inHost.c_str());
-        if (aEntry==NULL) return false;
-        memcpy(&aHost,aEntry->h_addr_list[0],sizeof(aHost));
+    uint32_t aHost=PlatSocketParseIPv4(inHost.c_str());
+    if (aHost==PLAT_INADDR_NONE) {
+        if (PlatSocketResolveIPv4(inHost.c_str(),&aHost,1)==0) return false;
     }
     if (this->mRememberHostString) this->mHost=inHost;
     else this->mHost.erase();
     this->mAddr.mFamily=PLAT_AF_INET;
     this->mAddr.mAddress=aHost;
-    this->mAddr.mPort=htons(inPort);
+    this->mAddr.mPort=PlatHostToNet16(inPort);
     this->mIsValid=true;
     return true;
 }
@@ -73,8 +69,8 @@ void IPAddr::Fn2B2C20(long inHost,unsigned short inPort)
 {
     memset(&this->mAddr,0,sizeof(this->mAddr));
     this->mAddr.mFamily=PLAT_AF_INET;
-    this->mAddr.mAddress=htonl(inHost);
-    this->mAddr.mPort=htons(inPort);
+    this->mAddr.mAddress=PlatHostToNet32(static_cast<uint32_t>(inHost));
+    this->mAddr.mPort=PlatHostToNet16(inPort);
     this->mHost.erase();
     this->mIsValid=true;
 }
@@ -87,17 +83,17 @@ bool IPAddr::SetWithDefaultPortNoDNS(const std::string& inHostAndPort,unsigned s
     uint32_t aHost;
     unsigned short aPort;
     if (aColon!=std::string::npos) {
-        aHost=inet_addr(inHostAndPort.substr(0,aColon).c_str());
+        aHost=PlatSocketParseIPv4(inHostAndPort.substr(0,aColon).c_str());
         aPort=atoi(inHostAndPort.substr(aColon+1).c_str());
     } else {
-        aHost=inet_addr(inHostAndPort.c_str());
+        aHost=PlatSocketParseIPv4(inHostAndPort.c_str());
         aPort=inDefaultPort;
     }
-    if (aHost!=INADDR_NONE) {
+    if (aHost!=PLAT_INADDR_NONE) {
         memset(&this->mAddr,0,sizeof(this->mAddr));
         this->mAddr.mFamily=PLAT_AF_INET;
         this->mAddr.mAddress=aHost;
-        this->mAddr.mPort=htons(static_cast<unsigned short>(aPort));
+        this->mAddr.mPort=PlatHostToNet16(static_cast<unsigned short>(aPort));
         this->mHost.erase();
         this->mIsValid=true;
     }
@@ -119,8 +115,7 @@ IPAddr IPAddr::GetLocalAddr()
 {
     if (IPAddr::mLocalHost!=0) return IPAddr(IPAddr::mLocalHost,0);
     char aHostName[1024];
-    int aErr=gethostname(aHostName,1024);
-    if (aErr==0) return IPAddr(aHostName,0);
+    if (PlatSocketGetHostName(aHostName,1024)) return IPAddr(aHostName,0);
     return IPAddr();
 }
 
@@ -143,37 +138,15 @@ bool IPAddr::SetLocalHost(long inHost,bool inValidate)
 
 
 // FUNCTION: WON 0x006b3540
-// Lists each network adapter's description and first IP via Iphlpapi.dll; false when unavailable
+// Lists each network adapter's description and first IP (Win32: GetAdaptersInfo); false when there is none
 static bool IPAddr_PlatformGetNetworkAdapterList(std::list<LobbyNetAddress>& outAddresses)
 {
-    typedef DWORD (WINAPI *GetAdaptersInfoFunc)(PIP_ADAPTER_INFO,PULONG);
-    static GetAdaptersInfoFunc aGetAdaptersInfoFunc=NULL;
-    static bool haveLoaded=false;
-    struct AutoUnloadLibrary {
-        HMODULE mModule;
-        AutoUnloadLibrary() : mModule(NULL) {}
-        ~AutoUnloadLibrary() { if(mModule!=NULL) FreeLibrary(mModule); }
-    };
-    static AutoUnloadLibrary anUnload;
-    if(!haveLoaded) {
-        HMODULE aModule=LoadLibraryA("Iphlpapi.dll");
-        if(aModule!=NULL) {
-            anUnload.mModule=aModule;
-            aGetAdaptersInfoFunc=(GetAdaptersInfoFunc)GetProcAddress(aModule,"GetAdaptersInfo");
-        }
-        haveLoaded=true;
-    }
-    if(aGetAdaptersInfoFunc==NULL) return false;
-    DWORD aBufSize=0;
-    aGetAdaptersInfoFunc(NULL,&aBufSize);
-    if(aBufSize==0 || aBufSize>256000) return false;
-    char* aBuf=new char[aBufSize];
-    std::unique_ptr<char[]> aDelBuf(aBuf);
-    PIP_ADAPTER_INFO anAdapter=(PIP_ADAPTER_INFO)aBuf;
-    aGetAdaptersInfoFunc(anAdapter,&aBufSize);
-    for(;anAdapter!=NULL;anAdapter=anAdapter->Next) {
-        std::string aName=anAdapter->Description;
-        long aHost=ntohl(inet_addr(anAdapter->IpAddressList.IpAddress.String));
+    PlatNetAdapter anAdapters[64];
+    uint32_t aCount=PlatSocketGetAdapters(anAdapters,64);
+    if(aCount==0) return false;
+    for(uint32_t i=0;i<aCount;++i) {
+        std::string aName=anAdapters[i].mDescription;
+        long aHost=static_cast<long>(PlatNetToHost32(anAdapters[i].mAddress));
         outAddresses.push_back(LobbyNetAddress(aName,aHost));
     }
     return true;
@@ -185,14 +158,11 @@ void LobbyGetNetAddresses(std::list<LobbyNetAddress>& outAddresses,bool inGetDet
     outAddresses.clear();
     if(inGetDetails && IPAddr_PlatformGetNetworkAdapterList(outAddresses) && !outAddresses.empty()) return;
     char aHostName[1024];
-    if(gethostname(aHostName,sizeof(aHostName))!=0) return;
-    hostent* anEntry=gethostbyname(aHostName);
-    if(anEntry==NULL) return;
-    for(int i=0;anEntry->h_addr_list[i]!=NULL;++i) {
-        uint32_t anAddress;
-        memcpy(&anAddress,anEntry->h_addr_list[i],sizeof(anAddress));
-        outAddresses.push_back(LobbyNetAddress("",ntohl(anAddress)));
-    }
+    if(!PlatSocketGetHostName(aHostName,sizeof(aHostName))) return;
+    uint32_t anAddresses[64];
+    uint32_t aCount=PlatSocketResolveIPv4(aHostName,anAddresses,64);
+    for(uint32_t i=0;i<aCount;++i)
+        outAddresses.push_back(LobbyNetAddress("",static_cast<long>(PlatNetToHost32(anAddresses[i]))));
 }
 // FUNCTION: WON 0x006b2350
 // Creates an empty, invalid address
@@ -257,30 +227,27 @@ const char* IPAddr::GetSixByte() const
 // Sets the port
 void IPAddr::SetPort(unsigned short inPort)
 {
-    this->mAddr.mPort=htons(inPort);
+    this->mAddr.mPort=PlatHostToNet16(inPort);
 }
 // FUNCTION: WON 0x006b2fb0
 // Returns the IP in host byte order
 long IPAddr::GetHost() const
 {
-    return ntohl(this->mAddr.mAddress);
+    return static_cast<long>(PlatNetToHost32(this->mAddr.mAddress));
 }
 // FUNCTION: WON 0x006b3070
-// Returns "host:port", formatted into a 50-byte buffer (a long remembered host name overflows it)
+// Returns "host:port", formatted into a 50-byte buffer (a long remembered host name is cut short)
 std::string IPAddr::GetHostAndPortString(bool inUseOriginal) const
 {
-    long host=ntohl(this->GetHost());
-    std::string hostText;
-    unsigned char* bytes=reinterpret_cast<unsigned char*>(&host);
     char text[50];
-    sprintf(text,"%s:%d",this->GetHostString(inUseOriginal).c_str(),this->GetPort());
+    snprintf(text,sizeof(text),"%s:%d",this->GetHostString(inUseOriginal).c_str(),this->GetPort());
     return text;
 }
 // FUNCTION: WON 0x006b31c0
 // Returns the port in host byte order
 unsigned short IPAddr::GetPort() const
 {
-    return ntohs(this->mAddr.mPort);
+    return PlatNetToHost16(this->mAddr.mPort);
 }
 // FUNCTION: WON 0x006b31d0
 // Returns whether the address has been set successfully
@@ -324,12 +291,13 @@ int IPAddr::StringCompare(const IPAddr& other) const
 
 // SDK static: the chosen local interface in host order; in the original at 565f40
 namespace WONAPI {
-long IPAddr::mLocalHost = INADDR_ANY;
+long IPAddr::mLocalHost = PLAT_INADDR_ANY;
 }
 
 // Compiler-generated for this unit:
 // SYNTHETIC: WON 0x006b3790
-// (_$E72: atexit destructor of IPAddr_PlatformGetNetworkAdapterList's static anUnload)
+// (_$E72: atexit destructor of IPAddr_PlatformGetNetworkAdapterList's static anUnload; the function no longer
+// loads Iphlpapi.dll itself)
 
 // Compiler-generated and header-inline functions this unit emits:
 // TEMPLATE: WON 0x006b8710

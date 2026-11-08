@@ -7,6 +7,7 @@
 #ifndef EE_RTSGRAPHICS_H
 #define EE_RTSGRAPHICS_H
 
+#include <stdint.h>
 #include <vector>
 
 class FSFileSpec;
@@ -57,6 +58,9 @@ public:
     void PostResume();                      // 0x11aaa2: waits for mIsPausePending, sets mIsResumePending, posts 0x403 (resume: mIsPaused = false) (provisional name)
     void PostStopMovie();                   // 0x11aacf: posts 0x40d
     void SetSurface(GESurface* inSurface);  // 0x11aae4: mU34, and mU38 the last attached surface before type 3
+    // port: the frame while the WON lobby is shown (Main, instead of Render): the lobby's composited frame copied to
+    // the back buffer and shown (the original showed the lobby in its own GDI window)
+    void RenderLobby();
 
     TSThread* mThread;                      // +0x04 (named by the ctor's asserts)
     GERasterizer* mRasterizer;              // +0x08
@@ -84,6 +88,12 @@ public:
     bool mIsQuitting;                       // +0x59 (message 0x401: the thread ends)
     bool mIsWindowed;                       // +0x5a (= !inArg5)
     bool mIsSlowPlayback;                   // +0x5b
+    // port: RenderLobby's state (graphics thread only)
+    GESurface* mLobbyFrame = NULL;          // system memory, the lobby frame's size in the back buffer's format
+    uint32_t mLobbySerial = 0;              // the lobby frame packed into mLobbyFrame
+    unsigned long mLobbySecondaryWidth = 0;   // the back buffer size last given to the lobby
+    unsigned long mLobbySecondaryHeight = 0;
+    unsigned long mLobbyShownTime = 0;      // TMGetTime of the last ShowScene
 };
 
 class SEMixer;
@@ -91,6 +101,11 @@ extern SEMixer* gConductor;             // 0x5319c0 (the mixer; its conductor at
 bool EELobbyIsShown();                      // 0x297ed0: a global flag (the thread skips the frame while it is set) (provisional name)
 void EELobbyLock();                         // 0x297f15: enters a global critical section (0x565858) (provisional name)
 void EELobbyUnlock();                       // 0x297f21: leaves it (provisional name)
+// port: the WON lobby's frame for RenderLobby (EELobbyInterface.cpp; the caller holds EELobbyLock): the composited
+// frame, 32-bit pixels 0xFFRRGGBB, inPitch bytes a row, a serial that changes with each frame -> false when the lobby
+// is not shown or has no frame yet (nothing to unlock then); EELobbyUnlockFrame after copying it.
+bool EELobbyLockFrame(const uint32_t*& outPixels, int& outWidth, int& outHeight, int& outPitch, uint32_t& outSerial);
+void EELobbyUnlockFrame();
 extern UString gGraphicsThreadName;       // 0x52a260 (the thread's name; provisional name)
 
 #endif

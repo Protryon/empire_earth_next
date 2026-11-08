@@ -151,7 +151,7 @@ static bool CompareNames(const GUIString& a,const GUIString& b,bool& prefix)
 // Advances a position past whitespace in a string
 static void SkipWhitespace(const GUIString& text,int& pos)
 {
- while(pos<text.length() && iswctype(text.at(pos),_SPACE)) ++pos;
+ while(pos<text.length() && iswspace(text.at(pos))) ++pos;
 }
 
 // FUNCTION: WON 0x756a40

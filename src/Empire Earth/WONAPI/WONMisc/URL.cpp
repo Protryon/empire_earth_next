@@ -1,5 +1,6 @@
 // URL: parsing of http/ftp/file URLs and relative URL resolution
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
+#include "platform/PlatString.h"
 #include <windows.h>
 #include <string>
 #include <string.h>
@@ -19,9 +20,9 @@ URL::URL(const std::string& inURL)
     int protocolEnd=inURL.find("://");
     if (protocolEnd!=std::string::npos) {
         std::string protocol=inURL.substr(0,protocolEnd);
-        if (stricmp(protocol.c_str(),"HTTP")==0) this->mType=URLType_HTTP;
-        else if (stricmp(protocol.c_str(),"FTP")==0) this->mType=URLType_FTP;
-        else if (stricmp(protocol.c_str(),"FILE")==0) this->mType=URLType_File;
+        if (PlatStrICmp(protocol.c_str(),"HTTP")==0) this->mType=URLType_HTTP;
+        else if (PlatStrICmp(protocol.c_str(),"FTP")==0) this->mType=URLType_FTP;
+        else if (PlatStrICmp(protocol.c_str(),"FILE")==0) this->mType=URLType_File;
         else {
             this->mType=URLType_None;
             return;

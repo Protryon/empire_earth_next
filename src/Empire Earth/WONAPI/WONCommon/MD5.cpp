@@ -142,7 +142,7 @@ void MD5::Digest(unsigned char digest[16])
 // Mixes one 64-byte block of input into the MD5 state (the four MD5 rounds)
 void MD5::Transform(uint32 buf[4], uint32 in[16])
 {
-	register uint32 a, b, c, d;
+	uint32 a, b, c, d;
 
 	a = buf[0];
 	b = buf[1];

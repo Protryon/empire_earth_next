@@ -10,6 +10,7 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONLobbyPlatform.h" // CreateNativeWindow
 #include "ee/wonapi/WONLobbyMSMessageBox.h"
 namespace WONAPI {
 static RawBuffer gMessageBoxEmptyBuffer;
@@ -99,7 +100,7 @@ int MSMessageBox::Msg(Window* parent,const GUIString& title,const GUIString& mes
 // the first button
 SmartPtr<Window> MSMessageBox::PrepareWindow(Window* parent)
 {
-    SmartPtr<MSWindow> window=new MSWindow;
+    SmartPtr<Window> window=CreateNativeWindow();
     window->SetParent(parent);
     window->SetTitle(this->mTitle);
     window->mStyle=0x59;

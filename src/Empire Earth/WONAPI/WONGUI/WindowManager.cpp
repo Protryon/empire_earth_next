@@ -9,20 +9,23 @@
 #include "ee/EEWonNet.h"
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
+#include "ee/wonapi/WONLobbyPlatform.h" // CreateNativeWindow
+#include "ee/wonapi/WONRouting.h" // WONTickCount
+#include "platform/PlatKeys.h"
 #include "ee/wonapi/WONLobbyDelayLoadImage.h"
 #include "ee/wonapi/WONComponentFlags.h"
 using namespace WONAPI;
 // FUNCTION: WON 0x0072b660
 // Creates the window manager: registers the BMP and WIM decoders, becomes the default manager, sets standard colours
 WindowManager::WindowManager() {
-    WindowManager::mThreadId=GetCurrentThreadId();
+    WindowManager::mThreadId=PlatCurrentThreadId();
     this->mIsFullScreen=false;
     this->mOriginalScreenWidth=this->mOriginalScreenHeight=0;
     this->mLastLoseFocusTick=0;
     this->mImageDecoder.AddDecoder(new BMPDecoder,"bmp");
     this->mImageDecoder.AddDecoder(new WIMDecoder,"wim");
     WindowManager::mDefaultWindowManager=this;
-    this->mLastTimerTick=GetTickCount();
+    this->mLastTimerTick=WONTickCount();
     this->mEndPopup=false;
     this->mDefaultWindow=NULL;this->mWindowCount=0;
     this->mCurMsgLoopDepth=0;this->mTargetMsgLoopDepth=0;this->mDialogResult=0;
@@ -108,7 +111,7 @@ void WindowManager::InitColorScheme()
 void WindowManager::NotifyLostFocus()
 {
 	this->mFocusWindow = NULL;
-	this->mLastLoseFocusTick = GetTickCount();
+	this->mLastLoseFocusTick = WONTickCount();
 	if(this->mLastLoseFocusTick==0)
 		this->mLastLoseFocusTick = 1;
 }
@@ -520,7 +523,7 @@ WindowEventBase* WindowManager::PeekNextEvent()
 void WindowManager::ProcessEvents()
 {
 
-	DWORD aTick = GetTickCount();
+	DWORD aTick = WONTickCount();
 	DWORD anElapsed = aTick - this->mLastTimerTick;
 	if(anElapsed >= 50)
 	{
@@ -874,7 +877,7 @@ void WindowManager::DoPopup(const PopupParams &theParams)
 				
 		if(aPopupWindow.get()==NULL)
 		{
-			aPopupWindow = new MSWindow;
+			aPopupWindow = CreateNativeWindow();
 			aPopupWindow->mIsOneComponentWindow = true;
 			aPopupWindow->mStyle=0x20;
 			aPopupWindow->SetParent(aParent.get());
@@ -1305,7 +1308,7 @@ void WindowManager::DeliverEvent(WindowEventBase *theEvent)
 			return;
 	}
 
-	this->mLastInputTick = GetTickCount();
+	this->mLastInputTick = WONTickCount();
 }
 
 // Class statics: the default window manager and the GUI thread id (constant-initialised)

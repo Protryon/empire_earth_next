@@ -615,7 +615,7 @@ void RoutingLogic::Reset()
 {
     if (this->mSuppressIdle || !this->IsConnected()) return;
     DWORD aLastInputTick = GetLobbyWindow()->mLastInputTick;
-    if (GetTickCount() - aLastInputTick > 300000) {
+    if (WONTickCount() - aLastInputTick > 300000) {
         if (this->mIdle) return;
         RoutingConnection* aConnection = this->GetConnection();
         if (aConnection != NULL) {
