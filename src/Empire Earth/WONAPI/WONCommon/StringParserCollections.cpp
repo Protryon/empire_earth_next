@@ -22,7 +22,7 @@ bool StringParser::ReadValue(std::wstring &theStr, bool stopAtWhitespace)
     return this->ReadString(theStr,stopAtWhitespace);
 }
 
-// Generic comma-separated list reader (the string-only form is in StringParserLists.cpp)
+// Generic comma-separated list reader (the string and wide-string lists are StringParserLists.cpp's)
 template<class T>
 static bool ReadList(StringParser *theParser, std::list<T> &theList)
 {
@@ -42,8 +42,6 @@ static bool ReadList(StringParser *theParser, std::list<T> &theList)
 
 bool StringParser::ReadValue(std::list<bool> &theList) { return ReadList<bool>(this,theList); }
 bool StringParser::ReadValue(std::list<int> &theList) { return ReadList<int>(this,theList); }
-bool StringParser::ReadValue(std::list<std::string> &theList) { return ReadList<std::string>(this,theList); }
-bool StringParser::ReadValue(std::list<std::wstring> &theList) { return ReadList<std::wstring>(this,theList); }
 
 // Parenthesized list-of-lists reader; on a failed element or missing ')' the groups read so far stay
 template<class T>

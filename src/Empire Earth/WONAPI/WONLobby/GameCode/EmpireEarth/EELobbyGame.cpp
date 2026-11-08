@@ -86,18 +86,6 @@ void EELobbyGame::SetGameFile(const GUIString& inName, unsigned long inSize, uns
         this->mFileTransfer->Serve(EELobbyGetFileTransferPort());
 }
 
-// FUNCTION: EXE 0x692419
-// Appends a range of another GUI string's characters, growing the buffer as needed
-inline void GUIStringData::append(const GUIStringData* inText, unsigned short inStart, unsigned short inLength)
-{
-    int theLength = this->mLength;
-    int theNewLength = theLength + inLength;
-    this->Reserve(theNewLength, true);
-    this->mLength = theNewLength;
-    this->mText[this->mLength] = 0;
-    memcpy(this->mText + theLength, inText->mText + inStart, inLength * sizeof(wchar_t));
-}
-
 // FUNCTION: EXE 0x69246d
 // Returns the saved game file's name, or an empty string without a file transfer
 const GUIString& EELobbyGame::GetGameFileName()
@@ -130,12 +118,6 @@ void EELobbyGame::ReadGameFile(ReadBuffer& inBuffer)
     IPAddr theAddress(this->mAddress);
     theAddress.SetPort(thePort);
     this->mFileTransfer->SetHost(theAddress);
-}
-
-// FUNCTION: EXE 0x69258f
-// Creates a GUI string holding a copy of the wide text
-GUIString::GUIString(const std::wstring& inText) : mData(new GUIStringData(inText))
-{
 }
 
 // FUNCTION: EXE 0x6925cb
@@ -196,12 +178,12 @@ bool EELobbyGame::CanReadyHook()
 }
 
 // FUNCTION: EXE 0x6926f9
-// Returns 1 when the game can start: at least one human, two players in all, and no saved-game slot still waiting
-long EELobbyGame::CanStartGameHook()
+// Returns true when the game can start: at least one human, two players in all, and no saved-game slot still waiting
+bool EELobbyGame::CanStartGameHook()
 {
     if (this->mNumHumanPlayers > 0 && this->mNumHumanPlayers + this->mNumComputerSlots > 1 && this->mNumReservedSlots == 0)
-        return 1;
-    return 0;
+        return true;
+    return false;
 }
 
 // FUNCTION: EXE 0x692719

@@ -16,7 +16,7 @@ using namespace WONAPI;
 template<class Type,class Map>
 static void ResourceConfig_AddToMap(Map& values,const std::string& key,Type& value,int generation)
 {
-    values[key]=Map::referent_type(value,generation);
+    values[key]=typename Map::mapped_type(value,generation);
 }
 // FUNCTION: WON 0x007934a0
 // Adds or replaces a named sound resource

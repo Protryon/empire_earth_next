@@ -151,7 +151,7 @@ void BigInteger::st_div(BigInteger *dvOrig, BigInteger *remOrig, const BigIntege
     if (remPtr == NULL)
         remPtr = new BigInteger();
 
-	std::auto_ptr<BigInteger> aDelDv(dvPtr), aDelRem(remPtr);
+	std::unique_ptr<BigInteger> aDelDv(dvPtr), aDelRem(remPtr);
 	if(dvOrig!=NULL)
 		aDelDv.release();
 	if(remOrig!=NULL)

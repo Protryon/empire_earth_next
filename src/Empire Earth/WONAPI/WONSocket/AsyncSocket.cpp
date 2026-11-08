@@ -285,7 +285,7 @@ WONStatus AsyncSocket::RecvFrom(void* outData, int inLength, IPAddr* outAddress,
         return WS_AsyncSocket_StreamNotAllowed;
     if (!this->IsValid())
         return WS_AsyncSocket_InvalidSocket;
-    sockaddr_in aFrom;
+    PlatSockAddrIn aFrom;                   // sockaddr_in's layout
     int aFromLength = 16;
     int aReceived = recvfrom(this->mSocket, static_cast<char*>(outData), inLength, 0,
         reinterpret_cast<sockaddr*>(&aFrom), &aFromLength);
@@ -417,7 +417,7 @@ WONStatus AsyncSocket::Listen(int inBacklog)
 WONStatus AsyncSocket::Accept(SmartPtr<AsyncSocket>& outSocket)
 {
     AutoCrit aCrit(this->mDataCrit);
-    sockaddr_in aFrom;
+    PlatSockAddrIn aFrom;                   // sockaddr_in's layout
     int aFromLength = 16;
     SOCKET aSocket = accept(this->mSocket, reinterpret_cast<sockaddr*>(&aFrom), &aFromLength);
     if (aSocket == INVALID_SOCKET)
@@ -471,11 +471,11 @@ WONStatus AsyncSocket::WaitForConnect(unsigned long inWaitTime)
 // Binds the socket to the local host address on the given port
 WONStatus AsyncSocket::Fn2B0D90(unsigned short inPort, bool inReuse)
 {
-    sockaddr_in anAddress;
+    PlatSockAddrIn anAddress;
     memset(&anAddress, 0, sizeof(anAddress));
-    anAddress.sin_family = AF_INET;
-    anAddress.sin_addr.s_addr = htonl(WONAPI::IPAddr::GetLocalHost());
-    anAddress.sin_port = htons(inPort);
+    anAddress.mFamily = PLAT_AF_INET;
+    anAddress.mAddress = htonl(WONAPI::IPAddr::GetLocalHost());
+    anAddress.mPort = htons(inPort);
     return this->Bind(IPAddr(anAddress), inReuse);
 }
 

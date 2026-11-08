@@ -17,8 +17,10 @@
 #include "ee/wonapi/WONLobbySkinListControls.h"
 #include "ee/wonapi/WONLobbyConfig.h"
 #include "ee/wonapi/WONPerfTimer.h"
-extern bool gShowParseTime;
-extern int gLinesParsed;
+// gShowParseTime and gLinesParsed (0x00966b30/0x00966b34) belonged to the original ComponentConfig.cpp, which is not
+// reconstructed as a unit: defined here
+bool gShowParseTime = false;
+int gLinesParsed = 0;
 namespace WONAPI {
 // FUNCTION: WON 0x00783bd0
 // Looks up a string resource in the current resource set, then up the parent configs; throws if none has it
@@ -339,8 +341,6 @@ bool ComponentConfig::BaseHandleInstruction(ConfigParser& parser,const std::stri
     return this->Virtual24(key);
 }
 
-// gShowParseTime and gLinesParsed (0x00966b30/0x00966b34) belong to the original ComponentConfig.cpp;
-// this file only references them
 // FUNCTION: WON 0x00787520
 // Applies a component instruction (position, size, color, flags, cursor, focus, parse timer ...); false if unknown
 bool ComponentConfig::Virtual24(const std::string& key)

@@ -13,7 +13,7 @@ namespace WONAPI {
 
 // FUNCTION: WON 0x006b76b0
 // Creates an unbound UDP manager with 1024-byte receives and auto-receive off
-UDPManager::UDPManager() : mCleanListItr(NULL), mCleanMapItr(NULL)
+UDPManager::UDPManager()
 {
     this->mCleanListItr = this->mOpList.begin();
     this->mCleanMapItr = this->mOpMap.begin();

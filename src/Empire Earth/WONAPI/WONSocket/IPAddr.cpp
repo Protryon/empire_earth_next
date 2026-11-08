@@ -23,7 +23,7 @@ bool IPAddr::Fn2B2660(const std::string& inHost,unsigned short inPort)
 {
     memset(&this->mAddr,0,sizeof(this->mAddr));
     this->mIsValid=false;
-    unsigned long aHost=inet_addr(inHost.c_str());
+    uint32_t aHost=inet_addr(inHost.c_str());
     if (aHost==INADDR_NONE) {
         hostent* aEntry=gethostbyname(inHost.c_str());
         if (aEntry==NULL) return false;
@@ -31,9 +31,9 @@ bool IPAddr::Fn2B2660(const std::string& inHost,unsigned short inPort)
     }
     if (this->mRememberHostString) this->mHost=inHost;
     else this->mHost.erase();
-    this->mAddr.sin_family=AF_INET;
-    this->mAddr.sin_addr.s_addr=aHost;
-    this->mAddr.sin_port=htons(inPort);
+    this->mAddr.mFamily=PLAT_AF_INET;
+    this->mAddr.mAddress=aHost;
+    this->mAddr.mPort=htons(inPort);
     this->mIsValid=true;
     return true;
 }
@@ -54,14 +54,14 @@ bool IPAddr::Fn2B2890(const std::string& inHostAndPort)
 void IPAddr::SetSixByte(const void* inAddress)
 {
     memset(&this->mAddr,0,sizeof(this->mAddr));
-    this->mAddr.sin_family=AF_INET;
-    memcpy(&this->mAddr.sin_port,inAddress,6);
+    this->mAddr.mFamily=PLAT_AF_INET;
+    memcpy(&this->mAddr.mPort,inAddress,6);
     this->mHost.erase();
     this->mIsValid=true;
 }
 // FUNCTION: WON 0x006b2b00
-// Sets the address from a Winsock sockaddr_in and forgets the host name
-void IPAddr::Fn2B2B00(const sockaddr_in& inAddress)
+// Sets the address from a PlatSockAddrIn and forgets the host name
+void IPAddr::Fn2B2B00(const PlatSockAddrIn& inAddress)
 {
     this->mAddr=inAddress;
     this->mHost.erase();
@@ -72,9 +72,9 @@ void IPAddr::Fn2B2B00(const sockaddr_in& inAddress)
 void IPAddr::Fn2B2C20(long inHost,unsigned short inPort)
 {
     memset(&this->mAddr,0,sizeof(this->mAddr));
-    this->mAddr.sin_family=AF_INET;
-    this->mAddr.sin_addr.s_addr=htonl(inHost);
-    this->mAddr.sin_port=htons(inPort);
+    this->mAddr.mFamily=PLAT_AF_INET;
+    this->mAddr.mAddress=htonl(inHost);
+    this->mAddr.mPort=htons(inPort);
     this->mHost.erase();
     this->mIsValid=true;
 }
@@ -84,7 +84,7 @@ bool IPAddr::SetWithDefaultPortNoDNS(const std::string& inHostAndPort,unsigned s
 {
     this->mIsValid=false;
     std::string::size_type aColon=inHostAndPort.find(':');
-    unsigned long aHost;
+    uint32_t aHost;
     unsigned short aPort;
     if (aColon!=std::string::npos) {
         aHost=inet_addr(inHostAndPort.substr(0,aColon).c_str());
@@ -95,9 +95,9 @@ bool IPAddr::SetWithDefaultPortNoDNS(const std::string& inHostAndPort,unsigned s
     }
     if (aHost!=INADDR_NONE) {
         memset(&this->mAddr,0,sizeof(this->mAddr));
-        this->mAddr.sin_family=AF_INET;
-        this->mAddr.sin_addr.s_addr=aHost;
-        this->mAddr.sin_port=htons(static_cast<unsigned short>(aPort));
+        this->mAddr.mFamily=PLAT_AF_INET;
+        this->mAddr.mAddress=aHost;
+        this->mAddr.mPort=htons(static_cast<unsigned short>(aPort));
         this->mHost.erase();
         this->mIsValid=true;
     }
@@ -109,7 +109,9 @@ bool IPAddr::SetWithDefaultPortNoDNS(const std::string& inHostAndPort,unsigned s
 std::string IPAddr::GetHostString(bool inUseOriginal) const
 {
     if (inUseOriginal && !this->mHost.empty()) return this->mHost;
-    return std::string(inet_ntoa(this->mAddr.sin_addr), std::allocator<char>());
+    char aText[16];
+    PlatSocketFormatIPv4(this->mAddr.mAddress,aText);
+    return std::string(aText, std::allocator<char>());
 }
 // FUNCTION: WON 0x006b2500
 // Returns the chosen local interface address, else this machine's host name resolved, else an invalid address
@@ -166,7 +168,7 @@ static bool IPAddr_PlatformGetNetworkAdapterList(std::list<LobbyNetAddress>& out
     aGetAdaptersInfoFunc(NULL,&aBufSize);
     if(aBufSize==0 || aBufSize>256000) return false;
     char* aBuf=new char[aBufSize];
-    std::auto_ptr<char> aDelBuf(aBuf);
+    std::unique_ptr<char[]> aDelBuf(aBuf);
     PIP_ADAPTER_INFO anAdapter=(PIP_ADAPTER_INFO)aBuf;
     aGetAdaptersInfoFunc(anAdapter,&aBufSize);
     for(;anAdapter!=NULL;anAdapter=anAdapter->Next) {
@@ -187,7 +189,8 @@ void LobbyGetNetAddresses(std::list<LobbyNetAddress>& outAddresses,bool inGetDet
     hostent* anEntry=gethostbyname(aHostName);
     if(anEntry==NULL) return;
     for(int i=0;anEntry->h_addr_list[i]!=NULL;++i) {
-        unsigned long anAddress=*(unsigned long*)anEntry->h_addr_list[i];
+        uint32_t anAddress;
+        memcpy(&anAddress,anEntry->h_addr_list[i],sizeof(anAddress));
         outAddresses.push_back(LobbyNetAddress("",ntohl(anAddress)));
     }
 }
@@ -200,8 +203,8 @@ IPAddr::IPAddr()
     this->mRememberHostString=false;
 }
 // FUNCTION: WON 0x006b2380
-// Creates the address from a Winsock sockaddr_in
-IPAddr::IPAddr(const sockaddr_in& inAddress)
+// Creates the address from a PlatSockAddrIn
+IPAddr::IPAddr(const PlatSockAddrIn& inAddress)
 {
     this->mRememberHostString=false;
     this->Fn2B2B00(inAddress);
@@ -248,19 +251,19 @@ IPAddr IPAddr::GetBroadcastAddr(int inPort)
 // Returns the 6-byte wire form of the address (port then IP, network order)
 const char* IPAddr::GetSixByte() const
 {
-    return reinterpret_cast<const char*>(&this->mAddr.sin_port);
+    return reinterpret_cast<const char*>(&this->mAddr.mPort);
 }
 // FUNCTION: WON 0x006b2f90
 // Sets the port
 void IPAddr::SetPort(unsigned short inPort)
 {
-    this->mAddr.sin_port=htons(inPort);
+    this->mAddr.mPort=htons(inPort);
 }
 // FUNCTION: WON 0x006b2fb0
 // Returns the IP in host byte order
 long IPAddr::GetHost() const
 {
-    return ntohl(this->mAddr.sin_addr.s_addr);
+    return ntohl(this->mAddr.mAddress);
 }
 // FUNCTION: WON 0x006b3070
 // Returns "host:port", formatted into a 50-byte buffer (a long remembered host name overflows it)
@@ -277,7 +280,7 @@ std::string IPAddr::GetHostAndPortString(bool inUseOriginal) const
 // Returns the port in host byte order
 unsigned short IPAddr::GetPort() const
 {
-    return ntohs(this->mAddr.sin_port);
+    return ntohs(this->mAddr.mPort);
 }
 // FUNCTION: WON 0x006b31d0
 // Returns whether the address has been set successfully
@@ -286,8 +289,8 @@ bool IPAddr::IsValid() const
     return this->mIsValid;
 }
 // FUNCTION: WON 0x006b31e0
-// Returns the Winsock sockaddr_in
-const sockaddr_in& IPAddr::GetSockAddrIn() const
+// Returns the PlatSockAddrIn
+const PlatSockAddrIn& IPAddr::GetSockAddrIn() const
 {
     return this->mAddr;
 }
@@ -295,19 +298,19 @@ const sockaddr_in& IPAddr::GetSockAddrIn() const
 // Orders addresses by their 6-byte wire form (port first)
 bool IPAddr::operator<(const IPAddr& other) const
 {
-    return memcmp(&mAddr.sin_port,&other.mAddr.sin_port,6)<0;
+    return memcmp(&mAddr.mPort,&other.mAddr.mPort,6)<0;
 }
 // FUNCTION: WON 0x006b3220
 // Returns whether two addresses have the same IP and port
 bool IPAddr::operator==(const IPAddr& other) const
 {
-    return memcmp(&this->mAddr.sin_port,&other.mAddr.sin_port,6)==0;
+    return memcmp(&this->mAddr.mPort,&other.mAddr.mPort,6)==0;
 }
 // FUNCTION: WON 0x006b3240
 // Returns whether two addresses differ in IP or port
 bool IPAddr::operator!=(const IPAddr& other) const
 {
-    return memcmp(&this->mAddr.sin_port,&other.mAddr.sin_port,6)!=0;
+    return memcmp(&this->mAddr.mPort,&other.mAddr.mPort,6)!=0;
 }
 // FUNCTION: WON 0x006b3260
 // Compares two addresses by host-order IP, then by port

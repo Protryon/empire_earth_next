@@ -138,7 +138,7 @@ void HTMLDisplayGen::ClearAccumulatedSegment(int flags)
 
 // Body of the constructor whose marker (0x00737f50) sits at the top of the file
 HTMLDisplayGen::HTMLDisplayGen()
-    :mTagListItr(NULL),mTagListEnd(NULL)
+    :mTagListItr(),mTagListEnd()
 {
     this->mNoBackground=false;
     this->mFontSize=HTMLFontSize_Medium;

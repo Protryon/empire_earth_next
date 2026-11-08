@@ -339,7 +339,7 @@ public:
     Font* GetDefaultFontMod(int inStyle, int inSize);  // 0x2f5b50
     void AddListener(ComponentListener* inListener);           // 0x2f4b10
     void SetDesiredSize(int inA, int inB);  // 0x2f4e90 (on a new popup: 0, 0)
-    void Fn2F5380(int inType, int inParam); // 0x2f5380 (provisional int form)
+    void Fn2F5380(int inType, int inParam) { this->FireEvent(inType, inParam != 0); } // 0x2f5380: FireEvent's older name
     void FireEvent(int,bool=false); // 0x2f5380
     bool IsRootVisible();                   // 0x2f5600: visible all the way up to the root (flag bit 18)
     void LocalToRoot(int& ioX, int& ioY);   // 0x2f56d0 (to the root's coordinates?)
@@ -1620,7 +1620,7 @@ struct PopupParams {
 // gets a component's events (vtable 0x84d...; 2 slots)
 class ComponentListener : public RefCount {
 public:
-    virtual void HandleComponentEvent(ComponentEvent*);
+    virtual void HandleComponentEvent(ComponentEvent*) {}   // the base listener ignores events
 };
 
 // Callback object (0x0c bytes): RTTI 0x451ad8, allocated at 0x359089.

@@ -39,8 +39,9 @@ deleted here, keep them deleted) were rewritten or deleted here. When upstream c
 5. **x86_64 only** (2026-11-05): the exe, wgpu-native and the harness are x86_64; the i686 build is gone
    (PORT_LEARNINGS.md "x64 only").
 6. **A plain link** (2026-11-05): every symbol the exe uses is defined in source (member aliases are references to
-   the members, the ICF/vtable-slot aliases are bodies, the WON library is a unit of stand-ins); the exe is one
-   lld-link with no stubs and no link tables (PORT_LEARNINGS.md "Plain link").
+   the members, the ICF/vtable-slot aliases are bodies); the exe is one lld-link with no stubs and no link tables
+   (PORT_LEARNINGS.md "Plain link"). Since 2026-11-08 the WON library is built from upstream's source as well (module
+   `won`; PORT_LEARNINGS.md "The WON library from source"), replacing the stand-ins it had.
 7. **Self-contained data and settings** (2026-11-05, branch nossa): the game reads one loose `Data` folder in its own
    directory (`tools/open_data.py`: both retail archives and the original game's loose data merged, db tables as
    text, models glTF, textures PNG; packed as a private bundle), needs neither a `data.ssa` nor the original Empire
@@ -466,7 +467,10 @@ scenario pictures, backgrounds).
 
 - Remove the clang dialect bridges: the `#ifdef __clang__` `const T&` forwarding overloads become `const` parameters,
   the `theTempN` call-site locals go.
-- The WON library's source, to replace its stand-ins (PORT_LEARNINGS.md "For WONAPI/WONLobby").
+- The WON lobby on the platform layer (PORT_LEARNINGS.md "The WON library from source"): (2) the lobby GUI toolkit
+  (WONGUI: GDI drawing into Win32 child windows) drawn through GX and fed from PlatInputEvent, so the lobby shows
+  under wgpu and LAN / Direct Connect multiplayer is reachable; (3) WON's sockets, threads and registry on Plat*,
+  the lobby's `#ifdef _WIN32` guards removed, so it builds and runs on Linux and macOS.
 - Drop `/FIXED /BASE:0x400000` (ASLR, a high image base): nothing needs a 32-bit base since the plain link.
 - Port the rest of the harness (human driver, per-PT differential) where still useful.
 - The platform layer's next steps ("Cross-platform: census and plan" above), then 64-bit and other platforms.

@@ -40,11 +40,7 @@ public:
     void AssignStr(const char*,int); //327a20 unsigned-byte widening
     void AssignWStr(const wchar_t*,int); //327ac0
     void assign(const GUIStringData*,unsigned short,unsigned short); //327c10
-#ifdef EE_DINKUM_SXL233
     void resize(int inLength, bool inGrow) { this->Reserve(inLength,inGrow); this->mLength=inLength; this->mText[this->mLength]=0; } // 0x30a1d0
-#else
-    void resize(int inLength, bool inGrow); // 0x30a1d0; distinct from Reserve
-#endif
     void Fill(int,unsigned short,unsigned short); // at 0x00727b60
     int ToInt(unsigned short inStart) const; // 0x3281e0
     int find(int inChar, int inStart) const; // 0x328280; -1 if absent
@@ -60,16 +56,11 @@ public:
     void toLowerCase(); // Latin-1 lower-casing
     int Compare(const GUIStringData* inOther) const;    // 0x327fa0
     int compare(const char* theStr, int theOffset) const; // case-sensitive compare with narrow text, at 0x007280f0
-    // 0x292419
     void append(int inChar) { this->resize(this->mLength + 1, true); this->mText[this->mLength - 1] = (wchar_t)inChar; } // inline (as used at 0x007022d0)
-#ifdef EE_DINKUM_SXL233 // the WON library objects inline it (ChatCommandParser::AddHelpEntry 0x757800); the exe's lobby
-    // glue calls an out-of-line copy of an older revision (0x292419: Reserve + mLength + terminator)
+    // inline in the WON library (ChatCommandParser::AddHelpEntry 0x757800); the exe's lobby glue had an out-of-line
+    // copy (0x292419) doing the same: Reserve, length, terminator, copy
     void append(const GUIStringData* inText, unsigned short inStart, unsigned short inLength)
     { int theLength = this->mLength; this->resize(theLength + inLength, true); memcpy(this->mText + theLength, inText->mText + inStart, inLength * sizeof(wchar_t)); }
-#else
-    void append(const GUIStringData* inText, unsigned short inStart, unsigned short inLength);
-#endif
-    int Compare(const GUIStringData* inOther, bool inCaseSensitive) const;     // 0x328340 (WONAPI)
     int CompareNoCase(const GUIStringData* inOther) const;  // 0x328030
     int CompareNoCase(const char* inText, int inOffset) const; // 0x328150
     std::string GetString() const;          // 0x327d90 (WONAPI, /GX): narrowed
@@ -80,7 +71,6 @@ public:
     unsigned short mCapacity;               // +0x0e
     // 0x2911c9 (a COMDAT of EELobbyFileDialog.cpp): room for inLength characters and the terminator (doubled when
     // inGrow), the text kept
-#ifdef EE_DINKUM_SXL233
     void Reserve(int inLength, bool inGrow)
     {
         inLength++;
@@ -96,9 +86,6 @@ public:
             this->mCapacity = inLength;
         }
     }
-#else
-    void Reserve(int inLength, bool inGrow);
-#endif
 };
 
 // 0x328450 (WONAPI, /GX): the shared empty string (a function-local static, created on first use)
@@ -107,56 +94,31 @@ GUIStringData* GetEmptyGUIStringData();
 // a lobby text: one reference to its shared data (4 bytes: the resource unit's 73 globals)
 class GUIString {
 public:
-#ifdef EE_DINKUM_SXL233 // WON library view: inline
     GUIString() : mData(GetEmptyGUIStringData()) {}
-#else
-    GUIString();                            // 0x29171b (out of line: every `$E` ctor jumps to it)
-#endif
     explicit GUIString(unsigned short capacity) : mData(new GUIStringData(capacity)) {} // inline (used at 0x007398f7)
     void erase() { this->mData=GetEmptyGUIStringData(); } // inline, no copy-on-write: replaces the data with the shared empty string
     int ToInt(int start=0) const { return this->mData->ToInt(start); }
     void reserve(int length) { this->mData->Reserve(length,false); } // inline, deliberately without copy-on-write (used at 0x0073ff52 and 0x0074053e)
-#ifdef EE_DINKUM_SXL233 // WON library view: built inline (ChatCommandParser::AddHelpEntry 0x757800, GetHelp 0x7579c0)
     GUIString(const char* inText) : mData(new GUIStringData(inText)) {}
     GUIString(const wchar_t* inText) : mData(new GUIStringData(inText)) {}
-#else
-    GUIString(const char* inText);         // 0x29115e (new GUIStringData(inText); no caller expands it)
-#endif
     GUIString(const char* text,unsigned short length) :mData(new GUIStringData(text,length)) {} // bounded constructor (not identified in the original exe)
     GUIString(const wchar_t* text,unsigned short length) :mData(new GUIStringData(text,length)) {} // bounded constructor (not identified in the original exe)
-#ifdef EE_DINKUM_SXL233
     GUIString(const std::string& inText) : mData(new GUIStringData(inText)) {}
     GUIString(const std::wstring& inText) : mData(new GUIStringData(inText)) {}
-#else
-    GUIString(const std::string& inText);  // 0x29848e
-    GUIString(const std::wstring& inText); // 0x29258f
-#endif
     // (EELobbyGame 0x292e9f: GetEmptyGUIStringData() into the SmartPtr ctor COMDAT 0x293cd4)
     GUIString(GUIStringData* inData) : mData(inData) {}
     GUIString& operator=(const GUIString& theCopy) { this->mData = theCopy.mData; return *this; }
     GUIString& operator=(GUIStringData* theData) { this->mData = theData; return *this; }
-    int Compare(const GUIString& inOther, bool inCaseSensitive) const
-    {
-        return this->mData->Compare(inOther.mData.get(), inCaseSensitive);
-    }
     int compare(const char* theStr, int theOffset=0) const { return this->mData->compare(theStr,theOffset); } // inline, read-only
     int CompareNoCase(const GUIString& inOther) const { return this->mData->CompareNoCase(inOther.mData.get()); }
     int CompareNoCase(const char* inText, int inOffset = 0) const { return this->mData->CompareNoCase(inText, inOffset); }
     //: the lobby's saved-games directory 0x2988e9 expands append(const GUIString&) (the length is read
     // before the copy-on-write call) and calls CopyOnWrite 0x29121b / GUIStringData::append 0x292419 out of line
-#ifdef EE_DINKUM_SXL233 // WON library view: expanded inline (AddHelpEntry 0x757800: cmp [data+4],1; new 0x10)
     void CopyOnWrite() { if (this->mData->GetRefCount() > 1) this->mData = new GUIStringData(*this->mData.mPtr); }
-#else
-    void CopyOnWrite();                     // 0x29121b
-#endif
     void Fill(int ch,unsigned short offset,unsigned short length) { this->CopyOnWrite(); this->mData->Fill(ch,offset,length); } // inline
-#ifdef EE_DINKUM_SXL233
     void resize(int inLength) { this->CopyOnWrite(); this->mData->resize(inLength,false); }
     void assign(const GUIString& s,unsigned short o,unsigned short n) { this->CopyOnWrite(); this->mData->assign(s.mData,o,n); }
     void assign(const GUIString& s,unsigned short o) { unsigned short off=o; unsigned short l=s.length(); this->assign(s,off,l-off); }
-#else
-    void resize(int inLength);              // 0x29119a
-#endif
     unsigned short length() const { return this->mData->mLength; }
     bool empty() const { return this->mData->mLength==0; }
     int operator[](int inPos) const { return this->mData->mText[inPos]; }

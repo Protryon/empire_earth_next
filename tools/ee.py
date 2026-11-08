@@ -14,6 +14,7 @@ MODULE_SRC = {
     "exe": "",
     "jpeg": "ThirdParty/libjpeg",
     "exeimg": "ThirdParty",
+    "won": "Empire Earth/WONAPI",
 }
 EEX_INCLUDE_DIRS = ["Low-Level Engine/Thread System", "Low-Level Engine/Graphics Engine",
                     "Empire Earth/Database", "Empire Earth/AI Thread"]
@@ -35,6 +36,8 @@ MODULE_FLAGS = {
     "exe": "-MT -GR -DEE_STATIC -DLLE_CURRENT_HEADERS -DLLE_EXE_HEADERS",
     "jpeg": "-MT",
     "exeimg": "-MT",
+    # the WON library (online lobby, routing, the lobby GUI toolkit): C++ exceptions on (it was built -GX)
+    "won": "-MT -GR -EHsc -DEE_STATIC",
 }
 MODULE_FILES = {m: "EE-AOC.exe" for m in MODULE_FLAGS}
 

@@ -21,8 +21,9 @@ const std::string& WONDebug::GetStackFileName()
 {
 	return gStackFileName;
 }
-static LPVOID __stdcall FunctionTableAccess(HANDLE hProcess, DWORD dwPCAddress);
-static DWORD __stdcall GetModuleBase(HANDLE hProcess, DWORD dwReturnAddress);
+// x64: DbgHelp's 64-bit API (StackWalk64, SymGetModuleInfo64, ...): addresses are DWORD64
+static LPVOID __stdcall FunctionTableAccess(HANDLE hProcess, DWORD64 dwPCAddress);
+static DWORD64 __stdcall GetModuleBase(HANDLE hProcess, DWORD64 dwReturnAddress);
 #define _countof(array) (sizeof(array)/sizeof(array[0]))
 
 #define MODULE_NAME_LEN 4096
@@ -32,31 +33,31 @@ typedef BOOL (WINAPI *StackWalkFunc)(
     DWORD                             MachineType,
     HANDLE                            hProcess,
     HANDLE                            hThread,
-    LPSTACKFRAME                      StackFrame,
+    LPSTACKFRAME64                    StackFrame,
     LPVOID                            ContextRecord,
-    PREAD_PROCESS_MEMORY_ROUTINE      ReadMemoryRoutine,
-    PFUNCTION_TABLE_ACCESS_ROUTINE    FunctionTableAccessRoutine,
-    PGET_MODULE_BASE_ROUTINE          GetModuleBaseRoutine,
-    PTRANSLATE_ADDRESS_ROUTINE        TranslateAddress
+    PREAD_PROCESS_MEMORY_ROUTINE64    ReadMemoryRoutine,
+    PFUNCTION_TABLE_ACCESS_ROUTINE64  FunctionTableAccessRoutine,
+    PGET_MODULE_BASE_ROUTINE64        GetModuleBaseRoutine,
+    PTRANSLATE_ADDRESS_ROUTINE64      TranslateAddress
 	);
 
-typedef BOOL(WINAPI *SymLoadModuleFunc)(
+typedef DWORD64(WINAPI *SymLoadModuleFunc)(
     IN  HANDLE          hProcess,
     IN  HANDLE          hFile,
     IN  PSTR            ImageName,
     IN  PSTR            ModuleName,
-    IN  DWORD           BaseOfDll,
+    IN  DWORD64         BaseOfDll,
     IN  DWORD           SizeOfDll
     );
 
 typedef DWORD(WINAPI *SymSetOptionsFunc)(IN DWORD SymOptions);
 typedef DWORD(WINAPI *SymGetOptionsFunc)(VOID);
 typedef BOOL(WINAPI *SymInitializeFunc)(IN HANDLE hProcess, IN LPSTR UserSearchPath, IN BOOL fInvadeProcess);
-typedef LPVOID(WINAPI *SymFunctionTableAccessFunc)(HANDLE hProcess, DWORD AddrBase);
-typedef BOOL(WINAPI *SymGetModuleInfoFunc)(IN HANDLE hProcess, IN DWORD dwAddr, OUT PIMAGEHLP_MODULE ModuleInfo);
-typedef BOOL(WINAPI *SymUnDNameFunc)(IN PIMAGEHLP_SYMBOL sym, OUT LPSTR UnDecName, IN  DWORD UnDecNameLength);
+typedef LPVOID(WINAPI *SymFunctionTableAccessFunc)(HANDLE hProcess, DWORD64 AddrBase);
+typedef BOOL(WINAPI *SymGetModuleInfoFunc)(IN HANDLE hProcess, IN DWORD64 dwAddr, OUT PIMAGEHLP_MODULE64 ModuleInfo);
+typedef BOOL(WINAPI *SymUnDNameFunc)(IN PIMAGEHLP_SYMBOL64 sym, OUT LPSTR UnDecName, IN  DWORD UnDecNameLength);
 typedef DWORD(WINAPI *UnDecorateSymbolNameFunc)(LPCSTR DecoratedName, LPSTR UnDecoratedName, DWORD UndecoratedLength, DWORD Flags);
-typedef BOOL(WINAPI *SymGetSymFromAddrFunc)(IN HANDLE hProcess, IN DWORD dwAddr, OUT PDWORD pdwDisplacement, OUT PIMAGEHLP_SYMBOL Symbol);
+typedef BOOL(WINAPI *SymGetSymFromAddrFunc)(IN HANDLE hProcess, IN DWORD64 dwAddr, OUT PDWORD64 pdwDisplacement, OUT PIMAGEHLP_SYMBOL64 Symbol);
 
 static StackWalkFunc gStackWalkFunc;
 static SymLoadModuleFunc gSymLoadModuleFunc;
@@ -94,16 +95,16 @@ static bool TryLoadWinDebugFunctions()
 	if(aModule==NULL)
 		return false;
 
-	if(!GetWinDebugFunc(aModule,"StackWalk",gStackWalkFunc)) return false;
-	if(!GetWinDebugFunc(aModule,"SymLoadModule",gSymLoadModuleFunc)) return false;
+	if(!GetWinDebugFunc(aModule,"StackWalk64",gStackWalkFunc)) return false;
+	if(!GetWinDebugFunc(aModule,"SymLoadModule64",gSymLoadModuleFunc)) return false;
 	if(!GetWinDebugFunc(aModule,"SymSetOptions",gSymSetOptionsFunc)) return false;
 	if(!GetWinDebugFunc(aModule,"SymGetOptions",gSymGetOptionsFunc)) return false;
 	if(!GetWinDebugFunc(aModule,"SymInitialize",gSymInitializeFunc)) return false;
-	if(!GetWinDebugFunc(aModule,"SymFunctionTableAccess",gSymFunctionTableAccessFunc)) return false;
-	if(!GetWinDebugFunc(aModule,"SymGetModuleInfo",gSymGetModuleInfoFunc)) return false;
-	if(!GetWinDebugFunc(aModule,"SymUnDName",gSymUnDNameFunc)) return false;
+	if(!GetWinDebugFunc(aModule,"SymFunctionTableAccess64",gSymFunctionTableAccessFunc)) return false;
+	if(!GetWinDebugFunc(aModule,"SymGetModuleInfo64",gSymGetModuleInfoFunc)) return false;
+	if(!GetWinDebugFunc(aModule,"SymUnDName64",gSymUnDNameFunc)) return false;
 	if(!GetWinDebugFunc(aModule,"UnDecorateSymbolName",gUnDecorateSymbolNameFunc)) return false;
-	if(!GetWinDebugFunc(aModule,"SymGetSymFromAddr",gSymGetSymFromAddrFunc)) return false;
+	if(!GetWinDebugFunc(aModule,"SymGetSymFromAddr64",gSymGetSymFromAddrFunc)) return false;
 
 	return true;
 }
@@ -123,24 +124,25 @@ static bool LoadWinDebugFunctions()
 
 struct MY_SYMBOL_INFO
 {
-	DWORD dwAddress;
-	DWORD dwOffset;
+	DWORD64 dwAddress;
+	DWORD64 dwOffset;
 	CHAR    szModule[MODULE_NAME_LEN];
 	CHAR    szSymbol[SYMBOL_NAME_LEN];
 };
 
 // FUNCTION: WON 0x006a72f0
 // Stack-walk callback: forwards to SymFunctionTableAccess
-static LPVOID __stdcall FunctionTableAccess(HANDLE hProcess, DWORD dwPCAddress)
+static LPVOID __stdcall FunctionTableAccess(HANDLE hProcess, DWORD64 dwPCAddress)
 {
 	return gSymFunctionTableAccessFunc(hProcess, dwPCAddress);
 }
 
 // FUNCTION: WON 0x006a7310
 // Stack-walk callback: returns the module base of an address, loading the module's symbols when unknown
-static DWORD __stdcall GetModuleBase(HANDLE hProcess, DWORD dwReturnAddress)
+static DWORD64 __stdcall GetModuleBase(HANDLE hProcess, DWORD64 dwReturnAddress)
 {
-	IMAGEHLP_MODULE moduleInfo;
+	IMAGEHLP_MODULE64 moduleInfo;
+	moduleInfo.SizeOfStruct = sizeof(moduleInfo);
 
 	if (gSymGetModuleInfoFunc(hProcess, dwReturnAddress, &moduleInfo))
 		return moduleInfo.BaseOfImage;
@@ -160,12 +162,12 @@ static DWORD __stdcall GetModuleBase(HANDLE hProcess, DWORD dwReturnAddress)
 		 // Ignore the return code since we can't do anything with it.
 		 if (!gSymLoadModuleFunc(hProcess,
 			   NULL, ((cch) ? szFile : NULL),
-			   NULL, (DWORD) memoryBasicInfo.AllocationBase, 0))
+			   NULL, (DWORD64) memoryBasicInfo.AllocationBase, 0))
 			{
 				DWORD dwError = GetLastError();
 //				TRACE1("Error: %d\n", dwError);
 			}
-		 return (DWORD) memoryBasicInfo.AllocationBase;
+		 return (DWORD64) memoryBasicInfo.AllocationBase;
 	  }
 		else
 		{}//TRACE1("Error is %d\n", GetLastError());
@@ -176,7 +178,7 @@ static DWORD __stdcall GetModuleBase(HANDLE hProcess, DWORD dwReturnAddress)
 
 // FUNCTION: WON 0x006a73d0
 // Fills in the module name and undecorated symbol (+ offset) for a code address; always TRUE
-static BOOL ResolveSymbol(HANDLE hProcess, DWORD dwAddress,
+static BOOL ResolveSymbol(HANDLE hProcess, DWORD64 dwAddress,
 	MY_SYMBOL_INFO &siSymbol)
 {
 	BOOL fRetval = TRUE;
@@ -184,17 +186,17 @@ static BOOL ResolveSymbol(HANDLE hProcess, DWORD dwAddress,
 	siSymbol.dwAddress = dwAddress;
 
 	struct {
-		IMAGEHLP_SYMBOL sym;
+		IMAGEHLP_SYMBOL64 sym;
 		CHAR rest[4095];
 	} aSym;
 
 	CHAR szUndec[4096];
 	CHAR szWithOffset[4096];
 	LPSTR pszSymbol = NULL;
-	IMAGEHLP_MODULE mi;
+	IMAGEHLP_MODULE64 mi;
 
 	memset(&siSymbol, 0, sizeof(MY_SYMBOL_INFO));
-	mi.SizeOfStruct = sizeof(IMAGEHLP_MODULE);
+	mi.SizeOfStruct = sizeof(IMAGEHLP_MODULE64);
 
 	if (!gSymGetModuleInfoFunc(hProcess, dwAddress, &mi))
 		lstrcpyA(siSymbol.szModule, "<no module>");
@@ -212,7 +214,7 @@ static BOOL ResolveSymbol(HANDLE hProcess, DWORD dwAddress,
 
 	__try
 	{
-		aSym.sym.SizeOfStruct = sizeof(IMAGEHLP_SYMBOL);
+		aSym.sym.SizeOfStruct = sizeof(IMAGEHLP_SYMBOL64);
 		aSym.sym.Address = dwAddress;
 		aSym.sym.MaxNameLength = 4095;
 
@@ -232,7 +234,7 @@ static BOOL ResolveSymbol(HANDLE hProcess, DWORD dwAddress,
 
 			if (siSymbol.dwOffset != 0)
 			{
-				wsprintfA(szWithOffset, "%s + %d bytes", pszSymbol, siSymbol.dwOffset);
+				wsprintfA(szWithOffset, "%s + %d bytes", pszSymbol, (int)siSymbol.dwOffset);
 				pszSymbol = szWithOffset;
 			}
 	  }
@@ -307,7 +309,7 @@ static void MyDumpStack(LPEXCEPTION_POINTERS pInfo)
 		clipboardData.SendOut(aBuf);
 	}
 
-	typedef std::vector<DWORD> DWORDArray;
+	typedef std::vector<DWORD64> DWORDArray;
 	DWORDArray adwAddress;
 	HANDLE hProcess = ::GetCurrentProcess();
 	if (gSymInitializeFunc(hProcess, NULL, FALSE))
@@ -331,19 +333,19 @@ static void MyDumpStack(LPEXCEPTION_POINTERS pInfo)
 
 //		if (::GetThreadContext(hThread, &threadContext))
 		{
-			STACKFRAME stackFrame;
+			STACKFRAME64 stackFrame;
 			memset(&stackFrame, 0, sizeof(stackFrame));
 			stackFrame.AddrPC.Mode = AddrModeFlat;
 
 			DWORD dwMachType;
 
-			dwMachType                  = IMAGE_FILE_MACHINE_I386;
+			dwMachType                  = IMAGE_FILE_MACHINE_AMD64;
 
 			// program counter, stack pointer, and frame pointer
-			stackFrame.AddrPC.Offset    = threadContext.Eip;
-			stackFrame.AddrStack.Offset = threadContext.Esp;
+			stackFrame.AddrPC.Offset    = threadContext.Rip;
+			stackFrame.AddrStack.Offset = threadContext.Rsp;
 			stackFrame.AddrStack.Mode   = AddrModeFlat;
-			stackFrame.AddrFrame.Offset = threadContext.Ebp;
+			stackFrame.AddrFrame.Offset = threadContext.Rbp;
 			stackFrame.AddrFrame.Mode   = AddrModeFlat;
 
 
@@ -382,10 +384,10 @@ static void MyDumpStack(LPEXCEPTION_POINTERS pInfo)
 	for (nAddress = 0; nAddress < cAddresses; nAddress++)
 	{
 		MY_SYMBOL_INFO info;
-		DWORD dwAddress = adwAddress[nAddress];
+		DWORD64 dwAddress = adwAddress[nAddress];
 
-		char sz[20];
-		wsprintfA(sz, "%8.8X: ", dwAddress);
+		char sz[24];
+		sprintf(sz, "%16.16llX: ", (unsigned long long)dwAddress);
 		clipboardData.SendOut(sz);
 
 		if (ResolveSymbol(hProcess, dwAddress, info))

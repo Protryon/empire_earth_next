@@ -78,7 +78,9 @@ void ServerContext::CopyAddresses(AddrList& inCopy)
         for (AddrList::iterator anItr=this->mAddresses.begin();anItr!=this->mAddresses.end();++anItr)
             anAddresses.push_back(*anItr);
         srand(time(NULL));
-        std::random_shuffle(anAddresses.begin(),anAddresses.end());
+        // std::random_shuffle (removed in C++17) over rand(), as the original
+        for (std::vector<IPAddr>::size_type i=1;i<anAddresses.size();++i)
+            std::swap(anAddresses[i],anAddresses[rand()%(i+1)]);
         this->mPingMap.clear();
         this->mAddresses.clear();
         for (std::vector<IPAddr>::iterator aPos=anAddresses.begin();aPos!=anAddresses.end();++aPos) {

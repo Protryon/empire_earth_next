@@ -22,8 +22,8 @@ protected:
 	HWAVEOUT		mWaveOut;
 	WAVEHDR			*mWaveHeader; //[NUM_BUFFERS]
 
-	static void CALLBACK waveOutProc(HWAVEOUT hwo,UINT uMsg,DWORD dwInstance,DWORD dwParam1,DWORD dwParam2);
-	void waveOutProcPrv(HWAVEOUT hwo,UINT uMsg,DWORD dwInstance,DWORD dwParam1,DWORD dwParam2);
+	static void CALLBACK waveOutProc(HWAVEOUT hwo,UINT uMsg,DWORD_PTR dwInstance,DWORD_PTR dwParam1,DWORD_PTR dwParam2);
+	void waveOutProcPrv(HWAVEOUT hwo,UINT uMsg,DWORD_PTR dwInstance,DWORD_PTR dwParam1,DWORD_PTR dwParam2);
 	bool CalcSettings();
 
 	virtual bool OpenHook();
@@ -67,7 +67,7 @@ MSSoundChannel::~MSSoundChannel()
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 // waveOut callback: forwards to the channel passed as instance data
-void CALLBACK MSSoundChannel::waveOutProc(HWAVEOUT hwo,UINT uMsg,DWORD dwInstance,DWORD dwParam1,DWORD dwParam2)
+void CALLBACK MSSoundChannel::waveOutProc(HWAVEOUT hwo,UINT uMsg,DWORD_PTR dwInstance,DWORD_PTR dwParam1,DWORD_PTR dwParam2)
 {
 	MSSoundChannel *aChannel = reinterpret_cast<MSSoundChannel*>(dwInstance);
 	aChannel->waveOutProcPrv(hwo,uMsg,dwInstance,dwParam1,dwParam2);
@@ -76,13 +76,13 @@ void CALLBACK MSSoundChannel::waveOutProc(HWAVEOUT hwo,UINT uMsg,DWORD dwInstanc
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 // Marks the finished buffer free and wakes the sound thread when the device reports a buffer done
-void MSSoundChannel::waveOutProcPrv(HWAVEOUT hwo,UINT uMsg,DWORD dwInstance,DWORD dwParam1,DWORD dwParam2)
+void MSSoundChannel::waveOutProcPrv(HWAVEOUT hwo,UINT uMsg,DWORD_PTR dwInstance,DWORD_PTR dwParam1,DWORD_PTR dwParam2)
 {
 	if(uMsg!=WOM_DONE)
 		return;
 	for(int i=0; i<this->NUM_BUFFERS; i++)
 	{
-		if(dwParam1==reinterpret_cast<DWORD>(&this->mWaveHeader[i]))
+		if(dwParam1==reinterpret_cast<DWORD_PTR>(&this->mWaveHeader[i]))
 		{
 			this->mBufferFree[i] = true;
 			break;
@@ -171,8 +171,8 @@ bool MSSoundChannel::OpenHook()
 	aResult = waveOutOpen(			&this->mWaveOut,
 									WAVE_MAPPER,
 									&wfx,
-									(DWORD)MSSoundChannel::waveOutProc,
-									reinterpret_cast<DWORD>(this),					// User data.
+									(DWORD_PTR)MSSoundChannel::waveOutProc,
+									reinterpret_cast<DWORD_PTR>(this),					// User data.
 									(DWORD)CALLBACK_FUNCTION);
 //									(DWORD)NULL,					// User data.
 //									(DWORD)CALLBACK_NULL);

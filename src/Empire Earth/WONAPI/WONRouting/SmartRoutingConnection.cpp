@@ -19,7 +19,6 @@ namespace WONAPI {
 // FUNCTION: WON 0x006bfb00
 // Creates the smart routing connection with the ignore file under the WON directory and the default chat commands
 SmartRoutingConnection::SmartRoutingConnection()
-    : mClientItr(NULL), mGroupItr(NULL), mMemberItr(NULL)
 {
     this->mDefaultGroupId = 0;
     this->mClientId = 0;

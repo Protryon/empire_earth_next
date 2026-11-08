@@ -71,49 +71,6 @@ void EELobbyFileDialog::ListFiles(const std::string& inDirectory, const std::str
     this->mFileList->EndUpdate();
 }
 
-// FUNCTION: EXE 0x69115e
-// Creates a GUI string from narrow text
-inline GUIString::GUIString(const char* inText) : mData(new GUIStringData(inText))
-{
-}
-
-// FUNCTION: EXE 0x69119a
-// Cuts or extends the string to a length, unsharing its text first
-inline void GUIString::resize(int inLength)
-{
-    this->CopyOnWrite();
-    GUIStringData* theData = this->mData.mPtr;
-    theData->Reserve(inLength, false);
-    theData->mLength = inLength;
-    theData->mText[theData->mLength] = 0;
-}
-
-// FUNCTION: EXE 0x6911c9
-// Makes room for a length plus terminator, doubling it when growing, and keeps the text
-inline void GUIStringData::Reserve(int inLength, bool inGrow)
-{
-    inLength++;
-    if (this->mCapacity < inLength) {
-        wchar_t* theOld = this->mText;
-        if (inGrow)
-            inLength += inLength;
-        this->mText = new wchar_t[inLength];
-        if (theOld != NULL) {
-            memcpy(this->mText, theOld, (this->mLength + 1) * sizeof(wchar_t));
-            delete[] theOld;
-        }
-        this->mCapacity = inLength;
-    }
-}
-
-// FUNCTION: EXE 0x69121b
-// Gives the string its own copy of the text when it is shared
-inline void GUIString::CopyOnWrite()
-{
-    if (this->mData->GetRefCount() > 1)
-        this->mData = new GUIStringData(*this->mData.mPtr);
-}
-
 // FUNCTION: EXE 0x691249
 // Loads the selected saved game and closes the dialog with OK when that succeeds
 void EELobbyFileDialog::LoadSelectedFile()

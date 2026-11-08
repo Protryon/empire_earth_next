@@ -26,7 +26,7 @@ MSWindow::~MSWindow()
 {
 	if(this->mHWND!=NULL)
 	{
-		SetWindowLongA(this->mHWND, GWL_USERDATA, 0);
+		SetWindowLongPtrA(this->mHWND, GWLP_USERDATA, 0);
 		DestroyWindow(this->mHWND);
 	}
 }
@@ -383,7 +383,7 @@ void MSWindow::CalcCodePage()
 // Win32 window procedure: binds the window object on creation and forwards every message to it
 LRESULT CALLBACK MSWindow::StaticWindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
-	MSWindow *aWindow = (MSWindow*)GetWindowLong(hwnd, GWL_USERDATA);
+	MSWindow *aWindow = (MSWindow*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 	if(aWindow==NULL)
 	{
 		if(msg==WM_CREATE || msg==WM_NCCREATE)
@@ -391,7 +391,7 @@ LRESULT CALLBACK MSWindow::StaticWindowProc(HWND hwnd, UINT msg, WPARAM wParam, 
 			CREATESTRUCT *aStruct = (CREATESTRUCT*)lParam;
 			aWindow = (MSWindow*)aStruct->lpCreateParams;
 			aWindow->mHWND = hwnd;
-			SetWindowLong(hwnd, GWL_USERDATA, reinterpret_cast<LONG>(aWindow));
+			SetWindowLongPtr(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(aWindow));
 		}
 		else
 			return DefWindowProc(hwnd,msg,wParam,lParam);
@@ -594,7 +594,7 @@ LRESULT MSWindow::WindowProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
 		case WM_DESTROY:
 			KillTimer(this->mHWND,0);
-			SetWindowLong(hwnd, GWL_USERDATA, 0);
+			SetWindowLongPtr(hwnd, GWLP_USERDATA, 0);
 			this->mHWND = NULL;
 			this->Close();
 			

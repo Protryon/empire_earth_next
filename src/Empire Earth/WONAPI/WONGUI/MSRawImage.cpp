@@ -40,7 +40,7 @@ void RawImage8::CalcBytesPerRow() {
 SmartPtr<NativeImage> RawImage8::CreateNativeImage(DisplayContext* context) {
     int aNumColors=this->mPalette->mNumColors;
     char* buffer=new char[sizeof(BITMAPINFO)+aNumColors*4];
-    std::auto_ptr<char> releaseBuffer(buffer);
+    std::unique_ptr<char[]> releaseBuffer(buffer);
     BITMAPINFO* info=reinterpret_cast<BITMAPINFO*>(buffer);
     BITMAPINFOHEADER& header=info->bmiHeader;
     header.biSize=sizeof(BITMAPINFOHEADER);
@@ -82,7 +82,7 @@ void RawImage1::CalcBytesPerRow() {
 // Returns a new native mask holding a black-and-white device bitmap made from the 1-bit pixels
 SmartPtr<NativeMask> RawImage1::GetMask(DisplayContext* context) {
     char* buffer=new char[sizeof(BITMAPINFO)+8];
-    std::auto_ptr<char> releaseBuffer(buffer);
+    std::unique_ptr<char[]> releaseBuffer(buffer);
     BITMAPINFO* info=reinterpret_cast<BITMAPINFO*>(buffer);
     BITMAPINFOHEADER& header=info->bmiHeader;
     header.biSize=sizeof(BITMAPINFOHEADER);

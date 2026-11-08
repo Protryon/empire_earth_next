@@ -133,7 +133,8 @@ void Component::MouseHover(unsigned long elapsed)
     if(elapsed>=gComponentToolTipStartTime && !this->mExtraStuff->mDontDoTip) {
         Window* window=this->GetRoot();
         int x=window->mMouseX+15; int y=window->mMouseY+15;
-        window->OpenPopup(PopupParams(this->mExtraStuff->mToolTip.get(),PopupFlag_StandardTip,this,x,y));
+        PopupParams params(this->mExtraStuff->mToolTip.get(),PopupFlag_StandardTip,this,x,y);
+        window->OpenPopup(params);
         this->mExtraStuff->mDontDoTip=true;
     } else if(elapsed>=gComponentToolTipStartTime+gComponentToolTipEndTime)
         this->GetRoot()->ClosePopup(this->mExtraStuff->mToolTip.get());

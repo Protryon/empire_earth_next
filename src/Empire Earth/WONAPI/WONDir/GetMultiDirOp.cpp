@@ -23,7 +23,7 @@ void GetMultiDirOp::Init()
 // FUNCTION: WON 0x6f1540
 // Creates a multi-directory request for a server context
 GetMultiDirOp::GetMultiDirOp(ServerContext* inContext)
-    :ServerRequestOp(inContext),mCurRequest(NULL)
+    :ServerRequestOp(inContext)
 {
     this->Init();
 }

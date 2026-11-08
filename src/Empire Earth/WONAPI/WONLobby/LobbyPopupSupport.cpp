@@ -23,7 +23,8 @@ void LobbyOpenPopup(Component* popup,int flags,int x,int y)
     Window* window=LobbyGetRootWindow();
     if(window!=NULL) {
         LobbyAddLogicListener(popup);
-        window->OpenPopup(PopupParams(popup,flags,gLobbyData->mLobbyContainer.get(),x,y));
+        PopupParams params(popup,flags,gLobbyData->mLobbyContainer.get(),x,y);
+        window->OpenPopup(params);
     }
 }
 }

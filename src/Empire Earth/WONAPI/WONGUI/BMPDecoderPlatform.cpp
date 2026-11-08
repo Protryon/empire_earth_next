@@ -30,7 +30,7 @@ SmartPtr<NativeImage> BMPDecoder::DoDecode(DisplayContext *theContext)
 			return NULL;
 
 		char *aData = new char[aSize];
-		std::auto_ptr<char> aDelData(aData);
+		std::unique_ptr<char[]> aDelData(aData);
 
 		this->mFileReader->ReadBytes(aData,aSize);
 		BITMAPINFOHEADER &bmiHeader = *(LPBITMAPINFOHEADER)(aData);

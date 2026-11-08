@@ -162,12 +162,6 @@ void EELobbySetupSavedGame(const EEGameOptions& inOptions, const char* inFile, c
     }
 }
 
-// FUNCTION: EXE 0x69848e
-// Creates a GUI string holding a copy of the narrow text
-inline GUIString::GUIString(const std::string& inText) : mData(new GUIStringData(inText))
-{
-}
-
 // FUNCTION: EXE 0x6984ca
 // Sets a player slot from a saved player (computer, human, observer, open or closed), then its colour (humans only),
 // team and starting citizens (all but observers)

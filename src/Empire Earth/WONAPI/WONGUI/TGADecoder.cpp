@@ -99,7 +99,7 @@ static DWORD* TGA_ReadColorMap(const TGAHeader &theHeader, FileReader &theReader
 		return NULL;
 
 	DWORD *aPalette = new DWORD[256];
-	std::auto_ptr<DWORD> aDelPalette(aPalette);
+	std::unique_ptr<DWORD[]> aDelPalette(aPalette);
 
 	int num = theHeader.colormaplength;
 	int i;
@@ -398,7 +398,7 @@ SmartPtr<RawImage> TGADecoder::DoDecodeRaw()
 			return NULL;
 	}
 
-	std::auto_ptr<DWORD> aDelPalette(palette);
+	std::unique_ptr<DWORD[]> aDelPalette(palette);
 
 	SmartPtr<RawImage32> anImage = new RawImage32(aHeader.width,aHeader.height);
 

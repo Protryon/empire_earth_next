@@ -16,10 +16,10 @@ using namespace WONAPI;
 // Returns the named entry of a resource map, or throws "<type> resource not found: <key> (ResourceGroup: <group>)"
 // (this address holds the string instance; the image and sound instances follow at 0x007a27f0 and 0x007a2960)
 template<class Map>
-static Map::referent_type::first_type& ResourceConfig_SafeGetRes(
+static typename Map::mapped_type::first_type& ResourceConfig_SafeGetRes(
     const char* typeName,const std::string& key,Map& values,ResourceConfig* config)
 {
-    Map::iterator found=values.find(key);
+    typename Map::iterator found=values.find(key);
     if(found!=values.end()) return found->second.first;
     char text[512];
     // mName is the config object's name (ConfigObject::GetName); the original reads its text at +0x1c.

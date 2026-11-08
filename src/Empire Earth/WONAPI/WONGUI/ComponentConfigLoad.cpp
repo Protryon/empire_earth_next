@@ -72,7 +72,8 @@ void ComponentConfig::InitComponents()
 {
     if(this->mHaveInitedComponents) return;
     this->mHaveInitedComponents=true;
-    this->mComponent->InitComponent(ComponentConfigInit(this));
+    ComponentConfigInit init(this);
+    this->mComponent->InitComponent(init);
     std::map<std::string,SmartPtr<ComponentConfig>,StringLessNoCase>::iterator it=this->mConfigMap.begin();
     while(it!=this->mConfigMap.end()) {
         it->second->InitComponents();

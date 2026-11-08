@@ -296,13 +296,13 @@ static int EELobbyEpochCompare(const ServerDetailsItem* inA, const ServerDetails
 
 // FUNCTION: EXE 0x6959e5
 // Removes listed games whose starting epoch name does not contain the filter text (any case)
-// GUIString::Compare(inText, false) is GUIStringData::findNoCase(inText, 0) (0x728340): a substring search
+// GUIStringData::findNoCase (0x728340): a substring search
 static void EELobbyEpochFilter(const GUIString& inText, std::list<ServerDetailsItem*>& ioItems, ServerListCtrl*)
 {
     std::list<ServerDetailsItem*>::iterator theIterator = ioItems.begin();
     while (theIterator != ioItems.end()) {
         GUIString theText = EELobbyGetEpochText(*theIterator, true);
-        if (theText.Compare(inText, false) >= 0)
+        if (theText.findNoCase(inText, 0) >= 0)
             ++theIterator;
         else
             ioItems.erase(theIterator++);
@@ -342,7 +342,7 @@ static void EELobbyMapTypeFilter(const GUIString& inText, std::list<ServerDetail
     std::list<ServerDetailsItem*>::iterator theIterator = ioItems.begin();
     while (theIterator != ioItems.end()) {
         GUIString theText = EELobbyGetMapTypeText(static_cast<EELobbyGame*>((*theIterator)->mGame.get()));
-        if (theText.Compare(inText, false) >= 0)
+        if (theText.findNoCase(inText, 0) >= 0)
             ++theIterator;
         else
             ioItems.erase(theIterator++);

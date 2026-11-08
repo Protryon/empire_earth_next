@@ -24,7 +24,7 @@ bool ResourceConfig_AddToMap(const char* typeName,StringParser& value,Map& value
     std::string key;
     value.ReadString(key,true);
     if(key.empty()) throw ConfigObjectException("Invalid resource key.");
-    std::pair<Map::iterator,bool> inserted=values.insert(Map::value_type(key,Map::referent_type(Type(),generation)));
+    std::pair<typename Map::iterator,bool> inserted=values.insert(typename Map::value_type(key,typename Map::mapped_type(Type(),generation)));
     int& oldGeneration=inserted.first->second.second;
     if(inserted.second) {
         output=&inserted.first->second.first;

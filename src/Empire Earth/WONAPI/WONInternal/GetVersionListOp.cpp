@@ -59,7 +59,8 @@ WONStatus GetVersionListOp::CheckResponse()
 
 		unsigned short versionDataSize = aReadBuf.ReadShort(); // record size for expandability
 
-		versionData->ReadFromBuffer(ReadBuffer(aReadBuf.ReadBytes(versionDataSize), versionDataSize));
+		ReadBuffer aVersionBuf(aReadBuf.ReadBytes(versionDataSize), versionDataSize);
+		versionData->ReadFromBuffer(aVersionBuf);
 		this->mVersionDataList.push_back(versionData);
 	}
 

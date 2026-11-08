@@ -461,7 +461,7 @@ bool HTMLParser2::HandleImage()
 //	anImagePath = &aTrick;
 //	string aPath = aTrick;
 
-	char *anExt = NULL;
+	const char *anExt = NULL;
 	anExt = strrchr(anImagePath->c_str(),'.');
 	if(anExt==NULL)
 		return false;

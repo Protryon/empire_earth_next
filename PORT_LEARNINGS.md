@@ -1,8 +1,8 @@
 # Port learnings: VC6 source to clang-cl
 
 These notes record what it took to move the reconstruction from VC6 to clang-cl (phase 1 of `PORT.md`): what broke, why,
-and the fix that was kept. Use them as the checklist for code that is ported later, the WON libraries first
-(WONAPI/WONLobby: stand-ins in source, see "Plain link").
+and the fix that was kept. Use them as the checklist for code that is ported later (the WON library: "The WON library from
+source").
 
 Order that worked: compile census → STL headers → stock-header patches → mechanical source passes → header bridges →
 one-off sources → DLL links → exe link → stub audit against VC6.
@@ -589,11 +589,50 @@ text carries what the game reads, nothing else.
 - Cost: compiling all 37 tables takes about 0.8 s at -O1 (dbobjects' 5.2 MB of YAML 0.33 s, dbgraphics 0.27 s). The
   modding plan's compiled cache would remove it.
 
-## For WONAPI/WONLobby later
+## The WON library from source (upstream merge, 2026-11-08)
 
-The WON library is stood in for by `src/Empire Earth/WONAPI/WONAPIStubs.cpp` ("Plain link"). When its source
-arrives, apply the dialect passes and header bridges first; WON is linked into the exe, not a DLL, so the ODR/inline
-section matters most. Then delete the stand-ins it defines (a duplicate symbol names each), with no new fatal ones.
+Upstream's source revisions up to 3f51317465d6 brought the WON library (578 sources, 153 headers) and a renaming and
+readability pass of the lobby, on top of byte-matching rewrites of the game code. Merged under this fork's changes;
+the library is module `won` (tools/ee.py, tools/units.py) and `WONAPIStubs.cpp` is gone.
+
+- **Review every file both sides changed, conflicted or not.** Git's line merge spliced upstream's reshuffles (swapped
+  if/else with a negated test, hoisted locals, getters) into ported code outside the conflict markers: a doubled
+  `else`, emptied branches, a VC6-scoped loop variable in a lifted-cap loop (EETechTree::GetChecksum), NULL
+  assignments to STL iterators restored (EEWonNet::ConnectToLobby). The check that caught them per file: the working
+  tree minus theirs must be exactly our delta, the working tree minus ours exactly upstream's delta (as line
+  multisets, with the changes both made set aside). Then grep our own files (the ones upstream does not have) for the
+  names upstream renamed (`gU5308A0` -> `gNetworkAdapter`, `Fn297ED0` -> `EELobbyIsShown`, `Fn2492C2` ->
+  `EEGetSquareRingTiles`, ...).
+- **Upstream's exactness fillers have no code:** `EE_LOST_DEBUG/TRACE/CASE/READ` and `LostDebug.h` only charged VC6's
+  inline budget; drop every statement and include on each merge.
+- **One view per class.** Upstream's headers carried `#ifdef EE_DINKUM_SXL233` splits: the WON library's revision of
+  a class (built against the sxlrt233 Dinkum) and the exe's (e.g. `GUIString` inline in one, out of line at exe
+  addresses in the other; `CanStartGameHook` `bool` vs `long`). In one static clang exe that is an ODR violation: the
+  WON library's view is kept, the exe-side out-of-line copies are deleted (each checked to do the same).
+- **Dialect passes WON needed** (30 of 576 units failed; the rest compiled as delivered): `std::auto_ptr` ->
+  `std::unique_ptr<T[]>` (the buffers came from `new[]`: auto_ptr freed them with scalar delete), `random_shuffle` ->
+  VC6's swap-with-`rand()%(i+1)` loop, STL iterators initialised from NULL -> default-constructed, temporaries bound to
+  non-const references -> named locals, `typename`, Dinkum's `referent_type` -> `mapped_type`, and VC6's
+  `unsigned short` for `wchar_t`: `extern unsigned short gEmptyWideString[]` compiles but mangles differently from
+  the `wchar_t` definition, so the link names it.
+- **x64 hazards WON had:** pointers through `DWORD` in the waveOut callback (`dwInstance`/`dwParam1` are
+  `DWORD_PTR`), the window object in `GWL_USERDATA` (`GWLP_USERDATA`, `SetWindowLongPtr`), DbgHelp's 32-bit stack walk
+  (StackWalk64, AMD64, Rip/Rsp/Rbp), the login-secret file written with `sizeof(time_t)` (8 bytes now: an `int32_t`).
+  `time_t` narrowed to `long` for 32-bit wire fields is left as is (until 2038).
+- **Linking every WONAPI source** (upstream's rule: each .cpp no unit list names) also links SDK reconstructions
+  that duplicate an original unit (StringParserFormat.cpp) or that the original exe never contained (GameSpySupport,
+  MSFileDialog: they drag in the GameSpy SDK and comdlg32): `units.WON_NOT_LINKED`. lld names undefined symbols only
+  once the duplicates are gone, so a first "0 unresolved" next to duplicates means nothing.
+- **Placeholder names for one address:** `Component::Fn2F5380` is `FireEvent` (both 0x2f5380: forwarded),
+  `GUIStringData::Compare(other, bool)` was `findNoCase` (0x328340: the epoch/map filters are substring searches);
+  globals of units upstream did not reconstruct (`gShowParseTime`, `gLinesParsed`) are defined where they are used.
+- **Ours over upstream, kept deliberately:** EEUCBasicCitizen's `kTriggerSmartTaskNotAssigned` test keeps
+  `mGoalState != NULL` although upstream's FIXES.md lists the inversion as a fix (it strands citizens here);
+  EEEffect2D::CreateParts reads the unit's stats inside its NULL test (upstream's order dereferences NULL for an
+  effect at a point).
+- **Left:** the lobby's GUI toolkit draws with GDI into Win32 child windows, which does not show under the wgpu
+  renderer; LAN/Direct Connect go through that lobby. Next: WONGUI on GX and PlatInputEvent, then WON on Plat* for
+  POSIX (PORT.md "Other next steps").
 
 ## Cross-platform: the platform layer (branch xplat)
 

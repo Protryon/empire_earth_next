@@ -217,8 +217,8 @@ bool AuthContext::LoadSecretList()
     unsigned char count=static_cast<unsigned char>(fgetc(file));
     int i=0;
     while(!feof(file) && i<count) {
-        time_t expires=0;
-        fread(&expires,sizeof(time_t),1,file);
+        int32_t expires=0;                  // the file's expiry is 32-bit (the original's time_t)
+        fread(&expires,sizeof(expires),1,file);
         char* raw=new char[8];
         fread(raw,1,8,file);
         this->mSecretList.push_back(SecretData(expires,new ByteBuffer(raw,8,true)));
@@ -237,7 +237,8 @@ bool AuthContext::SaveSecretList()
     unsigned char count=static_cast<unsigned char>(this->mSecretList.size());
     fwrite(&count,1,1,file);
     for(SecretList::iterator next=this->mSecretList.begin();next!=this->mSecretList.end();++next) {
-        fwrite(&next->mExpireTime,sizeof(time_t),1,file);
+        int32_t expires=static_cast<int32_t>(next->mExpireTime);   // 32-bit in the file
+        fwrite(&expires,sizeof(expires),1,file);
         fwrite(next->mSecret.get()!=NULL?next->mSecret->data():NULL,1,
                next->mSecret.get()!=NULL?next->mSecret->length():0,file);
     }

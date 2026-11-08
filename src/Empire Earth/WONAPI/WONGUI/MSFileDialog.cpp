@@ -32,7 +32,7 @@ MSFileDialog::MSFileDialog(bool isSave)
 static MSFileDialog *gFileDialog = NULL;
 static string gLastPath;
 static bool gGotDir;
-static UINT CALLBACK MyOFNHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam)
+static UINT_PTR CALLBACK MyOFNHookProc(HWND hdlg, UINT uiMsg, WPARAM wParam, LPARAM lParam)
 {
 	if(gFileDialog==NULL)
 		return 0;
