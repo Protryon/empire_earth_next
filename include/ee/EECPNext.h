@@ -12,9 +12,11 @@
 #ifndef EE_EECPNEXT_H
 #define EE_EECPNEXT_H
 
+#include <string>
 #include <vector>
 
 class EEComputerPlayer;
+class EECPLuaState;
 class EEComplexUnit;
 class EEUnit;
 class EETechTreeNode;
@@ -219,8 +221,8 @@ EECPNextResult EECPNextDefend(EEComputerPlayer* inPlayer, long inX, long inY, lo
 EECPNextResult EECPNextAttack(EEComputerPlayer* inPlayer, long inTarget, long inCount);
 
 // ---------------------------------------------------------------------------------------------------------------
-// The per-player state of the next engine (EEComputerPlayer::mNextState; created on its first tick). Not saved yet:
-// stage S2 saves it with the strategy's memory.
+// The per-player state of the next engine (EEComputerPlayer::mNextState; created on its first tick, or by a loaded
+// game: EECPNextLoadState). Saved with the computer player from save version 0.252 (EECPNextSaveState).
 
 struct EECPNextTestMemory {     // the C++ test opening's memory (EECPNextTest.cpp)
     long mLastClaim;            // game ms of the last claim pass
@@ -229,8 +231,19 @@ struct EECPNextTestMemory {     // the C++ test opening's memory (EECPNextTest.c
     long mStep;
 };
 
+// one order's result, for the script's next view (view.results)
+struct EECPNextOrderResult {
+    std::string mVerb;
+    long mCode;                 // EECPNextCode
+    long mReason;               // EECPNextReason
+    long mCount;
+};
+
 struct EECPNextState {
     EECPNextState();
+    ~EECPNextState();
+    EECPNextState(const EECPNextState&) = delete;
+    EECPNextState& operator=(const EECPNextState&) = delete;
     long mClaimRange;                       // tiles (EECPClaimRange)
     long mReserve[kNextResources];
     long mFoodPrefer;                       // EECPNextFoodPrefer
@@ -246,6 +259,18 @@ struct EECPNextState {
     long mSeenTownX[64], mSeenTownY[64];
     std::vector<EECPNextEvent> mEvents;     // since the last step
     EECPNextTestMemory mTest;
+    // the strategy (EECPNextLua.cpp; docs/AI_LUA_PLAN.md §3.2)
+    EECPLuaState* mLua;                     // the script's Lua state (NULL until the first step)
+    std::string mScript;                    // the module it runs ("c++": the C++ test opening, TEST ONLY); "" not chosen
+    bool mStarted;                          // init ran (a new game) or the memory came back (a loaded game)
+    bool mFailed;                           // the script did not load: the seat issues no orders
+    bool mRestore;                          // a loaded game: mRestoreBytes go back into the state at the first step
+    std::string mRestoreBytes;              // the saved memory bytes (EECPLuaState::SaveMemory)
+    std::vector<EECPNextOrderResult> mResults;   // the last step's orders' results (the next view's results)
+    long mErrors;                           // steps that failed (budget, runtime error, bad orders)
+    // TEST ONLY (EE_AI_SAVE_CHECK=1): a Lua state restored from the last save's bytes; the next step runs it beside the
+    // live one and traces whether both give the same orders and memory (next.savecheck)
+    EECPLuaState* mShadow;
 };
 
 EECPNextState* EECPNextGetState(EEComputerPlayer* inPlayer);        // created when missing
@@ -259,5 +284,21 @@ long EECPNextClaimRangeOf(const EEComputerPlayer* inPlayer);
 
 // the test strategy's step (EECPNextTest.cpp)
 void EECPNextTestStep(EEComputerPlayer* inPlayer, const EECPNextView& inView);
+
+// ---------------------------------------------------------------------------------------------------------------
+// The strategy (EECPNextLua.cpp; docs/AI_LUA_PLAN.md §3.2 "S2 gate as built"): the personality's Lua script
+// (aipersonalities.yaml next_script, Data/ai/<name>.lua) gets the view as a table and returns its orders, which the
+// verbs above carry out; their results are in the next step's view. TEST ONLY: EE_AI_NEXT_SCRIPT names the script per
+// player (a comma list by player id from player 1, as EE_AI_ENGINE); "c++" there runs the C++ test opening.
+void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView);
+// a class or a tech by its data id (dbobjects / dbtechtree "id"; "dbobjects_<n>" when the data has no ids) -> -1: none
+long EECPNextClassByName(const std::string& inName);
+long EECPNextTechByName(const std::string& inName);
+std::string EECPNextClassName(long inClass);
+std::string EECPNextTechName(long inTech);
+// the save (EEPPlayerHelper, from version 0.252): the state that must survive as bytes, and back. Load creates the
+// state; a Lua script gets its memory back at the first step (LoadPersonality, RestoreMemory, never init)
+bool EECPNextSaveState(EEComputerPlayer* inPlayer, std::string& outBytes);
+bool EECPNextLoadState(EEComputerPlayer* inPlayer, const std::string& inBytes);
 
 #endif

@@ -47,6 +47,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
                        "Empire Earth/AI Thread/EECPEngine.cpp",
                        # the computer player's Lua runtime: the strategy scripts' sandbox (docs/AI_LUA_PLAN.md §3)
                        "Empire Earth/AI Thread/EECPLua.cpp",
+                       # the next engine's strategy: the personality's Lua script behind the verbs (§3.2)
+                       "Empire Earth/AI Thread/EECPNextLua.cpp",
                        # the game log: every game, human and computer players (ee/EEGameLog.h)
                        "Empire Earth/Empire Earth/EEGameLog.cpp",
                        # TEST ONLY: the headless simulation's driver (EE-SIM.exe: build.py --sim links its entry)
