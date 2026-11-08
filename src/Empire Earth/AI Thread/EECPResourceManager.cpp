@@ -593,7 +593,44 @@ void EECPResourceManager::AddIdleGatherer(EEComplexUnit* inUnit)
 }
 
 // the experiment "foodeco": the settlement site nearest a forage patch, in the rings round it (BuildSettlementFor)
-static const long kPatchDropRange = 4;
+static const long kPatchDropRange = kEECPPatchDropRange;
+
+// economy.forage_patches: whether the player has a drop site for food (town centre, capitol, settlement, granary;
+// built or going up) within inRange tiles of a tile (measured to the drop site's centre tile, so a large town centre
+// counts from its middle)
+static bool EECPRMDropNear(EEComputerPlayer* inPlayer, long inX, long inY, long inRange, bool inFood)
+{
+    static const long kTypes[4] = {kUnitTypeTownCenter, kUnitTypeCapitol, kUnitTypeSettlement, kUnitTypeGranary};
+    for (int t = 0; t < (inFood ? 4 : 3); t++) {
+        std::vector<EEUnit*> theUnits;
+        EEGetPlayerUnitsOfType(kTypes[t], inPlayer->mPlayerID, theUnits);
+        for (unsigned long k = 0; k < theUnits.size(); k++) {
+            if (!(theUnits[k]->mHitPoints > 0))
+                continue;
+            long theHalf = theUnits[k]->mUnitClass->GetTileSize() / 2;
+            long theDX = theUnits[k]->GetTileX() + theHalf - inX, theDY = theUnits[k]->GetTileY() + theHalf - inY;
+            long theReach = inRange + theHalf;
+            if (theDX * theDX + theDY * theDY <= theReach * theReach)
+                return true;
+        }
+    }
+    return false;
+}
+
+static bool EECPRMFoodDropNear(EEComputerPlayer* inPlayer, long inX, long inY, long inRange)
+{
+    return EECPRMDropNear(inPlayer, inX, inY, inRange, true);
+}
+
+static bool EECPRMInClaimRange(EECPResourceManager* inManager, long inX, long inY)
+{
+    EECPBuildManager* theBuild = inManager->mManager->mBuildManager;
+    if (theBuild == NULL || theBuild->mTownCenterTile.mX == -10000)
+        return true;
+    long theDX = inX - theBuild->mTownCenterTile.mX, theDY = inY - theBuild->mTownCenterTile.mY;
+    long theRange = EECPClaimRange(inManager->mManager->mPlayer);
+    return theDX * theDX + theDY * theDY <= theRange * theRange;
+}
 
 static bool EECPRMPatchSite(EECPResourceManager* inManager, EEUnit* inPatch, EETileCoordinate& outTile)
 {
@@ -901,6 +938,15 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
             continue;
         if (this->mManager->mBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY()))
             continue;
+        // economy.forage_patches: only the patches within the claim range (the playtest AI sent 17 of 27 food gatherers
+        // on far trips); their settlements come from EECPRMSettlePatches. TEST ONLY: the experiment "droprule" also
+        // skips a patch with no drop site within kEECPPatchDropRange tiles (lost 4-17 in the sim: the patches stood
+        // unworked until their settlements were up; docs/AI_RESEARCH.md §8.28)
+        if (EECPClaimRangeOn(thePlayer)
+            && (!EECPRMInClaimRange(this, theUnit->GetTileX(), theUnit->GetTileY())
+                || (EECPExperiment(thePlayer, "droprule")
+                    && !EECPRMFoodDropNear(thePlayer, theUnit->GetTileX(), theUnit->GetTileY(), kEECPPatchDropRange))))
+            continue;
         if (theTile.DistanceSquared(theCenter.mCenter) < theRange) {
             theResult = theUnit;
             break;
@@ -1044,8 +1090,19 @@ EEUnit* EECPResourceManager::FindForestTarget(long inCount, EEComplexUnit* inUni
 // FUNCTION: EXE 0x490cb5
 // Returns a resource unit of a type from the resource centers (forwards or backwards) that is visible, not
 // crowded, unthreatened, away from other players' areas and reachable from the unit
+// economy.forage_patches: FindResourceTarget's first pass takes only the mines within the claim range (the playtest AI
+// sent 6 citizens to an iron mine far out with no settlement); a second pass, the original's, when none is left
+static bool sClaimPass = false;
+
 EEUnit* EECPResourceManager::FindResourceTarget(long inResource, EEComplexUnit* inUnit, bool inBackwards)
 {
+    if (!sClaimPass && EECPClaimRangeOn(this->mManager->mPlayer)) {
+        sClaimPass = true;
+        EEUnit* theNear = this->FindResourceTarget(inResource, inUnit, inBackwards);
+        sClaimPass = false;
+        if (theNear != NULL)
+            return theNear;
+    }
     EETileDistanceLess theTile(0, 0);
     EEComputerPlayer* thePlayer = this->mManager->mPlayer;
     EECPBuildManager* theBuildManager = this->mManager->mBuildManager;
@@ -1065,6 +1122,8 @@ EEUnit* EECPResourceManager::FindResourceTarget(long inResource, EEComplexUnit* 
                 theOK = !theBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY());
                 if (theOK)
                     theOK = !EECPRMResourceInDanger(this, theUnit->GetTileX(), theUnit->GetTileY());
+                if (theOK && sClaimPass)
+                    theOK = EECPRMInClaimRange(this, theUnit->GetTileX(), theUnit->GetTileY());
                 if (theOK) {
                     EEPlayer** thePlayers = gWorld.mPlayers;
                     for (unsigned long j = 0; j < gWorld.mNumPlayers && theOK; j++, thePlayers++) {
@@ -1573,6 +1632,13 @@ static bool EECPRMFishes(EECPResourceManager* inManager)
 
 // the coast's boats: a dock first, then one boat request at a time up to the wanted count; the island rule keeps
 // the original's single request
+static const unsigned long kBoatRushBatch = 4;   // the experiment "boatrush": boats requested at once
+
+static bool EECPRMHasBuildManager(EECPCivilizationManager* inManager)
+{
+    return inManager->mBuildManager != NULL;
+}
+
 static void EECPRMRequestBoats(EECPResourceManager* inManager)
 {
     EECPCivilizationManager* theManager = inManager->mManager;
@@ -1583,18 +1649,28 @@ static void EECPRMRequestBoats(EECPResourceManager* inManager)
     }
     std::vector<EEUnit*> theDocks;
     EEGetPlayerUnitsOfType(kUnitTypeDock, theManager->mPlayer->mPlayerID, theDocks);
-    bool theBuilt = false;
-    for (unsigned long k = 0; k < theDocks.size() && !theBuilt; k++)
-        theBuilt = theDocks[k]->mComplexUnit != NULL && theDocks[k]->mComplexUnit->mIsBuilt && theDocks[k]->mHitPoints > 0;
-    if (!theBuilt) {
-        if (theManager->mBuildManager != NULL)
-            theManager->mBuildManager->QueueBuilding(kUnitTypeDock, false, true);
+    unsigned long theBuilt = 0;
+    for (unsigned long k = 0; k < theDocks.size(); k++)
+        if (theDocks[k]->mComplexUnit != NULL && theDocks[k]->mComplexUnit->mIsBuilt && theDocks[k]->mHitPoints > 0)
+            theBuilt++;
+    bool theRush = EECPExperiment(theManager->mPlayer, "boatrush");
+    // the experiment "boatrush": a second dock once the first stands, so two train boats at once
+    if (EECPRMHasBuildManager(theManager) && (theBuilt == 0 || (theRush && theBuilt == 1 && theDocks.size() < 2 && theWanted > kBoatRushBatch)))
+        theManager->mBuildManager->QueueBuilding(kUnitTypeDock, false, true);
+    if (theBuilt == 0)
         return;
-    }
     long theClass = theManager->GetFishingBoatClass();
     EECPUGatherSpecialUnitsCount theCount(theManager->mPlayer, theClass, 0, false);
     theManager->mUnitManager->GatherUnits(theCount);
-    if (theCount.mRequested == 0 && (unsigned long)theCount.mUnits < theWanted)
+    if (theRush) {
+        // the experiment "boatrush" (the owner: "I spam boats ASAP at stone"): every boat short of the wanted count is
+        // requested, kBoatRushBatch at a time
+        unsigned long theHave = (unsigned long)(theCount.mUnits + theCount.mRequested);
+        if (theHave < theWanted) {
+            unsigned long theMore = theWanted - theHave;
+            theManager->mUnitManager->RequestUnits(theClass, (long)(theMore < kBoatRushBatch ? theMore : kBoatRushBatch), 0, 0);
+        }
+    } else if (theCount.mRequested == 0 && (unsigned long)theCount.mUnits < theWanted)
         theManager->mUnitManager->RequestUnits(theClass, 1, 0, 0);
 }
 
@@ -1765,6 +1841,10 @@ static void EECPRMGetDemand(EECPResourceManager* inManager, EECPRMDemand& outDem
                     EECPRMAddCost(thePlayer, theTree->Get(theID), kUnitTypeTownCenter, 1.0f, outDemand.mTier[2]);
             }
     long theEpoch = EECPCheatOn(thePlayer, kAICheatEpochs) ? kTechNone : EECPPendingEpoch(thePlayer);
+    // the experiment "boatrush": with the Stone Age pending, the wood of two docks and four boats is banked for it
+    if (theEpoch != kTechNone && EECPExperiment(thePlayer, "boatrush") && theTree->mCurrentEpoch <= kTechEpochPrehistoric
+        && EECPCoastFishingOn(thePlayer))
+        outDemand.mTier[1][kResourceWood] += 2 * 175 + 4 * 50;
     if (theEpoch != kTechNone) {
         const EEAIPersonalityRule& thePersonality = EECPPersonality(thePlayer);
         float theShare = (EECPEpochPressure(thePlayer, gPhysics->mGameTime) - thePersonality.mEpochPressureStart)
@@ -1794,6 +1874,101 @@ static void EECPRMGetDemand(EECPResourceManager* inManager, EECPRMDemand& outDem
 // does not cover and no active resource centre holds any, the nearest centre to the town centre that does is
 // activated (its gatherers then order their settlement); the original activated centres only by distance at the
 // start, so an AI whose near gold ran out never had gold again
+// economy.forage_patches: a settlement right on each forage patch of the active centres within the claim range that has
+// no drop site at hand, one at a time (every kSettleMs), before anyone gathers there
+static const unsigned long kSettleMs = 20000;
+
+static void EECPRMSettlePatches(EECPResourceManager* inManager)
+{
+    static unsigned long sLast[64];
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    EECPBuildManager* theBuild = inManager->mManager->mBuildManager;
+    unsigned long theID = thePlayer->mPlayerID < 64 ? thePlayer->mPlayerID : 63;
+    if (theBuild == NULL || !thePlayer->mCanBuild || !inManager->mSettlementsEnabled
+        || !thePlayer->CanProduceUnitType(kUnitTypeSettlement, 0x20, NULL))
+        return;
+    if (sLast[theID] != 0 && gPhysics->mGameTime >= sLast[theID] && gPhysics->mGameTime - sLast[theID] < kSettleMs)
+        return;
+    if (inManager->IsSettlementQueued(kResourceFood) || inManager->mManager->mUnitManager->HasUnfinished(kUnitTypeSettlement))
+        return;
+    EEUnit* theBest = NULL;
+    long long theBestDistance = 0;
+    for (unsigned long k = 0; k < thePlayer->GetNumResourceCenters(); k++) {
+        EECPResourceCenter* theCenter = thePlayer->GetResourceCenter(k);
+        if (theCenter == NULL || !theCenter->mIsActive)
+            continue;
+        // the forage patch, and the worked stone, gold and iron mines (a settlement at each, as at the patches)
+        for (long r = kResourceFood; r <= kResourceIron; r++) {
+            if (r == kResourceWood)
+                continue;
+            EEUnit* theUnit = theCenter->FindResourceUnit(r);
+            if (theUnit == NULL || !(theUnit->mHitPoints > 0) || !(theUnit->mResourceAmount > 0)
+                || (r == kResourceFood && theUnit->GetUnitClass()->mUnitType != kUnitTypeResForageBush)
+                || (r != kResourceFood && gWorld.GetResourceUsers(theUnit) == 0)
+                || !EECPRMInClaimRange(inManager, theUnit->GetTileX(), theUnit->GetTileY())
+                || EECPRMDropNear(thePlayer, theUnit->GetTileX(), theUnit->GetTileY(), kEECPPatchDropRange, r == kResourceFood)
+                || theBuild->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY())
+                || EECPRMResourceInDanger(inManager, theUnit->GetTileX(), theUnit->GetTileY()))
+                continue;
+            long long theDX = theUnit->GetTileX() - theBuild->mTownCenterTile.mX;
+            long long theDY = theUnit->GetTileY() - theBuild->mTownCenterTile.mY;
+            if (theBest == NULL || theDX * theDX + theDY * theDY < theBestDistance) {
+                theBest = theUnit;
+                theBestDistance = theDX * theDX + theDY * theDY;
+            }
+        }
+    }
+    if (theBest == NULL)
+        return;
+    EETileCoordinate theSite;
+    if (!EECPRMPatchSite(inManager, theBest, theSite)) {
+        EECPClaimExpand(thePlayer);   // no room by the patch: claim more land
+        return;
+    }
+    sLast[theID] = gPhysics->mGameTime;
+    theBuild->QueueBuildingAt(kUnitTypeSettlement, theSite.mX, theSite.mY);
+    EE_CP_TRACE(thePlayer, "settlement.patch", "x=%ld y=%ld patch=%ld/%ld distance=%.0f", (long)theSite.mX, (long)theSite.mY,
+                (long)theBest->GetTileX(), (long)theBest->GetTileY(), sqrt((double)theBestDistance));
+}
+
+// economy.forage_patches: a tower for each worked site (a patch or mine with gatherers) within the claim range that has
+// none within kGuardRange tiles, one at a time (every kGuardMs); FindTowerSite puts it at the nearest unguarded centre
+// (the owner: "undefended resources, no tower"; towers are strong until the Bronze Age)
+static const unsigned long kGuardMs = 30000;
+static const float kGuardRange = 8.0f;
+
+static void EECPRMGuardSites(EECPResourceManager* inManager)
+{
+    static unsigned long sLast[64];
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    EECPBuildManager* theBuild = inManager->mManager->mBuildManager;
+    unsigned long theID = thePlayer->mPlayerID < 64 ? thePlayer->mPlayerID : 63;
+    if (theBuild == NULL || !thePlayer->mCanBuild)
+        return;
+    if (sLast[theID] != 0 && gPhysics->mGameTime >= sLast[theID] && gPhysics->mGameTime - sLast[theID] < kGuardMs)
+        return;
+    long theTower = inManager->mManager->GetTowerClass();
+    if (theTower <= 0 || !thePlayer->CanProduceUnitType(theTower, 0x20, NULL) || theBuild->IsQueued(theTower)
+        || inManager->mManager->mUnitManager->HasUnfinished(theTower))
+        return;
+    for (unsigned long k = 0; k < thePlayer->GetNumResourceCenters(); k++) {
+        EECPResourceCenter* theCenter = thePlayer->GetResourceCenter(k);
+        if (theCenter == NULL || !theCenter->mIsActive)
+            continue;
+        for (long r = kResourceFood; r <= kResourceIron; r++) {
+            EEUnit* theUnit = theCenter->FindResourceUnit(r);
+            if (theUnit == NULL || !(theUnit->mHitPoints > 0) || gWorld.GetResourceUsers(theUnit) == 0
+                || !EECPRMInClaimRange(inManager, theUnit->GetTileX(), theUnit->GetTileY())
+                || theBuild->HasTowerNear(theUnit->GetTileX(), theUnit->GetTileY(), kGuardRange * kGuardRange))
+                continue;
+            sLast[theID] = gPhysics->mGameTime;
+            theBuild->QueueBuilding(theTower, false, true);
+            EE_CP_TRACE(thePlayer, "tower.guard", "resource=%ld x=%ld y=%ld", r, (long)theUnit->GetTileX(), (long)theUnit->GetTileY());
+            return;
+        }
+    }
+}
+
 static void EECPRMActivateNeeded(EECPResourceManager* inManager)
 {
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
@@ -1816,6 +1991,12 @@ static void EECPRMActivateNeeded(EECPResourceManager* inManager)
                     thePatches++;
         }
         unsigned long theWantedPatches = thePlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric ? kPatchesWanted : kPatchesWantedLater;
+        if (EECPClaimRangeOn(thePlayer)) {
+            if (!EECPExperiment(thePlayer, "nosettle"))   // TEST ONLY: the patch settlements off
+                EECPRMSettlePatches(inManager);
+            if (!EECPExperiment(thePlayer, "noguard"))    // TEST ONLY: the site towers off
+                EECPRMGuardSites(inManager);
+        }
         if (thePatches < theWantedPatches) {
             EECPResourceCenter* theBest = NULL;
             long long theBestDistance = 0;
@@ -1825,7 +2006,8 @@ static void EECPRMActivateNeeded(EECPResourceManager* inManager)
                     continue;
                 EEUnit* theUnit = theCenter->FindResourceUnit(kResourceFood);
                 if (theUnit == NULL || !(theUnit->mHitPoints > 0) || theUnit->GetUnitClass()->mUnitType != kUnitTypeResForageBush
-                    || EECPRMResourceInDanger(inManager, theUnit->GetTileX(), theUnit->GetTileY()))
+                    || EECPRMResourceInDanger(inManager, theUnit->GetTileX(), theUnit->GetTileY())
+                    || (EECPClaimRangeOn(thePlayer) && !EECPRMInClaimRange(inManager, theUnit->GetTileX(), theUnit->GetTileY())))
                     continue;
                 long long theDX = theUnit->GetTileX() - theBuild->mTownCenterTile.mX;
                 long long theDY = theUnit->GetTileY() - theBuild->mTownCenterTile.mY;
@@ -1858,7 +2040,8 @@ static void EECPRMActivateNeeded(EECPResourceManager* inManager)
             if (theCenter == NULL || theCenter->mIsActive)
                 continue;
             EEUnit* theUnit = theCenter->FindResourceUnit(r);
-            if (theUnit == NULL || !(theUnit->mHitPoints > 0) || EECPRMResourceInDanger(inManager, theUnit->GetTileX(), theUnit->GetTileY()))
+            if (theUnit == NULL || !(theUnit->mHitPoints > 0) || EECPRMResourceInDanger(inManager, theUnit->GetTileX(), theUnit->GetTileY())
+                || (EECPClaimRangeOn(thePlayer) && !EECPRMInClaimRange(inManager, theUnit->GetTileX(), theUnit->GetTileY())))
                 continue;
             long long theDX = theUnit->GetTileX() - theBuild->mTownCenterTile.mX;
             long long theDY = theUnit->GetTileY() - theBuild->mTownCenterTile.mY;
@@ -1878,6 +2061,9 @@ static bool EECPRMSplitByDemand(EECPResourceManager* inManager)
 {
     EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
     EECPRMActivateNeeded(inManager);
+    // the experiment "boatrush": the boats are asked for on every split, not only while a citizen stands idle
+    if (EECPExperiment(thePlayer, "boatrush") && EECPRMCoastBoatsWanted(inManager) > 0)
+        EECPRMRequestBoats(inManager);
     long theGatherers = (long)inManager->mGatherers[0].size();
     for (long r = 2; r < 7; r++)
         theGatherers += (long)inManager->mGatherers[r].size();

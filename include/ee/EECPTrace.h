@@ -69,7 +69,21 @@ bool EECPForagePatchesOn(const EEComputerPlayer* inPlayer);   // economy.forage_
 bool EECPClaimNeededOn(const EEComputerPlayer* inPlayer);     // economy.claim_needed
 bool EECPNavalFleeOn(const EEComputerPlayer* inPlayer);       // military.naval_flee
 bool EECPPrehistoricPeaceOn(const EEComputerPlayer* inPlayer);   // not military.prehistoric_attacks
-float EECPStoneSpan(const EEComputerPlayer* inPlayer);        // epoch_pressure.stone_span in minutes (0: the timer)       // the personality's military.militia; TEST ONLY: EE_AI_EXP nomilitia   // the personality's economy.demand_split; TEST ONLY: EE_AI_DEMAND
+float EECPStoneSpan(const EEComputerPlayer* inPlayer);        // epoch_pressure.stone_span in minutes (0: the timer)
+// economy.forage_patches: the land the AI claims and builds its drop sites on, in tiles from its town centre (the
+// owner: "stop claiming land it cannot defend"; docs/AI_RESEARCH.md §8.28): kEECPClaimRange, a step more each time a
+// farm, granary or settlement finds no room ("if no room for stuff like a farm, then expand"), kEECPClaimRangeMax at most
+const long kEECPClaimRange = 25;
+const long kEECPClaimRangeStep = 5;
+const long kEECPClaimRangeMax = 45;
+long EECPClaimRange(const EEComputerPlayer* inPlayer);
+void EECPClaimExpand(const EEComputerPlayer* inPlayer);   // one step (at most one per 2 game minutes)
+// ... and a worked forage patch has a drop site within this many tiles ("every patch should have 0 or 1 tile
+// distance to a settlement")
+const long kEECPPatchDropRange = 3;
+// economy.forage_patches with the claim range, the settlements on the patches and the drop site rule (TEST ONLY:
+// EE_AI_EXP oldpatches keeps forage_patches without them, as in §8.27)
+bool EECPClaimRangeOn(const EEComputerPlayer* inPlayer);       // the personality's military.militia; TEST ONLY: EE_AI_EXP nomilitia   // the personality's economy.demand_split; TEST ONLY: EE_AI_DEMAND
                                            // overrides it (0 or 1, or per player in turn from player 1, "0/1")
 
 bool EECPCheatOn(const EEComputerPlayer* inPlayer, long inCheat);          // whether that cheat stays on (the difficulty's ai_cheats, EE_AI_CHEATS)

@@ -1064,6 +1064,38 @@ unsigned long EECPEpochTimerSpan(EEComputerPlayer* inPlayer)
     return theSpan > 60000.0f ? (unsigned long)UMFloatToLong(theSpan) : 60000UL;
 }
 
+float EECPScheduleSpan(EEComputerPlayer* inPlayer)
+{
+    if (inPlayer->mTechnologies == NULL)
+        return 0.0f;
+    if (inPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric)
+        return EECPStoneSpan(inPlayer);
+    if (EECPExperiment(inPlayer, "span20"))
+        return 20.0f;
+    if (EECPExperiment(inPlayer, "span25"))
+        return 25.0f;
+    if (EECPExperiment(inPlayer, "span30"))
+        return 30.0f;
+    return 0.0f;
+}
+
+// the Prehistoric counts from the game's start; a later epoch from when the player was first seen in it (TEST ONLY
+// bookkeeping: not saved; the AI asks often enough that the lag is a few seconds)
+unsigned long EECPScheduleStart(EEComputerPlayer* inPlayer, unsigned long inTime)
+{
+    static long sEpoch[64];
+    static unsigned long sStart[64];
+    if (inPlayer->mTechnologies == NULL || inPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric)
+        return 0;
+    unsigned long theID = inPlayer->mPlayerID < 64 ? inPlayer->mPlayerID : 63;
+    long theEpoch = inPlayer->mTechnologies->mCurrentEpoch;
+    if (sEpoch[theID] != theEpoch || sStart[theID] > inTime) {
+        sEpoch[theID] = theEpoch;
+        sStart[theID] = inTime;
+    }
+    return sStart[theID];
+}
+
 float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime)
 {
     if (inPlayer->mCivilizationManager == NULL)
@@ -1071,9 +1103,11 @@ float EECPEpochPressure(EEComputerPlayer* inPlayer, unsigned long inTime)
     // the experiments "stone22" and "stone30" (docs/AI_RESEARCH.md §8.27; the owner reaches the Stone Age at 21 min,
     // the AI's timer at about 48): in the Prehistoric the pressure is the game time over a 22 (30) minute span, so
     // the advance is asked for from 0.3 of it and wholly reserved from 0.8; the later epochs keep the timer
-    if (inPlayer->mTechnologies != NULL && inPlayer->mTechnologies->mCurrentEpoch <= kTechEpochPrehistoric
-        && EECPStoneSpan(inPlayer) > 0.0f)
-        return (float)inTime / (EECPStoneSpan(inPlayer) * 60000.0f);
+    float theSchedule = EECPScheduleSpan(inPlayer);
+    if (theSchedule > 0.0f) {
+        unsigned long theStart = EECPScheduleStart(inPlayer, inTime);
+        return (float)(inTime - theStart) / (theSchedule * 60000.0f);
+    }
     unsigned long theSpan = EECPEpochTimerSpan(inPlayer);
     unsigned long theDue = inPlayer->mCivilizationManager->mNextEpochAdvanceTime;
     long long theLeft = (long long)theDue - (long long)inTime;
@@ -1122,9 +1156,20 @@ static bool EECPIsSoldier(EEUnit* inUnit)
 static long EECPCountSoldiers(EEComputerPlayer* inPlayer)
 {
     long theCount = 0;
-    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
         if (EECPIsSoldier(theUnit))
             theCount++;
+        // ... and one for each building training a soldier (the playtest AI's cap of 4 let 6 through: the ones
+        // already in training were not counted)
+        else if (theUnit->mComplexUnit != NULL && theUnit->mUnitClass->IsLandBuilding() && inPlayer->mTechnologies != NULL
+                 && inPlayer->mCombatManager != NULL && theUnit->mComplexUnit->mCurrentResearch != 100000) {
+            EETechTreeNode* theNode = inPlayer->mTechnologies->Get(theUnit->mComplexUnit->mCurrentResearch);
+            long theClass = theNode != NULL && theNode->mData->mMakesUnit ? theNode->mData->mUnitClass : -1;
+            if (theClass >= 0 && (unsigned long)theClass < EEUnitClassCount() && gUnitClassTable[theClass] != NULL
+                && inPlayer->mCombatManager->IsMilitaryClass(gUnitClassTable[theClass]))
+                theCount++;
+        }
+    }
     return theCount;
 }
 
@@ -1233,6 +1278,12 @@ bool EEComputerPlayer::CanAfford(EETechnology* inTechnology, long inUnitType, lo
     if (theShare > 1.0f)
         theShare = 1.0f;
     if (theShare <= 0.0f)
+        return true;
+    // the experiment "threatspend" (docs/AI_RESEARCH.md §8.28; the owner scrambles an army when he scouts a rush): while
+    // enemy soldiers near the town outmatch its army (EECPArmyThreat), soldiers are not held back by the epoch reserve
+    if (EECPExperiment(this, "threatspend") && this->mCombatManager != NULL && inUnitType >= 0
+        && (unsigned long)inUnitType < EEUnitClassCount() && gUnitClassTable[inUnitType] != NULL
+        && this->mCombatManager->IsMilitaryClass(gUnitClassTable[inUnitType]) && EECPArmyThreat(this))
         return true;
     // the experiment "goldfix" (docs/AI_RESEARCH.md §8.27): an advance that cannot be reached reserves nothing. A
     // resource it needs is short and has no gatherer (a playtest AI had no gold site from minute 34: its Copper

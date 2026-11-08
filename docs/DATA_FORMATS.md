@@ -2668,7 +2668,12 @@ computer player gets which. New in this port (no original values: the defaults a
           forage_patches: true     # the food capacity: mining_limit a forage patch (not every food gatherer), the
                                    # workers on farms, fish and game, 1 hunter per animal within 45 tiles (12 at
                                    # most); a settlement on a patch with no drop site within 4 tiles; 3 patches kept
-                                   # claimed in the Prehistoric, 5 later; 16 boats at most (§8.27)
+                                   # claimed in the Prehistoric, 5 later; 16 boats at most (§8.27). The claim
+                                   # range: patches, mines (those within it first), the claims and granaries within
+                                   # 25 tiles of the town centre, 5 more each time a farm, granary or settlement has
+                                   # no room (45 at most); a settlement on each claimed patch and worked mine with no
+                                   # drop site within 3 tiles; a tower at each worked site without one within 8; no
+                                   # houses in the Prehistoric (§8.28)
           claim_needed: true       # the next epoch's stone, gold or iron short with no active centre holding any:
                                    # the nearest centre with it is claimed; an advance that cannot be reached (a
                                    # resource short with no gatherer) reserves nothing (§8.27)
