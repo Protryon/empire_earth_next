@@ -1384,6 +1384,59 @@ Head to head against the AI without them (seeds 2-13, both seats, Medium, Small;
 - **A crash** in a 150-minute game: an AI transport's unload line ran off the map (PORT_LEARNINGS.md "A transport's
   unload line off the map").
 
+### 8.28 The original as a benchmark, the Copper Age, and the claim range (2026-11-07, third playtest and EE-SIM)
+
+**The original AI as a benchmark** (TEMPORARY until the new AI beats it): the `classic` personality holds every rule
+at the original's setting; `--set "gameoptions.difficulties.medium.ai_cheats=[...]"` (a list value replaces a list)
+brings back the cheats, `EE_AI_CHEATS` narrows them per seat (e.g. `all/none`). The switchless fixes (the guard, the
+nearest-home sites, the citizen recovery, the defeat rule) stay on in it. 3-hour Medium games against the current AI:
+
+| classic | Result |
+|---|---|
+| honest | lost 0-24 (the Stone Age in 2 games: the original lived on the free-epochs cheat) |
+| all seven cheats | lost 1-22 (not meaningful: `catchup` holds it back behind the idle sim human) |
+| cost, reveal, epochs, extra, retire | **won 5-0, 19 close**: 155 citizens at 30 min (units at 1%), the current AI out-techs it (Bronze 21/24 against Copper at 122 min, Bronze 8/24) |
+
+**Why the Copper Age takes long** (3-hour games, the current AI: Stone 25, Copper 81 min). The timer: the advance is
+asked for about 23 min after the Stone Age (0.3 of a ~60-min timer) and its reserve fills over the next 30 (to 0.8).
+All three resources reach their costs together, at the reserve's pace; the income (90 food, 42 gold, 38 iron per 30 s)
+would pay it in about 11 minutes. But schedules that ask sooner lose: the reserve takes the food and iron soldiers cost.
+
+| Experiment (TEST ONLY) | 90 min | 3 hours | Copper | Army at 40 min |
+|---|---|---|---|---|
+| `span20` / `span25` / `span30` (every later epoch on a schedule from its start) | 0-20 / 2-18 / 2-18 | 0-22 / 2-22 / 3-20 | 16-20/24 at 63 min | 9-12 (against 14) |
+| `boatrush` (wood for 2 docks and 4 boats banked before Stone, a second dock, boats 4 at a time) | 1-15 | 3-19 | 17/24 at 75 | 10 |
+| `boatrush` + `span25` / `span30` | 1-18 / 2-14 | 2-22 / 3-20 | 14-16/24 at 59-64 | 6-8 |
+| `threatspend` (no reserve on soldiers while a stronger enemy is near) | 6-13 | 6-15 | 20-21/24 at 73 | 14 |
+| `boatrush` + `span30` + `threatspend` | 1-16 | 1-22 | 15/24 at 62 | 9 |
+
+`boatrush` reaches the owner's food (106-114 per 30 s at 40-60 min) but the timer still sets the Copper Age; with a
+schedule the savers fall behind in soldiers and a third never reach Copper. In AI-against-AI games every investment
+loses to the opponent's standing army; the owner's playtests are the better judge of the boom.
+
+**The third playtest** (Continental, Medium, Babylon; a crash at 74 min, then a saved game to the Middle Ages). The
+Stone Age at 24.9 min (the owner 24.2), Copper at 73.1 (54.6). The owner: citizens sent to far patches and a far iron
+mine with no settlement ("every patch should have 0 or 1 tile distance to a settlement"); land claimed that it cannot
+defend, granaries far out; no towers at the resources; houses in the first minutes; more than 4 soldiers in the
+Prehistoric; "the ai did a good job rebuilding from raids". The log: 14-17 of 25-27 food trips far, iron trips of 9-16
+tiles; 4 houses in minutes 1-4; 6 soldiers in the Prehistoric (the cap counted only the living ones).
+
+**Rules** (under `economy.forage_patches`; TEST ONLY switches `oldpatches`, `nosettle`, `noguard`):
+- a claim range of 25 tiles round the town centre for the patch and gold claims, the mines (within it first, the
+  original's search when none is left) and the granaries; 5 more each time a farm, granary or settlement finds no room
+  (45 at most, one step per 2 minutes);
+- a settlement on each claimed patch and worked mine without a drop site within 3 tiles (`EECPRMSettlePatches`);
+- a tower at each worked site within the claim range without one within 8 tiles (`EECPRMGuardSites`);
+- no houses in the Prehistoric; the Prehistoric army cap counts the soldiers in training.
+
+| Against `oldpatches` | 90 min | 3 hours | Copper | Food trips 10-30 min |
+|---|---|---|---|---|
+| with the drop rule (no gathering at a patch without a drop site) | lost 4-17 | lost 3-20 | 11-14/24 | 6.5-8.6 |
+| without it (as shipped) | **won 10-7** | **won 11-8** | **69.4 min** (75.3) | **4.3-5.6** (5.9-7.0) |
+
+Without the drop rule (the experiment `droprule` keeps it): the towers alone are even (11-11), the settlements carry it.
+Dark Age 12/24 against 7/24 in 3 hours.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
