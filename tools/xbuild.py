@@ -179,9 +179,11 @@ def windows_env():
     return env
 
 
+# -ffp-contract=off everywhere (RUST_PLAN.md 2.1): no fused multiply-add, so a float expression rounds the same on
+# x86_64 and arm64 (the Lua VM and the game's simulation; tools/ee.py MODULE_FLAGS for the Windows build)
 WIN_CXX = ["--target=x86_64-pc-windows-msvc", "/nologo", "/std:c++17", "/EHsc", "/MT", "/O1", "/GS-", "/W3",
-           "-Wno-deprecated-declarations"]
-POSIX_CXX = ["-std=c++17", "-O1", "-g", "-Wall", "-Wno-unused-function"]
+           "-Wno-deprecated-declarations", "/clang:-ffp-contract=off"]
+POSIX_CXX = ["-std=c++17", "-O1", "-g", "-Wall", "-Wno-unused-function", "-ffp-contract=off"]
 
 
 def build_program(target, name, sources, includes=(), defines=(), libs=(), extra_link=(), c_sources=()):
@@ -207,7 +209,7 @@ def build_program(target, name, sources, includes=(), defines=(), libs=(), extra
     for src in [*sources, *c_sources]:
         obj = out / (pathlib.Path(src).stem + ".o")
         is_c = str(src).endswith(".c")
-        flags = ["-std=c11", "-O1", "-g"] if is_c else POSIX_CXX
+        flags = ["-std=c11", "-O1", "-g", "-ffp-contract=off"] if is_c else POSIX_CXX
         run([target.clang(cxx=not is_c), *base, *flags, "-c", *[f"-I{i}" for i in includes],
              *[f"-D{d}" for d in defines], "-o", obj, src])
         objs.append(obj)
@@ -328,7 +330,7 @@ def cmd_tcptest(a):
     else:
         base = t.base_flags()
         game_flags = ["-fms-extensions", "-fms-compatibility", "-fdelayed-template-parsing",
-                      "-fms-compatibility-version=19.44", "-fno-strict-aliasing", "-fwrapv", "-w"]
+                      "-fms-compatibility-version=19.44", "-fno-strict-aliasing", "-fwrapv", "-ffp-contract=off", "-w"]
         for src in [*game, *platform_sources(t)]:
             obj = out / (pathlib.Path(src).stem.replace(" ", "_") + ".o")
             if src in game:
@@ -832,6 +834,7 @@ def game_job_command(t, job, out, inc, opt):
     std = ["-x", "c", "-std=gnu11"] if is_c else ["-x", "c++", "-std=gnu++17" if plain else "-std=c++17"]
     obj = out / "obj" / (rel.replace("/", "__").replace(" ", "_") + ".o")
     cmd = [t.clang(cxx=not is_c), *t.base_flags(), "-c", *std, *opt, "-g", "-w", "-fno-strict-aliasing", "-fwrapv",
+           "-ffp-contract=off",
            "-U__OPTIMIZE__", "-DNDEBUG", *game_dialect_flags(t, not plain), *defs,
            f"-I{src.parent}", *[f"-I{i}" for i in own], *[f"-I{i}" for i in inc], "-o", str(obj), str(src)]
     return obj, cmd
