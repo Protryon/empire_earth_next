@@ -2124,14 +2124,17 @@ struct EEWorldGameResult {
 
 // New (gameoptions.yaml defeat_without_recovery): whether a player can still come back: a living unit that is
 // not a building (a citizen, a soldier, a ship), or a finished town centre or capitol and the means to train a
-// citizen there (a beaten AI kept its town centres with 10 food and no income for 50 minutes)
+// citizen there (a beaten AI kept its town centres with 10 food and no income for 50 minutes). Fishing boats do not
+// count: they cannot build or fight (the owner: "when they have nothing but fishing boats left, they should get
+// defeated too")
 static bool EEWorldCanRecover(EEPlayer* inPlayer)
 {
     EETechTreeNode* theCitizen = inPlayer->mTechnologies != NULL ? inPlayer->mTechnologies->Get(kTechCitizen) : NULL;
     bool theCanTrain = theCitizen == NULL || inPlayer->EEPlayer::CanAfford(theCitizen, kUnitTypeCitizen, 1);
     EEComplexUnit* theUnit = NULL;
     while ((theUnit = inPlayer->GetNextComplexUnit(theUnit)) != NULL) {
-        if (!(theUnit->mHitPoints > 0) || theUnit->mPreviousPart != NULL || !theUnit->mUnitClass->mIsVital)
+        if (!(theUnit->mHitPoints > 0) || theUnit->mPreviousPart != NULL || !theUnit->mUnitClass->mIsVital
+            || theUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
             continue;
         if (!theUnit->mUnitClass->IsLandBuilding())
             return true;
