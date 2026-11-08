@@ -1054,11 +1054,24 @@ bool EEComplexUnit::HasCalamityFlag(unsigned long inFlag)
     return (this->mCalamityFlags & inFlag) != 0;
 }
 
+// New (debugging): EE_UNIT_POOL=0 takes every unit from operator new instead of the pool (UMemoryPool::Delete deletes
+// what no chunk holds). A pool slot is reused at once, so a unit released one reference too early is read as the
+// next unit given that slot, unseen by AddressSanitizer; from the heap, ASan reports the first stale read with the
+// stack of the release that freed it (tools/play_posix.py sets it). The leak reports then list no unit.
+static EEComplexUnit* EENewPoolUnit()
+{
+    static const bool sPoolOff = [] {
+        const char* theValue = getenv("EE_UNIT_POOL");
+        return theValue != NULL && theValue[0] == '0';
+    }();
+    return sPoolOff ? new EEComplexUnit : EEComplexUnit::sMemoryPool.New();
+}
+
 // FUNCTION: EXE 0x5f7b7c
 // Takes a unit from the pool and resets it to defaults
 EEComplexUnit* EEComplexUnit::Create()
 {
-    EEComplexUnit* theUnit = EEComplexUnit::sMemoryPool.New();
+    EEComplexUnit* theUnit = EENewPoolUnit();
     theUnit->Reset();
     theUnit->ResetEEUnit();
     theUnit->ResetEEComplexUnit(true, false);
@@ -1078,7 +1091,7 @@ bool EEComplexUnit::SetPoolSize(unsigned long inChunkSize, unsigned long inMaxCh
 EEComplexUnit* EEComplexUnit::Create(EEUnitClass* inClass, const GETransformation& inTransformation,
                                      EEPlayer* inPlayer, unsigned long inGoalQueueCount)
 {
-    EEComplexUnit* theUnit = EEComplexUnit::sMemoryPool.New();
+    EEComplexUnit* theUnit = EENewPoolUnit();
     theUnit->Init(inClass, inTransformation, inPlayer, inGoalQueueCount);
     return theUnit;
 }

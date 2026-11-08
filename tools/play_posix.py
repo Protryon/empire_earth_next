@@ -8,7 +8,8 @@ Every session gets a folder build/playtest/<time>/:
   session.json  exe, build time, git revision and dirty state, data root, exit status
 A clean exit leaves only game.log and session.json.
 The unit chain check is on (EE_CHECK_UNIT_LIST=1, include/ee/RTSDummyHeader.h): the game stops at the first broken
-link of the world's x-sorted unit list, with the backtrace of the code that broke it.
+link of the world's x-sorted unit list, with the backtrace of the code that broke it. Units come from the heap, not
+the pool (EE_UNIT_POOL=0), so ASan reports a unit read after its last reference went, with the stack that freed it.
 
 Default: the AddressSanitizer build (build/xbuild/<target>/game-address/ee-aoc), which stops at the first bad
 memory access instead of crashing later from its damage; it runs about half as fast as the plain build.
@@ -71,9 +72,15 @@ def main():
     env['EE_DATA_ROOT'] = str(data)
     # the unit chain check (include/ee/RTSDummyHeader.h): stops at the first broken link; EE_CHECK_UNIT_LIST=0 to skip
     env.setdefault('EE_CHECK_UNIT_LIST', '1')
+    # units from the heap, not the pool (EEComplexUnit.cpp EENewPoolUnit): ASan sees a unit used after its last
+    # reference went; EE_UNIT_POOL=1 to use the pool
+    env.setdefault('EE_UNIT_POOL', '0')
     # abort_on_error: the sanitizer's stop becomes a SIGABRT that lldb catches (crash.txt gets the backtraces)
     env['ASAN_OPTIONS'] = ':'.join(filter(None, [env.get('ASAN_OPTIONS'),
-                                                 f'log_path={out}/asan', 'abort_on_error=1', 'print_summary=1']))
+                                                 f'log_path={out}/asan', 'abort_on_error=1', 'print_summary=1',
+                                                 # freed memory stays poisoned longer (default 256 MB): over an hour
+                                                 # of projectiles a stale pointer otherwise reads a reused block
+                                                 'quarantine_size_mb=4096']))
 
     exe_time = datetime.datetime.fromtimestamp(exe.stat().st_mtime).isoformat(timespec='seconds')
     session = {
