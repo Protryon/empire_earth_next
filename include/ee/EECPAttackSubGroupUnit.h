@@ -104,7 +104,9 @@ public:
     long mL3C;                              // +0x3c (init list)
     long mL40;                              // +0x40 (init list)
     EEComplexUnit* mUnit;                   // +0x44 (referenced)
+    EEComplexUnit* GetTarget() const { return this->mTarget; }
     EEComplexUnit* mTarget;                 // +0x48 (referenced; restored by id through dynamic_cast<EEComplexUnit*>)
+    EECPAttackSubGroup* GetSubGroup() const { return this->mSubGroup; }
     EECPAttackSubGroup* mSubGroup;          // +0x4c (referenced; may be 0)
     // +0x50: another unit of the sub group (Restore: mSubGroup's 0x5e01b by unit; dereferenced in the dtor)
     EECPAttackSubGroupUnit* mEscort;
@@ -112,13 +114,16 @@ public:
     long mState;                            // +0x58 (0, 700, 800, ...: slot +0x28 enters one)
     long mPostAttackMode;                   // +0x5c (Virtual28: 1 or 2)
     float mCourage;                         // +0x60 (= 0.5)
+    float GetAggression() const { return this->mAggression; }
     float mAggression;                      // +0x64 (= 0.5)
     float mF68;                             // +0x68 (= 0.5)
     float mF6C;                             // +0x6c (= 0.5)
     unsigned long mNextUpdateTime;          // +0x70 (slot +0x6c: inTime + 1000)
     long mTargetPickResult;                 // +0x74
     unsigned long mNextRetargetTime;        // +0x78 (saved as unsigned long)
+    unsigned long GetImportance() const { return this->mImportance; }
     unsigned long mImportance;              // +0x7c (the unit class's +0x244 times a factor; saved as unsigned long)
+    bool GetIsImportant() const { return this->mIsImportant; }
     bool mIsImportant;                      // +0x80
     bool mNeedsOrders;                      // +0x81
     bool mIsOutOfFight;                     // +0x82

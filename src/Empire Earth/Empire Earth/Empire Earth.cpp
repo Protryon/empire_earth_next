@@ -148,7 +148,7 @@ unsigned long& gGameWindowWidth = reinterpret_cast<unsigned long&>(gGamePreferen
 unsigned long& gTextureMipLevelsToDrop = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mMIPLevelsToDrop);   // +0x58c
 long& gModelDetail = gGamePreferences.mSettings.mModelDetail;   // +0x590
 unsigned long& gEffectDetail = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mEffectDetail);   // +0x594
-unsigned long& gU5308A0 = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mNetworkAdapter);   // +0x598
+unsigned long& gNetworkAdapter = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mNetworkAdapter);   // +0x598
 unsigned long& gScreenIndex = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mScreenID);   // +0x5a0
 unsigned long& gTerrainMIPLevelsToDrop = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mTerrainMIPLevelsToDrop);   // +0x5a8
 unsigned long& gTexturePixelDepth = reinterpret_cast<unsigned long&>(gGamePreferences.mSettings.mTextureBitDepth);   // +0x5ac
@@ -649,13 +649,14 @@ void EEAttackPlayers(long inPlayer, unsigned char inFlag)
     if (thePlayer != NULL) {
         for (unsigned long i = 1; i < gWorld.mNumPlayers; i++) {
             EEPlayer* theOther = gWorld.mPlayers[i];
-            if (theOther == NULL || theOther->mComputerPlayer == NULL || theOther->mObserverMode != false)
-                continue;
-            EEComputerPlayer* theComputer = theOther->mComputerPlayer;
-            if (theComputer == thePlayer || thePlayer->mEnemies[theComputer->mPlayerID] == 0)
-                theAllies.push_back(theComputer);
-            else
-                theEnemies.push_back(theComputer);
+            if (theOther != NULL && theOther->mComputerPlayer != NULL && theOther->mObserverMode == false) {
+                EEPlayer* theComputer = theOther->mComputerPlayer;
+                bool theIsEnemy = theComputer != thePlayer && thePlayer->mEnemies[theComputer->mPlayerID] != 0;
+                if (!theIsEnemy)
+                    theAllies.push_back(static_cast<EEComputerPlayer*>(theComputer));
+                else
+                    theEnemies.push_back(static_cast<EEComputerPlayer*>(theComputer));
+            }
         }
         long j;
         for (j = theEnemies.size() - 1; j >= 0; j--)
@@ -1244,7 +1245,7 @@ void EECreateGameTimer()
 #include "ee/EEE2DParticle.h"
 #include "ee/EEE3DParticle.h"
 
-void Fn1030AB(); // actual cdecl effect-media reset, defined in EEEffect.cpp
+void CreatePlaneModels(); // actual cdecl effect-media reset, defined in EEEffect.cpp
 
 // FUNCTION: EXE 0x53fcbc
 // Loads the status box icons, mini map, effect, unit, sky and ground shadow media
@@ -1252,7 +1253,7 @@ void EELoadGameMedia()
 {
     EEUIFMGStatusBox::LoadIcons();
     EEUIMiniMap::LoadMedia();
-    Fn1030AB();
+    CreatePlaneModels();
     EEROUnits::LoadMedia();
     EEROTerrain::CreateSkyModel();
     EEROGroundShadows::CreateShadowModel();
@@ -1440,7 +1441,7 @@ void EEStopAllSounds()
     gSoundManager->StopAllOneShotSounds();
 }
 
-void Fn104275(); // effect media cleanup, defined in EEEffect.cpp
+void ReleasePlaneModels(); // effect media cleanup, defined in EEEffect.cpp
 
 // FUNCTION: EXE 0x540d1e
 // Releases the status box icons, mini map, effect, unit, sky and ground shadow media
@@ -1448,7 +1449,7 @@ void EEUnloadGameMedia()
 {
     EEUIFMGStatusBox::UnloadIcons();
     EEUIMiniMap::UnloadMedia();
-    Fn104275();
+    ReleasePlaneModels();
     EEROUnits::ReleaseMedia();
     EEROTerrain::ReleaseSkyModels();
     EEROGroundShadows::ReleaseShadowModel();
@@ -1629,7 +1630,7 @@ void EEReleaseInstanceMutex(bool inShutdown)
 #include "ee/EEDisplayDevices.h"
 
 extern std::vector<GETexture*> gU4E8EF0; // defined in EERenderObject.cpp
-void Fn102E1B(); // effect-render cleanup, defined in EEEffect.cpp
+void DeleteEffectBatchBuffers(); // effect-render cleanup, defined in EEEffect.cpp
 static unsigned long sOriginalVideoMode; // 0x52a1a8: the video mode index found at start-up, restored at shutdown
 
 // FUNCTION: EXE 0x543ece
@@ -1684,7 +1685,7 @@ void EEGraphicsShutdown(bool inShutdown)
     gDisplayRasterizers.clear();
     delete gGameWindow;
     gGameWindow = NULL;
-    Fn102E1B();
+    DeleteEffectBatchBuffers();
     gRasterizer->Deactivate();
     delete gU565350;
     gU565350 = NULL;
@@ -1814,7 +1815,7 @@ void EEShutdownThreads(bool inShutdown)
 #include "ee/EECameraControl.h"
 #include "ee/EEButtonObject.h"
 
-void Fn10269C(); // effect reset, defined in EEEffect.cpp
+void CreateEffectBatchBuffers(); // effect reset, defined in EEEffect.cpp
 extern bool sIconsLoaded; // the status box's icons-loaded flag (defined in EEUIFMGStatusBox's unit)
 
 // FUNCTION: EXE 0x540306
@@ -1860,13 +1861,13 @@ void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFu
         theBlack = GEColor(0.0f, 0.0f, 0.0f);
         gRasterizer->GetSecondarySurface(theScreen)->Clear(theOldRectangle, theBlack, 1.0f);
         gRasterizer->GetScreen(theScreen)->Release(gGameWindow);
-        Fn102E1B();
+        DeleteEffectBatchBuffers();
         gRasterizer->Deactivate();
     }
     long theResult = gRasterizer->Activate();
 
     ESVERIFY_AT(theResult == keseOK, 2978);
-    Fn10269C();
+    CreateEffectBatchBuffers();
     theResult = gRasterizer->GetScreen(theScreen)->Capture(gGameWindow, gGamePreferences.mSettings.GetFullScreen());
 
     ESVERIFY_AT(theResult == keseOK, 2987);
@@ -1940,7 +1941,7 @@ void EEChangeGameScreen(unsigned long inWidth, unsigned long inHeight, bool inFu
 #include "ee/EEUserInterface.h"
 
 void EEEnumerateDisplayDevices(); // 0x548514
-void Fn10269C(); // effect reset, defined in EEEffect.cpp
+void CreateEffectBatchBuffers(); // effect reset, defined in EEEffect.cpp
 GERasterizer* gRasterizer;
 GEWindow* gGameWindow;
 
@@ -1998,7 +1999,7 @@ bool EEInitializeDisplay()
         gGamePreferences.mSettings.mGameBitDepth = 16;
     }
     gGamePreferences.Save();
-    Fn10269C();
+    CreateEffectBatchBuffers();
     // the window class (name, icon 0x66) is the platform window system's (PlatWindowSetAppName in WinMain); its
     // events go to EEUserInterface::HandleEvent (TSThread::SetEventPump)
     GERectangle theDesktop = gRasterizer->GetScreen(gGamePreferences.mSettings.GetScreenID())->GetDesktopRectangle();
@@ -2050,8 +2051,11 @@ UResourceFile* gResource;
 // (the previous instance and show command arguments are unused)
 static int EERun(HINSTANCE inInstance, char* inCommandLine)
 {
-    EEStartScreen theStartScreen(inInstance);
-    FSFileSpec theRecordingFile;
+    long theResult;
+    bool theInitialized;
+    EEStartScreen theSplashScreen(inInstance);
+    bool theShowMovies;
+    FSFileSpec theLogFile;
     if (gPlatSimMode || EECreateInstanceMutex()) {   // the simulation: any number of copies at once
         // the window system (platform/PlatWindow.h): the window class "Empire Earth Expansion" with the game's icon,
         // its events pumped by the UI thread's TSThread::Receive (this thread: EEUserInterface::Run runs on it)
@@ -2071,7 +2075,6 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
 #endif
         UMSetFloatingPointPrecision(kFPPrecision53);
         UMFastMath::BuildSqrtTable();
-        bool theShowMovies;
         if (EEParseCommandLineFirstPass(inCommandLine, theShowMovies)) {
             gInstance = inInstance;
             ESInitialize(inInstance);
@@ -2079,48 +2082,47 @@ static int EERun(HINSTANCE inInstance, char* inCommandLine)
             // started from: its Data, Users and config.yaml are found relative to it (the original used the current
             // directory)
             PlatPathEnterDataRoot();
-            FSInitialize(UString(""));
-            theRecordingFile.SetVolume(gStartupVolume);
-            theRecordingFile.SetDirectory(gStartupDirectory);
-            ESBeginRecording(theRecordingFile);
+            FSInitialize("");
+            theLogFile.SetVolume(gStartupVolume);
+            theLogFile.SetDirectory(gStartupDirectory);
+            ESBeginRecording(theLogFile);
             gResource = new UResourceFile(inInstance);   // the language resources are linked into the exe
 
             ESVERIFY_AT(gResource, 3632);
             EEInitializeDefaultSettings();
-            long theResult = gGamePreferences.Load();
+            theResult = gGamePreferences.Load();
 
             ESVERIFY_AT(theResult == keseOK, 3637);
             if (gPlatSimMode)
                 EESimPreferences();
             EELoadNetworkSettings();
             EEShowSinglePlayerScreen();
-            if (!gPlatSimMode)   // the simulation shows no splash window
-                theStartScreen.Start();
-            bool theInitialized = EEInitializePart1();
-            if (!gPlatSimMode)
-                theStartScreen.Stop();
-            if (theInitialized) {
-                EEPlayIntroMovies(gPlatSimMode || theShowMovies == false);
-                EEInitializePart2();
-                EETestFixtureStart();   // TEST ONLY: nothing unless EE_TEST_UI is set (EETestFixture.cpp)
-                if (gPlatSimMode)
-                    EESimStart();       // TEST ONLY: the simulation's driver (EESim.cpp)
-                if (EEParseCommandLine(inCommandLine)) {
-                    long theResult;
-                    {
-                        UString theCommandLine(inCommandLine);
-                        theResult = gUserInterface->Run(&theCommandLine);
+            // the original tests the constant 1 here (push 1; pop eax; test eax,eax; je, no-/Og)
+            if (1) {
+                if (!gPlatSimMode)   // the simulation shows no splash window
+                    theSplashScreen.Start();
+                theInitialized = EEInitializePart1();
+                if (!gPlatSimMode)
+                    theSplashScreen.Stop();
+                if (theInitialized) {
+                    EEPlayIntroMovies(gPlatSimMode || theShowMovies == false);
+                    EEInitializePart2();
+                    EETestFixtureStart();   // TEST ONLY: nothing unless EE_TEST_UI is set (EETestFixture.cpp)
+                    if (gPlatSimMode)
+                        EESimStart();       // TEST ONLY: the simulation's driver (EESim.cpp)
+                    if (EEParseCommandLine(inCommandLine)) {
+                        theResult = gUserInterface->Run((void*)&(const UString&)inCommandLine);
+                        theInitialized = theResult == kErrorOK;
+                        EEClearGame();
+                        UShutdown(theInitialized, false);
+                        gDataPath->Dereference();
+                        gCivilizationDataPath->Dereference();
                     }
-                    theInitialized = theResult == kErrorOK;
-                    EEClearGame();
+                } else {
                     UShutdown(theInitialized, false);
                     gDataPath->Dereference();
                     gCivilizationDataPath->Dereference();
                 }
-            } else {
-                UShutdown(theInitialized, false);
-                gDataPath->Dereference();
-                gCivilizationDataPath->Dereference();
             }
         }
 #ifdef _WIN32
@@ -2558,8 +2560,7 @@ bool EEInitializeSounds()
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x7a4, "theResult == keseOK");
     gSoundManager = new SESoundManager(gDataPath, gConductor, 50, 0);
     if (gSoundManager == NULL) ESVerify(__FILE__, 0x7a8, "gSoundManager");
-    float thePercentage = gGamePreferences.mSettings.mMaxNumberOfSounds;
-    float theChannels = (float)gSoundManager->GetMaxChannels() * thePercentage;
+    float theChannels = (float)gSoundManager->GetMaxChannels() * gGamePreferences.mSettings.GetMaxNumberOfSounds();
     unsigned long theMaximum = UMFloatToLong(theChannels);
     gSoundManager->SetMaxChannels(theMaximum < 8 ? 8 : theMaximum);
     gSoundManager->SetMasterVolume(gGamePreferences.mSettings.mSoundVolume);
@@ -2789,7 +2790,7 @@ void EEInitializeDatabase()
     EEGraphicEffect::SortMediaByKind();
     theResult = EEFn0FCA98();
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x4c1, "theResult == keseOK");
-    Fn1030AB();
+    CreatePlaneModels();
     EEInitGamePools();
     EEDumpRules();   // EE_DUMP_CONTENT: the rules, after dbmusic filled the binary load's songs
     theResult = URegisterShutdown(EEDeleteDatabase);
@@ -2830,6 +2831,7 @@ void EEInitializeGameObjects()
     EECreateGameTimer();
     theResult = URegisterShutdown(EEDeleteGameObjects);
     if (theResult != kErrorOK) ESVerify(__FILE__, 0x51f, "theResult == keseOK");
+    // GERasterizer::GetScreen and GERectangle::operator= out of line and emits the EEArtificialIntelligence ctor 0x54260b)
 }
 
 // FUNCTION: EXE 0x543e04

@@ -55,14 +55,14 @@ const UString EEEffect::sData("EEEffect-Data");
 
 // SYNTHETIC: EXE 0x502560
 // SYNTHETIC: EXE 0x502565
-// the effects' random numbers (EEEffect::GetRandom, Fn102F3D, Fn102F57; no dtor) (provisional name)
+// the effects' random numbers (EEEffect::GetRandom, GetEffectRandomFloat, GetEffectRandomLong; no dtor) (provisional name)
 static URandom sEffectRandom;
 
-// The two quad batches (one draw call per 0x800 vertices; provisional names): the camera-facing quads of Fn10317D
-// (0x4e8db8) and the flat/heightened ones of Fn1033F1/Fn103634/Fn10387B/Fn103AC8 (0x4e8da8)
+// The two quad batches (one draw call per 0x800 vertices; provisional names): the camera-facing quads of AddGlowSprite
+// (0x4e8db8) and the flat/heightened ones of AddGroundSprite/AddGroundQuad/AddBlendedSprite/AddGroundStrip (0x4e8da8)
 struct EEEffectBatch {
     GEVertexArray* mVertices;               // +0x00
-    GETexture* mTexture;                    // +0x04 (referenced twice by Fn102724)
+    GETexture* mTexture;                    // +0x04 (referenced twice by BeginEffectBatches)
     float mAlphaReference;                  // +0x08 (the smallest reference value of the batch; 1 when empty)
     unsigned long mCount;                   // +0x0c vertices
 };
@@ -72,10 +72,10 @@ static GEPolygonArray* sEffectPolygons;           // 0x4e8df0 (0x400 polygons: t
 GEModel* gU4E8DF4;                          // 0x4e8df4
 GEModel* gEffect2DModel;                    // 0x4e8df8
 
-void Fn103DB7();
+void FlushEffectBatch();
 // the camera plane (a, b, c, d) the fog distance is measured from (also RTSGraphics.cpp 0x11a130; read through
 // inline accessors: `fld; fld; fmulp`; a GEQuaternion by its x, y, z, w accessors) (provisional name; type inferred)
-void Fn103EA6();
+void FlushEffectGroundBatch();
 
 // FUNCTION: EXE 0x50258e
 // Creates an effect on a unit (or none) with a graphic effect, referencing both, in no region yet, and loads its media
@@ -127,7 +127,7 @@ EEEffect::~EEEffect()
 // FUNCTION: EXE 0x50269c
 // Creates the quad batches' shared polygon array (two triangles per quad, 0x200 quads) and both vertex arrays
 // (provisional name)
-void Fn10269C()
+void CreateEffectBatchBuffers()
 {
     sEffectPolygons = gRasterizer->CreatePolygonArray(0x400);
     unsigned long j = 0;
@@ -142,7 +142,7 @@ void Fn10269C()
 
 // FUNCTION: EXE 0x502724
 // Starts both quad batches empty with the given texture, referencing it once per batch (provisional name)
-void Fn102724(GETexture* inTexture)
+void BeginEffectBatches(GETexture* inTexture)
 {
     sEffectBatch.mTexture = inTexture;
     sEffectGroundBatch.mTexture = inTexture;
@@ -200,7 +200,7 @@ long EEEffect::Queue(EEEffectQueue* inQueues)
 
 // FUNCTION: EXE 0x50281f
 // Creates the shared horizontal quad model gU4E8DF4 (unit square in the ground plane, facing up) (provisional name)
-void Fn10281F()
+void CreateHorizontalPlaneModel()
 {
     GEColor theColor(1.0f, 1.0f, 1.0f);
     GE3DPoint thePoint1(-0.5f, 0.5f, 0.0f);
@@ -255,7 +255,7 @@ void Fn10281F()
 // FUNCTION: EXE 0x502b1c
 // Creates the shared upright quad model gEffect2DModel (unit square facing -y, which the 2D effects turn to the
 // camera) (provisional name)
-void Fn102B1C()
+void CreateStandingPlaneModel()
 {
     GEColor theColor(1.0f, 1.0f, 1.0f);
     GE3DPoint thePoint1(-0.5f, 0.0f, 0.5f);
@@ -309,7 +309,7 @@ void Fn102B1C()
 
 // FUNCTION: EXE 0x502e1b
 // Deletes the quad batches' polygon array and vertex arrays (provisional name)
-void Fn102E1B()
+void DeleteEffectBatchBuffers()
 {
     if (sEffectPolygons)
         delete sEffectPolygons;
@@ -349,7 +349,7 @@ void EEEffect::ReleaseResources()
 
 // FUNCTION: EXE 0x502ef0
 // Releases the shared horizontal quad model
-void Fn102EF0()
+void ReleaseHorizontalPlaneModel()
 {
     if (gU4E8DF4)
         gU4E8DF4->Dereference();
@@ -358,7 +358,7 @@ void Fn102EF0()
 
 // FUNCTION: EXE 0x502f08
 // Releases the shared upright quad model gEffect2DModel
-void Fn102F08()
+void ReleaseStandingPlaneModel()
 {
     if (gEffect2DModel)
         gEffect2DModel->Dereference();
@@ -366,8 +366,8 @@ void Fn102F08()
 }
 
 // FUNCTION: EXE 0x502f20
-// Drops the two texture references Fn102724 took (both through the first batch's texture)
-void Fn102F20()
+// Drops the two texture references BeginEffectBatches took (both through the first batch's texture)
+void EndEffectBatches()
 {
     if (sEffectBatch.mTexture) {
         sEffectBatch.mTexture->Dereference();
@@ -377,14 +377,14 @@ void Fn102F20()
 
 // FUNCTION: EXE 0x502f3d
 // Returns a random float between the minimum and the maximum from the effects' random generator
-float Fn102F3D(float inMinimum, float inMaximum)
+float GetEffectRandomFloat(float inMinimum, float inMaximum)
 {
     return sEffectRandom.Generate(inMinimum, inMaximum);
 }
 
 // FUNCTION: EXE 0x502f57
 // Returns a random long from the minimum to the maximum (clamped to the maximum) (provisional name)
-long Fn102F57(long inMinimum, long inMaximum)
+long GetEffectRandomLong(long inMinimum, long inMaximum)
 {
     long theResult = UMFloatToLong(sEffectRandom.Generate() * (inMaximum - inMinimum) + inMinimum);
     if (theResult > inMaximum)
@@ -476,10 +476,10 @@ long EEEffect::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, 
 
 // FUNCTION: EXE 0x5030ab
 // Creates the two shared quad models (provisional name)
-void Fn1030AB()
+void CreatePlaneModels()
 {
-    Fn10281F();
-    Fn102B1C();
+    CreateHorizontalPlaneModel();
+    CreateStandingPlaneModel();
 }
 
 // FUNCTION: EXE 0x5030b5
@@ -490,11 +490,11 @@ void EEEffect::LoadMedia(bool inIsOnDemand)
         this->mGraphicEffect->Load(inIsOnDemand);
 }
 
-// NEAR: block layout of the three returns, and `GetX() * gU4E8F08.GetCameraInverse().GetElement(1, 0)` folds into `fmul [mem]` in ours
+// NEAR: block layout of the three returns; fld1 and fldz where ours loads the literals
 // FUNCTION: EXE 0x5030c8
 // Returns the fog visibility of a point: 1 unless the fog mode is linear, else fades from 1 at the fog start to 0
-// at the fog end, by the distance to the camera plane 0x4e9008
-float Fn1030C8(const GE3DPoint& inPoint, unsigned long inFog)
+// at the fog end, by the distance along the camera (row 1 of the inverse)
+float GetEffectFogFactor(const GE3DPoint& inPoint, unsigned long inFog)
 {
     GERFogAttributes theAttributes;
     if (inFog != 1)
@@ -521,7 +521,7 @@ float Fn1030C8(const GE3DPoint& inPoint, unsigned long inFog)
 // FUNCTION: EXE 0x50317d
 // Adds a camera-facing additive quad to the camera batch (colour dimmed by fog, alpha and brightness), drawing the
 // batch first when it is full
-void Fn10317D(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
+void AddGlowSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
               float inBrightness, float inAlphaReference)
 {
     GE3DPoint theCorner;
@@ -529,13 +529,13 @@ void Fn10317D(const GE3DPoint& inPosition, const GEColor& inColor, float inRotat
     GEVector theUp(0.0f, -1.0f, 0.0f);
     GEVector theNormal;
     GETransformation theTransformation(false);
-    float theAlpha = Fn1030C8(inPosition, gRasterizer->GetFog(gScreenIndex));
+    float theAlpha = GetEffectFogFactor(inPosition, gRasterizer->GetFog(gScreenIndex));
     theAlpha *= inAlpha * inBrightness;
     unsigned long theIndex = sEffectBatch.mCount;
     float theHalfSize = inSize * 0.5f;
     GEColor theColor(inColor.GetRed() * theAlpha, inColor.GetGreen() * theAlpha, inColor.GetBlue() * theAlpha);
     if (theIndex == 0x800) {
-        Fn103DB7();
+        FlushEffectBatch();
         theIndex = 0;
     }
     if (inAlphaReference < sEffectBatch.mAlphaReference)
@@ -580,7 +580,7 @@ void Fn10317D(const GE3DPoint& inPosition, const GEColor& inColor, float inRotat
 // FUNCTION: EXE 0x5033f1
 // Adds a flat ground quad turned by the rotation to the ground batch with one opacity, drawing the batch first when
 // it is full
-void Fn1033F1(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
+void AddGroundSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
               float inBrightness, float inAlphaReference)
 {
     GE3DPoint theCorner;
@@ -592,7 +592,7 @@ void Fn1033F1(const GE3DPoint& inPosition, const GEColor& inColor, float inRotat
     GEColor theColor(inColor.GetRed() * inBrightness, inColor.GetGreen() * inBrightness, inColor.GetBlue() * inBrightness);
     float theHalfSize = inSize * 0.5f;
     if (theIndex == 0x800) {
-        Fn103EA6();
+        FlushEffectGroundBatch();
         theIndex = 0;
     }
     if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
@@ -637,7 +637,7 @@ void Fn1033F1(const GE3DPoint& inPosition, const GEColor& inColor, float inRotat
 // FUNCTION: EXE 0x503634
 // Adds a flat ground quad turned by the yaw to the ground batch with a separate opacity per corner, drawing the
 // batch first when it is full
-void Fn103634(const GE3DPoint& inCenter, const GEColor& inColor, float inYaw, float inSize, float* inHeights,
+void AddGroundQuad(const GE3DPoint& inCenter, const GEColor& inColor, float inYaw, float inSize, float* inHeights,
               float inBrightness, float inAlphaReference)
 {
     GE3DPoint theCorner;
@@ -649,7 +649,7 @@ void Fn103634(const GE3DPoint& inCenter, const GEColor& inColor, float inYaw, fl
     GEColor theColor(inColor.GetRed() * inBrightness, inColor.GetGreen() * inBrightness, inColor.GetBlue() * inBrightness);
     float theHalfSize = inSize * 0.5f;
     if (theIndex == 0x800) {
-        Fn103EA6();
+        FlushEffectGroundBatch();
         theIndex = 0;
     }
     if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
@@ -693,7 +693,7 @@ void Fn103634(const GE3DPoint& inCenter, const GEColor& inColor, float inYaw, fl
 
 // FUNCTION: EXE 0x50387b
 // Adds a camera-facing quad to the alpha-blended ground batch, drawing the batch first when it is full
-void Fn10387B(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
+void AddBlendedSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
               float inBrightness, float inAlphaReference)
 {
     GE3DPoint theCorner;
@@ -705,7 +705,7 @@ void Fn10387B(const GE3DPoint& inPosition, const GEColor& inColor, float inRotat
     GEColor theColor(inColor.GetRed() * inBrightness, inColor.GetGreen() * inBrightness, inColor.GetBlue() * inBrightness);
     float theHalfSize = inSize * 0.5f;
     if (theIndex == 0x800) {
-        Fn103EA6();
+        FlushEffectGroundBatch();
         theIndex = 0;
     }
     if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
@@ -750,7 +750,7 @@ void Fn10387B(const GE3DPoint& inPosition, const GEColor& inColor, float inRotat
 // FUNCTION: EXE 0x503ac8
 // Adds an upright quad from inFrom to inTo, inHeight tall above the ground line between them, to the ground batch,
 // textured from inOrigin over inSize (EEE3DEnergyWave) (provisional names)
-void Fn103AC8(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inHeight, const GEColor& inColor,
+void AddGroundStrip(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inHeight, const GEColor& inColor,
               const GETextureCoordinate& inOrigin, const GETextureCoordinate& inSize, float inAlpha, float inBrightness,
               float inAlphaReference)
 {
@@ -762,7 +762,7 @@ void Fn103AC8(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inHeight, co
     GEColor theColor(inColor.GetRed() * inBrightness, inColor.GetGreen() * inBrightness, inColor.GetBlue() * inBrightness);
     unsigned long theIndex = sEffectGroundBatch.mCount;
     if (theIndex == 0x800) {
-        Fn103EA6();
+        FlushEffectGroundBatch();
         theIndex = 0;
     }
     if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
@@ -816,7 +816,7 @@ void Fn103AC8(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inHeight, co
 
 // FUNCTION: EXE 0x503db7
 // Draws and empties the camera batch: additive, no fog, no culling, z test only (provisional name)
-void Fn103DB7()
+void FlushEffectBatch()
 {
     unsigned long theScreen = gScreenIndex;
     unsigned long theCulling = gRasterizer->GetCulling();
@@ -827,7 +827,7 @@ void Fn103DB7()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetShadingColorSource(1, theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     gRasterizer->Draw(*sEffectPolygons, sEffectBatch.mCount / 2, *sEffectBatch.mVertices, sEffectBatch.mCount, sEffectBatch.mTexture, theScreen,
                       gOrthographicView);
     gRasterizer->SetFog(theFog, theScreen);
@@ -838,7 +838,7 @@ void Fn103DB7()
 
 // FUNCTION: EXE 0x503ea6
 // Draws and empties the ground batch: alpha-blended, no culling, z test only (provisional name)
-void Fn103EA6()
+void FlushEffectGroundBatch()
 {
     unsigned long theScreen = gScreenIndex;
     unsigned long theCulling = gRasterizer->GetCulling();
@@ -847,7 +847,7 @@ void Fn103EA6()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetShadingColorSource(1, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    Fn10F71C();
+    SetPrelitLighting();
     gRasterizer->Draw(*sEffectPolygons, sEffectGroundBatch.mCount / 2, *sEffectGroundBatch.mVertices, sEffectGroundBatch.mCount,
                       sEffectGroundBatch.mTexture, theScreen, gOrthographicView);
     gRasterizer->SetCulling(theCulling);
@@ -857,12 +857,12 @@ void Fn103EA6()
 
 // FUNCTION: EXE 0x503f64
 // Draws whatever the ground batch and then the camera batch still hold (provisional name)
-void Fn103F64()
+void FlushEffectBatches()
 {
     if (sEffectGroundBatch.mCount != 0)
-        Fn103EA6();
+        FlushEffectGroundBatch();
     if (sEffectBatch.mCount != 0)
-        Fn103DB7();
+        FlushEffectBatch();
 }
 
 // FUNCTION: EXE 0x503f81
@@ -933,10 +933,10 @@ void EEEffect::MoveToPoint(const GE3DPoint& inLocation)
             theList->Remove(theEffect);
         this->mTileX = theX;
         this->mTileY = theY;
-        theEffect = this;
+        EEEffect* theEffect2 = this;
         theList = theTable->GetRegion(this->mTileX, this->mTileY);
         if (theList != NULL)
-            theList->push_back(theEffect);
+            theList->push_back(theEffect2);
     }
 }
 
@@ -977,10 +977,10 @@ void EEEffect::ReplaceUnit(EEUnit* inOldUnit, EEUnit* inNewUnit)
 
 // FUNCTION: EXE 0x504275
 // Releases the two shared quad models (provisional name)
-void Fn104275()
+void ReleasePlaneModels()
 {
-    Fn102EF0();
-    Fn102F08();
+    ReleaseHorizontalPlaneModel();
+    ReleaseStandingPlaneModel();
 }
 
 // FUNCTION: EXE 0x50427f

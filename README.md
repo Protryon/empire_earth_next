@@ -30,9 +30,9 @@ DLLs only.
 | `mixer` | `Miles Sound System Mixer.dll` (sound; now on miniaudio) | `src/Low-Level Engine/Sound Engine/Mixer/` |
 | (resources) | `Language.dll` | `src/Empire Earth/Language/Language.rc` |
 
-The WON online library is not part of the reconstruction (its services no longer exist): the exe links source
-stand-ins for it (`src/Empire Earth/WONAPI/WONAPIStubs.cpp`). Every symbol is defined in source; the exe is one plain
-lld-link.
+The WON online library (lobby, routing, the lobby's GUI toolkit; `src/Empire Earth/WONAPI`, module `won`) is built
+from the reconstruction's source too; its online services no longer exist. Every symbol is defined in source; the exe
+is one plain lld-link.
 
 ## Building
 

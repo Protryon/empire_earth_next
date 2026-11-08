@@ -278,7 +278,7 @@ void EEPMSubmergedNaval::Step4(EEComplexUnit* inUnit)
     float theYaw;
     this->SpinDown(inUnit, &theYawRate, &theYaw);
     theRate.mYaw = theYawRate;
-    inUnit->mAngularVelocity = theRate;
+    inUnit->SetAngularVelocity(theRate);
     GETransformation theNew(false);
     theNew.SetOrientationYPR(theYaw, 0.0f, 0.0f);
     theNew.SetPosition(0.0f, 0.0f, 0.0f);
@@ -326,7 +326,7 @@ void EEPMSubmergedNaval::Step5(EEComplexUnit* inUnit)
         float theLeft;
         float theYawRate;
         float theYaw;
-        this->TurnTowardAngle(inUnit, theHeading, theGoal->mYaw, &theLeft, &theYawRate, &theYaw, false);
+        this->TurnTowardAngle(inUnit, theHeading, theGoal->GetYaw(), &theLeft, &theYawRate, &theYaw, false);
         GEOrientation& theAngularVelocity = inUnit->mAngularVelocity;
         theAngularVelocity.mPitch = 0.0f;
         theAngularVelocity.mRoll = 0.0f;
@@ -411,10 +411,10 @@ bool EEPMSubmergedNaval::ClipStep(EEComplexUnit* inUnit, const GEVector& inMove,
 {
     GE3DPoint theTarget;
     EEUnit* theBlocker = NULL;
-    EEMap* theMap = ::gWorld.mMap;
     long theX = UMFloor(ioLocation.GetX());
-    long theY = UMFloor(ioLocation.GetY());
     bool theTriedX = false;
+    long theY = UMFloor(ioLocation.GetY());
+    EEMap* theMap = ::gWorld.mMap;
     bool theTriedY = false;
     bool theSlowed = true;
     EETile* theTile = theMap->GetTile(theX, theY);

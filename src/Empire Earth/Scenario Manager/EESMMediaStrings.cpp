@@ -15,7 +15,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEStringIDs.h"
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // FUNCTION: EXE 0x5c5783
 // Appends the scenario's sound and map picture files (lower case; the movie is not listed) to the list and each
@@ -27,9 +27,9 @@ bool EESMMediaStrings::ListMediaFiles(const UWideString& inFile, std::vector<UWi
     UWideString theFile;
     bool theResult = true;
     for (unsigned long i = 1; i < 3; i++) {
-        theFile = gU4E5B98;
+        theFile = gEmptyString;
         if (this->GetMediaFile(inFile, i, theFile, theError, inFlag)) {
-            if (theFile != gU4E5B98) {
+            if (theFile != gEmptyString) {
                 PlatMbsLwr((unsigned char*)(const char*)theFile);
                 ioFiles.push_back(theFile);
             }
@@ -100,7 +100,7 @@ bool EESMMediaStrings::GetMediaFile(const UWideString& inScenarioName, unsigned 
         break;
     }
     gResource->GetString(IDS_SE_MAP_NONE, theNoneString);
-    if (theName != theNoneString && theName != gU4E5B98) {
+    if (theName != theNoneString && theName != gEmptyString) {
         if (gDataPath->FindFile(thePath1) == 0) {
             outFile = inCampaignPrefix ? thePrefixedPath1 : thePath1;
         } else if (gDataPath->FindFile(thePath2) == 0) {

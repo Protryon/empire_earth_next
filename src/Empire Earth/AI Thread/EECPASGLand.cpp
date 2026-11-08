@@ -431,12 +431,12 @@ void EECPASGLand::GetPathCosts(void* inFrom, void* inTo, EECPASGWeights& outWeig
                 EEAIPathSubSector* theNeighbor = theSector->mNeighbors[i];
                 if (theNeighbor == NULL)
                     continue;
-                if (!theHasWall && theNeighbor->mKind == kAITileWall)
+                if (!theHasWall && theNeighbor->GetKind() == kAITileWall)
                     theHasWall = true;
                 else if (!theHasLand) {
-                    if (theNeighbor->mKind == kAITileWater || (theNeighbor->mKind > kAITileMapEdge && theNeighbor->mKind <= kAITileNearShore))
+                    if (theNeighbor->GetKind() == kAITileWater || (theNeighbor->GetKind() > kAITileMapEdge && theNeighbor->GetKind() <= kAITileNearShore))
                         theHasLand = true;
-                } else if (!theHasSpace && theNeighbor->mKind == kAITileSpace)
+                } else if (!theHasSpace && theNeighbor->GetKind() == kAITileSpace)
                     theHasSpace = true;
             }
             if (theHasWall && (theHasLand || theHasSpace)) {
@@ -447,33 +447,33 @@ void EECPASGLand::GetPathCosts(void* inFrom, void* inTo, EECPASGWeights& outWeig
         }
     }
     for (long j = this->mUnits.size() - 1; j >= 0; --j) {
-        EEUnitClass* theClass = this->mUnits[j]->mUnit->GetUnitClass();
-        if (theClass->mCanEnterAirTransports && !this->mNoTransport)
+        EEUnitClass* theClass = this->GetUnitAt(j)->GetUnit()->GetUnitClass();
+        if (theClass->GetCanEnterAirTransports() && !this->GetNoTransport())
             ++theLand;
-        if (theClass->mCanEnterSeaTransports)
+        if (theClass->GetCanEnterSeaTransports())
             ++theAir;
-        if (theClass->mCanEnterSpaceTransports)
+        if (theClass->GetCanEnterSpaceTransports())
             ++theSpace;
-        if ((this->mUnits[j]->mUnit->mStats->mTerrainMask >> 14) & 1)
+        if ((this->GetUnitAt(j)->GetUnit()->GetStats()->GetTerrainMask() >> 14) & 1)
             ++theSpecial;
-        theReadiness += this->mUnits[j]->mAggression * 1.23f;
+        theReadiness += this->GetUnitAt(j)->GetAggression() * 1.23f;
     }
     if (theToContinent != theFromContinent) {
         outWeights.mValues[1] = 0.02f;
         outWeights.mValues[10] = 0.03f;
-        if (this->mPlayer->mTechnologies->mCurrentEpoch >= kTechEpochAtomicModern && theLand != 0)
+        if (this->GetPlayer()->GetTechnologies()->GetCurrentEpoch() >= kTechEpochAtomicModern && theLand != 0)
             outWeights.mValues[5] = 0.0f;
     } else {
-        if (this->mPlayer->mTechnologies->mCurrentEpoch > kTechEpochPrehistoric && theAir != 0 && (this->mMission == 2 || this->mMission == 0) &&
+        if (this->GetPlayer()->GetTechnologies()->GetCurrentEpoch() > kTechEpochPrehistoric && theAir != 0 && (this->GetMission() == 2 || this->GetMission() == 0) &&
             gPhysics->mRandom.Generate() > 0.15f && (!theMixedSectors || gPhysics->mRandom.Generate() > kASGLMixedChance) &&
             theReadiness != 0.0f) {
             outWeights.mValues[1] = max(0.0f, 1.0f - theReadiness / (float)this->mUnits.size());   // the average, not stored back
         }
-        if (this->mPlayer->mTechnologies->mCurrentEpoch >= kTechEpochSpace && theSpace != 0 && (this->mMission == 2 || this->mMission == 0) &&
+        if (this->GetPlayer()->GetTechnologies()->GetCurrentEpoch() >= kTechEpochSpace && theSpace != 0 && (this->GetMission() == 2 || this->GetMission() == 0) &&
             theReadiness != 0.0f) {
             outWeights.mValues[10] = max(0.0f, 1.0f - theReadiness / (float)this->mUnits.size());   // averaged once (was again)
         }
-        if (this->mPlayer->mTechnologies->mCurrentEpoch >= kTechEpochAtomicModern && theLand != 0 &&
+        if (this->GetPlayer()->GetTechnologies()->GetCurrentEpoch() >= kTechEpochAtomicModern && theLand != 0 &&
             gPhysics->mRandom.Generate() > 0.15f && theReadiness != 0.0f)
             outWeights.mValues[5] = max(0.0f, 1.0f - theReadiness / (float)this->mUnits.size());
     }
@@ -616,7 +616,7 @@ long EECPASGLand::GetTransportNeeds(long& outA, long& outB, long& outC, long& ou
             theCount++;
     }
     return theCount;
-  /* LOST-DEBUG: none: exact only (lostdebug_search, smallest n) */ }
+}
 
 // FUNCTION: EXE 0x447145
 // Takes the units the request delivered; when they stand on more than one continent, queues a split order
@@ -856,18 +856,18 @@ bool EECPASGLand::CanReach(const EECPILocation* inLocation)
 bool EECPASGLand::IsGatePassable(EEAIPathSubSector* inSector)
 {
     bool theResult = true;
-    if (inSector != NULL && (inSector->mKind == kAITileWall || inSector->mKind == kAITileGate || inSector->mKind == kAITileUnitObstacle)) {
+    if (inSector != NULL && (inSector->GetKind() == kAITileWall || inSector->GetKind() == kAITileGate || inSector->GetKind() == kAITileUnitObstacle)) {
         EEMapTile* theTile = gWorld.GetMap()->GetTile(inSector->mLocation.GetX(), inSector->mLocation.GetY());
         if (theTile != NULL) {
-            for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL && theResult == true; theNode = theNode->mNext) {
-                EEUnit* theUnit = theNode->mUnit;
-                if (theUnit->mHitPoints <= 0)
+            for (RTSTileUnitNode* theNode = theTile->GetUnits(); theNode != NULL && theResult == true; theNode = theNode->GetNext()) {
+                EEUnit* theUnit = theNode->GetUnit();
+                if (theUnit->GetHitPoints() <= 0)
                     continue;
                 EEUnitClass* theClass = theUnit->GetUnitClass();
-                if (theClass->mIsWall || theClass->mCategory == kUnitCategoryGate) {
-                    theResult = !(this->mPlayer2->IsAlly(theUnit->mPlayer));
-                } else if (theClass->IsLandBuilding() && theUnit->GetUnitClass()->mBlocksTile) {
-                    theResult = theUnit->mPlayer == this->mPlayer2 || this->mPlayer2->mEnemies[theUnit->mPlayer->mPlayerID] == 0;
+                if (theClass->GetIsWall() || theClass->GetCategory() == kUnitCategoryGate) {
+                    theResult = !(this->GetPlayer2()->IsAlly(theUnit->GetPlayer()));
+                } else if (theClass->IsLandBuilding() && theUnit->GetUnitClass()->GetBlocksTile()) {
+                    theResult = theUnit->GetPlayer() == this->GetPlayer2() || this->GetPlayer2()->mEnemies[theUnit->GetPlayer()->GetPlayerID()] == 0;
                 } else {
                     theResult = true;
                 }
@@ -988,13 +988,13 @@ bool EECPASGLand::FindCrossingTile(EEAIContinent* inFirst, EEAIContinent* inSeco
             // the original uses BC's count even when indexing the separate DC vector; an index past DC's end
             // reads as id 0 instead of reading past the vector
             for (long i = inFirst->mIDsBC.size() - 1; i >= 0; i--) {
-                if (inWater) {
+                if (!(inWater)) {
+                    if (std::find(inSecond->mIDsBC.begin(), inSecond->mIDsBC.end(), inFirst->mIDsBC[i]) != inSecond->mIDsBC.end())
+                        theIDs.push_back(inFirst->mIDsBC[i]);
+                } else {
                     unsigned short theDCID = (unsigned long)i < inFirst->mIDsDC.size() ? inFirst->mIDsDC[i] : 0;
                     if (std::find(inSecond->mIDsDC.begin(), inSecond->mIDsDC.end(), theDCID) != inSecond->mIDsDC.end())
                         theIDs.push_back(theDCID);
-                } else {
-                    if (std::find(inSecond->mIDsBC.begin(), inSecond->mIDsBC.end(), inFirst->mIDsBC[i]) != inSecond->mIDsBC.end())
-                        theIDs.push_back(inFirst->mIDsBC[i]);
                 }
             }
             if (theIDs.size() > 0)
@@ -1037,39 +1037,39 @@ void EECPASGLand::GetUnitsNotAboard(std::vector<EEComplexUnit*>& outUnits)
 void EECPASGLand::GetUnitsNotCarriable(std::vector<EEComplexUnit*>& outUnits)
 {
     outUnits.clear();
-    if (this->mTransport == NULL)
+    if (this->GetTransport() == NULL)
         return;
-    EECPAttackSubGroup* theTransport = dynamic_cast<EECPAttackSubGroup*>(this->mTransport);
+    EECPAttackSubGroup* theTransport = dynamic_cast<EECPAttackSubGroup*>(this->GetTransport());
     for (long i = this->mUnits.size() - 1; i >= 0; i--) {
         if (this->mUnits[i]->IsDone())
             continue;
-        EEComplexUnit* theUnit = this->mUnits[i]->mUnit;
-        if (theUnit->mContainer != NULL)
+        EEComplexUnit* theUnit = this->mUnits[i]->GetUnit();
+        if (theUnit->GetContainer() != NULL)
             continue;
         EEUnitClass* theClass = theUnit->GetUnitClass();
-        if (theClass->mTransportCapacity == 0) {
+        if (theClass->GetTransportCapacity() == 0) {
             EEAIContinent* theContinent;
-            switch (theTransport->mKind) {
+            switch (theTransport->GetKind()) {
             case kASGKindSeaTransport:
-                if (theClass->mCanEnterSeaTransports && theUnit->mTileX != -10000) {
+                if (theClass->GetCanEnterSeaTransports() && theUnit->GetTileX() != -10000) {
                     theContinent = gContinentManager.GetContinentAt(theUnit);
-                    if (theContinent != NULL && theContinent->mCategory != kContinentCategoryCliff && theContinent->mCategory != kContinentCategoryWater
-                        && theContinent->mCategory != kContinentCategoryMapEdge)
+                    if (theContinent != NULL && theContinent->GetCategory() != kContinentCategoryCliff && theContinent->GetCategory() != kContinentCategoryWater
+                        && theContinent->GetCategory() != kContinentCategoryMapEdge)
                         continue;
                 }
                 break;
             case kASGKindAirTransport:
-                if (theClass->mCanEnterAirTransports && theUnit->mTileX != -10000) {
+                if (theClass->GetCanEnterAirTransports() && theUnit->GetTileX() != -10000) {
                     theContinent = gContinentManager.GetContinentAt(theUnit);
-                    if (theContinent != NULL && theContinent->mCategory != kContinentCategoryWater)
+                    if (theContinent != NULL && theContinent->GetCategory() != kContinentCategoryWater)
                         continue;
                 }
                 break;
             case kASGKindSpaceTransport:
-                if (theClass->mCanEnterSpaceTransports && theUnit->mTileX != -10000) {
+                if (theClass->GetCanEnterSpaceTransports() && theUnit->GetTileX() != -10000) {
                     theContinent = gContinentManager.GetContinentAt(theUnit);
-                    if (theContinent != NULL && theContinent->mCategory != kContinentCategoryCliff && theContinent->mCategory != kContinentCategoryWater
-                        && theContinent->mCategory != kContinentCategoryMapEdge)
+                    if (theContinent != NULL && theContinent->GetCategory() != kContinentCategoryCliff && theContinent->GetCategory() != kContinentCategoryWater
+                        && theContinent->GetCategory() != kContinentCategoryMapEdge)
                         continue;
                 }
                 break;
@@ -1574,16 +1574,16 @@ bool EECPASGLand::AdvanceSubSector()
             if (theResult)
                 return theResult;
             theResult = true;
-            theCurrent->GetLinks(theTarget->mID, theLinks);
+            theCurrent->GetLinks(theTarget->GetID(), theLinks);
             for (long i = theLinks.size() - 1; i >= 0 && theResult; --i) {
                 if (this->IsGateBlocked(theLinks[i].first) &&
                     (this->mFlags.mFlags[theLinks[i].second->mKind] != true || theLinks[i].second->mKind == 13 ||
-                     theLinks[i].second->mKind == 14 || theLinks[i].second->mKind == 12)) {
+                     theLinks[i].second->GetKind() == 14 || theLinks[i].second->GetKind() == 12)) {
                     this->mNextSubSectorTile = theLinks[i].first->mLocation;
                     theResult = false;
                 } else if (this->IsGateBlocked(theLinks[i].second) &&
                     (this->mFlags.mFlags[theLinks[i].first->mKind] != true || theLinks[i].first->mKind == 13 ||
-                     theLinks[i].first->mKind == 14 || theLinks[i].first->mKind == 12)) {
+                     theLinks[i].first->GetKind() == 14 || theLinks[i].first->GetKind() == 12)) {
                     this->mNextSubSectorTile = theLinks[i].second->mLocation;
                     theResult = false;
                 }
@@ -1612,26 +1612,26 @@ bool EECPASGLand::AdvanceSubSector()
                     EEAIPathSubSector* theNext = gContinentManager.GetPathSubSectorAt(
                         theRequest->mPath[j].GetX(), theRequest->mPath[j].GetY());
                     theResult = !this->IsGateBlocked(theNext);
-                    if (!theResult) {
-                        this->mNextSubSectorTile = theNext->mLocation;
-                    } else {
+                    if (theResult) {
                         theLinks.clear();
                         if (thePrevious->IsNeighbor(theNext) && thePrevious != theNext) {
-                            thePrevious->GetLinks(theNext->mID, theLinks);
+                            thePrevious->GetLinks(theNext->GetID(), theLinks);
                             for (long k = theLinks.size() - 1; k >= 0 && theResult; --k) {
                                 if (this->IsGateBlocked(theLinks[k].first) &&
                                     (this->mFlags.mFlags[theLinks[k].second->mKind] != true || theLinks[k].second->mKind == 13 ||
-                                     theLinks[k].second->mKind == 14 || theLinks[k].second->mKind == 12)) {
+                                     theLinks[k].second->GetKind() == 14 || theLinks[k].second->GetKind() == 12)) {
                                     this->mNextSubSectorTile = theLinks[k].first->mLocation;
                                     theResult = false;
                                 } else if (this->IsGateBlocked(theLinks[k].second) &&
                                     (this->mFlags.mFlags[theLinks[k].first->mKind] != true || theLinks[k].first->mKind == 13 ||
-                                     theLinks[k].first->mKind == 14 || theLinks[k].first->mKind == 12)) {
+                                     theLinks[k].first->GetKind() == 14 || theLinks[k].first->GetKind() == 12)) {
                                     this->mNextSubSectorTile = theLinks[k].second->mLocation;
                                     theResult = false;
                                 }
                             }
                         }
+                    } else {
+                        this->mNextSubSectorTile = theNext->mLocation;
                     }
                     thePrevious = theNext;
                 }
@@ -1644,8 +1644,8 @@ bool EECPASGLand::AdvanceSubSector()
         if (theResult)
             return theResult;
     }
-    EETile* theTile = gWorld.mMap->GetTileAtLocation(this->mNextSubSectorTile);
-    if (theTile == NULL || !theTile->IsSeenBy(this->mPlayer))
+    EETile* theTile = gWorld.GetMap()->GetTileAtLocation(this->mNextSubSectorTile);
+    if (theTile == NULL || !theTile->IsSeenBy(this->GetPlayer()))
         return true;
     theBounds = this->mArea;
     long theMargin = this->mScanRange;
@@ -1720,19 +1720,19 @@ bool EECPASGLand::CheckNextSubSector(long inTime)
                                 if (!theResult) {
                                     theLinks.clear();
                                     if (thePrevious->IsNeighbor(theNext) && thePrevious != theNext) {
-                                        thePrevious->GetLinks(theNext->mID, theLinks);
+                                        thePrevious->GetLinks(theNext->GetID(), theLinks);
                                         for (long k = theLinks.size() - 1; k >= 0 && !theResult; --k) {
                                             if (this->IsGateBlocked(theLinks[k].first)) {
                                                 theResult = gContinentManager.GetPathSubSectorAt(this->mNextSubSectorTile.GetX(), this->mNextSubSectorTile.GetY()) == theLinks[k].first;
                                                 if (theResult && this->mFlags.mFlags[theLinks[k].second->mKind] == true &&
-                                                    theLinks[k].second->mKind != 13 && theLinks[k].second->mKind != 14 && theLinks[k].second->mKind != 12)
+                                                    theLinks[k].second->GetKind() != 13 && theLinks[k].second->GetKind() != 14 && theLinks[k].second->GetKind() != 12)
                                                     theResult = false;
                                             }
                                             if (theResult || !this->IsGateBlocked(theLinks[k].second))
                                                 continue;
                                             theResult = gContinentManager.GetPathSubSectorAt(this->mNextSubSectorTile.GetX(), this->mNextSubSectorTile.GetY()) == theLinks[k].second;
                                             if (theResult && this->mFlags.mFlags[theLinks[k].first->mKind] == true &&
-                                                theLinks[k].first->mKind != 13 && theLinks[k].first->mKind != 14 && theLinks[k].first->mKind != 12)
+                                                theLinks[k].first->GetKind() != 13 && theLinks[k].first->GetKind() != 14 && theLinks[k].first->GetKind() != 12)
                                                 theResult = false;
                                         }
                                     }
@@ -1884,7 +1884,7 @@ bool EECPASGLand::BoardTransports(std::vector<EEComplexUnit*>* inTransports)
             theCurrent.mTransport = (*inTransports)[i];
             theCurrent.ResetLoad();
             while (!theAvailable.empty()) {
-                if (theAvailable.back()->mContainer == NULL) {
+                if (theAvailable.back()->GetContainer() == NULL) {
                     if (theAvailable.back()->GetUnitClass()->mWeight + theCurrent.mLoad > theCurrent.mTransport->GetUnitClass()->mTransportCapacity)
                         break;
                     theCurrent.mUnits.push_back(theAvailable.back());
@@ -2023,10 +2023,10 @@ bool EECPASGLand::ChooseAirUnloadPoint()
                     float theRandom = gPhysics->GetRandom();
                     switch (theChoices.back().first) {
                     case 4:
-                        if (theContinent->mCategory != kContinentCategoryWater && theContinent->mCategory != kContinentCategorySpace) {
+                        if (theContinent->GetCategory() != kContinentCategoryWater && theContinent->GetCategory() != kContinentCategorySpace) {
                             for (long i = 15; i >= 0; i--) {
                                 thePoint = theContinent->GetRandomPoint();
-                                if (gWorld.GetMap()->GetTile(thePoint.mX, thePoint.mY) == NULL || !this->CanTransportLandAt(thePoint))
+                                if (gWorld.GetMap()->GetTile(thePoint.GetX(), thePoint.GetY()) == NULL || !this->CanTransportLandAt(thePoint))
                                     continue;
                                 thePending = false;
                                 this->mUnloadLocation.mSerial = theContinent->mSerial;
@@ -2040,11 +2040,11 @@ bool EECPASGLand::ChooseAirUnloadPoint()
                         if (theRandom <= theChoices.back().second) {
                             theFile->GetAllUnits(theContinent->mID, theUnits);
                             for (long i = theUnits.size() - 1; i >= 0; i--) {
-                                if (theUnits[i]->mUnitClass->mUnitType != kUnitTypeFarm && theUnits[i]->mUnitClass->mUnitType != kUnitTypeRoboticFarm)
+                                if (theUnits[i]->GetClass()->GetUnitType() != kUnitTypeFarm && theUnits[i]->GetClass()->GetUnitType() != kUnitTypeRoboticFarm)
                                     continue;
                                 this->mUnloadLocation.mSerial = theContinent->mSerial;
                                 this->mUnloadLocation.mType = kAIAreaContinent;
-                                theTile.SetXY(theUnits[i]->mTileX, theUnits[i]->mTileY);
+                                theTile.SetXY(theUnits[i]->GetTileX(), theUnits[i]->GetTileY());
                                 thePending = false;
                                 break;
                             }
@@ -2084,7 +2084,7 @@ bool EECPASGLand::ChooseAirUnloadPoint()
             }
         }
     }
-    return theTile.mX != theOld.mX || theTile.mY != theOld.mY;
+    return theTile.GetX() != theOld.GetX() || theTile.GetY() != theOld.GetY();
 }
 
 // FUNCTION: EXE 0x44afce
@@ -2217,8 +2217,8 @@ void EECPASGLand::RequestPath(void* inFrom, void* inTo)
     EETileCoordinate* theFrom = static_cast<EETileCoordinate*>(inFrom);
     EETileCoordinate* theTo = static_cast<EETileCoordinate*>(inTo);
     EEAIGPGModifierLandAttackSubGroupRoutePlanner* theModifier = new EEAIGPGModifierLandAttackSubGroupRoutePlanner(
-        this, gContinentManager.GetContinentID(theFrom->mX, theFrom->mY),
-        gContinentManager.GetContinentID(theTo->mX, theTo->mY), theWeights.mValues[5] == 0.0f, theWeights);
+        this, gContinentManager.GetContinentID(theFrom->GetX(), theFrom->GetY()),
+        gContinentManager.GetContinentID(theTo->GetX(), theTo->GetY()), theWeights.mValues[5] == 0.0f, theWeights);
     this->mPathRequest = gPathManager.RequestPath(this->mPlayer->GetPlayerID(), *theFrom, *theTo, &theFlags, 2, -1,
                                            theModifier, 0);
     ++this->mPlayer->mCombatManager->mAttackCommander->mUpdatesThisTick;
@@ -2249,7 +2249,7 @@ void EECPASGLand::PrunePath()
         if (theSector == NULL)
             continue;
         EEAIContinent* theContinent = gContinentManager.GetContinentAt(this->mPath[i].mTile.GetX(), this->mPath[i].mTile.GetY());
-        long theType = theContinent->mCategory;
+        long theType = theContinent->GetCategory();
         if (theContinentID == theContinent->mID || theType == kContinentCategoryLand || theType == kContinentCategoryMapEdge) {
             long theKind = theSector->mKind;
             if ((theKind == kAITileLand || (theKind > kAITileMapEdge && theKind <= kAITileShore) || theKind == kAITileGate) &&
@@ -2307,7 +2307,7 @@ void EECPASGLand::PrunePath()
                     for (long j = i; j < this->mPath.size(); j++) {
                         EEAIContinent* theNext = gContinentManager.GetContinentAt(this->mPath[j].mTile.GetX(),
                                                                                this->mPath[j].mTile.GetY());
-                        if (theNext != theContinent && theNext->mCategory == kContinentCategoryLand &&
+                        if (theNext != theContinent && theNext->GetCategory() == kContinentCategoryLand &&
                             theNext->mID == theLastContinent->mID) {
                             this->mLandingTile = this->mPath[j].mTile;
                             break;

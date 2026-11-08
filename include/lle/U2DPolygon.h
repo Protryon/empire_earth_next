@@ -171,11 +171,11 @@ public:
                     } else
                         theResult = this->mPoints[theIndex];
                 } else {
-                    theToPoint.SetX(inPoint.GetX() - this->mPoints[theIndex].GetX());
-                    theToPoint.SetY(inPoint.GetY() - this->mPoints[theIndex].GetY());
+                    theToPoint.SetX((float)inPoint.GetX() - (float)this->mPoints[theIndex].GetX());
+                    theToPoint.SetY((float)inPoint.GetY() - (float)this->mPoints[theIndex].GetY());
                     theToPoint.Normalize();
-                    theEdge.SetX(this->mPoints[thePrevious].GetX() - this->mPoints[theIndex].GetX());
-                    theEdge.SetY(this->mPoints[thePrevious].GetY() - this->mPoints[theIndex].GetY());
+                    theEdge.SetX((float)this->mPoints[thePrevious].GetX() - (float)this->mPoints[theIndex].GetX());
+                    theEdge.SetY((float)this->mPoints[thePrevious].GetY() - (float)this->mPoints[theIndex].GetY());
                     theEdge.Normalize();
                     theDot = theEdge.DotProduct(theToPoint);
                     if (theDot >= 0.0f) {

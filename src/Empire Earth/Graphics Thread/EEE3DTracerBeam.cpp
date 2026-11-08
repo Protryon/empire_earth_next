@@ -266,11 +266,11 @@ long EEE3DTracerBeam::DrawPass6()
         gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
     else
         gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     theModel->SetTexture(this->mGraphicObject->mTextures[0], theScreen);
     if (theColoured) {
         GE3DPoint theLocation = theTransformation.GetPosition();
-        Fn11A130(theLocation, theFog, theValue);
+        GetFogFactor(theLocation, theFog, theValue);
     }
     theScale.SetScale(theSize, theSize, theSize);
     theTransformation.Apply(theScale, theCombined);

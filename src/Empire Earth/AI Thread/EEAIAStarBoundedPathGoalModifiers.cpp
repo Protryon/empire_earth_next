@@ -533,13 +533,13 @@ long EEAIGPGModifierLandAttackSubGroupRoutePlanner::GetCost(EEAIAStarGraphNode* 
             theCost += thePenalty;
     } else if (theKind == kAITileGate) {
         if (this->mWeights.mValues[2] != 1.0f)
-            theCost += UMFloatToLong(this->mWeights.mValues[2] * kEEGPGBridgeCost);
+            theCost += UMFloatToLong(this->mWeights.mValues[2] * 800.0f);
         else
             theCost += 800;
     }
     float theInfluence = (float)this->GetInfluenceCost(inFrom, inTo, false);
     if (theInfluence != 0.0f)
-        theCost += UMFloatToLong(theInfluence * kEEGPGInfluenceScale * this->mWeights.mValues[4]);
+        theCost += UMFloatToLong(this->mWeights.mValues[4] * (theInfluence * 1.85f));
 
     inTo->GetLinks(theFrom->mID, theLinks);
     for (long i = theLinks.size() - 1; i >= 0; i--) {
@@ -560,7 +560,7 @@ long EEAIGPGModifierLandAttackSubGroupRoutePlanner::GetCost(EEAIAStarGraphNode* 
         if (theLinks[i].first->mKind != 14 && theLinks[i].second->mKind != 14)
             continue;
         if (this->mWeights.mValues[2] != 1.0f)
-            theCost += UMFloatToLong(this->mWeights.mValues[2] * kEEGPGBridgeCost);
+            theCost += UMFloatToLong(this->mWeights.mValues[2] * 800.0f);
         else
             theCost += 800;
         break;

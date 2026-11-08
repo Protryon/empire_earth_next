@@ -1,9 +1,7 @@
-// C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbyFileTransfer.cpp (name PROVISIONAL: no __FILE__; the
-// class EELobbyFileTransfer (RTTI, vtable 0x84c440) and its WON send/receive operations; it sorts between
-// EELobbyFileDialog.cpp and EELobbyGame.cpp). A saved game's transfer between the host and the clients:
-// 0x291463..0x29222b. Module flags. r23-ai-planner: the transfer object's own members; the SendFileOp/receive
-// operation classes 0x291463..0x2916b3 and 0x291870..0x291b06, Download and the LobbyCompletion/set COMDATs after
-// 0x291d59 are not written yet.
+// C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbyFileTransfer.cpp (file name inferred: no __FILE__)
+// Class EELobbyFileTransfer (RTTI, vtable 0x84c440) and its WON send operation; the unit sorts between
+// EELobbyFileDialog.cpp and EELobbyGame.cpp. Transfers a saved game from the host to the clients in a lobby game
+// (0x691463..0x69222b).
 #include <windows.h>
 #include "platform/PlatFile.h"
 #include <string>
@@ -20,17 +18,18 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/EELobbyGameCode.h"
+#include "ee/wonapi/WONStatus.h"
 
 using namespace WONAPI;
 
-// the host's side of a saved game's transfer: the file in 0x2000-byte chunks over one client's socket (RTTI
-// SendFileOp > SocketOp, vtable 0x84c408; 0x207c bytes; r23)
+// The host's side of a saved game's transfer: sends the file in 0x2000-byte chunks over one client's socket (RTTI
+// SendFileOp > SocketOp, vtable 0x84c408; 0x207c bytes)
 class SendFileOp : public SocketOp {
 public:
     SendFileOp(const std::string& inPath, AsyncSocket* inSocket);
-    virtual void Virtual08() { CloseFile(); }   // +0x08 0x2916b3
-    virtual WONStatus Virtual0C();          // +0x0c 0x2915d2
-    virtual WONStatus Virtual10();          // +0x10 0x291613
+    virtual void CleanupHook() { this->CloseFile(); }  // +0x08 0x2916b3
+    virtual WONStatus Start();              // +0x0c 0x2915d2
+    virtual WONStatus Continue();           // +0x10 0x291613
     void CloseFile();                       // 0x29157e
     bool ReadChunk();                       // 0x291596
 
@@ -41,18 +40,19 @@ public:
 };
 
 // FUNCTION: EXE 0x691463
+// Creates the send operation for the saved game at the given path, with no file open yet
 SendFileOp::SendFileOp(const std::string& inPath, AsyncSocket* inSocket)
     : SocketOp(inSocket), mPath(inPath), mReadBuffer(mBuffer, 0x2000)
 {
-    mFile = NULL;
-    mB58[1] = true;
+    this->mFile = NULL;
+    this->mWaitForEvent[1] = true;
 }
 
 // TEMPLATE: EXE 0x6914c2
 // (SocketOp::SocketOp, inline)
 
 // TEMPLATE: EXE 0x69151c
-// (SocketOp::Virtual0C, inline)
+// (SocketOp::Start, inline)
 
 // SYNTHETIC: EXE 0x691521
 // (SocketOp's scalar deleting destructor)
@@ -64,175 +64,182 @@ SendFileOp::SendFileOp(const std::string& inPath, AsyncSocket* inSocket)
 // (SendFileOp's scalar deleting destructor)
 
 // FUNCTION: EXE 0x69157e
+// Closes the saved game file if it is open
 void SendFileOp::CloseFile()
 {
-    if (mFile != NULL) {
-        fclose(mFile);
-        mFile = NULL;
+    if (this->mFile != NULL) {
+        fclose(this->mFile);
+        this->mFile = NULL;
     }
 }
 
 // FUNCTION: EXE 0x691596
+// Reads the next chunk of the saved game into the send buffer; returns whether anything was read
 bool SendFileOp::ReadChunk()
 {
-    int theCount = fread(mBuffer, 1, 0x2000, mFile);
+    int theCount = fread(this->mBuffer, 1, 0x2000, this->mFile);
     if (theCount < 0)
         theCount = 0;
-    mReadBuffer.SetData(mBuffer, theCount);
+    this->mReadBuffer.SetData(this->mBuffer, theCount);
     return theCount > 0;
 }
 
 // FUNCTION: EXE 0x6915d2
-WONStatus SendFileOp::Virtual0C()
+// Opens the saved game and starts sending it; fails when there is no path or the file cannot be opened
+WONStatus SendFileOp::Start()
 {
-    if (mPath.size() == 0)
-        return 100007;
-    if ((mFile = PlatFOpen(mPath.c_str(), "rb")) == NULL)
-        return 100007;
-    ReadChunk();
-    return Virtual10();
+    if (this->mPath.size() == 0)
+        return WS_FailedToOpenFile;
+    if ((this->mFile = PlatFOpen(this->mPath.c_str(), "rb")) == NULL)
+        return WS_FailedToOpenFile;
+    this->ReadChunk();
+    return this->Continue();
 }
 
 // FUNCTION: EXE 0x691613
-WONStatus SendFileOp::Virtual10()
+// Sends the saved game chunk by chunk until the file ends, a socket error occurs or the time runs out
+WONStatus SendFileOp::Continue()
 {
     for (;;) {
-        if ((unsigned long)mReadBuffer.mL00 < (unsigned long)mReadBuffer.mL08) {
-            mSocket->Fn2B1360(TimeLeft());
-            unsigned long theSent = 0;
-            WONStatus theStatus = mSocket->Send(mReadBuffer.mData + mReadBuffer.mL00,
-                mReadBuffer.mL08 - mReadBuffer.mL00, &theSent);
+        if ((unsigned long)this->mReadBuffer.mPos < (unsigned long)this->mReadBuffer.mLength) {
+            this->mSocket->WaitForWrite(this->TimeLeft());
+            int theSent = 0;
+            WONStatus theStatus = this->mSocket->Send(this->mReadBuffer.mData + this->mReadBuffer.mPos,
+                this->mReadBuffer.mLength - this->mReadBuffer.mPos, &theSent);
             if ((long)theSent > 0)
-                mReadBuffer.ReadBytes(theSent);
-            if (theStatus == 100001 && TimeLeft() == 0)
-                return 100001;
-            if (theStatus != 0)
+                this->mReadBuffer.ReadBytes(theSent);
+            if (theStatus == WS_TimedOut && this->TimeLeft() == 0)
+                return WS_TimedOut;
+            if (theStatus != WS_Success)
                 return theStatus;
-        } else if (!ReadChunk()) {
-            CloseFile();
-            return 0;
+        } else if (!this->ReadChunk()) {
+            this->CloseFile();
+            return WS_Success;
         }
     }
 }
 
 // TEMPLATE: EXE 0x6916b3
-// (SendFileOp::Virtual08, inline)
+// (SendFileOp::CleanupHook, inline)
 
 // FUNCTION: EXE 0x6916b8
+// Creates an idle saved-game transfer with no local or host file known
 EELobbyFileTransfer::EELobbyFileTransfer()
 {
-    mLocalSize = 0;
-    mLocalChecksum = 0;
-    mSize = 0;
-    mChecksum = 0;
-    mLastProgressTime = 0;
+    this->mLocalSize = 0;
+    this->mLocalChecksum = 0;
+    this->mSize = 0;
+    this->mChecksum = 0;
+    this->mLastProgressTime = 0;
 }
 
 // SYNTHETIC: EXE 0x69173f
 // (the scalar deleting destructor)
 
 // FUNCTION: EXE 0x69175b
+// Destroys the transfer (members only)
 EELobbyFileTransfer::~EELobbyFileTransfer()
 {
 }
 
 // FUNCTION: EXE 0x6917a2
-// the local copy of the saved game: its path, size and checksum
+// Sets the local saved game's path and reads its size and checksum
 void EELobbyFileTransfer::SetPath(const std::string& inPath)
 {
-    mPath = inPath;
-    mLocalChecksum = 0;
-    mLocalSize = 0;
-    EELobbyGetSavedGameInfo(mPath.c_str(), mLocalSize, mLocalChecksum);
+    this->mPath = inPath;
+    this->mLocalChecksum = 0;
+    this->mLocalSize = 0;
+    EELobbyGetSavedGameInfo(this->mPath.c_str(), this->mLocalSize, this->mLocalChecksum);
 }
 
 // FUNCTION: EXE 0x6917e9
-// the host's saved game: its name, size and checksum
+// Records the name, size and checksum of the host's saved game
 void EELobbyFileTransfer::SetFileInfo(const GUIString& inName, unsigned long inSize, unsigned long inChecksum)
 {
-    mName = inName;
-    mSize = inSize;
-    mChecksum = inChecksum;
+    this->mName = inName;
+    this->mSize = inSize;
+    this->mChecksum = inChecksum;
 }
 
 // FUNCTION: EXE 0x69180c
+// Sets the address of the host to download the saved game from
 void EELobbyFileTransfer::SetHost(const IPAddr& inAddress)
 {
-    mHost = inAddress;
+    this->mHost = inAddress;
 }
 
 // TEMPLATE: EXE 0x69181b
 // (IPAddr's implicit operator=)
 
 // FUNCTION: EXE 0x691859
+// Returns whether the local saved game has the host's size and checksum
 bool EELobbyFileTransfer::IsFileHere()
 {
-    return mSize == mLocalSize && mChecksum == mLocalChecksum;
+    return this->mSize == this->mLocalSize && this->mChecksum == this->mLocalChecksum;
 }
 
 // FUNCTION: EXE 0x691870
-// a client's socket closed: it leaves the set (r23)
+// Forgets a client's socket once its connection closes
 void EELobbyFileTransfer::OnClientClosed(AsyncOp* inOp)
 {
-    SmartPtr<AsyncSocket> theSocket = ((SocketOp*)inOp)->mSocket;
-    mClients.erase(theSocket);
+    SmartPtr<AsyncSocket> theSocket = static_cast<SocketOp*>(inOp)->mSocket;
+    this->mClients.erase(theSocket);
 }
 
 // FUNCTION: EXE 0x6918b2
-// a client connected: keep its socket, send it the saved game, then close it (r23)
+// Keeps a newly connected client's socket and queues the saved game's send, then a close, on it
 void EELobbyFileTransfer::OnClientAccepted(AsyncOp* inOp)
 {
     if (!inOp->Succeeded())
         return;
-    SmartPtr<AsyncSocket> theSocket = ((AcceptOp*)inOp)->mAcceptedSocket;
-    mClients.insert(theSocket);
-    theSocket->SetCloseCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnClientClosed, this));
-    theSocket->Fn2B4740(new SendFileOp(mPath, NULL), -1);
-    theSocket->Fn2B4740(new CloseOp(NULL), -1);
+    SmartPtr<AsyncSocket> theSocket = static_cast<AcceptOp*>(inOp)->mAcceptedSocket;
+    this->mClients.insert(theSocket);
+    static_cast<QueueSocket*>(theSocket.get())->SetCloseCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnClientClosed, this));
+    static_cast<QueueSocket*>(theSocket.get())->QueueOp(new SendFileOp(this->mPath, NULL), -1);
+    static_cast<QueueSocket*>(theSocket.get())->QueueOp(new CloseOp(NULL), -1);
 }
 
-// FUNCTION: EXE 0x691983
-bool AsyncOp::Succeeded() { return mStatus == 0 && !mB39; }   // defined here, not inline: OnFileReceived calls it out of line
-
 // TEMPLATE: EXE 0x691993
-// (CloseOp::Virtual10, inline)
+// (CloseOp::Continue, inline)
 
 // FUNCTION: EXE 0x69199e
-// the transfer's progress (the receiving op's chunk completion), reported to the lobby game at most once a second
+// Reports the download's bytes received to the lobby game, at most once a second
+// Called on each chunk the receiving operation completes
 void EELobbyFileTransfer::OnProgress(AsyncOp* inOp)
 {
-    EELobbyGame* theGame = (EELobbyGame*)GetMyLobbyGame();
+    EELobbyGame* theGame = static_cast<EELobbyGame*>(GetMyLobbyGame());
     if (theGame == NULL)
         return;
     unsigned long theTime = (unsigned long)PlatTimeMilliseconds64();
-    if (theTime - mLastProgressTime < 1000)
+    if (theTime - this->mLastProgressTime < 1000)
         return;
-    mLastProgressTime = theTime;
-    theGame->UpdateTransferProgress(((RecvChunkOp*)inOp)->mRecvOp->mBytesRead, mSize);
+    this->mLastProgressTime = theTime;
+    theGame->UpdateTransferProgress(static_cast<RecvChunkOp*>(inOp)->mRecvOp->mBytesRead, this->mSize);
 }
 
 // FUNCTION: EXE 0x6919dc
+// Shows the download as complete in the lobby game once the saved game has arrived
 void EELobbyFileTransfer::OnFileReceived(AsyncOp* inOp)
 {
-    EELobbyGame* theGame = (EELobbyGame*)GetMyLobbyGame();
+    EELobbyGame* theGame = static_cast<EELobbyGame*>(GetMyLobbyGame());
     if (theGame != NULL && inOp->Succeeded())
-        theGame->UpdateTransferProgress(mSize, mSize);
+        theGame->UpdateTransferProgress(this->mSize, this->mSize);
 }
 
 // FUNCTION: EXE 0x691a09
-// serves the saved game on inPort: a listening socket whose accepts start OnClientAccepted (r23)
+// Starts serving the saved game on a port: listens and sends the file to every client that connects
 WONStatus EELobbyFileTransfer::Serve(unsigned short inPort)
 {
-    Stop();
-    mConnection = new AsyncSocket(0);
-    WONStatus theStatus = mConnection->Fn2B0D90(inPort, 0);
+    this->Stop();
+    this->mConnection = new QueueSocket(0);
+    WONStatus theStatus = this->mConnection->Fn2B0D90(inPort, 0);
     if (theStatus != 0)
         return theStatus;
-    theStatus = mConnection->Fn2B0FC0(1000);
+    theStatus = this->mConnection->Listen(1000);
     if (theStatus != 0)
         return theStatus;
-    mConnection->Fn2B3BF0(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnClientAccepted, this));
-    mConnection->Fn2B4500(new AcceptOp(NULL));
+    this->mConnection->SetRepeatCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnClientAccepted, this));
+    this->mConnection->SetRepeatOp(new AcceptOp(NULL));
     return 0;
 }
 
@@ -246,41 +253,42 @@ WONStatus EELobbyFileTransfer::Serve(unsigned short inPort)
 // (AcceptOp::~AcceptOp, inline)
 
 // FUNCTION: EXE 0x691b1e
-// stops serving: every client's connection, then the listening one
+// Stops serving: closes every client's connection, then the listening one
 void EELobbyFileTransfer::Stop()
 {
-    CloseClients();
-    if (mConnection.mPtr != NULL) {
-        mConnection->Close();
-        mConnection = NULL;
+    this->CloseClients();
+    if (this->mConnection.mPtr != NULL) {
+        this->mConnection->Kill();
+        this->mConnection = NULL;
     }
 }
 
 // FUNCTION: EXE 0x691b40
+// Kills every client connection and forgets them
 void EELobbyFileTransfer::CloseClients()
 {
-    for (std::set<SmartPtr<AsyncSocket> >::iterator it = mClients.begin(); it != mClients.end(); ++it)
-        (*it)->Close();
-    mClients.clear();
+    for (std::set<SmartPtr<AsyncSocket> >::iterator it = this->mClients.begin(); it != this->mClients.end(); ++it)
+        (*it)->Kill();
+    this->mClients.clear();
 }
 
 // FUNCTION: EXE 0x691b79
-// fetches the host's saved game: a socket that connects to the host and receives the file into mPath, reporting
-// progress (OnProgress) and the end (OnFileReceived); the socket joins the clients (r24)
+// Downloads the host's saved game into the local path, reporting progress and the end to the lobby game
+// Does nothing without a local path or a valid host address; the download socket joins the clients
 void EELobbyFileTransfer::Download()
 {
-    if (mPath.empty() || !mHost.IsValid())
+    if (this->mPath.empty() || !this->mHost.IsValid())
         return;
-    mLastProgressTime = (unsigned long)PlatTimeMilliseconds64();
-    SmartPtr<AsyncSocket> theSocket = new AsyncSocket(0);
-    theSocket->SetCloseCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnClientClosed, this));
+    this->mLastProgressTime = (unsigned long)PlatTimeMilliseconds64();
+    SmartPtr<AsyncSocket> theSocket = new QueueSocket(0);
+    static_cast<QueueSocket*>(theSocket.get())->SetCloseCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnClientClosed, this));
     SmartPtr<RecvBytesOp> theOp = new RecvBytesOp(0, NULL);
     theOp->mCompletion = new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnFileReceived, this);
-    theOp->mPath = mPath;
-    theOp->Fn2B4F90(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnProgress, this), 10000);
-    theSocket->Fn2B4740(new ConnectOp(mHost), -1);
-    theSocket->Fn2B4740(theOp.mPtr, -1);
-    mClients.insert(theSocket);
+    theOp->mPath = this->mPath;
+    theOp->SetProgressCompletion(new LobbyCompletion<EELobbyFileTransfer>(&EELobbyFileTransfer::OnProgress, this), 10000);
+    static_cast<QueueSocket*>(theSocket.get())->QueueOp(new ConnectOp(this->mHost), -1);
+    static_cast<QueueSocket*>(theSocket.get())->QueueOp(theOp.mPtr, -1);
+    this->mClients.insert(theSocket);
 }
 
 // TEMPLATE: EXE 0x691d59

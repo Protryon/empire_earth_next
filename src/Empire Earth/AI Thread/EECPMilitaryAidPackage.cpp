@@ -203,10 +203,10 @@ U2DPoint<long> EECPMilitaryAidPackage::GetLocation()
 void EECPMilitaryAidPackage::Recall()
 {
     for (long i = this->mSubGroupIDs.size() - 1; i >= 0; i--) {
-        EECPAttackSubGroup* theGroup = this->mPlayer->mCombatManager->mAttackCommander->GetSubGroup(this->mSubGroupIDs[i]);
+        EECPAttackSubGroup* theGroup = this->GetPlayer()->GetCombatManager()->GetAttackCommander()->GetSubGroup(this->mSubGroupIDs[i]);
         if (theGroup == NULL || theGroup->GetNumUnits() == 0)
             continue;
-        if (theGroup->mMission == 3)
+        if (theGroup->GetMission() == 3)
             theGroup->mTask.mMode = kAGModeCombat;
         else
             theGroup->mTask.mIsActive = false;
@@ -363,7 +363,7 @@ void EECPMilitaryAidPackage::Deploy(std::vector<EECPDCTownThreat>& inThreats)
         return;
     for (long i = this->mSubGroupIDs.size() - 1; i >= 0; i--) {
         EECPAttackSubGroup* theSubGroup =
-            this->mPlayer->mCombatManager->mAttackCommander->GetSubGroup(this->mSubGroupIDs[i]);
+            this->GetPlayer()->GetCombatManager()->GetAttackCommander()->GetSubGroup(this->mSubGroupIDs[i]);
         if (theSubGroup == NULL || theSubGroup->mUnits.size() == 0 || theSubGroup->mPath.size() != 0)
             continue;
         theSubGroup->FindPosition(theTile, true, false);
@@ -379,7 +379,7 @@ void EECPMilitaryAidPackage::Deploy(std::vector<EECPDCTownThreat>& inThreats)
             if (it != theEnd)
                 continue;
         }
-        if (theSubGroup->mTask.mIsActive) {
+        if (theSubGroup->mTask.GetIsActive()) {
             for (it = inThreats.begin(), theEnd = inThreats.end(); it != theEnd; ++it) {
                 if (it->mLocation == theSubGroup->mTask.mLocation.mTile)
                     break;
@@ -393,7 +393,7 @@ void EECPMilitaryAidPackage::Deploy(std::vector<EECPDCTownThreat>& inThreats)
         theLocation.mPlayer = this->mTarget->mPlayerID;
         theSubGroup->mTask.mMode = kAGModeCombat;
         theSubGroup->mTask.mLocation = theLocation;
-        long theThreatDistance = theLocation.mTile.DistanceToSquared(theTile);
+        long theThreatDistance = theLocation.GetTile().DistanceToSquared(theTile);
         switch (theSubGroup->mState) {
         case kASGStateWaitForUnits:
         case kASGStateClearSubSector:

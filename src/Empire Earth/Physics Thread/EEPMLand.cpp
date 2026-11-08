@@ -238,7 +238,7 @@ void EEPMLand::Step4(EEComplexUnit* inUnit)
     float theYaw;
     this->SpinDown(inUnit, &theYawRate, &theYaw);
     theRate.mYaw = theYawRate;
-    inUnit->mAngularVelocity = theRate;
+    inUnit->SetAngularVelocity(theRate);
     GETransformation theNew(false);
     theNew.SetOrientationYPR(theYaw, 0.0f, 0.0f);
     theNew.SetPosition(0.0f, 0.0f, 0.0f);

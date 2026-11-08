@@ -43,11 +43,16 @@ public:
     void UnitRemoved(EEComplexUnit* inUnit, bool inSwapped);   // 0x7f4f4 (ret 8; EEComputerPlayer 0x3ef91)
 
     // vptr                                 // +0x00
+    unsigned long GetUnitIDsAt(unsigned long inIndex) const { return this->mUnitIDs[inIndex]; }
     std::vector<unsigned long> mUnitIDs;    // +0x04 the explorers (saved through FSSaveVector, key "AI")
+    EECPPersonnelRequest* GetRequestsAt(unsigned long inIndex) const { return this->mRequests[inIndex]; }
     std::vector<EECPPersonnelRequest*> mRequests;   // +0x14 (referenced; saved as their ids, Restore resolves them)
+    EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;              // +0x24
+    unsigned long GetNextTime() const { return this->mNextTime; }
     unsigned long mNextTime;                // +0x28 (Update: inTime + 30000)
     bool mB2C;                              // +0x2c (saved)
+    bool GetEnabled() const { return this->mEnabled; }
     bool mEnabled;                          // +0x2d (saved; Update does nothing while clear)
 };
 

@@ -86,6 +86,7 @@ public:
     UIEditBox* mConditionDurationEditBox;   // +0x98 (0x9e2: the timer's value)
     UICheckBox* mLoopingCheckBox;           // +0x9c (0x9e3)
     EESEETriggerOperator* mOperatorEvent;   // +0xa0 (the operator combo boxes' trigger event)
+    long GetFirstCondition() const { return this->mFirstCondition; }
     long mFirstCondition;                   // +0xa4 (an index: EESEETriggerChangeIndex 0x9dc/0x9dd step it)
     long mFirstEffect;                      // +0xa8 (an index: 0x9de/0x9df)
 };

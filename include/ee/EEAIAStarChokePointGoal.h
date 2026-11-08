@@ -33,6 +33,7 @@ public:
     std::vector<U2DPoint<long> > mTiles;    // +0x3c
     long mWidth;                            // +0x4c (the map's size: Virtual10)
     long mHeight;                           // +0x50
+    unsigned long GetAreaSerialsAt(unsigned long inIndex) const { return this->mAreaSerials[inIndex]; }
     std::vector<unsigned long> mAreaSerials;       // +0x54 (the serials of the areas around the accepted tiles)
     long mTileCount;                        // +0x64 (counted by AcceptTile; reserves mTiles)
     long mNextIndex;                        // +0x68 (= 1)

@@ -420,7 +420,7 @@ void EECPASGAir::GoIdle()
         }
         this->RemoveUnits(theRemoved);
     }
-  /* LOST-DEBUG: none: exact only (lostdebug_search, smallest n) */ }
+}
 
 // FUNCTION: EXE 0x4423d4
 // Recalls every active unit (zeroes its flight time or clears its holder's goals), clears its goals, asks for removal
@@ -436,7 +436,7 @@ void EECPASGAir::RequestRemoval()
         this->mUnits[i]->GetUnit()->ClearGoalQueue(0);
     }
     EECPAttackSubGroup::RequestRemoval();
-  /* LOST-DEBUG: none: exact only (lostdebug_search, smallest n) */ }
+}
 
 // FUNCTION: EXE 0x44249f
 // Switches state: idle gets a new task and goes idle; remove, launch, hold-at-task and hold-territory (return to

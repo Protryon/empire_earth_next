@@ -17,6 +17,7 @@ public:
     void Cancel();                          // 0x205ff7: the path manager drops mPath
     void RemoveUnit(long inUnitID);         // 0x1efa8e (EEActiveGroup.cpp: EEActiveGroup::RemoveUnit) (provisional name)
 
+    long GetUnitIDsAt(unsigned long inIndex) const { return this->mUnitIDs[inIndex]; }
     std::vector<long> mUnitIDs;             // +0x04
     EECPASGFlags mFlags;                    // +0x14 (default: zero)
     EEAutoPathRequest* mPath;               // +0x2c (referenced)

@@ -21,6 +21,7 @@
 #include "stb_truetype.h"
 
 #include "platform/PlatFont.h"
+#include "platform/PlatString.h"
 
 namespace {
 
@@ -373,4 +374,71 @@ extern "C" void PlatFontDraw(const PlatFont* inFont, const char* inText, uint32_
         int32_t y = theBaseline + inFont->mUnderlineOffset;
         Fill(inTarget, c, inX, y, inX + theWidth, y + inFont->mUnderlineThickness, inColor);
     }
+}
+
+// ---- Windows-1252 <-> wide characters (platform/PlatString.h), on the font's table: here because every program
+// that has text links this unit
+
+namespace {
+
+// a byte's wide character: the table, the undefined five as the C1 controls of the same value (as Windows does)
+wchar_t WideOf(unsigned char inByte)
+{
+    if (inByte >= 0x80 && inByte < 0xA0 && kCP1252[inByte - 0x80])
+        return static_cast<wchar_t>(kCP1252[inByte - 0x80]);
+    return static_cast<wchar_t>(inByte);
+}
+
+char ByteOf(uint32_t inCharacter)
+{
+    if (inCharacter < 0x80 || (inCharacter >= 0xA0 && inCharacter <= 0xFF))
+        return static_cast<char>(inCharacter);
+    for (int i = 0; i < 32; i++)
+        if (kCP1252[i] ? kCP1252[i] == inCharacter : 0x80u + i == inCharacter)
+            return static_cast<char>(0x80 + i);
+    return '?';
+}
+
+}   // namespace
+
+extern "C" uint32_t PlatCp1252ToWide(const char* inText, uint32_t inLength, wchar_t* outText, uint32_t inCapacity)
+{
+    if (!inText)
+        inText = "";
+    uint32_t theLength = inLength == PLAT_TEXT_TERMINATED ? static_cast<uint32_t>(strlen(inText)) : inLength;
+    if (!outText)
+        return theLength;
+    uint32_t n = theLength < inCapacity ? theLength : inCapacity;
+    for (uint32_t i = 0; i < n; i++)
+        outText[i] = WideOf(static_cast<unsigned char>(inText[i]));
+    if (n < inCapacity)
+        outText[n] = 0;
+    return n;
+}
+
+extern "C" uint32_t PlatWideToCp1252(const wchar_t* inText, uint32_t inLength, char* outText, uint32_t inCapacity)
+{
+    if (!inText)
+        inText = L"";
+    uint32_t theLength = inLength;
+    if (inLength == PLAT_TEXT_TERMINATED)
+        for (theLength = 0; inText[theLength]; theLength++) {
+        }
+    uint32_t n = 0;
+    for (uint32_t i = 0; i < theLength; i++) {
+        uint32_t c = static_cast<uint32_t>(inText[i]);
+        // a UTF-16 surrogate pair (wchar_t is 16 bits on Windows) is one character: one '?'
+        if (c >= 0xD800 && c < 0xDC00 && i + 1 < theLength && static_cast<uint32_t>(inText[i + 1]) >= 0xDC00
+            && static_cast<uint32_t>(inText[i + 1]) < 0xE000)
+            i++;
+        if (outText) {
+            if (n >= inCapacity)
+                break;
+            outText[n] = ByteOf(c);
+        }
+        n++;
+    }
+    if (outText && n < inCapacity)
+        outText[n] = 0;
+    return n;
 }

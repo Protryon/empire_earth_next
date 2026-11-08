@@ -381,7 +381,7 @@ long EEE2DParticle::DrawPass6()
         float theEndSize = this->mGraphicEffect->GetSize();
         float theFrom = this->mGraphicEffect->GetStartSize();
         GEColor theColor(this->mGraphicEffect->GetParam5(), this->mGraphicEffect->GetParam6(), this->mGraphicEffect->GetParam7());
-        Fn10387B(this->mDrawPosition, theColor, this->mRotation, (theEndSize - theFrom) * this->mDrawAge + theStartSize,
+        AddBlendedSprite(this->mDrawPosition, theColor, this->mRotation, (theEndSize - theFrom) * this->mDrawAge + theStartSize,
                  (1.0f - this->mDrawAge) * theAlpha, this->mBrightness, theReference);
     } else {
         float theReference = this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mAlphaReference : 0.0f;
@@ -390,7 +390,7 @@ long EEE2DParticle::DrawPass6()
         float theEndSize = this->mGraphicEffect->GetSize();
         float theFrom = this->mGraphicEffect->GetStartSize();
         GEColor theColor(this->mGraphicEffect->GetParam5(), this->mGraphicEffect->GetParam6(), this->mGraphicEffect->GetParam7());
-        Fn10317D(this->mDrawPosition, theColor, this->mRotation, (theEndSize - theFrom) * this->mDrawAge + theStartSize,
+        AddGlowSprite(this->mDrawPosition, theColor, this->mRotation, (theEndSize - theFrom) * this->mDrawAge + theStartSize,
                  (1.0f - this->mDrawAge) * theAlpha, this->mBrightness, theReference);
     }
     return 0;

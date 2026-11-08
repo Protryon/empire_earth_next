@@ -37,6 +37,7 @@ public:
 
     // Layout: the ctor 0x13d013 (a vector's `_Buy(0)`, then +0x14 = new EEVCWonder (0xc bytes (vtable 0x442064: +4
     // = 0, +8 = this)) and the dtor 0x131b02 (deletes +0x14 through slot 0, vector _Tidy).
+    unsigned long GetPlayersAt(unsigned long inIndex) const { return this->mPlayers[inIndex]; }
     std::vector<unsigned long> mPlayers;    // +0x04 (Load 0x136ca3 / Save 0x136d03 use FSFile's unsigned long Read +0x5c / Write +0x94)
     EEVCWonder* mVictoryCondition;          // +0x14 (owned; the ctor news an EEVCWonder(this); Load calls its own slot +0x08; provisional name)
 };

@@ -121,18 +121,20 @@ void EECPASGHelicopter::CollectTargets(EEAIAStarBounds* inBounds, bool inInclude
 {
     std::vector<EEComplexUnit*> theUnits;
     EECPAHelicopterTargetFilter theFilter;
-    theFilter.mGroup = this;
+    EECPASTargetUnit* theTarget;
+    theFilter.mReserved = false;
     theFilter.mPlayer = this->mPlayer2;
+    theFilter.mGroup = this;
+    theFilter.mIncludeEnemies = inIncludeEnemies;
     theFilter.mPlayerID = this->mTask.GetPlayerID();
     // Only the low byte of the argument is the include-enemies flag (0x445a8f); the parent passes its
     // Virtual90 argument
-    theFilter.mIncludeEnemies = inIncludeEnemies;
-    theFilter.mReserved = false;
+
     if (EECollectASGTargets(*inBounds, theUnits, theFilter, true) != 0) {
         this->mTargets.reserve(theUnits.size());
         const std::vector<EEComplexUnit*>& theConst = theUnits;
         for (long i = theConst.size() - 1; i >= 0; i--) {
-            EECPASTargetUnit* theTarget = EECPAttackSubGroup::NewTarget(theConst[i]);
+            theTarget = EECPAttackSubGroup::NewTarget(theConst[i]);
             this->mTargets.push_back(theTarget);
         }
     }

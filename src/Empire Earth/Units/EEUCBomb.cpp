@@ -32,7 +32,7 @@ bool EEUCBomb::LaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocati
     GE3DPoint thePosition(theTransformation.GetX(), theTransformation.GetY(), theTransformation.GetZ());
     GEVector theForward(0.0f, 1.0f, 0.0f);
     GEVector theDirection;
-    float theSpeed = inUnit->mPlayer->mUnitClassUpgrades[inUnit->mLauncherClass->mUnitType]->mLaunchSpeed;
+    float theSpeed = inUnit->mPlayer->GetUpgrade(inUnit->mLauncherClass->mUnitType)->mLaunchSpeed;
     theTransformation.Apply(theForward, theDirection);
     float theYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY());
     float theTilt = inUnit->mLauncherClass->mLaunchPitch;
@@ -41,11 +41,11 @@ bool EEUCBomb::LaunchProjectile(EEComplexUnit* inUnit, const GE3DPoint& inLocati
         thePitch = 0.0f;
     else if (thePitch < -1.5707964f)
         thePitch = -1.5707964f;
-    theSpeed = UMCos(thePitch) * theSpeed;
+    float theVelocity = UMCos(thePitch) * theSpeed;
     inUnit->SetFlightTime(0);
     inUnit->mOrientation = GEOrientation(theYaw, thePitch, 0.0f);
     inUnit->SetProjectileStart(thePosition);
-    inUnit->SetVelocity(theSpeed);
+    inUnit->SetVelocity(theVelocity);
     theTransformation.SetOrientationYPR(theYaw, thePitch, 0.0f);
     long theX;
     long theY;

@@ -9,6 +9,7 @@
 #ifndef EE_EECALAMITY_H
 #define EE_EECALAMITY_H
 
+#include "lle/U2DPoint.h"
 class EECalamityClass;
 class EEUnit;
 class SESMInstanceNode;
@@ -68,8 +69,7 @@ public:
     GE3DPoint mTargetLocation;              // +0x14
     GE3DPoint mShakeLocation;               // +0x20 (saved after the target location; provisional name)
     std::vector<long> mEffectGeneration;    // +0x2c six entries (key "EffectGenerationStringID")
-    unsigned long mTilePlaceHolder1X;       // +0x3c (Load reads a long into a temporary, Save writes a (long) copy)
-    unsigned long mTilePlaceHolder1Y;       // +0x40
+    U2DPoint<unsigned long> mTilePlaceHolder1;  // +0x3c (Load reads a long into a temporary, Save writes a (long) copy)
     EEUnit* mTargetUnit;                    // +0x44 (GetTargetUnit 0xad5fc)
     EEUnit* mCasterUnit;                    // +0x48 (EEEffectManager::CreateEffect's unit; the unit-calamity
                                             // classes read its +0x18 and +0x2c; provisional name)

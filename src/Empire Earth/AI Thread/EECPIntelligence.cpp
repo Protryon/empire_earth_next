@@ -135,10 +135,7 @@ void EECPIntelligencePlayerFile::AddToArmies(EEComplexUnit* inUnit)
         theArmy = new EECPIArmy;
         theArmy->AddUnit(inUnit);
         this->mArmies.push_back(theArmy);
-    } else if (theNear.size() == 1) {
-        theArmy = theNear[0];
-        theArmy->AddUnit(inUnit);
-    } else {
+    } else if (theNear.size() != 1) {
         EECPIArmy* theBiggest = theNear.back();
         long theMax = theBiggest->mStrength;
         for (j = theNear.size() - 2; j >= 0; j--) {
@@ -160,6 +157,9 @@ void EECPIntelligencePlayerFile::AddToArmies(EEComplexUnit* inUnit)
             theNear[k] = NULL;
         }
         theBiggest->AddUnit(inUnit);
+    } else {
+        theArmy = theNear[0];
+        theArmy->AddUnit(inUnit);
     }
 }
 
@@ -241,7 +241,7 @@ void EECPIntelligencePlayerFile::Update(EEComputerPlayer* inPlayer, bool inForce
     std::sort(theResources.begin(), theResources.end(), EECPIUnitIDLess());
     theResources.erase(std::unique(theResources.begin(), theResources.end()), theResources.end());
     for (r = theResources.size() - 1; r >= 0; r--)
-        this->mResources[theResources[r]->mResourceType]++;
+        this->mResources[theResources[r]->GetResourceType()]++;
     this->mStrength = (this->mNumSpaceUnits + this->mNumLandUnits + this->mNumAirUnits + this->mNumSeaUnits) * inPlayer->GetMilitaryCountWeight() + inPlayer->GetWorkerCountWeight() * this->mNumGatherers;
     this->mNextUpdate = gPhysics->mGameTime + 30000;
     for (a = this->mArmies.size() - 1; a >= 0; a--)
@@ -411,7 +411,7 @@ long EECPIntelligencePlayerFile::GetInfluence(long inX, long inY, long inRadius)
     long theSum = 0;
     long theX = inX / theTable->mRegionSize;
     long theY = inY / theTable->mRegionSize;
-    Fn2492C2(theX, theY, inRadius, theRegions);
+    EEGetSquareRingTiles(theX, theY, inRadius, theRegions);
     theRegions.push_back(U2DPoint<long>(theX, theY));
     for (long i = theRegions.size() - 1; i >= 0; i--)
         theSum += theTable->GetValue(thePlayerID, theRegions[i].GetX(), theRegions[i].GetY());
@@ -442,7 +442,7 @@ void EECPIntelligencePlayerFile::AddUnitType(EEUnit* inUnit)
 {
     EEUnitClass* theClass = inUnit->GetUnitClass();
     long theFamily = theClass->mAIKind;
-    unsigned long theType = theClass->mUnitType;
+    unsigned long theType = theClass->GetUnitType();
     long i;
     for (i = this->mUnitTypes.size() - 1; i >= 0; i--) {
         if (this->mUnitTypes[i].mUnitType == theType)
@@ -457,16 +457,16 @@ void EECPIntelligencePlayerFile::AddUnitType(EEUnit* inUnit)
         theCount.mFamily = theFamily;
         this->mUnitTypes.push_back(theCount);
     }
-    if (theClass->mCategory == kUnitCategoryLandCitizen || theClass->mCategory == kUnitCategoryNavalCitizen
-        || (!(theClass->mAttack > 0) && !theClass->mHasCalamityPowers && !theClass->mIsMedic && theClass->mConversionRate == 0.0f))
+    if (theClass->GetCategory() == kUnitCategoryLandCitizen || theClass->GetCategory() == kUnitCategoryNavalCitizen
+        || (!(theClass->GetAttack() > 0) && !theClass->mHasCalamityPowers && !theClass->GetIsMedic() && theClass->GetConversionRate() == 0.0f))
         return;
-    if (theClass->mDomains & kMovementAir) {
+    if (theClass->GetDomains() & kMovementAir) {
         this->mAirStrength += theClass->mInfluence;
         this->mNumAirUnits++;
-    } else if (theClass->mDomains & kMovementSea) {
+    } else if (theClass->GetDomains() & kMovementSea) {
         this->mSeaStrength += theClass->mInfluence;
         this->mNumSeaUnits++;
-    } else if (theClass->mDomains & kMovementSpace) {
+    } else if (theClass->GetDomains() & kMovementSpace) {
         this->mSpaceStrength += theClass->mInfluence;
         this->mNumSpaceUnits++;
     } else {

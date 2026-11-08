@@ -20,10 +20,10 @@ template <class T> class U2DPoint;
 
 // 0x2492c2 (cdecl; outside this unit's range): the regions around region (inX, inY) within inRadius appended to
 // outRegions (EECPIntelligencePlayerFile::GetInfluence 0x81a0d) (provisional name; signature inferred)
-void Fn2492C2(long inX, long inY, long inRadius, std::vector<EETileCoordinate>& outRegions);
+void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<EETileCoordinate>& outRegions);
 // the real signature (names.txt 2492c2, every AI caller's mangled call): the tiles are U2DPoint<long>;
 // the EETileCoordinate form above stays for EEUCBuilding.cpp until its caller is retyped
-void Fn2492C2(long inX, long inY, long inRadius, std::vector<U2DPoint<long> >& outTiles);
+void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoint<long> >& outTiles);
 
 // A unit type's count in a player file (12 bytes; EECPIntelligencePlayerFile::AddUnitType 0x81b0e) (provisional names)
 struct EECPIUnitTypeCount {
@@ -82,7 +82,7 @@ public:
     void GetUnits(std::vector<EEComplexUnit*>& outUnits, unsigned short inContinent, bool inWater);
     // 0x815bc (ret 8): the living units on the map (on inContinent unless 0)
     void GetAllUnits(unsigned short inContinent, std::vector<EEComplexUnit*>& outUnits);
-    // 0x81654 (ret 8): the player's units (its buildings first, Virtual54) as locations, best target first
+    // 0x81654 (ret 8): the player's units (its buildings first, WriteDetailsHook) as locations, best target first
     void GetTargets(std::vector<EECPILocation>& outLocations, long inArg);
     long GetInfluence(long inX, long inY, long inRadius);   // 0x819c0 (ret 0xc): our influence around tile (inX, inY)
     void AddFamily(EEUnit* inUnit);         // 0x81aaa (ret 4)
@@ -97,10 +97,15 @@ public:
     EEAIAStarBounds mBounds;                // +0x34 the bounds of the player's unit tiles
     EEPlayer* mPlayer;                      // +0x44 (the ctor's second argument)
     EEPlayer* mOwner;                       // +0x48 (the ctor's first argument)
+    float GetStrength() const { return this->mStrength; }
     float mStrength;                        // +0x4c
+    unsigned long GetSeaStrength() const { return this->mSeaStrength; }
     unsigned long mSeaStrength;             // +0x50 the summed +0x244 of the flag-4 classes
+    unsigned long GetLandStrength() const { return this->mLandStrength; }
     unsigned long mLandStrength;            // +0x54 ... of the others
+    unsigned long GetAirStrength() const { return this->mAirStrength; }
     unsigned long mAirStrength;             // +0x58 ... of the flag-1 classes
+    unsigned long GetSpaceStrength() const { return this->mSpaceStrength; }
     unsigned long mSpaceStrength;           // +0x5c ... of the flag-8 classes
     unsigned long mNextUpdate;              // +0x60 (gPhysics's time + 30000)
     long mL64;                              // +0x64 (ctor 0)
@@ -108,9 +113,11 @@ public:
     long mL6C;                              // +0x6c (ctor 0)
     long mNumBuildings;                     // +0x70 the category-3 classes without +0x310
     unsigned long mNumGatherers;            // +0x74 the workers (category 6 or 0x16)
+    long GetNumSeaUnits() const { return this->mNumSeaUnits; }
     long mNumSeaUnits;                      // +0x78 (EECPCombatStrategy 0x771be: the second share's count) flag 4
     long mNumAirUnits;                      // +0x7c (the first share's count) flag 1
     long mNumLandUnits;                     // +0x80 (the third share's count) the others
+    long GetNumSpaceUnits() const { return this->mNumSpaceUnits; }
     long mNumSpaceUnits;                    // +0x84 (the fourth share's count) flag 8
     long mVictoryPercent;                   // +0x88 the best victory-condition percentage of the player's teams
     long mL8C;                              // +0x8c

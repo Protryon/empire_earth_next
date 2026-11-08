@@ -50,6 +50,8 @@
 // SYNTHETIC: EXE 0x4fdbd2
 const UString EEE3DVirus::sData("EEE3DVirus-Data");
 
+#include "ee/EEGamePreferences.h"
+
 // FUNCTION: EXE 0x4fdbee
 // Creates a virus effect on a unit, with no sound or graphic object yet
 EEE3DVirus::EEE3DVirus(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect)
@@ -114,7 +116,6 @@ long EEE3DVirus::DrawPass6()
 
 // FUNCTION: EXE 0x4fdd68
 // Snapshots the effect's frame, age, scroll, location and orbital angles for drawing and queues it in render queue 3
-// NEAR: the original calls mOrbitals[i]'s _Ptrit::operator+ out of line (inline budget, as EEE3DDisease)
 long EEE3DVirus::Queue(EEEffectQueue* inQueues)
 {
     long i;
@@ -128,9 +129,12 @@ long EEE3DVirus::Queue(EEEffectQueue* inQueues)
         theLocation.SetY(this->mTransformation.GetY());
         theLocation.SetZ(this->mTransformation.GetZ());
         for (i = 0; i < this->mOrbitalCount; i++)
-            this->mAngles[i] = this->mOrbitals[i]->mAngle;
+            this->mAngles[i] = this->mOrbitals[i]->GetAngle();
         GETexture* theTexture;
-        theTexture = this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mTextures[gScreenIndex] : NULL;
+        if (this->GetGraphicEffect()->GetGraphicObject())
+            theTexture = this->GetGraphicEffect()->GetGraphicObject()->GetTexture(gGamePreferences.mSettings.GetScreenID());
+        else
+            theTexture = NULL;
         inQueues[3][theTexture].push_back(this);
     }
     return theResult;
@@ -174,7 +178,7 @@ long EEE3DVirus::DrawPass5()
         gRasterizer->SetAlphaTestingRefValue(0.0f, theScreen);
     gRasterizer->SetZBuffer(kZBufferTestAndWrite, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    Fn10FA01();
+    SetUnitLighting();
     const GE3DPoint& theLocation = this->mLocation;
     theTransformation.SetPosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
     theModel->SetGraphicsPostModelTransform(theTransformation);
@@ -301,7 +305,7 @@ long EEE3DVirus::Step()
                 theChanged = false;
             // Place the sound at the unit, not at the map origin.
             this->mUnit->mComplexUnit->mPhysicalModel.GetLocation().GetPosition(theLocation);
-            this->SetSound(Fn1487A3(theLocation, this->mGraphicObject, 0, this->mSound, theFrame, theChanged));
+            this->SetSound(PlayAnimationSound(theLocation, this->mGraphicObject, 0, this->mSound, theFrame, theChanged));
             if (this->mSound)
                 this->mSound->Dereference();
         } else

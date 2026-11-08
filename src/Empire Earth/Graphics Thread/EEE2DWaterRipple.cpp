@@ -146,7 +146,7 @@ long EEE2DWaterRipple::DrawPass5()
     float theEndSize = this->mGraphicEffect->GetSize();
     float theFrom = this->mGraphicEffect->GetStartSize();
     GEColor theColor;
-    Fn1033F1(thePosition, theColor, 0.0f, (theEndSize - theFrom) * this->mDrawAge + theStartSize, theAlpha, 1.0f,
+    AddGroundSprite(thePosition, theColor, 0.0f, (theEndSize - theFrom) * this->mDrawAge + theStartSize, theAlpha, 1.0f,
              theReference);
     return 0;
 }

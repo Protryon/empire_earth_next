@@ -138,7 +138,7 @@ long EEE2DPulseWave::DrawPass6()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     theMaterial->SetTexture(this->mGraphicObject->mTextures[0], theScreen);
     float theScale = (this->mGraphicEffect->GetSize() - this->mGraphicEffect->GetStartSize()) * this->mDrawRadius
                      + this->mGraphicEffect->GetStartSize();
@@ -151,7 +151,7 @@ long EEE2DPulseWave::DrawPass6()
     theTransformation.SetElement(3, 3, 1.0f);
     theModel->SetGraphicsPostModelTransform(theTransformation);
     theModel->SetGraphicsScale(theScale);
-    Fn11A130(thePosition, theFog, theValue);
+    GetFogFactor(thePosition, theFog, theValue);
     if (this->mDrawAge < 0.9f) {
         gRasterizer->SetAmbientColor(GEColor(theValue, theValue, theValue), theScreen);
     } else {

@@ -22,15 +22,21 @@ public:
     virtual ~EEAIPathArea() {}
 
     std::vector<unsigned short> mSectorIDs;  // +0x68 (the ctor's _Buy(0) of a 2-byte vector) (provisional name)
+    unsigned short GetContinentID() const { return this->mContinentID; }
     unsigned short mContinentID;            // +0x78 (0x208cc: GetContinentByID) (provisional name)
     unsigned short mID;                     // +0x7a (EEAIContinentManager::NewPathAreaID())
+    long GetKind() const { return this->mKind; }
     long mKind;                             // +0x7c (the tile kind of EEAIGetTileKind: 0x204ea tests 2, 4, 7..0xc, 0xf) (provisional name)
     long mUnitID;                           // +0x80 (-1; CreateAreas stores the goal's owner id on kind 0xc) (provisional name)
     // +0x84..+0x8a: ids by kind (EEAIContinentManager::GetContinent 0x22b86: kind 4, 1, 2, 3;
     // EEAIContinent::GetShoreInRegions reads +0x86 and +0x8a) (provisional names)
+    unsigned short GetSurfaceRegionID() const { return this->mSurfaceRegionID; }
     unsigned short mSurfaceRegionID;
+    unsigned short GetWaterBodyID() const { return this->mWaterBodyID; }
     unsigned short mWaterBodyID;
+    unsigned short GetLandMassID() const { return this->mLandMassID; }
     unsigned short mLandMassID;
+    unsigned short GetSpaceRegionID() const { return this->mSpaceRegionID; }
     unsigned short mSpaceRegionID;
 
     void AddSectorID(unsigned short inSectorID);  // 0x2baf4 (EEAIContinentManager 0x20b48: the sub-sector's path sector id) (provisional name)

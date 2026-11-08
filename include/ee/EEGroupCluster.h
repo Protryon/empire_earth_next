@@ -11,6 +11,7 @@ class EEComplexUnit;
 struct EEGroupCluster {
     EEGroupCluster() : mContinentID(0), mKind(0) {}
 
+    EEComplexUnit* GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
     std::vector<EEComplexUnit*> mUnits;     // +0x00
     EECPASGFlags mFlags;                    // +0x10
     EEAIAStarBounds mBounds;                // +0x28

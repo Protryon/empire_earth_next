@@ -72,9 +72,9 @@ public:                                     // GetBottomLeft 0xe5e4 = (+4, +0));
     GERectangle(const GE2DPoint& inTopLeft, float inWidth, float inHeight)   // 0xe453; UIComboBox's ctor expands it
     {
         this->mLeft = inTopLeft.GetX();
-        this->mRight = inWidth - 1.0f + this->mLeft;
+        this->mRight = this->mLeft + (inWidth - 1.0f);
         this->mTop = inTopLeft.GetY();
-        this->mBottom = inHeight - 1.0f + this->mTop;
+        this->mBottom = this->mTop + (inHeight - 1.0f);
     }
     // inline + empty: exported ??1GERectangle@@QAE@XZ (ICF 0xc16a); vector<GERectangle>::insert 0x24b50 keeps the
     // dead stores of its destroy loop and refuses the second _Ufill

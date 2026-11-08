@@ -200,9 +200,10 @@ bool EEUGBuildRepair::IsAtBuildSite(EEComplexUnit* inUnit)
 // panel refresh); if this is the unit's goal, also fills other parts, starts mines, uncounts the builder; returns that
 bool EEUGBuildRepair::FinishBuilding(EEComplexUnit* inUnit)
 {
-    EEComplexUnit* theTarget = dynamic_cast<EEComplexUnit*>(this->mTarget);
+    EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(this->mTarget);
     EEPlayer* thePlayer = inUnit->mPlayer;
     bool theResult = false;
+    EEComplexUnit* theTarget = theUnit;
     while (theTarget->mPreviousPart != NULL)
         theTarget = theTarget->mPreviousPart;
     if (theTarget != NULL && theTarget->mHitPoints >= theTarget->mStats->mMaxHitPoints) {
@@ -409,11 +410,11 @@ bool EEUGBuildRepair::HelpBuildNearby(EEComplexUnit* inUnit, EEUnit* inTarget)
         for (i = theUnits.begin(); i != theUnits.end(); ++i) {
             EEComplexUnit* theUnit = (EEComplexUnit*)*i;
             if (!theUnit->mIsBuilt && theUnit != inTarget && theUnit->mHitPoints > 0
-                && theUnit->mUnitClass->IsLandBuilding() && theUnit->mIsPaidFor && theUnit->mPlayer == inUnit->mPlayer)
+                && theUnit->mUnitClass->IsLandBuilding() && theUnit->mIsPaidFor && theUnit->GetPlayer() == inUnit->GetPlayer())
                 break;
         }
         if (i != theUnits.end()) {
-            inUnit->SetGoal(new EEUGBuildRepair((*i)->mPlayer, *i, false), 0, 0);
+            inUnit->SetGoal(new EEUGBuildRepair((*i)->GetPlayer(), *i, false), 0, 0);
             inUnit->StartAction(kActionMoveToRepairSite);
             inUnit->mUnitClass->ActionChanged(inUnit);
             theResult = true;
@@ -462,7 +463,7 @@ bool EEUGBuildRepair::GatherNearBuilding(EEComplexUnit* inUnit, EEComplexUnit* i
         theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
     while (!theResult && theResource != NULL) {
         if (!theResource->mUnitClass->mIsTree && theResource->mUnitClass->mAnimalID == 1000
-            && ::gWorld.GetResourceUsers(theResource) >= inUnit->mPlayer->mMiningLimit) {
+            && ::gWorld.GetResourceUsers(theResource) >= inUnit->mPlayer->GetMiningLimit()) {
             theRejected.push_back(theResource);
             theResource = theClass->FindResourceOfKind(inUnit, inTarget, NULL, 6, 1, &theRejected, false);
         } else {
@@ -854,6 +855,12 @@ bool EEUGBuildRepair::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inE
     EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(this->mTarget);
     bool theResult = false;
     switch (inEvent) {
+    case kTriggerBuildingDestroyed:
+        if (this->mTarget == NULL || this->mTarget->mHitPoints == 0)
+            theResult = true;
+        else
+            theResult = false;
+        break;
     case kTriggerBuildingNotPaidFor:
         if (!theUnit->mIsPaidFor && this->mTarget != NULL) {
             EEComplexUnit* theOuter = theUnit;
@@ -891,12 +898,6 @@ bool EEUGBuildRepair::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inE
         break;
     default:
         theResult = EEUnitGoal::EvaluateCondition(inUnit, inEvent);
-        break;
-    case kTriggerBuildingDestroyed:
-        if (this->mTarget == NULL || this->mTarget->mHitPoints == 0)
-            theResult = true;
-        else
-            theResult = false;
         break;
     case kTriggerBuildingRepaired:
         if (this->mTarget == NULL || this->FinishBuilding(inUnit))

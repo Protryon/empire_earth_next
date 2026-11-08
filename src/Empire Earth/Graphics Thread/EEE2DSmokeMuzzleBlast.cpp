@@ -213,21 +213,21 @@ long EEE2DSmokeMuzzleBlast::DrawPass6()
     float theDelay2 = this->mDrawAge - this->mGraphicEffect->mTime1 * 2.0f;
     float theAlpha = 1.0f - (this->mGraphicEffect->GetParam3() * theAge + (1.0f - this->mGraphicEffect->GetParam3()));
     float theOffset = -this->mGraphicEffect->mAlpha;
-    Fn10387B(thePosition, theColor, this->mRotation, theSize, theAlpha, 1.0f,
+    AddBlendedSprite(thePosition, theColor, this->mRotation, theSize, theAlpha, 1.0f,
              this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mAlphaReference : 0.0f);
     if (!(theDelay >= 0.0f))
         return 0;
     thePosition.SetX(thePosition.GetX() + this->mVelocity.GetX() * theOffset);
     thePosition.SetY(thePosition.GetY() + this->mVelocity.GetY() * theOffset);
     thePosition.SetZ(thePosition.GetZ() + this->mVelocity.GetZ() * theOffset);
-    Fn10387B(thePosition, theColor, this->mRotation + 1.0471976f, theSize2, theAlpha, 1.0f,
+    AddBlendedSprite(thePosition, theColor, this->mRotation + 1.0471976f, theSize2, theAlpha, 1.0f,
              this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mAlphaReference : 0.0f);
     if (!(theDelay2 >= 0.0f))
         return 0;
     thePosition.SetX(thePosition.GetX() + this->mVelocity.GetX() * theOffset);
     thePosition.SetY(thePosition.GetY() + this->mVelocity.GetY() * theOffset);
     thePosition.SetZ(thePosition.GetZ() + this->mVelocity.GetZ() * theOffset);
-    Fn10387B(thePosition, theColor, this->mRotation + 2.0943952f, theSize3, theAlpha, 1.0f,
+    AddBlendedSprite(thePosition, theColor, this->mRotation + 2.0943952f, theSize3, theAlpha, 1.0f,
              this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mAlphaReference : 0.0f);
     return 0;
 }

@@ -12,7 +12,7 @@ language resources, with miniaudio, dmusic and pl_mpeg for sound, music and movi
 imported. Every unit is compiled first (tools/clang_build.py, objects in <out>/obj), then linked: one plain lld-link
 of every object, the image libraries (an archive), the Windows SDK import libraries, the static libraries (SDL3,
 wgpu-native) and runtime, and the resources.
-Every symbol is defined in source (the WON library's stand-ins: src/Empire Earth/WONAPI/WONAPIStubs.cpp).
+Every symbol is defined in source (the WON library too: module won).
 
 --test-profile windowed-software (TEST ONLY; default out build/clang-test): images for the headless live-game
 harness (tools/harness). The windowed and 32-bit display policy is compiled into the exe by text rules on the

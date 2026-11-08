@@ -390,7 +390,7 @@ bool EEAIFOSubGroupFilter::operator()(EECPAttackSubGroup* inGroup)
     if (theSkip)
         result = false;
     else {
-        result = this->mKinds.find(inGroup->mKind) != this->mKinds.end();
+        result = this->mKinds.find(inGroup->GetKind()) != this->mKinds.end();
         if (result && this->mContinent != 0) {
             unsigned short id = inGroup->GetMainContinent();
             result = this->mContinent == id;
@@ -610,30 +610,30 @@ bool EECPUSFavoriteUnitsScreen::IsFavoriteSpace(EEUnitClass* inClass)
 bool EEAIFOCurrentlyBuildableUnitScreener::Screen(EEUnitClass* inClass)
 {
     bool theResult = false;
-    if (inClass->mEpoch <= this->mPlayer->GetTechTree()->mCurrentEpoch && inClass->mMaxVelocity != 0.0f &&
-        (inClass->mIsAttackUnit || inClass->mIsDefenseUnit || inClass->IsTransport())) {
-        EETechTreeNode* theNode = this->mPlayer->GetTechTree()->Get(inClass->GetTechnology());
-        if (theNode && !theNode->GetIsObsolete() && !theNode->mScenEditorObsoleted) {
+    if (inClass->GetEpoch() <= this->GetPlayer()->GetTechTree()->GetCurrentEpoch() && inClass->GetMaxVelocity() != 0.0f &&
+        (inClass->GetIsAttackUnit() || inClass->GetIsDefenseUnit() || inClass->IsTransport())) {
+        EETechTreeNode* theNode = this->GetPlayer()->GetTechTree()->Get(inClass->GetTechnology());
+        if (theNode && !theNode->GetIsObsolete() && !theNode->GetScenEditorObsoleted()) {
             EEUnitClass* theBuilder = gUnitClassTable[theNode->GetUnitClass(0)];
             if (theBuilder) {
-                EETechTreeNode* theBuilderNode = this->mPlayer->GetTechTree()->Get(theBuilder->GetTechnology());
+                EETechTreeNode* theBuilderNode = this->GetPlayer()->GetTechTree()->Get(theBuilder->GetTechnology());
                 if (theBuilderNode) {
-                    if (theBuilderNode->GetIsObsolete() || theBuilderNode->mScenEditorObsoleted) {   // the builder node's flag (was the class node's)
+                    if (theBuilderNode->GetIsObsolete() || theBuilderNode->GetScenEditorObsoleted()) {   // the builder node's flag (was the class node's)
                         std::deque<EEComplexUnit*>* theUnits =
-                            this->mPlayer->mCivilizationManager->GetUnitManager()->GetUnits(theNode->GetUnitClass(0));
+                            this->GetPlayer()->GetCivilizationManager()->GetUnitManager()->GetUnits(theNode->GetUnitClass(0));
                         if (theUnits == NULL || theUnits->size() == 0) {
                             theResult = false;
                             return theResult;
                         }
                     }
-                    if ((inClass->mDomains & kMovementAir) && theBuilder->mCategory == kUnitCategoryNavalBuilding && theBuilder->mAirTrafficType) {
-                        EECPUGatheAircraftCarriersCount theGatherer(this->mPlayer);
-                        this->mPlayer->mCivilizationManager->mUnitManager->GatherUnits(theGatherer);
-                        theResult = theGatherer.mUnits + theGatherer.mRequested != 0;
+                    if ((inClass->GetDomains() & kMovementAir) && theBuilder->GetCategory() == kUnitCategoryNavalBuilding && theBuilder->GetAirTrafficType()) {
+                        EECPUGatheAircraftCarriersCount theGatherer(this->GetPlayer());
+                        this->GetPlayer()->GetCivilizationManager()->GetUnitManager()->GatherUnits(theGatherer);
+                        theResult = theGatherer.GetUnits() + theGatherer.GetRequested() != 0;
                         if (!theResult)
                             return theResult;
                     }
-                    switch (inClass->mCategory) {
+                    switch (inClass->GetCategory()) {
                     case kUnitCategoryAirplane:
                     case kUnitCategoryNaval:
                     case kUnitCategoryLand:
@@ -652,7 +652,7 @@ bool EEAIFOCurrentlyBuildableUnitScreener::Screen(EEUnitClass* inClass)
                     case kUnitCategorySpaceBuilding:
                     case kUnitCategorySpaceTransport:
                     case kUnitCategoryPlanetSpaceship:
-                        theResult = inClass->mFamily != kUnitFamilyMines;
+                        theResult = inClass->GetFamily() != kUnitFamilyMines;
                         break;
                     default:
                         theResult = false;

@@ -37,6 +37,11 @@ uint16_t PlatSystemLanguageId(void);
 // (Win32: a named mutex that did not exist; POSIX: an exclusive flock on a file in the temporary directory)
 int PlatSystemSingleInstance(const char* inName);
 uint32_t PlatSystemVersion(void);
+// A 32-bit number that identifies this machine and stays the same across runs (the WON library keys its CD key
+// store with it). Win32: the serial number of the volume holding the Windows directory (CDKey::GetMachineId's
+// GetWindowsDirectory + GetVolumeInformation); Linux: FNV-1a of /etc/machine-id; macOS: FNV-1a of gethostuuid().
+// *outOk (may be NULL) -> nonzero when the id was found; the result is 0 when it was not.
+uint32_t PlatSystemMachineId(int* outOk);
 void PlatSystemShutdown(void);
 
 #ifdef __cplusplus

@@ -38,6 +38,6 @@ private:
 
 
 // 0x118676 (cdecl): inPoint's screen position through the main viewport (EEE3DGoal) (provisional name)
-void Fn118676(const GE3DPoint& inPoint, GE2DPoint& outPoint);
+void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint);
 
 #endif

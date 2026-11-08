@@ -1,7 +1,7 @@
-// C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbyPlayer.cpp (name PROVISIONAL: no __FILE__; its classes
-// EELobbyPlayerSlot and EELobbyPlayer from RTTI). A lobby game's player slots and the game's lobby player:
-// 0x299838..0x299b17 (the string/map COMDATs at 0x29976f..0x299838 close the unit before; EELobbyPlayerOptionsCtrl.cpp
-// follows). Module flags (r12-misc-h4, round 12).
+// C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbyPlayer.cpp (file name inferred: no __FILE__; its
+// classes EELobbyPlayerSlot and EELobbyPlayer come from RTTI). A lobby game's player slots and the game's lobby player:
+// 0x699838..0x699b17 (the string/map functions at 0x69976f..0x699838 close the unit before; EELobbyPlayerOptionsCtrl.cpp
+// follows).
 #include <windows.h>
 #include <string>
 #include <list>
@@ -16,179 +16,201 @@
 using namespace WONAPI;
 
 // FUNCTION: EXE 0x699838
+// Creates an open player slot numbered 0 with the default team, colour, citizen and transfer options
 EELobbyPlayerSlot::EELobbyPlayerSlot()
 {
-    mIndex = 0;
-    mOptions[0] = 0;
-    Reset();
+    this->mIndex = 0;
+    this->mOptions[0] = 0;
+    this->Reset();
 }
 
 // FUNCTION: EXE 0x699880
+// Resets the slot's team, colour, citizen, observer and transfer options to their defaults
 void EELobbyPlayerSlot::Reset()
 {
-    mOptions[1] = 0;
-    mOptions[2] = 0;
-    mOptions[3] = 5;
-    mOptions[4] = 0;
-    mOptions[5] = 100;
+    this->mOptions[1] = 0;
+    this->mOptions[2] = 0;
+    this->mOptions[3] = 5;
+    this->mOptions[4] = 0;
+    this->mOptions[5] = 100;
 }
 
 // FUNCTION: EXE 0x699894
+// Destroys the slot, detaching the player in it
 EELobbyPlayerSlot::~EELobbyPlayerSlot()
 {
-    ClearPlayer();
+    this->ClearPlayer();
 }
 
 // FUNCTION: EXE 0x6998c8
+// Returns the name shown for the slot: its client's name, the slot's own name when named, else empty
 const GUIString& EELobbyPlayerSlot::GetName()
 {
-    if (mClient.mPtr == NULL) {
-        if (mOptions[0] == 4)
-            return mName;
+    if (this->mClient.mPtr == NULL) {
+        if (this->mOptions[0] == 4)
+            return this->mName;
         return gEmptyGUIString;
     }
-    return mClient->mName;
+    return this->mClient->mName;
 }
 
 // FUNCTION: EXE 0x6998e3
+// Sets whether the slot is open, computer, closed, a player or named; drops the player or name it no longer holds
 void EELobbyPlayerSlot::SetState(int inState)
 {
-    mOptions[0] = inState;
+    this->mOptions[0] = inState;
     if (inState != 3)
-        ClearPlayer();
+        this->ClearPlayer();
     if (inState != 4)
-        mName = GetEmptyGUIStringData();
+        this->mName = GetEmptyGUIStringData();
 }
 
 // FUNCTION: EXE 0x699910
+// Returns one of the slot's six options, or 0 for an option number out of range
 unsigned char EELobbyPlayerSlot::GetOption(int inOption)
 {
     if (inOption >= 0 && inOption < 6)
-        return mOptions[inOption];
+        return this->mOptions[inOption];
     return 0;
 }
 
 // FUNCTION: EXE 0x699928
+// Sets one of the slot's options; option 0 changes the slot's state and ignores invalid states
 void EELobbyPlayerSlot::SetOption(int inOption, unsigned char inValue)
 {
     if (inOption == 0) {
         if (inValue < 5)
-            SetState(inValue);
+            this->SetState(inValue);
     } else
-        mOptions[inOption] = inValue;
+        this->mOptions[inOption] = inValue;
 }
 
 // FUNCTION: EXE 0x69994f
-// NEAR: ICF alias: both assignments call SmartPtr<T>::operator=(T*) 0x299ae3 (bound to the GUIStringData instance)
+// Detaches the lobby player and client from the slot
+// Both assignments call the ICF-shared SmartPtr<T>::operator=(T*) at 0x699ae3
 void EELobbyPlayerSlot::ClearPlayer()
 {
-    if (mPlayer.mPtr != NULL) {
-        mPlayer->mPlayerSlot = NULL;
-        mPlayer = NULL;
+    if (this->mPlayer.mPtr != NULL) {
+        this->mPlayer->mPlayerSlot = NULL;
+        this->mPlayer = NULL;
     }
-    mClient = NULL;
+    this->mClient = NULL;
 }
 
 // FUNCTION: EXE 0x699973
-void EELobbyPlayerSlot::Fn299973()
+// Opens the slot for a player to join
+void EELobbyPlayerSlot::SetOpen()
 {
-    SetState(0);
+    this->SetState(0);
 }
 
 // FUNCTION: EXE 0x69997b
-void EELobbyPlayerSlot::Fn29997B()
+// Closes the slot
+void EELobbyPlayerSlot::SetClosed()
 {
-    SetState(2);
+    this->SetState(2);
 }
 
 // FUNCTION: EXE 0x699983
-void EELobbyPlayerSlot::Fn299983()
+// Gives the slot to a computer player
+void EELobbyPlayerSlot::SetComputer()
 {
-    SetState(1);
+    this->SetState(1);
 }
 
 // FUNCTION: EXE 0x69998b
+// Marks the slot as named and stores the name shown for it
 void EELobbyPlayerSlot::SetName(const GUIString& inName)
 {
-    SetState(4);
-    mName = inName;
+    this->SetState(4);
+    this->mName = inName;
 }
 
 // FUNCTION: EXE 0x6999a7
-// NEAR: ICF alias, as ClearPlayer
+// Puts a client's lobby player into the slot and tells the player its slot number; with no player the slot stays empty
+// The assignments call the ICF-shared SmartPtr<T>::operator=(T*), as in ClearPlayer
 void EELobbyPlayerSlot::SetPlayer(LobbyClient* inClient, EELobbyPlayer* inPlayer)
 {
-    ClearPlayer();
+    this->ClearPlayer();
     if (inClient != NULL && inPlayer != NULL) {
-        mClient = inClient;
-        mPlayer = inPlayer;
-        mPlayer->mPlayerSlot = this;
-        mPlayer->mSlot = mIndex;
-        SetState(3);
+        this->mClient = inClient;
+        this->mPlayer = inPlayer;
+        this->mPlayer->mPlayerSlot = this;
+        this->mPlayer->mSlot = this->mIndex;
+        this->SetState(3);
     }
 }
 
 // FUNCTION: EXE 0x6999f3
+// Reads the slot's six options from a game message, detaching the player unless the slot holds one
 void EELobbyPlayerSlot::ReadData(ReadBuffer& inBuffer)
 {
     for (int i = 0; i < 6; i++)
-        mOptions[i] = inBuffer.ReadByte();
-    if (mOptions[0] != 3)
-        ClearPlayer();
+        this->mOptions[i] = inBuffer.ReadByte();
+    if (this->mOptions[0] != 3)
+        this->ClearPlayer();
 }
 
 // FUNCTION: EXE 0x699a1e
+// Writes the slot's six options to a game message
 void EELobbyPlayerSlot::WriteData(WriteBuffer& outBuffer)
 {
     for (int i = 0; i < 6; i++)
-        outBuffer.AppendByte(mOptions[i]);
+        outBuffer.AppendByte(this->mOptions[i]);
 }
 
 // FUNCTION: EXE 0x699a3f
+// Creates a lobby game player in slot 0 with no slot attached
 EELobbyPlayer::EELobbyPlayer()
 {
-    mSlot = 0;
-    mPlayerSlot = NULL;
+    this->mSlot = 0;
+    this->mPlayerSlot = NULL;
 }
 
 // FUNCTION: EXE 0x699a75
+// Destroys the lobby game player (members only)
 EELobbyPlayer::~EELobbyPlayer()
 {
 }
 
 // FUNCTION: EXE 0x699a80
+// Reads the player's slot number from a game message; always succeeds
 bool EELobbyPlayer::ReadData(ReadBuffer& inBuffer)
 {
-    mSlot = inBuffer.ReadByte();
+    this->mSlot = inBuffer.ReadByte();
     return true;
 }
 
 // FUNCTION: EXE 0x699a95
+// Writes the player's slot number to a game message
 void EELobbyPlayer::WriteData(WriteBuffer& outBuffer)
 {
-    outBuffer.AppendByte(mSlot);
+    outBuffer.AppendByte(this->mSlot);
 }
 
 // FUNCTION: EXE 0x699aa7
+// Returns whether another player is on the same team; team 0 (no team) has no teammates
 bool EELobbyPlayer::IsTeammate(LobbyPlayer* inOther)
 {
-    unsigned char theTeam = ((EELobbyPlayer*)inOther)->GetTeam();
-    unsigned char myTeam = GetTeam();
+    unsigned char theTeam = static_cast<EELobbyPlayer*>(inOther)->GetTeam();
+    unsigned char myTeam = this->GetTeam();
     return myTeam != 0 && myTeam == theTeam;
 }
 
 // FUNCTION: EXE 0x699ad1
+// Returns the team of the player's slot, or 0 when the player has no slot
 unsigned char EELobbyPlayer::GetTeam()
 {
-    if (mPlayerSlot != NULL)
-        return mPlayerSlot->mOptions[1];
+    if (this->mPlayerSlot != NULL)
+        return this->mPlayerSlot->mOptions[1];
     return 0;
 }
 
 // FUNCTION: EXE 0x699adf
+// Returns the player's slot number
 unsigned char EELobbyPlayer::GetSlot()
 {
-    return mSlot;
+    return this->mSlot;
 }
 
 // The unit's other compiler-generated functions:
@@ -197,5 +219,4 @@ unsigned char EELobbyPlayer::GetSlot()
 // SYNTHETIC: EXE 0x699a59
 // (??_G EELobbyPlayer)
 // TEMPLATE: EXE 0x699ae3
-// (SmartPtr<T>::operator=(T*), ICF-shared by every instantiation; NEAR: the original returns the raw pointer and
-// stores it through the ternary shape: proposal P2 in build/scratch_r12-misc/proposals_h4.md)
+// (SmartPtr<T>::operator=(T*), ICF-shared by every instantiation)

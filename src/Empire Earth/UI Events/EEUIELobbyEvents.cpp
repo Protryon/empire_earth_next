@@ -427,6 +427,12 @@ bool LobbyCheckStart()
 {
     EEGameOptions theOptions;
     EEPSaveGameHeader theHeader;
+    FSFileSpec* theStream;
+    long theError;
+    unsigned char j;
+    long theTeam;
+    bool theFound;
+    long k;
     std::vector<UWideString> theMissing;
     UWideString theText;
     UString theFile;
@@ -442,8 +448,7 @@ bool LobbyCheckStart()
         else
             theDirectory = "Scenarios\\";
         theFile = gGameOptions.mMapType;
-        FSFileSpec* theStream;
-        long theError = EEOpenSaveGameFile(theFile, theDirectory, theStream);
+        theError = EEOpenSaveGameFile(theFile, theDirectory, theStream);
         if (theError == kErrorOK) {
             theHeader.mMajorVersion = kSaveGameMajorVersion;
             theHeader.mMinorVersion = kSaveGameMinorVersion;
@@ -492,7 +497,7 @@ bool LobbyCheckStart()
             gUIManager->DisplayMessage(theText, true, NULL, 0, true);
         }
         bool theColorUsed[16] = { false };
-        for (unsigned char j = 0; j < 16; j++) {
+        for (j = 0; j < 16; j++) {
             thePlayer = gGameOptions.mPlayers[j];
             if (thePlayer.mType != 1)
                 continue;
@@ -505,10 +510,10 @@ bool LobbyCheckStart()
         }
         if (theResult == true) {
             thePlayer = gGameOptions.mPlayers[0];
-            long theTeam = thePlayer.mTeam;
+            theTeam = thePlayer.mTeam;
             if (theTeam != 0) {
-                bool theFound = false;
-                for (long k = 1; k < 16; k++) {
+                theFound = false;
+                for (k = 1; k < 16; k++) {
                     thePlayer = gWorld.GetLobbyOptions().GetPlayer(k);
                     if ((thePlayer.mType == 0 || thePlayer.mType == 1)
                         && (thePlayer.mTeam == 0 || theTeam != thePlayer.mTeam)) {
@@ -1688,14 +1693,14 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
     bool theReady = inHost.mIsReady;
     bool theServer = gCommunications->IsServer();
     if (theForm != gUIManager->GetCurrentForm())
-        return;
+        goto theEnd;
     long theType;
     switch (inOptions.GetLoadType()) {
-    case 2:
-        theType = 1;
-        break;
     case 1:
         theType = 2;
+        break;
+    case 2:
+        theType = 1;
         break;
     case 0:
         theType = 0;
@@ -1818,7 +1823,7 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
         theForm->GetControl(kLobbyWorldPopLimitLabel2)->SetDisplayMode(kDisplayModeShown);
     }
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyWondersVictoryCombo))->SetCurrentSelection(inOptions.GetWondersForVictory());
-    if (inOptions.GetWondersForVictory() != 0)
+    if (inOptions.mWondersForVictory > 0)
         sprintf(theText, "%ld", inOptions.GetWondersForVictory());
     else
         gResource->GetString(IDS_LOBBY_OFF, theText);
@@ -1830,10 +1835,11 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
         theForm->GetControl(kLobbyWondersVictoryCombo)->SetDisplayMode(kDisplayModeHidden);
         theForm->GetControl(kLobbyWondersVictoryLabel2)->SetDisplayMode(kDisplayModeShown);
     }
-    unsigned long theVariant = 0;
+    unsigned long theVariant;
+    theVariant = 0;
     if (EEGetGameVariantAt(inOptions.GetVariant())->mSelectable == true)
-        for (unsigned long i = 0; i < inOptions.GetVariant(); i++)
-            if (EEGetGameVariantAt(i)->mSelectable == true)
+        for (theSelection = 0; theSelection < inOptions.GetVariant(); theSelection++)
+            if (EEGetGameVariantAt(theSelection)->mSelectable == true)
                 theVariant++;
     static_cast<UIComboBox*>(theForm->GetControl(kLobbyGameVariantCombo))->SetCurrentSelection(theVariant);
     gResource->GetString(EEGetGameVariantAt(inOptions.GetVariant())->mNameID, theText);
@@ -1919,9 +1925,9 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
         theForm->GetControl(kLobbyGameOpCheckBox1Bitmap)->SetDisplayMode(kDisplayModeShown);
         theForm->GetControl(kLobbyGameOpCheckBox1Label)->SetDisplayMode(kDisplayModeShown);
     }
-    if (inOptions.GetLockTeams() != static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox3LockTeam))->GetIsChecked())
-        (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox3LockTeam)))->SetChecked(inOptions.GetLockTeams());
-    if (inOptions.GetLockTeams() == true)
+    if (inOptions.mLockTeams != static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox3LockTeam))->GetIsChecked())
+        (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox3LockTeam)))->SetChecked(inOptions.mLockTeams);
+    if (inOptions.mLockTeams == true)
         (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox3Bitmap)))->SetBitmap(gUIManager->GetCheckDownOn());
     else
         (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox3Bitmap)))->SetBitmap(gUIManager->GetCheckDownOff());
@@ -1930,7 +1936,7 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
             static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox3LockTeam))->GetTextLabel()->GetText(0));
     else
         (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox3Label)))->SetText("");
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
+    if (inOptions.mLoadType == 0 && theServer && !theReady) {
         theForm->GetControl(kLobbyGameOpCheckBox3LockTeam)->SetDisplayMode(kDisplayModeShown);
         theForm->GetControl(kLobbyGameOpCheckBox3Bitmap)->SetDisplayMode(kDisplayModeHidden);
         theForm->GetControl(kLobbyGameOpCheckBox3Label)->SetDisplayMode(kDisplayModeHidden);
@@ -1939,9 +1945,9 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
         theForm->GetControl(kLobbyGameOpCheckBox3Bitmap)->SetDisplayMode(kDisplayModeShown);
         theForm->GetControl(kLobbyGameOpCheckBox3Label)->SetDisplayMode(kDisplayModeShown);
     }
-    if (inOptions.GetLockSpeed() != static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox4LockSpeed))->GetIsChecked())
-        (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox4LockSpeed)))->SetChecked(inOptions.GetLockSpeed());
-    if (inOptions.GetLockSpeed() == true)
+    if (inOptions.mLockSpeed != static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox4LockSpeed))->GetIsChecked())
+        (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox4LockSpeed)))->SetChecked(inOptions.mLockSpeed);
+    if (inOptions.mLockSpeed == true)
         (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox4Bitmap)))->SetBitmap(gUIManager->GetCheckDownOn());
     else
         (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox4Bitmap)))->SetBitmap(gUIManager->GetCheckDownOff());
@@ -1950,7 +1956,7 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
             static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox4LockSpeed))->GetTextLabel()->GetText(0));
     else
         (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox4Label)))->SetText("");
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
+    if (inOptions.mLoadType == 0 && theServer && !theReady) {
         theForm->GetControl(kLobbyGameOpCheckBox4LockSpeed)->SetDisplayMode(kDisplayModeShown);
         theForm->GetControl(kLobbyGameOpCheckBox4Bitmap)->SetDisplayMode(kDisplayModeHidden);
         theForm->GetControl(kLobbyGameOpCheckBox4Label)->SetDisplayMode(kDisplayModeHidden);
@@ -1959,9 +1965,9 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
         theForm->GetControl(kLobbyGameOpCheckBox4Bitmap)->SetDisplayMode(kDisplayModeShown);
         theForm->GetControl(kLobbyGameOpCheckBox4Label)->SetDisplayMode(kDisplayModeShown);
     }
-    if (inOptions.GetCheatCodes() != static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox5Cheats))->GetIsChecked())
-        (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox5Cheats)))->SetChecked(inOptions.GetCheatCodes());
-    if (inOptions.GetCheatCodes() == true)
+    if (inOptions.mCheatCodes != static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox5Cheats))->GetIsChecked())
+        (static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox5Cheats)))->SetChecked(inOptions.mCheatCodes);
+    if (inOptions.mCheatCodes == true)
         (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox5Bitmap)))->SetBitmap(gUIManager->GetCheckDownOn());
     else
         (static_cast<UIBitmap*>(theForm->GetControl(kLobbyGameOpCheckBox5Bitmap)))->SetBitmap(gUIManager->GetCheckDownOff());
@@ -1970,7 +1976,7 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
             static_cast<UICheckBox*>(theForm->GetControl(kLobbyGameOpCheckBox5Cheats))->GetTextLabel()->GetText(0));
     else
         (static_cast<UITextLabel*>(theForm->GetControl(kLobbyGameOpCheckBox5Label)))->SetText("");
-    if (inOptions.GetLoadType() == 0 && theServer && !theReady) {
+    if (inOptions.mLoadType == 0 && theServer && !theReady) {
         if (inOptions.mIsMultiplayer == false) {
             theForm->GetControl(kLobbyGameOpCheckBox5Cheats)->SetDisplayMode(kDisplayModeShown);
             theForm->GetControl(kLobbyGameOpCheckBox5Bitmap)->SetDisplayMode(kDisplayModeHidden);
@@ -1985,6 +1991,8 @@ void LobbyShowGameOptions(const EEGameOptions& inOptions, const EEGameOptionsPla
     theForm->GetControl(kLobbyGameOpCheckBox7Victory)->SetDisplayMode(kDisplayModeHidden);
     theForm->GetControl(kLobbyGameOpCheckBox7Bitmap)->SetDisplayMode(kDisplayModeHidden);
     theForm->GetControl(kLobbyGameOpCheckBox7Label)->SetDisplayMode(kDisplayModeHidden);
+theEnd:
+    ;
 }
 
 // FUNCTION: EXE 0x5deefb

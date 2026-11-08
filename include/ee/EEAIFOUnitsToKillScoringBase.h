@@ -28,6 +28,7 @@ public:
 
     long mCount;                            // +0x04 (-1; the scorers' users store how many to delete)
     long mCitizensToKill;                   // +0x08
+    long GetTransportsToKill() const { return this->mTransportsToKill; }
     long mTransportsToKill;                 // +0x0c
     long mMilitaryToKill;                   // +0x10
 };

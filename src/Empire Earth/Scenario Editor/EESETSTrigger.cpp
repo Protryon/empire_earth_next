@@ -774,21 +774,21 @@ void EESETSTrigger::Store()
     EEScenarioManager* theManager = gWorld.mScenarioManager;
     EESMTrigger* theTrigger = theManager->GetTrigger(theTriggerIndex);
     if (theTrigger != NULL) {
-        theTrigger->mName = UWideString(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetName());
+        theTrigger->SetName(UWideString(gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetName()));
         gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetTextEditBox()->GetAllText(theText);
-        theTrigger->mText = theText;
-        theTrigger->mIsOn = this->mIsOnCheckBox->GetIsChecked();
+        theTrigger->SetText(theText);
+        theTrigger->SetIsOn(this->mIsOnCheckBox->GetIsChecked());
         if (this->mConditionTimerCheckBox->GetIsChecked())
-            theTrigger->mConditionDuration = this->mConditionDurationEditBox->GetTextAsInt(0);
+            theTrigger->SetConditionDuration(this->mConditionDurationEditBox->GetTextAsInt(0));
         else
-            theTrigger->mConditionDuration = 0;
-        theTrigger->mIsLooping = this->mLoopingCheckBox->GetIsChecked();
-        theTrigger->mIsInCinematic = this->mInCinematicCheckBox->GetIsChecked();
+            theTrigger->SetConditionDuration(0);
+        theTrigger->SetIsLooping(this->mLoopingCheckBox->GetIsChecked());
+        theTrigger->SetIsInCinematic(this->mInCinematicCheckBox->GetIsChecked());
         if (this->mFirstConditionComboBox->GetCurrentSelection(theSelection) == kErrorOK && theTrigger->GetCondition(this->mFirstCondition) != NULL)
             theTrigger->SetCondition(this->mFirstCondition, this->mFirstNotCheckBox->GetIsChecked(), theSelection);
         if (this->mFirstCondition < theTrigger->GetConditionCount() - 1) {
-            if (this->mSecondConditionComboBox->GetCurrentSelection(theSelection) == kErrorOK && theTrigger->GetCondition(this->mFirstCondition + 1) != NULL)
-                theTrigger->SetCondition(this->mFirstCondition + 1, this->mSecondNotCheckBox->GetIsChecked(), theSelection);
+            if (this->mSecondConditionComboBox->GetCurrentSelection(theSelection) == kErrorOK && theTrigger->GetCondition(this->GetFirstCondition() + 1) != NULL)
+                theTrigger->SetCondition(this->GetFirstCondition() + 1, this->mSecondNotCheckBox->GetIsChecked(), theSelection);
             this->mSecondConditionOperatorComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, NULL);
         }
         if (this->mFirstEffectComboBox->GetCurrentSelection(theSelection) == kErrorOK && theTrigger->GetEffect(this->mFirstEffect) != NULL)

@@ -62,9 +62,12 @@ public:
     std::vector<RTSMapTileRun> mRuns;       // +0x24
     std::vector<U2DPoint<long> > mPath;     // +0x34
     U2DPoint<long> mGateTile;               // +0x44 (saved)
+    EECPCivilizationManager* GetManager() const { return this->mManager; }
     EECPCivilizationManager* mManager;      // +0x4c
+    EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;              // +0x50 (the manager's +0x4c)
     EEAutoPathRequest* mRequest;            // +0x54 (referenced)
+    EEComplexUnit* GetFrom() const { return this->mFrom; }
     EEComplexUnit* mFrom;                   // +0x58 (referenced)
     EEComplexUnit* mTo;                     // +0x5c (referenced)
     U2DPoint<long> mWallStart;              // +0x60 (saved)

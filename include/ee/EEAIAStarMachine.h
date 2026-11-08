@@ -39,7 +39,9 @@ public:
     virtual void SetStart(const EETileCoordinate& inTile) = 0;  // +0x38
 
     EETileCoordinate mTile;                 // +0x04 (the goal tile)
+    long GetType() const { return this->mType; }
     long mType;                             // +0x0c (2: land, 0x10: sea/space)
+    long GetRevs() const { return this->mRevs; }
     long mRevs;                             // +0x10
     long mNumRuns;                          // +0x14
     long mSteps;                            // +0x18
@@ -68,9 +70,11 @@ public:
 
     EETileCoordinate mTile;                 // +0x04 (the goal tile)
     long mType;                             // +0x0c
+    long GetRevs() const { return this->mRevs; }
     long mRevs;                             // +0x10
     long mNumRuns;                          // +0x14
     long mSteps;                            // +0x18
+    long GetSector() const { return this->mSector; }
     long mSector;                           // +0x1c (the goal's path sub sector id)
     long mNodeCount;                        // +0x20
     bool mFound;                            // +0x24

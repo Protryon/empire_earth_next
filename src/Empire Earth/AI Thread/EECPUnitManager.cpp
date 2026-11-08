@@ -739,10 +739,10 @@ void EECPUnitManager::RequestUnits(long inUnitClass, long inCount, long inTownID
                     theFront = true;
                 else
                     theFront = false;
-                if (!gUnitClassTable[theClass]->IsLandBuilding())
-                    this->RequestUnits(theClass, 1, 0, 0);
-                else
+                if (gUnitClassTable[theClass]->IsLandBuilding())
                     this->mManager->GetBuildManager()->QueueBuilding(theClass, 0, theFront);
+                else
+                    this->RequestUnits(theClass, 1, 0, 0);
                 theDone = true;
             }
         }

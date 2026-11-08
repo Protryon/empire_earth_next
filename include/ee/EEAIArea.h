@@ -56,6 +56,7 @@ public:
     // EECPIArmy 0x80296 calls U2DRectangle<long>::Contains 0xd190 on this + 0x50, 0x8019d calls 0x123d1 = the shape
     // of U2DRectangle<long>::Extend)
     U2DRectangle<long> mBounds;
+    unsigned long GetSerial() const { return this->mSerial; }
     unsigned long mSerial;                  // +0x60 EEAIContinentManager::mLastSerial; the key of its mAreas
     long mAreaType;                         // +0x64 (ctor 0; the continent factory 0x156b2 sets 1)
 };

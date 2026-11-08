@@ -15,6 +15,7 @@
 #include "platform/PlatPath.h"
 #include "platform/PlatFile.h"
 #include "lle/U2DGeometry.h"
+#include "lle/GEPixelPack.h"
 #include "dx7/DX7Rasterizer.h"
 #include "dx7/DX7Surface.h"
 #include "dx7/DX7Movie.h"
@@ -150,36 +151,6 @@ long DX7Movie::RenderFrame()
     return theResult;
 }
 
-// Packs one row of BGRA pixels into a frame buffer row of the given pixel format (GEPixelFormatID)
-static void PackRow(const unsigned char* inBGRA, unsigned char* outRow, unsigned long inWidth, unsigned long inFormat)
-{
-    unsigned short* the16 = reinterpret_cast<unsigned short*>(outRow);
-    uint32_t* the32 = reinterpret_cast<uint32_t*>(outRow);
-    for (unsigned long x = 0; x < inWidth; x++, inBGRA += 4) {
-        unsigned long b = inBGRA[0], g = inBGRA[1], r = inBGRA[2];
-        switch (inFormat) {
-        case kPixelFormatA8R8G8B8:
-        case kPixelFormatX8R8G8B8:
-            the32[x] = 0xff000000 | r << 16 | g << 8 | b;
-            break;
-        case kPixelFormatA4R4G4B4:
-            the16[x] = (unsigned short)(0xf000 | (r >> 4) << 8 | (g >> 4) << 4 | b >> 4);
-            break;
-        case kPixelFormatA1R5G5B5:
-        case kPixelFormatX1R5G5B5:
-            the16[x] = (unsigned short)(0x8000 | (r >> 3) << 10 | (g >> 3) << 5 | b >> 3);
-            break;
-        case kPixelFormatR5G5B5A1:
-        case kPixelFormatR5G5B5X1:
-            the16[x] = (unsigned short)((r >> 3) << 11 | (g >> 3) << 6 | (b >> 3) << 1 | 1);
-            break;
-        default:   // kPixelFormatR5G6B5
-            the16[x] = (unsigned short)((r >> 3) << 11 | (g >> 2) << 5 | b >> 3);
-            break;
-        }
-    }
-}
-
 // pl_mpeg decoded a frame (BGRA): converts it into the frame buffer and wakes RenderFrame
 void DX7Movie::DecodedFrame(const unsigned char* inBGRA, unsigned long inStride)
 {
@@ -190,7 +161,7 @@ void DX7Movie::DecodedFrame(const unsigned char* inBGRA, unsigned long inStride)
         unsigned char* theRow = this->mFrameBuffer->GetMemoryAddress();
         unsigned long theFormat = this->mFrameBuffer->GetPixelFormat();
         for (unsigned long y = 0; y < theHeight; y++, theRow += this->mFrameBuffer->GetBytesPerRow())
-            PackRow(inBGRA + y * inStride, theRow, theWidth, theFormat);
+            GEPackBGRXRow(inBGRA + y * inStride, theRow, theWidth, theFormat);
         this->mIsReady = true;
         this->mFrameReadyEvent->Set();
         this->mFrameBuffer->Unlock();

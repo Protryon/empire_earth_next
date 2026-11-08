@@ -100,7 +100,7 @@ EEClient::EEClient()
 #include "ee/EEMap.h"
 #include "ee/EEStringIDs.h"
 extern UString gCampaignExtension;          // 0x530b78 (ee/EECampaignFormManager.h, which needs the UI form headers)
-void EELobbyFn295CE3(bool inFlag);          // 0x295ce3 (EELobbyInit.cpp; provisional name)
+void EELobbyPostConnectStatus(bool inConnected);  // 0x295ce3 (EELobbyInit.cpp; provisional name)
 
 // FUNCTION: EXE 0x4b7278
 // Destroys the client, stopping its threads and releasing the fast-selection lock
@@ -137,8 +137,8 @@ void EEClient::SetConnectionState(long inState)
     UWideString theText;
     switch (inState) {
     case 0:
-        if (EECheck2989A9(true))
-            EELobbyFn295CE3(false);
+        if (EEIsMultiplayerGame(true))
+            EELobbyPostConnectStatus(false);
         else {
             gUserInterface->CloseForm(NULL);
             if (gWonNet != NULL && gUIManager->IsFormVisible(gUIManager->GetFormByID(kFormAvailableGames))) {
@@ -150,7 +150,7 @@ void EEClient::SetConnectionState(long inState)
         }
         break;
     case 1:
-        if (!EECheck2989A9(true)) {
+        if (!EEIsMultiplayerGame(true)) {
             gResource->GetString(IDS_CONNECTING_TO_SERVER, theText);
             gUIManager->DisplayMessage(theText, true, NULL, NULL, false);
         }
@@ -256,7 +256,7 @@ void EEClient::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
         } else if (inPlayer == this->GetPlayerNumber()) {
             if (inGameIsExiting) {
                 this->mHasLeftGame = true;
-                FnB7992(&theUnused);
+                CancelGameCallback(&theUnused);
             } else {
                 if (inPlayerIsOOS)
                     gResource->GetString(IDS_YOU_ARE_OUT_OF_SYNCH, theFormat);
@@ -266,7 +266,7 @@ void EEClient::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
                 this->mIgnoreConnectionTimeout = true;
                 this->mWasBooted = true;
                 this->mHasLeftGame = true;
-                gUIManager->DisplayMessage(theText, true, NULL, (EEUIFErrorCallback)FnB7992, true);
+                gUIManager->DisplayMessage(theText, true, NULL, (EEUIFErrorCallback)CancelGameCallback, true);
             }
         } else {
             if (inPlayerIsOOS)
@@ -289,7 +289,7 @@ void EEClient::ExecuteRemovePlayer(unsigned char inPlayer, bool inWasBooted, boo
 
 // FUNCTION: EXE 0x4b7992
 // Cancels the game (the callback of the booted message box)
-void FnB7992(void* inData)
+void CancelGameCallback(void* inData)
 {
     gUserInterface->PostCancelGame();
 }
@@ -305,7 +305,7 @@ bool EEClient::IsPlaybackRecordingSession()
 // Returns the connect timeout, kept in the global at 0x5308a0
 unsigned long EEClient::GetConnectTimeout()
 {
-    return gU5308A0;
+    return gNetworkAdapter;
 }
 
 // FUNCTION: EXE 0x4b79aa
@@ -318,9 +318,7 @@ unsigned char EEClient::GetClientSlot()
 // FUNCTION: EXE 0x4b79b1
 // Handles a server message: connection responses (lobby or an error box), reconnection, communications ticks whose
 // player inputs go to the physics queue (or the lobby before the game); load/save and lag messages execute at once
-// NEAR: the dead reads of mNumberOfCTsProcessedInPhysics are kept through dead locals (as EEServer 0x4cbc77);
-// case 0x43 keeps its compare in the original (EE_LOST_CASE does not make it exact, so it is not applied); the
-// mNoPop store is sunk into the shared tail in the original
+// NEAR: the dead reads of mNumberOfCTsProcessedInPhysics are kept through dead locals (as EEServer 0x4cbc77)
 void EEClient::HandleMessage(NEMessage* inMessage)
 {
     UWideString theText;
@@ -381,16 +379,16 @@ void EEClient::HandleMessage(NEMessage* inMessage)
         if (theResponse->GetError() == kConnectionAccepted) {
             this->mUISlotNumber = theResponse->GetUISlotNumber();
             gLocalPlayerOut = false;
-            if (EECheck2989A9(true))
-                EELobbyFn295CE3(true);
+            if (EEIsMultiplayerGame(true))
+                EELobbyPostConnectStatus(true);
             else
                 gUserInterface->OpenForm(gUIManager->GetFormByID(kFormLobby));
             gCommunications->SetNumberOfCTsProcessedInPhysics(theResponse->GetCurrentCT());
             gCommunications->SetCurrentCommunicationsTick(theResponse->GetCurrentCT());
             unsigned long theCT = gCommunications->GetNumberOfCTsProcessedInPhysics();
         } else if (this->mUISlotNumber == 0xff) {
-            if (EECheck2989A9(true))
-                EELobbyFn295CE3(false);
+            if (EEIsMultiplayerGame(true))
+                EELobbyPostConnectStatus(false);
             else if (theResponse->GetError() == kConnectionNameInUse) {
                 if (gWonNet != NULL) {
                     gWonNet->ClearGameList();

@@ -44,6 +44,7 @@ public:
     // name)
     void Create(EECPAttackFormation* inFormation);
 
+    EECPAttackSubGroupUnit* GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
     std::vector<EECPAttackSubGroupUnit*> mUnits;   // +0x04
     EEFormation* mFormation;                // +0x14 (referenced: Dereference before a new Create, in the dtor)
     U2DRectangle<float> mBounds;            // +0x18 (Create: the slots' positions)

@@ -8,8 +8,8 @@
 class EEABootClientFromCanceledGame : public EEAction {
 public:
     EEABootClientFromCanceledGame() : mStringID(0), mNoPop(false) {}
-    // EEClient::ClientSlot4C 0xb7fa5 news one with 0x271b: +0xc stored after the vptr (a body assignment)
-    EEABootClientFromCanceledGame(long inStringID) : mNoPop(false) { this->mStringID = inStringID; }
+    // EEClient::ClientSlot4C 0xb7fa5 news one with 0x271b; HandleMessage 0xb79b1: both stored after the vptr, the string id first
+    EEABootClientFromCanceledGame(long inStringID) { this->mStringID = inStringID; this->mNoPop = false; }
     // EEUserInterface 0x277231 expands one with both stored after the vptr (mNoPop first)
     EEABootClientFromCanceledGame(long inStringID, bool inNoPop) { this->mNoPop = inNoPop; this->mStringID = inStringID; }
     virtual void Virtual4();                // +0x04 (0x16c0)

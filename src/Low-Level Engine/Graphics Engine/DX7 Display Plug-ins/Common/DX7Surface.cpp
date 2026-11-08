@@ -78,9 +78,15 @@ long DX7Surface::Clear(GEColor& inColor, float inAlpha)
     return theResult;
 }
 
-// port: a logical rectangle (GESurface::GetLogicalShift) -> the surface's pixels
+// port: a logical rectangle (GESurface::GetLogicalShift, SetLogicalSize) -> the surface's pixels
 static GERectangle DX7PixelRectangle(const GERectangle& inRectangle, const GESurface* inSurface)
 {
+    if (inSurface != NULL && inSurface->GetLogicalWidthSet() != 0 && inSurface->GetLogicalHeightSet() != 0) {
+        float theX = (float)inSurface->GetPixelWidth() / (float)inSurface->GetLogicalWidthSet();
+        float theY = (float)inSurface->GetPixelHeight() / (float)inSurface->GetLogicalHeightSet();
+        return GERectangle(inRectangle.GetLeft() * theX, inRectangle.GetTop() * theY, inRectangle.GetRight() * theX,
+                           inRectangle.GetBottom() * theY);
+    }
     if (inSurface == NULL || inSurface->GetLogicalShift() == 0)
         return inRectangle;
     float theScale = (float)(1u << inSurface->GetLogicalShift());
@@ -563,6 +569,12 @@ long DX7Surface::Unlock()
     } else
         this->mIsLocked = false;
     return theResult;
+}
+
+// port: the GPU copy's pixels per logical pixel (a scaled back buffer's render scale)
+float DX7Surface::GetRenderScale() const
+{
+    return this->mSurface != NULL ? this->mSurface->GetRenderScale() : 1.0f;
 }
 
 // vector<GESurface*> COMDATs this unit is the first (link order) to instantiate (DetachSurface's erase):

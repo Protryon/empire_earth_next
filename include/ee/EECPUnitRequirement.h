@@ -17,12 +17,17 @@ public:
 
     long mL04;                              // +0x04 (-1)
     long mL08;                              // +0x08 (-1)
+    long GetNumLeft() const { return this->mNumLeft; }
     long mNumLeft;                          // +0x0c
     long mNumWanted;                        // +0x10
+    long GetCategory() const { return this->mCategory; }
     long mCategory;                         // +0x14 (0x23)
+    long GetUnitClass() const { return this->mUnitClass; }
     long mUnitClass;                        // +0x18
     long mFamily;                           // +0x1c (0x17)
+    long GetUnitKind() const { return this->mUnitKind; }
     long mUnitKind;                         // +0x20
+    long GetKind() const { return this->mKind; }
     long mKind;                             // +0x24
 };
 

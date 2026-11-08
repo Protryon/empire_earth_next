@@ -14,6 +14,13 @@ static_assert(PLAT_SOCKET_EVENT_READ == FD_READ && PLAT_SOCKET_EVENT_ACCEPT == F
 static_assert(PLAT_SOCKET_MAX_BACKLOG == SOMAXCONN, "Winsock 2's SOMAXCONN");
 static_assert(PLAT_SOCK_EWOULDBLOCK == WSAEWOULDBLOCK && PLAT_SOCK_HOST_NOT_FOUND == WSAHOST_NOT_FOUND,
               "Winsock's error numbering");
+static_assert(PLAT_SOCK_EDESTADDRREQ == WSAEDESTADDRREQ && PLAT_SOCK_ESTALE == WSAESTALE
+                  && PLAT_SOCK_EREMOTE == WSAEREMOTE
+                  && PLAT_SOCK_SYSNOTREADY == WSASYSNOTREADY && PLAT_SOCK_VERNOTSUPPORTED == WSAVERNOTSUPPORTED
+                  && PLAT_SOCK_EDISCON == WSAEDISCON && PLAT_SOCK_ENOTEMPTY == WSAENOTEMPTY,
+              "Winsock's error numbering");
+static_assert(PLAT_SOCKET_SHUT_RECEIVE == SD_RECEIVE && PLAT_SOCKET_SHUT_SEND == SD_SEND
+                  && PLAT_SOCKET_SHUT_BOTH == SD_BOTH, "Winsock's SD_* values");
 
 namespace {
 
@@ -95,6 +102,71 @@ extern "C" int PlatSocketSetBroadcast(PlatSocket inSocket, int inBroadcast)
     BOOL theValue = inBroadcast ? TRUE : FALSE;
     return setsockopt(Native(inSocket), SOL_SOCKET, SO_BROADCAST, reinterpret_cast<const char*>(&theValue),
                       sizeof(theValue)) == 0 ? 1 : 0;
+}
+
+extern "C" int PlatSocketSetLinger(PlatSocket inSocket, int inOn, int inSeconds)
+{
+    linger theValue;
+    theValue.l_onoff = static_cast<u_short>(inOn ? 1 : 0);
+    theValue.l_linger = static_cast<u_short>(inSeconds);
+    return setsockopt(Native(inSocket), SOL_SOCKET, SO_LINGER, reinterpret_cast<const char*>(&theValue),
+                      sizeof(theValue)) == 0 ? 1 : 0;
+}
+
+extern "C" int PlatSocketSetReuseAddress(PlatSocket inSocket, int inReuse)
+{
+    BOOL theValue = inReuse ? TRUE : FALSE;
+    return setsockopt(Native(inSocket), SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char*>(&theValue),
+                      sizeof(theValue)) == 0 ? 1 : 0;
+}
+
+extern "C" int PlatSocketSetNoDelay(PlatSocket inSocket, int inNoDelay)
+{
+    BOOL theValue = inNoDelay ? TRUE : FALSE;
+    return setsockopt(Native(inSocket), IPPROTO_TCP, TCP_NODELAY, reinterpret_cast<const char*>(&theValue),
+                      sizeof(theValue)) == 0 ? 1 : 0;
+}
+
+extern "C" int PlatSocketShutdown(PlatSocket inSocket, int inHow)
+{
+    return shutdown(Native(inSocket), inHow) == 0 ? 1 : 0;
+}
+
+extern "C" int32_t PlatSocketWait(PlatSocket inSocket, uint32_t inMask, uint32_t inTimeoutMs)
+{
+    fd_set theRead, theWrite, theExcept;
+    FD_ZERO(&theRead);
+    FD_ZERO(&theWrite);
+    FD_ZERO(&theExcept);
+    if (inMask & PLAT_SOCKET_WAIT_READ)
+        FD_SET(Native(inSocket), &theRead);
+    if (inMask & PLAT_SOCKET_WAIT_WRITE)
+        FD_SET(Native(inSocket), &theWrite);
+    if (inMask & PLAT_SOCKET_WAIT_EXCEPT)
+        FD_SET(Native(inSocket), &theExcept);
+    timeval theTime;
+    theTime.tv_sec = static_cast<long>(inTimeoutMs / 1000);
+    theTime.tv_usec = static_cast<long>((inTimeoutMs % 1000) * 1000);
+    int theResult = select(0, &theRead, &theWrite, &theExcept, inTimeoutMs == 0xFFFFFFFFu ? NULL : &theTime);
+    if (theResult == SOCKET_ERROR)
+        return -1;
+    int32_t theReady = 0;
+    if (FD_ISSET(Native(inSocket), &theRead))
+        theReady |= PLAT_SOCKET_WAIT_READ;
+    if (FD_ISSET(Native(inSocket), &theWrite))
+        theReady |= PLAT_SOCKET_WAIT_WRITE;
+    if (FD_ISSET(Native(inSocket), &theExcept))
+        theReady |= PLAT_SOCKET_WAIT_EXCEPT;
+    return theReady;
+}
+
+extern "C" uint32_t PlatSocketGetError(PlatSocket inSocket)
+{
+    int theError = 0;
+    int theLength = sizeof(theError);
+    if (getsockopt(Native(inSocket), SOL_SOCKET, SO_ERROR, reinterpret_cast<char*>(&theError), &theLength) != 0)
+        return static_cast<uint32_t>(WSAGetLastError());
+    return static_cast<uint32_t>(theError);
 }
 
 extern "C" int32_t PlatSocketSend(PlatSocket inSocket, const void* inData, uint32_t inLength)

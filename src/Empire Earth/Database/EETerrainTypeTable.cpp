@@ -109,27 +109,28 @@ void EETerrainTypeTable::Unload()
 // player is missing; the base table unless exactly one player (player 0 aside) is human, then a twin by difficulty
 float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned long inPlayer, unsigned long inTargetPlayer)
 {
-    float theResult = 0.0f;
     long theRow = inClass->mFamily;
-    if (!inClass->CanBeAttacked())
-        return theResult;
-    EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
-    EEPlayer* theTarget = gWorld.mPlayers[inTargetPlayer];
-    if (thePlayer == NULL || theTarget == NULL)
-        return 0.0f;
-    // the scale by difficulty (gameoptions.yaml difficulties: dbworld difficulty_damage_scale F / F2 on easy and
-    // hard, none on medium) when exactly one side is "human" (IsHuman, not player 0; provisional name)
-    bool theHuman = thePlayer->IsHuman() && inPlayer != 0;
-    bool theTargetHuman = theTarget->IsHuman() && inTargetPlayer != 0;
-    float theFactor = gU4E8708[theRow][inKind];
-    if (theHuman == theTargetHuman)
-        return theFactor;
-    const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
-    unsigned long theDifficulty = gWorld.mGameOptions.mDifficulty;
-    if (theDifficulty >= theList.size())
-        return theFactor;
-    const EEDifficultyRule& theRule = theList[theDifficulty];
-    return EERuleFloat(theTargetHuman ? theRule.mScaleHumanTarget : theRule.mScaleHumanAttacker) * theFactor;
+    float theResult = 0.0f;
+    if (inClass->CanBeAttacked()) {
+        EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
+        EEPlayer* theTarget = gWorld.mPlayers[inTargetPlayer];
+        if (thePlayer == NULL || theTarget == NULL)
+            return 0.0f;
+        // the scale by difficulty (gameoptions.yaml difficulties: dbworld difficulty_damage_scale F / F2 on easy and
+        // hard, none on medium) when exactly one side is "human" (IsHuman, not player 0; provisional name)
+        bool theHuman = thePlayer->IsHuman() && inPlayer != 0;
+        bool theTargetHuman = theTarget->IsHuman() && inTargetPlayer != 0;
+        float theFactor = gU4E8708[theRow][inKind];
+        if (theHuman == theTargetHuman)
+            return theFactor;
+        const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
+        unsigned long theDifficulty = gWorld.mGameOptions.mDifficulty;
+        if (theDifficulty >= theList.size())
+            return theFactor;
+        const EEDifficultyRule& theRule = theList[theDifficulty];
+        theResult = EERuleFloat(theTargetHuman ? theRule.mScaleHumanTarget : theRule.mScaleHumanAttacker) * theFactor;
+    }
+    return theResult;
 }
 
 

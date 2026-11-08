@@ -305,7 +305,7 @@ long EEE3DEarthquake::DrawPass2()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10F833();
+    SetTerrainLighting();
     bool theSorted = gOrthographicView;
     return gRasterizer->Draw(this->mModel, theScreen, 1.0f, theSorted);
 }

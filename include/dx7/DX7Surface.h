@@ -27,7 +27,8 @@ public:
     virtual unsigned long GetAttachedSurfaceCount() { return this->mAttachedSurfaces.size(); }
     virtual unsigned long GetBytesPerRow() const { return this->mBytesPerRow; }
     // port: the logical size (GESurface::GetLogicalShift); never below 1
-    virtual unsigned long GetHeight() const { return LogicalSize(this->mDescription.mHeight); }
+    virtual unsigned long GetHeight() const
+        { return this->mLogicalHeight != 0 ? this->mLogicalHeight : LogicalSize(this->mDescription.mHeight); }
     virtual bool GetIs3DRenderable() const { return this->mDescription.mIs3DRenderable; }
     virtual bool GetIsTextLocked() const { return this->mIsTextLocked; }
     virtual bool GetIsTransparencyEnabled() const { return this->mDescription.mIsTransparencyEnabled; }
@@ -39,13 +40,15 @@ public:
     virtual const GESurfaceDescription& GetSurfaceDescription() const { return this->mDescription; }
     virtual const GEColor& GetTransparencyColor() const { return this->mTransparencyColor; }
     virtual unsigned long GetType() const { return this->mDescription.mType; }
-    virtual unsigned long GetWidth() const { return LogicalSize(this->mDescription.mWidth); }
+    virtual unsigned long GetWidth() const
+        { return this->mLogicalWidth != 0 ? this->mLogicalWidth : LogicalSize(this->mDescription.mWidth); }
     virtual long Lock();
     virtual long RestoreSurface();
     virtual void SetTransparencyColor(GEColor& inColor);
     virtual long TextLock();
     virtual long TextUnlock();
     virtual long Unlock();
+    virtual float GetRenderScale() const;   // port: GXSurface::GetRenderScale
 
 protected:
     virtual ~DX7Surface();

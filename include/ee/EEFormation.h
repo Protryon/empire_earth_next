@@ -35,10 +35,12 @@ public:
 
     // layout: the base ctor 0xdd7f8 (EEFLine's 0xdd8b2 calls it); sizeof 0x60
     GETransformation mOrientation;          // +0x08
+    void SetCenter(const GE3DPoint& inCenter) { this->mCenter = inCenter; }   // inline: EEHerd::Surround 0xa4351 refuses the GE3DPoint::operator= inside (share)
     GE3DPoint mCenter;                      // +0x48 (EEActiveGroup::LayOutFormation 0x1ec5f3 assigns it through
                                             // GE3DPoint::operator=; the ctor 0xdd7f8 zeroes it) (provisional name)
 
     float mHeading;                         // +0x54
+    long GetType() const { return this->mType; }
     long mType;                             // +0x58
     bool mB5C;                              // +0x5c (= true)
 };

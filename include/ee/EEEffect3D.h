@@ -15,7 +15,7 @@ class SESMInstanceNode;
 // 0x1487a3 (cdecl, in the unnamed unit 0x1482e4..0x1497f4): the graphic's sound for the animation frame inFrame at
 // inLocation (inStart: the frame changed); takes a reference to inSound, returns a referenced node (the 3D effects
 // Disease/Hurricane/Virus/ParticleEmitter pass it to their SetSound and dereference once) (provisional name)
-SESMInstanceNode* Fn1487A3(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,
+SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,
                            SESMInstanceNode* inSound, unsigned long inFrame, bool inStart);
 
 class EEEffect3D : public EEEffect {

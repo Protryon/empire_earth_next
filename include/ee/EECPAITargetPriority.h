@@ -8,7 +8,7 @@
 // around the include flips 0x408fd7, one around the sort users or at the end of the file does not)
 #pragma optimize("g", off)
 struct EECPAITargetPriority {
-    EECPAITargetPriority(const EETileCoordinate& inCenter) : mCenter(inCenter) {}
+    EECPAITargetPriority(const EETileCoordinate& inCenter) { this->mCenter = inCenter; }
     EECPAITargetPriority(const EECPAITargetPriority& inOther) : mCenter(inOther.mCenter) {}
     ~EECPAITargetPriority() {}
     bool operator()(EECPASTargetUnit* inFirst, EECPASTargetUnit* inSecond) const

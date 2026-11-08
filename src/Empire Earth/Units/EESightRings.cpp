@@ -32,7 +32,16 @@ static const float kMaxSightRadius = 32.0f;
 // SYNTHETIC: EXE 0x60837a   (registrar)
 // SYNTHETIC: EXE 0x608386   (dtor)
 // the original dtor tests a guard bit (0x963288): a static data member of a class not identified yet
-std::vector<GE2DPoint> gSightRings[33];     // 0x963290 (r = 0..32)
+// A ring entry. Not a GE2DPoint: its copy is memberwise (`mov edx, [ecx + eax*8]; mov eax, [ecx + eax*8 + 4]` where GE2DPoint's
+// inline copy ctor goes through an address; push_back 0x608c0b is its own COMDAT next to GE2DPoint's 0x688c8d).
+struct EESightOffset {
+    EESightOffset(float inX, float inY) : mX(inX), mY(inY) {}
+    float GetX() const { return this->mX; }
+    float GetY() const { return this->mY; }
+    float mX;
+    float mY;
+};
+std::vector<EESightOffset> gSightRings[33];     // 0x963290 (r = 0..32)
 bool gSightRingsBuilt;                      // 0x9634a0
 
 // FUNCTION: EXE 0x6083b0
@@ -53,7 +62,7 @@ void EEAddSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlayer)
     for (long r = 0; r <= theRadius; r++) {
         long theCount = gSightRings[r].size();
         for (long i = 0; i < theCount; i++) {
-            GE2DPoint theOffset = gSightRings[r][i];
+            EESightOffset theOffset = gSightRings[r][i];
             float theX = theOffset.GetX() + inX;
             float theY = theOffset.GetY() + inY;
             long theTileX = UMFloor(theX);
@@ -90,7 +99,7 @@ void EEAddSightRingStep(float inOldX, float inOldY, float inNewX, float inNewY, 
             continue;
         long theCount = gSightRings[r].size();
         for (long i = 0; i < theCount; i++) {
-            GE2DPoint theOffset = gSightRings[r][i];
+            EESightOffset theOffset = gSightRings[r][i];
             float theX = theOffset.GetX() + inNewX;
             float theY = theOffset.GetY() + inNewY;
             long theTileX = UMFloor(theX);
@@ -122,7 +131,7 @@ void EEBuildSightRings()
             if (theDistance != (float)theRing)
                 theRing++;
             if (theRing <= 32)
-                gSightRings[theRing].push_back(GE2DPoint((float)x, (float)y));
+                gSightRings[theRing].push_back(EESightOffset((float)x, (float)y));
         }
     }
     gSightRingsBuilt = true;
@@ -146,7 +155,7 @@ void EERemoveSightCircle(float inX, float inY, float inRadius, EEPlayer* inPlaye
     for (long r = 0; r <= theRadius; r++) {
         long theCount = gSightRings[r].size();
         for (long i = 0; i < theCount; i++) {
-            GE2DPoint theOffset = gSightRings[r][i];
+            EESightOffset theOffset = gSightRings[r][i];
             float theX = theOffset.GetX() + inX;
             float theY = theOffset.GetY() + inY;
             long theTileX = UMFloor(theX);
@@ -183,7 +192,7 @@ void EERemoveSightRingStep(float inOldX, float inOldY, float inNewX, float inNew
             continue;
         long theCount = gSightRings[r].size();
         for (long i = 0; i < theCount; i++) {
-            GE2DPoint theOffset = gSightRings[r][i];
+            EESightOffset theOffset = gSightRings[r][i];
             float theX = theOffset.GetX() + inOldX;
             float theY = theOffset.GetY() + inOldY;
             long theTileX = UMFloor(theX);

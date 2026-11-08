@@ -22,7 +22,7 @@ public:
     UWideString mName;                      // +0x304 (the summary's name label)
     GEColor mColor;                         // +0x318 (the player's colour: bars and graph series)
     long mResult;                           // +0x324 (1 / 2: the victory / defeat banner; 0 ends the report loop)
-    unsigned long mColorIndex;              // +0x328 (shown when non-zero, label n + 0x5eb)
+    unsigned long mTeam;                    // +0x328 (shown when non-zero, label n + 0x5eb)
     unsigned long mEndTime;                 // +0x32c (milliseconds: the summary scales it by 0.001)
     unsigned long mResources[7];            // +0x330 (the summary adds [2..6] for the series 7..11)
     unsigned long mScore;                   // +0x34c

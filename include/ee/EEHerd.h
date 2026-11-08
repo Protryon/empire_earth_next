@@ -82,17 +82,23 @@ public:
     bool HasUnit(EEComplexUnit* inUnit) { return std::find(this->mUnits.begin(), this->mUnits.end(), inUnit) != this->mUnits.end(); }
 
     std::map<unsigned long, EEMedia*> mMedia;      // +0x68 unit id -> the media attached to it (SetUnitMedia/RemoveUnitMedia; UnloadMedia on release; the map code is ICF-shared with map<long, long*>)
+    EEComplexUnit* GetUnitsAt(unsigned long inIndex) const { return this->mUnits[inIndex]; }
     std::vector<EEComplexUnit*> mUnits;     // +0x74
     U2DRectangle<long> mBounds2;            // +0x84
     U2DPoint<long> mP94;                    // +0x94
     U2DPoint<long> mCenter;                 // +0x9c (the target's tile)
+    EEAnimal* GetAnimal() const { return this->mAnimal; }
     EEAnimal* mAnimal;                      // +0xa4 (saved as its +0x3c index; RepairPointers: EEAnimal::sTable)
     UReferenceCounter* mPathRequest;        // +0xa8 (released through gPathManager, then Dereference)
+    EEPlayer* GetPlayer() const { return this->mPlayer; }
     EEPlayer* mPlayer;                      // +0xac (saved as its mPlayerID; RepairPointers: gWorld's player)
+    EEComplexUnit* GetLeader() const { return this->mLeader; }
     EEComplexUnit* mLeader;                 // +0xb0 (reference counted)
+    EEComplexUnit* GetTarget() const { return this->mTarget; }
     EEComplexUnit* mTarget;                 // +0xb4 (reference counted)
     float mFB8;                             // +0xb8
     unsigned long mAnimalID;                // +0xbc (the animal index: the units' class +0x2cc)
+    unsigned long GetGrazeAreaID() const { return this->mGrazeAreaID; }
     unsigned long mGrazeAreaID;             // +0xc0 (an area serial: gContinentManager.GetArea)
     unsigned long mState;                   // +0xc4 (0, 2, 3, 4, 7, 9, 0xa, 0xb)
     unsigned long mLC8;                     // +0xc8

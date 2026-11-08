@@ -214,7 +214,7 @@ struct EECPRCAreaEffectLess {
     long mPlayer;                           // +0x04
 };
 
-// The tile vector is vector<U2DPoint<long> > (the zeroed U2DPoint locals pushed into it; Fn2492C2 /
+// The tile vector is vector<U2DPoint<long> > (the zeroed U2DPoint locals pushed into it; EEGetSquareRingTiles /
 // EEGetSquareRing / find 0x8d7bc / copy ctor 0x26f46 by their bound names)
 // FUNCTION: EXE 0x48bdfa
 // Finds a site near the resource center for a building: towers by gold or iron, houses in the main building's
@@ -229,7 +229,7 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
     std::vector<EEUnit*> theUnits;
     EECPBuildManager* theBuildManager = this->mPlayer->mCivilizationManager->mBuildManager;
     long theRange = this->mPlayer->mDropOffDistance;
-    long theSize = gUnitClassTable[inUnitClass]->mTileSize;
+    long theSize = gUnitClassTable[inUnitClass]->GetTileSize();
     bool theFound = false;
     EETileCoordinate theCenter;
     theCenter.mX = 0;
@@ -244,28 +244,28 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
         float theFactor = this->mPlayer->mUnitClassUpgrades[inUnitClass]->mRange;
         float theRadius = this->mPlayer->mTowerSpacing * theFactor;
         float theRadiusSquared = theRadius * theRadius;
-        theContinent = gContinentManager.GetContinent(U2DPoint<long>(this->mUnit->GetTileX(), this->mUnit->GetTileY()), kAIPathLandMass);
+        theContinent = gContinentManager.GetContinent(U2DPoint<long>(this->GetUnit()->GetTileX(), this->GetUnit()->GetTileY()), kAIPathLandMass);
         for (i = 0, theCount = this->mUnits.size(); i < theCount && !theFound; i++) {
             EEUnit* theUnit = this->mUnits[i];
             // port: also by the food of a worked centre (the forage and hunting grounds the early raids go for); the
             // original guarded only gold and iron
-            if (theUnit->mResourceType != kResourceGold && theUnit->mResourceType != kResourceIron
-                && !(theUnit->mResourceType == kResourceFood && this->mIsActive))
+            if (theUnit->GetResourceType() != kResourceGold && theUnit->GetResourceType() != kResourceIron
+                && !(theUnit->GetResourceType() == kResourceFood && this->mIsActive))
                 continue;
             for (long theRing = 2; theRing < UMFloatToLong(theFactor) && !theFound; theRing++) {
-                Fn2492C2(theUnit->GetTileX(), theUnit->GetTileY(), theRing, theTiles);
-                theCenter.mX = this->mUnit->GetTileX() + this->mUnit->GetUnitClass()->mTileSize / 2;
-                theCenter.mY = this->mUnit->GetTileY() + this->mUnit->GetUnitClass()->mTileSize / 2;
+                EEGetSquareRingTiles(theUnit->GetTileX(), theUnit->GetTileY(), theRing, theTiles);
+                theCenter.mX = this->GetUnit()->GetTileX() + this->GetUnit()->GetUnitClass()->GetTileSize() / 2;
+                theCenter.mY = this->GetUnit()->GetTileY() + this->GetUnit()->GetUnitClass()->GetTileSize() / 2;
                 std::sort(theTiles.begin(), theTiles.end(), EECPRCTileNearer(theCenter));
                 for (it = theTiles.begin() + (theTiles.size() > 3 ? 3 : 0); it != theTiles.end() && !theFound;
                      it++) {
-                    if (theBuildManager->HasTowerNear(it->mX, it->mY, theRadiusSquared))
+                    if (theBuildManager->HasTowerNear(it->GetX(), it->GetY(), theRadiusSquared))
                         continue;
                     theFound = theBuildManager->CanBuildAt(theContinent, inUnitClass, *it, theSize, true, true,
-                                                        this->mUnit->GetTileX(), this->mUnit->GetTileY());
+                                                        this->GetUnit()->GetTileX(), this->GetUnit()->GetTileY());
                     if (theFound) {
-                        outTile.mX = it->mX;
-                        outTile.mY = it->mY;
+                        outTile.mX = it->GetX();
+                        outTile.mY = it->GetY();
                     }
                 }
             }
@@ -276,13 +276,13 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
             this->GetCenter(theCenter);
             unsigned short theCenterContinent = gContinentManager.GetContinent(theCenter, kAIPathLandMass);
             for (long theRing = 2; theRing < theRange && !theFound; theRing++) {
-                Fn2492C2(theCenter.mX, theCenter.mY, theRing, theTiles);
+                EEGetSquareRingTiles(theCenter.GetX(), theCenter.GetY(), theRing, theTiles);
                 for (it = theTiles.begin(); it != theTiles.end() && !theFound; it++) {
-                    theFound = theBuildManager->CanBuildAt(theCenterContinent, kUnitTypeSettlement, *it, theSize, true, true, theCenter.mX,
-                                                        theCenter.mY);
+                    theFound = theBuildManager->CanBuildAt(theCenterContinent, kUnitTypeSettlement, *it, theSize, true, true, theCenter.GetX(),
+                                                        theCenter.GetY());
                     if (theFound) {
-                        outTile.mX = it->mX;
-                        outTile.mY = it->mY;
+                        outTile.mX = it->GetX();
+                        outTile.mY = it->GetY();
                     }
                 }
             }
@@ -294,17 +294,17 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
                 theContinent = gContinentManager.GetContinent(this->mUnits[0], kAIPathLandMass);
                 theUnit = this->mUnits[0];
             } else {
-                theContinent = gContinentManager.GetContinent(this->mUnit, kAIPathLandMass);
-                theUnit = this->mUnit;
+                theContinent = gContinentManager.GetContinent(this->GetUnit(), kAIPathLandMass);
+                theUnit = this->GetUnit();
             }
             EETileCoordinate theUnitTile;
             theUnitTile.mX = theUnit->GetTileX();
             theUnitTile.mY = theUnit->GetTileY();
-            long theUnitSize = this->mUnit->GetUnitClass()->mTileSize;
-            long theX = this->mUnit->GetTileX() + theUnitSize / 2;
-            long theY = this->mUnit->GetTileY() + theUnitSize / 2;
-            for (std::vector<EEAreaEffect*>::iterator theIterator = this->mUnit->mAreaEffects.mItems.begin();
-                 theIterator != this->mUnit->mAreaEffects.mItems.end(); ++theIterator) {
+            long theUnitSize = this->GetUnit()->GetUnitClass()->GetTileSize();
+            long theX = this->GetUnit()->GetTileX() + theUnitSize / 2;
+            long theY = this->GetUnit()->GetTileY() + theUnitSize / 2;
+            for (std::vector<EEAreaEffect*>::iterator theIterator = this->GetUnit()->mAreaEffects.mItems.begin();
+                 theIterator != this->GetUnit()->mAreaEffects.mItems.end(); ++theIterator) {
                 EEAEMoraleFromBuildings* theEffect = dynamic_cast<EEAEMoraleFromBuildings*>(*theIterator);
                 if (theEffect == NULL)
                     continue;
@@ -320,16 +320,16 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
                 for (i = 0, theCount = theBuildings.size(); i < theCount; i++) {
                     EEComplexUnit* theBuilding = theBuildings[i];
                     theSite = U2DPoint<long>(theBuilding->GetTileX() - theSize, theBuilding->GetTileY());
-                    if (this->IsInAreaEffect(theSite.mX, theSite.mY, 0x25, 5))
+                    if (this->IsInAreaEffect(theSite.GetX(), theSite.GetY(), 0x25, 5))
                         theTiles.push_back(theSite);
                     theSite = U2DPoint<long>(theBuilding->GetTileX() + theSize, theBuilding->GetTileY());
-                    if (this->IsInAreaEffect(theSite.mX, theSite.mY, 0x25, 5))
+                    if (this->IsInAreaEffect(theSite.GetX(), theSite.GetY(), 0x25, 5))
                         theTiles.push_back(theSite);
                     theSite = U2DPoint<long>(theBuilding->GetTileX(), theBuilding->GetTileY() - theSize);
-                    if (this->IsInAreaEffect(theSite.mX, theSite.mY, 0x25, 5))
+                    if (this->IsInAreaEffect(theSite.GetX(), theSite.GetY(), 0x25, 5))
                         theTiles.push_back(theSite);
                     theSite = U2DPoint<long>(theBuilding->GetTileX(), theBuilding->GetTileY() + theSize);
-                    if (this->IsInAreaEffect(theSite.mX, theSite.mY, 0x25, 5))
+                    if (this->IsInAreaEffect(theSite.GetX(), theSite.GetY(), 0x25, 5))
                         theTiles.push_back(theSite);
                 }
             }
@@ -343,42 +343,42 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
                 unsigned long j, n;
                 for (j = 0, n = this->mUnits.size(); j < n && theFound; j++) {
                     EEUnit* theOther = this->mUnits[j];
-                    long theOtherSize = theOther->GetUnitClass()->mTileSize;
+                    long theOtherSize = theOther->GetUnitClass()->GetTileSize();
                     float theHalf = theOtherSize * 0.5f;
                     theUnitCenter = U2DPoint<long>(UMFloatToLong(theOther->GetTileX() + theHalf),
                                                    UMFloatToLong(theOther->GetTileY() + theHalf));
                     theHalf = theSize * 0.5f;
-                    theSite = U2DPoint<long>(UMFloatToLong(theTile.mX + theHalf), UMFloatToLong(theTile.mY + theHalf));
+                    theSite = U2DPoint<long>(UMFloatToLong(theTile.GetX() + theHalf), UMFloatToLong(theTile.GetY() + theHalf));
                     theFound = theSite.DistanceTo(theUnitCenter) >= theOtherSize + 2;
                 }
                 if (theFound) {
-                    outTile.mX = it->mX;
-                    outTile.mY = it->mY;
+                    outTile.mX = it->GetX();
+                    outTile.mY = it->GetY();
                 }
             }
             if (!theFound) {
                 for (long theRing = theEffectRadius - 2; theRing > theUnitSize && !theFound; theRing--) {
-                    Fn2492C2(theX, theY, theRing, theTiles);
+                    EEGetSquareRingTiles(theX, theY, theRing, theTiles);
                     for (it = theTiles.begin(); it != theTiles.end() && !theFound; it++) {
-                        theFound = theBuildManager->CanBuildAt(theContinent, kUnitTypeHouse, *it, theSize, false, true, theUnitTile.mX,
-                                                            theUnitTile.mY);
+                        theFound = theBuildManager->CanBuildAt(theContinent, kUnitTypeHouse, *it, theSize, false, true, theUnitTile.GetX(),
+                                                            theUnitTile.GetY());
                         if (!theFound)
                             continue;
                         unsigned long j, n;
                         for (j = 0, n = this->mUnits.size(); j < n && theFound; j++) {
                             EEUnit* theOther = this->mUnits[j];
-                            long theOtherSize = theOther->GetUnitClass()->mTileSize;
+                            long theOtherSize = theOther->GetUnitClass()->GetTileSize();
                             float theHalf = theOtherSize * 0.5f;
                             theUnitCenter = U2DPoint<long>(UMFloatToLong(theOther->GetTileX() + theHalf),
                                                            UMFloatToLong(theOther->GetTileY() + theHalf));
                             theHalf = theSize * 0.5f;
-                            theSite = U2DPoint<long>(UMFloatToLong(it->mX + theHalf),
-                                                     UMFloatToLong(it->mY + theHalf));
+                            theSite = U2DPoint<long>(UMFloatToLong(it->GetX() + theHalf),
+                                                     UMFloatToLong(it->GetY() + theHalf));
                             theFound = theSite.DistanceTo(theUnitCenter) >= theOtherSize + 2;
                         }
                         if (theFound) {
-                            outTile.mX = it->mX;
-                            outTile.mY = it->mY;
+                            outTile.mX = it->GetX();
+                            outTile.mY = it->GetY();
                         }
                     }
                 }
@@ -394,22 +394,22 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
         case kUnitTypeCyberFactory:
         case kUnitTypeCyberLaboratory:
         case kUnitTypeCpMissileBase:
-            if (this->mUnit != NULL) {
+            if (this->GetUnit() != NULL) {
                 if (this->mUnits.size() == 0) {
-                    theCenter.mX = theBuildManager->mTownCenterTile.mX;
-                    theCenter.mY = theBuildManager->mTownCenterTile.mY;
+                    theCenter.mX = theBuildManager->mTownCenterTile.GetX();
+                    theCenter.mY = theBuildManager->mTownCenterTile.GetY();
                 } else
                     this->GetCenter(theCenter);
                 theContinent = gContinentManager.GetContinent(theCenter, kAIPathLandMass);
-                if (theCenter.mX != -10000 && theCenter.mY != -10000) {
+                if (theCenter.GetX() != -10000 && theCenter.GetY() != -10000) {
                     for (long theRing = theRange + 5; theRing > 1 && !theFound; theRing--) {
-                        Fn2492C2(theCenter.mX, theCenter.mY, theRing, theTiles);
+                        EEGetSquareRingTiles(theCenter.GetX(), theCenter.GetY(), theRing, theTiles);
                         for (it = theTiles.begin(); it != theTiles.end() && !theFound; it++) {
                             theFound = theBuildManager->CanBuildAt(theContinent, inUnitClass, *it, theSize, true, true,
-                                                                theCenter.mX, theCenter.mY);
+                                                                theCenter.GetX(), theCenter.GetY());
                             if (theFound) {
-                                outTile.mX = it->mX;
-                                outTile.mY = it->mY;
+                                outTile.mX = it->GetX();
+                                outTile.mY = it->GetY();
                             }
                         }
                     }
@@ -438,7 +438,7 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
             EEGetPlayerUnitsOfType(theOtherClass, this->mPlayer->mPlayerID, theUnits);
             std::vector<EEUnit*>::iterator theUnit = theUnits.begin();
             while (theUnit != theUnits.end()) {
-                if ((*theUnit)->mTileNode == NULL || (*theUnit)->mComplexUnit->mIsBuilt)
+                if ((*theUnit)->GetTileNode() == NULL || (*theUnit)->GetComplexUnit()->GetIsBuilt())
                     theUnit = theUnits.erase(theUnit);
                 else
                     theUnit++;
@@ -446,14 +446,14 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
             long theRadius = this->GetMinEffectRadius(inUnitClass);
             if (inUnitClass == kUnitTypeHospital)
                 theRadius *= 3;
-            EEGetTilesInRadius(theCenter.mX, theCenter.mY, theRadius, true, theTiles);
+            EEGetTilesInRadius(theCenter.GetX(), theCenter.GetY(), theRadius, true, theTiles);
             if (std::find_if(theUnits.begin(), theUnits.end(), EECPRCUnitOnTiles(theTiles)) == theUnits.end()) {
                 std::sort(this->mUnits.begin(), this->mUnits.end(), EECPRCAreaEffectLess(theKind, this->mPlayer->mPlayerID));
                 for (i = 0, theCount = this->mUnits.size(); i < theCount && !theFound; i++) {
                     EEUnit* theOther = this->mUnits[i];
                     long theX = theOther->GetTileX();
                     long theY = theOther->GetTileY();
-                    long theOtherSize = theOther->GetUnitClass()->mTileSize;
+                    long theOtherSize = theOther->GetUnitClass()->GetTileSize();
                     bool theBlocked = false;
                     bool theBlocked2 = false;
                     for (long k = 0; k < theRadius && !theFound && !theBlocked && !theBlocked2; k++) {
@@ -462,13 +462,13 @@ bool EECPResourceCenter::FindBuildSite(long inUnitClass, EETileCoordinate& outTi
                         EEAIRandomShuffle(theTiles.begin(), theTiles.end());
                         for (it = theTiles.begin(); it != theTiles.end() && !theFound && !theBlocked && !theBlocked2;
                              it++) {
-                            theBlocked = this->IsInAreaEffect(it->mX, it->mY, inUnitClass, theKind);
-                            theBlocked2 = this->IsInAreaEffect(it->mX, it->mY, inUnitClass, theKind2);
+                            theBlocked = this->IsInAreaEffect(it->GetX(), it->GetY(), inUnitClass, theKind);
+                            theBlocked2 = this->IsInAreaEffect(it->GetX(), it->GetY(), inUnitClass, theKind2);
                             if (!theBlocked && !theBlocked2 &&
                                 theBuildManager->CanBuildAt(theContinent, inUnitClass, *it, theSize, true, true,
-                                                         theCenter.mX, theCenter.mY)) {
-                                outTile.mX = it->mX;
-                                outTile.mY = it->mY;
+                                                         theCenter.GetX(), theCenter.GetY())) {
+                                outTile.mX = it->GetX();
+                                outTile.mY = it->GetY();
                                 theFound = true;
                             } else
                                 theFound = false;
@@ -553,33 +553,33 @@ void EECPResourceCenter::GetCenter(EETileCoordinate& outCenter)
     if (this->mUnits.size() > 1) {
         EETileCoordinate theTile;
         theTile.mX = this->mUnits[0]->GetTileX();
-        theTile.mY = this->mUnits[0]->mTileY;
+        theTile.mY = this->mUnits[0]->GetTileY();
         theBounds.Set(theTile);
         for (unsigned long i = 1; i < this->mUnits.size(); i++) {
             theTile.mX = this->mUnits[i]->GetTileX();
-            theTile.mY = this->mUnits[i]->mTileY;
+            theTile.mY = this->mUnits[i]->GetTileY();
             theBounds.Extend(theTile);
         }
         theBounds.GetCenter(theCenter);
         long theRadius = (theBounds.mRight - theBounds.mLeft) / 2;
         if (theRadius < 5)
             theRadius = 5;
-        EEGetTilesInRadius(theCenter.mX, theCenter.mY, theRadius, true, theTiles);
+        EEGetTilesInRadius(theCenter.GetX(), theCenter.GetY(), theRadius, true, theTiles);
         std::sort(theTiles.begin(), theTiles.end(), EECPRCTileNearer(theCenter));
     } else {
         EEUnit* theUnit;
         long theY;
         long theSize;
-        if (this->mUnits.size() <= 0) {
+        if (this->mUnits.size() > 0) {
+            theSize = this->mUnits[0]->GetClass()->GetTileSize();
+            theY = this->mUnits[0]->GetTileY();
+            theUnit = this->mUnits[0];
+        } else {
             theUnit = this->mUnit;
             if (theUnit == NULL)
                 goto search;
-            theSize = theUnit->GetUnitClass()->mTileSize;
+            theSize = theUnit->GetUnitClass()->GetTileSize();
             theY = theUnit->GetTileY();
-        } else {
-            theSize = this->mUnits[0]->mUnitClass->mTileSize;
-            theY = this->mUnits[0]->mTileY;
-            theUnit = this->mUnits[0];
         }
         EEGetSquareBlockRing(1, theUnit->GetTileX(), theY, theSize, theTiles, 0);
     }
@@ -588,7 +588,7 @@ search:
     for (it = theTiles.begin(); it != theTiles.end(); ++it) {
         if (theFound)
             break;
-        EETile* theTile = gWorld.mMap->GetTileAtLocation(U2DPoint<long>(it->mX, it->mY));
+        EETile* theTile = gWorld.GetMap()->GetTileAtLocation(U2DPoint<long>(it->GetX(), it->GetY()));
         if (theTile != NULL && theTile->mUnits == NULL) {
             outCenter = *it;
             theFound = true;
@@ -680,10 +680,10 @@ long EECPResourceCenter::Restore(unsigned long inMajorVersion, unsigned long inM
         if (theUnit != NULL && !this->Contains(theUnit))
             this->AddUnit(theUnit);
     }
-    if ((int32_t)USavedID(this->mUnit) != -1) {
-        this->mUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->mUnit)));
-        if (this->mUnit != NULL)
-            this->mUnit->Reference();
+    if ((int32_t)USavedID(this->GetUnit()) != -1) {
+        this->mUnit = dynamic_cast<EEComplexUnit*>(gWorld.GetUnit(USavedID(this->GetUnit())));
+        if (this->GetUnit() != NULL)
+            this->GetUnit()->Reference();
         else
             theResult = 3;
     } else

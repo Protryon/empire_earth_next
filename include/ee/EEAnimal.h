@@ -25,6 +25,7 @@ public:
 
     std::vector<long> mL04;                 // +0x04 (record +0x88..+0x94, the positive ones)
     std::vector<EEMedia*> mSounds;          // +0x14 (record +0xe8..+0xf0; LoadMedia'd)
+    EEMedia* GetMedia() const { return this->mMedia; }
     EEMedia* mMedia;                        // +0x24 (record +0xe4)
     float mF28;                             // +0x28 (ctor 0.0f; Load copies it with mov)
     long mL2C;                              // +0x2c
@@ -74,7 +75,9 @@ public:
     bool mB83;                              // +0x83
     bool mB84;                              // +0x84
     bool mBreeds;                           // +0x85
+    bool GetIsPredator() const { return this->mIsPredator; }
     bool mIsPredator;                       // +0x86
+    bool GetHasLeader() const { return this->mHasLeader; }
     bool mHasLeader;                        // +0x87
     bool mB88;                              // +0x88
     bool mB89;                              // +0x89

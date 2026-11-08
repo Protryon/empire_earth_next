@@ -79,11 +79,11 @@
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EEScenarioEditorIDs.h"
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // chain at 0x67efca (wrapper)
 //   object 0x9654a8  ctor __imp_??0UString@@QAE@XZ  dtor __imp_??1UString@@UAE@XZ
-// the last civilization file name saved (Fn27F6A4; Fn27F824 offers it in the save box) (provisional name)
+// the last civilization file name saved (CivBuilderSaveAs; CivBuilderShowSaveDialog offers it in the save box) (provisional name)
 UString gLastCivilizationFile;
 // SYNTHETIC: EXE 0x67efca   (wrapper)
 // SYNTHETIC: EXE 0x67efd4   (ctor)
@@ -92,7 +92,7 @@ UString gLastCivilizationFile;
 
 // FUNCTION: EXE 0x67eff6
 // Accepts the change-name dialog: a non-empty typed name becomes the builder's title, then the dialog closes
-long Fn27EFF6()
+long CivBuilderAcceptName()
 {
     UWideString theText;
     long theResult = 3;
@@ -104,17 +104,17 @@ long Fn27EFF6()
     if (theEdit == NULL)
         return theResult;
     theText = theEdit->GetText(0);
-    if (!(theText == gU4E5B98)) {
-        theResult = Fn27F43F(theText);
+    if (!(theText == gEmptyString)) {
+        theResult = CivBuilderSetName(theText);
         if (theResult == 0)
-            theResult = Fn27F340();
+            theResult = CivBuilderCloseForm();
     }
     return theResult;
 }
 
 // FUNCTION: EXE 0x67f08f
 // Finds the file list of the given load (0x11) or save (0x10) dialog; returns false for any other form
-bool Fn27F08F(UIForm* inForm, UIFileListBox** outList)
+bool CivBuilderGetFileList(UIForm* inForm, UIFileListBox** outList)
 {
     bool theResult = false;
     UIControl* theControl = NULL;
@@ -138,7 +138,7 @@ bool Fn27F08F(UIForm* inForm, UIFileListBox** outList)
 
 // FUNCTION: EXE 0x67f0f7
 // Returns the main game form's civilization builder button (control 5), or NULL
-UIBlinkingButton* Fn27F0F7()
+UIBlinkingButton* CivBuilderGetMainGameButton()
 {
     UIBlinkingButton* theResult = NULL;
     UIForm* theForm = gUIManager->GetFormByID(kFormMainGame);
@@ -152,7 +152,7 @@ UIBlinkingButton* Fn27F0F7()
 
 // FUNCTION: EXE 0x67f134
 // Reads the civilization name from the builder's title label; returns 3 when the label is missing
-long Fn27F134(UWideString& outName)
+long CivBuilderGetName(UWideString& outName)
 {
     UWideString theText;
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
@@ -169,7 +169,7 @@ long Fn27F134(UWideString& outName)
 
 // FUNCTION: EXE 0x67f1a9
 // Reads the text typed in the change-name dialog's edit box; returns 3 when it is missing
-long Fn27F1A9(UWideString& outText)
+long CivBuilderGetTypedName(UWideString& outText)
 {
     UWideString theText;
     long theResult = 3;
@@ -186,7 +186,7 @@ long Fn27F1A9(UWideString& outText)
 
 // FUNCTION: EXE 0x67f221
 // Reads the file name typed in the save dialog's edit box; returns 3 when it is missing
-long Fn27F221(UWideString& outText)
+long CivBuilderGetTypedFileName(UWideString& outText)
 {
     UWideString theText;
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilderSaveCiv);
@@ -204,15 +204,15 @@ long Fn27F221(UWideString& outText)
 // FUNCTION: EXE 0x67f299
 // Reads the id, bonus and cost of the selected line in the available (0xcb, inBought true) or bought (0xcc)
 // upgrade list
-bool Fn27F299(bool inBought, EECivUpgrade* outUpgrade, unsigned long* outBonus, unsigned long* outCost)
+bool CivBuilderGetSelectedUpgrade(bool inBought, EECivUpgrade* outUpgrade, unsigned long* outBonus, unsigned long* outCost)
 {
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
     bool theResult = false;
     EECBUIListBox* theList;
     if (inBought)
-        theList = Fn27F8C7(theForm, 0xcb);
+        theList = CivBuilderGetUpgradeList(theForm, 0xcb);
     else
-        theList = Fn27F8C7(theForm, 0xcc);
+        theList = CivBuilderGetUpgradeList(theForm, 0xcc);
     if (theList != NULL && theList->GetSelectedUpgrade(outUpgrade, outBonus, outCost) == 0)
         theResult = true;
     return theResult;
@@ -220,7 +220,7 @@ bool Fn27F299(bool inBought, EECivUpgrade* outUpgrade, unsigned long* outBonus, 
 
 // FUNCTION: EXE 0x67f2e8
 // Hides the builder's points labels and accept-changes button; always returns 3
-long Fn27F2E8()
+long CivBuilderHidePoints()
 {
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
     if (theForm != NULL) {
@@ -233,7 +233,7 @@ long Fn27F2E8()
 
 // FUNCTION: EXE 0x67f340
 // Closes the current form
-long Fn27F340()
+long CivBuilderCloseForm()
 {
     return gUserInterface->CloseForm(NULL);
 }
@@ -242,7 +242,7 @@ long Fn27F340()
 // Fills both upgrade lists: 0xcc with the given upgrades, 0xcb with all others; both are selectable unless
 // the lists are locked (gB565566)
 // the original fills control 0xcc (vtable +0xc8) before 0xcb (+0xc4)
-long Fn27F34E(std::vector<EECivUpgrade>& inUpgrades)
+long CivBuilderFillUpgradeLists(std::vector<EECivUpgrade>& inUpgrades)
 {
     long theResult = 3;
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
@@ -262,14 +262,14 @@ long Fn27F34E(std::vector<EECivUpgrade>& inUpgrades)
 
 // FUNCTION: EXE 0x67f3fc
 // Opens the civilization builder form
-long Fn27F3FC()
+long CivBuilderPushBuilderForm()
 {
     return gUIManager->Push(gUIManager->GetFormByID(kFormCivBuilder));
 }
 
 // FUNCTION: EXE 0x67f418
 // Opens the form with the given id; returns 3 when it does not exist
-long Fn27F418(unsigned long inFormID)
+long CivBuilderPushForm(unsigned long inFormID)
 {
     UIForm* theForm = gUIManager->GetFormByID(inFormID);
     long theResult = 3;
@@ -280,7 +280,7 @@ long Fn27F418(unsigned long inFormID)
 
 // FUNCTION: EXE 0x67f43f
 // Shows a name in the builder's title label; returns 3 when the label is missing
-long Fn27F43F(const UWideString& inName)
+long CivBuilderSetName(const UWideString& inName)
 {
     UWideString theName(inName);
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
@@ -321,7 +321,7 @@ long EEShowCivBuilderPoints(long inPointsLeft, long inMax)
 
 // FUNCTION: EXE 0x67f546
 // Lists the civilization files (Users\default\Civilizations\*.civ) in a file list box
-long Fn27F546(UIFileListBox* inList)
+long CivBuilderFillFileList(UIFileListBox* inList)
 {
     FSPath* thePath = new FSPath;
     UString theDirectory;
@@ -340,12 +340,12 @@ long Fn27F546(UIFileListBox* inList)
 
 // FUNCTION: EXE 0x67f6a4
 // Saves the civilization under the name typed in the save dialog and remembers that name
-long Fn27F6A4()
+long CivBuilderSaveAs()
 {
     UWideString theName;
-    long theResult = Fn27F221(theName);
+    long theResult = CivBuilderGetTypedFileName(theName);
     if (theResult == 0) {
-        theResult = Fn28015D(UString(theName), false);
+        theResult = CivBuilderSaveCivilization(UString(theName), false);
         gLastCivilizationFile = theName;
     }
     return theResult;
@@ -353,12 +353,12 @@ long Fn27F6A4()
 
 // FUNCTION: EXE 0x67f700
 // Opens the change-name dialog with the current name (or the default string 0x1b98) selected for editing
-long Fn27F700()
+long CivBuilderShowNameDialog()
 {
     UWideString theText;
-    long theResult = Fn27F418(0xf);
+    long theResult = CivBuilderPushForm(0xf);
     if (theResult == 0) {
-        theResult = Fn27F134(theText);
+        theResult = CivBuilderGetName(theText);
         UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilderNewCiv);
         UIControl* theControl = theForm->GetControlById(kCivBuilderIdNewCivNameTextField);
         UIEditBox* theEdit = dynamic_cast<UIEditBox*>(theControl);
@@ -373,37 +373,37 @@ long Fn27F700()
 
 // FUNCTION: EXE 0x67f7b1
 // Opens the load dialog with its civilization file list
-long Fn27F7B1()
+long CivBuilderShowLoadDialog()
 {
-    return Fn27F7C0(0x11, 0x1a9);
+    return CivBuilderShowFileDialog(0x11, 0x1a9);
 }
 
 // FUNCTION: EXE 0x67f7c0
 // Opens a dialog and fills its file list control with the civilization files
-long Fn27F7C0(unsigned long inFormID, unsigned long inControl)
+long CivBuilderShowFileDialog(unsigned long inFormID, unsigned long inControl)
 {
     UWideString theUnused;
-    long theResult = Fn27F418(inFormID);
+    long theResult = CivBuilderPushForm(inFormID);
     if (theResult == 0) {
         UIForm* theForm = gUIManager->GetFormByID(inFormID);
         UIControl* theControl = theForm->GetControlById(inControl);
-        theResult = Fn27F546(dynamic_cast<UIFileListBox*>(theControl));
+        theResult = CivBuilderFillFileList(dynamic_cast<UIFileListBox*>(theControl));
     }
     return theResult;
 }
 
 // FUNCTION: EXE 0x67f824
 // Opens the save dialog with the last saved file name (or the civilization's name) in its edit box
-long Fn27F824()
+long CivBuilderShowSaveDialog()
 {
     UWideString theText;
-    long theResult = Fn27F7C0(0x10, 0x1a4);
+    long theResult = CivBuilderShowFileDialog(0x10, 0x1a4);
     if (theResult != 0)
         return theResult;
-    if (gLastCivilizationFile != gU4E5B98)
+    if (gLastCivilizationFile != gEmptyString)
         theText = (const char*)gLastCivilizationFile;
     else
-        theResult = Fn27F134(theText);
+        theResult = CivBuilderGetName(theText);
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilderSaveCiv);
     UIControl* theControl = theForm->GetControlById(kCivBuilderIdSaveCivNameTextField);
     UIEditBox* theEdit = dynamic_cast<UIEditBox*>(theControl);
@@ -413,7 +413,7 @@ long Fn27F824()
 
 // FUNCTION: EXE 0x67f8c7
 // Returns the form's control with the given id as an upgrade list box, or NULL
-EECBUIListBox* Fn27F8C7(UIForm* inForm, unsigned long inControl)
+EECBUIListBox* CivBuilderGetUpgradeList(UIForm* inForm, unsigned long inControl)
 {
     EECBUIListBox* theResult = NULL;
     UIControl* theControl = inForm->GetControlById(inControl);
@@ -424,7 +424,7 @@ EECBUIListBox* Fn27F8C7(UIForm* inForm, unsigned long inControl)
 
 // FUNCTION: EXE 0x67f8f7
 // Returns the load dialog's civilization file list
-UIFileListBox* Fn27F8F7()
+UIFileListBox* CivBuilderGetLoadFileList()
 {
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilderLoadCiv);
     UIControl* theControl = theForm->GetControlById(kCivBuilderIdLoadCivFileListBox);
@@ -434,7 +434,7 @@ UIFileListBox* Fn27F8F7()
 // FUNCTION: EXE 0x67f92a
 // Moves an upgrade (the selected line when 0) to the bought list or back, then reformats the lists
 // (on a buy only the source list is reformatted)
-bool Fn27F92A(UIForm* inForm, bool inBuy, EECivUpgrade inUpgrade)
+bool CivBuilderMoveUpgrade(UIForm* inForm, bool inBuy, EECivUpgrade inUpgrade)
 {
     UWideString theLine;
     UWideString theName;
@@ -450,8 +450,8 @@ bool Fn27F92A(UIForm* inForm, bool inBuy, EECivUpgrade inUpgrade)
         theFromID = 0xcc;
         theToID = 0xcb;
     }
-    EECBUIListBox* theFrom = Fn27F8C7(inForm, theFromID);
-    EECBUIListBox* theTo = Fn27F8C7(inForm, theToID);
+    EECBUIListBox* theFrom = CivBuilderGetUpgradeList(inForm, theFromID);
+    EECBUIListBox* theTo = CivBuilderGetUpgradeList(inForm, theToID);
     if (theFrom != NULL && theTo != NULL && theFrom != theTo) {
         if (inUpgrade == 0)
             theFound = theFrom->GetCurrentSelection(theIndex);
@@ -499,7 +499,7 @@ long EEProcessTimerExpired()
                 gUIManager->Push(theForm);
             }
         } else {
-            theResult = Fn280FAF();
+            theResult = CivBuilderEditCivilization();
         }
     }
     return theResult;
@@ -507,9 +507,9 @@ long EEProcessTimerExpired()
 
 // FUNCTION: EXE 0x67fb5f
 // Clears the selection of the given upgrade list; returns 3 when it is missing
-long Fn27FB5F(UIForm* inForm, unsigned long inControl)
+long CivBuilderResetUpgradeSelection(UIForm* inForm, unsigned long inControl)
 {
-    EECBUIListBox* theList = Fn27F8C7(inForm, inControl);
+    EECBUIListBox* theList = CivBuilderGetUpgradeList(inForm, inControl);
     if (theList != NULL) {
         theList->ResetSelection();
         return 0;
@@ -519,36 +519,36 @@ long Fn27FB5F(UIForm* inForm, unsigned long inControl)
 
 // FUNCTION: EXE 0x67fb83
 // Clears the available upgrade list's (0xcb) selection
-long Fn27FB83(UIForm* inForm)
+long CivBuilderResetAvailableSelection(UIForm* inForm)
 {
-    return Fn27FB5F(inForm, 0xcb);
+    return CivBuilderResetUpgradeSelection(inForm, 0xcb);
 }
 
 // FUNCTION: EXE 0x67fb94
 // Clears the bought upgrade list's (0xcc) selection
-long Fn27FB94(UIForm* inForm)
+long CivBuilderResetBoughtSelection(UIForm* inForm)
 {
-    return Fn27FB5F(inForm, 0xcc);
+    return CivBuilderResetUpgradeSelection(inForm, 0xcc);
 }
 
 // FUNCTION: EXE 0x67fba5
 // Moves every upgrade in the bought list (0xcc) back to the available list; always returns true
-bool Fn27FBA5()
+bool CivBuilderReturnAllUpgrades()
 {
     std::vector<UWideString> theLines;
     EECivUpgrade theUpgrade = 0;
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
-    theLines = Fn27F8C7(theForm, 0xcc)->GetDataArray();
+    theLines = CivBuilderGetUpgradeList(theForm, 0xcc)->GetDataArray();
     for (std::vector<UWideString>::iterator i = theLines.begin(); i != theLines.end(); i++) {
         if (EECBUIListBox::IsUpgradeLine(*i) && EECBUIListBox::GetUpgrade(*i, &theUpgrade))
-            Fn27F92A(theForm, false, theUpgrade);
+            CivBuilderMoveUpgrade(theForm, false, theUpgrade);
     }
     return true;
 }
 
 // FUNCTION: EXE 0x67fc30
 // Copies the save dialog's selected file name into its edit box
-long Fn27FC30()
+long CivBuilderSaveNameSelected()
 {
     UWideString theText;
     unsigned long theIndex = 0;
@@ -573,7 +573,7 @@ long Fn27FC30()
 long EESetCivBuilderButtonBlinking(bool inBlinking)
 {
     gUIManager->mMainGameForm->mIsButtonBlinking = inBlinking;
-    UIBlinkingButton* theButton = Fn27F0F7();
+    UIBlinkingButton* theButton = CivBuilderGetMainGameButton();
     if (theButton == NULL)
         return 0;
     theButton->SetIsBlinking(inBlinking);
@@ -591,11 +591,11 @@ long EESetCivBuilderButtonBlinking(bool inBlinking)
 
 // FUNCTION: EXE 0x67fd5a
 // Buys an upgrade, playing the button sound on success; returns 0xd when it cannot be moved
-long Fn27FD5A(EECivUpgrade inUpgrade)
+long CivBuilderMoveToBought(EECivUpgrade inUpgrade)
 {
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
     long theResult = 0xd;
-    if (Fn27F92A(theForm, true, inUpgrade)) {
+    if (CivBuilderMoveUpgrade(theForm, true, inUpgrade)) {
         theResult = 0;
         gSoundManager->Play(gU5654E4, 1.0f, 0.0f, 1.0f, false, NULL);
     }
@@ -604,11 +604,11 @@ long Fn27FD5A(EECivUpgrade inUpgrade)
 
 // FUNCTION: EXE 0x67fdab
 // Sells an upgrade back, playing the button sound on success; returns 0xd when it cannot be moved
-long Fn27FDAB(EECivUpgrade inUpgrade)
+long CivBuilderMoveToAvailable(EECivUpgrade inUpgrade)
 {
     UIForm* theForm = gUIManager->GetFormByID(kFormCivBuilder);
     long theResult = 0xd;
-    if (Fn27F92A(theForm, false, inUpgrade)) {
+    if (CivBuilderMoveUpgrade(theForm, false, inUpgrade)) {
         gSoundManager->Play(gU5654E4, 1.0f, 0.0f, 1.0f, false, NULL);
         theResult = 0;
     }

@@ -27,6 +27,7 @@ public:
 
     std::vector<EEUnitTrigger*> mTriggers;  // +0x004
     UString mName;                          // +0x014
+    unsigned long GetType() const { return this->mType; }
     unsigned long mType;                    // +0x024 (the action id; 5000 is the idle action; unsigned: the EEUC* switches compare jb/jbe)
 
     static std::map<UString, std::map<long, EEUnitAction*>*> sScripts;   // 0x563688

@@ -1,8 +1,8 @@
 // C:\EEX\Empire Earth\Civilization Builder\EECBCivilizationFiles.cpp (file name inferred: no __FILE__ or RTTI of its
 // own). 0x27fdfe..0x2813f4, after EECivilizationBuilder.cpp and before EECivilizationManager.cpp:
 // seven init chains (".civ", "Civilizations", "Users", the file spec, "default", the two button sounds), the
-// civilization files (EEGetCivilizationDirectory, save Fn28015D/Fn2802EF, EELoadCivilization, Fn2806E7), the
-// builder's open/close (Fn280BE9, Fn280FAF, Fn280FFD) and its button handlers. Unit flags: the exe module set.
+// civilization files (EEGetCivilizationDirectory, save CivBuilderSaveCivilization/CivBuilderWriteCivilization, EELoadCivilization, EEApplyCivilizationFile), the
+// builder's open/close (CivBuilderOpenForm, CivBuilderEditCivilization, CivBuilderCreateCivilization) and its button handlers. Unit flags: the exe module set.
 #include <windows.h>
 #include <mbstring.h>
 #include <algorithm>
@@ -86,7 +86,7 @@
 #include "ee/EEPhysics.h"
 #include "ee/EECivilizationBuilder.h"
 #include "ee/EEStringIDs.h"
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // chain at 0x67fdfe (wrapper)
 //   object 0x965478  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
@@ -156,35 +156,35 @@ bool gB565567;                              // 0x565567 a premade civilization w
 
 // FUNCTION: EXE 0x67ff56
 // Tells whether the edited civilization may still change
-bool Fn27FF56()
+bool CivBuilderCanChange()
 {
     return gEditableCivilization->CanChange();
 }
 
 // FUNCTION: EXE 0x67ff61
 // Sets the edited civilization's name
-void Fn27FF61(const UWideString& inName)
+void CivBuilderSetCivilizationName(const UWideString& inName)
 {
     gEditableCivilization->SetName(inName);
 }
 
 // FUNCTION: EXE 0x67ff71
 // Tells whether any upgrade or a new name was chosen
-bool Fn27FF71()
+bool CivBuilderHasChoices()
 {
     return gEditableCivilization->HasChoices();
 }
 
 // FUNCTION: EXE 0x67ff7c
 // Closes the builder (applying the edits when asked), resuming a game it paused, and unloads its sounds
-long Fn27FF7C(bool inApply)
+long CivBuilderClose(bool inApply)
 {
     if (gB565564)
         ::gWorld.UnpauseGame();
     if (inApply && gEditableCivilization != NULL)
         gEditableCivilization->Apply();
-    Fn27F340();
-    return Fn2800B3();
+    CivBuilderCloseForm();
+    return CivBuilderUnloadSounds();
 }
 
 // FUNCTION: EXE 0x67ffae
@@ -222,7 +222,7 @@ UString EEGetCivilizationDirectory(bool inX)
 
 // FUNCTION: EXE 0x68006b
 // Loads the builder's buy/sell and refused button sounds; returns 3 when either fails
-long Fn28006B()
+long CivBuilderLoadSounds()
 {
     long theResult = 0;
     gU5654E4 = gSoundManager->Load(gU5654F8, 0, 1);
@@ -234,7 +234,7 @@ long Fn28006B()
 
 // FUNCTION: EXE 0x6800b3
 // Unloads the builder's two button sounds
-long Fn2800B3()
+long CivBuilderUnloadSounds()
 {
     gSoundManager->Unload(gU5654E4);
     gSoundManager->Unload(gU5654E0);
@@ -243,7 +243,7 @@ long Fn2800B3()
 
 // FUNCTION: EXE 0x6800da
 // Returns the user civilization directory (Users\default\Civilizations\ under the startup directory)
-UString Fn2800DA()
+UString CivBuilderGetUserDirectory()
 {
     UString theDirectory;
     theDirectory = gStartupDirectory + "Users\\" + gDefaultUserFolder + "\\Civilizations\\";
@@ -253,7 +253,7 @@ UString Fn2800DA()
 // FUNCTION: EXE 0x68015d
 // Saves the civilization under a file name: refuses a premade civilization's name and asks before
 // overwriting an existing file
-long Fn28015D(const UString& inName, bool inOverwrite)
+long CivBuilderSaveCivilization(const UString& inName, bool inOverwrite)
 {
     UWideString theFormat;
     UWideString theText;
@@ -269,18 +269,18 @@ long Fn28015D(const UString& inName, bool inOverwrite)
         }
     }
     gU565518.SetVolume(gStartupVolume);
-    gU565518.SetDirectory(Fn2800DA());
+    gU565518.SetDirectory(CivBuilderGetUserDirectory());
     gU565518.SetFile(inName + ".civ");
     long theResult;
     if (gU565518.Open(kFileAccessRead) == 0 && !inOverwrite) {
         theResult = gResource->GetString(IDS_CIVILIZATION_WITH_THAT_NAME_EXISTS_OVERWRITE, theText);
         if (theResult == 0) {
             bool theClose = false;
-            gUIManager->DisplayQuestion(theText, 1, (UIForm*)&theClose, Fn2802EF, NULL);
+            gUIManager->DisplayQuestion(theText, 1, (UIForm*)&theClose, CivBuilderWriteCivilization, NULL);
         }
     } else {
         bool theClose = inOverwrite == false;
-        Fn2802EF((UIForm*)&theClose);
+        CivBuilderWriteCivilization((UIForm*)&theClose);
         theResult = 0;
     }
     return theResult;
@@ -293,7 +293,7 @@ static bool EEKeyedCivilization(const std::string& inName, const std::vector<EEC
 // Writes the civilization file (name, upgrade count, upgrades), tells players using that file to reload it,
 // and reports errors; the answer to the overwrite question, its form argument the close-the-builder flag
 // (a checksum of the name and upgrades that was summed up but never written or used has been removed)
-void Fn2802EF(UIForm* inClose)
+void CivBuilderWriteCivilization(UIForm* inClose)
 {
     std::vector<unsigned long> thePlayers;
     UWideString theName(*gEditableCivilization->GetName());
@@ -304,7 +304,9 @@ void Fn2802EF(UIForm* inClose)
     unsigned long theWritten = 0;
     unsigned long theLength = 0;
     long theResult;
-    if (gU565518.Close() == 0) {
+    if (gU565518.Close() != 0) {
+        gU565518.Delete();
+    } else {
         gU565518.Delete();
         theResult = gU565518.Create();
         if (theResult == 0) {
@@ -358,13 +360,11 @@ void Fn2802EF(UIForm* inClose)
                 }
             }
         }
-    } else {
-        gU565518.Delete();
     }
     gU565518.Close();
     if (theMessage.GetLength() == 0) {
         if (theClose)
-            Fn27F340();
+            CivBuilderCloseForm();
     } else {
         gUIManager->DisplayMessage(theMessage, 1, NULL, NULL, true);
     }
@@ -373,7 +373,7 @@ void Fn2802EF(UIForm* inClose)
 // FUNCTION: EXE 0x68060c
 // Loads a civilization file (the game's, else the user's) into the builder: resets the edit, then buys its
 // upgrades again; fails when neither file loads
-long Fn28060C(const UString& inName)
+long CivBuilderLoadCivilization(const UString& inName)
 {
     std::vector<EECivUpgrade> theUpgrades;
     UWideString theName;
@@ -384,9 +384,9 @@ long Fn28060C(const UString& inName)
     gEditableCivilization->ResetToStart();
     gEditableCivilization->SetName(theName);
     gB565567 = true;
-    if (Fn27FBA5()) {
+    if (CivBuilderReturnAllUpgrades()) {
         for (std::vector<EECivUpgrade>::iterator i = theUpgrades.begin(); i != theUpgrades.end(); i++)
-            Fn28105E(*i);
+            CivBuilderBuyUpgrade(*i);
     } else {
         theResult = 3;
     }
@@ -396,7 +396,7 @@ long Fn28060C(const UString& inName)
 // FUNCTION: EXE 0x6806e7
 // Gives a player the civilization from a file (the game's, else the user's), buying its upgrades at no cost;
 // a game file's premade civilization keeps its localized name
-long Fn2806E7(UString& ioName, EEPlayer* inPlayer)
+long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer)
 {
     long theNameID;
     unsigned long theCost;
@@ -521,7 +521,7 @@ long EELoadCivilization(const UString& inName, const UString& inDirectory, UWide
             theResult = theFile->Read(theLength);
         if (theResult == 0) {
             if (theLength == 0) {
-                outName = gU4E5B98;
+                outName = gEmptyString;
             } else {
                 memset(theBuffer, 0, sizeof(theBuffer));
                 if (theFile->Read(theBuffer, theLength, theRead) == kErrorOK)
@@ -583,14 +583,14 @@ void EECBRequestUpgrades(unsigned char inPlayer, UWideString& inName, std::vecto
 
 // FUNCTION: EXE 0x680ba7
 // Sets whether players using the saved civilization file reload it
-void Fn280BA7(bool inFlag)
+void CivBuilderSetReloadPlayers(bool inFlag)
 {
     gB565565 = inFlag;
 }
 
 // FUNCTION: EXE 0x680bb1
 // Opens the current player's civilization for editing
-void Fn280BB1()
+void CivBuilderEditCurrentCivilization()
 {
     gEditableCivilization = new EECBEditableCivilization(&::gWorld.GetCurrentPlayer()->mCivilization,
                                                          ::gWorld.mCurrentPlayer);
@@ -599,7 +599,7 @@ void Fn280BB1()
 // FUNCTION: EXE 0x680be9
 // Opens the builder form for the current player (buttons chosen by game kind), fills its lists, name and
 // points and loads its sounds
-long Fn280BE9()
+long CivBuilderOpenForm()
 {
     UWideString theName;
     UString theDirectory;
@@ -635,20 +635,20 @@ long Fn280BE9()
     UIEvent* theClose = new EEUIECBCleanUp;
     theForm->SetFormCloseEvent(theClose);
     theClose->Dereference();
-    long theResult = Fn27F3FC();
+    long theResult = CivBuilderPushBuilderForm();
     if (theResult == 0) {
-        theResult = Fn28006B();
+        theResult = CivBuilderLoadSounds();
         if (theResult == 0) {
-            theResult = Fn27F34E(gEditableCivilization->GetCivilizationUpgrades());
+            theResult = CivBuilderFillUpgradeLists(gEditableCivilization->GetCivilizationUpgrades());
             if (theResult == 0) {
                 if (!::gWorld.mGameOptions.GetCampaignMapName(theName))
                     theName = *gEditableCivilization->GetName();
-                theResult = Fn27F43F(theName);
+                theResult = CivBuilderSetName(theName);
                 if (theResult == 0) {
-                    EECBTrace(Fn27FF56());
+                    EECBTrace(CivBuilderCanChange());
                     EEShowCivBuilderPoints(gEditableCivilization->GetPointsLeft(), gEditableCivilization->GetMaxPoints());
                     gU565518.SetVolume(gStartupVolume);
-                    theDirectory = Fn2800DA();
+                    theDirectory = CivBuilderGetUserDirectory();
                     gU565518.SetDirectory(theDirectory);
                     EESetCivBuilderButtonBlinking(false);
                 }
@@ -689,19 +689,19 @@ long EEUIECBShowOrHideButtons::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     else
         theForm->GetControl(kCivBuilderCivSaveButton)->SetDisplayMode(kDisplayModeHidden);
     if (this->mB10)
-        Fn27F2E8();
+        CivBuilderHidePoints();
     return kErrorOK;
 }
 
 // FUNCTION: EXE 0x680f34
 // Opens the load dialog, or says (string 0x7458) that the civilization may no longer change
-long Fn280F34()
+long CivBuilderShowLoad()
 {
     std::vector<UWideString> theUnused;
     UWideString theText;
     long theResult;
-    if (Fn27FF56()) {
-        theResult = Fn27F7B1();
+    if (CivBuilderCanChange()) {
+        theResult = CivBuilderShowLoadDialog();
     } else {
         theResult = gResource->GetString(IDS_YOU_CANT_LOAD_CIVILIZATION_AFTER, theText);
         gUIManager->DisplayMessage(theText, 1, NULL, NULL, true);
@@ -711,22 +711,22 @@ long Fn280F34()
 
 // FUNCTION: EXE 0x680faa
 // Opens the save dialog
-long Fn280FAA()
+long CivBuilderShowSave()
 {
-    return Fn27F824();
+    return CivBuilderShowSaveDialog();
 }
 
 // FUNCTION: EXE 0x680faf
 // Pauses the game and opens the builder on the current player's civilization, marking it chosen
-long Fn280FAF()
+long CivBuilderEditCivilization()
 {
     long theResult = ::gWorld.PauseGame();
     gB565564 = theResult == 0;
     if (theResult != 9 && theResult != 2 && theResult != 0)
         return theResult;
-    Fn280BB1();
-    Fn280BA7(false);
-    theResult = Fn280BE9();
+    CivBuilderEditCurrentCivilization();
+    CivBuilderSetReloadPlayers(false);
+    theResult = CivBuilderOpenForm();
     if (theResult == 0)
         ::gWorld.GetCurrentPlayer()->mCivilizationChosen = true;
     return theResult;
@@ -734,14 +734,14 @@ long Fn280FAF()
 
 // FUNCTION: EXE 0x680ffd
 // Pauses the game and opens the builder on a new civilization to create from the given one
-long Fn280FFD(EECivilization* inCivilization, bool inReload)
+long CivBuilderCreateCivilization(EECivilization* inCivilization, bool inReload)
 {
     long theResult = ::gWorld.PauseGame();
     gB565564 = theResult == 0;
     if (theResult == 9 || theResult == 2 || theResult == 0) {
         gEditableCivilization = new EECBCivilizationCreator(inCivilization, gFreeCamera);
-        Fn280BA7(inReload);
-        theResult = Fn280BE9();
+        CivBuilderSetReloadPlayers(inReload);
+        theResult = CivBuilderOpenForm();
     }
     return theResult;
 }
@@ -749,24 +749,24 @@ long Fn280FFD(EECivilization* inCivilization, bool inReload)
 // FUNCTION: EXE 0x68105e
 // Buys an upgrade (the selected available one when 0) and updates the points; plays the refused sound when
 // it is not affordable
-long Fn28105E(EECivUpgrade inUpgrade)
+long CivBuilderBuyUpgrade(EECivUpgrade inUpgrade)
 {
     EECivUpgrade theUpgrade = 0;
     unsigned long theBonus;
     unsigned long theCost;
     long theResult = 0xd;
-    EECBTrace(Fn27FF56());
-    if (Fn27FF56()) {
+    EECBTrace(CivBuilderCanChange());
+    if (CivBuilderCanChange()) {
         theResult = 0;
         if (inUpgrade == 0) {
-            if (!Fn27F299(true, &theUpgrade, &theCost, &theBonus))
+            if (!CivBuilderGetSelectedUpgrade(true, &theUpgrade, &theCost, &theBonus))
                 theResult = 3;
         } else {
             theUpgrade = inUpgrade;
         }
         if (theResult == 0) {
             if (gEditableCivilization->AddUpgrade(theUpgrade)) {
-                theResult = Fn27FD5A(inUpgrade);
+                theResult = CivBuilderMoveToBought(inUpgrade);
                 if (theResult == 0)
                     EEShowCivBuilderPoints(gEditableCivilization->GetPointsLeft(), gEditableCivilization->GetMaxPoints());
             } else {
@@ -779,17 +779,17 @@ long Fn28105E(EECivUpgrade inUpgrade)
 
 // FUNCTION: EXE 0x681120
 // Sells the selected bought upgrade back, unless the civilization already owned it before the edit
-long Fn281120()
+long CivBuilderReturnUpgrade()
 {
     std::vector<EECivUpgrade> theOwn;
     long theResult = 3;
-    EECBTrace(Fn27FF56());
-    if (!Fn27FF56())
+    EECBTrace(CivBuilderCanChange());
+    if (!CivBuilderCanChange())
         return theResult;
     EECivUpgrade theUpgrade;
     unsigned long theBonus;
     unsigned long theCost;
-    if (Fn27F299(false, &theUpgrade, &theBonus, &theCost)) {
+    if (CivBuilderGetSelectedUpgrade(false, &theUpgrade, &theBonus, &theCost)) {
         theOwn = gEditableCivilization->GetCivilizationUpgrades();
         std::vector<EECivUpgrade>::iterator i = theOwn.begin();
         while (true) {
@@ -800,7 +800,7 @@ long Fn281120()
             i++;
         }
         gEditableCivilization->RemoveUpgrade(theUpgrade);
-        theResult = Fn27FDAB(0);
+        theResult = CivBuilderMoveToAvailable(0);
         if (theResult == 0)
             EEShowCivBuilderPoints(gEditableCivilization->GetPointsLeft(), gEditableCivilization->GetMaxPoints());
     }
@@ -809,24 +809,24 @@ long Fn281120()
 
 // FUNCTION: EXE 0x6811d9
 // Asks whether to delete the selected civilization file
-long Fn2811D9(UIForm* inForm, UIEntity* inEntity)
+long CivBuilderAskDelete(UIForm* inForm, UIEntity* inEntity)
 {
     UWideString theText;
     long theResult = gResource->GetString(IDS_ARE_YOU_SURE_YOU_WANT_TO_DELETE, theText);
     if (theResult == 0)
-        gUIManager->DisplayQuestion(theText, 1, inForm, Fn28122C, NULL);
+        gUIManager->DisplayQuestion(theText, 1, inForm, CivBuilderDeleteSelected, NULL);
     return theResult;
 }
 
 // FUNCTION: EXE 0x68122c
 // Deletes the civilization file selected in the dialog's list, reporting a failure
-void Fn28122C(UIForm* inForm)
+void CivBuilderDeleteSelected(UIForm* inForm)
 {
     UWideString theText;
     FSFileSpec theUnused;
     UIFileListBox* theList = NULL;
     unsigned long theIndex = 0;
-    if (Fn27F08F(inForm, &theList) && theList->GetCurrentSelection(theIndex) == 0 &&
+    if (CivBuilderGetFileList(inForm, &theList) && theList->GetCurrentSelection(theIndex) == 0 &&
         theList->DeleteSelectedFile() != 0) {
         gResource->GetString(IDS_ERROR_DELETING_FILE, theText);
         gUIManager->DisplayMessage(theText, 1, NULL, NULL, true);
@@ -835,48 +835,48 @@ void Fn28122C(UIForm* inForm)
 
 // FUNCTION: EXE 0x6812bc
 // Warns that not all points were spent and asks before closing the builder
-long Fn2812BC(UIForm* inForm)
+long CivBuilderAskAccept(UIForm* inForm)
 {
     UWideString theText;
     long theResult = gResource->GetString(IDS_YOU_HAVE_NOT_SPENT_ALL, theText);
     if (theResult == 0)
-        gUIManager->DisplayQuestion(theText, 1, inForm, Fn28130F, NULL);
+        gUIManager->DisplayQuestion(theText, 1, inForm, CivBuilderAcceptChanges, NULL);
     return theResult;
 }
 
 // FUNCTION: EXE 0x68130f
 // Closes the builder, applying a changed civilization (an unchanged one named from the campaign map, else
 // string 0x771c unless a premade one was loaded)
-void Fn28130F(UIForm* inForm)
+void CivBuilderAcceptChanges(UIForm* inForm)
 {
     UWideString theName;
     bool theApply;
-    if (Fn27FF56() && Fn27FF71()) {
+    if (CivBuilderCanChange() && CivBuilderHasChoices()) {
         theApply = true;
         if (gEditableCivilization != NULL && gEditableCivilization->GetIsUnchanged()) {
             if (::gWorld.mGameOptions.GetCampaignMapName(theName)) {
-                if (Fn27F43F(theName) == 0) {
-                    Fn27FF61(theName);
-                    Fn27FF7C(true);
+                if (CivBuilderSetName(theName) == 0) {
+                    CivBuilderSetCivilizationName(theName);
+                    CivBuilderClose(true);
                 }
             } else {
                 if (!gB565567) {
                     gResource->GetString(IDS_CUSTOM_CIVILIZATION, theName);
-                    Fn27FF61(theName);
+                    CivBuilderSetCivilizationName(theName);
                 }
-                Fn27FF7C(true);
+                CivBuilderClose(true);
             }
             return;
         }
     } else {
         theApply = false;
     }
-    Fn27FF7C(theApply);
+    CivBuilderClose(theApply);
 }
 
 // FUNCTION: EXE 0x6813be
 // Creates the action that resets the given players' info (the out-of-line inline constructor)
-// (EEAResetAllPlayerInfo's inline ctor, out of line after its first user Fn2802EF)
+// (EEAResetAllPlayerInfo's inline ctor, out of line after its first user CivBuilderWriteCivilization)
 
 // ICF-FOLDED: EXE 0x4fca98
 // (no address of its own: folded into the shared `xor eax, eax; ret` body of EEUnitGoal::GetOutOfSynchChecksum)

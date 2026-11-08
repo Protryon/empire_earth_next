@@ -14,6 +14,7 @@ public:
     float mHalfArc;                         // +0x60 (= pi)
     float mF64;                             // +0x64
     float mF68;                             // +0x68
+    void SetMinRadius(float inRadius) { this->mMinRadius = inRadius; }   // inline: EEHerd 0xa4351/0xa1efc store it after the argument evaluation
     float mMinRadius;                       // +0x6c (Place's lower bound of the radius)
     long mMode;                             // +0x70 (0, 1 inward, 2 outward: Place's heading switch)
     bool mB74;                              // +0x74

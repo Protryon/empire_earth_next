@@ -65,7 +65,7 @@
 #include "ee/EESaveGameFiles.h"
 #include "ee/EEUIBMapBackground.h"
 
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // the frame's cells in its 64x64 texture (provisional names)
 static GERectangle sEdgeCell(57.0f, 0.0f, 64.0f, 64.0f);           // 0x564558 (the edges)
@@ -288,7 +288,8 @@ void EEUIBGenericBackground::DrawEdge(const GERectangle& inDestination, const GE
 {
     GETextureCoordinate theTopLeft;
     GETextureCoordinate theTopRight;
-    GERectangle theDestination = inDestination;
+    GERectangle theDestination;
+    theDestination = inDestination;
     GETextureCoordinate theBottomRight;
     GETextureCoordinate theBottomLeft;
     GERectangle theTexture = inTexture;
@@ -409,7 +410,7 @@ long EEUIBMapBackground::LoadBackground()
     theDescription.mMipLevelCount = 0;
     theDescription.mIs3DRenderable = false;
     theDescription.mIsTransparencyEnabled = false;
-    theResult = EEOpenSaveGameFile(this->mTextureFileName, UString(gU4E5B98), theFile);
+    theResult = EEOpenSaveGameFile(this->mTextureFileName, UString(gEmptyString), theFile);
     if (theResult != 0) {
         theDirectory.SetVolume(gStartupVolume);
         theDirectory.SetDirectory(gStartupDirectory);

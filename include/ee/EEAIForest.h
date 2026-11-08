@@ -22,7 +22,9 @@ public:
     long mNumResources3;                    // +0x74
     long mL78;                              // +0x78 (the ctor zeroes it)
     unsigned long mNextRenewal;             // +0x7c (unsigned deadline, 0x22a3fd)
+    unsigned short GetContinentID() const { return this->mContinentID; }
     unsigned short mContinentID;            // +0x80 (provisional name)
+    unsigned short GetID() const { return this->mID; }
     unsigned short mID;                     // +0x82 (provisional name)
 };
 

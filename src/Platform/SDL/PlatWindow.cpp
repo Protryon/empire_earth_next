@@ -14,6 +14,7 @@
 #include <windows.h>
 #endif
 
+#include <atomic>
 #include <string>
 
 #include <SDL3/SDL.h>
@@ -47,6 +48,7 @@ const char* const kWindowProperty = "ee.platwindow";
 Uint32 sActivateEvent;                      // SDL user event (Subclass below): code 1 activated, 0 deactivated
 #endif
 std::string sLastError;
+std::atomic<Uint32> sWakeEvent(0);   // SDL user event: PLAT_EVENT_WAKE (PlatWindowWake)
 
 struct KeyMap {
     SDL_Scancode mScanCode;
@@ -325,6 +327,10 @@ bool Translate(const SDL_Event& e, PlatInputEvent* out)
         out->mMouse.mModifiers = ModifiersOf(SDL_GetModState());
         return true;
     default:
+        if (sWakeEvent.load() && e.type == sWakeEvent.load()) {
+            out->mType = PLAT_EVENT_WAKE;
+            return true;
+        }
 #ifdef _WIN32
         if (sActivateEvent && e.type == sActivateEvent) {
             out->mType = e.user.code ? PLAT_EVENT_FOCUS_GAINED : PLAT_EVENT_FOCUS_LOST;
@@ -423,6 +429,8 @@ extern "C" int PlatWindowSystemStart(void)
     if (!sActivateEvent)
         sActivateEvent = SDL_RegisterEvents(1);
 #endif
+    if (!sWakeEvent.load())
+        sWakeEvent.store(SDL_RegisterEvents(1));
     PlatMessageSetHandler(ShowMessage);
     return 1;
 }
@@ -805,4 +813,68 @@ extern "C" void PlatTextInputCancel(PlatWindow* inWindow)
 {
     if (inWindow)
         SDL_ClearComposition(inWindow->mWindow);
+}
+
+extern "C" void PlatWindowWake(void)
+{
+    Uint32 theType = sWakeEvent.load();
+    if (!theType)
+        return;
+    SDL_Event e;
+    SDL_zero(e);
+    e.type = theType;
+    SDL_PushEvent(&e);   // thread-safe
+}
+
+extern "C" void PlatCursorSetSystem(PlatSystemCursor inCursor)
+{
+    static const SDL_SystemCursor kCursors[] = {SDL_SYSTEM_CURSOR_DEFAULT,   SDL_SYSTEM_CURSOR_POINTER,
+                                                SDL_SYSTEM_CURSOR_TEXT,      SDL_SYSTEM_CURSOR_EW_RESIZE,
+                                                SDL_SYSTEM_CURSOR_NS_RESIZE, SDL_SYSTEM_CURSOR_MOVE};
+    static SDL_Cursor* sCursors[sizeof(kCursors) / sizeof(kCursors[0])];
+    size_t theIndex = static_cast<size_t>(inCursor);
+    if (theIndex >= sizeof(kCursors) / sizeof(kCursors[0]))
+        theIndex = 0;
+    if (!sCursors[theIndex])
+        sCursors[theIndex] = SDL_CreateSystemCursor(kCursors[theIndex]);
+    if (sCursors[theIndex])
+        SDL_SetCursor(sCursors[theIndex]);
+}
+
+extern "C" void* PlatCursorCreate(const uint32_t* inBGRA, int inWidth, int inHeight, int inHotX, int inHotY)
+{
+    if (!inBGRA || inWidth <= 0 || inHeight <= 0)
+        return NULL;
+    // ARGB8888 is a packed format: each pixel one 0xAARRGGBB value, as the platform interface has them
+    SDL_Surface* theSurface = SDL_CreateSurfaceFrom(inWidth, inHeight, SDL_PIXELFORMAT_ARGB8888,
+                                                    const_cast<uint32_t*>(inBGRA), inWidth * 4);
+    if (!theSurface) {
+        sLastError = SDL_GetError();
+        return NULL;
+    }
+    SDL_Cursor* theCursor = SDL_CreateColorCursor(theSurface, inHotX, inHotY);   // copies the pixels
+    SDL_DestroySurface(theSurface);
+    if (!theCursor)
+        sLastError = SDL_GetError();
+    return theCursor;
+}
+
+extern "C" void PlatCursorSet(void* inCursor)
+{
+    SDL_SetCursor(inCursor ? static_cast<SDL_Cursor*>(inCursor) : SDL_GetDefaultCursor());
+}
+
+extern "C" void PlatCursorDestroy(void* inCursor)
+{
+    if (inCursor)
+        SDL_DestroyCursor(static_cast<SDL_Cursor*>(inCursor));
+}
+
+extern "C" int PlatOpenURL(const char* inURL)
+{
+    if (!inURL || !SDL_OpenURL(inURL)) {
+        sLastError = inURL ? SDL_GetError() : "no URL";
+        return 0;
+    }
+    return 1;
 }

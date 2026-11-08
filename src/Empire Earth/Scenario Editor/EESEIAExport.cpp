@@ -123,7 +123,7 @@
 #include "ee/EESEIAExport.h"
 unsigned long gSETextVersion = 1;           // 0x4c2cb8 (.data = 1; ee/EESEIAExport.h)
 
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 // 0x1705a2, in EESEInstructions.cpp (the import question's answer)
 void EESEImportTextAnswer(UIForm* inInfo);
 
@@ -225,7 +225,7 @@ void EESEIAImport::Virtual4()
             thePosition = theLine.Find("}", 0);
             if (thePosition <= theLine.GetLength()) {
                 char* theEnd = (char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>((const char*)theLine), thePosition);
-                strcpy(theEnd, gU4E5B98);
+                strcpy(theEnd, gEmptyString);
                 unsigned long theVersion = atoi(theLine);
                 if (theVersion <= gSETextVersion) {
                     EEScenarioManager* theManager = gWorld.mScenarioManager;

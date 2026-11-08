@@ -134,7 +134,7 @@ long EEE2DSmokePlume::DrawPass6()
 {
     float theReference = this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mAlphaReference : 0.0f;
     GEColor theColor;
-    Fn10387B(this->mDrawPosition, theColor, this->mRotation,
+    AddBlendedSprite(this->mDrawPosition, theColor, this->mRotation,
              (this->mGraphicEffect->GetSize() - this->mGraphicEffect->GetStartSize()) * this->mDrawAge + this->mGraphicEffect->GetStartSize(),
              (1.0f - this->mDrawAge) * this->mGraphicEffect->GetAlpha(), this->mBrightness, theReference);
     return 0;

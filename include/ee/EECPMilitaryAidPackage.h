@@ -46,8 +46,11 @@ public:
 
     std::vector<unsigned long> mSubGroupIDs;  // +0x04 (_Buy(0)) the sub group ids sent
     U2DPoint<long> mLocation;               // +0x14 the town's hull centre
+    EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;              // +0x1c (the ctor's argument)
     EEPlayer* mTarget;                      // +0x20 the town's owner
+    float GetThreat() const { return this->mThreat; }
+    long GetTownID() const { return this->mTownID; }
     float mThreat;                          // +0x24
     long mTownID;                           // +0x28 (EETown::mL74; the defense commander's map key)
     long mState;                            // +0x2c

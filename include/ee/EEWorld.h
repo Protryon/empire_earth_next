@@ -178,6 +178,7 @@ public:
     long mCollisionDetectionFlags;          // +0xb7c (= 15)
     long mUB80;                             // +0xb80 (= 0)
     long mCurrentPlayer;                    // +0xb84 the local player's index
+    unsigned long GetNumberOfWondersToWin() const { return this->mNumberOfWondersToWin; }
     unsigned long mNumberOfWondersToWin;    // +0xb88 ("TheNumberOfWondersToWin"; = 1)
     long mMaxPlayers;                       // +0xb8c (= 3)
     long mStartTime;                        // +0xb90 (= 0)

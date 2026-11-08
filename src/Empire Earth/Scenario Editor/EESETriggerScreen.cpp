@@ -97,7 +97,7 @@
 #include "ee/EESETSArea.h"
 #include "ee/EESETSTrigger.h"
 #include "ee/EEStringIDs.h"
-extern char gU4E5B98[]; // 0x4e5b98: the shared empty string
+extern char gEmptyString[]; // 0x4e5b98: the shared empty string
 
 bool gB4C3220 = true;
 
@@ -231,7 +231,7 @@ EESETriggerScreen::EESETriggerScreen(unsigned long& ioIndex, UIForm* inForm, GEF
     ioIndex++;
     theY = this->mDecPriorityButton->GetRectangle().GetBottom() + 1.0f;
     thePosition.SetXY(305.0f, theY);
-    this->mShowIDsCheckBox = new EESETSShowIDsCheckBox(0x7de, gU4E5B98, gU531930,
+    this->mShowIDsCheckBox = new EESETSShowIDsCheckBox(0x7de, gEmptyString, gU531930,
                                             thePosition,
                                             inForm->GetManager()->GetCheckOn()->GetWidth(),
                                             inForm->GetManager()->GetCheckOn()->GetHeight(),

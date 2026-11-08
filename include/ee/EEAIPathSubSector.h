@@ -66,7 +66,9 @@ public:
     long mNumTiles;                         // +0x48 (not set by the ctor)
     unsigned short mContinentID;            // +0x4c
     unsigned short mPathAreaID;             // +0x4e
+    unsigned short GetID() const { return this->mID; }
     unsigned short mID;                     // +0x50 (the manager's 0x24dcf indexes +0x5c by it)
+    long GetKind() const { return this->mKind; }
     long mKind;                             // +0x54 (GetBlockingUnit's switch; 0x10465 compares it with 0xd)
     long mPlayerID;                         // +0x58
     bool mIsStale;                          // +0x5c

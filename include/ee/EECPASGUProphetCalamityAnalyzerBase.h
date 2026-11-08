@@ -55,7 +55,9 @@ public:
     // +0x04 the target tile (init list; one point: Teleport::Virtual28 0x6b24 passes &mTile as EECanStandOn's
     // const U2DPoint<long>&) (provisional name)
     U2DPoint<long> mTile;
+    EECPASGUProphet* GetProphet() const { return this->mProphet; }
     EECPASGUProphet* mProphet;              // +0x0c
+    EECalamityClass* GetCalamityClass() const { return this->mCalamityClass; }
     EECalamityClass* mCalamityClass;        // +0x10 (filled by EECalamityManager 0xc473)
     EEUnitSet* mUnitSet;                    // +0x14 (EECPASGUPCTargetIsUnitSetScreenBase reads it)
     long mTechID;                           // +0x18 (init list)

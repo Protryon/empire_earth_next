@@ -113,7 +113,7 @@ long EEUIEMSEMultiPlayer::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
     EEUIManager* theManager = static_cast<EEUIManager*>(inForm->GetManager());
     theManager->mInScenarioEditor = false;
     gGameState.mGameOptions.mIsMultiplayer = true;
-    // EECheck2989A9(false) is always true, so the branch that opened the multiplayer form could never run and
+    // EEIsMultiplayerGame(false) is always true, so the branch that opened the multiplayer form could never run and
     // was removed.
     EEStartExternalLobby();
     return kErrorOK;
