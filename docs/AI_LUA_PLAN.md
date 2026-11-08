@@ -325,6 +325,43 @@ Each stage ends on a gate. Each one is useful on its own, and the work can stop 
   - the next engine's town stands idle;
   - the full gates pass.
 
+*S0 as built* (2026-11-08). The owner's decision 2 replaced the `gameoptions.yaml` setting: the choice is the lobby's.
+- **The choice:** `EEGameOptionsPlayer::mEngine` per lobby slot, 0 classic (the default, and every reset of a slot),
+  1 next, 2 random (`ee/EECPEngine.h` `EECPEngineKind`).
+- **The lobby:** the engine column sits in the ping column, which a computer row leaves empty, widened to 0.428-0.520
+  of the window. The controls are not in dbuicontrols; `EEUIManager`'s ctor adds them with
+  `UIControlsTable::AddControlLike` (form 26):
+  - 274: the header, a copy of the ping label (2507) shown in its place: "Ping / AI", or "AI" in single player;
+  - 275 + slot: the combo box, a copy of the citizens combo (2629; lines Classic, Next, Random = strings 33170-33172);
+  - 291 + slot: the label, a copy of the citizens label (2645);
+  - control ids 90100-90132; help string 33175.
+  `LobbyShowEngine` (flags 0, 6 and 8 of `LobbyShowPlayer`) shows them on computer rows only: the box to the host
+  until it is ready on a new game, like the citizens box, else the label.
+- **The network:** `EEUIELEChangeEngine` sends `EEMPlayerInformation` field 6 (`kPlayerInfoEngine`).
+  `EEMFullPlayerInformation` carries the engine too (4 more payload bytes), for the join sync and the slot resets.
+  A client's own full record keeps the host's engine for its slot.
+- **Random:** resolved in `EEGameState::Create`, when the computer player is made, by `EECPEngineResolve`. It is a
+  32-bit hash of `gUserInterface->mRandomSeed` (every peer's) and the slot, not one of the game's generators, so the
+  random start epoch and the map draw as before. The resolved engine goes to `EEComputerPlayer::mEngine` (a byte in
+  the class's padding: the size stays 0xf58) and into the game's options.
+- **TEST ONLY:** `EE_AI_ENGINE` (classic/next/random, a comma list in turn by player id from player 1, as
+  `EE_AI_PERSONALITY`) overrides the lobby at that point.
+- **Save games:** version 0.251 (`kSaveGameMinorVersion`; the original wrote 0.250). It adds a `u32` engine after
+  each game options slot and a `u8` engine after each computer player in the players chunk (`EEPPlayerHelper`), so a
+  loaded game keeps its engines. 0.250 saves and scenarios load as classic. The scenario editor's computer players
+  are classic.
+- **The branch point:** `EEComputerPlayer::Update`. The start-up block runs for both engines. Then a next player
+  calls `EECPNextUpdate` (`EECPEngine.cpp`) instead of the original's block (regroup, enable timers, population,
+  expansion, the civilization, diplomacy, combat and exploration managers, the standing army). The unit kill list
+  after it runs for both. The stub only writes the 30 s stats line. S1-S3 replace it with view -> Lua strategy ->
+  tactics.
+- **Classic:** takes the original's path unchanged. Its only new output is ` engine=classic` at the end of the
+  trace's `cp start` line. The game log's player line has `engine=` (tools/game_log.py shows it), and
+  tools/ai_scorecard.py can tell the players apart by it (`--key engine`).
+- **EE-SIM:** `--engine LIST` (one engine for every seat, or a comma list by seat; seat 1 is player 2) selects the
+  engine boxes 275 + seat through the lobby, as `--lobby 276=next` would. The report's setup records it.
+  `sim_bench.py --engine` takes `;` between variants.
+
 **S1, the tactics API** (the largest stage: 1-2 weeks).
 - **Extraction:** take the executors out of the managers (§2), and make the policy cuts listed there.
 - **Proof:** a C++ test strategy with a fixed build order shows that every verb works.
@@ -415,7 +452,7 @@ Decisions (the owner, 2026-11-08):
 ## 8. First steps
 
 1. The owner's decisions: done (§7).
-2. **S0:** the per-seat switch and an idle stub.
+2. **S0:** the per-seat switch and an idle stub: built (§5, "S0 as built").
 3. **The S1 audit:** done, in [AI_LUA_AUDIT.md](AI_LUA_AUDIT.md): a table of every decision buried in the managers' executors, file by file,
    with where each one ends up (a tactic, a strategy order, or classic only).
 4. **S1:** extract the executors in the order the boom opening needs them: gathering and claims, building and
