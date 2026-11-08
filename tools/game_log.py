@@ -5,7 +5,7 @@
 
 With no LOG, the newest log under --data's Logs (default: data/, then build/boot/windowed_f) is read. Per player: who
 it is (human or computer, the AI's personality and cheats), the minute it reached every epoch, and a timeline every
---every minutes (default 2): epoch, citizens (idle, gatherers per resource f/w/s/g/i, builders), army, buildings and
+--every minutes (default 2): epoch, citizens (the boats among them, idle, gatherers per resource f/w/s/g/i, builders), army, buildings and
 towers, stock, income per minute and losses (citizens/army/buildings, and by a human's or a computer's units), and
 every chat line with its game minute (notes typed while playing). The
 computer players' decision trace (the "EE-AI" lines) is in the same file for tools/harness/ai_trace.py and grep.
@@ -113,7 +113,7 @@ def main():
             reached = ", ".join(f"e{e} {t / 60000:.1f}m" for e, t in sorted(epochs[p].items())) or "none"
             color = colors.get(int(info["color"]), f"color {info['color']}") if info.get("color", "").isdigit() else "?"
             print(f"\np{p} {color} {who} civ={info.get('civ', '-')}: epochs {reached}")
-            print("   min ep  cit idle  gather f/w/s/g/i  bld  army  bldg tow  stock f/w/s/g/i           income/min f/w/s/g/i  lost c/a/b by h/c")
+            print("   min ep  cit boat idle  gather f/w/s/g/i  bld  army  bldg tow  stock f/w/s/g/i           income/min f/w/s/g/i  lost c/a/b by h/c")
             step = a.every * 60000
             next_t, window = 0.0, collections.Counter()
             lost, by = [0, 0, 0], [0, 0, 0]
@@ -127,7 +127,7 @@ def main():
                     span = max(step, 30000) / 60000 if next_t > 0 else 0.5
                     inc = [round(window[r] / span) for r in range(5)]
                     g = s["gather"]
-                    print(f"  {t / 60000:4.0f} {s['epoch']:>2} {s['citizens']:>4} {s['idle']:>4}  {g:<17} {s['build']:>4} {s['army']:>5} "
+                    print(f"  {t / 60000:4.0f} {s['epoch']:>2} {s['citizens']:>4} {s.get('boats', '-'):>4} {s['idle']:>4}  {g:<17} {s['build']:>4} {s['army']:>5} "
                           f"{s['buildings']:>5} {s['towers']:>3}  {s['stock']:<26} {'/'.join(map(str, inc)):<21} "
                           f"{'/'.join(map(str, lost))} {by[0]}/{by[1]}")
                     rows.append({**s, "min": round(t / 60000, 1), "income_per_min": inc, "lost": list(lost), "lost_by": list(by)})
