@@ -35,6 +35,7 @@
 #include "ee/EECommunications.h"
 #include "ee/EEUIManager.h"
 #include "ee/EEGameOptions.h"
+#include "ee/EECPEngine.h"
 #include "ee/EEGamePreferences.h"
 #include "ee/EESMMediaStrings.h"
 #include "ee/EEPSaveGameHeader.h"
@@ -588,6 +589,8 @@ void EEClient::HandleLobbyInput(NEMessage* inMessage)
             thePlayer.mPing = theInfo->mPing;
             thePlayer.mLoadedType = theInfo->mLoadedType;
             thePlayer.mStartingCitizens = theInfo->mCitizenBonus;
+            thePlayer.mEngine = (unsigned long)theInfo->mEngine < kEECPEngineChoiceCount ? (unsigned long)theInfo->mEngine
+                                                                                    : kEECPEngineClassic;   // port
             thePlayer.mB36 = theInfo->mB42;
             thePlayer.mIsReady = theInfo->mIsReady;
             thePlayer.mSlot = theInfo->mSlot;

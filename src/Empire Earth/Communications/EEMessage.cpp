@@ -68,6 +68,7 @@
 #include "ee/EEUserInterface.h"
 #include "ee/EEGameLog.h"
 #include "ee/EEMessage.h"
+#include "ee/EECPEngine.h"
 #include "ee/EECommunications.h"
 #include "ee/EEClient.h"
 #include "ee/EEServer.h"
@@ -5445,6 +5446,9 @@ void EEMPlayerInformation::Execute()
     gGameOptions.mLock->WriteLock();
     thePlayer = gGameOptions.mPlayers[this->mSlot];
     switch (this->mField) {
+    case kPlayerInfoEngine:   // port: a computer slot's engine (ee/EECPEngine.h)
+        thePlayer.mEngine = this->mValue < kEECPEngineChoiceCount ? this->mValue : kEECPEngineClassic;
+        break;
     case 5:
         thePlayer.mIsReady = this->mValue > 0;
         break;
@@ -5550,6 +5554,7 @@ EEMFullPlayerInformation::EEMFullPlayerInformation(const EEGameOptionsPlayer& in
     this->mIsLocal = inPlayer.mIsLocal;
     this->mLoadedType = inPlayer.mLoadedType;
     this->mB42 = inPlayer.mB36;
+    this->mEngine = (int32_t)inPlayer.mEngine;   // port
 }
 
 void EEMFullPlayerInformation::Execute()
@@ -5588,16 +5593,18 @@ void EEMFullPlayerInformation::ExportMessage(unsigned char** outPayloadPointer, 
         theLocation += sizeof(this->mIsLocal);
         memcpy(*outPayloadPointer + theLocation, &this->mB42, sizeof(this->mB42));
         theLocation += sizeof(this->mB42);
+        memcpy(*outPayloadPointer + theLocation, &this->mEngine, sizeof(this->mEngine));   // port
+        theLocation += sizeof(this->mEngine);
         ESVERIFY_AT(theLocation == theMessageSize, 11172);
         outMessageSize = theMessageSize;
     }
 }
 
 // FUNCTION: EXE 0x4c395e
-// Returns the full player record's payload size: the name's export size plus 36
+// Returns the full player record's payload size: the name's export size plus 36 (port: plus 4, the engine)
 unsigned long EEMFullPlayerInformation::ExportSize()
 {
-    return this->mName.GetExportSize() + 36;
+    return this->mName.GetExportSize() + 36 + sizeof(this->mEngine);
 }
 
 // FUNCTION: EXE 0x4c396b
@@ -5636,6 +5643,8 @@ void EEMFullPlayerInformation::ImportMessage(unsigned char* inPayloadPointer)
     theLocation += sizeof(this->mIsLocal);
     memcpy(&this->mB42, inPayloadPointer + theLocation, sizeof(this->mB42));
     theLocation += sizeof(this->mB42);
+    memcpy(&this->mEngine, inPayloadPointer + theLocation, sizeof(this->mEngine));   // port
+    theLocation += sizeof(this->mEngine);
 }
 
 bool EEMFullPlayerInformation::IsResponse(NEMessage* inMessage)

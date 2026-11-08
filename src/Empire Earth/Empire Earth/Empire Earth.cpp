@@ -853,9 +853,10 @@ static const float kWaterRipplePeriod = 3.1415927f;
 static const float kWaterRippleSpeed = 0.025f;
 static const float kWaterRippleAmplitude = 0.05f;
 #include "ee/EESaveGameFiles.h"
-// the save-game version (.rdata 0x4420ac/0x4420b0, before this unit's vtables 0x4420c0; values from the original)
+// the save-game version (.rdata 0x4420ac/0x4420b0, before this unit's vtables 0x4420c0; the original wrote 0/250;
+// port: 251 adds the computer slots' engine, EEGameOptionsPlayer and EEPPlayerHelper, docs/AI_LUA_PLAN.md S0)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 250;
+const unsigned long kSaveGameMinorVersion = 251;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"

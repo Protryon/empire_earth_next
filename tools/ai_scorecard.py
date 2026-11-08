@@ -3,7 +3,7 @@ every epoch, the economy and army over time and the citizens lost.
 
   python -I tools/ai_scorecard.py build/sim/bench/NAME [more bench dirs] [--key demand] [--json OUT]
 
-The computer players are told apart by a field of their trace start line (`--key`: exp, demand, personality, cheats; by
+The computer players are told apart by a field of their trace start line (`--key`: engine, exp, demand, personality, cheats; by
 default the first of those that differs between the players of a game, else "all": one variant). In a game of two
 variants a side wins when the other has no citizens left or its citizens + army are at least 1.5 times the other's,
 else the game is close. `--score mixed` (docs/AI_RESEARCH.md §8.29; the owner: "a mix of factors, economy, military")
@@ -22,7 +22,7 @@ import re
 import statistics
 import sys
 
-KEYS = ("exp", "demand", "personality", "cheats")
+KEYS = ("engine", "exp", "demand", "personality", "cheats")
 MARKS = (10, 20, 30, 40)
 MIXED_WEIGHTS = (0.4, 0.4, 0.2)   # economy, military, tech
 MIXED_WIN = 0.6
