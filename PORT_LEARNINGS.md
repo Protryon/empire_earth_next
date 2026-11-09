@@ -2916,3 +2916,50 @@ original; `oos` is compared less it) are left out.
   and the AI's other derived state (the `ai` checksum parts differ at the first tick and agree after the first AI
   update); a herd's path request and the path manager's pending requests; the wall request is asked again at the
   first Update, not where it was in the queue. In-game times far off the default (game speed) are untested.
+
+## R5b.2: the tech tree, the event effects and the calamities' age in Rust (ee_tech, branch rust-r5b-tech, 2026-11-09)
+
+`rust/crates/ee_tech` owns the decisions and the arithmetic of the tech tree (`src/Empire Earth/Tech Tree`), of the
+event effects (`Scenario Manager/EEEvent.cpp`) and the calamities' shared timing (`EECalamityClass::UpdateTimeAlive`).
+The C++ classes keep their members, vtables and object lifetimes; they fill plain views (`ee/EETechRust.h`: a node,
+the tree's epochs, an epoch's research counter, an effect's value/offset/factor) and apply what comes back, firing the
+events and refreshing the interface in the C++'s order.
+
+- **Moved:** a node's and an epoch's `GetIsAvailable`/`GetIsObsolete`, `SetPrerequisite`'s flags, `ResearchNode`'s and
+  the epoch's research decision and the research delay, `AddSOL`/`UpdateAvailability`, `EETechTree::Research`'s
+  epilogue, `GetCost` (a node's arithmetic, an epoch's scale), the per-class cost tables and prerequisite flags at
+  `Load`, `GetChecksum`, `DependsOn` and `SumCosts` (walks over callbacks into the C++ tree: the C++ is asked in the
+  C++'s order of calls, the costs are copied in and out so no Rust reference lives across a callback), both
+  `EEApplyEventEffect`s (now forwarders), which stat an attribute effect changes (`ee_tech_attribute`: the switch of
+  `ApplyEventAttribute` is on its operation), the maximum hit points, the hit point and flight time rescale
+  (`UMCeil`), the gather times, the population bonus, the terrain masks, `RunEffect`'s dispatch, and the calamity's
+  age. Kept C++: the effects that touch units, media, sounds, buttons and the interface; `ResearchToEpoch`, `Unlock`,
+  `ResearchAll` and the saved-game code (orchestration of member calls); every calamity class's own `Update`,
+  `Start`, `CanCastAt` and the contagion helpers.
+- **The C cast.** `(long)f` is `cvttss2si`: toward zero, `i32::MIN` for NaN or out of range. `ee_tech::ftol` keeps that
+  (`as i32` saturates); `UMCeil` is `lrintf` (ee_ge) plus one when below.
+- **The capture first** (`ee/EETechCapture.h`, `EE_SIM_CAPTURE`): research starts (`QueueResearch`), the tree's and the
+  nodes' research, prerequisites, epoch counters, every `GetCost` (7.8 million in the six oracle games) and `SumCosts`,
+  every effect with the upgrade's numeric fields and the player's before and after, every rescaled unit, calamity
+  creation, start and update, and a sweep of every player's tree every five game minutes (availability, obsolescence,
+  costs at three scales, `SumCosts`, the whole `DependsOn` closure, the checksum). Digests from the unmodified C++ are
+  in `tools/sim_capture/golden_cpp*.txt`; two captures of one build are identical and the capture leaves the six
+  traces equal to the reference.
+- **What the capture found.**
+  - An epoch's `mPrerequisiteFlags` is never set: uninitialized memory (two runs of one build differed there). Nothing
+    reads it (`SetPrerequisite` is only called on an epoch's nodes); the capture records 0 for epochs.
+  - `SumCosts` recurses through its own public entry; the capture records only the outermost call, so a walk inside
+    Rust gives the same records.
+  - The oracle's computer players never leave the first epochs (41 effect runs in a seed-2 game) and never cast a
+    calamity, even from a later start epoch with every cheat (`--profile late`, `space`: they stay in their start
+    epoch with almost no army). So the capture has three more profiles: `late` (3 AIs from the Middle Ages, cheats),
+    `space` (from the Atomic Age), and `calamity`: the oracle's game with `EE-SIM --calamities` (TEST ONLY), which
+    every five game minutes has each computer player cast an eighth of the calamity classes through
+    `EECalamityManager` (caster its first living unit, the next player's first unit or its tile the target). All 20
+    classes the game has (enums 3..26) start, update and end; 176 calamities, 166,320 updates in seeds 2-4.
+- **Gate:** `sim_capture.py check` equal to the C++ digests for the oracle's six seeds and the profiles' seeds (late
+  2-3, space 2-3, calamity 2-4); `sim_capture.py replay` (the Rust decisions recomputed from the C++ captures: TNRS,
+  TNPR, TSOL, the sweep's availability, closure and checksum, EVHP) found no difference before the C++ was replaced;
+  the sim oracle identical.
+- **Not ported (no oracle):** `CanCastAt` (only prophets and the interface ask it, and no captured game casts through
+  it), the calamity classes themselves (their `Update`s are world code), `GetUnitClassMediaMask`/`IsLatestEffect`.
