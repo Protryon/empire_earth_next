@@ -55,7 +55,6 @@
 
 static const long kNextSiteDangerRange = 12;   // tiles: the seen enemy soldiers that count as a site's danger
 static const long kNextTowerRange = 8;          // tiles: a tower this near guards a site (EECPRMGuardSites)
-static const long kNextDropReach = 3;           // tiles from a drop site's edge (about): a site's drop is at hand
 static const long kNextHuntMax = 30;            // animals counted at most in the view's hunt
 
 static long EECPNextSqrt(long long inValue)     // the integer square root (no float in the view)
@@ -264,6 +263,63 @@ bool EECPNextHasRoom(EEComputerPlayer* inPlayer, EEUnit* inResource)
         if (theCenter->mUnits[u]->mUnitClass->mUnitType == kUnitTypeResForageBush)
             thePatch += EECPNextAssigned(inPlayer, theCenter->mUnits[u]);
     return thePatch < kNextPatchPlaces;
+}
+
+// the player's finished drop sites for a resource (town centres, capitols, settlements; for food granaries too): the
+// centre tile and half the size of each, three longs a drop site
+void EECPNextReadyDrops(EEComputerPlayer* inPlayer, bool inFood, std::vector<long>& outDrops)
+{
+    outDrops.clear();
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        long theType = theUnit->mUnitClass->mUnitType;
+        if (theType != kUnitTypeTownCenter && theType != kUnitTypeCapitol && theType != kUnitTypeSettlement
+            && !(inFood && theType == kUnitTypeGranary))
+            continue;
+        if (theUnit->mComplexUnit == NULL || !theUnit->mComplexUnit->mIsBuilt || !(theUnit->mHitPoints > 0)
+            || theUnit->mTile == NULL)
+            continue;
+        long theHalf = theUnit->mUnitClass->GetTileSize() / 2;
+        outDrops.push_back(theUnit->GetTileX() + theHalf);
+        outDrops.push_back(theUnit->GetTileY() + theHalf);
+        outDrops.push_back(theHalf);
+    }
+}
+
+static bool EECPNextDropIn(const std::vector<long>& inDrops, long inX, long inY)
+{
+    for (unsigned long d = 0; d + 2 < inDrops.size(); d += 3) {
+        long theReach = kNextDropReach + inDrops[d + 2];
+        if (EECPNextDistance2(inX, inY, inDrops[d], inDrops[d + 1]) <= (long long)theReach * theReach)
+            return true;
+    }
+    return false;
+}
+
+bool EECPNextDropReady(EEComputerPlayer* inPlayer, long inX, long inY, bool inFood)
+{
+    std::vector<long> theDrops;
+    EECPNextReadyDrops(inPlayer, inFood, theDrops);
+    return EECPNextDropIn(theDrops, inX, inY);
+}
+
+bool EECPNextUnitDropReady(EEComputerPlayer* inPlayer, EEUnit* inResource)
+{
+    if (inResource == NULL || inResource->mTile == NULL)
+        return false;
+    std::vector<long> theDrops;
+    EECPNextReadyDrops(inPlayer, inResource->mResourceType == kResourceFood, theDrops);
+    if (EECPNextDropIn(theDrops, inResource->GetTileX(), inResource->GetTileY()))
+        return true;
+    // a forage bush or a mine: any unit of its centre holding the same resource (a patch's far bushes lie 4-6 tiles from
+    // a settlement on its near side)
+    EECPResourceCenter* theCenter = EECPNextCentreOf(inPlayer, inResource);
+    for (unsigned long u = 0; theCenter != NULL && u < theCenter->mUnits.size(); u++) {
+        EEUnit* theUnit = theCenter->mUnits[u];
+        if (theUnit != inResource && theUnit->mResourceType == inResource->mResourceType && EECPNextResourceLeft(theUnit)
+            && EECPNextDropIn(theDrops, theUnit->GetTileX(), theUnit->GetTileY()))
+            return true;
+    }
+    return false;
 }
 
 long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inNow, long* outKind)

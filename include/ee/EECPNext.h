@@ -114,6 +114,7 @@ const long kNextThreatRange = 9;            // tiles: seen enemy soldiers this n
 const long kNextThreatMs = 20000;           // ... remembered this long after they were last seen
 const long kNextTowerMargin = 3;            // tiles past a tower's range (the gatherers stand round the mine)
 const long kNextHomeRange = 20;             // tiles from the town centre: the start resources
+const long kNextDropReach = 3;              // tiles from a drop site's edge (about): a site's drop is at hand
 const long kNextPatchPlaces = 6;            // gatherers a forage patch holds in all, however many bushes (§8.35)
 const long kNextHuntRange = 24;             // tiles from the town centre: the game hunted at least (§8.35: hunters
                                             // 40+ tiles out); the claim range when it is larger (EECPNextHuntReach)
@@ -126,6 +127,14 @@ long EECPNextAssigned(EEComputerPlayer* inPlayer, EEUnit* inResource);
 // whether a resource unit has room for one more of the player's gatherers: the mining limit per unit and, for a forage
 // bush, kNextPatchPlaces over its whole patch (the resource centre holding it)
 bool EECPNextHasRoom(EEComputerPlayer* inPlayer, EEUnit* inResource);
+// a finished drop site for the resource at hand (docs/AI_RESEARCH.md §8.36, the owner: "build a settlement before using
+// a node"): a town centre, capitol or settlement (inFood: a granary too) whose centre lies within kNextDropReach tiles
+// plus half its size of the tile (as the view's has_drop, which also counts one going up)
+bool EECPNextDropReady(EEComputerPlayer* inPlayer, long inX, long inY, bool inFood);
+// the same for a resource unit: its tile or any unit of its resource centre holding the same resource
+bool EECPNextUnitDropReady(EEComputerPlayer* inPlayer, EEUnit* inResource);
+// the player's finished drop sites (inFood: granaries too): x, y (the centre tile) and half the size, three longs each
+void EECPNextReadyDrops(EEComputerPlayer* inPlayer, bool inFood, std::vector<long>& outDrops);
 // whether a building at a tile would put its builders in harm's way: a seen enemy tower whose range covers the tile
 // or the straight way to it from the town centre, enemy soldiers seen within kNextThreatRange of it in the last
 // kNextThreatMs (away from the town), a danger zone (citizens hit there lately); 0: safe, else kNextBlocked*
