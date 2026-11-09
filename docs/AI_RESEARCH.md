@@ -1849,6 +1849,102 @@ Prehistoric soldiers, the rush wins 6 of 16 (1 before).
   `citizens_by_killer` count every unit lost, and buildings and other losses only when there is no town centre. Not
   fixed here, because the fix changes the classic traces.
 
+### 8.34 The resource sites: the false enemy_near and the vanished mine (2026-11-08, owner playtest and EE-SIM)
+
+**The playtest** (Mac, boom, Medium, Continental Small, the owner against one next AI). The AI stayed in the Stone
+Age. From 10 minutes on most mineral sites 32-55 tiles out were `enemy_near` (stone 14/16, gold 10/14, iron 13/17).
+At about 50 minutes the only `ok` iron site (iron:12, d35, claimed, a drop site at hand) left `sites[]`. The iron
+gatherers fell to 0-1 for the rest of the game, though Copper needed 845 iron and the AI had 52. The owner was not
+near those sites until the end.
+
+**The vanished site: the view lost every worked mine.** A gather is `EEUGGather::Work`. It hits a resource whose
+hit points are not 0 for the gatherer's attack, as it hunts an animal. A mine has 1 hit point (dbobjects), and
+`EEUnit::TakeHit` sets a resource's hit points to 0 instead of killing it. So the first swing at a mine leaves it at
+0 hit points, still gatherable while its `mResourceAmount` lasts. Every mine holds 300000, so none is used up in a
+game. The view counted only units with hit points above 0 (`holds`, `units`, the site's tile), and so did the
+tactics' site tile. A mine dropped out of `sites[]` as soon as it was worked. In the playtest log the home gold
+(d7, d9) and iron (d9, d15) were gone by 5 minutes, the stone at d9 by 30, and iron:12 by 55: in each case right
+after its gatherers arrived. Boom then had no site for the mineral and set its gatherers to 0
+(`want[r] = places`). The classic finders test only the amount and kept gathering, but the script no longer asked
+for gatherers. Worked forage patches vanished the same way. Their claims never came back to the script: not
+listed, so never released, and the claim range grew because "no patch was left". The `cp sites` trace line has the
+same hit point test; it is left as it is, because changing it changes the classic traces.
+
+**The false enemy_near: enemy citizens out of sight.** `enemy_near` was `EECPBuildManager::HasEnemyNear` (0x467e10):
+the influence table's regions are 9 tiles, the box is the site ± 9 tiles, and the unit regions over it are taken
+whole (up to 27 tiles across). It counts every armed unit not its own that is not an idle searcher. Citizens have an
+attack of 5, towers count whatever their range, and the player need not see any of it. A TEST ONLY trace (`EE_AI_EXP
+sitetrace`: once a minute each blocked site, the unit that blocked it, whether its tile is in sight) over the bench
+below:
+
+| Blocked site-minutes, 16 games | Before | After |
+|---|---|---|
+| `enemy_near` | 5977 | 1650 |
+| ... by enemy citizens | 4602 (77%; 4562 out of sight) | 0 |
+| ... by soldiers | 900 (390 in sight) | 1650 (1501 in sight, 149 remembered) |
+| ... by towers (range not checked) / ships and boats | 309 / 128 | - |
+| `tower` (range + 3 tiles covers the site) | - | 2749 |
+| `danger` | 5 | 171 |
+| home sites blocked (`enemy_near`, raids seen on them) | - | 526 |
+
+Before, 91% of the blocking units were out of sight. On a 1v1 Continental Small the sites 40-55 tiles out lie by the
+other town, whose gatherers block them. That matches the playtest: the owner's citizens near his own town.
+
+**The fix** (next engine only; classic traces unchanged, seeds 2-5, 1800 s: 1784, 1884, 1854 and 1829 lines
+identical; a boom game run twice: 5283 lines identical):
+- The view counts a resource unit by its amount (`EECPNextResourceLeft`). The tactics' site tile does the same.
+- `EECPNextSiteBlocked` (EECPNextView.cpp) is the check for the view, for the finders' next-engine branch
+  (FindResourceTarget, FindFarm) and for next-engine `HasEnemyNear` (also used for building sites):
+  - `enemy_near`: enemy soldiers (land military, not citizens) seen within 9 tiles now or in the last 20 s. The memory
+    (`mThreats`) is filled from the army step's scan and saved in the state block (version 3).
+  - `tower`: an enemy tower seen and not seen destroyed (the army's tower memory), or an armed building in sight,
+    whose range + half its size + 3 tiles covers the site.
+  - Then `danger` and `area` as before.
+- **Home sites** (`sites[].home`, the owner's rule): the start resources every player gets are the nearest 2 gold,
+  2 iron, 1 stone and 2 forage patches within 20 tiles of the town centre. Continental Small gives per player 1 gold,
+  1 iron, 1 stone and 2 berries, plus `PlaceResourceInRing` gold 14-16 and iron 15-17. A home site is blocked only by
+  soldiers seen on it now (a raid, which the defence answers): never `tower`, `danger` or `area`. In seed 26 the
+  home sites are food d4 and d8, stone d4, gold d7 and d14, iron d4 and d7. The playtest's iron:12 (d35) was not a
+  home site. Its home iron was at d9 and d15, and both left the view in the first 5 minutes.
+- **Boom** (ai/boom.lua, claims only): the home sites come first in `sites_of`. A mineral the plan wants with no
+  open site kept contests the nearest site that only soldiers block: it is kept and claimed, and an escort (a
+  `defend` group of 2-6 from the home guard, radius 8) holds it. The escort is disbanded when the site opens or the
+  town is threatened. Such a resource counts as `no_site` for the reserve (§8.33). There were 11 escorts in the 16
+  games.
+
+**Bench**: EE-SIM, Small, Medium, 2 AIs and the idle human, no cheats, 2 hours, seeds 26-33 in both seat orders (16
+games), boom against the classic, `--data open`, main at 7a1155f (§8.33's build order) before and after.
+
+| | Before | After |
+|---|---|---|
+| Gold / iron gatherers in the Stone Age (mean of 30 s samples) | 8.4 / 9.9 | 6.6 / 9.6 |
+| ... samples with no iron gatherer | 13% | 14% |
+| Stone (median min) | 22.1 | 23.1 |
+| Copper reached, median min | 13/16, 58.7 | 11/16, 51.7 |
+| Wins vs classic (mixed; close) | 2 - 11 (3) | 2 - 10 (4) |
+| Citizens lost a game (boom) | 106.2 | 97.8 |
+
+The blocked reasons are now true, and no mine leaves the view, but the economy against the classic engine is about
+the same. Every difference above is within the §8.33 variance. The gold gatherers follow the plan's want now (about
+5): before, extra ones beyond the want went on working mines the view no longer listed. Against the classic AI the
+far sites stay blocked, now by its towers (2749 site-minutes) and soldiers rather than its citizens. The owner's
+case differs: an opponent who leaves his far mines unguarded no longer blocks them, and a worked iron mine stays
+claimed.
+
+Tried and dropped (same bench): 4 Prehistoric patches instead of 3 changed nothing (no fourth patch in reach).
+Growing the claim while the patch places are short of the food want: Copper 12/16 at 57.8, 109 citizens lost.
+
+**Left:**
+- Food: the Prehistoric food gatherers are 14.6 against a want of 19 (16.2 against 18 before, when the claims of
+  the vanished patches stayed active on top of the plan's 3).
+- `tower` memory: 1409 of the 2749 tower site-minutes are towers whose unit is gone from the world (the epoch's
+  upgrade's conversion may give the tower a new unit, or it was destroyed out of sight; not checked). They are kept
+  until their tile is seen empty, as the army's memory does.
+- Home detection is "the nearest within 20 tiles", not the random map's own placement. A neutral mine nearer than
+  the ring's second gold or iron can be taken for it.
+- The `cp sites` trace line and the classic `EECPRMSettlePatches`/claim_needed still skip worked mines (hit points
+  0), for both engines; changing them changes the classic.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

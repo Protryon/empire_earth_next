@@ -411,7 +411,7 @@ keyed `food`, `wood`, `stone`, `gold`, `iron`):
 | `stock`, `income` (last 60 s), `reserve`, `gatherers` (land), `wanted`, `next_epoch_cost` | per-resource maps |
 | `idle`, `citizens`, `boats`, `population`, `population_cap` | |
 | `town_x`, `town_y` (-1: no town centre), `claim_range`, `claim_range_min`, `claim_range_max`, `claim_range_step` | tiles (25, 45, 5 today) |
-| `sites[]` | `index` (its place in `sites`, what `claim`/`release`/`build near="site"` take; valid this step only), `resource` (name; nil when nothing is left), `units`, `amount`, `room`, `workers`, `x`, `y`, `distance`, `danger`; booleans `claimed`, `has_drop`, `has_tower`, `patch`, `explored` (S3: the tile is visible to the player); `holds` (S3: the living units of each resource, a per-resource map: a centre may hold stone and gold); `blocked` (S3: why the classic gatherer finders would pass it over, `unexplored`, `enemy_near`, `danger` or `area`; nil when they would not) |
+| `sites[]` | `index` (its place in `sites`, what `claim`/`release`/`build near="site"` take; valid this step only), `resource` (name; nil when nothing is left), `units`, `amount`, `room`, `workers`, `x`, `y`, `distance`, `danger`; booleans `claimed`, `has_drop`, `has_tower`, `patch`, `explored` (S3: the tile is visible to the player); `holds` (S3: the units of each resource with some left, a per-resource map: a centre may hold stone and gold; a worked mine's hit points are 0, so it counts by its amount, §8.34); `home` (§8.34: one of the start resources by the town, the nearest 2 gold, 2 iron, 1 stone and 2 forage patches within 20 tiles); `blocked` (why the gatherer finders would pass it over; nil when they would not): `unexplored`; `enemy_near` (enemy soldiers seen within 9 tiles in the last 20 s; a home site: seen there now); `tower` (an enemy tower or armed building seen and not seen destroyed whose range + 3 tiles covers it); `danger` (a danger zone: its gatherers attacked there lately); `area` (within 10 tiles of a non-enemy player's area). Home sites are never `tower`, `danger` or `area`. Fog-honest: never citizens, never what the player has not seen (§8.34; S3's `enemy_near` was BuildManager::HasEnemyNear, every armed unit not its own over up to 27 tiles, seen or not) |
 | `buildings[]` | `type`, `finished`, `unfinished`, `queued`, `busy`, `queue` |
 | `soldiers[]` | `type`, `count`, `strength`; and `army_count`, `army_strength` |
 | `threats[]` | `player`, `count`, `strength`, `x`, `y`, `distance`; and `threat_strength` |
@@ -623,7 +623,8 @@ step. A `plan` line each minute and a `sites` line every five (`next.print` in t
 **Tactics changes (economy side).**
 - **The view's sites** (EECPNextView.cpp, EECPNextLua.cpp): `holds` (units per resource), `explored` and
   `blocked`, the checks FindResourceTarget and FindFarm make in their order: not visible, an enemy near
-  (HasEnemyNear), a danger zone, another non-enemy player's area within 10 tiles.
+  (HasEnemyNear), a danger zone, another non-enemy player's area within 10 tiles. (§8.34 replaced the enemy check
+  for the next engine: `EECPNextSiteBlocked`, seen soldiers and towers in range, `home` sites; see `sites[]`.)
 - **The finders** (EECPResourceManager.cpp): for the next engine, FindResourceTarget and FindFarm send gatherers to
   a claimed site that is not visible. The next engine runs no explorers, and the larger mines 35-60 tiles out were
   never seen, so never gathered from. The view lists every resource centre and the strategy claims the ones it
