@@ -1,4 +1,6 @@
-// AuthBase (0x1c bytes), ctor 2dcce0
+// AuthBase (the original's 0x1c bytes, ctor 2dcce0): a signed auth block. The unpacking and the checks are ee_won's
+// (rust/crates/ee_won/src/auth.rs); this class keeps the raw bytes, the header fields its getters return and the
+// unpacked block.
 #ifndef EE_WONAPI_WONAUTHBASE_H
 #define EE_WONAPI_WONAUTHBASE_H
 #include <time.h>
@@ -11,16 +13,22 @@ class AuthBase : public RefCount {
     unsigned short mFamily; //0e
     time_t mIssueTime; //10
     time_t mExpireTime; //14
-    bool mIsValid; //18; size 1c
+    bool mIsValid; //18
+    EeWonAuth* mParsed; // the unpacked block (NULL before Unpack)
+    AuthBase(const AuthBase&); // not copied: the unpacked block has one owner
+    AuthBase& operator=(const AuthBase&);
 protected:
     virtual ~AuthBase(); //2dcdd0
-    virtual bool UnpackHook(ReadBuffer&); //2dcf80
+    virtual uint32_t UnpackKind() const { return EE_WON_AUTH_BASE; } // which block the bytes hold (EE_WON_AUTH_*)
+    virtual void UnpackHook() {} // copies what a subclass keeps from the unpacked block
     bool Unpack(); //2dce40
+    const EeWonAuthHeader& GetHeader() const { return this->mHeader; }
+    EeWonAuthHeader mHeader;
 public:
     AuthBase(const void* = NULL, unsigned long = 0); //2dcce0
-    ByteBufferPtr GetRawBuf() const { return this->mRawBuf; } //returns an owning pointer; 2e8060/51 bytes, sret, ret 4
-    const void* GetRaw() const { return this->mRawBuf.get()!=NULL ? this->mRawBuf->data() : NULL; } //SDK borrowed raw data at +08; Start 2e6730
-    unsigned long GetRawLen() const { return this->mRawBuf.get()!=NULL ? this->mRawBuf->length() : 0; } //SDK raw +08 length; Start 2e6730
+    ByteBufferPtr GetRawBuf() const { return this->mRawBuf; }
+    const void* GetRaw() const { return this->mRawBuf.get()!=NULL ? this->mRawBuf->data() : NULL; }
+    unsigned long GetRawLen() const { return this->mRawBuf.get()!=NULL ? this->mRawBuf->length() : 0; }
     bool IsValid() const { return this->mIsValid; } //+18 (inline)
     const void* GetData() const { return this->mRawBuf.get()!=NULL ? this->mRawBuf->data() : NULL; }
     unsigned long GetDataLen() const { return this->mRawBuf.get()!=NULL ? this->mDataLen : 0; }
@@ -30,6 +38,7 @@ public:
     time_t GetExpireTime() const { return this->mExpireTime; } //+14 (inline)
     bool IsExpired(time_t = 0) const; //2dcf40
     bool Verify(const ElGamal&) const; //2dced0, external
+    const EeWonAuth* GetParsed() const { return this->mParsed; } // the unpacked block (NULL before Unpack)
 };
 }
 #endif

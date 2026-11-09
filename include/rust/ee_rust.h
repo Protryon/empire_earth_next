@@ -123,6 +123,18 @@ constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
 
 constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
 
+/// An auth block's kind for `ee_won_auth_unpack`: the header only.
+constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
+
+/// `AuthCertificate`.
+constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE = 1;
+
+/// `Auth2Certificate`.
+constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE2 = 2;
+
+/// `AuthPubKeyBlock`.
+constexpr static const uint32_t EE_WON_AUTH_PUB_KEY_BLOCK = 3;
+
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
   Left = 0,
@@ -131,8 +143,30 @@ enum class EeUiEdge {
   Bottom = 3,
 };
 
+/// What an ElGamal call computes into a sink.
+enum class EeWonElGamalOp : uint32_t {
+  Encrypt = 0,
+  Decrypt = 1,
+  Sign = 2,
+  RawPrivateKey = 3,
+  RawPublicKey = 4,
+};
+
+/// What `ee_won_auth_cert2_query` asks of an `Auth2Certificate`.
+enum class EeWonCert2Query : uint32_t {
+  /// the community's key id
+  KeyId = 0,
+  /// the first community (0 if none)
+  FirstCommunity = 1,
+  /// the first community's trust
+  FirstCommunityTrust = 2,
+};
+
 /// `FSArchive`'s tables.
 struct EeFsArchive;
+
+/// An unpacked block. The header fields are those read before any failure, as in the C++.
+struct EeWonAuth;
 
 /// The compiler's state for one data path; every table's text is read through `read`. Not thread safe.
 struct EeDataContent;
@@ -150,6 +184,9 @@ struct EeRmapResult;
 
 /// The manager's state, owned by the C++ `SESoundManager` (created and destroyed with it).
 struct EeSoundManager;
+
+/// An ElGamal key with its own random generator.
+struct EeWonElGamal;
 
 /// A `GEPolygonArray` of 16-bit triangle indices (`DrawIndexedPrimitive`'s WORD list).
 struct EeDx7PolygonArray;
@@ -1076,6 +1113,50 @@ struct EeUiSliderFields {
   long max_thumb_pixel;
   long drag_offset;
   bool is_dragging;
+};
+
+/// Receives UTF-16 units; valid only during the call.
+using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
+
+/// A running MD5 digest. `#[repr(C)]` and plain data: the C++ forwarders embed it by value.
+struct EeWonMd5 {
+  uint32_t state[4];
+  /// bytes hashed so far
+  uint64_t count;
+  uint8_t pending[64];
+};
+
+/// A keyed cipher. `#[repr(C)]` plain data: the C++ `Blowfish` embeds it by value and copies it with the class.
+struct EeWonBlowfish {
+  uint32_t s[1024];
+  uint32_t p[18];
+  uint8_t key[56];
+  uint32_t key_len;
+  uint32_t valid;
+};
+
+/// Receives bytes; valid only during the call.
+using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// An auth block's header and validity.
+struct EeWonAuthHeader {
+  bool valid;
+  uint16_t family;
+  uint16_t data_len;
+  int32_t issue_time;
+  int32_t expire_time;
+  /// a certificate's user id
+  uint32_t user_id;
+  /// a key block's id
+  uint16_t key_block_id;
+};
+
+/// What `ee_won_cdkey_decrypt` found.
+struct EeWonCdKeyDecoded {
+  bool has_raw;
+  bool valid;
+  bool used_machine;
+  uint8_t raw[8];
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -3618,6 +3699,388 @@ void ee_ui_slider_set_range(void *slider,
 
 /// `UITextLabel::SetText`'s line loop: `text` (NUL-terminated) wrapped to `width`.
 void ee_ui_label_wrap(void *ctx, const char *text, float width);
+
+/// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
+/// bytes); returns the byte count. `out` may be null to measure.
+///
+/// # Safety
+/// `wide` holds `count` characters of `wchar_size` (2 or 4) bytes; `out` has `capacity` bytes or is null.
+size_t ee_won_utf16le_from_wide(const void *wide,
+                                uint32_t wchar_size,
+                                size_t count,
+                                uint8_t *out,
+                                size_t capacity);
+
+/// The code point a UTF-16 unit makes with the last character of a UTF-32 text: the joined code point when `last`
+/// is a high surrogate and `unit` a low one, else 0 (append the unit as it is).
+uint32_t ee_won_utf16_join(uint32_t last,
+                           uint16_t unit);
+
+/// `wchar_t` text of UTF-16 units (`wchar_size` 2: unchanged; 4: surrogate pairs joined) written to `out` (up to
+/// `capacity` characters, which `count` always suffices for); returns the character count.
+///
+/// # Safety
+/// `data` holds `count` units; `out` has room for `capacity` characters of `wchar_size` bytes.
+size_t ee_won_wide_from_utf16(const uint16_t *data,
+                              size_t count,
+                              uint32_t wchar_size,
+                              void *out,
+                              size_t capacity);
+
+/// The UTF-16 units of little-endian bytes (`count` units read from `data`, which holds `2 * count` bytes) as
+/// `wchar_t` text; see `ee_won_wide_from_utf16`.
+///
+/// # Safety
+/// `data` holds `2 * count` bytes; `out` as for `ee_won_wide_from_utf16`.
+size_t ee_won_wide_from_utf16le(const uint8_t *data,
+                                size_t count,
+                                uint32_t wchar_size,
+                                void *out,
+                                size_t capacity);
+
+/// The UTF-16 units of `wchar_t` text, to a sink.
+///
+/// # Safety
+/// As `ee_won_utf16le_from_wide`; the sink is called once.
+void ee_won_utf16_from_wide(const void *wide,
+                            uint32_t wchar_size,
+                            size_t count,
+                            EeWonUnitSink sink,
+                            void *context);
+
+/// `CheckWrite`: the capacity for `length + add` bytes, or 0 when the current one suffices.
+uint64_t ee_won_write_grow(uint64_t capacity, uint64_t length, uint64_t add);
+
+/// `ReserveChunk`: the capacity for `total` bytes capped at `max`, or 0 when the current one suffices.
+uint64_t ee_won_write_chunk(uint64_t capacity,
+                            uint64_t total,
+                            uint64_t max);
+
+/// `AppendLength`: the field's bytes into `out` (4 bytes of room); returns their count (0 for another size).
+///
+/// # Safety
+/// `out` has 4 bytes.
+size_t ee_won_encode_length(uint32_t length,
+                            uint8_t size,
+                            uint8_t *out);
+
+/// `ToByteBuffer`'s prefix for `length` data bytes into `out` (6 bytes of room); returns its length.
+///
+/// # Safety
+/// `out` has 6 bytes.
+size_t ee_won_length_prefix(uint8_t field_size,
+                            bool includes_field,
+                            uint32_t length,
+                            uint8_t *out);
+
+/// `ReadBytes`'s bound: advances `*pos` by `amount` and returns true when that many bytes remain before `length`.
+///
+/// # Safety
+/// `pos` is valid.
+bool ee_won_read_take(uint64_t length,
+                      int64_t *pos,
+                      uint64_t amount);
+
+/// `ReadLength`: reads a 1, 2 or 4-byte length at `*pos` (sign-extended; 0 for another size); false past the end.
+///
+/// # Safety
+/// `data` holds `length` bytes; `pos` and `out` are valid.
+bool ee_won_read_length(const uint8_t *data,
+                        uint64_t length,
+                        int64_t *pos,
+                        uint8_t size,
+                        uint32_t *out);
+
+/// `CRC16::Put`: the register after the bytes.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+uint16_t ee_won_crc16_put(uint16_t register_, const uint8_t *data, size_t length);
+
+/// Resets an MD5 state (also its initialisation).
+///
+/// # Safety
+/// `state` is valid.
+void ee_won_md5_reset(EeWonMd5 *state);
+
+/// Adds bytes.
+///
+/// # Safety
+/// `state` is valid; `data` holds `length` bytes.
+void ee_won_md5_update(EeWonMd5 *state, const uint8_t *data, size_t length);
+
+/// Writes the 16-byte digest and resets.
+///
+/// # Safety
+/// `state` is valid; `out` has 16 bytes.
+void ee_won_md5_finish(EeWonMd5 *state, uint8_t *out);
+
+/// No key.
+///
+/// # Safety
+/// `bf` is valid for a write.
+void ee_won_blowfish_init(EeWonBlowfish *bf);
+
+/// `SetKey`.
+///
+/// # Safety
+/// `bf` is valid; `key` holds `length` bytes.
+bool ee_won_blowfish_set_key(EeWonBlowfish *bf, const uint8_t *key, size_t length);
+
+/// `Create`: a random key.
+///
+/// # Safety
+/// `bf` is valid.
+bool ee_won_blowfish_create(EeWonBlowfish *bf, int32_t length);
+
+/// The raw key (`GetKey`); its length is `ee_won_blowfish_key_length`.
+///
+/// # Safety
+/// `bf` is valid; the pointer lives as long as `*bf` is unchanged.
+const uint8_t *ee_won_blowfish_key(const EeWonBlowfish *bf);
+
+/// `GetKeyLen`.
+///
+/// # Safety
+/// `bf` is valid.
+int32_t ee_won_blowfish_key_length(const EeWonBlowfish *bf);
+
+/// `Encrypt`: the cipher text to the sink; false (no call) without a key.
+///
+/// # Safety
+/// `bf` is valid; `data` holds `length` bytes.
+bool ee_won_blowfish_encrypt(const EeWonBlowfish *bf,
+                             const uint8_t *data,
+                             size_t length,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// `Decrypt`: the plain text to the sink; false (no call) when refused.
+///
+/// # Safety
+/// As `ee_won_blowfish_encrypt`.
+bool ee_won_blowfish_decrypt(const EeWonBlowfish *bf,
+                             const uint8_t *data,
+                             size_t length,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// A key with no key material, its generator seeded from the system.
+EeWonElGamal *ee_won_elgamal_new();
+
+/// A copy (generator state included).
+///
+/// # Safety
+/// `key` is a live key.
+EeWonElGamal *ee_won_elgamal_clone(const EeWonElGamal *key);
+
+/// Frees a key (null: nothing).
+///
+/// # Safety
+/// `key` came from this module and is not used afterwards.
+void ee_won_elgamal_free(EeWonElGamal *key);
+
+/// `SetPrivateKey` (`is_private` true) or `SetPublicKey`.
+///
+/// # Safety
+/// `key` is live; `data` holds `length` bytes.
+bool ee_won_elgamal_set_key(EeWonElGamal *key, const uint8_t *data, size_t length, bool is_private);
+
+/// `Invalidate`.
+///
+/// # Safety
+/// `key` is live.
+void ee_won_elgamal_invalidate(EeWonElGamal *key);
+
+/// `IsPrivate`.
+///
+/// # Safety
+/// `key` is live.
+bool ee_won_elgamal_is_private(const EeWonElGamal *key);
+
+/// `IsPublic`.
+///
+/// # Safety
+/// `key` is live.
+bool ee_won_elgamal_is_public(const EeWonElGamal *key);
+
+/// Encrypt, decrypt, sign (the input is the message) or write a raw key (no input): the result to the sink; false
+/// (no call) when the key cannot (`Encrypt`/`Sign` advance the key's generator, as the C++'s `mutable Random`).
+///
+/// # Safety
+/// `key` is live; `data` holds `length` bytes.
+bool ee_won_elgamal_op(EeWonElGamal *key,
+                       EeWonElGamalOp op,
+                       const uint8_t *data,
+                       size_t length,
+                       EeWonByteSink sink,
+                       void *context);
+
+/// `Verify`.
+///
+/// # Safety
+/// `key` is live; the buffers hold their lengths.
+bool ee_won_elgamal_verify(const EeWonElGamal *key,
+                           const uint8_t *message,
+                           size_t message_length,
+                           const uint8_t *signature,
+                           size_t signature_length);
+
+/// Unpacks a block of `kind` (`EE_WON_AUTH_*`).
+///
+/// # Safety
+/// `data` holds `length` bytes.
+EeWonAuth *ee_won_auth_unpack(uint32_t kind, const uint8_t *data, size_t length);
+
+/// Frees a block (null: nothing).
+///
+/// # Safety
+/// `block` came from `ee_won_auth_unpack` and is not used afterwards.
+void ee_won_auth_free(EeWonAuth *block);
+
+/// The header fields.
+///
+/// # Safety
+/// `block` is live; `out` is valid.
+void ee_won_auth_header(const EeWonAuth *block, EeWonAuthHeader *out);
+
+/// `AuthBase::Verify(key)`.
+///
+/// # Safety
+/// `block` and `key` are live.
+bool ee_won_auth_verify(const EeWonAuth *block, const EeWonElGamal *key);
+
+/// `IsExpired(extra)` at `now` (seconds).
+///
+/// # Safety
+/// `block` is live.
+bool ee_won_auth_is_expired(const EeWonAuth *block, int64_t now, int64_t extra);
+
+/// `VerifyPermissions`.
+///
+/// # Safety
+/// `block` is live.
+bool ee_won_auth_verify_permissions(const EeWonAuth *block,
+                                    uint32_t user_id,
+                                    uint32_t community,
+                                    uint16_t min_trust);
+
+/// The number of keys a block carries: a certificate's public key (0 or 1) or a key block's keys.
+///
+/// # Safety
+/// `block` is live.
+size_t ee_won_auth_key_count(const EeWonAuth *block);
+
+/// A copy of key `index` (null past the count); free it with `ee_won_elgamal_free`.
+///
+/// # Safety
+/// `block` is live.
+EeWonElGamal *ee_won_auth_key(const EeWonAuth *block, size_t index);
+
+/// `AuthPubKeyBlock::Verify(block)`.
+///
+/// # Safety
+/// Both are live.
+bool ee_won_auth_verify_with_block(const EeWonAuth *key_block, const EeWonAuth *block);
+
+/// A number from an `Auth2Certificate` (0 for another block).
+///
+/// # Safety
+/// `block` is live.
+uint32_t ee_won_auth_cert2_query(const EeWonAuth *block, EeWonCert2Query query, uint32_t community);
+
+/// `GetNickname(key)` (`first` false) or `GetFirstNickname` (`first` true): the units to the sink (empty when
+/// absent).
+///
+/// # Safety
+/// `block` is live; `key` holds `key_count` units.
+void ee_won_auth_cert2_nickname(const EeWonAuth *block,
+                                bool first,
+                                const uint16_t *key,
+                                size_t key_count,
+                                EeWonUnitSink sink,
+                                void *context);
+
+/// `GetUserData(community)` (`first` false) or `GetFirstUserData`: the bytes to the sink; false (no call) when
+/// absent.
+///
+/// # Safety
+/// `block` is live.
+bool ee_won_auth_cert2_user_data(const EeWonAuth *block,
+                                 bool first,
+                                 uint32_t community,
+                                 EeWonByteSink sink,
+                                 void *context);
+
+/// A page file's text (`plaintext::page_text`: HTML pages converted; `skip_first_if_text` drops a text page's first
+/// character) as UTF-16 units to the sink.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+void ee_won_page_text(const uint8_t *data,
+                      size_t length,
+                      bool skip_first_if_text,
+                      EeWonUnitSink sink,
+                      void *context);
+
+/// `CalcKeyFromBuffer`'s test of 8 raw bytes for a product.
+///
+/// # Safety
+/// `product` holds `product_length` bytes; `raw` 8.
+bool ee_won_cdkey_is_valid(const uint8_t *product, size_t product_length, const uint8_t *raw);
+
+/// `Init(string)`'s decoding: the raw bytes into `out` (8 bytes); false when the text is not a key.
+///
+/// # Safety
+/// `text` holds `length` bytes; `out` has 8.
+bool ee_won_cdkey_parse(const uint8_t *text, size_t length, uint8_t *out);
+
+/// `GetString`: the 24 characters and a NUL into `out` (25 bytes).
+///
+/// # Safety
+/// `raw` holds 8 bytes; `out` has 25.
+void ee_won_cdkey_format(const uint8_t *raw, char *out);
+
+/// `GetSymmetricKey`'s key bytes into `out` (12 bytes of room); returns their count.
+///
+/// # Safety
+/// `product` holds `product_length` bytes; `out` has 12.
+size_t ee_won_cdkey_symmetric_key(const uint8_t *product,
+                                  size_t product_length,
+                                  uint32_t machine_id,
+                                  bool use_machine_id,
+                                  uint8_t *out);
+
+/// `GetEncrypted`: the stored form of a raw key to the sink.
+///
+/// # Safety
+/// As `ee_won_cdkey_symmetric_key`; `raw` holds 8 bytes.
+bool ee_won_cdkey_encrypt(const uint8_t *product,
+                          size_t product_length,
+                          uint32_t machine_id,
+                          bool use_machine_id,
+                          const uint8_t *raw,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// `InitEncrypted`'s decoding: `has_machine_id` false when the machine has none.
+///
+/// # Safety
+/// `product` and `data` hold their lengths; `out` is valid.
+void ee_won_cdkey_decrypt(const uint8_t *product,
+                          size_t product_length,
+                          uint32_t machine_id,
+                          bool has_machine_id,
+                          bool prefer_machine,
+                          const uint8_t *data,
+                          size_t length,
+                          EeWonCdKeyDecoded *out);
+
+/// `IsBeta` (`which` 0) or `IsForceCheck` (`which` 1) of a raw key of `length` bytes.
+///
+/// # Safety
+/// `raw` holds `length` bytes.
+bool ee_won_cdkey_flag(const uint8_t *raw, size_t length, uint32_t which);
 
 }  // extern "C"
 

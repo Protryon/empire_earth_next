@@ -1,4 +1,5 @@
 // WriteBuffer (0x18 bytes): a growable message buffer with room for a length prefix
+// (the growth, length fields, prefixes and UTF-16 text are ee_won's: rust/crates/ee_won/src/wire.rs, text.rs)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -50,15 +51,9 @@ void WriteBuffer::Release()
 // Grows the capacity (from 32, doubling) so the given number of bytes fits
 void WriteBuffer::CheckWrite(unsigned long length)
 {
-    unsigned long needed=this->mLength+length;
-    if(!(needed>this->mCapacity))
-        return;
-    long capacity=static_cast<long>(this->mCapacity);
-    if(capacity<32)
-        capacity=32;
-    while(capacity<static_cast<long>(needed))
-        capacity <<= 1;
-    this->Reserve(static_cast<unsigned long>(capacity));
+    uint64_t capacity=ee_won_write_grow(this->mCapacity,this->mLength,length);
+    if(capacity!=0)
+        this->Reserve(static_cast<unsigned long>(capacity));
 }
 // FUNCTION: WON 0x006a81e0
 // Reallocates to at least the given capacity plus 6 prefix bytes, keeping the written data
@@ -117,11 +112,10 @@ void WriteBuffer::AppendLong(int32_t value) { this->AppendBytes(&value,4); }
 // Appends a length as a 1, 2 or 4 byte field; appends nothing for any other size
 void WriteBuffer::AppendLength(unsigned long length,unsigned char size)
 {
-    switch(size) {
-    case 1: this->AppendByte(static_cast<unsigned char>(length)); break;
-    case 2: this->AppendShort(static_cast<short>(length)); break;
-    case 4: this->AppendLong(static_cast<int32_t>(length)); break;
-    }
+    uint8_t field[4];
+    size_t count=ee_won_encode_length(static_cast<uint32_t>(length),size,field);
+    if(count>0)
+        this->AppendBytes(field,static_cast<unsigned long>(count));
 }
 // FUNCTION: WON 0x006a8350
 // Appends a string with a length field of the given size
@@ -137,8 +131,8 @@ void WriteBuffer::AppendWString(const std::wstring& text,int size)
 {
     std::string bytes;
     WideAppendUtf16LE(bytes,text);
-    this->AppendLength(bytes.length()/2,static_cast<unsigned char>(size));
-    this->AppendBytes(bytes.data(),bytes.length());
+    this->AppendLength(static_cast<unsigned long>(bytes.length()/2),static_cast<unsigned char>(size));
+    this->AppendBytes(bytes.data(),static_cast<unsigned long>(bytes.length()));
 }
 // FUNCTION: WON 0x006a83d0
 // Appends a byte buffer with a length field; a NULL buffer writes only a zero length
@@ -166,39 +160,15 @@ void WriteBuffer::SetShort(unsigned long position,short value) { this->SetBytes(
 // Writes the length prefix in front of the data (0xffff + 32-bit for long 2-byte lengths); returns it as a byte buffer
 ConstSmartPtr<ByteBuffer> WriteBuffer::ToByteBuffer(bool release)
 {
-    uint32_t value=this->mLength; // the length prefix is 32-bit on the wire
-    unsigned long length=this->mLength;
-    char* data=this->mData;
-    switch(this->mLengthFieldSize) {
-    case 1:
-        if(this->mLengthIncludesField) ++value;
-        --data;
-        ++length;
-        *data=static_cast<char>(value);
-        break;
-    case 2:
-        if(value<0xffff) {
-            if(this->mLengthIncludesField) value+=2;
-            data=this->mData-2;
-            length+=2;
-            unsigned short word=static_cast<unsigned short>(value);
-            memcpy(data,&word,2);
-        } else {
-            data=this->mData-6;
-            length+=6;
-            unsigned short marker=0xffff;
-            memcpy(data,&marker,2);
-            if(this->mLengthIncludesField) value+=4;
-            memcpy(data+2,&value,4);
-        }
-        break;
-    case 4:
-        if(this->mLengthIncludesField) value+=4;
-        data=this->mData-4;
-        length+=4;
-        memcpy(data,&value,4);
-        break;
-    }
+    // (a buffer never written to has no room for the prefix in front of it: the C++ wrote before NULL)
+    if(this->mAllocation==NULL)
+        this->Reserve(32);
+    uint8_t prefix[6];
+    size_t prefixLength=ee_won_length_prefix(this->mLengthFieldSize,this->mLengthIncludesField,
+                                             static_cast<uint32_t>(this->mLength),prefix);
+    char* data=this->mData-prefixLength;
+    memcpy(data,prefix,prefixLength);
+    unsigned long length=this->mLength+static_cast<unsigned long>(prefixLength);
     if(release) {
         char* allocation=this->mAllocation;
         this->Release();
@@ -209,23 +179,12 @@ ConstSmartPtr<ByteBuffer> WriteBuffer::ToByteBuffer(bool release)
 }
 
 namespace WONAPI {
-// No original address identified: WON SDK chunk growth
+// No original address identified: WON SDK chunk growth (doubling from 32, capped at theMaxSize when that suffices)
 void WriteBuffer::ReserveChunk(unsigned long theNumBytesToReserve, unsigned long theMaxSize)
 {
-	int aTotalLen = theNumBytesToReserve;
-	if(!(aTotalLen>this->mCapacity))
-		return;
-	int aSize = this->mCapacity;
-	if(aSize<32)
-		aSize = 32;
-
-	while(aSize<aTotalLen)
-		aSize<<=1;
-
-	if(theMaxSize>=theNumBytesToReserve && aSize>theMaxSize)
-		aSize = theMaxSize;
-
-	this->Reserve(aSize);
+	uint64_t capacity=ee_won_write_chunk(this->mCapacity,theNumBytesToReserve,theMaxSize);
+	if(capacity!=0)
+		this->Reserve(static_cast<unsigned long>(capacity));
 }
 }
 

@@ -312,6 +312,7 @@ dependencies = [
  "ee_rmap",
  "ee_sound",
  "ee_ui",
+ "ee_won",
 ]
 
 [[package]]
@@ -327,6 +328,10 @@ version = "0.1.0"
 dependencies = [
  "ee_plat_core",
 ]
+
+[[package]]
+name = "ee_won"
+version = "0.1.0"
 
 [[package]]
 name = "equivalent"

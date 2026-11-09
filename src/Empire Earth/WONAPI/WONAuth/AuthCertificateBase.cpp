@@ -1,7 +1,6 @@
 // AuthCertificateBase: base class of the WON auth certificates; the original's entry is at 0x2e5760
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
-#include <time.h>
 #include <string>
 #include <list>
 #include <map>
@@ -15,5 +14,11 @@ namespace WONAPI {
 bool AuthCertificateBase::VerifyPermissions(DWORD,DWORD,unsigned short) const
 {
     return false;
+}
+// Takes the user id and a copy of the public key from the unpacked certificate
+void AuthCertificateBase::UnpackHook()
+{
+    this->mUserId = this->GetHeader().user_id;
+    this->mPubKey.Adopt(ee_won_auth_key(this->GetParsed(), 0));
 }
 }

@@ -8,54 +8,50 @@
 #include <wchar.h>
 #include <string>
 #include "ee/EEWonNet.h"
+#include "rust/ee_rust.h"
 namespace WONAPI {
 
 // WON's wide text is UTF-16 on the wire and in its files (wchar_t of the original Windows build). wchar_t is UTF-32
 // on Linux and macOS, so every byte boundary converts per 16-bit unit, little-endian (characters past U+FFFF as
-// surrogate pairs). On Windows each wchar_t is one unit and the bytes are unchanged.
-template<class Emit> inline void WideForEachUtf16Unit(const std::wstring& inText, Emit inEmit)
-{
-    for(std::wstring::size_type i=0; i<inText.length(); ++i) {
-        uint32_t c=static_cast<uint32_t>(inText[i]);
-#if WCHAR_MAX > 0xffff
-        if(c>0xffff && c<=0x10ffff) {
-            c-=0x10000;
-            inEmit(static_cast<uint16_t>(0xd800+(c>>10)));
-            inEmit(static_cast<uint16_t>(0xdc00+(c&0x3ff)));
-            continue;
-        }
-#endif
-        inEmit(static_cast<uint16_t>(c));
-    }
-}
+// surrogate pairs). On Windows each wchar_t is one unit and the bytes are unchanged. The conversions are Rust's
+// (rust/crates/ee_won/src/text.rs, the one place WON's text is converted: docs/RUST_PLAN.md D6).
+
 // the number of UTF-16 units (the wire's character count) of a wide string
 inline unsigned long WideUtf16Length(const std::wstring& inText)
 {
-    unsigned long count=0;
-    WideForEachUtf16Unit(inText,[&count](uint16_t) { ++count; });
-    return count;
+    return static_cast<unsigned long>(ee_won_utf16le_from_wide(inText.data(),sizeof(wchar_t),inText.length(),NULL,0)/2);
 }
 // the UTF-16 little-endian bytes of a wide string, appended to outBytes
 inline void WideAppendUtf16LE(std::string& outBytes, const std::wstring& inText)
 {
-    WideForEachUtf16Unit(inText,[&outBytes](uint16_t unit) {
-        outBytes+=static_cast<char>(unit&0xff);
-        outBytes+=static_cast<char>(unit>>8);
-    });
+    size_t at=outBytes.length();
+    size_t count=ee_won_utf16le_from_wide(inText.data(),sizeof(wchar_t),inText.length(),NULL,0);
+    outBytes.resize(at+count);
+    if(count>0)
+        ee_won_utf16le_from_wide(inText.data(),sizeof(wchar_t),inText.length(),
+                                 reinterpret_cast<uint8_t*>(&outBytes[at]),count);
 }
 // appends one UTF-16 unit; on UTF-32 systems a low surrogate after a high one joins it into one character
 inline void WideAppendUtf16Unit(std::wstring& ioText, uint16_t inUnit)
 {
 #if WCHAR_MAX > 0xffff
-    if(inUnit>=0xdc00 && inUnit<0xe000 && !ioText.empty()) {
-        uint32_t high=static_cast<uint32_t>(ioText[ioText.length()-1]);
-        if(high>=0xd800 && high<0xdc00) {
-            ioText[ioText.length()-1]=static_cast<wchar_t>(0x10000+((high-0xd800)<<10)+(inUnit-0xdc00));
+    if(!ioText.empty()) {
+        uint32_t joined=ee_won_utf16_join(static_cast<uint32_t>(ioText[ioText.length()-1]),inUnit);
+        if(joined!=0) {
+            ioText[ioText.length()-1]=static_cast<wchar_t>(joined);
             return;
         }
     }
 #endif
     ioText+=static_cast<wchar_t>(inUnit);
+}
+// a wide string of count UTF-16 little-endian units (surrogate pairs joined on UTF-32 systems)
+inline void WideAssignUtf16LE(std::wstring& outText, const void* inBytes, unsigned long inCount)
+{
+    outText.resize(inCount);
+    size_t n=inCount>0 ? ee_won_wide_from_utf16le(static_cast<const uint8_t*>(inBytes),inCount,sizeof(wchar_t),
+                                                    &outText[0],inCount) : 0;
+    outText.resize(n);
 }
 
 // a reference-counted byte buffer (+8 data, +0xc length)
@@ -82,6 +78,20 @@ public:
     virtual ~OffsetByteBuffer(); //2a0c10/93, delete original then clear base data
     char* mAllocation; //10, the only additional owned array
 };
+
+// ee_won's sinks: bytes into a new ByteBuffer held by *(ByteBufferPtr*)inContext; UTF-16 units into the std::wstring
+// at inContext
+inline void WonByteBufferSink(void* inContext, const uint8_t* inBytes, size_t inLength)
+{
+    *static_cast<ConstSmartPtr<ByteBuffer>*>(inContext)=new ByteBuffer(inBytes,static_cast<unsigned long>(inLength),false);
+}
+inline void WonWideSink(void* inContext, const uint16_t* inUnits, size_t inCount)
+{
+    std::wstring& text=*static_cast<std::wstring*>(inContext);
+    text.resize(inCount);
+    size_t n=inCount>0 ? ee_won_wide_from_utf16(inUnits,inCount,sizeof(wchar_t),&text[0],inCount) : 0;
+    text.resize(n);
+}
 
 class ReadBuffer {
 public:

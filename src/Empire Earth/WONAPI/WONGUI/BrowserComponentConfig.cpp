@@ -1,4 +1,4 @@
-// Resource configuration of the HTML browser component
+// Resource configuration of the lobby's page view (BrowserComponent: plain text, WONGUI/BrowserComponent.cpp)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -11,6 +11,7 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/WONLobbyControlConfig.h"
+#include "ee/wonapi/WONLobbyTextAreaConfig.h"
 
 namespace WONAPI {
 // FUNCTION: WON 0x007facb0
@@ -31,7 +32,7 @@ void BrowserComponentConfig::SetComponent(Component* component)
     this->mBrowserComponent=static_cast<BrowserComponent*>(component);
 }
 // FUNCTION: WON 0x007fa7e0
-// Resolves HTMLVIEW to the browser's HTML view (configured as a scroll area); other names go to the container
+// Resolves HTMLVIEW to the page view's text area (configured as a scroll area); other names go to the container
 bool BrowserComponentConfig::GetPredefinedComponent(const std::string& name,ComponentConfig*& config,Component*& component)
 {
     if(name=="HTMLVIEW")

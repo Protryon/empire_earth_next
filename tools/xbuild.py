@@ -4,7 +4,7 @@
   python -I tools/xbuild.py fonttest [--target T] [--no-run]                    text rasteriser test (PlatFont)
   python -I tools/xbuild.py luatest  [--target T] [--no-run]                    the computer player's Lua runtime (EECPLua)
   python -I tools/xbuild.py tcptest  [--target T] [--no-run]                    TCP/IP plug-in loopback (tools/tcp_test)
-  python -I tools/xbuild.py wontest  [--target T] [--no-run]                    WON wire format and sockets (tests/won)
+  python -I tools/xbuild.py wontest  [--target T] [--no-run]                    WON wire format, crypto, sockets (tests/won)
   python -I tools/xbuild.py sdl3     [--target T]                               SDL3 as a static library (CMake)
   python -I tools/xbuild.py sdltest  [--target T] [--no-run] [--frames N]       SDL3 window + GX presentation test
   python -I tools/xbuild.py census   [--target T] [--dialect ms|gnu] [-j N] [--only TEXT] [module ...]
@@ -367,6 +367,11 @@ WON_SRC = ROOT / "src" / "Empire Earth" / "WONAPI"
 # program -> the WON units it links besides its test source and the platform layer
 WON_TESTS = {
     "won_wire_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    # the forwarders to ee_won (rust/crates/ee_won)
+    "won_crypto_test": [*[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp",
+                                                                "CRC16.cpp", "MD5.cpp")],
+                        *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp", "MD5Digest.cpp")],
+                        *[WON_SRC / "WONAuth" / f for f in ("AuthBase.cpp", "AuthPubKeyBlock.cpp")]],
     "won_socket_test": [WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
                                                             "AsyncSocketInternet.cpp", "IPAddr.cpp", "NetStats.cpp")],
 }

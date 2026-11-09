@@ -651,115 +651,12 @@ public:
     virtual void MouseHover(unsigned long); // 0x2f3900 (forwarder)
 };
 
-// Only a prefix of LineSegment (0x14 bytes, 32 vtable slots) is declared: nothing here allocates,
-// constructs, copies or destroys these rich-text classes.
-class MultiLineBuilder;
-class ScrollAreaViewport;
-struct ElementSelectionInfo;
-struct ElementFindInfo;
 enum MouseButton { MouseButton_Left=0,MouseButton_Middle=1,MouseButton_Right=2 };
-struct ElementPaintInfo {
-    int mClipX,mClipY,mClipWidth,mClipHeight;
-    int mLineY,mLineHeight;
-    int mStartSelSegment,mEndSelSegment,mStartSelSegmentPos,mEndSelSegmentPos;
-    ElementPaintInfo() : mLineY(-1),mLineHeight(-1) {}
-};
-class Table;
-class LineSegment : public RefCount {
-public:
-    bool DrawSelection1(Graphics&,int,int,ElementPaintInfo&); //309570
-    void DrawSelection2(Graphics&,int,int); //3095e0
-    static SmartPtr<Image> mSelectImageMask; // 0x566220 (defined in the original, not here)
-    static int mCounter; // 0x566240 (defined in the original, not here)
-    static Table* mTableContext; // 0x56623c (declaration only)
-    // Implicit destructor (RefCount's virtual slot 0).
-    // No owned members; TextPiece's destructor (0x311480) goes to the generic one at 0x338c70.
-    virtual int GetWidth(); //04
-    virtual int GetMinWidth(); //08
-    virtual int GetMaxWidth(); //0c
-    virtual int GetHeight(); //10
-    virtual int GetAscent(); //14
-    virtual int GetFirstWrapWidth(); //18
-    virtual char GetVertAlign(); //1c
-    virtual int GetStartSelIndex(); //20
-    virtual int GetEndSelIndex(); //24
-    virtual void MouseEnter(int,int); //28
-    virtual void MouseExit(); //2c
-    virtual void MouseDown(int,int,MouseButton); //30
-    virtual void MouseUp(int,int,MouseButton); //34
-    virtual void MouseMove(int,int); //38
-    virtual void MouseDrag(int,int); //3c
-    virtual void LinkDown(); //40
-    virtual void LinkUp(); //44
-    virtual bool CanStartSelection(); //48
-    virtual int GetSelChar(int,int); //4c
-    virtual bool GetSelCharPos(int&,int&,int,int); //50
-    virtual void GetSelText(GUIString&,ElementSelectionInfo&); //54
-    virtual bool FindStr(ElementFindInfo&); //58
-    virtual void SetSelIndex() { this->mStartSelIndex=LineSegment::mCounter++; } //5c
-    virtual LineSegment* GetSegmentAt(int&,int&,bool); //60
-    virtual bool IsInvalid(); //64
-    virtual bool AllowModalInput(); //68
-    virtual bool PerformInstructions(MultiLineBuilder*); //6c
-    virtual void Paint(Graphics&,int,int,ElementPaintInfo&); //70
-    virtual void Wrap(MultiLineBuilder*,bool); //74, target excludes later SDK PaintSelection
-    virtual void SetMaxWidth(int); //78
-    virtual void SetViewport(ScrollAreaViewport*,int,int); //7c
-    int mStartSelIndex,mAbsX,mAbsY; // at +0x08, +0x0c, +0x10
-};
-class LineElement;
-// Floating record (0x10 bytes) with two virtual size queries (no virtual destructor).
-// Vector stride 0x10 at 0x30cbb5/0x30cd35/0x30d7c8; the segment at +0x04.
-struct FloatingSegment {
-    SmartPtr<LineSegment> mSegment; //04, vptr00
-    int mx,my; //08,0c
-    FloatingSegment(LineSegment* segment=NULL,int x=0,int y=0):mSegment(segment),mx(x),my(y) {}
-    virtual int GetWidth() { return this->mSegment->GetWidth(); }
-    virtual int GetHeight() { return this->mSegment->GetHeight(); }
-};
-// Segment list value (8 bytes); list node payload 8, flags at +0x0c.
-struct SegmentInfo {
-    SmartPtr<LineSegment> mSegment;
-    unsigned short mFlags;
-    SegmentInfo(LineSegment* segment=NULL,unsigned short flags=0):mSegment(segment),mFlags(flags) {}
-};
-// MultiLineElement (0x68 bytes); constructor and destructor out of line.
-class MultiLineElement : public LineSegment {
-public:
-    MultiLineElement(); // 0x30c7e0
-    virtual int GetWidth(); // 0x30c8f0
-    void CalcMinMaxWidths(); // empty; calls from 0x30d000/0x30d020 reach the shared body at 0x4142a0
-    virtual int GetMinWidth(); // 0x30d000
-    virtual int GetMaxWidth(); // 0x30d020
-    virtual int GetHeight(); // 0x30c900
-    virtual LineSegment* GetSegmentAt(int&,int&,bool); //30ca30
-    virtual void SetViewport(ScrollAreaViewport*,int,int); //30cb60
-    virtual void GetSelText(GUIString&,ElementSelectionInfo&); //30cc50
-    virtual bool GetSelCharPos(int&,int&,int,int); //30ccd0
-    virtual bool FindStr(ElementFindInfo&); //30cd70
-    virtual void SetSelIndex(); //30cbf0
-    virtual int GetEndSelIndex(); // 0x30cc30
-    bool IsLastLineEmpty(); // tests the segment's tail flag (not identified in the original exe)
-    virtual void Paint(Graphics&,int,int,ElementPaintInfo&); //30d6e0
-    virtual void SetMaxWidth(int); // 0x30d1d0: rebuilds the lines for the new width
-    void AddSegment(LineSegment*,unsigned short=0); //30d570
-    typedef std::vector<FloatingSegment> FloatingVector;
-    typedef std::vector<SmartPtr<LineElement> > LineVector;
-    typedef std::list<SegmentInfo> SegmentList;
-    LineVector::iterator FindLineAt(int); // 0x30d040: binary search
-    FloatingSegment* FindFloatingSegmentAt(int,int,bool); // 0x30d0c0
-    FloatingVector mFloatingItems[2]; //14..33
-    LineVector mLineVector; //34..43
-    SegmentList mSegmentList; //44..4f
-    SmartPtr<LineElement> mSearchLine; // at +0x50, search sentinel
-    int mWidth,mHeight,mMinWidth,mCurLineWidth,mMaxWidth; //54,58,5c,60,64
-};
 // WrappedText (0x30 bytes); the fields at +0x08/+0x0c come first.
 class WrappedText : public RefCount {
 public:
     GUIString mText; //08
     SmartPtr<Font> mFont; //0c
-    SmartPtr<MultiLineElement> mRichText; // at +0x10; destroyed through its virtual destructor
 protected:
     struct BreakInfo {
         unsigned short mBreakPos,mNextStartPos,mWidth;
@@ -3113,243 +3010,49 @@ struct GUIStringLessNoCase {
     { return inLeft.CompareNoCase(inRight) < 0; }
 };
 
-// Table (0x140 bytes, vtable 0x4501d0, 54 slots); ScrollArea (0x110) base.
-// Nothing here constructs, copies or destroys a Table.
-class Table : public ScrollArea {
-public:
-    Table(LineSegment* =NULL); // 0x30f9d0
-    // Implicit destructor (0x30fbb0, scalar deleting 0x30fad0).
-    virtual void MouseEnter(int,int); //3100b0 MouseEnter
-    virtual void MouseExit(); //3100e0 MouseExit
-    virtual void MouseDown(int,int,int); // 0x310100
-    virtual void MouseUp(int,int,int);   //310250 MouseUp
-    virtual void MouseMove(int,int); //3102b0 MouseMove
-    virtual void MouseDrag(int,int); //310300 MouseDrag
-    virtual bool TimerEvent(int); //310450 TimerEvent
-    virtual bool KeyChar(int);   //30fdc0 KeyChar
-    virtual bool KeyDown(int);   //30fe00 KeyDown
-    virtual Component* FindClickChildAt(int,int); //310040 WMFindChildAt
-    virtual void ScrollSizeChanged(); //310660 ScrollSizeChanged
-    virtual void ScrollPaint(Graphics&); //310670 ScrollPaint
-    void MouseAt(int&,int&,bool=false); // 0x30ff20 (ret 0x0c)
-    void CopySelection(); //30fce0
-    void SetContents(LineSegment*); //310500
-    void SetMaxWidth(bool=true); // 0x3105b0
-    void AddAnchor(const GUIString&,int,int); //310700
-    bool GotoAnchor(const GUIString&); //310730
-    bool FindStr(const GUIString&,bool=true,bool=false); // 0x3107b0 (ret 0x0c)
-    SmartPtr<LineSegment> mContents; // at +0x110
-    LineSegment* mMouseSegment; // at +0x114, the segment under the mouse
-    int mStartSelSegment,mEndSelSegment; //118,11c
-    int mStartSelSegmentPos,mEndSelSegmentPos; //120,124
-    bool mBackwardsSel,mSelecting; // at +0x128, +0x129; +0x12a..0x12b padding
-    int mMouseSegmentDX,mMouseSegmentDY; //12c,130
-    struct AnchorCoordinate {
-        int mx,my;
-        AnchorCoordinate(int x=0,int y=0) : mx(x),my(y) {}
-    };
-    typedef std::map<GUIString,AnchorCoordinate,GUIStringLessNoCase> AnchorMap;
-    AnchorMap mAnchorMap; // at +0x134: allocator/compare bytes, head +0x138, size +0x13c (0x0c bytes)
-};
-class HTMLTag;
-class TextLinkParam : public RefCount {
-public:
-    GUIString mLinkParam; //08
-    std::list<LineSegment*> mLinkList; // at +0x0c..0x17, line pointers (not owned)
-    bool mLinkIsDown,mLaunchBrowser; // at +0x18, +0x19; the class is 0x1c bytes
-    void LinkDown(); //30ab50
-    bool LinkUp(); //30ab80
-    TextLinkParam(const GUIString& p,bool launch) : mLinkParam(p),mLinkIsDown(false),mLaunchBrowser(launch) {}
-};
-// HyperLinkEvent (0x24 bytes), allocated at 0x30ac35/0x30adbd/0x30ae5f.
-// Inline constructor; keeps the link parameter at +0x20 after ComponentEvent (0x20 bytes).
-class HyperLinkEvent : public ComponentEvent {
-public:
-    HyperLinkEvent(Component* component,int type,TextLinkParam* param)
-        :ComponentEvent(component,type),mLinkParam(param) {} // 0x30ac51..0x30ac82
-    SmartPtr<TextLinkParam> mLinkParam; // at +0x20
-};
 // Keyboard.h modifiers; the exe tests bits 1 and 2.
 enum { KEYMOD_SHIFT=0x0001,KEYMOD_ALT=0x0002,KEYMOD_CTRL=0x0004 };
-class ImageMap : public RefCount {
-public:
-    struct ShapeLink {
-        SmartPtr<TextLinkParam> mLinkParam;
-        WONRectangle mShape;
-        ShapeLink(TextLinkParam* p,WONRectangle& r) : mLinkParam(p),mShape(r) {}
-    }; // 0x14-byte value: a SmartPtr (4) and a rectangle (0x10)
-    std::list<ShapeLink> mShapeList; // at +0x08..0x13
-    TextLinkParam* GetLink(int,int); // 0x30aed0
-    void AddLink(TextLinkParam* p,WONRectangle& r) { this->mShapeList.push_back(ShapeLink(p,r)); } // inline
-};
-enum HTMLListType
-{
-	HTMLListType_None,
-	HTMLListType_Disc,
-	HTMLListType_Circle,
-	HTMLListType_Square,
-	HTMLListType_Digit,
-	HTMLListType_LowerLetter,
-	HTMLListType_UpperLetter,
-	HTMLListType_LowerRoman,
-	HTMLListType_UpperRoman
-};
-class HTMLBodyTag;
-class HTMLImageTag;
-class HTMLInputTag;
-class HTMLImageMapTag;
-class HTMLAreaTag;
-class HTMLListTag;
-class HTMLListItemTag;
-// HTMLDocument (0x80 bytes); constructor and destructor out of line.
-// Constructor 0x33c610; allocated by the parser at 0x34461e.
-class HTMLDocument : public RefCount {
-protected:
-    GUIString mBasePath; //08
-    Window* mWindow; //0c borrowed
-    bool mDelayImages; //10
-    std::list<SmartPtr<HTMLTag> > mTagList; //14..1f
-    std::list<SmartPtr<HTMLTag> >::iterator mTagItr,mBodyStart,mBodyEnd; //20,24,28
-public:
-    struct LoadedImageStruct {
-        SmartPtr<RawImage> mRawImage; //00
-        SmartPtr<NativeImage> mImage; //04
-        SmartPtr<Animation> mAnimation; //08
-        bool mHaveUsedAnimation; // at +0x0c; the struct is 0x10 bytes
-        LoadedImageStruct(NativeImage* =NULL,Animation* =NULL); // out of line
-    };
-    typedef std::map<GUIString,LoadedImageStruct,GUIStringLessNoCase> LoadedImageMap;
-protected:
-    LoadedImageMap mLoadedImageMap,mScaledImageMap; //2c,38
-    bool mDecodingImages; //44
-    std::list<SmartPtr<HTMLTag> > mImageTagList; //48..53
-    SmartPtr<ImageMap> mCurImageMap; //54
-    typedef std::map<GUIString,SmartPtr<ImageMap>,GUIStringLessNoCase> ImageMapMap;
-    ImageMapMap mImageMapMap; //58..63
-    struct ListInfo { bool mOrdered; HTMLListType mType; int mCount; }; //0c
-    std::vector<ListInfo> mListStack; //64..73
-    typedef std::multimap<GUIString,SmartPtr<HTMLTag>,GUIStringLessNoCase> ImageTagMap;
-    ImageTagMap mImageTagMap; //74..7f
-    LoadedImageStruct* GetImage(const GUIString&,HTMLTag*); //33d010
-    NativeImage* CheckScaleImage(LoadedImageStruct*,const GUIString&,int,int); //33d560
-    void HandleBody(HTMLBodyTag*); // 0x33e410
-    void HandleImage(HTMLImageTag*); // 0x33d9e0
-    void HandleInput(HTMLInputTag*); // 0x33dfa0
-    void HandleImageMap(HTMLImageMapTag*); // 0x33e020
-    void HandleArea(HTMLAreaTag*); // 0x33e270
-    void HandleList(HTMLListTag*); // 0x33e680
-    void HandleListItem(HTMLListItemTag*); // 0x33e7b0
-public:
-    std::list<SmartPtr<HTMLTag> >& GetTagList() { return this->mTagList; } // inline (0x33c43e)
-    HTMLDocument(const GUIString&); // 0x33c610
-    void Clear(); // 0x33cbd0
-    void DecodeImages(bool); //33edb0
-    bool DoDecodeImage(LoadedImageStruct*,Window*,const std::string&); // 0x33ce10
-    LoadedImageMap& GetLoadedImageMap() {return this->mLoadedImageMap;}
-    virtual ~HTMLDocument(); // 0x33c780 (scalar deleting)
-    void AddTag(HTMLTag*); //33ebd0
-    void AddDocument(HTMLDocument*); //33eb80
-    void Rewind(bool=true); // (not identified in the original exe)
-    HTMLTag* GetNextTag(bool=true); // (not identified in the original exe)
-    void SetBasePath(const GUIString&); //33ccf0
-    std::list<SmartPtr<HTMLTag> >::iterator GetBodyStart(); // 0x33ef70
-    std::list<SmartPtr<HTMLTag> >::iterator GetBodyEnd(); // 0x33efa0
-};
-// SDK enum; the Browser constructor stores Medium (2) at +0x8c.
+// The font size a layout gives the page view (FontSize: Smallest..Largest); kept, not used
 enum HTMLFontSize {
     HTMLFontSize_Smallest,HTMLFontSize_Small,HTMLFontSize_Medium,
     HTMLFontSize_Large,HTMLFontSize_Largest
 };
-class HTTPCache;
-class HTTPSession;
+class TextArea;
+// The lobby's page view (layout type BrowserComponent; WONGUI/BrowserComponent.cpp). WON's HTML rendering is not
+// ported (docs/RUST_PLAN.md D8): a page is plain text in a TextArea, an HTML page with its tags dropped and entities
+// decoded (ee_won's plaintext.rs). There are no links, so no history: back, forward and stop stay disabled.
 class BrowserComponent : public Container {
 public:
-    BrowserComponent(); // 0x3fad10; the class is 0xe0 bytes
-    void SetTransparent(bool); // 0x3fd210 (older SDK API)
-    virtual ~BrowserComponent(); // destructor 0x3faf30, deleting 0x3faf10; 51 vtable slots
-    virtual void AddedToParent(); //AddedToParent3fb0e0, no args
-    virtual void HandleComponentEvent(ComponentEvent*); //3fd350, ret4
-    bool StopButtonEnabled(); //3fb230
-    bool BackButtonEnabled(); //3fb250
-    bool ForwardButtonEnabled(); //3fb280
-    void Reset(); //3fc480
-    void Refresh(); //3fc4e0
-    void Stop(); //3fc510
-    void Go(HTMLDocument*); //3fc590, ret4
-    void Go(const GUIString&,bool=false,bool=false,int=-1); //3fc800, ret10
-    void Back(); //3fcf60
-    void Forward(); //3fcfc0
-    bool FindStr(const GUIString&,bool=true,bool=false); //3fd1f0, ret0c
-    Table* GetHTMLView() { return this->mHTMLView.get(); }
-    void SetScroller(Scroller*); // 0x3fb1a0: sets the scroller and lays it out
-    const GUIString& GetCurStatus() { return this->mCurStatus; }
+    BrowserComponent();
+    virtual ~BrowserComponent();
+    virtual void AddedToParent();
+    void SetTransparent(bool);
+    void SetScroller(Scroller*);
     void SetFontSize(HTMLFontSize size) { this->mFontSize=size; }
+    void Reset(); // empties the view
+    void Refresh(); // shows the current location again
+    void Stop() {}
+    void Back() {}
+    void Forward() {}
+    bool StopButtonEnabled() { return false; }
+    bool BackButtonEnabled() { return false; }
+    bool ForwardButtonEnabled() { return false; }
+    bool FindStr(const GUIString&,bool=true,bool=false) { return false; }
+    void Go(const GUIString&,bool=false,bool=false,int=-1); // a file's text; a web address as text
+    // the readable ones of two page files, with a blank line between (the MOTD's and the terms of use's pages)
+    void ShowFiles(const std::string& inFirst,const std::string& inSecond,bool inSkipFirstCharIfText);
+    TextArea* GetHTMLView() { return this->mHTMLView.get(); }
+    const GUIString& GetCurStatus() { return this->mCurStatus; }
     const GUIString& GetCurLocation() { return this->mCurLocation; }
-    void SetLaunchBrowserOnLink(bool inLaunch) { this->mLaunchBrowserOnLink=inLaunch; }
-    // Table, scroller, font size, cache, session, document and background members follow.
-    SmartPtr<Table> mHTMLView; // at +0x84
-    SmartPtr<Scroller> mScroller; // at +0x88 (0x3fb1a9..0x3fb1e5)
-    HTMLFontSize mFontSize; // at +0x8c, a 32-bit enum, default 2 = Medium
-    SmartPtr<HTTPCache> mHTTPCache; // at +0x90
-    SmartPtr<HTTPSession> mHTTPSession; // at +0x94
-    SmartPtr<HTMLDocument> mHTMLDocument; // at +0x98
-    bool mHaveBackground; // at +0x9c; +0x9d..0x9f padding
-    GUIString mCurStatus; //a0, GetEmpty+SmartPtr ctor/dtor and Label consumer closed
-    GUIString mCurPath; //a4
-    GUIString mCurAnchor; //a8
-    std::string mHTMLDocumentPath; //ac
-    bool mLaunchBrowserOnLink; //bc, byte ctor/read and consumers write true
-    int mNumPendingOps; // at +0xc0; +0xbd..0xbf padding before it
-    int mVertOffset; //c4
-    struct PageLocation {
-        GUIString mLocation; // at +0x00
-        int mVertOffset; // at +0x04; the struct is 8 bytes
-        PageLocation() :mVertOffset(0) {} // inline
-        PageLocation(const GUIString& location,int offset) :mLocation(location),mVertOffset(offset) {}
-    };
-    typedef std::vector<PageLocation> PageVector;
-    PageVector mPageVector; // at +0xc8; data +0xcc, end +0xd0, capacity +0xd4; 8-byte elements
-    int mCurPage; //d8
-    GUIString mCurLocation; //dc
 protected:
-    void GotoAnchor(); //3fc540
-    void RememberVertOffset(); //3fc7c0
-    void GetLinkPath(const std::string&,std::string&); //3fd030
-    void SetStatus(const GUIString&); // 0x3fb2c0
-    void FinishImages(); //3fb6a0
-    struct ImageParam : public RefCount {
-        SmartPtr<BrowserComponent> mBrowser; // at +0x08
-        HTMLDocument::LoadedImageStruct* mImageStruct; // at +0x0c; the struct is 0x10 bytes
-        ImageParam(BrowserComponent* browser,HTMLDocument::LoadedImageStruct* image) :mBrowser(browser),mImageStruct(image) {}
-    };
-    typedef SmartPtr<ImageParam> ImageParamPtr;
-    static void DownloadImageCompletion(AsyncOpPtr,ImageParamPtr); // 0x3fb930 (cdecl, arguments by value)
-    bool DownloadImages(); // 0x3fbc10
-    void ParseDocument(); // 0x3fc0d0
-    static void DownloadDocumentCompletion(AsyncOpPtr,SmartPtr<RefCount>); // 0x3fb320 (cdecl, two SmartPtrs by value)
-    // Only the 0xe0-byte prefix is declared; nothing here constructs or copies one.
+    void SetPageText(const std::wstring&);
+    SmartPtr<TextArea> mHTMLView;
+    SmartPtr<Scroller> mScroller;
+    HTMLFontSize mFontSize;
+    bool mHaveBackground;
+    GUIString mCurStatus;
+    GUIString mCurLocation;
 };
-// Plain value (0x14 bytes, no vtable): constructor 0x33efc0, implicit destructor 0x3c0fb0.
-class HTMLDocumentGen {
-public:
-protected:
-    bool AddDocPrv(const GUIString&,int,bool); //33f020
-public:
-    HTMLDocumentGen(HTMLDocument* =NULL);
-    void SetDocument(HTMLDocument*); // 0x33f440: replaces the owned document
-    bool AddDoc(const GUIString&,int=0); // 0x33f1f0 (forwarder)
-    bool AddDocParam(const GUIString&,int=0); //33f210 ->AddDocPrv(...,true)
-    void printf(const GUIString&); //33f230
-    void AddTag(HTMLTag*); // (not identified in the original exe)
-    void AddTagParam(HTMLTag*); // (not identified in the original exe)
-    HTMLDocument* GetDocument() { return this->mDocument.get(); }
-    SmartPtr<HTMLDocument> mDocument; //0
-    std::vector<SmartPtr<HTMLDocument> > mDocumentVector; //4, allocator4/data8/endc/cap10
-    // Implicit destructor.
-};
-
-// HTMLDisplayGen; its declaration is in WONLobbyHTMLDisplayGen.h.
-class HTMLDisplayGen;
 
 // 0x3c5ff0: the sort/filter handlers of a server-list column
 

@@ -2493,3 +2493,99 @@ clipboard, mouse and keyboard capture, key dispatch and repeat timers, focus, th
 - **Still C++ in R6's toolkit:** `UIComboBox`, the buttons, check boxes and radio buttons (state machines over tab
   stops, sounds and capture), `UIControlsTable`, `UIManager`, every `CopyData`/drawing member, the edit box's key
   dispatch and repeat timers.
+
+## R2: the data layer in Rust (ee_data, 2026-11-08)
+
+- **`std::from_chars` and `f32::from_str` agree.** The text compiler's floats moved to `f32::from_str` (correctly
+  rounded); `cppgate` compared C++ and Rust on a 12,074-string sweep (tables' float cells, subnormals, 7e-46 / 7.1e-46
+  halfway cases, exact-tie decimals) with identical bits and messages; from_chars' `result_out_of_range` and Rust's
+  inf/0 land in the same message through the C++'s own post-checks.
+- **`strchr` matches the NUL.** The C++ YAML subset's `strchr(" [,:-", s[i - 1])` and the plain-scalar check treat a
+  NUL byte as "in the set" (the terminator). The port keeps that (`strchr_set`), byte-level parity needs it.
+- **cbindgen writes a dependency's functions only from loose sources.** `parse_deps` follows the crate tree but
+  functions from any crate other than the binding crate are skipped ("not used"); xtask adds
+  `rust/crates/ee_data/src/ffi.rs` with `with_src` to get them into `include/rust/ee_rust.h`.
+- **A shared `CARGO_TARGET_DIR` hides worktrees' `cargo run` binaries.** Cargo's uplifted `target/debug/xtask.exe` is
+  whichever worktree linked it last; `env!("CARGO_MANIFEST_DIR")` then pointed at another worktree (`cbindgen` wrote the
+  r1-core header once from the r2-data worktree). Touch the crate or run with a private target dir before relying on it.
+- **Generated headers next to a staged unit must end in `.h`.** `verify.stage_source` copies a unit's sibling `*.h`
+  to `C:\EEX\` (or `EE_ORIG_SRC_ROOT`); a generated `.inl` was not found. Hence `EERulesGenDecode.h`.
+- **Rules live in Rust; the game keeps a C++ copy.** `EERules` holds a Rust handle (`ee_data_rules_*`); every rules
+  field, default and dump key is generated from `tools/eedata/rules_schema.json` (`rulesgen.py`); C++ reads a binary
+  snapshot after each change (`Refresh`). The dump formats `(long)float_bits` as signed like the Windows 32-bit `long`
+  (gate pins it); Rust's `RuleNumber::constant` truncates as x86's `cvttss2si` does (INT_MIN out of range).
+- **cppgate after the C++ compiler is gone** compares against the Python importer (independent) and against digests
+  recorded from the C++ compiler (`tools/eedata/cppgate/golden_cpp.json`), which apply while the data's texts are the
+  recorded ones. A data change requires re-recording against an independent reference, not the Rust compiler itself.
+- **R2 step 4 (GEOpenFormats in Rust) is not done:** the `eemodel.py cppgate` byte gate exports every model and texture
+  to the temporary folder (gigabytes), which this machine's disk could not hold (C: 0.5 GB free); nothing was ported
+  or deleted there. The port is mechanical (cgltf's semantics are the risk: a hand parser or the gltf crate must
+  reproduce its acceptance rules exactly) and waits for the gate to be runnable.
+
+## R6: WON's leaves in Rust, and the lobby without HTML (ee_won, 2026-11-09)
+
+Decision D8 ports the WON library to Rust, leaves first. Crate `ee_won` (pure code, `cargo test` without a game) now
+holds the message buffers' format (`wire.rs`), WON's text conversions (`text.rs`, the one place: D6), CRC-16, MD5,
+the random generator, Blowfish, the big integers, ElGamal, the key encoding, the auth blocks and the CD key logic.
+The C++ classes stay where C++ holds them (ByteBuffer, ReadBuffer/WriteBuffer, CRC16, MD5, MD5Digest, Blowfish,
+ElGamal, AuthBase and the certificates, CDKey) as forwarders; BigInteger, Random and IntegerExtractor/Inserter are
+gone (nothing outside WONCrypt used them).
+
+- **Golden vectors needed AddressSanitizer.** The generator links the real WON units (clang-cl, like the game) and
+  prints synthetic cases; it was built twice, plain and with `/fsanitize=address` (`/MD`, the dynamic ASan runtime,
+  `/NODEFAULTLIB:stl_asan.lib`, `_DISABLE_STRING_ANNOTATION`/`_DISABLE_VECTOR_ANNOTATION`, `ASAN_OPTIONS=replace_intrin=0`
+  past BigInteger's overlapping `memcpy` in an in-place shift). Only cases that ran clean and printed the same in both
+  builds became goldens: several big-integer cases gave different answers with different heap contents.
+- **The clang-built `MD5Digest` returned MD5's initial state for every input.** Its rounds rotate with
+  `(unsigned)a >> -s` (Java's `>>>`): a negative shift count is undefined behaviour, the original compiler masked it to
+  `32 - s`, and clang dropped the rounds. So in the C++ game `Random` repeated the same 16 bytes, every ElGamal
+  signature was over the same constant, and the golden program's `Verify` accepted a signature for a different
+  message. WONCommon's `MD5` (macros, unsigned) was right. The Rust MD5 is RFC 1321 (tested on its vectors), and ElGamal and Random are
+  checked against a Python model with exact integers and real MD5 (`py*` lines of `golden_won.txt`), not against the
+  broken C++.
+- **`st_kmul`'s Karatsuba was wrong for odd word counts above 16** (`a[N-1]*b[N-1]` multiplied in 32 bits, operand
+  words read past their length, writes past the work buffer that ASan reported as heap-buffer-overflow). WON's real
+  keys (1024 and 2048-bit moduli, tiny top words in the reduction constants) mostly avoided it. `ee_won` multiplies
+  exactly; the other algorithms (shift-and-subtract division and modulo with their sign rules, Barrett reduction with
+  at most three corrections, binary gcd, extended Euclid) are ported as they were, with the C++'s "target keeps its
+  sign" rule of the shifts. `gcd` with a negative operand never returned in C++ (not ported as a case).
+- **Other C++ faults the port does not keep:** `WriteBuffer::ToByteBuffer` on a buffer never written wrote the prefix
+  before NULL (it now reserves first); Blowfish left the second block of a 4-byte input uninitialised (zero now); an
+  ElGamal block whose plain text starts with zero bytes read before its buffer (the zeros are restored); a key whose
+  modulus has no reciprocal let `ArithmeticException` escape `SetPublicKey` (now false); `IntegerInserter` writes a
+  two-byte length low byte first, which its own reader takes big-endian: kept, and tested (keys over 255 bytes per
+  integer do not round-trip).
+- **On LP64 the C++ crypto was broken anyway:** `MD5`'s and `BigInteger`'s `unsigned long` words were 64 bits on
+  Linux and macOS. The Rust is the same on every system.
+- **Seams:** fixed-size state is a `#[repr(C)]` struct embedded by value (`EeWonMd5`, `EeWonBlowfish`: Blowfish is
+  copied by value, e.g. into `AuthSession`); keys and auth blocks are boxed Rust objects behind opaque pointers
+  (`EeWonElGamal`: the C++ `ElGamal` deep-copies through `ee_won_elgamal_clone`, as `std::list<ElGamal>` needs);
+  results of variable length go to a sink (`WonByteBufferSink` makes the `ByteBuffer`, `WonWideSink` the
+  `std::wstring`; WONBuffer.h). `WONBuffer.h` includes `rust/ee_rust.h`, so every WON unit sees the C ABI.
+  cbindgen renames the generic Rust names (`Md5`, `Blowfish`, `ElGamal`, `AuthBlock`): a global `Blowfish` next to
+  `WONAPI::Blowfish` is ambiguous under `using namespace WONAPI`.
+- **The auth blocks** unpack in Rust in one call per block (`ee_won_auth_unpack`); `AuthBase::Unpack` asks the
+  subclass for its kind (`UnpackKind`) instead of passing a `ReadBuffer` down the `UnpackHook` chain, and the
+  certificate getters ask the unpacked block. Header fields read before a failure stay set, as before.
+- **Tests:** `cargo test -p ee_won` (unit tests and the goldens); `xbuild.py wontest` gains `won_crypto_test` (the C++ API
+  over the forwarders: CRC16, MD5, MD5Digest, Blowfish copies, ElGamal copies, signing, a key block).
+- **build.py has no incremental compile:** every build stages and compiles all ~1,400 units (an hour at `-j 3` on a
+  shared machine). To check a change, compile only the units that include the changed headers (transitively) into the
+  last build's object folder and relink with `build.link_exe` (a scratch script); run the full builds once at the end.
+
+### The lobby without HTML (D8)
+
+WON's HTML rendering is gone: the parser and documents (`HTMLParser*`, `HTMLDocument*`, `HTMLTag`, `HTMLFromText`,
+`HTMLDisplay*`), the line-segment layout engine that only HTML used (`LineSegment`, `MultiLineElement`,
+`MultiLineBuilder`, `TextLineSegment`, `Table`, `TableElement`, links and image maps) and the browser's downloads.
+The chat window never used it (`TextArea` has its own lines).
+
+- **`BrowserComponent` stays as the layout type** the lobby's .cfg files name (MOTD, login help, terms of use, the
+  Help and News tabs; their keys `FontSize`, `Transparent`, `Scroller` and the child `HTMLVIEW` still parse). It is a
+  `TextArea` in a scroller now: a page file's text, HTML pages with their tags dropped, block tags as line breaks and
+  entities decoded (`ee_won/src/plaintext.rs`, from Windows-1252 bytes). Back, forward and stop stay disabled (no
+  links, no history), find finds nothing, and a web address (the News tab's community URL) is shown as text: the WON
+  servers are gone and nothing fetched pages but the browser.
+- `MOTDCtrl` and `TOUDialog` built an HTML document of two files (`HTMLDocumentGen`, flags IsOptionalHTML and, for the
+  MOTD, SkipFirstCharIfNotHTML: a text MOTD's first character is WON's "is new" flag); `ShowFiles` keeps that rule.
+- `WrappedText::mRichText` was never set; its branches went with the segment engine.
