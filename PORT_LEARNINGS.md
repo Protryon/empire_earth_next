@@ -2916,3 +2916,56 @@ original; `oos` is compared less it) are left out.
   and the AI's other derived state (the `ai` checksum parts differ at the first tick and agree after the first AI
   update); a herd's path request and the path manager's pending requests; the wall request is asked again at the
   first Update, not where it was in the queue. In-game times far off the default (game speed) are untested.
+
+## R4.3, third part: GEModel's reader, writer and geometry (ee_ge model_file.rs, legacy.rs, model_save.rs, model_geom.rs, 2026-11-09)
+
+`GEModel::Load` (both `.cem` formats, the sub-models), the version-1 conversion (`ConvertLegacyModel`, so
+'GEModel Legacy.cpp' is gone), `GEModel::Save`'s chunk writers and `GEModel.cpp`'s geometry (`ComputeBoundingBoxes`,
+`ComputeBoundingVolumes`, `ComputeModelNormals`, `PrepareTransforms`, `RemoveModelScale`'s matrices, `SortTagPoints`'
+order, `Verify`'s test) are Rust. The model, its arrays (`GEVertexArray`/`GEPolygonArray` virtuals), the materials,
+the allocation (`AllocateInternalData`), the lifetimes and `GEModelManager` stay C++.
+
+- **Simulation reach.** `GEPhysicalModel::Intersects` (projectile hits, `EEUnitClass.cpp`) reads the loaded vertices,
+  so the reader feeds the simulation, but it does no float arithmetic: the bytes it stores are the bytes read. The
+  geometry's callers are the graphics thread, the UI and `Save`; its `f32` order is the C++'s anyway. The sim oracle
+  is identical.
+- **Decode, then store.** Rust reads the whole model into a plain `CemModel` through the field stream (now with
+  bytes and the position: `GERustFieldIO(FSFileSpec&)`), and `GEModel::StoreLoaded` allocates from the counts and
+  stores what was read. A load that fails keeps what the C++ had stored up to the failing field: every list in
+  `CemModel` is that prefix (vertices whole or not at all, a transform's or box's values one by one, a material's
+  values in the order the C++ set them). This matters: **a failing sub-model stays attached** (the parent ignores
+  sub-model results), its partial arrays included, and the file goes back to where that sub-model started, so a
+  file cut in its last sub-model loads "successfully". The assumption is that a failed read stores nothing, which
+  is `FSMemoryFile`'s rule; every model load reads from one (`Load` copies any other file first).
+- **The shared frames** (`ioTextures`, filled by `EEGraphicObject` for animations): a shared frame's vertices and tag
+  points are read into the *last* frame's arrays, and its arrays are the neighbour's (`AllocateInternalData` in frame
+  order). The reader records the target frame; the store writes there. An offset to a later shared frame read a
+  pointer the C++ had not set yet (never in the data).
+- **The header version was a global** (`sMajorVersion`/`sMinorVersion`, read by the legacy chunks and overwritten by
+  every sub-model's header). Nothing reads it after a sub-model, so it is a local now.
+- **`ConvertLegacyModel`'s quirks are kept:** the version-1 materials never get names, so the groups are named "" or
+  "player color"; a polygon listed twice in a group is placed twice (the second time past the polygon array's end, a
+  write the C++ made past its array and Rust drops); a vertex shared by two materials is copied into both. Reads past
+  an array's end (the C++'s undefined behaviour) give 0 in Rust.
+- **`Read(bool&)`** of a byte that is neither 0 nor 1 was undefined in the C++ (`!b` on a bool holding 2); Rust reads
+  the byte and tests it against 0.
+- **Golden driver** (scratch, `build/gemodel_golden`): the original 'GEModel Load.cpp', 'GEModel Legacy.cpp',
+  'GEModel Save.cpp' and `GEModel.cpp` text (`git archive` of the commit before) compiled with the driver against the
+  original headers (`EE_INCLUDE`), arrays of its own behind a fake `GERasterizer` (overrides generated from the
+  header's pure virtuals), the driver's own `GEModelManager` (GEModel's friend, so it reaches the private members),
+  `operator new` zeroing every allocation (so what the C++ leaves unset reads the same in both links), an
+  `FSMemoryFile` subclass refusing writes past a limit. Two snags: `FSMemoryFile(data, length, ...)` frees the buffer
+  it is given, and `FSFileSpec`'s constructor reads `gStartupDirectory` (the driver defines it). Each case prints the
+  result, the position and a digest of the whole model (every array; a frame's array shared with an earlier frame as
+  that frame's number). Corpus: 600 synthetic models (both formats, sub-models, strings with NULs, out-of-range
+  indices, quantized normals past the table) whole, shared and cut at random lengths, 8,186 cases; the 862 `.cem`
+  files of the binary tree whole, shared and cut, 45,402 cases; 500 in-memory models through the six geometry
+  steps; 1,079 loaded game models through them (sub-models included); 2,400 synthetic saves and the game models'
+  saves into limited files. Relinked over the forwarders, the driver printed identical files. The cargo tests replay
+  the synthetic sections (`golden_model*.rs`: the generator, the store, the C++'s loops and its digest re-stated).
+- **The driver hashes no out-of-range counter:** the original conversion's polygons listed twice land past the end
+  (counted by the driver's arrays), and Rust drops them before they reach the array; the stored state is the same.
+- Left: 'GEModel LOD.cpp' (`ComputeLODReduction`, the edge collapse) and 'GEModel Caching.cpp' (the vertex cache
+  optimiser): neither has a caller in the game, the tools or the data path. `GEModelManager` is a map and a lock
+  (lifetimes, kept C++). `GETexture::Load`'s description and grid planning, the managers, fonts, bitmaps and the rest
+  of `GETerrainMesh` were not reached.

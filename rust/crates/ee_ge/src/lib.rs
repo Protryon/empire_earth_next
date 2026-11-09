@@ -3,7 +3,7 @@
 //! `GE3DPlane`, `GETransformation`, `GEOrientation`, `GEQuaternion`, `GEBoundingBox`, `GERectangle`), the
 //! engine's table trigonometry (`UMath.cpp`) and `GETerrainMesh`'s height, normal, closest-tile and line queries, its vertex normals, shorelines, fog of war and
 //! file codec, `GEPhysicalModel`'s per-triangle tests, and `GEModel`'s `.cem` reader (both formats, the version-1
-//! conversion and the sub-models: `model_file.rs`, `legacy.rs`).
+//! conversion and the sub-models: `model_file.rs`, `legacy.rs`), writer (`model_save.rs`) and geometry (`model_geom.rs`).
 //!
 //! The simulation calls this math everywhere (unit positions, distances, orientations, bounding boxes), so it is
 //! deterministic code under RUST_PLAN 2.1: `f32` operations in the C++'s order, no fused multiply-add, `lrintf`
