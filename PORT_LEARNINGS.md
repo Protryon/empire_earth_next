@@ -3156,3 +3156,55 @@ The order of "R5b.1: the tile A* searches in Rust" held: every tile goal's hooks
   `rust`; the sim oracle identical on seeds 2-7 and `sim_capture.py check` PASS at every step; the ee_astar tests
   (37: 15 new for the modifiers, path goals and area fills, each pinning the order of the view queries).
 ||||||| 5ffeba22
+
+## R6: buttons, check boxes, radio buttons, scroll bars and combo boxes in Rust (ee_ui button.rs, scrollbar.rs, combo.rs, 2026-11-09)
+
+The logic of `UIButton` (the normal/focused/pressed state machine over the mouse, the keyboard and tabbing,
+`SetLocation`'s text rectangle, what `CopyData` shows: the bitmap for the state and the centred text), `UIDualButton`'s
+right-button handlers, `UIScrollButton::ButtonDown` (the step, the 500 ms delay, the 100 ms repeat), `UICheckBox` and
+`UIRadioButton` (check, uncheck, the neighbour run, the disabled box, the box rectangle, the bitmap offset, the label's
+place), `UIScrollBar` (the constructor's layout, the mouse routing to the part under it, `SetLocation`, `IncrementBy`)
+and `UIComboBox` (where the list opens, the popup and the capture, the mouse and keyboard routing, the selection,
+`AddString`, the line edits' reopen, `SetLocation`, `ChangeWidth`, `CopyData`'s focus highlight) moved to
+`rust/crates/ee_ui`. The C++ classes keep every member, vtable and exported name.
+
+- **Access without new friends where possible.** `UIButtonRust.h` (a friend struct in `UIButton.h`, `UICheckBox.h`,
+  `UIRadioButton.h`, `UIScrollButton.h`, `UIDualButton.h`) and `UIScrollBarRust` (friend in `UIScrollBar.h`,
+  `UISlider.h`, `UIScrollButton.h`) hold the host calls. The combo box uses a **nested** struct, `UIComboBox::Rust`
+  (declared public in `UIComboBox.h`, defined in `UIComboBox.cpp`): a member of the class has its friendships, so it
+  reaches the parts' protected handlers (`UIControl` befriends `UIComboBox`), `UITextLabel`'s private
+  `SetText(text, true)` and `UIListBox`'s `mLineHeight` without touching those headers. A protected static such as
+  `UIControl::sSpaceKey` must be named through the befriending class (`UIButton::sSpaceKey`), not `UIControl::`.
+- **A friend of the derived class may call the base's protected members only through the derived type.** The scroll
+  bar's host calls name `UIScrollButton*`/`UISlider*`, not `UIControl*`; `UITextLabel::SetText(text, bool)` is
+  private, its public one-argument overload is the same call.
+- **Records.** `EeUiButtonFields` (from `mTextRectangle`), `EeUiCheckFields`, `EeUiRadioFields` (the subclasses' own
+  members, passed as `sub` in `EeUiButtonRefs`), `EeUiScrollBarFields`, `EeUiComboFields` (from `mTextBox`, after the
+  `GERhombus` member, so the rhombus's layout is not pinned). Offsets are `static_assert`ed where the refs are built.
+  `ee_ui_button_init` writes the record whole: reading the not yet constructed members as a Rust struct with `bool`s
+  would be undefined behaviour.
+- **Unsigned long arithmetic.** `UIsNone32` looks at the low 32 bits (a -1 in memory has 64 on LP64); the radio
+  button's `2 * inBorderThickness` is `unsigned long` arithmetic (wrapping on 32 or 64 bits), the check box's
+  `2.0f * border` a float. `OpenListBox`'s `window height - floor(bottom) - 1` is unsigned arithmetic assigned to a
+  `long`. Kept per system.
+- **Text.** `UWideString`'s `operator==` (`_mbscmp == 0`, `AddString`'s search) and `GetLength() == 0` are
+  `text::equal` and `text::is_empty`.
+- **Golden drivers with fake classes.** The button driver links the five real units over fakes of what they reach
+  (`UIControl`'s out-of-line members, `UIForm::SetTabStop`, the sound manager, the keys as an `ISEntity` subclass,
+  `TMPoll`, `UISlider::SetCurrentRangeValue`, `UITextLabel`'s constructor and members) and dumps 12 controls under
+  seeded operations, the bitmaps' reference counts included. The combo driver goes further: it predefines the header
+  guards of `UIListBox.h`, `UILBString.h`, `UIEditBox.h` and `UITextLabel.h` and supplies its own classes with the
+  member names the unit uses, so the parts are traced fakes and no real list box (GE objects, rasterizer) is built;
+  `GERhombus` gets a fake `GEVertexArray` and `GERasterizer` a calloc'ed screen state with a 600-pixel window. One
+  driver artefact: a fake list whose selection could pass its lines made both builds read past the vector (different
+  garbage); the fake now keeps the selection inside the lines, as the real list does.
+  A C escape written inside a Python string in a bash heredoc reached the driver as a real line break: write C
+  sources with the editor.
+- **Goldens:** `golden_button.txt` (1,500 ops), `golden_scrollbar.txt` (4 bars, 2,000 ops), `golden_combo.txt`
+  (5 combo boxes of both text box types, 2,000 ops). The drivers over the forwarders and the new `ee_rust.lib` print
+  the same files and equal the originals on 6 seeds x 4,000-5,000 ops each (buttons, scroll bars) and 8 seeds x 5,000
+  (combo boxes). No behaviour change.
+- **Still C++ in R6's toolkit:** `UITriStateCheckBox`, `UIBlinkingButton`'s fading, `UIScalableButton`'s three-part
+  draw, `UIControlsTable` (forms from the db), `UIManager` (form stack, event dispatch), every `DrawPolygons`/
+  `DrawTextA`, the edit box's key dispatch and repeat timers.
+||||||| 5ffeba22

@@ -14,6 +14,7 @@
 
 class LLE_API UISlider : public UIControl {
     friend class UIScrollBar;               // calls the protected page steps and mouse handlers
+    friend struct UIScrollBarRust;          // the Rust scroll bar logic's host calls (User Interface/UIScrollBar.cpp)
 public:
     UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned long inSliderStyle, UIForm* inForm,
              unsigned long inIndex, unsigned long inBorderThickness);

@@ -4,7 +4,12 @@
 // 0x10069cc7..0x10069d6b: the ctor, the dtor and the right-button overrides. No inline block and no init chains
 // (the class's implicit copy members are emitted first by UIControlsTable.cpp); UIEditBox.cpp's U2D key chains
 // start at 0x10069d6b.
+//
+// The right-button handlers are Rust (rust/crates/ee_ui/src/button.rs, docs/RUST_PLAN.md R6).
 #include <windows.h>
+#include <stddef.h>
+
+#include "rust/ee_rust.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -12,6 +17,8 @@
 #include "lle/GEBitmap.h"
 #include "lle/GERhombus.h"
 #include "lle/UIDualButton.h"
+#include "lle/UITextLabel.h"
+#include "UIButtonRust.h"
 
 // FUNCTION: LLE 0x10069cc7
 // Creates a button that also reacts to the right mouse button
@@ -33,21 +40,12 @@ UIDualButton::~UIDualButton()
 // Presses the button on a right click, capturing the mouse and firing the right-button-down trigger
 long UIDualButton::MouseRButtonDown()
 {
-    this->CaptureMouse();
-    this->ButtonDown();
-    this->FireTriggerEvent(kControlTriggerRightButtonDown);
-    return kErrorOK;
+    return ee_ui_dual_button_mouse_r_button_down(UIButtonRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x10069d24
 // Releases the mouse; a right release over the button pops it up and fires the right-button-up trigger
 long UIDualButton::MouseRButtonUp()
 {
-    this->MouseMove(this->GetMouseLocation());
-    this->ReleaseCapturedMouse();
-    if (this->mRectangle.Contains(this->GetMouseLocation())) {
-        this->ButtonUp();
-        this->FireTriggerEvent(kControlTriggerRightButtonUp);
-    }
-    return kErrorOK;
+    return ee_ui_dual_button_mouse_r_button_up(UIButtonRust::Refs(this));
 }

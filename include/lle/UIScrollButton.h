@@ -8,7 +8,9 @@
 #define LLE_UISCROLLBUTTON_H
 
 class LLE_API UIScrollButton : public UIButton {
+    friend struct UIButtonRust;             // the Rust button logic's host calls (User Interface/UIButtonRust.h)
     friend class UIScrollBar;
+    friend struct UIScrollBarRust;          // the Rust scroll bar logic's host calls (User Interface/UIScrollBar.cpp)
 private:
     UIScrollButton(unsigned long inId, GEBitmap* inNormalBitmap, GEBitmap* inPressedBitmap,
                    const GE2DPoint& inLocation, UIForm* inForm, UISlider* inSlider, unsigned long inDecrement,

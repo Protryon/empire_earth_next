@@ -156,6 +156,18 @@ pub fn from_bytes(bytes: &[u8]) -> Vec<u8> {
     v
 }
 
+/// `UWideString`'s `operator==`: `_mbscmp(a, b) == 0`, which compares character by character and so holds exactly
+/// when the bytes before the terminators are equal.
+pub fn equal(_m: &impl Mbcs, a: &[u8], b: &[u8]) -> bool {
+    let end = |s: &[u8]| s.iter().position(|&c| c == 0).unwrap_or(s.len());
+    a[..end(a)] == b[..end(b)]
+}
+
+/// `GetLength() == 0`: no character before the terminator (a missing terminator counts as the end).
+pub fn is_empty(s: &[u8]) -> bool {
+    s.first().is_none_or(|&b| b == 0)
+}
+
 /// `_mbslen` (`UWideString::GetLength`): the characters before the terminator.
 pub fn char_len(m: &impl Mbcs, s: &[u8]) -> usize {
     let (mut at, mut n) = (0, 0);

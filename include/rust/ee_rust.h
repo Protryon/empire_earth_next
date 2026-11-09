@@ -1291,6 +1291,87 @@ struct EeOfSlice {
   size_t len;
 };
 
+/// `GERectangle`: the C++ member order, `mBottom` first.
+struct EeUiRect {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
+/// `GE2DPoint`: x, y.
+struct EeUiPoint {
+  float x;
+  float y;
+};
+
+/// `GEColor`: red, green, blue.
+struct EeUiColor {
+  float red;
+  float green;
+  float blue;
+};
+
+/// `UIButton`'s members in their C++ order (the record starts at `mTextRectangle`). The pointers are C++'s and
+/// never dereferenced here.
+struct EeUiButtonFields {
+  EeUiRect text_rect;
+  EeUiPoint bitmap_location;
+  void *pressed_bitmap;
+  void *normal_bitmap;
+  void *focused_bitmap;
+  void *copied_bitmap;
+  unsigned long state;
+  EeUiRect copied_text_rect;
+  EeUiPoint bitmap_draw_offset;
+  EeUiColor focused_text_color;
+  unsigned long button_down_sound;
+  unsigned long button_up_sound;
+  void *text;
+  void *copied_text;
+  bool key_down;
+  bool mouse_down;
+  bool has_copied_text;
+};
+
+/// One button as Rust sees it: the C++ object (as a `UIButton*`), its record from `mTextRectangle` on, the
+/// `UIControl` members it uses, the subclass's record (`CheckFields`, `RadioFields`, the scroll button's
+/// `mDecrement`; NULL for a plain button) and `ctx`, the C++ forwarder's own context for a host call (a `SetText`'s
+/// text and font; NULL otherwise).
+struct EeUiButtonRefs {
+  void *button;
+  EeUiButtonFields *fields;
+  unsigned long *border_type;
+  const EeUiRect *rect;
+  const unsigned long *border;
+  const unsigned long *index;
+  void *sub;
+  void *ctx;
+};
+
+/// `UIComboBox`'s members in their C++ order (from `mTextBox` on). The pointer is C++'s.
+struct EeUiComboFields {
+  void *text_box;
+  unsigned long text_box_type;
+  unsigned long current_selection;
+  unsigned long max_list_box_height;
+  bool is_list_box_open;
+  bool released_once;
+  bool copied_list_box_open;
+  bool list_box_always_dirty;
+  bool copied_has_focus;
+};
+
+/// One combo box as Rust sees it: the C++ object, its record from `mTextBox` on, `mRectangle`, `mIndex`, and `ctx`,
+/// the C++ forwarder's context for a host call (`UpdateTranslatedKey`'s key; NULL otherwise).
+struct EeUiComboRefs {
+  void *combo;
+  EeUiComboFields *fields;
+  const EeUiRect *rect;
+  const unsigned long *index;
+  void *ctx;
+};
+
 /// `UIEditBox`'s members from `mCaretX` (+0x17c in the original) to `mSavedAlwaysDirty`, in order (offsets
 /// `static_assert`ed in `UIEditBox.cpp`).
 struct EeUiEditFields {
@@ -1331,14 +1412,6 @@ struct EeUiEditFields {
   bool saved_always_dirty;
 };
 
-/// `GERectangle`: the C++ member order, `mBottom` first.
-struct EeUiRect {
-  float bottom;
-  float left;
-  float right;
-  float top;
-};
-
 /// One edit box as Rust sees it: the C++ object, its record from `mCaretX` on, `mTextRectangle`, `mRectangle` and
 /// `mBorderThickness`.
 struct EeUiEditRefs {
@@ -1347,12 +1420,6 @@ struct EeUiEditRefs {
   EeUiRect *text;
   const EeUiRect *rect;
   const unsigned long *border;
-};
-
-/// `GE2DPoint`: x, y.
-struct EeUiPoint {
-  float x;
-  float y;
 };
 
 /// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
@@ -1418,6 +1485,24 @@ struct EeUiListRefs {
   EeUiRect *text;
   const EeUiRect *rect;
   const unsigned long *border;
+};
+
+/// The constructor's geometry for a bar at `at`, `length` long: the control's rectangle, the slider's and the
+/// increment button's location (the decrement button sits at `at`).
+struct EeUiScrollBarLayout {
+  EeUiRect rect;
+  EeUiRect slider;
+  EeUiPoint increment;
+};
+
+/// `UIScrollBar`'s members in their C++ order (from `mIncrementButton` on). The pointers are C++'s.
+struct EeUiScrollBarFields {
+  void *increment_button;
+  void *decrement_button;
+  void *slider;
+  bool increment_pressed;
+  bool decrement_pressed;
+  bool slider_pressed;
 };
 
 /// `UISlider`'s members in their C++ order (the record starts at `mThumbRectangle`).
@@ -1573,6 +1658,28 @@ struct EeGeTmTile {
   uint16_t reference_count;
   uint8_t texture_set_id;
   uint8_t water_info;
+};
+
+/// `UICheckBox`'s members in their C++ order (from `mTextLabel` on).
+struct EeUiCheckFields {
+  /// `UITextLabel*`, C++'s.
+  void *text_label;
+  bool is_checked;
+  bool has_text;
+  bool scale_bitmap;
+  bool is_disabled;
+};
+
+/// `UIRadioButton`'s members in their C++ order (from `mOtherNormalBitmap` on).
+struct EeUiRadioFields {
+  void *other_normal_bitmap;
+  void *other_pressed_bitmap;
+  /// `UITextLabel*`, C++'s.
+  void *text_label;
+  bool is_checked;
+  bool has_text;
+  bool is_push_button;
+  bool scale_bitmap;
 };
 
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
@@ -4061,6 +4168,173 @@ int32_t ee_sound_node_set_pitch(void *node, float v);
 /// `node` is a live node.
 int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
 
+/// The constructor's part after `UIControl`'s ([`button::init`]).
+void ee_ui_button_init(EeUiButtonFields *fields, const EeUiRect *rect, unsigned long border);
+
+/// `UIButton::ButtonDown`.
+void ee_ui_button_button_down(const EeUiButtonRefs *refs);
+
+/// `UIButton::ButtonUp`.
+void ee_ui_button_button_up(const EeUiButtonRefs *refs);
+
+/// `UIButton::MouseOver`.
+void ee_ui_button_mouse_over(const EeUiButtonRefs *refs);
+
+/// `UIButton::MouseLButtonDown`.
+long ee_ui_button_mouse_l_button_down(const EeUiButtonRefs *refs);
+
+/// `UIButton::MouseLButtonUp`.
+long ee_ui_button_mouse_l_button_up(const EeUiButtonRefs *refs);
+
+/// `UIButton::MouseMove`.
+long ee_ui_button_mouse_move(const EeUiButtonRefs *refs, EeUiPoint at);
+
+/// `UIButton::TabbedTo`.
+void ee_ui_button_tabbed_to(const EeUiButtonRefs *refs);
+
+/// `UIButton::TabbedFrom`.
+void ee_ui_button_tabbed_from(const EeUiButtonRefs *refs);
+
+/// `UIButton::UpdateKeyboard`.
+long ee_ui_button_update_keyboard(const EeUiButtonRefs *refs);
+
+/// `UIButton::SetLocation`.
+void ee_ui_button_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
+
+/// `UIButton::CopyData`.
+long ee_ui_button_copy_data(const EeUiButtonRefs *refs);
+
+/// `UIDualButton::MouseRButtonDown`.
+long ee_ui_dual_button_mouse_r_button_down(const EeUiButtonRefs *refs);
+
+/// `UIDualButton::MouseRButtonUp`.
+long ee_ui_dual_button_mouse_r_button_up(const EeUiButtonRefs *refs);
+
+/// `UIScrollButton::ButtonDown` (`sub`: `mDecrement`).
+void ee_ui_scroll_button_button_down(const EeUiButtonRefs *refs);
+
+/// The check box's and radio button's bitmap rectangle ([`button::box_rect`]).
+EeUiRect ee_ui_button_box_rect(EeUiRect rect, bool scale_bitmap);
+
+/// The check box's (`float_border`) and radio button's bitmap offset: true and `out` written, or false to keep it
+/// ([`button::label_bitmap_offset`]).
+bool ee_ui_button_label_bitmap_offset(float height,
+                                      unsigned long border,
+                                      bool scale_bitmap,
+                                      bool float_border,
+                                      EeUiPoint *out);
+
+/// `UICheckBox::SetChecked` (`sub`: the check box's record).
+void ee_ui_check_set_checked(const EeUiButtonRefs *refs, bool checked);
+
+/// `UICheckBox::ToggleCheck`.
+void ee_ui_check_toggle(const EeUiButtonRefs *refs);
+
+/// `UICheckBox::SetDisabled`.
+void ee_ui_check_set_disabled(const EeUiButtonRefs *refs, bool disabled);
+
+/// `UICheckBox::SetLocation` (`ctx`: the label, as for `SetText`).
+void ee_ui_check_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
+
+/// `UICheckBox::SetText` (`ctx`: the C++ text and font for the label host calls).
+void ee_ui_check_set_text(const EeUiButtonRefs *refs, const char *s);
+
+/// `UICheckBox::ButtonDown` and the mouse handlers: whether the enabled box goes on to `UIButton`'s.
+bool ee_ui_check_enabled(const EeUiButtonRefs *refs);
+
+/// `UIRadioButton::Check`.
+void ee_ui_radio_check(const EeUiButtonRefs *refs);
+
+/// `UIRadioButton::UnCheck`.
+void ee_ui_radio_uncheck(const EeUiButtonRefs *refs);
+
+/// `UIRadioButton::RemoveOtherChecks`.
+void ee_ui_radio_remove_other_checks(const EeUiButtonRefs *refs);
+
+/// `UIRadioButton::CopyData`'s button part (the label's stays C++).
+long ee_ui_radio_copy_data(const EeUiButtonRefs *refs);
+
+/// `UIRadioButton::MouseLButtonDown`.
+long ee_ui_radio_mouse_l_button_down(const EeUiButtonRefs *refs);
+
+/// `UIRadioButton::SetLocation` (`ctx`: the label, as for `SetText`).
+void ee_ui_radio_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
+
+/// `UIRadioButton::SetText` (`ctx` as for the check box).
+void ee_ui_radio_set_text(const EeUiButtonRefs *refs, const char *s);
+
+/// The constructor's drop button ([`combo::drop_rect`]).
+EeUiRect ee_ui_combo_drop_rect(EeUiRect control, EeUiRect given);
+
+/// The constructor's text box ([`combo::text_rect`]).
+EeUiRect ee_ui_combo_text_rect(EeUiRect control, EeUiRect given, unsigned long drop_width);
+
+/// The constructor's list ([`combo::list_rect`]).
+EeUiRect ee_ui_combo_list_rect(EeUiRect control, float text_bottom, unsigned long max_height);
+
+/// `UIComboBox::AddString`.
+long ee_ui_combo_add_string(const EeUiComboRefs *refs);
+
+/// `UIComboBox::InsertLine` (`text` NUL-terminated).
+void ee_ui_combo_insert_line(const EeUiComboRefs *refs, const char *text, unsigned long i);
+
+/// `AppendLine` / `AppendStringArray`'s end: an open list reopens.
+void ee_ui_combo_reopen(const EeUiComboRefs *refs);
+
+/// `UIComboBox::ChangeSelection`.
+void ee_ui_combo_change_selection(const EeUiComboRefs *refs);
+
+/// `UIComboBox::ChangeWidth`.
+void ee_ui_combo_change_width(const EeUiComboRefs *refs, unsigned long width);
+
+/// `UIComboBox::CloseListBox`.
+void ee_ui_combo_close_list_box(const EeUiComboRefs *refs);
+
+/// `UIComboBox::CopyData`.
+long ee_ui_combo_copy_data(const EeUiComboRefs *refs);
+
+/// `UIComboBox::DeleteAllEntries`.
+void ee_ui_combo_delete_all_entries(const EeUiComboRefs *refs);
+
+/// `UIComboBox::DeleteLine`.
+void ee_ui_combo_delete_line(const EeUiComboRefs *refs, unsigned long line);
+
+/// `UIComboBox::HideControl`.
+void ee_ui_combo_hide_control(const EeUiComboRefs *refs);
+
+/// `UIComboBox::MouseLButtonDown`.
+long ee_ui_combo_mouse_l_button_down(const EeUiComboRefs *refs);
+
+/// `UIComboBox::MouseLButtonUp`.
+long ee_ui_combo_mouse_l_button_up(const EeUiComboRefs *refs);
+
+/// `UIComboBox::MouseMove`.
+long ee_ui_combo_mouse_move(const EeUiComboRefs *refs, EeUiPoint at);
+
+/// `UIComboBox::MouseWheelTurned`.
+long ee_ui_combo_mouse_wheel_turned(const EeUiComboRefs *refs, long delta);
+
+/// `UIComboBox::OpenListBox`.
+void ee_ui_combo_open_list_box(const EeUiComboRefs *refs);
+
+/// `UIComboBox::ProcessDown` and `ProcessUp`.
+void ee_ui_combo_process_arrow(const EeUiComboRefs *refs);
+
+/// `UIComboBox::SetCurrentSelection`.
+void ee_ui_combo_set_current_selection(const EeUiComboRefs *refs, unsigned long i);
+
+/// `UIComboBox::SetLocation`.
+void ee_ui_combo_set_location(const EeUiComboRefs *refs, EeUiPoint at);
+
+/// `UIComboBox::TabbedTo` (`to`) or `TabbedFrom`.
+void ee_ui_combo_tabbed(const EeUiComboRefs *refs, bool to);
+
+/// `UIComboBox::UpdateKeyboard`.
+long ee_ui_combo_update_keyboard(const EeUiComboRefs *refs);
+
+/// `UIComboBox::UpdateTranslatedKey` (`ctx`: the C++ key and repeat count).
+long ee_ui_combo_update_translated_key(const EeUiComboRefs *refs);
+
 /// `UIEditBox::AddChar` -> how many bytes of `text` a single-line box read.
 size_t ee_ui_edit_add_char(const EeUiEditRefs *refs, const char *text);
 
@@ -4260,6 +4534,37 @@ void ee_ui_list_set_location(const EeUiListRefs *refs, EeUiPoint at);
 
 /// `UWSNoCaseAlphaSort::operator()`: `left` sorts before `right` with the case folded.
 bool ee_ui_text_less_no_case(const char *left, const char *right);
+
+/// The constructor's geometry ([`scrollbar::layout`]).
+EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at, float length, unsigned long style);
+
+/// `UIScrollBar::MouseLButtonDown`.
+long ee_ui_scroll_bar_mouse_l_button_down(void *bar,
+                                          EeUiScrollBarFields *fields,
+                                          const EeUiRect *rect);
+
+/// `UIScrollBar::MouseLButtonUp`.
+long ee_ui_scroll_bar_mouse_l_button_up(void *bar,
+                                        EeUiScrollBarFields *fields,
+                                        const EeUiRect *rect);
+
+/// `UIScrollBar::MouseMove`.
+long ee_ui_scroll_bar_mouse_move(void *bar,
+                                 EeUiScrollBarFields *fields,
+                                 const EeUiRect *rect,
+                                 EeUiPoint at);
+
+/// `UIScrollBar::SetLocation`.
+void ee_ui_scroll_bar_set_location(void *bar,
+                                   EeUiScrollBarFields *fields,
+                                   const EeUiRect *rect,
+                                   EeUiPoint at);
+
+/// `UIScrollBar::IncrementBy`.
+void ee_ui_scroll_bar_increment_by(void *bar,
+                                   EeUiScrollBarFields *fields,
+                                   const EeUiRect *rect,
+                                   long amount);
 
 /// The constructor's track and thumb ([`slider::init`]).
 void ee_ui_slider_init(EeUiSliderFields *fields, const EeUiRect *rectangle, unsigned long style);

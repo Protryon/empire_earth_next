@@ -15,6 +15,7 @@ class UITextLabel;
 class LLE_API UIComboBox : public UIControl {
     friend class EESEPlayerRow; // original direct field/method caller17a3f0..17a3f6; access policy only
 public:
+    struct Rust;                            // the Rust logic's view and host calls (UIComboBox.cpp; a member: the class's friendships)
     UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData, GEFont* inFont,
                const GERectangle& inRectangle, unsigned long inMaxListBoxHeight, UIForm* inForm, unsigned long inIndex,
                unsigned long inMaxChars, unsigned long inBorderThickness);

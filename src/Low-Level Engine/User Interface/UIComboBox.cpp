@@ -8,9 +8,18 @@
 // alphabetical order, the vector<UWideString> copy members, every member of UIListBox<UWideString> in declaration
 // order (0x100629a3..), the vector<UWideString> COMDATs, the InsertLine member template (0x1006452c) and the
 // lower_bound/sort chains it and Sort() instantiate. UIControl.cpp starts at 0x10064ed6.
+//
+// The combo box's logic is Rust (rust/crates/ee_ui/src/combo.rs, docs/RUST_PLAN.md R6): the constructor's geometry,
+// opening and closing the list (where it opens, the popup, the capture), the mouse and keyboard routing, the
+// selection, the line edits' reopen, SetLocation, ChangeWidth and what CopyData shows. The members below forward to it
+// with the object's members from mTextBox on as the pinned record EeUiComboFields; the parts stay here, reached
+// through the ee_uicpp_combo_* host calls (UIComboBox::Rust). Drawing and the parts' lifetimes stay C++.
 #include <windows.h>
 #include <mbstring.h>
+#include <stddef.h>
 #include <stdlib.h>
+
+#include "rust/ee_rust.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -43,6 +52,279 @@
 #include "lle/UILBString.h"
 #include "lle/UIComboBox.h"
 
+// --- the Rust combo box's view of the object (ee_ui/src/combo_ffi.rs) ------------------------------------------------
+
+// A nested struct: a member of UIComboBox, so it has the class's friendships (UIControl's, UITextLabel's, UIListBox's)
+struct UIComboBox::Rust {
+    struct Refs {
+        EeUiComboRefs mRefs;
+        Refs(const UIComboBox* inCombo, void* inContext = NULL)
+        {
+            UIComboBox* theCombo = const_cast<UIComboBox*>(inCombo);
+            UIComboBox::Rust::CheckLayout();
+            this->mRefs.combo = theCombo;
+            this->mRefs.fields = reinterpret_cast<EeUiComboFields*>(&theCombo->mTextBox);
+            this->mRefs.rect = reinterpret_cast<const EeUiRect*>(&theCombo->mRectangle);
+            this->mRefs.index = &theCombo->mIndex;
+            this->mRefs.ctx = inContext;
+        }
+        operator const EeUiComboRefs*() const { return &this->mRefs; }
+    };
+    // UpdateTranslatedKey's key
+    struct Key {
+        const char* mKey;
+        short mRepeat;
+    };
+    static void CheckLayout()
+    {
+        // the record's offsets from mTextBox (ee_ui/src/combo.rs ComboFields)
+#define EE_UI_COMBO_FIELD(member, field)                                                                              \
+    static_assert(offsetof(UIComboBox, member) - offsetof(UIComboBox, mTextBox) == offsetof(EeUiComboFields, field),   \
+                  "ee_ui/src/combo.rs")
+        EE_UI_COMBO_FIELD(mTextBox, text_box);
+        EE_UI_COMBO_FIELD(mTextBoxType, text_box_type);
+        EE_UI_COMBO_FIELD(mCurrentSelection, current_selection);
+        EE_UI_COMBO_FIELD(mMaxListBoxHeight, max_list_box_height);
+        EE_UI_COMBO_FIELD(mIsListBoxOpen, is_list_box_open);
+        EE_UI_COMBO_FIELD(mReleasedOnce, released_once);
+        EE_UI_COMBO_FIELD(mCopiedListBoxOpen, copied_list_box_open);
+        EE_UI_COMBO_FIELD(mListBoxAlwaysDirty, list_box_always_dirty);
+        EE_UI_COMBO_FIELD(mCopiedHasFocus, copied_has_focus);
+#undef EE_UI_COMBO_FIELD
+        static_assert(sizeof(UIComboBox) - offsetof(UIComboBox, mTextBox) >= sizeof(EeUiComboFields), "ee_ui/src/combo.rs");
+        static_assert(sizeof(GERectangle) == sizeof(EeUiRect), "ee_ui/src/rect.rs");
+        static_assert(sizeof(((UIComboBox*)0)->mIndex) == sizeof(unsigned long), "ee_ui/src/combo_ffi.rs");
+    }
+    static UIComboBox* Combo(void* inCombo) { return static_cast<UIComboBox*>(inCombo); }
+    static EeUiRect Rect(const GERectangle& inRectangle)
+    {
+        return EeUiRect{inRectangle.mBottom, inRectangle.mLeft, inRectangle.mRight, inRectangle.mTop};
+    }
+    static GERectangle Rect(const EeUiRect& inRectangle)
+    {
+        return GERectangle(inRectangle.left, inRectangle.top, inRectangle.right, inRectangle.bottom);
+    }
+    static EeUiPoint Point(const GE2DPoint& inPoint) { return EeUiPoint{inPoint.GetX(), inPoint.GetY()}; }
+    // the parts as ee_ui/src/combo.rs ComboPart numbers them
+    static UIControl* Part(void* inCombo, int inPart)
+    {
+        UIComboBox* theCombo = Combo(inCombo);
+        switch (inPart) {
+        case 0:
+            return theCombo->mTextBox;
+        case 1:
+            return theCombo->mDropButton;
+        case 2:
+            return theCombo->mListBox;
+        case 3:
+            return theCombo->mEditBox;
+        default:
+            return theCombo->mTextLabel;
+        }
+    }
+    static bool HasLabel(void* inCombo) { return Combo(inCombo)->mTextLabel != NULL; }
+    static EeUiRect RectOf(void* inCombo, int inPart) { return Rect(Part(inCombo, inPart)->GetRectangle()); }
+    static unsigned long TextBoxBorder(void* inCombo) { return Combo(inCombo)->mTextBox->GetBorderThickness(); }
+    static UILBString* List(void* inCombo) { return Combo(inCombo)->mListBox; }
+    static unsigned long LineHeight(void* inCombo) { return Combo(inCombo)->mListBox->mLineHeight; }
+    static unsigned long ListBorder(void* inCombo) { return Combo(inCombo)->mListBox->GetBorderThickness(); }
+    static unsigned long WindowHeight(void* inCombo)
+    {
+        UIComboBox* theCombo = Combo(inCombo);
+        return theCombo->GetRasterizer()->GetWindow(theCombo->GetScreenIndex())->GetHeight();
+    }
+    static const char* EditText(void* inCombo) { return Combo(inCombo)->mEditBox->GetText(0); }
+    static void ShowLine(void* inCombo, unsigned long inLine)
+    {
+        UIComboBox* theCombo = Combo(inCombo);
+        if (theCombo->mTextLabel)
+            theCombo->mTextLabel->SetText(theCombo->mListBox->GetData(inLine), true);
+        else
+            theCombo->mEditBox->SetText(theCombo->mListBox->GetData(inLine));
+    }
+    static void ClearText(void* inCombo)
+    {
+        UIComboBox* theCombo = Combo(inCombo);
+        if (theCombo->mTextLabel)
+            theCombo->mTextLabel->SetText("", true);
+        else
+            theCombo->mEditBox->SetText("");
+    }
+    static void DeleteText(void* inCombo)
+    {
+        UIComboBox* theCombo = Combo(inCombo);
+        if (theCombo->mTextLabel)
+            theCombo->mTextLabel->DeleteLine(0);
+        else
+            theCombo->mEditBox->DeleteText();
+    }
+    static long PartMouseDown(void* inCombo, int inPart) { return Part(inCombo, inPart)->MouseLButtonDown(); }
+    static long PartMouseUp(void* inCombo, int inPart) { return Part(inCombo, inPart)->MouseLButtonUp(); }
+    static long PartMouseMove(void* inCombo, int inPart, float inX, float inY)
+    {
+        return Part(inCombo, inPart)->MouseMove(GE2DPoint(inX, inY));
+    }
+    static long PartUpdateKeyboard(void* inCombo, int inPart) { return Part(inCombo, inPart)->UpdateKeyboard(); }
+    static long PartTranslatedKey(void* inCombo, int inPart, void* inKey)
+    {
+        Key* theKey = static_cast<Key*>(inKey);
+        return Part(inCombo, inPart)->UpdateTranslatedKey(theKey->mKey, theKey->mRepeat);
+    }
+    static void PartTabbed(void* inCombo, int inPart, bool inTo)
+    {
+        if (inTo)
+            Part(inCombo, inPart)->TabbedTo();
+        else
+            Part(inCombo, inPart)->TabbedFrom();
+    }
+    static void CopyListColours(void* inCombo)
+    {
+        UIComboBox* theCombo = Combo(inCombo);
+        GEText* theText;
+        if (theCombo->mTextLabel)
+            theText = theCombo->mTextLabel->GetGEText();
+        else
+            theText = theCombo->mEditBox->GetGEText();
+        GEText* theListText = theCombo->mListBox->GetGEText();
+        theListText->SetFgColor(theText->GetFgColor());
+        theListText->SetBgColor(theText->GetBgColor());
+        theListText->SetIsTransparent(theText->GetIsTransparent());
+    }
+    static void SetFocusRect(void* inCombo, const EeUiRect* inRectangle)
+    {
+        Combo(inCombo)->mSelectedBackground.SetRectangle(Rect(*inRectangle));
+    }
+    static void CaptureMouse(void* inCombo) { Combo(inCombo)->CaptureMouse(); }
+    static void CaptureKeyboard(void* inCombo) { Combo(inCombo)->CaptureKeyboard(); }
+    static bool HasMouseCapture(void* inCombo) { return Combo(inCombo)->GetHasMouseCapture(); }
+    static EeUiPoint MouseLocation(void* inCombo) { return Point(Combo(inCombo)->GetMouseLocation()); }
+    static bool KeyDown(int inKey)
+    {
+        switch (inKey) {
+        case 0:
+            return UIControl::DownKeyPressed();
+        case 1:
+            return UIControl::UpKeyPressed();
+        case 2:
+            return UIControl::HomeKeyPressed();
+        case 3:
+            return UIControl::EndKeyPressed();
+        default:
+            return UIControl::sEnterKey->GetValue() != 0;
+        }
+    }
+    static void OpenList(void* inCombo) { Combo(inCombo)->OpenListBox(); }
+    static void CloseList(void* inCombo) { Combo(inCombo)->CloseListBox(); }
+    static long AddString(void* inCombo) { return Combo(inCombo)->AddString(); }
+    static void ChangeSelection(void* inCombo) { Combo(inCombo)->ChangeSelection(); }
+    static void ProcessArrow(void* inCombo, bool inDown)
+    {
+        if (inDown)
+            Combo(inCombo)->ProcessDown();
+        else
+            Combo(inCombo)->ProcessUp();
+    }
+};
+
+typedef UIComboBox::Rust UIComboBoxRust;
+
+// The host calls of ee_ui/src/combo_ffi.rs
+extern "C" bool ee_uicpp_combo_has_label(void* inCombo) { return UIComboBoxRust::HasLabel(inCombo); }
+extern "C" EeUiRect ee_uicpp_combo_rect_of(void* inCombo, int inPart) { return UIComboBoxRust::RectOf(inCombo, inPart); }
+extern "C" unsigned long ee_uicpp_combo_text_box_border(void* inCombo) { return UIComboBoxRust::TextBoxBorder(inCombo); }
+extern "C" unsigned long ee_uicpp_combo_line_count(void* inCombo) { return UIComboBoxRust::List(inCombo)->GetLineCount(); }
+extern "C" const char* ee_uicpp_combo_line(void* inCombo, unsigned long inLine) { return UIComboBoxRust::List(inCombo)->GetData(inLine); }
+extern "C" unsigned long ee_uicpp_combo_line_height(void* inCombo) { return UIComboBoxRust::LineHeight(inCombo); }
+extern "C" unsigned long ee_uicpp_combo_list_border(void* inCombo) { return UIComboBoxRust::ListBorder(inCombo); }
+extern "C" bool ee_uicpp_combo_list_scroll_bar_rect(void* inCombo, EeUiRect* outRectangle)
+{
+    const UIScrollBar* theBar = UIComboBoxRust::List(inCombo)->GetScrollBar();
+    if (!theBar)
+        return false;
+    *outRectangle = UIComboBoxRust::Rect(theBar->GetRectangle());
+    return true;
+}
+extern "C" bool ee_uicpp_combo_list_scroll_bar_captured(void* inCombo) { return UIComboBoxRust::List(inCombo)->GetScrollBarCaptured(); }
+extern "C" long ee_uicpp_combo_list_selection(void* inCombo, unsigned long* outSelection)
+{
+    return UIComboBoxRust::List(inCombo)->GetCurrentSelection(*outSelection);
+}
+extern "C" void ee_uicpp_combo_list_change_selection(void* inCombo, unsigned long inLine, bool inFire, bool inScroll)
+{
+    UIComboBoxRust::List(inCombo)->ChangeSelectionIndex(inLine, inFire, inScroll);
+}
+extern "C" void ee_uicpp_combo_list_insert_line(void* inCombo, const char* inText, unsigned long inLine)
+{
+    UIComboBoxRust::List(inCombo)->InsertLine(UWideString(inText), inLine);
+}
+extern "C" void ee_uicpp_combo_list_delete_line(void* inCombo, unsigned long inLine) { UIComboBoxRust::List(inCombo)->DeleteLine(inLine); }
+extern "C" void ee_uicpp_combo_list_delete_all(void* inCombo) { UIComboBoxRust::List(inCombo)->DeleteAllEntries(); }
+extern "C" void ee_uicpp_combo_list_change_width(void* inCombo, unsigned long inWidth) { UIComboBoxRust::List(inCombo)->ChangeWidth(inWidth); }
+extern "C" unsigned long ee_uicpp_combo_window_height(void* inCombo) { return UIComboBoxRust::WindowHeight(inCombo); }
+extern "C" const char* ee_uicpp_combo_edit_text(void* inCombo) { return UIComboBoxRust::EditText(inCombo); }
+extern "C" void ee_uicpp_combo_show_line(void* inCombo, unsigned long inLine) { UIComboBoxRust::ShowLine(inCombo, inLine); }
+extern "C" void ee_uicpp_combo_clear_text(void* inCombo) { UIComboBoxRust::ClearText(inCombo); }
+extern "C" void ee_uicpp_combo_delete_text(void* inCombo) { UIComboBoxRust::DeleteText(inCombo); }
+extern "C" long ee_uicpp_combo_part_mouse_down(void* inCombo, int inPart) { return UIComboBoxRust::PartMouseDown(inCombo, inPart); }
+extern "C" long ee_uicpp_combo_part_mouse_up(void* inCombo, int inPart) { return UIComboBoxRust::PartMouseUp(inCombo, inPart); }
+extern "C" long ee_uicpp_combo_part_mouse_move(void* inCombo, int inPart, float inX, float inY)
+{
+    return UIComboBoxRust::PartMouseMove(inCombo, inPart, inX, inY);
+}
+extern "C" long ee_uicpp_combo_list_wheel(void* inCombo, long inDelta) { return UIComboBoxRust::List(inCombo)->MouseWheelTurned(inDelta); }
+extern "C" long ee_uicpp_combo_part_update_keyboard(void* inCombo, int inPart) { return UIComboBoxRust::PartUpdateKeyboard(inCombo, inPart); }
+extern "C" long ee_uicpp_combo_part_translated_key(void* inCombo, int inPart, void* inKey)
+{
+    return UIComboBoxRust::PartTranslatedKey(inCombo, inPart, inKey);
+}
+extern "C" void ee_uicpp_combo_part_tabbed(void* inCombo, int inPart, bool inTo) { UIComboBoxRust::PartTabbed(inCombo, inPart, inTo); }
+extern "C" void ee_uicpp_combo_part_set_rectangle(void* inCombo, int inPart, const EeUiRect* inRectangle)
+{
+    UIComboBoxRust::Part(inCombo, inPart)->SetRectangle(UIComboBoxRust::Rect(*inRectangle));
+}
+extern "C" void ee_uicpp_combo_part_set_location(void* inCombo, int inPart, float inX, float inY)
+{
+    UIComboBoxRust::Part(inCombo, inPart)->SetLocation(GE2DPoint(inX, inY));
+}
+extern "C" long ee_uicpp_combo_part_copy_data(void* inCombo, int inPart) { return UIComboBoxRust::Part(inCombo, inPart)->CopyData(); }
+extern "C" void ee_uicpp_combo_copy_list_colours(void* inCombo) { UIComboBoxRust::CopyListColours(inCombo); }
+extern "C" void ee_uicpp_combo_set_focus_rect(void* inCombo, const EeUiRect* inRectangle) { UIComboBoxRust::SetFocusRect(inCombo, inRectangle); }
+extern "C" long ee_uicpp_combo_base_copy_data(void* inCombo) { return UIComboBoxRust::Combo(inCombo)->UIControl::CopyData(); }
+extern "C" bool ee_uicpp_combo_tabbing_on(void* inCombo) { return UIComboBoxRust::Combo(inCombo)->GetForm()->GetTabbingOn(); }
+extern "C" unsigned long ee_uicpp_combo_tab_stop(void* inCombo) { return UIComboBoxRust::Combo(inCombo)->GetForm()->GetTabStop(); }
+extern "C" void ee_uicpp_combo_set_popup(void* inCombo, bool inThis)
+{
+    UIComboBox* theCombo = UIComboBoxRust::Combo(inCombo);
+    theCombo->GetForm()->SetPopup(inThis ? theCombo : NULL);
+}
+extern "C" void ee_uicpp_combo_set_dirty(void* inCombo) { UIComboBoxRust::Combo(inCombo)->SetDirty(true); }
+extern "C" void ee_uicpp_combo_set_rectangle(void* inCombo, const EeUiRect* inRectangle)
+{
+    UIComboBoxRust::Combo(inCombo)->SetRectangle(UIComboBoxRust::Rect(*inRectangle));
+}
+extern "C" void ee_uicpp_combo_base_set_rectangle(void* inCombo, const EeUiRect* inRectangle)
+{
+    UIComboBoxRust::Combo(inCombo)->UIControl::SetRectangle(UIComboBoxRust::Rect(*inRectangle));
+}
+extern "C" void ee_uicpp_combo_base_set_location(void* inCombo, float inX, float inY)
+{
+    UIComboBoxRust::Combo(inCombo)->UIControl::SetLocation(GE2DPoint(inX, inY));
+}
+extern "C" void ee_uicpp_combo_set_always_dirty(void* inCombo, bool inOn) { UIComboBoxRust::Combo(inCombo)->SetAlwaysDirty(inOn); }
+extern "C" void ee_uicpp_combo_fire(void* inCombo, unsigned long inEvent) { UIComboBoxRust::Combo(inCombo)->FireTriggerEvent(inEvent); }
+extern "C" void ee_uicpp_combo_capture_mouse(void* inCombo) { UIComboBoxRust::CaptureMouse(inCombo); }
+extern "C" void ee_uicpp_combo_capture_keyboard(void* inCombo) { UIComboBoxRust::CaptureKeyboard(inCombo); }
+extern "C" void ee_uicpp_combo_release_mouse(void* inCombo) { UIComboBoxRust::Combo(inCombo)->ReleaseCapturedMouse(); }
+extern "C" void ee_uicpp_combo_release_keyboard(void* inCombo) { UIComboBoxRust::Combo(inCombo)->ReleaseCapturedKeyboard(); }
+extern "C" bool ee_uicpp_combo_has_mouse_capture(void* inCombo) { return UIComboBoxRust::HasMouseCapture(inCombo); }
+extern "C" EeUiPoint ee_uicpp_combo_mouse_location(void* inCombo) { return UIComboBoxRust::MouseLocation(inCombo); }
+extern "C" bool ee_uicpp_combo_key(void* inCombo, int inKey) { return UIComboBoxRust::KeyDown(inKey); }
+extern "C" void ee_uicpp_combo_open_list(void* inCombo) { UIComboBoxRust::OpenList(inCombo); }
+extern "C" void ee_uicpp_combo_close_list(void* inCombo) { UIComboBoxRust::CloseList(inCombo); }
+extern "C" long ee_uicpp_combo_add_string(void* inCombo) { return UIComboBoxRust::AddString(inCombo); }
+extern "C" void ee_uicpp_combo_change_selection(void* inCombo) { UIComboBoxRust::ChangeSelection(inCombo); }
+extern "C" void ee_uicpp_combo_process_arrow(void* inCombo, bool inDown) { UIComboBoxRust::ProcessArrow(inCombo, inDown); }
+
 // FUNCTION: LLE 0x1006150f
 // Creates a combo box: a text label (type 1) or edit box, a drop button and a hidden list box showing the first entry
 UIComboBox::UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vector<UWideString> inData,
@@ -57,9 +339,7 @@ UIComboBox::UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vec
     this->mTextBoxType = inTextBoxType;
     this->mMaxListBoxHeight = inMaxListBoxHeight;
     this->mReleasedOnce = false;
-    theRectangle.SetTopLeft(GE2DPoint(this->mRectangle.GetRight() - inRectangle.GetHeight(), inRectangle.GetTop()));
-    theRectangle.SetRight(inRectangle.GetRight());
-    theRectangle.SetBottom(inRectangle.GetBottom());
+    theRectangle = UIComboBoxRust::Rect(ee_ui_combo_drop_rect(UIComboBoxRust::Rect(this->mRectangle), UIComboBoxRust::Rect(inRectangle)));
     GEBitmap* theNormal = inForm->GetManager()->CreateBitmapForScaledControl(
         inForm->GetManager()->GetSBBitmapDownNormal(), theRectangle);
     GEBitmap* thePressed = inForm->GetManager()->CreateBitmapForScaledControl(
@@ -67,27 +347,23 @@ UIComboBox::UIComboBox(unsigned long inId, unsigned long inTextBoxType, std::vec
     this->mDropButton = new UIButton(this->GetId(), theNormal, NULL, thePressed, theRectangle, this->GetForm(), this->GetIndex(), 0);
     theNormal->Dereference();
     thePressed->Dereference();
-    GE2DPoint theLocation;
-    theLocation = inRectangle.GetTopLeft();
+    GERectangle theTextRectangle = UIComboBoxRust::Rect(ee_ui_combo_text_rect(
+        UIComboBoxRust::Rect(this->mRectangle), UIComboBoxRust::Rect(inRectangle), this->mDropButton->GetWidth()));
     if (inTextBoxType == 1) {
-        this->mTextLabel = new UITextLabel(theEmpty, inFont, this->GetId(),
-                                     GERectangle(theLocation, this->mRectangle.GetWidth() - this->mDropButton->GetWidth() + 1.0f,
-                                                 inRectangle.GetHeight()),
-                                     this->GetForm(), 0, this->GetIndex(), inBorderThickness);
+        this->mTextLabel = new UITextLabel(theEmpty, inFont, this->GetId(), theTextRectangle, this->GetForm(), 0,
+                                     this->GetIndex(), inBorderThickness);
         this->mEditBox = NULL;
         this->mTextBox = this->mTextLabel;
     } else {
-        this->mEditBox = new UIEditBox(this->GetId(), inFont, inMaxChars, false,
-                                 GERectangle(theLocation, this->mRectangle.GetWidth() - this->mDropButton->GetWidth() + 1.0f,
-                                             inRectangle.GetHeight()),
-                                 this->GetForm(), this->GetIndex(), inBorderThickness, false, false);
+        this->mEditBox = new UIEditBox(this->GetId(), inFont, inMaxChars, false, theTextRectangle, this->GetForm(),
+                                 this->GetIndex(), inBorderThickness, false, false);
         this->mTextLabel = NULL;
         this->mTextBox = this->mEditBox;
     }
     this->mListBox = new UILBString(this->GetId(), inData, inFont, true,
-                              GERectangle(this->mRectangle.GetLeft(), this->mTextBox->GetRectangle().GetBottom(),
-                                          this->mRectangle.GetRight(),
-                                          this->mTextBox->GetRectangle().GetBottom() + inMaxListBoxHeight),
+                              UIComboBoxRust::Rect(ee_ui_combo_list_rect(UIComboBoxRust::Rect(this->mRectangle),
+                                                                         this->mTextBox->GetRectangle().GetBottom(),
+                                                                         inMaxListBoxHeight)),
                               this->GetForm(), this->GetIndex(), inBorderThickness);
     this->mListBox->ChangeSelectionIndex(0, true, false);
     this->mIsListBoxOpen = false;
@@ -125,27 +401,7 @@ UIComboBox::~UIComboBox()
 // Selects the edit box's text in the list (OK), or adds it at the top and selects it (not found); fails on empty text
 long UIComboBox::AddString()
 {
-    long theResult = kErrorNotFound;
-    UWideString theString(this->mEditBox->GetText(0));
-    long i = this->mListBox->GetLineCount();
-    if (theString.GetLength() > 0) {
-        bool theFound = false;
-        for (i--; i >= 0; i--)
-            if (this->mListBox->GetData(i) == theString) {
-                theFound = true;
-                break;
-            }
-        if (theFound) {
-            theResult = kErrorOK;
-            this->mListBox->ChangeSelectionIndex(i, true, false);
-        } else {
-            this->InsertLine(theString, 0);
-            this->mListBox->ChangeSelectionIndex(0, true, false);
-        }
-        this->SetDirty(true);
-    } else
-        theResult = kErrorFailed;
-    return theResult;
+    return ee_ui_combo_add_string(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x10061a86
@@ -154,10 +410,7 @@ void UIComboBox::AppendLine(UWideString& inLine)
 {
     this->SetDirty(true);
     this->mListBox->AppendLine(inLine);
-    if (this->mIsListBoxOpen) {
-        this->CloseListBox();
-        this->OpenListBox();
-    }
+    ee_ui_combo_reopen(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x10061ac3
@@ -166,127 +419,49 @@ void UIComboBox::AppendStringArray(std::vector<UWideString>& inLines)
 {
     this->SetDirty(true);
     this->mListBox->AppendStringArray(inLines);
-    if (this->mIsListBoxOpen) {
-        this->CloseListBox();
-        this->OpenListBox();
-    }
+    ee_ui_combo_reopen(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x10061b00
 // Shows the selected entry in the text box and fires the selection-changed trigger
 void UIComboBox::ChangeSelection()
 {
-    if (this->mTextLabel)
-        this->mTextLabel->SetText(this->mListBox->GetData(this->mCurrentSelection), true);
-    else
-        this->mEditBox->SetText(this->mListBox->GetData(this->mCurrentSelection));
-    this->FireTriggerEvent(kControlTriggerSelectionChanged);
+    ee_ui_combo_change_selection(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x10061b5b
 // Resizes the text box, the list and the control to a new width
 void UIComboBox::ChangeWidth(unsigned long inWidth)
 {
-    GERectangle theRectangle;
-    theRectangle = this->mTextBox->GetRectangle();
-    float theWidth = inWidth;
-    theRectangle.SetRight(theRectangle.GetLeft() + theWidth - kScrollBarWidth);
-    this->mTextBox->SetRectangle(theRectangle);
-    this->mListBox->ChangeWidth(inWidth);
-    theRectangle.SetRight(theRectangle.GetLeft() + theWidth);
-    UIControl::SetRectangle(theRectangle);
+    ee_ui_combo_change_width(UIComboBoxRust::Refs(this), inWidth);
 }
 
 // FUNCTION: LLE 0x10061bdf
 // Closes the drop-down list, shrinks the control back to the text box and fires the list-closed trigger
 void UIComboBox::CloseListBox()
 {
-    GERectangle theRectangle;
-    if (this->mEditBox == NULL)
-        this->ReleaseCapturedKeyboard();
-    this->mIsListBoxOpen = false;
-    this->SetDirty(true);
-    this->mForm->SetPopup(NULL);
-    theRectangle.SetTopLeft(this->mTextBox->GetRectangle().GetTopLeft());
-    theRectangle.SetRight(this->mDropButton->GetRectangle().GetRight());
-    theRectangle.SetBottom(this->mTextBox->GetRectangle().GetBottom());
-    this->SetRectangle(theRectangle);
-    if (this->mListBoxAlwaysDirty)
-        this->SetAlwaysDirty(false);
-    this->FireTriggerEvent(kControlTriggerListClosed);
+    ee_ui_combo_close_list_box(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x10061c92
 // Snapshots the parts for drawing: the open list in the text box's colours, or the focus highlight when tabbed to
 long UIComboBox::CopyData()
 {
-    GERectangle theRectangle;
-    this->mCopiedListBoxOpen = false;
-    this->mTextBox->CopyData();
-    this->mDropButton->CopyData();
-    if (this->mIsListBoxOpen) {
-        this->mCopiedListBoxOpen = true;
-        GEText* theText;
-        if (this->mTextLabel)
-            theText = this->mTextLabel->GetGEText();
-        else
-            theText = this->mEditBox->GetGEText();
-        GEText* theListText = this->mListBox->GetGEText();
-        theListText->SetFgColor(theText->GetFgColor());
-        theListText->SetBgColor(theText->GetBgColor());
-        theListText->SetIsTransparent(theText->GetIsTransparent());
-        this->mListBox->CopyData();
-    } else if (this->mForm->GetTabbingOn() && this->mForm->GetTabStop() == this->mIndex) {
-        theRectangle.SetLeft(this->mTextBox->GetRectangle().GetLeft() + this->mTextBox->GetBorderThickness());
-        theRectangle.SetTop(this->mTextBox->GetRectangle().GetTop() + this->mTextBox->GetBorderThickness());
-        theRectangle.SetRight(this->mTextBox->GetRectangle().GetRight() - this->mTextBox->GetBorderThickness());
-        theRectangle.SetBottom(this->mTextBox->GetRectangle().GetBottom() - this->mTextBox->GetBorderThickness());
-        this->mSelectedBackground.SetRectangle(theRectangle);
-        this->mCopiedHasFocus = true;
-    } else
-        this->mCopiedHasFocus = false;
-    return UIControl::CopyData();
+    return ee_ui_combo_copy_data(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x10061dd0
 // Empties the list and the text box and clears the selection
 void UIComboBox::DeleteAllEntries()
 {
-    this->mListBox->DeleteAllEntries();
-    if (this->mTextLabel)
-        this->mTextLabel->SetText("", true);
-    else
-        this->mEditBox->SetText("");
-    this->SetDirty(true);
-    if (this->mIsListBoxOpen) {
-        this->CloseListBox();
-        this->OpenListBox();
-    }
-    this->mCurrentSelection = -1;
+    ee_ui_combo_delete_all_entries(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x10061e62
 // Removes a list line and shows the entry now selected, or clears the text and the selection when none is
 void UIComboBox::DeleteLine(unsigned long inLine)
 {
-    this->mListBox->DeleteLine(inLine);
-    if (this->mListBox->GetCurrentSelection(inLine) == kErrorOK) {
-        if (this->mTextLabel)
-            this->mTextLabel->SetText(this->mListBox->GetData(inLine), true);
-        else
-            this->mEditBox->SetText(this->mListBox->GetData(inLine));
-    } else {
-        this->mCurrentSelection = -1;
-        if (this->mTextLabel)
-            this->mTextLabel->SetText("", true);
-        else
-            this->mEditBox->SetText("");
-    }
-    this->SetDirty(true);
-    if (this->mIsListBoxOpen) {
-        this->CloseListBox();
-        this->OpenListBox();
-    }
+    ee_ui_combo_delete_line(UIComboBoxRust::Refs(this), inLine);
 }
 
 // FUNCTION: LLE 0x10061f56
@@ -321,297 +496,106 @@ long UIComboBox::DrawTextA()
 // Closes an open list and releases mouse and keyboard capture when the control is hidden
 void UIComboBox::HideControl()
 {
-    if (!this->mIsListBoxOpen)
-        return;
-    this->CloseListBox();
-    this->ReleaseCapturedMouse();
-    this->ReleaseCapturedKeyboard();
+    ee_ui_combo_hide_control(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x1006200f
 // Inserts a line into the list at an index, reopening an open list so it resizes
 void UIComboBox::InsertLine(const UWideString& inLine, unsigned long inIndex)
 {
-    this->SetDirty(true);
-    this->mListBox->InsertLine(inLine, inIndex);
-    if (this->mIsListBoxOpen) {
-        this->CloseListBox();
-        this->OpenListBox();
-    }
+    ee_ui_combo_insert_line(UIComboBoxRust::Refs(this), inLine, inIndex);
 }
 
 // FUNCTION: LLE 0x10062053
 // Handles a click: opens the list (or starts editing the edit box), or picks in / closes the open list
 long UIComboBox::MouseLButtonDown()
 {
-    long theResult = kErrorOK;
-    if (!this->mIsListBoxOpen && !this->GetHasMouseCapture()) {
-        if (this->mTextLabel) {
-            this->mDropButton->MouseLButtonDown();
-            theResult = this->mTextLabel->MouseLButtonDown();
-            this->mListBox->GetCurrentSelection(this->mCurrentSelection);
-            this->OpenListBox();
-        } else if (this->mTextBox->GetRectangle().Contains(this->GetMouseLocation())) {
-            theResult = this->mEditBox->MouseLButtonDown();
-            this->CaptureMouse();
-        } else {
-            theResult = this->mDropButton->MouseLButtonDown();
-            this->mListBox->GetCurrentSelection(this->mCurrentSelection);
-            this->OpenListBox();
-        }
-    } else {
-        if (this->mListBox->GetRectangle().Contains(this->GetMouseLocation())) {
-            theResult = this->mListBox->MouseLButtonDown();
-            if (!this->mListBox->GetScrollBarCaptured())
-                this->mListBox->GetCurrentSelection(this->mCurrentSelection);
-        } else
-            this->CloseListBox();
-        this->CaptureMouse();
-    }
-    return theResult;
+    return ee_ui_combo_mouse_l_button_down(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x10062144
 // Handles a release: commits the entry under the mouse and closes the list, else keeps it open for a second click
 long UIComboBox::MouseLButtonUp()
 {
-    GERectangle theRectangle = this->mListBox->GetRectangle();
-    if (this->mIsListBoxOpen) {
-        if (!this->mListBox->GetScrollBarCaptured()) {
-            if (this->mListBox->GetScrollBar())
-                theRectangle.SetRight(this->mListBox->GetScrollBar()->GetRectangle().GetLeft());
-            if (theRectangle.Contains(this->GetMouseLocation())) {
-                if (this->mListBox->GetCurrentSelection(this->mCurrentSelection) == kErrorOK)
-                    this->ChangeSelection();
-                this->CloseListBox();
-                this->ReleaseCapturedMouse();
-            } else if (this->mReleasedOnce && this->mCurrentSelection < this->mListBox->GetLineCount()) {
-                if (this->mListBox->GetCurrentSelection(this->mCurrentSelection) == kErrorOK)
-                    this->ChangeSelection();
-                this->CloseListBox();
-                this->ReleaseCapturedMouse();
-            } else
-                this->mReleasedOnce = true;
-        }
-        this->mListBox->MouseLButtonUp();
-    } else {
-        if (this->mCurrentSelection < this->mListBox->GetLineCount())
-            this->mListBox->ChangeSelectionIndex(this->mCurrentSelection, false, false);
-        this->ReleaseCapturedMouse();
-    }
-    this->mTextBox->MouseLButtonUp();
-    long theResult = this->mDropButton->MouseLButtonUp();
-    this->SetDirty(true);
-    return theResult;
+    return ee_ui_combo_mouse_l_button_up(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x10062252
 // Passes mouse movement to the text box, the drop button and the open list
 long UIComboBox::MouseMove(const GE2DPoint& inLocation)
 {
-    long theResult;
-    this->mTextBox->MouseMove(inLocation);
-    theResult = this->mDropButton->MouseMove(inLocation);
-    if (this->mIsListBoxOpen)
-        theResult = this->mListBox->MouseMove(inLocation);
-    return theResult;
+    return ee_ui_combo_mouse_move(UIComboBoxRust::Refs(this), UIComboBoxRust::Point(inLocation));
 }
 
 // FUNCTION: LLE 0x1006228c
 // Scrolls the open list with the mouse wheel; fails while the list is closed
 long UIComboBox::MouseWheelTurned(long inDelta)
 {
-    long theResult = kErrorFailed;
-    if (this->mIsListBoxOpen)
-        theResult = this->mListBox->MouseWheelTurned(inDelta);
-    return theResult;
+    return ee_ui_combo_mouse_wheel_turned(UIComboBoxRust::Refs(this), inDelta);
 }
 
 // FUNCTION: LLE 0x100622aa
 // Opens the drop-down list below the text box, or above it when there is more room, and captures input
 void UIComboBox::OpenListBox()
 {
-    GERectangle theListRectangle;
-    GERectangle theRectangle;
-    GEWindow* theWindow = this->GetRasterizer()->GetWindow(this->GetScreenIndex());
-    long theHeight = this->mListBox->GetLineCount() * this->mListBox->mLineHeight + this->mListBox->GetBorderThickness() * 2 +
-                     1;
-    if (theHeight > (long)this->mMaxListBoxHeight)
-        theHeight = this->mMaxListBoxHeight;
-    theListRectangle.SetLeft(this->mTextBox->GetRectangle().GetLeft());
-    theListRectangle.SetRight(this->mDropButton->GetRectangle().GetRight());
-    theRectangle.SetLeft(theListRectangle.GetLeft());
-    theRectangle.SetRight(theListRectangle.GetRight());
-    long theBelow = theWindow->GetHeight() - UMFloor(this->mTextBox->GetRectangle().GetBottom()) - 1;
-    long theAbove = UMFloor(this->mTextBox->GetRectangle().GetTop()) - 1;
-    if (theHeight > theBelow) {
-        if (theBelow < theAbove) {
-            if (theAbove < theHeight)
-                theHeight = theAbove;
-            theListRectangle.SetBottom(this->mTextBox->GetRectangle().GetTop() - 1.0f);
-            theListRectangle.SetTop(theListRectangle.GetBottom() - theHeight);
-            theRectangle.SetTop(theListRectangle.GetTop());
-            theRectangle.SetBottom(this->mTextBox->GetRectangle().GetBottom());
-        } else {
-            if (theBelow < theHeight)
-                theHeight = theBelow;
-            theListRectangle.SetTop(this->mTextBox->GetRectangle().GetBottom() + 1.0f);
-            theListRectangle.SetBottom(theListRectangle.GetTop() + theHeight);
-            theRectangle.SetTop(this->mTextBox->GetRectangle().GetTop());
-            theRectangle.SetBottom(theListRectangle.GetBottom());
-        }
-    } else {
-        theListRectangle.SetTop(this->mTextBox->GetRectangle().GetBottom() + 1.0f);
-        theListRectangle.SetBottom(theListRectangle.GetTop() + theHeight);
-        theRectangle.SetTop(this->mTextBox->GetRectangle().GetTop());
-        theRectangle.SetBottom(theListRectangle.GetBottom());
-    }
-    this->mReleasedOnce = false;
-    this->mIsListBoxOpen = true;
-    this->mListBox->SetRectangle(theListRectangle);
-    this->SetRectangle(theRectangle);
-    this->mForm->SetPopup(this);
-    this->CaptureMouse();
-    this->CaptureKeyboard();
-    this->SetDirty(true);
-    if (this->mListBoxAlwaysDirty)
-        this->SetAlwaysDirty(true);
-    this->FireTriggerEvent(kControlTriggerListOpened);
+    ee_ui_combo_open_list_box(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x10062462
 // Shows the list's current selection in the text box after a Down key, or clears the text
 void UIComboBox::ProcessDown()
 {
-    if (this->mListBox->GetCurrentSelection(this->mCurrentSelection) == kErrorOK) {
-        if (this->mTextLabel)
-            this->mTextLabel->SetText(this->mListBox->GetData(this->mCurrentSelection), true);
-        else
-            this->mEditBox->SetText(this->mListBox->GetData(this->mCurrentSelection));
-    } else if (this->mTextLabel)
-        this->mTextLabel->DeleteLine(0);
-    else
-        this->mEditBox->DeleteText();
+    ee_ui_combo_process_arrow(UIComboBoxRust::Refs(this));
 }
 
 // Shows the list's current selection in the text box after an Up key, or clears the text
 // (ICF-folded with ProcessDown 0x10062462)
 void UIComboBox::ProcessUp()
 {
-    if (this->mListBox->GetCurrentSelection(this->mCurrentSelection) == kErrorOK) {
-        if (this->mTextLabel)
-            this->mTextLabel->SetText(this->mListBox->GetData(this->mCurrentSelection), true);
-        else
-            this->mEditBox->SetText(this->mListBox->GetData(this->mCurrentSelection));
-    } else if (this->mTextLabel)
-        this->mTextLabel->DeleteLine(0);
-    else
-        this->mEditBox->DeleteText();
+    ee_ui_combo_process_arrow(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x100624db
 // Selects a list entry by index and shows it; out-of-range indices are ignored
 void UIComboBox::SetCurrentSelection(unsigned long inIndex)
 {
-    unsigned long theSelection;
-    this->mListBox->GetCurrentSelection(theSelection);
-    if (!(inIndex < this->mListBox->GetLineCount()))
-        return;
-    if (inIndex != theSelection)
-        this->mListBox->ChangeSelectionIndex(inIndex, true, false);
-    this->mCurrentSelection = inIndex;
-    UIComboBox::ChangeSelection();
+    ee_ui_combo_set_current_selection(UIComboBoxRust::Refs(this), inIndex);
 }
 
 // FUNCTION: LLE 0x1006252f
 // Moves the combo box, keeping a list that opened upwards above the text box
 void UIComboBox::SetLocation(const GE2DPoint& inLocation)
 {
-    if (this->mIsListBoxOpen && this->mListBox->GetRectangle().GetTop() < this->mTextBox->GetRectangle().GetTop()) {
-        this->mListBox->SetLocation(inLocation);
-        this->mTextBox->SetLocation(GE2DPoint(inLocation.GetX(), this->mListBox->GetRectangle().GetBottom() + 1.0f));
-        this->mDropButton->SetLocation(GE2DPoint(this->mTextBox->GetRectangle().GetRight() + 1.0f,
-                                           this->mTextBox->GetRectangle().GetTop()));
-    } else {
-        this->mTextBox->SetLocation(inLocation);
-        this->mDropButton->SetLocation(GE2DPoint(this->mTextBox->GetRectangle().GetRight() + 1.0f, inLocation.GetY()));
-        this->mListBox->SetLocation(GE2DPoint(this->mTextBox->GetRectangle().GetLeft(),
-                                        this->mTextBox->GetRectangle().GetBottom() + 1.0f));
-    }
-    UIControl::SetLocation(inLocation);
+    ee_ui_combo_set_location(UIComboBoxRust::Refs(this), UIComboBoxRust::Point(inLocation));
 }
 
 // FUNCTION: LLE 0x10062619
 // Takes keyboard focus when tabbed to (the edit box too, if any)
 void UIComboBox::TabbedTo()
 {
-    this->SetDirty(true);
-    if (this->mEditBox) {
-        this->mEditBox->TabbedTo();
-        this->CaptureKeyboard();
-    } else if (this->mForm->GetTabbingOn() == true)
-        this->CaptureKeyboard();
+    ee_ui_combo_tabbed(UIComboBoxRust::Refs(this), true);
 }
 
 // FUNCTION: LLE 0x10062649
 // Gives up focus when tabbed away: closes the list and releases mouse and keyboard
 void UIComboBox::TabbedFrom()
 {
-    if (this->mIsListBoxOpen)
-        this->CloseListBox();
-    else
-        this->SetDirty(true);
-    this->ReleaseCapturedMouse();
-    if (this->mTextLabel == NULL)
-        this->mEditBox->TabbedFrom();
-    this->ReleaseCapturedKeyboard();
+    ee_ui_combo_tabbed(UIComboBoxRust::Refs(this), false);
 }
 
 // FUNCTION: LLE 0x1006268a
 // Handles keys: Down opens the list; in the open list Enter commits and Up/Down move; else the edit box gets them
 long UIComboBox::UpdateKeyboard()
 {
-    long theResult = kErrorOK;
-    if (!this->mIsListBoxOpen) {
-        if (UIControl::DownKeyPressed())
-            this->OpenListBox();
-        else if (this->mEditBox) {
-            if (UIControl::sEnterKey->GetValue())
-                this->AddString();
-            theResult = this->mEditBox->UpdateKeyboard();
-        }
-    } else {
-        theResult = this->mListBox->UpdateKeyboard();
-        if (UIControl::sEnterKey->GetValue()) {
-            if (this->mEditBox)
-                this->AddString();
-            else {
-                if (this->mListBox->GetCurrentSelection(this->mCurrentSelection) == kErrorOK)
-                    this->ChangeSelection();
-                this->CloseListBox();
-                this->ReleaseCapturedMouse();
-            }
-        }
-        if (UIControl::DownKeyPressed())
-            this->ProcessDown();
-        if (UIControl::UpKeyPressed())
-            this->ProcessUp();
-        if (this->mEditBox && !UIControl::DownKeyPressed() && !UIControl::UpKeyPressed() && !UIControl::HomeKeyPressed() && !UIControl::EndKeyPressed())
-            theResult = this->mEditBox->UpdateKeyboard();
-    }
-    return theResult;
+    return ee_ui_combo_update_keyboard(UIComboBoxRust::Refs(this));
 }
 
 // FUNCTION: LLE 0x100627a7
 // Passes a typed character to the open list, else to the text box
 long UIComboBox::UpdateTranslatedKey(const char* inKey, short inRepeat)
 {
-    UIControl* theControl;
-    if (this->mIsListBoxOpen)
-        theControl = this->mListBox;
-    else
-        theControl = this->mTextBox;
-    return theControl->UpdateTranslatedKey(inKey, inRepeat);
+    UIComboBoxRust::Key theKey = {inKey, inRepeat};
+    return ee_ui_combo_update_translated_key(UIComboBoxRust::Refs(this, &theKey));
 }
 
 // Header-inline members first emitted here, in class-definition order (names in analysis/lle/names.txt)
