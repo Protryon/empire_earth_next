@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EESaveGameFiles.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -343,6 +344,12 @@ long EEUGAttackUnit::Load(unsigned long inMajorVersion, unsigned long inMinorVer
         this->mIsConvert = false;
     else
         theResult = inFile.Read(this->mIsConvert);
+    // port (0.253): the destination and the sidestep count (older saves: none and 0, the goal finds them again)
+    if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+        theResult = this->mLocation.Load(inFile);
+        if (theResult == 0)
+            theResult = inFile.Read(this->mSidestepCount);
+    }
     return theResult;
 }
 
@@ -403,6 +410,12 @@ long EEUGAttackUnit::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     theResult = outFile.Write(this->mTargetTileY);
     if (theResult == 0)
         theResult = outFile.Write(this->mIsConvert);
+    // port (0.253): the destination and the sidestep count, so a loaded attack goes on as the saved one
+    if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+        theResult = this->mLocation.Save(outFile);
+        if (theResult == 0)
+            theResult = outFile.Write(this->mSidestepCount);
+    }
     return theResult;
 }
 
