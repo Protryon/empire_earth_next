@@ -402,7 +402,13 @@ def main():
         if name == 'install':
             p.add_argument('gamedir')
         if name == 'cppgate':
-            p.add_argument('--out')
+            p.add_argument('--out', help='build folder (default build/eemodel-cppgate)')
+            p.add_argument('--exe', help='a built gate program to run instead of building one')
+            p.add_argument('--tree', help="a built tree (its Data folder's .cem/.sst/.tga) instead of the game installs")
+            p.add_argument('--limit-mb', type=float, default=300, help='cap on the temporary folder (default 300 MB)')
+            p.add_argument('--subset', type=int, default=1, help='every Nth model and texture (default: all)')
+            p.add_argument('--record-golden', metavar='FILE', help='write the digests of this run to FILE')
+            p.add_argument('--golden', metavar='FILE', help='compare with recorded digests')
     p = sub.add_parser('convert')
     p.add_argument('input')
     p.add_argument('output')
