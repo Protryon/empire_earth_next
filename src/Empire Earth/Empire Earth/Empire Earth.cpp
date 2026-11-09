@@ -1191,6 +1191,9 @@ void EEInitializeNetwork()
     theChecksum += EEGetFileChecksum(theFile, "*.glb", 0);
     theChecksum += EEGetFileChecksum(theFile, "*.gltf", 0);
     theChecksum += EEGetFileChecksum(theFile, "*.bin", 0);
+    // port: the computer players' AIs (Data\ai: the manifest ais.json and every Lua script; ee/EECPEngine.h), so a
+    // joiner whose AI folder differs from the host's is refused like any other data mismatch (kConnectionBadChecksum)
+    theChecksum += EECPAIFolderHash();
     for (unsigned long i = 0; i < gDataPath->GetArchiveCount(); i++) {
         bool theHaveTimestamp = gDataPath->GetArchive(i).GetTag(UWideString("Timestamp"), theTag) == kErrorOK;
         if (theHaveTimestamp) {
