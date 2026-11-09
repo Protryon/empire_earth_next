@@ -187,7 +187,7 @@ static bool EECPNextTowerRingSite(EEComputerPlayer* inPlayer, long inType, long 
     std::vector<EETileCoordinate> theTiles;
     for (long theRing = inFirst; theRing <= inLast; theRing++) {
         theTiles.clear();
-        Fn2492C2(inX, inY, theRing, theTiles);
+        EEGetSquareRingTiles(inX, inY, theRing, theTiles);
         for (unsigned long k = 0; k < theTiles.size(); k++)
             if (!theBuild->HasTowerNear(theTiles[k].mX, theTiles[k].mY, theSpacing * theSpacing)
                 && theBuild->CanBuildAt(theContinent, inType, theTiles[k], theClass->GetTileSize(), true, true, inX, inY)) {
