@@ -51,11 +51,12 @@ IS_LINUX = sys.platform.startswith("linux")
 IS_MACOS = sys.platform == "darwin"
 
 PLATFORM_HEADERS = ROOT / "include"
-POSIX_IMPL = ["PlatTime.cpp", "PlatThread.cpp", "PlatFile.cpp", "PlatPath.cpp",
-              "PlatString.cpp", "PlatSocket.cpp", "PlatMessage.cpp"]
-WIN32_IMPL = ["PlatTime.cpp", "PlatThread.cpp", "PlatFile.cpp", "PlatPath.cpp",
-              "PlatString.cpp", "PlatSocket.cpp", "PlatMessage.cpp"]
-COMMON_IMPL = ["PlatFont.cpp", "PlatConfig.cpp", "PlatSim.cpp"]   # src/Platform/Common: the same code on every system
+# what is still C++: PlatConfig, PlatPath, PlatString, PlatTime, PlatMessage and PlatSim are in the Rust library
+# (rust/crates/ee_plat_core), which every program below links (platform_libs); PlatPosixBridge.cpp keeps the POSIX C++
+# files that remain on the part that moved (until R1.3)
+POSIX_IMPL = ["PlatThread.cpp", "PlatFile.cpp", "PlatSocket.cpp", "PlatPosixBridge.cpp"]
+WIN32_IMPL = ["PlatThread.cpp", "PlatFile.cpp", "PlatSocket.cpp"]
+COMMON_IMPL = ["PlatFont.cpp"]   # src/Platform/Common: the same code on every system
 WIN32_SYSLIBS = ["kernel32.lib", "user32.lib", "advapi32.lib", "ole32.lib", "winmm.lib", "ws2_32.lib",
                  "iphlpapi.lib", "shell32.lib", "gdi32.lib", "imm32.lib", "version.lib", "setupapi.lib",
                  "oleaut32.lib", "uuid.lib", "cfgmgr32.lib", "propsys.lib", "d3d12.lib", "dxgi.lib",
@@ -225,6 +226,17 @@ def platform_sources(target):
     return [impl / n for n in names] + [ROOT / "src" / "Platform" / "Common" / n for n in COMMON_IMPL]
 
 
+def platform_libs(target):
+    """The link arguments of the platform layer: the Rust library (rust_build) and what its standard library and C
+    calls need besides the program's usual libraries (only the objects a program uses are pulled in)."""
+    libs = [rust_build.ensure(target.name)]
+    if target.os == "linux":
+        libs += ["-ldl", "-lm", "-lpthread"]
+    elif target.os == "macos":
+        libs += ["-framework", "Foundation"]
+    return libs
+
+
 def run_program(target, exe, args=(), env=None):
     if not target.native():
         print(f"{exe.name}: built for {target.name}; this machine cannot run it (not run)")
@@ -244,7 +256,7 @@ def cmd_test(a):
     if why:
         sys.exit(f"{t.name}: {why}")
     srcs = [*platform_sources(t), ROOT / "tests" / "platform" / "plat_test.cpp"]
-    libs = [] if t.os == "windows" else (["-ldl"] if t.os == "linux" else [])
+    libs = platform_libs(t)
     exe = build_program(t, "plat_test", srcs, includes=[PLATFORM_HEADERS, ROOT / "src" / "ThirdParty" / "stb"],
                         libs=libs)
     print(f"built {exe}")
@@ -262,7 +274,7 @@ def cmd_luatest(a):
         sys.exit(f"{t.name}: {why}")
     srcs = [*platform_sources(t), ROOT / "src" / "Empire Earth" / "AI Thread" / "EECPLua.cpp",
             ROOT / "tests" / "platform" / "lua_test.cpp"]
-    libs = [] if t.os == "windows" else (["-ldl"] if t.os == "linux" else [])
+    libs = platform_libs(t)
     exe = build_program(t, "lua_test", srcs, includes=[PLATFORM_HEADERS, ROOT / "src" / "ThirdParty" / "stb"],
                         libs=libs, c_sources=[ROOT / "src" / "ThirdParty" / "lua" / "ee_lua.c"])
     print(f"built {exe}")
@@ -328,7 +340,8 @@ def cmd_tcptest(a):
                  f"/Fo{obj}", src], env=env)
             objs.append(obj)
         run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, "libcmt.lib",
-             "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS], env=env)
+             "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *platform_libs(t), *WIN32_SYSLIBS],
+            env=env)
     else:
         base = t.base_flags()
         game_flags = ["-fms-extensions", "-fms-compatibility", "-fdelayed-template-parsing",
@@ -343,7 +356,7 @@ def cmd_tcptest(a):
                 flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}", f"-I{ROOT / 'src' / 'ThirdParty' / 'stb'}"]
             run([t.clang(), *base, *flags, "-c", "-o", obj, src])
             objs.append(obj)
-        run([t.clang(), *t.link_flags(), "-o", exe, *objs, *(["-ldl"] if t.os == "linux" else [])])
+        run([t.clang(), *t.link_flags(), "-o", exe, *objs, *platform_libs(t)])
     print(f"built {exe}")
     if a.no_run:
         return 0
@@ -383,7 +396,8 @@ def build_won_test(t, name, units):
                 env=env)
             objs.append(obj)
         run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, "libcmt.lib",
-             "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS], env=env)
+             "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *platform_libs(t), *WIN32_SYSLIBS],
+            env=env)
     else:
         base = t.base_flags()
         for src in [*game, *platform_sources(t)]:
@@ -396,7 +410,7 @@ def build_won_test(t, name, units):
                 flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}", f"-I{ROOT / 'src' / 'ThirdParty' / 'stb'}"]
             run([t.clang(), *base, *flags, "-c", "-o", obj, src])
             objs.append(obj)
-        run([t.clang(), *t.link_flags(), "-o", exe, *objs, *(["-ldl", "-lpthread"] if t.os == "linux" else [])])
+        run([t.clang(), *t.link_flags(), "-o", exe, *objs, *platform_libs(t)])
     return exe
 
 
@@ -551,8 +565,7 @@ def cmd_sdltest(a):
     # file (PlatInput.cpp) is the game's and stays out: the SDL file implements the same functions
     srcs = [ROOT / "tools" / "sdl_test" / "sdl_test.cpp", ROOT / "src" / "Platform" / "SDL" / "PlatWindow.cpp",
             ROOT / "src" / "Platform" / "Common" / "PlatFont.cpp",
-            ROOT / "src" / "Platform" / "Common" / "PlatSim.cpp",   # gPlatSimMode, PlatDebugGetHandler (PlatWindow uses them)
-            *[s for s in platform_sources(t) if s.name in ("PlatMessage.cpp", "PlatThread.cpp", "PlatTime.cpp")]]
+            *[s for s in platform_sources(t) if s.name in ("PlatThread.cpp", "PlatPosixBridge.cpp")]]
     libs = [*sdl_libs(t), wlib]
     if t.os == "linux":
         libs += ["-lm", "-ldl"]
