@@ -245,6 +245,13 @@ void EECPBuildManager::BuilderLost(EEComplexUnit* inUnit)
     EEComplexUnit* theTarget = dynamic_cast<EEComplexUnit*>(theTargetUnit);
     if (theTarget == NULL || !theTarget->IsFoundation())
         return;
+    // the next engine (docs/AI_RESEARCH.md §8.35): a builder lost where enemy towers or soldiers are seen is not
+    // replaced (the playtest sent 80 citizens one after another to a settlement under the other player's towers)
+    if (EECPNextEngine(this->mPlayer) && EECPNextBuildUnsafe(this->mPlayer, theTarget->mTileX, theTarget->mTileY) != kNextBlockedNone) {
+        EE_CP_TRACE(this->mPlayer, "build.unsafe", "cls=%ld x=%ld y=%ld why=builder_lost", (long)theTarget->mUnitClass->mUnitType,
+            (long)theTarget->mTileX, (long)theTarget->mTileY);
+        return;
+    }
     EEComplexUnit* theWorker;
     {
         long theUnitType = theTarget->mUnitClass->mUnitType;
@@ -298,6 +305,14 @@ bool EECPBuildManager::StartBuilding(EECPBuildRequest inRequest)
         if (theHasTile)
             this->mManager->mWallManager->BuildWall(inRequest.second, inRequest.second, theClassID, false);
         theResult = true;
+    } else if (theHasTile && EECPNextEngine(this->mPlayer)
+               && EECPNextBuildUnsafe(this->mPlayer, theTile.mX, theTile.mY) != kNextBlockedNone) {
+        // the next engine (§8.35): the site (or the way there) came under enemy towers or soldiers since it was
+        // queued: dropped, and the strategy told
+        EE_CP_TRACE(this->mPlayer, "build.unsafe", "cls=%ld x=%ld y=%ld why=queued", theClassID, (long)theTile.mX,
+            (long)theTile.mY);
+        EECPNextEventAdd(this->mPlayer, kNextEventNoSite, theClassID, 1);
+        theNoSite = true;
     } else {
         this->mManager->mUnitManager->GetIdleCitizens(theWorkers);
         if (theWorkers.size() > 0) {
@@ -413,7 +428,30 @@ void EECPBuildManager::AssignBuilders()
             theBuildings.push_back(theUnit);
     }
     this->mManager->mUnitManager->GetCitizens(theWorkers);
+    bool theNext = EECPNextEngine(this->mPlayer);
     for (std::vector<EEUnit*>::iterator it = theBuildings.begin(); it != theBuildings.end(); it++) {
+        long theUnsafe = theNext ? EECPNextBuildUnsafe(this->mPlayer, (*it)->mTileX, (*it)->mTileY) : kNextBlockedNone;
+        if (theUnsafe != kNextBlockedNone) {
+            // the next engine (§8.35): no builder is sent; its builders leave it; a foundation under a seen enemy tower
+            // (or with one on the way) is given up and refunded, as CancelStalledBuilds does
+            for (unsigned long w = 0; w < theWorkers.size(); w++)
+                if (EECPBMBuildsTarget(*it)(theWorkers[w])) {
+                    theWorkers[w]->ClearGoalQueue(0);
+                    theWorkers[w]->StartAction(kActionIdle);
+                    theWorkers[w]->mUnitClass->ActionChanged(theWorkers[w]);
+                }
+            EEComplexUnit* theFoundation = (*it)->mComplexUnit;
+            if (theUnsafe == kNextBlockedTower && theFoundation != NULL && theFoundation->IsFoundation()) {
+                EE_CP_TRACE(this->mPlayer, "build.unsafe", "cls=%ld x=%ld y=%ld why=cancelled",
+                    (long)(*it)->mUnitClass->mUnitType, (long)(*it)->mTileX, (long)(*it)->mTileY);
+                EETechTreeNode* theNode = this->mPlayer->mTechnologies->Get((*it)->mUnitClass->mTechnology);
+                (*it)->Kill(0, 0, 0);
+                for (unsigned long i = 2; theNode != NULL && i < 7; i++)
+                    this->mPlayer->AddResource(i, this->mPlayer->ScaleCost(theNode->GetCost(i, 0x20, 1.0f)));
+                EECPNextEventAdd(this->mPlayer, kNextEventNoSite, (*it)->mUnitClass->mUnitType, 1);
+            }
+            continue;
+        }
         theFound = std::find_if(theWorkers.begin(), theWorkers.end(), EECPBMBuildsTarget(*it));
         if (theFound != theWorkers.end())
             continue;

@@ -48,6 +48,8 @@ enum EECPNextReason {
     kNextReasonRequirements,    // the epoch's SOL is not met, or the last epoch is reached
     kNextReasonBusy,            // already queued or under way
     kNextReasonNoTarget,        // a group verb: no place to go (no enemy town seen, nothing left to explore)
+    kNextReasonUnsafe,          // build: the site (or the way there from the town) is under an enemy tower or soldiers
+                                // seen there (EECPNextBuildUnsafe; docs/AI_RESEARCH.md §8.35)
 };
 
 struct EECPNextResult {
@@ -73,8 +75,10 @@ struct EECPNextSite {           // a resource centre (EEComputerPlayer::mResourc
     long units;                 // its resource units of that resource with some left (a mine's hit points drop to 0 at
                                 // the first gather, EEUnit::TakeHit; it stays until its amount is gone)
     long amount;                // what they still hold
-    long room;                  // gatherer slots left: units x the mining limit less the gatherers there
-    long workers;               // gatherers working its units now
+    long room;                  // gatherer slots left: the capacity less the workers
+    long workers;               // gatherers sent to its units (EECPNextAssigned: working, walking or waiting there)
+    long capacity;              // the gatherers it holds: a forage patch kNextPatchPlaces in all, a mine the mining
+                                // limit per unit (§8.35: the owner's "strictly no more than 6 to a patch")
     long x, y;                  // the tile of its first resource unit with some left
     long distance;              // tiles from the town centre
     long claimed;               // 1: active (gathered from)
@@ -110,6 +114,24 @@ const long kNextThreatRange = 9;            // tiles: seen enemy soldiers this n
 const long kNextThreatMs = 20000;           // ... remembered this long after they were last seen
 const long kNextTowerMargin = 3;            // tiles past a tower's range (the gatherers stand round the mine)
 const long kNextHomeRange = 20;             // tiles from the town centre: the start resources
+const long kNextPatchPlaces = 6;            // gatherers a forage patch holds in all, however many bushes (§8.35)
+const long kNextHuntRange = 24;             // tiles from the town centre: the game hunted at least (§8.35: hunters
+                                            // 40+ tiles out); the claim range when it is larger (EECPNextHuntReach)
+long EECPNextHuntReach(EEComputerPlayer* inPlayer);
+const long kNextHuntersPerAnimal = 3;       // hunters sent to one animal at most (the finder takes the next one then)
+const long kNextDockReach = 30;             // tiles from the town centre: the fish a dock is built for (§8.35)
+// the gatherers sent to a resource unit by the player: their gather goal names it (walking, waiting or working;
+// gWorld.GetResourceUsers counts only those working, so 9 were sent to one patch of 6)
+long EECPNextAssigned(EEComputerPlayer* inPlayer, EEUnit* inResource);
+// whether a resource unit has room for one more of the player's gatherers: the mining limit per unit and, for a forage
+// bush, kNextPatchPlaces over its whole patch (the resource centre holding it)
+bool EECPNextHasRoom(EEComputerPlayer* inPlayer, EEUnit* inResource);
+// whether a building at a tile would put its builders in harm's way: a seen enemy tower whose range covers the tile
+// or the straight way to it from the town centre, enemy soldiers seen within kNextThreatRange of it in the last
+// kNextThreatMs (away from the town), a danger zone (citizens hit there lately); 0: safe, else kNextBlocked*
+long EECPNextBuildUnsafe(EEComputerPlayer* inPlayer, long inX, long inY);
+// whether the straight way from the town centre to a tile crosses a seen enemy tower's reach (the tower's tile)
+long EECPNextRouteTower(EEComputerPlayer* inPlayer, long inX, long inY);
 // the unit id of the threat at a tile (0: none) and its kind (kNextBlockedEnemyNear, kNextBlockedTower); inNow: only
 // soldiers in sight now, no memory, no towers (a home site)
 long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inNow, long* outKind);
@@ -248,6 +270,12 @@ struct EECPNextView {
     std::vector<EECPNextGroupView> groups;  // the next engine's groups (EECPNextArmy.cpp)
     long free_soldiers;         // land soldiers in none of them (the classic attack commander keeps these)
     long free_strength;
+    // §8.35
+    long hunt;                  // huntable animals seen within EECPNextHuntReach of the town centre, not blocked
+    long hunters;               // land citizens hunting (their gather goal is an animal)
+    long wood_x, wood_y;        // the forest edge the wood gatherers go to (FindForestTarget; -1: none)
+    long wood_distance;         // its distance from the town centre
+    long wood_drop;             // 1: a drop site (town centre, settlement) within reach of it
 };
 
 void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView);

@@ -200,6 +200,65 @@ static bool EECPNextTowerRingSite(EEComputerPlayer* inPlayer, long inType, long 
     return false;
 }
 
+// the tiles between a building of inSize at a tile (its corner) and a resource unit's footprint (0: touching)
+static long EECPNextGap(long inX, long inY, long inSize, EEUnit* inUnit)
+{
+    long theUX = inUnit->GetTileX(), theUY = inUnit->GetTileY();
+    long theUSize = inUnit->mUnitClass->GetTileSize() > 0 ? inUnit->mUnitClass->GetTileSize() : 1;
+    long theDX = (std::max)((std::max)(theUX - (inX + inSize), inX - (theUX + theUSize)), 0L);
+    long theDY = (std::max)((std::max)(theUY - (inY + inSize), inY - (theUY + theUSize)), 0L);
+    return (std::max)(theDX, theDY);
+}
+
+// a drop site by its resource (§8.35, the owner: "settlements directly adjacent to all resource mines, not just randomly
+// 3 tiles away"): of the tiles in the rings 1..inLast round a tile where the class can be built (CanBuildAt keeps a
+// one-tile margin free, the gatherers' side), the one nearest the resource units (inUnits; the tile itself when
+// empty), then nearest the town centre (the shorter way home), then the first in the rings' order
+static bool EECPNextAdjacentSite(EEComputerPlayer* inPlayer, long inType, long inX, long inY, long inLast,
+    const std::vector<EEUnit*>& inUnits, EETileCoordinate& outTile, long& outGap)
+{
+    EECPBuildManager* theBuild = inPlayer->mCivilizationManager->mBuildManager;
+    EEUnitClass* theClass = gUnitClassTable[inType];
+    long theSize = theClass->GetTileSize() > 0 ? theClass->GetTileSize() : 1;
+    // the town's land (a tree's tile is forest, on no land continent: every settlement by a forest was refused)
+    unsigned short theContinent = gContinentManager.GetContinent(theBuild->mTownCenterTile, kAIPathLandMass);
+    long theTownX = theBuild->mTownCenterTile.mX, theTownY = theBuild->mTownCenterTile.mY;
+    std::vector<EETileCoordinate> theTiles;
+    bool theFound = false;
+    long theBestGap = 0;
+    long long theBestHome = 0;
+    for (long theRing = 1; theRing <= inLast; theRing++) {
+        theTiles.clear();
+        EEGetSquareRingTiles(inX - theSize / 2, inY - theSize / 2, theRing, theTiles);
+        for (unsigned long k = 0; k < theTiles.size(); k++) {
+            long theGap = 1000;
+            if (inUnits.empty()) {
+                long theDX = (std::max)((std::max)(inX - (theTiles[k].mX + theSize - 1), theTiles[k].mX - inX), 0L);
+                long theDY = (std::max)((std::max)(inY - (theTiles[k].mY + theSize - 1), theTiles[k].mY - inY), 0L);
+                theGap = (std::max)(theDX, theDY);
+            }
+            for (unsigned long u = 0; u < inUnits.size(); u++)
+                theGap = (std::min)(theGap, EECPNextGap(theTiles[k].mX, theTiles[k].mY, theSize, inUnits[u]));
+            if (theFound && theGap > theBestGap)
+                continue;
+            long long theDX = theTiles[k].mX - theTownX, theDY = theTiles[k].mY - theTownY;
+            long long theHome = theDX * theDX + theDY * theDY;
+            if (theFound && theGap == theBestGap && theHome >= theBestHome)
+                continue;
+            if (!theBuild->CanBuildAt(theContinent, inType, theTiles[k], theSize, true, true, inX, inY))
+                continue;
+            theFound = true;
+            theBestGap = theGap;
+            theBestHome = theHome;
+            outTile = theTiles[k];
+            outGap = theGap;
+        }
+        if (theFound && theBestGap <= 1 && theRing >= theBestGap + 2)
+            break;   // (nothing nearer lies further out)
+    }
+    return theFound;
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Gathering and claims (EECPResourceManager: AssignGatherers, RebalanceGatherers, the finders and SendToGather carry
 // them out; UpdateWantedGatherers, EECPRMSplitByDemand, EECPRMActivateNeeded, SettlePatches and GuardSites never run)
@@ -265,6 +324,8 @@ EECPNextResult EECPNextClaimRange(EEComputerPlayer* inPlayer, long inTiles)
 // Building (EECPBuildManager::QueueBuilding / QueueBuildingAt and the build runner; the QueueBuilding vetoes, the
 // ClaimExpand of StartBuilding, CheckBuildingCounts and QueueMoraleBuilding are classic only)
 
+static EECPNextResult EECPNextDockByFish(EEComputerPlayer* inPlayer);
+
 EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNear, long inArg1, long inArg2)
 {
     long theReason;
@@ -282,7 +343,10 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
             inType, inNear, inArg1, inArg2);
     EETileCoordinate theTile(0, 0);
     bool theFound = false;
+    long theGap = -1;   // a drop site's tiles from its resource (EECPNextAdjacentSite; -1: not placed that way)
     const char* theNearName = "town";
+    if (inNear == kNextNearTown && inType == kUnitTypeDock)
+        return EECPNextDockByFish(inPlayer);   // (§8.35: by the fish near home, or none)
     if (inNear == kNextNearTown)
         theFound = theBuild->FindSite(inType, theTile);   // the classic placement for the class
     else if (inNear == kNextNearSite) {
@@ -292,10 +356,16 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
         if (theCenter == NULL || !EECPNextSiteTile(theCenter, theX, theY))
             return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonBadArgument, 0, "cls=%ld near=site arg=%ld",
                 inType, inArg1);
-        // a settlement in the rings round the resource (EECPRMPatchSite: 2..kEECPPatchDropRange + 2), anything else
-        // a little further out so that it does not stand on the gatherers' path
-        theFound = inType == kUnitTypeSettlement ? EECPNextRingSite(inPlayer, inType, theX, theY, 2, kEECPPatchDropRange + 2, theTile)
-            : EECPNextRingSite(inPlayer, inType, theX, theY, 2, 7, theTile);
+        // a settlement next to the resource (EECPNextAdjacentSite: the nearest free tile to the centre's units, §8.35),
+        // anything else a little further out so that it does not stand on the gatherers' path
+        if (inType == kUnitTypeSettlement || inType == kUnitTypeGranary) {
+            std::vector<EEUnit*> theUnits;
+            for (unsigned long u = 0; u < theCenter->mUnits.size(); u++)
+                if (theCenter->mUnits[u]->mResourceAmount > 0 && theCenter->mUnits[u]->mTile != NULL)
+                    theUnits.push_back(theCenter->mUnits[u]);
+            theFound = EECPNextAdjacentSite(inPlayer, inType, theX, theY, kEECPPatchDropRange + 4, theUnits, theTile, theGap);
+        } else
+            theFound = EECPNextRingSite(inPlayer, inType, theX, theY, 2, 7, theTile);
         // a settlement with no room in those rings (trees, cliffs, other buildings round a mine): the rings a little
         // further out, then the centre's own placement (as BuildSettlementFor's fallback), still near the resource
         if (!theFound && inType == kUnitTypeSettlement) {
@@ -316,7 +386,11 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
         if (gWorld.mMap == NULL || inArg1 < 0 || inArg2 < 0 || gWorld.mMap->GetTile((unsigned long)inArg1, (unsigned long)inArg2) == NULL)
             return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonBadArgument, 0, "cls=%ld near=tile arg=%ld/%ld",
                 inType, inArg1, inArg2);
-        theFound = EECPNextRingSite(inPlayer, inType, inArg1, inArg2, 0, 6, theTile);
+        if (inType == kUnitTypeSettlement) {   // (§8.35: by the forest edge the wood gatherers work)
+            std::vector<EEUnit*> theNone;
+            theFound = EECPNextAdjacentSite(inPlayer, inType, inArg1, inArg2, 7, theNone, theTile, theGap);
+        } else
+            theFound = EECPNextRingSite(inPlayer, inType, inArg1, inArg2, 0, 6, theTile);
     }
     // a tower at the town: the classic placement (FindTowerSite: the gold, iron and worked food centres, gates, choke
     // points), else the rings 3..12 round the town centre away from the other towers (FindTowerSite finds nothing once
@@ -334,10 +408,15 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
     if (!theFound || (theTile.mX == 0 && theTile.mY == 0))
         return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonNoSite, 0, "cls=%ld near=%s arg=%ld/%ld", inType,
             theNearName, inArg1, inArg2);
+    // §8.35: never where the builders would walk under a seen enemy tower or into enemy soldiers seen there
+    long theUnsafe = EECPNextBuildUnsafe(inPlayer, theTile.mX, theTile.mY);
+    if (theUnsafe != kNextBlockedNone)
+        return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonUnsafe, 0, "cls=%ld near=%s arg=%ld/%ld x=%ld y=%ld why=%ld",
+            inType, theNearName, inArg1, inArg2, (long)theTile.mX, (long)theTile.mY, theUnsafe);
     bool theAfford = inPlayer->CanAfford(theNode, kUnitTypeCitizen, 1);
     theBuild->QueueBuildingAt(inType, theTile.mX, theTile.mY);
-    return EECPNextReport(inPlayer, "build", kNextQueued, kNextReasonNone, 1, "cls=%ld near=%s arg=%ld/%ld x=%ld y=%ld afford=%d",
-        inType, theNearName, inArg1, inArg2, (long)theTile.mX, (long)theTile.mY, theAfford ? 1 : 0);
+    return EECPNextReport(inPlayer, "build", kNextQueued, kNextReasonNone, 1, "cls=%ld near=%s arg=%ld/%ld x=%ld y=%ld gap=%ld afford=%d",
+        inType, theNearName, inArg1, inArg2, (long)theTile.mX, (long)theTile.mY, theGap, theAfford ? 1 : 0);
 }
 
 // the buildings of a type: built, going up and waiting in the build queues
@@ -360,6 +439,106 @@ static long EECPNextBuildingCount(EEComputerPlayer* inPlayer, long inType, long*
     return theCount;
 }
 
+static const long kNextDockSpacing = 12;   // tiles: fish this near one of the player's docks are served by it
+
+// a dock queued at the shore by the nearest fish within kNextDockReach of the town centre with none of the player's
+// docks within kNextDockSpacing of it: the rings 1..6 round the fish, the land tile nearest the town first
+static EECPNextResult EECPNextDockByFish(EEComputerPlayer* inPlayer)
+{
+    EECPBuildManager* theBuild = inPlayer->mCivilizationManager->mBuildManager;
+    EECPResourceManager* theResources = inPlayer->mCivilizationManager->mResourceManager;
+    long theReason;
+    EETechTreeNode* theNode = EECPNextClassNode(inPlayer, kUnitTypeDock, theReason);
+    if (theNode == NULL)
+        return EECPNextReport(inPlayer, "build", kNextRefused, theReason, 0, "cls=%ld near=fish", (long)kUnitTypeDock);
+    if (theBuild->mTownCenterTile.mX == -10000)
+        return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonNoSite, 0, "cls=%ld near=fish (no town)", (long)kUnitTypeDock);
+    long theTownX = theBuild->mTownCenterTile.mX, theTownY = theBuild->mTownCenterTile.mY;
+    std::vector<EEUnit*> theDocks;
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+        if (theUnit->mUnitClass->mUnitType == kUnitTypeDock && theUnit->mHitPoints > 0)
+            theDocks.push_back(theUnit);
+    for (long e = 0; e < EEEpochCount(); e++)
+        for (unsigned long k = 0; k < theBuild->mQueues[e].size(); k++)
+            if ((long)theBuild->mQueues[e][k].first == kUnitTypeDock)
+                return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonBusy, 0, "cls=%ld near=fish (queued)", (long)kUnitTypeDock);
+    EEUnitClass* theClass = gUnitClassTable[kUnitTypeDock];
+    long theSize = theClass->GetTileSize() > 0 ? theClass->GetTileSize() : 1;
+    unsigned short theContinent = gContinentManager.GetContinent(theBuild->mTownCenterTile, kAIPathLandMass);
+    EEUnit* theBestFish = NULL;
+    long long theBestD2 = 0;
+    long theNear = 0, theSeen = 0;   // (the trace: fish within reach, and of those seen)
+    for (unsigned long f = 0; f < theResources->mFish.size(); f++) {
+        EEComplexUnit* theFish = theResources->mFish[f];
+        if (theFish == NULL || !(theFish->mResourceAmount > 0) || theFish->mTile == NULL)
+            continue;
+        {
+            long long theDX = theFish->GetTileX() - theTownX, theDY = theFish->GetTileY() - theTownY;
+            if (theDX * theDX + theDY * theDY <= (long long)kNextDockReach * kNextDockReach)
+                theNear++;
+        }
+        // (seen or not: the fish by the town are the start's food, as the home mines are, §8.34; the AI never explores
+        // the water, and the playtest's town had fish at home but its dock 59 tiles out)
+        long long theDX = theFish->GetTileX() - theTownX, theDY = theFish->GetTileY() - theTownY;
+        long long theD2 = theDX * theDX + theDY * theDY;
+        if (theD2 > (long long)kNextDockReach * kNextDockReach || (theBestFish != NULL && theD2 >= theBestD2))
+            continue;
+        theSeen++;
+        bool theServed = false;
+        for (unsigned long d = 0; d < theDocks.size() && !theServed; d++) {
+            long long theX = theDocks[d]->GetTileX() - theFish->GetTileX(), theY = theDocks[d]->GetTileY() - theFish->GetTileY();
+            theServed = theX * theX + theY * theY <= (long long)kNextDockSpacing * kNextDockSpacing;
+        }
+        if (theServed)
+            continue;
+        // a shore tile for it
+        bool theShore = false;
+        std::vector<EETileCoordinate> theTiles;
+        for (long theRing = 1; theRing <= 6 && !theShore; theRing++) {
+            theTiles.clear();
+            EEGetSquareRingTiles(theFish->GetTileX(), theFish->GetTileY(), theRing, theTiles);
+            for (unsigned long k = 0; k < theTiles.size() && !theShore; k++)
+                theShore = theBuild->CanBuildAt(theContinent, kUnitTypeDock, theTiles[k], theSize, false, true, theTownX, theTownY);
+        }
+        if (theShore) {
+            theBestFish = theFish;
+            theBestD2 = theD2;
+        }
+    }
+    if (theBestFish == NULL)
+        return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonNoSite, 0, "cls=%ld near=fish fish=%ld seen=%ld (no fish near home)",
+            (long)kUnitTypeDock, theNear, theSeen);
+    EETileCoordinate theTile(0, 0);
+    bool theFound = false;
+    long long theBestHome = 0;
+    std::vector<EETileCoordinate> theTiles;
+    for (long theRing = 1; theRing <= 6 && !theFound; theRing++) {
+        theTiles.clear();
+        EEGetSquareRingTiles(theBestFish->GetTileX(), theBestFish->GetTileY(), theRing, theTiles);
+        for (unsigned long k = 0; k < theTiles.size(); k++) {
+            if (!theBuild->CanBuildAt(theContinent, kUnitTypeDock, theTiles[k], theSize, false, true, theTownX, theTownY))
+                continue;
+            long long theDX = theTiles[k].mX - theTownX, theDY = theTiles[k].mY - theTownY;
+            if (!theFound || theDX * theDX + theDY * theDY < theBestHome) {
+                theFound = true;
+                theBestHome = theDX * theDX + theDY * theDY;
+                theTile = theTiles[k];
+            }
+        }
+    }
+    if (!theFound)
+        return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonNoSite, 0, "cls=%ld near=fish", (long)kUnitTypeDock);
+    long theUnsafe = EECPNextBuildUnsafe(inPlayer, theTile.mX, theTile.mY);
+    if (theUnsafe != kNextBlockedNone)
+        return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonUnsafe, 0, "cls=%ld near=fish x=%ld y=%ld why=%ld",
+            (long)kUnitTypeDock, (long)theTile.mX, (long)theTile.mY, theUnsafe);
+    bool theAfford = inPlayer->CanAfford(theNode, kUnitTypeCitizen, 1);
+    theBuild->QueueBuildingAt(kUnitTypeDock, theTile.mX, theTile.mY);
+    return EECPNextReport(inPlayer, "build", kNextQueued, kNextReasonNone, 1, "cls=%ld near=fish fx=%ld fy=%ld x=%ld y=%ld afford=%d",
+        (long)kUnitTypeDock, (long)theBestFish->GetTileX(), (long)theBestFish->GetTileY(), (long)theTile.mX, (long)theTile.mY,
+        theAfford ? 1 : 0);
+}
+
 // fish(boats, docks) (from EECPRMRequestBoats): a dock at the shore while fewer than inDocks stand or are queued, then
 // fishing boats up to inBoats (made, in production or requested)
 EECPNextResult EECPNextFish(EEComputerPlayer* inPlayer, long inBoats, long inDocks)
@@ -371,7 +550,11 @@ EECPNextResult EECPNextFish(EEComputerPlayer* inPlayer, long inBoats, long inDoc
     long theDocks = EECPNextBuildingCount(inPlayer, kUnitTypeDock, &theBuilt);
     long theCode = kNextDone, theReason = kNextReasonNone, theCount = 0;
     if (theDocks < inDocks) {
-        EECPNextResult theDock = EECPNextBuild(inPlayer, kUnitTypeDock, kNextNearTown);
+        // §8.35 (the owner: "they have fish at home! no dock at home", "a dock really, really far away from home"):
+        // the dock goes to the shore by the nearest fish within kNextDockReach of the town that no dock of the
+        // player's serves yet (kNextDockSpacing); with no such fish, none (the classic shore site was the largest
+        // water's shore nearest the town, 59 tiles out in the playtest)
+        EECPNextResult theDock = EECPNextDockByFish(inPlayer);
         if (theDock.mCode == kNextRefused && theBuilt == 0)
             return EECPNextReport(inPlayer, "fish", kNextRefused, theDock.mReason, 0, "boats=%ld docks=%ld", inBoats, inDocks);
         theCode = kNextQueued;

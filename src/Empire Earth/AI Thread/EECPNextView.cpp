@@ -37,6 +37,11 @@
 #include "ee/EEWorld.h"
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIArea.h"
+#include "ee/EEAIForest.h"
+#include "ee/EEAIContinentManager.h"
+#include "ee/EEUnitGoal.h"
+#include "ee/EEUGGather.h"
+#include "ee/EEUGAttackUnit.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPBuildManager.h"
@@ -50,6 +55,8 @@
 
 static const long kNextSiteDangerRange = 12;   // tiles: the seen enemy soldiers that count as a site's danger
 static const long kNextTowerRange = 8;          // tiles: a tower this near guards a site (EECPRMGuardSites)
+static const long kNextDropReach = 3;           // tiles from a drop site's edge (about): a site's drop is at hand
+static const long kNextHuntMax = 30;            // animals counted at most in the view's hunt
 
 static long EECPNextSqrt(long long inValue)     // the integer square root (no float in the view)
 {
@@ -134,6 +141,131 @@ static void EECPNextUpdateThreats(EECPNextState* inState, long inNow)
     inState->mThreatsTime = inNow;
 }
 
+// the enemy tower (remembered, or an armed building in sight) whose range + half its size + inMargin tiles covers a
+// tile: its unit id, 0 none
+static long EECPNextTowerAt(const EECPNextState* inState, long inX, long inY, long inMargin)
+{
+    for (unsigned long t = 0; t < inState->mTowers.size(); t++) {
+        const EECPNextSpot& theSpot = inState->mTowers[t];
+        EEUnit* theTower = gWorld.GetUnit((unsigned long)theSpot.mUnit);
+        long theRange = EECPNextShootRange(theTower);
+        long theHalf = theTower != NULL ? theTower->mUnitClass->GetTileSize() / 2 : 1;
+        if (theRange == 0)
+            theRange = 6;   // (gone from the world unseen: the memory keeps it, at a guard tower's reach)
+        long theReach = theRange + theHalf + inMargin;
+        if (EECPNextDistance2(inX, inY, theSpot.mX + theHalf, theSpot.mY + theHalf) <= (long long)theReach * theReach)
+            return theSpot.mUnit;
+    }
+    for (unsigned long k = 0; k < inState->mSeen.size(); k++) {
+        const EECPNextSeen& theSeen = inState->mSeen[k];
+        if (theSeen.mKind != kSeenBuilding)
+            continue;
+        EEUnit* theBuilding = gWorld.GetUnit((unsigned long)theSeen.mUnit);
+        long theRange = EECPNextShootRange(theBuilding);
+        if (theRange == 0)
+            continue;
+        long theHalf = theBuilding->mUnitClass->GetTileSize() / 2;
+        long theReach = theRange + theHalf + inMargin;
+        if (EECPNextDistance2(inX, inY, theSeen.mX + theHalf, theSeen.mY + theHalf) <= (long long)theReach * theReach)
+            return theSeen.mUnit;
+    }
+    return 0;
+}
+
+static const long kNextRouteStep = 2;       // tiles between the points of a way checked for towers
+static const long kNextRouteMargin = 1;     // tiles past a tower's range a walker keeps off
+static const long kNextBuildHome = 20;      // tiles from the town centre: soldiers or a danger zone there do not stop a
+                                            // building (the defence answers them; a raid would stop every building)
+
+long EECPNextRouteTower(EEComputerPlayer* inPlayer, long inX, long inY)
+{
+    EECPNextState* theState = EECPNextGetState(inPlayer);
+    if (theState->mTowers.empty() && theState->mSeen.empty())
+        return 0;
+    EECPBuildManager* theBuild = inPlayer->mCivilizationManager->mBuildManager;
+    if (theBuild->mTownCenterTile.mX == -10000)
+        return 0;
+    long theTownX = theBuild->mTownCenterTile.mX, theTownY = theBuild->mTownCenterTile.mY;
+    long theLength = EECPNextSqrt(EECPNextDistance2(inX, inY, theTownX, theTownY));
+    for (long d = kNextRouteStep; d < theLength; d += kNextRouteStep) {
+        long theX = theTownX + (inX - theTownX) * d / theLength;
+        long theY = theTownY + (inY - theTownY) * d / theLength;
+        long theTower = EECPNextTowerAt(theState, theX, theY, kNextRouteMargin);
+        if (theTower != 0)
+            return theTower;
+    }
+    return 0;
+}
+
+long EECPNextBuildUnsafe(EEComputerPlayer* inPlayer, long inX, long inY)
+{
+    EECPNextState* theState = EECPNextGetState(inPlayer);
+    if (EECPNextTowerAt(theState, inX, inY, kNextTowerMargin) != 0 || EECPNextRouteTower(inPlayer, inX, inY) != 0)
+        return kNextBlockedTower;
+    EECPBuildManager* theBuild = inPlayer->mCivilizationManager->mBuildManager;
+    if (theBuild->mTownCenterTile.mX != -10000
+        && EECPNextDistance2(inX, inY, theBuild->mTownCenterTile.mX, theBuild->mTownCenterTile.mY)
+            <= (long long)kNextBuildHome * kNextBuildHome)
+        return kNextBlockedNone;
+    long theKind = kNextBlockedNone;
+    if (EECPNextSiteThreat(inPlayer, inX, inY, false, &theKind) != 0)
+        return theKind;
+    if (EECPRMResourceInDanger(inPlayer->mCivilizationManager->mResourceManager, inX, inY))
+        return kNextBlockedDanger;
+    return kNextBlockedNone;
+}
+
+// the resource centre holding a resource unit (NULL: none)
+static EECPResourceCenter* EECPNextCentreOf(EEComputerPlayer* inPlayer, EEUnit* inUnit)
+{
+    for (unsigned long k = 0; k < inPlayer->GetNumResourceCenters(); k++) {
+        EECPResourceCenter* theCenter = inPlayer->GetResourceCenter(k);
+        for (unsigned long u = 0; u < theCenter->mUnits.size(); u++)
+            if (theCenter->mUnits[u] == inUnit)
+                return theCenter;
+    }
+    return NULL;
+}
+
+long EECPNextHuntReach(EEComputerPlayer* inPlayer)
+{
+    long theRange = EECPClaimRange(inPlayer);
+    return theRange > kNextHuntRange ? theRange : kNextHuntRange;
+}
+
+long EECPNextAssigned(EEComputerPlayer* inPlayer, EEUnit* inResource)
+{
+    EECPResourceManager* theResources = inPlayer->mCivilizationManager->mResourceManager;
+    long theCount = 0;
+    for (long r = 0; r < 7; r++)
+        for (unsigned long k = 0; k < theResources->mGatherers[r].size(); k++) {
+            EEComplexUnit* theUnit = theResources->mGatherers[r][k];
+            if (theUnit->GetUnitClass()->mCategory != kUnitCategoryLandCitizen || !(theUnit->GetHitPoints() > 0))
+                continue;
+            EEUGGather* theGather = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
+            if (theGather != NULL && theGather->mResource == inResource)
+                theCount++;
+        }
+    return theCount;
+}
+
+bool EECPNextHasRoom(EEComputerPlayer* inPlayer, EEUnit* inResource)
+{
+    long theLimit = inPlayer->mMiningLimit > 0 ? (long)inPlayer->mMiningLimit : 1;
+    if ((long)gWorld.GetResourceUsers(inResource) >= theLimit || EECPNextAssigned(inPlayer, inResource) >= theLimit)
+        return false;
+    if (inResource->mUnitClass->mUnitType != kUnitTypeResForageBush)
+        return true;
+    EECPResourceCenter* theCenter = EECPNextCentreOf(inPlayer, inResource);
+    if (theCenter == NULL)
+        return true;
+    long thePatch = 0;
+    for (unsigned long u = 0; u < theCenter->mUnits.size(); u++)
+        if (theCenter->mUnits[u]->mUnitClass->mUnitType == kUnitTypeResForageBush)
+            thePatch += EECPNextAssigned(inPlayer, theCenter->mUnits[u]);
+    return thePatch < kNextPatchPlaces;
+}
+
 long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inNow, long* outKind)
 {
     EECPNextState* theState = EECPNextGetState(inPlayer);
@@ -153,34 +285,9 @@ long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inN
     if (theUnit == 0 && !inNow) {
         // the towers remembered (seen and not seen destroyed), then the armed buildings in sight; the reach is from
         // the building's centre
-        for (unsigned long t = 0; t < theState->mTowers.size() && theUnit == 0; t++) {
-            const EECPNextSpot& theSpot = theState->mTowers[t];
-            EEUnit* theTower = gWorld.GetUnit((unsigned long)theSpot.mUnit);
-            long theRange = EECPNextShootRange(theTower);
-            long theHalf = theTower != NULL ? theTower->mUnitClass->GetTileSize() / 2 : 1;
-            if (theRange == 0)
-                theRange = 6;   // (gone from the world unseen: the memory keeps it, at a guard tower's reach)
-            long theReach = theRange + theHalf + kNextTowerMargin;
-            if (EECPNextDistance2(inX, inY, theSpot.mX + theHalf, theSpot.mY + theHalf) <= (long long)theReach * theReach) {
-                theUnit = theSpot.mUnit;
-                theKind = kNextBlockedTower;
-            }
-        }
-        for (unsigned long k = 0; k < theState->mSeen.size() && theUnit == 0; k++) {
-            const EECPNextSeen& theSeen = theState->mSeen[k];
-            if (theSeen.mKind != kSeenBuilding)
-                continue;
-            EEUnit* theBuilding = gWorld.GetUnit((unsigned long)theSeen.mUnit);
-            long theRange = EECPNextShootRange(theBuilding);
-            if (theRange == 0)
-                continue;
-            long theHalf = theBuilding->mUnitClass->GetTileSize() / 2;
-            long theReach = theRange + theHalf + kNextTowerMargin;
-            if (EECPNextDistance2(inX, inY, theSeen.mX + theHalf, theSeen.mY + theHalf) <= (long long)theReach * theReach) {
-                theUnit = theSeen.mUnit;
-                theKind = kNextBlockedTower;
-            }
-        }
+        theUnit = EECPNextTowerAt(theState, inX, inY, kNextTowerMargin);
+        if (theUnit != 0)
+            theKind = kNextBlockedTower;
     }
     if (outKind != NULL)
         *outKind = theKind;
@@ -248,6 +355,13 @@ long EECPNextSiteBlocked(EEComputerPlayer* inPlayer, EEUnit* inUnit, long* outCa
         return theKind;
     if (theHome)
         return kNextBlockedNone;
+    // §8.35: the way there from the town passes a seen enemy tower (the playtest's builders walked through the other
+    // town to a site on its far side)
+    theCause = EECPNextRouteTower(inPlayer, theX, theY);
+    if (outCause != NULL)
+        *outCause = theCause;
+    if (theCause != 0)
+        return kNextBlockedTower;
     EECPCivilizationManager* theCivilization = inPlayer->mCivilizationManager;
     if (EECPRMResourceInDanger(theCivilization->mResourceManager, theX, theY))
         return kNextBlockedDanger;
@@ -536,9 +650,12 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
                 }
                 theSite.units++;
                 theSite.amount += theUnit->mResourceAmount;
-                theSite.workers += (long)gWorld.GetResourceUsers(theUnit);
+                theSite.workers += EECPNextAssigned(inPlayer, theUnit);   // (§8.35: sent there, not only working)
             }
-            theSite.room = theSite.units * theLimit - theSite.workers;
+            theSite.capacity = theSite.units * theLimit;
+            if (theSite.patch && theSite.capacity > kNextPatchPlaces)
+                theSite.capacity = kNextPatchPlaces;   // the owner: "strictly no more than 6 to a patch"
+            theSite.room = theSite.capacity - theSite.workers;
             if (theSite.room < 0)
                 theSite.room = 0;
         } else {
@@ -555,7 +672,9 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
         theSite.distance = theTown ? EECPNextSqrt(EECPNextDistance2(theSite.x, theSite.y, theTownX, theTownY)) : 0;
         const std::vector<EECPNextPlace>& theDropList = theSite.resource == 0 ? theFoodDrops : theDrops;
         for (unsigned long d = 0; d < theDropList.size() && !theSite.has_drop; d++) {
-            long theReach = kEECPPatchDropRange + 2 + theDropList[d].mReach;
+            // (§8.35, the owner: "settlements directly adjacent to all resource mines": a drop counts only this near; it
+            // was kEECPPatchDropRange + 2 + half, so the town centre 8-10 tiles off stood for the home mines' drop)
+            long theReach = kNextDropReach + theDropList[d].mReach;
             theSite.has_drop = EECPNextDistance2(theSite.x, theSite.y, theDropList[d].mX, theDropList[d].mY)
                 <= (long long)theReach * theReach ? 1 : 0;
         }
@@ -612,6 +731,53 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
         theCost.in_production = theMaking != theInProduction.end() ? theMaking->second : 0;
         theCost.counts_toward_epoch = theNode->mData->mCountsTowardEpoch ? 1 : 0;
         outView.costs.push_back(theCost);
+    }
+
+    // §8.35: the game near the town (what the hunters can take without walking 40 tiles), the hunters, and the forest
+    // edge the wood gatherers go to (FindForestTarget's) with whether a drop site is at hand there
+    outView.hunt = 0;
+    outView.hunters = 0;
+    outView.wood_x = outView.wood_y = -1;
+    outView.wood_distance = 0;
+    outView.wood_drop = 0;
+    if (theTown) {
+        for (unsigned long i = 0; i < theResources->mMines.size() && outView.hunt < kNextHuntMax; i++) {
+            EEComplexUnit* theAnimal = theResources->mMines[i];
+            if (theAnimal == NULL || !(theAnimal->mResourceAmount > 0) || !(theAnimal->mHitPoints > 0) || theAnimal->mTile == NULL)
+                continue;
+            long theReach = EECPNextHuntReach(inPlayer);
+            if (EECPNextDistance2(theAnimal->GetTileX(), theAnimal->GetTileY(), theTownX, theTownY)
+                > (long long)theReach * theReach)
+                continue;
+            if (!static_cast<EETile*>(theAnimal->mTile)->IsVisibleTo(inPlayer)
+                || EECPNextSiteBlocked(inPlayer, theAnimal, NULL) > kNextBlockedUnexplored)
+                continue;
+            outView.hunt++;
+        }
+        for (unsigned long k = 0; k < theResources->mGatherers[kResourceFood].size(); k++) {
+            EEComplexUnit* theUnit = theResources->mGatherers[kResourceFood][k];
+            if (theUnit->GetUnitClass()->mCategory != kUnitCategoryLandCitizen)
+                continue;
+            EEUnitGoal* theGoal = theUnit->GetLoadGoal();
+            EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoal);
+            EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theGoal);
+            if ((theGather != NULL && theGather->mResource != NULL
+                    && theGather->mResource->mUnitClass->mFamily == kUnitFamilyAnimal)
+                || (theAttack != NULL && theAttack->mTarget != NULL
+                    && theAttack->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal))
+                outView.hunters++;
+        }
+        EEUnit* theTree = theResources->FindForestTarget(0, NULL);
+        if (theTree != NULL && theTree->mTile != NULL) {
+            outView.wood_x = theTree->GetTileX();
+            outView.wood_y = theTree->GetTileY();
+            outView.wood_distance = EECPNextSqrt(EECPNextDistance2(outView.wood_x, outView.wood_y, theTownX, theTownY));
+            for (unsigned long d = 0; d < theDrops.size() && !outView.wood_drop; d++) {
+                long theReach = kNextDropReach + theDrops[d].mReach;
+                outView.wood_drop = EECPNextDistance2(outView.wood_x, outView.wood_y, theDrops[d].mX, theDrops[d].mY)
+                    <= (long long)theReach * theReach ? 1 : 0;
+            }
+        }
     }
 
     outView.events = theState->mEvents;
