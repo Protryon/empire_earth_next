@@ -6,6 +6,7 @@
 
 pub mod api;
 pub mod filter;
+pub mod movie;
 pub mod state;
 pub mod surface;
 pub mod vertex;
@@ -15,6 +16,8 @@ mod ffi;
 mod filter_ffi;
 #[cfg(not(test))]
 pub mod gx;
+#[cfg(not(test))]
+mod movie_ffi;
 #[cfg(not(test))]
 mod state_ffi;
 #[cfg(not(test))]

@@ -87,6 +87,10 @@ struct EeRmapResult;
 /// A `GEPolygonArray` of 16-bit triangle indices (`DrawIndexedPrimitive`'s WORD list).
 struct EeDx7PolygonArray;
 
+/// The decoded sound waiting for the mixer (`mSound`, `mSoundRead`, `mSoundCount`, `mSoundPosition`, `mSoundStep`):
+/// interleaved stereo at the movie's rate. C++ calls it under `mSoundAccess`.
+struct EeDx7SoundRing;
+
 /// A `GEVertexArray` of [`Dx7Vertex`]: no colour (reads give white, opacity 1; writes of colour and opacity are
 /// ignored).
 struct EeDx7StandardVertexArray;
@@ -135,6 +139,21 @@ struct Dx7StdColorVertex {
   uint32_t color;
   float tu;
   float tv;
+};
+
+/// `GESurfaceDescription` (`lle/GESurface.h`; pinned by `DX7Trampolines.cpp`).
+struct EeDx7SurfaceDescription {
+  unsigned long mType;
+  unsigned long mPixelFormat;
+  unsigned long mSurfaceVolatility;
+  unsigned long mWidth;
+  unsigned long mHeight;
+  unsigned long m14;
+  long mMipLevelCount;
+  unsigned long mPixelDepth;
+  bool mIs3DRenderable;
+  bool mIsTransparencyEnabled;
+  bool mNoAlpha;
 };
 
 /// `GXVIEWPORT`.
@@ -865,6 +884,43 @@ void ee_dx7_copy_with_filter_16(unsigned long format,
                                 uint32_t destination_pitch,
                                 const float *source_rect,
                                 const float *destination_rect);
+
+EeDx7SoundRing *ee_dx7m_ring_new();
+
+void ee_dx7m_ring_destroy(EeDx7SoundRing *ring);
+
+void ee_dx7m_ring_set_step(EeDx7SoundRing *ring, double step);
+
+/// `DecodedSamples`: `2 * inCount` interleaved floats.
+void ee_dx7m_ring_push(EeDx7SoundRing *ring, const float *samples, uint32_t count);
+
+/// `MixSound`: adds to `2 * count` floats.
+void ee_dx7m_ring_mix(EeDx7SoundRing *ring, float *out, uint32_t count);
+
+/// `DX7Movie::PlayMovie`: `movie` is the `DX7Movie*`, `filename` its file name (not NUL terminated in Rust).
+void ee_dx7m_play_movie(void *movie,
+                        const uint8_t *filename,
+                        size_t length,
+                        bool looping);
+
+/// `DX7Movie::RenderFrame`.
+int32_t ee_dx7m_render_frame(void *movie);
+
+/// `DecodedFrame`'s rows, through `GEPackBGRXRow`.
+void ee_dx7m_convert_frame(const uint8_t *bgra,
+                           uint32_t stride,
+                           uint8_t *destination,
+                           uint32_t pitch,
+                           uint32_t width,
+                           uint32_t height,
+                           unsigned long format);
+
+/// `CreateFrameBuffer`'s description.
+void ee_dx7m_frame_buffer_description(EeDx7SurfaceDescription *out,
+                                      uint32_t pixel_format,
+                                      uint32_t pixel_depth,
+                                      uint32_t width,
+                                      uint32_t height);
 
 bool ee_dx7r_set_alpha_testing(void *device, unsigned long in_state, unsigned long current);
 

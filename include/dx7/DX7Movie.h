@@ -40,7 +40,7 @@ public:
     void DecodedSamples(const float* inInterleaved, unsigned long inCount);
     static void MixSound(void* inMovie, float* outFrames, unsigned long inCount);
 
-private:
+    // port: the Rust playback thread's trampolines (ee_dx7cpp_movie_*, rust/crates/ee_dx7/src/movie_ffi.rs) reach these
     virtual ~DX7Movie();
     long CreateFrameBuffer(unsigned long inWidth, unsigned long inHeight);
     void Initialize(const FSFileSpec& inFile, unsigned long inScreen, bool inLoop);
@@ -64,13 +64,10 @@ private:
     volatile bool mJustStarted;
     bool mHasRectangle;
 
-    // the decoded sound waiting for the mixer: interleaved stereo at the movie's rate, a ring of mSound.size() floats
+    // the decoded sound waiting for the mixer (Rust: interleaved stereo at the movie's rate, a ring of floats)
     TSCriticalSection* mSoundAccess;
-    std::vector<float> mSound;
-    unsigned long mSoundRead;               // in floats
-    unsigned long mSoundCount;              // floats waiting
-    double mSoundPosition;                  // the fraction between the next two frames (resampling)
-    double mSoundStep;                      // movie frames per device frame
+    struct EeDx7SoundRing* mSoundRing;
+    void* mPLM;                             // plm_t* of the playing movie
 
     static TSCriticalSection* sMovieCriticalSection;
 };

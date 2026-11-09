@@ -5,7 +5,7 @@
 #![allow(non_snake_case)]
 #![allow(dead_code)] // the crate adopts the rest of the contract file by file
 
-use core::ffi::c_void;
+use core::ffi::{c_long, c_ulong, c_void};
 
 pub type H = *mut c_void;
 pub(crate) const NULL: H = core::ptr::null_mut();
@@ -24,6 +24,9 @@ pub(crate) const K_NATIVE: i32 = 1;
 pub(crate) const K_ALREADY: i32 = 2;
 pub(crate) const K_FAILED: i32 = 9;
 pub(crate) const K_NOT_SUPPORTED: i32 = 0xd;
+
+// kSurface*
+pub(crate) const SURFACE_SYSTEM_MEMORY: c_ulong = 4;
 
 // GXIID
 pub(crate) const IID_DIRECT3D7: u32 = 1;
@@ -128,6 +131,23 @@ pub struct Light {
     pub direction: [f32; 3],
     pub range: f32,
     pub attenuation: [f32; 3],
+}
+
+/// `GESurfaceDescription` (`lle/GESurface.h`; pinned by `DX7Trampolines.cpp`).
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct SurfaceDescription {
+    pub mType: c_ulong,
+    pub mPixelFormat: c_ulong,
+    pub mSurfaceVolatility: c_ulong,
+    pub mWidth: c_ulong,
+    pub mHeight: c_ulong,
+    pub m14: c_ulong,
+    pub mMipLevelCount: c_long,
+    pub mPixelDepth: c_ulong,
+    pub mIs3DRenderable: bool,
+    pub mIsTransparencyEnabled: bool,
+    pub mNoAlpha: bool,
 }
 
 /// The GX calls of the plug-in. `s`/`o` are `GXSurface*`, `b` a `GXVertexBuffer*`, `dd` a `GXDirectDraw*`, `d` a
