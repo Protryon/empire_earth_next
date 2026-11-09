@@ -1234,6 +1234,7 @@ fn the_stats_switch_counts_draws_and_logs_every_n_scenes() {
     assert_eq!(logs.iter().filter(|l| l.starts_with("GX stats")).count(), 3);
     assert!(logs.iter().any(|l| l.contains("2 scenes, 1 clears") && l.contains("triangles 1")));
     assert!(logs.iter().any(|l| l.contains("BGRA min 1,2,3,4 max 1,2,3,4")));
+    assert!(logs.iter().any(|l| l.starts_with("GX live: surfaces ") && l.contains("submissions in flight 0")));
     drop(logs);
     assert_eq!(g.stats, crate::stats::DrawStats::default(), "the counters restart");
 }

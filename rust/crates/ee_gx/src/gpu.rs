@@ -1,11 +1,11 @@
 //! The [`Backend`] on the `wgpu` crate. Thin on purpose: every choice is made in `gx`/`keys`; this file turns them into
 //! wgpu calls.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::ffi::c_void;
 use std::num::NonZeroU64;
 use std::ptr::NonNull;
-use std::sync::atomic::{AtomicI32, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 use std::sync::Arc;
 
 use wgpu::*;
@@ -17,6 +17,40 @@ use crate::keys::{self, BlitMode, SamplerDesc};
 use crate::plat::gx_log;
 use crate::shaders;
 use crate::surface::SurfaceId;
+
+/// Submissions the GPU may be behind by before `submit` waits for the oldest. Every submission keeps the objects it
+/// used (bind groups and textures dropped since, the staging buffers of `write_texture`/`write_buffer`) until the GPU
+/// has finished it, and nothing else bounds them: on WARP the CPU outran the GPU until DX12's shader-visible sampler
+/// heap (2048 descriptors, one per live bind group) was full.
+const MAX_SUBMISSIONS_IN_FLIGHT: usize = 8;
+/// Presented frames the GPU may be behind by before a present waits for the oldest one's work (DXGI's frame latency).
+const MAX_FRAMES_IN_FLIGHT: usize = 2;
+/// How long a wait for the GPU polls before it gives up (and says so).
+const GPU_WAIT_MS: u64 = 10_000;
+
+/// Polls the device until `done` (no blocking wait: a blocking device poll never returned in an x64 session, wgpu-native
+/// v29 on DX12/WARP); false after `timeout_ms`.
+fn poll_until(core: &Core, done: impl Fn() -> bool, timeout_ms: u64) -> bool {
+    let start = ee_plat_core::time::PlatTimeMilliseconds64();
+    let mut spin = 0u64;
+    loop {
+        if done() {
+            return true;
+        }
+        core.device.poll(Maintain::Poll);
+        core.instance.poll_all(false);
+        if done() {
+            return true;
+        }
+        if ee_plat_core::time::PlatTimeMilliseconds64() - start > timeout_ms {
+            return false;
+        }
+        if spin > 64 {
+            ee_plat_core::time::PlatSleep(if spin > 1000 { 1 } else { 0 });
+        }
+        spin += 1;
+    }
+}
 
 fn block_on<F: std::future::Future>(future: F) -> F::Output {
     let mut future = std::pin::pin!(future);
@@ -117,6 +151,12 @@ pub struct WgpuBackend {
     encoder: Option<CommandEncoder>,
     pass: Option<RenderPass<'static>>,
     pass_pipeline: Option<PipelineId>,
+    /// one flag per submission the GPU has not been seen to finish, oldest first
+    in_flight: VecDeque<Arc<AtomicBool>>,
+    /// the flags of the presented frames' last submissions, oldest first
+    frames: VecDeque<Arc<AtomicBool>>,
+    /// a wait for the GPU timed out (logged once)
+    wait_timed_out: bool,
 }
 
 impl WgpuBackend {
@@ -177,6 +217,38 @@ impl WgpuBackend {
             }
         }
         group
+    }
+
+    /// Drops the finished submissions from the front of `in_flight`.
+    fn retire(&mut self) {
+        while self.in_flight.front().is_some_and(|done| done.load(Ordering::SeqCst)) {
+            self.in_flight.pop_front();
+        }
+    }
+
+    /// Waits until the GPU has finished the submission `done` stands for (and every earlier one).
+    fn wait_for(&mut self, done: &AtomicBool) {
+        if !poll_until(self.core(), || done.load(Ordering::SeqCst), GPU_WAIT_MS) && !self.wait_timed_out {
+            self.wait_timed_out = true;
+            gx_log(&format!(
+                "GX: the GPU is {} submissions behind after {} ms; not waiting for it",
+                self.in_flight.len(),
+                GPU_WAIT_MS
+            ));
+        }
+        self.retire();
+    }
+
+    /// After a present: at most `MAX_FRAMES_IN_FLIGHT` frames' work unfinished.
+    fn frame_presented(&mut self) {
+        // the frame's blit was the last submission (gone from `in_flight` when finished, with every earlier one)
+        if let Some(last) = self.in_flight.back() {
+            self.frames.push_back(last.clone());
+        }
+        while self.frames.len() > MAX_FRAMES_IN_FLIGHT {
+            let oldest = self.frames.pop_front().unwrap();
+            self.wait_for(&oldest);
+        }
     }
 
     fn sampler(&mut self, key: u32) -> Sampler {
@@ -563,23 +635,13 @@ impl crate::gx::Backend for WgpuBackend {
         buffer.slice(..).map_async(MapMode::Read, move |result| {
             signal.store(if result.is_ok() { 1 } else { -1 }, Ordering::SeqCst);
         });
-        // poll without a blocking wait (a blocking device poll never returned in an x64 session, wgpu-native v29 on
-        // DX12/WARP): give the copy up to 10 s
-        let start = ee_plat_core::time::PlatTimeMilliseconds64();
-        let mut spin = 0u64;
-        while done.load(Ordering::SeqCst) == 0 {
-            core.device.poll(Maintain::Poll);
-            core.instance.poll_all(false);
-            if done.load(Ordering::SeqCst) != 0 {
-                break;
-            }
-            if ee_plat_core::time::PlatTimeMilliseconds64() - start > 10000 {
-                return ReadBack::TimedOut;
-            }
-            if spin > 64 {
-                ee_plat_core::time::PlatSleep(if spin > 1000 { 1 } else { 0 });
-            }
-            spin += 1;
+        // give the copy up to 10 s
+        if !poll_until(core, || done.load(Ordering::SeqCst) != 0, GPU_WAIT_MS) {
+            return ReadBack::TimedOut;
+        }
+        // the copy came after every earlier submission
+        for earlier in self.in_flight.drain(..) {
+            earlier.store(true, Ordering::SeqCst);
         }
         if done.load(Ordering::SeqCst) < 0 {
             return ReadBack::Failed;
@@ -630,7 +692,17 @@ impl crate::gx::Backend for WgpuBackend {
         self.pass = None;
         self.pass_pipeline = None;
         if let Some(encoder) = self.encoder.take() {
-            self.core().queue.submit(Some(encoder.finish()));
+            let queue = &self.core().queue;
+            queue.submit(Some(encoder.finish()));
+            let done = Arc::new(AtomicBool::new(false));
+            let signal = done.clone();
+            queue.on_submitted_work_done(move || signal.store(true, Ordering::SeqCst));
+            self.in_flight.push_back(done);
+            self.retire();
+            while self.in_flight.len() > MAX_SUBMISSIONS_IN_FLIGHT {
+                let oldest = self.in_flight[0].clone();
+                self.wait_for(&oldest);
+            }
         }
     }
 
@@ -753,6 +825,21 @@ impl crate::gx::Backend for WgpuBackend {
         if let Some(frame) = slot.frame.take() {
             frame.present();
         }
+        self.frame_presented();
+    }
+
+    fn live(&self) -> gx::LiveCounts {
+        let Some(core) = self.core.as_ref() else { return gx::LiveCounts::default() };
+        let hal = core.device.get_internal_counters().hal;
+        gx::LiveCounts {
+            cached_groups: self.surfaces.iter().map(|s| s.groups.len()).sum::<usize>() + core.white_groups.len(),
+            bind_groups: hal.bind_groups.read(),
+            textures: hal.textures.read(),
+            texture_views: hal.texture_views.read(),
+            samplers: hal.samplers.read(),
+            buffers: hal.buffers.read(),
+            in_flight: self.in_flight.iter().filter(|done| !done.load(Ordering::SeqCst)).count(),
+        }
     }
 }
 
@@ -790,7 +877,7 @@ mod tests {
     use crate::device;
     use crate::directdraw::{self, DirectDraw};
     use crate::fake::{FakePlatform, PlatformBase};
-    use crate::gx::Gx;
+    use crate::gx::{Backend as _, Gx};
     use crate::keys::BlitMode;
     use crate::modes::DisplayInfo;
 
@@ -933,6 +1020,90 @@ mod tests {
         gx.submit();
         let pixels = lock_read(&mut gx, id);
         assert!(pixels.iter().all(|p| *p & 0x00ff_ffff == 0x0000_ff00), "{:x}", pixels[0]);
+    }
+
+    /// The game on WARP: textures made, drawn with and destroyed every frame (DrawText's temporaries, the window image)
+    /// while the CPU outruns the GPU. Each submission keeps its dropped bind groups until the GPU finishes it, so without
+    /// a bound on the submissions in flight the live bind groups grew to DX12's 2048 shader-visible samplers and
+    /// `create_bind_group` failed ("Not enough memory left"). The live count must stay within the bound.
+    #[test]
+    fn device_dropped_bind_groups_stay_bounded_when_the_gpu_lags() {
+        let Some(mut gx) = try_start() else { return };
+        let dd = DirectDraw::new(&DisplayInfo::default());
+        // a large target: each stretched blit is slow on a software adapter, so the CPU gets ahead
+        let dst = target(&mut gx, &dd, 1024, 1024);
+        let desc = GxSurfaceDesc {
+            dwFlags: (GXSD_WIDTH | GXSD_HEIGHT) as _,
+            dwWidth: 32,
+            dwHeight: 32,
+            ddsCaps: GxSCaps { dwCaps: GXSCAPS_TEXTURE as _, dwCaps2: 0 },
+            ..Default::default()
+        };
+        let (source, whole) = (Rect::new(0, 0, 32, 32), Rect::new(0, 0, 1024, 1024));
+        gx.blit(dst, &whole, None, None, BlitMode::Fill, Some([0.0, 0.0, 0.0, 1.0]), 0.0, false);
+        gx.submit();
+        let base = gx.backend.live();
+        const PER_FRAME: usize = 24;
+        let (mut peak, mut peak_in_flight) = (0isize, 0usize);
+        for frame in 0..150u32 {
+            let mut ids = Vec::new();
+            for i in 0..PER_FRAME as u32 {
+                let id = directdraw::create_surface(&mut gx, &dd, &desc).unwrap();
+                gx.for_cpu_write(id);
+                gx.m(id).write_pixel(0, 0, frame << 8 | i);
+                gx.blit(dst, &whole, Some(id), Some(&source), BlitMode::Copy, None, 0.0, false);
+                ids.push(id);
+            }
+            for id in ids {
+                gx.release(id);
+            }
+            gx.submit();
+            let live = gx.backend.live();
+            assert_eq!(live.cached_groups, base.cached_groups, "a destroyed texture's bind groups are dropped");
+            peak = peak.max(live.bind_groups);
+            peak_in_flight = peak_in_flight.max(live.in_flight);
+        }
+        eprintln!(
+            "live bind groups: base {}, peak {peak}; submissions in flight: peak {peak_in_flight}",
+            base.bind_groups
+        );
+        assert!(peak_in_flight <= MAX_SUBMISSIONS_IN_FLIGHT, "{peak_in_flight} submissions in flight");
+        let bound = base.bind_groups + (PER_FRAME * (MAX_SUBMISSIONS_IN_FLIGHT + 1)) as isize;
+        assert!(peak <= bound, "{peak} live bind groups (bound {bound})");
+        // all of them go once the GPU is idle
+        let flag = gx.backend.in_flight.back().cloned();
+        if let Some(flag) = flag {
+            gx.backend.wait_for(&flag);
+        }
+        gx.backend.core().device.poll(Maintain::Poll);
+        assert_eq!(gx.backend.live().bind_groups, base.bind_groups);
+        assert_eq!(gx.backend.live().textures, base.textures);
+    }
+
+    /// A present waits for the work of the frame before the previous one.
+    #[test]
+    fn presents_keep_at_most_two_frames_in_flight() {
+        let Some(mut gx) = try_start() else { return };
+        let dd = DirectDraw::new(&DisplayInfo::default());
+        let dst = target(&mut gx, &dd, 512, 512);
+        for _ in 0..20 {
+            gx.blit(
+                dst,
+                &Rect::new(0, 0, 512, 512),
+                None,
+                None,
+                BlitMode::Fill,
+                Some([1.0, 0.0, 0.0, 1.0]),
+                0.0,
+                false,
+            );
+            gx.submit();
+            // what swap_present does after the present (no window here)
+            gx.backend.frame_presented();
+            assert!(gx.backend.frames.len() <= MAX_FRAMES_IN_FLIGHT);
+            assert!(gx.backend.live().in_flight <= MAX_FRAMES_IN_FLIGHT);
+        }
+        assert!(!gx.backend.wait_timed_out);
     }
 
     #[test]

@@ -140,6 +140,24 @@ pub trait Backend {
     fn swap_acquire(&mut self, primary: SurfaceId) -> bool;
     fn swap_begin_pass(&mut self, primary: SurfaceId);
     fn swap_present(&mut self, primary: SurfaceId);
+    /// The live GPU objects (`EE_GX_STATS`'s "GX live" line); a fake has none.
+    fn live(&self) -> LiveCounts {
+        LiveCounts::default()
+    }
+}
+
+/// The GPU objects alive now: `cached_groups` are the bind groups GX holds (per texture and the white texture's), the
+/// rest wgpu-hal's counters (raw objects not yet destroyed, including those kept by submissions in flight).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct LiveCounts {
+    pub cached_groups: usize,
+    pub bind_groups: isize,
+    pub textures: isize,
+    pub texture_views: isize,
+    pub samplers: isize,
+    pub buffers: isize,
+    /// submissions the GPU has not finished
+    pub in_flight: usize,
 }
 
 /// The platform layer and the environment.

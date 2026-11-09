@@ -113,6 +113,22 @@ pub fn stats_lines(s: &DrawStats) -> [String; 3] {
     ]
 }
 
+/// The live objects after the three lines (not in the C++): GX's surfaces and cached bind groups, wgpu-hal's raw
+/// objects (those of submissions in flight included) and the submissions the GPU has not finished.
+pub fn live_line(surfaces: usize, live: &crate::gx::LiveCounts) -> String {
+    format!(
+        "GX live: surfaces {}, cached bind groups {}; wgpu bind groups {}, textures {}, views {}, samplers {}, buffers {}; submissions in flight {}",
+        surfaces,
+        live.cached_groups,
+        live.bind_groups,
+        live.textures,
+        live.texture_views,
+        live.samplers,
+        live.buffers,
+        live.in_flight
+    )
+}
+
 /// The device state `DrawStats` reads.
 pub struct StatsInput<'a> {
     pub world: &'a [f32; 16],
