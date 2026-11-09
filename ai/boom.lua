@@ -27,10 +27,11 @@ local PLAN = {
         food_share = 55,        -- percent of the citizens on food at least
         food = 18,              -- citizens on food at least (the fishing boats come on top)
         patches = 3,            -- forage patches claimed at most
+        hunt = 6,               -- hunters at most (one an animal, within the claim range: view.hunt)
         soldiers = 0,           -- the mobile defence when nothing threatens (none: the militia and the towers)
         soldiers_max = 0,       -- under a threat
         towers = 3,
-        settlements = 3,
+        settlements = 4,          -- (§8.35: one by each worked patch and mine, the owner)
         barracks = 1, ranges = 0,
         barracks_at = 28,       -- citizens: the first barracks stands when the Stone Age's army is trained
         boats = 0, docks = 0,
@@ -46,10 +47,11 @@ local PLAN = {
         food_share = 25,
         food = 18,
         patches = 5,
+        hunt = 8,
         soldiers = 20, soldiers_max = 30,
         army_first = true,      -- the citizens wait (at the last epoch's count) until the soldiers are trained
         towers = 7,
-        settlements = 6,
+        settlements = 8,
         barracks = 2, ranges = 1,
         barracks_at = 10,
         boats = 10, docks = 2,
@@ -64,10 +66,11 @@ local PLAN = {
         food_share = 25,
         food = 18,
         patches = 5,
+        hunt = 8,
         soldiers = 20, soldiers_max = 40,
         barracks_at = 10,
         towers = 10,
-        settlements = 7,
+        settlements = 9,
         barracks = 2, ranges = 2,
         boats = 10, docks = 2,
         farms = 24, granaries = 3,
@@ -79,8 +82,15 @@ local PASS_MS = 10000           -- the claims, the gatherers and the buildings e
 local THREAT_MS = 90000         -- a threat seen keeps the town on guard this long
 local THREAT_MIN = 2500         -- weaker than this (a scout) is left to the militia and the towers
 local BACKOFF_MS = 60000        -- an order refused for want of a site or producer is not repeated for this long
-local SITE_PLACES = 6           -- gatherers a mine or a patch holds (the mining limit)
-local FAR_REACH = 60            -- tiles: how far a mineral with no site in the claim range is looked for
+local SITE_PLACES = 6           -- gatherers a mine unit holds (the mining limit); a forage patch holds 6 in all
+local FAR_REACH = 45            -- tiles: how far a mineral with no site in the claim range is looked for (was 60:
+                                -- on a Small map that is the other town, §8.35)
+local UNKNOWN_REACH = 38        -- tiles: how far out a site is taken while no enemy town has been seen
+local ENEMY_SHARE = 85          -- percent: a site is taken only this much nearer to the town than to an enemy town
+local ENEMY_KEEP_OFF = 25       -- tiles: and never this near a seen enemy town
+local HUNT_MAX = 6              -- hunters at most beside the patches (the owner: 6 hunt beside the patches)
+local HUNTERS_PER_ANIMAL = 3    -- (as the C++ finder, kNextHuntersPerAnimal)
+local WOOD_DROP_AT = 4          -- wood gatherers wanted from which the worked forest edge gets a settlement
 local SCOUT_AT = 90000          -- the first scout (a soldier) from here
 local SCOUTS = 3                -- scouts sent at most (a new one when the last was lost)
 local TOWER_STRENGTH = 4000     -- what a tower counts for against a threat (about three clubmen)
@@ -96,7 +106,7 @@ local MINERALS = {"stone", "gold", "iron"}
 local TOWER_CLASSES = {"b_guard_tower_paleo", "b_guard_tower_copper", "b_guard_tower_bronze", "b_guard_tower_middle"}
 -- never built for the SOL (as the classic ResearchCheapest), and houses: the boom has none
 local NOT_FOR_SOL = {b_town_center = true, b_capitol = true, b_settlement = true, b_farm = true, b_granary = true,
-                     b_house = true}
+                     b_house = true, b_dock = true}   -- (a dock for the SOL went 59 tiles out: the fish verb builds them, §8.35)
 local TRAINERS = {"b_barracks", "b_archery_range"}
 
 local M = {}
@@ -239,13 +249,52 @@ local function open_site(s)
     return s.blocked == nil or s.blocked == "unexplored"
 end
 
+-- a place the town may expand to (§8.35, the owner's fifth playtest: a settlement queued 50 tiles out in the other
+-- town, 80 citizens lost walking and building there): the home sites always; else well nearer to the town than to
+-- any enemy town seen (ENEMY_SHARE), never within ENEMY_KEEP_OFF of one, and while no enemy town has been seen not
+-- past UNKNOWN_REACH
+local function our_side(view, x, y, distance, home)
+    if home then
+        return true
+    end
+    local seen = false
+    for _, e in ipairs(view.enemies) do
+        if e.town_x ~= nil and e.town_x >= 0 then
+            seen = true
+            local dx, dy = x - e.town_x, y - e.town_y
+            local d2 = dx * dx + dy * dy
+            if d2 <= ENEMY_KEEP_OFF * ENEMY_KEEP_OFF
+                    or distance * distance * 10000 > d2 * ENEMY_SHARE * ENEMY_SHARE then
+                return false
+            end
+        end
+    end
+    return seen or distance <= UNKNOWN_REACH
+end
+
+local function safe_site(view, s)
+    return our_side(view, s.x, s.y, s.distance, s.home)
+end
+
+-- the gatherers a site holds for a resource (the view's capacity: 6 a forage patch, the mining limit a mine unit)
+local function places_of(s, resource)
+    if s.capacity ~= nil and s.resource == resource then
+        return s.capacity
+    end
+    if s.patch then
+        return SITE_PLACES
+    end
+    return s.holds[resource] * SITE_PLACES
+end
+
 -- the claims of one resource: the nearest open sites whose places hold the gatherers wanted, at least one while any
 -- are wanted, at most `most` (a claimed one under a passing threat is kept), are marked in `keep` and claimed. The
 -- patches stay inside the claim range; the minerals are looked for out to FAR_REACH, nearest first (the claim range
 -- holds a few small mines; the larger ones lie farther out). A mineral with no open site kept contests the nearest
 -- one only enemy soldiers keep the gatherers off (not a tower, a danger zone or another player's land): it is kept
--- and claimed, and the escort holds it (§8.34). Returns the places the kept sites hold and the contested site (nil:
--- none).
+-- and claimed, and the escort holds it (§8.34). Only sites on the town's side (safe_site, §8.35); a claimed one under
+-- a tower (or with one on the way) is not kept. Returns the places the kept sites hold, the contested site (nil: none)
+-- and the places of the kept sites the gatherers can go to now (open).
 local function claim_sites(view, order, keep, resource, patch, wanted, most, range)
     local want_sites = 0
     if wanted > 0 then
@@ -255,15 +304,17 @@ local function claim_sites(view, order, keep, resource, patch, wanted, most, ran
         want_sites = most
     end
     local reach = patch and range or FAR_REACH
-    local kept, places, open = 0, 0, 0
+    local kept, places, open, open_places = 0, 0, 0, 0
     local list = sites_of(view, resource, patch)
     for _, s in ipairs(list) do
-        if kept < want_sites and (open_site(s) or (s.claimed and s.blocked ~= "area")) and s.distance <= reach then
+        if kept < want_sites and (open_site(s) or (s.claimed and (s.blocked == "enemy_near" or s.blocked == "danger")))
+                and s.distance <= reach and safe_site(view, s) then
             kept = kept + 1
-            places = places + s.holds[resource] * SITE_PLACES
+            places = places + places_of(s, resource)
             keep[s.index] = true
             if open_site(s) then
                 open = open + 1
+                open_places = open_places + places_of(s, resource)
             end
             if not s.claimed then
                 order("claim_" .. resource, {verb = "claim", site = s.index})
@@ -273,11 +324,11 @@ local function claim_sites(view, order, keep, resource, patch, wanted, most, ran
     local contest = nil
     if open == 0 and want_sites > 0 and not patch then
         for _, s in ipairs(list) do
-            if contest == nil and s.blocked == "enemy_near" and s.distance <= reach then
+            if contest == nil and s.blocked == "enemy_near" and s.distance <= reach and safe_site(view, s) then
                 contest = s
                 if not keep[s.index] then
                     keep[s.index] = true
-                    places = places + s.holds[resource] * SITE_PLACES
+                    places = places + places_of(s, resource)
                     if not s.claimed then
                         order("claim_" .. resource, {verb = "claim", site = s.index})
                     end
@@ -285,7 +336,7 @@ local function claim_sites(view, order, keep, resource, patch, wanted, most, ran
             end
         end
     end
-    return places, contest
+    return places, contest, open_places
 end
 
 -- every claimed patch or mine the plan does not keep is released (the start-up claims far ones)
@@ -335,7 +386,14 @@ function M.step(view, memory)
     memory.bad_spots = memory.bad_spots or {}
     for i, r in ipairs(view.results) do
         local tag = memory.tags[i]
-        if tag ~= nil and r.code == "refused" and (r.reason == "no_site" or r.reason == "no_producer") then
+        if tag ~= nil and r.code == "refused" and tag == "improve" then
+            -- a tower improvement: no level left waits for the next tower class, else a minute
+            if r.reason == "requirements" or r.reason == "bad_argument" or r.reason == "not_in_epoch" then
+                memory.improved = memory.improve_class
+            end
+            memory.backoff[tag] = view.time + BACKOFF_MS
+        elseif tag ~= nil and r.code == "refused"
+                and (r.reason == "no_site" or r.reason == "no_producer" or r.reason == "unsafe") then
             local spot = memory.spots ~= nil and memory.spots[i] or ""
             if spot ~= "" then
                 memory.bad_spots[spot] = view.time + 5 * BACKOFF_MS
@@ -503,6 +561,28 @@ function M.step(view, memory)
             cap = math.min(cap, PLAN[age - 1].citizens)
         end
     end
+    -- (§8.35, the owner: "if there is only 12 spots for a resource available, use only that 12"): in the Prehistoric no
+    -- more citizens than the patches, the game near the town, the planned wood and the mines' places can take (from
+    -- the Stone Age the claims grow with the town: a cap there kept iron at one site and the Copper Age 7 min later)
+    if age == 1 and memory.useful ~= nil and cap > memory.useful then
+        cap = memory.useful
+    end
+    -- the soldiers' share (§8.35, the owner: "~20 spearmen in the Stone Age so it can stop a raid"): past the
+    -- soldiers-first window, while the light army is short and the food gatherers fill the food places, a citizen is
+    -- trained only from the food above what two soldiers cost, when the soldiers' other resource is in stock (the
+    -- citizens took every 50 food as it came in, and the army was 5 at 30 minutes)
+    if plan.army_first and army_short and view.army_count < plan.soldiers and soldier_cost ~= nil and citizen
+            and view.gatherers.food >= ((memory.want or {}).food or 0) then
+        local soldiers_payable = true
+        for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
+            if soldier_cost[r] > 0 and view.stock[r] - reserve[r] < 2 * soldier_cost[r] then
+                soldiers_payable = false
+            end
+        end
+        if soldiers_payable and view.stock.food - reserve.food < 2 * soldier_cost.food + citizen.cost.food then
+            cap = math.min(cap, planned)
+        end
+    end
     if citizen and waiting == 0 and making < 2 * math.max(citizen.producers, 1) and planned < cap
             and view.population < view.population_cap then
         order("citizen", {verb = "train", type = "citizen", n = math.min(cap - planned, 2)})
@@ -550,8 +630,14 @@ function M.step(view, memory)
         end
         while others > 0 and land - others < food_min do
             local big, big_n = nil, nil
+            -- (while the army is short the soldiers' iron gives way only when nothing else is left: the Copper Age's
+            -- gold counted as the larger lack, so iron went to 0 in a third of the bench's Stone Age minutes and the
+            -- spearmen came one per 30 iron gathered, §8.35)
             for _, r in ipairs({"iron", "gold", "stone", "wood"}) do
                 local spare = want[r] - needed[r]
+                if army_short and r == "iron" then
+                    spare = -1000000
+                end
                 if want[r] > 0 and (big_n == nil or spare > big_n) then
                     big, big_n = r, spare
                 end
@@ -568,8 +654,14 @@ function M.step(view, memory)
         -- site the gatherers can reach gets none: they would wander between resources
         local range = view.claim_range
         local keep = {}
-        local patch_places = claim_sites(view, order, keep, "food", true, want.food, plan.patches, range)
-        if (patch_places == 0 or memory.grow_claim) and range < math.min(plan.claim_max, view.claim_range_max) then
+        -- the food places (§8.35): the open patches kept (6 each), the game near the town (HUNT_MAX at most, one
+        -- hunter an animal) and, from the Copper Age, the farms
+        local hunt_places = math.min((view.hunt or 0) * HUNTERS_PER_ANIMAL, plan.hunt or HUNT_MAX)
+        local farm_places = V.total(V.buildings(view, "b_farm"))
+        local food_wanted = want.food
+        local _, _, patch_places = claim_sites(view, order, keep, "food", true, want.food, plan.patches, range)
+        if (patch_places + hunt_places < want.food - farm_places or memory.grow_claim)
+                and range < math.min(plan.claim_max, view.claim_range_max) then
             order("claim_range", {verb = "claim_range", range = range + view.claim_range_step})
         end
         memory.grow_claim = nil
@@ -577,9 +669,11 @@ function M.step(view, memory)
         -- (none at all, or only a contested one they go to once its escort has cleared it)
         memory.no_site = {}
         local contest = nil
+        local mineral_places = {}
         for _, r in ipairs(MINERALS) do
             local places, c = claim_sites(view, order, keep, r, false, want[r], 3, range)
             memory.no_site[r] = want[r] > 0 and (places == 0 or c ~= nil)
+            mineral_places[r] = places
             if c ~= nil and (contest == nil or c.distance < contest.distance) then
                 contest = c
             end
@@ -588,6 +682,28 @@ function M.step(view, memory)
                 want[r] = places
             end
         end
+        -- no more on food than it has places for (§8.35: 16 on two patches of 6, the rest waiting; the owner: "if
+        -- there is only 12 spots ... use only that 12"): the rest go to the mines' places (iron, gold, stone: the
+        -- advance and the soldiers spend them), then to wood up to the plan's cap, and the citizens are not trained past
+        -- what has work (memory.useful)
+        local food_cap = patch_places + hunt_places + farm_places
+        if want.food > food_cap then
+            local spill = want.food - food_cap
+            want.food = food_cap
+            for _, r in ipairs({"iron", "gold", "stone"}) do
+                local n = math.min(spill, math.max(math.min(plan.cap[r], mineral_places[r]) - want[r], 0))
+                want[r] = want[r] + n
+                spill = spill - n
+            end
+            local n = math.min(spill, math.max(plan.cap.wood - want.wood, 0))
+            want.wood = want.wood + n
+        end
+        local useful = food_cap + plan.cap.wood + 2
+        for _, r in ipairs(MINERALS) do
+            useful = useful + math.min(plan.cap[r], mineral_places[r])
+        end
+        memory.useful = useful
+        memory.food_cap = food_cap
         release_unkept(view, order, keep)
         memory.contest = contest ~= nil and {x = contest.x, y = contest.y} or nil
 
@@ -615,7 +731,24 @@ function M.step(view, memory)
             if best ~= nil then
                 order("settlement", {verb = "build", type = "b_settlement", near = "site", site = best.index},
                       spot_of(best))
+            else
+                -- (§8.35: every wood trip was a far one) by the forest edge the wood gatherers work, when it has no
+                -- drop site at hand
+                local w = view.wood
+                if w ~= nil and not w.has_drop and want.wood >= WOOD_DROP_AT and w.distance > 6
+                        and our_side(view, w.x, w.y, w.distance, false)
+                        and memory.bad_spots["w" .. w.x .. "," .. w.y] == nil then
+                    order("settlement_wood", {verb = "build", type = "b_settlement", near = "tile", x = w.x, y = w.y},
+                          "w" .. w.x .. "," .. w.y)
+                end
             end
+        end
+
+        -- (§8.35, the owner: "upgrading tower range is worth it for AI") the towers' range, a level at a time, once
+        -- three towers stand, from the Stone Age, never out of the reserve (the verb keeps it)
+        if age >= 2 and tower ~= nil and towers_built >= 3 and not scramble and memory.improved ~= tower then
+            memory.improve_class = tower
+            order("improve", {verb = "improve", type = tower, what = "range"})
         end
 
         -- towers: the first at the town, then at the worked sites (the nearest unguarded first), one at a time; under a
@@ -702,7 +835,7 @@ function M.step(view, memory)
             if V.total(granaries) < 1 and V.cost(view, "b_granary") ~= nil then
                 order("granary", {verb = "build", type = "b_granary", near = "town"})
             elseif (farms == nil or farms.queued < 2) and V.total(farms) < plan.farms
-                    and patch_room < want.food - view.gatherers.food + 4 then
+                    and patch_room < food_wanted - view.gatherers.food + 4 then
                 order("farm", {verb = "build", type = "b_farm", near = "town"})
             elseif V.total(farms) >= 8 and V.total(granaries) < plan.granaries then
                 order("granary", {verb = "build", type = "b_granary", near = "town"})

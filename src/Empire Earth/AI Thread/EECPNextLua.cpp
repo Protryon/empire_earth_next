@@ -50,6 +50,7 @@
 #include "ee/EECPLua.h"
 #include "ee/EECPNext.h"
 #include "ee/EECPEngine.h"
+#include "ee/EEImprovementIDs.h"
 #include "EEDataText.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
@@ -204,6 +205,7 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("amount", EECPNextInt(s.amount));
         e.Set("room", EECPNextInt(s.room));
         e.Set("workers", EECPNextInt(s.workers));
+        e.Set("capacity", EECPNextInt(s.capacity));
         e.Set("x", EECPNextInt(s.x));
         e.Set("y", EECPNextInt(s.y));
         e.Set("distance", EECPNextInt(s.distance));
@@ -332,6 +334,17 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
     v.Set("groups", theGroups);
     v.Set("free_soldiers", EECPNextInt(inView.free_soldiers));
     v.Set("free_strength", EECPNextInt(inView.free_strength));
+    // §8.35: the game near the town, the hunters, the worked forest edge
+    v.Set("hunt", EECPNextInt(inView.hunt));
+    v.Set("hunters", EECPNextInt(inView.hunters));
+    if (inView.wood_x >= 0) {
+        EECPLuaValue theWood = EECPLuaValue::NewMap();
+        theWood.Set("x", EECPNextInt(inView.wood_x));
+        theWood.Set("y", EECPNextInt(inView.wood_y));
+        theWood.Set("distance", EECPNextInt(inView.wood_distance));
+        theWood.Set("has_drop", EECPLuaValue::Bool(inView.wood_drop != 0));
+        v.Set("wood", theWood);
+    }
     EECPLuaValue theResults = EECPLuaValue::NewArray();
     for (unsigned long k = 0; k < inResults.size(); k++) {
         EECPLuaValue e = EECPLuaValue::NewMap();
@@ -542,6 +555,21 @@ static EECPNextResult EECPNextRunOrder(EEComputerPlayer* inPlayer, const EECPLua
         if (theID < 0)
             return EECPNextRefuse(inPlayer, v, "unknown tech " + theTech);
         return EECPNextResearch(inPlayer, theID);
+    }
+    if (v == "improve") {
+        // {verb="improve", type="b_guard_tower_paleo", what="range"} (§8.35); what: attack, hit_points, range, speed
+        std::string theType = r.Str("type", "", true);
+        std::string theWhat = r.Str("what", "", true);
+        if (!r.Done())
+            return EECPNextRefuse(inPlayer, v, r.mProblem);
+        long theClass = EECPNextClassByName(theType);
+        if (theClass < 0)
+            return EECPNextRefuse(inPlayer, v, "unknown type " + theType);
+        long theKind = theWhat == "range" ? kImprovementRange : theWhat == "attack" ? kImprovementAttack
+            : theWhat == "hit_points" ? kImprovementHitPoints : theWhat == "speed" ? kImprovementSpeed : -1;
+        if (theKind < 0)
+            return EECPNextRefuse(inPlayer, v, "what " + theWhat);
+        return EECPNextImprove(inPlayer, theClass, theKind);
     }
     if (v == "advance") {
         if (!r.Done())

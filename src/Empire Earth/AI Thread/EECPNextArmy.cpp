@@ -66,6 +66,7 @@ static const long kNextRaidSoldierRange = 6;   // a raid fights soldiers only th
 static const long kNextCitizenRange = 20;      // an attack goes for the citizens it sees this near (before buildings)
 static const long kNextBoatRange = 7;          // ranged units shoot at boats and ships this near the centre
 static const long kNextTowerAvoid = 9;         // a raid leaves targets this near a known tower alone
+static const long kNextShipAvoid = 10;         // tiles: units that cannot shoot keep this far from a warship (§8.35)
 static const long kNextArrive = 6;             // a group this near its place has arrived
 static const long kNextLeg = 14;               // a move goes this far ahead of the group's centre
 static const long kNextFormMs = 20000;         // the longest a group forms
@@ -689,6 +690,47 @@ static void EECPNextScoutStep(EEComputerPlayer* inPlayer, EECPNextGroup& ioGroup
     }
 }
 
+// the units of a group not fighting that stand within kNextShipAvoid tiles of a seen warship among the candidates
+// walk out of its reach: back to the group's place, or away from the ship when the place is in reach too (§8.35)
+static void EECPNextAvoidShips(EEComputerPlayer* inPlayer, const EECPNextState* inState, EECPNextGroup& ioGroup,
+    const std::vector<long>& theCandidates)
+{
+    for (unsigned long k = 0; k < ioGroup.mUnits.size(); k++) {
+        EEComplexUnit* theUnit = ioGroup.mAims[k] == 0 ? EECPNextGroupUnit(inPlayer, ioGroup.mUnits[k]) : NULL;
+        if (theUnit == NULL || !EECPNextCanOrder(theUnit))
+            continue;
+        long theShip = -1;
+        long long theShipD2 = 0;
+        for (unsigned long c = 0; c < theCandidates.size(); c++) {
+            const EECPNextSeen& theSeen = inState->mSeen[theCandidates[c]];
+            long long theD2 = EECPNextD2(theUnit->GetTileX(), theUnit->GetTileY(), theSeen.mX, theSeen.mY);
+            if (theSeen.mKind == kSeenShip && (theShip < 0 || theD2 < theShipD2)) {
+                theShip = theCandidates[c];
+                theShipD2 = theD2;
+            }
+        }
+        if (theShip < 0 || theShipD2 > (long long)kNextShipAvoid * kNextShipAvoid)
+            continue;
+        const EECPNextSeen& theSeen = inState->mSeen[theShip];
+        long theX = ioGroup.mX, theY = ioGroup.mY;
+        long long theD2 = EECPNextD2(theX, theY, theSeen.mX, theSeen.mY);
+        if (theD2 <= (long long)kNextShipAvoid * kNextShipAvoid) {
+            // the group's place is in reach too: away from the ship, kNextShipAvoid + 2 tiles from it
+            long theDX = theUnit->GetTileX() - theSeen.mX, theDY = theUnit->GetTileY() - theSeen.mY;
+            long theD = EECPNextRoot(theShipD2);
+            if (theD < 1) {
+                theD = 1;
+                theDX = 1;
+            }
+            theX = theSeen.mX + theDX * (kNextShipAvoid + 2) / theD;
+            theY = theSeen.mY + theDY * (kNextShipAvoid + 2) / theD;
+        }
+        if (theX < 0 || theY < 0)
+            continue;
+        EECPNextGiveMove(theUnit, theX, theY, true);
+    }
+}
+
 static void EECPNextGroupStep(EEComputerPlayer* inPlayer, EECPNextState* inState, EECPNextGroup& ioGroup, long inNow)
 {
     long theCX, theCY;
@@ -744,13 +786,29 @@ static void EECPNextGroupStep(EEComputerPlayer* inPlayer, EECPNextState* inState
         for (unsigned long k = 0; k < ioGroup.mAims.size(); k++)
             theOthers = theOthers || ioGroup.mAims[k] == 0;
         if (theOthers) {
-            const EECPNextSeen& theFirst = inState->mSeen[theCandidates[0]];
-            EECPNextMove(inPlayer, ioGroup, theCX, theCY, theFirst.mX, theFirst.mY, false, inNow);
+            // (§8.35, the owner: "they shouldn't respond to naval bombardment with melee units, only ranged": the ones
+            // not fighting closed in on the first target, a warship, and the spearmen died on the shore) a land target
+            // to close in on; with only ships and boats to fight, those not fighting keep out of the ships' reach
+            long theLand = -1;
+            for (unsigned long c = 0; c < theCandidates.size() && theLand < 0; c++)
+                if (inState->mSeen[theCandidates[c]].mKind != kSeenBoat && inState->mSeen[theCandidates[c]].mKind != kSeenShip)
+                    theLand = theCandidates[c];
+            if (theLand >= 0)
+                EECPNextMove(inPlayer, ioGroup, theCX, theCY, inState->mSeen[theLand].mX, inState->mSeen[theLand].mY, false, inNow);
+            else
+                EECPNextAvoidShips(inPlayer, inState, ioGroup, theCandidates);
         }
         return;
     }
     for (unsigned long k = 0; k < ioGroup.mAims.size(); k++)
         ioGroup.mAims[k] = 0;
+    bool theShips = false;
+    for (unsigned long c = 0; c < theCandidates.size() && !theShips; c++)
+        theShips = inState->mSeen[theCandidates[c]].mKind == kSeenShip;
+    if (theShips) {   // ships to fight and no one to shoot them: out of their reach until they go (§8.35)
+        EECPNextAvoidShips(inPlayer, inState, ioGroup, theCandidates);
+        return;
+    }
     if (ioGroup.mState == kNextGroupFighting)
         ioGroup.mWayTime = 0;   // the fight is over: on to its place
     if (ioGroup.mState == kNextGroupForming) {
