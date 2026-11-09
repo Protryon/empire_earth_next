@@ -132,9 +132,12 @@ unsafe fn monotonic_now() -> libc::timespec {
     now
 }
 
+/// `time` plus a timeout of `ms` milliseconds: of the harness clock when its factor is set (platform/PlatSim.h
+/// PlatSimSetTimeFactor: 1/F of the real time), else real ones.
 fn add_milliseconds(mut time: libc::timespec, ms: u32) -> libc::timespec {
-    time.tv_sec += (ms / 1000) as libc::time_t;
-    time.tv_nsec += ((ms % 1000) as libc::c_long) * 1_000_000;
+    let ns = ee_plat_core::sim_clock::real_timeout_nanoseconds(ms).unwrap_or(u64::from(ms) * 1_000_000);
+    time.tv_sec += (ns / 1_000_000_000) as libc::time_t;
+    time.tv_nsec += (ns % 1_000_000_000) as libc::c_long;
     if time.tv_nsec >= 1_000_000_000 {
         time.tv_sec += 1;
         time.tv_nsec -= 1_000_000_000;

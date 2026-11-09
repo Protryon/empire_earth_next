@@ -12,6 +12,7 @@ pub mod config;
 pub mod message;
 pub mod path;
 pub mod sim;
+pub mod sim_clock;
 pub mod string;
 pub mod time;
 
