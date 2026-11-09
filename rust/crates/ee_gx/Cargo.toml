@@ -1,0 +1,23 @@
+[package]
+name = "ee_gx"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+ee_plat_core = { path = "../ee_plat_core" }
+log = "0.4"
+parking_lot = "0.12"
+raw-window-handle = "0.6"
+
+[dependencies.wgpu]
+git = "https://github.com/gfx-rs/wgpu"
+tag = "v24.0.3"
+default-features = false
+features = ["wgsl", "dx12", "metal"]
+
+[dev-dependencies]
+naga = { workspace = true, features = ["wgsl-in"] }

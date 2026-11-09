@@ -11,7 +11,7 @@ protocol, the mixer, the Default random map generator, the DX7 T&L renderer; reg
 language resources, with miniaudio, dmusic and pl_mpeg for sound, music and movies. Only Windows system DLLs are
 imported. Every unit is compiled first (tools/clang_build.py, objects in <out>/obj), then linked: one plain lld-link
 of every object, the image libraries (an archive), the Windows SDK import libraries, the static libraries (SDL3,
-wgpu-native) and runtime, and the resources.
+the Rust library) and runtime, and the resources.
 Every symbol is defined in source (the WON library too: module won).
 
 --test-profile windowed-software (TEST ONLY; default out build/clang-test): images for the headless live-game
@@ -119,7 +119,7 @@ def compile_all(targets, out, opt, jobs, overlays=None, extra=(), more=()):
 
 def static_libs():
     """System libraries the engine and the window layer link statically (SDL3: tools/xbuild.py sdl3), then the
-    Rust library (ee_rust: wgpu-native and the game's Rust code; tools/rust_build.py) with the system libraries wgpu's
+    Rust library (ee_rust: GX on wgpu and the game's Rust code; tools/rust_build.py) with the system libraries wgpu's
     DX12/Vulkan backends and the Rust standard library import."""
     return ["ole32.lib", "winmm.lib", "user32.lib",
             # the window layer: SDL3 (static) and the system libraries it imports besides the ones below

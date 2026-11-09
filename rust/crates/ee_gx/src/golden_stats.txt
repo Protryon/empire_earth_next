@@ -1,0 +1,3 @@
+GX stats: 7 scenes, 3 clears; draws points 1 lines 2 triangles 3 (primitives 4/5/6); lit 1 textured 2 blended 3 fogged 4 z 5
+GX stats: vertices 100, in front 90, inside 80; clip x -1.5..1.5 y 0.25..1e+06 w 0.1..2.5e-07
+GX stats: BGRA min 1,2,3,4 max 5,6,7,8; fog 0.5..100 colour 00abcdef (view z before/in/past 1/2/3); ambient 00000012

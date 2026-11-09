@@ -15,8 +15,8 @@ One statically linked x86_64 `EE-AOC.exe` with the static C runtime. The origina
 (`Low-Level Engine.dll`, with libjpeg and the DCL), the TCP protocol, the mixer, the Default random map generator
 and the DX7 hardware T&L renderer (the plug-ins are registered in `src/Low-Level Engine/PIMModule.cpp` instead of
 being loaded from DLLs), and the language strings of `Language.dll`. The non-T&L renderer `DX7HRDisplay.dll` is
-gone. The renderer draws through GX, its DirectDraw 7/Direct3D 7 subset reimplemented on wgpu (statically linked
-wgpu-native; DX12, or Vulkan where available, with WARP on machines without a GPU). Sound goes through miniaudio,
+gone. The renderer draws through GX, its DirectDraw 7/Direct3D 7 subset reimplemented on the wgpu crate (in the
+Rust library, `ee_gx`; DX12, or Vulkan where available, with WARP on machines without a GPU). Sound goes through miniaudio,
 music through dmusic and movies through pl_mpeg (all vendored, statically linked). The exe imports Windows system
 DLLs only.
 
@@ -45,7 +45,7 @@ Requirements (Windows 10/11):
   Microsoft.VisualStudio.Component.Windows11SDK.22621"`
 - Python 3.12 (standard library only) and 7-Zip (`winget install 7zip.7zip`)
 - Rust, through rustup (`winget install Rustlang.Rustup`): `rust/rust-toolchain.toml` pins the version and rustup
-  installs it on the first build. `build.py` builds the Rust library (`ee_rust`, with wgpu-native inside; about 3
+  installs it on the first build. `build.py` builds the Rust library (`ee_rust`, with GX and wgpu inside; about 3
   minutes the first time, `python -I tools/rust_build.py gate` runs its tests).
 
 Then:
@@ -90,7 +90,7 @@ The movies need converting once: `python -I tools/convert_movies.py <game direct
 `.mpg` next to every `.bik` (`make_play_dir.py --movies` does it for a play directory).
 
 Linux and macOS (in progress, PORT.md step 4): `tools/fetch_posix.py` fetches the pinned dependencies (a Debian
-sysroot for cross-compiling to Linux, wgpu-native, SDL3 sources, Liberation fonts) and `tools/xbuild.py` builds the
+sysroot for cross-compiling to Linux, SDL3 sources, Liberation fonts) and `tools/xbuild.py` builds the
 platform layer's tests, the window/text test programs and the compile census for `linux-x86_64`, `macos-arm64` and
 `macos-x86_64` (`python -I tools/xbuild.py targets` says what this machine can build).
 

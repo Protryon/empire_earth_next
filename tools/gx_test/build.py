@@ -1,4 +1,4 @@
-"""Build and run the GX self-test (gx_test.cpp + the renderer's GX layer) against the pinned wgpu-native.
+"""Build and run the GX self-test (gx_test.cpp + the shim classes) against ee_gx, the renderer's GX layer in Rust.
 
 The window comes from the platform layer on SDL3 (rust/crates/ee_plat_sdl, in ee_rust; tools/xbuild.py sdl3) and the
 text from PlatFont with the built-in fonts (rust/crates/ee_plat_ui, src/Platform/Common/PlatFontData.c; toolchain/fonts,
@@ -17,15 +17,20 @@ import sys
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
-sys.path.insert(0, str(ROOT / "tools" / "wgpu_probe"))
 from ee import CLANG, LLD_LINK, TOOLCHAIN, modern_dirs, sdl3_dir   # noqa: E402
 import rust_build   # noqa: E402
-from build import LIBS, TARGETS   # noqa: E402  (tools/wgpu_probe/build.py)
+
+TARGETS = {"x86_64": ("x86_64-pc-windows-msvc", "x64", "X64")}
+# the static runtime, then what the Rust standard library and wgpu's DX12/Vulkan/GL backends link against
+LIBS = ["libcmt.lib", "libvcruntime.lib", "libucrt.lib", "oldnames.lib", "kernel32.lib", "user32.lib", "gdi32.lib",
+        "advapi32.lib", "ws2_32.lib", "iphlpapi.lib", "userenv.lib", "ntdll.lib", "bcrypt.lib", "ole32.lib", "oleaut32.lib",
+        "d3d12.lib", "dxgi.lib", "d3dcompiler.lib", "opengl32.lib", "propsys.lib", "runtimeobject.lib", "uuid.lib",
+        "synchronization.lib", "shell32.lib", "dwmapi.lib", "winmm.lib"]
 
 GX = ROOT / "src" / "Low-Level Engine" / "Graphics Engine" / "DX7 Display Plug-ins" / "GX"
 PLATFORM = ROOT / "src" / "Platform"
 # PlatMessage, PlatString, PlatTime and PlatSim come with the Rust library (rust/crates/ee_plat_core)
-SOURCES = [HERE / "gx_test.cpp", GX / "GX.cpp", GX / "GXDevice.cpp",
+SOURCES = [HERE / "gx_test.cpp", GX / "GX.cpp",
            PLATFORM / "Common" / "PlatFontData.c"]   # the rest: ee_rust
 # what SDL3 (static) imports besides LIBS
 SDL_LIBS = ["setupapi.lib", "version.lib", "cfgmgr32.lib", "imm32.lib"]
@@ -33,7 +38,6 @@ SDL_LIBS = ["setupapi.lib", "version.lib", "cfgmgr32.lib", "imm32.lib"]
 
 def build(arch):
     triple, libarch, machine = TARGETS[arch]
-    wgpu = rust_build.WGPU_HEADERS
     rust_lib = rust_build.ensure("windows-x86_64")
     msvc, sdk_inc, sdk_lib, _ = modern_dirs()
     out = ROOT / "build" / "gx_test" / arch
@@ -41,7 +45,7 @@ def build(arch):
     sdl3 = sdl3_dir()
     if not (sdl3 / "lib" / "SDL3-static.lib").exists():
         sys.exit(f"{sdl3} is missing: python -I tools/xbuild.py sdl3")
-    inc = os.pathsep.join([str(ROOT / "include"), str(GX), str(wgpu / "include"), str(sdl3 / "include"),
+    inc = os.pathsep.join([str(ROOT / "include"), str(GX), str(sdl3 / "include"),
                            str(msvc / "include"),
                            str(sdk_inc / "ucrt"), str(sdk_inc / "um"), str(sdk_inc / "shared")])
     objs = []

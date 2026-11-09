@@ -3,8 +3,9 @@
 
 use std::ffi::c_char;
 
-// wgpu-native's `#[no_mangle]` C API (webgpu.h) reaches the staticlib through this dependency.
 use ee_codec as _;
+#[cfg(not(test))] // its FFI imports the platform layer's window functions (absent from a test binary)
+use ee_gx as _;
 #[cfg(not(test))] // its FFI imports the C++ shim
 use ee_mixer as _;
 #[cfg(not(test))] // its FFI imports the platform layer, absent from a test binary
@@ -12,7 +13,6 @@ use ee_net_tcp as _;
 use ee_random as _;
 // the random map generator's `extern "C"` API (ee_rmap/src/ffi.rs) reaches the staticlib through this dependency
 use ee_rmap as _;
-use wgpu_native as _;
 // the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency
 use ee_data as _;
 

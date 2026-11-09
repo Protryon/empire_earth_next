@@ -1,4 +1,6 @@
-// GX: the subset of DirectDraw 7 and Direct3D 7 the renderer uses, reimplemented on wgpu (webgpu.h). PORT.md
+// GX: the subset of DirectDraw 7 and Direct3D 7 the renderer uses, reimplemented on the wgpu crate
+// (rust/crates/ee_gx, docs/RUST_PLAN.md R4.1). These classes are C++ shims forwarding to its extern "C" functions; a
+// GXSurface*, GXDevice*, GXVertexBuffer* or GXDirectDraw* is an opaque handle owned by Rust. PORT.md
 // "Plan: DirectX -> wgpu". The renderer (DX7 Display Plug-ins) keeps its structure; its DirectX objects became the
 // GX classes below, which keep the COM-style method names and HRESULT-style results, with the constants renamed
 // D3D*/DD* -> GX* (same values as the DirectX 7 SDK, for comparison with the original).
@@ -275,8 +277,6 @@ class GXSurface;
 class GXDirectDraw;
 class GXDevice;
 class GXVertexBuffer;
-struct GXSurfaceData;
-struct GXDeviceData;
 typedef GXDirectDraw GXDirect3D;   // IDirect3D7 was a QueryInterface of the DirectDraw object; here it is the same
 
 typedef GXRESULT (CALLBACK* GXENUMMODESCALLBACK)(GXSURFACEDESC* inMode, void* inContext);
@@ -311,14 +311,9 @@ public:
     GXRESULT CreateDevice(GXIID inKind, GXSurface* inTarget, GXDevice** outDevice);
     GXRESULT CreateVertexBuffer(GXVERTEXBUFFERDESC* inDescription, GXVertexBuffer** outBuffer, unsigned long inFlags);
 
-    GXDirectDraw();
-private:
-    ~GXDirectDraw();
-    friend GXRESULT GXDirectDrawCreate(GUID* inGUID, GXDirectDraw** outDirectDraw);
-    unsigned long mReferences;
-    PlatWindow* mWindow;
-    unsigned long mCooperativeFlags;
-    unsigned long mModeWidth, mModeHeight, mModeBitCount;
+private:   // handles: Rust owns the objects
+    GXDirectDraw() = delete;
+    ~GXDirectDraw() = delete;
 };
 
 GXRESULT GXDirectDrawCreate(GUID* inGUID, GXDirectDraw** outDirectDraw);
@@ -355,12 +350,9 @@ public:
     typedef bool (*TextCallback)(const struct PlatFontTarget& inTarget, long inOriginX, long inOriginY, void* inContext);
     GXRESULT DrawText(const RECT& inBounds, TextCallback inDraw, void* inContext);
 
-    GXSurfaceData* mData;
-private:
-    GXSurface();
-    ~GXSurface();
-    friend class GXDirectDraw;
-    friend struct GXSurfaceData;
+private:   // a handle: Rust owns the object
+    GXSurface() = delete;
+    ~GXSurface() = delete;
 };
 
 class GXVertexBuffer {
@@ -370,14 +362,9 @@ public:
     GXRESULT Lock(unsigned long inFlags, void** outData, unsigned long* outSize);
     GXRESULT Unlock();
 
-    unsigned char* mVertices;
-    unsigned long mStride;
-    unsigned long mCount;
-private:
-    GXVertexBuffer();
-    ~GXVertexBuffer();
-    friend class GXDirectDraw;
-    unsigned long mReferences;
+private:   // a handle: Rust owns the object
+    GXVertexBuffer() = delete;
+    ~GXVertexBuffer() = delete;
 };
 
 // port: the display settings (EEApplyDisplaySettings, the settings form's video tab; config.yaml)
@@ -426,11 +413,9 @@ public:
                                     unsigned long inCount, unsigned short* inIndices, unsigned long inIndexCount,
                                     unsigned long inFlags);
 
-    GXDeviceData* mData;
-private:
-    GXDevice();
-    ~GXDevice();
-    friend class GXDirectDraw;
+private:   // a handle: Rust owns the object
+    GXDevice() = delete;
+    ~GXDevice() = delete;
 };
 
 #endif

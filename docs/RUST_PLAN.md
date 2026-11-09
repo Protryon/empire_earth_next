@@ -362,7 +362,7 @@ Ordered by isolation:
 
 ### R4: the renderer
 
-1. **GX in Rust on the `wgpu` crate.** GX's contract is ~60 methods with DirectX 7 semantics: surfaces with
+1. **GX in Rust on the `wgpu` crate (done: `rust/crates/ee_gx`).** GX's contract is ~60 methods with DirectX 7 semantics: surfaces with
    CPU/GPU copies, colour keys, the fixed-function WGSL shader. C++ keeps `GX.h` as shim classes. The webgpu.h C
    API and the wgpu-native pin go.
    - Gates: `gx_test`, the tour's screenshots, `EE_GX_STATS` summaries.
