@@ -88,6 +88,9 @@ local BOATS_LOST_MS = 300000   -- fishing boats sunk within this long ...
 local BOATS_LOST_MAX = 3        -- ... this many times: none are replaced until fewer are
 local ARMY_FIRST_MIN = 5        -- minutes into the epoch the citizens wait at most for the army_first soldiers
 local PER_GATHERER = 30         -- what one gatherer is counted on to bring in over the planning horizon (~6 min)
+local ESCORT_MIN = 2            -- soldiers an escort of a contested site takes at least (the guard keeps 2) ...
+local ESCORT_MAX = 6            -- ... and at most
+local ESCORT_WAIT = 120000      -- a new escort no sooner than this after the last one was sent
 
 local MINERALS = {"stone", "gold", "iron"}
 local TOWER_CLASSES = {"b_guard_tower_paleo", "b_guard_tower_copper", "b_guard_tower_bronze", "b_guard_tower_middle"}
@@ -148,7 +151,8 @@ local function soldier_classes(view)
     return best
 end
 
--- the sites holding a resource, nearest first (patch: forage patches only); a centre may hold two minerals
+-- the sites holding a resource, the home ones (the start resources by the town) first, then nearest first (patch:
+-- forage patches only); a centre may hold two minerals
 local function sites_of(view, resource, patch)
     local list = {}
     for _, s in ipairs(view.sites) do
@@ -157,6 +161,9 @@ local function sites_of(view, resource, patch)
         end
     end
     table.sort(list, function(a, b)
+        if a.home ~= b.home then
+            return a.home
+        end
         if a.distance ~= b.distance then
             return a.distance < b.distance
         end
@@ -235,7 +242,10 @@ end
 -- the claims of one resource: the nearest open sites whose places hold the gatherers wanted, at least one while any
 -- are wanted, at most `most` (a claimed one under a passing threat is kept), are marked in `keep` and claimed. The
 -- patches stay inside the claim range; the minerals are looked for out to FAR_REACH, nearest first (the claim range
--- holds a few small mines; the larger ones lie farther out). Returns the places the kept sites hold.
+-- holds a few small mines; the larger ones lie farther out). A mineral with no open site kept contests the nearest
+-- one only enemy soldiers keep the gatherers off (not a tower, a danger zone or another player's land): it is kept
+-- and claimed, and the escort holds it (§8.34). Returns the places the kept sites hold and the contested site (nil:
+-- none).
 local function claim_sites(view, order, keep, resource, patch, wanted, most, range)
     local want_sites = 0
     if wanted > 0 then
@@ -245,18 +255,37 @@ local function claim_sites(view, order, keep, resource, patch, wanted, most, ran
         want_sites = most
     end
     local reach = patch and range or FAR_REACH
-    local kept, places = 0, 0
-    for _, s in ipairs(sites_of(view, resource, patch)) do
+    local kept, places, open = 0, 0, 0
+    local list = sites_of(view, resource, patch)
+    for _, s in ipairs(list) do
         if kept < want_sites and (open_site(s) or (s.claimed and s.blocked ~= "area")) and s.distance <= reach then
             kept = kept + 1
             places = places + s.holds[resource] * SITE_PLACES
             keep[s.index] = true
+            if open_site(s) then
+                open = open + 1
+            end
             if not s.claimed then
                 order("claim_" .. resource, {verb = "claim", site = s.index})
             end
         end
     end
-    return places
+    local contest = nil
+    if open == 0 and want_sites > 0 and not patch then
+        for _, s in ipairs(list) do
+            if contest == nil and s.blocked == "enemy_near" and s.distance <= reach then
+                contest = s
+                if not keep[s.index] then
+                    keep[s.index] = true
+                    places = places + s.holds[resource] * SITE_PLACES
+                    if not s.claimed then
+                        order("claim_" .. resource, {verb = "claim", site = s.index})
+                    end
+                end
+            end
+        end
+    end
+    return places, contest
 end
 
 -- every claimed patch or mine the plan does not keep is released (the start-up claims far ones)
@@ -544,16 +573,23 @@ function M.step(view, memory)
             order("claim_range", {verb = "claim_range", range = range + view.claim_range_step})
         end
         memory.grow_claim = nil
+        -- no_site (the reserve keeps such a resource from the army): wanted, and no open site the gatherers can reach
+        -- (none at all, or only a contested one they go to once its escort has cleared it)
         memory.no_site = {}
+        local contest = nil
         for _, r in ipairs(MINERALS) do
-            local places = claim_sites(view, order, keep, r, false, want[r], 3, range)
-            memory.no_site[r] = want[r] > 0 and places == 0   -- wanted, and no site the gatherers can reach
+            local places, c = claim_sites(view, order, keep, r, false, want[r], 3, range)
+            memory.no_site[r] = want[r] > 0 and (places == 0 or c ~= nil)
+            if c ~= nil and (contest == nil or c.distance < contest.distance) then
+                contest = c
+            end
             if want[r] > places then
                 want.food = want.food + want[r] - places
                 want[r] = places
             end
         end
         release_unkept(view, order, keep)
+        memory.contest = contest ~= nil and {x = contest.x, y = contest.y} or nil
 
         local tower_wanted = tower ~= nil and towers < plan.towers
         local boats_changed = (memory.boats_seen or -1) ~= view.boats
@@ -733,6 +769,22 @@ function M.step(view, memory)
         end
     end
 
+    -- the escort (§8.34): a contested mineral site (the claims' memory.contest) is held by a defend group from the
+    -- home guard until the soldiers that kept the gatherers off it are gone; disbanded when the site is open again or
+    -- the town is threatened (its soldiers go back to the guard). A lost escort is sent again after ESCORT_WAIT.
+    local escort = A.role(view, memory, "escort")
+    local contested = memory.contest
+    if escort == nil and contested ~= nil and not threatened and home ~= nil and home.units >= ESCORT_MIN + 2
+            and view.time >= (memory.escort_next or 0) then
+        if order("escort", {verb = "defend", n = math.min(home.units - 2, ESCORT_MAX), x = contested.x,
+                            y = contested.y, radius = 8, from = home.id}) then
+            A.track(memory, orders, "escort")
+            memory.escort_next = view.time + ESCORT_WAIT
+        end
+    elseif escort ~= nil and (contested == nil or threatened or escort.tx ~= contested.x or escort.ty ~= contested.y) then
+        order("escort_done", {verb = "disband", group = escort.id})
+    end
+
     -- the plan line, once a minute
     if view.time % 60000 < 1000 then
         local w = memory.want or {}
@@ -741,17 +793,17 @@ function M.step(view, memory)
             view.army_count, soldiers_wanted, view.citizens, cap, towers, view.boats, view.claim_range, w.food or 0,
             w.wood or 0, w.stone or 0, w.gold or 0, w.iron or 0))
     end
-    -- every five minutes the nearest patches and mines: index, distance, C claimed, E explored, D drop site, why the
-    -- gatherers would pass it over (ok: they would not)
+    -- every five minutes the nearest patches and mines: index, distance, C claimed, E explored, D drop site, H home,
+    -- why the gatherers would pass it over (ok: they would not)
     if view.time % 300000 < 1000 then
         local parts = {}
         for _, r in ipairs({"food", "stone", "gold", "iron"}) do
             local n = 0
             for _, s in ipairs(sites_of(view, r, r == "food")) do
                 if n < 4 then
-                    parts[#parts + 1] = string.format("%s:%d:d%d:%s%s%s:%s", r, s.index, s.distance,
+                    parts[#parts + 1] = string.format("%s:%d:d%d:%s%s%s%s:%s", r, s.index, s.distance,
                         s.claimed and "C" or "-", s.explored and "E" or "-", s.has_drop and "D" or "-",
-                        s.blocked or "ok")
+                        s.home and "H" or "-", s.blocked or "ok")
                 end
                 n = n + 1
             end
