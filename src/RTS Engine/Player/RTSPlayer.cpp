@@ -17,6 +17,7 @@
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/EEUnitHandle.h"
 #include "lle/NEMessageID.h"
 
 const UString RTSPlayer::sSaveVisMap("RTSPlayer-SaveVisMap");
@@ -174,6 +175,7 @@ void RTSPlayer::InsertUnit(RTSUnit* inUnit)
 {
     unsigned long theBucket = inUnit->mUnitID;
     inUnit->Reference();
+    RTSRegisterUnit(inUnit);   // New (R5a.4): its id resolves to it from here (ee/EEUnitHandle.h)
     inUnit->mPlayer = static_cast<EEPlayer*>(this);
     this->mUnitCount++;
     theBucket &= 0x7f;
