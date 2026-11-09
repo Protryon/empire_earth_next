@@ -32,6 +32,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | R5b.1 formations | Done (`ee_formations`): the C++ classes keep their members and call Rust for the geometry. 14,068 `Place` calls captured from the C++ in the six oracle games (`tools/sim_capture.py`: real games plus a sweep of every formation type over real units) equal bit for bit |
 | **R5b.1 A* pathfinding, continents, choke points** | **Open.** No plain-data seam yet: the goals read the live world tile by tile, lazily and with side effects, and walk the storage's lists (PORT_LEARNINGS "R5b.1"). The address-ordered set at `EEAIAStarPathAreaGoal.cpp:282` turned out order-independent |
 | **R4.3 Graphics Engine (17k)** | **In progress** (`ee_ge`): the math and geometry (points, vectors, lines, planes, transformations, quaternions, bounding boxes, rectangles) `UMath`'s table trigonometry and `GETerrainMesh`'s height, normal, closest-tile and line queries, bit-exact against the C++ (golden digests, the sim oracle). The header inlines and the file I/O stay C++. Open: the rest of `GETerrainMesh` (visible-terrain build, fog, water, load/save), `GEModel` load/save/LOD/caching, the managers, fonts, textures, the viewport |
+| **R5a.7 gates on layout-independent observation** | **Done, gate runs pending** (branch `rust-r5a-gates`): `tools/gates.sh` runs `fixture_game.py` (the game's UI fixture, its telemetry, stderr verdicts and game log; window captures; no layout, mangled name, debugger or import hook); the harness clock is `PlatSimSetTimeFactor` in `ee_plat_core` (clocks F x, sleeps/timers/wait timeouts 1/F); `--legacy` keeps `game_session.py`. Still on the layout: exe_boot.c's guards and hooks, the RNG trace, the human driver, `differential/` |
 | **R6 LLE User Interface toolkit (14.4k)** | **Started** (`ee_ui`, branch `rust-r6-ui`): `UILayoutUtility` (whole unit), `UISlider`'s arithmetic, a multi-line `UITextLabel`'s word wrapping, `UIForm`'s focus walk (`Tab`, `ShiftTab`, `CheckedRadioButton`) and control hit test, each pinned by a golden trace of the real C++ unit and re-run over the forwarders. The C++ classes keep their members, vtables and exported names. Every reading of game text is in `ee_ui/src/text.rs` (still cp1252 bytes; D6's UTF-8 switch changes that module). Open: lists and combo boxes (`UIListBox.h`, a template the harness hooks), edit boxes, buttons, `UIControlsTable` (forms from the db), `UIManager`, drawing |
 
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
@@ -239,6 +240,8 @@ harness's `--exercise lobby` waits for presented frames instead, so a lobby repl
 or give the fixture a real way in.
 
 **Move the gates onto these before R5.** R1-R4 can keep exporting the mangled C++ shims the harness hooks.
+Done in R5a.7: the gates run `tools/harness/fixture_game.py` (fixture, stderr, game log, window captures) and the
+harness clock is `PlatSimSetTimeFactor`; only `gates.sh --legacy` and the debugger tools still need the layout.
 
 ---
 

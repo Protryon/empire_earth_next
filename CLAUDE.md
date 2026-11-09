@@ -122,12 +122,19 @@ Before merging or pushing any code change, all of these are required:
 1. `python -I build.py -j 10` and `python -I build.py -j 10 --test-profile windowed-software` both link (0/0).
 2. `python -I tools/eedata/eedata.py check` prints PASS. If tables, rules or the text compiler changed, `cppgate`
    must pass as well.
-3. `bash tools/gates.sh` (about 40 minutes, test profile; logs in `build/gates/`):
-   - a tour on the binary tree and on the open tree: menus, settings tour, input check, 120 s of play. Pass:
-     `STOP <windowed session complete> reached`;
-   - a seeded 2-AI Hard Small game to the time cap on both trees. Pass: outcome `time-cap` with both AI players alive
-     (e.g. units `[0, 28, 25]`). The PT at the cap is the harness's poll, not the game: one build gave 13,986 and
-     17,633 in two runs, so compare it only against the same build's spread.
+3. `bash tools/gates.sh` (test profile; logs in `build/gates/`). It runs the fixture driver
+   (`tools/harness/fixture_game.py`: the game's own UI fixture, telemetry and game log, the harness clock through
+   PlatSim; no record layout, mangled name or import hook). `EE_GATES_TREE_BINARY` / `EE_GATES_TREE_OPEN` name the
+   trees (default `build/open_data/tree-binary` and `tree`). The script ends `GATES PASS` when all of these pass:
+   - a tour on the binary tree and on the open tree: main menu, settings tabs, a random map, 120 s of play, the
+     rendering checks and the F3 input check. Pass: `RESULT PASS tour`;
+   - a seeded 2-AI Hard Small game to the time cap on both trees (`--time-factor 32 --pt-rate 40`). Pass:
+     `RESULT PASS ai-game outcome time-cap` with both AI players alive (`alive_computers [2, 3]`; units
+     e.g. `[0, 30, 34]`, player 1 being the idle human). Unit counts vary a little between runs.
+   - The PT at the cap is the driver's poll (once a real second, about 1,300 PTs at 32 x), not the game: compare it
+     only against the same build's spread. GX errors are in `summary.json` (`gx_errors`).
+   - `bash tools/gates.sh --legacy` still runs the debugger harness (`game_session.py`, about 40 minutes; pass:
+     `STOP <windowed session complete> reached`, outcome `time-cap`) until it is retired.
 
 - Harness self test, no game, about 1 minute: `python -I tools/harness/selftest/selftest.py`. Run it after any
   change under `tools/harness/`.

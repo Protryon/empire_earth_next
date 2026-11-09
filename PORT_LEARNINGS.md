@@ -2341,3 +2341,47 @@ harness's hooks and `layout_gen.py`'s offsets are untouched (`UIForm` gained onl
   `rust_build.py gate`, the seeded sim oracle (seeds 2-7 identical to `ref`), `layout.json`'s records for UIForm,
   UIManager, UISlider, UITextLabel and UILayoutUtility unchanged, and the harness's 34 UI symbols present in the map.
   No tour or screenshot comparison was run here.
+
+## R5a.7: the gates on the game's own fixture, the harness clock through PlatSim (2026-11-09)
+
+`tools/gates.sh` now runs `tools/harness/fixture_game.py`: the test-profile exe started directly with `EE_TEST_UI`,
+read only through the fixture (`EETestFixture.cpp`), its stderr and its game log. `--legacy` keeps the debugger path.
+
+- **What the gates read and where.** PT, game ms, game over, world players, map, local player: the fixture's `game ms`
+  line (it always had them). New: `comm ct <n> last <n> paused <0/1> multiplayer <0/1>` (the CTs and the pause the
+  input check needs), `civ <locked> <chosen> stock f/w/s/g/i` per player (the civilization pre-empt's check, the
+  summary's resources), `clock <num>/<den> ms <t> frames <n>`. The units the old summary called `units_lb14` are
+  `population` (`mPopulationCount`), the victory units `victory` (`mEndOfGameCount`). A command's verdict is the
+  `TEST UI <verdict> ...` stderr line. The game log (`Logs/game-*.log`) names the computer players; the driver checks
+  their number.
+- **Windows' `rename` never replaces.** The fixture wrote `ui-state.txt` through `.tmp` + `rename`, which on Windows
+  fails when the target exists: the file was written once, at the first poll, and the driver saw a frozen main menu.
+  `MoveFileExA(..., MOVEFILE_REPLACE_EXISTING)`; the reader may hold the file for a moment, the next poll writes it.
+- **The harness clock is a seam of the platform layer.** `PlatSimSetTimeFactor(num, den)` (`ee_plat_core::sim_clock`):
+  `PlatTimeMilliseconds(64)` and `PlatCounterTicks` run F x real time from their values at the set (no jump); `PlatSleep`,
+  the timer intervals and the finite timeouts of `PlatEventWait`/`PlatEventWaitAny`/`PlatThreadWait` last 1/F. Without
+  a factor every function calls exactly the Win32 import it called before, so the legacy time shim still works.
+  Windows waits shorter than a millisecond on a high-resolution waitable timer per thread (added to the wait set, as
+  the shim did); scaled timers are a thread each with deadlines on the performance counter (a multimedia timer fires
+  at most once a millisecond), ids from 0x7e000001. `EETestFixtureConfigure` (first in `EERun`, only with
+  `EE_TEST_UI`) takes `EE_TEST_TIME_FACTOR`, `EE_TEST_SEED` (`gPlatSimSeed`, as the old seed pin) and
+  `EE_TEST_NO_HUMAN_DEFEAT`; a malformed one stops the game. GX's own `Instant` clock (frame pacing, the null-3D key
+  frames) stays real time, as the key frames were meant to be.
+- **Game time follows the clock, PTs follow the timer.** At factor 32 and PT rate 40 a seeded 2-AI Hard game ran 1280
+  PTs per real second and about 16 PTs per game second (Very Fast); the legacy shim gave about 23. The driver stops at
+  its first poll past the cap (once a real second = about 1,300 PTs) and samples once more 3 s later, so the final
+  PT is the driver's, not the game's.
+- **Frames: a window capture, not GX's read-back.** `GXTestReadFrame` from the fixture's present hook timed out (10 s,
+  "GX: read-back ... timed out") on every frame on this machine's WARP adapter; the legacy log has the same timeouts
+  between successes. The driver captures the game window with `PrintWindow(PW_CLIENTONLY | PW_RENDERFULLCONTENT)`,
+  which returns the composed swap chain. `frame.request` -> `frame.bmp` stays for other platforms. A window keeps its
+  last picture when the renderer stops presenting, so a game capture must differ from the one before it (a running
+  game changes about 0.2% of the picture between captures 120 s apart): this found GX's "Not enough memory left"
+  bind-group failures, after which the window showed the loading screen while the game ran on.
+- **Debug output without a debugger.** With `EE_TEST_UI`, `PlatDebugSetHandler` sends `PlatDebugOutput` to stderr as
+  `debugstring <text>`, so GX's errors and the EE-AI lines reach `game.log`; `summary.json` counts GX's errors.
+- **What no longer runs on the gate path:** exe_boot.c's guards (registry writes, files outside the stage,
+  non-loopback sockets), its crash/abort hooks (a crash ends the process and fails the run; a message box fails it;
+  `SetErrorMode` keeps WER dialogs away), the RNG trace, `--instance`, the human driver and the differential tools.
+  They still need the layout and the mangled names (`layout_gen.py`, `game_state_probe.py`, `hbuild.py`,
+  `exe_boot.c`) and run with `gates.sh --legacy` / `game_session.py`.
