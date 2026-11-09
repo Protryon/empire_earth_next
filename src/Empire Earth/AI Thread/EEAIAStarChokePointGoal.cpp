@@ -44,6 +44,7 @@
 #include "ee/EEAIChokePoint.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIAStarGoalBase.h"
+#include "ee/EEAIAStarCapture.h"
 #include "ee/EEAIAStarChokePointGoal.h"
 
 // FUNCTION: EXE 0x410d5d
@@ -65,15 +66,15 @@ void EEAIAStarChokePointGoal::Attach(EEMap* inMap, EEAIAStarChokePointStorage* i
 // Stamps every closed and open node's tile with the current choke point number and collects those tiles
 void EEAIAStarChokePointGoal::CollectTiles()
 {
-    EEAIAStarNode* theNode;
     this->mTiles.reserve(this->mTileCount);
-    for (theNode = this->mStorage->mFastClosedList; theNode; theNode = theNode->mNext) {
-        this->mStorage->mChokePointIDs[this->mStorage->mHeight * theNode->mX + theNode->mY] = this->mNextIndex;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    }
-    for (theNode = this->mStorage->mFastOpenList; theNode; theNode = theNode->mNext) {
-        this->mStorage->mChokePointIDs[this->mStorage->mHeight * theNode->mX + theNode->mY] = this->mNextIndex;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
+    // the closed list, then the open list (the storage's order)
+    std::vector<EEAIAStarNodeView> theNodes;
+    this->mStorage->ListNodes(kAStarListFastClosed, theNodes);
+    this->mStorage->ListNodes(kAStarListFastOpen, theNodes);
+    for (size_t i = 0; i < theNodes.size(); i++) {
+        const EEAIAStarNodeView& theNode = theNodes[i];
+        this->mStorage->mChokePointIDs[this->mStorage->mHeight * theNode.mX + theNode.mY] = this->mNextIndex;
+        this->mTiles.push_back(U2DPoint<long>(theNode.mX, theNode.mY));
     }
 }
 
@@ -94,8 +95,7 @@ void EEAIAStarChokePointGoal::CreateChokePoint()
     theChokePoint->AddAreaSerials(this->mAreaSerials);
     if (this->mTiles.size() > 0)
         theChokePoint->mContinentID = gContinentManager.GetContinentID(this->mTiles.front().GetX(), this->mTiles.front().GetY());
-    EEAIAStarBounds& theBounds = this->mStorage->mDirtyBounds;
-    theBounds = theChokePoint->mHull.GetBounds();
+    this->mStorage->SetDirtyBounds(theChokePoint->mHull.GetBounds());
     this->mTileCount = 0;
     this->mTiles.clear();
     this->mAreaSerials.clear();
@@ -108,15 +108,17 @@ void EEAIAStarChokePointGoal::CreateChokePoint()
 // records its area serial
 bool EEAIAStarChokePointGoal::AcceptTile(long inX, long inY, bool inStart)
 {
-    bool theResult = false;
-    if (inX >= 0 && inX < this->mWidth && inY >= 0 && inY < this->mHeight) {
-        long theIndex = this->mWidth * inX + inY;
-        if (gEEAIChokeTileFlags[theIndex] && gEEAIChokeTileKinds[theIndex] != 0x36) {
-            this->mTileCount++;
-            theResult = true;
-            this->mAreaSerials.push_back(gEEAIChokeTileSerials[theIndex]);
-        }
-    }
+    // Rust (ee_astar goals.rs choke_accept): the size and the count go in, the accepted tile's serial comes back
+    EeAStarChokeFill theFill;
+    theFill.width = this->mWidth;
+    theFill.height = this->mHeight;
+    theFill.tile_count = this->mTileCount;
+    EeAStarViewCallbacks theView = this->mView.Callbacks();
+    uint32_t theSerial = 0;
+    bool theResult = ee_astar_choke_accept(&theFill, &theView, (int32_t)inX, (int32_t)inY, &theSerial);
+    this->mTileCount = theFill.tile_count;
+    if (theResult)
+        this->mAreaSerials.push_back(theSerial);
     return theResult;
 }
 

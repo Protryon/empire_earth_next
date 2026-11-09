@@ -18,6 +18,7 @@ ee_net_tcp = { path = "../ee_net_tcp" }
 ee_random = { path = "../ee_random" }
 ee_rmap = { path = "../ee_rmap" }
 ee_formations = { path = "../ee_formations" }
+ee_astar = { path = "../ee_astar" }
 ee_codec = { path = "../ee_codec" }
 ee_fs = { path = "../ee_fs" }
 ee_ge = { path = "../ee_ge" }

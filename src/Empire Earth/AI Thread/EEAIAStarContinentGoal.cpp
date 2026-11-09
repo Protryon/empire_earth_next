@@ -40,6 +40,7 @@
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIAStarGoalBase.h"
+#include "ee/EEAIAStarCapture.h"
 #include "ee/EEAIAStarContinentGoal.h"
 
 // FUNCTION: EXE 0x4155c0
@@ -56,19 +57,17 @@ void EEAIAStarContinentGoal::CollectTiles()
     EEAIAStarContinentTile theValue;
     theValue.mKind = this->mKind;
     theValue.mID = this->mNextID;
-    EEAIAStarNode* theNode;
     this->mTiles.reserve(this->mTileCount);
-    for (theNode = this->mStorage->mFastClosedList; theNode; theNode = theNode->mNext) {
-        EEAIAStarContinentTile& theTile = this->mStorage->mTiles60[this->mStorage->mWidth * theNode->mX + theNode->mY];
+    // the closed list, then the open list (the storage's order)
+    std::vector<EEAIAStarNodeView> theNodes;
+    this->mStorage->ListNodes(kAStarListFastClosed, theNodes);
+    this->mStorage->ListNodes(kAStarListFastOpen, theNodes);
+    for (size_t i = 0; i < theNodes.size(); i++) {
+        const EEAIAStarNodeView& theNode = theNodes[i];
+        EEAIAStarContinentTile& theTile = this->mStorage->mTiles60[this->mStorage->mWidth * theNode.mX + theNode.mY];
         theTile.mID = theValue.mID;
         theTile.mKind = theValue.mKind;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    }
-    for (theNode = this->mStorage->mFastOpenList; theNode; theNode = theNode->mNext) {
-        EEAIAStarContinentTile& theTile = this->mStorage->mTiles60[this->mStorage->mWidth * theNode->mX + theNode->mY];
-        theTile.mID = theValue.mID;
-        theTile.mKind = theValue.mKind;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
+        this->mTiles.push_back(U2DPoint<long>(theNode.mX, theNode.mY));
     }
 }
 
@@ -83,7 +82,7 @@ void EEAIAStarContinentGoal::CreateContinent()
     theContinent->mAreaType = kAIAreaContinent;
     theContinent->Create(this->mTiles);
     theContinent->UpdateBounds(gWorld.mInfluenceTable);
-    this->mStorage->mDirtyBounds = theContinent->mHull.GetBounds();
+    this->mStorage->SetDirtyBounds(theContinent->mHull.GetBounds());
     this->mTileCount = 0;
     this->mTiles.clear();
     this->mContinents.insert(std::make_pair(this->mNextID, theContinent));
@@ -97,48 +96,14 @@ void EEAIAStarContinentGoal::CreateContinent()
 // first tile picks the kind), counting it; map edge tiles join only map edge continents
 bool EEAIAStarContinentGoal::AcceptTile(unsigned long inX, unsigned long inY, bool inStart)
 {
-    EEMapTile* theTile = this->mMap->GetTile(inX, inY);
-    bool theResult = false;
-    if (theTile) {
-        bool theMatch = false;
-        if (this->mKind == kContinentCategoryLand)
-            theMatch = theTile->mTerrainType != kTerrainDeepWater && theTile->mTerrainType != kTerrainCliff && theTile->mTerrainType != kTerrainSpace;
-        else if (this->mKind == kContinentCategoryWater)
-            theMatch = theTile->mTerrainType == kTerrainDeepWater;
-        else if (this->mKind == kContinentCategorySpace)
-            theMatch = theTile->mTerrainType == kTerrainSpace;
-        else if (this->mKind == kContinentCategoryCliff)
-            theMatch = theTile->mTerrainType == kTerrainCliff;
-        else if (this->mKind == kContinentCategoryMapEdge)
-            theMatch = this->mMap->IsEdgeTile(inX, inY);
-        else if (this->mKind == kContinentCategoryNone) {
-            switch (theTile->mTerrainType) {
-            case kTerrainDeepWater:
-                this->mKind = kContinentCategoryWater;
-                break;
-            case kTerrainCliff:
-                this->mKind = kContinentCategoryCliff;
-                break;
-            case kTerrainSpace:
-                this->mKind = kContinentCategorySpace;
-                break;
-            default:
-                this->mKind = kContinentCategoryLand;
-                break;
-            }
-            if (this->mMap->IsEdgeTile(inX, inY))
-                this->mKind = kContinentCategoryMapEdge;
-            theMatch = true;
-        }
-        if (theMatch) {
-            if (this->mMap->IsEdgeTile(inX, inY) == (this->mKind == kContinentCategoryMapEdge)) {
-                this->mTileCount++;
-                theResult = true;
-            } else
-                theResult = false;
-        } else
-            theResult = false;
-    }
+    // Rust (ee_astar goals.rs continent_accept): the kind and the count go in and come back
+    EeAStarContinentFill theFill;
+    theFill.kind = this->mKind;
+    theFill.tile_count = this->mTileCount;
+    EeAStarViewCallbacks theView = this->mView.Callbacks();
+    bool theResult = ee_astar_continent_accept(&theFill, &theView, (int32_t)inX, (int32_t)inY);
+    this->mKind = theFill.kind;
+    this->mTileCount = theFill.tile_count;
     return theResult;
 }
 

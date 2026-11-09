@@ -11,6 +11,8 @@
 #ifndef EE_EEAIASTARGOALBASE_H
 #define EE_EEAIASTARGOALBASE_H
 
+#include "ee/EEAIAStarView.h"
+
 class EEAIAStarMachineBase;
 
 template <class S, class M>
@@ -42,6 +44,7 @@ public:
         this->mMap = inMap;
         this->mStorage = inStorage;
         this->mMachine = inMachine;
+        this->mView.SetMap(inMap);
     }
     // inline (COMDAT 0x26452 in EEAIContinentManager.cpp's range: the machines' Reset)
     void Reset()
@@ -72,6 +75,8 @@ public:
     bool mB2B;                              // +0x2b
     bool mB2C;                              // +0x2c
     bool mTookNearest;                      // +0x2d
+    // New (port): the search's reads of the world, by tile (ee/EEAIAStarView.h; on Attach's map)
+    EEAIAStarView mView;
 };
 
 #endif

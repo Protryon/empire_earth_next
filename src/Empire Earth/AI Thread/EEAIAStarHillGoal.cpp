@@ -43,6 +43,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIHill.h"
 #include "ee/EEAIAStarGoalBase.h"
+#include "ee/EEAIAStarCapture.h"
 #include "ee/EEAIAStarHillGoal.h"
 
 // FUNCTION: EXE 0x416c0e
@@ -59,19 +60,17 @@ void EEAIAStarHillGoal::CollectTiles()
     EEAIAStarHillTile theValue;
     theValue.mContinentID = this->mContinentID;
     theValue.mID = this->mNextID;
-    EEAIAStarNode* theNode;
     this->mTiles.reserve(this->mTileCount);
-    for (theNode = this->mStorage->mFastClosedList; theNode; theNode = theNode->mNext) {
-        EEAIAStarHillTile& theTile = this->mStorage->mTiles60[this->mStorage->mHeight * theNode->mX + theNode->mY];
+    // the closed list, then the open list (the storage's order)
+    std::vector<EEAIAStarNodeView> theNodes;
+    this->mStorage->ListNodes(kAStarListFastClosed, theNodes);
+    this->mStorage->ListNodes(kAStarListFastOpen, theNodes);
+    for (size_t i = 0; i < theNodes.size(); i++) {
+        const EEAIAStarNodeView& theNode = theNodes[i];
+        EEAIAStarHillTile& theTile = this->mStorage->mTiles60[this->mStorage->mHeight * theNode.mX + theNode.mY];
         theTile.mID = theValue.mID;
         theTile.mContinentID = theValue.mContinentID;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    }
-    for (theNode = this->mStorage->mFastOpenList; theNode; theNode = theNode->mNext) {
-        EEAIAStarHillTile& theTile = this->mStorage->mTiles60[this->mStorage->mHeight * theNode->mX + theNode->mY];
-        theTile.mID = theValue.mID;
-        theTile.mContinentID = theValue.mContinentID;
-        this->mTiles.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
+        this->mTiles.push_back(U2DPoint<long>(theNode.mX, theNode.mY));
     }
 }
 
@@ -86,8 +85,7 @@ void EEAIAStarHillGoal::CreateHill()
     theHill->mAreaType = kAIAreaHill;
     theHill->Create(this->mTiles);
     theHill->UpdateBounds(gWorld.mInfluenceTable);
-    EEAIAStarBounds& theBounds = this->mStorage->mDirtyBounds;
-    theBounds = theHill->mHull.GetBounds();
+    this->mStorage->SetDirtyBounds(theHill->mHull.GetBounds());
     this->mTileCount = 0;
     this->mTiles.clear();
     this->mHills.insert(std::map<unsigned short, EEAIHill*>::value_type(this->mNextID, theHill));
@@ -100,23 +98,16 @@ void EEAIAStarHillGoal::CreateHill()
 // tile picks it); counts the tile and adds its level to the sum
 bool EEAIAStarHillGoal::AcceptTile(unsigned long inX, unsigned long inY, long inStart)
 {
-    EEMapTile* theTile = this->mMap->GetTile(inX, inY);
-    bool theResult = false;
-    if (theTile) {
-        long theLevel = UMFloor(theTile->GetHeight() / (this->mMap->GetF1955F4() * 0.5f) + 0.00001f);
-        if (theTile->mTerrainType != kTerrainCliff && theLevel >= 4) {
-            if (this->mContinentID != 0) {
-                theResult = gContinentManager.GetContinentID(inX, inY) == this->mContinentID;
-            } else {
-                this->mContinentID = gContinentManager.GetContinentID(inX, inY);
-                theResult = true;
-            }
-            if (theResult) {
-                this->mTileCount++;
-                this->mLevelSum += UMFloor(theTile->GetHeight() / (this->mMap->GetF1955F4() * 0.5f) + 0.00001f);
-            }
-        }
-    }
+    // Rust (ee_astar goals.rs hill_accept): the continent, the count and the level sum go in and come back
+    EeAStarHillFill theFill;
+    theFill.continent_id = this->mContinentID;
+    theFill.tile_count = this->mTileCount;
+    theFill.level_sum = this->mLevelSum;
+    EeAStarViewCallbacks theView = this->mView.Callbacks();
+    bool theResult = ee_astar_hill_accept(&theFill, &theView, (int32_t)inX, (int32_t)inY);
+    this->mContinentID = theFill.continent_id;
+    this->mTileCount = theFill.tile_count;
+    this->mLevelSum = theFill.level_sum;
     return theResult;
 }
 

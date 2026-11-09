@@ -7,8 +7,8 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui", "ee_won"]
-extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui", "ee_won"]
+include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui", "ee_won", "ee_astar"]
+extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui", "ee_won", "ee_astar"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
@@ -30,6 +30,12 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 # ee_formations
 "Vec3" = "EeFormationVec3"
 "Rotation" = "EeFormationRotation"
+# ee_astar
+"StorageKind" = "EeAStarStorageKind"
+"GridKind" = "EeAStarGridKind"
+"List" = "EeAStarList"
+"AStarRect" = "EeAStarRect"
+"MachineState" = "EeAStarMachineState"
 # ee_fs
 "Archive" = "EeFsArchive"
 # ee_dx7

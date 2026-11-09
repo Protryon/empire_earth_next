@@ -12,7 +12,10 @@
 #ifndef EE_EEAIASTARMACHINE_H
 #define EE_EEAIASTARMACHINE_H
 
+#include "rust/ee_rust.h"   // EeAStarCallbacks (the Rust search steps)
+
 struct EEAIAStarGraphNode;               // ee/EEAIAStarGraphStorage.h
+class EEAIAStarCaptureRun;              // ee/EEAIAStarCapture.h
 class AStarGraphableObjectBase;         // ee/AStarGraphableObjectBase.h
 
 class EEAIAStarMachineBase {
@@ -100,14 +103,16 @@ public:
     virtual void SetStart(const EETileCoordinate& inTile) { this->mGoal.mStartTile = inTile; }  // +0x38 0xa9882
     virtual void SetStart(long inX, long inY) { this->mGoal.mStartTile = U2DPoint<long>(inX, inY); }  // +0x3c 0xa9871
 
-    // Run's flood-fill steps (the <EEAIAStarChokePointStorage, EEAIAStarChokePointGoal, EEMap> COMDATs 0x1d184.. in
-    // EEAIChokePoint.cpp's range; bodies there for now) (provisional names)
+    // Run's search steps (the <EEAIAStarChokePointStorage, EEAIAStarChokePointGoal, EEMap> COMDATs 0x1d184.. in
+    // EEAIChokePoint.cpp's range) (provisional names). Port: Start 0x1d184, Expand 0x1d1fb and their Restart
+    // 0x1d527, TestTile 0x1d63b, NextNode 0x1d6b1 and AddNode 0x28fc9 are Rust (rust/crates/ee_astar machine.rs);
+    // these call it with the goal behind EeAStarCallbacks (EEAIAStarHooks, ee/EEAIAStarMachineSteps.h)
     bool Start();                           // 0x1d184: the start node, the goal tile
     void Expand();                          // 0x1d1fb: pops nodes and adds the neighbours the goal accepts
-    bool Restart();                         // 0x1d527: the nearest remaining node the goal accepts
-    bool TestTile(unsigned long inX, unsigned long inY);   // 0x1d63b: the goal's AcceptTile, cached in mTileFlags (1/2)
-    EEAIAStarNode* NextNode();              // 0x1d6b1: the nearer of the nearest open and closed nodes
-    void AddNode(EEAIAStarNode* inParent, long inX, long inY);   // 0x28fc9 (ICF): a new open node unless known
+    EeAStarCallbacks Callbacks();
+    // New (port), TEST ONLY: Run's record in the A* capture (ee/EEAIAStarCapture.h)
+    void CaptureInputs(EEAIAStarCaptureRun& ioRun);
+    void CaptureOutputs(EEAIAStarCaptureRun& ioRun);
 
     G mGoal;                                // +0x6c / +0x80
     M* mMap;                                // +0x110 / +0x13c

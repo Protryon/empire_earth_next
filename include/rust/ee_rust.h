@@ -135,6 +135,37 @@ constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE2 = 2;
 /// `AuthPubKeyBlock`.
 constexpr static const uint32_t EE_WON_AUTH_PUB_KEY_BLOCK = 3;
 
+/// Which members the storage's machine calls (see the module table).
+enum class EeAStarStorageKind {
+  Hashed = 0,
+  Bounded = 1,
+  Terrain = 2,
+};
+
+/// Which `PrepareGrid` the storage has (its `+0x10` slot).
+enum class EeAStarGridKind {
+  /// `EEAIAStarStorage`: the flags; the last search's bounds grown by two when they are valid
+  Hashed = 0,
+  /// `EEAIAStarFastStorage`: the flags and the node map, all of them
+  Fast = 1,
+  /// `EEAIAStarBoundedStorage`: the flags and the node map; the last search's bounds grown by two
+  Bounded = 2,
+  /// the flood storages (choke point, continent, hill, path area, path sector): the flags and the node map; the
+  /// dirty bounds grown by one when they are valid and the grid was not just allocated
+  Dirty = 3,
+};
+
+/// The storage's lists, for the goals' walks and the capture.
+enum class EeAStarList {
+  SortedOpen = 0,
+  FastOpen = 1,
+  FastClosed = 2,
+  /// every open bucket, the last bucket first
+  OpenTable = 3,
+  /// every closed bucket, the last bucket first
+  ClosedTable = 4,
+};
+
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
   Left = 0,
@@ -167,6 +198,9 @@ struct EeFsArchive;
 
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
+
+/// One storage (opaque to C++).
+struct EeAStarStorage;
 
 /// The compiler's state for one data path; every table's text is read through `read`. Not thread safe.
 struct EeDataContent;
@@ -219,6 +253,113 @@ using EeDataIdVisit = void(*)(void *ctx, int32_t key, const uint8_t *id, size_t 
 
 /// One keyed upgrade of a `.civ` text: its key and line.
 using EeDataCivVisit = void(*)(void *ctx, const uint8_t *key, size_t key_len, int32_t line);
+
+/// A node as the goals and the capture see it.
+struct EeAStarNodeView {
+  int32_t x;
+  int32_t y;
+  uint32_t cost;
+  int32_t path_cost;
+  int32_t estimate;
+  bool has_parent;
+  int32_t parent_x;
+  int32_t parent_y;
+};
+
+/// `U2DRectangle<long>` (`EEAIAStarBounds`): the member order of the C++ (bottom, left, right, top).
+struct EeAStarRect {
+  int32_t bottom;
+  int32_t left;
+  int32_t right;
+  int32_t top;
+};
+
+/// The storage's scalar members, read and written whole.
+struct EeAStarFields {
+  EeAStarRect bounds;
+  EeAStarRect dirty;
+  int32_t width;
+  int32_t height;
+  bool has_bounds;
+};
+
+/// `EEAIAStarMachineBase`'s search members and `EEAIAStarMachine`'s map size.
+struct EeAStarMachineState {
+  int32_t tile_x;
+  int32_t tile_y;
+  int32_t revs;
+  int32_t num_runs;
+  int32_t steps;
+  bool check_corners;
+  bool found;
+  int32_t map_width;
+  int32_t map_height;
+};
+
+/// The goal and the C++ machine's members (`machine::Host`), as C function pointers over `ctx`.
+struct EeAStarCallbacks {
+  void *ctx;
+  bool (*accept_tile)(void *ctx, int32_t x, int32_t y, bool flag);
+  int32_t (*get_cost)(void *ctx,
+                      int32_t from_x,
+                      int32_t from_y,
+                      int32_t x,
+                      int32_t y,
+                      bool has_parent,
+                      int32_t parent_x,
+                      int32_t parent_y);
+  int32_t (*estimate)(void *ctx, int32_t from_x, int32_t from_y, int32_t to_x, int32_t to_y);
+  bool (*is_goal_node)(void *ctx, bool has_node, int32_t x, int32_t y);
+  void (*search_done)(void *ctx, bool has_current, int32_t x, int32_t y, bool has_open);
+  bool (*search_failed)(void *ctx);
+  bool (*accept_nearest)(void *ctx);
+  bool (*is_step_limit)(void *ctx, int32_t steps);
+  bool (*is_rev_limit)(void *ctx, int32_t revs);
+  bool (*is_cheaper)(void *ctx, uint32_t cost, uint32_t old);
+  /// the goal's start (`out[0..2]`) and goal (`out[2..4]`) tiles
+  void (*tiles)(void *ctx, int32_t *out);
+  void (*get_state)(void *ctx, EeAStarMachineState *out);
+  void (*set_state)(void *ctx, const EeAStarMachineState *state);
+};
+
+/// `EEAIAStarContinentGoal`'s fill state.
+struct EeAStarContinentFill {
+  /// `mKind` (`EEAIContinentCategory`; 0 until the first tile picks it)
+  uint8_t kind;
+  /// `mTileCount`
+  int32_t tile_count;
+};
+
+/// A goal's view (`EEAIAStarView`), as C function pointers over `ctx`: the queries the flood goals make.
+struct EeAStarViewCallbacks {
+  void *ctx;
+  bool (*has_tile)(void *ctx, int32_t x, int32_t y);
+  int32_t (*terrain)(void *ctx, int32_t x, int32_t y);
+  bool (*is_edge)(void *ctx, int32_t x, int32_t y);
+  int32_t (*height_level)(void *ctx, int32_t x, int32_t y);
+  uint16_t (*continent_id)(void *ctx, int32_t x, int32_t y);
+  /// a choke tile at `index` (`*serial` its area serial)
+  bool (*choke_tile)(void *ctx, int32_t index, uint32_t *serial);
+};
+
+/// `EEAIAStarHillGoal`'s fill state.
+struct EeAStarHillFill {
+  /// `mContinentID` (the first tile's; 0 between hills)
+  uint16_t continent_id;
+  /// `mTileCount`
+  int32_t tile_count;
+  /// `mLevelSum`
+  int32_t level_sum;
+};
+
+/// `EEAIAStarChokePointGoal`'s fill state.
+struct EeAStarChokeFill {
+  /// `mWidth`, `mHeight` (the map's size: `Attach`)
+  int32_t width;
+  int32_t height;
+  /// `mTileCount`
+  int32_t tile_count;
+};
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
 using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
@@ -1384,6 +1525,141 @@ uint32_t ee_rust_abi_version();
 /// `log` must be callable from any thread for the life of the process, with a NUL-terminated line valid during the
 /// call.
 void ee_rust_init(void (*log)(const char *line));
+
+/// A new storage of the given kind (`StorageKind`: 0 hashed, 1 bounded, 2 terrain).
+EeAStarStorage *ee_astar_new(EeAStarStorageKind kind);
+
+/// Frees a storage.
+///
+/// # Safety
+/// `s` must come from `ee_astar_new` (or be null) and not be used afterwards.
+void ee_astar_free(EeAStarStorage *s);
+
+/// `ResetNodes`.
+///
+/// # Safety
+/// As `st`.
+void ee_astar_reset_nodes(EeAStarStorage *s);
+
+/// `Clear`.
+///
+/// # Safety
+/// As `st`.
+void ee_astar_clear(EeAStarStorage *s);
+
+/// `Init`'s first half: the size, then `Clear`.
+///
+/// # Safety
+/// As `st`.
+void ee_astar_init_begin(EeAStarStorage *s, int32_t width, int32_t height);
+
+/// `Init`'s last half: empty hash tables.
+///
+/// # Safety
+/// As `st`.
+void ee_astar_alloc_tables(EeAStarStorage *s);
+
+/// A `PrepareGrid` slot (`GridKind`) over the storage's flags and node map; `resized`: the caller's own grid was
+/// just allocated (the flood storages).
+///
+/// # Safety
+/// As `st`.
+void ee_astar_prepare_grid(EeAStarStorage *s,
+                           int32_t width,
+                           int32_t height,
+                           EeAStarGridKind grid,
+                           bool resized);
+
+/// `MarkTile`.
+///
+/// # Safety
+/// As `st`.
+void ee_astar_mark_tile(EeAStarStorage *s, uint32_t x, uint32_t y, bool accept);
+
+/// `GetFirstPathTile` (false: no path).
+///
+/// # Safety
+/// As `st`; `x`, `y` valid for writes.
+bool ee_astar_first_path_tile(EeAStarStorage *s, int32_t *x, int32_t *y);
+
+/// `GetNextPathTile` (false and (0, 0) at the end).
+///
+/// # Safety
+/// As `st`; `x`, `y` valid for writes.
+bool ee_astar_next_path_tile(EeAStarStorage *s, int32_t *x, int32_t *y);
+
+/// The nodes of a list (`List`) in its order: writes up to `capacity` into `out`, returns the list's length.
+///
+/// # Safety
+/// As `st`; `out` valid for `capacity` writes (or null with `capacity` 0).
+uint32_t ee_astar_list(EeAStarStorage *s,
+                       EeAStarList which,
+                       EeAStarNodeView *out,
+                       uint32_t capacity);
+
+/// The current node, the found path's node (`which` 0, 1); false when none.
+///
+/// # Safety
+/// As `st`; `out` writable.
+bool ee_astar_node(EeAStarStorage *s, uint32_t which, EeAStarNodeView *out);
+
+/// Whether an open node is left.
+///
+/// # Safety
+/// As `st`.
+bool ee_astar_has_open(EeAStarStorage *s);
+
+/// Reads the storage's scalar members.
+///
+/// # Safety
+/// As `st`; `out` writable.
+void ee_astar_get_fields(EeAStarStorage *s, EeAStarFields *out);
+
+/// Sets the bounds, the dirty bounds and the bounds flag (the size stays).
+///
+/// # Safety
+/// As `st`; `fields` readable.
+void ee_astar_set_fields(EeAStarStorage *s, const EeAStarFields *fields);
+
+/// The machine's `Start`.
+///
+/// # Safety
+/// As `st`; `cb` valid, its functions callable and not re-entering this storage.
+bool ee_astar_start(EeAStarStorage *s, const EeAStarCallbacks *cb);
+
+/// The machine's `Expand`.
+///
+/// # Safety
+/// As `ee_astar_start`.
+void ee_astar_expand(EeAStarStorage *s, const EeAStarCallbacks *cb);
+
+/// `EEAIAStarContinentGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// `fill` readable and writable; `view` valid, its functions callable.
+bool ee_astar_continent_accept(EeAStarContinentFill *fill,
+                               const EeAStarViewCallbacks *view,
+                               int32_t x,
+                               int32_t y);
+
+/// `EEAIAStarHillGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// As `ee_astar_continent_accept`.
+bool ee_astar_hill_accept(EeAStarHillFill *fill,
+                          const EeAStarViewCallbacks *view,
+                          int32_t x,
+                          int32_t y);
+
+/// `EEAIAStarChokePointGoal::AcceptTile` over the goal's state; `*serial` the tile's area serial when accepted.
+///
+/// # Safety
+/// As `ee_astar_continent_accept`; `serial` writable.
+bool ee_astar_choke_accept(EeAStarChokeFill *fill,
+                           const EeAStarViewCallbacks *view,
+                           int32_t x,
+                           int32_t y,
+                           uint32_t *serial);
 
 /// `UDataCompression::Compress`.
 ///
