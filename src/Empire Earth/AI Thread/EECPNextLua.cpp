@@ -662,7 +662,7 @@ static void EECPNextError(EEComputerPlayer* inPlayer, const char* inWhat, EECPLu
     }
 }
 
-// TEST ONLY: EE_AI_NEXT_SCRIPT, the script per player (a comma list by player id from player 1; "" unset)
+// TEST ONLY: EE_AI_NEXT_SCRIPT, the script per player (a comma or / list by player id from player 1; "" unset)
 static std::string EECPNextScriptOverride(const EEComputerPlayer* inPlayer)
 {
     static std::vector<std::string> sScripts;
@@ -673,7 +673,7 @@ static std::string EECPNextScriptOverride(const EEComputerPlayer* inPlayer)
         std::string theList = theValue != NULL ? theValue : "";
         size_t theStart = 0;
         while (!theList.empty() && theStart <= theList.size()) {
-            size_t theEnd = theList.find(',', theStart);
+            size_t theEnd = theList.find_first_of(",/", theStart);   // (/ as well: sim_bench --env-vary splits on commas)
             if (theEnd == std::string::npos)
                 theEnd = theList.size();
             sScripts.push_back(theList.substr(theStart, theEnd - theStart));
