@@ -178,7 +178,7 @@ bool EEUnitPicker::Contains(EEUnit* inUnit)
     bool theFound = false;
     if (this->mCount > 0) {
         for (long i = this->mCount - 1; i >= 0 && !theFound; i--)
-            theFound = this->mEntries[i].mUnit == inUnit;
+            theFound = this->mEntries[i].mUnitID == inUnit->GetUnitID();   // port: ids (R5a.3)
     }
     return theFound;
 }
@@ -198,7 +198,10 @@ void EEUnitPicker::PickUnitsOfType(const GERectangle& inRectangle, EEPlayer* inP
     if (this->mCount > 0) {
         this->mViewport.GetFrustrumWorldPlanes(inRectangle, thePlanes, gOrthographicView);
         for (long i = this->mCount - 1; i >= 0; i--) {
-            EEComplexUnit* theUnit = this->mEntries[i].mUnit->GetComplexUnit();
+            EEUnit* theEntryUnit = this->GetEntryUnit(i);   // port: ids (R5a.3)
+            if (theEntryUnit == NULL)
+                continue;
+            EEComplexUnit* theUnit = theEntryUnit->GetComplexUnit();
             if (theUnit == NULL || !theUnit->mUnitClass->IsPickable() || !(theUnit->mHitPoints > 0) ||
                 theUnit->mUnitClass->mCategory == kUnitCategoryProjectile || theUnit->mUnitClass->mCategory == kUnitCategoryBomb ||
                 (theUnit->mUnitClass->mCategory == kUnitCategoryMissile && theUnit->mUnitClass->mUnitType != kUnitTypeCpICBM) ||
@@ -344,10 +347,36 @@ static bool GetIsModelInView(GEModel* inModel, const GETransformation& inTransfo
     return theInside;
 }
 
+// port (R5a.3): an entry's unit by its id; NULL once the unit has left the world (the original's reference kept it)
+EEUnit* EEUnitPicker::GetEntryUnit(unsigned long inIndex)
+{
+    return static_cast<EEUnit*>(gWorld.GetUnit(this->mEntries[inIndex].mUnitID));
+}
+
 // FUNCTION: EXE 0x519540
 // Returns the unit under a screen point (its carrier for a part), referenced: polygon hits beat
 // bounding hits, then the nearest, with click priority deciding near ties; or null
 EEUnit* EEUnitPicker::PickUnit(const GE2DPoint& inPoint, long inPreferResources)
+{
+    this->mLock->Enter();
+    EEUnit* theResult = this->FindUnit(inPoint, inPreferResources);
+    if (theResult != NULL)
+        theResult->Reference();
+    this->mLock->Leave();
+    return theResult;
+}
+
+// port (R5a.3): PickUnit with no reference taken (FillRenderLists, under the world's lock)
+EEUnit* EEUnitPicker::PickUnitUnreferenced(const GE2DPoint& inPoint, long inPreferResources)
+{
+    this->mLock->Enter();
+    EEUnit* theResult = this->FindUnit(inPoint, inPreferResources);
+    this->mLock->Leave();
+    return theResult;
+}
+
+// PickUnit's search, under mLock (port: split from PickUnit, R5a.3)
+EEUnit* EEUnitPicker::FindUnit(const GE2DPoint& inPoint, long inPreferResources)
 {
     GE3DPoint theNear;
     GE3DPoint theFar;
@@ -369,7 +398,6 @@ EEUnit* EEUnitPicker::PickUnit(const GE2DPoint& inPoint, long inPreferResources)
     unsigned long theSecond = theBest;
     float theDistance;
     long i;
-    this->mLock->Enter();
     if (this->mCount != 0) {
         float theX = (inPoint.GetX() - this->mViewport.GetXCenter()) * theScale;
         float theY = -((inPoint.GetY() - this->mViewport.GetYCenter()) * theScale);
@@ -384,13 +412,16 @@ EEUnit* EEUnitPicker::PickUnit(const GE2DPoint& inPoint, long inPreferResources)
         }
         theLine.Define(theNearWorld, theFarWorld);
         for (i = this->mCount - 1; i >= 0; i--) {
+            EEUnit* theEntryUnit = this->GetEntryUnit(i);   // port: ids (R5a.3)
+            if (theEntryUnit == NULL)
+                continue;
             theSavedScale = this->mEntries[i].GetScale();
-            long theKind = GetUnitPickPriority(this->mEntries[i].mUnit, false);
+            long theKind = GetUnitPickPriority(theEntryUnit, false);
             this->mEntries[i].SetScale((theKind != 2 ? kPickScale : kTreePickScale) * theSavedScale);
-            if (this->mEntries[i].mUnit->GetTileX() != -10000 &&
+            if (theEntryUnit->GetTileX() != -10000 &&
                 this->mEntries[i].Intersects(theLine, 1, theHit.mDistance, false)) {
                 theHit.mIndex = i;
-                theHit.mPriority = GetUnitPickPriority(this->mEntries[i].mUnit, inPreferResources != 0);
+                theHit.mPriority = GetUnitPickPriority(theEntryUnit, inPreferResources != 0);
                 theHit.mExact = false;
                 theHit.mLarge = false;
                 theHit.mKind = theKind;
@@ -466,16 +497,14 @@ EEUnit* EEUnitPicker::PickUnit(const GE2DPoint& inPoint, long inPreferResources)
             theBest = theFirst;
         }
         if (theBest < this->mCount) {
-            theResult = this->mEntries[theHits[theBest].mIndex].mUnit;
+            theResult = this->GetEntryUnit(theHits[theBest].mIndex);
             if (theResult->GetComplexUnit() != NULL) {
                 for (EEComplexUnit* theCarrier = theResult->GetComplexUnit()->mPreviousPart; theCarrier != NULL;
                      theCarrier = theCarrier->GetComplexUnit()->mPreviousPart)
                     theResult = theCarrier;
             }
-            theResult->Reference();
         }
     }
-    this->mLock->Leave();
     return theResult;
 }
 
@@ -491,7 +520,9 @@ void EEUnitPicker::PickUnitsInRectangle(const GERectangle& inRectangle, long inT
     if (this->mCount > 0) {
         this->mViewport.GetFrustrumWorldPlanes(inRectangle, thePlanes, gOrthographicView);
         for (long i = this->mCount - 1; i >= 0; i--) {
-            EEUnit* theUnit = this->mEntries[i].mUnit;
+            EEUnit* theUnit = this->GetEntryUnit(i);   // port: ids (R5a.3)
+            if (theUnit == NULL)
+                continue;
             if (!theUnit->mUnitClass->IsPickable())
                 continue;
             EEUnitClass* theClass = theUnit->mUnitClass;
@@ -533,18 +564,13 @@ void EEUnitPicker::PickUnits(const GERectangle& inRectangle, EEPlayer* inPlayer,
 }
 
 // FUNCTION: EXE 0x519f08
-// Releases every picked unit and carrier and empties the picker
+// Empties the picker (port, R5a.3: ids, nothing to release; the original dereferenced every
+// unit and carrier here)
 void EEUnitPicker::Clear()
 {
-    unsigned long i;
-    for (i = 0; i < this->mCount; i++) {
+    for (unsigned long i = 0; i < this->mCount; i++)
         this->mEntries[i].SetModel(NULL);
-        this->mEntries[i].mUnit->Dereference();
-    }
     this->mCount = 0;
-    for (i = 0; i < this->mCarriers.size(); i++)
-        this->mCarriers[i]->Dereference();
-    this->mCarriers.clear();
 }
 
 // FUNCTION: EXE 0x519f7c
@@ -557,20 +583,7 @@ void EEUnitPicker::Reset()
     this->mShowHiddenUnits = gHiddenUnitsMode;
 }
 
-// FUNCTION: EXE 0x519faa
-// Keeps a reference to every other part of a unit's chain (its carriers and riders)
-void EEUnitPicker::ReferenceCarriers(EEComplexUnit* inUnit)
-{
-    EEComplexUnit* theUnit = inUnit;
-    while (theUnit->mPreviousPart != NULL)
-        theUnit = theUnit->mPreviousPart;
-    for (; theUnit != NULL; theUnit = theUnit->mNextPart) {
-        if (theUnit != inUnit) {
-            theUnit->Reference();
-            this->mCarriers.push_back(theUnit);
-        }
-    }
-}
+// (ReferenceCarriers 0x519faa: gone with the references, R5a.3)
 
 // FUNCTION: EXE 0x519ffb
 // Adds a unit at a transformation when there is room and it is big enough on screen (no path points;
@@ -583,10 +596,8 @@ void EEUnitPicker::AddUnit(EEUnit* inUnit, const GETransformation& inTransformat
     if (!(this->mCount < this->mCapacity) || !(inPixelSize >= kMinPickPixelSize) || theClass->mUnitType == kUnitTypePathPoint ||
         (!gFreeCamera && (theClass->mCategory == kUnitCategoryAmbient || (theClass->mIsProjectile && theClass->mUnitType != kUnitTypeCpICBM))))
         return;
-    inUnit->Reference();
-    theEntry.mUnit = inUnit;
+    theEntry.mUnitID = inUnit->GetUnitID();   // port: the id, no reference (R5a.3)
     if (theComplexUnit != NULL) {
-        this->ReferenceCarriers(theComplexUnit);
         (GEPhysicalModel&)theEntry = theComplexUnit->mPhysicalModel;
         theEntry.SetLocation(inTransformation);
     } else {

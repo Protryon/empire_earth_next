@@ -1533,11 +1533,10 @@ void EERenderObject::FillRenderLists()
         theInfo.mYaw = UMArcTan2(-theDirection.GetX(), theDirection.GetY()) - 0.78539819f;
         sL52908C = (gB529065 ? sL52908C : gPhysics->mTicksRun) + 1;
         theInfo.mFrame = sL52908C;
-        theInfo.mPickedUnit = !gFreeCamera ? gUnitPicker.PickUnit(gMouse->mPosition, 1) : NULL;
-        if (theInfo.mPickedUnit != NULL && theInfo.mPickedUnit->GetHitPoints() <= 0) {
-            theInfo.mPickedUnit->Dereference();
+        // port (R5a.3): no reference: the unit is only compared and read while the world's lock is held
+        theInfo.mPickedUnit = !gFreeCamera ? gUnitPicker.PickUnitUnreferenced(gMouse->mPosition, 1) : NULL;
+        if (theInfo.mPickedUnit != NULL && theInfo.mPickedUnit->GetHitPoints() <= 0)
             theInfo.mPickedUnit = NULL;
-        }
         gUnitPicker.GetLock()->Enter();
         gUnitPicker.Reset();
         unsigned long theRows = theMap->mTerrainMesh.GetNumVisibleTileRows();
@@ -1657,8 +1656,6 @@ void EERenderObject::FillRenderLists()
         }
         if (theInfo.mAmbient)
             gAmbientSoundManager.Update();
-        if (theInfo.mPickedUnit != NULL)
-            theInfo.mPickedUnit->Dereference();
     }
 }
 
