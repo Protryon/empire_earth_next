@@ -258,19 +258,19 @@ void EECPResourceManager::RequestFerry(std::vector<EEComplexUnit*>& inUnits, EEU
 {
     std::vector<long> theClasses;
     std::vector<long> theIDs;
-    EEComputerPlayer* thePlayer = this->mManager->mPlayer;
-    EECPUnitManager* theUnitManager = this->mManager->mUnitManager;
-    EECPCombatManager* theCombatManager = thePlayer->mCombatManager;
-    long theClass = this->mManager->ChooseTransportClass();
+    EEComputerPlayer* thePlayer = this->GetManager()->GetPlayer();
+    EECPUnitManager* theUnitManager = this->GetManager()->GetUnitManager();
+    EECPCombatManager* theCombatManager = thePlayer->GetCombatManager();
+    long theClass = this->GetManager()->ChooseTransportClass();
     bool theFailed = true;
     if (theClass == 0)
         return;
     std::deque<EEComplexUnit*>* theUnits = theUnitManager->GetUnits(theClass);
     theClasses.push_back(theClass);
-    EECPPersonnelRequest* theRequest = theCombatManager->mPersonnel->NewContinentRequest(theClasses, theIDs, 0);
-    if (theRequest->mNumFilled == 1) {
+    EECPPersonnelRequest* theRequest = theCombatManager->GetPersonnel()->NewContinentRequest(theClasses, theIDs, 0);
+    if (theRequest->GetNumFilled() == 1) {
         EEComplexUnit* theUnit = theRequest->mUnits.back().mUnit;
-        if (theUnit->mAIState != 0x46cd7)
+        if (theUnit->GetAIState() != 0x46cd7)
             theUnit->mAIState = 0x46cd7;
         theRequest->PopSlot();
         thePlayer->DetachUnitFromAI(theUnit);
@@ -278,13 +278,13 @@ void EECPResourceManager::RequestFerry(std::vector<EEComplexUnit*>& inUnits, EEU
         if (this->FerryGatherers(inUnits, theUnit, inResource))
             thePlayer->SetNextIslandExpansionTime();
         else {
-            if (theUnit->mIsDetachedFromAI)
+            if (theUnit->GetIsDetachedFromAI())
                 theUnit->mIsDetachedFromAI = false;
             theCombatManager->UnitAdded(theUnit);
         }
     } else
         theRequest->Cancel();
-    theCombatManager->mPersonnel->ReleaseRequest(theRequest->mID);
+    theCombatManager->GetPersonnel()->ReleaseRequest(theRequest->GetID());
     theRequest->Dereference();
     if (theFailed && (theUnits == NULL || theUnits->size() < 4) && !theUnitManager->IsRequested(theClass)
         && !theUnitManager->IsInProduction(theClass))
@@ -320,12 +320,12 @@ void EECPResourceManager::AssignGatherers()
     unsigned long theLimit = thePlayer->mMiningLimit;
     unsigned short theTownContinent = 0;
     bool theAcross;
-    EEMap* theMap = gWorld.mMap;
+    EEMap* theMap = gWorld.GetMap();
     if (theMap != NULL && ((theMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap || (theMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap)) {
         U2DPoint<long> theTown = this->mManager->mBuildManager->mTownCenterTile;
         theAcross = true;
-        if (theTown.mX != -10000)
-            theTownContinent = gContinentManager.GetContinentID(theTown.mX, theTown.mY);
+        if (theTown.GetX() != -10000)
+            theTownContinent = gContinentManager.GetContinentID(theTown.GetX(), theTown.GetY());
     } else
         theAcross = false;
     bool theNext = EECPNextEngine(thePlayer);   // the next engine: no boat requests (fish), the food order of gather
@@ -333,30 +333,30 @@ void EECPResourceManager::AssignGatherers()
 
     for (it = this->mGatherers[0].begin(); it != this->mGatherers[0].end(); ++it) {
         theUnit = *it;
-        EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theUnit->mActiveGoal);
-        EEUGGather* theGather = dynamic_cast<EEUGGather*>(theUnit->mActiveGoal);
+        EEUGAttackUnit* theAttack = dynamic_cast<EEUGAttackUnit*>(theUnit->GetLoadGoal());
+        EEUGGather* theGather = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
         if ((theGather != NULL && theGather->mResource != NULL)
-            || (theAttack != NULL && theAttack->mTarget->GetUnitClass()->mFamily == kUnitFamilyAnimal))
+            || (theAttack != NULL && theAttack->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal))
             theMoved.push_back(theUnit);
     }
     unsigned long i;
     for (i = 0; i < theMoved.size(); i++) {
         this->RemoveGatherer(theMoved[i]);
-        this->AddGatherer(theMoved[i], theMoved[i]->mResourceType);
+        this->AddGatherer(theMoved[i], theMoved[i]->GetResourceType());
     }
 
     unsigned long j;
     for (j = 0; j < 7; j++) {
         for (it = this->mGatherers[j].begin(); it != this->mGatherers[j].end(); ++it) {
             theUnit = *it;
-            EEUnitGoal* theGoal = theUnit->mActiveGoal;
+            EEUnitGoal* theGoal = theUnit->GetLoadGoal();
             EEUGGather* theGather = dynamic_cast<EEUGGather*>(theGoal);
-            if (theUnit->mIsDisabled || theUnit->mIsDetachedFromAI)
+            if (theUnit->GetIsDisabled() || theUnit->mIsDetachedFromAI)
                 continue;
-            if (theUnit->GetUnitClass()->mCategory == kUnitCategoryNavalCitizen) {
+            if (theUnit->GetUnitClass()->GetCategory() == kUnitCategoryNavalCitizen) {
                 if (j == 0)
                     theBoats.push_back(theUnit);
-            } else if (theUnit->mCitizenBuildQueue.size() == 0 && theUnit->mHitPoints > 0 && theUnit->GetTileX() != -10000
+            } else if (theUnit->mCitizenBuildQueue.size() == 0 && theUnit->GetHitPoints() > 0 && theUnit->GetTileX() != -10000
                        && theUnit->GetTileY() != -10000
                        && (theGoal == NULL || (theGather != NULL && theGather->mWaiting && theUnit->mCurrentPhysicsAction != 0)))
                 theIdle.push_back(theUnit);
@@ -576,14 +576,13 @@ void EECPResourceManager::AssignGatherers()
                                 while (theIdle.size() > 0) {
                                     theUnit = theIdle.front();
                                     theIdle.pop_front();
-                                    if (gContinentManager.AreConnected(gContinentManager.GetContinentByID(theTownContinent),
-                                            gContinentManager.mContinents[gContinentManager.GetContinentID(theUnit)],
+                                    if (gContinentManager.AreConnectedFromIDs(theTownContinent, gContinentManager.GetContinentID(theUnit),
                                             this->mManager->mPlayer->GetCitizenPassability())
                                         && !gContinentManager.AreConnected(gContinentManager.GetContinentAt(theFar),
                                             gContinentManager.GetContinentAt(theUnit), this->mManager->mPlayer->GetCitizenPassability()))
                                         theStranded.push_back(theUnit);
                                 }
-                                if (theStranded.size() > 0)
+                                if (theStranded.size() != 0)
                                     this->RequestFerry(theStranded, theFar);
                             }
                         }
@@ -669,7 +668,7 @@ static bool EECPRMPatchSite(EECPResourceManager* inManager, EEUnit* inPatch, EET
     unsigned short theContinent = gContinentManager.GetContinent(U2DPoint<long>(theX, theY), kAIPathLandMass);
     std::vector<EETileCoordinate> theTiles;
     for (long theRing = 2; theRing <= kPatchDropRange + 2; theRing++) {
-        Fn2492C2(theX, theY, theRing, theTiles);
+        EEGetSquareRingTiles(theX, theY, theRing, theTiles);
         for (unsigned long k = 0; k < theTiles.size(); k++)
             if (theBuild->CanBuildAt(theContinent, kUnitTypeSettlement, theTiles[k], theClass->mTileSize, true, true, theX, theY)) {
                 outTile = theTiles[k];
@@ -834,7 +833,7 @@ void EECPResourceManager::RefreshResources()
         }
     }
     theCenter = U2DPoint<long>(this->mManager->mBuildManager->mTownCenterTile.mX, this->mManager->mBuildManager->mTownCenterTile.mY);
-    if (theCenter.mX != -10000 && theCenter.mY != -10000)
+    if (theCenter.GetX() != -10000 && theCenter.GetY() != -10000)
         std::sort(this->mForests.begin(), this->mForests.end(), EECPRMForestDistanceLess(theCenter));
     unsigned long j;
     for (j = 0; j < this->mMines.size(); j++)
@@ -845,19 +844,19 @@ void EECPResourceManager::RefreshResources()
         this->mFish[k]->Dereference();
     this->mFish.clear();
     for (EEUnit* theUnit = theNature->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
-        if (!(theUnit->mResourceAmount > 0) || theUnit->mResourceType != kResourceFood || !(theUnit->mHitPoints > 0) || theUnit->mStats->mAttack != 0.0f)
+        if (!(theUnit->GetResourceAmount() > 0) || theUnit->GetResourceType() != kResourceFood || !(theUnit->GetHitPoints() > 0) || theUnit->GetStats()->GetAttack() != 0.0f)
             continue;
-        long theKind = theUnit->GetUnitClass()->mFamily;
+        long theKind = theUnit->GetUnitClass()->GetFamily();
         if (theKind == kUnitFamilyAnimal) {
             theUnit->Reference();
-            EEComplexUnit* theMine = theUnit->mComplexUnit;
+            EEComplexUnit* theMine = theUnit->GetComplexUnit();
             this->mMines.push_back(theMine);
         } else if (theKind == kUnitFamilyFish) {
             theUnit->Reference();
             this->mFish.push_back(static_cast<EEComplexUnit*>(theUnit));
         }
     }
-    if (theCenter.mX != -10000 && theCenter.mY != -10000)
+    if (theCenter.GetX() != -10000 && theCenter.GetY() != -10000)
         std::sort(this->mMines.begin(), this->mMines.end(), EECPRMUnitDistanceLess(theCenter));
 }
 
@@ -879,39 +878,38 @@ void EECPResourceManager::AddCosts(EETechTreeNode* inNode, long inCount)
 // town center
 void EECPResourceManager::FindMines(unsigned long inCount, bool inNear, std::vector<EEComplexUnit*>& outUnits)
 {
-    long theRadius = this->mManager->mPlayer->mDropOffDistance;
+    long theRadius = this->GetManager()->GetPlayer()->GetDropOffDistance();
     outUnits.clear();
     long theRange = inNear ? theRadius * theRadius * 4 : theRadius * theRadius * 36;
     EETileCoordinate theCenter;
-    theCenter.mX = this->mManager->mBuildManager->mTownCenterTile.mX;
-    theCenter.mY = this->mManager->mBuildManager->mTownCenterTile.mY;
+    theCenter.SetX(this->GetManager()->GetBuildManager()->mTownCenterTile.GetX());
+    theCenter.SetY(this->GetManager()->GetBuildManager()->mTownCenterTile.GetY());
     bool theHaveCenter;
-    if (theCenter.mX != -10000 && theCenter.mY != -10000)
+    if (theCenter.GetX() != -10000 && theCenter.GetY() != -10000)
         theHaveCenter = true;
     else
         theHaveCenter = false;
     unsigned long theFound = 0;
     for (unsigned long i = 0; theFound < inCount && i < this->mMines.size(); i++) {
-        EEComplexUnit* theMine = this->mMines[i];
+        EEComplexUnit* theMine = this->GetMinesAt(i);
         bool theSame;
         if (theHaveCenter) {
-            EEComputerPlayer* thePlayer = this->mManager->mPlayer;
+            EEComputerPlayer* thePlayer = this->GetManager()->GetPlayer();
             long theY = theMine->GetTileY();
             long theX = theMine->GetTileX();
-            unsigned short theCenterID = gContinentManager.GetContinentID(theCenter.mX, theCenter.mY);
+            unsigned short theCenterID = gContinentManager.GetContinentID(theCenter.GetX(), theCenter.GetY());
             long theFlags = thePlayer->GetCitizenPassability();
-            theSame = gContinentManager.AreConnected(gContinentManager.GetContinentByID(theCenterID),
-                                                gContinentManager.mContinents[gContinentManager.GetContinentID(theX, theY)], theFlags);
+            theSame = gContinentManager.AreConnectedFromIDs(theCenterID, gContinentManager.GetContinentID(theX, theY), theFlags);
         } else
             theSame = true;
-        if (!theSame || !theMine->mIsValid || !(theMine->mResourceAmount > 0) || !(theMine->GetHitPoints() > 0))
+        if (!theSame || !theMine->GetIsValid() || !(theMine->GetResourceAmount() > 0) || !(theMine->GetHitPoints() > 0))
             continue;
-        bool theFree = !this->mManager->mBuildManager->HasEnemyNear(theMine->GetTileX(), theMine->GetTileY());
+        bool theFree = !this->GetManager()->GetBuildManager()->HasEnemyNear(theMine->GetTileX(), theMine->GetTileY());
         if (!theFree)
             continue;
         EEComplexUnit* theCenterUnit = this->FindNearestTownCenter(theMine);
         if (theCenterUnit != NULL && theCenterUnit->DistanceSquaredTo(theMine) < (float)theRange) {
-            outUnits.push_back(this->mMines[i]);
+            outUnits.push_back(this->GetMinesAt(i));
             theFound++;
         }
     }
@@ -934,7 +932,7 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
     for (unsigned long i = 0; i < thePlayer->GetNumResourceCenters(); i++) {
         EECPResourceCenter* theCenterObject = thePlayer->GetResourceCenter(i);
         EEUnit* theUnit = theCenterObject->FindResourceUnit(2);
-        if (theUnit == NULL || theUnit->GetUnitClass()->mUnitType != kUnitTypeResForageBush)
+        if (theUnit == NULL || theUnit->GetUnitClass()->GetUnitType() != kUnitTypeResForageBush)
             continue;
         if (inUnit != NULL) {
             EETileCoordinate theUnitTile;
@@ -951,17 +949,16 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
             long theX = theUnit->GetTileX();
             unsigned short theCenterID = gContinentManager.GetContinentID(theCenter.mCenter.mX, theCenter.mCenter.mY);
             long theFlags = theOwner->GetCitizenPassability();
-            if (!gContinentManager.AreConnected(gContinentManager.GetContinentByID(theCenterID),
-                                           gContinentManager.mContinents[gContinentManager.GetContinentID(theX, theY)], theFlags))
+            if (!gContinentManager.AreConnectedFromIDs(theCenterID, gContinentManager.GetContinentID(theX, theY), theFlags))
                 continue;
         }
-        if (!static_cast<EETile*>(theUnit->mTile)->IsVisibleTo(thePlayer))
+        if (!static_cast<EETile*>(theUnit->GetRTSTile())->IsVisibleTo(thePlayer))
             continue;   // skip it (was break: ended the whole search)
         if (gWorld.GetResourceUsers(theUnit) >= theLimit)
             continue;
         theTile.mCenter.mX = theUnit->GetTileX();
         theTile.mCenter.mY = theUnit->GetTileY();
-        if (theUnit->mResourceAmount <= 0 || theUnit->mTile->mTerrainType == kTerrainDeepWater)
+        if (theUnit->GetResourceAmount() <= 0 || theUnit->GetRTSTile()->GetTerrainType() == kTerrainDeepWater)
             continue;
         if (inNeedsDropSite && theCenterObject->mUnit == NULL)
             continue;
@@ -996,14 +993,14 @@ static bool EECPRMFishInDanger(EECPResourceManager* inManager, EEUnit* inFish)
 EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
 {
     std::vector<EEUnit*> theUnits;
-    unsigned long theLimit = this->mManager->mPlayer->mMiningLimit;
+    unsigned long theLimit = this->GetManager()->GetPlayer()->mMiningLimit;
     EEUnit* theResult = NULL;
     std::sort(this->mFish.begin(), this->mFish.end(), EECPUnitTileDistanceLess(inUnit->GetTile()));
-    EEGetPlayerUnitsOfType(kUnitTypeDock, this->mManager->mPlayer->mPlayerID, theUnits);
+    EEGetPlayerUnitsOfType(kUnitTypeDock, this->GetManager()->GetPlayer()->GetPlayerID(), theUnits);
     unsigned long i;
     for (i = 0; i < this->mFish.size() && theResult == NULL; i++) {
         EEComplexUnit* theUnit = this->mFish[i];
-        if (theUnit->mResourceAmount > 0 && gWorld.GetResourceUsers(theUnit) < theLimit && !EECPRMFishInDanger(this, theUnit)) {
+        if (theUnit->GetResourceAmount() > 0 && gWorld.GetResourceUsers(theUnit) < theLimit && !EECPRMFishInDanger(this, theUnit)) {
             if (std::find_if(theUnits.begin(), theUnits.end(), EECPRMUnitWithin(theUnit->GetTile(), 64.0f)) == theUnits.end())
                 theResult = theUnit;
         }
@@ -1013,7 +1010,7 @@ EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
     unsigned long j;
     for (j = 0; j < this->mFish.size() && theResult == NULL; j++) {
         EEComplexUnit* theUnit = this->mFish[j];
-        if (theUnit->mResourceAmount > 0 && gWorld.GetResourceUsers(theUnit) < theLimit && !EECPRMFishInDanger(this, theUnit))
+        if (theUnit->GetResourceAmount() > 0 && gWorld.GetResourceUsers(theUnit) < theLimit && !EECPRMFishInDanger(this, theUnit))
             theResult = theUnit;
     }
     return theResult;
@@ -1327,6 +1324,7 @@ void EECPResourceManager::UnitsSwapped(std::vector<EEPUnitSwap>& inSwaps)
     }
 }
 
+
 // FUNCTION: EXE 0x4912be
 // Sends a unit on the same land mass to gather a resource (new or retargeted gather goal) and files it under
 // that resource
@@ -1335,29 +1333,27 @@ void EECPResourceManager::SendToGather(EEComplexUnit* inUnit, EEUnit* inResource
     long theFlags = this->mManager->mPlayer->GetCitizenPassability();
     unsigned short theResourceContinent = gContinentManager.GetContinentID(inResource);
     unsigned short theUnitContinent = gContinentManager.GetContinentID(inUnit);
-    bool theOK = gContinentManager.AreConnected(gContinentManager.GetContinentByID(theUnitContinent),
-                                           gContinentManager.mContinents[theResourceContinent], theFlags);
+    bool theOK = gContinentManager.AreConnectedFromIDs(theUnitContinent, theResourceContinent, theFlags);
     if (!theOK)
         return;
     EEUnitAction* theCommand = inUnit->mCommand;
     if (theCommand != NULL && theCommand->mType == kActionIdle) {
-        if (inResource->mResourceType != inUnit->mResourceType && inUnit->mResourceAmount != 0)
-            inUnit->mResourceAmount = 0;
+        if (inResource->GetResourceType() != inUnit->GetResourceType())
+            inUnit->SetResourceAmount(0);
         EEUnitGoal* theGoal = new EEUGGather(inResource, inStorage, true);
         inUnit->ClearGoalQueue(0);
         inUnit->SetGoal(theGoal, 0, 0);
     } else if (inUnit->IsGathering()) {
         EEUGGather* theGoal = static_cast<EEUGGather*>(inUnit->GetLoadGoal());
-        if (inUnit->mResourceAmount != 0)
-            inUnit->mResourceAmount = 0;
+        inUnit->SetResourceAmount(0);
         inUnit->SetGatheredResource(NULL);
         theGoal->SetResource(inResource);
         theGoal->SetStorage(inStorage);
     } else {
         EEUGGather* theGoal = dynamic_cast<EEUGGather*>(inUnit->GetLoadGoal());
         if (theGoal != NULL) {
-            if (inResource->mResourceType != inUnit->mResourceType && inUnit->mResourceAmount != 0)
-                inUnit->mResourceAmount = 0;
+            if (inResource->GetResourceType() != inUnit->GetResourceType())
+                inUnit->SetResourceAmount(0);
             inUnit->SetGatheredResource(NULL);
             theGoal->SetResource(inResource);
             theGoal->SetStorage(inStorage);
@@ -1366,12 +1362,11 @@ void EECPResourceManager::SendToGather(EEComplexUnit* inUnit, EEUnit* inResource
     }
     if (!theOK)
         return;
-    if (inUnit->mResourceType != inResource->mResourceType)
-        inUnit->mResourceType = inResource->mResourceType;
+    inUnit->SetResourceType(inResource->GetResourceType());
     inUnit->StartAction(kActionMoveToWaitingArea);
     inUnit->GetUnitClass()->ActionChanged(inUnit);
     this->RemoveGatherer(inUnit);
-    this->AddGatherer(inUnit, inResource->mResourceType);
+    this->AddGatherer(inUnit, inResource->GetResourceType());
 }
 
 // FUNCTION: EXE 0x491430

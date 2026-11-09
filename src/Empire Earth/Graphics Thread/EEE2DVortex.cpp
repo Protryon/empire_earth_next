@@ -131,8 +131,6 @@ long EEE2DVortex::SetUp()
 // of its life; returns the draw result
 long EEE2DVortex::DrawPass5()
 {
-    // mOrbitals[i] call operator+ out of line
-
     std::vector<long> theUnused;
     GETransformation theTransformation;
     GETransformation theOrientation;
@@ -147,7 +145,7 @@ long EEE2DVortex::DrawPass5()
     gRasterizer->SetZBuffer(kZBufferTestAndWrite, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10FA01();
+    SetUnitLighting();
     theTransformation.SetX(this->mDrawPosition.GetX());
     theTransformation.SetY(this->mDrawPosition.GetY());
     theTransformation.SetZ(this->mDrawPosition.GetZ() + 0.2f);

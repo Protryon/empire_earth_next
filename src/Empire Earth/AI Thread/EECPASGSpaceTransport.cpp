@@ -123,7 +123,7 @@ EETileLocation EECPASGSpaceTransport::GetRallyPoint(bool inIncludeAllies)
     if (theUnits.size() > 0) {
         GETransformation theTransformation;
         GE3DPoint theLocation(0.0f, 0.0f, 0.0f);
-        Fn4EEF9(theUnits, UMFloatToLong(gPhysics->mRandom.GenerateUnit()));
+        PermuteValues(theUnits, UMFloatToLong(gPhysics->mRandom.GenerateUnit()));
         if (EEGetDockShipFacing(&theLocation, this->mUnits.front()->GetUnit()->GetUnitClass(),
                       theUnits.front(), false, &theTransformation)) {
             this->mRallyPoint.mTile = EETileLocation(UMFloor(theTransformation.GetX()), UMFloor(theTransformation.GetY()));

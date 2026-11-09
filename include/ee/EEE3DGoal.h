@@ -9,7 +9,7 @@ class GE2DPoint;
 
 // 0x118676 (cdecl, in the render objects' range): the screen point of the world point inPoint (the current camera
 // transformation, then the viewport projection) (provisional name; types inferred)
-void Fn118676(const GE3DPoint& inPoint, GE2DPoint& outPoint);
+void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint);
 
 class EEE3DGoal : public EEE3DIcon {
 public:

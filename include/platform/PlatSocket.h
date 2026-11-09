@@ -52,6 +52,29 @@ typedef intptr_t PlatSocket;
 #define PLAT_SOCK_ECONNREFUSED 10061
 #define PLAT_SOCK_EHOSTUNREACH 10065
 #define PLAT_SOCK_NOTINITIALISED 10093
+// the rest of Winsock's numbering (the WON library names them; a native error maps to one where it has a twin)
+#define PLAT_SOCK_EDESTADDRREQ 10039
+#define PLAT_SOCK_EPROTOTYPE 10041
+#define PLAT_SOCK_ENOPROTOOPT 10042
+#define PLAT_SOCK_EPROTONOSUPPORT 10043
+#define PLAT_SOCK_ESOCKTNOSUPPORT 10044
+#define PLAT_SOCK_EPFNOSUPPORT 10046
+#define PLAT_SOCK_EAFNOSUPPORT 10047
+#define PLAT_SOCK_ENETRESET 10052
+#define PLAT_SOCK_ESHUTDOWN 10058
+#define PLAT_SOCK_ETOOMANYREFS 10059
+#define PLAT_SOCK_ELOOP 10062
+#define PLAT_SOCK_ENAMETOOLONG 10063
+#define PLAT_SOCK_EHOSTDOWN 10064
+#define PLAT_SOCK_ENOTEMPTY 10066
+#define PLAT_SOCK_EPROCLIM 10067
+#define PLAT_SOCK_EUSERS 10068
+#define PLAT_SOCK_EDQUOT 10069
+#define PLAT_SOCK_ESTALE 10070
+#define PLAT_SOCK_EREMOTE 10071
+#define PLAT_SOCK_SYSNOTREADY 10091
+#define PLAT_SOCK_VERNOTSUPPORTED 10092
+#define PLAT_SOCK_EDISCON 10101
 #define PLAT_SOCK_HOST_NOT_FOUND 11001
 #define PLAT_SOCK_OTHER 10100               // a native error without a Winsock twin
 
@@ -101,6 +124,28 @@ int PlatSocketConnect(PlatSocket inSocket, const PlatSockAddrIn* inAddress);
 int PlatSocketGetName(PlatSocket inSocket, PlatSockAddrIn* outAddress);        // getsockname
 int PlatSocketSetNonBlocking(PlatSocket inSocket, int inNonBlocking);
 int PlatSocketSetBroadcast(PlatSocket inSocket, int inBroadcast);
+// Socket options: SO_LINGER (inOn nonzero: a close waits up to inSeconds for unsent data; 0 with inSeconds 0 is the
+// default graceful close, nonzero with 0 an abortive one), SO_REUSEADDR, TCP_NODELAY (Nagle off when nonzero).
+int PlatSocketSetLinger(PlatSocket inSocket, int inOn, int inSeconds);
+int PlatSocketSetReuseAddress(PlatSocket inSocket, int inReuse);
+int PlatSocketSetNoDelay(PlatSocket inSocket, int inNoDelay);
+// shutdown: inHow PLAT_SOCKET_SHUT_* (Winsock's SD_RECEIVE / SD_SEND / SD_BOTH = POSIX SHUT_RD / SHUT_WR / SHUT_RDWR)
+#define PLAT_SOCKET_SHUT_RECEIVE 0
+#define PLAT_SOCKET_SHUT_SEND 1
+#define PLAT_SOCKET_SHUT_BOTH 2
+int PlatSocketShutdown(PlatSocket inSocket, int inHow);
+// Waits up to inTimeoutMs (PLAT_WAIT_INFINITE of platform/PlatThread.h: forever; 0: a poll) until the socket is
+// ready for one of inMask's PLAT_SOCKET_WAIT_* conditions -> the ready ones (a subset of inMask), 0 on timeout, -1 on
+// failure (PlatSocketLastError). Readable: data, a connection to accept, or the peer closed or reset the stream.
+// Writable: a non-blocking connect completed, or room to send. Except: a non-blocking connect failed (the reason in
+// PlatSocketGetError). Win32: select; POSIX: poll, with POLLERR / POLLHUP reported as EXCEPT.
+#define PLAT_SOCKET_WAIT_READ 0x1u
+#define PLAT_SOCKET_WAIT_WRITE 0x2u
+#define PLAT_SOCKET_WAIT_EXCEPT 0x4u
+int32_t PlatSocketWait(PlatSocket inSocket, uint32_t inMask, uint32_t inTimeoutMs);
+// The socket's pending error (getsockopt SO_ERROR) as PLAT_SOCK_E*, 0 when there is none. POSIX clears it as it is
+// read, Winsock keeps it: read it once.
+uint32_t PlatSocketGetError(PlatSocket inSocket);
 // -> the bytes sent / received (0: the peer closed a stream), -1 on failure (PLAT_SOCK_EWOULDBLOCK: nothing yet)
 int32_t PlatSocketSend(PlatSocket inSocket, const void* inData, uint32_t inLength);
 int32_t PlatSocketRecv(PlatSocket inSocket, void* outData, uint32_t inLength);

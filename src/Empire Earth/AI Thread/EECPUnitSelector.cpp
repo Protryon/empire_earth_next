@@ -125,21 +125,21 @@ EECPUnitSelector::~EECPUnitSelector()
 // join the group, buildings are queued (at the group's tile when on the map), anything else is traced and dropped
 void EECPUnitSelector::AllocateAlreadyDefinedUnits(EECPUnitSelectionGroup* inGroup, EECPUnitRequirement* inRequirement)
 {
-    EECPCombatStrategy* theStrategy = inGroup->mStrategy;
+    EECPCombatStrategy* theStrategy = inGroup->GetStrategy();
     long theClassID = 0;
-    for (long i = theStrategy->mNumRemaining - 1; i >= 0; i--) {
-        long theUnitClass = inRequirement->mUnitKind;
+    for (long i = theStrategy->GetNumRemaining() - 1; i >= 0; i--) {
+        long theUnitClass = inRequirement->GetUnitKind();
         if (theUnitClass != 0) {
             theClassID = inGroup->mGatherer.TakeByKind(theUnitClass);
             if (theClassID == 0)
                 theClassID = this->GetRandomOfKind(theUnitClass, inGroup->mClassesByKind);
-        } else if (inRequirement->mUnitClass != 0) {
-            if (this->IsAvailable(inRequirement->mUnitClass, inGroup->mGatherer))
-                theClassID = inRequirement->mUnitClass;
-            if (theClassID == 0 && this->IsCandidate(inRequirement->mUnitClass, inGroup->mClassesByKind))
-                theClassID = inRequirement->mUnitClass;
+        } else if (inRequirement->GetUnitClass() != 0) {
+            if (this->IsAvailable(inRequirement->GetUnitClass(), inGroup->mGatherer))
+                theClassID = inRequirement->GetUnitClass();
+            if (theClassID == 0 && this->IsCandidate(inRequirement->GetUnitClass(), inGroup->mClassesByKind))
+                theClassID = inRequirement->GetUnitClass();
         } else {
-            long theType = inRequirement->mCategory;
+            long theType = inRequirement->GetCategory();
             if (theType != 0x23) {
                 theClassID = inGroup->mGatherer.TakeByCategory(theType);
                 if (theClassID == 0)
@@ -148,22 +148,22 @@ void EECPUnitSelector::AllocateAlreadyDefinedUnits(EECPUnitSelectionGroup* inGro
         }
         if (theClassID != 0) {
             EEUnitClass* theClass = gUnitClassTable[theClassID];
-            if (theClass->mMaxVelocity > 0.0f && (theClass->mIsAttackUnit || theClass->mIsDefenseUnit || theClass->IsTransport())) {
-                if ((theClass->mDomains & kMovementAir) && !theClass->FliesOver())
-                    theStrategy->mNumAir = max(theStrategy->mNumAir - 1, 0);
-                else if (theClass->mDomains & kMovementSea)
-                    theStrategy->mNumSea = max(theStrategy->mNumSea - 1, 0);
-                else if ((theClass->mDomains & kMovementLand) || theClass->FliesOver())
-                    theStrategy->mNumLand = max(theStrategy->mNumLand - 1, 0);
-                else if (theClass->mDomains & kMovementSpace)
-                    theStrategy->mNumSpace = max(theStrategy->mNumSpace - 1, 0);
+            if (theClass->GetMaxVelocity() > 0.0f && (theClass->GetIsAttackUnit() || theClass->GetIsDefenseUnit() || theClass->IsTransport())) {
+                if ((theClass->GetDomains() & kMovementAir) && !theClass->FliesOver())
+                    theStrategy->mNumAir = max(theStrategy->GetNumAir() - 1, 0);
+                else if (theClass->GetDomains() & kMovementSea)
+                    theStrategy->mNumSea = max(theStrategy->GetNumSea() - 1, 0);
+                else if ((theClass->GetDomains() & kMovementLand) || theClass->FliesOver())
+                    theStrategy->mNumLand = max(theStrategy->GetNumLand() - 1, 0);
+                else if (theClass->GetDomains() & kMovementSpace)
+                    theStrategy->mNumSpace = max(theStrategy->GetNumSpace() - 1, 0);
                 inGroup->mSelected.push_back(theClassID);
             } else if (theClass->IsLandBuilding()) {
                 if (gWorld.mMap->GetTileAtLocation(inGroup->mLocation.mTile))
                     this->mPlayer->mCivilizationManager->GetBuildManager()->QueueBuildingAt(theClassID, inGroup->mLocation.mTile.mX,
                                                                                inGroup->mLocation.mTile.mY);
                 else
-                    this->mPlayer->mCivilizationManager->GetBuildManager()->QueueBuilding(theClassID, 1, 1);
+                    this->GetPlayer()->GetCivilizationManager()->GetBuildManager()->QueueBuilding(theClassID, 1, 1);
             } else
                 EEDebugTrace("!Throwing Object %s(ID:%d) away in EECPUnitSelector::AllocateAlreadyDefinedUnits since its not a building and doesn't have either velocity or use for ai attack/use for ai defense checked.\n", theClass->GetName(), theClassID);
         }
@@ -188,23 +188,23 @@ void EECPUnitSelector::AllocateHeldUnits(EECPUnitSelectionGroup* inGroup, EECPUn
     std::map<long, long> theCounts;
     std::vector<long> theClasses;
     std::map<long, long>::iterator it;
-    EECPCombatStrategy* theStrategy = inGroup->mStrategy;
-    long theWanted = inRequirement->mNumLeft;
-    long the34 = theStrategy->mNumAir;
-    long the38 = theStrategy->mNumSea;
-    long the3C = theStrategy->mNumLand;
-    long the40 = theStrategy->mNumSpace;
+    EECPCombatStrategy* theStrategy = inGroup->GetStrategy();
+    long theWanted = inRequirement->GetNumLeft();
+    long the34 = theStrategy->GetNumAir();
+    long the38 = theStrategy->GetNumSea();
+    long the3C = theStrategy->GetNumLand();
+    long the40 = theStrategy->GetNumSpace();
     std::vector<EEUnit*>& theUnits = inGroup->mUnits;
     for (long i = theUnits.size() - 1; i >= 0; i--) {
         EEUnitClass* theClass = (theUnits[i])->GetClass();
-        if (theClass->mAIKind == kAIKindHero || theClass->mUnitType == kUnitTypePriest || theClass->mUnitType == kUnitTypeProphet ||
-            theClass->mCategory == kUnitCategoryNavalBuilding)
+        if (theClass->GetAIKind() == kAIKindHero || theClass->GetUnitType() == kUnitTypePriest || theClass->GetUnitType() == kUnitTypeProphet ||
+            theClass->GetCategory() == kUnitCategoryNavalBuilding)
             continue;
-        it = theCounts.find((theUnits[i])->GetClass()->mUnitType);
+        it = theCounts.find((theUnits[i])->GetClass()->GetUnitType());
         if (it != theCounts.end())
             it->second++;
         else
-            theCounts.insert(std::map<long, long>::value_type((theUnits[i])->GetClass()->mUnitType, 1));
+            theCounts.insert(std::map<long, long>::value_type((theUnits[i])->GetClass()->GetUnitType(), 1));
     }
     for (long j = 0; j <= 8; j++) {
         if (theWanted <= 0 || theCounts.size() == 0)
@@ -218,15 +218,15 @@ void EECPUnitSelector::AllocateHeldUnits(EECPUnitSelectionGroup* inGroup, EECPUn
         EEUnitClass* theClass = gUnitClassTable[theBest->first];
         long theTaken = 0;
         for (long k = min(theBest->second, theWanted) - 1; k >= 0; k--, theTaken++) {
-            if ((theClass->mDomains & kMovementAir) && !theClass->FliesOver()) {
+            if ((theClass->GetDomains() & kMovementAir) && !theClass->FliesOver()) {
                 if (the34 <= 0)
                     break;
                 the34--;
-            } else if (theClass->mDomains & kMovementSea) {
+            } else if (theClass->GetDomains() & kMovementSea) {
                 if (the38 <= 0)
                     break;
                 the38--;
-            } else if (theClass->mDomains & kMovementSpace) {
+            } else if (theClass->GetDomains() & kMovementSpace) {
                 if (the40 <= 0)
                     break;
                 the40--;
@@ -235,7 +235,7 @@ void EECPUnitSelector::AllocateHeldUnits(EECPUnitSelectionGroup* inGroup, EECPUn
                     break;
                 the3C--;
             }
-            theClasses.push_back(theClass->mUnitType);
+            theClasses.push_back(theClass->GetUnitType());
         }
         theWanted -= theTaken;
         if (theWanted < 0)
@@ -244,21 +244,21 @@ void EECPUnitSelector::AllocateHeldUnits(EECPUnitSelectionGroup* inGroup, EECPUn
     }
     for (long m = theClasses.size() - 1; m >= 0; m--) {
         for (long n = inGroup->mUnits.size() - 1; n >= 0; n--) {
-            if ((inGroup->mUnits[n])->GetClass()->mUnitType != theClasses[m])
+            if ((inGroup->mUnits[n])->GetClass()->GetUnitType() != theClasses[m])
                 continue;
             EEUnit* theUnit = inGroup->mUnits[n];
             if (theUnit != NULL) {
                 EEUnitClass* theClass = theUnit->GetClass();
-                if (theClass->mMaxVelocity > 0.0f && (theClass->mIsAttackUnit || theClass->mIsDefenseUnit || theClass->IsTransport())) {
-                    inGroup->mUnitIDs.push_back(theUnit->mUnitID);
-                    if ((theClass->mDomains & kMovementAir) && !theClass->FliesOver())
-                        inGroup->mStrategy->mNumAir = max(inGroup->mStrategy->mNumAir - 1, 0);
-                    else if (theClass->mDomains & kMovementSea)
-                        inGroup->mStrategy->mNumSea = max(inGroup->mStrategy->mNumSea - 1, 0);
-                    else if (theClass->mDomains & kMovementSpace)
-                        inGroup->mStrategy->mNumSpace = max(inGroup->mStrategy->mNumSpace - 1, 0);
+                if (theClass->GetMaxVelocity() > 0.0f && (theClass->GetIsAttackUnit() || theClass->GetIsDefenseUnit() || theClass->IsTransport())) {
+                    inGroup->mUnitIDs.push_back(theUnit->GetUnitID());
+                    if ((theClass->GetDomains() & kMovementAir) && !theClass->FliesOver())
+                        inGroup->GetStrategy()->mNumAir = max(inGroup->GetStrategy()->GetNumAir() - 1, 0);
+                    else if (theClass->GetDomains() & kMovementSea)
+                        inGroup->GetStrategy()->mNumSea = max(inGroup->GetStrategy()->GetNumSea() - 1, 0);
+                    else if (theClass->GetDomains() & kMovementSpace)
+                        inGroup->GetStrategy()->mNumSpace = max(inGroup->GetStrategy()->GetNumSpace() - 1, 0);
                     else
-                        inGroup->mStrategy->mNumLand = max(inGroup->mStrategy->mNumLand - 1, 0);
+                        inGroup->GetStrategy()->mNumLand = max(inGroup->GetStrategy()->GetNumLand() - 1, 0);
                     inRequirement->mNumLeft--;
                     theStrategy->DecrementRemaining();
                     inGroup->mUnits[n]->Dereference();
@@ -268,9 +268,9 @@ void EECPUnitSelector::AllocateHeldUnits(EECPUnitSelectionGroup* inGroup, EECPUn
             break;
         }
     }
-    if (!(inRequirement->mNumLeft > 0))
+    if (!(inRequirement->GetNumLeft() > 0))
         return;
-    long theRest = theStrategy->mNumRemaining - inRequirement->mNumLeft;
+    long theRest = theStrategy->GetNumRemaining() - inRequirement->GetNumLeft();
     if (theRest < 0)
         theRest = 0;
     theStrategy->mNumRemaining = theRest;
@@ -292,13 +292,13 @@ void EECPUnitSelector::AllocateFavoriteUnits(EECPUnitSelectionGroup* inGroup)
         long theFavorite = inGroup->mPlayer->mFavoriteAirType;
         EEUnitClass* theClass = gUnitClassTable[theFavorite];
         EETechTreeNode* theNode;
-        if (theClass == NULL || (theClass->mDomains & kMovementAir) == 0 ||
-            (theNode = theTree->Get(theClass->mTechnology)) == NULL || !theNode->GetIsAvailable()) {
+        if (theClass == NULL || (theClass->GetDomains() & kMovementAir) == 0 ||
+            (theNode = theTree->Get(theClass->GetTechnology())) == NULL || !theNode->GetIsAvailable()) {
             for (long i = theKind34.size() - 1; i >= 0; --i) {
                 EEUnitClass* theCandidate = gUnitClassTable[theKind34[i]];
                 EETechTreeNode* theCandidateNode;
                 if (theCandidate == NULL ||
-                    (theCandidateNode = theTree->Get(theCandidate->mTechnology)) == NULL ||
+                    (theCandidateNode = theTree->Get(theCandidate->GetTechnology())) == NULL ||
                     !theCandidateNode->GetIsAvailable() || !theScreen.IsFavoriteAir(theCandidate))
                     theKind34.erase(theKind34.begin() + i);
             }
@@ -322,13 +322,13 @@ void EECPUnitSelector::AllocateFavoriteUnits(EECPUnitSelectionGroup* inGroup)
         long theFavorite = inGroup->mPlayer->mFavoriteSeaType;
         EEUnitClass* theClass = gUnitClassTable[theFavorite];
         EETechTreeNode* theNode;
-        if (theClass == NULL || (theClass->mDomains & kMovementSea) == 0 ||
-            (theNode = theTree->Get(theClass->mTechnology)) == NULL || !theNode->GetIsAvailable()) {
+        if (theClass == NULL || (theClass->GetDomains() & kMovementSea) == 0 ||
+            (theNode = theTree->Get(theClass->GetTechnology())) == NULL || !theNode->GetIsAvailable()) {
             for (long i = theKind38.size() - 1; i >= 0; --i) {
                 EEUnitClass* theCandidate = gUnitClassTable[theKind38[i]];
                 EETechTreeNode* theCandidateNode;
                 if (theCandidate == NULL ||
-                    (theCandidateNode = theTree->Get(theCandidate->mTechnology)) == NULL ||
+                    (theCandidateNode = theTree->Get(theCandidate->GetTechnology())) == NULL ||
                     !theCandidateNode->GetIsAvailable() || !theScreen.IsFavoriteSea(theCandidate))
                     theKind38.erase(theKind38.begin() + i);
             }
@@ -352,13 +352,13 @@ void EECPUnitSelector::AllocateFavoriteUnits(EECPUnitSelectionGroup* inGroup)
         long theFavorite = inGroup->mPlayer->mFavoriteSpaceType;
         EEUnitClass* theClass = gUnitClassTable[theFavorite];
         EETechTreeNode* theNode;
-        if (theClass == NULL || (theClass->mDomains & kMovementSpace) == 0 ||
-            (theNode = theTree->Get(theClass->mTechnology)) == NULL || !theNode->GetIsAvailable()) {
+        if (theClass == NULL || (theClass->GetDomains() & kMovementSpace) == 0 ||
+            (theNode = theTree->Get(theClass->GetTechnology())) == NULL || !theNode->GetIsAvailable()) {
             for (long i = theKind40.size() - 1; i >= 0; --i) {
                 EEUnitClass* theCandidate = gUnitClassTable[theKind40[i]];
                 EETechTreeNode* theCandidateNode;
                 if (theCandidate == NULL ||
-                    (theCandidateNode = theTree->Get(theCandidate->mTechnology)) == NULL ||
+                    (theCandidateNode = theTree->Get(theCandidate->GetTechnology())) == NULL ||
                     !theCandidateNode->GetIsAvailable() || !theScreen.IsFavoriteSpace(theCandidate))
                     theKind40.erase(theKind40.begin() + i);
             }
@@ -382,13 +382,13 @@ void EECPUnitSelector::AllocateFavoriteUnits(EECPUnitSelectionGroup* inGroup)
         long theFavorite = inGroup->mPlayer->mFavoriteLandType;
         EEUnitClass* theClass = gUnitClassTable[theFavorite];
         EETechTreeNode* theNode;
-        if (theClass == NULL || (theClass->mDomains & kMovementLand) == 0 ||
-            (theNode = theTree->Get(theClass->mTechnology)) == NULL || !theNode->GetIsAvailable()) {
+        if (theClass == NULL || (theClass->GetDomains() & kMovementLand) == 0 ||
+            (theNode = theTree->Get(theClass->GetTechnology())) == NULL || !theNode->GetIsAvailable()) {
             for (long i = theKind3C.size() - 1; i >= 0; --i) {
                 EEUnitClass* theCandidate = gUnitClassTable[theKind3C[i]];
                 EETechTreeNode* theCandidateNode;
                 if (theCandidate == NULL ||
-                    (theCandidateNode = theTree->Get(theCandidate->mTechnology)) == NULL ||
+                    (theCandidateNode = theTree->Get(theCandidate->GetTechnology())) == NULL ||
                     !theCandidateNode->GetIsAvailable() || !theScreen.IsFavoriteLand(theCandidate))
                     theKind3C.erase(theKind3C.begin() + i);
             }
@@ -493,7 +493,7 @@ void EECPUnitSelector::AllocateCounterUnits(EECPUnitSelectionGroup* inGroup, EEC
             float theFactor = ((gWorld.mMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap || (gWorld.mMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap) ?
                 this->mPlayer->mRPSSelectionIslands : this->mPlayer->mRPSSelectionNonIslands;
             for (long n = UMCeil(theStrategy->mNumAir * theFactor) - 1; n >= 0; n--) {
-                if (theSpecials.size() > 0 && gPhysics->GetRandom() <= this->mPlayer->mSpecializedUnitChance)
+                if (theSpecials.size() != 0 && gPhysics->GetRandom() <= this->mPlayer->mSpecializedUnitChance)
                     theClassID = theSpecials[gPhysics->GetRandom(0L, (long)theSpecials.size() - 1)];
                 else if ((theClassID = inGroup->mGatherer.TakeUnitClass(*theChoices.begin())) == 0)
                     theClassID = *(theChoices.begin() + gPhysics->GetRandom(0L, (long)theChoices.size() - 1));
@@ -531,7 +531,7 @@ void EECPUnitSelector::AllocateCounterUnits(EECPUnitSelectionGroup* inGroup, EEC
             float theFactor = ((gWorld.mMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap || (gWorld.mMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap) ?
                 this->mPlayer->mRPSSelectionIslands : this->mPlayer->mRPSSelectionNonIslands;
             for (long n = UMCeil(theStrategy->mNumSea * theFactor) - 1; n >= 0; n--) {
-                if (theSpecials.size() > 0 && gPhysics->GetRandom() <= this->mPlayer->mSpecializedUnitChance)
+                if (theSpecials.size() != 0 && gPhysics->GetRandom() <= this->mPlayer->mSpecializedUnitChance)
                     theClassID = theSpecials[gPhysics->GetRandom(0L, (long)theSpecials.size() - 1)];
                 else if ((theClassID = inGroup->mGatherer.TakeUnitClass(*theChoices.begin())) == 0)
                     theClassID = *(theChoices.begin() + gPhysics->GetRandom(0L, (long)theChoices.size() - 1));
@@ -569,7 +569,7 @@ void EECPUnitSelector::AllocateCounterUnits(EECPUnitSelectionGroup* inGroup, EEC
             float theFactor = ((gWorld.mMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap || (gWorld.mMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap) ?
                 this->mPlayer->mRPSSelectionIslands : this->mPlayer->mRPSSelectionNonIslands;
             for (long n = UMCeil(theStrategy->mNumSpace * theFactor) - 1; n >= 0; n--) {
-                if (theSpecials.size() > 0 && gPhysics->mRandom.Generate() <= this->mPlayer->mSpecializedUnitChance)
+                if (theSpecials.size() != 0 && gPhysics->mRandom.Generate() <= this->mPlayer->mSpecializedUnitChance)
                     theClassID = *(theSpecials.begin() + gPhysics->GetRandom(0L, (long)theSpecials.size() - 1));
                 else if ((theClassID = inGroup->mGatherer.TakeUnitClass(*theChoices.begin())) == 0)
                     theClassID = theChoices[gPhysics->GetRandom(0L, (long)theChoices.size() - 1)];
@@ -644,10 +644,10 @@ void EECPUnitSelector::AllocateCounterUnits(EECPUnitSelectionGroup* inGroup, EEC
 // NEAR: the original expands GetRandom() in the last two blocks
 void EECPUnitSelector::AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EECPUnitRequirement* inRequirement)
 {
-    EECPUGatherSpecialUnitsCount theGatherer(inGroup->mPlayer, 0, 0);
+    EECPUGatherSpecialUnitsCount theGatherer(inGroup->GetPlayer(), 0, 0);
     std::map<long, std::vector<long>*>::iterator it;
-    EECPCombatStrategy* theStrategy = inGroup->mStrategy;
-    long theMaxUnits = this->mPlayer->GetPopulationLimit(0);
+    EECPCombatStrategy* theStrategy = inGroup->GetStrategy();
+    long theMaxUnits = this->GetPlayer()->GetPopulationLimit(0);
     long theClassID = 0;
     long theWanted;
     long theLimit;
@@ -655,37 +655,37 @@ void EECPUnitSelector::AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EEC
     long i;
     long j;
     long k;
-    if (theStrategy->mNumLand >= 4 && theStrategy->mNumAir > 0 && (gWorld.mMap->mMapCharacteristics & kRMMapPlanetsMap) != kRMMapPlanetsMap &&
-        gCivPowersManager.HasPower(this->mPlayer, kCivPowerParatroopers) &&
-        this->mPlayer->mTechnologies->Get(gUnitClassTable[kUnitTypeParatrooperPlane]->mTechnology)->GetIsAvailable() && gPhysics->GetRandom() <= 0.5f) {
+    if (theStrategy->GetNumLand() >= 4 && theStrategy->GetNumAir() > 0 && (gWorld.GetMap()->GetMapCharacteristics() & kRMMapPlanetsMap) != kRMMapPlanetsMap &&
+        gCivPowersManager.HasPower(this->GetPlayer(), kCivPowerParatroopers) &&
+        this->GetPlayer()->GetTechnologies()->Get(gUnitClassTable[kUnitTypeParatrooperPlane]->GetTechnology())->GetIsAvailable() && gPhysics->GetRandom() <= 0.5f) {
         inGroup->mSelected.push_back(0x2e1);
         theStrategy->mNumLand -= 4;
-        theStrategy->mNumAir = max(theStrategy->mNumAir - 1, 0);
+        theStrategy->mNumAir = max(theStrategy->GetNumAir() - 1, 0);
     }
-    if (theStrategy->mNumLand > 0) {
+    if (theStrategy->GetNumLand() > 0) {
         // unit type 1
-        if (gPhysics->GetRandom() <= this->mPlayer->mPriestChance &&
-            (theStrategy->mKind == 4 || theStrategy->mKind == 5 || (gUnitClassTable[kUnitTypePriest]->mIsAttackUnit && theStrategy->mKind == 0) ||
-             (gUnitClassTable[kUnitTypePriest]->mIsDefenseUnit && theStrategy->mKind == 1))) {
-            theWanted = gPhysics->GetRandom(1L, max(min(this->mPlayer->mPriestMaxPerGroup, theStrategy->mNumLand - 1), 1L));
+        if (gPhysics->GetRandom() <= this->GetPlayer()->GetPriestChance() &&
+            (theStrategy->GetKind() == 4 || theStrategy->GetKind() == 5 || (gUnitClassTable[kUnitTypePriest]->GetIsAttackUnit() && theStrategy->GetKind() == 0) ||
+             (gUnitClassTable[kUnitTypePriest]->GetIsDefenseUnit() && theStrategy->GetKind() == 1))) {
+            theWanted = gPhysics->GetRandom(1L, max(min(this->GetPlayer()->GetPriestMaxPerGroup(), theStrategy->GetNumLand() - 1), 1L));
             theGatherer.mUnits = 0;
             theGatherer.mRequested = 0;
             theGatherer.mCategory = kAIKindNone;
             theGatherer.mUnitType = kUnitTypePriest;
-            this->mPlayer->mCivilizationManager->mUnitManager->GatherUnits(theGatherer);
-            theLimit = UMCeil(this->mPlayer->mPriestPopPercentage * theMaxUnits);
-            if (theGatherer.mUnits + theGatherer.mRequested < theLimit) {
-                theWanted = min(theWanted, theLimit - theGatherer.mRequested - theGatherer.mUnits);
+            this->GetPlayer()->GetCivilizationManager()->GetUnitManager()->GatherUnits(theGatherer);
+            theLimit = UMCeil(this->GetPlayer()->GetPriestPopPercentage() * theMaxUnits);
+            if (theGatherer.GetUnits() + theGatherer.GetRequested() < theLimit) {
+                theWanted = min(theWanted, theLimit - theGatherer.GetRequested() - theGatherer.GetUnits());
                 if (theWanted > 0) {
                     theAvailable = inGroup->mGatherer.TakeUnitClass(kUnitTypePriest) == kUnitTypePriest;
                     if (!theAvailable) {
                         for (i = inGroup->mUnits.size() - 1; i >= 0; i--) {
                             if (theWanted <= 0)
                                 break;
-                            if ((*(inGroup->mUnits.begin() + i))->GetClass()->mUnitType != kUnitTypePriest)
+                            if ((*(inGroup->mUnits.begin() + i))->GetClass()->GetUnitType() != kUnitTypePriest)
                                 continue;
-                            inGroup->mUnitIDs.push_back((*(inGroup->mUnits.begin() + i))->mUnitID);
-                            theStrategy->mNumLand = max(theStrategy->mNumLand - 1, 0);
+                            inGroup->mUnitIDs.push_back((*(inGroup->mUnits.begin() + i))->GetUnitID());
+                            theStrategy->mNumLand = max(theStrategy->GetNumLand() - 1, 0);
                             inGroup->mUnits[i]->Dereference();
                             inGroup->mUnits.erase(inGroup->mUnits.begin() + i);
                             theWanted--;
@@ -701,7 +701,7 @@ void EECPUnitSelector::AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EEC
                     if (theAvailable) {
                         for (k = theWanted - 1; k >= 0; k--) {
                             inGroup->mSelected.push_back(1);
-                            inGroup->mStrategy->mNumLand = max(inGroup->mStrategy->mNumLand - 1, 0);
+                            inGroup->GetStrategy()->mNumLand = max(inGroup->GetStrategy()->GetNumLand() - 1, 0);
                         }
                     }
                 }
@@ -713,29 +713,29 @@ void EECPUnitSelector::AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EEC
         theGatherer.mCategory = kAIKindNone;
 
         // unit type 0xd8
-        if (theStrategy->mNumUnits > 1 && gPhysics->GetRandom() <= this->mPlayer->mProphetChance &&
-            (theStrategy->mKind == 4 || theStrategy->mKind == 5 ||
-             (gUnitClassTable[kUnitTypeProphet]->mIsAttackUnit && theStrategy->mKind == 0) ||
-             (gUnitClassTable[kUnitTypeProphet]->mIsDefenseUnit && theStrategy->mKind == 1))) {
-            theWanted = gPhysics->GetRandom(1L, max(min(this->mPlayer->mProphetMaxPerGroup, theStrategy->mNumLand - 1), 1L));
+        if (theStrategy->GetNumUnits() > 1 && gPhysics->GetRandom() <= this->GetPlayer()->GetProphetChance() &&
+            (theStrategy->GetKind() == 4 || theStrategy->GetKind() == 5 ||
+             (gUnitClassTable[kUnitTypeProphet]->GetIsAttackUnit() && theStrategy->GetKind() == 0) ||
+             (gUnitClassTable[kUnitTypeProphet]->GetIsDefenseUnit() && theStrategy->GetKind() == 1))) {
+            theWanted = gPhysics->GetRandom(1L, max(min(this->GetPlayer()->GetProphetMaxPerGroup(), theStrategy->GetNumLand() - 1), 1L));
             theGatherer.mUnits = 0;
             theGatherer.mRequested = 0;
             theGatherer.mCategory = kAIKindNone;
             theGatherer.mUnitType = kUnitTypeProphet;
-            this->mPlayer->mCivilizationManager->mUnitManager->GatherUnits(theGatherer);
-            theLimit = UMCeil(this->mPlayer->mProphetPopPercentage * theMaxUnits);
-            if (theGatherer.mUnits + theGatherer.mRequested < theLimit) {
-                theWanted = min(theWanted, theLimit - theGatherer.mRequested - theGatherer.mUnits);
+            this->GetPlayer()->GetCivilizationManager()->GetUnitManager()->GatherUnits(theGatherer);
+            theLimit = UMCeil(this->GetPlayer()->GetProphetPopPercentage() * theMaxUnits);
+            if (theGatherer.GetUnits() + theGatherer.GetRequested() < theLimit) {
+                theWanted = min(theWanted, theLimit - theGatherer.GetRequested() - theGatherer.GetUnits());
                 if (theWanted > 0) {
                     theAvailable = inGroup->mGatherer.TakeUnitClass(kUnitTypeProphet) == kUnitTypeProphet;
                     if (!theAvailable) {
                         for (i = inGroup->mUnits.size() - 1; i >= 0; i--) {
                             if (theWanted <= 0)
                                 break;
-                            if (inGroup->mUnits[i]->GetClass()->mUnitType != kUnitTypeProphet)
+                            if (inGroup->mUnits[i]->GetClass()->GetUnitType() != kUnitTypeProphet)
                                 continue;
-                            inGroup->mUnitIDs.push_back(inGroup->mUnits[i]->mUnitID);
-                            theStrategy->mNumLand = max(theStrategy->mNumLand - 1, 0);
+                            inGroup->mUnitIDs.push_back(inGroup->mUnits[i]->GetUnitID());
+                            theStrategy->mNumLand = max(theStrategy->GetNumLand() - 1, 0);
                             inGroup->mUnits[i]->Dereference();
                             inGroup->mUnits.erase(inGroup->mUnits.begin() + i);
                             theWanted--;
@@ -750,7 +750,7 @@ void EECPUnitSelector::AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EEC
                     }
                     if (theAvailable) {
                         for (k = theWanted - 1; k >= 0; k--) {
-                            inGroup->mStrategy->mNumLand = max(inGroup->mStrategy->mNumLand - 1, 0);
+                            inGroup->GetStrategy()->mNumLand = max(inGroup->GetStrategy()->GetNumLand() - 1, 0);
                             inGroup->mSelected.push_back(0xd8);
                         }
                     }
@@ -763,20 +763,20 @@ void EECPUnitSelector::AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EEC
         theGatherer.mCategory = kAIKindNone;
 
         // category 0x1b
-        if (theStrategy->mNumUnits > 1 && gPhysics->mRandom.Generate() <= this->mPlayer->mHeroChance && gUnitClassTable[kUnitTypeH24HannibalMorale] != NULL &&
-            (theStrategy->mKind == 4 || theStrategy->mKind == 5 ||
-             (gUnitClassTable[kUnitTypeH24HannibalMorale]->mIsAttackUnit && theStrategy->mKind == 0) ||
-             (gUnitClassTable[kUnitTypeH24HannibalMorale]->mIsDefenseUnit && theStrategy->mKind == 1))) {
-            theWanted = gPhysics->GetRandom(1L, max(min(this->mPlayer->mHeroMaxPerGroup, theStrategy->mNumLand - 1), 1L));
+        if (theStrategy->GetNumUnits() > 1 && gPhysics->mRandom.Generate() <= this->GetPlayer()->GetHeroChance() && gUnitClassTable[kUnitTypeH24HannibalMorale] != NULL &&
+            (theStrategy->GetKind() == 4 || theStrategy->GetKind() == 5 ||
+             (gUnitClassTable[kUnitTypeH24HannibalMorale]->GetIsAttackUnit() && theStrategy->GetKind() == 0) ||
+             (gUnitClassTable[kUnitTypeH24HannibalMorale]->GetIsDefenseUnit() && theStrategy->GetKind() == 1))) {
+            theWanted = gPhysics->GetRandom(1L, max(min(this->GetPlayer()->GetHeroMaxPerGroup(), theStrategy->GetNumLand() - 1), 1L));
             theGatherer.mUnits = 0;
             theGatherer.mRequested = 0;
             theGatherer.mUnitType = 0;
             theGatherer.mCategory = kAIKindHero;
-            this->mPlayer->mCivilizationManager->mUnitManager->GatherUnits(theGatherer);
-            theLimit = UMCeil(this->mPlayer->mHeroPopPercentage * theMaxUnits);
-            if (theGatherer.mUnits + theGatherer.mRequested < theLimit &&
-                (gWorld.mGameOptions.mIsScenarioGame || this->mPlayer->GetHeroCount(true, true) < this->mPlayer->mHeroLimit)) {
-                theWanted = min(theWanted, theLimit - theGatherer.mRequested - theGatherer.mUnits);
+            this->GetPlayer()->GetCivilizationManager()->GetUnitManager()->GatherUnits(theGatherer);
+            theLimit = UMCeil(this->GetPlayer()->GetHeroPopPercentage() * theMaxUnits);
+            if (theGatherer.GetUnits() + theGatherer.GetRequested() < theLimit &&
+                (gWorld.GetGameOptions().GetIsScenarioGame() || this->GetPlayer()->GetHeroCount(true, true) < this->GetPlayer()->GetHeroLimit())) {
+                theWanted = min(theWanted, theLimit - theGatherer.GetRequested() - theGatherer.GetUnits());
                 if (theWanted > 0) {
                     theClassID = inGroup->mGatherer.TakeByKind(0x1b);
                     if (theClassID != 0) {
@@ -787,10 +787,10 @@ void EECPUnitSelector::AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EEC
                         for (i = inGroup->mUnits.size() - 1; i >= 0; i--) {
                             if (theWanted <= 0)
                                 break;
-                            if (inGroup->mUnits[i]->GetClass()->mAIKind != kAIKindHero)
+                            if (inGroup->mUnits[i]->GetClass()->GetAIKind() != kAIKindHero)
                                 continue;
-                            inGroup->mUnitIDs.push_back(inGroup->mUnits[i]->mUnitID);
-                            theStrategy->mNumLand = max(theStrategy->mNumLand - 1, 0);
+                            inGroup->mUnitIDs.push_back(inGroup->mUnits[i]->GetUnitID());
+                            theStrategy->mNumLand = max(theStrategy->GetNumLand() - 1, 0);
                             inGroup->mUnits[i]->Dereference();
                             inGroup->mUnits.erase(inGroup->mUnits.begin() + i);
                             theWanted--;
@@ -799,7 +799,7 @@ void EECPUnitSelector::AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EEC
                             theClassID = this->GetRandomOfKind(kAIKindHero, inGroup->mClassesByKind);
                             if (theClassID != 0) {
                                 for (k = theWanted - 1; k >= 0; k--) {
-                                    inGroup->mStrategy->mNumLand = max(inGroup->mStrategy->mNumLand - 1, 0);
+                                    inGroup->GetStrategy()->mNumLand = max(inGroup->GetStrategy()->GetNumLand() - 1, 0);
                                     inGroup->mSelected.push_back(theClassID);
                                 }
                             }
@@ -815,21 +815,21 @@ void EECPUnitSelector::AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EEC
     theGatherer.mCategory = kAIKindNone;
 
     // category 0xf
-    if (!(theStrategy->mNumSea > 0) || !(theStrategy->mNumUnits > 1) || !(gPhysics->mRandom.Generate() <= this->mPlayer->mCarrierChance) ||
+    if (!(theStrategy->GetNumSea() > 0) || !(theStrategy->GetNumUnits() > 1) || !(gPhysics->mRandom.Generate() <= this->GetPlayer()->GetCarrierChance()) ||
         gUnitClassTable[kUnitTypeS11EnterpriseAircraftCarrier] == NULL ||
-        (theStrategy->mKind != 4 && theStrategy->mKind != 5 && (!gUnitClassTable[kUnitTypeS11EnterpriseAircraftCarrier]->mIsAttackUnit || theStrategy->mKind != 0) &&
-         (!gUnitClassTable[kUnitTypeS11EnterpriseAircraftCarrier]->mIsDefenseUnit || theStrategy->mKind != 1)))
+        (theStrategy->GetKind() != 4 && theStrategy->GetKind() != 5 && (!gUnitClassTable[kUnitTypeS11EnterpriseAircraftCarrier]->GetIsAttackUnit() || theStrategy->GetKind() != 0) &&
+         (!gUnitClassTable[kUnitTypeS11EnterpriseAircraftCarrier]->GetIsDefenseUnit() || theStrategy->GetKind() != 1)))
         return;
-    theWanted = gPhysics->GetRandom(1L, max(min(this->mPlayer->mCarrierMaxPerGroup, theStrategy->mNumSea - 1), 1L));
+    theWanted = gPhysics->GetRandom(1L, max(min(this->GetPlayer()->GetCarrierMaxPerGroup(), theStrategy->GetNumSea() - 1), 1L));
     theGatherer.mUnits = 0;
     theGatherer.mRequested = 0;
     theGatherer.mUnitType = 0;
     theGatherer.mCategory = kAIKindAircraftCarrier;
-    this->mPlayer->mCivilizationManager->mUnitManager->GatherUnits(theGatherer);
-    theLimit = UMCeil(this->mPlayer->mCarrierPopPercentage * theMaxUnits);
-    if (!(theGatherer.mUnits + theGatherer.mRequested < theLimit))
+    this->GetPlayer()->GetCivilizationManager()->GetUnitManager()->GatherUnits(theGatherer);
+    theLimit = UMCeil(this->GetPlayer()->GetCarrierPopPercentage() * theMaxUnits);
+    if (!(theGatherer.GetUnits() + theGatherer.GetRequested() < theLimit))
         return;
-    theWanted = min(theWanted, theLimit - theGatherer.mRequested - theGatherer.mUnits);
+    theWanted = min(theWanted, theLimit - theGatherer.GetRequested() - theGatherer.GetUnits());
     if (theWanted <= 0)
         return;
     theClassID = inGroup->mGatherer.TakeByKind(0xf);
@@ -842,10 +842,10 @@ void EECPUnitSelector::AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EEC
     for (i = inGroup->mUnits.size() - 1; i >= 0; i--) {
         if (theWanted <= 0)
             break;
-        if (inGroup->mUnits[i]->GetClass()->mAIKind != kAIKindAircraftCarrier)
+        if (inGroup->mUnits[i]->GetClass()->GetAIKind() != kAIKindAircraftCarrier)
             continue;
-        inGroup->mUnitIDs.push_back(inGroup->mUnits[i]->mUnitID);
-        theStrategy->mNumSea = max(theStrategy->mNumSea - 1, 0);
+        inGroup->mUnitIDs.push_back(inGroup->mUnits[i]->GetUnitID());
+        theStrategy->mNumSea = max(theStrategy->GetNumSea() - 1, 0);
         inGroup->mUnits[i]->Dereference();
         inGroup->mUnits.erase(inGroup->mUnits.begin() + i);
         theWanted--;
@@ -856,7 +856,7 @@ void EECPUnitSelector::AllocateSpecialUnits(EECPUnitSelectionGroup* inGroup, EEC
     if (theClassID == 0)
         return;
     for (k = theWanted - 1; k >= 0; k--) {
-        inGroup->mStrategy->mNumSea = max(inGroup->mStrategy->mNumSea - 1, 0);
+        inGroup->GetStrategy()->mNumSea = max(inGroup->GetStrategy()->GetNumSea() - 1, 0);
         inGroup->mSelected.push_back(theClassID);
     }
 }
@@ -961,7 +961,7 @@ void EECPUnitSelector::ComputeDomainShares(EECPUnitSelectionGroup* inGroup)
     float remaining=1.0f;
     if(s->mSpaceShare+(s->mAirShare+(s->mSeaShare+s->mLandShare))!=100.0f) {
         if(inGroup->mPlayer->GetTechTree()->mCurrentEpoch>=kTechEpochSpace) {
-            inGroup->mStrategy->mSpaceShare=!gWorld.mMap->mTerrainMesh.GetIsSpaceMap()?0.0f:this->GetDomainShare(inGroup,false);
+            inGroup->mStrategy->mSpaceShare=!gWorld.GetMap()->GetTerrainMesh().GetIsSpaceMap()?0.0f:this->GetDomainShare(inGroup,false);
             remaining=1.0f-inGroup->mStrategy->mSpaceShare;
         }
         EEComputerPlayer* player=inGroup->mPlayer;
@@ -970,7 +970,7 @@ void EECPUnitSelector::ComputeDomainShares(EECPUnitSelectionGroup* inGroup)
             bool calculate=true;
             if((gWorld.mMap->mMapCharacteristics&kRMMapPlanetsMap)==kRMMapPlanetsMap && inGroup->mTask.mIsActive) {
                 calculate=false;
-                if(!player->mTowns.empty()) {
+                if(!player->GetTownList().empty()) {
                     EEAIContinent* continent=gContinentManager.GetContinentAt(inGroup->mTask.mLocation.mTile.GetX(),inGroup->mTask.mLocation.mTile.mY);
                     if(continent->mID==player->mTowns.back()->mContinent && continent->mCategory!=kContinentCategorySpace) calculate=true;
                 }
@@ -978,10 +978,10 @@ void EECPUnitSelector::ComputeDomainShares(EECPUnitSelectionGroup* inGroup)
             if(calculate) {
                 EEPlayer* target=inGroup->mTarget;
                 float weight=0.0f;
-                if(!target->mTowns.empty() && player->GetNumTowns()!=0) {
-                    if(target->mTowns.back()->mContinent!=player->mTowns.back()->mContinent && !gWorld.mMap->mTerrainMesh.GetIsSpaceMap())
+                if(!target->GetTownList().empty() && player->GetNumTowns()!=0) {
+                    if(target->GetTownList().back()->mContinent!=player->GetTownList().back()->mContinent && !gWorld.GetMap()->GetTerrainMesh().GetIsSpaceMap())
                         weight=gPhysics->GetRandom(0.1f,0.3f);
-                    if(target->mTowns.size()<=player->mTowns.size() &&
+                    if(target->GetTownList().size()<=player->GetTownList().size() &&
                        (float)player->mTowns.back()->mValue*1.5f<(float)target->mTowns.back()->mValue)
                         weight+=gPhysics->GetRandom(0.2f,0.4f);
                 }
@@ -989,7 +989,7 @@ void EECPUnitSelector::ComputeDomainShares(EECPUnitSelectionGroup* inGroup)
                 long ownCount=inGroup->mPlayerFile->GetFamilyCount(kAIKindAntiAir);
                 if(ownCount<targetCount) weight+=gPhysics->GetRandom(0.05f,0.2f);
                 if(weight<=0.0f) {
-                    if((gWorld.mMap->mMapCharacteristics&kRMMapPlanetsMap)==kRMMapPlanetsMap) weight=gPhysics->GetRandom(0.0f,0.1f);
+                    if((gWorld.GetMap()->mMapCharacteristics&kRMMapPlanetsMap)==kRMMapPlanetsMap) weight=gPhysics->GetRandom(0.0f,0.1f);
                     else weight=gPhysics->GetRandom(0.2f,0.35f);
                 }
                 result=gPhysics->GetRandom(0.9f,1.35f)*weight;
@@ -1028,17 +1028,17 @@ float EECPUnitSelector::GetDomainShare(EECPUnitSelectionGroup* inGroup, bool inS
     float theResult = 0.0f;
     if (gContinentManager.GetContinentByID(gContinentManager.GetLargestContinent(inSea == false ? 4 : 2)) != NULL) {
         float theShare = 0.0f;
-        long theLand = gContinentManager.mNumWaterTiles;
-        long theSea = gContinentManager.mNumSpaceTiles;
-        long theTotal = theLand + theSea + gContinentManager.mNumLandTiles;
+        long theLand = gContinentManager.GetNumWaterTiles();
+        long theSea = gContinentManager.GetNumSpaceTiles();
+        long theTotal = theLand + theSea + gContinentManager.GetNumLandTiles();
         if (theTotal > 0) {
-            EECPIntelligencePlayerFile* theTarget = inGroup->mTargetFile;
-            EECPIntelligencePlayerFile* theOwn = inGroup->mPlayerFile;
-            float theTargetStrength = inSea ? (float)theTarget->mSeaStrength : (float)theTarget->mSpaceStrength;
-            float theOwnStrength = inSea ? (float)theOwn->mSeaStrength : (float)theOwn->mSpaceStrength;
-            if (theTarget->mSpaceStrength + theTarget->mAirStrength + theTarget->mLandStrength + theTarget->mSeaStrength != 0)
+            EECPIntelligencePlayerFile* theTarget = inGroup->GetTargetFile();
+            EECPIntelligencePlayerFile* theOwn = inGroup->GetPlayerFile();
+            float theTargetStrength = inSea ? (float)theTarget->GetSeaStrength() : (float)theTarget->GetSpaceStrength();
+            float theOwnStrength = inSea ? (float)theOwn->GetSeaStrength() : (float)theOwn->GetSpaceStrength();
+            if (theTarget->GetSpaceStrength() + theTarget->GetAirStrength() + theTarget->GetLandStrength() + theTarget->GetSeaStrength() != 0)
                 theShare = theTargetStrength
-                    / (float)(theTarget->mSpaceStrength + theTarget->mAirStrength + theTarget->mLandStrength + theTarget->mSeaStrength);
+                    / (float)(theTarget->GetSpaceStrength() + theTarget->GetAirStrength() + theTarget->GetLandStrength() + theTarget->GetSeaStrength());
             float theRatio;
             if (theTargetStrength > 0.0f) {
                 if (theOwnStrength != 0.0f)
@@ -1046,7 +1046,7 @@ float EECPUnitSelector::GetDomainShare(EECPUnitSelectionGroup* inGroup, bool inS
                 else
                     theRatio = 1.0f - theShare;
             } else
-                theRatio = inSea ? (float)theOwn->mNumSeaUnits : (float)theOwn->mNumSpaceUnits;
+                theRatio = inSea ? (float)theOwn->GetNumSeaUnits() : (float)theOwn->GetNumSpaceUnits();
             float theFraction = (inSea ? (float)theLand : (float)theSea) / theTotal;
             if (theFraction > kHeightEpsilon) {
                 theResult = gPhysics->GetRandom(0.85f, 1.15f) * theFraction;
@@ -1062,7 +1062,7 @@ float EECPUnitSelector::GetDomainShare(EECPUnitSelectionGroup* inGroup, bool inS
                 }
             }
             if (theShare > 0.0f && theResult > 0.0f) {
-                theResult = this->mPlayer->mAirUnitWeight * (theShare - theResult) + theResult;
+                theResult = this->GetPlayer()->GetAirUnitWeight() * (theShare - theResult) + theResult;
                 if (theResult >= 1.0f)
                     theResult = 1.0f;
                 if (0.0f > theResult)
@@ -1080,48 +1080,48 @@ float EECPUnitSelector::GetDomainShare(EECPUnitSelectionGroup* inGroup, bool inS
 // team has enough wonders
 void EECPUnitSelector::ComputeGroupSize(EECPUnitSelectionGroup* inGroup)
 {
-    EEAIFOUnitsToKillForMilitary theScorer(this->mPlayer, 0, 0, 0);
+    EEAIFOUnitsToKillForMilitary theScorer(this->GetPlayer(), 0, 0, 0);
     EECPUnitRequirement theRequirement;
-    float theStrength = inGroup->mTargetFile->mStrength;
+    float theStrength = inGroup->GetTargetFile()->GetStrength();
     unsigned long theWonders = 0;
     long theCount;
     long theNew;
-    long theCitizens = EEAIFOUnitsToKillScoringBase::GetCitizensToKill(this->mPlayer);
+    long theCitizens = EEAIFOUnitsToKillScoringBase::GetCitizensToKill(this->GetPlayer());
     if (theCitizens > 0)
         theScorer.mCitizensToKill = theCitizens;
-    if (inGroup->mTask.mIsActive && inGroup->mTask.mUnit != NULL && !inGroup->mTask.mUnit->mPlayer->mObserverMode &&
+    if (inGroup->mTask.GetIsActive() && inGroup->mTask.GetUnit() != NULL && !inGroup->mTask.GetUnit()->GetPlayer()->GetObserverMode() &&
         inGroup->mTask.mUnit->GetTechTreeNode() != NULL && inGroup->mTask.mUnit->GetTechTreeNode()->mData->mKind == 4) {
-        EETeam& theTeam = gWorld.mTeams[inGroup->mTask.mUnit->mPlayer->GetTeamIndex()];
+        EETeam& theTeam = gWorld.mTeams[inGroup->mTask.GetUnit()->GetPlayer()->GetTeamIndex()];
         for (long i = theTeam.GetNumPlayers() - 1; i >= 0; i--)
             theWonders += gWorld.mPlayers[theTeam.mPlayers[i]]->GetNumWonderUnits();
-        if (theWonders >= gWorld.mNumberOfWondersToWin) {
-            long theExtra = this->mPlayer->mCivilizationManager->mUnitManager->GetNumWorkers() - 5;
+        if (theWonders >= gWorld.GetNumberOfWondersToWin()) {
+            long theExtra = this->GetPlayer()->GetCivilizationManager()->GetUnitManager()->GetNumWorkers() - 5;
             theScorer.mCitizensToKill = theExtra > 0 ? theExtra : 0;
         }
     }
-    theScorer.mCount = theScorer.mTransportsToKill + theScorer.mCitizensToKill;
-    long theKilled = this->mPlayer->ChooseUnitsToKill(theScorer, false) + this->mPlayer->mCombatManager->GetUnitsAvailable();
+    theScorer.mCount = theScorer.GetTransportsToKill() + theScorer.mCitizensToKill;
+    long theKilled = this->GetPlayer()->ChooseUnitsToKill(theScorer, false) + this->GetPlayer()->GetCombatManager()->GetUnitsAvailable();
     float theShare;
-    if (inGroup->mStrategy->mKind == 1 || inGroup->mStrategy->mKind == 5)
-        theShare = gPhysics->GetRandom(this->mPlayer->mDefenseGroupSizeMin * 0.01f, this->mPlayer->mDefenseGroupSizeMax * 0.01f);
+    if (inGroup->GetStrategy()->GetKind() == 1 || inGroup->GetStrategy()->GetKind() == 5)
+        theShare = gPhysics->GetRandom(this->GetPlayer()->GetDefenseGroupSizeMin() * 0.01f, this->GetPlayer()->GetDefenseGroupSizeMax() * 0.01f);
     else
-        theShare = gPhysics->GetRandom(this->mPlayer->mAttackGroupSizeMin * 0.01f, this->mPlayer->mAttackGroupSizeMax * 0.01f);
-    EECPCombatStrategy* theStrategy = inGroup->mStrategy;
+        theShare = gPhysics->GetRandom(this->GetPlayer()->GetAttackGroupSizeMin() * 0.01f, this->GetPlayer()->GetAttackGroupSizeMax() * 0.01f);
+    EECPCombatStrategy* theStrategy = inGroup->GetStrategy();
     bool theAdjust = true;
-    if (theStrategy->mNumUnits <= 0) {
+    if (theStrategy->GetNumUnits() <= 0) {
         theCount = (long)(theShare * theStrength);
         if (theCount > 0) {
-            if (theStrategy->mKind == 0 || theStrategy->mKind == 4)
-                theCount = (long)(this->mPlayer->GetAttackGroupModifier() * theCount);
+            if (theStrategy->GetKind() == 0 || theStrategy->GetKind() == 4)
+                theCount = (long)(this->GetPlayer()->GetAttackGroupModifier() * theCount);
         } else
             theCount = 1;
-        if (this->mPlayer->IsDeathmatch() && (inGroup->mStrategy->mKind == 0 || inGroup->mStrategy->mKind == 4) &&
-            (unsigned long)gPhysics->mGameTime <= this->mPlayer->mDMEarlyAttackTime)
-            theCount = UMCeil(this->mPlayer->mDMEarlyAttackScale * theCount);
+        if (this->GetPlayer()->IsDeathmatch() && (inGroup->GetStrategy()->GetKind() == 0 || inGroup->GetStrategy()->GetKind() == 4) &&
+            (unsigned long)gPhysics->GetGameTime() <= this->GetPlayer()->GetDMEarlyAttackTime())
+            theCount = UMCeil(this->GetPlayer()->GetDMEarlyAttackScale() * theCount);
     } else {
-        theCount = theStrategy->mNumUnits;
-        if (theStrategy->mKind == 4 || theStrategy->mKind == 5 ||
-            (theStrategy->GetNumRequirements() > 0 && (inGroup->mStrategy->mRequirements[0]).mKind == kRequirementAlreadyDefined))
+        theCount = theStrategy->GetNumUnits();
+        if (theStrategy->GetKind() == 4 || theStrategy->GetKind() == 5 ||
+            (theStrategy->GetNumRequirements() > 0 && (inGroup->GetStrategy()->mRequirements[0]).GetKind() == kRequirementAlreadyDefined))
             theAdjust = false;
     }
     if (theAdjust && theCount > theKilled) {
@@ -1135,21 +1135,21 @@ void EECPUnitSelector::ComputeGroupSize(EECPUnitSelectionGroup* inGroup)
         } else {
             if (theCount >= (long)inGroup->mUnits.size())
                 theCount = inGroup->mUnits.size();
-            inGroup->mStrategy->mRequirements.clear();
-            inGroup->mStrategy->mAddFavorites = false;
+            inGroup->GetStrategy()->mRequirements.clear();
+            inGroup->GetStrategy()->mAddFavorites = false;
             theNew = theCount;
         }
         if (theNew > 0) {
             theRequirement.mKind = kRequirementHeld;
             theRequirement.mNumWanted = theNew;
             theRequirement.mNumLeft = theNew;
-            inGroup->mStrategy->mRequirements.insert(inGroup->mStrategy->mRequirements.begin(), theRequirement);
+            inGroup->GetStrategy()->mRequirements.insert(inGroup->GetStrategy()->mRequirements.begin(), theRequirement);
         }
     }
     if (theCount <= 0)
         theCount = 0;
-    inGroup->mStrategy->mNumUnits = theCount;
-    inGroup->mStrategy->mNumRemaining = theCount;
+    inGroup->GetStrategy()->mNumUnits = theCount;
+    inGroup->GetStrategy()->mNumRemaining = theCount;
 }
 
 // NEAR: the original expands the units' begin() and calls its operator+ out of line (ours expands both); frame 0xc larger
@@ -1224,10 +1224,10 @@ void EECPUnitSelector::WeighCounters(EEUnitClass* inClass, std::map<long, long>&
         it = inMap.find(inClass->mCounterKind1);
         if (it != inMap.end()) {
             theCount = ioCounts.find(it->first);
-            if (theCount != ioCounts.end())
-                theCount->second += 3;
-            else
+            if (theCount == ioCounts.end())
                 ioCounts.insert(std::make_pair(it->first, 3));
+            else
+                theCount->second += 3;
         }
     }
     if (inClass->mCounterKind2 != 0) {

@@ -121,7 +121,7 @@
 #include "ee/EESEPlayerScreen.h"
 #include "ee/EESEATechTree.h"
 #include "ee/EESEBSelect.h"
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 
 // SYNTHETIC: EXE 0x572d2c
 // SYNTHETIC: EXE 0x572d36
@@ -248,7 +248,7 @@ void EESEBSelect::Select()
 // Creates a 150x25 player screen tab (player pages 1/2, options, tech tree, AI settings) without bitmaps
 EESETab::EESETab(unsigned long inId, const GE2DPoint& inLocation, GEFont* inFont, UIForm* inForm,
                  unsigned long inIndex, bool inIsChecked)
-    : UIRadioButton(inId, UWideString(gU4E5B98), inFont, GERectangle(inLocation, 150.0f, 25.0f), inForm, inIndex, 3, true, inIsChecked,
+    : UIRadioButton(inId, UWideString(gEmptyString), inFont, GERectangle(inLocation, 150.0f, 25.0f), inForm, inIndex, 3, true, inIsChecked,
                     false)
 {
     UWideString theText;

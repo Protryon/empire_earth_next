@@ -94,7 +94,7 @@ void EECPExplorationManager::RequestExplorer(long inKind)
     long theContinent = 0;
     unsigned long i;
 
-    this->mPlayer->GetScreenedTypesByLine(theClasses, EEAIFOAcceptableComputerPlayerExplorerUnitScreener(this->mPlayer));
+    this->GetPlayer()->GetScreenedTypesByLine(theClasses, EEAIFOAcceptableComputerPlayerExplorerUnitScreener(this->GetPlayer()));
     if (theClasses.size() > 0) {
         for (it = theClasses.begin(); it != theClasses.end(); ++it) {
             std::vector<long>* theList = it->second;
@@ -102,12 +102,12 @@ void EECPExplorationManager::RequestExplorer(long inKind)
                 continue;
             for (i = 0; i < theList->size(); i++) {
                 EEUnitClass* theClass = gUnitClassTable[(*theList)[i]];
-                if (theClass == NULL || theClass->mCategory == kUnitCategoryNavalCitizen)
+                if (theClass == NULL || theClass->GetCategory() == kUnitCategoryNavalCitizen)
                     continue;
                 switch (inKind) {
                 case kExplorerSpace:
-                    if (theClass->mDomains & kMovementSpace) {
-                        theValue = this->mPlayer->mUnitClassUpgrades[theClass->GetUnitType()]->mMaxVelocity;
+                    if (theClass->GetDomains() & kMovementSpace) {
+                        theValue = this->GetPlayer()->mUnitClassUpgrades[theClass->GetUnitType()]->GetMaxVelocity();
                         if (theValue > theBest) {
                             theBest = theValue;
                             theBestClass = (*theList)[i];
@@ -116,8 +116,8 @@ void EECPExplorationManager::RequestExplorer(long inKind)
                     theContinent = gContinentManager.GetLargestContinent(kContinentCategorySpace);
                     break;
                 case kExplorerAir:
-                    if (theClass->mDomains & kMovementAir) {
-                        theValue = this->mPlayer->mUnitClassUpgrades[theClass->GetUnitType()]->mMaxVelocity;
+                    if (theClass->GetDomains() & kMovementAir) {
+                        theValue = this->GetPlayer()->mUnitClassUpgrades[theClass->GetUnitType()]->GetMaxVelocity();
                         if (theValue > theBest) {
                             theBest = theValue;
                             theBestClass = (*theList)[i];
@@ -125,8 +125,8 @@ void EECPExplorationManager::RequestExplorer(long inKind)
                     }
                     break;
                 case kExplorerSea:
-                    if (theClass->mDomains & kMovementSea) {
-                        theValue = this->mPlayer->mUnitClassUpgrades[theClass->GetUnitType()]->mMaxVelocity;
+                    if (theClass->GetDomains() & kMovementSea) {
+                        theValue = this->GetPlayer()->mUnitClassUpgrades[theClass->GetUnitType()]->GetMaxVelocity();
                         if (theValue > theBest) {
                             theBest = theValue;
                             theBestClass = (*theList)[i];
@@ -135,8 +135,8 @@ void EECPExplorationManager::RequestExplorer(long inKind)
                     theContinent = gContinentManager.GetLargestContinent(kContinentCategoryWater);
                     break;
                 case kExplorerLand:
-                    if ((theClass->mDomains & kMovementAirSeaOrSpace) == 0) {
-                        theValue = this->mPlayer->mUnitClassUpgrades[theClass->GetUnitType()]->mMaxVelocity;
+                    if ((theClass->GetDomains() & kMovementAirSeaOrSpace) == 0) {
+                        theValue = this->GetPlayer()->mUnitClassUpgrades[theClass->GetUnitType()]->GetMaxVelocity();
                         if (theValue > theBest) {
                             theBest = theValue;
                             theBestClass = (*theList)[i];
@@ -150,7 +150,7 @@ void EECPExplorationManager::RequestExplorer(long inKind)
         if (theBest > 0.0f) {
             theWanted.clear();
             theWanted.push_back(theBestClass);
-            this->mRequests.push_back(this->mPlayer->mCombatManager->mPersonnel->NewContinentRequest(theWanted, theUnits, theContinent));
+            this->mRequests.push_back(this->GetPlayer()->GetCombatManager()->GetPersonnel()->NewContinentRequest(theWanted, theUnits, theContinent));
         }
     }
     for (it = theClasses.begin(); it != theClasses.end(); ++it)
@@ -223,7 +223,7 @@ long EECPExplorationManager::Restore(unsigned long inMajorVersion, unsigned long
     long i;
     for (i = this->mRequests.size() - 1; i >= 0; i--) {
         EECPPersonnelRequest* theRequest =
-            this->mPlayer->mCombatManager->mPersonnel->GetRequest((int32_t)USavedID(this->mRequests[i]));
+            this->GetPlayer()->GetCombatManager()->GetPersonnel()->GetRequest((int32_t)USavedID(this->mRequests[i]));
         if (theRequest != NULL) {
             theRequest->Reference();
             this->mRequests[i] = theRequest;
@@ -298,18 +298,18 @@ void EECPExplorationManager::Update(unsigned long inTime)
     long j;
     EECPPersonnelRequest* theRequest;
 
-    if (!this->mPlayer->mCanExplore || this->mNextTime > inTime || !this->mEnabled || this->mPlayer->mSeesAll)
+    if (!this->GetPlayer()->GetCanExplore() || this->GetNextTime() > inTime || !this->GetEnabled() || this->GetPlayer()->GetSeesAll())
         return;
 
     // the land explorers
-    theLandWanted = this->mPlayer->mNumLandExplorers;
+    theLandWanted = this->GetPlayer()->GetNumLandExplorers();
     if (theLandWanted > 0) {
         for (i = this->mUnitIDs.size() - 1; i >= 0; i--) {
             EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(this->mUnitIDs[i]));
             if (theUnit != NULL) {
                 EEUnitClass* theClass = theUnit->GetUnitClass();
-                if ((theClass->mDomains & kMovementAirOrSea) == 0
-                    && theClass->mEpoch >= this->mPlayer->GetTechTree()->mCurrentEpoch - 1)
+                if ((theClass->GetDomains() & kMovementAirOrSea) == 0
+                    && theClass->GetEpoch() >= this->GetPlayer()->GetTechTree()->GetCurrentEpoch() - 1)
                     theLandCount++;
             } else
                 this->mUnitIDs.erase(this->mUnitIDs.begin() + i);
@@ -332,15 +332,15 @@ void EECPExplorationManager::Update(unsigned long inTime)
     }
 
     // the sea explorers
-    theSeaWanted = this->mPlayer->mNumSeaExplorers;
-    this->mPlayer->GetTechTree()->GetTechIDState(kTechDock, theResearched, theObsolete, theScenarioObsolete);
+    theSeaWanted = this->GetPlayer()->GetNumSeaExplorers();
+    this->GetPlayer()->GetTechTree()->GetTechIDState(kTechDock, theResearched, theObsolete, theScenarioObsolete);
     if (theSeaWanted > 0 && theResearched && !theObsolete && gDCGameSpeed > 0) {
         for (i = this->mUnitIDs.size() - 1; i >= 0; i--) {
             EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(this->mUnitIDs[i]));
             if (theUnit != NULL) {
                 EEUnitClass* theClass = theUnit->GetUnitClass();
-                if ((theClass->mDomains & kMovementSea) != 0
-                    && theClass->mEpoch >= this->mPlayer->GetTechTree()->mCurrentEpoch - 1)
+                if ((theClass->GetDomains() & kMovementSea) != 0
+                    && theClass->GetEpoch() >= this->GetPlayer()->GetTechTree()->GetCurrentEpoch() - 1)
                     theSeaCount++;
             } else
                 this->mUnitIDs.erase(this->mUnitIDs.begin() + i);
@@ -362,15 +362,15 @@ void EECPExplorationManager::Update(unsigned long inTime)
     }
 
     // the space explorers
-    theSpaceWanted = this->mPlayer->mNumSeaExplorers;
-    this->mPlayer->GetTechTree()->GetTechIDState(kTechSpaceDock, theResearched, theObsolete, theScenarioObsolete);
+    theSpaceWanted = this->GetPlayer()->GetNumSeaExplorers();
+    this->GetPlayer()->GetTechTree()->GetTechIDState(kTechSpaceDock, theResearched, theObsolete, theScenarioObsolete);
     if (theSpaceWanted > 0 && theResearched && !theObsolete && gNumSpaceTiles > 0) {
         for (i = this->mUnitIDs.size() - 1; i >= 0; i--) {
             EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(this->mUnitIDs[i]));
             if (theUnit != NULL) {
                 EEUnitClass* theClass = theUnit->GetUnitClass();
-                if ((theClass->mDomains & kMovementSpace) != 0
-                    && theClass->mEpoch >= this->mPlayer->GetTechTree()->mCurrentEpoch - 1)
+                if ((theClass->GetDomains() & kMovementSpace) != 0
+                    && theClass->GetEpoch() >= this->GetPlayer()->GetTechTree()->GetCurrentEpoch() - 1)
                     theSpaceCount++;
             } else
                 this->mUnitIDs.erase(this->mUnitIDs.begin() + i);
@@ -392,16 +392,16 @@ void EECPExplorationManager::Update(unsigned long inTime)
     }
 
     // the air explorers
-    theAirWanted = this->mPlayer->mAttackStarted ? this->mPlayer->mNumAirExplorers : 0;
-    this->mPlayer->GetTechTree()->GetTechIDState(kTechAirport, theResearched, theObsolete, theScenarioObsolete);
+    theAirWanted = this->GetPlayer()->GetAttackStarted() ? this->GetPlayer()->GetNumAirExplorers() : 0;
+    this->GetPlayer()->GetTechTree()->GetTechIDState(kTechAirport, theResearched, theObsolete, theScenarioObsolete);
     if (theAirWanted > 0 && theResearched && !theObsolete) {
         for (i = this->mUnitIDs.size() - 1; i >= 0; i--) {
             EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(this->mUnitIDs[i]));
             if (theUnit == NULL)
                 continue;
             EEUnitClass* theClass = theUnit->GetUnitClass();
-            if ((theClass->mDomains & kMovementAir) != 0
-                && theClass->mEpoch >= this->mPlayer->GetTechTree()->mCurrentEpoch - 1)
+            if ((theClass->GetDomains() & kMovementAir) != 0
+                && theClass->GetEpoch() >= this->GetPlayer()->GetTechTree()->GetCurrentEpoch() - 1)
                 theAirCount++;
         }
         for (j = this->mRequests.size() - 1; j >= 0; j--) {
@@ -431,7 +431,7 @@ void EECPExplorationManager::Update(unsigned long inTime)
                         for (unsigned long k = 0; k < this->mUnitIDs.size(); k++) {
                             EEComplexUnit* theOld = static_cast<EEComplexUnit*>(gWorld.GetUnit(this->mUnitIDs[k]));
                             if (theOld == NULL
-                                || !(theOld->GetUnitClass()->mEpoch < this->mPlayer->GetTechTree()->mCurrentEpoch - 1))
+                                || !(theOld->GetUnitClass()->GetEpoch() < this->GetPlayer()->GetTechTree()->GetCurrentEpoch() - 1))
                                 continue;
                             theOld->ClearGoals(0);
                             if (theOld->GetUnitClass()->GetCategory() == kUnitCategoryAirplane || theOld->GetUnitClass()->GetCategory() == kUnitCategoryPlanetSpaceship)
@@ -439,8 +439,8 @@ void EECPExplorationManager::Update(unsigned long inTime)
                             else
                                 theOld->StartAction(kActionIdle);
                             theOld->GetUnitClass()->ActionChanged(theOld);
-                            theOld->SetBehavior(theOld->GetUnitClass()->mBehavior);
-                            this->mPlayer->mCombatManager->mPersonnel->ReturnUnit(theOld);
+                            theOld->SetBehavior(theOld->GetUnitClass()->GetBehavior());
+                            this->GetPlayer()->GetCombatManager()->GetPersonnel()->ReturnUnit(theOld);
                             this->mUnitIDs.erase(this->mUnitIDs.begin() + k);
                             break;
                         }
@@ -468,10 +468,10 @@ void EECPExplorationManager::Update(unsigned long inTime)
         if (this->mUnitIDs[j] != 0 && gWorld.GetUnit(this->mUnitIDs[j]) != NULL) {
             EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(gWorld.GetUnit(this->mUnitIDs[j]));
             if (theUnit->GetHitPoints() > 0 && theUnit->GetGoal() == NULL
-                && (theUnit->mContainer == NULL || theUnit->GetUnitClass()->mAirTrafficType != 0)) {
-                if (this->mPlayer->mDifficulty == kDifficultyEasy)
+                && (theUnit->GetContainer() == NULL || theUnit->GetUnitClass()->GetAirTrafficType() != 0)) {
+                if (this->GetPlayer()->GetDifficulty() == kDifficultyEasy)
                     theUnit->SetBehavior(EEUnitBehavior::sTable[0]);
-                else if (this->mPlayer->mDifficulty == kDifficultyHard)
+                else if (this->GetPlayer()->GetDifficulty() == kDifficultyHard)
                     theUnit->SetBehavior(EEUnitBehavior::sTable[3]);
                 theUnit->ClearGoals(0);
                 theUnit->SetGoal(new EEUGExplore(false), 0, 0);

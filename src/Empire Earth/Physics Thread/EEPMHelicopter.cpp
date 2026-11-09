@@ -538,7 +538,7 @@ void EEPMHelicopter::Step5(EEComplexUnit* inUnit)
         float theLeft;
         float theYawRate;
         float theYaw;
-        this->TurnTowardAngle(inUnit, UMArcTan2(-theResult.mX, theResult.mY), theGoal->mYaw, &theLeft, &theYawRate, &theYaw, false);
+        this->TurnTowardAngle(inUnit, UMArcTan2(-theResult.mX, theResult.mY), theGoal->GetYaw(), &theLeft, &theYawRate, &theYaw, false);
         GEOrientation& theAngularVelocity = inUnit->mAngularVelocity;
         inUnit->mAngularVelocity.SetPitch(thePitchRate);
         theAngularVelocity.mRoll = 0.0f;

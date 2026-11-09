@@ -15,15 +15,15 @@ const long keeCouldntOpenFile = 0x1bf0;     // ESVERIFY text 0x4bfa44 (EEGameSta
 // returns 0 on success (EEASaveGame::Virtual4, EEMLoadOrSaveGame 0xc10f1; provisional name)
 long SaveGame(const UString& inFileName, unsigned long inTime, bool inFlag, UString inDescription);
 // 0x14c741: the save file name for inName (EEAQuickSaveLoad::Virtual4) (provisional name; types inferred)
-UString Fn14C741(const UString& inName, bool inFlag);
+UString GetSaveTextName(const UString& inName, bool inFlag);
 // 0x14cbc7: keeps the inMax first files matching inPattern in inDirectory and deletes the rest (EEMLoadOrSaveGame
 // FnC1052's auto-saves) (provisional name; one prototype)
-long Fn14CBC7(const UString& inPattern, const UString& inDirectory, unsigned long inMax);
-UString Fn14CED5();                     // 0x14ced5 (asctime of now, or "Date/time failed."; provisional name)
+long TrimAutoSaves(const UString& inPattern, const UString& inDirectory, unsigned long inMax);
+UString GetDateText();                  // 0x14ced5 (asctime of now, or "Date/time failed."; provisional name)
 // 0x14ce06: writes the save header and the game into inFile (EEAQuickSaveLoad::Virtual4 passes its memory file
 // twice) (provisional name; types inferred)
-long Fn14CE06(const UString& inName, unsigned long inTime, FSFile& inFile, FSFile& inOther);
+long WriteSaveGame(const UString& inName, unsigned long inTime, FSFile& inFile, FSFile& inOther);
 // 0x14cf33: loads the game from inFile (EEAQuickSaveLoad::Virtual4) (provisional name; types inferred)
-long Fn14CF33(FSFileSpec& inFile, bool inArg2, bool inQuiet, bool inResumeGraphics);
+long LoadSavedGameFile(FSFileSpec& inFile, bool inArg2, bool inQuiet, bool inResumeGraphics);
 
 #endif

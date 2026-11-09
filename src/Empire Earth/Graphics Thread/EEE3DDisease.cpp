@@ -50,6 +50,8 @@
 // SYNTHETIC: EXE 0x4ebe10
 const UString EEE3DDisease::sData("EEE3DDisease-Data");
 
+#include "ee/EEGamePreferences.h"
+
 // FUNCTION: EXE 0x4ebe2c
 // Creates a disease cloud on a unit, with no graphic or sound yet
 EEE3DDisease::EEE3DDisease(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect)
@@ -114,8 +116,6 @@ long EEE3DDisease::DrawPass6()
 
 // FUNCTION: EXE 0x4ebfd0
 // Queues the cloud in render queue 3 under its texture, snapshotting its frame, age, position and orbital angles
-// NEAR: the original keeps the result in [ebp-8] and inQueues in ebx, and calls mOrbitals[i]'s _Ptrit::operator+ out
-// of line (more inline pressure than ours; EE_LOST_DEBUG 1..20 does not reproduce both)
 long EEE3DDisease::Queue(EEEffectQueue* inQueues)
 {
     long i;
@@ -125,9 +125,12 @@ long EEE3DDisease::Queue(EEEffectQueue* inQueues)
         this->mDrawAge = this->mAge;
         this->mTransformation.GetPosition(this->mLocation);
         for (i = 0; i < this->mOrbitalCount; i++)
-            this->mAngles[i] = this->mOrbitals[i]->mAngle;
+            this->mAngles[i] = this->mOrbitals[i]->GetAngle();
         GETexture* theTexture;
-        theTexture = this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mTextures[gScreenIndex] : NULL;
+        if (this->GetGraphicEffect()->GetGraphicObject())
+            theTexture = this->GetGraphicEffect()->GetGraphicObject()->GetTexture(gGamePreferences.mSettings.GetScreenID());
+        else
+            theTexture = NULL;
         inQueues[3][theTexture].push_back(this);
     }
     return theResult;
@@ -138,7 +141,6 @@ long EEE3DDisease::Queue(EEEffectQueue* inQueues)
 // mFrame is assigned before mTime (the original stores mTime after the mStartFrames[13] load)
 long EEE3DDisease::SetUp()
 {
-
     this->mGraphicObject = this->GetGraphicObject();
     long theResult = this->mGraphicObject->LoadMedia();
     this->mFrame = this->mGraphicObject->mStartFrames[13];
@@ -171,7 +173,7 @@ long EEE3DDisease::DrawPass5()
     gRasterizer->SetZBuffer(kZBufferTestAndWrite, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10FA01();
+    SetUnitLighting();
     const GE3DPoint& theLocation = this->mLocation;
     theTransformation.SetPosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
     theModel->SetGraphicsPostModelTransform(theTransformation);
@@ -272,7 +274,7 @@ long EEE3DDisease::Step()
             else
                 theChanged = false;
             this->mUnit->mComplexUnit->mPhysicalModel.GetLocation().GetPosition(theLocation);
-            this->SetSound(Fn1487A3(theLocation, this->mGraphicObject, 0, this->mSound, theFrame, theChanged));
+            this->SetSound(PlayAnimationSound(theLocation, this->mGraphicObject, 0, this->mSound, theFrame, theChanged));
             if (this->mSound)
                 this->mSound->Dereference();
         } else

@@ -219,7 +219,7 @@ void EESETSArea::Delete()
 {
     EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(this->mCenterButton->GetForm());
     gWorld.mScenarioManager->DeleteArea(this->mSelection + 2);
-    theEditor->mBrushGroup->mIsHighlightShown = false;
+    theEditor->GetBrushGroup()->SetIsHighlightShown(false);
 }
 
 // FUNCTION: EXE 0x57d21d
@@ -313,21 +313,21 @@ void EESETSArea::Load()
     EESMArea* theArea = gWorld.mScenarioManager->GetArea(this->mSelection + 2);
     if (theArea == NULL)
         return;
-    gUIManager->mScenarioEditorForm->GetTriggerScreen()->ShowText();
-    gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetNameEditBox()->SetText(theArea->mName);
-    gUIManager->mScenarioEditorForm->GetTriggerScreen()->GetTextEditBox()->SetText(theArea->mText);
-    this->mRectangle = theArea->mRect;
-    this->mPoint = GE2DPoint((float)theArea->mAnchor.mX, (float)theArea->mAnchor.GetY());
-    this->mHasRectangle = theArea->mHasRectangle;
-    this->mHasPoint = theArea->mHasAnchor;
-    this->mModeComboBox->SetCurrentSelection(theArea->mSelectMode);
-    if (this->mHasRectangle) {
-        theEditor->mBrushGroup->mIsHighlightShown = true;
+    gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->ShowText();
+    gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetNameEditBox()->SetText(theArea->GetName());
+    gUIManager->GetScenarioEditorForm()->GetTriggerScreen()->GetTextEditBox()->SetText(theArea->GetText());
+    this->mRectangle = theArea->GetRect();
+    this->mPoint = GE2DPoint((float)theArea->GetAnchor().GetX(), (float)theArea->GetAnchor().GetY());
+    this->mHasRectangle = theArea->GetHasRectangle();
+    this->mHasPoint = theArea->GetHasAnchor();
+    this->mModeComboBox->SetCurrentSelection(theArea->GetSelectMode());
+    if (this->GetHasRectangle()) {
+        theEditor->GetBrushGroup()->SetIsHighlightShown(true);
         theEditor->SetPaintArea(this->mRectangle);
         this->mLabel->SetDisplayMode(kDisplayModeHidden);
         this->mCenterButton->SetDisplayMode(kDisplayModeShown);
     } else if (this->mHasPoint) {
-        theEditor->mBrushGroup->mIsHighlightShown = true;
+        theEditor->GetBrushGroup()->SetIsHighlightShown(true);
         theEditor->SetPaintArea(GERectangle(this->mPoint, this->mPoint));
         this->mLabel->SetDisplayMode(kDisplayModeHidden);
         this->mCenterButton->SetDisplayMode(kDisplayModeShown);

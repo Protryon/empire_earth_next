@@ -60,7 +60,7 @@ long EEE3DShells::DrawPass5()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10FA01();
+    SetUnitLighting();
     theMaterial->SetTexture(this->mGraphicObject->mTextures[0], theScreen);
     theTransformation.SetPosition(this->mLocation);
     theModel->SetGraphicsPostModelTransform(theTransformation);

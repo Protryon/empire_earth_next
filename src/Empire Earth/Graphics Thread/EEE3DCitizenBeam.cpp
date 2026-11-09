@@ -181,10 +181,10 @@ long EEE3DCitizenBeam::DrawPass6()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     theModel->SetTexture(this->mGraphicObject->mTextures[0], theScreen);
     const GE3DPoint& theLocation = this->mDrawLocation;
-    Fn11A130(theLocation, theFog, theValue);
+    GetFogFactor(theLocation, theFog, theValue);
     GETransformation theTransformation(this->mTransformation);
     theTransformation.SetPosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
     theModel->SetGraphicsPostModelTransform(theTransformation);

@@ -88,8 +88,6 @@ long EEE3DGoal::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
 // FUNCTION: EXE 0x4f13db
 // While a countdown runs, draws its m:ss time above the goal as white text with a black shadow, on the game or
 // scenario editor form; returns 0
-// NEAR: the original keeps 0 in ebx, stores the transparency before the sprintf pushes and pushes the draw
-// arguments before it picks the form (an inline accessor?)
 long EEE3DGoal::DrawPass3()
 {
     GE3DPoint thePosition;
@@ -110,16 +108,20 @@ long EEE3DGoal::DrawPass3()
         theText.SetText(theString);
         thePosition = this->mLocation;
         thePosition.SetZ(thePosition.GetZ() + kGoalLabelHeight);
-        Fn118676(thePosition, theScreenPoint);
+        GetScreenPoint(thePosition, theScreenPoint);
         theText.SetLocation(theScreenPoint);
-        (!gFreeCamera ? static_cast<UIForm*>(gUIManager->mMainGameForm) : static_cast<UIForm*>(gUIManager->mScenarioEditorForm))
-            ->DrawClippedText(theRectangle, &theText, NULL);
+        if (!gFreeCamera)
+            gUIManager->mMainGameForm->DrawClippedText(theRectangle, &theText, NULL);
+        else
+            gUIManager->mScenarioEditorForm->DrawClippedText(theRectangle, &theText, NULL);
         theScreenPoint.SetX(theScreenPoint.GetX() - 1.0f);
         theScreenPoint.SetY(theScreenPoint.GetY() - 1.0f);
         theText.SetLocation(theScreenPoint);
         theText.SetFgColor(GEColor());
-        (!gFreeCamera ? static_cast<UIForm*>(gUIManager->mMainGameForm) : static_cast<UIForm*>(gUIManager->mScenarioEditorForm))
-            ->DrawClippedText(theRectangle, &theText, NULL);
+        if (!gFreeCamera)
+            gUIManager->mMainGameForm->DrawClippedText(theRectangle, &theText, NULL);
+        else
+            gUIManager->mScenarioEditorForm->DrawClippedText(theRectangle, &theText, NULL);
     }
     return 0;
 }

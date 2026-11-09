@@ -456,7 +456,7 @@ void EEPathManager::SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoor
     EEAIPathSubSector* theSector = gContinentManager.GetPathSubSectorAt(inTo.GetX(), inTo.GetY());
     long theDistance = inFrom.DistanceTo(inTo);
     unsigned long theTime;
-    theTime = gPhysics ? gPhysics->mGameTime : 0;
+    theTime = gPhysics ? gPhysics->GetGameTime() : 0;
     if (theTime > 4000)
         theTime -= 4000;
     long theFactor;
@@ -466,10 +466,10 @@ void EEPathManager::SetGraphRevs(EEGraphPathMachine* inMachine, const EETileCoor
         theFactor = 0x4b;
     else
         theFactor = theDistance <= 0xa0 ? 0x5a : 0x6e;
-    if (!inMachine->mGoal.mPathFlags.mFlags[theSector->mKind] && theFactor >= 0x28)
+    if (!inMachine->mGoal.mPathFlags.mFlags[theSector->GetKind()] && theFactor >= 0x28)
         theFactor = 0x28;
     EEComplexUnit* theUnit = inMachine->mGoal.mUnit;
-    if (theUnit && theUnit->mPlayer->mComputerPlayer && theUnit->mIsCitizen) {
+    if (theUnit && theUnit->GetPlayer()->mComputerPlayer && theUnit->mIsCitizen) {
         for (it = this->mHistory.begin(); it != this->mHistory.end(); it++) {
             if ((*it).mTime < theTime)
                 break;
@@ -586,9 +586,9 @@ void EEPathManager::DumpOutOfSynch(FILE* inFile)
     fprintf(inFile, "OUT OF SYNCH DUMP: Pathfinding Information\nOUT OF SYNCH DUMP:----------------------------------\n");
     fprintf(inFile, "OUT OF SYNCH DUMP: Path SubSectors: %zu\n", gContinentManager.mPathSubSectors.size());
     for (long i = gContinentManager.mPathSubSectors.size() - 1; i > 0; i--) {
-        EEAIPathSubSector* theSector = gContinentManager.mPathSubSectors[(unsigned short)i];
+        EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)i);
         if (theSector)
-            fprintf(inFile, "OUT OF SYNCH DUMP: PathSubSector[%d] with center point: %ld,%ld\n", theSector->mID,
+            fprintf(inFile, "OUT OF SYNCH DUMP: PathSubSector[%d] with center point: %ld,%ld\n", theSector->GetID(),
                     theSector->mLocation.GetX(), theSector->mLocation.GetY());
     }
     fprintf(inFile, "OUT OF SYNCH DUMP: Paths In progress: %zu\n", this->mPaths.size());
@@ -607,7 +607,7 @@ void EEPathManager::DumpOutOfSynch(FILE* inFile)
             fprintf(inFile, "OUT OF SYNCH DUMP: Path for Unit: %ld to (%ld,%ld) has been queued %ld time.\n", theUnitID,
                     this->mPaths[j]->mTile.GetX(), this->mPaths[j]->mTile.GetY(), this->mPaths[j]->mPasses);
             fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld Pathfinder Type is: %ld\n",
-                    theMachine->mRevs, theMachine->GetMaxRevs(), theMachine->mType);
+                    theMachine->GetRevs(), theMachine->GetMaxRevs(), theMachine->GetType());
         } else {
             fprintf(inFile, "OUT OF SYNCH DUMP: !!! UNKNOWN PATHFINDER! Can't Dynamic cast it!\n");
         }
@@ -628,7 +628,7 @@ void EEPathManager::DumpOutOfSynch(FILE* inFile)
             fprintf(inFile, "OUT OF SYNCH DUMP: AutoPath for Unit: %ld to (%ld,%ld) has been queued %ld time.\n",
                     theUnitID, this->mAutoPaths[j]->mTile.GetX(), this->mAutoPaths[j]->mTile.GetY(),
                     this->mAutoPaths[j]->mPasses);
-            fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld\n", theMachine->mRevs,
+            fprintf(inFile, "OUT OF SYNCH DUMP: Revs completed: %ld. Tile Cap is: %ld\n", theMachine->GetRevs(),
                     theMachine->GetMaxRevs());
         } else {
             fprintf(inFile, "OUT OF SYNCH DUMP: !!! UNKNOWN GraphFinder! Can't Dynamic cast it!\n");
@@ -643,7 +643,7 @@ EEGraphPathMachine* EEPathManager::NewGraphMachine(long inType)
 {
     EEGraphPathMachine* theMachine = NULL;
     while (this->mSpareGraphMachines.size() != 0) {
-        if (this->mSpareGraphMachines.back()->mCount == gContinentManager.mPathSubSectors.size() + 1)
+        if (this->mSpareGraphMachines.back()->GetCount() == gContinentManager.mPathSubSectors.size() + 1)
             theMachine = this->mSpareGraphMachines.back();
         else
             delete this->mSpareGraphMachines.back();
@@ -663,15 +663,15 @@ EEGraphPathMachine* EEPathManager::NewGraphMachine(long inType)
 EEPathMachine* EEPathManager::NewPathMachine(long inType, EEMap* inMap)
 {
     EEPathMachine* theMachine = NULL;
-    if (this->mSparePathMachines.size() == 0) {
-        theMachine = new EEPathMachine(1, inMap);
-    } else {
+    if (this->mSparePathMachines.size() != 0) {
         theMachine = this->mSparePathMachines.back();
         this->mSparePathMachines.pop_back();
         if (inMap != theMachine->mGoal.mMap) {
             delete theMachine;
             theMachine = new EEPathMachine(1, inMap);
         }
+    } else {
+        theMachine = new EEPathMachine(1, inMap);
     }
     EEAIPathGoalModifierBase* theModifier;
     if (inType == 2)
@@ -854,7 +854,9 @@ void EEPathManager::FindPath(EEComplexUnit* inUnit, EEMap* inMap, const U2DPoint
     this->ClampTile(inMap, theTo);
     this->PrepareBoundedMachine(inMap);
     EEBoundedPathMachine* theMachine = this->mBoundedMachine;
-    if (inModifier == NULL) {
+    if (inModifier != NULL) {
+        theMachine->mGoal.SetModifier(inModifier);
+    } else {
         EEAIPathGoalModifierBase* theModifier = NULL;
         if (inType == 2)
             theModifier = new EEAIBPGModifierSea(&this->mBoundedMachine->mGoal);
@@ -864,8 +866,6 @@ void EEPathManager::FindPath(EEComplexUnit* inUnit, EEMap* inMap, const U2DPoint
             goto set;
         theMachine->mGoal.SetModifier(theModifier);
         theModifier->Dereference();
-    } else {
-        theMachine->mGoal.SetModifier(inModifier);
     }
 set:
     theMachine->mGoal.SetUnit(inUnit);
@@ -873,10 +873,10 @@ set:
     this->mBoundedMachine->SetGoal(theTo);
     this->mBoundedMachine->mTile = theTo;
     if (inRevs <= 0) {
-        if (inUnit == NULL)
-            this->mBoundedMachine->SetMaxRevs(200);
-        else
+        if (inUnit != NULL)
             this->SetPathRevs((EEPathMachine*)this->mBoundedMachine, inUnit, theFrom, theTo);
+        else
+            this->mBoundedMachine->SetMaxRevs(200);
         theRevs = this->mBoundedMachine->GetMaxRevs();
         if (theRevs > 200) {
             theRevs = 200;
@@ -950,10 +950,10 @@ void EEPathManager::RequestUnitPath(EEComplexUnit* inUnit, const EETileCoordinat
     if (inUnit != NULL && !theNoPath)
         return;
     long theType;
-    if (inUnit->mUnitClass->CanMoveOnTerrain(inUnit, 1))
-        theType = 2;
-    else
+    if (!(inUnit->mUnitClass->CanMoveOnTerrain(inUnit, 1)))
         theType = inUnit->mUnitClass->CanMoveOnTerrain(inUnit, 0xc) ? 0x10 : 1;
+    else
+        theType = 2;
     if (inUnit->mNumPathRequests != inUnit->mNumPathRequests + 1)
         inUnit->mNumPathRequests = inUnit->mNumPathRequests + 1;
     if ((!inUnit->GetPlayer()->IsHuman() || inUnit->GetPlayer()->GetPlayerID() == 0) && !inUnit->mIsDetachedFromAI && inUnit->mPreviousPart == NULL)
@@ -1211,10 +1211,10 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
         std::deque<EEUnitGoal*>& theGoals = inUnit->mGoalQueues[0].mGoals;
         if (inUnit->GetGoal())
             inUnit->GetGoal()->mB1D = true;
-        bool theForced = theLocation == NULL || theLocation->mIsForcedMove;
+        bool theForced = theLocation == NULL || theLocation->GetIsForcedMove();
         if (theLocation == NULL) {
             EEUGAttackUnit* theAttackGoal = dynamic_cast<EEUGAttackUnit*>(inUnit->GetGoal());
-            if (theAttackGoal && !theAttackGoal->mB1C) {
+            if (theAttackGoal && !theAttackGoal->GetB1C()) {
                 theAttack = true;
                 if (theGoals.size() <= 1)
                     goto done;
@@ -1223,15 +1223,15 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
         }
         if (theGoals.size() == 0)
             goto done;
-        if (theGoals.back()->mKind == 1 && static_cast<EEUGLocation*>(theGoals.back())->mIsAutoWaypoint)
+        if (theGoals.back()->GetKind() == 1 && static_cast<EEUGLocation*>(theGoals.back())->GetIsAutoWaypoint())
             goto done;
     build:
         if (thePath.size() > 1 && inUnit->mTile) {
             for (long i = 0; i < (long)thePath.size() - 2; i++) {
-                EEAIPathSubSector* theSector = gContinentManager.mPathSubSectors[(unsigned short)thePath[i]];
+                EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)thePath[i]);
                 theTile = theSector->mLocation;
                 EEUGLocation* theGoal = new EEUGLocation(theTile.GetX() + 0.5f, theTile.GetY() + 0.5f, 0.0f,
-                                                         inUnit->GetGoal() && inUnit->GetGoal()->mB1C, theForced,
+                                                         inUnit->GetGoal() && inUnit->GetGoal()->GetB1C(), theForced,
                                                          false, 0.0f, true, 0);
                 if (!theAttack) {
                     inUnit->SetGoal(theGoal, 1, 0);
@@ -1246,7 +1246,7 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
             inUnit->RefreshActiveGoal();
             if (theSet) {
                 inUnit->StartAction(kActionPrepareToMove);
-                inUnit->mUnitClass->ActionChanged(inUnit);
+                inUnit->GetUnitClass()->ActionChanged(inUnit);
             }
         }
     } else if (inRequest) {
@@ -1255,7 +1255,7 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
             EEAIPathSubSector* theSector = gContinentManager.GetPathSubSector((unsigned short)thePath.back());
             theLast = theSector->mLocation;
             inRequest->mPath.push_back(theLast);
-            if (inMachine->mGoal.mFrom)
+            if (inMachine->mGoal.GetFrom())
                 theDistance = UMAbs(inMachine->mGoal.mFrom->mLocation.GetX() - theLast.GetX()) +
                               UMAbs(inMachine->mGoal.mFrom->mLocation.GetY() - theLast.GetY());
         }
@@ -1269,7 +1269,7 @@ bool EEPathManager::RequestUnitPaths(EEComplexUnit* inUnit, EEAutoPathRequest* i
         inRequest->mIsDone = true;
     }
 done:
-    return inMachine->mGoal.mTo->mID == inMachine->mSector;
+    return inMachine->mGoal.GetTo()->GetID() == inMachine->GetSector();
 }
 
 // FUNCTION: EXE 0x4a7e6c
@@ -1342,7 +1342,7 @@ void EEPathManager::FinishFailedPath(EEPathManagerNode* inNode)
          (thePath.size() != 0 &&
           (UMAbs(UMFloor((*theUnit->mWaypoints.begin()).mLocation.GetX()) - theUnit->GetTileX()) > 1 ||
            UMAbs(UMFloor((*theUnit->mWaypoints.begin()).mLocation.GetY()) - theUnit->GetTileY()) > 1)))) {
-        this->PrepareBoundedMachine(gWorld.mMap);
+        this->PrepareBoundedMachine(gWorld.GetMap());
         theCount = thePath.size() < 10 ? thePath.size() : 10;
         long theY = UMFloor((*(thePath.begin() + (thePath.size() - theCount))).GetY());
         long theX = UMFloor(thePath[(thePath.size() - theCount)].GetX());
@@ -1352,15 +1352,15 @@ void EEPathManager::FinishFailedPath(EEPathManagerNode* inNode)
         theFrom.mY = theUnit->GetTileY();
         theBounds.mTop = theFrom.GetY() - 26 > 0 ? theFrom.GetY() - 26 : 0;
         theBounds.mLeft = theFrom.GetX() - 26 > 0 ? theFrom.GetX() - 26 : 0;
-        theBounds.mBottom = theFrom.GetY() + 26 < gWorld.GetMap()->mSize - 1 ? theFrom.GetY() + 26 : gWorld.GetMap()->mSize - 1;
-        theBounds.mRight = theFrom.GetX() + 26 < gWorld.GetMap()->mSize - 1 ? theFrom.GetX() + 26 : gWorld.GetMap()->mSize - 1;
+        theBounds.mBottom = theFrom.GetY() + 26 < gWorld.GetMap()->GetSize() - 1 ? theFrom.GetY() + 26 : gWorld.GetMap()->GetSize() - 1;
+        theBounds.mRight = theFrom.GetX() + 26 < gWorld.GetMap()->GetSize() - 1 ? theFrom.GetX() + 26 : gWorld.GetMap()->GetSize() - 1;
         this->mBoundedMachine->mSearchBounds = theBounds;
         this->mBoundedMachine->mGoal.mBounds = theBounds;
         this->mBoundedMachine->mGoal.mMaxRevs = 50;
         EEAIPathGoalModifierBase* theModifier;
-        if (theMachine->mType == kAIMachineWaterPath)
+        if (theMachine->GetType() == kAIMachineWaterPath)
             theModifier = new EEAIBPGModifierSea(&this->mBoundedMachine->mGoal);
-        else if (theMachine->mType == kAIMachineSpacePath)
+        else if (theMachine->GetType() == kAIMachineSpacePath)
             theModifier = new EEAIBPGModifierSpace(&this->mBoundedMachine->mGoal);
         else
             goto run;
@@ -1727,7 +1727,7 @@ void EEPathManager::PruneHistory()
 {
     std::vector<std::pair<EEPathHistoryEntry, unsigned long> > theCounts;
     std::deque<EEPathHistoryEntry>::iterator it;
-    unsigned long theTime = gPhysics->mGameTime;
+    unsigned long theTime = gPhysics->GetGameTime();
     long i;
     if (theTime > 0x157c)
         theTime -= 0x157c;

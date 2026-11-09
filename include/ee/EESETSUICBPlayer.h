@@ -18,6 +18,7 @@ public:
     void FillList();                        // 0x197014 (one entry per mFlags bit; provisional name)
     // inline (EESETSCTDiplomacy::Virtual10 stores the flags and calls FillList through one load; provisional name)
     void SetFlags(unsigned long inFlags) { this->mFlags = inFlags; this->FillList(); }
+    void SetPlayerCount(unsigned long inCount) { this->mPlayerCount = inCount; }
 
 protected:
     virtual void ChangeSelection();         // +0x8c 0x19718d (the base's, then the trigger screen's Virtual3C)

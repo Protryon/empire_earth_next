@@ -124,8 +124,8 @@ long EEE3DScreenFlash::DrawPass6()
     theLocation.SetX(this->mTransformation.GetX());
     theLocation.SetY(this->mTransformation.GetY());
     theLocation.SetZ(this->mTransformation.GetZ());
-    Fn10F7C8();
-    Fn11A130(theLocation, theFog, theValue);
+    SetWhiteLighting();
+    GetFogFactor(theLocation, theFog, theValue);
     theValue *= 1.0f - this->mDrawAge * this->mDrawAge;
     gRasterizer->SetAmbientColor(GEColor(theValue, theValue, theValue), theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);

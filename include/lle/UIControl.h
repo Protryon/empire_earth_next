@@ -139,6 +139,11 @@ public:
         this->SetDirty(true);
     }
     void SetBorderType(unsigned long inType) { this->mBorderType = inType; }
+#ifdef LLE_EXE_HEADERS
+    // inline forwards (the diplomacy form 0x5d4165, built without /Og: no extra code, each is one more inline site)
+    void SetHiddenMode() { this->SetDisplayMode(0); }
+    void SetTrigger(unsigned long inEvent, UIEvent* inTriggerEvent) { this->SetTriggerEvent(inEvent, inTriggerEvent); }
+#endif
     virtual void SetDirty(bool inDirty);
     virtual void SetDisplayMode(unsigned long inMode);
     void SetHotKey(UIHotKey* inHotKey) { this->mHotKey = inHotKey; }

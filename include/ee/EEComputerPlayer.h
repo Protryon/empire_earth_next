@@ -66,7 +66,7 @@ public:
     void ChooseFavoriteSeaType();
     void ChooseFavoriteSpaceType();
     void Regroup();                         // 0x2e2a3 (Attacked when there is no resource center)
-    void EnterEpoch(long inEpoch);          // 0x3c9c5 (VirtualA4: a new epoch)
+    void EnterEpoch(long inEpoch);          // 0x3c9c5 (GetMaxWidth: a new epoch)
     void UpdateGroups();                    // 0x3f3f1
     void EnableManagers(unsigned long inTime);  // 0x2d334 (Update) (provisional name)
     void SetNextAttackTime(unsigned long inTime);  // 0x3d4cd (Update) (provisional name)
@@ -195,13 +195,20 @@ public:
     std::vector<EECPResourceCenter*> mResourceCenters;
     std::vector<UWideString> mB90;          // +0xb90 (20-byte polymorphic elements: _Tidy 0x40ee8; unused here) (provisional name)
     std::vector<std::pair<unsigned long, long> > mFavoriteTypeHistory;  // +0xba0 (Load: resize(n, make_pair(0, 0)), then first/second)
+    EEComplexUnit* GetUnitsToKillAt(unsigned long inIndex) const { return this->mUnitsToKill[inIndex]; }
     std::vector<EEComplexUnit*> mUnitsToKill;  // +0xbb0 (ChooseUnitsToKill push_backs the units it kills; the dtor dereferences each)
+    EECPCombatManager* GetCombatManager() const { return this->mCombatManager; }
     EECPCombatManager* mCombatManager;      // +0xbc0 (EEAttackPlayers 0x13f5e9) (provisional name)
+    EECPCivilizationManager* GetCivilizationManager() const { return this->mCivilizationManager; }
     EECPCivilizationManager* mCivilizationManager;   // +0xbc4 (EECPUnitSelector 0x97a34: its +0x3c build manager) (provisional name)
+    EECPDiplomacyManager* GetDiplomacyManager() const { return this->mDiplomacyManager; }
     EECPDiplomacyManager* mDiplomacyManager;   // +0xbc8 (new 8: Init 0x2f1c8; deleted in the dtor) (provisional name)
+    EECPExplorationManager* GetExplorationManager() const { return this->mExplorationManager; }
     EECPExplorationManager* mExplorationManager;   // +0xbcc (new 0x30: Init; Load calls its +0x08) (provisional name)
+    EECPPlayerInteractionManager* GetInteractionManager() const { return this->mInteractionManager; }
     EECPPlayerInteractionManager* mInteractionManager;   // +0xbd0 (new 0x2c; EECPCombatManager 0x472f39 calls SendChat on it) (provisional name)
     unsigned long mLBD4;   // (unsigned: Load)
+    unsigned long GetDifficulty() const { return this->mDifficulty; }
     unsigned long mDifficulty;                       // +0xbd8 0 or 2 (GetResearchFrequencyModifier; CheckBuildingCounts picks +0xe14/+0xe24/+0xe1c by it) (provisional name; unsigned: Load)
     unsigned long mFavoriteLandType;
     unsigned long mFavoriteSeaType;
@@ -209,7 +216,9 @@ public:
     unsigned long mFavoriteSpaceType;
     float mUnitCostMedium;
     float mComputerAggression;              // +0xbf0 (fld at 0x47346f)
+    float GetCarrierChance() const { return this->mCarrierChance; }
     float mCarrierChance;
+    float GetCarrierPopPercentage() const { return this->mCarrierPopPercentage; }
     float mCarrierPopPercentage;
     float mAttackFrequencyPerEpoch;
     float mSpecializedUnitPercentage;
@@ -218,6 +227,7 @@ public:
     float mSpecializedUnitChance;
     float mTownGuardPercentage;             // +0xc10 (EECPDefenseCommander 0x783e7: the aid chance)
     float mCitizenPercentage;               // +0xc14 (fld at 0x4734d2)
+    float GetDMEarlyAttackScale() const { return this->mDMEarlyAttackScale; }
     float mDMEarlyAttackScale;
     float mEpochCatchUpEasy;
     float mEpochCatchUpHard;
@@ -238,21 +248,28 @@ public:
     float mGuardTownPercentage;             // +0xc5c
     float mGuardTownLandPercentage;         // +0xc60
     float mGuardWaterwayPercentage;
+    float GetHeroChance() const { return this->mHeroChance; }
     float mHeroChance;
+    float GetHeroPopPercentage() const { return this->mHeroPopPercentage; }
     float mHeroPopPercentage;
     float mDefensiveUnitCap;                // +0xc70 (EECPDefenseCommander 0x799fa: the defense share)
     float mSiegeWeaponPercentage;  // (float: Load/Init)
     float mMaxAttackResponseRange;  // (float: Load/Init)
     float mMilitaryPopPercentage;  // (float: Load/Init)
     float mAidThreatThreshold;              // +0xc80 (EECPDefenseCommander 0x785cb: the allies' threat limit)
+    float GetPriestPopPercentage() const { return this->mPriestPopPercentage; }
     float mPriestPopPercentage;  // (float: Load/Init)
+    float GetPriestChance() const { return this->mPriestChance; }
     float mPriestChance;  // (float: Load/Init)
+    float GetProphetPopPercentage() const { return this->mProphetPopPercentage; }
     float mProphetPopPercentage;  // (float: Load/Init)
+    float GetProphetChance() const { return this->mProphetChance; }
     float mProphetChance;  // (float: Load/Init)
     float mEnableInterval;  // (float: Load/Init)
     float mWorkerCountWeight;               // +0xc98 (EECPIntelligencePlayerFile::Update: the worker-count weight) (provisional name)
     float mMilitaryCountWeight;             // +0xc9c (Update: the military-count weight) (provisional name)
     float mNavalUnitWeight;  // (float: Load/Init)
+    float GetAirUnitWeight() const { return this->mAirUnitWeight; }
     float mAirUnitWeight;  // (float: Load/Init)
     float mTowerSpacing;                    // +0xca8 (float: EECPResourceCenter::FindBuildSite 0x48bee3 flds it)
     float mDMAttackFrequencyModifierEasy;  // (float: Load/Init)
@@ -278,12 +295,16 @@ public:
     long mAssistAlliesDelayMedium;          // +0xcfc
     long mAssistAlliesDelayHard;            // +0xd00
     long mPopulationCap;
+    long GetCarrierMaxPerGroup() const { return this->mCarrierMaxPerGroup; }
     long mCarrierMaxPerGroup;
+    long GetNumAirExplorers() const { return this->mNumAirExplorers; }
     long mNumAirExplorers;                  // +0xd0c (EECPExplorationManager::Update: the wanted explorers of kind 2 when +0xf55)
     long mAttackEnemyChance;
     long mAttackToClaimResourceChance;
     long mAttackForRevengeChance;
+    long GetAttackGroupSizeMax() const { return this->mAttackGroupSizeMax; }
     long mAttackGroupSizeMax;
+    long GetAttackGroupSizeMin() const { return this->mAttackGroupSizeMin; }
     long mAttackGroupSizeMin;
     long mAttackFrequencyModifierEasy;
     long mAttackFrequencyModifierHard;
@@ -310,7 +331,9 @@ public:
     long mLD7C;
     long mUnitCostReductionEasy;
     long mUnitCostReductionHard;
+    long GetDefenseGroupSizeMax() const { return this->mDefenseGroupSizeMax; }
     long mDefenseGroupSizeMax;
+    long GetDefenseGroupSizeMin() const { return this->mDefenseGroupSizeMin; }
     long mDefenseGroupSizeMin;
     long mEpochFrequencyMax;
     long mEpochFrequencyMin;
@@ -321,29 +344,48 @@ public:
     long mExpansionTimerEasy;
     long mExpansionTimerMedium;
     long mExpansionTimerHard;
+    long GetHeroMaxPerGroup() const { return this->mHeroMaxPerGroup; }
     long mHeroMaxPerGroup;
     long mNumImprovedAttributes;
     long mNumImprovedUnitTypes;
     long mReplenishDelayMax;
     long mReplenishDelayMin;
+    long GetNumLandExplorers() const { return this->mNumLandExplorers; }
     long mNumLandExplorers;
     long mNumChokePointsToGuard;
+    long GetAntiAirMax() const { return this->mAntiAirMax; }
     long mAntiAirMax;
+    long GetAirportMax() const { return this->mAirportMax; }
     long mAirportMax;
+    long GetArcheryRangeMax() const { return this->mArcheryRangeMax; }
     long mArcheryRangeMax;
+    long GetBarracksMax() const { return this->mBarracksMax; }
     long mBarracksMax;
+    long GetDockMax() const { return this->mDockMax; }
     long mDockMax;
+    long GetGranaryMax() const { return this->mGranaryMax; }
     long mGranaryMax;
+    long GetHospitalMax() const { return this->mHospitalMax; }
     long mHospitalMax;
+    long GetCyberFactoryMax() const { return this->mCyberFactoryMax; }
     long mCyberFactoryMax;
+    long GetCyberLabMax() const { return this->mCyberLabMax; }
     long mCyberLabMax;
+    long GetNavalYardMax() const { return this->mNavalYardMax; }
     long mNavalYardMax;
+    long GetSiegeFactoryMax() const { return this->mSiegeFactoryMax; }
     long mSiegeFactoryMax;
+    long GetSpaceDockMax() const { return this->mSpaceDockMax; }
     long mSpaceDockMax;
+    long GetStableMax() const { return this->mStableMax; }
     long mStableMax;
+    long GetTankFactoryMax() const { return this->mTankFactoryMax; }
     long mTankFactoryMax;
+    long GetTempleMax() const { return this->mTempleMax; }
     long mTempleMax;
+    long GetTowerMax() const { return this->mTowerMax; }
     long mTowerMax;
+    long GetUniversityMax() const { return this->mUniversityMax; }
     long mUniversityMax;
     long mMinMilitaryBuildingsEasy;
     long mMinMilitaryBuildingsEasyDM;
@@ -354,13 +396,17 @@ public:
     long mPopLimitAdjustmentEasy;
     long mPopLimitAdjustmentMedium;
     long mPopLimitAdjustmentHard;
+    long GetPriestMaxPerGroup() const { return this->mPriestMaxPerGroup; }
     long mPriestMaxPerGroup;
+    long GetProphetMaxPerGroup() const { return this->mProphetMaxPerGroup; }
     long mProphetMaxPerGroup;
     long mResearchFrequency;                // +0xe40 (EECPResearchManager::SetNextTime 0x8b1fb scales it by GetResearchFrequencyModifier)
     long mResearchFrequencyModifierEasy;
     long mResearchFrequencyModifierHard;
+    long GetDropOffDistance() const { return this->mDropOffDistance; }
     long mDropOffDistance;
     long mExtraResources;
+    long GetNumSeaExplorers() const { return this->mNumSeaExplorers; }
     long mNumSeaExplorers;
     long mTownCenterUpgradeTimer;
     long mMaxEnabledManagers;
@@ -375,22 +421,39 @@ public:
     long mLE80;
     long mEnableStockResearch;
     long mEnableStockCombat;
+    long GetUnitsPerAntiAirBuilding() const { return this->mUnitsPerAntiAirBuilding; }
     long mUnitsPerAntiAirBuilding;
+    long GetUnitsPerAirport() const { return this->mUnitsPerAirport; }
     long mUnitsPerAirport;
+    long GetUnitsPerArcheryRange() const { return this->mUnitsPerArcheryRange; }
     long mUnitsPerArcheryRange;
+    long GetUnitsPerBarracks() const { return this->mUnitsPerBarracks; }
     long mUnitsPerBarracks;
+    long GetUnitsPerDock() const { return this->mUnitsPerDock; }
     long mUnitsPerDock;
+    long GetUnitsPerGranary() const { return this->mUnitsPerGranary; }
     long mUnitsPerGranary;
+    long GetUnitsPerHospital() const { return this->mUnitsPerHospital; }
     long mUnitsPerHospital;
+    long GetUnitsPerCyberFactory() const { return this->mUnitsPerCyberFactory; }
     long mUnitsPerCyberFactory;
+    long GetUnitsPerCyberLab() const { return this->mUnitsPerCyberLab; }
     long mUnitsPerCyberLab;
+    long GetUnitsPerNavalYard() const { return this->mUnitsPerNavalYard; }
     long mUnitsPerNavalYard;
+    long GetUnitsPerSiegeFactory() const { return this->mUnitsPerSiegeFactory; }
     long mUnitsPerSiegeFactory;
+    long GetUnitsPerSpaceDock() const { return this->mUnitsPerSpaceDock; }
     long mUnitsPerSpaceDock;
+    long GetUnitsPerStable() const { return this->mUnitsPerStable; }
     long mUnitsPerStable;
+    long GetUnitsPerTankFactory() const { return this->mUnitsPerTankFactory; }
     long mUnitsPerTankFactory;
+    long GetUnitsPerTemple() const { return this->mUnitsPerTemple; }
     long mUnitsPerTemple;
+    long GetUnitsPerTower() const { return this->mUnitsPerTower; }
     long mUnitsPerTower;
+    long GetUnitsPerUniversity() const { return this->mUnitsPerUniversity; }
     long mUnitsPerUniversity;
     long mCapitolUpgradeTimer;
     long mMaxFlameThrowers;
@@ -419,6 +482,7 @@ public:
     long mLastDamagedTime;
     long mNextPopulationTime;
     unsigned long mNextExpansionTime;  // (unsigned: Load)
+    unsigned long GetDMEarlyAttackTime() const { return this->mDMEarlyAttackTime; }
     unsigned long mDMEarlyAttackTime;  // (unsigned: Load)
     unsigned long mNextIslandExpansionTime;  // (unsigned: Load)
     bool mCanAttack;
@@ -430,6 +494,7 @@ public:
     bool mUsesFishing;
     bool mIsCheating;
     bool mCanBuild;
+    bool GetCanExplore() const { return this->mCanExplore; }
     bool mCanExplore;
     bool mBF4E;
     bool mCanGather;
@@ -438,6 +503,7 @@ public:
     bool mIgnoreOthers;
     bool mReplaceOnLoad;
     bool mRegroupPending;
+    bool GetAttackStarted() const { return this->mAttackStarted; }
     bool mAttackStarted;
     // port: the engine (ee/EECPEngine.h: kEECPEngineClassic or kEECPEngineNext; EEGameState::Create sets it from
     // the lobby, EEPPlayerHelper saves it), in the padding

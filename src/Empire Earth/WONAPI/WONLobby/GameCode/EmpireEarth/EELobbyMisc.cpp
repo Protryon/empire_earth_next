@@ -1,8 +1,8 @@
-// C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbyMisc.cpp (name PROVISIONAL: no __FILE__, it sorts
-// between EELobbyInit.cpp and EELobbyPlayer.cpp). The lobby's glue to the game: the lobby lock (a WONAPI critical
-// section the renderer takes too), saved games in the game room (header checks, set-up from the saved options), the
-// game options and map types, the player colours, the version check and the lobby music: 0x297ee7..0x299838 (the
-// std::set/map COMDATs 0x298b02..0x299838 close it). Module flags (r12-misc-h5, round 12).
+// C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbyMisc.cpp (file name inferred: no __FILE__; it
+// sorts between EELobbyInit.cpp and EELobbyPlayer.cpp). The lobby's glue to the game: the lobby lock (a WONAPI
+// critical section the renderer takes too), saved games in the game room (header checks, set-up from the saved
+// options), the game options and map types, the player colours, the version check and the lobby music:
+// 0x697ee7..0x699838 (the std::set/map COMDATs 0x698b02..0x699838 close it).
 #include <windows.h>
 #include <string>
 #include <list>
@@ -33,18 +33,21 @@ using namespace WONAPI;
 static CriticalSection gEELobbyCriticalSection;     // 0x565858
 
 // FUNCTION: EXE 0x697f15
-void Fn297F15()
+// Enters the lobby's critical section (shared with the renderer)
+void EELobbyLock()
 {
     gEELobbyCriticalSection.Enter();
 }
 
 // FUNCTION: EXE 0x697f21
-void Fn297F21()
+// Leaves the lobby's critical section
+void EELobbyUnlock()
 {
     gEELobbyCriticalSection.Leave();
 }
 
 // FUNCTION: EXE 0x697f2d
+// Reads a saved game's file length and header checksum; returns false if the file or header can't be read
 bool EELobbyGetSavedGameInfo(const char* inFile, unsigned long& outLength, unsigned long& outChecksum)
 {
     EEPSaveGameHeader theHeader;
@@ -66,8 +69,10 @@ bool EELobbyGetSavedGameInfo(const char* inFile, unsigned long& outLength, unsig
 }
 
 // FUNCTION: EXE 0x698005
-// NEAR: register choice (esi/edi swapped, saved in the prologue in the original) and the player-missing return is
-// laid out at the end there; the found-flag shape is worse (81%)
+// Loads a saved game into the hosted game room, refusing it (with a message box) when the file is unreadable or a
+// joined player was not in the saved game
+// Not identical: the original swaps esi/edi (both saved in the prologue) and places the player-missing return at
+// the end of the function
 bool EELobbyLoadSavedGame(const char* inFile)
 {
     EEPSaveGameHeader theHeader;
@@ -86,7 +91,7 @@ bool EELobbyLoadSavedGame(const char* inFile)
         return false;
     }
     theOptions = theHeader.mGameOptions;
-    EELobbyGame* theGame = (EELobbyGame*)GetMyLobbyGame();
+    EELobbyGame* theGame = static_cast<EELobbyGame*>(GetMyLobbyGame());
     if (theGame == NULL)
         return false;
     std::set<GUIString> theNames;
@@ -107,15 +112,18 @@ bool EELobbyLoadSavedGame(const char* inFile)
 }
 
 // FUNCTION: EXE 0x6981ff
+// Converts a game wide string (player or map name) to a lobby GUI string
 GUIString EELobbyToGUIString(const UWideString& inText)
 {
     return GUIString(StringToWString(std::string(inText), -1));
 }
 
 // FUNCTION: EXE 0x698266
+// Sets the game room up from a saved game: file, game options, joined players matched to their saved slots by name,
+// remaining saved players spread over the free slots
 void EELobbySetupSavedGame(const EEGameOptions& inOptions, const char* inFile, const EEPSaveGameHeader& inHeader)
 {
-    EELobbyGame* theGame = (EELobbyGame*)GetMyLobbyGame();
+    EELobbyGame* theGame = static_cast<EELobbyGame*>(GetMyLobbyGame());
     if (theGame == NULL)
         return;
     WONFile theFile(inFile);
@@ -154,36 +162,32 @@ void EELobbySetupSavedGame(const EEGameOptions& inOptions, const char* inFile, c
     }
 }
 
-// FUNCTION: EXE 0x69848e
-GUIString::GUIString(const std::string& inText) : mData(new GUIStringData(inText))
-{
-}
-
 // FUNCTION: EXE 0x6984ca
-// NEAR: the original's switch compares unsigned (`jbe`): EEGameOptionsPlayer::mType is long in the shared header
+// Sets a player slot from a saved player (computer, human, observer, open or closed), then its colour (humans only),
+// team and starting citizens (all but observers)
 void EELobbySetSlot(EELobbyPlayerSlot* inSlot, const EEGameOptionsPlayer& inPlayer)
 {
     switch (inPlayer.mType) {
     case 0:
-        inSlot->Fn299983();
+        inSlot->SetComputer();
         break;
     case 1:
     case 2:
-        if (inSlot->mClient.mPtr != NULL && inSlot->mClient->mPlayer != NULL) {
+        if (inSlot->mClient.mPtr != NULL && inSlot->mClient->mPlayer.mPtr != NULL) {
             inSlot->mOptions[4] = inPlayer.mType == 2;
-            inSlot->SetPlayer(inSlot->mClient.mPtr, (EELobbyPlayer*)inSlot->mClient->mPlayer);
+            inSlot->SetPlayer(inSlot->mClient.mPtr, (EELobbyPlayer*)inSlot->mClient->mPlayer.mPtr);
         } else if (inPlayer.mName == "") {
-            inSlot->Fn29997B();
+            inSlot->SetClosed();
         } else {
             inSlot->SetName(EELobbyToGUIString(inPlayer.mName));
             inSlot->mOptions[4] = inPlayer.mType == 2;
         }
         break;
     case 3:
-        inSlot->Fn299973();
+        inSlot->SetOpen();
         return;
     case 4:
-        inSlot->Fn29997B();
+        inSlot->SetClosed();
         return;
     }
     if (inPlayer.mType == 1)
@@ -195,6 +199,7 @@ void EELobbySetSlot(EELobbyPlayerSlot* inSlot, const EEGameOptionsPlayer& inPlay
 }
 
 // FUNCTION: EXE 0x6985a8
+// Copies the game's options (map, size, resources, epochs, variant, difficulty, speed, limits, flags) to the game room
 void EELobbySetGameOptions(const EEGameOptions& inOptions, EELobbyGame* inGame)
 {
     unsigned long theMapType = 0;
@@ -230,6 +235,7 @@ void EELobbySetGameOptions(const EEGameOptions& inOptions, EELobbyGame* inGame)
 }
 
 // FUNCTION: EXE 0x6986e9
+// Returns the display name of the random map type with the given index, or an empty string
 GUIString& EELobbyGetMapTypeName(int inMapType)
 {
     static GUIString theName;
@@ -241,7 +247,8 @@ GUIString& EELobbyGetMapTypeName(int inMapType)
 }
 
 // FUNCTION: EXE 0x69876a
-void EELobbyFn29876A(ComboBox* inCombo)
+// Fills a combo box with the display names of every random map type
+void EELobbyFillMapTypeCombo(ComboBox* inCombo)
 {
     inCombo->Clear(true);
     int theCount = EERMGetNumberOfGenerators();
@@ -252,7 +259,8 @@ void EELobbyFn29876A(ComboBox* inCombo)
 }
 
 // FUNCTION: EXE 0x6987bd
-void EELobbyFn2987BD()
+// Adds every random map type's display name to the lobby's MapType game option
+void EELobbyAddMapTypeOptions()
 {
     int theCount = EERMGetNumberOfGenerators();
     for (int i = 0; i < theCount; i++) {
@@ -262,13 +270,15 @@ void EELobbyFn2987BD()
 }
 
 // FUNCTION: EXE 0x698824
-unsigned long EELobbyFn298824()
+// Returns the number of random map types
+unsigned long EELobbyGetNumMapTypes()
 {
     return EERMGetNumberOfGenerators();
 }
 
 // FUNCTION: EXE 0x698829
-void EELobbyFn298829(unsigned long* outColors, int inCount)
+// Fills an array with up to 16 player colours, each packed as 0xRRGGBB
+void EELobbyGetPlayerColors(unsigned long* outColors, int inCount)
 {
     if (inCount > 16)
         inCount = 16;
@@ -294,12 +304,14 @@ void EELobbyFn298829(unsigned long* outColors, int inCount)
 }
 
 // FUNCTION: EXE 0x6988d8
-void EELobbyFn2988D8(EELobbyGame* inGame)
+// Sets the game room's options from the player's saved game preferences
+void EELobbySetDefaultGameOptions(EELobbyGame* inGame)
 {
     EELobbySetGameOptions(gGamePreferences.GetSettings().mGameOptions, inGame);
 }
 
 // FUNCTION: EXE 0x6988e9
+// Returns the saved games directory (data\Saved Games)
 const GUIString& EELobbyFn2988E9()
 {
     static GUIString theDirectory;
@@ -310,12 +322,14 @@ const GUIString& EELobbyFn2988E9()
 }
 
 // FUNCTION: EXE 0x6989a9
-bool EECheck2989A9(bool inFlag)
+// Returns whether the game is multiplayer when the flag is set, true otherwise
+bool EEIsMultiplayerGame(bool inFlag)
 {
     return inFlag ? gGameOptions.mIsMultiplayer : true;
 }
 
 // FUNCTION: EXE 0x6989b8
+// Returns the game's version string and binary checksum
 void EELobbyGetVersion(GUIString& outVersion, unsigned long& outChecksum)
 {
     outVersion = EELobbyToGUIString(gGameVersion);
@@ -323,9 +337,10 @@ void EELobbyGetVersion(GUIString& outVersion, unsigned long& outChecksum)
 }
 
 // FUNCTION: EXE 0x6989ef
-void EELobbyFn2989EF(ResourceCollection* inCollection)
+// Adds the LobbyGlobal resource section with the lobby music
+void EELobbyAddResources(ResourceConfigTable* inCollection)
 {
-    ResourceConfigTable* theTable = inCollection->GetTable("LobbyGlobal", false);
+    ResourceConfig* theTable = inCollection->AddConfig("LobbyGlobal", NULL);
     theTable->AddSound("LobbyMusic", new EELobbyMusic(SoundDescriptor("", 2)));
 }
 
@@ -336,8 +351,9 @@ void EELobbyFn2989EF(ResourceCollection* inCollection)
 // SYNTHETIC: EXE 0x69875a
 // SYNTHETIC: EXE 0x698999
 
-// the std::set<GUIString>, std::set<long> and std::map<GUIString, long> COMDATs that close the unit (0x298bf9 /
-// 0x298c1c, a std::list ctor/clear used by EELobbyInit.cpp and the 0x296aaa unit, are ICF copies of another type's)
+// the std::set<GUIString>, std::set<long> and std::map<GUIString, long> COMDATs that close the unit (0x698bf9 /
+// 0x698c1c, a std::list ctor/clear used by EELobbyInit.cpp and the unit at 0x696aaa, are ICF copies of another
+// type's)
 // TEMPLATE: EXE 0x698b02
 // TEMPLATE: EXE 0x698b2d
 // TEMPLATE: EXE 0x698b7e

@@ -10,7 +10,8 @@
 // stays valid after the thread ends and PlatThreadClose never touches a running thread. A thread created suspended
 // waits at a start gate until PlatThreadResume; suspending a running thread is not possible with pthreads, so
 // PlatThreadSuspend fails there (ERROR_NOT_SUPPORTED), and so does PlatThreadTerminate (the engine never calls
-// either on a running thread). Priorities are kept and applied as a nice value where the system allows it.
+// either on a running thread). PlatThreadWait waits on a done event the thread sets as it ends. Priorities are kept
+// and applied as a nice value where the system allows it.
 #include <errno.h>
 #include <pthread.h>
 #include <sched.h>
@@ -324,6 +325,7 @@ struct PlatThread {
     bool mOwnsThread;               // created here (joinable until detached)
     PlatThreadMain mMain;
     void* mParameter;
+    PlatEvent* mDone;               // manual reset, set when inMain has returned (PlatThreadWait)
 };
 
 namespace {
@@ -346,6 +348,13 @@ PlatThread* NewThreadRecord()
     theThread->mOwnsThread = false;
     theThread->mMain = NULL;
     theThread->mParameter = NULL;
+    theThread->mDone = PlatEventCreate(1, 0);
+    if (!theThread->mDone) {
+        pthread_cond_destroy(&theThread->mStartCondition);
+        pthread_mutex_destroy(&theThread->mLock);
+        delete theThread;
+        return NULL;
+    }
     return theThread;
 }
 
@@ -355,6 +364,7 @@ void Release(PlatThread* inThread)
     int theLeft = --inThread->mReferences;
     pthread_mutex_unlock(&inThread->mLock);
     if (theLeft == 0) {
+        PlatEventDestroy(inThread->mDone);
         pthread_cond_destroy(&inThread->mStartCondition);
         pthread_mutex_destroy(&inThread->mLock);
         delete inThread;
@@ -404,6 +414,7 @@ void* ThreadEntry(void* inThread)
     theThread->mExitCode = theExitCode;
     theThread->mRunning = false;
     pthread_mutex_unlock(&theThread->mLock);
+    PlatEventSet(theThread->mDone);
     tCurrentThread = NULL;
     Release(theThread);
     return NULL;
@@ -482,6 +493,16 @@ extern "C" int PlatThreadGetExitCode(PlatThread* inThread, uint32_t* outExitCode
     *outExitCode = inThread->mRunning ? PLAT_THREAD_STILL_ACTIVE : inThread->mExitCode;
     pthread_mutex_unlock(&inThread->mLock);
     return 1;
+}
+
+extern "C" int32_t PlatThreadWait(PlatThread* inThread, uint32_t inTimeoutMs)
+{
+    if (!inThread) {
+        PlatPosix::Fail(PlatPosix::kErrorInvalidHandle);
+        return PLAT_WAIT_FAILED;
+    }
+    // a thread not started here (PlatThreadOpenCurrent) never sets it: as Win32, a thread waiting on itself waits
+    return PlatEventWait(inThread->mDone, inTimeoutMs);
 }
 
 extern "C" int32_t PlatThreadGetPriority(PlatThread* inThread)

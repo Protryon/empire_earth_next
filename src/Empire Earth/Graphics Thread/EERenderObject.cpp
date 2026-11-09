@@ -142,7 +142,7 @@ static bool sB529088;                       // 0x529088 (the letterbox is cleare
 static unsigned long sSwayClock;            // 0x529084 (+2 every 33 ms: FillRenderLists; the objects' sway; provisional name)
 static const float kEERenderObject_F441344 = 0.017453292f;   // 0x441344 (degrees to radians)
 static const float kEERenderObject_F441354 = 0.025f;         // 0x441354
-bool Fn10CF98(EETile* inTile);
+bool GetTileHasTree(EETile* inTile);
 static unsigned long sU529090;              // 0x529090 (the music check's last time; provisional name)
 static unsigned long sU529094;              // 0x529094 (the sway clock's last time; provisional name)
 static unsigned long sL52908C;              // 0x52908c (the frame counter; provisional name)
@@ -181,7 +181,7 @@ GEColor gU4E9220(1.0f, 1.0f, 1.0f);
 // SYNTHETIC: EXE 0x50adbd   (registrar)
 // SYNTHETIC: EXE 0x50adc9   (dtor)
 
-GEVector gU4E9210;                         // 0x4e9210 (the sun direction: Fn10C036, Fn10F833)
+GEVector gU4E9210;                         // 0x4e9210 (the sun direction: Fn10C036, SetTerrainLighting)
 // SYNTHETIC: EXE 0x50adca   (wrapper)
 // SYNTHETIC: EXE 0x50add4   (ctor)
 // SYNTHETIC: EXE 0x50aded   (registrar)
@@ -530,7 +530,7 @@ bool EERenderObject::IsUnitDrawn(EEUnit* inUnit, EETile* inTile, std::set<EEUnit
 
 // FUNCTION: EXE 0x50b7e1
 // Unloads the media of every pooled map object and empties the pool
-void Fn10B7E1(EERenderShadow* inObjects, unsigned long& ioCount)
+void UnloadRenderShadows(EERenderShadow* inObjects, unsigned long& ioCount)
 {
     for (unsigned long i = 0; i < ioCount; i++)
         inObjects[i].mObject->UnloadMedia();
@@ -540,7 +540,7 @@ void Fn10B7E1(EERenderShadow* inObjects, unsigned long& ioCount)
 // FUNCTION: EXE 0x50b80b
 // Unloads the media of every pooled render unit, resets its bars and turning parts, clears the pointed-at
 // unit and object, and empties the pool
-void Fn10B80B(EERenderUnit* inUnits, unsigned long& ioCount)
+void UnloadRenderUnits(EERenderUnit* inUnits, unsigned long& ioCount)
 {
     for (unsigned long i = 0; i < ioCount; i++) {
         inUnits[i].mSource->UnloadMedia();
@@ -562,7 +562,7 @@ void Fn10B80B(EERenderUnit* inUnits, unsigned long& ioCount)
 
 // FUNCTION: EXE 0x50b8ad
 // Empties the ghost render records from the back, unloading each one's media
-void Fn10B8AD()
+void UnloadGhostRecords()
 {
     EERenderUnitRecord theRecord;
     while (EERenderLists::sInstance.mGhostRecords.size() > 0) {
@@ -827,7 +827,7 @@ void EERenderObject::Fn10C036()
             goto done;
     }
     if (gCameraFollowing) {
-        Fn10F833();
+        SetTerrainLighting();
         gRasterizer->Light(gWorld.mMap->mTerrainMesh, gScreenIndex);
     }
 done:
@@ -925,7 +925,7 @@ void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERen
     outObject->mModelScale *= (unsigned long)inUnit->GetUnitID() % 11 * kEERenderObject_F441354 + 1.0f;
     long theX = inUnit->mTileX;
     long theY = inUnit->mTileY;
-    if (!Fn10CF98(theMap->GetTile(theX - 1, theY - 1)) || !Fn10CF98(theMap->GetTile(theX + 1, theY + 1))) {
+    if (!GetTileHasTree(theMap->GetTile(theX - 1, theY - 1)) || !GetTileHasTree(theMap->GetTile(theX + 1, theY + 1))) {
         outObject->mScale = inUnit->mUnitClass->GetShadowScale();
         outObject->mF1C = inUnit->mUnitClass->GetF170();
     } else {
@@ -962,7 +962,7 @@ void EERenderObject::FillObject(EEUnit* inUnit, EERenderShadow* outObject, EERen
 
 // FUNCTION: EXE 0x50cf98
 // Returns whether any unit on a tile is a map object (its class has mIsTree)
-bool Fn10CF98(EETile* inTile)
+bool GetTileHasTree(EETile* inTile)
 {
     bool theResult = false;
     if (inTile != NULL) {
@@ -1010,7 +1010,7 @@ void EERenderObject::FillDoppelgangerObject(EEDoppelganger* inDoppelganger, EERe
                              * theScale;
     outObject->mObject = inDoppelganger->GetModel();
     outObject->mObject->LoadMedia();
-    if (!Fn10CF98(theMap->GetTile(inX - 1, inY - 1)) || !Fn10CF98(theMap->GetTile(inX + 1, inY + 1))) {
+    if (!GetTileHasTree(theMap->GetTile(inX - 1, inY - 1)) || !GetTileHasTree(theMap->GetTile(inX + 1, inY + 1))) {
         outObject->mScale = inDoppelganger->mUnit->mUnitClass->GetShadowScale();
         outObject->mF1C = inDoppelganger->mUnit->mUnitClass->GetF170();
     } else {
@@ -1139,7 +1139,7 @@ void EERenderObject::FillDoppelgangerUnit(EEDoppelganger* inDoppelganger, EERend
     ioCount++;
 }
 
-// the space-cliff textures (0x4e8ef0; loaded once by Fn10EA27, handed to the terrain mesh) (provisional name)
+// the space-cliff textures (0x4e8ef0; loaded once by LoadCliffTextures, handed to the terrain mesh) (provisional name)
 std::vector<GETexture*> gU4E8EF0;
 // SYNTHETIC: EXE 0x50e899   (wrapper)
 // SYNTHETIC: EXE 0x50e8a3   (ctor)
@@ -1269,7 +1269,7 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
                     outUnit->mHealthBars.resize(theComplex->GetNumCargoUnits() + 1, 0.0f);
                     for (unsigned long j = 0; j < theComplex->GetNumCargoUnits(); j++)
                         outUnit->mHealthBars[j + 1] = (float)theComplex->mCargo[j]->mHitPoints
-                                               / theComplex->mCargo[j]->mStats->mMaxHitPoints;
+                                               / theComplex->mCargo[j]->GetStats()->mMaxHitPoints;
                 }
                 outUnit->mHealthBars[0] = (float)inUnit->GetHitPoints() / inUnit->mStats->mMaxHitPoints;
                 outUnit->mHealth = inUnit->mStats->mPower == 0 ? -1.0f
@@ -1282,8 +1282,8 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
                 && (theComplex->GetPlayer() == theCurrent || theComplex->GetPlayer()->mEnemies[theCurrent->GetPlayerID()] == 0)) {
                 outUnit->mHealthBars.resize(theComplex->GetNumCargoUnits() + 1, 0.0f);
                 for (unsigned long j = 0; j < theComplex->GetNumCargoUnits(); j++)
-                    outUnit->mHealthBars[j + 1] = (float)theComplex->mCargo[j]->mHitPoints
-                                           / theComplex->mCargo[j]->mStats->mMaxHitPoints;
+                    outUnit->mHealthBars[j + 1] = (float)theComplex->mCargo[j]->GetHitPoints()
+                                           / theComplex->mCargo[j]->GetStats()->GetMaxHitPoints();
             }
             outUnit->mHealthBars[0] = (float)inUnit->GetHitPoints() / inUnit->mStats->mMaxHitPoints;
             outUnit->mHealth = inUnit->mStats->mPower == 0 ? -1.0f : (float)theComplex->mPower / theStats->mPower;
@@ -1412,7 +1412,7 @@ void EERenderObject::FillUnit(EEUnit* inUnit, EERenderUnit* outUnit, EERenderUni
 
 
 // loads the space-cliff and cliff-edge textures into gU4E8EF0 (a static function: emitted after its user)
-static void Fn10EA27()
+static void LoadCliffTextures()
 {
     GETextureDescription theDescription;
     theDescription.mPixelDepth = 16;
@@ -1446,11 +1446,11 @@ void EERenderObject::Fn10E8D1()
         this->Fn10C036();
         if (theMap->mTerrainMesh.GetIsSpaceMap() && theMap->mTerrainMesh.NumSpaceCliffTextures() < 1) {
             if (gU4E8EF0.size() == 0)
-                Fn10EA27();
+                LoadCliffTextures();
             theMap->mTerrainMesh.SetSpaceCliffTextures(gU4E8EF0);
         }
         theMap->mTerrainMesh.UpdateVisibleTerrain(gWorld.mTransformation, theViewport, 2, 1, 3, gOrthographicView);
-        Fn10F833();
+        SetTerrainLighting();
         gRasterizer->Light(theMap->mTerrainMesh, gScreenIndex);
     }
     if (!gCameraFollowing || theElapsed >= 100) {
@@ -1462,7 +1462,7 @@ void EERenderObject::Fn10E8D1()
 }
 
 // SYNTHETIC: EXE 0x50ea27
-// (Fn10EA27, the static function above)
+// (LoadCliffTextures, the static function above)
 
 // FUNCTION: EXE 0x50eabe
 // Builds the frame's render lists: resets the pools, picks units, walks the visible tiles (units, map
@@ -1486,8 +1486,8 @@ void EERenderObject::FillRenderLists()
             sU529094 = theTime;
         }
         this->Fn10E8D1();
-        Fn10B7E1(EERenderLists::sInstance.mRenderShadows, EERenderLists::sInstance.mRenderShadowCount);
-        Fn10B80B(EERenderLists::sInstance.mRenderUnits, EERenderLists::sInstance.mRenderUnitCount);
+        UnloadRenderShadows(EERenderLists::sInstance.mRenderShadows, EERenderLists::sInstance.mRenderShadowCount);
+        UnloadRenderUnits(EERenderLists::sInstance.mRenderUnits, EERenderLists::sInstance.mRenderUnitCount);
         for (unsigned long i = 0; i < gU529050.size(); i++)
             gU529050[i].mTexture->Dereference();
         gU529050.clear();
@@ -1499,7 +1499,7 @@ void EERenderObject::FillRenderLists()
         EERenderLists::sInstance.mUnits2.clear();
         EERenderLists::sInstance.mSelectedObjects.clear();
         EERenderLists::sInstance.mSelectedUnits.clear();
-        Fn10B8AD();
+        UnloadGhostRecords();
         gU529044 = NULL;
         if (!gFreeCamera) {
             if (theSelection->GetIsDrawn())
@@ -1670,8 +1670,8 @@ void EEReleaseScene()
         gEffectQueues[i].clear();
     }
     gWorld.mLock->ReadUnlock();
-    Fn10B7E1(EERenderLists::sInstance.mRenderShadows, EERenderLists::sInstance.mRenderShadowCount);
-    Fn10B80B(EERenderLists::sInstance.mRenderUnits, EERenderLists::sInstance.mRenderUnitCount);
+    UnloadRenderShadows(EERenderLists::sInstance.mRenderShadows, EERenderLists::sInstance.mRenderShadowCount);
+    UnloadRenderUnits(EERenderLists::sInstance.mRenderUnits, EERenderLists::sInstance.mRenderUnitCount);
     EERenderLists::sInstance.mShadows0.clear();
     EERenderLists::sInstance.mUnits0.clear();
     EERenderLists::sInstance.mShadows1.clear();
@@ -1682,7 +1682,7 @@ void EEReleaseScene()
     EERenderLists::sInstance.mSelectedUnits.clear();
     EERenderLists::sInstance.mRenderUnitCount = 0;
     EERenderLists::sInstance.mRenderShadowCount = 0;
-    Fn10B8AD();
+    UnloadGhostRecords();
     sU529060->Dereference();
     gUnitPicker.Reset();
     sSceneInitialised = false;
@@ -1781,7 +1781,7 @@ bool EERenderObject::GetUnitOpacity(EEUnit* inUnit, float& outOpacity)
 // FUNCTION: EXE 0x50f60f
 // Turns on linear fog in the fog colour dimmed by the light fade, ending at the rear clipping distance
 // (off in the orthographic view)
-void Fn10F60F()
+void SetSceneFog()
 {
     GEColor theColor;
     theColor.SetRed(gU4E9220.GetRed() * sLightFade);
@@ -1802,14 +1802,14 @@ void Fn10F60F()
 
 // FUNCTION: EXE 0x50f6c7
 // Turns the fog off
-void Fn10F6C7()
+void SetFogOff()
 {
     gRasterizer->SetFog(0, gScreenIndex);
 }
 
 // FUNCTION: EXE 0x50f6de
 // Turns lighting off (no ambient light, no lights)
-void Fn10F6DE()
+void SetLightingOff()
 {
     unsigned long theScreen = gScreenIndex;
     gRasterizer->SetAmbientIntensity(0.0f, theScreen);
@@ -1819,7 +1819,7 @@ void Fn10F6DE()
 
 // FUNCTION: EXE 0x50f71c
 // Lights with the environment's prelit colour as ambient, dimmed by the light fade, and no lights
-void Fn10F71C()
+void SetPrelitLighting()
 {
     unsigned long theScreen = gScreenIndex;
     gRasterizer->SetAmbientColor(gRenderEnvironment.mPrelitColor, theScreen);
@@ -1830,7 +1830,7 @@ void Fn10F71C()
 
 // FUNCTION: EXE 0x50f772
 // Lights with the environment's second ambient colour (the clouds'), dimmed by the light fade, and no lights
-void Fn10F772()
+void SetCloudLighting()
 {
     unsigned long theScreen = gScreenIndex;
     gRasterizer->SetAmbientColor(gRenderEnvironment.mColor54, theScreen);
@@ -1841,7 +1841,7 @@ void Fn10F772()
 
 // FUNCTION: EXE 0x50f7c8
 // Lights with white ambient light dimmed by the light fade, and no lights
-void Fn10F7C8()
+void SetWhiteLighting()
 {
     GEColor theWhite(1.0f, 1.0f, 1.0f);
     unsigned long theScreen = gScreenIndex;
@@ -1853,7 +1853,7 @@ void Fn10F7C8()
 
 // FUNCTION: EXE 0x50f833
 // Sets the terrain lighting: the environment's terrain ambient light and the sun light, dimmed by the fade
-void Fn10F833()
+void SetTerrainLighting()
 {
     unsigned long theScreen = gScreenIndex;
     gRasterizer->RemoveAllLights(theScreen);
@@ -1869,7 +1869,7 @@ void Fn10F833()
 // FUNCTION: EXE 0x50f8de
 // Sets the map objects' lighting: unit ambient and a flattened sun light when unit lighting is on, else the
 // prelit colour at a fixed intensity
-void Fn10F8DE()
+void SetMapObjectLighting()
 {
     GEVector theDirection = gU4E9210;
     unsigned long theScreen = gScreenIndex;
@@ -1892,7 +1892,7 @@ void Fn10F8DE()
 
 // FUNCTION: EXE 0x50fa01
 // Sets the units' lighting: unit ambient and the sun light when unit lighting is on, else the prelit colour
-void Fn10FA01()
+void SetUnitLighting()
 {
     unsigned long theScreen = gScreenIndex;
     gRasterizer->RemoveAllLights(theScreen);
@@ -1912,7 +1912,7 @@ void Fn10FA01()
 
 // FUNCTION: EXE 0x50fae8
 // Restores the units' lighting at full strength for a unit in view (not fogged)
-void Fn10FAE8()
+void RestoreUnitLighting()
 {
     unsigned long theScreen = gScreenIndex;
     if (gUnitLighting) {
@@ -1927,7 +1927,7 @@ void Fn10FAE8()
 
 // FUNCTION: EXE 0x50fb74
 // Halves the units' lighting for a fogged unit (the dim prelit colour without unit lighting)
-void Fn10FB74()
+void DimUnitLighting()
 {
     unsigned long theScreen = gScreenIndex;
     if (gUnitLighting) {

@@ -157,26 +157,26 @@ bool EEHerd::AddUnit(EEComplexUnit* inUnit)
     bool theResult = false;
     if (this->mTiles.Size() != 0 || this->CanTake(inUnit, true)) {
         theResult = true;
-        if (inUnit->mGrowth != 1.0f)
+        if (inUnit->GetGrowth() != 1.0f)
             this->mNumYoung++;
         this->mContinent = gContinentManager.GetContinentID(inUnit);
         inUnit->mReferenceCount++;
         inUnit->SetHerd(this);
         this->mUnits.push_back(inUnit);
-        this->mIsActive = inUnit->mStats->mIsInitialized;
+        this->mIsActive = inUnit->GetStats()->GetIsInitialized();
         if (gPhysics) {
-            long theTime = gPhysics->mGameTime;
-            inUnit->SetGrazeTime(theTime + gPhysics->GetRandom(this->mAnimal->GetMinGrazeTime(), this->mAnimal->GetMaxGrazeTime()));
+            long theTime = gPhysics->GetGameTime();
+            inUnit->SetGrazeTime(theTime + gPhysics->GetRandom(this->GetAnimal()->GetMinGrazeTime(), this->GetAnimal()->GetMaxGrazeTime()));
         }
         else
-            inUnit->SetGrazeTime(inUnit->mGrazeTime + this->mAnimal->GetMinGrazeTime());
+            inUnit->SetGrazeTime(inUnit->GetGrazeTime() + this->GetAnimal()->GetMinGrazeTime());
         for (long i = this->mUnits.size() - 1; i >= 0; i--)
-            theTiles.push_back(U2DPoint<long>(this->mUnits[i]->mTileX, this->mUnits[i]->mTileY));
+            theTiles.push_back(U2DPoint<long>(this->mUnits[i]->GetTileX(), this->mUnits[i]->GetTileY()));
         this->SetUnitMedia((EEMedia*)inUnit->mStats->mModel, inUnit->mUnitID);
-        if (inUnit->mGrowth == 1.0f ||
+        if (inUnit->GetGrowth() == 1.0f ||
             (this->mBounds2.mRight - this->mBounds2.mLeft <= 4 && this->mBounds2.mBottom - this->mBounds2.mTop <= 4))
             this->Create(theTiles);
-        if (inUnit->mIsRegrowing)
+        if (inUnit->GetIsRegrowing())
             this->mState = 10;
     }
     return theResult;
@@ -247,19 +247,19 @@ bool EEHerd::Chase()
     GE3DPoint thePosition;
     GE3DPoint theLocation;
     bool theResult;
-    EEAIContinent* theContinent = gContinentManager.mContinents[this->mContinent];
-    if (theContinent && theContinent->mCategory == kContinentCategoryWater &&
-        !(this->mTarget && this->mTarget->mTileX != -10000 && (long)this->mTarget->mWaypoints.size() > 1 && this->mTarget->mHitPoints > 0)) {
+    EEAIContinent* theContinent = gContinentManager.GetContinentFromID(this->mContinent);
+    if (theContinent && theContinent->GetCategory() == kContinentCategoryWater &&
+        !(this->mTarget && this->mTarget->GetTileX() != -10000 && (long)this->mTarget->mWaypoints.size() > 1 && this->mTarget->GetHitPoints() > 0)) {
         this->ReleaseTarget();
         EEHerdUnitFilter theFilter(this->mContinent, false, true);
         EEGetUnitsInRectangle(theContinent->mHull.GetBounds(), theTargets, theFilter, false);
         if (theTargets.size() > 0) {
             this->mTarget = theTargets[gPhysics->Fn82D66(theTargets)];
             this->mTarget->mReferenceCount++;
-            this->mCenter = U2DPoint<long>(this->mTarget->mTileX, this->mTarget->mTileY);
+            this->mCenter = U2DPoint<long>(this->mTarget->GetTileX(), this->mTarget->GetTileY());
         }
     }
-    if (this->mTarget && this->mTarget->mTileX != -10000 && (long)this->mTarget->mWaypoints.size() > 1 && this->mTarget->mHitPoints > 0) {
+    if (this->mTarget && this->mTarget->GetTileX() != -10000 && (long)this->mTarget->mWaypoints.size() > 1 && this->mTarget->GetHitPoints() > 0) {
         theResult = true;
         EEFInwardCircle* theFormation = dynamic_cast<EEFInwardCircle*>(EEFormation::Create(6));
         theUnits = this->mUnits;
@@ -267,11 +267,11 @@ bool EEHerd::Chase()
         theFormation->mCenter.mX = thePosition.mX;
         theFormation->mCenter.mY = thePosition.mY;
         theFormation->mCenter.mZ = thePosition.mZ;
-        theFormation->mMinRadius = gPhysics->GetRandom(1.25f, 2.75f);
+        theFormation->SetMinRadius(gPhysics->GetRandom(1.25f, 2.75f));
         theFormation->Place(theUnits, theSlots);
         while (theUnits.size() != 0) {
             EEComplexUnit* theUnit = theUnits.back();
-            if (theUnit->mTileX != -10000 && !theUnit->mIsDisabled) {
+            if (theUnit->GetTileX() != -10000 && !theUnit->GetIsDisabled()) {
                 float theHeading = 0.0f;
                 bool theFace = false;
                 if (theUnit->DistanceSquaredTo(this->mTarget) > 9.0f && theSlots.size() > 0) {
@@ -469,13 +469,13 @@ void EEHerd::Graze(EEComplexUnit* inUnit, unsigned long inTime)
     GE3DPoint theLocation;
     U2DPoint<long> theOther;
     U2DPoint<long> theTile;
-    EEAIArea* theArea = gContinentManager.GetArea(this->mGrazeAreaID);
+    EEAIArea* theArea = gContinentManager.GetArea(this->GetGrazeAreaID());
     bool theFound = false;
-    if (inUnit->mHolder != NULL)
+    if (inUnit->GetHolder() != NULL)
         return;
-    theTile.mX = inUnit->mTileX;
-    theTile.mY = inUnit->mTileY;
-    unsigned short theContinent = gContinentManager.GetContinentID(theTile.mX, theTile.mY);
+    theTile.SetX(inUnit->GetTileX());
+    theTile.SetY(inUnit->GetTileY());
+    unsigned short theContinent = gContinentManager.GetContinentID(theTile.GetX(), theTile.GetY());
     if (theArea) {
         for (long i = 0; i < 15 && !theFound; i++) {
             theTile = theArea->GetRandomPoint();
@@ -486,32 +486,32 @@ void EEHerd::Graze(EEComplexUnit* inUnit, unsigned long inTime)
         theTile = this->GetRandomTile();
         theFound = this->CanStandOn(inUnit, theTile);
     }
-    if (!((unsigned long)theTile.mX < gMapWidth) || !((unsigned long)theTile.mY < gMapHeight) ||
-        gContinentManager.GetContinentID(theTile.mX, theTile.mY) != theContinent)
+    if (!((unsigned long)theTile.GetX() < gMapWidth) || !((unsigned long)theTile.GetY() < gMapHeight) ||
+        gContinentManager.GetContinentID(theTile.GetX(), theTile.GetY()) != theContinent)
         return;
-    theLocation.mX = (float)theTile.mX + gPhysics->GetRandom(kHeightEpsilon, 0.99f);
-    theLocation.mY = (float)theTile.mY + gPhysics->GetRandom(kHeightEpsilon, 0.99f);
-    EEUGLocation* theGoal = new EEUGLocation(&theLocation, true, !this->mAnimal->mIsPredator, false, 0.0f, false, false);
+    theLocation.SetX((float)theTile.GetX() + gPhysics->GetRandom(kHeightEpsilon, 0.99f));
+    theLocation.SetY((float)theTile.GetY() + gPhysics->GetRandom(kHeightEpsilon, 0.99f));
+    EEUGLocation* theGoal = new EEUGLocation(&theLocation, true, !this->GetAnimal()->GetIsPredator(), false, 0.0f, false, false);
     bool theMoved = this->GiveGoal(inUnit, theGoal, 0, kActionPrepareToMove);
     if (!theMoved && theGoal)
         delete theGoal;
-    inUnit->SetGrazeTime(gPhysics->GetRandom(this->mAnimal->GetMinGrazeTime(), this->mAnimal->GetMaxGrazeTime()) + inTime);
+    inUnit->SetGrazeTime(gPhysics->GetRandom(this->GetAnimal()->GetMinGrazeTime(), this->GetAnimal()->GetMaxGrazeTime()) + inTime);
     if (!theMoved || inUnit->mHeldUnits.size() == 0)
         return;
     U2DPoint<long> theStart = theTile;
-    long theTop = max(theStart.mY - 1, 0);
-    long theLeft = max(theStart.mX - 1, 0);
-    long theLimit = gWorld.mMap->mSize - 1;
-    long theRight = min(theStart.mX + 1, theLimit);
-    long theBottom = min(theStart.mY + 1, theLimit);
+    long theTop = max(theStart.GetY() - 1, 0);
+    long theLeft = max(theStart.GetX() - 1, 0);
+    long theLimit = gWorld.GetMap()->GetSize() - 1;
+    long theRight = min(theStart.GetX() + 1, theLimit);
+    long theBottom = min(theStart.GetY() + 1, theLimit);
     for (long k = inUnit->mHeldUnits.size() - 1; k >= 0; k--) {
         EEComplexUnit* theYoung = inUnit->mHeldUnits[k];
         theTile = theStart;
-        if (theYoung->mGrowth > 0.79f) {
+        if (theYoung->GetGrowth() > 0.79f) {
             theFound = false;
             for (long m = 0; !theFound && m < 5; m++) {
-                theOther.mX = gPhysics->GetRandom(0, theRight - theLeft) + theLeft;
-                theOther.mY = gPhysics->GetRandom(0, theBottom - theTop) + theTop;
+                theOther.SetX(gPhysics->GetRandom(0, theRight - theLeft) + theLeft);
+                theOther.SetY(gPhysics->GetRandom(0, theBottom - theTop) + theTop);
                 if (std::find(theTried.begin(), theTried.end(), theOther) == theTried.end())
                     theFound = this->CanStandOn(theYoung, theOther);
             }
@@ -520,13 +520,13 @@ void EEHerd::Graze(EEComplexUnit* inUnit, unsigned long inTime)
                 theTile = theOther;
             }
         }
-        theLocation.mX = (float)theTile.mX + gPhysics->GetRandom(kHeightEpsilon, 0.99f);
-        theLocation.mY = (float)theTile.mY + gPhysics->GetRandom(kHeightEpsilon, 0.99f);
-        EEUGLocation* theYoungGoal = new EEUGLocation(&theLocation, true, !this->mAnimal->mIsPredator, false, 0.0f,
+        theLocation.SetX((float)theTile.GetX() + gPhysics->GetRandom(kHeightEpsilon, 0.99f));
+        theLocation.SetY((float)theTile.GetY() + gPhysics->GetRandom(kHeightEpsilon, 0.99f));
+        EEUGLocation* theYoungGoal = new EEUGLocation(&theLocation, true, !this->GetAnimal()->GetIsPredator(), false, 0.0f,
                                                       false, false);
         if (!this->GiveGoal(theYoung, theYoungGoal, 0, kActionPrepareToMove) && theYoungGoal)
             delete theYoungGoal;
-        theYoung->SetGrazeTime(gPhysics->GetRandom(this->mAnimal->GetMinGrazeTime(), this->mAnimal->GetMaxGrazeTime()) + inTime);
+        theYoung->SetGrazeTime(gPhysics->GetRandom(this->GetAnimal()->GetMinGrazeTime(), this->GetAnimal()->GetMaxGrazeTime()) + inTime);
     }
 }
 
@@ -899,10 +899,10 @@ long EEHerd::RepairPointers(long, long)
 {
     std::vector<EEComplexUnit*> theYoung;
     std::vector<U2DPoint<long> > theTiles;
-    this->mPlayer = gWorld.GetPlayer(USavedID(this->mPlayer));
-    this->mAnimal = EEAnimal::sTable[USavedID(this->mAnimal)];
-    if (this->mAnimal)
-        this->mRadiusSquared = this->mAnimal->GetHerdRadius() * this->mAnimal->GetHerdRadius();
+    this->mPlayer = gWorld.GetPlayer(USavedID(this->GetPlayer()));
+    this->mAnimal = EEAnimal::sTable[USavedID(this->GetAnimal())];
+    if (this->GetAnimal())
+        this->mRadiusSquared = this->GetAnimal()->GetHerdRadius() * this->GetAnimal()->GetHerdRadius();
     for (long i = this->mUnits.size() - 1; i >= 0; i--) {
         if (this->mUnits[i] != (EEComplexUnit*)-1) {
             unsigned long theID = USavedID(this->mUnits[i]);
@@ -917,28 +917,28 @@ long EEHerd::RepairPointers(long, long)
             this->mUnits.erase(this->mUnits.begin() + i);
     }
     if (this->mUnits.size() > 0) {
-        if (!this->mAnimal || this->mAnimal->GetAnimalID() != this->mUnits[0]->GetUnitClass()->mAnimalID)
-            this->mAnimal = EEAnimal::Get(this->mUnits[0]->GetUnitClass()->mAnimalID);
+        if (!this->GetAnimal() || this->GetAnimal()->GetAnimalID() != this->mUnits[0]->GetUnitClass()->GetAnimalID())
+            this->mAnimal = EEAnimal::Get(this->mUnits[0]->GetUnitClass()->GetAnimalID());
     }
-    if (this->mLeader != (EEComplexUnit*)-1) {
-        this->mLeader = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mLeader))));
-        if (this->mLeader)
-            this->mLeader->mReferenceCount++;
+    if (this->GetLeader() != (EEComplexUnit*)-1) {
+        this->mLeader = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->GetLeader()))));
+        if (this->GetLeader())
+            this->GetLeader()->mReferenceCount++;
     } else
         this->mLeader = NULL;
-    if (this->mAnimal) {
+    if (this->GetAnimal()) {
         for (long j = this->mUnits.size() - 1; j >= 0; j--) {
             this->SetUnitMedia((EEMedia*)this->mUnits[j]->GetStats()->mModel, this->mUnits[j]->GetUnitID());
-            if (this->mUnits[j]->mB34F && this->mAnimal->mMedia)
-                this->SetUnitMedia(this->mAnimal->mMedia, this->mUnits[j]->GetUnitID());
+            if (this->mUnits[j]->mB34F && this->GetAnimal()->GetMedia())
+                this->SetUnitMedia(this->GetAnimal()->GetMedia(), this->mUnits[j]->GetUnitID());
         }
-        if (!this->mLeader && this->mAnimal->mHasLeader)
+        if (!this->GetLeader() && this->GetAnimal()->GetHasLeader())
             this->PickLeader();
     }
-    if (this->mTarget != (EEComplexUnit*)-1) {
-        this->mTarget = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mTarget))));
-        if (this->mTarget)
-            this->mTarget->mReferenceCount++;
+    if (this->GetTarget() != (EEComplexUnit*)-1) {
+        this->mTarget = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->GetTarget()))));
+        if (this->GetTarget())
+            this->GetTarget()->mReferenceCount++;
     } else
         this->mTarget = NULL;
     if (this->mUnits.size() > 0)
@@ -1110,12 +1110,10 @@ void EEHerd::Surround(EEComplexUnit* inTarget)
     GE3DPoint theUnitPosition;
     inTarget->GetPosition(thePosition);
     theUnits = this->mUnits;
-    theFormation->mCenter.mX = thePosition.mX;
-    theFormation->mCenter.mY = thePosition.GetY();
-    theFormation->mCenter.mZ = thePosition.mZ;
-    theFormation->mMinRadius = gPhysics->GetRandom(1.25f, 2.75f);
+    theFormation->SetCenter(thePosition);
+    theFormation->SetMinRadius(gPhysics->GetRandom(1.25f, 2.75f));
     theFormation->Place(theUnits, theSlots);
-    while (theUnits.size() > 0 && theSlots.size() > 0) {
+    while (theUnits.size() != 0 && theSlots.size() != 0) {
         EEComplexUnit* theBest = NULL;
         long theBestIndex = 0;
         float theBestDistance = -1.0f;
@@ -1264,13 +1262,13 @@ unsigned long EEHerd::UpdateResting(unsigned long inTime)
 unsigned long EEHerd::UpdateLeaving(unsigned long inTime)
 {
     EEAIAStarBounds theBounds;
-    EEMap* theMap = gWorld.mMap;
+    EEMap* theMap = gWorld.GetMap();
     long theOffMap = 0;
     for (long i = this->mUnits.size() - 1; i >= 0; i--) {
-        EEComplexUnit* theUnit = this->mUnits[i];
+        EEComplexUnit* theUnit = this->GetUnitsAt(i);
         bool theLeaving = false;
-        if (theMap->GetTile(UMFloor(theUnit->mPhysicalModel.GetLocation().GetX()),
-                            UMFloor(theUnit->mPhysicalModel.GetLocation().GetY()))) {
+        if (theMap->GetTile(UMFloor(theUnit->GetPhysicalModel().GetLocation().GetX()),
+                            UMFloor(theUnit->GetPhysicalModel().GetLocation().GetY()))) {
             for (long j = theUnit->mGoalQueues[0].mGoals.size() - 1; j >= 0 && !theLeaving; j--) {
                 EEUGLocation* theGoal = dynamic_cast<EEUGLocation*>(theUnit->mGoalQueues[0].mGoals[j]);
                 if (theGoal)
@@ -1302,12 +1300,12 @@ unsigned long EEHerd::UpdateLeaving(unsigned long inTime)
                                 if (!theMap->GetTile(theCorner.GetX(), theCorner.GetY()))
                                     theExit = theBounds.GetBottomLeft();
                                 else
-                                    theExit.mX = theExit.mY = -10000;
+                                    theExit.SetX(theExit.mY = -10000);
                             }
                         }
                     }
                 } else
-                    theExit.mX = theExit.mY = -10000;
+                    theExit.SetX(theExit.mY = -10000);
                 EEUGLocation* theExitGoal = new EEUGLocation((float)theExit.GetX() + 0.5f, (float)theExit.GetY() + 0.5f, 0.0f,
                                                              true, true, false, 0.0f, false, false);
                 if (!this->GiveGoal(theUnit, theExitGoal, 0, kActionPrepareToMove) && theExitGoal)

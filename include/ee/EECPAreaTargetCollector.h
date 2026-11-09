@@ -19,16 +19,16 @@ long EECollectASGTargets(const EEAIAStarBounds& inBounds, std::vector<EEComplexU
     U2DPoint<long> theEndY = theRegions.GetBottomRight();
     bool theMultiple = false;
     U2DPoint<long> theStart = theRegions.GetTopLeft();
-    for (long x = theStart.mX; x <= theEndX.mX; x++) {
+    for (long x = theStart.GetX(); x <= theEndX.GetX(); x++) {
         U2DPoint<long> theRowStart = theRegions.GetTopLeft();
         for (long y = theRowStart.mY; y <= theEndY.mY; y++) {
-            std::vector<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
+            RTSRegion<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
             if (theRegion) {
                 for (long i = theRegion->size() - 1; i >= 0; i--) {
-                    EEComplexUnit* theUnit = (*theRegion)[i];
+                    EEComplexUnit* theUnit = theRegion->GetAt(i);
                     if (inBounds.Contains(theUnit->GetTileX(), theUnit->GetTileY()) &&
                         inPredicate(theUnit)) {
-                        if (theUnit->mUnitClass->mTileSize > 1)
+                        if (theUnit->GetUnitClass()->GetTileSize() > 1)
                             theMultiple = true;
                         outUnits.push_back(theUnit);
                     }

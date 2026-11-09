@@ -49,8 +49,10 @@
 // FUNCTION: EXE 0x4abbaf
 // Creates a player's town with the given id: an empty town area with no patrol group, not near water
 EETown::EETown(EEPlayer* inPlayer, long inTownID)
-    : mPlayer(inPlayer), mTownID(inTownID), mNearMapEdge(false)
+    : mNearMapEdge(false)
 {
+    this->mPlayer = inPlayer;
+    this->mTownID = inTownID;
     this->mAreaType = kAIAreaTown;
     this->mContinent = 0;
     this->mPatrolGroup = NULL;
@@ -77,9 +79,9 @@ bool EETown::AddUnit(EEUnit* inUnit)
 {
     std::vector<U2DPoint<long> > thePoints;
     U2DPoint<long> theTile;
-    EEUnitClass* theClass = inUnit->mUnitClass;
+    EEUnitClass* theClass = inUnit->GetUnitClass();
     EETechTreeNode* theNode = inUnit->GetTechTreeNode();
-    unsigned long theValue = theClass->mInfluence;
+    unsigned long theValue = theClass->GetInfluence();
     long theCount = 1;
     bool theResult = false;
     if (this->mTiles.Size() != 0 || this->CanTake(inUnit)) {
@@ -87,26 +89,26 @@ bool EETown::AddUnit(EEUnit* inUnit)
         theResult = true;
         this->AddTile(theTile);
         if (!gLoadingSavedGame) {
-            if (this->mPatrolGroup == NULL && this->mHull.GetPointCount() > 1) {
+            if (this->GetPatrolGroup() == NULL && this->mHull.GetPointCount() > 1) {
                 this->FindPatrolGroup();
-                if (this->mPatrolGroup == NULL) {
+                if (this->GetPatrolGroup() == NULL) {
                     this->mPatrolGroup = new EEPPatrolGroup;
-                    this->mPatrolGroup->mIsTownPatrol = true;
-                    this->mPlayer->AddPatrolGroup(this->mPatrolGroup);
+                    this->GetPatrolGroup()->mIsTownPatrol = true;
+                    this->GetPlayer()->AddPatrolGroup(this->GetPatrolGroup());
                 }
             }
-            if (this->mPatrolGroup != NULL) {
+            if (this->GetPatrolGroup() != NULL) {
                 for (unsigned long i = 0; i < this->mHull.GetPointCount(); i++)
                     thePoints.push_back(*this->mHull.GetPoint(i));
-                this->mPatrolGroup->SetPatrolPoints(thePoints, this->mPlayer->mPlayerID);
+                this->GetPatrolGroup()->SetPatrolPoints(thePoints, this->GetPlayer()->GetPlayerID());
             }
         }
-        if (theClass->mIsWall) {
+        if (theClass->GetIsWall()) {
             this->mNumWalls++;
             theValue = theValue * 0.1f;
             theCount = 0;
         }
-        switch (theClass->mUnitType) {
+        switch (theClass->GetUnitType()) {
         case kUnitTypeAirport:
             this->mNumAirports++;
             break;
@@ -211,7 +213,7 @@ bool EETown::UpdateNearWater()
     if (this->mContinent != 0 && this->mTiles.Size() > 0) {
         gContinentManager.GetConnectedIDs(theIDs, this->mContinent);
         for (long i = theIDs.size() - 1; i >= 0 && !this->mNearWater; i--) {
-            EEAIContinent* theContinent = gContinentManager.mContinents[theIDs[i]];
+            EEAIContinent* theContinent = gContinentManager.GetContinentFromID(theIDs[i]);
             if (theContinent == NULL)
                 continue;
             if (theContinent->GetCategory() == kContinentCategoryWater) {
@@ -231,17 +233,17 @@ bool EETown::UpdateNearWater()
 // Adopts (references) the patrol group of one of the owner's path-point units on a hull vertex, if any
 void EETown::FindPatrolGroup()
 {
-    for (unsigned long i = 0; i < this->mHull.GetPointCount() && this->mPatrolGroup == NULL; i++) {
-        EEMapTile* theTile = gWorld.mMap->GetTile(this->mHull.GetPoint(i)->mX, this->mHull.GetPoint(i)->mY);
+    for (unsigned long i = 0; i < this->mHull.GetPointCount() && this->GetPatrolGroup() == NULL; i++) {
+        EEMapTile* theTile = gWorld.GetMap()->GetTile(this->mHull.GetPoint(i)->GetX(), this->mHull.GetPoint(i)->GetY());
         if (theTile == NULL)
             continue;
-        for (RTSTileUnitNode* theNode = theTile->mUnits; theNode != NULL && this->mPatrolGroup == NULL;
-             theNode = theNode->mNext) {
-            EEUnit* theUnit = theNode->mUnit;
-            if (theUnit != NULL && theUnit->mUnitClass->mUnitType == kUnitTypePathPoint && theUnit->mPlayer == this->mPlayer &&
-                theUnit->mComplexUnit->mPatrolGroup != NULL) {
-                this->mPatrolGroup = theUnit->mComplexUnit->mPatrolGroup;
-                this->mPatrolGroup->Reference();
+        for (RTSTileUnitNode* theNode = theTile->GetUnits(); theNode != NULL && this->GetPatrolGroup() == NULL;
+             theNode = theNode->GetNext()) {
+            EEUnit* theUnit = theNode->GetUnit();
+            if (theUnit != NULL && theUnit->GetUnitClass()->GetUnitType() == kUnitTypePathPoint && theUnit->GetPlayer() == this->GetPlayer() &&
+                theUnit->GetComplexUnit()->GetPatrolGroup() != NULL) {
+                this->mPatrolGroup = theUnit->GetComplexUnit()->GetPatrolGroup();
+                this->GetPatrolGroup()->Reference();
             }
         }
     }

@@ -232,8 +232,8 @@ long EEE3DMarchingLine::DrawPass4()
         gRasterizer->SetAlphaTestingRefValue(this->mGraphicEffect->mGraphicObject->mAlphaReference, theScreen);
     else
         gRasterizer->SetAlphaTestingRefValue(0.0f, theScreen);
-    Fn118676(this->mDrawFrom, theStart);
-    Fn118676(this->mDrawTo, theEnd);
+    GetScreenPoint(this->mDrawFrom, theStart);
+    GetScreenPoint(this->mDrawTo, theEnd);
     theLine.SetStartPoint(theStart);
     theLine.SetEndPoint(theEnd);
     theLine.SetOpacityPerVertex(1.0f, 0.3f);
@@ -245,7 +245,7 @@ long EEE3DMarchingLine::DrawPass4()
     gRasterizer->SetZCompare(kCompareLess, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetShadingColorSource(1, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     long theResult = gRasterizer->Draw(&theLine, 1, theScreen);
     gRasterizer->SetFog(theFog, theScreen);
     gRasterizer->SetZBuffer(theZBuffer, theScreen);

@@ -207,9 +207,10 @@ long EEE2DLightGlow::SetUp()
     EETagPointList* theTags;
     if (theComplex != NULL) {
         theTags = theUnit->GetModel()->GetTagPoints(theComplex->GetAnimation(), 0xd);
-        thePosition.SetX(theComplex->mPhysicalModel.GetLocation().GetX());
-        thePosition.SetY(theComplex->mPhysicalModel.GetLocation().GetY());
-        thePosition.SetZ(theComplex->mPhysicalModel.GetLocation().GetZ());
+        const GETransformation& theLocation = theComplex->mPhysicalModel.GetLocation();
+        thePosition.SetX(theLocation.GetX());
+        thePosition.SetY(theLocation.GetY());
+        thePosition.SetZ(theLocation.GetZ());
     } else {
         theTags = theUnit->GetModel()->GetTagPoints(0, 0xd);
         thePosition.SetX(theUnit->mUnitClass->mTileSize * 0.5f + theUnit->mTileX);
@@ -272,9 +273,9 @@ long EEE2DLightGlow::SetUp()
             } else {
                 this->mSpots[i].mStart = 0;
             }
-            this->mSpots[i].mColor.mRed = theRed / 255.0f;
-            this->mSpots[i].mColor.mGreen = theGreen / 255.0f;
-            this->mSpots[i].mColor.mBlue = theBlue / 255.0f;
+            this->mSpots[i].mColor.SetRed(theRed / 255.0f);
+            this->mSpots[i].mColor.SetGreen(theGreen / 255.0f);
+            this->mSpots[i].mColor.SetBlue(theBlue / 255.0f);
         }
     } else {
         this->mSpotCount = 1;
@@ -310,7 +311,7 @@ long EEE2DLightGlow::DrawPass6()
 {
     for (unsigned long i = 0; i < this->mSpotCount; i++) {
         if (this->mSpots[i].mDrawVisible)
-            Fn10317D(this->mSpots[i].mDrawPosition, this->mSpots[i].mColor, 0.0f, this->mGraphicEffect->GetSize(), 1.0f, 1.0f,
+            AddGlowSprite(this->mSpots[i].mDrawPosition, this->mSpots[i].mColor, 0.0f, this->mGraphicEffect->GetSize(), 1.0f, 1.0f,
                      this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mAlphaReference : 0.0f);
     }
     return 0;
@@ -421,8 +422,10 @@ long EEE2DLightGlow::PlaceGlows()
                     this->mSpots[i].mVisible = false;
                 } else {
                     this->mSpots[i].mVisible = true;
-                    if (theTags != NULL)
-                        theTags->GetTagPoint(i)->GetPoint(theFrame, theTransformation, this->mSpots[i].mPosition);
+                    if (theTags != NULL) {
+                        const std::vector<EETagPoint*>& thePoints = theTags->mPoints;
+                        thePoints[i]->GetPoint(theFrame, theTransformation, this->mSpots[i].mPosition);
+                    }
                     else
                         this->mSpots[i].mPosition = thePosition;
                 }

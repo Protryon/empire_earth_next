@@ -4,6 +4,7 @@
   python -I tools/xbuild.py fonttest [--target T] [--no-run]                    text rasteriser test (PlatFont)
   python -I tools/xbuild.py luatest  [--target T] [--no-run]                    the computer player's Lua runtime (EECPLua)
   python -I tools/xbuild.py tcptest  [--target T] [--no-run]                    TCP/IP plug-in loopback (tools/tcp_test)
+  python -I tools/xbuild.py wontest  [--target T] [--no-run]                    WON wire format and sockets (tests/won)
   python -I tools/xbuild.py sdl3     [--target T]                               SDL3 as a static library (CMake)
   python -I tools/xbuild.py sdltest  [--target T] [--no-run] [--frames N]       SDL3 window + wgpu surface test
   python -I tools/xbuild.py census   [--target T] [--dialect ms|gnu] [-j N] [--only TEXT] [module ...]
@@ -348,6 +349,70 @@ def cmd_tcptest(a):
     return run_program(t, exe)
 
 
+# ---- wontest: the WON library's wire format and socket layer (tests/won), built like the game's units
+
+WON_SRC = ROOT / "src" / "Empire Earth" / "WONAPI"
+# program -> the WON units it links besides its test source and the platform layer
+WON_TESTS = {
+    "won_wire_test": [WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp")],
+    "won_socket_test": [WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
+                                                            "AsyncSocketInternet.cpp", "IPAddr.cpp", "NetStats.cpp")],
+}
+
+
+def build_won_test(t, name, units):
+    """One tests/won program: its source and WON units in the game's dialect and include path (module won's defines),
+    the platform layer as standard code -> the executable."""
+    out = t.out / "won_test" / name
+    out.mkdir(parents=True, exist_ok=True)
+    exe = out / (name + t.exe_suffix)
+    game = [ROOT / "tests" / "won" / f"{name}.cpp", *units]
+    inc = [ROOT / "include", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
+    defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
+    objs = []
+    if t.os == "windows":
+        env = windows_env()
+        game_flags = ["-fms-compatibility", "-fms-extensions", "-fms-compatibility-version=19.44", "/Zc:wchar_t",
+                      "-fdelayed-template-parsing", "-fno-strict-aliasing", "-fwrapv", "/GR", "/EHsc",
+                      "-Wno-everything"]
+        for src in [*game, *platform_sources(t)]:
+            obj = out / (pathlib.Path(src).stem.replace(" ", "_") + ".obj")
+            flags = WIN_CXX + (game_flags if src in game else [f"/I{ROOT / 'src' / 'ThirdParty' / 'stb'}"])
+            run([t.clang(), *flags, "/c", *[f"/I{i}" for i in inc], *[f"/D{d}" for d in defs], f"/Fo{obj}", src],
+                env=env)
+            objs.append(obj)
+        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, "libcmt.lib",
+             "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS], env=env)
+    else:
+        base = t.base_flags()
+        for src in [*game, *platform_sources(t)]:
+            obj = out / (pathlib.Path(src).stem.replace(" ", "_") + ".o")
+            if src in game:
+                # -O0: with __OPTIMIZE__ glibc's inline string.h needs the GNU macros -fms-compatibility hides
+                flags = ["-std=c++17", "-O0", "-g", *game_dialect_flags(t, True), "-fno-strict-aliasing", "-fwrapv",
+                         "-w", f"-I{COMPAT}", *[f"-I{i}" for i in inc], *[f"-D{d}" for d in defs]]
+            else:
+                flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}", f"-I{ROOT / 'src' / 'ThirdParty' / 'stb'}"]
+            run([t.clang(), *base, *flags, "-c", "-o", obj, src])
+            objs.append(obj)
+        run([t.clang(), *t.link_flags(), "-o", exe, *objs, *(["-ldl", "-lpthread"] if t.os == "linux" else [])])
+    return exe
+
+
+def cmd_wontest(a):
+    t = Target(a.target)
+    why = t.can_build()
+    if why:
+        sys.exit(f"{t.name}: {why}")
+    result = 0
+    for name, units in WON_TESTS.items():
+        exe = build_won_test(t, name, units)
+        print(f"built {exe}")
+        if not a.no_run:
+            result |= run_program(t, exe)
+    return result
+
+
 # ---- SDL3
 
 
@@ -491,6 +556,7 @@ def cmd_sdltest(a):
     # file (PlatInput.cpp) is the game's and stays out: the SDL file implements the same functions
     srcs = [ROOT / "tools" / "sdl_test" / "sdl_test.cpp", ROOT / "src" / "Platform" / "SDL" / "PlatWindow.cpp",
             ROOT / "src" / "Platform" / "Common" / "PlatFont.cpp",
+            ROOT / "src" / "Platform" / "Common" / "PlatSim.cpp",   # gPlatSimMode, PlatDebugGetHandler (PlatWindow uses them)
             *[s for s in platform_sources(t) if s.name in ("PlatMessage.cpp", "PlatThread.cpp", "PlatTime.cpp")]]
     libs = [*sdl_libs(t), wlib]
     if t.os == "linux":
@@ -535,6 +601,8 @@ def census_flags(t, dialect):
     if dialect == "ms":
         f += ["-fms-extensions", "-fms-compatibility", "-fdelayed-template-parsing",
               "-fms-compatibility-version=19.44", *MS_DIALECT_LENIENCE, *MACOS_GNUC(t)]
+        if t.os == "linux":   # as the game build (game_dialect_flags): libstdc++'s atomic_flag needs it
+            f += ["-D__GCC_ATOMIC_TEST_AND_SET_TRUEVAL=1"]
     elif dialect == "msext":   # the extensions without -fms-compatibility (which retypes va_list on Darwin)
         f += ["-fms-extensions", "-fdelayed-template-parsing"]
     return f
@@ -808,6 +876,11 @@ def game_dialect_flags(t, cxx_game):
     # <memory>) needs __GCC_ATOMIC_TEST_AND_SET_TRUEVAL, which is 1 on x86_64
     if t.os == "linux":
         f += ["-D__GCC_ATOMIC_TEST_AND_SET_TRUEVAL=1"]
+        # Linux: functions returning std::string mangle with libstdc++'s [abi:cxx11] tag or without it depending on
+        # whether glibc's <string.h> came before <string> in the unit (in this dialect); units that include the
+        # compat <windows.h> first get it first, units that start with <string> did not, and the two halves of a call
+        # did not link (GUIStringData::GetString). Every game unit sees <string.h> first.
+        f += ["-include", "string.h"]
     return f
 
 
@@ -956,11 +1029,11 @@ def cmd_targets(a):
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("test", "fonttest", "luatest", "tcptest", "sdl3", "sdltest", "census", "game", "targets"):
+    for name in ("test", "fonttest", "luatest", "tcptest", "wontest", "sdl3", "sdltest", "census", "game", "targets"):
         p = sub.add_parser(name)
         p.add_argument("--target", default=host_target_name(), choices=TARGETS)
         p.add_argument("-j", type=int, default=3)
-        if name in ("test", "fonttest", "luatest", "tcptest", "sdltest"):
+        if name in ("test", "fonttest", "luatest", "tcptest", "wontest", "sdltest"):
             p.add_argument("--no-run", action="store_true")
         if name == "test":
             p.add_argument("--no-network", action="store_true")
@@ -979,7 +1052,7 @@ def main():
             p.add_argument("--only")
             p.add_argument("modules", nargs="*")
     a = ap.parse_args()
-    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "luatest": cmd_luatest, "tcptest": cmd_tcptest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
+    sys.exit({"test": cmd_test, "fonttest": cmd_fonttest, "luatest": cmd_luatest, "tcptest": cmd_tcptest, "wontest": cmd_wontest, "sdl3": cmd_sdl3, "sdltest": cmd_sdltest,
               "census": cmd_census, "game": cmd_game, "targets": cmd_targets}[a.cmd](a))
 
 

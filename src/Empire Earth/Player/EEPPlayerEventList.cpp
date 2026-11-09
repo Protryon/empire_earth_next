@@ -102,7 +102,9 @@ void EEPPlayerEventList::AddPlayerEvent(const EETileLocation& inTile, const EETi
     unsigned long i = 0;
     std::deque<EEPPlayerEvent*>::iterator theWhere;
     bool theFound = inForceNew;
-    while (!theFound && i < this->mEvents.size()) {
+    while (true) {
+        if (!(!theFound && i < this->mEvents.size()))
+            break;
         theFound = this->mEvents[i]->mType == inType ? this->mEvents[i]->mSource.DistanceToSquared(inTile) <= 110 : false;
         if (!theFound)
             i++;

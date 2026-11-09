@@ -67,7 +67,9 @@ void EEUCNavalTransport::FindUnloadTiles(EEComplexUnit* inTransport, U2DPoint<lo
         EEGetTileLine(outFirstCargoTile->GetX(), outFirstCargoTile->GetY(), inDestination->GetX(),
                    inDestination->GetY(), &theTiles, 1, 0);
         std::vector<U2DPoint<long> >::iterator theTile = theTiles.begin();
-        while (theTile != theTiles.end()) {
+        while (true) {
+            if (theTile == theTiles.end())
+                break;
             U2DPoint<long>* thePoint = &(*theTile);
             float theDistance = outUnloadTile->DistanceToSquaredF(*thePoint);
             EEMapTile* theMapTile = ::gWorld.mMap->GetTile(thePoint->GetX(), thePoint->GetY());

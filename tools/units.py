@@ -14,13 +14,13 @@ from ee import LINK_DIR, MODULE_FLAGS, ROOT, module_units
 
 # Every module is linked into the one exe (no DLLs): the game, its image libraries, the engine with libjpeg, and the
 # plug-ins (TCP protocol, mixer, Default random maps, the DX7 T&L renderer), registered in PIMModule.cpp.
-MODULES = ["tcp", "mixer", "default", "lle", "jpeg", "dx7hrtnl", "exeimg", "exe"]
+MODULES = ["tcp", "mixer", "default", "lle", "jpeg", "dx7hrtnl", "exeimg", "won", "exe"]
 TARGETS = ["exe"]
-TARGET_MODULES = {"exe": ["exe", "exeimg", "lle", "jpeg", "tcp", "mixer", "default", "dx7hrtnl"]}
+TARGET_MODULES = {"exe": ["exe", "exeimg", "won", "lle", "jpeg", "tcp", "mixer", "default", "dx7hrtnl"]}
 PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/)
 # with the engine, the open model/texture formats (glTF, PNG: tools/eemodel) with the engine, and new game units that
-# have no address in the original (the db text loader, the WON library's stand-ins)
+# have no address in the original (the db text loader, ...)
 PLATFORM_UNITS = ["Platform/Win32/PlatTime.cpp", "Platform/Win32/PlatThread.cpp", "Platform/Win32/PlatString.cpp",
                   "Platform/Common/PlatConfig.cpp", "Platform/Win32/PlatFile.cpp", "Platform/Win32/PlatPath.cpp",
                   "Platform/Win32/PlatSocket.cpp", "Platform/Win32/PlatMessage.cpp",
@@ -35,7 +35,6 @@ OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormats.cpp",
 EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
                "exe": ["Empire Earth/Database/EEDataText.cpp", "Empire Earth/Database/EEDataTextFile.cpp",
                        "Empire Earth/Database/EEDataDump.cpp", "Empire Earth/Database/EERules.cpp",
-                       "Empire Earth/WONAPI/WONAPIStubs.cpp",
                        # the computer-player decision trace and cheat switches (docs/AI_RESEARCH.md stage 0)
                        "Empire Earth/AI Thread/EECPTrace.cpp",
                        # the next computer player's tactics layer (docs/AI_LUA_PLAN.md §2, stage S1; ee/EECPNext.h)
@@ -61,6 +60,31 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
                        "Empire Earth/Language/LanguageStrings.cpp",
                        # a unit with no code range of its own (every member was ICF-folded into another unit's)
                        "Empire Earth/Calamities/EEGlobalCalamityClass.cpp"]}
+
+
+def _won_extra_units():
+    """The WON library's units that no unit list names (link/won/units.txt lists the ones with an original address;
+    the lobby glue, WONLobby/GameCode, is in the exe's list): every other .cpp under src/Empire Earth/WONAPI."""
+    listed = {p.resolve() for mod in ("won", "exe") for _, _, p in module_units(mod)}
+    won = ROOT / "src" / "Empire Earth" / "WONAPI"
+    return [p.relative_to(ROOT / "src").as_posix() for p in sorted(won.rglob("*.cpp"))
+            if p.resolve() not in listed and p.name not in WON_NOT_LINKED]
+
+
+# the WON GUI toolkit's Win32/GDI backend (link/won/units.txt lists it): replaced on every OS by the backend on the
+# platform layer (WONGUI/Plat*.cpp, include/ee/wonapi/WONLobbyPlatform.h; PORT_LEARNINGS.md "The WON library from
+# source")
+WON_REPLACED = {"MSWindowManager.cpp", "MSWindow.cpp", "MSGraphics.cpp", "MSNativeImage.cpp", "MSRawImage.cpp",
+                "MSFont.cpp", "DisplayContext.cpp", "BMPDecoderPlatform.cpp", "Clipboard.cpp", "MSSound.cpp"}
+# WONAPI sources not linked: a reconstruction whose every function the original unit StringParser.cpp already defines
+# (same bodies; linking both is a duplicate symbol); WON SDK sources the original exe did not contain and nothing
+# references (the GameSpy query/report support, the Win32 open/save file dialog, the Winsock event-driven socket
+# thread backends: the game runs WON's polling SocketThreadSimple; WinSkin, the Windows desktop-theme reader)
+WON_NOT_LINKED = {"StringParserFormat.cpp", "GameSpySupport.cpp", "MSFileDialog.cpp", "SocketThreadWinsock2.cpp",
+                  "SocketThreadEx_Windows.cpp", "WinSkin.cpp"}
+
+
+EXTRA_UNITS["won"] = _won_extra_units()
 LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c", "pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
              "implode": "ThirdParty/pkdcl/implode.c", "explode": "ThirdParty/pkdcl/explode.c",
              "cgltf": "ThirdParty/cgltf/cgltf.c", "stb_image": "ThirdParty/stb_image/stb_image.c",
@@ -86,6 +110,8 @@ def rel_src(path):
 def jobs_for(mod):
     """[(module, source, flags)] of a module's units (and the shared extra units it links)."""
     paths = [p for _, _, p in module_units(mod)] + [ROOT / "src" / rel for rel in EXTRA_UNITS.get(mod, [])]
+    if mod == "won":
+        paths = [p for p in paths if p.name not in WON_REPLACED]
     for p in paths:
         if not p.exists():
             sys.exit(f"{mod}: unit {p} does not exist")

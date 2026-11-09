@@ -72,7 +72,7 @@ long EEE2DImpactBlood::DrawPass6()
         gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
         gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
         gRasterizer->SetShadingColorSource(0, theScreen);
-        Fn10FA01();
+        SetUnitLighting();
         GETexture* theTexture = this->mGraphicObject->mTextures[0];
         theTexture->SetFrame(this->mDrawFrame);
         theMaterial->SetTexture(theTexture, theScreen);

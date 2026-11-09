@@ -38,7 +38,9 @@ public:
     EEAIPathSector* mSector;                // +0x8c (the sector: CreateSubSector inserts into its +0x04 map)
     // +0x90: the path-area fill's storage (CreatePathSectors 0x20b48 stores its EEAIAStarPathAreaStorage* argument;
     // AcceptTile reads its +0x40 width and +0x60 per-tile path-area ids)
+    EEAIAStarPathAreaStorage* GetPathAreaStorage() const { return this->mPathAreaStorage; }
     EEAIAStarPathAreaStorage* mPathAreaStorage;
+    long GetTileCount() const { return this->mTileCount; }
     long mTileCount;                        // +0x94 (reserves mTiles)
     long mUnitID;                           // +0x98 (= -1)
     long mPlayerID;                         // +0x9c
@@ -47,9 +49,12 @@ public:
     long mKind;                             // +0xa4
     unsigned short mContinentID;            // +0xa8 (the sub-sector's +0x4c)
     unsigned char mCategory;                // +0xaa
+    unsigned short GetPathAreaID() const { return this->mPathAreaID; }
     unsigned short mPathAreaID;             // +0xac (the sub-sector's +0x4e; the first tile's id)
     unsigned short mNextID;                 // +0xae (= 1; NewSubSectorID)
+    long GetPathAreaKind() const { return this->mPathAreaKind; }
     long mPathAreaKind;                     // +0xb0
+    bool GetClassifyTiles() const { return this->mClassifyTiles; }
     bool mClassifyTiles;                    // +0xb4
 };
 

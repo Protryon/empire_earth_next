@@ -28,8 +28,8 @@ struct EEUnitPickerEntry : public GEPhysicalModel {
 // name)
 struct EEUnitPickerHit {
     float mDistance;                        // +0x00 along the ray
-    unsigned long mPriority;                // +0x04 Fn118C40(unit, inArg)
-    long mKind;                             // +0x08 Fn118C40(unit, false)
+    unsigned long mPriority;                // +0x04 GetUnitPickPriority(unit, inArg)
+    long mKind;                             // +0x08 GetUnitPickPriority(unit, false)
     unsigned long mIndex;                   // +0x0c into mEntries
     bool mExact;                            // +0x10 the exact (LOD 2) test hit
     bool mLarge;                            // +0x11 big on the screen (or kind 2)

@@ -301,10 +301,9 @@ static float EECameraRayDistance(const GE2DPoint& inPoint, float inZ, float inDi
         theUp = false;
     } else if (theAngle <= sCameraTiltLimit)
         theAngle = 0.0f;
-    if (theAngle > sCameraTiltLimit)
-        theMaximum = kCameraRearMaximum;
-    else
+    if (!(theAngle > sCameraTiltLimit))
         theMaximum = sCameraRearRange * (theAngle / sCameraTiltLimit) + kCameraRearMaximum2;
+    else theMaximum = kCameraRearMaximum;
     if (!theUp && theLine.SolveForZ(inZ, theT, theIntersection) && theT > 0.0f)
         theDistance = theIntersection.DistanceTo(theLine.GetStart());
     if (theDistance > theMaximum)
@@ -715,7 +714,10 @@ void EECameraControl::MoveTo(EEUnit* inUnitA, GE3DPoint inLocationA, bool inFlag
     } else {
         if (this->mMode != 2 && inZoom >= -1.0f) {
             float thePitch = EECameraControl::GetPitch(inZoom, this->mMode);
-            theKey.mT40.SetOrientationYPR(this->mTurnYaw == 0.0f ? kCameraDefaultYaw : gWorld.mCameraYaw, thePitch, 0.0f);
+            if (this->mTurnYaw == 0.0f)
+                theKey.mT40.SetOrientationYPR(kCameraDefaultYaw, thePitch, 0.0f);
+            else
+                theKey.mT40.SetOrientationYPR(gWorld.mCameraYaw, thePitch, 0.0f);
         }
     }
 theDone:
@@ -733,9 +735,9 @@ theDone:
     if (theTurn) {
         GETransformation theCamera(false);
         theCamera = this->mView;
-        theDirection.SetX(theTarget.GetX() - theKey.mFocus.GetX());
-        theDirection.SetY(theTarget.GetY() - theKey.mFocus.GetY());
-        theDirection.SetZ(theTarget.GetZ() - theKey.mFocus.GetZ());
+        theDirection.SetX(theTarget.GetX() - theKey.mFocus.mX);
+        theDirection.SetY(theTarget.GetY() - theKey.mFocus.mY);
+        theDirection.SetZ(theTarget.GetZ() - theKey.mFocus.mZ);
         theDirection.Normalize();
         theKey.mT40.SetOrientationYPR(UMArcTan2(-theDirection.GetX(), theDirection.GetY()),
                                       UMArcCos(-theDirection.GetZ()) - 1.5707964f, 0.0f);
@@ -1103,8 +1105,8 @@ void EECameraControl::Update(float inElapsedTime)
             this->mFraction = 1.0f;
         goto theUpdate;
     }
-    this->mChanged = false;
     this->mFraction = 1.0f;
+    this->mChanged = false;
 theUpdate:
     if (!gOrthographicView)
         this->BuildView(this->mView, this->mFraction);

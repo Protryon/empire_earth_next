@@ -24,11 +24,14 @@ public:
     void SetUnit(EEComplexUnit* inUnit);    // 0x41912 (referenced)
 
     EECPILocation mLocation;                // +0x04
+    EEComplexUnit* GetUnit() const { return this->mUnit; }
     EEComplexUnit* mUnit;                   // +0x1c (referenced; saved as its unit id)
     EEPlayer* mPlayer;                      // +0x20 (saved as its player id)
     float mAggression;                      // +0x24
     long mType;                             // +0x28
     long mMode;                             // +0x2c
+    bool IsActive() const { return this->mIsActive; }   // inline: EECPAttackGroup::AssignAirTask 0x454f62 (scheduling of the mType store), 0x45502e
+    bool GetIsActive() const { return this->mIsActive; }
     bool mIsActive;                         // +0x30
     bool mB31;                              // +0x31
 };

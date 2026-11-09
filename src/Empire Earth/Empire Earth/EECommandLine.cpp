@@ -74,7 +74,7 @@
 
 extern bool& gGameStateIsMultiplayer;        // 0x52fa88 (cleared when a local server starts; provisional name)
 long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, UString inDirectory, bool inArg);  // 0x14cfb1
-void Fn1030AB();                            // 0x1030ab (EEEffect.cpp)
+void CreatePlaneModels();                   // 0x1030ab (EEEffect.cpp)
 
 // The four file statics (0x529ad0, 0x529ac0, 0x529ab0, 0x529aa0)
 // chain at 0x52cac8 (wrapper)
@@ -177,7 +177,7 @@ void EEUpdateSavedGames()
     FSFileSpec theFile;
     std::vector<UString> theNames;
     gWorld.mLock->WriteLock();
-    Fn1030AB();
+    CreatePlaneModels();
     if (gCommunications != NULL)
         delete gCommunications;
     gCommunications = new EEServer(UWideString("EEName"), gGamePreferences.mSettings.GetNetworkAdapter(), 0, 0, true, true);

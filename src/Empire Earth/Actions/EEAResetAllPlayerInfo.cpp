@@ -72,7 +72,7 @@ void EEAResetAllPlayerInfo::Virtual4()
     unsigned long i;
     for (i = 0; i < this->mPlayers.size(); i++) {
         EEPlayer* thePlayer = ::gWorld.mPlayers[this->mPlayers[i]];
-        Fn2806E7(::gWorld.mPlayers[this->mPlayers[i]]->mCivilizationFile, thePlayer);
+        EEApplyCivilizationFile(::gWorld.mPlayers[this->mPlayers[i]]->mCivilizationFile, thePlayer);
         long theCivilization = ::gWorld.mPlayers[this->mPlayers[i]]->GetTechTree()->mStartEpoch;
         gUIManager->mScenarioEditorForm->mLoadThread->Post406(reinterpret_cast<void*>(this->mPlayers[i]), reinterpret_cast<void*>(theCivilization));
     }

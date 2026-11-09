@@ -367,7 +367,7 @@ void EEUIFMGStatusBox::FillArmorAttributes(EEUnit* inUnit)
 }
 
 // Existing pooled empty byte string, original reference26b6d9; no equal-content alias.
-extern char gU4E5B98[];
+extern char gEmptyString[];
 
 // FUNCTION: EXE 0x66b593
 // Fills the status box for a unit: name (gate lock state), civilization, hit point / power / flight / garrison
@@ -414,7 +414,7 @@ void EEUIFMGStatusBox::Fill(EEUnit* inUnit)
     if (inUnit != NULL) {
         EEUnitClass* theClass = inUnit->GetUnitClass();
         EEUnitClassUpgrade* theStats = inUnit->mStats;
-        if (theStats->mName == gU4E5B98)
+        if (theStats->mName == gEmptyString)
             gResource->GetString(theClass->mNameStringID, theText);
         else
             theText = inUnit->mStats->mName;
@@ -613,7 +613,7 @@ void EEUIFMGStatusBox::Fill(EEUnit* inUnit)
                 theBar->mBar->SetStatusBarColor(kStatusColor1);
                 theBar->mBar->SetRange(0, theStats->mPower);
                 theBar->mBar->SetCurrentRangeValue(theUnit->mPower);
-                theBar->mAttribute = kImprovementFlightTimeOrPower;
+                theBar->SetAttribute(kImprovementFlightTimeOrPower);
                 theBar->SetDisplayMode(kDisplayModeShown);
                 theBar->mEnabled = true;
                 theBar->SetStringTableID(IDS_IMPROVEMENT_GARRISON);
@@ -888,8 +888,8 @@ void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
 {
     UWideString theText;
     UWideString theSuffix;
-    EEUnitClassUpgrade* theStats = inUnit->GetStats();
     EEUnitClass* theClass = inUnit->GetUnitClass();
+    EEUnitClassUpgrade* theStats = inUnit->GetStats();
     if (theStats->mName == "")
         gResource->GetString(theClass->mNameStringID, theText);
     else
@@ -934,8 +934,8 @@ void EEUIFMGStatusBox::Refresh(EEUnit* inUnit)
     }
     if ((theIndex = this->mAttributes[1]) != -1) {
         float theAdjustment = theStats->GetRange() < theClass->GetRange() ? -0.0001f : 0.0001f;
-        float theValue = (theStats->mRange - theStats->GetUnitClass()->mRange) + theAdjustment;
-        this->GetAttributeText(theClass->mRange, theValue, theText);
+        float theValue = (theStats->mRange - theStats->mUnitClass->GetRange()) + theAdjustment;
+        this->GetAttributeText(theClass->GetRange(), theValue, theText);
         static_cast<EEUIBUpgrade*>(this->mIcons[theIndex])->UpdateCost(theText);
     }
     if ((theIndex = this->mAttributes[2]) != -1) {

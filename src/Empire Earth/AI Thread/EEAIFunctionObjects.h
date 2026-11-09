@@ -92,7 +92,7 @@ public:
 
 // RTTI EECPUGatherMilitaryUnitsCount > EECPUMGatherUnitsScreenBase (vtable 0x43a504: ??_G 0x7895f, 0x2b239, 0x2b2b2,
 // 0x2b323): the military classes the combat manager accepts (EECPCombatManager::IsMilitaryClass), not type 0x2e5 nor
-// categories 0x20/0x15; mB14 weighs them by the class's Virtual6C. Ctor 0x2b207 (ret 0x10).
+// categories 0x20/0x15; mB14 weighs them by the class's AddedToParent. Ctor 0x2b207 (ret 0x10).
 class EECPUGatherMilitaryUnitsCount : public EECPUMGatherUnitsScreenBase {
 public:
     EECPUGatherMilitaryUnitsCount(EEComputerPlayer* inPlayer, bool inByClass, bool inRequests, bool inCountPopulation);  // 0x2b207

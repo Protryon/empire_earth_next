@@ -34,7 +34,9 @@ public:
     // inline: units plus requests (EECPDefenseCommander::Fn78866 0x478866 adds them as `add edx, ecx` with mRequested
     // loaded first) (provisional name)
     long GetTotal() const { return this->mUnits + this->mRequested; }
+    long GetUnits() const { return this->mUnits; }
     long mUnits;                            // +0x04
+    long GetRequested() const { return this->mRequested; }
     long mRequested;                        // +0x08
     bool mByClass;                          // +0x0c (0x93ed4: walk the unit manager's class map)
     bool mRequests;                         // +0x0d (... then the requests and upgrades)

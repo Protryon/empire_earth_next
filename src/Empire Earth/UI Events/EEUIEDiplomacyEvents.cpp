@@ -6,9 +6,9 @@
 // ProcessEvents are the ICF-shared `return 0` (0x27cf38). The float constants are literals: their __real COMDATs sit in
 // this unit's .rdata (0x44630c..0x44632c, 0x4463bc) because no earlier unit uses them.
 // Open (0x1d4165) was built without /Og: every local memory resident, constants not folded into inline arguments,
-// `this` saved to the frame, early GEColor::operator= and UIEvent() sites refused. `#pragma optimize("g", off)` around
-// it reproduces that shape, but the frame layout then follows the local names' hash, so it is not exact and the
-// pragma is not used (CLAUDE.md rule 4). Unit flags: the exe's module set.
+// `this` saved to the frame, the first seven GEColor::operator= and all UIEvent() sites refused. It takes the rule-4
+// `#pragma optimize("g", off)`; the frame layout then follows the local names' hash, so its locals' names are chosen
+// by that hash (LEARNINGS round 14) and declared in the order the frame needs. Unit flags: the exe's module set.
 #include <windows.h>
 #include <mbstring.h>
 #include <stdlib.h>
@@ -78,263 +78,274 @@ long GetTributeResource(unsigned long inControl);
 void RefundTributes(UIForm* inForm);
 void AddTribute(UIForm* inForm, long inResource, long inAmount);
 
+// Built without /Og (the file header): the pragma plus this source shape make 0x5d4165 exact
+#pragma optimize("g", off)
+// (an inline forward: the original stores the player in a temporary before the local)
+inline EEPlayer* GetDiplomacyPlayer(unsigned long inIndex) { return gWorld.GetPlayer(inIndex); }
 // FUNCTION: EXE 0x5d4165
 // Fills the diplomacy form: the player's status icon, name, civilization and resources, then a row per other
 // player: icon, chat and allied boxes, stance, five tribute buttons (hidden for gone, observer, defeated players)
 long EEUIEDSOpen::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    UWideString theZero("0");
-    UWideString theEmpty("");
-    UWideString theAlly;
+    UWideString theNoTribute("0");
+    UWideString theBlankText("");
+    UWideString theFriend;
     UWideString theEnemy;
     GETextureCoordinate theTopLeft;
-    GETextureCoordinate theTopRight;
-    GETextureCoordinate theBottomRight;
-    GETextureCoordinate theBottomLeft;
-    EEPlayer* thePlayer = gWorld.GetCurrentPlayer();
-    unsigned long theLocal = thePlayer->mPlayerID;
-    unsigned long thePlayerIndex = 1;
-    gResource->GetString(IDS_FRIENDLY, theAlly);
+    GETextureCoordinate theTopRightTC;
+    GETextureCoordinate theBottomRightPos;
+    GETextureCoordinate theBottomLeftCell;
+    EEPlayer* theLocalPlayer = GetDiplomacyPlayer(gWorld.mCurrentPlayer);
+    unsigned long theLocalSlot = theLocalPlayer->mPlayerID;
+    unsigned long theOpponentIndex = 1;
+    gResource->GetString(IDS_FRIENDLY, theFriend);
     gResource->GetString(IDS_HOSTILE, theEnemy);
-    UIEvent* theCustomChatEvent = new EEUIEDSCustomChatCheckBox;
-    UIEvent* theAlliedEvent = new EEUIEDSAlliedCheckBox;
-    UIEvent* theLClickEvent = new EEUIEDSTributeLClick;
+    UIEvent* theCustomEvent = new EEUIEDSCustomChatCheckBox;
+    UIEvent* theAlliedCheckChanged = new EEUIEDSAlliedCheckBox;
+    UIEvent* theLeftEvent = new EEUIEDSTributeLClick;
     UIEvent* theRClickEvent = new EEUIEDSTributeRClick;
     UIEvent* theOKEvent = new EEUIEDSOKButton;
-    UIEvent* theClearEvent = new EEUIEDSClearTribute;
+    UIEvent* theClearButtonPressed = new EEUIEDSClearTribute;
     UIEvent* theCancelEvent = new EEUIEDSCancel;
     unsigned long theIndex = 11;
     UIBitmap* theBitmap = dynamic_cast<UIBitmap*>(inForm->GetControl(theIndex));
-    if (thePlayer->GetGameResult() == 2) {
+    if (theLocalPlayer->GetGameResult() == 2) {
         theTopLeft.mU = 0.5859375f;
         theTopLeft.mV = 0.0f;
-        theBottomLeft.mU = 0.7734375f;
-        theBottomLeft.mV = 0.1875f;
-        theTopRight.mU = 0.7734375f;
-        theTopRight.mV = 0.0f;
-        theBottomRight.mU = 0.5859375f;
-        theBottomRight.mV = 0.1875f;
-    } else if (thePlayer->GetObserverMode()) {
+        theBottomLeftCell.mU = 0.7734375f;
+        theBottomLeftCell.mV = 0.1875f;
+        theTopRightTC.mU = 0.7734375f;
+        theTopRightTC.mV = 0.0f;
+        theBottomRightPos.mU = 0.5859375f;
+        theBottomRightPos.mV = 0.1875f;
+    } else if (theLocalPlayer->GetObserverMode()) {
         theTopLeft.mU = 0.390625f;
         theTopLeft.mV = 0.0f;
-        theBottomLeft.mU = 0.578125f;
-        theBottomLeft.mV = 0.1875f;
-        theTopRight.mU = 0.578125f;
-        theTopRight.mV = 0.0f;
-        theBottomRight.mU = 0.390625f;
-        theBottomRight.mV = 0.1875f;
+        theBottomLeftCell.mU = 0.578125f;
+        theBottomLeftCell.mV = 0.1875f;
+        theTopRightTC.mU = 0.578125f;
+        theTopRightTC.mV = 0.0f;
+        theBottomRightPos.mU = 0.390625f;
+        theBottomRightPos.mV = 0.1875f;
     } else {
         theTopLeft.mU = 0.0f;
         theTopLeft.mV = 0.0f;
-        theBottomLeft.mU = 0.1875f;
-        theBottomLeft.mV = 0.1875f;
-        theTopRight.mU = 0.1875f;
-        theTopRight.mV = 0.0f;
-        theBottomRight.mU = 0.0f;
-        theBottomRight.mV = 0.1875f;
+        theBottomLeftCell.mU = 0.1875f;
+        theBottomLeftCell.mV = 0.1875f;
+        theTopRightTC.mU = 0.1875f;
+        theTopRightTC.mV = 0.0f;
+        theBottomRightPos.mU = 0.0f;
+        theBottomRightPos.mV = 0.1875f;
     }
-    theBitmap->GetBitmap()->SetTextureCoordinates(theTopLeft, theTopRight, theBottomRight, theBottomLeft);
+    theBitmap->GetBitmap()->SetTextureCoordinates(theTopLeft, theTopRightTC, theBottomRightPos, theBottomLeftCell);
     theBitmap->SetBgColor(GEColor(0.667f, 0.616f, 0.0f));
     theIndex++;
-    UITextLabel* theLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
-    theLabel->SetText(thePlayer->mName);
-    theLabel->GetGEText()->SetFgColor(thePlayer->mColor);
+    UITextLabel* theTextLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
+    theTextLabel->SetText(theLocalPlayer->mName);
+    theTextLabel->GetGEText()->SetFgColor(theLocalPlayer->GetColor());
     theIndex++;
-    theLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
-    theLabel->SetText(thePlayer->mCivilization.GetName());
-    theLabel->GetGEText()->SetFgColor(thePlayer->mColor);
+    theTextLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
+    theTextLabel->SetText(UWideString(theLocalPlayer->mCivilization.mName));
+    theTextLabel->GetGEText()->SetFgColor(theLocalPlayer->GetColor());
     theIndex++;
-    theLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
-    theLabel->SetText(thePlayer->GetResource(kResourceFood));
-    theLabel->GetGEText()->SetFgColor(thePlayer->mColor);
+    theTextLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
+    theTextLabel->SetText(theLocalPlayer->GetResource(kResourceFood));
+    theTextLabel->GetGEText()->SetFgColor(theLocalPlayer->GetColor());
     theIndex++;
-    theLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
-    theLabel->SetText(thePlayer->GetResource(kResourceWood));
-    theLabel->GetGEText()->SetFgColor(thePlayer->mColor);
+    theTextLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
+    theTextLabel->SetText(theLocalPlayer->GetResource(kResourceWood));
+    theTextLabel->GetGEText()->SetFgColor(theLocalPlayer->GetColor());
     theIndex++;
-    theLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
-    theLabel->SetText(thePlayer->GetResource(kResourceStone));
-    theLabel->GetGEText()->SetFgColor(thePlayer->mColor);
+    theTextLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
+    theTextLabel->SetText(theLocalPlayer->GetResource(kResourceStone));
+    theTextLabel->GetGEText()->SetFgColor(theLocalPlayer->GetColor());
     theIndex++;
-    theLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
-    theLabel->SetText(thePlayer->GetResource(kResourceGold));
-    theLabel->GetGEText()->SetFgColor(thePlayer->mColor);
+    theTextLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
+    theTextLabel->SetText(theLocalPlayer->GetResource(kResourceGold));
+    theTextLabel->GetGEText()->SetFgColor(theLocalPlayer->GetColor());
     theIndex++;
-    theLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
-    theLabel->SetText(thePlayer->GetResource(kResourceIron));
-    theLabel->GetGEText()->SetFgColor(thePlayer->mColor);
+    theTextLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
+    theTextLabel->SetText(theLocalPlayer->GetResource(kResourceIron));
+    theTextLabel->GetGEText()->SetFgColor(theLocalPlayer->GetColor());
     theIndex++;
+    EEPlayer* theOtherPlayer;
+    bool theHideRow;
+    UICheckBox* theCheckBox;
     UIButton* theButton = dynamic_cast<UIButton*>(inForm->GetControl(kDiplomacyOKButton));
-    theButton->SetTriggerEvent(kControlTriggerButtonUp, theOKEvent);
+    theButton->SetTrigger(kControlTriggerButtonUp, theOKEvent);
     theButton = dynamic_cast<UIButton*>(inForm->GetControl(kDiplomacyClearTributesButton));
-    theButton->SetTriggerEvent(kControlTriggerButtonUp, theClearEvent);
+    theButton->SetTrigger(kControlTriggerButtonUp, theClearButtonPressed);
     theButton = dynamic_cast<UIButton*>(inForm->GetControl(kDiplomacyCancelButton));
-    theButton->SetTriggerEvent(kControlTriggerButtonUp, theCancelEvent);
+    theButton->SetTrigger(kControlTriggerButtonUp, theCancelEvent);
     theIndex = 19;
-    if (thePlayerIndex == theLocal)
-        thePlayerIndex++;
+    if (theOpponentIndex == theLocalSlot)
+        theOpponentIndex++;
     while (theIndex <= 183) {
-        EEPlayer* theOther;
-        theOther = thePlayerIndex < gWorld.GetNumPlayers() ? gWorld.GetPlayer(thePlayerIndex) : NULL;
-        bool theHidden = theOther == NULL || theOther->GetObserverMode() ||
-                         (theOther->IsHuman() && theOther->GetSlot() == kSlotNone) || theOther->GetGameResult() == 2;
+        if (theOpponentIndex < gWorld.GetNumPlayers())
+            theOtherPlayer = GetDiplomacyPlayer(theOpponentIndex);
+        else
+            theOtherPlayer = NULL;
+        theHideRow = theOtherPlayer == NULL || theOtherPlayer->GetObserverMode() ||
+                         (theOtherPlayer->IsHuman() && theOtherPlayer->GetSlot() == kSlotNone) || theOtherPlayer->GetGameResult() == 2;
         theBitmap = dynamic_cast<UIBitmap*>(inForm->GetControl(theIndex));
-        if (theOther == NULL)
-            theBitmap->SetDisplayMode(kDisplayModeHidden);
+        if (theOtherPlayer == NULL)
+            theBitmap->SetHiddenMode();
         else {
-            if (theOther->GetGameResult() == 2) {
+            if (theOtherPlayer->GetGameResult() == 2) {
                 theTopLeft.mU = 0.5859375f;
                 theTopLeft.mV = 0.0f;
-                theBottomLeft.mU = 0.7734375f;
-                theBottomLeft.mV = 0.1875f;
-                theTopRight.mU = 0.7734375f;
-                theTopRight.mV = 0.0f;
-                theBottomRight.mU = 0.5859375f;
-                theBottomRight.mV = 0.1875f;
-                if (theOther->IsHuman())
+                theBottomLeftCell.mU = 0.7734375f;
+                theBottomLeftCell.mV = 0.1875f;
+                theTopRightTC.mU = 0.7734375f;
+                theTopRightTC.mV = 0.0f;
+                theBottomRightPos.mU = 0.5859375f;
+                theBottomRightPos.mV = 0.1875f;
+                if (theOtherPlayer->IsHuman())
                     theBitmap->SetBgColor(GEColor(0.667f, 0.616f, 0.0f));
                 else
                     theBitmap->SetBgColor(GEColor(0.85f, 0.85f, 0.85f));
-            } else if (theOther->IsHuman()) {
-                if (theOther->GetSlot() == kSlotNone) {
+            } else if (theOtherPlayer->IsHuman()) {
+                if (theOtherPlayer->GetSlot() == kSlotNone) {
                     theTopLeft.mU = 0.1953125f;
                     theTopLeft.mV = 0.0f;
-                    theBottomLeft.mU = 0.3828125f;
-                    theBottomLeft.mV = 0.1875f;
-                    theTopRight.mU = 0.3828125f;
-                    theTopRight.mV = 0.0f;
-                    theBottomRight.mU = 0.1953125f;
-                    theBottomRight.mV = 0.1875f;
-                } else if (theOther->GetObserverMode()) {
+                    theBottomLeftCell.mU = 0.3828125f;
+                    theBottomLeftCell.mV = 0.1875f;
+                    theTopRightTC.mU = 0.3828125f;
+                    theTopRightTC.mV = 0.0f;
+                    theBottomRightPos.mU = 0.1953125f;
+                    theBottomRightPos.mV = 0.1875f;
+                } else if (theOtherPlayer->GetObserverMode()) {
                     theTopLeft.mU = 0.390625f;
                     theTopLeft.mV = 0.0f;
-                    theBottomLeft.mU = 0.578125f;
-                    theBottomLeft.mV = 0.1875f;
-                    theTopRight.mU = 0.578125f;
-                    theTopRight.mV = 0.0f;
-                    theBottomRight.mU = 0.390625f;
-                    theBottomRight.mV = 0.1875f;
+                    theBottomLeftCell.mU = 0.578125f;
+                    theBottomLeftCell.mV = 0.1875f;
+                    theTopRightTC.mU = 0.578125f;
+                    theTopRightTC.mV = 0.0f;
+                    theBottomRightPos.mU = 0.390625f;
+                    theBottomRightPos.mV = 0.1875f;
                 } else {
                     theTopLeft.mU = 0.0f;
                     theTopLeft.mV = 0.0f;
-                    theBottomLeft.mU = 0.1875f;
-                    theBottomLeft.mV = 0.1875f;
-                    theTopRight.mU = 0.1875f;
-                    theTopRight.mV = 0.0f;
-                    theBottomRight.mU = 0.0f;
-                    theBottomRight.mV = 0.1875f;
+                    theBottomLeftCell.mU = 0.1875f;
+                    theBottomLeftCell.mV = 0.1875f;
+                    theTopRightTC.mU = 0.1875f;
+                    theTopRightTC.mV = 0.0f;
+                    theBottomRightPos.mU = 0.0f;
+                    theBottomRightPos.mV = 0.1875f;
                 }
                 theBitmap->SetBgColor(GEColor(0.667f, 0.616f, 0.0f));
             } else {
                 theTopLeft.mU = 0.0f;
                 theTopLeft.mV = 0.0f;
-                theBottomLeft.mU = 0.1875f;
-                theBottomLeft.mV = 0.1875f;
-                theTopRight.mU = 0.1875f;
-                theTopRight.mV = 0.0f;
-                theBottomRight.mU = 0.0f;
-                theBottomRight.mV = 0.1875f;
+                theBottomLeftCell.mU = 0.1875f;
+                theBottomLeftCell.mV = 0.1875f;
+                theTopRightTC.mU = 0.1875f;
+                theTopRightTC.mV = 0.0f;
+                theBottomRightPos.mU = 0.0f;
+                theBottomRightPos.mV = 0.1875f;
                 theBitmap->SetBgColor(GEColor(0.85f, 0.85f, 0.85f));
             }
-            theBitmap->GetBitmap()->SetTextureCoordinates(theTopLeft, theTopRight, theBottomRight, theBottomLeft);
+            theBitmap->GetBitmap()->SetTextureCoordinates(theTopLeft, theTopRightTC, theBottomRightPos, theBottomLeftCell);
         }
         theIndex++;
-        UICheckBox* theCheckBox = dynamic_cast<UICheckBox*>(inForm->GetControl(theIndex));
-        theCheckBox->SetChecked(theOther ? thePlayer->GetSendChatMessage(thePlayerIndex) == true : false);
-        if (theHidden)
-            theCheckBox->SetDisplayMode(kDisplayModeHidden);
-        theCheckBox->SetTriggerEvent(kControlTriggerChecked, theCustomChatEvent);
-        theCheckBox->SetTriggerEvent(kControlTriggerUnchecked, theCustomChatEvent);
+        theCheckBox = dynamic_cast<UICheckBox*>(inForm->GetControl(theIndex));
+        theCheckBox->SetChecked(theOtherPlayer == NULL ? false : theLocalPlayer->GetSendChatMessage(theOpponentIndex) == true);
+        if (theHideRow)
+            theCheckBox->SetHiddenMode();
+        theCheckBox->SetTrigger(kControlTriggerChecked, theCustomEvent);
+        theCheckBox->SetTrigger(kControlTriggerUnchecked, theCustomEvent);
         theIndex++;
-        theLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
-        theLabel->SetText(theOther ? theOther->mName : theEmpty);
-        if (theHidden)
-            theLabel->SetDisplayMode(kDisplayModeHidden);
+        theTextLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
+        theTextLabel->SetText(theOtherPlayer == NULL ? theBlankText : theOtherPlayer->mName);
+        if (theHideRow)
+            theTextLabel->SetHiddenMode();
         else
-            theLabel->GetGEText()->SetFgColor(theOther->mColor);
+            theTextLabel->GetGEText()->SetFgColor(theOtherPlayer->GetColor());
         theIndex++;
-        theLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
-        theLabel->SetText(theOther ? theOther->mCivilization.GetName() : theEmpty);
-        if (theHidden)
-            theLabel->SetDisplayMode(kDisplayModeHidden);
+        theTextLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
+        theTextLabel->SetText(theOtherPlayer == NULL ? theBlankText : UWideString(theOtherPlayer->mCivilization.mName));
+        if (theHideRow)
+            theTextLabel->SetHiddenMode();
         else
-            theLabel->GetGEText()->SetFgColor(theOther->mColor);
+            theTextLabel->GetGEText()->SetFgColor(theOtherPlayer->GetColor());
         theIndex++;
-        theLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
-        theLabel->SetText(theOther ? (theOther->GetEnemy(thePlayer->GetPlayerID()) == 0 ? theAlly : theEnemy) : theEmpty);
-        if (theHidden)
-            theLabel->SetDisplayMode(kDisplayModeHidden);
+        theTextLabel = dynamic_cast<UITextLabel*>(inForm->GetControl(theIndex));
+        theTextLabel->SetText(theOtherPlayer == NULL ? theBlankText : (theOtherPlayer->GetEnemy(theLocalPlayer->GetPlayerID()) == 0 ? theFriend : theEnemy));
+        if (theHideRow)
+            theTextLabel->SetHiddenMode();
         else
-            theLabel->GetGEText()->SetFgColor(theOther->mColor);
+            theTextLabel->GetGEText()->SetFgColor(theOtherPlayer->GetColor());
         theIndex++;
         theCheckBox = dynamic_cast<UICheckBox*>(inForm->GetControl(theIndex));
-        theCheckBox->SetChecked(theOther ? thePlayer->GetEnemy(thePlayerIndex) == 0 : false);
-        if (theHidden)
-            theCheckBox->SetDisplayMode(kDisplayModeHidden);
+        theCheckBox->SetChecked(theOtherPlayer == NULL ? false : theLocalPlayer->GetEnemy(theOpponentIndex) == 0);
+        if (theHideRow)
+            theCheckBox->SetHiddenMode();
         if (!gWorld.GetTeamsLocked()) {
-            theCheckBox->SetTriggerEvent(kControlTriggerChecked, theAlliedEvent);
-            theCheckBox->SetTriggerEvent(kControlTriggerUnchecked, theAlliedEvent);
+            theCheckBox->SetTrigger(kControlTriggerChecked, theAlliedCheckChanged);
+            theCheckBox->SetTrigger(kControlTriggerUnchecked, theAlliedCheckChanged);
         } else
             theCheckBox->SetDisabled(true);
         theIndex++;
         theButton = dynamic_cast<UIButton*>(inForm->GetControl(theIndex));
-        theButton->SetText(theZero, theButton->GetGEText()->GetFont());
-        if (theHidden)
-            theButton->SetDisplayMode(kDisplayModeHidden);
+        theButton->SetText(theNoTribute, theButton->GetGEText()->GetFont());
+        if (theHideRow)
+            theButton->SetHiddenMode();
         else
-            theButton->GetGEText()->SetFgColor(theOther->mColor);
-        theButton->SetTriggerEvent(kControlTriggerButtonUp, theLClickEvent);
-        theButton->SetTriggerEvent(kControlTriggerRightButtonUp, theRClickEvent);
+            theButton->GetGEText()->SetFgColor(theOtherPlayer->GetColor());
+        theButton->SetTrigger(kControlTriggerButtonUp, theLeftEvent);
+        theButton->SetTrigger(kControlTriggerRightButtonUp, theRClickEvent);
         theIndex++;
         theButton = dynamic_cast<UIButton*>(inForm->GetControl(theIndex));
-        theButton->SetText(theZero, theButton->GetGEText()->GetFont());
-        if (theHidden)
-            theButton->SetDisplayMode(kDisplayModeHidden);
+        theButton->SetText(theNoTribute, theButton->GetGEText()->GetFont());
+        if (theHideRow)
+            theButton->SetHiddenMode();
         else
-            theButton->GetGEText()->SetFgColor(theOther->mColor);
-        theButton->SetTriggerEvent(kControlTriggerButtonUp, theLClickEvent);
-        theButton->SetTriggerEvent(kControlTriggerRightButtonUp, theRClickEvent);
+            theButton->GetGEText()->SetFgColor(theOtherPlayer->GetColor());
+        theButton->SetTrigger(kControlTriggerButtonUp, theLeftEvent);
+        theButton->SetTrigger(kControlTriggerRightButtonUp, theRClickEvent);
         theIndex++;
         theButton = dynamic_cast<UIButton*>(inForm->GetControl(theIndex));
-        theButton->SetText(theZero, theButton->GetGEText()->GetFont());
-        if (theHidden)
-            theButton->SetDisplayMode(kDisplayModeHidden);
+        theButton->SetText(theNoTribute, theButton->GetGEText()->GetFont());
+        if (theHideRow)
+            theButton->SetHiddenMode();
         else
-            theButton->GetGEText()->SetFgColor(theOther->mColor);
-        theButton->SetTriggerEvent(kControlTriggerButtonUp, theLClickEvent);
-        theButton->SetTriggerEvent(kControlTriggerRightButtonUp, theRClickEvent);
+            theButton->GetGEText()->SetFgColor(theOtherPlayer->GetColor());
+        theButton->SetTrigger(kControlTriggerButtonUp, theLeftEvent);
+        theButton->SetTrigger(kControlTriggerRightButtonUp, theRClickEvent);
         theIndex++;
         theButton = dynamic_cast<UIButton*>(inForm->GetControl(theIndex));
-        theButton->SetText(theZero, theButton->GetGEText()->GetFont());
-        if (theHidden)
-            theButton->SetDisplayMode(kDisplayModeHidden);
+        theButton->SetText(theNoTribute, theButton->GetGEText()->GetFont());
+        if (theHideRow)
+            theButton->SetHiddenMode();
         else
-            theButton->GetGEText()->SetFgColor(theOther->mColor);
-        theButton->SetTriggerEvent(kControlTriggerButtonUp, theLClickEvent);
-        theButton->SetTriggerEvent(kControlTriggerRightButtonUp, theRClickEvent);
+            theButton->GetGEText()->SetFgColor(theOtherPlayer->GetColor());
+        theButton->SetTrigger(kControlTriggerButtonUp, theLeftEvent);
+        theButton->SetTrigger(kControlTriggerRightButtonUp, theRClickEvent);
         theIndex++;
         theButton = dynamic_cast<UIButton*>(inForm->GetControl(theIndex));
-        theButton->SetText(theZero, theButton->GetGEText()->GetFont());
-        if (theHidden)
-            theButton->SetDisplayMode(kDisplayModeHidden);
+        theButton->SetText(theNoTribute, theButton->GetGEText()->GetFont());
+        if (theHideRow)
+            theButton->SetHiddenMode();
         else
-            theButton->GetGEText()->SetFgColor(theOther->mColor);
-        theButton->SetTriggerEvent(kControlTriggerButtonUp, theLClickEvent);
-        theButton->SetTriggerEvent(kControlTriggerRightButtonUp, theRClickEvent);
+            theButton->GetGEText()->SetFgColor(theOtherPlayer->GetColor());
+        theButton->SetTrigger(kControlTriggerButtonUp, theLeftEvent);
+        theButton->SetTrigger(kControlTriggerRightButtonUp, theRClickEvent);
         theIndex++;
-        thePlayerIndex++;
-        if (thePlayerIndex == theLocal)
-            thePlayerIndex++;
+        theOpponentIndex++;
+        if (theOpponentIndex == theLocalSlot)
+            theOpponentIndex++;
     }
-    theCustomChatEvent->Dereference();
-    theAlliedEvent->Dereference();
-    theLClickEvent->Dereference();
+    theCustomEvent->Dereference();
+    theAlliedCheckChanged->Dereference();
+    theLeftEvent->Dereference();
     theRClickEvent->Dereference();
     theOKEvent->Dereference();
-    theClearEvent->Dereference();
+    theClearButtonPressed->Dereference();
     theCancelEvent->Dereference();
     return kErrorOK;
 }
+
+#pragma optimize("g", on)
 
 // FUNCTION: EXE 0x5d5a0e
 // Destroys the allied check box event and frees it when asked (scalar deleting destructor)

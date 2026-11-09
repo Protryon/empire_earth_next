@@ -17,6 +17,7 @@
 #include "lle/GERhombus.h"
 #include "lle/GEBitmap.h"
 #include "lle/GEMovie.h"
+#include "lle/GEPixelPack.h"
 #include "lle/FSFileSpec.h"
 #include "lle/TSCriticalSection.h"
 #include "lle/TSScheduler.h"
@@ -92,6 +93,10 @@ RTSGraphics::~RTSGraphics()
         this->mMovie->Dereference();
         this->mMovie = NULL;
     }
+    if (this->mLobbyFrame != NULL) {
+        this->mLobbyFrame->Dereference();
+        this->mLobbyFrame = NULL;
+    }
     TSScheduler::DestroyEvent(this->mRenderNow);
     TSScheduler::DestroyEvent(this->mThreadCreated);
     TSScheduler::DestroyEvent(this->mThreadDone);
@@ -127,12 +132,14 @@ unsigned long RTSGraphics::Main(void* inGraphics)
         if (theResult == kErrorOK)
             theGraphics->HandleMessage(theMessage, theParameter1, theParameter2);
         // the headless simulation (platform/PlatSim.h) draws nothing: the thread only answers its messages
-        if (!gPlatSimMode && !Fn297ED0() && !theGraphics->mIsPaused && !theGraphics->mIsQuitting) {
+        if (!gPlatSimMode && !EELobbyIsShown() && !theGraphics->mIsPaused && !theGraphics->mIsQuitting) {
             gMouse->mInputLock->Enter();
             gISMouse->RefreshXY();
             gMouse->Update();
             gMouse->mInputLock->Leave();
             theGraphics->Render(true, true);
+        } else if (!gPlatSimMode && EELobbyIsShown() && !theGraphics->mIsQuitting) {
+            theGraphics->RenderLobby();   // port: the lobby is drawn into the game's window
         }
         // Win32 Sleep, not PlatSleep: the test harness's time shim caps the frame rate at the Sleep import by the
         // caller's return address (inside RTSGraphics::Main; tools/harness/timeshim.c), which a wrapper would hide
@@ -291,8 +298,8 @@ void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
             this->mRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f), this->mRasterizer->GetViewport(this->mScreen).GetViewRectangle(),
                                this->mScreen);
         }
-        Fn297F15();
-        if (!Fn297ED0()) {
+        EELobbyLock();
+        if (!EELobbyIsShown()) {
             theResult = this->mRasterizer->BeginScene(this->mSurface, this->mScreen);
             if (theResult == kErrorOK) {
                 this->RenderScene();
@@ -301,7 +308,7 @@ void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
         } else {
             theResult = 5;
         }
-        Fn297F21();
+        EELobbyUnlock();
         this->FrameDone();
         this->mSurface->TextUnlock();
     }
@@ -312,11 +319,11 @@ void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
             this->mMouse->Draw(this->mSurface, theOrigin);
         }
         if (inShowScene) {
-            Fn297F15();
-            if (!Fn297ED0()) {
+            EELobbyLock();
+            if (!EELobbyIsShown()) {
                 this->mRasterizer->ShowScene(this->mScreen);
             }
-            Fn297F21();
+            EELobbyUnlock();
         }
         if (inDrawMouse) {
             this->mMouse->RestoreUnder(this->mU38, theOrigin, this->mIsWindowed);
@@ -325,6 +332,107 @@ void RTSGraphics::Render(bool inDrawMouse, bool inShowScene)
     } else if (theResult == kErrorFailed) {
         this->RestoreSurfaces();
     }
+}
+
+// port: the frame while the WON lobby is shown (it was a GDI window over the game's): packs a new lobby frame into a
+// system-memory surface in the back buffer's format (as the movie player does), copies it letterboxed to the back
+// buffer and shows it; an unchanged frame is shown again every 100 ms. The lobby is laid out for 1024x768 logical
+// pixels and drawn at a pixel scale k: the letterboxed lobby's size in the back buffer's PIXELS (its logical size
+// times its render scale) over 768, at least 1. The letterbox is the largest 4:3 rectangle of whole back-buffer
+// (logical) pixels, centred on whole pixels, since a copy's rectangle is in whole logical pixels: at a whole render
+// scale (1, 2) the frame's pixels land 1:1 on the back buffer's (crisp text and lines at any UI scale); at a
+// fractional one they are within a pixel's phase. The frame's surface has the lobby's logical size
+// (GESurface::SetLogicalSize) and the copy is in logical coordinates. k follows the back buffer (window size, UI
+// scale, render resolution); until the lobby has repainted at a new k the frame is stretched. Lock order: EELobbyLock, then the lobby's frame lock.
+void RTSGraphics::RenderLobby()
+{
+    GESurface* theTarget = this->mRasterizer->GetSecondarySurface(this->mScreen);
+    if (theTarget == NULL)
+        return;
+    bool theChanged = false;
+    EELobbyLock();
+    if (theTarget->GetWidth() != this->mLobbySecondaryWidth || theTarget->GetHeight() != this->mLobbySecondaryHeight) {
+        this->mLobbySecondaryWidth = theTarget->GetWidth();
+        this->mLobbySecondaryHeight = theTarget->GetHeight();
+        theChanged = true;
+    }
+    // the letterbox: the lobby's aspect (1024:768 = 4:3) in whole back-buffer pixels, centred
+    float theRenderScale = theTarget->GetRenderScale() > 0.0f ? theTarget->GetRenderScale() : 1.0f;
+    long theTargetWidth = (long)theTarget->GetWidth(), theTargetHeight = (long)theTarget->GetHeight();
+    int theLobbyWidth, theLobbyHeight;
+    EELobbyGetSurfaceSize(theLobbyWidth, theLobbyHeight);
+    long theUnits = (std::min)(theTargetWidth / 4, theTargetHeight / 3);
+    if (theUnits < 1)
+        theUnits = 1;
+    long theBoxWidth = theUnits * 4, theBoxHeight = theUnits * 3;
+    long theBoxLeft = (theTargetWidth - theBoxWidth) / 2, theBoxTop = (theTargetHeight - theBoxHeight) / 2;
+    float thePixelScale = (float)theBoxHeight * theRenderScale / (float)theLobbyHeight;
+    thePixelScale = (std::max)(1.0f, (std::min)(thePixelScale, 4.0f));
+    // every frame (a lobby opened again has a new manager); a scale it has already wakes nothing
+    EELobbySetPresentation(thePixelScale, (float)theBoxLeft / theTargetWidth, (float)theBoxTop / theTargetHeight,
+                           (float)theBoxWidth / theTargetWidth, (float)theBoxHeight / theTargetHeight);
+    const uint32_t* thePixels;
+    int theWidth, theHeight, thePitch, theLogicalWidth, theLogicalHeight;
+    uint32_t theSerial;
+    if (EELobbyLockFrame(thePixels, theWidth, theHeight, thePitch, theLogicalWidth, theLogicalHeight, theSerial)) {
+        if (this->mLobbyFrame != NULL &&
+            (this->mLobbyFrame->GetPixelWidth() != (unsigned long)theWidth ||
+             this->mLobbyFrame->GetPixelHeight() != (unsigned long)theHeight ||
+             this->mLobbyFrame->GetWidth() != (unsigned long)theLogicalWidth ||
+             this->mLobbyFrame->GetHeight() != (unsigned long)theLogicalHeight ||
+             this->mLobbyFrame->GetPixelFormat() != theTarget->GetPixelFormat())) {
+            this->mLobbyFrame->Dereference();
+            this->mLobbyFrame = NULL;
+        }
+        if (this->mLobbyFrame == NULL && theWidth > 0 && theHeight > 0 && theLogicalWidth > 0 && theLogicalHeight > 0) {
+            GESurfaceDescription theDescription;
+            theDescription.mType = kSurfaceSystemMemory;
+            theDescription.mPixelFormat = theTarget->GetPixelFormat();
+            theDescription.mPixelDepth = theTarget->GetPixelDepth();
+            theDescription.mSurfaceVolatility = 0;
+            theDescription.mWidth = (unsigned long)theWidth;
+            theDescription.mHeight = (unsigned long)theHeight;
+            theDescription.m14 = 0;
+            theDescription.mMipLevelCount = 0;
+            theDescription.mIs3DRenderable = false;
+            theDescription.mIsTransparencyEnabled = false;
+            if (this->mRasterizer->GetScreen(this->mScreen)->CreateSurface(theDescription, &this->mLobbyFrame) != kErrorOK)
+                this->mLobbyFrame = NULL;
+            else
+                this->mLobbyFrame->SetLogicalSize((unsigned long)theLogicalWidth, (unsigned long)theLogicalHeight);
+            theChanged = true;
+        }
+        if (this->mLobbyFrame != NULL && (theChanged || theSerial != this->mLobbySerial) &&
+            this->mLobbyFrame->Lock() == kErrorOK) {
+            unsigned char* theRow = this->mLobbyFrame->GetMemoryAddress();
+            unsigned long theFormat = this->mLobbyFrame->GetPixelFormat();
+            const unsigned char* theSource = reinterpret_cast<const unsigned char*>(thePixels);
+            for (int y = 0; y < theHeight; y++, theRow += this->mLobbyFrame->GetBytesPerRow())
+                GEPackBGRXRow(theSource + (size_t)y * thePitch, theRow, (unsigned long)theWidth, theFormat);
+            this->mLobbyFrame->Unlock();
+            this->mLobbySerial = theSerial;
+            theChanged = true;
+        }
+        EELobbyUnlockFrame();
+    }
+    unsigned long theTime = TMGetTime();
+    if (this->mLobbyFrame != NULL && (theChanged || theTime - this->mLobbyShownTime >= 100)) {
+        float theFrameWidth = (float)this->mLobbyFrame->GetWidth(), theFrameHeight = (float)this->mLobbyFrame->GetHeight();
+        GERectangle theSource(0.0f, 0.0f, theFrameWidth, theFrameHeight);
+        // letterboxed (EELobbySetPresentation gave the lobby the same rectangle for its pointer mapping)
+        GERectangle theDestination((float)theBoxLeft, (float)theBoxTop, (float)(theBoxLeft + theBoxWidth),
+                                   (float)(theBoxTop + theBoxHeight));
+        if (theBoxLeft > 0 || theBoxTop > 0)
+            this->mRasterizer->Clear(GEColor(0.0f, 0.0f, 0.0f),
+                                     GERectangle(0.0f, 0.0f, (float)theTargetWidth, (float)theTargetHeight), this->mScreen);
+        long theResult = this->mLobbyFrame->CopyTo(theTarget, theSource, theDestination, false);
+        if (theResult == kErrorOK)
+            theResult = this->mRasterizer->ShowScene(this->mScreen);
+        if (theResult == kErrorFailed)
+            this->RestoreSurfaces();
+        this->mLobbyShownTime = theTime;
+    }
+    EELobbyUnlock();
 }
 
 // FUNCTION: EXE 0x51a8fb

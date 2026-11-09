@@ -66,10 +66,14 @@ public:
     static const UString sData;             // "EECPResourceManager-Data" (0x4e5d78, guard 0x4e5d70; chain 0x8e702)
 
     std::vector<unsigned long> mDropSiteClasses[7];  // +0x04 per resource (Load/Save: a count, then Read/Write(unsigned long))
+    unsigned short GetForestsAt(unsigned long inIndex) const { return this->mForests[inIndex]; }
     std::vector<unsigned short> mForests;   // +0x74 (RefreshResources: the continent manager's forest ids)
+    EEComplexUnit* GetMinesAt(unsigned long inIndex) const { return this->mMines[inIndex]; }
     std::vector<EEComplexUnit*> mMines;     // +0x84 (referenced; nature's units of class 0x11)
+    EEComplexUnit* GetFishAt(unsigned long inIndex) const { return this->mFish[inIndex]; }
     std::vector<EEComplexUnit*> mFish;      // +0x94 (referenced; nature's units of class 0x12)
     std::deque<EEComplexUnit*> mGatherers[7];   // +0xa4 per resource (referenced)
+    EECPCivilizationManager* GetManager() const { return this->mManager; }
     EECPCivilizationManager* mManager;      // +0x130 (the ctor argument)
     long mNeeds[7];                         // +0x134 per resource (Earn/Spend; Read/Write(long))
     unsigned long mWantedGatherers[7];      // +0x150 per resource (Reset zeroes it)

@@ -12,6 +12,10 @@
 template <class T>
 class RTSRegion : public std::vector<T> {
 public:
+    // inline: the region loops read through them, so size and operator[] sit one level deeper and are refused where
+    // the original calls them out of line (EEGetUnitsInRectangle 0xa509a) (provisional names)
+    long GetCount() const { return this->size(); }
+    T& GetAt(long inIndex) { return (*this)[inIndex]; }
     void Remove(const T& inValue)
     {
         for (iterator it = begin(); it != end(); ++it)

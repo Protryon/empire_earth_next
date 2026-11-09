@@ -562,7 +562,7 @@ long EEE3DVolcano::DrawPass4()
     gRasterizer->SetZBuffer(kZBufferTestAndWrite, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetShadingColorSource(1, theScreen);
-    Fn10F833();
+    SetTerrainLighting();
     bool theSorted = gOrthographicView;
     long theResult = gRasterizer->Draw(this->mModel, theScreen, 1.0f, theSorted);
     // Leave the shared viewport at its normal depth range 0..1 for the draws that follow.

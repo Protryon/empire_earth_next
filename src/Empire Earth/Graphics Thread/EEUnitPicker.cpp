@@ -1,7 +1,7 @@
 // C:\EEX\Empire Earth\Graphics Thread\EEUnitPicker.cpp (__FILE__ 0x4be904). 0x118aa2..0x11a1cc: EEROWater's members
-// (vtable 0x441c10; no __FILE__ of its own, so they may be a unit of their own), the pick priority Fn118C40, then
+// (vtable 0x441c10; no __FILE__ of its own, so they may be a unit of their own), the pick priority GetUnitPickPriority, then
 // EEUnitPicker (vtable 0x441c48): ctor (assert line 340), ??_G, the entries' vector deleting dtor, dtor, the pickers,
-// the frustum tests, the std template COMDATs (vector<EEUnitPickerHit>::push_back, fill) and Fn11A130 (the fog
+// the frustum tests, the std template COMDATs (vector<EEUnitPickerHit>::push_back, fill) and GetFogFactor (the fog
 // factor the effects use). gUnitPicker's init chain sits at 0x10ab0e (before EERenderObject.cpp's chains). Unit
 // flags: the exe's module set.
 #include <windows.h>
@@ -96,15 +96,15 @@ void EEROWater::RenderScene()
     gRasterizer->SetZCompare(kCompareLessEqual, theScreen);
     gRasterizer->SetShadingColorSource(1, theScreen);
     gRasterizer->SetCulling(kCullNone);
-    Fn10F6DE();
-    Fn10F60F();
+    SetLightingOff();
+    SetSceneFog();
     gRasterizer->DrawWater(gWorld.mMap->mTerrainMesh, gScreenIndex, gOrthographicView);
     for (theIterator = gEffectQueues[4].begin(); theIterator != gEffectQueues[4].end(); theIterator++) {
-        Fn102724(theIterator->first);
+        BeginEffectBatches(theIterator->first);
         for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)
             (*theEffect)->DrawPass6();
-        Fn103F64();
-        Fn102F20();
+        FlushEffectBatches();
+        EndEffectBatches();
     }
     gRasterizer->SetAlphaTestingRefValue(theAlphaRefValue, gScreenIndex);
 }
@@ -116,7 +116,7 @@ void EEROWater::FrameDone()
 // FUNCTION: EXE 0x518c40
 // Returns a unit's click priority: 1 land building or wall, 4 own or allied unit, 6 enemy unit or AA
 // building, 2 wood, 3 stone/gold/other resource, 5 any resource when preferring resources (provisional name)
-long Fn118C40(EEUnit* inUnit, bool inPreferResources)
+long GetUnitPickPriority(EEUnit* inUnit, bool inPreferResources)
 {
     long theResult = 0;
     if (inUnit->GetComplexUnit() != NULL && inUnit->mHitPoints > 0 && inUnit->mPlayer != gWorld.mPlayers[0]) {
@@ -125,8 +125,7 @@ long Fn118C40(EEUnit* inUnit, bool inPreferResources)
         else if (inUnit->mUnitClass->IsLandBuilding() || inUnit->mUnitClass->mIsWall)
             theResult = 1;
         else {
-            EEPlayer* theCurrentPlayer = gWorld.GetCurrentPlayer();
-            if (theCurrentPlayer == inUnit->mPlayer || theCurrentPlayer->mEnemies[inUnit->mPlayer->mPlayerID] == 0)
+            if (gWorld.GetCurrentPlayer()->IsAlly(inUnit->GetPlayer()))
 
                 theResult = 4;
             else
@@ -183,7 +182,7 @@ bool EEUnitPicker::Contains(EEUnit* inUnit)
     return theFound;
 }
 
-static bool Fn11911C(const EEUnitPickerEntry& inEntry, std::vector<GE3DPlane>& inPlanes);
+static bool GetIsEntryInView(const EEUnitPickerEntry& inEntry, std::vector<GE3DPlane>& inPlanes);
 
 // FUNCTION: EXE 0x518eaf
 // Adds the ids of a player's living pickable units of a type inside a screen rectangle (a part's carrier
@@ -205,7 +204,7 @@ void EEUnitPicker::PickUnitsOfType(const GERectangle& inRectangle, EEPlayer* inP
                 theUnit->mUnitClass->mCategory == kUnitCategoryTorpedo ||
                 (inPlayer != NULL && theUnit->mPlayer != inPlayer) ||
                 (inType != 0 && theUnit->mUnitClass->mUnitType != inType) ||
-                !Fn11911C(this->mEntries[i], thePlanes))
+                !GetIsEntryInView(this->mEntries[i], thePlanes))
                 continue;
             while (theUnit->mPreviousPart != NULL)
                 theUnit = theUnit->mPreviousPart;
@@ -236,13 +235,13 @@ void EEUnitPicker::PickUnitsOfType(const GERectangle& inRectangle, EEPlayer* inP
     }
 }
 
-static bool Fn1192F2(GEModel* inModel, const GETransformation& inTransformation, unsigned long inFrame,
+static bool GetIsModelInView(GEModel* inModel, const GETransformation& inTransformation, unsigned long inFrame,
                      unsigned long inLOD, std::vector<GE3DPlane>& inPlanes);
 
 // FUNCTION: EXE 0x51911c
 // Returns whether an entry's model lies inside the side planes 2..5 of a selection frustum (bounding sphere
 // first, then the vertices)
-static bool Fn11911C(const EEUnitPickerEntry& inEntry, std::vector<GE3DPlane>& inPlanes)
+static bool GetIsEntryInView(const EEUnitPickerEntry& inEntry, std::vector<GE3DPlane>& inPlanes)
 {
     long theOutside = 0;
     GE3DPoint theCenter;
@@ -283,7 +282,7 @@ static bool Fn11911C(const EEUnitPickerEntry& inEntry, std::vector<GE3DPlane>& i
             unsigned long theLOD = UMFloatToLong((1.0f - kU441C38) * theModel->GetLODCount());
             if (theLOD == theModel->GetLODCount())
                 theLOD = theModel->GetLODCount() - 1;
-            theResult = Fn1192F2(theModel, theTransformation, theFrame, theLOD, inPlanes);
+            theResult = GetIsModelInView(theModel, theTransformation, theFrame, theLOD, inPlanes);
         } else {
             theResult = false;
         }
@@ -293,7 +292,7 @@ static bool Fn11911C(const EEUnitPickerEntry& inEntry, std::vector<GE3DPlane>& i
 
 // FUNCTION: EXE 0x5192f2
 // Returns whether a vertex of a model (or of a sub model) is on or above every side plane 2..5
-static bool Fn1192F2(GEModel* inModel, const GETransformation& inTransformation, unsigned long inFrame,
+static bool GetIsModelInView(GEModel* inModel, const GETransformation& inTransformation, unsigned long inFrame,
                      unsigned long inLOD, std::vector<GE3DPlane>& inPlanes)
 {
     GETransformation theTransformation(false);
@@ -339,7 +338,7 @@ static bool Fn1192F2(GEModel* inModel, const GETransformation& inTransformation,
     if (!theInside) {
         theCount = inModel->GetSubModelCount();
         for (i = 0; i < theCount && !theInside; i++)
-            theInside = Fn1192F2(inModel->GetSubModel(i), theTransformation, inFrame, inLOD, inPlanes);
+            theInside = GetIsModelInView(inModel->GetSubModel(i), theTransformation, inFrame, inLOD, inPlanes);
     }
     return theInside;
 }
@@ -385,12 +384,12 @@ EEUnit* EEUnitPicker::PickUnit(const GE2DPoint& inPoint, long inPreferResources)
         theLine.Define(theNearWorld, theFarWorld);
         for (i = this->mCount - 1; i >= 0; i--) {
             theSavedScale = this->mEntries[i].GetScale();
-            long theKind = Fn118C40(this->mEntries[i].mUnit, false);
+            long theKind = GetUnitPickPriority(this->mEntries[i].mUnit, false);
             this->mEntries[i].SetScale((theKind != 2 ? kPickScale : kTreePickScale) * theSavedScale);
             if (this->mEntries[i].mUnit->GetTileX() != -10000 &&
                 this->mEntries[i].Intersects(theLine, 1, theHit.mDistance, false)) {
                 theHit.mIndex = i;
-                theHit.mPriority = Fn118C40(this->mEntries[i].mUnit, inPreferResources != 0);
+                theHit.mPriority = GetUnitPickPriority(this->mEntries[i].mUnit, inPreferResources != 0);
                 theHit.mExact = false;
                 theHit.mLarge = false;
                 theHit.mKind = theKind;
@@ -499,7 +498,7 @@ void EEUnitPicker::PickUnitsInRectangle(const GERectangle& inRectangle, long inT
                 (theClass->mCategory == kUnitCategoryMissile && theClass->mUnitType != kUnitTypeCpICBM) ||
                 (inType != 0 && theClass->mUnitType != inType && (inType != 0x20 || theClass->mUnitType != kUnitTypeFemaleCitizen) &&
                  (inType != 0x1e0 || theClass->mUnitType != kUnitTypeCitizen)) ||
-                !Fn11911C(this->mEntries[i], thePlanes))
+                !GetIsEntryInView(this->mEntries[i], thePlanes))
                 continue;
             EEComplexUnit* theCarrier = theUnit->GetComplexUnit();
             if (theCarrier != NULL) {
@@ -608,7 +607,7 @@ void EEUnitPicker::AddUnit(EEUnit* inUnit, const GETransformation& inTransformat
 
 // FUNCTION: EXE 0x51a130
 // Computes the fog visibility of a point into outValue (linear fog only, which it also turns off; else 1)
-void Fn11A130(const GE3DPoint& inLocation, unsigned long inFog, float& outValue)
+void GetFogFactor(const GE3DPoint& inLocation, unsigned long inFog, float& outValue)
 {
     GERFogAttributes theAttributes;
     unsigned long theScreen = gScreenIndex;

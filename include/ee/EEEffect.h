@@ -41,25 +41,25 @@ typedef std::map<GETexture*, std::deque<EEEffect*> > EEEffectQueue;
 class GEColor;
 // 0x103634 (cdecl, in EEEffect.cpp's range): draws a ground ring of inSize at inCenter with the four corner heights
 // inHeights (EEE3DEnergyWave::DrawPass6; arguments from its pushes) (provisional name; types inferred)
-void Fn103634(const GE3DPoint& inCenter, const GEColor& inColor, float inYaw, float inSize, float* inHeights,
+void AddGroundQuad(const GE3DPoint& inCenter, const GEColor& inColor, float inYaw, float inSize, float* inHeights,
               float inBrightness, float inAlphaReference);
 // 0x10317d (cdecl, in EEEffect.cpp's range): adds a camera-facing quad of inSize at inPosition, turned by inRotation,
 // to the 2D batch 0x4e8db8 (colour scaled by inAlpha * inArg6; inAlphaReference keeps the batch's minimum); the 2D
 // effects' Virtual18 (EEE2DFireTrail) (provisional name; types inferred)
-void Fn10317D(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
+void AddGlowSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
               float inBrightness, float inAlphaReference);
-// 0x1033f1 / 0x10387b (cdecl, in EEEffect.cpp's range): the same quad as Fn10317D, flat on the ground / another batch
+// 0x1033f1 / 0x10387b (cdecl, in EEEffect.cpp's range): the same quad as AddGlowSprite, flat on the ground / another batch
 // (EEE2DWaterRipple::DrawPass5, EEE2DSmokePlume::DrawPass6) (provisional names; types inferred)
-void Fn1033F1(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
+void AddGroundSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
               float inBrightness, float inAlphaReference);
-void Fn10387B(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
+void AddBlendedSprite(const GE3DPoint& inPosition, const GEColor& inColor, float inRotation, float inSize, float inAlpha,
               float inBrightness, float inAlphaReference);
 // 0x102f3d (cdecl, in EEEffect.cpp's range): a random value in [inMinimum, inMaximum] (also declared locally by
 // EECPCombatManager.cpp; EEE2DImpact::DrawPass6's random roll) (provisional name)
-float Fn102F3D(float inMinimum, float inMaximum);
+float GetEffectRandomFloat(float inMinimum, float inMaximum);
 // 0x102f57 (cdecl, in EEEffect.cpp's range): a random integer in [inMinimum, inMaximum] (EEE2DBattlefieldAmbient's
 // effect variant pick) (provisional name)
-long Fn102F57(long inMinimum, long inMaximum);
+long GetEffectRandomLong(long inMinimum, long inMaximum);
 
 class EEEffect : public UReferenceCounter {
 public:
@@ -119,6 +119,8 @@ public:
     // 0x102759: the unit's location (its complex unit's position, else its tile centre and +0x14's +0x10 height, else
     // 0), in a function-local static (guard 0x4e8da4; EEEffect2D::CreateParts) (provisional name)
     const GE3DPoint& GetUnitLocation();
+    EEUnit* GetUnit() const { return this->mUnit; }  // inline: EEEDamagedEffect::Step 0x50225c
+    EEGraphicEffect* GetGraphicEffect() const { return this->mGraphicEffect; }  // inline: the effects' Queue tail (0x4ebfd0)
     EEGraphicObject* GetGraphicObject();    // 0x102f96: mGraphicEffect's object (0 without one) (provisional name)
     void Init();                            // 0x102ffa (the ctor's: pointers 0, tile -1/-1, mHandle = none, mIsSaved = true)
     // 0x102fa6 / 0x102fe7: Init(), then the ctors' argument stores (and the media load); EEEffect3D's 0x105441/0x10545e

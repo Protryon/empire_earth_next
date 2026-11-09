@@ -99,7 +99,8 @@ typedef enum PlatInputEventType {
     PLAT_EVENT_MOUSE_MOVE,                  // mMouse mX, mY (client) and mDeltaX, mDeltaY (raw motion when relative)
     PLAT_EVENT_MOUSE_DOWN,                  // mMouse mButton (1 left, 2 middle, 3 right, 4, 5), mClicks (2: double)
     PLAT_EVENT_MOUSE_UP,
-    PLAT_EVENT_MOUSE_WHEEL                  // mMouse mWheel: notches, positive away from the user (WHEEL_DELTA 120)
+    PLAT_EVENT_MOUSE_WHEEL,                 // mMouse mWheel: notches, positive away from the user (WHEEL_DELTA 120)
+    PLAT_EVENT_WAKE                         // PlatWindowWake: no data
 } PlatInputEventType;
 
 #define PLAT_MOD_SHIFT 0x1u
@@ -143,6 +144,9 @@ typedef struct PlatInputEvent {
 // thread; macOS requires it).
 int PlatWindowPollEvent(PlatInputEvent* outEvent);
 int PlatWindowWaitEvent(PlatInputEvent* outEvent, uint32_t inTimeoutMs);
+// Queues a PLAT_EVENT_WAKE, which ends a PlatWindowWaitEvent: callable from any thread (the WON lobby's network and
+// timer threads wake its message loop). A no-op before PlatWindowSystemStart.
+void PlatWindowWake(void);
 
 // ---- keyboard and mouse state (GetKeyState / GetAsyncKeyState, DirectInput's device state)
 int PlatKeyIsDown(uint32_t inVirtualKey);          // VK_*: held now
@@ -156,6 +160,26 @@ uint32_t PlatMouseGetState(PlatWindow* inWindow, int32_t* outX, int32_t* outY);
 int PlatMouseSetRelative(PlatWindow* inWindow, int inRelative);
 void PlatMouseWarp(PlatWindow* inWindow, int32_t inX, int32_t inY);
 void PlatCursorShow(int inShow);
+// The pointer's shape (the window system's thread only). PlatCursorSetSystem -> one of the system's cursors.
+// PlatCursorCreate -> a cursor from inWidth x inHeight pixels, each a uint32_t 0xAARRGGBB (B, G, R, A in memory on
+// a little-endian machine; the data is copied) with the hot spot at inHotX, inHotY, NULL on failure;
+// PlatCursorSet(NULL) restores the default cursor. PlatCursorDestroy frees a created cursor (not while it is set).
+typedef enum PlatSystemCursor {
+    PLAT_CURSOR_ARROW = 0,
+    PLAT_CURSOR_HAND,
+    PLAT_CURSOR_IBEAM,
+    PLAT_CURSOR_SIZE_WE,
+    PLAT_CURSOR_SIZE_NS,
+    PLAT_CURSOR_SIZE_ALL
+} PlatSystemCursor;
+void PlatCursorSetSystem(PlatSystemCursor inCursor);
+void* PlatCursorCreate(const uint32_t* inBGRA, int inWidth, int inHeight, int inHotX, int inHotY);
+void PlatCursorSet(void* inCursor);
+void PlatCursorDestroy(void* inCursor);
+
+// Opens inURL (UTF-8; "http://...", "https://...", "file://...") in the user's browser or the system's handler for
+// it -> nonzero on success
+int PlatOpenURL(const char* inURL);
 // confines the pointer to the window (ClipCursor) or frees it
 void PlatMouseConfine(PlatWindow* inWindow, int inConfine);
 

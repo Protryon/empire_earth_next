@@ -31,6 +31,7 @@ public:
     UWideString mHostGameName;              // +0x40c "Host Game Name"
     // inline: the grab scroll event copies the value to a temporary before its GetValue call (0x1d9a51)
     float GetGrabScrollSpeed() const { return this->mGrabScrollSpeed; }
+    float GetMaxNumberOfSounds() const { return this->mMaxNumberOfSounds; }  // inline (EEInitializeSounds 0x543557 copies it to a frame temp before GetMaxChannels' call)
     float GetMusicVolume() const { return this->mMusicVolume; }  // inline (the music fades compare it as a value)
     UWideString mLoadGameName;              // +0x420
     UWideString mLastQuickSave;             // +0x434

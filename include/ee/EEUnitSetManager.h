@@ -34,6 +34,7 @@ public:
     // looks inUnitType's class +0x1c8 up in mFamilies. Names are provisional
     std::set<unsigned long> mFamilies;               // +0x04
     std::set<unsigned long> mUnitTypes;              // +0x10
+    const UWideString& GetName() const { return this->mName; }  // inline (EESETSObject ctor 0x58efb7: mov eax,[eax+0x20] straight after GetSet) (provisional name)
     UWideString mName;                      // +0x1c
     EEUnitSet* mIncludedSet;                // +0x30 (Contains: all three empty -> no unit is in the set; a second set tried when this one fails)
     EEUnitSet* mExcludedSet;                // +0x34 (a unit in it is excluded)

@@ -59,16 +59,16 @@ bool EECPASGUSpaceCarrier::Retarget()
     EECPASTargetUnit* theTarget = this->ChooseTarget(false, theTile);
     if (theTarget == NULL)
         return false;
-    bool theNewTarget = this->mTarget != theTarget->mUnit;
+    bool theNewTarget = this->mTarget != theTarget->GetUnit();
     if (!theNewTarget) {
         EEUGAttackUnit* theGoal = dynamic_cast<EEUGAttackUnit*>(this->GetUnit()->GetLoadGoal());
         if (theGoal == NULL && this->GetUnit()->mGoalQueues[1].mGoals.size() > 0)
             theGoal = dynamic_cast<EEUGAttackUnit*>(this->GetUnit()->mGoalQueues[1].mGoals.back());
-        if (theGoal != NULL && theGoal->mTarget == theTarget->mUnit)
+        if (theGoal != NULL && theGoal->GetTarget() == theTarget->GetUnit())
             return false;
     }
-    this->SetTarget(theTarget->mUnit);
-    EEUGAttackUnit* theAttack = new EEUGAttackUnit(this->GetUnit(), theTarget->mUnit, true, false);
+    this->SetTarget(theTarget->GetUnit());
+    EEUGAttackUnit* theAttack = new EEUGAttackUnit(this->GetUnit(), theTarget->GetUnit(), true, false);
     this->GetUnit()->ClearGoalQueue(1);
     this->GetUnit()->SetGoal(theAttack->Clone(), 0, 1);
     unsigned long theCount = this->GetUnit()->GetNumCargoUnits();
@@ -78,7 +78,7 @@ bool EECPASGUSpaceCarrier::Retarget()
     }
     delete theAttack;   // the template the goals were cloned from
     this->GetUnit()->StartAction(kActionAirportOpen);
-    this->GetUnit()->mUnitClass->ActionChanged(this->GetUnit());
+    this->GetUnit()->GetUnitClass()->ActionChanged(this->GetUnit());
     return true;
 }
 

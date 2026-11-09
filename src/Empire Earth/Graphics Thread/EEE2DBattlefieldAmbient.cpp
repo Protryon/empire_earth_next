@@ -173,7 +173,7 @@ static EEGraphicEffect* AmbientPickVariant(EEGraphicEffect* inEffect)
         theCount = 2;
     else
         return inEffect;
-    switch (Fn102F57(1, theCount)) {
+    switch (GetEffectRandomLong(1, theCount)) {
     case 2:
         return inEffect->mLinkedEffect1;
     case 3:
@@ -300,10 +300,13 @@ long EEE2DBattlefieldAmbient::Queue(EEEffectQueue* inQueues)
     long theResult = EEEffect2D::Queue(inQueues);
     if (theResult == 0) {
         this->mDrawAge = this->mAge;
-        float theAge = this->mAge;
-        if (this->mGraphicEffect->mFlag2 && theAge < 0.1f)
-            this->mDrawSize = (theAge * 10.0f) * this->mSize;
-        else
+        if (this->mGraphicEffect->mFlag2) {
+            float theAge = this->mAge;
+            if (theAge < 0.1f)
+                this->mDrawSize = (theAge * 10.0f) * this->mSize;
+            else
+                this->mDrawSize = this->mSize;
+        } else
             this->mDrawSize = this->mSize;
         GETexture* theTexture;
         theTexture = this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mTextures[gScreenIndex] : NULL;
@@ -345,7 +348,7 @@ long EEE2DBattlefieldAmbient::DrawPass2()
     float theScale = this->mGraphicEffect->mParam1;
     float theAlpha = this->mGraphicEffect->mAlpha;
     GEColor theColor;
-    Fn1033F1(thePosition, theColor, this->mRotation, this->mDrawSize, theAlpha * theFade, theScale, theReference);
+    AddGroundSprite(thePosition, theColor, this->mRotation, this->mDrawSize, theAlpha * theFade, theScale, theReference);
     return 0;
 }
 

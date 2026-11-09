@@ -272,7 +272,7 @@ long EEUIEMGEnterScenarioEditor::ProcessEvent(UIForm* inForm, UIEntity* inEntity
         gWorld.ClearGhostUnits();
         gWorld.mGhostUnitsLock->Leave();
         NEProtocol::GetProtocol(0, theProtocol);
-        gWorld.MovePlayerToSlot(0xfe, gWorld.GetCurrentPlayer()->GetSlot(), 1, theProtocol->GetLocalAddress(gU5308A0), 0);
+        gWorld.MovePlayerToSlot(0xfe, gWorld.GetCurrentPlayer()->GetSlot(), 1, theProtocol->GetLocalAddress(gNetworkAdapter), 0);
         gPhysics->mThread->Post(0x402, NULL, NULL, true);
         theResult = gUserInterface->PostEnterScenarioEditor(gUIManager->GetInScenarioEditor());
         gUserInterface->PostPauseInformation(true);

@@ -237,7 +237,8 @@ void EEButtonObject::SetPressedBitmap(GEBitmap* inBitmap, const GERectangle& inR
     float theV;
     if (theWidth >= 256.0f) {
         theU = 40.0f / theWidth;
-        theV = 40.0f / (float)(theHeight << theDrop);
+        float theScaledHeight = (float)(theHeight << theDrop);
+        theV = 40.0f / theScaledHeight;
     } else {
         theU = (float)(this->mTexture->GetWidth() - 1) / (float)this->mTexture->GetWidth();
         theV = (float)(this->mTexture->GetHeight() - 1) / (float)this->mTexture->GetHeight();

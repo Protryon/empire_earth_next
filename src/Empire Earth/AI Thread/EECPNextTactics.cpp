@@ -149,7 +149,7 @@ static bool EECPNextRingSite(EEComputerPlayer* inPlayer, long inType, long inX, 
             continue;
         }
         theTiles.clear();
-        Fn2492C2(inX, inY, theRing, theTiles);
+        EEGetSquareRingTiles(inX, inY, theRing, theTiles);
         for (unsigned long k = 0; k < theTiles.size(); k++)
             if (theBuild->CanBuildAt(theContinent, inType, theTiles[k], theClass->GetTileSize(), true, true, inX, inY)) {
                 outTile = theTiles[k];

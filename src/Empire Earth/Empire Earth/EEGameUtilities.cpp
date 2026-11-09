@@ -195,7 +195,7 @@ void EEEnumerateDisplayDevices()
 // FUNCTION: EXE 0x5487a3
 // Starts, restarts or updates the sound of a graphic object's animation frame at a location; returns the
 // referenced sound instance now playing (the given one when nothing changes)
-SESMInstanceNode* Fn1487A3(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,
+SESMInstanceNode* PlayAnimationSound(const GE3DPoint& inLocation, EEGraphicObject* inGraphicObject, long inAnimation,
                            SESMInstanceNode* inSound, unsigned long inFrame, bool inStart)
 {
     SESMInstanceNode* theResult = inSound;
@@ -208,10 +208,10 @@ SESMInstanceNode* Fn1487A3(const GE3DPoint& inLocation, EEGraphicObject* inGraph
         EESoundObject* theSound;
         if (inFrame == inGraphicObject->mSound1Frames[inAnimation])
             theSound = inGraphicObject->mSounds1[inAnimation];
-        else if (inFrame == inGraphicObject->mSound2Frames[inAnimation])
-            theSound = inGraphicObject->mSounds2[inAnimation];
-        else
+        else if (inFrame != inGraphicObject->mSound2Frames[inAnimation])
             return theResult;
+        else
+            theSound = inGraphicObject->mSounds2[inAnimation];
         if (theSound == NULL)
             return theResult;
         if (theSound->GetSampleID() == gSoundManager->GetSampleID(inSound)) {

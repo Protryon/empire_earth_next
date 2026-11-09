@@ -1260,7 +1260,8 @@ void EEPhysics::UpdateWeather()
     URandom& theRandom = gPhysics->mRandom;
     float theElapsed = this->GetTickTime();
     gWorld.mWindYaw = ((theRandom.Generate() * 2.0f - 1.0f) * theElapsed) * kWindDrift + theAngle;
-    theTransformation.SetOrientationYPR(gWorld.mWindYaw, 0.0f, 0.0f);
+    float theYaw = gWorld.mWindYaw;
+    theTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
     theTransformation.Apply(theNorth, theWind);
     gWorld.mWindDirection = theWind;
     gWorld.mEnvironmentManager->Tick(this->mGameTime);

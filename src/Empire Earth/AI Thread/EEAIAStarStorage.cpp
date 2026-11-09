@@ -401,7 +401,8 @@ EEAIAStarNode* EEAIAStarStorage::RemoveNearestClosed(const EETileCoordinate& inT
         }
         theResult->mNext = NULL;
         theResult->mPrev = NULL;
-        this->mTileFlags[this->mWidth * theResult->mX + theResult->mY] &= ~kAStarTileClosed;
+        unsigned char* theFlags = this->mTileFlags + this->mWidth * theResult->mX + theResult->mY;
+        *theFlags &= ~kAStarTileClosed;
     }
     return theResult;
 }
@@ -464,7 +465,8 @@ EEAIAStarNode* EEAIAStarStorage::RemoveNearestOpen(const EETileCoordinate& inTil
             this->mSortedOpenTail = theResult->mPrev;
         theResult->mNext = NULL;
         theResult->mPrev = NULL;
-        this->mTileFlags[this->mWidth * theResult->mX + theResult->mY] &= ~kAStarTileOpen;
+        unsigned char* theFlags = this->mTileFlags + this->mWidth * theResult->mX + theResult->mY;
+        *theFlags &= ~kAStarTileOpen;
     }
     return theResult;
 }

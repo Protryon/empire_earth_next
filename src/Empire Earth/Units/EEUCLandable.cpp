@@ -73,7 +73,7 @@ bool EEUCLandable::ReturnToAirport(EEComplexUnit* inUnit)
     GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
     if (inUnit == NULL || inUnit->mPlayer->mAirTraffic[inUnit->mUnitClass->mAirTrafficType - 1] == 0)
         return true;
-    float theGround = inUnit->mTile != NULL ? inUnit->mTile->GetHeight() : 0.0f;
+    float theGround = inUnit->mTile != NULL ? inUnit->mTile->mHeight : 0.0f;
     inUnit->DropPath();
     theTransformation.Apply(GE3DPoint(0.0f, 3.0f, 0.0f), thePoint);
     this->AddWaypointAt(inUnit, thePoint.GetX(), thePoint.GetY(), theGround, true);
@@ -143,7 +143,7 @@ float EEUCLandable::GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocati
         theStep.SetX(theState != 0 ? -theDistance : theDistance);
         theLocation.Apply(theStep, theOffset);
         thePosition += theOffset;
-        Fn24B212(thePosition, kLandableAhead + theDistance, theTiles);
+        EEGetTilesNearPoint(thePosition, kLandableAhead + theDistance, theTiles);
     } else {
         EEGetTileLine(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY()), UMFloor(inLocation.GetX()),
                    UMFloor(inLocation.GetY()), (std::vector<U2DPoint<long> >*)&theTiles, 1, 0);
@@ -492,10 +492,10 @@ void EEUCLandable::ActionChanged(EEComplexUnit* inUnit)
     }
     case kActionRequestLanding: {
         long theResult;
-        if (inUnit->mHomeBase == NULL)
-            theResult = 9;
-        else
+        if (inUnit->mHomeBase != NULL)
             theResult = theAirTraffic->QueueRequest(inUnit->mHomeBase, inUnit, 1);
+        else
+            theResult = 9;
         if (theResult != 0) {
             EEComplexUnit* theBase = theAirTraffic->FindNearestAirport(inUnit);
             if (theBase == NULL)
@@ -1084,10 +1084,10 @@ bool EEUCLandable::IsAwayFromGoal(EEComplexUnit* inUnit)
         theTags->mPoints[0]->GetPoint(inUnit->mPhysicalModel.GetFrame(), theTransformation, theDeck);
     }
     bool theResult;
-    if (theDeck.DistanceToSquared(static_cast<EEUGLocation*>(inUnit->GetGoal())->mLocation) <= 1.0f)
-        theResult = false;
-    else
+    if (!(theDeck.DistanceToSquared(static_cast<EEUGLocation*>(inUnit->GetGoal())->mLocation) <= 1.0f))
         theResult = true;
+    else
+        theResult = false;
     return theResult;
 }
 

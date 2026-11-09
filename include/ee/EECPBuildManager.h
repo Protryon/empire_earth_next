@@ -102,7 +102,9 @@ public:
     std::vector<U2DPoint<long> > mWaterSites;  // +0x130 (CollectSiteTiles(2))
     std::vector<U2DPoint<long> > mSpaceSites;  // +0x140 (CollectSiteTiles(4))
     U2DPoint<long> mTownCenterTile;         // +0x150 (U2DPoint<long>: Load/Save call its Load/Save; the ctor zeroes it) (-10000: none) (provisional name)
+    EECPCivilizationManager* GetManager() const { return this->mManager; }
     EECPCivilizationManager* mManager;      // +0x158 (the ctor's argument)
+    EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;              // +0x15c (mManager->mPlayer)
     unsigned long mNextResourceCenter;      // +0x160 (FindProductionSite's round robin)
     unsigned long mNextBuilderCheckTime;    // +0x164

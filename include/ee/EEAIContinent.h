@@ -63,18 +63,22 @@ public:
     // +0x6c (0x208cc/0x1fa5c push_back tiles; 8-byte elements, sar 3). U2DPoint<long> (GetClosestPoints 0x1da61 is
     // EEAIArea's 0xd8fe over it, the manager's 0x22ad9 takes its elements as EETileLocation)
     std::vector<U2DPoint<long> > mShoreTiles;
+    long GetChokePointsAt(unsigned long inIndex) const { return this->mChokePoints[inIndex]; }
     std::vector<long> mChokePoints;         // +0x7c EEAIContinentManager::mChokePoints indices (push_back<long>)
     std::vector<unsigned short> mForestIDs; // +0x8c
     std::vector<unsigned short> mPathAreaIDs;  // +0x9c
     std::vector<unsigned short> mHillIDs;   // +0xac
+    unsigned short GetIDsBCAt(unsigned long inIndex) const { return this->mIDsBC[inIndex]; }
     std::vector<unsigned short> mIDsBC;     // +0xbc (0x188e0, from the path-area unit's 0x17a4b, as are the next three)
     std::vector<unsigned short> mIDsCC;     // +0xcc (0x1887f)
+    unsigned short GetIDsDCAt(unsigned long inIndex) const { return this->mIDsDC[inIndex]; }
     std::vector<unsigned short> mIDsDC;     // +0xdc (0x189a2)
     std::vector<unsigned short> mIDsEC;     // +0xec (0x18941)
     std::vector<EEAIContinent*> mNeighbors; // +0xfc the adjacent continents (the chain machine's graph edges)
     unsigned short mCounts[7];              // +0x10c (ctor body `for (i = 6; i >= 0; i--) mCounts[i] = 0;`, proven)
     unsigned char GetCategory() const { return this->mCategory; }  // inline (GetRandomContinent 0x422dc8) (provisional name)
     unsigned char mCategory;                // +0x11a kind (byte; the factory copies its +0x50 byte; compared with 1, 2, 4 at 0xabfda/0xac2b6)
+    unsigned short GetID() const { return this->mID; }
     unsigned short mID;                     // +0x11c the id (EEAIContinentManager::FindContinentID returns it)
 };
 

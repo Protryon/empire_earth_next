@@ -44,6 +44,7 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEE2DExplosion.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EEGamePreferences.h"
 
 // unit-local .rdata before the vtable (0x43fb24), loaded from memory: a named const
 const float kExplosionHeightOffset = 0.4f;
@@ -115,9 +116,12 @@ long EEE2DExplosion::Queue(EEEffectQueue* inQueues)
     long theResult = EEEffect2D::Queue(inQueues);
     if (theResult == 0) {
         for (unsigned long i = 0; i < theCount; i++)
-            this->mParts[i].mDrawFrame = this->mParts[i].mFrame;
+            this->mParts[i].SetDrawFrame((this->mParts.begin() + i)->mFrame);
         GETexture* theTexture;
-        theTexture = this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mTextures[gScreenIndex] : NULL;
+        if (this->GetGraphicEffect()->GetGraphicObject())
+            theTexture = this->GetGraphicEffect()->GetGraphicObject()->GetTexture(gGamePreferences.mSettings.GetScreenID());
+        else
+            theTexture = NULL;
         inQueues[4][theTexture].push_back(this);
     }
     return theResult;
@@ -148,7 +152,7 @@ long EEE2DExplosion::DrawPass6()
     GEModel* theModel = this->mModel;
     GEMaterial* theMaterial = theModel->GetMaterial(0);
     long theResult = 0;
-    unsigned long theScreen = gScreenIndex;
+    unsigned long theScreen = gGamePreferences.mSettings.GetScreenID();
     float theScale = this->mGraphicEffect->mSize;
     unsigned long theCount = this->mParts.size();
     if (this->mGraphicEffect->mGraphicObject)
@@ -159,13 +163,13 @@ long EEE2DExplosion::DrawPass6()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     for (unsigned long i = 0; i < theCount && theResult == 0; i++) {
         GETexture* theTexture = this->mParts[i].mGraphicObject->mTextures[0];
         theTexture->SetFrame(this->mParts[i].mDrawFrame);
         theMaterial->SetTexture(theTexture, theScreen);
         float theValue;
-        Fn11A130(this->mParts[i].mPosition, theFog, theValue);
+        GetFogFactor(this->mParts[i].mPosition, theFog, theValue);
         gRasterizer->SetAmbientColor(GEColor(theValue, theValue, theValue), theScreen);
         const GE3DPoint& thePosition = (this->mParts.begin() + i)->mPosition;
         theTransformation.SetPosition(thePosition);
@@ -248,7 +252,7 @@ void EEE2DExplosion::UpdatePart(unsigned long inIndex)
                 theChanged = true;
             else
                 theChanged = false;
-            this->SetSound(Fn1487A3(theLocation, this->mParts[0].mGraphicObject, 0, this->mSound, theFrame, theChanged));
+            this->SetSound(PlayAnimationSound(theLocation, this->mParts[0].mGraphicObject, 0, this->mSound, theFrame, theChanged));
             if (this->GetSound())
                 this->GetSound()->Dereference();
         }

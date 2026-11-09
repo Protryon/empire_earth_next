@@ -220,53 +220,53 @@ void EEUIFMGMainGroup::Open(EEUIFMainGame* inForm)
 // NEAR: the original calls sTable's vector::operator[] out of line (inline budget) and keeps theComplex in ebp
 void EEUIFMGMainGroup::ShowCommandButton(EEPlayer* inPlayer, EEUnit* inUnit, unsigned long inButton, unsigned long inControl)
 {
-    EEComplexUnit* theComplex = inUnit ? inUnit->mComplexUnit : NULL;
+    EEComplexUnit* theComplex = inUnit ? inUnit->GetComplexUnit() : NULL;
     EEButtonObject* theObject = EEButtonObject::Get(inButton);
     if (theObject == NULL)
         return;
-    EEUIFMGStatusButton* theButton = static_cast<EEUIFMGStatusButton*>(this->mOwner->GetControl(inControl));
+    EEUIFMGStatusButton* theButton = static_cast<EEUIFMGStatusButton*>(this->GetOwner()->GetControl(inControl));
     theButton->SetCommandButton(inButton);
     if (inButton == 0x1d) {
-        if (theComplex->mBehavior == EEUnitBehavior::Get(0)) {
-            theButton->SetNormalBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameBehaviorScout))->GetNormalBitmap());
-            theButton->SetPressedBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameBehaviorScout))->GetPressedBitmap());
-        } else if (theComplex->mBehavior == EEUnitBehavior::Get(1)) {
-            theButton->SetNormalBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameBehaviorStandGround))->GetNormalBitmap());
-            theButton->SetPressedBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameBehaviorStandGround))->GetPressedBitmap());
-        } else if (theComplex->mBehavior == EEUnitBehavior::Get(2)) {
-            theButton->SetNormalBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameBehaviorGuard))->GetNormalBitmap());
-            theButton->SetPressedBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameBehaviorGuard))->GetPressedBitmap());
-        } else if (theComplex->mBehavior == EEUnitBehavior::Get(5)) {
-            theButton->SetNormalBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameBehaviorAggressive))->GetNormalBitmap());
-            theButton->SetPressedBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameBehaviorAggressive))->GetPressedBitmap());
+        if (theComplex->GetBehavior() == EEUnitBehavior::Get(0)) {
+            theButton->SetNormalBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameBehaviorScout))->GetNormalBitmap());
+            theButton->SetPressedBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameBehaviorScout))->GetPressedBitmap());
+        } else if (theComplex->GetBehavior() == EEUnitBehavior::Get(1)) {
+            theButton->SetNormalBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameBehaviorStandGround))->GetNormalBitmap());
+            theButton->SetPressedBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameBehaviorStandGround))->GetPressedBitmap());
+        } else if (theComplex->GetBehavior() == EEUnitBehavior::Get(2)) {
+            theButton->SetNormalBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameBehaviorGuard))->GetNormalBitmap());
+            theButton->SetPressedBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameBehaviorGuard))->GetPressedBitmap());
+        } else if (theComplex->GetBehavior() == EEUnitBehavior::Get(5)) {
+            theButton->SetNormalBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameBehaviorAggressive))->GetNormalBitmap());
+            theButton->SetPressedBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameBehaviorAggressive))->GetPressedBitmap());
         } else
             ESVERIFY_AT(false, 415);
     } else if (inButton == 0x1e) {
-        long theFormation = inPlayer->mSelectedGroup->mFormation->mType;
+        long theFormation = inPlayer->GetSelectedGroup()->GetFormation()->GetType();
         if (theFormation == 0) {
-            theButton->SetNormalBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationShortLine))->GetNormalBitmap());
-            theButton->SetPressedBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationShortLine))->GetPressedBitmap());
+            theButton->SetNormalBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationShortLine))->GetNormalBitmap());
+            theButton->SetPressedBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationShortLine))->GetPressedBitmap());
         } else if (theFormation == 1) {
-            theButton->SetNormalBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationLongLine))->GetNormalBitmap());
-            theButton->SetPressedBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationLongLine))->GetPressedBitmap());
+            theButton->SetNormalBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationLongLine))->GetNormalBitmap());
+            theButton->SetPressedBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationLongLine))->GetPressedBitmap());
         } else if (theFormation == 2) {
-            theButton->SetNormalBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationLooseLine))->GetNormalBitmap());
-            theButton->SetPressedBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationLooseLine))->GetPressedBitmap());
+            theButton->SetNormalBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationLooseLine))->GetNormalBitmap());
+            theButton->SetPressedBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationLooseLine))->GetPressedBitmap());
         } else if (theFormation == 3) {
-            theButton->SetNormalBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationStaggeredLine))->GetNormalBitmap());
-            theButton->SetPressedBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationStaggeredLine))->GetPressedBitmap());
+            theButton->SetNormalBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationStaggeredLine))->GetNormalBitmap());
+            theButton->SetPressedBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationStaggeredLine))->GetPressedBitmap());
         } else if (theFormation == 4) {
-            theButton->SetNormalBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationDeepWedge))->GetNormalBitmap());
-            theButton->SetPressedBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationDeepWedge))->GetPressedBitmap());
+            theButton->SetNormalBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationDeepWedge))->GetNormalBitmap());
+            theButton->SetPressedBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationDeepWedge))->GetPressedBitmap());
         } else if (theFormation == 5) {
-            theButton->SetNormalBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationShallowWedge))->GetNormalBitmap());
-            theButton->SetPressedBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationShallowWedge))->GetPressedBitmap());
+            theButton->SetNormalBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationShallowWedge))->GetNormalBitmap());
+            theButton->SetPressedBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationShallowWedge))->GetPressedBitmap());
         } else if (theFormation == 6) {
-            theButton->SetNormalBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationInwardCircle))->GetNormalBitmap());
-            theButton->SetPressedBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationInwardCircle))->GetPressedBitmap());
+            theButton->SetNormalBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationInwardCircle))->GetNormalBitmap());
+            theButton->SetPressedBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationInwardCircle))->GetPressedBitmap());
         } else if (theFormation == 7) {
-            theButton->SetNormalBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationOutwardCircle))->GetNormalBitmap());
-            theButton->SetPressedBitmap(static_cast<UIButton*>(this->mOwner->GetControl(kMainGameFormationOutwardCircle))->GetPressedBitmap());
+            theButton->SetNormalBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationOutwardCircle))->GetNormalBitmap());
+            theButton->SetPressedBitmap(static_cast<UIButton*>(this->GetOwner()->GetControl(kMainGameFormationOutwardCircle))->GetPressedBitmap());
         } else
             ESVERIFY_AT(false, 462);
     }
@@ -281,7 +281,7 @@ void EEUIFMGMainGroup::ShowCommandButton(EEPlayer* inPlayer, EEUnit* inUnit, uns
     theObject->GetHotKey()->SetJustUnpressedEvent(theEvent);
     theEvent->Dereference();
     this->mOwner->AddHotKey(*theObject->GetHotKey(), 2);
-    if (this->mMode != 4)
+    if (this->GetMode() != 4)
         return;
     UIHotKey theHotKey(this->mOwner, *theObject->GetHotKey());
     theHotKey.SetModifier(kKeyShift, 0);
@@ -291,7 +291,7 @@ void EEUIFMGMainGroup::ShowCommandButton(EEPlayer* inPlayer, EEUnit* inUnit, uns
     theEvent = new EEUIEMGHotKeyStatusButton(theButton, false);
     theHotKey.SetJustUnpressedEvent(theEvent);
     theEvent->Dereference();
-    this->mOwner->AddHotKey(theHotKey, 2);
+    this->GetOwner()->AddHotKey(theHotKey, 2);
 }
 
 // FUNCTION: EXE 0x6687db
@@ -452,25 +452,25 @@ void EEUIFMGMainGroup::Update(EEUnit* inUnit)
         static_cast<EEUIFMGStatusButton*>(this->mOwner->GetControl(i))->mCount = 0;
         this->mOwner->GetControl(i)->SetDirty(true);
     }
-    if (inUnit->mHitPoints == 0 && this->mHitPoints != 0)
+    if (inUnit->GetHitPoints() == 0 && this->mHitPoints != 0)
         this->ShowCommands(inUnit);
-    else if (inUnit->mTileNode && inUnit->mPlayer == gWorld.GetCurrentPlayer()) {
-        EEComplexUnit* theComplex = inUnit->mComplexUnit;
+    else if (inUnit->GetTileNode() && inUnit->mPlayer == gWorld.GetCurrentPlayer()) {
+        EEComplexUnit* theComplex = inUnit->GetComplexUnit();
         bool theIsWorker;
-        if (theComplex->mUnitClass->mCategory == kUnitCategoryLandCitizen || theComplex->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
+        if (theComplex->GetClass()->GetCategory() == kUnitCategoryLandCitizen || theComplex->GetClass()->GetCategory() == kUnitCategoryNavalCitizen)
             theIsWorker = true;
         else
             theIsWorker = false;
-        bool theHasTimers = theComplex->mUnitClass->mUnitType == kUnitTypeAirport;
+        bool theHasTimers = theComplex->GetClass()->GetUnitType() == kUnitTypeAirport;
         unsigned long theCount = theIsWorker ? theComplex->mCitizenBuildQueue.size() : theComplex->GetBuildQueueSize();
         for (unsigned long j = 0; j < theCount; j++) {
             long theRun = 1;
             long theKey;
             unsigned long k;
             if (theIsWorker) {
-                theKey = theComplex->GetCitizenBuildTarget(j)->mUnitClass->mTechnology;
+                theKey = theComplex->GetCitizenBuildTarget(j)->GetClass()->GetTechnology();
                 for (k = j + 1; k < theCount; k++) {
-                    if (theComplex->GetCitizenBuildTarget(k)->mUnitClass->mTechnology != theKey)
+                    if (theComplex->GetCitizenBuildTarget(k)->GetClass()->GetTechnology() != theKey)
                         break;
                     j++;
                     theRun++;
@@ -495,7 +495,7 @@ void EEUIFMGMainGroup::Update(EEUnit* inUnit)
         if (theHasTimers)
             this->ShowSpecialButtons(inUnit);
         this->mStatusBox->UpdateQueuedCounts(theComplex,
-                             theComplex->mPlayer->GetResearchedImprovement(theComplex->mUnitClass->mUnitType));
+                             theComplex->GetPlayer()->GetResearchedImprovement(theComplex->GetClass()->GetUnitType()));
     }
     this->mStatusBox->Refresh(inUnit);
 }

@@ -111,7 +111,7 @@ bool EEUGExplore::FindNextTile(EEComplexUnit* inUnit)
     EECPASGFlags theFlags;
 
     std::vector<U2DPoint<long> > theTiles;
-    EEMap* theMap = gWorld.GetMap();
+    EEMap* theMap = gWorld.mMap;
     bool theFound = false;
     U2DPoint<long> theCenter;
     EEUnit* theTarget;
@@ -148,7 +148,7 @@ bool EEUGExplore::FindNextTile(EEComplexUnit* inUnit)
             this->mSearchRadius = theMaximum - theRadius;
         unsigned long theRing = this->mSearchRadius - 5 + theRadius;
         for (; !theFound && theRing < this->mSearchRadius + theRadius; ++theRing) {
-            Fn2492C2(theCenter.GetX(), theCenter.mY, theRing, theTiles);
+            EEGetSquareRingTiles(theCenter.GetX(), theCenter.mY, theRing, theTiles);
             EEAIRandomShuffle(theTiles.begin(), theTiles.end());
             for (long i = (long)theTiles.size() - 1; i >= 0 && !theFound; --i) {
                 this->mTile.mX = theTiles[i].GetX();

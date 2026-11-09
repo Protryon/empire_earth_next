@@ -195,7 +195,7 @@ bool EECPAttackGroup::PlaceInSubGroup(EEComplexUnit* inUnit)
         theResult = true;
         return theResult;
     }
-    EEPlayer* thePlayer = this->mCommander->GetCombatManager()->mIntelligence->GetRandomEnemy(this->mCommander->mPlayer);
+    EEPlayer* thePlayer = this->mCommander->GetCombatManager()->GetIntelligence()->GetRandomEnemy(this->mCommander->mPlayer);
     if (!thePlayer)
         thePlayer = inUnit->mPlayer;
     // the new sub group's task carries the target player too (original 0x454ab0: [ebp-0x90] = theTask+0x20 before
@@ -327,7 +327,7 @@ void EECPAttackGroup::AssignAirTask(EECPAttackSubGroup* inSubGroup)
         EECPCombatManager* theCombat = this->mCommander->GetCombatManager();
         theCombat->mDefenseCommander->AssignSubGroupTask(inSubGroup, theTask, this->mContinentID != 0);
     }
-    if (!theTask.mIsActive) {
+    if (!theTask.IsActive()) {
         theTask.mType = kAGTaskReturn;
         theTask.mLocation = inSubGroup->mRallyPoint;
         theTask.mIsActive = true;
@@ -362,7 +362,7 @@ void EECPAttackGroup::AssignLandTask(EECPAttackSubGroup* inSubGroup)
     }
     theCombat = this->mCommander->GetCombatManager();
     theCombat->mDefenseCommander->AssignSubGroupTask(inSubGroup, theTask, this->mContinentID != 0);
-    if (!theTask.mIsActive && this->mContinentID != 0) {
+    if (!theTask.IsActive() && this->mContinentID != 0) {
         EEAIContinent* theContinent = gContinentManager.GetContinentByID(this->mContinentID);
         // test the continent found, not the id again: the id may no longer name a continent
         if (theContinent != NULL) {
@@ -413,14 +413,24 @@ void EECPAttackGroup::AssignSeaTask(EECPAttackSubGroup* inSubGroup)
         if (gPhysics->GetRandom() <= 0.25f) {
             unsigned short theID = inSubGroup->GetMainContinent();
             theFile->GetUnits(theUnits, theID, true);
-            if (theUnits.size() == 0) {
+            if (theUnits.size() != 0) {
+                unsigned long theIndex = gPhysics->GetRandom(0L, theUnits.size() - 1);
+                if (theIndex < theUnits.size()) {
+                    theTarget.mTile.mX = theUnits[theIndex]->mTileX;
+                    theTarget.mTile.mY = theUnits[theIndex]->mTileY;
+                    theTask.mType = kAGTaskUnit;
+                    theTask.SetUnit(theUnits[theIndex]);
+                    theTask.mLocation = theTarget;
+                    theTask.mIsActive = true;
+                }
+            } else {
                 gContinentManager.GetConnectedIDs(theIDs, theID);
                 EEAIContinent* theContinent;
                 long i = theIDs.size();
                 do {
                     if (--i < 0)
                         goto ranged;
-                    theContinent = gContinentManager.mContinents[*(theIDs.begin() + i)];
+                    theContinent = gContinentManager.GetContinentFromID(*(theIDs.begin() + i));
                 } while (!theContinent || theContinent->mCategory != kContinentCategoryWater);
                 theFile->GetUnits(theUnits, theContinent->mID, true);
                 if (theUnits.size() > 0) {
@@ -433,16 +443,6 @@ void EECPAttackGroup::AssignSeaTask(EECPAttackSubGroup* inSubGroup)
                         theTask.mLocation = theTarget;
                         theTask.mIsActive = true;
                     }
-                }
-            } else {
-                unsigned long theIndex = gPhysics->GetRandom(0L, theUnits.size() - 1);
-                if (theIndex < theUnits.size()) {
-                    theTarget.mTile.mX = theUnits[theIndex]->mTileX;
-                    theTarget.mTile.mY = theUnits[theIndex]->mTileY;
-                    theTask.mType = kAGTaskUnit;
-                    theTask.SetUnit(theUnits[theIndex]);
-                    theTask.mLocation = theTarget;
-                    theTask.mIsActive = true;
                 }
             }
         }
@@ -484,7 +484,7 @@ ranged:
             }
         }
     }
-    if (!theTask.mIsActive) {
+    if (!theTask.IsActive()) {
         theTask.mType = kAGTaskReturn;
         theTask.mLocation = inSubGroup->mRallyPoint;
         theTask.mIsActive = true;
@@ -508,8 +508,8 @@ void EECPAttackGroup::AssignSpaceTask(EECPAttackSubGroup* inSubGroup)
     EECPILocation theFrom;
     EECPILocation theTarget;
     EECPAGTask theTask;
-    EECPIntelligencePlayerFile* theFile = this->mCommander->GetIntelligence()->GetFile(this->mTask.GetPlayer());
-    theTask.mPlayer = this->mTask.mPlayer;
+    EECPIntelligencePlayerFile* theFile = this->GetCommander()->GetIntelligence()->GetFile(this->mTask.GetPlayer());
+    theTask.mPlayer = this->mTask.GetPlayer();
     inSubGroup->GetLocation(theFrom);
     bool theFound = this->FindSpaceTarget(inSubGroup, theFrom, theTarget);
     if (theFound) {
@@ -517,11 +517,21 @@ void EECPAttackGroup::AssignSpaceTask(EECPAttackSubGroup* inSubGroup)
         theTask.mLocation = theTarget;
         theTask.mIsActive = true;
     }
-    if (!theTask.mIsActive) {
+    if (!theTask.GetIsActive()) {
         if (gPhysics->GetRandom() <= 0.25f) {
             unsigned short theID = inSubGroup->GetMainContinent();
             theFile->GetUnits(theUnits, theID, false);
-            if (theUnits.size() == 0) {
+            if (theUnits.size() != 0) {
+                unsigned long theIndex = gPhysics->GetRandom(0L, theUnits.size() - 1);
+                if (theIndex < theUnits.size()) {
+                    theTarget.mTile.mX = theUnits[theIndex]->mTileX;
+                    theTarget.mTile.mY = theUnits[theIndex]->mTileY;
+                    theTask.mType = kAGTaskUnit;
+                    theTask.SetUnit(theUnits[theIndex]);
+                    theTask.mLocation = theTarget;
+                    theTask.mIsActive = true;
+                }
+            } else {
                 gContinentManager.GetConnectedIDs(theIDs, theID);
                 EEAIContinent* theContinent;
                 long i = theIDs.size();
@@ -529,8 +539,8 @@ void EECPAttackGroup::AssignSpaceTask(EECPAttackSubGroup* inSubGroup)
                     if (--i < 0)
                         goto ranged;
                     theContinent = gContinentManager.mContinents[theIDs[i]];
-                } while (!theContinent || theContinent->mCategory != kContinentCategorySpace);
-                theFile->GetUnits(theUnits, theContinent->mID, false);
+                } while (!theContinent || theContinent->GetCategory() != kContinentCategorySpace);
+                theFile->GetUnits(theUnits, theContinent->GetID(), false);
                 if (theUnits.size() > 0) {
                     unsigned long theIndex = gPhysics->GetRandom(0L, theUnits.size() - 1);
                     if (theIndex < theUnits.size()) {
@@ -542,34 +552,24 @@ void EECPAttackGroup::AssignSpaceTask(EECPAttackSubGroup* inSubGroup)
                         theTask.mIsActive = true;
                     }
                 }
-            } else {
-                unsigned long theIndex = gPhysics->GetRandom(0L, theUnits.size() - 1);
-                if (theIndex < theUnits.size()) {
-                    theTarget.mTile.mX = theUnits[theIndex]->mTileX;
-                    theTarget.mTile.mY = theUnits[theIndex]->mTileY;
-                    theTask.mType = kAGTaskUnit;
-                    theTask.SetUnit(theUnits[theIndex]);
-                    theTask.mLocation = theTarget;
-                    theTask.mIsActive = true;
-                }
             }
         }
     }
 ranged:
-    if (!theTask.mIsActive && gPhysics->GetRandom() <= 1.0f) {
+    if (!theTask.GetIsActive() && gPhysics->GetRandom() <= 1.0f) {
         unsigned short theID = inSubGroup->GetMainContinent();
-        if (this->mCommander->GetCombatManager()->mDefendTasks.size() > 0) {
+        if (this->GetCommander()->GetCombatManager()->mDefendTasks.size() > 0) {
             float theChance = 0.9f;
-            if (0.9f <= this->mCommander->GetCombatManager()->mDefendTasks.size() * 0.05f + 0.5f)
-                theChance = this->mCommander->GetCombatManager()->mDefendTasks.size() * 0.05f + 0.5f;
+            if (0.9f <= this->GetCommander()->GetCombatManager()->mDefendTasks.size() * 0.05f + 0.5f)
+                theChance = this->GetCommander()->GetCombatManager()->mDefendTasks.size() * 0.05f + 0.5f;
             if (gPhysics->mRandom.Generate() < theChance)
-                theFound = theTask.mIsActive = this->mCommander->GetCombatManager()->ChooseTask(theTask, false, true, false, theID);
+                theFound = theTask.mIsActive = this->GetCommander()->GetCombatManager()->ChooseTask(theTask, false, true, false, theID);
         }
         if (!theFound) {
             EEAIContinent* theContinent = gContinentManager.GetContinentByID(theID);
             if (theContinent) {
-                if (theContinent->mCategory == kContinentCategorySpace) {
-                    theTarget.mSerial = theContinent->mSerial;
+                if (theContinent->GetCategory() == kContinentCategorySpace) {
+                    theTarget.mSerial = theContinent->GetSerial();
                     theTarget.mType = kAIAreaContinent;
                     theTarget.mTile = theContinent->GetRandomPoint();
                     theTask.mType = kAGTaskLocation;
@@ -579,8 +579,8 @@ ranged:
                     gContinentManager.GetConnectedIDs(theIDs, theID);
                     for (long i = theIDs.size() - 1; i >= 0; i--) {
                         EEAIContinent* theOther = gContinentManager.GetContinentByID(theIDs[i]);
-                        if (theOther && theOther->mCategory == kContinentCategorySpace) {
-                            theTarget.mSerial = theOther->mSerial;
+                        if (theOther && theOther->GetCategory() == kContinentCategorySpace) {
+                            theTarget.mSerial = theOther->GetSerial();
                             theTarget.mType = kAIAreaContinent;
                             theTarget.mTile = theOther->GetRandomPoint();
                             theTask.mType = kAGTaskLocation;
@@ -592,12 +592,12 @@ ranged:
             }
         }
     }
-    if (!theTask.mIsActive) {
+    if (!theTask.GetIsActive()) {
         theTask.mType = kAGTaskReturn;
         theTask.mLocation = inSubGroup->mRallyPoint;
         theTask.mIsActive = true;
     }
-    if (!theTask.mIsActive) {
+    if (!theTask.GetIsActive()) {
         theTask.mType = kAGTaskReturn;
         theTask.mLocation = EECPILocation(inSubGroup->GetPosition());
         theTask.mIsActive = true;
@@ -669,19 +669,19 @@ void EECPAttackGroup::MakeSubGroups(EECPUnitSelectionGroup& inGroup, std::vector
     }
     for (long i = inGroup.mUnitIDs.size() - 1; i >= 0; i--) {
         EEUnit* theUnit = gWorld.GetUnit(inGroup.mUnitIDs[i]);
-        if (!theUnit || !theUnit->mTileNode)
+        if (!theUnit || !theUnit->GetTileNode())
             continue;
-        theKind = this->GetSubGroupKind(theUnit->mUnitClass);
+        theKind = this->GetSubGroupKind(theUnit->GetUnitClass());
         theIt = theKinds.find(theKind);
         if (theIt == theKinds.end()) {
             std::pair<EECPAGKindMap::iterator, bool> theResult = theKinds.insert(std::make_pair(theKind,
                 std::pair<std::vector<long>, std::vector<long> >(std::vector<long>(), std::vector<long>())));
             if (theResult.second == true) {
                 theIt = theResult.first;
-                theIt->second.second.push_back(theUnit->mUnitID);
+                theIt->second.second.push_back(theUnit->GetUnitID());
             }
         } else
-            theIt->second.second.push_back(theUnit->mUnitID);
+            theIt->second.second.push_back(theUnit->GetUnitID());
     }
     for (long j = inGroup.mSelected.size() - 1; j >= 0; j--) {
         if (!gUnitClassTable[inGroup.mSelected[j]])
@@ -737,14 +737,14 @@ void EECPAttackGroup::MakeSubGroups(EECPUnitSelectionGroup& inGroup, std::vector
             theSubGroup = new EECPASGSpaceFighter(this, kASGKindSpaceFighter);
             break;
         }
-        switch (inGroup.mStrategy->mKind) {
+        switch (inGroup.GetStrategy()->GetKind()) {
         case 0:
         case 4:
-            theSubGroup->mMission = 2;
+            theSubGroup->SetMission(2);
             break;
         case 1:
         case 5:
-            theSubGroup->mMission = 1;
+            theSubGroup->SetMission(1);
             break;
         }
         theSubGroup->RequestUnits(theIt->second.first, theIt->second.second, inGroup.mStrategy->mContinentID,
@@ -1163,7 +1163,10 @@ bool EECPAttackGroup::FindLandTarget(EECPAttackSubGroup* inSubGroup, EECPILocati
     if (this->mContinentID == 0 && theFrom.IsValid()) {
         this->GetTargetLocations(theTargets);
         if (theTargets.size() > 0) {
-            if (inSubGroup) {
+            if (!(inSubGroup)) {
+                outTo = (theTargets[0]);
+                theResult = true;
+            } else {
                 for (long i = theTargets.size() - 1; i >= 0; i--) {
                     float theScore = theScorer(theTargets[i]);
                     theScores.insert(std::make_pair(theScore, theTargets[i]));
@@ -1175,9 +1178,6 @@ bool EECPAttackGroup::FindLandTarget(EECPAttackSubGroup* inSubGroup, EECPILocati
                     theResult = true;
                     break;
                 }
-            } else {
-                outTo = (theTargets[0]);
-                theResult = true;
             }
         }
     }
@@ -1340,7 +1340,7 @@ long EECPAttackGroup::Restore(unsigned long inMajorVersion, unsigned long inMino
     unsigned long i = 0;
     if (theResult != 0)
         return theResult;
-    bool theHasPlayer = this->mTask.mPlayer != NULL;
+    bool theHasPlayer = this->mTask.GetPlayer() != NULL;
     theResult = 0;
     for (; i < this->mSubGroups.size(); i++)
         if (theResult == 0)
@@ -1355,7 +1355,7 @@ long EECPAttackGroup::Restore(unsigned long inMajorVersion, unsigned long inMino
     }
     unsigned long j = 0;
     while (j < this->mSubGroups.size()) {
-        if (!theHasPlayer || this->mSubGroups[j]->GetNumUnits() == 0 && this->mSubGroups[j]->mRequest == NULL) {
+        if (!theHasPlayer || this->mSubGroups[j]->GetNumUnits() == 0 && this->mSubGroups[j]->GetRequest() == NULL) {
             long theCount = this->mSubGroups.size();
             this->RemoveSubGroup(this->mSubGroups[j]);
             if (theCount != (long)this->mSubGroups.size()) {
@@ -1404,16 +1404,16 @@ EECPASGTransport* EECPAttackGroup::FindLandTransport(EECPASGLand* inLand)
     long theAirNeed = 0;
     long theSpaceNeed = 0;
     theGroup.mPlayer = this->mCommander->mPlayer;
-    theGroup.mTarget = this->mTask.mPlayer;
+    theGroup.mTarget = this->mTask.GetPlayer();
     unsigned short theContinentID = 0;
     long theCapacity = 0;
     if (theLand) {
         EEAIContinent* theContinent =
             gContinentManager.GetContinentAt(theLand->mPickupLocation.mTile.mX, theLand->mPickupLocation.mTile.mY);
         theLand->GetTransportNeeds(theNeedA, theSeaNeed, theAirNeed, theSpaceNeed);
-        EEMap* theMap = gWorld.mMap;
+        EEMap* theMap = gWorld.GetMap();
         if (theMap->mTerrainMesh.GetIsSpaceMap() && this->mCommander->mPlayer->GetTechTree()->mCurrentEpoch >= kTechEpochSpace &&
-            theSpaceNeed > 0 && (theContinent == NULL || theContinent->mCategory != kContinentCategoryCliff)) {
+            theSpaceNeed > 0 && (theContinent == NULL || theContinent->GetCategory() != kContinentCategoryCliff)) {
             theStrategy.Reset();
             long theClass = this->mCommander->mPlayer->mCivilizationManager->GetTransportClass(false, false, true);
             if (theClass && gUnitClassTable[theClass] && (theCapacity = gUnitClassTable[theClass]->mTransportCapacity) > 0) {
@@ -1443,9 +1443,9 @@ EECPASGTransport* EECPAttackGroup::FindLandTransport(EECPASGLand* inLand)
                     if (theTotal > 0 && theSpaceNeed > 0 && theTotal < theSpaceNeed &&
                         (float)theTotal / theSpaceNeed < 1.0f)
                         theGroup.mSelected.push_back(*theGroup.mSelected.begin());
-                    if ((theLand->mEmbarkTile.mX || theLand->mEmbarkTile.mY) && (theLand->mLandingTile.mX || theLand->mLandingTile.mY)) {
-                        unsigned short theFirst = gContinentManager.GetContinentID(theLand->mEmbarkTile.mX, theLand->mEmbarkTile.mY);
-                        unsigned short theSecond = gContinentManager.GetContinentID(theLand->mLandingTile.mX, theLand->mLandingTile.mY);
+                    if ((theLand->mEmbarkTile.GetX() || theLand->mEmbarkTile.GetY()) && (theLand->mLandingTile.GetX() || theLand->mLandingTile.GetY())) {
+                        unsigned short theFirst = gContinentManager.GetContinentID(theLand->mEmbarkTile.GetX(), theLand->mEmbarkTile.GetY());
+                        unsigned short theSecond = gContinentManager.GetContinentID(theLand->mLandingTile.GetX(), theLand->mLandingTile.GetY());
                         EEAIFOContinentScreenContinentsShareAdjacentOceanContinentID theScreen(theFirst, theSecond, true);
                         gContinentManager.GetAdjacentContinents(theFirst, theSecond, theAdjacent, &theScreen);
                         if (theAdjacent.size() > 0)
@@ -1453,8 +1453,8 @@ EECPASGTransport* EECPAttackGroup::FindLandTransport(EECPASGLand* inLand)
                     }
                     for (i = theGroup.mUnitIDs.size() - 1; i >= 0; i--) {
                         EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(theGroup.mUnitIDs[i]));
-                        if (theUnit && (theUnit->mUnitClass->mDomains & kMovementLand)) {
-                            theUnitIDs.push_back(theUnit->mUnitID);
+                        if (theUnit && (theUnit->GetClass()->GetDomains() & kMovementLand)) {
+                            theUnitIDs.push_back(theUnit->GetUnitID());
                             theGroup.mUnitIDs.erase(theGroup.mUnitIDs.begin() + i);
                         }
                     }
@@ -1471,7 +1471,7 @@ EECPASGTransport* EECPAttackGroup::FindLandTransport(EECPASGLand* inLand)
             if (theCarriers == NULL || theCarriers->size() == 0) {
                 long theCarrierClass = this->mCommander->mPlayer->mCivilizationManager->ChooseTransportClass();
                 theCarrier = theCarrierClass && gUnitClassTable[theCarrierClass] &&
-                             (gUnitClassTable[theCarrierClass]->mDomains & kMovementAir);
+                             (gUnitClassTable[theCarrierClass]->GetDomains() & kMovementAir);
             }
             if (theCarrier) {
                 theStrategy.Reset();
@@ -1501,8 +1501,8 @@ EECPASGTransport* EECPAttackGroup::FindLandTransport(EECPASGLand* inLand)
                             theGroup.mSelected.push_back(*theGroup.mSelected.begin());
                         for (i = theGroup.mUnitIDs.size() - 1; i >= 0; i--) {
                             EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(theGroup.mUnitIDs[i]));
-                            if (theUnit && (theUnit->mUnitClass->mDomains & kMovementLand)) {
-                                theUnitIDs.push_back(theUnit->mUnitID);
+                            if (theUnit && (theUnit->GetClass()->GetDomains() & kMovementLand)) {
+                                theUnitIDs.push_back(theUnit->GetUnitID());
                                 theGroup.mUnitIDs.erase(theGroup.mUnitIDs.begin() + i);
                             }
                         }
@@ -1514,7 +1514,7 @@ EECPASGTransport* EECPAttackGroup::FindLandTransport(EECPASGLand* inLand)
                 }
             }
         }
-        if (theSeaNeed > 0 && gDCGameSpeed > 0 && theSubGroup == NULL && (theContinent == NULL || theContinent->mCategory != kContinentCategoryCliff)) {
+        if (theSeaNeed > 0 && gDCGameSpeed > 0 && theSubGroup == NULL && (theContinent == NULL || theContinent->GetCategory() != kContinentCategoryCliff)) {
             theStrategy.Reset();
             long theClass = this->mCommander->mPlayer->mCivilizationManager->GetTransportClass(true, false, false);
             if (theClass && gUnitClassTable[theClass] && (theCapacity = gUnitClassTable[theClass]->mTransportCapacity) > 0) {
@@ -1543,9 +1543,9 @@ EECPASGTransport* EECPAttackGroup::FindLandTransport(EECPASGLand* inLand)
                     }
                     if (theTotal > 0 && theSeaNeed > 0 && theTotal < theSeaNeed && (float)theTotal / theSeaNeed < 1.0f)
                         theGroup.mSelected.push_back(*theGroup.mSelected.begin());
-                    if ((theLand->mEmbarkTile.mX || theLand->mEmbarkTile.mY) && (theLand->mLandingTile.mX || theLand->mLandingTile.mY)) {
-                        unsigned short theFirst = gContinentManager.GetContinentID(theLand->mEmbarkTile.mX, theLand->mEmbarkTile.mY);
-                        unsigned short theSecond = gContinentManager.GetContinentID(theLand->mLandingTile.mX, theLand->mLandingTile.mY);
+                    if ((theLand->mEmbarkTile.GetX() || theLand->mEmbarkTile.GetY()) && (theLand->mLandingTile.GetX() || theLand->mLandingTile.GetY())) {
+                        unsigned short theFirst = gContinentManager.GetContinentID(theLand->mEmbarkTile.GetX(), theLand->mEmbarkTile.GetY());
+                        unsigned short theSecond = gContinentManager.GetContinentID(theLand->mLandingTile.GetX(), theLand->mLandingTile.GetY());
                         EEAIFOContinentScreenContinentsShareAdjacentOceanContinentID theScreen(theFirst, theSecond, false);
                         gContinentManager.GetAdjacentContinents(theFirst, theSecond, theAdjacent, &theScreen);
                         if (theAdjacent.size() != 0)
@@ -1553,8 +1553,8 @@ EECPASGTransport* EECPAttackGroup::FindLandTransport(EECPASGLand* inLand)
                     }
                     for (i = theGroup.mUnitIDs.size() - 1; i >= 0; i--) {
                         EEUnit* theUnit = static_cast<EEUnit*>(gWorld.GetUnit(theGroup.mUnitIDs[i]));
-                        if (theUnit && (theUnit->mUnitClass->mDomains & kMovementLand)) {
-                            theUnitIDs.push_back(theUnit->mUnitID);
+                        if (theUnit && (theUnit->GetClass()->GetDomains() & kMovementLand)) {
+                            theUnitIDs.push_back(theUnit->GetUnitID());
                             theGroup.mUnitIDs.erase(theGroup.mUnitIDs.begin() + i);
                         }
                     }
@@ -1582,10 +1582,8 @@ EECPASGTransport* EECPAttackGroup::FindLandTransport(EECPASGLand* inLand)
 // category 4 (space) when mOcean (the space transport path), else 2 (water)
 bool EEAIFOContinentScreenContinentsShareAdjacentOceanContinentID::Test(unsigned short inID)
 {
-    bool theResult = false;
-    if (inID == this->mContinent1 || inID == this->mContinent2)
-        theResult = true;
-    else {
+    bool theResult = inID == this->mContinent1 || inID == this->mContinent2;
+    if (!theResult) {
         const std::vector<EEAIContinent*>& theContinents = gContinentManager.mContinents;
         EEAIContinent* theContinent = theContinents[inID];
         unsigned char theKind = this->mOcean ? 4 : 2;
@@ -1780,9 +1778,9 @@ void EECPAttackGroup::GiveImprovements(EECPUnitSelectionGroup& inGroup)
         EEUnit* theUnit = gWorld.GetUnit(inGroup.mUnitIDs[i]);
         if (!theUnit)
             continue;
-        long theClass = theUnit->mUnitClass->GetUnitType();
+        long theClass = theUnit->GetClass()->GetUnitType();
         if (std::find(theClasses.begin(), theClasses.end(), theClass) == theClasses.end())   // the type list (was the empty improvement list)
-            theClasses.push_back(theUnit->mUnitClass->GetUnitType());
+            theClasses.push_back(theUnit->GetClass()->GetUnitType());
     }
     EEAIRandomShuffle(theClasses.begin(), theClasses.end());
     for (unsigned long j = 0; j < theNumClasses; j++) {

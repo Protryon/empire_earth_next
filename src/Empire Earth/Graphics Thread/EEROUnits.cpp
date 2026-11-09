@@ -1,6 +1,6 @@
 // C:\EEX\Empire Earth\Graphics Thread\EEROUnits.cpp (__FILE__ 0x4be760). The units' render object (vtable 0x441bbc):
 // 0x114296..0x118741 (the player-colour key and eleven colour constants' init chains, ctor, ??_G, dtor, Virtual00,
-// the ring/bar/model passes, the labels, Virtual08, Virtual0C, the media release, the screen projection Fn118676);
+// the ring/bar/model passes, the labels, Virtual08, Virtual0C, the media release, the screen projection GetScreenPoint);
 // EEROUserInterface.cpp's init chain starts at 0x118741. Unit flags: the exe's module set.
 // The passes are EEROUnits members; LoadMedia 0x116a97's asserts carry their original __LINE__ 1823/1824.
 #include <windows.h>
@@ -61,7 +61,7 @@ extern bool gUnitPanelActive;               // 0x5297a0 (EEROUserInterface.cpp)
 extern GEFont* gU531994;                    // 0x531994 (the labels' default font; before gFontTahoma10; provisional name)
 // 0x4e5b98: an empty string (EEHumanPlayer's ctors assign it too); zero bytes in the original's initialised .data.
 // Size: one dword (the next named datum is 8 bytes on, 0x4e5ba0; the dword between is unreferenced)
-char gU4E5B98[4] = "";
+char gEmptyString[4] = "";
 extern EERenderUnit* gU529044;              // 0x529044 (the unit with the debug label; EERenderObject.cpp; provisional name)
 extern UWideString gU529030;                // 0x529030 (that label; EERenderObject.cpp; provisional name)
 
@@ -196,7 +196,7 @@ void EEROUnits::DrawSelectionRings()
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetCulling(kCullNone);
-    Fn10F7C8();
+    SetWhiteLighting();
     gRasterizer->SetAlphaTestingRefValue(0.0f, theScreen);
     for (unsigned long i = 0; i < EERenderLists::sInstance.mSelectedUnits.size(); i++) {
         EERenderUnit* theUnit = EERenderLists::sInstance.mSelectedUnits[i];
@@ -219,7 +219,7 @@ void EEROUnits::DrawRings()
     unsigned long theScreen = gScreenIndex;
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetCulling(kCullNone);
-    Fn10F7C8();
+    SetWhiteLighting();
     theTransformation.SetOrientationYPR(gRenderEnvironment.mCameraYaw, 0.0f, 0.0f);
     theIterator = EERenderLists::sInstance.mUnits0.begin();
     while (theIterator != EERenderLists::sInstance.mUnits0.end()) {
@@ -272,7 +272,7 @@ void EEROUnits::DrawBar(EERenderUnit* inUnit, const GEColor& inColor, const GECo
     theOffset.SetY(inUnit->mSource->mBar.GetY() * inUnit->mScale);
     theOffset.SetZ(inUnit->mSource->mBar.GetZ() * inUnit->mScale);
     inUnit->mTransformation.Apply(theOffset, theLocation);
-    Fn118676(theLocation, theScreenPoint);
+    GetScreenPoint(theLocation, theScreenPoint);
     theScreenPoint.SetX(theScreenPoint.GetX() - sBarWidth / 2);
     theScreenPoint.SetY(theScreenPoint.GetY() - inRow * sBarStep);
     theScreenPoint.SetX((float)UMFloor(theScreenPoint.GetX()));
@@ -360,6 +360,8 @@ void EEROUnits::DrawPlacement(EERenderUnitRecord& inRecord)
     long theX = inRecord.mTileX;
     long theY = inRecord.mTileY;
     unsigned long theLineCount = 0;
+    float theLineX;
+    float theLineY;
     bool theRows[12][12];
     bool theColumns[12][12];
     memset(theRows, 0, sizeof(theRows));
@@ -367,7 +369,7 @@ void EEROUnits::DrawPlacement(EERenderUnitRecord& inRecord)
     inRecord.mUnit.mOpacity = 1.0f;
     if (inRecord.mUnit.mScale != 0.0f) {
         gRasterizer->SetShadingColorSource(0, gScreenIndex);
-        Fn10FA01();
+        SetUnitLighting();
         if (inRecord.mUnit.mCanPlace) {
             this->DrawUnitModel(&inRecord.mUnit);
         } else {
@@ -392,8 +394,8 @@ void EEROUnits::DrawPlacement(EERenderUnitRecord& inRecord)
     }
     if (!inRecord.mUnit.mInfo->IsLandBuilding())
         return;
-    Fn10F7C8();
-    Fn10F6C7();
+    SetWhiteLighting();
+    SetFogOff();
     gRasterizer->SetShadingColorSource(1, gScreenIndex);
     gU4E8F08.SetDepthRange(0.0f, 0.0f);
     gRasterizer->SetViewport(gU4E8F08, theScreen);
@@ -408,43 +410,40 @@ void EEROUnits::DrawPlacement(EERenderUnitRecord& inRecord)
     float theLeft = (float)theX - theHalf;
     float theTop = (float)theY - theHalf;
     theEnd.SetU(gU4E9330 + 3.0f);
-    long i;
     long j;
-    for (i = 0; i <= theSize; i++) {
+    for (theX = 0; theX <= theSize; theX++) {
         for (j = 0; j <= theSize; j++) {
-            float theLineX;
-            float theLineY;
-            if ((i == 0 || i == theSize) && j != theSize) {
+            if ((theX == 0 || theX == theSize) && j != theSize) {
                 sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
                 sLines[theLineCount].SetColor(gBarColor);
                 thePoint.SetX(theLineX = j + theLeft);
-                thePoint.SetY(theLineY = i + theTop);
-                thePoint.SetZ(inRecord.mHeights[j][i]);
-                Fn118676(thePoint, theScreenPoint);
+                thePoint.SetY(theLineY = theX + theTop);
+                thePoint.SetZ(inRecord.mHeights[j][theX]);
+                GetScreenPoint(thePoint, theScreenPoint);
                 sLines[theLineCount].SetStartPoint(theScreenPoint);
                 thePoint.SetX(theLineX + 1.0f);
                 thePoint.SetY(theLineY);
-                thePoint.SetZ(inRecord.mHeights[j + 1][i]);
-                Fn118676(thePoint, theScreenPoint);
+                thePoint.SetZ(inRecord.mHeights[j + 1][theX]);
+                GetScreenPoint(thePoint, theScreenPoint);
                 sLines[theLineCount].SetEndPoint(theScreenPoint);
                 if (++theLineCount == 0x40) {
                     gRasterizer->Draw(sLines, theLineCount, theScreen);
                     theLineCount = 0;
                 }
             }
-            if ((j != 0 && j != theSize) || i == theSize)
+            if ((j != 0 && j != theSize) || theX == theSize)
                 continue;
             sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
             sLines[theLineCount].SetColor(gBarColor);
             thePoint.SetX(theLineX = j + theLeft);
-            thePoint.SetY(theLineY = i + theTop);
-            thePoint.SetZ(inRecord.mHeights[j][i]);
-            Fn118676(thePoint, theScreenPoint);
+            thePoint.SetY(theLineY = theX + theTop);
+            thePoint.SetZ(inRecord.mHeights[j][theX]);
+            GetScreenPoint(thePoint, theScreenPoint);
             sLines[theLineCount].SetStartPoint(theScreenPoint);
             thePoint.SetX(theLineX);
             thePoint.SetY(theLineY + 1.0f);
-            thePoint.SetZ(inRecord.mHeights[j][i + 1]);
-            Fn118676(thePoint, theScreenPoint);
+            thePoint.SetZ(inRecord.mHeights[j][theX + 1]);
+            GetScreenPoint(thePoint, theScreenPoint);
             sLines[theLineCount].SetEndPoint(theScreenPoint);
             if (++theLineCount == 0x40) {
                 gRasterizer->Draw(sLines, theLineCount, theScreen);
@@ -452,51 +451,49 @@ void EEROUnits::DrawPlacement(EERenderUnitRecord& inRecord)
             }
         }
     }
-    for (i = 0; i < theSize; i++) {
+    for (theX = 0; theX < theSize; theX++) {
         for (j = 0; j < theSize; j++) {
-            if (inRecord.mCells[j][i])
+            if (inRecord.mCells[j][theX])
                 continue;
-            theRows[j][i] ^= 1;
-            theRows[j][i + 1] ^= 1;
-            theColumns[j][i] ^= 1;
-            theColumns[j + 1][i] ^= 1;
+            theRows[j][theX] ^= 1;
+            theRows[j][theX + 1] ^= 1;
+            theColumns[j][theX] ^= 1;
+            theColumns[j + 1][theX] ^= 1;
         }
     }
-    for (i = 0; i <= theSize; i++) {
+    for (theX = 0; theX <= theSize; theX++) {
         for (j = 0; j <= theSize; j++) {
-            float theLineX;
-            float theLineY;
-            if (theRows[j][i] && j != theSize) {
+            if (theRows[j][theX] && j != theSize) {
                 sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
                 sLines[theLineCount].SetColor(gBarBackColor);
                 thePoint.SetX(theLineX = j + theLeft);
-                thePoint.SetY(theLineY = i + theTop);
-                thePoint.SetZ(inRecord.mHeights[j][i]);
-                Fn118676(thePoint, theScreenPoint);
+                thePoint.SetY(theLineY = theX + theTop);
+                thePoint.SetZ(inRecord.mHeights[j][theX]);
+                GetScreenPoint(thePoint, theScreenPoint);
                 sLines[theLineCount].SetStartPoint(theScreenPoint);
                 thePoint.SetX(theLineX + 1.0f);
                 thePoint.SetY(theLineY);
-                thePoint.SetZ(inRecord.mHeights[j + 1][i]);
-                Fn118676(thePoint, theScreenPoint);
+                thePoint.SetZ(inRecord.mHeights[j + 1][theX]);
+                GetScreenPoint(thePoint, theScreenPoint);
                 sLines[theLineCount].SetEndPoint(theScreenPoint);
                 if (++theLineCount == 0x40) {
                     gRasterizer->Draw(sLines, theLineCount, theScreen);
                     theLineCount = 0;
                 }
             }
-            if (!theColumns[j][i] || i == theSize)
+            if (!theColumns[j][theX] || theX == theSize)
                 continue;
             sLines[theLineCount].SetTextureCoordinates(theStart, theEnd);
             sLines[theLineCount].SetColor(gBarBackColor);
             thePoint.SetX(theLineX = j + theLeft);
-            thePoint.SetY(theLineY = i + theTop);
-            thePoint.SetZ(inRecord.mHeights[j][i]);
-            Fn118676(thePoint, theScreenPoint);
+            thePoint.SetY(theLineY = theX + theTop);
+            thePoint.SetZ(inRecord.mHeights[j][theX]);
+            GetScreenPoint(thePoint, theScreenPoint);
             sLines[theLineCount].SetStartPoint(theScreenPoint);
             thePoint.SetX(theLineX);
             thePoint.SetY(theLineY + 1.0f);
-            thePoint.SetZ(inRecord.mHeights[j][i + 1]);
-            Fn118676(thePoint, theScreenPoint);
+            thePoint.SetZ(inRecord.mHeights[j][theX + 1]);
+            GetScreenPoint(thePoint, theScreenPoint);
             sLines[theLineCount].SetEndPoint(theScreenPoint);
             if (++theLineCount == 0x40) {
                 gRasterizer->Draw(sLines, theLineCount, theScreen);
@@ -522,7 +519,7 @@ void EEROUnits::DrawSelection()
     unsigned long i;
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetCulling(kCullNone);
-    Fn10F7C8();
+    SetWhiteLighting();
     gRasterizer->SetAlphaTestingRefValue(0.0f, theScreen);
     for (i = 0; i < EERenderLists::sInstance.mSelectedUnits.size(); i++) {
         EERenderUnit* theUnit = EERenderLists::sInstance.mSelectedUnits[i];
@@ -545,9 +542,10 @@ void EEROUnits::DrawSelection()
     for (theIterator = EERenderLists::sInstance.mUnits0.begin();
          theIterator != EERenderLists::sInstance.mUnits0.end(); theIterator++) {
         EERenderUnit* theUnit = theIterator->second;
-        float theSize;
-        if (theUnit->mCategory == kUnitCategoryAmbient || theUnit->mCategory == kUnitCategoryResource || theUnit->mAnimation == 5 || theUnit->mAnimation == 4 ||
-            !((theSize = theUnit->mInfo->mInnerCollisionSphere) > 0.0f))
+        if (theUnit->mCategory == kUnitCategoryAmbient || theUnit->mCategory == kUnitCategoryResource || theUnit->mAnimation == 5 || theUnit->mAnimation == 4)
+            continue;
+        float theSize = theUnit->mInfo->GetInnerCollisionSphere();
+        if (!(theSize > 0.0f))
             continue;
         sSelectionModels[0]->SetGraphicsPostModelTransform(theUnit->mTransformation);
         sSelectionModels[0]->SetGraphicsScale(theSize);
@@ -604,7 +602,7 @@ void EEROUnits::DrawObjectBars(EERenderShadow* inObject)
     theOffset.SetX(inObject->mLocation.GetX() + inObject->mObject->mBar.GetX() * inObject->mModelScale);
     theOffset.SetY(inObject->mLocation.GetY() + inObject->mObject->mBar.GetY() * inObject->mModelScale);
     theOffset.SetZ(inObject->mLocation.GetZ() + inObject->mObject->mBar.GetZ() * inObject->mModelScale);
-    Fn118676(theOffset, theScreenPoint);
+    GetScreenPoint(theOffset, theScreenPoint);
     theScreenPoint.SetX(theScreenPoint.GetX() - sBarWidth / 2);
     theScreenPoint.SetY(theScreenPoint.GetY() - sBarStep);
     if (inObject->mHealth >= 1.0f) {
@@ -649,14 +647,14 @@ void EEROUnits::DrawObjectModels(EERenderShadowMap& inObjects)
     EERenderShadowMap::iterator theIterator;
     unsigned long theScreen = gScreenIndex;
     bool theCanModulate = gRasterizer->GetCanModulateTextureAlpha(theScreen);
-    Fn10F8DE();
+    SetMapObjectLighting();
     theTransformation.SetOrientationYPR(gRenderEnvironment.mCameraYaw - 0.7853982f, 0.0f, 0.0f);
     for (theIterator = inObjects.begin(); theIterator != inObjects.end(); theIterator++) {
         EERenderShadow* theObject = theIterator->second;
         if (!theObject->mIsFogged)
-            Fn10FAE8();
+            RestoreUnitLighting();
         else
-            Fn10FB74();
+            DimUnitLighting();
         if (theCanModulate) {
             gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
         } else if (theObject->mOpacity < 1.0f) {
@@ -676,7 +674,7 @@ void EEROUnits::DrawObjectSelection()
     unsigned long theScreen = gScreenIndex;
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetCulling(kCullNone);
-    Fn10F7C8();
+    SetWhiteLighting();
     for (unsigned long i = 0; i < EERenderLists::sInstance.mSelectedObjects.size(); i++) {
         EERenderShadow* theObject = EERenderLists::sInstance.mSelectedObjects[i];
         theTransformation.SetPosition(theObject->mLocation.GetX(), theObject->mLocation.GetY(),
@@ -813,7 +811,7 @@ void EEROUnits::DrawUnitModels(EERenderUnitMap& inUnits)
     unsigned long theFog;
     GERFogAttributes theFogAttributes;
     bool theCanModulate = gRasterizer->GetCanModulateTextureAlpha(theScreen);
-    Fn10FA01();
+    SetUnitLighting();
     gRasterizer->SetCulling(kCullCW);
     gRasterizer->GetLighting(theScreen);
     for (theIterator = inUnits.begin(); theIterator != inUnits.end(); theIterator++) {
@@ -832,9 +830,9 @@ void EEROUnits::DrawUnitModels(EERenderUnitMap& inUnits)
             gRasterizer->SetFogRange(theStartDistance, theEndDistance, theScreen);
         }
         if (!theUnit->mIsFogged)
-            Fn10FAE8();
+            RestoreUnitLighting();
         else
-            Fn10FB74();
+            DimUnitLighting();
         if (theCanModulate) {
             gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
         } else if (theUnit->mOpacity == 1.0f) {
@@ -864,7 +862,7 @@ void EEROUnits::DrawBars()
     unsigned long theCount;
     gRasterizer->SetBlending(kBlendOne, kBlendZero, gScreenIndex);
     gRasterizer->SetCulling(kCullNone);
-    Fn10F7C8();
+    SetWhiteLighting();
     sBarWidth = max(24L, UMFloor(24.0f * (theWidth / 1024.0f)));
     float theBarScale = (float)theHeight * 0.0013020834f;
     sBarHeight = max(2.0f, theBarScale * 2.0f);
@@ -922,12 +920,12 @@ void EEROUnits::DrawLabels(EERenderUnit* inUnits, unsigned long inCount)
         EERenderUnit* theUnit = &inUnits[i];
         if (theUnit->mCommandType != 0) {
             theString = theUnit->mName;
-            if (theString != gU4E5B98 && theString[0] == ' ') {
+            if (theString != gEmptyString && theString[0] == ' ') {
                 theText.SetText(theString);
                 theOffset.SetX(theUnit->mTransformation.GetX());
                 theOffset.SetY(theUnit->mTransformation.GetY());
                 theOffset.SetZ(theUnit->mTransformation.GetZ());
-                Fn118676(theOffset, theScreenPoint);
+                GetScreenPoint(theOffset, theScreenPoint);
                 theText.SetLocation(theScreenPoint);
             } else {
                 continue;
@@ -939,7 +937,7 @@ void EEROUnits::DrawLabels(EERenderUnit* inUnits, unsigned long inCount)
             theOffset.SetY(theUnit->mSource->mBar.GetY() * theUnit->mScale);
             theOffset.SetZ(theUnit->mSource->mBar.GetZ() * theUnit->mScale);
             theUnit->mTransformation.Apply(theOffset, theLocation);
-            Fn118676(theLocation, theScreenPoint);
+            GetScreenPoint(theLocation, theScreenPoint);
             theScreenPoint.SetY(theScreenPoint.GetY() - theUnit->mHealthBars.size() * 5.0f - 10.0f);
             theText.SetLocation(theScreenPoint);
             theText.SetFgColor(theUnit->mPlayerColor);
@@ -969,12 +967,20 @@ void EEROUnits::LoadMedia()
 {
     GETransformation theTransformation;
     GE3DPoint theStart;
-    GETextureDescription theDescription = { 1, 0, 16, 0, false, false, true, true };
+    GETextureDescription theDescription;
+    theDescription.mNumMipLevelsToDrop = 0;
+    theDescription.mFrameFormat = 0;
+    theDescription.mIs3DRenderable = false;
+    theDescription.mIsTransparencyEnabled = false;
+    theDescription.mPixelDepth = 16;
+    theDescription.mSurfaceVolatility = 1;
+    theDescription.mHasAlpha = true;
+    theDescription.mCreateMIPMaps = true;
     GE3DPoint thePoint;
     GE3DPoint theInner;
     GE3DPoint theOuter;
-    GETextureCoordinate theLineEnd(3.0f, 0.0f);
     GETextureCoordinate theLineStart;
+    GETextureCoordinate theLineEnd(3.0f, 0.0f);
     UString theName;
     unsigned long theSegments;
     float theAngle;
@@ -1179,24 +1185,23 @@ void EEROUnits::LoadMedia()
             theVertex++;
         }
         unsigned long thePolygon = 0;
-        unsigned long theFirst = 0;
-        unsigned long theNext = 2;
-        unsigned long theLast = theSegments * 2 - 2;
-        for (; thePolygon < theLast; theFirst += 2, theNext += 2) {
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theFirst);
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex2(thePolygon, theNext);
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theNext - 1);
+        theVertex = 0;
+        unsigned long theCount = theSegments * 2;
+        for (; thePolygon < theCount - 2; theVertex += 2) {
+            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex);
+            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex2(thePolygon, theVertex + 2);
+            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theVertex + 1);
             thePolygon++;
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theNext - 1);
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex2(thePolygon, theNext);
-            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theNext + 1);
+            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex + 1);
+            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex2(thePolygon, theVertex + 2);
+            sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theVertex + 3);
             thePolygon++;
         }
-        sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theFirst);
+        sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex);
         sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex2(thePolygon, 0);
-        sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theFirst + 1);
+        sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(thePolygon, theVertex + 1);
         thePolygon++;
-        sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theFirst + 1);
+        sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex1(thePolygon, theVertex + 1);
         sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex2(thePolygon, 0);
         sSelectionModels[k]->GetPolygonArray(0)->SetVertexIndex3(thePolygon, 1);
         if (gModelDetail == 0) {
@@ -1282,7 +1287,7 @@ void EEROUnits::RenderScene()
     float theAlphaRefValue = gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
     long theCount = EERenderLists::sInstance.mGhostRecords.size();
     unsigned long theScreen = gScreenIndex;
-    Fn10F60F();
+    SetSceneFog();
     if (!gInCinematic) {
         gU4E8F08.SetDepthRange(0.0f, 0.0f);
         gRasterizer->SetViewport(gU4E8F08, theScreen);
@@ -1298,7 +1303,7 @@ void EEROUnits::RenderScene()
         gRasterizer->SetZCompare(kCompareLessEqual, theScreen);
     }
     gRasterizer->SetShadingColorSource(0, gScreenIndex);
-    Fn10F60F();
+    SetSceneFog();
     this->DrawObjectModels(EERenderLists::sInstance.mShadows0);
     this->DrawUnitModels(EERenderLists::sInstance.mUnits0);
     this->DrawUnitModels(EERenderLists::sInstance.mUnits1);
@@ -1323,11 +1328,11 @@ void EEROUnits::RenderScene()
     }
     gRasterizer->SetCulling(kCullNone);
     for (theIterator = gEffectQueues[3].begin(); theIterator != gEffectQueues[3].end(); theIterator++) {
-        Fn102724(theIterator->first);
+        BeginEffectBatches(theIterator->first);
         for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)
             (*theEffect)->DrawPass5();
-        Fn103F64();
-        Fn102F20();
+        FlushEffectBatches();
+        EndEffectBatches();
     }
     gRasterizer->SetAlphaTestingRefValue(theAlphaRefValue, gScreenIndex);
 }
@@ -1372,7 +1377,7 @@ void EEROUnits::ReleaseMedia()
 
 // FUNCTION: EXE 0x518676
 // Projects a world point to window coordinates in the game view
-void Fn118676(const GE3DPoint& inPoint, GE2DPoint& outPoint)
+void GetScreenPoint(const GE3DPoint& inPoint, GE2DPoint& outPoint)
 {
     GE3DPoint theCameraPoint(0.0f, 0.0f, 0.0f);
     GE3DPoint theNormalPoint(0.0f, 0.0f, 0.0f);
@@ -1388,8 +1393,7 @@ void Fn118676(const GE3DPoint& inPoint, GE2DPoint& outPoint)
         theW = 1.0f / theW;
     else
         theW = 1.0f;
-    outPoint.SetX(gU4E8F08.GetHalfWidth() * theNormalPoint.GetX() * theW +
-                  (gU4E8F08.GetXCenter() - gU4E8F08.GetViewRectangle().GetLeft()));
+    outPoint.SetX(theW * (gU4E8F08.GetHalfWidth() * theNormalPoint.GetX()) + (gU4E8F08.GetXCenter() - gU4E8F08.GetViewRectangle().GetLeft()));
     outPoint.SetY(gU4E8F08.GetYCenter() - gU4E8F08.GetViewRectangle().GetTop() -
                   theNormalPoint.GetY() * gU4E8F08.GetHalfWidth() * theW);
 }

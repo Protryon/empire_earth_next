@@ -67,7 +67,7 @@ public:
     unsigned long mDesktopWidth;            // +0x90 (the desktop width; unsigned, likewise)
     long mWheel;                            // +0x94
     volatile long mPointer;                 // +0x98 (volatile: EEMSavedGroupSelect stores `mov dword ptr [x], 0`)
-    long mOverlay;                          // +0x9c (= 8)
+    volatile long mOverlay;                 // +0x9c (= 8; volatile like mPointer: BeginFrame keeps the push next to the call, 0x11b240)
     volatile bool mShiftMode;               // +0xa0 (volatile: `mov byte ptr [x], 0`, 0xbe1b7) set with the local player's shift mode (0xbe076; provisional name)
     bool mInFrame;                          // +0xa1
     bool mBA2;                              // +0xa2

@@ -21,6 +21,7 @@ public:
     virtual void Build(const GE2DPoint& inLocation, long inDirection);   // +0x14 0x25619b
     void ClearGhostUnits();                 // 0x2561c9 (un-highlights the walls, clears the ghosts)
 
+    void SetUnitClass(EEUnitClass* inClass) { this->mUnitClass = inClass; }
     EEUnitClass* mUnitClass;                // +0x04 the gate's class (its +0x1bc type: the media)
     long mTileX;                            // +0x08 (= -99) the tile of the last build
     long mTileY;                            // +0x0c (= -99)

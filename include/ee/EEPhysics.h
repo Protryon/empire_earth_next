@@ -176,6 +176,7 @@ public:
     unsigned long mTickWorkSum;             // +0x0c4 (saved)
     unsigned long mTickWorkCount;           // +0x0c8 (saved)
     long mAutoSaveClock;                    // +0x0cc (untouched by the ctor, its init 0x152909 and Load/Save)
+    long GetGameTime() const { return this->mGameTime; }
     long mGameTime;                         // +0x0d0
     long mLD4;                              // +0x0d4
     long mAveragePhysicsUpdateTime;         // +0x0d8

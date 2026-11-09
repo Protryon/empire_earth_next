@@ -260,7 +260,7 @@ long EEE2DMarchingIcons::DrawPass6()
         theScale = 1.0f;
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendZero, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     theMaterial->SetTexture(this->mGraphicObject->mTextures[0], theScreen);
     for (std::vector<GE3DPoint>::iterator theIterator = this->mShown.begin(); theIterator != this->mShown.end(); ++theIterator) {
         theTransformation.SetOrientationYPR(gWorld.GetCameraYaw() * 0.5f, 0.0f, 0.0f);
@@ -270,7 +270,7 @@ long EEE2DMarchingIcons::DrawPass6()
         if (theMap->GetTile(UMFloor(theLocation.GetX()), UMFloor(theLocation.GetY()))) {
             theMap->GetGroundPoint(theLocation, theGround);
             theGround.SetZ(theGround.GetZ() + this->GetHeightOffset());
-            Fn11A130(theGround, theFog, theValue);
+            GetFogFactor(theGround, theFog, theValue);
             gRasterizer->SetAmbientColor(GEColor(theValue, theValue, theValue), theScreen);
             theTransformation.SetPosition(theGround.GetX(), theGround.GetY(), theGround.GetZ());
             theModel->SetGraphicsPostModelTransform(theTransformation);

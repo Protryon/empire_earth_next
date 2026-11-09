@@ -45,8 +45,10 @@ public:
     // members (names from the out-of-synch dump 0x227842; provisional name)
     GE3DPoint mLocation;                    // +0x20 (saved)
     float mYaw;                             // +0x2c "Yaw" (saved from minor version 0x1a)
+    bool GetIsForcedMove() const { return this->mIsForcedMove; }
     bool mIsForcedMove;                     // +0x30 "Forced Move Flag" (saved from 0xf)
     bool mShouldFace;                       // +0x31 "Should Face Flag" (saved from 0x1a)
+    bool GetIsAutoWaypoint() const { return this->mIsAutoWaypoint; }
     bool mIsAutoWaypoint;                   // +0x32 "Is Auto Waypoint Flag" (saved from 0x87)
     bool mUseGroupMovement;                 // +0x33 "Use Group Movement Flag" (saved from 0xad)
     unsigned char mGroupPathState;                   // +0x34 "Group Path State"
