@@ -227,7 +227,18 @@ name = "ee_codec"
 version = "0.1.0"
 
 [[package]]
+name = "ee_net_tcp"
+version = "0.1.0"
+dependencies = [
+ "ee_random",
+]
+
+[[package]]
 name = "ee_panic"
+version = "0.1.0"
+
+[[package]]
+name = "ee_random"
 version = "0.1.0"
 
 [[package]]
@@ -235,7 +246,9 @@ name = "ee_rust"
 version = "0.1.0"
 dependencies = [
  "ee_codec",
+ "ee_net_tcp",
  "ee_panic",
+ "ee_random",
  "wgpu-native",
 ]
 

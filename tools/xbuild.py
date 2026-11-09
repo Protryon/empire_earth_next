@@ -314,6 +314,7 @@ def cmd_tcptest(a):
     defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
     # the engine units with the engine's module define (tools/ee.py MODULE_FLAGS "lle")
     unit_defs = lambda src: [*defs, *(["LOWLEVELENGINE_EXPORTS"] if src in TCP_ENGINE_UNITS else [])]
+    rust_lib = rust_build.ensure(t.name)   # the plug-in itself (rust/crates/ee_net_tcp)
     objs = []
     if t.os == "windows":
         env = windows_env()
@@ -327,7 +328,7 @@ def cmd_tcptest(a):
             run([t.clang(), *flags, "/c", *[f"/I{i}" for i in inc], *[f"/D{d}" for d in unit_defs(src)],
                  f"/Fo{obj}", src], env=env)
             objs.append(obj)
-        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, "libcmt.lib",
+        run([ee.LLD_LINK, "/nologo", f"/OUT:{exe}", "/SUBSYSTEM:CONSOLE", "/DEBUG", *objs, rust_lib, "libcmt.lib",
              "libvcruntime.lib", "libucrt.lib", "libcpmt.lib", "oldnames.lib", *WIN32_SYSLIBS], env=env)
     else:
         base = t.base_flags()
@@ -343,7 +344,8 @@ def cmd_tcptest(a):
                 flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}", f"-I{ROOT / 'src' / 'ThirdParty' / 'stb'}"]
             run([t.clang(), *base, *flags, "-c", "-o", obj, src])
             objs.append(obj)
-        run([t.clang(), *t.link_flags(), "-o", exe, *objs, *(["-ldl"] if t.os == "linux" else [])])
+        run([t.clang(), *t.link_flags(), "-o", exe, *objs, rust_lib,
+             *(["-ldl", "-lm", "-lpthread"] if t.os == "linux" else [])])
     print(f"built {exe}")
     if a.no_run:
         return 0

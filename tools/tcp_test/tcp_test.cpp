@@ -22,6 +22,7 @@
 // search (NPIMSearchForGame) is not tested: its querier and the host both bind port 33334, which needs two machines.
 // Uses ports 33334 and 33335 (the game's): no game may run on this machine meanwhile.
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <vector>
 
@@ -29,6 +30,7 @@
 #include "platform/PlatSocket.h"
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
+#include "platform/PlatSim.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/PIMModule.h"
 
@@ -181,6 +183,10 @@ static void Fill(std::vector<char>& outData, unsigned long inSeed)
 
 int main()
 {
+    // the test's ports are the game's (33334, 33335): set EE_TCP_TEST_PORT_OFFSET when a game runs on this machine
+    if (const char* theOffset = getenv("EE_TCP_TEST_PORT_OFFSET"))
+        gPlatSimPortOffset = atoi(theOffset);
+
     long (*Activate)() = (long (*)())Entry("NPIMActivate");
     long (*Deactivate)() = (long (*)())Entry("NPIMDeactivate");
     bool (*IsValid)() = (bool (*)())Entry("PIMIsValid");
