@@ -31,7 +31,8 @@ local PLAN = {
         soldiers = 0,           -- the mobile defence when nothing threatens (none: the militia and the towers)
         soldiers_max = 0,       -- under a threat
         towers = 3,
-        settlements = 4,          -- (§8.35: one by each worked patch and mine, the owner)
+        settlements = 6,        -- (§8.35/8.36: one by each worked patch, mine and forest edge, the owner; the
+                                -- second home patch, iron, gold, stone, wood and a third patch)
         barracks = 1, ranges = 0,
         barracks_at = 28,       -- citizens: the first barracks stands when the Stone Age's army is trained
         boats = 0, docks = 0,
@@ -51,7 +52,7 @@ local PLAN = {
         soldiers = 20, soldiers_max = 30,
         army_first = true,      -- the citizens wait (at the last epoch's count) until the soldiers are trained
         towers = 7,
-        settlements = 8,
+        settlements = 9,
         barracks = 2, ranges = 1,
         barracks_at = 10,
         boats = 10, docks = 2,
@@ -70,7 +71,7 @@ local PLAN = {
         soldiers = 20, soldiers_max = 40,
         barracks_at = 10,
         towers = 10,
-        settlements = 9,
+        settlements = 10,
         barracks = 2, ranges = 2,
         boats = 10, docks = 2,
         farms = 24, granaries = 3,
@@ -90,7 +91,10 @@ local ENEMY_SHARE = 85          -- percent: a site is taken only this much neare
 local ENEMY_KEEP_OFF = 25       -- tiles: and never this near a seen enemy town
 local HUNT_MAX = 6              -- hunters at most beside the patches (the owner: 6 hunt beside the patches)
 local HUNTERS_PER_ANIMAL = 3    -- (as the C++ finder, kNextHuntersPerAnimal)
-local WOOD_DROP_AT = 4          -- wood gatherers wanted from which the worked forest edge gets a settlement
+local SETTLE_AT_ONCE = 2        -- settlements going up (or queued) at once (§8.36)
+local SETTLE_WAIT = 60000       -- a settlement ordered at a spot is not ordered there again for this long (queued, no
+                                -- foundation yet: the site's has_drop does not show it)
+local SETTLE_RANK = {food = 1, wood = 2, iron = 3, gold = 4, stone = 5}   -- whose drop site comes first
 local SCOUT_AT = 90000          -- the first scout (a soldier) from here
 local SCOUTS = 3                -- scouts sent at most (a new one when the last was lost)
 local TOWER_STRENGTH = 4000     -- what a tower counts for against a threat (about three clubmen)
@@ -295,7 +299,7 @@ end
 -- and claimed, and the escort holds it (§8.34). Only sites on the town's side (safe_site, §8.35); a claimed one under
 -- a tower (or with one on the way) is not kept. Returns the places the kept sites hold, the contested site (nil: none)
 -- and the places of the kept sites the gatherers can go to now (open).
-local function claim_sites(view, order, keep, resource, patch, wanted, most, range)
+local function claim_sites(view, order, keep, resource, patch, wanted, most, range, skip)
     local want_sites = 0
     if wanted > 0 then
         want_sites = (wanted + SITE_PLACES - 1) // SITE_PLACES
@@ -308,7 +312,7 @@ local function claim_sites(view, order, keep, resource, patch, wanted, most, ran
     local list = sites_of(view, resource, patch)
     for _, s in ipairs(list) do
         if kept < want_sites and (open_site(s) or (s.claimed and (s.blocked == "enemy_near" or s.blocked == "danger")))
-                and s.distance <= reach and safe_site(view, s) then
+                and s.distance <= reach and safe_site(view, s) and not (skip ~= nil and skip[s.index]) then
             kept = kept + 1
             places = places + places_of(s, resource)
             keep[s.index] = true
@@ -386,6 +390,11 @@ function M.step(view, memory)
     memory.bad_spots = memory.bad_spots or {}
     for i, r in ipairs(view.results) do
         local tag = memory.tags[i]
+        if r.reason == "unexplored" and memory.settle_at ~= nil and memory.spots ~= nil and memory.spots[i] ~= nil then
+            -- (§8.36: a citizen walks to the site and stands there; the settlement is ordered again next pass, once
+            -- its tiles are in sight)
+            memory.settle_at[memory.spots[i]] = nil
+        end
         if tag ~= nil and r.code == "refused" and tag == "improve" then
             -- a tower improvement: no level left waits for the next tower class, else a minute
             if r.reason == "requirements" or r.reason == "bad_argument" or r.reason == "not_in_epoch" then
@@ -656,10 +665,26 @@ function M.step(view, memory)
         local keep = {}
         -- the food places (§8.35): the open patches kept (6 each), the game near the town (HUNT_MAX at most, one
         -- hunter an animal) and, from the Copper Age, the farms
-        local hunt_places = math.min((view.hunt or 0) * HUNTERS_PER_ANIMAL, plan.hunt or HUNT_MAX)
+        local hunt_cap = plan.hunt or HUNT_MAX   -- (§8.36: hunting fills what the patches cannot take, see below)
+        local hunt_places = math.min((view.hunt or 0) * HUNTERS_PER_ANIMAL, hunt_cap)
         local farm_places = V.total(V.buildings(view, "b_farm"))
         local food_wanted = want.food
-        local _, _, patch_places = claim_sites(view, order, keep, "food", true, want.food, plan.patches, range)
+        -- (§8.36: a patch whose settlement found no room is passed over until it has one, and the next patch is
+        -- taken: the far patch's gatherers went to wood, 25 on wood against 10 wanted, the food stayed at 12)
+        local unsettled = {}
+        for _, s in ipairs(view.sites) do
+            if s.patch and s.drop.food == 0 and memory.bad_spots[spot_of(s)] ~= nil then
+                unsettled[s.index] = true
+            end
+        end
+        local _, _, patch_places = claim_sites(view, order, keep, "food", true, want.food, plan.patches, range,
+                                               unsettled)
+        -- (§8.36, the owner: "~18 food citizens: fill beyond the patches with nearby hunting, 3 an animal"): with the
+        -- patches short of the plan's food, the game near the town takes the rest
+        if patch_places < (plan.food or 0) then
+            hunt_cap = math.max(hunt_cap, plan.food - patch_places)
+            hunt_places = math.min((view.hunt or 0) * HUNTERS_PER_ANIMAL, hunt_cap)
+        end
         if (patch_places + hunt_places < want.food - farm_places or memory.grow_claim)
                 and range < math.min(plan.claim_max, view.claim_range_max) then
             order("claim_range", {verb = "claim_range", range = range + view.claim_range_step})
@@ -671,7 +696,13 @@ function M.step(view, memory)
         local contest = nil
         local mineral_places = {}
         for _, r in ipairs(MINERALS) do
-            local places, c = claim_sites(view, order, keep, r, false, want[r], 3, range)
+            local unsettled_r = {}   -- (§8.36, as the patches)
+            for _, s in ipairs(view.sites) do
+                if s.holds[r] > 0 and s.drop[r] == 0 and memory.bad_spots[spot_of(s)] ~= nil then
+                    unsettled_r[s.index] = true
+                end
+            end
+            local places, c = claim_sites(view, order, keep, r, false, want[r], 3, range, unsettled_r)
             memory.no_site[r] = want[r] > 0 and (places == 0 or c ~= nil)
             mineral_places[r] = places
             if c ~= nil and (contest == nil or c.distance < contest.distance) then
@@ -717,29 +748,79 @@ function M.step(view, memory)
         end
         memory.want = want
 
-        -- a settlement at a claimed patch or worked mine with no drop site at hand, the nearest first, one at a time
+        -- §8.36 (the owner: "the first thing I do is build a settlement. require the AI to build a settlement before
+        -- using a node"): the gatherers go only to a patch, mine or forest edge with a finished drop site at hand (the
+        -- C++ finders; the town centre serves what lies by it), so each kept site the plan wants gatherers on, and the
+        -- worked forest edge when no edge has one, gets its settlement first: the food first, then the wood, then the
+        -- minerals, nearest first, SETTLE_AT_ONCE going up at once. The citizens waiting for them help build them
+        -- (EECPRMHelpBuildDrops), then gather there.
         local settlements = V.buildings(view, "b_settlement")
-        if not going_up(settlements) and V.total(settlements) < plan.settlements
-                and V.cost(view, "b_settlement") ~= nil then
-            local best = nil
+        local going = settlements ~= nil and settlements.unfinished + settlements.queued or 0
+        local total = V.total(settlements)
+        memory.settle_at = memory.settle_at or {}
+        for _, k in ipairs(ai.keys(memory.settle_at)) do
+            if view.time - memory.settle_at[k] >= SETTLE_WAIT then
+                memory.settle_at[k] = nil
+            end
+        end
+        if V.cost(view, "b_settlement") ~= nil and going < SETTLE_AT_ONCE and total < plan.settlements then
+            local wanted = {}
             for _, s in ipairs(view.sites) do
-                if keep[s.index] and not s.has_drop and s.danger == 0 and memory.bad_spots[spot_of(s)] == nil
-                        and (best == nil or s.distance < best.distance) then
-                    best = s
+                if keep[s.index] and s.danger == 0 and memory.bad_spots[spot_of(s)] == nil
+                        and memory.settle_at[spot_of(s)] == nil then
+                    local rank = nil
+                    -- (by resource: a centre's iron may lie 6 tiles from the settlement by its gold)
+                    for _, r in ipairs({"food", "iron", "gold", "stone"}) do
+                        if want[r] > 0 and s.holds[r] > 0 and s.drop[r] == 0 and (r ~= "food" or s.patch)
+                                and (rank == nil or SETTLE_RANK[r] < rank) then
+                            rank = SETTLE_RANK[r]
+                        end
+                    end
+                    if rank ~= nil then
+                        wanted[#wanted + 1] = {rank = rank, distance = s.distance, x = s.x, y = s.y, site = s}
+                    end
                 end
             end
-            if best ~= nil then
-                order("settlement", {verb = "build", type = "b_settlement", near = "site", site = best.index},
-                      spot_of(best))
-            else
-                -- (§8.35: every wood trip was a far one) by the forest edge the wood gatherers work, when it has no
-                -- drop site at hand
-                local w = view.wood
-                if w ~= nil and not w.has_drop and want.wood >= WOOD_DROP_AT and w.distance > 6
-                        and our_side(view, w.x, w.y, w.distance, false)
-                        and memory.bad_spots["w" .. w.x .. "," .. w.y] == nil then
-                    order("settlement_wood", {verb = "build", type = "b_settlement", near = "tile", x = w.x, y = w.y},
-                          "w" .. w.x .. "," .. w.y)
+            local w = view.wood
+            if w ~= nil and not w.ready and not w.has_drop and want.wood > 0
+                    and our_side(view, w.x, w.y, w.distance, false)
+                    and memory.bad_spots["w" .. w.x .. "," .. w.y] == nil
+                    and memory.settle_at["w" .. w.x .. "," .. w.y] == nil then
+                wanted[#wanted + 1] = {rank = SETTLE_RANK.wood, distance = w.distance, x = w.x, y = w.y}
+            end
+            table.sort(wanted, function(a, b)
+                if a.rank ~= b.rank then
+                    return a.rank < b.rank
+                end
+                if a.distance ~= b.distance then
+                    return a.distance < b.distance
+                end
+                if a.x ~= b.x then
+                    return a.x < b.x
+                end
+                return a.y < b.y
+            end)
+            for _, c in ipairs(wanted) do
+                if going < SETTLE_AT_ONCE and total < plan.settlements then
+                    local placed = false
+                    if c.site ~= nil then
+                        placed = order("settlement", {verb = "build", type = "b_settlement", near = "site",
+                                                      site = c.site.index}, spot_of(c.site))
+                        if placed then
+                            memory.settle_at[spot_of(c.site)] = view.time
+                        end
+                    else
+                        local spot = "w" .. c.x .. "," .. c.y
+                        placed = order("settlement_wood", {verb = "build", type = "b_settlement", near = "tile",
+                                                           x = c.x, y = c.y}, spot)
+                        if placed then
+                            memory.settle_at[spot] = view.time
+                        end
+                    end
+                    if placed then
+                        going = going + 1
+                        total = total + 1
+                    end
                 end
             end
         end
