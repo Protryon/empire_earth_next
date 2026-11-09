@@ -317,6 +317,7 @@ dependencies = [
  "ee_random",
  "ee_rmap",
  "ee_sound",
+ "ee_tech",
  "ee_ui",
  "ee_won",
 ]
@@ -326,6 +327,13 @@ name = "ee_sound"
 version = "0.1.0"
 dependencies = [
  "ee_random",
+]
+
+[[package]]
+name = "ee_tech"
+version = "0.1.0"
+dependencies = [
+ "ee_ge",
 ]
 
 [[package]]
