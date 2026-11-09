@@ -39,6 +39,7 @@
 #include "ee/EEUIFMainGame.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EETechCapture.h"
 const UString EETechTree::sNumEpochs("EETechTree-NumEpochs");
 const UString EETechTree::sNumTechIDs("EETechTree-NumTechIDs");
 const UString EETechTree::sTechNodeID("EETechTree-TechNodeID");
@@ -348,6 +349,28 @@ void EETechTree::GetChecksum(ESChecksum& ioChecksum)
 // Adds up the resource costs (kinds 2..6) of a tech and every unresearched prerequisite and upgrade path to it
 void EETechTree::SumCosts(long inID, long inUnitClass, long* ioCosts)
 {
+    // TEST ONLY (ee/EETechCapture.h): the outermost call (the walk's own recursion is not a call of the game's)
+    static thread_local long sDepth = 0;
+    if (EESimCaptureRecord::Active() && sDepth == 0) {
+        sDepth++;
+        EESimCaptureRecord theRecord(EECaptureTag("TSUM"));
+        theRecord.I32(this->mPlayerIndex);
+        theRecord.I32(inID);
+        theRecord.I32(inUnitClass);
+        for (long i = 0; i < 7; i++)
+            theRecord.I32(ioCosts[i]);
+        this->SumCostsUncaptured(inID, inUnitClass, ioCosts);
+        for (long i = 0; i < 7; i++)
+            theRecord.I32(ioCosts[i]);
+        theRecord.Commit();
+        sDepth--;
+        return;
+    }
+    this->SumCostsUncaptured(inID, inUnitClass, ioCosts);
+}
+
+void EETechTree::SumCostsUncaptured(long inID, long inUnitClass, long* ioCosts)
+{
     while (inID >= kTechEpochPrehistoric && inID < kTechNone) {
         EETechTreeNode* theNode = this->Get(inID);
         if (!theNode->GetIsAvailable() || theNode->mIsResearched)
@@ -611,6 +634,24 @@ void EETechTree::AddScenEditorObsoletedID(long inID)
 // updates statistics series 0xc
 void EETechTree::Research(long inID, EEComplexUnit* inUnit)
 {
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
+        EESimCaptureRecord theRecord(EECaptureTag("TTRS"));
+        theRecord.I32(inID);
+        theRecord.I32(inUnit != NULL ? (long)inUnit->mUnitID : -1);
+        EETechCaptureTree(theRecord, this);
+        long theNext = this->mCurrentEpoch + 1;
+        theRecord.I32(theNext < this->mEpochs.size() ? this->mEpochs[theNext].mCurrentSOL : -1);
+        this->ResearchUncaptured(inID, inUnit);
+        EETechCaptureTree(theRecord, this);
+        theRecord.I32(theNext < this->mEpochs.size() ? this->mEpochs[theNext].mCurrentSOL : -1);
+        theRecord.Commit();
+        return;
+    }
+    this->ResearchUncaptured(inID, inUnit);
+}
+
+void EETechTree::ResearchUncaptured(long inID, EEComplexUnit* inUnit)
+{
     long theEpoch = EETechTreeEpochOf(inID);
     long theNextEpoch = this->mCurrentEpoch + 1;
     if (!(theEpoch >= kTechEpochPrehistoric) || !(theEpoch < this->mEpochs.size()))
@@ -632,6 +673,13 @@ void EETechTree::Research(long inID, EEComplexUnit* inUnit)
 // the local player
 void EETechTree::ResearchToEpoch(long inEpoch)
 {
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
+        EESimCaptureRecord theRecord(EECaptureTag("TEPO"));
+        theRecord.U32(1);
+        theRecord.I32(inEpoch);
+        EETechCaptureTree(theRecord, this);
+        theRecord.Commit();
+    }
     gEventsEnabled = false;
     if (inEpoch >= kTechEpochPrehistoric && inEpoch < this->mEpochs.size()) {
         if (inEpoch != kTechEpochPrehistoric) {
@@ -734,6 +782,13 @@ long EETechTree::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
 // Moves the tree forward to an epoch (never back), recording it in statistics series 0xc and researching up to it
 void EETechTree::SetEpoch(long inEpoch)
 {
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
+        EESimCaptureRecord theRecord(EECaptureTag("TEPO"));
+        theRecord.U32(0);
+        theRecord.I32(inEpoch);
+        EETechCaptureTree(theRecord, this);
+        theRecord.Commit();
+    }
     if (!(inEpoch >= kTechEpochPrehistoric) || !(inEpoch < this->mEpochs.size()) || !(inEpoch >= this->mCurrentEpoch))
         return;
     this->mCurrentEpoch = inEpoch;
@@ -746,6 +801,14 @@ void EETechTree::SetEpoch(long inEpoch)
 // Sets the start and end epochs and researches up to the start
 void EETechTree::SetEpochRange(long inStart, long inEnd)
 {
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
+        EESimCaptureRecord theRecord(EECaptureTag("TEPO"));
+        theRecord.U32(2);
+        theRecord.I32(inStart);
+        theRecord.I32(inEnd);
+        EETechCaptureTree(theRecord, this);
+        theRecord.Commit();
+    }
     this->mStartEpoch = inStart;
     this->mEndEpoch = inEnd;
     this->ResearchToEpoch(inStart);

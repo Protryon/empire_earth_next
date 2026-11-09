@@ -568,6 +568,7 @@ public:
                + (this->mPhysicalModel.GetLocation().GetY() - inPoint.GetY()) * (this->mPhysicalModel.GetLocation().GetY() - inPoint.GetY());
     }
     void QueueResearch(long inTechnology, bool inFront);  // 0x1f5f97 (EEMResearchTechnology; provisional name)
+    void QueueResearchUncaptured(long inTechnology, bool inFront);  // its body (ee/EETechCapture.h's TQRS)
     // inline (out-of-line COMDAT 0x940eb, 26 callers)
     unsigned long GetBuildQueueSize() { return this->mBuildQueue.size(); }
     // inline (the per-class EnabledChanged/B8 switches and EEUCGate::IsPartLeftOut read the current command through it;

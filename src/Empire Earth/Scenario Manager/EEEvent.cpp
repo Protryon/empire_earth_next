@@ -22,6 +22,7 @@
 #include "ee/EEGameVariant.h"
 #include "lle/UResourceFile.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EETechCapture.h"
 
 class EEUnitSetFunctorModifyPathfindingBehavior : public EEUnitSetFunctor {
 public:
@@ -203,6 +204,26 @@ long EEEventKind7(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlaye
 // Runs one event effect by kind (stats, button, model, sounds, research, unit upgrade ...); returns 9 for a bad id or
 // while loading a save unless the effect runs on load, 3 for an unknown kind
 long EEEvent::RunEffect(unsigned long inEffect, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit)
+{
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
+        EESimCaptureRecord theRecord(EECaptureTag("EVRN"));
+        theRecord.U32(inEffect);
+        bool theKnown = inEffect < gEventEffects.size();
+        theRecord.I32(theKnown ? gEventEffects[inEffect].mKind : -1);
+        theRecord.I32(theKnown ? gEventEffects[inEffect].mAttribute : -1);
+        theRecord.I32(inPlayer != NULL ? inPlayer->mPlayerID : inPlayerIndex);
+        theRecord.I32(inID);
+        theRecord.I32(inUnit != NULL ? (long)inUnit->mUnitID : -1);
+        theRecord.U32((gLoadingSavedGame ? 1u : 0u) | (gEventsEnabled ? 2u : 0u));
+        long theResult = EEEvent::RunEffectUncaptured(inEffect, inPlayerIndex, inID, inPlayer, inUnit);
+        theRecord.I32(theResult);
+        theRecord.Commit();
+        return theResult;
+    }
+    return EEEvent::RunEffectUncaptured(inEffect, inPlayerIndex, inID, inPlayer, inUnit);
+}
+
+long EEEvent::RunEffectUncaptured(unsigned long inEffect, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit)
 {
     long theResult = 9;
     long thePlayerIndex = inPlayer != NULL ? inPlayer->mPlayerID : inPlayerIndex;
@@ -464,6 +485,15 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
     std::vector<EEUnitClass*> theClasses;
     EEUnitClass* theClass = NULL;
     long theResult = 0;
+    bool theCapture = EESimCaptureRecord::Active();   // TEST ONLY (ee/EETechCapture.h)
+    EESimCaptureRecord theCallRecord(EECaptureTag("EVAT"));
+    if (theCapture) {
+        theCallRecord.U32(0);
+        theCallRecord.I32((long)(inEffect - &gEventEffects[0]));
+        theCallRecord.I32(inEffect->mAttribute);
+        theCallRecord.I32(inPlayerIndex);
+        EETechCapturePlayer(theCallRecord, thePlayer);
+    }
     if (thePlayer != NULL) {
         if (inEffect->mAttribute == 23)
             thePlayer->mPopulationLimitBonus += (long)inEffect->mOffset;
@@ -482,6 +512,13 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
         for (unsigned long i = 0; i < theClasses.size(); i++) {
             theClass = theClasses[i];
             EEUnitClassUpgrade* theUpgrade = thePlayer->mUnitClassUpgrades[theClass->GetUnitType()];
+            EESimCaptureRecord theClassRecord(EECaptureTag("EVAT"));
+            if (theCapture) {
+                theClassRecord.U32(1);
+                theClassRecord.I32((long)(inEffect - &gEventEffects[0]));
+                theClassRecord.I32(theClass->GetUnitType());
+                EETechCaptureUpgrade(theClassRecord, theUpgrade);
+            }
             switch (inEffect->mAttribute) {
             case 1:
                 theUpgrade->mAttack = EEApplyEventEffect((float)theClass->GetAttack(), theUpgrade->GetAttack(), inEffect);
@@ -523,6 +560,9 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                             (theUnit->GetComplexUnit() != NULL && theUnit->mComplexUnit->mIsBuilt != true))
                             continue;
                         float theAmount = (float)UMCeil((float)theUnit->GetHitPoints() / theOldMaximum * theUpgrade->mMaxHitPoints);
+                        if (theCapture)   // TEST ONLY (ee/EETechCapture.h)
+                            EETechCaptureRescale(0, theUnit->mUnitID, theUnit->GetHitPoints(), theOldMaximum,
+                                                 theUpgrade->mMaxHitPoints, theAmount);
                         if (theUnit->GetHitPoints() > 0)
                             theUnit->SetHitPoints((long)theAmount);
                     }
@@ -531,6 +571,9 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                         if (theUnit->mUnitClass->mUnitType != theClass->mUnitType || !(theUnit->GetHitPoints() > 0))
                             continue;
                         float theAmount = (float)UMCeil((float)theUnit->GetHitPoints() / theOldMaximum * theUpgrade->mMaxHitPoints);
+                        if (theCapture)   // TEST ONLY (ee/EETechCapture.h)
+                            EETechCaptureRescale(0, theUnit->mUnitID, theUnit->GetHitPoints(), theOldMaximum,
+                                                 theUpgrade->mMaxHitPoints, theAmount);
                         if (theUnit->GetHitPoints() > 0 &&
                             (theUnit->mComplexUnit == NULL || theUnit->mComplexUnit->mIsBuilt == true))
                             theUnit->SetHitPoints((long)theAmount);
@@ -551,6 +594,9 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                             theUnit->mComplexUnit == NULL)
                             continue;
                         float theAmount = (float)UMCeil((float)theUnit->mComplexUnit->mFlightTime / theOldMaximum * theUpgrade->mFlightTime);
+                        if (theCapture)   // TEST ONLY (ee/EETechCapture.h)
+                            EETechCaptureRescale(1, theUnit->mUnitID, theUnit->mComplexUnit->mFlightTime, theOldMaximum,
+                                                 theUpgrade->mFlightTime, theAmount);
                         long theValue = (long)theAmount;
                         if (theUnit->mComplexUnit->mFlightTime > 0)
                             theUnit->mComplexUnit->SetFlightTime(theValue);
@@ -561,6 +607,9 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                             theUnit->mComplexUnit == NULL)
                             continue;
                         float theAmount = (float)UMCeil((float)theUnit->mComplexUnit->mFlightTime / theOldMaximum * theUpgrade->mFlightTime);
+                        if (theCapture)   // TEST ONLY (ee/EETechCapture.h)
+                            EETechCaptureRescale(1, theUnit->mUnitID, theUnit->mComplexUnit->mFlightTime, theOldMaximum,
+                                                 theUpgrade->mFlightTime, theAmount);
                         long theValue = (long)theAmount;
                         if (theUnit->mComplexUnit->mFlightTime > 0)
                             theUnit->mComplexUnit->SetFlightTime(theValue);
@@ -656,9 +705,20 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                 theResult = 9;
                 break;
             }
+            if (theCapture) {
+                theClassRecord.I32(theResult);
+                EETechCaptureUpgrade(theClassRecord, theUpgrade);
+                theClassRecord.Commit();
+            }
         }
     } else
         theResult = 9;
+    if (theCapture) {
+        theCallRecord.U32((unsigned int)theClasses.size());
+        theCallRecord.I32(theResult);
+        EETechCapturePlayer(theCallRecord, thePlayer);
+        theCallRecord.Commit();
+    }
     return theResult;
 }
 

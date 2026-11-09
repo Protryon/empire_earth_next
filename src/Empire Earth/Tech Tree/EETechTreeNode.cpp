@@ -32,6 +32,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EETechTreeRecord.h"
 #include "ee/EEStringIDs.h"
+#include "ee/EETechCapture.h"
 // FUNCTION: EXE 0x5cedce
 // Creates an empty tech node, allowed and obsolete only after the space epoch
 EETechTreeNode::EETechTreeNode()
@@ -96,6 +97,14 @@ long EETechTreeNode::Unload()
 // Returns a node's cost in a resource for a unit class: per-class cost, scaled for unit-making nodes by wonder
 // epoch, cost set and upgrade cost scale, and by the just-in-time manufacturing factor for rally-point classes
 long EETechTreeNode::GetCost(long inResource, long inUnitClass, float inScale)
+{
+    long theCost = this->GetCostUncaptured(inResource, inUnitClass, inScale);
+    if (EESimCaptureRecord::Active())   // TEST ONLY (ee/EETechCapture.h)
+        EETechCaptureCost(this, 0, inResource, inUnitClass, inScale, theCost);
+    return theCost;
+}
+
+long EETechTreeNode::GetCostUncaptured(long inResource, long inUnitClass, float inScale)
 {
     EEPlayer* thePlayer = this->mTree->GetPlayer();
     std::map<long, long*>::iterator theCosts = this->mData->mClassCosts.find(inUnitClass);
@@ -418,6 +427,21 @@ void EETechTreeNode::LoadMedia(EEPlayer* inPlayer)
 // (event 0x7d1, statistics series 0x16)
 void EETechTreeNode::SetPrerequisite(long inID)
 {
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
+        EESimCaptureRecord theRecord(EECaptureTag("TNPR"));
+        theRecord.I32(EETechCapturePlayerIndex(this->mTree));
+        EETechCaptureNode(theRecord, this);
+        theRecord.I32(inID);
+        this->SetPrerequisiteUncaptured(inID);
+        EETechCaptureNode(theRecord, this);
+        theRecord.Commit();
+        return;
+    }
+    this->SetPrerequisiteUncaptured(inID);
+}
+
+void EETechTreeNode::SetPrerequisiteUncaptured(long inID)
+{
     if (this->mIsAvailable || this->mIsObsolete)
         return;
     if (EEIsEpochID(inID))
@@ -453,6 +477,22 @@ void EETechTreeNode::MakeAvailable()
 // Researches the node if available: fires its event; returns 2 when already researched (repeatable kind 3 excepted),
 // 9 when not possible; counts down a research delay
 long EETechTreeNode::ResearchNode(EEComplexUnit* inUnit)
+{
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
+        EESimCaptureRecord theRecord(EECaptureTag("TNRS"));
+        theRecord.U32(0);
+        theRecord.I32(EETechCapturePlayerIndex(this->mTree));
+        EETechCaptureNode(theRecord, this);
+        long theResult = this->ResearchNodeUncaptured(inUnit);
+        theRecord.I32(theResult);
+        EETechCaptureNode(theRecord, this);
+        theRecord.Commit();
+        return theResult;
+    }
+    return this->ResearchNodeUncaptured(inUnit);
+}
+
+long EETechTreeNode::ResearchNodeUncaptured(EEComplexUnit* inUnit)
 {
     long theResult;
     if (this->mData->mKind != 5 && this->mData->mID >= 1000 && this->mData->mID < 16000 && !this->mScenEditorObsoleted && this->mResearchDelay == 0) {
