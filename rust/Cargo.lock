@@ -295,6 +295,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_sound"
+version = "0.1.0"
+dependencies = [
+ "ee_random",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
