@@ -4,8 +4,13 @@
 //! Modules that only need their inputs as plain data are tested with golden values captured from the C++
 //! (each module's tests say how).
 
+pub mod state;
 pub mod vertex;
 
 mod ffi;
+#[cfg(not(test))]
+pub mod gx;
+#[cfg(not(test))]
+mod state_ffi;
 
 pub use vertex::{float_to_long, rgb_make, rgba, PolygonArray, StandardVertexArray, StdColorVertexArray};

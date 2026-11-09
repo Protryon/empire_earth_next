@@ -102,6 +102,76 @@ struct Dx7StdColorVertex {
   float tv;
 };
 
+/// `GXMATERIAL` (`rust/crates/ee_gx/src/abi.rs GxMaterial`): colours r,g,b,a of diffuse/ambient/specular/emissive, power.
+/// Only the white material of `SetShadingColorSource` is built here.
+struct GxMaterial {
+  float diffuse[4];
+  float ambient[4];
+  float specular[4];
+  float emissive[4];
+  float power;
+};
+
+/// `GXVIEWPORT`.
+struct EeDx7Viewport {
+  unsigned long dwX;
+  unsigned long dwY;
+  unsigned long dwWidth;
+  unsigned long dwHeight;
+  float dvMinZ;
+  float dvMaxZ;
+};
+
+/// `DX7RTextureStage`. `#[repr(C)]`, pinned by the C++ (`unsigned long` is `c_ulong`, as the C++ fields were).
+struct EeDx7TextureStageCache {
+  void *mTexture;
+  unsigned long mColorMode;
+  unsigned long mAlphaMode;
+  unsigned long mColorArgument1;
+  unsigned long mColorArgument2;
+  unsigned long mAlphaArgument1;
+  unsigned long mAlphaArgument2;
+  unsigned long mTextureAddressingMode;
+  unsigned long mMinFilterMode;
+  unsigned long mMagFilterMode;
+  unsigned long mMipFilterMode;
+  float mMipMapBias;
+};
+
+/// `DX7RScreenState`. A pinned record shared with the C++ draw code (`DX7Trampolines.cpp` asserts the size and each
+/// offset).
+struct EeDx7ScreenState {
+  EeDx7Viewport mViewport;
+  void *mDirect3D;
+  void *mDevice;
+  void *mScreen;
+  void *mVertexBuffer;
+  unsigned long mVertexBufferPosition;
+  unsigned long mStage1ColorOperation;
+  EeDx7TextureStageCache mStage;
+  unsigned long mBlendSource;
+  unsigned long mBlendDestination;
+  unsigned long mZEnable;
+  bool mIs3DMode;
+  bool mViewportChanged;
+  bool mZWriteEnable;
+  bool mAlphaBlendEnable;
+  bool mCanModulateTextureAlpha;
+  bool mDirtyRectangleSupport;
+};
+
+/// The texture stage plain data `SetTexture` reads through `inTexture->GetStage()` and `GetFrameSurface()`.
+struct EeDx7StageView {
+  void *surface;
+  unsigned long mColorMode;
+  unsigned long mAlphaMode;
+  unsigned long mTextureAddressingMode;
+  unsigned long mMinFilterMode;
+  unsigned long mMagFilterMode;
+  unsigned long mMipFilterMode;
+  float mMipMapBias;
+};
+
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -702,6 +772,75 @@ void ee_dx7_poly_set_vertex_indices(EeDx7PolygonArray *p,
                                     uint32_t i3);
 
 uint32_t ee_dx7_poly_size_of(const EeDx7PolygonArray *p);
+
+extern long gx_device_set_render_state(void *device, uint32_t state, unsigned long value);
+
+extern long gx_device_set_stage_state(void *device,
+                                      unsigned long stage,
+                                      uint32_t state,
+                                      unsigned long value);
+
+extern long gx_device_set_texture(void *device, unsigned long stage, void *texture);
+
+extern long gx_device_set_material(void *device, const GxMaterial *material);
+
+bool ee_dx7r_set_alpha_testing(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_alpha_testing_compare_state(void *device,
+                                             unsigned long in_state,
+                                             unsigned long current);
+
+bool ee_dx7r_set_alpha_testing_ref_value(void *device, float value, float current);
+
+bool ee_dx7r_set_anti_aliasing(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_color_keying(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_dithering(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_draw_style(void *device, unsigned long in_style, unsigned long current);
+
+bool ee_dx7r_set_fog(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_lighting(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_shading(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_shading_color_source(void *device, unsigned long in_source, unsigned long current);
+
+bool ee_dx7r_set_specular(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_z_compare(void *device, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_blending(EeDx7ScreenState *state,
+                          unsigned long in_source,
+                          unsigned long in_destination,
+                          unsigned long current_source,
+                          unsigned long current_destination);
+
+bool ee_dx7r_set_z_buffer(EeDx7ScreenState *state, unsigned long in_state, unsigned long current);
+
+bool ee_dx7r_set_fog_color(void *device, const float *rgb, bool current_equal);
+
+void ee_dx7r_set_fog_range(void *device,
+                           float start,
+                           float end,
+                           float current_start,
+                           float current_end);
+
+int32_t ee_dx7r_set_cull_mode(void *device, unsigned long in_state);
+
+/// `SetAmbientColor`/`SetAmbientIntensity`: `computed` is `mComputedAmbientColor` (r,g,b); the value sent to the device.
+int32_t ee_dx7r_set_ambient(void *device,
+                            const float *computed);
+
+uint32_t ee_dx7r_debug_color(const float *rgb);
+
+/// `SetTexture`'s NULL path.
+void ee_dx7r_clear_texture(EeDx7ScreenState *state);
+
+/// `SetTexture`'s stage-0 diff and stage 1 off (after the C++ reference counting).
+void ee_dx7r_apply_texture_stage(EeDx7ScreenState *state, const EeDx7StageView *view);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);

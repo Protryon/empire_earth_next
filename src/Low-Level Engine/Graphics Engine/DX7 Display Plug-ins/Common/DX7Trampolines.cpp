@@ -234,3 +234,40 @@ void DX7StdColorVertexArray::SetVertex(const GEColor& inColor, const GE3DPoint& 
 }
 
 unsigned long DX7StdColorVertexArray::SizeOf() const { return ee_dx7_color_va_size_of(this->mRust); }
+
+// --- DX7RScreenState: the pinned record the Rust state setters write ---------------------------------------------------
+#include <stddef.h>
+#include "dx7/DX7Rasterizer.h"
+#define DX7_SAME_OFFSET(cpp, rust, field) static_assert(offsetof(cpp, field) == offsetof(rust, field), #field)
+static_assert(sizeof(GXVIEWPORT) == sizeof(EeDx7Viewport), "ee_dx7/src/state.rs Viewport");
+static_assert(sizeof(DX7RTextureStage) == sizeof(EeDx7TextureStageCache), "ee_dx7/src/state.rs TextureStageCache");
+static_assert(sizeof(DX7RScreenState) == sizeof(EeDx7ScreenState), "ee_dx7/src/state.rs ScreenState");
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mViewport);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mDirect3D);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mDevice);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mScreen);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mVertexBuffer);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mVertexBufferPosition);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mStage1ColorOperation);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mStage);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mBlendSource);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mBlendDestination);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mZEnable);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mIs3DMode);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mViewportChanged);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mZWriteEnable);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mAlphaBlendEnable);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mCanModulateTextureAlpha);
+DX7_SAME_OFFSET(DX7RScreenState, EeDx7ScreenState, mDirtyRectangleSupport);
+DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mTexture);
+DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mColorMode);
+DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mAlphaMode);
+DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mColorArgument1);
+DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mColorArgument2);
+DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mAlphaArgument1);
+DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mAlphaArgument2);
+DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mTextureAddressingMode);
+DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMinFilterMode);
+DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMagFilterMode);
+DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMipFilterMode);
+DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMipMapBias);
