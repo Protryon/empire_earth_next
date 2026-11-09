@@ -23,6 +23,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | R1.4-R1.5 window, fonts | Done (`ee_plat_ui`, `ee_plat_sdl`): SDL3 kept (D4), stb_truetype ported line by line, 51,520 glyphs byte-equal |
 | R2.1-R2.3 rules schema, rustgen, text compiler | Done (`ee_data`) |
 | R2.4 glTF and PNG | Done (`ee_openformats`), 7,150 of 7,150 gate cases equal to the C++ digests |
+| D9 open formats only, the data side | Done (branch `rust-d9-data`): the db tables are read only as text (no `.dat` fallback, the dead `dbrandommap.dat` load removed); the pointers, palette, volcano, scenario map and campaign background are PNG read by `GESurface::LoadPNG` (`ee_openformats` `png_to_picture`; 50/50 retail pictures and 2,666/2,666 tree PNGs pixel-equal to the `LoadTGA` path); `open_data.py` builds only the open tree (no binary form in it or in the release parts); the gates, the sim tools and the harness use it. Left: the model and texture loaders (another branch) |
 | R3.1-R3.3 mixer logic, compression, encryption, TCP | Done (`ee_mixer`, `ee_codec`, `ee_net_tcp`). miniaudio stays; no audio has been listened to through the Rust mixer |
 | R3.4 random maps | Done (`ee_rmap`), 2,088 of 2,088 maps equal to the C++ digests. The `.rmv` reader (`Unit10.cpp`) stays C++ |
 | R3.5 File System | Done (`ee_fs`) behind the C++ facades |

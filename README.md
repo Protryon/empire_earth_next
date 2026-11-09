@@ -57,12 +57,14 @@ python -I tools/clang_build.py      # compile only, with a ranked error census (
 
 The game reads its data as one loose `Data` folder in its own directory: the contents of both retail `data.ssa`
 archives (*Art of Conquest* and the original *Empire Earth*) and the original game's loose data, merged in the game's
-search order, with the db tables as text (CSV/YAML), the models as glTF and the textures as PNG. Neither a `data.ssa`
-nor an installation of the original game is needed. `tools/open_data.py` makes that tree from the two installs (only
-read) and packs it as a bundle (it is derived from the retail game):
+search order, with the db tables as text (CSV/YAML), the models as glTF and the textures and other pictures as PNG.
+These open forms are the only ones the game reads (docs/RUST_PLAN.md D9: no `.dat`, `.cem`, `.sst` or `.tga`). Neither
+a `data.ssa` nor an installation of the original game is needed. `tools/open_data.py` makes that tree from the two
+installs (only read; its converters read the retail binary forms) and packs it as a bundle (it is derived from the
+retail game):
 
 ```
-python -I tools/open_data.py build build/open_data/tree       # the tree (about 4 minutes; --binary: unconverted)
+python -I tools/open_data.py build build/open_data/tree       # the tree (about 4 minutes)
 python -I tools/open_data.py pack build/ee-aoc-data.zip       # the bundle: the tree, fonts/, README.txt
 ```
 
