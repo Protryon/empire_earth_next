@@ -8,6 +8,7 @@
 
 #![allow(non_snake_case, non_upper_case_globals, clippy::missing_safety_doc)]
 
+pub mod path;
 pub mod sim;
 
 /// Copies between C strings and the game's byte strings.
