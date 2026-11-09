@@ -1715,6 +1715,140 @@ citizen-defence work's concern. The boom's Stone Age is still below its plan of 
 room. Classic traces unchanged (seeds 2-5, 1800 s: 1842, 1822, 1746, 1807 lines identical). A boom game run twice
 gives identical traces (9376 lines).
 
+### 8.33 Why the next engine's citizens die (2026-11-08, EE-SIM)
+
+The next engine lost 50-110 citizens per 2-hour game against the classic AI (§8.31), even though boom and balanced
+guard the town with one defend group. Every bench below: EE-SIM, Small, Medium, 2 AIs and the idle human, no cheats,
+2 hours. Boom vs classic is played from both seats (seeds 26-33, 16 games). Balanced vs classic is played from seat
+p2 (8 games). "Citizens" are land citizens; fishing boats are counted apart. The scorecard's "citizens lost" counts
+both.
+
+**The measurement.** A new trace (trace on only; the game reads nothing of it: EECPNextArmy.cpp, from
+EEComputerPlayer::DamageTaken and UnitTaken) writes two lines:
+- `next.death`, for every citizen and boat lost:
+  - where it died (tile, distance from the town centre) and the epoch;
+  - the killer (player, class, kind);
+  - what the citizen was doing at its first hit of the incident, and at its death;
+  - the foes within 10 tiles, the armed animals within 4 and the own soldiers within 10;
+  - the nearest group (distance, task, units), and the nearest own tower and drop site;
+  - the time from the first hit and from the incident's start.
+- `next.raid`, for every incident (hits on citizens within 20 tiles and 30 s of each other):
+  - its length, hits, losses and most foes;
+  - how far the nearest group was at its start, and how long a group took to come within 10 tiles.
+
+The scripts that read them (deaths.py, militia.py, drain.py) were scratch tools and are not in the repository.
+
+**Before** (main a84b92a with the trace, 16 boom games; balanced from §8.31's script):
+
+| | Boom | Balanced |
+|---|---|---|
+| Land citizens / boats lost per game | 83.6 / 37.1 | 76.4 / 48.1 |
+| Killed by soldiers / animals / warships / towers | 91% / 3% / 3% / 2% | 87% / 6% / 5% / 0% |
+| Died within 15 tiles of the town centre | 58% | 77% |
+| In the Copper Age / Bronze Age | 60% / 22% | 84% / - |
+| Fighting when first hit (the militia) | 52% | 51-58% |
+| Moving when first hit / at death | 17% / 40% | 10% / 29% |
+| No own soldier within 10 tiles | 65% | 49% |
+| No next-engine group at all | 51% | 37% |
+| Losses in incidents of 8+ foes | 54% (675 of 1244) | 72% |
+
+What it shows:
+- **Armies in the town.** The classic attacks the town from the Copper Age with 8-17 soldiers; hunting, remote sites
+  and animals are minor causes.
+- **The militia fights armies.** It decided "fight" 1957 times and "run" 292. Its odds sum the towers' hit points
+  (1000-1450 each) with the citizens', so 12 citizens and a tower against 8 rock throwers came out at 7.9. Fights
+  against 5 or more raiders account for about half of the fighting deaths.
+- **No army.** The boom's army was 4.1 / 3.5 soldiers at 30 / 40 minutes. Two causes:
+  - the reserve, once the stock was below it, let no soldier be made: "reserve less the light army's cost" still
+    leaves stock - cost < reserve, so one game had 0/8 soldiers for 50 minutes;
+  - under a threat the town never scrambled: six towers anywhere counted 6 x 4,000 against a threat of 3,000.
+- **Boats.** Frigates sank 37 boats a game, at fish the 30-second naval danger zones had already forgotten.
+
+**Tried and dropped** (16 boom games each, seeds 26-33; TEST ONLY `EE_AI_EXP` switches, removed again):
+
+| Variant | Land citizens lost / game | Copper reached | Why dropped |
+|---|---|---|---|
+| baseline (main 6a03d9b) | 71.7 | 13/16 | |
+| `mrun`: the citizens fight only raids of 2 or fewer and run from anything larger to a refuge 15+ tiles from the attack | 77.2 | 9/16 | 70% now die running (spearmen and horsemen catch them); 25-29 citizens bounce between work and refuge every 4 s through the attack; the economy stops |
+| `modds`: honest odds (towers add attack, not hit points; group soldiers count), no raider cap | 79.6 | 14/16 | no gain |
+| rb_economy: the reserve cap below, for balanced and rush | 90 (balanced) | 7/8, Copper +8 min | slower and no larger army |
+| a defend group that answers soldiers attacking the player's units first, up to 12 tiles past the claim (32 games, seeds 34-49) | 74.0 vs 77.6 | | within the noise |
+
+Neither fighting nor running saves citizens from an army in the town; killing the army does. Game-to-game variance
+is large (1 to 224 losses), so 16 games resolve only about 15 losses a game.
+
+**Kept:**
+- **The boom's army** (boom.lua):
+  - the reserve never locks out the missing light army: at most the stock less what the missing soldiers cost, in
+    steps of 100;
+  - the town scrambles under a threat while its army is below the light army;
+  - the stock targets count the soldiers of both trainers (the archers' wood);
+  - a guard (from an owner playtest, where a raid's scramble spent the Copper Age's iron from 433 to 22, then the last
+    safe iron mine ran out): a resource of the advance that is 70% paid, or that has no site left to gather from,
+    keeps its reserve under a scramble and against the light army.
+- **The boats:**
+  - the fish finder skips fish within 12 tiles of an armed enemy ship the player sees now (C++, next engine; read
+    from the world at the call, so fog-honest and save-safe);
+  - the boom replaces no boat while 3 or more were sunk in the last 5 minutes.
+
+**After** (the branch merged with main, same 16 seeds and seats):
+
+| | Before | After |
+|---|---|---|
+| Land citizens lost / game (boom) | 83.6 | **65.5** |
+| Fishing boats lost / game | 37.1 | **19.2** |
+| All citizens lost (scorecard) | 118.9 | **82.8** |
+| Army at 20 / 30 / 40 min | 3.6 / 4.1 / 3.5 | 4.0 / **7.9 / 7.2** |
+| Citizens at 10 / 20 / 30 / 40 min | 22.4 / 26.8 / 40.9 / 57.3 | 22.4 / 29.1 / 40.1 / 58.9 |
+| Stone / Copper / Bronze (median min, reached) | 23.5 / 53.4 (15) / 85.6 (8) | 24.3 / 51.7 (15) / 89.0 (12) |
+| Per seed: Stone / Copper later by (median) | | +0.0 / +1.2 min |
+| Wins, mixed score | 1 - 13, 2 close | 2 - 8, 6 close |
+| Advance reserves of 600+ drained below 30% within 3 min | 2 (2 games) | **0** |
+| Rush vs boom (16 games, both seats): wins | boom 5 - rush 1, 10 close | boom **8** - rush 1, 7 close |
+| Rush vs boom: boom citizens lost | 29.5 | 14.5 |
+
+The after-bench's causes: 86% soldiers, 50% within 15 tiles, 50% fighting when first hit, and 42% with no group near
+(51% before). Balanced vs classic (8 games, its script unchanged, only the C++ fish check): 76.4 → 86.8 land citizens
+and 48 boats, within the noise; balanced has no boat hold. Classic unchanged: seeds 2-5, 1800 s, classic against
+classic, pre and post executables, `ai_trace.py compare` identical (1784, 1884, 1854 and 1829 lines). The same boom
+game twice: identical (seeds 26 and 27, 3600 s: 4657 and 5864 lines).
+
+**The owner's build order** (a separate step, after the above; boom.lua's plan table):
+- **Prehistoric:** no soldiers; all the food to citizens (32-36: about 18 food, 5-10 wood, 4 iron, 2 gold, 2 stone);
+  the barracks at 28 citizens; the advance as soon as it is paid.
+- **Stone:** 20 soldiers first, spearmen preferred (`PREFERRED`), from two barracks, while the citizens wait at 32
+  for at most 5 minutes. Then the citizens: 18 food (`food`, a minimum), 12 gold, 12-18 iron, 6 stone and 10-15
+  wood, the boats on top. Then the Copper Age.
+- **Copper:** 15-20 wood, 6 stone, 12-18 gold and iron, 3 granaries and 24 farms.
+- **The give-way rule:** when food is short of its minimum, the resource with the most gatherers beyond what its
+  lack needs gives one up. Before, iron always gave way first, while gold piled up past 1000.
+
+Same 16 seeds against the after-bench above (v1 without the give-way rule):
+
+| | After (above) | Build order v1 | Build order v2 |
+|---|---|---|---|
+| Stone (median, per seed vs after) | 24.3 | 23.1 (-0.7) | **22.1 (-1.6)** |
+| Copper (median, reached; per seed vs after) | 51.7 (15) | 60.1 (14; +6.0) | 58.7 (13; +3.3) |
+| Citizens at 10 / 20 / 30 / 40 min | 22.4 / 29.1 / 40.1 / 58.9 | 23.3 / 33.6 / 41.2 / 60.1 | 23.6 / **33.9** / 42.8 / **65.6** |
+| Army at 20 / 30 / 40 min | 4.0 / 7.9 / 7.2 | 0 / 6.4 / 11.8 | 0 / 6.1 / **15.0** |
+| Land citizens / boats lost per game | 65.5 / 19.2 | 103.8 / 25.4 | 81.8 / 26.8 |
+| Wins vs classic (mixed) | 2 - 8, 6 close | 2 - 13, 1 close | 2 - 11, 3 close |
+| Rush vs boom (boom - rush, close) | 8 - 1, 7 | 6 - 3, 7 | 8 - 6, 2 |
+| Advance reserves drained | 0 | 0 | 0 |
+
+The build order reaches Stone faster and has a larger economy and army by 40 minutes. The Copper Age comes later,
+and more citizens die: the 20 soldiers and 18 food gatherers leave too few for iron at 36 citizens. Without
+Prehistoric soldiers, the rush wins 6 of 16 (1 before).
+
+**Left:**
+- The town still loses to 8+ soldier armies (576 of the 922 incident losses after). The boom needs a larger standing
+  army there, and its towers sit mostly at the sites.
+- The militia's tower-inflated odds stay (better odds did not help by themselves).
+- Balanced and rush have neither the army fixes nor the boat hold.
+- The trace's `losses` line (EECPTrace.cpp EECPTraceUnitLost) lacks braces: `citizens_by_distance` and
+  `citizens_by_killer` count every unit lost, and buildings and other losses only when there is no town centre. Not
+  fixed here, because the fix changes the classic traces.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

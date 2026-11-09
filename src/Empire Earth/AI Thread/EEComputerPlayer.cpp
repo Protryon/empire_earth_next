@@ -1388,6 +1388,8 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
         EECPRMNavalFlee(this->mCivilizationManager->mResourceManager, inUnit, inUnit->mComplexUnit->mLastAttacker);
     if (theCategory == kUnitCategoryNavalCitizen || theCategory == kUnitCategoryLandCitizen) {
         this->mCitizenDamaged = true;
+        if (this->mNextState != NULL && gCPTraceOn)
+            EECPNextTraceHit(this, inPlayer, inUnit);   // the next engine's losses trace (nothing the game reads)
         // new: a hit by a human player's unit marks a danger zone the gatherers run from (EECPResourceManager.cpp
         // EECPRMNoteDanger; against computer players only with the experiment "flee": docs/AI_RESEARCH.md §8.22)
         if (inPlayer > 0 && theCategory == kUnitCategoryLandCitizen
@@ -5828,6 +5830,8 @@ void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
     if (gCPTraceOn && !inSwapped)
         EECPTraceUnitLost(this, theUnit);
+    if (gCPTraceOn && !inSwapped && this->mNextState != NULL)
+        EECPNextTraceDeath(this, theUnit);   // the next engine's losses trace (nothing the game reads)
     if (this->mNextState != NULL && !inSwapped && theUnit->mUnitClass != NULL)
         EECPNextEventAdd(this, kNextEventUnitLost, theUnit->mUnitClass->mUnitType, 1);   // the next engine's view
     if (this->mActive)

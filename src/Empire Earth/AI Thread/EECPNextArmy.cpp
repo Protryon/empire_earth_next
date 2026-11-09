@@ -49,6 +49,7 @@
 #include "ee/EEUnitGoal.h"
 #include "ee/EEUGLocation.h"
 #include "ee/EEUGAttackUnit.h"
+#include "ee/EEUGGather.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEAIKindIDs.h"
 #include "ee/EEAIArea.h"
@@ -832,11 +833,14 @@ static void EECPNextGroupStep(EEComputerPlayer* inPlayer, EECPNextState* inState
     EECPNextMove(inPlayer, ioGroup, theCX, theCY, ioGroup.mX, ioGroup.mY, false, inNow);
 }
 
+static void EECPNextTraceIncidents(EEComputerPlayer* inPlayer, const EECPNextState* inState, long inNow);
+
 void EECPNextArmyStep(EEComputerPlayer* inPlayer)
 {
     EECPNextState* theState = EECPNextGetState(inPlayer);
     long theNow = (long)gPhysics->mGameTime;
     EECPNextScan(inPlayer, theState, theNow);
+    EECPNextTraceIncidents(inPlayer, theState, theNow);
     for (unsigned long g = 0; g < theState->mGroups.size();) {
         EECPNextGroup& theGroup = theState->mGroups[g];
         for (long k = (long)theGroup.mUnits.size() - 1; k >= 0; k--) {
@@ -1255,4 +1259,329 @@ void EECPNextArmyView(EEComputerPlayer* inPlayer, EECPNextView& ioView)
         theEnemy.army_x = p > 0 && p < 64 ? theState->mArmyX[p] : -1;
         theEnemy.army_y = p > 0 && p < 64 ? theState->mArmyY[p] : -1;
     }
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The fishing boats' reflex (EECPResourceManager::FindFish; docs/AI_RESEARCH.md §8.33): the tiles of the armed enemy
+// ships the player sees now, read from the world at the call (not the army step's mSeen, which a loaded game has not
+// rebuilt yet), so the finder can leave the fish near them alone
+
+void EECPNextSeenWarships(EEComputerPlayer* inPlayer, std::vector<long>& outTiles)
+{
+    outTiles.clear();
+    for (unsigned long p = 1; p < gWorld.mNumPlayers && p < 64; p++) {
+        EEPlayer* theOther = gWorld.mPlayers[p];
+        if (theOther == NULL || theOther == inPlayer || inPlayer->IsAlly(theOther) || theOther->mObserverMode)
+            continue;
+        for (EEUnit* theUnit = theOther->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0) || theUnit->mTile == NULL || theUnit->mStats == NULL
+                || theUnit->mStats->mAttack == 0.0f || theUnit->mUnitClass->IsBuilding()
+                || theUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen || !(theUnit->mUnitClass->mDomains & kMovementSea)
+                || theUnit->mComplexUnit->mContainer != NULL || !static_cast<EETile*>(theUnit->mTile)->IsSeenBy(inPlayer))
+                continue;
+            outTiles.push_back(theUnit->GetTileX() << 16 | theUnit->GetTileY());
+        }
+    }
+}
+
+bool EECPNextNearTiles(const std::vector<long>& inTiles, long inX, long inY, long inRange)
+{
+    for (unsigned long k = 0; k < inTiles.size(); k++)
+        if (EECPNextNear(inTiles[k] >> 16, inTiles[k] & 0xffff, inX, inY, inRange))
+            return true;
+    return false;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// The citizens' losses (the AI trace only, gCPTraceOn: nothing here is read by the game; docs/AI_RESEARCH.md §8.33).
+// Every hit on a land citizen of a next-engine player opens or extends an incident (hits within 20 tiles and 30 s of
+// each other); every citizen lost writes a next.death line (where, what killed it, what it was doing when first hit,
+// the foes, the own soldiers, groups and towers near), and every incident closed a next.raid line (how long it
+// lasted, the hits and losses, how far the nearest group was when it began and how long one took to come within 10
+// tiles).
+
+struct EECPNextLossHit {
+    long mFirst, mLast;         // game ms: its first hit of the incident, its last
+    long mWhat;                 // what it was doing at the first hit (EECPNextDoing)
+    long mIncident;
+};
+
+struct EECPNextIncident {
+    long mID, mX, mY, mDistance, mStart, mLast, mHits, mLost, mFoes, mFoeStrength, mAttacker;
+    long mGuard0, mOwn0, mTower0, mGuardAt;
+};
+
+static std::map<long, EECPNextLossHit> sNextHits[64];
+static std::vector<EECPNextIncident> sNextIncidents[64];
+static long sNextIncidentID[64];
+static long sNextLossTime[64];
+
+enum {
+    kDoingIdle = 0, kDoingForage, kDoingHunt, kDoingFish, kDoingFarm, kDoingFood, kDoingWood, kDoingStone, kDoingGold,
+    kDoingIron, kDoingBuild, kDoingFight, kDoingMove, kDoingOther,
+};
+
+static const char* EECPNextDoingName(long inWhat)
+{
+    static const char* const sNames[] = {"idle", "forage", "hunt", "fish", "farm", "food", "wood", "stone", "gold",
+                                         "iron", "build", "fight", "move", "other"};
+    return inWhat >= 0 && inWhat <= kDoingOther ? sNames[inWhat] : "?";
+}
+
+static long EECPNextDoing(EEComplexUnit* inUnit)
+{
+    EEUnitGoal* theGoal = inUnit->mActiveGoal;
+    if (theGoal == NULL)
+        return kDoingIdle;
+    switch (theGoal->mKind) {
+    case kGoalGather: {
+        EEUnit* theResource = static_cast<EEUGGather*>(theGoal)->mResource;
+        if (theResource == NULL)
+            return kDoingOther;
+        switch (theResource->mResourceType) {
+        case kResourceFood: {
+            long theClass = theResource->mUnitClass->mUnitType;
+            unsigned long theFamily = theResource->mUnitClass->GetFamily();
+            return theClass == kUnitTypeResForageBush ? kDoingForage : theFamily == kUnitFamilyAnimal ? kDoingHunt
+                : theFamily == kUnitFamilyFish || theClass == kUnitTypeResFish ? kDoingFish
+                : theClass == kUnitTypeFarm || theClass == kUnitTypeRoboticFarm ? kDoingFarm : kDoingFood;
+        }
+        case kResourceWood: return kDoingWood;
+        case kResourceStone: return kDoingStone;
+        case kResourceGold: return kDoingGold;
+        case kResourceIron: return kDoingIron;
+        default: return kDoingOther;
+        }
+    }
+    case kGoalAttackUnit: {
+        EEUnit* theTarget = static_cast<EEUGAttackUnit*>(theGoal)->mTarget;
+        return theTarget != NULL && theTarget->mUnitClass->GetFamily() == kUnitFamilyAnimal ? kDoingHunt : kDoingFight;
+    }
+    case kGoalBuildRepair: return kDoingBuild;
+    case kGoalLocation: return kDoingMove;
+    default: return kDoingOther;
+    }
+}
+
+// the nearest of the player's groups (but scouts) to a tile: its distance (-1: none), task and units
+static long EECPNextNearestGroup(EEComputerPlayer* inPlayer, const EECPNextState* inState, long inX, long inY,
+    long& outTask, long& outUnits)
+{
+    long theBest = -1;
+    outTask = -1;
+    outUnits = 0;
+    for (unsigned long g = 0; g < inState->mGroups.size(); g++) {
+        const EECPNextGroup& theGroup = inState->mGroups[g];
+        long theX, theY;
+        if (theGroup.mTask == kNextTaskScout || !EECPNextCentre(inPlayer, theGroup, theX, theY))
+            continue;
+        long theDistance = EECPNextRoot(EECPNextD2(theX, theY, inX, inY));
+        if (theBest < 0 || theDistance < theBest) {
+            theBest = theDistance;
+            outTask = theGroup.mTask;
+            outUnits = (long)theGroup.mUnits.size();
+        }
+    }
+    return theBest;
+}
+
+// the foes round a tile (enemy soldiers, towers and warships within inRange; armed animals within 4), the own soldiers
+// within inRange, and the nearest own built tower and drop site
+static void EECPNextAround(EEComputerPlayer* inPlayer, long inX, long inY, long inRange, long& outFoes, long& outStrength,
+    long& outAnimals, long& outOwn, long& outTower, long& outDrop)
+{
+    outFoes = outStrength = outAnimals = outOwn = 0;
+    outTower = outDrop = -1;
+    for (unsigned long p = 0; p < gWorld.mNumPlayers && p < 64; p++) {
+        EEPlayer* theOther = gWorld.mPlayers[p];
+        if (theOther == NULL)
+            continue;
+        bool theOwn = theOther == inPlayer;
+        if (!theOwn && p > 0 && inPlayer->IsAlly(theOther))
+            continue;
+        for (EEUnit* theUnit = theOther->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0) || theUnit->mStats == NULL
+                || theUnit->mComplexUnit->mContainer != NULL || theUnit->GetTileX() == -10000)
+                continue;
+            long long theD2 = EECPNextD2(theUnit->GetTileX(), theUnit->GetTileY(), inX, inY);
+            EEUnitClass* theClass = theUnit->mUnitClass;
+            if (theOwn) {
+                if (theClass->IsBuilding() && theUnit->mComplexUnit->mIsBuilt) {
+                    long theDistance = EECPNextRoot(theD2);
+                    if (theClass->mIsTower && theUnit->mStats->mAttack != 0.0f && (outTower < 0 || theDistance < outTower))
+                        outTower = theDistance;
+                    if (theClass->IsDropSite() && (outDrop < 0 || theDistance < outDrop))
+                        outDrop = theDistance;
+                } else if (EECPNextArmySoldier(theUnit) && theD2 <= (long long)inRange * inRange)
+                    outOwn++;
+                continue;
+            }
+            if (p == 0) {
+                if (theUnit->mStats->mAttack != 0.0f && theClass->GetFamily() == kUnitFamilyAnimal && theD2 <= 16)
+                    outAnimals++;
+                continue;
+            }
+            if (theD2 > (long long)inRange * inRange)
+                continue;
+            if (EECPNextArmySoldier(theUnit) || (theClass->IsBuilding() && theClass->mIsTower && theUnit->mStats->mAttack != 0.0f)
+                || ((theClass->mDomains & kMovementSea) && theUnit->mStats->mAttack != 0.0f && !theClass->IsBuilding()
+                    && theClass->mCategory != kUnitCategoryNavalCitizen)) {
+                outFoes++;
+                outStrength += EECPNextUnitStrength(theUnit);
+            }
+        }
+    }
+}
+
+static long EECPNextTownDistance(EEComputerPlayer* inPlayer, long inX, long inY)
+{
+    EECPBuildManager* theBuild = inPlayer->mCivilizationManager != NULL ? inPlayer->mCivilizationManager->mBuildManager : NULL;
+    if (theBuild == NULL || theBuild->mTownCenterTile.mX == -10000)
+        return -1;
+    return EECPNextRoot(EECPNextD2(inX, inY, theBuild->mTownCenterTile.mX, theBuild->mTownCenterTile.mY));
+}
+
+static void EECPNextLossReset(unsigned long inID, long inNow)
+{
+    if (inNow < sNextLossTime[inID]) {   // a new game in the same process
+        sNextHits[inID].clear();
+        sNextIncidents[inID].clear();
+        sNextIncidentID[inID] = 0;
+    }
+    sNextLossTime[inID] = inNow;
+}
+
+void EECPNextTraceHit(EEComputerPlayer* inPlayer, long inAttacker, EEUnit* inUnit)
+{
+    unsigned long theID = inPlayer->mPlayerID;
+    if (!gCPTraceOn || inPlayer->mNextState == NULL || theID >= 64 || inUnit == NULL || inUnit->mComplexUnit == NULL
+        || inUnit->mUnitClass->mCategory != kUnitCategoryLandCitizen || inUnit->GetTileX() == -10000)
+        return;
+    long theNow = (long)gPhysics->mGameTime;
+    EECPNextLossReset(theID, theNow);
+    long theX = inUnit->GetTileX(), theY = inUnit->GetTileY();
+    std::vector<EECPNextIncident>& theIncidents = sNextIncidents[theID];
+    EECPNextIncident* theIncident = NULL;
+    for (unsigned long k = 0; k < theIncidents.size() && theIncident == NULL; k++)
+        if (theNow - theIncidents[k].mLast <= 30000 && EECPNextNear(theIncidents[k].mX, theIncidents[k].mY, theX, theY, 20))
+            theIncident = &theIncidents[k];
+    long theFoes, theStrength, theAnimals, theOwn, theTower, theDrop;
+    EECPNextAround(inPlayer, theX, theY, 10, theFoes, theStrength, theAnimals, theOwn, theTower, theDrop);
+    if (theIncident == NULL) {
+        EECPNextIncident theNew;
+        memset(&theNew, 0, sizeof(theNew));
+        theNew.mID = ++sNextIncidentID[theID];
+        theNew.mX = theX;
+        theNew.mY = theY;
+        theNew.mDistance = EECPNextTownDistance(inPlayer, theX, theY);
+        theNew.mStart = theNow;
+        theNew.mAttacker = inAttacker;
+        long theTask, theUnits;
+        theNew.mGuard0 = EECPNextNearestGroup(inPlayer, inPlayer->mNextState, theX, theY, theTask, theUnits);
+        theNew.mOwn0 = theOwn;
+        theNew.mTower0 = theTower;
+        theNew.mGuardAt = -1;
+        theIncidents.push_back(theNew);
+        theIncident = &theIncidents.back();
+    }
+    theIncident->mLast = theNow;
+    theIncident->mHits++;
+    if (theFoes > theIncident->mFoes)
+        theIncident->mFoes = theFoes;
+    if (theStrength > theIncident->mFoeStrength)
+        theIncident->mFoeStrength = theStrength;
+    EECPNextLossHit& theHit = sNextHits[theID][(long)inUnit->mUnitID];
+    if (theHit.mLast == 0 || theNow - theHit.mLast > 30000) {
+        theHit.mFirst = theNow;
+        theHit.mWhat = EECPNextDoing(inUnit->mComplexUnit);
+    }
+    theHit.mLast = theNow;
+    theHit.mIncident = theIncident->mID;
+}
+
+void EECPNextTraceDeath(EEComputerPlayer* inPlayer, EEUnit* inUnit)
+{
+    unsigned long theID = inPlayer->mPlayerID;
+    if (!gCPTraceOn || inPlayer->mNextState == NULL || theID >= 64 || inUnit == NULL || inUnit->mComplexUnit == NULL
+        || (inUnit->mUnitClass->mCategory != kUnitCategoryLandCitizen && inUnit->mUnitClass->mCategory != kUnitCategoryNavalCitizen))
+        return;
+    bool theBoat = inUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen;
+    long theNow = (long)gPhysics->mGameTime;
+    EECPNextLossReset(theID, theNow);
+    long theX = inUnit->mTileX, theY = inUnit->mTileY;
+    EEComplexUnit* theKiller = inUnit->mComplexUnit->mLastAttacker;
+    long theKillerPlayer = -1, theKillerClass = -1, theKillerDistance = -1;
+    char theKind = '-';
+    if (theKiller != NULL && theKiller->mUnitClass != NULL) {
+        theKillerPlayer = theKiller->mPlayer != NULL ? (long)theKiller->mPlayer->mPlayerID : -1;
+        theKillerClass = theKiller->mUnitClass->mUnitType;
+        if (theKiller->GetTileX() != -10000)
+            theKillerDistance = EECPNextRoot(EECPNextD2(theKiller->GetTileX(), theKiller->GetTileY(), theX, theY));
+        EEUnitClass* theClass = theKiller->mUnitClass;
+        theKind = theKillerPlayer == 0 ? 'a' : theClass->IsBuilding() ? (theClass->mIsTower ? 't' : 'b')
+            : theClass->mCategory == kUnitCategoryLandCitizen ? 'c' : EECPNextArmySoldier(theKiller) ? 's'
+            : (theClass->mDomains & kMovementSea) ? 'n' : 'o';
+    }
+    long theFoes, theStrength, theAnimals, theOwn, theTower, theDrop;
+    EECPNextAround(inPlayer, theX, theY, 10, theFoes, theStrength, theAnimals, theOwn, theTower, theDrop);
+    long theTask, theUnits;
+    long theGuard = EECPNextNearestGroup(inPlayer, inPlayer->mNextState, theX, theY, theTask, theUnits);
+    long theNowDoing = EECPNextDoing(inUnit->mComplexUnit);
+    long theWhat = theNowDoing, theHitMs = -1, theIncidentID = 0, theIncidentMs = -1;
+    std::map<long, EECPNextLossHit>::iterator theHit = sNextHits[theID].find((long)inUnit->mUnitID);
+    if (theHit != sNextHits[theID].end()) {
+        theWhat = theHit->second.mWhat;
+        theHitMs = theNow - theHit->second.mFirst;
+        theIncidentID = theHit->second.mIncident;
+        sNextHits[theID].erase(theHit);
+    }
+    for (unsigned long k = 0; k < sNextIncidents[theID].size(); k++)
+        if (sNextIncidents[theID][k].mID == theIncidentID) {
+            sNextIncidents[theID][k].mLost++;
+            theIncidentMs = theNow - sNextIncidents[theID][k].mStart;
+        }
+    EECPTraceScope theScope("next");
+    EE_CP_TRACE(inPlayer, "next.death",
+        "unit=%s x=%ld y=%ld d=%ld epoch=%ld killer=%ld:%s:%c kd=%ld doing=%s now=%s hit=%ld inc=%ld inc_ms=%ld foes=%ld/%ld "
+        "animals=%ld own=%ld guard=%ld:%s:%ld tower=%ld drop=%ld",
+        theBoat ? "boat" : "citizen", theX, theY, EECPNextTownDistance(inPlayer, theX, theY),
+        inPlayer->mTechnologies != NULL ? (long)inPlayer->mTechnologies->mCurrentEpoch : -1L,
+        theKillerPlayer, theKillerClass >= 0 ? EECPNextClassName(theKillerClass).c_str() : "-", theKind, theKillerDistance,
+        EECPNextDoingName(theWhat), EECPNextDoingName(theNowDoing), theHitMs, theIncidentID, theIncidentMs, theFoes, theStrength,
+        theAnimals, theOwn, theGuard, theTask >= 0 ? EECPNextTaskName(theTask) : "-", theUnits, theTower, theDrop);
+}
+
+// each step (trace on): a group that comes within 10 tiles of an open incident marks it answered; an incident with no
+// hit for 30 s is closed (a next.raid line)
+static void EECPNextTraceIncidents(EEComputerPlayer* inPlayer, const EECPNextState* inState, long inNow)
+{
+    unsigned long theID = inPlayer->mPlayerID;
+    if (!gCPTraceOn || theID >= 64)
+        return;
+    EECPNextLossReset(theID, inNow);
+    std::vector<EECPNextIncident>& theIncidents = sNextIncidents[theID];
+    for (long k = (long)theIncidents.size() - 1; k >= 0; k--) {
+        EECPNextIncident& theIncident = theIncidents[k];
+        if (theIncident.mGuardAt < 0) {
+            long theTask, theUnits;
+            long theGuard = EECPNextNearestGroup(inPlayer, inState, theIncident.mX, theIncident.mY, theTask, theUnits);
+            if (theGuard >= 0 && theGuard <= 10)
+                theIncident.mGuardAt = inNow;
+        }
+        if (inNow - theIncident.mLast <= 30000)
+            continue;
+        EE_CP_TRACE(inPlayer, "next.raid",
+            "id=%ld x=%ld y=%ld d=%ld start=%ld ms=%ld hits=%ld lost=%ld foes=%ld/%ld attacker=%ld guard0=%ld own0=%ld "
+            "tower0=%ld guard_ms=%ld",
+            theIncident.mID, theIncident.mX, theIncident.mY, theIncident.mDistance, theIncident.mStart,
+            theIncident.mLast - theIncident.mStart, theIncident.mHits, theIncident.mLost, theIncident.mFoes,
+            theIncident.mFoeStrength, theIncident.mAttacker, theIncident.mGuard0, theIncident.mOwn0, theIncident.mTower0,
+            theIncident.mGuardAt >= 0 ? theIncident.mGuardAt - theIncident.mStart : -1L);
+        theIncidents.erase(theIncidents.begin() + k);
+    }
+    for (std::map<long, EECPNextLossHit>::iterator it = sNextHits[theID].begin(); it != sNextHits[theID].end();)
+        if (inNow - it->second.mLast > 120000)
+            sNextHits[theID].erase(it++);
+        else
+            ++it;
 }
