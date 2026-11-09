@@ -233,6 +233,23 @@ using EeFsFatVisitor = void(*)(void *context,
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
+/// A byte buffer owned by Rust; free it with `ee_of_bytes_free`.
+struct EeOfBytes {
+  uint8_t *ptr;
+  size_t len;
+};
+
+/// Reads an external file a glTF names (`uri`, its bytes, percent-decoded; relative to the .gltf). On success stores
+/// the bytes in `*out` with `ee_of_bytes_copy` and returns true; false when it cannot be found. `user` is the
+/// `resolve_user` given to `ee_of_gltf_to_cem`.
+using EeOfResolve = bool(*)(void *user, const uint8_t *uri, size_t uri_len, EeOfBytes *out);
+
+/// A byte buffer the caller owns (one PNG frame).
+struct EeOfSlice {
+  const uint8_t *ptr;
+  size_t len;
+};
+
 /// `GERectangle`, as the generator reads it.
 struct EeRmapRect {
   float left;
@@ -1562,6 +1579,38 @@ int32_t ee_tcp_xfer_receive(uint32_t size, uint8_t *buffer, uint32_t *received);
 /// # Safety
 /// `server` is a valid slot; `data` for `length`.
 int32_t ee_tcp_xfer_send_to(void **server, uint32_t index, const uint8_t *data, uint32_t length);
+
+/// Copies `len` bytes into a Rust-owned buffer (a resolver's answer).
+///
+/// # Safety
+/// `data` is valid for `len` bytes.
+EeOfBytes ee_of_bytes_copy(const uint8_t *data, size_t len);
+
+/// Frees a buffer returned by this interface.
+///
+/// # Safety
+/// `bytes` came from this interface and is not used again.
+void ee_of_bytes_free(EeOfBytes bytes);
+
+/// `GEOpenFormats::GltfToCem`: a .gltf or .glb -> the .cem bytes in `*out`, or false with the message in `*err`.
+///
+/// # Safety
+/// `data` is valid for `len` bytes, `out` and `err` for writing; `resolve`, if any, follows `EeOfResolve`'s contract.
+bool ee_of_gltf_to_cem(const uint8_t *data,
+                       size_t len,
+                       EeOfResolve resolve,
+                       void *resolve_user,
+                       EeOfBytes *out,
+                       EeOfBytes *err);
+
+/// `GEOpenFormats::PngToSst`: PNG frames -> the .sst bytes in `*out`, or false with the message in `*err`.
+///
+/// # Safety
+/// `frames` is valid for `count` slices, each slice for its bytes; `out` and `err` for writing.
+bool ee_of_png_to_sst(const EeOfSlice *frames,
+                      size_t count,
+                      EeOfBytes *out,
+                      EeOfBytes *err);
 
 /// Runs generator step `step` (0 player positions, 1 neutral positions, 2 land and water, 3 flat map, 4 height map,
 /// 5 filter, 6 shallows, 7 resources, 8 trees) on `input`, fills `output` and returns the handle that owns `output`'s

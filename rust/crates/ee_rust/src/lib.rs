@@ -20,6 +20,9 @@ use ee_rmap as _;
 // the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency
 use ee_data as _;
 
+// glTF -> .cem and PNG -> .sst (ee_openformats/src/ffi.rs): the open-format readers GEOpenFormatsFile.cpp calls
+use ee_openformats as _;
+
 // The platform layer's leaves: its `#[no_mangle]` functions and variables reach the staticlib through this
 // dependency.
 use ee_plat_core as _;
