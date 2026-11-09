@@ -634,6 +634,10 @@ step. A `plan` line each minute and a `sites` line every five (`next.print` in t
 - A rush-aware army mix: the boom's light army is 4-5 soldiers at 30-40 min against the aggressive classic's 19-29,
   and it loses the mixed score to it (it survives: §8.30).
 
+(S4 provides the first two, §5 "S4 as built": `defend` groups that hold their named soldiers, and `scout`; boom.lua now
+guards with one defend group and scouts, its army under threat may grow further, and the finders' fog bypass above is
+reverted.)
+
 **Results** (EE-SIM, Small, Medium, 2 AIs, no cheats, 2 hours; `--engine next,classic` and `classic,next`, seeds
 26-49, 48 games; details in AI_RESEARCH.md §8.30):
 
@@ -785,7 +789,7 @@ now owns its groups:
 | `{verb="attack", player=3, n=8, classes={...}, group=id, from=id, x=, y=}` | a new group (or `group` takes the task and `n` more); the place: x, y, else the target's town seen; `no_target` when none is seen |
 | `{verb="raid", player=3, n=4, ...}` | the place: x, y, else its latest gather spot with no known tower near, else its town |
 | `{verb="defend", n=4, x=-1, y=-1, radius=0, group=, from=, classes=}` | -1: the town, radius 0: the claim range (12 at a tile) |
-| `{verb="scout", n=1, classes=, from=}` | |
+| `{verb="scout", n=1, classes=, from=, x=, y=}` | x, y: its first place (e.g. a claimed site not explored yet), then on its own |
 | `{verb="retreat", group=id, x=, y=}` | group 0 or none: every group but the scouts; home by default |
 | `{verb="regroup", group=id, x=, y=}` | hold a place (default: its centre) as a defence of 8 tiles |
 | `{verb="disband", group=id}` | the soldiers back to the classic commander |
@@ -811,23 +815,32 @@ army, numbers from a plan table); `ai/rush.lua`; `ai/balanced.lua`. Mapping for 
   least 40-45%; while saving, every mineral the advance does not need goes to its least; forage patches claimed, the
   claim grows and the food gatherers hunt when none is left; settlements at patches; towers at the worked sites;
   docks and boats from the Stone Age; the plan's buildings (a whitelist with counts); the SOL by the cheapest
-  building; the reserve and the advance only when paid. Farms from the Copper Age.
-- **Army** (both): a scout (one soldier); the home guard (`defend` at the town, the claim range) takes every free
-  soldier; waves `attack ... from = home`; reinforcements; raids `from = home`; a group out retreats from a stronger
-  enemy, and every group out is recalled when the threat at the town outweighs the home guard; no wave while the
-  town is threatened; a group back home is folded into the guard; a wave lost (or back with half its units lost)
-  counts as failed.
-- **Rush:** 24/55/75 citizens, iron-heavy (30% in the Prehistoric), two barracks at 7 and 11 citizens, no army cap but
-  the population (held at its size while 4+ citizens short with 8 soldiers), the scout at 1 minute, raids of 3 every
-  2.5 minutes, waves of 6 in the Prehistoric and 10 later (more than the target was seen with), a wave as the target
-  reaches a new epoch, Stone saved for from 12 minutes. **Falls back** to a boom (the BOOM plan: 30/80/95 citizens,
-  towers 2/4/6, two docks, an army of 6/14/20, attacks only from 1.6 times the target's seen strength) after two
-  failed waves, from 25 minutes against a target with 4+ towers and a stronger army, or still Prehistoric at 30.
-- **Balanced:** 32/88/100 citizens, gold at most 3/12/14, iron 6/18/20, wood up to 23, one barracks, a range from
-  40 citizens, towers 2/4/6, 10-12 boats in two docks; an army of 6/16/26 (or half as many again as the most seen,
-  at most a third of the pop cap); the scout at 2.5 minutes, again after 8 minutes without news; a wave (keeping 4
-  home) only when 1.5 times the target's seen strength (towers counted) with 8/14/20 soldiers; raids of 4 every 6
-  minutes on targets with 3 towers at most.
+  building; the reserve and the advance only when paid. Farms from the Copper Age. The soldiers missing up to half
+  the army wanted are left out of the epoch's reserve (`reserve_less`): the army floor comes before the advance.
+- **Army** (both): a scout (one soldier; again every 30 s until the target's town is seen, then when it has not been
+  seen for a while); the home guard (`defend` at the town, the claim range) takes every free soldier; waves
+  `attack ... from = home` (never smaller than the army seen at the target; at its gather spot while its town is not
+  seen); reinforcements; raids `from = home` only from a surplus (6 soldiers stay); a group out retreats from a stronger
+  enemy, and every group out is recalled when the threat at the town outweighs the home guard; no wave while the town
+  is threatened; a group back home is folded into the guard; a wave lost (or back with half its units lost) counts as
+  failed.
+- **Rush:** 30/60/80 citizens, iron-heavy (30% in the Prehistoric), two barracks at 7 and 11 citizens, no army cap but
+  the population (held at its size while 4+ citizens short with 8 soldiers), the scout at 1 minute, raids of 4 every
+  3 minutes, waves of 10 in the Prehistoric and 14 later, a wave as the target reaches a new epoch, Stone saved for
+  from 12 minutes. **Falls back** to a boom (the BOOM plan: 30/80/95 citizens, towers 2/4/6, two docks, an army of
+  6/14/20, attacks only from 1.6 times the target's seen strength) after two failed waves, from 25 minutes against a
+  target with 4+ towers and a stronger army, or still Prehistoric at 30.
+- **Balanced:** 32/88/100 citizens, gold at most 3/12/14, iron 6/18/20, wood up to 23, a barracks (two from 40
+  citizens), a range from 30, towers 2/4/6, 10-12 boats in two docks; an army of 6/16/26 (or half as many again as the
+  most seen, at most a third of the pop cap); the scout at 2.5 minutes, again after 4 minutes without news; a wave
+  (keeping 4 home) only when 1.5 times the target's seen strength (towers counted) with 8/14/20 soldiers; raids of 4
+  every 6 minutes on targets with 3 towers at most.
+
+- **Boom** (S3's script; the S4 changes): its soldiers guard the town as one `defend` group (the claim range) and a
+  scout goes from 1.5 minutes (the nearest claimed site not explored yet first; up to three scouts in all); under a
+  threat its army may grow to 18/30/40 (was 12/24/40), and it grows by half the army its scout saw (was a third). With
+  the scout the TEMPORARY fog bypass of S3 (the finders sending next-engine gatherers to unseen claimed sites,
+  d7d9bac) is reverted: fog of war is on for the next engine's gatherers again.
 
 **Results:** docs/AI_RESEARCH.md §8.31 (the matrix).
 
