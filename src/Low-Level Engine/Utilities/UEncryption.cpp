@@ -1,235 +1,75 @@
 // C:\EEX\Low-Level Engine\Utilities\UEncryption.cpp
-// Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
-//
-// 0x1005662f..0x10057218: the two file-static block helpers, then the exported functions in header order. __ftol
-// (library) follows at 0x10057218.
-//
-// Shapes the binary proves:
-// - the padding is an if/else chain (compare 1, 2, 3 in order), not a switch;
-// - the 4-character pack is one expression; the chars are signed (movsx), so high-bit characters smear (as written);
-// - UEEncryptUString appends through a wide string with the left operand cast to const char*: the original builds
-//   UWideString(x), then a second UWideString from its buffer (implicit conversion for operator+(W, W)), then the
-//   right operand; `UWideString(x) + y` alone picks operator+(W, const char*) or elides the second temporary.
+// The encryption itself is Rust (rust/crates/ee_codec, encryption.rs): these forwarders only convert UStrings. The
+// exported signatures stay, so nothing above this file changed.
 #include <windows.h>
-#include <stdio.h>
+#include <string>
 
 #include "lle/LowLevelEngine.h"
 #include "lle/UEncryption.h"
+#include "rust/ee_rust.h"
 
-// The blocks are 32-bit words on every data model (LP64: unsigned long is 64-bit): the rotates, the scanned hex
-// words and the checksum sums are uint32_t, so encrypted strings and codes are the same everywhere.
-struct UEKey {
-    uint32_t mShift;
-    uint32_t mKey;
-};
-
-static const UEKey kKeys[4] = {
-    { 3, 0xb7b226bd },
-    { 5, 0x35013685 },
-    { 11, 0x007445a5 },
-    { 21, 0x5c46fcc5 },
-};
-
-// sum of the four bytes of a 32-bit value (the checksum term)
-#define UEByteSum(x) (((x) & 0xff) + (((x) >> 8) & 0xff) + (((x) >> 16) & 0xff) + ((x) >> 24))
-
-// FUNCTION: LLE 0x1005662f
-// Encrypts a value with one of four rotate-and-xor keys into an 8-digit hex block
-static void UEEncryptBlock(unsigned long inValue, unsigned long inKey, UString& outBlock)
+static const uint8_t* Bytes(const UString& inString)
 {
-    uint32_t theValue = inValue;
-    sprintf(outBlock, "%08X",
-            ((theValue << kKeys[inKey].mShift) | (theValue >> (32 - kKeys[inKey].mShift))) ^ kKeys[inKey].mKey);
+    return reinterpret_cast<const uint8_t*>(static_cast<const char*>(inString));
 }
 
-// FUNCTION: LLE 0x1005666c
-// Decrypts an 8-digit hex block with one of four rotate-and-xor keys
-static void UEDecryptBlock(UString& inBlock, unsigned long inKey, unsigned long& outValue)
+// sink: the bytes become the UString's text (no embedded NULs: the Rust side drops them as the C++ did)
+static void ToUString(void* inContext, const uint8_t* inBytes, size_t inLength)
 {
-    uint32_t theValue;
-    sscanf(inBlock, "%X", &theValue);
-    theValue ^= kKeys[inKey].mKey;
-    outValue = (theValue >> kKeys[inKey].mShift) | (theValue << (32 - kKeys[inKey].mShift));
+    *static_cast<UString*>(inContext) = std::string(reinterpret_cast<const char*>(inBytes), inLength).c_str();
 }
 
-// FUNCTION: LLE 0x100566b6
-// Encrypts a 16-digit hex authorization code as two key-2 blocks
 void UEEncryptAuthorizationCode(UString& inCode, UString& outCode)
 {
-    UString theSubstring;
-    UString theBlock;
-    uint32_t theValue;
-
-    theSubstring = inCode.GetSubstring(0, 8);
-    sscanf(theSubstring, "%X", &theValue);
-    UEEncryptBlock(theValue, 2, theBlock);
-    outCode = theBlock;
-    theSubstring = inCode.GetSubstring(8, 8);
-    sscanf(theSubstring, "%X", &theValue);
-    UEEncryptBlock(theValue, 2, theBlock);
-    outCode += theBlock;
+    ee_ue_encrypt_authorization_code(Bytes(inCode), inCode.GetLength(), ToUString, &outCode);
 }
 
-// FUNCTION: LLE 0x1005677d
-// Decrypts a 16-digit authorization code into its two values
 void UEDecryptAuthorizationCode(UString& inCode, unsigned long& outFirst, unsigned long& outSecond)
 {
-    UString theSubstring;
-
-    theSubstring = inCode.GetSubstring(0, 8);
-    UEDecryptBlock(theSubstring, 2, outFirst);
-    theSubstring = inCode.GetSubstring(8, 8);
-    UEDecryptBlock(theSubstring, 2, outSecond);
+    uint32_t theFirst;
+    uint32_t theSecond;
+    ee_ue_decrypt_authorization_code(Bytes(inCode), inCode.GetLength(), &theFirst, &theSecond);
+    outFirst = theFirst;
+    outSecond = theSecond;
 }
 
-// FUNCTION: LLE 0x100567f9
-// Encrypts two expiration values plus a byte-sum checksum as three key-3 blocks
 void UEEncryptExpiration(unsigned long inFirst, unsigned long inSecond, UString& outString)
 {
-    UString theBlock;
-
-    UEEncryptBlock(inFirst, 3, theBlock);
-    outString = theBlock;
-    UEEncryptBlock(inSecond, 3, theBlock);
-    outString += theBlock;
-    UEEncryptBlock(UEByteSum(inFirst) + UEByteSum(inSecond), 3, theBlock);
-    outString += theBlock;
+    ee_ue_encrypt_expiration((uint32_t)inFirst, (uint32_t)inSecond, ToUString, &outString);
 }
 
-// FUNCTION: LLE 0x100568a1
-// Decrypts two expiration values; returns whether the checksum block matches
 bool UEDecryptExpiration(const UString& inString, unsigned long& outFirst, unsigned long& outSecond)
 {
-    UString theBlock;
-    unsigned long theChecksum = 0;
-    uint32_t theSum;
-
-    theBlock = inString.GetSubstring(0, 8);
-    UEDecryptBlock(theBlock, 3, outFirst);
-    theBlock = inString.GetSubstring(8, 8);
-    UEDecryptBlock(theBlock, 3, outSecond);
-    theSum = UEByteSum(outFirst) + UEByteSum(outSecond);
-    theBlock = inString.GetSubstring(16, 8);
-    UEDecryptBlock(theBlock, 3, theChecksum);
-    return theChecksum == theSum;
+    uint32_t theFirst;
+    uint32_t theSecond;
+    bool theResult = ee_ue_decrypt_expiration(Bytes(inString), inString.GetLength(), &theFirst, &theSecond);
+    outFirst = theFirst;
+    outSecond = theSecond;
+    return theResult;
 }
 
-// FUNCTION: LLE 0x100569a1
-// Encrypts a value and a GUID string (pads the caller's string with spaces to a multiple of 4) plus a checksum
 void UEEncryptGUID(unsigned long inValue, UString& inGUID, unsigned long inKey, UString& outString)
 {
-    UString theBlock;
-
-    if ((inGUID.GetLength() & 3) == 1)
-        inGUID += "   ";
-    else if ((inGUID.GetLength() & 3) == 2)
-        inGUID += "  ";
-    else if ((inGUID.GetLength() & 3) == 3)
-        inGUID += " ";
-    UEEncryptBlock(inValue, inKey, theBlock);
-    outString = theBlock;
-    UEEncryptBlock(inGUID.GetLength(), inKey, theBlock);
-    outString = outString + theBlock;
-    int i; for (i = 0; i < inGUID.GetLength(); i += 4) {
-        uint32_t theValue =
-            (((inGUID[i] << 8 | inGUID[i + 1]) << 8 | inGUID[i + 2]) << 8) | inGUID[i + 3];
-        UEEncryptBlock(theValue, inKey, theBlock);
-        outString += theBlock;
-    }
-    uint32_t theSum = UEByteSum(inValue) + UEByteSum(inGUID.GetLength());
-    for (i = 0; i < inGUID.GetLength(); i++)
-        theSum += inGUID[i];
-    UEEncryptBlock(theSum, inKey, theBlock);
-    outString += theBlock;
+    ee_ue_encrypt_guid((uint32_t)inValue, Bytes(inGUID), inGUID.GetLength(), inGUID.GetAllocatedLength(),
+                       (uint32_t)inKey, ToUString, &inGUID, ToUString, &outString);
 }
 
-// FUNCTION: LLE 0x10056b2a
-// Decrypts a value and a GUID string (appended to outGUID, padding kept); returns whether the checksum matches
 bool UEDecryptGUID(const UString& inString, unsigned long inKey, unsigned long& outValue, UString& outGUID)
 {
-    UString theBlock;
-    unsigned long theChecksum = 0;
-    unsigned long theLength;
-    unsigned long theValue;
-    uint32_t theSum;
-
-    theBlock = inString.GetSubstring(0, 8);
-    UEDecryptBlock(theBlock, inKey, outValue);
-    theBlock = inString.GetSubstring(8, 8);
-    UEDecryptBlock(theBlock, inKey, theLength);
-    int i; for (i = 16; i < theLength * 2 + 16; i += 8) {
-        theBlock = inString.GetSubstring(i, 8);
-        UEDecryptBlock(theBlock, inKey, theValue);
-        sprintf(theBlock, "%c%c%c%c", (char)(theValue >> 24), (char)(theValue >> 16), (char)(theValue >> 8),
-                (char)theValue);
-        outGUID += theBlock;
-    }
-    theSum = UEByteSum(outValue) + UEByteSum(theLength);
-    for (i = 0; i < outGUID.GetLength(); i++)
-        theSum += outGUID[i];
-    theBlock = inString.GetSubstring(theLength * 2 + 16, 8);
-    UEDecryptBlock(theBlock, inKey, theChecksum);
-    return theChecksum == theSum;
+    uint32_t theValue;
+    bool theResult = ee_ue_decrypt_guid(Bytes(inString), inString.GetLength(), (uint32_t)inKey, &theValue,
+                                        Bytes(outGUID), outGUID.GetLength(), outGUID.GetAllocatedLength(), ToUString,
+                                        &outGUID);
+    outValue = theValue;
+    return theResult;
 }
 
-// FUNCTION: LLE 0x10056cd7
-// Encrypts a string with key 0: its length, padded length, 4-character blocks and a checksum
 void UEEncryptUString(const UString& inString, UString& outString)
 {
-    UString theString(inString);
-    UString theBlock;
-
-    UEEncryptBlock(inString.GetLength(), 0, theBlock);
-    outString = theBlock;
-    if ((inString.GetLength() & 3) == 1)
-        theString = UString((const char*)UWideString(theString) + UWideString("   "));
-    else if ((inString.GetLength() & 3) == 2)
-        theString += UString("  ");
-    else if ((inString.GetLength() & 3) == 3)
-        theString += UString(" ");
-    UEEncryptBlock(theString.GetLength(), 0, theBlock);
-    outString = UString((const char*)UWideString(outString) + UWideString(theBlock));
-    int i; for (i = 0; i < theString.GetLength(); i += 4) {
-        uint32_t theValue =
-            (((theString[i] << 8 | theString[i + 1]) << 8 | theString[i + 2]) << 8) | theString[i + 3];
-        UEEncryptBlock(theValue, 0, theBlock);
-        outString = UString((const char*)UWideString(outString) + UWideString(theBlock));
-    }
-    uint32_t theSum = UEByteSum(theString.GetLength()) + UEByteSum(inString.GetLength());
-    for (i = 0; i < theString.GetLength(); i++)
-        theSum += theString[i];
-    UEEncryptBlock(theSum, 0, theBlock);
-    outString = UString((const char*)UWideString(outString) + UWideString(theBlock));
+    ee_ue_encrypt_ustring(Bytes(inString), inString.GetLength(), inString.GetAllocatedLength(), ToUString, &outString);
 }
 
-// FUNCTION: LLE 0x1005703f
-// Decrypts a string written by UEEncryptUString; returns whether the checksum matches
 bool UEDecryptUString(const UString& inString, UString& outString)
 {
-    UString theBlock;
-    UString theString;
-    unsigned long theChecksum = 0;
-    unsigned long theLength;
-    unsigned long thePaddedLength;
-    unsigned long theValue;
-    uint32_t theSum;
-
-    theBlock = inString.GetSubstring(0, 8);
-    UEDecryptBlock(theBlock, 0, theLength);
-    theBlock = inString.GetSubstring(8, 8);
-    UEDecryptBlock(theBlock, 0, thePaddedLength);
-    int i; for (i = 16; i < thePaddedLength * 2 + 16; i += 8) {
-        theBlock = inString.GetSubstring(i, 8);
-        UEDecryptBlock(theBlock, 0, theValue);
-        sprintf(theBlock, "%c%c%c%c", (char)(theValue >> 24), (char)(theValue >> 16), (char)(theValue >> 8),
-                (char)theValue);
-        theString += theBlock;
-    }
-    outString = theString.GetSubstring(0, theLength);
-    theSum = UEByteSum(thePaddedLength) + UEByteSum(theLength);
-    for (i = 0; i < theString.GetLength(); i++)
-        theSum += theString[i];
-    theBlock = inString.GetSubstring(thePaddedLength * 2 + 16, 8);
-    UEDecryptBlock(theBlock, 0, theChecksum);
-    return theChecksum == theSum;
+    return ee_ue_decrypt_ustring(Bytes(inString), inString.GetLength(), ToUString, &outString);
 }

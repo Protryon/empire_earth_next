@@ -11,3 +11,4 @@ crate-type = ["staticlib", "rlib"]
 [dependencies]
 ee_panic = { path = "../ee_panic" }
 wgpu-native = { path = "../../vendor/wgpu-native" }
+ee_codec = { path = "../ee_codec" }

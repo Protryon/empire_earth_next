@@ -9,6 +9,9 @@
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 constexpr static const uint32_t EE_RUST_ABI_VERSION = 1;
 
+/// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
+using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
 extern "C" {
 
 /// Returns `EE_RUST_ABI_VERSION`.
@@ -20,6 +23,117 @@ uint32_t ee_rust_abi_version();
 /// `log` must be callable from any thread for the life of the process, with a NUL-terminated line valid during the
 /// call.
 void ee_rust_init(void (*log)(const char *line));
+
+/// `UDataCompression::Compress`.
+///
+/// # Safety
+/// `input` is valid for `input_length` bytes, `output` for `capacity` bytes, `out_length` for a write.
+int32_t ee_compress(const uint8_t *input,
+                    uint32_t input_length,
+                    uint8_t *output,
+                    uint32_t capacity,
+                    uint32_t *out_length,
+                    uint32_t level);
+
+/// `UDataCompression::Decompress`.
+///
+/// # Safety
+/// `input` is valid for `input_length` bytes, `output` for `capacity` bytes, `out_length` for a write.
+int32_t ee_decompress(const uint8_t *input,
+                      uint32_t input_length,
+                      uint8_t *output,
+                      uint32_t capacity,
+                      uint32_t *out_length);
+
+/// `UDataCompression::GetDecompressedSize`.
+///
+/// # Safety
+/// `input` is valid for `input_length` bytes, `out_size` for a write.
+int32_t ee_decompressed_size(const uint8_t *input, uint32_t input_length, uint32_t *out_size);
+
+/// `UDataCompression::GetIsCompressed`.
+///
+/// # Safety
+/// `input` is valid for `input_length` bytes.
+bool ee_is_compressed(const uint8_t *input, uint32_t input_length);
+
+/// `UEEncryptUString`. `capacity` is the input `UString`'s allocated size.
+///
+/// # Safety
+/// `text` is valid for `length` bytes; `sink` is called once.
+void ee_ue_encrypt_ustring(const uint8_t *text,
+                           size_t length,
+                           size_t capacity,
+                           EeCodecSink sink,
+                           void *context);
+
+/// `UEDecryptUString`. Returns whether the checksum matches.
+///
+/// # Safety
+/// `text` is valid for `length` bytes; `sink` is called once.
+bool ee_ue_decrypt_ustring(const uint8_t *text, size_t length, EeCodecSink sink, void *context);
+
+/// `UEEncryptAuthorizationCode`.
+///
+/// # Safety
+/// `code` is valid for `length` bytes; `sink` is called once.
+void ee_ue_encrypt_authorization_code(const uint8_t *code,
+                                      size_t length,
+                                      EeCodecSink sink,
+                                      void *context);
+
+/// `UEDecryptAuthorizationCode`.
+///
+/// # Safety
+/// `code` is valid for `length` bytes; `first` and `second` for a write.
+void ee_ue_decrypt_authorization_code(const uint8_t *code,
+                                      size_t length,
+                                      uint32_t *first,
+                                      uint32_t *second);
+
+/// `UEEncryptExpiration`.
+///
+/// # Safety
+/// `sink` is called once.
+void ee_ue_encrypt_expiration(uint32_t first, uint32_t second, EeCodecSink sink, void *context);
+
+/// `UEDecryptExpiration`. Returns whether the checksum matches.
+///
+/// # Safety
+/// `text` is valid for `length` bytes; `first` and `second` for a write.
+bool ee_ue_decrypt_expiration(const uint8_t *text,
+                              size_t length,
+                              uint32_t *first,
+                              uint32_t *second);
+
+/// `UEEncryptGUID`. `sink_guid` receives the padded GUID (written back into the caller's string), then `sink_out` the
+/// encrypted text.
+///
+/// # Safety
+/// `guid` is valid for `length` bytes; each sink is called once.
+void ee_ue_encrypt_guid(uint32_t value,
+                        const uint8_t *guid,
+                        size_t length,
+                        size_t capacity,
+                        uint32_t key,
+                        EeCodecSink sink_guid,
+                        void *context_guid,
+                        EeCodecSink sink_out,
+                        void *context_out);
+
+/// `UEDecryptGUID`: the GUID is appended to `prefix` (capped at `capacity`). Returns whether the checksum matches.
+///
+/// # Safety
+/// `text` is valid for `length` bytes, `prefix` for `prefix_length`, `value` for a write; `sink` is called once.
+bool ee_ue_decrypt_guid(const uint8_t *text,
+                        size_t length,
+                        uint32_t key,
+                        uint32_t *value,
+                        const uint8_t *prefix,
+                        size_t prefix_length,
+                        size_t capacity,
+                        EeCodecSink sink,
+                        void *context);
 
 }  // extern "C"
 

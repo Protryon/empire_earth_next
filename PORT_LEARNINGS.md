@@ -1745,3 +1745,17 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **A data tree being rebuilt under EE-SIM** (another session's `open_data.py build`) fails the runs that stage it
   then (`EETerrainColorTable` verification failure at start-up, rc 0x80000003). For a long bench, hard-link a copy
   (`cp -al build/open_data/tree build/tw/tree`, seconds) and pass it with `--data`.
+
+## Rust R3: compression and UEncryption (2026-11-08)
+
+- **cbindgen only exports functions from crates named in `[parse] extra_bindings`.** `parse_deps`/`include` make it
+  parse a dependency, and the "Take ... opaque" lines look like it worked, but functions outside the binding crate
+  are dropped silently (`should_generate_top_level_item`). Each crate with `#[no_mangle]` functions goes into both
+  `include` and `extra_bindings` in `rust/cbindgen.toml`.
+- **UEncryption's output depends on the `UString` buffer.** The padding `+=` never grows the string, so a string in an
+  exact-fit buffer (`UString("hi")`) stays unpadded and its decryption's checksum lookup misses (the checksum block is
+  read at padded length * 2 + 16). `UEDecryptUString` caps its text at 255 characters (a default-capacity `UString`).
+  Both quirks are kept (the forwarders pass the capacity); golden vectors pin them. A block with no hex digits read
+  uninitialised memory in C++; Rust reads 0, and scanning past the end of the input stops there.
+- **The DCL encoder and decoder are now Rust (`ee_codec`).** `Compress` of empty input gives a 4-byte stream, which
+  `explode` refuses (first read <= 4 bytes): the C++ quirk is preserved and a test pins it.

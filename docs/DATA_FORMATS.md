@@ -208,7 +208,7 @@ u32   reserved = 0
 * Decompression is the standard DCL `explode`. zlib's `contrib/blast` is a compatible decoder; a 100-line Python port of it decoded every entry tried to its declared size: all 39 db files, all `.tai`
   and `.civ` files, a few models and textures, and a scenario.
 * **Round trip:** the compressed bytes cannot be reproduced exactly unless the same implode implementation and
-  dictionary size are used. The port ships its own implode (`src/ThirdParty/pkdcl`, documented as non-exact). That
+  dictionary size are used. The port ships its own implode (`rust/crates/ee_codec`, documented as non-exact). That
   does not matter: the loaders accept stored (uncompressed) data, and loose files need no compression at all.
 
 ### 2.4 Conventions shared by the db tables

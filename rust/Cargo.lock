@@ -223,6 +223,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_codec"
+version = "0.1.0"
+
+[[package]]
 name = "ee_panic"
 version = "0.1.0"
 
@@ -230,6 +234,7 @@ version = "0.1.0"
 name = "ee_rust"
 version = "0.1.0"
 dependencies = [
+ "ee_codec",
  "ee_panic",
  "wgpu-native",
 ]
