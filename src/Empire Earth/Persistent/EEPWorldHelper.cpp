@@ -48,6 +48,10 @@
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIEChatLogEvents.h"
 #include "ee/EEPersistentTag.h"
+#include "ee/EEUnit.h"
+#include "ee/EESaveGameFiles.h"
+#include <algorithm>
+#include <vector>
 
 const UString EEPWorldHelper::sTheScenarioManager("EEWorldHelper-The Scenario Manager");
 const UString EEPWorldHelper::sTheTeams("EEPWorldHelper-The Teams");
@@ -125,6 +129,96 @@ FSPersistent* EEPWorldHelper::CreateDefault() const
     return new EEPWorldHelper;
 }
 
+// port (save version 0.253): the order of the world's unit chain (x-sorted; units on one column in the order they
+// came) and of the units stepped each tick, and the queued (de)activations, as unit ids. A load links the units in
+// its own order and rebuilds the stepped list from the chain, so a loaded game stepped its units (and drew its random
+// numbers) in another order than the game that was saved. Put back at the first tick (EEAfterLoad), when every unit
+// of the load is in place; left as the load made it when the units are not the same.
+static void SaveUnitOrder(FSFile& outFile)
+{
+    std::vector<unsigned long> theIDs;
+    for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext)
+        theIDs.push_back(theUnit->mUnitID);
+    long theResult = outFile.Write((unsigned long)theIDs.size());
+    for (size_t i = 0; i < theIDs.size() && theResult == kErrorOK; i++)
+        theResult = outFile.Write(theIDs[i]);
+    const std::deque<EEComplexUnit*>* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
+    for (int l = 0; l < 3 && theResult == kErrorOK; l++) {
+        theResult = outFile.Write((unsigned long)theLists[l]->size());
+        for (size_t i = 0; i < theLists[l]->size() && theResult == kErrorOK; i++)
+            theResult = outFile.Write((*theLists[l])[i]->mUnitID);
+    }
+}
+
+static EEComplexUnit* LoadedComplexUnit(unsigned long inID)
+{
+    return dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(inID)));
+}
+
+static void RestoreUnitOrder(const std::vector<unsigned long>& inChain, const std::vector<unsigned long> inLists[3])
+{
+    // the chain: the same units, each at the same tile column as its neighbours allow (x-sorted)
+    std::vector<RTSUnit*> theUnits;
+    size_t theCount = 0;
+    for (RTSUnit* theUnit = gWorld.mUnits.mFirst; theUnit != NULL; theUnit = theUnit->mTileNode->mNext)
+        theCount++;
+    bool theSame = theCount == inChain.size();
+    for (size_t i = 0; i < inChain.size() && theSame; i++) {
+        RTSUnit* theUnit = gWorld.GetUnit(inChain[i]);
+        theSame = theUnit != NULL && theUnit->mTileNode != NULL && (theUnit->mTileNode->mPrev != NULL || gWorld.mUnits.mFirst == theUnit)
+            && (theUnits.empty() || theUnits.back()->mTileX <= theUnit->mTileX);
+        theUnits.push_back(theUnit);
+    }
+    if (theSame) {
+        RTSUnit* thePrev = reinterpret_cast<RTSUnit*>(&gWorld.mUnits);
+        for (size_t i = 0; i < theUnits.size(); i++) {
+            theUnits[i]->Link(thePrev);
+            thePrev = theUnits[i];
+        }
+    } else
+        ESDebugOut("EEPWorldHelper: the loaded units are not the saved ones: their order is the load's\n");
+    // the stepped units and the queues: the same units, in the saved order
+    std::deque<EEComplexUnit*>* theLists[3] = {&gWorld.mUpdateUnits, &gWorld.mActivateQueue, &gWorld.mDeactivateQueue};
+    for (int l = 0; l < 3; l++) {
+        std::deque<EEComplexUnit*> theOrder;
+        bool theFound = inLists[l].size() == theLists[l]->size();
+        for (size_t i = 0; i < inLists[l].size() && theFound; i++) {
+            EEComplexUnit* theUnit = LoadedComplexUnit(inLists[l][i]);
+            theFound = theUnit != NULL && std::find(theLists[l]->begin(), theLists[l]->end(), theUnit) != theLists[l]->end();
+            theOrder.push_back(theUnit);
+        }
+        if (theFound)
+            *theLists[l] = theOrder;
+        else if (l == 0)
+            ESDebugOut("EEPWorldHelper: the loaded stepped units are not the saved ones: their order is the load's\n");
+    }
+}
+
+static long LoadUnitOrder(FSFile& inFile)
+{
+    std::vector<unsigned long> theChain;
+    std::vector<unsigned long> theLists[3];
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long i = 0; i < theCount && theResult == kErrorOK; i++) {
+        unsigned long theID = 0;
+        theResult = inFile.Read(theID);
+        theChain.push_back(theID);
+    }
+    for (int l = 0; l < 3 && theResult == kErrorOK; l++) {
+        theCount = 0;
+        theResult = inFile.Read(theCount);
+        for (unsigned long i = 0; i < theCount && theResult == kErrorOK; i++) {
+            unsigned long theID = 0;
+            theResult = inFile.Read(theID);
+            theLists[l].push_back(theID);
+        }
+    }
+    if (theResult == kErrorOK)
+        EEAfterLoad([theChain, theLists]() { RestoreUnitOrder(theChain, theLists); });
+    return theResult;
+}
+
 // FUNCTION: EXE 0x54c2bd
 // Reads the teams, world settings and id counters (Carbon flag from version 0.239 on), then the chat log and
 // the main game form; returns only the main game form's error
@@ -147,6 +241,8 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
         this->mUsingCarbon = false;
     else
         inFile.Read(this->mUsingCarbon);
+    if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.253): the units' order
+        LoadUnitOrder(inFile);
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -192,6 +288,8 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     outFile.Write(this->mTownIDCounter);
     outFile.Write(this->mHerdIDCounter);
     outFile.Write(this->mUsingCarbon);
+    if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.253): the units' order
+        SaveUnitOrder(outFile);
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);
     return gUIManager->mMainGameForm->Save(inMajorVersion, inMinorVersion, outFile);
 }
