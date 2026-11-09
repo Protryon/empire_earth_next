@@ -38,6 +38,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | R6 WON leaves (D8) | Done (`ee_won`, branch `rust-r6-won`): the message buffers' format and WON's text conversions, CRC-16, MD5, the random generator, Blowfish, big integers, ElGamal, the auth blocks and the CD key logic, behind C++ forwarders (BigInteger, Random, IntegerExtractor deleted). The clang-built C++ MD5Digest and Karatsuba were wrong (PORT_LEARNINGS "R6") |
 | R6 WON HTML (D8) | Removed: the HTML parser, documents and the segment layout engine; the lobby's pages (MOTD, terms of use, help, news) are plain text in a `TextArea` (`ee_won` plaintext) |
 | **R6 WON, the rest** | **Open.** The socket layer and async ops (WONSocket), the services (auth ops, directory, routing, DB, HTTP, misc), the lobby logic (WONLobby) and the GUI toolkit (WONGUI) |
+| **R5a.7 gates on layout-independent observation** | **Done, gate runs pending** (branch `rust-r5a-gates`): `tools/gates.sh` runs `fixture_game.py` (the game's UI fixture, its telemetry, stderr verdicts and game log; window captures; no layout, mangled name, debugger or import hook); the harness clock is `PlatSimSetTimeFactor` in `ee_plat_core` (clocks F x, sleeps/timers/wait timeouts 1/F); `--legacy` keeps `game_session.py`. Still on the layout: exe_boot.c's guards and hooks, the RNG trace, the human driver, `differential/` |
 
 
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
@@ -245,6 +246,8 @@ harness's `--exercise lobby` waits for presented frames instead, so a lobby repl
 or give the fixture a real way in.
 
 **Move the gates onto these before R5.** R1-R4 can keep exporting the mangled C++ shims the harness hooks.
+Done in R5a.7: the gates run `tools/harness/fixture_game.py` (fixture, stderr, game log, window captures) and the
+harness clock is `PlatSimSetTimeFactor`; only `gates.sh --legacy` and the debugger tools still need the layout.
 
 ---
 

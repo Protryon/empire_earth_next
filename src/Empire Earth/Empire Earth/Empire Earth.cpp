@@ -9,6 +9,7 @@
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "platform/PlatMessage.h"
 void EETestFixtureStart();   // EETestFixture.cpp (TEST ONLY)
+void EETestFixtureConfigure();   // EETestFixture.cpp (TEST ONLY): the harness clock, seed and no-defeat switches
 void EESimPreferences();     // EESim.cpp (TEST ONLY: the headless simulation, platform/PlatSim.h)
 void EESimStart();
 #include "platform/PlatSim.h"
@@ -2056,6 +2057,7 @@ void EERustInit();   // EERust.cpp
 static int EERun(HINSTANCE inInstance, char* inCommandLine)
 {
     EERustInit();   // first: a panic anywhere after this reaches a log
+    EETestFixtureConfigure();   // TEST ONLY: nothing unless EE_TEST_UI is set (before any clock or thread starts)
     long theResult;
     bool theInitialized;
     EEStartScreen theSplashScreen(inInstance);

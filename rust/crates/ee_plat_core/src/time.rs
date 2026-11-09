@@ -3,7 +3,12 @@
 //! `timeEndPeriod`, `GetLocalTime`, `GetSystemTimeAsFileTime`, `timeSetEvent`, `timeKillEvent`): the test harness's
 //! time shim replaces those imports (tools/harness/timeshim), so they must stay the ones called, never std::time.
 //! POSIX runs the clocks on CLOCK_MONOTONIC and the timers on one thread started on first use, as the C++ did.
+//!
+//! The harness clock (`PlatSimSetTimeFactor`, `sim_clock`): with a factor set, the clocks here run that many times
+//! faster and the sleeps, timer intervals and wait timeouts last that much less real time. Without one, every
+//! function calls exactly what it called before.
 
+use crate::sim_clock;
 use std::ffi::{c_int, c_void};
 
 /// `PlatDateTime`: the header's layout.
@@ -35,7 +40,6 @@ fn filetime_of_unix(seconds: u64, nanoseconds: u64) -> u64 {
 
 /// A periodic timer's next due time: the last due time plus the interval (it keeps its phase), or from now when it
 /// fell far behind (a suspended process: no burst of catch-ups).
-#[cfg(any(unix, test))]
 fn next_due(due: u64, interval: u64, now: u64) -> u64 {
     let next = due + interval;
     if next < now {
@@ -50,16 +54,23 @@ mod imp {
     use super::*;
     use std::collections::BTreeMap;
     use std::mem::MaybeUninit;
+    use std::ptr::{null, null_mut};
     use std::sync::{Mutex, PoisonError};
     use windows_sys::Win32::Foundation::FILETIME;
     use windows_sys::Win32::Foundation::SYSTEMTIME;
+    use windows_sys::Win32::Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0, WAIT_TIMEOUT};
     use windows_sys::Win32::Media::{
         timeBeginPeriod, timeEndPeriod, timeGetTime, timeKillEvent, timeSetEvent, LPTIMECALLBACK, TIMERR_NOERROR,
         TIME_CALLBACK_EVENT_SET, TIME_CALLBACK_FUNCTION, TIME_ONESHOT, TIME_PERIODIC,
     };
     use windows_sys::Win32::System::Performance::{QueryPerformanceCounter, QueryPerformanceFrequency};
     use windows_sys::Win32::System::SystemInformation::{GetLocalTime, GetSystemTimeAsFileTime, GetTickCount64};
-    use windows_sys::Win32::System::Threading::Sleep;
+    use windows_sys::Win32::System::Threading::{
+        CancelWaitableTimer, CreateEventW, CreateWaitableTimerExW, GetCurrentThread, SetEvent, SetThreadPriority,
+        SetWaitableTimer, Sleep, WaitForMultipleObjects, WaitForSingleObject, CREATE_WAITABLE_TIMER_HIGH_RESOLUTION,
+        INFINITE, THREAD_PRIORITY_TIME_CRITICAL, TIMER_ALL_ACCESS,
+    };
+    const MAXIMUM_WAIT_OBJECTS: usize = 64;
 
     pub fn milliseconds() -> u32 {
         // SAFETY: no arguments.
@@ -92,6 +103,200 @@ mod imp {
     pub fn sleep(milliseconds: u32) {
         // SAFETY: no pointers.
         unsafe { Sleep(milliseconds) }
+    }
+
+    // ---- the harness clock's precise waits: a high-resolution waitable timer per thread (closed with the thread),
+    // as tools/harness/timeshim.c waited, so that a scaled millisecond can last less than a real one
+
+    struct ThreadTimer(HANDLE);
+
+    impl Drop for ThreadTimer {
+        fn drop(&mut self) {
+            if !self.0.is_null() {
+                // SAFETY: this thread's own timer.
+                unsafe { CloseHandle(self.0) };
+            }
+        }
+    }
+
+    thread_local! {
+        static TIMER: ThreadTimer = ThreadTimer(new_timer());
+    }
+
+    fn new_timer() -> HANDLE {
+        // SAFETY: NULL attributes and name; a NULL result is handled by the callers.
+        unsafe {
+            let timer = CreateWaitableTimerExW(null(), null(), CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_ALL_ACCESS);
+            if !timer.is_null() {
+                return timer;
+            }
+            CreateWaitableTimerExW(null(), null(), 0, TIMER_ALL_ACCESS) // before Windows 10 1803
+        }
+    }
+
+    /// Arms `timer` to fire once, `nanoseconds` from now (100 ns units, rounded up).
+    unsafe fn arm(timer: HANDLE, nanoseconds: u64) {
+        let due = -(nanoseconds.div_ceil(100).max(1) as i64);
+        SetWaitableTimer(timer, &due, 0, None, null(), 0);
+    }
+
+    pub fn sleep_nanoseconds(nanoseconds: u64) {
+        TIMER.with(|timer| {
+            // SAFETY: the thread's own timer, or a plain Sleep when there is none.
+            unsafe {
+                if timer.0.is_null() {
+                    Sleep(nanoseconds.div_ceil(1_000_000) as u32);
+                    return;
+                }
+                arm(timer.0, nanoseconds);
+                WaitForSingleObject(timer.0, INFINITE);
+            }
+        })
+    }
+
+    /// WaitForMultipleObjects (any one) on `handles` for `nanoseconds` of real time -> its result, WAIT_TIMEOUT when
+    /// the time ran out. None when it cannot (too many handles, no timer): the caller then waits as without a factor.
+    pub unsafe fn wait_nanoseconds(handles: &[HANDLE], nanoseconds: u64) -> Option<u32> {
+        if handles.is_empty() || handles.len() >= MAXIMUM_WAIT_OBJECTS {
+            return None;
+        }
+        TIMER.with(|timer| {
+            if timer.0.is_null() {
+                return None;
+            }
+            let mut set = [null_mut(); MAXIMUM_WAIT_OBJECTS];
+            set[..handles.len()].copy_from_slice(handles);
+            set[handles.len()] = timer.0;
+            arm(timer.0, nanoseconds);
+            let count = handles.len() as u32;
+            let result = WaitForMultipleObjects(count + 1, set.as_ptr(), 0, INFINITE);
+            if result == WAIT_OBJECT_0 + count {
+                return Some(WAIT_TIMEOUT);
+            }
+            CancelWaitableTimer(timer.0);
+            Some(result)
+        })
+    }
+
+    /// Real time in nanoseconds on the performance counter (the scaled timers' deadlines).
+    fn real_nanoseconds_now() -> u64 {
+        let frequency = counter_frequency().max(1) as i128;
+        (counter_ticks() as i128 * 1_000_000_000 / frequency) as u64
+    }
+
+    // ---- the harness clock's timers: with a factor set, a timer is a thread of its own with deadlines on the real
+    // performance counter (a multimedia timer fires at most once a millisecond). Their ids start at SCALED_FIRST, as
+    // the time shim's did, so PlatTimerStop tells them apart.
+
+    pub const SCALED_FIRST: u32 = 0x7e00_0001;
+
+    struct StopEvent(HANDLE);
+
+    // SAFETY: an event handle, usable from any thread.
+    unsafe impl Send for StopEvent {}
+    unsafe impl Sync for StopEvent {}
+
+    impl Drop for StopEvent {
+        fn drop(&mut self) {
+            // SAFETY: the event this owns.
+            unsafe { CloseHandle(self.0) };
+        }
+    }
+
+    struct Scaled {
+        stop: std::sync::Arc<StopEvent>,
+        thread: Option<std::thread::JoinHandle<()>>,
+    }
+
+    static SCALED: Mutex<BTreeMap<u32, Scaled>> = Mutex::new(BTreeMap::new());
+    static NEXT_SCALED: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(SCALED_FIRST);
+
+    fn scaled_table() -> std::sync::MutexGuard<'static, BTreeMap<u32, Scaled>> {
+        SCALED.lock().unwrap_or_else(PoisonError::into_inner)
+    }
+
+    #[derive(Clone, Copy)]
+    enum Fire {
+        Callback(PlatTimerCallback, *mut c_void),
+        Event(*mut PlatEvent),
+    }
+
+    // SAFETY: as `Entry`: the pointers are only handed back to the callback, or to SetEvent.
+    unsafe impl Send for Fire {}
+
+    fn scaled_start(period_ns: u64, periodic: bool, fire: Fire) -> u32 {
+        // SAFETY: an unnamed manual-reset event; a NULL result is checked.
+        let stop = unsafe { CreateEventW(null(), 1, 0, null()) };
+        if stop.is_null() {
+            return 0;
+        }
+        let stop = std::sync::Arc::new(StopEvent(stop));
+        let id = NEXT_SCALED.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        // the table is locked across the spawn, so a one-shot timer that fires at once finds its entry to remove
+        let mut table = scaled_table();
+        let theirs = stop.clone();
+        let spawned = std::thread::Builder::new()
+            .name("PlatSim timer".into())
+            .spawn(move || scaled_main(id, period_ns, periodic, fire, &theirs));
+        let Ok(thread) = spawned else {
+            return 0;
+        };
+        table.insert(id, Scaled { stop, thread: Some(thread) });
+        id
+    }
+
+    fn scaled_main(id: u32, period_ns: u64, periodic: bool, fire: Fire, stop: &StopEvent) {
+        // SAFETY: the current thread's pseudo handle.
+        unsafe { SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL) }; // as winmm's timer thread
+        let mut deadline = real_nanoseconds_now() + period_ns;
+        TIMER.with(|timer| loop {
+            let now = real_nanoseconds_now();
+            // SAFETY: the stop event lives while this thread holds it; the timer is this thread's.
+            unsafe {
+                if deadline > now && !timer.0.is_null() {
+                    arm(timer.0, deadline - now);
+                    let set = [stop.0, timer.0];
+                    if WaitForMultipleObjects(2, set.as_ptr(), 0, INFINITE) != WAIT_OBJECT_0 + 1 {
+                        return;
+                    }
+                } else if deadline > now {
+                    Sleep((deadline - now).div_ceil(1_000_000) as u32);
+                }
+                if WaitForSingleObject(stop.0, 0) == WAIT_OBJECT_0 {
+                    return;
+                }
+                match fire {
+                    Fire::Callback(Some(callback), user) => callback(user),
+                    Fire::Callback(None, _) => {}
+                    Fire::Event(event) => {
+                        SetEvent(event as HANDLE);
+                    }
+                }
+            }
+            if !periodic {
+                // a one-shot timer's id is gone once it fired (as timeSetEvent's); this thread is not joined
+                if let Some(mut entry) = scaled_table().remove(&id) {
+                    entry.thread.take();
+                }
+                return;
+            }
+            deadline = next_due(deadline, period_ns, real_nanoseconds_now());
+        })
+    }
+
+    /// Stops a timer of `scaled_start` -> 1, 0 when it is not running (any more).
+    fn scaled_stop(id: u32) -> c_int {
+        let Some(mut entry) = scaled_table().remove(&id) else {
+            return 0;
+        };
+        // SAFETY: the event lives while `entry` holds it.
+        unsafe { SetEvent(entry.stop.0) };
+        if let Some(thread) = entry.thread.take() {
+            if thread.thread().id() != std::thread::current().id() {
+                let _ = thread.join(); // a callback that stops its own timer cannot wait for itself
+            }
+        }
+        1
     }
 
     pub fn begin_period(milliseconds: u32) {
@@ -176,6 +381,10 @@ mod imp {
         callback: PlatTimerCallback,
         user: *mut c_void,
     ) -> u32 {
+        if let Some(scale) = crate::sim_clock::scale() {
+            let period = scale.real_nanoseconds(interval_ms.max(1));
+            return scaled_start(period, periodic != 0, Fire::Callback(callback, user));
+        }
         // the lock is held across timeSetEvent, so a timer that fires at once waits until its entry exists
         let mut table = table();
         let flags = TIME_CALLBACK_FUNCTION | if periodic != 0 { TIME_PERIODIC } else { TIME_ONESHOT };
@@ -187,6 +396,10 @@ mod imp {
     }
 
     pub unsafe fn start_event(interval_ms: u32, periodic: c_int, event: *mut PlatEvent) -> u32 {
+        if let Some(scale) = crate::sim_clock::scale() {
+            let period = scale.real_nanoseconds(interval_ms.max(1));
+            return scaled_start(period, periodic != 0, Fire::Event(event));
+        }
         let flags = TIME_CALLBACK_EVENT_SET | if periodic != 0 { TIME_PERIODIC } else { TIME_ONESHOT };
         // TIME_CALLBACK_EVENT_SET: the "callback" is the event handle
         let handle = std::mem::transmute::<*mut c_void, LPTIMECALLBACK>(event);
@@ -194,6 +407,9 @@ mod imp {
     }
 
     pub fn stop(id: u32) -> c_int {
+        if id >= SCALED_FIRST {
+            return scaled_stop(id);
+        }
         // SAFETY: no pointers.
         if unsafe { timeKillEvent(id) } != TIMERR_NOERROR {
             return 0;
@@ -244,6 +460,17 @@ mod imp {
                 tv_sec: (milliseconds / 1000) as _,
                 tv_nsec: ((milliseconds % 1000) * 1_000_000) as _,
             };
+            while libc::nanosleep(&left, &mut left) != 0
+                && std::io::Error::last_os_error().raw_os_error() == Some(libc::EINTR)
+            {}
+        }
+    }
+
+    pub fn sleep_nanoseconds(nanoseconds: u64) {
+        let mut left =
+            libc::timespec { tv_sec: (nanoseconds / 1_000_000_000) as _, tv_nsec: (nanoseconds % 1_000_000_000) as _ };
+        // SAFETY: both valid.
+        unsafe {
             while libc::nanosleep(&left, &mut left) != 0
                 && std::io::Error::last_os_error().raw_os_error() == Some(libc::EINTR)
             {}
@@ -360,7 +587,8 @@ mod imp {
     }
 
     fn interval_nanoseconds(interval_ms: u32) -> u64 {
-        u64::from(interval_ms.max(1)) * 1_000_000
+        let interval_ms = interval_ms.max(1);
+        crate::sim_clock::real_timeout_nanoseconds(interval_ms).unwrap_or(u64::from(interval_ms) * 1_000_000)
     }
 
     pub unsafe fn start_callback(
@@ -410,12 +638,18 @@ mod imp {
 
 #[no_mangle]
 pub extern "C" fn PlatTimeMilliseconds() -> u32 {
-    imp::milliseconds()
+    match sim_clock::scale() {
+        Some(scale) => scale.milliseconds(imp::counter_ticks()),
+        None => imp::milliseconds(),
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn PlatTimeMilliseconds64() -> u64 {
-    imp::milliseconds64()
+    match sim_clock::scale() {
+        Some(scale) => scale.milliseconds64(imp::counter_ticks()),
+        None => imp::milliseconds64(),
+    }
 }
 
 #[no_mangle]
@@ -425,12 +659,48 @@ pub extern "C" fn PlatCounterFrequency() -> i64 {
 
 #[no_mangle]
 pub extern "C" fn PlatCounterTicks() -> i64 {
-    imp::counter_ticks()
+    match sim_clock::scale() {
+        Some(scale) => scale.counter(imp::counter_ticks()),
+        None => imp::counter_ticks(),
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn PlatSleep(milliseconds: u32) {
-    imp::sleep(milliseconds)
+    match sim_clock::real_timeout_nanoseconds(milliseconds) {
+        Some(nanoseconds) => imp::sleep_nanoseconds(nanoseconds),
+        None => imp::sleep(milliseconds),
+    }
+}
+
+/// `PlatSimSetTimeFactor` (platform/PlatSim.h, TEST ONLY): the harness clock runs `num`/`den` times real time from
+/// now on -> 1; 0 for a factor outside 1/1000..4096, and nothing changes.
+#[no_mangle]
+pub extern "C" fn PlatSimSetTimeFactor(num: u32, den: u32) -> c_int {
+    let real = (imp::counter_ticks(), imp::counter_frequency());
+    let now = (PlatCounterTicks(), PlatTimeMilliseconds(), PlatTimeMilliseconds64());
+    sim_clock::set(num, den, real, now) as c_int
+}
+
+/// `PlatSimGetTimeFactor`: the factor in force (1/1 when none was set).
+#[no_mangle]
+pub unsafe extern "C" fn PlatSimGetTimeFactor(num: *mut u32, den: *mut u32) {
+    let (n, d) = sim_clock::scale().map_or((1, 1), |s| (s.num, s.den));
+    if !num.is_null() {
+        *num = n;
+    }
+    if !den.is_null() {
+        *den = d;
+    }
+}
+
+/// A wait of the platform layer (ee_plat_sys: PlatEventWait, PlatEventWaitAny, PlatThreadWait) under the harness
+/// clock: WaitForMultipleObjects (any) on `handles` with the timeout scaled -> its Win32 result. None when no factor
+/// is set or the timeout is 0 or INFINITE: the caller then makes its own Win32 wait, exactly as without the harness.
+#[cfg(windows)]
+pub unsafe fn sim_wait(handles: &[*mut c_void], timeout_ms: u32) -> Option<u32> {
+    let nanoseconds = sim_clock::real_timeout_nanoseconds(timeout_ms)?;
+    imp::wait_nanoseconds(handles, nanoseconds)
 }
 
 #[no_mangle]
@@ -499,8 +769,107 @@ mod tests {
         assert_eq!(next_due(100, 10, 111), 121); // behind: from now
     }
 
+    /// Runs `body` with the harness clock at `num`/`den`, then back to real time.
+    fn with_factor(num: u32, den: u32, body: impl FnOnce()) {
+        let _guard = crate::test_globals();
+        assert_eq!(PlatSimSetTimeFactor(num, den), 1);
+        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(body));
+        sim_clock::reset();
+        if let Err(panic) = result {
+            std::panic::resume_unwind(panic);
+        }
+    }
+
+    fn real_ms(start: std::time::Instant) -> u128 {
+        start.elapsed().as_millis()
+    }
+
+    #[test]
+    fn the_harness_clock_runs_factor_times_faster_and_sleeps_shorter() {
+        with_factor(20, 1, || {
+            let mut num = 0;
+            let mut den = 0;
+            unsafe { PlatSimGetTimeFactor(&mut num, &mut den) };
+            assert_eq!((num, den), (20, 1));
+            let (ms, ms64, ticks) = (PlatTimeMilliseconds(), PlatTimeMilliseconds64(), PlatCounterTicks());
+            let start = std::time::Instant::now();
+            PlatSleep(1000); // 50 real ms
+            let real = real_ms(start);
+            assert!((40..600).contains(&real), "{real} real ms");
+            let virtual_ms = PlatTimeMilliseconds().wrapping_sub(ms);
+            assert!(virtual_ms >= 950 && u128::from(virtual_ms) <= (real + 20) * 20, "{virtual_ms} virtual ms");
+            assert!(PlatTimeMilliseconds64() - ms64 >= 950);
+            assert!((PlatCounterTicks() - ticks) * 1000 / PlatCounterFrequency() >= 950);
+        });
+    }
+
+    #[test]
+    fn a_new_factor_continues_the_clocks_without_a_jump() {
+        with_factor(1000, 1, || {
+            PlatSleep(2000); // 2 real ms
+            let before = PlatTimeMilliseconds64();
+            assert_eq!(PlatSimSetTimeFactor(1, 1), 1);
+            let after = PlatTimeMilliseconds64();
+            assert!(after >= before && after - before < 50, "{before} -> {after}");
+            assert_eq!(PlatSimSetTimeFactor(0, 1), 0, "refused");
+            assert_eq!(PlatSimSetTimeFactor(5000, 1), 0, "refused");
+        });
+    }
+
+    static SCALED_TICKS: AtomicU32 = AtomicU32::new(0);
+    unsafe extern "C" fn scaled_tick(_user: *mut c_void) {
+        SCALED_TICKS.fetch_add(1, Ordering::SeqCst);
+    }
+
+    #[test]
+    fn timers_under_a_factor_fire_at_the_scaled_rate_until_stopped() {
+        with_factor(50, 1, || {
+            SCALED_TICKS.store(0, Ordering::SeqCst);
+            // 25 virtual ms = 0.5 real ms: 200 real ms are 400 periods (a loaded machine reaches fewer)
+            let id = unsafe { PlatTimerStartCallback(25, 1, Some(scaled_tick), std::ptr::null_mut()) };
+            assert_ne!(id, 0);
+            std::thread::sleep(std::time::Duration::from_millis(200));
+            assert_eq!(PlatTimerStop(id), 1);
+            let count = SCALED_TICKS.load(Ordering::SeqCst);
+            assert!((40..=420).contains(&count), "{count} ticks: more than a 1 ms timer could fire");
+            std::thread::sleep(std::time::Duration::from_millis(30));
+            assert!(SCALED_TICKS.load(Ordering::SeqCst) - count <= 1, "stopped");
+            assert_eq!(PlatTimerStop(id), 0);
+            // a one-shot timer fires once and its id is gone
+            SCALED_TICKS.store(0, Ordering::SeqCst);
+            let id = unsafe { PlatTimerStartCallback(100, 0, Some(scaled_tick), std::ptr::null_mut()) };
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            assert_eq!(SCALED_TICKS.load(Ordering::SeqCst), 1);
+            assert_eq!(PlatTimerStop(id), 0);
+        });
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn scaled_waits_time_out_early_and_still_see_their_events() {
+        use windows_sys::Win32::Foundation::{CloseHandle, WAIT_OBJECT_0, WAIT_TIMEOUT};
+        use windows_sys::Win32::System::Threading::{CreateEventA, SetEvent};
+        assert!(unsafe { sim_wait(&[std::ptr::null_mut()], 100) }.is_none(), "no factor: the caller waits");
+        with_factor(100, 1, || unsafe {
+            let event = CreateEventA(std::ptr::null(), 0, 0, std::ptr::null());
+            let start = std::time::Instant::now();
+            assert_eq!(sim_wait(&[event], 5000), Some(WAIT_TIMEOUT)); // 50 real ms
+            let real = real_ms(start);
+            assert!((40..1000).contains(&real), "{real} real ms");
+            SetEvent(event);
+            assert_eq!(sim_wait(&[event], 5000), Some(WAIT_OBJECT_0));
+            assert!(sim_wait(&[event], 0).is_none() && sim_wait(&[event], u32::MAX).is_none(), "0 and INFINITE");
+            // an event timer under the factor
+            let id = PlatTimerStartEvent(1000, 0, event);
+            assert_ne!(id, 0);
+            assert_eq!(sim_wait(&[event], 100_000), Some(WAIT_OBJECT_0), "set after 10 real ms");
+            CloseHandle(event);
+        });
+    }
+
     #[test]
     fn clocks_advance_with_a_sleep() {
+        let _guard = crate::test_globals();
         assert!(PlatCounterFrequency() > 0);
         let (ms, ms64, ticks) = (PlatTimeMilliseconds(), PlatTimeMilliseconds64(), PlatCounterTicks());
         PlatSleep(60);

@@ -261,6 +261,7 @@ dependencies = [
 name = "ee_plat_sys"
 version = "0.1.0"
 dependencies = [
+ "ee_plat_core",
  "libc",
  "windows-sys 0.60.2",
 ]

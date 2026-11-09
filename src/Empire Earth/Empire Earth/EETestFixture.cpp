@@ -1,15 +1,21 @@
 // TEST ONLY: the in-process UI fixture of the POSIX test driver (tools/harness/posix_game.py). Port addition: the
 // Windows harness reaches the same engine methods through its debugger and presentation bridge
 // (tools/harness/presentation_bridge.c ui_test); on Linux and macOS there is no such debugger, so the game carries the
-// fixture itself. It does nothing unless EE_TEST_UI names a directory.
+// fixture itself, and the Windows fixture driver (tools/harness/fixture_game.py, the gates) uses it too: it reads
+// nothing by memory offset. It does nothing unless EE_TEST_UI names a directory.
 //
 // Every 250 ms a thread of its own (never the render or UI thread) takes the UI manager's lock and
 //   - writes <dir>/ui-state.txt (atomically: .tmp + rename) in the bridge's format: "form <id> controls <n>",
 //     "command <seq>", "pid <pid>", "stack <ids>", "control <i>" (controls with a 0x3f0 trigger event),
 //     "combo <i> sel <s> lines <n> a|b|..", "check <i> <0|1>", "list <i> sel <s> lines <n> a|b|..",
 //     "window <w> <h>", "mouseover <i>" (the control under the game's pointer, -1 for none: the form's own hit test); plus the
-//     game telemetry: "game ms <t> ticks <n> over <0|1> players <n> map <0|1> local <i>" and one
-//     "player <i> observer <0|1> result <r> population <n> victory <n>" per world player;
+//     game telemetry: "game ms <t> ticks <n> over <0|1> players <n> map <0|1> local <i>" (ticks: the completed
+//     physics ticks, PTs), "comm ct <n> last <n> paused <0|1> multiplayer <0|1>" (the communications ticks processed,
+//     the last received, the pause), one "player <i> observer <0|1> result <r> population <n> victory <n> civ <locked>
+//     <chosen> stock <f>/<w>/<s>/<g>/<i>" per world player, and "clock <num>/<den> ms <t> frames <n>" (the harness
+//     clock's factor and time, the frames written so far);
+//   - when <dir>/frame.request exists, removes it and writes the next presented frame to <dir>/frame.bmp (a top-down
+//     32-bit BMP, through the renderer's GXTestSetPresentHook / GXTestReadFrame);
 //   - executes the newest line of <dir>/test.command, "<seq> click|select|check|lselect <form> <control> [<k>]"
 //     (or "<seq> zoom <form> 0 <percent>", the camera zoom, or "<seq> pointer <form> <x> <y>", the game's pointer
 //     moved to a window position and the UI updated: hover through the controls' real hit test, or
@@ -119,11 +125,73 @@
 #include "ee/EETechTreeTechID.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
+#include "ee/EEResourceType.h"
+#include "platform/PlatSim.h"
+#include "platform/PlatTime.h"
+#include <atomic>
+
+// the renderer's test hooks (rust/crates/ee_gx ffi.rs; GX.cpp keeps them linked): a callback before every presented
+// frame, and a read-back of that frame as 32-bit BGRA rows
+extern "C" void GXTestSetPresentHook(void (*inHook)(void* inWindow, void* inFrame));
+extern "C" long GXTestReadFrame(void* inFrame, void* outPixels, unsigned long inCapacity, unsigned long* outWidth,
+                                unsigned long* outHeight);
 
 namespace {
 
 const unsigned long kTriggerEvent = 0x3f0;
 unsigned long sLastCommand = 0;
+std::string sDirectory;                      // EE_TEST_UI
+std::atomic<int> sFrameWanted(0);            // a frame.request seen: the next presented frame goes to frame.bmp
+std::atomic<unsigned long> sFramesWritten(0);
+
+// Replaces inTo with inFrom -> true on success. Windows' rename does not replace an existing file (the reader may
+// hold it open for a moment: the next poll writes it again)
+bool ReplaceWith(const std::string& inFrom, const std::string& inTo)
+{
+#ifdef _WIN32
+    return MoveFileExA(inFrom.c_str(), inTo.c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
+#else
+    return rename(inFrom.c_str(), inTo.c_str()) == 0;
+#endif
+}
+
+// Before every presented frame (the render thread): when a frame was asked for, writes it to <dir>/frame.bmp
+// (atomically: .tmp + rename), a top-down 32-bit BMP
+void PresentHook(void* inWindow, void* inFrame)
+{
+    if (!sFrameWanted.exchange(0))
+        return;
+    unsigned long theWidth = 0, theHeight = 0;
+    GXTestReadFrame(inFrame, NULL, 0, &theWidth, &theHeight);
+    if (theWidth == 0 || theHeight == 0 || theWidth > 16384 || theHeight > 16384)
+        return;
+    std::string thePixels((size_t)theWidth * theHeight * 4, '\0');
+    if (GXTestReadFrame(inFrame, &thePixels[0], (unsigned long)thePixels.size(), &theWidth, &theHeight) != 0)
+        return;
+    unsigned char theHeader[54] = {0};
+    uint32_t theSize = 54 + (uint32_t)thePixels.size();
+    int32_t theTopDown = -(int32_t)theHeight;
+    theHeader[0] = 'B';
+    theHeader[1] = 'M';
+    memcpy(theHeader + 2, &theSize, 4);
+    theHeader[10] = 54;    // the pixels' offset
+    theHeader[14] = 40;    // BITMAPINFOHEADER
+    memcpy(theHeader + 18, &theWidth, 4);
+    memcpy(theHeader + 22, &theTopDown, 4);
+    theHeader[26] = 1;     // planes
+    theHeader[28] = 32;    // bits per pixel (BI_RGB)
+    std::string theTemporary = sDirectory + "/frame.tmp";
+    FILE* theFile = fopen(theTemporary.c_str(), "wb");
+    if (!theFile)
+        return;
+    bool theWritten = fwrite(theHeader, 1, sizeof(theHeader), theFile) == sizeof(theHeader)
+        && fwrite(thePixels.data(), 1, thePixels.size(), theFile) == thePixels.size();
+    fclose(theFile);
+    if (theWritten) {
+        if (ReplaceWith(theTemporary, sDirectory + "/frame.bmp"))
+            sFramesWritten++;
+    }
+}
 
 void PrintText(FILE* outFile, const char* inText)
 {
@@ -154,13 +222,28 @@ void WriteTelemetry(FILE* outFile)
             thePhysics ? (long)thePhysics->mGameTime : -1L, thePhysics ? (unsigned long)thePhysics->mNumTicksDone : 0UL,
             thePhysics ? (int)thePhysics->mGameOver : 0, thePlayers, gWorld.mMap != NULL ? 1 : 0,
             (long)gWorld.mCurrentPlayer);
+    NESynchronousCommunications* theCommunications = gCommunications;
+    if (theCommunications)
+        fprintf(outFile, "comm ct %lu last %ld paused %d multiplayer %d\n",
+                theCommunications->GetNumberOfCTsProcessedInPhysics(), (long)theCommunications->GetLastTickReceived(),
+                theCommunications->GetIsGamePaused() ? 1 : 0, theCommunications->GetIsMultiplayerSession() ? 1 : 0);
     for (unsigned long i = 0; i < thePlayers && i < 17; i++) {
         EEPlayer* thePlayer = gWorld.GetPlayer(i);
-        if (thePlayer)
-            fprintf(outFile, "player %lu observer %d result %lu population %ld victory %ld\n", i,
+        if (thePlayer) {
+            const long* s = thePlayer->mResourceCaps;
+            fprintf(outFile, "player %lu observer %d result %lu population %ld victory %ld civ %d %d "
+                    "stock %ld/%ld/%ld/%ld/%ld\n", i,
                     (int)thePlayer->mObserverMode, (unsigned long)thePlayer->mGameResult,
-                    (long)thePlayer->mPopulationCount, (long)thePlayer->mEndOfGameCount);
+                    (long)thePlayer->mPopulationCount, (long)thePlayer->mEndOfGameCount,
+                    thePlayer->mCivilizationLocked ? 1 : 0, thePlayer->mCivilizationChosen ? 1 : 0,
+                    (long)s[kResourceFood], (long)s[kResourceWood], (long)s[kResourceStone], (long)s[kResourceGold],
+                    (long)s[kResourceIron]);
+        }
     }
+    uint32_t theNum = 1, theDen = 1;
+    PlatSimGetTimeFactor(&theNum, &theDen);
+    fprintf(outFile, "clock %lu/%lu ms %lu frames %lu\n", (unsigned long)theNum, (unsigned long)theDen,
+            (unsigned long)PlatTimeMilliseconds(), sFramesWritten.load());
 }
 
 void Execute(const std::string& inDirectory, UIForm* inForm, unsigned long inFormID)
@@ -288,7 +371,10 @@ void Poll(const std::string& inDirectory)
         }
         WriteTelemetry(theState);
         fclose(theState);
-        rename(theTemporary.c_str(), (inDirectory + "/ui-state.txt").c_str());
+        std::string theRequest = inDirectory + "/frame.request";
+        if (remove(theRequest.c_str()) == 0)   // the driver asks for the next presented frame
+            sFrameWanted = 1;
+        ReplaceWith(theTemporary, inDirectory + "/ui-state.txt");
         if (theForm)
             Execute(inDirectory, theForm, theFormID);
     }
@@ -297,6 +383,69 @@ void Poll(const std::string& inDirectory)
 
 }   // namespace
 
+namespace {
+// The game's debug output (PlatDebugOutput: GX's log, EE-AI lines, ...) goes to stderr as "debugstring <text>", the
+// lines the debugger harness read (no debugger runs under the fixture driver)
+void DebugToStderr(const char* inText)
+{
+    size_t theLength = inText ? strlen(inText) : 0;
+    fprintf(stderr, "debugstring %s%s", inText ? inText : "", theLength && inText[theLength - 1] == '\n' ? "" : "\n");
+    fflush(stderr);
+}
+}   // namespace
+
+// The test switches, when EE_TEST_UI names a directory (EERun, first, before the engine starts its clocks and threads):
+//   EE_TEST_TIME_FACTOR=F (or N/D, or a decimal): the harness clock (platform/PlatSim.h PlatSimSetTimeFactor);
+//   EE_TEST_SEED=S: the start seed (gPlatSimSeed: EEMStartLoading::Execute takes it instead of the lobby's);
+//   EE_TEST_NO_HUMAN_DEFEAT=1: the idle local human is never taken out or defeated (gPlatSimNoHumanDefeat);
+// and the debug output goes to stderr ("debugstring <text>": PlatDebugSetHandler).
+// Each one taken is announced on stderr ("TEST UI ..."); a malformed one stops the game (a run must not go on
+// believing it is accelerated or seeded when it is not).
+void EETestFixtureConfigure()
+{
+    const char* theDirectory = getenv("EE_TEST_UI");
+    if (!theDirectory || !*theDirectory)
+        return;
+    PlatDebugSetHandler(DebugToStderr);
+    if (const char* theFactor = getenv("EE_TEST_TIME_FACTOR")) {
+        unsigned long theNum = 0, theDen = 1, theWhole = 0;
+        char theRest[8] = {0};
+        int theFields = sscanf(theFactor, "%lu/%lu", &theNum, &theDen);
+        if (theFields == 1 && strchr(theFactor, '.')) {   // a decimal: up to three places
+            theDen = 1;
+            theNum = 0;
+            if (sscanf(theFactor, "%lu.%7[0-9]", &theWhole, theRest) >= 1) {
+                size_t thePlaces = strlen(theRest);
+                theNum = theWhole;
+                for (size_t k = 0; k < thePlaces && k < 3; k++) {
+                    theNum = theNum * 10 + (unsigned long)(theRest[k] - '0');
+                    theDen *= 10;
+                }
+            }
+        }
+        if (theFields < 1 || !PlatSimSetTimeFactor((uint32_t)theNum, (uint32_t)theDen)) {
+            fprintf(stderr, "TEST UI EE_TEST_TIME_FACTOR=%s is not a factor in 1/1000..4096\n", theFactor);
+            exit(3);
+        }
+        fprintf(stderr, "TEST UI clock factor %lu/%lu\n", theNum, theDen);
+    }
+    if (const char* theSeed = getenv("EE_TEST_SEED")) {
+        char* theEnd = NULL;
+        unsigned long long theValue = strtoull(theSeed, &theEnd, 0);
+        if (!*theSeed || *theEnd || theValue > 0xffffffffULL) {
+            fprintf(stderr, "TEST UI EE_TEST_SEED=%s is not a 32-bit number\n", theSeed);
+            exit(3);
+        }
+        gPlatSimSeed = (uint32_t)theValue;
+        gPlatSimSeedSet = 1;
+        fprintf(stderr, "TEST UI seed %lu\n", (unsigned long)gPlatSimSeed);
+    }
+    if (const char* theFlag = getenv("EE_TEST_NO_HUMAN_DEFEAT")) {
+        gPlatSimNoHumanDefeat = atoi(theFlag) != 0;
+        fprintf(stderr, "TEST UI no human defeat %d\n", gPlatSimNoHumanDefeat);
+    }
+}
+
 // Starts the fixture's thread when EE_TEST_UI names a directory (EERun, after the engine is initialised)
 void EETestFixtureStart()
 {
@@ -304,6 +453,8 @@ void EETestFixtureStart()
     if (!theDirectory || !*theDirectory)
         return;
     std::string theCopy(theDirectory);
+    sDirectory = theCopy;
+    GXTestSetPresentHook(PresentHook);   // frame.request -> frame.bmp
     fprintf(stderr, "TEST UI fixture on %s\n", theCopy.c_str());
     std::thread([theCopy]() {
         for (;;) {
