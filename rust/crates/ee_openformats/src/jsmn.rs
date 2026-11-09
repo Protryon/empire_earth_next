@@ -1,5 +1,7 @@
-//! A literal port of the jsmn tokenizer inside cgltf 1.15 (non-strict mode, as cgltf builds it). The token stream is
-//! what `cgltf.rs` walks, so that a file is accepted or refused exactly as the C++ loader did.
+//! A literal port of the jsmn tokenizer inside cgltf 1.15, in the configuration cgltf builds it: `JSMN_STRICT` and
+//! `JSMN_PARENT_LINKS`. The token stream is what `cgltf.rs` walks, so that a file is accepted or refused exactly as the
+//! C++ loader did. The parent links are behaviour, not an optimisation: after a malformed `"key":"value":,` a comma
+//! returns to the value's parent (the key), which miscounts the object and makes cgltf refuse it.
 
 /// jsmn's token types. `Undefined` is the sentinel cgltf puts after the last token.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -11,13 +13,14 @@ pub(crate) enum TokenType {
     Primitive,
 }
 
-/// One token: a value's type, its byte range in the text and (objects, arrays) its child count.
+/// One token: a value's type, its byte range in the text, its child count (objects, arrays, keys) and its parent.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct Token {
     pub ty: TokenType,
     pub start: i32,
     pub end: i32,
     pub size: i32,
+    pub parent: i32,
 }
 
 /// The tokenizer's failure. The kind does not matter: cgltf reports every one as "invalid JSON".
@@ -32,10 +35,6 @@ struct Parser<'a> {
 }
 
 impl Parser<'_> {
-    fn at(&self, p: usize) -> u8 {
-        self.js.get(p).copied().unwrap_or(0)
-    }
-
     // the text ends at the buffer's end or the first NUL
     fn more(&self) -> bool {
         self.pos < self.js.len() && self.js[self.pos] != 0
@@ -43,9 +42,13 @@ impl Parser<'_> {
 
     fn parse_primitive(&mut self) -> Result<(), JsmnError> {
         let start = self.pos;
+        let mut found = false;
         while self.more() {
             match self.js[self.pos] {
-                b':' | b'\t' | b'\r' | b'\n' | b' ' | b',' | b']' | b'}' => break,
+                b'\t' | b'\r' | b'\n' | b' ' | b',' | b']' | b'}' => {
+                    found = true;
+                    break;
+                }
                 c if !(32..127).contains(&c) => {
                     self.pos = start;
                     return Err(JsmnError);
@@ -54,8 +57,13 @@ impl Parser<'_> {
             }
             self.pos += 1;
         }
-        // non-strict: the end of the text ends a primitive too
-        self.toks.push(Token { ty: TokenType::Primitive, start: start as i32, end: self.pos as i32, size: 0 });
+        if !found {
+            // strict: a primitive must be followed by a comma, a closing bracket or white space
+            self.pos = start;
+            return Err(JsmnError);
+        }
+        let parent = self.toksuper;
+        self.toks.push(Token { ty: TokenType::Primitive, start: start as i32, end: self.pos as i32, size: 0, parent });
         self.pos -= 1;
         Ok(())
     }
@@ -66,7 +74,14 @@ impl Parser<'_> {
         while self.more() {
             let c = self.js[self.pos];
             if c == b'"' {
-                self.toks.push(Token { ty: TokenType::String, start: start as i32 + 1, end: self.pos as i32, size: 0 });
+                let parent = self.toksuper;
+                self.toks.push(Token {
+                    ty: TokenType::String,
+                    start: start as i32 + 1,
+                    end: self.pos as i32,
+                    size: 0,
+                    parent,
+                });
                 return Ok(());
             }
             if c == b'\\' && self.pos + 1 < self.js.len() {
@@ -99,32 +114,30 @@ impl Parser<'_> {
         Err(JsmnError)
     }
 
+    // the closing-bracket walk up the parent links
     fn close(&mut self, ty: TokenType) -> Result<(), JsmnError> {
-        let mut i = self.toks.len() as i32 - 1;
-        while i >= 0 {
-            let t = self.toks[i as usize];
+        if self.toks.is_empty() {
+            return Err(JsmnError);
+        }
+        let mut i = self.toks.len() - 1;
+        loop {
+            let t = self.toks[i];
             if t.start != -1 && t.end == -1 {
                 if t.ty != ty {
                     return Err(JsmnError);
                 }
-                self.toksuper = -1;
-                self.toks[i as usize].end = self.pos as i32 + 1;
-                break;
+                self.toks[i].end = self.pos as i32 + 1;
+                self.toksuper = t.parent;
+                return Ok(());
             }
-            i -= 1;
-        }
-        if i == -1 {
-            return Err(JsmnError);
-        }
-        while i >= 0 {
-            let t = self.toks[i as usize];
-            if t.start != -1 && t.end == -1 {
-                self.toksuper = i;
-                break;
+            if t.parent == -1 {
+                if t.ty != ty || self.toksuper == -1 {
+                    return Err(JsmnError);
+                }
+                return Ok(());
             }
-            i -= 1;
+            i = t.parent as usize;
         }
-        Ok(())
     }
 
     fn parent_grew(&mut self) {
@@ -138,12 +151,13 @@ impl Parser<'_> {
 pub(crate) fn tokenize(js: &[u8]) -> Result<Vec<Token>, JsmnError> {
     let mut p = Parser { js, pos: 0, toks: Vec::new(), toksuper: -1 };
     while p.more() {
-        let c = p.at(p.pos);
+        let c = p.js[p.pos];
         match c {
             b'{' | b'[' => {
                 let ty = if c == b'{' { TokenType::Object } else { TokenType::Array };
                 p.parent_grew();
-                p.toks.push(Token { ty, start: p.pos as i32, end: -1, size: 0 });
+                let parent = p.toksuper;
+                p.toks.push(Token { ty, start: p.pos as i32, end: -1, size: 0, parent });
                 p.toksuper = p.toks.len() as i32 - 1;
             }
             b'}' | b']' => {
@@ -158,28 +172,25 @@ pub(crate) fn tokenize(js: &[u8]) -> Result<Vec<Token>, JsmnError> {
             b':' => p.toksuper = p.toks.len() as i32 - 1,
             b',' => {
                 if p.toksuper != -1 && !matches!(p.toks[p.toksuper as usize].ty, TokenType::Array | TokenType::Object) {
-                    let mut i = p.toks.len() as i32 - 1;
-                    while i >= 0 {
-                        let t = p.toks[i as usize];
-                        if matches!(t.ty, TokenType::Array | TokenType::Object) && t.start != -1 && t.end == -1 {
-                            p.toksuper = i;
-                            break;
-                        }
-                        i -= 1;
-                    }
+                    p.toksuper = p.toks[p.toksuper as usize].parent;
                 }
             }
-            _ => {
+            b'-' | b'0'..=b'9' | b't' | b'f' | b'n' => {
+                // strict: a primitive is a value, never a key
+                if p.toksuper != -1 {
+                    let t = p.toks[p.toksuper as usize];
+                    if t.ty == TokenType::Object || (t.ty == TokenType::String && t.size != 0) {
+                        return Err(JsmnError);
+                    }
+                }
                 p.parse_primitive()?;
                 p.parent_grew();
             }
+            _ => return Err(JsmnError),
         }
         p.pos += 1;
     }
-    if p.toks.iter().any(|t| t.start != -1 && t.end == -1) {
-        return Err(JsmnError);
-    }
-    if p.toks.is_empty() {
+    if p.toks.iter().any(|t| t.start != -1 && t.end == -1) || p.toks.is_empty() {
         return Err(JsmnError);
     }
     Ok(p.toks)
@@ -227,7 +238,26 @@ mod tests {
     #[test]
     fn nul_ends_the_text_and_primitives_end_at_the_end() {
         assert_eq!(tokenize(b"[1,2]\0garbage").unwrap().len(), 3);
-        assert_eq!(tokenize(b"12").unwrap()[0].ty, TokenType::Primitive);
+        assert_eq!(tokenize(b"12"), Err(JsmnError)); // strict: a primitive needs a terminator
+        assert_eq!(tokenize(b"12 ").unwrap()[0].ty, TokenType::Primitive);
+    }
+
+    #[test]
+    fn strict_mode_refuses_bare_words_and_primitive_keys() {
+        assert_eq!(tokenize(b"[abc]"), Err(JsmnError));
+        assert_eq!(tokenize(b"{1:2}"), Err(JsmnError));
+        assert_eq!(tokenize(br#"{"a":1 2}"#), Err(JsmnError)); // the key already has its value
+        assert_eq!(tokenize(b"[0x10,nan]").unwrap().len(), 3); // the first letter decides, cgltf reads the text
+    }
+
+    #[test]
+    fn a_comma_goes_back_through_the_parent_link() {
+        use TokenType::*;
+        // the comma after the second string returns to its parent, the key "a": "c" then counts as the key's child
+        assert_eq!(
+            kinds(r#"{"a":"b":,"c":1}"#),
+            vec![(Object, 1), (String, 2), (String, 0), (String, 1), (Primitive, 0)]
+        );
     }
 
     #[test]

@@ -484,7 +484,7 @@ struct Cur<'t, 'a> {
     i: usize,
 }
 
-const UNDEF: Token = Token { ty: TokenType::Undefined, start: 0, end: 0, size: 0 };
+const UNDEF: Token = Token { ty: TokenType::Undefined, start: 0, end: 0, size: 0, parent: -1 };
 
 impl<'t, 'a> Cur<'t, 'a> {
     fn tok(&self, i: usize) -> Token {
