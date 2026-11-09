@@ -292,7 +292,12 @@ dependencies = [
  "ee_plat_ui",
  "ee_random",
  "ee_rmap",
+ "ee_won",
 ]
+
+[[package]]
+name = "ee_won"
+version = "0.1.0"
 
 [[package]]
 name = "equivalent"

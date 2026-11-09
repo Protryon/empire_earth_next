@@ -37,6 +37,10 @@ use ee_plat_sys as _;
 use ee_plat_sdl as _;
 use ee_plat_ui as _;
 
+// the WON library's leaves (ee_won/src/ffi.rs): the buffers' and text helpers, CRC-16, MD5, Blowfish, ElGamal, the auth
+// blocks and the CD keys behind the C++ forwarders of src/Empire Earth/WONAPI
+use ee_won as _;
+
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 pub const EE_RUST_ABI_VERSION: u32 = 1;
 
