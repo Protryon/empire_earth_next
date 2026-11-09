@@ -962,8 +962,9 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
             continue;
         if (inNeedsDropSite && theCenterObject->mUnit == NULL)
             continue;
-        if (this->mManager->mBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY()))
-            continue;
+        if (EECPNextEngine(thePlayer) ? EECPNextSiteBlocked(thePlayer, theUnit, NULL) > kNextBlockedUnexplored
+                                      : this->mManager->mBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY()))
+            continue;   // (the next engine: its gather safety, as FindResourceTarget)
         // economy.forage_patches: only the patches within the claim range (the playtest AI sent 17 of 27 food gatherers
         // on far trips); their settlements come from EECPRMSettlePatches. TEST ONLY: the experiment "droprule" also
         // skips a patch with no drop site within kEECPPatchDropRange tiles (lost 4-17 in the sim: the patches stood
@@ -1158,14 +1159,20 @@ EEUnit* EECPResourceManager::FindResourceTarget(long inResource, EEComplexUnit* 
             EEUnit* theUnit = theCenter->FindResourceUnit(inResource);
             if (theUnit != NULL && static_cast<EETile*>(theUnit->mTile)->IsVisibleTo(thePlayer) && gWorld.GetResourceUsers(theUnit) < theLimit
                 && theUnit->mResourceAmount > 0 && theUnit->mTile->mTerrainType != kTerrainDeepWater) {
-                theOK = !theBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY());
-                if (theOK)
+                // the next engine: its gather safety (EECPNextSiteBlocked: seen soldiers, towers in range, a danger
+                // zone, another player's land; a home site only soldiers on it; docs/AI_RESEARCH.md §8.34)
+                bool theNextCheck = EECPNextEngine(thePlayer);
+                if (theNextCheck)
+                    theOK = EECPNextSiteBlocked(thePlayer, theUnit, NULL) <= kNextBlockedUnexplored;
+                else
+                    theOK = !theBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY());
+                if (theOK && !theNextCheck)
                     theOK = !EECPRMResourceInDanger(this, theUnit->GetTileX(), theUnit->GetTileY());
                 if (theOK && sClaimPass)
                     theOK = EECPRMInClaimRange(this, theUnit->GetTileX(), theUnit->GetTileY());
                 if (theOK) {
                     EEPlayer** thePlayers = gWorld.mPlayers;
-                    for (unsigned long j = 0; j < gWorld.mNumPlayers && theOK; j++, thePlayers++) {
+                    for (unsigned long j = 0; j < gWorld.mNumPlayers && theOK && !theNextCheck; j++, thePlayers++) {
                         EEPlayer* theOther = *thePlayers;
                         if (theOther == thePlayer || theOther->mEnemies[thePlayer->mPlayerID] != 0)
                             continue;

@@ -132,12 +132,13 @@ static EECPResourceCenter* EECPNextSiteAt(EEComputerPlayer* inPlayer, long inSit
     return inPlayer->GetResourceCenter((unsigned long)inSite);
 }
 
-// the tile of a centre's first living resource unit (what its site in the view shows)
+// the tile of a centre's first resource unit with some left (what its site in the view shows; a worked mine's hit
+// points are 0)
 static bool EECPNextSiteTile(EECPResourceCenter* inCenter, long& outX, long& outY)
 {
     for (unsigned long u = 0; u < inCenter->mUnits.size(); u++) {
         EEUnit* theUnit = inCenter->mUnits[u];
-        if (theUnit->mHitPoints > 0 && theUnit->mResourceAmount > 0) {
+        if (theUnit->mResourceAmount > 0 && theUnit->mTile != NULL) {
             outX = theUnit->GetTileX();
             outY = theUnit->GetTileY();
             return true;

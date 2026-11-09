@@ -1777,3 +1777,23 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   resolves differences of about 15 losses a game. One change looked 14 worse on 16 games and was neutral on 32.
 - **A fishing boat sees 4 tiles; a frigate shoots from 5.** A boat that flees "on sight" is already under fire. The
   docks and towers see further, which is what the fish finder's warship check uses.
+
+## The next computer player's resource sites (2026-11-08, docs/AI_RESEARCH.md §8.34)
+
+- **A worked mine has 0 hit points.** `EEUGGather::Work` hits any resource with hit points not 0 (meant for hunted
+  animals). A mine has 1 hit point in the data, and `EEUnit::TakeHit` sets a resource's hit points to 0 instead of
+  killing it. So a mine is at 0 from its first gather and stays gatherable while its amount (300000) lasts. Code
+  that asks `mHitPoints > 0` of a resource loses every worked mine and patch. The next engine's view did that, and
+  the playtest's only safe iron mine vanished the minute its gatherers reached it. Test resources by
+  `mResourceAmount > 0`, as `EECPResourceCenter::FindResourceUnit` does. The classic `cp sites` trace,
+  EECPRMSettlePatches and claim_needed still use the hit point test (left alone: changing them changes the classic
+  traces).
+- **`HasEnemyNear` is neither a threat test nor fog-honest.** It sums the influence regions (9 tiles each) round
+  the tile, then takes every unit in the overlapping unit regions (up to 27 tiles across): every armed unit not its
+  own, citizens (attack 5) and towers whatever their range, seen or not. 77% of the next engine's blocked
+  site-minutes were enemy citizens, 91% of all the blockers were out of sight. Its collection is in pointer order;
+  pick a cause by distance and unit id for a deterministic trace.
+- **A trace of who blocked what** (`EE_AI_EXP sitetrace`) settled in one bench what the playtest log could only
+  suggest. Build the before image with the trace commit alone and keep it apart (`build/trace_exe`). An edit
+  made while build.py runs can mix two header versions in one image, so stash or patch the work aside while it
+  builds.

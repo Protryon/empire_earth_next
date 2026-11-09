@@ -213,8 +213,9 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("patch", EECPLuaValue::Bool(s.patch != 0));
         e.Set("holds", EECPNextResources(s.holds));
         e.Set("explored", EECPLuaValue::Bool(s.explored != 0));
-        static const char* const kBlocked[5] = {"", "unexplored", "enemy_near", "danger", "area"};
-        if (s.blocked > 0 && s.blocked <= 4)   // why the gatherer finders would pass it over (nil: they would not)
+        e.Set("home", EECPLuaValue::Bool(s.home != 0));   // a start resource by the town
+        static const char* const kBlocked[6] = {"", "unexplored", "enemy_near", "danger", "area", "tower"};
+        if (s.blocked > 0 && s.blocked <= kNextBlockedTower)   // why the gatherer finders would pass it over (nil: they would not)
             e.Set("blocked", EECPLuaValue::Str(kBlocked[s.blocked]));
         theSites.Push(e);
     }
@@ -971,7 +972,7 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
 {
     outBytes.clear();
     outBytes.append("EENS", 4);
-    EECPNextPut(outBytes, 2);
+    EECPNextPut(outBytes, 3);
     EECPNextPut(outBytes, s->mClaimRange);
     for (long i = 0; i < kNextResources; i++)
         EECPNextPut(outBytes, s->mReserve[i]);
@@ -1015,6 +1016,9 @@ static void EECPNextEncodeState(const EECPNextState* s, const std::string& inMem
     }
     EECPNextPutString(outBytes, inMemory);
     EECPNextEncodeArmy(s, outBytes);
+    // version 3: the gather safety's memory (the enemy soldiers seen lately, as the spots; the time of its last scan)
+    EECPNextPutSpots(outBytes, s->mThreats);
+    EECPNextPut(outBytes, s->mThreatsTime);
 }
 
 // the state from its bytes (false: not a version 1 block, or bytes left over); the Lua memory goes to mRestoreBytes,
@@ -1026,7 +1030,7 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
     EECPNextGetter g(inBytes);
     g.mOffset = 4;
     long theVersion = g.Get();
-    if (theVersion != 1 && theVersion != 2)
+    if (theVersion < 1 || theVersion > 3)
         return false;
     s->mClaimRange = g.Get();
     for (long i = 0; i < kNextResources; i++)
@@ -1081,6 +1085,12 @@ static bool EECPNextDecodeState(EECPNextState* s, const std::string& inBytes)
     std::string theMemory = g.GetString();
     if (theVersion >= 2)
         EECPNextDecodeArmy(s, g);   // (a version 1 block: no groups, no army memory)
+    s->mThreats.clear();
+    s->mThreatsTime = -1;
+    if (theVersion >= 3) {
+        EECPNextGetSpots(g, s->mThreats);
+        s->mThreatsTime = g.Get();
+    }
     if (!g.mOK || g.mOffset != inBytes.size())
         return false;
     delete s->mLua;

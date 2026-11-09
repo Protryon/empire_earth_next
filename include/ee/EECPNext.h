@@ -70,11 +70,12 @@ const long kNextResources = 5;
 struct EECPNextSite {           // a resource centre (EEComputerPlayer::mResourceCenters, by distance from the town)
     long index;                 // the centre's index this step (claim/release/build near take it)
     long resource;              // 0..4: the resource most of its units hold (-1: none left)
-    long units;                 // its living resource units of that resource
+    long units;                 // its resource units of that resource with some left (a mine's hit points drop to 0 at
+                                // the first gather, EEUnit::TakeHit; it stays until its amount is gone)
     long amount;                // what they still hold
     long room;                  // gatherer slots left: units x the mining limit less the gatherers there
     long workers;               // gatherers working its units now
-    long x, y;                  // the tile of its first living resource unit
+    long x, y;                  // the tile of its first resource unit with some left
     long distance;              // tiles from the town centre
     long claimed;               // 1: active (gathered from)
     long has_drop;              // 1: a drop site (town centre, settlement; granary for food) at hand: within the rings
@@ -83,18 +84,39 @@ struct EECPNextSite {           // a resource centre (EEComputerPlayer::mResourc
     long danger;                // the seen enemy strength within 12 tiles, plus 1 in a recent danger zone
     long patch;                 // 1: its food is a forage patch
     long explored;              // 1: its tile is visible to the player (EETile::IsVisibleTo)
-    long blocked;               // kNextBlocked*: why the classic gatherer finders would pass its first unit over
-    long holds[kNextResources]; // its living resource units of each resource (a centre may hold stone and gold: the
-                                // finders take any of its units of the resource they look for)
+    long blocked;               // kNextBlocked*: why the gatherer finders would pass its first unit over
+    long holds[kNextResources]; // its resource units of each resource with some left (a centre may hold stone and
+                                // gold: the finders take any of its units of the resource they look for)
+    long home;                  // 1: one of the start resources by the town (EECPNextIsHome)
+    long cause;                 // TEST ONLY (the site trace): the unit id that blocks it (enemy_near, tower; 0 none)
 };
 
 enum {                          // EECPNextSite::blocked
     kNextBlockedNone = 0,
     kNextBlockedUnexplored = 1, // not visible (the next engine's finders still send gatherers to a claimed site)
-    kNextBlockedEnemyNear = 2,  // an enemy unit near it (BuildManager::HasEnemyNear)
-    kNextBlockedDanger = 3,     // a recent danger zone (EECPRMResourceInDanger)
-    kNextBlockedArea = 4        // within 10 tiles of a non-enemy player's area (gaia, an ally)
+    kNextBlockedEnemyNear = 2,  // enemy soldiers seen within kNextThreatRange tiles in the last kNextThreatMs (a home
+                                // site: seen there now); EECPNextSiteThreat
+    kNextBlockedDanger = 3,     // a recent danger zone (EECPRMResourceInDanger; not a home site)
+    kNextBlockedArea = 4,       // within 10 tiles of a non-enemy player's area (gaia, an ally; not a home site)
+    kNextBlockedTower = 5       // an enemy tower or armed building seen (and not seen destroyed) whose range covers it
+                                // (not a home site)
 };
+
+// The next engine's gather safety (EECPNextView.cpp; docs/AI_LUA_PLAN.md §3.2 "blocked"): what keeps gatherers off a
+// resource is a real threat to them that the player sees or remembers: enemy soldiers (land military, not citizens),
+// and enemy towers or armed buildings in range. The start resources by the town (2 gold, 2 iron, 1 stone, 2 forage
+// patches: the nearest within kNextHomeRange tiles) are home: blocked only while enemy soldiers are seen on them.
+const long kNextThreatRange = 9;            // tiles: seen enemy soldiers this near a resource keep gatherers off it
+const long kNextThreatMs = 20000;           // ... remembered this long after they were last seen
+const long kNextTowerMargin = 3;            // tiles past a tower's range (the gatherers stand round the mine)
+const long kNextHomeRange = 20;             // tiles from the town centre: the start resources
+// the unit id of the threat at a tile (0: none) and its kind (kNextBlockedEnemyNear, kNextBlockedTower); inNow: only
+// soldiers in sight now, no memory, no towers (a home site)
+long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inNow, long* outKind);
+// why the next engine's gatherer finders pass a resource unit over (kNextBlocked*; kNextBlockedNone: they take it);
+// outCause: the unit id that blocks it
+long EECPNextSiteBlocked(EEComputerPlayer* inPlayer, EEUnit* inUnit, long* outCause);
+bool EECPNextIsHome(EEComputerPlayer* inPlayer, EEUnit* inUnit);
 
 struct EECPNextBuildings {      // the player's buildings of one type
     long type;                  // the unit class
@@ -359,6 +381,15 @@ struct EECPNextSpot {
     long mUnit;                 // a tower: its unit id (0: a gather spot)
 };
 
+enum EECPNextSeenKind {          // EECPNextSeen::mKind
+    kSeenSoldier = 0,
+    kSeenCitizen,
+    kSeenBoat,
+    kSeenTower,
+    kSeenBuilding,
+    kSeenShip,
+};
+
 // an enemy unit the player sees now (EECPNextArmyStep; not saved, rebuilt each step)
 struct EECPNextSeen {
     long mUnit, mPlayer, mX, mY, mKind, mStrength, mHitPoints;
@@ -393,6 +424,10 @@ struct EECPNextState {
     long mSeenCitizens[64];                 // citizens and fishing boats in sight at the last step, by player id
     long mArmyX[64], mArmyY[64];            // where its soldiers were last seen (-1 never)
     std::vector<EECPNextSeen> mSeen;        // (transient) the enemy units in sight this step
+    // the gather safety (EECPNextView.cpp; saved from the state block's version 3)
+    std::vector<EECPNextSpot> mThreats;     // enemy soldiers seen in the last kNextThreatMs (unit, player, x, y, time)
+    long mThreatsTime;                      // game ms of the last scan into mThreats (its entries of that time: in sight)
+    std::vector<long> mHome;                // (transient) the start resources' unit ids, sorted (EECPNextUpdateHome)
     // the strategy (EECPNextLua.cpp; docs/AI_LUA_PLAN.md §3.2)
     EECPLuaState* mLua;                     // the script's Lua state (NULL until the first step)
     std::string mScript;                    // the module it runs ("c++": the C++ test opening, TEST ONLY); "" not chosen

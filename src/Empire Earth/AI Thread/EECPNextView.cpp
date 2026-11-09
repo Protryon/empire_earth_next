@@ -90,17 +90,165 @@ static bool EECPNextIsSoldier(EEUnit* inUnit)
     return theCategory == kUnitCategoryLand || theCategory == kUnitCategoryLandMilitaryHero;
 }
 
-// why the gatherer finders (EECPResourceManager::FindResourceTarget, FindFarm) pass a resource over, in their order of
-// checks: never seen, an enemy near (BuildManager::HasEnemyNear), a danger zone, or within 10 tiles of the area of a
-// player who is not its enemy (gaia, an ally); kNextBlockedNone when they would send gatherers to it
-static long EECPNextSiteBlocked(EEComputerPlayer* inPlayer, EEUnit* inUnit)
+// a resource unit the view and the finders count: some left (a mine's or a patch's hit points drop to 0 at its first
+// gather, EEUnit::TakeHit, and it stays gatherable until its amount is gone; the view's old hit point test lost every
+// worked mine)
+static bool EECPNextResourceLeft(EEUnit* inUnit)
 {
+    return inUnit->mResourceAmount > 0 && inUnit->mTile != NULL && inUnit->GetTileX() != -10000;
+}
+
+// the range in tiles of a building that shoots (a tower, an armed building); 0: it does not
+static long EECPNextShootRange(EEUnit* inUnit)
+{
+    if (inUnit == NULL || !(inUnit->mHitPoints > 0) || inUnit->mStats == NULL || inUnit->mStats->mAttack == 0.0f)
+        return 0;
+    long theRange = (long)UMFloatToLong(inUnit->mStats->mRange);
+    return theRange > 0 ? theRange : 1;
+}
+
+// the enemy soldiers in sight this step go into the memory (mThreats, by unit id); the ones not seen for
+// kNextThreatMs are forgotten
+static void EECPNextUpdateThreats(EECPNextState* inState, long inNow)
+{
+    for (unsigned long k = 0; k < inState->mSeen.size(); k++) {
+        const EECPNextSeen& theSeen = inState->mSeen[k];
+        if (theSeen.mKind != kSeenSoldier)
+            continue;
+        bool theKnown = false;
+        for (unsigned long t = 0; t < inState->mThreats.size() && !theKnown; t++)
+            if (inState->mThreats[t].mUnit == theSeen.mUnit) {
+                inState->mThreats[t].mX = theSeen.mX;
+                inState->mThreats[t].mY = theSeen.mY;
+                inState->mThreats[t].mTime = inNow;
+                theKnown = true;
+            }
+        if (!theKnown && inState->mThreats.size() < 512) {
+            EECPNextSpot theSpot = { theSeen.mPlayer, theSeen.mX, theSeen.mY, inNow, theSeen.mUnit };
+            inState->mThreats.push_back(theSpot);
+        }
+    }
+    for (long t = (long)inState->mThreats.size() - 1; t >= 0; t--)
+        if (inNow - inState->mThreats[t].mTime > kNextThreatMs)
+            inState->mThreats.erase(inState->mThreats.begin() + t);
+    inState->mThreatsTime = inNow;
+}
+
+long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inNow, long* outKind)
+{
+    EECPNextState* theState = EECPNextGetState(inPlayer);
+    long theUnit = 0, theKind = kNextBlockedNone;
+    long long theBest = 0;
+    for (unsigned long t = 0; t < theState->mThreats.size(); t++) {
+        const EECPNextSpot& theSpot = theState->mThreats[t];
+        if (inNow && theSpot.mTime != theState->mThreatsTime)
+            continue;
+        long long theDistance = EECPNextDistance2(inX, inY, theSpot.mX, theSpot.mY);
+        if (theDistance <= (long long)kNextThreatRange * kNextThreatRange && (theUnit == 0 || theDistance < theBest)) {
+            theUnit = theSpot.mUnit;
+            theBest = theDistance;
+            theKind = kNextBlockedEnemyNear;
+        }
+    }
+    if (theUnit == 0 && !inNow) {
+        // the towers remembered (seen and not seen destroyed), then the armed buildings in sight; the reach is from
+        // the building's centre
+        for (unsigned long t = 0; t < theState->mTowers.size() && theUnit == 0; t++) {
+            const EECPNextSpot& theSpot = theState->mTowers[t];
+            EEUnit* theTower = gWorld.GetUnit((unsigned long)theSpot.mUnit);
+            long theRange = EECPNextShootRange(theTower);
+            long theHalf = theTower != NULL ? theTower->mUnitClass->GetTileSize() / 2 : 1;
+            if (theRange == 0)
+                theRange = 6;   // (gone from the world unseen: the memory keeps it, at a guard tower's reach)
+            long theReach = theRange + theHalf + kNextTowerMargin;
+            if (EECPNextDistance2(inX, inY, theSpot.mX + theHalf, theSpot.mY + theHalf) <= (long long)theReach * theReach) {
+                theUnit = theSpot.mUnit;
+                theKind = kNextBlockedTower;
+            }
+        }
+        for (unsigned long k = 0; k < theState->mSeen.size() && theUnit == 0; k++) {
+            const EECPNextSeen& theSeen = theState->mSeen[k];
+            if (theSeen.mKind != kSeenBuilding)
+                continue;
+            EEUnit* theBuilding = gWorld.GetUnit((unsigned long)theSeen.mUnit);
+            long theRange = EECPNextShootRange(theBuilding);
+            if (theRange == 0)
+                continue;
+            long theHalf = theBuilding->mUnitClass->GetTileSize() / 2;
+            long theReach = theRange + theHalf + kNextTowerMargin;
+            if (EECPNextDistance2(inX, inY, theSeen.mX + theHalf, theSeen.mY + theHalf) <= (long long)theReach * theReach) {
+                theUnit = theSeen.mUnit;
+                theKind = kNextBlockedTower;
+            }
+        }
+    }
+    if (outKind != NULL)
+        *outKind = theKind;
+    return theUnit;
+}
+
+// the start resources by the town: the 2 gold, 2 iron, 1 stone and 2 forage patches every player is given (the random
+// maps' per-player resources, e.g. Continental Small: kGoldPerPlayer 1 and PlaceResourceInRing (Gold, 14, 16)), taken
+// as the nearest of each within kNextHomeRange tiles of the town centre among the player's resource centres (nearest
+// first, then the lowest unit id). Mines are never used up, so the home mines stay the same all game.
+static void EECPNextUpdateHome(EEComputerPlayer* inPlayer, EECPNextState* inState)
+{
+    inState->mHome.clear();
+    EECPBuildManager* theBuild = inPlayer->mCivilizationManager->mBuildManager;
+    if (theBuild->mTownCenterTile.mX == -10000)
+        return;
+    long theTownX = theBuild->mTownCenterTile.mX, theTownY = theBuild->mTownCenterTile.mY;
+    static const long kWanted[kNextResources] = {2, 0, 1, 2, 2};
+    std::vector<std::pair<long long, long> > theFound[kNextResources];
+    for (unsigned long k = 0; k < inPlayer->GetNumResourceCenters(); k++) {
+        EECPResourceCenter* theCenter = inPlayer->GetResourceCenter(k);
+        for (unsigned long u = 0; u < theCenter->mUnits.size(); u++) {
+            EEUnit* theUnit = theCenter->mUnits[u];
+            long r = (long)theUnit->mResourceType - kResourceFood;
+            if (r < 0 || r >= kNextResources || kWanted[r] == 0 || !EECPNextResourceLeft(theUnit)
+                || (r == 0 && theUnit->mUnitClass->mUnitType != kUnitTypeResForageBush))
+                continue;
+            long long theDistance = EECPNextDistance2(theUnit->GetTileX(), theUnit->GetTileY(), theTownX, theTownY);
+            if (theDistance <= (long long)kNextHomeRange * kNextHomeRange)
+                theFound[r].push_back(std::make_pair(theDistance, (long)theUnit->mUnitID));
+        }
+    }
+    for (long r = 0; r < kNextResources; r++) {
+        std::sort(theFound[r].begin(), theFound[r].end());
+        for (unsigned long k = 0; k < theFound[r].size() && (long)k < kWanted[r]; k++)
+            inState->mHome.push_back(theFound[r][k].second);
+    }
+    std::sort(inState->mHome.begin(), inState->mHome.end());
+}
+
+bool EECPNextIsHome(EEComputerPlayer* inPlayer, EEUnit* inUnit)
+{
+    const std::vector<long>& theHome = EECPNextGetState(inPlayer)->mHome;
+    return std::binary_search(theHome.begin(), theHome.end(), (long)inUnit->mUnitID);
+}
+
+// why the gatherer finders (EECPResourceManager::FindResourceTarget, FindFarm: their next-engine branch) pass a
+// resource over: never seen; enemy soldiers seen near it now or lately; an enemy tower or armed building whose range
+// covers it; a danger zone (its gatherers attacked there lately); within 10 tiles of the area of a player who is not
+// its enemy (gaia, an ally). A home site is passed over only while enemy soldiers are seen on it. kNextBlockedNone
+// when they would send gatherers to it.
+long EECPNextSiteBlocked(EEComputerPlayer* inPlayer, EEUnit* inUnit, long* outCause)
+{
+    if (outCause != NULL)
+        *outCause = 0;
     if (inUnit->mTile == NULL || !static_cast<EETile*>(inUnit->mTile)->IsVisibleTo(inPlayer))
         return kNextBlockedUnexplored;
     long theX = inUnit->GetTileX(), theY = inUnit->GetTileY();
+    bool theHome = EECPNextIsHome(inPlayer, inUnit);
+    long theKind = kNextBlockedNone;
+    long theCause = EECPNextSiteThreat(inPlayer, theX, theY, theHome, &theKind);
+    if (outCause != NULL)
+        *outCause = theCause;
+    if (theCause != 0)
+        return theKind;
+    if (theHome)
+        return kNextBlockedNone;
     EECPCivilizationManager* theCivilization = inPlayer->mCivilizationManager;
-    if (theCivilization->mBuildManager->HasEnemyNear(theX, theY))
-        return kNextBlockedEnemyNear;
     if (EECPRMResourceInDanger(theCivilization->mResourceManager, theX, theY))
         return kNextBlockedDanger;
     for (unsigned long j = 0; j < gWorld.mNumPlayers; j++) {
@@ -119,6 +267,35 @@ static long EECPNextSiteBlocked(EEComputerPlayer* inPlayer, EEUnit* inUnit)
             return kNextBlockedArea;
     }
     return kNextBlockedNone;
+}
+
+// TEST ONLY (EE_AI_EXP sitetrace; docs/AI_RESEARCH.md §8.34): one line a minute for each site the gatherers would pass
+// over but for being out of sight: its blocked reason, whether it is home, and for enemy_near and tower the unit that
+// caused it (its class, owner, category, distance in tiles, and whether the player sees its tile now)
+static void EECPNextTraceSites(EEComputerPlayer* inPlayer, const EECPNextView& inView)
+{
+    static const char* const kReasons[6] = {"ok", "unexplored", "enemy_near", "danger", "area", "tower"};
+    static const char* const kNames[kNextResources] = {"food", "wood", "stone", "gold", "iron"};
+    for (unsigned long k = 0; k < inView.sites.size(); k++) {
+        const EECPNextSite& theSite = inView.sites[k];
+        if (theSite.resource < 0 || theSite.blocked < kNextBlockedEnemyNear || theSite.blocked > kNextBlockedTower)
+            continue;
+        EEUnit* theCause = theSite.cause != 0 ? gWorld.GetUnit((unsigned long)theSite.cause) : NULL;
+        if (theCause == NULL || theCause->mUnitClass == NULL || theCause->mPlayer == NULL) {
+            EE_CP_TRACE(inPlayer, "next.sitecheck", "site=%ld res=%s d=%ld claimed=%ld home=%ld blocked=%s cause=-",
+                theSite.index + 1, kNames[theSite.resource], theSite.distance, theSite.claimed, theSite.home,
+                kReasons[theSite.blocked]);
+            continue;
+        }
+        EETile* theTile = static_cast<EETile*>(theCause->mTile);
+        EE_CP_TRACE(inPlayer, "next.sitecheck",
+            "site=%ld res=%s d=%ld claimed=%ld home=%ld blocked=%s cause=%s owner=p%lu cat=%ld cd=%ld seen=%d",
+            theSite.index + 1, kNames[theSite.resource], theSite.distance, theSite.claimed, theSite.home,
+            kReasons[theSite.blocked], EECPNextClassName((long)theCause->mUnitClass->mUnitType).c_str(),
+            theCause->mPlayer->mPlayerID, (long)theCause->mUnitClass->mCategory,
+            EECPNextSqrt(EECPNextDistance2(theSite.x, theSite.y, theCause->GetTileX(), theCause->GetTileY())),
+            theTile != NULL && theTile->IsSeenBy(inPlayer) ? 1 : 0);
+    }
 }
 
 struct EECPNextPlace {
@@ -150,6 +327,9 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
     EECPUnitManager* theUnits = theCivilization->mUnitManager;
     EETechTree* theTree = inPlayer->mTechnologies;
     unsigned long theNow = gPhysics->mGameTime;
+    // the gather safety's memory (the army step's scan just ran) and the home resources
+    EECPNextUpdateThreats(theState, (long)theNow);
+    EECPNextUpdateHome(inPlayer, theState);
 
     outView.player = (long)inPlayer->mPlayerID;
     outView.time = (long)theNow;
@@ -331,8 +511,11 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
         for (unsigned long u = 0; u < theCenter->mUnits.size(); u++) {
             EEUnit* theUnit = theCenter->mUnits[u];
             long r = (long)theUnit->mResourceType - kResourceFood;
-            if (theUnit->mHitPoints > 0 && theUnit->mResourceAmount > 0 && r >= 0 && r < kNextResources)
+            if (EECPNextResourceLeft(theUnit) && r >= 0 && r < kNextResources) {
                 theCounts[r]++;
+                if (EECPNextIsHome(inPlayer, theUnit))
+                    theSite.home = 1;
+            }
         }
         for (long r = 0; r < kNextResources; r++)
             theSite.holds[r] = theCounts[r];
@@ -343,14 +526,13 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
         if (theSite.resource >= 0) {
             for (unsigned long u = 0; u < theCenter->mUnits.size(); u++) {
                 EEUnit* theUnit = theCenter->mUnits[u];
-                if (!(theUnit->mHitPoints > 0) || !(theUnit->mResourceAmount > 0)
-                    || (long)theUnit->mResourceType != kResourceFood + theSite.resource)
+                if (!EECPNextResourceLeft(theUnit) || (long)theUnit->mResourceType != kResourceFood + theSite.resource)
                     continue;
                 if (theSite.units == 0) {
                     theSite.x = theUnit->GetTileX();
                     theSite.y = theUnit->GetTileY();
                     theSite.patch = theUnit->mUnitClass->mUnitType == kUnitTypeResForageBush ? 1 : 0;
-                    theSite.blocked = EECPNextSiteBlocked(inPlayer, theUnit);
+                    theSite.blocked = EECPNextSiteBlocked(inPlayer, theUnit, &theSite.cause);
                 }
                 theSite.units++;
                 theSite.amount += theUnit->mResourceAmount;
@@ -434,4 +616,6 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
 
     outView.events = theState->mEvents;
     EECPNextArmyView(inPlayer, outView);   // the groups, the free soldiers, the enemies' army fields (EECPNextArmy.cpp)
+    if (gCPTraceOn && theNow % 60000 < 1000 && EECPExperiment(inPlayer, "sitetrace"))
+        EECPNextTraceSites(inPlayer, outView);
 }

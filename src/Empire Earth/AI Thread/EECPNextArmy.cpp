@@ -76,15 +76,6 @@ static const long kNextSpotRange = 8;          // gather spots this near are one
 static const long kNextSpotsPerPlayer = 8;
 static const long kNextTowersPerPlayer = 32;
 
-enum EECPNextSeenKind {
-    kSeenSoldier = 0,
-    kSeenCitizen,
-    kSeenBoat,
-    kSeenTower,
-    kSeenBuilding,
-    kSeenShip,
-};
-
 const char* EECPNextTaskName(long inTask)
 {
     switch (inTask) {
