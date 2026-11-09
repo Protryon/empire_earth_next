@@ -661,21 +661,20 @@ function M.step(view, memory)
             end
         end
         -- no more on food than it has places for (§8.35: 16 on two patches of 6, the rest waiting; the owner: "if
-        -- there is only 12 spots ... use only that 12"): the rest go to wood up to the plan's cap, then to the mines'
-        -- places, and the citizens are not trained past what has work (memory.useful)
+        -- there is only 12 spots ... use only that 12"): the rest go to the mines' places (iron, gold, stone: the
+        -- advance and the soldiers spend them), then to wood up to the plan's cap, and the citizens are not trained past
+        -- what has work (memory.useful)
         local food_cap = patch_places + hunt_places + farm_places
         if want.food > food_cap then
             local spill = want.food - food_cap
             want.food = food_cap
-            local room = math.max(plan.cap.wood - want.wood, 0)
-            local n = math.min(spill, room)
-            want.wood = want.wood + n
-            spill = spill - n
             for _, r in ipairs({"iron", "gold", "stone"}) do
-                n = math.min(spill, math.max(math.min(plan.cap[r], mineral_places[r]) - want[r], 0))
+                local n = math.min(spill, math.max(math.min(plan.cap[r], mineral_places[r]) - want[r], 0))
                 want[r] = want[r] + n
                 spill = spill - n
             end
+            local n = math.min(spill, math.max(plan.cap.wood - want.wood, 0))
+            want.wood = want.wood + n
         end
         local useful = food_cap + plan.cap.wood + 2
         for _, r in ipairs(MINERALS) do
