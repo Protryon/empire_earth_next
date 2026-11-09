@@ -2863,3 +2863,43 @@ Done here, each unit disassembled before and after (identical where no code was 
   The records `game_state_probe.py` reads (EEWorld, EEPlayer, NESynchronousCommunications, EEPhysics up to its old
   end) and UIManager/UIForm/EEMouse/RTSMouse have the same layout.json offsets as before.
   Not run: the harness (tours, `gates.sh`), a saved game loaded, Linux or macOS.
+
+## GX on WARP: "Not enough memory left" in create_bind_group, the submissions in flight (2026-11-09)
+
+Game sessions on WARP logged thousands of `wgpu error 2: ... In Device::create_bind_group ... Not enough memory left`,
+then `BindGroup with '' label is invalid` in `set_bind_group`, and the view stopped presenting.
+
+- **The cause was not a leak of GX's objects.** GX drops a texture's bind groups with its slot, as the C++ released
+  them (`GXSurfaceData` destruction). The new "GX live" line shows GX's cached groups staying flat. The problem is
+  that every submission keeps what it used until the GPU has finished it: bind groups and textures destroyed since,
+  and the staging buffers of `write_texture`/`write_buffer`. GX never waited for the GPU. On WARP the CPU outran it,
+  and the destroyed objects piled up: DrawText's temporaries, the window image and uploads. `Queue::submit` already
+  runs a non-blocking maintain (wgpu-core 24 `queue.rs`), so it freed only the work already finished.
+- **The limit is DX12's shader-visible sampler heap**: wgpu-hal 24 gives it 2048 descriptors
+  (`dx12/device.rs` `capacity_samplers`), and every bind group with a sampler takes one, so "live bind groups"
+  includes those waiting for submissions in flight. The view heap (1,000,000) is not the limit. wgpu-native 24 had
+  the same heap and the C++ GX had the same lack of waiting, so the bug probably dates from before R4.1. It showed
+  only when the harness's per-second `GXTestReadFrame` was absent: that read-back waits for its copy, which comes
+  after all earlier work, so it brought the GPU up to date once a second.
+- **The fix** (`ee_gx` `gpu.rs`): each submission gets an `on_submitted_work_done` flag. `submit` waits while more
+  than 8 are unfinished, and a present waits for the work of the frame before the previous one (2 frames in flight,
+  as DXGI's frame latency). The wait polls as the read-back does (`poll_until`, no blocking `Maintain::Wait`). If it
+  times out after 10 s, GX logs that once and stops waiting.
+- **The reproducer** `device_dropped_bind_groups_stay_bounded_when_the_gpu_lags` makes, draws with and destroys 24
+  textures per frame on a 1024x1024 target. Without the bound, the live bind groups reach 2049 (the heap is full) at
+  138-143 submissions in flight and wgpu panics. With the bound, the peak is 194 and the submissions in flight peak
+  at 8. A non-blocking `device.poll` after each submit alone also reached 2049, so polling once per frame is not
+  enough.
+- **`EE_GX_STATS=<n>`** now adds `GX live: surfaces, cached bind groups; wgpu bind groups, textures, views, samplers,
+  buffers; submissions in flight; presents (no image acquired)` (wgpu-hal's counters: the `wgpu` crate's `counters`
+  feature, on in ee_gx). The first 8 `get_current_texture` errors are logged as `GX: no swap chain image`. These are
+  the first things to read when a resource error appears or the view stops changing.
+- **The live check** used `fixture_game.py --exercise random-game --play-seconds 300` with `EE_GX_STATS`, on the
+  test-profile exe started directly (no debugger) on `tree-binary`. Over 300 s of gameplay it logged no wgpu error and
+  no GPU wait timeout. The live counts stayed flat (wgpu bind groups 60-64, textures 57-61, buffers about 650,
+  submissions in flight 2), presents rose about 10 a second, and no swap chain image failed to be acquired. With the
+  bound switched off (a temporary switch, not committed), the same exe logged 730 "Not enough memory left" errors
+  within about 20 s of gameplay.
+- **Still open, a separate bug:** in these fixture runs, the window capture (PrintWindow) keeps the first gameplay
+  frame, even after a camera zoom. This happens with and without the bound and with no wgpu error, while GX keeps
+  presenting. `fixture_game.py`'s play check ("the window shows the same picture as gameplay") fails on it.
