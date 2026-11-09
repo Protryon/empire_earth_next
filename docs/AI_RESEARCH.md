@@ -1646,12 +1646,47 @@ Open:
 - **The economy beyond the Stone Age** is the limit for all three scripts: food income collapses once the patches are
   gone and before farms (rb_economy builds farms in the Copper Age, too late), and the reserve stalls the army for
   10-15 minutes per epoch. The boom's economy work (S3) and S5 (farms, later epochs) are where the classic gap is.
-- **Towers stay Prehistoric**: there is no tower upgrade verb; rb_economy counts only the current epoch's tower class
+- **Towers stay Prehistoric** (wrong, §8.32: the computer player gets each upgrade with its epoch): there is no tower upgrade verb; rb_economy counts only the current epoch's tower class
   (so it builds new ones each epoch), boom.lua counts every class toward its plan.
 - **Rush micro**: clubmen waves of 10 still die to towers and a defending army; a rush wins when it hits early and
   kills gatherers, and it should pick fights by the seen strength near each target, not only at the wave.
 - **The target**: `lib.army.pick_enemy` takes the largest economy seen; in EE-SIM the idle human (player 1) is an
   enemy too, and the first raids sometimes went there.
+
+### 8.32 The next computer player's towers and the epochs (2026-11-08, EE-SIM)
+
+§8.31 read from the scripts that the next engine's towers stay `b_guard_tower_paleo` all game. Measured, they do not.
+The tower upgrades are techs (`copper_tower_upgrade`, `bronze_wall_and_tower_upgrade` ... `space_wall_and_tower_upgrade`;
+dbtechtree kind 7, at the town centre or capitol, 50-300 of the fourth cost, each after the one before). Each one's
+event converts every tower of the old class into the new one (dbeffects kind 19) and obsoletes the old class's
+tech. They are `mResearchedWithEpoch`, and `EEComputerPlayer::EnterEpoch` researches an epoch's kind-7 techs the
+moment the epoch is reached, for both engines, free. So the towers turn Copper on entering the Copper Age and Bronze on
+entering the Bronze Age. The classic AI never researches them itself.
+
+Bench: EE-SIM, Small, Medium, 2 AIs and the idle human, no cheats, 2 hours, seeds 26-33 in both seat orders (16
+games a matchup), a hard-linked copy of the open tree. A TEST ONLY wrapper (`m_boom`, `m_rush`) printed the view's
+`buildings[]` towers each minute. The table counts finished towers at each epoch's last minute, summed over the games
+that reached that epoch (P paleo, C copper, B bronze). Six rush runs failed to start (the lobby's "slot 0 human"
+fault, and a crash at the main menu on one slot); seeds 30-33 were run again for them.
+
+| Matchup | Prehistoric | Stone | Copper | Bronze | Stone / Copper (median min) |
+|---|---|---|---|---|---|
+| boom vs classic, before | P 42 (16) | P 71 (16) | **C 72** (13) | **B 33** (5) | 24 / 54 |
+| boom vs classic, after | P 42 (16) | P 71 (16) | C 72 (13) | B 33 (5) | 24 / 54 |
+| rush vs classic, before | P 4 (16) | P 26 (15) | **C 30** (8) | **B 6** (1) | 30 / 65.5 |
+| rush vs classic, after | P 4 (16) | P 26 (15) | C 30 (8) | B 6 (1) | 30 / 65.5 |
+
+No old-class tower is left in any game past the Copper Age, before or after. The change (the `research` verb answers a
+researched tech `done` instead of `busy`; `lib.view.tower_upgrade` orders each epoch's upgrade in boom, rush and
+balanced) issues orders that come back `done`. Every trace is identical to the one before but for those lines (16
+boom and 16 rush games), so the epoch pace is the same. The classic engine's traces are unchanged (seeds 2-5,
+1800 s, `ai_trace.py compare`: 1842, 1822, 1746 and 1807 lines identical).
+
+Open: the **number** of towers, not their class, falls behind the plan. Boom has about 4.4 in the Stone Age (plan 7)
+and 5.5 in the Copper Age (plan 10). Over the 16 boom games, `build near=site` got `no_site` for 76 Copper towers
+(13 queued) and 26 Bronze towers (none queued). Paleo towers: 49 `no_site`, 87 queued. The newer towers find no room
+in the rings round the worked sites. Also open: whether the computer should get the upgrades free (a human pays and
+waits 45 s at the town centre). Without the free research, the scripts already research the upgrades.
 
 ### 8.9 Next
 
