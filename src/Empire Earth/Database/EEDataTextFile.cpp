@@ -9,6 +9,7 @@
 // EE_DUMP_CONTENT=<file> (tests): every db table served, text or .dat, is appended to <file> as the content dump
 // (EEDataDump.cpp; docs/MODDING_PLAN.md gate G1).
 #include <windows.h>
+#include <cstdlib>
 #include <set>
 #include <string>
 #include <vector>
@@ -107,6 +108,40 @@ bool EEDbRowIds(const char* inTable, std::map<long, std::string>& outIds)
     return !outIds.empty();
 }
 
+// a binary tree's <table>.ids (tools/open_data.py ids: `key id` lines, # comments): the row ids the text tables would
+// carry, so that the computer player's scripts name the same classes and techs on both trees (docs/AI_RESEARCH.md
+// §8.36: without them every name was dbobjects_<n> and the boom AI found no class it knew)
+static void EEReadIdsFile(FSPath* inPath, const std::string& inName, std::map<long, std::string>& outIds)
+{
+    FSFileSpec* theFile = NULL;
+    std::string theText;
+    if (inPath->FindFile(UString(inName.c_str()), theFile) != kErrorOK || theFile == NULL)
+        return;
+    bool theRead = EEReadWholeFile(*theFile, theText);
+    delete theFile;
+    if (!theRead)
+        return;
+    outIds.clear();
+    size_t thePos = 0;
+    while (thePos < theText.size()) {
+        size_t theEnd = theText.find('\n', thePos);
+        if (theEnd == std::string::npos)
+            theEnd = theText.size();
+        std::string theLine = theText.substr(thePos, theEnd - thePos);
+        thePos = theEnd + 1;
+        while (!theLine.empty() && (theLine.back() == '\r' || theLine.back() == ' '))
+            theLine.pop_back();
+        size_t theSpace = theLine.find(' ');
+        if (theLine.empty() || theLine[0] == '#' || theSpace == std::string::npos || theSpace == 0)
+            continue;
+        char* theStop = NULL;
+        long theKey = strtol(theLine.c_str(), &theStop, 10);
+        if (theStop != theLine.c_str() + theSpace)
+            continue;
+        outIds[theKey] = theLine.substr(theSpace + 1);
+    }
+}
+
 long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
 {
     // "db\dbworld.dat" -> directory "db\", table "dbworld"
@@ -148,6 +183,8 @@ long EEDbFindFile(FSPath* inPath, const UString& inName, FSFileSpec*& outFile)
             outFile = new FSMemoryFile(theBuffer, (unsigned long)theData.size(), 1000, true);   // owns theBuffer
             return kErrorOK;
         }
+        if (theStem == "dbobjects" || theStem == "dbtechtree")
+            EEReadIdsFile(inPath, theDirectory + theStem + ".ids", EERowIdsOf(theStem));
         if (getenv("EE_DUMP_CONTENT") != NULL && theExtension != NULL) {   // the binary load, for the dump
             FSFileSpec* theDat = NULL;
             std::string theBytes;

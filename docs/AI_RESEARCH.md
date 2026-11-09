@@ -2079,6 +2079,93 @@ in stock, a citizen is trained only from the food above two soldiers' cost (alon
 - The improvement cost is taken at once; a human pays and waits at the building (queued improvements). The classic
   attack groups now buy improvements on Windows, as they did in the original.
 
+### 8.36 Settlement first, and boom on the binary tree (2026-11-09, EE-SIM)
+
+**The owner's rule:** "the first thing I do is build a settlement. require the AI to build a settlement before using a
+node." No citizen gathers from a forage patch, mine or forest edge until a drop site stands by it; the first citizens
+build the settlement, then gather there.
+
+**Before** (main 300e36b): a site's drop was "at hand" within about 3 tiles (§8.35), but the finders sent gatherers to
+any claimed site, drop or not. Counted per gatherer sample (the trips trace's new `nodrop=`: a gathered unit with no
+finished drop site within 3 tiles plus the drop's half size plus 1; the before column used the first, looser version
+of the count, any unit of the unit's resource centre, so it undercounts): 21% of the food, 81% of the wood and 52% of
+the stone, gold and iron gatherer samples had no drop at hand.
+
+**The changes** (next engine and boom only; the classic engine is unchanged):
+- **The finders** (EECPResourceManager.cpp): FindFarm and FindResourceTarget take only a bush or mine with a finished
+  drop site at hand (`EECPNextUnitDropReady`: a town centre, capitol or settlement, a granary for food; the unit of a
+  centre with room *and* a drop is taken). The wood goes to the forest point nearest the town when it has one, else
+  to the forest point nearest each finished drop site (`EECPNextWoodTarget`, 2 tiles more slack: the settlement
+  stands off the edge). The hunters keep their rule (near home, §8.35): animals move, and the town centre is their
+  drop. A wood gatherer the game moved on to a tree with no drop goes back to the idle list when an edge with a drop
+  has trees (`EECPRMShedCrowds`). A resource by the player's own finished drop site skips the visibility test (below).
+- **The citizens with no place help build** (`EECPRMHelpBuildDrops`): the idle ones the finders could not place go
+  to the settlements and granaries going up, up to 4 builders a building, nearest first; when it stands they are idle
+  by it and the finders send them there (`build.help` trace lines, 14 a game).
+- **The verbs**: `gather` returns `queued` / `no_dropoff` (with `ready=` places) when fewer places have a finished
+  drop than gatherers are wanted. `build(b_settlement, near="site")` places by the units of the centre that have no
+  drop yet (a centre can hold gold and iron 6 tiles apart: its first unit's drop said yes for the iron). When the
+  rings find no tile, or only one more than 2 tiles off, the nearest citizen not building walks to the site and stands
+  there (`EECPNextState::mExplore`; AssignGatherers leaves it, 90 s at most): `queued` / `unexplored`, and the order
+  comes again. The view: `sites[].ready` and `drop` per resource, `wood.ready`.
+- **Why the walker**: `EETile::IsVisibleTo` is "in sight now", not "explored", and `EECanPlaceUnitOnTile` tests it
+  for every tile of a footprint. A settlement ordered at a site nobody stood by went 5-6 tiles off (and never served
+  its patch) or nowhere (`build.nosite_why`, TEST ONLY: 288 of 288 ring tiles refused). A home patch 7 tiles from the
+  town centre read as unexplored all game, and the finders, which test it too, never sent a gatherer there (seed 31).
+- **Boom**: each kept site the plan wants gatherers on whose resource has no drop (finished or going up), and the
+  worked forest edge when no edge has one, gets its settlement: food first, then wood, then iron, gold, stone, nearest
+  first, 2 going up at once, a spot not ordered again for 60 s (at once after `unexplored`); settlements 6/12/14 (were
+  4/8/9). A patch or mine whose settlement found no room (`no_site`, 5 minutes) is passed over and the next one kept.
+  With the patches short of the plan's 18 on food, hunting takes the rest (it was 6 hunters at most).
+
+**Boom on the binary tree.** The binary tree's tables have no ids (every class is `dbobjects_<row>`): boom found no
+`citizen`, so it never trained one, released every claimed site and asked for `copper_tower_upgrade`, refused as
+unknown. The tree now carries `Data/db/dbobjects.ids` and `dbtechtree.ids` (`open_data.py build --binary` writes them,
+`open_data.py ids TREE` adds them to an older tree), the ids the converter gives the text rows; `EEDbFindFile` reads
+them with the `.dat`. Seeds 26 and 27 on both trees (boom against classic, 40 minutes): the boom traces are identical
+line for line (701 and 656 `next` lines). The main checkout's `build/open_data/tree-binary` needs a rebuild (the
+converter hash changed) or `open_data.py ids`.
+
+**Bench** (EE-SIM, Small, Hard, 2 AIs and the idle human, no cheats, 2 hours; boom against classic, seeds 26-41 in
+both seat orders, 32 games; the open tree; before: 300e36b with only the `nodrop` count added):
+
+| | Before | After |
+|---|---|---|
+| Stone Age (median min, reached) | 26.0 (32/32) | 25.5 (32/32) |
+| Copper Age (median min, reached) | 55.5 (23/32) | 57.5 (21/32) |
+| Prehistoric food gatherers / food a minute (after 5 min) | 13.7 / 83.1 | 14.1 / 85.3 |
+| Trip, resource to the nearest drop (tiles: food / wood / stone / gold / iron) | 7.6 / 5.4 / 5.6 / 5.7 / 6.3 | 6.3 / 4.4 / 3.3 / 3.4 / 3.2 |
+| Gatherer samples with no drop at hand (food / wood / minerals) | 21% / 81% / 52% | 0.2% / 1.1% / 0.02% |
+| Army at 25 / 30 / 40 min | 1.6 / 6.8 / 12.5 | 2.5 / 7.7 / 15.2 |
+| Citizens lost a game | 102.3 | 93.6 |
+| Stone Age gatherers on wood / iron (wanted) | 9.3 / 10.3 (7.1 / 10.9) | 15.1 / 8.8 (8.4 / 10.4) |
+| Still in the Prehistoric at 30 min | 6 games | 7 games |
+| Stone Age with no soldier | 1 game | 1 game |
+
+The rule holds: what gathering is left without a drop at hand is the game's own retargeting (a gatherer taking the
+next bush or tree) between two assignment passes. Every mineral trip is about half as long, and the Stone Age army is
+larger (15.2 at 40 minutes). The epochs come at about the same time: the first 30-60 s go to the home patch's
+settlement (on most maps the town centre is not "at hand" for the start patches), and the Stone Age's iron waits for
+its settlements while the citizens it cannot take go to wood.
+
+**The three questions:**
+- **Food 18 in the Prehistoric**: 14.1 on average (13.7 before). Where it stays at 12 the third patch's settlement
+  finds no room (`no_site`, every ring tile refused even with the walker there: patches 25-30 tiles out in rough
+  ground) and too few animals are near. With one home patch (seed 30, the second 27 tiles out) the hunters now fill
+  the rest.
+- **Seed 27** (still in the Prehistoric at 30 minutes with 28 citizens): the boom seat p2 (27a) is raided by the
+  classic Hard AI from minute 3 (citizens lost at 3-6 minutes, threats every few minutes); it reaches the Stone Age at
+  35.5 minutes (34.5 before). The other seat (27b) reaches it at 21.5 (23.0 before). Not solved: a defence problem.
+- **Stone Age with no soldier** (seed 30 before, 31b after): no iron site with a settlement (both home iron mines'
+  settlements refused `no_site`, no other in reach), so no iron was wanted and no spearman could be paid. Not solved.
+
+**Left:**
+- The wood is over-gathered in the Stone Age (above): the citizens the iron's sites cannot take yet go to wood
+  (`AssignIdleGatherers`). Holding them for the iron's settlement, or a third iron site, is the next step; so is a
+  placement that can use tiles the walker sees but the site's rings do not reach (the far third patch, the iron of
+  31b).
+- Walkers to far sites can die; they are not counted separately.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
