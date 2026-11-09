@@ -2,7 +2,10 @@
 // Unit flags (calibrated, docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
 //
 // 0x1001c294..0x1001cd3b: GEModel's current-format loader (Load, LoadCurrentVersion, Load*Chunk) (file name inferred).
+// The .cem reader is Rust (rust/crates/ee_ge model_file.rs, both formats and the sub-models; legacy.rs, the version-1
+// conversion that was 'GEModel Legacy.cpp'): GEModel::Load hands it the file and stores what it read (StoreLoaded).
 #include <windows.h>
+#include <vector>
 
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UString.h"
@@ -30,6 +33,8 @@
 #include "lle/GEPolygonArray.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
+#include "GERustMath.h"
+#include "GERustIO.h"
 
 // Compiler-generated for this unit (names in analysis/lle/names.txt):
 
@@ -59,21 +64,23 @@
 // SYNTHETIC: LLE 0x1001c39e
 // SYNTHETIC: LLE 0x1001c3aa
 
-// The .cem header version, read by LoadHeaderChunk and tested by Load (0x1010fac6 / 0x1010fac4); global: the
-// LoadLegacy* members in 'GEModel Legacy.cpp' test it too
-unsigned short sMinorVersion;
-unsigned short sMajorVersion;
+// UString from Rust's bytes (no NUL inside)
+static UString GERustString(const EeGeBytes& inBytes)
+{
+    std::vector<char> theText(inBytes.data, inBytes.data + inBytes.length);
+    theText.push_back(0);
+    return UString(&theText[0]);
+}
 
 // FUNCTION: LLE 0x1001c3b4
 // Loads a .cem model (through a memory copy when preloading), legacy or current format by header version;
-// on failure rewinds the file to where it started
+// on failure rewinds the file to where it started. The reading is Rust's (ee_ge_model_load).
 long GEModel::Load(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures, bool inPreload)
 {
     FSMemoryFile theMemoryFile;
     FSFileSpec* theFile = &inFile;
     long theResult = kErrorOK;
     unsigned long theLength;
-    long thePosition;
     if (inPreload == true && dynamic_cast<FSMemoryFile*>(&inFile) == NULL) {
         inFile.GetLength(theLength);
         theMemoryFile.Load(inFile, theLength);
@@ -81,230 +88,130 @@ long GEModel::Load(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures
         theFile = &theMemoryFile;
     }
     if (theFile->GetIsOpen() == true) {
-        theResult = theFile->GetPosition(thePosition);
-        if (theResult == kErrorOK) {
-            theResult = this->LoadHeaderChunk(*theFile);
-            if (theResult == kErrorOK) {
-                if (sMajorVersion < 2)
-                    theResult = this->LoadLegacyVersion(*theFile, ioTextures);
-                else
-                    theResult = this->LoadCurrentVersion(*theFile, ioTextures);
-            }
-            if (theResult != kErrorOK)
-                theFile->SetPosition(thePosition, kFileOriginBegin, false);
+        std::vector<EeGeSharedFrame> theShared;
+        for (std::map<unsigned long, long>::iterator theIterator = ioTextures.begin(); theIterator != ioTextures.end();
+             theIterator++) {
+            EeGeSharedFrame theEntry;
+            theEntry.frame = (uint32_t)theIterator->first;
+            theEntry.offset = (int32_t)theIterator->second;
+            theShared.push_back(theEntry);
         }
+        EeGeFieldIo theIO = GERustFieldIO(*theFile);
+        EeGeCemModel* theModel = ee_ge_model_load(&theIO, theShared.empty() ? NULL : &theShared[0], theShared.size());
+        theResult = this->StoreLoaded(theModel, ioTextures);
+        ee_ge_cem_free(theModel);
         if (theResult == kErrorNativeError)
             ESGetNativeError();
     }
     return theResult;
 }
 
-// FUNCTION: LLE 0x1001c4ac
-// Loads a current-format model body chunk by chunk, then its sub-models; returns the first chunk error
-long GEModel::LoadCurrentVersion(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures)
+// Allocates the model's arrays from the counts read (AllocateInternalData, as the counts chunk did) and stores
+// what was read where the C++ chunk readers stored it, then creates and fills the sub-models; returns the load's
+// result. A model whose counts were not read is left as constructed.
+long GEModel::StoreLoaded(const EeGeCemModel* inModel, std::map<unsigned long, long>& ioTextures)
 {
-    long theResult;
-    if ((theResult = this->LoadCountsChunk(inFile, ioTextures)) == kErrorOK &&
-        (theResult = this->LoadMiscellaneousChunk(inFile)) == kErrorOK && (theResult = this->LoadPolygonsChunk(inFile)) == kErrorOK &&
-        (theResult = this->LoadMaterialsChunk(inFile)) == kErrorOK && (theResult = this->LoadTagPointsChunk(inFile)) == kErrorOK &&
-        (theResult = this->LoadFrameChunk(inFile, ioTextures)) == kErrorOK) {
-        for (unsigned long i = 0; i < this->mSubModelCount; i++) {
-            this->mSubModels[i] = new GEModel(this->mManager);
-            this->mSubModels[i]->mParentModel = this;
-            this->mSubModels[i]->Load(inFile, ioTextures, false);
-        }
-    }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001c589
-// Reads the polygon, vertex, tag point, material, frame, sub-model and LOD counts and allocates the model's data
-long GEModel::LoadCountsChunk(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures)
-{
-    long theResult;
-    unsigned long thePolygonCount;
-    unsigned long theVertexCount;
-    unsigned long theSubModelCount = 0;
-    unsigned long theTagPointCount = 0;
-    unsigned long theLODCount = 1;
-    unsigned long theMaterialCount;
-    unsigned long theFrameCount;
-    if ((theResult = inFile.Read(thePolygonCount)) != kErrorOK)
-        return theResult;
-    if (thePolygonCount <= 0)
-        return kErrorFailed;
-    if ((theResult = inFile.Read(theVertexCount)) != kErrorOK)
-        return theResult;
-    if (theVertexCount <= 0)
-        return kErrorFailed;
-    if ((theResult = inFile.Read(theTagPointCount)) != kErrorOK)
-        return theResult;
-    if ((theResult = inFile.Read(theMaterialCount)) != kErrorOK)
-        return theResult;
-    if (theMaterialCount <= 0)
-        return kErrorFailed;
-    if ((theResult = inFile.Read(theFrameCount)) != kErrorOK)
-        return theResult;
-    if (theFrameCount > 0) {
-        if ((theResult = inFile.Read(theSubModelCount)) != kErrorOK)
-            return theResult;
-        if ((theResult = inFile.Read(theLODCount)) != kErrorOK)
-            return theResult;
-        this->mPolygonCount = thePolygonCount;
-        this->mVertexCount = theVertexCount;
-        this->mTagPointCount = theTagPointCount;
-        this->mMaterialCount = theMaterialCount;
-        this->mFrameCount = theFrameCount;
-        this->mSubModelCount = theSubModelCount;
-        this->mLODCount = theLODCount;
-        return this->AllocateInternalData(0, ioTextures);
-    }
-    return kErrorFailed;
-}
-
-// FUNCTION: LLE 0x1001c691
-// Reads each frame's radius, vertices, tag points, transform and bounding box; returns the first read error
-long GEModel::LoadFrameChunk(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures)
-{
-    long theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->mFrameCount; i++) {
-        unsigned long theFrame;
-        std::map<unsigned long, long>::iterator theIterator = ioTextures.find(i);
-        if (theIterator != ioTextures.end())
-            theFrame = this->mFrameCount - 1;
-        else
-            theFrame = i;
-        if ((theResult = inFile.Read(this->mBoundingRadii[i])) != kErrorOK)
-            break;
-        if ((theResult = this->LoadVertexSubChunk(inFile, theFrame)) != kErrorOK)
-            break;
-        if ((theResult = this->LoadTagPointsSubChunk(inFile, theFrame)) != kErrorOK)
-            break;
-        if ((theResult = this->mInternalTransforms[i].Load(inFile)) != kErrorOK)
-            break;
-        theResult = this->mBoundingBoxes[i].Load(inFile);
-    }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001c74a
-// Checks the "SSMF" tag and reads the version (2.x or 1.0-1.3 accepted)
-long GEModel::LoadHeaderChunk(FSFileSpec& inFile)
-{
-    unsigned long theRead;
-    char theTag[5];
-    long theResult = inFile.Read(theTag, 4, theRead);
-    if (theResult != kErrorOK)
-        return theResult;
-    // A short tag read is a truncated file: fail instead of returning the read's success.
-    if (theRead != 4)
-        return kErrorFailed;
-    theTag[4] = 0;
-    if (strcmp(theTag, "SSMF") == 0) {
-        theResult = inFile.Read(sMajorVersion);
-        if (theResult == kErrorOK) {
-            if (sMajorVersion == 1 || sMajorVersion == 2) {
-                theResult = inFile.Read(sMinorVersion);
-                if (theResult == kErrorOK && sMinorVersion != 0 && sMinorVersion != 1 && sMinorVersion != 2 &&
-                    sMinorVersion != 3)
-                    theResult = kErrorFailed;
-            } else
-                theResult = kErrorFailed;
-        }
-    } else
-        theResult = kErrorFailed;
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001c7dd
-// Reads each material's name, texture index, per-LOD polygon ranges, vertex range and texture file name
-long GEModel::LoadMaterialsChunk(FSFileSpec& inFile)
-{
-    UString theName;
-    long theResult = kErrorOK;
-    unsigned long theValue;
-    for (unsigned long i = 0; i < this->mMaterialCount && theResult == kErrorOK; i++) {
-        theResult = theName.Load(inFile);
-        if (theResult == kErrorOK) {
-            this->mMaterials[i]->SetName(theName);
-            theResult = inFile.Read(theValue);
-            if (theResult == kErrorOK) {
-                this->mMaterials[i]->SetTextureIndex(theValue);
-                for (unsigned long j = 0; j < this->mLODCount && theResult == kErrorOK; j++) {
-                    theResult = inFile.Read(theValue);
-                    if (theResult != kErrorOK)
-                        continue;
-                    this->mMaterials[i]->SetPolygonStartingIndex(theValue, j);
-                    theResult = inFile.Read(theValue);
-                    if (theResult == kErrorOK)
-                        this->mMaterials[i]->SetPolygonRangeLength(theValue, j);
-                }
-                if (theResult == kErrorOK) {
-                    theResult = inFile.Read(theValue);
-                    if (theResult == kErrorOK) {
-                        this->mMaterials[i]->SetVertexStartingIndex(theValue);
-                        theResult = inFile.Read(theValue);
-                        if (theResult == kErrorOK) {
-                            this->mMaterials[i]->SetVertexRangeLength(theValue);
-                            theResult = this->mTextureFilenames[i].Load(inFile);
-                        }
-                    }
-                }
-            }
-        }
-    }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001c962
-// Reads the model name and centre point
-long GEModel::LoadMiscellaneousChunk(FSFileSpec& inFile)
-{
-    long theResult = this->mName.Load(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mCenterPoint.Load(inFile);
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001c98b
-// Reads each LOD's polygon vertex indices, creating the polygon arrays for LODs above 0
-long GEModel::LoadPolygonsChunk(FSFileSpec& inFile)
-{
+    EeGeCemInfo theInfo;
+    unsigned long i;
+    size_t k;
+    ee_ge_cem_info(inModel, &theInfo);
+    if (!theInfo.allocated)
+        return theInfo.result;
+    this->mPolygonCount = theInfo.polygon_count;
+    this->mVertexCount = theInfo.vertex_count;
+    this->mTagPointCount = theInfo.tag_point_count;
+    this->mMaterialCount = theInfo.material_count;
+    this->mFrameCount = theInfo.frame_count;
+    this->mSubModelCount = theInfo.sub_model_count;
+    this->mLODCount = theInfo.lod_count;
+    this->AllocateInternalData(0, ioTextures);
+    if (theInfo.name.length > 0)
+        this->mName = GERustString(theInfo.name);
+    float* theCenter[3] = {&this->mCenterPoint.mX, &this->mCenterPoint.mY, &this->mCenterPoint.mZ};
+    for (k = 0; k < theInfo.center_count; k++)
+        *theCenter[k] = theInfo.center[k];
     GERasterizer* theRasterizer = GERasterizer::GetActiveRasterizer();
-    long theResult = kErrorOK;
-    unsigned long theIndex;
-    for (long i = 0; i < this->mLODCount; i++) {
-        unsigned long theCount;
-        theResult = inFile.Read(theCount);
-        if (theResult == kErrorOK) {
-            if (i > 0)
-                this->mPolygonArrays[i] = theRasterizer->CreatePolygonArray(theCount);
-            for (unsigned long j = 0; j < theCount && theResult == kErrorOK; j++) {
-                theResult = inFile.Read(theIndex);
-                if (theResult != kErrorOK)
-                    continue;
-                this->mPolygonArrays[i]->SetVertexIndex1(j, theIndex);
-                theResult = inFile.Read(theIndex);
-                if (theResult != kErrorOK)
-                    continue;
-                this->mPolygonArrays[i]->SetVertexIndex2(j, theIndex);
-                theResult = inFile.Read(theIndex);
-                if (theResult == kErrorOK)
-                    this->mPolygonArrays[i]->SetVertexIndex3(j, theIndex);
-            }
+    for (i = 0; i < this->mLODCount; i++) {
+        EeGeCemLod theLOD;
+        ee_ge_cem_lod(inModel, i, &theLOD);
+        if (theLOD.created)
+            this->mPolygonArrays[i] = theRasterizer->CreatePolygonArray(theLOD.count);
+        for (k = 0; k < theLOD.index_count; k++) {
+            unsigned long thePolygon = (unsigned long)(k / 3);
+            if (k % 3 == 0)
+                this->mPolygonArrays[i]->SetVertexIndex1(thePolygon, theLOD.indices[k]);
+            else if (k % 3 == 1)
+                this->mPolygonArrays[i]->SetVertexIndex2(thePolygon, theLOD.indices[k]);
+            else
+                this->mPolygonArrays[i]->SetVertexIndex3(thePolygon, theLOD.indices[k]);
         }
     }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001ca9b
-// Reads the tag point names; returns the first read error
-long GEModel::LoadTagPointsChunk(FSFileSpec& inFile)
-{
-    long theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->mTagPointCount && theResult == kErrorOK; i++)
-        theResult = this->mTagPointNames[i].Load(inFile);
-    return theResult;
+    for (i = 0; i < this->mMaterialCount; i++) {
+        EeGeCemMaterial theMaterial;
+        ee_ge_cem_material(inModel, i, &theMaterial);
+        GEMaterial* theTarget = this->mMaterials[i];
+        if (theMaterial.name.length > 0)
+            theTarget->SetName(GERustString(theMaterial.name));
+        // texture index, (start, length) per LOD, vertex start, vertex length
+        for (k = 0; k < theMaterial.value_count; k++) {
+            unsigned long theValue = theMaterial.values[k];
+            if (k == 0)
+                theTarget->SetTextureIndex(theValue);
+            else if (k <= 2 * this->mLODCount) {
+                if ((k - 1) % 2 == 0)
+                    theTarget->SetPolygonStartingIndex(theValue, (unsigned long)((k - 1) / 2));
+                else
+                    theTarget->SetPolygonRangeLength(theValue, (unsigned long)((k - 1) / 2));
+            } else if (k == 2 * this->mLODCount + 1)
+                theTarget->SetVertexStartingIndex(theValue);
+            else
+                theTarget->SetVertexRangeLength(theValue);
+        }
+        if (theMaterial.texture_filename.length > 0)
+            this->mTextureFilenames[i] = GERustString(theMaterial.texture_filename);
+    }
+    for (i = 0; i < this->mTagPointCount; i++) {
+        EeGeBytes theName = ee_ge_cem_tag_point_name(inModel, i);
+        if (theName.length > 0)
+            this->mTagPointNames[i] = GERustString(theName);
+    }
+    for (i = 0; i < this->mFrameCount; i++) {
+        EeGeCemFrame theFrame;
+        ee_ge_cem_frame(inModel, i, &theFrame);
+        if (theFrame.has_radius)
+            this->mBoundingRadii[i] = theFrame.radius;
+        GEVertexArray* theArray = this->mVertexArrays[theFrame.target];
+        for (k = 0; k < theFrame.point_count; k++)
+            theArray->SetPoint(*reinterpret_cast<const GE3DPoint*>(&theFrame.points[k]), (unsigned long)k);
+        for (k = 0; k < theFrame.normal_count; k++)
+            theArray->SetNormal(*reinterpret_cast<const GEVector*>(&theFrame.normals[k]), (unsigned long)k);
+        for (k = 0; k < theFrame.uv_count; k++)
+            theArray->SetTextureCoordinate(GETextureCoordinate(theFrame.uvs[2 * k], theFrame.uvs[2 * k + 1]),
+                                           (unsigned long)k);
+        for (k = 0; k < theFrame.tag_point_count; k++)
+            this->mFrameTagPoints[theFrame.target][k] = *reinterpret_cast<const GE3DPoint*>(&theFrame.tag_points[k]);
+        for (k = 0; k < theFrame.transform_count; k++)
+            this->mInternalTransforms[i].SetElement((unsigned long)(k / 4), (unsigned long)(k % 4),
+                                                    theFrame.transform[k]);
+        // GEBoundingBox::Load: the corners as read, the dimensions once both were (no reordering)
+        EeGeBoundingBox* theBox = GERust(this->mBoundingBoxes[i]);
+        float* theCorners[6] = {&theBox->bottom_left_front.x, &theBox->bottom_left_front.y,
+                                &theBox->bottom_left_front.z, &theBox->top_right_back.x,
+                                &theBox->top_right_back.y, &theBox->top_right_back.z};
+        for (k = 0; k < theFrame.bbox_count; k++)
+            *theCorners[k] = theFrame.bbox[k];
+        if (theFrame.bbox_count == 6) {
+            theBox->width = theBox->top_right_back.x - theBox->bottom_left_front.x;
+            theBox->height = theBox->top_right_back.z - theBox->bottom_left_front.z;
+            theBox->depth = theBox->top_right_back.y - theBox->bottom_left_front.y;
+        }
+    }
+    for (i = 0; i < theInfo.sub_models_loaded; i++) {
+        this->mSubModels[i] = new GEModel(this->mManager);
+        this->mSubModels[i]->mParentModel = this;
+        this->mSubModels[i]->StoreLoaded(ee_ge_cem_sub_model(inModel, i), ioTextures);
+    }
+    return theInfo.result;
 }
 
 // FUNCTION: LLE 0x1001cad5
@@ -329,42 +236,6 @@ long GEModel::LoadTexturesForScreen(const GETextureDescription& inDescription, u
     for (i = 0; i < this->mSubModelCount; i++)
         this->mSubModels[i]->LoadTexturesForScreen(inDescription, inScreen);
     return kErrorOK;
-}
-
-// FUNCTION: LLE 0x1001cbb5
-// Reads a frame's tag point positions; returns the first read error
-long GEModel::LoadTagPointsSubChunk(FSFileSpec& inFile, unsigned long inFrame)
-{
-    GE3DPoint thePoint;
-    long theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->mTagPointCount; i++) {
-        if ((theResult = thePoint.Load(inFile)) != kErrorOK)
-            break;
-        this->mFrameTagPoints[inFrame][i] = thePoint;
-    }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001cc1e
-// Reads a frame's vertices (point, normal, texture coordinate); returns the first read error
-long GEModel::LoadVertexSubChunk(FSFileSpec& inFile, unsigned long inFrame)
-{
-    GEVector theNormal;
-    GE3DPoint thePoint;
-    GETextureCoordinate theCoordinate;
-    long theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->mVertexCount; i++) {
-        if ((theResult = thePoint.Load(inFile)) != kErrorOK)
-            break;
-        this->mVertexArrays[inFrame]->SetPoint(thePoint, i);
-        if ((theResult = theNormal.Load(inFile)) != kErrorOK)
-            break;
-        this->mVertexArrays[inFrame]->SetNormal(theNormal, i);
-        if ((theResult = theCoordinate.Load(inFile)) != kErrorOK)
-            break;
-        this->mVertexArrays[inFrame]->SetTextureCoordinate(theCoordinate, i);
-    }
-    return theResult;
 }
 
 // UList<GELODVertex*>/<GELODPolygon*>/<GELODMetaVertex*>::sNodePool init wrapper and atexit registrars (GELOD.h via

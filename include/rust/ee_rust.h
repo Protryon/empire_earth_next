@@ -199,6 +199,9 @@ struct EeFsArchive;
 /// An unpacked block. The header fields are those read before any failure, as in the C++.
 struct EeWonAuth;
 
+/// A model as `GEModel::Load` leaves it.
+struct EeGeCemModel;
+
 /// One storage (opaque to C++).
 struct EeAStarStorage;
 
@@ -777,6 +780,14 @@ struct EeGeFieldIo {
   long (*write_u16)(void *file, uint16_t value);
   long (*write_u32)(void *file, uint32_t value);
   long (*write_f32)(void *file, float value);
+  /// `Read(char*, length, read)`.
+  long (*read_bytes)(void *file, uint8_t *out, uint32_t length, uint32_t *read);
+  /// `Write(const char*, length, written)`.
+  long (*write_bytes)(void *file, const uint8_t *data, uint32_t length, uint32_t *written);
+  /// `FSFileSpec::GetPosition` (a plain `FSFile` has none: `kErrorFailed`).
+  long (*get_position)(void *file, long *out);
+  /// `FSFileSpec::SetPosition(offset, kFileOriginBegin, false)`.
+  long (*set_position)(void *file, long offset);
 };
 
 /// The mesh's members `load_body` updates.
@@ -787,6 +798,77 @@ struct EeGeTerrainLoad {
   unsigned long fractal_seed;
   /// The fractal seed was read (successfully or not): the C++ recomputes the fractal from it.
   bool compute_fractal;
+};
+
+/// One entry of the shared frames map (`std::map<unsigned long, long>`: frame, offset to the frame it shares).
+struct EeGeSharedFrame {
+  uint32_t frame;
+  int32_t offset;
+};
+
+/// Borrowed bytes (no terminating NUL).
+struct EeGeBytes {
+  const uint8_t *data;
+  size_t length;
+};
+
+/// The model's result, counts and scalar fields.
+struct EeGeCemInfo {
+  long result;
+  /// The counts were read and the arrays are to be allocated with them.
+  bool allocated;
+  uint32_t polygon_count;
+  uint32_t vertex_count;
+  uint32_t tag_point_count;
+  uint32_t material_count;
+  uint32_t frame_count;
+  uint32_t sub_model_count;
+  uint32_t lod_count;
+  EeGeBytes name;
+  /// The centre's values read (x, y, z; a prefix).
+  const float *center;
+  size_t center_count;
+  /// The sub-models created (all of `sub_model_count` when the model's own chunks loaded, else none).
+  size_t sub_models_loaded;
+};
+
+/// One LOD's polygons: `created` when the LOD's array is created with `count` polygons (LOD 0 has the allocation's);
+/// `indices` the vertex indices set, three per polygon (a prefix).
+struct EeGeCemLod {
+  bool created;
+  uint32_t count;
+  const uint32_t *indices;
+  size_t index_count;
+};
+
+/// One material: its name, the values set in order (texture index, polygon start and length per LOD, vertex start,
+/// vertex length; a prefix) and its texture file name.
+struct EeGeCemMaterial {
+  EeGeBytes name;
+  const uint32_t *values;
+  size_t value_count;
+  EeGeBytes texture_filename;
+};
+
+/// One frame: the radius when read; the vertices and tag points for frame `target`'s arrays; the transform's
+/// elements read (row by row) and the box's corner values read (prefixes).
+struct EeGeCemFrame {
+  bool has_radius;
+  float radius;
+  uint32_t target;
+  const EeGe3DPoint *points;
+  size_t point_count;
+  const EeGeVector *normals;
+  size_t normal_count;
+  /// u, v pairs.
+  const float *uvs;
+  size_t uv_count;
+  const EeGe3DPoint *tag_points;
+  size_t tag_point_count;
+  const float *transform;
+  size_t transform_count;
+  const float *bbox;
+  size_t bbox_count;
 };
 
 /// `GEVector` / `GE3DPoint`: three floats.
@@ -2797,6 +2879,57 @@ void ee_ge_physical_triangle_box(const EeGe3DPoint *p1,
                                  const EeGe3DPoint *p2,
                                  const EeGe3DPoint *p3,
                                  EeGeBoundingBox *out);
+
+/// Reads a model from the file's current position (`GEModel::Load` once the file is open): the header, the body
+/// by version, the sub-models; on failure the file is put back. Never null.
+///
+/// # Safety
+/// `io` is a valid field stream; `shared` holds `shared_count` entries sorted by frame (or is null when 0).
+EeGeCemModel *ee_ge_model_load(const EeGeFieldIo *io,
+                               const EeGeSharedFrame *shared,
+                               size_t shared_count);
+
+/// Frees a model read by `ee_ge_model_load` (not a sub-model's handle).
+///
+/// # Safety
+/// `model` came from `ee_ge_model_load` and is freed once.
+void ee_ge_cem_free(EeGeCemModel *model);
+
+/// The model's result, counts and scalars.
+///
+/// # Safety
+/// `model` is live; `out` valid for a write.
+void ee_ge_cem_info(const EeGeCemModel *model, EeGeCemInfo *out);
+
+/// LOD `lod`'s polygons (`lod` below the LOD count of an allocated model).
+///
+/// # Safety
+/// `model` is live; `out` valid for a write.
+void ee_ge_cem_lod(const EeGeCemModel *model, uint32_t lod, EeGeCemLod *out);
+
+/// Material `index`.
+///
+/// # Safety
+/// `model` is live; `out` valid for a write.
+void ee_ge_cem_material(const EeGeCemModel *model, uint32_t index, EeGeCemMaterial *out);
+
+/// Tag point `index`'s name.
+///
+/// # Safety
+/// `model` is live.
+EeGeBytes ee_ge_cem_tag_point_name(const EeGeCemModel *model, uint32_t index);
+
+/// Frame `index`.
+///
+/// # Safety
+/// `model` is live; `out` valid for a write.
+void ee_ge_cem_frame(const EeGeCemModel *model, uint32_t index, EeGeCemFrame *out);
+
+/// Sub-model `index` (borrowed from its parent: never freed on its own).
+///
+/// # Safety
+/// `model` is live.
+const EeGeCemModel *ee_ge_cem_sub_model(const EeGeCemModel *model, uint32_t index);
 
 /// `EEFLine`'s constructor: `count` column offsets into `out`.
 ///

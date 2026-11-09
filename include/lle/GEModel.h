@@ -16,8 +16,9 @@ class GETexture;
 class GEVertexArray;
 class URandomIntegers;
 struct GETextureDescription;
+struct EeGeCemModel;   // a model read by Rust (rust/ee_rust.h)
 
-class LLE_API GEModel : public UReferenceCounter {   // sizeof 0x188 (GEModelManager: operator new(0x188))
+class LLE_API GEModel : public UReferenceCounter {   // sizeof 0x188 in the original (GEModelManager: operator new(0x188))
     friend class GEModelManager;
     friend class GEPhysicalModel;           // Intersects reads the const model's arrays (provisional name)
 public:
@@ -110,17 +111,8 @@ private:
     void RemoveModelScale(unsigned long inFrame, const GETransformation& inParent, float inX, float inY, float inZ);   // 0x1001fc00
     void ComputeBoundingBoxes();            // 0x1001f544
     long AllocateInternalData(unsigned long inA, std::map<unsigned long, long>& ioTextures);   // 0x1001f080
-    long LoadCountsChunk(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures);   // 0x1001c589
-    long LoadCurrentVersion(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures);   // 0x1001c4ac
-    long LoadFrameChunk(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures);   // 0x1001c691
-    long LoadHeaderChunk(FSFileSpec& inFile);       // 0x1001c74a
-    long LoadLegacyVersion(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures);   // 0x1001a403
-    long LoadMaterialsChunk(FSFileSpec& inFile);    // 0x1001c7dd
-    long LoadMiscellaneousChunk(FSFileSpec& inFile);   // 0x1001c962
-    long LoadPolygonsChunk(FSFileSpec& inFile);     // 0x1001c98b
-    long LoadTagPointsChunk(FSFileSpec& inFile);    // 0x1001ca9b
-    long LoadTagPointsSubChunk(FSFileSpec& inFile, unsigned long inFrame);   // 0x1001cbb5
-    long LoadVertexSubChunk(FSFileSpec& inFile, unsigned long inFrame);      // 0x1001cc1e
+    // Stores a model read by Rust (ee_ge_model_load) as the chunk readers did ('GEModel Load.cpp')
+    long StoreLoaded(const EeGeCemModel* inModel, std::map<unsigned long, long>& ioTextures);
     long SaveCountsChunk(FSFileSpec& inFile);       // 0x1001e651
     long SaveFrameChunk(FSFileSpec& inFile);        // 0x1001e9c2
     long SaveHeaderChunk(FSFileSpec& inFile);       // 0x1001e5fb
@@ -132,22 +124,9 @@ private:
     long SaveVertexSubChunk(FSFileSpec& inFile, unsigned long inFrame);      // 0x1001ea4e
     void SetSubModel(GEModel* inModel, unsigned long inIndex);   // 0x10020166
 
-    // 'GEModel Legacy.cpp' / 'GEModel Caching.cpp' types (defined there; mangled as GEModel::<name>)
-    struct LegacyPolygon;
-    struct LegacyIndexList;
+    // 'GEModel Caching.cpp' types (defined there; mangled as GEModel::<name>)
     struct TriListGenome;
     struct VertexListGenome;
-    long ConvertLegacyModel();              // 0x10018b2f
-    long LoadLegacyCountsChunk(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures);   // 0x1001a520
-    long LoadLegacyFrameChunk(FSFileSpec& inFile, std::map<unsigned long, long>& ioTextures);    // 0x1001a7ef
-    long LoadLegacyMaterialsChunk(FSFileSpec& inFile);         // 0x1001a92b
-    long LoadLegacyMiscellaneousChunk(FSFileSpec& inFile);     // 0x1001aa47
-    long LoadLegacyPolygonGroupsChunk(FSFileSpec& inFile);     // 0x1001aabf
-    long LoadLegacyPolygonNormalsSubChunk(FSFileSpec& inFile, unsigned long inFrame);   // 0x1001abba
-    long LoadLegacyPolygonsChunk(FSFileSpec& inFile);          // 0x1001abfd
-    long LoadLegacyVertexNormalsSubChunk(FSFileSpec& inFile, unsigned long inFrame);    // 0x1001acd7
-    long LoadLegacyVertexPointsSubChunk(FSFileSpec& inFile, unsigned long inFrame);     // 0x1001ad9b
-    long LoadLegacyVerticesChunk(FSFileSpec& inFile);          // 0x1001adea
     void ComputeInitialTriOrdering(TriListGenome& ioGenome);   // 0x10016dd8
     void ComputeInitialVertexOrdering(VertexListGenome& ioGenome, unsigned long inMaterial);   // 0x1001711c
     unsigned long ComputeMemoryCoherency(const VertexListGenome& inGenome, unsigned long inMaterial);   // 0x1001720e
@@ -190,18 +169,7 @@ private:
     unsigned long mTagPointCount;           // +0x150
     unsigned long mLODCount;                // +0x154
     bool mClipToPlane[6];                   // +0x158
-    // The version-1 (.cem 1.x) data, filled by LoadLegacy* and freed by ConvertLegacyModel ('GEModel Legacy.cpp',
-    // which defines the two structs)
-    LegacyPolygon* mLegacyPolygons;         // +0x160 0x24 bytes each
-    GE3DPoint** mLegacyPoints;              // +0x164 [frame][point]
-    GEVector** mLegacyNormals;              // +0x168 [frame][vertex]
-    LegacyIndexList* mLegacyMaterials;      // +0x16c polygon indices per material
-    LegacyIndexList* mLegacyPolygonGroups;  // +0x170 polygon indices per group ("player color")
-    unsigned long* mLegacyVertexPoints;     // +0x174 point index per vertex
-    unsigned long mLegacyPolygonCount;      // +0x178
-    unsigned long mLegacyPointCount;        // +0x17c
-    unsigned long mLegacyVertexCount;       // +0x180
-    unsigned long mLegacyPolygonGroupCount; // +0x184
+    // (+0x160..+0x188 held the version-1 data while 'GEModel Legacy.cpp' converted it; the reader is Rust now)
 };
 
 // The LOD helper classes follow GEModel (GEBoundingBox.cpp emits their inline members right after GEModel's)
