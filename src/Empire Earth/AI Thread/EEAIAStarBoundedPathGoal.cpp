@@ -84,6 +84,26 @@ void EEAIAStarBoundedPathGoal::Reset()
     this->mB8 = true;
 }
 
+// New (port): the goal's state as ee_astar's path_goals read it (inMachine: the machine running the search)
+EeAStarPathGoal EEAIAStarBoundedPathGoal::PathState(EEAIAStarMachineBase* inMachine)
+{
+    EeAStarPathGoal theGoal;
+    theGoal.bounded = true;
+    theGoal.bounds = EEAIAStarRectOf(this->mBounds);
+    theGoal.goal_x = this->mGoalTile.mX;
+    theGoal.goal_y = this->mGoalTile.mY;
+    theGoal.walker = this->mUnit;
+    theGoal.modifier = this->mModifier;
+    theGoal.continent_id = this->mContinentID;
+    theGoal.check_corners = inMachine->mCheckCorners;
+    theGoal.accept_nearest = this->mAcceptNearest;
+    theGoal.search_failed = this->mSearchFailed;
+    theGoal.took_nearest = this->mTookNearest;
+    theGoal.revs = inMachine->mRevs;
+    theGoal.max_revs = inMachine->GetMaxRevs();
+    return theGoal;
+}
+
 // FUNCTION: EXE 0x40ea54
 // Drops the reference to the bounded modifier, then releases the base goal's modifier
 void EEAIAStarBoundedPathGoal::ReleaseModifier()
@@ -100,20 +120,12 @@ void EEAIAStarBoundedPathGoal::ReleaseModifier()
 void EEAIAStarBoundedPathGoal::SearchDone(EEAIAStarMachineBase* inMachine)
 {
     // (the machine's hook: the current node, whether an open node is left)
-    if (!this->mStorage->mHookHasCurrent) {
-        bool theOpen = this->mStorage->mHookHasOpen;
-        if (!theOpen) {
-            this->mSearchFailed = true;
-            this->mTookNearest = this->mAcceptNearest;
-        }
-    } else if (UMAbs(this->mStorage->mHookCurrentX - this->mGoalTile.mX) <= 1 && UMAbs(this->mStorage->mHookCurrentY - this->mGoalTile.mY) <= 1) {
-        this->mSearchFailed = !this->AcceptTile(this->mStorage->mHookCurrentX, this->mStorage->mHookCurrentY, true);
-        this->mTookNearest = this->mAcceptNearest;
-    }
-    if (!this->mSearchFailed) {
-        long theRevs = inMachine->mRevs;
-        this->mSearchFailed = theRevs >= inMachine->GetMaxRevs();
-    }
+    EeAStarPathGoal theGoal = this->PathState(inMachine);
+    EeAStarViewCallbacks theCallbacks = this->mView.Callbacks();
+    ee_astar_path_search_done(&theGoal, &theCallbacks, this->mStorage->mHookHasCurrent, this->mStorage->mHookCurrentX,
+                              this->mStorage->mHookCurrentY, this->mStorage->mHookHasOpen);
+    this->mSearchFailed = theGoal.search_failed;
+    this->mTookNearest = theGoal.took_nearest;
 }
 
 // NEAR: the original materialises the false result right after the distance tests
@@ -122,26 +134,10 @@ void EEAIAStarBoundedPathGoal::SearchDone(EEAIAStarMachineBase* inMachine)
 // neighbour also needs both corner tiles enterable); lets the bounded modifier inspect the node
 bool EEAIAStarBoundedPathGoal::IsGoalNode(EEAIAStarNode* inNode)
 {
-    bool theResult = inNode == NULL;
-    if (!theResult) {
-        bool theFar = UMAbs(inNode->mX - this->mGoalTile.mX) > 1 || UMAbs(inNode->mY - this->mGoalTile.mY) > 1;
-        if (theFar)
-            theResult = false;
-        else if (inNode->mX == this->mGoalTile.mX && inNode->mY == this->mGoalTile.mY)
-            theResult = true;
-        else {
-            theResult = !this->AcceptTile(this->mGoalTile.mX, this->mGoalTile.mY, true);
-            if (theResult) {
-                long theDX = inNode->mX - this->mGoalTile.mX;
-                long theDY = inNode->mY - this->mGoalTile.mY;
-                if (this->mMachine->mCheckCorners && UMAbs(theDX) == 1 && UMAbs(theDY) == 1) {
-                    theResult = this->AcceptTile(inNode->mX + theDX, inNode->mY + theDY, false);
-                    if (theResult)
-                        theResult = this->AcceptTile(inNode->mX - theDX, inNode->mY - theDY, false);
-                }
-            }
-        }
-    }
+    EeAStarPathGoal theGoal = this->PathState(this->mMachine);
+    EeAStarViewCallbacks theCallbacks = this->mView.Callbacks();
+    bool theResult = ee_astar_path_is_goal_node(&theGoal, &theCallbacks, inNode != NULL, inNode ? inNode->mX : 0,
+                                                inNode ? inNode->mY : 0);
     if (this->mModifier)
         this->mBoundedModifier->CheckNode(inNode);
     return theResult;
@@ -208,45 +204,14 @@ void EEAIAStarBoundedPathGoal::GetPoints(std::vector<GE3DPoint>& outPath, std::v
 // else the default cost
 long EEAIAStarBoundedPathGoal::GetCost(long inFromX, long inFromY, long inX, long inY)
 {
-    if (this->mModifier == NULL)
-        return this->GetDefaultCost(inFromX, inFromY, inX, inY);
     // (the machine's hook: the current node's parent)
-    if (this->mStorage->mHookHasParent) {
-        long theX = this->mStorage->mHookParentX;
-        long theY = this->mStorage->mHookParentY;
-        return this->mView.GetModifierCost(this->mModifier, inFromX, inFromY, inX, inY, theX, theY);
-    }
-    return this->mView.GetModifierCost(this->mModifier, inFromX, inFromY, inX, inY, -10000, -10000);
+    EeAStarPathGoal theGoal = this->PathState(this->mMachine);
+    EeAStarViewCallbacks theCallbacks = this->mView.Callbacks();
+    return ee_astar_path_cost(&theGoal, &theCallbacks, inFromX, inFromY, inX, inY, this->mStorage->mHookHasParent,
+                              this->mStorage->mHookParentX, this->mStorage->mHookParentY);
 }
 
-// NEAR: the first GetTile is the out-of-line RTSMap::GetTile 0x2f85 in the original; theRange lives in inFromY's slot
-// FUNCTION: EXE 0x40ee51
-// Returns a step's cost: 10 straight or 14 diagonal, +50 (+150 if big) per idle or attacking unit on the tile
-// off the goal; doubled for a big ranked unit near a blocked tile (continent test uses the entered tile, not the probe)
-long EEAIAStarBoundedPathGoal::GetDefaultCost(long inFromX, long inFromY, long inX, long inY)
-{
-    static const long kDirections[4] = {4, 3, 1, 6};
-    long theCost;
-    if (inFromX == inX || inFromY == inY)
-        theCost = 10;
-    else
-        theCost = 14;
-    if (inX != this->mGoalTile.mX || inY != this->mGoalTile.mY)
-        theCost += this->mView.GetCrowdCost(this->mUnit, inX, inY);
-    if (!this->mView.IsWide(this->mUnit))
-        return theCost;
-    long theRange = this->mView.GetFormationRank(this->mUnit);
-    if (!theRange || this->mView.IgnoresFormation(this->mUnit))
-        return theCost;
-    long theX = 0;
-    long theY = 0;
-    for (long i = 0; i < 4; i++) {
-        EEGetTileInDirection(inX, inY, &theX, &theY, kDirections[i], theRange);
-        if (this->mView.IsRankProbeBlocked(this->mUnit, this->mContinentID, theX, theY))
-            return theCost * 2;
-    }
-    return theCost;
-}
+// 0xee51 GetDefaultCost: ee_astar path_goals::default_cost
 
 // FUNCTION: EXE 0x40f1c8
 // Prepares the search: bounds it to the start and goal tiles plus 3, accepts the nearest tile, and sets the
@@ -282,33 +247,17 @@ void EEAIAStarBoundedPathGoal::MarkBlockedTiles()
         this->mStorage->MarkTile(this->mBlockedTiles[i].mX, this->mBlockedTiles[i].mY, false);
 }
 
-// Returns whether the unit can move on the tile's terrain and pass every unit on it (false on a map edge)
-// (no address: ICF-folded into EEAIAStarPathfindingGoal's identical 0x1990c)
-bool EEAIAStarBoundedPathGoal::AcceptDefault(long inX, long inY, bool inGoal)
-{
-    if (this->mView.IsEdgeTile(inX, inY))
-        return false;
-    if (!this->mView.CanMoveOn(this->mUnit, this->mView.GetTerrain(inX, inY)))
-        return false;
-    return this->mView.ArePassable(this->mUnit, inX, inY);
-}
+// AcceptDefault: ee_astar path_goals::accept_tile
 
-// Returns whether the unit may enter the tile: the modifier decides, else the default test
-// (no address: ICF-folded into EEAIAStarPathfindingGoal's identical 0x19a3f)
-bool EEAIAStarBoundedPathGoal::AcceptOnMap(long inX, long inY, bool inGoal)
-{
-    if (this->mModifier == NULL)
-        return this->AcceptDefault(inX, inY, inGoal);
-    return this->mView.CanEnter(this->mModifier, inX, inY, inGoal);
-}
+// AcceptOnMap: ee_astar path_goals::accept_tile
 
 // FUNCTION: EXE 0x40f4bc
 // Returns whether the unit may enter a map tile that lies inside the search bounds
-inline bool EEAIAStarBoundedPathGoal::AcceptTile(long inX, long inY, bool inGoal)
+bool EEAIAStarBoundedPathGoal::AcceptTile(long inX, long inY, bool inGoal)
 {
-    if (this->mView.HasTile(inX, inY) && this->mBounds.Contains(inX, inY))
-        return this->AcceptOnMap(inX, inY, inGoal);
-    return false;
+    EeAStarPathGoal theGoal = this->PathState(this->mMachine);
+    EeAStarViewCallbacks theCallbacks = this->mView.Callbacks();
+    return ee_astar_path_accept(&theGoal, &theCallbacks, inX, inY, inGoal);
 }
 
 // Compiler-generated for this unit (first users here): vector<U2DPoint<long> >::reserve 0xf2dc, vector<GE3DPoint>::

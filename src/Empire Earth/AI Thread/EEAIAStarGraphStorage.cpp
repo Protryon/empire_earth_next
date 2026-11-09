@@ -11,6 +11,7 @@
 
 #include "ee/EETileCoordinate.h"
 #include "ee/EEAIAStarGraphStorage.h"
+#include "ee/EEAIAStarCapture.h"
 #include "ee/EEMathInline.h"
 
 // the free nodes and their counters (0x4e5c28..0x4e5c3c) (provisional names)
@@ -673,4 +674,57 @@ EEAIAStarGraphNode* EEAIAStarGraphStorage::Pop()
         this->mNodes[theNode->mIndex] = NULL;
     }
     return theNode;
+}
+
+// New (port), TEST ONLY: a node as the capture sees it (EEAIAStarNodeView's fields: the tile, the costs, the parent's
+// index in mParentX and the node's own index in mParentY)
+static EEAIAStarNodeView EEAIAStarGraphNodeView(const EEAIAStarGraphNode* inNode)
+{
+    EEAIAStarNodeView theView;
+    theView.mX = inNode->mTile.mX;
+    theView.mY = inNode->mTile.mY;
+    theView.mCost = inNode->mCost;
+    theView.mPathCost = inNode->mPathCost;
+    theView.mEstimate = inNode->mEstimate;
+    theView.mHasParent = inNode->mParent != NULL;
+    theView.mParentX = inNode->mParent ? inNode->mParent->mIndex : 0;
+    theView.mParentY = inNode->mIndex;
+    return theView;
+}
+
+static void EEAIAStarGraphListNodes(const EEAIAStarGraphNode* inHead, std::vector<EEAIAStarNodeView>& ioNodes)
+{
+    for (const EEAIAStarGraphNode* theNode = inHead; theNode; theNode = theNode->mNext)
+        ioNodes.push_back(EEAIAStarGraphNodeView(theNode));
+}
+
+// New (port), TEST ONLY: the current and path nodes, then the closed list, the closed table (the last bucket first),
+// the sorted open list, the open table (the last bucket first) and the fast open list, each digested in order
+void EEAIAStarGraphStorage::CaptureNodes(EEAIAStarCaptureRun& ioRun)
+{
+    const EEAIAStarGraphNode* theNodes[2] = {this->mCurrentNode, this->mPath};
+    for (long i = 0; i < 2; i++) {
+        ioRun.U8(theNodes[i] != NULL);
+        if (theNodes[i])
+            ioRun.Node(EEAIAStarGraphNodeView(theNodes[i]));
+    }
+    std::vector<EEAIAStarNodeView> theList;
+    EEAIAStarGraphListNodes(this->mClosedList, theList);
+    ioRun.Nodes(theList);
+    theList.clear();
+    if (this->mClosedTable)
+        for (long i = this->mBucketCount - 1; i >= 0; i--)
+            EEAIAStarGraphListNodes(this->mClosedTable[i], theList);
+    ioRun.Nodes(theList);
+    theList.clear();
+    EEAIAStarGraphListNodes(this->mSortedOpen, theList);
+    ioRun.Nodes(theList);
+    theList.clear();
+    if (this->mOpenTable)
+        for (long i = this->mBucketCount - 1; i >= 0; i--)
+            EEAIAStarGraphListNodes(this->mOpenTable[i], theList);
+    ioRun.Nodes(theList);
+    theList.clear();
+    EEAIAStarGraphListNodes(this->mOpenList, theList);
+    ioRun.Nodes(theList);
 }

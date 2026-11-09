@@ -25,14 +25,15 @@ public:
     virtual void GetPoints(std::vector<GE3DPoint>& outPath, std::vector<U2DPoint<long> >& outVisited);
     virtual void GetPath(std::vector<U2DPoint<long> >& outPath, std::vector<U2DPoint<long> >& outVisited);
     virtual void GetPath(std::vector<U2DPoint<long> >& outPath);
-    long GetCost(long inFromX, long inFromY, long inX, long inY);          // 0xede4
-    long GetDefaultCost(long inFromX, long inFromY, long inX, long inY);   // 0xee51
+    long GetCost(long inFromX, long inFromY, long inX, long inY);          // 0xede4 (the default 0xee51 in ee_astar)
     virtual bool Prepare();                 // +0x0c 0xf1c8 (both bases' slot; the second base's thunk 0xf481)
     virtual void SetModifier(EEAIPathGoalModifierBase* inModifier);   // second base +0x0c 0xf251
     virtual void MarkBlockedTiles();        // second base +0x10 0xf298 (EEAIAStarPathfindingGoal's is folded into it)
-    bool AcceptDefault(long inX, long inY, bool inGoal); // (ICF: EEAIAStarPathfindingGoal's 0x1990c)
-    bool AcceptOnMap(long inX, long inY, bool inGoal);   // (ICF: EEAIAStarPathfindingGoal's 0x19a3f)
-    bool AcceptTile(long inX, long inY, bool inGoal);  // 0xf4bc (inline COMDAT: also inside mBounds)
+    // 0xf4bc (inline COMDAT: also inside mBounds; the default and modifier tests ICF-shared with
+    // EEAIAStarPathfindingGoal's): ee_astar path_goals::accept_tile
+    bool AcceptTile(long inX, long inY, bool inGoal);
+    // New (port): the goal's state for ee_astar's path_goals
+    EeAStarPathGoal PathState(EEAIAStarMachineBase* inMachine);
 
     EEAIAStarBounds mBounds;                // +0xa4 (the search window: EEPathManager::FindPath)
     EEAIBoundedPathGoalModifierBase* mBoundedModifier;   // +0xb4 (referenced; SetModifier's dynamic_cast)

@@ -27,13 +27,11 @@ public:
     void CollectTiles();                    // 0x1747c: the storage's open and closed nodes get the id; mTiles gets them
     // 0x17510: a new EEAIPathArea (and, on kind 4, an EEAIForest) of mTiles; in a kind pass (mMode) the kind ids
     void CreateAreas();
-    // 0x176c7 (ret 0x18): whether a kind pass may take the tile; *ioKind is the first tile's class (0: set it)
-    // Provisional name
-    bool ClassifyTile(long inX, long inY, unsigned char* ioKind, bool inShallowsAreWater);
+    // 0x176c7 (ClassifyTile: whether a kind pass may take the tile) and its wrapper 0x184d1: ee_astar
+    // area_goals::path_area_classify
     void AssignKindIDs();                   // 0x17a4b: the kind id into the tiles' path areas and their continents
-    bool AcceptTile(long inX, long inY, bool inStart);   // 0x17bcb (ret 0xc): whether the fill may take the tile
-    // inline (COMDAT 0x184d1, ret 0x10): ClassifyTile with the goal's map and continent kind (provisional name)
-    bool ClassifyTile(long inX, long inY, long inArg);
+    // 0x17bcb (ret 0xc): whether the fill may take the tile (ee_astar area_goals::path_area_accept)
+    bool AcceptTile(long inX, long inY, bool inStart);
     // inline (COMDAT 0x18a84): the path area of tile (inX, inY), 0 off the grid (provisional name)
     EEAIPathArea* GetArea(unsigned long inX, unsigned long inY);
 

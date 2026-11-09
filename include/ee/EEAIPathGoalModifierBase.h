@@ -31,13 +31,10 @@ public:
 
     // 0xf53b / 0xf9bb: the land/sea/space modifiers' shared tests (called on this; provisional name)
     long GetStepCost(bool inSea, long inFromX, long inFromY, long inX, long inY, long inParentX, long inParentY);
-    // (the walker: inGoal's unit, else inBoundedGoal's)
-    bool IsPassable(EEAIAStarPathfindingGoalBase* inGoal, EEAIAStarBoundedPathGoal* inBoundedGoal, EETile* inTile,
-                 long inX, long inY, bool inAtGoal);
-    // 0xfa75 / 0xfb08 (thiscall, ret 4): whether inUnit blocks the walker (mGoal's unit) at sea / on land: an idle
-    // (+0x238 0) other unit whose class has flag 4 / 8 and +0x303, not in the walker's group
-    bool IsSeaBlocker(EEComplexUnit* inUnit);
-    bool IsLandBlocker(EEComplexUnit* inUnit);
+    // (the walker: inGoal's unit, else inBoundedGoal's; the original also took the tile)
+    bool IsPassable(EEAIAStarPathfindingGoalBase* inGoal, EEAIAStarBoundedPathGoal* inBoundedGoal, long inX, long inY,
+                    bool inAtGoal);
+    // 0xfa75 / 0xfb08 (whether a unit blocks the walker at sea / in space): EEAIAStarView::HasStepBlocker
 
     EEAIAStarPathfindingGoalBase* mGoal;    // +0x08 (the goal using it)
 };

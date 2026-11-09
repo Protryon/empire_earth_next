@@ -3105,3 +3105,54 @@ connect, accept, `SendMsgOp` / `RecvMsgOp` with 2-byte fields), peer auth, GetLo
 servers' ops (directory, routing, DB, HTTP's `RecvCRMsgOp`, FTP). Those are covered only by won_ops_test over loopback
 in one process.
 ||||||| 5ffeba22
+
+## R5b.1, continued: the path goals, their modifiers and the area fills in Rust (ee_astar, branch rust-r5b-astar2, 2026-11-09)
+
+The order of "R5b.1: the tile A* searches in Rust" held: every tile goal's hooks are Rust now. `ee_astar` gained
+`modifiers.rs` (the path goals' modifiers' costs and tile tests), `path_goals.rs` (`EEAIAStarPathfindingGoal` and
+`EEAIAStarBoundedPathGoal`: `AcceptTile`, `GetCost` with `GetDefaultCost`, `IsGoalNode`, `SearchDone`) and
+`area_goals.rs` (`EEAIAStarPathAreaGoal` and `EEAIAStarPathSectorGoal`: `AcceptTile` with `ClassifyTile`).
+
+- **The modifiers read through a quiet view first (C++, own commit).** `EEAIPathGoalModifierBase::GetStepCost` and
+  `IsPassable`, `EEAIBPGModifierEnemyIsAttackableByUnit` / `WallsDoNotBlock` / `EEAIGPGModifierComputerPlayerWallPather`
+  `CanEnter` and `EEAIBPGModifierStormShaper`'s two slots ask an `EEAIAStarView(gWorld.mMap, true)`. A quiet view
+  does not note its answers: the goal's `CanEnter` / `GetModifierCost` query stays the one noted fact, so the ASRN
+  digests (recorded from the C++ before any of this) still gate the modifiers bit for bit, and adding queries did
+  not change them. New queries: `HasStepBlocker` (the old `IsSeaBlocker` / `IsLandBlocker` with the walker as an
+  argument), `GetUnitRegionState` (-1 none, 0 empty, 1 with units: GetStepCost's five-region short cut),
+  `GetEpoch`, `IsAlone`, `GetWaterState`, `IsSeaGoing`, `ArePassableExcept` (walls, trees), `HasHill`,
+  `RandomAtMost` (the storm's draws from the physics stream: one `Generate()` per call, in the C++'s order).
+- **The modifier classes stay C++** (the goals reference them, `SetModifier` `dynamic_cast`s the bounded one, the
+  wall manager and the storm `new` them and set their members); each slot copies its state into a plain struct
+  (`EeAStarStepGoal`, `EeAStarStorm`) and calls `ee_astar_mod_*`. The base class's default slots, the wall
+  modifiers' 10/14 cost and the enemy modifier's `CheckNode` (goal state and one float compare) are one-liners and
+  stay. The graph modifiers (route planners) are untouched.
+- **A Rust goal calls a C++ modifier that calls Rust.** `path_goals::accept_tile` asks `view.can_enter(modifier)`;
+  the C++ view calls the modifier's virtual, which runs `modifiers::*` over its own quiet view. Nothing Rust is
+  borrowed across that call (the goal's state is a copy, the modifier's another), so the rule "no Rust reference
+  across a call back into C++" holds.
+- **Goal state is copied in for every hook, never cached.** `EEAIBPGModifierEnemyIsAttackableByUnit::CheckNode`
+  moves the bounded goal's `mGoalTile` from inside `IsGoalNode`, after the Rust part of `IsGoalNode` returned; the
+  next hook reads the new tile. `SearchDone` passes `GetMaxRevs()` along: a goal with `mMaxRevs` -1 fails every
+  search that does not end at the goal (`revs >= -1`), kept.
+- **The area fills' side effects come back as out fields.** `mCheckCorners` (the C++ wrote it through
+  `dynamic_cast<EEAIAStarMachineBase*>(mStorage)`, unchecked in the sector fill) is the fill's last write, -1 for
+  none; the machine reads it only after `AcceptTile` returns, so applying it at the end is the same. The sector
+  fill's stale tile is a flag the C++ turns into the `mStaleTiles` push.
+- **The graph searches are captured now (ASGR, `ee/EEAIAStarCapture.h`).** One record per
+  `EEAIAStarGraphMachine::Run`: its inputs (sectors, tiles, limits, node count), the digest of its questions to the
+  goal (start object, estimates, goal node, `CanEnter` per neighbour, step costs, `SearchDone`) and its outputs (the
+  machine's members, the goal's flags, the current and path nodes, the closed list, both hash tables, the sorted and
+  the fast open list). Graph nodes are named by index, never by address. The six games make 14,992 graph runs
+  (3,555 / 2,546 / 2,155 / 1,844 / 2,641 / 2,251 for seeds 2-7); two captures of the same build are equal, the
+  other 24 digests did not move, and the golden lines were recorded with the graph machine, storage, goals and route
+  planners unchanged. Porting them is next: their goals and route planners take `EEAIAStarGraphNode*` (`mObject`,
+  `mIndex`, the parent chain), so a Rust storage needs the stack-node trick of the tile `IsGoalNode` or node views.
+- **Two builds share one checkout's data tree.** A sim run failed at start (`EETerrainColorTable.cpp (81)
+  Verification failure`) while the main checkout's `build/open_data/tree` was being rebuilt by someone else
+  (`open_data.json` missing): not the code. Wait for `open_data.json` before trusting a run.
+- **Gates run:** `build.py -j 3 --sim` 0/0 for the C++ view step; the later steps were built with a scratch
+  incremental wrapper (objects newer than their include closure kept), then the full build after the merge of
+  `rust`; the sim oracle identical on seeds 2-7 and `sim_capture.py check` PASS at every step; the ee_astar tests
+  (37: 15 new for the modifiers, path goals and area fills, each pinning the order of the view queries).
+||||||| 5ffeba22

@@ -11,6 +11,7 @@
 #include "ee/EEAIKindIDs.h"
 
 class AStarGraphableObjectBase;         // ee/AStarGraphableObjectBase.h
+class EEAIAStarCaptureRun;              // ee/EEAIAStarCapture.h
 
 // A graph search node (0x28 bytes; NewNode 0x162b0 pops one off the free list or allocates one). Names are provisional.
 struct EEAIAStarGraphNode {
@@ -61,6 +62,9 @@ public:
     // machine's 0xab6c1): the index's node when it is open (flag 4) / closed (flag 8), else 0 (provisional names)
     EEAIAStarGraphNode* GetOpenNode(long inIndex) { return this->mFlags[inIndex] & kAStarTileOpen ? this->mNodes[inIndex] : 0; }
     EEAIAStarGraphNode* GetClosedNode(long inIndex) { return this->mFlags[inIndex] & kAStarTileClosed ? this->mNodes[inIndex] : 0; }
+    // New (port), TEST ONLY: the current and path nodes and every list's nodes in order into the A* capture
+    // (ee/EEAIAStarCapture.h)
+    void CaptureNodes(EEAIAStarCaptureRun& ioRun);
 
     EEAIAStarGraphNode** mClosedTable;      // +0x04 (mBucketCount buckets; delete[] in the dtor)
     EEAIAStarGraphNode** mOpenTable;        // +0x08 (mBucketCount buckets; delete[] in the dtor)

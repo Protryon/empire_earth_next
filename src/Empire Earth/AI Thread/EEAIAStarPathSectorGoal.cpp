@@ -110,231 +110,49 @@ void EEAIAStarPathSectorGoal::CreateSubSector()
     this->mKind = kAITileNone;
 }
 
-// NEAR: the original calls RTSMap::GetTile 0x2f85 and _Ptrit::operator+ out of line, keeps the result in inY's slot
 // FUNCTION: EXE 0x41acbf
-// Decides whether the fill takes a tile: by default it must lie in the first tile's path area and the sector's
-// bounds; in classify mode ClassifyTile decides. Accepted tiles are counted and grow the bounds
+// Decides whether the fill takes a tile (ee_astar area_goals::path_sector_accept with its ClassifyTile 0x41ae1d, over
+// the goal's fill state; the machine's corner checks as it leaves them, a stale tile to mStaleTiles)
 bool EEAIAStarPathSectorGoal::AcceptTile(unsigned long inX, unsigned long inY, long inStart)
 {
-    bool theResult = false;
-    if (!this->mView.HasTile(inX, inY))
-        return theResult;
-    if (this->GetTileCount() == 0)
-        this->mTileBounds.Set(U2DPoint<long>(inX, inY));
-    if (!this->GetClassifyTiles()) {
-        if (this->GetPathAreaID()) {
-            theResult = this->GetPathAreaID() == this->mView.GetStoredPathAreaID(this->GetPathAreaStorage(), inX, inY);
-            if (!theResult)
-                return theResult;
-            if (!this->mSectorBounds.Contains(inX, inY))
-                return false;
-        } else {
-            this->mPathAreaID = this->mView.GetStoredPathAreaID(this->GetPathAreaStorage(), inX, inY);
-            EEAIAStarPathAreaInfo theArea = this->mView.GetPathArea(this->GetPathAreaID());
-            this->mContinentID = theArea.mContinentID;
-            this->mPathAreaKind = theArea.mKind;
-            EEAIAStarMachineBase* theMachine = dynamic_cast<EEAIAStarMachineBase*>(this->mStorage);
-            if (this->GetPathAreaKind() == kAITileCliff || (this->GetPathAreaKind() > kAITileForest && this->GetPathAreaKind() <= kAITileMapEdge) || (this->GetPathAreaKind() > kAITileNearShore && this->GetPathAreaKind() <= kAITileGate))
-                theMachine->mCheckCorners = false;
-            else
-                theMachine->mCheckCorners = true;
-        }
-        theResult = true;
-    } else {
-        theResult = this->ClassifyTile(inX, inY, false);
-        if (!theResult)
-            return theResult;
-    }
-    this->mTileCount++;
-    this->mTileBounds.Extend(U2DPoint<long>(inX, inY));
-    return theResult;
-}
-
-// The match test is a jump table over mKind - 1. Every accepted tile not already in a path area of that kind is
-// listed in mStaleTiles.
-// NEAR: the original calls RTSMap::GetTile 0x2f85 out of line (ours expands it, so the registers shift);
-// GetTileFlag's int result type and the case bodies' block order are unchecked
-// FUNCTION: EXE 0x41ae1d
-// Tests a tile for the classify fill: the first sets the sub-sector's continent and kind from terrain, shore
-// distance and blocking units; later ones must match it inside the sector bounds. Returns whether it matched
-bool EEAIAStarPathSectorGoal::ClassifyTile(unsigned long inX, unsigned long inY, bool inArg)
-{
-    bool theResult;
-    long theTerrain = this->mView.GetTerrain(inX, inY);
-    long theUnitID = -1;
-    EEAIAStarContinentInfo theContinent = this->mView.GetContinentAt(inX, inY);
-    bool theMatch;
-
-    if (this->mContinentID != 0) {
-        if (this->mCategory != theContinent.mCategory || theContinent.mID != this->mContinentID)
-            return false;
-        switch (this->mKind) {
-        case kAITileLand:
-            if (theTerrain == kTerrainShallowWater)
-                return false;
-            theMatch = !this->mView.GetResourceKind(inX, inY);
-            if (!theMatch)
-                return false;
-            if (this->mView.HasBlocker(inX, inY))
-                theMatch = false;
-            break;
-        case kAITileWater:
-            if (theTerrain != kTerrainDeepWater || this->mView.GetTileFlag(inX, inY) != 0)
-                return false;
-            theMatch = true;
-            break;
-        case kAITileCliff:
-            if (theTerrain != kTerrainCliff)
-                return false;
-            theMatch = true;
-            break;
-        case kAITileForest:
-            theMatch = this->mView.GetResourceKind(inX, inY) != 0;
-            break;
-        case kAITileGaiaObstacle:
-            if (this->mView.GetResourceKind(inX, inY))
-                return false;
-            theUnitID = this->mView.GetFirstBlockerID(inX, inY);
-            theMatch = theUnitID == this->mUnitID;
-            break;
-        case kAITileMapEdge:
-            theMatch = true;
-            break;
-        case kAITileShallows:
-            if (theTerrain != kTerrainShallowWater || this->mView.GetTileFlag(inX, inY) != 0)
-                return false;
-            theMatch = !this->mView.GetResourceKind(inX, inY);
-            if (!theMatch)
-                return false;
-            if (this->mView.HasBlocker(inX, inY))
-                theMatch = false;
-            break;
-        case kAITileShallowsShore:
-            if (theTerrain != kTerrainShallowWater || this->mView.GetTileFlag(inX, inY) >= 0)
-                return false;
-            theMatch = !this->mView.GetResourceKind(inX, inY);
-            if (!theMatch)
-                return false;
-            if (this->mView.HasBlocker(inX, inY))
-                theMatch = false;
-            break;
-        case kAITileShallowsNearShore:
-            if (theTerrain != kTerrainShallowWater || this->mView.GetTileFlag(inX, inY) <= 0)
-                return false;
-            theMatch = !this->mView.GetResourceKind(inX, inY);
-            if (!theMatch)
-                return false;
-            if (this->mView.HasBlocker(inX, inY))
-                theMatch = false;
-            break;
-        case kAITileShore:
-            if ((theTerrain != kTerrainDeepWater && theTerrain != kTerrainSpace) ||
-                this->mView.GetTileFlag(inX, inY) >= 0)
-                return false;
-            theMatch = true;
-            break;
-        case kAITileNearShore:
-            if ((theTerrain != kTerrainDeepWater && theTerrain != kTerrainSpace) ||
-                this->mView.GetTileFlag(inX, inY) <= 0)
-                return false;
-            theMatch = true;
-            break;
-        case kAITileUnitObstacle:
-            if (this->mView.GetResourceKind(inX, inY))
-                return false;
-            theUnitID = this->mView.GetFirstObstacleID(inX, inY);
-            theMatch = theUnitID == this->mUnitID;
-            break;
-        case kAITileWall:
-            if (this->mView.GetResourceKind(inX, inY))
-                return false;
-            if (!this->mView.HasOwnWallFirst(inX, inY, this->mPlayerID))
-                return false;
-            theMatch = true;
-            break;
-        case kAITileGate:
-            if (this->mView.GetResourceKind(inX, inY))
-                return false;
-            theUnitID = this->mView.GetSectorGateOwner(inX, inY, this->mPlayerID);
-            theMatch = theUnitID == this->mUnitID;
-            break;
-        case kAITileSpace:
-            if (theTerrain != kTerrainSpace || this->mView.GetTileFlag(inX, inY) != 0)
-                return false;
-            theMatch = true;
-            break;
-        default:
-            return false;
-        }
-        if (!theMatch || !this->mSectorBounds.Contains(U2DPoint<long>(inX, inY)))
-            return false;
-    } else {
+    EeAStarPathSectorFill theFill;
+    theFill.path_area_storage = this->GetPathAreaStorage();
+    theFill.classify_tiles = this->mClassifyTiles;
+    theFill.tile_count = this->mTileCount;
+    theFill.tile_bounds = EEAIAStarRectOf(this->mTileBounds);
+    theFill.sector_bounds = EEAIAStarRectOf(this->mSectorBounds);
+    theFill.path_area_id = this->mPathAreaID;
+    theFill.path_area_kind = this->mPathAreaKind;
+    theFill.continent_id = this->mContinentID;
+    theFill.category = this->mCategory;
+    theFill.kind = this->mKind;
+    theFill.unit_id = this->mUnitID;
+    theFill.player_id = this->mPlayerID;
+    theFill.wa0 = this->mWA0;
+    theFill.wa2 = this->mWA2;
+    theFill.check_corners = -1;
+    theFill.stale = false;
+    EeAStarViewCallbacks theCallbacks = this->mView.Callbacks();
+    bool theResult = ee_astar_path_sector_accept(&theFill, &theCallbacks, (int32_t)inX, (int32_t)inY);
+    this->mTileCount = theFill.tile_count;
+    this->mTileBounds.mBottom = theFill.tile_bounds.bottom;
+    this->mTileBounds.mLeft = theFill.tile_bounds.left;
+    this->mTileBounds.mRight = theFill.tile_bounds.right;
+    this->mTileBounds.mTop = theFill.tile_bounds.top;
+    this->mPathAreaID = theFill.path_area_id;
+    this->mPathAreaKind = theFill.path_area_kind;
+    this->mContinentID = theFill.continent_id;
+    this->mCategory = theFill.category;
+    this->mKind = theFill.kind;
+    this->mUnitID = theFill.unit_id;
+    this->mPlayerID = theFill.player_id;
+    this->mWA0 = theFill.wa0;
+    if (theFill.check_corners >= 0) {
         EEAIAStarMachineBase* theMachine = dynamic_cast<EEAIAStarMachineBase*>(this->mStorage);
-        theMachine->mCheckCorners = true;
-        this->mContinentID = theContinent.mID;
-        this->mCategory = theContinent.mCategory;
-        EEAIAStarPathAreaInfo theArea = this->mView.GetPathAreaAt(inX, inY);
-        this->mPathAreaID = theArea.mFound ? theArea.mID : 0;
-        if (this->mCategory == kContinentCategoryLand) {
-            if (theTerrain == kTerrainShallowWater) {
-                long theFlag = this->mView.GetTileFlag(inX, inY);
-                if (theFlag < 0)
-                    this->mKind = kAITileShallowsShore;
-                else if (theFlag > 0)
-                    this->mKind = kAITileShallowsNearShore;
-                else
-                    this->mKind = 7;
-            } else
-                this->mKind = 1;
-            if (this->mView.GetResourceKind(inX, inY)) {
-                this->mWA0 = this->mWA2;
-                this->mKind = kAITileForest;
-            } else {
-                EEAIAStarBlocker theBlocker = this->mView.GetFirstBlocker(inX, inY);
-                if (theBlocker.mFound) {
-                    this->mUnitID = theBlocker.mUnitID;
-                    this->mKind = kAITileUnitObstacle;
-                    this->mPlayerID = theBlocker.mPlayerID;
-                    if (theMachine != NULL)
-                        theMachine->mCheckCorners = false;
-                    if (theBlocker.mIsGate)
-                        this->mKind = kAITileGate;
-                    else if (theBlocker.mIsWall)
-                        this->mKind = kAITileWall;
-                }
-            }
-        } else if (this->mCategory == kContinentCategoryWater) {
-            long theFlag = this->mView.GetTileFlag(inX, inY);
-            if (theFlag < 0)
-                this->mKind = kAITileShore;
-            else if (theFlag > 0)
-                this->mKind = kAITileNearShore;
-            else
-                this->mKind = 2;
-        } else if (this->mCategory == kContinentCategorySpace) {
-            long theFlag = this->mView.GetTileFlag(inX, inY);
-            if (theFlag < 0)
-                this->mKind = kAITileShore;
-            else if (theFlag > 0)
-                this->mKind = kAITileNearShore;
-            else
-                this->mKind = 15;
-        } else if (this->mCategory == kContinentCategoryMapEdge) {
-            this->mKind = kAITileMapEdge;
-            if (theMachine != NULL)
-                theMachine->mCheckCorners = false;
-        } else if (this->mCategory == kContinentCategoryCliff) {
-            this->mKind = kAITileCliff;
-            if (theMachine != NULL)
-                theMachine->mCheckCorners = false;
-        }
+        if (theMachine)
+            theMachine->mCheckCorners = theFill.check_corners != 0;
     }
-
-    if (this->mView.IsEdgeTile(inX, inY) != (this->mCategory == kContinentCategoryMapEdge))
-        return false;
-    theResult = true;
-    EEAIAStarPathAreaInfo theArea = this->mView.GetPathAreaAt(inX, inY);
-    if (!theArea.mFound || theArea.mKind != this->mKind) {
+    if (theFill.stale) {
         EETileCoordinate theCoordinate;
         theCoordinate.mX = inX;
         theCoordinate.mY = inY;

@@ -152,102 +152,8 @@ void EEAIAStarPathAreaGoal::CreateAreas()
     this->mResources3 = 0;
 }
 
-// NEAR: the original keeps the result in bl; ours spills it to the frame.
 // FUNCTION: EXE 0x4176c7
-// Tests whether a tile belongs to the current kind (land, water, cliff, space, map edge); kind 0 picks the kind
-// from the first tile. Water and space tiles under units pass only for working docks/navy yards or space docks
-bool EEAIAStarPathAreaGoal::ClassifyTile(long inX, long inY, unsigned char* ioKind, bool inShallowsAreWater)
-{
-    // (the tile was the goal's map's, tested on the map by the caller, AcceptTile)
-    bool theResult = false;
-    {
-        long theTerrain = this->mView.GetTerrain(inX, inY);
-        switch (*ioKind) {
-        case 0:
-            switch (theTerrain) {
-            case kTerrainDeepWater:
-                *ioKind = this->mMode != kAIPathNonSpace ? 2 : 1;
-                break;
-            case kTerrainCliff:
-                *ioKind = 3;
-                break;
-            case kTerrainShallowWater:
-                if (this->mMode != kAIPathNonSpace)
-                    *ioKind = inShallowsAreWater ? 2 : 1;
-                else
-                    *ioKind = 1;
-                break;
-            case kTerrainSpace:
-                *ioKind = 4;
-                break;
-            default:
-                *ioKind = 1;
-                break;
-            }
-            if (this->mView.IsEdgeTile(inX, inY))
-                *ioKind = 5;
-            theResult = true;
-            break;
-        case 1:
-            if (this->mMode == kAIPathNonSpace) {
-                if (theTerrain != kTerrainSpace && !this->mView.IsEdgeTile(inX, inY))
-                    theResult = true;
-                else
-                    theResult = false;
-            } else if (theTerrain != kTerrainDeepWater && theTerrain != kTerrainCliff && theTerrain != kTerrainSpace &&
-                       !this->mView.IsEdgeTile(inX, inY))
-                theResult = !this->mView.GetResourceKind(inX, inY);
-            else
-                theResult = false;
-            break;
-        case 2:
-            if ((theTerrain == kTerrainDeepWater || theTerrain == kTerrainShallowWater) && !this->mView.IsEdgeTile(inX, inY)) {
-                theResult = true;
-                if (theTerrain == kTerrainShallowWater && this->mView.HasUnits(inX, inY)) {
-                    EEAIAStarPathAreaInfo theArea = this->mView.GetPathAreaAt(inX, inY);
-                    if (theArea.mFound && theArea.mKind != kAITileWater) {
-                        if (theArea.mKind <= kAITileMapEdge)
-                            theResult = false;
-                        else if (theArea.mKind > kAITileNearShore) {
-                            if (theArea.mKind == kAITileUnitObstacle)
-                                theResult = this->mView.HasLiveDock(inX, inY);
-                            else
-                                theResult = false;
-                        }
-                    }
-                }
-            } else
-                theResult = false;
-            break;
-        case 3:
-            theResult = theTerrain == kTerrainCliff && !this->mView.IsEdgeTile(inX, inY);
-            break;
-        case 4:
-            if (theTerrain == kTerrainSpace && !this->mView.IsEdgeTile(inX, inY)) {
-                theResult = true;
-                if (this->mView.HasUnits(inX, inY)) {
-                    EEAIAStarPathAreaInfo theArea = this->mView.GetPathAreaAt(inX, inY);
-                    if (theArea.mFound) {
-                        if (theArea.mKind != kAITileUnitObstacle) {
-                            if (theArea.mKind != kAITileSpace)
-                                theResult = false;
-                        } else
-                            theResult = this->mView.HasLiveSpaceDock(inX, inY);
-                    }
-                }
-            } else
-                theResult = false;
-            break;
-        case 5:
-            if (this->mView.IsEdgeTile(inX, inY))
-                theResult = true;
-            else
-                theResult = false;
-            break;
-        }
-    }
-    return theResult;
-}
+// ClassifyTile: ee_astar area_goals::path_area_classify (AcceptTile's kind pass)
 
 // The set's insert result is unused; the continents get the id through their kind vectors.
 // FUNCTION: EXE 0x417a4b
@@ -283,223 +189,51 @@ void EEAIAStarPathAreaGoal::AssignKindIDs()
     }
 }
 
-// GetCategory() accessors put RTSMap::GetTile out of line
-// as in the original; the 4-argument ClassifyTile wrapper (0x184d1) is an out-of-line member defined below.
-// The unit loops are written out, the resource count is a switch, the tile value tests the grid first.
 // FUNCTION: EXE 0x417bcb
 // Decides whether the flood fill takes a tile into the current area and, if so, counts it and grows the bounds
-// In a path area pass (mMode 0) the first tile fixes the area's continent and kind; later tiles must match them (by
-// kind: terrain, the manager's tile value, resources, the blocking unit's owner), and the area's tiles are all on
-// or all off the map edge as its continent is a kind 5 one. In a kind pass ClassifyTile decides.
+// (ee_astar area_goals::path_area_accept over the goal's fill state; the machine's corner checks as it leaves them)
 bool EEAIAStarPathAreaGoal::AcceptTile(long inX, long inY, bool inStart)
 {
-    long theOwner = -1;
-    bool theResult = false;
-    if (this->mView.HasTile(inX, inY)) {
-        if (this->mMode == kAIPathNone) {
-            EEAIAStarContinentInfo theContinent = this->mView.GetContinentAt(inX, inY);
-            long theTerrain = this->mView.GetTerrain(inX, inY);
-            if (this->mContinentID) {
-                if (this->mContinentKind == theContinent.mCategory && this->mContinentID == theContinent.mID) {
-                    switch (this->mKind) {
-                    case kAITileLand:
-                        if (theTerrain != kTerrainShallowWater && theTerrain != kTerrainSpace) {
-                            theResult = !this->mView.GetResourceKind(inX, inY);
-                            if (theResult && this->mView.HasBlocker(inX, inY))
-                                theResult = false;
-                        }
-                        break;
-                    case kAITileWater:
-                        theResult = theTerrain == kTerrainDeepWater && this->mView.GetTileValue(inX, inY) == 0;
-                        break;
-                    case kAITileSpace:
-                        theResult = theTerrain == kTerrainSpace && this->mView.GetTileValue(inX, inY) == 0;
-                        break;
-                    case kAITileCliff:
-                        if (theTerrain == kTerrainCliff)
-                            theResult = true;
-                        else
-                            theResult = false;
-                        break;
-                    case kAITileForest: {
-                        long theResource = this->mView.GetResourceKind(inX, inY);
-                        theResult = theResource != 0;
-                        if (theResult) {
-                            switch (theResource) {
-                            case 1:
-                                this->mResources1++;
-                                break;
-                            case 2:
-                                this->mResources2++;
-                                break;
-                            case 3:
-                                this->mResources3++;
-                                break;
-                            }
-                        }
-                        break;
-                    }
-                    case kAITileGaiaObstacle:
-                        if (!this->mView.GetResourceKind(inX, inY)) {
-                            theOwner = this->mView.GetFirstBlockerID(inX, inY);
-                            theResult = theOwner == this->mOwnerID;
-                        }
-                        break;
-                    case kAITileMapEdge:
-                        theResult = true;
-                        break;
-                    case kAITileShallows:
-                        if (theTerrain == kTerrainShallowWater && this->mView.GetTileValue(inX, inY) == 0) {
-                            theResult = !this->mView.GetResourceKind(inX, inY);
-                            if (theResult && this->mView.HasBlocker(inX, inY))
-                                theResult = false;
-                        }
-                        break;
-                    case kAITileShallowsShore:
-                        if (theTerrain == kTerrainShallowWater && this->mView.GetTileValue(inX, inY) < 0) {
-                            theResult = !this->mView.GetResourceKind(inX, inY);
-                            if (theResult && this->mView.HasBlocker(inX, inY))
-                                theResult = false;
-                        }
-                        break;
-                    case kAITileShallowsNearShore:
-                        if (theTerrain == kTerrainShallowWater && this->mView.GetTileValue(inX, inY) > 0) {
-                            theResult = !this->mView.GetResourceKind(inX, inY);
-                            if (theResult && this->mView.HasBlocker(inX, inY))
-                                theResult = false;
-                        }
-                        break;
-                    case kAITileShore:
-                        theResult = (theTerrain == kTerrainDeepWater || theTerrain == kTerrainSpace) && this->mView.GetTileValue(inX, inY) < 0;
-                        break;
-                    case kAITileNearShore:
-                        theResult = (theTerrain == kTerrainDeepWater || theTerrain == kTerrainSpace) && this->mView.GetTileValue(inX, inY) > 0;
-                        break;
-                    case kAITileUnitObstacle:
-                        if (!this->mView.GetResourceKind(inX, inY)) {
-                            theOwner = this->mView.GetFirstObstacleID(inX, inY);
-                            theResult = theOwner == this->mOwnerID;
-                        }
-                        break;
-                    case kAITileWall:
-                        if (!this->mView.GetResourceKind(inX, inY))
-                            theResult = this->mView.HasOwnWallFirst(inX, inY, this->mPlayerID);
-                        break;
-                    case kAITileGate:
-                        if (!this->mView.GetResourceKind(inX, inY)) {
-                            theOwner = this->mView.GetAreaGateOwner(inX, inY, this->mPlayerID);
-                            theResult = theOwner == this->mOwnerID;
-                        }
-                        break;
-                    }
-                }
-            } else {
-                EEAIAStarMachineBase* theMachine = dynamic_cast<EEAIAStarMachineBase*>(this->mStorage);
-                if (theMachine)
-                    theMachine->mCheckCorners = true;
-                this->mTileBounds.Set(EETileCoordinate(inX, inY));
-                this->mContinentID = theContinent.mID;
-                this->mContinentKind = theContinent.mCategory;
-                if (this->mContinentKind == kContinentCategoryLand) {
-                    if (theTerrain == kTerrainShallowWater) {
-                        long theValue = this->mView.GetTileValue(inX, inY);
-                        if (theValue < 0)
-                            this->mKind = kAITileShallowsShore;
-                        else if (theValue > 0)
-                            this->mKind = kAITileShallowsNearShore;
-                        else
-                            this->mKind = 7;
-                    } else
-                        this->mKind = 1;
-                    long theResource = this->mView.GetResourceKind(inX, inY);
-                    if (theResource) {
-                        this->mForestID = this->mNextForestID;
-                        this->mKind = kAITileForest;
-                        if (theMachine)
-                            theMachine->mCheckCorners = false;
-                        switch (theResource) {
-                        case 1:
-                            this->mResources1++;
-                            break;
-                        case 2:
-                            this->mResources2++;
-                            break;
-                        case 3:
-                            this->mResources3++;
-                            break;
-                        }
-                    } else {
-                        EEAIAStarBlocker theBlocker = this->mView.GetFirstBlocker(inX, inY);
-                        if (theBlocker.mFound) {
-                            this->mOwnerID = theBlocker.mUnitID;
-                            this->mKind = kAITileUnitObstacle;
-                            this->mPlayerID = theBlocker.mPlayerID;
-                            if (theMachine)
-                                theMachine->mCheckCorners = false;
-                            if (theBlocker.mIsGate)
-                                this->mKind = kAITileGate;
-                            else if (theBlocker.mIsWall)
-                                this->mKind = kAITileWall;
-                        }
-                    }
-                } else if (this->mContinentKind == kContinentCategoryWater) {
-                    long theValue = this->mView.GetTileValue(inX, inY);
-                    if (theValue < 0)
-                        this->mKind = kAITileShore;
-                    else if (theValue > 0)
-                        this->mKind = kAITileNearShore;
-                    else
-                        this->mKind = 2;
-                } else if (this->mContinentKind == kContinentCategorySpace) {
-                    long theValue = this->mView.GetTileValue(inX, inY);
-                    if (theValue < 0)
-                        this->mKind = kAITileShore;
-                    else if (theValue > 0)
-                        this->mKind = kAITileNearShore;
-                    else
-                        this->mKind = 0xf;
-                } else if (this->mContinentKind == kContinentCategoryMapEdge) {
-                    this->mKind = kAITileMapEdge;
-                    if (theMachine)
-                        theMachine->mCheckCorners = false;
-                } else if (this->mContinentKind == kContinentCategoryCliff) {
-                    this->mKind = kAITileCliff;
-                    if (theMachine)
-                        theMachine->mCheckCorners = false;
-                }
-                theResult = true;
-            }
-            if (theResult) {
-                if (this->mView.IsEdgeTile(inX, inY) == (this->mContinentKind == kContinentCategoryMapEdge))
-                    theResult = true;
-                else
-                    theResult = false;
-            } else
-                theResult = false;
-        } else {
-            if (this->mTileCount == 0) {
-                this->mTileBounds.Set(EETileCoordinate(inX, inY));
-            }
-            theResult = this->ClassifyTile(inX, inY, 0);
-        }
-        if (theResult) {
-            this->mTileCount++;
-            EETileCoordinate theCoordinate;
-            theCoordinate.mX = inX;
-            theCoordinate.mY = inY;
-            this->mTileBounds.Extend(theCoordinate);
-        }
+    EeAStarPathAreaFill theFill;
+    theFill.mode = this->mMode;
+    theFill.continent_id = this->mContinentID;
+    theFill.continent_kind = this->mContinentKind;
+    theFill.kind = this->mKind;
+    theFill.owner_id = this->mOwnerID;
+    theFill.player_id = this->mPlayerID;
+    theFill.tile_count = this->mTileCount;
+    theFill.resources[0] = this->mResources1;
+    theFill.resources[1] = this->mResources2;
+    theFill.resources[2] = this->mResources3;
+    theFill.forest_id = this->mForestID;
+    theFill.next_forest_id = this->mNextForestID;
+    theFill.tile_bounds = EEAIAStarRectOf(this->mTileBounds);
+    theFill.check_corners = -1;
+    EeAStarViewCallbacks theCallbacks = this->mView.Callbacks();
+    bool theResult = ee_astar_path_area_accept(&theFill, &theCallbacks, inX, inY);
+    this->mContinentID = theFill.continent_id;
+    this->mContinentKind = theFill.continent_kind;
+    this->mKind = theFill.kind;
+    this->mOwnerID = theFill.owner_id;
+    this->mPlayerID = theFill.player_id;
+    this->mTileCount = theFill.tile_count;
+    this->mResources1 = theFill.resources[0];
+    this->mResources2 = theFill.resources[1];
+    this->mResources3 = theFill.resources[2];
+    this->mForestID = theFill.forest_id;
+    this->mTileBounds.mBottom = theFill.tile_bounds.bottom;
+    this->mTileBounds.mLeft = theFill.tile_bounds.left;
+    this->mTileBounds.mRight = theFill.tile_bounds.right;
+    this->mTileBounds.mTop = theFill.tile_bounds.top;
+    if (theFill.check_corners >= 0) {
+        EEAIAStarMachineBase* theMachine = dynamic_cast<EEAIAStarMachineBase*>(this->mStorage);
+        if (theMachine)
+            theMachine->mCheckCorners = theFill.check_corners != 0;
     }
     return theResult;
 }
 
-// FUNCTION: EXE 0x4184d1
-// Classifies a tile on the goal's own map against the goal's continent kind, shallows counting as water
-// Not inline: the original calls it from AcceptTile.
-bool EEAIAStarPathAreaGoal::ClassifyTile(long inX, long inY, long inArg)
-{
-    return this->ClassifyTile(inX, inY, &this->mContinentKind, true);
-}
+// 0x4184d1 (the 4-argument ClassifyTile wrapper): in ee_astar's path_area_accept
 
 // FUNCTION: EXE 0x418a84
 // Returns the path area at tile (inX, inY), or NULL off the grid
