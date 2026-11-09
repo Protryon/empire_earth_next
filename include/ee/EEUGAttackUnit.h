@@ -50,6 +50,7 @@ public:
 
     GE3DPoint mLocation;                    // +0x20 "The Actual Destination" (the target's tile centre)
     EEComplexUnit* mAttacker;               // +0x2c "The attacking unit" (not referenced; saved by id)
+    EEUnit* GetTarget() const { return this->mTarget; }
     EEUnit* mTarget;                        // +0x30 "The target unit" (referenced; saved by id while alive)
     long mTargetTileX;                      // +0x34 "The last known target X" (saved)
     long mTargetTileY;                      // +0x38 (saved)

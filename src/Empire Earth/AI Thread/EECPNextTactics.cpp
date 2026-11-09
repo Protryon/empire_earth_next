@@ -109,6 +109,22 @@ static bool EECPNextHasProducer(EEComputerPlayer* inPlayer, EETechTreeNode* inNo
     return false;
 }
 
+// whether one of the player's producers of a node has it in its queue (TryResearch started it: it left mEpochIDs)
+static bool EECPNextInQueue(EEComputerPlayer* inPlayer, EETechTreeNode* inNode)
+{
+    EECPUnitManager* theUnits = inPlayer->mCivilizationManager->mUnitManager;
+    for (unsigned long i = 0; i < inNode->GetNumUnitClasses(); i++) {
+        std::deque<EEComplexUnit*>* theMakers = theUnits->GetUnits(inNode->GetUnitClass(i));
+        for (unsigned long m = 0; theMakers != NULL && m < theMakers->size(); m++) {
+            EEComplexUnit* theMaker = (*theMakers)[m];
+            for (unsigned long q = 0; q < theMaker->GetBuildQueueSize(); q++)
+                if ((*(theMaker->mBuildQueue.begin() + q)).mTechnology == inNode->mData->mID)
+                    return true;
+        }
+    }
+    return false;
+}
+
 static EECPResourceCenter* EECPNextSiteAt(EEComputerPlayer* inPlayer, long inSite)
 {
     if (inSite < 0 || (unsigned long)inSite >= inPlayer->GetNumResourceCenters())
@@ -149,7 +165,7 @@ static bool EECPNextRingSite(EEComputerPlayer* inPlayer, long inType, long inX, 
             continue;
         }
         theTiles.clear();
-        Fn2492C2(inX, inY, theRing, theTiles);
+        EEGetSquareRingTiles(inX, inY, theRing, theTiles);
         for (unsigned long k = 0; k < theTiles.size(); k++)
             if (theBuild->CanBuildAt(theContinent, inType, theTiles[k], theClass->GetTileSize(), true, true, inX, inY)) {
                 outTile = theTiles[k];
@@ -402,14 +418,16 @@ EECPNextResult EECPNextResearch(EEComputerPlayer* inPlayer, long inTech)
         theReason = kNextReasonUnknownClass;
     else if (EEIsEpochID(inTech) || !theResearch->IsWanted(inTech))
         theReason = kNextReasonBadArgument;   // an epoch (advance) or a unit (train, build)
-    else if (theNode->mIsResearched)
-        theReason = kNextReasonBusy;
+    else if (theNode->mIsResearched)   // nothing to do (e.g. an epoch's kind-7 tech: EEComputerPlayer::EnterEpoch's)
+        return EECPNextReport(inPlayer, "research", kNextDone, kNextReasonNone, 0, "tech=%ld (researched)", inTech);
     else if (!theNode->GetIsAvailable() || theNode->GetIsObsolete())
         theReason = kNextReasonNotInEpoch;
     else {
         for (long e = 0; e < EEEpochCount() && theReason == kNextReasonNone; e++)
             if (std::find(theResearch->mEpochIDs[e].begin(), theResearch->mEpochIDs[e].end(), inTech) != theResearch->mEpochIDs[e].end())
                 theReason = kNextReasonBusy;
+        if (theReason == kNextReasonNone && EECPNextInQueue(inPlayer, theNode))
+            theReason = kNextReasonBusy;   // under way at a producer
         if (theReason == kNextReasonNone && !EECPNextHasProducer(inPlayer, theNode))
             theReason = kNextReasonNoProducer;
     }

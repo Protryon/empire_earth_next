@@ -191,7 +191,7 @@ EEUnit* EEUCBuilding::CreateUnit(long inX, long inY, long inPlayer, bool inIsFou
 
 // FUNCTION: EXE 0x60ea01
 // Counts the tiles of a terrain that follow a tile in steps of (inDX, inDY), up to inLength; returns whether all did
-static bool Fn20EA01(unsigned long inX, unsigned long inY, long inDX, long inDY, long inLength, long inTerrain,
+static bool CountTerrainRun(unsigned long inX, unsigned long inY, long inDX, long inDY, long inLength, long inTerrain,
                      long* outCount)
 {
     EEMap* theMap = ::gWorld.mMap;
@@ -218,7 +218,7 @@ long EEGetDockFacing(unsigned long inX, unsigned long inY)
     long theScores[4];
     long i;
     for (i = 0; i < 4; i++)
-        Fn20EA01(inX, inY, sSideSteps[i][0], sSideSteps[i][1], 6, 0xc, &theCounts[i]);
+        CountTerrainRun(inX, inY, sSideSteps[i][0], sSideSteps[i][1], 6, 0xc, &theCounts[i]);
     for (i = 0; i < 4; i++)
         theScores[i] = (theCounts[(i + 3) & 3] >> 1) + (theCounts[(i + 1) & 3] >> 1) + theCounts[i];
     long theBest = -1;
@@ -234,7 +234,7 @@ long EEGetDockFacing(unsigned long inX, unsigned long inY)
 // FUNCTION: EXE 0x60eb1c
 // Returns a navy yard's facing at a tile: its map quarter if 5 deep-water tiles follow that way, else the next side
 // that has them, else the side with the longest run
-static long Fn20EB1C(unsigned long inX, unsigned long inY)
+static long GetNavyYardFacing(unsigned long inX, unsigned long inY)
 {
     long theResult = EEGetFacingQuarter(inX, inY);
     long theBest = 0;
@@ -248,7 +248,7 @@ static long Fn20EB1C(unsigned long inX, unsigned long inY)
     }
     long theTries;
     for (theTries = 0; theTries < 4; theTries++) {
-        if (Fn20EA01(inX, inY, theSteps[theSide * 2], theSteps[theSide * 2 + 1], 5, 1, &theCount))
+        if (CountTerrainRun(inX, inY, theSteps[theSide * 2], theSteps[theSide * 2 + 1], 5, 1, &theCount))
             break;
         if (theCount > theBest) {
             theBest = theCount;
@@ -350,7 +350,7 @@ EEUnit* EEUCBuilding::FindNearestTargetBuilding(EEUnit* inUnit)
     EEUnit* theResult = NULL;
     EEMap* theMap = ::gWorld.mMap;
     for (unsigned long theRing = 1; theResult == NULL && theRing < 0x14; theRing++) {
-        Fn2492C2(inUnit->GetTileX(), inUnit->GetTileY(), theRing, theTiles);
+        EEGetSquareRingTiles(inUnit->GetTileX(), inUnit->GetTileY(), theRing, theTiles);
         for (std::vector<EETileCoordinate>::iterator theTile = theTiles.begin();
              theResult == NULL && theTile != theTiles.end(); theTile++) {
             EEMapTile* theMapTile = theMap->GetTile(theTile->mX, theTile->mY);
@@ -448,9 +448,11 @@ void EEUCBuilding::ActionChanged(EEComplexUnit* inUnit)
         inUnit->SetResourceAmount(0);
         break;
     case kActionPrepareToMove:
-        if (inUnit->mUnitClass->mAIKind != kAIKindAircraftCarrier && inUnit->mUnitClass->mUnitType != kUnitTypeSp15SpaceCarrier)
-            return;
-        break;
+        if (inUnit->mUnitClass->mAIKind == kAIKindAircraftCarrier)
+            break;
+        if (inUnit->mUnitClass->mUnitType == kUnitTypeSp15SpaceCarrier)
+            break;
+        return;
     case kActionAirportOpen:
         inUnit->SetExitingUnitID(-1);
         return;
@@ -487,7 +489,7 @@ void EEUCBuilding::UnitCreated(EEComplexUnit* inUnit)
         theTransformation.SetOrientationYPR(theYaw, 0.0f, 0.0f);
         inUnit->mPhysicalModel.SetLocation(theTransformation);
     } else if (this->mUnitType == kUnitTypeNavyYard)
-        inUnit->SetFacing(Fn20EB1C(inUnit->GetTileX(), inUnit->GetTileY()));
+        inUnit->SetFacing(GetNavyYardFacing(inUnit->GetTileX(), inUnit->GetTileY()));
     else if (this->mUnitType == kUnitTypeSpaceDock) {
         GETransformation theTransformation(inUnit->mPhysicalModel.GetLocation());
         theTransformation.SetOrientationYPR(

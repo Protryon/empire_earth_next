@@ -70,6 +70,7 @@ public:
     virtual void Work(EEComplexUnit* inUnit);        // +0x74 (empty; the heal goal heals every second)
 
     bool mIsActive;                         // +0x04
+    unsigned char GetKind() const { return this->mKind; }
     unsigned char mKind;                    // +0x05
     unsigned long mAction;                  // +0x08 (FSFile Read/Write(unsigned long))
     unsigned long mStartTime;               // +0x0c (saved from minor version 0x9d)

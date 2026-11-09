@@ -196,7 +196,7 @@ long EEE3DEnergyWall::Queue(EEEffectQueue* inQueues)
         this->mColor = theUnit->mPlayer->mColor;
         long theFrame;
         if (gFreeCamera)
-            theFrame = Fn102F57(0, 0x20);
+            theFrame = GetEffectRandomLong(0, 0x20);
         else if (this->mSeen) {
             theFrame = 0;
             this->mSeen = false;
@@ -235,16 +235,16 @@ long EEE3DEnergyWall::DrawPass6()
     theSize.SetV(theEffect->GetParam5());
     for (i = 1; i < 5; i++) {
         if (this->mSegments & (1 << i))
-            Fn103AC8(this->mPoints[0], this->mPoints[i], theEffect->GetParam1(), this->mColor, this->mTextureOffset, theSize, this->mAlpha, 1.0f,
+            AddGroundStrip(this->mPoints[0], this->mPoints[i], theEffect->GetParam1(), this->mColor, this->mTextureOffset, theSize, this->mAlpha, 1.0f,
                      theEffect->mGraphicObject ? theEffect->mGraphicObject->mAlphaReference : 0.0f);
     }
     if (!this->mGate)
         return 0;
-    Fn103AC8(this->mPoints[0], this->mPoints[9], theEffect->GetParam1(), this->mColor, this->mTextureOffset, theSize, this->mGateAlpha, 1.0f,
+    AddGroundStrip(this->mPoints[0], this->mPoints[9], theEffect->GetParam1(), this->mColor, this->mTextureOffset, theSize, this->mGateAlpha, 1.0f,
              theEffect->mGraphicObject ? theEffect->mGraphicObject->mAlphaReference : 0.0f);
     for (i = 5; i < 9; i++) {
         if (this->mSegments & (1 << i))
-            Fn103AC8(this->mPoints[9], this->mPoints[i], theEffect->GetParam1(), this->mColor, this->mTextureOffset, theSize, this->mAlpha, 1.0f,
+            AddGroundStrip(this->mPoints[9], this->mPoints[i], theEffect->GetParam1(), this->mColor, this->mTextureOffset, theSize, this->mAlpha, 1.0f,
                      theEffect->mGraphicObject ? theEffect->mGraphicObject->mAlphaReference : 0.0f);
     }
     return 0;

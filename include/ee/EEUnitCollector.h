@@ -53,13 +53,13 @@ long EEGetUnitsInRectangle(const U2DRectangle<long>& inRectangle, V& outUnits, c
     for (long x = theStart.mX; x <= theEndX.mX; x++) {
         U2DPoint<long> theRowStart = theRegions.GetTopLeft();
         for (long y = theRowStart.mY; y <= theEndY.mY; y++) {
-            std::vector<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
+            RTSRegion<EEComplexUnit*>* theRegion = theTable->GetRegion(x, y);
             if (theRegion) {
-                for (long i = theRegion->size() - 1; i >= 0; i--) {
-                    EEComplexUnit* theUnit = (*theRegion)[i];
+                for (long i = theRegion->GetCount() - 1; i >= 0; i--) {
+                    EEComplexUnit* theUnit = theRegion->GetAt(i);
                     if (inRectangle.Contains(theUnit->GetTileX(), theUnit->GetTileY()) &&
                         inPredicate(theUnit)) {
-                        if (theUnit->mUnitClass->mTileSize > 1)
+                        if (theUnit->GetUnitClass()->GetTileSize() > 1)
                             theMultiple = true;
                         outUnits.push_back(theUnit);
                     }

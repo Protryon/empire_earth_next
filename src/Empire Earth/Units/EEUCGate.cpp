@@ -164,7 +164,8 @@ void EEBuildGate(EETileCoordinate& inTile, long inPlayer, long inTechnology, lon
         float theRatio = (float)(*it)->mHitPoints / (*it)->mStats->mMaxHitPoints;
         if (theHealth >= theRatio)
             theHealth = theRatio;
-        EEComplexUnit* thePiece = EEReplaceUnit((EEComplexUnit*)*it, thePlayer->GetPlayerID(), theClass);
+        long thePlayerID = thePlayer->GetPlayerID();
+        EEComplexUnit* thePiece = EEReplaceUnit((EEComplexUnit*)*it, thePlayerID, theClass);
         GETransformation theTransformation(false);
         theTransformation = thePiece->mPhysicalModel.GetLocation();
         long theAction = EETurnGatePart(theTransformation, inDirection, j);
@@ -173,7 +174,7 @@ void EEBuildGate(EETileCoordinate& inTile, long inPlayer, long inTechnology, lon
         thePiece->SetGateDirection(inDirection);
         theGate.push_back(thePiece);
     }
-    theGate[4]->GetComplexUnit()->GetPosition(thePost4);
+    theGate[4]->mComplexUnit->GetPosition(thePost4);
     theGate[0]->GetComplexUnit()->GetPosition(thePost0);
     float theZ = min(::gWorld.GetMap()->mTerrainMesh.GetMeshZ(thePost4.GetX(), thePost4.GetY()),
                      ::gWorld.GetMap()->mTerrainMesh.GetMeshZ(thePost0.GetX(), thePost0.GetY()));
@@ -189,7 +190,7 @@ void EEBuildGate(EETileCoordinate& inTile, long inPlayer, long inTechnology, lon
     theGate[0]->GetComplexUnit()->StartAction(kActionIdle);
     theGate[3]->GetComplexUnit()->StartAction(kActionClosed);
     theGate[1]->GetComplexUnit()->StartAction(kActionClosed);
-    theGate[2]->GetComplexUnit()->StartAction(kActionClosed);
+    theGate[2]->mComplexUnit->StartAction(kActionClosed);
     theGate[2]->SetHitPoints(UMFloatToLong(theGate[2]->GetStats()->mMaxHitPoints * theHealth));
     if (gUIManager->mInScenarioEditor && !gGameScreenActive) {
         ::gWorld.FlushQueuedPlacements();
@@ -450,15 +451,17 @@ bool EEUCGate::AreEnemiesNear(EEComplexUnit* inUnit)
     EEGetUnitsNear(thePosition, kGateSearchRadius, theUnits);
     for (long i = theUnits.size() - 1; i >= 0 && !theFound; i--) {
         EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(theUnits[i]);
-        if (!theSet->Contains(theUnit->mUnitClass->GetUnitType()) || !(theUnit->mHitPoints > 0) ||
+        if (!theSet->Contains(theUnit->GetUnitClass()->GetUnitType()) || !(theUnit->mHitPoints > 0) ||
             thePlayer == theUnit->mPlayer || theUnit->mPlayer->mEnemies[thePlayer->mPlayerID] == 0)
             continue;
-        float theRange = theUnit->mUnitClass->mInnerCollisionSphere * 0.5f + kGateRangeBase;
+        float theRange = theUnit->GetUnitClass()->mInnerCollisionSphere * 0.5f + kGateRangeBase;
         theRange *= theRange;  // compared with squared distances
         if (inUnit->DistanceSquaredTo(theUnit) <= theRange ||
             theNext->DistanceSquaredTo(theUnit) <= theRange ||
             theLast->DistanceSquaredTo(theUnit) <= theRange)
             theFound = true;
+        else
+            theFound = false;
     }
     return theFound;
 }

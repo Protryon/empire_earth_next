@@ -1619,6 +1619,12 @@ GXRESULT GXSurface::IsLost()
     return GX_OK;
 }
 
+float GXSurface::GetRenderScale() const
+{
+    GX_GUARD;
+    return this->mData->mScale;
+}
+
 bool GXSurface::IsGPUResident() const
 {
     GX_GUARD;

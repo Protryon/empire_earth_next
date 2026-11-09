@@ -130,8 +130,8 @@ EEROTerrain::~EEROTerrain()
 {
 }
 
-static void Fn113EBD();
-static void Fn11396F();
+static void UpdateSkyColors();
+static void UpdateCloudLayer();
 
 // FUNCTION: EXE 0x512638
 // Prepares the frame: updates the sky colours and models, the clouds (black fog colour on space maps instead),
@@ -139,13 +139,13 @@ static void Fn11396F();
 void EEROTerrain::FrameStarting()
 {
     this->Fn10C036();
-    Fn113EBD();
+    UpdateSkyColors();
     if (gWorld.mMap->mTerrainMesh.GetIsSpaceMap()) {
         gU4E9220.SetRed(0.0f);
         gU4E9220.SetGreen(0.0f);
         gU4E9220.SetBlue(0.0f);
     } else if (gDrawClouds) {
-        Fn11396F();
+        UpdateCloudLayer();
     }
     this->Fn10E8D1();
     EEMap* theMap = gWorld.mMap;
@@ -156,7 +156,7 @@ void EEROTerrain::FrameStarting()
 
 // FUNCTION: EXE 0x5126ce
 // Creates the outer and inner star models (space maps' backdrop) and loads their texture (provisional name)
-static void Fn1126CE()
+static void CreateStarModels()
 {
     GETextureDescription theDescription;
     unsigned long i;
@@ -237,7 +237,7 @@ static void Fn1126CE()
 // FUNCTION: EXE 0x512bc4
 // Creates the cloud layer model (opaque inner square, transparent outer edge) and loads the cloud texture
 // (provisional name)
-static void Fn112BC4()
+static void CreateCloudModel()
 {
     GETextureDescription theDescription;
     unsigned long i;
@@ -354,9 +354,9 @@ void EEROTerrain::CreateSkyModel()
         for (j = 0; j < 17; j++, theEntry += 3)
             gSkyColors[i * 17 + j] = GEColor(theEntry[-1], theEntry[0], theEntry[1]);
     }
-    Fn1126CE();
+    CreateStarModels();
     if (gDrawClouds)
-        Fn112BC4();
+        CreateCloudModel();
     theDescription.mPixelDepth = 0x10;
     theDescription.mHasAlpha = false;
     theDescription.mCreateMIPMaps = false;
@@ -413,12 +413,12 @@ void EEROTerrain::RenderScene()
     gRasterizer->SetAlphaTesting(0, theScreen);
     gRasterizer->SetShadingColorSource(1, theScreen);
     gRasterizer->SetCulling(kCullNone);
-    Fn10F6DE();
-    Fn10F60F();
+    SetLightingOff();
+    SetSceneFog();
     gRasterizer->SetFog(0, theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendZero, theScreen);
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     float theRearClipping = gU4E8F08.GetRearClippingDistance();
     gU4E8F08.SetRearClippingDistance(kSkyRearClipping);
     gU4E8F08.SetDepthRange(1.0f, 1.0f);
@@ -433,7 +433,7 @@ void EEROTerrain::RenderScene()
         gRasterizer->DrawSky(sSkyModel, theScreen, 1.0f, gOrthographicView);
         if (gDrawClouds) {
             gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-            Fn10F772();
+            SetCloudLighting();
             gRasterizer->DrawSky(sCloudModel, theScreen, 1.0f, false);
         }
     }
@@ -447,8 +447,8 @@ void EEROTerrain::RenderScene()
     gRasterizer->SetAlphaTesting(0, theScreen);
     gRasterizer->SetShadingColorSource(1, theScreen);
     gRasterizer->SetCulling(kCullNone);
-    Fn10F6DE();
-    Fn10F60F();
+    SetLightingOff();
+    SetSceneFog();
     gRasterizer->Draw(gWorld.mMap->mTerrainMesh, theScreen, gOrthographicView);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, gScreenIndex);
     gRasterizer->SetZBuffer(kZBufferDisabled, gScreenIndex);
@@ -495,11 +495,11 @@ void EEROTerrain::RenderScene()
     }
     gRasterizer->SetZCompare(kCompareLessEqual, theScreen);
     for (theIterator = gEffectQueues[2].begin(); theIterator != gEffectQueues[2].end(); theIterator++) {
-        Fn102724(theIterator->first);
+        BeginEffectBatches(theIterator->first);
         for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)
             (*theEffect)->DrawPass4();
-        Fn103F64();
-        Fn102F20();
+        FlushEffectBatches();
+        EndEffectBatches();
     }
     gU4E8F08.SetDepthRange(0.0f, 1.0f);
     gRasterizer->SetViewport(gU4E8F08, theScreen);
@@ -570,7 +570,7 @@ static const EEROTerrainVertex sStarVertices[24] = {
 // FUNCTION: EXE 0x51396f
 // Places the cloud layer over the map square and scrolls its texture by the environment's cloud offset
 // (kept in 0..1) (provisional name)
-static void Fn11396F()
+static void UpdateCloudLayer()
 {
     GETextureCoordinate theCoordinate4;
     GETextureCoordinate theCoordinate5;
@@ -584,7 +584,7 @@ static void Fn11396F()
     GE3DPoint thePoint1;
     float theOffset = gRenderEnvironment.mCloudOffset;
     if (sCloudModel == NULL)
-        Fn112BC4();
+        CreateCloudModel();
     float theSize = (float)gWorld.mMap->mSize;
     float theLow = theSize - (float)gWorld.mMap->mL195614 - 1.0f;
     float theHigh = (float)gWorld.mMap->mL195614 + 1.0f;
@@ -665,7 +665,7 @@ static void Fn11396F()
 // FUNCTION: EXE 0x513ebd
 // Blends the sky colours for the environment's time of day (17 steps) into the sky dome and fog colour, and
 // stretches the sky dome and star models over the map square (provisional name)
-static void Fn113EBD()
+static void UpdateSkyColors()
 {
     float theTime = gRenderEnvironment.mTimeOfDay * 16.0f;
     float theFraction = theTime - (float)UMFloor(theTime);

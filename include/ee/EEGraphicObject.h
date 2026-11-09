@@ -56,6 +56,7 @@ public:
     // 0x208ce6 (ret 4; after EEGraphicObject 0xd76a1 news one inline: vptr, mAngle 0, mModel 0): the model and the
     // speed from the name's degrees after the prefix, negative for clockwise (provisional name)
     void Init(GEModel* inModel);
+    float GetAngle() const { return this->mAngle; }  // inline: `mov eax,[x+0xc]` into a temp before the array's op[] (EEE3DIcon::Queue 0x4f21e5)
     void Update();                          // 0x208e28: mAngle += frame time * mSpeed, wrapped to [-pi, pi]
 
     GEModel* mModel;                        // +0x04 (EEE3DDisease::DrawPass5 sets its pre-model transform)
@@ -140,6 +141,7 @@ public:
     unsigned long GetWheelCount() const;    // 0x200292 (out-of-line COMDAT, defined in EEComplexUnit.cpp): mWheels.size() (provisional name)
     // inline (EEE3DDisease::Load expands it with the const operator[]: lea, then the load; Virtual30 calls the const
     // begin() and operator+ out of line) (provisional name)
+    GETexture* GetTexture(unsigned long inIndex) const { return this->mTextures[inIndex]; }  // inline: the effects' Queue tail (0x4ebfd0)
     EEOrbital* GetOrbital(unsigned long inIndex) const { return this->mOrbitals[inIndex]; }
     // inline; out of line after their first user EEUnitClass::TurretsFacePoint (0x23a59b / 0x23a5ad, in this order)
     // (provisional names)

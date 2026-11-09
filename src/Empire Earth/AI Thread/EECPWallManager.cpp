@@ -75,7 +75,7 @@
 // 0x24b794: the tiles on the line inFrom..inTo
 void EEGetWallLine(const U2DPoint<long>& inFrom, const U2DPoint<long>& inTo, std::vector<U2DPoint<long> >& outTiles);
 // 0x2492c2 (ee/EECPIntelligence.h declares it with vector<EETileCoordinate>): the tiles around (inX, inY) at inRadius
-void Fn2492C2(long inX, long inY, long inRadius, std::vector<U2DPoint<long> >& outTiles);
+void EEGetSquareRingTiles(long inX, long inY, long inRadius, std::vector<U2DPoint<long> >& outTiles);
 // 0x24c3df: the units on tile (inX, inY)
 long EEGetUnitsOnTile(long inX, long inY, std::vector<EEUnit*>& outUnits);
 // 0x24c433: the units on inTiles
@@ -220,7 +220,7 @@ bool EECPWallManager::IsPathBlocked(std::vector<U2DPoint<long> >& inTiles)
     for (std::vector<U2DPoint<long> >::iterator it = inTiles.begin(); it != inTiles.end(); it++) {
         theAll.push_back(*it);
         for (unsigned long theRadius = 1; theRadius <= 2; theRadius++) {
-            Fn2492C2(it->mX, it->mY, theRadius, theAround);
+            EEGetSquareRingTiles(it->mX, it->mY, theRadius, theAround);
             theAll.insert(theAll.end(), theAround.begin(), theAround.end());
         }
     }
@@ -405,17 +405,17 @@ void EECPWallManager::AddGates(EEComplexUnit* inUnit)
     std::vector<U2DPoint<long> > theSorted;
     GE2DPoint theLocation(0.0f, 0.0f);
     EETileCoordinate theMiddle;
-    theMiddle.mX = 0;
-    theMiddle.mY = 0;
-    long theUnitClass = this->mPlayer->mCivilizationManager->GetGateClass();
+    theMiddle.SetX(0);
+    theMiddle.SetY(0);
+    long theUnitClass = this->GetPlayer()->GetCivilizationManager()->GetGateClass();
     long theTechnology;
     if (gUnitClassTable[theUnitClass] != NULL)
-        theTechnology = gUnitClassTable[theUnitClass]->mTechnology;
+        theTechnology = gUnitClassTable[theUnitClass]->GetTechnology();
     else
         theTechnology = 100000;
     long theSide = 0;
     long theIndex;
-    if (inUnit->mUnitClass->mIsWall && !inUnit->mUnitClass->mIsTower) {
+    if (inUnit->GetClass()->GetIsWall() && !inUnit->GetClass()->GetIsTower()) {
         std::vector<EEComplexUnit*>::iterator it = std::find(this->mGates.begin(), this->mGates.end(), inUnit);
         if (it != this->mGates.end()) {
             this->mGates.erase(it);
@@ -423,26 +423,26 @@ void EECPWallManager::AddGates(EEComplexUnit* inUnit)
             if (this->mGates.size() == 0) {
                 EEGetWallLine(this->mWallStart, this->mWallEnd, theTiles);
                 U2DPoint<long> theTile = theTiles[theTiles.size() / 2];
-                theMiddle.mX = theTile.mX;
-                theMiddle.mY = theTile.mY;
+                theMiddle.SetX(theTile.GetX());
+                theMiddle.SetY(theTile.GetY());
                 theSorted = theTiles;
                 std::sort(theSorted.begin(), theSorted.end(), EETileDistanceLess(theMiddle));
                 if (this->FindGate(theSorted, theSide, theIndex)) {
                     this->mGateTile = theSorted[theIndex];
-                    theLocation.SetX((float)theSorted[theIndex].mX);
-                    theLocation.SetY((float)theSorted[theIndex].mY);
-                    EEMBuildGate* theMessage = new EEMBuildGate(theLocation, theTechnology, theSide, this->mPlayer->GetPlayerID());
+                    theLocation.SetX((float)theSorted[theIndex].GetX());
+                    theLocation.SetY((float)theSorted[theIndex].GetY());
+                    EEMBuildGate* theMessage = new EEMBuildGate(theLocation, theTechnology, theSide, this->GetPlayer()->GetPlayerID());
                     theMessage->Execute();
                     theMessage->Dereference();
                 } else {
-                    this->mGateTile.mX = theMiddle.mX;
-                    this->mGateTile.mY = theMiddle.mY;
+                    this->mGateTile.SetX(theMiddle.GetX());
+                    this->mGateTile.SetY(theMiddle.GetY());
                 }
                 this->mWallEnd.SetXY(0, 0);
                 this->mWallStart.SetXY(0, 0);
             }
         }
-    } else if (inUnit->mUnitClass->mUnitType == kUnitTypeTownCenter || inUnit->mUnitClass->mUnitType == kUnitTypeCapitol)
+    } else if (inUnit->GetClass()->GetUnitType() == kUnitTypeTownCenter || inUnit->GetClass()->GetUnitType() == kUnitTypeCapitol)
         this->AddWalls(inUnit);
 }
 
@@ -507,7 +507,7 @@ EEComplexUnit* EECPWallManager::GetCenter(EEPlayer* inPlayer)
 bool EECPWallManager::FindGate(std::vector<U2DPoint<long> >& inTiles, long& outSide, long& outIndex)
 {
     std::vector<EEUnit*> theUnits;
-    EEMap* theMap = gWorld.mMap;
+    EEMap* theMap = gWorld.GetMap();
     bool theFound = false;
     unsigned long theSize = inTiles.size();
     for (unsigned long i = 0; i < theSize && !theFound; i++) {
@@ -516,12 +516,12 @@ bool EECPWallManager::FindGate(std::vector<U2DPoint<long> >& inTiles, long& outS
         EEGetUnitsOnTile(inTiles[i].GetX(), inTiles[i].GetY(), theUnits);
         EEUnit* theWall = NULL;
         for (std::vector<EEUnit*>::iterator it = theUnits.begin(); it != theUnits.end() && theWall == NULL; it++) {
-            if ((*it)->mUnitClass->mIsWall && (*it)->mHitPoints > 0)
+            if ((*it)->GetUnitClass()->GetIsWall() && (*it)->GetHitPoints() > 0)
                 theWall = *it;
         }
         if (theWall == NULL)
             continue;
-        long theType = theWall->mUnitClass->mUnitType;
+        long theType = theWall->GetUnitClass()->GetUnitType();
         theUnits.clear();
         long theSide;
         if (EEDoesWallGateFitOnUnit(static_cast<EEComplexUnit*>(theWall), 1, theType, theUnits))
@@ -571,14 +571,14 @@ bool EECPWallManager::PlanWall()
     thePath[thePath.size() - 1] = this->mTo->GetTile();
     unsigned long theCount = thePath.size() - 1;
     for (unsigned long i = 0; i < theCount; ) {
-        theFrom.SetXY(thePath[i].mX, thePath[i].GetY());
+        theFrom.SetXY(thePath[i].GetX(), thePath[i].GetY());
         i++;
-        theTo.SetXY(thePath[i].mX, thePath[i].GetY());
+        theTo.SetXY(thePath[i].GetX(), thePath[i].GetY());
         EETileCoordinate theTile;
-        theTile.mX = theFrom.mX;
+        theTile.mX = theFrom.GetX();
         theTile.mY = theFrom.GetY();
         theBounds.Set(theTile);
-        theTile.mX = theTo.mX;
+        theTile.mX = theTo.GetX();
         theTile.mY = theTo.GetY();
         theBounds.Extend(theTile);
         // each step is searched backwards, from the later path tile to the earlier one (the original passes theTo first)
@@ -602,20 +602,20 @@ bool EECPWallManager::PlanWall()
             theFrom = this->mPath[theFirst];
             theFirst++;
             theTo = this->mPath[theFirst];
-            if (theFrom.mX == theTo.mX) {
-                theStart.mX = theFrom.mX - theHalf;
-                theEnd.mX = theHalf + theFrom.mX;
+            if (theFrom.GetX() == theTo.GetX()) {
+                theStart.mX = theFrom.GetX() - theHalf;
+                theEnd.mX = theHalf + theFrom.GetX();
                 theStart.mY = theFrom.GetY();
                 theEnd.mY = theFrom.GetY();
             } else if (theFrom.GetY() == theTo.GetY()) {
                 theStart.mY = theFrom.GetY() - theHalf;
-                theStart.mX = theFrom.mX;
-                theEnd.mX = theFrom.mX;
+                theStart.mX = theFrom.GetX();
+                theEnd.mX = theFrom.GetX();
                 theEnd.mY = theFrom.GetY() + theHalf;
             } else {
                 long theOffset;
-                if ((theFrom.mX < theTo.mX && theFrom.GetY() < theTo.GetY()) ||
-                    (theTo.mX < theFrom.mX && theTo.GetY() < theFrom.GetY())) {
+                if ((theFrom.GetX() < theTo.GetX() && theFrom.GetY() < theTo.GetY()) ||
+                    (theTo.GetX() < theFrom.GetX() && theTo.GetY() < theFrom.GetY())) {
                     theEnd.mX = theHalf;
                     theOffset = -theHalf;
                 } else {
@@ -623,8 +623,8 @@ bool EECPWallManager::PlanWall()
                     theOffset = theHalf;
                 }
                 theStart.mY = theFrom.GetY() + theHalf;
-                theStart.mX = theFrom.mX + theOffset;
-                theEnd.mX = theFrom.mX + theEnd.mX;
+                theStart.mX = theFrom.GetX() + theOffset;
+                theEnd.mX = theFrom.GetX() + theEnd.GetX();
                 theEnd.mY = theFrom.GetY() - theHalf;
             }
             EEGetWallLine(theStart, theEnd, thePath);
@@ -636,12 +636,12 @@ bool EECPWallManager::PlanWall()
         bool theSeenBlock = false;
         for (unsigned long j = 0; j < theSize; j++) {
             bool theBlock;
-            if (theMap->GetTile(thePath[j].mX, thePath[j].GetY()) == NULL)
+            if (theMap->GetTile(thePath[j].GetX(), thePath[j].GetY()) == NULL)
                 theBlock = true;
             else if (gContinentManager.GetForestAt(thePath[j]) != NULL)
                 theBlock = true;
             else {
-                unsigned char theKind = gContinentManager.GetContinentAt(thePath[j].mX, thePath[j].GetY())->mCategory;
+                unsigned char theKind = gContinentManager.GetContinentAt(thePath[j].GetX(), thePath[j].GetY())->GetCategory();
                 theBlock = theKind == kContinentCategoryCliff || theKind == kContinentCategoryWater || theKind == kContinentCategorySpace;
             }
             if (theBlock) {
@@ -659,13 +659,13 @@ bool EECPWallManager::PlanWall()
         bool theFound = false;
         unsigned long theLimit = 99999;
         for (unsigned long k = 0; k < theStretchCount; k++) {
-            unsigned long theA = theStretches[k].mX;
+            unsigned long theA = theStretches[k].GetX();
             long theB = theStretches[k].GetY();
             unsigned long theLength = theB - theA + 1;
             if (theLength <= 4 || theLength >= theLimit ||
                 !this->IsRunClear(thePath[theA], thePath[theB], false, false) ||
-                theBuildManager->HasGateNear(thePath[theA].mX, thePath[theA].GetY(), 10.0f) ||
-                theBuildManager->HasGateNear(thePath[theB].mX, thePath[theB].GetY(), 10.0f))
+                theBuildManager->HasGateNear(thePath[theA].GetX(), thePath[theA].GetY(), 10.0f) ||
+                theBuildManager->HasGateNear(thePath[theB].GetX(), thePath[theB].GetY(), 10.0f))
                 continue;
             for (unsigned long m = 0; m < theB - theA - 4; m++) {
                 theFree.clear();
@@ -679,11 +679,11 @@ bool EECPWallManager::PlanWall()
             }
         }
         if (theFound) {
-            theRuns.push_back(RTSMapTileRun(thePath[theStretches[theBest].mX], thePath[theStretches[theBest].GetY()]));
+            theRuns.push_back(RTSMapTileRun(thePath[theStretches[theBest].GetX()], thePath[theStretches[theBest].GetY()]));
             this->mRuns.clear();
         } else {
             for (unsigned long n = 0; n < theStretchCount; n++) {
-                U2DPoint<long> theA = thePath[theStretches[n].mX];
+                U2DPoint<long> theA = thePath[theStretches[n].GetX()];
                 U2DPoint<long> theB = thePath[theStretches[n].GetY()];
                 EEGetWallLine(theA, theB, theLine);
                 EEGetUnitsOn(theLine, theLineUnits);
@@ -692,8 +692,8 @@ bool EECPWallManager::PlanWall()
                     continue;
                 bool theNear = false;
                 for (std::vector<U2DPoint<long> >::iterator it = theLine.begin(); it != theLine.end() && !theNear; it++) {
-                    if (theBuildManager->HasWallNear(it->mX, it->mY, 100.0f) ||
-                        theBuildManager->HasGateNear(it->mX, it->mY, 10.0f))
+                    if (theBuildManager->HasWallNear(it->GetX(), it->GetY(), 100.0f) ||
+                        theBuildManager->HasGateNear(it->GetX(), it->GetY(), 10.0f))
                         theNear = true;
                 }
                 if (!theNear)
@@ -801,18 +801,18 @@ bool EECPWallManager::IsPathUsable()
 bool EECPWallManager::ChooseRun(std::vector<RTSMapTileRun>& inRuns, U2DPoint<long>& outFrom, U2DPoint<long>& outTo)
 {
     std::vector<U2DPoint<long> > theTiles;
-    EETechTree* theTree = this->mPlayer->mTechnologies;
-    long theUnitClass = this->mManager->GetWallClass();
+    EETechTree* theTree = this->GetPlayer()->GetTechnologies();
+    long theUnitClass = this->GetManager()->GetWallClass();
     bool theResult = false;
     if (theTree != NULL) {
         EETechTreeNode* theNode = theTree->Get(gUnitClassTable[theUnitClass] != NULL ?
-                                               gUnitClassTable[theUnitClass]->mTechnology : 100000);
+                                               gUnitClassTable[theUnitClass]->GetTechnology() : 100000);
         if (theNode != NULL) {
             long theLength = sWallSizes[this->mSize].mLength;
-            std::sort(inRuns.begin(), inRuns.end(), EECPWMRunLess(this->mFrom, (float)(theLength * theLength)));
+            std::sort(inRuns.begin(), inRuns.end(), EECPWMRunLess(this->GetFrom(), (float)(theLength * theLength)));
             for (unsigned long i = 0; i < inRuns.size() && !theResult; i++) {
                 EEGetWallLine(inRuns[i].mStart, inRuns[i].mEnd, theTiles);
-                if (!this->mPlayer->CanAfford(theNode, 0x20, theTiles.size()))
+                if (!this->GetPlayer()->CanAfford(theNode, 0x20, theTiles.size()))
                     continue;
                 theResult = true;
                 outFrom = inRuns[i].mStart;

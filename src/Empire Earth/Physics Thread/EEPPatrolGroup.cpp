@@ -234,16 +234,18 @@ void EEPPatrolGroup::RemoveUnit(EEComplexUnit* inUnit)
 long EEPPatrolGroup::RepairPointers(unsigned long inMajorVersion, unsigned long inMinorVersion)
 {
     std::vector<long> theIDs;
+    EEComplexUnit* theUnit;
     long theResult = 0;
     for (unsigned long i = 0; i < this->mPatrolPoints.size(); i++) {
-        long theID = (int32_t)USavedID(this->mPatrolPoints[i]);
-        theIDs.push_back(theID);
+        theUnit = this->mPatrolPoints[i];
+        theIDs.push_back((int32_t)USavedID(theUnit));
     }
     this->mPatrolPoints.clear();
     for (unsigned long j = 0; j < theIDs.size() && theResult == 0; j++) {
-        EEComplexUnit* theUnit = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(theIDs[j]));
+        long theID = theIDs[j];
+        theUnit = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(theID));
         if (theUnit != NULL) {
-            if (theUnit->mPatrolGroup != NULL && theUnit->mPatrolGroup != this)
+            if (theUnit->GetPatrolGroup() != NULL && theUnit->GetPatrolGroup() != this)
                 theUnit->SetPatrolGroup(this);
             this->mPatrolPoints.push_back(theUnit);
         } else {

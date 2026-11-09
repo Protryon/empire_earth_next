@@ -49,6 +49,12 @@ public:
         this->mCenterTile.mX = -10000;
     }
 
+    const UWideString& GetText() const { return this->mText; }
+    const GERectangle& GetRect() const { return this->mRect; }
+    const U2DPoint<long>& GetAnchor() const { return this->mAnchor; }
+    unsigned long GetSelectMode() const { return this->mSelectMode; }
+    bool GetHasRectangle() const { return this->mHasRectangle; }
+    bool GetHasAnchor() const { return this->mHasAnchor; }
     UWideString mName;                     // +0x04 (ctor: assigned "")
     UWideString mText;                      // +0x18
     U2DPoint<long> mAnchor;                 // +0x2c

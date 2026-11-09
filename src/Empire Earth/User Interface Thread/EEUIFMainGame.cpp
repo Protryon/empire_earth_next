@@ -786,6 +786,8 @@ long EEUIFMainGame::CopyData()
 {
     GERectangle theView = gViewport.GetViewRectangle();
     unsigned long theElapsed;
+    long theDirection;
+    EETile* theOther;
 
     this->mErrorCriticalSection->Enter();
     if (gWorld.GetCurrentPlayer() != NULL &&
@@ -828,12 +830,10 @@ long EEUIFMainGame::CopyData()
         EEUnit* theUnit = gUnitPicker.PickUnit(gMouse->mPosition, 0);
         long theX;
         long theY;
-        long theDirection;
         if (theUnit != NULL && theUnit->mUnitClass->mIsWall) {
             theX = theUnit->mTileX;
             theY = theUnit->mTileY;
         } else {
-            EETile* theOther;
             EEPointUnitOrTileXY(gMouse->mPosition, theOther, theX, theY, true);
         }
         if (theUnit != NULL)
@@ -1139,16 +1139,16 @@ bool EEUIFMainGame::IsInGameView(const GE2DPoint& inLocation)
 // 0x265d79 is plain ret. It does not consume a form receiver.
 long EEGetAttackRangeKind(EEUnit* inTarget, unsigned long inCommand, bool inAllowDead)
 {
-    GE3DPoint theAimPoint;
     GE3DPoint theTargetPoint;
+    GE3DPoint theAimPoint;
     GE3DPoint theAttackerPoint;
     long theResult = 0;
     EEUnitClassUpgrade* theStats = inTarget->mStats;
     EESelectedGroup* theGroup = gWorld.GetCurrentPlayer()->mSelectedGroup;
     unsigned long theCount = theGroup->GetNumUnits();
     bool theCanAttack = false;
-    bool theHasHealth = false;
     bool theInRange = false;
+    bool theHasHealth = false;
 
     if (inCommand == 8 || (!inAllowDead && inTarget->GetHitPoints() < 1))
         return theResult;
@@ -1435,7 +1435,7 @@ void EEUIFMainGame::StartGate(long inTechnology)
     this->mBuild->mTechnology = inTechnology;
     this->mBuildGate.mTechnology = inTechnology;
     this->mBuildGate.mWallType = theWallType;
-    this->mBuildGate.mUnitClass = theClass;
+    this->mBuildGate.SetUnitClass(theClass);
     EEUIBuildGate* theTool = &this->mBuildGate;
     theTool->Initialize(thePlayer->mPlayerID);
 

@@ -74,8 +74,8 @@ extern UString gU5656B8; // original UString("Civilizations")
 extern UString gU5656C8; // original UString(".civ")
 extern UString gU530B88; // existing Empire Earth.cpp archive extension object
 // cdecl civilization helpers (the original's callers push zero and two arguments; the second returns an error code)
-void Fn280BB1();
-long Fn28015D(const UString& inName, bool inCampaign);
+void CivBuilderEditCurrentCivilization();
+long CivBuilderSaveCivilization(const UString& inName, bool inCampaign);
 
 // the progress archive's tag keys (unguarded file-scope globals, 0x565720 down to 0x5656d8)
 const UWideString kEECampaignProgressChecksumKey("Checksum");
@@ -118,9 +118,9 @@ void EECampaignProgress::GetCompletedScenarios(std::vector<UWideString>& outScen
 }
 
 // The pooled empty byte string (referenced at 0x68f763)
-extern char gU4E5B98[];
+extern char gEmptyString[];
 // Original cdecl scenario-civilization loader (EEAResetAllPlayerInfo, 0x2806e7).
-long Fn2806E7(UString& inName, EEPlayer* inPlayer);
+long EEApplyCivilizationFile(UString& inName, EEPlayer* inPlayer);
 
 // FUNCTION: EXE 0x68f56d
 // Before a scenario of a user campaign, loads the player's progress and gives the current player the civilization
@@ -136,67 +136,73 @@ long EECampaignProgress::RestoreCivilization(const UWideString& inUser, const UW
     UString theDestination;
     FSPath* thePath = new FSPath;
     bool theExtracted = false;
-    long theResult = kErrorOK;
+    long theResult;
+    unsigned long theAvailable;
+    FSFileSpec* theFile;
+    FSArchive* theArchive;
+    FSMemoryFile* theCivilization;
+    FSFileSpec* theTemporary;
+    std::vector<UWideString>::iterator theFound;
 
-    if (EECampaignFormManager::GetBuiltInCampaign(inCampaign) == 0) {
-        theResult = this->Load(inUser, inCampaign, inChecksum, false);
+    if (EECampaignFormManager::GetBuiltInCampaign(inCampaign) != 0) {
+        thePath->Dereference();
+        return kErrorOK;
+    }
+    theResult = this->Load(inUser, inCampaign, inChecksum, false);
+    if (theResult == kErrorOK) {
+        sprintf(theChecksum, "%ld", inChecksum);
+        theDirectory.SetVolume(gStartupVolume);
+        theDirectory.SetDirectory(gStartupDirectory + "Users\\" + (const char*)inUser + "\\");
+        thePath->AddDirectory(theDirectory, true);
+        theResult = thePath->FindFile(UString((const char*)(inCampaign + theChecksum + (const char*)gU530B88)),
+                                     theFile);
         if (theResult == kErrorOK) {
-            sprintf(theChecksum, "%ld", inChecksum);
-            theDirectory.SetVolume(gStartupVolume);
-            theDirectory.SetDirectory(gStartupDirectory + "Users\\" + (const char*)inUser + "\\");
-            thePath->AddDirectory(theDirectory, true);
-            FSFileSpec* theFile;
-            theResult = thePath->FindFile(UString((const char*)(inCampaign + theChecksum + (const char*)gU530B88)),
-                                         theFile);
+            theArchive = new FSArchive(*theFile);
+            theResult = theArchive->Open();
             if (theResult == kErrorOK) {
-                FSArchive* theArchive = new FSArchive(*theFile);
-                theResult = theArchive->Open();
-                if (theResult == kErrorOK) {
-                    long theAvailable = 0;
-                    thePreviousScenario = gU4E5B98;
-                    this->GetCompletedScenarios(theCompleted);
-                    if (std::find(theCompleted.begin(), theCompleted.end(), inScenario) == theCompleted.end())
-                        theCompleted.push_back(inScenario);
-                    for (unsigned long i = 0; i < theCompleted.size(); i++) {
-                        if (i > 0) {
-                            thePreviousScenario = theCompleted[i - 1];
-                            theAvailable = this->mCivPointsAvailable[i - 1];
-                        }
-                        if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theCompleted[i]),
-                                      reinterpret_cast<const unsigned char*>((const char*)inScenario)) == 0)
-                            break;
+                theAvailable = 0;
+                thePreviousScenario = gEmptyString;
+                this->GetCompletedScenarios(theCompleted);
+                theFound = std::find(theCompleted.begin(), theCompleted.end(), inScenario);
+                if (theFound == theCompleted.end())
+                    theCompleted.push_back(inScenario);
+                for (unsigned long i = 0; i < theCompleted.size(); i++) {
+                    if (i > 0) {
+                        thePreviousScenario = theCompleted[i - 1];
+                        theAvailable = this->mCivPointsAvailable[i - 1];
                     }
-                    if (thePreviousScenario.GetLength() > 0) {
-                        this->MakeKey(theKey, inCampaign, thePreviousScenario, inChecksum);
-                        FSMemoryFile* theCivilization;
-                        theResult = theArchive->FindFile(gU5656B8 + "\\" + (const char*)theKey + gU5656C8,
-                                                        theCivilization);
+                    if (PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)theCompleted[i]),
+                                  reinterpret_cast<const unsigned char*>((const char*)inScenario)) == 0)
+                        break;
+                }
+                if (thePreviousScenario.GetLength() > 0) {
+                    this->MakeKey(theKey, inCampaign, thePreviousScenario, inChecksum);
+                    theResult = theArchive->FindFile(gU5656B8 + "\\" + (const char*)theKey + gU5656C8,
+                                                    theCivilization);
+                    if (theResult == kErrorOK) {
+                        theDestination = gStartupVolume + gStartupDirectory + "Users\\" + (const char*)inUser
+                                         + "\\" + gU5656B8 + "\\" + (const char*)theKey + gU5656C8;
+                        theResult = theCivilization->Copy(theDestination, false, true);
                         if (theResult == kErrorOK) {
-                            theDestination = gStartupVolume + gStartupDirectory + "Users\\" + (const char*)inUser
-                                             + "\\" + gU5656B8 + "\\" + (const char*)theKey + gU5656C8;
-                            theResult = theCivilization->Copy(theDestination, false, true);
-                            if (theResult == kErrorOK) {
-                                theExtracted = true;
-                                UString theName((const char*)theKey);
-                                theResult = Fn2806E7(theName, gWorld.GetCurrentPlayer());
-                                if (theResult == kErrorOK && theAvailable != 0)
-                                    gWorld.GetCurrentPlayer()->mCivilization.AddPoints(theAvailable);
-                            }
+                            theExtracted = true;
+                            UString theName((const char*)theKey);   // named: the loader takes a non-const reference
+                            theResult = EEApplyCivilizationFile(theName, gWorld.GetCurrentPlayer());
+                            if (theResult == kErrorOK && theAvailable > 0)
+                                gWorld.GetCurrentPlayer()->mCivilization.AddPoints(theAvailable);
                         }
                     }
                 }
-                theArchive->Close();
-                delete theArchive;
-                delete theFile;
-            } else {
-                theResult = kErrorOK;
             }
-            if (theExtracted) {
-                FSFileSpec* theTemporary;
-                if (thePath->FindFile(gU5656B8 + "\\" + (const char*)theKey + gU5656C8, theTemporary) == kErrorOK) {
-                    theTemporary->Delete();
-                    delete theTemporary;
-                }
+            theArchive->Close();
+            delete theArchive;
+            delete theFile;
+        } else {
+            theResult = kErrorOK;
+        }
+        if (theExtracted) {
+            if (thePath->FindFile(gU5656B8 + "\\" + (const char*)theKey + gU5656C8, theTemporary) == kErrorOK) {
+                theTemporary->Delete();
+                delete theTemporary;
             }
         }
     }
@@ -286,8 +292,8 @@ long EECampaignProgress::Load(const UWideString& inUser, const UWideString& inCa
 long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const UWideString& inCampaign,
                                   const UWideString& inScenario, unsigned long inChecksum)
 {
-    std::vector<UString> theArchiveFiles;
     std::vector<UString> theTemporaryFiles;
+    std::vector<UString> theArchiveFiles;
     FSFileSpec theDirectory;
     UWideString theChecksum;
     UWideString theKey;
@@ -298,6 +304,7 @@ long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const 
     FSPath* thePath = new FSPath;
     bool theAlreadyCompleted = false;
     long theResult;
+    FSFileSpec* theFile;
 
     this->MakeKey(theKey, inCampaign, inScenario, inChecksum);
     sprintf(theChecksum, "%ld", inChecksum);
@@ -305,10 +312,11 @@ long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const 
     theDirectory.SetDirectory(gStartupDirectory + "Users\\" + (const char*)inUser + "\\");
     thePath->AddDirectory(theDirectory, true);
     long theAvailable = gWorld.GetCurrentPlayer()->mCivilization.GetAvailablePoints();
-    if (std::find(this->mCompletedScenarios.begin(), this->mCompletedScenarios.end(), inScenario) != this->mCompletedScenarios.end())
+    std::vector<UWideString>::iterator theFound = std::find(this->mCompletedScenarios.begin(), this->mCompletedScenarios.end(), inScenario);
+    if (theFound != this->mCompletedScenarios.end())
         theAlreadyCompleted = true;
-    Fn280BB1();
-    theResult = Fn28015D(UString((const char*)theKey), true);
+    CivBuilderEditCurrentCivilization();
+    theResult = CivBuilderSaveCivilization(UString((const char*)theKey), true);
     if (theResult == kErrorOK) {
         if (!theAlreadyCompleted) {
             this->mNumScenariosCompleted++;
@@ -328,16 +336,13 @@ long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const 
             sprintf(theTag, "%s%.03ld", (const char*)kEECampaignProgressScenarioNameKey, i);
             theArchive->SetTag(theTag, this->mCompletedScenarios[i]);
             sprintf(theTag, "%s%.03ld", (const char*)kEECampaignProgressNumCivPointsAvailableKey, i);
-            long theValue;
             if (theAlreadyCompleted && PlatMbsICmp(reinterpret_cast<const unsigned char*>((const char*)this->mCompletedScenarios[i]),
                                                reinterpret_cast<const unsigned char*>((const char*)inScenario)) == 0)
-                theValue = theAvailable;
+                sprintf(thePoints, "%ld", theAvailable);
             else
-                theValue = this->mCivPointsAvailable[i];
-            sprintf(thePoints, "%ld", theValue);
+                sprintf(thePoints, "%ld", this->mCivPointsAvailable[i]);
             theArchive->SetTag(theTag, thePoints);
             theFileName = gU5656B8 + "\\" + (const char*)this->mCivilizationKeys[i] + gU5656C8;
-            FSFileSpec* theFile;
             if (thePath->FindFile(theFileName, theFile) != kErrorOK) {
                 theComplete = false;
                 break;
@@ -349,7 +354,6 @@ long EECampaignProgress::SaveCompletedScenario(const UWideString& inUser, const 
         if (theComplete)
             theResult = theArchive->Create(theDirectory, theArchiveFiles, 0x1000);
         for (std::vector<UString>::iterator it = theTemporaryFiles.begin(); it != theTemporaryFiles.end(); ++it) {
-            FSFileSpec* theFile;
             if (thePath->FindFile(*it, theFile) == kErrorOK) {
                 theFile->Delete();
                 delete theFile;

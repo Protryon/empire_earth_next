@@ -24,6 +24,9 @@ public:
         this->mRight = 0;
     }
 #ifdef LLE_EXE_HEADERS
+    // exe: user-declared empty dtor: a returned rectangle is then built in place, no temporary and movsd copy
+    // (EEGetUnitsInRectangle's GetRegions 0xa50a6, 0x46bace 93 -> 99.66, 0x609847 91 -> 99.63, as U2DPoint's)
+    ~U2DRectangle() {}
     // exe: user-declared (0x6c5ce, ICF RTSMapVertexColors::operator=: +0c, +04, +00, +08, the ctor's order): it makes
     // pair<U2DRectangle<long>, unsigned long>'s implicit operator= an out-of-line call (EECPBuildManager), and fill /
     // copy_backward copy member by member (EESelectedGroup 0x209b5c / 0x209b8a)

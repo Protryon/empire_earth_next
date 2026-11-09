@@ -133,7 +133,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EESEEHideUI.h"
 #include "ee/EEStringIDs.h"
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 extern GEFont* gU531930;                    // 0x531930 (Empire Earth.cpp's fonts)
 extern GEFont* gU531934;                    // 0x531934
@@ -145,7 +145,7 @@ long EEUIENewPlayer::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     EEUIFScenarioEditor* theEditor = static_cast<EEUIFScenarioEditor*>(inForm);
     theEditor->GetUnitScreen()->ReselectUnitType();
-    static_cast<EESEPlayerScreen*>(theEditor->mTabGroups[kEditorTabPlayers])->FillTechLists();
+    theEditor->GetPlayerScreen()->FillTechLists();
     return kErrorOK;
 }
 
@@ -404,7 +404,7 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
     this->mPlayerComboBox->SetTriggerEvent(kControlTriggerSelectionChanged, this->mNewPlayerEvent);
 
     // the top text label
-    this->mLoadTextLabel = new UITextLabel(UWideString(gU4E5B98), gU531930, 9,
+    this->mLoadTextLabel = new UITextLabel(UWideString(gEmptyString), gU531930, 9,
                             GERectangle(GE2DPoint(500.0f, 0.0f), 300.0f, (float)gU531930->GetHeight()), this, 0,
                             theIndex, 0);
     this->mLoadTextLabel->SetAlignment(kTextAlignRight);
@@ -419,7 +419,7 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
     this->mLoadTextLabel->SetFitRectToText(true);
 
     // the loading text label
-    this->mHelpLabel = new UITextLabel(UWideString(gU4E5B98), gU531934, 0x10, GERectangle(GE2DPoint(0.0f, 0.0f), 400.0f, 400.0f),
+    this->mHelpLabel = new UITextLabel(UWideString(gEmptyString), gU531934, 0x10, GERectangle(GE2DPoint(0.0f, 0.0f), 400.0f, 400.0f),
                             this, 1, theIndex, 0);
     this->mHelpLabel->SetAlignment(kTextAlignLeft);
     this->mHelpLabel->SetBgOpacity(1.0f);
@@ -440,7 +440,7 @@ EEUIFScenarioEditor::EEUIFScenarioEditor(UIManager* inManager)
     this->CreateToolbarButtons(theIndex);
 
     // the hide-UI check box
-    this->mHideUICheckBox = new UICheckBox(kScenarioEditorHideUICheckBox, UWideString(gU4E5B98), gU531934,
+    this->mHideUICheckBox = new UICheckBox(kScenarioEditorHideUICheckBox, UWideString(gEmptyString), gU531934,
                            GERectangle(GE2DPoint(849.0f, 718.0f), 20.0f, 20.0f), this, theIndex, 0, false);
     this->mHideUICheckBox->SetStringTableID(IDS_HIDE_UI);
     this->mHideUICheckBox->SetChecked(true);

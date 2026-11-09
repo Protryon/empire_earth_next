@@ -45,7 +45,7 @@ extern long gDefaultTerrain;                // 0x4e86d0 (EETerrainTable.cpp)
 extern long gFirstCliffTerrain;             // 0x4e86e8 (EETerrainTable.cpp)
 extern bool gSightUpdatesEnabled;           // 0x4c76ec (EEUserInterface.cpp; provisional name)
 // 0x24b212 (EEFOFindNewTargetNearOldTarget.cpp's range): the tiles within inRadius of inCenter (provisional name)
-void Fn24B212(const GE3DPoint& inCenter, float inRadius, std::vector<EETileCoordinate>& outTiles);
+void EEGetTilesNearPoint(const GE3DPoint& inCenter, float inRadius, std::vector<EETileCoordinate>& outTiles);
 
 // unit-local constants (.rdata next to EEMap's vtables)
 const float kMapTileSize = 0.40824828f;     // 0x441ce8 (RTSMap's ctor argument; provisional name)
@@ -262,7 +262,7 @@ void EEMap::RemoveSight(EEPlayer* inPlayer, float inX, float inY, float inRadius
                 theVisible = false;
         } else
             theVisible = ::gWorld.mPlayers[::gWorld.mCurrentPlayer] == inPlayer;
-        Fn24B212(GE3DPoint(inX, inY, 0.0f), inRadius, theTiles);
+        EEGetTilesNearPoint(GE3DPoint(inX, inY, 0.0f), inRadius, theTiles);
         for (unsigned long i = 0, theCount = theTiles.size(); i < theCount; i++) {
             if (!this->mTerrainMesh.GetIsValidTile(theTiles[i].GetX(), theTiles[i].GetY())
                 || !this->mTerrainMesh.GetIsWaterTile(theTiles[i].GetX(), theTiles[i].GetY()))
@@ -589,7 +589,7 @@ void EEMap::AddSight(EEPlayer* inPlayer, float inX, float inY, float inRadius, b
                 theVisible = false;
         } else
             theVisible = ::gWorld.mPlayers[::gWorld.mCurrentPlayer] == inPlayer;
-        Fn24B212(GE3DPoint(inX, inY, 0.0f), inRadius, theTiles);
+        EEGetTilesNearPoint(GE3DPoint(inX, inY, 0.0f), inRadius, theTiles);
         for (unsigned long i = 0, theCount = theTiles.size(); i < theCount; i++) {
             if (!this->mTerrainMesh.GetIsValidTile(theTiles[i].GetX(), theTiles[i].GetY())
                 || !this->mTerrainMesh.GetIsWaterTile(theTiles[i].GetX(), theTiles[i].GetY()))

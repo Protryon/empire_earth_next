@@ -114,8 +114,6 @@ void EESMCondition::Copy(const EESMCondition& inCondition)
 // FUNCTION: EXE 0x5baabf
 // Returns whether the condition holds: object exists, player attribute/technology/diplomacy for any or all chosen
 // players, trigger on/fired, elapsed time/hour/difficulty, or the last chat text containing a phrase
-// NEAR: the player loops' flag shapes are a first decode (the diplomacy all/all test matches the original's
-// i == 0 && j == 0 seed at 0x5bac3b)
 bool EESMCondition::Evaluate()
 {
     std::vector<long> thePlayers;
@@ -123,6 +121,7 @@ bool EESMCondition::Evaluate()
     EESMObject* theObject = gWorld.mScenarioManager->GetScenarioObject(this->mObjectIndex);
     EESMTrigger* theTrigger = gWorld.mScenarioManager->GetTrigger(this->mTrigger);
     bool theResult = false;
+    bool theTimeResult = true;
     switch (this->GetType()) {
     case kSMConditionAlwaysTrue:
         theResult = true;
@@ -138,6 +137,7 @@ bool EESMCondition::Evaluate()
     case kSMConditionPlayerDiplomacy: {
         bool theAny = gWorld.mScenarioManager->ChoosePlayer(this->mPlayer, &thePlayers, false) == -1;
         theResult = false;
+        unsigned char j;
         for (unsigned char i = 0; i < thePlayers.size(); i++) {
             bool thePlayerResult = false;
             if (theAny && theResult)
@@ -146,7 +146,7 @@ bool EESMCondition::Evaluate()
                 EEPlayer* thePlayer = gWorld.mPlayers[thePlayers[i]];
                 if (thePlayer != NULL) {
                     bool theAnyOther = gWorld.mScenarioManager->ChoosePlayer(this->mOtherPlayer, &theOthers, false) == -1;
-                    for (unsigned char j = 0; j < theOthers.size(); j++) {
+                    for (j = 0; j < theOthers.size(); j++) {
                         if (theAnyOther) {
                             thePlayerResult = thePlayer->mEnemies[theOthers[j]] == (long)this->mDiplomacy;
                             if (thePlayerResult)
@@ -164,18 +164,18 @@ bool EESMCondition::Evaluate()
             } else if (this->GetType() == kSMConditionPlayerAttribute) {
                 unsigned long theValue = this->GetPlayerValue(thePlayers[i], this->mAttribute);
                 if (this->mUsesPlayerAttribute == true) {
-                    long theOther = gWorld.GetScenarioManager()->ChoosePlayer(this->mOtherPlayer, &theOthers, false);
+                    bool theAnyOther = gWorld.GetScenarioManager()->ChoosePlayer(this->mOtherPlayer, &theOthers, false) == -1;
                     thePlayerResult = false;
-                    for (unsigned char j = 0; j < theOthers.size(); j++) {
+                    for (j = 0; j < theOthers.size(); j++) {
                         unsigned long theOtherValue = this->GetPlayerValue(theOthers[j], this->mOtherAttribute);
-                        if (theOther == -1) {
+                        if (theAnyOther) {
                             thePlayerResult = this->Compare(theValue, this->mOperator, theOtherValue);
                             if (thePlayerResult)
                                 break;
-                        } else if ((!thePlayerResult && j != 0) || !this->Compare(theValue, this->mOperator, theOtherValue))
-                            thePlayerResult = false;
-                        else
+                        } else if ((thePlayerResult || j == 0) && this->Compare(theValue, this->mOperator, theOtherValue))
                             thePlayerResult = true;
+                        else
+                            thePlayerResult = false;
                     }
                 } else
                     thePlayerResult = this->Compare(theValue, this->mOperator, this->mAmount);
@@ -184,7 +184,7 @@ bool EESMCondition::Evaluate()
                 if (thePlayer != NULL) {
                     long theTech = this->mTechnology;
                     if (theTech < EEEpochCount())
-                        thePlayerResult = theTech <= thePlayer->GetTechTree()->mCurrentEpoch;
+                        thePlayerResult = thePlayer->GetTechTree()->mCurrentEpoch >= theTech;
                     else {
                         EETechTreeNode* theNode = thePlayer->GetTechTree()->Get(theTech);
                         if (theNode != NULL && (theNode->mData->mMakesUnit || theNode->mIsResearched)) {
@@ -218,19 +218,18 @@ bool EESMCondition::Evaluate()
             theResult = theTrigger != NULL && theTrigger->mIsOn;
         break;
     case kSMConditionGameAttribute: {
-        bool theTimeResult = true;
         if (this->mUsesElapsedTime) {
             float theTime = gWorld.mScenarioManager->mTime * 0.001f;
-            if (theTime < (float)this->mMinTime || (float)this->mMaxTime < theTime)
-                theResult = false;
-            else
+            if ((float)this->mMinTime <= theTime && (float)this->mMaxTime >= theTime)
                 theResult = true;
+            else
+                theResult = false;
             theTimeResult = theResult;
         }
         if (this->mUsesHour && theTimeResult) {
-            unsigned long theHour = (long)(gWorld.mTimeOfDay * kSMCHoursPerDay);
-            theTimeResult = !((30 - theHour) % 24 < this->mHour);
-            theResult = theTimeResult;
+            unsigned long theHour = (long)(gWorld.GetTimeOfDay() * kSMCHoursPerDay);
+            theResult = !((30 - theHour) % 24 < this->mHour);
+            theTimeResult = theResult;
         }
         if (this->mUsesDifficulty && theTimeResult)
             theResult = gDifficultyLevel == (long)this->mDifficulty;

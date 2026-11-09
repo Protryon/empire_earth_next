@@ -24,7 +24,7 @@ extern bool gCameraFollowing;
 extern bool& gTakeJPGScreenshots;
 extern bool& gAntiAliasing;
 // 0x52fa88 is not a global: gGameState.mGameOptions.mIsMultiplayer (ee/EEGameState.h); the main screen sets it
-bool Fn14A09E();                            // 0x14a09e: returns the byte 0x531a40 (EEScenarioManager::Load drops the mPendingEffects effects while set; provisional name)
+bool GetIsLoadingScenario();                // 0x14a09e: returns the byte 0x531a40 (EEScenarioManager::Load drops the mPendingEffects effects while set; provisional name)
 extern long& gGameStateLoadType;            // 0x52fa58 (= 2 when a local server starts a game: SPLE LoadFile, 0x12ccd0; provisional name)
 // game functions the EEM* messages call (provisional names and argument types)
 class EEComplexUnit;
@@ -62,7 +62,7 @@ extern bool gFreeCamera;
 extern UWideString& gPlayerName;            // 0x530768 the single player's name (the SP screen's edit box 8; provisional name)
 extern UWideString gGameVersion;           // 0x529a08 (the version a client sends with its connection request; provisional name)
 extern uint32_t gBinaryChecksum;      // 0x5319e4 (likewise, the binary checksum; provisional name)
-extern unsigned long& gU5308A0;             // 0x5308a0 (passed to the local server's ctor by the SP random map; provisional name)
+extern unsigned long& gNetworkAdapter;      // 0x5308a0 (passed to the local server's ctor by the SP random map; provisional name)
 extern long& gDifficultyLevel2;             // 0x530704 (likewise; provisional name)
 extern unsigned long& gStartTime;           // 0x5318d0 (EEClient 0xb80ef/EEServer 0xcc34e: NEMStartGame's offset start time; provisional name)
 
@@ -99,7 +99,7 @@ void EEPostF9Key();
 class EEUIFMainGame;
 extern EEUIFMainGame* gSavedMainGameForm;  // 0x563144 (LoadScenario stores gUIManager->mMainGameForm; provisional name)
 extern UString gMultiplayerString;         // 0x562fd8 (defined by EEUIEMultiplayerScreenEvents.cpp, ""; provisional name)
-bool EECheck2989A9(bool inFlag);           // 0x2989a9 (inFlag ? byte 0x531664 : true; provisional name)
+bool EEIsMultiplayerGame(bool inFlag);     // 0x2989a9 (inFlag ? byte 0x531664 : true; provisional name)
 void EEStartExternalLobby();               // 0x297276 (the main screen's MultiPlayer when the check passes; provisional name)
 void EEShowSinglePlayerScreen();           // 0x13fe97 (the campaign choice's Back, after Pop; provisional name)
 // the built-in campaigns' names (Empire Earth.cpp init chains 0x13eef8..; provisional names)

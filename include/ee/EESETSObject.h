@@ -52,6 +52,7 @@ public:
     void UpdateSelection();                 // 0x192ad3 (EESEEObjectDetail; resizes mUnitIDs to the editor's selection)
     void CheckChanged(UIEntity* inCheckBox);    // 0x192ee0 (EESEEObjectCheck: the check box, by its id 0x846..)
 
+    unsigned long GetUnitIDsAt(unsigned long inIndex) const { return this->mUnitIDs[inIndex]; }
     std::vector<unsigned long> mUnitIDs;    // +0x0c (0x192b39 resizes it to the editor's mSelectedUnits and copies the
                                             // units' mUnitID)
     std::vector<unsigned long> mUnitTypes;  // +0x1c (Virtual20: 0, then the unit classes of the type combo box)
@@ -68,6 +69,10 @@ public:
     EESETSAEditBox* mMaxEditBox;            // +0x5c 0x838
     UICheckBox* mDynamicCheckBox;           // +0x60 0x844 (string 0x766b)
     UITextLabel* mPlayerLabel;              // +0x64 0x83e (string 0x7666)
+    EESETSEScenarioComboBox* GetAreaComboBox() const { return this->mAreaComboBox; }
+    EESETSUICBPlayer* GetPlayerBC() const { return this->mPlayerBC; }
+    EESETSUICBPlayer* GetPlayerCC() const { return this->mPlayerCC; }
+    EESETSUICBPlayer* GetPlayer() const { return this->mPlayer; }
     EESETSUICBPlayer* mPlayer;              // +0x68 0x841
     UITextLabel* mGroupLabel;               // +0x6c 0x83e (string 0x503a)
     EESETSAComboBox* mGroupComboBox;        // +0x70 0x841 (the 0x75 unit groups, then the unit sets)

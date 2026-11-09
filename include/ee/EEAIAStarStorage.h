@@ -78,7 +78,9 @@ public:
     EEAIAStarNode* mPathCursor;             // +0x30
     EEAIAStarNode* mCurrentNode;            // +0x34
     unsigned char* mTileFlags;              // +0x38 (delete[] in the dtor; one byte per tile: 8 closed, 4 open)
+    long GetWidth() const { return this->mWidth; }
     long mWidth;                            // +0x3c the width (the terrain storages: +0x58 = this - 1)
+    long GetHeight() const { return this->mHeight; }
     long mHeight;                           // +0x40 the height (the terrain storages: +0x50 = this - 1)
     long mBucketCount;                      // +0x44 the bucket count (= 0x35)
     bool mHasBounds;                        // +0x48 (set once the bounds hold a tile)

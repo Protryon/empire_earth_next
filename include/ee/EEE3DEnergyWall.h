@@ -14,7 +14,7 @@ class EEGraphicObject;
 long EEGetUnitsOnTile(long inX, long inY, std::vector<EEUnit*>& outUnits);  // returns their count (eax from 0x24c433)
 // 0x103ac8 (cdecl, in EEEffect.cpp's range; MISSING there): a textured ground strip from inFrom to inTo of width inWidth
 // (the ground batch). Declared here because only this unit calls it so far; types from the pushes (provisional name)
-void Fn103AC8(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inWidth, const GEColor& inColor,
+void AddGroundStrip(const GE3DPoint& inFrom, const GE3DPoint& inTo, float inWidth, const GEColor& inColor,
               const GETextureCoordinate& inOffset, const GETextureCoordinate& inSize, float inAlpha, float inBrightness,
               float inAlphaReference);
 
@@ -26,7 +26,7 @@ public:
     virtual long DrawPass2();               // +0x08 (`return 0`: ICF-folded into 0xfca98)
     virtual long DrawPass4();               // +0x10 (likewise)
     virtual long DrawPass5();               // +0x14 (likewise)
-    virtual long DrawPass6();               // +0x18 0xedb6c (the draw: Fn103AC8 per segment)
+    virtual long DrawPass6();               // +0x18 0xedb6c (the draw: AddGroundStrip per segment)
     virtual long Queue(EEEffectQueue* inQueues);       // +0x24 0xed9d0 (alpha, colour, texture frame; queue 4)
     virtual void PrepareQueue();            // +0x2c (empty: ICF-folded into 0xe123d)
     virtual long SetUp();                   // +0x30 0xedb58 (loads the graphic)

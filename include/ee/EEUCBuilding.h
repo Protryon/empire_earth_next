@@ -18,7 +18,7 @@ class EEUCBuilding : public EEUnitClass {
 public:
     EEUCBuilding();                         // inline
     EEUCBuilding(EEUnitClassRecord* inRecord, EEPhysicsModel* inModel);   // inline: defined in EEUnitClass.cpp (the class factory 0x2358b1; out of line 0x2361e3)
-    EEUnit* FindNearestTargetBuilding(EEUnit* inUnit);  // 0x20ed72 (Virtual74 passes this in ecx; provisional name)
+    EEUnit* FindNearestTargetBuilding(EEUnit* inUnit);  // 0x20ed72 (EnabledChanged passes this in ecx; provisional name)
     virtual ~EEUCBuilding() {}              // +0x00 dtor 0x2305ee
     virtual void GroundLocation(GE3DPoint& ioLocation); // +0x04 0x20e58d (ICF: EEUCBuildingPriest, EEUCGate...)
     virtual EEUnit* CreateUnit(long inX, long inY, long inPlayer, bool inIsFoundation, EEUnit* inCreator); // +0x30 0x20e909 (ICF: EEUCBuildingPriest)
@@ -42,8 +42,8 @@ public:
     virtual void UpdateEffects(EEComplexUnit*); // +0xbc 0x20fd62 (ICF: EEUCGate, EEUCMiningBuilding)
     virtual bool SelectUnitToRelease(EEComplexUnit* inUnit);  // +0xe0 0x20e5b8 NEW (ICF: EEUCBuildingPriest, EEUCGate...)
     // EEUCBuilding.cpp's members (provisional names)
-    bool EruptVolcano(EEComplexUnit* inUnit);  // 0x20e809 (VirtualA0 0x7ee: the volcano erupts)
-    void ReleaseUnit(EEComplexUnit* inUnit);  // 0x20f2bb (Virtual74 0x32ca)
+    bool EruptVolcano(EEComplexUnit* inUnit);  // 0x20e809 (GetMinHeight 0x7ee: the volcano erupts)
+    void ReleaseUnit(EEComplexUnit* inUnit);  // 0x20f2bb (EnabledChanged 0x32ca)
     void UpdateArmed(EEComplexUnit* inUnit);  // 0x20fef9 (VirtualB8: an attacking building)
 };
 
@@ -54,7 +54,7 @@ long EEGetUnitFacingQuarter(EEComplexUnit* inUnit); // 0x20ed11 (EEGetFacingQuar
 void EEGetBlockRing(long inArg, long inX, long inY, long inWidth, long inHeight, std::vector<EETileCoordinate>& outTiles,
                 bool inArg7);           // 0x246a42 (the tiles of a rectangle)
 float EEGetSpaceDockYaw(long inX, long inY, long inSize);  // 0x23d008 (a yaw for the footprint at (inX, inY))
-void EEAddToFootprintTiles(EEUnit* inUnit);  // 0x24caef (Virtual84)
-void EERemoveFromFootprintTiles(EEUnit* inUnit);  // 0x24d946 (Virtual98)
+void EEAddToFootprintTiles(EEUnit* inUnit);  // 0x24caef (NotifyRootVisibility)
+void EERemoveFromFootprintTiles(EEUnit* inUnit);  // 0x24d946 (GetMouseChild)
 
 #endif

@@ -52,6 +52,7 @@ struct EERMRing {                         // proven sizeof 0x10 (Default.dll uni
 };
 
 struct EERMTeam {                           // proven sizeof 0x20 (map +0x110 vector: index << 5, 0x4db3) (provisional name)
+    long GetPlayersAt(unsigned long inIndex) const { return this->mPlayers[inIndex]; }
     std::vector<long> mPlayers;             // +0x00 proven by CMUGeneratePlayerPositions 0x2843 (1-based player
                                             // numbers: players[mPlayers[j] - 1])
     std::vector<GE2DPoint> mPositions;      // +0x10 proven by 0x2843 (mPositions[j] -> player position)

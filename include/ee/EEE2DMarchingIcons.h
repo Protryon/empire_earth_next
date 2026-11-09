@@ -1,7 +1,7 @@
 // C:\EEX\Empire Earth\Graphics Thread\EEE2DMarchingIcons.h (RECONSTRUCTION; file name inferred). Icons circling a
 // unit while an area effect of a kind is on it (RTTI EEE2DMarchingIcons > EEEffect2D; vtable 0x43fdc4;
 // EEE2DMarchingIcons.cpp 0xe3954..0xe4529; sizeof 0xa0). The circular and square variants lay the
-// icons out (pure Virtual54). Layout from the two ctors 0xe3aa3/0xe3b1d, the dtor 0xe3bf6 and Load/Save; names
+// icons out (pure WriteDetailsHook). Layout from the two ctors 0xe3aa3/0xe3b1d, the dtor 0xe3bf6 and Load/Save; names
 // are provisional (the members after the save keys). Requires ee/EEEffect2D.h, lle/GE3DPoint.h.
 #ifndef EE_EEE2DMARCHINGICONS_H
 #define EE_EEE2DMARCHINGICONS_H
@@ -37,10 +37,10 @@ public:
     virtual bool GetPlayerID(unsigned long& outPlayerID);  // +0x60 0xe3dd0
     virtual void LayOutIcons();             // +0x64 0xe42db (turns the icons)
 
-    unsigned long GetIconCount();           // 0xe3dc9 (the variants' Virtual54) (provisional name)
+    unsigned long GetIconCount();           // 0xe3dc9 (the variants' WriteDetailsHook) (provisional name)
     float GetHeightOffset();                // 0xe3df1 (0.05) (provisional name)
 
-    std::vector<GE3DPoint> mOffsets;        // +0x54 (Virtual54's output)
+    std::vector<GE3DPoint> mOffsets;        // +0x54 (WriteDetailsHook's output)
     std::vector<GE3DPoint> mShown;          // +0x64 (the offsets drawn this frame)
     long mAreaEffectType;                   // +0x74
     long mAreaEffectIconCount;              // +0x78 (= 1, or the matching area effect's template +0x34)

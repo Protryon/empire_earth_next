@@ -56,6 +56,7 @@ public:
     unsigned short mNextPathAreaID;         // +0x90 (= 1; 0x208cc: the manager's mPathAreas size and mNextPathAreaID)
     long mKind;                             // +0x94 (the tile kind 1..0xf of the area)
     long mMode;                             // +0x98 (0: path areas; 1..4: 0x204ea's kind pass)
+    unsigned short GetNextKindID() const { return this->mNextKindID; }
     unsigned short mNextKindID;             // +0x9c (0x204ea: the manager's mNextID124..mNextID130 by kind)
 };
 

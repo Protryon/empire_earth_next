@@ -1,8 +1,7 @@
 // C:\EEX\Empire Earth\WONAPI\WONLobby\GameCode\EmpireEarth\EELobbyInit.cpp (__FILE__ 0x8d0be8, passed by the component
 // getters of lines 328/329). The game's set-up of the WON lobby: its factories, the server list's column handlers, the
-// component types of the resource file, and the accessors of the lobby's dialogs: 0x294d62..0x296aaa (its two
-// SmartPtr chains first; EELobbyGameOptionsCtrl.cpp ends at 0x294d62). Unit flags: the exe's module set
-// (r12-misc-h2, round 12).
+// component types of the resource file, and the accessors of the lobby's dialogs: 0x694d62..0x696aaa (its two
+// SmartPtr init chains first; EELobbyGameOptionsCtrl.cpp ends at 0x694d62).
 #include <windows.h>
 #include <stdio.h>
 #include <string>
@@ -14,78 +13,86 @@
 #include "ee/wonapi/WONLobbyResource.h"
 #include "ee/wonapi/WONLobbyGUI.h"
 #include "ee/wonapi/EELobbyGameCode.h"
-
+#include "ee/wonapi/WONLobbyRoomServer.h"
 using namespace WONAPI;
 
 SmartPtr<EELobbyConnectDialog> gEELobbyConnectDialog;
 SmartPtr<EELobbyFileDialog> gEELobbyFileDialog;
 
 // FUNCTION: EXE 0x694dbe
+// Creates the lobby config with the EEFileTransferPort key (default 8889)
 EELobbyConfig::EELobbyConfig()
 {
-    KeyAdd("EEFileTransferPort", mFileTransferPort, 8889);
+    this->KeyAdd("EEFileTransferPort", this->mFileTransferPort, 8889);
 }
 
 // FUNCTION: EXE 0x694ebc
+// Returns the lobby string naming a game option's value (first string + value), or empty when out of range
 GUIString EELobbyServerDetailsItem::GetOptionText(int inOption, int inFirstString, unsigned long inCount)
 {
-    unsigned long theValue = GetGame()->GetOption(inOption);
+    unsigned long theValue = this->GetGame()->GetOption(inOption);
     if (theValue < inCount)
         return EELobbyResource_GetString(theValue + inFirstString);
     return gEmptyGUIString;
 }
 
 // FUNCTION: EXE 0x694f02
+// Returns a game option's value as decimal text
 GUIString EELobbyServerDetailsItem::GetNumberText(int inOption)
 {
     char theBuffer[50];
-    sprintf(theBuffer, "%ld", GetGame()->GetOption(inOption));
+    sprintf(theBuffer, "%ld", this->GetGame()->GetOption(inOption));
     return GUIString(theBuffer);
 }
 
 // FUNCTION: EXE 0x694f39
+// Returns the number of wonders needed for victory as text, or "wonders off" when it is 0
 GUIString EELobbyServerDetailsItem::GetWondersText()
 {
-    if (GetGame()->GetOption(10) == 0)
+    if (this->GetGame()->GetOption(10) == 0)
         return gEELobbyGameOptionsCtrl_WondersOff;
-    return GetNumberText(10);
+    return this->GetNumberText(10);
 }
 
 // FUNCTION: EXE 0x694f7f
+// Returns the name of the game's starting or ending epoch (option 15 shows the 16th epoch name)
 GUIString EELobbyServerDetailsItem::GetEpochText(bool inStart)
 {
     int theOption = inStart ? 4 : 5;
-    if (GetGame()->GetOption(theOption) == 15)
+    if (this->GetGame()->GetOption(theOption) == 15)
         return gEELobbyGameOptionsCtrl_Epoch16;
-    return GetOptionText(theOption, 0, 16);
+    return this->GetOptionText(theOption, 0, 16);
 }
 
 // FUNCTION: EXE 0x694fd7
+// Returns "on" or "off" for a game option flag
 GUIString EELobbyServerDetailsItem::GetOnOffText(int inOption)
 {
-    return GetGame()->GetOption(inOption) != 0 ? gEELobbyGameOptionsCtrl_OptionOn : gEELobbyGameOptionsCtrl_OptionOff;
+    return this->GetGame()->GetOption(inOption) != 0 ? gEELobbyGameOptionsCtrl_OptionOn : gEELobbyGameOptionsCtrl_OptionOff;
 }
 
 // FUNCTION: EXE 0x695010
-void EELobbyServerDetailsItem::Paint(Graphics& inGraphics, ListArea* inList)
+// Draws a listed game's details: two label/value columns of game options (type, map, epochs, speed, flags ...),
+// then the players
+void EELobbyServerDetailsItem::PaintDetailsHook(Graphics& inGraphics, MultiListArea* inList)
 {
-    EELobbyGame* theGame = GetGame();
+    EELobbyGame* theGame = this->GetGame();
     int theCounts[4] = { 8, 8, 7, 7 };
     GUIString theLabels1[8] = { gEELobbyGameOptionsCtrl_GameType, gEELobbyGameOptionsCtrl_MapSize,
         gEELobbyGameOptionsCtrl_MapType, gEELobbyGameOptionsCtrl_Resources, gEELobbyGameOptionsCtrl_StartingEpoch,
         gEELobbyGameOptionsCtrl_EndingEpoch, gEELobbyGameOptionsCtrl_GameUnitLimit, gEELobbyGameOptionsCtrl_GameVariant };
-    GUIString theValues1[8] = { GetOptionText(0, 0x10, 3), GetOptionText(1, 0x13, 6),
-        EELobbyGetMapTypeName(theGame->GetOption(2)), GetOptionText(3, 0x19, 5), GetEpochText(true),
-        GetEpochText(false), GetNumberText(9), GetOptionText(6, 0x1e, 2) };
+    GUIString theValues1[8] = { this->GetOptionText(0, 0x10, 3), this->GetOptionText(1, 0x13, 6),
+        EELobbyGetMapTypeName(theGame->GetOption(2)), this->GetOptionText(3, 0x19, 5), this->GetEpochText(true),
+        this->GetEpochText(false), this->GetNumberText(9), this->GetOptionText(6, 0x1e, 2) };
     GUIString theLabels2[7] = { gEELobbyGameOptionsCtrl_DifficultyLevel, gEELobbyGameOptionsCtrl_GameSpeed,
         gEELobbyGameOptionsCtrl_RevealMap, gEELobbyGameOptionsCtrl_UseCustomCivs, gEELobbyGameOptionsCtrl_LockTeams,
         gEELobbyGameOptionsCtrl_LockSpeed, gEELobbyGameOptionsCtrl_NumberOfWonders };
-    GUIString theValues2[7] = { GetOptionText(7, 0x20, 3), GetOptionText(8, 0x23, 4), GetOnOffText(0xb),
-        GetOnOffText(0xc), GetOnOffText(0xd), GetOnOffText(0xe), GetWondersText() };
+    GUIString theValues2[7] = { this->GetOptionText(7, 0x20, 3), this->GetOptionText(8, 0x23, 4), this->GetOnOffText(0xb),
+        this->GetOnOffText(0xc), this->GetOnOffText(0xd), this->GetOnOffText(0xe), this->GetWondersText() };
     GUIString* theColumns[4] = { theLabels1, theValues1, theLabels2, theValues2 };
     int theGaps[4] = { 10, 50, 10, 50 };
     unsigned long theColors[4] = { 0x8000000f, 0x8000000e, 0x8000000f, 0x8000000e };
-    Font* theFont = inGraphics.mFont; int theX = 0, theY, i;
+    Font* theFont = inGraphics.mFont.get(); int theX = 0, theY, i;
     for (i = 0; i < 4; i++) {
         theY = 0;
         int theWidth = 0;
@@ -113,133 +120,147 @@ void EELobbyServerDetailsItem::Paint(Graphics& inGraphics, ListArea* inList)
 }
 
 // FUNCTION: EXE 0x6954fc
-int EELobbyServerDetailsItem::GetHeight(ListArea* inList)
+// Returns the details area's height, nine lines of the list's font
+int EELobbyServerDetailsItem::GetDetailsHeightHook(MultiListArea* inList)
 {
     return inList->mFont->GetHeight() * 9;
 }
 
-static RefCount* EELobbyNewPlayer();
+static LobbyPlayer* EELobbyNewPlayer();
 static LobbyGame* EELobbyNewGame();
-static RefCount* EELobbyNewButtonConfig();
-static RefCount* EELobbyNewContainerConfig();
-static RefCount* EELobbyNewDialogConfig();
-static RefCount* EELobbyNewGameOptionsCtrl();
-static RefCount* EELobbyNewPlayerOptionsCtrl();
-static RefCount* EELobbyNewColorButton();
-static RefCount* EELobbyNewFileDialog();
-static RefCount* EELobbyNewConnectDialog();
+static ComponentConfig* EELobbyNewButtonConfig();
+static ComponentConfig* EELobbyNewContainerConfig();
+static ComponentConfig* EELobbyNewDialogConfig();
+static Component* EELobbyNewGameOptionsCtrl();
+static Component* EELobbyNewPlayerOptionsCtrl();
+static Component* EELobbyNewColorButton();
+static Component* EELobbyNewFileDialog();
+static Component* EELobbyNewConnectDialog();
 static LobbyConfig* EELobbyNewConfig();
 static ServerDetailsItem* EELobbyNewServerDetailsItem();
-static void EELobbyEpochGetText(Graphics& inGraphics, ServerDetailsItem* inItem);
-static int EELobbyEpochCompare(ServerDetailsItem* inA, ServerDetailsItem* inB);
-static void EELobbyEpochFilter(const GUIString& inText, std::list<ServerDetailsItem*>& ioItems);
-static void EELobbyMapTypeGetText(Graphics& inGraphics, ServerDetailsItem* inItem);
-static int EELobbyMapTypeCompare(ServerDetailsItem* inA, ServerDetailsItem* inB);
-static void EELobbyMapTypeFilter(const GUIString& inText, std::list<ServerDetailsItem*>& ioItems);
+static void EELobbyEpochGetText(Graphics& inGraphics, ServerDetailsItem* inItem, ServerListCtrl*);
+static int EELobbyEpochCompare(const ServerDetailsItem* inA, const ServerDetailsItem* inB, ServerListCtrl*);
+static void EELobbyEpochFilter(const GUIString& inText, std::list<ServerDetailsItem*>& ioItems, ServerListCtrl*);
+static void EELobbyMapTypeGetText(Graphics& inGraphics, ServerDetailsItem* inItem, ServerListCtrl*);
+static int EELobbyMapTypeCompare(const ServerDetailsItem* inA, const ServerDetailsItem* inB, ServerListCtrl*);
+static void EELobbyMapTypeFilter(const GUIString& inText, std::list<ServerDetailsItem*>& ioItems, ServerListCtrl*);
 static void EELobbyGetComponents(ComponentConfig* inConfig);
 
 // FUNCTION: EXE 0x695511
-// NEAR: the original calls the GUIString temporaries' dtor out of line (0x2941d4); ours expands it
+// Sets the lobby up for Empire Earth: epoch and map type server list columns, game/player factories, the game's
+// dialog and control types, resources, epoch and map type options, player colours and the product name
 void EELobbyInit()
 {
-    ServerColumnHandlers* theHandlers = GetServerColumnHandlers("Epoch");
-    theHandlers->mGetText = EELobbyEpochGetText;
-    theHandlers->mCompare = EELobbyEpochCompare;
-    theHandlers->mFilter = EELobbyEpochFilter;
-    theHandlers = GetServerColumnHandlers("MapType");
-    theHandlers->mGetText = EELobbyMapTypeGetText;
-    theHandlers->mCompare = EELobbyMapTypeCompare;
-    theHandlers->mFilter = EELobbyMapTypeFilter;
+    ServerListCtrl::ColumnInfo* theHandlers = ServerListCtrl::GetColumnInfo("Epoch");
+    theHandlers->mPaintFunc = EELobbyEpochGetText;
+    theHandlers->mCompareFunc = EELobbyEpochCompare;
+    theHandlers->mFilterFunc = EELobbyEpochFilter;
+    theHandlers = ServerListCtrl::GetColumnInfo("MapType");
+    theHandlers->mPaintFunc = EELobbyMapTypeGetText;
+    theHandlers->mCompareFunc = EELobbyMapTypeCompare;
+    theHandlers->mFilterFunc = EELobbyMapTypeFilter;
 
-    gLobbyGameFactory = EELobbyNewGame;
-    gLobbyPlayerFactory = EELobbyNewPlayer;
-    gServerDetailsItemFactory = EELobbyNewServerDetailsItem;
-    gLobbyConfigFactory = EELobbyNewConfig;
+    LobbyGame::SetGameFactory(EELobbyNewGame);
+    LobbyPlayer::SetPlayerFactory(EELobbyNewPlayer);
+    ServerDetailsItem::SetItemFactory(EELobbyNewServerDetailsItem);
+    LobbyConfig::SetAllocator(EELobbyNewConfig);
 
-    ResourceCollectionPtr theCollection = EELobbyResource_Init(NULL);
-    theCollection->AddComponentType("GameOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewGameOptionsCtrl);
-    theCollection->AddComponentType("PlayerOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewPlayerOptionsCtrl);
-    theCollection->AddComponentType("EELobbyColorButton", EELobbyNewButtonConfig, EELobbyNewColorButton);
-    theCollection->AddComponentType("EELobbyFileDialog", EELobbyNewDialogConfig, EELobbyNewFileDialog);
-    theCollection->AddComponentType("EELobbyConnectDialog", EELobbyNewDialogConfig, EELobbyNewConnectDialog);
-    EELobbyFn2989EF(theCollection.mPtr);
+    ResourceConfigTablePtr theCollection = EELobbyResource_Init(NULL);
+    theCollection->AddAllocator("GameOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewGameOptionsCtrl);
+    theCollection->AddAllocator("PlayerOptionsCtrl", EELobbyNewContainerConfig, EELobbyNewPlayerOptionsCtrl);
+    theCollection->AddAllocator("EELobbyColorButton", EELobbyNewButtonConfig, EELobbyNewColorButton);
+    theCollection->AddAllocator("EELobbyFileDialog", EELobbyNewDialogConfig, EELobbyNewFileDialog);
+    theCollection->AddAllocator("EELobbyConnectDialog", EELobbyNewDialogConfig, EELobbyNewConnectDialog);
+    EELobbyAddResources(theCollection.mPtr);
     LobbyAddComponentLoader(theCollection.mPtr, EELobbyGetComponents);
 
     for (int i = 0; i < 16; i++)
         LobbyAddGameOption("Epoch", EELobbyResource_GetString(i), true);
-    EELobbyFn2987BD();
-    EELobbyFn298829(gEELobbyColors, 16);
+    EELobbyAddMapTypeOptions();
+    EELobbyGetPlayerColors(gEELobbyColors, 16);
     LobbyAddGameOption("MapType", gEELobbyGameOptionsCtrl_GameType2, true);
-    LobbySetProductName(L"EEAOC", 0);
+    LobbySetProductName(L"EEAOC", NULL);
 }
 
 // FUNCTION: EXE 0x6957fa
-static RefCount* EELobbyNewPlayer()
+// Creates an Empire Earth lobby player
+static LobbyPlayer* EELobbyNewPlayer()
 {
     return new EELobbyPlayer;
 }
 
 // FUNCTION: EXE 0x695811
+// Creates an Empire Earth lobby game
 static LobbyGame* EELobbyNewGame()
 {
     return new EELobbyGame;
 }
 
 // FUNCTION: EXE 0x69582b
-static RefCount* EELobbyNewButtonConfig()
+// Creates a button config for the resource file
+static ComponentConfig* EELobbyNewButtonConfig()
 {
     return new ButtonConfig;
 }
 
 // FUNCTION: EXE 0x695842
-static RefCount* EELobbyNewContainerConfig()
+// Creates a container config for the resource file
+static ComponentConfig* EELobbyNewContainerConfig()
 {
     return new ContainerConfig;
 }
 
 // FUNCTION: EXE 0x69585c
-static RefCount* EELobbyNewDialogConfig()
+// Creates a dialog config for the resource file
+static ComponentConfig* EELobbyNewDialogConfig()
 {
     return new DialogConfig;
 }
 
 // FUNCTION: EXE 0x69589f
-static RefCount* EELobbyNewGameOptionsCtrl()
+// Creates the game options control
+static Component* EELobbyNewGameOptionsCtrl()
 {
     return new EELobbyGameOptionsCtrl;
 }
 
 // FUNCTION: EXE 0x6958b9
-static RefCount* EELobbyNewPlayerOptionsCtrl()
+// Creates the player options control
+static Component* EELobbyNewPlayerOptionsCtrl()
 {
     return new EELobbyPlayerOptionsCtrl;
 }
 
 // FUNCTION: EXE 0x6958d3
-static RefCount* EELobbyNewColorButton()
+// Creates a player colour button
+static Component* EELobbyNewColorButton()
 {
     return new EELobbyColorButton;
 }
 
 // FUNCTION: EXE 0x6958ea
-static RefCount* EELobbyNewFileDialog()
+// Creates the saved game / scenario file dialog
+static Component* EELobbyNewFileDialog()
 {
     return new EELobbyFileDialog;
 }
 
 // FUNCTION: EXE 0x695904
-static RefCount* EELobbyNewConnectDialog()
+// Creates the connect dialog shown while players connect to the game
+static Component* EELobbyNewConnectDialog()
 {
     return new EELobbyConnectDialog;
 }
 
 // FUNCTION: EXE 0x69591e
+// Creates the Empire Earth lobby config
 static LobbyConfig* EELobbyNewConfig()
 {
     return new EELobbyConfig;
 }
 
 // FUNCTION: EXE 0x695938
+// Creates a server list item with Empire Earth game details
 static ServerDetailsItem* EELobbyNewServerDetailsItem()
 {
     return new EELobbyServerDetailsItem;
@@ -249,35 +270,39 @@ static GUIString EELobbyGetEpochText(ServerDetailsItem* inItem, bool inStart);
 static GUIString EELobbyGetMapTypeText(EELobbyGame* inGame);
 
 // FUNCTION: EXE 0x695978
-static void EELobbyEpochGetText(Graphics& inGraphics, ServerDetailsItem* inItem)
+// Draws a listed game's starting epoch in the epoch column
+static void EELobbyEpochGetText(Graphics& inGraphics, ServerDetailsItem* inItem, ServerListCtrl*)
 {
     GUIString theText = EELobbyGetEpochText(inItem, true);
     inGraphics.DrawString(theText, 0, 0);
 }
 
 // FUNCTION: EXE 0x6959aa
-// the flag is not passed on: every caller asks for the start epoch
+// Returns a listed game's starting epoch name
+// The flag is not passed on: every caller asks for the starting epoch
 static GUIString EELobbyGetEpochText(ServerDetailsItem* inItem, bool inStart)
 {
-    return ((EELobbyServerDetailsItem*)inItem)->GetEpochText(true);
+    return (static_cast<EELobbyServerDetailsItem*>(inItem))->GetEpochText(true);
 }
 
 // FUNCTION: EXE 0x6959be
-static int EELobbyEpochCompare(ServerDetailsItem* inA, ServerDetailsItem* inB)
+// Orders two listed games by starting epoch
+static int EELobbyEpochCompare(const ServerDetailsItem* inA, const ServerDetailsItem* inB, ServerListCtrl*)
 {
-    EELobbyGame* theA = (EELobbyGame*)inA->mGame;
-    long theB = ((EELobbyGame*)inB->mGame)->GetOption(4);
+    EELobbyGame* theA = static_cast<EELobbyGame*>(inA->mGame.get());
+    long theB = (static_cast<EELobbyGame*>(inB->mGame.get()))->GetOption(4);
     return theA->GetOption(4) - theB;
 }
 
 // FUNCTION: EXE 0x6959e5
-// NEAR: the compared text's pointer goes through a register first in the original (an inline accessor?)
-static void EELobbyEpochFilter(const GUIString& inText, std::list<ServerDetailsItem*>& ioItems)
+// Removes listed games whose starting epoch name does not contain the filter text (any case)
+// GUIStringData::findNoCase (0x728340): a substring search
+static void EELobbyEpochFilter(const GUIString& inText, std::list<ServerDetailsItem*>& ioItems, ServerListCtrl*)
 {
     std::list<ServerDetailsItem*>::iterator theIterator = ioItems.begin();
     while (theIterator != ioItems.end()) {
         GUIString theText = EELobbyGetEpochText(*theIterator, true);
-        if (theText.Compare(inText, false) >= 0)
+        if (theText.findNoCase(inText, 0) >= 0)
             ++theIterator;
         else
             ioItems.erase(theIterator++);
@@ -285,13 +310,15 @@ static void EELobbyEpochFilter(const GUIString& inText, std::list<ServerDetailsI
 }
 
 // FUNCTION: EXE 0x695a59
-static void EELobbyMapTypeGetText(Graphics& inGraphics, ServerDetailsItem* inItem)
+// Draws a listed game's map type in the map type column
+static void EELobbyMapTypeGetText(Graphics& inGraphics, ServerDetailsItem* inItem, ServerListCtrl*)
 {
-    GUIString theText = EELobbyGetMapTypeText((EELobbyGame*)inItem->mGame);
+    GUIString theText = EELobbyGetMapTypeText(static_cast<EELobbyGame*>(inItem->mGame.get()));
     inGraphics.DrawString(theText, 0, 0);
 }
 
 // FUNCTION: EXE 0x695a8b
+// Returns a game's random map type name, or the second game type's name for other game types
 static GUIString EELobbyGetMapTypeText(EELobbyGame* inGame)
 {
     if (inGame->GetOption(0) == 0)
@@ -300,126 +327,139 @@ static GUIString EELobbyGetMapTypeText(EELobbyGame* inGame)
 }
 
 // FUNCTION: EXE 0x695ad1
-// a case-insensitive compare (0x328030; r28: was the Find 0x328340)
-static int EELobbyMapTypeCompare(ServerDetailsItem* inA, ServerDetailsItem* inB)
+// Orders two listed games by map type name, ignoring case
+static int EELobbyMapTypeCompare(const ServerDetailsItem* inA, const ServerDetailsItem* inB, ServerListCtrl*)
 {
-    GUIString theA = EELobbyGetMapTypeText((EELobbyGame*)inA->mGame);
-    GUIString theB = EELobbyGetMapTypeText((EELobbyGame*)inB->mGame);
+    GUIString theA = EELobbyGetMapTypeText(static_cast<EELobbyGame*>(inA->mGame.get()));
+    GUIString theB = EELobbyGetMapTypeText(static_cast<EELobbyGame*>(inB->mGame.get()));
     return theA.CompareNoCase(theB);
 }
 
 // FUNCTION: EXE 0x695b21
-// NEAR: as the epoch filter
-static void EELobbyMapTypeFilter(const GUIString& inText, std::list<ServerDetailsItem*>& ioItems)
+// Removes listed games whose map type name does not contain the filter text (any case)
+static void EELobbyMapTypeFilter(const GUIString& inText, std::list<ServerDetailsItem*>& ioItems, ServerListCtrl*)
 {
     std::list<ServerDetailsItem*>::iterator theIterator = ioItems.begin();
     while (theIterator != ioItems.end()) {
-        GUIString theText = EELobbyGetMapTypeText((EELobbyGame*)(*theIterator)->mGame);
-        if (theText.Compare(inText, false) >= 0)
+        GUIString theText = EELobbyGetMapTypeText(static_cast<EELobbyGame*>((*theIterator)->mGame.get()));
+        if (theText.findNoCase(inText, 0) >= 0)
             ++theIterator;
         else
             ioItems.erase(theIterator++);
     }
 }
-// (the original's line 328 is the first getter call below: blank lines stand in for code not reconstructed)
+
 // FUNCTION: EXE 0x695b95
+// Fetches the file dialog and connect dialog from the loaded lobby resources
 static void EELobbyGetComponents(ComponentConfig* inConfig)
 {
-    SafeGetComponent(inConfig, gEELobbyFileDialog, "EELobbyFileDialog", __FILE__, __LINE__);
-    SafeGetComponent(inConfig, gEELobbyConnectDialog, "EELobbyConnectDialog", __FILE__, __LINE__);
+    SafeGetComponent(inConfig, gEELobbyFileDialog, "EELobbyFileDialog", __FILE__, 328);
+    SafeGetComponent(inConfig, gEELobbyConnectDialog, "EELobbyConnectDialog", __FILE__, 329);
 }
 
 // FUNCTION: EXE 0x695bd2
-// NEAR: ICF alias: both assignments call SmartPtr<T>::operator=(T*) 0x299ae3 (bound to the GUIStringData instance)
+// Shuts the lobby down: closes it, empties its strings and releases the file and connect dialogs
+// Both assignments call the ICF-folded SmartPtr<T>::operator=(T*) at 0x699ae3 (named after its GUIStringData
+// instance)
 void EELobbyShutdown()
 {
-    EELobbyFn297E51();
+    EELobbyClose();
     EELobbyResource_Destroy();
     gEELobbyFileDialog = NULL;
     gEELobbyConnectDialog = NULL;
 }
 
 // FUNCTION: EXE 0x695bf5
+// Returns the configured file transfer port (8889 without a lobby config)
 unsigned short EELobbyGetFileTransferPort()
 {
-    EELobbyConfig* theConfig = (EELobbyConfig*)GetLobbyConfig();
+    EELobbyConfig* theConfig = static_cast<EELobbyConfig*>(GetLobbyConfig());
     if (theConfig == NULL)
         return 8889;
     return theConfig->mFileTransferPort;
 }
 
 // FUNCTION: EXE 0x695c0b
+// Returns the lobby's file dialog
 EELobbyFileDialog* EELobbyGetFileDialog()
 {
     return gEELobbyFileDialog.mPtr;
 }
 
 // FUNCTION: EXE 0x695c11
+// Returns the lobby's connect dialog
 EELobbyConnectDialog* EELobbyGetConnectDialog()
 {
     return gEELobbyConnectDialog.mPtr;
 }
 
 // FUNCTION: EXE 0x695c17
-bool EELobbyFn295C17()
+// Runs the connect dialog for the player's game; on failure the host cancels the launch and a client reports it
+// and leaves the game (unless the dialog was ended for it); returns whether everyone connected
+bool EELobbyRunConnectDialog()
 {
     SmartPtr<EELobbyConnectDialog> theDialog = EELobbyGetConnectDialog();
     if (theDialog.mPtr == NULL)
         return false;
-    EELobbyGame* theGame = (EELobbyGame*)GetMyLobbyGame();
+    EELobbyGame* theGame = static_cast<EELobbyGame*>(GetMyLobbyGame());
     if (theGame == NULL)
         return false;
     bool theFlag = theGame->mIsHost;
     bool theResult = theDialog->Run(theGame);
-    theGame = (EELobbyGame*)GetMyLobbyGame();
+    theGame = static_cast<EELobbyGame*>(GetMyLobbyGame());
     if (theGame == NULL)
         return false;
     if (!theResult) {
         if (theFlag) {
-            LobbyFn3612B0(0);
-            theGame->Fn2934A0();
+            LobbySetGameInProgress(0);
+            theGame->SendCancelConnect();
         } else if (!theDialog->mIsEnded) {
-            theGame->Fn293437(false);
-            LobbyFn361310(0);
+            theGame->SendConnectStatus(false);
+            LobbyLeaveGame(false);
         }
     }
     return theResult;
 }
 
 // FUNCTION: EXE 0x695cab
-void EELobbyFn295CAB(unsigned char inSlot, bool inConnected)
+// Marks a player slot connected or not in the connect dialog
+void EELobbySetSlotConnected(unsigned char inSlot, bool inConnected)
 {
     if (gEELobbyConnectDialog.mPtr != NULL)
         gEELobbyConnectDialog->SetConnected(inSlot, inConnected);
 }
 
 // FUNCTION: EXE 0x695cc3
-void EELobbyFn295CC3()
+// Closes the connect dialog, unless this player is the game's captain
+void EELobbyCancelConnectDialog()
 {
-    if (gEELobbyConnectDialog.mPtr != NULL && !LobbyFn3613C0())
+    if (gEELobbyConnectDialog.mPtr != NULL && !LobbyIAmCaptain())
         gEELobbyConnectDialog->End(0);
 }
 
-static void EELobbyFn295D38(int inFlag);
+static void EELobbySendConnectStatus(int inConnected);
 
 // FUNCTION: EXE 0x695ce3
-void EELobbyFn295CE3(bool inFlag)
+// Posts this client's connect status to the lobby window's thread for sending
+void EELobbyPostConnectStatus(bool inConnected)
 {
-    Window* theWindow = GetLobbyWindow();
+    WindowManager* theWindow = GetLobbyWindow();
     if (theWindow != NULL)
-        theWindow->PostEvent(new UserEvent(EELobbyFn295D38, inFlag != false), true);
+        theWindow->PostEvent(new UserEvent(EELobbySendConnectStatus, inConnected != false), true);
 }
 
 // FUNCTION: EXE 0x695d38
-static void EELobbyFn295D38(int inFlag)
+// Sends this client's connect status for the player's lobby game
+static void EELobbySendConnectStatus(int inConnected)
 {
-    EELobbyGame* theGame = (EELobbyGame*)GetMyLobbyGame();
+    EELobbyGame* theGame = static_cast<EELobbyGame*>(GetMyLobbyGame());
     if (theGame != NULL)
-        theGame->Fn293437(inFlag != 0);
+        theGame->SendConnectStatus(inConnected != 0);
 }
 
 // FUNCTION: EXE 0x695d52
-bool EELobbyFn295D52()
+// Returns whether the connect dialog is running
+bool EELobbyIsConnectDialogRunning()
 {
     if (gEELobbyConnectDialog.mPtr != NULL)
         return gEELobbyConnectDialog->mIsRunning;
@@ -448,8 +488,8 @@ bool EELobbyFn295D52()
 // (SafeGetComponent<EELobbyFileDialog>)
 // TEMPLATE: EXE 0x6969c8
 // (SafeGetComponent<EELobbyConnectDialog>)
-// The implicit dtors of EELobbyConfig (LobbyConfig's, ICF) and ConfigObject (r24 ui P1 layouts), then the map/list
-// COMDATs they instantiate (r24-lobby-player-gfx):
+// The implicit dtors of EELobbyConfig (LobbyConfig's, ICF) and ConfigObject, then the map/list
+// COMDATs they instantiate:
 // TEMPLATE: EXE 0x694e04
 // TEMPLATE: EXE 0x694e83
 // TEMPLATE: EXE 0x695d65

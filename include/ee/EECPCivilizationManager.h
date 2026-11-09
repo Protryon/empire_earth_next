@@ -83,6 +83,7 @@ public:
     EECPResearchManager* mResearchManager;  // +0x40 (new 0x12c, ctor 0x8a007)
     EECPUnitManager* mUnitManager;          // +0x44 (new 0x158, ctor 0x935e6)
     EECPWallManager* mWallManager;          // +0x48 (new 0x88, ctor 0x9cc24; provisional class name)
+    EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;              // +0x4c (the ctor argument)
     EEComplexUnit* mGarrison;               // +0x50 referenced (saved as its unit id) (provisional name)
     EEComplexUnit* mFortress;               // +0x54 referenced (saved as its unit id) (provisional name)

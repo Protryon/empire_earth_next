@@ -159,7 +159,6 @@ void EEUICCommandUnits::CreateModel()
 
 // FUNCTION: EXE 0x657c4d
 // Draws the facing arrow at the command point over everything, restoring the rasterizer state afterwards
-// NEAR: schedule only (the original loads mModel before the `+ 0.5f`)
 long EEUICCommandUnits::DrawPolygons()
 {
     GEColor theWhite(1.0f, 1.0f, 1.0f);
@@ -183,7 +182,8 @@ long EEUICCommandUnits::DrawPolygons()
         const GE3DPoint& thePosition = this->mPosition;
         theTransformation.SetPosition(thePosition.GetX(), thePosition.GetY(), thePosition.GetZ());
         this->mModel->SetGraphicsCurrentFrame(0);
-        this->mModel->SetGraphicsScale(gCameraZoom + 0.5f);
+        float theZoom = gCameraZoom;
+        this->mModel->SetGraphicsScale(theZoom + 0.5f);
         this->mModel->SetGraphicsPostModelTransform(theTransformation);
         this->mModel->PrepareTransforms();
         gRasterizer->Draw(this->mModel, theScreen, 1.0f, gOrthographicView);

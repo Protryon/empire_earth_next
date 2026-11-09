@@ -55,11 +55,13 @@ public:
     EEAIAStarBounds mGoalBounds;            // +0x34
     EEAIAStarBounds mStartBounds;           // +0x44
     U2DPoint<long> mDestination;            // +0x54 (ctor: zeroed by its default ctor before mF68; Q1)
+    EEComplexUnit* GetUnit() const { return this->mUnit; }
     EEComplexUnit* mUnit;                   // +0x5c (referenced)
     EEAIPathGoalModifierBase* mModifier;    // +0x60 (referenced)
     long mL64;                              // +0x64
     float mOffsetX;                         // +0x68
     float mOffsetY;                         // +0x6c
+    unsigned short GetContinentID() const { return this->mContinentID; }
     unsigned short mContinentID;            // +0x70 (the unit's)
     bool mIsBounded;                        // +0x72
     bool mAvoidUnits;                       // +0x73

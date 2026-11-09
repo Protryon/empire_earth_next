@@ -459,7 +459,7 @@ bool EEUGAttackUnit::EvaluateCondition(EEComplexUnit* inUnit, unsigned long inEv
         break;
     case kTriggerEnemyUnitNoLongerVisible:
         if ((inUnit->mPlayer->IsHuman() || inUnit->mStats->GetRange() > inUnit->GetLineOfSight())
-            && !EEIsSeenBy(this->mTarget, inUnit->GetPlayer(), false))
+            && !EEIsSeenBy(this->mTarget, inUnit->mPlayer, false))
             theResult = true;
         else
             theResult = false;

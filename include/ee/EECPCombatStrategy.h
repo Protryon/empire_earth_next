@@ -34,12 +34,19 @@ public:
     float mSpaceShare;                      // +0x20 (inOwn->mL84)
     long mTownID;                           // +0x24
     short mContinentID;                     // +0x28
+    long GetNumUnits() const { return this->mNumUnits; }
     long mNumUnits;                         // +0x2c the total
+    long GetNumRemaining() const { return this->mNumRemaining; }
     long mNumRemaining;                     // +0x30
+    long GetNumAir() const { return this->mNumAir; }
     long mNumAir;                           // +0x34 the four counts Calculate fills
+    long GetNumSea() const { return this->mNumSea; }
     long mNumSea;                           // +0x38
+    long GetNumLand() const { return this->mNumLand; }
     long mNumLand;                          // +0x3c (also gets the remainder)
+    long GetNumSpace() const { return this->mNumSpace; }
     long mNumSpace;                         // +0x40
+    long GetKind() const { return this->mKind; }
     long mKind;                             // +0x44
     bool mAddFavorites;                     // +0x48
 };

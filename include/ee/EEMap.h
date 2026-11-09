@@ -32,6 +32,8 @@ class EEUnit;
 // (init list); the dtor (inline: EETUnitList's ??_E 0x121b37 expands it) dereferences the unit
 class RTSTUnitList {
 public:
+    EEUnit* GetUnit() const { return this->mUnit; }
+    RTSTUnitList* GetNext() const { return this->mNext; }
     RTSTUnitList() : mUnit(NULL), mNext(NULL) {}
     virtual ~RTSTUnitList();                // +0x00 (inline: defined below where ee/EEUnit.h came first)
     EEUnit* mUnit;                          // +0x04 (referenced)
@@ -77,6 +79,7 @@ public:
 
     long GetTerrainType() const { return this->mTerrainType; }  // inline (EEUCTransport::FilterLoadable 0x61c806 budget) r37_big B2
     long mTerrainType;                      // +0x04 (calamity effects sit at height 0 on 1 and 10)
+    RTSTileUnitNode* GetUnits() const { return this->mUnits; }
     RTSTileUnitNode* mUnits;                // +0x08 the units on the tile (EEGhostUnit 0x203d43 walks them; = 0 by the ctor)
     // inline (COMDAT 0x2035cf; expanded in EEDoppelgangerManager 0x20266e): player inPlayerID's visibility of the
     // tile, two 16-bit entries per dword (provisional name)
@@ -89,6 +92,7 @@ public:
     float GetHeight() const { return this->mHeight; }
     uint32_t* mVisibility;                  // +0x0c (not set by the ctor; 32-bit words: two players per word, saved)
     float mHeight;                          // +0x10 (EECalamityManager::CreateLocationCalamity: the calamity's z)
+    signed char GetAIValue() const { return this->mAIValue; }
     signed char mAIValue;                   // +0x14 the AI tile value (GetTileFlag 0x21f5a movsx; RemoveForestTile 0x425325 -= 10 floored at 0)
 };
 
@@ -265,10 +269,14 @@ public:
     float mF1955FC;                         // +0x1955fc (42 after Create)
     long mL195600;                          // +0x195600
     long mL195604;                          // +0x195604
+    long GetL195608() const { return this->mL195608; }
     long mL195608;                          // +0x195608
+    long GetL19560C() const { return this->mL19560C; }
     long mL19560C;                          // +0x19560c
+    long GetL195610() const { return this->mL195610; }
     long mL195610;                          // +0x195610 (saved: Create's height)
     long mL195614;                          // +0x195614 (saved: Create's width)
+    long GetSize() const { return this->mSize; }
     long mSize;                             // +0x195618 tiles per side (signed: the loops compare it with jl)
     unsigned long mU19561C;                 // +0x19561c (saved: the player count)
     bool mB195620;                          // +0x195620 (true once the tiles exist)
@@ -381,6 +389,7 @@ public:
     RTSRegionTable<EEComplexUnit*>* mUnitRegions;   // +0x195640 (ctor 0x11e05e; the units per region; EEAIArea 0xdcbe/0xde7f) (provisional name)
     EETile* mTileArray;                     // +0x195644 (new EETile[n]: Virtual1C; Virtual18/24 hand them out) (provisional name)
     uint32_t* mVisibilityWords;             // +0x195648 (the tiles' visibility words, (players + 1) / 2 per tile) (provisional name)
+    unsigned long GetMapCharacteristics() const { return this->mMapCharacteristics; }
     unsigned long mMapCharacteristics;      // +0x19564c (saved)
     unsigned long mU195650;                 // +0x195650 (saved; a ctor result)
     unsigned long mNextTile;                // +0x195654 (the next free entry of mTileArray) (provisional name)

@@ -156,7 +156,7 @@ bool EECPPersonnelRequest::TryAssign(EEComplexUnit* inUnit)
             this->mUnits[i].mB0C = true;
             this->mNumFilled++;
             theResult = true;
-            this->mFill = (float)this->mNumFilled / (float)this->mUnits.size();
+            this->mFill = (float)this->GetNumFilled() / (float)this->mUnits.size();
             inUnit->SetAIState(0x46cd3);
             break;
         }
@@ -446,14 +446,14 @@ long EECPPersonnelRequest::Restore(unsigned long inMajorVersion, unsigned long i
         } else {
             bool theKeep = EECPCombatManager::IsMilitaryType(it->mClass);
             it->mUnit = NULL;
-            if (theKeep)
-                it++;
-            else
+            if (!(theKeep))
                 it = this->mUnits.erase(it);
+            else
+                it++;
         }
     }
     if (this->mUnits.size() > 0)
-        this->mFill = (float)this->mNumFilled / (float)this->mUnits.size();
+        this->mFill = (float)this->GetNumFilled() / (float)this->mUnits.size();
     else
         this->mFill = 1.0f;
     this->GetTownID();
@@ -920,7 +920,7 @@ void EECPPersonnel::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
                 continue;
             if ((ioSwaps[i]).mOld->mPlayer != this->mPlayer && (ioSwaps[i]).mNew->mPlayer != this->mPlayer)
                 continue;
-            theType = (ioSwaps[i]).mNew->GetUnitClass()->mUnitType;
+            theType = (ioSwaps[i]).mNew->GetUnitClass()->GetUnitType();
             std::pair<std::multimap<long, EEUnit*>::iterator, std::multimap<long, EEUnit*>::iterator> theRange =
                 this->mUnits.equal_range(theType);
             for (it = theRange.first, theEnd = theRange.second; it != theEnd; ++it) {
@@ -930,7 +930,7 @@ void EECPPersonnel::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
                 this->mUnits.erase(it);
                 break;
             }
-            theType = (ioSwaps[i]).mOld->GetUnitClass()->mUnitType;
+            theType = (ioSwaps[i]).mOld->GetUnitClass()->GetUnitType();
             theRange = this->mUnits.equal_range(theType);
             for (it = theRange.first, theEnd = theRange.second; it != theEnd; ++it) {
                 if (it->second != (ioSwaps[i]).mOld)
@@ -938,7 +938,7 @@ void EECPPersonnel::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
                 it->second->Dereference();
                 (ioSwaps[i]).mNew->Reference();
                 this->mUnits.erase(it);
-                long theNewType = (ioSwaps[i]).mNew->GetUnitClass()->mUnitType;
+                long theNewType = (ioSwaps[i]).mNew->GetUnitClass()->GetUnitType();
                 this->mUnits.insert(std::make_pair(theNewType, (ioSwaps[i]).mNew));
                 break;
             }
@@ -961,13 +961,13 @@ void EECPPersonnel::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
         }
     }
     for (i = ioSwaps.size() - 1; i >= 0; i--) {
-        long theCategory = (ioSwaps[i]).mOld->GetUnitClass()->mCategory;
+        long theCategory = (ioSwaps[i]).mOld->GetUnitClass()->GetCategory();
         if (theCategory == kUnitCategoryLandCitizen || theCategory == kUnitCategoryNavalCitizen)
             continue;
         if ((ioSwaps[i]).mNew->mPlayer != this->mPlayer)
             continue;
-        EEPlayer* theOldPlayer = (ioSwaps[i]).mOld->mPlayer;
-        if (theOldPlayer == (ioSwaps[i]).mNew->mPlayer)
+        EEPlayer* theOldPlayer = (ioSwaps[i]).mOld->GetPlayer();
+        if (theOldPlayer == (ioSwaps[i]).mNew->GetPlayer())
             continue;
         if (!this->mPlayer->mCombatManager->IsMilitaryClass((ioSwaps[i]).mNew->GetUnitClass()))
             continue;
@@ -1230,7 +1230,7 @@ void EECPPersonnel::UnloadTransport(EEComplexUnit* inUnit)
         if (theContinent->mCategory != kContinentCategoryLand) {
             gContinentManager.GetAdjacentIDs(theIDs, theContinent->mID);
             if (theIDs.size() != 0) {
-                Fn4EEF9(theIDs, UMFloatToLong(gPhysics->mRandom.Generate()));
+                PermuteValues(theIDs, UMFloatToLong(gPhysics->mRandom.Generate()));
                 while (theIDs.size() != 0) {
                     if (gContinentManager.GetContinentByID(theIDs.back()) != NULL &&
                         gContinentManager.GetContinentByID(theIDs.back())->mCategory == kContinentCategoryLand) {
@@ -1248,7 +1248,7 @@ void EECPPersonnel::UnloadTransport(EEComplexUnit* inUnit)
         else
             theTarget->GetShoreInRegion(gContinentManager.GetContinent(inUnit, kAIPathSpaceRegion), theTiles, kAIPathSpaceRegion);
         if (theTiles.size() != 0) {
-            Fn4EEF9(theTiles, UMFloatToLong(gPhysics->mRandom.Generate()));
+            PermuteValues(theTiles, UMFloatToLong(gPhysics->mRandom.Generate()));
             for (n = 0x14; theTiles.size() != 0; ) {
                 theGoal->mDestination = theTiles.back();
                 theGoal->FindUnloadTiles();

@@ -109,7 +109,7 @@ void EEAQuickSaveLoad::Virtual4()
         theFile.SetVolume(gStartupVolume);
         theFile.SetDirectory(gStartupDirectory + "data\\" + "Scenarios\\");
         theFile.SetFile(theName);
-        if (Fn14CF33(theFile, true, true, true) != 0)
+        if (LoadSavedGameFile(theFile, true, true, true) != 0)
             gUIManager->DisplayMessage(gLoadSaveErrorMessage, 1, NULL, NULL, true);
     } else {
         if (this->mFile != NULL) {
@@ -117,8 +117,8 @@ void EEAQuickSaveLoad::Virtual4()
             this->mFile = NULL;
         }
         this->mFile = new FSMemoryFile(0x400, true, 1000);
-        theFileName = Fn14C741(theName, true);
-        Fn14CE06(theFileName, TMGetTime(), *this->mFile, *this->mFile);
+        theFileName = GetSaveTextName(theName, true);
+        WriteSaveGame(theFileName, TMGetTime(), *this->mFile, *this->mFile);
         if (this->mWriteToFile == true)
             this->SaveToFile(theFileName);
     }

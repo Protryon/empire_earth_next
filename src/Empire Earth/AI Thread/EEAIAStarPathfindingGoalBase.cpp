@@ -46,7 +46,7 @@
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIAStarPathfindingGoalBase.h"
 
-void Fn248FE4(EEUnit* inUnit, std::vector<U2DPoint<long> >& ioPoints, float inArg);   // 0x248fe4 (cdecl) (provisional name)
+void EEGetUnitTiles(EEUnit* inUnit, std::vector<U2DPoint<long> >& ioPoints, float inArg);  // 0x248fe4 (cdecl) (provisional name)
 
 // The units blocking a path near the goal (0x19ccb's local; sizeof 0x3c; ctor 0x19da3 out of line, members in
 // address order after Virtual14) (provisional name)
@@ -93,7 +93,7 @@ EEAIAStarPathfindingGoalBase::~EEAIAStarPathfindingGoalBase()
 void EEAIAStarPathfindingGoalBase::CollectUnitTiles()
 {
     if (this->mUnit->mUnitClass->mDomains & kMovementSea)
-        Fn248FE4(this->mUnit, this->mUnitTiles, 0.0f);
+        EEGetUnitTiles(this->mUnit, this->mUnitTiles, 0.0f);
 }
 
 // FUNCTION: EXE 0x419b6e
@@ -235,7 +235,7 @@ bool EEAIPathBlockerCollector::AddTiles(EEComplexUnit* inUnit)
     std::vector<U2DPoint<long> > theTiles;
     if (inUnit->mUnitClass->GetInnerCollisionSphere() >= this->mUnit->mUnitClass->GetInnerCollisionSphere()
         || inUnit->mPushImmuneUntil > gPhysics->mGameTime) {
-        Fn248FE4(inUnit, theTiles, !this->mWide ? 1.0f : 2.0f);
+        EEGetUnitTiles(inUnit, theTiles, !this->mWide ? 1.0f : 2.0f);
         for (long i = theTiles.size() - 1; i >= 0; i--) {
             if (theTiles[i] != this->mGoal && this->mBlocked.find(theTiles[i]) == this->mBlocked.end())
                 this->mTiles.push_back(theTiles[i]);

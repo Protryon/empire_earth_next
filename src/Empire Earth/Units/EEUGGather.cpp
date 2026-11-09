@@ -182,7 +182,9 @@ void EEUGGather::GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation)
             this->mDestination = outLocation;
         } else {
             theResources.clear();
-            while (this->mResource != NULL) {
+            while (true) {
+                if (this->mResource == NULL)
+                    break;
                 if (EEFindResourceSpot(inUnit, static_cast<EEComplexUnit*>(this->mResource), outLocation))
                     break;
                 if (this->mResource->GetResourceType() != kResourceWood) {
@@ -196,7 +198,9 @@ void EEUGGather::GetDestination(EEComplexUnit* inUnit, GE3DPoint& outLocation)
         }
     } else if (this->mStorage != NULL) {
         theStorages.clear();
-        while (this->mStorage != NULL) {
+        while (true) {
+            if (this->mStorage == NULL)
+                break;
             if (EEFindNextFreeTile(inUnit, static_cast<EEComplexUnit*>(this->mStorage), outLocation))
                 break;
             if (std::find(theStorages.begin(), theStorages.end(), this->mStorage) != theStorages.end())
@@ -656,7 +660,6 @@ void EEUGGather::GatherNextTree(EEComplexUnit* inUnit)
 // FUNCTION: EXE 0x62333b
 // Unless it works a farm, gives the gatherer a build goal for each unfinished own settlement or town centre in sight
 // (each becomes the storage); stops gathering
-// NEAR: the original calls begin() and _Ptrit::operator+ out of line (8 more frame bytes); ours inlines them
 void EEUGGather::BuildFarms(EEComplexUnit* inUnit)
 {
     GE2DPoint theCenter;
@@ -664,22 +667,22 @@ void EEUGGather::BuildFarms(EEComplexUnit* inUnit)
     std::vector<EEUnit*> theUnits;
     std::vector<EEUnit*> theOthers;
     inUnit->SetCurrentPhysicsAction(0);
-    if (this->mResource == NULL || this->mResource->mUnitClass->mUnitType != kUnitTypeFarm) {
+    if (this->mResource == NULL || this->mResource->GetUnitClass()->mUnitType != kUnitTypeFarm) {
         theCenter.SetX(inUnit->mTileX);
         theCenter.SetY(inUnit->GetTileY());
         EEGetUnitsInRadius(theCenter, inUnit->GetLineOfSight(), theUnits);
         for (long theIndex = theUnits.size() - 1; theIndex >= 0; theIndex--) {
             EEUnit* theUnit = theUnits[theIndex];
-            unsigned long theType = theUnit->mUnitClass->mUnitType;
-            if ((theType != kUnitTypeSettlement && theType != kUnitTypeTownCenter) || theUnit->mPlayer != inUnit->mPlayer || !(theUnit->mHitPoints > 0)
-                || static_cast<EEComplexUnit*>(theUnit)->mIsBuilt)
+            unsigned long theType = theUnit->GetUnitClass()->GetUnitType();
+            if ((theType != kUnitTypeSettlement && theType != kUnitTypeTownCenter) || theUnit->GetPlayer() != inUnit->GetPlayer() || !(theUnit->GetHitPoints() > 0)
+                || static_cast<EEComplexUnit*>(theUnit)->GetIsBuilt())
                 continue;
             EEUGBuildRepair* theGoal = new EEUGBuildRepair(inUnit->GetPlayer(), theUnit, false);
             if (theGoal == NULL)
                 continue;
             this->SetStorage(theUnit);
             inUnit->SetGoal(theGoal, 1, 0);
-            inUnit->mUnitClass->ActionChanged(inUnit);
+            inUnit->GetUnitClass()->ActionChanged(inUnit);
         }
     }
     this->mGathering = false;

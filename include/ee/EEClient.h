@@ -57,7 +57,7 @@ class EEUnit;
 // 0xb7992 (cdecl): the DisplayMessage callback after the host left (gUserInterface's 0x27921e; the argument is
 // not read: the server and the client also call it with the address of a zeroed local; provisional name; types
 // inferred)
-void FnB7992(void* inData);
+void CancelGameCallback(void* inData);
 void EESendGroupCommand(EEGroup* inGroup, EEUnit* inTarget, unsigned long inPlayerID, long inCommand, long inGoalQueue);
 
 #endif

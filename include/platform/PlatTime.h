@@ -44,6 +44,10 @@ typedef struct PlatDateTime {
 } PlatDateTime;
 void PlatGetLocalTime(PlatDateTime* outTime);
 
+// The UTC wall-clock time in 100-nanosecond units since 1601-01-01 (a Windows FILETIME; Win32:
+// GetSystemTimeAsFileTime). Follows the system clock: it may jump when the clock is set.
+uint64_t PlatTimeWallClock100ns(void);
+
 // System timers (Win32: the multimedia timers, timeSetEvent). A timer fires once, or every inIntervalMs when
 // inPeriodic is nonzero, on a system thread. A callback timer calls inCallback(inUser) there; an event timer sets
 // inEvent (platform/PlatThread.h) instead. -> the timer id, 0 on failure. PlatTimerStop stops a running timer ->

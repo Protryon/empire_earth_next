@@ -573,11 +573,11 @@ void EEE3DFarm::BuildGroundModels()
     this->mGroundCopy->GetMaterial(0)->SetVertexRangeLength(this->mRowLength * this->mRowLength);
     this->mGroundCopy->ComputeBoundingVolumes();
     this->mCropsCopy = gModelManager->CreateModel(
-        this->mGraphicEffect->mIntParam1 * UMFloor(this->mArea.GetWidth() + 1.0f) * UMFloor(this->mArea.GetWidth() + 1.0f) * 2,
-        this->mRowLength * UMFloor(this->mArea.GetWidth() + 1.0f) * this->mGraphicEffect->mIntParam1 * 2, 1, 0, 1, 0,
+        UMFloor(this->mArea.GetWidth() + 1.0f) * UMFloor(this->mArea.GetWidth() + 1.0f) * this->mGraphicEffect->GetIntParam1() * 2,
+        this->mGraphicEffect->GetIntParam1() * this->mRowLength * UMFloor(this->mArea.GetWidth() + 1.0f) * 2, 1, 0, 1, 0,
         UString("graphics farm stalk model"), 1);
     this->mCropsCopy->Reference();
-    for (j = 0; j < this->mRowLength * UMFloor(this->mArea.GetWidth() + 1.0f) * this->mGraphicEffect->mIntParam1 * 2; j += 3) {
+    for (j = 0; j < this->mGraphicEffect->GetIntParam1() * this->mRowLength * UMFloor(this->mArea.GetWidth() + 1.0f) * 2; j += 3) {
         this->mCropsCopy->GetPolygonArray(0)->SetVertexIndex1(0, j);
         this->mCropsCopy->GetPolygonArray(0)->SetVertexIndex2(0, j + 1);
         this->mCropsCopy->GetPolygonArray(0)->SetVertexIndex3(0, j + 2);
@@ -590,10 +590,10 @@ void EEE3DFarm::BuildGroundModels()
     }
     this->mCropsCopy->GetMaterial(0)->SetPolygonStartingIndex(0, 0);
     this->mCropsCopy->GetMaterial(0)->SetPolygonRangeLength(
-        this->mGraphicEffect->mIntParam1 * UMFloor(this->mArea.GetWidth() + 1.0f) * UMFloor(this->mArea.GetWidth() + 1.0f) * 2, 0);
+        UMFloor(this->mArea.GetWidth() + 1.0f) * UMFloor(this->mArea.GetWidth() + 1.0f) * this->mGraphicEffect->GetIntParam1() * 2, 0);
     this->mCropsCopy->GetMaterial(0)->SetVertexStartingIndex(0);
     this->mCropsCopy->GetMaterial(0)->SetVertexRangeLength(
-        this->mRowLength * UMFloor(this->mArea.GetWidth() + 1.0f) * this->mGraphicEffect->mIntParam1 * 2);
+        this->mGraphicEffect->GetIntParam1() * this->mRowLength * UMFloor(this->mArea.GetWidth() + 1.0f) * 2);
     this->mCropsCopy->ComputeBoundingVolumes();
 }
 
@@ -714,9 +714,9 @@ long EEE3DFarm::DrawPass2()
         gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
         gRasterizer->SetShadingColorSource(0, theScreen);
         if (!this->mDoppelganger)
-            Fn10F833();
+            SetTerrainLighting();
         else
-            Fn10FB74();
+            DimUnitLighting();
         this->mGroundCopy->SetOpacity(theOpacity);
         this->mCropsCopy->SetOpacity(theOpacity);
         bool theSorted = gOrthographicView;

@@ -153,16 +153,16 @@ EESEAPaint* EEUIFSEPaintElevation::CreatePaintAction()
     long theX;
     long theY;
     EETile* theTile;
-    ISEntity* theKey;
+    ISEntity* theSpaceKey;
     char theLevel = 0;
-    long theResult = gISKeyboard->GetEntity(kKeySpace, theKey);
+    long theResult = gISKeyboard->GetEntity(kKeySpace, theSpaceKey);
 
     if (this->GetRightMouseButtonDown() == true) {
         if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true)
             theLevel = (char)UMFloor(gWorld.GetMap()->GetTile(this->mTileX, this->mTileY)->GetHeight() * 4.8989797f + 0.00001f);
         else if (static_cast<UIRadioButton*>(gUIManager->mScenarioEditorForm->GetControlById(kSEElevationLowerButton))->GetIsChecked() == true)
             theLevel = (char)UMFloor(gWorld.GetMap()->GetTile(this->mTileX, this->mTileY)->GetHeight() * 1.2247449f + 0.00001f);
-    } else if (theResult == 0 && theKey->GetValue() > 0) {
+    } else if (theResult == 0 && theSpaceKey->GetValue() > 0) {
         EEPointUnitOrTileXY(this->GetMouseLocation(), theTile, theX, theY, false);
         theLevel = (char)UMFloor(theTile->GetHeight() / (gWorld.GetMap()->GetF1955F4() * 0.5f) + 0.00001f);
     } else if (static_cast<UIRadioButton*>(this->GetForm()->GetControlById(kSEElevationRaiseButton))->GetIsChecked() == true) {
@@ -173,7 +173,7 @@ EESEAPaint* EEUIFSEPaintElevation::CreatePaintAction()
         theLevel = (char)((float)(theSlider->GetMaxRange() - theSlider->GetCurrentRangeValue()) - 6.0f);
     }
     EESEAPaint* theAction = new EESEAPaintElevation(theLevel);
-    this->mIsCentered = false;
+    this->SetIsCentered(false);
     return theAction;
 }
 

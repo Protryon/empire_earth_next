@@ -35,6 +35,7 @@ public:
     EESEAPaint* mPac;                // +0xac
     long mLastTileX;                        // +0xb0 (ctor: 0)
     long mLastTileY;                        // +0xb4 (ctor: 0)
+    void SetIsCentered(bool inValue) { this->mIsCentered = inValue; }
     bool mIsCentered;                       // +0xb8 (ctor: false; EEUIFSEPaintElevation::CreatePaintAction clears it)
 };
 

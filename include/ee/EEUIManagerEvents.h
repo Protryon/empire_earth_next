@@ -73,11 +73,11 @@ public:
 
 class EEUIEMGIncrementRallyTimer : public UIEvent {
 public:
-    EEUIEMGIncrementRallyTimer(long inTimer) { this->mTimer = inTimer; }  // body: stored after the vptr
+    EEUIEMGIncrementRallyTimer(unsigned char inTimer) { this->mTimer = inTimer; }  // body: stored after the vptr
     virtual ~EEUIEMGIncrementRallyTimer() {}
     virtual long ProcessEvent(UIForm* inForm, UIEntity* inEntity);
 
-    long mTimer;                            // +0x0c (1..3)
+    unsigned char mTimer;                   // +0x0c (1..3)
 };
 
 // ProcessEvent 0x273345 inline (emitted after the main game factory): the unit hack panel loads the unit data

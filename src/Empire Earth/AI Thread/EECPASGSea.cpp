@@ -145,17 +145,18 @@ void EECPASGSea::CollectTargets(EEAIAStarBounds* inBounds, bool inIncludeEnemies
 {
     std::vector<EEComplexUnit*> theUnits;
     EECPASeaTargetFilter theFilter;
-    theFilter.mGroup = this;
-    theFilter.mPlayer = this->mPlayer2;
-    theFilter.mPlayerID = this->mTask.GetPlayerID();
-    theFilter.mIncludeEnemies = inIncludeEnemies;
+    EECPASTargetUnit* theTarget;
     theFilter.mAlternate = false;
     theFilter.mAllowNaval = false;
+    theFilter.mPlayer = this->mPlayer2;
+    theFilter.mIncludeEnemies = inIncludeEnemies;
+    theFilter.mGroup = this;
     theFilter.mAllowShore = this->mCanAttackShore;
+    theFilter.mPlayerID = this->mTask.GetPlayerID();
     if (EECollectASGTargets(*inBounds, theUnits, theFilter, true) != 0) {
         this->mTargets.reserve(theUnits.size());
         for (long i = theUnits.size() - 1; i >= 0; --i) {
-            EECPASTargetUnit* theTarget = EECPAttackSubGroup::NewTarget(theUnits[i]);
+            theTarget = EECPAttackSubGroup::NewTarget(theUnits[i]);
             EEUnitClass* theClass = theUnits[i]->mUnitClass;
             if (theClass->mIsWall && !theClass->mIsTower) {
                 this->mSiegeTargets.push_back(theTarget);

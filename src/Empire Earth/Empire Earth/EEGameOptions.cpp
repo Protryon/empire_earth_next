@@ -77,7 +77,7 @@
 #include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
 
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern EEGameOptions& gLobbyGameOptions;     // 0x53030c (SetDefaults starts from it)
 unsigned long EEGetNumberOfResourceLevels();
 
@@ -97,7 +97,7 @@ EEGameOptionsPlayer::EEGameOptionsPlayer()
 {
     this->mType = 3;
     this->mLoadedType = 3;
-    this->mName = gU4E5B98;
+    this->mName = gEmptyString;
     this->mPing = 0.0f;
     this->mSlot = 0;
     this->mColor = 0;
@@ -203,10 +203,10 @@ EEGameOptions::EEGameOptions()
     this->mVariant = 0;
     this->mEpochStart = EEEpochCount();
     this->mEpochEnd = EEEpochCount() - 1;
-    this->mMapType = gU4E5B98;
-    this->mCampaignName = gU4E5B98;
-    this->mScenarioName = gU4E5B98;
-    this->mMapName = gU4E5B98;
+    this->mMapType = gEmptyString;
+    this->mCampaignName = gEmptyString;
+    this->mScenarioName = gEmptyString;
+    this->mMapName = gEmptyString;
     this->mDifficulty = 0;
     this->mCampaignChecksum = 0;
     this->mLockTeams = false;
@@ -274,7 +274,7 @@ EEGameOptions& EEGameOptions::operator=(const EEGameOptions& inOther)
         if (EERMFindGenerator(inOther.mMapType, theIndex) == 0)
             this->mMapType = inOther.mMapType;
         else
-            this->mMapType = EERMGetNumberOfGenerators() >= 1 ? EERMGetGeneratorName(0) : UWideString(gU4E5B98);
+            this->mMapType = EERMGetNumberOfGenerators() >= 1 ? EERMGetGeneratorName(0) : UWideString(gEmptyString);
     } else {
         this->mMapType = inOther.mMapType;
     }
@@ -340,7 +340,7 @@ bool EEGameOptions::GetCampaignMapName(UWideString& outName)
         outName = this->mMapName;
         theResult = true;
     } else {
-        outName = gU4E5B98;
+        outName = gEmptyString;
     }
     return theResult;
 }
@@ -366,10 +366,10 @@ void EEGameOptions::SetDefaults()
     this->mVariant = 0;
     this->mEpochStart = EEEpochCount();
     this->mEpochEnd = EEEpochCount() - 1;
-    this->mMapType = EERMGetNumberOfGenerators() > 0 ? EERMGetGeneratorName(0) : UWideString(gU4E5B98);
-    this->mCampaignName = gU4E5B98;
-    this->mScenarioName = gU4E5B98;
-    this->mMapName = gU4E5B98;
+    this->mMapType = EERMGetNumberOfGenerators() > 0 ? EERMGetGeneratorName(0) : UWideString(gEmptyString);
+    this->mCampaignName = gEmptyString;
+    this->mScenarioName = gEmptyString;
+    this->mMapName = gEmptyString;
     this->mMapSize = EEGetRules().mGameOptions.mMapSizeDefault;
     this->mUnitLimit = EERuleLong(EEGetRules().mGameOptions.mUnitLimitDefault);
     this->mWondersForVictory = EEGetRules().mGameOptions.mWondersDefault;

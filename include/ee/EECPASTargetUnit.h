@@ -20,6 +20,7 @@ public:
     // (referenced) and mL08 = its mUnitID (provisional name)
     void SetUnit(EEComplexUnit* inUnit);
 
+    EEComplexUnit* GetUnit() const { return this->mUnit; }
     EEComplexUnit* mUnit;                   // +0x04 (referenced: RTSUnit::Dereference)
     long mUnitID;                           // +0x08
     // inline: the no-/Og priority functor 0x408fd7 reads it through return temps (twice per compare) (provisional name)

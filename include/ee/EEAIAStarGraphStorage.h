@@ -73,6 +73,7 @@ public:
     EEAIAStarGraphNode* mCurrentNode;       // +0x24
     unsigned char* mFlags;                  // +0x28 (one byte per index: 8 closed, 4 open)
     EEAIAStarGraphNode** mNodes;            // +0x2c (one per index)
+    long GetCount() const { return this->mCount; }
     long mCount;                            // +0x30 the index count
     long mBucketCount;                      // +0x34 (= 0x1b)
     long mOldCount;                         // +0x38 (the count the arrays were sized for)

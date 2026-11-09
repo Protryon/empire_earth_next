@@ -144,7 +144,7 @@ const UString EECalamity::mEffectHandleStringID("EffectHandleStringID");
 // Creates an active calamity of the class for the caster (referenced) and loads the class's media for the caster's
 // player (nature without a caster)
 EECalamity::EECalamity(EECalamityClass* inClass, EEUnit* inCasterUnit)
-    : mEffectGeneration(6), mTilePlaceHolder1X(0), mTilePlaceHolder1Y(0)
+    : mEffectGeneration(6), mTilePlaceHolder1(0, 0)
 {
     this->mTargetUnit = NULL;
     this->mCasterUnit = NULL;
@@ -162,7 +162,7 @@ EECalamity::EECalamity(EECalamityClass* inClass, EEUnit* inCasterUnit)
 // FUNCTION: EXE 0x4ad1ad
 // Creates an empty calamity with no class, target or caster (for loading)
 EECalamity::EECalamity()
-    : mEffectGeneration(6), mTilePlaceHolder1X(0), mTilePlaceHolder1Y(0)
+    : mEffectGeneration(6), mTilePlaceHolder1(0, 0)
 {
     this->mTargetUnit = NULL;
     this->mCasterUnit = NULL;
@@ -268,8 +268,8 @@ void EECalamity::DumpOutOfSynch(FILE* inFile)
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Location X: %6.6f\n", this->mTargetLocation.GetX());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Location Y: %6.6f\n", this->mTargetLocation.GetY());
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Location Z: %6.6f\n", this->mTargetLocation.GetZ());
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Tile Int PlaceHolder1 X: %ld\n", this->mTilePlaceHolder1X);
-    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Tile Int PlaceHolder1 Y: %ld\n", this->mTilePlaceHolder1Y);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Tile Int PlaceHolder1 X: %ld\n", this->mTilePlaceHolder1.mX);
+    fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Tile Int PlaceHolder1 Y: %ld\n", this->mTilePlaceHolder1.mY);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Integer PlaceHolder1 %ld\n", this->mIntPlaceHolder1);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Integer PlaceHolder2 %ld\n", this->mIntPlaceHolder2);
     fprintf(inFile, "OUT OF SYNCH DUMP:  Calamity Target Unit ID #%08lx\n", this->mTargetUnitID);
@@ -306,7 +306,7 @@ long EECalamity::GetOutOfSynchChecksum()
     theValue = this->mTargetLocation.GetY();
     theChecksum += *reinterpret_cast<int32_t*>(&theValue);
     theValue = this->mTargetLocation.GetZ();
-    theChecksum += *reinterpret_cast<int32_t*>(&theValue) + this->mTilePlaceHolder1X + this->mTilePlaceHolder1Y + this->mIntPlaceHolder1 + this->mIntPlaceHolder2
+    theChecksum += *reinterpret_cast<int32_t*>(&theValue) + this->mTilePlaceHolder1.mX + this->mTilePlaceHolder1.mY + this->mIntPlaceHolder1 + this->mIntPlaceHolder2
                  + this->mTargetUnitID + this->mOriginatingUnitID + this->mPlayerNumber + (this->mBoolPlaceHolder1 == true)
                  + (this->mBoolPlaceHolder2 == true) + (this->mInitialized == true) + (this->mHasTargetLocation == true)
                  + (this->mHasTargetUnit == true);
@@ -394,13 +394,13 @@ long EECalamity::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
                                                                         {
                                                                             long theTileX;
                                                                             theResult = inFile.Read(theTileX);
-                                                                            this->mTilePlaceHolder1X = theTileX;
+                                                                            this->mTilePlaceHolder1.mX = theTileX;
                                                                         }
                                                                         if (theResult == kErrorOK) {
                                                                             {
                                                                                 long theTileY;
                                                                                 theResult = inFile.Read(theTileY);
-                                                                                this->mTilePlaceHolder1Y = theTileY;
+                                                                                this->mTilePlaceHolder1.mY = theTileY;
                                                                             }
                                                                             if (theResult == kErrorOK) {
                                                                                 theResult = inFile.Read(this->mEffectHandle.mValue);
@@ -499,10 +499,10 @@ long EECalamity::Save(unsigned long inMajorVersion, unsigned long inMinorVersion
     theResult = outFile.Write(this->mTimeElapsedSinceLastUpdate);
     if (theResult != kErrorOK)
         return theResult;
-    theResult = outFile.Write((long)this->mTilePlaceHolder1X);
+    theResult = outFile.Write((long)this->mTilePlaceHolder1.mX);
     if (theResult != kErrorOK)
         return theResult;
-    theResult = outFile.Write((long)this->mTilePlaceHolder1Y);
+    theResult = outFile.Write((long)this->mTilePlaceHolder1.mY);
     if (theResult != kErrorOK)
         return theResult;
     theResult = outFile.Write(this->mEffectHandle.mValue);

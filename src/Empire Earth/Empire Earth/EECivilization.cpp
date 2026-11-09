@@ -16,7 +16,7 @@
 #include "ee/EECivilizationManager.h"
 #include "ee/EECivilization.h"
 
-extern char gU4E5B98[];                     // 0x4e5b98 (pooled "")
+extern char gEmptyString[];                 // 0x4e5b98 (pooled "")
 extern EECivilizationManager gCivilizationManager;
 extern EEGameOptions& gGameOptions;
 
@@ -56,7 +56,7 @@ const UString EECivilization::sIsDefaultCiv("EECivilization-IsDefaultCiv");
 // Creates an unnamed civilization with no points or upgrades, marked unchanged
 EECivilization::EECivilization()
 {
-    this->mName = gU4E5B98;
+    this->mName = gEmptyString;
     this->mAvailablePoints = 0;
     this->mMaxPoints = 0;
     this->mNoPointsAdded = true;

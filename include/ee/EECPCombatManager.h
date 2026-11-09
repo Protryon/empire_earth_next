@@ -83,11 +83,13 @@ public:
     std::vector<unsigned long> mWonderAttackTimes;  // +0x30 (saved)
     EECPUnitSelector* mUnitSelector;        // +0x40 (new 8; EECPAttackGroup 0x57391 calls Select)
     EEComputerPlayer* mPlayer;              // +0x44
+    EECPAttackCommander* GetAttackCommander() const { return this->mAttackCommander; }
     EECPAttackCommander* mAttackCommander;  // +0x48 (new 0x3c, ctor 0x5198e)
     EECPDefenseCommander* mDefenseCommander;   // +0x4c (new 0x54, ctor 0x77bce)
     // inline (EECPDefenseCommander 0x478301 loads the object chain into ecx before the push) (provisional name)
     EECPIntelligence* GetIntelligence() { return this->mIntelligence; }
     EECPIntelligence* mIntelligence;        // +0x50 (new 0x14, ctor 0x81cd0)
+    EECPPersonnel* GetPersonnel() const { return this->mPersonnel; }
     EECPPersonnel* mPersonnel;              // +0x54 (new 0x38, ctor 0x868b8)
     // inline post-increment id dispensers (the AttackGroup/AttackSubGroup ctors 0x45473a/0x45adb2)
     unsigned long GetNextGroupID() { return this->mNextGroupID++; }

@@ -419,8 +419,8 @@ void EEPlayer::RefundImprovement(EEUnitClass* inClass, long inImprovement, float
         return;
     long theType = inClass->GetUnitType();
     long theLevel;
-    float theScale = inClass->mImprovements->mEntries[inImprovement].mCostFactor;
-    theScale = this->GetImprovementLevel(theType, inImprovement) * theScale;
+    float theFactor = inClass->mImprovements->mEntries[inImprovement].mCostFactor;
+    float theScale = this->GetImprovementLevel(theType, inImprovement) * theFactor;
     for (unsigned long i = 2; i < 7; i++) {
         long theCost = theNode->GetCost(i, 0, 1.0f) * theScale + 0.0001f;
         long theAmount = this->ScaleCost(theCost) * inFraction;
@@ -575,10 +575,7 @@ bool EEPlayer::AddUnitToHerd(EEComplexUnit* inUnit)
                 this->mHerds.push_back(theHerd);
             else
                 delete theHerd;
-        } else if (theHerds.size() == 1) {
-            theHerd = *theHerds.begin();
-            theResult = theHerd->AddUnit(inUnit);
-        } else {
+        } else if (theHerds.size() != 1) {
             long theIndex = -1;
             if (inUnit->mHolder != NULL) {
                 for (theIndex = theHerds.size() - 1; theIndex >= 0; theIndex--)
@@ -588,6 +585,9 @@ bool EEPlayer::AddUnitToHerd(EEComplexUnit* inUnit)
             if (theIndex == -1)
                 theIndex = gPhysics->GetRandom(0L, (long)theHerds.size() - 1);
             theHerd = *(theHerds.begin() + theIndex);
+            theResult = theHerd->AddUnit(inUnit);
+        } else {
+            theHerd = *theHerds.begin();
             theResult = theHerd->AddUnit(inUnit);
         }
     }
@@ -1008,7 +1008,7 @@ void EEPlayer::ClearUnitsToRepatrol()
 void EEPlayer::UnitCompleted(EEComplexUnit* inUnit)
 {
     EECivPower thePower;
-    EETechTreeNode* theNode = this->mTechnologies->Get(inUnit->mUnitClass->mTechnology);
+    EETechTreeNode* theNode = this->mTechnologies->Get(inUnit->GetUnitClass()->mTechnology);
     if (theNode != NULL && theNode->mData->mKind == 4) {
         inUnit->mPlayer->AddWonder(inUnit, false);
         if (gWorld.mVictoryEnabled) {
@@ -1017,28 +1017,28 @@ void EEPlayer::UnitCompleted(EEComplexUnit* inUnit)
                     gWorld.mPlayers[i]->WonderStarted(inUnit);
         }
     }
-    if (inUnit->mUnitClass->IsLandBuilding() && inUnit->mPreviousPart == NULL && inUnit->mUnitClass->mIsVital)
+    if (inUnit->GetUnitClass()->IsLandBuilding() && inUnit->mPreviousPart == NULL && inUnit->GetUnitClass()->mIsVital)
         this->mEndOfGameCount++;
-    if (inUnit->mUnitClass->IsLandBuilding() && inUnit->mUnitClass->mIsVital) {
+    if (inUnit->GetUnitClass()->IsLandBuilding() && inUnit->GetUnitClass()->mIsVital) {
         this->mNumVitalBuildings++;
         if (this->mNumVitalBuildings == 1)
             this->EnableCamouflagePower();
     }
     if (gCivPowersManager.HasPower(this, kCivPowerExploration) &&
-        (inUnit->mUnitClass->mUnitType == kUnitTypeTownCenter || inUnit->mUnitClass->mUnitType == kUnitTypeCapitol)) {
+        (inUnit->GetUnitClass()->mUnitType == kUnitTypeTownCenter || inUnit->GetUnitClass()->mUnitType == kUnitTypeCapitol)) {
         gCivPowersManager.GetPower(kCivPowerExploration, thePower);
         this->PulseSight(true, thePower.mAmount, inUnit->mUnitID);
     }
     this->ClearFootprint(inUnit);
-    if (inUnit->mUnitClass->mUnitType == kUnitTypeHouse)
+    if (inUnit->GetUnitClass()->mUnitType == kUnitTypeHouse)
         this->SuggestRecomputeAllAreaEffects();
-    if (inUnit->mUnitClass->mIsWall)
+    if (inUnit->GetUnitClass()->mIsWall)
         this->RemoveConstructionSite(inUnit);
     if (gLoadingSavedGame || !gGameScreenActive)
         return;
     this->AddUnitToTown(inUnit);
-    if (inUnit->mUnitClass->mBlocksTile || inUnit->mUnitClass->mCategory == kUnitCategoryGate)
-        gContinentManager.UpdateWallUnit(inUnit, inUnit->mUnitClass->mCategory == kUnitCategoryGate);
+    if (inUnit->GetUnitClass()->mBlocksTile || inUnit->GetUnitClass()->mCategory == kUnitCategoryGate)
+        gContinentManager.UpdateWallUnit(inUnit, inUnit->GetUnitClass()->mCategory == kUnitCategoryGate);
 }
 
 // FUNCTION: EXE 0x56419b
@@ -1280,12 +1280,12 @@ void EEPlayer::AddWonderPower(EEComplexUnit* inUnit)
         this->mWonderPowers.push_back(2);
         EEUnitSet* theSet = gUnitSetManager.GetSet(inUnit->mUnitClass->mWonderUnitSet);
         for (unsigned long i = 0; i < this->mUnitClassUpgrades.size(); i++) {
-            if (this->GetUpgrade(i) == NULL || !theSet->Contains(this->GetUpgrade(i)->mUnitClass->mUnitType))
+            if (this->GetUpgrade(i) == NULL || !theSet->Contains(this->GetUpgrade(i)->GetUnitClass()->GetUnitType()))
                 continue;
-            long theType = this->GetUpgrade(i)->mUnitClass->mUnitType;
+            long theType = this->GetUpgrade(i)->mUnitClass->GetUnitType();
             float theFactor = gWorld.GetGameVariant()->GetFactor(theType);
             float theAmount = gWorldTable.GetFloatValue(kWorldWonderHitPointBonus);
-            EEUpgradeHitPoints(this->mUnitClassUpgrades[i], this->mUnitClassUpgrades[i]->mUnitClass->mUnitType,
+            EEUpgradeHitPoints(this->mUnitClassUpgrades[i], this->mUnitClassUpgrades[i]->mUnitClass->GetUnitType(),
                        (theFactor + 1.0f) * theAmount, this);
         }
         break;
@@ -1367,23 +1367,24 @@ EETown* EEPlayer::GetNearestTown(const EETileLocation& inTile, EETileLocation& o
     EETileLocation theCandidate;
     long theDistance = 0;
     for (long i = this->mTowns.size() - 1; i >= 0; i--) {
-        if (!this->mTowns[i]->mHull.BoundedContains(inTile)) {
-            if (theTown == NULL) {
-                outTile = this->mTowns[i]->GetClosestPoint(inTile);
-                theTown = this->mTowns[i];
-                theDistance = outTile.DistanceToSquared(inTile);
-            } else {
+        EETown* theCurrent = this->mTowns[i];
+        if (!(!theCurrent->mHull.BoundedContains(inTile))) {
+            theTown = this->mTowns[i];
+            outTile = inTile;
+            break;
+        } else {
+            if (theTown != NULL) {
                 theCandidate = this->mTowns[i]->GetClosestPoint(inTile);
                 if (theCandidate.DistanceToSquared(inTile) < theDistance) {
                     outTile = theCandidate;
                     theTown = this->mTowns[i];   // the closer town too (was its tile only)
                     theDistance = theCandidate.DistanceToSquared(inTile);   // was (theCandidate): always 0
                 }
+            } else {
+                outTile = this->mTowns[i]->GetClosestPoint(inTile);
+                theTown = this->mTowns[i];
+                theDistance = outTile.DistanceToSquared(inTile);
             }
-        } else {
-            theTown = this->mTowns[i];
-            outTile = inTile;
-            break;
         }
     }
     return theTown;
@@ -2926,9 +2927,10 @@ void EEPlayer::RemoveSightSharer(EEPlayer* inPlayer)
 // Finishes running groups left without units, then releases and drops every finished group
 void EEPlayer::RemovalsDone()
 {
+    EEGroup* theGroup;
     unsigned long theCount = this->mRunningGroups.size();
     for (unsigned long i = 0; i < theCount; i++) {
-        EEGroup* theGroup = this->mRunningGroups[i];
+        theGroup = this->mRunningGroups[i];
         if (theGroup->GetNumUnits() == 0 && std::find(this->mFinishedGroups.begin(), this->mFinishedGroups.end(), theGroup) == this->mFinishedGroups.end()) {
             // Virtual04 copies these entries from mPendingGroups; these are EEActiveGroup objects.
             static_cast<EEActiveGroup*>(theGroup)->Finish();
@@ -3212,12 +3214,12 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
             theIterator = this->mQueuedImprovements.erase(theIterator);
     }
     this->mSelectedGroup->CopySelection(this->mActiveGroup);
-    this->mTechnologies->Get(kTechCapitol)->mIsAllowed = this->mNumCapitols == 0;
-    if (this->mTechnologies->Get(kTechSettlement)->GetIsObsolete())
-        this->mTechnologies->Get(kTechTownCenter)->mIsAllowed = this->mNumCapitols > 0;
+    this->GetTechTree()->Get(kTechCapitol)->mIsAllowed = this->mNumCapitols == 0;
+    if (this->GetTechTree()->Get(kTechSettlement)->GetIsObsolete())
+        this->GetTechTree()->Get(kTechTownCenter)->mIsAllowed = this->mNumCapitols > 0;
     else {
-        this->mTechnologies->Get(kTechSettlement)->mIsAllowed = this->mNumCapitols > 0;
-        this->mTechnologies->Get(kTechTownCenter)->mIsAllowed = false;
+        this->GetTechTree()->Get(kTechSettlement)->mIsAllowed = this->mNumCapitols > 0;
+        this->GetTechTree()->Get(kTechTownCenter)->mIsAllowed = false;
     }
     for (long theTown = this->mTowns.size() - 1; theTown >= 0; theTown--)
         if (this->mTowns[theTown] != NULL && this->mTowns[theTown]->mPatrolGroup == NULL)
@@ -3269,11 +3271,11 @@ bool EEPlayer::AdvanceImprovement(unsigned long inUnitType)
                 this->mQueuedImprovements[inUnitType].first = 1.0f;
             } else {
                 EEUnitClassUpgrade* theUpgrade = this->mUnitClassUpgrades[inUnitType];
-                if (theUpgrade->mImprovement.GetLevel(theImprovement) == 1) {
-                    float theTime = (long)gWorldTable.GetLongValue(EEWorldImprovementTime(theImprovement));
+                if (theUpgrade->mImprovement.GetLevel(theImprovement) != 1) {
+                    float theTime = (long)gWorldTable.GetLongValue2(EEWorldImprovementTime(theImprovement));
                     this->mQueuedImprovements[inUnitType].first = theTime;
                 } else {
-                    float theTime = (long)gWorldTable.GetLongValue2(EEWorldImprovementTime(theImprovement));
+                    float theTime = (long)gWorldTable.GetLongValue(EEWorldImprovementTime(theImprovement));
                     this->mQueuedImprovements[inUnitType].first = theTime;
                 }
             }
@@ -3309,25 +3311,25 @@ void EEPlayer::ReloadTechTree(bool inFlag)
 {
     std::vector<long> theMedia;
     std::vector<long> theIDs;
-    long theStartEpoch = this->mTechnologies->mStartEpoch;
-    long theEndEpoch = this->mTechnologies->mEndEpoch;
+    long theStartEpoch = this->GetTechTree()->mStartEpoch;
+    long theEndEpoch = this->GetTechTree()->mEndEpoch;
     FSMemoryFile theFile(1000, true, 1);
-    this->mTechnologies->GetNodeIDs(theIDs);
+    this->GetTechTree()->GetNodeIDs(theIDs);
     for (unsigned long i = 0; i < theIDs.size(); i++) {
-        EETechTreeNode* theNode = this->mTechnologies->Get(theIDs[i]);
+        EETechTreeNode* theNode = this->GetTechTree()->Get(theIDs[i]);
         if (theNode != NULL && theNode->mIsUnitMediaLoaded == true) {
             long theType = theNode->mData->mUnitClass;
             theMedia.push_back(theType);
         }
     }
-    this->mTechnologies->Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile);
+    this->GetTechTree()->Save(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile);
     gWorld.RemoveShareBonus();
     this->ResetTechTree();
     this->RefreshUpgrades();
     theFile.SetPosition(0, kFileOriginBegin, false);
-    if (this->mTechnologies->Load(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile) == kErrorOK) {
-        this->mTechnologies->ResetEpochRange(theStartEpoch, theEndEpoch);
-        this->mTechnologies->ApplySavedState(true, !inFlag);
+    if (this->GetTechTree()->Load(kSaveGameMajorVersion, kSaveGameMinorVersion, theFile) == kErrorOK) {
+        this->GetTechTree()->ResetEpochRange(theStartEpoch, theEndEpoch);
+        this->GetTechTree()->ApplySavedState(true, !inFlag);
     }
     for (unsigned long j = 0; j < theMedia.size(); j++)
         this->UnloadUnitClassMedia(theMedia[j]);
@@ -3380,21 +3382,23 @@ void EEPlayer::RefreshUpgrades()
 void EEPlayer::PulseSight(bool inByID, float inSight, long inID)
 {
     std::vector<EEUnit*> theUnits;
+    EEUnit* theUnit;
     if (inByID) {
         if (gWorld.GetUnit(inID) != NULL) {
             EEUnit* theUnit = gWorld.GetUnit(inID);
             theUnits.push_back(theUnit);
         }
     } else {
-        for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+        for (theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
             if (theUnit->mTileNode != NULL && theUnit->mUnitClass->mUnitType == inID)
                 theUnits.push_back(theUnit);
     }
     for (unsigned long i = 0; i < theUnits.size(); i++) {
-        EEUnit* theUnit = theUnits[i];
-        float theSight = inSight - theUnit->mStats->mLineOfSight;
+        theUnit = theUnits[i];
+        float theLineOfSight = theUnit->GetStats()->GetLineOfSight();
+        float theSight = inSight - theLineOfSight;
         theUnit->GetComplexUnit()->SightOffHere();
-        theUnit->GetComplexUnit()->mSight = theSight;
+        theUnit->GetComplexUnit()->SetSight(theSight);
         theUnit->SightOnHere();
         theUnit->GetComplexUnit()->SightOffHere();
         theUnit->GetComplexUnit()->mSight = 0;
@@ -3404,8 +3408,7 @@ void EEPlayer::PulseSight(bool inByID, float inSight, long inID)
 
 // FUNCTION: EXE 0x569c46
 // Writes the player's state to a saved game; returns the write status (some writes' errors are ignored)
-// NEAR: mQueuedImprovements value is pair<float, vector<unsigned long> > (Write slot 0x7c, FSSaveVector<unsigned long>); +0xb64 is a
-// long[5]; the sGoalCounter extern; the patrol loop's dead lea and the cloaked-unit loop's schedule
+// mQueuedImprovements value is pair<float, vector<unsigned long> > (Write slot 0x7c, FSSaveVector<unsigned long>); +0xb64 is a long[5]
 long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
     std::map<unsigned long, std::pair<float, std::vector<unsigned long> > >::iterator theIterator;
@@ -3439,32 +3442,31 @@ long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, 
     if (theResult == kErrorOK) {
         theHaveTechTree = this->mTechnologies != NULL;
         theResult = outFile.Write(theHaveTechTree);
+    }
+    if (theResult == kErrorOK) {
+        if (this->mTechnologies != NULL)
+            theResult = this->mTechnologies->Save(inMajorVersion, inMinorVersion, outFile);
+        if (theResult == kErrorOK)
+            theResult = outFile.Write(this->mPopLimit);
         if (theResult == kErrorOK) {
-            if (this->mTechnologies != NULL)
-                theResult = this->mTechnologies->Save(inMajorVersion, inMinorVersion, outFile);
+            theCount = 7;
+            theResult = outFile.Write(theCount);
+            if (theResult == kErrorOK && theCount > 0) {
+                for (unsigned long r = 0; r < theCount && theResult == kErrorOK; r++)
+                    theResult = outFile.Write(this->mResourceCaps[r]);
+            }
             if (theResult == kErrorOK) {
-                theResult = outFile.Write(this->mPopLimit);
-                if (theResult == kErrorOK) {
-                    theCount = 7;
-                    theResult = outFile.Write(theCount);
-                    if (theResult == kErrorOK && theCount > 0) {
-                        for (unsigned long r = 0; r < theCount && theResult == kErrorOK; r++)
-                            theResult = outFile.Write(this->mResourceCaps[r]);
-                    }
-                    if (theResult == kErrorOK) {
-                        if (theResult == kErrorOK) {
-                            theCount = 0;
-                            long p;
-                            for (p = this->mPatrolGroups.size() - 1; p >= 0; p--)
-                                if (this->mPatrolGroups[p] != NULL && !this->mPatrolGroups[p]->mIsTownPatrol)
-                                    theCount++;
-                            theResult = outFile.Write(theCount);
-                            if (theResult == kErrorOK && theCount > 0) {
-                                for (p = this->mPatrolGroups.size() - 1; p >= 0 && theResult == kErrorOK; p--) { EEPPatrolGroup*& theGroup = this->mPatrolGroups[p];
-                                    if (theGroup != NULL && !theGroup->mIsTownPatrol)
-                                        theResult = this->mPatrolGroups[p]->Save(inMajorVersion, inMinorVersion, &outFile); }
-                            }
-                        }
+                theCount = 0;
+                long p;
+                for (p = this->mPatrolGroups.size() - 1; p >= 0; p--)
+                    if (this->mPatrolGroups[p] != NULL && !this->mPatrolGroups[p]->mIsTownPatrol)
+                        theCount++;
+                theResult = outFile.Write(theCount);
+                if (theResult == kErrorOK && theCount > 0) {
+                    for (p = this->mPatrolGroups.size() - 1; p >= 0 && theResult == kErrorOK; p--) {
+                        EEPPatrolGroup*& theGroup = this->mPatrolGroups[p];
+                        if (this->mPatrolGroups[p] != NULL && !this->mPatrolGroups[p]->mIsTownPatrol)
+                            theResult = theGroup->Save(inMajorVersion, inMinorVersion, &outFile);
                     }
                 }
             }
@@ -3601,13 +3603,12 @@ long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, 
 
 // FUNCTION: EXE 0x56a4b5
 // Writes one unit's type, kind and data to a saved game (type 0xdf only as a type); returns the write status
-// NEAR: frame slots of the two bools and the complex unit
 long EEPlayer::SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile)
 {
+    bool theIsUnit = true;
     bool theIsComplex;
     EEComplexUnit* theComplexUnit = static_cast<EEUnit*>(inUnit)->mComplexUnit;
     EEUnitClass* theClass = static_cast<EEUnit*>(inUnit)->mUnitClass;
-    bool theIsUnit = true;
     unsigned long theType = theClass->mUnitType;
     long theResult = outFile.Write(theType);
     if (theResult != kErrorOK)
@@ -4473,7 +4474,9 @@ void EEPlayer::UpdatePlayer()
     this->UpdateAirTraffic();
     this->mEvents.TickEvents(this, theElapsed);
     theIterator = this->mQueuedImprovements.begin();
-    while (theIterator != this->mQueuedImprovements.end()) {
+    while (true) {
+        if (theIterator == this->mQueuedImprovements.end())
+            break;
         if ((*theIterator).second.first != 0.0f) {
             (*theIterator).second.first -= gPhysics->GetTickTime();
             if (this->mInstantBuild && (*theIterator).second.first > 1.0f)
@@ -4486,10 +4489,10 @@ void EEPlayer::UpdatePlayer()
             (*theIterator).second.second.erase((*theIterator).second.second.begin());
             (*theIterator).second.first = 0.0f;
         }
-        if (this->AdvanceImprovement((*theIterator).first))
-            theIterator = this->mQueuedImprovements.erase(theIterator);
-        else
+        if (!(this->AdvanceImprovement((*theIterator).first)))
             theIterator++;
+        else
+            theIterator = this->mQueuedImprovements.erase(theIterator);
     }
     if (this->mHealsUnits != true)
         return;

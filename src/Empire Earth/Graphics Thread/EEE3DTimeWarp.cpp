@@ -184,11 +184,11 @@ long EEE3DTimeWarp::DrawPass4()
     gRasterizer->SetZBuffer(kZBufferTestAndWrite, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     gRasterizer->SetAlphaTesting(0, theScreen);
     theModel->SetOpacity(0.0f);
     const GE3DPoint& theLocation = this->mLocation;
-    Fn11A130(theLocation, theFog, theValue);
+    GetFogFactor(theLocation, theFog, theValue);
     theTransformation.SetPosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
     theModel->SetGraphicsPostModelTransform(theTransformation);
     theModel->SetGraphicsScale(theScale);

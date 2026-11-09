@@ -158,6 +158,7 @@ public:
     std::deque<EEAction*> mUndoQueue;       // +0x18 (lock mUndoLock; Undo pops, Redo pushes)
     std::deque<EEAction*> mRedoQueue;       // +0x2c (lock mRedoLock)
     TSThread* mThread;                      // +0x40 the constructing thread; every Post* goes to it
+    TSCriticalSection* GetActionLock() const { return this->mActionLock; }
     TSCriticalSection* mActionLock;         // +0x44
     TSCriticalSection* mUndoLock;           // +0x48
     TSCriticalSection* mRedoLock;           // +0x4c

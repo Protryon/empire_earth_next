@@ -83,10 +83,11 @@ void EEPMSpaceship::Step0(EEComplexUnit* inUnit)
     this->TurnToward(inUnit, theLocation, theTarget, &theTurn, &theYawRate, &theYaw, false);
     if (inUnit->GetUnitClass()->mCategory == kUnitCategoryPlanetSpaceship)
         EEPhysicsModel::PitchTowardSlope(inUnit, theLocation, theTarget, theDistance, &thePitchRate, &thePitch);
-    GEOrientation& theAngularVelocity = inUnit->mAngularVelocity;
-    theAngularVelocity.SetPitch(thePitchRate);
-    theAngularVelocity.mRoll = 0.0f;
-    theAngularVelocity.mYaw = theYawRate;
+    GEOrientation theRate;
+    theRate.SetPitch(thePitchRate);
+    theRate.mRoll = 0.0f;
+    theRate.mYaw = theYawRate;
+    inUnit->SetAngularVelocity(theRate);
     float theRoll = inUnit->GetRoll();
     theTransformation.SetOrientationYPR(theYaw, thePitch, theRoll);
     float theSpeed = this->Accelerate(inUnit, theDistance, theTurn);
@@ -307,8 +308,8 @@ bool EEPMSpaceship::PushMoving(EEComplexUnit* inUnit, EEComplexUnit* inOther)
     GE3DLine theCrossLine;
     GE3DPoint theLocation;
     GE3DPoint theOtherLocation;
-    bool theResult = false;
     float theSpeed = inUnit->mCollisionRadius;
+    bool theResult = false;
     float theOtherSpeed = inOther->mCollisionRadius;
     float theSlow = 0.75f;
     float theT = 0.0f;
@@ -318,14 +319,12 @@ bool EEPMSpaceship::PushMoving(EEComplexUnit* inUnit, EEComplexUnit* inOther)
     float theCrossT;
     float theCrossOtherT;
     const GETransformation& theTransformation = inUnit->mPhysicalModel.GetLocation();
-    const GETransformation& theOtherTransformation = inOther->mPhysicalModel.GetLocation();
     theTransformation.Apply(theForward, theDirection);
+    const GETransformation& theOtherTransformation = inOther->mPhysicalModel.GetLocation();
     theOtherTransformation.Apply(theForward, theOtherDirection);
     theDirection.Normalize();
     theOtherDirection.Normalize();
-    float theAngle = UMArcCos(theDirection.DotProduct(theOtherDirection));
-    if (theAngle < 0.0f)
-        theAngle = -theAngle;
+    float theAngle = UMAbs(UMArcCos(theDirection.DotProduct(theOtherDirection)));
     while (theAngle > 3.1415927f)
         theAngle -= 3.1415927f;
     if (theAngle > 1.5707964f)
@@ -349,9 +348,9 @@ bool EEPMSpaceship::PushMoving(EEComplexUnit* inUnit, EEComplexUnit* inOther)
     bool theCrossing = theLine.IntersectsIn2D(theOtherLine, theT, theOtherT);
     theCrossLine.SetStart(theOtherLine.GetStart());
     theCrossLine.SetDirection(theOtherLine.GetDirection());
-    float theX = theOtherDirection.mX;
-    theOtherDirection.mX = theOtherDirection.mY;
-    theOtherDirection.mY = -theX;
+    float theX = -theOtherDirection.mX;
+    theOtherDirection.mX = theOtherDirection.GetY();
+    theOtherDirection.mY = theX;
     theCrossLine.SetDirection(theOtherDirection);
     bool theNear;
     if (theLine.IntersectsIn2D(theCrossLine, theCrossT, theCrossOtherT)
@@ -393,7 +392,7 @@ bool EEPMSpaceship::PushMoving(EEComplexUnit* inUnit, EEComplexUnit* inOther)
         theDY *= theOtherLine.GetDirection().GetY() * theOtherSign;
         if (theOtherSign < 0.0f && theOtherT > theT) {
             inOther->SetVelocity(0.0f);
-            inOther->mAngularVelocity = GEOrientation(0.0f, 0.0f, 0.0f);
+            inOther->SetAngularVelocity(GEOrientation(0.0f, 0.0f, 0.0f));
         }
         inOther->SetPushVelocityX(inOther->GetPushVelocityX() + theDX);
         inOther->SetPushVelocityY(inOther->GetPushVelocityY() + theDY);
@@ -484,7 +483,7 @@ void EEPMSpaceship::Step4(EEComplexUnit* inUnit)
     float theYaw;
     this->SpinDown(inUnit, &theYawRate, &theYaw);
     theRate.mYaw = theYawRate;
-    inUnit->mAngularVelocity = theRate;
+    inUnit->SetAngularVelocity(theRate);
     GETransformation theNew(false);
     theNew.SetOrientationYPR(theYaw, 0.0f, inUnit->GetRoll());
     theNew.SetPosition(0.0f, 0.0f, 0.0f);
@@ -535,7 +534,7 @@ void EEPMSpaceship::Step5(EEComplexUnit* inUnit)
         float theLeft;
         float theYawRate;
         float theYaw;
-        this->TurnTowardAngle(inUnit, theHeading, theGoal->mYaw, &theLeft, &theYawRate, &theYaw, false);
+        this->TurnTowardAngle(inUnit, theHeading, theGoal->GetYaw(), &theLeft, &theYawRate, &theYaw, false);
         GEOrientation& theAngularVelocity = inUnit->mAngularVelocity;
         theAngularVelocity.mPitch = 0.0f;
         theAngularVelocity.mRoll = 0.0f;

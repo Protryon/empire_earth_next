@@ -124,7 +124,7 @@
 #include "ee/EEUIFSEUpgradePanel.h"
 #include "ee/EEStringIDs.h"
 // the shared empty byte string (the original references it at 0x1a4eb4; no other string has its contents)
-extern char gU4E5B98[];
+extern char gEmptyString[];
 
 // FUNCTION: EXE 0x5a4e99
 // Builds the unit tab's status panel (portrait, unit name, two status bars, nine attribute rows and the armor
@@ -134,7 +134,7 @@ EEUIFSEUpgradePanel::EEUIFSEUpgradePanel(unsigned long& ioID, unsigned long& ioI
 {
     UILayoutUtility theLayout;
     GEText* theGEText;
-    UWideString theText(gU4E5B98);
+    UWideString theText(gEmptyString);
     GERectangle theRectangle;
     this->mStatusBox = new EEUIFMGStatusBox(inForm);
     theRectangle.SetLeft(6.0f);

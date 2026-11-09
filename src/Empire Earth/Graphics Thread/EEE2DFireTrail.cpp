@@ -122,7 +122,7 @@ long EEE2DFireTrail::DrawPass6()
     float theEndSize = theEffect->GetSize();
     float theFrom = theEffect->GetStartSize();
     GEColor theColor;
-    Fn10317D(this->mDrawPosition, theColor, this->mRotation, (theEndSize - theFrom) * this->mDrawAge + theStartSize, 1.0f - this->mDrawAge, 1.0f, theReference);
+    AddGlowSprite(this->mDrawPosition, theColor, this->mRotation, (theEndSize - theFrom) * this->mDrawAge + theStartSize, 1.0f - this->mDrawAge, 1.0f, theReference);
     return 0;
 }
 
@@ -175,8 +175,8 @@ long EEE2DFireTrail::Step()
     this->mAge += theElapsed / this->mGraphicEffect->mDuration;
     if (this->mAge <= 1.0f) {
         thePosition.SetX(thePosition.GetX() + theWind.mX);
-        thePosition.SetY(thePosition.GetY() + theWind.mY);
-        thePosition.SetZ(thePosition.GetZ() + (theWind.mZ + theElapsed * kFireTrailRise));
+        thePosition.SetY(thePosition.GetY() + theWind.GetY());
+        thePosition.SetZ(thePosition.GetZ() + (theWind.GetZ() + theElapsed * kFireTrailRise));
         this->SetPosition(thePosition);
         this->SetBoundingRadius(((this->mGraphicEffect->GetSize() - this->mGraphicEffect->GetStartSize()) * this->mAge + this->mGraphicEffect->GetStartSize()) * 0.5f);
     } else {

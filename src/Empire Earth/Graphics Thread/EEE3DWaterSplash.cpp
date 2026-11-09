@@ -138,7 +138,7 @@ long EEE3DWaterSplash::DrawPass6()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10FA01();
+    SetUnitLighting();
     theModel->GetMaterial(0)->SetTexture(this->mGraphicObject->mTextures[0], theScreen);
     this->mDrawAge = 1.0f - UMSquare(1.0f - this->mDrawAge);
     theTransformation.Scale(1.0f, 1.0f, theFlatness);

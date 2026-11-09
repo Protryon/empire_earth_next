@@ -35,7 +35,7 @@ UWideString gLoadSaveErrorMessage;
 
 // FUNCTION: EXE 0x54c741
 // Returns a save file's name with its last three characters replaced by "txt", or unchanged when asked to keep it
-UString Fn14C741(const UString& inName, bool inKeep)
+UString GetSaveTextName(const UString& inName, bool inKeep)
 {
     UString theName;
     if (!inKeep) {
@@ -150,7 +150,7 @@ extern unsigned long& gMaxPlayers;       // 0x5318cc (EESERBUnitTypes.h's declar
 
 // FUNCTION: EXE 0x54c7a7
 // Builds the list of chunks a save writes, in chunk order (each chunk new; the game objects are only borrowed)
-void Fn14C7A7(std::vector<FSPersistent*>& outList)
+void BuildSaveGameChunks(std::vector<FSPersistent*>& outList)
 {
     GE3DPoint theLocation;
     std::vector<EETeam> theTeams;
@@ -182,7 +182,7 @@ void Fn14C7A7(std::vector<FSPersistent*>& outList)
 
 // FUNCTION: EXE 0x54ca3d
 // Fills a save header: name, versions, player names, date, chunk tags, scenario media strings and game options
-void Fn14CA3D(const UString& inName, EEPSaveGameHeader& outHeader, std::vector<FSPersistent*>& inList)
+void FillSaveGameHeader(const UString& inName, EEPSaveGameHeader& outHeader, std::vector<FSPersistent*>& inList)
 {
     std::vector<long> theTags;
     long theTag = 0;
@@ -200,7 +200,7 @@ void Fn14CA3D(const UString& inName, EEPSaveGameHeader& outHeader, std::vector<F
             thePlayers += " ";
     }
     outHeader.mPlayerNames = thePlayers;
-    theDate = Fn14CED5();
+    theDate = GetDateText();
     outHeader.mDate = theDate;
     for (std::vector<FSPersistent*>::iterator theIterator = inList.begin(); theIterator != inList.end();
          theIterator++) {
@@ -217,7 +217,7 @@ void Fn14CA3D(const UString& inName, EEPSaveGameHeader& outHeader, std::vector<F
 // FUNCTION: EXE 0x54cbc7
 // Deletes the files matching a pattern in a directory, lowest (FSFileSpec order) first, until at most a given number
 // remain
-long Fn14CBC7(const UString& inPattern, const UString& inDirectory, unsigned long inMax)
+long TrimAutoSaves(const UString& inPattern, const UString& inDirectory, unsigned long inMax)
 {
     std::vector<FSFileSpec> theFiles;
     FSFileSpec theFile;
@@ -240,7 +240,7 @@ long Fn14CBC7(const UString& inPattern, const UString& inDirectory, unsigned lon
 
 // FUNCTION: EXE 0x54ccfb
 // Writes each listed chunk to a file; on success deletes the chunks and empties the list; returns the first error
-long Fn14CCFB(std::vector<FSPersistent*>& inList, FSFile& inFile)
+long WriteSaveGameChunks(std::vector<FSPersistent*>& inList, FSFile& inFile)
 {
     std::vector<FSChunk> theChunks;
     long theResult = kErrorOK;
@@ -262,16 +262,16 @@ long Fn14CCFB(std::vector<FSPersistent*>& inList, FSFile& inFile)
 
 // FUNCTION: EXE 0x54ce06
 // Writes a whole saved game (header, then every chunk) to a file; returns the first error
-long Fn14CE06(const UString& inName, unsigned long inTime, FSFile& inFile, FSFile& inOther)
+long WriteSaveGame(const UString& inName, unsigned long inTime, FSFile& inFile, FSFile& inOther)
 {
     EEPSaveGameHeader theHeader;
     std::vector<FSPersistent*> theList;
-    Fn14C7A7(theList);
-    Fn14CA3D(inName, theHeader, theList);
+    BuildSaveGameChunks(theList);
+    FillSaveGameHeader(inName, theHeader, theList);
     theHeader.mChecksum = inTime;
     long theResult = theHeader.Save(kSaveGameMajorVersion, kSaveGameMinorVersion, inFile);
     if (theResult == kErrorOK)
-        theResult = Fn14CCFB(theList, inOther);
+        theResult = WriteSaveGameChunks(theList, inOther);
     return theResult;
 }
 
@@ -285,7 +285,7 @@ long EEOpenSaveGameFile(const UString& inName, const UString& inDirectory, FSFil
 
 // FUNCTION: EXE 0x54ced5
 // Returns the current date and time as text (asctime), or "Date/time failed."
-UString Fn14CED5()
+UString GetDateText()
 {
     UString theDate;
     time_t theTime;
@@ -300,21 +300,21 @@ UString Fn14CED5()
 #include "ee/EEGraphics.h"
 class EEGameState;
 extern EEGameState gGameState;
-long Fn14D195(bool inLoading, bool inQuiet);                         // 0x14d195 (mutes the sound before a save/load)
-long Fn14D253(bool inLoading, bool inQuiet);                         // 0x14d253 (restores it afterwards)
-long Fn14D2E3(FSFileSpec& inFile, bool inArg, EEGameState& ioState);   // 0x14d2e3 (loads the game under gLoadingSavedGame)
+long MuteForSaveLoad(bool inLoading, bool inQuiet);                  // 0x14d195 (mutes the sound before a save/load)
+long UnmuteAfterSaveLoad(bool inLoading, bool inQuiet);              // 0x14d253 (restores it afterwards)
+long LoadIntoGame(FSFileSpec& inFile, bool inArg, EEGameState& ioState);  // 0x14d2e3 (loads the game under gLoadingSavedGame)
 
 // FUNCTION: EXE 0x54cf33
 // Validates and loads a saved game file with the sound muted (multiplayer reload or into the game state),
 // optionally resuming the graphics after; returns 9 when the file is not a valid save
-long Fn14CF33(FSFileSpec& inFile, bool inArg2, bool inQuiet, bool inResumeGraphics)
+long LoadSavedGameFile(FSFileSpec& inFile, bool inArg2, bool inQuiet, bool inResumeGraphics)
 {
     UString theUnused;
     long theResult;
-    if (Fn14D195(true, inQuiet) == 0 && EEValidateSaveGameFile(inFile, gLoadSaveErrorMessage) == true) {
-        theResult = Fn14D2E3(inFile, inArg2, gGameState);
+    if (MuteForSaveLoad(true, inQuiet) == 0 && EEValidateSaveGameFile(inFile, gLoadSaveErrorMessage) == true) {
+        theResult = LoadIntoGame(inFile, inArg2, gGameState);
         if (theResult == 0)
-            theResult = Fn14D253(true, inQuiet);
+            theResult = UnmuteAfterSaveLoad(true, inQuiet);
     } else {
         theResult = 9;
     }
@@ -323,12 +323,12 @@ long Fn14CF33(FSFileSpec& inFile, bool inArg2, bool inQuiet, bool inResumeGraphi
     return theResult;
 }
 
-long Fn14D0E6(FSFileSpec& outFile, bool inLoading, const UString& inName, const UString& inDirectory);   // 0x14d0e6
-long Fn14D34B(FSFileSpec& inFile, unsigned long inTime);              // 0x14d34b (writes the game)
-long Fn14D4FD(EEGameState& ioState, FSFile& inFile);                 // 0x14d4fd
-long Fn14D521(FSFile& inFile);                                       // 0x14d521
+long OpenSaveFile(FSFileSpec& outFile, bool inLoading, const UString& inName, const UString& inDirectory);  // 0x14d0e6
+long SaveGameToFile(FSFileSpec& inFile, unsigned long inTime);        // 0x14d34b (writes the game)
+long LoadGameState(EEGameState& ioState, FSFile& inFile);            // 0x14d4fd
+long ReloadSavedGame(FSFile& inFile);                                // 0x14d521
 
-// the volumes Fn14D195 mutes and Fn14D253 restores (0x531cac, 0x531ca8; provisional names)
+// the volumes MuteForSaveLoad mutes and UnmuteAfterSaveLoad restores (0x531cac, 0x531ca8; provisional names)
 static float sMasterVolume;
 static float sMusicVolume;
 
@@ -339,13 +339,13 @@ long EELoadSavedGameFile(const UString& inFileName, bool inFlag1, bool inFlag2, 
 {
     FSFileSpec theFile;
     UString theUnused;
-    long theResult = Fn14D0E6(theFile, true, inFileName, inDirectory);
+    long theResult = OpenSaveFile(theFile, true, inFileName, inDirectory);
     if (theResult != kErrorOK)
         return theResult;
-    if (Fn14D195(false, inFlag2) == 0 && EEValidateSaveGameFile(theFile, gLoadSaveErrorMessage) == true) {
-        theResult = Fn14D2E3(theFile, inFlag1, gGameState);
+    if (MuteForSaveLoad(false, inFlag2) == 0 && EEValidateSaveGameFile(theFile, gLoadSaveErrorMessage) == true) {
+        theResult = LoadIntoGame(theFile, inFlag1, gGameState);
         if (theResult == kErrorOK)
-            theResult = Fn14D253(true, inFlag2);
+            theResult = UnmuteAfterSaveLoad(true, inFlag2);
     } else {
         theResult = kErrorFailed;
     }
@@ -362,19 +362,19 @@ long SaveGame(const UString& inFileName, unsigned long inTime, bool inFlag, UStr
     FSFileSpec theFile;
     UString theUnused;
     unsigned long theCT = gCommunications->GetNumberOfCTsProcessedInPhysics();
-    long theResult = Fn14D0E6(theFile, false, inFileName, inDescription);
+    long theResult = OpenSaveFile(theFile, false, inFileName, inDescription);
     if (theResult != kErrorOK)
         return theResult;
-    Fn14D195(false, inFlag);
-    theResult = Fn14D34B(theFile, inTime);
-    Fn14D253(false, inFlag);
+    MuteForSaveLoad(false, inFlag);
+    theResult = SaveGameToFile(theFile, inTime);
+    UnmuteAfterSaveLoad(false, inFlag);
     return theResult;
 }
 
 // FUNCTION: EXE 0x54d0e6
 // Points a file spec at the startup directory plus a subdirectory and name and opens it (recreated first for a save);
 // sets the load/save error message on failure
-long Fn14D0E6(FSFileSpec& outFile, bool inLoading, const UString& inName, const UString& inDirectory)
+long OpenSaveFile(FSFileSpec& outFile, bool inLoading, const UString& inName, const UString& inDirectory)
 {
     long theResult = kErrorOK;
     outFile.SetVolume(gStartupVolume);
@@ -402,7 +402,7 @@ long Fn14D0E6(FSFileSpec& outFile, bool inLoading, const UString& inName, const 
 // FUNCTION: EXE 0x54d195
 // Mutes the sound and music (keeping their volumes) and waits 642 ms before a save or load; before a save it applies
 // the map's vertex colours, before a host's non-quiet load it shows the splash form
-long Fn14D195(bool inLoading, bool inQuiet)
+long MuteForSaveLoad(bool inLoading, bool inQuiet)
 {
     if (!inLoading)
         gWorld.GetMap()->ApplyVertexColors();
@@ -422,7 +422,7 @@ long Fn14D195(bool inLoading, bool inQuiet)
 // FUNCTION: EXE 0x54d253
 // Restores the sound and music volumes after a save or load; after a save it shows the selection areas again, after
 // a host's non-quiet load it opens the main game form and waits for the next render
-long Fn14D253(bool inLoading, bool inQuiet)
+long UnmuteAfterSaveLoad(bool inLoading, bool inQuiet)
 {
     if (!inLoading)
         gWorld.GetCurrentPlayer()->mActiveGroup->ShowSelectionAreas();
@@ -438,14 +438,14 @@ long Fn14D253(bool inLoading, bool inQuiet)
 // FUNCTION: EXE 0x54d2e3
 // Loads a saved game file into a game state, or for a reload into the world, while the saved-game flag is set;
 // sets the "save game invalid" message on failure
-long Fn14D2E3(FSFileSpec& inFile, bool inArg, EEGameState& ioState)
+long LoadIntoGame(FSFileSpec& inFile, bool inArg, EEGameState& ioState)
 {
     long theResult;
     gLoadingSavedGame = true;
     if (!inArg)
-        theResult = Fn14D4FD(ioState, inFile);
+        theResult = LoadGameState(ioState, inFile);
     else
-        theResult = Fn14D521(inFile);
+        theResult = ReloadSavedGame(inFile);
     if (theResult != kErrorOK)
         ESVERIFY_AT(::gResource->GetString(keeslSaveGameInvalid, ::gLoadSaveErrorMessage) == keseOK, 669);
     gLoadingSavedGame = false;
@@ -455,20 +455,20 @@ long Fn14D2E3(FSFileSpec& inFile, bool inArg, EEGameState& ioState)
 // FUNCTION: EXE 0x54d34b
 // Writes the game into memory and then to the file (deleting the old text twin first) and reports "Game saved." or
 // an error message; returns the first error
-long Fn14D34B(FSFileSpec& inFile, unsigned long inTime)
+long SaveGameToFile(FSFileSpec& inFile, unsigned long inTime)
 {
     FSMemoryFile theMemory(0x400, true, 1000);
     FSDebugFile theDebugFile(&theMemory);
     UString theTextName;
     UString theName;
     UString theFile = inFile.GetFile();
-    theTextName = Fn14C741(theFile, true);
-    theName = Fn14C741(theFile, false);
+    theTextName = GetSaveTextName(theFile, true);
+    theName = GetSaveTextName(theFile, false);
     theDebugFile.SetVolume(inFile.GetVolume());
     theDebugFile.SetDirectory(inFile.GetDirectory());
     theDebugFile.SetFile(theName);
     theDebugFile.Delete();
-    long theResult = Fn14CE06(theTextName, inTime, theMemory, theMemory);
+    long theResult = WriteSaveGame(theTextName, inTime, theMemory, theMemory);
     if (theResult == kErrorOK) {
         theResult = theMemory.Save(inFile);
         if (theResult == kErrorOK)
@@ -488,7 +488,7 @@ long Fn14D34B(FSFileSpec& inFile, unsigned long inTime)
 
 // FUNCTION: EXE 0x54d4fd
 // Loads a saved game file into a game state; returns 9 when it failed
-long Fn14D4FD(EEGameState& ioState, FSFile& inFile)
+long LoadGameState(EEGameState& ioState, FSFile& inFile)
 {
     EEGameStateLoader theLoader(&ioState);
     return theLoader.Load(inFile) == true ? kErrorOK : 9;
@@ -497,11 +497,11 @@ long Fn14D4FD(EEGameState& ioState, FSFile& inFile)
 // FUNCTION: EXE 0x54d521
 // Loads a saved game file into the global game state and, when it worked, restarts the world from it (scenario
 // editor and multiplayer reload)
-long Fn14D521(FSFile& inFile)
+long ReloadSavedGame(FSFile& inFile)
 {
     UWideString theUnused;
     gGameState.Clear();
-    long theResult = Fn14D4FD(gGameState, inFile);
+    long theResult = LoadGameState(gGameState, inFile);
     if (gGameState.mIsLoadedGame && theResult == kErrorOK) {
         if (gUIManager->mScenarioEditorForm != NULL)
             gUIManager->mScenarioEditorForm->ClearSelection();
@@ -579,8 +579,8 @@ bool EECheckSavedGameOptions(EEGameOptions& inSaved, EEGameOptions& inCurrent, b
     return outMissing.size() == 0;
 }
 
-extern char gU4E5B98[];                 // 0x4e5b98 (the empty string; EECampaignProgress.cpp's declaration)
-static bool Fn14DA7C(EEPSaveGameHeader& inHeader, UWideString& outErrorMessage, FSFile& inFile);
+extern char gEmptyString[];             // 0x4e5b98 (the empty string; EECampaignProgress.cpp's declaration)
+static bool CheckSaveGameHeader(EEPSaveGameHeader& inHeader, UWideString& outErrorMessage, FSFile& inFile);
 
 // FUNCTION: EXE 0x54d946
 // Returns whether a file holds a save game this build can load; on failure sets the error message (the header
@@ -591,12 +591,12 @@ bool EEValidateSaveGameFile(FSFile& inFile, UWideString& outErrorMessage)
     std::vector<long> theTags;
     FSMemoryFile theMemory(1000, true, 1);
     bool theResult = false;
-    outErrorMessage = gU4E5B98;
+    outErrorMessage = gEmptyString;
     inFile.Close();
     if (inFile.Open(kFileAccessRead) == kErrorOK) {
         if (theMemory.Load(inFile) == kErrorOK
             && theHeader.Load(kSaveGameMajorVersion, kSaveGameMinorVersion, theMemory) == kErrorOK
-            && Fn14DA7C(theHeader, outErrorMessage, theMemory)) {
+            && CheckSaveGameHeader(theHeader, outErrorMessage, theMemory)) {
             theResult = true;
             inFile.Close();
             inFile.Open(kFileAccessRead);
@@ -612,13 +612,13 @@ bool EEValidateSaveGameFile(FSFile& inFile, UWideString& outErrorMessage)
     return theResult;
 }
 
-static long Fn14DC54(std::vector<long>& inTags, long inTag);
+static long CountChunkTags(std::vector<long>& inTags, long inTag);
 
 // FUNCTION: EXE 0x54da7c
 // Checks a save header's version and chunk tags (each of 1..7, 10 and 11 once, no 0) and that every chunk's size is
 // readable and sane; sets outErrorMessage on failure (it wrote the global message,
 // which only worked because every caller passed it)
-static bool Fn14DA7C(EEPSaveGameHeader& inHeader, UWideString& outErrorMessage, FSFile& inFile)
+static bool CheckSaveGameHeader(EEPSaveGameHeader& inHeader, UWideString& outErrorMessage, FSFile& inFile)
 {
     std::vector<long> theTags;
     bool theResult = false;
@@ -626,10 +626,10 @@ static bool Fn14DA7C(EEPSaveGameHeader& inHeader, UWideString& outErrorMessage, 
     unsigned long theSize;
     if (inHeader.mMajorVersion <= kSaveGameMajorVersion && inHeader.mMinorVersion <= kSaveGameMinorVersion) {
         theTags = inHeader.mChunkTypes;
-        if (Fn14DC54(theTags, 0) == 0) {
-            if (Fn14DC54(theTags, 1) == 1 && Fn14DC54(theTags, 2) == 1 && Fn14DC54(theTags, 3) == 1
-                && Fn14DC54(theTags, 4) == 1 && Fn14DC54(theTags, 5) == 1 && Fn14DC54(theTags, 6) == 1
-                && Fn14DC54(theTags, 7) == 1 && Fn14DC54(theTags, 10) == 1 && Fn14DC54(theTags, 11) == 1) {
+        if (CountChunkTags(theTags, 0) == 0) {
+            if (CountChunkTags(theTags, 1) == 1 && CountChunkTags(theTags, 2) == 1 && CountChunkTags(theTags, 3) == 1
+                && CountChunkTags(theTags, 4) == 1 && CountChunkTags(theTags, 5) == 1 && CountChunkTags(theTags, 6) == 1
+                && CountChunkTags(theTags, 7) == 1 && CountChunkTags(theTags, 10) == 1 && CountChunkTags(theTags, 11) == 1) {
                 for (unsigned long i = 0; i < theTags.size() && theError == kErrorOK; i++) {
                     FSChunk theChunk;
                     theError = theChunk.LoadChunkHeader(inFile);
@@ -659,7 +659,7 @@ static bool Fn14DA7C(EEPSaveGameHeader& inHeader, UWideString& outErrorMessage, 
 
 // FUNCTION: EXE 0x54dc54
 // Counts how many tags in a list equal a given tag
-static long Fn14DC54(std::vector<long>& inTags, long inTag)
+static long CountChunkTags(std::vector<long>& inTags, long inTag)
 {
     long theCount = 0;
     for (std::vector<long>::iterator theIterator = inTags.begin(); theIterator != inTags.end(); theIterator++)

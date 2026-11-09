@@ -5,7 +5,11 @@
 #include <string.h>
 #include <fcntl.h>
 #include <sys/file.h>
+#include <time.h>
 #include <unistd.h>
+#if defined(__APPLE__)
+#include <uuid/uuid.h>
+#endif
 
 #include <atomic>
 #include <initializer_list>
@@ -44,6 +48,52 @@ extern "C" uint32_t PlatSystemVersion(void)
 
 extern "C" void PlatSystemShutdown(void)
 {
+}
+
+namespace {
+uint32_t Fnv1a(const unsigned char* inBytes, size_t inLength)
+{
+    uint32_t theHash = 2166136261u;
+    for (size_t i = 0; i < inLength; i++) {
+        theHash ^= inBytes[i];
+        theHash *= 16777619u;
+    }
+    return theHash;
+}
+}   // namespace
+
+extern "C" uint32_t PlatSystemMachineId(int* outOk)
+{
+    if (outOk)
+        *outOk = 0;
+#if defined(__APPLE__)
+    uuid_t theUUID;
+    struct timespec theWait = {1, 0};
+    if (gethostuuid(theUUID, &theWait) != 0)
+        return 0;
+    if (outOk)
+        *outOk = 1;
+    return Fnv1a(theUUID, sizeof(theUUID));
+#else
+    // systemd's id, else D-Bus's older copy of it
+    for (const char* thePath : {"/etc/machine-id", "/var/lib/dbus/machine-id"}) {
+        FILE* theFile = fopen(thePath, "rb");
+        if (!theFile)
+            continue;
+        unsigned char theText[128];
+        size_t theLength = fread(theText, 1, sizeof(theText), theFile);
+        fclose(theFile);
+        while (theLength > 0 && (theText[theLength - 1] == '\n' || theText[theLength - 1] == '\r'
+                                 || theText[theLength - 1] == ' '))
+            theLength--;
+        if (theLength == 0)
+            continue;
+        if (outOk)
+            *outOk = 1;
+        return Fnv1a(theText, theLength);
+    }
+    return 0;
+#endif
 }
 
 extern "C" void PlatMessageShow(const char* inTitle, const char* inText, uint32_t inFlags)

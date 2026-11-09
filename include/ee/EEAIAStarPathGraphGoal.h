@@ -42,7 +42,9 @@ public:
     U2DPoint<long> mPoint40;                // +0x40 (the goal sector's location: Virtual0C)
     EEComplexUnit* mUnit;                   // +0x48 (referenced; EEPathManager::SetGraphRevs: its player, +0x353)
     EEAIGraphPathGoalModifierBase* mModifier;   // +0x4c (referenced)
+    EEAIPathSubSector* GetFrom() const { return this->mFrom; }
     EEAIPathSubSector* mFrom;               // +0x50
+    EEAIPathSubSector* GetTo() const { return this->mTo; }
     EEAIPathSubSector* mTo;                 // +0x54
     EECPASGFlags mPathFlags;                // +0x58 (the walker's passable sub sector kinds; the request's flags:
                                             // operator= 0xaa1da)

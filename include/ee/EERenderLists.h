@@ -39,7 +39,7 @@ struct EERenderUnit {
     EEUnitClass* mInfo;                     // +0xdc (its +0x178 ring size, +0x2d0 bit 0, Virtual54)
 
     EEGraphicObject* mSource;               // +0xe0 (its models, shadow model, bar offset)
-    EEGraphicObject* mSource2;              // +0xe4 (Fn10B80B unloads it when set)
+    EEGraphicObject* mSource2;              // +0xe4 (UnloadRenderUnits unloads it when set)
     float mScale;                           // +0xe8 (the shadow's size)
     float mSelectionSize;                   // +0xec (> 0: the selection ring is drawn)
     float mShadowScale;                     // +0xf0 (the shadow's opacity; > 0: drawn)
@@ -172,17 +172,17 @@ struct EERenderEnvironment {
     GEVector mDirection;                    // +0x00 (Fn10C036 copies gWorld.mWindDirection with movs: GEVector's operator=)
     // Fn10C036's colours (each GEColor's default 1, 1, 1): +0x0c/+0x24 gU4E9338, +0x18/+0x30 the time-of-day blend of
     // gU4E9348, +0x3c/+0x54 the lit colour and +0x48 half of it
-    GEColor mTerrainAmbientColor;           // +0x0c (Fn10F833: the ambient colour)
-    GEColor mTerrainLightColor;             // +0x18 (Fn10F833: the light's colour)
+    GEColor mTerrainAmbientColor;           // +0x0c (SetTerrainLighting: the ambient colour)
+    GEColor mTerrainLightColor;             // +0x18 (SetTerrainLighting: the light's colour)
     GEColor mUnitAmbientColor;              // +0x24
     GEColor mUnitLightColor;                // +0x30
-    GEColor mPrelitColor;                   // +0x3c (Fn10F71C: the ambient colour)
+    GEColor mPrelitColor;                   // +0x3c (SetPrelitLighting: the ambient colour)
     GEColor mDimPrelitColor;                // +0x48
-    GEColor mColor54;                       // +0x54 (Fn10F772: the ambient colour)
+    GEColor mColor54;                       // +0x54 (SetCloudLighting: the ambient colour)
     float mUnitAmbientIntensity;            // +0x60 (the time-of-day blend of gU4E9264)
     float mUnitLightIntensity;              // +0x64 (of gU4E92EC)
-    float mTerrainAmbientIntensity;         // +0x68 (of gU4E92A8; Fn10F833: the ambient intensity scale)
-    float mTerrainLightIntensity;           // +0x6c (of gU4E92EC; Fn10F833: the light's intensity scale)
+    float mTerrainAmbientIntensity;         // +0x68 (of gU4E92A8; SetTerrainLighting: the ambient intensity scale)
+    float mTerrainLightIntensity;           // +0x6c (of gU4E92EC; SetTerrainLighting: the light's intensity scale)
     float mSeaLevel;                        // +0x70 (0)
     float mTimeOfDay;                       // +0x74 (0; [0, 1): EEROTerrain's sky colours)
     float mWaterPhase;                      // +0x78 (0)
@@ -207,8 +207,8 @@ extern float gSpaceStationHeight;
 // EERenderObject::FillRenderLists's lock around the tile walk (0x529014; TSCriticalSection*) (provisional name and
 // owner)
 extern bool& gMusicFollowsBattle;            // 0x5308e0 (the music follows the battle intensity) (provisional name)
-extern bool& gUnitLighting;                  // 0x5308e3 (the second light set: Fn10F8DE..Fn10FB74) (provisional name)
-extern float& gZoomLock;                     // 0x530840 (Fn10F60F's fog band) (provisional name)
+extern bool& gUnitLighting;                  // 0x5308e3 (the second light set: SetMapObjectLighting..DimUnitLighting) (provisional name)
+extern float& gZoomLock;                     // 0x530840 (SetSceneFog's fog band) (provisional name)
 // the game's render objects (0x565350..0x565360; Empire Earth.cpp creates them; EEPostGraphicsAll/EEResetGraphicsValues push them)
 // (provisional names)
 extern RTSRenderObject* gU565350;

@@ -31,7 +31,7 @@ class SESMInstanceNode;                 // lle/SESMInstanceNode.h (EEComplexUnit
 class EEOrbital;                            // ee/EEGraphicObject.h (EEComplexUnit+0x1b8)
 class EEWheel;                              // ee/EEWheel.h (EEComplexUnit+0x1bc)
 class EEGraphicObject;                      // ee/EEGraphicObject.h
-typedef EEGraphicObject EEModel;            // (see below: Virtual54's)
+typedef EEGraphicObject EEModel;            // (see below: WriteDetailsHook's)
 class EEActiveGroup;
 struct EECPASGFlags;                        // ee/EECPAttackSubGroup.h (EEUnitClass::GetTerrainFlags)
 class EEFleeFromLocationScreenBase;         // ee/EEFleeFromLocationScreenBase.h (EEComplexUnit::FindFleePoint)
@@ -168,11 +168,13 @@ public:
     unsigned long GetMediaCount() const { return this->mMediaCount; }  // inline (EEPlayer::LoadAllClassMedia 0x167c16 compares it unsigned: jbe) (provisional name)
     long mButtonLoadCount;                  // +0x158 (EEPlayer::SwapClassButtonMedia: > 0)
     long mRegeneration;                     // +0x15c
+    unsigned long GetTerrainMask() const { return this->mTerrainMask; }
     unsigned long mTerrainMask;             // +0x160 (unsigned: `>> 14` is shr in 0x23198b/0x2292c9/0x23b891)
     bool mCanFireOverWalls;                 // +0x164 (EEUGAttackGround::Step)
     bool mBuildsOnElevation;                // +0x165
     bool mConvertsBuildings;                // +0x166
     bool mConvertsPriests;                  // +0x167
+    bool GetIsInitialized() const { return this->mIsInitialized; }
     bool mIsInitialized;                    // +0x168
     volatile bool mIsLoadingMedia;          // +0x169 (ctor: false; a busy flag polled with Sleep(1): volatile, 0x63bcc3)
     volatile bool mIsLoadingButtons;        // +0x16a (ctor: false; 0x23bc29 sets it while loading the media and the
@@ -245,6 +247,7 @@ public:
 
     // Members (moved here from EEUnit, RTSUnit's Reset sets them; provisional names)
     RTSUnitLink* mTileNode;                 // +0x08 (0: not a valid target; the unit calamities' Virtual4C)
+    RTSUnit* GetNext() const { return this->mNext; }
     RTSUnit* mNext;                         // +0x0c the owner's next unit (EEPlayer::mFirstUnit)
     RTSUnit* mPrevious;                     // +0x10 the previous unit of that list (0x23dabb)
     RTSTile* mTile;                         // +0x14 its tile (0x23dcf3; 0: not selectable by the hot keys; provisional name)
@@ -255,6 +258,7 @@ public:
     bool mIsQueuedForDelete;                // +0x28 (saved)
     bool mIsEditorSelected;                 // +0x29 (saved as false; Load clears it)
     bool mIsNodeFreed;                      // +0x2a (= true after the ctor)
+    bool GetIsValid() const { return this->mIsValid; }
     bool mIsValid;                          // +0x2b (named by the asserts "this->mIsValid == true")
 };
 
@@ -623,7 +627,7 @@ public:
     // 0x229314: a free tile near inUnit for this unit (EEMPathTo; returns a distance; provisional name)
 
     // 0xc7486 (EEMessage.cpp's range; EEActiveGroup::SpreadAroundUnit/SpreadAroundResource call it): stats +0xd8 > 0 and the table
-    // gU4E8708 [inClass +0x1c8][class +0x1cc] > 0 for a class whose Virtual68 holds (can attack it) (provisional name)
+    // gU4E8708 [inClass +0x1c8][class +0x1cc] > 0 for a class whose MarkInvalid holds (can attack it) (provisional name)
     bool CanAttackClass(EEUnitClass* inClass);
     EETown* FindNearestTown();              // 0x1fa856 (the owner's town (EEPlayer +0x7d0) nearest the unit that contains it: EEMPatrol, EECPUnitManager, EECPCombatManager) (provisional name)
     float DistanceSquaredToTileXY(long inTileX, long inTileY);  // 0x4211d (squared distance from the transformation (+0x13c/+0x14c) to a tile; EEPPatrolGroup::GetNearest; provisional name)
@@ -640,10 +644,10 @@ public:
     void QueueResearch(long inTechnology, bool inFront);  // 0x1f5f97 (EEMResearchTechnology; provisional name)
     // inline (out-of-line COMDAT 0x940eb, 26 callers)
     unsigned long GetBuildQueueSize() { return this->mBuildQueue.size(); }
-    // inline (the per-class Virtual74/B8 switches and EEUCGate::IsPartLeftOut read the current command through it;
+    // inline (the per-class EnabledChanged/B8 switches and EEUCGate::IsPartLeftOut read the current command through it;
     // provisional name)
     unsigned long GetCommandType() const { return this->mCommand ? this->mCommand->mType : 0; }
-    // inline (GetEffectHeight 0x1fa4dc loads mFirstFrame2 before the Virtual54 call that indexes the models with it)
+    // inline (GetEffectHeight 0x1fa4dc loads mFirstFrame2 before the WriteDetailsHook call that indexes the models with it)
     unsigned long GetAnimation() const { return this->mAnimation; }
     void OrderRepair(EEUnit* inTarget);     // 0x1f60ea (EEMRepairUnit, EEMBuildUnit; provisional name)
     void AddBuildTarget(EEUnit* inTarget);  // 0x1f61c8 (EEMRepairUnit, EEMBuildUnit; provisional name)
@@ -675,7 +679,7 @@ public:
     virtual void DescribeLong(UWideString& ioString);  // +0x14 (ICF-folded empty `ret 4` 0x157269)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x1c 0x1f2452
     virtual void Clear();                   // +0x20 0x1f5b6e
-    virtual void SightOffHere();            // +0x24 0x1f5b8e: Virtual68(tile)
+    virtual void SightOffHere();            // +0x24 0x1f5b8e: MarkInvalid(tile)
     virtual long RepairPointers(unsigned long, unsigned long);  // +0x28 0x1f353f
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x2c 0x1f417e
     virtual void FreeNode();                // +0x30 0x1f8a43
@@ -850,39 +854,48 @@ public:
     // source location; switching every reader to the accessor changed no row)
     GEPhysicalModel& GetPhysicalModel() { return this->mPhysicalModel; }  // inline (EEAMouseClick::Execute 0x403350: the original refuses its early message ctors)
     GEPhysicalModel mPhysicalModel;         // +0x130
+    void SetAngularVelocity(const GEOrientation& inV) { this->mAngularVelocity = inV; }
     GEOrientation mAngularVelocity;         // +0x17c (saved)
     GEOrientation mOrientation;             // +0x188 (saved)
-    std::vector<U2DPoint<long> > mBoundedPathTiles;  // +0x194 (filled from Fn248FE4's vector 0x2373bd; assigned with operator= 0x1a4f4 at 0x419ccb)
+    std::vector<U2DPoint<long> > mBoundedPathTiles;  // +0x194 (filled from EEGetUnitTiles's vector 0x2373bd; assigned with operator= 0x1a4f4 at 0x419ccb)
     U2DPoint<long> mCollisionTile;          // +0x1a4 (the ctor's dead lea: U2DPoint's inline ctor; Virtual10 prints it as the tile)
     GEColor mColor;                         // +0x1ac (1, 1, 1; saved)
     EEOrbital** mOrbitals;                  // +0x1b8 (+0x1b8..+0x20c: zeroed by 0x1fac37; mAreaEffectTemplate0 copies of the model's orbitals: Virtual64/Virtual30)
     EEWheel** mWheels;                      // +0x1bc (mAreaEffectTemplate1 copies of the model's wheels: Virtual64/Virtual30)
     EEUnitClass* mLauncherClass;            // +0x1c0 provisional name (drop object: the dropped class)
+    EEPPatrolGroup* GetPatrolGroup() const { return this->mPatrolGroup; }
     EEPPatrolGroup* mPatrolGroup;           // +0x1c4 (RTTI EEPPatrolGroup, ee/EEPPatrolGroup.h)
+    EEActiveGroup* GetActiveGroup() const { return this->mActiveGroup; }
     EEActiveGroup* mActiveGroup;            // +0x1c8 provisional name (0x5e407 and the teleport calamity call into it)
     // +0x1cc (non-zero: not selectable by the aircraft hot key; the unit carrying this one: the fire/plague functors
     // walk the chain to the outermost carrier; provisional name)
+    EEComplexUnit* GetPreviousPart() const { return this->mPreviousPart; }
     EEComplexUnit* mPreviousPart;
+    EEComplexUnit* GetNextPart() const { return this->mNextPart; }
     EEComplexUnit* mNextPart;               // +0x1d0 the next unit of a linked group (EEDoppelgangerManager 0x20278c walks it)
     EEComplexUnit* mHomeBase;               // +0x1d4
     EEComplexUnit* GetContainer() const { return this->mContainer; }  // inline (0x61c806 budget) r37_big B2
     EEComplexUnit* mContainer;              // +0x1d8 provisional name (aircraft in an airport: its position is the holder's)
     EEComplexUnit* mLastAttacker;                 // +0x1dc (released by Virtual04)
-    void SetLastAttacker(EEComplexUnit* inUnit);  // 0x22a3d8 (Virtual74 0x229de2; set-if-different with Reference) (provisional name)
+    void SetLastAttacker(EEComplexUnit* inUnit);  // 0x22a3d8 (EnabledChanged 0x229de2; set-if-different with Reference) (provisional name)
     EEComplexUnit* mOwner;                        // +0x1e0 provisional name (SetOwner; referenced)
+    EEComplexUnit* GetHolder() const { return this->mHolder; }
     EEComplexUnit* mHolder;                 // +0x1e4 (Virtual04: mRegeneration->ReleaseHeld(this))
+    EEUnitAction* GetCommand() const { return this->mCommand; }
     EEUnitAction* mCommand;                 // +0x1e8 the unit's current script action (ee/EEUnitAction.h)
     // +0x1ec a goal (EECPASGUHero::CheckCondition 0x64fd tests its mKind == 0xb; EECPASGUProphet::CanStillCast
     // dynamic_casts it to EEUnitGoal) (provisional name)
     EEUnitGoal* mActiveGoal;
     // +0x1f0 the unit's goal (EEMAddPatrolPoint dynamic_casts it to EEUGPatrol, src TD EEUnitGoal). Its
     // mKind 0xb = not to be cloaked (EECCCloaking). Name is provisional
+    EEUnitGoal* GetGoalState() const { return this->mGoalState; }
     EEUnitGoal* mGoalState;
     RTSUnit* mLastResource;                 // +0x1f4
     EEUnit* mGatheredResource;              // +0x1f8 (SetGatheredResource: referenced, its +0x2b tested)
     EEUnit* mMine;                          // +0x1fc (a unit: the mining building tests its +0x2b/+0x40; provisional name)
     EEHerd* mHerd;                          // +0x200 the unit's herd (EEHerd AddUnit 0xa1b45 sets it, RemoveUnit 0xa3749 clears it)
     float* mTurretAngles;                   // +0x204 (ResizeTurretAngles: delete[], new float[n] zeroed)
+    EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     EEUnitBehavior* mBehavior;              // +0x208 the unit's behaviour (EEUnitAI 0x22d9b5 reads its mB09; EEUIFMGMainGroup compares it with EEUnitBehavior::sTable[i])
     RTSUnit* mBlockingUnit;                 // +0x20c
     float mHeight;                          // +0x210 provisional name (SetHeight; saved)
@@ -901,6 +914,7 @@ public:
     float mVelocity;                        // +0x238 (SetVelocity; saved)
     float mAnimationFraction;               // +0x23c
     float mGrowth;                          // +0x240 (saved)
+    float GetCollisionRadius() const { return this->mCollisionRadius; }
     float mCollisionRadius;                 // +0x244
     float mCollisionResolutionCount;        // +0x248 (saved)
     // inline value getter (the Physics Virtual0C family: `fld [F98]; fld [ecx]; faddp`, ecx = &mF24C kept from the
@@ -943,6 +957,7 @@ public:
     long mPower;                            // +0x2d4 (calamities compare it with EECalamityClass::GetCost)
     long mNumPathRequests;                  // +0x2d8
     long mIsCollidable;                     // +0x2dc
+    long GetFormationRank() const { return this->mFormationRank; }
     long mFormationRank;                    // +0x2e0 (saved)
     long mWaterState;                       // +0x2e4 (saved)
     unsigned long mAmmunition;              // +0x2e8 (saved)
@@ -956,6 +971,7 @@ public:
     unsigned long mTimesUpdated;            // +0x308 (saved)
     long mNextFrame;                        // +0x30c
     EEEffectHandle mFireEffect;             // +0x310 provisional name (the fire functor's effect on the unit; saved)
+    unsigned long GetGrazeTime() const { return this->mGrazeTime; }
     unsigned long mGrazeTime;               // +0x314 (saved)
     unsigned long mGrowTime;                // +0x318 (saved)
     unsigned long mNumAttackers;            // +0x31c (saved)
@@ -963,10 +979,12 @@ public:
     unsigned long mPushImmuneUntil;         // +0x324 (a game time: mLD0 + 5000; compared unsigned)
     unsigned long mCamouflageTimer;         // +0x328 (saved)
     unsigned long mU32C;                    // +0x32c (saved)
+    long GetAIState() const { return this->mAIState; }
     long mAIState;                          // +0x330
     long mL334;                             // +0x334
     long mL338;                             // +0x338
     unsigned short mCollisionState;         // +0x33c (saved)
+    unsigned short GetExperience() const { return this->mExperience; }
     unsigned short mExperience;             // +0x33e (saved)
     bool mIsDeletable;                      // +0x340 (the contagion functors set it from EEUnitClass::mIsDeletable; provisional name)
     bool GetIsCommandable() const { return this->mIsCommandable; }  // inline (0x61c806 budget) r37_big B2
@@ -984,11 +1002,13 @@ public:
     bool mIsPathDone;                       // +0x34a
     bool mHasArrived;                       // +0x34b
     bool mIsBuilt;                          // +0x34c (drop object: a valid target)
+    bool GetIsDetachedFromAI() const { return this->mIsDetachedFromAI; }
     bool mIsDetachedFromAI;                 // +0x34d
     bool mIsFiringHigh;                     // +0x34e
     bool mB34F;                             // +0x34f
+    bool GetIsRegrowing() const { return this->mIsRegrowing; }
     bool mIsRegrowing;                      // +0x350
-    bool mIsFoundation;                     // +0x351 (Virtual84 sets it)
+    bool mIsFoundation;                     // +0x351 (NotifyRootVisibility sets it)
     bool mCanBeHidden;                      // +0x352
     bool mIsCitizen;                        // +0x353
     bool mIsPacked;                         // +0x354
@@ -1062,7 +1082,7 @@ extern EEUnitClassImprovementTable** gUnitClassImprovementTables;
 class EEActiveGroup;
 // (the pieces are the planned wall units: 0x23ebb2 push_backs EEUnit*, 0x23e630 reads them as units; inArg5 is a bool:
 // `cmp byte ptr [ebp+0x20], 0` and passed whole to CreateUnit's bool)
-void EEPlanWall(GE2DPoint inStart, GE2DPoint inEnd, EEUnitClass* inClass, EEPlayer* inPlayer, bool inAsFoundation, long inSkipPlayerChecks,
+void EEPlanWall(GE2DPoint inStart, GE2DPoint inEnd, EEUnitClass* inClass, EEPlayer* inPlayer, bool inAsFoundation, bool inSkipPlayerChecks,
                 std::vector<EEUnit*>& outPieces);
 void EEBuildWall(EEActiveGroup* inGroup, std::vector<EEUnit*>& inPieces);
 
@@ -1211,7 +1231,7 @@ public:
     bool IsTransport();                     // 0x4292 (categories 0x10..: a transport class; EEMImmediateCargoUnload)
     bool IsAirBase();                       // 0x4229 (+0x28 set and +0x1b8 2, 0x15 or 0x20: the icon bar's aircraft carrier test) (provisional name)
     // 0x1fdf06 (inline in the real header? its COMDAT follows EEComplexUnit::StartProduction; EEUnitClass 0x231b55
-    // calls it too): mAirTrafficType set, not Virtual54, category not 0x15/0x20 (provisional name)
+    // calls it too): mAirTrafficType set, not WriteDetailsHook, category not 0x15/0x20 (provisional name)
     bool IsAircraft();
     // inline (COMDAT 0x221b9, first emitted by EEAIContinentManager.cpp; every caller passes it to an EEDebugTrace
     // and calls it out of line) (provisional name)
@@ -1382,6 +1402,7 @@ public:
     EEUnitClass* mPackedClass;              // +0x10c the ctor stores it (the class it packs/unpacks into: EEMPackUnpack)
     EEPhysicsModel* mPhysicsModel;          // +0x110 (the class's physics model: EEUCSpaceBuilding/NavalBuilding::VirtualB8 call its 0x156897) (provisional name)
     EEUnitClassImprovementTable* mImprovements;   // +0x114 the ctor stores it
+    EEUnitBehavior* GetBehavior() const { return this->mBehavior; }
     EEUnitBehavior* mBehavior;              // +0x118 the ctor stores it (EEUnitBehavior::sTable[record +0x390]; the units' default behaviour)
     float mCruiseAltitude;                  // +0x11c the ctor stores it (a float: the space building's z, EEUCSpaceBuilding 0x219fe3)
     float mMinRange;                        // +0x120 the ctor stores it (a float: 0x243e0a fld/fmul; the record's +0x80 copied with mov)
@@ -1447,7 +1468,7 @@ public:
     float GetHealThreshold() const { return this->mHealThreshold; }
     float mHealThreshold;                   // +0x1a0 the ctor stores it (a float: the heal goal fld's it as the health fraction to heal below)
     float mHealRange;                       // +0x1a4 the ctor stores it (the heal range: squared against a distance)
-    float mHealDelay;                       // +0x1a8 the ctor stores it (a float: Virtual78 compares it with the unit's +0x22c)
+    float mHealDelay;                       // +0x1a8 the ctor stores it (a float: SetCursor compares it with the unit's +0x22c)
     float mLoadRange;                       // +0x1ac the ctor stores it (a float: the load goals add it to their distance)
     float mUnloadRange;                     // +0x1b0 the ctor stores it (a float: the unload goal squares it as its range)
     long mIsComplex;                        // +0x1b4 the ctor stores it
@@ -1457,6 +1478,7 @@ public:
     long mWeapon;                           // +0x1c4 the ctor stores it
     unsigned long mFamily;                  // +0x1c8 (provisional name; aircraft hot keys: with +0x1cc the aircraft kind; unsigned: EESEUnitLayerLess 0x199e45 jbe/jae)
     long mAmmoType;                         // +0x1cc (provisional name)
+    unsigned long GetAIKind() const { return this->mAIKind; }
     unsigned long mAIKind;                         // +0x1d0 the ctor stores it
     unsigned long mCounterKind1;            // +0x1d4 the ctor stores it (unsigned: 0x49b34e's map<long>::find takes a converted temp)
     unsigned long mCounterKind2;            // +0x1d8 the ctor stores it
@@ -1467,6 +1489,7 @@ public:
     long mWaterKind;                        // +0x1ec the ctor stores it
     long mArmor[6];                         // +0x1f0 the base armor per weapon kind (EECBUpgradeArmor 0x28239e indexes it)
     long mL208;                             // +0x208 the ctor stores it
+    long GetEpoch() const { return this->mEpoch; }
     long mEpoch;                            // +0x20c the ctor stores it
     long mReloadTime;                       // +0x210 the ctor stores it
     long mAttack;                           // +0x214 the ctor stores it
@@ -1475,8 +1498,10 @@ public:
     long mFlightTime;                       // +0x238 the ctor stores it
     long mLeadership;                       // +0x23c the ctor stores it
     long mMaxObjectCarry;                   // +0x240 the ctor stores it
+    long GetInfluence() const { return this->mInfluence; }
     long mInfluence;                        // +0x244 the ctor stores it
     long mRottingTime;                      // +0x248 the ctor stores it
+    long GetTransportCapacity() const { return this->mTransportCapacity; }
     long mTransportCapacity;                // +0x24c the ctor stores it
     long mGarrisonCapacity;                 // +0x250 the ctor stores it
     long mRepairRate;                       // +0x254 the ctor stores it
@@ -1539,13 +1564,18 @@ public:
     bool mCanFly;                           // +0x2f9 the ctor stores it
     bool mB2FA;                             // +0x2fa the ctor stores it
     bool mBuildsOnElevation;                // +0x2fb the ctor stores it
+    bool GetBlocksTile() const { return this->mBlocksTile; }
     bool mBlocksTile;                       // +0x2fc the ctor stores it
+    bool GetCanEnterAirTransports() const { return this->mCanEnterAirTransports; }
     bool mCanEnterAirTransports;            // +0x2fd the ctor stores it
     bool mCanEnterLandTransports;           // +0x2fe the ctor stores it
+    bool GetCanEnterSeaTransports() const { return this->mCanEnterSeaTransports; }
     bool mCanEnterSeaTransports;            // +0x2ff the ctor stores it
+    bool GetCanEnterSpaceTransports() const { return this->mCanEnterSpaceTransports; }
     bool mCanEnterSpaceTransports;          // +0x300 the ctor stores it
     bool mCanEnterFortresses;               // +0x301 the ctor stores it
     bool mCanGarrison;                      // +0x302 the ctor stores it
+    bool GetIsCollidable() const { return this->mIsCollidable; }
     bool mIsCollidable;                     // +0x303 the ctor stores it
     bool mCanSetRallyPoint;                 // +0x304 the ctor stores it
     bool mB305;                             // +0x305 the ctor stores it
@@ -1559,10 +1589,13 @@ public:
     bool mCanEnterAirports;                 // +0x30d the ctor stores it
     bool mCanEnterCarriers;                 // +0x30e the ctor stores it
     bool mCanEnterNavyYards;                // +0x30f the ctor stores it
+    bool GetIsWall() const { return this->mIsWall; }
     bool mIsWall;                           // +0x310 the ctor stores it
     bool mIsDeletable;                      // +0x311 the contagion functors copy it to EEComplexUnit::mIsDeletable; (provisional name)
     bool mIsInactive;                       // +0x312 the ctor stores it
+    bool GetIsAttackUnit() const { return this->mIsAttackUnit; }
     bool mIsAttackUnit;                     // +0x313 the ctor stores it
+    bool GetIsDefenseUnit() const { return this->mIsDefenseUnit; }
     bool mIsDefenseUnit;                    // +0x314 the ctor stores it
     bool mCanCrossForest;                             // +0x315 the ctor stores it
     bool mIsObstacle;                       // +0x316 the ctor stores it
@@ -1572,6 +1605,7 @@ public:
     bool mIsHuman;                          // +0x31a the ctor stores it
     bool mIsHorse;                          // +0x31b the ctor stores it
     bool mIsTower;                          // +0x31c the ctor stores it
+    bool GetHasCalamityPowers() const { return this->mHasCalamityPowers; }
     bool mHasCalamityPowers;                // +0x31d the ctor stores it
     bool mIsProjectile;                     // +0x31e the ctor stores it
     bool mCanChangeBehavior;                // +0x31f the ctor stores it
@@ -1579,7 +1613,7 @@ public:
     bool mCanPatrol;                        // +0x321 the ctor stores it
     bool mIsMedic;                          // +0x322 (untouched by the ctor)
     bool mSkipsLineOfFireCheck;             // +0x323 the ctor stores it
-    bool mIsFlare;                          // +0x324 (untouched by the ctor; Virtual68; the doppelganger manager)
+    bool mIsFlare;                          // +0x324 (untouched by the ctor; MarkInvalid; the doppelganger manager)
     bool mIsBoobyTrap;                      // +0x325 (untouched by the ctor; the doppelganger manager)
     bool mIsParatrooperBomber;              // +0x326 (untouched by the ctor)
     bool mHasSpecialAttack;                 // +0x327 the ctor stores it

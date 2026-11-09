@@ -121,9 +121,11 @@ public:
     // +0x240 (init list 0): the transport carrying it (EECPASGTransport::mLand points back; Save writes
     // dynamic_cast<EECPAttackSubGroup*>(mTransport)->mID, Restore: dynamic_cast<EECPASGTransport*> of the commander's
     // GetSubGroup(id))
+    EECPASGTransport* GetTransport() const { return this->mTransport; }
     EECPASGTransport* mTransport;
     long mTransportStage;                   // +0x244 (init list 0; saved)
     long mNextSubSectorCheckTime;           // +0x248 (init list 0)
+    bool GetNoTransport() const { return this->mNoTransport; }
     bool mNoTransport;                      // +0x24c (init list false)
 };
 

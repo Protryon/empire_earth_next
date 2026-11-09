@@ -103,7 +103,7 @@ void EECPASGSubmarine::PickSplitUnits(std::vector<EEComplexUnit*>& outUnits)
     if (theLargest == NULL && this->GetNumUnits() > 1) {
         for (long i = this->GetNumUnits() - 1; i >= 0; i--) {
             EECPAttackSubGroupUnit* theUnit = i < this->GetNumUnits() ? this->mUnits[i] : NULL;
-            long theKind = this->GetUnitUnit(i)->GetUnitClass()->mAIKind;
+            long theKind = this->GetUnitUnit(i)->GetUnitClass()->GetAIKind();
             theRanked.insert(std::multimap<long, EECPAttackSubGroupUnit*>::value_type(theKind, theUnit));
         }
         std::multimap<long, EECPAttackSubGroupUnit*>::iterator theEntry;

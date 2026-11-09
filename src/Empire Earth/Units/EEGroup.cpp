@@ -508,7 +508,7 @@ void EEGroup::RemoveUnit(EEComplexUnit* inUnit)
 // Removes and releases the unit at an index; recomputes the kind flags when its type's last unit leaves
 void EEGroup::RemoveAt(long inIndex)
 {
-    long theType = this->mUnits[inIndex]->mUnitClass->mUnitType;
+    long theType = this->mUnits[inIndex]->GetUnitClass()->mUnitType;
     std::map<long, long>::iterator it = this->mUnitTypeCounts.find(theType);
     this->mUnits[inIndex]->Dereference();
     this->mUnits.erase(this->mUnits.begin() + inIndex);

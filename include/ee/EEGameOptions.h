@@ -88,6 +88,9 @@ public:
     UWideString mScenarioName;              // +0x394
     UWideString mMapType;                   // +0x3a8 option 2 (the map script name; also the file the lobby loads)
     UWideString mMapName;                   // +0x3bc
+    TSReadWriteLock* GetLock() const { return this->mLock; }
+    void SetLoadType(unsigned long inType) { this->mLoadType = inType; }
+    void SetIsMultiplayer(bool inValue) { this->mIsMultiplayer = inValue; }
     TSReadWriteLock* mLock;                 // +0x3d0
     unsigned long mGameSpeed;                        // +0x3d4 option 10
     unsigned long mLoadType;                         // +0x3d8 0 new game, 1 scenario, 2 saved game ... (< kLoadTypeCount; provisional name)

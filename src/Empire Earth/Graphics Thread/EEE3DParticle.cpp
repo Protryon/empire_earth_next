@@ -234,10 +234,10 @@ long EEE3DParticle::Update()
             float theDrag = -this->mGraphicEffect->mParam11;
             GEVector theForce(this->mVelocity.mX * theDrag, this->mVelocity.mY * theDrag, this->mVelocity.mZ * theDrag);
             theFall += theForce.GetZ();
-            this->mVelocity.SetX(theForce.GetX() * theStep + this->mVelocity.mX);
+            this->mVelocity.SetX(theForce.GetX() * theStep + this->mVelocity.GetX());
             this->mVelocity.SetY(theForce.GetY() * theStep + this->mVelocity.mY);
             this->mVelocity.SetZ(theFall * theStep + this->mVelocity.mZ);
-            thePosition.SetX(this->mGraphicEffect->GetParam9() * theWind.GetX() * theStep + this->mVelocity.mX * theStep + thePosition.GetX());
+            thePosition.SetX(this->mGraphicEffect->GetParam9() * theWind.GetX() * theStep + this->mVelocity.GetX() * theStep + thePosition.GetX());
             thePosition.SetY(this->mGraphicEffect->GetParam9() * theWind.GetY() * theStep + this->mVelocity.mY * theStep + thePosition.GetY());
             thePosition.SetZ(this->mGraphicEffect->GetParam9() * theWind.GetZ() * theStep + this->mGraphicEffect->GetParam4() * theStep +
                              this->mVelocity.mZ * theStep + thePosition.GetZ());
@@ -254,9 +254,9 @@ long EEE3DParticle::Update()
                         thePosition.SetZ(theHeight);
                         float theBounce = theNormal.DotProduct(this->mVelocity) * (-1.0f - this->mGraphicEffect->GetParam10())
                                           / theNormal.DotProduct(theNormal);
-                        this->mVelocity.SetX(theNormal.mX * theBounce + this->mVelocity.mX);
-                        this->mVelocity.SetY(theNormal.mY * theBounce + this->mVelocity.mY);
-                        this->mVelocity.SetZ(theNormal.mZ * theBounce + this->mVelocity.mZ);
+                        this->mVelocity.SetX(theNormal.mX * theBounce + this->mVelocity.GetX());
+                        this->mVelocity.SetY(theNormal.mY * theBounce + this->mVelocity.GetY());
+                        this->mVelocity.SetZ(theNormal.mZ * theBounce + this->mVelocity.GetZ());
                     }
                 }
             }
@@ -330,15 +330,15 @@ long EEE3DParticle::DrawPass6()
     gRasterizer->SetShadingColorSource(0, theScreen);
     if (!this->mGraphicEffect->mFlag1) {
         gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-        Fn10FA01();
+        SetUnitLighting();
         theModel->SetOpacity((1.0f - this->mLifeFraction) * this->mGraphicEffect->GetParam1());
         GEColor theAmbient(this->mBrightness, this->mBrightness, this->mBrightness);
         gRasterizer->SetAmbientColor(theAmbient, theScreen);
     } else {
         float theLight;
-        Fn11A130(this->mPosition, theFog, theLight);
+        GetFogFactor(this->mPosition, theFog, theLight);
         gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
-        Fn10F7C8();
+        SetWhiteLighting();
         theModel->SetOpacity(this->mGraphicEffect->GetParam1());
         float theValue = (1.0f - this->mLifeFraction) * this->mBrightness * theLight;
         GEColor theAmbient(theValue, theValue, theValue);

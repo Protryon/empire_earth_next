@@ -37,6 +37,7 @@ public:
     virtual bool GetDisabled();
 
     UWideString mHelpText;                  // +0x104
+    void SetAttribute(long inAttribute) { this->mAttribute = inAttribute; }  // by value: schedules the store (Fill 0x66b593)
     long mAttribute;                        // +0x118 the improvement (0x10: help string only, 0xc: no cost)
     UITextLabel* mCostLabel;                // +0x11c
     unsigned long mLastMessageTime;         // +0x120 TMGetTime of the last "cannot" chat line

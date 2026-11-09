@@ -163,13 +163,13 @@ long EEE2DPlasmaPulse::DrawPass6()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     GETexture* theTexture = this->mGraphicObject->mTextures[0];
     theTexture->SetFrame(this->mDrawFrame);
     theMaterial->SetTexture(theTexture, theScreen);
     float theValue;
     const GE3DPoint& thePosition = this->mDrawPosition;
-    Fn11A130(thePosition, theFog, theValue);
+    GetFogFactor(thePosition, theFog, theValue);
     gRasterizer->SetAmbientColor(GEColor(theValue, theValue, theValue), theScreen);
     theTransformation.SetPosition(thePosition.GetX(), thePosition.GetY(), thePosition.GetZ());
     theModel->SetGraphicsPostModelTransform(theTransformation);
@@ -243,7 +243,7 @@ long EEE2DPlasmaPulse::Step()
             theChanged = true;
         else
             theChanged = false;
-        this->SetSound(Fn1487A3(theLocation, this->mGraphicObject, 0, this->mSound, theFrame, theChanged));
+        this->SetSound(PlayAnimationSound(theLocation, this->mGraphicObject, 0, this->mSound, theFrame, theChanged));
         if (this->mSound)
             this->mSound->Dereference();
     }

@@ -51,6 +51,8 @@
 // SYNTHETIC: EXE 0x4f2dba
 const UString EEE3DLinearProjectile::sData("EEE3DLinearProjectile-Data");
 
+#include "ee/EEGamePreferences.h"
+
 // FUNCTION: EXE 0x4f2dd6
 // Creates a projectile flying straight from one point to another in about the effect's duration (+-12.5% at random)
 // (the 0.001 factor 0x43c2a4 is `/ 1000.0f`: VC6 multiplies by the unrounded reciprocal)
@@ -108,7 +110,6 @@ long EEE3DLinearProjectile::DrawPass6()
 
 // FUNCTION: EXE 0x4f2ffe
 // Queues the projectile in render queue 3, snapshotting its progress, position and orbital angles
-// NEAR: as EEE3DDisease::Queue (the result in [ebp-8], inQueues in ebx, mOrbitals[i] through operator+)
 long EEE3DLinearProjectile::Queue(EEEffectQueue* inQueues)
 {
     long i;
@@ -117,9 +118,12 @@ long EEE3DLinearProjectile::Queue(EEEffectQueue* inQueues)
         this->mDrawPosition = this->mPosition;
         this->mTransformation.GetPosition(this->mLocation);
         for (i = 0; i < this->mOrbitalCount; i++)
-            this->mAngles[i] = this->mOrbitals[i]->mAngle;
+            this->mAngles[i] = this->mOrbitals[i]->GetAngle();
         GETexture* theTexture;
-        theTexture = this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mTextures[gScreenIndex] : NULL;
+        if (this->GetGraphicEffect()->GetGraphicObject())
+            theTexture = this->GetGraphicEffect()->GetGraphicObject()->GetTexture(gGamePreferences.mSettings.GetScreenID());
+        else
+            theTexture = NULL;
         inQueues[3][theTexture].push_back(this);
     }
     return theResult;
@@ -156,7 +160,7 @@ long EEE3DLinearProjectile::DrawPass5()
         gRasterizer->SetAlphaTestingRefValue(0.0f, theScreen);
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
-    Fn10F71C();
+    SetPrelitLighting();
     const GE3DPoint& theLocation = this->mLocation;
     theTransformation.SetPosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
     theModel->SetGraphicsPostModelTransform(theTransformation);

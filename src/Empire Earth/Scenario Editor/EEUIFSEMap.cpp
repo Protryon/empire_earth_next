@@ -279,7 +279,7 @@ EEUIFSEMap::EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
                             0xff, 0);
     this->mWidth->SetTextBoxBgOpacity(0.4f);
     ioIndex++;
-    thePosition.SetXY(this->mHeightLabel->GetRectangle().GetLeft(), this->mHeightLabel->GetRectangle().GetBottom() + 5.0f);
+    thePosition.SetX(this->mHeightLabel->GetRectangle().GetLeft()); thePosition.SetY(this->mHeightLabel->GetRectangle().GetBottom() + 5.0f);
     this->mHeight = new UIComboBox(kSEMapHeight, 1, theStrings, inFont, GERectangle(thePosition, 75.0f, 20.0f), 0x180, inForm,
                              ioIndex, 0xff, 0);
     this->mHeight->SetListBoxAlwaysDirty(true);
@@ -443,7 +443,7 @@ EEUIFSEMap::EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
     thePosition.SetX(this->mMap[2]->GetTextLabel()->GetRectangle().GetLeft()); thePosition.SetY(this->mMap[2]->GetRectangle().GetBottom() + 5.0f);
     this->mSeedEditBox->SetLocation(thePosition);
     this->mSeedLabel->SetLocation(thePosition);
-    thePosition.SetXY(this->mMap[0]->GetRectangle().GetLeft(), this->mSeedEditBox->GetRectangle().GetBottom() + 5.0f);
+    thePosition.SetX(this->mMap[0]->GetRectangle().GetLeft()); thePosition.SetY(this->mSeedEditBox->GetRectangle().GetBottom() + 5.0f);
     this->mCreateMap->SetLocation(thePosition);
     gResource->GetString(IDS_CREATE_MAP, theText);
     theMeasure.SetText(theText);
@@ -473,7 +473,7 @@ EEUIFSEMap::EEUIFSEMap(unsigned long& ioIndex, UIForm* inForm, GEFont* inFont)
     for (i = 0; i < theStrings.size(); i++)
         gResource->GetString(EEGetRules().mGameOptions.mMapSizes[i].mNameID, theStrings[i]);
 
-    thePosition.SetXY(this->mWidth->GetRectangle().GetLeft(), this->mWidth->GetRectangle().GetTop());
+    thePosition.SetX(this->mWidth->GetRectangle().GetLeft()); thePosition.SetY(this->mWidth->GetRectangle().GetTop());
     this->mRandomMapSize = new UIComboBox(kSEMapRandomMapSize, 1, theStrings, inFont,
                                     GERectangle(thePosition,
                                                 (float)(unsigned long)(this->mHeightLabel->GetRectangle().GetRight() -

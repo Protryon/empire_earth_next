@@ -45,6 +45,10 @@ public:
     EESMTEffectWrapper* GetEffectAt(unsigned long inIndex) const { return this->mEffects[inIndex]; }
     void SetName(const UWideString& inName) { this->mName = inName; }
     void SetText(const UWideString& inText) { this->mText = inText; }
+    void SetConditionDuration(unsigned long inValue) { this->mConditionDuration = inValue; }
+    void SetIsOn(bool inValue) { this->mIsOn = inValue; }
+    void SetIsLooping(bool inValue) { this->mIsLooping = inValue; }
+    void SetIsInCinematic(bool inValue) { this->mIsInCinematic = inValue; }
 
     UWideString mName;                      // +0x04
     UWideString mText;                      // +0x18

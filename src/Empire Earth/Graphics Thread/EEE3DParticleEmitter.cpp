@@ -312,7 +312,7 @@ long EEE3DParticleEmitter::Step()
         theTransformation.SetPosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
         this->SetTransformation(theTransformation);
         if (this->mGraphicEffect->mGraphicObject) {
-            this->SetSound(Fn1487A3(theLocation, this->mGraphicEffect->mGraphicObject, 0, this->mSound, 0, this->mIsFirstStep));
+            this->SetSound(PlayAnimationSound(theLocation, this->mGraphicEffect->mGraphicObject, 0, this->mSound, 0, this->mIsFirstStep));
             if (this->mSound)
                 this->mSound->Dereference();
         }
@@ -327,7 +327,7 @@ long EEE3DParticleEmitter::Step()
                 thePosition.SetY((0.5f - EEEffect::GetRandom()) * theSpreadY + thePosition.mY);
                 if (!this->mGraphicEffect->mIsEmitFlat) {
                     float theSpreadZ = this->mGraphicEffect->mEmitPositionSpread;
-                    thePosition.SetZ((0.5f - EEEffect::GetRandom()) * theSpreadZ + thePosition.mZ);
+                    thePosition.SetZ((0.5f - EEEffect::GetRandom()) * theSpreadZ + thePosition.GetZ());
                 }
                 float thePitch = EEEffect::GetRandomSpread(this->mGraphicEffect->GetParam2(), this->mGraphicEffect->GetParam1());
                 float theYaw = EEEffect::GetRandomSpread(this->mGraphicEffect->GetParam4(), this->mGraphicEffect->GetParam3());

@@ -46,6 +46,7 @@ public:
     UITextLabel* mLabel;                    // +0x2c (id 0x89b, red: shown while there is no area)
     EESEAPaintArea* mPaintAction;           // +0x30 (while the left button paints)
     bool mRectangleMode;                    // +0x34
+    bool GetHasRectangle() const { return this->mHasRectangle; }
     bool mHasRectangle;                     // +0x35
     bool mHasPoint;                         // +0x36
 };

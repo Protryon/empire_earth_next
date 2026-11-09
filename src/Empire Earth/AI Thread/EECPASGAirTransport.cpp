@@ -133,13 +133,15 @@ EETileLocation EECPASGAirTransport::GetRallyPoint(bool inIncludeAllies)
                 thePlayers.push_back(this->mPlayer2->mAllies[i]);
         }
     }
-    Fn4EEF9(thePlayers, UMFloatToLong(gPhysics->mRandom.GenerateUnit()));
+    PermuteValues(thePlayers, UMFloatToLong(gPhysics->mRandom.GenerateUnit()));
     theTowns = thePlayers.front()->mTowns;
-    if (theTowns.size() <= 0)
+    if (theTowns.empty())
         return this->mRallyPoint.mTile;
-    Fn4EEF9(theTowns, UMFloatToLong(gPhysics->mRandom.GenerateUnit()));
-    if (theTowns.front() != NULL) {
-        EETileLocation theTile = theTowns.front()->GetRandomPoint();
+    PermuteValues(theTowns, UMFloatToLong(gPhysics->mRandom.GenerateUnit()));
+    EETown* theTown = theTowns.front();
+    if (theTown != NULL) {
+        EETileLocation theTile;
+        theTile = theTown->GetRandomPoint();
         if (theTile.mX != 0 || theTile.GetY() != 0)
             this->mRallyPoint.mTile = theTile;
     }

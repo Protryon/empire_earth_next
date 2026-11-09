@@ -224,8 +224,10 @@ void EESEACreateBlankMap::CreateMap()
             thePoint.SetX((float)x);
             thePoint.SetY((float)y);
             theTransformation.Apply(thePoint, theWorld);
-            unsigned long theX = min(max(UMFloatToLong(theWorld.GetX()), 0), theFileWidth - 1);
-            unsigned long theY = min(max(UMFloatToLong(theWorld.GetY()), 0), theFileHeight - 1);
+            unsigned long theX = max(UMFloatToLong(theWorld.GetX()), 0);
+            theX = min(theX, theFileWidth - 1);
+            unsigned long theY = max(UMFloatToLong(theWorld.GetY()), 0);
+            theY = min(theY, theFileHeight - 1);
             float theZ = theData[theY * theFileWidth + theX];
             if (theZ < 0.0f)
                 theZ = max(theZ * theWaterScale, (float)-theWaterDepth);

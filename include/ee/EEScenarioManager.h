@@ -199,6 +199,7 @@ public:
     std::vector<EESMObject*> mObjects;      // +0x114 (virtual delete; Reset's default object 0x32c9)
     std::vector<EESMArea*> mAreas;          // +0x124 (Reset's two default areas 0x32ce/0x32cf)
     std::vector<EESMEffect*> mPendingEffects;  // +0x134 (0x1b000d appends new effects)
+    EESMDialogMessage& GetDialogMessage(unsigned long inIndex) { return this->mMessages[inIndex]; }
     std::vector<EESMDialogMessage> mMessages;    // +0x144 (0x40-byte elements by value)
     std::vector<UWideString> mImportErrors;  // +0x154 (_Buy 0x6ba94)
     std::vector<EESMTimedEffect> mTimedEffects;  // +0x164

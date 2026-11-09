@@ -132,10 +132,10 @@ void EEGhostUnit::FillDockSquare()
         }
     }
     if (theValid) {
-        if (this->mUnitClass->GetUnitType() == kUnitTypeSpaceDock)
-            theYaw = EEGetSpaceDockYaw(this->mTileX, this->mTileY, this->mUnitClass->GetTileSize());
-        else
+        if (this->mUnitClass->GetUnitType() != kUnitTypeSpaceDock)
             theYaw = kWallRotations[EEGetDockFacing(this->mTileX, this->mTileY)];
+        else
+            theYaw = EEGetSpaceDockYaw(this->mTileX, this->mTileY, this->mUnitClass->GetTileSize());
     }
     if (theBorder < 2) {
         for (long a = theLeft + 1; a < theRight; a++)
@@ -247,15 +247,15 @@ void EEGhostUnit::FillSquare()
             for (long y = theBottom; y <= theTop; y++) {
                 EETile* theTile = theMap->GetTile(x, y);
                 bool theCell;
-                if (theTile == NULL) {
-                    theCell = false;
-                    this->mHeights[(x - theLeft) * 12 + y - theBottom] = 0.0f;
-                } else {
+                if (theTile != NULL) {
                     theCell = EECanPlace(this->mPlayer, theType, &thePosition, x, y, 0, 0);
                     if (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
                         this->mHeights[(x - theLeft) * 12 + y - theBottom] = 0.0f;
                     else
                         this->mHeights[(x - theLeft) * 12 + y - theBottom] = theMap->mTerrainMesh.GetZ(x, y);
+                } else {
+                    theCell = false;
+                    this->mHeights[(x - theLeft) * 12 + y - theBottom] = 0.0f;
                 }
                 this->mFootprint[x - theLeft][y - theBottom] = theCell;
                 if (x < theRight && y < theTop && !theCell)

@@ -87,7 +87,7 @@ static bool sFirstChange = true;
 // Opens the change-name dialog
 long EEUIECBShowChangeNameDialog::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    return Fn27F700();
+    return CivBuilderShowNameDialog();
 }
 
 // FUNCTION: EXE 0x67cd6a
@@ -96,17 +96,17 @@ long EEUIECBShowChangeNameDialog::ProcessEvent(UIForm* inForm, UIEntity* inEntit
 long EEUIECBAcceptChangeName::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     UWideString theName;
-    long theResult = Fn27F1A9(theName);
+    long theResult = CivBuilderGetTypedName(theName);
     if (theResult != kErrorOK)
         return theResult;
-    Fn27FF61(theName);
-    theResult = Fn27EFF6();
+    CivBuilderSetCivilizationName(theName);
+    theResult = CivBuilderAcceptName();
     if (theResult != kErrorOK)
         return theResult;
     if (sFirstChange)
-        theResult = Fn27FF7C(true);
+        theResult = CivBuilderClose(true);
     else {
-        theResult = Fn27F6A4();
+        theResult = CivBuilderSaveAs();
         sFirstChange = true;
     }
     return theResult;
@@ -116,7 +116,7 @@ long EEUIECBAcceptChangeName::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Opens the load-civilization dialog, or tells the player the civilization can no longer be changed
 long EEUIECBShowLoadCivDialog::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    return Fn280F34();
+    return CivBuilderShowLoad();
 }
 
 // FUNCTION: EXE 0x67cdd9
@@ -125,17 +125,17 @@ long EEUIECBAcceptLoadCivilization::ProcessEvent(UIForm* inForm, UIEntity* inEnt
 {
     UString theName;
     long theResult;
-    UIFileListBox* theList = Fn27F8F7();
+    UIFileListBox* theList = CivBuilderGetLoadFileList();
     if (theList != NULL) {
         unsigned long theSelection;
         theResult = theList->GetCurrentSelection(theSelection);
         if (theResult == kErrorOK) {
             theName = (const char*)theList->GetData(theSelection);
-            theResult = Fn28060C(theName);
+            theResult = CivBuilderLoadCivilization(theName);
             if (theResult == kErrorOK) {
-                theResult = Fn27F43F(*gEditableCivilization->GetName());
+                theResult = CivBuilderSetName(*gEditableCivilization->GetName());
                 if (theResult == kErrorOK)
-                    theResult = Fn27F340();
+                    theResult = CivBuilderCloseForm();
             }
         }
     } else
@@ -147,25 +147,25 @@ long EEUIECBAcceptLoadCivilization::ProcessEvent(UIForm* inForm, UIEntity* inEnt
 // Opens the save-civilization dialog
 long EEUIECBShowSaveCivDialog::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    return Fn280FAA();
+    return CivBuilderShowSave();
 }
 
 // FUNCTION: EXE 0x67ce70
 // Closes the current dialog (also the cancel of the load and change-name dialogs, ICF-folded here)
 long EEUIECBCancelSaveCivDialog::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    return Fn27F340();
+    return CivBuilderCloseForm();
 }
 
 // the other two cancel events: same body, ICF-folded into 0x27ce70 (no marker)
 long EEUIECBCancelLoadCivDialog::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    return Fn27F340();
+    return CivBuilderCloseForm();
 }
 
 long EEUIECBCancelChangeName::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    return Fn27F340();
+    return CivBuilderCloseForm();
 }
 
 // FUNCTION: EXE 0x67ce78
@@ -176,16 +176,16 @@ long EEUIECBAcceptSaveCivilization::ProcessEvent(UIForm* inForm, UIEntity* inEnt
     UWideString theName;
     long theResult;
     if (gEditableCivilization->GetIsUnchanged()) {
-        theResult = Fn27F221(theName);
+        theResult = CivBuilderGetTypedFileName(theName);
         if (theResult == kErrorOK) {
-            Fn27FF61(theName);
-            theResult = Fn27F43F(theName);
+            CivBuilderSetCivilizationName(theName);
+            theResult = CivBuilderSetName(theName);
             sFirstChange = false;
             if (theResult == kErrorOK)
-                theResult = Fn27F6A4();
+                theResult = CivBuilderSaveAs();
         }
     } else
-        theResult = Fn27F6A4();
+        theResult = CivBuilderSaveAs();
     return theResult;
 }
 
@@ -193,7 +193,7 @@ long EEUIECBAcceptSaveCivilization::ProcessEvent(UIForm* inForm, UIEntity* inEnt
 // Copies the save list's selected file name into the save dialog's edit box
 long EEUIECBSaveNameSelected::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    return Fn27FC30();
+    return CivBuilderSaveNameSelected();
 }
 
 // FUNCTION: EXE 0x67cee7
@@ -201,8 +201,8 @@ long EEUIECBSaveNameSelected::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 long EEUIECBPurchasedUpgradeSelected::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     long theResult = kErrorOK;
-    if (Fn27FF56())
-        theResult = Fn27FB83(inForm);
+    if (CivBuilderCanChange())
+        theResult = CivBuilderResetAvailableSelection(inForm);
     return theResult;
 }
 
@@ -210,7 +210,7 @@ long EEUIECBPurchasedUpgradeSelected::ProcessEvent(UIForm* inForm, UIEntity* inE
 // On an available upgrade's selection, clears the bought list's selection
 long EEUIECBPotentialUpgradeSelected::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    return Fn27FB94(inForm);
+    return CivBuilderResetBoughtSelection(inForm);
 }
 
 // FUNCTION: EXE 0x67cf12
@@ -219,7 +219,7 @@ long EEUIECBUpgradePurchaseAttempt::ProcessEvent(UIForm* inForm, UIEntity* inEnt
 {
     long theResult = kErrorOK;
     if (!gB565566)
-        theResult = Fn28105E(0);
+        theResult = CivBuilderBuyUpgrade(0);
     return theResult;
 }
 
@@ -229,7 +229,7 @@ long EEUIECBUpgradeReturned::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     long theResult = kErrorOK;
     if (!gB565566)
-        theResult = Fn281120();
+        theResult = CivBuilderReturnUpgrade();
     return theResult;
 }
 
@@ -243,7 +243,7 @@ long EEUIECBUpdateControls::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 // Discards the civilization edits
 long EEUIECBCancelChanges::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
-    return Fn27FF7C(false);
+    return CivBuilderClose(false);
 }
 
 // FUNCTION: EXE 0x67cf48
@@ -251,11 +251,11 @@ long EEUIECBCancelChanges::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 long EEUIECBAcceptChanges::ProcessEvent(UIForm* inForm, UIEntity* inEntity)
 {
     long theResult = kErrorOK;
-    bool theFlag = Fn27FF56();
+    bool theFlag = CivBuilderCanChange();
     if (gCommunications->GetIsMultiplayerSession() && theFlag && gEditableCivilization->GetPointsLeft() > 0)
-        theResult = Fn2812BC(inForm);
+        theResult = CivBuilderAskAccept(inForm);
     else
-        Fn28130F(NULL);
+        CivBuilderAcceptChanges(NULL);
     return theResult;
 }
 
@@ -266,13 +266,13 @@ long EEUIECBDisplayDeleteCivDialog::ProcessEvent(UIForm* inForm, UIEntity* inEnt
     long theResult = kErrorOK;
     UIFileListBox* theList;
     if (inForm->GetFormID() == kFormCivBuilderLoadCiv)
-        theList = Fn27F8F7();
+        theList = CivBuilderGetLoadFileList();
     else
         theList = static_cast<UIFileListBox*>(inForm->GetControlById(kCivBuilderIdSaveCivFileListBox));
     if (theList != NULL) {
         unsigned long theSelection;
         if (theList->GetCurrentSelection(theSelection) == kErrorOK)
-            theResult = Fn2811D9(inForm, inEntity);
+            theResult = CivBuilderAskDelete(inForm, inEntity);
     }
     return theResult;
 }

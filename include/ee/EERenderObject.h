@@ -17,26 +17,26 @@ class EETile;
 class EEDoppelganger;
 
 // free functions of the render units (cdecl; provisional names; types inferred)
-void Fn10F7C8();                            // 0x10f7c8: ambient colour 1, 1, 1 and intensity (the effects' Virtual18)
-void Fn11A130(const GE3DPoint& inLocation, unsigned long inFog, float& outValue);   // 0x11a130
-void Fn10F71C();                            // 0x10f71c: the effects' lighting set-up (EEE3DLinearProjectile::DrawPass5)
-void Fn10F833();                            // 0x10f833: the effects' lighting set-up (EEE3DEarthquake::DrawPass2)
-void Fn10FA01();                            // 0x10fa01: the effects' lighting set-up before a model draw (EEE3DDisease::DrawPass5)
-void Fn10F6DE();                            // 0x10f6de: lighting set-up (EEROWater::RenderScene)
-void Fn10F60F();                            // 0x10f60f: lighting set-up (EEROWater::RenderScene)
-void Fn10F772();                            // 0x10f772: lighting set-up (EEROTerrain::RenderScene's clouds)
-void Fn10F6C7();                            // 0x10f6c7 (EEROUnits::DrawPlacement)
-void Fn10F8DE();                            // 0x10f8de (EEROUnits::DrawObjectModels)
-void Fn10FAE8();                            // 0x10fae8 (EEROUnits::DrawObjectModels)
-void Fn10FB74();                            // 0x10fb74 (EEROUnits::DrawObjectModels)
+void SetWhiteLighting();                    // 0x10f7c8: ambient colour 1, 1, 1 and intensity (the effects' Virtual18)
+void GetFogFactor(const GE3DPoint& inLocation, unsigned long inFog, float& outValue);  // 0x11a130
+void SetPrelitLighting();                   // 0x10f71c: the effects' lighting set-up (EEE3DLinearProjectile::DrawPass5)
+void SetTerrainLighting();                  // 0x10f833: the effects' lighting set-up (EEE3DEarthquake::DrawPass2)
+void SetUnitLighting();                     // 0x10fa01: the effects' lighting set-up before a model draw (EEE3DDisease::DrawPass5)
+void SetLightingOff();                      // 0x10f6de: lighting set-up (EEROWater::RenderScene)
+void SetSceneFog();                         // 0x10f60f: lighting set-up (EEROWater::RenderScene)
+void SetCloudLighting();                    // 0x10f772: lighting set-up (EEROTerrain::RenderScene's clouds)
+void SetFogOff();                           // 0x10f6c7 (EEROUnits::DrawPlacement)
+void SetMapObjectLighting();                // 0x10f8de (EEROUnits::DrawObjectModels)
+void RestoreUnitLighting();                 // 0x10fae8 (EEROUnits::DrawObjectModels)
+void DimUnitLighting();                     // 0x10fb74 (EEROUnits::DrawObjectModels)
 
 
 // EEEffect.cpp's batch functions (declared here for the render objects)
 class GETexture;
-void Fn102724(GETexture* inTexture);        // 0x102724: starts both effect batches with inTexture
-void Fn102F20();                            // 0x102f20: drops Fn102724's references
-void Fn103F64();                            // 0x103f64: draws what the batches hold
-// the camera plane the fog distance is measured from (0x4e9008; declared in EEEffect.cpp, read by Fn11A130)
+void BeginEffectBatches(GETexture* inTexture);  // 0x102724: starts both effect batches with inTexture
+void EndEffectBatches();                    // 0x102f20: drops BeginEffectBatches's references
+void FlushEffectBatches();                  // 0x103f64: draws what the batches hold
+// the camera plane the fog distance is measured from (0x4e9008; declared in EEEffect.cpp, read by GetFogFactor)
 // (provisional name)
 class GEQuaternion;
 extern long& gHiddenUnitsMode;

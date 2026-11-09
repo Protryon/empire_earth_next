@@ -72,7 +72,9 @@ public:
     long mTownID;                           // +0x2c the town id (GetTownID)
     unsigned long mStartTime;               // +0x30
     unsigned long mDeadline;                // +0x34 (-1; Restore of an old save: mL30 + 600000)
+    long GetNumFilled() const { return this->mNumFilled; }   // inline: EECPPersonnelRequest::TryAssign 0x485b64
     long mNumFilled;                        // +0x38
+    long GetID() const { return this->mID; }
     long mID;                               // +0x3c (EECPPersonnel::ReleaseRequest's argument)
 };
 

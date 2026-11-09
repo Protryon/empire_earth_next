@@ -157,8 +157,9 @@ bool EEAIPathSubSector::IsPassable(long inPlayer)
     bool thePassable = false;
     EEComplexUnit* theGate = NULL;
     EEUCGate* theGateClass = NULL;
+    U2DPoint<long> theTile;
     for (long i = this->mTiles.Size() - 1; i >= 0 && !thePassable; i--) {
-        U2DPoint<long> theTile = this->mTiles[i];
+        theTile = this->mTiles[i];
         EETile* theMapTile = gWorld.mMap->GetTile(theTile.mX, theTile.mY);
         if (!theMapTile)
             continue;

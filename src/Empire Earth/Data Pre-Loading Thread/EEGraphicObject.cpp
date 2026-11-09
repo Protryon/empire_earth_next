@@ -802,9 +802,7 @@ long EEGraphicObject::LoadMedia()
                 theResult = 9;
         }
         theDescription.mCreateMIPMaps = this->mCreateMipMaps;
-        theDescription.mNumMipLevelsToDrop = this->mNumMipLevelsToDrop + gTextureMipLevelsToDrop;
-        if (theDescription.mNumMipLevelsToDrop >= this->mMaxMipLevelsToDrop)
-            theDescription.mNumMipLevelsToDrop = this->mMaxMipLevelsToDrop;
+        theDescription.mNumMipLevelsToDrop = (this->mNumMipLevelsToDrop + gTextureMipLevelsToDrop < this->mMaxMipLevelsToDrop) ? this->mNumMipLevelsToDrop + gTextureMipLevelsToDrop : this->mMaxMipLevelsToDrop;
         theShadowDescription.mNumMipLevelsToDrop = 0;
         theShadowDescription.mCreateMIPMaps = true;
         if (this->mTextureName != NULL)

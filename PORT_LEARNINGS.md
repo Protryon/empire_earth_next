@@ -1,8 +1,8 @@
 # Port learnings: VC6 source to clang-cl
 
 These notes record what it took to move the reconstruction from VC6 to clang-cl (phase 1 of `PORT.md`): what broke, why,
-and the fix that was kept. Use them as the checklist for code that is ported later, the WON libraries first
-(WONAPI/WONLobby: stand-ins in source, see "Plain link").
+and the fix that was kept. Use them as the checklist for code that is ported later (the WON library: "The WON library from
+source").
 
 Order that worked: compile census → STL headers → stock-header patches → mechanical source passes → header bridges →
 one-off sources → DLL links → exe link → stub audit against VC6.
@@ -589,11 +589,94 @@ text carries what the game reads, nothing else.
 - Cost: compiling all 37 tables takes about 0.8 s at -O1 (dbobjects' 5.2 MB of YAML 0.33 s, dbgraphics 0.27 s). The
   modding plan's compiled cache would remove it.
 
-## For WONAPI/WONLobby later
+## The WON library from source (upstream merge, 2026-11-08)
 
-The WON library is stood in for by `src/Empire Earth/WONAPI/WONAPIStubs.cpp` ("Plain link"). When its source
-arrives, apply the dialect passes and header bridges first; WON is linked into the exe, not a DLL, so the ODR/inline
-section matters most. Then delete the stand-ins it defines (a duplicate symbol names each), with no new fatal ones.
+Upstream's source revisions up to 3f51317465d6 brought the WON library (578 sources, 153 headers) and a renaming and
+readability pass of the lobby, on top of byte-matching rewrites of the game code. Merged under this fork's changes;
+the library is module `won` (tools/ee.py, tools/units.py) and `WONAPIStubs.cpp` is gone.
+
+- **Review every file both sides changed, conflicted or not.** Git's line merge spliced upstream's reshuffles (swapped
+  if/else with a negated test, hoisted locals, getters) into ported code outside the conflict markers: a doubled
+  `else`, emptied branches, a VC6-scoped loop variable in a lifted-cap loop (EETechTree::GetChecksum), NULL
+  assignments to STL iterators restored (EEWonNet::ConnectToLobby). The check that caught them per file: the working
+  tree minus theirs must be exactly our delta, the working tree minus ours exactly upstream's delta (as line
+  multisets, with the changes both made set aside). Then grep our own files (the ones upstream does not have) for the
+  names upstream renamed (`gU5308A0` -> `gNetworkAdapter`, `Fn297ED0` -> `EELobbyIsShown`, `Fn2492C2` ->
+  `EEGetSquareRingTiles`, ...).
+- **Upstream's exactness fillers have no code:** `EE_LOST_DEBUG/TRACE/CASE/READ` and `LostDebug.h` only charged VC6's
+  inline budget; drop every statement and include on each merge.
+- **One view per class.** Upstream's headers carried `#ifdef EE_DINKUM_SXL233` splits: the WON library's revision of
+  a class (built against the sxlrt233 Dinkum) and the exe's (e.g. `GUIString` inline in one, out of line at exe
+  addresses in the other; `CanStartGameHook` `bool` vs `long`). In one static clang exe that is an ODR violation: the
+  WON library's view is kept, the exe-side out-of-line copies are deleted (each checked to do the same).
+- **Dialect passes WON needed** (30 of 576 units failed; the rest compiled as delivered): `std::auto_ptr` ->
+  `std::unique_ptr<T[]>` (the buffers came from `new[]`: auto_ptr freed them with scalar delete), `random_shuffle` ->
+  VC6's swap-with-`rand()%(i+1)` loop, STL iterators initialised from NULL -> default-constructed, temporaries bound to
+  non-const references -> named locals, `typename`, Dinkum's `referent_type` -> `mapped_type`, and VC6's
+  `unsigned short` for `wchar_t`: `extern unsigned short gEmptyWideString[]` compiles but mangles differently from
+  the `wchar_t` definition, so the link names it.
+- **x64 hazards WON had:** pointers through `DWORD` in the waveOut callback (`dwInstance`/`dwParam1` are
+  `DWORD_PTR`), the window object in `GWL_USERDATA` (`GWLP_USERDATA`, `SetWindowLongPtr`), DbgHelp's 32-bit stack walk
+  (StackWalk64, AMD64, Rip/Rsp/Rbp), the login-secret file written with `sizeof(time_t)` (8 bytes now: an `int32_t`).
+  `time_t` narrowed to `long` for 32-bit wire fields is left as is (until 2038).
+- **Linking every WONAPI source** (upstream's rule: each .cpp no unit list names) also links SDK reconstructions
+  that duplicate an original unit (StringParserFormat.cpp) or that the original exe never contained (GameSpySupport,
+  MSFileDialog: they drag in the GameSpy SDK and comdlg32): `units.WON_NOT_LINKED`. lld names undefined symbols only
+  once the duplicates are gone, so a first "0 unresolved" next to duplicates means nothing.
+- **Placeholder names for one address:** `Component::Fn2F5380` is `FireEvent` (both 0x2f5380: forwarded),
+  `GUIStringData::Compare(other, bool)` was `findNoCase` (0x328340: the epoch/map filters are substring searches);
+  globals of units upstream did not reconstruct (`gShowParseTime`, `gLinesParsed`) are defined where they are used.
+- **Ours over upstream, kept deliberately:** EEUCBasicCitizen's `kTriggerSmartTaskNotAssigned` test keeps
+  `mGoalState != NULL` although upstream's FIXES.md lists the inversion as a fix (it strands citizens here);
+  EEEffect2D::CreateParts reads the unit's stats inside its NULL test (upstream's order dereferences NULL for an
+  effect at a point).
+
+### The WON lobby on the platform layer (every OS)
+
+- **WONGUI's backend is ours.** The SDK separates it (WindowManager, Window, Graphics, NativeImage, Font, the RawImage
+  platform calls, Clipboard): `WONGUI/Plat*.cpp` implement it on the platform layer and WON's own software rasteriser
+  (`Surface<DWORD>`, WONSurface.h), with GDI's rules kept where the look depends on them (both line end points,
+  rectangles x..x+w-1, mask blits AND then OR, text at the cell top, MSFont's size and underline). `units.WON_REPLACED`
+  keeps the MS* GDI backend out of every link; `include/ee/wonapi/WONLobbyGUIMS.h` keeps its declarations for merges.
+- **One frame, pulled by the graphics thread.** The window manager composites the lobby's windows into one BGRA frame
+  (a serial per change, its own lock); `RTSGraphics::RenderLobby` copies it into a system-memory surface (the movie's
+  pattern; `GEPackBGRXRow`, include/lle/GEPixelPack.h) and onto the back buffer, then ShowScene. Lock order:
+  EELobbyLock, then the frame lock.
+- **The lobby runs inside a posted action, which holds two locks.** `EEUserInterface::ProcessActions` holds the UI
+  copy lock and the world write lock around every action, and EELobbyOpen's lobby loop never returns while the lobby
+  is open; the graphics thread then blocked in `EEGraphics::FrameStarting` (the original did not care: its lobby was
+  another GDI window). `EELobbyRunLoop` releases both while the lobby runs and takes them back in ProcessActions'
+  order. Found with lldb, not traces: run the play directory's exe outside the harness (one debugger per process),
+  drive it with the UI fixture (EE_TEST_UI, `click 12 1`), `lldb -p PID -o "thread backtrace all"`, and resolve the
+  frames through EE-AOC.map (lldb shows only the nearest export; the exe is linked at 0x400000).
+- **A 1024x768 layout, letterboxed.** The lobby's screens are drawn for 1024x768 (the original switched the display
+  mode): the surface keeps that size and is scaled uniformly into the back buffer, centred (black bars), and
+  `PlatWindowManager::ScaleToSurface` maps the pointer back the same way. `GERectangle(a, b, c, d)` is left, top,
+  RIGHT, BOTTOM: a width there squeezed the image (identical only at the origin).
+- **WON's files get absolute paths.** `WONAPICore::GetDefaultFileDirectory` was "" (the working directory, the data
+  root); it now names the data root, so `_wonHTTPCache` and the other files are absolute (the harness refuses relative
+  creates).
+- **POSIX.** Sockets on PlatSocket (`PlatSocketWait`/`GetError`/`Shutdown`/options added; WSAE* are the PLAT_SOCK_*
+  values), threads and events on PlatThread/PlatEvent (no SEH off Windows), time on `WONTickCount()`, the registry on
+  PlatConfig (`won:` block of config.yaml: the CD key, UseLocalIP), files on PlatFOpen/PlatFile, cp1252 text on
+  `PlatCp1252ToWide`/`PlatWideToCp1252`. Wide strings on the wire and in WON's files are UTF-16 LE per unit
+  (`WideAppendUtf16LE`, WONBuffer.h): wchar_t is 4 bytes there, and ReadRawWString read past its buffer.
+- **libstdc++'s [abi:cxx11] tag on Linux:** in this dialect a function returning std::string mangles with the tag
+  or without it depending on whether glibc's `<string.h>` came before `<string>` in the unit, and two lobby units
+  that start with `<string>` did not link against the definition (`GUIStringData::GetString`). Every game unit on
+  Linux gets `-include string.h` (xbuild.py game_dialect_flags). The census's ms dialect also gets the Linux
+  `__GCC_ATOMIC_TEST_AND_SET_TRUEVAL` define the game build has (it reported 384 phantom failures).
+- **The lobby at the display's pixels (the UI round).** The 1024x768 layout, events and hit tests stay logical; the
+  backend draws at a pixel scale k (`PlatWindowManager::SetPixelScale`: window images k times larger, PlatGraphics
+  scales coordinates and clip, fonts rasterised at size x k, images resampled bilinearly with masks kept exact, or
+  the 4x pack's `Data/Textures-4x/WONLobby Resources/...` when present: none yet, tools/upscale covers Data/Textures
+  only). RenderLobby's surface has a 1024x768 logical size over the frame's pixels (`GESurface::SetLogicalSize`), and
+  k = the letterbox box's back-buffer pixels / 768. Windowed GX has render scale 1, so k > 1 shows in full screen;
+  fractional render scales round the copy rectangle to whole logical pixels.
+- **Tests:** `xbuild.py wontest` (tests/won: the wire format byte for byte, the socket layer over loopback; built like
+  game units), the harness's `--exercise lobby` (main menu -> MultiPlayer -> the lobby's frames -> Other Multiplayer
+  -> the LAN screen; `--refuse-autodial`: the lookups of the gone WON servers fail as offline). The lobby owns the UI
+  thread, so the UI fixture does not acknowledge commands while it is open: the exercise waits for presented frames.
 
 ## Cross-platform: the platform layer (branch xplat)
 
@@ -1647,3 +1730,18 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   its soldiers leaves them there.
 - **sim_bench `--env-vary` splits its values on commas**, so a per-player list like `EE_AI_NEXT_SCRIPT=x,rush,boom`
   cannot be a value: the variable takes `/` too.
+
+## The next computer player's towers and the epochs (2026-11-08)
+
+- **A computer player's towers upgrade by themselves.** The tower upgrades (`copper_tower_upgrade`,
+  `bronze_wall_and_tower_upgrade`, ...) are dbtechtree kind-7 techs with `mResearchedWithEpoch`, and
+  `EEComputerPlayer::EpochReached` -> `EnterEpoch` -> `EETechTreeEpoch::ResearchKind(7, true)` researches them
+  free the moment the epoch is reached, for the classic and the next engine alike; their events convert every tower
+  of the old class (dbeffects kind 19, `Fn1CACB4`) and obsolete its tech. Reading the scripts suggested the towers
+  "stay Prehistoric all game" (AI_RESEARCH §8.31); a trace of the view's `buildings[]` each minute showed the
+  opposite. Measure before fixing. The `research` verb answered such a tech `busy`; it is now `done` (n=0).
+- **A research started at a building leaves `mEpochIDs`** (TryResearch hands it to the producer's queue), so the
+  verb's busy check missed it and a second order queued it again; it now also looks at the producers' queues.
+- **A data tree being rebuilt under EE-SIM** (another session's `open_data.py build`) fails the runs that stage it
+  then (`EETerrainColorTable` verification failure at start-up, rc 0x80000003). For a long bench, hard-link a copy
+  (`cp -al build/open_data/tree build/tw/tree`, seconds) and pass it with `--data`.

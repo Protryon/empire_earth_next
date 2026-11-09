@@ -52,6 +52,8 @@
 // SYNTHETIC: EXE 0x4f1627
 const UString EEE3DHurricane::sData("EEE3DHurricane-Data");
 
+#include "ee/EEGamePreferences.h"
+
 // FUNCTION: EXE 0x4f1643
 // Creates a hurricane on a unit, with no graphic or sound yet
 EEE3DHurricane::EEE3DHurricane(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect)
@@ -115,7 +117,6 @@ long EEE3DHurricane::DrawPass5()
 
 // FUNCTION: EXE 0x4f17c2
 // Queues the hurricane in render queue 4, snapshotting its frame, scale, position and orbital angles
-// NEAR: the original calls mOrbitals[i]'s _Ptrit::operator+ out of line (inline budget, as EEE3DDisease)
 long EEE3DHurricane::Queue(EEEffectQueue* inQueues)
 {
     long i;
@@ -128,9 +129,12 @@ long EEE3DHurricane::Queue(EEEffectQueue* inQueues)
         theLocation.SetY(this->mTransformation.GetY());
         theLocation.SetZ(this->mTransformation.GetZ());
         for (i = 0; i < this->mOrbitalCount; i++)
-            this->mAngles[i] = this->mOrbitals[i]->mAngle;
+            this->mAngles[i] = this->mOrbitals[i]->GetAngle();
         GETexture* theTexture;
-        theTexture = this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mTextures[gScreenIndex] : NULL;
+        if (this->GetGraphicEffect()->GetGraphicObject())
+            theTexture = this->GetGraphicEffect()->GetGraphicObject()->GetTexture(gGamePreferences.mSettings.GetScreenID());
+        else
+            theTexture = NULL;
         inQueues[4][theTexture].push_back(this);
     }
     return theResult;
@@ -138,7 +142,6 @@ long EEE3DHurricane::Queue(EEEffectQueue* inQueues)
 
 // FUNCTION: EXE 0x4f188a
 // Picks a random type-6 tag point of the effect's graphic around the unit; leaves the point unchanged if there is none
-// NEAR: registers only (the point's operator[])
 void EEE3DHurricane::GetSpawnPoint(GE3DPoint& outPoint)
 {
     GETransformation theLocation(this->mUnit->mComplexUnit->mPhysicalModel.GetLocation());
@@ -151,14 +154,14 @@ void EEE3DHurricane::GetSpawnPoint(GE3DPoint& outPoint)
     if (theIndex == theList->mPoints.size())
         theIndex = theList->mPoints.size() - 1;
     EETagPointList::Scale(theLocation, theScale);
-    theList->mPoints[theIndex]->GetPoint(theFrame, theLocation, outPoint);
+    const std::vector<EETagPoint*>& thePoints = theList->mPoints;
+    thePoints[theIndex]->GetPoint(theFrame, theLocation, outPoint);
 }
 
 // FUNCTION: EXE 0x4f1953
 // Loads the graphic, starts animation 13 at a tenth of full size, copies the orbitals and moves onto the unit
 long EEE3DHurricane::SetUp()
 {
-    // operator+ out of line
     this->mGraphicObject = this->GetGraphicObject();
     long theResult = this->mGraphicObject->LoadMedia();
     this->mFrame = this->mGraphicObject->mStartFrames[13];
@@ -193,7 +196,7 @@ long EEE3DHurricane::DrawPass6()
     gRasterizer->SetZBuffer(kZBufferTestAndWrite, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10FA01();
+    SetUnitLighting();
     const GE3DPoint& theLocation = this->mLocation;
     theTransformation.SetPosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
     theModel->SetGraphicsPostModelTransform(theTransformation);
@@ -320,7 +323,7 @@ long EEE3DHurricane::Step()
             theChanged = false;
         // Place the sound at the unit, not at the map origin.
         this->mUnit->mComplexUnit->mPhysicalModel.GetLocation().GetPosition(theLocation);
-        this->SetSound(Fn1487A3(theLocation, this->mGraphicObject, 0, this->mSound, theFrame, theChanged));
+        this->SetSound(PlayAnimationSound(theLocation, this->mGraphicObject, 0, this->mSound, theFrame, theChanged));
         if (this->mSound)
             this->mSound->Dereference();
     }

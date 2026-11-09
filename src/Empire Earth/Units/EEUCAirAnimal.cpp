@@ -90,7 +90,7 @@ float EEUCAirAnimal::GetHeightAt(EEComplexUnit* inUnit, const GE3DPoint& inLocat
         theStep.SetX(theState != 0 ? -theDistance : theDistance);
         theLocation.Apply(theStep, theOffset);
         thePosition += theOffset;
-        Fn24B212(thePosition, kAirAnimalAhead + theDistance, theTiles);
+        EEGetTilesNearPoint(thePosition, kAirAnimalAhead + theDistance, theTiles);
     } else {
         EEGetTileLine(UMFloor(thePosition.GetX()), UMFloor(thePosition.GetY()), UMFloor(inLocation.GetX()),
                    UMFloor(inLocation.GetY()), (std::vector<U2DPoint<long> >*)&theTiles, 1, 0);

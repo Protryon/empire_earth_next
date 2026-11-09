@@ -19,6 +19,10 @@ public:
     // inline (out-of-line COMDAT 0x185a71 after its first user, EESETSETGame.cpp's GraphicEffect::Virtual14 loop)
     // (provisional name)
     static unsigned long GetCount() { return EEGraphicEffect::sEffects.size(); }
+    EEGraphicObject* GetGraphicObject() const { return this->mGraphicObject; }  // inline: the effects' Queue tail (0x4ebfd0)
+    EEGraphicEffect* GetLinkedEffect1() const { return this->mLinkedEffect1; }  // inline: 0x50225c
+    EEGraphicEffect* GetLinkedEffect2() const { return this->mLinkedEffect2; }  // inline: 0x50225c
+    long GetKind() const { return this->mKind; }  // inline: EEEffect2D::CreateParts 0x504623 (the kind loaded into edx after the animation's ?:)
     float GetSize() const { return this->mSize; }  // inline (the hurricane copies it through the FP stack)
     // inline: the 3D effects load the parameters as values (EEE3DShield: `fld [+0x38]` twice for two copies, `fld
     // [+0x28]; fmul st1`) (provisional names)
@@ -26,6 +30,7 @@ public:
     float GetAlpha() const { return this->mAlpha; }
     float GetParam1() const { return this->mParam1; }
     float GetParam2() const { return this->mParam2; }
+    long GetIntParam1() const { return this->mIntParam1; }
     float GetParam3() const { return this->mParam3; }
     float GetParam4() const { return this->mParam4; }
     float GetParam5() const { return this->mParam5; }

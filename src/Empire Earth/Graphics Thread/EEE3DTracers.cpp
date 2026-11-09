@@ -192,13 +192,13 @@ long EEE3DTracers::DrawPass6()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendOne, kBlendOne, theScreen);
     gRasterizer->SetShadingColorSource(0, theScreen);
-    Fn10F7C8();
+    SetWhiteLighting();
     if (theColoured)
         theMaterial->SetColor(this->mColor);
     else
         theMaterial->SetTexture(this->mGraphicObject->mTextures[0], theScreen);
     const GE3DPoint& theLocation = this->mLocation;
-    Fn11A130(theLocation, theFog, theValue);
+    GetFogFactor(theLocation, theFog, theValue);
     theTransformation.SetPosition(theLocation.GetX(), theLocation.GetY(), theLocation.GetZ());
     theModel->SetGraphicsPostModelTransform(theTransformation);
     theModel->SetGraphicsScale(theScale);

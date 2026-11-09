@@ -172,8 +172,7 @@ void EECCTimeWarp::Reset(EECalamity* inCalamity)
         EEComplexUnit* theUnit = theTargetUnit->mComplexUnit;
         long theTileX = theUnit->mTileX;
         if (theTileX != -10000 && theUnit->mHitPoints > 0) {
-            inCalamity->mTilePlaceHolder1X = theTileX;
-            inCalamity->mTilePlaceHolder1Y = theUnit->mTileY;
+            inCalamity->mTilePlaceHolder1.SetXY(theTileX, theUnit->mTileY);
             inCalamity->mBoolPlaceHolder1 = false;
             inCalamity->mBoolPlaceHolder2 = false;
         } else {
@@ -249,8 +248,8 @@ void EECCTimeWarp::Return(EECalamity* inCalamity)
         return;
     EEComplexUnit* theUnit = theTargetUnit->mComplexUnit;
     theUnit->SetIsTinted(true);
-    if (EEFindPlacement(&theFoundLocation, theUnit, NULL, inCalamity->mTilePlaceHolder1X,
-                        inCalamity->mTilePlaceHolder1Y, theUnit->mUnitClass->GetTileSize(), this->mPlacementRange, 1, 1, 0, 0,
+    if (EEFindPlacement(&theFoundLocation, theUnit, NULL, inCalamity->mTilePlaceHolder1.mX,
+                        inCalamity->mTilePlaceHolder1.mY, theUnit->mUnitClass->GetTileSize(), this->mPlacementRange, 1, 1, 0, 0,
                         &theTransformation, NULL)) {
         long theY = UMFloor(theTransformation.GetY());
         long theX = UMFloor(theTransformation.GetX());
