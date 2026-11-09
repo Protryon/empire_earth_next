@@ -116,6 +116,13 @@ constexpr static const unsigned long PROPORTIONAL = 4;
 /// `kLayoutFromStartEdge`: the left/top edge's own point + offset (a width or height).
 constexpr static const unsigned long FROM_START_EDGE = 5;
 
+/// `kControlTriggerSelectionChanged`, `kControlTriggerDoubleClicked`, `kControlTriggerButtonDown`.
+constexpr static const unsigned long TRIGGER_SELECTION_CHANGED = 1003;
+
+constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
+
+constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
+
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
   Left = 0,
@@ -953,6 +960,59 @@ struct EeUiLayout {
   unsigned long right_type;
   unsigned long top_type;
   unsigned long bottom_type;
+};
+
+/// The host functions of one `UIListBox<T>` instantiation.
+struct EeUiListHost {
+  unsigned long (*num_lines)(void *list);
+  void (*change_selection)(void *list, unsigned long index, bool fire, bool scroll_to);
+  void (*clear_selection)(void *list);
+  bool (*has_scroll_bar)(void *list);
+  long (*scroll_value)(void *list);
+  long (*scroll_max)(void *list);
+  void (*set_scroll_value)(void *list, unsigned long value);
+  void (*set_scroll_range)(void *list, unsigned long min, unsigned long max);
+  void (*scroll_set_rectangle)(void *list, const EeUiRect *r);
+  void (*create_scroll_bar)(void *list,
+                            float x,
+                            float y,
+                            float length,
+                            unsigned long page,
+                            unsigned long value);
+  void (*set_dirty)(void *list);
+  void (*fire)(void *list, unsigned long event);
+  void (*set_bg_rectangle)(void *list, const EeUiRect *r);
+  void (*base_set_location)(void *list, float x, float y);
+  void (*mouse_location)(void *list, EeUiPoint *out);
+};
+
+/// `UIListBox`'s members from `mScrollBarBgOpacity` to `mHasSelection`, in order (offsets `static_assert`ed in
+/// `lle/UIListBox.h`).
+struct EeUiListFields {
+  float scroll_bar_bg_opacity;
+  unsigned long number_lines_displayed;
+  unsigned long current_selection;
+  unsigned long draw_line_count;
+  unsigned long line_height;
+  bool auto_select;
+  bool button_down;
+  bool scroll_bar_captured;
+  bool copied_has_focus;
+  bool copied_has_selection;
+  bool scroll_bar_removed;
+  bool copied_scroll_bar_visible;
+  bool has_selection;
+};
+
+/// One list box as Rust sees it: the object, its host table, its record from `mScrollBarBgOpacity` on,
+/// `mTextRectangle`, `mRectangle` and `mBorderThickness`.
+struct EeUiListRefs {
+  void *list;
+  const EeUiListHost *host;
+  EeUiListFields *fields;
+  EeUiRect *text;
+  const EeUiRect *rect;
+  const unsigned long *border;
 };
 
 /// `UISlider`'s members in their C++ order (the record starts at `mThumbRectangle`).
@@ -3323,6 +3383,54 @@ void ee_ui_layout_calculate(const EeUiLayout *layout,
 
 /// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
 void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
+
+/// `UIListBox::ChangeSelectionIndex`.
+void ee_ui_list_change_selection_index(const EeUiListRefs *refs,
+                                       unsigned long index,
+                                       bool fire,
+                                       bool scroll_to);
+
+/// `UIListBox::CheckScrollBar`.
+void ee_ui_list_check_scroll_bar(const EeUiListRefs *refs);
+
+/// `UIListBox::DeleteAllEntries` after `mData.clear()`.
+void ee_ui_list_cleared(const EeUiListRefs *refs);
+
+/// `UIListBox::DeleteLine` after the erase.
+void ee_ui_list_deleted_line(const EeUiListRefs *refs, unsigned long line);
+
+/// `UIListBox::InsertLine` after the insert at `index`.
+void ee_ui_list_inserted(const EeUiListRefs *refs, unsigned long index);
+
+/// `UIListBox::ButtonDown`.
+void ee_ui_list_button_down(const EeUiListRefs *refs);
+
+/// `UIListBox::MouseLButtonDoublePressed` inside the text (false: the C++ hands the click to `UIControl`).
+bool ee_ui_list_double_pressed(const EeUiListRefs *refs);
+
+/// `UIListBox::MouseLButtonUp`'s test: the button went up on the selected line.
+bool ee_ui_list_up_on_selection(const EeUiListRefs *refs);
+
+/// `UIListBox::MouseMove` off the scroll bar.
+void ee_ui_list_mouse_move(const EeUiListRefs *refs, EeUiPoint at);
+
+/// `UIListBox::ProcessDown`.
+void ee_ui_list_down(const EeUiListRefs *refs);
+
+/// `UIListBox::ProcessUp`.
+void ee_ui_list_up(const EeUiListRefs *refs);
+
+/// `UIListBox::ProcessHome`.
+void ee_ui_list_home(const EeUiListRefs *refs);
+
+/// `UIListBox::ProcessEnd`.
+void ee_ui_list_end(const EeUiListRefs *refs);
+
+/// `UIListBox::SetLocation`.
+void ee_ui_list_set_location(const EeUiListRefs *refs, EeUiPoint at);
+
+/// `UWSNoCaseAlphaSort::operator()`: `left` sorts before `right` with the case folded.
+bool ee_ui_text_less_no_case(const char *left, const char *right);
 
 /// The constructor's track and thumb ([`slider::init`]).
 void ee_ui_slider_init(EeUiSliderFields *fields, const EeUiRect *rectangle, unsigned long style);

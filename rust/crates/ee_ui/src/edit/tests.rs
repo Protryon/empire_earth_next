@@ -381,10 +381,10 @@ fn replays_the_cpp_golden() {
         last_lines = f.lines.clone();
         force = false;
     }
-    assert_eq!(out.len(), golden.len(), "line count");
     for (n, (a, b)) in out.iter().zip(golden.iter()).enumerate() {
         assert_eq!(a, b, "line {}", n + 1);
     }
+    assert_eq!(out.len(), golden.len(), "line count");
 }
 
 fn single(max_chars: c_ulong, numbers: bool) -> Fake {

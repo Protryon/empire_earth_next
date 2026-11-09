@@ -49,9 +49,10 @@ impl Mbcs for SingleByte {
         (0x30..=0x39).contains(&c)
     }
     fn compare_no_case(&self, a: &[u8], b: &[u8]) -> c_int {
-        // the C locale's _mbsicmp folds to upper case (unlike _stricmp for the bytes between 'Z' and 'a')
+        // the UCRT's _mbsicmp in the C locale folds to lower case, as _stricmp does (the list box golden: '_' sorts
+        // before the letters; ee_plat_core's POSIX fallback folds to upper)
         for (&x, &y) in a.iter().zip(b) {
-            let (x, y) = (x.to_ascii_uppercase(), y.to_ascii_uppercase());
+            let (x, y) = (x.to_ascii_lowercase(), y.to_ascii_lowercase());
             if x != y {
                 return if x < y { -1 } else { 1 };
             }
@@ -274,14 +275,15 @@ mod tests {
     }
 
     #[test]
-    fn case_folds_to_upper_like_mbsicmp() {
+    fn case_folds_to_lower_like_the_ucrts_mbsicmp() {
         let s = SingleByte;
         assert_eq!(s.compare_no_case(b"abc\0", b"ABC\0"), 0);
         assert!(less_no_case(&s, b"Apple\0", b"banana\0"));
         assert!(!less_no_case(&s, b"banana\0", b"Apple\0"));
         assert!(less_no_case(&s, b"ab\0", b"abc\0"), "a prefix sorts first");
-        // '_' (0x5f) sits between 'Z' and 'a': upper-case folding puts it after every letter
-        assert!(less_no_case(&s, b"z\0", b"_\0"));
+        // '_' (0x5f) sits between 'Z' and 'a': lower-case folding puts it before every letter
+        assert!(less_no_case(&s, b"_\0", b"A\0"));
+        assert!(!less_no_case(&s, b"z\0", b"_\0"));
         assert_ne!(s.compare_no_case(b"\xe9\0", b"\xc9\0"), 0, "the C locale folds ASCII only");
     }
 
