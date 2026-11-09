@@ -1798,6 +1798,32 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   `src/Platform/Posix/PlatPosixBridge.cpp` (`PlatPosix::ResolvePath`/`GameForm`, and the two C functions Rust calls to
   set the thread's last error), which goes away with R1.3.
 
+## The window and the fonts in Rust (R1.4, R1.5; crates ee_plat_ui, ee_plat_sdl, 2026-11-08)
+
+- **Two crates, on purpose.** The window layer imports SDL, the fonts and PlatCp1252ToWide do not. `ee_rust.lib` is
+  one archive, and the linker pulls whole object files; rustc's codegen units cut across modules, so with one crate a
+  program that only needs text (`plat_test`, `font_test`, the WON tests: no SDL on their link line) could pull in an
+  object that references SDL. `ee_plat_ui` (logic, fonts, tests) has no SDL symbols; `ee_plat_sdl` (the imports and the
+  PlatWindow exports, compiled out of `cargo test`) depends on it. POSIX links scan archives once, so the Rust library
+  now comes *before* SDL on the link line (`sdl_libs` after `wlib`).
+- **No `sdl3-sys`.** The imports are hand-written (each checked against the pinned 3.4.18 headers) and the
+  layouts (`SDL_Event`, `SDL_DisplayMode`, `PlatInputEvent`, ...) are tested against the C compiler's `offsetof` from
+  a generator run (`golden_window.txt`). No binding crate means no second SDL build and no pkg-config step on
+  every `cargo test`.
+- **The rasteriser is a port of stb_truetype, not fontdue or ab_glyph.** `ttf.rs` is v1.26's cmap, glyf, composite and
+  rasteriser-v2 code line by line (same float order, same casts, same quicksort: the order of equal edges feeds the
+  float sums). Result: byte-equal coverage on the Liberation fonts (5 faces x 23 sizes x bold, 51,520 glyphs against a
+  dump of the C++ font code; rerun with the ignored test `liberation_fonts_against_a_cpp_dump`) and on the synthetic
+  `golden_font.ttf` (simple and composite glyphs, on- and off-curve starts). CFF/OTF outlines are not ported (no font
+  the game registers has them): `PlatFontRegister` refuses such a font. C reads past a malformed font's tables were
+  undefined; the port reads 0.
+- **Golden values come from the real C++ text**: `PlatFont.cpp` built as is, `PlatWindow.cpp` sliced (key table,
+  `Translate`, the key-state functions) and run against stub SDL functions in a throwaway generator
+  (`golden_font.txt`, `golden_window.txt`).
+- **The icon crosses the language boundary through a constructor.** `PlatIconData.h` is generated for the POSIX game
+  only, and Rust cannot take a weak symbol on stable, so `src/Platform/SDL/PlatWindowIcon.c` hands the pixels to
+  `PlatWindowSetIcon` before `main` (compiled into the POSIX game; no program without the header).
+
 ## Rust R3: compression and UEncryption (2026-11-08)
 
 - **cbindgen only exports functions from crates named in `[parse] extra_bindings`.** `parse_deps`/`include` make it

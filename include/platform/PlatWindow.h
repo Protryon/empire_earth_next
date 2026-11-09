@@ -4,8 +4,8 @@
 // message loop (Empire Earth.cpp WinMain/WndProc, TSThread's message dispatch), DirectInput (the Input System) and
 // the IMM calls of the edit boxes.
 //
-// Implementation: src/Platform/SDL/PlatWindow.cpp (SDL3: Windows, Linux X11/Wayland, macOS Cocoa), on every system
-// (the game's window since PORT.md step 4.3).
+// Implementation: rust/crates/ee_plat_sdl (SDL3: Windows, Linux X11/Wayland, macOS Cocoa) with its logic in
+// rust/crates/ee_plat_ui, on every system (the game's window since PORT.md step 4.3).
 //
 // Keys are the game's numbering on every system (platform/PlatKeys.h): mScanCode is a DirectInput scan code
 // (DIK_*), mVirtualKey a Windows virtual-key code (VK_*). Text is Windows-1252 bytes (platform/PlatString.h);
@@ -80,6 +80,10 @@ int PlatWindowGetNative(PlatWindow* inWindow, PlatNativeWindow* outNative);
 // the WON lobby's window messages); a nonzero result drops the message. NULL removes it. Ignored elsewhere.
 typedef int (*PlatNativeMessageHook)(void* inWindow, uint32_t inMessage, uint64_t inWParam, int64_t inLParam);
 void PlatWindowSetNativeMessageHook(PlatNativeMessageHook inHook);
+
+// The game icon, off Windows (the exe's resource on Windows): inSize x inSize BGRA pixels, used in place for every
+// later window; src/Platform/SDL/PlatWindowIcon.c passes the generated icon at start-up (the POSIX game only).
+void PlatWindowSetIcon(const void* inBGRA, int inSize);
 
 // ---- events
 typedef enum PlatInputEventType {

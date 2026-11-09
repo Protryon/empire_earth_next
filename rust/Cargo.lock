@@ -261,6 +261,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_plat_sdl"
+version = "0.1.0"
+dependencies = [
+ "ee_plat_ui",
+]
+
+[[package]]
 name = "ee_plat_sys"
 version = "0.1.0"
 dependencies = [
@@ -286,6 +293,7 @@ dependencies = [
  "ee_net_tcp",
  "ee_panic",
  "ee_plat_core",
+ "ee_plat_sdl",
  "ee_plat_sys",
  "ee_plat_ui",
  "ee_random",

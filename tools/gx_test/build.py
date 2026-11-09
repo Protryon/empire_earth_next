@@ -1,6 +1,6 @@
 """Build and run the GX self-test (gx_test.cpp + the renderer's GX layer) against the pinned wgpu-native.
 
-The window comes from the platform layer on SDL3 (src/Platform/SDL/PlatWindow.cpp; tools/xbuild.py sdl3) and the
+The window comes from the platform layer on SDL3 (rust/crates/ee_plat_sdl, in ee_rust; tools/xbuild.py sdl3) and the
 text from PlatFont with the built-in fonts (rust/crates/ee_plat_ui, src/Platform/Common/PlatFontData.c; toolchain/fonts,
 embedded with #embed).
 
@@ -25,7 +25,7 @@ from build import LIBS, TARGETS   # noqa: E402  (tools/wgpu_probe/build.py)
 GX = ROOT / "src" / "Low-Level Engine" / "Graphics Engine" / "DX7 Display Plug-ins" / "GX"
 PLATFORM = ROOT / "src" / "Platform"
 # PlatMessage, PlatString, PlatTime and PlatSim come with the Rust library (rust/crates/ee_plat_core)
-SOURCES = [HERE / "gx_test.cpp", GX / "GX.cpp", GX / "GXDevice.cpp", PLATFORM / "SDL" / "PlatWindow.cpp",
+SOURCES = [HERE / "gx_test.cpp", GX / "GX.cpp", GX / "GXDevice.cpp",
            PLATFORM / "Common" / "PlatFontData.c"]   # the rest: ee_rust
 # what SDL3 (static) imports besides LIBS
 SDL_LIBS = ["setupapi.lib", "version.lib", "cfgmgr32.lib", "imm32.lib"]
