@@ -1607,3 +1607,20 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   resumed game's first view differs. `EE_AI_SAVE_CHECK=1` proves it in EE-SIM, which cannot load a game: each save's
   bytes are decoded into a fresh state, re-encoded (same bytes) and restored into a shadow Lua state that runs the
   next step beside the live one (`next.savecheck step orders=same memory=same`).
+
+## The next computer player's army (S4, docs/AI_LUA_PLAN.md §5 "S4 as built", 2026-11-08)
+
+- **A strategy group from `CreateGroupFromStrategy` never filled.** MakePlan runs the UnitSelector (its own sizing,
+  randomised domain shares), the sub-groups ask Personnel for classes, and Personnel fills a class slot only from its
+  free pool or by ordering production, which is off for the next engine: S1's `defend` and `attack` groups held 0
+  units. The next engine now keeps its own groups of named units (EECPNextArmy.cpp) and gives their goals itself.
+- **Taking a soldier from the classic AI is `DetachUnitFromAI`**: out of Personnel and the area groups, and
+  `mIsDetachedFromAI` keeps the drafting, the militia and the combat manager's counts off it. But
+  `EEComputerPlayer::UnitGoalDone` re-attaches a detached unit as soon as its goal queue runs out (the original's
+  "the player gave it an order" detach), so a group's soldier went back to an area group after its first fight; it
+  now asks `EECPNextHoldsUnit` first.
+- **Every soldier is already in a group.** Personnel drafts each new soldier into an area group of the attack
+  commander, which walks it to a town, a choke point or a random point of the continent; a script that never names
+  its soldiers leaves them there.
+- **sim_bench `--env-vary` splits its values on commas**, so a per-player list like `EE_AI_NEXT_SCRIPT=x,rush,boom`
+  cannot be a value: the variable takes `/` too.
