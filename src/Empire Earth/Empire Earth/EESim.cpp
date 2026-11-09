@@ -474,6 +474,15 @@ void DumpState(const std::string& inPath)
                     fprintf(f, " g%ld:%s:%08lx", q, typeid(*theGoals[g]).name(),
                             (unsigned long)(uint32_t)theGoals[g]->GetOutOfSynchChecksum());
             }
+            fprintf(f, "\n");
+            for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {   // each goal's own out-of-synch dump
+                std::deque<EEUnitGoal*>& theGoals = x->GetQueueGoals(q);
+                for (size_t g = 0; g < theGoals.size(); g++) {
+                    fprintf(f, "  unit %lu goal %ld.%zu\n", u->GetUnitID(), q, g);
+                    theGoals[g]->DumpOutOfSynch(f);
+                }
+            }
+            continue;
         }
         fprintf(f, "\n");
     }
