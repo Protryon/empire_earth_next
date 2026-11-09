@@ -1,7 +1,8 @@
 // C:\EEX\Low-Level Engine\User Interface\UILayoutUtility.h (RECONSTRUCTION). Anchoring of a rectangle's four edges
-// to its parent (offset + offset type per edge). UILayoutUtility.cpp (0x10077f75..) holds the ctor and the
-// out-of-line members; the inline setters and operator= are emitted first by UIBackground.cpp (0x10058d44..). sizeof
-// 0x20 (operator= is `rep movsd` x8).
+// to its parent (offset + offset type per edge). The ctor and the out-of-line members (once UILayoutUtility.cpp,
+// 0x10077f75..) forward to Rust (rust/crates/ee_ui/src/layout.rs, through User Interface/UITrampolines.cpp: the
+// object is the pinned record EeUiLayout); the inline setters and operator= are emitted first by UIBackground.cpp
+// (0x10058d44..). sizeof 0x20 (operator= is `rep movsd` x8).
 #ifndef LLE_UILAYOUTUTILITY_H
 #define LLE_UILAYOUTUTILITY_H
 
@@ -43,9 +44,6 @@ public:
         this->mRightOffsetType = inType;
     }
 private:
-    float GetHorizontalPoint(const GERectangle& inParent, unsigned long inType, float inOffset) const;
-    float GetVerticalPoint(const GERectangle& inParent, unsigned long inType, float inOffset) const;
-
     float mLeftOffset;                      // +0x00
     float mRightOffset;                     // +0x04
     float mTopOffset;                       // +0x08

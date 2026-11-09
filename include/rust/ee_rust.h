@@ -90,6 +90,32 @@ constexpr static const float TWO_PI = 6.2831855;
 
 constexpr static const float HALF_PI = 1.5707964;
 
+/// `kLayoutFromStart`: left/top + offset.
+constexpr static const unsigned long FROM_START = 0;
+
+/// `kLayoutAfterCenter`: centre + offset.
+constexpr static const unsigned long AFTER_CENTER = 1;
+
+/// `kLayoutBeforeCenter`: centre - offset.
+constexpr static const unsigned long BEFORE_CENTER = 2;
+
+/// `kLayoutFromEnd`: right/bottom - offset.
+constexpr static const unsigned long FROM_END = 3;
+
+/// `kLayoutProportional`: left/top + size x offset.
+constexpr static const unsigned long PROPORTIONAL = 4;
+
+/// `kLayoutFromStartEdge`: the left/top edge's own point + offset (a width or height).
+constexpr static const unsigned long FROM_START_EDGE = 5;
+
+/// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
+enum class EeUiEdge {
+  Left = 0,
+  Right = 1,
+  Top = 2,
+  Bottom = 3,
+};
+
 /// `FSArchive`'s tables.
 struct EeFsArchive;
 
@@ -699,6 +725,26 @@ struct EeRmapState {
   uint32_t spacing_rules_len;
   const int32_t *player_order;
   uint32_t player_order_len;
+};
+
+/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
+struct EeUiLayout {
+  float left_offset;
+  float right_offset;
+  float top_offset;
+  float bottom_offset;
+  unsigned long left_type;
+  unsigned long right_type;
+  unsigned long top_type;
+  unsigned long bottom_type;
+};
+
+/// `GERectangle`: the C++ member order, `mBottom` first.
+struct EeUiRect {
+  float bottom;
+  float left;
+  float right;
+  float top;
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -2230,6 +2276,19 @@ EeRmapResult *ee_rmap_run(int32_t step,
 /// # Safety
 /// `result` must be null or a handle from `ee_rmap_run`, freed once.
 void ee_rmap_free(EeRmapResult *result);
+
+/// `UILayoutUtility::UILayoutUtility`.
+void ee_ui_layout_init(EeUiLayout *layout);
+
+/// `UILayoutUtility::CalculateRectangle`. The parent is read whole before `out` is written (no caller passes the same
+/// rectangle twice).
+void ee_ui_layout_calculate(const EeUiLayout *layout,
+                            const EeUiRect *parent,
+                            EeUiRect *out,
+                            bool exclusive);
+
+/// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
+void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
 
 }  // extern "C"
 

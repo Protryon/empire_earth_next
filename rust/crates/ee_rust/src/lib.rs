@@ -15,6 +15,10 @@ use ee_mixer as _;
 #[cfg(not(test))] // its FFI imports the platform layer, absent from a test binary
 use ee_net_tcp as _;
 use ee_random as _;
+// the UI toolkit's algorithms behind the C++ UI* classes (ee_ui); its FFI imports C++ host functions, absent from a
+// test binary
+#[cfg(not(test))]
+use ee_ui as _;
 // the random map generator's `extern "C"` API (ee_rmap/src/ffi.rs) reaches the staticlib through this dependency
 use ee_rmap as _;
 // the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency
