@@ -7,6 +7,7 @@
 pub mod api;
 pub mod filter;
 pub mod movie;
+pub mod raster;
 pub mod state;
 pub mod surface;
 pub mod vertex;
@@ -18,6 +19,8 @@ mod filter_ffi;
 pub mod gx;
 #[cfg(not(test))]
 mod movie_ffi;
+#[cfg(not(test))]
+mod raster_ffi;
 #[cfg(not(test))]
 mod state_ffi;
 #[cfg(not(test))]

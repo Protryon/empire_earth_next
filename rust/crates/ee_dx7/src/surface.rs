@@ -280,27 +280,14 @@ mod tests {
     // golden_surface.txt: "# name", the trace lines, "= result".
     #[test]
     fn matches_cpp_golden() {
-        let text = include_str!("golden_surface.txt");
-        let mut sections: Vec<(String, Vec<String>, i32)> = Vec::new();
-        let mut name = String::new();
-        let mut lines = Vec::new();
-        for line in text.lines() {
-            if let Some(rest) = line.strip_prefix("# ") {
-                name = rest.to_string();
-                lines.clear();
-            } else if let Some(value) = line.strip_prefix("= ") {
-                sections.push((name.clone(), lines.clone(), value.parse().unwrap()));
-            } else {
-                lines.push(line.to_string());
-            }
-        }
+        let sections = golden_sections(include_str!("golden_surface.txt"));
         assert!(sections.len() >= 20, "golden sections read: {}", sections.len());
-        for (name, want, want_result) in sections {
+        for section in sections {
             let (mut gx, mut host) = Recorder::pair();
-            let result = run(&name, &mut gx, &mut host);
+            let result = run(&section.name, &mut gx, &mut host);
             let got: Vec<String> = gx.log.borrow().clone();
-            assert_eq!(got, want, "trace of {name}");
-            assert_eq!(result, want_result, "result of {name}");
+            assert_eq!(got, section.trace, "trace of {}", section.name);
+            assert_eq!(result, section.result, "result of {}", section.name);
         }
     }
 

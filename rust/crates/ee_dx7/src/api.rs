@@ -260,6 +260,8 @@ pub(crate) mod test_recorder {
         pub texture_formats: Vec<PixelFormat>,
         pub identifier: Identifier,
         pub display_mode: SurfaceDesc,
+        pub total_mem: u32,
+        pub free_mem: u32,
     }
 
     pub struct RecHost {
@@ -277,7 +279,7 @@ pub(crate) mod test_recorder {
 
     impl Recorder {
         pub fn pair() -> (Recorder, RecHost) {
-            let gx = Recorder::default();
+            let gx = Recorder { total_mem: 0x100_0000, free_mem: 0x80_0000, ..Default::default() };
             let log = gx.log.clone();
             (gx, RecHost { log })
         }
@@ -291,6 +293,48 @@ pub(crate) mod test_recorder {
         pub fn queue(&mut self, method: &'static str, values: &[i32]) {
             self.results.entry(method).or_default().extend(values.iter().copied());
         }
+    }
+
+    /// A golden file section: `# name`, the trace lines, `= result`, and the extra lines up to the next `#`.
+    pub struct Section {
+        pub name: String,
+        pub trace: Vec<String>,
+        pub result: i32,
+        pub extra: Vec<String>,
+    }
+
+    pub fn golden_sections(text: &str) -> Vec<Section> {
+        let mut sections: Vec<Section> = Vec::new();
+        let mut trace: Vec<String> = Vec::new();
+        let mut name = String::new();
+        let mut result: Option<i32> = None;
+        let mut extra: Vec<String> = Vec::new();
+        let mut flush =
+            |name: &mut String, trace: &mut Vec<String>, extra: &mut Vec<String>, result: &mut Option<i32>| {
+                if let Some(result) = result.take() {
+                    sections.push(Section {
+                        name: core::mem::take(name),
+                        trace: core::mem::take(trace),
+                        result,
+                        extra: core::mem::take(extra),
+                    });
+                }
+            };
+        for line in text.lines() {
+            if let Some(rest) = line.strip_prefix("# ") {
+                flush(&mut name, &mut trace, &mut extra, &mut result);
+                name = rest.to_string();
+                trace.clear();
+            } else if let Some(value) = line.strip_prefix("= ") {
+                result = Some(value.parse().unwrap());
+            } else if result.is_some() {
+                extra.push(line.to_string());
+            } else {
+                trace.push(line.to_string());
+            }
+        }
+        flush(&mut name, &mut trace, &mut extra, &mut result);
+        sections
     }
 
     fn hx(handle: H) -> usize {
@@ -430,7 +474,7 @@ pub(crate) mod test_recorder {
         fn dd_get_available_vid_mem(&mut self, dd: H, caps: u32) -> (i32, u32, u32) {
             self.line(format!("dd_get_available_vid_mem {} {caps:x}", hx(dd)));
             let r = self.result("vidmem");
-            (r, 0x1000000, 0x800000)
+            (r, self.total_mem, self.free_mem)
         }
         fn dd_get_device_identifier(&mut self, dd: H) -> (i32, Identifier) {
             self.line(format!("dd_get_device_identifier {}", hx(dd)));
@@ -495,22 +539,28 @@ pub(crate) mod test_recorder {
         }
         fn device_set_viewport(&mut self, d: H, v: &Viewport) -> i32 {
             let (x, y, w, h) = (v.dwX, v.dwY, v.dwWidth, v.dwHeight);
-            self.line(format!("device_set_viewport {} {x} {y} {w} {h} {} {}", hx(d), v.dvMinZ, v.dvMaxZ));
+            self.line(format!(
+                "device_set_viewport {} {x} {y} {w} {h} {:08x} {:08x}",
+                hx(d),
+                v.dvMinZ.to_bits(),
+                v.dvMaxZ.to_bits()
+            ));
             self.result("set_viewport")
         }
         fn device_clear(&mut self, d: H, r: IRect, flags: u32, color: u32, z: f32) -> i32 {
             self.line(format!(
-                "device_clear {} {},{},{},{} {flags:x} {color:x} {z}",
+                "device_clear {} {},{},{},{} {flags:x} {color:x} {:08x}",
                 hx(d),
                 r.left,
                 r.top,
                 r.right,
-                r.bottom
+                r.bottom,
+                z.to_bits()
             ));
             self.result("clear")
         }
         fn device_set_transform(&mut self, d: H, state: u32, m: &[f32; 16]) -> i32 {
-            let values: Vec<String> = m.iter().map(|v| format!("{v}")).collect();
+            let values: Vec<String> = m.iter().map(|v| format!("{:08x}", v.to_bits())).collect();
             self.line(format!("device_set_transform {} {state} {}", hx(d), values.join(",")));
             self.result("set_transform")
         }
@@ -523,23 +573,16 @@ pub(crate) mod test_recorder {
             self.result("set_stage_state")
         }
         fn device_set_light(&mut self, d: H, index: u32, l: &Light) -> i32 {
+            let hexes = |v: &[f32]| v.iter().map(|x| format!("{:08x}", x.to_bits())).collect::<Vec<_>>().join(",");
             self.line(format!(
-                "device_set_light {} {index} kind={} diffuse={},{},{} pos={},{},{} dir={},{},{} range={} att={},{},{}",
+                "device_set_light {} {index} kind={} d={} p={} dr={} r={:08x} a={}",
                 hx(d),
                 l.kind,
-                l.diffuse[0],
-                l.diffuse[1],
-                l.diffuse[2],
-                l.position[0],
-                l.position[1],
-                l.position[2],
-                l.direction[0],
-                l.direction[1],
-                l.direction[2],
-                l.range,
-                l.attenuation[0],
-                l.attenuation[1],
-                l.attenuation[2]
+                hexes(&l.diffuse),
+                hexes(&l.position),
+                hexes(&l.direction),
+                l.range.to_bits(),
+                hexes(&l.attenuation)
             ));
             self.result("set_light")
         }

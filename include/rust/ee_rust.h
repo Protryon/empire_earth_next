@@ -922,6 +922,17 @@ void ee_dx7m_frame_buffer_description(EeDx7SurfaceDescription *out,
                                       uint32_t width,
                                       uint32_t height);
 
+int32_t ee_dx7r_activate_the_screen(EeDx7ScreenState *state,
+                                    void *dd,
+                                    void *target,
+                                    uint32_t width,
+                                    uint32_t height,
+                                    bool tnl);
+
+int32_t ee_dx7r_create_vertex_buffers(EeDx7ScreenState *state, bool tnl);
+
+bool ee_dx7r_is_screen_valid(void *dd, bool tnl);
+
 bool ee_dx7r_set_alpha_testing(void *device, unsigned long in_state, unsigned long current);
 
 bool ee_dx7r_set_alpha_testing_compare_state(void *device,
