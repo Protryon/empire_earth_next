@@ -301,6 +301,11 @@ EECPNextResult EECPNextAttack(EEComputerPlayer* inPlayer, long inTarget, long in
 void EECPNextArmyStep(EEComputerPlayer* inPlayer);
 // the view's army fields: groups, free_soldiers, free_strength and the enemies' army fields
 void EECPNextArmyView(EEComputerPlayer* inPlayer, EECPNextView& ioView);
+// the citizens' losses in the AI trace (trace on only; nothing the game reads): a hit on a land citizen
+// (EEComputerPlayer::DamageTaken; inAttacker the attacker's player id) and a citizen lost (UnitTaken): next.death and
+// next.raid lines (EECPNextArmy.cpp)
+void EECPNextTraceHit(EEComputerPlayer* inPlayer, long inAttacker, EEUnit* inUnit);
+void EECPNextTraceDeath(EEComputerPlayer* inPlayer, EEUnit* inUnit);
 // a unit in one of the next engine's groups (EEComputerPlayer::UnitGoalDone keeps it detached from the classic AI)
 bool EECPNextHoldsUnit(const EEComputerPlayer* inPlayer, const EEComplexUnit* inUnit);
 const char* EECPNextTaskName(long inTask);         // "attack", "raid", "defend", "retreat", "scout"
