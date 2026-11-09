@@ -567,6 +567,22 @@ function M.step(view, memory)
     if age == 1 and memory.useful ~= nil and cap > memory.useful then
         cap = memory.useful
     end
+    -- the soldiers' share (§8.35, the owner: "~20 spearmen in the Stone Age so it can stop a raid"): past the
+    -- soldiers-first window, while the light army is short and the food gatherers fill the food places, a citizen is
+    -- trained only from the food above what two soldiers cost, when the soldiers' other resource is in stock (the
+    -- citizens took every 50 food as it came in, and the army was 5 at 30 minutes)
+    if plan.army_first and army_short and view.army_count < plan.soldiers and soldier_cost ~= nil and citizen
+            and view.gatherers.food >= ((memory.want or {}).food or 0) then
+        local soldiers_payable = true
+        for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
+            if soldier_cost[r] > 0 and view.stock[r] - reserve[r] < 2 * soldier_cost[r] then
+                soldiers_payable = false
+            end
+        end
+        if soldiers_payable and view.stock.food - reserve.food < 2 * soldier_cost.food + citizen.cost.food then
+            cap = math.min(cap, planned)
+        end
+    end
     if citizen and waiting == 0 and making < 2 * math.max(citizen.producers, 1) and planned < cap
             and view.population < view.population_cap then
         order("citizen", {verb = "train", type = "citizen", n = math.min(cap - planned, 2)})
@@ -614,8 +630,14 @@ function M.step(view, memory)
         end
         while others > 0 and land - others < food_min do
             local big, big_n = nil, nil
+            -- (while the army is short the soldiers' iron gives way only when nothing else is left: the Copper Age's
+            -- gold counted as the larger lack, so iron went to 0 in a third of the bench's Stone Age minutes and the
+            -- spearmen came one per 30 iron gathered, §8.35)
             for _, r in ipairs({"iron", "gold", "stone", "wood"}) do
                 local spare = want[r] - needed[r]
+                if army_short and r == "iron" then
+                    spare = -1000000
+                end
                 if want[r] > 0 and (big_n == nil or spare > big_n) then
                     big, big_n = r, spare
                 end

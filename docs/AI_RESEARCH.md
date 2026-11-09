@@ -2050,9 +2050,27 @@ Tried and dropped (16 games each, the same image): the sites anywhere out to 60 
 the same within the noise; kept the owner's rule); no food cap in the script (the C++ capacity alone: Stone 24.0,
 Copper 60.0, 15/16, 95 citizens lost a game).
 
+**The Stone Age army** (a second step, after the table above; the owner: about 20 spearmen in the Stone Age to stop a
+raid). The army did not fall between 30 and 40 minutes; it grew slowly (trained 9-10 in those 10 minutes, 2-4
+lost). A spearman costs 30 food and 30 iron, and iron was the limit: in 31% of the Stone Age's minutes boom wanted no
+iron gatherer at all (21% before §8.35), the iron stock stood at 10-25, and the spearmen came one per 30 iron
+gathered. The give-way rule (food short of its minimum takes a gatherer from the resource with the most to spare)
+counted the Copper Age's gold reserve as the larger lack, so iron gave way first, 12 gold gatherers against 0-1 on
+iron. Now, while the army is short of what is wanted, iron gives way only when nothing else is left. Also past the
+soldiers-first window, while the light army is short, the food gatherers fill their places and the soldiers' iron is
+in stock, a citizen is trained only from the food above two soldiers' cost (alone this changed nothing: army
+5.4 / 11.2 at 30 / 40 min). The same 32 games:
+
+| | Before §8.35 | §8.35 above | With the army step |
+|---|---|---|---|
+| Army at 25 / 30 / 40 min | 2.6 / 6.0 / 14.3 | 2.1 / 5.2 / 10.8 | 2.3 / **8.4** / 13.5 |
+| Stone / Copper (median min, Copper reached) | 23.5 / 56.5 (24/32) | 24.5 / 58.3 (26/32) | 24.5 / **55.0** (26/32) |
+| Citizens lost a game (on a build job / by towers) | 82.8 (4.2 / 5.8) | 78.5 (2.4 / 1.1) | 79.1 (1.8 / 1.1) |
+
 **Left:**
-- The Stone Age army (item 5): 20 spearmen are wanted from the Stone Age's first minute, but the citizens take the
-  food after 5 minutes; the army is at 5 at 30 minutes in the bench and was 13 in the playtest.
+- The Stone Age army is still short of 20 at 30 minutes (8.4): two home iron mines hold 12 gatherers, and 20
+  spearmen are 600 iron. A larger Prehistoric iron bank or a third iron site from the Stone Age's first minute would
+  be the next step.
 - The explore-and-fish mode for fishing boats: `FindFish` already takes the nearest fish with some left, seen or
   not, so drained boats sail on to far fish; a deliberate exploring boat (and keeping them off seen warships farther
   out) is not built.
