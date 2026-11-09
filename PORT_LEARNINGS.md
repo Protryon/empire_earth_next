@@ -2341,3 +2341,62 @@ harness's hooks and `layout_gen.py`'s offsets are untouched (`UIForm` gained onl
   `rust_build.py gate`, the seeded sim oracle (seeds 2-7 identical to `ref`), `layout.json`'s records for UIForm,
   UIManager, UISlider, UITextLabel and UILayoutUtility unchanged, and the harness's 34 UI symbols present in the map.
   No tour or screenshot comparison was run here.
+
+## R5b.1: the tile A* searches in Rust (ee_astar, branch rust-r5b-astar, 2026-11-09)
+
+The order proposed in "R5b.1" above held through step 3 and the first goals of step 4. `rust/crates/ee_astar` is the
+node storage and the search machine of every `EEAIAStarMachine<S, G, M>` (the land/sea/space path searches, the
+bounded search, and the continent, hill, choke point, path area and path sector flood fills), plus the continent,
+hill and choke point goals' tile tests. The graph searches (`EEAIAStarGraphMachine`, `EEAIAStarGraphStorage`, the
+path graph and continental chain goals) are untouched C++ and not captured.
+
+- **Step 1, the view (`ee/EEAIAStarView.h`).** Every read the tile goals' `AcceptTile`, `GetCost` and
+  `ClassifyTile` made of the live world is one query with a plain answer (about 35 queries: the tile's terrain, edge,
+  units, height level; the continent manager's ids, tile flag and value, path areas; the choke pass's grids; the
+  unit loops of the area fills, each loop its own query because their predicates differ slightly; the walker's
+  facts). The expressions moved unchanged; the goals keep their state and side effects in the same order. The path
+  goals' modifiers (`EEAIPathGoalModifierBase` and subclasses, the storm's) stay world-side policies, asked as one
+  query each (`CanEnter`, `GetModifierCost`). The search set-up's reads (the walker's blocked tiles in `Prepare`) are
+  not per tile and stay with the goal; their effect reaches the search as `MarkTile` calls.
+  - A blocker query that also returns the unit's player would read `GetPlayer()` of units the C++ never asked: so
+    there are three (`HasBlocker`, `GetFirstBlockerID`, `GetFirstBlocker`), each reading what its caller read.
+- **Step 2, the capture (ASRN, `ee/EEAIAStarCapture.h`).** One record per `Run`: its inputs; the count and FNV-1a of
+  every event (the machine's questions to its goal: AcceptTile, GetCost, Estimate, IsGoalNode, SearchDone, MarkTile;
+  and the goal's view queries, in order, with the answers); its outputs (the machine's members, the goal's flags,
+  the current and path nodes, the bounds, every node of every list in order). The six oracle games make 82,302 runs
+  (by machine type: 26,182 land paths, 2,001 water, 47,709 bounded, 127 continent, 52 choke point, 34 hill, 1,304 path
+  area, 4,893 path sector fills) and 34.8 million events; a capture is about 3 MB per game. Recording the events
+  themselves (`EE_SIM_CAPTURE_ASTAR_EVENTS=1`) gives 160 MB for seed 2, enough to name the first event where two
+  builds part. Two captures of the same build are identical, and the capture runs' traces equal the reference.
+- **Step 3, the storage and the machine.** `storage.rs` and `machine.rs` are line-by-line ports. Nodes are an arena
+  with a linked free list per storage instead of the C++'s one static list: which free node a search reuses is not
+  observable (`NewNode` clears every field, nothing compares node addresses), and the C++ never releases a node twice.
+  Kept quirks: the hash's high-nibble fold replaces the hash; `RemoveNearestOpen` on a one-node sorted list sets the
+  head from the node's (null) prev; `PrepareGrid`'s clears stop one tile short of their span's end, so a stale
+  accept/reject flag can survive into the next search; the terrain storages never clear `mBounds`;
+  `Init` sets the size before `PrepareGrid`, so a "size changed" test there only ever sees the first allocation.
+  - The C++ machine keeps its members (`mTile`, `mRevs`, `mSteps`, `mFound`, `mCheckCorners`): goals write
+    `mCheckCorners` from inside `AcceptTile` (the area fills) and the path manager reads the others. The Rust machine
+    reads and writes them through callbacks every time and never caches one across a call into the goal.
+  - No callback re-enters the running storage: what a goal read of the storage during a search (`SearchDone`: the
+    current node and whether an open node is left; `GetCost`: the current node's parent) arrives as callback
+    arguments, cached on the C++ storage (`mHook*`). `IsGoalNode` gets a stack node with only `mX`/`mY` (all that
+    the goals and `CheckNode` read).
+  - The C++ storages keep their own per-tile id grids (continent, hill, choke point, path area, sector), which the
+    managers index, and forward the rest; `mDirtyBounds` and `mHasBounds` became setters.
+  - **Gate:** the six games' ASRN digests equal the C++ machine's (and seed 2's 15,055 records equal event by event),
+    the sim oracle identical. It held at the first build.
+- **Step 4, the goals, first ones.** The continent, hill and choke point goals' `AcceptTile` are Rust (`goals.rs`),
+  asking the view through `EeAStarViewCallbacks`; the goal's counters go in and come back (the choke goal appends the
+  returned serial). Their constant hooks (goal node, costs, limits) stay one-line C++ inlines. Not ported yet: the
+  path goals (their modifiers first: they read units, regions and goal state), the path area and path sector goals
+  (their `ClassifyTile` and side effects on `mCheckCorners`).
+- **`long` is `i32` here** (the Windows build's). On LP64 the C++ costs (`unsigned long`) were 64-bit; the Rust
+  machine wraps at 32 bits. The costs never come near that, but a Linux/macOS run is not proven equal by this gate.
+- **Builds:** a full `build.py -j 3 --sim` took 27-28 minutes on this machine with other agents' builds running.
+  For iteration a scratch wrapper skipped units whose object was newer than the unit and the A* headers it
+  includes (4-6 minutes); every commit's gate used the full build.
+- **Gates run:** `build.py -j 3 --sim` links 0/0 (EE-AOC, EE-SIM) at every commit; `rust_build.py gate` (one rerun:
+  `ee_plat_sys`'s `suspended_thread_runs_only_after_resume` failed once under load, then passed); the sim oracle
+  identical on seeds 2-7; `sim_capture.py check` PASS from step 2 on. Not run: the test-profile build, `gates.sh`,
+  `eedata check`/`cppgate` (no data change), any macOS or Linux build.
