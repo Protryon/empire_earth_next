@@ -288,6 +288,9 @@ EECPNextResult EECPNextFish(EEComputerPlayer* inPlayer, long inBoats, long inDoc
 EECPNextResult EECPNextTrain(EEComputerPlayer* inPlayer, long inType, long inCount, long inTown = 0);
 // reserve(food, wood, stone, gold, iron): what nothing but the epoch advance may spend
 EECPNextResult EECPNextReserve(EEComputerPlayer* inPlayer, long inFood, long inWood, long inStone, long inGold, long inIron);
+// improve(type, attribute): one level of a unit class's improvement (EEImprovementKind, e.g. a tower's range), paid
+// and applied at once as the classic AI's GiveImprovements does (§8.35)
+EECPNextResult EECPNextImprove(EEComputerPlayer* inPlayer, long inType, long inImprovement);
 // research(tech): queued at its producer (TryResearch starts it when affordable)
 EECPNextResult EECPNextResearch(EEComputerPlayer* inPlayer, long inTech);
 // advance(): the next epoch, only when its SOL is met and it is paid (the town centre researches it at once)

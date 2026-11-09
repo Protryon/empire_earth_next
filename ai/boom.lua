@@ -335,7 +335,14 @@ function M.step(view, memory)
     memory.bad_spots = memory.bad_spots or {}
     for i, r in ipairs(view.results) do
         local tag = memory.tags[i]
-        if tag ~= nil and r.code == "refused" and (r.reason == "no_site" or r.reason == "no_producer") then
+        if tag ~= nil and r.code == "refused" and tag == "improve" then
+            -- a tower improvement: no level left waits for the next tower class, else a minute
+            if r.reason == "requirements" or r.reason == "bad_argument" or r.reason == "not_in_epoch" then
+                memory.improved = memory.improve_class
+            end
+            memory.backoff[tag] = view.time + BACKOFF_MS
+        elseif tag ~= nil and r.code == "refused"
+                and (r.reason == "no_site" or r.reason == "no_producer" or r.reason == "unsafe") then
             local spot = memory.spots ~= nil and memory.spots[i] or ""
             if spot ~= "" then
                 memory.bad_spots[spot] = view.time + 5 * BACKOFF_MS
@@ -616,6 +623,13 @@ function M.step(view, memory)
                 order("settlement", {verb = "build", type = "b_settlement", near = "site", site = best.index},
                       spot_of(best))
             end
+        end
+
+        -- (§8.35, the owner: "upgrading tower range is worth it for AI") the towers' range, a level at a time, once
+        -- three towers stand, from the Stone Age, never out of the reserve (the verb keeps it)
+        if age >= 2 and tower ~= nil and towers_built >= 3 and not scramble and memory.improved ~= tower then
+            memory.improve_class = tower
+            order("improve", {verb = "improve", type = tower, what = "range"})
         end
 
         -- towers: the first at the town, then at the worked sites (the nearest unguarded first), one at a time; under a

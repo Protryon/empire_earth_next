@@ -61,6 +61,7 @@
 #include "ee/EECPIntelligence.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNext.h"
+#include "ee/EEImprovementIDs.h"
 
 static const long kNextMaxCount = 100;   // a larger count in one order is a bad argument
 
@@ -444,6 +445,42 @@ EECPNextResult EECPNextReserve(EEComputerPlayer* inPlayer, long inFood, long inW
         theState->mReserve[i] = theAmounts[i];
     return EECPNextReport(inPlayer, "reserve", kNextDone, kNextReasonNone, 0, "f=%ld w=%ld s=%ld g=%ld i=%ld", inFood, inWood,
         inStone, inGold, inIron);
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Improvements (§8.35, the owner: "upgrading tower range is worth it for AI")
+
+EECPNextResult EECPNextImprove(EEComputerPlayer* inPlayer, long inType, long inImprovement)
+{
+    long theReason;
+    EETechTreeNode* theNode = EECPNextClassNode(inPlayer, inType, theReason);
+    if (theNode == NULL)
+        return EECPNextReport(inPlayer, "improve", kNextRefused, theReason, 0, "cls=%ld what=%ld", inType, inImprovement);
+    EEUnitClass* theClass = gUnitClassTable[inType];
+    if (inImprovement < 0 || inImprovement >= 16 || theClass->mImprovements == NULL)
+        return EECPNextReport(inPlayer, "improve", kNextRefused, kNextReasonBadArgument, 0, "cls=%ld what=%ld", inType, inImprovement);
+    long theLevel = inPlayer->GetImprovementLevel(inType, inImprovement);
+    if (!inPlayer->CanBuy(inType, inImprovement, NULL)) {
+        // the level's cost not in stock, or no level left (the class's maximum or the improvement points)
+        bool theMax = theLevel > theClass->mImprovements->GetMaxLevel();
+        return EECPNextReport(inPlayer, "improve", kNextRefused, theMax ? kNextReasonRequirements : kNextReasonCannotAfford, 0,
+            "cls=%ld what=%ld level=%ld max=%ld step=%ld", inType, inImprovement, theLevel, theClass->mImprovements->GetMaxLevel(),
+            (long)UMFloatToLong(theClass->mImprovements->mEntries[inImprovement].mStepFactor * 100.0f));
+    }
+    // the reserve: PayImprovement's cost (the class's cost x its cost scale x the level's factor) out of the stock above it
+    EECPNextState* theState = EECPNextGetState(inPlayer);
+    EEUnitClassUpgrade* theUpgrade = inPlayer->mUnitClassUpgrades[inType];
+    float theFactor = theClass->mImprovements->mEntries[inImprovement].mCostFactor * (float)theLevel;
+    for (long i = 0; i < kNextResources; i++) {
+        long theCost = inPlayer->ScaleCost(UMFloatToLong((float)theNode->mData->mCosts[kResourceFood + i] * theUpgrade->mCostScale * theFactor));
+        if (theCost > 0 && inPlayer->mResourceCaps[kResourceFood + i] - theCost < theState->mReserve[i])
+            return EECPNextReport(inPlayer, "improve", kNextRefused, kNextReasonCannotAfford, 0, "cls=%ld what=%ld level=%ld (reserve)",
+                inType, inImprovement, theLevel);
+    }
+    inPlayer->PayImprovement(theClass, inImprovement);
+    inPlayer->ApplyImprovement(inType, inImprovement, false);
+    return EECPNextReport(inPlayer, "improve", kNextDone, kNextReasonNone, 1, "cls=%ld what=%ld level=%ld", inType, inImprovement,
+        inPlayer->GetImprovementLevel(inType, inImprovement));
 }
 
 // ---------------------------------------------------------------------------------------------------------------

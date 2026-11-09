@@ -49,6 +49,7 @@
 #include "ee/EEGameLog.h"
 #include "ee/EECPLua.h"
 #include "ee/EECPNext.h"
+#include "ee/EEImprovementIDs.h"
 #include "EEDataText.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
@@ -541,6 +542,21 @@ static EECPNextResult EECPNextRunOrder(EEComputerPlayer* inPlayer, const EECPLua
         if (theID < 0)
             return EECPNextRefuse(inPlayer, v, "unknown tech " + theTech);
         return EECPNextResearch(inPlayer, theID);
+    }
+    if (v == "improve") {
+        // {verb="improve", type="b_guard_tower_paleo", what="range"} (§8.35); what: attack, hit_points, range, speed
+        std::string theType = r.Str("type", "", true);
+        std::string theWhat = r.Str("what", "", true);
+        if (!r.Done())
+            return EECPNextRefuse(inPlayer, v, r.mProblem);
+        long theClass = EECPNextClassByName(theType);
+        if (theClass < 0)
+            return EECPNextRefuse(inPlayer, v, "unknown type " + theType);
+        long theKind = theWhat == "range" ? kImprovementRange : theWhat == "attack" ? kImprovementAttack
+            : theWhat == "hit_points" ? kImprovementHitPoints : theWhat == "speed" ? kImprovementSpeed : -1;
+        if (theKind < 0)
+            return EECPNextRefuse(inPlayer, v, "what " + theWhat);
+        return EECPNextImprove(inPlayer, theClass, theKind);
     }
     if (v == "advance") {
         if (!r.Done())
