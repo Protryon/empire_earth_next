@@ -282,9 +282,11 @@ AI_DEFAULTS = dict(start='0.3', full='0.8', stone_span='30', surplus='1000', low
                    floor='0.1', militia='true', militia_towers='true', prearmy='4', attacks='false', naval_flee='true',
                    safe_bonus='0.25', town_centers='2', trainers='2', patch_expand='true', stone_attacks='false',
                    next_script='test_opening')
-AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.27)', {}),
+AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.27)',
+                     dict(next_script='boom')),
                     ('tall', 'tech: saves for the next epoch early and hard', dict(start='0.15', full='0.5', army='0.2')),
-                    ('wide', 'boom: grows its workforce, advances late', dict(start='0.6', full='1.0', citizens='0.8', army='0.15')),
+                    ('wide', 'boom: grows its workforce, advances late',
+                     dict(start='0.6', full='1.0', citizens='0.8', army='0.15', next_script='boom')),
                     ('aggressive', 'rush: a large standing army, a middling epoch pace',
                      dict(start='0.4', full='0.9', army='0.5', floor='0.3', prearmy='0', attacks='true', stone_attacks='true',
                           safe_bonus='0', trainers='0')),
