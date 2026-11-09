@@ -1,0 +1,2088 @@
+Continental|0|2|ffa|1 abac940453db29aa
+Continental|0|2|ffa|1000 49d8bd2511b45e41
+Continental|0|2|ffa|12345 06e35740ebd87f9e
+Continental|0|2|ffa|2 7ae6473fd558cf46
+Continental|0|2|ffa|2147483647 c75b38afe839fc62
+Continental|0|2|ffa|3 9dfc789bf5ef9d2a
+Continental|0|2|forced|1 bad34d1b36ad9e8c
+Continental|0|2|forced|1000 32248f9f1df4293e
+Continental|0|2|forced|12345 d7ed20dd3ddfd079
+Continental|0|2|forced|2 c4499edf3c9fc6be
+Continental|0|2|forced|2147483647 7376e8ebdcff8fd2
+Continental|0|2|forced|3 7486b4a0665cd958
+Continental|0|3|ffa|1 ee329a2c504e7b09
+Continental|0|3|ffa|1000 b5badd602e512a72
+Continental|0|3|ffa|12345 50dcb29bf36192a0
+Continental|0|3|ffa|2 e053fefeb6b489c0
+Continental|0|3|ffa|2147483647 0f23d24a96c28908
+Continental|0|3|ffa|3 5a9fabc90fde122b
+Continental|0|3|forced|1 e47b145d37675f84
+Continental|0|3|forced|1000 baa89aece436c2dd
+Continental|0|3|forced|12345 47093e6d27bc5e93
+Continental|0|3|forced|2 78fbdf75445f639a
+Continental|0|3|forced|2147483647 db0a7293290eb5cc
+Continental|0|3|forced|3 34b1247dcce91d5b
+Continental|1|2|ffa|1 b175bd81fefe5a15
+Continental|1|2|ffa|1000 38a99f71131ae445
+Continental|1|2|ffa|12345 e6cfaaeeb49b1edb
+Continental|1|2|ffa|2 7a40427594364320
+Continental|1|2|ffa|2147483647 dc0f80eb3659e5c9
+Continental|1|2|ffa|3 a9c179ffd7d6ee8f
+Continental|1|2|forced|1 b528376ebac17b8c
+Continental|1|2|forced|1000 8c006aea93f0b40b
+Continental|1|2|forced|12345 4471a336eaa0c525
+Continental|1|2|forced|2 3389f2180cfdac7a
+Continental|1|2|forced|2147483647 ae57c63e4c008168
+Continental|1|2|forced|3 caa52afe40bbf6fe
+Continental|1|4|ffa|1 586595f4474f34a1
+Continental|1|4|ffa|1000 4177d167ad2d7a95
+Continental|1|4|ffa|12345 851ab2aa468d1817
+Continental|1|4|ffa|2 d6fc1cf3adbec695
+Continental|1|4|ffa|2147483647 40f3f22046b171f1
+Continental|1|4|ffa|3 9c80c6a567871b46
+Continental|1|4|forced|1 7d86113954ff516e
+Continental|1|4|forced|1000 3ac3148f338a947d
+Continental|1|4|forced|12345 ecc851681d514b85
+Continental|1|4|forced|2 348ce6c41479f7a2
+Continental|1|4|forced|2147483647 3600652db42dbe4b
+Continental|1|4|forced|3 863e2ed37bcc4653
+Continental|1|4|teams|1 761576482db05303
+Continental|1|4|teams|1000 4e317a29049ccd6a
+Continental|1|4|teams|12345 6660a0264fa57d20
+Continental|1|4|teams|2 9a10531db0394440
+Continental|1|4|teams|2147483647 7e97bc547e92002b
+Continental|1|4|teams|3 6a0a7a1c937b339a
+Continental|2|2|ffa|1 7ffba25fde691ef4
+Continental|2|2|ffa|1000 781729d6ad047d9e
+Continental|2|2|ffa|12345 eec78abc9f71aeff
+Continental|2|2|ffa|2 30f49d2801014683
+Continental|2|2|ffa|2147483647 e3165eda068b8018
+Continental|2|2|ffa|3 f194c85d3757fd4f
+Continental|2|4|ffa|1 221c76069931cf41
+Continental|2|4|ffa|1000 8de8b59176634e7a
+Continental|2|4|ffa|12345 f3549fe522968fb5
+Continental|2|4|ffa|2 9dd88d7e86af5216
+Continental|2|4|ffa|2147483647 b76c8c77f99636c4
+Continental|2|4|ffa|3 e372cc110ba69d3a
+Continental|2|4|teams|1 6b4cd29cda896a52
+Continental|2|4|teams|1000 0fb122a7bc2d5e61
+Continental|2|4|teams|12345 1bb701fc7df4e26e
+Continental|2|4|teams|2 3c40219cdd2f63a4
+Continental|2|4|teams|2147483647 4aedd2616c48d5f9
+Continental|2|4|teams|3 9656f3aba7517b1d
+Continental|2|6|ffa|1 efde05079533157c
+Continental|2|6|ffa|1000 0ffaff33aa816c6a
+Continental|2|6|ffa|12345 22da297efea334a4
+Continental|2|6|ffa|2 b87fc8b3ad14cd66
+Continental|2|6|ffa|2147483647 100aa9cf2e91776f
+Continental|2|6|ffa|3 091e7828d03eb410
+Continental|2|6|teams|1 d9f2b5e32b1f8be4
+Continental|2|6|teams|1000 69005e0c1dbea550
+Continental|2|6|teams|12345 89603934af3f5276
+Continental|2|6|teams|2 5f4c74181cb05e3c
+Continental|2|6|teams|2147483647 9e70444452779c6f
+Continental|2|6|teams|3 5be20263ccf19bbc
+Continental|3|2|ffa|1 fd575319ba60efd4
+Continental|3|2|ffa|1000 4dd2bc6f2567e73d
+Continental|3|2|ffa|12345 d9462f63a8ea5560
+Continental|3|2|ffa|2 5e80c5400b84ca2d
+Continental|3|2|ffa|2147483647 03b37ab960cc79e2
+Continental|3|2|ffa|3 aeca257e761f7d8b
+Continental|3|4|ffa|1 454fbe098ac9f0a4
+Continental|3|4|ffa|1000 7f4e636471adce24
+Continental|3|4|ffa|12345 0bd4e270a787ef33
+Continental|3|4|ffa|2 a3a18fa0f1aa94aa
+Continental|3|4|ffa|2147483647 2f171837d05829a3
+Continental|3|4|ffa|3 3e50a3abd65ff160
+Continental|3|4|teams|1 8c9e9bbf80e72ae6
+Continental|3|4|teams|1000 200ee6df965ddb82
+Continental|3|4|teams|12345 2b28f62453138ae9
+Continental|3|4|teams|2 710581713211d994
+Continental|3|4|teams|2147483647 ccb0fd4c7acec91a
+Continental|3|4|teams|3 9a996811a085b461
+Continental|3|8|ffa|1 cd22e2327690d245
+Continental|3|8|ffa|1000 6ebac5b0121e538a
+Continental|3|8|ffa|12345 398512eec1f07032
+Continental|3|8|ffa|2 3ff6a8d689bb5dc9
+Continental|3|8|ffa|2147483647 67b31448ff8c648e
+Continental|3|8|ffa|3 149665056fd698b3
+Continental|3|8|teams|1 10ef59ef790bc3ef
+Continental|3|8|teams|1000 c2729d8f6a24ac6b
+Continental|3|8|teams|12345 77362028f9d5d1bc
+Continental|3|8|teams|2 3a40c0e6e5276e1e
+Continental|3|8|teams|2147483647 7a44a3e40ee16977
+Continental|3|8|teams|3 8877de94e5b8bb49
+Continental|4|2|ffa|1 21287278d8d91d6b
+Continental|4|2|ffa|1000 c8e5bc62730e57ff
+Continental|4|2|ffa|12345 dcace08f3b094cf2
+Continental|4|2|ffa|2 dee31669a42c9559
+Continental|4|2|ffa|2147483647 acf982748fab78d3
+Continental|4|2|ffa|3 6496f0322ca45e73
+Continental|4|4|ffa|1 081137c00054942e
+Continental|4|4|ffa|1000 c8c926cbef632a4e
+Continental|4|4|ffa|12345 bb88cdf57cdbd72e
+Continental|4|4|ffa|2 4a406cea19d4bb58
+Continental|4|4|ffa|2147483647 df322c1539af3262
+Continental|4|4|ffa|3 e0a1df50051151d7
+Continental|4|4|teams|1 1cbbd2405280ca1a
+Continental|4|4|teams|1000 7bdeccd5b2cc753f
+Continental|4|4|teams|12345 17f35558c888075f
+Continental|4|4|teams|2 331dd938f50e81d8
+Continental|4|4|teams|2147483647 bff93662ceba36ab
+Continental|4|4|teams|3 654c0cda6da4c872
+Continental|4|8|ffa|1 735d2e89349f6d5e
+Continental|4|8|ffa|1000 346e44faa2a9d3c9
+Continental|4|8|ffa|12345 bb35e02762c46488
+Continental|4|8|ffa|2 7c3938344b1491cb
+Continental|4|8|ffa|2147483647 d998db05f8faf4e8
+Continental|4|8|ffa|3 8b736f156eadecb5
+Continental|4|8|teams|1 265536ae517d7e8a
+Continental|4|8|teams|1000 163df32e5c5aaa48
+Continental|4|8|teams|12345 acbe6098f3f79b68
+Continental|4|8|teams|2 6d79baa9705b8983
+Continental|4|8|teams|2147483647 178f7d2f7201f02e
+Continental|4|8|teams|3 0895faf9293f06a1
+Continental|5|2|ffa|1 ba7d5624f8992e0d
+Continental|5|2|ffa|1000 bc2b420dff3edb36
+Continental|5|2|ffa|12345 85802ea330008764
+Continental|5|2|ffa|2 e609bafa67f257ae
+Continental|5|2|ffa|2147483647 65bc8f84a72a1876
+Continental|5|2|ffa|3 a82982ff82c1710a
+Continental|5|4|ffa|1 3bcb203025fa72b1
+Continental|5|4|ffa|1000 84cde5034167a81a
+Continental|5|4|ffa|12345 dbb678813ff10935
+Continental|5|4|ffa|2 76bbf2e2f0e42f23
+Continental|5|4|ffa|2147483647 3a0cc9ef121f6574
+Continental|5|4|ffa|3 15c67d339bfbcc9e
+Continental|5|4|teams|1 bb24aff22ba752c3
+Continental|5|4|teams|1000 fd92ff5d50b95c94
+Continental|5|4|teams|12345 737bb6a867477fc2
+Continental|5|4|teams|2 0db9c318c79908bc
+Continental|5|4|teams|2147483647 69f273aca1a55823
+Continental|5|4|teams|3 8ef56eaca0928bf8
+Continental|5|8|ffa|1 b590033ad7d0deaa
+Continental|5|8|ffa|1000 ec168f498b6bb6b4
+Continental|5|8|ffa|12345 3f90d0844f69f9dd
+Continental|5|8|ffa|2 6e95bfde45448be5
+Continental|5|8|ffa|2147483647 808e00f2e2bda500
+Continental|5|8|ffa|3 8d55699ee238d448
+Continental|5|8|teams|1 4b0a9abf8837e617
+Continental|5|8|teams|1000 7dfceb903d4f9420
+Continental|5|8|teams|12345 7a989f708a9dfff0
+Continental|5|8|teams|2 a8d219c68534c475
+Continental|5|8|teams|2147483647 72180dd2493df716
+Continental|5|8|teams|3 2ca20d113af704d4
+Earth|0|2|ffa|1 6c8b7c23cacf3649
+Earth|0|2|ffa|1000 72266feb6233f2f3
+Earth|0|2|ffa|12345 607d182d810644c6
+Earth|0|2|ffa|2 6253858a306ea19a
+Earth|0|2|ffa|2147483647 df9cf88ddf171e8e
+Earth|0|2|ffa|3 a1aeca613fc9a3f4
+Earth|0|2|forced|1 260e3954cfecfc63
+Earth|0|2|forced|1000 b83692403808592a
+Earth|0|2|forced|12345 2b323c17fb8fa856
+Earth|0|2|forced|2 bbc3e367d0d4a5fb
+Earth|0|2|forced|2147483647 b1715dd1c49a1b26
+Earth|0|2|forced|3 0a9954e109279905
+Earth|0|3|ffa|1 a39004bb1eb86383
+Earth|0|3|ffa|1000 c8bc781022873d27
+Earth|0|3|ffa|12345 a3211eabd6699297
+Earth|0|3|ffa|2 0174fd90d0f28c6d
+Earth|0|3|ffa|2147483647 3bf64609ec6c14c0
+Earth|0|3|ffa|3 e09a09af5171706e
+Earth|0|3|forced|1 4d09f56b3c095b2c
+Earth|0|3|forced|1000 b93b472429991fc3
+Earth|0|3|forced|12345 84449b7ed0727340
+Earth|0|3|forced|2 f43025f6c18e040b
+Earth|0|3|forced|2147483647 24cbb9372733737a
+Earth|0|3|forced|3 b5a9581daa969baa
+Earth|1|2|ffa|1 cb7ea323b166bf29
+Earth|1|2|ffa|1000 17251160553899de
+Earth|1|2|ffa|12345 356242ea6001a489
+Earth|1|2|ffa|2 46113b10261d90a9
+Earth|1|2|ffa|2147483647 ab46d1500a7f123d
+Earth|1|2|ffa|3 f82df4314d4c6721
+Earth|1|2|forced|1 1452e84f357007a0
+Earth|1|2|forced|1000 b29066f24735bbf9
+Earth|1|2|forced|12345 ef35ffb491ea4a25
+Earth|1|2|forced|2 8eb5e5aeda44b5df
+Earth|1|2|forced|2147483647 d77560b42ca1a950
+Earth|1|2|forced|3 8d3bde285253e06c
+Earth|1|4|ffa|1 18ad3cd85d691894
+Earth|1|4|ffa|1000 d8f3db31c9de5843
+Earth|1|4|ffa|12345 57de05c4f71238b6
+Earth|1|4|ffa|2 644bda8105b6cac2
+Earth|1|4|ffa|2147483647 eae6a9477a03a116
+Earth|1|4|ffa|3 a84a4ba82b99ce7e
+Earth|1|4|forced|1 2a69a1e1e6e501a9
+Earth|1|4|forced|1000 a6d02346058e52cb
+Earth|1|4|forced|12345 b87710c66be87e2f
+Earth|1|4|forced|2 4473b6c419714492
+Earth|1|4|forced|2147483647 84786b4f9aaabb04
+Earth|1|4|forced|3 627d3fe9da91fd19
+Earth|1|4|teams|1 4e5ef34a2df6cb11
+Earth|1|4|teams|1000 1d90df608b791f59
+Earth|1|4|teams|12345 3b9574bb88d2f684
+Earth|1|4|teams|2 afea4ae9cc806048
+Earth|1|4|teams|2147483647 21c14c54476268ab
+Earth|1|4|teams|3 aa066baa20ac864d
+Earth|2|2|ffa|1 98a30da5e3264627
+Earth|2|2|ffa|1000 048d74cde5717000
+Earth|2|2|ffa|12345 270f05814bc71268
+Earth|2|2|ffa|2 5e7a89cb4b42184d
+Earth|2|2|ffa|2147483647 0d6b86e4a3633a6c
+Earth|2|2|ffa|3 b9d2e7aeb5d9e61a
+Earth|2|4|ffa|1 361e06caa2a5ebda
+Earth|2|4|ffa|1000 b8de733202555b71
+Earth|2|4|ffa|12345 eaa3138600d38e2e
+Earth|2|4|ffa|2 b3d232c3d1d9300b
+Earth|2|4|ffa|2147483647 c7a84d7d2f463e2b
+Earth|2|4|ffa|3 c56dfd3711cef6d7
+Earth|2|4|teams|1 36c3c7597298ffb4
+Earth|2|4|teams|1000 01022e0c36a7e698
+Earth|2|4|teams|12345 c60674a44d5656ec
+Earth|2|4|teams|2 a9b5b22f7d5447e6
+Earth|2|4|teams|2147483647 ea706da563cb07ed
+Earth|2|4|teams|3 e87aeb2689ac47d5
+Earth|2|6|ffa|1 9a3faee242bd17c5
+Earth|2|6|ffa|1000 5f4c3f761f1088a3
+Earth|2|6|ffa|12345 0ee1396b36de21e6
+Earth|2|6|ffa|2 22e867105498ab3f
+Earth|2|6|ffa|2147483647 f13a7352b83d34cb
+Earth|2|6|ffa|3 c45fda17549c8fb3
+Earth|2|6|teams|1 cfe059eedac16392
+Earth|2|6|teams|1000 8161d7dbb641fcb8
+Earth|2|6|teams|12345 969e52969b9796ce
+Earth|2|6|teams|2 304f4f9413dc6ef7
+Earth|2|6|teams|2147483647 59043beaa4163f44
+Earth|2|6|teams|3 d31feb0be0d6532e
+Earth|3|2|ffa|1 01ebd98d9e86b311
+Earth|3|2|ffa|1000 de1dac5ce47e36ac
+Earth|3|2|ffa|12345 c94179246cf32f44
+Earth|3|2|ffa|2 97992053b795cd3f
+Earth|3|2|ffa|2147483647 291a43071d1b0e60
+Earth|3|2|ffa|3 a825265488f2f515
+Earth|3|4|ffa|1 0174ce3e677d18d7
+Earth|3|4|ffa|1000 9fa61985f4a7c8ca
+Earth|3|4|ffa|12345 74a6988f986eb174
+Earth|3|4|ffa|2 67505f779852f202
+Earth|3|4|ffa|2147483647 b5b11d7ed3e7df03
+Earth|3|4|ffa|3 541756549bfd941d
+Earth|3|4|teams|1 56d9296e16480a1a
+Earth|3|4|teams|1000 3055300f451a2840
+Earth|3|4|teams|12345 4517c57be0b27ea1
+Earth|3|4|teams|2 5033249d19eebfe4
+Earth|3|4|teams|2147483647 635c4b6cd612c44a
+Earth|3|4|teams|3 6606c66b882f338d
+Earth|3|8|ffa|1 31ebf2c7c2e68b09
+Earth|3|8|ffa|1000 d6b68497a1b1e48c
+Earth|3|8|ffa|12345 bf7ed72be52c6f22
+Earth|3|8|ffa|2 6096f27c00bbfff7
+Earth|3|8|ffa|2147483647 66b9314ff762bad8
+Earth|3|8|ffa|3 1c26201fcbad562a
+Earth|3|8|teams|1 7a2260dfcb403ee4
+Earth|3|8|teams|1000 b7a3ae380ce9f743
+Earth|3|8|teams|12345 98afc8c4cacd9fc4
+Earth|3|8|teams|2 c7c82214b0c37ff5
+Earth|3|8|teams|2147483647 3e26bf8b8dc4b043
+Earth|3|8|teams|3 4e2e198b586db517
+Earth|4|2|ffa|1 6866521f3f0500ae
+Earth|4|2|ffa|1000 a55b8f09de4ce18e
+Earth|4|2|ffa|12345 33995cb742d48bdf
+Earth|4|2|ffa|2 48c093bc346781a8
+Earth|4|2|ffa|2147483647 c097e9591c8e3ca2
+Earth|4|2|ffa|3 96b36034004ad8f7
+Earth|4|4|ffa|1 901fadee76852611
+Earth|4|4|ffa|1000 16f93c4930ebc192
+Earth|4|4|ffa|12345 b34417935121bc7c
+Earth|4|4|ffa|2 24e90c0848f06de0
+Earth|4|4|ffa|2147483647 d5ebbfc37448ad66
+Earth|4|4|ffa|3 e1badd06c5521c3b
+Earth|4|4|teams|1 bbfa82c4fb4e163c
+Earth|4|4|teams|1000 c7b086e73c3baaf5
+Earth|4|4|teams|12345 1c728f2f432b2356
+Earth|4|4|teams|2 3499cc812107ba44
+Earth|4|4|teams|2147483647 5e3bba56721cb2f3
+Earth|4|4|teams|3 807d6dd735458c53
+Earth|4|8|ffa|1 50a809f1662d6e41
+Earth|4|8|ffa|1000 b8f930589428dbb5
+Earth|4|8|ffa|12345 623a6642705d66c8
+Earth|4|8|ffa|2 d3c0f803e714acb2
+Earth|4|8|ffa|2147483647 3c3863859a4b7f68
+Earth|4|8|ffa|3 61f96f584ebd02d4
+Earth|4|8|teams|1 ee9daca5eef84a3c
+Earth|4|8|teams|1000 5cfe6183fc3c1f29
+Earth|4|8|teams|12345 612145096aed9dbc
+Earth|4|8|teams|2 58655bd0e165cd3f
+Earth|4|8|teams|2147483647 7a96654a6d649f2b
+Earth|4|8|teams|3 4f12d1d4ab3b3ce1
+Earth|5|2|ffa|1 84ce15dc25c3b14f
+Earth|5|2|ffa|1000 e6626cc3b18c6219
+Earth|5|2|ffa|12345 3d7a66f4d748159c
+Earth|5|2|ffa|2 77aa6199a78b2a61
+Earth|5|2|ffa|2147483647 fb902e8d8c8c1857
+Earth|5|2|ffa|3 a38cae4a90e5fc24
+Earth|5|4|ffa|1 30bd0d6ebf68579d
+Earth|5|4|ffa|1000 e1edb2d8f143e675
+Earth|5|4|ffa|12345 9a0667911072f22b
+Earth|5|4|ffa|2 e576aae683b85594
+Earth|5|4|ffa|2147483647 3f4ec69fefc3cb1b
+Earth|5|4|ffa|3 594ffdeec10df32f
+Earth|5|4|teams|1 0429be6d6260db2f
+Earth|5|4|teams|1000 b35cb2a6fb4b126b
+Earth|5|4|teams|12345 78c83542c7822f62
+Earth|5|4|teams|2 60943f2f6abbd94a
+Earth|5|4|teams|2147483647 2d1ad0c0465ab78e
+Earth|5|4|teams|3 5ef6458c92e5db77
+Earth|5|8|ffa|1 d94579e45b012b73
+Earth|5|8|ffa|1000 87dd1712a1b2b1ef
+Earth|5|8|ffa|12345 862459f36fe80b12
+Earth|5|8|ffa|2 96b27ce47f342dbe
+Earth|5|8|ffa|2147483647 a6b999aefe087854
+Earth|5|8|ffa|3 35f79e00f005fda1
+Earth|5|8|teams|1 dcd480f8ed7fe825
+Earth|5|8|teams|1000 dcf1b81cb832d15c
+Earth|5|8|teams|12345 281cf0f2019c6d6b
+Earth|5|8|teams|2 53ef6dd712966a71
+Earth|5|8|teams|2147483647 a54ba30142649c6d
+Earth|5|8|teams|3 0f20c11889606dc2
+Highlands|0|2|ffa|1 63cf64c1f07fc9e5
+Highlands|0|2|ffa|1000 5b0f47e41a9257ed
+Highlands|0|2|ffa|12345 e479c5eecdfcbc20
+Highlands|0|2|ffa|2 093c2bd79c0a0024
+Highlands|0|2|ffa|2147483647 2e5c524456969788
+Highlands|0|2|ffa|3 02277c84c8da2798
+Highlands|0|2|forced|1 528d565973b6d6e8
+Highlands|0|2|forced|1000 496b216fdb43d3b7
+Highlands|0|2|forced|12345 8f20069c87dd15aa
+Highlands|0|2|forced|2 66d42205eb33d1a2
+Highlands|0|2|forced|2147483647 7bf1e9bf8aab2d11
+Highlands|0|2|forced|3 d59b89ae34232e89
+Highlands|0|3|ffa|1 cc2bd94cdba84e2b
+Highlands|0|3|ffa|1000 acb717a24bfe5fda
+Highlands|0|3|ffa|12345 77722cc1dc88f662
+Highlands|0|3|ffa|2 fb2d58aca7cc398e
+Highlands|0|3|ffa|2147483647 5aa2f8a409fd1deb
+Highlands|0|3|ffa|3 fd80853db769dabb
+Highlands|0|3|forced|1 361dea2f2d01c0fa
+Highlands|0|3|forced|1000 e54c4c235169d27a
+Highlands|0|3|forced|12345 c163b45e511160d3
+Highlands|0|3|forced|2 6d4d42e28d5c9fb5
+Highlands|0|3|forced|2147483647 1ec1eefb7425d232
+Highlands|0|3|forced|3 f2ff7dbdd4ecee7c
+Highlands|1|2|ffa|1 60dee19954de80d8
+Highlands|1|2|ffa|1000 3bc9c49a2d08c0d5
+Highlands|1|2|ffa|12345 1dda0217c686faac
+Highlands|1|2|ffa|2 ff99476a0b5dcc34
+Highlands|1|2|ffa|2147483647 63a865313b72fdab
+Highlands|1|2|ffa|3 cf36ff86a37dd89f
+Highlands|1|2|forced|1 7bd281002b78bf1b
+Highlands|1|2|forced|1000 0bdccd8fca0c23b4
+Highlands|1|2|forced|12345 5a5a57a3607a53d9
+Highlands|1|2|forced|2 c78faddee3c107f7
+Highlands|1|2|forced|2147483647 dc73752d79d20fe2
+Highlands|1|2|forced|3 90162abaca906cb9
+Highlands|1|4|ffa|1 516702bb5825f0f7
+Highlands|1|4|ffa|1000 50cefb2c768e94fc
+Highlands|1|4|ffa|12345 98ae22c24819f5ce
+Highlands|1|4|ffa|2 b695b99da2e8de94
+Highlands|1|4|ffa|2147483647 e8ab1a9fcd239add
+Highlands|1|4|ffa|3 eb8080cd528d71ec
+Highlands|1|4|forced|1 ecfac75d3af92d3c
+Highlands|1|4|forced|1000 e0948d902bbbbc48
+Highlands|1|4|forced|12345 f5b88ab683cf5612
+Highlands|1|4|forced|2 ecaf9187d793bcfe
+Highlands|1|4|forced|2147483647 5eda7b0510473fd4
+Highlands|1|4|forced|3 796bae5a87e48090
+Highlands|1|4|teams|1 70abfe17d61cf99a
+Highlands|1|4|teams|1000 d371bd77e19192d8
+Highlands|1|4|teams|12345 d25c4a7a9809647c
+Highlands|1|4|teams|2 7e38df20b1d70475
+Highlands|1|4|teams|2147483647 d2e3a4aca1ce6154
+Highlands|1|4|teams|3 0325e9842a4b199e
+Highlands|2|2|ffa|1 d04fe1f80e701108
+Highlands|2|2|ffa|1000 2c316bb1cdd281d0
+Highlands|2|2|ffa|12345 8d2bd125f32b767a
+Highlands|2|2|ffa|2 1902bde68be14e5a
+Highlands|2|2|ffa|2147483647 de61a7b6510eeb67
+Highlands|2|2|ffa|3 22fd45075f20ffde
+Highlands|2|4|ffa|1 e56b6e0a1794fbee
+Highlands|2|4|ffa|1000 178734c0d44c4e39
+Highlands|2|4|ffa|12345 93be517adf27f2fa
+Highlands|2|4|ffa|2 df2192341f9bb624
+Highlands|2|4|ffa|2147483647 ffb5c3540aa49d7d
+Highlands|2|4|ffa|3 dd49b80d79846a50
+Highlands|2|4|teams|1 af5c4943ddafbc51
+Highlands|2|4|teams|1000 4dd75df0bef84fb9
+Highlands|2|4|teams|12345 524e8e228de49463
+Highlands|2|4|teams|2 48469ca8cae9937b
+Highlands|2|4|teams|2147483647 16701a140a279d61
+Highlands|2|4|teams|3 fc1962218e80aa3c
+Highlands|2|6|ffa|1 141482e60fac78ee
+Highlands|2|6|ffa|1000 524643b68caa25c5
+Highlands|2|6|ffa|12345 51d12ddf57be2adc
+Highlands|2|6|ffa|2 7eef3e2df7fd90c4
+Highlands|2|6|ffa|2147483647 7dc1fdb8b8966c20
+Highlands|2|6|ffa|3 51e4841c78066cc7
+Highlands|2|6|teams|1 dc3057783ebe3805
+Highlands|2|6|teams|1000 42ae85011a28e4de
+Highlands|2|6|teams|12345 56accad3bdbf0b93
+Highlands|2|6|teams|2 c0c87feb76dd62bb
+Highlands|2|6|teams|2147483647 126aecb6bd059aa0
+Highlands|2|6|teams|3 cd87b02619486b8c
+Highlands|3|2|ffa|1 468b2eab170005fa
+Highlands|3|2|ffa|1000 d95488c6a978f868
+Highlands|3|2|ffa|12345 522002b7879c4bba
+Highlands|3|2|ffa|2 53797cc6074298f0
+Highlands|3|2|ffa|2147483647 40979ce4a80f914a
+Highlands|3|2|ffa|3 8a9d5676beb95aa5
+Highlands|3|4|ffa|1 73a6a9fc3f754f95
+Highlands|3|4|ffa|1000 2b63ba8353ea6615
+Highlands|3|4|ffa|12345 872363f098fb13ed
+Highlands|3|4|ffa|2 22f076187b6809c3
+Highlands|3|4|ffa|2147483647 c235873c6f627524
+Highlands|3|4|ffa|3 ecd50aebe623f3f1
+Highlands|3|4|teams|1 bef161a92cff8596
+Highlands|3|4|teams|1000 d78c183e43c4443c
+Highlands|3|4|teams|12345 d0d8d2e74c54677f
+Highlands|3|4|teams|2 f6e1617779a29894
+Highlands|3|4|teams|2147483647 765a4f9ddc091e7e
+Highlands|3|4|teams|3 7646927ec4e15e15
+Highlands|3|8|ffa|1 def3fda0b0b9f6fc
+Highlands|3|8|ffa|1000 31e1e7fae0c299a6
+Highlands|3|8|ffa|12345 fc36f3c4b325fd24
+Highlands|3|8|ffa|2 a831aeb0ed0919f0
+Highlands|3|8|ffa|2147483647 815a7555f280e5a9
+Highlands|3|8|ffa|3 12e4bff2b1e33f6f
+Highlands|3|8|teams|1 4e84b81cbdff07d5
+Highlands|3|8|teams|1000 fc749e2a1a72a48f
+Highlands|3|8|teams|12345 3c1c82c806bc2994
+Highlands|3|8|teams|2 630d2852cd92cad7
+Highlands|3|8|teams|2147483647 f804db9d6faa43a2
+Highlands|3|8|teams|3 ed3e504053656329
+Highlands|4|2|ffa|1 a1daf5d3fc999c32
+Highlands|4|2|ffa|1000 b84fc266c0fdcef0
+Highlands|4|2|ffa|12345 fd5f008324a1cf9c
+Highlands|4|2|ffa|2 5a1beae4909c49ee
+Highlands|4|2|ffa|2147483647 7ebac680f942a062
+Highlands|4|2|ffa|3 557b6aa46e39791d
+Highlands|4|4|ffa|1 fbda0ed07a612412
+Highlands|4|4|ffa|1000 868cb3d3604a83b2
+Highlands|4|4|ffa|12345 5a0c5c367e90f5e1
+Highlands|4|4|ffa|2 7175d071491a0b7f
+Highlands|4|4|ffa|2147483647 0bd021048ce546bd
+Highlands|4|4|ffa|3 798ff322ce8a0228
+Highlands|4|4|teams|1 f239728cdb0b1d93
+Highlands|4|4|teams|1000 f28579fb6465e53b
+Highlands|4|4|teams|12345 0ac9640ba9d81e26
+Highlands|4|4|teams|2 a1aec2a605053fe9
+Highlands|4|4|teams|2147483647 df6f906c94434aaa
+Highlands|4|4|teams|3 e123d228a11aa760
+Highlands|4|8|ffa|1 bde2006a0af60157
+Highlands|4|8|ffa|1000 37731b54298cc3d6
+Highlands|4|8|ffa|12345 019fbf6761cffa1a
+Highlands|4|8|ffa|2 489a3a9b07a28cc0
+Highlands|4|8|ffa|2147483647 69a60bfd49b3f24c
+Highlands|4|8|ffa|3 565cf9d4dc834d41
+Highlands|4|8|teams|1 5d19bb113ef6e388
+Highlands|4|8|teams|1000 eeb48c3617caf3d3
+Highlands|4|8|teams|12345 c010b30f19417f9c
+Highlands|4|8|teams|2 bfc0d909123a50e5
+Highlands|4|8|teams|2147483647 a8fe717dfe2c69f8
+Highlands|4|8|teams|3 83e7132865fc0967
+Highlands|5|2|ffa|1 4c61d532f5c16198
+Highlands|5|2|ffa|1000 831bf5e5e0a38e1e
+Highlands|5|2|ffa|12345 bbb5466f036c9804
+Highlands|5|2|ffa|2 0fa2a35a71b4457b
+Highlands|5|2|ffa|2147483647 7c96c040397e77c7
+Highlands|5|2|ffa|3 0966867706f28506
+Highlands|5|4|ffa|1 df2f303234f05326
+Highlands|5|4|ffa|1000 da78f1865f5dd313
+Highlands|5|4|ffa|12345 c67f54bab260b5f6
+Highlands|5|4|ffa|2 44c2bf1079262fac
+Highlands|5|4|ffa|2147483647 18b4c94ee91f8d62
+Highlands|5|4|ffa|3 33d88ec07c4ed04f
+Highlands|5|4|teams|1 6c5c2bef009aeb32
+Highlands|5|4|teams|1000 b2ce416f4a4a4352
+Highlands|5|4|teams|12345 527ff248e239660a
+Highlands|5|4|teams|2 39542eeed27da042
+Highlands|5|4|teams|2147483647 c23141be63386937
+Highlands|5|4|teams|3 c2679179c7b173cb
+Highlands|5|8|ffa|1 f10ff1433d2bc446
+Highlands|5|8|ffa|1000 ff6f28922ab54a0e
+Highlands|5|8|ffa|12345 7086584ffd24efb1
+Highlands|5|8|ffa|2 9d6a8ce3de06ce31
+Highlands|5|8|ffa|2147483647 1e13ac005cda452b
+Highlands|5|8|ffa|3 1803912d7826ac28
+Highlands|5|8|teams|1 d91489149ed75f79
+Highlands|5|8|teams|1000 4d5f0c094a12dd44
+Highlands|5|8|teams|12345 345ba8a540ad8418
+Highlands|5|8|teams|2 cb7d88544f86c02d
+Highlands|5|8|teams|2147483647 9ebc0149e867e6be
+Highlands|5|8|teams|3 edeb9fbccc2800bf
+Large Islands|0|2|ffa|1 981f13ceea9ca583
+Large Islands|0|2|ffa|1000 d7c6ff28d3a8207a
+Large Islands|0|2|ffa|12345 f50c870824356ed8
+Large Islands|0|2|ffa|2 0c43e96d8eecc0d5
+Large Islands|0|2|ffa|2147483647 b288659421cc5849
+Large Islands|0|2|ffa|3 e336136d366072c4
+Large Islands|0|2|forced|1 cb43d6dd3f9ae92d
+Large Islands|0|2|forced|1000 222858dfb22f188c
+Large Islands|0|2|forced|12345 f99776123f81b373
+Large Islands|0|2|forced|2 a979befa58c3170c
+Large Islands|0|2|forced|2147483647 04c2aca2a832a19e
+Large Islands|0|2|forced|3 d1fbb717f71083e7
+Large Islands|0|3|ffa|1 e0556e87f9a79f58
+Large Islands|0|3|ffa|1000 752d72efb98e28b9
+Large Islands|0|3|ffa|12345 488f1cce72eccd5e
+Large Islands|0|3|ffa|2 8d7fb54d978d8fab
+Large Islands|0|3|ffa|2147483647 d084d15a879866ee
+Large Islands|0|3|ffa|3 650ef6618f92667e
+Large Islands|0|3|forced|1 53250c2a3b55d473
+Large Islands|0|3|forced|1000 32635aefa9660a7a
+Large Islands|0|3|forced|12345 0562e3f0dbbd2239
+Large Islands|0|3|forced|2 fb584595879c05ac
+Large Islands|0|3|forced|2147483647 528807ac62d54d62
+Large Islands|0|3|forced|3 51d57fffce4dea22
+Large Islands|1|2|ffa|1 d12ab62d3de2d161
+Large Islands|1|2|ffa|1000 94efcf7b83bad157
+Large Islands|1|2|ffa|12345 1582d2d27d8ab8d1
+Large Islands|1|2|ffa|2 52d58b028c9e5f8b
+Large Islands|1|2|ffa|2147483647 d388edbd83991fdb
+Large Islands|1|2|ffa|3 e7ffe20fffe9b6ea
+Large Islands|1|2|forced|1 c6ac2ea3de891456
+Large Islands|1|2|forced|1000 e03cae2d85d24ad9
+Large Islands|1|2|forced|12345 572c1a09bf1f0cb1
+Large Islands|1|2|forced|2 91114be59e6e515d
+Large Islands|1|2|forced|2147483647 13b64cb969faac3d
+Large Islands|1|2|forced|3 aa01f855fdb5ddc0
+Large Islands|1|4|ffa|1 03b095a6050edb97
+Large Islands|1|4|ffa|1000 95ed1069b58819fa
+Large Islands|1|4|ffa|12345 b0c446ec09230d38
+Large Islands|1|4|ffa|2 08816e37d2438a41
+Large Islands|1|4|ffa|2147483647 0bc503731a2cc1a9
+Large Islands|1|4|ffa|3 7ed50fce804e5037
+Large Islands|1|4|forced|1 2f993d0a2ead19a3
+Large Islands|1|4|forced|1000 88cfa02b190dda4f
+Large Islands|1|4|forced|12345 5e4d974c43ec862b
+Large Islands|1|4|forced|2 91cbd0227b3bf1bf
+Large Islands|1|4|forced|2147483647 0b814efe17988245
+Large Islands|1|4|forced|3 ba60b1fbbf5d83ef
+Large Islands|1|4|teams|1 b31718fad3fcbd98
+Large Islands|1|4|teams|1000 22279fbdab294b8a
+Large Islands|1|4|teams|12345 fd2e642ab409b04b
+Large Islands|1|4|teams|2 8d7d78620ef92e7e
+Large Islands|1|4|teams|2147483647 e171b130f3d5a24d
+Large Islands|1|4|teams|3 5e1b307032c7ca2d
+Large Islands|2|2|ffa|1 006a5d1e49eb6344
+Large Islands|2|2|ffa|1000 bdad6a754710c36f
+Large Islands|2|2|ffa|12345 33ed067544eb6841
+Large Islands|2|2|ffa|2 d18015ece2be1615
+Large Islands|2|2|ffa|2147483647 af5804f42e70b833
+Large Islands|2|2|ffa|3 05d4f6d7e1f06c8f
+Large Islands|2|4|ffa|1 f2536189b551cad5
+Large Islands|2|4|ffa|1000 f5ec48eb2a900c34
+Large Islands|2|4|ffa|12345 e8e1aab4a6cbf1f7
+Large Islands|2|4|ffa|2 c075207e0012e9f7
+Large Islands|2|4|ffa|2147483647 0827b929e80b983a
+Large Islands|2|4|ffa|3 4faa394741ace6ab
+Large Islands|2|4|teams|1 140a0aaf1fcd7f54
+Large Islands|2|4|teams|1000 9d15ecba0f84f476
+Large Islands|2|4|teams|12345 f1c8c4bedf2208bc
+Large Islands|2|4|teams|2 bfdb2f42a8f90fa4
+Large Islands|2|4|teams|2147483647 b0995405e22b4be5
+Large Islands|2|4|teams|3 2f55d6f82208802c
+Large Islands|2|6|ffa|1 e458d70f6df8100e
+Large Islands|2|6|ffa|1000 0b83469d625a9bc2
+Large Islands|2|6|ffa|12345 c27369094cabf6b6
+Large Islands|2|6|ffa|2 a98ec315a156c571
+Large Islands|2|6|ffa|2147483647 667ac140d1ba00e6
+Large Islands|2|6|ffa|3 37ea4bd8e63956ca
+Large Islands|2|6|teams|1 20929c9b3a8005df
+Large Islands|2|6|teams|1000 3f0f0244cb3ec186
+Large Islands|2|6|teams|12345 0282f0c2a695abd7
+Large Islands|2|6|teams|2 5906fdf1848119a9
+Large Islands|2|6|teams|2147483647 21154564c5a16417
+Large Islands|2|6|teams|3 5095926bb2975c6f
+Large Islands|3|2|ffa|1 d5b256527380e27e
+Large Islands|3|2|ffa|1000 b079a4914e558d3d
+Large Islands|3|2|ffa|12345 abb438bd433f34af
+Large Islands|3|2|ffa|2 4d82d6a19e49b562
+Large Islands|3|2|ffa|2147483647 4a89a6fd1069ab99
+Large Islands|3|2|ffa|3 4463f914fd3ea4d3
+Large Islands|3|4|ffa|1 374400dbd138f300
+Large Islands|3|4|ffa|1000 0420292142a031f6
+Large Islands|3|4|ffa|12345 e1c182507fbe5c05
+Large Islands|3|4|ffa|2 0778ae7a5898e44b
+Large Islands|3|4|ffa|2147483647 31017cca31e928cb
+Large Islands|3|4|ffa|3 c49581dadc0bac49
+Large Islands|3|4|teams|1 4bc3d2c80d39664c
+Large Islands|3|4|teams|1000 1e5b2b0d201be0e8
+Large Islands|3|4|teams|12345 86b41bba6df161a9
+Large Islands|3|4|teams|2 db87d99023ee76ae
+Large Islands|3|4|teams|2147483647 35849a4267b9b8c5
+Large Islands|3|4|teams|3 12d298480df2c067
+Large Islands|3|8|ffa|1 1dc04bf4f7b0296c
+Large Islands|3|8|ffa|1000 f68dcc958b880115
+Large Islands|3|8|ffa|12345 eb8f35e8e0ebd644
+Large Islands|3|8|ffa|2 33f4565c37509045
+Large Islands|3|8|ffa|2147483647 cf4a1c8df660d3b3
+Large Islands|3|8|ffa|3 41f531fbf186c6c4
+Large Islands|3|8|teams|1 311370baffb85f92
+Large Islands|3|8|teams|1000 fdecb881a0f9386e
+Large Islands|3|8|teams|12345 646d0d46c09b454f
+Large Islands|3|8|teams|2 6934f7e26a36a0ae
+Large Islands|3|8|teams|2147483647 38395c71248dc507
+Large Islands|3|8|teams|3 4ecd66503ebdd91c
+Large Islands|4|2|ffa|1 415a385b164778a1
+Large Islands|4|2|ffa|1000 936e6d839d9b55cb
+Large Islands|4|2|ffa|12345 5a530c8412ac6761
+Large Islands|4|2|ffa|2 d1aae2a23427482f
+Large Islands|4|2|ffa|2147483647 9a66ffdb89ef9cc3
+Large Islands|4|2|ffa|3 a69d93b5442c4185
+Large Islands|4|4|ffa|1 77589556ce21240b
+Large Islands|4|4|ffa|1000 f5589da2b85385f1
+Large Islands|4|4|ffa|12345 18476f760ca4c6eb
+Large Islands|4|4|ffa|2 c95ecf0109a7ce67
+Large Islands|4|4|ffa|2147483647 c6b6693f8eb7b8b9
+Large Islands|4|4|ffa|3 44efcce3fc5e4baa
+Large Islands|4|4|teams|1 67a30ed48fc08c36
+Large Islands|4|4|teams|1000 eec3dcd5d9577226
+Large Islands|4|4|teams|12345 93522031a9f41a84
+Large Islands|4|4|teams|2 dc63f7939ae072a1
+Large Islands|4|4|teams|2147483647 608a8e6f56b33eba
+Large Islands|4|4|teams|3 f5d03bf3e1c3dd13
+Large Islands|4|8|ffa|1 8fd127d0ba90416d
+Large Islands|4|8|ffa|1000 d8cbeed9635625e6
+Large Islands|4|8|ffa|12345 f5e9f6597ed422ea
+Large Islands|4|8|ffa|2 a50682d904eec957
+Large Islands|4|8|ffa|2147483647 59bd6b69bf8c631b
+Large Islands|4|8|ffa|3 2e3d6e1b0e8b4329
+Large Islands|4|8|teams|1 d80136fa830f2eb4
+Large Islands|4|8|teams|1000 62c1549b7badca4d
+Large Islands|4|8|teams|12345 cd5a174b5644f615
+Large Islands|4|8|teams|2 9e65d0d720d62d24
+Large Islands|4|8|teams|2147483647 de4805f58bd4a681
+Large Islands|4|8|teams|3 ac33a505e70f57f3
+Large Islands|5|2|ffa|1 6d95c5bc9ef6d7d6
+Large Islands|5|2|ffa|1000 0a157de1bbda8cd6
+Large Islands|5|2|ffa|12345 bda4f2c03d392e31
+Large Islands|5|2|ffa|2 f60b256d7cd0691c
+Large Islands|5|2|ffa|2147483647 22f0f82e09231a63
+Large Islands|5|2|ffa|3 68fb269759e91d23
+Large Islands|5|4|ffa|1 582da5b4791c5f6e
+Large Islands|5|4|ffa|1000 2b90299ca1699af9
+Large Islands|5|4|ffa|12345 5c889e87180c167c
+Large Islands|5|4|ffa|2 e25acf437c2b08c0
+Large Islands|5|4|ffa|2147483647 13a47623955723f4
+Large Islands|5|4|ffa|3 ac50abe0890b4b44
+Large Islands|5|4|teams|1 ff5502771b35d085
+Large Islands|5|4|teams|1000 3989fbdaf44386ce
+Large Islands|5|4|teams|12345 87923510860c5c20
+Large Islands|5|4|teams|2 ef468b46e8574c97
+Large Islands|5|4|teams|2147483647 58a4ca50f03ba108
+Large Islands|5|4|teams|3 6947980a4dab0bc2
+Large Islands|5|8|ffa|1 d8f8a651d22f8dc0
+Large Islands|5|8|ffa|1000 cc27d86748635fbd
+Large Islands|5|8|ffa|12345 e9b1850d82a3b004
+Large Islands|5|8|ffa|2 31b616102ffea573
+Large Islands|5|8|ffa|2147483647 8ffb132807577736
+Large Islands|5|8|ffa|3 441e798c62adcbff
+Large Islands|5|8|teams|1 5578aa2a369ade1c
+Large Islands|5|8|teams|1000 6edcdb9c195fca64
+Large Islands|5|8|teams|12345 1d8ff6541ed3d8b5
+Large Islands|5|8|teams|2 965f6a8b818da471
+Large Islands|5|8|teams|2147483647 91a59df2254d56df
+Large Islands|5|8|teams|3 255fc329f86fd749
+Large Planets|0|2|ffa|1 d2067771de3d94ff
+Large Planets|0|2|ffa|1000 103a1809890b6190
+Large Planets|0|2|ffa|12345 56bf207e303209ed
+Large Planets|0|2|ffa|2 181c4b9d728ae079
+Large Planets|0|2|ffa|2147483647 049dacfeee457bbf
+Large Planets|0|2|ffa|3 617a31a1c9c94203
+Large Planets|0|2|forced|1 684247c2aaee3a77
+Large Planets|0|2|forced|1000 5d92d8c4f45339e4
+Large Planets|0|2|forced|12345 71d1c2c499b1e67a
+Large Planets|0|2|forced|2 96c85d7cadef476d
+Large Planets|0|2|forced|2147483647 69a3ed99f81894bc
+Large Planets|0|2|forced|3 1914be5fc51521f1
+Large Planets|0|3|ffa|1 ace6a6eac0159263
+Large Planets|0|3|ffa|1000 5c155d92e6155e23
+Large Planets|0|3|ffa|12345 f28b0c0c8245bdfa
+Large Planets|0|3|ffa|2 f664f81e0a4a2122
+Large Planets|0|3|ffa|2147483647 f146209948088afe
+Large Planets|0|3|ffa|3 80b14bcadfa40c66
+Large Planets|0|3|forced|1 af8d1cedea686495
+Large Planets|0|3|forced|1000 6c252655c417881a
+Large Planets|0|3|forced|12345 5957bc543452491a
+Large Planets|0|3|forced|2 c431ace451177502
+Large Planets|0|3|forced|2147483647 78e98a617b4b3433
+Large Planets|0|3|forced|3 eca4574625b3a8ff
+Large Planets|1|2|ffa|1 2aeca9f5b5b6d080
+Large Planets|1|2|ffa|1000 98f397e0ec7c2765
+Large Planets|1|2|ffa|12345 8e9fc4382ebc1b9e
+Large Planets|1|2|ffa|2 e4dbc9f3109006c8
+Large Planets|1|2|ffa|2147483647 a9802a5c501299cc
+Large Planets|1|2|ffa|3 cecc7604096b411f
+Large Planets|1|2|forced|1 6b88b4271c1176b0
+Large Planets|1|2|forced|1000 27d21124dc44a8f7
+Large Planets|1|2|forced|12345 c42904d966af4015
+Large Planets|1|2|forced|2 c3342bbdfb8b2f86
+Large Planets|1|2|forced|2147483647 1bcce5af8de9e6fe
+Large Planets|1|2|forced|3 5fc968ad0478ac13
+Large Planets|1|4|ffa|1 734dadbcaf11ffa0
+Large Planets|1|4|ffa|1000 6713fb7d3d185288
+Large Planets|1|4|ffa|12345 23d66513b550b77c
+Large Planets|1|4|ffa|2 16f0ea382c93c1a6
+Large Planets|1|4|ffa|2147483647 b6810af231842f3d
+Large Planets|1|4|ffa|3 8801e8f980fd5e3b
+Large Planets|1|4|forced|1 04eb99e5f08e5312
+Large Planets|1|4|forced|1000 e41329515000088d
+Large Planets|1|4|forced|12345 e0b13fafd2d0f54c
+Large Planets|1|4|forced|2 64953b6b81632cd0
+Large Planets|1|4|forced|2147483647 bc4d96fd7006ccce
+Large Planets|1|4|forced|3 5fdf3926a980eb6e
+Large Planets|1|4|teams|1 1e97d78dd231634f
+Large Planets|1|4|teams|1000 41f6398d8f0476b9
+Large Planets|1|4|teams|12345 cd80eaeadaaee0c0
+Large Planets|1|4|teams|2 d70a1e221638b750
+Large Planets|1|4|teams|2147483647 b8b695f7f0eebb06
+Large Planets|1|4|teams|3 46ee7a56a6213bc6
+Large Planets|2|2|ffa|1 ea8394d0d9af7ee5
+Large Planets|2|2|ffa|1000 04637ce9952e1a4c
+Large Planets|2|2|ffa|12345 88f72000a1d13ef3
+Large Planets|2|2|ffa|2 cc5a342d5b5e4575
+Large Planets|2|2|ffa|2147483647 59ea9ceaa6fa451c
+Large Planets|2|2|ffa|3 951548fb9d873e7e
+Large Planets|2|4|ffa|1 411cd1fc83c930af
+Large Planets|2|4|ffa|1000 4f81357f1c8645f3
+Large Planets|2|4|ffa|12345 f07a6b8f420536df
+Large Planets|2|4|ffa|2 e23393064e015516
+Large Planets|2|4|ffa|2147483647 e742c759395df341
+Large Planets|2|4|ffa|3 58e131486b4d7158
+Large Planets|2|4|teams|1 f51d8b131210cb03
+Large Planets|2|4|teams|1000 bd74b3bb4ba35a9a
+Large Planets|2|4|teams|12345 429efb7124b088b5
+Large Planets|2|4|teams|2 42fca6e4b8c3bba0
+Large Planets|2|4|teams|2147483647 68606692985ea128
+Large Planets|2|4|teams|3 2916ebd8fe791237
+Large Planets|2|6|ffa|1 d6997247eb285c88
+Large Planets|2|6|ffa|1000 f8611ae7e3e1d774
+Large Planets|2|6|ffa|12345 bcf27f6b41209881
+Large Planets|2|6|ffa|2 ab7dc1afb7b59d60
+Large Planets|2|6|ffa|2147483647 a8ec72f3692d5430
+Large Planets|2|6|ffa|3 af831f3e369d3090
+Large Planets|2|6|teams|1 42f1b8b8e1913847
+Large Planets|2|6|teams|1000 0e572faee54408cd
+Large Planets|2|6|teams|12345 2c95d5959b2cac63
+Large Planets|2|6|teams|2 a645f922cb4f8e57
+Large Planets|2|6|teams|2147483647 2e120b5f61627122
+Large Planets|2|6|teams|3 f881e021e4cac9cd
+Large Planets|3|2|ffa|1 48519dc4e3835f47
+Large Planets|3|2|ffa|1000 923ab16d28daffcd
+Large Planets|3|2|ffa|12345 e0ba8776c9e2eb4b
+Large Planets|3|2|ffa|2 2743c3a2c9f42e3d
+Large Planets|3|2|ffa|2147483647 60d30e3e8a69e53f
+Large Planets|3|2|ffa|3 cb1dc6c230caf249
+Large Planets|3|4|ffa|1 ed42043996f889bd
+Large Planets|3|4|ffa|1000 2399e9ebaf54fade
+Large Planets|3|4|ffa|12345 55e6521ded0a2e2c
+Large Planets|3|4|ffa|2 d39640b6feb2bfcb
+Large Planets|3|4|ffa|2147483647 9ee130fc4e706042
+Large Planets|3|4|ffa|3 667b117b758b6317
+Large Planets|3|4|teams|1 264f512e7253adf3
+Large Planets|3|4|teams|1000 927faf95ac43beb2
+Large Planets|3|4|teams|12345 3873fd286065503f
+Large Planets|3|4|teams|2 9d0970eaf646fe6b
+Large Planets|3|4|teams|2147483647 7e8edd9bb81e7f57
+Large Planets|3|4|teams|3 d69904d6ae2ec321
+Large Planets|3|8|ffa|1 32cd6b9f93bcc0c0
+Large Planets|3|8|ffa|1000 7fd3f92fe1f4476b
+Large Planets|3|8|ffa|12345 a72d48b6c4f6c3c7
+Large Planets|3|8|ffa|2 2136d18b7e4a296b
+Large Planets|3|8|ffa|2147483647 0ddb6ca47c4ae9d9
+Large Planets|3|8|ffa|3 5d4be140653b5175
+Large Planets|3|8|teams|1 5d3a60ba7535928e
+Large Planets|3|8|teams|1000 54e050171b8bb3d0
+Large Planets|3|8|teams|12345 84b5c165896946af
+Large Planets|3|8|teams|2 68e00e79d6c58884
+Large Planets|3|8|teams|2147483647 2745a0f5457e698f
+Large Planets|3|8|teams|3 3009d764fb666884
+Large Planets|4|2|ffa|1 a77664cb89eb9a1d
+Large Planets|4|2|ffa|1000 5b14d0367447c6ee
+Large Planets|4|2|ffa|12345 c87709eeb8727757
+Large Planets|4|2|ffa|2 1030c04da1fb2358
+Large Planets|4|2|ffa|2147483647 f71b4d1d25cae454
+Large Planets|4|2|ffa|3 c93b095c28f49e47
+Large Planets|4|4|ffa|1 0d531f9640029784
+Large Planets|4|4|ffa|1000 39490eff62825994
+Large Planets|4|4|ffa|12345 451235d618c36ba5
+Large Planets|4|4|ffa|2 88045c3cfc3c2578
+Large Planets|4|4|ffa|2147483647 549d08a0bea0bec3
+Large Planets|4|4|ffa|3 f17336d13932b9a4
+Large Planets|4|4|teams|1 a5be5c8d8bb41f36
+Large Planets|4|4|teams|1000 e50d4fdd126cd234
+Large Planets|4|4|teams|12345 02591b20664ca352
+Large Planets|4|4|teams|2 9f9c010a1e55b5a8
+Large Planets|4|4|teams|2147483647 00e8e1d2f0e0feb4
+Large Planets|4|4|teams|3 1904def47bc2032e
+Large Planets|4|8|ffa|1 4a3590f0da4ba6f8
+Large Planets|4|8|ffa|1000 671b06b1ba2aade4
+Large Planets|4|8|ffa|12345 6ab4cdd2c8805367
+Large Planets|4|8|ffa|2 b1fe1cd6d489d06c
+Large Planets|4|8|ffa|2147483647 baed729fd4b7e4db
+Large Planets|4|8|ffa|3 f49d7cfee042b523
+Large Planets|4|8|teams|1 fcbbba8341a90b45
+Large Planets|4|8|teams|1000 82fa4c6361786c06
+Large Planets|4|8|teams|12345 e2b3fcad79a21e03
+Large Planets|4|8|teams|2 3d0995b9f532dd78
+Large Planets|4|8|teams|2147483647 9911e7a4a69ee2c0
+Large Planets|4|8|teams|3 243a4421bf0ab0da
+Large Planets|5|2|ffa|1 94f52b1e5c87dc35
+Large Planets|5|2|ffa|1000 ff1ccc369cecbc75
+Large Planets|5|2|ffa|12345 daf53b372ada1526
+Large Planets|5|2|ffa|2 9549506b6b59fb89
+Large Planets|5|2|ffa|2147483647 f5cfe8fdbba1eefb
+Large Planets|5|2|ffa|3 a4be22f246485a23
+Large Planets|5|4|ffa|1 9cff1f766769d561
+Large Planets|5|4|ffa|1000 84d3d42724f7177f
+Large Planets|5|4|ffa|12345 5d86fdb456efa4af
+Large Planets|5|4|ffa|2 86051936076946be
+Large Planets|5|4|ffa|2147483647 36b9f9a672f7d585
+Large Planets|5|4|ffa|3 d5339dd03078fb62
+Large Planets|5|4|teams|1 7207e78392020698
+Large Planets|5|4|teams|1000 ae924ecd29f537c7
+Large Planets|5|4|teams|12345 fc6027b49a822bf1
+Large Planets|5|4|teams|2 e2e2f2447dd734ae
+Large Planets|5|4|teams|2147483647 13b22323eb94d618
+Large Planets|5|4|teams|3 14746781fefdb9c2
+Large Planets|5|8|ffa|1 da8417ed914b53e8
+Large Planets|5|8|ffa|1000 ed5f38da85a7e538
+Large Planets|5|8|ffa|12345 a2462287da46384e
+Large Planets|5|8|ffa|2 fae581b890c53308
+Large Planets|5|8|ffa|2147483647 42d36f1aa4d70514
+Large Planets|5|8|ffa|3 207ef881d7ebfb73
+Large Planets|5|8|teams|1 7b5216d9dcda5a0b
+Large Planets|5|8|teams|1000 892bdbb8b8611951
+Large Planets|5|8|teams|12345 e11c08f31ad2a62e
+Large Planets|5|8|teams|2 fa85fe95039fed23
+Large Planets|5|8|teams|2147483647 8062eb19accf238b
+Large Planets|5|8|teams|3 745452100eef90e1
+Mars|0|2|ffa|1 248bb5f4f109b933
+Mars|0|2|ffa|1000 d9fb464476926c81
+Mars|0|2|ffa|12345 33d2aae1920105db
+Mars|0|2|ffa|2 2280962e71c8da83
+Mars|0|2|ffa|2147483647 07ef0e5b85eb33b0
+Mars|0|2|ffa|3 27bd1a78c3922c31
+Mars|0|2|forced|1 b69c2e099cfaf2f8
+Mars|0|2|forced|1000 34634bb060ec7a58
+Mars|0|2|forced|12345 347bafd79b35f8e6
+Mars|0|2|forced|2 fe05b7d4ba693f8f
+Mars|0|2|forced|2147483647 9c45e8afe36f10fa
+Mars|0|2|forced|3 b256cfd4e3873e2a
+Mars|0|3|ffa|1 7c2b04791217c75f
+Mars|0|3|ffa|1000 044be903461cedda
+Mars|0|3|ffa|12345 b5ce1ed0857f5903
+Mars|0|3|ffa|2 20a07856f6a4a116
+Mars|0|3|ffa|2147483647 250d3f833a1c6815
+Mars|0|3|ffa|3 0d37e48977196973
+Mars|0|3|forced|1 3c56c443c11c667a
+Mars|0|3|forced|1000 f2492880f3f1cf59
+Mars|0|3|forced|12345 9b7c81d30a3ca326
+Mars|0|3|forced|2 4aff2cdfd9e16935
+Mars|0|3|forced|2147483647 97cf8f1284987c19
+Mars|0|3|forced|3 0768612c9ba92120
+Mars|1|2|ffa|1 ad7b9e39fe2a473f
+Mars|1|2|ffa|1000 e8aeff8b491da569
+Mars|1|2|ffa|12345 d10800eced362ac1
+Mars|1|2|ffa|2 6a35ef9ca79658e1
+Mars|1|2|ffa|2147483647 0fadc15791f856f9
+Mars|1|2|ffa|3 3bbc3f1d99cca7db
+Mars|1|2|forced|1 d17fbcc32c7b3fd7
+Mars|1|2|forced|1000 10c134c8d5b1080f
+Mars|1|2|forced|12345 d14f532912ff375f
+Mars|1|2|forced|2 5471a583502cb15a
+Mars|1|2|forced|2147483647 eccca8ae93980aef
+Mars|1|2|forced|3 7d873cac06e28e14
+Mars|1|4|ffa|1 d125929ee74edd12
+Mars|1|4|ffa|1000 eceb1abfa45b3bdb
+Mars|1|4|ffa|12345 b98643256ecfa7f5
+Mars|1|4|ffa|2 8a8137f6e1db2560
+Mars|1|4|ffa|2147483647 d0ca3ebb7f5f7d9e
+Mars|1|4|ffa|3 12bfc30291b61037
+Mars|1|4|forced|1 a5f9d14f71d43f69
+Mars|1|4|forced|1000 fe0fb0571a5a585a
+Mars|1|4|forced|12345 8a55dedfe614e06a
+Mars|1|4|forced|2 a02b5eafe3881515
+Mars|1|4|forced|2147483647 c4ad7bc84fdbdcee
+Mars|1|4|forced|3 91c2dfe1c4cb8851
+Mars|1|4|teams|1 90589c8cb9654822
+Mars|1|4|teams|1000 cd39b14fee5c8f2f
+Mars|1|4|teams|12345 3e64a9b792710c11
+Mars|1|4|teams|2 1523fd0c9931997c
+Mars|1|4|teams|2147483647 fde8700fefdd77b3
+Mars|1|4|teams|3 d03e30c8b2675f7f
+Mars|2|2|ffa|1 63215f32b888c782
+Mars|2|2|ffa|1000 6f79f0c6e96f7167
+Mars|2|2|ffa|12345 e80bd66942f0cd11
+Mars|2|2|ffa|2 ce437ce81088f1fe
+Mars|2|2|ffa|2147483647 3c085a9cfe301002
+Mars|2|2|ffa|3 fc4d098edae284a5
+Mars|2|4|ffa|1 acf1bf9917146cbd
+Mars|2|4|ffa|1000 12e00f1caa262054
+Mars|2|4|ffa|12345 2e3a56d41014f2eb
+Mars|2|4|ffa|2 0d9c6d8c49bc4fb1
+Mars|2|4|ffa|2147483647 95eed6669ee8c677
+Mars|2|4|ffa|3 12dddcb585a20aa8
+Mars|2|4|teams|1 14138d1b1a41d8a7
+Mars|2|4|teams|1000 2c9b2e9e0a53aee8
+Mars|2|4|teams|12345 cbc59d5f8f36a007
+Mars|2|4|teams|2 4d036ed8290e18b5
+Mars|2|4|teams|2147483647 f9b678fe0d111715
+Mars|2|4|teams|3 efee826f40505b68
+Mars|2|6|ffa|1 a471ebcf49f143e0
+Mars|2|6|ffa|1000 fb2af607090733c2
+Mars|2|6|ffa|12345 d34e0526d1bb2a94
+Mars|2|6|ffa|2 d3bf759249a65274
+Mars|2|6|ffa|2147483647 5f8158cc0fdbb098
+Mars|2|6|ffa|3 60eda3227f86fe2f
+Mars|2|6|teams|1 70a4ad2159c8f003
+Mars|2|6|teams|1000 f34b0f8e23589735
+Mars|2|6|teams|12345 3610356d3d375a4d
+Mars|2|6|teams|2 5d992a1cc6f9e3bc
+Mars|2|6|teams|2147483647 1d18e54e4e589b93
+Mars|2|6|teams|3 18c06273f533a2dc
+Mars|3|2|ffa|1 83a9e1d46fac5815
+Mars|3|2|ffa|1000 4afd75abeff3c01a
+Mars|3|2|ffa|12345 e200e051b5ff0054
+Mars|3|2|ffa|2 086609177c196600
+Mars|3|2|ffa|2147483647 677920e3c2394e1b
+Mars|3|2|ffa|3 c796093ca0aea625
+Mars|3|4|ffa|1 c6f3aad3e837515b
+Mars|3|4|ffa|1000 5f5693da892f5b00
+Mars|3|4|ffa|12345 16123c5d12161bd6
+Mars|3|4|ffa|2 e1bc31ebdedd12bd
+Mars|3|4|ffa|2147483647 af059581d92cf096
+Mars|3|4|ffa|3 933cb49d6acf6a5b
+Mars|3|4|teams|1 2404fb7c0bd3acc4
+Mars|3|4|teams|1000 cafc32f62b37fc16
+Mars|3|4|teams|12345 bcec5bc131c1e80d
+Mars|3|4|teams|2 3852444177b6a461
+Mars|3|4|teams|2147483647 50fba06004edca0b
+Mars|3|4|teams|3 bc5b8ec5572955c9
+Mars|3|8|ffa|1 af81f95c7676a606
+Mars|3|8|ffa|1000 22e49fc1e56e31dd
+Mars|3|8|ffa|12345 d273c1974996c022
+Mars|3|8|ffa|2 c3e918fb2b520047
+Mars|3|8|ffa|2147483647 da700301cd0d975d
+Mars|3|8|ffa|3 f4ec0f09ffd61c06
+Mars|3|8|teams|1 717d5b259912dddb
+Mars|3|8|teams|1000 7f44827c6145a6a8
+Mars|3|8|teams|12345 4e31dbd15e3df0d4
+Mars|3|8|teams|2 6a051fc304e4ce49
+Mars|3|8|teams|2147483647 20a90373e30cdd65
+Mars|3|8|teams|3 7fc328f381296631
+Mars|4|2|ffa|1 c6f92aa979214f36
+Mars|4|2|ffa|1000 a83c5f93fbc15cf8
+Mars|4|2|ffa|12345 7ba318ffe7ff2d84
+Mars|4|2|ffa|2 89ac39b005c66518
+Mars|4|2|ffa|2147483647 28035776613505cf
+Mars|4|2|ffa|3 27d7a2dc70e482dd
+Mars|4|4|ffa|1 095981eb75f36efc
+Mars|4|4|ffa|1000 2f8ff9d013ba9aae
+Mars|4|4|ffa|12345 7a67cdd8e8967ce8
+Mars|4|4|ffa|2 e60ea0bdbbcef31e
+Mars|4|4|ffa|2147483647 1cd4b6ca6a5cfa22
+Mars|4|4|ffa|3 295fd6fae119c50a
+Mars|4|4|teams|1 ca7bac5764ed7665
+Mars|4|4|teams|1000 3cddf72600ce0142
+Mars|4|4|teams|12345 e12857eb8f7f8ae4
+Mars|4|4|teams|2 1c497a59203b18bc
+Mars|4|4|teams|2147483647 298655884cb842e5
+Mars|4|4|teams|3 52576e7960ac46e4
+Mars|4|8|ffa|1 4c57329c22441200
+Mars|4|8|ffa|1000 6c331560dd990523
+Mars|4|8|ffa|12345 d8c91c4c852364b8
+Mars|4|8|ffa|2 514753c3eb4bedeb
+Mars|4|8|ffa|2147483647 7c19cdc494d02ffa
+Mars|4|8|ffa|3 40c56a1d3511ba5a
+Mars|4|8|teams|1 97c6c191c08bea93
+Mars|4|8|teams|1000 4332ba8beec75038
+Mars|4|8|teams|12345 73280a0bb48dc07b
+Mars|4|8|teams|2 6496d03156ea270e
+Mars|4|8|teams|2147483647 55167d4dbfa235bb
+Mars|4|8|teams|3 1116a486f7a6a972
+Mars|5|2|ffa|1 1000c6521f0f67c6
+Mars|5|2|ffa|1000 b07c73b3538cd6ec
+Mars|5|2|ffa|12345 c1ae2290e8d57de8
+Mars|5|2|ffa|2 5a7dda3e2a8ee017
+Mars|5|2|ffa|2147483647 a4bfd2c21907dcdf
+Mars|5|2|ffa|3 c237fcd2f4e26597
+Mars|5|4|ffa|1 81fb211e2feed362
+Mars|5|4|ffa|1000 8e72cae40312ddf3
+Mars|5|4|ffa|12345 a63bbf8df976f831
+Mars|5|4|ffa|2 61903b410a39ec93
+Mars|5|4|ffa|2147483647 6be37fae5a95fa46
+Mars|5|4|ffa|3 b6d935837779767c
+Mars|5|4|teams|1 6ff2807d8a0dd83e
+Mars|5|4|teams|1000 d540bcf1e9be0afb
+Mars|5|4|teams|12345 8cd3b1ae2b896f09
+Mars|5|4|teams|2 dcd07b6018be75a9
+Mars|5|4|teams|2147483647 84b27f7d94978fec
+Mars|5|4|teams|3 7611254eb548ae5d
+Mars|5|8|ffa|1 6066f3072e085e5d
+Mars|5|8|ffa|1000 15d8a595d83f008f
+Mars|5|8|ffa|12345 787311772cfdde95
+Mars|5|8|ffa|2 361eaaff238fc709
+Mars|5|8|ffa|2147483647 002e88b508e2ec9f
+Mars|5|8|ffa|3 7cf2694c2854db87
+Mars|5|8|teams|1 05dd802e17c9797f
+Mars|5|8|teams|1000 8cf2aac9d067609c
+Mars|5|8|teams|12345 03c282dee1210fe1
+Mars|5|8|teams|2 01453e696f0734c1
+Mars|5|8|teams|2147483647 48c556152163a523
+Mars|5|8|teams|3 0bcfd2998a0ff91a
+Mediterranean|0|2|ffa|1 e107c35c6a3f6246
+Mediterranean|0|2|ffa|1000 8a8956797d1938b6
+Mediterranean|0|2|ffa|12345 94d5ac9c80996c72
+Mediterranean|0|2|ffa|2 2771a0a6aad7f653
+Mediterranean|0|2|ffa|2147483647 c1f1f98bc7769e51
+Mediterranean|0|2|ffa|3 62c5081e8e13f93b
+Mediterranean|0|2|forced|1 e6c41370f1231a9c
+Mediterranean|0|2|forced|1000 6518f059f822fa3e
+Mediterranean|0|2|forced|12345 10604b4f8fff50be
+Mediterranean|0|2|forced|2 3b9d013e8c0ffe01
+Mediterranean|0|2|forced|2147483647 96b77d27c6947aa6
+Mediterranean|0|2|forced|3 3bbca92aff2daed1
+Mediterranean|0|3|ffa|1 c8a2fb53dacb6db0
+Mediterranean|0|3|ffa|1000 3142792ba532a0cd
+Mediterranean|0|3|ffa|12345 9993a6a90992ff5c
+Mediterranean|0|3|ffa|2 5b883f61f1e7d745
+Mediterranean|0|3|ffa|2147483647 5b17101439f23554
+Mediterranean|0|3|ffa|3 42b8b3a480e7dcc4
+Mediterranean|0|3|forced|1 6beb6bdbbe45da89
+Mediterranean|0|3|forced|1000 e2d8e4f009558b05
+Mediterranean|0|3|forced|12345 e84b5e3fc77e4dd6
+Mediterranean|0|3|forced|2 eae4fdf93ec03f30
+Mediterranean|0|3|forced|2147483647 2342cd4b4348f615
+Mediterranean|0|3|forced|3 f9b3fb6c437bc2c5
+Mediterranean|1|2|ffa|1 9b4218ef2b9cd317
+Mediterranean|1|2|ffa|1000 4b4096439b6284d5
+Mediterranean|1|2|ffa|12345 a376673dfcf1a36b
+Mediterranean|1|2|ffa|2 401782a757445758
+Mediterranean|1|2|ffa|2147483647 e55bb4842398c62f
+Mediterranean|1|2|ffa|3 7e359a089a4e23a1
+Mediterranean|1|2|forced|1 ca2221fea0be2022
+Mediterranean|1|2|forced|1000 ab754140d837bc18
+Mediterranean|1|2|forced|12345 ca420407d7dd6249
+Mediterranean|1|2|forced|2 68c8460a51c1bc10
+Mediterranean|1|2|forced|2147483647 b8ccf8eb0994c93e
+Mediterranean|1|2|forced|3 7cbf6d99e2baeee7
+Mediterranean|1|4|ffa|1 de68d94d628ca474
+Mediterranean|1|4|ffa|1000 a4654eef0e27d523
+Mediterranean|1|4|ffa|12345 390728c00d8171c5
+Mediterranean|1|4|ffa|2 f2a36abd9d65e6d2
+Mediterranean|1|4|ffa|2147483647 de7bb661e9df378c
+Mediterranean|1|4|ffa|3 344cf6fcc4d8dc85
+Mediterranean|1|4|forced|1 989e2772338b5fea
+Mediterranean|1|4|forced|1000 5e85ac655ea4b548
+Mediterranean|1|4|forced|12345 7bd3fd478d0385d1
+Mediterranean|1|4|forced|2 e51c462b26b67502
+Mediterranean|1|4|forced|2147483647 a66ae2ac7c36f9ea
+Mediterranean|1|4|forced|3 30fa9f60f616df2c
+Mediterranean|1|4|teams|1 122272792d568ea8
+Mediterranean|1|4|teams|1000 13b81ae652e47fd7
+Mediterranean|1|4|teams|12345 1e79e9903ed1e240
+Mediterranean|1|4|teams|2 c74426bf58e8cf96
+Mediterranean|1|4|teams|2147483647 09eb9dd9cf90aff0
+Mediterranean|1|4|teams|3 e8d2099da04a9bbe
+Mediterranean|2|2|ffa|1 a81f3769ec72be52
+Mediterranean|2|2|ffa|1000 fa69a025d0df9de4
+Mediterranean|2|2|ffa|12345 2c8fd5a4d09f77da
+Mediterranean|2|2|ffa|2 0e279e2294040dec
+Mediterranean|2|2|ffa|2147483647 18b0f807d947399c
+Mediterranean|2|2|ffa|3 d60311445e3647b3
+Mediterranean|2|4|ffa|1 c37cb8050f969250
+Mediterranean|2|4|ffa|1000 29002bc9b836ad17
+Mediterranean|2|4|ffa|12345 52c996311e2b9376
+Mediterranean|2|4|ffa|2 47f4e1e9b34c8f08
+Mediterranean|2|4|ffa|2147483647 ac335903fe4fe9c4
+Mediterranean|2|4|ffa|3 cb817ca485be194d
+Mediterranean|2|4|teams|1 2f83c270dead03f3
+Mediterranean|2|4|teams|1000 956f2b5548785fe2
+Mediterranean|2|4|teams|12345 aa265d073c1e9017
+Mediterranean|2|4|teams|2 a32f19a00ba38038
+Mediterranean|2|4|teams|2147483647 0ed1b465443ab5d9
+Mediterranean|2|4|teams|3 c1682f22a600e1bf
+Mediterranean|2|6|ffa|1 475bd7908189b6a7
+Mediterranean|2|6|ffa|1000 a6feb4d308c1b2cc
+Mediterranean|2|6|ffa|12345 690b5bb7c3babc32
+Mediterranean|2|6|ffa|2 a430d45c8b754d3e
+Mediterranean|2|6|ffa|2147483647 3fa0a26394d71878
+Mediterranean|2|6|ffa|3 fdce00a4e0d1e978
+Mediterranean|2|6|teams|1 98f2267830ce9622
+Mediterranean|2|6|teams|1000 54779f53d0048859
+Mediterranean|2|6|teams|12345 c9fcd929435f1963
+Mediterranean|2|6|teams|2 0404d02a26275c38
+Mediterranean|2|6|teams|2147483647 ad3d111d977fdad9
+Mediterranean|2|6|teams|3 a5565b5ea35d7b86
+Mediterranean|3|2|ffa|1 41203a3e6c0d5428
+Mediterranean|3|2|ffa|1000 b512c98589d21cee
+Mediterranean|3|2|ffa|12345 7f81aa77c5cd53c3
+Mediterranean|3|2|ffa|2 b0c9e216f7a460c4
+Mediterranean|3|2|ffa|2147483647 88b4fa351572783b
+Mediterranean|3|2|ffa|3 3fb7c137dcf7b3ee
+Mediterranean|3|4|ffa|1 dbc89608f5c7cc1e
+Mediterranean|3|4|ffa|1000 acd904dc7c209d76
+Mediterranean|3|4|ffa|12345 7915979fc9330fc6
+Mediterranean|3|4|ffa|2 fed7e381491cf59a
+Mediterranean|3|4|ffa|2147483647 f572179ddc10a9c4
+Mediterranean|3|4|ffa|3 0df6d2a74e88aa2a
+Mediterranean|3|4|teams|1 05a805791d44ea7c
+Mediterranean|3|4|teams|1000 6c9818486358ef84
+Mediterranean|3|4|teams|12345 b2c74f1cbd399534
+Mediterranean|3|4|teams|2 e4aa9ef6b01c3f78
+Mediterranean|3|4|teams|2147483647 41e4d4514abded78
+Mediterranean|3|4|teams|3 9531cd4b9ab279b4
+Mediterranean|3|8|ffa|1 039fa43172c71d92
+Mediterranean|3|8|ffa|1000 70cbec347eb9031a
+Mediterranean|3|8|ffa|12345 7f72141dd8538297
+Mediterranean|3|8|ffa|2 9d81b00c1d54f85c
+Mediterranean|3|8|ffa|2147483647 eaf1077642cf9400
+Mediterranean|3|8|ffa|3 2ad5f8eba5fdb7ab
+Mediterranean|3|8|teams|1 4014236ce57903d2
+Mediterranean|3|8|teams|1000 992d3efe00fa18c3
+Mediterranean|3|8|teams|12345 95919d1a232aaef8
+Mediterranean|3|8|teams|2 3c7a82b1ac6340fe
+Mediterranean|3|8|teams|2147483647 04ac0ba2e8d1bfda
+Mediterranean|3|8|teams|3 de2fd80e6ebd7a5d
+Mediterranean|4|2|ffa|1 2d75235d04be0ee6
+Mediterranean|4|2|ffa|1000 ce0a462170a4dee8
+Mediterranean|4|2|ffa|12345 a1f43dd0a6e4edce
+Mediterranean|4|2|ffa|2 c95bace9590cbde3
+Mediterranean|4|2|ffa|2147483647 faa647e69acca92a
+Mediterranean|4|2|ffa|3 d1af9608370d7080
+Mediterranean|4|4|ffa|1 fc35f96611ee105c
+Mediterranean|4|4|ffa|1000 a48728f60aa1b7d2
+Mediterranean|4|4|ffa|12345 5ae06ff5d095de96
+Mediterranean|4|4|ffa|2 a4bbebeb0fe66574
+Mediterranean|4|4|ffa|2147483647 35db5c250d2d50bc
+Mediterranean|4|4|ffa|3 6f264d47908c8f87
+Mediterranean|4|4|teams|1 c653841c5a01f8ae
+Mediterranean|4|4|teams|1000 5d0a374959701026
+Mediterranean|4|4|teams|12345 2893bfff680dd336
+Mediterranean|4|4|teams|2 c74530ae47d0b025
+Mediterranean|4|4|teams|2147483647 a4244cfcc07c7b29
+Mediterranean|4|4|teams|3 be665313aeb37e64
+Mediterranean|4|8|ffa|1 85f0181dc098d3e3
+Mediterranean|4|8|ffa|1000 59597c5eaa23c8a9
+Mediterranean|4|8|ffa|12345 7ebdccda677199b1
+Mediterranean|4|8|ffa|2 adb926910c29869e
+Mediterranean|4|8|ffa|2147483647 0eab683cc53cdb6a
+Mediterranean|4|8|ffa|3 8288003fc2481987
+Mediterranean|4|8|teams|1 55dfea54f45daa67
+Mediterranean|4|8|teams|1000 935b2d627420c74a
+Mediterranean|4|8|teams|12345 a3fdcb8118530a08
+Mediterranean|4|8|teams|2 532944b03c2a907c
+Mediterranean|4|8|teams|2147483647 4088bb432fd700e4
+Mediterranean|4|8|teams|3 5e7e573bae9a4bf8
+Mediterranean|5|2|ffa|1 a984203156bdc2e5
+Mediterranean|5|2|ffa|1000 746326aab9640734
+Mediterranean|5|2|ffa|12345 3860f57fe7eb6f57
+Mediterranean|5|2|ffa|2 8574a1c5d72867e6
+Mediterranean|5|2|ffa|2147483647 294da0402b31ea71
+Mediterranean|5|2|ffa|3 20d899ab07696720
+Mediterranean|5|4|ffa|1 4bbcde1215b017ea
+Mediterranean|5|4|ffa|1000 abb6849655809e5b
+Mediterranean|5|4|ffa|12345 9f000c5f63ec08e6
+Mediterranean|5|4|ffa|2 910aaa6b1964e64a
+Mediterranean|5|4|ffa|2147483647 2e5bd6a3bae41520
+Mediterranean|5|4|ffa|3 b450718c044c07de
+Mediterranean|5|4|teams|1 39243d21f6a129b2
+Mediterranean|5|4|teams|1000 8cbc7293a9b2890b
+Mediterranean|5|4|teams|12345 a9ce899f427fe7d9
+Mediterranean|5|4|teams|2 dfbb0bb3733de8a2
+Mediterranean|5|4|teams|2147483647 e6f123b2b7579cc0
+Mediterranean|5|4|teams|3 383be12beab7de74
+Mediterranean|5|8|ffa|1 d6c5e2649891cb16
+Mediterranean|5|8|ffa|1000 0ababdfe389bfc6a
+Mediterranean|5|8|ffa|12345 4df29601c148af55
+Mediterranean|5|8|ffa|2 939e4eaffb68a457
+Mediterranean|5|8|ffa|2147483647 48ec2899d44e00a1
+Mediterranean|5|8|ffa|3 e7e15da398acb3c0
+Mediterranean|5|8|teams|1 273e3ae9b3bb8afb
+Mediterranean|5|8|teams|1000 008a334c91df0ed5
+Mediterranean|5|8|teams|12345 f9c027e74991081d
+Mediterranean|5|8|teams|2 3e76e6749eec86a3
+Mediterranean|5|8|teams|2147483647 7d7f61ad2702af5e
+Mediterranean|5|8|teams|3 599165f6dfbf47ba
+Plains|0|2|ffa|1 3707533b99d00042
+Plains|0|2|ffa|1000 6e550bfb962afef0
+Plains|0|2|ffa|12345 8b7f40c739410e49
+Plains|0|2|ffa|2 6eabbbbd3dd7b35e
+Plains|0|2|ffa|2147483647 16069d5027bbb9a9
+Plains|0|2|ffa|3 9a8cf69ae310aaa5
+Plains|0|2|forced|1 3d77a8cf14a08b4c
+Plains|0|2|forced|1000 446df680d520031d
+Plains|0|2|forced|12345 1e1666345aeb03d3
+Plains|0|2|forced|2 3a7c4e6b09ff73d4
+Plains|0|2|forced|2147483647 528b05b0eee0d31a
+Plains|0|2|forced|3 8845bf9680eee40a
+Plains|0|3|ffa|1 40e750d34c299649
+Plains|0|3|ffa|1000 f7ba5a19a05bc2dd
+Plains|0|3|ffa|12345 90c9b7edb6fb0bc2
+Plains|0|3|ffa|2 d5a79517136472a5
+Plains|0|3|ffa|2147483647 bab4164256e8a166
+Plains|0|3|ffa|3 2a6da60f77643a62
+Plains|0|3|forced|1 cbe3b2774cd552dd
+Plains|0|3|forced|1000 5dad885818e157c4
+Plains|0|3|forced|12345 a330f6bf55ac6863
+Plains|0|3|forced|2 4ffe45fd6e416a7a
+Plains|0|3|forced|2147483647 2730fd96c0c54cfb
+Plains|0|3|forced|3 f5a4003e9185fb51
+Plains|1|2|ffa|1 95325af986afdff0
+Plains|1|2|ffa|1000 00fe5ad94b596263
+Plains|1|2|ffa|12345 a529dd77e97f60e7
+Plains|1|2|ffa|2 a1fb3903fc2257e3
+Plains|1|2|ffa|2147483647 351b62020925e4a7
+Plains|1|2|ffa|3 e1797cfefb4067c7
+Plains|1|2|forced|1 80350b8f962d5b30
+Plains|1|2|forced|1000 c6a8637aa1991b59
+Plains|1|2|forced|12345 3069c5414ca92d06
+Plains|1|2|forced|2 7349afc23cfa0d21
+Plains|1|2|forced|2147483647 0c81316c8bcea738
+Plains|1|2|forced|3 247e666da7f1f6fa
+Plains|1|4|ffa|1 32767960731292f9
+Plains|1|4|ffa|1000 0fc2825786f066ce
+Plains|1|4|ffa|12345 18ad6ff1fa7effa4
+Plains|1|4|ffa|2 0a4b7ca4bb255818
+Plains|1|4|ffa|2147483647 4d4c3d7820ef881a
+Plains|1|4|ffa|3 f5b257d0ea2f72b2
+Plains|1|4|forced|1 5b0e074ad6cce01c
+Plains|1|4|forced|1000 f54cfe2d2c638026
+Plains|1|4|forced|12345 eb00299e89e774ce
+Plains|1|4|forced|2 31261c3d69d759f5
+Plains|1|4|forced|2147483647 8f4233246ba6948f
+Plains|1|4|forced|3 90c746a8abd28980
+Plains|1|4|teams|1 ce0a10a8a4a5c9d0
+Plains|1|4|teams|1000 fa8a30d710330b7c
+Plains|1|4|teams|12345 23ac49b5c5c7a8d4
+Plains|1|4|teams|2 3aeef7c28c36fb9e
+Plains|1|4|teams|2147483647 9dcbf40273354ef3
+Plains|1|4|teams|3 f54d27bcaadf265b
+Plains|2|2|ffa|1 aa894aedbe6f9ba9
+Plains|2|2|ffa|1000 b2a2db8d1c2adc85
+Plains|2|2|ffa|12345 721e351a34bbfa8c
+Plains|2|2|ffa|2 cf96341919ce591e
+Plains|2|2|ffa|2147483647 585ef35aeb747086
+Plains|2|2|ffa|3 0a1b3f3d19208740
+Plains|2|4|ffa|1 d726ef66c490b6eb
+Plains|2|4|ffa|1000 094b681543dc3387
+Plains|2|4|ffa|12345 40818355932a1edd
+Plains|2|4|ffa|2 854b839c3df1cc97
+Plains|2|4|ffa|2147483647 ad650517a2dac47e
+Plains|2|4|ffa|3 35daf1dadbc14ddc
+Plains|2|4|teams|1 782f83ced833d2bc
+Plains|2|4|teams|1000 c065b47ee441a756
+Plains|2|4|teams|12345 c85fbf9f1a3cbc0e
+Plains|2|4|teams|2 efc462784913c9f5
+Plains|2|4|teams|2147483647 626d75b50205743a
+Plains|2|4|teams|3 f3f601fcbdc5b4ba
+Plains|2|6|ffa|1 596e198b45e0cdf8
+Plains|2|6|ffa|1000 2ea1750ceeb5f559
+Plains|2|6|ffa|12345 d8d5063ca4d5a637
+Plains|2|6|ffa|2 970c56f54689bb48
+Plains|2|6|ffa|2147483647 80cbc7f536de14ab
+Plains|2|6|ffa|3 dcf6c4a98393e334
+Plains|2|6|teams|1 0519d5dacda0765c
+Plains|2|6|teams|1000 d52be502e7367733
+Plains|2|6|teams|12345 b29109a540f20089
+Plains|2|6|teams|2 3a061cecce26df02
+Plains|2|6|teams|2147483647 e4ea6e3d1f4bc79b
+Plains|2|6|teams|3 1a6ade48a09767b4
+Plains|3|2|ffa|1 b71e4fb2e8574749
+Plains|3|2|ffa|1000 30f93d02d616b2ed
+Plains|3|2|ffa|12345 b4d447903c1452a4
+Plains|3|2|ffa|2 fda70c637322b637
+Plains|3|2|ffa|2147483647 b6906025e24c27ac
+Plains|3|2|ffa|3 ab23f7cb716981c9
+Plains|3|4|ffa|1 ece21d48ea287097
+Plains|3|4|ffa|1000 7f7053d563f6c663
+Plains|3|4|ffa|12345 57cbc08c6097cb6e
+Plains|3|4|ffa|2 07c741b4287ae119
+Plains|3|4|ffa|2147483647 ba0fd38f489f1153
+Plains|3|4|ffa|3 95802edb7f203161
+Plains|3|4|teams|1 0aa9e8524ca75c9f
+Plains|3|4|teams|1000 03cd79ad463e4b31
+Plains|3|4|teams|12345 a426fbda5d2933c5
+Plains|3|4|teams|2 e51b19d6f1080d3d
+Plains|3|4|teams|2147483647 d6c57266303ca707
+Plains|3|4|teams|3 9ddc625b7c0b2016
+Plains|3|8|ffa|1 c9d025855e750872
+Plains|3|8|ffa|1000 034f403561f17043
+Plains|3|8|ffa|12345 a2ef5116743c9d08
+Plains|3|8|ffa|2 709f94fb95b1be6c
+Plains|3|8|ffa|2147483647 7db7b9f394367b12
+Plains|3|8|ffa|3 58c1cb605a9c7502
+Plains|3|8|teams|1 c3a5439ea6390ea9
+Plains|3|8|teams|1000 701de90609a8b0e5
+Plains|3|8|teams|12345 1e70d9746e3bed28
+Plains|3|8|teams|2 bcd97376a4702c2d
+Plains|3|8|teams|2147483647 cb1db78b2772aab5
+Plains|3|8|teams|3 e10f5432653c6186
+Plains|4|2|ffa|1 15f0af7e2110f546
+Plains|4|2|ffa|1000 564bc50472aa9f35
+Plains|4|2|ffa|12345 3a795740c92cb2b3
+Plains|4|2|ffa|2 901067c6cbfe2d84
+Plains|4|2|ffa|2147483647 be592c4944a676c5
+Plains|4|2|ffa|3 d090da0b118cefc2
+Plains|4|4|ffa|1 45bc4bbed732e5f0
+Plains|4|4|ffa|1000 7cca5058336f1a03
+Plains|4|4|ffa|12345 18a9065e6bfee661
+Plains|4|4|ffa|2 5f612963fa085604
+Plains|4|4|ffa|2147483647 7ed87fe8b0b222f3
+Plains|4|4|ffa|3 7229a7a6c422670f
+Plains|4|4|teams|1 c19b1b85e5275b97
+Plains|4|4|teams|1000 63f899e2d1d0fc5d
+Plains|4|4|teams|12345 27ee5e9bf2c4ffe7
+Plains|4|4|teams|2 cf421d11ac83a647
+Plains|4|4|teams|2147483647 7749c908af3275d7
+Plains|4|4|teams|3 2147e0576e8c258b
+Plains|4|8|ffa|1 39e80891334a2fb8
+Plains|4|8|ffa|1000 08dbacaff7451380
+Plains|4|8|ffa|12345 c7c35dc7c6878287
+Plains|4|8|ffa|2 6745149a025501f1
+Plains|4|8|ffa|2147483647 a9a44d9eb7baa498
+Plains|4|8|ffa|3 c37aea5c1d75f244
+Plains|4|8|teams|1 06277cf8276d9f4e
+Plains|4|8|teams|1000 9e5286d155938343
+Plains|4|8|teams|12345 53990ea1b4028e64
+Plains|4|8|teams|2 6129dd01f955624e
+Plains|4|8|teams|2147483647 ba39aadae2d36c4d
+Plains|4|8|teams|3 553032c3518ff42f
+Plains|5|2|ffa|1 012f4df64a3f98fa
+Plains|5|2|ffa|1000 310f43a749791d44
+Plains|5|2|ffa|12345 717c242f06aeb8e0
+Plains|5|2|ffa|2 5d5908083c0da1e8
+Plains|5|2|ffa|2147483647 2b2fa0bef2d16838
+Plains|5|2|ffa|3 30ad5980f801b033
+Plains|5|4|ffa|1 30e3301d4331fedc
+Plains|5|4|ffa|1000 8a488037d20b0dd7
+Plains|5|4|ffa|12345 f2a8ccf3d6bd255d
+Plains|5|4|ffa|2 9b89501cdb5d23e3
+Plains|5|4|ffa|2147483647 6c1739d8f5872b97
+Plains|5|4|ffa|3 2667dfcde2ac7b38
+Plains|5|4|teams|1 f235b4cfce05af79
+Plains|5|4|teams|1000 18428593b9cf8e09
+Plains|5|4|teams|12345 48b3f3a5fd12f288
+Plains|5|4|teams|2 0429f13cb4df6344
+Plains|5|4|teams|2147483647 d4fb014cba7f63cc
+Plains|5|4|teams|3 47700717df66d2ba
+Plains|5|8|ffa|1 1f85f69638060575
+Plains|5|8|ffa|1000 61fc2468dae2ea0f
+Plains|5|8|ffa|12345 d7bfe4bdce892b89
+Plains|5|8|ffa|2 e74754235a546b7c
+Plains|5|8|ffa|2147483647 7a5d474f210ea52c
+Plains|5|8|ffa|3 b975c707a3b5d05b
+Plains|5|8|teams|1 6fc3d9008bd448e2
+Plains|5|8|teams|1000 cb86131c02bd688e
+Plains|5|8|teams|12345 f5afd6f3675c34b5
+Plains|5|8|teams|2 7edd40819ecaabb1
+Plains|5|8|teams|2147483647 5ee6fd42eea9823e
+Plains|5|8|teams|3 588b9163675140af
+Small Islands|0|2|ffa|1 34703f41d208c2ac
+Small Islands|0|2|ffa|1000 9ee7c8cad4e79b26
+Small Islands|0|2|ffa|12345 e038fc2788f725c7
+Small Islands|0|2|ffa|2 241e8d82e6f13981
+Small Islands|0|2|ffa|2147483647 cda2c211f7eef2ba
+Small Islands|0|2|ffa|3 a295117207b5d391
+Small Islands|0|2|forced|1 2363308155160920
+Small Islands|0|2|forced|1000 236e87c1b67a7d99
+Small Islands|0|2|forced|12345 c6b9578bb9fd02e5
+Small Islands|0|2|forced|2 90e8513814633f2f
+Small Islands|0|2|forced|2147483647 cbc2ffd17adf0541
+Small Islands|0|2|forced|3 4989b1d9fd807a7a
+Small Islands|0|3|ffa|1 af29f6f8c6aecc8d
+Small Islands|0|3|ffa|1000 61d42dd97d1bce57
+Small Islands|0|3|ffa|12345 637a90cd5bd4e166
+Small Islands|0|3|ffa|2 8c897811dc5b6845
+Small Islands|0|3|ffa|2147483647 5cde252dd63df31a
+Small Islands|0|3|ffa|3 e4373269ffc86866
+Small Islands|0|3|forced|1 71405e7d61c925bd
+Small Islands|0|3|forced|1000 50498a337f4c5be0
+Small Islands|0|3|forced|12345 2f5fbdb039e0b2cb
+Small Islands|0|3|forced|2 267e33ad695eacfd
+Small Islands|0|3|forced|2147483647 d4418ebf448fe1e7
+Small Islands|0|3|forced|3 1e4cc885222ae2ec
+Small Islands|1|2|ffa|1 f4c49d0a8dc0763a
+Small Islands|1|2|ffa|1000 f4bc890d77394899
+Small Islands|1|2|ffa|12345 b4ff0093d4e82d67
+Small Islands|1|2|ffa|2 a83cc55a69f8553e
+Small Islands|1|2|ffa|2147483647 dd6b7717a9665b64
+Small Islands|1|2|ffa|3 9f22e3223c7895ff
+Small Islands|1|2|forced|1 127854575cdbbff5
+Small Islands|1|2|forced|1000 42380f5e5d65398c
+Small Islands|1|2|forced|12345 512f59068f2e1dbc
+Small Islands|1|2|forced|2 5be72e3ec56b11be
+Small Islands|1|2|forced|2147483647 b3900fa100849628
+Small Islands|1|2|forced|3 3ba2b12bcafa6cdf
+Small Islands|1|4|ffa|1 ebf0e00bba5b6c9b
+Small Islands|1|4|ffa|1000 ae0222a497d5ecf9
+Small Islands|1|4|ffa|12345 d83e6905cb15f0c9
+Small Islands|1|4|ffa|2 ece53f1735e3fc68
+Small Islands|1|4|ffa|2147483647 ae8a1140cf6b78f4
+Small Islands|1|4|ffa|3 022cfc5978257f67
+Small Islands|1|4|forced|1 4590e060e430f657
+Small Islands|1|4|forced|1000 dd0cc7ccc04ac27b
+Small Islands|1|4|forced|12345 fa75b33c682767de
+Small Islands|1|4|forced|2 858bd18bb7861ac2
+Small Islands|1|4|forced|2147483647 0dc97cd01ab91791
+Small Islands|1|4|forced|3 ba5a5ee6897a86db
+Small Islands|1|4|teams|1 c65f496ec4d80d09
+Small Islands|1|4|teams|1000 f3973b8d833cad2b
+Small Islands|1|4|teams|12345 8a5e183cbcf64937
+Small Islands|1|4|teams|2 6f63c4083b12403b
+Small Islands|1|4|teams|2147483647 c5c55237c910dd9a
+Small Islands|1|4|teams|3 58dfabe88deb27c5
+Small Islands|2|2|ffa|1 3b5baf901c87b656
+Small Islands|2|2|ffa|1000 ed32ebd24a7ef9db
+Small Islands|2|2|ffa|12345 136ae361ba93505d
+Small Islands|2|2|ffa|2 61b7e890744236a5
+Small Islands|2|2|ffa|2147483647 1a1ee08e82db1497
+Small Islands|2|2|ffa|3 9088662245b5e731
+Small Islands|2|4|ffa|1 cdf6b6415729c033
+Small Islands|2|4|ffa|1000 9210463c8989ebbd
+Small Islands|2|4|ffa|12345 aaed02044b71ab94
+Small Islands|2|4|ffa|2 b83c827e18ab2e73
+Small Islands|2|4|ffa|2147483647 96617dd8976d8ede
+Small Islands|2|4|ffa|3 59273ea7e4dff4f7
+Small Islands|2|4|teams|1 dfa5537d273a6ef3
+Small Islands|2|4|teams|1000 5224cad9cf9b1c53
+Small Islands|2|4|teams|12345 1c6bbdfa93e23cbb
+Small Islands|2|4|teams|2 85a8d39fdd689c79
+Small Islands|2|4|teams|2147483647 abc2c280b3515eb2
+Small Islands|2|4|teams|3 3f2e7ee62cdec96e
+Small Islands|2|6|ffa|1 8160980971e414f4
+Small Islands|2|6|ffa|1000 1646d129abbce01b
+Small Islands|2|6|ffa|12345 bc3cda669de8d083
+Small Islands|2|6|ffa|2 220d28d6ac27596d
+Small Islands|2|6|ffa|2147483647 aaeaf3794358ee8c
+Small Islands|2|6|ffa|3 22057eb0defa9e2f
+Small Islands|2|6|teams|1 b38246b4db53b2ec
+Small Islands|2|6|teams|1000 81ff4852f80af9c6
+Small Islands|2|6|teams|12345 eca339950bf40a14
+Small Islands|2|6|teams|2 bf170389a395aee5
+Small Islands|2|6|teams|2147483647 41a5c6055b142520
+Small Islands|2|6|teams|3 3cbface7c8fadc78
+Small Islands|3|2|ffa|1 0ab481f625f464a5
+Small Islands|3|2|ffa|1000 05e92cc0db90ceaa
+Small Islands|3|2|ffa|12345 5084b51da3feb8bd
+Small Islands|3|2|ffa|2 4943eb7ddb4fd455
+Small Islands|3|2|ffa|2147483647 b805c087115d758a
+Small Islands|3|2|ffa|3 46db4890042eaa4f
+Small Islands|3|4|ffa|1 bae2264ad0daedf8
+Small Islands|3|4|ffa|1000 1cb810ae94da5f2d
+Small Islands|3|4|ffa|12345 88b7845f9c533acb
+Small Islands|3|4|ffa|2 14ab8f34f928faa7
+Small Islands|3|4|ffa|2147483647 b2d7a65bf7d8aaab
+Small Islands|3|4|ffa|3 1a99fbe6a9d5af85
+Small Islands|3|4|teams|1 c52cfd15acefc352
+Small Islands|3|4|teams|1000 c3c254e39de8c6a0
+Small Islands|3|4|teams|12345 aa66be6ea44efb69
+Small Islands|3|4|teams|2 21daa576f42b20b3
+Small Islands|3|4|teams|2147483647 234a5f4e4efcc712
+Small Islands|3|4|teams|3 4eac465ba9fc8482
+Small Islands|3|8|ffa|1 913e4ffc22afd277
+Small Islands|3|8|ffa|1000 aa164f8063fd21bc
+Small Islands|3|8|ffa|12345 a831e1dc17691fa9
+Small Islands|3|8|ffa|2 024ab0ca39f704a1
+Small Islands|3|8|ffa|2147483647 cdc58cdaea992872
+Small Islands|3|8|ffa|3 87e370f4aea92d77
+Small Islands|3|8|teams|1 cfb28a07f1c8939d
+Small Islands|3|8|teams|1000 57d7d17cfc4848d7
+Small Islands|3|8|teams|12345 877d1318787f7360
+Small Islands|3|8|teams|2 a8def9dfbc7d85c4
+Small Islands|3|8|teams|2147483647 98b2f5286a601bf7
+Small Islands|3|8|teams|3 6675e1a79a0425fc
+Small Islands|4|2|ffa|1 4246c41c55c82257
+Small Islands|4|2|ffa|1000 d985771109454470
+Small Islands|4|2|ffa|12345 e2abbefc3ea22431
+Small Islands|4|2|ffa|2 d13dd99faceded95
+Small Islands|4|2|ffa|2147483647 0e266d2b1a134253
+Small Islands|4|2|ffa|3 170ff6b0b8bf1111
+Small Islands|4|4|ffa|1 17b3f0a0103564db
+Small Islands|4|4|ffa|1000 3f14c4ab07af6d92
+Small Islands|4|4|ffa|12345 e7a896b72da07026
+Small Islands|4|4|ffa|2 36fde0d08684b8a9
+Small Islands|4|4|ffa|2147483647 b878b183de6f6f37
+Small Islands|4|4|ffa|3 741a93339433fd8f
+Small Islands|4|4|teams|1 0a920b386404ad29
+Small Islands|4|4|teams|1000 a4a2aa892e2ba6dc
+Small Islands|4|4|teams|12345 ead7da5f95acd7c5
+Small Islands|4|4|teams|2 b28bfdade6bc32f9
+Small Islands|4|4|teams|2147483647 077c3c3e29989f29
+Small Islands|4|4|teams|3 3708d658a719b8b3
+Small Islands|4|8|ffa|1 2e3c222b7c1d96af
+Small Islands|4|8|ffa|1000 7d6864dc9cb90749
+Small Islands|4|8|ffa|12345 70fceed8636bd25c
+Small Islands|4|8|ffa|2 39c182405030ec65
+Small Islands|4|8|ffa|2147483647 cc244a039285872c
+Small Islands|4|8|ffa|3 a6c015fc5d11ec87
+Small Islands|4|8|teams|1 80b1f16ebc40762c
+Small Islands|4|8|teams|1000 4f4aafc7cc3393d4
+Small Islands|4|8|teams|12345 81f0ebd43687905d
+Small Islands|4|8|teams|2 d4bdf591c974eb68
+Small Islands|4|8|teams|2147483647 73d17e63700d6c7e
+Small Islands|4|8|teams|3 107afc6f8b826e9d
+Small Islands|5|2|ffa|1 6edbc0890fccd787
+Small Islands|5|2|ffa|1000 d0a9d4bf8ef0597f
+Small Islands|5|2|ffa|12345 8e1a152c62a6f3ce
+Small Islands|5|2|ffa|2 a16f13c3ab0ec9b3
+Small Islands|5|2|ffa|2147483647 5c5425bd75758f97
+Small Islands|5|2|ffa|3 868e8796a1972313
+Small Islands|5|4|ffa|1 ee61ac7277a1e3a4
+Small Islands|5|4|ffa|1000 73bb5dffa2c750c3
+Small Islands|5|4|ffa|12345 a14af267a16fce66
+Small Islands|5|4|ffa|2 4f7d66a425564c6c
+Small Islands|5|4|ffa|2147483647 ce098779faba3348
+Small Islands|5|4|ffa|3 ade4a6a1f134f94d
+Small Islands|5|4|teams|1 b599e46b370cb76d
+Small Islands|5|4|teams|1000 9fb232a28305bfc2
+Small Islands|5|4|teams|12345 cdf8f1875bd41f57
+Small Islands|5|4|teams|2 120f00da0864dfd3
+Small Islands|5|4|teams|2147483647 eb12baa2aa786339
+Small Islands|5|4|teams|3 00b73bf3a2a9c144
+Small Islands|5|8|ffa|1 c12bd128b47dc86d
+Small Islands|5|8|ffa|1000 5fc1e3611b336aae
+Small Islands|5|8|ffa|12345 0001160ae1aad3f1
+Small Islands|5|8|ffa|2 4743c8de6a1b6266
+Small Islands|5|8|ffa|2147483647 975170d6860f50d9
+Small Islands|5|8|ffa|3 487e267035a339db
+Small Islands|5|8|teams|1 fe46f0888395c85b
+Small Islands|5|8|teams|1000 7d293801f28a2f94
+Small Islands|5|8|teams|12345 4b0cdb6360601721
+Small Islands|5|8|teams|2 5e9436e72e6ea4b8
+Small Islands|5|8|teams|2147483647 d959d695f168abfa
+Small Islands|5|8|teams|3 58f7a4eeed8a3adc
+Small Planets|0|2|ffa|1 d33d6a5cf385f6b0
+Small Planets|0|2|ffa|1000 2f7ea1d8c3641303
+Small Planets|0|2|ffa|12345 ddf59152229fc926
+Small Planets|0|2|ffa|2 7ce022c8375e56f2
+Small Planets|0|2|ffa|2147483647 9125bf9e19ec0ed6
+Small Planets|0|2|ffa|3 3b57970800620e2c
+Small Planets|0|2|forced|1 f264aaee69dc4ab5
+Small Planets|0|2|forced|1000 de3fa0f04326cb0c
+Small Planets|0|2|forced|12345 8c8819d75a71a6a5
+Small Planets|0|2|forced|2 5d6f39cd62087bd1
+Small Planets|0|2|forced|2147483647 3f854d90de2ff169
+Small Planets|0|2|forced|3 88940621f4b809b7
+Small Planets|0|3|ffa|1 77e7ea8858e4cabf
+Small Planets|0|3|ffa|1000 172290e02d495bcc
+Small Planets|0|3|ffa|12345 d75b652d21b28346
+Small Planets|0|3|ffa|2 33a2668f53904cd3
+Small Planets|0|3|ffa|2147483647 e1adac03ff3eeb06
+Small Planets|0|3|ffa|3 fc3565dfbfba8447
+Small Planets|0|3|forced|1 19f706b1c7b4d9d6
+Small Planets|0|3|forced|1000 fdfe36ae15566020
+Small Planets|0|3|forced|12345 815f7baef516182e
+Small Planets|0|3|forced|2 f928286b6e135e84
+Small Planets|0|3|forced|2147483647 b5dfbb391aac6214
+Small Planets|0|3|forced|3 bc187390759b7715
+Small Planets|1|2|ffa|1 751b7e66a64992f0
+Small Planets|1|2|ffa|1000 5eb73e138f681bcf
+Small Planets|1|2|ffa|12345 3dd8315c977fa853
+Small Planets|1|2|ffa|2 b243bae2e61e8a72
+Small Planets|1|2|ffa|2147483647 09a62577eaaf6103
+Small Planets|1|2|ffa|3 0415f5d025c725d7
+Small Planets|1|2|forced|1 756c09f4e38261a2
+Small Planets|1|2|forced|1000 261101e145bb462a
+Small Planets|1|2|forced|12345 48cb882890c25b9e
+Small Planets|1|2|forced|2 5c8c7c9549d03ee4
+Small Planets|1|2|forced|2147483647 e5ac1adedf39955c
+Small Planets|1|2|forced|3 efd0d4499589b84b
+Small Planets|1|4|ffa|1 776247c5e6100e66
+Small Planets|1|4|ffa|1000 87fc81c591200283
+Small Planets|1|4|ffa|12345 a00673f153b95b10
+Small Planets|1|4|ffa|2 65844fa4914c8add
+Small Planets|1|4|ffa|2147483647 7f61667d8e383aae
+Small Planets|1|4|ffa|3 a21f9d07673401ba
+Small Planets|1|4|forced|1 f5773f20f07bcb0c
+Small Planets|1|4|forced|1000 02ce8da4d2f6abe5
+Small Planets|1|4|forced|12345 c145056f64c2dd91
+Small Planets|1|4|forced|2 e74ed3be3e1cc300
+Small Planets|1|4|forced|2147483647 54daaf552af31c33
+Small Planets|1|4|forced|3 e8629d90fbe293ad
+Small Planets|1|4|teams|1 9dade1f2c786a79a
+Small Planets|1|4|teams|1000 23efdd0aec9dad83
+Small Planets|1|4|teams|12345 9db8287bbbb84b3e
+Small Planets|1|4|teams|2 6aacea66d9c9d7a2
+Small Planets|1|4|teams|2147483647 338e95a8d6529713
+Small Planets|1|4|teams|3 cee85b424a3df5e0
+Small Planets|2|2|ffa|1 08da28fc3098a0d4
+Small Planets|2|2|ffa|1000 c98ecd743504e9bc
+Small Planets|2|2|ffa|12345 8798e3144e583920
+Small Planets|2|2|ffa|2 1f3cbc030c577b3a
+Small Planets|2|2|ffa|2147483647 7e741d3b9cf1490f
+Small Planets|2|2|ffa|3 2538ed068e9bf37c
+Small Planets|2|4|ffa|1 16086e4892e2d087
+Small Planets|2|4|ffa|1000 186ed004ad942c76
+Small Planets|2|4|ffa|12345 cb570b8228e280c2
+Small Planets|2|4|ffa|2 eb62dab849e4c446
+Small Planets|2|4|ffa|2147483647 d33b1c16420f3c4d
+Small Planets|2|4|ffa|3 476013f546ddd0fa
+Small Planets|2|4|teams|1 5feac940b7a40149
+Small Planets|2|4|teams|1000 b2e36701a8b82c65
+Small Planets|2|4|teams|12345 2048b1a95a344a84
+Small Planets|2|4|teams|2 65f816808f208906
+Small Planets|2|4|teams|2147483647 361eb758ee2fa8e0
+Small Planets|2|4|teams|3 3f0839a4d074d5ed
+Small Planets|2|6|ffa|1 e3437864ef562f51
+Small Planets|2|6|ffa|1000 6072f9faa0b2b3dd
+Small Planets|2|6|ffa|12345 f5ac2818179dd669
+Small Planets|2|6|ffa|2 143eb86b62157553
+Small Planets|2|6|ffa|2147483647 1b9543ddf6575c4c
+Small Planets|2|6|ffa|3 efe425b5841b9ae3
+Small Planets|2|6|teams|1 52a1fa47e0bb8e90
+Small Planets|2|6|teams|1000 334785f8c2a1702d
+Small Planets|2|6|teams|12345 c1f7aa6910ff06f7
+Small Planets|2|6|teams|2 d56a00660c6a96df
+Small Planets|2|6|teams|2147483647 a4637409f0ed3565
+Small Planets|2|6|teams|3 705195349f0babe8
+Small Planets|3|2|ffa|1 d0bc091fe7729c15
+Small Planets|3|2|ffa|1000 552f6383ace15227
+Small Planets|3|2|ffa|12345 16875a9d05f3ffad
+Small Planets|3|2|ffa|2 c5bd91e372eecb84
+Small Planets|3|2|ffa|2147483647 627fea0e48c1f833
+Small Planets|3|2|ffa|3 503d84e30fb3e6fa
+Small Planets|3|4|ffa|1 e5948790ab38e738
+Small Planets|3|4|ffa|1000 7cf769dcf6b6ca77
+Small Planets|3|4|ffa|12345 741bd2b84d815206
+Small Planets|3|4|ffa|2 3e0c39299f19ec4b
+Small Planets|3|4|ffa|2147483647 357cef0257f8190c
+Small Planets|3|4|ffa|3 d787a6fe8d77e338
+Small Planets|3|4|teams|1 139faf61e4cb4b59
+Small Planets|3|4|teams|1000 26d63dd9adcbe599
+Small Planets|3|4|teams|12345 400845c1067c27c9
+Small Planets|3|4|teams|2 ff8a10de0e819ea0
+Small Planets|3|4|teams|2147483647 e65338f740424092
+Small Planets|3|4|teams|3 e75b7758f48e4546
+Small Planets|3|8|ffa|1 9f43a3f1130ff32b
+Small Planets|3|8|ffa|1000 95970ffc7c99af45
+Small Planets|3|8|ffa|12345 5e205e40fbc3cd26
+Small Planets|3|8|ffa|2 edc5ca9bc2b0c28c
+Small Planets|3|8|ffa|2147483647 307998af0c6cc1bd
+Small Planets|3|8|ffa|3 3d81ca494f481634
+Small Planets|3|8|teams|1 0e40792609bca2c7
+Small Planets|3|8|teams|1000 45ae9d99f8d87ebf
+Small Planets|3|8|teams|12345 f2e310d5150e25c3
+Small Planets|3|8|teams|2 91c97d19874bc84e
+Small Planets|3|8|teams|2147483647 87afc040ca6d7cb2
+Small Planets|3|8|teams|3 3df8759ae5973356
+Small Planets|4|2|ffa|1 54dac2b149409250
+Small Planets|4|2|ffa|1000 3a59d0a4a63533a0
+Small Planets|4|2|ffa|12345 fc220c17ae98f0da
+Small Planets|4|2|ffa|2 1156933487e5b691
+Small Planets|4|2|ffa|2147483647 fbf064fc4a2a89b3
+Small Planets|4|2|ffa|3 f4aaeb26e1d8131f
+Small Planets|4|4|ffa|1 a11d28456cc78caa
+Small Planets|4|4|ffa|1000 f56ff59b7bfedb1a
+Small Planets|4|4|ffa|12345 8dd086c62d0660a9
+Small Planets|4|4|ffa|2 9beda024cf43aeac
+Small Planets|4|4|ffa|2147483647 dc1f4c01ad0e2555
+Small Planets|4|4|ffa|3 69762bf37cc3007c
+Small Planets|4|4|teams|1 23554a53cc81fa84
+Small Planets|4|4|teams|1000 97d6937328b6dfec
+Small Planets|4|4|teams|12345 36c553a5af4f40a2
+Small Planets|4|4|teams|2 d4da04976dfeedf5
+Small Planets|4|4|teams|2147483647 24294262a21adab9
+Small Planets|4|4|teams|3 ea4337699e68135e
+Small Planets|4|8|ffa|1 870b1085138673b3
+Small Planets|4|8|ffa|1000 34f1ca3d362ff283
+Small Planets|4|8|ffa|12345 07fd4f7a3e321ea1
+Small Planets|4|8|ffa|2 ea5e0dcacea0177a
+Small Planets|4|8|ffa|2147483647 946a202dcc91d268
+Small Planets|4|8|ffa|3 bfae63eb00d2f7ea
+Small Planets|4|8|teams|1 c2613dd31c350806
+Small Planets|4|8|teams|1000 4be116885415f396
+Small Planets|4|8|teams|12345 a0eb93979ef7dfc6
+Small Planets|4|8|teams|2 0857653e9e325692
+Small Planets|4|8|teams|2147483647 94511ad6ef1cfe52
+Small Planets|4|8|teams|3 e4eb030d4b2e3f11
+Small Planets|5|2|ffa|1 bb8057f540d62066
+Small Planets|5|2|ffa|1000 f6c5ff8a23200ad4
+Small Planets|5|2|ffa|12345 496da741db58ae89
+Small Planets|5|2|ffa|2 b31c0384b38460d3
+Small Planets|5|2|ffa|2147483647 49c7ce897caa6d74
+Small Planets|5|2|ffa|3 6c262f091c3bddf8
+Small Planets|5|4|ffa|1 caa0f45b103f9958
+Small Planets|5|4|ffa|1000 393d09eef036ee31
+Small Planets|5|4|ffa|12345 1468736bfdda274b
+Small Planets|5|4|ffa|2 3c15eca4dce64a09
+Small Planets|5|4|ffa|2147483647 13cc4e40caf30e3b
+Small Planets|5|4|ffa|3 b9366797a1ede3a8
+Small Planets|5|4|teams|1 4f78ea6d93e96bb2
+Small Planets|5|4|teams|1000 7c7b5b19c67977d4
+Small Planets|5|4|teams|12345 ea4a0351ebbdc105
+Small Planets|5|4|teams|2 cd0130bc2d11b965
+Small Planets|5|4|teams|2147483647 ce6f12049e9ea0b0
+Small Planets|5|4|teams|3 be93fc7003f756fe
+Small Planets|5|8|ffa|1 6c5d0ed31e421ebf
+Small Planets|5|8|ffa|1000 7f814693b9050b73
+Small Planets|5|8|ffa|12345 2ec4e02d93b5ec34
+Small Planets|5|8|ffa|2 4dedc702a3a1c539
+Small Planets|5|8|ffa|2147483647 652e7dfd8df802c4
+Small Planets|5|8|ffa|3 8aa62aeb11fd25c1
+Small Planets|5|8|teams|1 3c7b5c568243faf2
+Small Planets|5|8|teams|1000 64be37356d8cdb18
+Small Planets|5|8|teams|12345 7db53311fdedd1dd
+Small Planets|5|8|teams|2 dc5b7d835bc6ef05
+Small Planets|5|8|teams|2147483647 7ca318e2a83f0d1d
+Small Planets|5|8|teams|3 7af2968d96ca6a65
+Tournament Islands|0|2|ffa|1 265dd3ede1a37107
+Tournament Islands|0|2|ffa|1000 dfdeb307d3f7fd0a
+Tournament Islands|0|2|ffa|12345 5ba2fe952796c771
+Tournament Islands|0|2|ffa|2 18ef43165fb66279
+Tournament Islands|0|2|ffa|2147483647 421d6c298bffc00b
+Tournament Islands|0|2|ffa|3 49bfa6c70f1492ec
+Tournament Islands|0|2|forced|1 122d5a6d7f524c85
+Tournament Islands|0|2|forced|1000 22e669619ecc8472
+Tournament Islands|0|2|forced|12345 d813f770a364bc90
+Tournament Islands|0|2|forced|2 b1f23e11c0c70038
+Tournament Islands|0|2|forced|2147483647 5ccd52ea412fa522
+Tournament Islands|0|2|forced|3 4327bcbfd6b389e9
+Tournament Islands|0|3|ffa|1 f2f609ccaef1f84d
+Tournament Islands|0|3|ffa|1000 8f5a9102a3694f01
+Tournament Islands|0|3|ffa|12345 f0cbca33c53c972b
+Tournament Islands|0|3|ffa|2 cf7a52372005f602
+Tournament Islands|0|3|ffa|2147483647 d9931a203f0aed87
+Tournament Islands|0|3|ffa|3 26243f1f2b76856a
+Tournament Islands|0|3|forced|1 c4542bbf6b7c1ba8
+Tournament Islands|0|3|forced|1000 9c43adde40fbf6c0
+Tournament Islands|0|3|forced|12345 8ad95e3a0769bb30
+Tournament Islands|0|3|forced|2 09818281506e7e01
+Tournament Islands|0|3|forced|2147483647 6dcde15fb9865f94
+Tournament Islands|0|3|forced|3 773355f89e289b37
+Tournament Islands|1|2|ffa|1 4b32f16f2c6a6f1f
+Tournament Islands|1|2|ffa|1000 a552e47ef05c5d91
+Tournament Islands|1|2|ffa|12345 d4d1fe50b3b2da9b
+Tournament Islands|1|2|ffa|2 7861181bb43057cd
+Tournament Islands|1|2|ffa|2147483647 9249919e62badb0e
+Tournament Islands|1|2|ffa|3 b4559fa4e1e0da74
+Tournament Islands|1|2|forced|1 18ba087aa80ce353
+Tournament Islands|1|2|forced|1000 e9b3d2d46e0606be
+Tournament Islands|1|2|forced|12345 fe38697b726df75c
+Tournament Islands|1|2|forced|2 1a981d9723e442d3
+Tournament Islands|1|2|forced|2147483647 2ffa46a0f219b26a
+Tournament Islands|1|2|forced|3 d28bea524328d333
+Tournament Islands|1|4|ffa|1 229c6770468329c9
+Tournament Islands|1|4|ffa|1000 c012c553989113d6
+Tournament Islands|1|4|ffa|12345 f534fae50dddf817
+Tournament Islands|1|4|ffa|2 235025b112f9df5b
+Tournament Islands|1|4|ffa|2147483647 b3dbc37dd13bc3c5
+Tournament Islands|1|4|ffa|3 3d3b5368e6f753c9
+Tournament Islands|1|4|forced|1 da78ba1194c923da
+Tournament Islands|1|4|forced|1000 b73065b9b366a042
+Tournament Islands|1|4|forced|12345 e57f74d22ed3e0dd
+Tournament Islands|1|4|forced|2 4307787cd781a06c
+Tournament Islands|1|4|forced|2147483647 74950a411a1f3ef6
+Tournament Islands|1|4|forced|3 72fa547fe9a853fd
+Tournament Islands|1|4|teams|1 5d186ae40c62963d
+Tournament Islands|1|4|teams|1000 a8f0edd1184da511
+Tournament Islands|1|4|teams|12345 290301e2674ef825
+Tournament Islands|1|4|teams|2 21e84e784f8bf440
+Tournament Islands|1|4|teams|2147483647 e12e49d5fe30b9ed
+Tournament Islands|1|4|teams|3 d3e6666299c206d2
+Tournament Islands|2|2|ffa|1 d37536804377d9ed
+Tournament Islands|2|2|ffa|1000 396da176eee0f869
+Tournament Islands|2|2|ffa|12345 108d08cc56dd024f
+Tournament Islands|2|2|ffa|2 ea9418254fa672c9
+Tournament Islands|2|2|ffa|2147483647 a34ab0690abc48b1
+Tournament Islands|2|2|ffa|3 f69929b2674281be
+Tournament Islands|2|4|ffa|1 5c8e01405ee47a03
+Tournament Islands|2|4|ffa|1000 2f210cf103315854
+Tournament Islands|2|4|ffa|12345 fb7ddbcdde80e879
+Tournament Islands|2|4|ffa|2 818635d71a83ae62
+Tournament Islands|2|4|ffa|2147483647 e9cb73e4fbdf4f84
+Tournament Islands|2|4|ffa|3 2b6e1f78821733b3
+Tournament Islands|2|4|teams|1 9cb79c870bd3cd00
+Tournament Islands|2|4|teams|1000 c791748b5b067126
+Tournament Islands|2|4|teams|12345 540e116947ec3b6d
+Tournament Islands|2|4|teams|2 72abdcc29a59a348
+Tournament Islands|2|4|teams|2147483647 84415681ac4cd5a0
+Tournament Islands|2|4|teams|3 64a30cf7d9304b46
+Tournament Islands|2|6|ffa|1 d42db6a7ed3dd750
+Tournament Islands|2|6|ffa|1000 d641c7b4354ebab0
+Tournament Islands|2|6|ffa|12345 8b1d9e7ddf69ab44
+Tournament Islands|2|6|ffa|2 bde280ad7fef5fa2
+Tournament Islands|2|6|ffa|2147483647 5eb35328a99ab9b3
+Tournament Islands|2|6|ffa|3 ae20e73b35b1d30f
+Tournament Islands|2|6|teams|1 5956983aa92c1beb
+Tournament Islands|2|6|teams|1000 43a8f110996ed6a2
+Tournament Islands|2|6|teams|12345 1659bb7a9d6718bf
+Tournament Islands|2|6|teams|2 7a6e46b6b8f5e335
+Tournament Islands|2|6|teams|2147483647 cd27ad550425634c
+Tournament Islands|2|6|teams|3 bd39bc09bfe11f08
+Tournament Islands|3|2|ffa|1 517242cc1837c4a4
+Tournament Islands|3|2|ffa|1000 ca2301c0622c9bbb
+Tournament Islands|3|2|ffa|12345 09a939ed2e83f5ad
+Tournament Islands|3|2|ffa|2 91327e83609d6c8b
+Tournament Islands|3|2|ffa|2147483647 6db7c7b710115721
+Tournament Islands|3|2|ffa|3 71cdc5e64d000ce6
+Tournament Islands|3|4|ffa|1 38810dccce760bdb
+Tournament Islands|3|4|ffa|1000 b3c2333f5f454263
+Tournament Islands|3|4|ffa|12345 a9264914f526eda7
+Tournament Islands|3|4|ffa|2 a7bee290a7d90d47
+Tournament Islands|3|4|ffa|2147483647 8de2389e669ff9b3
+Tournament Islands|3|4|ffa|3 2c3e1d028a090e59
+Tournament Islands|3|4|teams|1 3ea7fb1b46a9ab7a
+Tournament Islands|3|4|teams|1000 071db013450a09cf
+Tournament Islands|3|4|teams|12345 32270c618c314f5b
+Tournament Islands|3|4|teams|2 a1055c220e548c2a
+Tournament Islands|3|4|teams|2147483647 61cc5f995c251f90
+Tournament Islands|3|4|teams|3 37b7a00c20e50b59
+Tournament Islands|3|8|ffa|1 2c8d7ef958e3b9be
+Tournament Islands|3|8|ffa|1000 7d345b25281f6e3b
+Tournament Islands|3|8|ffa|12345 c49f35a67aaa5cb7
+Tournament Islands|3|8|ffa|2 e87d8b1370591240
+Tournament Islands|3|8|ffa|2147483647 9173962e491dd0e9
+Tournament Islands|3|8|ffa|3 c9bb1dff3fa68a48
+Tournament Islands|3|8|teams|1 efa3a99a940bfc30
+Tournament Islands|3|8|teams|1000 a7c2715378fd31ea
+Tournament Islands|3|8|teams|12345 429afe4cfd26ea2c
+Tournament Islands|3|8|teams|2 4bcb7368acd4112d
+Tournament Islands|3|8|teams|2147483647 7cb01ca61dcd75ad
+Tournament Islands|3|8|teams|3 42fc6658a3d4fb92
+Tournament Islands|4|2|ffa|1 f74a2154da1ae311
+Tournament Islands|4|2|ffa|1000 96b72613dbc4d188
+Tournament Islands|4|2|ffa|12345 f65fd6b7a6d5109e
+Tournament Islands|4|2|ffa|2 9b72ce5fc432bbb7
+Tournament Islands|4|2|ffa|2147483647 8c9385617776b0af
+Tournament Islands|4|2|ffa|3 b374bdbcfd69984d
+Tournament Islands|4|4|ffa|1 07ba4e3729845fd9
+Tournament Islands|4|4|ffa|1000 3b67651a50bf1290
+Tournament Islands|4|4|ffa|12345 b0c2cee23e2b0126
+Tournament Islands|4|4|ffa|2 273b1c01ace677d0
+Tournament Islands|4|4|ffa|2147483647 5f6f96e80821f55c
+Tournament Islands|4|4|ffa|3 a20cfd535d285dc8
+Tournament Islands|4|4|teams|1 1adf1d0d764784d7
+Tournament Islands|4|4|teams|1000 3c7e06b9e17f9cc3
+Tournament Islands|4|4|teams|12345 4fff65f0fdb5b259
+Tournament Islands|4|4|teams|2 8a8650cbe0cf4f54
+Tournament Islands|4|4|teams|2147483647 d599218d63bb71e4
+Tournament Islands|4|4|teams|3 470134d244e7ea84
+Tournament Islands|4|8|ffa|1 406f64a1b95478d9
+Tournament Islands|4|8|ffa|1000 d0d1e82954eaa048
+Tournament Islands|4|8|ffa|12345 8e9dffee7d072457
+Tournament Islands|4|8|ffa|2 6ca5aae41ff51b34
+Tournament Islands|4|8|ffa|2147483647 559a161a2585d82b
+Tournament Islands|4|8|ffa|3 b6eaaf5a65f12295
+Tournament Islands|4|8|teams|1 292cac1f1d3331d4
+Tournament Islands|4|8|teams|1000 0af7cd47989bfb93
+Tournament Islands|4|8|teams|12345 8d6b4ac5c4e989bd
+Tournament Islands|4|8|teams|2 fc2b48f2d31bb355
+Tournament Islands|4|8|teams|2147483647 f941f18e58c397de
+Tournament Islands|4|8|teams|3 f254ef8082ff2e71
+Tournament Islands|5|2|ffa|1 40a41cc3d53b46be
+Tournament Islands|5|2|ffa|1000 11f61ba52ad93b50
+Tournament Islands|5|2|ffa|12345 6149df3c3d79f96c
+Tournament Islands|5|2|ffa|2 83f9ab8dc3fb68c6
+Tournament Islands|5|2|ffa|2147483647 4e1bb983773ffcdd
+Tournament Islands|5|2|ffa|3 0e44418f3940f4c5
+Tournament Islands|5|4|ffa|1 d7a9beff7871efa3
+Tournament Islands|5|4|ffa|1000 e24bf0fe94207757
+Tournament Islands|5|4|ffa|12345 3940905e0ea81c45
+Tournament Islands|5|4|ffa|2 104fcef706d727e8
+Tournament Islands|5|4|ffa|2147483647 6ef7f37404b75897
+Tournament Islands|5|4|ffa|3 bb395375c4f831fd
+Tournament Islands|5|4|teams|1 454aeb1d340d9ff1
+Tournament Islands|5|4|teams|1000 440345d780265bf4
+Tournament Islands|5|4|teams|12345 081df318c6f8d038
+Tournament Islands|5|4|teams|2 512413234d09450d
+Tournament Islands|5|4|teams|2147483647 078a084d79175fdc
+Tournament Islands|5|4|teams|3 7ac11c11445a1a67
+Tournament Islands|5|8|ffa|1 72bfc968b6a1ef8d
+Tournament Islands|5|8|ffa|1000 6ab2a4ba873084a2
+Tournament Islands|5|8|ffa|12345 733e831b73c42374
+Tournament Islands|5|8|ffa|2 13a144adb49b96e3
+Tournament Islands|5|8|ffa|2147483647 8a56ca7b207fbcea
+Tournament Islands|5|8|ffa|3 3c5cdd79114155a8
+Tournament Islands|5|8|teams|1 b3175e72e60fe23e
+Tournament Islands|5|8|teams|1000 15a24fb364de3da4
+Tournament Islands|5|8|teams|12345 0e911c219e9a5cab
+Tournament Islands|5|8|teams|2 23e0818f8e24e45f
+Tournament Islands|5|8|teams|2147483647 0f0ed095d1b00b12
+Tournament Islands|5|8|teams|3 fa6fb2384e50e150
+Tournament Planets|0|2|ffa|1 19ef42e28bc00a83
+Tournament Planets|0|2|ffa|1000 5ccd00c5b60aad66
+Tournament Planets|0|2|ffa|12345 8cdb1527e12cd07e
+Tournament Planets|0|2|ffa|2 68d78bc5d18ab981
+Tournament Planets|0|2|ffa|2147483647 9ef0cb6c88f44805
+Tournament Planets|0|2|ffa|3 9bb6f6e1e27aaa28
+Tournament Planets|0|2|forced|1 d96912431cc1047f
+Tournament Planets|0|2|forced|1000 84a66cc7f6cf087d
+Tournament Planets|0|2|forced|12345 e2ae5be442ef26af
+Tournament Planets|0|2|forced|2 c20c0cd9af62179a
+Tournament Planets|0|2|forced|2147483647 26c0e5fee8129ddd
+Tournament Planets|0|2|forced|3 04f80516f1c870dd
+Tournament Planets|0|3|ffa|1 ed412171ef548898
+Tournament Planets|0|3|ffa|1000 da456371bbbb9da1
+Tournament Planets|0|3|ffa|12345 d31df4b1d3653560
+Tournament Planets|0|3|ffa|2 1f6f2db717adc5c5
+Tournament Planets|0|3|ffa|2147483647 e2ddae73ce66da2e
+Tournament Planets|0|3|ffa|3 57d912fb0fe9c3b2
+Tournament Planets|0|3|forced|1 191b72a5175e8cd5
+Tournament Planets|0|3|forced|1000 8d30d38825f9b6ae
+Tournament Planets|0|3|forced|12345 e1c7c68f93e1c36a
+Tournament Planets|0|3|forced|2 39499ccc17ce05dc
+Tournament Planets|0|3|forced|2147483647 34d746afc8c6750e
+Tournament Planets|0|3|forced|3 88445505ab420a10
+Tournament Planets|1|2|ffa|1 72be4fa4e475d264
+Tournament Planets|1|2|ffa|1000 97b093af9c7badd8
+Tournament Planets|1|2|ffa|12345 cf294c47c102192c
+Tournament Planets|1|2|ffa|2 295361490fade920
+Tournament Planets|1|2|ffa|2147483647 23bb9309d57defb3
+Tournament Planets|1|2|ffa|3 81cbc8497bb3c034
+Tournament Planets|1|2|forced|1 5437958657dc8281
+Tournament Planets|1|2|forced|1000 bacb66e750b39fee
+Tournament Planets|1|2|forced|12345 f268b48950b0aa8b
+Tournament Planets|1|2|forced|2 ba02e39c31fdfd55
+Tournament Planets|1|2|forced|2147483647 8b54fc613c4ca08a
+Tournament Planets|1|2|forced|3 ff4d285d83635084
+Tournament Planets|1|4|ffa|1 f46f1e62e481c5af
+Tournament Planets|1|4|ffa|1000 2009408a1fa7da7b
+Tournament Planets|1|4|ffa|12345 ef320f6459af2422
+Tournament Planets|1|4|ffa|2 10fbb2c2cba25969
+Tournament Planets|1|4|ffa|2147483647 ba11f9970288e8f2
+Tournament Planets|1|4|ffa|3 f52471a5c517bd40
+Tournament Planets|1|4|forced|1 94e14e77eae1c5bb
+Tournament Planets|1|4|forced|1000 029037801cd6964d
+Tournament Planets|1|4|forced|12345 e289cc5f2d741bdf
+Tournament Planets|1|4|forced|2 682ed8ca7ba82eac
+Tournament Planets|1|4|forced|2147483647 32c37e4235b08f78
+Tournament Planets|1|4|forced|3 467620c3d6b4432a
+Tournament Planets|1|4|teams|1 ecc581f4babbe7ef
+Tournament Planets|1|4|teams|1000 18aab29fc0ba4d6a
+Tournament Planets|1|4|teams|12345 0d47898e2bc5a64c
+Tournament Planets|1|4|teams|2 2f4ec9538b13ec76
+Tournament Planets|1|4|teams|2147483647 ba5931655393cb08
+Tournament Planets|1|4|teams|3 e373fb1310e8677b
+Tournament Planets|2|2|ffa|1 12c9e6b1d2fadfb7
+Tournament Planets|2|2|ffa|1000 f7ae07c722c372e4
+Tournament Planets|2|2|ffa|12345 c6df469386fd25ab
+Tournament Planets|2|2|ffa|2 7787b67d9c63a9df
+Tournament Planets|2|2|ffa|2147483647 a1e247bd7e2029fb
+Tournament Planets|2|2|ffa|3 1c87d2e89afd70ab
+Tournament Planets|2|4|ffa|1 73795b4fb312eef0
+Tournament Planets|2|4|ffa|1000 bb79c9efc88e877b
+Tournament Planets|2|4|ffa|12345 83fdd27b1e5e9d1f
+Tournament Planets|2|4|ffa|2 9691ead84b2e4aed
+Tournament Planets|2|4|ffa|2147483647 e8f26392320e0cfb
+Tournament Planets|2|4|ffa|3 e08605ed8e8cc1fc
+Tournament Planets|2|4|teams|1 6a7a79aa8692a3ef
+Tournament Planets|2|4|teams|1000 6e7f1da2f05c68df
+Tournament Planets|2|4|teams|12345 bebb56bbdc55e0c7
+Tournament Planets|2|4|teams|2 12de35c050529b30
+Tournament Planets|2|4|teams|2147483647 47f9fee7f1c85a45
+Tournament Planets|2|4|teams|3 201366656fb07439
+Tournament Planets|2|6|ffa|1 bf013a20cea4476e
+Tournament Planets|2|6|ffa|1000 613d8b07f27e8f89
+Tournament Planets|2|6|ffa|12345 9fb40e990057f4ff
+Tournament Planets|2|6|ffa|2 987eee9b9fbd3d0f
+Tournament Planets|2|6|ffa|2147483647 9b6cf8470b716326
+Tournament Planets|2|6|ffa|3 e2e3fefb04ef142a
+Tournament Planets|2|6|teams|1 b1e5ef4e35f5ac76
+Tournament Planets|2|6|teams|1000 c780b8f3d1985bd7
+Tournament Planets|2|6|teams|12345 89cdc0fd3cce6f85
+Tournament Planets|2|6|teams|2 4807237987eeaa75
+Tournament Planets|2|6|teams|2147483647 33c29dc33a2443ed
+Tournament Planets|2|6|teams|3 915d2c245c2057c1
+Tournament Planets|3|2|ffa|1 e1ac98d128275fa4
+Tournament Planets|3|2|ffa|1000 6a2eb6cc2cfb5975
+Tournament Planets|3|2|ffa|12345 d1549d7de6b213c1
+Tournament Planets|3|2|ffa|2 d09dd0dcf746b7a2
+Tournament Planets|3|2|ffa|2147483647 067f1979dd8b959d
+Tournament Planets|3|2|ffa|3 c65d713178bff83c
+Tournament Planets|3|4|ffa|1 278131652ac40d42
+Tournament Planets|3|4|ffa|1000 e005fdf9972c2369
+Tournament Planets|3|4|ffa|12345 1c5f666cffc490b1
+Tournament Planets|3|4|ffa|2 85214e1593aad240
+Tournament Planets|3|4|ffa|2147483647 3c69586cdc57058c
+Tournament Planets|3|4|ffa|3 7a33a88073175f2c
+Tournament Planets|3|4|teams|1 ca0ba1234c7e60b8
+Tournament Planets|3|4|teams|1000 dc719ffde61898f8
+Tournament Planets|3|4|teams|12345 f5ba99189ef1fcb3
+Tournament Planets|3|4|teams|2 56fa1620f0e5e8ea
+Tournament Planets|3|4|teams|2147483647 50c6cfaae10975e6
+Tournament Planets|3|4|teams|3 ea23df08c78f184a
+Tournament Planets|3|8|ffa|1 3a4bfac55712102e
+Tournament Planets|3|8|ffa|1000 8cadca27fb5fb282
+Tournament Planets|3|8|ffa|12345 5943b8e0d08f7d2c
+Tournament Planets|3|8|ffa|2 5645455ab8dfbc5e
+Tournament Planets|3|8|ffa|2147483647 d8cefe4044a1fb9a
+Tournament Planets|3|8|ffa|3 f9ebd37be1e8c91c
+Tournament Planets|3|8|teams|1 fd4574d23fbe70f7
+Tournament Planets|3|8|teams|1000 ceb62581d9d9a29f
+Tournament Planets|3|8|teams|12345 c50587a1c5cb3378
+Tournament Planets|3|8|teams|2 d0087ef59cc6baa9
+Tournament Planets|3|8|teams|2147483647 828ce869a72aa723
+Tournament Planets|3|8|teams|3 452f09ba9c15398f
+Tournament Planets|4|2|ffa|1 28d9d0c490a1764f
+Tournament Planets|4|2|ffa|1000 778254974a407b32
+Tournament Planets|4|2|ffa|12345 be5cc55b5a4d7b69
+Tournament Planets|4|2|ffa|2 5b7e6e286028db52
+Tournament Planets|4|2|ffa|2147483647 0409e8cb433f6193
+Tournament Planets|4|2|ffa|3 655ca7ad404187b4
+Tournament Planets|4|4|ffa|1 d1f5e1c9e7870df7
+Tournament Planets|4|4|ffa|1000 1ace144e280d705d
+Tournament Planets|4|4|ffa|12345 00872b7296669e3f
+Tournament Planets|4|4|ffa|2 ecd83512ae5dbacb
+Tournament Planets|4|4|ffa|2147483647 1f7fdf180b439ecb
+Tournament Planets|4|4|ffa|3 f42c552603a0b062
+Tournament Planets|4|4|teams|1 a2f9f10bc2383340
+Tournament Planets|4|4|teams|1000 043963a5a7f6fe13
+Tournament Planets|4|4|teams|12345 674ec32b66639631
+Tournament Planets|4|4|teams|2 0f1d5807258892a8
+Tournament Planets|4|4|teams|2147483647 039453c14547c5f1
+Tournament Planets|4|4|teams|3 3311afaa1c9d57f5
+Tournament Planets|4|8|ffa|1 e8c1bf74f5b394da
+Tournament Planets|4|8|ffa|1000 660e8b541b483ad5
+Tournament Planets|4|8|ffa|12345 71d0ab635420b7a4
+Tournament Planets|4|8|ffa|2 3b83e3d9a8f95b34
+Tournament Planets|4|8|ffa|2147483647 45bc371a90ec502a
+Tournament Planets|4|8|ffa|3 a33db692c6d069e5
+Tournament Planets|4|8|teams|1 3f385d768572590a
+Tournament Planets|4|8|teams|1000 c3a8bb6ce3482a1e
+Tournament Planets|4|8|teams|12345 ed17f68f25c6323f
+Tournament Planets|4|8|teams|2 51af1a116287df85
+Tournament Planets|4|8|teams|2147483647 237672a5252edf62
+Tournament Planets|4|8|teams|3 98267d326e932eba
+Tournament Planets|5|2|ffa|1 bf88ac1aed6c78b3
+Tournament Planets|5|2|ffa|1000 9d8c17591685f613
+Tournament Planets|5|2|ffa|12345 41c844ffcfebe30c
+Tournament Planets|5|2|ffa|2 5bc3e9f1f8fbaf46
+Tournament Planets|5|2|ffa|2147483647 57e60bd6825035c3
+Tournament Planets|5|2|ffa|3 40e96aba5fd75345
+Tournament Planets|5|4|ffa|1 b4c271a572729aa7
+Tournament Planets|5|4|ffa|1000 3676ccef8ac802d6
+Tournament Planets|5|4|ffa|12345 062dae2df6dea1bf
+Tournament Planets|5|4|ffa|2 aca7b1cf8f99a988
+Tournament Planets|5|4|ffa|2147483647 99030abe2ae0d97f
+Tournament Planets|5|4|ffa|3 914fe13963e595aa
+Tournament Planets|5|4|teams|1 3e95a06558b16e87
+Tournament Planets|5|4|teams|1000 e48ce599c0241df5
+Tournament Planets|5|4|teams|12345 652b77b5be3943bb
+Tournament Planets|5|4|teams|2 7ca2d9fb5c618ef8
+Tournament Planets|5|4|teams|2147483647 86cd29a9f3ab8198
+Tournament Planets|5|4|teams|3 ad1a6ceb26f8b85a
+Tournament Planets|5|8|ffa|1 7512d9ff083cb394
+Tournament Planets|5|8|ffa|1000 867bf0c37d0377b0
+Tournament Planets|5|8|ffa|12345 c903955e73a1e7f1
+Tournament Planets|5|8|ffa|2 ff84d7965b729a79
+Tournament Planets|5|8|ffa|2147483647 ad40202766ec7e04
+Tournament Planets|5|8|ffa|3 68a40c78ba69a569
+Tournament Planets|5|8|teams|1 b017abcca578a60b
+Tournament Planets|5|8|teams|1000 2c2692c9e94e7404
+Tournament Planets|5|8|teams|12345 4d3afc7a0997b6a5
+Tournament Planets|5|8|teams|2 49cc119088d3323f
+Tournament Planets|5|8|teams|2147483647 8f6eef36b70b19d9
+Tournament Planets|5|8|teams|3 2d69bb2d6af1aa13

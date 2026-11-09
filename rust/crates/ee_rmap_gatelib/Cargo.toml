@@ -1,0 +1,13 @@
+[package]
+name = "ee_rmap_gatelib"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# A static library holding only the generator, for the byte gate's dump tool (tools/rmap_gate): the game links
+# ee_rust, whose wgpu dependency is far too big to build for a helper.
+[lib]
+crate-type = ["staticlib"]
+
+[dependencies]
+ee_rmap = { path = "../ee_rmap" }

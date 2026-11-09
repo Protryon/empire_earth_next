@@ -12,7 +12,6 @@
 #include "lle/U2DGeometry.h"
 #include "ee/EERandomMap.h"
 #include "Unit10.h"
-#include "Unit12.h"
 #include "ee/EERandomMapIDs.h"
 
 // ---- Unit-local types (provisional names)

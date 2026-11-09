@@ -33,7 +33,6 @@ struct EERMPlayer {                         // proven sizeof 0x3c (map +0xe0 vec
 
 struct EERMCircle {                         // proven sizeof 0xc (map +0x1a0 inner vectors: idiv 0xc, EELandClumps 0x9a4a)
     EERMCircle() : mRadius(0.0f) {}         // inline: EELandClumps::AddClump 0x9e27 pushes three fldz
-    void Extend(const GE2DPoint& inPoint);  // 0x9df0, defined in EELandClumps.cpp (grow the radius to reach the point)
 
     GE2DPoint mCenter;                      // +0x00 proven by 0x9a4a (DistanceToSquared), 0x98df (= the location)
     float mRadius;                          // +0x08 proven by 0x9df0 (sqrt of the squared distance)
