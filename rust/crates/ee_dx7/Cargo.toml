@@ -11,3 +11,5 @@ publish.workspace = true
 crate-type = ["rlib"]
 
 [dependencies]
+# GETransformation's Apply: the composition GETransformation.cpp forwards to, and the header inlines ee_ge restates
+ee_ge = { path = "../ee_ge" }

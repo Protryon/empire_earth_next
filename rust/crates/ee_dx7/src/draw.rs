@@ -9,6 +9,8 @@
 
 use core::ffi::{c_long, c_void};
 
+use ee_ge::types::{Ge3DPoint, GeTransformation, GeVector};
+
 use crate::vertex::{float_to_long, Dx7StdColorVertex};
 
 /// A C++ object seen from Rust.
@@ -79,37 +81,23 @@ pub fn y_up_to_z_up() -> Transform {
     t
 }
 
-/// `GETransformation::Apply(point)`, in the C++ operand order (bit-exact f32).
+/// `GETransformation::Apply(point)`: ee_ge's (the C++ operand order, bit-exact f32).
 #[inline]
 pub fn apply_point(t: &Transform, p: [f32; 3]) -> [f32; 3] {
-    [
-        p[2] * t[0][2] + p[1] * t[0][1] + p[0] * t[0][0] + t[0][3],
-        p[0] * t[1][0] + p[2] * t[1][2] + p[1] * t[1][1] + t[1][3],
-        p[0] * t[2][0] + p[2] * t[2][2] + p[1] * t[2][1] + t[2][3],
-    ]
+    let o = GeTransformation { m: *t }.apply_point(Ge3DPoint { x: p[0], y: p[1], z: p[2] });
+    [o.x, o.y, o.z]
 }
 
-/// `GETransformation::Apply(vector)`.
+/// `GETransformation::Apply(vector)`: ee_ge's.
 #[inline]
 pub fn apply_vector(t: &Transform, v: [f32; 3]) -> [f32; 3] {
-    [
-        v[2] * t[0][2] + v[1] * t[0][1] + v[0] * t[0][0],
-        v[0] * t[1][0] + v[2] * t[1][2] + v[1] * t[1][1],
-        v[0] * t[2][0] + v[2] * t[2][2] + v[1] * t[2][1],
-    ]
+    let o = GeTransformation { m: *t }.apply_vector(GeVector { x: v[0], y: v[1], z: v[2] });
+    [o.x, o.y, o.z]
 }
 
-/// `GETransformation::Apply(transformation)`: the composition `this x other`; the bottom row comes from `b`.
+/// `GETransformation::Apply(transformation)`: ee_ge's composition `this x other`; the bottom row comes from `b`.
 pub fn compose(a: &Transform, b: &Transform) -> Transform {
-    let mut o = [[0.0f32; 4]; 4];
-    for r in 0..3 {
-        o[r][0] = a[r][0] * b[0][0] + a[r][1] * b[1][0] + a[r][2] * b[2][0];
-        o[r][1] = a[r][0] * b[0][1] + a[r][1] * b[1][1] + a[r][2] * b[2][1];
-        o[r][2] = a[r][0] * b[0][2] + a[r][1] * b[1][2] + a[r][2] * b[2][2];
-        o[r][3] = a[r][0] * b[0][3] + a[r][1] * b[1][3] + a[r][2] * b[2][3] + a[r][3];
-    }
-    o[3] = b[3];
-    o
+    GeTransformation { m: *a }.compose(&GeTransformation { m: *b }).m
 }
 
 /// `GEVector::Normalize`: (0,0,0) when the magnitude is within 0.0001 of zero, else scaled by its reciprocal.
