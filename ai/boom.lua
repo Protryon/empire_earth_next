@@ -72,6 +72,8 @@ local FAR_REACH = 60            -- tiles: how far a mineral with no site in the 
 local SCOUT_AT = 90000          -- the first scout (a soldier) from here
 local SCOUTS = 3                -- scouts sent at most (a new one when the last was lost)
 local TOWER_STRENGTH = 4000     -- what a tower counts for against a threat (about three clubmen)
+local BOATS_LOST_MS = 300000   -- fishing boats sunk within this long ...
+local BOATS_LOST_MAX = 3        -- ... this many times: none are replaced until fewer are
 local PER_GATHERER = 30         -- what one gatherer is counted on to bring in over the planning horizon (~6 min)
 
 local MINERALS = {"stone", "gold", "iron"}
@@ -304,7 +306,21 @@ function M.step(view, memory)
         if e.kind == "no_site" and (e.type == "b_granary" or e.type == "b_farm") then
             memory.grow_claim = true
         end
+        if e.kind == "unit_lost" and string.find(e.type, "fishing_boat", 1, true) then
+            memory.boats_lost = memory.boats_lost or {}
+            for _ = 1, e.count do
+                memory.boats_lost[#memory.boats_lost + 1] = view.time
+            end
+        end
     end
+    -- the boats sunk in the last BOATS_LOST_MS (warships on the fishing waters: no new boats for them to sink)
+    local sunk = {}
+    for _, t in ipairs(memory.boats_lost or {}) do
+        if view.time - t < BOATS_LOST_MS then
+            sunk[#sunk + 1] = t
+        end
+    end
+    memory.boats_lost = sunk
     for _, k in ipairs(ai.keys(memory.bad_spots)) do
         if memory.bad_spots[k] <= view.time then
             memory.bad_spots[k] = nil
@@ -560,7 +576,11 @@ function M.step(view, memory)
 
         -- fishing: from the Stone Age's first minute, two docks and the boats (they pay for themselves in food)
         if plan.boats > 0 then
-            order("fish", {verb = "fish", boats = plan.boats, docks = plan.docks})
+            local boats = plan.boats
+            if #memory.boats_lost >= BOATS_LOST_MAX then
+                boats = math.min(boats, view.boats)   -- the boats left fish on; none are replaced for now
+            end
+            order("fish", {verb = "fish", boats = boats, docks = plan.docks})
         end
 
         -- the trainers: a barracks once the town has ten citizens, then an archery range, then the second of each as
