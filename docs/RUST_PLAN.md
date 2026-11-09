@@ -1,6 +1,6 @@
 # Rust: a research plan for an iterative rewrite
 
-Status (2026-11-09): R0-R3 and R4.1-R4.2 built on the `rust` branch, except what the table below lists as open.
+Status (2026-11-09): R0-R3, R4.1-R4.2 and R5b.1's formations built on the `rust` branch, except what the table below lists as open.
 Revised for the WON library (module `won`, the upstream merge to 3f51317465d6) and its lobby on the platform layer. The goal is a game written wholly in Rust. The way there is one binary
 in which C++ and Rust coexist for a long time. Each step moves one module across a seam, and the game keeps passing
 its gates at every commit. This document covers:
@@ -30,6 +30,8 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | R4.1 GX on the `wgpu` crate | Done (`ee_gx`); wgpu-native is gone |
 | R4.2 DX7 plug-in | Done (`ee_dx7`), a faithful port (D5) with C++ trampolines. C++ keeps the classes, object lifetimes, `Set3DMode`'s matrix composition, the PIM table and pl_mpeg |
 | **R4.3 Graphics Engine (17k)** | **Open.** May move with R5's renderer decoupling, as this plan allows |
+| R5b.1 formations | Done (`ee_formations`): the C++ classes keep their members and call Rust for the geometry. 14,068 `Place` calls captured from the C++ in the six oracle games (`tools/sim_capture.py`: real games plus a sweep of every formation type over real units) equal bit for bit |
+| **R5b.1 A* pathfinding, continents, choke points** | **Open.** No plain-data seam yet: the goals read the live world tile by tile, lazily and with side effects, and walk the storage's lists (PORT_LEARNINGS "R5b.1"). The address-ordered set at `EEAIAStarPathAreaGoal.cpp:282` turned out order-independent |
 
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
 trees), six seeded 45-minute sim traces equal to the pre-Rust reference, menu captures pixel-equal, a saved game loaded and
@@ -175,8 +177,9 @@ must reproduce:
 - **libm.** 15 sim files call `sin`/`cos`/`atan2`/`sqrt`. Rust's `f32::sin` lowers to the same CRT/libm call as
   clang's C++ on the same target; the pure-Rust `libm` crate does not give the same bits. Use std, or call the C
   functions explicitly, and never the `libm` crate in sim code.
-- **Container iteration order.** No `HashMap` iteration in the sim. Address-ordered sets are a known hazard already
-  (`EEAIAStarPathAreaGoal.cpp:282`).
+- **Container iteration order.** No `HashMap` iteration in the sim. Address-ordered sets are a hazard; the one in the
+  A* code (`EEAIAStarPathAreaGoal.cpp:282`) turned out harmless, since every visiting order gives the same state
+  (PORT_LEARNINGS "R5b.1").
 - **Wrapping integer arithmetic** where C++ relies on `-fwrapv`: `wrapping_*`, or `Wrapping<T>`.
 
 Policy proposal: **bit-exact while porting, divergence only at declared rebaseline points.** CLAUDE.md allows the game

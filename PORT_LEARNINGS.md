@@ -11654,3 +11654,54 @@ screen.rs). `DX7HRTnLDisplay.cpp` is the plug-in entry (the PIM table, a validit
 - **The DX7Movie thread stays a C++ `TSThread`**, with the trampolines as the seam and the pl_mpeg, event and critical
   section objects C++; Rust owns the sound ring, which the mixer's device thread and the decoder share under C++'s
   `mSoundAccess`.
+
+## R5b.1: formations in Rust (ee_formations), and why A* stays C++ (2026-11-09)
+
+`rust/crates/ee_formations` is the formation geometry: `EEFLine`'s column offsets and `Place`, `EEFWedge`'s arms and
+`Place`, `EEFCircle::Place`. The C++ classes stay (callers `dynamic_cast` them, set `mCenter`, `mHeading`,
+`mOrientation`, `SetMinRadius` and `mHalfArc` themselves); their constructors and `Place` hand plain data to Rust
+(`EEFormationRadii`, `include/ee/EEFormationRust.h`: the frame, the units' outer collision radii in input order) and
+get slots back that name units by index.
+
+- **The gate is a capture of the real game, not a dump tool.** `EE_SIM_CAPTURE=<file>` makes EE-SIM append one record
+  per captured call (`ee/EESimCapture.h`: tag, size, the inputs, the outputs); `tools/sim_capture.py run` plays the
+  oracle's six seeds with it, `check` compares per-seed digests with `tools/sim_capture/golden_cpp.txt` (recorded from
+  the C++ before the geometry was deleted; the captures themselves stay in `build/`), and `replay` runs the Rust over a
+  capture and compares every slot by bits. The capture writes nothing back: the six traces stay equal to the reference
+  with it on.
+- **The computer players form only circles** (herds, `EEHerd`; the attack formation's outward circle). Lines and
+  wedges come from human commands, which EE-SIM has none of, so EE-SIM with the capture on also runs a sweep every
+  five game minutes (`EEFormationCaptureSweep`): every formation type over the newest 1..64 units of each player (real
+  radii, real positions, the yaw between the first and the last unit; odd sizes keep the identity orientation as
+  `EEHerd` does). It reads the world and allocates only the formations, and the traces stayed equal with it.
+- **What the capture found:** `EECPAttackFormationNode` sets an outward circle's `mHalfArc` to pi/2, so a circle's arc
+  is caller state like its minimum radius; only its mode is the constructor's.
+- **Circles append, lines and wedges clear** `outSlots` first; the C++ adapter keeps that.
+- `UMTan` (from `UMCos`/`UMSin`, an infinity where the table cosine is +0) is in `ee_formations`; the tables and
+  `UMArcTan2` come from `ee_rmap::math`, which should become a shared crate when a third leaf needs them. `UMCos(NaN)`
+  indexes the table with `lrintf`'s indefinite value: out of bounds in the C++, a panic in Rust.
+
+**A* (`EEAIAStar*`, ~6k lines) and the continent/choke-point analysis stay C++.** Not a divergence found by a gate:
+the plain-data seam RUST_PLAN R5b.1 asks for does not exist in this code yet.
+
+- The machine (`EEAIAStarMachine<S, G, M>`) is generic over seven goals, and each goal's `AcceptTile`/`GetCost` reads
+  the live world per tile: `EEMapTile` unit lists, each unit's command, active group, collision radius and
+  `IsPassableBy` (a virtual per unit kind), `CanMoveOnTerrain`, `gContinentManager`'s continents and path areas, the
+  formation rank of the walker, and for the bounded goals a polymorphic modifier (`EEAIBPGModifier*`: enemy
+  attackable by the unit, walls do not block, sea, space).
+- `AcceptTile` is evaluated lazily, once per tile per search (`TestTile` caches it in the storage's flag grid), and the
+  flood goals count and record tiles in it (`EEAIAStarPathAreaGoal`: `mTileCount`, bounds, `mTiles`). A grid snapshot
+  computed up front would call it on tiles the search never reaches and in another order: not the same search.
+- The goals walk the storage's intrusive lists directly (`CollectTiles`, the visited lists, `mPath`'s parent chain,
+  the modifiers' `CheckNode`), and the nodes come from one static free list shared by every storage.
+- So the order of work is: first, in C++, a per-search world view that the goals query by tile (accept, cost
+  components) with no side effects, and the flood goals' bookkeeping moved out of `AcceptTile`; then the storage and
+  the machine move to Rust over that view, gated by a capture of searches (start, goal, the view's answers, the path)
+  in the shape of `tools/sim_capture.py`.
+- **The address-ordered set (`EEAIAStarPathAreaGoal::AssignKindIDs`, `std::set<EEAIPathArea*>`) is not a hazard.**
+  Its second loop only calls `AddIDBC`/`CC`/`DC`/`EC(id)` on each area's continent, with one id for the whole loop;
+  each call appends that id to that continent's own vector unless it is there (`std::find`). Every continent ends with
+  the same vectors in any visiting order, so address order, id order or any other order gives the same state, and a
+  Rust port may use any deterministic order. `GetContinentFromID` is a plain array read. It is the only
+  pointer-ordered container in the A*, continent and choke-point code; their other sets and sorts key on ids, serials
+  and tiles.
