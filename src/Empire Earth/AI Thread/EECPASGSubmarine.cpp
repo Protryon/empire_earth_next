@@ -74,7 +74,7 @@ bool EECPASGSubmarine::UpdateCanAttackShips()
 {
     this->mCanAttackShips = false;
     for (long i = this->mUnits.size() - 1; i >= 0 && !this->mCanAttackShips; i--)
-        this->mCanAttackShips = gU4E8708[3][this->mUnits[i]->GetUnit()->GetUnitClass()->mAmmoType] != 0.0f;
+        this->mCanAttackShips = gDamageTable[3][this->mUnits[i]->GetUnit()->GetUnitClass()->mAmmoType] != 0.0f;
     return this->mCanAttackShips;
 }
 

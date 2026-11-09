@@ -1,4 +1,5 @@
 // ReadBuffer: sequential reads from a byte buffer, throwing ReadBufferException at the end
+// (the bounds, length fields and UTF-16 text are ee_won's: rust/crates/ee_won/src/wire.rs, text.rs)
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -28,10 +29,11 @@ void ReadBuffer::Rewind() {this->mPos=0;}
 // Returns a pointer to the next bytes and skips them; throws ReadBufferException past the end
 const void* ReadBuffer::ReadBytes(unsigned long amount)
 {
-    if(this->length()-this->pos()<amount)
+    int64_t position=this->mPos;
+    if(!ee_won_read_take(static_cast<uint64_t>(this->length()),&position,amount))
         throw ReadBufferException("Attempt to read past end of buffer.");
     const void* result=static_cast<const char*>(this->data())+this->mPos;
-    this->mPos+=amount;
+    this->mPos=static_cast<long>(position);
     return result;
 }
 // FUNCTION: WON 0x006a3b40
@@ -60,17 +62,16 @@ int32_t ReadBuffer::ReadLong()
 }
 // FUNCTION: WON 0x006a3d70
 // Reads a sign-extended 1, 2 or 4 byte length field; returns 0 for any other size
-// (sign-extended to 32 bits, as the original's 32-bit unsigned long, on every OS)
+// (sign-extended to 32 bits, as the original's 32-bit unsigned long, on every OS; decoded by ee_won's wire module)
 unsigned long ReadBuffer::ReadLength(unsigned char fieldSize)
 {
-    int32_t length;
-    switch(fieldSize) {
-    case 1:length=(signed char)this->ReadByte(); break;
-    case 2:length=this->ReadShort(); break;
-    case 4:length=this->ReadLong(); break;
-    default:return 0;
-    }
-    return static_cast<uint32_t>(length);
+    int64_t position=this->mPos;
+    uint32_t length=0;
+    if(!ee_won_read_length(reinterpret_cast<const uint8_t*>(this->mData),static_cast<uint64_t>(this->length()),
+                           &position,fieldSize,&length))
+        throw ReadBufferException("Attempt to read past end of buffer.");
+    this->mPos=static_cast<long>(position);
+    return length;
 }
 // FUNCTION: WON 0x006a3db0
 // Reads the given number of characters into the string
@@ -90,10 +91,8 @@ void ReadBuffer::ReadString(std::string& text,unsigned char fieldSize)
 void ReadBuffer::ReadRawWString(std::wstring& text,unsigned long length)
 {
     text.erase();
-    const unsigned char* data=static_cast<const unsigned char*>(this->ReadBytes(length*2));
-    text.reserve(length);
-    for(unsigned long i=0; i<length; ++i)
-        WideAppendUtf16Unit(text,static_cast<uint16_t>(data[2*i]|(data[2*i+1]<<8)));
+    const void* data=this->ReadBytes(length*2);
+    WideAssignUtf16LE(text,data,length);
 }
 // The field size is passed as int
 // FUNCTION: WON 0x006a40f0

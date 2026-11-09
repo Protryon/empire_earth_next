@@ -683,15 +683,15 @@ void EECPASGAir::AssignPrejudices()
             theBombers.push_back(this->mUnits[i]);
     }
     for (i = theFighters.size() - 1; i >= 0; i--) {
-        if (gU4E8708[36][theFighters[i]->GetUnit()->GetUnitClass()->mAmmoType] > 0.0f &&
+        if (gDamageTable[36][theFighters[i]->GetUnit()->GetUnitClass()->mAmmoType] > 0.0f &&
             gPhysics->GetRandom() <= 0.1f)
             theFighters[i]->mPrejudices.push_back(theAntiAir);
-        if (gU4E8708[32][theFighters[i]->GetUnit()->GetUnitClass()->mAmmoType] > 0.0f &&
+        if (gDamageTable[32][theFighters[i]->GetUnit()->GetUnitClass()->mAmmoType] > 0.0f &&
             gPhysics->GetRandom() <= theFighterChance)
             theFighters[i]->mPrejudices.push_back(theFighter);
     }
     for (i = theBombers.size() - 1; i >= 0; i--) {
-        if (gU4E8708[20][theBombers[i]->GetUnit()->GetUnitClass()->mAmmoType] > 0.0f &&
+        if (gDamageTable[20][theBombers[i]->GetUnit()->GetUnitClass()->mAmmoType] > 0.0f &&
             gPhysics->GetRandom() <= theBomberChance)
             theBombers[i]->mPrejudices.push_back(theBomber);
     }

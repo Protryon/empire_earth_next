@@ -15,12 +15,10 @@
 #include "lle/U2DRectangle.h"
 #include "lle/FSFile.h"
 
-#include "ee/EETileLocation.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEMap.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EEGlobalConstants.h"
@@ -54,7 +52,7 @@ const UString RTSMap::sVertexColorIndex("RTSMap-VertexColorIndex");
 // SYNTHETIC: EXE 0x521d25   (dtor)
 
 // FUNCTION: EXE 0x521d41
-// Creates an empty map with the given scale value (also copied to gF52988C) and its colored-rectangle lock
+// Creates an empty map with the given scale value (also copied to gMapTileSize) and its colored-rectangle lock
 RTSMap::RTSMap(float inF1955F4)
     : mF1955F4(inF1955F4), mF1955F8(0.0f), mF1955FC(0.0f), mB195620(false)
 {
@@ -68,7 +66,7 @@ RTSMap::RTSMap(float inF1955F4)
     this->mL195608 = 0;
     this->mL19560C = 0;
     ESVERIFY_AT(TSScheduler::CreateCriticalSection(this->mCriticalSectionForColoredRectangles) == keseOK, 149);
-    gF52988C = this->GetF1955F4();
+    gMapTileSize = this->GetF1955F4();
 }
 
 // ICF-FOLDED: EXE 0x557269

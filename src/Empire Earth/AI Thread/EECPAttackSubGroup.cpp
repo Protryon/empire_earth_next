@@ -531,7 +531,7 @@ EETileLocation EECPAttackSubGroup::ComputeCenterPoint(long inMustBeInList)
             theTiles.push_back(theUnit->GetTile());
     }
     if (theTiles.size() > 0)
-        theResult = EEFn08282(theTiles, inMustBeInList);
+        theResult = EEComputeTileCenterPoint(theTiles, inMustBeInList);
     return theResult;
 }
 
@@ -769,7 +769,7 @@ void EECPAttackSubGroup::RankUnits()
         }
         for (long j = this->mUnits.size() - 1; j >= 0 && !this->mCanAttackShore; j--) {
             if (this->mUnits[j] && this->mUnits[j]->GetUnit())
-                this->mCanAttackShore = gU4E8708[0x2c][(*(this->mUnits.begin() + j))->GetUnit()->GetClass()->mAmmoType] != 0.0f;
+                this->mCanAttackShore = gDamageTable[0x2c][(*(this->mUnits.begin() + j))->GetUnit()->GetClass()->mAmmoType] != 0.0f;
         }
     }
     this->mStats.Compute(this->mUnits);
@@ -1252,7 +1252,7 @@ bool EECPAttackSubGroup::TakeRequestedUnits()
         EEComplexUnit* theUnit = this->mRequest->mUnits.back().mUnit;
         // Fix: PopSlot releases the request's reference, the last one of a unit that died waiting in the request; the
         // original then read it and gave it to a sub group unit: a freed pool slot, soon another unit (the sub group
-        // held a projectile, CanAttack read gU4E8708 at -1, and the slot was freed twice when the game ended; an ASan
+        // held a projectile, CanAttack read gDamageTable at -1, and the slot was freed twice when the game ended; an ASan
         // use-after-free with EE_UNIT_POOL=0, 2026-11-07). Held across PopSlot, and a dead unit is not taken.
         if (theUnit != NULL)
             theUnit->Reference();

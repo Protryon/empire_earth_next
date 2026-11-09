@@ -1,4 +1,5 @@
-// AuthPubKeyBlock (0x2c bytes)
+// AuthPubKeyBlock (the original's 0x2c bytes): the auth servers' public keys, unpacked by ee_won
+// (rust/crates/ee_won/src/auth.rs)
 #ifndef EE_WONAPI_WONAUTHPUBKEYBLOCK_H
 #define EE_WONAPI_WONAUTHPUBKEYBLOCK_H
 #include <list>
@@ -7,14 +8,15 @@
 namespace WONAPI {
 class AuthPubKeyBlock : public AuthBase {
     typedef std::list<ElGamal> KeyBlock;
-    KeyBlock mKeyBlock; //1c allocator /20header /24count
-    unsigned short mKeyBlockId; //28, natural extent2c
+    KeyBlock mKeyBlock; //1c
+    unsigned short mKeyBlockId; //28
 protected:
-    virtual ~AuthPubKeyBlock(); //2e2350, explicit destructor
-    virtual bool UnpackHook(ReadBuffer&); //2e2400 discoverygap,732code+4pad
+    virtual ~AuthPubKeyBlock(); //2e2350
+    virtual uint32_t UnpackKind() const { return EE_WON_AUTH_PUB_KEY_BLOCK; }
+    virtual void UnpackHook(); // the id and the keys
 public:
     AuthPubKeyBlock(const void* data = NULL,unsigned long len = 0)
-        :AuthBase(data,len) { this->Unpack(); } //inline constructor; 2e4b6a/2e5a31 build the key list
+        :AuthBase(data,len),mKeyBlockId(0) { this->Unpack(); } //inline constructor
     unsigned short GetId() const { return this->mKeyBlockId; } //+28
     const ElGamal& GetCurrentKey() const { return this->mKeyBlock.front(); } //first key node's payload, +8
     bool Verify(const AuthBase*) const; //2e26e0

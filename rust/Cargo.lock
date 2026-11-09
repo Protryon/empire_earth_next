@@ -171,6 +171,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "ee_astar"
+version = "0.1.0"
+
+[[package]]
 name = "ee_codec"
 version = "0.1.0"
 
@@ -261,6 +265,7 @@ dependencies = [
 name = "ee_plat_sys"
 version = "0.1.0"
 dependencies = [
+ "ee_plat_core",
  "libc",
  "windows-sys 0.60.2",
 ]
@@ -293,6 +298,7 @@ dependencies = [
 name = "ee_rust"
 version = "0.1.0"
 dependencies = [
+ "ee_astar",
  "ee_codec",
  "ee_data",
  "ee_dx7",
@@ -312,6 +318,7 @@ dependencies = [
  "ee_rmap",
  "ee_sound",
  "ee_ui",
+ "ee_won",
 ]
 
 [[package]]
@@ -327,6 +334,10 @@ version = "0.1.0"
 dependencies = [
  "ee_plat_core",
 ]
+
+[[package]]
+name = "ee_won"
+version = "0.1.0"
 
 [[package]]
 name = "equivalent"

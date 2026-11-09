@@ -11,6 +11,13 @@ game-derived and stay under build/; only their digests are checked in. golden_cp
 from a capture of the C++ leaves before they were deleted: a later build whose games and leaves are unchanged gives
 the same records, so `check` gates the whole path (the inputs the game hands a leaf and its outputs), and `replay`
 gates the Rust leaves alone over the C++ capture, even after the game has changed.
+
+ASRN is the tile A* searches' record (ee/EEAIAStarCapture.h): one per EEAIAStarMachine::Run, with the run's inputs,
+the count and FNV-1a digest of everything the machine asked its goal and the goal asked its view (in order, with the
+answers), and the run's outputs (the machine's members, the goal's flags, a digest of every storage node in list
+order). Its golden lines come from the C++ machine (R5b.1 step 2). EE_SIM_CAPTURE_ASTAR_EVENTS=1 also writes the
+events themselves (about 25 bytes each, some 35 million in the six games): for finding where two builds part.
+`replay` covers the formations only.
 """
 import argparse
 import concurrent.futures

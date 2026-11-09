@@ -264,7 +264,7 @@ bool EECPASGUProphetCalamityAnalyzerTeleport::MayGo(EECPAttackSubGroupUnit* inUn
         EEUnitClass* theClass = theUnit->mUnitClass;
         long theDefense = theClass->mAmmoType;
         long theAttack = theOwnClass->mFamily;
-        if (theOwnClass->CanBeAttacked() && gU4E8708[theAttack][theDefense] != 0.0f) {
+        if (theOwnClass->CanBeAttacked() && gDamageTable[theAttack][theDefense] != 0.0f) {
             float theDistance = inUnit->GetUnit()->DistanceSquaredTo(this->GetUnit());
             float theRange = inUnit->mUnit->mStats->mRange;
             if (theDistance >= theRange * theRange && inUnit->mCourage >= 0.5f && !theClass->mHasCalamityPowers &&
@@ -962,7 +962,7 @@ void EECPASGUMechProphet::Update(unsigned long inTime)
 // FUNCTION: EXE 0x408250
 // Frees a subtree of a ranked target multimap, node by node (std::_Tree _Erase)
 
-// 0x408282 is U2DComputeCenterPoint<long> (lle/U2DPoint.h; EEFn08282): its marker is in EECPASGUProphet.cpp, whose
+// 0x408282 is U2DComputeCenterPoint<long> (lle/U2DPoint.h; EEComputeTileCenterPoint): its marker is in EECPASGUProphet.cpp, whose
 // analyzers instantiate it
 
 // FUNCTION: EXE 0x40841e

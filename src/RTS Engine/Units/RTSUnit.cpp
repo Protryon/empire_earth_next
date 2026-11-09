@@ -11,13 +11,67 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
-#include "ee/EEUnit.h"
+#include "ee/RTSUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSDummyHeader.h"
+#include "ee/EEUnitHandle.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unordered_map>
+
+// New (R5a.4): the unit registry behind EEUnitHandle (ee/EEUnitHandle.h). Looked up only, never iterated.
+static std::unordered_map<uint32_t, RTSUnit*>& RTSUnitRegistry()
+{
+    static std::unordered_map<uint32_t, RTSUnit*> sRegistry;
+    return sRegistry;
+}
+
+RTSUnit* RTSResolveUnitID(uint32_t inUnitID)
+{
+    if (inUnitID == 0xffffffff)
+        return NULL;
+    std::unordered_map<uint32_t, RTSUnit*>& theRegistry = RTSUnitRegistry();
+    std::unordered_map<uint32_t, RTSUnit*>::const_iterator it = theRegistry.find(inUnitID);
+    return it != theRegistry.end() ? it->second : NULL;
+}
+
+// A unit's id is final when its player inserts it. A second object with the same id (none in a game: ids count up)
+// replaces the first in the registry; the first one's FreeNode then leaves the entry alone.
+void RTSRegisterUnit(RTSUnit* inUnit)
+{
+    uint32_t theID = static_cast<uint32_t>(inUnit->mUnitID);
+    if (theID != 0xffffffff)
+        RTSUnitRegistry()[theID] = inUnit;
+}
+
+void RTSUnregisterUnit(RTSUnit* inUnit)
+{
+    uint32_t theID = static_cast<uint32_t>(inUnit->mUnitID);
+    if (theID == 0xffffffff)
+        return;
+    std::unordered_map<uint32_t, RTSUnit*>& theRegistry = RTSUnitRegistry();
+    std::unordered_map<uint32_t, RTSUnit*>::iterator it = theRegistry.find(theID);
+    if (it != theRegistry.end() && it->second == inUnit)
+        theRegistry.erase(it);
+}
+
+// A handle of a unit without an id resolves to nothing: reported once (such a holder must keep its pointer). The
+// EEUnit and EEComplexUnit overloads are in EEUnit.cpp (they need the complete classes).
+uint32_t EEUnitHandleID(const RTSUnit* inUnit)
+{
+    uint32_t theID = static_cast<uint32_t>(inUnit->mUnitID);
+    static bool sReported = false;
+    if (theID == 0xffffffff && !sReported) {
+        sReported = true;
+        fprintf(stderr, "EE-HANDLE: a handle to a unit without an id (%p): it resolves to nothing\n",
+                (const void*)inUnit);
+    }
+    return theID;
+}
+
+void EEUnitHandleResolve(uint32_t inUnitID, RTSUnit*& outUnit) { outUnit = RTSResolveUnitID(inUnitID); }
 
 // New: the unit chain check (ee/RTSDummyHeader.h)
 static bool RTSCheckUnitListFromEnvironment()
@@ -137,6 +191,7 @@ void RTSUnit::Invalidate()
 void RTSUnit::FreeNode()
 {
     ESVERIFY_AT(this->mIsValid == false, 119);
+    RTSUnregisterUnit(this);   // New (R5a.4): its handles resolve to nothing from here (ee/EEUnitHandle.h)
     delete this->mTileNode;
     this->mTileNode = NULL;
     this->mIsNodeFreed = true;

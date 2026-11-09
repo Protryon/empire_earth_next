@@ -49,7 +49,7 @@ public:
     float GetUnitCostModifier();            // 0x2eb7c (+0xd80/+0xd84/+0xbec)
     float GetDMAttackFrequencyModifier();   // 0x2eba8 (+0xcac/+0xcb0/+0xcb4)
     float GetDMInitialAttackModifier();     // 0x2ebd9 (+0xcb8/+0xcbc/+0xcc0)
-    bool Fn2EC67();                         // 0x2ec67 (the resources option is 5)
+    bool RunsEveryManager();                         // 0x2ec67 (the resources option is 5)
     float GetPopLimitAdjustment();          // 0x2ec74 (+0xe2c/+0xe34/+0xe30)
     unsigned long GetIslandExpansionTimer();  // 0x2ed01 (+0xf08/+0xf0c/+0xf10, else 60000)
     bool IsAttackDue(unsigned long inTime);  // 0x2ed2f (mCanAttack and inTime >= mNextAttackTime)

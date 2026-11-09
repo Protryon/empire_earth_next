@@ -1,4 +1,4 @@
-// Login help page: an HTML browser that shows help/loginhelp.html
+// Login help page: the text of help/loginhelp.html
 // UNIT-FLAGS: -O2 -MD -GR -GX -DEE_DINKUM_SXL233
 #include <windows.h>
 #include <string>
@@ -21,12 +21,11 @@ void LoginHelpCtrl::InitComponent(ComponentInit& inInit)
 }
 // Both std::string temporaries are destroyed before the flag store and Container::Paint
 // FUNCTION: WON 0x007bfcd0
-// Loads the login help page on first paint (links open the external browser), then paints the page
+// Loads the login help page on first paint, then paints the page
 void LoginHelpCtrl::Paint(Graphics& inGraphics)
 {
     if(!this->mHaveLoadedHelp) {
         this->mBrowser->Go(ComponentConfig::GetResourceFile("help/loginhelp.html"),false,0,-1);
-        this->mBrowser->SetLaunchBrowserOnLink(true);
         this->mHaveLoadedHelp=true;
     }
     Container::Paint(inGraphics);

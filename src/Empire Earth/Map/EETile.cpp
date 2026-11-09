@@ -156,7 +156,7 @@ void EETile::SetTerrainType(long inTerrainType, const EETileLocation& inLocation
     long theY = inLocation.mY;
     theMesh.SetIsSpace(theX, theY, inTerrainType == kTerrainSpace);
     if (this->GetHeight() < 0.0f) {
-        if (this->GetHeight() < -(gF52988C * 0.75f))
+        if (this->GetHeight() < -(gMapTileSize * 0.75f))
             inTerrainType = kTerrainDeepWater;
         else {
             long theCount = 0;

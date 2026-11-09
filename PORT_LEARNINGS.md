@@ -2427,3 +2427,439 @@ the C++ members forward. The mesh, its rows, the render arrays and the materials
   `rust_build.py gate` PASS (940 tests), `eedata.py check` PASS, `gx_test` PASS, the sim oracle (seeds 2-7 identical
   to `ref`). Not run: `eemodel.py cppgate` (no model or texture bytes changed), tours, a saved game loaded through the
   new `Load` in the game (the codec is pinned by the goldens only).
+
+## R6: edit boxes and list boxes in Rust (ee_ui edit.rs, list.rs, 2026-11-09)
+
+`UIEditBox`'s text model (insertion with word wrap, deletion and re-wrap, caret moves, selection, single-line
+scrolling, the caret from a mouse location, the IME composition's bookkeeping: 30 members) and `UIListBox<T>`'s
+selection and scrolling (`ChangeSelectionIndex`, `CheckScrollBar`, the arrow keys, clicks, double clicks, auto-select,
+`SetLocation`, the bookkeeping after inserts and deletes) moved to `rust/crates/ee_ui`. The C++ classes keep every
+member, vtable and exported name; `include/lle/UIEditBox.h` gained only `friend struct UIEditBoxRust`, `UIListBox.h`
+`friend struct UIListBoxRust<T>`. What stays C++: construction, drawing (`CopyData`, `DrawPolygons`, `DrawTextA`), the
+clipboard, mouse and keyboard capture, key dispatch and repeat timers, focus, the list data (`std::vector<T>`),
+`FindString`, `std::sort`.
+
+- **The lines stay a `std::vector<UWideString>`.** The harness reads an edit box through `GetText`/`GetLineCount`
+  (header inlines over `mLines`) and a list box through `GetData`/`GetLineCount`, so Rust reads and writes the lines
+  through host calls (`ee_uicpp_edit_line`, `..._set_line`, `..._insert_line`, ...) instead of owning them. Only the
+  `UWideString` capacities differ from before (no one reads them).
+- **A template's host calls are a table.** `UIListBox<T>` is instantiated for `UWideString` (exported, emitted by
+  `UIComboBox.cpp`) and by the game for its own line types, whose subclasses override virtuals. `UIListBoxRust<T>` in
+  the header instantiates one static `EeUiListHost` of function pointers per `T` and passes it in `EeUiListRefs`; the
+  virtual members the algorithms call (`GetNumLines`, `ChangeSelectionIndex`, `ClearSelection`) are called virtually,
+  so an override still runs. The record offsets are `static_assert`ed in `Refs`' constructor, which every forwarder
+  instantiates.
+- **Re-entry.** A virtual host call can come back into Rust for the same object (`SetRectangle` -> the box's own
+  `SetLocation`; a list's virtual `ChangeSelectionIndex` -> the forwarder). Each FFI call loads the record at entry and
+  stores it at exit, and stores/reloads it around every host call with side effects (`Edit::call`, `List::call`), as
+  `UISlider` did.
+- **Text.** Everything that interprets text is in `text.rs`: characters through `Mbcs` (lengths, `CopyString`'s
+  prefixes, `_mbsninc` tails, `_mbschr(s, '\n')`, `_mbsnccnt`, spaces, digits) and the case-folded order
+  (`_mbsicmp`, `UWSNoCaseAlphaSort` now calls `ee_ui_text_less_no_case`). `SingleByte::inc` no longer steps past the
+  terminator. In `AddChar`, `\t` and `\r` are spaces to `_ismbcspace`, so their own branches never ran: kept.
+- **One divergence (a crash in the original):** `GetLocationFromIndex` with an index before the drawing index asked
+  `UWideString::CopyString` for 2^32 - k characters, and `_mbsncpy` padded that many NUL bytes into a small buffer. A
+  multi-line box gets a drawing index from `SetCaretLocation`'s `ComputeDrawingIndex` (a caret line whose prefix is as
+  wide as the box); typing at the start of such a line then crashed the scratch driver. Rust measures nothing there
+  (the caret at the left edge). The golden driver ran the original with that one line patched.
+- **One fix (`InsertLine`):** the inserted line's index was taken after `mData.insert`, from an iterator that a
+  reallocation had invalidated, so the selection's bump after an insert depended on the heap. The index is now taken
+  before the insert (the header's member template; the golden driver ran the original with the same change).
+- **`_mbsicmp` folds to lower case** in the UCRT's C locale (as `_stricmp`): `'_'` sorts before the letters. The
+  golden showed it; `ee_plat_core`'s POSIX fallback (`mbs_icmp`) folds to upper, so Linux and macOS sort names with
+  `[`, `\`, `]`, `^`, `_` or `` ` `` differently from Windows. Not changed here (it is ee_plat_core's).
+- **MSVC's `std::lower_bound`** is a binary search: over an unsorted range (`InsertLine(line, at, sort)` from an
+  arbitrary index) it does not give the first greater element; the replay searches the same way.
+- **Other original hazards kept:** a single character wider than a multi-line box's text area makes `AddChar` add
+  lines forever; `DeleteChar` with a selection (the game deletes the selection instead) can index past the lines.
+  The drivers avoid both, as the game does.
+- **Goldens:** `golden_edit.txt` (80 boxes x 60 operations: typing, paste, Enter, Backspace, Delete, arrows, Home,
+  End, selections, `SetText`, clears, mouse positions, `CheckScrollBar`, width and location changes, IME open, change,
+  close, scrolling) and `golden_list.txt` (60 boxes x 60 operations). The drivers over the forwarders print the same
+  files and also equal the original on 2,000 edit boxes x 150 operations (979k lines) and 400 list boxes x 100.
+  MSVC's `std::sort` is an insertion sort (stable) up to 32 elements; the list driver keeps lists shorter so that the
+  replay's stable sort matches.
+- **Python and line endings:** `PORT_LEARNINGS.md` and some goldens are CRLF, the Rust sources LF, and
+  `.gitattributes` stores bytes as they are (`* -text`): write files in binary. A Python heredoc that carries Rust
+  escapes (`b"\0"`, `'\n'`) put raw NUL and newline bytes into `text.rs`; write such code with an editor, not through
+  Python string literals.
+- **Gates run for this part:** both commits built EE-AOC and EE-SIM (`build.py -j 3 --sim`) and the windowed-software
+  profile, each 0 unresolved, 0 duplicates; the sim oracle (seeds 2-7, open tree) identical to `ref` after each;
+  `layout.json`'s 38 UI records unchanged from the pre-change build; the 24 names `presentation_bridge.c` resolves
+  (the `UIListBox<UWideString>`, `UIEditBox`, `UIComboBox`, `UICheckBox`, `UIRadioButton` members and vtables, the
+  `UWideString` members, `gUIManager`) present in both maps; `rust_build.py gate`'s steps pass except
+  `ee_plat_sys`'s two socket tests, which fail when the tests run in parallel on this shared machine and pass with
+  `--test-threads=1` (the crate is untouched here). No tour, screenshot or live edit-box/list-box use was run.
+- **Still C++ in R6's toolkit:** `UIComboBox`, the buttons, check boxes and radio buttons (state machines over tab
+  stops, sounds and capture), `UIControlsTable`, `UIManager`, every `CopyData`/drawing member, the edit box's key
+  dispatch and repeat timers.
+
+## R6: WON's leaves in Rust, and the lobby without HTML (ee_won, 2026-11-09)
+
+Decision D8 ports the WON library to Rust, leaves first. Crate `ee_won` (pure code, `cargo test` without a game) now
+holds the message buffers' format (`wire.rs`), WON's text conversions (`text.rs`, the one place: D6), CRC-16, MD5,
+the random generator, Blowfish, the big integers, ElGamal, the key encoding, the auth blocks and the CD key logic.
+The C++ classes stay where C++ holds them (ByteBuffer, ReadBuffer/WriteBuffer, CRC16, MD5, MD5Digest, Blowfish,
+ElGamal, AuthBase and the certificates, CDKey) as forwarders; BigInteger, Random and IntegerExtractor/Inserter are
+gone (nothing outside WONCrypt used them).
+
+- **Golden vectors needed AddressSanitizer.** The generator links the real WON units (clang-cl, like the game) and
+  prints synthetic cases; it was built twice, plain and with `/fsanitize=address` (`/MD`, the dynamic ASan runtime,
+  `/NODEFAULTLIB:stl_asan.lib`, `_DISABLE_STRING_ANNOTATION`/`_DISABLE_VECTOR_ANNOTATION`, `ASAN_OPTIONS=replace_intrin=0`
+  past BigInteger's overlapping `memcpy` in an in-place shift). Only cases that ran clean and printed the same in both
+  builds became goldens: several big-integer cases gave different answers with different heap contents.
+- **The clang-built `MD5Digest` returned MD5's initial state for every input.** Its rounds rotate with
+  `(unsigned)a >> -s` (Java's `>>>`): a negative shift count is undefined behaviour, the original compiler masked it to
+  `32 - s`, and clang dropped the rounds. So in the C++ game `Random` repeated the same 16 bytes, every ElGamal
+  signature was over the same constant, and the golden program's `Verify` accepted a signature for a different
+  message. WONCommon's `MD5` (macros, unsigned) was right. The Rust MD5 is RFC 1321 (tested on its vectors), and ElGamal and Random are
+  checked against a Python model with exact integers and real MD5 (`py*` lines of `golden_won.txt`), not against the
+  broken C++.
+- **`st_kmul`'s Karatsuba was wrong for odd word counts above 16** (`a[N-1]*b[N-1]` multiplied in 32 bits, operand
+  words read past their length, writes past the work buffer that ASan reported as heap-buffer-overflow). WON's real
+  keys (1024 and 2048-bit moduli, tiny top words in the reduction constants) mostly avoided it. `ee_won` multiplies
+  exactly; the other algorithms (shift-and-subtract division and modulo with their sign rules, Barrett reduction with
+  at most three corrections, binary gcd, extended Euclid) are ported as they were, with the C++'s "target keeps its
+  sign" rule of the shifts. `gcd` with a negative operand never returned in C++ (not ported as a case).
+- **Other C++ faults the port does not keep:** `WriteBuffer::ToByteBuffer` on a buffer never written wrote the prefix
+  before NULL (it now reserves first); Blowfish left the second block of a 4-byte input uninitialised (zero now); an
+  ElGamal block whose plain text starts with zero bytes read before its buffer (the zeros are restored); a key whose
+  modulus has no reciprocal let `ArithmeticException` escape `SetPublicKey` (now false); `IntegerInserter` writes a
+  two-byte length low byte first, which its own reader takes big-endian: kept, and tested (keys over 255 bytes per
+  integer do not round-trip).
+- **On LP64 the C++ crypto was broken anyway:** `MD5`'s and `BigInteger`'s `unsigned long` words were 64 bits on
+  Linux and macOS. The Rust is the same on every system.
+- **Seams:** fixed-size state is a `#[repr(C)]` struct embedded by value (`EeWonMd5`, `EeWonBlowfish`: Blowfish is
+  copied by value, e.g. into `AuthSession`); keys and auth blocks are boxed Rust objects behind opaque pointers
+  (`EeWonElGamal`: the C++ `ElGamal` deep-copies through `ee_won_elgamal_clone`, as `std::list<ElGamal>` needs);
+  results of variable length go to a sink (`WonByteBufferSink` makes the `ByteBuffer`, `WonWideSink` the
+  `std::wstring`; WONBuffer.h). `WONBuffer.h` includes `rust/ee_rust.h`, so every WON unit sees the C ABI.
+  cbindgen renames the generic Rust names (`Md5`, `Blowfish`, `ElGamal`, `AuthBlock`): a global `Blowfish` next to
+  `WONAPI::Blowfish` is ambiguous under `using namespace WONAPI`.
+- **The auth blocks** unpack in Rust in one call per block (`ee_won_auth_unpack`); `AuthBase::Unpack` asks the
+  subclass for its kind (`UnpackKind`) instead of passing a `ReadBuffer` down the `UnpackHook` chain, and the
+  certificate getters ask the unpacked block. Header fields read before a failure stay set, as before.
+- **Tests:** `cargo test -p ee_won` (unit tests and the goldens); `xbuild.py wontest` gains `won_crypto_test` (the C++ API
+  over the forwarders: CRC16, MD5, MD5Digest, Blowfish copies, ElGamal copies, signing, a key block).
+- **build.py has no incremental compile:** every build stages and compiles all ~1,400 units (an hour at `-j 3` on a
+  shared machine). To check a change, compile only the units that include the changed headers (transitively) into the
+  last build's object folder and relink with `build.link_exe` (a scratch script); run the full builds once at the end.
+
+### The lobby without HTML (D8)
+
+WON's HTML rendering is gone: the parser and documents (`HTMLParser*`, `HTMLDocument*`, `HTMLTag`, `HTMLFromText`,
+`HTMLDisplay*`), the line-segment layout engine that only HTML used (`LineSegment`, `MultiLineElement`,
+`MultiLineBuilder`, `TextLineSegment`, `Table`, `TableElement`, links and image maps) and the browser's downloads.
+The chat window never used it (`TextArea` has its own lines).
+
+- **`BrowserComponent` stays as the layout type** the lobby's .cfg files name (MOTD, login help, terms of use, the
+  Help and News tabs; their keys `FontSize`, `Transparent`, `Scroller` and the child `HTMLVIEW` still parse). It is a
+  `TextArea` in a scroller now: a page file's text, HTML pages with their tags dropped, block tags as line breaks and
+  entities decoded (`ee_won/src/plaintext.rs`, from Windows-1252 bytes). Back, forward and stop stay disabled (no
+  links, no history), find finds nothing, and a web address (the News tab's community URL) is shown as text: the WON
+  servers are gone and nothing fetched pages but the browser.
+- `MOTDCtrl` and `TOUDialog` built an HTML document of two files (`HTMLDocumentGen`, flags IsOptionalHTML and, for the
+  MOTD, SkipFirstCharIfNotHTML: a text MOTD's first character is WON's "is new" flag); `ShowFiles` keeps that rule.
+- `WrappedText::mRichText` was never set; its branches went with the segment engine.
+
+## R2 performance: the text db load under the Windows debug heap (ee_data, 2026-11-09)
+
+Every harness session starts the game as a debugged process (exe_boot.c, `DEBUG_ONLY_THIS_PROCESS`), which turns on the
+NT debug heap (no low-fragmentation front end, fill and free checks) unless `_NO_DEBUG_HEAP=1`. There a heap operation
+costs 30-80 microseconds instead of ~50 ns, and the Rust text compiler (R2.3) did not reach the main menu in 120 s.
+
+- **Measure with the same entry points.** `ee_data_startup <Data/db> [--repeat N] [--tables]` (rust/crates/ee_data/src/bin)
+  runs the game's load (one `Content`, `Rules::load`, then every table with a text form compiled, the ids of dbobjects
+  and dbtechtree) with a counting global allocator: time, allocations, reallocations, frees, bytes, peak, and the time
+  spent inside the system heap by block size. Run it under a debugger to get the debug heap: a ctypes launcher with
+  `CreateProcessW(..., DEBUG_ONLY_THIS_PROCESS)` and a `WaitForDebugEvent`/`ContinueDebugEvent` loop is enough
+  (`DEBUG_EVENT`'s union starts at offset 16 on x64, not 12).
+- **Before / after, on the open tree's Data/db** (11 MB of text, 8.0 MB of db files):
+
+  | | allocations | reallocations | allocated | release | under the debug heap |
+  |---|---|---|---|---|---|
+  | before | 3,861,008 | 197,240 | 223 MB | 0.9-1.3 s | 115 s (rules 41 s, tables 74 s) |
+  | after | 56,552 | 1,962 | 125 MB | 0.45-0.8 s | 5.2-6.2 s (rules 0.3 s) |
+
+  Release times are noisy on a shared machine; the debug-heap time is the number the harness sees.
+- **The whole game under the debug heap** (EE-SIM.exe started with `DEBUG_ONLY_THIS_PROCESS`, the open tree, seed 2):
+  the main menu at 90.0 s before (the main checkout's EE-SIM.exe of 2026-11-09 10:11) and at 19.9 s after; with
+  `_NO_DEBUG_HEAP=1` the whole 1-game-second run takes 9.7 s. The ~15 s left before the menu are outside ee_data.
+- **Where they went:** (1) the YAML parser copied every line, key and scalar (`Vec<u8>` each, a `Rc<Node>` per node,
+  keys/items grown by push); (2) `find_table` lowercased its argument into a new `Vec` on every reference cell
+  (`resolve` calls `table(r.table)` per cell: 190,000 allocations for dbobjects alone); (3) `parse_f32` lowercased
+  every float; (4) `msg!` places built eagerly per row, per field (`g.where_.clone()`) and per reference
+  (`m.where_at(x)`), each growing a `Vec` and formatting integers through `to_string`; (5) `get_index` cloned the
+  rows and kept a `line_of` map of place strings; (6) `elems` built a `Vec` per array field per row.
+- **The shape now:** `node::Bytes` is a slice of the text it was parsed from (an `Rc<[u8]>` and a range; a quoted
+  scalar with escapes is the one copy), `Node::items` is `Vec<Node>` built off a parser stack at its exact size (one
+  allocation per collection), a placed record is its list's `Rc` and an index, a place in a message is
+  `msg::At { what, line }` (any `msg::Part`) written only when a message is, the readers in text.rs take
+  `where_: &W where W: Part`, a row's place / key marks / string field reuse buffers (`Scratch`), and every row's
+  record lives in one buffer per table. Messages and output bytes are unchanged (`eedata.py check`, `cppgate`).
+- **What is left is mostly frees.** After the fix the debug heap spends ~3.4 s in 45,000 frees and ~1.2 s in 56,000
+  allocations; small blocks cost as much as large ones, so the count is what matters. Remaining per row: a CSV
+  record's keys and items, a YAML record's keys and items and one per list value, a lead table's strings, and one
+  shared id per indexed row. The next step, if needed, is a flat document (all nodes of a text in one vector,
+  children as ranges), which would bring a table's parse to a handful of allocations; it changes the `Node` API that
+  rules.rs, textrow.rs and the generated `text_rows` use.
+
+## R5a.7: the gates on the game's own fixture, the harness clock through PlatSim (2026-11-09)
+
+`tools/gates.sh` now runs `tools/harness/fixture_game.py`: the test-profile exe started directly with `EE_TEST_UI`,
+read only through the fixture (`EETestFixture.cpp`), its stderr and its game log. `--legacy` keeps the debugger path.
+
+- **What the gates read and where.** PT, game ms, game over, world players, map, local player: the fixture's `game ms`
+  line (it always had them). New: `comm ct <n> last <n> paused <0/1> multiplayer <0/1>` (the CTs and the pause the
+  input check needs), `civ <locked> <chosen> stock f/w/s/g/i` per player (the civilization pre-empt's check, the
+  summary's resources), `clock <num>/<den> ms <t> frames <n>`. The units the old summary called `units_lb14` are
+  `population` (`mPopulationCount`), the victory units `victory` (`mEndOfGameCount`). A command's verdict is the
+  `TEST UI <verdict> ...` stderr line. The game log (`Logs/game-*.log`) names the computer players; the driver checks
+  their number.
+- **Windows' `rename` never replaces.** The fixture wrote `ui-state.txt` through `.tmp` + `rename`, which on Windows
+  fails when the target exists: the file was written once, at the first poll, and the driver saw a frozen main menu.
+  `MoveFileExA(..., MOVEFILE_REPLACE_EXISTING)`; the reader may hold the file for a moment, the next poll writes it.
+- **The harness clock is a seam of the platform layer.** `PlatSimSetTimeFactor(num, den)` (`ee_plat_core::sim_clock`):
+  `PlatTimeMilliseconds(64)` and `PlatCounterTicks` run F x real time from their values at the set (no jump); `PlatSleep`,
+  the timer intervals and the finite timeouts of `PlatEventWait`/`PlatEventWaitAny`/`PlatThreadWait` last 1/F. Without
+  a factor every function calls exactly the Win32 import it called before, so the legacy time shim still works.
+  Windows waits shorter than a millisecond on a high-resolution waitable timer per thread (added to the wait set, as
+  the shim did); scaled timers are a thread each with deadlines on the performance counter (a multimedia timer fires
+  at most once a millisecond), ids from 0x7e000001. `EETestFixtureConfigure` (first in `EERun`, only with
+  `EE_TEST_UI`) takes `EE_TEST_TIME_FACTOR`, `EE_TEST_SEED` (`gPlatSimSeed`, as the old seed pin) and
+  `EE_TEST_NO_HUMAN_DEFEAT`; a malformed one stops the game. GX's own `Instant` clock (frame pacing, the null-3D key
+  frames) stays real time, as the key frames were meant to be.
+- **Game time follows the clock, PTs follow the timer.** At factor 32 and PT rate 40 a seeded 2-AI Hard game ran 1280
+  PTs per real second and about 16 PTs per game second (Very Fast); the legacy shim gave about 23. The driver stops at
+  its first poll past the cap (once a real second = about 1,300 PTs) and samples once more 3 s later, so the final
+  PT is the driver's, not the game's.
+- **Frames: a window capture, not GX's read-back.** `GXTestReadFrame` from the fixture's present hook timed out (10 s,
+  "GX: read-back ... timed out") on every frame on this machine's WARP adapter; the legacy log has the same timeouts
+  between successes. The driver captures the game window with `PrintWindow(PW_CLIENTONLY | PW_RENDERFULLCONTENT)`,
+  which returns the composed swap chain. `frame.request` -> `frame.bmp` stays for other platforms. A window keeps its
+  last picture when the renderer stops presenting, so a game capture must differ from the one before it (a running
+  game changes about 0.2% of the picture between captures 120 s apart): this found GX's "Not enough memory left"
+  bind-group failures, after which the window showed the loading screen while the game ran on.
+- **Debug output without a debugger.** With `EE_TEST_UI`, `PlatDebugSetHandler` sends `PlatDebugOutput` to stderr as
+  `debugstring <text>`, so GX's errors and the EE-AI lines reach `game.log`; `summary.json` counts GX's errors.
+- **What no longer runs on the gate path:** exe_boot.c's guards (registry writes, files outside the stage,
+  non-loopback sockets), its crash/abort hooks (a crash ends the process and fails the run; a message box fails it;
+  `SetErrorMode` keeps WER dialogs away), the RNG trace, `--instance`, the human driver and the differential tools.
+  They still need the layout and the mangled names (`layout_gen.py`, `game_state_probe.py`, `hbuild.py`,
+  `exe_boot.c`) and run with `gates.sh --legacy` / `game_session.py`.
+
+## R5b.1: the tile A* searches in Rust (ee_astar, branch rust-r5b-astar, 2026-11-09)
+
+The order proposed in "R5b.1" above held through step 3 and the first goals of step 4. `rust/crates/ee_astar` is the
+node storage and the search machine of every `EEAIAStarMachine<S, G, M>` (the land/sea/space path searches, the
+bounded search, and the continent, hill, choke point, path area and path sector flood fills), plus the continent,
+hill and choke point goals' tile tests. The graph searches (`EEAIAStarGraphMachine`, `EEAIAStarGraphStorage`, the
+path graph and continental chain goals) are untouched C++ and not captured.
+
+- **Step 1, the view (`ee/EEAIAStarView.h`).** Every read the tile goals' `AcceptTile`, `GetCost` and
+  `ClassifyTile` made of the live world is one query with a plain answer (about 35 queries: the tile's terrain, edge,
+  units, height level; the continent manager's ids, tile flag and value, path areas; the choke pass's grids; the
+  unit loops of the area fills, each loop its own query because their predicates differ slightly; the walker's
+  facts). The expressions moved unchanged; the goals keep their state and side effects in the same order. The path
+  goals' modifiers (`EEAIPathGoalModifierBase` and subclasses, the storm's) stay world-side policies, asked as one
+  query each (`CanEnter`, `GetModifierCost`). The search set-up's reads (the walker's blocked tiles in `Prepare`) are
+  not per tile and stay with the goal; their effect reaches the search as `MarkTile` calls.
+  - A blocker query that also returns the unit's player would read `GetPlayer()` of units the C++ never asked: so
+    there are three (`HasBlocker`, `GetFirstBlockerID`, `GetFirstBlocker`), each reading what its caller read.
+- **Step 2, the capture (ASRN, `ee/EEAIAStarCapture.h`).** One record per `Run`: its inputs; the count and FNV-1a of
+  every event (the machine's questions to its goal: AcceptTile, GetCost, Estimate, IsGoalNode, SearchDone, MarkTile;
+  and the goal's view queries, in order, with the answers); its outputs (the machine's members, the goal's flags,
+  the current and path nodes, the bounds, every node of every list in order). The six oracle games make 82,302 runs
+  (by machine type: 26,182 land paths, 2,001 water, 47,709 bounded, 127 continent, 52 choke point, 34 hill, 1,304 path
+  area, 4,893 path sector fills) and 34.8 million events; a capture is about 3 MB per game. Recording the events
+  themselves (`EE_SIM_CAPTURE_ASTAR_EVENTS=1`) gives 160 MB for seed 2, enough to name the first event where two
+  builds part. Two captures of the same build are identical, and the capture runs' traces equal the reference.
+- **Step 3, the storage and the machine.** `storage.rs` and `machine.rs` are line-by-line ports. Nodes are an arena
+  with a linked free list per storage instead of the C++'s one static list: which free node a search reuses is not
+  observable (`NewNode` clears every field, nothing compares node addresses), and the C++ never releases a node twice.
+  Kept quirks: the hash's high-nibble fold replaces the hash; `RemoveNearestOpen` on a one-node sorted list sets the
+  head from the node's (null) prev; `PrepareGrid`'s clears stop one tile short of their span's end, so a stale
+  accept/reject flag can survive into the next search; the terrain storages never clear `mBounds`;
+  `Init` sets the size before `PrepareGrid`, so a "size changed" test there only ever sees the first allocation.
+  - The C++ machine keeps its members (`mTile`, `mRevs`, `mSteps`, `mFound`, `mCheckCorners`): goals write
+    `mCheckCorners` from inside `AcceptTile` (the area fills) and the path manager reads the others. The Rust machine
+    reads and writes them through callbacks every time and never caches one across a call into the goal.
+  - No callback re-enters the running storage: what a goal read of the storage during a search (`SearchDone`: the
+    current node and whether an open node is left; `GetCost`: the current node's parent) arrives as callback
+    arguments, cached on the C++ storage (`mHook*`). `IsGoalNode` gets a stack node with only `mX`/`mY` (all that
+    the goals and `CheckNode` read).
+  - The C++ storages keep their own per-tile id grids (continent, hill, choke point, path area, sector), which the
+    managers index, and forward the rest; `mDirtyBounds` and `mHasBounds` became setters.
+  - **Gate:** the six games' ASRN digests equal the C++ machine's (and seed 2's 15,055 records equal event by event),
+    the sim oracle identical. It held at the first build.
+- **Step 4, the goals, first ones.** The continent, hill and choke point goals' `AcceptTile` are Rust (`goals.rs`),
+  asking the view through `EeAStarViewCallbacks`; the goal's counters go in and come back (the choke goal appends the
+  returned serial). Their constant hooks (goal node, costs, limits) stay one-line C++ inlines. Not ported yet: the
+  path goals (their modifiers first: they read units, regions and goal state), the path area and path sector goals
+  (their `ClassifyTile` and side effects on `mCheckCorners`).
+- **`long` is `i32` here** (the Windows build's). On LP64 the C++ costs (`unsigned long`) were 64-bit; the Rust
+  machine wraps at 32 bits. The costs never come near that, but a Linux/macOS run is not proven equal by this gate.
+- **Builds:** a full `build.py -j 3 --sim` took 27-28 minutes on this machine with other agents' builds running.
+  For iteration a scratch wrapper skipped units whose object was newer than the unit and the A* headers it
+  includes (4-6 minutes); every commit's gate used the full build.
+- **Gates run:** `build.py -j 3 --sim` links 0/0 (EE-AOC, EE-SIM) at every commit; `rust_build.py gate` (one rerun:
+  `ee_plat_sys`'s `suspended_thread_runs_only_after_resume` failed once under load, then passed); the sim oracle
+  identical on seeds 2-7; `sim_capture.py check` PASS from step 2 on. Not run: the test-profile build, `gates.sh`,
+  `eedata check`/`cppgate` (no data change), any macOS or Linux build.
+
+## R5a.4-R5a.6: unit handles, named globals, the RTS layer's real surface (branch rust-r5a-handles, 2026-11-09)
+
+### R5a.4 measured: who holds `EEComplexUnit*`/`EEUnit*`/`RTSUnit*`
+
+Counted by regexes over comment-stripped source (a header belongs to the module of the `.cpp` of the same name;
+the WON library left out). *member*: a class member pointer; *container*: a member container of them; *param*: a
+parameter of a function definition; *local* / *local cont.*: a local pointer / local container.
+
+| Module | member | container | param | local | local cont. |
+|---|---|---|---|---|---|
+| AI Thread | 24 (+5 in headers of no unit) | 17 | 312 | 408 | 193 |
+| User Interface Thread | 4 (+2) | 1 | 25 | 169 | 29 |
+| Graphics Thread | 5 (+1) | 1 | 84 | 75 | 3 |
+| Communications | 0 | 0 | 0 | 95 | 14 |
+| Scenario Editor Actions | 3 | 0 | 2 | 17 | 3 |
+| Scenario Editor | 0 | 2 | 5 | 11 | 0 |
+| UI Events | 1 | 0 | 0 | 15 | 1 |
+| Actions | 1 | 0 | 2 | 16 | 1 |
+| Empire Earth (EEWorld, the camera) | 2 | 5 | 14 | 32 | 0 |
+| *for scale:* Units | 29 | 3 | 742 | 347 | 62 |
+| *for scale:* Physics Thread | 5 | 1 | 166 | 39 | 1 |
+| *for scale:* Player | 5 | 6 | 42 | 50 | 4 |
+
+Outside Units/Physics, the members that live across ticks (where a freed pool slot can come back as another unit):
+
+- AI Thread, 14, all referenced (`Reference`/`Dereference`): `EECPASTargetUnit::mUnit`, `EECPAttackSubGroupUnit::mUnit`/`mTarget`,
+  `EECPAGTask::mUnit`, `EECPCivilizationManager::mGarrison`/`mFortress`, `EECPPersonnelRequest::Unit::mUnit`,
+  `EECPResourceCenter::mUnit`, `EECPWMWall::mUnit`, `EECPWallManager::mFrom`/`mTo`, `EEHerd::mLeader`/`mTarget`,
+  `EEPathManagerNode::mUnit`; plus the A* goals' `mUnit` (`EEAIAStarPathfindingGoalBase`, `EEAIAStarPathGraphGoal`,
+  `EEAIPathGoalModifiers`: the A* branch's files). The 17 containers (`EECPUnitManager`, `EECPResourceManager::mMines`/`mFish`,
+  `EECPWallManager::mGates`, `EEHerd::mUnits`, `EECPPersonnel::mUnits` (a multimap by id), ...) are the larger part.
+- User Interface Thread: `EEUICPortrait::mUnit` (referenced). UI Events: none (the hot keys' entry is a local).
+- Scenario Editor Actions: `EESEAMoveUnit::mUnit`/`mContainer`, `EESEAPlaceUnit`'s `mContainer` (undo records, referenced).
+  Scenario Editor: `EEUIFScenarioEditor::mSelectedUnits`, `EESEUnit`'s `mCargo` (containers).
+- Actions: `EEAUpgradeImprovement::mUnit`. Empire Earth: `EECameraControl::mUnitA`/`mUnitB` (referenced).
+- Graphics Thread (left to rust-r5a-snap): `EEE3DMarchingLine::mFromUnit`/`mToUnit`, `EEE3DTracerBeam::mTarget`,
+  `EEEffect::mUnit`, `EEUnitPicker::mUnit`, `mCarriers`.
+- Communications holds none: its 95 locals live inside one message's Execute.
+
+The other members are function objects built and dropped inside one call (`EECPBMBuildsTarget`, `EECPWMRunLess`,
+`EECPAILoadGroup`, the `EEFO*` target finders). Parameters and locals stay pointers.
+
+### The handle (`ee/EEUnitHandle.h`)
+
+- **The id is the handle; no generation counter is needed.** A unit id is the player id in the top byte and a
+  per-player counter (`RTSPlayer::AddUnit`: `mNextUniqueID`, 24 bits) below; ids are never reused within a game
+  (a converted unit is a new unit with a new id, `EEConvertUnit`; a swapped unit too, `EEPhysics::SwapUnit` passes
+  both ids to the scenario manager). So a freed pool slot reborn as another unit has another id, and a handle to the
+  freed unit resolves to NULL.
+- **The registry maps the id to the object for the object's life**, not for its player membership:
+  `RTSRegisterUnit` at `RTSPlayer::InsertUnit` (every new, loaded or kept id passes there), `RTSUnregisterUnit` at
+  `RTSUnit::FreeNode` (the last reference, the complex units' pool return, the destructor), and only if the entry is
+  still that object. A killed unit that a holder still references resolves to itself, as the pointer did; that is
+  what makes the conversion behaviour-neutral for the referencing holders (all the converted ones). Resolving through
+  `RTSWorld::GetUnit` instead (the player's hash buckets) would have changed behaviour: a dead unit leaves the
+  buckets at `RemoveKilledUnits` while its referencing holders still read it.
+- `std::unordered_map<uint32_t, RTSUnit*>`, looked up only, never iterated: it orders nothing and draws no random
+  number. It is touched by the same threads, under the same world lock, as the pool and the reference counts.
+- `EEUnitHandle<T>` (T = `RTSUnit`, `EEUnit`, `EEComplexUnit`): 4 bytes, converts to and from `T*`, so a member's
+  type changes and its uses read the same (`mUnit->X`, `if (mUnit)`, `mUnit = p`, comparisons). The compiler finds
+  the places that need a decision: `USavedID(handle)` does not deduce, `a ? handle : ptr` is ambiguous,
+  `dynamic_cast<X*>(handle)` is refused.
+- **Saves are unchanged:** the save code writes `mUnit ? mUnit->GetUnitID() : -1` as before. The Load/Restore swizzle
+  that kept the raw id in the pointer field keeps it in the handle (`EEUnitHandle::FromSavedID`, `GetSavedID`),
+  and Restore resolves it through `gWorld.GetUnit` as before. **Trap:** a getter returning `T*` (`GetUnit()`,
+  `GetLeader()`, `GetTarget()`) compiles inside `USavedID(...)` and silently resolves; three Restore passes read the
+  saved id that way (`EECPAttackSubGroupUnit`, `EECPResourceCenter`, `EEHerd`) and were changed by hand (grep
+  `USavedID([^)]*Get` after any further conversion). Between Load and Restore a handle resolves its saved id to the
+  live unit of that id, where the pointer held a garbage address. A reader in that window (none in the converted
+  classes' own Load/Restore; other classes not audited) would now see a real unit, and a destructor run after a
+  failed load would dereference one where the original crashed. No saved game was loaded on this branch.
+- A unit without an id (pending until `RTSPlayer::AddPendingUnits` at the tick's flush) has no handle: storing one
+  prints `EE-HANDLE` once on stderr. None appeared in the six oracle games' logs.
+- **Threads.** Only the physics thread (the AI runs inside its tick, under the write lock) resolves handles today, so
+  the map has no lock. A unit's last `Dereference` can run on the UI thread under the read lock (`FreeNode` erases
+  there), so before a UI, editor or graphics holder resolves handles the registry needs a lock, or the frees must
+  move to the physics thread. That is why the UI's `EEUICPortrait::mUnit`, the editor's undo records and the camera
+  stayed pointers here.
+- **Converted:** the AI's 14 stored members listed above. Their classes shrink on x64 (an 8-byte pointer becomes a
+  4-byte id); none is read by the harness (`game_state_probe.py` reads EEWorld, EEPlayer, EEPhysics and
+  NESynchronousCommunications; `hbuild.py`/`exe_boot.c` hook no AI symbol).
+- **Containers are next, and harder:** a `std::set<EEComplexUnit*>` or a map keyed by unit pointer iterates in
+  address order; as handles it would iterate in id order. Each needs its order kept (a vector of handles where it
+  was a vector) or proven irrelevant, as "R5b.1" did for the A* set.
+- The handle holds no reference: a holder that referenced the unit still calls `Reference`/`Dereference` through it.
+  Dropping those (weak handles, so that Rust can own units) changes when units return to the pool, which moves pool
+  addresses and so any address-ordered container: a rebaseline of its own, after the address-keyed containers are
+  gone.
+
+### R5a.5: the address-named globals in the simulation modules
+
+Named from what they do, the address kept in each comment (the R5a.5 commit message has the list): the damage
+tables `gDamageTable`/`gDamageTableScaled1`/`gDamageTableRowCount`/`gDamageTableColumnCount` (`gU4E8708`/`870C`/
+`8714`/`8718`), `gMapTileSize` (`gF52988C`), `UpdateFanaticismColor`, `SetRandomReloadTimer`, `EEUnitClass::UpdateDone`
+(the empty hook every unit class's Update ends with), the AI's `RunsEveryManager`, `GetRandomElementIndex`, the
+military aid package's `EnterState2/3` and `UpdateState2/3` (states nothing enters in a game; their meaning is not
+known, so they keep numbers), `EEComputeTileCenterPoint`, `gHerdUnreadValue` (only cleared). Folded, a pure move:
+`gU531CF0`/`gU531CF4` became `EEPhysics::mInputMessagesProcessed`/`mLastOutOfSynchChecksum` (appended, so the
+harness's EEPhysics offsets are unchanged; gPhysics is made once and Init clears the count as before).
+
+- A renamed record comment is a data-gate change: `EEDamageTableRecord`'s comment named `gU4E8708` and is copied
+  into `tools/eedata/specs.json`, so `eedata.py specs` had to run (`check` reports it stale otherwise).
+- Left: the names in Graphics Thread files (`Fn23CEE2`, the cloak opacity; `EEUnit::Fn27C0B4`;
+  `EEComplexUnit::FnE123D`; `gB529065/66/68`), for the renderer branch; the UI, editor, WON and lobby ones
+  (`gU5654E4`, the `gU531930..38` fonts, `EEWonNet::FnCFFDD`, ...), which are not simulation. `tools/datafmt` and
+  DATA_FORMATS.md, generated once from old headers, still say `gU4E8708`. The x86-only differential harness looked
+  up `?gU531CF0@@3JA` by symbol; its other 32-bit names do not resolve on x64 either.
+
+### R5a.6: what the RTS layer really uses of the game
+
+`llvm-nm --undefined-only` on the 11 RTS Engine objects, each symbol attributed to the module whose object defines
+it: 146 into the LLE, 115 external (CRT, platform, Rust), and 26 into the game:
+
+| Into | Symbols | What |
+|---|---|---|
+| Empire Earth | 12 | globals: `gWorld`, `gContinentManager`, `gDoppelgangerManager` (RTSMap); `gMouse`, `gUserInterface`, `gSoundManager`, `gConductor`, the thread names (RTSGraphics, RTSMousePointer, RTSPhysics); `gCommunications` (RTSPhysics) |
+| WON lobby glue | 7 | `EELobby*` (RTSGraphics::RenderLobby) |
+| AI Thread | 3 | `EEAIContinentManager::GetContinent`; `RTSMapTileRun`'s ctor and `kHeightEpsilon`, both defined in AI objects by the original's placement |
+| Graphics Thread | 1 (2 refs) | `RTSMouse::EndFrame`: the RTS class's own method, placed in EEGraphics.cpp by its address |
+| User Interface Thread | 1 | `EEUserInterface::PostMovieDone` (RTSGraphics) |
+| Units | 1 | `EEDoppelgangerManager::UnregisterPlayer` (RTSMap) |
+
+So "RTS -> Graphics Thread" is headers, not code: the RTS classes were declared in the game's headers (`RTSMouse`
+in EEMouse.h; `RTSUnit` in EEUnit.h, which pulls EEEffectManager.h, EEGraphicalGoalManager.h and EEEffect.h).
+Done here, each unit disassembled before and after (identical where no code was meant to change):
+
+- `RTSMouse` (with `RTSMouseSaveUnder`) moved to `ee/RTSMouse.h`, `RTSUnit` (with `RTSUnitLink`) to `ee/RTSUnit.h`;
+  EEMouse.h and EEUnit.h include them where the classes were. RTSMouse.cpp, RTSWorld.cpp and RTSUnit.cpp include the
+  RTS headers instead. The handle's EEUnit/EEComplexUnit halves moved from RTSUnit.cpp to EEUnit.cpp. The
+  differential harness's header parser (`UNIT_CLASSES`) reads RTSUnit from the new header.
+- RTSMousePointer's thread read `gMouse` (an `EEMouse*`) three times per pass; it now calls `RTSGetInputMouse()`,
+  declared by the RTS header and defined in Empire Earth.cpp (`return gMouse;`), read at each call as before.
+- RTSMap.cpp dropped two includes it did not use (EEAreaUtilities.h, EETileLocation.h).
+- Measured by a text include closure (quoted includes; a header belongs to the module of the `.cpp` of its name):
+  RTS -> Graphics Thread went from 3 direct / 12 transitive edges to 1 / 4, RTS -> Units from 4 / 10 to 2 / 4.
+  RTSGraphics.cpp still needs `gMouse` and so EEMouse.h; RTSPlayer.cpp still includes EEUnit.h, because EEPlayer.h
+  types its unit lists `EEUnit*`. The plan's "146" was another count; it is not reproducible from the includes as
+  they are now.
+- Left: RTSGraphics.cpp (its lobby, movie and mouse uses; the renderer branch rust-r5a-snap works there), RTSMap's
+  world, AI and doppelganger globals, `RTSMouse::EndFrame`'s placement in EEGraphics.cpp, RTSPlayer's `EEUnit*`
+  lists.
+
+### Builds and gates on this branch
+
+- `build.py` recompiles every unit: about 25 minutes at `-j 3` with four other agents building. Between commits a
+  scratch wrapper (not committed) skipped the units whose object was newer than the source and every quoted header
+  it reaches; the per-commit EE-SIM link and sim oracle ran on that, the full `build.py` at the start and the end.
+- A killed `build.py` leaves objects compiled from a mix of staged (old) sources and live (new) headers: `include/`
+  is read in place, only `src/` is staged. Do not edit headers while a build of the same worktree runs, and delete
+  the objects of a killed build.
+- Gates run: per commit, EE-SIM linked 0/0 and the sim oracle (seeds 2-7, 2700 s) identical to the main checkout's
+  `ref`; `eedata check` PASS after R5a.5; at the end the full `build.py --sim` (EE-AOC and EE-SIM 0/0, its EE-SIM
+  identical on seeds 2-7 again) and `--test-profile windowed-software` (0/0; the harness's hooked symbols in its map).
+  The records `game_state_probe.py` reads (EEWorld, EEPlayer, NESynchronousCommunications, EEPhysics up to its old
+  end) and UIManager/UIForm/EEMouse/RTSMouse have the same layout.json offsets as before.
+  Not run: the harness (tours, `gates.sh`), a saved game loaded, Linux or macOS.

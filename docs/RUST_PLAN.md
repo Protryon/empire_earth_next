@@ -30,13 +30,17 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | R4.1 GX on the `wgpu` crate | Done (`ee_gx`); wgpu-native is gone |
 | R4.2 DX7 plug-in | Done (`ee_dx7`), a faithful port (D5) with C++ trampolines. C++ keeps the classes, object lifetimes, `Set3DMode`'s matrix composition, the PIM table and pl_mpeg |
 | R5b.1 formations | Done (`ee_formations`): the C++ classes keep their members and call Rust for the geometry. 14,068 `Place` calls captured from the C++ in the six oracle games (`tools/sim_capture.py`: real games plus a sweep of every formation type over real units) equal bit for bit |
-| **R5b.1 A* pathfinding, continents, choke points** | **Open.** No plain-data seam yet: the goals read the live world tile by tile, lazily and with side effects, and walk the storage's lists (PORT_LEARNINGS "R5b.1"). The address-ordered set at `EEAIAStarPathAreaGoal.cpp:282` turned out order-independent |
+| **R5b.1 A* pathfinding, continents, choke points** | **In progress** (`ee_astar`, branch `rust-r5b-astar`): the tile goals read the world through a per-search view (`ee/EEAIAStarView.h`); the node storage and the search machine of every tile search (paths, bounded, the five flood fills) are Rust, and so are the continent, hill and choke point goals' tile tests. Gate: an ASRN capture of every search of the six oracle games (82,302 runs, 34.8 million goal and view events) equal to the C++ machine's digests, and the sim oracle. Open: the path goals and their modifiers, the path area and path sector goals, and the graph searches (`EEAIAStarGraphMachine`, untouched C++, not captured). The address-ordered set at `EEAIAStarPathAreaGoal.cpp:282` turned out order-independent |
 | **R4.3 Graphics Engine (17k)** | **In progress** (`ee_ge`): the math and geometry (points, vectors, lines, planes, transformations, quaternions, bounding boxes, rectangles), `UMath`'s table trigonometry, `GETerrainMesh`'s height, normal, closest-tile and line queries, its vertex normals, shorelines, fog of war and `Load`/`Save` (a field stream over the C++ `FSFile`), and `GEPhysicalModel`'s per-triangle line and box tests, bit-exact against the C++ (golden digests from the original text, the drivers relinked over the forwarders, the sim oracle). `ee_dx7` uses `ee_ge`'s `GETransformation::Apply`. The header inlines stay C++. Open: `UpdateVisibleTerrain` and the edge skirts, the water state, `GEPhysicalModel`'s walks and viewport test, `GEModel` load/save/LOD/caching, `GETexture`/`GETextureSet`/`GEMaterial`, the managers, fonts, bitmaps, the viewport |
-| **R6 LLE User Interface toolkit (14.4k)** | **Started** (`ee_ui`, branch `rust-r6-ui`): `UILayoutUtility` (whole unit), `UISlider`'s arithmetic, a multi-line `UITextLabel`'s word wrapping, `UIForm`'s focus walk (`Tab`, `ShiftTab`, `CheckedRadioButton`) and control hit test, each pinned by a golden trace of the real C++ unit and re-run over the forwarders. The C++ classes keep their members, vtables and exported names. Every reading of game text is in `ee_ui/src/text.rs` (still cp1252 bytes; D6's UTF-8 switch changes that module). Open: lists and combo boxes (`UIListBox.h`, a template the harness hooks), edit boxes, buttons, `UIControlsTable` (forms from the db), `UIManager`, drawing |
-
-| **R4.3 Graphics Engine (17k)** | **Open.** May move with R5's renderer decoupling, as this plan allows |
+| **R6 LLE User Interface toolkit (14.4k)** | **Started** (`ee_ui`, branch `rust-r6-ui`): `UILayoutUtility` (whole unit), `UISlider`'s arithmetic, a multi-line `UITextLabel`'s word wrapping, `UIForm`'s focus walk (`Tab`, `ShiftTab`, `CheckedRadioButton`) and control hit test, each pinned by a golden trace of the real C++ unit and re-run over the forwarders. The C++ classes keep their members, vtables and exported names. Then (branch `rust-r6-ui2`) `UIEditBox`'s text model (insertion and word wrap, deletion, caret, selection, scrolling, IME bookkeeping; the lines stay a `std::vector<UWideString>`) and `UIListBox<T>`'s selection and scrolling (host calls as a table per `T`, the virtuals stay virtual), each pinned the same way; one divergence (an edit-box crash) and one fix (`InsertLine`'s index), PORT_LEARNINGS "R6: edit boxes and list boxes". Every reading of game text is in `ee_ui/src/text.rs` (still cp1252 bytes; D6's UTF-8 switch changes that module), the case-folded sort order included. Open: `UIComboBox`, buttons, check boxes, radio buttons, `UIControlsTable` (forms from the db), `UIManager`, drawing |
 | R5a.1 per-CT checksum trace | Done: `EE-SIM --checksum-trace`, `sim_oracle.py run --checksums` and `ticks` (the first divergent tick). The option leaves the traces of seeds 2-7 equal to the reference |
 | R5a.2 side-effect-free save | Done (a declared rebaseline for games that save): three more Save functions wrote the running state. With autosaves every 150 game s, seeds 2-7 now trace like the unsaved games (before: seeds 2 and 4 diverged) |
+| R6 WON leaves (D8) | Done (`ee_won`, branch `rust-r6-won`): the message buffers' format and WON's text conversions, CRC-16, MD5, the random generator, Blowfish, big integers, ElGamal, the auth blocks and the CD key logic, behind C++ forwarders (BigInteger, Random, IntegerExtractor deleted). The clang-built C++ MD5Digest and Karatsuba were wrong (PORT_LEARNINGS "R6") |
+| R6 WON HTML (D8) | Removed: the HTML parser, documents and the segment layout engine; the lobby's pages (MOTD, terms of use, help, news) are plain text in a `TextArea` (`ee_won` plaintext) |
+| **R6 WON, the rest** | **Open.** The socket layer and async ops (WONSocket), the services (auth ops, directory, routing, DB, HTTP, misc), the lobby logic (WONLobby) and the GUI toolkit (WONGUI) |
+| **R5a.7 gates on layout-independent observation** | **Done, gate runs pending** (branch `rust-r5a-gates`): `tools/gates.sh` runs `fixture_game.py` (the game's UI fixture, its telemetry, stderr verdicts and game log; window captures; no layout, mangled name, debugger or import hook); the harness clock is `PlatSimSetTimeFactor` in `ee_plat_core` (clocks F x, sleeps/timers/wait timeouts 1/F); `--legacy` keeps `game_session.py`. Still on the layout: exe_boot.c's guards and hooks, the RNG trace, the human driver, `differential/` |
+| **R5a.4-R5a.6 handles, names, the RTS layer** | **Started** (branch `rust-r5a-handles`, C++ only, no behaviour change; sim oracle identical per commit). R5a.4: measured who holds unit pointers (PORT_LEARNINGS "R5a.4-R5a.6"); `EEUnitHandle<T>` (`ee/EEUnitHandle.h`) is the unit id resolved through a registry that lives from `RTSPlayer::InsertUnit` to `RTSUnit::FreeNode`, so a freed unit's handle is NULL, never a reborn slot; the AI's 14 stored unit pointers are handles. R5a.5: the simulation's address-named globals and functions named, `gU531CF0`/`CF4` folded into `EEPhysics`. R5a.6: the RTS objects import 26 game symbols (1 from Graphics Thread, `RTSMouse::EndFrame`); `RTSMouse`/`RTSUnit` moved to their own headers, RTS -> Graphics Thread include edges 3/12 (direct/transitive) -> 1/4. Open: the AI's 17 containers (address order), the UI/editor/camera holders (the registry needs a lock first), the A* goals (`rust-r5b-astar`), the Graphics Thread holders and names (`rust-r5a-snap`), RTSGraphics.cpp's game globals |
+
 
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
 trees), six seeded 45-minute sim traces equal to the pre-Rust reference, menu captures pixel-equal, a saved game loaded and
@@ -122,9 +126,12 @@ Lines include each module's headers. "Build module" is `tools/units.py`.
   - AI <-> Units (181/81 include edges);
   - Graphics Thread <-> Units (89/18) and Graphics Thread <-> Physics (64/8);
   - Physics <-> Units (47/72);
-  - RTS -> Graphics Thread (146): the base layer includes the game.
-- **Global state.** 224 `g*` names are declared in headers and ~459 are defined in `src`; ~30 are still
-  address-named (`gU4E8708`). The ones touched most:
+  - RTS -> Graphics Thread (146): the base layer includes the game. Measured by symbols (R5a.6), the RTS objects
+    import one Graphics Thread symbol, the RTS class's own `RTSMouse::EndFrame`; the edges were the RTS classes
+    declared in game headers.
+- **Global state.** 224 `g*` names are declared in headers and ~459 are defined in `src`; the
+  simulation's address-named ones are named since R5a.5 (`gU4E8708` is `gDamageTable`); the UI's, the editor's and the
+  renderer's are not yet. The ones touched most:
   - `gWorld`: 310 files in 23 modules;
   - `gPhysics`: 174;
   - `gUIManager`: 123;
@@ -243,6 +250,8 @@ harness's `--exercise lobby` waits for presented frames instead, so a lobby repl
 or give the fixture a real way in.
 
 **Move the gates onto these before R5.** R1-R4 can keep exporting the mangled C++ shims the harness hooks.
+Done in R5a.7: the gates run `tools/harness/fixture_game.py` (fixture, stderr, game log, window captures) and the
+harness clock is `PlatSimSetTimeFactor`; only `gates.sh --legacy` and the debugger tools still need the layout.
 
 ---
 
@@ -257,7 +266,7 @@ or give the fixture a real way in.
 | `tests/platform` (plat_test, font_test), `tools/gx_test`, `tools/sdl_test`, `tools/tcp_test` | Self-checks of a C API, exit code = failures | Run unchanged against the Rust implementation (link swap) |
 | `tools/record_sizes.py`, the `static_assert` pins | Record sizes | Mirror each assert in Rust (`const _: () = assert!(size_of::<T>() == N)`) |
 | `tools/harness/posix_game.py` + `EETestFixture.cpp` | Live game through the UI fixture | The layout-independent live harness; port its Windows half before R5 |
-| `tests/won` (`xbuild.py wontest`: `won_wire_test`, `won_socket_test`) | WON's wire format byte for byte, its socket layer over loopback | Gates R1's PlatSocket and any Rust WON codec. Not part of `gates.sh` today. `won_gui_test.cpp` (the GUI backend's GDI rules, offscreen) is in the tree, but `wontest` does not build it |
+| `tests/won` (`xbuild.py wontest`: `won_wire_test`, `won_crypto_test`, `won_socket_test`) | WON's wire format byte for byte, its socket layer over loopback | Gates R1's PlatSocket and any Rust WON codec. Not part of `gates.sh` today. `won_gui_test.cpp` (the GUI backend's GDI rules, offscreen) is in the tree, but `wontest` does not build it |
 | Harness `--exercise lobby` (`--refuse-autodial`) | Main menu -> MultiPlayer -> the lobby's frames -> Other Multiplayer -> the LAN screen | Smoke test of a lobby replacement. **It plays no game:** a LAN or Direct Connect game between two instances through the lobby is still untested (`mp_game.py` bypasses the lobby), and that test must exist before the lobby moves |
 | wgpu-native in the exe (`tools/build.py:127`) | | **Precedent:** a Rust staticlib already links with lld-link and `/MT`, with the system libraries Rust std needs |
 | MODDING_PLAN / AI_RESEARCH choices | | JSON-shaped canonical data "read by C++ and Rust alike"; strict YAML; `f32::from_str` float parsing; Lua through mlua; deferred caps (16 players, 6 armour kinds, 7 resources) planned for Rust |

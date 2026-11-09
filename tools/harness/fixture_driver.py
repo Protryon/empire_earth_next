@@ -1,0 +1,537 @@
+"""TEST ONLY: the core of the live-game drivers that work through the game's own UI fixture
+(src/Empire Earth/Empire Earth/EETestFixture.cpp, on when EE_TEST_UI names a directory): posix_game.py (Linux,
+macOS) and fixture_game.py (Windows, the gates).
+
+Nothing here reads the game's memory or names a symbol: the game writes <ui>/ui-state.txt every 250 ms (the form
+stack, the controls, the game telemetry) and executes the newest line of <ui>/test.command through the controls' own
+methods; <ui>/frame.request asks for the next presented frame as <ui>/frame.bmp. The game log (Logs/game-*.log,
+EE-GAME lines) is the second source. The lobby options, the dismiss table and the state parser are ai_game.py's.
+
+  Game(out, argv, env, cwd=None)   the game process with its fixture directory out/ui and its output out/game.log
+  parse_telemetry(text)            the fixture's telemetry lines -> dict
+  setup_lobby(g, a), dismiss(g, st), civ_preempt(g), wait_running(g, ...), play(g, a, ...)   the shared exercises
+  frame(g, name)                   the next presented frame -> BMP bytes (also out/<name>.bmp)
+  window_frame(g, name)            Windows: the game window's content (PrintWindow) -> BMP bytes
+  capture_frame(g, name)           window_frame on Windows, frame elsewhere
+  game_log(directory)              the newest EE-GAME log there, summarised
+"""
+import json
+import os
+import pathlib
+import re
+import shutil
+import signal
+import subprocess
+import sys
+import time
+
+HERE = pathlib.Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from ai_game import CITIZENS, DEFAULTS, DISMISS, LOBBY, GAME, NAMED, PLAYER_TYPE, TEAM, VISIBLE_SLOTS, parse_state, resolve
+
+MAIN, SINGLE, SETTINGS = 12, 6, 5
+SETTINGS_BUTTON, SETTINGS_OK = 3, 18   # main menu 'Game Settings Button', settings 'GS OK Button'
+GAME_SPEED = 209
+WINDOWS = sys.platform == 'win32'
+
+
+def parse_telemetry(text):
+    """The fixture's telemetry lines (EETestFixture.cpp WriteTelemetry). ticks are the completed physics ticks (PTs),
+    ct the communications ticks processed; population is EEPlayer::mPopulationCount (the units the old harness read as
+    mLB14), victory_units mEndOfGameCount (mLB18)."""
+    t = dict(players=[])
+    for line in text.splitlines():
+        p = line.split()
+        try:
+            if p[:2] == ['game', 'ms'] and len(p) >= 13:
+                t.update(game_ms=int(p[2]), ticks=int(p[4]), over=int(p[6]), world_players=int(p[8]), map=int(p[10]),
+                         local=int(p[12]))
+            elif p[:2] == ['comm', 'ct'] and len(p) >= 9:
+                t.update(ct=int(p[2]), last_tick=int(p[4]), paused=int(p[6]), multiplayer=int(p[8]))
+            elif p[:1] == ['player'] and len(p) >= 10:
+                row = dict(index=int(p[1]), observer=int(p[3]), result=int(p[5]), population=int(p[7]),
+                           victory_units=int(p[9]))
+                if len(p) >= 15 and p[10] == 'civ' and p[13] == 'stock':
+                    row.update(civ_locked=int(p[11]), civ_chosen=int(p[12]), stock=[int(v) for v in p[14].split('/')])
+                t['players'].append(row)
+            elif p[:1] == ['clock'] and len(p) >= 6:
+                num, _, den = p[1].partition('/')
+                t.update(clock=[int(num), int(den or 1)], clock_ms=int(p[3]), frames=int(p[5]))
+        except (IndexError, ValueError):
+            pass
+    return t
+
+
+def _windows_dialogs(pid):
+    """The visible message boxes (class #32770) of process pid -> [their text]"""
+    import ctypes
+    import ctypes.wintypes as w
+    user = ctypes.windll.user32
+    found = []
+
+    @ctypes.WINFUNCTYPE(w.BOOL, w.HWND, w.LPARAM)
+    def visit(hwnd, _):
+        owner = w.DWORD()
+        user.GetWindowThreadProcessId(hwnd, ctypes.byref(owner))
+        name = ctypes.create_unicode_buffer(64)
+        user.GetClassNameW(hwnd, name, 64)
+        if owner.value == pid and name.value == '#32770' and user.IsWindowVisible(hwnd):
+            texts = []
+
+            @ctypes.WINFUNCTYPE(w.BOOL, w.HWND, w.LPARAM)
+            def child(h, _):
+                buffer = ctypes.create_unicode_buffer(512)
+                user.GetWindowTextW(h, buffer, 512)
+                if buffer.value:
+                    texts.append(buffer.value)
+                return True
+            user.EnumChildWindows(hwnd, child, 0)
+            found.append(' | '.join(texts))
+        return True
+    user.EnumWindows(visit, 0)
+    return found
+
+
+class Game:
+    """The game process and its fixture. out: the evidence directory (absolute: the game changes into its data
+    root); argv/env/cwd: how to start it (EE_TEST_UI is added); deadline: a monotonic time the run must end by."""
+
+    def __init__(self, out, argv, env, cwd=None, deadline=None):
+        self.out = pathlib.Path(out).resolve()
+        self.ui = self.out / 'ui'
+        self.ui.mkdir(parents=True, exist_ok=True)
+        for f in self.ui.iterdir():
+            f.unlink()
+        self.seq = 0
+        self.log_lines = []
+        self.deadline = deadline
+        env = dict(env, EE_TEST_UI=str(self.ui))
+        self.log = open(self.out / 'game.log', 'wb')
+        if WINDOWS:
+            import ctypes
+            # no Windows Error Reporting dialog for a crash: the process ends and the driver reports it (inherited)
+            ctypes.windll.kernel32.SetErrorMode(0x0001 | 0x0002 | 0x8000)
+            self.proc = subprocess.Popen(argv, env=env, cwd=cwd, stdout=self.log, stderr=subprocess.STDOUT,
+                                         creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+        else:
+            self.proc = subprocess.Popen(argv, env=env, cwd=cwd, stdout=self.log, stderr=subprocess.STDOUT,
+                                         start_new_session=True)
+        self.note(f'START {argv[0]} pid {self.proc.pid}')
+
+    def note(self, text):
+        line = f'{time.strftime("%H:%M:%S")} {text}'
+        print(line, flush=True)
+        self.log_lines.append(line)
+
+    def alive(self):
+        return self.proc.poll() is None
+
+    def game_output(self):
+        return (self.out / 'game.log').read_bytes().decode('latin-1')
+
+    def check_alive(self):
+        # a failed verification (a db load error at startup, ...) fails the run even while the process lingers
+        # (stopped in a debugger, a crash reporter or a message box)
+        log = self.game_output()
+        if 'Verification failure' in log:
+            line = next(v for v in log.splitlines() if 'Verification failure' in v)
+            raise RuntimeError(f'the game failed a verification: {line}')
+        if not self.alive():
+            tail = log[-3000:]
+            raise RuntimeError(f'the game exited with {self.proc.returncode} ({self.proc.returncode & 0xffffffff:#x}); '
+                               f'log tail:\n{tail}')
+        if WINDOWS:
+            dialogs = _windows_dialogs(self.proc.pid)
+            if dialogs:
+                raise RuntimeError(f'the game shows a message box: {dialogs}')
+        if self.deadline is not None and time.monotonic() > self.deadline:
+            raise RuntimeError('the session timeout ran out')
+
+    def raw(self):
+        for _ in range(20):   # Windows: the fixture's rename can briefly hold the file
+            try:
+                return (self.ui / 'ui-state.txt').read_text(encoding='latin-1')
+            except FileNotFoundError:
+                return ''
+            except OSError:
+                time.sleep(0.05)
+        return ''
+
+    def state(self):
+        text = self.raw()
+        st = parse_state(text)
+        st['telemetry'] = parse_telemetry(text)
+        return st
+
+    def command(self, text):
+        self.seq += 1
+        tmp = self.ui / 'test.command.tmp'
+        tmp.write_text(f'{self.seq} {text}\n', encoding='ascii')
+        os.replace(tmp, self.ui / 'test.command')
+        return self.seq
+
+    def verdict(self, seq):
+        """The fixture's verdict on command seq ("TEST UI <verdict> <op> ..." on stderr), None before it ran."""
+        found = re.findall(rf'^TEST UI (\S+) .*\(seq {seq}, top form', self.game_output(), re.M)
+        return found[-1] if found else None
+
+    def wait(self, pred, what, timeout=60):
+        end = time.monotonic() + timeout
+        while True:
+            self.check_alive()
+            st = self.state()
+            if st['form'] is not None and pred(st):
+                return st
+            if time.monotonic() > end:
+                raise RuntimeError(f'timeout waiting for {what}: form {st["form"]} stack {st["stack"]}')
+            time.sleep(0.25)
+
+    def click(self, form, control, then_form, what, timeout=60):
+        seq = self.command(f'click {form} {control}')
+        st = self.wait(lambda s: s['command'] >= seq and s['form'] == then_form, what, timeout)
+        self.note(f'UI {what}: form {form} control {control} -> form {then_form}')
+        return st
+
+    def select(self, control, value, label):
+        st = self.state()
+        combo = st['combos'].get(control)
+        if combo is None:
+            raise RuntimeError(f'{label}: control {control} is not a combo on form {st["form"]}')
+        index = resolve(value, combo['lines'], label)
+        if combo['sel'] != index:
+            seq = self.command(f'select {LOBBY} {control} {index}')
+            self.wait(lambda s: s['command'] >= seq and s['combos'].get(control, {}).get('sel') == index,
+                      f'{label} = {value}', 30)
+            time.sleep(0.5)
+        self.note(f'LOBBY {label}: control {control} = {index} {combo["lines"][index]!r}')
+        return dict(control=control, label=label, value=value, index=index, line=combo['lines'][index])
+
+    def capture(self, name):
+        """A capture of the game window; the drivers override it (macOS: screencapture; Windows: the fixture's frame)"""
+        self.note(f'CAPTURE {name} skipped (no capture on this platform)')
+        return None
+
+    def stop(self):
+        if self.alive():
+            if WINDOWS:
+                self.proc.kill()   # TerminateProcess: the game keeps nothing the run needs
+            else:
+                os.killpg(self.proc.pid, signal.SIGTERM)
+            try:
+                self.proc.wait(10)
+            except subprocess.TimeoutExpired:
+                if not WINDOWS:
+                    os.killpg(self.proc.pid, signal.SIGKILL)
+                self.proc.wait()
+        self.log.close()
+
+
+def frame(g, name, timeout=15):
+    """The next frame the game presents after this call, through the fixture (frame.request -> frame.bmp) -> BMP bytes,
+    saved as out/<name>.bmp. Raises when no frame comes or it is blank."""
+    target = g.ui / 'frame.bmp'
+    target.unlink(missing_ok=True)
+    before = g.state()['telemetry'].get('frames', 0)
+    (g.ui / 'frame.request').write_bytes(b'')
+    end = time.monotonic() + timeout
+    while True:
+        g.check_alive()
+        if target.exists() and g.state()['telemetry'].get('frames', 0) > before:
+            try:
+                pixels = target.read_bytes()
+            except OSError:
+                pixels = b''
+            if len(pixels) >= 54 and pixels[:2] == b'BM' and int.from_bytes(pixels[2:6], 'little') == len(pixels):
+                break
+        if time.monotonic() > end:
+            raise RuntimeError(f'{name}: no frame presented within {timeout} s')
+        time.sleep(0.25)
+    if len(set(pixels[54:])) < 16:
+        raise RuntimeError(f'{name}: the frame is blank')
+    (g.out / f'{name}.bmp').write_bytes(pixels)
+    g.note(f'FRAME {name}: {int.from_bytes(pixels[18:22], "little")}x{abs(int.from_bytes(pixels[22:26], "little", signed=True))}')
+    return pixels
+
+
+def window_bmp(hwnd):
+    """Windows: the client area of window hwnd as a 32-bit top-down BMP (PrintWindow with PW_CLIENTONLY |
+    PW_RENDERFULLCONTENT: the composed swap chain, as on screen) -> bytes, None when it cannot."""
+    import ctypes
+    import ctypes.wintypes as w
+    import struct
+    user, gdi = ctypes.windll.user32, ctypes.windll.gdi32
+    user.GetDC.restype = w.HDC; gdi.CreateCompatibleDC.restype = w.HDC; gdi.CreateDIBSection.restype = w.HBITMAP
+    gdi.SelectObject.restype = w.HGDIOBJ
+    gdi.CreateCompatibleDC.argtypes = [w.HDC]
+    gdi.CreateDIBSection.argtypes = [w.HDC, ctypes.c_void_p, w.UINT, ctypes.POINTER(ctypes.c_void_p), w.HANDLE, w.DWORD]
+    gdi.SelectObject.argtypes = [w.HDC, w.HGDIOBJ]
+    gdi.DeleteObject.argtypes = [w.HGDIOBJ]; gdi.DeleteDC.argtypes = [w.HDC]
+    user.ReleaseDC.argtypes = [w.HWND, w.HDC]; user.PrintWindow.argtypes = [w.HWND, w.HDC, w.UINT]
+    user.GetClientRect.argtypes = [w.HWND, ctypes.POINTER(w.RECT)]
+    r = w.RECT(); user.GetClientRect(w.HWND(hwnd), ctypes.byref(r))
+    width, height = r.right - r.left, r.bottom - r.top
+    if width <= 0 or height <= 0:
+        return None
+    screen = user.GetDC(None); dc = gdi.CreateCompatibleDC(screen)
+    class BIH(ctypes.Structure):
+        _fields_ = [('biSize', w.DWORD), ('biWidth', w.LONG), ('biHeight', w.LONG), ('biPlanes', w.WORD),
+                    ('biBitCount', w.WORD), ('biCompression', w.DWORD), ('biSizeImage', w.DWORD),
+                    ('biXPelsPerMeter', w.LONG), ('biYPelsPerMeter', w.LONG), ('biClrUsed', w.DWORD), ('biClrImportant', w.DWORD)]
+    info = BIH(ctypes.sizeof(BIH), width, -height, 1, 32, 0, 0, 0, 0, 0, 0)
+    bits = ctypes.c_void_p()
+    bitmap = gdi.CreateDIBSection(dc, ctypes.byref(info), 0, ctypes.byref(bits), None, 0)
+    old = gdi.SelectObject(dc, bitmap)
+    ok = user.PrintWindow(w.HWND(hwnd), dc, 3)
+    pixels = ctypes.string_at(bits, width * height * 4)
+    gdi.SelectObject(dc, old); gdi.DeleteObject(bitmap); gdi.DeleteDC(dc); user.ReleaseDC(None, screen)
+    if not ok:
+        return None
+    header = b'BM' + struct.pack('<IHHI', 54 + len(pixels), 0, 0, 54) + bytes(info)
+    return header + pixels
+
+
+def window_frame(g, name, settle=1.0):
+    """Windows: the game window's content now (window_bmp, after `settle` s for the last command's frame) -> BMP
+    bytes, saved as out/<name>.bmp; raises when there is no window or the capture is blank. GX's read-back
+    (frame()) times out on WARP (PORT_LEARNINGS "R5a.7"), a window capture does not touch the renderer."""
+    from session_exercise import game_window
+    time.sleep(settle)
+    end = time.monotonic() + 15
+    while True:
+        g.check_alive()
+        hwnd = game_window(g.proc.pid)
+        pixels = window_bmp(hwnd) if hwnd else None
+        if pixels and len(set(pixels[54:])) >= 16:
+            break
+        if time.monotonic() > end:
+            raise RuntimeError(f'{name}: ' + ('the window capture is blank' if pixels else 'no game window to capture'))
+        time.sleep(0.5)
+    (g.out / f'{name}.bmp').write_bytes(pixels)
+    g.note(f'FRAME {name}: window {int.from_bytes(pixels[18:22], "little")}x'
+           f'{abs(int.from_bytes(pixels[22:26], "little", signed=True))}')
+    return pixels
+
+
+def capture_frame(g, name):
+    """The frame for a milestone: the window capture on Windows, the fixture's presented frame elsewhere."""
+    return window_frame(g, name) if WINDOWS else frame(g, name)
+
+
+def window_state(g):
+    """The fixture's 'window <w> <h>' and 'mouseover <i>' lines"""
+    out = dict(window=None, mouseover=None)
+    for line in g.raw().splitlines():
+        part = line.split()
+        if part[:1] == ['window'] and len(part) == 3:
+            out['window'] = (int(part[1]), int(part[2]))
+        elif part[:1] == ['mouseover'] and len(part) == 2:
+            out['mouseover'] = int(part[1])
+    return out
+
+
+PARK = (0.08, 0.2)   # where the pointer waits during captures (window fractions)
+
+
+def pointer(g, form, fx, fy, op='pointer'):
+    st = window_state(g)
+    if not st['window']:
+        raise RuntimeError('the fixture reports no window size')
+    x, y = int(fx * st['window'][0]), int(fy * st['window'][1])
+    seq = g.command(f'{op} {form} {x} {y}')
+    g.wait(lambda s: s['command'] >= seq, f'{op} {x},{y}', 30)
+    time.sleep(1.0)
+    after = window_state(g)
+    g.note(f'POINTER {op} form {form} at {x},{y} (window {st["window"]}): mouseover {after["mouseover"]}')
+    return dict(op=op, form=form, x=x, y=y, window=st['window'], mouseover=after['mouseover'])
+
+
+def dismiss(g, st):
+    """Cancels a modal form of ai_game.DISMISS (the civilization forms: no simulation input) -> True when it did."""
+    if st['form'] in DISMISS:
+        form = st['form']
+        seq = g.command(DISMISS[form])
+        g.wait(lambda s: s['command'] >= seq and s['form'] != form, f'form {form} closed', 30)
+        g.note(f'PLAY form {form} cancelled ({DISMISS[form]})')
+        return True
+    return False
+
+
+def setup_lobby(g, a):
+    """The lobby set up as ai_game.py does: the human idles in slot 0, a.ai_players computers, every option absolute
+    (a.map_size, a.map_type, a.difficulty, a.game_speed; a.lobby CONTROL=VALUE; a.lobby_check CONTROL=0|1)."""
+    g.wait(lambda s: s['form'] == LOBBY and all(PLAYER_TYPE + k in s['combos'] for k in range(VISIBLE_SLOTS))
+           and all(c in s['combos'] for c in NAMED.values()), 'the lobby combos', 60)
+    time.sleep(3)   # local-server readiness and queued lobby updates (as ai_game.py)
+    (g.out / 'lobby_before.txt').write_text(g.raw(), encoding='latin-1')
+    chosen = [g.select(PLAYER_TYPE, '#0', 'slot 0 human')]
+    for k in range(1, VISIBLE_SLOTS):
+        chosen.append(g.select(PLAYER_TYPE + k, 'Computer' if k <= a.ai_players else 'Open', f'slot {k}'))
+    options = dict(DEFAULTS)
+    options[NAMED['map_size']] = a.map_size
+    options[NAMED['map_type']] = a.map_type
+    options[NAMED['difficulty']] = a.difficulty
+    options[GAME_SPEED] = a.game_speed
+    for item in getattr(a, 'lobby', None) or []:   # CONTROL=VALUE (as ai_game.py's --lobby)
+        control, _, value = item.partition('=')
+        options[int(control)] = value
+    for k in range(a.ai_players + 1):
+        options.setdefault(TEAM + k, '-')
+        options.setdefault(CITIZENS + k, '5')
+    for control, value in options.items():
+        chosen.append(g.select(control, value, f'control {control}'))
+    for item in getattr(a, 'lobby_check', None) or []:   # CONTROL=0|1 (as ai_game.py's --lobby-check)
+        control, _, value = item.partition('=')
+        control, value = int(control), int(value)
+        if g.state()['checks'].get(control) != value:
+            seq = g.command(f'check {LOBBY} {control} {value}')
+            g.wait(lambda s2: s2['command'] >= seq and s2['checks'].get(control) == value, f'check {control}', 30)
+        g.note(f'LOBBY check {control} = {value}')
+    time.sleep(2)
+    st = g.state()
+    drift = [c for c in chosen if st['combos'].get(c['control'], {}).get('sel') != c['index']]
+    if drift:
+        raise RuntimeError(f'lobby selections changed after setting: {drift}')
+    (g.out / 'lobby.json').write_text(json.dumps(dict(chosen=chosen, combos=st['combos']), indent=2) + '\n')
+    return chosen
+
+
+def local_row(tel):
+    return next((p for p in tel.get('players', []) if p['index'] == tel.get('local')), None)
+
+
+def civ_preempt(g):
+    """The civilization timer pre-empt (ai_game.py): open the civilization builder (game form control 5) and cancel it
+    at once, so the timer's inputs never land on a wall-time-dependent PT -> evidence dict."""
+    before = g.state()['telemetry']
+    seq = g.command(f'click {GAME} 5')
+    st = g.wait(lambda s: s['command'] >= seq and s['form'] in DISMISS, 'the civilization builder', 30)
+    opened = st['telemetry']
+    dismiss(g, st)
+    after = g.state()['telemetry']
+    local = local_row(after) or {}
+    record = dict(form=st['form'], pt_before=before.get('ticks'), pt_open=opened.get('ticks'),
+                  pt_after=after.get('ticks'), game_ms_open=opened.get('game_ms'),
+                  civ_chosen=local.get('civ_chosen'), civ_locked=local.get('civ_locked'))
+    g.note(f'CIV PREEMPT form {st["form"]} opened at PT {opened.get("ticks")} (game ms {opened.get("game_ms")}), '
+           f'cancelled; local civ chosen {local.get("civ_chosen")} locked {local.get("civ_locked")}')
+    if 'civ_chosen' in local and not local['civ_chosen']:
+        raise RuntimeError('the civilization pre-empt did not mark the local civilization chosen')
+    return record
+
+
+def wait_running(g, players=None, timeout=120):
+    """Waits for the game: a map, physics ticks advancing (and, given, that many world players) -> telemetry."""
+    first = g.state()['telemetry']
+    st = g.wait(lambda s: s['telemetry'].get('ticks', 0) > first.get('ticks', 0) and s['telemetry'].get('map'),
+                'physics ticks advancing', timeout)
+    tel = st['telemetry']
+    g.note(f'GAME running: players {tel["world_players"]} local {tel["local"]} PT {tel["ticks"]} CT {tel.get("ct")} '
+           f'game ms {tel["game_ms"]}')
+    if players is not None and tel['world_players'] != players:
+        raise RuntimeError(f'expected {players} world players, got {tel["world_players"]}')
+    return tel
+
+
+def play(g, a, ai_game, capture=None, stall=90):
+    """Plays on until the game ends (over, or the idle human has a result in an AI game), a.max_game_seconds of game
+    time or a.play_seconds of wall time; cancels the civilization forms; fails when the physics stalls `stall` s.
+    -> dict(outcome game-over|human-result|max-game-seconds|play-seconds, samples, forms, results, defeat_order,
+    wall_seconds). capture(name): called every a.capture_every wall seconds."""
+    tel = g.state()['telemetry']
+    start = time.monotonic()
+    samples, forms, results, defeat_order = [], {}, {}, []
+    last_sample = last_capture = last_note = 0
+    last_ticks, last_advance = (tel.get('ticks'), tel.get('game_ms')), time.monotonic()
+    outcome = 'play-seconds'
+    while True:
+        g.check_alive()
+        st = g.state()
+        tel = st['telemetry']
+        if st['form'] not in (GAME, None) and st['form'] not in forms:
+            forms[st['form']] = dict(first_game_ms=tel.get('game_ms'), first_pt=tel.get('ticks'), stack=st['stack'])
+            (g.out / f'form{st["form"]}.txt').write_text(g.raw(), encoding='latin-1')
+            g.note(f'UI MODAL form {st["form"]} stack {st["stack"]} at game ms {tel.get("game_ms")} PT {tel.get("ticks")}')
+        if dismiss(g, st):
+            forms[st['form']].setdefault('dismissed', []).append(dict(game_ms=tel.get('game_ms'), pt=tel.get('ticks')))
+            last_advance = time.monotonic()
+            continue
+        now = time.monotonic()
+        progress = (tel.get('ticks'), tel.get('game_ms'))
+        if progress != last_ticks:
+            last_ticks, last_advance = progress, now
+        elif now - last_advance > stall:
+            raise RuntimeError(f'physics stalled for {stall} s at PT {tel.get("ticks")} on form {st["form"]} '
+                               f'(stack {st["stack"]})')
+        for p in tel.get('players', []):
+            if p['index'] >= 1 and p['result'] and results.get(p['index']) != p['result']:
+                results[p['index']] = p['result']
+                kind = {1: 'victorious', 2: 'defeated'}.get(p['result'], p['result'])
+                g.note(f'RESULT player {p["index"]} {kind} at game ms {tel.get("game_ms")} PT {tel.get("ticks")}')
+                if p['result'] == 2:
+                    defeat_order.append(dict(player=p['index'], pt=tel.get('ticks'), game_ms=tel.get('game_ms')))
+        if now - last_sample >= 10:
+            last_sample = now
+            samples.append(dict(wall_s=round(now - start, 1), form=st['form'], **tel))
+            (g.out / 'samples.json').write_text(json.dumps(samples, indent=1) + '\n')
+        if now - last_note >= (60 if ai_game else 10):
+            last_note = now
+            pops = ' '.join(f'{p["index"]}:{p["population"]}{"*" if p["result"] else ""}' for p in tel['players'])
+            g.note(f'PLAY t+{now - start:.0f}s game {tel.get("game_ms", 0) / 1000:.0f} s PT {tel.get("ticks")} '
+                   f'CT {tel.get("ct")} paused {tel.get("paused")} population {pops}')
+        if capture and getattr(a, 'capture_every', 0) and now - last_capture >= a.capture_every:
+            last_capture = now
+            capture(f'play_{int(now - start):05d}')
+        if tel.get('over'):
+            outcome = 'game-over'
+            break
+        local = local_row(tel)
+        if ai_game and local and local['result']:
+            outcome = 'human-result'
+            break
+        if getattr(a, 'max_game_seconds', 0) and tel.get('game_ms', 0) >= a.max_game_seconds * 1000:
+            outcome = 'max-game-seconds'
+            break
+        if getattr(a, 'play_seconds', None) is not None and now - start >= a.play_seconds:
+            break
+        time.sleep(1)
+    return dict(outcome=outcome, samples=samples, forms=forms, results=results, defeat_order=defeat_order,
+                wall_seconds=round(time.monotonic() - start, 1))
+
+
+GAME_LINE = re.compile(r'^EE-GAME (\d+) p(\d+) (\w+)(.*)$')
+
+
+def game_log(directory):
+    """The newest game log (Logs/game-*.log, EE-GAME lines; ee/EEGameLog.h) in directory -> summary dict or None:
+    the start options, each player's kind/civ/personality, its last sample (pop, army, buildings, epoch) and the end."""
+    logs = sorted(pathlib.Path(directory).glob('game-*.log'), key=lambda p: p.stat().st_mtime)
+    if not logs:
+        return None
+    out = dict(file=str(logs[-1]), start=None, players={}, last_sample={}, end=None, epochs={})
+    for line in logs[-1].read_text(encoding='latin-1', errors='replace').splitlines():
+        m = GAME_LINE.match(line)
+        if not m:
+            continue
+        ms, player, kind, rest = int(m[1]), int(m[2]), m[3], m[4]
+        fields = dict(kv.split('=', 1) for kv in rest.split() if '=' in kv)
+        if kind == 'start':
+            out['start'] = fields
+        elif kind == 'player':
+            out['players'][player] = fields
+        elif kind == 'sample':
+            out['last_sample'][player] = dict(game_ms=ms, **fields)
+        elif kind == 'epoch':
+            out['epochs'][player] = fields.get('to')
+        elif kind == 'end':
+            out['end'] = dict(game_ms=ms, **fields)
+    return out
+
+
+def copy_game_logs(data_root, out):
+    """Copies the game's Logs/game-*.log (the data root's) into out/ -> the newest one's summary (game_log)."""
+    logs = pathlib.Path(data_root) / 'Logs'
+    if not logs.is_dir():
+        return None
+    for f in logs.glob('game-*.log'):
+        shutil.copy(f, pathlib.Path(out) / f.name)
+    return game_log(out)

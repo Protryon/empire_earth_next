@@ -30,8 +30,8 @@ public:
     virtual bool Prepare();                 // +0x0c 0xf1c8 (both bases' slot; the second base's thunk 0xf481)
     virtual void SetModifier(EEAIPathGoalModifierBase* inModifier);   // second base +0x0c 0xf251
     virtual void MarkBlockedTiles();        // second base +0x10 0xf298 (EEAIAStarPathfindingGoal's is folded into it)
-    bool AcceptDefault(EEMapTile* inTile, long inX, long inY, bool inGoal); // (ICF: EEAIAStarPathfindingGoal's 0x1990c)
-    bool AcceptTile(EEMapTile* inTile, long inX, long inY, bool inGoal);   // (ICF: EEAIAStarPathfindingGoal's 0x19a3f)
+    bool AcceptDefault(long inX, long inY, bool inGoal); // (ICF: EEAIAStarPathfindingGoal's 0x1990c)
+    bool AcceptOnMap(long inX, long inY, bool inGoal);   // (ICF: EEAIAStarPathfindingGoal's 0x19a3f)
     bool AcceptTile(long inX, long inY, bool inGoal);  // 0xf4bc (inline COMDAT: also inside mBounds)
 
     EEAIAStarBounds mBounds;                // +0xa4 (the search window: EEPathManager::FindPath)

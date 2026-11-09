@@ -285,7 +285,7 @@ void EEComputerPlayer::EnableManagers(unsigned long inTime)
     this->mExplorationManager->mEnabled = false;
     this->mCombatManager->mImprovementsEnabled = false;
 
-    if (this->Fn2EC67()) {
+    if (this->RunsEveryManager()) {
         thePriority.push_back(0L);
         thePriority.push_back(1L);
         thePriority.push_back(2L);
@@ -885,7 +885,7 @@ bool EEComputerPlayer::IsDeathmatch()
 
 // FUNCTION: EXE 0x42ec67
 // Returns true when the resource setting is 5 (EnableManagers then runs every manager)
-bool EEComputerPlayer::Fn2EC67()
+bool EEComputerPlayer::RunsEveryManager()
 {
     return gWorld.mGameOptions.mResources == 5;
 }

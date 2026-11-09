@@ -37,38 +37,18 @@ EEAIAStarPathSectorStorage::~EEAIAStarPathSectorStorage()
 // become memory `dec`s); EEAIAStarContinentStorage's Virtual10 0x15a99 has the same shape
 void EEAIAStarPathSectorStorage::PrepareGrid(long inWidth, long inHeight)
 {
+    // the id grid is C++ (its readers index it); the flags and the node map are Rust, cleared there from the dirty
+    // bounds grown by one (all of them when this grid was just allocated)
     bool theResized = false;
     long theOldWidth = this->mWidth;
     long theOldHeight = this->mHeight;
     this->mWidth = inWidth;
     this->mHeight = inHeight;
-    if (this->mSubSectorIDs == NULL || this->mTileFlags == NULL || this->mNodes == NULL || theOldWidth != inWidth || theOldHeight != inHeight) {
+    if (this->mSubSectorIDs == NULL || theOldWidth != inWidth || theOldHeight != inHeight) {
         delete[] this->mSubSectorIDs;
         this->mSubSectorIDs = new unsigned short[this->mHeight * this->mWidth];
         memset(this->mSubSectorIDs, 0, this->mHeight * this->mWidth * sizeof(unsigned short));
-        delete[] this->mTileFlags;
-        this->mTileFlags = new unsigned char[this->mHeight * this->mWidth];
-        delete[] this->mNodes;
-        this->mNodes = new EEAIAStarNode*[this->mHeight * this->mWidth];
         theResized = true;
     }
-    if (!theResized && this->mDirtyBounds.mLeft <= this->mDirtyBounds.mRight && this->mDirtyBounds.mTop <= this->mDirtyBounds.mBottom) {
-        this->mDirtyBounds.mTop = this->mDirtyBounds.mTop - 1;
-        if (this->mDirtyBounds.mTop < 0)
-            this->mDirtyBounds.mTop = 0;
-        this->mDirtyBounds.mLeft = this->mDirtyBounds.mLeft - 1;
-        if (this->mDirtyBounds.mLeft < 0)
-            this->mDirtyBounds.mLeft = 0;
-        this->mDirtyBounds.mRight = min(this->mWidth - 1, this->mDirtyBounds.mRight + 1);
-        this->mDirtyBounds.mBottom = min(this->mHeight - 1, this->mDirtyBounds.mBottom + 1);
-        long theStart = this->mDirtyBounds.mLeft * this->mWidth + this->mDirtyBounds.mTop;
-        long theCount = this->mWidth * this->mDirtyBounds.mRight + this->mDirtyBounds.mBottom - theStart;
-        memset(this->mNodes + theStart, 0, theCount * sizeof(EEAIAStarNode*));
-        memset(this->mTileFlags + theStart, 0, theCount);
-    } else {
-        memset(this->mNodes, 0, this->mHeight * this->mWidth * sizeof(EEAIAStarNode*));
-        memset(this->mTileFlags, 0, this->mHeight * this->mWidth);
-    }
-    this->mHasBounds = false;
-    this->mDirtyBounds.Clear();
+    ee_astar_prepare_grid(this->mCore, inWidth, inHeight, EeAStarGridKind::Dirty, theResized);
 }

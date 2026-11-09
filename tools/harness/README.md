@@ -1,5 +1,45 @@
 # tools/harness: the live-game test harness
 
+**The gates' path: the fixture driver** (`fixture_game.py`, `fixture_driver.py`; docs/RUST_PLAN.md R5a.7). It runs
+the test-profile exe directly, with the game's own UI fixture (`src/Empire Earth/Empire Earth/EETestFixture.cpp`,
+on when `EE_TEST_UI` names a directory) and nothing else: no debugger, no record layout, no mangled name, no import
+hook. What it reads:
+
+| Fact | Source |
+|---|---|
+| form stack, controls, combos, check boxes, command acknowledgement | `ui-state.txt` (`form`, `stack`, `control`, `combo`, `check`, `command`) |
+| a command's verdict (`triggered`, `selected`, `rejected`) | the game's stderr (`TEST UI <verdict> ... (seq N, ...)`) |
+| game time, PTs, game over, world players, map, local player | `game ms <t> ticks <PT> over <0/1> players <n> map <0/1> local <i>` |
+| CTs, pause | `comm ct <n> last <n> paused <0/1> multiplayer <0/1>` |
+| per player: observer, result, units (`mPopulationCount`), victory units, civilization flags, stock | `player <i> observer .. result .. population .. victory .. civ <locked> <chosen> stock f/w/s/g/i` |
+| the harness clock's factor, frames written | `clock <num>/<den> ms <t> frames <n>` |
+| frames (rendering checks) | Windows: the game window captured with `PrintWindow` (`PW_RENDERFULLCONTENT`); a game capture must differ from the one before it (a renderer that stopped presenting leaves the last picture). Elsewhere: `frame.request` -> `frame.bmp`, the next presented frame (GX's `GXTestSetPresentHook`/`GXTestReadFrame`, whose read-back times out on WARP) |
+| GX errors | stderr `debugstring GX: wgpu error ...` (the game's debug output, `PlatDebugSetHandler`), counted in `summary.json` `gx_errors` |
+| computer players, samples, the end | the game log `Logs/game-*.log` (EE-GAME lines), copied into the evidence |
+| the switches taken | stderr `TEST UI clock factor N/D`, `TEST UI seed S` |
+| input check | F3 posted to the game window (`WM_KEYDOWN/UP`), the pause read from `comm ... paused` |
+
+The switches are environment variables the fixture takes only with `EE_TEST_UI` (`EETestFixtureConfigure`, first
+in `EERun`): `EE_TEST_TIME_FACTOR` (the harness clock: `PlatSimSetTimeFactor`, `platform/PlatSim.h`; the platform
+layer's clocks run F x real time and its sleeps, timers and wait timeouts 1/F, replacing the time shim),
+`EE_TEST_SEED` (`gPlatSimSeed`, as `--seed`), `EE_TEST_NO_HUMAN_DEFEAT`; `--no-render` is GX's `EE_GX_NULL3D`.
+
+```
+python -I tools/harness/fixture_game.py --exercise tour --input-check --play-seconds 120 [--data TREE | --tree open]
+python -I tools/harness/fixture_game.py --exercise ai-game --ai-players 2 --map-size Small --difficulty Hard        --max-game-seconds 600 --time-factor 32 --no-render --seed 2 --pt-rate 40 [--data TREE]
+```
+
+The stage is `build/fixture_game/stage` (the exe, the tree as hard links, a fresh `config.yaml` with the pins), the
+evidence `build/fixture_game/<time>/` (`summary.json`, `game.log`, `ui/`, the frames, `rendering.json`,
+`samples.json`, the game log). The last line is `RESULT PASS|FAIL <exercise> ...`. Not covered compared with the
+debugger path: the guards (registry writes, files outside the stage, non-loopback sockets), the crash/abort hooks
+(a crash ends the process and fails the run; a message box fails it), the RNG trace, `--instance`, the human driver
+and the differential tools. `posix_game.py` is the same core with macOS captures. `tools/gates.sh --legacy` still
+runs the debugger path below.
+
+The rest of this file is the debugger harness (`game_session.py`), which depends on the build's record layout and
+mangled names.
+
 A port of the `empire_earth` reconstruction's `tools/boot` (the headless live-game harness: staging, the debugger
 harness `exe_boot.c`, exercises, telemetry, AI games, the human driver and per-PT differential tooling) for this
 repository's builds. The reconstruction's version runs the original game or a VC6 full link next to the retail DLLs,
@@ -71,7 +111,7 @@ checks it has 8-byte pointers). Exe addresses are passed as RVAs, so an ASLR ima
 **Self test** (no game; ~1 min): `python -I tools/harness/selftest/selftest.py` runs 40 guard cases (every guarded API:
 files, registry, windows, processes, display, sockets, the test interventions) under `exe_boot.exe` and checks each
 case's decisions and STOP, then the time shim, the bridge, the telemetry probe and the session plumbing on small x64
-exes. It writes only below `build/boot/selftest*`, `build/boot/windowed_o_32` and
+exes, and the fixture driver against a stand-in of the fixture's protocol (`selftest/fixture_standin.py`). It writes only below `build/boot/selftest*`, `build/boot/windowed_o_32` and
 `HKCU\Software\EE-harness-selftest*`.
 
 **Linux and macOS** (`posix_game.py`): neither the debugger harness nor the bridge exists there; the game carries the
@@ -92,5 +132,6 @@ game window (`macos_window.swift` + `screencapture -l`). See its docstring.
 | `differential/` (`layout.py`, `ptsync.h`, `ai_layout.py`, `sampler.py`) | not yet |
 | `mp_game.py`, `save_load.py`, `scenario_game.py`, `synth_scenario.py`, `game_batch.py`, `play.py` | not yet (they still name i686 symbols and VC6 addresses) |
 | `ubsan_minimal.c` | the recovering handlers of `build.py --sanitize-null` builds |
+| `fixture_game.py`, `fixture_driver.py` (the gates; no layout, no debugger) | menu, tour, random-game, ai-game; self-tested against `selftest/fixture_standin.py` |
 
 `fulllink_locator.py` and `windowed_overlay.py` remain only for their helpers (`LinkMap`, `test_output`).

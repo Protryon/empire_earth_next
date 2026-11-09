@@ -45,6 +45,7 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEAIPathGoalModifierBase.h"
 #include "ee/EEAIAStarGoalBase.h"
+#include "ee/EEAIAStarCapture.h"
 #include "ee/EEAIAStarPathfindingGoalBase.h"
 #include "ee/EEAIAStarBoundedStorage.h"
 #include "ee/EEAIBoundedPathGoalModifierBase.h"
@@ -98,17 +99,15 @@ void EEAIAStarBoundedPathGoal::ReleaseModifier()
 // entered, or when the machine used up its revolutions; a failure takes the nearest tile if allowed
 void EEAIAStarBoundedPathGoal::SearchDone(EEAIAStarMachineBase* inMachine)
 {
-    EEAIAStarNode* theNode = this->mStorage->mCurrentNode;
-    if (theNode == NULL) {
-        bool theOpen = this->mStorage->mFastOpenList != NULL || this->mStorage->mSortedOpen != NULL;
-        for (long i = this->mStorage->mBucketCount - 1; i >= 0 && !theOpen; i--)
-            theOpen = this->mStorage->mOpenTable[i] != NULL;
+    // (the machine's hook: the current node, whether an open node is left)
+    if (!this->mStorage->mHookHasCurrent) {
+        bool theOpen = this->mStorage->mHookHasOpen;
         if (!theOpen) {
             this->mSearchFailed = true;
             this->mTookNearest = this->mAcceptNearest;
         }
-    } else if (UMAbs(theNode->mX - this->mGoalTile.mX) <= 1 && UMAbs(theNode->mY - this->mGoalTile.mY) <= 1) {
-        this->mSearchFailed = !this->AcceptTile(theNode->mX, theNode->mY, true);
+    } else if (UMAbs(this->mStorage->mHookCurrentX - this->mGoalTile.mX) <= 1 && UMAbs(this->mStorage->mHookCurrentY - this->mGoalTile.mY) <= 1) {
+        this->mSearchFailed = !this->AcceptTile(this->mStorage->mHookCurrentX, this->mStorage->mHookCurrentY, true);
         this->mTookNearest = this->mAcceptNearest;
     }
     if (!this->mSearchFailed) {
@@ -169,13 +168,10 @@ void EEAIAStarBoundedPathGoal::GetPath(std::vector<U2DPoint<long> >& outPath)
 // Appends the found path to outPath and the tile of every closed and open search node to outVisited
 void EEAIAStarBoundedPathGoal::GetPath(std::vector<U2DPoint<long> >& outPath, std::vector<U2DPoint<long> >& outVisited)
 {
-    EEAIAStarNode* theNode;
     this->GetPath(outPath);
     outVisited.reserve(this->mMachine->mRevs);
-    for (theNode = this->mStorage->mFastClosedList; theNode; theNode = theNode->mNext)
-        outVisited.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    for (theNode = this->mStorage->mFastOpenList; theNode; theNode = theNode->mNext)
-        outVisited.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
+    this->mStorage->AppendTiles(kAStarListFastClosed, outVisited);
+    this->mStorage->AppendTiles(kAStarListFastOpen, outVisited);
 }
 
 // NEAR: the original computes the point before the loop head (rotated loop)
@@ -200,13 +196,10 @@ void EEAIAStarBoundedPathGoal::GetPoints(std::vector<GE3DPoint>& outPath)
 // Appends the found path to outPath as tile-centre points and every closed and open node's tile to outVisited
 void EEAIAStarBoundedPathGoal::GetPoints(std::vector<GE3DPoint>& outPath, std::vector<U2DPoint<long> >& outVisited)
 {
-    EEAIAStarNode* theNode;
     this->GetPoints(outPath);
     outVisited.reserve(this->mMachine->mRevs);
-    for (theNode = this->mStorage->mFastClosedList; theNode; theNode = theNode->mNext)
-        outVisited.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
-    for (theNode = this->mStorage->mFastOpenList; theNode; theNode = theNode->mNext)
-        outVisited.push_back(U2DPoint<long>(theNode->mX, theNode->mY));
+    this->mStorage->AppendTiles(kAStarListFastClosed, outVisited);
+    this->mStorage->AppendTiles(kAStarListFastOpen, outVisited);
 }
 
 // NEAR: the original loads the parent tile into registers before the vtable
@@ -217,13 +210,13 @@ long EEAIAStarBoundedPathGoal::GetCost(long inFromX, long inFromY, long inX, lon
 {
     if (this->mModifier == NULL)
         return this->GetDefaultCost(inFromX, inFromY, inX, inY);
-    EEAIAStarNode* theNode = this->mStorage->mCurrentNode;
-    if (theNode && theNode->mParent) {
-        long theX = theNode->mParent->mX;
-        long theY = theNode->mParent->mY;
-        return this->mModifier->GetCost(inFromX, inFromY, inX, inY, theX, theY);
+    // (the machine's hook: the current node's parent)
+    if (this->mStorage->mHookHasParent) {
+        long theX = this->mStorage->mHookParentX;
+        long theY = this->mStorage->mHookParentY;
+        return this->mView.GetModifierCost(this->mModifier, inFromX, inFromY, inX, inY, theX, theY);
     }
-    return this->mModifier->GetCost(inFromX, inFromY, inX, inY, -10000, -10000);
+    return this->mView.GetModifierCost(this->mModifier, inFromX, inFromY, inX, inY, -10000, -10000);
 }
 
 // NEAR: the first GetTile is the out-of-line RTSMap::GetTile 0x2f85 in the original; theRange lives in inFromY's slot
@@ -232,69 +225,25 @@ long EEAIAStarBoundedPathGoal::GetCost(long inFromX, long inFromY, long inX, lon
 // off the goal; doubled for a big ranked unit near a blocked tile (continent test uses the entered tile, not the probe)
 long EEAIAStarBoundedPathGoal::GetDefaultCost(long inFromX, long inFromY, long inX, long inY)
 {
-    EEMapTile* theTile;
+    static const long kDirections[4] = {4, 3, 1, 6};
     long theCost;
-    long theRange;
-    RTSMap* theMap;
-    long theX;
-    long theY;
-    EEMapTile* theNeighbor;
-    theTile = this->mMap->GetTile(inX, inY);
     if (inFromX == inX || inFromY == inY)
         theCost = 10;
     else
         theCost = 14;
-    if (inX != this->mGoalTile.GetX() || inY != this->mGoalTile.GetY()) {
-        for (RTSTileUnitNode* theNode = theTile->GetUnits(); theNode; theNode = theNode->GetNext()) {
-            EEComplexUnit* theUnit = theNode->GetUnit()->GetComplexUnit();
-            if (!theUnit || theUnit == this->GetUnit() || !theUnit->GetUnitClass()->GetIsCollidable() || theUnit->IsFoundation())
-                continue;
-            if (theUnit->GetActiveGroup() && theUnit->GetActiveGroup() == this->GetUnit()->GetActiveGroup() && theUnit->GetCollisionRadius() < kEEBPGFull)
-                continue;
-            if ((theUnit->GetCommand() ? theUnit->GetCommand()->GetType() : 0) != kActionIdle
-                && (theUnit->GetCommand() ? theUnit->GetCommand()->GetType() : 0) != kActionAttackEnemyUnit)
-                continue;
-            if (theUnit->GetCollisionRadius() >= kEEBPGFull && this->GetUnit()->GetUnitClass()->GetInnerCollisionSphere() < kEEBPGFull)
-                theCost += 150;
-            else
-                theCost += 50;
-        }
-    }
-    if (!(this->GetUnit()->GetUnitClass()->GetInnerCollisionSphere() >= kEEBPGFull))
+    if (inX != this->mGoalTile.mX || inY != this->mGoalTile.mY)
+        theCost += this->mView.GetCrowdCost(this->mUnit, inX, inY);
+    if (!this->mView.IsWide(this->mUnit))
         return theCost;
-    theRange = this->GetUnit()->GetFormationRank();
-    if (!theRange || ((this->GetUnit()->GetStats()->GetTerrainMask() >> 14) & 1) != 0)
+    long theRange = this->mView.GetFormationRank(this->mUnit);
+    if (!theRange || this->mView.IgnoresFormation(this->mUnit))
         return theCost;
-    theMap = gWorld.GetMap();
-    theX = 0;
-    theY = 0;
-    EEGetTileInDirection(inX, inY, &theX, &theY, 4, theRange);
-    theNeighbor = theMap->GetTile(theX, theY);
-    if (theNeighbor && (theNeighbor->GetAIValue() || !this->GetUnit()->GetUnitClass()->CanMoveOnTerrain(this->GetUnit(), theNeighbor->GetTerrainType())
-                        || this->GetContinentID() != gContinentManager.GetContinentID(theX, theY)))
-        theCost *= 2;
-    else {
-        EEGetTileInDirection(inX, inY, &theX, &theY, 3, theRange);
-        theNeighbor = theMap->GetTile(theX, theY);
-        if (theNeighbor && (theNeighbor->GetAIValue() || !this->GetUnit()->GetUnitClass()->CanMoveOnTerrain(this->GetUnit(), theNeighbor->GetTerrainType())
-                            || this->GetContinentID() != gContinentManager.GetContinentID(theX, theY)))
-            theCost *= 2;
-        else {
-            EEGetTileInDirection(inX, inY, &theX, &theY, 1, theRange);
-            theNeighbor = theMap->GetTile(theX, theY);
-            if (theNeighbor && (theNeighbor->GetAIValue()
-                                || !this->GetUnit()->GetUnitClass()->CanMoveOnTerrain(this->GetUnit(), theNeighbor->GetTerrainType())
-                                || this->GetContinentID() != gContinentManager.GetContinentID(theX, theY)))
-                theCost *= 2;
-            else {
-                EEGetTileInDirection(inX, inY, &theX, &theY, 6, theRange);
-                theNeighbor = theMap->GetTile(theX, theY);
-                if (theNeighbor && (theNeighbor->GetAIValue()
-                                    || !this->GetUnit()->GetUnitClass()->CanMoveOnTerrain(this->GetUnit(), theNeighbor->GetTerrainType())
-                                    || this->GetContinentID() != gContinentManager.GetContinentID(theX, theY)))
-                    theCost *= 2;
-            }
-        }
+    long theX = 0;
+    long theY = 0;
+    for (long i = 0; i < 4; i++) {
+        EEGetTileInDirection(inX, inY, &theX, &theY, kDirections[i], theRange);
+        if (this->mView.IsRankProbeBlocked(this->mUnit, this->mContinentID, theX, theY))
+            return theCost * 2;
     }
     return theCost;
 }
@@ -335,42 +284,30 @@ void EEAIAStarBoundedPathGoal::MarkBlockedTiles()
 
 // Returns whether the unit can move on the tile's terrain and pass every unit on it (false on a map edge)
 // (no address: ICF-folded into EEAIAStarPathfindingGoal's identical 0x1990c)
-bool EEAIAStarBoundedPathGoal::AcceptDefault(EEMapTile* inTile, long inX, long inY, bool inGoal)
+bool EEAIAStarBoundedPathGoal::AcceptDefault(long inX, long inY, bool inGoal)
 {
-    bool theResult;
-    if (!this->mMap->IsEdgeTile(inX, inY)) {
-        long theType = inTile->mTerrainType;
-        if (this->mUnit->GetUnitClass()->CanMoveOnTerrain(this->mUnit, theType)) {
-            theResult = true;
-            for (RTSTileUnitNode* theNode = inTile->mUnits; theNode; theNode = theNode->mNext) {
-                if (!theNode->mUnit->IsPassableBy(this->mUnit)) {
-                    theResult = false;
-                    break;
-                }
-            }
-        } else
-            theResult = false;
-    } else
-        theResult = false;
-    return theResult;
+    if (this->mView.IsEdgeTile(inX, inY))
+        return false;
+    if (!this->mView.CanMoveOn(this->mUnit, this->mView.GetTerrain(inX, inY)))
+        return false;
+    return this->mView.ArePassable(this->mUnit, inX, inY);
 }
 
 // Returns whether the unit may enter the tile: the modifier decides, else the default test
 // (no address: ICF-folded into EEAIAStarPathfindingGoal's identical 0x19a3f)
-bool EEAIAStarBoundedPathGoal::AcceptTile(EEMapTile* inTile, long inX, long inY, bool inGoal)
+bool EEAIAStarBoundedPathGoal::AcceptOnMap(long inX, long inY, bool inGoal)
 {
     if (this->mModifier == NULL)
-        return this->AcceptDefault(inTile, inX, inY, inGoal);
-    return this->mModifier->CanEnter(inTile, inX, inY, inGoal);
+        return this->AcceptDefault(inX, inY, inGoal);
+    return this->mView.CanEnter(this->mModifier, inX, inY, inGoal);
 }
 
 // FUNCTION: EXE 0x40f4bc
 // Returns whether the unit may enter a map tile that lies inside the search bounds
 inline bool EEAIAStarBoundedPathGoal::AcceptTile(long inX, long inY, bool inGoal)
 {
-    EEMapTile* theTile = this->mMap->GetTile(inX, inY);
-    if (theTile && this->mBounds.Contains(inX, inY))
-        return this->AcceptTile(theTile, inX, inY, inGoal);
+    if (this->mView.HasTile(inX, inY) && this->mBounds.Contains(inX, inY))
+        return this->AcceptOnMap(inX, inY, inGoal);
     return false;
 }
 

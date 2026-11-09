@@ -60,9 +60,9 @@ public:
     // 0x82d66 (ret 4): a random index into inValues, GetRandom(0, size - 1). A member template: each TU emits its own
     // COMDAT (the kept copy is EECPIntelligence's 0x82d66, ICF-folding the EEComplexUnit*/long/EEPlayer*
     // instantiations; callers EECPCivilizationManager 0x711ac, EECPDefenseCommander 0x78148, EEHerd) (provisional name)
-    template <class T> long Fn82D66(std::vector<T>& inValues) { return this->GetRandom(0L, (long)inValues.size() - 1); }
+    template <class T> long GetRandomElementIndex(std::vector<T>& inValues) { return this->GetRandom(0L, (long)inValues.size() - 1); }
     // template COMDAT 0xa52eb (EEHerd.cpp's range, ret 4): GetRandom(0, size - 1) of a vector of EEFormationSlot
-    // (Fn82D66's twin for 0x14-byte elements) (provisional name)
+    // (GetRandomElementIndex's twin for 0x14-byte elements) (provisional name)
     template <class V> long GetRandomIndex(V& inValues) { return this->GetRandom(0L, (long)inValues.size() - 1); }
     void SetSpeed(float inSpeed);           // 0x161774 (EEMRecordFrames passes mF50; provisional name)
     // inline: EEMRecordFrames stores +0x69 after it has pushed mF50 from the same `this` (provisional name)
@@ -191,6 +191,9 @@ public:
     bool mBE7;                              // +0x0e7
     bool mResourceTimerPending;             // +0x0e8 (saved)
     std::vector<EEPUnitSwap> mUnitSwaps;    // +0x0ec (QueueUnitSwap; the `_Buy` is vector<EETileCoordinate>'s ICF twin)
+    // New members (R5a.5): the physics totals that were the globals 0x531cf0 / 0x531cf4 (gU531CF0 / gU531CF4)
+    long mInputMessagesProcessed;           // the user-input messages executed (Init clears it; part of the out-of-synch checksum)
+    unsigned long mLastOutOfSynchChecksum;  // GetOutOfSynchChecksum's last result (written, never read)
 };
 
 extern EEPhysics* gPhysics;                 // 0x5318f0 (provisional name)

@@ -9,6 +9,10 @@ publish.workspace = true
 [lib]
 crate-type = ["rlib"]
 
+# the harness clock (ee_plat_core::sim_clock): the waits' timeouts follow its factor
+[dependencies]
+ee_plat_core = { path = "../ee_plat_core" }
+
 # windows-sys 0.60, not the 0.59 of the wgpu tree: a second version with its own feature set. Features added to 0.59
 # would recompile naga, wgpu-core and wgpu-hal (they depend on it through termcolor/winapi-util).
 [target.'cfg(windows)'.dependencies.windows-sys]

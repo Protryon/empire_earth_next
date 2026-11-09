@@ -318,6 +318,12 @@ mod tests {
         fn is_lead(&self, b: u8) -> bool {
             (0x81..=0x9f).contains(&b)
         }
+        fn is_digit(&self, c: c_uint) -> bool {
+            SingleByte.is_digit(c)
+        }
+        fn compare_no_case(&self, a: &[u8], b: &[u8]) -> core::ffi::c_int {
+            SingleByte.compare_no_case(a, b)
+        }
     }
 
     #[test]

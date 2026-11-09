@@ -419,7 +419,7 @@ def main():
     results, failures = guard_suite(builds, only, a.v)
     sys.path.insert(0, str(HERE))
     import selftest_inproc
-    for part in ("shim", "bridge", "probe", "plumbing"):
+    for part in ("shim", "bridge", "probe", "plumbing", "fixture"):
         if only and part not in only:
             continue
         for arch in ARCHES:

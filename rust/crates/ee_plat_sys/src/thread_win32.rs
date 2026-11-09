@@ -2,6 +2,8 @@
 //! `CRITICAL_SECTION*`), a `PlatEvent*` is the event HANDLE itself (PlatTimerStartEvent relies on it), a `PlatThread*`
 //! the thread HANDLE. The waits call WaitForSingleObject / WaitForMultipleObjects as the engine did: the harness's
 //! time shim patches those imports (a PlatEventWait must stay WaitForSingleObject, not a multi-wait of one handle).
+//! With the harness clock's factor set (platform/PlatSim.h PlatSimSetTimeFactor) a finite timeout is a multi-wait
+//! with a high-resolution timer instead (ee_plat_core::time::sim_wait).
 
 use crate::constants::*;
 use crate::cstr::try_box;
@@ -126,7 +128,16 @@ pub fn wait_result(result: u32, count: u32) -> i32 {
 
 #[no_mangle]
 pub unsafe extern "C" fn PlatEventWait(event: *mut PlatEvent, timeout_ms: u32) -> i32 {
+    if let Some(result) = sim_wait(&[event_handle(event)], timeout_ms) {
+        return wait_result(result, 1);
+    }
     wait_result(WaitForSingleObject(event_handle(event), timeout_ms), 1)
+}
+
+/// The harness clock (platform/PlatSim.h PlatSimSetTimeFactor): a finite timeout lasts 1/F of its real time. None
+/// without a factor: the Win32 wait as always.
+unsafe fn sim_wait(handles: &[HANDLE], timeout_ms: u32) -> Option<u32> {
+    ee_plat_core::time::sim_wait(handles, timeout_ms)
 }
 
 #[no_mangle]
@@ -138,6 +149,9 @@ pub unsafe extern "C" fn PlatEventWaitAny(events: *const *mut PlatEvent, count: 
     let mut handles: [HANDLE; PLAT_WAIT_MAX as usize] = [null_mut(); PLAT_WAIT_MAX as usize];
     for (i, slot) in handles.iter_mut().enumerate().take(count as usize) {
         *slot = event_handle(*events.add(i));
+    }
+    if let Some(result) = sim_wait(&handles[..count as usize], timeout_ms) {
+        return wait_result(result, count);
     }
     wait_result(WaitForMultipleObjects(count, handles.as_ptr(), 0, timeout_ms), count)
 }
@@ -222,6 +236,9 @@ pub unsafe extern "C" fn PlatThreadGetExitCode(thread: *mut PlatThread, exit_cod
 
 #[no_mangle]
 pub unsafe extern "C" fn PlatThreadWait(thread: *mut PlatThread, timeout_ms: u32) -> i32 {
+    if let Some(result) = sim_wait(&[thread_handle(thread)], timeout_ms) {
+        return wait_result(result, 1);
+    }
     wait_result(WaitForSingleObject(thread_handle(thread), timeout_ms), 1)
 }
 

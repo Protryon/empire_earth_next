@@ -20,7 +20,7 @@
 #include "lle/ISMouse.h"
 #include "lle/ISEntity.h"
 
-#include "ee/EEMouse.h"
+#include "ee/RTSMouse.h"
 #include "lle/GERenderState.h"
 // 0x4be9f8: the pointer textures, by pointer index (Virtual0C); the last slot repeats the blank pointer
 static const char* sPointerFiles[10] = {

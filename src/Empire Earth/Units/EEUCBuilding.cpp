@@ -1,7 +1,7 @@
 // C:\EEX\Empire Earth\Units\EEUCBuilding.cpp (__FILE__ 0x4c8f28: the volcano assert, line 261). The buildings' unit
 // class: 0x20e58d..0x21005e (after EEUCBomb.cpp; EEUCBuildingPriest.cpp follows). Unit flags: the exe's module set.
 // Its ctor is inline (EEUnitClass.cpp's factory). Order: Virtual04, VirtualE0, EruptVolcano (the volcano erupts),
-// CreateUnitAt, CreateUnit, the wall/tower helpers (0x20ea01..0x20ed72: Fn20EBDA = the map quarter a tile faces),
+// CreateUnitAt, CreateUnit, the wall/tower helpers (0x20ea01..0x20ed72: EEGetFacingQuarter = the map quarter a tile faces),
 // Virtual44, Virtual74, Virtual78, Virtual84, ReleaseUnit, VirtualA8, Virtual98, VirtualA0, VirtualB4, VirtualBC,
 // VirtualB8, UpdateArmed, then EECalamityManager::GetCalamityClass<EECCVolcano>.
 #include <windows.h>
@@ -59,9 +59,9 @@
 // 0x446ff0/0x446ff4: the unit's named constants (one .rdata copy per unit)
 static const float kBuildingLift = 0.001f;      // 0x446ff0 (a building sits just above the ground)
 static const float kBuildingSunk = -2.0f;       // 0x446ff4 (VirtualA0 6000: below it the building is gone)
-// 0x446dc0: the yaw of each map quarter (Fn20EBDA's 0..3) (provisional name)
+// 0x446dc0: the yaw of each map quarter (EEGetFacingQuarter's 0..3) (provisional name)
 static const float kQuarterYaws[4] = { 0.0f, 3.1415927f, -1.5707964f, 1.5707964f };
-// 0x4c8ef8/0x4c8f08: the quarter for each side, and the steps along the four sides (Fn20EA89) (provisional names)
+// 0x4c8ef8/0x4c8f08: the quarter for each side, and the steps along the four sides (EEGetDockFacing) (provisional names)
 static long sSideQuarters[4] = { 0, 2, 1, 3 };
 static long sSideSteps[4][2] = { { 0, 1 }, { 1, 0 }, { 0, -1 }, { -1, 0 } };
 
@@ -768,7 +768,7 @@ void EEUCBuilding::Update(EEComplexUnit* inUnit)
         if (inUnit->mCurrentPhysicsAction == 2 && this->mPhysicsModel != NULL && inUnit->GetTileX() != -10000)
             this->mPhysicsModel->Step(inUnit);
         if (this->mUnitType == kUnitTypeCapitol && inUnit->mStats->mPower > 0) {
-            this->Fn157269(inUnit);
+            this->UpdateDone(inUnit);
             this->RegeneratePower(inUnit);
         }
         this->UpdateBuilding(inUnit);

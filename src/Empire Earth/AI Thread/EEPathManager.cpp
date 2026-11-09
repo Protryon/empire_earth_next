@@ -72,6 +72,7 @@
 #include "ee/EEMathInline.h"
 
 #include "ee/EEPathManager.h"
+#include "ee/EEUnitHandle.h"
 
 
 // NEAR: the original copies the (uninitialised) allocator byte of its fifth argument
@@ -125,7 +126,7 @@ public:
     EEAIAStarMachineBase* mPathMachine;     // +0x10 (an EEPathMachine, or the bounded one when its mType is 4)
     EEGraphPathMachine* mGraphMachine;      // +0x14
     EEAutoPathRequest* mRequest;            // +0x18 (referenced)
-    EEComplexUnit* mUnit;                   // +0x1c (referenced)
+    EEUnitHandle<EEComplexUnit> mUnit;      // +0x1c (referenced; a handle since R5a.4)
     long mL20;                              // +0x20
     long mL24;                              // +0x24
     long mL28;                              // +0x28

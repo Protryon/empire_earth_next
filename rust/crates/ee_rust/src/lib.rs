@@ -28,6 +28,8 @@ use ee_ui as _;
 use ee_rmap as _;
 // formations (ee_formations/src/ffi.rs): the geometry the formation classes call
 use ee_formations as _;
+// the tile A* searches' storage and machine (ee_astar/src/ffi.rs), called by the C++ EEAIAStar* classes
+use ee_astar as _;
 // the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency
 use ee_data as _;
 
@@ -47,6 +49,10 @@ use ee_plat_sys as _;
 #[cfg(not(test))]
 use ee_plat_sdl as _;
 use ee_plat_ui as _;
+
+// the WON library's leaves (ee_won/src/ffi.rs): the buffers' and text helpers, CRC-16, MD5, Blowfish, ElGamal, the auth
+// blocks and the CD keys behind the C++ forwarders of src/Empire Earth/WONAPI
+use ee_won as _;
 
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 pub const EE_RUST_ABI_VERSION: u32 = 1;

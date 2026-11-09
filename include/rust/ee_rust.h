@@ -84,6 +84,17 @@ constexpr static const int32_t BEYOND_END = 10;
 
 constexpr static const int32_t END_OF_FILE = 18;
 
+/// `kControlTriggerEnterPressed`.
+constexpr static const unsigned long TRIGGER_ENTER_PRESSED = 1009;
+
+/// `kScrollBarWidth`.
+constexpr static const float SCROLL_BAR_WIDTH = 20.0;
+
+/// `kErrorOK`, `kErrorFailed`.
+constexpr static const long ERROR_OK = 0;
+
+constexpr static const long ERROR_FAILED = 9;
+
 /// `kControlTypeRadioButton`.
 constexpr static const unsigned long RADIO_BUTTON = 6;
 
@@ -105,6 +116,56 @@ constexpr static const unsigned long PROPORTIONAL = 4;
 /// `kLayoutFromStartEdge`: the left/top edge's own point + offset (a width or height).
 constexpr static const unsigned long FROM_START_EDGE = 5;
 
+/// `kControlTriggerSelectionChanged`, `kControlTriggerDoubleClicked`, `kControlTriggerButtonDown`.
+constexpr static const unsigned long TRIGGER_SELECTION_CHANGED = 1003;
+
+constexpr static const unsigned long TRIGGER_DOUBLE_CLICKED = 1004;
+
+constexpr static const unsigned long TRIGGER_BUTTON_DOWN = 1007;
+
+/// An auth block's kind for `ee_won_auth_unpack`: the header only.
+constexpr static const uint32_t EE_WON_AUTH_BASE = 0;
+
+/// `AuthCertificate`.
+constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE = 1;
+
+/// `Auth2Certificate`.
+constexpr static const uint32_t EE_WON_AUTH_CERTIFICATE2 = 2;
+
+/// `AuthPubKeyBlock`.
+constexpr static const uint32_t EE_WON_AUTH_PUB_KEY_BLOCK = 3;
+
+/// Which members the storage's machine calls (see the module table).
+enum class EeAStarStorageKind {
+  Hashed = 0,
+  Bounded = 1,
+  Terrain = 2,
+};
+
+/// Which `PrepareGrid` the storage has (its `+0x10` slot).
+enum class EeAStarGridKind {
+  /// `EEAIAStarStorage`: the flags; the last search's bounds grown by two when they are valid
+  Hashed = 0,
+  /// `EEAIAStarFastStorage`: the flags and the node map, all of them
+  Fast = 1,
+  /// `EEAIAStarBoundedStorage`: the flags and the node map; the last search's bounds grown by two
+  Bounded = 2,
+  /// the flood storages (choke point, continent, hill, path area, path sector): the flags and the node map; the
+  /// dirty bounds grown by one when they are valid and the grid was not just allocated
+  Dirty = 3,
+};
+
+/// The storage's lists, for the goals' walks and the capture.
+enum class EeAStarList {
+  SortedOpen = 0,
+  FastOpen = 1,
+  FastClosed = 2,
+  /// every open bucket, the last bucket first
+  OpenTable = 3,
+  /// every closed bucket, the last bucket first
+  ClosedTable = 4,
+};
+
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
 enum class EeUiEdge {
   Left = 0,
@@ -113,8 +174,33 @@ enum class EeUiEdge {
   Bottom = 3,
 };
 
+/// What an ElGamal call computes into a sink.
+enum class EeWonElGamalOp : uint32_t {
+  Encrypt = 0,
+  Decrypt = 1,
+  Sign = 2,
+  RawPrivateKey = 3,
+  RawPublicKey = 4,
+};
+
+/// What `ee_won_auth_cert2_query` asks of an `Auth2Certificate`.
+enum class EeWonCert2Query : uint32_t {
+  /// the community's key id
+  KeyId = 0,
+  /// the first community (0 if none)
+  FirstCommunity = 1,
+  /// the first community's trust
+  FirstCommunityTrust = 2,
+};
+
 /// `FSArchive`'s tables.
 struct EeFsArchive;
+
+/// An unpacked block. The header fields are those read before any failure, as in the C++.
+struct EeWonAuth;
+
+/// One storage (opaque to C++).
+struct EeAStarStorage;
 
 /// The compiler's state for one data path; every table's text is read through `read`. Not thread safe.
 struct EeDataContent;
@@ -132,6 +218,9 @@ struct EeRmapResult;
 
 /// The manager's state, owned by the C++ `SESoundManager` (created and destroyed with it).
 struct EeSoundManager;
+
+/// An ElGamal key with its own random generator.
+struct EeWonElGamal;
 
 /// A `GEPolygonArray` of 16-bit triangle indices (`DrawIndexedPrimitive`'s WORD list).
 struct EeDx7PolygonArray;
@@ -164,6 +253,113 @@ using EeDataIdVisit = void(*)(void *ctx, int32_t key, const uint8_t *id, size_t 
 
 /// One keyed upgrade of a `.civ` text: its key and line.
 using EeDataCivVisit = void(*)(void *ctx, const uint8_t *key, size_t key_len, int32_t line);
+
+/// A node as the goals and the capture see it.
+struct EeAStarNodeView {
+  int32_t x;
+  int32_t y;
+  uint32_t cost;
+  int32_t path_cost;
+  int32_t estimate;
+  bool has_parent;
+  int32_t parent_x;
+  int32_t parent_y;
+};
+
+/// `U2DRectangle<long>` (`EEAIAStarBounds`): the member order of the C++ (bottom, left, right, top).
+struct EeAStarRect {
+  int32_t bottom;
+  int32_t left;
+  int32_t right;
+  int32_t top;
+};
+
+/// The storage's scalar members, read and written whole.
+struct EeAStarFields {
+  EeAStarRect bounds;
+  EeAStarRect dirty;
+  int32_t width;
+  int32_t height;
+  bool has_bounds;
+};
+
+/// `EEAIAStarMachineBase`'s search members and `EEAIAStarMachine`'s map size.
+struct EeAStarMachineState {
+  int32_t tile_x;
+  int32_t tile_y;
+  int32_t revs;
+  int32_t num_runs;
+  int32_t steps;
+  bool check_corners;
+  bool found;
+  int32_t map_width;
+  int32_t map_height;
+};
+
+/// The goal and the C++ machine's members (`machine::Host`), as C function pointers over `ctx`.
+struct EeAStarCallbacks {
+  void *ctx;
+  bool (*accept_tile)(void *ctx, int32_t x, int32_t y, bool flag);
+  int32_t (*get_cost)(void *ctx,
+                      int32_t from_x,
+                      int32_t from_y,
+                      int32_t x,
+                      int32_t y,
+                      bool has_parent,
+                      int32_t parent_x,
+                      int32_t parent_y);
+  int32_t (*estimate)(void *ctx, int32_t from_x, int32_t from_y, int32_t to_x, int32_t to_y);
+  bool (*is_goal_node)(void *ctx, bool has_node, int32_t x, int32_t y);
+  void (*search_done)(void *ctx, bool has_current, int32_t x, int32_t y, bool has_open);
+  bool (*search_failed)(void *ctx);
+  bool (*accept_nearest)(void *ctx);
+  bool (*is_step_limit)(void *ctx, int32_t steps);
+  bool (*is_rev_limit)(void *ctx, int32_t revs);
+  bool (*is_cheaper)(void *ctx, uint32_t cost, uint32_t old);
+  /// the goal's start (`out[0..2]`) and goal (`out[2..4]`) tiles
+  void (*tiles)(void *ctx, int32_t *out);
+  void (*get_state)(void *ctx, EeAStarMachineState *out);
+  void (*set_state)(void *ctx, const EeAStarMachineState *state);
+};
+
+/// `EEAIAStarContinentGoal`'s fill state.
+struct EeAStarContinentFill {
+  /// `mKind` (`EEAIContinentCategory`; 0 until the first tile picks it)
+  uint8_t kind;
+  /// `mTileCount`
+  int32_t tile_count;
+};
+
+/// A goal's view (`EEAIAStarView`), as C function pointers over `ctx`: the queries the flood goals make.
+struct EeAStarViewCallbacks {
+  void *ctx;
+  bool (*has_tile)(void *ctx, int32_t x, int32_t y);
+  int32_t (*terrain)(void *ctx, int32_t x, int32_t y);
+  bool (*is_edge)(void *ctx, int32_t x, int32_t y);
+  int32_t (*height_level)(void *ctx, int32_t x, int32_t y);
+  uint16_t (*continent_id)(void *ctx, int32_t x, int32_t y);
+  /// a choke tile at `index` (`*serial` its area serial)
+  bool (*choke_tile)(void *ctx, int32_t index, uint32_t *serial);
+};
+
+/// `EEAIAStarHillGoal`'s fill state.
+struct EeAStarHillFill {
+  /// `mContinentID` (the first tile's; 0 between hills)
+  uint16_t continent_id;
+  /// `mTileCount`
+  int32_t tile_count;
+  /// `mLevelSum`
+  int32_t level_sum;
+};
+
+/// `EEAIAStarChokePointGoal`'s fill state.
+struct EeAStarChokeFill {
+  /// `mWidth`, `mHeight` (the map's size: `Attach`)
+  int32_t width;
+  int32_t height;
+  /// `mTileCount`
+  int32_t tile_count;
+};
 
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
 using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
@@ -910,6 +1106,64 @@ struct EeOfSlice {
   size_t len;
 };
 
+/// `UIEditBox`'s members from `mCaretX` (+0x17c in the original) to `mSavedAlwaysDirty`, in order (offsets
+/// `static_assert`ed in `UIEditBox.cpp`).
+struct EeUiEditFields {
+  float caret_x;
+  float saved_bg_opacity;
+  unsigned long selection_start_line;
+  unsigned long copied_selection_start_line;
+  unsigned long copied_selection_end_line;
+  unsigned long max_chars;
+  unsigned long char_scroll;
+  unsigned long caret_line;
+  unsigned long visible_line_count;
+  unsigned long ime_composition_length;
+  unsigned long ime_start_index;
+  unsigned long ime_start_line;
+  unsigned long copied_ime_start_index;
+  unsigned long copied_ime_start_line;
+  unsigned long copied_ime_end_index;
+  unsigned long copied_ime_end_line;
+  long copied_selection_end_index;
+  long copied_selection_start_index;
+  long selection_start_index;
+  long caret_index;
+  long drawing_index;
+  bool is_text_selected;
+  bool key_repeating;
+  bool cursor_on;
+  bool selecting;
+  bool copied_cursor_on;
+  bool copied_is_text_selected;
+  bool numbers_only;
+  bool is_single_line;
+  bool scroll_bar_captured;
+  bool scroll_bar_visible;
+  bool is_password_box;
+  bool ime_active;
+  bool copied_ime_active;
+  bool saved_always_dirty;
+};
+
+/// `GERectangle`: the C++ member order, `mBottom` first.
+struct EeUiRect {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
+/// One edit box as Rust sees it: the C++ object, its record from `mCaretX` on, `mTextRectangle`, `mRectangle` and
+/// `mBorderThickness`.
+struct EeUiEditRefs {
+  void *edit;
+  EeUiEditFields *fields;
+  EeUiRect *text;
+  const EeUiRect *rect;
+  const unsigned long *border;
+};
+
 /// `GE2DPoint`: x, y.
 struct EeUiPoint {
   float x;
@@ -928,12 +1182,57 @@ struct EeUiLayout {
   unsigned long bottom_type;
 };
 
-/// `GERectangle`: the C++ member order, `mBottom` first.
-struct EeUiRect {
-  float bottom;
-  float left;
-  float right;
-  float top;
+/// The host functions of one `UIListBox<T>` instantiation.
+struct EeUiListHost {
+  unsigned long (*num_lines)(void *list);
+  void (*change_selection)(void *list, unsigned long index, bool fire, bool scroll_to);
+  void (*clear_selection)(void *list);
+  bool (*has_scroll_bar)(void *list);
+  long (*scroll_value)(void *list);
+  long (*scroll_max)(void *list);
+  void (*set_scroll_value)(void *list, unsigned long value);
+  void (*set_scroll_range)(void *list, unsigned long min, unsigned long max);
+  void (*scroll_set_rectangle)(void *list, const EeUiRect *r);
+  void (*create_scroll_bar)(void *list,
+                            float x,
+                            float y,
+                            float length,
+                            unsigned long page,
+                            unsigned long value);
+  void (*set_dirty)(void *list);
+  void (*fire)(void *list, unsigned long event);
+  void (*set_bg_rectangle)(void *list, const EeUiRect *r);
+  void (*base_set_location)(void *list, float x, float y);
+  void (*mouse_location)(void *list, EeUiPoint *out);
+};
+
+/// `UIListBox`'s members from `mScrollBarBgOpacity` to `mHasSelection`, in order (offsets `static_assert`ed in
+/// `lle/UIListBox.h`).
+struct EeUiListFields {
+  float scroll_bar_bg_opacity;
+  unsigned long number_lines_displayed;
+  unsigned long current_selection;
+  unsigned long draw_line_count;
+  unsigned long line_height;
+  bool auto_select;
+  bool button_down;
+  bool scroll_bar_captured;
+  bool copied_has_focus;
+  bool copied_has_selection;
+  bool scroll_bar_removed;
+  bool copied_scroll_bar_visible;
+  bool has_selection;
+};
+
+/// One list box as Rust sees it: the object, its host table, its record from `mScrollBarBgOpacity` on,
+/// `mTextRectangle`, `mRectangle` and `mBorderThickness`.
+struct EeUiListRefs {
+  void *list;
+  const EeUiListHost *host;
+  EeUiListFields *fields;
+  EeUiRect *text;
+  const EeUiRect *rect;
+  const unsigned long *border;
 };
 
 /// `UISlider`'s members in their C++ order (the record starts at `mThumbRectangle`).
@@ -955,6 +1254,50 @@ struct EeUiSliderFields {
   long max_thumb_pixel;
   long drag_offset;
   bool is_dragging;
+};
+
+/// Receives UTF-16 units; valid only during the call.
+using EeWonUnitSink = void(*)(void *context, const uint16_t *units, size_t count);
+
+/// A running MD5 digest. `#[repr(C)]` and plain data: the C++ forwarders embed it by value.
+struct EeWonMd5 {
+  uint32_t state[4];
+  /// bytes hashed so far
+  uint64_t count;
+  uint8_t pending[64];
+};
+
+/// A keyed cipher. `#[repr(C)]` plain data: the C++ `Blowfish` embeds it by value and copies it with the class.
+struct EeWonBlowfish {
+  uint32_t s[1024];
+  uint32_t p[18];
+  uint8_t key[56];
+  uint32_t key_len;
+  uint32_t valid;
+};
+
+/// Receives bytes; valid only during the call.
+using EeWonByteSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// An auth block's header and validity.
+struct EeWonAuthHeader {
+  bool valid;
+  uint16_t family;
+  uint16_t data_len;
+  int32_t issue_time;
+  int32_t expire_time;
+  /// a certificate's user id
+  uint32_t user_id;
+  /// a key block's id
+  uint16_t key_block_id;
+};
+
+/// What `ee_won_cdkey_decrypt` found.
+struct EeWonCdKeyDecoded {
+  bool has_raw;
+  bool valid;
+  bool used_machine;
+  uint8_t raw[8];
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -1182,6 +1525,141 @@ uint32_t ee_rust_abi_version();
 /// `log` must be callable from any thread for the life of the process, with a NUL-terminated line valid during the
 /// call.
 void ee_rust_init(void (*log)(const char *line));
+
+/// A new storage of the given kind (`StorageKind`: 0 hashed, 1 bounded, 2 terrain).
+EeAStarStorage *ee_astar_new(EeAStarStorageKind kind);
+
+/// Frees a storage.
+///
+/// # Safety
+/// `s` must come from `ee_astar_new` (or be null) and not be used afterwards.
+void ee_astar_free(EeAStarStorage *s);
+
+/// `ResetNodes`.
+///
+/// # Safety
+/// As `st`.
+void ee_astar_reset_nodes(EeAStarStorage *s);
+
+/// `Clear`.
+///
+/// # Safety
+/// As `st`.
+void ee_astar_clear(EeAStarStorage *s);
+
+/// `Init`'s first half: the size, then `Clear`.
+///
+/// # Safety
+/// As `st`.
+void ee_astar_init_begin(EeAStarStorage *s, int32_t width, int32_t height);
+
+/// `Init`'s last half: empty hash tables.
+///
+/// # Safety
+/// As `st`.
+void ee_astar_alloc_tables(EeAStarStorage *s);
+
+/// A `PrepareGrid` slot (`GridKind`) over the storage's flags and node map; `resized`: the caller's own grid was
+/// just allocated (the flood storages).
+///
+/// # Safety
+/// As `st`.
+void ee_astar_prepare_grid(EeAStarStorage *s,
+                           int32_t width,
+                           int32_t height,
+                           EeAStarGridKind grid,
+                           bool resized);
+
+/// `MarkTile`.
+///
+/// # Safety
+/// As `st`.
+void ee_astar_mark_tile(EeAStarStorage *s, uint32_t x, uint32_t y, bool accept);
+
+/// `GetFirstPathTile` (false: no path).
+///
+/// # Safety
+/// As `st`; `x`, `y` valid for writes.
+bool ee_astar_first_path_tile(EeAStarStorage *s, int32_t *x, int32_t *y);
+
+/// `GetNextPathTile` (false and (0, 0) at the end).
+///
+/// # Safety
+/// As `st`; `x`, `y` valid for writes.
+bool ee_astar_next_path_tile(EeAStarStorage *s, int32_t *x, int32_t *y);
+
+/// The nodes of a list (`List`) in its order: writes up to `capacity` into `out`, returns the list's length.
+///
+/// # Safety
+/// As `st`; `out` valid for `capacity` writes (or null with `capacity` 0).
+uint32_t ee_astar_list(EeAStarStorage *s,
+                       EeAStarList which,
+                       EeAStarNodeView *out,
+                       uint32_t capacity);
+
+/// The current node, the found path's node (`which` 0, 1); false when none.
+///
+/// # Safety
+/// As `st`; `out` writable.
+bool ee_astar_node(EeAStarStorage *s, uint32_t which, EeAStarNodeView *out);
+
+/// Whether an open node is left.
+///
+/// # Safety
+/// As `st`.
+bool ee_astar_has_open(EeAStarStorage *s);
+
+/// Reads the storage's scalar members.
+///
+/// # Safety
+/// As `st`; `out` writable.
+void ee_astar_get_fields(EeAStarStorage *s, EeAStarFields *out);
+
+/// Sets the bounds, the dirty bounds and the bounds flag (the size stays).
+///
+/// # Safety
+/// As `st`; `fields` readable.
+void ee_astar_set_fields(EeAStarStorage *s, const EeAStarFields *fields);
+
+/// The machine's `Start`.
+///
+/// # Safety
+/// As `st`; `cb` valid, its functions callable and not re-entering this storage.
+bool ee_astar_start(EeAStarStorage *s, const EeAStarCallbacks *cb);
+
+/// The machine's `Expand`.
+///
+/// # Safety
+/// As `ee_astar_start`.
+void ee_astar_expand(EeAStarStorage *s, const EeAStarCallbacks *cb);
+
+/// `EEAIAStarContinentGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// `fill` readable and writable; `view` valid, its functions callable.
+bool ee_astar_continent_accept(EeAStarContinentFill *fill,
+                               const EeAStarViewCallbacks *view,
+                               int32_t x,
+                               int32_t y);
+
+/// `EEAIAStarHillGoal::AcceptTile` over the goal's state.
+///
+/// # Safety
+/// As `ee_astar_continent_accept`.
+bool ee_astar_hill_accept(EeAStarHillFill *fill,
+                          const EeAStarViewCallbacks *view,
+                          int32_t x,
+                          int32_t y);
+
+/// `EEAIAStarChokePointGoal::AcceptTile` over the goal's state; `*serial` the tile's area serial when accepted.
+///
+/// # Safety
+/// As `ee_astar_continent_accept`; `serial` writable.
+bool ee_astar_choke_accept(EeAStarChokeFill *fill,
+                           const EeAStarViewCallbacks *view,
+                           int32_t x,
+                           int32_t y,
+                           uint32_t *serial);
 
 /// `UDataCompression::Compress`.
 ///
@@ -3239,6 +3717,133 @@ int32_t ee_sound_node_set_pitch(void *node, float v);
 /// `node` is a live node.
 int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
 
+/// `UIEditBox::AddChar` -> how many bytes of `text` a single-line box read.
+size_t ee_ui_edit_add_char(const EeUiEditRefs *refs, const char *text);
+
+/// `UIEditBox::BackSpaceChar`.
+void ee_ui_edit_back_space_char(const EeUiEditRefs *refs);
+
+/// `UIEditBox::CalculateCaretFromMouseLocation` (the outputs are written after the model ran: a caller may pass the
+/// box's own caret members).
+void ee_ui_edit_caret_from_mouse(const EeUiEditRefs *refs,
+                                 EeUiPoint at,
+                                 unsigned long *out_line,
+                                 long *out_index);
+
+/// `UIEditBox::ChangeWidth`.
+void ee_ui_edit_change_width(const EeUiEditRefs *refs, unsigned long width);
+
+/// `UIEditBox::CheckScrollBar`.
+void ee_ui_edit_check_scroll_bar(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ComputeCaretLocation`.
+void ee_ui_edit_compute_caret_location(const EeUiEditRefs *refs, bool update_x);
+
+/// `UIEditBox::ComputeDrawingIndex`.
+void ee_ui_edit_compute_drawing_index(const EeUiEditRefs *refs);
+
+/// `UIEditBox::DecrementCaretPos`.
+void ee_ui_edit_decrement_caret_pos(const EeUiEditRefs *refs);
+
+/// `UIEditBox::DeleteChar`.
+void ee_ui_edit_delete_char(const EeUiEditRefs *refs);
+
+/// `UIEditBox::DeleteLine`.
+void ee_ui_edit_delete_line(const EeUiEditRefs *refs, unsigned long line);
+
+/// `UIEditBox::DeleteSelectedText`.
+void ee_ui_edit_delete_selected_text(const EeUiEditRefs *refs);
+
+/// `UIEditBox::DeleteText(start index, start line, end index, end line)`.
+void ee_ui_edit_delete_range(const EeUiEditRefs *refs,
+                             unsigned long start_index,
+                             unsigned long start_line,
+                             unsigned long end_index,
+                             unsigned long end_line);
+
+/// `UIEditBox::DeleteText()`.
+void ee_ui_edit_clear(const EeUiEditRefs *refs);
+
+/// `UIEditBox::GetLocationFromIndex`.
+void ee_ui_edit_location_from_index(const EeUiEditRefs *refs,
+                                    unsigned long index,
+                                    unsigned long line,
+                                    EeUiPoint *out);
+
+/// `UIEditBox::GetSelectedText` into the `UWideString` `out` (left alone without a selection).
+void ee_ui_edit_selected_text(const EeUiEditRefs *refs, void *out);
+
+/// `UIEditBox::GetText(start line, end line, start index, end index)` into the `UWideString` `out`.
+void ee_ui_edit_text(const EeUiEditRefs *refs,
+                     unsigned long start_line,
+                     unsigned long end_line,
+                     unsigned long start_index,
+                     unsigned long end_index,
+                     void *out);
+
+/// `UIEditBox::IncrementCaretPos`.
+void ee_ui_edit_increment_caret_pos(const EeUiEditRefs *refs, long count);
+
+/// `UIEditBox::ProcessDownKey`.
+void ee_ui_edit_down_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ProcessEndKey`.
+void ee_ui_edit_end_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ProcessEnterKey`.
+void ee_ui_edit_enter_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ProcessHomeKey`.
+void ee_ui_edit_home_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ProcessUpKey`.
+void ee_ui_edit_up_key(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ScrollLeft`.
+void ee_ui_edit_scroll_left(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ScrollRight`.
+void ee_ui_edit_scroll_right(const EeUiEditRefs *refs, long count);
+
+/// `UIEditBox::SelectText()`.
+void ee_ui_edit_select_all(const EeUiEditRefs *refs);
+
+/// `UIEditBox::SelectText(caret index, anchor index, caret line, anchor line)`.
+void ee_ui_edit_select(const EeUiEditRefs *refs,
+                       unsigned long caret_index,
+                       unsigned long start_index,
+                       unsigned long caret_line,
+                       unsigned long start_line);
+
+/// `UIEditBox::SetCaretLocation`.
+void ee_ui_edit_set_caret_location(const EeUiEditRefs *refs,
+                                   unsigned long index,
+                                   unsigned long line);
+
+/// `UIEditBox::SetIndexFromUpDownOffset`.
+void ee_ui_edit_index_from_up_down_offset(const EeUiEditRefs *refs);
+
+/// `UIEditBox::SetLocation`.
+void ee_ui_edit_set_location(const EeUiEditRefs *refs, EeUiPoint at);
+
+/// `UIEditBox::SetText`.
+void ee_ui_edit_set_text(const EeUiEditRefs *refs, const char *text);
+
+/// `UIEditBox::OpenIMECompositionString`.
+long ee_ui_edit_ime_open(const EeUiEditRefs *refs);
+
+/// `UIEditBox::CloseIMECompositionString`.
+long ee_ui_edit_ime_close(const EeUiEditRefs *refs);
+
+/// `UIEditBox::ChangeIMECompositionString` (the C++ sets `mIMEAttributes`).
+long ee_ui_edit_ime_change(const EeUiEditRefs *refs, const char *text, unsigned long cursor);
+
+/// `UIEditBox::RemoveIMECompositionString`.
+void ee_ui_edit_ime_remove(const EeUiEditRefs *refs);
+
+/// `UIEditBox::UpdateTranslatedKey`'s typing (the C++ restarts the caret blink).
+void ee_ui_edit_type_key(const EeUiEditRefs *refs, const char *key, short repeat);
+
 /// `UIForm::CheckedRadioButton`.
 void ee_ui_form_checked_radio_button(void *form, long *index);
 
@@ -3263,6 +3868,54 @@ void ee_ui_layout_calculate(const EeUiLayout *layout,
 
 /// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
 void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
+
+/// `UIListBox::ChangeSelectionIndex`.
+void ee_ui_list_change_selection_index(const EeUiListRefs *refs,
+                                       unsigned long index,
+                                       bool fire,
+                                       bool scroll_to);
+
+/// `UIListBox::CheckScrollBar`.
+void ee_ui_list_check_scroll_bar(const EeUiListRefs *refs);
+
+/// `UIListBox::DeleteAllEntries` after `mData.clear()`.
+void ee_ui_list_cleared(const EeUiListRefs *refs);
+
+/// `UIListBox::DeleteLine` after the erase.
+void ee_ui_list_deleted_line(const EeUiListRefs *refs, unsigned long line);
+
+/// `UIListBox::InsertLine` after the insert at `index`.
+void ee_ui_list_inserted(const EeUiListRefs *refs, unsigned long index);
+
+/// `UIListBox::ButtonDown`.
+void ee_ui_list_button_down(const EeUiListRefs *refs);
+
+/// `UIListBox::MouseLButtonDoublePressed` inside the text (false: the C++ hands the click to `UIControl`).
+bool ee_ui_list_double_pressed(const EeUiListRefs *refs);
+
+/// `UIListBox::MouseLButtonUp`'s test: the button went up on the selected line.
+bool ee_ui_list_up_on_selection(const EeUiListRefs *refs);
+
+/// `UIListBox::MouseMove` off the scroll bar.
+void ee_ui_list_mouse_move(const EeUiListRefs *refs, EeUiPoint at);
+
+/// `UIListBox::ProcessDown`.
+void ee_ui_list_down(const EeUiListRefs *refs);
+
+/// `UIListBox::ProcessUp`.
+void ee_ui_list_up(const EeUiListRefs *refs);
+
+/// `UIListBox::ProcessHome`.
+void ee_ui_list_home(const EeUiListRefs *refs);
+
+/// `UIListBox::ProcessEnd`.
+void ee_ui_list_end(const EeUiListRefs *refs);
+
+/// `UIListBox::SetLocation`.
+void ee_ui_list_set_location(const EeUiListRefs *refs, EeUiPoint at);
+
+/// `UWSNoCaseAlphaSort::operator()`: `left` sorts before `right` with the case folded.
+bool ee_ui_text_less_no_case(const char *left, const char *right);
 
 /// The constructor's track and thumb ([`slider::init`]).
 void ee_ui_slider_init(EeUiSliderFields *fields, const EeUiRect *rectangle, unsigned long style);
@@ -3322,6 +3975,388 @@ void ee_ui_slider_set_range(void *slider,
 
 /// `UITextLabel::SetText`'s line loop: `text` (NUL-terminated) wrapped to `width`.
 void ee_ui_label_wrap(void *ctx, const char *text, float width);
+
+/// The UTF-16 little-endian bytes of `count` `wchar_t`s of `wchar_size` bytes, written to `out` (up to `capacity`
+/// bytes); returns the byte count. `out` may be null to measure.
+///
+/// # Safety
+/// `wide` holds `count` characters of `wchar_size` (2 or 4) bytes; `out` has `capacity` bytes or is null.
+size_t ee_won_utf16le_from_wide(const void *wide,
+                                uint32_t wchar_size,
+                                size_t count,
+                                uint8_t *out,
+                                size_t capacity);
+
+/// The code point a UTF-16 unit makes with the last character of a UTF-32 text: the joined code point when `last`
+/// is a high surrogate and `unit` a low one, else 0 (append the unit as it is).
+uint32_t ee_won_utf16_join(uint32_t last,
+                           uint16_t unit);
+
+/// `wchar_t` text of UTF-16 units (`wchar_size` 2: unchanged; 4: surrogate pairs joined) written to `out` (up to
+/// `capacity` characters, which `count` always suffices for); returns the character count.
+///
+/// # Safety
+/// `data` holds `count` units; `out` has room for `capacity` characters of `wchar_size` bytes.
+size_t ee_won_wide_from_utf16(const uint16_t *data,
+                              size_t count,
+                              uint32_t wchar_size,
+                              void *out,
+                              size_t capacity);
+
+/// The UTF-16 units of little-endian bytes (`count` units read from `data`, which holds `2 * count` bytes) as
+/// `wchar_t` text; see `ee_won_wide_from_utf16`.
+///
+/// # Safety
+/// `data` holds `2 * count` bytes; `out` as for `ee_won_wide_from_utf16`.
+size_t ee_won_wide_from_utf16le(const uint8_t *data,
+                                size_t count,
+                                uint32_t wchar_size,
+                                void *out,
+                                size_t capacity);
+
+/// The UTF-16 units of `wchar_t` text, to a sink.
+///
+/// # Safety
+/// As `ee_won_utf16le_from_wide`; the sink is called once.
+void ee_won_utf16_from_wide(const void *wide,
+                            uint32_t wchar_size,
+                            size_t count,
+                            EeWonUnitSink sink,
+                            void *context);
+
+/// `CheckWrite`: the capacity for `length + add` bytes, or 0 when the current one suffices.
+uint64_t ee_won_write_grow(uint64_t capacity, uint64_t length, uint64_t add);
+
+/// `ReserveChunk`: the capacity for `total` bytes capped at `max`, or 0 when the current one suffices.
+uint64_t ee_won_write_chunk(uint64_t capacity,
+                            uint64_t total,
+                            uint64_t max);
+
+/// `AppendLength`: the field's bytes into `out` (4 bytes of room); returns their count (0 for another size).
+///
+/// # Safety
+/// `out` has 4 bytes.
+size_t ee_won_encode_length(uint32_t length,
+                            uint8_t size,
+                            uint8_t *out);
+
+/// `ToByteBuffer`'s prefix for `length` data bytes into `out` (6 bytes of room); returns its length.
+///
+/// # Safety
+/// `out` has 6 bytes.
+size_t ee_won_length_prefix(uint8_t field_size,
+                            bool includes_field,
+                            uint32_t length,
+                            uint8_t *out);
+
+/// `ReadBytes`'s bound: advances `*pos` by `amount` and returns true when that many bytes remain before `length`.
+///
+/// # Safety
+/// `pos` is valid.
+bool ee_won_read_take(uint64_t length,
+                      int64_t *pos,
+                      uint64_t amount);
+
+/// `ReadLength`: reads a 1, 2 or 4-byte length at `*pos` (sign-extended; 0 for another size); false past the end.
+///
+/// # Safety
+/// `data` holds `length` bytes; `pos` and `out` are valid.
+bool ee_won_read_length(const uint8_t *data,
+                        uint64_t length,
+                        int64_t *pos,
+                        uint8_t size,
+                        uint32_t *out);
+
+/// `CRC16::Put`: the register after the bytes.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+uint16_t ee_won_crc16_put(uint16_t register_, const uint8_t *data, size_t length);
+
+/// Resets an MD5 state (also its initialisation).
+///
+/// # Safety
+/// `state` is valid.
+void ee_won_md5_reset(EeWonMd5 *state);
+
+/// Adds bytes.
+///
+/// # Safety
+/// `state` is valid; `data` holds `length` bytes.
+void ee_won_md5_update(EeWonMd5 *state, const uint8_t *data, size_t length);
+
+/// Writes the 16-byte digest and resets.
+///
+/// # Safety
+/// `state` is valid; `out` has 16 bytes.
+void ee_won_md5_finish(EeWonMd5 *state, uint8_t *out);
+
+/// No key.
+///
+/// # Safety
+/// `bf` is valid for a write.
+void ee_won_blowfish_init(EeWonBlowfish *bf);
+
+/// `SetKey`.
+///
+/// # Safety
+/// `bf` is valid; `key` holds `length` bytes.
+bool ee_won_blowfish_set_key(EeWonBlowfish *bf, const uint8_t *key, size_t length);
+
+/// `Create`: a random key.
+///
+/// # Safety
+/// `bf` is valid.
+bool ee_won_blowfish_create(EeWonBlowfish *bf, int32_t length);
+
+/// The raw key (`GetKey`); its length is `ee_won_blowfish_key_length`.
+///
+/// # Safety
+/// `bf` is valid; the pointer lives as long as `*bf` is unchanged.
+const uint8_t *ee_won_blowfish_key(const EeWonBlowfish *bf);
+
+/// `GetKeyLen`.
+///
+/// # Safety
+/// `bf` is valid.
+int32_t ee_won_blowfish_key_length(const EeWonBlowfish *bf);
+
+/// `Encrypt`: the cipher text to the sink; false (no call) without a key.
+///
+/// # Safety
+/// `bf` is valid; `data` holds `length` bytes.
+bool ee_won_blowfish_encrypt(const EeWonBlowfish *bf,
+                             const uint8_t *data,
+                             size_t length,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// `Decrypt`: the plain text to the sink; false (no call) when refused.
+///
+/// # Safety
+/// As `ee_won_blowfish_encrypt`.
+bool ee_won_blowfish_decrypt(const EeWonBlowfish *bf,
+                             const uint8_t *data,
+                             size_t length,
+                             EeWonByteSink sink,
+                             void *context);
+
+/// A key with no key material, its generator seeded from the system.
+EeWonElGamal *ee_won_elgamal_new();
+
+/// A copy (generator state included).
+///
+/// # Safety
+/// `key` is a live key.
+EeWonElGamal *ee_won_elgamal_clone(const EeWonElGamal *key);
+
+/// Frees a key (null: nothing).
+///
+/// # Safety
+/// `key` came from this module and is not used afterwards.
+void ee_won_elgamal_free(EeWonElGamal *key);
+
+/// `SetPrivateKey` (`is_private` true) or `SetPublicKey`.
+///
+/// # Safety
+/// `key` is live; `data` holds `length` bytes.
+bool ee_won_elgamal_set_key(EeWonElGamal *key, const uint8_t *data, size_t length, bool is_private);
+
+/// `Invalidate`.
+///
+/// # Safety
+/// `key` is live.
+void ee_won_elgamal_invalidate(EeWonElGamal *key);
+
+/// `IsPrivate`.
+///
+/// # Safety
+/// `key` is live.
+bool ee_won_elgamal_is_private(const EeWonElGamal *key);
+
+/// `IsPublic`.
+///
+/// # Safety
+/// `key` is live.
+bool ee_won_elgamal_is_public(const EeWonElGamal *key);
+
+/// Encrypt, decrypt, sign (the input is the message) or write a raw key (no input): the result to the sink; false
+/// (no call) when the key cannot (`Encrypt`/`Sign` advance the key's generator, as the C++'s `mutable Random`).
+///
+/// # Safety
+/// `key` is live; `data` holds `length` bytes.
+bool ee_won_elgamal_op(EeWonElGamal *key,
+                       EeWonElGamalOp op,
+                       const uint8_t *data,
+                       size_t length,
+                       EeWonByteSink sink,
+                       void *context);
+
+/// `Verify`.
+///
+/// # Safety
+/// `key` is live; the buffers hold their lengths.
+bool ee_won_elgamal_verify(const EeWonElGamal *key,
+                           const uint8_t *message,
+                           size_t message_length,
+                           const uint8_t *signature,
+                           size_t signature_length);
+
+/// Unpacks a block of `kind` (`EE_WON_AUTH_*`).
+///
+/// # Safety
+/// `data` holds `length` bytes.
+EeWonAuth *ee_won_auth_unpack(uint32_t kind, const uint8_t *data, size_t length);
+
+/// Frees a block (null: nothing).
+///
+/// # Safety
+/// `block` came from `ee_won_auth_unpack` and is not used afterwards.
+void ee_won_auth_free(EeWonAuth *block);
+
+/// The header fields.
+///
+/// # Safety
+/// `block` is live; `out` is valid.
+void ee_won_auth_header(const EeWonAuth *block, EeWonAuthHeader *out);
+
+/// `AuthBase::Verify(key)`.
+///
+/// # Safety
+/// `block` and `key` are live.
+bool ee_won_auth_verify(const EeWonAuth *block, const EeWonElGamal *key);
+
+/// `IsExpired(extra)` at `now` (seconds).
+///
+/// # Safety
+/// `block` is live.
+bool ee_won_auth_is_expired(const EeWonAuth *block, int64_t now, int64_t extra);
+
+/// `VerifyPermissions`.
+///
+/// # Safety
+/// `block` is live.
+bool ee_won_auth_verify_permissions(const EeWonAuth *block,
+                                    uint32_t user_id,
+                                    uint32_t community,
+                                    uint16_t min_trust);
+
+/// The number of keys a block carries: a certificate's public key (0 or 1) or a key block's keys.
+///
+/// # Safety
+/// `block` is live.
+size_t ee_won_auth_key_count(const EeWonAuth *block);
+
+/// A copy of key `index` (null past the count); free it with `ee_won_elgamal_free`.
+///
+/// # Safety
+/// `block` is live.
+EeWonElGamal *ee_won_auth_key(const EeWonAuth *block, size_t index);
+
+/// `AuthPubKeyBlock::Verify(block)`.
+///
+/// # Safety
+/// Both are live.
+bool ee_won_auth_verify_with_block(const EeWonAuth *key_block, const EeWonAuth *block);
+
+/// A number from an `Auth2Certificate` (0 for another block).
+///
+/// # Safety
+/// `block` is live.
+uint32_t ee_won_auth_cert2_query(const EeWonAuth *block, EeWonCert2Query query, uint32_t community);
+
+/// `GetNickname(key)` (`first` false) or `GetFirstNickname` (`first` true): the units to the sink (empty when
+/// absent).
+///
+/// # Safety
+/// `block` is live; `key` holds `key_count` units.
+void ee_won_auth_cert2_nickname(const EeWonAuth *block,
+                                bool first,
+                                const uint16_t *key,
+                                size_t key_count,
+                                EeWonUnitSink sink,
+                                void *context);
+
+/// `GetUserData(community)` (`first` false) or `GetFirstUserData`: the bytes to the sink; false (no call) when
+/// absent.
+///
+/// # Safety
+/// `block` is live.
+bool ee_won_auth_cert2_user_data(const EeWonAuth *block,
+                                 bool first,
+                                 uint32_t community,
+                                 EeWonByteSink sink,
+                                 void *context);
+
+/// A page file's text (`plaintext::page_text`: HTML pages converted; `skip_first_if_text` drops a text page's first
+/// character) as UTF-16 units to the sink.
+///
+/// # Safety
+/// `data` holds `length` bytes.
+void ee_won_page_text(const uint8_t *data,
+                      size_t length,
+                      bool skip_first_if_text,
+                      EeWonUnitSink sink,
+                      void *context);
+
+/// `CalcKeyFromBuffer`'s test of 8 raw bytes for a product.
+///
+/// # Safety
+/// `product` holds `product_length` bytes; `raw` 8.
+bool ee_won_cdkey_is_valid(const uint8_t *product, size_t product_length, const uint8_t *raw);
+
+/// `Init(string)`'s decoding: the raw bytes into `out` (8 bytes); false when the text is not a key.
+///
+/// # Safety
+/// `text` holds `length` bytes; `out` has 8.
+bool ee_won_cdkey_parse(const uint8_t *text, size_t length, uint8_t *out);
+
+/// `GetString`: the 24 characters and a NUL into `out` (25 bytes).
+///
+/// # Safety
+/// `raw` holds 8 bytes; `out` has 25.
+void ee_won_cdkey_format(const uint8_t *raw, char *out);
+
+/// `GetSymmetricKey`'s key bytes into `out` (12 bytes of room); returns their count.
+///
+/// # Safety
+/// `product` holds `product_length` bytes; `out` has 12.
+size_t ee_won_cdkey_symmetric_key(const uint8_t *product,
+                                  size_t product_length,
+                                  uint32_t machine_id,
+                                  bool use_machine_id,
+                                  uint8_t *out);
+
+/// `GetEncrypted`: the stored form of a raw key to the sink.
+///
+/// # Safety
+/// As `ee_won_cdkey_symmetric_key`; `raw` holds 8 bytes.
+bool ee_won_cdkey_encrypt(const uint8_t *product,
+                          size_t product_length,
+                          uint32_t machine_id,
+                          bool use_machine_id,
+                          const uint8_t *raw,
+                          EeWonByteSink sink,
+                          void *context);
+
+/// `InitEncrypted`'s decoding: `has_machine_id` false when the machine has none.
+///
+/// # Safety
+/// `product` and `data` hold their lengths; `out` is valid.
+void ee_won_cdkey_decrypt(const uint8_t *product,
+                          size_t product_length,
+                          uint32_t machine_id,
+                          bool has_machine_id,
+                          bool prefer_machine,
+                          const uint8_t *data,
+                          size_t length,
+                          EeWonCdKeyDecoded *out);
+
+/// `IsBeta` (`which` 0) or `IsForceCheck` (`which` 1) of a raw key of `length` bytes.
+///
+/// # Safety
+/// `raw` holds `length` bytes.
+bool ee_won_cdkey_flag(const uint8_t *raw, size_t length, uint32_t which);
 
 }  // extern "C"
 

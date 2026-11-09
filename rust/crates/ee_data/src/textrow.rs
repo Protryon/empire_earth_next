@@ -22,7 +22,7 @@ pub fn raw(g: &mut Getter, key: &str) -> Res<Option<Vec<u8>>> {
     let v = g.get(key);
     match v {
         None => Ok(None),
-        Some(n) if n.kind == Kind::Scalar => Ok(Some(n.text.clone())),
+        Some(n) if n.kind == Kind::Scalar => Ok(Some(n.text.to_vec())),
         Some(_) => Err(Failure::new(msg!(&g.where_, ": ", key, ": not a scalar"))),
     }
 }
@@ -53,7 +53,7 @@ impl FromBits for f32 {
 
 /// A numeric field: None when absent; the record's value when present.
 pub fn num<T: FromBits>(g: &mut Getter, key: &str, ty: Type) -> Res<Option<T>> {
-    let w = g.where_.clone();
+    let w = g.where_;
     let v = g.get(key);
     let Some(v) = v else { return Ok(None) };
     number(key, ty, Some(v), &w).map(|bits| Some(T::from_bits(bits, ty)))
@@ -61,7 +61,7 @@ pub fn num<T: FromBits>(g: &mut Getter, key: &str, ty: Type) -> Res<Option<T>> {
 
 /// An array of a numeric type; a missing element is None.
 pub fn num_array<T: FromBits>(g: &mut Getter, key: &str, ty: Type, n: usize) -> Res<Vec<Option<T>>> {
-    let w = g.where_.clone();
+    let w = g.where_;
     let v = g.get(key);
     let e = elems(v, n, &w, key)?;
     let mut out = Vec::with_capacity(n);
@@ -85,7 +85,7 @@ pub fn raw_array(g: &mut Getter, key: &str, n: usize) -> Res<Vec<Option<Vec<u8>>
 }
 
 fn raw_array_map(g: &mut Getter, key: &str, n: usize, encode: bool) -> Res<Vec<Option<Vec<u8>>>> {
-    let w = g.where_.clone();
+    let w = g.where_;
     let v = g.get(key);
     let e = elems(v, n, &w, key)?;
     let mut out = Vec::with_capacity(n);
@@ -95,7 +95,7 @@ fn raw_array_map(g: &mut Getter, key: &str, n: usize, encode: bool) -> Res<Vec<O
             Some(node) if node.kind == Kind::Scalar => Some(if encode {
                 encode_text(&node.text).map_err(|e| Failure::new(msg!(&w, ": ", key, ": ", &e.text)))?
             } else {
-                node.text.clone()
+                node.text.to_vec()
             }),
             Some(_) => return Err(Failure::new(msg!(&w, ": ", key, ": not a scalar"))),
         });
@@ -105,7 +105,7 @@ fn raw_array_map(g: &mut Getter, key: &str, n: usize, encode: bool) -> Res<Vec<O
 
 /// A pair_f32 array: n pairs of optional floats.
 pub fn pairs(g: &mut Getter, key: &str, n: usize) -> Res<Vec<[Option<f32>; 2]>> {
-    let w = g.where_.clone();
+    let w = g.where_;
     let v = g.get(key);
     let e = elems(v, n, &w, key)?;
     let mut out = Vec::with_capacity(n);
@@ -135,7 +135,7 @@ pub fn raw_list(g: &mut Getter, key: &str) -> Res<Vec<Vec<u8>>> {
         if x.kind != Kind::Scalar {
             return Err(Failure::new(msg!(&g.where_, ": ", key, ": a list where a number belongs")));
         }
-        out.push(x.text.clone());
+        out.push(x.text.to_vec());
     }
     Ok(out)
 }

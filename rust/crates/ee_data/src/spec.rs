@@ -118,8 +118,12 @@ impl Table {
 
 /// A table by file stem, case-insensitive (the loaders spell some names in mixed case).
 pub fn find_table(name: &[u8]) -> Option<&'static Table> {
-    let lower: Vec<u8> = name.iter().map(u8::to_ascii_lowercase).collect();
-    crate::generated::specs_gen::TABLES.iter().find(|t| t.name.as_bytes() == lower.as_slice())
+    // the name lowercased, compared without a copy (a lookup per reference cell)
+    let same = |t: &&Table| {
+        let n = t.name.as_bytes();
+        n.len() == name.len() && n.iter().zip(name).all(|(a, b)| *a == b.to_ascii_lowercase())
+    };
+    crate::generated::specs_gen::TABLES.iter().find(same)
 }
 
 /// A table that must exist in the specs (the names in code).
@@ -145,6 +149,9 @@ mod tests {
     fn lookup_is_case_insensitive() {
         assert_eq!(find_table(b"DBWorld").map(|t| t.name), Some("dbworld"));
         assert!(find_table(b"nosuchtable").is_none());
+        assert!(find_table(b"dbworl").is_none());
+        assert!(find_table(b"dbworldx").is_none());
+        assert_eq!(find_table(b"DBTECHTREE").map(|t| t.name), Some("dbtechtree"));
     }
 
     #[test]

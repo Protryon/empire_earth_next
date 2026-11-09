@@ -11,6 +11,7 @@
 #include <map>
 #include <vector>
 #include "ee/EETileCoordinate.h"
+#include "ee/EEUnitHandle.h"
 
 class EEComplexUnit;
 class EEComputerPlayer;
@@ -85,8 +86,8 @@ public:
     EECPWallManager* mWallManager;          // +0x48 (new 0x88, ctor 0x9cc24; provisional class name)
     EEComputerPlayer* GetPlayer() const { return this->mPlayer; }
     EEComputerPlayer* mPlayer;              // +0x4c (the ctor argument)
-    EEComplexUnit* mGarrison;               // +0x50 referenced (saved as its unit id) (provisional name)
-    EEComplexUnit* mFortress;               // +0x54 referenced (saved as its unit id) (provisional name)
+    EEUnitHandle<EEComplexUnit> mGarrison;  // +0x50 referenced (saved as its unit id; a handle since R5a.4) (provisional name)
+    EEUnitHandle<EEComplexUnit> mFortress;  // +0x54 referenced (saved as its unit id; a handle since R5a.4) (provisional name)
     unsigned long mNextEpochAdvanceTime;    // +0x58 (saved relative to gPhysics' time)
     unsigned long mLastCountCheck;          // +0x5c (saved)
     unsigned long mNextRepairTime;          // +0x60

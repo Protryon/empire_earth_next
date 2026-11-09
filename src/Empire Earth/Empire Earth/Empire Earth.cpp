@@ -9,6 +9,7 @@
 #include "EEDataText.h"   // EEDbFindFile: the db tables' text forms
 #include "platform/PlatMessage.h"
 void EETestFixtureStart();   // EETestFixture.cpp (TEST ONLY)
+void EETestFixtureConfigure();   // EETestFixture.cpp (TEST ONLY): the harness clock, seed and no-defeat switches
 void EESimPreferences();     // EESim.cpp (TEST ONLY: the headless simulation, platform/PlatSim.h)
 void EESimStart();
 #include "platform/PlatSim.h"
@@ -928,6 +929,9 @@ bool EEInitializePart1()
 #include "ee/RTSMousePointer.h"
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEPhysics.h"
+
+// New (R5a.6): the RTS layer's way to the input mouse (ee/RTSMouse.h), without the game's mouse header
+RTSMouse* RTSGetInputMouse() { return gMouse; }
 
 // The three threads' stop members (declared in their headers; their COMDATs 0x140999, 0x144488, 0x1444ac are this
 // unit's; the same body as RTSGraphics::Shutdown)
@@ -2056,6 +2060,7 @@ void EERustInit();   // EERust.cpp
 static int EERun(HINSTANCE inInstance, char* inCommandLine)
 {
     EERustInit();   // first: a panic anywhere after this reaches a log
+    EETestFixtureConfigure();   // TEST ONLY: nothing unless EE_TEST_UI is set (before any clock or thread starts)
     long theResult;
     bool theInitialized;
     EEStartScreen theSplashScreen(inInstance);

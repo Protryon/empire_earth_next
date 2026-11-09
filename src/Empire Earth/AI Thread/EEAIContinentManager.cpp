@@ -921,7 +921,7 @@ void EEAIContinentManager::CreatePathAreaKind(EEMap* inMap, long inKind)
     else if (inKind == kAIPathNonSpace)
         this->mNextID130 = theMachine.mGoal.GetNextKindID();
     delete[] theAreas;
-    theMachine.mHasBounds = false;
+    theMachine.SetHasBounds(false);
     theMachine.Reset();
 }
 
@@ -971,7 +971,7 @@ void EEAIContinentManager::CreatePathAreas(EEMap* inMap)
             theContinent->AddForestID(theArea->GetID());
         this->AddArea(theArea);
     }
-    theMachine.mHasBounds = false;
+    theMachine.SetHasBounds(false);
     theMachine.Reset();
     this->CreatePathSectors(inMap, &theMachine);
     for (long i = this->mPathSubSectors.size() - 1; i >= 0; i--) {

@@ -158,7 +158,7 @@ public:
     virtual ~EETerrainTypeTable() {}
     static long Load(FSFileSpec* inFile);   // 0xdbd2e (db\dbterrainType.dat)
     static void Unload();                   // 0xdbde7
-    static long LoadDamageTables(FSFileSpec* inFile);  // 0xdbf11 (gU4E8708 and its two twins; provisional name)
+    static long LoadDamageTables(FSFileSpec* inFile);  // 0xdbf11 (gDamageTable and its two twins; provisional name)
     static void ClearDamageTables();        // 0xdc5bb
     // members from the ctor: +0x08..+0x18 = 0, +0x1c = false; sizeof 0x20 (new site)
     long mColorSetID;                       // +0x04 (untouched by the ctor)

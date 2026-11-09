@@ -13,14 +13,14 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEDatabaseTables.h"
 
-// The damage tables (.bss after sTable 0x4e86f8): 0x4e8708 gU4E8708 (EmpireEarth.h), 0x4e870c / 0x4e8710 its
+// The damage tables (.bss after sTable 0x4e86f8): 0x4e8708 gDamageTable (EmpireEarth.h), 0x4e870c / 0x4e8710 its
 // two twin tables, 0x4e8714 / 0x4e8718 their row and column counts (provisional names). VC6 orders a unit's .bss by
 // neither definition order nor its reverse: ours places them 0x10 8710, 8714, 8708, 8718, 870c (placement open).
-float** gU4E8708;
-float** gU4E870C;
+float** gDamageTable;
+float** gDamageTableScaled1;
 float** gDamageTableScaled2;
-unsigned long gU4E8714;
-unsigned long gU4E8718;
+unsigned long gDamageTableRowCount;
+unsigned long gDamageTableColumnCount;
 
 // One record of db\dbterrainType.dat (0x80 bytes, read whole). Inferred layout.
 struct EETerrainTypeRecord {
@@ -120,7 +120,7 @@ float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned 
         // hard, none on medium) when exactly one side is "human" (IsHuman, not player 0; provisional name)
         bool theHuman = thePlayer->IsHuman() && inPlayer != 0;
         bool theTargetHuman = theTarget->IsHuman() && inTargetPlayer != 0;
-        float theFactor = gU4E8708[theRow][inKind];
+        float theFactor = gDamageTable[theRow][inKind];
         if (theHuman == theTargetHuman)
             return theFactor;
         const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
@@ -139,14 +139,14 @@ struct EEDamageTableRecord {
     char mLabel[100];                       // +0x000 the row name (the game never reads it; the text's label)
     int32_t mUnusedDatabaseID;              // +0x064 the database row id (not read)
     int32_t mUnusedIndex;                   // +0x068 the 0-based row index (not read)
-    int32_t mDamage[0x44];                  // +0x6c (scaled by kHeightEpsilon into gU4E8708's row)
+    int32_t mDamage[0x44];                  // +0x6c (scaled by kHeightEpsilon into gDamageTable's row)
 };
 static_assert(sizeof(EEDamageTableRecord) == 380, "on-disk record: 380 bytes on every target");
 
 // The number of unit families: the rows of dbfamily (the original refused a file of more than 60)
 unsigned long EEFamilyCount()
 {
-    return gU4E8714;
+    return gDamageTableRowCount;
 }
 
 // FUNCTION: EXE 0x4dbf11
@@ -158,96 +158,96 @@ long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
     unsigned long theCount = 0;
     unsigned long theRead = 0;
     EEDamageTableRecord theRecord;
-    if (gU4E8708 != NULL || gU4E870C != NULL || gDamageTableScaled2 != NULL)
+    if (gDamageTable != NULL || gDamageTableScaled1 != NULL || gDamageTableScaled2 != NULL)
         EETerrainTypeTable::ClearDamageTables();
     inFile->Open(kFileAccessRead);
     long theResult = inFile->Read(theCount);
     if (theResult == kErrorOK) {
-        gU4E8714 = theCount;
-        gU4E8708 = new float*[theCount];
-        gU4E870C = new float*[theCount];
+        gDamageTableRowCount = theCount;
+        gDamageTable = new float*[theCount];
+        gDamageTableScaled1 = new float*[theCount];
         gDamageTableScaled2 = new float*[theCount];
         unsigned long i;
         for (i = 0; i < theCount; i++) {
-            gU4E8708[i] = new float[0x44];
+            gDamageTable[i] = new float[0x44];
             gDamageTableScaled2[i] = new float[0x44];
-            gU4E870C[i] = new float[0x44];
+            gDamageTableScaled1[i] = new float[0x44];
             theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
-            gU4E8718 = 0x44;
+            gDamageTableColumnCount = 0x44;
             float theScale = kHeightEpsilon;
-            gU4E8708[i][0] = theRecord.mDamage[0] * theScale;
-            gU4E8708[i][1] = theRecord.mDamage[1] * theScale;
-            gU4E8708[i][2] = theRecord.mDamage[2] * theScale;
-            gU4E8708[i][3] = theRecord.mDamage[3] * theScale;
-            gU4E8708[i][4] = theRecord.mDamage[4] * theScale;
-            gU4E8708[i][5] = theRecord.mDamage[5] * theScale;
-            gU4E8708[i][6] = theRecord.mDamage[6] * theScale;
-            gU4E8708[i][7] = theRecord.mDamage[7] * theScale;
-            gU4E8708[i][8] = theRecord.mDamage[8] * theScale;
-            gU4E8708[i][9] = theRecord.mDamage[9] * theScale;
-            gU4E8708[i][10] = theRecord.mDamage[10] * theScale;
-            gU4E8708[i][11] = theRecord.mDamage[11] * theScale;
-            gU4E8708[i][12] = theRecord.mDamage[12] * theScale;
-            gU4E8708[i][13] = theRecord.mDamage[13] * theScale;
-            gU4E8708[i][14] = theRecord.mDamage[14] * theScale;
-            gU4E8708[i][15] = theRecord.mDamage[15] * theScale;
-            gU4E8708[i][16] = theRecord.mDamage[16] * theScale;
-            gU4E8708[i][17] = theRecord.mDamage[17] * theScale;
-            gU4E8708[i][18] = theRecord.mDamage[18] * theScale;
-            gU4E8708[i][19] = theRecord.mDamage[19] * theScale;
-            gU4E8708[i][20] = theRecord.mDamage[20] * theScale;
-            gU4E8708[i][21] = theRecord.mDamage[21] * theScale;
-            gU4E8708[i][22] = theRecord.mDamage[22] * theScale;
-            gU4E8708[i][23] = theRecord.mDamage[23] * theScale;
-            gU4E8708[i][24] = theRecord.mDamage[24] * theScale;
-            gU4E8708[i][25] = theRecord.mDamage[25] * theScale;
-            gU4E8708[i][26] = theRecord.mDamage[26] * theScale;
-            gU4E8708[i][27] = theRecord.mDamage[27] * theScale;
-            gU4E8708[i][28] = theRecord.mDamage[28] * theScale;
-            gU4E8708[i][29] = theRecord.mDamage[29] * theScale;
-            gU4E8708[i][30] = theRecord.mDamage[30] * theScale;
-            gU4E8708[i][31] = theRecord.mDamage[31] * theScale;
-            gU4E8708[i][32] = theRecord.mDamage[32] * theScale;
-            gU4E8708[i][33] = theRecord.mDamage[33] * theScale;
-            gU4E8708[i][34] = theRecord.mDamage[34] * theScale;
-            gU4E8708[i][35] = theRecord.mDamage[35] * theScale;
-            gU4E8708[i][36] = theRecord.mDamage[36] * theScale;
-            gU4E8708[i][37] = theRecord.mDamage[37] * theScale;
-            gU4E8708[i][38] = theRecord.mDamage[38] * theScale;
-            gU4E8708[i][39] = theRecord.mDamage[39] * theScale;
-            gU4E8708[i][40] = theRecord.mDamage[40] * theScale;
-            gU4E8708[i][41] = theRecord.mDamage[41] * theScale;
-            gU4E8708[i][42] = theRecord.mDamage[42] * theScale;
-            gU4E8708[i][43] = theRecord.mDamage[43] * theScale;
-            gU4E8708[i][44] = theRecord.mDamage[44] * theScale;
-            gU4E8708[i][45] = theRecord.mDamage[45] * theScale;
-            gU4E8708[i][46] = theRecord.mDamage[46] * theScale;
-            gU4E8708[i][47] = theRecord.mDamage[47] * theScale;
-            gU4E8708[i][48] = theRecord.mDamage[48] * theScale;
-            gU4E8708[i][49] = theRecord.mDamage[49] * theScale;
-            gU4E8708[i][50] = theRecord.mDamage[50] * theScale;
-            gU4E8708[i][51] = theRecord.mDamage[51] * theScale;
-            gU4E8708[i][52] = theRecord.mDamage[52] * theScale;
-            gU4E8708[i][53] = theRecord.mDamage[53] * theScale;
-            gU4E8708[i][54] = theRecord.mDamage[54] * theScale;
-            gU4E8708[i][55] = theRecord.mDamage[55] * theScale;
-            gU4E8708[i][56] = theRecord.mDamage[56] * theScale;
-            gU4E8708[i][57] = theRecord.mDamage[57] * theScale;
-            gU4E8708[i][58] = theRecord.mDamage[58] * theScale;
-            gU4E8708[i][59] = theRecord.mDamage[59] * theScale;
-            gU4E8708[i][60] = theRecord.mDamage[60] * theScale;
-            gU4E8708[i][61] = theRecord.mDamage[61] * theScale;
-            gU4E8708[i][62] = theRecord.mDamage[62] * theScale;
-            gU4E8708[i][63] = theRecord.mDamage[63] * theScale;
-            gU4E8708[i][64] = theRecord.mDamage[64] * theScale;
-            gU4E8708[i][65] = theRecord.mDamage[65] * theScale;
-            gU4E8708[i][66] = theRecord.mDamage[66] * theScale;
-            gU4E8708[i][67] = theRecord.mDamage[67] * theScale;
+            gDamageTable[i][0] = theRecord.mDamage[0] * theScale;
+            gDamageTable[i][1] = theRecord.mDamage[1] * theScale;
+            gDamageTable[i][2] = theRecord.mDamage[2] * theScale;
+            gDamageTable[i][3] = theRecord.mDamage[3] * theScale;
+            gDamageTable[i][4] = theRecord.mDamage[4] * theScale;
+            gDamageTable[i][5] = theRecord.mDamage[5] * theScale;
+            gDamageTable[i][6] = theRecord.mDamage[6] * theScale;
+            gDamageTable[i][7] = theRecord.mDamage[7] * theScale;
+            gDamageTable[i][8] = theRecord.mDamage[8] * theScale;
+            gDamageTable[i][9] = theRecord.mDamage[9] * theScale;
+            gDamageTable[i][10] = theRecord.mDamage[10] * theScale;
+            gDamageTable[i][11] = theRecord.mDamage[11] * theScale;
+            gDamageTable[i][12] = theRecord.mDamage[12] * theScale;
+            gDamageTable[i][13] = theRecord.mDamage[13] * theScale;
+            gDamageTable[i][14] = theRecord.mDamage[14] * theScale;
+            gDamageTable[i][15] = theRecord.mDamage[15] * theScale;
+            gDamageTable[i][16] = theRecord.mDamage[16] * theScale;
+            gDamageTable[i][17] = theRecord.mDamage[17] * theScale;
+            gDamageTable[i][18] = theRecord.mDamage[18] * theScale;
+            gDamageTable[i][19] = theRecord.mDamage[19] * theScale;
+            gDamageTable[i][20] = theRecord.mDamage[20] * theScale;
+            gDamageTable[i][21] = theRecord.mDamage[21] * theScale;
+            gDamageTable[i][22] = theRecord.mDamage[22] * theScale;
+            gDamageTable[i][23] = theRecord.mDamage[23] * theScale;
+            gDamageTable[i][24] = theRecord.mDamage[24] * theScale;
+            gDamageTable[i][25] = theRecord.mDamage[25] * theScale;
+            gDamageTable[i][26] = theRecord.mDamage[26] * theScale;
+            gDamageTable[i][27] = theRecord.mDamage[27] * theScale;
+            gDamageTable[i][28] = theRecord.mDamage[28] * theScale;
+            gDamageTable[i][29] = theRecord.mDamage[29] * theScale;
+            gDamageTable[i][30] = theRecord.mDamage[30] * theScale;
+            gDamageTable[i][31] = theRecord.mDamage[31] * theScale;
+            gDamageTable[i][32] = theRecord.mDamage[32] * theScale;
+            gDamageTable[i][33] = theRecord.mDamage[33] * theScale;
+            gDamageTable[i][34] = theRecord.mDamage[34] * theScale;
+            gDamageTable[i][35] = theRecord.mDamage[35] * theScale;
+            gDamageTable[i][36] = theRecord.mDamage[36] * theScale;
+            gDamageTable[i][37] = theRecord.mDamage[37] * theScale;
+            gDamageTable[i][38] = theRecord.mDamage[38] * theScale;
+            gDamageTable[i][39] = theRecord.mDamage[39] * theScale;
+            gDamageTable[i][40] = theRecord.mDamage[40] * theScale;
+            gDamageTable[i][41] = theRecord.mDamage[41] * theScale;
+            gDamageTable[i][42] = theRecord.mDamage[42] * theScale;
+            gDamageTable[i][43] = theRecord.mDamage[43] * theScale;
+            gDamageTable[i][44] = theRecord.mDamage[44] * theScale;
+            gDamageTable[i][45] = theRecord.mDamage[45] * theScale;
+            gDamageTable[i][46] = theRecord.mDamage[46] * theScale;
+            gDamageTable[i][47] = theRecord.mDamage[47] * theScale;
+            gDamageTable[i][48] = theRecord.mDamage[48] * theScale;
+            gDamageTable[i][49] = theRecord.mDamage[49] * theScale;
+            gDamageTable[i][50] = theRecord.mDamage[50] * theScale;
+            gDamageTable[i][51] = theRecord.mDamage[51] * theScale;
+            gDamageTable[i][52] = theRecord.mDamage[52] * theScale;
+            gDamageTable[i][53] = theRecord.mDamage[53] * theScale;
+            gDamageTable[i][54] = theRecord.mDamage[54] * theScale;
+            gDamageTable[i][55] = theRecord.mDamage[55] * theScale;
+            gDamageTable[i][56] = theRecord.mDamage[56] * theScale;
+            gDamageTable[i][57] = theRecord.mDamage[57] * theScale;
+            gDamageTable[i][58] = theRecord.mDamage[58] * theScale;
+            gDamageTable[i][59] = theRecord.mDamage[59] * theScale;
+            gDamageTable[i][60] = theRecord.mDamage[60] * theScale;
+            gDamageTable[i][61] = theRecord.mDamage[61] * theScale;
+            gDamageTable[i][62] = theRecord.mDamage[62] * theScale;
+            gDamageTable[i][63] = theRecord.mDamage[63] * theScale;
+            gDamageTable[i][64] = theRecord.mDamage[64] * theScale;
+            gDamageTable[i][65] = theRecord.mDamage[65] * theScale;
+            gDamageTable[i][66] = theRecord.mDamage[66] * theScale;
+            gDamageTable[i][67] = theRecord.mDamage[67] * theScale;
         }
         for (i = 0; i < theCount; i++) {
             for (long j = 0; j < 0x44; j++) {
-                gU4E870C[i][j] = gWorldTable.GetFloatValue(kWorldDifficultyDamageScale) * gU4E8708[i][j];
-                gDamageTableScaled2[i][j] = gWorldTable.GetFloatValue2(kWorldDifficultyDamageScale) * gU4E8708[i][j];
+                gDamageTableScaled1[i][j] = gWorldTable.GetFloatValue(kWorldDifficultyDamageScale) * gDamageTable[i][j];
+                gDamageTableScaled2[i][j] = gWorldTable.GetFloatValue2(kWorldDifficultyDamageScale) * gDamageTable[i][j];
             }
         }
     }
@@ -261,29 +261,29 @@ long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
 void EETerrainTypeTable::ClearDamageTables()
 {
     unsigned long i;
-    if (gU4E8708 != NULL) {
-        for (i = 0; i < gU4E8714; i++)
-            if (gU4E8708[i] != NULL)
-                delete[] gU4E8708[i];
-        delete[] gU4E8708;
+    if (gDamageTable != NULL) {
+        for (i = 0; i < gDamageTableRowCount; i++)
+            if (gDamageTable[i] != NULL)
+                delete[] gDamageTable[i];
+        delete[] gDamageTable;
     }
-    if (gU4E870C != NULL) {
-        for (i = 0; i < gU4E8714; i++)
-            if (gU4E870C[i] != NULL)
-                delete[] gU4E870C[i];
-        delete[] gU4E870C;
+    if (gDamageTableScaled1 != NULL) {
+        for (i = 0; i < gDamageTableRowCount; i++)
+            if (gDamageTableScaled1[i] != NULL)
+                delete[] gDamageTableScaled1[i];
+        delete[] gDamageTableScaled1;
     }
     if (gDamageTableScaled2 != NULL) {
-        for (i = 0; i < gU4E8714; i++)
+        for (i = 0; i < gDamageTableRowCount; i++)
             if (gDamageTableScaled2[i] != NULL)
                 delete[] gDamageTableScaled2[i];
         delete[] gDamageTableScaled2;
     }
-    gU4E8708 = NULL;
-    gU4E870C = NULL;
+    gDamageTable = NULL;
+    gDamageTableScaled1 = NULL;
     gDamageTableScaled2 = NULL;
-    gU4E8718 = 0;
-    gU4E8714 = 0;
+    gDamageTableColumnCount = 0;
+    gDamageTableRowCount = 0;
 }
 
 // SYNTHETIC: EXE 0x4dbcc8

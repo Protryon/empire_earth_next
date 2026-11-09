@@ -23,16 +23,16 @@ public:
     void ReleaseSubGroups();                // 0x8572c (the dtor's call; EECPDefenseCommander::FreePackages)
     // the state machine (mL2C 0..3; SetState 0x85131 runs the entry action) (provisional names)
     void Gather();                          // 0x84e42 (state 1: sends sub groups)
-    void Fn85006();                         // 0x85006 (state 3)
+    void EnterState3();                         // 0x85006 (state 3)
     void Recall();                          // 0x85084 (state 0: the sub groups go home)
     void SetState(long inState);            // 0x85131 (ret 4; EECPDefenseCommander 0x77e4b..)
     void Deploy(std::vector<EECPDCTownThreat>& inThreats);    // 0x853e3 (ret 4; Gather passes GetWorstThreats's list)
     void DropDeadSubGroups();               // 0x8566a: drops the ids of dead sub groups
-    void Fn8588A();                         // 0x8588a (state 2)
+    void EnterState2();                         // 0x8588a (state 2)
     unsigned long UpdateGathering(EETown* inTown);  // 0x85892 (ret 4; state 1's update)
-    unsigned long Fn85922(EETown* inTown);  // 0x85922 (ret 4; state 3's update)
+    unsigned long UpdateState3(EETown* inTown);  // 0x85922 (ret 4; state 3's update)
     unsigned long UpdateRecalled(EETown* inTown);  // 0x85981 (ret 4; state 0's update)
-    unsigned long Fn859D7(EETown* inTown);  // 0x859d7 (ret 4; state 2's update)
+    unsigned long UpdateState2(EETown* inTown);  // 0x859d7 (ret 4; state 2's update)
     unsigned long Update(unsigned long inTime);    // 0x85163 (ret 4): the next time it wants an update (0: none)
     bool IsFinished();                      // 0x85105: finished
     long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // 0x851ec
