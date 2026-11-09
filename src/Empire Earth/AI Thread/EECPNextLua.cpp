@@ -49,6 +49,7 @@
 #include "ee/EEGameLog.h"
 #include "ee/EECPLua.h"
 #include "ee/EECPNext.h"
+#include "ee/EECPEngine.h"
 #include "EEDataText.h"
 #include "platform/PlatFile.h"
 #include "platform/PlatSim.h"
@@ -749,13 +750,58 @@ static void EECPNextRunOrders(EEComputerPlayer* inPlayer, EECPNextState* inState
 static void EECPNextShadowStep(EEComputerPlayer* inPlayer, EECPNextState* s, const EECPLuaValue& inView,
     const EECPLuaValue& inOrders);
 
+// the script a seat runs (a new game; a loaded one has its saved script): EE_AI_NEXT_SCRIPT's (TEST ONLY), else its
+// AI's in the manifest (ee/EECPEngine.h) -> "" none
+static std::string EECPNextChooseScript(EEComputerPlayer* inPlayer, EECPNextState* inState)
+{
+    std::string theScript = EECPNextScriptOverride(inPlayer);
+    if (theScript.empty()) {
+        if (inState->mAI.empty())
+            inState->mAI = "boom";   // a seat given the next engine without an AI (none of today's paths)
+        const EECPAIEntry* theAI = EECPAIByID(inState->mAI);
+        if (theAI != NULL)
+            theScript = theAI->mScript;
+    }
+    return theScript;
+}
+
+bool EECPNextPrepare(EEComputerPlayer* inPlayer)
+{
+    EECPTraceScope theScope("next");
+    EECPNextState* theState = EECPNextGetState(inPlayer);
+    if (theState->mScript.empty()) {
+        theState->mScript = EECPNextChooseScript(inPlayer, theState);
+        if (theState->mScript.empty()) {
+            EECPEngineLog("p%lu: the AI '%s' is not in Data/ai/ais.json: the seat plays classic", inPlayer->mPlayerID,
+                          theState->mAI.c_str());
+            return false;
+        }
+        if (theState->mScript == "c++")
+            EE_CP_TRACE(inPlayer, "next.script", "name=c++ (TEST ONLY: the C++ test opening)");
+    }
+    if (theState->mScript == "c++" || theState->mLua != NULL || theState->mFailed)
+        return true;
+    if (!EECPNextOpen(inPlayer, theState)) {
+        // the script does not load (a missing module, a syntax or top-level error: the next.error line says which):
+        // the seat plays the classic engine instead of standing idle. Safe here: the first tick, before either
+        // engine has made a decision (EEComputerPlayer::Update's start block runs the same for both)
+        EECPEngineLog("p%lu: the AI '%s' (script %s) did not load: the seat plays classic", inPlayer->mPlayerID,
+                      theState->mAI.c_str(), theState->mScript.c_str());
+        return false;
+    }
+    return true;
+}
+
 void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView)
 {
     EECPNextState* theState = EECPNextGetState(inPlayer);
     if (theState->mScript.empty()) {
-        theState->mScript = EECPNextScriptOverride(inPlayer);
-        if (theState->mScript.empty())
-            theState->mScript = EECPPersonality(inPlayer).mNextScript;
+        theState->mScript = EECPNextChooseScript(inPlayer, theState);
+        if (theState->mScript.empty()) {
+            theState->mFailed = true;
+            EECPNextError(inPlayer, "load", kEECPLuaNoFile, "the AI '" + theState->mAI + "' is not in Data/ai/ais.json");
+            return;
+        }
         if (theState->mScript == "c++")
             EE_CP_TRACE(inPlayer, "next.script", "name=c++ (TEST ONLY: the C++ test opening)");
     }

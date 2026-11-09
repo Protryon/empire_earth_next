@@ -313,20 +313,17 @@ EEAIPersonalityRules::EEAIPersonalityRules()
 {
     EEAIPersonalityRule theBalanced;
     theBalanced.mID = "balanced";
-    theBalanced.mNextScript = "boom";       // the next engine: the boom script (docs/AI_LUA_PLAN.md "S3 as built")
     EEAIPersonalityRule theTall;            // tech: saves for the next epoch early and hard
     theTall.mID = "tall";
     theTall.mEpochPressureStart = 0.15f;
     theTall.mEpochPressureFull = 0.5f;
     theTall.mStandingArmy = 0.2f;
-    theTall.mNextScript = "balanced";      // the next engine: ai/balanced.lua (S4; the final mapping is the owner's)
     EEAIPersonalityRule theWide;            // boom: grows its workforce, advances late
     theWide.mID = "wide";
     theWide.mEpochPressureStart = 0.6f;
     theWide.mEpochPressureFull = 1.0f;
     theWide.mMaxCitizenShare = 0.8f;
     theWide.mStandingArmy = 0.15f;
-    theWide.mNextScript = "boom";
     EEAIPersonalityRule theAggressive;      // rush: a large standing army, a middling epoch pace
     theAggressive.mID = "aggressive";
     theAggressive.mEpochPressureStart = 0.4f;
@@ -338,7 +335,6 @@ EEAIPersonalityRules::EEAIPersonalityRules()
     theAggressive.mStoneAttacks = true;
     theAggressive.mSafeBonus = 0.0f;        // the rush does not dash for the epoch ...
     theAggressive.mEarlyTrainers = 0;       // ... and trains from as many buildings as it likes
-    theAggressive.mNextScript = "rush";     // the next engine: ai/rush.lua (S4)
     // TEMPORARY (until the new AI beats it; docs/AI_RESEARCH.md §8.28): the original's decisions where a rule holds
     // them; EE_AI_PERSONALITY gives it to a seat
     EEAIPersonalityRule theClassic;
@@ -942,27 +938,6 @@ void LoadEpochs(EEDataText::Content& c, const Node& d, EERules& r)
     r.mEpochMusicFromText = true;
 }
 
-// a Lua module name as the runtime's require takes it (EECPLua.cpp ModuleName): letters, digits and _, in segments
-// separated by dots
-bool NextScriptName(const std::string& inName)
-{
-    if (inName.empty() || inName.size() > 96)
-        return false;
-    bool theStart = true;
-    for (char c : inName) {
-        if (c == '.') {
-            if (theStart)
-                return false;
-            theStart = true;
-        } else if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_') {
-            theStart = false;
-        } else {
-            return false;
-        }
-    }
-    return !theStart;
-}
-
 void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
 {
     const char* doc = "aipersonalities";
@@ -974,12 +949,9 @@ void LoadAIPersonalities(const Node& d, EEAIPersonalityRules& r)
             Map x(e, doc, "a personality");
             EEAIPersonalityRule p;
             p.mID = Id(x);
-            if (const Node* v = x.Get("next_script")) {
-                p.mNextScript = EEDataText::NodeScalar(v, x.Where(*v), "next_script");
-                if (!NextScriptName(p.mNextScript))
-                    Fail(x.Where(*v) + ": next_script: '" + p.mNextScript +
-                         "' is not a module name (letters, digits and _, in segments separated by dots)");
-            }
+            // next_script: obsolete (the AI manifest Data/ai/ais.json names the next engine's scripts, ee/EECPEngine.h);
+            // read and ignored, so the documents of older data releases still load
+            x.Get("next_script");
             if (const Node* s = x.Sub("epoch_pressure")) {
                 Map y(*s, doc, "epoch_pressure");
                 y.Float("start", p.mEpochPressureStart);
@@ -1323,7 +1295,6 @@ void EERules::Dump(std::string& outJson) const
         for (const EEAIPersonalityRule& p : this->mAIPersonalities.mPersonalities) {
             j.Open(nullptr, '{');
             j.Str("id", p.mID);
-            j.Str("next_script", p.mNextScript);
             j.Float("epoch_pressure_start", p.mEpochPressureStart);
             j.Float("epoch_pressure_full", p.mEpochPressureFull);
             j.Float("stone_span", p.mStoneSpan);

@@ -5076,9 +5076,8 @@ BEGIN
     33165, L"Quality: Custom"
     33166, L"A preset for the detail settings below: models, effects, shadows, clouds and battlefield ambients. Changing one of them makes it Custom."
     33170, L"Classic"
-    33171, L"Next"
-    33172, L"Random"
+    33171, L"Random"
     33173, L"AI"
     33174, L"Ping / AI"
-    33175, L"The computer player's AI. Classic is the original computer player; Next is the new one (in development: for now it makes no decisions); Random picks one of them when the game starts."
+    33175, L"The computer player's AI. Classic is the original computer player; Random picks Classic or one of the AIs marked for it when the game starts; the others are the AIs listed in Data/ai/ais.json (new AIs are Lua scripts there)."
 END

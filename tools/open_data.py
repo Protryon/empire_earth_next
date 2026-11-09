@@ -15,8 +15,8 @@
                  scripts, the tweakables (small; republished whenever the data format or a script changes)
         The third part, Data/Textures-4x, comes from tools/upscale.
   python -I tools/open_data.py ai TREE
-        refresh a built tree's Data/ai from the repository's ai/ (the next engine's Lua scripts; seconds, no rebuild)
-        and record their hash in its open_data.json ("ai"). A build copies them too.
+        refresh a built tree's Data/ai from the repository's ai/ (the AI manifest ais.json and the next engine's Lua
+        scripts; seconds, no rebuild) and record their hash in its open_data.json ("ai"). A build copies them too.
   python -I tools/open_data.py check DIR
         counts per folder of a tree or bundle and the rules it must keep (no data.ssa, no dxm, no binary file that has
         an open replacement)
@@ -65,24 +65,30 @@ def converters_hash():
     return h.hexdigest()[:16]
 
 
+def ai_files():
+    """The repository's ai/ files a data tree gets: the AI manifest ais.json (the lobby's AIs, ee/EECPEngine.h) and
+    every Lua script."""
+    return sorted([*AI_SCRIPTS.rglob('*.lua'), *([AI_SCRIPTS / 'ais.json'] if (AI_SCRIPTS / 'ais.json').exists() else [])])
+
+
 def scripts_hash():
-    """A hash of the repository's ai/ scripts (paths and contents): a tree whose open_data.json records another one
+    """A hash of the repository's ai/ files (paths and contents): a tree whose open_data.json records another one
     has stale scripts (refresh_scripts copies them in seconds; the converters' hash leaves them out)."""
     import hashlib
     h = hashlib.sha256()
-    for p in sorted(AI_SCRIPTS.rglob('*.lua')):
+    for p in ai_files():
         h.update(p.relative_to(AI_SCRIPTS).as_posix().encode() + b'\0' + p.read_bytes().replace(b'\r\n', b'\n'))
     return h.hexdigest()[:16]
 
 
 def refresh_scripts(tree):
-    """Data/ai of a tree replaced by the repository's ai/ (*.lua) and its hash recorded in open_data.json -> the hash.
+    """Data/ai of a tree replaced by the repository's ai/ (ais.json, *.lua), its hash recorded in open_data.json -> the hash.
     The old files are unlinked first, so a staged copy's hard links into another tree are never written through."""
     tree = pathlib.Path(tree)
     target = tree / 'Data' / 'ai'
     if target.exists():
         shutil.rmtree(target)
-    for p in sorted(AI_SCRIPTS.rglob('*.lua')):
+    for p in ai_files():
         dst = target / p.relative_to(AI_SCRIPTS)
         dst.parent.mkdir(parents=True, exist_ok=True)
         dst.write_bytes(p.read_bytes().replace(b'\r\n', b'\n'))

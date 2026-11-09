@@ -167,7 +167,7 @@ void Open()
               p->IsHuman() ? "human" : ai != NULL ? "computer" : "other", Narrow(p->mName).c_str(),
               (unsigned long)EEColorTable::FindIndex(p->mColor), p->mColor.mRed, p->mColor.mGreen, p->mColor.mBlue,
               Narrow(p->mCivilization.GetName()).c_str(), ai != NULL ? EECPPersonality(ai).mID.c_str() : "-",
-              ai != NULL ? EECPCheatNames(ai) : "-", ai != NULL ? EECPEngineName(EECPEngine(ai)) : "-");
+              ai != NULL ? EECPCheatNames(ai) : "-", ai != NULL ? EECPEngineName(ai).c_str() : "-");
         sCiv[i] = Narrow(p->mCivilization.GetName());
     }
     // the computer players' decision trace into the log too (EECPTraceOut; the sim hash stays EE_AI_TRACE's)

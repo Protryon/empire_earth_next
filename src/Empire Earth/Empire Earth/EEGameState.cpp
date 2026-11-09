@@ -309,7 +309,7 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
         this->mPlayers[0] = new EEHumanPlayer(UWideString("World"), 0);
         unsigned long thePlayerID = 1;
         unsigned long theColor = 0;
-        long theEngines[16];   // port: the computer slots' resolved engines (-1: not a computer slot)
+        long theEngines[16];   // port: the computer slots' resolved engine choices (-1: not a computer slot)
         for (i = 0; i < 16; i++)
             theEngines[i] = -1;
         for (i = 0; i < 16; i++) {
@@ -324,9 +324,10 @@ bool EEGameState::Create(EEGameOptions& inOptions, UWideString& outErrorMessage)
                 gResource->GetString(IDS_COMPUTER, theComputerName);
                 EEComputerPlayer* theComputer = new EEComputerPlayer(theComputerName, thePlayerID);
                 // port: the slot's engine, random drawn here (the seed is every peer's; ee/EECPEngine.h)
-                theComputer->mEngine = (unsigned char)EECPEngineResolve(theSlot.mEngine, gUserInterface->mRandomSeed,
-                                                                        i, thePlayerID);
-                theEngines[i] = (long)theComputer->mEngine;
+                unsigned long theChoice = EECPEngineResolve(theSlot.mEngine, gUserInterface->mRandomSeed, i,
+                                                            thePlayerID);
+                EECPEngineSet(theComputer, theChoice);
+                theEngines[i] = (long)theChoice;
                 thePlayer = theComputer;
             } else {
                 if (theSlot.mType == 2) {
