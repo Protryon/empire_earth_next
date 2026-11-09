@@ -11,22 +11,22 @@ fix; keep it current), `docs/MODDING_PLAN.md` (rules as data, lifted caps, statu
 ## Building the game
 
 ```
-python -I tools/fetch_wgpu.py                                      # once: wgpu-native into toolchain/ (sha-pinned)
 python -I build.py -j 10                                           # -> build/clang/exe/EE-AOC.exe (+ .map, .pdb)
 python -I build.py -j 10 --test-profile windowed-software          # -> build/clang-test/exe/EE-AOC.exe (harness image)
 python -I build.py --compile-only                                  # compile every unit, link nothing
 python -I build.py -j 10 --sim                                     # + build/clang/exe/EE-SIM.exe (headless simulation)
 python -I tools/sim_bench.py --name X --seeds 2-7 --jobs 2         # EE-SIM games: seeds x settings (README "Testing")
 python -I tools/clang_build.py [-j N] [module ...]                 # compile census, ranked error summary
+python -I tools/rust_build.py gate                                 # the Rust library: tests, clippy, rustfmt, header check
 ```
 
-- Requirements: LLVM, the VS 2022 Build Tools C++ workload (MSVC STL, UCRT, Windows SDK), Python 3.12 and 7-Zip.
+- Requirements: LLVM, the VS 2022 Build Tools C++ workload (MSVC STL, UCRT, Windows SDK), Rust through rustup, Python 3.12 and 7-Zip.
   The harness also needs MSYS2 `mingw-w64-x86_64-gcc` and pip `pefile capstone`. See README.md.
 - A full build takes about 2 minutes. A link must report `0 unresolved, 0 duplicates`.
 - Sources are staged under `C:\EEX\` before compiling. `EE_ORIG_SRC_ROOT` moves the staging root. Use a separate
   root per worktree when two builds run at once.
 - New units without an original address go into `units.EXTRA_UNITS` (`tools/units.py`, per module).
-- Linux/macOS: `python -I tools/fetch_posix.py wgpu sdl3 fonts`, then `python -I tools/xbuild.py game -j 8`.
+- Linux/macOS: `python -I tools/fetch_posix.py sdl3 fonts`, then `python -I tools/xbuild.py game -j 8`.
   - `xbuild.py test` runs the platform tests (`tests/platform`).
   - `xbuild.py targets` lists what this machine can build.
   - `posix_game.py` drives the game (see README.md).
@@ -36,8 +36,8 @@ python -I tools/clang_build.py [-j N] [module ...]                 # compile cen
 The owner also develops on an Apple Silicon Mac. There the Windows build, its harness (`tools/harness/game_session.py`,
 a Win32 debugger) and `tools/gates.sh` cannot run; the POSIX tooling below stands in for them.
 
-- Setup: `brew install cmake ninja python@3.12`. The system `python3` is 3.9: run every tool with
-  `/opt/homebrew/bin/python3.12 -I ...`. Then `fetch_posix.py wgpu sdl3 fonts` (above).
+- Setup: `brew install cmake ninja python@3.12 rustup`, then `rustup-init -y`. The system `python3` is 3.9: run every tool with
+  `/opt/homebrew/bin/python3.12 -I ...`. Then `fetch_posix.py sdl3 fonts` (above).
 - Build: `python3.12 -I tools/xbuild.py game -j 12` -> `build/xbuild/macos-arm64/game/ee-aoc` and `Empire Earth AoC.app`
   (about 40 s).
   - `--sanitize address` (or `undefined`) builds into `game-address/`. Run it first for any crash: ASan stops at the

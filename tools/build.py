@@ -43,6 +43,7 @@ import clang_build
 import units
 import verify
 import ee
+import rust_build
 from ee import CLANG, LLD_LINK, LLVM_LIB, MODULE_FLAGS, ROOT, RUNTIME_LIBS, lib_paths, module_units
 
 TEST_PROFILES = {
@@ -118,13 +119,13 @@ def compile_all(targets, out, opt, jobs, overlays=None, extra=(), more=()):
 
 def static_libs():
     """System libraries the engine and the window layer link statically (SDL3: tools/xbuild.py sdl3), then the
-    renderer's wgpu-native of the target (static, tools/fetch_wgpu.py) with the system libraries its DX12/Vulkan
-    backends and the Rust standard library import."""
+    Rust library (ee_rust: wgpu-native and the game's Rust code; tools/rust_build.py) with the system libraries wgpu's
+    DX12/Vulkan backends and the Rust standard library import."""
     return ["ole32.lib", "winmm.lib", "user32.lib",
             # the window layer: SDL3 (static) and the system libraries it imports besides the ones below
             str(ee.sdl3_dir() / "lib" / "SDL3-static.lib"), "setupapi.lib", "version.lib", "cfgmgr32.lib",
             "imm32.lib",
-            str(ee.wgpu_dir() / "lib" / "wgpu_native.lib"), "gdi32.lib", "advapi32.lib", "ws2_32.lib",
+            str(rust_build.lib_path("windows-x86_64")), "gdi32.lib", "advapi32.lib", "ws2_32.lib",
             "userenv.lib", "ntdll.lib", "bcrypt.lib", "oleaut32.lib", "d3d12.lib", "dxgi.lib", "d3dcompiler.lib",
             "opengl32.lib", "propsys.lib", "runtimeobject.lib", "uuid.lib", "synchronization.lib", "shell32.lib",
             "dwmapi.lib"]
@@ -222,8 +223,8 @@ def main():
     for tool in (CLANG, LLD_LINK):
         if not tool.exists():
             sys.exit(f"{tool} is missing: install LLVM (winget install LLVM.LLVM) or set EE_LLVM")
-    if not (ee.wgpu_dir() / "lib" / "wgpu_native.lib").exists():
-        sys.exit(f"{ee.wgpu_dir()} is missing: python -I tools/fetch_wgpu.py")
+    if not a.compile_only:
+        rust_build.ensure("windows-x86_64")
     if not (ee.sdl3_dir() / "lib" / "SDL3-static.lib").exists():   # the window layer: SDL3 from its pinned sources
         r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / "xbuild.py"), "sdl3", "--target",
                             "windows-x86_64", "-j", str(a.j)])

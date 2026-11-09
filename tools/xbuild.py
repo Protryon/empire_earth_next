@@ -41,6 +41,7 @@ import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import ee  # noqa: E402  (paths and the Windows toolchain)
+import rust_build
 
 ROOT = ee.ROOT
 TC = ee.TOOLCHAIN
@@ -536,14 +537,8 @@ def sdl_libs(t):
 
 
 def wgpu_dir(t):
-    name = {"windows-x86_64": "x86_64", "linux-x86_64": "linux-x86_64", "macos-arm64": "macos-aarch64",
-            "macos-x86_64": "macos-x86_64"}[t.name]
-    d = TC / "wgpu" / name
-    lib = d / "lib" / ("wgpu_native.lib" if t.os == "windows" else "libwgpu_native.a")
-    if not lib.exists():
-        sys.exit(f"{lib} is missing: python -I tools/" + ("fetch_wgpu.py" if t.os == "windows" else
-                                                           "fetch_posix.py wgpu"))
-    return d, lib
+    """wgpu-native's headers (the directory holding include/webgpu) and the Rust library that contains it."""
+    return rust_build.WGPU_HEADERS, rust_build.ensure(t.name)
 
 
 def cmd_sdltest(a):
@@ -653,8 +648,7 @@ def cmd_census(a):
     inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
            ROOT / "src" / "ThirdParty" / "stb",
            *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
-    if (TC / "wgpu" / ("linux-x86_64" if t.os == "linux" else "macos-aarch64") / "include").exists():
-        inc.append(TC / "wgpu" / ("linux-x86_64" if t.os == "linux" else "macos-aarch64") / "include")
+    inc.append(rust_build.WGPU_HEADERS / "include")
     if (TC / "src" / f"SDL3-{SDL_VERSION}" / "include").exists():   # the window layer (src/Platform/SDL)
         inc.append(TC / "src" / f"SDL3-{SDL_VERSION}" / "include")
     if (TC / "fonts").exists():   # the built-in fonts for compilers without #embed

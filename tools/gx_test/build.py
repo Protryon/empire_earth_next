@@ -5,7 +5,7 @@ text from PlatFont with the built-in fonts (src/Platform/Common; toolchain/fonts
 
   python -I tools/gx_test/build.py [--run] [-- test arguments]
 
--> build/gx_test/x86_64/gx_test.exe (clang-cl, lld-link, static runtime as the game). Needs tools/fetch_wgpu.py.
+-> build/gx_test/x86_64/gx_test.exe (clang-cl, lld-link, static runtime as the game).
 """
 import argparse
 import os
@@ -18,6 +18,7 @@ ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 sys.path.insert(0, str(ROOT / "tools" / "wgpu_probe"))
 from ee import CLANG, LLD_LINK, TOOLCHAIN, modern_dirs, sdl3_dir   # noqa: E402
+import rust_build   # noqa: E402
 from build import LIBS, TARGETS   # noqa: E402  (tools/wgpu_probe/build.py)
 
 GX = ROOT / "src" / "Low-Level Engine" / "Graphics Engine" / "DX7 Display Plug-ins" / "GX"
@@ -31,7 +32,8 @@ SDL_LIBS = ["setupapi.lib", "version.lib", "cfgmgr32.lib", "imm32.lib"]
 
 def build(arch):
     triple, libarch, machine = TARGETS[arch]
-    wgpu = TOOLCHAIN / "wgpu" / arch
+    wgpu = rust_build.WGPU_HEADERS
+    rust_lib = rust_build.ensure("windows-x86_64")
     msvc, sdk_inc, sdk_lib, _ = modern_dirs()
     out = ROOT / "build" / "gx_test" / arch
     out.mkdir(parents=True, exist_ok=True)
@@ -56,7 +58,7 @@ def build(arch):
         objs.append(obj)
     exe = out / "gx_test.exe"
     cmd = [str(LLD_LINK), "/nologo", f"/MACHINE:{machine}", "/SUBSYSTEM:CONSOLE", "/NODEFAULTLIB", "/INCREMENTAL:NO",
-           "/OPT:REF", f"/OUT:{exe}", *map(str, objs), str(wgpu / "lib" / "wgpu_native.lib"),
+           "/OPT:REF", f"/OUT:{exe}", *map(str, objs), str(rust_lib),
            str(sdl3 / "lib" / "SDL3-static.lib"), "libcpmt.lib", *LIBS, *SDL_LIBS,
            f"/LIBPATH:{msvc / 'lib' / libarch}", f"/LIBPATH:{sdk_lib / 'ucrt' / libarch}",
            f"/LIBPATH:{sdk_lib / 'um' / libarch}"]

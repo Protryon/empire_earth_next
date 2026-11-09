@@ -56,7 +56,7 @@ def include_paths(src=None):
     incdir = pathlib.Path(os.environ.get("EE_INCLUDE", str(ROOT / "include")))
     dx7 = pathlib.Path(os.environ.get("EE_DX7SDK", str(TOOLCHAIN / "dx7sdk" / "include")))
     use_dx7 = src is not None and "dx7sdk" in unit_includes(src) and dx7.exists()
-    # the renderer's GX layer: wgpu-native's C headers (tools/fetch_wgpu.py; the headers must match the library that
+    # the renderer's GX layer: wgpu-native's C headers (rust/vendor/wgpu-native; the headers must match the library that
     # is linked)
     import ee
     wgpu = [str(ee.wgpu_dir() / "include")] if src is not None and "DX7 Display Plug-ins" in str(src) \

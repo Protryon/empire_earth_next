@@ -1,0 +1,13 @@
+language = "C++"
+cpp_compat = true
+include_guard = "EE_RUST_H"
+no_includes = true
+sys_includes = ["stdint.h", "stddef.h"]
+usize_is_size_t = true
+
+[parse]
+parse_deps = true
+include = ["ee_panic", "ee_rust"]
+
+[export]
+item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]

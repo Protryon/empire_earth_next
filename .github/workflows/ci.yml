@@ -20,15 +20,15 @@ jobs:
       - name: LLVM
         run: choco upgrade llvm -y --no-progress
 
-      - name: Cache wgpu-native
+      - name: Cache downloads
         uses: actions/cache@v4
         with:
           path: toolchain
-          key: wgpu-${{ hashFiles('tools/fetch_wgpu.py') }}
+          key: toolchain-${{ hashFiles('tools/fetch_posix.py') }}
 
-      # the renderer's static wgpu-native x86_64 (sha256-pinned GitHub release; 7-Zip is on the runner)
-      - name: Fetch wgpu-native
-        run: python -I tools/fetch_wgpu.py
+      # rustup is on the runner; rust/rust-toolchain.toml pins the version
+      - name: Rust gate (tests, clippy, rustfmt, the generated header)
+        run: python -I tools/rust_build.py gate
 
       # the window layer's SDL3 sources (built static by build.py) and the built-in fonts
       - name: Fetch SDL3 and the fonts

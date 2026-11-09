@@ -1,0 +1,39 @@
+# The game's Rust code: one static library, ee_rust, linked into the exe (docs/RUST_PLAN.md section 4).
+[workspace]
+members = ["crates/*", "vendor/wgpu-native"]
+default-members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+# wgpu-native's own pins (vendor/wgpu-native/VENDORED.md)
+[workspace.dependencies.wgc]
+package = "wgpu-core"
+git = "https://github.com/gfx-rs/wgpu"
+tag = "v24.0.3"
+
+[workspace.dependencies.wgt]
+package = "wgpu-types"
+git = "https://github.com/gfx-rs/wgpu"
+tag = "v24.0.3"
+
+[workspace.dependencies.hal]
+package = "wgpu-hal"
+git = "https://github.com/gfx-rs/wgpu"
+tag = "v24.0.3"
+
+[workspace.dependencies.naga]
+package = "naga"
+git = "https://github.com/gfx-rs/wgpu"
+tag = "v24.0.3"
+
+[profile.release]
+panic = "abort"
+debug = "line-tables-only"
+
+# tests build everything once more: no debug info, to keep build/rust small
+[profile.dev]
+debug = false

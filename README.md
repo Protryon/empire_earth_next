@@ -44,8 +44,9 @@ Requirements (Windows 10/11):
   Microsoft.VisualStudio.Workload.VCTools --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 --add
   Microsoft.VisualStudio.Component.Windows11SDK.22621"`
 - Python 3.12 (standard library only) and 7-Zip (`winget install 7zip.7zip`)
-- wgpu-native, the renderer's graphics library (static, sha256-pinned GitHub release download into `toolchain/`,
-  which is not tracked): `python -I tools/fetch_wgpu.py`
+- Rust, through rustup (`winget install Rustlang.Rustup`): `rust/rust-toolchain.toml` pins the version and rustup
+  installs it on the first build. `build.py` builds the Rust library (`ee_rust`, with wgpu-native inside; about 3
+  minutes the first time, `python -I tools/rust_build.py gate` runs its tests).
 
 Then:
 
@@ -101,7 +102,7 @@ macOS (arm64; on a Mac only: the Xcode SDK may not leave Apple hardware). Requir
 `.github/workflows/posix.yml`), Python 3.12, CMake.
 
 ```
-python -I tools/fetch_posix.py wgpu sdl3 fonts     # wgpu-native, SDL3 sources, Liberation fonts (sha256-pinned)
+python -I tools/fetch_posix.py sdl3 fonts          # SDL3 sources, Liberation fonts (sha256-pinned)
 python -I tools/xbuild.py game -j 8                # -> build/xbuild/<target>/game/ee-aoc (macOS: also the .app)
 build/xbuild/<target>/game/ee-aoc --smoke-test     # window + wgpu device + 30 frames; needs no game data
 ```

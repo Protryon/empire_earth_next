@@ -2051,8 +2051,11 @@ UResourceFile* gResource;
 // Runs the game: single-instance check, start-up, splash and intro, the user interface loop, then shutdown;
 // returns 1 when the original Empire Earth install is missing, else 0
 // (the previous instance and show command arguments are unused)
+void EERustInit();   // EERust.cpp
+
 static int EERun(HINSTANCE inInstance, char* inCommandLine)
 {
+    EERustInit();   // first: a panic anywhere after this reaches a log
     long theResult;
     bool theInitialized;
     EEStartScreen theSplashScreen(inInstance);

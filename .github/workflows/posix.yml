@@ -24,7 +24,7 @@ jobs:
       - name: Packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends clang lld cmake ninja-build pkg-config \
+          sudo apt-get install -y --no-install-recommends clang libclang-dev lld cmake ninja-build pkg-config \
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev libxfixes-dev libxtst-dev \
             libxkbcommon-dev libwayland-dev wayland-protocols libegl1-mesa-dev libgl1-mesa-dev libdbus-1-dev \
             libibus-1.0-dev libdecor-0-dev xvfb xauth mesa-vulkan-drivers libvulkan1
@@ -36,11 +36,14 @@ jobs:
           path: toolchain/dl
           key: posix-dl-${{ hashFiles('tools/fetch_posix.py') }}
 
-      - name: Fetch wgpu-native, SDL3, fonts
-        run: python -I tools/fetch_posix.py wgpu sdl3 fonts
+      - name: Fetch SDL3 and fonts
+        run: python -I tools/fetch_posix.py sdl3 fonts
 
       - name: Targets
         run: python -I tools/xbuild.py targets
+
+      - name: Rust gate (tests, clippy, rustfmt, the generated header)
+        run: python -I tools/rust_build.py gate
 
       - name: Platform layer tests
         run: python -I tools/xbuild.py test
@@ -121,11 +124,14 @@ jobs:
           path: toolchain/dl
           key: posix-dl-${{ hashFiles('tools/fetch_posix.py') }}
 
-      - name: Fetch wgpu-native, SDL3, fonts
-        run: python -I tools/fetch_posix.py wgpu sdl3 fonts
+      - name: Fetch SDL3 and fonts
+        run: python -I tools/fetch_posix.py sdl3 fonts
 
       - name: Targets
         run: python -I tools/xbuild.py targets
+
+      - name: Rust gate (tests, clippy, rustfmt, the generated header)
+        run: python -I tools/rust_build.py gate
 
       - name: Platform layer tests
         run: python -I tools/xbuild.py test

@@ -97,8 +97,8 @@ ARCH = "x64"
 
 
 def wgpu_dir():
-    """wgpu-native x86_64 (tools/fetch_wgpu.py): toolchain/wgpu/x86_64."""
-    return TOOLCHAIN / "wgpu" / "x86_64"
+    """wgpu-native's C headers (include/webgpu/): vendored in the Rust workspace, which builds the library."""
+    return ROOT / "rust" / "vendor" / "wgpu-native"
 
 
 def sdl3_dir():

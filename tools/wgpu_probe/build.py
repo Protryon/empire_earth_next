@@ -1,9 +1,9 @@
-"""Build and run the wgpu phase-0 probe (probe.c) for x86_64 against the pinned wgpu-native static library.
+"""Build and run the wgpu phase-0 probe (probe.c) for x86_64 against wgpu-native (in the Rust library, tools/rust_build.py).
 
   python -I tools/wgpu_probe/build.py [--run] [-- probe arguments]
 
 Compiles with clang-cl and links with lld-link and the static C runtime (/MT, as the game), into
-build/wgpu_probe/x86_64/probe.exe; --run runs it (arguments after --). Needs tools/fetch_wgpu.py first.
+build/wgpu_probe/x86_64/probe.exe; --run runs it (arguments after --).
 """
 import argparse
 import os
@@ -15,6 +15,7 @@ HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT / "tools"))
 from ee import CLANG, LLD_LINK, TOOLCHAIN, modern_dirs   # noqa: E402
+import rust_build   # noqa: E402
 
 TARGETS = {"x86_64": ("x86_64-pc-windows-msvc", "x64", "X64")}
 # the static runtime, then what the Rust standard library and wgpu's DX12/Vulkan/GL backends link against
@@ -26,9 +27,8 @@ LIBS = ["libcmt.lib", "libvcruntime.lib", "libucrt.lib", "oldnames.lib", "kernel
 
 def build(arch):
     triple, libarch, machine = TARGETS[arch]
-    wgpu = TOOLCHAIN / "wgpu" / arch
-    if not (wgpu / "lib" / "wgpu_native.lib").exists():
-        sys.exit(f"{wgpu} is missing: python -I tools/fetch_wgpu.py")
+    wgpu = rust_build.WGPU_HEADERS
+    rust_lib = rust_build.ensure("windows-x86_64")
     msvc, sdk_inc, sdk_lib, _ = modern_dirs()
     out = ROOT / "build" / "wgpu_probe" / arch
     out.mkdir(parents=True, exist_ok=True)
@@ -42,7 +42,7 @@ def build(arch):
         sys.exit(f"{arch}: compile failed\n{r.stdout}{r.stderr}")
     exe = out / "probe.exe"
     cmd = [str(LLD_LINK), "/nologo", f"/MACHINE:{machine}", "/SUBSYSTEM:CONSOLE", "/NODEFAULTLIB", "/INCREMENTAL:NO",
-           "/OPT:REF", f"/OUT:{exe}", str(obj), str(wgpu / "lib" / "wgpu_native.lib"), *LIBS,
+           "/OPT:REF", f"/OUT:{exe}", str(obj), str(rust_lib), *LIBS,
            f"/LIBPATH:{msvc / 'lib' / libarch}", f"/LIBPATH:{sdk_lib / 'ucrt' / libarch}",
            f"/LIBPATH:{sdk_lib / 'um' / libarch}"]
     r = subprocess.run(cmd, capture_output=True, text=True)

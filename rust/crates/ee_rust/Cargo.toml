@@ -1,0 +1,13 @@
+[package]
+name = "ee_rust"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The one static library the exe links: every crate of the workspace comes in through this one.
+[lib]
+crate-type = ["staticlib", "rlib"]
+
+[dependencies]
+ee_panic = { path = "../ee_panic" }
+wgpu-native = { path = "../../vendor/wgpu-native" }
