@@ -1,5 +1,6 @@
 // GETerrainMesh's queries in Rust (rust/crates/ee_ge terrain.rs, docs/RUST_PLAN.md R4.3): the mesh stays C++ and the
-// queries read its point and tile rows in place through an EeGeTerrainView. The row layouts are pinned here.
+// queries read its point and tile rows in place through an EeGeTerrainView. The row layouts are pinned here; the
+// fog of war reads the visible area through an EeGeTerrainFog.
 // Include after lle/GETerrainMesh.h and GERustMath.h.
 #ifndef GERUSTTERRAIN_H
 #define GERUSTTERRAIN_H
@@ -10,6 +11,10 @@ struct GERustTerrainLayout {
     typedef GETerrainMesh::GETMPoint Point;
     typedef GETerrainMesh::GETMPointRow PointRow;
     typedef GETerrainMesh::GETMTileRow TileRow;
+    typedef GETerrainMesh::GETMTile Tile;
+    static_assert(sizeof(Tile) == sizeof(EeGeTmTile) && offsetof(Tile, mReferenceCount) == offsetof(EeGeTmTile, reference_count) &&
+                  offsetof(Tile, mTextureSetID) == offsetof(EeGeTmTile, texture_set_id) &&
+                  offsetof(Tile, mWaterInfo) == offsetof(EeGeTmTile, water_info), "GETMTile");
     static_assert(sizeof(Point) == sizeof(EeGeTmPoint) && offsetof(Point, mZ) == offsetof(EeGeTmPoint, z) &&
                   offsetof(Point, mNormal) == offsetof(EeGeTmPoint, normal) &&
                   offsetof(Point, mColorTableIndex) == offsetof(EeGeTmPoint, color_table_index), "GETMPoint");
@@ -33,6 +38,26 @@ struct GERustTerrainLayout {
         theView.tile_row_count = inMesh.mTileRowCount;
         theView.planes = reinterpret_cast<const EeGe3DPlane*>(&inMesh.mFrontPlane);
         return theView;
+    }
+
+    // UpdateFogOfWar's visible area: the point arrays and the render vertices' mVisibility, by vertex size
+    static EeGeTerrainFog Fog(GETerrainMesh& inMesh, bool inAllVisible)
+    {
+        EeGeTerrainFog theFog;
+        theFog.visible_row_count = inMesh.mVisibleTileRows.size();
+        theFog.bottom_left_x = inMesh.mVisibleBottomLeftX;
+        theFog.bottom_left_y = inMesh.mVisibleBottomLeftY;
+        theFog.tile_width = inMesh.mVisibleTileWidth;
+        theFog.tile_height = inMesh.mVisibleTileHeight;
+        theFog.num_visible_tiles = inMesh.mNumVisibleTiles;
+        theFog.side = GETM_VISIBLE_POINTS;
+        theFog.terrain_point_visible = reinterpret_cast<const uint8_t*>(&inMesh.mTerrainPointVisibility[0][0]);
+        theFog.water_point_visible = reinterpret_cast<const uint8_t*>(&inMesh.mWaterPointVisibility[0][0]);
+        theFog.terrain_visibility = &inMesh.mTerrainRenderVertices[0][0].mVisibility;
+        theFog.water_visibility = &inMesh.mWaterRenderVertices[0][0].mVisibility;
+        theFog.vertex_stride = sizeof(GETerrainMesh::GETMRenderVertex);
+        theFog.all_visible = inAllVisible;
+        return theFog;
     }
 };
 
