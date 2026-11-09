@@ -796,8 +796,8 @@ long EECPWallManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                 theResult = inFile.Read(this->mSize);
             if (theResult == kErrorOK) {
                 this->mPathing = true;
-                this->mFrom = reinterpret_cast<EEComplexUnit*>(theValue);
-                this->mTo = reinterpret_cast<EEComplexUnit*>(theOther);
+                this->mFrom = EEUnitHandle<EEComplexUnit>::FromSavedID(theValue);   // ids until Restore
+                this->mTo = EEUnitHandle<EEComplexUnit>::FromSavedID(theOther);
             }
         }
         if (theResult == kErrorOK)
@@ -976,10 +976,10 @@ long EECPWallManager::Restore(unsigned long inMajorVersion, unsigned long inMino
     this->mNextTime += gPhysics->mGameTime;
     // port (0.253): the wall being planned, its units back (Update requests its path again); without them none
     if (this->mPathing) {
-        EEComplexUnit* theFrom = USavedID(this->mFrom) == -1 ? NULL
-            : dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mFrom))));
-        EEComplexUnit* theTo = USavedID(this->mTo) == -1 ? NULL
-            : dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->mTo))));
+        EEComplexUnit* theFrom = this->mFrom.GetSavedID() == (uint32_t)-1 ? NULL
+            : dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mFrom.GetSavedID())));
+        EEComplexUnit* theTo = this->mTo.GetSavedID() == (uint32_t)-1 ? NULL
+            : dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mTo.GetSavedID())));
         this->mFrom = this->mTo = NULL;
         this->mPathing = false;
         if (theFrom != NULL && theTo != NULL) {
