@@ -35,6 +35,8 @@
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "ee/EEAIKindIDs.h"
+#include "ee/EEAIArea.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPUnitManager.h"
 #include "ee/EECPBuildManager.h"
@@ -86,6 +88,37 @@ static bool EECPNextIsSoldier(EEUnit* inUnit)
         return false;
     long theCategory = inUnit->mUnitClass->mCategory;
     return theCategory == kUnitCategoryLand || theCategory == kUnitCategoryLandMilitaryHero;
+}
+
+// why the gatherer finders (EECPResourceManager::FindResourceTarget, FindFarm) pass a resource over, in their order of
+// checks: never seen, an enemy near (BuildManager::HasEnemyNear), a danger zone, or within 10 tiles of the area of a
+// player who is not its enemy (gaia, an ally); kNextBlockedNone when they would send gatherers to it
+static long EECPNextSiteBlocked(EEComputerPlayer* inPlayer, EEUnit* inUnit)
+{
+    if (inUnit->mTile == NULL || !static_cast<EETile*>(inUnit->mTile)->IsVisibleTo(inPlayer))
+        return kNextBlockedUnexplored;
+    long theX = inUnit->GetTileX(), theY = inUnit->GetTileY();
+    EECPCivilizationManager* theCivilization = inPlayer->mCivilizationManager;
+    if (theCivilization->mBuildManager->HasEnemyNear(theX, theY))
+        return kNextBlockedEnemyNear;
+    if (EECPRMResourceInDanger(theCivilization->mResourceManager, theX, theY))
+        return kNextBlockedDanger;
+    for (unsigned long j = 0; j < gWorld.mNumPlayers; j++) {
+        EEPlayer* theOther = gWorld.mPlayers[j];
+        if (theOther == NULL || theOther == inPlayer || theOther->mEnemies[inPlayer->mPlayerID] != 0)
+            continue;
+        EETileCoordinate theTile;
+        theTile.mX = theX;
+        theTile.mY = theY;
+        EEAIArea* theArea = theOther->GetNearestArea(theTile, true);
+        if (theArea == NULL)
+            continue;
+        U2DPoint<long> theClosest = theArea->GetClosestHullPoint(U2DPoint<long>(theX, theY));
+        long long theDX = theClosest.mX - theX, theDY = theClosest.mY - theY;
+        if (theDX * theDX + theDY * theDY <= 100)
+            return kNextBlockedArea;
+    }
+    return kNextBlockedNone;
 }
 
 struct EECPNextPlace {
@@ -302,6 +335,8 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
                 theCounts[r]++;
         }
         for (long r = 0; r < kNextResources; r++)
+            theSite.holds[r] = theCounts[r];
+        for (long r = 0; r < kNextResources; r++)
             if (theCounts[r] > 0 && (theSite.resource < 0 || theCounts[r] > theCounts[theSite.resource]))
                 theSite.resource = r;
         theSite.claimed = theCenter->mIsActive ? 1 : 0;
@@ -315,6 +350,7 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
                     theSite.x = theUnit->GetTileX();
                     theSite.y = theUnit->GetTileY();
                     theSite.patch = theUnit->mUnitClass->mUnitType == kUnitTypeResForageBush ? 1 : 0;
+                    theSite.blocked = EECPNextSiteBlocked(inPlayer, theUnit);
                 }
                 theSite.units++;
                 theSite.amount += theUnit->mResourceAmount;
@@ -328,6 +364,11 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
             theCenter->GetCenter(theTile);
             theSite.x = theTile.mX;
             theSite.y = theTile.mY;
+        }
+        if (theSite.x >= 0 && theSite.y >= 0 && gWorld.mMap != NULL) {
+            EETile* theTile = static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)theSite.x,
+                (unsigned long)theSite.y));
+            theSite.explored = theTile != NULL && theTile->IsVisibleTo(inPlayer) ? 1 : 0;
         }
         theSite.distance = theTown ? EECPNextSqrt(EECPNextDistance2(theSite.x, theSite.y, theTownX, theTownY)) : 0;
         const std::vector<EECPNextPlace>& theDropList = theSite.resource == 0 ? theFoodDrops : theDrops;

@@ -955,7 +955,10 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
                                            gContinentManager.mContinents[gContinentManager.GetContinentID(theX, theY)], theFlags))
                 continue;
         }
-        if (!static_cast<EETile*>(theUnit->mTile)->IsVisibleTo(thePlayer))
+        // the next engine: a patch its strategy claimed is gathered from even before it is seen (the gatherer who
+        // walks there explores it; the next engine runs no explorers)
+        if (!static_cast<EETile*>(theUnit->mTile)->IsVisibleTo(thePlayer)
+            && !(theCenterObject->mIsActive && EECPNextEngine(thePlayer)))
             continue;   // skip it (was break: ended the whole search)
         if (gWorld.GetResourceUsers(theUnit) >= theLimit)
             continue;
@@ -1146,7 +1149,10 @@ EEUnit* EECPResourceManager::FindResourceTarget(long inResource, EEComplexUnit* 
         bool theOK = false;
         if (theCenter != NULL && theCenter->mIsActive) {
             EEUnit* theUnit = theCenter->FindResourceUnit(inResource);
-            if (theUnit != NULL && static_cast<EETile*>(theUnit->mTile)->IsVisibleTo(thePlayer) && gWorld.GetResourceUsers(theUnit) < theLimit
+            // (the next engine: a claimed site is gathered from even before it is seen, as FindFarm)
+            if (theUnit != NULL
+                && (static_cast<EETile*>(theUnit->mTile)->IsVisibleTo(thePlayer) || EECPNextEngine(thePlayer))
+                && gWorld.GetResourceUsers(theUnit) < theLimit
                 && theUnit->mResourceAmount > 0 && theUnit->mTile->mTerrainType != kTerrainDeepWater) {
                 theOK = !theBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY());
                 if (theOK)

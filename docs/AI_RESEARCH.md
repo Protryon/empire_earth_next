@@ -1492,6 +1492,76 @@ out and wins later, hence several personalities.
 recorder and the first input faults in `NERecordPlayback::Process` (the original's path). Run names past the Windows
 path limit fail as no-report (long `+` experiment lists).
 
+### 8.30 The boom script (S3, 2026-11-08, EE-SIM)
+
+The next engine's boom personality as a Lua script (`ai/boom.lua`; docs/AI_LUA_PLAN.md §4.1 has the plan as built).
+EE-SIM, Small, Medium, 2 AIs, no cheats, 2 hours, the boom against the classic engine (`balanced`), both seats
+(`--engine next,classic` and `classic,next`), `--score mixed` where noted. Epoch times are the reports' `epoch_ms`.
+
+**The way there** (seeds 26-29, 8 games, then 26-33, 16 games; the earlier rows as they ran):
+
+| Version | Games | Stone | Copper (reached, median) | Copper after Stone | Defeated (before Copper) |
+|---|---|---|---|---|---|
+| the S2 test opening (`test_opening`) | 8 | 20.7 | 5/8, 47.3 | 29.2 | 8/8 (3) |
+| v1: fixed shares, any enemy unit a threat | 8 | 26.6 | 3/8, 60.2 | 36.4 | 4/8 (4) |
+| a threat only above a scout (2,500), food first, the start-up claims released | 8 | 24.4 | 7/8, 54.8 | 30.3 | 2/8 (1) |
+| the sites' `explored`, the settlement fallback | 8 | 25.9 | 8/8, 56.2 | 31.8 | 4/8 (0) |
+| gatherers by what each resource lacks | 8 | 21.8 | 8/8, 52.4 | 30.5 | 2/8 (0) |
+| minerals limited to the places of reachable sites | 8 | 19.9 | 6/8, 62.9 | 44.2 | 3/8 (2) |
+| claimed sites gathered before they are seen | 8 | 21.1 | 6/8, 52.7 | 32.0 | 1/8 (1) |
+| a Prehistoric bank (gold 350, iron 400), mines out to 60 tiles, the light army before the reserve | 16 | 23.0 | 12/16, 50.9 | 28.8 | 2/16 (2) |
+| `holds` (mixed centres), refused sites passed over, bank 250/300 | 16 | 22.5 | 15/16, 52.0 | 30.2 | 2/16 (1) |
+| 30 per gatherer (was 50), the granary's claim growth | 16 | 22.3 | 15/16, 52.2 | 30.6 | 2/16 (0) |
+| HasEnemyNear counts enemies only (as committed) | 16 | 22.3 | 15/16, 52.2 | 28.9 | 0/16 (0) |
+| TEST: Stone Age citizens 72 (was 64) | 16 | identical to the row above | | | |
+
+What each step found:
+- **Scouts as threats.** The classic AI's early explorer (one unit, strength ~1,600) counted as a threat: the
+  reserve came off, 12 clubmen were wanted in the Prehistoric, and the food went to soldiers (the Stone Age at 62
+  min in one game).
+- **Minerals out of reach.** Gold wanted, no gatherer on gold for 30 minutes: the mines in the view were never seen
+  (the next engine has no explorer), or an enemy was near; the wanted miners wandered (1,520 moves a game).
+- **The start-up claims.** Regroup's first activations hold mines 30-40 tiles out and the finder takes the farthest
+  first: releasing them brought the miners home.
+- **Mixed centres.** A centre labelled stone also held the town's nearest gold; releasing it starved gold.
+- **Granaries.** In the Copper Age a granary found no room round the claimed land; with no granary there are no farm
+  plots and so no farms: 60-98 idle citizens in one game. The claim now grows when the granary has no room.
+
+**The benchmark** (seeds 26-49, both seats, 48 games, as committed):
+
+| Measure | Boom | Classic | Owner's target |
+|---|---|---|---|
+| Stone Age (median) | 22.4 min, 47/48 reached, 42/48 by 25 | 25.0 | 20-26 |
+| Copper Age (median) | 52.7, 44/48 | 66.3, 47/48 | 41-46 |
+| Copper after Stone | 30.7 (6/48 within 25, 20/48 within 30) | 41 | about 20 |
+| Bronze Age within 2 hours | 19/48 at 91.0 | 44/48 at 99.4 | 67-86 |
+| Defeated before Copper / within 2 hours | 2/48 / 9/48 | 0 / 0 | |
+| Citizens at 30 / 60 min | 44 / 76.5 | 35 at 30, 53 at 40 | 50-62 / 85-94 |
+| Army at 30 / 40 min | 5 / 4 | 13 / 14 | |
+| Most gatherers on gold / iron / wood, Stone Age | 10 / 11 / 14 | | at most 12 / 18; 10-23 |
+| Fishing boats | 11 | | 8-10 |
+| Towers by 40 min | 6 | | 4-7 |
+| Mixed score, 2 hours | 2 wins, 37 losses, 9 close | | |
+
+By seat (seat 0 = p2): Stone 22.4 / 22.4, Copper after Stone 30.9 / 30.4, defeated before Copper 0/24 and 2/24.
+The Copper Age's three costs (1584 food, 845 gold, 845 iron) are each first in stock about 20 minutes into the Stone
+Age (medians 21.5, 20.0, 19.3); iron comes last in 26 of 48 games. The Stone Age citizens never reach the plan's 64
+before the reserve begins at 10 minutes, so a higher target changes nothing (the TEST row).
+
+**Against a rush** (the classic `aggressive`: a large standing army, attacks from the Prehistoric; seeds 26-33, both
+seats, 16 games): Stone 22.2, Copper 56.8 (15/16), Copper after Stone 33.2; 1/16 defeated before the Copper Age, 2/16
+within 2 hours. The rush is slow (Stone 28.1, Copper 81.3) and holds 19-29 soldiers at 30-40 min against the boom's
+4-5: the mixed score is 10-3 for it (3 close), as the owner expects of a pure rush against a boom; the towers and
+the militia keep the town.
+
+**Checks.** The classic engine's traces of seeds 2-5 (1800 game s, classic against classic) are identical before
+and after the S3 changes (1842, 1822, 1746 and 1807 lines). The same seed twice gives the same trace (seeds 26 and 27,
+3600 game s: 4795 and 4733 lines). No script errors in any run.
+
+**The S3 gate:** Stone at 25 min at most: met (median 22.4, 42/48). Copper within about 25 min of Stone: not met
+(30.7). Fewer than 1 in 10 defeated before the Copper Age: met (2/48 against the classic AI, 1/16 against the rush).
+The owner's playtest is still to come.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch
