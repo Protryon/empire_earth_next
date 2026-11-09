@@ -1,0 +1,228 @@
+ol sizeof_SDL_Event 128
+ol type 0
+ol key.windowID 16
+ol key.scancode 24
+ol key.key 28
+ol key.mod 32
+ol key.repeat 37
+ol text.windowID 16
+ol text.text 24
+ol edit.windowID 16
+ol edit.text 24
+ol edit.start 32
+ol edit.length 36
+ol motion.windowID 16
+ol motion.x 28
+ol motion.y 32
+ol motion.xrel 36
+ol motion.yrel 40
+ol button.windowID 16
+ol button.button 24
+ol button.clicks 26
+ol button.x 28
+ol button.y 32
+ol wheel.windowID 16
+ol wheel.y 28
+ol wheel.direction 32
+ol wheel.mouse_x 36
+ol wheel.mouse_y 40
+ol window.windowID 16
+ol window.data1 20
+ol window.data2 24
+ol user.windowID 16
+ol user.code 20
+ol sizeof_SDL_DisplayMode 40
+ol DisplayMode.w 8
+ol DisplayMode.h 12
+ol DisplayMode.pixel_density 16
+ol sizeof_SDL_Rect 16
+ol sizeof_PlatInputEvent 88
+pl mType 0
+pl mTime 4
+pl mWindow 8
+pl mKey.mScanCode 16
+pl mKey.mVirtualKey 20
+pl mKey.mModifiers 24
+pl mKey.mRepeat 28
+pl mMouse.mX 16
+pl mMouse.mY 20
+pl mMouse.mDeltaX 24
+pl mMouse.mDeltaY 28
+pl mMouse.mButton 32
+pl mMouse.mClicks 36
+pl mMouse.mWheel 40
+pl mMouse.mModifiers 44
+pl mText.mText 16
+pl mText.mCursor 80
+pl mText.mLength 84
+pl mSize.mWidth 16
+pl mSize.mHeight 20
+pl sizeof_PlatNativeWindow 24
+pl PlatNativeWindow.mKind 0
+pl PlatNativeWindow.mDisplay 8
+pl PlatNativeWindow.mWindow 16
+keys 118
+k 41 1 27
+k 30 2 49
+k 31 3 50
+k 32 4 51
+k 33 5 52
+k 34 6 53
+k 35 7 54
+k 36 8 55
+k 37 9 56
+k 38 10 57
+k 39 11 48
+k 45 12 189
+k 46 13 187
+k 42 14 8
+k 43 15 9
+k 20 16 81
+k 26 17 87
+k 8 18 69
+k 21 19 82
+k 23 20 84
+k 28 21 89
+k 24 22 85
+k 12 23 73
+k 18 24 79
+k 19 25 80
+k 47 26 219
+k 48 27 221
+k 40 28 13
+k 224 29 162
+k 4 30 65
+k 22 31 83
+k 7 32 68
+k 9 33 70
+k 10 34 71
+k 11 35 72
+k 13 36 74
+k 14 37 75
+k 15 38 76
+k 51 39 186
+k 52 40 222
+k 53 41 192
+k 225 42 160
+k 49 43 220
+k 50 43 220
+k 29 44 90
+k 27 45 88
+k 6 46 67
+k 25 47 86
+k 5 48 66
+k 17 49 78
+k 16 50 77
+k 54 51 188
+k 55 52 190
+k 56 53 191
+k 229 54 161
+k 85 55 106
+k 226 56 164
+k 44 57 32
+k 57 58 20
+k 58 59 112
+k 59 60 113
+k 60 61 114
+k 61 62 115
+k 62 63 116
+k 63 64 117
+k 64 65 118
+k 65 66 119
+k 66 67 120
+k 67 68 121
+k 83 69 144
+k 71 70 145
+k 95 71 103
+k 96 72 104
+k 97 73 105
+k 86 74 109
+k 92 75 100
+k 93 76 101
+k 94 77 102
+k 87 78 107
+k 89 79 97
+k 90 80 98
+k 91 81 99
+k 98 82 96
+k 99 83 110
+k 100 86 226
+k 68 87 122
+k 69 88 123
+k 104 100 124
+k 105 101 125
+k 106 102 126
+k 136 112 21
+k 135 115 0
+k 138 121 28
+k 139 123 29
+k 137 125 0
+k 103 141 0
+k 88 156 13
+k 228 157 163
+k 133 179 108
+k 84 181 111
+k 70 183 44
+k 230 184 165
+k 72 197 19
+k 74 199 36
+k 82 200 38
+k 75 201 33
+k 80 203 37
+k 79 205 39
+k 77 207 35
+k 81 208 40
+k 78 209 34
+k 73 210 45
+k 76 211 46
+k 227 219 91
+k 231 220 92
+k 101 221 93
+k 102 222 0
+k 258 223 0
+vkhash 4c537ef095d3dcc2
+vkex 65 99 112 186 0
+modhash 0109ccae142f0383
+u8 x706c61696e 5 x706c61696e
+u8 x636166c3a9 4 x636166e9
+u8 xe282ac2035 3 x802035
+u8 xe4b8ade69687 2 x3f3f
+u8 xc3 1 x3f
+u8 xe282 1 x3f
+u8 xf09f988021 2 x3f21
+u8 xc341 2 x3f41
+u8 x8078 2 x3f78
+u8 xff79 2 xff79
+u8 xc2a0c3bf 2 xa0ff
+u8tiny 2 61 62 00
+cp x706c61696e x706c61696e
+cp x636166e9 x636166c3a9
+cp x808182 xe282ac3fe2809a
+cp xffa0 xc3bfc2a0
+cp x9d9e x3fc5be
+ev 100 w 0 args 0 0 0 0 0 0 0 0 mod 0 text - => 1 t 1 777 win 0 key 0 0 0 0 mouse 0 0 0 0 0 0 0 0 text x 0 0 size 0 0
+ev 210 w 5 args 11 22 0 0 0 0 0 0 mod 0 text - => 1 t 2 777 win 5 key 11 22 0 0 mouse 11 22 0 0 0 0 0 0 text x0b 0 0 size 11 22
+ev 207 w 5 args 800 600 0 0 0 0 0 0 mod 0 text - => 1 t 3 777 win 5 key 800 600 0 0 mouse 800 600 0 0 0 0 0 0 text x2003 0 0 size 800 600
+ev 20e w 5 args 0 0 0 0 0 0 0 0 mod 0 text - => 0
+ev 20f w 5 args 0 0 0 0 0 0 0 0 mod 0 text - => 0
+ev 209 w 5 args 1 2 0 0 0 0 0 0 mod 0 text - => 1 t 6 777 win 5 key 1 2 0 0 mouse 1 2 0 0 0 0 0 0 text x01 0 0 size 1 2
+ev 20b w 5 args 3 4 0 0 0 0 0 0 mod 0 text - => 1 t 7 777 win 5 key 3 4 0 0 mouse 3 4 0 0 0 0 0 0 text x03 0 0 size 3 4
+ev 204 w 9 args 7 8 0 0 0 0 0 0 mod 0 text - => 1 t 8 777 win 9 key 7 8 0 0 mouse 7 8 0 0 0 0 0 0 text x07 0 0 size 7 8
+ev 300 w 5 args 20 97 0 0 0 0 0 0 mod 8193 text - => 1 t 9 777 win 5 key 16 65 17 0 mouse 16 65 17 0 0 0 0 0 text x10 0 0 size 16 65
+ev 300 w 5 args 88 1073741912 1 0 0 0 0 0 mod 128 text - => 1 t 9 777 win 5 key 156 13 2 1 mouse 156 13 2 1 0 0 0 0 text x9c 0 0 size 156 13
+ev 301 w 5 args 54 44 0 0 0 0 0 0 mod 6400 text - => 1 t 10 777 win 5 key 51 188 44 0 mouse 51 188 44 0 0 0 0 0 text x33 0 0 size 51 188
+ev 300 w 0 args 111 1073741935 0 0 0 0 0 0 mod 0 text - => 1 t 9 777 win 0 key 0 0 0 0 mouse 0 0 0 0 0 0 0 0 text x 0 0 size 0 0
+ev 303 w 5 args 0 0 0 0 0 0 0 0 mod 0 text x48c3a96c6c6f20e282ac => 1 t 11 777 win 5 key 1819076936 8396911 0 0 mouse 1819076936 8396911 0 0 0 0 0 0 text x48e96c6c6f2080 0 0 size 1819076936 8396911
+ev 302 w 5 args 2 7 0 0 0 0 0 0 mod 0 text xe4b8ad61 => 1 t 12 777 win 5 key 24895 0 0 0 mouse 24895 0 0 0 0 0 0 0 text x3f61 2 7 size 24895 0
+ev 400 w 5 args 0 0 0 0 12.75 -3.5 1.25 -7.9000001 mod 64 text - => 1 t 13 777 win 5 key 12 4294967293 1 -7 mouse 12 -3 1 -7 0 0 0 2 text x0c 0 0 size 12 -3
+ev 401 w 5 args 1 2 0 0 100.5 200.899994 0 0 mod 1 text - => 1 t 14 777 win 5 key 100 200 0 0 mouse 100 200 0 0 1 2 0 1 text x64 0 0 size 100 200
+ev 402 w 7 args 3 1 0 0 1 2 0 0 mod 0 text - => 1 t 15 777 win 7 key 1 2 0 0 mouse 1 2 0 0 3 1 0 0 text x01 0 0 size 1 2
+ev 403 w 5 args 0 0 0 0 0 3 15.5 40.25 mod 1024 text - => 1 t 16 777 win 5 key 15 40 0 0 mouse 15 40 0 0 0 0 3 8 text x0f 0 0 size 15 40
+ev 403 w 5 args 1 0 0 0 0 2 5.5 4.25 mod 0 text - => 1 t 16 777 win 5 key 5 4 0 0 mouse 5 4 0 0 0 0 -2 0 text x05 0 0 size 5 4
+ev 8001 w 0 args 0 0 0 0 0 0 0 0 mod 0 text - => 1 t 17 777 win 0 key 0 0 0 0 mouse 0 0 0 0 0 0 0 0 text x 0 0 size 0 0
+ev 8002 w 5 args 1 0 0 0 0 0 0 0 mod 0 text - => 1 t 4 777 win 5 key 0 0 0 0 mouse 0 0 0 0 0 0 0 0 text x 0 0 size 0 0
+ev 8002 w 5 args 0 0 0 0 0 0 0 0 mod 0 text - => 1 t 5 777 win 5 key 0 0 0 0 mouse 0 0 0 0 0 0 0 0 text x 0 0 size 0 0
+ev 8003 w 5 args 1 0 0 0 0 0 0 0 mod 0 text - => 0
+statehash ea23c4c3c20ae293
+mousehash 4bacfa7b89c66083
+togglehash 909862112cc50383

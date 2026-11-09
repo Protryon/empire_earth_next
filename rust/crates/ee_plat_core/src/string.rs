@@ -2,7 +2,7 @@
 //! calls the C runtime functions the C++ called (`_stricmp`, `_mbs*`...), so the running locale (`setlocale`,
 //! EEUserInterface) and the multibyte code page keep deciding, as they did. POSIX is the single-byte port in `sbcs`:
 //! every byte one character, ASCII case folding (PORT.md: an encoding needs the fonts and text input to agree first).
-//! PlatCp1252ToWide/PlatWideToCp1252 are not here: they share the font's table (PlatFont.cpp).
+//! PlatCp1252ToWide/PlatWideToCp1252 are not here: they share the font crate's table (ee_plat_ui, cp1252.rs).
 
 use std::ffi::{c_char, c_int, c_uint};
 

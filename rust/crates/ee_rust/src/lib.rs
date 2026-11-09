@@ -21,6 +21,9 @@ use ee_plat_core as _;
 // The platform layer's PlatFile, PlatThread and PlatSocket: `#[no_mangle]` exports, as above.
 use ee_plat_sys as _;
 
+// The fonts (PlatFont.h, the Windows-1252 conversions): `#[no_mangle]` exports, as above.
+use ee_plat_ui as _;
+
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 pub const EE_RUST_ABI_VERSION: u32 = 1;
 

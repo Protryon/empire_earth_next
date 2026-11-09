@@ -18,3 +18,4 @@ ee_mixer = { path = "../ee_mixer" }
 ee_net_tcp = { path = "../ee_net_tcp" }
 ee_random = { path = "../ee_random" }
 ee_codec = { path = "../ee_codec" }
+ee_plat_ui = { path = "../ee_plat_ui" }

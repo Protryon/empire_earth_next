@@ -1,0 +1,10 @@
+[package]
+name = "ee_plat_ui"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The platform layer's window logic and fonts (docs/RUST_PLAN.md R1.4, R1.5): everything without the SDL calls, which
+# are the crate ee_plat_sdl. No system calls here, so `cargo test` needs no window, no game and no data.
+[lib]
+crate-type = ["rlib"]
