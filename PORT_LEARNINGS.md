@@ -2493,5 +2493,8 @@ Done here, each unit disassembled before and after (identical where no code was 
   is read in place, only `src/` is staged. Do not edit headers while a build of the same worktree runs, and delete
   the objects of a killed build.
 - Gates run: per commit, EE-SIM linked 0/0 and the sim oracle (seeds 2-7, 2700 s) identical to the main checkout's
-  `ref`; `eedata check` PASS after R5a.5; at the end the full `build.py --sim` and `--test-profile windowed-software`.
+  `ref`; `eedata check` PASS after R5a.5; at the end the full `build.py --sim` (EE-AOC and EE-SIM 0/0, its EE-SIM
+  identical on seeds 2-7 again) and `--test-profile windowed-software` (0/0; the harness's hooked symbols in its map).
+  The records `game_state_probe.py` reads (EEWorld, EEPlayer, NESynchronousCommunications, EEPhysics up to its old
+  end) and UIManager/UIForm/EEMouse/RTSMouse have the same layout.json offsets as before.
   Not run: the harness (tours, `gates.sh`), a saved game loaded, Linux or macOS.
