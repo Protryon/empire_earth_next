@@ -144,6 +144,17 @@ std::string sDirectory;                      // EE_TEST_UI
 std::atomic<int> sFrameWanted(0);            // a frame.request seen: the next presented frame goes to frame.bmp
 std::atomic<unsigned long> sFramesWritten(0);
 
+// Replaces inTo with inFrom -> true on success. Windows' rename does not replace an existing file (the reader may
+// hold it open for a moment: the next poll writes it again)
+bool ReplaceWith(const std::string& inFrom, const std::string& inTo)
+{
+#ifdef _WIN32
+    return MoveFileExA(inFrom.c_str(), inTo.c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
+#else
+    return rename(inFrom.c_str(), inTo.c_str()) == 0;
+#endif
+}
+
 // Before every presented frame (the render thread): when a frame was asked for, writes it to <dir>/frame.bmp
 // (atomically: .tmp + rename), a top-down 32-bit BMP
 void PresentHook(void* inWindow, void* inFrame)
@@ -177,9 +188,7 @@ void PresentHook(void* inWindow, void* inFrame)
         && fwrite(thePixels.data(), 1, thePixels.size(), theFile) == thePixels.size();
     fclose(theFile);
     if (theWritten) {
-        std::string theFinal = sDirectory + "/frame.bmp";
-        remove(theFinal.c_str());   // Windows: rename does not replace
-        if (rename(theTemporary.c_str(), theFinal.c_str()) == 0)
+        if (ReplaceWith(theTemporary, sDirectory + "/frame.bmp"))
             sFramesWritten++;
     }
 }
@@ -365,7 +374,7 @@ void Poll(const std::string& inDirectory)
         std::string theRequest = inDirectory + "/frame.request";
         if (remove(theRequest.c_str()) == 0)   // the driver asks for the next presented frame
             sFrameWanted = 1;
-        rename(theTemporary.c_str(), (inDirectory + "/ui-state.txt").c_str());
+        ReplaceWith(theTemporary, inDirectory + "/ui-state.txt");
         if (theForm)
             Execute(inDirectory, theForm, theFormID);
     }
@@ -374,10 +383,22 @@ void Poll(const std::string& inDirectory)
 
 }   // namespace
 
+namespace {
+// The game's debug output (PlatDebugOutput: GX's log, EE-AI lines, ...) goes to stderr as "debugstring <text>", the
+// lines the debugger harness read (no debugger runs under the fixture driver)
+void DebugToStderr(const char* inText)
+{
+    size_t theLength = inText ? strlen(inText) : 0;
+    fprintf(stderr, "debugstring %s%s", inText ? inText : "", theLength && inText[theLength - 1] == '\n' ? "" : "\n");
+    fflush(stderr);
+}
+}   // namespace
+
 // The test switches, when EE_TEST_UI names a directory (EERun, first, before the engine starts its clocks and threads):
 //   EE_TEST_TIME_FACTOR=F (or N/D, or a decimal): the harness clock (platform/PlatSim.h PlatSimSetTimeFactor);
 //   EE_TEST_SEED=S: the start seed (gPlatSimSeed: EEMStartLoading::Execute takes it instead of the lobby's);
-//   EE_TEST_NO_HUMAN_DEFEAT=1: the idle local human is never taken out or defeated (gPlatSimNoHumanDefeat).
+//   EE_TEST_NO_HUMAN_DEFEAT=1: the idle local human is never taken out or defeated (gPlatSimNoHumanDefeat);
+// and the debug output goes to stderr ("debugstring <text>": PlatDebugSetHandler).
 // Each one taken is announced on stderr ("TEST UI ..."); a malformed one stops the game (a run must not go on
 // believing it is accelerated or seeded when it is not).
 void EETestFixtureConfigure()
@@ -385,6 +406,7 @@ void EETestFixtureConfigure()
     const char* theDirectory = getenv("EE_TEST_UI");
     if (!theDirectory || !*theDirectory)
         return;
+    PlatDebugSetHandler(DebugToStderr);
     if (const char* theFactor = getenv("EE_TEST_TIME_FACTOR")) {
         unsigned long theNum = 0, theDen = 1, theWhole = 0;
         char theRest[8] = {0};
