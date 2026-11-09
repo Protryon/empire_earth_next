@@ -12,6 +12,7 @@
 #include <vector>
 #include <algorithm>
 #include "ee/EETileCoordinate.h"
+#include "ee/EEUnitHandle.h"
 
 class EEComplexUnit;
 class EEAnimal;
@@ -93,9 +94,9 @@ public:
     EEPlayer* GetPlayer() const { return this->mPlayer; }
     EEPlayer* mPlayer;                      // +0xac (saved as its mPlayerID; RepairPointers: gWorld's player)
     EEComplexUnit* GetLeader() const { return this->mLeader; }
-    EEComplexUnit* mLeader;                 // +0xb0 (reference counted)
+    EEUnitHandle<EEComplexUnit> mLeader;    // +0xb0 (reference counted; a handle since R5a.4)
     EEComplexUnit* GetTarget() const { return this->mTarget; }
-    EEComplexUnit* mTarget;                 // +0xb4 (reference counted)
+    EEUnitHandle<EEComplexUnit> mTarget;    // +0xb4 (reference counted; a handle since R5a.4)
     float mFB8;                             // +0xb8
     unsigned long mAnimalID;                // +0xbc (the animal index: the units' class +0x2cc)
     unsigned long GetGrazeAreaID() const { return this->mGrazeAreaID; }

@@ -63,7 +63,7 @@ long EECPAGTask::Load(unsigned long inMajorVersion, unsigned long inMinorVersion
     unsigned long theID = 0;
     if (theResult == kErrorOK) {
         theResult = inFile.Read(theID);
-        this->mUnit = reinterpret_cast<EEComplexUnit*>(theID);
+        this->mUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(theID);
     }
     theID = 0;
     if (theResult == kErrorOK) {
@@ -93,8 +93,8 @@ long EECPAGTask::Restore(unsigned long inMajorVersion, unsigned long inMinorVers
         this->mPlayer = ::gWorld.mPlayers[USavedID(this->mPlayer)];
     else
         this->mPlayer = NULL;
-    if (USavedID(this->mUnit) != -1) {
-        this->mUnit = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(USavedID(this->mUnit)));
+    if (this->mUnit.GetSavedID() != -1) {
+        this->mUnit = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(this->mUnit.GetSavedID()));
         if (this->mUnit)
             this->mUnit->Reference();
     } else {

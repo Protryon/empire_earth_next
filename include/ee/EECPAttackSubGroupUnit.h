@@ -10,6 +10,7 @@
 #define EE_EECPATTACKSUBGROUPUNIT_H
 
 #include <set>
+#include "ee/EEUnitHandle.h"
 
 class EEComplexUnit;
 class EECPAttackSubGroup;
@@ -103,9 +104,9 @@ public:
     EECPILocation mLocation;                // +0x24 (ctor 0x80873; Load/Restore/Save first)
     long mL3C;                              // +0x3c (init list)
     long mL40;                              // +0x40 (init list)
-    EEComplexUnit* mUnit;                   // +0x44 (referenced)
+    EEUnitHandle<EEComplexUnit> mUnit;      // +0x44 (referenced; a handle since R5a.4)
     EEComplexUnit* GetTarget() const { return this->mTarget; }
-    EEComplexUnit* mTarget;                 // +0x48 (referenced; restored by id through dynamic_cast<EEComplexUnit*>)
+    EEUnitHandle<EEComplexUnit> mTarget;    // +0x48 (referenced; restored by id through dynamic_cast<EEComplexUnit*>; a handle since R5a.4)
     EECPAttackSubGroup* GetSubGroup() const { return this->mSubGroup; }
     EECPAttackSubGroup* mSubGroup;          // +0x4c (referenced; may be 0)
     // +0x50: another unit of the sub group (Restore: mSubGroup's 0x5e01b by unit; dereferenced in the dtor)

@@ -732,7 +732,7 @@ long EECPWallManager::Load(unsigned long inMajorVersion, unsigned long inMinorVe
             theResult = inFile.Read(theValue);
             if (theResult != kErrorOK)
                 continue;
-            theWall.mUnit = reinterpret_cast<EEComplexUnit*>(theValue);
+            theWall.mUnit = EEUnitHandle<EEComplexUnit>::FromSavedID(theValue);
             theResult = inFile.Read(theOther);
             if (theResult == kErrorOK) {
                 theWall.mEnemy = reinterpret_cast<EEPlayer*>(theOther);
@@ -902,9 +902,9 @@ long EECPWallManager::Restore(unsigned long inMajorVersion, unsigned long inMino
     this->mWalls.clear();
     for (i = 0; i < theWalls.size(); i++) {
         theWall = theWalls[i];
-        if (USavedID(theWall.mUnit) == -1)
+        if (theWall.mUnit.GetSavedID() == -1)
             continue;
-        theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(theWall.mUnit))));
+        theUnit = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(theWall.mUnit.GetSavedID())));
         if (theUnit == NULL)
             continue;
         EEPlayer* thePlayer = gWorld.mPlayers[USavedID(theWall.mEnemy)];

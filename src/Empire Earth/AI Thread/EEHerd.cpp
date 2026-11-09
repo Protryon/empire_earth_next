@@ -664,7 +664,7 @@ void EEHerd::GrowUnit(EEComplexUnit* inUnit)
 bool EEHerd::FollowNearestHerd()
 {
     std::vector<EEHerd*> theHerds;
-    EEComplexUnit* theLeader = this->mLeader ? this->mLeader : this->mUnits[0];
+    EEComplexUnit* theLeader = this->mLeader ? this->mLeader.Get() : this->mUnits[0];
     float theBest = 0.0f;
     EEHerd* theBestHerd = NULL;
     this->mPlayer->GetHerds(EEHerdOtherHerdFilter(this), theHerds);
@@ -760,12 +760,12 @@ long EEHerd::Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FS
     theValue = -1;
     if (theResult == 0) {
         theResult = inFile.Read(theValue);
-        this->mLeader = USavedPointer<EEComplexUnit>(theValue);
+        this->mLeader = EEUnitHandle<EEComplexUnit>::FromSavedID(theValue);
     }
     theValue = -1;
     if (theResult == 0) {
         theResult = inFile.Read(theValue);
-        this->mTarget = USavedPointer<EEComplexUnit>(theValue);
+        this->mTarget = EEUnitHandle<EEComplexUnit>::FromSavedID(theValue);
         if (theResult == 0)
             theResult = this->mBounds2.Load(inFile);
         if (theResult == 0)
@@ -920,8 +920,8 @@ long EEHerd::RepairPointers(long, long)
         if (!this->GetAnimal() || this->GetAnimal()->GetAnimalID() != this->mUnits[0]->GetUnitClass()->GetAnimalID())
             this->mAnimal = EEAnimal::Get(this->mUnits[0]->GetUnitClass()->GetAnimalID());
     }
-    if (this->GetLeader() != (EEComplexUnit*)-1) {
-        this->mLeader = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->GetLeader()))));
+    if (this->mLeader.GetSavedID() != 0xffffffff) {   // (was the pointer field (EEComplexUnit*)-1)
+        this->mLeader = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mLeader.GetSavedID())));
         if (this->GetLeader())
             this->GetLeader()->mReferenceCount++;
     } else
@@ -935,8 +935,8 @@ long EEHerd::RepairPointers(long, long)
         if (!this->GetLeader() && this->GetAnimal()->GetHasLeader())
             this->PickLeader();
     }
-    if (this->GetTarget() != (EEComplexUnit*)-1) {
-        this->mTarget = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(USavedID(this->GetTarget()))));
+    if (this->mTarget.GetSavedID() != 0xffffffff) {   // (was the pointer field (EEComplexUnit*)-1)
+        this->mTarget = dynamic_cast<EEComplexUnit*>(static_cast<EEUnit*>(gWorld.GetUnit(this->mTarget.GetSavedID())));
         if (this->GetTarget())
             this->GetTarget()->mReferenceCount++;
     } else
