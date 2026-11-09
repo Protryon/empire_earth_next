@@ -45,6 +45,7 @@
 #include "ee/EEEffect.h"
 #include "ee/EEROWater.h"
 #include "ee/EEUnitPicker.h"
+#include "ee/EERenderSnapshot.h"
 
 // the picker's named consts (.rdata 0x441c28.., reloaded per use) (provisional names)
 const float kU441C28 = 3.0f;
@@ -98,7 +99,7 @@ void EEROWater::RenderScene()
     gRasterizer->SetCulling(kCullNone);
     SetLightingOff();
     SetSceneFog();
-    gRasterizer->DrawWater(gWorld.mMap->mTerrainMesh, gScreenIndex, gOrthographicView);
+    gRasterizer->DrawWater(*gRenderSnapshot.mTerrainMesh, gScreenIndex, gOrthographicView);   // port: the snapshot's
     for (theIterator = gEffectQueues[4].begin(); theIterator != gEffectQueues[4].end(); theIterator++) {
         BeginEffectBatches(theIterator->first);
         for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)

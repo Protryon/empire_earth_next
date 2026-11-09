@@ -50,6 +50,7 @@
 #include "ee/EEEffect.h"
 #include "ee/EERenderLists.h"
 #include "ee/EEROTerrain.h"
+#include "ee/EERenderSnapshot.h"
 
 extern unsigned long& gTexturePixelDepth;    // 0x5308b4
 extern unsigned long& gTextureMipLevelsToDrop; // 0x530894 (provisional name)
@@ -152,6 +153,7 @@ void EEROTerrain::FrameStarting()
     theMap->mTerrainMesh.UpdateFogOfWar(gWorld.GetCurrentPlayer()->mSeesAll || gFreeCamera);
 
     gGridRuns = gWorld.mMap->mU1955DC;
+    EETakeTerrainSnapshot();   // port: what RenderScene draws from the map and the editor (ee/EERenderSnapshot.h)
 }
 
 // FUNCTION: EXE 0x5126ce
@@ -401,8 +403,6 @@ void EEROTerrain::RenderScene()
 {
     EEEffectQueue::iterator theIterator;
     std::deque<EEEffect*>::iterator theEffect;
-    U2DRectangle<long> theTiles;
-    GERectangle theRectangle;
     unsigned long theScreen = gScreenIndex;
     float theAlphaRefValue = gRasterizer->GetAlphaTestingRefValue(gScreenIndex);
     unsigned long theLineCount = gU529050.size();
@@ -423,7 +423,7 @@ void EEROTerrain::RenderScene()
     gU4E8F08.SetRearClippingDistance(kSkyRearClipping);
     gU4E8F08.SetDepthRange(1.0f, 1.0f);
     gRasterizer->SetViewport(gU4E8F08, theScreen);
-    if (gWorld.mMap->mTerrainMesh.GetIsSpaceMap()) {
+    if (gRenderSnapshot.mIsSpaceMap) {
         gRasterizer->DrawSky(sOuterStarModel, theScreen, 1.0f, false);
         if (gDrawClouds) {
             gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
@@ -449,34 +449,19 @@ void EEROTerrain::RenderScene()
     gRasterizer->SetCulling(kCullNone);
     SetLightingOff();
     SetSceneFog();
-    gRasterizer->Draw(gWorld.mMap->mTerrainMesh, theScreen, gOrthographicView);
+    GETerrainMesh& theMesh = *gRenderSnapshot.mTerrainMesh;
+    gRasterizer->Draw(theMesh, theScreen, gOrthographicView);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, gScreenIndex);
     gRasterizer->SetZBuffer(kZBufferDisabled, gScreenIndex);
-    if (gUIManager->mScenarioEditorForm != NULL) {
-        theRectangle = gUIManager->mScenarioEditorForm->mBrushGroup->mRectangle;
-        if (gUIManager->mScenarioEditorForm->mBrushGroup->mIsHighlightShown) {
-            theTiles.mLeft = UMFloor(theRectangle.GetLeft());
-            theTiles.mTop = UMFloor(theRectangle.GetTop());
-            theTiles.mRight = UMFloor(theRectangle.GetRight());
-            theTiles.mBottom = UMFloor(theRectangle.GetBottom());
-            gRasterizer->DrawTerrainHighlight(gWorld.mMap->mTerrainMesh, theTiles, gScreenIndex, gOrthographicView,
-                                              gBrushHighlightColor, kHighlightOpacity);
-        }
-    }
-    // the map's coloured rectangles, back to front under their lock: a zero opacity erases the element (through the
-    // inline accessors whose refused copies are 0x11428f and the ICF-folded 0x1d99fb)
-    if (gWorld.mMap->mColoredRectangles.size() > 0) {
-        gWorld.mMap->mCriticalSectionForColoredRectangles->Enter();
-        for (long theRect = gWorld.mMap->mColoredRectangles.size() - 1; theRect >= 0; theRect--) {
-            RTSColoredRectangle& theColored = gWorld.mMap->mColoredRectangles[theRect];
-            if (theColored.mOpacity != 0.0f)
-                gRasterizer->DrawTerrainHighlight(gWorld.mMap->mTerrainMesh, theColored.mRect, gScreenIndex,
-                                                  gOrthographicView, theColored.mColor, theColored.mOpacity);
-            else
-                gWorld.GetMap()->GetColoredRectangles().erase(gWorld.GetMap()->GetColoredRectangles().begin()
-                                                              + theRect);
-        }
-        gWorld.mMap->mCriticalSectionForColoredRectangles->Leave();
+    // port: the editor's brush and the map's coloured rectangles from the frame's snapshot (EETakeTerrainSnapshot
+    // took them, and erased the erase markers, where this drew them from the live map and its lock)
+    if (gRenderSnapshot.mBrushHighlightShown)
+        gRasterizer->DrawTerrainHighlight(theMesh, gRenderSnapshot.mBrushTiles, gScreenIndex, gOrthographicView,
+                                          gBrushHighlightColor, kHighlightOpacity);
+    for (unsigned long theRect = 0; theRect < gRenderSnapshot.mColoredRectangles.size(); theRect++) {
+        const RTSColoredRectangle& theColored = gRenderSnapshot.mColoredRectangles[theRect];
+        gRasterizer->DrawTerrainHighlight(theMesh, theColored.mRect, gScreenIndex, gOrthographicView, theColored.mColor,
+                                          theColored.mOpacity);
     }
     gU4E8F08.SetDepthRange(0.0f, 0.0f);
     gRasterizer->SetViewport(gU4E8F08, theScreen);
@@ -484,10 +469,9 @@ void EEROTerrain::RenderScene()
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetZCompare(kCompareLess, theScreen);
     if (this->mGridMode != 0)
-        gRasterizer->DrawTerrainGrid
-(gWorld.mMap->mTerrainMesh, theScreen, gOrthographicView);
+        gRasterizer->DrawTerrainGrid(theMesh, theScreen, gOrthographicView);
     if (gGridRuns.size() != 0)
-        gRasterizer->DrawGridLines(gWorld.mMap->mTerrainMesh, gGridRuns, gAreaEffectTexture, gU4E9330, theScreen,
+        gRasterizer->DrawGridLines(theMesh, gGridRuns, gAreaEffectTexture, gU4E9330, theScreen,
                                    gOrthographicView);
     for (long i = 0; i < (long)theLineCount; i++) {
         EERenderLine& theLine = gU529050[i];
