@@ -47,6 +47,9 @@
 #include "ee/EECPAttackCommander.h"
 #include "ee/EECPTrace.h"
 #include "ee/EECPNext.h"
+#include "ee/RTSRegionTable.h"
+#include "ee/EEInfluenceTable.h"
+#include "ee/EERandomMapIDs.h"
 
 static const long kNextSiteDangerRange = 12;   // tiles: the seen enemy soldiers that count as a site's danger
 static const long kNextTowerRange = 8;          // tiles: a tower this near guards a site (EECPRMGuardSites)
@@ -119,6 +122,77 @@ static long EECPNextSiteBlocked(EEComputerPlayer* inPlayer, EEUnit* inUnit)
             return kNextBlockedArea;
     }
     return kNextBlockedNone;
+}
+
+// TEST ONLY (EE_AI_EXP sitetrace; docs/AI_RESEARCH.md §8.34): the unit BuildManager::HasEnemyNear counts at a tile,
+// as it collects them (the unit regions over its box of influence regions; armed units not the player's, gaia's or
+// an ally's, not idle searchers): the nearest, then the lowest id (the collection is in pointer order)
+static EEComplexUnit* EECPNextNearCause(EEComputerPlayer* inPlayer, long inX, long inY)
+{
+    EEInfluenceTable* theTable = gWorld.mInfluenceTable;
+    EEMap* theMap = gWorld.mMap;
+    if (theTable == NULL || theMap == NULL || theMap->mUnitRegions == NULL)
+        return NULL;
+    long theSize = theTable->mRegionSize;
+    if (((theMap->mMapCharacteristics & kRMMapIslandMap) == kRMMapIslandMap
+         || (theMap->mMapCharacteristics & kRMMapPlanetsMap) == kRMMapPlanetsMap) && theMap->mL195610 <= 0x2a)
+        theSize = 1;
+    U2DRectangle<long> theRect;
+    theRect.mLeft = inX - theSize;
+    theRect.mRight = inX + theSize;
+    theRect.mTop = inY - theSize;
+    theRect.mBottom = inY + theSize;
+    std::vector<EEComplexUnit*> theUnits;
+    theMap->mUnitRegions->CollectValues(theRect, theUnits, std::less<EEComplexUnit*>());
+    EEComplexUnit* theBest = NULL;
+    long long theBestDistance = 0;
+    for (unsigned long k = 0; k < theUnits.size(); k++) {
+        EEComplexUnit* theUnit = theUnits[k];
+        EEPlayer* theOwner = theUnit->mPlayer;
+        if (theOwner == inPlayer || theUnit->mStats->mAttack == 0.0f || theUnit->mTargetSearchTimer > 60000
+            || theOwner == NULL || theOwner == gWorld.mPlayers[0] || inPlayer->IsAlly(theOwner))
+            continue;
+        long long theDistance = EECPNextDistance2(inX, inY, theUnit->GetTileX(), theUnit->GetTileY());
+        if (theBest == NULL || theDistance < theBestDistance
+            || (theDistance == theBestDistance && theUnit->mUnitID < theBest->mUnitID)) {
+            theBest = theUnit;
+            theBestDistance = theDistance;
+        }
+    }
+    return theBest;
+}
+
+// TEST ONLY (EE_AI_EXP sitetrace): one line a minute for each site the gatherers would pass over but for being out of
+// sight: its blocked reason and, for enemy_near, the unit that caused it (its class, owner, category, distance in
+// tiles, and whether the player sees its tile)
+static void EECPNextTraceSites(EEComputerPlayer* inPlayer, const EECPNextView& inView)
+{
+    static const char* const kReasons[5] = {"ok", "unexplored", "enemy_near", "danger", "area"};
+    static const char* const kNames[kNextResources] = {"food", "wood", "stone", "gold", "iron"};
+    for (unsigned long k = 0; k < inView.sites.size(); k++) {
+        const EECPNextSite& theSite = inView.sites[k];
+        if (theSite.resource < 0 || theSite.blocked < kNextBlockedEnemyNear || theSite.blocked > 4)
+            continue;
+        if (theSite.blocked != kNextBlockedEnemyNear) {
+            EE_CP_TRACE(inPlayer, "next.sitecheck", "site=%ld res=%s d=%ld claimed=%ld blocked=%s", theSite.index + 1,
+                kNames[theSite.resource], theSite.distance, theSite.claimed, kReasons[theSite.blocked]);
+            continue;
+        }
+        EEComplexUnit* theCause = EECPNextNearCause(inPlayer, theSite.x, theSite.y);
+        if (theCause == NULL) {
+            EE_CP_TRACE(inPlayer, "next.sitecheck", "site=%ld res=%s d=%ld claimed=%ld blocked=enemy_near cause=-",
+                theSite.index + 1, kNames[theSite.resource], theSite.distance, theSite.claimed);
+            continue;
+        }
+        EETile* theTile = static_cast<EETile*>(theCause->mTile);
+        EE_CP_TRACE(inPlayer, "next.sitecheck",
+            "site=%ld res=%s d=%ld claimed=%ld blocked=enemy_near cause=%s owner=p%lu cat=%ld cd=%ld seen=%d",
+            theSite.index + 1, kNames[theSite.resource], theSite.distance, theSite.claimed,
+            EECPNextClassName((long)theCause->mUnitClass->mUnitType).c_str(), theCause->mPlayer->mPlayerID,
+            (long)theCause->mUnitClass->mCategory,
+            EECPNextSqrt(EECPNextDistance2(theSite.x, theSite.y, theCause->GetTileX(), theCause->GetTileY())),
+            theTile != NULL && theTile->IsSeenBy(inPlayer) ? 1 : 0);
+    }
 }
 
 struct EECPNextPlace {
@@ -434,4 +508,6 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
 
     outView.events = theState->mEvents;
     EECPNextArmyView(inPlayer, outView);   // the groups, the free soldiers, the enemies' army fields (EECPNextArmy.cpp)
+    if (gCPTraceOn && theNow % 60000 < 1000 && EECPExperiment(inPlayer, "sitetrace"))
+        EECPNextTraceSites(inPlayer, outView);
 }
