@@ -16,6 +16,7 @@
 #include "lle/GETerrainMesh.h"
 #include "lle/U2DPoint.h"
 
+#include "ee/EESaveGameFiles.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
@@ -583,6 +584,12 @@ long EEUGBuildRepair::Load(unsigned long inMajorVersion, unsigned long inMinorVe
     theResult = inFile.Read(this->mFirstTickAmount);
     if (theResult == 0)
         theResult = inFile.Read(this->mIsRepair);
+    // port (0.253): the site as the goal had it (older saves: RepairPointers takes it from the building)
+    if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+        theResult = this->mTargetLocation.Load(inFile);
+        if (theResult == 0)
+            theResult = this->mTargetCenter.Load(inFile);
+    }
     return theResult;
 }
 
@@ -649,7 +656,8 @@ long EEUGBuildRepair::RepairPointers(unsigned long inMajorVersion, unsigned long
                 thePosition.SetX((float)this->mTarget->GetTileX() + 0.5f);
                 thePosition.SetY((float)this->mTarget->GetTileY() + 0.5f);
             }
-            this->SetTargetLocation(GE2DPoint(thePosition.GetX(), thePosition.GetY()));
+            if (!EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port: 0.253 saves keep the goal's site
+                this->SetTargetLocation(GE2DPoint(thePosition.GetX(), thePosition.GetY()));
         }
     } else
         this->mTarget = NULL;
@@ -692,6 +700,13 @@ long EEUGBuildRepair::Save(unsigned long inMajorVersion, unsigned long inMinorVe
     theResult = outFile.Write(this->mFirstTickAmount);
     if (theResult == 0)
         theResult = outFile.Write(this->mIsRepair);
+    // port (0.253): the site as the goal has it (RepairPointers made it again from the building's position, which
+    // is not where the goal put it: a loaded builder walked elsewhere)
+    if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+        theResult = this->mTargetLocation.Save(outFile);
+        if (theResult == 0)
+            theResult = this->mTargetCenter.Save(outFile);
+    }
     return theResult;
 }
 

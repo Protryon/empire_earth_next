@@ -19,6 +19,11 @@
 // harness's session-log form (tools/harness/ai_trace.py extract/compare/summary read the file as it is).
 // --checksum-trace FILE: after every communications tick, one line of the simulation's state hashes (ChecksumLine;
 // docs/RUST_PLAN.md R5a.1), so two runs name the first divergent tick (tools/sim_oracle.py ticks).
+// --save-at MS=FILE: at the first communications tick at or after game ms MS, the game saves (the autosave's request,
+// EEMLoadOrSaveGame through SendToAllAndWait, under a fixed name); the file is copied to FILE at the end of the run.
+// --load-save FILE: instead of the lobby, the game's own load path (main menu -> single player -> Load Game -> the
+// file -> Load, as the harness's --load-save), then the run as usual. Together: "load equals continue" (R5a.2;
+// tools/sim_oracle.py saveload): a game loaded from a save must trace like the game that went on.
 #ifdef _WIN32
 #include <winsock2.h>
 #else
@@ -29,6 +34,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <algorithm>
+#include <typeinfo>
 #include <chrono>
 #include <condition_variable>
 #include <functional>
@@ -125,6 +132,9 @@
 #include "ee/EETechTreeTechID.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEPhysics.h"
+#include "ee/EEUnitGoal.h"
+#include "ee/EEUIESinglePlayerEvents.h"
+#include "ee/EEUIESinglePlayerLoadEvents.h"
 #include "lle/GE2DPoint.h"
 #include "lle/GE3DPoint.h"
 #include "lle/GEVector.h"
@@ -149,8 +159,10 @@
 #include "ee/EERules.h"
 #include "ee/EECPTrace.h"
 #include "ee/EESimCapture.h"
+#include "ee/EESaveGameFiles.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
+
 
 namespace {
 
@@ -177,6 +189,8 @@ struct Options {
     std::string mEngine;                                 // --engine: the computer seats' engines ("" the lobby's: classic)
     long mPortOffset = -1;                              // -1: a free pair found at start
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
+    std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
+    std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
     bool mQuiet = false;
 };
 
@@ -380,8 +394,8 @@ void Finish(const char* inOutcome)
 const unsigned long kChecksumFlags = 0x1 | 0x2 | 0x10 | 0x40 | 0x100;
 
 // --checksum-trace: one line per communications tick (the physics thread, under the world's write lock, after the
-// CT's last physics tick). Only reads: no random draws, no caches filled; EEPhysics::mLastOutOfSynchChecksum, the one
-// member GetOutOfSynchChecksum writes (and nothing reads), is put back. The parts beside "oos" say what diverged first:
+// CT's last physics tick). Only reads: no random draws, no caches filled; EEPhysics::mLastOutOfSynchChecksum, the one member
+// GetOutOfSynchChecksum writes (and nothing reads), is put back. The parts beside "oos" say what diverged first:
 //   CT <the game's CTs run, from 1> pt=<ticks done> tick=<current tick> ms=<game ms> rng=<physics random seed>
 //      oos=<GetOutOfSynchChecksum(kChecksumFlags)> units=<count>/<sum of GetChecksum(3)> ai=<EECPOutOfSynchChecksum>
 //      inputs=<user inputs executed>
@@ -392,11 +406,8 @@ const unsigned long kChecksumFlags = 0x1 | 0x2 | 0x10 | 0x40 | 0x100;
 unsigned long sChecksumLines = 0;
 unsigned long sChecksumLastPT = 0;
 
-void ChecksumLine()
+void ChecksumFields(FILE* inFile)
 {
-    if (sChecksumFile == NULL || (sChecksumLines > 0 && gPhysics->mNumTicksDone == sChecksumLastPT))
-        return;
-    sChecksumLastPT = gPhysics->mNumTicksDone;
     unsigned long theSaved = gPhysics->mLastOutOfSynchChecksum;
     unsigned long theChecksum = gPhysics->GetOutOfSynchChecksum(false, kChecksumFlags);
     gPhysics->mLastOutOfSynchChecksum = theSaved;
@@ -406,17 +417,144 @@ void ChecksumLine()
         theUnits += (unsigned long)static_cast<EEUnit*>(theUnit)->GetChecksum(3);
         theCount++;
     }
-    fprintf(sChecksumFile, "CT %lu pt=%lu tick=%lu ms=%ld rng=%08lx oos=%08lx units=%lu/%08lx ai=%08lx inputs=%ld\n",
-            ++sChecksumLines, gPhysics->mNumTicksDone, gPhysics->mCurrentTick,
+    fprintf(inFile, "pt=%lu tick=%lu ms=%ld rng=%08lx oos=%08lx units=%lu/%08lx ai=%08lx inputs=%ld\n",
+            gPhysics->mNumTicksDone, gPhysics->mCurrentTick,
             gPhysics->mGameTime, (unsigned long)(uint32_t)gPhysics->mRandom.GetSeed(), (unsigned long)(uint32_t)theChecksum,
             theCount, (unsigned long)(uint32_t)theUnits, (unsigned long)(uint32_t)EECPOutOfSynchChecksum(), gPhysics->mInputMessagesProcessed);
 }
 
+void ChecksumLine()
+{
+    if (sChecksumFile == NULL || (sChecksumLines > 0 && gPhysics->mNumTicksDone == sChecksumLastPT))
+        return;
+    sChecksumLastPT = gPhysics->mNumTicksDone;
+    fprintf(sChecksumFile, "CT %lu ", ++sChecksumLines);
+    ChecksumFields(sChecksumFile);
+}
+
+// --dump-at / --dump-load (TEST ONLY, the save/load fidelity hunt): the state the checksum line sums, item by item, so
+// two dumps name the units and players that differ. Reads only (the goals' own out-of-synch checksums are read, as
+// the checksum's flag 0x20 would).
+void DumpState(const std::string& inPath)
+{
+    FILE* f = fopen(inPath.c_str(), "w");
+    if (!f)
+        return;
+    fprintf(f, "STATE ");
+    ChecksumFields(f);
+    fprintf(f, "physics clock=%a tickrandom=%ld tickstoprocess=%ld\n", (double)gPhysics->mGameClock,
+            (long)gPhysics->mTickRandom, (long)gPhysics->mTicksToProcess);
+    for (unsigned long i = 0; i < gWorld.GetNumPlayers(); i++) {
+        EEPlayer* p = gWorld.GetPlayer(i);
+        if (!p)
+            continue;
+        fprintf(f, "P %lu pop=%ld eog=%ld epoch=%ld res=", i, (long)p->mPopulationCount, (long)p->mEndOfGameCount,
+                p->mTechnologies ? (long)p->mTechnologies->mCurrentEpoch : -1L);
+        for (long r = 0; r < 5; r++)
+            fprintf(f, "%s%a", r ? "," : "", (double)p->mResourceCaps[kResourceFood + r]);
+        fprintf(f, "\n");
+    }
+    for (RTSUnit* r = gWorld.mUnits.mFirst; r != NULL; r = r->mTileNode->mNext) {
+        EEUnit* u = static_cast<EEUnit*>(r);
+        EEComplexUnit* c = dynamic_cast<EEComplexUnit*>(u);
+        fprintf(f, "U %lu type=%ld player=%ld hp=%a tile=%ld,%ld", u->GetUnitID(), (long)u->mUnitClass->mUnitType,
+                u->GetPlayer() ? (long)u->GetPlayer()->mPlayerID : -1L, (double)u->mHitPoints, (long)u->mTileX,
+                (long)u->mTileY);
+        if (c != NULL && c->mComplexUnit != NULL) {
+            EEComplexUnit* x = c->mComplexUnit;
+            fprintf(f, " upd=%lu cmd=%ld grp=%d loc=%a,%a,%a h=%a c1=%08lx c2=%08lx", (unsigned long)x->mTimesUpdated,
+                    x->mCommand ? (long)x->mCommand->mType : -1L, x->mActiveGroup != NULL,
+                    (double)x->mPhysicalModel.GetLocation().GetX(), (double)x->mPhysicalModel.GetLocation().GetY(),
+                    (double)x->mPhysicalModel.GetLocation().GetZ(), (double)x->mHeight,
+                    (unsigned long)(uint32_t)c->GetChecksum(1), (unsigned long)(uint32_t)c->GetChecksum(2));
+            for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {
+                std::deque<EEUnitGoal*>& theGoals = x->GetQueueGoals(q);
+                for (size_t g = 0; g < theGoals.size(); g++)
+                    fprintf(f, " g%ld:%s:%08lx", q, typeid(*theGoals[g]).name(),
+                            (unsigned long)(uint32_t)theGoals[g]->GetOutOfSynchChecksum());
+            }
+            fprintf(f, "\n  raw ");   // the unit's bytes (pointers differ by run; build/clang/layout.json names offsets)
+            for (size_t b = 0; b < sizeof(EEComplexUnit); b++)
+                fprintf(f, "%02x", reinterpret_cast<const unsigned char*>(c)[b]);
+            fprintf(f, "\n");
+            for (long q = 0; q < (long)x->GetNumGoalQueues(); q++) {   // each goal's own out-of-synch dump
+                std::deque<EEUnitGoal*>& theGoals = x->GetQueueGoals(q);
+                for (size_t g = 0; g < theGoals.size(); g++) {
+                    fprintf(f, "  unit %lu goal %ld.%zu\n", u->GetUnitID(), q, g);
+                    theGoals[g]->DumpOutOfSynch(f);
+                }
+            }
+            continue;
+        }
+        fprintf(f, "\n  rawu ");   // a simple unit's bytes (layout.json "EEUnit")
+        for (size_t b = 0; b < sizeof(EEUnit); b++)
+            fprintf(f, "%02x", reinterpret_cast<const unsigned char*>(u)[b]);
+        fprintf(f, "\n");
+    }
+    fclose(f);
+}
+
+std::vector<std::pair<long, std::string>> sDumps;   // --dump-at MS=FILE, in game-ms order
+size_t sNextDump = 0;
+std::string sDumpLoad;                               // --dump-load FILE
+
 // the physics thread, after each communications tick, under the world's write lock
+// --save-at: the saves' names in data\Saved Games (the game's folder; copied out at the end of the run)
+std::string SaveName(size_t inIndex)
+{
+    return "EE-SIM save " + std::to_string(inIndex);
+}
+
+std::string SavePath(const std::string& inName)
+{
+    return std::string("data\\Saved Games\\") + inName + (const char*)gSavedGameExtension;
+}
+
+size_t sNextSave = 0;
+
+// the save requests of --save-at, as EEPhysics::AutoSave sends one (but quiet and not an autosave: no autosave is
+// trimmed, the preferences are not written). It runs at the start of the next communications tick that carries it
+// (EEPhysics::Tick: DrainInput executes it, ServeLoadSaveRequests saves), between two communications ticks: the
+// loaded game goes on from there.
+void RequestSaves(long inTime)
+{
+    while (sNextSave < sOptions.mSaves.size() && inTime >= sOptions.mSaves[sNextSave].first) {
+        std::string theName = SaveName(sNextSave) + (const char*)gSavedGameExtension;
+        NEMessage* theSave = new EEMLoadOrSaveGame(UWideString(theName.c_str()), TMGetTime(), 0, true,
+                                                   gCommunications->GetNumberOfCTsProcessedInPhysics(), 0);
+        static_cast<NESynchronousServer*>(gCommunications)->SendToAllAndWait(theSave, 15000, 12);
+        theSave->Dereference();
+        Note("SAVE %zu requested at game ms %ld PT %lu", sNextSave, inTime, gPhysics->mNumTicksDone);
+        sNextSave++;
+    }
+}
+
+bool CopyAFile(const std::string& inFrom, const std::string& inTo)
+{
+    FILE* a = fopen(inFrom.c_str(), "rb");
+    if (!a)
+        return false;
+    FILE* b = fopen(inTo.c_str(), "wb");
+    if (!b) {
+        fclose(a);
+        return false;
+    }
+    char theBuffer[65536];
+    size_t n;
+    bool theOK = true;
+    while ((n = fread(theBuffer, 1, sizeof(theBuffer), a)) > 0)
+        theOK = theOK && fwrite(theBuffer, 1, n, b) == n;
+    fclose(a);
+    return fclose(b) == 0 && theOK;
+}
+
 void AfterTick()
 {
     ChecksumLine();
     long theTime = gPhysics->mGameTime;
+    RequestSaves(theTime);
+    while (sNextDump < sDumps.size() && theTime >= sDumps[sNextDump].first)
+        DumpState(sDumps[sNextDump++].second);
     unsigned long theCount = gWorld.GetNumPlayers();
     if (sResults.size() < theCount)
         sResults.resize(theCount, 0);
@@ -866,6 +1004,86 @@ void Fail(const std::string& inError)
     Quit(2);
 }
 
+// ------------------------------------------------------------------------------------------------ the load
+
+// the control of the form on top whose trigger event is a T (-1: none)
+template <class T> long ControlWithEvent(unsigned long inForm)
+{
+    UILock theLock;
+    UIForm* theForm = gUIManager->GetCurrentForm();
+    if (!theForm || theForm->GetFormID() != inForm)
+        return -1;
+    for (unsigned long k = 0; k < theForm->GetControlCount(); k++) {
+        UIControl* theControl = theForm->GetControl(k);
+        if (theControl && dynamic_cast<T*>(theControl->GetTriggerEvent(kTriggerEvent)) != NULL)
+            return (long)k;
+    }
+    return -1;
+}
+
+const unsigned long kFormLoad = 13;
+const char* kLoadName = "EE-SIM load";
+
+// the load screen's file list (NULL: not on top)
+UILBString* LoadList()
+{
+    UIForm* theForm = gUIManager->GetCurrentForm();
+    if (!theForm || theForm->GetFormID() != kFormLoad || (unsigned long)kSPLoadGameFileListBox >= theForm->GetControlCount())
+        return NULL;
+    return dynamic_cast<UILBString*>(theForm->GetControl(kSPLoadGameFileListBox));
+}
+
+// the line of kLoadName in the load screen's file list (-1: not listed) and the list's selection
+long LoadLine(unsigned long& outSelection)
+{
+    UILock theLock;
+    outSelection = 0xffffffffUL;
+    UILBString* theList = LoadList();
+    if (!theList)
+        return -1;
+    theList->GetCurrentSelection(outSelection);
+    for (unsigned long k = 0; k < theList->GetLineCount(); k++) {
+        const char* theText = (const char*)theList->GetData(k);
+        if (theText && !strcmp(theText, kLoadName))
+            return (long)k;
+    }
+    return -1;
+}
+
+// --load-save: the file staged as data\Saved Games\EE-SIM load.ees, then the single-player form's Load Game, the file
+// selected in the load screen's list (UIListBox::ChangeSelectionIndex, as the screen's own keys do), Load
+// (EEUIESPLELoadFile: the file validated, EEMStartLoading of a saved game)
+void LoadFromMenu()
+{
+    std::string theStaged = SavePath(kLoadName);
+    remove(theStaged.c_str());
+    if (!CopyAFile(sOptions.mLoadSave, theStaged))
+        Fail("--load-save: cannot copy " + sOptions.mLoadSave + " to " + theStaged);
+    long theButton = ControlWithEvent<EEUIESPELoadGame>(kFormSingle);
+    if (theButton < 0)
+        Fail("--load-save: no Load Game button on the single-player form");
+    Click(kFormSingle, (unsigned long)theButton);
+    WaitForm(kFormLoad);
+    unsigned long theSelection = 0;
+    WaitFor("the load screen to list the file", 60, [&] { return LoadLine(theSelection) >= 0; });
+    long theLine = LoadLine(theSelection);
+    {
+        UILock theLock;
+        UILBString* theList = LoadList();
+        if (!theList)
+            Fail("--load-save: the load screen went away");
+        theList->ChangeSelectionIndex((unsigned long)theLine, true, false);
+    }
+    WaitFor("the load selection to stick", 20,
+            [&] { return LoadLine(theSelection) == theLine && theSelection == (unsigned long)theLine; });
+    SimSleep(200);
+    long theLoad = ControlWithEvent<EEUIESPLELoadFile>(kFormLoad);
+    if (theLoad < 0)
+        Fail("--load-save: no Load button on the load screen");
+    Note("UI load %s", sOptions.mLoadSave.c_str());
+    Click(kFormLoad, (unsigned long)theLoad);
+}
+
 // ------------------------------------------------------------------------------------------------ the driver
 
 void Drive()
@@ -881,23 +1099,47 @@ void Drive()
                 theText += (theText.empty() ? "" : "; ") + p;
             Fail("--set did not apply: " + theText);
         }
+        for (size_t k = 0; k < sOptions.mSaves.size(); k++)
+            remove(SavePath(SaveName(k)).c_str());   // a stage is reused: no file of an earlier run
         WaitForm(kFormMain, 300);
         Note("UI main menu");
         Click(kFormMain, 0);
         WaitForm(kFormSingle);
-        Click(kFormSingle, 1);
-        WaitForm(kFormLobbyID);
-        Note("UI lobby");
-        SetUpLobby();
-        Click(kFormLobbyID, 10);
-        Note("UI start");
+        bool theLoaded = !sOptions.mLoadSave.empty();
+        if (theLoaded)
+            LoadFromMenu();
+        else {
+            Click(kFormSingle, 1);
+            WaitForm(kFormLobbyID);
+            Note("UI lobby");
+            SetUpLobby();
+            Click(kFormLobbyID, 10);
+            Note("UI start");
+        }
         long theExpected = sOptions.mComputers + 2;
         WaitFor("the game", 600, [&] {
             return TopForm() == kFormGame && gPhysics != NULL && gPhysics->mTimerRunning &&
-                   (long)gWorld.GetNumPlayers() == theExpected && gWorld.GetMap() != NULL;
+                   (theLoaded ? gWorld.GetNumPlayers() > 1 : (long)gWorld.GetNumPlayers() == theExpected) &&
+                   gWorld.GetMap() != NULL;
         });
         SimSleep(500);
-        {
+        if (theLoaded) {
+            // the saved players carry their flags (the harness's loaded game: no civilization pre-empt)
+            gWorld.mLock->WriteLock();
+            sResults.assign(gWorld.GetNumPlayers(), 0);
+            for (unsigned long i = 1; i < gWorld.GetNumPlayers(); i++)
+                if (gWorld.GetPlayer(i) != NULL)
+                    sResults[i] = gWorld.GetPlayer(i)->mGameResult;
+            Note("LOADED %s: game ms %ld PT %lu", sOptions.mLoadSave.c_str(), gPhysics->mGameTime,
+                 gPhysics->mNumTicksDone);
+            if (sChecksumFile) {   // the loaded state (not a "CT" line: the comparisons skip it)
+                fprintf(sChecksumFile, "LOADED ");
+                ChecksumFields(sChecksumFile);
+            }
+            if (!sDumpLoad.empty())
+                EEAfterLoad([] { DumpState(sDumpLoad); });   // at the first tick, after the load's own fix-ups
+            gWorld.mLock->WriteUnlock();
+        } else {
             // the idle human as the harness's civilization pre-empt leaves it (ai_game.py: the civilization builder
             // opened and cancelled): the civilization timer sends its messages but opens no form, and the computers'
             // civilizations are not locked at its expiry
@@ -944,6 +1186,15 @@ void Drive()
              theLast ? theLast->mGameMs / 1000 : 0L, theUnits.c_str(), theGame,
              theLast && theGame > 0 ? theLast->mGameMs / 1000.0 / theGame : 0.0);
     }
+    for (size_t k = 0; k < sOptions.mSaves.size(); k++) {
+        if (k >= sNextSave)
+            Note("SAVE %zu (game ms %ld) not requested: the run ended before", k, sOptions.mSaves[k].first);
+        else if (!CopyAFile(SavePath(SaveName(k)), sOptions.mSaves[k].second)) {
+            Note("SAVE %zu: %s not written or not copied to %s", k, SavePath(SaveName(k)).c_str(),
+                 sOptions.mSaves[k].second.c_str());
+            theCode = theCode ? theCode : 5;
+        }
+    }
     WriteReport(theCode, theError);
     Quit(theCode);
 }
@@ -976,6 +1227,11 @@ const char* kUsage =
     "  --checksum-trace FILE  one line of state hashes per communications tick (tick, random seed, out-of-synch\n"
     "                         checksum, units, AI); reading them changes nothing (tools/sim_oracle.py ticks)\n"
     "  --autosave-ms N        the game's autosave period in PT time (default 0: none; the game and the harness: 600000)\n"
+    "  --save-at MS=FILE      save the game at the first communications tick at or after game ms MS (repeatable); the\n"
+    "                         file is copied to FILE at the end of the run\n"
+    "  --load-save FILE       load this saved game (the game's Load Game screen) instead of starting from the lobby\n"
+    "  --dump-at MS=FILE      write the units' and players' state at the first tick at or after game ms MS (repeatable)\n"
+    "  --dump-load FILE       with --load-save: the same of the loaded state (at its first tick, before it runs)\n"
     "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: a free pair from 35334 up)\n"
     "  --quiet                no progress on stderr\n";
 
@@ -1171,6 +1427,26 @@ int EESimMain(int argc, char** argv)
             sOptions.mPortOffset = atol(value().c_str());
         else if (a == "--autosave-ms")
             sOptions.mAutoSaveMs = atol(value().c_str());
+        else if (a == "--save-at") {
+            std::string v = value();
+            size_t eq = v.find('=');
+            if (eq == std::string::npos || eq == 0 || eq + 1 == v.size()) {
+                fprintf(stderr, "EE-SIM: --save-at MS=FILE\n");
+                return 64;
+            }
+            sOptions.mSaves.push_back({atol(v.substr(0, eq).c_str()), Absolute(v.substr(eq + 1))});
+        } else if (a == "--load-save")
+            sOptions.mLoadSave = Absolute(value());
+        else if (a == "--dump-at") {
+            std::string v = value();
+            size_t eq = v.find('=');
+            if (eq == std::string::npos) {
+                fprintf(stderr, "EE-SIM: --dump-at MS=FILE\n");
+                return 64;
+            }
+            sDumps.push_back({atol(v.substr(0, eq).c_str()), Absolute(v.substr(eq + 1))});
+        } else if (a == "--dump-load")
+            sDumpLoad = Absolute(value());
         else {
             fprintf(stderr, "EE-SIM: unknown option %s (--help)\n", a.c_str());
             return 64;
@@ -1207,8 +1483,12 @@ int EESimMain(int argc, char** argv)
             return 66;
         }
     }
+    std::stable_sort(sOptions.mSaves.begin(), sOptions.mSaves.end(),
+                     [](const std::pair<long, std::string>& a, const std::pair<long, std::string>& b) {
+                         return a.first < b.first;
+                     });
     gPlatSimMode = 1;
-    gPlatSimSeedSet = 1;
+    gPlatSimSeedSet = sOptions.mLoadSave.empty() ? 1 : 0;   // a loaded game: the file's seed, as the game loads it
     gPlatSimSeed = (uint32_t)sOptions.mSeed;
     gPlatSimNoHumanDefeat = sOptions.mNoHumanDefeat ? 1 : 0;
     gPlatSimPortOffset = sOptions.mPortOffset >= 0 ? (int)sOptions.mPortOffset : (int)FreePortOffset();

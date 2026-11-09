@@ -85,6 +85,8 @@
 #include "ee/EEMap.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EECPTrace.h"
+#include "ee/EESaveGameFiles.h"
+#include <functional>
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 UString gPhysicsDataKey("EEPhysics Data");
@@ -477,6 +479,20 @@ void EEPhysics::Init()
     this->SetSpeed(this->mSpeed);
 }
 
+// port: the random seed a saved game was saved with, put back at the loaded game's first tick. The physics chunk is
+// read before the load has finished: rebuilding the players draws from the physics random numbers afterwards (the
+// computer players' favourite unit types as their epochs are entered again, herds, patrol points, the lobby's
+// player records), so the loaded game played on from another seed than the game that was saved (R5a.2, "load
+// equals continue"). Not saved state: a load sets it, the first tick spends it.
+static unsigned long sLoadedSeed = 0;
+static bool sLoadedSeedPending = false;
+static std::vector<std::function<void()> > sAfterLoad;   // EEAfterLoad's (ee/EESaveGameFiles.h)
+
+void EEAfterLoad(std::function<void()> inFixup)
+{
+    sAfterLoad.push_back(inFixup);
+}
+
 // FUNCTION: EXE 0x552a4d
 // Reads the physics clocks, tick counters, timing averages and civ timer state from a saved game (the game-over
 // flag after version 0.0xce, the resource timer from 0xfa); returns the first read error
@@ -498,7 +514,7 @@ long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
                             theResult = inFile.Read(this->mTimeOfDayStep);
                             if (theResult == kErrorOK) {
                                 theResult = inFile.Read(this->mTickTime);
-                                this->mTickTimeMs = (long)this->mTickTime;
+                                this->mTickTimeMs = UMFloatToLong(this->mTickTime);   // port: as UpdateTiming rounds it (the cast truncated)
                                 if (theResult == kErrorOK) {
                                     theResult = inFile.Read(this->mTickStartTime);
                                     if (theResult == kErrorOK) {
@@ -571,7 +587,7 @@ long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
                             theResult = inFile.Read(this->mTimeOfDayStep);
                             if (theResult == kErrorOK) {
                                 theResult = inFile.Read(this->mTickTime);
-                                this->mTickTimeMs = (long)this->mTickTime;
+                                this->mTickTimeMs = UMFloatToLong(this->mTickTime);   // port: as UpdateTiming rounds it (the cast truncated)
                                 if (theResult == kErrorOK) {
                                     theResult = inFile.Read(this->mTickStartTime);
                                     if (theResult == kErrorOK) {
@@ -634,6 +650,10 @@ long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
             if (inMinorVersion >= 0xfa && theResult == kErrorOK)
                 theResult = inFile.Read(this->mResourceTimerPending);
         }
+    }
+    if (theResult == kErrorOK) {   // port: the loaded seed comes back at the first tick (sLoadedSeed)
+        sLoadedSeed = this->mRandom.GetSeed();
+        sLoadedSeedPending = true;
     }
     return theResult;
 }
@@ -712,6 +732,16 @@ void EEPhysics::Idle()
 // NEAR: GetLongValue(0x5e) out of line and signed in the original (fild dword); TMGetTime hoisted into ebx
 void EEPhysics::Tick()
 {
+    if (sLoadedSeedPending) {   // port: a loaded game goes on from the saved seed (sLoadedSeed)
+        sLoadedSeedPending = false;
+        this->mRandom.SetSeed(sLoadedSeed);
+    }
+    if (!sAfterLoad.empty()) {   // port: the loaded values the load's rebuilding set again (EEAfterLoad)
+        std::vector<std::function<void()> > theFixups;
+        theFixups.swap(sAfterLoad);
+        for (size_t i = 0; i < theFixups.size(); i++)
+            theFixups[i]();
+    }
     this->ReportStatistics();
     if (this->mTicksToProcess == 0) {
         this->DrainInput();

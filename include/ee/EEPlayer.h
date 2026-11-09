@@ -746,6 +746,7 @@ public:
     virtual void RemovalsDone();            // +0x34 0x16854e (same RTSPlayer slot)
     virtual long Load(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& inFile);   // +0x18 0x165cfa
     virtual long RepairPointers(unsigned long inFirst, unsigned long inSecond);   // +0x20 0x1690ca
+    bool AdoptTownPatrol(EETown* inTown);   // port: a loaded town takes back its saved patrol group (0.253 saves)
     virtual long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // +0x24 0x169c46
     virtual void AddPendingUnits(bool inKeepID, bool inReleasePending);  // +0x04 0x16275a (mPendingGroups into mRunningGroups, then RTSPlayer's)
     virtual void RecountPopulation();       // +0x08 0x16379e (counts the units into mPopulationCount/mEndOfGameCount/mNumVitalBuildings)

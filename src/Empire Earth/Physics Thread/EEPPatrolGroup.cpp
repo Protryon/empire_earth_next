@@ -24,6 +24,7 @@
 #include "ee/EEUnit.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EEPPatrolGroup.h"
+#include "ee/EESaveGameFiles.h"
 
 static unsigned long sPatrolGroupID = 0;    // 0x531d8c
 
@@ -210,6 +211,15 @@ long EEPPatrolGroup::Load(unsigned long inMajorVersion, unsigned long inMinorVer
             }
             if (theResult == kErrorOK)
                 theResult = inFile->Read(this->mIsLoop);
+            // port (0.253): the town patrol flag (town patrols are saved from then on) and the id counter as saved
+            if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+                theResult = inFile->Read(this->mIsTownPatrol);
+                unsigned long theNextID = 0;
+                if (theResult == kErrorOK)
+                    theResult = inFile->Read(theNextID);
+                if (theResult == kErrorOK && theNextID > sPatrolGroupID)
+                    sPatrolGroupID = theNextID;
+            }
         }
     }
     return theResult;
@@ -245,7 +255,8 @@ long EEPPatrolGroup::RepairPointers(unsigned long inMajorVersion, unsigned long 
         long theID = theIDs[j];
         theUnit = dynamic_cast<EEComplexUnit*>(::gWorld.GetUnit(theID));
         if (theUnit != NULL) {
-            if (theUnit->GetPatrolGroup() != NULL && theUnit->GetPatrolGroup() != this)
+            // port: a point without a group is this group's too (path points are saved from 0.253 on)
+            if (theUnit->GetPatrolGroup() != this)
                 theUnit->SetPatrolGroup(this);
             this->mPatrolPoints.push_back(theUnit);
         } else {
@@ -282,6 +293,12 @@ long EEPPatrolGroup::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     }
     if (theResult == 0)
         theResult = inFile->Write(this->mIsLoop);
+    // port (0.253): the town patrol flag and the id counter (Load)
+    if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+        theResult = inFile->Write(this->mIsTownPatrol);
+        if (theResult == 0)
+            theResult = inFile->Write(sPatrolGroupID);
+    }
     return theResult;
 }
 

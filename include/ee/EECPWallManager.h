@@ -51,6 +51,7 @@ public:
     void Clear();                           // 0x9d371
     void ClearRequest();                    // 0x9d3f2
     void StartNextWall();                   // 0x9d6cc
+    void RequestPath();                     // port: a loaded plan's path asked for again (Update)
     EEComplexUnit* GetCenter(EEPlayer* inPlayer);   // 0x9d815 (ret 4; the player's town center, else its first unit)
     bool FindGate(std::vector<U2DPoint<long> >& inTiles, long& outSide, long& outIndex);   // 0x9d851 (ret 0xc)
     bool PlanWall();                        // 0x9d9e9
