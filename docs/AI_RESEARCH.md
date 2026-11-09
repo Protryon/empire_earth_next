@@ -1682,11 +1682,38 @@ balanced) issues orders that come back `done`. Every trace is identical to the o
 boom and 16 rush games), so the epoch pace is the same. The classic engine's traces are unchanged (seeds 2-5,
 1800 s, `ai_trace.py compare`: 1842, 1822, 1746 and 1807 lines identical).
 
-Open: the **number** of towers, not their class, falls behind the plan. Boom has about 4.4 in the Stone Age (plan 7)
+Open then: the **number** of towers, not their class, fell behind the plan. Boom has about 4.4 in the Stone Age (plan 7)
 and 5.5 in the Copper Age (plan 10). Over the 16 boom games, `build near=site` got `no_site` for 76 Copper towers
 (13 queued) and 26 Bronze towers (none queued). Paleo towers: 49 `no_site`, 87 queued. The newer towers find no room
 in the rings round the worked sites. Also open: whether the computer should get the upgrades free (a human pays and
 waits 45 s at the town centre). Without the free research, the scripts already research the upgrades.
+
+**Tower placement.** A TEMP diagnostic of every failed ring search (seed 28, boom) showed why the later towers found
+no room. By the Copper Age the only kept sites still unguarded were far or contested mines, 40-47 tiles from the
+town. In their rings 2..7, 150-210 of the 216 tiles failed the block test. The first failing tile was out of sight
+(`EECanPlaceUnitOnTile` places only on tiles visible now), under trees or the mine, or had another player's unit on
+it. The rest failed `HasEnemyNear`. Boom then cycled over those 2-3 sites (each passed over for 5 minutes) and built
+at the town only below 3 towers. The rush's `near=town` towers (the classic FindTowerSite) were refused 735 times:
+FindTowerSite finds nothing once the gold, iron and worked food centres nearest the town are guarded.
+
+The fix: `EECPNextBuild` sends a tower with no room at its site to the town (FindTowerSite, then the rings 3..12
+round the town centre, at least the tower's range from the player's other towers; only tiles in sight, as before).
+A `near=town` tower that FindTowerSite cannot place takes the same rings. Boom builds at the town whenever no kept
+site is left unguarded (it stopped at 3). Same bench (16 games each, all runs started):
+
+| Matchup | Stone | Copper | Bronze | tower no_site | Stone / Copper / Bronze (median min, games) | citizens lost / game (script, classic) |
+|---|---|---|---|---|---|---|
+| boom vs classic, before | 4.4 | 5.5 | 6.6 | 154 | 24 / 54 (13) / 90 (5) | 104, 49 |
+| boom vs classic, after | 4.9 | **6.7** | **9.1** | 23 | 24 / 54 (15) / 86.5 (8) | 119, 68 |
+| rush vs classic, before | 1.7 | 3.8 | 6 | 739 | 30 / 65.5 (8) / 116 (1) | 77, 39 |
+| rush vs classic, after | 2.2 | 4.7 | 4.5 | 2 | 30 / 65 (7) / 110.5 (2) | 79, 31 |
+
+(Towers: finished ones at each epoch's last minute, the mean over the games that reached the epoch.) The epoch pace
+is unchanged; more boom games reach Copper (15 vs 13) and Bronze (8 vs 5). Citizens lost do not fall. Boom loses
+more because more of its games run long into the later epochs, and the classic loses more too. Losses are the
+citizen-defence work's concern. The boom's Stone Age is still below its plan of 7: there it is the stone, not the
+room. Classic traces unchanged (seeds 2-5, 1800 s: 1842, 1822, 1746, 1807 lines identical). A boom game run twice
+gives identical traces (9376 lines).
 
 ### 8.9 Next
 

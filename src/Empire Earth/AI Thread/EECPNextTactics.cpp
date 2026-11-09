@@ -175,6 +175,29 @@ static bool EECPNextRingSite(EEComputerPlayer* inPlayer, long inType, long inX, 
     return false;
 }
 
+// a tower's tile in the rings inFirst..inLast round a tile, none of the player's towers within its range of it (the
+// rings' order: deterministic; CanBuildAt: only tiles in sight, no armed enemy near)
+static bool EECPNextTowerRingSite(EEComputerPlayer* inPlayer, long inType, long inX, long inY, long inFirst, long inLast,
+    EETileCoordinate& outTile)
+{
+    EECPBuildManager* theBuild = inPlayer->mCivilizationManager->mBuildManager;
+    EEUnitClass* theClass = gUnitClassTable[inType];
+    unsigned short theContinent = gContinentManager.GetContinent(U2DPoint<long>(inX, inY), kAIPathLandMass);
+    float theSpacing = inPlayer->mUnitClassUpgrades[inType]->mRange;
+    std::vector<EETileCoordinate> theTiles;
+    for (long theRing = inFirst; theRing <= inLast; theRing++) {
+        theTiles.clear();
+        EEGetSquareRingTiles(inX, inY, theRing, theTiles);
+        for (unsigned long k = 0; k < theTiles.size(); k++)
+            if (!theBuild->HasTowerNear(theTiles[k].mX, theTiles[k].mY, theSpacing * theSpacing)
+                && theBuild->CanBuildAt(theContinent, inType, theTiles[k], theClass->GetTileSize(), true, true, inX, inY)) {
+                outTile = theTiles[k];
+                return true;
+            }
+    }
+    return false;
+}
+
 // ---------------------------------------------------------------------------------------------------------------
 // Gathering and claims (EECPResourceManager: AssignGatherers, RebalanceGatherers, the finders and SendToGather carry
 // them out; UpdateWantedGatherers, EECPRMSplitByDemand, EECPRMActivateNeeded, SettlePatches and GuardSites never run)
@@ -281,12 +304,30 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
                 theFound = theDX * theDX + theDY * theDY <= (kEECPPatchDropRange + 6) * (kEECPPatchDropRange + 6);
             }
         }
+        // a tower with no room round its site (the rings' tiles not in sight, under trees or the mine, or an armed
+        // enemy near: a far or contested mine) goes to the town instead (below), rather than being refused for as
+        // long as that site stays unguarded
+        if (!theFound && gUnitClassTable[inType]->mIsTower)
+            theNearName = "site>town";
     } else {
         theNearName = "tile";
         if (gWorld.mMap == NULL || inArg1 < 0 || inArg2 < 0 || gWorld.mMap->GetTile((unsigned long)inArg1, (unsigned long)inArg2) == NULL)
             return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonBadArgument, 0, "cls=%ld near=tile arg=%ld/%ld",
                 inType, inArg1, inArg2);
         theFound = EECPNextRingSite(inPlayer, inType, inArg1, inArg2, 0, 6, theTile);
+    }
+    // a tower at the town: the classic placement (FindTowerSite: the gold, iron and worked food centres, gates, choke
+    // points), else the rings 3..12 round the town centre away from the other towers (FindTowerSite finds nothing once
+    // those centres are guarded or out of sight)
+    if (!theFound && gUnitClassTable[inType]->mIsTower && inNear != kNextNearTile) {
+        if (inNear == kNextNearSite)
+            theFound = theBuild->FindSite(inType, theTile);
+        if (!theFound) {
+            long theHalf = gUnitClassTable[kUnitTypeTownCenter] != NULL ? gUnitClassTable[kUnitTypeTownCenter]->GetTileSize() / 2 : 0;
+            theFound = EECPNextTowerRingSite(inPlayer, inType, theBuild->mTownCenterTile.mX + theHalf,
+                theBuild->mTownCenterTile.mY + theHalf, 3, 12, theTile);
+            theNearName = inNear == kNextNearSite ? "site>ring" : "town>ring";
+        }
     }
     if (!theFound || (theTile.mX == 0 && theTile.mY == 0))
         return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonNoSite, 0, "cls=%ld near=%s arg=%ld/%ld", inType,
