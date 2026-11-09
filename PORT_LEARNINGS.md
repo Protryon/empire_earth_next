@@ -1751,3 +1751,29 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **A data tree being rebuilt under EE-SIM** (another session's `open_data.py build`) fails the runs that stage it
   then (`EETerrainColorTable` verification failure at start-up, rc 0x80000003). For a long bench, hard-link a copy
   (`cp -al build/open_data/tree build/tw/tree`, seconds) and pass it with `--data`.
+
+## The next computer player's citizens' losses (2026-11-08, docs/AI_RESEARCH.md §8.33)
+
+- **Measure the deaths, not the guesses.** The suspects were remote raids, far hunting and slow defenders. A
+  `next.death` line per citizen lost (killer, place, what it was doing at its first hit, foes and own soldiers near)
+  showed the real causes in one bench: armies in the town, the militia fighting them, and no army. Animals and remote
+  sites were minor.
+- **The militia's odds count a tower's hit points as the citizens'.** The odds are (sum of hit points) x (sum of
+  attack), so a tower's 1000-1450 hit points multiply the citizens' attack: 12 citizens and a tower against 8 rock
+  throwers came out at 7.9 to 1. Yet running was worse: citizens run no faster than spearmen or horsemen, and the
+  militia's 4-second re-decisions plus the 10-second gatherer pass sent 25-29 citizens back and forth through the
+  attack.
+- **"Reserve less what the soldiers cost" does not let them be made when the stock is below the reserve.**
+  CanAfford asks stock - cost >= reserve, so a reserve of 1344 food against a stock of 743 blocked every soldier
+  whatever was subtracted. The reserve has to be capped at stock - cost.
+- **`EEUnit::GetGoal()` is `mGoalState`, not the goal the unit is carrying out.** A check of "is this enemy
+  attacking my unit" through `dynamic_cast<EEUGAttackUnit*>(GetGoal())` never fired. `mActiveGoal` with
+  `mKind == kGoalAttackUnit` does (the militia's own test).
+- **The trace's `losses` line lacks braces** (EECPTrace.cpp EECPTraceUnitLost: an `if` without braces before
+  several statements). `citizens_by_distance` and `citizens_by_killer` count every unit lost, projectiles included,
+  and the `else` binds to the town-centre test. It is left as it is, because fixing it changes the classic traces;
+  `next.death` is the reliable count.
+- **EE-SIM game-to-game variance is large**: 1 to 224 citizens lost in 16 games of one setting. A 16-game bench
+  resolves differences of about 15 losses a game. One change looked 14 worse on 16 games and was neutral on 32.
+- **A fishing boat sees 4 tiles; a frigate shoots from 5.** A boat that flees "on sight" is already under fire. The
+  docks and towers see further, which is what the fish finder's warship check uses.

@@ -857,6 +857,24 @@ army, numbers from a plan table); `ai/rush.lua`; `ai/balanced.lua`. Mapping for 
 
 **Results:** docs/AI_RESEARCH.md §8.31 (the matrix).
 
+*The citizens' losses* (2026-11-08, AI_RESEARCH §8.33).
+- **The reflexes run for the next engine** (they hang off EEComputerPlayer::DamageTaken: militia, flee, naval flee).
+  The next engine's group soldiers are detached, so the militia neither counts nor orders them.
+- **The fish finder** (FindFish, next engine only) skips fish within 12 tiles of an armed enemy ship the player sees
+  now (`EECPNextSeenWarships`, read from the world at the call). No verb or view field changed.
+- **The trace:** `next.death` (every citizen and boat lost) and `next.raid` (every incident of hits). Both are written
+  only while the trace is on, and the game reads neither.
+- **boom.lua:**
+  - the reserve never locks out the missing light army;
+  - the town scrambles under a threat while its army is below the light army;
+  - the advance's resources that are 70% paid, or have no site left, are never spent by the army;
+  - no boats are replaced while 3 or more were sunk in the last 5 minutes.
+
+  Its plan follows the owner's build order: no Prehistoric soldiers, all the food to citizens, 20 spearmen at the
+  Stone Age's start, then the citizens (§8.33 has its numbers).
+- **Tried and dropped:** a militia that runs from armies, honest militia odds, and a defend group that answers
+  attackers of the player's units first.
+
 **S5, later epochs.**
 - **Coverage:** Copper to Bronze (farms, the phalanx swarm), then the Middle Ages and on.
 - **New verbs** in the tactics as the scripts need them: siege, navy, air.
