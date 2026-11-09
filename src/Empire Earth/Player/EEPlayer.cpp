@@ -45,6 +45,7 @@
 #include "lle/UResourceFile.h"
 #include "ee/EEAIArea.h"
 #include "ee/EETown.h"
+#include "ee/EESaveGameFiles.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEDatabaseTables.h"
@@ -3153,6 +3154,36 @@ long EEPlayer::FinishUnitsLoad(long inMajorVersion, long inMinorVersion)
     return 0;
 }
 
+// port: a town rebuilt by a load of a 0.253 save takes back its saved patrol group, the town patrol with a point on
+// one of the town's hull vertices, as it was (the original made the points again from the hull: other units, other
+// ids; FindPatrolGroup cannot find the saved one yet, its points are not on their tiles before the load ends);
+// returns whether one was found
+bool EEPlayer::AdoptTownPatrol(EETown* inTown)
+{
+    for (unsigned long g = 0; g < this->mPatrolGroups.size(); g++) {
+        EEPPatrolGroup* theGroup = this->mPatrolGroups[g];
+        if (theGroup == NULL || !theGroup->mIsTownPatrol)
+            continue;
+        bool theTaken = false;
+        for (unsigned long t = 0; t < this->mTowns.size() && !theTaken; t++)
+            theTaken = this->mTowns[t] != NULL && this->mTowns[t]->mPatrolGroup == theGroup;
+        if (theTaken)
+            continue;
+        for (unsigned long i = 0; i < theGroup->mPatrolPoints.size(); i++) {
+            EEComplexUnit* thePoint = theGroup->mPatrolPoints[i];
+            for (unsigned long v = 0; v < inTown->mHull.GetPointCount(); v++) {
+                if (thePoint->GetTileX() == inTown->mHull.GetPoint(v)->GetX()
+                    && thePoint->GetTileY() == inTown->mHull.GetPoint(v)->GetY()) {
+                    inTown->mPatrolGroup = theGroup;
+                    theGroup->Reference();
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 // FUNCTION: EXE 0x5690ca
 // Relinks the player after a load: towns, construction sites, wonders, groups, herds, events, queued improvements
 // and off-map units are rebuilt from saved IDs; returns the status of the last step
@@ -3222,7 +3253,8 @@ long EEPlayer::RepairPointers(unsigned long inFirst, unsigned long inSecond)
         this->GetTechTree()->Get(kTechTownCenter)->mIsAllowed = false;
     }
     for (long theTown = this->mTowns.size() - 1; theTown >= 0; theTown--)
-        if (this->mTowns[theTown] != NULL && this->mTowns[theTown]->mPatrolGroup == NULL)
+        if (this->mTowns[theTown] != NULL && this->mTowns[theTown]->mPatrolGroup == NULL
+            && !(EESaveHasLiveState(inFirst, inSecond) && this->AdoptTownPatrol(this->mTowns[theTown])))
             this->mTowns[theTown]->RefreshPatrolGroup();
     if (inFirst == 0 && inSecond < 0xd7) {
         for (EEUnit* theUnit = this->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
@@ -3455,7 +3487,18 @@ long EEPlayer::Save(unsigned long inMajorVersion, unsigned long inMinorVersion, 
                 for (unsigned long r = 0; r < theCount && theResult == kErrorOK; r++)
                     theResult = outFile.Write(this->mResourceCaps[r]);
             }
-            if (theResult == kErrorOK) {
+            if (theResult == kErrorOK && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+                // port (0.253): every patrol group, the towns' too, in their order (the original left the towns'
+                // out, rebuilt them at load with new path points, and wrote the others backwards)
+                theCount = 0;
+                for (unsigned long p = 0; p < this->mPatrolGroups.size(); p++)
+                    if (this->mPatrolGroups[p] != NULL)
+                        theCount++;
+                theResult = outFile.Write(theCount);
+                for (unsigned long p = 0; p < this->mPatrolGroups.size() && theResult == kErrorOK; p++)
+                    if (this->mPatrolGroups[p] != NULL)
+                        theResult = this->mPatrolGroups[p]->Save(inMajorVersion, inMinorVersion, &outFile);
+            } else if (theResult == kErrorOK) {
                 theCount = 0;
                 long p;
                 for (p = this->mPatrolGroups.size() - 1; p >= 0; p--)
@@ -3613,7 +3656,9 @@ long EEPlayer::SaveUnit(RTSUnit* inUnit, unsigned long inMajorVersion, unsigned 
     long theResult = outFile.Write(theType);
     if (theResult != kErrorOK)
         return theResult;
-    theIsUnit = theClass->mUnitType != kUnitTypePathPoint;
+    // port (0.253): path points are saved as units too (the original wrote only their type and made the towns'
+    // patrol points again at load: other units, other ids)
+    theIsUnit = theClass->mUnitType != kUnitTypePathPoint || EESaveHasLiveState(inMajorVersion, inMinorVersion);
     theResult = outFile.Write(theIsUnit);
     if (!theIsUnit)
         return theResult;
