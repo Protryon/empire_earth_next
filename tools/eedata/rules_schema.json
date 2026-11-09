@@ -1,0 +1,1950 @@
+{
+ "comment": [
+  "The rules documents (docs/DATA_FORMATS.md 8.8) as data: the machine-readable schema both languages generate from.",
+  "Hand-edited; tools/eedata/rulesgen.py writes the C++ (include/ee/EERulesGen.h, EERulesGenDecode.inl) and the Rust (ee_data rules_gen.rs); eedata.py check verifies they are current."
+ ],
+ "enums": {
+  "unit_category": {
+   "cpp_table": "kEERuleCategoryNames",
+   "cpp_count": "kEERuleCategoryCount",
+   "names": [
+    "ambient",
+    "resource",
+    "building",
+    "airplane",
+    "naval",
+    "land",
+    "land_citizen",
+    "helicopter",
+    "land8",
+    "projectile",
+    "submerged_naval",
+    "bomb",
+    "missile",
+    "land_priest",
+    "naval_priest",
+    "land15",
+    "land_transport",
+    "helicopter_transport",
+    "naval_transport",
+    "building19",
+    "torpedo",
+    "naval_building",
+    "naval_citizen",
+    "land_military_hero",
+    "mining_building",
+    "gate",
+    "helicopter_priest",
+    "sea_animal",
+    "air_animal",
+    "fortress",
+    "building_priest",
+    "spaceship",
+    "space_building",
+    "space_transport",
+    "planet_spaceship"
+   ],
+   "doc": "unit category names (the data's category ids): kUnitCategory* by value"
+  },
+  "stat": {
+   "cpp_enum": "EECivStat",
+   "cpp_prefix": "kCivStat",
+   "cpp_count": "kCivStatCount",
+   "names": [
+    "attack",
+    "hit_points",
+    "reload_time",
+    "armor",
+    "range",
+    "line_of_sight",
+    "speed",
+    "flight_time",
+    "area_effect",
+    "gather_time",
+    "build_time",
+    "conversion",
+    "repair_rate",
+    "area_effect_scale",
+    "high_ground",
+    "population",
+    "cost",
+    "power"
+   ],
+   "cpp_values": [
+    "Attack",
+    "HitPoints",
+    "ReloadTime",
+    "Armor",
+    "Range",
+    "LineOfSight",
+    "Speed",
+    "FlightTime",
+    "AreaEffect",
+    "GatherTime",
+    "BuildTime",
+    "Conversion",
+    "RepairRate",
+    "AreaEffectScale",
+    "HighGround",
+    "Population",
+    "Cost",
+    "Power"
+   ],
+   "doc": "What a civilization builder attribute raises (EECivilizationManager::ApplyUpgradeLevel). The stat and the mode are\nC++ primitives; the data picks and combines them."
+  },
+  "mode": {
+   "cpp_enum": "EECivMode",
+   "cpp_prefix": "kCivMode",
+   "cpp_count": "kCivModeCount",
+   "names": [
+    "share",
+    "add",
+    "multiply"
+   ],
+   "cpp_values": [
+    "Share",
+    "Add",
+    "Multiply"
+   ],
+   "value_docs": [
+    "the stat's own rule: a share of the class's base value (the original)",
+    "+ the value",
+    "x (1 + the value)"
+   ]
+  },
+  "action": {
+   "cpp_enum": "EECivPowerAction",
+   "cpp_prefix": "kPower",
+   "cpp_count": "kPowerActionCount",
+   "names": [
+    "research_if_researched",
+    "load_sound",
+    "load_effect",
+    "pulse_sight",
+    "set_mining_limit",
+    "enable_camouflage",
+    "allow_tech",
+    "disallow_tech"
+   ],
+   "cpp_values": [
+    "ResearchIfResearched",
+    "LoadSound",
+    "LoadEffect",
+    "PulseSight",
+    "SetMiningLimit",
+    "EnableCamouflage",
+    "AllowTech",
+    "DisallowTech"
+   ],
+   "value_docs": [
+    "research mTech when mIfTech is researched (flaming/crusader upgrades)",
+    "load mSound's media for the player",
+    "load mEffect's media for the player",
+    "a sight pulse of the power's mAmount around every mUnitType",
+    "the player's gatherers per resource: the power's mMiningLimit",
+    "EEPlayer::EnableCamouflagePower",
+    "mTech becomes allowed",
+    "mTech becomes disallowed and obsolete"
+   ],
+   "doc": "What granting a civ power does after researching its technology (EECivPowersManager::ApplyPower). C++ primitives."
+  },
+  "ai_cheat": {
+   "cpp_enum": "EEAICheat",
+   "cpp_prefix": "kAICheat",
+   "bits": true,
+   "cpp_all": "kAICheatAll",
+   "cpp_table": "kEEAICheatNames",
+   "cpp_count": "kEEAICheatCount",
+   "names": [
+    "cost",
+    "reveal",
+    "epochs",
+    "extra",
+    "popband",
+    "catchup",
+    "retire"
+   ],
+   "cpp_values": [
+    "Cost",
+    "Reveal",
+    "Epochs",
+    "Extra",
+    "PopBand",
+    "CatchUp",
+    "Retire"
+   ],
+   "value_docs": [
+    "cost: the difficulty's unit cost modifier (dbcpbehavior rows 67/96; stock 1%)",
+    "reveal: the whole map explored at the start",
+    "epochs: epoch advances are free and always affordable",
+    "extra: computer_player_extra_resources (row 101) gold and iron at the start",
+    "popband: the pop cap pulled toward the largest human population (rows 92/93)",
+    "catchup: the epoch rubber band (pulled forward when behind, held back when ahead of every human)",
+    "retire: obsolete units no human sees are deleted"
+   ],
+   "doc": "The computer players' cheats a difficulty keeps (EEDifficultyRule::mAICheats; gameoptions.yaml `ai_cheats`, a list\nof these names; docs/AI_RESEARCH.md). The original keeps every one at every difficulty; here none is kept by default."
+  }
+ },
+ "structs": [
+  {
+   "name": "EECombatRules",
+   "rust": "CombatRules",
+   "section": "combat.yaml",
+   "methods": [
+    "bool IsElevationAttacker(long inCategory) const;",
+    "bool IsElevationLauncher(long inCategory) const;",
+    "bool IsElevationTarget(long inCategory) const;",
+    "bool IsMoraleBuilding(long inUnitType) const;"
+   ],
+   "fields": [
+    {
+     "cpp": "mMinimumDamage",
+     "type": "int",
+     "default": 1,
+     "dump": "minimum_damage",
+     "doc": "the least damage of a direct or splash hit that gets through"
+    },
+    {
+     "cpp": "mFanaticFactor",
+     "type": "number",
+     "default": {
+      "world": [
+       88,
+       1
+      ]
+     },
+     "dump": "fanatic_factor",
+     "doc": "attack factor of a fanatic attacker (direct hits)"
+    },
+    {
+     "cpp": "mElevationStep",
+     "type": "float",
+     "default": 1.0,
+     "dump": "elevation_step",
+     "doc": "the elevation factor moves damage by at least this much"
+    },
+    {
+     "cpp": "mAllyFactor",
+     "type": "float",
+     "default": 0.0,
+     "dump": "ally_factor",
+     "doc": "a direct hit on an own or allied unit: ceil(damage x this) ..."
+    },
+    {
+     "cpp": "mHerdAllyFactor",
+     "type": "float",
+     "default": 0.1,
+     "dump": "herd_ally_factor",
+     "doc": "... by a herd animal: ceil(damage x this)"
+    },
+    {
+     "cpp": "mDeadFoodShare",
+     "type": "float",
+     "default": 0.25,
+     "dump": "dead_food_share",
+     "doc": "a land food source a non-citizen kills keeps this share of its food"
+    },
+    {
+     "cpp": "mTrampleDamage",
+     "type": "int",
+     "default": 1,
+     "dump": "trample_damage",
+     "doc": "the trample's damage, when hit x (attack - armour) > mTrampleThreshold"
+    },
+    {
+     "cpp": "mTrampleThreshold",
+     "type": "float",
+     "default": 1.0,
+     "dump": "trample_threshold"
+    },
+    {
+     "cpp": "mElevationAttackers",
+     "type": "int_list",
+     "default": [
+      "kUnitCategoryLand",
+      "kUnitCategoryLandCitizen"
+     ],
+     "dump": "elevation_attackers",
+     "doc": "attackers the height difference scales (EEUnitClass::GetElevationFactor: unit categories)"
+    },
+    {
+     "cpp": "mElevationLaunchers",
+     "type": "int_list",
+     "default": [
+      "kUnitCategoryProjectile",
+      "kUnitCategoryBomb",
+      "kUnitCategoryMissile",
+      "kUnitCategoryTorpedo"
+     ],
+     "dump": "elevation_launchers",
+     "doc": "projectiles that count as their launcher's category"
+    },
+    {
+     "cpp": "mElevationTargets",
+     "type": "int_list",
+     "default": [
+      "kUnitCategoryLand",
+      "kUnitCategoryBuilding",
+      "kUnitCategoryLandCitizen",
+      "kUnitCategoryLandPriest",
+      "kUnitCategoryBuilding19",
+      "kUnitCategoryLand15",
+      "kUnitCategoryLandMilitaryHero",
+      "kUnitCategoryLandTransport",
+      "kUnitCategoryFortress",
+      "kUnitCategoryMiningBuilding",
+      "kUnitCategoryBuildingPriest",
+      "kUnitCategoryGate"
+     ],
+     "dump": "elevation_targets",
+     "doc": "targets it applies to"
+    },
+    {
+     "cpp": "mPositiveMorale",
+     "type": "float",
+     "default": 0.8,
+     "dump": "positive_morale",
+     "doc": "positive morale takes this share off a time (EEComplexUnit::ApplyMorale)"
+    },
+    {
+     "cpp": "mNegativeMorale",
+     "type": "float",
+     "default": 0.6,
+     "dump": "negative_morale",
+     "doc": "negative morale adds this share"
+    },
+    {
+     "cpp": "mMoraleBuildings",
+     "type": "int_list",
+     "default": [
+      "kUnitTypeHouse"
+     ],
+     "dump": "morale_buildings",
+     "doc": "the unit types morale from buildings counts (dbobjects rows)"
+    },
+    {
+     "cpp": "mRegenerationInterval",
+     "type": "int",
+     "default": 1000,
+     "dump": "regeneration_interval",
+     "doc": "hit point regeneration and garrison heals (ms)"
+    },
+    {
+     "cpp": "mPowerRegenerationInterval",
+     "type": "int",
+     "default": 5000,
+     "dump": "power_regeneration_interval",
+     "doc": "power regeneration (ms)"
+    }
+   ]
+  },
+  {
+   "name": "EEMapSizeRule",
+   "rust": "MapSizeRule",
+   "section": "gameoptions.yaml",
+   "fields": [
+    {
+     "cpp": "mID",
+     "type": "string",
+     "dump": "id"
+    },
+    {
+     "cpp": "mNameID",
+     "type": "int",
+     "default": 0,
+     "dump": "name",
+     "doc": "the lobby's text (Language.rc string)"
+    },
+    {
+     "cpp": "mTiles",
+     "type": "int",
+     "default": 0,
+     "dump": "tiles",
+     "doc": "width and height in tiles"
+    },
+    {
+     "cpp": "mScriptSize",
+     "type": "int",
+     "default": 0,
+     "dump": "script_size",
+     "doc": "the random map scripts' size class (0 tiny .. 5 gigantic)"
+    }
+   ]
+  },
+  {
+   "name": "EESpeedRule",
+   "rust": "SpeedRule",
+   "fields": [
+    {
+     "cpp": "mID",
+     "type": "string",
+     "dump": "id"
+    },
+    {
+     "cpp": "mNameID",
+     "type": "int",
+     "default": 0,
+     "dump": "name"
+    },
+    {
+     "cpp": "mFactor",
+     "type": "number",
+     "default": {
+      "const": 1.0
+     },
+     "dump": "factor",
+     "doc": "the game speed"
+    }
+   ]
+  },
+  {
+   "name": "EEDifficultyRule",
+   "rust": "DifficultyRule",
+   "fields": [
+    {
+     "cpp": "mID",
+     "type": "string",
+     "dump": "id"
+    },
+    {
+     "cpp": "mNameID",
+     "type": "int",
+     "default": 0,
+     "dump": "name"
+    },
+    {
+     "cpp": "mAILevel",
+     "type": "int",
+     "default": 0,
+     "dump": "ai_level",
+     "doc": "the computer players' level: 0 easy, 1 medium, 2 hard (their records)"
+    },
+    {
+     "cpp": "mScaleHumanTarget",
+     "type": "number",
+     "default": {
+      "const": 1.0
+     },
+     "dump": "damage_scale_human_target",
+     "doc": "the damage table scale when exactly one side is \"human\" (EEPlayer::IsHuman, not player 0; provisional name): the target"
+    },
+    {
+     "cpp": "mScaleHumanAttacker",
+     "type": "number",
+     "default": {
+      "const": 1.0
+     },
+     "dump": "damage_scale_human_attacker",
+     "doc": "... the attacker"
+    },
+    {
+     "cpp": "mAICheats",
+     "type": "int",
+     "default": 0,
+     "dump": "ai_cheats",
+     "doc": "the computer players' cheats (EEAICheat bits); none by default (the original: all)"
+    }
+   ]
+  },
+  {
+   "name": "EEGameOptionRules",
+   "rust": "GameOptionRules",
+   "fields": [
+    {
+     "cpp": "mMapSizes",
+     "type": "list:EEMapSizeRule",
+     "default": [
+      {
+       "mID": "tiny",
+       "mNameID": "IDS_MAP_SIZE_FIRST+0",
+       "mTiles": 42,
+       "mScriptSize": 0
+      },
+      {
+       "mID": "small",
+       "mNameID": "IDS_MAP_SIZE_FIRST+1",
+       "mTiles": 58,
+       "mScriptSize": 1
+      },
+      {
+       "mID": "medium",
+       "mNameID": "IDS_MAP_SIZE_FIRST+2",
+       "mTiles": 75,
+       "mScriptSize": 2
+      },
+      {
+       "mID": "large",
+       "mNameID": "IDS_MAP_SIZE_FIRST+3",
+       "mTiles": 105,
+       "mScriptSize": 3
+      },
+      {
+       "mID": "huge",
+       "mNameID": "IDS_MAP_SIZE_FIRST+4",
+       "mTiles": 160,
+       "mScriptSize": 4
+      },
+      {
+       "mID": "gigantic",
+       "mNameID": "IDS_MAP_SIZE_FIRST+5",
+       "mTiles": 220,
+       "mScriptSize": 5
+      }
+     ],
+     "dump": "map_sizes",
+     "doc": "the option is the position"
+    },
+    {
+     "cpp": "mMapSizeDefault",
+     "type": "int",
+     "default": 1,
+     "dump": "map_size_default"
+    },
+    {
+     "cpp": "mSpeeds",
+     "type": "list:EESpeedRule",
+     "default": [
+      {
+       "mID": "slow",
+       "mNameID": "IDS_INGAME_SLOW",
+       "mFactor": {
+        "world": [
+         81,
+         0
+        ]
+       }
+      },
+      {
+       "mID": "normal",
+       "mNameID": "IDS_STANDARD",
+       "mFactor": {
+        "world": [
+         81,
+         1
+        ]
+       }
+      },
+      {
+       "mID": "fast",
+       "mNameID": "IDS_INGAME_FAST",
+       "mFactor": {
+        "world": [
+         82,
+         0
+        ]
+       }
+      },
+      {
+       "mID": "very_fast",
+       "mNameID": "IDS_VERY_FAST",
+       "mFactor": {
+        "world": [
+         82,
+         1
+        ]
+       }
+      }
+     ],
+     "dump": "speeds",
+     "doc": "the four speeds: dbworld's game_speed_slow_normal F / F2, game_speed_fast_fastest F / F2 (EEGameState::Create)"
+    },
+    {
+     "cpp": "mSpeedDefault",
+     "type": "int",
+     "default": 1,
+     "dump": "speed_default"
+    },
+    {
+     "cpp": "mDifficulties",
+     "type": "list:EEDifficultyRule",
+     "default": [
+      {
+       "mID": "easy",
+       "mNameID": "IDS_LOBBY_EASY",
+       "mAILevel": 0,
+       "mScaleHumanTarget": {
+        "world": [
+         89,
+         0
+        ]
+       },
+       "mScaleHumanAttacker": {
+        "world": [
+         89,
+         1
+        ]
+       }
+      },
+      {
+       "mID": "medium",
+       "mNameID": "IDS_LOBBY_MEDIUM",
+       "mAILevel": 1,
+       "mScaleHumanTarget": {
+        "const": 1.0
+       },
+       "mScaleHumanAttacker": {
+        "const": 1.0
+       }
+      },
+      {
+       "mID": "hard",
+       "mNameID": "IDS_LOBBY_HARD",
+       "mAILevel": 2,
+       "mScaleHumanTarget": {
+        "world": [
+         89,
+         1
+        ]
+       },
+       "mScaleHumanAttacker": {
+        "world": [
+         89,
+         0
+        ]
+       }
+      }
+     ],
+     "dump": "difficulties",
+     "doc": "the damage tables (EEToHitTable::GetAttackFactor): dbworld's difficulty_damage_scale F / F2, none on medium"
+    },
+    {
+     "cpp": "mUnitLimitMinimum",
+     "type": "number",
+     "default": {
+      "world": [
+       26,
+       2
+      ]
+     },
+     "dump": "unit_limit_minimum"
+    },
+    {
+     "cpp": "mUnitLimitMaximum",
+     "type": "number",
+     "default": {
+      "world": [
+       26,
+       3
+      ]
+     },
+     "dump": "unit_limit_maximum"
+    },
+    {
+     "cpp": "mUnitLimitStep",
+     "type": "int",
+     "default": 50,
+     "dump": "unit_limit_step"
+    },
+    {
+     "cpp": "mUnitLimitDefault",
+     "type": "number",
+     "default": {
+      "world": [
+       27,
+       2
+      ]
+     },
+     "dump": "unit_limit_default"
+    },
+    {
+     "cpp": "mWondersMaximum",
+     "type": "number",
+     "default": {
+      "world": [
+       77,
+       2
+      ]
+     },
+     "dump": "wonders_maximum"
+    },
+    {
+     "cpp": "mWondersDefault",
+     "type": "int",
+     "default": 3,
+     "dump": "wonders_default"
+    },
+    {
+     "cpp": "mDefeatWithoutRecovery",
+     "type": "bool",
+     "default": true,
+     "dump": "defeat_without_recovery",
+     "doc": "new: a player with no citizens, no other units, and no built town centre or capitol with a citizen's cost in\nstock is defeated (it cannot come back; random maps); false: the original rule, every vital unit and building\ngone (EEWorld::CheckGameOver)"
+    }
+   ]
+  },
+  {
+   "name": "EECivApply",
+   "rust": "CivApply",
+   "section": "civbuilder.yaml",
+   "fields": [
+    {
+     "cpp": "mStat",
+     "type": "int",
+     "default": 0,
+     "dump": "stat",
+     "doc": "EECivStat",
+     "nodefault_cpp": true
+    },
+    {
+     "cpp": "mMode",
+     "type": "int",
+     "default": "kCivModeShare",
+     "dump": "mode",
+     "doc": "EECivMode"
+    },
+    {
+     "cpp": "mSlot",
+     "type": "int",
+     "default": -1,
+     "dump": "slot",
+     "doc": "gather_time: the gather time slot"
+    },
+    {
+     "cpp": "mOnlyCategory",
+     "type": "int",
+     "default": -1,
+     "dump": "only_category",
+     "doc": "apply only to classes of this unit category ..."
+    },
+    {
+     "cpp": "mExceptCategory",
+     "type": "int",
+     "default": -1,
+     "dump": "except_category",
+     "doc": "... or to every class but this one"
+    },
+    {
+     "cpp": "mPower",
+     "type": "int",
+     "default": -1,
+     "dump": "power",
+     "doc": "power: the civ power (dbcivpowers row)"
+    }
+   ]
+  },
+  {
+   "name": "EECivAttribute",
+   "rust": "CivAttribute",
+   "fields": [
+    {
+     "cpp": "mID",
+     "type": "string",
+     "dump": "id"
+    },
+    {
+     "cpp": "mLevel",
+     "type": "int",
+     "default": 0,
+     "dump": "level",
+     "doc": "its level in every category (dbcivilization levels; the upgrade id's low 16 bits)",
+     "nodefault_cpp": true
+    },
+    {
+     "cpp": "mNameID",
+     "type": "int",
+     "default": 0,
+     "dump": "name",
+     "doc": "its name in the builder (Language.rc; the original: IDS_CIV_BONUS_BASE + level, a power IDS_CIV_POWER_BASE + level)",
+     "nodefault_cpp": true
+    },
+    {
+     "cpp": "mApplies",
+     "type": "list:EECivApply",
+     "dump": "applies"
+    }
+   ]
+  },
+  {
+   "name": "EECivCategoryText",
+   "rust": "CivCategoryText",
+   "dump": false,
+   "doc": "a civilization builder category's levels from dbcivilization.yaml (any number: the record holds the first 60)",
+   "fields": [
+    {
+     "cpp": "mRow",
+     "type": "int",
+     "default": 0,
+     "doc": "its dbcivilization row",
+     "nodefault_cpp": true
+    },
+    {
+     "cpp": "mID",
+     "type": "string"
+    },
+    {
+     "cpp": "mValues",
+     "type": "float_list",
+     "doc": "by level - 1"
+    },
+    {
+     "cpp": "mBonuses",
+     "type": "float_list"
+    }
+   ]
+  },
+  {
+   "name": "EECivBuilderRules",
+   "rust": "CivBuilderRules",
+   "methods": [
+    "const EECivAttribute* Find(long inLevel) const;",
+    "const EECivAttribute* FindID(const std::string& inID) const;",
+    "const EECivCategoryText* FindCategory(long inRow) const;"
+   ],
+   "fields": [
+    {
+     "cpp": "mAttributes",
+     "type": "list:EECivAttribute",
+     "dump": "attributes",
+     "default_rust": "attributes"
+    },
+    {
+     "cpp": "mPowersID",
+     "type": "string",
+     "default": "special_powers",
+     "dump": "powers_id",
+     "doc": "the special powers category EECivilizationManager::Load appends (one level per civ power): its id (the keyed .civ files name its upgrades by it)"
+    },
+    {
+     "cpp": "mPowersNameID",
+     "type": "int",
+     "default": "IDS_SPECIAL_POWERS",
+     "dump": "powers_name",
+     "doc": "IDS_SPECIAL_POWERS"
+    },
+    {
+     "cpp": "mPowersUnitSet",
+     "type": "int",
+     "default": 102,
+     "dump": "powers_unit_set",
+     "doc": "dbunitset row"
+    },
+    {
+     "cpp": "mPowersCost",
+     "type": "number",
+     "default": {
+      "world": [
+       86,
+       2
+      ]
+     },
+     "dump": "powers_cost"
+    },
+    {
+     "cpp": "mPowersLevelValue",
+     "type": "float",
+     "default": 0.01,
+     "dump": "powers_level_value"
+    },
+    {
+     "cpp": "mCategories",
+     "type": "list:EECivCategoryText",
+     "dump": false,
+     "doc": "dbcivilization.yaml's categories (ids and levels by attribute); empty without the text (the binary records)"
+    }
+   ]
+  },
+  {
+   "name": "EECivPowerEffect",
+   "rust": "CivPowerEffect",
+   "section": "civpowers.yaml",
+   "fields": [
+    {
+     "cpp": "mAction",
+     "type": "int",
+     "default": 0,
+     "dump": "do",
+     "doc": "EECivPowerAction",
+     "nodefault_cpp": true
+    },
+    {
+     "cpp": "mTech",
+     "type": "int",
+     "default": -1,
+     "dump": "tech",
+     "doc": "dbtechtree ids (mTech, mIfTech)"
+    },
+    {
+     "cpp": "mIfTech",
+     "type": "int",
+     "default": -1,
+     "dump": "if_researched"
+    },
+    {
+     "cpp": "mSound",
+     "type": "int",
+     "default": -1,
+     "dump": "sound",
+     "doc": "dbsounds row"
+    },
+    {
+     "cpp": "mEffect",
+     "type": "int",
+     "default": -1,
+     "dump": "effect",
+     "doc": "dbgfxeffects row"
+    },
+    {
+     "cpp": "mUnitType",
+     "type": "int",
+     "default": -1,
+     "dump": "unit_type",
+     "doc": "dbobjects row"
+    }
+   ]
+  },
+  {
+   "name": "EECivPowerRule",
+   "rust": "CivPowerRule",
+   "fields": [
+    {
+     "cpp": "mPower",
+     "type": "int",
+     "default": 0,
+     "dump": "power",
+     "doc": "dbcivpowers row",
+     "nodefault_cpp": true
+    },
+    {
+     "cpp": "mEffects",
+     "type": "list:EECivPowerEffect",
+     "dump": "effects"
+    }
+   ]
+  },
+  {
+   "name": "EECivPowerRules",
+   "rust": "CivPowerRules",
+   "methods": [
+    "const EECivPowerRule* Find(long inRow) const;"
+   ],
+   "fields": [
+    {
+     "cpp": "mPowers",
+     "type": "list:EECivPowerRule",
+     "dump": "powers",
+     "default_rust": "powers"
+    }
+   ]
+  },
+  {
+   "name": "EEEpochMedia",
+   "rust": "EpochMedia",
+   "section": "epochs.yaml media",
+   "fields": [
+    {
+     "cpp": "mMusic",
+     "type": "int_list",
+     "dump": "music",
+     "doc": "music: the songs of the epoch (dbmusic rows). Without epochs.yaml the songs come from dbmusic's per-epoch\nflags (EEMusicObject::LoadTable fills this; the space age plays the nano age's songs, as the original did)"
+    },
+    {
+     "cpp": "mHighTechTools",
+     "type": "bool",
+     "default": false,
+     "dump": "high_tech_tools",
+     "doc": "the citizen of the epoch: beams: the mining beam, the shot effect (EEUGGather, EEUnitClass)"
+    },
+    {
+     "cpp": "mRemovalEffects",
+     "type": "int_list",
+     "dump": "removal_effects",
+     "doc": "a unit removed by a research (EEPlayUnitEffect): effects and a sound at its place, a thunder every n-th unit: dbgfxeffects rows"
+    },
+    {
+     "cpp": "mRemovalSound",
+     "type": "int",
+     "default": 374,
+     "dump": "removal_sound",
+     "doc": "dbsounds row (Lightning)"
+    },
+    {
+     "cpp": "mRemovalPitchOffset",
+     "type": "float",
+     "default": 0.0,
+     "dump": "removal_pitch_offset",
+     "doc": "added to the sound's pitch (not below -1)"
+    },
+    {
+     "cpp": "mRemovalThunder",
+     "type": "int",
+     "default": 442,
+     "dump": "removal_thunder",
+     "doc": "dbsounds row (Thunder 2)"
+    },
+    {
+     "cpp": "mRemovalThunderEvery",
+     "type": "int",
+     "default": 0,
+     "dump": "removal_thunder_every",
+     "doc": "a thunder when the unit id is a multiple of this (0: never)"
+    }
+   ]
+  },
+  {
+   "name": "EEAIPersonalityRule",
+   "rust": "AIPersonalityRule",
+   "section": "aipersonalities.yaml",
+   "doc": "A computer player's personality (docs/AI_RESEARCH.md §8.8): the tuning of its decisions that is not in dbcpbehavior.\nThe defaults are \"balanced\", the tuning the benchmarks of §8.10-8.11 settled on.",
+   "fields": [
+    {
+     "cpp": "mID",
+     "type": "string",
+     "dump": "id"
+    },
+    {
+     "cpp": "mNextScript",
+     "type": "string",
+     "default": "test_opening",
+     "dump": "next_script",
+     "doc": "the next engine's strategy (docs/AI_LUA_PLAN.md §3): the Lua module a computer seat with the next engine runs,\nData/ai/<name, dots as folders>.lua; the classic engine ignores it. Until stage S3's boom script, the S1 test\nopening ported to Lua"
+    },
+    {
+     "cpp": "mEpochPressureStart",
+     "type": "float",
+     "default": 0.3,
+     "dump": "epoch_pressure_start",
+     "doc": "epoch pressure (the elapsed share of the epoch timer's span): a paid advance is asked for from mEpochPressureStart;\nits reserve grows from nothing there to the whole cost at mEpochPressureFull. Low: tall (tech); high: wide."
+    },
+    {
+     "cpp": "mEpochPressureFull",
+     "type": "float",
+     "default": 0.8,
+     "dump": "epoch_pressure_full"
+    },
+    {
+     "cpp": "mStoneSpan",
+     "type": "float",
+     "default": 30.0,
+     "dump": "stone_span",
+     "doc": "the Prehistoric's pressure instead: the game time over this many minutes, so the Stone Age is asked for and\nreserved on that schedule (docs/AI_RESEARCH.md §8.27; 30: the Stone Age at about 25 minutes); 0: the epoch timer"
+    },
+    {
+     "cpp": "mSafeBonus",
+     "type": "float",
+     "default": 0.25,
+     "dump": "safe_bonus",
+     "doc": "from the Stone Age, while no stronger enemy army is near the town, the epoch pressure is this much higher: the\nadvance is asked for sooner and its reserve fills faster; a threat drops it back (docs/AI_RESEARCH.md §8.29)"
+    },
+    {
+     "cpp": "mSurplus",
+     "type": "int",
+     "default": 1000,
+     "dump": "surplus",
+     "doc": "the economy (EECPResourceManager): the gatherer split's stock correction, the citizen target, rebalancing:\na resource with more in stock ..."
+    },
+    {
+     "cpp": "mSurplusCut",
+     "type": "float",
+     "default": 0.5,
+     "dump": "surplus_cut",
+     "doc": "... gets this share of its gatherers"
+    },
+    {
+     "cpp": "mLowStock",
+     "type": "int",
+     "default": 150,
+     "dump": "low_stock",
+     "doc": "a resource with less in stock ..."
+    },
+    {
+     "cpp": "mFloor",
+     "type": "float_array",
+     "default": [
+      0.1,
+      0.25,
+      0.05,
+      0.05,
+      0.05
+     ],
+     "dump": "floor",
+     "doc": "... at least this share (food, wood, stone, gold, iron)",
+     "count": 5
+    },
+    {
+     "cpp": "mMaxCitizenShare",
+     "type": "float",
+     "default": 0.7,
+     "dump": "max_citizen_share",
+     "doc": "the citizen target is at most this share of the pop cap"
+    },
+    {
+     "cpp": "mWoodSlots",
+     "type": "int",
+     "default": 15,
+     "dump": "wood_slots",
+     "doc": "wood's gatherer capacity (trees are not resource-center units)"
+    },
+    {
+     "cpp": "mMovesPerCycle",
+     "type": "int",
+     "default": 3,
+     "dump": "moves_per_cycle",
+     "doc": "busy gatherers moved to a short resource per 10 s"
+    },
+    {
+     "cpp": "mDemandSplit",
+     "type": "bool",
+     "default": true,
+     "dump": "demand_split",
+     "doc": "the gatherer split: by the tiered demand less the stock (EECPResourceManager.cpp EECPRMSplitByDemand; docs/AI_RESEARCH.md\n§8.21), or false: the original's needs ledger with the stock correction above"
+    },
+    {
+     "cpp": "mCoastFishing",
+     "type": "bool",
+     "default": true,
+     "dump": "coast_fishing",
+     "doc": "fishing off any coast from the Stone Age (EECPResourceManager.cpp EECPRMCoastBoatsWanted; docs/AI_RESEARCH.md\n§8.26): a dock, up to 8 boats, at most 2 docks from the build lists; the original fished only on island maps"
+    },
+    {
+     "cpp": "mForagePatches",
+     "type": "bool",
+     "default": true,
+     "dump": "forage_patches",
+     "doc": "forage patches (docs/AI_RESEARCH.md §8.27): about mining_limit gatherers a patch (the food capacity no longer\ncounts the bush gatherers), a settlement on a patch with no drop site within 4 tiles, hunting slots by the game\nnear home, 3 patches kept claimed in the Prehistoric and 5 later, up to 16 fishing boats"
+    },
+    {
+     "cpp": "mClaimNeeded",
+     "type": "bool",
+     "default": true,
+     "dump": "claim_needed",
+     "doc": "a centre claimed for the next epoch's missing stone, gold or iron, and no epoch reserve while an advance cannot\nbe reached (docs/AI_RESEARCH.md §8.27)"
+    },
+    {
+     "cpp": "mEarlyTownCenters",
+     "type": "int",
+     "default": 2,
+     "dump": "early_town_centers",
+     "doc": "before the Bronze Age a settlement becomes a town centre only while the player has fewer than this many, and no\ntown centre becomes a capitol (the owner: \"upgrading a settlement to a capitol early game is mostly a waste of\nfood\"; docs/AI_RESEARCH.md §8.29); 0: the original's timers"
+    },
+    {
+     "cpp": "mEarlyTrainers",
+     "type": "int",
+     "default": 2,
+     "dump": "early_trainers",
+     "doc": "before the Copper Age at most this many barracks and this many archery ranges (dbcpbehavior asks for 7 and 6;\nthe owner: \"no more than 2 barracks and 2 archery ranges pre-copper\"); 0: no cap"
+    },
+    {
+     "cpp": "mPatchExpand",
+     "type": "bool",
+     "default": true,
+     "dump": "patch_expand",
+     "doc": "before the Copper Age (no farms yet) the claim range grows when no forage patch is left in it (a playtest AI had\nno food gatherer for 45 minutes and 1399 of the Copper Age's 1584 food; docs/AI_RESEARCH.md §8.29)"
+    },
+    {
+     "cpp": "mStandingArmy",
+     "type": "float",
+     "default": 0.25,
+     "dump": "standing_army",
+     "doc": "military pressure: the standing army the player keeps, per worker (citizens and fishing boats); up to the\noriginal's military share of the pop cap"
+    },
+    {
+     "cpp": "mArmyFloor",
+     "type": "float",
+     "default": 0.1,
+     "dump": "army_floor",
+     "doc": "while the standing army is short of its target, the floor share of the gatherers on what its unit costs rises by\nup to this much (by the shortfall, split by the unit's cost): more army, less economy"
+    },
+    {
+     "cpp": "mMilitia",
+     "type": "bool",
+     "default": true,
+     "dump": "militia",
+     "doc": "the town's answer to an attack group on its citizens (EECPResourceManager.cpp EECPRMMilitia; docs/AI_RESEARCH.md\n§8.25): the nearby soldiers and as many of the nearest citizens as the odds need fight, or the citizens run"
+    },
+    {
+     "cpp": "mMilitiaTowers",
+     "type": "bool",
+     "default": true,
+     "dump": "militia_towers",
+     "doc": "the militia counts the built towers near the attack, and citizens that cannot fight run to the nearest tower\n(docs/AI_RESEARCH.md §8.26)"
+    },
+    {
+     "cpp": "mPrehistoricArmy",
+     "type": "int",
+     "default": 4,
+     "dump": "prehistoric_army",
+     "doc": "the Prehistoric army is a mobile defence force of at most this many soldiers, unless enemy soldiers near the town\nare stronger than it (EEComputerPlayer.cpp CanAfford; docs/AI_RESEARCH.md §8.26); 0: no cap (the rush)"
+    },
+    {
+     "cpp": "mPrehistoricAttacks",
+     "type": "bool",
+     "default": false,
+     "dump": "prehistoric_attacks",
+     "doc": "attack groups against an enemy in the Prehistoric (false: none, the defence still forms; docs/AI_RESEARCH.md §8.27)"
+    },
+    {
+     "cpp": "mStoneAttacks",
+     "type": "bool",
+     "default": false,
+     "dump": "stone_attacks",
+     "doc": "attack groups against an enemy in the Stone Age (false: none, the defence still forms; docs/AI_RESEARCH.md §8.29)"
+    },
+    {
+     "cpp": "mNavalFlee",
+     "type": "bool",
+     "default": true,
+     "dump": "naval_flee",
+     "doc": "units hit by a warship they cannot answer leave (boats to the farthest dock, citizens and melee inland)"
+    }
+   ]
+  },
+  {
+   "name": "EEAIPersonalityRules",
+   "rust": "AIPersonalityRules",
+   "methods": [
+    "const EEAIPersonalityRule& ForPlayer(unsigned long inPlayerID) const;",
+    "long Find(const std::string& inID) const;   // the position, -1 when none"
+   ],
+   "fields": [
+    {
+     "cpp": "mPersonalities",
+     "type": "list:EEAIPersonalityRule",
+     "dump": "personalities",
+     "default_rust": "personalities"
+    },
+    {
+     "cpp": "mAssign",
+     "type": "int_list",
+     "default": [
+      0
+     ],
+     "dump": "assign",
+     "doc": "positions in mPersonalities; computer player n takes mAssign[(n - 1) % size]"
+    }
+   ]
+  }
+ ],
+ "top": [
+  {
+   "cpp": "mCombat",
+   "type": "struct:EECombatRules"
+  },
+  {
+   "cpp": "mGameOptions",
+   "type": "struct:EEGameOptionRules"
+  },
+  {
+   "cpp": "mCivBuilder",
+   "type": "struct:EECivBuilderRules"
+  },
+  {
+   "cpp": "mCivPowers",
+   "type": "struct:EECivPowerRules"
+  },
+  {
+   "cpp": "mAIPersonalities",
+   "type": "struct:EEAIPersonalityRules"
+  },
+  {
+   "cpp": "mEpochs",
+   "type": "list:EEEpochMedia"
+  },
+  {
+   "cpp": "mEpochMusicFromText",
+   "type": "bool"
+  }
+ ],
+ "list_defaults": {
+  "attributes": [
+   {
+    "mID": "attack",
+    "mLevel": 1,
+    "mNameID": "IDS_CIV_BONUS_BASE+1",
+    "mApplies": [
+     {
+      "mStat": "kCivStatAttack"
+     }
+    ]
+   },
+   {
+    "mID": "hit_points",
+    "mLevel": 2,
+    "mNameID": "IDS_CIV_BONUS_BASE+2",
+    "mApplies": [
+     {
+      "mStat": "kCivStatHitPoints"
+     }
+    ]
+   },
+   {
+    "mID": "reload_time",
+    "mLevel": 3,
+    "mNameID": "IDS_CIV_BONUS_BASE+3",
+    "mApplies": [
+     {
+      "mStat": "kCivStatReloadTime"
+     }
+    ]
+   },
+   {
+    "mID": "armor",
+    "mLevel": 4,
+    "mNameID": "IDS_CIV_BONUS_BASE+4",
+    "mApplies": [
+     {
+      "mStat": "kCivStatArmor"
+     }
+    ]
+   },
+   {
+    "mID": "range",
+    "mLevel": 5,
+    "mNameID": "IDS_CIV_BONUS_BASE+5",
+    "mApplies": [
+     {
+      "mStat": "kCivStatRange"
+     },
+     {
+      "mStat": "kCivStatLineOfSight"
+     }
+    ]
+   },
+   {
+    "mID": "speed",
+    "mLevel": 6,
+    "mNameID": "IDS_CIV_BONUS_BASE+6",
+    "mApplies": [
+     {
+      "mStat": "kCivStatSpeed"
+     }
+    ]
+   },
+   {
+    "mID": "flight_time",
+    "mLevel": 7,
+    "mNameID": "IDS_CIV_BONUS_BASE+7",
+    "mApplies": [
+     {
+      "mStat": "kCivStatFlightTime"
+     }
+    ]
+   },
+   {
+    "mID": "area_effect",
+    "mLevel": 8,
+    "mNameID": "IDS_CIV_BONUS_BASE+8",
+    "mApplies": [
+     {
+      "mStat": "kCivStatAreaEffect"
+     }
+    ]
+   },
+   {
+    "mID": "gather_stone_gold",
+    "mLevel": 9,
+    "mNameID": "IDS_CIV_BONUS_BASE+9",
+    "mApplies": [
+     {
+      "mStat": "kCivStatGatherTime",
+      "mSlot": 5,
+      "mExceptCategory": "kUnitCategoryNavalCitizen"
+     },
+     {
+      "mStat": "kCivStatGatherTime",
+      "mSlot": 4,
+      "mExceptCategory": "kUnitCategoryNavalCitizen"
+     }
+    ]
+   },
+   {
+    "mID": "gather_slot_0",
+    "mLevel": 10,
+    "mNameID": "IDS_CIV_BONUS_BASE+10",
+    "mApplies": [
+     {
+      "mStat": "kCivStatGatherTime",
+      "mSlot": 0
+     }
+    ]
+   },
+   {
+    "mID": "gather_slot_2",
+    "mLevel": 11,
+    "mNameID": "IDS_CIV_BONUS_BASE+11",
+    "mApplies": [
+     {
+      "mStat": "kCivStatGatherTime",
+      "mSlot": 2
+     }
+    ]
+   },
+   {
+    "mID": "gather_slot_6",
+    "mLevel": 12,
+    "mNameID": "IDS_CIV_BONUS_BASE+12",
+    "mApplies": [
+     {
+      "mStat": "kCivStatGatherTime",
+      "mSlot": 6
+     }
+    ]
+   },
+   {
+    "mID": "gather_slot_1",
+    "mLevel": 13,
+    "mNameID": "IDS_CIV_BONUS_BASE+13",
+    "mApplies": [
+     {
+      "mStat": "kCivStatGatherTime",
+      "mSlot": 1
+     }
+    ]
+   },
+   {
+    "mID": "gather_slot_3",
+    "mLevel": 14,
+    "mNameID": "IDS_CIV_BONUS_BASE+14",
+    "mApplies": [
+     {
+      "mStat": "kCivStatGatherTime",
+      "mSlot": 3
+     }
+    ]
+   },
+   {
+    "mID": "build_time",
+    "mLevel": 15,
+    "mNameID": "IDS_CIV_BONUS_BASE+15",
+    "mApplies": [
+     {
+      "mStat": "kCivStatBuildTime"
+     }
+    ]
+   },
+   {
+    "mID": "conversion",
+    "mLevel": 16,
+    "mNameID": "IDS_CIV_BONUS_BASE+16",
+    "mApplies": [
+     {
+      "mStat": "kCivStatConversion"
+     }
+    ]
+   },
+   {
+    "mID": "fishing",
+    "mLevel": 17,
+    "mNameID": "IDS_CIV_BONUS_BASE+17",
+    "mApplies": [
+     {
+      "mStat": "kCivStatGatherTime",
+      "mSlot": 4,
+      "mOnlyCategory": "kUnitCategoryNavalCitizen"
+     }
+    ]
+   },
+   {
+    "mID": "repair_rate",
+    "mLevel": 18,
+    "mNameID": "IDS_CIV_BONUS_BASE+18",
+    "mApplies": [
+     {
+      "mStat": "kCivStatRepairRate"
+     }
+    ]
+   },
+   {
+    "mID": "area_effect_scale",
+    "mLevel": 19,
+    "mNameID": "IDS_CIV_BONUS_BASE+19",
+    "mApplies": [
+     {
+      "mStat": "kCivStatAreaEffectScale"
+     }
+    ]
+   },
+   {
+    "mID": "high_ground",
+    "mLevel": 20,
+    "mNameID": "IDS_CIV_BONUS_BASE+20",
+    "mApplies": [
+     {
+      "mStat": "kCivStatHighGround"
+     }
+    ]
+   },
+   {
+    "mID": "population",
+    "mLevel": 21,
+    "mNameID": "IDS_CIV_BONUS_BASE+21",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPopulation"
+     }
+    ]
+   },
+   {
+    "mID": "cost",
+    "mLevel": 23,
+    "mNameID": "IDS_CIV_BONUS_BASE+23",
+    "mApplies": [
+     {
+      "mStat": "kCivStatCost"
+     }
+    ]
+   },
+   {
+    "mID": "flaming_arrows",
+    "mLevel": "kCivPowerFlamingArrows+0",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+0",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 0
+     }
+    ]
+   },
+   {
+    "mID": "slavery",
+    "mLevel": "kCivPowerFlamingArrows+1",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+1",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 1
+     }
+    ]
+   },
+   {
+    "mID": "priest_tower",
+    "mLevel": "kCivPowerFlamingArrows+2",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+2",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 2
+     }
+    ]
+   },
+   {
+    "mID": "crusaders",
+    "mLevel": "kCivPowerFlamingArrows+3",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+3",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 3
+     }
+    ]
+   },
+   {
+    "mID": "fanaticism",
+    "mLevel": "kCivPowerFlamingArrows+4",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+4",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 4
+     }
+    ]
+   },
+   {
+    "mID": "emissaries",
+    "mLevel": "kCivPowerFlamingArrows+5",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+5",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 5
+     }
+    ]
+   },
+   {
+    "mID": "exploration",
+    "mLevel": "kCivPowerFlamingArrows+6",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+6",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 6
+     }
+    ]
+   },
+   {
+    "mID": "insurance",
+    "mLevel": "kCivPowerFlamingArrows+7",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+7",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 7
+     }
+    ]
+   },
+   {
+    "mID": "metallurgy",
+    "mLevel": "kCivPowerFlamingArrows+8",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+8",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 8
+     }
+    ]
+   },
+   {
+    "mID": "advanced_mining",
+    "mLevel": "kCivPowerFlamingArrows+9",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+9",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 9
+     }
+    ]
+   },
+   {
+    "mID": "pathfinding",
+    "mLevel": "kCivPowerFlamingArrows+10",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+10",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 10
+     }
+    ]
+   },
+   {
+    "mID": "camouflage",
+    "mLevel": "kCivPowerFlamingArrows+11",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+11",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 11
+     }
+    ]
+   },
+   {
+    "mID": "bundeswehr",
+    "mLevel": "kCivPowerFlamingArrows+12",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+12",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 12
+     }
+    ]
+   },
+   {
+    "mID": "sas",
+    "mLevel": "kCivPowerFlamingArrows+13",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+13",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 13
+     }
+    ]
+   },
+   {
+    "mID": "paratroopers",
+    "mLevel": "kCivPowerFlamingArrows+14",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+14",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 14
+     }
+    ]
+   },
+   {
+    "mID": "market",
+    "mLevel": "kCivPowerFlamingArrows+15",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+15",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 15
+     }
+    ]
+   },
+   {
+    "mID": "cyber_ninja",
+    "mLevel": "kCivPowerFlamingArrows+16",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+16",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 16
+     }
+    ]
+   },
+   {
+    "mID": "missile_base",
+    "mLevel": "kCivPowerFlamingArrows+17",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+17",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 17
+     }
+    ]
+   },
+   {
+    "mID": "cloaking",
+    "mLevel": "kCivPowerFlamingArrows+18",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+18",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 18
+     }
+    ]
+   },
+   {
+    "mID": "adaptation",
+    "mLevel": "kCivPowerFlamingArrows+19",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+19",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 19
+     }
+    ]
+   },
+   {
+    "mID": "expansionism",
+    "mLevel": "kCivPowerFlamingArrows+20",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+20",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 20
+     }
+    ]
+   },
+   {
+    "mID": "conquistadors",
+    "mLevel": "kCivPowerFlamingArrows+21",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+21",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 21
+     }
+    ]
+   },
+   {
+    "mID": "just_in_time_manufacturing",
+    "mLevel": "kCivPowerFlamingArrows+22",
+    "mNameID": "IDS_CIV_POWER_BASE+kCivPowerFlamingArrows+22",
+    "mApplies": [
+     {
+      "mStat": "kCivStatPower",
+      "mPower": 22
+     }
+    ]
+   }
+  ],
+  "powers": [
+   {
+    "mPower": "kCivPowerFlamingArrows-kCivPowerFlamingArrows",
+    "mEffects": [
+     {
+      "mAction": "kPowerResearchIfResearched",
+      "mIfTech": "kTechSimpleBowmanResearch",
+      "mTech": "kTechSimpleBowmanFlamingResearch"
+     },
+     {
+      "mAction": "kPowerResearchIfResearched",
+      "mIfTech": "kTechCompositeBowUpgrade",
+      "mTech": "kTechCompositeBowFlamingUpgrade"
+     },
+     {
+      "mAction": "kPowerResearchIfResearched",
+      "mIfTech": "kTechLongBowUpgrade",
+      "mTech": "kTechLongBowFlamingUpgrade"
+     }
+    ]
+   },
+   {
+    "mPower": "kCivPowerSlavery-kCivPowerFlamingArrows",
+    "mEffects": [
+     {
+      "mAction": "kPowerLoadSound",
+      "mSound": 1058
+     }
+    ]
+   },
+   {
+    "mPower": "kCivPowerPriestTower-kCivPowerFlamingArrows",
+    "mEffects": [
+     {
+      "mAction": "kPowerLoadSound",
+      "mSound": 1052
+     },
+     {
+      "mAction": "kPowerLoadEffect",
+      "mEffect": 247
+     },
+     {
+      "mAction": "kPowerLoadEffect",
+      "mEffect": 256
+     }
+    ]
+   },
+   {
+    "mPower": "kCivPowerCrusaders-kCivPowerFlamingArrows",
+    "mEffects": [
+     {
+      "mAction": "kPowerResearchIfResearched",
+      "mIfTech": "kTechShortSwordUpgrade",
+      "mTech": "kTechShortSwordUpgradeCrusaders"
+     },
+     {
+      "mAction": "kPowerResearchIfResearched",
+      "mIfTech": "kTechLongSwordUpgrade",
+      "mTech": "kTechLongSwordUpgradeCrusaders"
+     },
+     {
+      "mAction": "kPowerResearchIfResearched",
+      "mIfTech": "kTechKnightUpgrade",
+      "mTech": "kTechKnightUpgradeCrusaders"
+     }
+    ]
+   },
+   {
+    "mPower": "kCivPowerExploration-kCivPowerFlamingArrows",
+    "mEffects": [
+     {
+      "mAction": "kPowerPulseSight",
+      "mUnitType": "kUnitTypeTownCenter"
+     },
+     {
+      "mAction": "kPowerPulseSight",
+      "mUnitType": "kUnitTypeCapitol"
+     }
+    ]
+   },
+   {
+    "mPower": "kCivPowerAdvancedMining-kCivPowerFlamingArrows",
+    "mEffects": [
+     {
+      "mAction": "kPowerSetMiningLimit"
+     }
+    ]
+   },
+   {
+    "mPower": "kCivPowerCamouflage-kCivPowerFlamingArrows",
+    "mEffects": [
+     {
+      "mAction": "kPowerEnableCamouflage"
+     }
+    ]
+   },
+   {
+    "mPower": "kCivPowerBundeswehr-kCivPowerFlamingArrows",
+    "mEffects": [
+     {
+      "mAction": "kPowerLoadSound",
+      "mSound": 374
+     },
+     {
+      "mAction": "kPowerLoadSound",
+      "mSound": 442
+     },
+     {
+      "mAction": "kPowerLoadEffect",
+      "mEffect": 21
+     },
+     {
+      "mAction": "kPowerLoadEffect",
+      "mEffect": 171
+     },
+     {
+      "mAction": "kPowerLoadEffect",
+      "mEffect": 236
+     }
+    ]
+   },
+   {
+    "mPower": "kCivPowerExpansionism-kCivPowerFlamingArrows",
+    "mEffects": [
+     {
+      "mAction": "kPowerDisallowTech",
+      "mTech": "kTechSettlement"
+     },
+     {
+      "mAction": "kPowerAllowTech",
+      "mTech": "kTechTownCenter"
+     }
+    ]
+   }
+  ],
+  "personalities": [
+   {
+    "mID": "balanced",
+    "mNextScript": "boom"
+   },
+   {
+    "mID": "tall",
+    "mEpochPressureStart": 0.15,
+    "mEpochPressureFull": 0.5,
+    "mStandingArmy": 0.2,
+    "mNextScript": "balanced"
+   },
+   {
+    "mID": "wide",
+    "mEpochPressureStart": 0.6,
+    "mEpochPressureFull": 1.0,
+    "mMaxCitizenShare": 0.8,
+    "mStandingArmy": 0.15,
+    "mNextScript": "boom"
+   },
+   {
+    "mID": "aggressive",
+    "mEpochPressureStart": 0.4,
+    "mEpochPressureFull": 0.9,
+    "mStandingArmy": 0.5,
+    "mArmyFloor": 0.3,
+    "mPrehistoricArmy": 0,
+    "mPrehistoricAttacks": true,
+    "mStoneAttacks": true,
+    "mSafeBonus": 0.0,
+    "mEarlyTrainers": 0,
+    "mNextScript": "rush"
+   },
+   {
+    "mID": "classic",
+    "mEpochPressureStart": 1.0,
+    "mEpochPressureFull": 100.0,
+    "mStoneSpan": 0.0,
+    "mSafeBonus": 0.0,
+    "mSurplus": 100000000,
+    "mLowStock": 0,
+    "mMaxCitizenShare": 0.0,
+    "mMovesPerCycle": 0,
+    "mDemandSplit": false,
+    "mCoastFishing": false,
+    "mForagePatches": false,
+    "mClaimNeeded": false,
+    "mEarlyTownCenters": 0,
+    "mEarlyTrainers": 0,
+    "mPatchExpand": false,
+    "mStandingArmy": 0.0,
+    "mArmyFloor": 0.0,
+    "mMilitia": false,
+    "mMilitiaTowers": false,
+    "mPrehistoricArmy": 0,
+    "mPrehistoricAttacks": true,
+    "mStoneAttacks": true,
+    "mNavalFlee": false
+   }
+  ]
+ },
+ "epoch_constants": [
+  "kTechEpochBronze",
+  "kTechEpochIndustrial",
+  "kTechEpochAtomicModern",
+  "kTechEpochNano",
+  "kTechEpochSpace"
+ ],
+ "documents": [
+  "combat",
+  "gameoptions",
+  "civbuilder",
+  "civpowers",
+  "aipersonalities"
+ ]
+}

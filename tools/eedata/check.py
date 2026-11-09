@@ -7,7 +7,8 @@
     record; their game-read fields equal the retail ones except where the retail bytes are the converter's 0xCC
     fill (counted and listed). dbworld: the values each constant's readers use.
 (c) specs: specs.json equals what specgen.py makes from the sources now (and the C++ EEDataTextSpecs.h what
-    cppgen.py makes from specs.json), and every struct's size equals its static_assert (or the size its source
+    cppgen.py makes from specs.json, the Rust specs what rustgen.py makes, the rules code what rulesgen.py makes from
+    rules_schema.json), and every struct's size equals its static_assert (or the size its source
     states, for the one without one).
 """
 import collections
@@ -78,6 +79,15 @@ def run(a, spec, load_db):
     for out, new in ((cppgen.OUT, cppgen.generate(spec)), (cppgen.WORLD_OUT, cppgen.generate_world(spec))):
         if not out.exists() or out.read_bytes() != new:
             print(f'(c) FAIL {out.name} is stale: run eedata.py cppgen')
+            ok = False
+    import rustgen
+    if not rustgen.OUT.exists() or rustgen.OUT.read_bytes() != rustgen.generate(spec):
+        print(f'(c) FAIL {rustgen.OUT.name} is stale: run eedata.py rustgen')
+        ok = False
+    import rulesgen
+    for out, new in rulesgen.outputs():
+        if not out.exists() or out.read_bytes() != new:
+            print(f'(c) FAIL {out.name} is stale: run eedata.py rulesgen')
             ok = False
     nsize = 0
     for s in spec['structs'].values():

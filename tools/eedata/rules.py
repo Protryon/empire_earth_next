@@ -13,6 +13,7 @@ defaults and the vanilla documents dump identically.
 The code constants the vanilla values name (kUnitType*, kTech*, kSound*, kGraphicEffect*, IDS_*) are read from the
 C++ headers, so the two sides cannot name different rows.
 """
+import json
 import pathlib
 import re
 
@@ -24,18 +25,11 @@ INC = ROOT / 'include' / 'ee'
 
 DOCS = ['combat', 'gameoptions', 'civbuilder', 'civpowers', 'aipersonalities']
 
-CATEGORIES = ['ambient', 'resource', 'building', 'airplane', 'naval', 'land', 'land_citizen', 'helicopter', 'land8',
-              'projectile', 'submerged_naval', 'bomb', 'missile', 'land_priest', 'naval_priest', 'land15',
-              'land_transport', 'helicopter_transport', 'naval_transport', 'building19', 'torpedo', 'naval_building',
-              'naval_citizen', 'land_military_hero', 'mining_building', 'gate', 'helicopter_priest', 'sea_animal',
-              'air_animal', 'fortress', 'building_priest', 'spaceship', 'space_building', 'space_transport',
-              'planet_spaceship']
-STATS = ['attack', 'hit_points', 'reload_time', 'armor', 'range', 'line_of_sight', 'speed', 'flight_time',
-         'area_effect', 'gather_time', 'build_time', 'conversion', 'repair_rate', 'area_effect_scale', 'high_ground',
-         'population', 'cost', 'power']
-MODES = ['share', 'add', 'multiply']
-ACTIONS = ['research_if_researched', 'load_sound', 'load_effect', 'pulse_sight', 'set_mining_limit',
-           'enable_camouflage', 'allow_tech', 'disallow_tech']
+SCHEMA = json.loads((pathlib.Path(__file__).resolve().parent / 'rules_schema.json').read_text(encoding='utf-8'))
+CATEGORIES = SCHEMA['enums']['unit_category']['names']
+STATS = SCHEMA['enums']['stat']['names']
+MODES = SCHEMA['enums']['mode']['names']
+ACTIONS = SCHEMA['enums']['action']['names']
 WORLD_VALUE = re.compile(r'^([a-z][a-z0-9_]*)\.(F|F2|L|L2)$')
 
 
@@ -101,7 +95,7 @@ ticks:
 
 
 # the computer players' cheats (ee/EERules.h EEAICheat, by bit): a difficulty's ai_cheats lists the ones it keeps
-AI_CHEATS = ('cost', 'reveal', 'epochs', 'extra', 'popband', 'catchup', 'retire')
+AI_CHEATS = tuple(SCHEMA['enums']['ai_cheat']['names'])
 
 
 def gameoptions(ids, spec):
