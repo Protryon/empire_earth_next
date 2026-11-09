@@ -9,7 +9,179 @@
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 constexpr static const uint32_t EE_RUST_ABI_VERSION = 1;
 
+/// The compiler's state for one data path; every table's text is read through `read`. Not thread safe.
+struct EeDataContent;
+
+/// The rules (ee/EERules.h, its `mRust`). Every field starts at its default.
+struct EeDataRules;
+
+/// A sink handed to the read callback; the text goes in with `ee_data_sink_write`.
+struct EeDataSink;
+
+/// A byte buffer owned by Rust; free it with `ee_data_bytes_free`.
+struct EeDataBytes {
+  uint8_t *ptr;
+  size_t len;
+};
+
+/// A text by name: true with the text written to the sink; false when there is no such text.
+using EeDataRead = bool(*)(void *ctx, const char *name, EeDataSink *sink);
+
+/// One entry of `ee_data_ids`.
+using EeDataIdVisit = void(*)(void *ctx, int32_t key, const uint8_t *id, size_t len);
+
+/// One keyed upgrade of a `.civ` text: its key and line.
+using EeDataCivVisit = void(*)(void *ctx, const uint8_t *key, size_t key_len, int32_t line);
+
 extern "C" {
+
+/// Frees a buffer this library returned (empty buffers are fine).
+///
+/// # Safety
+/// `bytes` must have come from this library and not been freed already.
+void ee_data_bytes_free(EeDataBytes bytes);
+
+/// Appends to the sink a reader was given.
+///
+/// # Safety
+/// `sink` must be the one given to the callback; `data` must be readable for `len` bytes.
+void ee_data_sink_write(EeDataSink *sink, const uint8_t *data, size_t len);
+
+/// A Content reading through a callback (from C++).
+///
+/// # Safety
+/// `read` must stay callable, with `ctx`, until `ee_data_content_free`.
+EeDataContent *ee_data_content_new(EeDataRead read, void *ctx);
+
+/// Frees a Content.
+///
+/// # Safety
+/// `content` must come from `ee_data_content_new`, once.
+void ee_data_content_free(EeDataContent *content);
+
+/// Compiles a table of a Content into its db file bytes. False with the message (with its place) on the first problem;
+/// on success `out` receives the bytes.
+///
+/// # Safety
+/// `content` is a live Content, `table_name` NUL-terminated, `out`/`err` writable (or `err` null).
+bool ee_data_compile(EeDataContent *content,
+                     const char *table_name,
+                     EeDataBytes *out,
+                     EeDataBytes *err);
+
+/// One table on its own: `text` compiled without any other table's text (a reference by id is an error then).
+///
+/// # Safety
+/// `table_name` NUL-terminated, `text` readable for `len` bytes, `out`/`err` writable (or `err` null).
+bool ee_data_compile_text(const char *table_name,
+                          const uint8_t *text,
+                          size_t len,
+                          EeDataBytes *out,
+                          EeDataBytes *err);
+
+/// The text file extension of a db table or rules document (".csv"/".yaml"), null when it has no text form.
+/// `name` is the file stem, case-insensitive. The result is static.
+///
+/// # Safety
+/// `name` must be NUL-terminated.
+const char *ee_data_text_extension(const char *name);
+
+/// The ids of a table's listed rows by key (false with a message when the table has no text or does not parse).
+///
+/// # Safety
+/// `content` live, `table_name` NUL-terminated, `visit` callable with `ctx`, `err` writable or null.
+bool ee_data_ids(EeDataContent *content,
+                 const char *table_name,
+                 EeDataIdVisit visit,
+                 void *ctx,
+                 EeDataBytes *err);
+
+/// Appends the content dump of a table's db file bytes to `out` (`"name":[...]`).
+///
+/// # Safety
+/// `table_name` NUL-terminated, `data` readable for `len` bytes, `out`/`err` writable or `err` null.
+bool ee_data_dump_table(const char *table_name,
+                        const uint8_t *data,
+                        size_t len,
+                        EeDataBytes *out,
+                        EeDataBytes *err);
+
+/// CP-1252 bytes -> a double-quoted YAML scalar (UTF-8).
+///
+/// # Safety
+/// `bytes` readable for `len` bytes, `out` writable.
+void ee_data_quote_text(const uint8_t *bytes, size_t len, EeDataBytes *out);
+
+/// Reads a keyed `.civ` text: its name as CP-1252 bytes (`name`), its upgrades through `visit` (the list's items in
+/// order; only when the document is a mapping). The error (with `where_`) is in `err`: false on a parse problem or
+/// when the document is not a mapping ("<where>: not a civilization").
+///
+/// # Safety
+/// `text` readable for `len` bytes, `where_` NUL-terminated, `name`/`err` writable, `visit` callable with `ctx`.
+bool ee_data_civ_read(const uint8_t *text_ptr,
+                      size_t len,
+                      const char *where_,
+                      EeDataBytes *name,
+                      EeDataCivVisit visit,
+                      void *ctx,
+                      EeDataBytes *err);
+
+EeDataRules *ee_data_rules_new();
+
+/// # Safety
+/// `rules` must come from `ee_data_rules_new`, once.
+void ee_data_rules_free(EeDataRules *rules);
+
+/// Reads the rules documents through the Content; false with a message on the first problem.
+///
+/// # Safety
+/// `rules` and `content` live, `err` writable or null.
+bool ee_data_rules_load(EeDataRules *rules, EeDataContent *content, EeDataBytes *err);
+
+/// The snapshot the C++ `EERules` decodes (EERulesGenDecode.inl).
+///
+/// # Safety
+/// `rules` live, `out` writable.
+void ee_data_rules_encode(const EeDataRules *rules, EeDataBytes *out);
+
+/// The content dump of the rules (`"rules.<doc>":{...}` lines).
+///
+/// # Safety
+/// `rules` live, `out` writable.
+void ee_data_rules_dump(const EeDataRules *rules, EeDataBytes *out);
+
+/// A song's per-epoch flags from dbmusic (no-op when epochs.yaml named the songs).
+///
+/// # Safety
+/// `rules` live, `flags` readable for `count` entries.
+void ee_data_rules_set_music_from_flags(EeDataRules *rules,
+                                        int32_t song,
+                                        const bool *flags,
+                                        size_t count);
+
+/// The binary load's songs: every row of a dbmusic.dat file's per-epoch flags (the gate's and tools' path).
+///
+/// # Safety
+/// `rules` live, `data` readable for `len` bytes.
+bool ee_data_rules_music_from_dbmusic(EeDataRules *rules,
+                                      const uint8_t *data,
+                                      size_t len);
+
+/// TEST ONLY (EE-SIM --set): adds a rules override; false with the reason in `err`.
+///
+/// # Safety
+/// `spec` readable for `len` bytes, `err` writable or null.
+bool ee_data_rules_add_override(const uint8_t *spec, size_t len, EeDataBytes *err);
+
+/// TEST ONLY: the overrides that changed nothing, one reason per line in `out`.
+///
+/// # Safety
+/// `out` writable.
+void ee_data_rules_override_problems(EeDataBytes *out);
+
+/// The names of the unit categories, for C++: `kEERuleCategoryNames[]` is generated (EERulesGen.h); this is its count
+/// source of truth for a consistency check in tests.
+size_t ee_data_rule_category_count();
 
 /// Returns `EE_RUST_ABI_VERSION`.
 uint32_t ee_rust_abi_version();

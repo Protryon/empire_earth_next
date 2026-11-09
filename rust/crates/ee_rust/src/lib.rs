@@ -5,6 +5,8 @@ use std::ffi::c_char;
 
 // wgpu-native's `#[no_mangle]` C API (webgpu.h) reaches the staticlib through this dependency.
 use wgpu_native as _;
+// the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency
+use ee_data as _;
 
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 pub const EE_RUST_ABI_VERSION: u32 = 1;

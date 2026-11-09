@@ -1,0 +1,14 @@
+[package]
+name = "ee_data"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The data layer (docs/RUST_PLAN.md R2): the db tables' text compiler, the content dump, the rules documents, the
+# open formats. An rlib of the staticlib ee_rust: its extern "C" items (ffi.rs) reach the exe through ee_rust.
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "ee_data_gate"
+path = "src/bin/ee_data_gate.rs"

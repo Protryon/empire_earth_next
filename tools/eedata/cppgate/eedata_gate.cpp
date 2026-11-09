@@ -174,10 +174,86 @@ static int Batch(const char* inDir, const char* inTextDir)
     return 0;
 }
 
+// Edited rules documents: <case>__<doc>.<ext> -> <case>.out (the rules dump) or <case>.err (the message)
+static int RulesBatch(const char* inDir, const char* inTextDir)
+{
+    int n = 0;
+    for (const std::filesystem::directory_entry& e : std::filesystem::directory_iterator(inDir)) {
+        std::string file = e.path().filename().string();
+        size_t sep = file.find("__"), dot = file.rfind('.');
+        if (sep == std::string::npos || dot == std::string::npos || dot < sep)
+            continue;
+        std::string name = file.substr(0, sep), doc = file.substr(sep + 2, dot - sep - 2), text;
+        if (!ReadFile(e.path().string(), text))
+            return 2;
+        EEDataText::Content::Reader others = TextReader(inTextDir);
+        EEDataText::Content c([&](const char* inTable, std::string& outText) {
+            if (doc == inTable) {
+                outText = text;
+                return true;
+            }
+            return others(inTable, outText);
+        });
+        EERules theRules;
+        std::string err, dump;
+        bool ok = theRules.Load(c, err);
+        if (ok)
+            theRules.Dump(dump);
+        std::string out = (std::filesystem::path(inDir) / (name + (ok ? ".out" : ".err"))).string();
+        FILE* f = fopen(out.c_str(), "wb");
+        if (!f)
+            return 2;
+        const std::string& data = ok ? dump : err;
+        fwrite(data.data(), 1, data.size(), f);
+        fclose(f);
+        n++;
+    }
+    printf("%d rules cases compiled\n", n);
+    return 0;
+}
+
+// One decimal per line -> its bits as `XXXXXXXX`, or `E <message>`
+static int Floats(const char* inFile, const char* inOut)
+{
+    std::string data;
+    if (!ReadFile(inFile, data))
+        return 2;
+    FILE* f = fopen(inOut, "wb");
+    if (!f)
+        return 2;
+    size_t p = 0;
+    while (true) {
+        size_t e = data.find('\n', p);
+        std::string line = data.substr(p, e == std::string::npos ? std::string::npos : e - p);
+        EEDataText::Node n;
+        n.mKind = EEDataText::Node::kScalar;
+        n.mText = line;
+        try {
+            float v = EEDataText::NodeFloat(&n, "", "");
+            unsigned bits;
+            memcpy(&bits, &v, 4);
+            fprintf(f, "%08x\n", bits);
+        } catch (EEDataText::Failure& x) {
+            // NodeFloat's message starts ": : " (empty place and field); the same text as the Rust gate writes
+            std::string m = x.mText.substr(x.mText.compare(0, 4, ": : ") == 0 ? 4 : 0);
+            fprintf(f, "E %s\n", m.c_str());
+        }
+        if (e == std::string::npos)
+            break;
+        p = e + 1;
+    }
+    fclose(f);
+    return 0;
+}
+
 int main(int argc, char** argv)
 {
     if (argc == 4 && strcmp(argv[1], "--batch") == 0)
         return Batch(argv[2], argv[3]);
+    if (argc == 4 && strcmp(argv[1], "--rules-batch") == 0)
+        return RulesBatch(argv[2], argv[3]);
+    if (argc == 4 && strcmp(argv[1], "--floats") == 0)
+        return Floats(argv[2], argv[3]);
     if (argc == 4 && (strcmp(argv[1], "--dump-text") == 0 || strcmp(argv[1], "--dump-dat") == 0))
         return Dump(strcmp(argv[1], "--dump-text") == 0, argv[2], argv[3]);
     if (argc != 3) {
