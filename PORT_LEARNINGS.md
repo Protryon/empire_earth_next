@@ -1878,3 +1878,39 @@ checkout's. `tools/rust_build.py` always uses this checkout's `build/rust`.
 The gate's PT at the time cap is timing, not game state: `main` (9cc83d51) gave PT 13,986 and 17,633 in two runs on one
 machine. The seeded EE-SIM trace is the check that a change left the simulation alone.
 
+
+## The random map generator in Rust (R3.4)
+
+`rust/crates/ee_rmap` is the generator (`Random Map Generators/Default`, minus the `.rmv` reader). The `rmap` PIM stays
+in C++: `Default.cpp` copies `EERandomMap` into flat arrays (`EeRmapState`), runs one step in Rust and copies the result
+back, per step, because the game mutates the state between steps (water points, smoothing, feature claims). The grids
+are copied in and out of Rust at every step; the cost is small next to the generation.
+
+- **The `.rmv` reader is `Unit10.cpp`, not `EERandomMap.cpp`** (RUST_PLAN's R3.4 text is off). It stays in C++: it is
+  a text parser over `UString` and `std::map`, and its script-language semantics (`%f`-style number parsing through
+  `sprintf`/`sscanf`, `#if` evaluation over tokens) would need a gate of their own. `SetRandomMapValues` calls the
+  adapter's `ResetPlayerOrder`, now in `Default.cpp`.
+- **The byte gate.** `python -I tools/rmap_gate/rmap_gate.py check` runs 2088 maps (12 scripts x 6 sizes x player counts x
+  teams x 6 seeds) and compares digests of every `EERandomMap` output (floats by bits) with `golden_cpp.txt`, recorded
+  from the C++ generator before it was deleted. `diff "Script|size|players|mode|seed"` prints the digest after every
+  step to find a divergence. The tool links the real `Unit10.cpp` and engine math (`UString`, `UMath`, `GE2DPoint`,
+  `GETransformation`, `U2DFractal`...) with stubs for the platform layer (`/FORCE:UNRESOLVED` for code it never calls)
+  and the generator through `ee_rmap_gatelib`, a tiny staticlib (`ee_rust` needs wgpu, far too big for a helper).
+  - The game-side passes between the PIM steps are approximated by the tool (`rmap_dump.cpp`: the diamond map shape,
+    water points, smoothing, feature claims): the gate needs both generators to see the same input, not the game's.
+  - Mode `forced` turns on the filter pass and the shallows, which no shipped script enables, so that code is gated.
+- **`UMCos`/`UMArcCos` are lookup tables, and the tables are not a formula.** `UMTables.h` holds the `%f` spelling of
+  an `f32` cosine. Rust recomputes them the same way: `cos(f32(i * pi32 / 16384))`, formatted `{:.6}`, parsed back as
+  `f32` — and one entry differs from the formula: `cos(pi/2)` is a tiny negative that the table spells `0.000000`, a
+  plus zero (`-0.000000` parses to minus zero). `math::tables_digest` pins all 49,154 entries to the C++.
+- **`lrintf` has an "indefinite" value.** `round_ties_even` + `as i32` saturates; the C++ conversion gives `0x80000000`
+  for NaN and out-of-range values (a neutral share over zero neutrals is NaN). `ee_rmap::math::lrintf` keeps that
+  value (`ee_random::float_to_long` does not; it was not needed there).
+- **`unsigned long` is `u32` in the Rust**, on every target. The C++ on Linux/macOS had a 64-bit `unsigned long` here
+  (LP64). The Rust matches the Windows C++, which is what the gate recorded; on POSIX it may differ from the old POSIX
+  C++ where a value wraps (no POSIX C++ dump was recorded or compared).
+- **`EERMObject::mType` is uninitialized on every kind but trees** in the C++ (a stack record), so the digest skips it
+  there; the game reads it only for trees.
+- **All-valid test grids crash the C++.** A point off the map passes `AreAllMasked`'s clamped scan when every cell is
+  valid, and then indexes `mHeights` out of range. The real maps' diamond corners are invalid, so this never happens
+  in a game; `ee_rmap`'s golden test uses a one-tile invalid border as a real map has. A Rust index there would panic.

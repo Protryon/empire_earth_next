@@ -1,12 +1,15 @@
 """The random map generator's byte gate: a canonical dump of every EERandomMap output for every map script x seeds x
 map sizes x player counts, compared with the digests recorded from the C++ generator (golden_cpp.txt, RUST_PLAN R3.4).
 
-  python -I tools/rmap_gate/rmap_gate.py build [--generator cpp|rust]    compile and link rmap_dump (build/rmap_gate/)
+  python -I tools/rmap_gate/rmap_gate.py build                           compile and link rmap_dump (build/rmap_gate/)
   python -I tools/rmap_gate/rmap_gate.py check [--data TREE] [-j N]      run the matrix, compare with the golden digests
   python -I tools/rmap_gate/rmap_gate.py record [--data TREE] [-j N]     (over)write the golden digests
   python -I tools/rmap_gate/rmap_gate.py diff SCRIPT SIZE PLAYERS TEAMS SEED   per-stage digests of one map
 
-The tool compiles the .rmv reader (Unit10.cpp), the C++ adapter or generator, and only the engine units they need.
+The tool compiles the .rmv reader (Unit10.cpp), the C++ adapter (Default.cpp) and the engine units they need, and links
+the generator as ee_rmap_gatelib. The golden digests were recorded from the C++ generator (commit 7e470841) before
+it was deleted; there is no way to re-record them from C++ now. `record` overwrites them from the Rust generator: only
+do that at a declared rebaseline.
 """
 import argparse
 import concurrent.futures
@@ -21,6 +24,7 @@ sys.path.insert(0, str(HERE.parent))
 import clang_build
 import verify
 import ee
+import rust_build
 from ee import LLD_LINK, MODULE_FLAGS, ROOT
 
 OUT = ROOT / "build" / "rmap_gate"
@@ -28,30 +32,25 @@ GOLDEN = HERE / "golden_cpp.txt"
 DATA_DEFAULT = ROOT.parent / "empire_earth_next" / "build" / "open_data" / "tree"
 DEFAULT = ROOT / "src" / "Empire Earth" / "Random Map" / "Random Map Generators" / "Default"
 UTIL = ROOT / "src" / "Low-Level Engine"
-GEN_CPP = ["CMU Map Generator.cpp", "Default.cpp", "EEClumps.cpp", "EEFlatClumps.cpp", "EEIslandClumps.cpp",
-           "EELandClumps.cpp", "EETreeClumps.cpp", "HMUFractal.cpp", "Unit09.cpp", "Unit11.cpp", "Unit12.cpp"]
 READER = ["Unit10.cpp"]
 # engine units the dump tool compiles for real: the geometry math, the random stream, the strings and the fractal
 LLE_UNITS = ["Utilities/UString.cpp", "Utilities/UMath.cpp", "Utilities/U2DFractal.cpp",
              "File System/FSBasicFile.cpp", "File System/FSFileSpec.cpp", "Graphics Engine/GE3DLine.cpp",
              "Graphics Engine/GE2DPoint.cpp", "Graphics Engine/GE3DPoint.cpp", "Graphics Engine/GETransformation.cpp"]
 OPT = "-O1"
-DEFAULT_GENERATOR = "cpp"
-GENERATOR_EXTRA = {"cpp": GEN_CPP, "rust": []}
+DEFAULT_GENERATOR = "rust"
 
 
 def compile_units(generator, jobs=4):
-    work = [(DEFAULT / n, MODULE_FLAGS["default"]) for n in READER + GENERATOR_EXTRA[generator]]
+    work = [(DEFAULT / n, MODULE_FLAGS["default"]) for n in READER + ["Default.cpp"]]
     work += [(UTIL / rel, MODULE_FLAGS["lle"]) for rel in LLE_UNITS]
     work += [(HERE / "rmap_dump.cpp", MODULE_FLAGS["default"])]
-    if generator == "rust":
-        work += [(adapter_source(), MODULE_FLAGS["default"])]
     work += [(HERE / "rmap_stubs.cpp", MODULE_FLAGS["default"])]
 
     def one(job):
         src, flags = job
         obj = OUT / "obj" / generator / (src.stem + ".obj")
-        ok, log = clang_build.compile_to(src, flags, obj, OPT, None, [f"/I{DEFAULT}"])
+        ok, log = clang_build.compile_to(src, flags, obj, OPT)
         return src, obj, ok, log
     objs, failed = [], []
     with concurrent.futures.ThreadPoolExecutor(jobs) as ex:
@@ -66,22 +65,13 @@ def compile_units(generator, jobs=4):
     return objs
 
 
-def adapter_source():
-    """The C++ adapter (the rmap PIM on the Rust generator): Default.cpp once the C++ generator is gone, its .in before."""
-    pending = HERE / "Default_rust.cpp.in"
-    if pending.exists():
-        copy = OUT / "src" / "Default_rust.cpp"
-        copy.parent.mkdir(parents=True, exist_ok=True)
-        copy.write_bytes(pending.read_bytes())
-        return copy
-    return DEFAULT / "Default.cpp"
-
-
 def rust_staticlib():
-    r = subprocess.run(["cargo", "build", "--release", "-p", "ee_rmap_gatelib"], cwd=ROOT / "rust")
+    """The generator as a small static library (the game's ee_rust is far too big to build for a helper)."""
+    r = subprocess.run([rust_build.cargo(), "build", "--release", "-p", "ee_rmap_gatelib"], cwd=ROOT / "rust",
+                       env=rust_build.cargo_env())
     if r.returncode:
         sys.exit("cargo build of ee_rmap_gatelib failed")
-    return ROOT / "rust" / "target" / "release" / "ee_rmap_gatelib.lib"
+    return rust_build.TARGET_DIR / "release" / "ee_rmap_gatelib.lib"
 
 
 def link(objs, generator, extra=()):
@@ -129,7 +119,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("command", choices=["build", "check", "record", "diff"])
     ap.add_argument("key", nargs="?", help="diff: script|size|players|mode|seed")
-    ap.add_argument("--generator", choices=["cpp", "rust"], default=DEFAULT_GENERATOR)
+    ap.add_argument("--generator", choices=["rust"], default=DEFAULT_GENERATOR)
     ap.add_argument("--data", default=str(DATA_DEFAULT))
     ap.add_argument("-j", type=int, default=4)
     a = ap.parse_args()

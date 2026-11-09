@@ -7,4 +7,7 @@
 // validate the values read. Always returns 0. (EERMPIMSetRandomMapValues forwards both arguments.)
 long SetRandomMapValues(EERandomMap* ioMap, const UString& inScriptName);
 
+// Empties the neutral placement order (the Rust generator's, kept by Default.cpp) before a script is read.
+void ResetPlayerOrder();
+
 #endif
