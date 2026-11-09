@@ -115,6 +115,7 @@
 #include "ee/EEServer.h"
 #include "ee/EEWonNet.h"
 #include "ee/EEGameOptions.h"
+#include "ee/EECPEngine.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEGamePreferences.h"
@@ -975,8 +976,19 @@ void SetUpLobby()
         bool theSet = false;
         for (auto& o : theOptions)
             theSet = theSet || o.first == kEngine + s;
-        if (!theSet)
-            theOptions.push_back({kEngine + s, theEngines[(size_t)(s - 1) % theEngines.size()]});
+        if (theSet)
+            continue;
+        // the box's line by the choice's name (ee/EECPEngine.h: classic, random, an AI's id, or next for the
+        // manifest's first AI), not by its text: the manifest's names are free text
+        const std::string& theName = theEngines[(size_t)(s - 1) % theEngines.size()];
+        long theChoice = EECPChoiceByName(theName);
+        if (theChoice < 0) {
+            std::string theKnown = "classic, random";
+            for (const EECPAIEntry& e : EECPAIManifest())
+                theKnown += ", " + e.mID;
+            Fail("--engine: '" + theName + "' is no engine (" + theKnown + (EECPAIManifest().empty() ? "" : ", next") + ")");
+        }
+        theOptions.push_back({kEngine + s, "#" + std::to_string(theChoice)});
     }
     Select(kPlayerType, "#0", "slot 0 human");
     for (long s = 1; s < kVisibleSlots; s++)
@@ -1324,8 +1336,9 @@ const char* kUsage =
     "  --human-defeat         let the idle human be defeated (default: kept in, the harness's --no-human-defeat)\n"
     "  --cheats SETS          EE_AI_CHEATS (e.g. none, all, none/all)\n"
     "  --personality NAMES    EE_AI_PERSONALITY (e.g. balanced)\n"
-    "  --engine LIST          the computer seats' engine (classic, next, random) through the lobby's engine boxes:\n"
-    "                         one for every seat or a comma list by seat, taken in turn (e.g. next,classic)\n"
+    "  --engine LIST          the computer seats' engine through the lobby's engine boxes: classic, random, an AI's\n"
+    "                         id from Data/ai/ais.json (e.g. boom) or next (its first AI); one for every seat or a\n"
+    "                         comma list by seat, taken in turn (e.g. boom,classic)\n"
     "  --set DOC.KEY=VALUE    a rules document value (repeatable), e.g. aipersonalities.balanced.military.army_floor=0.2\n"
     "  --data DIR             the data root (EE_DATA_ROOT; default the exe's directory)\n"
     "  --config FILE          the settings file (EE_CONFIG; default <data root>/config.yaml)\n"

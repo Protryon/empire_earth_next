@@ -1741,9 +1741,97 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   opposite. Measure before fixing. The `research` verb answered such a tech `busy`; it is now `done` (n=0).
 - **A research started at a building leaves `mEpochIDs`** (TryResearch hands it to the producer's queue), so the
   verb's busy check missed it and a second order queued it again; it now also looks at the producers' queues.
+- **The later towers found no room round their sites** because only far or contested sites were left unguarded by
+  then: the ring tiles out of sight (`EECanPlaceUnitOnTile` takes only tiles visible now), under trees or the mine,
+  or with an armed enemy near. The classic FindTowerSite fails, too, once the centres nearest the town are guarded.
+  `EECPNextBuild` now falls back to the rings round the town, spaced by the tower's range. A TEMP per-tile
+  classification of the failed searches (which test failed first) found it in one run, where reading the code had
+  not.
 - **A data tree being rebuilt under EE-SIM** (another session's `open_data.py build`) fails the runs that stage it
   then (`EETerrainColorTable` verification failure at start-up, rc 0x80000003). For a long bench, hard-link a copy
   (`cp -al build/open_data/tree build/tw/tree`, seconds) and pass it with `--data`.
+
+## The next computer player's citizens' losses (2026-11-08, docs/AI_RESEARCH.md §8.33)
+
+- **Measure the deaths, not the guesses.** The suspects were remote raids, far hunting and slow defenders. A
+  `next.death` line per citizen lost (killer, place, what it was doing at its first hit, foes and own soldiers near)
+  showed the real causes in one bench: armies in the town, the militia fighting them, and no army. Animals and remote
+  sites were minor.
+- **The militia's odds count a tower's hit points as the citizens'.** The odds are (sum of hit points) x (sum of
+  attack), so a tower's 1000-1450 hit points multiply the citizens' attack: 12 citizens and a tower against 8 rock
+  throwers came out at 7.9 to 1. Yet running was worse: citizens run no faster than spearmen or horsemen, and the
+  militia's 4-second re-decisions plus the 10-second gatherer pass sent 25-29 citizens back and forth through the
+  attack.
+- **"Reserve less what the soldiers cost" does not let them be made when the stock is below the reserve.**
+  CanAfford asks stock - cost >= reserve, so a reserve of 1344 food against a stock of 743 blocked every soldier
+  whatever was subtracted. The reserve has to be capped at stock - cost.
+- **`EEUnit::GetGoal()` is `mGoalState`, not the goal the unit is carrying out.** A check of "is this enemy
+  attacking my unit" through `dynamic_cast<EEUGAttackUnit*>(GetGoal())` never fired. `mActiveGoal` with
+  `mKind == kGoalAttackUnit` does (the militia's own test).
+- **The trace's `losses` line lacks braces** (EECPTrace.cpp EECPTraceUnitLost: an `if` without braces before
+  several statements). `citizens_by_distance` and `citizens_by_killer` count every unit lost, projectiles included,
+  and the `else` binds to the town-centre test. It is left as it is, because fixing it changes the classic traces;
+  `next.death` is the reliable count.
+- **EE-SIM game-to-game variance is large**: 1 to 224 citizens lost in 16 games of one setting. A 16-game bench
+  resolves differences of about 15 losses a game. One change looked 14 worse on 16 games and was neutral on 32.
+- **A fishing boat sees 4 tiles; a frigate shoots from 5.** A boat that flees "on sight" is already under fire. The
+  docks and towers see further, which is what the fish finder's warship check uses.
+
+## The next computer player's resource sites (2026-11-08, docs/AI_RESEARCH.md §8.34)
+
+- **A worked mine has 0 hit points.** `EEUGGather::Work` hits any resource with hit points not 0 (meant for hunted
+  animals). A mine has 1 hit point in the data, and `EEUnit::TakeHit` sets a resource's hit points to 0 instead of
+  killing it. So a mine is at 0 from its first gather and stays gatherable while its amount (300000) lasts. Code
+  that asks `mHitPoints > 0` of a resource loses every worked mine and patch. The next engine's view did that, and
+  the playtest's only safe iron mine vanished the minute its gatherers reached it. Test resources by
+  `mResourceAmount > 0`, as `EECPResourceCenter::FindResourceUnit` does. The classic `cp sites` trace,
+  EECPRMSettlePatches and claim_needed still use the hit point test (left alone: changing them changes the classic
+  traces).
+- **`HasEnemyNear` is neither a threat test nor fog-honest.** It sums the influence regions (9 tiles each) round
+  the tile, then takes every unit in the overlapping unit regions (up to 27 tiles across): every armed unit not its
+  own, citizens (attack 5) and towers whatever their range, seen or not. 77% of the next engine's blocked
+  site-minutes were enemy citizens, 91% of all the blockers were out of sight. Its collection is in pointer order;
+  pick a cause by distance and unit id for a deterministic trace.
+- **A trace of who blocked what** (`EE_AI_EXP sitetrace`) settled in one bench what the playtest log could only
+  suggest. Build the before image with the trace commit alone and keep it apart (`build/trace_exe`). An edit
+  made while build.py runs can mix two header versions in one image, so stash or patch the work aside while it
+  builds.
+
+## Unit improvements and the next computer player's fifth playtest (2026-11-09, docs/AI_RESEARCH.md §8.35)
+
+- **No unit improvement could be bought on 64-bit Windows.** `EEUnitClass` takes its improvement table by
+  `reinterpret_cast<EEUnitClassImprovementTable*>(EEUCUpgradeTable::sTable[i])`. EEUCUpgradeTable has a virtual
+  destructor, so its data starts after the vtable pointer (8 bytes on x64); the reading struct began with a `long`
+  (4 bytes on Windows). Every entry was read 4 bytes off (a cost factor from the previous step, a step from the
+  cost) and the maximum level came from a step factor, 0, so `EEPlayer::CanBuy` refused every level (the
+  next engine's new `improve` verb found it: `level=1 max=0`). On LP64 macOS/Linux `long` is 8 bytes and the layout
+  happened to match. The first member is now `void*`, and a `static_assert` in EEUnitClass.cpp pins the shared
+  offsets. The classic AI's attack groups (`GiveImprovements`) buy improvements again on Windows, so its traces
+  differ from the images before.
+- **`gWorld.GetResourceUsers` counts the gatherers working a resource, not those sent to it.** The finders tested
+  it against the mining limit, so a patch of 6 drew 9 or more citizens: the walkers and those waiting were never
+  counted, and hunters whose game ran out walked to the nearest bushes on their own. Count the gather goals that
+  name the unit (`EECPNextAssigned`) and shed the extras.
+- **A tree's tile is on no land continent.** A placement search round a forest tile that asks the tile's own
+  continent (`GetContinent(x, y, kAIPathLandMass)`) refuses every site: take the town's continent.
+- **Docks from `FindShoreSite`** use the shore of the largest water body nearest the town, which can be 60 tiles out
+  while the town's own fish lie in other water by it.
+
+## The next computer player's settlement-first rule and the binary tree (2026-11-09, docs/AI_RESEARCH.md §8.36)
+
+- **A binary data tree has no row ids.** The Lua AIs name classes and techs by the text tables' `id`; on the binary
+  tree (`.dat` only) every class was `dbobjects_<n>`, so boom found no `citizen`, released every site and never
+  trained, and `research copper_tower_upgrade` was refused as unknown. The gates' AI games play classic only, so
+  nothing caught it. The binary tree now carries `Data/db/dbobjects.ids` / `dbtechtree.ids` (`key id` lines from
+  `ids.generate`, the same ids the converter gives the text rows); `EEDbFindFile` reads them with the `.dat`. The
+  boom traces of both trees are identical (seeds 26-27, 40 minutes).
+- **`EETile::IsVisibleTo` is "in sight now" (a count of the units seeing it), not "explored".** A home patch 7 tiles
+  from the town centre read as unexplored all game, and the finders (which test it) never sent anyone there. Building
+  placement (`EECanPlaceUnitOnTile`) tests it per footprint tile too: a settlement at a site nobody stands by went 5-6
+  tiles off, or nowhere. The next engine sends a walker and keeps it standing there until the settlement is placed,
+  and a resource by the player's own finished drop site skips the visibility test.
+- **A resource centre can hold gold and iron 6 tiles apart.** A per-site `has_drop` from its first unit said the iron
+  had a drop site; per-resource `drop`/`ready` in the view, and a settlement placed by the units that have none.
 
 ## R1.3: PlatFile, PlatThread and PlatSocket in Rust (rust/crates/ee_plat_sys, 2026-11-08)
 

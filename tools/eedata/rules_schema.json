@@ -992,13 +992,6 @@
      "dump": "id"
     },
     {
-     "cpp": "mNextScript",
-     "type": "string",
-     "default": "test_opening",
-     "dump": "next_script",
-     "doc": "the next engine's strategy (docs/AI_LUA_PLAN.md §3): the Lua module a computer seat with the next engine runs,\nData/ai/<name, dots as folders>.lua; the classic engine ignores it. Until stage S3's boom script, the S1 test\nopening ported to Lua"
-    },
-    {
      "cpp": "mEpochPressureStart",
      "type": "float",
      "default": 0.3,
@@ -1874,23 +1867,20 @@
   ],
   "personalities": [
    {
-    "mID": "balanced",
-    "mNextScript": "boom"
+    "mID": "balanced"
    },
    {
     "mID": "tall",
     "mEpochPressureStart": 0.15,
     "mEpochPressureFull": 0.5,
-    "mStandingArmy": 0.2,
-    "mNextScript": "balanced"
+    "mStandingArmy": 0.2
    },
    {
     "mID": "wide",
     "mEpochPressureStart": 0.6,
     "mEpochPressureFull": 1.0,
     "mMaxCitizenShare": 0.8,
-    "mStandingArmy": 0.15,
-    "mNextScript": "boom"
+    "mStandingArmy": 0.15
    },
    {
     "mID": "aggressive",
@@ -1902,8 +1892,7 @@
     "mPrehistoricAttacks": true,
     "mStoneAttacks": true,
     "mSafeBonus": 0.0,
-    "mEarlyTrainers": 0,
-    "mNextScript": "rush"
+    "mEarlyTrainers": 0
    },
    {
     "mID": "classic",

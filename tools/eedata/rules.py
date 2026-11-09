@@ -274,17 +274,16 @@ powers:
 AI_DEFAULTS = dict(start='0.3', full='0.8', stone_span='30', surplus='1000', low_stock='150', citizens='0.7', moves='3',
                    demand_split='true', coast_fishing='true', forage_patches='true', claim_needed='true', army='0.25',
                    floor='0.1', militia='true', militia_towers='true', prearmy='4', attacks='false', naval_flee='true',
-                   safe_bonus='0.25', town_centers='2', trainers='2', patch_expand='true', stone_attacks='false',
-                   next_script='test_opening')
+                   safe_bonus='0.25', town_centers='2', trainers='2', patch_expand='true', stone_attacks='false')
 AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_RESEARCH.md 8.10-8.27)',
-                     dict(next_script='boom')),
+                     dict()),
                     ('tall', 'tech: saves for the next epoch early and hard',
-                     dict(start='0.15', full='0.5', army='0.2', next_script='balanced')),
+                     dict(start='0.15', full='0.5', army='0.2')),
                     ('wide', 'boom: grows its workforce, advances late',
-                     dict(start='0.6', full='1.0', citizens='0.8', army='0.15', next_script='boom')),
+                     dict(start='0.6', full='1.0', citizens='0.8', army='0.15')),
                     ('aggressive', 'rush: a large standing army, a middling epoch pace',
                      dict(start='0.4', full='0.9', army='0.5', floor='0.3', prearmy='0', attacks='true', stone_attacks='true',
-                          safe_bonus='0', trainers='0', next_script='rush')),
+                          safe_bonus='0', trainers='0')),
                     ('classic', 'TEMPORARY: the original\'s decisions where a rule holds them (docs/AI_RESEARCH.md 8.28)',
                      dict(start='1.0', full='100.0', stone_span='0', surplus='100000000', low_stock='0', citizens='0.0', moves='0',
                           demand_split='false', coast_fishing='false', forage_patches='false', claim_needed='false',
@@ -292,7 +291,6 @@ AI_PERSONALITIES = [('balanced', 'the tuning the benchmarks settled on (docs/AI_
                           naval_flee='false', safe_bonus='0', town_centers='0', trainers='0', patch_expand='false',
                           stone_attacks='true'))]
 AI_FLOOR = ('food', 'wood', 'stone', 'gold', 'iron')
-NEXT_SCRIPT_RE = re.compile(r'^[A-Za-z0-9_]{1,96}(\.[A-Za-z0-9_]{1,96})*$')   # a Lua module name (EECPLua.cpp ModuleName)
 
 
 def aipersonalities(ids, spec):
@@ -303,7 +301,6 @@ def aipersonalities(ids, spec):
         v = dict(AI_DEFAULTS, **differs)
         start, full, citizens, army, floor, prearmy = v['start'], v['full'], v['citizens'], v['army'], v['floor'], v['prearmy']
         lines += [f'  - id: {pid:<24}# {what}',
-                  f"    next_script: {v['next_script']:<15}# the next engine's strategy: Data/ai/<name>.lua (docs/AI_LUA_PLAN.md)",
                   '    epoch_pressure:              # the elapsed share of the epoch timer (dbcpbehavior rows 28/29)',
                   f'      start: {start:<22}# a paid epoch advance is asked for from here ...',
                   f'      full: {full:<23}# ... and its cost is wholly reserved from here',
@@ -647,10 +644,7 @@ def validate(name, text, content, spec):
                 if y.get('prehistoric_army') is not None and _int(y.get('prehistoric_army'), y.where(), 'prehistoric_army') < 0:
                     raise TextError(f'{y.where()}: military: prehistoric_army must be 0 or more')
                 y.done()
-            s = x.get('next_script')
-            if s is not None and (len(str(s)) > 96 or not NEXT_SCRIPT_RE.match(str(s))):
-                raise TextError(f'{x.where(s)}: next_script: {str(s)!r} is not a module name (letters, digits and _, '
-                                'in segments separated by dots)')
+            x.get('next_script')   # obsolete (the AI manifest Data/ai/ais.json names the scripts): older documents load
             return x.get('id')
         found = entries(top, 'personalities', personality)
         _check_entries(found, top.where(), 'personalities')

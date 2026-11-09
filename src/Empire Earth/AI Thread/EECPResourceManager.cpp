@@ -93,6 +93,7 @@ struct EECPRMUnitDistanceLess {
 static bool EECPRMFishes(EECPResourceManager* inManager);        // economy.coast_fishing (below GetGatherCapacity)
 static void EECPRMRequestBoats(EECPResourceManager* inManager);
 static unsigned long EECPRMHunters(EECPResourceManager* inManager);
+static EEUnit* EECPRMNextWoodTarget(EECPResourceManager* inManager, long inCount, EEComplexUnit* inUnit);
 static const unsigned long kHuntFirst = 6;   // the experiment "hunt6": hunters before the patches
 
 // The units within a distance of a tile (FindFish's find_if: COMDATs 0x921d0/0x921f7) (provisional name)
@@ -223,7 +224,8 @@ void EECPResourceManager::AssignIdleGatherers(std::deque<EEComplexUnit*>& ioUnit
             }
         EEUnit* theResource = NULL;
         for (long i = 0; i < 4 && theResource == NULL; i++)
-            theResource = theOrder[i] == 3 ? this->FindForestTarget(1, *it) : this->FindResourceTarget(theOrder[i], *it, false);
+            theResource = theOrder[i] != 3 ? this->FindResourceTarget(theOrder[i], *it, false)
+                : EECPNextEngine(this->mManager->mPlayer) ? EECPRMNextWoodTarget(this, 1, *it) : this->FindForestTarget(1, *it);
         if (theResource != NULL)
             this->SendToGather(*it, theResource, NULL);
     }
@@ -303,10 +305,148 @@ void EECPResourceManager::AddGatherer(EEComplexUnit* inUnit, long inResource)
     }
 }
 
+// whether a resource unit takes one more gatherer: the original's test (its users working there below the mining limit);
+// the next engine also counts the gatherers sent there and holds a forage patch to kNextPatchPlaces in all
+// (EECPNextHasRoom; docs/AI_RESEARCH.md §8.35: 9 were sent to one patch, waiting)
+static bool EECPRMHasRoom(EEComputerPlayer* inPlayer, EEUnit* inResource, unsigned long inLimit)
+{
+    if (EECPNextEngine(inPlayer))
+        return EECPNextHasRoom(inPlayer, inResource);
+    return gWorld.GetResourceUsers(inResource) < inLimit;
+}
+
+// the next engine: a unit of a resource centre's resource with room for one more gatherer (the original takes the
+// first unit with some left, so a centre whose first mine or bush is full was passed over)
+static EEUnit* EECPRMUnitWithRoom(EEComputerPlayer* inPlayer, EECPResourceCenter* inCenter, unsigned long inResource)
+{
+    for (unsigned long i = 0; i < inCenter->mUnits.size(); i++) {
+        EEUnit* theUnit = inCenter->mUnits[i];
+        if (theUnit->mResourceType == inResource && theUnit->mResourceAmount > 0 && EECPNextHasRoom(inPlayer, theUnit)
+            && EECPNextUnitDropReady(inPlayer, theUnit))   // (§8.36: by a finished drop site)
+            return theUnit;
+    }
+    return NULL;
+}
+
+// the next engine (§8.35): the gatherers beyond what a patch (kNextPatchPlaces) or a mine unit (the mining limit)
+// holds are taken off it (hunters whose game ran out walk to the nearest bushes; the game moves gatherers to the next
+// bush of a patch). They go back to the idle list, and AssignGatherers places them where there is room.
+static void EECPRMShedCrowds(EECPResourceManager* inManager)
+{
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    long theLimit = thePlayer->mMiningLimit > 0 ? (long)thePlayer->mMiningLimit : 1;
+    std::map<EEUnit*, long> theOnUnit;
+    std::map<EECPResourceCenter*, long> theOnPatch;
+    std::map<EEUnit*, EECPResourceCenter*> thePatchOf;
+    for (unsigned long k = 0; k < thePlayer->GetNumResourceCenters(); k++) {
+        EECPResourceCenter* theCenter = thePlayer->GetResourceCenter(k);
+        for (unsigned long u = 0; u < theCenter->mUnits.size(); u++)
+            if (theCenter->mUnits[u]->mUnitClass->mUnitType == kUnitTypeResForageBush)
+                thePatchOf[theCenter->mUnits[u]] = theCenter;
+    }
+    std::vector<EEComplexUnit*> theShed;
+    long theWoodReady = -1;   // (§8.36) whether some forest edge has a finished drop site at hand (-1: not asked yet)
+    for (long r = 2; r < 7; r++)
+        for (unsigned long k = 0; k < inManager->mGatherers[r].size(); k++) {
+            EEComplexUnit* theUnit = inManager->mGatherers[r][k];
+            if (theUnit->GetUnitClass()->mCategory != kUnitCategoryLandCitizen || theUnit->mIsDisabled
+                || theUnit->mIsDetachedFromAI || theUnit->mCitizenBuildQueue.size() != 0)
+                continue;
+            EEUGGather* theGather = dynamic_cast<EEUGGather*>(theUnit->GetLoadGoal());
+            if (theGather != NULL && theGather->mResource != NULL && theGather->mResource->mUnitClass->mIsTree
+                && theGather->mResource->mTile != NULL) {
+                // §8.36: a wood gatherer the game moved on to a tree with no drop site at hand (the forest edge is cut
+                // back) goes back to the idle list when an edge by a drop site has trees, and is sent there
+                EEUnit* theTree = theGather->mResource;
+                if (!EECPNextDropReady(thePlayer, theTree->GetTileX(), theTree->GetTileY(), false, kNextWoodSlack)) {
+                    if (theWoodReady < 0)
+                        theWoodReady = EECPNextWoodTarget(thePlayer, 0, NULL) != NULL ? 1 : 0;
+                    if (theWoodReady > 0)
+                        theShed.push_back(theUnit);
+                }
+                continue;
+            }
+            if (theGather == NULL || theGather->mResource == NULL || theGather->mResource->mUnitClass->mIsTree
+                || theGather->mResource->mUnitClass->mFamily == kUnitFamilyAnimal
+                || theGather->mResource->mUnitClass->mFamily == kUnitFamilyFish)
+                continue;
+            EEUnit* theResource = theGather->mResource;
+            bool theOver = ++theOnUnit[theResource] > theLimit;
+            std::map<EEUnit*, EECPResourceCenter*>::iterator thePatch = thePatchOf.find(theResource);
+            if (thePatch != thePatchOf.end() && ++theOnPatch[thePatch->second] > kNextPatchPlaces)
+                theOver = true;
+            if (theOver)
+                theShed.push_back(theUnit);
+        }
+    for (unsigned long k = 0; k < theShed.size(); k++) {
+        EEComplexUnit* theUnit = theShed[k];
+        theUnit->Reference();
+        inManager->AddIdleGatherer(theUnit);
+        theUnit->ClearGoalQueue(0);
+        theUnit->StartAction(kActionIdle);
+        theUnit->GetUnitClass()->ActionChanged(theUnit);
+        theUnit->Dereference();
+    }
+    if (!theShed.empty())
+        EE_CP_TRACE(thePlayer, "gather.shed", "n=%lu", (unsigned long)theShed.size());
+}
+
 // NEAR: block order and register choice (the resource loop: the original tests 2, 3, then >3 and lays the bodies out in reverse)
 // FUNCTION: EXE 0x48eecf
 // Sends idle citizens and boats to food, wood, stone, gold and iron up to each resource's wanted gatherer
 // count, requesting fishing boats and ferries as needed; the rest go to AssignIdleGatherers/AssignIdleBoats
+// the next engine (docs/AI_RESEARCH.md §8.36, the owner: "the first thing I do is build a settlement"): the citizens the
+// finders found no place for (the sites of their resource wait for a drop site) help build the settlements and
+// granaries going up, up to kNextDropBuilders a building, the nearest citizen first; when it stands they gather there
+static const long kNextDropBuilders = 4;
+
+static void EECPRMHelpBuildDrops(EECPResourceManager* inManager, std::deque<EEComplexUnit*>& ioIdle)
+{
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    std::vector<EEUnit*> theSites;
+    for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        long theType = theUnit->mUnitClass->mUnitType;
+        if ((theType != kUnitTypeSettlement && theType != kUnitTypeGranary) || theUnit->mComplexUnit == NULL
+            || theUnit->mComplexUnit->mIsBuilt || theUnit->mTile == NULL)
+            continue;
+        if (EECPNextBuildUnsafe(thePlayer, theUnit->mTileX, theUnit->mTileY) != kNextBlockedNone)
+            continue;
+        theSites.push_back(theUnit);
+    }
+    if (theSites.empty())
+        return;
+    std::vector<EEComplexUnit*> theCitizens;
+    inManager->mManager->mUnitManager->GetCitizens(theCitizens);
+    for (unsigned long k = 0; k < theSites.size() && !ioIdle.empty(); k++) {
+        long theBuilders = 0;
+        for (unsigned long c = 0; c < theCitizens.size(); c++) {
+            EEUGBuildRepair* theGoal = dynamic_cast<EEUGBuildRepair*>(theCitizens[c]->GetLoadGoal());
+            if (theGoal != NULL && theGoal->mTarget == theSites[k])
+                theBuilders++;
+        }
+        long theSent = 0;
+        while (theBuilders < kNextDropBuilders && !ioIdle.empty()) {
+            std::deque<EEComplexUnit*>::iterator theNearest = ioIdle.begin();
+            for (std::deque<EEComplexUnit*>::iterator it = ioIdle.begin(); it != ioIdle.end(); ++it)
+                if ((*it)->DistanceSquaredTo(theSites[k]->mComplexUnit) < (*theNearest)->DistanceSquaredTo(theSites[k]->mComplexUnit))
+                    theNearest = it;
+            EEComplexUnit* theWorker = *theNearest;
+            ioIdle.erase(theNearest);
+            EEUGBuildRepair* theGoal = new EEUGBuildRepair(thePlayer, theSites[k], false);
+            theWorker->ClearGoalQueue(0);
+            theWorker->SetGoal(theGoal, 0, 0);
+            theWorker->StartAction(theGoal->GetStartAction());
+            theWorker->mUnitClass->ActionChanged(theWorker);
+            theBuilders++;
+            theSent++;
+        }
+        if (theSent > 0)
+            EE_CP_TRACE(thePlayer, "build.help", "cls=%ld x=%ld y=%ld sent=%ld builders=%ld",
+                (long)theSites[k]->mUnitClass->mUnitType, (long)theSites[k]->mTileX, (long)theSites[k]->mTileY, theSent,
+                theBuilders);
+    }
+}
+
 void EECPResourceManager::AssignGatherers()
 {
     std::vector<EEComplexUnit*> theFound;
@@ -330,6 +470,8 @@ void EECPResourceManager::AssignGatherers()
         theAcross = false;
     bool theNext = EECPNextEngine(thePlayer);   // the next engine: no boat requests (fish), the food order of gather
     this->RebalanceGatherers();   // new
+    if (theNext)
+        EECPRMShedCrowds(this);   // the next engine: no more than a patch or mine holds (§8.35)
 
     for (it = this->mGatherers[0].begin(); it != this->mGatherers[0].end(); ++it) {
         theUnit = *it;
@@ -358,7 +500,8 @@ void EECPResourceManager::AssignGatherers()
                     theBoats.push_back(theUnit);
             } else if (theUnit->mCitizenBuildQueue.size() == 0 && theUnit->GetHitPoints() > 0 && theUnit->GetTileX() != -10000
                        && theUnit->GetTileY() != -10000
-                       && (theGoal == NULL || (theGather != NULL && theGather->mWaiting && theUnit->mCurrentPhysicsAction != 0)))
+                       && (theGoal == NULL || (theGather != NULL && theGather->mWaiting && theUnit->mCurrentPhysicsAction != 0))
+                       && !(theNext && EECPNextExploring(thePlayer, theUnit)))   // (§8.36: kept where it looks)
                 theIdle.push_back(theUnit);
         }
     }
@@ -406,7 +549,7 @@ void EECPResourceManager::AssignGatherers()
                     if (theTarget != NULL) {
                         unsigned long theCount = theWanted < theIdle.size() ? theWanted : theIdle.size();
                         while (theCount > 0) {
-                            if (gWorld.GetResourceUsers(theTarget) < theLimit) {
+                            if (EECPRMHasRoom(thePlayer, theTarget, theLimit)) {
                                 theUnit = theIdle.front();
                                 theIdle.pop_front();
                                 this->SendToGather(theUnit, theTarget, NULL);
@@ -451,7 +594,7 @@ void EECPResourceManager::AssignGatherers()
                                 if (theTarget != NULL) {
                                     unsigned long theCount = theWanted < theIdle.size() ? theWanted : theIdle.size();
                                     while (theCount > 0) {
-                                        if (gWorld.GetResourceUsers(theTarget) < theLimit) {
+                                        if (EECPRMHasRoom(thePlayer, theTarget, theLimit)) {
                                             theUnit = theIdle.front();
                                             theIdle.pop_front();
                                             this->SendToGather(theUnit, theTarget, NULL);
@@ -469,7 +612,7 @@ void EECPResourceManager::AssignGatherers()
                                     if (theTarget != NULL) {
                                         unsigned long theCount = theWanted < theIdle.size() ? theWanted : theIdle.size();
                                         while (theCount > 0) {
-                                            if (gWorld.GetResourceUsers(theTarget) < theLimit) {
+                                            if (EECPRMHasRoom(thePlayer, theTarget, theLimit)) {
                                                 theUnit = theIdle.front();
                                                 theIdle.pop_front();
                                                 this->SendToGather(theUnit, theTarget, NULL);
@@ -539,7 +682,8 @@ void EECPResourceManager::AssignGatherers()
                     break;
                 }
                 case 3: {
-                    EEUnit* theTarget = this->FindForestTarget(theWanted, theIdle.size() > 0 ? theIdle.front() : NULL);
+                    EEUnit* theTarget = theNext ? EECPRMNextWoodTarget(this, (long)theWanted, theIdle.size() > 0 ? theIdle.front() : NULL)
+                        : this->FindForestTarget(theWanted, theIdle.size() > 0 ? theIdle.front() : NULL);
                     if (theTarget != NULL) {
                         unsigned long theCount = theWanted < theIdle.size() ? theWanted : theIdle.size();
                         while (theCount > 0 && theIdle.size() > 0) {
@@ -557,7 +701,7 @@ void EECPResourceManager::AssignGatherers()
                         if (theTarget != NULL) {
                             unsigned long theCount = theWanted < theIdle.size() ? theWanted : theIdle.size();
                             while (theCount > 0) {
-                                if (gWorld.GetResourceUsers(theTarget) < theLimit) {
+                                if (EECPRMHasRoom(thePlayer, theTarget, theLimit)) {
                                     theUnit = theIdle.front();
                                     theIdle.pop_front();
                                     this->SendToGather(theUnit, theTarget, NULL);
@@ -591,6 +735,8 @@ void EECPResourceManager::AssignGatherers()
                 }
             }
         }
+        if (theNext && theIdle.size() > 0)
+            EECPRMHelpBuildDrops(this, theIdle);   // (§8.36: the settlement first, then the gathering there)
         if (theIdle.size() > 0)
             this->AssignIdleGatherers(theIdle);
     }
@@ -907,6 +1053,18 @@ void EECPResourceManager::FindMines(unsigned long inCount, bool inNear, std::vec
         bool theFree = !this->GetManager()->GetBuildManager()->HasEnemyNear(theMine->GetTileX(), theMine->GetTileY());
         if (!theFree)
             continue;
+        if (EECPNextEngine(this->GetManager()->GetPlayer())) {
+            // the next engine (§8.35, the owner: "hunting really really far away from home"): the game within the
+            // claim range of the town centre (EECPNextHuntReach), not more than kNextHuntersPerAnimal hunters an animal
+            long theDX = theMine->GetTileX() - theCenter.GetX(), theDY = theMine->GetTileY() - theCenter.GetY();
+            long theReach = EECPNextHuntReach(this->GetManager()->GetPlayer());
+            if (theHaveCenter && theDX * theDX + theDY * theDY <= theReach * theReach
+                && EECPNextAssigned(this->GetManager()->GetPlayer(), theMine) < kNextHuntersPerAnimal) {
+                outUnits.push_back(this->GetMinesAt(i));
+                theFound++;
+            }
+            continue;
+        }
         EEComplexUnit* theCenterUnit = this->FindNearestTownCenter(theMine);
         if (theCenterUnit != NULL && theCenterUnit->DistanceSquaredTo(theMine) < (float)theRange) {
             outUnits.push_back(this->GetMinesAt(i));
@@ -934,6 +1092,17 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
         EEUnit* theUnit = theCenterObject->FindResourceUnit(2);
         if (theUnit == NULL || theUnit->GetUnitClass()->GetUnitType() != kUnitTypeResForageBush)
             continue;
+        bool theNextReady = false;
+        if (EECPNextEngine(thePlayer)) {   // a bush of the patch with room (§8.35), else the next patch
+            theUnit = EECPRMUnitWithRoom(thePlayer, theCenterObject, 2);
+            if (theUnit == NULL)
+                continue;
+            // §8.36 (the owner: "require the AI to build a settlement before using a node"): only a patch with a
+            // finished drop site at hand; the strategy builds it first
+            if (!EECPNextUnitDropReady(thePlayer, theUnit))
+                continue;
+            theNextReady = true;
+        }
         if (inUnit != NULL) {
             EETileCoordinate theUnitTile;
             theUnitTile.mX = theUnit->GetTileX();
@@ -952,18 +1121,20 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
             if (!gContinentManager.AreConnectedFromIDs(theCenterID, gContinentManager.GetContinentID(theX, theY), theFlags))
                 continue;
         }
-        if (!static_cast<EETile*>(theUnit->GetRTSTile())->IsVisibleTo(thePlayer))
-            continue;   // skip it (was break: ended the whole search)
-        if (gWorld.GetResourceUsers(theUnit) >= theLimit)
+        if (!theNextReady && !static_cast<EETile*>(theUnit->GetRTSTile())->IsVisibleTo(thePlayer))
+            continue;   // skip it (was break: ended the whole search; §8.36: a patch by the player's own finished drop
+                        // site is known: a home patch 7 tiles from the town centre stayed unexplored all game)
+        if (!EECPRMHasRoom(thePlayer, theUnit, theLimit))
             continue;
         theTile.mCenter.mX = theUnit->GetTileX();
         theTile.mCenter.mY = theUnit->GetTileY();
         if (theUnit->GetResourceAmount() <= 0 || theUnit->GetRTSTile()->GetTerrainType() == kTerrainDeepWater)
             continue;
-        if (inNeedsDropSite && theCenterObject->mUnit == NULL)
+        if (inNeedsDropSite && theCenterObject->mUnit == NULL && !theNextReady)
             continue;
-        if (this->mManager->mBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY()))
-            continue;
+        if (EECPNextEngine(thePlayer) ? EECPNextSiteBlocked(thePlayer, theUnit, NULL) > kNextBlockedUnexplored
+                                      : this->mManager->mBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY()))
+            continue;   // (the next engine: its gather safety, as FindResourceTarget)
         // economy.forage_patches: only the patches within the claim range (the playtest AI sent 17 of 27 food gatherers
         // on far trips); their settlements come from EECPRMSettlePatches. TEST ONLY: the experiment "droprule" also
         // skips a patch with no drop site within kEECPPatchDropRange tiles (lost 4-17 in the sim: the patches stood
@@ -973,7 +1144,7 @@ EEUnit* EECPResourceManager::FindFarm(bool inNeedsDropSite, bool inNear, EECompl
                 || (EECPExperiment(thePlayer, "droprule")
                     && !EECPRMFoodDropNear(thePlayer, theUnit->GetTileX(), theUnit->GetTileY(), kEECPPatchDropRange))))
             continue;
-        if (theTile.DistanceSquared(theCenter.mCenter) < theRange) {
+        if (theNextReady || theTile.DistanceSquared(theCenter.mCenter) < theRange) {   // (§8.36: its drop decides)
             theResult = theUnit;
             break;
         }
@@ -988,6 +1159,11 @@ static bool EECPRMFishInDanger(EECPResourceManager* inManager, EEUnit* inFish)
         && EECPRMResourceInDanger(inManager, inFish->GetTileX(), inFish->GetTileY());
 }
 
+// the next engine (docs/AI_RESEARCH.md §8.33): the fishing boats also leave alone the fish within this many tiles of an
+// armed enemy ship the player sees now (frigates sank about a third of the boom's losses, 36-40 boats a game, at fish
+// the 30-second danger zones had already forgotten)
+static const long kNextFishWarshipRange = 12;
+
 // FUNCTION: EXE 0x490819
 // Returns the nearest fish to a unit that is not crowded, preferring fish more than 8 tiles from every own dock
 EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
@@ -997,9 +1173,15 @@ EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
     EEUnit* theResult = NULL;
     std::sort(this->mFish.begin(), this->mFish.end(), EECPUnitTileDistanceLess(inUnit->GetTile()));
     EEGetPlayerUnitsOfType(kUnitTypeDock, this->GetManager()->GetPlayer()->GetPlayerID(), theUnits);
+    std::vector<long> theWarships;
+    bool theNext = EECPNextEngine(this->GetManager()->GetPlayer());
+    if (theNext)
+        EECPNextSeenWarships(this->GetManager()->GetPlayer(), theWarships);
     unsigned long i;
     for (i = 0; i < this->mFish.size() && theResult == NULL; i++) {
         EEComplexUnit* theUnit = this->mFish[i];
+        if (theNext && EECPNextNearTiles(theWarships, theUnit->GetTileX(), theUnit->GetTileY(), kNextFishWarshipRange))
+            continue;
         if (theUnit->GetResourceAmount() > 0 && gWorld.GetResourceUsers(theUnit) < theLimit && !EECPRMFishInDanger(this, theUnit)) {
             if (std::find_if(theUnits.begin(), theUnits.end(), EECPRMUnitWithin(theUnit->GetTile(), 64.0f)) == theUnits.end())
                 theResult = theUnit;
@@ -1010,6 +1192,8 @@ EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
     unsigned long j;
     for (j = 0; j < this->mFish.size() && theResult == NULL; j++) {
         EEComplexUnit* theUnit = this->mFish[j];
+        if (theNext && EECPNextNearTiles(theWarships, theUnit->GetTileX(), theUnit->GetTileY(), kNextFishWarshipRange))
+            continue;
         if (theUnit->GetResourceAmount() > 0 && gWorld.GetResourceUsers(theUnit) < theLimit && !EECPRMFishInDanger(this, theUnit))
             theResult = theUnit;
     }
@@ -1113,6 +1297,67 @@ EEUnit* EECPResourceManager::FindForestTarget(long inCount, EEComplexUnit* inUni
     return theResult;
 }
 
+// the next engine's wood (docs/AI_RESEARCH.md §8.36, the owner: a settlement before using a node): a tree with a
+// finished drop site at hand (kNextDropReach plus the drop's half size): the forest point nearest the town centre when
+// it has one (FindForestTarget's), else the forest point nearest each finished drop site, the drop nearest the town
+// first; NULL when no forest edge has one (the strategy builds a settlement there: view.wood)
+static EEUnit* EECPRMNextWoodTarget(EECPResourceManager* inManager, long inCount, EEComplexUnit* inUnit)
+{
+    EEComputerPlayer* thePlayer = inManager->mManager->mPlayer;
+    EEUnit* theTree = inManager->FindForestTarget(inCount, inUnit);
+    if (theTree != NULL && EECPNextDropReady(thePlayer, theTree->GetTileX(), theTree->GetTileY(), false, kNextWoodSlack))
+        return theTree;
+    U2DPoint<long> theTown(inManager->mManager->mBuildManager->mTownCenterTile.mX,
+        inManager->mManager->mBuildManager->mTownCenterTile.mY);
+    if (theTown.mX == -10000 || gWorld.mMap == NULL)
+        return NULL;
+    std::vector<long> theDrops;
+    EECPNextReadyDrops(thePlayer, false, theDrops);
+    std::vector<std::pair<long long, unsigned long> > theOrder;   // (distance from the town, the drop's first long)
+    for (unsigned long d = 0; d + 2 < theDrops.size(); d += 3) {
+        long long theDX = theDrops[d] - theTown.mX, theDY = theDrops[d + 1] - theTown.mY;
+        theOrder.push_back(std::make_pair(theDX * theDX + theDY * theDY, d));
+    }
+    std::sort(theOrder.begin(), theOrder.end());
+    for (unsigned long o = 0; o < theOrder.size(); o++) {
+        unsigned long d = theOrder[o].second;
+        U2DPoint<long> theDrop(theDrops[d], theDrops[d + 1]);
+        long theReach = kNextDropReach + kNextWoodSlack + theDrops[d + 2];
+        EEUnit* theBest = NULL;
+        long long theBestDistance = 0;
+        for (unsigned long i = 0; i < inManager->mForests.size(); i++) {
+            EEAIForest* theForest = gContinentManager.mForests[inManager->mForests[i]];
+            if (theForest == NULL)
+                continue;
+            if (inUnit != NULL && !gContinentManager.AreConnectedByID(gContinentManager.GetContinentID(inUnit),
+                    theForest->mContinentID, thePlayer->GetCitizenPassability()))
+                continue;
+            U2DPoint<long> thePoint = theForest->GetClosestPoint(theDrop);
+            long long theDX = thePoint.mX - theDrop.mX, theDY = thePoint.mY - theDrop.mY;
+            long long theDistance = theDX * theDX + theDY * theDY;
+            if (theDistance > (long long)theReach * theReach || (theBest != NULL && theDistance >= theBestDistance))
+                continue;
+            EEMapTile* theMapTile = gWorld.mMap->GetTile(thePoint.mX, thePoint.mY);
+            for (RTSTileUnitNode* theNode = theMapTile != NULL ? theMapTile->mUnits : NULL; theNode != NULL; theNode = theNode->mNext) {
+                EEUnit* theUnit = theNode->mUnit;
+                if (theUnit != NULL && theUnit->GetUnitClass()->mResourceType == kResourceWood && theUnit->mResourceAmount > 0) {
+                    theBest = theUnit;
+                    theBestDistance = theDistance;
+                    break;
+                }
+            }
+        }
+        if (theBest != NULL)
+            return theBest;
+    }
+    return NULL;
+}
+
+EEUnit* EECPNextWoodTarget(EEComputerPlayer* inPlayer, long inCount, EEComplexUnit* inUnit)
+{
+    return EECPRMNextWoodTarget(inPlayer->mCivilizationManager->mResourceManager, inCount, inUnit);
+}
+
 // FUNCTION: EXE 0x490cb5
 // Returns a resource unit of a type from the resource centers (forwards or backwards) that is visible, not
 // crowded, unthreatened, away from other players' areas and reachable from the unit
@@ -1143,16 +1388,30 @@ EEUnit* EECPResourceManager::FindResourceTarget(long inResource, EEComplexUnit* 
         bool theOK = false;
         if (theCenter != NULL && theCenter->mIsActive) {
             EEUnit* theUnit = theCenter->FindResourceUnit(inResource);
-            if (theUnit != NULL && static_cast<EETile*>(theUnit->mTile)->IsVisibleTo(thePlayer) && gWorld.GetResourceUsers(theUnit) < theLimit
+            if (theUnit != NULL && EECPNextEngine(thePlayer)) {   // a unit with room (§8.35)
+                EEUnit* theRoom = EECPRMUnitWithRoom(thePlayer, theCenter, (unsigned long)inResource);
+                if (theRoom != NULL)
+                    theUnit = theRoom;
+            }
+            if (theUnit != NULL && (static_cast<EETile*>(theUnit->mTile)->IsVisibleTo(thePlayer)
+                    || (EECPNextEngine(thePlayer) && EECPNextUnitDropReady(thePlayer, theUnit)))   // (§8.36, as FindFarm)
+                && EECPRMHasRoom(thePlayer, theUnit, theLimit)
                 && theUnit->mResourceAmount > 0 && theUnit->mTile->mTerrainType != kTerrainDeepWater) {
-                theOK = !theBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY());
-                if (theOK)
+                // the next engine: its gather safety (EECPNextSiteBlocked: seen soldiers, towers in range, a danger
+                // zone, another player's land; a home site only soldiers on it; docs/AI_RESEARCH.md §8.34)
+                bool theNextCheck = EECPNextEngine(thePlayer);
+                if (theNextCheck)   // (§8.36: and a finished drop site at hand, the owner's settlement first)
+                    theOK = EECPNextSiteBlocked(thePlayer, theUnit, NULL) <= kNextBlockedUnexplored
+                        && EECPNextUnitDropReady(thePlayer, theUnit);
+                else
+                    theOK = !theBuildManager->HasEnemyNear(theUnit->GetTileX(), theUnit->GetTileY());
+                if (theOK && !theNextCheck)
                     theOK = !EECPRMResourceInDanger(this, theUnit->GetTileX(), theUnit->GetTileY());
                 if (theOK && sClaimPass)
                     theOK = EECPRMInClaimRange(this, theUnit->GetTileX(), theUnit->GetTileY());
                 if (theOK) {
                     EEPlayer** thePlayers = gWorld.mPlayers;
-                    for (unsigned long j = 0; j < gWorld.mNumPlayers && theOK; j++, thePlayers++) {
+                    for (unsigned long j = 0; j < gWorld.mNumPlayers && theOK && !theNextCheck; j++, thePlayers++) {
                         EEPlayer* theOther = *thePlayers;
                         if (theOther == thePlayer || theOther->mEnemies[thePlayer->mPlayerID] != 0)
                             continue;

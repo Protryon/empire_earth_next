@@ -552,6 +552,9 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         double theTrip[kResourceIron + 1] = {0};
         long theTrips[kResourceIron + 1] = {0};
         long theFar[kResourceIron + 1] = {0};     // past the drop-off distance
+        // §8.36: gathering with no finished drop site at hand (EECPNextUnitDropReady; patches, mines and trees: the
+        // game, fish and farms are not counted)
+        long theNoDrop[kResourceIron + 1] = {0};
         for (unsigned long g = 0; g < theGathered.size(); g++) {
             unsigned long theType = theGathered[g]->mResourceType;
             float theBest = -1.0f;
@@ -565,6 +568,14 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
             }
             if (theBest < 0.0f)
                 continue;
+            long theClass = theGathered[g]->mUnitClass->mUnitType;
+            unsigned long theFamily = theGathered[g]->mUnitClass->GetFamily();
+            if (theFamily != kUnitFamilyAnimal && theFamily != kUnitFamilyFish && theClass != kUnitTypeResFish
+                && theClass != kUnitTypeFarm && theClass != kUnitTypeRoboticFarm
+                && !(theType == kResourceWood
+                         ? EECPNextDropReady(inPlayer, theGathered[g]->GetTileX(), theGathered[g]->GetTileY(), false, kNextWoodSlack)
+                         : EECPNextUnitDropReady(inPlayer, theGathered[g])))
+                theNoDrop[theType]++;
             double theLength = sqrt((double)theBest);
             theTrip[theType] += theLength;
             theTrips[theType]++;
@@ -574,11 +585,12 @@ void EECPTraceStats(EEComputerPlayer* inPlayer, unsigned long inTime)
         long theMean[kResourceIron + 1];
         for (long r = 0; r <= kResourceIron; r++)
             theMean[r] = theTrips[r] > 0 ? (long)(theTrip[r] / theTrips[r] + 0.5) : -1;
-        EECPTraceOut(inPlayer, "trips", "mean=%ld/%ld/%ld/%ld/%ld n=%ld/%ld/%ld/%ld/%ld far=%ld/%ld/%ld/%ld/%ld dropoff=%ld settlements=%ld towncenters=%ld granaries=%ld",
+        EECPTraceOut(inPlayer, "trips", "mean=%ld/%ld/%ld/%ld/%ld n=%ld/%ld/%ld/%ld/%ld far=%ld/%ld/%ld/%ld/%ld dropoff=%ld settlements=%ld towncenters=%ld granaries=%ld nodrop=%ld/%ld/%ld/%ld/%ld",
             theMean[kResourceFood], theMean[kResourceWood], theMean[kResourceStone], theMean[kResourceGold], theMean[kResourceIron],
             theTrips[kResourceFood], theTrips[kResourceWood], theTrips[kResourceStone], theTrips[kResourceGold], theTrips[kResourceIron],
             theFar[kResourceFood], theFar[kResourceWood], theFar[kResourceStone], theFar[kResourceGold], theFar[kResourceIron],
-            inPlayer->mDropOffDistance, theDropSites[0], theDropSites[1], theDropSites[2]);
+            inPlayer->mDropOffDistance, theDropSites[0], theDropSites[1], theDropSites[2], theNoDrop[kResourceFood],
+            theNoDrop[kResourceWood], theNoDrop[kResourceStone], theNoDrop[kResourceGold], theNoDrop[kResourceIron]);
         // what came in since the last income line, by resource (EEComputerPlayer::AddResource: the gatherers'
         // deposits, plus refunds and tributes), and the gatherers on each now
         long theTopOther = -1, theTopCount = 0;

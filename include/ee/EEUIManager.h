@@ -395,8 +395,8 @@ enum EELobbyControl {
 // port: the lobby's engine controls' ids (past the database's and the settings' 90001..) and strings (Language.rc)
 enum EELobbyEngineControl {
     kLobbyEngineControlID = 90100,      // the header; + 1 + slot the combo boxes, + 17 + slot the labels
-    kLobbyEngineClassicString = 33170,  // "Classic", "Next" (33171), "Random" (33172): the combo's lines, in
-                                        // EECPEngineKind's order
+    kLobbyEngineClassicString = 33170,  // "Classic", then "Random": the combo's first lines (ee/EECPEngine.h
+    kLobbyEngineRandomString = 33171,   // EECPEngineChoice); the AI manifest's names follow
     kLobbyEngineHeaderString = 33173,   // "AI" (single player)
     kLobbyEnginePingHeaderString = 33174,   // "Ping / AI" (multiplayer)
     kLobbyEngineHelpString = 33175,

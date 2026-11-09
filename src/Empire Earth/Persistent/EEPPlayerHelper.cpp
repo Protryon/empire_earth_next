@@ -125,13 +125,40 @@ long EEPPlayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                                 theResult = kErrorFailed;
                             else
                                 theResult = thePlayer->Load(inMajorVersion, inMinorVersion, inFile);
-                            // port: a computer player's engine from version 0.251 (ee/EECPEngine.h; older: classic)
+                            // port: a computer player's engine from version 0.251 (ee/EECPEngine.h; older: classic),
+                            // and from 0.253 the next engine's AI id after it (a uint32 length, then the bytes;
+                            // before, the next engine played boom). An AI the manifest no longer lists fails the load.
                             if (theResult == kErrorOK && theType == 1 && thePlayer->mComputerPlayer != NULL
                                 && (inMajorVersion > 0 || inMinorVersion >= 251)) {
                                 unsigned char theEngine = kEECPEngineClassic;
                                 theResult = inFile.Read(theEngine);
-                                thePlayer->mComputerPlayer->mEngine =
-                                    theEngine == kEECPEngineNext ? kEECPEngineNext : kEECPEngineClassic;
+                                thePlayer->mComputerPlayer->mEngine = kEECPEngineClassic;
+                                if (theResult == kErrorOK && theEngine == kEECPEngineNext) {
+                                    std::string theAI = "boom";
+                                    if (inMajorVersion > 0 || inMinorVersion >= 253) {
+                                        unsigned long theLength = 0;
+                                        theResult = inFile.Read(theLength);
+                                        if (theResult == kErrorOK && (theLength == 0 || theLength > 64))
+                                            theResult = kErrorFailed;
+                                        if (theResult == kErrorOK) {
+                                            theAI.assign(theLength, '\0');
+                                            unsigned long theRead = 0;
+                                            theResult = inFile.Read(&theAI[0], theLength, theRead);
+                                            if (theResult == kErrorOK && theRead != theLength)
+                                                theResult = kErrorFailed;
+                                        }
+                                    }
+                                    if (theResult == kErrorOK && EECPAIByID(theAI) == NULL) {
+                                        EECPEngineLog("the saved game's player %lu plays the AI '%s', which "
+                                                      "Data/ai/ais.json does not list: the game cannot be loaded",
+                                                      thePlayer->mPlayerID, theAI.c_str());
+                                        theResult = kErrorFailed;
+                                    }
+                                    if (theResult == kErrorOK) {
+                                        thePlayer->mComputerPlayer->mEngine = kEECPEngineNext;
+                                        EECPNextGetState(thePlayer->mComputerPlayer)->mAI = theAI;
+                                    }
+                                }
                             }
                             // port: from version 0.252 the next engine's state and its script's memory (ee/EECPNext.h
                             // EECPNextSaveState; a uint32 length, 0 for none, then the bytes)
@@ -228,6 +255,17 @@ long EEPPlayerHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVe
             theResult = thePlayer->Save(inMajorVersion, inMinorVersion, outFile);
         if (theResult == kErrorOK && theType == 1)   // port: the computer player's engine (Load: from 0.251)
             theResult = outFile.Write(thePlayer->mComputerPlayer->mEngine);
+        if (theResult == kErrorOK && theType == 1 && thePlayer->mComputerPlayer->mEngine == kEECPEngineNext) {
+            // port: the next engine's AI id (Load: from 0.253)
+            std::string theAI = EECPEngineAI(thePlayer->mComputerPlayer);
+            if (theAI.empty())
+                theAI = "boom";
+            unsigned long theLength = (unsigned long)theAI.size();
+            unsigned long theWritten = 0;
+            theResult = outFile.Write(theLength);
+            if (theResult == kErrorOK)
+                theResult = outFile.Write(theAI.data(), theLength, theWritten);
+        }
         if (theResult == kErrorOK && theType == 1) {   // port: the next engine's state (Load: from 0.252)
             std::string theBytes;
             EECPNextSaveState(thePlayer->mComputerPlayer, theBytes);   // a script's failure is logged; its state goes

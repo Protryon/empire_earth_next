@@ -5447,7 +5447,7 @@ void EEMPlayerInformation::Execute()
     thePlayer = gGameOptions.mPlayers[this->mSlot];
     switch (this->mField) {
     case kPlayerInfoEngine:   // port: a computer slot's engine (ee/EECPEngine.h)
-        thePlayer.mEngine = this->mValue < kEECPEngineChoiceCount ? this->mValue : kEECPEngineClassic;
+        thePlayer.mEngine = this->mValue < EECPEngineChoiceCount() ? this->mValue : (unsigned long)kEECPChoiceClassic;
         break;
     case 5:
         thePlayer.mIsReady = this->mValue > 0;

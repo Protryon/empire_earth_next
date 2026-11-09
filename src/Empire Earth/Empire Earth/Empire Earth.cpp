@@ -855,10 +855,13 @@ static const float kWaterRipplePeriod = 3.1415927f;
 static const float kWaterRippleSpeed = 0.025f;
 static const float kWaterRippleAmplitude = 0.05f;
 #include "ee/EESaveGameFiles.h"
+#include "ee/EECPEngine.h"
 // the save-game version (.rdata 0x4420ac/0x4420b0, before this unit's vtables 0x4420c0; the original wrote 0/250;
 // port: 251 adds the computer slots' engine, EEGameOptionsPlayer and EEPPlayerHelper, docs/AI_LUA_PLAN.md S0; 252 the
 // next engine's state and its script's memory after each computer player, EEPPlayerHelper, docs/AI_LUA_PLAN.md §3.2;
-// 253 the running game's own values, ee/EESaveGameFiles.h EESaveHasLiveState, docs/RUST_PLAN.md R5a.2)
+// 253 the running game's own values, ee/EESaveGameFiles.h EESaveHasLiveState, docs/RUST_PLAN.md R5a.2; and on main
+// 253 the next engine's AI id after each computer player's engine, EEPPlayerHelper, and the lobby choices' new
+// numbering in EEGameOptionsPlayer, ee/EECPEngine.h)
 const unsigned long kSaveGameMajorVersion = 0;
 const unsigned long kSaveGameMinorVersion = 253;
 #include "lle/PIMModule.h"
@@ -1193,6 +1196,9 @@ void EEInitializeNetwork()
     theChecksum += EEGetFileChecksum(theFile, "*.glb", 0);
     theChecksum += EEGetFileChecksum(theFile, "*.gltf", 0);
     theChecksum += EEGetFileChecksum(theFile, "*.bin", 0);
+    // port: the computer players' AIs (Data\ai: the manifest ais.json and every Lua script; ee/EECPEngine.h), so a
+    // joiner whose AI folder differs from the host's is refused like any other data mismatch (kConnectionBadChecksum)
+    theChecksum += EECPAIFolderHash();
     for (unsigned long i = 0; i < gDataPath->GetArchiveCount(); i++) {
         bool theHaveTimestamp = gDataPath->GetArchive(i).GetTag(UWideString("Timestamp"), theTag) == kErrorOK;
         if (theHaveTimestamp) {

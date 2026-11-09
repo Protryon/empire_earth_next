@@ -569,7 +569,6 @@ impl EpochMedia {
 #[derive(Clone, Debug, PartialEq)]
 pub struct AIPersonalityRule {
     pub id: Vec<u8>,
-    pub next_script: Vec<u8>,
     pub epoch_pressure_start: f32,
     pub epoch_pressure_full: f32,
     pub stone_span: f32,
@@ -601,7 +600,6 @@ impl Default for AIPersonalityRule {
     fn default() -> Self {
         Self {
             id: Default::default(),
-            next_script: b"test_opening".to_vec(),
             epoch_pressure_start: 0.3_f32,
             epoch_pressure_full: 0.8_f32,
             stone_span: 30.0_f32,
@@ -634,7 +632,6 @@ impl Default for AIPersonalityRule {
 impl AIPersonalityRule {
     pub fn encode(&self, out: &mut Vec<u8>) {
         enc_string(out, &self.id);
-        enc_string(out, &self.next_script);
         enc_float(out, self.epoch_pressure_start);
         enc_float(out, self.epoch_pressure_full);
         enc_float(out, self.stone_span);
@@ -664,7 +661,6 @@ impl AIPersonalityRule {
     }
     pub fn dump(&self, j: &mut Json<'_>) {
         j.string(b"id", &self.id);
-        j.string(b"next_script", &self.next_script);
         j.float(b"epoch_pressure_start", self.epoch_pressure_start);
         j.float(b"epoch_pressure_full", self.epoch_pressure_full);
         j.float(b"stone_span", self.stone_span);
@@ -782,10 +778,10 @@ pub fn default_powers() -> Vec<CivPowerRule> {
 }
 pub fn default_personalities() -> Vec<AIPersonalityRule> {
     vec![
-        AIPersonalityRule { id: b"balanced".to_vec(), next_script: b"boom".to_vec(), ..Default::default() },
-        AIPersonalityRule { id: b"tall".to_vec(), epoch_pressure_start: 0.15_f32, epoch_pressure_full: 0.5_f32, standing_army: 0.2_f32, next_script: b"balanced".to_vec(), ..Default::default() },
-        AIPersonalityRule { id: b"wide".to_vec(), epoch_pressure_start: 0.6_f32, epoch_pressure_full: 1.0_f32, max_citizen_share: 0.8_f32, standing_army: 0.15_f32, next_script: b"boom".to_vec(), ..Default::default() },
-        AIPersonalityRule { id: b"aggressive".to_vec(), epoch_pressure_start: 0.4_f32, epoch_pressure_full: 0.9_f32, standing_army: 0.5_f32, army_floor: 0.3_f32, prehistoric_army: 0, prehistoric_attacks: true, stone_attacks: true, safe_bonus: 0.0_f32, early_trainers: 0, next_script: b"rush".to_vec(), ..Default::default() },
+        AIPersonalityRule { id: b"balanced".to_vec(), ..Default::default() },
+        AIPersonalityRule { id: b"tall".to_vec(), epoch_pressure_start: 0.15_f32, epoch_pressure_full: 0.5_f32, standing_army: 0.2_f32, ..Default::default() },
+        AIPersonalityRule { id: b"wide".to_vec(), epoch_pressure_start: 0.6_f32, epoch_pressure_full: 1.0_f32, max_citizen_share: 0.8_f32, standing_army: 0.15_f32, ..Default::default() },
+        AIPersonalityRule { id: b"aggressive".to_vec(), epoch_pressure_start: 0.4_f32, epoch_pressure_full: 0.9_f32, standing_army: 0.5_f32, army_floor: 0.3_f32, prehistoric_army: 0, prehistoric_attacks: true, stone_attacks: true, safe_bonus: 0.0_f32, early_trainers: 0, ..Default::default() },
         AIPersonalityRule { id: b"classic".to_vec(), epoch_pressure_start: 1.0_f32, epoch_pressure_full: 100.0_f32, stone_span: 0.0_f32, safe_bonus: 0.0_f32, surplus: 100000000, low_stock: 0, max_citizen_share: 0.0_f32, moves_per_cycle: 0, demand_split: false, coast_fishing: false, forage_patches: false, claim_needed: false, early_town_centers: 0, early_trainers: 0, patch_expand: false, standing_army: 0.0_f32, army_floor: 0.0_f32, militia: false, militia_towers: false, prehistoric_army: 0, prehistoric_attacks: true, stone_attacks: true, naval_flee: false, ..Default::default() },
     ]
 }
