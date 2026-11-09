@@ -2,8 +2,8 @@
 //! already records and a few callers compare against, so a trace reads the same on every system; an errno without a
 //! Win32 twin is `0x20000000 | errno` (the Win32 "customer" bit: never a system code).
 //!
-//! `PlatPosixSetLastError` / `PlatPosixErrorFromErrno` are this crate's seam for the POSIX C++ that remains
-//! (`src/Platform/Posix/PlatPosix.h` wraps them): the last error of PlatPath, PlatTime and the like lives here too.
+//! `ee_plat_posix_set_last_error` and `..._errno` are the link-time seam `ee_plat_core` calls, so the last error of
+//! PlatPath, PlatTime and the like lives here too.
 
 use std::cell::Cell;
 use std::ffi::c_int;
@@ -87,16 +87,19 @@ pub fn fail(error: u32) -> c_int {
     0
 }
 
-/// For the POSIX C++ that remains (`PlatPosix.h`): sets the calling thread's last error.
+/// For `ee_plat_core`, which cannot depend on this crate: sets the calling thread's last error (POSIX; Windows has
+/// `SetLastError`).
+#[cfg(unix)]
 #[no_mangle]
-pub extern "C" fn PlatPosixSetLastError(error: u32) {
+pub extern "C" fn ee_plat_posix_set_last_error(error: u32) {
     set(error);
 }
 
-/// For the POSIX C++ that remains (`PlatPosix.h`): the Win32 code for an errno value.
+/// For `ee_plat_core`: sets the calling thread's last error from an errno value.
+#[cfg(unix)]
 #[no_mangle]
-pub extern "C" fn PlatPosixErrorFromErrno(errno: c_int) -> u32 {
-    from_errno(errno)
+pub extern "C" fn ee_plat_posix_set_last_error_errno(errno: c_int) {
+    set(from_errno(errno));
 }
 
 #[cfg(test)]
@@ -136,8 +139,9 @@ mod tests {
 
     #[test]
     fn the_seam_sets_the_error_the_getter_returns() {
-        PlatPosixSetLastError(183);
+        ee_plat_posix_set_last_error(183);
         assert_eq!(get(), 183);
-        assert_eq!(PlatPosixErrorFromErrno(libc::ENOENT), 2);
+        ee_plat_posix_set_last_error_errno(libc::ENOENT);
+        assert_eq!(get(), 2);
     }
 }

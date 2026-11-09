@@ -227,6 +227,14 @@ name = "ee_panic"
 version = "0.1.0"
 
 [[package]]
+name = "ee_plat_core"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "windows-sys 0.59.0",
+]
+
+[[package]]
 name = "ee_plat_sys"
 version = "0.1.0"
 dependencies = [
@@ -239,6 +247,7 @@ name = "ee_rust"
 version = "0.1.0"
 dependencies = [
  "ee_panic",
+ "ee_plat_core",
  "ee_plat_sys",
  "wgpu-native",
 ]

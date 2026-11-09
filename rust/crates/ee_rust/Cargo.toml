@@ -10,5 +10,6 @@ crate-type = ["staticlib", "rlib"]
 
 [dependencies]
 ee_panic = { path = "../ee_panic" }
+ee_plat_core = { path = "../ee_plat_core" }
 ee_plat_sys = { path = "../ee_plat_sys" }
 wgpu-native = { path = "../../vendor/wgpu-native" }

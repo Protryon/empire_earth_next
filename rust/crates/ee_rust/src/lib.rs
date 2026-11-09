@@ -6,6 +6,10 @@ use std::ffi::c_char;
 // wgpu-native's `#[no_mangle]` C API (webgpu.h) reaches the staticlib through this dependency.
 use wgpu_native as _;
 
+// The platform layer's leaves: its `#[no_mangle]` functions and variables reach the staticlib through this
+// dependency.
+use ee_plat_core as _;
+
 // The platform layer's PlatFile, PlatThread and PlatSocket: `#[no_mangle]` exports, as above.
 use ee_plat_sys as _;
 

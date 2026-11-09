@@ -51,10 +51,11 @@ IS_LINUX = sys.platform.startswith("linux")
 IS_MACOS = sys.platform == "darwin"
 
 PLATFORM_HEADERS = ROOT / "include"
-# PlatFile, PlatThread and PlatSocket are Rust (rust/crates/ee_plat_sys, in ee_rust: rust_libs below)
-POSIX_IMPL = ["PlatTime.cpp", "PlatPath.cpp", "PlatString.cpp", "PlatMessage.cpp"]
-WIN32_IMPL = ["PlatTime.cpp", "PlatPath.cpp", "PlatString.cpp", "PlatMessage.cpp"]
-COMMON_IMPL = ["PlatFont.cpp", "PlatConfig.cpp", "PlatSim.cpp"]   # src/Platform/Common: the same code on every system
+# the platform layer that is still C++; the rest is Rust (rust/crates/ee_plat_core and ee_plat_sys, in ee_rust:
+# rust_libs below)
+POSIX_IMPL = []
+WIN32_IMPL = []
+COMMON_IMPL = ["PlatFont.cpp"]   # src/Platform/Common: the same code on every system
 WIN32_SYSLIBS = ["kernel32.lib", "user32.lib", "advapi32.lib", "ole32.lib", "winmm.lib", "ws2_32.lib",
                  "iphlpapi.lib", "shell32.lib", "gdi32.lib", "imm32.lib", "version.lib", "setupapi.lib",
                  "oleaut32.lib", "uuid.lib", "cfgmgr32.lib", "propsys.lib", "d3d12.lib", "dxgi.lib",
@@ -219,13 +220,13 @@ def build_program(target, name, sources, includes=(), defines=(), libs=(), extra
 
 
 def rust_libs(target):
-    """The Rust library (PlatFile/PlatThread/PlatSocket live in it) and what its objects need from the system."""
+    """The Rust library (the platform layer lives in it) and what its objects need from the system."""
     lib = str(rust_build.ensure(target.name))
     if target.os == "windows":
         return [lib]
     if target.os == "linux":
         return [lib, "-lpthread", "-ldl", "-lm"]
-    return [lib, "-framework", "Security", "-framework", "CoreFoundation", "-liconv"]
+    return [lib, "-framework", "Foundation", "-framework", "Security", "-framework", "CoreFoundation", "-liconv"]
 
 
 def platform_sources(target):
@@ -561,10 +562,7 @@ def cmd_sdltest(a):
     # file (PlatInput.cpp) is the game's and stays out: the SDL file implements the same functions
     srcs = [ROOT / "tools" / "sdl_test" / "sdl_test.cpp", ROOT / "src" / "Platform" / "SDL" / "PlatWindow.cpp",
             ROOT / "src" / "Platform" / "Common" / "PlatFont.cpp",
-            ROOT / "src" / "Platform" / "Common" / "PlatSim.cpp",   # gPlatSimMode, PlatDebugGetHandler (PlatWindow uses them)
-            # PlatThread is in ee_rust (wlib); on POSIX the Rust code resolves paths through PlatPath.cpp
-            *[s for s in platform_sources(t) if s.name in ("PlatMessage.cpp", "PlatTime.cpp")
-              or (t.os != "windows" and s.name == "PlatPath.cpp")]]
+            ]
     libs = [*sdl_libs(t), wlib]
     if t.os == "linux":
         libs += ["-lm", "-ldl"]

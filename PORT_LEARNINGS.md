@@ -1772,3 +1772,28 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   relative to the workspace), so `CARGO_MANIFEST_DIR` is baked from whichever worktree compiled it last and
   `xtask cbindgen` then reads that worktree. The Rust gate's header step needs its own target directory or a single
   worktree per target dir.
+
+## The platform leaves in Rust (R1.1, R1.2; crate ee_plat_core, 2026-11-08)
+
+- **Windows keeps the C runtime and the Win32 calls**: `PlatStrICmp`/`_mbs*`/`_itoa`/`_strdup` stay the CRT's, because
+  `setlocale` (EEUserInterface) and the process's ANSI code page change `_stricmp`, `_mbsicmp` and the lead bytes at
+  run time; a reimplementation would have to track both. POSIX is the single-byte port (`string::sbcs`). PlatTime
+  calls the same imports as before, checked in the built exe with `llvm-readobj --coff-imports` (WINMM five, KERNEL32
+  `QueryPerformance*`/`Sleep`/`GetTickCount64`/`GetLocalTime`/`GetSystemTimeAsFileTime`), so the harness shim still
+  works. PlatConfig reads and writes through the CRT's `fopen` family, not `std::fs`: its paths are the game's bytes.
+- **PlatSim's variables are `#[no_mangle] static CVar<T>`**: a transparent `UnsafeCell`, readable as `read_volatile`.
+  `gPlatSimNoHumanDefeatHits` is `c_long` (32-bit on Windows, 64 on LP64), as the header says.
+- **Golden values come from running the deleted C++**: `gen_strings.cpp` (built against the POSIX and the Win32
+  PlatString.cpp, the latter under `_setmbcp(1252)` and `932`) and `gen_config.cpp` (`#include "PlatConfig.cpp"`) wrote
+  `golden_*.txt` in `rust/crates/ee_plat_core/src`. A lone lead byte at the end of a source makes `_mbsnbcat` fail its
+  parameter check (a process-terminating invalid-parameter fast fail) under 932; those rows are skipped.
+- **strtoll("0x")**: glibc stops after the 0, the UCRT reports no conversion, and neither is a whole-string conversion.
+  `PlatConfigGetInt` only keeps whole-string conversions, so the Rust strtoll matches both.
+- **A config value `~` is rendered `key: ` and reads back as a block** on the next start (kept from the C++; the value
+  was empty anyway).
+- **Shared `CARGO_TARGET_DIR` across worktrees**: `rust_build.py gate`'s header step ran another worktree's `xtask`
+  (its `include/rust/ee_rust.h` is reported) when two checkouts share the target directory; run it with a private
+  target directory to check this checkout's header.
+- **The POSIX C++ still here** (`PlatFile.cpp`, `PlatThread.cpp`, `PlatSocket.cpp`) reaches the moved code through
+  `src/Platform/Posix/PlatPosixBridge.cpp` (`PlatPosix::ResolvePath`/`GameForm`, and the two C functions Rust calls to
+  set the thread's last error), which goes away with R1.3.

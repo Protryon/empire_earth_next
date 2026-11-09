@@ -1,0 +1,3184 @@
+stricmp   0
+mbscmp   0
+mbsicmp   0
+strnicmp   0 0
+mbsnbcmp   0 0
+mbsncmp   0 0
+mbsnbicmp   0 0
+strnicmp   2 0
+mbsnbcmp   2 0
+mbsncmp   2 0
+mbsnbicmp   2 0
+strnicmp   100 0
+mbsnbcmp   100 0
+mbsncmp   100 0
+mbsnbicmp   100 0
+stricmp  61 -97
+mbscmp  61 -1
+mbsicmp  61 -1
+strnicmp  61 0 0
+mbsnbcmp  61 0 0
+mbsncmp  61 0 0
+mbsnbicmp  61 0 0
+strnicmp  61 2 -97
+mbsnbcmp  61 2 -1
+mbsncmp  61 2 -1
+mbsnbicmp  61 2 -1
+strnicmp  61 100 -97
+mbsnbcmp  61 100 -1
+mbsncmp  61 100 -1
+mbsnbicmp  61 100 -1
+stricmp  41 -97
+mbscmp  41 -1
+mbsicmp  41 -1
+strnicmp  41 0 0
+mbsnbcmp  41 0 0
+mbsncmp  41 0 0
+mbsnbicmp  41 0 0
+strnicmp  41 2 -97
+mbsnbcmp  41 2 -1
+mbsncmp  41 2 -1
+mbsnbicmp  41 2 -1
+strnicmp  41 100 -97
+mbsnbcmp  41 100 -1
+mbsncmp  41 100 -1
+mbsnbicmp  41 100 -1
+stricmp  616263 -97
+mbscmp  616263 -1
+mbsicmp  616263 -1
+strnicmp  616263 0 0
+mbsnbcmp  616263 0 0
+mbsncmp  616263 0 0
+mbsnbicmp  616263 0 0
+strnicmp  616263 2 -97
+mbsnbcmp  616263 2 -1
+mbsncmp  616263 2 -1
+mbsnbicmp  616263 2 -1
+strnicmp  616263 100 -97
+mbsnbcmp  616263 100 -1
+mbsncmp  616263 100 -1
+mbsnbicmp  616263 100 -1
+stricmp  414243 -97
+mbscmp  414243 -1
+mbsicmp  414243 -1
+strnicmp  414243 0 0
+mbsnbcmp  414243 0 0
+mbsncmp  414243 0 0
+mbsnbicmp  414243 0 0
+strnicmp  414243 2 -97
+mbsnbcmp  414243 2 -1
+mbsncmp  414243 2 -1
+mbsnbicmp  414243 2 -1
+strnicmp  414243 100 -97
+mbsnbcmp  414243 100 -1
+mbsncmp  414243 100 -1
+mbsnbicmp  414243 100 -1
+stricmp  5a65627261 -122
+mbscmp  5a65627261 -1
+mbsicmp  5a65627261 -1
+strnicmp  5a65627261 0 0
+mbsnbcmp  5a65627261 0 0
+mbsncmp  5a65627261 0 0
+mbsnbicmp  5a65627261 0 0
+strnicmp  5a65627261 2 -122
+mbsnbcmp  5a65627261 2 -1
+mbsncmp  5a65627261 2 -1
+mbsnbicmp  5a65627261 2 -1
+strnicmp  5a65627261 100 -122
+mbsnbcmp  5a65627261 100 -1
+mbsncmp  5a65627261 100 -1
+mbsnbicmp  5a65627261 100 -1
+stricmp  5b -91
+mbscmp  5b -1
+mbsicmp  5b -1
+strnicmp  5b 0 0
+mbsnbcmp  5b 0 0
+mbsncmp  5b 0 0
+mbsnbicmp  5b 0 0
+strnicmp  5b 2 -91
+mbsnbcmp  5b 2 -1
+mbsncmp  5b 2 -1
+mbsnbicmp  5b 2 -1
+strnicmp  5b 100 -91
+mbsnbcmp  5b 100 -1
+mbsncmp  5b 100 -1
+mbsnbicmp  5b 100 -1
+stricmp  e9 -233
+mbscmp  e9 -1
+mbsicmp  e9 -1
+strnicmp  e9 0 0
+mbsnbcmp  e9 0 0
+mbsncmp  e9 0 0
+mbsnbicmp  e9 0 0
+strnicmp  e9 2 -233
+mbsnbcmp  e9 2 -1
+mbsncmp  e9 2 -1
+mbsnbicmp  e9 2 -1
+strnicmp  e9 100 -233
+mbsnbcmp  e9 100 -1
+mbsncmp  e9 100 -1
+mbsnbicmp  e9 100 -1
+stricmp  c9 -201
+mbscmp  c9 -1
+mbsicmp  c9 -1
+strnicmp  c9 0 0
+mbsnbcmp  c9 0 0
+mbsncmp  c9 0 0
+mbsnbicmp  c9 0 0
+strnicmp  c9 2 -201
+mbsnbcmp  c9 2 -1
+mbsncmp  c9 2 -1
+mbsnbicmp  c9 2 -1
+strnicmp  c9 100 -201
+mbsnbcmp  c9 100 -1
+mbsncmp  c9 100 -1
+mbsnbicmp  c9 100 -1
+stricmp  8341 -131
+mbscmp  8341 -1
+mbsicmp  8341 -1
+strnicmp  8341 0 0
+mbsnbcmp  8341 0 0
+mbsncmp  8341 0 0
+mbsnbicmp  8341 0 0
+strnicmp  8341 2 -131
+mbsnbcmp  8341 2 -1
+mbsncmp  8341 2 -1
+mbsnbicmp  8341 2 -1
+strnicmp  8341 100 -131
+mbsnbcmp  8341 100 -1
+mbsncmp  8341 100 -1
+mbsnbicmp  8341 100 -1
+stricmp  834182a0 -131
+mbscmp  834182a0 -1
+mbsicmp  834182a0 -1
+strnicmp  834182a0 0 0
+mbsnbcmp  834182a0 0 0
+mbsncmp  834182a0 0 0
+mbsnbicmp  834182a0 0 0
+strnicmp  834182a0 2 -131
+mbsnbcmp  834182a0 2 -1
+mbsncmp  834182a0 2 -1
+mbsnbicmp  834182a0 2 -1
+strnicmp  834182a0 100 -131
+mbsnbcmp  834182a0 100 -1
+mbsncmp  834182a0 100 -1
+mbsnbicmp  834182a0 100 -1
+stricmp  ff -255
+mbscmp  ff -1
+mbsicmp  ff -1
+strnicmp  ff 0 0
+mbsnbcmp  ff 0 0
+mbsncmp  ff 0 0
+mbsnbicmp  ff 0 0
+strnicmp  ff 2 -255
+mbsnbcmp  ff 2 -1
+mbsncmp  ff 2 -1
+mbsnbicmp  ff 2 -1
+strnicmp  ff 100 -255
+mbsnbcmp  ff 100 -1
+mbsncmp  ff 100 -1
+mbsnbicmp  ff 100 -1
+stricmp 61  97
+mbscmp 61  1
+mbsicmp 61  1
+strnicmp 61  0 0
+mbsnbcmp 61  0 0
+mbsncmp 61  0 0
+mbsnbicmp 61  0 0
+strnicmp 61  2 97
+mbsnbcmp 61  2 1
+mbsncmp 61  2 1
+mbsnbicmp 61  2 1
+strnicmp 61  100 97
+mbsnbcmp 61  100 1
+mbsncmp 61  100 1
+mbsnbicmp 61  100 1
+stricmp 61 61 0
+mbscmp 61 61 0
+mbsicmp 61 61 0
+strnicmp 61 61 0 0
+mbsnbcmp 61 61 0 0
+mbsncmp 61 61 0 0
+mbsnbicmp 61 61 0 0
+strnicmp 61 61 2 0
+mbsnbcmp 61 61 2 0
+mbsncmp 61 61 2 0
+mbsnbicmp 61 61 2 0
+strnicmp 61 61 100 0
+mbsnbcmp 61 61 100 0
+mbsncmp 61 61 100 0
+mbsnbicmp 61 61 100 0
+stricmp 61 41 0
+mbscmp 61 41 1
+mbsicmp 61 41 0
+strnicmp 61 41 0 0
+mbsnbcmp 61 41 0 0
+mbsncmp 61 41 0 0
+mbsnbicmp 61 41 0 0
+strnicmp 61 41 2 0
+mbsnbcmp 61 41 2 1
+mbsncmp 61 41 2 1
+mbsnbicmp 61 41 2 0
+strnicmp 61 41 100 0
+mbsnbcmp 61 41 100 1
+mbsncmp 61 41 100 1
+mbsnbicmp 61 41 100 0
+stricmp 61 616263 -98
+mbscmp 61 616263 -1
+mbsicmp 61 616263 -1
+strnicmp 61 616263 0 0
+mbsnbcmp 61 616263 0 0
+mbsncmp 61 616263 0 0
+mbsnbicmp 61 616263 0 0
+strnicmp 61 616263 2 -98
+mbsnbcmp 61 616263 2 -1
+mbsncmp 61 616263 2 -1
+mbsnbicmp 61 616263 2 -1
+strnicmp 61 616263 100 -98
+mbsnbcmp 61 616263 100 -1
+mbsncmp 61 616263 100 -1
+mbsnbicmp 61 616263 100 -1
+stricmp 61 414243 -98
+mbscmp 61 414243 1
+mbsicmp 61 414243 -1
+strnicmp 61 414243 0 0
+mbsnbcmp 61 414243 0 0
+mbsncmp 61 414243 0 0
+mbsnbicmp 61 414243 0 0
+strnicmp 61 414243 2 -98
+mbsnbcmp 61 414243 2 1
+mbsncmp 61 414243 2 1
+mbsnbicmp 61 414243 2 -1
+strnicmp 61 414243 100 -98
+mbsnbcmp 61 414243 100 1
+mbsncmp 61 414243 100 1
+mbsnbicmp 61 414243 100 -1
+stricmp 61 5a65627261 -25
+mbscmp 61 5a65627261 1
+mbsicmp 61 5a65627261 -1
+strnicmp 61 5a65627261 0 0
+mbsnbcmp 61 5a65627261 0 0
+mbsncmp 61 5a65627261 0 0
+mbsnbicmp 61 5a65627261 0 0
+strnicmp 61 5a65627261 2 -25
+mbsnbcmp 61 5a65627261 2 1
+mbsncmp 61 5a65627261 2 1
+mbsnbicmp 61 5a65627261 2 -1
+strnicmp 61 5a65627261 100 -25
+mbsnbcmp 61 5a65627261 100 1
+mbsncmp 61 5a65627261 100 1
+mbsnbicmp 61 5a65627261 100 -1
+stricmp 61 5b 6
+mbscmp 61 5b 1
+mbsicmp 61 5b -1
+strnicmp 61 5b 0 0
+mbsnbcmp 61 5b 0 0
+mbsncmp 61 5b 0 0
+mbsnbicmp 61 5b 0 0
+strnicmp 61 5b 2 6
+mbsnbcmp 61 5b 2 1
+mbsncmp 61 5b 2 1
+mbsnbicmp 61 5b 2 -1
+strnicmp 61 5b 100 6
+mbsnbcmp 61 5b 100 1
+mbsncmp 61 5b 100 1
+mbsnbicmp 61 5b 100 -1
+stricmp 61 e9 -136
+mbscmp 61 e9 -1
+mbsicmp 61 e9 -1
+strnicmp 61 e9 0 0
+mbsnbcmp 61 e9 0 0
+mbsncmp 61 e9 0 0
+mbsnbicmp 61 e9 0 0
+strnicmp 61 e9 2 -136
+mbsnbcmp 61 e9 2 -1
+mbsncmp 61 e9 2 -1
+mbsnbicmp 61 e9 2 -1
+strnicmp 61 e9 100 -136
+mbsnbcmp 61 e9 100 -1
+mbsncmp 61 e9 100 -1
+mbsnbicmp 61 e9 100 -1
+stricmp 61 c9 -104
+mbscmp 61 c9 -1
+mbsicmp 61 c9 -1
+strnicmp 61 c9 0 0
+mbsnbcmp 61 c9 0 0
+mbsncmp 61 c9 0 0
+mbsnbicmp 61 c9 0 0
+strnicmp 61 c9 2 -104
+mbsnbcmp 61 c9 2 -1
+mbsncmp 61 c9 2 -1
+mbsnbicmp 61 c9 2 -1
+strnicmp 61 c9 100 -104
+mbsnbcmp 61 c9 100 -1
+mbsncmp 61 c9 100 -1
+mbsnbicmp 61 c9 100 -1
+stricmp 61 8341 -34
+mbscmp 61 8341 -1
+mbsicmp 61 8341 -1
+strnicmp 61 8341 0 0
+mbsnbcmp 61 8341 0 0
+mbsncmp 61 8341 0 0
+mbsnbicmp 61 8341 0 0
+strnicmp 61 8341 2 -34
+mbsnbcmp 61 8341 2 -1
+mbsncmp 61 8341 2 -1
+mbsnbicmp 61 8341 2 -1
+strnicmp 61 8341 100 -34
+mbsnbcmp 61 8341 100 -1
+mbsncmp 61 8341 100 -1
+mbsnbicmp 61 8341 100 -1
+stricmp 61 834182a0 -34
+mbscmp 61 834182a0 -1
+mbsicmp 61 834182a0 -1
+strnicmp 61 834182a0 0 0
+mbsnbcmp 61 834182a0 0 0
+mbsncmp 61 834182a0 0 0
+mbsnbicmp 61 834182a0 0 0
+strnicmp 61 834182a0 2 -34
+mbsnbcmp 61 834182a0 2 -1
+mbsncmp 61 834182a0 2 -1
+mbsnbicmp 61 834182a0 2 -1
+strnicmp 61 834182a0 100 -34
+mbsnbcmp 61 834182a0 100 -1
+mbsncmp 61 834182a0 100 -1
+mbsnbicmp 61 834182a0 100 -1
+stricmp 61 ff -158
+mbscmp 61 ff -1
+mbsicmp 61 ff -1
+strnicmp 61 ff 0 0
+mbsnbcmp 61 ff 0 0
+mbsncmp 61 ff 0 0
+mbsnbicmp 61 ff 0 0
+strnicmp 61 ff 2 -158
+mbsnbcmp 61 ff 2 -1
+mbsncmp 61 ff 2 -1
+mbsnbicmp 61 ff 2 -1
+strnicmp 61 ff 100 -158
+mbsnbcmp 61 ff 100 -1
+mbsncmp 61 ff 100 -1
+mbsnbicmp 61 ff 100 -1
+stricmp 41  97
+mbscmp 41  1
+mbsicmp 41  1
+strnicmp 41  0 0
+mbsnbcmp 41  0 0
+mbsncmp 41  0 0
+mbsnbicmp 41  0 0
+strnicmp 41  2 97
+mbsnbcmp 41  2 1
+mbsncmp 41  2 1
+mbsnbicmp 41  2 1
+strnicmp 41  100 97
+mbsnbcmp 41  100 1
+mbsncmp 41  100 1
+mbsnbicmp 41  100 1
+stricmp 41 61 0
+mbscmp 41 61 -1
+mbsicmp 41 61 0
+strnicmp 41 61 0 0
+mbsnbcmp 41 61 0 0
+mbsncmp 41 61 0 0
+mbsnbicmp 41 61 0 0
+strnicmp 41 61 2 0
+mbsnbcmp 41 61 2 -1
+mbsncmp 41 61 2 -1
+mbsnbicmp 41 61 2 0
+strnicmp 41 61 100 0
+mbsnbcmp 41 61 100 -1
+mbsncmp 41 61 100 -1
+mbsnbicmp 41 61 100 0
+stricmp 41 41 0
+mbscmp 41 41 0
+mbsicmp 41 41 0
+strnicmp 41 41 0 0
+mbsnbcmp 41 41 0 0
+mbsncmp 41 41 0 0
+mbsnbicmp 41 41 0 0
+strnicmp 41 41 2 0
+mbsnbcmp 41 41 2 0
+mbsncmp 41 41 2 0
+mbsnbicmp 41 41 2 0
+strnicmp 41 41 100 0
+mbsnbcmp 41 41 100 0
+mbsncmp 41 41 100 0
+mbsnbicmp 41 41 100 0
+stricmp 41 616263 -98
+mbscmp 41 616263 -1
+mbsicmp 41 616263 -1
+strnicmp 41 616263 0 0
+mbsnbcmp 41 616263 0 0
+mbsncmp 41 616263 0 0
+mbsnbicmp 41 616263 0 0
+strnicmp 41 616263 2 -98
+mbsnbcmp 41 616263 2 -1
+mbsncmp 41 616263 2 -1
+mbsnbicmp 41 616263 2 -1
+strnicmp 41 616263 100 -98
+mbsnbcmp 41 616263 100 -1
+mbsncmp 41 616263 100 -1
+mbsnbicmp 41 616263 100 -1
+stricmp 41 414243 -98
+mbscmp 41 414243 -1
+mbsicmp 41 414243 -1
+strnicmp 41 414243 0 0
+mbsnbcmp 41 414243 0 0
+mbsncmp 41 414243 0 0
+mbsnbicmp 41 414243 0 0
+strnicmp 41 414243 2 -98
+mbsnbcmp 41 414243 2 -1
+mbsncmp 41 414243 2 -1
+mbsnbicmp 41 414243 2 -1
+strnicmp 41 414243 100 -98
+mbsnbcmp 41 414243 100 -1
+mbsncmp 41 414243 100 -1
+mbsnbicmp 41 414243 100 -1
+stricmp 41 5a65627261 -25
+mbscmp 41 5a65627261 -1
+mbsicmp 41 5a65627261 -1
+strnicmp 41 5a65627261 0 0
+mbsnbcmp 41 5a65627261 0 0
+mbsncmp 41 5a65627261 0 0
+mbsnbicmp 41 5a65627261 0 0
+strnicmp 41 5a65627261 2 -25
+mbsnbcmp 41 5a65627261 2 -1
+mbsncmp 41 5a65627261 2 -1
+mbsnbicmp 41 5a65627261 2 -1
+strnicmp 41 5a65627261 100 -25
+mbsnbcmp 41 5a65627261 100 -1
+mbsncmp 41 5a65627261 100 -1
+mbsnbicmp 41 5a65627261 100 -1
+stricmp 41 5b 6
+mbscmp 41 5b -1
+mbsicmp 41 5b -1
+strnicmp 41 5b 0 0
+mbsnbcmp 41 5b 0 0
+mbsncmp 41 5b 0 0
+mbsnbicmp 41 5b 0 0
+strnicmp 41 5b 2 6
+mbsnbcmp 41 5b 2 -1
+mbsncmp 41 5b 2 -1
+mbsnbicmp 41 5b 2 -1
+strnicmp 41 5b 100 6
+mbsnbcmp 41 5b 100 -1
+mbsncmp 41 5b 100 -1
+mbsnbicmp 41 5b 100 -1
+stricmp 41 e9 -136
+mbscmp 41 e9 -1
+mbsicmp 41 e9 -1
+strnicmp 41 e9 0 0
+mbsnbcmp 41 e9 0 0
+mbsncmp 41 e9 0 0
+mbsnbicmp 41 e9 0 0
+strnicmp 41 e9 2 -136
+mbsnbcmp 41 e9 2 -1
+mbsncmp 41 e9 2 -1
+mbsnbicmp 41 e9 2 -1
+strnicmp 41 e9 100 -136
+mbsnbcmp 41 e9 100 -1
+mbsncmp 41 e9 100 -1
+mbsnbicmp 41 e9 100 -1
+stricmp 41 c9 -104
+mbscmp 41 c9 -1
+mbsicmp 41 c9 -1
+strnicmp 41 c9 0 0
+mbsnbcmp 41 c9 0 0
+mbsncmp 41 c9 0 0
+mbsnbicmp 41 c9 0 0
+strnicmp 41 c9 2 -104
+mbsnbcmp 41 c9 2 -1
+mbsncmp 41 c9 2 -1
+mbsnbicmp 41 c9 2 -1
+strnicmp 41 c9 100 -104
+mbsnbcmp 41 c9 100 -1
+mbsncmp 41 c9 100 -1
+mbsnbicmp 41 c9 100 -1
+stricmp 41 8341 -34
+mbscmp 41 8341 -1
+mbsicmp 41 8341 -1
+strnicmp 41 8341 0 0
+mbsnbcmp 41 8341 0 0
+mbsncmp 41 8341 0 0
+mbsnbicmp 41 8341 0 0
+strnicmp 41 8341 2 -34
+mbsnbcmp 41 8341 2 -1
+mbsncmp 41 8341 2 -1
+mbsnbicmp 41 8341 2 -1
+strnicmp 41 8341 100 -34
+mbsnbcmp 41 8341 100 -1
+mbsncmp 41 8341 100 -1
+mbsnbicmp 41 8341 100 -1
+stricmp 41 834182a0 -34
+mbscmp 41 834182a0 -1
+mbsicmp 41 834182a0 -1
+strnicmp 41 834182a0 0 0
+mbsnbcmp 41 834182a0 0 0
+mbsncmp 41 834182a0 0 0
+mbsnbicmp 41 834182a0 0 0
+strnicmp 41 834182a0 2 -34
+mbsnbcmp 41 834182a0 2 -1
+mbsncmp 41 834182a0 2 -1
+mbsnbicmp 41 834182a0 2 -1
+strnicmp 41 834182a0 100 -34
+mbsnbcmp 41 834182a0 100 -1
+mbsncmp 41 834182a0 100 -1
+mbsnbicmp 41 834182a0 100 -1
+stricmp 41 ff -158
+mbscmp 41 ff -1
+mbsicmp 41 ff -1
+strnicmp 41 ff 0 0
+mbsnbcmp 41 ff 0 0
+mbsncmp 41 ff 0 0
+mbsnbicmp 41 ff 0 0
+strnicmp 41 ff 2 -158
+mbsnbcmp 41 ff 2 -1
+mbsncmp 41 ff 2 -1
+mbsnbicmp 41 ff 2 -1
+strnicmp 41 ff 100 -158
+mbsnbcmp 41 ff 100 -1
+mbsncmp 41 ff 100 -1
+mbsnbicmp 41 ff 100 -1
+stricmp 616263  97
+mbscmp 616263  1
+mbsicmp 616263  1
+strnicmp 616263  0 0
+mbsnbcmp 616263  0 0
+mbsncmp 616263  0 0
+mbsnbicmp 616263  0 0
+strnicmp 616263  2 97
+mbsnbcmp 616263  2 1
+mbsncmp 616263  2 1
+mbsnbicmp 616263  2 1
+strnicmp 616263  100 97
+mbsnbcmp 616263  100 1
+mbsncmp 616263  100 1
+mbsnbicmp 616263  100 1
+stricmp 616263 61 98
+mbscmp 616263 61 1
+mbsicmp 616263 61 1
+strnicmp 616263 61 0 0
+mbsnbcmp 616263 61 0 0
+mbsncmp 616263 61 0 0
+mbsnbicmp 616263 61 0 0
+strnicmp 616263 61 2 98
+mbsnbcmp 616263 61 2 1
+mbsncmp 616263 61 2 1
+mbsnbicmp 616263 61 2 1
+strnicmp 616263 61 100 98
+mbsnbcmp 616263 61 100 1
+mbsncmp 616263 61 100 1
+mbsnbicmp 616263 61 100 1
+stricmp 616263 41 98
+mbscmp 616263 41 1
+mbsicmp 616263 41 1
+strnicmp 616263 41 0 0
+mbsnbcmp 616263 41 0 0
+mbsncmp 616263 41 0 0
+mbsnbicmp 616263 41 0 0
+strnicmp 616263 41 2 98
+mbsnbcmp 616263 41 2 1
+mbsncmp 616263 41 2 1
+mbsnbicmp 616263 41 2 1
+strnicmp 616263 41 100 98
+mbsnbcmp 616263 41 100 1
+mbsncmp 616263 41 100 1
+mbsnbicmp 616263 41 100 1
+stricmp 616263 616263 0
+mbscmp 616263 616263 0
+mbsicmp 616263 616263 0
+strnicmp 616263 616263 0 0
+mbsnbcmp 616263 616263 0 0
+mbsncmp 616263 616263 0 0
+mbsnbicmp 616263 616263 0 0
+strnicmp 616263 616263 2 0
+mbsnbcmp 616263 616263 2 0
+mbsncmp 616263 616263 2 0
+mbsnbicmp 616263 616263 2 0
+strnicmp 616263 616263 100 0
+mbsnbcmp 616263 616263 100 0
+mbsncmp 616263 616263 100 0
+mbsnbicmp 616263 616263 100 0
+stricmp 616263 414243 0
+mbscmp 616263 414243 1
+mbsicmp 616263 414243 0
+strnicmp 616263 414243 0 0
+mbsnbcmp 616263 414243 0 0
+mbsncmp 616263 414243 0 0
+mbsnbicmp 616263 414243 0 0
+strnicmp 616263 414243 2 0
+mbsnbcmp 616263 414243 2 1
+mbsncmp 616263 414243 2 1
+mbsnbicmp 616263 414243 2 0
+strnicmp 616263 414243 100 0
+mbsnbcmp 616263 414243 100 1
+mbsncmp 616263 414243 100 1
+mbsnbicmp 616263 414243 100 0
+stricmp 616263 5a65627261 -25
+mbscmp 616263 5a65627261 1
+mbsicmp 616263 5a65627261 -1
+strnicmp 616263 5a65627261 0 0
+mbsnbcmp 616263 5a65627261 0 0
+mbsncmp 616263 5a65627261 0 0
+mbsnbicmp 616263 5a65627261 0 0
+strnicmp 616263 5a65627261 2 -25
+mbsnbcmp 616263 5a65627261 2 1
+mbsncmp 616263 5a65627261 2 1
+mbsnbicmp 616263 5a65627261 2 -1
+strnicmp 616263 5a65627261 100 -25
+mbsnbcmp 616263 5a65627261 100 1
+mbsncmp 616263 5a65627261 100 1
+mbsnbicmp 616263 5a65627261 100 -1
+stricmp 616263 5b 6
+mbscmp 616263 5b 1
+mbsicmp 616263 5b -1
+strnicmp 616263 5b 0 0
+mbsnbcmp 616263 5b 0 0
+mbsncmp 616263 5b 0 0
+mbsnbicmp 616263 5b 0 0
+strnicmp 616263 5b 2 6
+mbsnbcmp 616263 5b 2 1
+mbsncmp 616263 5b 2 1
+mbsnbicmp 616263 5b 2 -1
+strnicmp 616263 5b 100 6
+mbsnbcmp 616263 5b 100 1
+mbsncmp 616263 5b 100 1
+mbsnbicmp 616263 5b 100 -1
+stricmp 616263 e9 -136
+mbscmp 616263 e9 -1
+mbsicmp 616263 e9 -1
+strnicmp 616263 e9 0 0
+mbsnbcmp 616263 e9 0 0
+mbsncmp 616263 e9 0 0
+mbsnbicmp 616263 e9 0 0
+strnicmp 616263 e9 2 -136
+mbsnbcmp 616263 e9 2 -1
+mbsncmp 616263 e9 2 -1
+mbsnbicmp 616263 e9 2 -1
+strnicmp 616263 e9 100 -136
+mbsnbcmp 616263 e9 100 -1
+mbsncmp 616263 e9 100 -1
+mbsnbicmp 616263 e9 100 -1
+stricmp 616263 c9 -104
+mbscmp 616263 c9 -1
+mbsicmp 616263 c9 -1
+strnicmp 616263 c9 0 0
+mbsnbcmp 616263 c9 0 0
+mbsncmp 616263 c9 0 0
+mbsnbicmp 616263 c9 0 0
+strnicmp 616263 c9 2 -104
+mbsnbcmp 616263 c9 2 -1
+mbsncmp 616263 c9 2 -1
+mbsnbicmp 616263 c9 2 -1
+strnicmp 616263 c9 100 -104
+mbsnbcmp 616263 c9 100 -1
+mbsncmp 616263 c9 100 -1
+mbsnbicmp 616263 c9 100 -1
+stricmp 616263 8341 -34
+mbscmp 616263 8341 -1
+mbsicmp 616263 8341 -1
+strnicmp 616263 8341 0 0
+mbsnbcmp 616263 8341 0 0
+mbsncmp 616263 8341 0 0
+mbsnbicmp 616263 8341 0 0
+strnicmp 616263 8341 2 -34
+mbsnbcmp 616263 8341 2 -1
+mbsncmp 616263 8341 2 -1
+mbsnbicmp 616263 8341 2 -1
+strnicmp 616263 8341 100 -34
+mbsnbcmp 616263 8341 100 -1
+mbsncmp 616263 8341 100 -1
+mbsnbicmp 616263 8341 100 -1
+stricmp 616263 834182a0 -34
+mbscmp 616263 834182a0 -1
+mbsicmp 616263 834182a0 -1
+strnicmp 616263 834182a0 0 0
+mbsnbcmp 616263 834182a0 0 0
+mbsncmp 616263 834182a0 0 0
+mbsnbicmp 616263 834182a0 0 0
+strnicmp 616263 834182a0 2 -34
+mbsnbcmp 616263 834182a0 2 -1
+mbsncmp 616263 834182a0 2 -1
+mbsnbicmp 616263 834182a0 2 -1
+strnicmp 616263 834182a0 100 -34
+mbsnbcmp 616263 834182a0 100 -1
+mbsncmp 616263 834182a0 100 -1
+mbsnbicmp 616263 834182a0 100 -1
+stricmp 616263 ff -158
+mbscmp 616263 ff -1
+mbsicmp 616263 ff -1
+strnicmp 616263 ff 0 0
+mbsnbcmp 616263 ff 0 0
+mbsncmp 616263 ff 0 0
+mbsnbicmp 616263 ff 0 0
+strnicmp 616263 ff 2 -158
+mbsnbcmp 616263 ff 2 -1
+mbsncmp 616263 ff 2 -1
+mbsnbicmp 616263 ff 2 -1
+strnicmp 616263 ff 100 -158
+mbsnbcmp 616263 ff 100 -1
+mbsncmp 616263 ff 100 -1
+mbsnbicmp 616263 ff 100 -1
+stricmp 414243  97
+mbscmp 414243  1
+mbsicmp 414243  1
+strnicmp 414243  0 0
+mbsnbcmp 414243  0 0
+mbsncmp 414243  0 0
+mbsnbicmp 414243  0 0
+strnicmp 414243  2 97
+mbsnbcmp 414243  2 1
+mbsncmp 414243  2 1
+mbsnbicmp 414243  2 1
+strnicmp 414243  100 97
+mbsnbcmp 414243  100 1
+mbsncmp 414243  100 1
+mbsnbicmp 414243  100 1
+stricmp 414243 61 98
+mbscmp 414243 61 -1
+mbsicmp 414243 61 1
+strnicmp 414243 61 0 0
+mbsnbcmp 414243 61 0 0
+mbsncmp 414243 61 0 0
+mbsnbicmp 414243 61 0 0
+strnicmp 414243 61 2 98
+mbsnbcmp 414243 61 2 -1
+mbsncmp 414243 61 2 -1
+mbsnbicmp 414243 61 2 1
+strnicmp 414243 61 100 98
+mbsnbcmp 414243 61 100 -1
+mbsncmp 414243 61 100 -1
+mbsnbicmp 414243 61 100 1
+stricmp 414243 41 98
+mbscmp 414243 41 1
+mbsicmp 414243 41 1
+strnicmp 414243 41 0 0
+mbsnbcmp 414243 41 0 0
+mbsncmp 414243 41 0 0
+mbsnbicmp 414243 41 0 0
+strnicmp 414243 41 2 98
+mbsnbcmp 414243 41 2 1
+mbsncmp 414243 41 2 1
+mbsnbicmp 414243 41 2 1
+strnicmp 414243 41 100 98
+mbsnbcmp 414243 41 100 1
+mbsncmp 414243 41 100 1
+mbsnbicmp 414243 41 100 1
+stricmp 414243 616263 0
+mbscmp 414243 616263 -1
+mbsicmp 414243 616263 0
+strnicmp 414243 616263 0 0
+mbsnbcmp 414243 616263 0 0
+mbsncmp 414243 616263 0 0
+mbsnbicmp 414243 616263 0 0
+strnicmp 414243 616263 2 0
+mbsnbcmp 414243 616263 2 -1
+mbsncmp 414243 616263 2 -1
+mbsnbicmp 414243 616263 2 0
+strnicmp 414243 616263 100 0
+mbsnbcmp 414243 616263 100 -1
+mbsncmp 414243 616263 100 -1
+mbsnbicmp 414243 616263 100 0
+stricmp 414243 414243 0
+mbscmp 414243 414243 0
+mbsicmp 414243 414243 0
+strnicmp 414243 414243 0 0
+mbsnbcmp 414243 414243 0 0
+mbsncmp 414243 414243 0 0
+mbsnbicmp 414243 414243 0 0
+strnicmp 414243 414243 2 0
+mbsnbcmp 414243 414243 2 0
+mbsncmp 414243 414243 2 0
+mbsnbicmp 414243 414243 2 0
+strnicmp 414243 414243 100 0
+mbsnbcmp 414243 414243 100 0
+mbsncmp 414243 414243 100 0
+mbsnbicmp 414243 414243 100 0
+stricmp 414243 5a65627261 -25
+mbscmp 414243 5a65627261 -1
+mbsicmp 414243 5a65627261 -1
+strnicmp 414243 5a65627261 0 0
+mbsnbcmp 414243 5a65627261 0 0
+mbsncmp 414243 5a65627261 0 0
+mbsnbicmp 414243 5a65627261 0 0
+strnicmp 414243 5a65627261 2 -25
+mbsnbcmp 414243 5a65627261 2 -1
+mbsncmp 414243 5a65627261 2 -1
+mbsnbicmp 414243 5a65627261 2 -1
+strnicmp 414243 5a65627261 100 -25
+mbsnbcmp 414243 5a65627261 100 -1
+mbsncmp 414243 5a65627261 100 -1
+mbsnbicmp 414243 5a65627261 100 -1
+stricmp 414243 5b 6
+mbscmp 414243 5b -1
+mbsicmp 414243 5b -1
+strnicmp 414243 5b 0 0
+mbsnbcmp 414243 5b 0 0
+mbsncmp 414243 5b 0 0
+mbsnbicmp 414243 5b 0 0
+strnicmp 414243 5b 2 6
+mbsnbcmp 414243 5b 2 -1
+mbsncmp 414243 5b 2 -1
+mbsnbicmp 414243 5b 2 -1
+strnicmp 414243 5b 100 6
+mbsnbcmp 414243 5b 100 -1
+mbsncmp 414243 5b 100 -1
+mbsnbicmp 414243 5b 100 -1
+stricmp 414243 e9 -136
+mbscmp 414243 e9 -1
+mbsicmp 414243 e9 -1
+strnicmp 414243 e9 0 0
+mbsnbcmp 414243 e9 0 0
+mbsncmp 414243 e9 0 0
+mbsnbicmp 414243 e9 0 0
+strnicmp 414243 e9 2 -136
+mbsnbcmp 414243 e9 2 -1
+mbsncmp 414243 e9 2 -1
+mbsnbicmp 414243 e9 2 -1
+strnicmp 414243 e9 100 -136
+mbsnbcmp 414243 e9 100 -1
+mbsncmp 414243 e9 100 -1
+mbsnbicmp 414243 e9 100 -1
+stricmp 414243 c9 -104
+mbscmp 414243 c9 -1
+mbsicmp 414243 c9 -1
+strnicmp 414243 c9 0 0
+mbsnbcmp 414243 c9 0 0
+mbsncmp 414243 c9 0 0
+mbsnbicmp 414243 c9 0 0
+strnicmp 414243 c9 2 -104
+mbsnbcmp 414243 c9 2 -1
+mbsncmp 414243 c9 2 -1
+mbsnbicmp 414243 c9 2 -1
+strnicmp 414243 c9 100 -104
+mbsnbcmp 414243 c9 100 -1
+mbsncmp 414243 c9 100 -1
+mbsnbicmp 414243 c9 100 -1
+stricmp 414243 8341 -34
+mbscmp 414243 8341 -1
+mbsicmp 414243 8341 -1
+strnicmp 414243 8341 0 0
+mbsnbcmp 414243 8341 0 0
+mbsncmp 414243 8341 0 0
+mbsnbicmp 414243 8341 0 0
+strnicmp 414243 8341 2 -34
+mbsnbcmp 414243 8341 2 -1
+mbsncmp 414243 8341 2 -1
+mbsnbicmp 414243 8341 2 -1
+strnicmp 414243 8341 100 -34
+mbsnbcmp 414243 8341 100 -1
+mbsncmp 414243 8341 100 -1
+mbsnbicmp 414243 8341 100 -1
+stricmp 414243 834182a0 -34
+mbscmp 414243 834182a0 -1
+mbsicmp 414243 834182a0 -1
+strnicmp 414243 834182a0 0 0
+mbsnbcmp 414243 834182a0 0 0
+mbsncmp 414243 834182a0 0 0
+mbsnbicmp 414243 834182a0 0 0
+strnicmp 414243 834182a0 2 -34
+mbsnbcmp 414243 834182a0 2 -1
+mbsncmp 414243 834182a0 2 -1
+mbsnbicmp 414243 834182a0 2 -1
+strnicmp 414243 834182a0 100 -34
+mbsnbcmp 414243 834182a0 100 -1
+mbsncmp 414243 834182a0 100 -1
+mbsnbicmp 414243 834182a0 100 -1
+stricmp 414243 ff -158
+mbscmp 414243 ff -1
+mbsicmp 414243 ff -1
+strnicmp 414243 ff 0 0
+mbsnbcmp 414243 ff 0 0
+mbsncmp 414243 ff 0 0
+mbsnbicmp 414243 ff 0 0
+strnicmp 414243 ff 2 -158
+mbsnbcmp 414243 ff 2 -1
+mbsncmp 414243 ff 2 -1
+mbsnbicmp 414243 ff 2 -1
+strnicmp 414243 ff 100 -158
+mbsnbcmp 414243 ff 100 -1
+mbsncmp 414243 ff 100 -1
+mbsnbicmp 414243 ff 100 -1
+stricmp 5a65627261  122
+mbscmp 5a65627261  1
+mbsicmp 5a65627261  1
+strnicmp 5a65627261  0 0
+mbsnbcmp 5a65627261  0 0
+mbsncmp 5a65627261  0 0
+mbsnbicmp 5a65627261  0 0
+strnicmp 5a65627261  2 122
+mbsnbcmp 5a65627261  2 1
+mbsncmp 5a65627261  2 1
+mbsnbicmp 5a65627261  2 1
+strnicmp 5a65627261  100 122
+mbsnbcmp 5a65627261  100 1
+mbsncmp 5a65627261  100 1
+mbsnbicmp 5a65627261  100 1
+stricmp 5a65627261 61 25
+mbscmp 5a65627261 61 -1
+mbsicmp 5a65627261 61 1
+strnicmp 5a65627261 61 0 0
+mbsnbcmp 5a65627261 61 0 0
+mbsncmp 5a65627261 61 0 0
+mbsnbicmp 5a65627261 61 0 0
+strnicmp 5a65627261 61 2 25
+mbsnbcmp 5a65627261 61 2 -1
+mbsncmp 5a65627261 61 2 -1
+mbsnbicmp 5a65627261 61 2 1
+strnicmp 5a65627261 61 100 25
+mbsnbcmp 5a65627261 61 100 -1
+mbsncmp 5a65627261 61 100 -1
+mbsnbicmp 5a65627261 61 100 1
+stricmp 5a65627261 41 25
+mbscmp 5a65627261 41 1
+mbsicmp 5a65627261 41 1
+strnicmp 5a65627261 41 0 0
+mbsnbcmp 5a65627261 41 0 0
+mbsncmp 5a65627261 41 0 0
+mbsnbicmp 5a65627261 41 0 0
+strnicmp 5a65627261 41 2 25
+mbsnbcmp 5a65627261 41 2 1
+mbsncmp 5a65627261 41 2 1
+mbsnbicmp 5a65627261 41 2 1
+strnicmp 5a65627261 41 100 25
+mbsnbcmp 5a65627261 41 100 1
+mbsncmp 5a65627261 41 100 1
+mbsnbicmp 5a65627261 41 100 1
+stricmp 5a65627261 616263 25
+mbscmp 5a65627261 616263 -1
+mbsicmp 5a65627261 616263 1
+strnicmp 5a65627261 616263 0 0
+mbsnbcmp 5a65627261 616263 0 0
+mbsncmp 5a65627261 616263 0 0
+mbsnbicmp 5a65627261 616263 0 0
+strnicmp 5a65627261 616263 2 25
+mbsnbcmp 5a65627261 616263 2 -1
+mbsncmp 5a65627261 616263 2 -1
+mbsnbicmp 5a65627261 616263 2 1
+strnicmp 5a65627261 616263 100 25
+mbsnbcmp 5a65627261 616263 100 -1
+mbsncmp 5a65627261 616263 100 -1
+mbsnbicmp 5a65627261 616263 100 1
+stricmp 5a65627261 414243 25
+mbscmp 5a65627261 414243 1
+mbsicmp 5a65627261 414243 1
+strnicmp 5a65627261 414243 0 0
+mbsnbcmp 5a65627261 414243 0 0
+mbsncmp 5a65627261 414243 0 0
+mbsnbicmp 5a65627261 414243 0 0
+strnicmp 5a65627261 414243 2 25
+mbsnbcmp 5a65627261 414243 2 1
+mbsncmp 5a65627261 414243 2 1
+mbsnbicmp 5a65627261 414243 2 1
+strnicmp 5a65627261 414243 100 25
+mbsnbcmp 5a65627261 414243 100 1
+mbsncmp 5a65627261 414243 100 1
+mbsnbicmp 5a65627261 414243 100 1
+stricmp 5a65627261 5a65627261 0
+mbscmp 5a65627261 5a65627261 0
+mbsicmp 5a65627261 5a65627261 0
+strnicmp 5a65627261 5a65627261 0 0
+mbsnbcmp 5a65627261 5a65627261 0 0
+mbsncmp 5a65627261 5a65627261 0 0
+mbsnbicmp 5a65627261 5a65627261 0 0
+strnicmp 5a65627261 5a65627261 2 0
+mbsnbcmp 5a65627261 5a65627261 2 0
+mbsncmp 5a65627261 5a65627261 2 0
+mbsnbicmp 5a65627261 5a65627261 2 0
+strnicmp 5a65627261 5a65627261 100 0
+mbsnbcmp 5a65627261 5a65627261 100 0
+mbsncmp 5a65627261 5a65627261 100 0
+mbsnbicmp 5a65627261 5a65627261 100 0
+stricmp 5a65627261 5b 31
+mbscmp 5a65627261 5b -1
+mbsicmp 5a65627261 5b -1
+strnicmp 5a65627261 5b 0 0
+mbsnbcmp 5a65627261 5b 0 0
+mbsncmp 5a65627261 5b 0 0
+mbsnbicmp 5a65627261 5b 0 0
+strnicmp 5a65627261 5b 2 31
+mbsnbcmp 5a65627261 5b 2 -1
+mbsncmp 5a65627261 5b 2 -1
+mbsnbicmp 5a65627261 5b 2 -1
+strnicmp 5a65627261 5b 100 31
+mbsnbcmp 5a65627261 5b 100 -1
+mbsncmp 5a65627261 5b 100 -1
+mbsnbicmp 5a65627261 5b 100 -1
+stricmp 5a65627261 e9 -111
+mbscmp 5a65627261 e9 -1
+mbsicmp 5a65627261 e9 -1
+strnicmp 5a65627261 e9 0 0
+mbsnbcmp 5a65627261 e9 0 0
+mbsncmp 5a65627261 e9 0 0
+mbsnbicmp 5a65627261 e9 0 0
+strnicmp 5a65627261 e9 2 -111
+mbsnbcmp 5a65627261 e9 2 -1
+mbsncmp 5a65627261 e9 2 -1
+mbsnbicmp 5a65627261 e9 2 -1
+strnicmp 5a65627261 e9 100 -111
+mbsnbcmp 5a65627261 e9 100 -1
+mbsncmp 5a65627261 e9 100 -1
+mbsnbicmp 5a65627261 e9 100 -1
+stricmp 5a65627261 c9 -79
+mbscmp 5a65627261 c9 -1
+mbsicmp 5a65627261 c9 -1
+strnicmp 5a65627261 c9 0 0
+mbsnbcmp 5a65627261 c9 0 0
+mbsncmp 5a65627261 c9 0 0
+mbsnbicmp 5a65627261 c9 0 0
+strnicmp 5a65627261 c9 2 -79
+mbsnbcmp 5a65627261 c9 2 -1
+mbsncmp 5a65627261 c9 2 -1
+mbsnbicmp 5a65627261 c9 2 -1
+strnicmp 5a65627261 c9 100 -79
+mbsnbcmp 5a65627261 c9 100 -1
+mbsncmp 5a65627261 c9 100 -1
+mbsnbicmp 5a65627261 c9 100 -1
+stricmp 5a65627261 8341 -9
+mbscmp 5a65627261 8341 -1
+mbsicmp 5a65627261 8341 -1
+strnicmp 5a65627261 8341 0 0
+mbsnbcmp 5a65627261 8341 0 0
+mbsncmp 5a65627261 8341 0 0
+mbsnbicmp 5a65627261 8341 0 0
+strnicmp 5a65627261 8341 2 -9
+mbsnbcmp 5a65627261 8341 2 -1
+mbsncmp 5a65627261 8341 2 -1
+mbsnbicmp 5a65627261 8341 2 -1
+strnicmp 5a65627261 8341 100 -9
+mbsnbcmp 5a65627261 8341 100 -1
+mbsncmp 5a65627261 8341 100 -1
+mbsnbicmp 5a65627261 8341 100 -1
+stricmp 5a65627261 834182a0 -9
+mbscmp 5a65627261 834182a0 -1
+mbsicmp 5a65627261 834182a0 -1
+strnicmp 5a65627261 834182a0 0 0
+mbsnbcmp 5a65627261 834182a0 0 0
+mbsncmp 5a65627261 834182a0 0 0
+mbsnbicmp 5a65627261 834182a0 0 0
+strnicmp 5a65627261 834182a0 2 -9
+mbsnbcmp 5a65627261 834182a0 2 -1
+mbsncmp 5a65627261 834182a0 2 -1
+mbsnbicmp 5a65627261 834182a0 2 -1
+strnicmp 5a65627261 834182a0 100 -9
+mbsnbcmp 5a65627261 834182a0 100 -1
+mbsncmp 5a65627261 834182a0 100 -1
+mbsnbicmp 5a65627261 834182a0 100 -1
+stricmp 5a65627261 ff -133
+mbscmp 5a65627261 ff -1
+mbsicmp 5a65627261 ff -1
+strnicmp 5a65627261 ff 0 0
+mbsnbcmp 5a65627261 ff 0 0
+mbsncmp 5a65627261 ff 0 0
+mbsnbicmp 5a65627261 ff 0 0
+strnicmp 5a65627261 ff 2 -133
+mbsnbcmp 5a65627261 ff 2 -1
+mbsncmp 5a65627261 ff 2 -1
+mbsnbicmp 5a65627261 ff 2 -1
+strnicmp 5a65627261 ff 100 -133
+mbsnbcmp 5a65627261 ff 100 -1
+mbsncmp 5a65627261 ff 100 -1
+mbsnbicmp 5a65627261 ff 100 -1
+stricmp 5b  91
+mbscmp 5b  1
+mbsicmp 5b  1
+strnicmp 5b  0 0
+mbsnbcmp 5b  0 0
+mbsncmp 5b  0 0
+mbsnbicmp 5b  0 0
+strnicmp 5b  2 91
+mbsnbcmp 5b  2 1
+mbsncmp 5b  2 1
+mbsnbicmp 5b  2 1
+strnicmp 5b  100 91
+mbsnbcmp 5b  100 1
+mbsncmp 5b  100 1
+mbsnbicmp 5b  100 1
+stricmp 5b 61 -6
+mbscmp 5b 61 -1
+mbsicmp 5b 61 1
+strnicmp 5b 61 0 0
+mbsnbcmp 5b 61 0 0
+mbsncmp 5b 61 0 0
+mbsnbicmp 5b 61 0 0
+strnicmp 5b 61 2 -6
+mbsnbcmp 5b 61 2 -1
+mbsncmp 5b 61 2 -1
+mbsnbicmp 5b 61 2 1
+strnicmp 5b 61 100 -6
+mbsnbcmp 5b 61 100 -1
+mbsncmp 5b 61 100 -1
+mbsnbicmp 5b 61 100 1
+stricmp 5b 41 -6
+mbscmp 5b 41 1
+mbsicmp 5b 41 1
+strnicmp 5b 41 0 0
+mbsnbcmp 5b 41 0 0
+mbsncmp 5b 41 0 0
+mbsnbicmp 5b 41 0 0
+strnicmp 5b 41 2 -6
+mbsnbcmp 5b 41 2 1
+mbsncmp 5b 41 2 1
+mbsnbicmp 5b 41 2 1
+strnicmp 5b 41 100 -6
+mbsnbcmp 5b 41 100 1
+mbsncmp 5b 41 100 1
+mbsnbicmp 5b 41 100 1
+stricmp 5b 616263 -6
+mbscmp 5b 616263 -1
+mbsicmp 5b 616263 1
+strnicmp 5b 616263 0 0
+mbsnbcmp 5b 616263 0 0
+mbsncmp 5b 616263 0 0
+mbsnbicmp 5b 616263 0 0
+strnicmp 5b 616263 2 -6
+mbsnbcmp 5b 616263 2 -1
+mbsncmp 5b 616263 2 -1
+mbsnbicmp 5b 616263 2 1
+strnicmp 5b 616263 100 -6
+mbsnbcmp 5b 616263 100 -1
+mbsncmp 5b 616263 100 -1
+mbsnbicmp 5b 616263 100 1
+stricmp 5b 414243 -6
+mbscmp 5b 414243 1
+mbsicmp 5b 414243 1
+strnicmp 5b 414243 0 0
+mbsnbcmp 5b 414243 0 0
+mbsncmp 5b 414243 0 0
+mbsnbicmp 5b 414243 0 0
+strnicmp 5b 414243 2 -6
+mbsnbcmp 5b 414243 2 1
+mbsncmp 5b 414243 2 1
+mbsnbicmp 5b 414243 2 1
+strnicmp 5b 414243 100 -6
+mbsnbcmp 5b 414243 100 1
+mbsncmp 5b 414243 100 1
+mbsnbicmp 5b 414243 100 1
+stricmp 5b 5a65627261 -31
+mbscmp 5b 5a65627261 1
+mbsicmp 5b 5a65627261 1
+strnicmp 5b 5a65627261 0 0
+mbsnbcmp 5b 5a65627261 0 0
+mbsncmp 5b 5a65627261 0 0
+mbsnbicmp 5b 5a65627261 0 0
+strnicmp 5b 5a65627261 2 -31
+mbsnbcmp 5b 5a65627261 2 1
+mbsncmp 5b 5a65627261 2 1
+mbsnbicmp 5b 5a65627261 2 1
+strnicmp 5b 5a65627261 100 -31
+mbsnbcmp 5b 5a65627261 100 1
+mbsncmp 5b 5a65627261 100 1
+mbsnbicmp 5b 5a65627261 100 1
+stricmp 5b 5b 0
+mbscmp 5b 5b 0
+mbsicmp 5b 5b 0
+strnicmp 5b 5b 0 0
+mbsnbcmp 5b 5b 0 0
+mbsncmp 5b 5b 0 0
+mbsnbicmp 5b 5b 0 0
+strnicmp 5b 5b 2 0
+mbsnbcmp 5b 5b 2 0
+mbsncmp 5b 5b 2 0
+mbsnbicmp 5b 5b 2 0
+strnicmp 5b 5b 100 0
+mbsnbcmp 5b 5b 100 0
+mbsncmp 5b 5b 100 0
+mbsnbicmp 5b 5b 100 0
+stricmp 5b e9 -142
+mbscmp 5b e9 -1
+mbsicmp 5b e9 -1
+strnicmp 5b e9 0 0
+mbsnbcmp 5b e9 0 0
+mbsncmp 5b e9 0 0
+mbsnbicmp 5b e9 0 0
+strnicmp 5b e9 2 -142
+mbsnbcmp 5b e9 2 -1
+mbsncmp 5b e9 2 -1
+mbsnbicmp 5b e9 2 -1
+strnicmp 5b e9 100 -142
+mbsnbcmp 5b e9 100 -1
+mbsncmp 5b e9 100 -1
+mbsnbicmp 5b e9 100 -1
+stricmp 5b c9 -110
+mbscmp 5b c9 -1
+mbsicmp 5b c9 -1
+strnicmp 5b c9 0 0
+mbsnbcmp 5b c9 0 0
+mbsncmp 5b c9 0 0
+mbsnbicmp 5b c9 0 0
+strnicmp 5b c9 2 -110
+mbsnbcmp 5b c9 2 -1
+mbsncmp 5b c9 2 -1
+mbsnbicmp 5b c9 2 -1
+strnicmp 5b c9 100 -110
+mbsnbcmp 5b c9 100 -1
+mbsncmp 5b c9 100 -1
+mbsnbicmp 5b c9 100 -1
+stricmp 5b 8341 -40
+mbscmp 5b 8341 -1
+mbsicmp 5b 8341 -1
+strnicmp 5b 8341 0 0
+mbsnbcmp 5b 8341 0 0
+mbsncmp 5b 8341 0 0
+mbsnbicmp 5b 8341 0 0
+strnicmp 5b 8341 2 -40
+mbsnbcmp 5b 8341 2 -1
+mbsncmp 5b 8341 2 -1
+mbsnbicmp 5b 8341 2 -1
+strnicmp 5b 8341 100 -40
+mbsnbcmp 5b 8341 100 -1
+mbsncmp 5b 8341 100 -1
+mbsnbicmp 5b 8341 100 -1
+stricmp 5b 834182a0 -40
+mbscmp 5b 834182a0 -1
+mbsicmp 5b 834182a0 -1
+strnicmp 5b 834182a0 0 0
+mbsnbcmp 5b 834182a0 0 0
+mbsncmp 5b 834182a0 0 0
+mbsnbicmp 5b 834182a0 0 0
+strnicmp 5b 834182a0 2 -40
+mbsnbcmp 5b 834182a0 2 -1
+mbsncmp 5b 834182a0 2 -1
+mbsnbicmp 5b 834182a0 2 -1
+strnicmp 5b 834182a0 100 -40
+mbsnbcmp 5b 834182a0 100 -1
+mbsncmp 5b 834182a0 100 -1
+mbsnbicmp 5b 834182a0 100 -1
+stricmp 5b ff -164
+mbscmp 5b ff -1
+mbsicmp 5b ff -1
+strnicmp 5b ff 0 0
+mbsnbcmp 5b ff 0 0
+mbsncmp 5b ff 0 0
+mbsnbicmp 5b ff 0 0
+strnicmp 5b ff 2 -164
+mbsnbcmp 5b ff 2 -1
+mbsncmp 5b ff 2 -1
+mbsnbicmp 5b ff 2 -1
+strnicmp 5b ff 100 -164
+mbsnbcmp 5b ff 100 -1
+mbsncmp 5b ff 100 -1
+mbsnbicmp 5b ff 100 -1
+stricmp e9  233
+mbscmp e9  1
+mbsicmp e9  1
+strnicmp e9  0 0
+mbsnbcmp e9  0 0
+mbsncmp e9  0 0
+mbsnbicmp e9  0 0
+strnicmp e9  2 233
+mbsnbcmp e9  2 1
+mbsncmp e9  2 1
+mbsnbicmp e9  2 1
+strnicmp e9  100 233
+mbsnbcmp e9  100 1
+mbsncmp e9  100 1
+mbsnbicmp e9  100 1
+stricmp e9 61 136
+mbscmp e9 61 1
+mbsicmp e9 61 1
+strnicmp e9 61 0 0
+mbsnbcmp e9 61 0 0
+mbsncmp e9 61 0 0
+mbsnbicmp e9 61 0 0
+strnicmp e9 61 2 136
+mbsnbcmp e9 61 2 1
+mbsncmp e9 61 2 1
+mbsnbicmp e9 61 2 1
+strnicmp e9 61 100 136
+mbsnbcmp e9 61 100 1
+mbsncmp e9 61 100 1
+mbsnbicmp e9 61 100 1
+stricmp e9 41 136
+mbscmp e9 41 1
+mbsicmp e9 41 1
+strnicmp e9 41 0 0
+mbsnbcmp e9 41 0 0
+mbsncmp e9 41 0 0
+mbsnbicmp e9 41 0 0
+strnicmp e9 41 2 136
+mbsnbcmp e9 41 2 1
+mbsncmp e9 41 2 1
+mbsnbicmp e9 41 2 1
+strnicmp e9 41 100 136
+mbsnbcmp e9 41 100 1
+mbsncmp e9 41 100 1
+mbsnbicmp e9 41 100 1
+stricmp e9 616263 136
+mbscmp e9 616263 1
+mbsicmp e9 616263 1
+strnicmp e9 616263 0 0
+mbsnbcmp e9 616263 0 0
+mbsncmp e9 616263 0 0
+mbsnbicmp e9 616263 0 0
+strnicmp e9 616263 2 136
+mbsnbcmp e9 616263 2 1
+mbsncmp e9 616263 2 1
+mbsnbicmp e9 616263 2 1
+strnicmp e9 616263 100 136
+mbsnbcmp e9 616263 100 1
+mbsncmp e9 616263 100 1
+mbsnbicmp e9 616263 100 1
+stricmp e9 414243 136
+mbscmp e9 414243 1
+mbsicmp e9 414243 1
+strnicmp e9 414243 0 0
+mbsnbcmp e9 414243 0 0
+mbsncmp e9 414243 0 0
+mbsnbicmp e9 414243 0 0
+strnicmp e9 414243 2 136
+mbsnbcmp e9 414243 2 1
+mbsncmp e9 414243 2 1
+mbsnbicmp e9 414243 2 1
+strnicmp e9 414243 100 136
+mbsnbcmp e9 414243 100 1
+mbsncmp e9 414243 100 1
+mbsnbicmp e9 414243 100 1
+stricmp e9 5a65627261 111
+mbscmp e9 5a65627261 1
+mbsicmp e9 5a65627261 1
+strnicmp e9 5a65627261 0 0
+mbsnbcmp e9 5a65627261 0 0
+mbsncmp e9 5a65627261 0 0
+mbsnbicmp e9 5a65627261 0 0
+strnicmp e9 5a65627261 2 111
+mbsnbcmp e9 5a65627261 2 1
+mbsncmp e9 5a65627261 2 1
+mbsnbicmp e9 5a65627261 2 1
+strnicmp e9 5a65627261 100 111
+mbsnbcmp e9 5a65627261 100 1
+mbsncmp e9 5a65627261 100 1
+mbsnbicmp e9 5a65627261 100 1
+stricmp e9 5b 142
+mbscmp e9 5b 1
+mbsicmp e9 5b 1
+strnicmp e9 5b 0 0
+mbsnbcmp e9 5b 0 0
+mbsncmp e9 5b 0 0
+mbsnbicmp e9 5b 0 0
+strnicmp e9 5b 2 142
+mbsnbcmp e9 5b 2 1
+mbsncmp e9 5b 2 1
+mbsnbicmp e9 5b 2 1
+strnicmp e9 5b 100 142
+mbsnbcmp e9 5b 100 1
+mbsncmp e9 5b 100 1
+mbsnbicmp e9 5b 100 1
+stricmp e9 e9 0
+mbscmp e9 e9 0
+mbsicmp e9 e9 0
+strnicmp e9 e9 0 0
+mbsnbcmp e9 e9 0 0
+mbsncmp e9 e9 0 0
+mbsnbicmp e9 e9 0 0
+strnicmp e9 e9 2 0
+mbsnbcmp e9 e9 2 0
+mbsncmp e9 e9 2 0
+mbsnbicmp e9 e9 2 0
+strnicmp e9 e9 100 0
+mbsnbcmp e9 e9 100 0
+mbsncmp e9 e9 100 0
+mbsnbicmp e9 e9 100 0
+stricmp e9 c9 32
+mbscmp e9 c9 1
+mbsicmp e9 c9 1
+strnicmp e9 c9 0 0
+mbsnbcmp e9 c9 0 0
+mbsncmp e9 c9 0 0
+mbsnbicmp e9 c9 0 0
+strnicmp e9 c9 2 32
+mbsnbcmp e9 c9 2 1
+mbsncmp e9 c9 2 1
+mbsnbicmp e9 c9 2 1
+strnicmp e9 c9 100 32
+mbsnbcmp e9 c9 100 1
+mbsncmp e9 c9 100 1
+mbsnbicmp e9 c9 100 1
+stricmp e9 8341 102
+mbscmp e9 8341 1
+mbsicmp e9 8341 1
+strnicmp e9 8341 0 0
+mbsnbcmp e9 8341 0 0
+mbsncmp e9 8341 0 0
+mbsnbicmp e9 8341 0 0
+strnicmp e9 8341 2 102
+mbsnbcmp e9 8341 2 1
+mbsncmp e9 8341 2 1
+mbsnbicmp e9 8341 2 1
+strnicmp e9 8341 100 102
+mbsnbcmp e9 8341 100 1
+mbsncmp e9 8341 100 1
+mbsnbicmp e9 8341 100 1
+stricmp e9 834182a0 102
+mbscmp e9 834182a0 1
+mbsicmp e9 834182a0 1
+strnicmp e9 834182a0 0 0
+mbsnbcmp e9 834182a0 0 0
+mbsncmp e9 834182a0 0 0
+mbsnbicmp e9 834182a0 0 0
+strnicmp e9 834182a0 2 102
+mbsnbcmp e9 834182a0 2 1
+mbsncmp e9 834182a0 2 1
+mbsnbicmp e9 834182a0 2 1
+strnicmp e9 834182a0 100 102
+mbsnbcmp e9 834182a0 100 1
+mbsncmp e9 834182a0 100 1
+mbsnbicmp e9 834182a0 100 1
+stricmp e9 ff -22
+mbscmp e9 ff -1
+mbsicmp e9 ff -1
+strnicmp e9 ff 0 0
+mbsnbcmp e9 ff 0 0
+mbsncmp e9 ff 0 0
+mbsnbicmp e9 ff 0 0
+strnicmp e9 ff 2 -22
+mbsnbcmp e9 ff 2 -1
+mbsncmp e9 ff 2 -1
+mbsnbicmp e9 ff 2 -1
+strnicmp e9 ff 100 -22
+mbsnbcmp e9 ff 100 -1
+mbsncmp e9 ff 100 -1
+mbsnbicmp e9 ff 100 -1
+stricmp c9  201
+mbscmp c9  1
+mbsicmp c9  1
+strnicmp c9  0 0
+mbsnbcmp c9  0 0
+mbsncmp c9  0 0
+mbsnbicmp c9  0 0
+strnicmp c9  2 201
+mbsnbcmp c9  2 1
+mbsncmp c9  2 1
+mbsnbicmp c9  2 1
+strnicmp c9  100 201
+mbsnbcmp c9  100 1
+mbsncmp c9  100 1
+mbsnbicmp c9  100 1
+stricmp c9 61 104
+mbscmp c9 61 1
+mbsicmp c9 61 1
+strnicmp c9 61 0 0
+mbsnbcmp c9 61 0 0
+mbsncmp c9 61 0 0
+mbsnbicmp c9 61 0 0
+strnicmp c9 61 2 104
+mbsnbcmp c9 61 2 1
+mbsncmp c9 61 2 1
+mbsnbicmp c9 61 2 1
+strnicmp c9 61 100 104
+mbsnbcmp c9 61 100 1
+mbsncmp c9 61 100 1
+mbsnbicmp c9 61 100 1
+stricmp c9 41 104
+mbscmp c9 41 1
+mbsicmp c9 41 1
+strnicmp c9 41 0 0
+mbsnbcmp c9 41 0 0
+mbsncmp c9 41 0 0
+mbsnbicmp c9 41 0 0
+strnicmp c9 41 2 104
+mbsnbcmp c9 41 2 1
+mbsncmp c9 41 2 1
+mbsnbicmp c9 41 2 1
+strnicmp c9 41 100 104
+mbsnbcmp c9 41 100 1
+mbsncmp c9 41 100 1
+mbsnbicmp c9 41 100 1
+stricmp c9 616263 104
+mbscmp c9 616263 1
+mbsicmp c9 616263 1
+strnicmp c9 616263 0 0
+mbsnbcmp c9 616263 0 0
+mbsncmp c9 616263 0 0
+mbsnbicmp c9 616263 0 0
+strnicmp c9 616263 2 104
+mbsnbcmp c9 616263 2 1
+mbsncmp c9 616263 2 1
+mbsnbicmp c9 616263 2 1
+strnicmp c9 616263 100 104
+mbsnbcmp c9 616263 100 1
+mbsncmp c9 616263 100 1
+mbsnbicmp c9 616263 100 1
+stricmp c9 414243 104
+mbscmp c9 414243 1
+mbsicmp c9 414243 1
+strnicmp c9 414243 0 0
+mbsnbcmp c9 414243 0 0
+mbsncmp c9 414243 0 0
+mbsnbicmp c9 414243 0 0
+strnicmp c9 414243 2 104
+mbsnbcmp c9 414243 2 1
+mbsncmp c9 414243 2 1
+mbsnbicmp c9 414243 2 1
+strnicmp c9 414243 100 104
+mbsnbcmp c9 414243 100 1
+mbsncmp c9 414243 100 1
+mbsnbicmp c9 414243 100 1
+stricmp c9 5a65627261 79
+mbscmp c9 5a65627261 1
+mbsicmp c9 5a65627261 1
+strnicmp c9 5a65627261 0 0
+mbsnbcmp c9 5a65627261 0 0
+mbsncmp c9 5a65627261 0 0
+mbsnbicmp c9 5a65627261 0 0
+strnicmp c9 5a65627261 2 79
+mbsnbcmp c9 5a65627261 2 1
+mbsncmp c9 5a65627261 2 1
+mbsnbicmp c9 5a65627261 2 1
+strnicmp c9 5a65627261 100 79
+mbsnbcmp c9 5a65627261 100 1
+mbsncmp c9 5a65627261 100 1
+mbsnbicmp c9 5a65627261 100 1
+stricmp c9 5b 110
+mbscmp c9 5b 1
+mbsicmp c9 5b 1
+strnicmp c9 5b 0 0
+mbsnbcmp c9 5b 0 0
+mbsncmp c9 5b 0 0
+mbsnbicmp c9 5b 0 0
+strnicmp c9 5b 2 110
+mbsnbcmp c9 5b 2 1
+mbsncmp c9 5b 2 1
+mbsnbicmp c9 5b 2 1
+strnicmp c9 5b 100 110
+mbsnbcmp c9 5b 100 1
+mbsncmp c9 5b 100 1
+mbsnbicmp c9 5b 100 1
+stricmp c9 e9 -32
+mbscmp c9 e9 -1
+mbsicmp c9 e9 -1
+strnicmp c9 e9 0 0
+mbsnbcmp c9 e9 0 0
+mbsncmp c9 e9 0 0
+mbsnbicmp c9 e9 0 0
+strnicmp c9 e9 2 -32
+mbsnbcmp c9 e9 2 -1
+mbsncmp c9 e9 2 -1
+mbsnbicmp c9 e9 2 -1
+strnicmp c9 e9 100 -32
+mbsnbcmp c9 e9 100 -1
+mbsncmp c9 e9 100 -1
+mbsnbicmp c9 e9 100 -1
+stricmp c9 c9 0
+mbscmp c9 c9 0
+mbsicmp c9 c9 0
+strnicmp c9 c9 0 0
+mbsnbcmp c9 c9 0 0
+mbsncmp c9 c9 0 0
+mbsnbicmp c9 c9 0 0
+strnicmp c9 c9 2 0
+mbsnbcmp c9 c9 2 0
+mbsncmp c9 c9 2 0
+mbsnbicmp c9 c9 2 0
+strnicmp c9 c9 100 0
+mbsnbcmp c9 c9 100 0
+mbsncmp c9 c9 100 0
+mbsnbicmp c9 c9 100 0
+stricmp c9 8341 70
+mbscmp c9 8341 1
+mbsicmp c9 8341 1
+strnicmp c9 8341 0 0
+mbsnbcmp c9 8341 0 0
+mbsncmp c9 8341 0 0
+mbsnbicmp c9 8341 0 0
+strnicmp c9 8341 2 70
+mbsnbcmp c9 8341 2 1
+mbsncmp c9 8341 2 1
+mbsnbicmp c9 8341 2 1
+strnicmp c9 8341 100 70
+mbsnbcmp c9 8341 100 1
+mbsncmp c9 8341 100 1
+mbsnbicmp c9 8341 100 1
+stricmp c9 834182a0 70
+mbscmp c9 834182a0 1
+mbsicmp c9 834182a0 1
+strnicmp c9 834182a0 0 0
+mbsnbcmp c9 834182a0 0 0
+mbsncmp c9 834182a0 0 0
+mbsnbicmp c9 834182a0 0 0
+strnicmp c9 834182a0 2 70
+mbsnbcmp c9 834182a0 2 1
+mbsncmp c9 834182a0 2 1
+mbsnbicmp c9 834182a0 2 1
+strnicmp c9 834182a0 100 70
+mbsnbcmp c9 834182a0 100 1
+mbsncmp c9 834182a0 100 1
+mbsnbicmp c9 834182a0 100 1
+stricmp c9 ff -54
+mbscmp c9 ff -1
+mbsicmp c9 ff -1
+strnicmp c9 ff 0 0
+mbsnbcmp c9 ff 0 0
+mbsncmp c9 ff 0 0
+mbsnbicmp c9 ff 0 0
+strnicmp c9 ff 2 -54
+mbsnbcmp c9 ff 2 -1
+mbsncmp c9 ff 2 -1
+mbsnbicmp c9 ff 2 -1
+strnicmp c9 ff 100 -54
+mbsnbcmp c9 ff 100 -1
+mbsncmp c9 ff 100 -1
+mbsnbicmp c9 ff 100 -1
+stricmp 8341  131
+mbscmp 8341  1
+mbsicmp 8341  1
+strnicmp 8341  0 0
+mbsnbcmp 8341  0 0
+mbsncmp 8341  0 0
+mbsnbicmp 8341  0 0
+strnicmp 8341  2 131
+mbsnbcmp 8341  2 1
+mbsncmp 8341  2 1
+mbsnbicmp 8341  2 1
+strnicmp 8341  100 131
+mbsnbcmp 8341  100 1
+mbsncmp 8341  100 1
+mbsnbicmp 8341  100 1
+stricmp 8341 61 34
+mbscmp 8341 61 1
+mbsicmp 8341 61 1
+strnicmp 8341 61 0 0
+mbsnbcmp 8341 61 0 0
+mbsncmp 8341 61 0 0
+mbsnbicmp 8341 61 0 0
+strnicmp 8341 61 2 34
+mbsnbcmp 8341 61 2 1
+mbsncmp 8341 61 2 1
+mbsnbicmp 8341 61 2 1
+strnicmp 8341 61 100 34
+mbsnbcmp 8341 61 100 1
+mbsncmp 8341 61 100 1
+mbsnbicmp 8341 61 100 1
+stricmp 8341 41 34
+mbscmp 8341 41 1
+mbsicmp 8341 41 1
+strnicmp 8341 41 0 0
+mbsnbcmp 8341 41 0 0
+mbsncmp 8341 41 0 0
+mbsnbicmp 8341 41 0 0
+strnicmp 8341 41 2 34
+mbsnbcmp 8341 41 2 1
+mbsncmp 8341 41 2 1
+mbsnbicmp 8341 41 2 1
+strnicmp 8341 41 100 34
+mbsnbcmp 8341 41 100 1
+mbsncmp 8341 41 100 1
+mbsnbicmp 8341 41 100 1
+stricmp 8341 616263 34
+mbscmp 8341 616263 1
+mbsicmp 8341 616263 1
+strnicmp 8341 616263 0 0
+mbsnbcmp 8341 616263 0 0
+mbsncmp 8341 616263 0 0
+mbsnbicmp 8341 616263 0 0
+strnicmp 8341 616263 2 34
+mbsnbcmp 8341 616263 2 1
+mbsncmp 8341 616263 2 1
+mbsnbicmp 8341 616263 2 1
+strnicmp 8341 616263 100 34
+mbsnbcmp 8341 616263 100 1
+mbsncmp 8341 616263 100 1
+mbsnbicmp 8341 616263 100 1
+stricmp 8341 414243 34
+mbscmp 8341 414243 1
+mbsicmp 8341 414243 1
+strnicmp 8341 414243 0 0
+mbsnbcmp 8341 414243 0 0
+mbsncmp 8341 414243 0 0
+mbsnbicmp 8341 414243 0 0
+strnicmp 8341 414243 2 34
+mbsnbcmp 8341 414243 2 1
+mbsncmp 8341 414243 2 1
+mbsnbicmp 8341 414243 2 1
+strnicmp 8341 414243 100 34
+mbsnbcmp 8341 414243 100 1
+mbsncmp 8341 414243 100 1
+mbsnbicmp 8341 414243 100 1
+stricmp 8341 5a65627261 9
+mbscmp 8341 5a65627261 1
+mbsicmp 8341 5a65627261 1
+strnicmp 8341 5a65627261 0 0
+mbsnbcmp 8341 5a65627261 0 0
+mbsncmp 8341 5a65627261 0 0
+mbsnbicmp 8341 5a65627261 0 0
+strnicmp 8341 5a65627261 2 9
+mbsnbcmp 8341 5a65627261 2 1
+mbsncmp 8341 5a65627261 2 1
+mbsnbicmp 8341 5a65627261 2 1
+strnicmp 8341 5a65627261 100 9
+mbsnbcmp 8341 5a65627261 100 1
+mbsncmp 8341 5a65627261 100 1
+mbsnbicmp 8341 5a65627261 100 1
+stricmp 8341 5b 40
+mbscmp 8341 5b 1
+mbsicmp 8341 5b 1
+strnicmp 8341 5b 0 0
+mbsnbcmp 8341 5b 0 0
+mbsncmp 8341 5b 0 0
+mbsnbicmp 8341 5b 0 0
+strnicmp 8341 5b 2 40
+mbsnbcmp 8341 5b 2 1
+mbsncmp 8341 5b 2 1
+mbsnbicmp 8341 5b 2 1
+strnicmp 8341 5b 100 40
+mbsnbcmp 8341 5b 100 1
+mbsncmp 8341 5b 100 1
+mbsnbicmp 8341 5b 100 1
+stricmp 8341 e9 -102
+mbscmp 8341 e9 -1
+mbsicmp 8341 e9 -1
+strnicmp 8341 e9 0 0
+mbsnbcmp 8341 e9 0 0
+mbsncmp 8341 e9 0 0
+mbsnbicmp 8341 e9 0 0
+strnicmp 8341 e9 2 -102
+mbsnbcmp 8341 e9 2 -1
+mbsncmp 8341 e9 2 -1
+mbsnbicmp 8341 e9 2 -1
+strnicmp 8341 e9 100 -102
+mbsnbcmp 8341 e9 100 -1
+mbsncmp 8341 e9 100 -1
+mbsnbicmp 8341 e9 100 -1
+stricmp 8341 c9 -70
+mbscmp 8341 c9 -1
+mbsicmp 8341 c9 -1
+strnicmp 8341 c9 0 0
+mbsnbcmp 8341 c9 0 0
+mbsncmp 8341 c9 0 0
+mbsnbicmp 8341 c9 0 0
+strnicmp 8341 c9 2 -70
+mbsnbcmp 8341 c9 2 -1
+mbsncmp 8341 c9 2 -1
+mbsnbicmp 8341 c9 2 -1
+strnicmp 8341 c9 100 -70
+mbsnbcmp 8341 c9 100 -1
+mbsncmp 8341 c9 100 -1
+mbsnbicmp 8341 c9 100 -1
+stricmp 8341 8341 0
+mbscmp 8341 8341 0
+mbsicmp 8341 8341 0
+strnicmp 8341 8341 0 0
+mbsnbcmp 8341 8341 0 0
+mbsncmp 8341 8341 0 0
+mbsnbicmp 8341 8341 0 0
+strnicmp 8341 8341 2 0
+mbsnbcmp 8341 8341 2 0
+mbsncmp 8341 8341 2 0
+mbsnbicmp 8341 8341 2 0
+strnicmp 8341 8341 100 0
+mbsnbcmp 8341 8341 100 0
+mbsncmp 8341 8341 100 0
+mbsnbicmp 8341 8341 100 0
+stricmp 8341 834182a0 -130
+mbscmp 8341 834182a0 -1
+mbsicmp 8341 834182a0 -1
+strnicmp 8341 834182a0 0 0
+mbsnbcmp 8341 834182a0 0 0
+mbsncmp 8341 834182a0 0 0
+mbsnbicmp 8341 834182a0 0 0
+strnicmp 8341 834182a0 2 0
+mbsnbcmp 8341 834182a0 2 0
+mbsncmp 8341 834182a0 2 0
+mbsnbicmp 8341 834182a0 2 0
+strnicmp 8341 834182a0 100 -130
+mbsnbcmp 8341 834182a0 100 -1
+mbsncmp 8341 834182a0 100 -1
+mbsnbicmp 8341 834182a0 100 -1
+stricmp 8341 ff -124
+mbscmp 8341 ff -1
+mbsicmp 8341 ff -1
+strnicmp 8341 ff 0 0
+mbsnbcmp 8341 ff 0 0
+mbsncmp 8341 ff 0 0
+mbsnbicmp 8341 ff 0 0
+strnicmp 8341 ff 2 -124
+mbsnbcmp 8341 ff 2 -1
+mbsncmp 8341 ff 2 -1
+mbsnbicmp 8341 ff 2 -1
+strnicmp 8341 ff 100 -124
+mbsnbcmp 8341 ff 100 -1
+mbsncmp 8341 ff 100 -1
+mbsnbicmp 8341 ff 100 -1
+stricmp 834182a0  131
+mbscmp 834182a0  1
+mbsicmp 834182a0  1
+strnicmp 834182a0  0 0
+mbsnbcmp 834182a0  0 0
+mbsncmp 834182a0  0 0
+mbsnbicmp 834182a0  0 0
+strnicmp 834182a0  2 131
+mbsnbcmp 834182a0  2 1
+mbsncmp 834182a0  2 1
+mbsnbicmp 834182a0  2 1
+strnicmp 834182a0  100 131
+mbsnbcmp 834182a0  100 1
+mbsncmp 834182a0  100 1
+mbsnbicmp 834182a0  100 1
+stricmp 834182a0 61 34
+mbscmp 834182a0 61 1
+mbsicmp 834182a0 61 1
+strnicmp 834182a0 61 0 0
+mbsnbcmp 834182a0 61 0 0
+mbsncmp 834182a0 61 0 0
+mbsnbicmp 834182a0 61 0 0
+strnicmp 834182a0 61 2 34
+mbsnbcmp 834182a0 61 2 1
+mbsncmp 834182a0 61 2 1
+mbsnbicmp 834182a0 61 2 1
+strnicmp 834182a0 61 100 34
+mbsnbcmp 834182a0 61 100 1
+mbsncmp 834182a0 61 100 1
+mbsnbicmp 834182a0 61 100 1
+stricmp 834182a0 41 34
+mbscmp 834182a0 41 1
+mbsicmp 834182a0 41 1
+strnicmp 834182a0 41 0 0
+mbsnbcmp 834182a0 41 0 0
+mbsncmp 834182a0 41 0 0
+mbsnbicmp 834182a0 41 0 0
+strnicmp 834182a0 41 2 34
+mbsnbcmp 834182a0 41 2 1
+mbsncmp 834182a0 41 2 1
+mbsnbicmp 834182a0 41 2 1
+strnicmp 834182a0 41 100 34
+mbsnbcmp 834182a0 41 100 1
+mbsncmp 834182a0 41 100 1
+mbsnbicmp 834182a0 41 100 1
+stricmp 834182a0 616263 34
+mbscmp 834182a0 616263 1
+mbsicmp 834182a0 616263 1
+strnicmp 834182a0 616263 0 0
+mbsnbcmp 834182a0 616263 0 0
+mbsncmp 834182a0 616263 0 0
+mbsnbicmp 834182a0 616263 0 0
+strnicmp 834182a0 616263 2 34
+mbsnbcmp 834182a0 616263 2 1
+mbsncmp 834182a0 616263 2 1
+mbsnbicmp 834182a0 616263 2 1
+strnicmp 834182a0 616263 100 34
+mbsnbcmp 834182a0 616263 100 1
+mbsncmp 834182a0 616263 100 1
+mbsnbicmp 834182a0 616263 100 1
+stricmp 834182a0 414243 34
+mbscmp 834182a0 414243 1
+mbsicmp 834182a0 414243 1
+strnicmp 834182a0 414243 0 0
+mbsnbcmp 834182a0 414243 0 0
+mbsncmp 834182a0 414243 0 0
+mbsnbicmp 834182a0 414243 0 0
+strnicmp 834182a0 414243 2 34
+mbsnbcmp 834182a0 414243 2 1
+mbsncmp 834182a0 414243 2 1
+mbsnbicmp 834182a0 414243 2 1
+strnicmp 834182a0 414243 100 34
+mbsnbcmp 834182a0 414243 100 1
+mbsncmp 834182a0 414243 100 1
+mbsnbicmp 834182a0 414243 100 1
+stricmp 834182a0 5a65627261 9
+mbscmp 834182a0 5a65627261 1
+mbsicmp 834182a0 5a65627261 1
+strnicmp 834182a0 5a65627261 0 0
+mbsnbcmp 834182a0 5a65627261 0 0
+mbsncmp 834182a0 5a65627261 0 0
+mbsnbicmp 834182a0 5a65627261 0 0
+strnicmp 834182a0 5a65627261 2 9
+mbsnbcmp 834182a0 5a65627261 2 1
+mbsncmp 834182a0 5a65627261 2 1
+mbsnbicmp 834182a0 5a65627261 2 1
+strnicmp 834182a0 5a65627261 100 9
+mbsnbcmp 834182a0 5a65627261 100 1
+mbsncmp 834182a0 5a65627261 100 1
+mbsnbicmp 834182a0 5a65627261 100 1
+stricmp 834182a0 5b 40
+mbscmp 834182a0 5b 1
+mbsicmp 834182a0 5b 1
+strnicmp 834182a0 5b 0 0
+mbsnbcmp 834182a0 5b 0 0
+mbsncmp 834182a0 5b 0 0
+mbsnbicmp 834182a0 5b 0 0
+strnicmp 834182a0 5b 2 40
+mbsnbcmp 834182a0 5b 2 1
+mbsncmp 834182a0 5b 2 1
+mbsnbicmp 834182a0 5b 2 1
+strnicmp 834182a0 5b 100 40
+mbsnbcmp 834182a0 5b 100 1
+mbsncmp 834182a0 5b 100 1
+mbsnbicmp 834182a0 5b 100 1
+stricmp 834182a0 e9 -102
+mbscmp 834182a0 e9 -1
+mbsicmp 834182a0 e9 -1
+strnicmp 834182a0 e9 0 0
+mbsnbcmp 834182a0 e9 0 0
+mbsncmp 834182a0 e9 0 0
+mbsnbicmp 834182a0 e9 0 0
+strnicmp 834182a0 e9 2 -102
+mbsnbcmp 834182a0 e9 2 -1
+mbsncmp 834182a0 e9 2 -1
+mbsnbicmp 834182a0 e9 2 -1
+strnicmp 834182a0 e9 100 -102
+mbsnbcmp 834182a0 e9 100 -1
+mbsncmp 834182a0 e9 100 -1
+mbsnbicmp 834182a0 e9 100 -1
+stricmp 834182a0 c9 -70
+mbscmp 834182a0 c9 -1
+mbsicmp 834182a0 c9 -1
+strnicmp 834182a0 c9 0 0
+mbsnbcmp 834182a0 c9 0 0
+mbsncmp 834182a0 c9 0 0
+mbsnbicmp 834182a0 c9 0 0
+strnicmp 834182a0 c9 2 -70
+mbsnbcmp 834182a0 c9 2 -1
+mbsncmp 834182a0 c9 2 -1
+mbsnbicmp 834182a0 c9 2 -1
+strnicmp 834182a0 c9 100 -70
+mbsnbcmp 834182a0 c9 100 -1
+mbsncmp 834182a0 c9 100 -1
+mbsnbicmp 834182a0 c9 100 -1
+stricmp 834182a0 8341 130
+mbscmp 834182a0 8341 1
+mbsicmp 834182a0 8341 1
+strnicmp 834182a0 8341 0 0
+mbsnbcmp 834182a0 8341 0 0
+mbsncmp 834182a0 8341 0 0
+mbsnbicmp 834182a0 8341 0 0
+strnicmp 834182a0 8341 2 0
+mbsnbcmp 834182a0 8341 2 0
+mbsncmp 834182a0 8341 2 0
+mbsnbicmp 834182a0 8341 2 0
+strnicmp 834182a0 8341 100 130
+mbsnbcmp 834182a0 8341 100 1
+mbsncmp 834182a0 8341 100 1
+mbsnbicmp 834182a0 8341 100 1
+stricmp 834182a0 834182a0 0
+mbscmp 834182a0 834182a0 0
+mbsicmp 834182a0 834182a0 0
+strnicmp 834182a0 834182a0 0 0
+mbsnbcmp 834182a0 834182a0 0 0
+mbsncmp 834182a0 834182a0 0 0
+mbsnbicmp 834182a0 834182a0 0 0
+strnicmp 834182a0 834182a0 2 0
+mbsnbcmp 834182a0 834182a0 2 0
+mbsncmp 834182a0 834182a0 2 0
+mbsnbicmp 834182a0 834182a0 2 0
+strnicmp 834182a0 834182a0 100 0
+mbsnbcmp 834182a0 834182a0 100 0
+mbsncmp 834182a0 834182a0 100 0
+mbsnbicmp 834182a0 834182a0 100 0
+stricmp 834182a0 ff -124
+mbscmp 834182a0 ff -1
+mbsicmp 834182a0 ff -1
+strnicmp 834182a0 ff 0 0
+mbsnbcmp 834182a0 ff 0 0
+mbsncmp 834182a0 ff 0 0
+mbsnbicmp 834182a0 ff 0 0
+strnicmp 834182a0 ff 2 -124
+mbsnbcmp 834182a0 ff 2 -1
+mbsncmp 834182a0 ff 2 -1
+mbsnbicmp 834182a0 ff 2 -1
+strnicmp 834182a0 ff 100 -124
+mbsnbcmp 834182a0 ff 100 -1
+mbsncmp 834182a0 ff 100 -1
+mbsnbicmp 834182a0 ff 100 -1
+stricmp ff  255
+mbscmp ff  1
+mbsicmp ff  1
+strnicmp ff  0 0
+mbsnbcmp ff  0 0
+mbsncmp ff  0 0
+mbsnbicmp ff  0 0
+strnicmp ff  2 255
+mbsnbcmp ff  2 1
+mbsncmp ff  2 1
+mbsnbicmp ff  2 1
+strnicmp ff  100 255
+mbsnbcmp ff  100 1
+mbsncmp ff  100 1
+mbsnbicmp ff  100 1
+stricmp ff 61 158
+mbscmp ff 61 1
+mbsicmp ff 61 1
+strnicmp ff 61 0 0
+mbsnbcmp ff 61 0 0
+mbsncmp ff 61 0 0
+mbsnbicmp ff 61 0 0
+strnicmp ff 61 2 158
+mbsnbcmp ff 61 2 1
+mbsncmp ff 61 2 1
+mbsnbicmp ff 61 2 1
+strnicmp ff 61 100 158
+mbsnbcmp ff 61 100 1
+mbsncmp ff 61 100 1
+mbsnbicmp ff 61 100 1
+stricmp ff 41 158
+mbscmp ff 41 1
+mbsicmp ff 41 1
+strnicmp ff 41 0 0
+mbsnbcmp ff 41 0 0
+mbsncmp ff 41 0 0
+mbsnbicmp ff 41 0 0
+strnicmp ff 41 2 158
+mbsnbcmp ff 41 2 1
+mbsncmp ff 41 2 1
+mbsnbicmp ff 41 2 1
+strnicmp ff 41 100 158
+mbsnbcmp ff 41 100 1
+mbsncmp ff 41 100 1
+mbsnbicmp ff 41 100 1
+stricmp ff 616263 158
+mbscmp ff 616263 1
+mbsicmp ff 616263 1
+strnicmp ff 616263 0 0
+mbsnbcmp ff 616263 0 0
+mbsncmp ff 616263 0 0
+mbsnbicmp ff 616263 0 0
+strnicmp ff 616263 2 158
+mbsnbcmp ff 616263 2 1
+mbsncmp ff 616263 2 1
+mbsnbicmp ff 616263 2 1
+strnicmp ff 616263 100 158
+mbsnbcmp ff 616263 100 1
+mbsncmp ff 616263 100 1
+mbsnbicmp ff 616263 100 1
+stricmp ff 414243 158
+mbscmp ff 414243 1
+mbsicmp ff 414243 1
+strnicmp ff 414243 0 0
+mbsnbcmp ff 414243 0 0
+mbsncmp ff 414243 0 0
+mbsnbicmp ff 414243 0 0
+strnicmp ff 414243 2 158
+mbsnbcmp ff 414243 2 1
+mbsncmp ff 414243 2 1
+mbsnbicmp ff 414243 2 1
+strnicmp ff 414243 100 158
+mbsnbcmp ff 414243 100 1
+mbsncmp ff 414243 100 1
+mbsnbicmp ff 414243 100 1
+stricmp ff 5a65627261 133
+mbscmp ff 5a65627261 1
+mbsicmp ff 5a65627261 1
+strnicmp ff 5a65627261 0 0
+mbsnbcmp ff 5a65627261 0 0
+mbsncmp ff 5a65627261 0 0
+mbsnbicmp ff 5a65627261 0 0
+strnicmp ff 5a65627261 2 133
+mbsnbcmp ff 5a65627261 2 1
+mbsncmp ff 5a65627261 2 1
+mbsnbicmp ff 5a65627261 2 1
+strnicmp ff 5a65627261 100 133
+mbsnbcmp ff 5a65627261 100 1
+mbsncmp ff 5a65627261 100 1
+mbsnbicmp ff 5a65627261 100 1
+stricmp ff 5b 164
+mbscmp ff 5b 1
+mbsicmp ff 5b 1
+strnicmp ff 5b 0 0
+mbsnbcmp ff 5b 0 0
+mbsncmp ff 5b 0 0
+mbsnbicmp ff 5b 0 0
+strnicmp ff 5b 2 164
+mbsnbcmp ff 5b 2 1
+mbsncmp ff 5b 2 1
+mbsnbicmp ff 5b 2 1
+strnicmp ff 5b 100 164
+mbsnbcmp ff 5b 100 1
+mbsncmp ff 5b 100 1
+mbsnbicmp ff 5b 100 1
+stricmp ff e9 22
+mbscmp ff e9 1
+mbsicmp ff e9 1
+strnicmp ff e9 0 0
+mbsnbcmp ff e9 0 0
+mbsncmp ff e9 0 0
+mbsnbicmp ff e9 0 0
+strnicmp ff e9 2 22
+mbsnbcmp ff e9 2 1
+mbsncmp ff e9 2 1
+mbsnbicmp ff e9 2 1
+strnicmp ff e9 100 22
+mbsnbcmp ff e9 100 1
+mbsncmp ff e9 100 1
+mbsnbicmp ff e9 100 1
+stricmp ff c9 54
+mbscmp ff c9 1
+mbsicmp ff c9 1
+strnicmp ff c9 0 0
+mbsnbcmp ff c9 0 0
+mbsncmp ff c9 0 0
+mbsnbicmp ff c9 0 0
+strnicmp ff c9 2 54
+mbsnbcmp ff c9 2 1
+mbsncmp ff c9 2 1
+mbsnbicmp ff c9 2 1
+strnicmp ff c9 100 54
+mbsnbcmp ff c9 100 1
+mbsncmp ff c9 100 1
+mbsnbicmp ff c9 100 1
+stricmp ff 8341 124
+mbscmp ff 8341 1
+mbsicmp ff 8341 1
+strnicmp ff 8341 0 0
+mbsnbcmp ff 8341 0 0
+mbsncmp ff 8341 0 0
+mbsnbicmp ff 8341 0 0
+strnicmp ff 8341 2 124
+mbsnbcmp ff 8341 2 1
+mbsncmp ff 8341 2 1
+mbsnbicmp ff 8341 2 1
+strnicmp ff 8341 100 124
+mbsnbcmp ff 8341 100 1
+mbsncmp ff 8341 100 1
+mbsnbicmp ff 8341 100 1
+stricmp ff 834182a0 124
+mbscmp ff 834182a0 1
+mbsicmp ff 834182a0 1
+strnicmp ff 834182a0 0 0
+mbsnbcmp ff 834182a0 0 0
+mbsncmp ff 834182a0 0 0
+mbsnbicmp ff 834182a0 0 0
+strnicmp ff 834182a0 2 124
+mbsnbcmp ff 834182a0 2 1
+mbsncmp ff 834182a0 2 1
+mbsnbicmp ff 834182a0 2 1
+strnicmp ff 834182a0 100 124
+mbsnbcmp ff 834182a0 100 1
+mbsncmp ff 834182a0 100 1
+mbsnbicmp ff 834182a0 100 1
+stricmp ff ff 0
+mbscmp ff ff 0
+mbsicmp ff ff 0
+strnicmp ff ff 0 0
+mbsnbcmp ff ff 0 0
+mbsncmp ff ff 0 0
+mbsnbicmp ff ff 0 0
+strnicmp ff ff 2 0
+mbsnbcmp ff ff 2 0
+mbsncmp ff ff 2 0
+mbsnbicmp ff ff 2 0
+strnicmp ff ff 100 0
+mbsnbcmp ff ff 100 0
+mbsncmp ff ff 100 0
+mbsnbicmp ff ff 100 0
+mbslen  0
+mbsnbcnt  0 0
+mbsnccnt  0 0
+mbsninc  0 0
+mbsnbcnt  1 0
+mbsnccnt  1 0
+mbsninc  1 0
+mbsnbcnt  5 0
+mbsnccnt  5 0
+mbsninc  5 0
+mbsnbcnt  100 0
+mbsnccnt  100 0
+mbsninc  100 0
+mbsdec  0 null
+mbschr  97 null
+mbschr  65 null
+mbschr  90 null
+mbschr  233 null
+mbschr  131 null
+mbschr  33601 null
+mbschr  0 0
+mbschr  256 null
+mbscase  lwr 
+mbscase  upr 
+mbslen 61 1
+mbsnbcnt 61 0 0
+mbsnccnt 61 0 0
+mbsninc 61 0 0
+mbsnbcnt 61 1 1
+mbsnccnt 61 1 1
+mbsninc 61 1 1
+mbsnbcnt 61 5 1
+mbsnccnt 61 5 1
+mbsninc 61 5 1
+mbsnbcnt 61 100 1
+mbsnccnt 61 100 1
+mbsninc 61 100 1
+mbsinc 61 1
+mbsdec 61 0 null
+mbsdec 61 1 0
+mbschr 61 97 0
+mbschr 61 65 null
+mbschr 61 90 null
+mbschr 61 233 null
+mbschr 61 131 null
+mbschr 61 33601 null
+mbschr 61 0 1
+mbschr 61 256 null
+mbscase 61 lwr 61
+mbscase 61 upr 41
+mbslen 41 1
+mbsnbcnt 41 0 0
+mbsnccnt 41 0 0
+mbsninc 41 0 0
+mbsnbcnt 41 1 1
+mbsnccnt 41 1 1
+mbsninc 41 1 1
+mbsnbcnt 41 5 1
+mbsnccnt 41 5 1
+mbsninc 41 5 1
+mbsnbcnt 41 100 1
+mbsnccnt 41 100 1
+mbsninc 41 100 1
+mbsinc 41 1
+mbsdec 41 0 null
+mbsdec 41 1 0
+mbschr 41 97 null
+mbschr 41 65 0
+mbschr 41 90 null
+mbschr 41 233 null
+mbschr 41 131 null
+mbschr 41 33601 null
+mbschr 41 0 1
+mbschr 41 256 null
+mbscase 41 lwr 61
+mbscase 41 upr 41
+mbslen 616263 3
+mbsnbcnt 616263 0 0
+mbsnccnt 616263 0 0
+mbsninc 616263 0 0
+mbsnbcnt 616263 1 1
+mbsnccnt 616263 1 1
+mbsninc 616263 1 1
+mbsnbcnt 616263 5 3
+mbsnccnt 616263 5 3
+mbsninc 616263 5 3
+mbsnbcnt 616263 100 3
+mbsnccnt 616263 100 3
+mbsninc 616263 100 3
+mbsinc 616263 1
+mbsdec 616263 0 null
+mbsdec 616263 1 0
+mbsdec 616263 2 1
+mbsdec 616263 3 2
+mbschr 616263 97 0
+mbschr 616263 65 null
+mbschr 616263 90 null
+mbschr 616263 233 null
+mbschr 616263 131 null
+mbschr 616263 33601 null
+mbschr 616263 0 3
+mbschr 616263 256 null
+mbscase 616263 lwr 616263
+mbscase 616263 upr 414243
+mbslen 414243 3
+mbsnbcnt 414243 0 0
+mbsnccnt 414243 0 0
+mbsninc 414243 0 0
+mbsnbcnt 414243 1 1
+mbsnccnt 414243 1 1
+mbsninc 414243 1 1
+mbsnbcnt 414243 5 3
+mbsnccnt 414243 5 3
+mbsninc 414243 5 3
+mbsnbcnt 414243 100 3
+mbsnccnt 414243 100 3
+mbsninc 414243 100 3
+mbsinc 414243 1
+mbsdec 414243 0 null
+mbsdec 414243 1 0
+mbsdec 414243 2 1
+mbsdec 414243 3 2
+mbschr 414243 97 null
+mbschr 414243 65 0
+mbschr 414243 90 null
+mbschr 414243 233 null
+mbschr 414243 131 null
+mbschr 414243 33601 null
+mbschr 414243 0 3
+mbschr 414243 256 null
+mbscase 414243 lwr 616263
+mbscase 414243 upr 414243
+mbslen 48656c6c6f 5
+mbsnbcnt 48656c6c6f 0 0
+mbsnccnt 48656c6c6f 0 0
+mbsninc 48656c6c6f 0 0
+mbsnbcnt 48656c6c6f 1 1
+mbsnccnt 48656c6c6f 1 1
+mbsninc 48656c6c6f 1 1
+mbsnbcnt 48656c6c6f 5 5
+mbsnccnt 48656c6c6f 5 5
+mbsninc 48656c6c6f 5 5
+mbsnbcnt 48656c6c6f 100 5
+mbsnccnt 48656c6c6f 100 5
+mbsninc 48656c6c6f 100 5
+mbsinc 48656c6c6f 1
+mbsdec 48656c6c6f 0 null
+mbsdec 48656c6c6f 1 0
+mbsdec 48656c6c6f 2 1
+mbsdec 48656c6c6f 3 2
+mbsdec 48656c6c6f 4 3
+mbsdec 48656c6c6f 5 4
+mbschr 48656c6c6f 97 null
+mbschr 48656c6c6f 65 null
+mbschr 48656c6c6f 90 null
+mbschr 48656c6c6f 233 null
+mbschr 48656c6c6f 131 null
+mbschr 48656c6c6f 33601 null
+mbschr 48656c6c6f 0 5
+mbschr 48656c6c6f 256 null
+mbscase 48656c6c6f lwr 68656c6c6f
+mbscase 48656c6c6f upr 48454c4c4f
+mbslen 5f 1
+mbsnbcnt 5f 0 0
+mbsnccnt 5f 0 0
+mbsninc 5f 0 0
+mbsnbcnt 5f 1 1
+mbsnccnt 5f 1 1
+mbsninc 5f 1 1
+mbsnbcnt 5f 5 1
+mbsnccnt 5f 5 1
+mbsninc 5f 5 1
+mbsnbcnt 5f 100 1
+mbsnccnt 5f 100 1
+mbsninc 5f 100 1
+mbsinc 5f 1
+mbsdec 5f 0 null
+mbsdec 5f 1 0
+mbschr 5f 97 null
+mbschr 5f 65 null
+mbschr 5f 90 null
+mbschr 5f 233 null
+mbschr 5f 131 null
+mbschr 5f 33601 null
+mbschr 5f 0 1
+mbschr 5f 256 null
+mbscase 5f lwr 5f
+mbscase 5f upr 5f
+mbslen 5b 1
+mbsnbcnt 5b 0 0
+mbsnccnt 5b 0 0
+mbsninc 5b 0 0
+mbsnbcnt 5b 1 1
+mbsnccnt 5b 1 1
+mbsninc 5b 1 1
+mbsnbcnt 5b 5 1
+mbsnccnt 5b 5 1
+mbsninc 5b 5 1
+mbsnbcnt 5b 100 1
+mbsnccnt 5b 100 1
+mbsninc 5b 100 1
+mbsinc 5b 1
+mbsdec 5b 0 null
+mbsdec 5b 1 0
+mbschr 5b 97 null
+mbschr 5b 65 null
+mbschr 5b 90 null
+mbschr 5b 233 null
+mbschr 5b 131 null
+mbschr 5b 33601 null
+mbschr 5b 0 1
+mbschr 5b 256 null
+mbscase 5b lwr 5b
+mbscase 5b upr 5b
+mbslen 5a 1
+mbsnbcnt 5a 0 0
+mbsnccnt 5a 0 0
+mbsninc 5a 0 0
+mbsnbcnt 5a 1 1
+mbsnccnt 5a 1 1
+mbsninc 5a 1 1
+mbsnbcnt 5a 5 1
+mbsnccnt 5a 5 1
+mbsninc 5a 5 1
+mbsnbcnt 5a 100 1
+mbsnccnt 5a 100 1
+mbsninc 5a 100 1
+mbsinc 5a 1
+mbsdec 5a 0 null
+mbsdec 5a 1 0
+mbschr 5a 97 null
+mbschr 5a 65 null
+mbschr 5a 90 0
+mbschr 5a 233 null
+mbschr 5a 131 null
+mbschr 5a 33601 null
+mbschr 5a 0 1
+mbschr 5a 256 null
+mbscase 5a lwr 7a
+mbscase 5a upr 5a
+mbslen 7a 1
+mbsnbcnt 7a 0 0
+mbsnccnt 7a 0 0
+mbsninc 7a 0 0
+mbsnbcnt 7a 1 1
+mbsnccnt 7a 1 1
+mbsninc 7a 1 1
+mbsnbcnt 7a 5 1
+mbsnccnt 7a 5 1
+mbsninc 7a 5 1
+mbsnbcnt 7a 100 1
+mbsnccnt 7a 100 1
+mbsninc 7a 100 1
+mbsinc 7a 1
+mbsdec 7a 0 null
+mbsdec 7a 1 0
+mbschr 7a 97 null
+mbschr 7a 65 null
+mbschr 7a 90 null
+mbschr 7a 233 null
+mbschr 7a 131 null
+mbschr 7a 33601 null
+mbschr 7a 0 1
+mbschr 7a 256 null
+mbscase 7a lwr 7a
+mbscase 7a upr 5a
+mbslen 5a65627261 5
+mbsnbcnt 5a65627261 0 0
+mbsnccnt 5a65627261 0 0
+mbsninc 5a65627261 0 0
+mbsnbcnt 5a65627261 1 1
+mbsnccnt 5a65627261 1 1
+mbsninc 5a65627261 1 1
+mbsnbcnt 5a65627261 5 5
+mbsnccnt 5a65627261 5 5
+mbsninc 5a65627261 5 5
+mbsnbcnt 5a65627261 100 5
+mbsnccnt 5a65627261 100 5
+mbsninc 5a65627261 100 5
+mbsinc 5a65627261 1
+mbsdec 5a65627261 0 null
+mbsdec 5a65627261 1 0
+mbsdec 5a65627261 2 1
+mbsdec 5a65627261 3 2
+mbsdec 5a65627261 4 3
+mbsdec 5a65627261 5 4
+mbschr 5a65627261 97 4
+mbschr 5a65627261 65 null
+mbschr 5a65627261 90 0
+mbschr 5a65627261 233 null
+mbschr 5a65627261 131 null
+mbschr 5a65627261 33601 null
+mbschr 5a65627261 0 5
+mbschr 5a65627261 256 null
+mbscase 5a65627261 lwr 7a65627261
+mbscase 5a65627261 upr 5a45425241
+mbslen e9 1
+mbsnbcnt e9 0 0
+mbsnccnt e9 0 0
+mbsninc e9 0 0
+mbsnbcnt e9 1 1
+mbsnccnt e9 1 1
+mbsninc e9 1 1
+mbsnbcnt e9 5 1
+mbsnccnt e9 5 1
+mbsninc e9 5 1
+mbsnbcnt e9 100 1
+mbsnccnt e9 100 1
+mbsninc e9 100 1
+mbsinc e9 1
+mbsdec e9 0 null
+mbsdec e9 1 0
+mbschr e9 97 null
+mbschr e9 65 null
+mbschr e9 90 null
+mbschr e9 233 0
+mbschr e9 131 null
+mbschr e9 33601 null
+mbschr e9 0 1
+mbschr e9 256 null
+mbscase e9 lwr e9
+mbscase e9 upr e9
+mbslen c9 1
+mbsnbcnt c9 0 0
+mbsnccnt c9 0 0
+mbsninc c9 0 0
+mbsnbcnt c9 1 1
+mbsnccnt c9 1 1
+mbsninc c9 1 1
+mbsnbcnt c9 5 1
+mbsnccnt c9 5 1
+mbsninc c9 5 1
+mbsnbcnt c9 100 1
+mbsnccnt c9 100 1
+mbsninc c9 100 1
+mbsinc c9 1
+mbsdec c9 0 null
+mbsdec c9 1 0
+mbschr c9 97 null
+mbschr c9 65 null
+mbschr c9 90 null
+mbschr c9 233 null
+mbschr c9 131 null
+mbschr c9 33601 null
+mbschr c9 0 1
+mbschr c9 256 null
+mbscase c9 lwr c9
+mbscase c9 upr c9
+mbslen ff 1
+mbsnbcnt ff 0 0
+mbsnccnt ff 0 0
+mbsninc ff 0 0
+mbsnbcnt ff 1 1
+mbsnccnt ff 1 1
+mbsninc ff 1 1
+mbsnbcnt ff 5 1
+mbsnccnt ff 5 1
+mbsninc ff 5 1
+mbsnbcnt ff 100 1
+mbsnccnt ff 100 1
+mbsninc ff 100 1
+mbsinc ff 1
+mbsdec ff 0 null
+mbsdec ff 1 0
+mbschr ff 97 null
+mbschr ff 65 null
+mbschr ff 90 null
+mbschr ff 233 null
+mbschr ff 131 null
+mbschr ff 33601 null
+mbschr ff 0 1
+mbschr ff 256 null
+mbscase ff lwr ff
+mbscase ff upr ff
+mbslen 61e9 2
+mbsnbcnt 61e9 0 0
+mbsnccnt 61e9 0 0
+mbsninc 61e9 0 0
+mbsnbcnt 61e9 1 1
+mbsnccnt 61e9 1 1
+mbsninc 61e9 1 1
+mbsnbcnt 61e9 5 2
+mbsnccnt 61e9 5 2
+mbsninc 61e9 5 2
+mbsnbcnt 61e9 100 2
+mbsnccnt 61e9 100 2
+mbsninc 61e9 100 2
+mbsinc 61e9 1
+mbsdec 61e9 0 null
+mbsdec 61e9 1 0
+mbsdec 61e9 2 1
+mbschr 61e9 97 0
+mbschr 61e9 65 null
+mbschr 61e9 90 null
+mbschr 61e9 233 1
+mbschr 61e9 131 null
+mbschr 61e9 33601 null
+mbschr 61e9 0 2
+mbschr 61e9 256 null
+mbscase 61e9 lwr 61e9
+mbscase 61e9 upr 41e9
+mbslen 41c9 2
+mbsnbcnt 41c9 0 0
+mbsnccnt 41c9 0 0
+mbsninc 41c9 0 0
+mbsnbcnt 41c9 1 1
+mbsnccnt 41c9 1 1
+mbsninc 41c9 1 1
+mbsnbcnt 41c9 5 2
+mbsnccnt 41c9 5 2
+mbsninc 41c9 5 2
+mbsnbcnt 41c9 100 2
+mbsnccnt 41c9 100 2
+mbsninc 41c9 100 2
+mbsinc 41c9 1
+mbsdec 41c9 0 null
+mbsdec 41c9 1 0
+mbsdec 41c9 2 1
+mbschr 41c9 97 null
+mbschr 41c9 65 0
+mbschr 41c9 90 null
+mbschr 41c9 233 null
+mbschr 41c9 131 null
+mbschr 41c9 33601 null
+mbschr 41c9 0 2
+mbschr 41c9 256 null
+mbscase 41c9 lwr 61c9
+mbscase 41c9 upr 41c9
+mbslen 8341 2
+mbsnbcnt 8341 0 0
+mbsnccnt 8341 0 0
+mbsninc 8341 0 0
+mbsnbcnt 8341 1 1
+mbsnccnt 8341 1 1
+mbsninc 8341 1 1
+mbsnbcnt 8341 5 2
+mbsnccnt 8341 5 2
+mbsninc 8341 5 2
+mbsnbcnt 8341 100 2
+mbsnccnt 8341 100 2
+mbsninc 8341 100 2
+mbsinc 8341 1
+mbsdec 8341 0 null
+mbsdec 8341 1 0
+mbsdec 8341 2 1
+mbschr 8341 97 null
+mbschr 8341 65 1
+mbschr 8341 90 null
+mbschr 8341 233 null
+mbschr 8341 131 0
+mbschr 8341 33601 null
+mbschr 8341 0 2
+mbschr 8341 256 null
+mbscase 8341 lwr 8361
+mbscase 8341 upr 8341
+mbslen 834182a0 4
+mbsnbcnt 834182a0 0 0
+mbsnccnt 834182a0 0 0
+mbsninc 834182a0 0 0
+mbsnbcnt 834182a0 1 1
+mbsnccnt 834182a0 1 1
+mbsninc 834182a0 1 1
+mbsnbcnt 834182a0 5 4
+mbsnccnt 834182a0 5 4
+mbsninc 834182a0 5 4
+mbsnbcnt 834182a0 100 4
+mbsnccnt 834182a0 100 4
+mbsninc 834182a0 100 4
+mbsinc 834182a0 1
+mbsdec 834182a0 0 null
+mbsdec 834182a0 1 0
+mbsdec 834182a0 2 1
+mbsdec 834182a0 3 2
+mbsdec 834182a0 4 3
+mbschr 834182a0 97 null
+mbschr 834182a0 65 1
+mbschr 834182a0 90 null
+mbschr 834182a0 233 null
+mbschr 834182a0 131 0
+mbschr 834182a0 33601 null
+mbschr 834182a0 0 4
+mbschr 834182a0 256 null
+mbscase 834182a0 lwr 836182a0
+mbscase 834182a0 upr 834182a0
+mbslen 83 1
+mbsnbcnt 83 0 0
+mbsnccnt 83 0 0
+mbsninc 83 0 0
+mbsnbcnt 83 1 1
+mbsnccnt 83 1 1
+mbsninc 83 1 1
+mbsnbcnt 83 5 1
+mbsnccnt 83 5 1
+mbsninc 83 5 1
+mbsnbcnt 83 100 1
+mbsnccnt 83 100 1
+mbsninc 83 100 1
+mbsinc 83 1
+mbsdec 83 0 null
+mbsdec 83 1 0
+mbschr 83 97 null
+mbschr 83 65 null
+mbschr 83 90 null
+mbschr 83 233 null
+mbschr 83 131 0
+mbschr 83 33601 null
+mbschr 83 0 1
+mbschr 83 256 null
+mbscase 83 lwr 83
+mbscase 83 upr 83
+mbslen 6183 2
+mbsnbcnt 6183 0 0
+mbsnccnt 6183 0 0
+mbsninc 6183 0 0
+mbsnbcnt 6183 1 1
+mbsnccnt 6183 1 1
+mbsninc 6183 1 1
+mbsnbcnt 6183 5 2
+mbsnccnt 6183 5 2
+mbsninc 6183 5 2
+mbsnbcnt 6183 100 2
+mbsnccnt 6183 100 2
+mbsninc 6183 100 2
+mbsinc 6183 1
+mbsdec 6183 0 null
+mbsdec 6183 1 0
+mbsdec 6183 2 1
+mbschr 6183 97 0
+mbschr 6183 65 null
+mbschr 6183 90 null
+mbschr 6183 233 null
+mbschr 6183 131 1
+mbschr 6183 33601 null
+mbschr 6183 0 2
+mbschr 6183 256 null
+mbscase 6183 lwr 6183
+mbscase 6183 upr 4183
+mbslen 83417a 3
+mbsnbcnt 83417a 0 0
+mbsnccnt 83417a 0 0
+mbsninc 83417a 0 0
+mbsnbcnt 83417a 1 1
+mbsnccnt 83417a 1 1
+mbsninc 83417a 1 1
+mbsnbcnt 83417a 5 3
+mbsnccnt 83417a 5 3
+mbsninc 83417a 5 3
+mbsnbcnt 83417a 100 3
+mbsnccnt 83417a 100 3
+mbsninc 83417a 100 3
+mbsinc 83417a 1
+mbsdec 83417a 0 null
+mbsdec 83417a 1 0
+mbsdec 83417a 2 1
+mbsdec 83417a 3 2
+mbschr 83417a 97 null
+mbschr 83417a 65 1
+mbschr 83417a 90 null
+mbschr 83417a 233 null
+mbschr 83417a 131 0
+mbschr 83417a 33601 null
+mbschr 83417a 0 3
+mbschr 83417a 256 null
+mbscase 83417a lwr 83617a
+mbscase 83417a upr 83415a
+mbslen b1 1
+mbsnbcnt b1 0 0
+mbsnccnt b1 0 0
+mbsninc b1 0 0
+mbsnbcnt b1 1 1
+mbsnccnt b1 1 1
+mbsninc b1 1 1
+mbsnbcnt b1 5 1
+mbsnccnt b1 5 1
+mbsninc b1 5 1
+mbsnbcnt b1 100 1
+mbsnccnt b1 100 1
+mbsninc b1 100 1
+mbsinc b1 1
+mbsdec b1 0 null
+mbsdec b1 1 0
+mbschr b1 97 null
+mbschr b1 65 null
+mbschr b1 90 null
+mbschr b1 233 null
+mbschr b1 131 null
+mbschr b1 33601 null
+mbschr b1 0 1
+mbschr b1 256 null
+mbscase b1 lwr b1
+mbscase b1 upr b1
+mbslen 889f 2
+mbsnbcnt 889f 0 0
+mbsnccnt 889f 0 0
+mbsninc 889f 0 0
+mbsnbcnt 889f 1 1
+mbsnccnt 889f 1 1
+mbsninc 889f 1 1
+mbsnbcnt 889f 5 2
+mbsnccnt 889f 5 2
+mbsninc 889f 5 2
+mbsnbcnt 889f 100 2
+mbsnccnt 889f 100 2
+mbsninc 889f 100 2
+mbsinc 889f 1
+mbsdec 889f 0 null
+mbsdec 889f 1 0
+mbsdec 889f 2 1
+mbschr 889f 97 null
+mbschr 889f 65 null
+mbschr 889f 90 null
+mbschr 889f 233 null
+mbschr 889f 131 null
+mbschr 889f 33601 null
+mbschr 889f 0 2
+mbschr 889f 256 null
+mbscase 889f lwr 889f
+mbscase 889f upr 889f
+mbslen 8140 2
+mbsnbcnt 8140 0 0
+mbsnccnt 8140 0 0
+mbsninc 8140 0 0
+mbsnbcnt 8140 1 1
+mbsnccnt 8140 1 1
+mbsninc 8140 1 1
+mbsnbcnt 8140 5 2
+mbsnccnt 8140 5 2
+mbsninc 8140 5 2
+mbsnbcnt 8140 100 2
+mbsnccnt 8140 100 2
+mbsninc 8140 100 2
+mbsinc 8140 1
+mbsdec 8140 0 null
+mbsdec 8140 1 0
+mbsdec 8140 2 1
+mbschr 8140 97 null
+mbschr 8140 65 null
+mbschr 8140 90 null
+mbschr 8140 233 null
+mbschr 8140 131 null
+mbschr 8140 33601 null
+mbschr 8140 0 2
+mbschr 8140 256 null
+mbscase 8140 lwr 8140
+mbscase 8140 upr 8140
+mbslen 302031 3
+mbsnbcnt 302031 0 0
+mbsnccnt 302031 0 0
+mbsninc 302031 0 0
+mbsnbcnt 302031 1 1
+mbsnccnt 302031 1 1
+mbsninc 302031 1 1
+mbsnbcnt 302031 5 3
+mbsnccnt 302031 5 3
+mbsninc 302031 5 3
+mbsnbcnt 302031 100 3
+mbsnccnt 302031 100 3
+mbsninc 302031 100 3
+mbsinc 302031 1
+mbsdec 302031 0 null
+mbsdec 302031 1 0
+mbsdec 302031 2 1
+mbsdec 302031 3 2
+mbschr 302031 97 null
+mbschr 302031 65 null
+mbschr 302031 90 null
+mbschr 302031 233 null
+mbschr 302031 131 null
+mbschr 302031 33601 null
+mbschr 302031 0 3
+mbschr 302031 256 null
+mbscase 302031 lwr 302031
+mbscase 302031 upr 302031
+mbslen 612062 3
+mbsnbcnt 612062 0 0
+mbsnccnt 612062 0 0
+mbsninc 612062 0 0
+mbsnbcnt 612062 1 1
+mbsnccnt 612062 1 1
+mbsninc 612062 1 1
+mbsnbcnt 612062 5 3
+mbsnccnt 612062 5 3
+mbsninc 612062 5 3
+mbsnbcnt 612062 100 3
+mbsnccnt 612062 100 3
+mbsninc 612062 100 3
+mbsinc 612062 1
+mbsdec 612062 0 null
+mbsdec 612062 1 0
+mbsdec 612062 2 1
+mbsdec 612062 3 2
+mbschr 612062 97 0
+mbschr 612062 65 null
+mbschr 612062 90 null
+mbschr 612062 233 null
+mbschr 612062 131 null
+mbschr 612062 33601 null
+mbschr 612062 0 3
+mbschr 612062 256 null
+mbscase 612062 lwr 612062
+mbscase 612062 upr 412042
+mbslen 80e95a 3
+mbsnbcnt 80e95a 0 0
+mbsnccnt 80e95a 0 0
+mbsninc 80e95a 0 0
+mbsnbcnt 80e95a 1 1
+mbsnccnt 80e95a 1 1
+mbsninc 80e95a 1 1
+mbsnbcnt 80e95a 5 3
+mbsnccnt 80e95a 5 3
+mbsninc 80e95a 5 3
+mbsnbcnt 80e95a 100 3
+mbsnccnt 80e95a 100 3
+mbsninc 80e95a 100 3
+mbsinc 80e95a 1
+mbsdec 80e95a 0 null
+mbsdec 80e95a 1 0
+mbsdec 80e95a 2 1
+mbsdec 80e95a 3 2
+mbschr 80e95a 97 null
+mbschr 80e95a 65 null
+mbschr 80e95a 90 2
+mbschr 80e95a 233 1
+mbschr 80e95a 131 null
+mbschr 80e95a 33601 null
+mbschr 80e95a 0 3
+mbschr 80e95a 256 null
+mbscase 80e95a lwr 80e97a
+mbscase 80e95a upr 80e95a
+mbslen 6162636465666768696a 10
+mbsnbcnt 6162636465666768696a 0 0
+mbsnccnt 6162636465666768696a 0 0
+mbsninc 6162636465666768696a 0 0
+mbsnbcnt 6162636465666768696a 1 1
+mbsnccnt 6162636465666768696a 1 1
+mbsninc 6162636465666768696a 1 1
+mbsnbcnt 6162636465666768696a 5 5
+mbsnccnt 6162636465666768696a 5 5
+mbsninc 6162636465666768696a 5 5
+mbsnbcnt 6162636465666768696a 100 10
+mbsnccnt 6162636465666768696a 100 10
+mbsninc 6162636465666768696a 100 10
+mbsinc 6162636465666768696a 1
+mbsdec 6162636465666768696a 0 null
+mbsdec 6162636465666768696a 1 0
+mbsdec 6162636465666768696a 2 1
+mbsdec 6162636465666768696a 3 2
+mbsdec 6162636465666768696a 4 3
+mbsdec 6162636465666768696a 5 4
+mbschr 6162636465666768696a 97 0
+mbschr 6162636465666768696a 65 null
+mbschr 6162636465666768696a 90 null
+mbschr 6162636465666768696a 233 null
+mbschr 6162636465666768696a 131 null
+mbschr 6162636465666768696a 33601 null
+mbschr 6162636465666768696a 0 10
+mbschr 6162636465666768696a 256 null
+mbscase 6162636465666768696a lwr 6162636465666768696a
+mbscase 6162636465666768696a upr 4142434445464748494a
+mbsncpy   0 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat   0 00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy   3 000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat   3 00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy   12 000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat   12 00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  41 0 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  41 0 00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  41 3 410000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  41 3 4100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  41 12 410000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  41 12 4100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  616263 0 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  616263 0 00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  616263 3 616263eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  616263 3 61626300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  616263 12 616263000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  616263 12 61626300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  48656c6c6f 0 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  48656c6c6f 0 00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  48656c6c6f 3 48656ceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  48656c6c6f 3 48656c00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  48656c6c6f 12 48656c6c6f00000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  48656c6c6f 12 48656c6c6f00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  e9 0 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  e9 0 00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  e9 3 e90000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  e9 3 e900eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  e9 12 e90000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  e9 12 e900eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  8341 0 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  8341 0 00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  8341 3 834100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  8341 3 834100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  8341 12 834100000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  8341 12 834100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  834182a0 0 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  834182a0 0 00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  834182a0 3 834182eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  834182a0 3 83418200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  834182a0 12 834182a00000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  834182a0 12 834182a000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  6183 0 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  6183 0 00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  6183 3 618300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  6183 3 618300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  6183 12 618300000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  6183 12 618300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  6162636465666768696a 0 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  6162636465666768696a 0 00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  6162636465666768696a 3 616263eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  6162636465666768696a 3 61626300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy  6162636465666768696a 12 6162636465666768696a0000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat  6162636465666768696a 12 6162636465666768696a00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162  0 6162eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162  0 616200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162  3 000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162  3 616200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162  12 000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162  12 616200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 41 0 6162eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 41 0 616200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 41 3 410000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 41 3 61624100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 41 12 410000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 41 12 61624100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 616263 0 6162eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 616263 0 616200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 616263 3 616263eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 616263 3 616261626300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 616263 12 616263000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 616263 12 616261626300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 48656c6c6f 0 6162eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 48656c6c6f 0 616200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 48656c6c6f 3 48656ceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 48656c6c6f 3 616248656c00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 48656c6c6f 12 48656c6c6f00000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 48656c6c6f 12 616248656c6c6f00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 e9 0 6162eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 e9 0 616200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 e9 3 e90000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 e9 3 6162e900eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 e9 12 e90000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 e9 12 6162e900eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 8341 0 6162eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 8341 0 616200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 8341 3 834100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 8341 3 6162834100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 8341 12 834100000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 8341 12 6162834100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 834182a0 0 6162eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 834182a0 0 616200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 834182a0 3 834182eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 834182a0 3 616283418200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 834182a0 12 834182a00000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 834182a0 12 6162834182a000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 6183 0 6162eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 6183 0 616200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 6183 3 618300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 6183 3 6162618300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 6183 12 618300000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 6183 12 6162618300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 6162636465666768696a 0 6162eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 6162636465666768696a 0 616200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 6162636465666768696a 3 616263eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 6162636465666768696a 3 616261626300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy 6162 6162636465666768696a 12 6162636465666768696a0000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat 6162 6162636465666768696a 12 61626162636465666768696a00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe  0 fffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe  0 fffe00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe  3 000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe  3 fffe00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe  12 000000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe  12 fffe00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 41 0 fffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 41 0 fffe00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 41 3 410000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 41 3 fffe4100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 41 12 410000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 41 12 fffe4100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 616263 0 fffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 616263 0 fffe00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 616263 3 616263eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 616263 3 fffe61626300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 616263 12 616263000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 616263 12 fffe61626300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 48656c6c6f 0 fffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 48656c6c6f 0 fffe00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 48656c6c6f 3 48656ceeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 48656c6c6f 3 fffe48656c00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 48656c6c6f 12 48656c6c6f00000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 48656c6c6f 12 fffe48656c6c6f00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe e9 0 fffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe e9 0 fffe00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe e9 3 e90000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe e9 3 fffee900eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe e9 12 e90000000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe e9 12 fffee900eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 8341 0 fffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 8341 0 fffe00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 8341 3 834100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 8341 3 fffe834100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 8341 12 834100000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 8341 12 fffe834100eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 834182a0 0 fffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 834182a0 0 fffe00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 834182a0 3 834182eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 834182a0 3 fffe83418200eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 834182a0 12 834182a00000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 834182a0 12 fffe834182a000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 6183 0 fffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 6183 0 fffe00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 6183 3 618300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 6183 3 fffe618300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 6183 12 618300000000000000000000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 6183 12 fffe618300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 6162636465666768696a 0 fffeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 6162636465666768696a 0 fffe00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 6162636465666768696a 3 616263eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 6162636465666768696a 3 fffe61626300eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsncpy fffe 6162636465666768696a 12 6162636465666768696a0000eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+mbsnbcat fffe 6162636465666768696a 12 fffe6162636465666768696a00eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+itoa 0 2 0
+itoa 0 8 0
+itoa 0 10 0
+itoa 0 16 0
+itoa 0 36 0
+itoa 1 2 1
+itoa 1 8 1
+itoa 1 10 1
+itoa 1 16 1
+itoa 1 36 1
+itoa -1 2 11111111111111111111111111111111
+itoa -1 8 37777777777
+itoa -1 10 -1
+itoa -1 16 ffffffff
+itoa -1 36 1z141z3
+itoa 7 2 111
+itoa 7 8 7
+itoa 7 10 7
+itoa 7 16 7
+itoa 7 36 7
+itoa -123 2 11111111111111111111111110000101
+itoa -123 8 37777777605
+itoa -123 10 -123
+itoa -123 16 ffffff85
+itoa -123 36 1z141vp
+itoa 255 2 11111111
+itoa 255 8 377
+itoa 255 10 255
+itoa 255 16 ff
+itoa 255 36 73
+itoa 2147483647 2 1111111111111111111111111111111
+itoa 2147483647 8 17777777777
+itoa 2147483647 10 2147483647
+itoa 2147483647 16 7fffffff
+itoa 2147483647 36 zik0zj
+itoa -2147483648 2 10000000000000000000000000000000
+itoa -2147483648 8 20000000000
+itoa -2147483648 10 -2147483648
+itoa -2147483648 16 80000000
+itoa -2147483648 36 zik0zk
+ismbc space 0 0
+ismbc digit 0 0
+ismbc lead 0 0
+ismbc space 9 1
+ismbc digit 9 0
+ismbc lead 9 0
+ismbc space 10 1
+ismbc digit 10 0
+ismbc lead 10 0
+ismbc space 13 1
+ismbc digit 13 0
+ismbc lead 13 0
+ismbc space 32 1
+ismbc digit 32 0
+ismbc lead 32 0
+ismbc space 48 0
+ismbc digit 48 1
+ismbc lead 48 0
+ismbc space 57 0
+ismbc digit 57 1
+ismbc lead 57 0
+ismbc space 58 0
+ismbc digit 58 0
+ismbc lead 58 0
+ismbc space 65 0
+ismbc digit 65 0
+ismbc lead 65 0
+ismbc space 97 0
+ismbc digit 97 0
+ismbc lead 97 0
+ismbc space 128 0
+ismbc digit 128 0
+ismbc lead 128 0
+ismbc space 129 0
+ismbc digit 129 0
+ismbc lead 129 0
+ismbc space 159 0
+ismbc digit 159 0
+ismbc lead 159 0
+ismbc space 160 0
+ismbc digit 160 0
+ismbc lead 160 0
+ismbc space 176 0
+ismbc digit 176 0
+ismbc lead 176 0
+ismbc space 224 0
+ismbc digit 224 0
+ismbc lead 224 0
+ismbc space 233 0
+ismbc digit 233 0
+ismbc lead 233 0
+ismbc space 240 0
+ismbc digit 240 0
+ismbc lead 240 0
+ismbc space 252 0
+ismbc digit 252 0
+ismbc lead 252 0
+ismbc space 254 0
+ismbc digit 254 0
+ismbc lead 254 0
+ismbc space 255 0
+ismbc digit 255 0
+ismbc lead 255 0
