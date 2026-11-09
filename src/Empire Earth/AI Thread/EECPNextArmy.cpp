@@ -1262,6 +1262,37 @@ void EECPNextArmyView(EEComputerPlayer* inPlayer, EECPNextView& ioView)
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// The fishing boats' reflex (EECPResourceManager::FindFish; docs/AI_RESEARCH.md §8.33): the tiles of the armed enemy
+// ships the player sees now, read from the world at the call (not the army step's mSeen, which a loaded game has not
+// rebuilt yet), so the finder can leave the fish near them alone
+
+void EECPNextSeenWarships(EEComputerPlayer* inPlayer, std::vector<long>& outTiles)
+{
+    outTiles.clear();
+    for (unsigned long p = 1; p < gWorld.mNumPlayers && p < 64; p++) {
+        EEPlayer* theOther = gWorld.mPlayers[p];
+        if (theOther == NULL || theOther == inPlayer || inPlayer->IsAlly(theOther) || theOther->mObserverMode)
+            continue;
+        for (EEUnit* theUnit = theOther->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+            if (theUnit->mComplexUnit == NULL || !(theUnit->mHitPoints > 0) || theUnit->mTile == NULL || theUnit->mStats == NULL
+                || theUnit->mStats->mAttack == 0.0f || theUnit->mUnitClass->IsBuilding()
+                || theUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen || !(theUnit->mUnitClass->mDomains & kMovementSea)
+                || theUnit->mComplexUnit->mContainer != NULL || !static_cast<EETile*>(theUnit->mTile)->IsSeenBy(inPlayer))
+                continue;
+            outTiles.push_back(theUnit->GetTileX() << 16 | theUnit->GetTileY());
+        }
+    }
+}
+
+bool EECPNextNearTiles(const std::vector<long>& inTiles, long inX, long inY, long inRange)
+{
+    for (unsigned long k = 0; k < inTiles.size(); k++)
+        if (EECPNextNear(inTiles[k] >> 16, inTiles[k] & 0xffff, inX, inY, inRange))
+            return true;
+    return false;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
 // The citizens' losses (the AI trace only, gCPTraceOn: nothing here is read by the game; docs/AI_RESEARCH.md §8.33).
 // Every hit on a land citizen of a next-engine player opens or extends an incident (hits within 20 tiles and 30 s of
 // each other); every citizen lost writes a next.death line (where, what killed it, what it was doing when first hit,
