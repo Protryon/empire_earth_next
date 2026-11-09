@@ -12,3 +12,8 @@ path = "src/lib.rs"
 [[bin]]
 name = "ee_data_gate"
 path = "src/bin/ee_data_gate.rs"
+
+# The game's startup load of a text db, timed, with its allocations counted (PORT_LEARNINGS "R2 performance")
+[[bin]]
+name = "ee_data_startup"
+path = "src/bin/ee_data_startup.rs"

@@ -2376,3 +2376,42 @@ them (`ct-SEED.txt`) and `sim_oracle.py ticks BASE NAME` names the first diverge
 - **Not done: a loaded game still differs from the saved one.** The file keeps the original's values
   (`mBuildingCountsChecked` true, the gather flags cleared, the walls re-planned), so a game loaded from a save plays
   differently from the game that went on. Writing the live values instead would change the save files.
+
+## R2 performance: the text db load under the Windows debug heap (ee_data, 2026-11-09)
+
+Every harness session starts the game as a debugged process (exe_boot.c, `DEBUG_ONLY_THIS_PROCESS`), which turns on the
+NT debug heap (no low-fragmentation front end, fill and free checks) unless `_NO_DEBUG_HEAP=1`. There a heap operation
+costs 30-80 microseconds instead of ~50 ns, and the Rust text compiler (R2.3) did not reach the main menu in 120 s.
+
+- **Measure with the same entry points.** `ee_data_startup <Data/db> [--repeat N] [--tables]` (rust/crates/ee_data/src/bin)
+  runs the game's load (one `Content`, `Rules::load`, then every table with a text form compiled, the ids of dbobjects
+  and dbtechtree) with a counting global allocator: time, allocations, reallocations, frees, bytes, peak, and the time
+  spent inside the system heap by block size. Run it under a debugger to get the debug heap: a ctypes launcher with
+  `CreateProcessW(..., DEBUG_ONLY_THIS_PROCESS)` and a `WaitForDebugEvent`/`ContinueDebugEvent` loop is enough
+  (`DEBUG_EVENT`'s union starts at offset 16 on x64, not 12).
+- **Before / after, on the open tree's Data/db** (11 MB of text, 8.0 MB of db files):
+
+  | | allocations | reallocations | allocated | release | under the debug heap |
+  |---|---|---|---|---|---|
+  | before | 3,861,008 | 197,240 | 223 MB | 0.9-1.3 s | 115 s (rules 41 s, tables 74 s) |
+  | after | 56,552 | 1,962 | 125 MB | 0.45-0.8 s | 5.2-6.2 s (rules 0.3 s) |
+
+  Release times are noisy on a shared machine; the debug-heap time is the number the harness sees.
+- **Where they went:** (1) the YAML parser copied every line, key and scalar (`Vec<u8>` each, a `Rc<Node>` per node,
+  keys/items grown by push); (2) `find_table` lowercased its argument into a new `Vec` on every reference cell
+  (`resolve` calls `table(r.table)` per cell: 190,000 allocations for dbobjects alone); (3) `parse_f32` lowercased
+  every float; (4) `msg!` places built eagerly per row, per field (`g.where_.clone()`) and per reference
+  (`m.where_at(x)`), each growing a `Vec` and formatting integers through `to_string`; (5) `get_index` cloned the
+  rows and kept a `line_of` map of place strings; (6) `elems` built a `Vec` per array field per row.
+- **The shape now:** `node::Bytes` is a slice of the text it was parsed from (an `Rc<[u8]>` and a range; a quoted
+  scalar with escapes is the one copy), `Node::items` is `Vec<Node>` built off a parser stack at its exact size (one
+  allocation per collection), a placed record is its list's `Rc` and an index, a place in a message is
+  `msg::At { what, line }` (any `msg::Part`) written only when a message is, the readers in text.rs take
+  `where_: &W where W: Part`, a row's place / key marks / string field reuse buffers (`Scratch`), and every row's
+  record lives in one buffer per table. Messages and output bytes are unchanged (`eedata.py check`, `cppgate`).
+- **What is left is mostly frees.** After the fix the debug heap spends ~3.4 s in 45,000 frees and ~1.2 s in 56,000
+  allocations; small blocks cost as much as large ones, so the count is what matters. Remaining per row: a CSV
+  record's keys and items, a YAML record's keys and items and one per list value, a lead table's strings, and one
+  shared id per indexed row. The next step, if needed, is a flat document (all nodes of a text in one vector,
+  children as ranges), which would bring a table's parse to a handful of allocations; it changes the `Node` API that
+  rules.rs, textrow.rs and the generated `text_rows` use.
