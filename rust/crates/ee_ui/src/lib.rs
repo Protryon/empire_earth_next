@@ -8,11 +8,15 @@
 pub mod layout;
 pub mod rect;
 pub mod slider;
+pub mod wrap;
 
 mod layout_ffi;
 // imports the C++ host functions (UISlider.cpp), absent from a test binary
 #[cfg(not(test))]
 mod slider_ffi;
+// imports the C++ text measuring (UITextLabel.cpp)
+#[cfg(not(test))]
+mod wrap_ffi;
 
 pub use layout::{Edge, Layout};
 pub use rect::{float_to_long, um_floor, um_floor_unsigned, UiPoint, UiRect};

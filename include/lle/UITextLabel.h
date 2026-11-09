@@ -1,6 +1,7 @@
 // C:\EEX\Low-Level Engine\User Interface\UITextLabel.h (RECONSTRUCTION). A text control: one line (label type 0)
 // or word-wrapped lines with an optional vertical scroll bar (label type 1); the form's help text label is one.
-// UITextLabel.cpp (0x1007e579..0x1007fb46) holds the ctor and the out-of-line members; the inline members are
+// UITextLabel.cpp (0x1007e579..0x1007fb46) holds the ctor and the out-of-line members (ReadLine/ReadWord moved to
+// Rust: rust/crates/ee_ui/src/wrap.rs); the inline members are
 // emitted first by UICheckBox.cpp (0x1005f538..0x1005f9da, in declaration order). Vtable 0x10098f98 (UIControl's
 // 34 slots, then AppendText, RecomputeDisplayRange, CheckScrollBar). Layout proven by the implicit copy ctor
 // 0x1005f689 (sizeof 0x124). Access levels from the exports. Requires lle/UIControl.h (includes lle/UIScrollBar.h).
@@ -99,8 +100,6 @@ protected:
     virtual void TabbedTo() {}
 private:
     void ComputeTextLabelRect();
-    unsigned long ReadLine(const char* inText);
-    unsigned long ReadWord(const char* inText, char* outWord);
     void SetText(const UWideString& inText, bool inReplace);
 
     std::vector<UWideString*> mLines;       // +0x0a0 one string per line (owned)

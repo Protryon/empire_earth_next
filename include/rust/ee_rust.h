@@ -2373,6 +2373,9 @@ void ee_ui_slider_set_range(void *slider,
                             unsigned long min,
                             unsigned long max);
 
+/// `UITextLabel::SetText`'s line loop: `text` (NUL-terminated) wrapped to `width`.
+void ee_ui_label_wrap(void *ctx, const char *text, float width);
+
 }  // extern "C"
 
 #endif  // EE_RUST_H

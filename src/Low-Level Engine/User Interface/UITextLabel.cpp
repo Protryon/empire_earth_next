@@ -4,11 +4,16 @@
 // 0x1007e579..0x1007fb46: the ctor, then the out-of-line members in alphabetical order, then the vector COMDATs it
 // is the first to emit. No U2D key init chains (the unit does not include the rasterizer header). The
 // header-inline members are emitted first by UICheckBox.cpp (0x1005f538..).
+//
+// A multi-line label's word wrapping (ReadWord 0x1007f5f8, ReadLine 0x1007f406 and SetText's line loop) is Rust
+// (rust/crates/ee_ui/src/wrap.rs, docs/RUST_PLAN.md R6); SetText forwards to it, and ee_uicpp_label_measure/_add_line
+// are its way back to the text object and the new lines.
 #include <windows.h>
 #include <mbstring.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GETextureCoordinate.h"
@@ -355,58 +360,25 @@ long UITextLabel::MouseWheelTurned(long inDelta)
     return theResult;
 }
 
-// FUNCTION: LLE 0x1007f406
-// Returns how many characters of the text fit on one line by whole words (cuts an over-wide first word by width)
-unsigned long UITextLabel::ReadLine(const char* inText)
+// SetText's wrapping state for ee_ui_label_wrap: the label's text object (it measures each word, keeping the last
+// one as ReadLine left it) and the lines made so far (appended to the label's in order at the end)
+struct UITextLabelWrap {
+    GEText* mText;
+    std::vector<UWideString*> mLines;
+};
+
+// A word's width, as ReadLine measured it (UMFloor is Rust's)
+extern "C" float ee_uicpp_label_measure(void* inContext, const char* inWord)
 {
-    unsigned long theWidth = 0;
-    unsigned long theLength = 0;
-    char theWord[512];
-    while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(inText), (const unsigned char*)"") != 0) {
-        long theWordLength = this->ReadWord(inText, theWord);
-        this->mText->SetText(UWideString(theWord));
-        theWidth += UMFloor(this->mText->GetTextExtent().GetWidth());
-        if (theWidth > this->mTextRectangle.GetWidth()) {
-            if (theLength == 0) {
-                while (theWordLength > 0) {
-                    theWordLength--;
-                    strcpy((char*)PlatMbsNInc(reinterpret_cast<unsigned char*>(theWord), theWordLength), "");
-                    this->mText->SetText(UWideString(theWord));
-                    if ((unsigned long)UMFloor(this->mText->GetTextExtent().GetWidth()) <
-                        UMFloorUnsigned(this->mTextRectangle.GetWidth())) {
-                        theLength = theWordLength;
-                        break;
-                    }
-                }
-            }
-            break;
-        }
-        theLength += theWordLength;
-        inText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>(inText), theWordLength);
-        if (PlatMbsNBCmp(PlatMbsNInc(reinterpret_cast<unsigned char*>(theWord), theWordLength - 1), (const unsigned char*)"\n", 1) == 0)
-            break;
-    }
-    return theLength;
+    GEText* theText = static_cast<UITextLabelWrap*>(inContext)->mText;
+    theText->SetText(UWideString(inWord));
+    return theText->GetTextExtent().GetWidth();
 }
 
-// FUNCTION: LLE 0x1007f5f8
-// Copies the next word (up to and including a space, tab or newline; at most 256 characters); returns its length
-unsigned long UITextLabel::ReadWord(const char* inText, char* outWord)
+// One wrapped line (no final newline)
+extern "C" void ee_uicpp_label_add_line(void* inContext, const char* inLine)
 {
-    unsigned long theCount = 0;
-    while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(inText), (const unsigned char*)"") != 0 && theCount++ < 256) {
-        PlatMbsNCpy(reinterpret_cast<unsigned char*>(outWord), reinterpret_cast<const unsigned char*>(inText), 1);
-        if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(outWord), (const unsigned char*)"\n", 1) == 0 ||
-            PlatIsMbcSpace(GetMultiByteChar(outWord)) ||
-            PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(outWord), (const unsigned char*)"\t", 1) == 0) {
-            outWord = (char*)PlatMbsInc(reinterpret_cast<unsigned char*>(outWord));
-            break;
-        }
-        outWord = (char*)PlatMbsInc(reinterpret_cast<unsigned char*>(outWord));
-        inText = (const char*)PlatMbsInc(reinterpret_cast<const unsigned char*>(inText));
-    }
-    strcpy(outWord, "");
-    return theCount;
+    static_cast<UITextLabelWrap*>(inContext)->mLines.push_back(new UWideString(inLine));
 }
 
 // FUNCTION: LLE 0x1007f6b9
@@ -482,20 +454,10 @@ void UITextLabel::SetText(const UWideString& inText, bool inReplace)
     if (this->mLabelType == 0)
         this->mLines.push_back(new UWideString(inText));
     else {
-        while (PlatMbsCmp(reinterpret_cast<const unsigned char*>(theText), (const unsigned char*)"") != 0) {
-            unsigned long theLength = this->ReadLine(theText);
-            if (theLength == 0)
-                break;
-            char* theLine = new char[theLength * 2 + 1];
-            PlatMbsNCpy(reinterpret_cast<unsigned char*>(theLine), reinterpret_cast<const unsigned char*>(theText), theLength);
-            char* theEnd = (char*)PlatMbsNInc(reinterpret_cast<unsigned char*>(theLine), theLength - 1);
-            if (PlatMbsNBCmp(reinterpret_cast<const unsigned char*>(theEnd), (const unsigned char*)"\n", 1) != 0)
-                theEnd = (char*)PlatMbsInc(reinterpret_cast<unsigned char*>(theEnd));
-            strcpy(theEnd, "");
-            this->mLines.push_back(new UWideString(theLine));
-            delete theLine;
-            theText = (const char*)PlatMbsNInc(reinterpret_cast<const unsigned char*>(theText), theLength);
-        }
+        UITextLabelWrap theWrap;
+        theWrap.mText = this->mText;
+        ee_ui_label_wrap(&theWrap, theText, this->mTextRectangle.GetWidth());
+        this->mLines.insert(this->mLines.end(), theWrap.mLines.begin(), theWrap.mLines.end());
     }
     this->SetDirty(true);
     this->CheckScrollBar();
