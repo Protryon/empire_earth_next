@@ -218,7 +218,7 @@
  */
 #ifndef MACOS
 #  if (defined(__MWERKS__) && defined(macintosh)) || defined(applec) || \
-      defined(THINK_C) || defined(__SC__) || defined(TARGET_OS_MAC)
+      defined(THINK_C) || defined(__SC__)   /* fork: not TARGET_OS_MAC, defined for macOS too (as later libpng) */
 #    define MACOS
 #  endif
 #endif
