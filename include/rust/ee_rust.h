@@ -90,6 +90,9 @@ constexpr static const float TWO_PI = 6.2831855;
 
 constexpr static const float HALF_PI = 1.5707964;
 
+/// `kControlTypeRadioButton`.
+constexpr static const unsigned long RADIO_BUTTON = 6;
+
 /// `kLayoutFromStart`: left/top + offset.
 constexpr static const unsigned long FROM_START = 0;
 
@@ -727,6 +730,12 @@ struct EeRmapState {
   uint32_t player_order_len;
 };
 
+/// `GE2DPoint`: x, y.
+struct EeUiPoint {
+  float x;
+  float y;
+};
+
 /// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
 struct EeUiLayout {
   float left_offset;
@@ -766,12 +775,6 @@ struct EeUiSliderFields {
   long max_thumb_pixel;
   long drag_offset;
   bool is_dragging;
-};
-
-/// `GE2DPoint`: x, y.
-struct EeUiPoint {
-  float x;
-  float y;
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -2303,6 +2306,18 @@ EeRmapResult *ee_rmap_run(int32_t step,
 /// # Safety
 /// `result` must be null or a handle from `ee_rmap_run`, freed once.
 void ee_rmap_free(EeRmapResult *result);
+
+/// `UIForm::CheckedRadioButton`.
+void ee_ui_form_checked_radio_button(void *form, long *index);
+
+/// `UIForm::Tab`.
+void ee_ui_form_tab(void *form, bool tabbing, unsigned long tab_stop);
+
+/// `UIForm::ShiftTab`.
+void ee_ui_form_shift_tab(void *form, bool tabbing, unsigned long tab_stop);
+
+/// `UIForm::UpdateMouseLocation`'s search -> whether a control was found, at `(*group, *entity)`.
+bool ee_ui_form_hit(void *form, EeUiPoint at, long *group, unsigned long *entity);
 
 /// `UILayoutUtility::UILayoutUtility`.
 void ee_ui_layout_init(EeUiLayout *layout);

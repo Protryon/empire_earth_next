@@ -79,6 +79,7 @@ struct UIDirtyRectangle {
 };
 
 class LLE_API UIForm {
+    friend struct UIFormRust;               // UIForm.cpp: the Rust focus walk's and hit test's view (ee_ui form.rs)
     friend class UIControl;                 // CaptureMouse writes mMouseCaptured; SetKeyboardCaptured is private
     friend class UIManager;                 // calls the protected Close/CopyData/DrawPolygons/Open and AddDirtyRectangle
 public:
