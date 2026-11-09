@@ -815,11 +815,54 @@ foundation's id, which the script holds), `repair`, `garrison`, `load`, `unload`
 - **Boom after the batch:** seeds 2-9 as above. The traces are identical to main's but for one line: the AI folder
   hash (`EE-AI engine ... folder hash`) changed, because `ai/lib/units.lua` is new.
 
+**The second batch of helpers (2026-11-09, the Age of AI port's needs):**
+- `ai.path_len(x1, y1, x2, y2, {sea})` -> tiles along the cell A* without danger (the straight distance at least),
+  nil when no way; `ai.drop_site(x, y[, "food"])` -> the nearest finished drop site's id, distance and centre;
+  `ai.shore(x, y, {sea, land, max = 20})` -> the nearest explored land tile by water (of a sea), its sea and land
+  ids; `ai.unexplored(x, y, {land, grid = 8, away = {x, y}, skip = {{x, y}...}})` -> the scout's grid point;
+  `ai.config{memory_ms}`.
+- **The lost layer** (§4.4): per cell and minute the hit points own units lost to enemies and dealt to them
+  (`EEUnit::TakeHit` tells the attacker's seat what it dealt, `EECPUnitsOnDealt`); 20 minutes; where lost exceeds
+  dealt the difference over 10 stands on the cell and half of it round it. **The influence layer:** own strength
+  less the remembered enemies' (weighed down with age), spread over 3 cells. `ai.danger(x, y, "lost" | "influence")`,
+  `ai.danger_box(..., layer)`, `ai.route{avoid_lost = n}`. The trades are in the save (EENU version 3).
+- **Projectiles** (a hunter's spear, bombs, missiles, torpedoes) are no units of the interface (they were "soldiers").
+- The helpers test prints them (`helpers.more`): seeds 2-5 give a path length of 20 (nil where the point is off
+  the land), the town centre as the drop site 12 tiles off, a shore in one seed within 30 rings, a grid point, the
+  influence at the town 1200-1300.
+
+**Stage L5 as built (2026-11-09): `ai/lib/groups.lua`.** EECPNextArmy's groups as Lua data on the primitives:
+`G.create{task, role, x, y, radius, target}`, `G.add` / `G.recruit` (free soldiers: `ai.units{category = "soldier",
+held = "engine"}`, nearest a tile first, or out of another group), `G.disband` (released to the engine), `G.step`
+(every group: the dead dropped, forming at the nearest soldier for 20 s, legs of 14 tiles given again after 4 tiles
+or 10 s, per-unit targets by priority and distance through `ai.attack` batched by target, a unit keeps its aim while
+it is still a candidate, melee never against ships and boats, a group with only ships to fight walks out of their
+reach; attack / raid / defend / retreat / scout as the C++ tasks, the raid's flight at 1.5 x its strength, the scout
+over `ai.unexplored` with its skips), the enemies' gather spots (`mem.gspots`), `G.retreat`, `G.pick_enemy`. Boom's
+home guard, scouts and escorts run on it; the C++ verbs (`defend`, `scout`, ...) and `EECPNextArmy.cpp` stay for
+rush and balanced until those are ported (the deletion the table above names is left).
+- **Parity** (sim_bench, boom against classic, seeds 2-33, Small, Hard, 45 min; lib against the C++ groups): Stone
+  Age 27.4 +- 1.0 min in both (32/32 reached), Copper 2 against 1 games, citizens at 30 / 40 min 33.5 / 43.3 against
+  33.7 / 43.6, army 5.3 / 11.6 against 5.3 / 11.8, citizens at the end 49.3 against 50.6, no defeats, no script
+  errors.
+
+**The Age of AI port** (2026-11-09): `ai/ageofai/` (GPL-3.0, pinned in `UPSTREAM` to upstream 0ac6495 with a per-file
+map), `ais.json` entry `ageofai` ("Age of AI", random false). The economy runs on the coarse verbs, as upstream
+steered the game's managers (the budget's accounts and the worker targets by shortfall and rate, the citizens by
+epoch and the mines' places, drop sites before gathering, the core towers then the fronts' and outposts', the
+production and SOL buildings, farms from the Copper Age, the gathering upgrades, the epoch when paid); the army on
+the primitives with lib.groups (the home guard and the strongest affordable soldier, one force at the station,
+pushes at the attack time at 130% of the enemy known at the target along `ai.route` to a staging point, judged every
+4 s and home as a convoy when losing or bled, the next building, the raid answer, the muster, scouts). docs/AI_RESEARCH.md
+§8.37 has the bench. Not ported: the navy, landings, other islands, towns, siege, counterfire, garrison upgrades,
+diplomacy (UPSTREAM lists them).
+
 **Not built yet:**
-- `path_len`, `drop_site`, `shore`, `unexplored`, the lost and influence layers;
 - the engine pathfinder overlay (§4.3, step 2);
 - `patrol`, `wall` / `gate`, `tribute` / `trade` / `diplomacy` (their messages write chat lines);
-- the per-step command limits are counted per game ms, so a step and a micro in the same tick share them.
+- the per-step command limits are counted per game ms, so a step and a micro in the same tick share them;
+- L6 (the navy, transports and landings in lib) and the deletion of `EECPNextArmy.cpp` once rush and balanced run on
+  lib.groups.
 
 **Gates:**
 - **Boom unchanged.** sim_bench seeds 2-9 (Small, Hard, `--engine boom,classic`, 2700 game s, `--ai-scripts ai`,

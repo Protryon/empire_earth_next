@@ -2166,6 +2166,72 @@ its settlements while the citizens it cannot take go to wood.
   31b).
 - Walkers to far sites can die; they are not counted separately.
 
+### 8.37 The Age of AI port, first bench (2026-11-09, EE-SIM)
+
+`ai/ageofai/` is a Lua port of Grille's *Empire Earth: Age of AI* (GPL-3.0, with the author's permission;
+`ai/ageofai/UPSTREAM` pins upstream commit 0ac6495 and maps each upstream file to its module). What it keeps are the
+decisions: the budget (an epoch reserve; a military account fed by 30% of the start stock and 40% of the income, 65%
+from the Copper Age, with the hoard above reserve + 3000 / 200 free for the army), the worker targets by shortfall
+over the measured rate per gatherer (food's shortfall counts the citizens' own food, wood the buildings', the
+minerals a standing margin; a food floor before farms), the citizens wanted (the copper plan's workforce before the
+saving, the mines' places from the Copper Age), two core towers by the town centre then one a minute at the front
+(towards the nearest enemy building known) and the outposts, drop sites before gathering (the engine's rule, §8.36),
+the production buildings and army_plan BUILD, granaries and fields from the Copper Age, the gathering upgrades, the
+epoch as soon as it is paid (a deviation: upstream's "independent" timer is 50-70 minutes an epoch for games of
+200-400 population a player). The army is one force on the per-unit interface (docs/AI_LUA_UNITS.md, lib.groups):
+the home guard (6 + 4 x epoch, or 35% of the military room) of the strongest soldier the account pays for; the
+force at its station pushes at the attack time (20-40 minutes, then every 20-25) when it beats the enemy known at
+the nearest enemy building by 130%, along `ai.route` over the threat and lost layers to a staging point, is judged
+every 4 s against the enemy at its middle and its destination and comes home as a convoy when losing twice running
+or bled to half, takes the next building when the first is down, answers a raid at an own building with the whole
+force when it beats what is known there, musters beyond the base when the base cannot be held, and sends a scout.
+What upstream patched into the original exe stands in as C++ helpers: honest vision is the enemy memory, the danger
+map the threat layer, DANGER_LOST the lost layer, `ar_route` is `ai.route`. Not ported yet: the navy, landings,
+other islands, towns, siege, counterfire, garrison upgrades, diplomacy.
+
+**Bench** (sim_bench, Small, Hard, no cheats, 45 minutes, seeds 2-17 in both seat orders: 32 games a pair; the
+means with their standard errors; "army" is the land soldiers):
+
+| | Stone Age (min, reached) | Copper | citizens 30 / 40 min | army 30 / 40 min | citizens / army at the end | wiped out |
+|---|---|---|---|---|---|---|
+| Age of AI against classic | 30.9 +- 0.6 (30/32) | 0 | 33.2 / 38.3 | 5.5 / 10.4 | 41.7 / 12.0 | 0 |
+| classic Hard in those games | 26.1 +- 0.5 (32/32) | 0 | 37.4 / 58.3 | 10.7 / 10.2 | 70.1 / 3.8 | 0 |
+| Age of AI against boom | 29.2 +- 0.5 (31/32) | 0 | 36.8 / 43.2 | 6.9 / 8.6 | 48.6 / 8.7 | 0 |
+| boom in those games | 22.8 +- 0.5 (31/32) | 2 | 42.4 / 59.2 | 9.7 / 16.2 | 65.9 / 18.2 | 0 |
+| boom against classic (§8.36's bench on this build, 32 games) | 27.4 +- 1.0 (32/32) | 2 | 33.5 / 43.3 | 5.3 / 11.6 | 49.3 / 11.8 | 0 |
+
+No game was decided in 45 minutes (no wins, no losses, no script errors). The first port is behind boom in the early
+economy: with upstream's copper plan the saving starts at 40 citizens or 18 minutes into the epoch (boom saves from
+32), the Prehistoric home guard of 6 and the first barracks take food, iron and wood the citizens would have used,
+and the worker plan's wood and mineral targets start earlier than boom's food-first order. The force does what it
+should: the pushes wait at home while the enemy known at the target outweighs it (the classic Hard base is 10-20
+times the force by 40 minutes), raids at the outposts are answered and the force comes home when losing; nothing
+of upstream's late game (farms, the army's growth from the income share) shows in 45 minutes.
+
+**The opening tuned** (seeds 2-17, one seat order, 16 games a pair; the deviations are marked in
+`ai/ageofai/settings.lua`):
+- *Variant 2*, the owner's opening as upstream's playtester's (`early_army`: no soldiers in the first epoch, the
+  towers and the militia hold the town, the home guard from the Stone Age; the saving from 34 citizens instead of
+  40; 60% of the workers on food before farms, up to 24): against boom the Stone Age at 23.1 +- 0.7 (boom 22.7), but
+  with the saving starting again at once in the Stone Age (the copper plan holds the next epoch's cost from 34
+  citizens on) the citizens stalled at 45 at 40 minutes (boom 63) and the army stayed at 0-1 all game (the Copper
+  Age's gold and iron reserve left the account nothing to spend); against classic Stone 26.9, 34.6 citizens at 40.
+- *Variant 3* (kept): the Stone Age grows to 60 citizens before the Copper Age is saved for (`stone_workforce`):
+
+| 16 games each | Stone Age (min, reached) | citizens 30 / 40 min | army 30 / 40 min | citizens / army at the end | wiped out |
+|---|---|---|---|---|---|
+| Age of AI against boom | 23.1 +- 0.7 (15/16) | 47.3 / 59.2 | 8.9 / 11.2 | 59.5 / 9.2 | 0 |
+| boom in those games | 22.7 +- 0.7 (16/16) | 42.0 / 60.9 | 8.8 / 14.4 | 68.8 / 17.1 | 0 |
+| Age of AI against classic | 26.9 +- 1.0 (14/16) | 36.6 / 46.1 | 4.4 / 14.8 | 50.4 / 15.3 | 0 |
+| classic Hard in those games | 25.2 +- 0.1 (16/16) | 38.2 / 61.4 | 11.6 / 11.7 | 76.2 / 4.5 | 0 |
+
+The port is level with boom in the first 45 minutes (the Stone Age half a minute later, more citizens at 30
+minutes, as many at 40, a smaller army at the end: the home guard's account is 40% of the income) and ahead of boom's
+own numbers against the classic raider (Stone 26.9 against 27.4, citizens at 40 minutes 46 against 43, army 14.8
+against 11.6). What upstream is strong at - the force's pushes, farms, the army's growth from 65% of the income -
+lies past these 45 minutes; a longer bench (90 minutes, the Copper and Bronze Ages) is the next measure, with the
+navy, towns and siege still to port.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

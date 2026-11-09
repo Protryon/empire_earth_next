@@ -8,9 +8,12 @@ return {
     military_income_share_farms = 65,   -- ... and from the Copper Age on
     hoard_cap = 3000,               -- stock above the reserve + this is free for the army too (food, wood)
     hoard_cap_mineral = 200,        -- ... stone, gold, iron
-    min_workforce = 40,             -- the citizens before the epoch is saved for (the copper plan)
+    min_workforce = 34,             -- the citizens before the epoch is saved for (the copper plan). DEVIATION: 40
+                                    -- upstream; the owner's own build order saves from 32 (docs/AI_RESEARCH §8.37)
+    stone_workforce = 60,           -- DEVIATION: the Stone Age's workforce before the Copper Age is saved for
     mineral_worker_margin = 300,    -- the minerals' demand beyond the reserve the workers follow at most
-    food_floor = 18,                -- citizens on food at least before farms (half the workers at most)
+    food_floor = 24,                -- citizens on food at least before farms (food_share of the workers at most)
+    food_share = 60,                -- DEVIATION (half upstream): percent of the workers on food at least before farms
     reserve_window_min = 5,         -- from farms: the reserve grows to the epoch's cost over these minutes
     -- epoch pacing: upstream "independent" (the timer, 50-70 minutes an epoch; a human's advance pulls the AIs
     -- behind along). DEVIATION: "rush", as soon as the epoch is paid (our games are 45 minutes long, the owner
@@ -20,7 +23,9 @@ return {
     -- the early game (early.c)
     early_towers = true,            -- two towers by the town centre in the first two epochs
     early_core = 2, early_dist = 4,
-    early_army = false,             -- (off upstream: a home guard from the start)
+    early_army = true,              -- DEVIATION (off upstream): no soldiers in the first epoch, towers and the militia
+                                    -- hold the town (the owner's and upstream's playtester's opening); the home guard
+                                    -- from the Stone Age
     -- citizens (citizens.c)
     citizen_share = 45,             -- percent of the population cap the game wants as citizens
     citizen_army_share = 40,        -- from farms: the army's share of the cap the citizens' goal leaves

@@ -91,7 +91,11 @@ function M.reserve(view, mem)
     if view.epoch < view.last_epoch and not view.advancing then
         local age = view.time - view.epoch_start
         if view.epoch < FARM_EPOCH then
-            saving = view.citizens >= S.min_workforce or age >= 18 * 60000
+            -- the copper plan: the economy first, then the saving; the Stone Age grows to stone_workforce first (a
+            -- deviation: upstream holds both epochs' costs from min_workforce on, which its own measurements call
+            -- the most harmful brake; the owner's build order grows to about 64 in the Stone Age)
+            local at = view.epoch == 0 and S.min_workforce or S.stone_workforce
+            saving = view.citizens >= at or age >= 18 * 60000
         elseif S.epoch_pacing == "rush" then
             saving = age >= 5 * 60000
         else
@@ -222,7 +226,8 @@ function M.workers(view, mem, reserve, wants)
     end
     -- the food floor: half the workers on food, up to food_floor, before farms (the citizens' own food); from farms
     -- the fields: at least their farmers (fields + 2) when the plan has them
-    local floor_food = late and math.min(total // 2, (wants.fields or 0) + 2) or math.min(total // 2, S.food_floor)
+    local floor_food = late and math.min(total // 2, (wants.fields or 0) + 2)
+        or math.min(total * S.food_share // 100, S.food_floor)
     while target.food < floor_food do
         local from = nil
         for _, r in ipairs({"wood", "stone", "gold", "iron"}) do

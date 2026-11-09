@@ -178,3 +178,8 @@ The `upstream` remote is the `empire_earth` reconstruction. Its `fixes-all` bran
 
 No license is granted. Empire Earth is the property of its rights holders. The third-party libraries under
 `src/ThirdParty/` keep their own licenses.
+
+The "Age of AI" computer player (`ai/ageofai/`) is a Lua port of Grille's
+[Empire Earth: Age of AI](https://github.com/Grille/Empire-Earth-Age-of-AI) (GPL-3.0, Copyright Grille and the Age
+of AI contributors), ported with the author's permission; those files are GPL-3.0 (`ai/ageofai/LICENSE`), and
+`ai/ageofai/UPSTREAM` names the upstream commit they follow.
