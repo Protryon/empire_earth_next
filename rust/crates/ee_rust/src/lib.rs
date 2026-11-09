@@ -22,6 +22,7 @@ use ee_random as _;
 use ee_sound as _;
 // the UI toolkit's algorithms behind the C++ UI* classes (ee_ui); its FFI imports C++ host functions, absent from a
 // test binary
+#[cfg(not(test))]
 use ee_ui as _;
 // the random map generator's `extern "C"` API (ee_rmap/src/ffi.rs) reaches the staticlib through this dependency
 use ee_rmap as _;
