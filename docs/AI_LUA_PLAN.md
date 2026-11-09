@@ -149,7 +149,7 @@ culling), CombatManager::Update and the wonder race.
 | fish | `EECPNextFish(p, boats, docks)` | a dock (build near town) while fewer stand or are queued, then `RequestUnits(fishing boat)` up to the count | queued, done; no_producer (no dock built yet), the dock's refusal |
 | train | `EECPNextTrain(p, type, n, town = 0)` | `RequestUnits` and the production runner (`StartProduction`: the least busy producer) | queued (afford in the trace); no_producer, not_in_epoch, unknown_class, bad_argument (a building, n out of 1..100) |
 | reserve | `EECPNextReserve(p, f, w, s, g, i)` | `EECPNextCanAfford`: the plain `EEPlayer::CanAfford`, then nothing but the epoch advance may spend below the reserve | done; bad_argument |
-| research | `EECPNextResearch(p, tech)` | `ResearchManager::Research` into mEpochIDs; TryResearch starts it when affordable | queued; no_producer, busy (researched or queued), not_in_epoch, bad_argument (an epoch or a unit), unknown_class |
+| research | `EECPNextResearch(p, tech)` | `ResearchManager::Research` into mEpochIDs; TryResearch starts it when affordable | queued; done (n=0: already researched, e.g. an epoch's kind-7 tech); no_producer, busy (queued, or in a producer's queue), not_in_epoch, bad_argument (an epoch or a unit), unknown_class |
 | advance | `EECPNextAdvance(p)` | only when the SOL is met and the cost is paid: DropObsoleteRequests, `Research(epoch)`, TryResearch at the town centre | queued; requirements, busy, cannot_afford, no_producer |
 | defend | `EECPNextDefend(p, x, y, n)` (x = y = -1: the town centre) | `CreateGroupFromStrategy`: a defence task at the tile (as CreateDefendGroup), "already defined" requirements of the soldiers there are, up to n | done (n = the units in the group); no_units, bad_argument |
 | attack | `EECPNextAttack(p, player, n)` | `CreateGroupFromStrategy` with a task naming the player (as CombatManager::Update's attack), up to n soldiers | done; no_units, bad_argument |
@@ -449,6 +449,19 @@ name or verb is refused `bad_argument` with a `next.order verb=... (why) result=
 | `{verb="attack", player=3, n=4}` | `EECPNextAttack` |
 
 At most 200 orders a step (the rest are dropped, a `next.orders dropped=` line). No orders: return `{}` or nil.
+
+**Tower upgrades** (2026-11-08): the towers follow the epochs through techs, not a per-building order:
+`copper_tower_upgrade`, then `bronze_`, `middle_`, `imperial_`, `ww1_`, `info_` and `space_wall_and_tower_upgrade`
+(dbtechtree kind 7, researched at the town centre or capitol, 50-300 of the fourth cost; each needs the one before).
+Each one's event turns the player's towers (and walls) of the epoch before into its own class (dbeffects kind 19,
+`Fn1CACB4`: the units, their queued production and upgrade levels), obsoletes the old class's tech and makes the next
+upgrade available. They are `mResearchedWithEpoch`, and `EEComputerPlayer::EnterEpoch` researches an epoch's kind-7
+techs when the epoch is reached, for both engines: a computer player's towers become the new class the moment it
+enters the epoch, and only the new class can be built from then on (EE-SIM: every next-engine tower is
+`b_guard_tower_copper` in the Copper Age and `b_guard_tower_bronze` in the Bronze Age). A script needs no view field
+for it: the newest tower class in `costs` is the one to build, and counting every class equals counting the current
+one. `ai/lib/view.lua` `tower_upgrade(view, mem)` still orders each upgrade once its epoch is reached (boom, rush and
+balanced, before the reserve): `done` with n=0 today, a real research where the upgrade is not free.
 
 **Memory.** `memory` is the same table every step: integers, strings, booleans and nested tables (no floats; §3.1).
 The save keeps it, with the RNG (below).

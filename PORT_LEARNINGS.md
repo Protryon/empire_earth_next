@@ -1647,3 +1647,18 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   its soldiers leaves them there.
 - **sim_bench `--env-vary` splits its values on commas**, so a per-player list like `EE_AI_NEXT_SCRIPT=x,rush,boom`
   cannot be a value: the variable takes `/` too.
+
+## The next computer player's towers and the epochs (2026-11-08)
+
+- **A computer player's towers upgrade by themselves.** The tower upgrades (`copper_tower_upgrade`,
+  `bronze_wall_and_tower_upgrade`, ...) are dbtechtree kind-7 techs with `mResearchedWithEpoch`, and
+  `EEComputerPlayer::EpochReached` -> `EnterEpoch` -> `EETechTreeEpoch::ResearchKind(7, true)` researches them
+  free the moment the epoch is reached, for the classic and the next engine alike; their events convert every tower
+  of the old class (dbeffects kind 19, `Fn1CACB4`) and obsolete its tech. Reading the scripts suggested the towers
+  "stay Prehistoric all game" (AI_RESEARCH §8.31); a trace of the view's `buildings[]` each minute showed the
+  opposite. Measure before fixing. The `research` verb answered such a tech `busy`; it is now `done` (n=0).
+- **A research started at a building leaves `mEpochIDs`** (TryResearch hands it to the producer's queue), so the
+  verb's busy check missed it and a second order queued it again; it now also looks at the producers' queues.
+- **A data tree being rebuilt under EE-SIM** (another session's `open_data.py build`) fails the runs that stage it
+  then (`EETerrainColorTable` verification failure at start-up, rc 0x80000003). For a long bench, hard-link a copy
+  (`cp -al build/open_data/tree build/tw/tree`, seconds) and pass it with `--data`.
