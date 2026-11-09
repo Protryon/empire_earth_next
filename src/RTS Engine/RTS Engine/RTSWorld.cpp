@@ -12,7 +12,7 @@
 #include "ee/RTSWorld.h"
 #include "ee/EEMap.h"
 #include "ee/EEPlayer.h"
-#include "ee/EEUnit.h"
+#include "ee/RTSUnit.h"
 
 // FUNCTION: EXE 0x547dfd
 // Creates an empty world: no players or map, normal game speed, a population limit of 800

@@ -16,7 +16,7 @@
 #include "lle/Input System.h"
 #include "lle/ISMouse.h"
 
-#include "ee/EEMouse.h"
+#include "ee/RTSMouse.h"
 #include "ee/RTSMousePointer.h"
 
 // FUNCTION: EXE 0x51b54e
@@ -72,10 +72,10 @@ unsigned long RTSMousePointer::Main(void* inPointer)
         if (theResult == kErrorOK)
             thePointer->HandleMessage(theMessage, theParameter1, theParameter2);
         if (thePointer->mIsShown && !thePointer->mQuit && thePointer->mSurface != NULL) {
-            gMouse->mInputLock->Enter();
+            RTSGetInputMouse()->mInputLock->Enter();
             gISMouse->RefreshXY();
-            gMouse->Update();
-            gMouse->mInputLock->Leave();
+            RTSGetInputMouse()->Update();
+            RTSGetInputMouse()->mInputLock->Leave();
             thePosition = thePointer->mMouse->mPosition;
             if (thePosition != theLastPosition) {
                 thePointer->mMouse->BeginFrame();

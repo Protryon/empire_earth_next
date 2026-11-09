@@ -11,7 +11,7 @@
 #include "lle/GE3DPlane.h"
 #include "lle/GETerrainMesh.h"
 
-#include "ee/EEUnit.h"
+#include "ee/RTSUnit.h"
 #include "ee/EEMap.h"
 #include "ee/RTSDummyHeader.h"
 #include "ee/EEUnitHandle.h"
@@ -57,8 +57,9 @@ void RTSUnregisterUnit(RTSUnit* inUnit)
         theRegistry.erase(it);
 }
 
-// A handle of a unit without an id resolves to nothing: reported once (such a holder must keep its pointer)
-static uint32_t EEUnitHandleIDOf(const RTSUnit* inUnit)
+// A handle of a unit without an id resolves to nothing: reported once (such a holder must keep its pointer). The
+// EEUnit and EEComplexUnit overloads are in EEUnit.cpp (they need the complete classes).
+uint32_t EEUnitHandleID(const RTSUnit* inUnit)
 {
     uint32_t theID = static_cast<uint32_t>(inUnit->mUnitID);
     static bool sReported = false;
@@ -70,18 +71,7 @@ static uint32_t EEUnitHandleIDOf(const RTSUnit* inUnit)
     return theID;
 }
 
-uint32_t EEUnitHandleID(const RTSUnit* inUnit) { return EEUnitHandleIDOf(inUnit); }
-uint32_t EEUnitHandleID(const EEUnit* inUnit) { return EEUnitHandleIDOf(inUnit); }
-uint32_t EEUnitHandleID(const EEComplexUnit* inUnit) { return EEUnitHandleIDOf(inUnit); }
 void EEUnitHandleResolve(uint32_t inUnitID, RTSUnit*& outUnit) { outUnit = RTSResolveUnitID(inUnitID); }
-void EEUnitHandleResolve(uint32_t inUnitID, EEUnit*& outUnit)
-{
-    outUnit = static_cast<EEUnit*>(RTSResolveUnitID(inUnitID));
-}
-void EEUnitHandleResolve(uint32_t inUnitID, EEComplexUnit*& outUnit)
-{
-    outUnit = static_cast<EEComplexUnit*>(static_cast<EEUnit*>(RTSResolveUnitID(inUnitID)));
-}
 
 // New: the unit chain check (ee/RTSDummyHeader.h)
 static bool RTSCheckUnitListFromEnvironment()

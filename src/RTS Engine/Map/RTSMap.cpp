@@ -15,12 +15,10 @@
 #include "lle/U2DRectangle.h"
 #include "lle/FSFile.h"
 
-#include "ee/EETileLocation.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEMap.h"
-#include "ee/EEAreaUtilities.h"
 #include "ee/EEAIContinentManager.h"
 #include "ee/EEDoppelgangerManager.h"
 #include "ee/EEGlobalConstants.h"

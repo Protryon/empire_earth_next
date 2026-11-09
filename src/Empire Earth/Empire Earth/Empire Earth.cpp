@@ -929,6 +929,9 @@ bool EEInitializePart1()
 #include "ee/EEDataPreLoading.h"
 #include "ee/EEPhysics.h"
 
+// New (R5a.6): the RTS layer's way to the input mouse (ee/RTSMouse.h), without the game's mouse header
+RTSMouse* RTSGetInputMouse() { return gMouse; }
+
 // The three threads' stop members (declared in their headers; their COMDATs 0x140999, 0x144488, 0x1444ac are this
 // unit's; the same body as RTSGraphics::Shutdown)
 inline void RTSMousePointer::Shutdown()

@@ -47,6 +47,20 @@
 #include "ee/EEPhysics.h"
 #include "ee/EEAIForest.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EEUnitHandle.h"
+
+// New (R5a.4/R5a.6): the typed halves of EEUnitHandle (ee/EEUnitHandle.h), which need the complete classes; the
+// registry and the RTSUnit halves are in RTSUnit.cpp
+uint32_t EEUnitHandleID(const EEUnit* inUnit) { return EEUnitHandleID(static_cast<const RTSUnit*>(inUnit)); }
+uint32_t EEUnitHandleID(const EEComplexUnit* inUnit) { return EEUnitHandleID(static_cast<const RTSUnit*>(inUnit)); }
+void EEUnitHandleResolve(uint32_t inUnitID, EEUnit*& outUnit)
+{
+    outUnit = static_cast<EEUnit*>(RTSResolveUnitID(inUnitID));
+}
+void EEUnitHandleResolve(uint32_t inUnitID, EEComplexUnit*& outUnit)
+{
+    outUnit = static_cast<EEComplexUnit*>(static_cast<EEUnit*>(RTSResolveUnitID(inUnitID)));
+}
 
 const UString EEUnit::sHitPoints("EEUnit-HitPoints");
 // SYNTHETIC: EXE 0x628c4c   (wrapper)
