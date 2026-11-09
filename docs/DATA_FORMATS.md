@@ -2686,11 +2686,11 @@ computer player gets which. New in this port (no original values: the defaults a
 
     personalities:
       - id: balanced
-        next_script: test_opening  # the next engine's strategy: the Lua module Data/ai/<name, dots as folders>.lua a
+        next_script: boom          # the next engine's strategy: the Lua module Data/ai/<name, dots as folders>.lua a
                                    # computer seat with the next engine runs (docs/AI_LUA_PLAN.md §3.2; the classic
                                    # engine ignores it). A module name: letters, digits and _, in segments separated
                                    # by dots, at most 96 characters. Default: test_opening (the S1 test opening in
-                                   # Lua) until stage S3's boom script
+                                   # Lua); balanced and wide run boom (ai/boom.lua, docs/AI_LUA_PLAN.md §4.1)
         epoch_pressure:            # the elapsed share of the epoch timer (dbcpbehavior rows 28/29); paid epochs only
           start: 0.3               # the advance is asked for from here (1: the original timer) ...
           full: 0.8                # ... and its cost is wholly reserved from here (the reserve grows in between)
