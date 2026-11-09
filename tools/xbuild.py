@@ -6,7 +6,7 @@
   python -I tools/xbuild.py tcptest  [--target T] [--no-run]                    TCP/IP plug-in loopback (tools/tcp_test)
   python -I tools/xbuild.py wontest  [--target T] [--no-run]                    WON wire format and sockets (tests/won)
   python -I tools/xbuild.py sdl3     [--target T]                               SDL3 as a static library (CMake)
-  python -I tools/xbuild.py sdltest  [--target T] [--no-run] [--frames N]       SDL3 window + wgpu surface test
+  python -I tools/xbuild.py sdltest  [--target T] [--no-run] [--frames N]       SDL3 window + GX presentation test
   python -I tools/xbuild.py census   [--target T] [--dialect ms|gnu] [-j N] [--only TEXT] [module ...]
   python -I tools/xbuild.py game     [--target T] [-j N] [--debug] [--incremental] [--smoke] [--sanitize address|undefined]
                                                                                 the game (POSIX targets): ee-aoc
@@ -548,9 +548,9 @@ def sdl_libs(t):
             "-framework", "AudioToolbox", "-liconv"]
 
 
-def wgpu_dir(t):
-    """wgpu-native's headers (the directory holding include/webgpu) and the Rust library that contains it."""
-    return rust_build.WGPU_HEADERS, rust_build.ensure(t.name)
+def rust_lib(t):
+    """The Rust static library (GX and wgpu are inside)."""
+    return rust_build.ensure(t.name)
 
 
 def cmd_sdltest(a):
@@ -558,17 +558,18 @@ def cmd_sdltest(a):
     why = t.can_build()
     if why:
         sys.exit(f"{t.name}: {why}")
-    wgpu, wlib = wgpu_dir(t)
+    wlib = rust_lib(t)
     # the window layer on SDL3 (src/Platform/SDL) with the platform layer it uses; on Windows the Win32 key-state
     # file (PlatInput.cpp) is the game's and stays out: the SDL file implements the same functions
     srcs = [ROOT / "tools" / "sdl_test" / "sdl_test.cpp", ROOT / "src" / "Platform" / "SDL" / "PlatWindow.cpp",
             ROOT / "src" / "Platform" / "Common" / "PlatFont.cpp",
+            ROOT / "src" / "Low-Level Engine" / "Graphics Engine" / "DX7 Display Plug-ins" / "GX" / "GX.cpp",
             ]
     libs = [*sdl_libs(t), wlib]
     if t.os == "linux":
         libs += ["-lm", "-ldl"]
     exe = build_program(t, "sdl_test", srcs,
-                        includes=[sdl_prefix(t) / "include", wgpu / "include", PLATFORM_HEADERS,
+                        includes=[sdl_prefix(t) / "include", *([COMPAT] if t.posix else []), PLATFORM_HEADERS,
                                   ROOT / "src" / "ThirdParty" / "stb"],
                         libs=libs, defines=["SDL_MAIN_HANDLED"])
     print(f"built {exe}")
@@ -920,7 +921,7 @@ def game_job_command(t, job, out, inc, opt):
 
 def cmd_game(a):
     """Builds the game for a POSIX target: every unit of the Windows exe (tools/units.py) with the POSIX platform
-    layer, SDL3 and wgpu-native, one link -> <out>/game/ee-aoc (macOS: also <out>/game/Empire Earth AoC.app)."""
+    layer, SDL3 and the Rust library, one link -> <out>/game/ee-aoc (macOS: also <out>/game/Empire Earth AoC.app)."""
     t = Target(a.target)
     if not t.posix:
         sys.exit("the game for Windows is tools/build.py")
@@ -930,7 +931,7 @@ def cmd_game(a):
     import units
     if not (sdl_prefix(t) / "include" / "SDL3" / "SDL.h").exists():
         cmd_sdl3(argparse.Namespace(target=t.name, j=a.j, fresh=False))
-    wgpu, wlib = wgpu_dir(t)
+    wlib = rust_lib(t)
     out = t.out / ("game" if not a.sanitize else f"game-{a.sanitize}")
     (out / "obj").mkdir(parents=True, exist_ok=True)
     mods = units.TARGET_MODULES["exe"]
@@ -944,7 +945,7 @@ def cmd_game(a):
     jobs = [j for j in jobs if not (j[0] == "exeimg" and units.rel_src(j[1]).parts[1] == "libjpeg")]
     inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
            ROOT / "src" / "ThirdParty" / "stb", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS],
-           wgpu / "include", sdl_prefix(t) / "include", font_arrays(t)]
+           sdl_prefix(t) / "include", font_arrays(t)]
     icon_header(t)   # gen/PlatIconData.h, beside the font arrays
     opt = ["-O1"] if not a.debug else ["-O0"]
     san = [f"-fsanitize={a.sanitize}", "-fno-omit-frame-pointer"] if a.sanitize else []

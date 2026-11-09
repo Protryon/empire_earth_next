@@ -1,10 +1,10 @@
 // The window layer's test program (`python -I tools/xbuild.py sdltest`): the game's future window path end to end on
 // one system, without the game. It starts the window system of include/platform/PlatWindow.h (on SDL3), opens a
-// window, builds a wgpu surface from the native handles the layer hands out (HWND, X11 Window, Wayland surface or
-// CAMetalLayer, as GX will), presents --frames cleared frames, pumps the events, and checks:
-//   - an offscreen render target cleared on the GPU and read back has the clear colour;
-//   - text drawn by PlatFont (Liberation Sans as "Arial", --fonts DIR) into a CPU buffer, uploaded to a texture and
-//     copied on the GPU into the target, reads back with its ink where it was drawn;
+// window, hands GX the native handles the layer gives (HWND, X11 Window, Wayland surface or CAMetalLayer: the swap
+// chain's surface is ee_gx's), presents --frames filled frames, pumps the events, and checks:
+//   - an offscreen render target filled on the GPU and read back has the fill colour;
+//   - text drawn by PlatFont (Liberation Sans as "Arial", --fonts DIR) into a CPU surface, uploaded and blitted on
+//     the GPU into the target, reads back with its ink where it was drawn;
 //   - the clipboard keeps a Windows-1252 text through the system's UTF-8 clipboard;
 //   - the key-state queries answer (nothing is held).
 // Exit code: 0 pass, 1 a check failed, 2 no window system / GPU adapter (CI machines without a display or GPU:
@@ -16,18 +16,15 @@
 #include <string>
 #include <vector>
 
-#include <webgpu/webgpu.h>
-#include <webgpu/wgpu.h>
+#include <windows.h>   // platform/wintypes.h elsewhere (RECT, HANDLE, the VK_* codes on Windows)
 
+#include "gx/GX.h"
 #include "platform/PlatFont.h"
 #include "platform/PlatKeys.h"
 #include "platform/PlatThread.h"
 #include "platform/PlatTime.h"
 #include "platform/PlatWindow.h"
 
-#if defined(_WIN32)
-#include <windows.h>   // the VK_* codes on Windows
-#endif
 
 static int sFailures;
 #define CHECK(c) Check((c), #c, __LINE__)
@@ -39,82 +36,12 @@ static void Check(bool inOk, const char* inText, int inLine)
     }
 }
 
-struct Wait {
-    int mDone;
-    void* mResult;
-};
-
-static void OnAdapter(WGPURequestAdapterStatus inStatus, WGPUAdapter inAdapter, WGPUStringView inMessage, void* inWait,
-                      void*)
+// GX's test hook (GX.h's harness seam): counts the frames GX was asked to present
+extern "C" void GXTestSetPresentHook(void (*inHook)(void* inWindow, GXSurface* inFrame));
+static int sPresented;
+static void OnPresent(void*, GXSurface*)
 {
-    Wait* w = static_cast<Wait*>(inWait);
-    w->mResult = inStatus == WGPURequestAdapterStatus_Success ? inAdapter : NULL;
-    if (inStatus != WGPURequestAdapterStatus_Success)
-        printf("adapter: %.*s\n", (int)(inMessage.length == WGPU_STRLEN ? strlen(inMessage.data) : inMessage.length),
-               inMessage.data ? inMessage.data : "");
-    w->mDone = 1;
-}
-
-static void OnDevice(WGPURequestDeviceStatus inStatus, WGPUDevice inDevice, WGPUStringView, void* inWait, void*)
-{
-    Wait* w = static_cast<Wait*>(inWait);
-    w->mResult = inStatus == WGPURequestDeviceStatus_Success ? inDevice : NULL;
-    w->mDone = 1;
-}
-
-static void OnMapped(WGPUMapAsyncStatus inStatus, WGPUStringView, void* inWait, void*)
-{
-    Wait* w = static_cast<Wait*>(inWait);
-    w->mResult = reinterpret_cast<void*>(static_cast<intptr_t>(inStatus == WGPUMapAsyncStatus_Success ? 1 : 0));
-    w->mDone = 1;
-}
-
-static void Pump(WGPUInstance inInstance, WGPUDevice inDevice, Wait& w)
-{
-    for (int i = 0; i < 10000 && !w.mDone; i++) {
-        if (inDevice)
-            wgpuDevicePoll(inDevice, 0, NULL);
-        wgpuInstanceProcessEvents(inInstance);
-        if (!w.mDone)
-            PlatSleep(1);
-    }
-}
-
-static WGPUSurface CreateSurface(WGPUInstance inInstance, const PlatNativeWindow& n)
-{
-    WGPUSurfaceDescriptor d = {};
-    WGPUSurfaceSourceWindowsHWND theWin32 = {};
-    WGPUSurfaceSourceXlibWindow theX11 = {};
-    WGPUSurfaceSourceWaylandSurface theWayland = {};
-    WGPUSurfaceSourceMetalLayer theMetal = {};
-    switch (n.mKind) {
-    case PLAT_NATIVE_WIN32:
-        theWin32.chain.sType = WGPUSType_SurfaceSourceWindowsHWND;
-        theWin32.hinstance = n.mDisplay;
-        theWin32.hwnd = n.mWindow;
-        d.nextInChain = &theWin32.chain;
-        break;
-    case PLAT_NATIVE_X11:
-        theX11.chain.sType = WGPUSType_SurfaceSourceXlibWindow;
-        theX11.display = n.mDisplay;
-        theX11.window = static_cast<uint64_t>(reinterpret_cast<uintptr_t>(n.mWindow));
-        d.nextInChain = &theX11.chain;
-        break;
-    case PLAT_NATIVE_WAYLAND:
-        theWayland.chain.sType = WGPUSType_SurfaceSourceWaylandSurface;
-        theWayland.display = n.mDisplay;
-        theWayland.surface = n.mWindow;
-        d.nextInChain = &theWayland.chain;
-        break;
-    case PLAT_NATIVE_METAL:
-        theMetal.chain.sType = WGPUSType_SurfaceSourceMetalLayer;
-        theMetal.layer = n.mWindow;
-        d.nextInChain = &theMetal.chain;
-        break;
-    default:
-        return NULL;
-    }
-    return wgpuInstanceCreateSurface(inInstance, &d);
+    sPresented++;
 }
 
 static std::vector<std::vector<unsigned char>> sFontData;
@@ -176,131 +103,64 @@ int main(int argc, char** argv)
     CHECK(!PlatKeyIsDown(VK_ESCAPE) && !PlatScanCodeIsDown(DIK_ESCAPE));
     PlatKeyIsToggled(VK_NUMLOCK);
 
-    // wgpu on the window
-    WGPUInstanceDescriptor theInstanceDescriptor = {};
-    WGPUInstance theInstance = wgpuCreateInstance(&theInstanceDescriptor);
-    WGPUSurface theSurface = CreateSurface(theInstance, theNative);
-    CHECK(theSurface != NULL);
-    WGPURequestAdapterOptions theOptions = {};
-    theOptions.compatibleSurface = theSurface;
-    theOptions.powerPreference = WGPUPowerPreference_HighPerformance;
-    Wait w = {0, NULL};
-    WGPURequestAdapterCallbackInfo theAdapterCallback = {};
-    theAdapterCallback.mode = WGPUCallbackMode_AllowProcessEvents;
-    theAdapterCallback.callback = OnAdapter;
-    theAdapterCallback.userdata1 = &w;
-    wgpuInstanceRequestAdapter(theInstance, &theOptions, theAdapterCallback);
-    Pump(theInstance, NULL, w);
-    WGPUAdapter theAdapter = static_cast<WGPUAdapter>(w.mResult);
-    if (!theAdapter) {
-        printf("no GPU adapter for this surface\n");
+    // GX on the window
+    GXDirectDraw* theDirectDraw = NULL;
+    if (GXDirectDrawCreate(NULL, &theDirectDraw) != GX_OK) {
+        printf("no GPU adapter\n");
         return 2;
     }
-    WGPUAdapterInfo theInfo = {};
-    wgpuAdapterGetInfo(theAdapter, &theInfo);
-    printf("adapter: %.*s (backend %d)\n",
-           (int)(theInfo.device.length == WGPU_STRLEN ? strlen(theInfo.device.data) : theInfo.device.length),
-           theInfo.device.data ? theInfo.device.data : "", (int)theInfo.backendType);
-    w = Wait{0, NULL};
-    WGPUDeviceDescriptor theDeviceDescriptor = {};
-    WGPURequestDeviceCallbackInfo theDeviceCallback = {};
-    theDeviceCallback.mode = WGPUCallbackMode_AllowProcessEvents;
-    theDeviceCallback.callback = OnDevice;
-    theDeviceCallback.userdata1 = &w;
-    wgpuAdapterRequestDevice(theAdapter, &theDeviceDescriptor, theDeviceCallback);
-    Pump(theInstance, NULL, w);
-    WGPUDevice theDevice = static_cast<WGPUDevice>(w.mResult);
-    if (!theDevice) {
-        printf("no device\n");
-        return 2;
-    }
-    WGPUQueue theQueue = wgpuDeviceGetQueue(theDevice);
+    GXDEVICEIDENTIFIER theIdentifier;
+    theDirectDraw->GetDeviceIdentifier(&theIdentifier, 0);
+    printf("adapter: %s\n", theIdentifier.szDescription);
+    CHECK(theDirectDraw->SetCooperativeLevel(theWindow, GXSCL_NORMAL) == GX_OK);
+    GXTestSetPresentHook(OnPresent);
 
-    // the offscreen check: clear on the GPU, copy PlatFont's text in, read back
+    // the offscreen check: fill on the GPU, copy PlatFont's text in, read back
     const uint32_t W = 256, H = 64;
-    WGPUTextureDescriptor theTargetDescriptor = {};
-    theTargetDescriptor.usage = WGPUTextureUsage_RenderAttachment | WGPUTextureUsage_CopySrc | WGPUTextureUsage_CopyDst;
-    theTargetDescriptor.dimension = WGPUTextureDimension_2D;
-    theTargetDescriptor.size = {W, H, 1};
-    theTargetDescriptor.format = WGPUTextureFormat_BGRA8Unorm;
-    theTargetDescriptor.mipLevelCount = 1;
-    theTargetDescriptor.sampleCount = 1;
-    WGPUTexture theTarget = wgpuDeviceCreateTexture(theDevice, &theTargetDescriptor);
-    WGPUTextureDescriptor theTextDescriptor = theTargetDescriptor;
-    theTextDescriptor.usage = WGPUTextureUsage_CopySrc | WGPUTextureUsage_CopyDst;
-    theTextDescriptor.size = {128, 32, 1};
-    WGPUTexture theTextTexture = wgpuDeviceCreateTexture(theDevice, &theTextDescriptor);
+    static const GXPIXELFORMAT kXRGB32 = {sizeof(GXPIXELFORMAT), GXPF_RGB, 0, 32, 0xff0000, 0xff00, 0xff, 0};
+    GXSURFACEDESC theDescription = {};
+    theDescription.dwSize = sizeof(theDescription);
+    theDescription.dwFlags = GXSD_CAPS | GXSD_WIDTH | GXSD_HEIGHT | GXSD_PIXELFORMAT;
+    theDescription.dwWidth = W;
+    theDescription.dwHeight = H;
+    theDescription.ddpfPixelFormat = kXRGB32;
+    theDescription.ddsCaps.dwCaps = GXSCAPS_3DDEVICE;
+    GXSurface* theTarget = NULL;
+    CHECK(theDirectDraw->CreateSurface(&theDescription, &theTarget, NULL) == GX_OK);
+    theDescription.dwWidth = 128;
+    theDescription.dwHeight = 32;
+    theDescription.ddsCaps.dwCaps = GXSCAPS_OFFSCREENPLAIN;
+    GXSurface* theText = NULL;
+    CHECK(theDirectDraw->CreateSurface(&theDescription, &theText, NULL) == GX_OK);
     bool theHaveText = !theFonts.empty() && LoadFonts(theFonts);
     if (!theFonts.empty())
         CHECK(theHaveText);
+    GXBLTFX theFill = {sizeof(theFill), 0x004080BF};   // 0.25, 0.5, 0.75 -> 64, 128, 191
+    CHECK(theTarget->Blt(NULL, NULL, NULL, GXBLT_COLORFILL, &theFill) == GX_OK);
     if (theHaveText) {
-        std::vector<uint32_t> thePixels(128 * 32, 0xFFFFFFFFu);
-        PlatFontTarget theText = {thePixels.data(), 128 * 4, 128, 32};
+        GXSURFACEDESC theLocked;
+        CHECK(theText->Lock(NULL, &theLocked, GXLOCK_WRITEONLY, NULL) == GX_OK);
+        for (uint32_t y = 0; y < 32; y++)
+            memset(static_cast<char*>(theLocked.lpSurface) + y * theLocked.lPitch, 0xff, 128 * 4);
+        PlatFontTarget theDrawTarget = {theLocked.lpSurface, static_cast<int32_t>(theLocked.lPitch), 128, 32};
         PlatFont* theFont = PlatFontCreate("Arial", -16, 1, 0, 0, 1);
-        PlatFontDraw(theFont, "Empire", 6, 4, 4, 0x000000, 0, 0, NULL, &theText);
+        PlatFontDraw(theFont, "Empire", 6, 4, 4, 0x000000, 0, 0, NULL, &theDrawTarget);
         PlatFontDestroy(theFont);
-        WGPUTexelCopyTextureInfo theDestination = {};
-        theDestination.texture = theTextTexture;
-        WGPUTexelCopyBufferLayout theLayout = {0, 128 * 4, 32};
-        WGPUExtent3D theSize = {128, 32, 1};
-        wgpuQueueWriteTexture(theQueue, &theDestination, thePixels.data(), thePixels.size() * 4, &theLayout, &theSize);
+        CHECK(theText->Unlock(NULL) == GX_OK);
+        RECT theDestination = {16, 16, 16 + 128, 16 + 32};
+        CHECK(theTarget->Blt(&theDestination, theText, NULL, 0, NULL) == GX_OK);
     }
-    WGPUCommandEncoder theEncoder = wgpuDeviceCreateCommandEncoder(theDevice, NULL);
-    WGPUTextureView theTargetView = wgpuTextureCreateView(theTarget, NULL);
-    WGPURenderPassColorAttachment theClear = {};
-    theClear.view = theTargetView;
-    theClear.depthSlice = WGPU_DEPTH_SLICE_UNDEFINED;
-    theClear.loadOp = WGPULoadOp_Clear;
-    theClear.storeOp = WGPUStoreOp_Store;
-    theClear.clearValue = {0.25, 0.5, 0.75, 1.0};
-    WGPURenderPassDescriptor thePass = {};
-    thePass.colorAttachmentCount = 1;
-    thePass.colorAttachments = &theClear;
-    WGPURenderPassEncoder theRender = wgpuCommandEncoderBeginRenderPass(theEncoder, &thePass);
-    wgpuRenderPassEncoderEnd(theRender);
-    wgpuRenderPassEncoderRelease(theRender);
-    if (theHaveText) {
-        WGPUTexelCopyTextureInfo theFrom = {}, theTo = {};
-        theFrom.texture = theTextTexture;
-        theTo.texture = theTarget;
-        theTo.origin = {16, 16, 0};
-        WGPUExtent3D theSize = {128, 32, 1};
-        wgpuCommandEncoderCopyTextureToTexture(theEncoder, &theFrom, &theTo, &theSize);
-    }
-    WGPUBufferDescriptor theBufferDescriptor = {};
-    theBufferDescriptor.usage = WGPUBufferUsage_CopyDst | WGPUBufferUsage_MapRead;
-    theBufferDescriptor.size = W * H * 4;
-    WGPUBuffer theReadBack = wgpuDeviceCreateBuffer(theDevice, &theBufferDescriptor);
-    WGPUTexelCopyTextureInfo theSource = {};
-    theSource.texture = theTarget;
-    WGPUTexelCopyBufferInfo theCopy = {};
-    theCopy.buffer = theReadBack;
-    theCopy.layout.bytesPerRow = W * 4;
-    theCopy.layout.rowsPerImage = H;
-    WGPUExtent3D theAll = {W, H, 1};
-    wgpuCommandEncoderCopyTextureToBuffer(theEncoder, &theSource, &theCopy, &theAll);
-    WGPUCommandBuffer theCommands = wgpuCommandEncoderFinish(theEncoder, NULL);
-    wgpuQueueSubmit(theQueue, 1, &theCommands);
-    wgpuCommandBufferRelease(theCommands);
-    wgpuCommandEncoderRelease(theEncoder);
-    w = Wait{0, NULL};
-    WGPUBufferMapCallbackInfo theMapCallback = {};
-    theMapCallback.mode = WGPUCallbackMode_AllowProcessEvents;
-    theMapCallback.callback = OnMapped;
-    theMapCallback.userdata1 = &w;
-    wgpuBufferMapAsync(theReadBack, WGPUMapMode_Read, 0, W * H * 4, theMapCallback);
-    Pump(theInstance, theDevice, w);
-    CHECK(w.mDone && w.mResult);
-    if (w.mDone && w.mResult) {
-        const unsigned char* p = static_cast<const unsigned char*>(wgpuBufferGetConstMappedRange(theReadBack, 0, W * H * 4));
-        // BGRA: the clear colour at a corner (0.25, 0.5, 0.75 -> 64, 128, 191 within rounding)
+    GXSURFACEDESC theRead;
+    CHECK(theTarget->Lock(NULL, &theRead, 0, NULL) == GX_OK);
+    {
+        const unsigned char* p = static_cast<const unsigned char*>(theRead.lpSurface);
         printf("read back: corner %d %d %d %d\n", p[0], p[1], p[2], p[3]);
         CHECK(abs(p[0] - 191) <= 1 && abs(p[1] - 128) <= 1 && abs(p[2] - 64) <= 1 && p[3] == 255);
         if (theHaveText) {
             int theInk = 0, theWhite = 0;
             for (uint32_t y = 16; y < 48; y++)
                 for (uint32_t x = 16; x < 144; x++) {
-                    const unsigned char* q = p + (y * W + x) * 4;
+                    const unsigned char* q = p + y * theRead.lPitch + x * 4;
                     if (q[0] < 64 && q[1] < 64 && q[2] < 64)
                         theInk++;
                     else if (q[0] == 255 && q[1] == 255 && q[2] == 255)
@@ -309,17 +169,25 @@ int main(int argc, char** argv)
             printf("read back: text %d ink, %d white pixels\n", theInk, theWhite);
             CHECK(theInk > 50 && theWhite > 1000);
         }
-        wgpuBufferUnmap(theReadBack);
     }
+    CHECK(theTarget->Unlock(NULL) == GX_OK);
 
-    // the window's frames
-    WGPUSurfaceCapabilities theCaps = {};
-    wgpuSurfaceGetCapabilities(theSurface, theAdapter, &theCaps);
-    WGPUTextureFormat theFormat = theCaps.formatCount ? theCaps.formats[0] : WGPUTextureFormat_BGRA8Unorm;
-    wgpuSurfaceCapabilitiesFreeMembers(theCaps);
-    int32_t theWidth = 0, theHeight = 0, theConfigured = -1;
-    int theEvents = 0, thePresented = 0;
+    // the window's frames: the primary with one back buffer, filled and flipped
+    int32_t theWidth = 0, theHeight = 0;
+    int theEvents = 0;
     bool theQuit = false;
+    PlatWindowGetClientSize(theWindow, &theWidth, &theHeight);
+    CHECK(theDirectDraw->SetDisplayMode(theWidth > 0 ? theWidth : 640, theHeight > 0 ? theHeight : 480, 32, 0, 0) == GX_OK);
+    GXSURFACEDESC thePrimaryDescription = {};
+    thePrimaryDescription.dwSize = sizeof(thePrimaryDescription);
+    thePrimaryDescription.dwFlags = GXSD_CAPS | GXSD_BACKBUFFERCOUNT;
+    thePrimaryDescription.dwBackBufferCount = 1;
+    thePrimaryDescription.ddsCaps.dwCaps = GXSCAPS_PRIMARYSURFACE | GXSCAPS_FLIP | GXSCAPS_COMPLEX;
+    GXSurface* thePrimary = NULL;
+    CHECK(theDirectDraw->CreateSurface(&thePrimaryDescription, &thePrimary, NULL) == GX_OK);
+    GXSCAPS theBackCaps = {GXSCAPS_FLIP, 0};
+    GXSurface* theBack = NULL;
+    CHECK(thePrimary && thePrimary->GetAttachedSurface(&theBackCaps, &theBack) == GX_OK);
     uint32_t theStart = PlatTimeMilliseconds();
     for (int f = 0; f < theFrames && !theQuit; f++) {
         PlatInputEvent e;
@@ -333,60 +201,21 @@ int main(int argc, char** argv)
         PlatWindowGetClientSize(theWindow, &theWidth, &theHeight);
         if (theWidth <= 0 || theHeight <= 0)
             continue;
-        if (theConfigured != theWidth * 65536 + theHeight) {
-            WGPUSurfaceConfiguration theConfig = {};
-            theConfig.device = theDevice;
-            theConfig.format = theFormat;
-            theConfig.usage = WGPUTextureUsage_RenderAttachment;
-            theConfig.width = static_cast<uint32_t>(theWidth);
-            theConfig.height = static_cast<uint32_t>(theHeight);
-            theConfig.alphaMode = WGPUCompositeAlphaMode_Auto;
-            theConfig.presentMode = WGPUPresentMode_Fifo;
-            wgpuSurfaceConfigure(theSurface, &theConfig);
-            theConfigured = theWidth * 65536 + theHeight;
-        }
-        WGPUSurfaceTexture theFrame = {};
-        wgpuSurfaceGetCurrentTexture(theSurface, &theFrame);
-        if (theFrame.status != WGPUSurfaceGetCurrentTextureStatus_SuccessOptimal &&
-            theFrame.status != WGPUSurfaceGetCurrentTextureStatus_SuccessSuboptimal) {
-            if (theFrame.texture)
-                wgpuTextureRelease(theFrame.texture);
-            theConfigured = -1;
-            continue;
-        }
-        WGPUTextureView theView = wgpuTextureCreateView(theFrame.texture, NULL);
-        WGPUCommandEncoder theFrameEncoder = wgpuDeviceCreateCommandEncoder(theDevice, NULL);
-        WGPURenderPassColorAttachment theColor = theClear;
-        theColor.view = theView;
-        theColor.clearValue = {0.1 + 0.4 * (f % 30) / 30.0, 0.2, 0.3, 1.0};
-        WGPURenderPassDescriptor theFramePass = {};
-        theFramePass.colorAttachmentCount = 1;
-        theFramePass.colorAttachments = &theColor;
-        WGPURenderPassEncoder theFrameRender = wgpuCommandEncoderBeginRenderPass(theFrameEncoder, &theFramePass);
-        wgpuRenderPassEncoderEnd(theFrameRender);
-        wgpuRenderPassEncoderRelease(theFrameRender);
-        WGPUCommandBuffer theFrameCommands = wgpuCommandEncoderFinish(theFrameEncoder, NULL);
-        wgpuQueueSubmit(theQueue, 1, &theFrameCommands);
-        wgpuCommandBufferRelease(theFrameCommands);
-        wgpuCommandEncoderRelease(theFrameEncoder);
-        if (wgpuSurfacePresent(theSurface) == WGPUStatus_Success)
-            thePresented++;
-        wgpuTextureViewRelease(theView);
-        wgpuTextureRelease(theFrame.texture);
+        GXBLTFX theFrameFill = {sizeof(theFrameFill), static_cast<unsigned long>((26 + (f % 30) * 102 / 30) << 16 | 51 << 8 | 77)};
+        CHECK(theBack->Blt(NULL, NULL, NULL, GXBLT_COLORFILL, &theFrameFill) == GX_OK);
+        CHECK(thePrimary->Flip(NULL, 0) == GX_OK);
     }
-    printf("%d frames presented at %dx%d in %u ms, %d events\n", thePresented, theWidth, theHeight,
+    printf("%d frames presented at %dx%d in %u ms, %d events\n", sPresented, theWidth, theHeight,
            PlatTimeMilliseconds() - theStart, theEvents);
-    CHECK(thePresented > 0 || theQuit);
+    CHECK(sPresented > 0 || theQuit);
 
-    wgpuBufferRelease(theReadBack);
-    wgpuTextureViewRelease(theTargetView);
-    wgpuTextureRelease(theTarget);
-    wgpuTextureRelease(theTextTexture);
-    wgpuSurfaceRelease(theSurface);
-    wgpuQueueRelease(theQueue);
-    wgpuDeviceRelease(theDevice);
-    wgpuAdapterRelease(theAdapter);
-    wgpuInstanceRelease(theInstance);
+    if (theBack)
+        theBack->Release();
+    if (thePrimary)
+        thePrimary->Release();
+    theText->Release();
+    theTarget->Release();
+    theDirectDraw->Release();
     PlatWindowDestroy(theWindow);
     PlatWindowSystemStop();
     printf("%s\n", sFailures ? "FAILED" : "PASS");

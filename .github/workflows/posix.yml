@@ -67,7 +67,7 @@ jobs:
           python -I tools/xbuild.py census -j 4 > census-linux-ms.txt 2>&1 || true
           head -60 census-linux-ms.txt
 
-      # the game itself: every unit, SDL3 and wgpu-native, one link
+      # the game itself: every unit, SDL3 and the Rust library, one link
       - name: Game (linux-x86_64)
         run: |
           rc=0

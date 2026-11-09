@@ -4,8 +4,8 @@
   python -I tools/rust_build.py gate                   cargo test, clippy -D warnings, rustfmt --check, the header check
   python -I tools/rust_build.py header                 regenerate include/rust/ee_rust.h (cbindgen)
 
-Targets are tools/xbuild.py's names. Needs rustup (rust/rust-toolchain.toml pins the version) and libclang
-(`bindgen`, for wgpu-native's C API). Outputs stay under this checkout's build/, so worktrees do not share them.
+Targets are tools/xbuild.py's names. Needs rustup (rust/rust-toolchain.toml pins the version). Outputs stay under
+this checkout's build/, so worktrees do not share them.
 """
 import argparse
 import os
@@ -17,15 +17,11 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RUST = ROOT / "rust"
-TC = pathlib.Path(os.environ.get("EE_TOOLCHAIN", ROOT / "toolchain"))
 # Per checkout, always: cargo gives path crates the same hash in every worktree, so in a shared target directory a
 # checkout can run or link what another checkout built (PORT_LEARNINGS "A shared CARGO_TARGET_DIR")
 TARGET_DIR = ROOT / "build" / "rust"
-# the directory holding include/webgpu/{webgpu,wgpu}.h, which C++ includes
-WGPU_HEADERS = RUST / "vendor" / "wgpu-native"
 TRIPLES = {"windows-x86_64": "x86_64-pc-windows-msvc", "linux-x86_64": "x86_64-unknown-linux-gnu",
            "macos-arm64": "aarch64-apple-darwin", "macos-x86_64": "x86_64-apple-darwin"}
-SYSROOT = TC / "sysroot" / "debian_bullseye_amd64"
 
 
 def host_target():
@@ -53,15 +49,6 @@ def cargo_env(target=None):
     env = dict(os.environ, CARGO_TARGET_DIR=str(TARGET_DIR))
     if target in ("macos-arm64", "macos-x86_64"):   # as the C++ (tools/xbuild.py)
         env.setdefault("MACOSX_DEPLOYMENT_TARGET", "11.0" if target == "macos-arm64" else "10.15")
-    if sys.platform == "win32" and "LIBCLANG_PATH" not in env:
-        llvm = pathlib.Path(env.get("EE_LLVM", r"C:\Program Files\LLVM"))
-        env["LIBCLANG_PATH"] = str(llvm / "bin")
-    # cross-compiling to Linux from another system: bindgen parses the C headers against the same sysroot as the C++
-    if target == "linux-x86_64" and sys.platform != "linux" and SYSROOT.exists():
-        clang = pathlib.Path(env.get("EE_LLVM", r"C:\Program Files\LLVM")) / "bin" / "clang.exe"
-        resource = subprocess.run([str(clang), "-print-resource-dir"], capture_output=True, text=True).stdout.strip()
-        env["BINDGEN_EXTRA_CLANG_ARGS_x86_64_unknown_linux_gnu"] = (
-            f"--sysroot={SYSROOT.as_posix()} -isystem \"{pathlib.Path(resource).as_posix()}/include\"")
     return env
 
 
@@ -84,13 +71,13 @@ def ensure(target=None):
 
 
 def fmt_packages():
-    """rustfmt's -p list: the workspace's own crates, not the vendored one."""
+    """rustfmt's -p list: the workspace's crates."""
     return [arg for crate in sorted(p.name for p in (RUST / "crates").iterdir() if p.is_dir()) for arg in ("-p", crate)]
 
 
 def gate():
-    steps = [("test", ["test", "--workspace", "--exclude", "wgpu-native"]),
-             ("clippy", ["clippy", "--workspace", "--exclude", "wgpu-native", "--no-deps", "--all-targets", "--", "-D", "warnings"]),
+    steps = [("test", ["test", "--workspace"]),
+             ("clippy", ["clippy", "--workspace", "--no-deps", "--all-targets", "--", "-D", "warnings"]),
              ("rustfmt", ["fmt", "--check", *fmt_packages()]),
              ("header", ["run", "-q", "-p", "xtask", "--", "cbindgen", "--check"])]
     for name, args in steps:

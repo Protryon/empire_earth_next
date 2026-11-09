@@ -96,11 +96,6 @@ def modern_dirs():
 ARCH = "x64"
 
 
-def wgpu_dir():
-    """wgpu-native's C headers (include/webgpu/): vendored in the Rust workspace, which builds the library."""
-    return ROOT / "rust" / "vendor" / "wgpu-native"
-
-
 def sdl3_dir():
     """SDL3 3.4.18, static, for windows-x86_64 (built from the pinned sources by tools/xbuild.py sdl3; EE_SDL3
     overrides): <dir>/include, <dir>/lib/SDL3-static.lib."""

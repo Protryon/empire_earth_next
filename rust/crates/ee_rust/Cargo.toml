@@ -13,7 +13,6 @@ ee_panic = { path = "../ee_panic" }
 ee_data = { path = "../ee_data" }
 ee_plat_core = { path = "../ee_plat_core" }
 ee_plat_sys = { path = "../ee_plat_sys" }
-wgpu-native = { path = "../../vendor/wgpu-native" }
 ee_mixer = { path = "../ee_mixer" }
 ee_net_tcp = { path = "../ee_net_tcp" }
 ee_random = { path = "../ee_random" }

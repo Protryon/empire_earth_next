@@ -542,6 +542,36 @@ and `clang_link.py --stl msvc` find them automatically (env `EE_MSVC_DIR`, `EE_W
   timed out at the main menu). tools/harness/human/human_input.c (not ported yet) still reads the raw layout and
   must switch to TryEnter/Enter/Leave when it is ported.
 
+## GX in Rust (R4.1)
+
+GX is `rust/crates/ee_gx` on the `wgpu` crate at tag v24.0.3 (the version wgpu-native v24.0.3.1 was built from; later
+ones broke the read-backs, see above). `include/gx/GX.h` keeps its classes as C++ shims with no members: a `GXSurface*`
+is a pointer to a small Rust handle naming a slot in GX's table, `GXDevice*`/`GXVertexBuffer*`/`GXDirectDraw*` are
+Rust boxes, each freed by its last `Release`. The harness's `GXTestSetPresentHook`/`GXTestReadFrame` are `#[no_mangle]`
+Rust functions with the same names; `GX.cpp` keeps the `/include` pragmas that hold them in the image.
+
+- **The wgpu crate's defaults differ from wgpu-native's in ways that show.** `Device`'s default error handler panics
+  (wgpu-native's callback logged): `on_uncaptured_error` routes to `GXLog`, set before anything else on the device.
+  `Instance::new` must get explicit flags: the `wgpu` crate defaults to `from_build_config` (debug layers in a debug
+  build), `InstanceFlags::empty()` is what wgpu-native gave a release build. `EE_WGPU_FLAGS` still selects debug and
+  validation. Limits are wgpu-native's `get_base_device_limits_from_adapter_limits`, ported.
+- **The `wgpu` crate forces wgpu-core's `indirect-validation` feature** on native (wgpu-native did not): device
+  creation builds its compute pipeline. No draw uses it and it adds one shader compile at start; on WARP/FXC it
+  works (gx_test, the device tests).
+- **The open render pass spans API calls**: `begin_render_pass(...).forget_lifetime()` gives a `RenderPass<'static>`;
+  dropping it ends the pass, which must happen before `encoder.finish()`.
+- **One reentrant lock, and no borrow across a callback.** GX's state is a `RefCell` inside a `parking_lot::ReentrantMutex`
+  (the C++'s `recursive_mutex`). A callback into C++ must not run with the `RefCell` borrowed, because it can call back
+  (the bridge's present hook calls `GXTestReadFrame`): `Blt`/`Flip` return a `PresentRequest` that the FFI layer runs
+  after the hook, and `DrawText` is two calls around its callback. The enumerations (`EnumDisplayModes`, ...) and the
+  display settings take no lock at all, as in the C++ (the settings are atomics).
+- **Everything GPU-shaped goes through a `Backend` trait** (`gx.rs`): the CPU/GPU bookkeeping, the pass and ring
+  tracking, the blits and presentation are tested against a recording fake with golden values generated from the
+  C++ before it was deleted; `gpu.rs` is the wgpu `Backend` and has device tests (a fill, a keyed blit, a textured draw,
+  a scaled target's read-back) that skip when no adapter is reachable.
+- `tools/sdl_test` now goes through GX (the swap chain is ee_gx's); `tools/wgpu_probe` (the phase-0 probe of the C API)
+  is deleted and wgpu-native is gone from the workspace, so the Rust build no longer needs libclang or bindgen.
+
 ## Text db tables (tools/eedata and the text loader)
 
 The 37 db tables the game reads convert to CSV/YAML (`tools/eedata/eedata.py`; formats in docs/DATA_FORMATS.md
