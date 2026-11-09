@@ -319,6 +319,7 @@ EEAIPersonalityRules::EEAIPersonalityRules()
     theTall.mEpochPressureStart = 0.15f;
     theTall.mEpochPressureFull = 0.5f;
     theTall.mStandingArmy = 0.2f;
+    theTall.mNextScript = "balanced";      // the next engine: ai/balanced.lua (S4; the final mapping is the owner's)
     EEAIPersonalityRule theWide;            // boom: grows its workforce, advances late
     theWide.mID = "wide";
     theWide.mEpochPressureStart = 0.6f;
@@ -337,6 +338,7 @@ EEAIPersonalityRules::EEAIPersonalityRules()
     theAggressive.mStoneAttacks = true;
     theAggressive.mSafeBonus = 0.0f;        // the rush does not dash for the epoch ...
     theAggressive.mEarlyTrainers = 0;       // ... and trains from as many buildings as it likes
+    theAggressive.mNextScript = "rush";     // the next engine: ai/rush.lua (S4)
     // TEMPORARY (until the new AI beats it; docs/AI_RESEARCH.md §8.28): the original's decisions where a rule holds
     // them; EE_AI_PERSONALITY gives it to a seat
     EEAIPersonalityRule theClassic;

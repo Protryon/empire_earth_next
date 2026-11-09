@@ -433,5 +433,5 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
     }
 
     outView.events = theState->mEvents;
-    outView.groups = inPlayer->mCombatManager != NULL ? (long)inPlayer->mCombatManager->mAttackCommander->mGroups.size() : 0;
+    EECPNextArmyView(inPlayer, outView);   // the groups, the free soldiers, the enemies' army fields (EECPNextArmy.cpp)
 }

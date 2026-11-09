@@ -1562,6 +1562,97 @@ and after the S3 changes (1842, 1822, 1746 and 1807 lines). The same seed twice 
 (30.7). Fewer than 1 in 10 defeated before the Copper Age: met (2/48 against the classic AI, 1/16 against the rush).
 The owner's playtest is still to come.
 
+### 8.31 The army and the rush and balanced scripts (S4, 2026-11-08, EE-SIM)
+
+The next engine's army (docs/AI_LUA_PLAN.md §5 "S4 as built": groups that hold named soldiers, attack, raid,
+defend, retreat, regroup, disband, scout) and two scripts: `ai/rush.lua` (aggressive) and `ai/balanced.lua` (tall for
+now). Every bench: EE-SIM, Small, Medium, 2 AIs and the idle human, no cheats, 2 hours, seeds 26-49 in both seat
+orders (48 games a matchup), `--score mixed`; "defeated" is a side with no citizens and no army at the end. The
+classic engine's traces are unchanged (seeds 2-5, 1800 s, `ai_trace.py compare`: 1842, 1822, 1746 and 1807 lines
+identical, after each C++ change). Two runs of the 576 failed to start (the lobby's "slot 0 human: index #0 outside
+the combo's 0 lines", before any game code) and are left out.
+
+**Round 1** (the first scripts; the pure boom is the S2 test opening, before S3 landed):
+
+| Matchup (48 games) | Wins (mixed) | Defeated |
+|---|---|---|
+| rush vs classic | 6 - 38, 3 close | rush 27/47, classic 1 |
+| balanced vs classic | 2 - 41, 4 close | balanced 25/47, classic 0 |
+| rush vs test-opening boom | **24** - 6, 18 close | rush 1, boom 4 |
+| balanced vs test-opening boom | **37** - 5, 6 close | balanced 0, boom 1 |
+| balanced vs rush | **26** - 11, 11 close | balanced 3, rush 2 |
+
+**Round 2** (main's S3 merged: the boom script with a scout and a defend guard, its army allowed to grow further, the
+fog bypass reverted; the pure boom is now `ai/boom.lua`):
+
+| Matchup (48 games) | Wins (mixed) | Defeated | Army at 20/30/40 min (script) |
+|---|---|---|---|
+| rush vs classic | 3 - 43, 2 close | rush 31, classic 0 | 5.0 / 6.3 / 7.9 |
+| balanced vs classic | 5 - 43 | balanced 28, classic 0 | 4.0 / 6.3 / 7.6 |
+| boom vs classic | 2 - 38, 8 close | boom 10, classic 0 | 3.9 / 4.8 / 3.6 |
+| rush vs boom | 13 - **18**, 17 close | rush 0, boom 3 | 5.1 / 6.4 / 9.0 vs 3.0 / 3.8 / 3.3 |
+| balanced vs boom | 10 - **17**, 21 close | none | 3.7 / 6.8 / 8.6 vs 3.5 / 5.5 / 7.0 |
+| balanced vs rush | **20** - 14, 14 close | balanced 4, rush 1 | 3.2 / 4.8 / 7.1 vs 4.9 / 7.7 / 10.0 |
+
+What the traces showed (and the coordinator's analysis of them):
+- **The groups work**: soldiers stay in their groups (about 1.2 groups a side, nearly every soldier in one), defend
+  groups fight on the claimed land and come back, scouts find the towns (`enemies[].town_x`) and gather spots, raids
+  flee from towers and armies (`next.group flee`).
+- **The rush split its army**: raids of 3, the guard and a wave at once; against the classic's 13-29 its army fell
+  from about 9 at 30 minutes to 3 by 50. Its first wave in some games came only at 22 minutes: the scout died and
+  the next one waited 2 minutes, and a wave needed the target's town seen.
+- **The armies never reach their targets**: the epoch reserve holds what the soldiers would cost (saving lasts 10-15
+  minutes in this sim's slow economy), and in the Stone Age the food income falls to 30-45 a minute with 15-20 food
+  gatherers (the patches gone, the hunting far). Balanced reaches the Copper Age in 31 of 48 games against classic;
+  the classic reaches the Bronze Age in 39.
+- **Citizens die near the town from 30 minutes**: 50-110 lost in 2 hours against classic, which attacks from the
+  Copper Age with 10-16 soldiers.
+
+**Round 3** (the scripts as committed): one army (a raid only from a surplus of 6 over the guard; never a wave smaller
+than the army seen at the target), scouting again every 30 s until the target's town is seen, a wave at the target's
+gather spot while its town is unseen, the soldiers missing up to half the army wanted left out of the epoch's
+reserve, the rush 30/60/80 citizens and waves of 10/14, balanced two barracks from 40 citizens. A 16-game check
+(seeds 26-33) before the full bench: rush vs classic 3 - 11 (defeated 7/16, was 31/48), army 8.4 / 8.4 / 7.4 at 20 /
+30 / 40 min (was 5.0 / 6.3 / 7.9); balanced vs classic 1 - 15 (defeated 7/16, was 28/48), army at 40 min 10.2 (was
+7.6); rush vs boom 4 - 8, 4 close.
+
+The full round 3 bench (48 games a matchup, 0 failed runs):
+
+| Matchup (48 games) | Wins (mixed) | Defeated | Army at 20/30/40 min (script) | Stone / Copper (median min) |
+|---|---|---|---|---|
+| rush vs classic | 9 - 36, 3 close | rush **21** (was 31), classic 1 | 8.1 / 8.2 / 7.2 (was 5.0 / 6.3 / 7.9) | 32.6 / 75.4 |
+| balanced vs classic | 3 - 44, 1 close | balanced 26 (was 28) | 3.8 / 5.9 / 8.2 | 26.7 / 63.7 (32/48) |
+| rush vs boom | 12 - **19**, 17 close | boom 4 | 8.7 / 9.7 / 10.2 vs 3.3 / 3.7 / 3.4 | rush 33.3, boom 23.6 |
+| balanced vs boom | 6 - **19**, 23 close | none | 3.6 / 7.0 / 10.7 vs 3.7 / 5.0 / 6.3 | balanced 25.9, boom 22.6 |
+| balanced vs rush | 14 - **20**, 14 close | balanced 7 | 3.1 / 3.0 / 6.4 vs 8.5 / 8.6 / 10.7 | balanced 28.0, rush 32.0 |
+
+The rush's Stone Age at 33 minutes is a bug of round 3: its army wanted is "the population", so the army floor
+(half of it) left the whole epoch reserve out; the floor is now capped at 10 soldiers (`cfg.floor`; committed after the bench). Its 16-game check (seeds 26-33,
+against the same seeds of round 3's first check): the rush's Stone Age at 29.1 minutes (was about 33), its army 6.9 /
+6.8 / 8.5 at 20 / 30 / 40 min (was 8.4 / 8.4 / 7.4); rush vs classic 1 - 14, 1 close (defeated 9/16, was 7/16); rush
+vs boom 3 - 5, 8 close (was 4 - 8, 4 close). The cap trades soldiers for the epoch; neither setting makes the rush beat
+the boom.
+
+**The gate** (AI_LUA_PLAN §5 S4):
+- **Rush beats a pure boom: not met** against `ai/boom.lua` (round 3: 12 - 19, 17 close; it was met against the S2
+  test opening in round 1, 24 - 6, 18 close). It never defeats the boom (0-4 booms defeated in 48).
+- **A boom beats a failed rush: met.** The rush falls back in 45 of the 48 games (44 in round 2); in those the boom
+  wins 18 - 10, 17 close (round 2: 17 - 10, 17 close); in the 3 where the rush held on it won 2 - 1.
+- **Balanced holds its own** against the scripts (not lost in 29 of 48 against the boom, 28 of 48 against the rush;
+  against the S2 test opening 37 - 5) but **not against classic** (3 - 44, defeated 26/48), which out-builds every
+  next script from the Copper Age (39/48 classic Bronze Ages against 1/48).
+
+Open:
+- **The economy beyond the Stone Age** is the limit for all three scripts: food income collapses once the patches are
+  gone and before farms (rb_economy builds farms in the Copper Age, too late), and the reserve stalls the army for
+  10-15 minutes per epoch. The boom's economy work (S3) and S5 (farms, later epochs) are where the classic gap is.
+- **Towers stay Prehistoric**: there is no tower upgrade verb; rb_economy counts only the current epoch's tower class
+  (so it builds new ones each epoch), boom.lua counts every class toward its plan.
+- **Rush micro**: clubmen waves of 10 still die to towers and a defending army; a rush wins when it hits early and
+  kills gatherers, and it should pick fights by the seen strength near each target, not only at the wave.
+- **The target**: `lib.army.pick_enemy` takes the largest economy seen; in EE-SIM the idle human (player 1) is an
+  enemy too, and the first raids sometimes went there.
+
 ### 8.9 Next
 
 Done since §8.5: 60-minute multi-seed benchmarks (`--jobs`), the gatherer, placement and stall trace, Q2, epoch

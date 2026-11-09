@@ -154,7 +154,7 @@ culling), CombatManager::Update and the wonder race.
 | defend | `EECPNextDefend(p, x, y, n)` (x = y = -1: the town centre) | `CreateGroupFromStrategy`: a defence task at the tile (as CreateDefendGroup), "already defined" requirements of the soldiers there are, up to n | done (n = the units in the group); no_units, bad_argument |
 | attack | `EECPNextAttack(p, player, n)` | `CreateGroupFromStrategy` with a task naming the player (as CombatManager::Update's attack), up to n soldiers | done; no_units, bad_argument |
 
-Not built yet: `upgrade(centre)` (the garrison and fortress choices simply never run), `scout`, `group(units,
+Not built yet (S4 added scout, raid, retreat and groups that name their soldiers: §5 "S4 as built"): `upgrade(centre)` (the garrison and fortress choices simply never run), `scout`, `group(units,
 task)` with a mix, `raid`, `retreat`, walls.
 
 **The view** (`EECPNextView`, snake_case fields as the Lua table will have them; resources 0..4 = food, wood,
@@ -419,7 +419,7 @@ keyed `food`, `wood`, `stone`, `gold`, `iron`):
 | `sol_missing` | the next epoch's SOL still missing |
 | `costs[]` | every class the player can make now: `type`, `cost` (per-resource map), `producer` (nil: none), `producers`, `requested`, `in_production`; booleans `building`, `military`, `counts_toward_epoch` |
 | `events[]` | `kind` (`unit_lost`, `production_lost`, `advance_lost`, `no_site`, `group_wants`), `type`, `count` |
-| `groups` | the attack commander's groups |
+| `groups` | (S4: the next engine's groups, §5 "S4 as built"; it was the attack commander's group count) |
 | `results[]` | the previous step's orders, index for index: `verb`, `code` (`done`, `queued`, `refused`), `reason` (`none`, `no_site`, `no_producer`, `cannot_afford`, `not_in_epoch`, `unknown_class`, `bad_argument`, `no_units`, `requirements`, `busy`), `count` |
 
 **Classes and techs are named by their data ids:** dbobjects' `id` (`citizen`, `b_barracks`, `b_settlement`,
@@ -634,6 +634,10 @@ step. A `plan` line each minute and a `sites` line every five (`next.print` in t
 - A rush-aware army mix: the boom's light army is 4-5 soldiers at 30-40 min against the aggressive classic's 19-29,
   and it loses the mixed score to it (it survives: §8.30).
 
+(S4 provides the first two, §5 "S4 as built": `defend` groups that hold their named soldiers, and `scout`; boom.lua now
+guards with one defend group and scouts, its army under threat may grow further, and the finders' fog bypass above is
+reverted.)
+
 **Results** (EE-SIM, Small, Medium, 2 AIs, no cheats, 2 hours; `--engine next,classic` and `classic,next`, seeds
 26-49, 48 games; details in AI_RESEARCH.md §8.30):
 
@@ -745,6 +749,100 @@ Each stage ends on a gate. Each one is useful on its own, and the work can stop 
   - rush beats a pure boom, boom beats a failed rush;
   - balanced holds its own;
   - the owner's Medium is even.
+
+*S4 as built* (2026-11-08; the army side and the rush and balanced scripts; the boom script is S3's).
+
+**The army** (`src/Empire Earth/AI Thread/EECPNextArmy.cpp`, new; `ee/EECPNext.h`). S1's `defend` and `attack` handed
+a strategy to `CreateGroupFromStrategy`: the UnitSelector sized it its own way, the sub-groups asked Personnel for the
+units, and nothing arrived (0 units placed, and the group's production is off for the next engine). The next engine
+now owns its groups:
+- **Taking soldiers.** A group verb takes up to `n` of the free land soldiers (in none of the next engine's groups),
+  only the `classes` named when there are any, or with `from = id` out of another group: the nearest to the town
+  first, a raid's and a scout's the fastest first. Each leaves the classic attack commander through
+  `EEComputerPlayer::DetachUnitFromAI` (out of Personnel and the area groups, `mIsDetachedFromAI`).
+  `EEComputerPlayer::UnitGoalDone` gives a detached unit back to the commander when its goals run out; it now asks
+  `EECPNextHoldsUnit` first (classic never has a next state: unchanged). `disband` gives them back
+  (`CombatManager::UnitAdded`). Soldiers no group took stay with the classic commander as before.
+- **The step** (`EECPNextArmyStep`, every tick after the commander's update, before the view). It drops the lost
+  units, then gives each group's units their goals itself: `EEUGAttackUnit` on a seen enemy unit, `EEUGLocation`
+  towards its place (a leg of 14 tiles ahead of the group's centre, given again when the leg moves 4 tiles or after
+  10 s; non-forced, so they fight what they meet, forced for retreat and scout). A new group forms first at the
+  soldier nearest its centre (20 s at most, or 80% there). The targets are the enemy units whose tile the player sees
+  now (`IsSeenBy`), so the army is as fog-honest as the view; each unit keeps its target while it is still the best
+  kind it can reach, else takes the nearest (one already taken counts a little further; buildings: the weakest first;
+  boats and ships only for ranged units).
+- **Tasks:** `attack` (soldiers within 12 tiles, then citizens within 20, towers, buildings; at its place it looks for
+  the target's units within 30 tiles, then its town; nothing: `arrived`); `raid` (citizens, then fishing boats, and
+  soldiers only within 6 tiles; nothing within 9 tiles of a known tower; at its place the next gather spot; it flees
+  home when the seen soldiers and towers within 10 tiles are 1.5 times its strength); `defend` (the enemies within
+  its radius of the place, or 6 tiles of the group; strays come back); `retreat` (forced home, then it defends the
+  town); `scout` (forced moves to the unexplored grid point (8 tiles) on its continent nearest it and furthest from
+  the town; skips a place it does not reach in 45 s; `done` when nothing is left).
+- **The scouting memory** (in the state, saved): the enemies' gather spots (citizens or fishing boats seen; one spot
+  per 8 tiles, 8 per player; forgotten when seen empty for a minute) and towers (forgotten when their tile is seen
+  without them), the citizens seen now, where their soldiers were last seen.
+
+**Verbs** (Lua; every group verb's result carries `group`, the id):
+
+| Order | What |
+|---|---|
+| `{verb="attack", player=3, n=8, classes={...}, group=id, from=id, x=, y=}` | a new group (or `group` takes the task and `n` more); the place: x, y, else the target's town seen; `no_target` when none is seen |
+| `{verb="raid", player=3, n=4, ...}` | the place: x, y, else its latest gather spot with no known tower near, else its town |
+| `{verb="defend", n=4, x=-1, y=-1, radius=0, group=, from=, classes=}` | -1: the town, radius 0: the claim range (12 at a tile) |
+| `{verb="scout", n=1, classes=, from=, x=, y=}` | x, y: its first place (e.g. a claimed site not explored yet), then on its own |
+| `{verb="retreat", group=id, x=, y=}` | group 0 or none: every group but the scouts; home by default |
+| `{verb="regroup", group=id, x=, y=}` | hold a place (default: its centre) as a defence of 8 tiles |
+| `{verb="disband", group=id}` | the soldiers back to the classic commander |
+
+The same task at the same place only adds soldiers (the group goes on as it was). The C++ test opening's
+`EECPNextDefend` and `EECPNextAttack` make these groups too.
+
+**View** (new fields): `groups[]` (it was the commander's group count): `id`, `task`, `state` (`forming`, `moving`,
+`fighting`, `arrived`, `done`), `units`, `strength`, `x`, `y` (its centre), `target`, `tx`, `ty` (its place),
+`enemy_count`, `enemy_strength` (seen soldiers within 12 tiles), `targets` (what it would fight now), `started` (its
+most units), `lost`, `created`; `free_soldiers`, `free_strength`; per enemy `towers`, `citizens_seen`, `citizen_x`,
+`citizen_y` (its latest gather spot with no known tower near), `army_x`, `army_y`. Results: `group`. Reason:
+`no_target`. Save: the state block is version 2, the army after the Lua memory (groups, spots, towers, result group
+ids); version 1 still loads.
+
+**Scripts.** `ai/lib/army.lua` (generic: groups by role from the results, `pick_enemy` (the largest economy seen),
+the classes a producer makes); `ai/lib/rb_economy.lua` and `ai/lib/rb_army.lua` (the rush and balanced economy and
+army, numbers from a plan table); `ai/rush.lua`; `ai/balanced.lua`. Mapping for now: `aggressive` runs `rush`,
+`tall` runs `balanced` (S3 gives `balanced` and `wide` the boom; the final mapping is the owner's). TEST ONLY:
+`EE_AI_NEXT_SCRIPT` also takes `/` between players (sim_bench's `--env-vary` splits on commas).
+- **Economy** (both): citizens two at a time and never held back for the army (soldiers wait while the town is short
+  of citizens, unless the army is under half its target); the gatherer split in per-resource bounds with food at
+  least 40-45%; while saving, every mineral the advance does not need goes to its least; forage patches claimed, the
+  claim grows and the food gatherers hunt when none is left; settlements at patches; towers at the worked sites;
+  docks and boats from the Stone Age; the plan's buildings (a whitelist with counts); the SOL by the cheapest
+  building; the reserve and the advance only when paid. Farms from the Copper Age. The soldiers missing up to half
+  the army wanted are left out of the epoch's reserve (`reserve_less`): the army floor comes before the advance.
+- **Army** (both): a scout (one soldier; again every 30 s until the target's town is seen, then when it has not been
+  seen for a while); the home guard (`defend` at the town, the claim range) takes every free soldier; waves
+  `attack ... from = home` (never smaller than the army seen at the target; at its gather spot while its town is not
+  seen); reinforcements; raids `from = home` only from a surplus (6 soldiers stay); a group out retreats from a stronger
+  enemy, and every group out is recalled when the threat at the town outweighs the home guard; no wave while the town
+  is threatened; a group back home is folded into the guard; a wave lost (or back with half its units lost) counts as
+  failed.
+- **Rush:** 30/60/80 citizens, iron-heavy (30% in the Prehistoric), two barracks at 7 and 11 citizens, no army cap but
+  the population (held at its size while 4+ citizens short with 8 soldiers), the scout at 1 minute, raids of 4 every
+  3 minutes, waves of 10 in the Prehistoric and 14 later, a wave as the target reaches a new epoch, Stone saved for
+  from 12 minutes. **Falls back** to a boom (the BOOM plan: 30/80/95 citizens, towers 2/4/6, two docks, an army of
+  6/14/20, attacks only from 1.6 times the target's seen strength) after two failed waves, from 25 minutes against a
+  target with 4+ towers and a stronger army, or still Prehistoric at 30.
+- **Balanced:** 32/88/100 citizens, gold at most 3/12/14, iron 6/18/20, wood up to 23, a barracks (two from 40
+  citizens), a range from 30, towers 2/4/6, 10-12 boats in two docks; an army of 6/16/26 (or half as many again as the
+  most seen, at most a third of the pop cap); the scout at 2.5 minutes, again after 4 minutes without news; a wave
+  (keeping 4 home) only when 1.5 times the target's seen strength (towers counted) with 8/14/20 soldiers; raids of 4
+  every 6 minutes on targets with 3 towers at most.
+
+- **Boom** (S3's script; the S4 changes): its soldiers guard the town as one `defend` group (the claim range) and a
+  scout goes from 1.5 minutes (the nearest claimed site not explored yet first; up to three scouts in all); under a
+  threat its army may grow to 18/30/40 (was 12/24/40), and it grows by half the army its scout saw (was a third). With
+  the scout the TEMPORARY fog bypass of S3 (the finders sending next-engine gatherers to unseen claimed sites,
+  d7d9bac) is reverted: fog of war is on for the next engine's gatherers again.
+
+**Results:** docs/AI_RESEARCH.md §8.31 (the matrix).
 
 **S5, later epochs.**
 - **Coverage:** Copper to Bronze (farms, the phalanx swarm), then the Middle Ages and on.

@@ -8,6 +8,7 @@
 -- Everything it decides comes from the view and the previous step's results. Each minute it prints a `plan` line (the
 -- epoch, saving, the threat, army, citizens, towers, boats, claim and the gatherers wanted) into the AI trace.
 local V = require("lib.view")
+local A = require("lib.army")
 
 local PLAN = {
     {   -- Prehistoric
@@ -24,7 +25,7 @@ local PLAN = {
         food_share = 55,        -- percent of the citizens on food at least
         patches = 3,            -- forage patches claimed at most
         soldiers = 4,           -- the mobile defence when nothing threatens
-        soldiers_max = 12,      -- under a threat
+        soldiers_max = 18,      -- under a threat (S4: 12 held 4-5 soldiers against a rush of 19-29)
         towers = 3,
         settlements = 3,
         barracks = 1, ranges = 0,
@@ -38,7 +39,7 @@ local PLAN = {
         bank = {wood = 150, stone = 0, gold = 100, iron = 100},
         food_share = 40,
         patches = 5,
-        soldiers = 8, soldiers_max = 24,
+        soldiers = 8, soldiers_max = 30,
         towers = 7,
         settlements = 6,
         barracks = 2, ranges = 2,
@@ -68,6 +69,8 @@ local THREAT_MIN = 2500         -- weaker than this (a scout) is left to the mil
 local BACKOFF_MS = 60000        -- an order refused for want of a site or producer is not repeated for this long
 local SITE_PLACES = 6           -- gatherers a mine or a patch holds (the mining limit)
 local FAR_REACH = 60            -- tiles: how far a mineral with no site in the claim range is looked for
+local SCOUT_AT = 90000          -- the first scout (a soldier) from here
+local SCOUTS = 3                -- scouts sent at most (a new one when the last was lost)
 local TOWER_STRENGTH = 4000     -- what a tower counts for against a threat (about three clubmen)
 local PER_GATHERER = 30         -- what one gatherer is counted on to bring in over the planning horizon (~6 min)
 
@@ -334,7 +337,7 @@ function M.step(view, memory)
     if per < 500 then
         per = 500
     end
-    local soldiers_wanted = plan.soldiers + seen // 3
+    local soldiers_wanted = plan.soldiers + seen // 2   -- (S4: the scout sees the army coming)
     local short_strength = 0
     if threatened then
         short_strength = memory.threat * 3 // 2 - view.army_strength - towers_built * TOWER_STRENGTH
@@ -603,6 +606,43 @@ function M.step(view, memory)
                 order("soldier_" .. k, {verb = "train", type = c.type, n = n})
                 need = need - n
             end
+        end
+    end
+
+    -- the groups (lib.army; docs/AI_LUA_PLAN.md "S4 as built"): the soldiers guard the town together (a defence of the
+    -- claim range: they fight what comes onto the claimed land and come back), and one of them scouts, the nearest
+    -- claimed site not explored yet first (the gatherers go only to what the player has seen), then the land beyond
+    A.collect(view, memory)
+    local home = A.role(view, memory, "home")
+    local scout = A.role(view, memory, "scout")
+    if scout ~= nil and scout.state == "done" then
+        order("scout_done", {verb = "disband", group = scout.id})
+    end
+    if scout == nil and view.time >= SCOUT_AT and (memory.scouts or 0) < SCOUTS
+            and (view.free_soldiers > 0 or (home ~= nil and home.units > 1)) then
+        local o = {verb = "scout", n = 1}
+        local first = nil
+        for _, s in ipairs(view.sites) do
+            if s.claimed and not s.explored and (first == nil or s.distance < first.distance) then
+                first = s
+            end
+        end
+        if first ~= nil then
+            o.x, o.y = first.x, first.y
+        end
+        if view.free_soldiers == 0 then
+            o.from = home.id
+        end
+        if order("scout", o) then
+            A.track(memory, orders, "scout")
+            memory.scouts = (memory.scouts or 0) + 1
+        end
+    end
+    if view.free_soldiers > 0 then
+        if home ~= nil then
+            order("guard", {verb = "defend", group = home.id, n = view.free_soldiers})
+        elseif order("guard", {verb = "defend", n = view.free_soldiers}) then
+            A.track(memory, orders, "home")
         end
     end
 

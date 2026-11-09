@@ -5857,7 +5857,7 @@ void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit)
             inUnit->ClearGoalQueue(0);
     }
     theGoals = inUnit->mGoalQueues[0].mGoals.size();
-    if (inUnit->mIsDetachedFromAI && theGoals <= 1) {
+    if (inUnit->mIsDetachedFromAI && theGoals <= 1 && !EECPNextHoldsUnit(this, inUnit)) {   // (a next group keeps its units)
         inUnit->mIsDetachedFromAI = false;
         this->mCombatManager->UnitAdded(inUnit);
     }

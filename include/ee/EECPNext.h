@@ -47,12 +47,14 @@ enum EECPNextReason {
     kNextReasonNoUnits,         // no units to form the group from
     kNextReasonRequirements,    // the epoch's SOL is not met, or the last epoch is reached
     kNextReasonBusy,            // already queued or under way
+    kNextReasonNoTarget,        // a group verb: no place to go (no enemy town seen, nothing left to explore)
 };
 
 struct EECPNextResult {
     long mCode;                 // EECPNextCode
     long mReason;               // EECPNextReason
     long mCount;                // what was done or queued (units, buildings, gatherers)
+    long mGroup;                // the group verbs: the group's id (0: none)
 };
 
 const char* EECPNextCodeName(long inCode);       // "done", "queued", "refused"
@@ -124,6 +126,45 @@ struct EECPNextEnemy {          // what the player has seen of an enemy
     long seen_strength;         // their hit points x attack
     long last_seen;             // the game ms of the last sighting of any of its units (0: never)
     long town_x, town_y;        // the last town centre seen (-1: none)
+    // (the army side, docs/AI_LUA_PLAN.md §5 S4)
+    long towers;                // its towers seen and not seen destroyed (EECPNextArmy's memory)
+    long citizens_seen;         // its citizens and fishing boats in sight now
+    long citizen_x, citizen_y;  // the latest place its gatherers were seen with no known tower near (-1: none)
+    long army_x, army_y;        // where its soldiers were last seen (-1: never)
+};
+
+// a group of the next engine (EECPNextArmy.cpp): soldiers the strategy took out of the classic attack commander
+enum EECPNextTask {
+    kNextTaskAttack = 1,        // fight its way to a place (an enemy's town): soldiers, then citizens, towers, buildings
+    kNextTaskRaid = 2,          // the enemy's gatherers and fishing boats; away from its towers; no buildings
+    kNextTaskDefend = 3,        // hold a place: the enemies within its radius
+    kNextTaskRetreat = 4,       // back to the town without fighting; then it defends the town
+    kNextTaskScout = 5,         // walk to the unexplored land without fighting (the view's enemies fill from it)
+};
+
+enum EECPNextGroupState {
+    kNextGroupForming = 0,      // its soldiers gather (at most 20 s)
+    kNextGroupMoving = 1,       // on its way
+    kNextGroupFighting = 2,     // attacking what it sees
+    kNextGroupArrived = 3,      // at its place with nothing to fight (attack, raid, defend)
+    kNextGroupDone = 4,         // a scout with nothing left to explore that it can reach
+};
+
+struct EECPNextGroupView {
+    long id;
+    long task;                  // EECPNextTask
+    long state;                 // EECPNextGroupState
+    long units;
+    long strength;              // hit points x attack
+    long x, y;                  // the tile at its centre
+    long target;                // the player it attacks or raids (0: none)
+    long tx, ty;                // its place
+    long enemy_count;           // seen enemy soldiers within 12 tiles of its centre
+    long enemy_strength;
+    long targets;               // seen enemy units it would fight now
+    long started;               // the units it had at its largest
+    long lost;                  // its units lost
+    long created;               // game ms
 };
 
 struct EECPNextClassCost {      // a class the player can make now (its tech is available and not obsolete)
@@ -182,7 +223,9 @@ struct EECPNextView {
     long sol_missing;           // the next epoch's SOL still missing
     std::vector<EECPNextClassCost> costs;
     std::vector<EECPNextEvent> events;      // since the last step
-    long groups;                // the attack commander's groups
+    std::vector<EECPNextGroupView> groups;  // the next engine's groups (EECPNextArmy.cpp)
+    long free_soldiers;         // land soldiers in none of them (the classic attack commander keeps these)
+    long free_strength;
 };
 
 void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView);
@@ -227,10 +270,41 @@ EECPNextResult EECPNextReserve(EEComputerPlayer* inPlayer, long inFood, long inW
 EECPNextResult EECPNextResearch(EEComputerPlayer* inPlayer, long inTech);
 // advance(): the next epoch, only when its SOL is met and it is paid (the town centre researches it at once)
 EECPNextResult EECPNextAdvance(EEComputerPlayer* inPlayer);
+// The groups (EECPNextArmy.cpp; docs/AI_LUA_PLAN.md "S4 as built"). A group verb takes up to n of the free land
+// soldiers (in none of the next engine's groups; only the classes named, when any are), the nearest to its place
+// first (a raid and a scout: the fastest first), out of the classic attack commander (DetachUnitFromAI), into a new
+// group, or into group inGroup when it names one (which then takes the new task). Its units are its own until it is
+// disbanded or empty: every step the army moves them and picks their targets from what the player sees.
+struct EECPNextGroupOrder {
+    long mGroup;                // 0: a new group; else the group to add to and give the task
+    long mCount;                // the free soldiers to add (0: none, for a group named)
+    long mFrom;                 // 0: the free soldiers; else the soldiers are taken out of this group
+    std::vector<long> mClasses; // only these classes (empty: any)
+    long mPlayer;               // attack, raid: the target player (0: the first enemy)
+    long mX, mY;                // the place (-1: the task's default: the town, the target's town, a gather spot)
+    long mRadius;               // defend: the tiles round the place it holds (0: the claim range at the town, else 12)
+};
+// attack, raid, defend or scout (EECPNextTask)
+EECPNextResult EECPNextGroupTask(EEComputerPlayer* inPlayer, long inTask, const EECPNextGroupOrder& inOrder);
+// retreat(group): back to the town (or x, y), not fighting on the way; group 0: every group but the scouts
+EECPNextResult EECPNextRetreat(EEComputerPlayer* inPlayer, long inGroup, long inX, long inY);
+// regroup(group[, x, y]): gather at a place (default: the group's own centre) and hold it (a defence of 8 tiles)
+EECPNextResult EECPNextRegroup(EEComputerPlayer* inPlayer, long inGroup, long inX, long inY);
+// disband(group): its soldiers go back to the classic attack commander
+EECPNextResult EECPNextDisband(EEComputerPlayer* inPlayer, long inGroup);
 // defend(x, y, n): a group of up to n soldiers to a tile (the town centre's: x = y = -1)
 EECPNextResult EECPNextDefend(EEComputerPlayer* inPlayer, long inX, long inY, long inCount);
 // attack(player, n): a group of up to n soldiers against a player
 EECPNextResult EECPNextAttack(EEComputerPlayer* inPlayer, long inTarget, long inCount);
+// the army's step (EECPNextUpdate, before the view): drops lost units, fights and moves the groups, keeps the
+// scouting memory (the enemies' gather spots and towers)
+void EECPNextArmyStep(EEComputerPlayer* inPlayer);
+// the view's army fields: groups, free_soldiers, free_strength and the enemies' army fields
+void EECPNextArmyView(EEComputerPlayer* inPlayer, EECPNextView& ioView);
+// a unit in one of the next engine's groups (EEComputerPlayer::UnitGoalDone keeps it detached from the classic AI)
+bool EECPNextHoldsUnit(const EEComputerPlayer* inPlayer, const EEComplexUnit* inUnit);
+const char* EECPNextTaskName(long inTask);         // "attack", "raid", "defend", "retreat", "scout"
+const char* EECPNextGroupStateName(long inState);  // "forming", "moving", "fighting", "arrived", "done"
 
 // ---------------------------------------------------------------------------------------------------------------
 // The per-player state of the next engine (EEComputerPlayer::mNextState; created on its first tick, or by a loaded
@@ -249,6 +323,37 @@ struct EECPNextOrderResult {
     long mCode;                 // EECPNextCode
     long mReason;               // EECPNextReason
     long mCount;
+    long mGroup;                // the group verbs: the group's id
+};
+
+// a group of the next engine (EECPNextArmy.cpp)
+struct EECPNextGroup {
+    long mID;
+    long mTask;                 // EECPNextTask
+    long mState;                // EECPNextGroupState
+    long mTarget;               // attack, raid: the target player
+    long mX, mY;                // its place
+    long mRadius;               // defend: the tiles it holds round its place
+    long mCreated, mStateTime;  // game ms: made, and since its state
+    long mWayX, mWayY, mWayTime;   // the move it gave last, and when
+    long mStarted, mLost;       // its largest unit count, its units lost
+    std::vector<long> mUnits;   // unit ids
+    std::vector<long> mAims;    // each unit's target (a unit id; 0 none)
+    std::vector<long> mSkips;   // a scout: the places it could not reach (x << 16 | y)
+};
+
+// what the army remembers of an enemy's place: a gather spot (its citizens or fishing boats seen there) or a tower
+struct EECPNextSpot {
+    long mPlayer;
+    long mX, mY;
+    long mTime;                 // game ms last seen
+    long mUnit;                 // a tower: its unit id (0: a gather spot)
+};
+
+// an enemy unit the player sees now (EECPNextArmyStep; not saved, rebuilt each step)
+struct EECPNextSeen {
+    long mUnit, mPlayer, mX, mY, mKind, mStrength, mHitPoints;
+    unsigned short mContinent;
 };
 
 struct EECPNextState {
@@ -271,6 +376,14 @@ struct EECPNextState {
     long mSeenTownX[64], mSeenTownY[64];
     std::vector<EECPNextEvent> mEvents;     // since the last step
     EECPNextTestMemory mTest;
+    // the army (EECPNextArmy.cpp; saved from the state block's version 2)
+    std::vector<EECPNextGroup> mGroups;
+    long mNextGroup;                        // the next group's id
+    std::vector<EECPNextSpot> mSpots;       // the enemies' gather spots (at most 8 a player)
+    std::vector<EECPNextSpot> mTowers;      // the enemies' towers seen and not seen destroyed
+    long mSeenCitizens[64];                 // citizens and fishing boats in sight at the last step, by player id
+    long mArmyX[64], mArmyY[64];            // where its soldiers were last seen (-1 never)
+    std::vector<EECPNextSeen> mSeen;        // (transient) the enemy units in sight this step
     // the strategy (EECPNextLua.cpp; docs/AI_LUA_PLAN.md §3.2)
     EECPLuaState* mLua;                     // the script's Lua state (NULL until the first step)
     std::string mScript;                    // the module it runs ("c++": the C++ test opening, TEST ONLY); "" not chosen
