@@ -12,6 +12,7 @@ pub mod config;
 pub mod path;
 pub mod sim;
 pub mod string;
+pub mod time;
 
 /// Copies between C strings and the game's byte strings.
 pub(crate) mod c_text {
