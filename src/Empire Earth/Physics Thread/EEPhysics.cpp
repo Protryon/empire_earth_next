@@ -85,6 +85,8 @@
 #include "ee/EEMap.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EECPTrace.h"
+#include "ee/EESaveGameFiles.h"
+#include <functional>
 // chain at 0x551c28 (wrapper)
 //   object 0x931ce0  ctor __imp_??0UString@@QAE@PBD@Z  dtor __imp_??1UString@@UAE@XZ
 UString gPhysicsDataKey("EEPhysics Data");
@@ -486,6 +488,12 @@ void EEPhysics::Init()
 // equals continue"). Not saved state: a load sets it, the first tick spends it.
 static unsigned long sLoadedSeed = 0;
 static bool sLoadedSeedPending = false;
+static std::vector<std::function<void()> > sAfterLoad;   // EEAfterLoad's (ee/EESaveGameFiles.h)
+
+void EEAfterLoad(std::function<void()> inFixup)
+{
+    sAfterLoad.push_back(inFixup);
+}
 
 // FUNCTION: EXE 0x552a4d
 // Reads the physics clocks, tick counters, timing averages and civ timer state from a saved game (the game-over
@@ -729,6 +737,12 @@ void EEPhysics::Tick()
     if (sLoadedSeedPending) {   // port: a loaded game goes on from the saved seed (sLoadedSeed)
         sLoadedSeedPending = false;
         this->mRandom.SetSeed(sLoadedSeed);
+    }
+    if (!sAfterLoad.empty()) {   // port: the loaded values the load's rebuilding set again (EEAfterLoad)
+        std::vector<std::function<void()> > theFixups;
+        theFixups.swap(sAfterLoad);
+        for (size_t i = 0; i < theFixups.size(); i++)
+            theFixups[i]();
     }
     this->ReportStatistics();
     if (this->mTicksToProcess == 0) {

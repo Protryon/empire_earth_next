@@ -5,6 +5,8 @@
 #ifndef EE_EESAVEGAMEFILES_H
 #define EE_EESAVEGAMEFILES_H
 
+#include <functional>
+
 class EEGameOptions;
 class FSFile;
 class FSFileSpec;
@@ -17,6 +19,9 @@ inline bool EESaveHasLiveState(unsigned long inMajorVersion, unsigned long inMin
 {
     return inMajorVersion > 0 || inMinorVersion >= 253;
 }
+// port: a loaded value to put back at the loaded game's first tick, after the load's own rebuilding (which sets some
+// of them again: animations, collision radii, ...); EEPhysics::Tick runs them once (EEPhysics.cpp)
+void EEAfterLoad(std::function<void()> inFixup);
 
 // 0x14ce98: opens inName in data\inDirectory (the lobby's load checks); keseOK and outFile on success
 // (gDataPath->FindFile(inDirectory + inName, outFile), hence FSFileSpec*&)

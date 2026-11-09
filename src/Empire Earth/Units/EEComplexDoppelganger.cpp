@@ -21,6 +21,7 @@
 #include "lle/FSFile.h"
 #include "lle/FSRestorable.h"
 
+#include "ee/EESaveGameFiles.h"
 #include "ee/EmpireEarth.h"
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
@@ -682,6 +683,56 @@ LoadFinalVersions:
         theResult = inFile.Read(this->mSight);
     if ((inMajorVersion != 0 || inMinorVersion >= 0xf5) && theResult == 0)
         theResult = inFile.Read(this->mU32C);
+    // port (0.253): the running state the original did not save (Save); put back at the first tick, after the load's
+    // own rebuilding has set some of it again (EEAfterLoad)
+    if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+        struct LiveState {
+            float mAnimationFraction, mCollisionRadius, mPushVelocityX, mPushVelocityY, mF24C;
+            long mNextFrame, mAIState;
+            unsigned long mNextTriggerTime;
+            std::deque<EEComplexUnitAttacker> mIgnoredTargets;
+            std::vector<U2DPoint<long> > mBoundedPathTiles;
+        } theLive;
+        unsigned long theLiveCount = 0;
+        if ((theResult = inFile.Read(theLive.mAnimationFraction)) == 0 && (theResult = inFile.Read(theLive.mNextFrame)) == 0
+            && (theResult = inFile.Read(theLive.mCollisionRadius)) == 0 && (theResult = inFile.Read(theLive.mPushVelocityX)) == 0
+            && (theResult = inFile.Read(theLive.mPushVelocityY)) == 0 && (theResult = inFile.Read(theLive.mF24C)) == 0
+            && (theResult = inFile.Read(theLive.mAIState)) == 0 && (theResult = inFile.Read(theLive.mNextTriggerTime)) == 0)
+            theResult = inFile.Read(theLiveCount);
+        for (unsigned long k = 0; k < theLiveCount && theResult == 0; k++) {
+            EEComplexUnitAttacker theAttacker;
+            if ((theResult = inFile.Read(theAttacker.mTileX)) == 0 && (theResult = inFile.Read(theAttacker.mTileY)) == 0
+                && (theResult = inFile.Read(theAttacker.mFromX)) == 0 && (theResult = inFile.Read(theAttacker.mFromY)) == 0
+                && (theResult = inFile.Read(theAttacker.mUnitID)) == 0 && (theResult = inFile.Read(theAttacker.mTime)) == 0)
+                theLive.mIgnoredTargets.push_back(theAttacker);
+        }
+        theLiveCount = 0;
+        if (theResult == 0)
+            theResult = inFile.Read(theLiveCount);
+        for (unsigned long k = 0; k < theLiveCount && theResult == 0; k++) {
+            U2DPoint<long> theTile;
+            if ((theResult = inFile.Read(theTile.mX)) == 0 && (theResult = inFile.Read(theTile.mY)) == 0)
+                theLive.mBoundedPathTiles.push_back(theTile);
+        }
+        unsigned long theUnitID = this->mUnitID;
+        EEComplexUnit* theSelf = this;   // only while it is the world's unit of that id (not a doppelganger, not freed)
+        if (theResult == 0)
+            EEAfterLoad([theUnitID, theSelf, theLive]() {
+                EEComplexUnit* theUnit = theSelf;
+                if (static_cast<RTSUnit*>(theUnit) != gWorld.GetUnit(theUnitID))
+                    return;
+                theUnit->mAnimationFraction = theLive.mAnimationFraction;
+                theUnit->mNextFrame = theLive.mNextFrame;
+                theUnit->mCollisionRadius = theLive.mCollisionRadius;
+                theUnit->mPushVelocityX = theLive.mPushVelocityX;
+                theUnit->mPushVelocityY = theLive.mPushVelocityY;
+                theUnit->mF24C = theLive.mF24C;
+                theUnit->mAIState = theLive.mAIState;
+                theUnit->mNextTriggerTime = theLive.mNextTriggerTime;
+                theUnit->mIgnoredTargets = theLive.mIgnoredTargets;
+                theUnit->mBoundedPathTiles = theLive.mBoundedPathTiles;
+            });
+    }
     return theResult;
 }
 
@@ -1227,6 +1278,28 @@ SaveFinalFields:
         && (theResult = outFile.Write(this->mIsSpecialAttack)) == 0 && (theResult = outFile.Write(this->mDisabledReason)) == 0
         && (theResult = outFile.Write(this->mPlanetID)) == 0 && (theResult = outFile.Write(this->mSight)) == 0)
         theResult = outFile.Write(this->mU32C);
+    // port (0.253): the running state the original did not save: the animation, collision and push, the AI state and
+    // trigger time, the targets ignored for now and the tiles a bounded path avoids (Load)
+    if (theResult == 0 && EESaveHasLiveState(inMajorVersion, inMinorVersion)) {
+        if ((theResult = outFile.Write(this->mAnimationFraction)) == 0 && (theResult = outFile.Write(this->mNextFrame)) == 0
+            && (theResult = outFile.Write(this->mCollisionRadius)) == 0 && (theResult = outFile.Write(this->mPushVelocityX)) == 0
+            && (theResult = outFile.Write(this->mPushVelocityY)) == 0 && (theResult = outFile.Write(this->mF24C)) == 0
+            && (theResult = outFile.Write(this->mAIState)) == 0 && (theResult = outFile.Write(this->mNextTriggerTime)) == 0)
+            theResult = outFile.Write((unsigned long)this->mIgnoredTargets.size());
+        for (size_t k = 0; k < this->mIgnoredTargets.size() && theResult == 0; k++) {
+            const EEComplexUnitAttacker& theAttacker = this->mIgnoredTargets[k];
+            if ((theResult = outFile.Write(theAttacker.mTileX)) == 0 && (theResult = outFile.Write(theAttacker.mTileY)) == 0
+                && (theResult = outFile.Write(theAttacker.mFromX)) == 0 && (theResult = outFile.Write(theAttacker.mFromY)) == 0
+                && (theResult = outFile.Write(theAttacker.mUnitID)) == 0)
+                theResult = outFile.Write(theAttacker.mTime);
+        }
+        if (theResult == 0)
+            theResult = outFile.Write((unsigned long)this->mBoundedPathTiles.size());
+        for (size_t k = 0; k < this->mBoundedPathTiles.size() && theResult == 0; k++) {
+            if ((theResult = outFile.Write(this->mBoundedPathTiles[k].mX)) == 0)
+                theResult = outFile.Write(this->mBoundedPathTiles[k].mY);
+        }
+    }
     return theResult;
 }
 
