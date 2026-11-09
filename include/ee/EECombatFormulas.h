@@ -1,0 +1,155 @@
+// New (port): the combat and unit formulas as plain data (docs/RUST_PLAN.md R5b.2): the damage of a hit, the attack
+// factor's difficulty scale, the elevation factor, morale, hit points and healing, conversion, the ballistic pitch,
+// the projectile's arc and the reach and range tests. The C++ unit methods gather each formula's inputs from the
+// world into a record and get the result back; nothing here reads the world.
+//
+// With EE_SIM_CAPTURE set (ee/EESimCapture.h, tools/sim_capture.py) every call appends one record: the tag, the
+// input record's bytes, the output's bytes (every field 4 bytes, no padding). Requires lle/LowLevelEngine.h.
+#ifndef EE_EECOMBATFORMULAS_H
+#define EE_EECOMBATFORMULAS_H
+
+#include <stdint.h>
+
+#include "rust/ee_rust.h"
+#include "ee/EESimCapture.h"
+
+// The records (EeCombat*In, EeCombat*Out) and the formulas are ee_combat's (rust/crates/ee_combat; the field order
+// is the capture's layout). The C++ formulas they replace were deleted after the capture equalled theirs.
+
+// ---- the calls (and the capture)
+
+template <class In, class Out> inline void EECombatCapture(unsigned int inTag, const In& inInput, const Out& inOutput)
+{
+    if (!EESimCaptureRecord::Active())
+        return;
+    EESimCaptureRecord theRecord(inTag);
+    theRecord.Bytes(&inInput, sizeof(In));
+    theRecord.Bytes(&inOutput, sizeof(Out));
+    theRecord.Commit();
+}
+
+#define EE_COMBAT_TAG(a, b, c, d) ((unsigned int)(a) | ((unsigned int)(b) << 8) | ((unsigned int)(c) << 16) | ((unsigned int)(d) << 24))
+
+inline float EECombatAttackFactor(const EeCombatAttackFactorIn& in)
+{
+    float theOut = ee_combat_attack_factor(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'A', 'F'), in, theOut);
+    return theOut;
+}
+inline float EECombatHitFactor(const EeCombatDamageIn& in) { return ee_combat_hit_factor(&in); }
+inline EeCombatDamageOut EECombatDamage(const EeCombatDamageIn& in)
+{
+    EeCombatDamageOut theOut = ee_combat_damage(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'M'), in, theOut);
+    return theOut;
+}
+inline float EECombatElevation(const EeCombatElevationIn& in)
+{
+    float theOut = ee_combat_elevation(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'E', 'L'), in, theOut);
+    return theOut;
+}
+inline int32_t EECombatMorale(const EeCombatMoraleIn& in)
+{
+    int32_t theOut = ee_combat_morale(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'M', 'O'), in, theOut);
+    return theOut;
+}
+inline EeCombatHitPointsOut EECombatHitPoints(const EeCombatHitPointsIn& in)
+{
+    EeCombatHitPointsOut theOut = ee_combat_hit_points(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'T', 'H'), in, theOut);
+    return theOut;
+}
+inline int32_t EECombatDamageEffect(const EeCombatDamageEffectIn& in)
+{
+    int32_t theOut = ee_combat_damage_effect(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'E'), in, theOut);
+    return theOut;
+}
+inline EeCombatRegenerateOut EECombatRegenerate(const EeCombatRegenerateIn& in)
+{
+    EeCombatRegenerateOut theOut = ee_combat_regenerate(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'R', 'G'), in, theOut);
+    return theOut;
+}
+inline EeCombatTimerOut EECombatTimer(const EeCombatTimerIn& in)
+{
+    EeCombatTimerOut theOut = ee_combat_timer(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'T', 'M'), in, theOut);
+    return theOut;
+}
+inline EeCombatHealOut EECombatHeal(const EeCombatHealIn& in)
+{
+    EeCombatHealOut theOut = ee_combat_heal(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'H', 'L'), in, theOut);
+    return theOut;
+}
+inline EeCombatHealStepOut EECombatHealStep(const EeCombatHealStepIn& in)
+{
+    EeCombatHealStepOut theOut = ee_combat_heal_step(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'H', 'S'), in, theOut);
+    return theOut;
+}
+inline int32_t EECombatConversionCost(const EeCombatConversionCostIn& in)
+{
+    int32_t theOut = ee_combat_conversion_cost(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'C', 'C'), in, theOut);
+    return theOut;
+}
+inline EeCombatConversionOut EECombatConversion(const EeCombatConversionIn& in)
+{
+    EeCombatConversionOut theOut = ee_combat_conversion(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'C', 'V'), in, theOut);
+    return theOut;
+}
+inline EeCombatBallisticOut EECombatBallistic(const EeCombatBallisticIn& in)
+{
+    EeCombatBallisticOut theOut = ee_combat_ballistic(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'B', 'P'), in, theOut);
+    return theOut;
+}
+inline EeCombatArcOut EECombatArc(const EeCombatArcIn& in)
+{
+    EeCombatArcOut theOut = ee_combat_arc(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'P', 'A'), in, theOut);
+    return theOut;
+}
+inline int32_t EECombatRange(const EeCombatRangeIn& in)
+{
+    int32_t theOut = ee_combat_range(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'R', 'H'), in, theOut);
+    return theOut;
+}
+inline int32_t EECombatCanReach(const EeCombatReachIn& in)
+{
+    int32_t theOut = ee_combat_can_reach(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'R', 'C'), in, theOut);
+    return theOut;
+}
+inline int32_t EECombatWorkReach(const EeCombatReachIn& in)
+{
+    int32_t theOut = ee_combat_work_reach(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'R', 'W'), in, theOut);
+    return theOut;
+}
+inline int32_t EECombatGatherReach(const EeCombatReachIn& in)
+{
+    int32_t theOut = ee_combat_gather_reach(&in);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'R', 'T'), in, theOut);
+    return theOut;
+}
+inline int32_t EECombatWithinRange(float inDistanceSquared, float inRange)
+{
+    int32_t theOut = ee_combat_within_range(inDistanceSquared, inRange);
+    float theIn[2] = {inDistanceSquared, inRange};
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'H', 'R'), theIn, theOut);
+    return theOut;
+}
+inline void EECombatDamageRow(const EeCombatDamageRowIn& in, EeCombatDamageRowOut& out)
+{
+    ee_combat_damage_row(&in, &out);
+    EECombatCapture(EE_COMBAT_TAG('C', 'B', 'D', 'T'), in, out);
+}
+
+#endif

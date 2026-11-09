@@ -3205,3 +3205,49 @@ and `UIComboBox` (where the list opens, the popup and the capture, the mouse and
 - **Still C++ in R6's toolkit:** `UITriStateCheckBox`, `UIBlinkingButton`'s fading, `UIScalableButton`'s three-part
   draw, `UIControlsTable` (forms from the db), `UIManager` (form stack, event dispatch), every `DrawPolygons`/
   `DrawTextA`, the edit box's key dispatch and repeat timers.
+
+## R5b.2: the combat and unit formulas in Rust (ee_combat, branch rust-r5b-combat, 2026-11-09)
+
+`rust/crates/ee_combat` holds the per-unit formulas of `src/Empire Earth/Units`, `Physics Thread` and the unit
+utilities in `User Interface Thread/EEFOFindNewTargetNearOldTarget.cpp`. The C++ methods keep their signatures and
+their world access; each fills a plain record (`EeCombat*In`, `ee/EECombatFormulas.h`), calls Rust and acts on the
+result. Moved, with their callers:
+
+| Formula | C++ caller(s) | Tag |
+|---|---|---|
+| damage of a hit (direct, splash, trample) | `EEUnitClass::ComputeDamage` (ApplyHit, ApplyAreaDamage, `EEPhysicsModel`'s trample) | CBDM |
+| the attack factor's difficulty scale | `EEToHitTable::GetAttackFactor` (ComputeDamage; the AI, the UI target screens) | CBAF |
+| elevation factor | `EEUnitClass::GetElevationFactor` | CBEL |
+| morale | `EEComplexUnit::ApplyMorale` (TakeHit) | CBMO |
+| a hit's hit points, badly hurt; the damage effect threshold | `EEUnit::TakeHit` | CBTH, CBDE |
+| regeneration | `EEUnitClass::Regenerate` | CBRG |
+| garrison healing (timer, per unit), the heal goal (clock, heal) | `EEUnitClass::HealGarrison`, `EEUGHealUnit::Work` | CBTM, CBHL, CBHS |
+| heal range | `EEUGHealUnit::IsInRange` | CBHR |
+| conversion cost; the conversion clock and chance | `EEGetConversionCost`; both priests' `UpdateConversion` | CBCC, CBCV |
+| ballistic pitch | `EEGetBallisticPitch` (LaunchProjectile, the attack range checks) | CBBP |
+| a projectile's arc | `EEPMProjectile::Step0` | CBPA |
+| range to hit; contact, work and gather reach | `EEIsInRangeToHit`; `EECanReach`, `EEIsInWorkReach`, `EEIsInGatherReach` | CBRH, CBRC, CBRW, CBRT |
+| the damage table rows and their difficulty twins | `EETerrainTypeTable::LoadDamageTables` | CBDT |
+
+- **The gate is the capture, as for formations.** Every call appends its input record and its output
+  (`EECombatCapture`). The golden lines in `tools/sim_capture/golden_cpp.txt` were written from a build where the same
+  records went through C++ copies of the formulas (the commit before the switch; those copies were the original
+  arithmetic moved into the header, and the sim oracle stayed identical with them). `sim_capture.py replay` runs
+  `ee_combat`'s `combat_replay` over every record, byte for byte; `check` then gates the Rust build's own capture.
+- **The AI games never heal, regenerate or convert** (CBHL, CBHS, CBTM, CBRG, CBCV, CBHR were absent from the
+  six games, CBRH and CBCC in one each). As for formations, EE-SIM's capture sweep (`EECombatCaptureSweep`, every five
+  game minutes) calls those formulas over each player's newest 64 living units and their neighbours: real stats,
+  distances, timers and conversion factors, plus fixed variations (timers 0/tick/1000, full resistance with and
+  without adaptation, dead units). It reads the world only; the traces stay equal with it. The healing and
+  conversion paths themselves (which unit heals whom, the draw) are still not exercised by any game gate.
+- **What stays C++ and why.** The draws (`URandom::Generate` in the conversion attempt), the effects, events and
+  sounds, the target walks (`ApplyAreaDamage`'s tile loop), `GETransformation` in the arc, and the table storage:
+  `gDamageTable` and its twins are indexed directly by the AI (EECPASG*, EEHerd, EECPAttackSubGroup*), the messages and
+  the UI, which this branch does not touch; only the rows' arithmetic moved.
+- **Lazy inputs stay lazy.** The original read some inputs only on one branch: the attack factor not for a direct hit
+  without attack, the elevation and the fanatic flag only for a damaging hit (`ee_combat_hit_factor` lets the C++
+  decide that), the adaptation power only at full resistance, the projectile's own launch speed only when the
+  launcher's is zero, a crusader's heal range only for a crusader. Reading them eagerly would index
+  `gDamageTable` at a projectile's -1 ammo column or dereference a missing launcher class.
+- **Two C++ conversions to keep**: `(long)(tick_seconds * -1000.0f)` is a truncation (`ee_combat::truncate`, with
+  x86's indefinite value, not `as`), and `UMCeil` compares the rounded `long` with the float as a float.

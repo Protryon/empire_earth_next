@@ -19,6 +19,26 @@ constexpr static const int32_t CODE_FAILURE = 21;
 
 constexpr static const int32_t CODE_OUTPUT_TOO_SMALL = 22;
 
+/// `kDamageDirect`, `kDamageSplash`, `kDamageTrample` (`ee/EERules.h`).
+constexpr static const int32_t EE_COMBAT_DAMAGE_DIRECT = 0;
+
+constexpr static const int32_t EE_COMBAT_DAMAGE_SPLASH = 1;
+
+constexpr static const int32_t EE_COMBAT_DAMAGE_TRAMPLE = 2;
+
+/// The columns of a damage table row (the attack kinds).
+constexpr static const size_t EE_COMBAT_DAMAGE_COLUMNS = 68;
+
+/// `kUUContactMargin`, `kUUWorkReach`, `kUUGatherReach` (0x449b7c..0x449b84).
+constexpr static const float EE_COMBAT_CONTACT_MARGIN = 1.42;
+
+constexpr static const float EE_COMBAT_WORK_REACH = 1.5;
+
+constexpr static const float EE_COMBAT_GATHER_REACH = 1.42;
+
+/// `k447ADC`: 1 / sqrt(6), the elevation thresholds' scale.
+constexpr static const float EE_COMBAT_ELEVATION_SCALE = 0.40824828;
+
 constexpr static const uint32_t ALIGN_LEFT = 0;
 
 constexpr static const uint32_t ALIGN_CENTER = 1;
@@ -549,6 +569,421 @@ struct EeAStarPathSectorFill {
 /// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
 using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
+/// `EEToHitTable::GetAttackFactor`'s inputs.
+struct EeCombatAttackFactorIn {
+  /// `gDamageTable[the target class's family][the attack kind]`
+  float factor;
+  /// the target class `CanBeAttacked`
+  int32_t attackable;
+  /// both players exist
+  int32_t players_present;
+  /// `IsHuman` and not player 0
+  int32_t attacker_human;
+  int32_t target_human;
+  /// the game's difficulty has a gameoptions.yaml rule
+  int32_t has_rule;
+  /// that rule's scales (0 without one)
+  float scale_human_target;
+  float scale_human_attacker;
+};
+
+/// `EEUnitClass::ComputeDamage`'s inputs.
+struct EeCombatDamageIn {
+  /// `DAMAGE_DIRECT`, `DAMAGE_SPLASH` or `DAMAGE_TRAMPLE`
+  int32_t form;
+  float attack;
+  /// `EEToHitTable::GetAttackFactor` (0, unread, for a direct hit without attack)
+  float attack_factor;
+  /// `gWeaponToHitFactors[the target class's weapon][the attack's weapon]`
+  float weapon_factor;
+  /// the target's armour of the attack's weapon
+  float armor;
+  /// `GetElevationFactor` (1 unless the C++ filled it: not a trample, a positive hit factor)
+  float elevation;
+  /// a direct hit by a cloaked attacker (or owner)
+  int32_t fanatic;
+  int32_t same_player;
+  /// the attacker's player is not an enemy of the target's
+  int32_t allied;
+  /// the attacker is a herd animal
+  int32_t herd;
+  /// splash on the own player's units
+  float friendly_factor;
+  /// combat.yaml
+  int32_t minimum_damage;
+  float fanatic_factor;
+  float elevation_step;
+  float ally_factor;
+  float herd_ally_factor;
+  int32_t trample_damage;
+  float trample_threshold;
+};
+
+struct EeCombatDamageOut {
+  /// the hit does damage
+  int32_t hit;
+  int32_t amount;
+};
+
+/// `EEUnitClass::GetElevationFactor`'s inputs.
+struct EeCombatElevationIn {
+  /// a combat.yaml elevation attacker against an elevation target
+  int32_t applies;
+  /// the attacker's height (its launch height for a projectile)
+  float own_z;
+  float target_z;
+  /// dbworld high_ground_height, low_ground_height (scaled by `ELEVATION_SCALE`)
+  float high_height;
+  float low_height;
+  /// the player's high ground bonus
+  float high_bonus;
+  /// dbworld high_ground_attack_factor, low_ground_attack_factor
+  float high_factor;
+  float low_factor;
+};
+
+/// `EEComplexUnit::ApplyMorale`'s inputs.
+struct EeCombatMoraleIn {
+  int32_t value;
+  /// the unit's positive and negative morale counts
+  int32_t positive;
+  int32_t negative;
+  /// combat.yaml
+  float positive_share;
+  float negative_share;
+};
+
+struct EeCombatHitPointsOut {
+  /// at least 0
+  int32_t hit_points;
+  /// the hit crossed a tenth of the maximum
+  int32_t badly_hurt;
+};
+
+/// `EEUnit::TakeHit`'s hit points.
+struct EeCombatHitPointsIn {
+  int32_t hit_points;
+  int32_t damage;
+  int32_t max_hit_points;
+};
+
+/// `EEUnit::TakeHit`: whether the hit crosses the class's damage effect threshold.
+struct EeCombatDamageEffectIn {
+  int32_t old_hit_points;
+  int32_t hit_points;
+  int32_t max_hit_points;
+  /// the effect's second parameter (a share of the maximum)
+  float threshold;
+};
+
+struct EeCombatRegenerateOut {
+  int32_t timer;
+  int32_t hit_points;
+  /// the hit points change (a living unit)
+  int32_t set;
+};
+
+/// `EEUnitClass::Regenerate`'s inputs.
+struct EeCombatRegenerateIn {
+  int32_t timer;
+  int32_t tick_ms;
+  int32_t hit_points;
+  int32_t regeneration;
+  int32_t max_hit_points;
+  /// combat.yaml regeneration_interval
+  int32_t interval;
+};
+
+struct EeCombatTimerOut {
+  int32_t timer;
+  int32_t due;
+};
+
+/// `EEUnitClass::HealGarrison`'s timer.
+struct EeCombatTimerIn {
+  int32_t timer;
+  int32_t tick_ms;
+  int32_t interval;
+};
+
+struct EeCombatHealOut {
+  /// at most the maximum
+  int32_t hit_points;
+  /// a living unit
+  int32_t set;
+};
+
+/// `EEUnitClass::HealGarrison` per unit, `EEUGHealUnit::Work`.
+struct EeCombatHealIn {
+  int32_t hit_points;
+  int32_t healing;
+  int32_t max_hit_points;
+};
+
+struct EeCombatHealStepOut {
+  uint32_t elapsed;
+  int32_t due;
+};
+
+/// `EEUGHealUnit::Work`'s clock.
+struct EeCombatHealStepIn {
+  uint32_t elapsed;
+  int32_t tick_ms;
+};
+
+/// `EEGetConversionCost`'s inputs.
+struct EeCombatConversionCostIn {
+  /// dbworld conversion_faith_cost
+  int32_t cost;
+  /// the unit's maximum power
+  int32_t power;
+};
+
+struct EeCombatConversionOut {
+  /// the work timer after this tick (no attempt)
+  int32_t timer;
+  /// a second has gone: one attempt
+  int32_t due;
+  /// the attempt converts when the draw is at most this
+  float threshold;
+  /// the work timer after a failed attempt
+  int32_t miss_timer;
+};
+
+/// `EEUCBasicPriest::UpdateConversion`'s (and `EEUCBuildingPriest`'s) inputs.
+struct EeCombatConversionIn {
+  int32_t work_timer;
+  float tick_seconds;
+  /// the target's conversion resistance
+  float resistance;
+  /// the adaptation power lowers a town centre's full resistance (the C++ fills it at resistance 1 only)
+  int32_t adaptation;
+  /// the priest's conversion rate
+  float rate;
+  /// the target player's conversion factor
+  float factor;
+};
+
+struct EeCombatBallisticOut {
+  int32_t reached;
+  float angle;
+};
+
+/// `EEGetBallisticPitch`'s inputs.
+struct EeCombatBallisticIn {
+  float from_x;
+  float from_y;
+  float from_z;
+  float to_x;
+  float to_y;
+  float to_z;
+  /// the launch speed
+  float speed;
+  /// the projectile class's gravity
+  float acceleration;
+  /// the high arc (the class shoots high, or fires over walls high in animation 8)
+  int32_t high;
+};
+
+struct EeCombatArcOut {
+  /// the move from the launch point in the yaw's frame (x is 0)
+  float move_y;
+  float move_z;
+  /// the nose along the arc
+  float pitch;
+};
+
+/// `EEPMProjectile::Step0`'s arc.
+struct EeCombatArcIn {
+  int32_t flight_time_ms;
+  float gravity;
+  float pitch;
+  /// flies straight at `max_velocity`, no gravity
+  int32_t meteor;
+  float max_velocity;
+  /// the launcher class's launch speed (else the projectile's own)
+  float launcher_speed;
+  float own_speed;
+};
+
+/// `EEIsInRangeToHit`'s distance test.
+struct EeCombatRangeIn {
+  float range;
+  /// a crusader's range
+  float heal_range;
+  int32_t crusader;
+  /// `EEGetHitDistanceSquared`
+  float distance_squared;
+  /// the target is a land building: half its inner sphere counts
+  int32_t building;
+  float inner_sphere;
+};
+
+/// `EECanReach`, `EEIsInWorkReach`, `EEIsInGatherReach`.
+struct EeCombatReachIn {
+  float distance_squared;
+  float radius;
+  float other_radius;
+  /// `EECanReach`'s scale (0 for the work and gather tests)
+  float scale;
+  /// work: the target is a wall; gather: the target is a tree
+  int32_t flag_a;
+  /// work: a robotic farm; gather: the unit is a naval citizen
+  int32_t flag_b;
+};
+
+/// One row of the damage tables (`EETerrainTypeTable::LoadDamageTables`).
+struct EeCombatDamageRowIn {
+  int32_t percent[EE_COMBAT_DAMAGE_COLUMNS];
+  /// percent to fraction (`kHeightEpsilon`)
+  float scale;
+  /// dbworld difficulty_damage_scale F, F2
+  float twin1;
+  float twin2;
+};
+
+struct EeCombatDamageRowOut {
+  float base[EE_COMBAT_DAMAGE_COLUMNS];
+  float scaled1[EE_COMBAT_DAMAGE_COLUMNS];
+  float scaled2[EE_COMBAT_DAMAGE_COLUMNS];
+};
+
+/// `GE2DPoint` (sizeof 8).
+struct EeGe2DPoint {
+  float x;
+  float y;
+};
+
+/// Receives one point of an interpolation (`std::vector::push_back` on the C++ side).
+using EeGePush2D = void(*)(void *context, const EeGe2DPoint *point);
+
+/// `GE3DPoint` (sizeof 0xc).
+struct EeGe3DPoint {
+  float x;
+  float y;
+  float z;
+};
+
+/// Receives one point of a 3D interpolation.
+using EeGePush3D = void(*)(void *context, const EeGe3DPoint *point);
+
+/// `GEVector` (sizeof 0xc).
+struct EeGeVector {
+  float x;
+  float y;
+  float z;
+};
+
+/// `GE3DLine` (sizeof 0x18): start, direction.
+struct EeGe3DLine {
+  EeGe3DPoint start;
+  EeGeVector direction;
+};
+
+/// `GE3DPlane` (sizeof 0x18): a point on the plane, the normal.
+struct EeGe3DPlane {
+  EeGe3DPoint point;
+  EeGeVector normal;
+};
+
+/// `GETransformation` (sizeof 0x40): row-major 4x4, the translation in column 3.
+struct EeGeTransformation {
+  float m[4][4];
+};
+
+/// `GEOrientation` (sizeof 0xc).
+struct EeGeOrientation {
+  float yaw;
+  float pitch;
+  float roll;
+};
+
+/// `GEQuaternion` (sizeof 0x10).
+struct EeGeQuaternion {
+  float x;
+  float y;
+  float z;
+  float w;
+};
+
+/// `GEBoundingBox` (sizeof 0x24): the two corners, then width (x), height (z) and depth (y).
+struct EeGeBoundingBox {
+  EeGe3DPoint bottom_left_front;
+  EeGe3DPoint top_right_back;
+  float width;
+  float height;
+  float depth;
+};
+
+/// `GERectangle` (sizeof 0x10), in the C++'s member order.
+struct EeGeRectangle {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
+/// Receives one rectangle of a split.
+using EeGePushRectangle = void(*)(void *context, const EeGeRectangle *rectangle);
+
+/// `GETerrainMesh::GETMPointRow` and `GETMTileRow`: the first map column, the count, the items.
+struct EeGeTmRow {
+  unsigned long start;
+  unsigned long count;
+  const uint8_t *items;
+};
+
+/// What the queries read of a `GETerrainMesh`: its rows and its four map-edge planes (`mFrontPlane`, `mBackPlane`,
+/// `mLeftPlane`, `mRightPlane`, contiguous in the class).
+struct EeGeTerrainView {
+  const EeGeTmRow *point_rows;
+  const EeGeTmRow *tile_rows;
+  unsigned long tile_row_count;
+  const EeGe3DPlane *planes;
+};
+
+/// What `UpdateFogOfWar` reads and writes besides the tile rows: the visible area and its point arrays
+/// (`[side][side]`, indexed `[x - bottom left x][y - bottom left y]`), the render vertices reached through a pointer
+/// to the first one's `mVisibility` and the vertex size.
+struct EeGeTerrainFog {
+  size_t visible_row_count;
+  unsigned long bottom_left_x;
+  unsigned long bottom_left_y;
+  unsigned long tile_width;
+  unsigned long tile_height;
+  unsigned long num_visible_tiles;
+  size_t side;
+  const uint8_t *terrain_point_visible;
+  const uint8_t *water_point_visible;
+  float *terrain_visibility;
+  float *water_visibility;
+  size_t vertex_stride;
+  bool all_visible;
+};
+
+/// The typed reads and writes of one `FSFile` (`FSFile::Read(T&)`, `FSFile::Write(const T&)`).
+struct EeGeFieldIo {
+  void *file;
+  long (*read_u8)(void *file, uint8_t *out);
+  long (*read_u16)(void *file, uint16_t *out);
+  long (*read_u32)(void *file, uint32_t *out);
+  long (*read_f32)(void *file, float *out);
+  long (*write_u8)(void *file, uint8_t value);
+  long (*write_u16)(void *file, uint16_t value);
+  long (*write_u32)(void *file, uint32_t value);
+  long (*write_f32)(void *file, float value);
+};
+
+/// The mesh's members `load_body` updates.
+struct EeGeTerrainLoad {
+  unsigned long space_tile_count;
+  float minimum_z;
+  float maximum_z;
+  unsigned long fractal_seed;
+  /// The fractal seed was read (successfully or not): the C++ recomputes the fractal from it.
+  bool compute_fractal;
+};
+
 /// `GXVIEWPORT`.
 struct EeDx7Viewport {
   unsigned long dwX;
@@ -836,142 +1271,6 @@ struct EeDx7LockOutcome {
   void *memory;
   int32_t pitch;
   bool locked;
-};
-
-/// `GE2DPoint` (sizeof 8).
-struct EeGe2DPoint {
-  float x;
-  float y;
-};
-
-/// Receives one point of an interpolation (`std::vector::push_back` on the C++ side).
-using EeGePush2D = void(*)(void *context, const EeGe2DPoint *point);
-
-/// `GE3DPoint` (sizeof 0xc).
-struct EeGe3DPoint {
-  float x;
-  float y;
-  float z;
-};
-
-/// Receives one point of a 3D interpolation.
-using EeGePush3D = void(*)(void *context, const EeGe3DPoint *point);
-
-/// `GEVector` (sizeof 0xc).
-struct EeGeVector {
-  float x;
-  float y;
-  float z;
-};
-
-/// `GE3DLine` (sizeof 0x18): start, direction.
-struct EeGe3DLine {
-  EeGe3DPoint start;
-  EeGeVector direction;
-};
-
-/// `GE3DPlane` (sizeof 0x18): a point on the plane, the normal.
-struct EeGe3DPlane {
-  EeGe3DPoint point;
-  EeGeVector normal;
-};
-
-/// `GETransformation` (sizeof 0x40): row-major 4x4, the translation in column 3.
-struct EeGeTransformation {
-  float m[4][4];
-};
-
-/// `GEOrientation` (sizeof 0xc).
-struct EeGeOrientation {
-  float yaw;
-  float pitch;
-  float roll;
-};
-
-/// `GEQuaternion` (sizeof 0x10).
-struct EeGeQuaternion {
-  float x;
-  float y;
-  float z;
-  float w;
-};
-
-/// `GEBoundingBox` (sizeof 0x24): the two corners, then width (x), height (z) and depth (y).
-struct EeGeBoundingBox {
-  EeGe3DPoint bottom_left_front;
-  EeGe3DPoint top_right_back;
-  float width;
-  float height;
-  float depth;
-};
-
-/// `GERectangle` (sizeof 0x10), in the C++'s member order.
-struct EeGeRectangle {
-  float bottom;
-  float left;
-  float right;
-  float top;
-};
-
-/// Receives one rectangle of a split.
-using EeGePushRectangle = void(*)(void *context, const EeGeRectangle *rectangle);
-
-/// `GETerrainMesh::GETMPointRow` and `GETMTileRow`: the first map column, the count, the items.
-struct EeGeTmRow {
-  unsigned long start;
-  unsigned long count;
-  const uint8_t *items;
-};
-
-/// What the queries read of a `GETerrainMesh`: its rows and its four map-edge planes (`mFrontPlane`, `mBackPlane`,
-/// `mLeftPlane`, `mRightPlane`, contiguous in the class).
-struct EeGeTerrainView {
-  const EeGeTmRow *point_rows;
-  const EeGeTmRow *tile_rows;
-  unsigned long tile_row_count;
-  const EeGe3DPlane *planes;
-};
-
-/// What `UpdateFogOfWar` reads and writes besides the tile rows: the visible area and its point arrays
-/// (`[side][side]`, indexed `[x - bottom left x][y - bottom left y]`), the render vertices reached through a pointer
-/// to the first one's `mVisibility` and the vertex size.
-struct EeGeTerrainFog {
-  size_t visible_row_count;
-  unsigned long bottom_left_x;
-  unsigned long bottom_left_y;
-  unsigned long tile_width;
-  unsigned long tile_height;
-  unsigned long num_visible_tiles;
-  size_t side;
-  const uint8_t *terrain_point_visible;
-  const uint8_t *water_point_visible;
-  float *terrain_visibility;
-  float *water_visibility;
-  size_t vertex_stride;
-  bool all_visible;
-};
-
-/// The typed reads and writes of one `FSFile` (`FSFile::Read(T&)`, `FSFile::Write(const T&)`).
-struct EeGeFieldIo {
-  void *file;
-  long (*read_u8)(void *file, uint8_t *out);
-  long (*read_u16)(void *file, uint16_t *out);
-  long (*read_u32)(void *file, uint32_t *out);
-  long (*read_f32)(void *file, float *out);
-  long (*write_u8)(void *file, uint8_t value);
-  long (*write_u16)(void *file, uint16_t value);
-  long (*write_u32)(void *file, uint32_t value);
-  long (*write_f32)(void *file, float value);
-};
-
-/// The mesh's members `load_body` updates.
-struct EeGeTerrainLoad {
-  unsigned long space_tile_count;
-  float minimum_z;
-  float maximum_z;
-  unsigned long fractal_seed;
-  /// The fractal seed was read (successfully or not): the C++ recomputes the fractal from it.
-  bool compute_fractal;
 };
 
 /// `GEVector` / `GE3DPoint`: three floats.
@@ -2223,6 +2522,636 @@ bool ee_ue_decrypt_guid(const uint8_t *text,
                         EeCodecSink sink,
                         void *context);
 
+/// `EEToHitTable::GetAttackFactor`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+float ee_combat_attack_factor(const EeCombatAttackFactorIn *input);
+
+/// The to-hit factor `ee_combat_damage` uses (the C++ reads the elevation only when it is positive).
+///
+/// # Safety
+/// `input` must point to a valid record.
+float ee_combat_hit_factor(const EeCombatDamageIn *input);
+
+/// `EEUnitClass::ComputeDamage`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatDamageOut ee_combat_damage(const EeCombatDamageIn *input);
+
+/// `EEUnitClass::GetElevationFactor`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+float ee_combat_elevation(const EeCombatElevationIn *input);
+
+/// `EEComplexUnit::ApplyMorale`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_morale(const EeCombatMoraleIn *input);
+
+/// `EEUnit::TakeHit`'s hit points.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatHitPointsOut ee_combat_hit_points(const EeCombatHitPointsIn *input);
+
+/// `EEUnit::TakeHit`'s damage effect test.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_damage_effect(const EeCombatDamageEffectIn *input);
+
+/// `EEUnitClass::Regenerate`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatRegenerateOut ee_combat_regenerate(const EeCombatRegenerateIn *input);
+
+/// `EEUnitClass::HealGarrison`'s timer.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatTimerOut ee_combat_timer(const EeCombatTimerIn *input);
+
+/// A heal (`HealGarrison`, `EEUGHealUnit::Work`).
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatHealOut ee_combat_heal(const EeCombatHealIn *input);
+
+/// `EEUGHealUnit::Work`'s clock.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatHealStepOut ee_combat_heal_step(const EeCombatHealStepIn *input);
+
+/// `EEGetConversionCost`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_conversion_cost(const EeCombatConversionCostIn *input);
+
+/// `UpdateConversion`'s clock and chance.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatConversionOut ee_combat_conversion(const EeCombatConversionIn *input);
+
+/// `EEGetBallisticPitch`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatBallisticOut ee_combat_ballistic(const EeCombatBallisticIn *input);
+
+/// `EEPMProjectile::Step0`'s arc.
+///
+/// # Safety
+/// `input` must point to a valid record.
+EeCombatArcOut ee_combat_arc(const EeCombatArcIn *input);
+
+/// `EEIsInRangeToHit`'s distance test.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_range(const EeCombatRangeIn *input);
+
+/// `EECanReach`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_can_reach(const EeCombatReachIn *input);
+
+/// `EEIsInWorkReach`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_work_reach(const EeCombatReachIn *input);
+
+/// `EEIsInGatherReach`.
+///
+/// # Safety
+/// `input` must point to a valid record.
+int32_t ee_combat_gather_reach(const EeCombatReachIn *input);
+
+/// `EEUGHealUnit::IsInRange`.
+int32_t ee_combat_within_range(float distance_squared, float range);
+
+/// One damage table row.
+///
+/// # Safety
+/// `input` must point to a valid record and `output` to writable room for one.
+void ee_combat_damage_row(const EeCombatDamageRowIn *input, EeCombatDamageRowOut *output);
+
+/// `UMCos`.
+float ee_ge_um_cos(float angle);
+
+/// `UMArcCos`.
+float ee_ge_um_arccos(float value);
+
+/// `UMArcTan`.
+float ee_ge_um_arctan(float value);
+
+/// `UMArcTan2`.
+float ee_ge_um_arctan2(float y, float x);
+
+/// `UMTan`.
+float ee_ge_um_tan(float angle);
+
+/// `UMQuadraticEquation`: false (roots unwritten) when a and b are 0.
+///
+/// # Safety
+/// `root1` and `root2` are valid for writes.
+bool ee_ge_um_quadratic(float a, float b, float c, float *root1, float *root2);
+
+/// `GE2DPoint::GetDirection`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_2d_direction(const EeGe2DPoint *p, const EeGe2DPoint *from, const EeGe2DPoint *to);
+
+/// `GE2DPoint::DistanceTo`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_2d_distance(const EeGe2DPoint *p, const EeGe2DPoint *q);
+
+/// `GE2DPoint::DistanceToSquared`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_2d_distance_squared(const EeGe2DPoint *p, const EeGe2DPoint *q);
+
+/// `GE2DPoint::RotatePoint(angle, centre, out)` (and the in-place form with `out == p`).
+///
+/// # Safety
+/// The pointers are valid; they may be equal.
+void ee_ge_2d_rotate(const EeGe2DPoint *p,
+                     float angle,
+                     const EeGe2DPoint *center,
+                     EeGe2DPoint *out);
+
+/// `GE2DPoint::InterpolateTo`: each point goes to `push` (the caller clears its vector first).
+///
+/// # Safety
+/// The pointers are valid; `push` may be called with `context`.
+void ee_ge_2d_interpolate(const EeGe2DPoint *from,
+                          const EeGe2DPoint *to,
+                          float step,
+                          EeGePush2D push,
+                          void *context);
+
+/// `GE3DPoint::DistanceTo`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_3d_distance(const EeGe3DPoint *p, const EeGe3DPoint *q);
+
+/// `GE3DPoint::DistanceToSquared`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_3d_distance_squared(const EeGe3DPoint *p, const EeGe3DPoint *q);
+
+/// `GE3DPoint::InterpolateTo`.
+///
+/// # Safety
+/// The pointers are valid; `push` may be called with `context`.
+void ee_ge_3d_interpolate(const EeGe3DPoint *from,
+                          const EeGe3DPoint *to,
+                          float step,
+                          EeGePush3D push,
+                          void *context);
+
+/// `GEVector::GetMagnitude`.
+///
+/// # Safety
+/// `v` is valid.
+float ee_ge_vector_magnitude(const EeGeVector *v);
+
+/// `GEVector::GetMagnitudeSquared`.
+///
+/// # Safety
+/// `v` is valid.
+float ee_ge_vector_magnitude_squared(const EeGeVector *v);
+
+/// `GEVector::CrossProduct(in, out)`, storing each component before computing the next as the C++ does.
+///
+/// # Safety
+/// The pointers are valid; any of them may be equal.
+void ee_ge_vector_cross(const EeGeVector *v,
+                        const EeGeVector *other,
+                        EeGeVector *out);
+
+/// Fills `QuantizedVectorArray::mVectors` (`count` must be 41 * 246).
+///
+/// # Safety
+/// `out` is valid for `count` vectors.
+void ee_ge_vector_quantized_table(EeGeVector *out, size_t count);
+
+/// `GEVector::GetQuantizedVersion` as an index into the table, -1 for the zero vector, -2 for no face
+/// (`vector::QUANT_ZERO`, `vector::QUANT_NONE`).
+///
+/// # Safety
+/// `v` is valid.
+int32_t ee_ge_vector_quantized_index(const EeGeVector *v);
+
+/// `GE3DLine::Intersects(point, tolerance, t)`: `t` written only on a hit.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_line_intersects_point(const EeGe3DLine *line,
+                                 const EeGe3DPoint *point,
+                                 float tolerance,
+                                 float *t);
+
+/// `GE3DLine::Intersects(line, t, lineT)`: the parameters are written whenever a branch computed them.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_line_intersects_line(const EeGe3DLine *line,
+                                const EeGe3DLine *other,
+                                float *t,
+                                float *line_t);
+
+/// `GE3DLine::IntersectsIn2D`: the parameters written only when the lines are not parallel.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_line_intersects_2d(const EeGe3DLine *line,
+                              const EeGe3DLine *other,
+                              float *t,
+                              float *line_t);
+
+/// `GE3DLine::Intersects(plane, t)`.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_line_intersects_plane(const EeGe3DLine *line, const EeGe3DPlane *plane, float *t);
+
+/// `GE3DLine::SolveForX/Y/Z` (`axis` 0, 1, 2), with the point when `point` is not null; nothing written when the
+/// line runs parallel to the axis.
+///
+/// # Safety
+/// `line` and `t` are valid; `point` is null or valid.
+bool ee_ge_line_solve(const EeGe3DLine *line,
+                      uint32_t axis,
+                      float value,
+                      float *t,
+                      EeGe3DPoint *point);
+
+/// `GE3DPlane::Define(p1, p2, p3)`.
+///
+/// # Safety
+/// The pointers are valid; `out` may be the storage of an input.
+void ee_ge_plane_define(const EeGe3DPoint *p1,
+                        const EeGe3DPoint *p2,
+                        const EeGe3DPoint *p3,
+                        EeGe3DPlane *out);
+
+/// `GE3DPlane::Intersects(plane, line)`: the line written only when the planes are not parallel.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_plane_intersects(const EeGe3DPlane *plane, const EeGe3DPlane *other, EeGe3DLine *out);
+
+/// `GE3DPlane::IsPoint*`: `test` 0 above, 1 below, 2 on or above, 3 on or below, 4 on.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_plane_side(const EeGe3DPlane *plane, const EeGe3DPoint *point, uint32_t test);
+
+/// `GETransformation::Apply(transformation, out)`.
+///
+/// # Safety
+/// The pointers are valid; `out` may equal either input.
+void ee_ge_t_compose(const EeGeTransformation *a,
+                     const EeGeTransformation *b,
+                     EeGeTransformation *out);
+
+/// `GETransformation::Apply(line, out)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_t_apply_line(const EeGeTransformation *t, const EeGe3DLine *line, EeGe3DLine *out);
+
+/// `GETransformation::Apply(plane, out)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_t_apply_plane(const EeGeTransformation *t, const EeGe3DPlane *plane, EeGe3DPlane *out);
+
+/// `GETransformation::ConvertToOrientation`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_t_orientation(const EeGeTransformation *t, EeGeOrientation *out);
+
+/// `GETransformation::GetYaw`.
+///
+/// # Safety
+/// `t` is valid.
+float ee_ge_t_yaw(const EeGeTransformation *t);
+
+/// `GETransformation::GetPitch`.
+///
+/// # Safety
+/// `t` is valid.
+float ee_ge_t_pitch(const EeGeTransformation *t);
+
+/// `GETransformation::GetRoll`.
+///
+/// # Safety
+/// `t` is valid.
+float ee_ge_t_roll(const EeGeTransformation *t);
+
+/// `GETransformation::DistanceTo(point)`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_t_distance_to_point(const EeGeTransformation *t, const EeGe3DPoint *p);
+
+/// `GETransformation::DistanceSquaredTo(point)`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_t_distance_squared_to_point(const EeGeTransformation *t, const EeGe3DPoint *p);
+
+/// `GETransformation::DistanceTo(transformation)`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_t_distance_to(const EeGeTransformation *t, const EeGeTransformation *other);
+
+/// `GETransformation::DistanceSquaredTo(transformation)`.
+///
+/// # Safety
+/// The pointers are valid.
+float ee_ge_t_distance_squared_to(const EeGeTransformation *t, const EeGeTransformation *other);
+
+/// `GETransformation::MakeInverse(out)`, in the C++'s store order (an output equal to `t` included).
+///
+/// # Safety
+/// The pointers are valid; they may be equal.
+void ee_ge_t_make_inverse(const EeGeTransformation *t,
+                          EeGeTransformation *out);
+
+/// `GETransformation::MakeLookAtTransform(eye, target)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_t_make_look_at(EeGeTransformation *t, const EeGe3DPoint *eye, const EeGe3DPoint *target);
+
+/// `GETransformation::Normalize`.
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_normalize(EeGeTransformation *t);
+
+/// `GETransformation::Revolve(yaw, pitch, roll)`.
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_revolve(EeGeTransformation *t, float yaw, float pitch, float roll);
+
+/// `GETransformation::Rotate(yaw, pitch, roll)`.
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_rotate(EeGeTransformation *t, float yaw, float pitch, float roll);
+
+/// `GETransformation::Scale(x, y, z)`.
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_scale(EeGeTransformation *t, float x, float y, float z);
+
+/// `GETransformation::SetOrientation{PRY,PYR,RPY,RYP,YPR,YRP}` (`order` 0..5 in that order).
+///
+/// # Safety
+/// `t` is valid.
+void ee_ge_t_set_orientation(EeGeTransformation *t,
+                             uint32_t order,
+                             float yaw,
+                             float pitch,
+                             float roll);
+
+/// `GEOrientation::Normalize`.
+///
+/// # Safety
+/// `o` is valid.
+void ee_ge_orientation_normalize(EeGeOrientation *o);
+
+/// `GEQuaternion::ConvertFrom(transformation)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_quat_from(const EeGeTransformation *t, EeGeQuaternion *out);
+
+/// `GEQuaternion::ConvertTo(transformation)`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_quat_to(const EeGeQuaternion *q, EeGeTransformation *out);
+
+/// `GEQuaternion::Normalize`.
+///
+/// # Safety
+/// `q` is valid.
+void ee_ge_quat_normalize(EeGeQuaternion *q);
+
+/// `GEQuaternion::Slerp(target, t, out)`.
+///
+/// # Safety
+/// The pointers are valid; `out` may equal either input.
+void ee_ge_quat_slerp(const EeGeQuaternion *q,
+                      const EeGeQuaternion *target,
+                      float t,
+                      EeGeQuaternion *out);
+
+/// `GEBoundingBox::ComputeDimensions`.
+///
+/// # Safety
+/// `b` is valid.
+void ee_ge_bbox_compute_dimensions(EeGeBoundingBox *b);
+
+/// `GEBoundingBox::Contains`.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_bbox_contains(const EeGeBoundingBox *b, const EeGe3DPoint *p);
+
+/// `GEBoundingBox::Intersects(box)`.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_bbox_intersects(const EeGeBoundingBox *b, const EeGeBoundingBox *other);
+
+/// `GEBoundingBox::Intersects(line, distance)`: the distance is always written.
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_bbox_intersects_line(const EeGeBoundingBox *b, const EeGe3DLine *line, float *distance);
+
+/// `GEBoundingBox::Transform(transformation, out)`.
+///
+/// # Safety
+/// The pointers are valid; `out` may equal `b`.
+void ee_ge_bbox_transform(const EeGeBoundingBox *b,
+                          const EeGeTransformation *t,
+                          EeGeBoundingBox *out);
+
+/// `GERectangle::And(rectangle)`.
+///
+/// # Safety
+/// The pointers are valid; they may be equal.
+bool ee_ge_rect_and_in_place(EeGeRectangle *r, const EeGeRectangle *other);
+
+/// `GERectangle::And(rectangle, out)`: `out` written only when they overlap.
+///
+/// # Safety
+/// The pointers are valid; `out` may equal either input.
+bool ee_ge_rect_and(const EeGeRectangle *r, const EeGeRectangle *other, EeGeRectangle *out);
+
+/// `GERectangle::RemoveIntersectingRectangle`: each piece goes to `push`; `existing` is the output vector's size
+/// before the call.
+///
+/// # Safety
+/// The pointers are valid; `push` may be called with `context`.
+void ee_ge_rect_remove_intersecting(const EeGeRectangle *r,
+                                    const EeGeRectangle *other,
+                                    size_t existing,
+                                    EeGePushRectangle push,
+                                    void *context);
+
+/// `GETerrainMesh::GetMeshZ`.
+///
+/// # Safety
+/// `view` describes a live mesh; the tile under the position exists.
+float ee_ge_terrain_z(const EeGeTerrainView *view, float x, float y);
+
+/// `GETerrainMesh::GetMeshNormal`.
+///
+/// # Safety
+/// As `ee_ge_terrain_z`; `out` is valid.
+void ee_ge_terrain_normal(const EeGeTerrainView *view, float x, float y, EeGeVector *out);
+
+/// `GETerrainMesh::InitializePlanes`: writes the front, back, left and right planes to `out[0..4]`.
+///
+/// # Safety
+/// `tile_rows` holds `tile_row_count` (at least one) rows; `out` is valid for four planes.
+void ee_ge_terrain_planes(const EeGeTmRow *tile_rows,
+                          unsigned long tile_row_count,
+                          EeGe3DPlane *out);
+
+/// `GETerrainMesh::GetClosestTile(point, x, y)`.
+///
+/// # Safety
+/// The pointers are valid; `view`'s planes are.
+void ee_ge_terrain_closest_tile_point(const EeGeTerrainView *view,
+                                      const EeGe3DPoint *point,
+                                      long *out_x,
+                                      long *out_y);
+
+/// `GETerrainMesh::GetClosestTile(line, x, y)`.
+///
+/// # Safety
+/// The pointers are valid; `view` describes a live mesh.
+void ee_ge_terrain_closest_tile_line(const EeGeTerrainView *view,
+                                     const EeGe3DLine *line,
+                                     long *out_x,
+                                     long *out_y);
+
+/// `GETerrainMesh::Intersects(line, distance)`: `distance` is written whenever the C++ wrote it (a triangle's plane
+/// met, hit or not).
+///
+/// # Safety
+/// The pointers are valid; `view` describes a live mesh.
+bool ee_ge_terrain_intersects(const EeGeTerrainView *view,
+                              const EeGe3DLine *line,
+                              float *distance);
+
+/// `GETerrainMesh::ComputeVertexNormal` before the quantization (the C++ stores `GetQuantizedVersion()` of `out`).
+///
+/// # Safety
+/// `point_rows` holds `point_row_count` live rows, the point exists and `out` is valid.
+void ee_ge_terrain_vertex_normal(const EeGeTmRow *point_rows,
+                                 unsigned long point_row_count,
+                                 unsigned long x,
+                                 unsigned long y,
+                                 EeGeVector *out);
+
+/// `GETerrainMesh::ComputeShorelines`: the tile's new shoreline bits for `SetWaterInfo`, or -1 to leave it alone.
+///
+/// # Safety
+/// `view` describes a live mesh and the tile exists.
+int32_t ee_ge_terrain_shoreline(const EeGeTerrainView *view,
+                                bool space_map,
+                                unsigned long x,
+                                unsigned long y);
+
+/// `GETerrainMesh::UpdateFogOfWar`: writes the visible points' visibility and the two shares; false (nothing
+/// written) when no tile row is visible.
+///
+/// # Safety
+/// `view` and `fog` describe a live mesh; the out pointers are valid.
+bool ee_ge_terrain_fog(const EeGeTerrainView *view,
+                       const EeGeTerrainFog *fog,
+                       float *out_water,
+                       float *out_space);
+
+/// `GETerrainMesh::Save`.
+///
+/// # Safety
+/// `io` is a live field stream; `view` and `point_rows` describe a live mesh.
+long ee_ge_terrain_save(const EeGeFieldIo *io,
+                        const EeGeTerrainView *view,
+                        unsigned long point_row_count,
+                        long width,
+                        long height,
+                        unsigned long fractal_seed);
+
+/// `GETerrainMesh::Load`'s map size (each read through the member's old value).
+///
+/// # Safety
+/// `io` is a live field stream; the pointers are valid.
+long ee_ge_terrain_load_size(const EeGeFieldIo *io, long *width, long *height);
+
+/// `GETerrainMesh::Load` after `CreateFlatMesh`: the tiles, the points and the fractal seed. `valid_sets[id]` is
+/// nonzero for a registered texture set.
+///
+/// # Safety
+/// `io` is a live field stream; `view` and `point_rows` describe a live, writable mesh; `valid_sets` holds 256
+/// bytes; `state` is valid.
+long ee_ge_terrain_load_body(const EeGeFieldIo *io,
+                             const EeGeTerrainView *view,
+                             unsigned long point_row_count,
+                             const uint8_t *valid_sets,
+                             EeGeTerrainLoad *state);
+
+/// One triangle of `GEPhysicalModel::Intersects(location, model, frame, line, ...)`; `distance` is written whenever
+/// the C++ wrote it (the triangle's plane was not parallel to the line).
+///
+/// # Safety
+/// The pointers are valid.
+bool ee_ge_physical_line_triangle(const EeGe3DLine *line,
+                                  const EeGe3DPoint *p1,
+                                  const EeGe3DPoint *p2,
+                                  const EeGe3DPoint *p3,
+                                  bool exact,
+                                  float *distance);
+
+/// `GEPhysicalModel.cpp`'s `ComputeTriangleBox`.
+///
+/// # Safety
+/// The pointers are valid.
+void ee_ge_physical_triangle_box(const EeGe3DPoint *p1,
+                                 const EeGe3DPoint *p2,
+                                 const EeGe3DPoint *p3,
+                                 EeGeBoundingBox *out);
+
 long ee_dx7r_draw_bitmap(void *rast,
                          unsigned long screen,
                          EeDx7ScreenState *state,
@@ -2741,513 +3670,6 @@ uint32_t ee_dx7s_own_size(uint32_t pixel_depth, uint32_t height, uint32_t width)
 int32_t ee_dx7s_text_lock(bool *locked);
 
 int32_t ee_dx7s_text_unlock(bool *locked);
-
-/// `UMCos`.
-float ee_ge_um_cos(float angle);
-
-/// `UMArcCos`.
-float ee_ge_um_arccos(float value);
-
-/// `UMArcTan`.
-float ee_ge_um_arctan(float value);
-
-/// `UMArcTan2`.
-float ee_ge_um_arctan2(float y, float x);
-
-/// `UMTan`.
-float ee_ge_um_tan(float angle);
-
-/// `UMQuadraticEquation`: false (roots unwritten) when a and b are 0.
-///
-/// # Safety
-/// `root1` and `root2` are valid for writes.
-bool ee_ge_um_quadratic(float a, float b, float c, float *root1, float *root2);
-
-/// `GE2DPoint::GetDirection`.
-///
-/// # Safety
-/// The pointers are valid.
-float ee_ge_2d_direction(const EeGe2DPoint *p, const EeGe2DPoint *from, const EeGe2DPoint *to);
-
-/// `GE2DPoint::DistanceTo`.
-///
-/// # Safety
-/// The pointers are valid.
-float ee_ge_2d_distance(const EeGe2DPoint *p, const EeGe2DPoint *q);
-
-/// `GE2DPoint::DistanceToSquared`.
-///
-/// # Safety
-/// The pointers are valid.
-float ee_ge_2d_distance_squared(const EeGe2DPoint *p, const EeGe2DPoint *q);
-
-/// `GE2DPoint::RotatePoint(angle, centre, out)` (and the in-place form with `out == p`).
-///
-/// # Safety
-/// The pointers are valid; they may be equal.
-void ee_ge_2d_rotate(const EeGe2DPoint *p,
-                     float angle,
-                     const EeGe2DPoint *center,
-                     EeGe2DPoint *out);
-
-/// `GE2DPoint::InterpolateTo`: each point goes to `push` (the caller clears its vector first).
-///
-/// # Safety
-/// The pointers are valid; `push` may be called with `context`.
-void ee_ge_2d_interpolate(const EeGe2DPoint *from,
-                          const EeGe2DPoint *to,
-                          float step,
-                          EeGePush2D push,
-                          void *context);
-
-/// `GE3DPoint::DistanceTo`.
-///
-/// # Safety
-/// The pointers are valid.
-float ee_ge_3d_distance(const EeGe3DPoint *p, const EeGe3DPoint *q);
-
-/// `GE3DPoint::DistanceToSquared`.
-///
-/// # Safety
-/// The pointers are valid.
-float ee_ge_3d_distance_squared(const EeGe3DPoint *p, const EeGe3DPoint *q);
-
-/// `GE3DPoint::InterpolateTo`.
-///
-/// # Safety
-/// The pointers are valid; `push` may be called with `context`.
-void ee_ge_3d_interpolate(const EeGe3DPoint *from,
-                          const EeGe3DPoint *to,
-                          float step,
-                          EeGePush3D push,
-                          void *context);
-
-/// `GEVector::GetMagnitude`.
-///
-/// # Safety
-/// `v` is valid.
-float ee_ge_vector_magnitude(const EeGeVector *v);
-
-/// `GEVector::GetMagnitudeSquared`.
-///
-/// # Safety
-/// `v` is valid.
-float ee_ge_vector_magnitude_squared(const EeGeVector *v);
-
-/// `GEVector::CrossProduct(in, out)`, storing each component before computing the next as the C++ does.
-///
-/// # Safety
-/// The pointers are valid; any of them may be equal.
-void ee_ge_vector_cross(const EeGeVector *v,
-                        const EeGeVector *other,
-                        EeGeVector *out);
-
-/// Fills `QuantizedVectorArray::mVectors` (`count` must be 41 * 246).
-///
-/// # Safety
-/// `out` is valid for `count` vectors.
-void ee_ge_vector_quantized_table(EeGeVector *out, size_t count);
-
-/// `GEVector::GetQuantizedVersion` as an index into the table, -1 for the zero vector, -2 for no face
-/// (`vector::QUANT_ZERO`, `vector::QUANT_NONE`).
-///
-/// # Safety
-/// `v` is valid.
-int32_t ee_ge_vector_quantized_index(const EeGeVector *v);
-
-/// `GE3DLine::Intersects(point, tolerance, t)`: `t` written only on a hit.
-///
-/// # Safety
-/// The pointers are valid.
-bool ee_ge_line_intersects_point(const EeGe3DLine *line,
-                                 const EeGe3DPoint *point,
-                                 float tolerance,
-                                 float *t);
-
-/// `GE3DLine::Intersects(line, t, lineT)`: the parameters are written whenever a branch computed them.
-///
-/// # Safety
-/// The pointers are valid.
-bool ee_ge_line_intersects_line(const EeGe3DLine *line,
-                                const EeGe3DLine *other,
-                                float *t,
-                                float *line_t);
-
-/// `GE3DLine::IntersectsIn2D`: the parameters written only when the lines are not parallel.
-///
-/// # Safety
-/// The pointers are valid.
-bool ee_ge_line_intersects_2d(const EeGe3DLine *line,
-                              const EeGe3DLine *other,
-                              float *t,
-                              float *line_t);
-
-/// `GE3DLine::Intersects(plane, t)`.
-///
-/// # Safety
-/// The pointers are valid.
-bool ee_ge_line_intersects_plane(const EeGe3DLine *line, const EeGe3DPlane *plane, float *t);
-
-/// `GE3DLine::SolveForX/Y/Z` (`axis` 0, 1, 2), with the point when `point` is not null; nothing written when the
-/// line runs parallel to the axis.
-///
-/// # Safety
-/// `line` and `t` are valid; `point` is null or valid.
-bool ee_ge_line_solve(const EeGe3DLine *line,
-                      uint32_t axis,
-                      float value,
-                      float *t,
-                      EeGe3DPoint *point);
-
-/// `GE3DPlane::Define(p1, p2, p3)`.
-///
-/// # Safety
-/// The pointers are valid; `out` may be the storage of an input.
-void ee_ge_plane_define(const EeGe3DPoint *p1,
-                        const EeGe3DPoint *p2,
-                        const EeGe3DPoint *p3,
-                        EeGe3DPlane *out);
-
-/// `GE3DPlane::Intersects(plane, line)`: the line written only when the planes are not parallel.
-///
-/// # Safety
-/// The pointers are valid.
-bool ee_ge_plane_intersects(const EeGe3DPlane *plane, const EeGe3DPlane *other, EeGe3DLine *out);
-
-/// `GE3DPlane::IsPoint*`: `test` 0 above, 1 below, 2 on or above, 3 on or below, 4 on.
-///
-/// # Safety
-/// The pointers are valid.
-bool ee_ge_plane_side(const EeGe3DPlane *plane, const EeGe3DPoint *point, uint32_t test);
-
-/// `GETransformation::Apply(transformation, out)`.
-///
-/// # Safety
-/// The pointers are valid; `out` may equal either input.
-void ee_ge_t_compose(const EeGeTransformation *a,
-                     const EeGeTransformation *b,
-                     EeGeTransformation *out);
-
-/// `GETransformation::Apply(line, out)`.
-///
-/// # Safety
-/// The pointers are valid.
-void ee_ge_t_apply_line(const EeGeTransformation *t, const EeGe3DLine *line, EeGe3DLine *out);
-
-/// `GETransformation::Apply(plane, out)`.
-///
-/// # Safety
-/// The pointers are valid.
-void ee_ge_t_apply_plane(const EeGeTransformation *t, const EeGe3DPlane *plane, EeGe3DPlane *out);
-
-/// `GETransformation::ConvertToOrientation`.
-///
-/// # Safety
-/// The pointers are valid.
-void ee_ge_t_orientation(const EeGeTransformation *t, EeGeOrientation *out);
-
-/// `GETransformation::GetYaw`.
-///
-/// # Safety
-/// `t` is valid.
-float ee_ge_t_yaw(const EeGeTransformation *t);
-
-/// `GETransformation::GetPitch`.
-///
-/// # Safety
-/// `t` is valid.
-float ee_ge_t_pitch(const EeGeTransformation *t);
-
-/// `GETransformation::GetRoll`.
-///
-/// # Safety
-/// `t` is valid.
-float ee_ge_t_roll(const EeGeTransformation *t);
-
-/// `GETransformation::DistanceTo(point)`.
-///
-/// # Safety
-/// The pointers are valid.
-float ee_ge_t_distance_to_point(const EeGeTransformation *t, const EeGe3DPoint *p);
-
-/// `GETransformation::DistanceSquaredTo(point)`.
-///
-/// # Safety
-/// The pointers are valid.
-float ee_ge_t_distance_squared_to_point(const EeGeTransformation *t, const EeGe3DPoint *p);
-
-/// `GETransformation::DistanceTo(transformation)`.
-///
-/// # Safety
-/// The pointers are valid.
-float ee_ge_t_distance_to(const EeGeTransformation *t, const EeGeTransformation *other);
-
-/// `GETransformation::DistanceSquaredTo(transformation)`.
-///
-/// # Safety
-/// The pointers are valid.
-float ee_ge_t_distance_squared_to(const EeGeTransformation *t, const EeGeTransformation *other);
-
-/// `GETransformation::MakeInverse(out)`, in the C++'s store order (an output equal to `t` included).
-///
-/// # Safety
-/// The pointers are valid; they may be equal.
-void ee_ge_t_make_inverse(const EeGeTransformation *t,
-                          EeGeTransformation *out);
-
-/// `GETransformation::MakeLookAtTransform(eye, target)`.
-///
-/// # Safety
-/// The pointers are valid.
-void ee_ge_t_make_look_at(EeGeTransformation *t, const EeGe3DPoint *eye, const EeGe3DPoint *target);
-
-/// `GETransformation::Normalize`.
-///
-/// # Safety
-/// `t` is valid.
-void ee_ge_t_normalize(EeGeTransformation *t);
-
-/// `GETransformation::Revolve(yaw, pitch, roll)`.
-///
-/// # Safety
-/// `t` is valid.
-void ee_ge_t_revolve(EeGeTransformation *t, float yaw, float pitch, float roll);
-
-/// `GETransformation::Rotate(yaw, pitch, roll)`.
-///
-/// # Safety
-/// `t` is valid.
-void ee_ge_t_rotate(EeGeTransformation *t, float yaw, float pitch, float roll);
-
-/// `GETransformation::Scale(x, y, z)`.
-///
-/// # Safety
-/// `t` is valid.
-void ee_ge_t_scale(EeGeTransformation *t, float x, float y, float z);
-
-/// `GETransformation::SetOrientation{PRY,PYR,RPY,RYP,YPR,YRP}` (`order` 0..5 in that order).
-///
-/// # Safety
-/// `t` is valid.
-void ee_ge_t_set_orientation(EeGeTransformation *t,
-                             uint32_t order,
-                             float yaw,
-                             float pitch,
-                             float roll);
-
-/// `GEOrientation::Normalize`.
-///
-/// # Safety
-/// `o` is valid.
-void ee_ge_orientation_normalize(EeGeOrientation *o);
-
-/// `GEQuaternion::ConvertFrom(transformation)`.
-///
-/// # Safety
-/// The pointers are valid.
-void ee_ge_quat_from(const EeGeTransformation *t, EeGeQuaternion *out);
-
-/// `GEQuaternion::ConvertTo(transformation)`.
-///
-/// # Safety
-/// The pointers are valid.
-void ee_ge_quat_to(const EeGeQuaternion *q, EeGeTransformation *out);
-
-/// `GEQuaternion::Normalize`.
-///
-/// # Safety
-/// `q` is valid.
-void ee_ge_quat_normalize(EeGeQuaternion *q);
-
-/// `GEQuaternion::Slerp(target, t, out)`.
-///
-/// # Safety
-/// The pointers are valid; `out` may equal either input.
-void ee_ge_quat_slerp(const EeGeQuaternion *q,
-                      const EeGeQuaternion *target,
-                      float t,
-                      EeGeQuaternion *out);
-
-/// `GEBoundingBox::ComputeDimensions`.
-///
-/// # Safety
-/// `b` is valid.
-void ee_ge_bbox_compute_dimensions(EeGeBoundingBox *b);
-
-/// `GEBoundingBox::Contains`.
-///
-/// # Safety
-/// The pointers are valid.
-bool ee_ge_bbox_contains(const EeGeBoundingBox *b, const EeGe3DPoint *p);
-
-/// `GEBoundingBox::Intersects(box)`.
-///
-/// # Safety
-/// The pointers are valid.
-bool ee_ge_bbox_intersects(const EeGeBoundingBox *b, const EeGeBoundingBox *other);
-
-/// `GEBoundingBox::Intersects(line, distance)`: the distance is always written.
-///
-/// # Safety
-/// The pointers are valid.
-bool ee_ge_bbox_intersects_line(const EeGeBoundingBox *b, const EeGe3DLine *line, float *distance);
-
-/// `GEBoundingBox::Transform(transformation, out)`.
-///
-/// # Safety
-/// The pointers are valid; `out` may equal `b`.
-void ee_ge_bbox_transform(const EeGeBoundingBox *b,
-                          const EeGeTransformation *t,
-                          EeGeBoundingBox *out);
-
-/// `GERectangle::And(rectangle)`.
-///
-/// # Safety
-/// The pointers are valid; they may be equal.
-bool ee_ge_rect_and_in_place(EeGeRectangle *r, const EeGeRectangle *other);
-
-/// `GERectangle::And(rectangle, out)`: `out` written only when they overlap.
-///
-/// # Safety
-/// The pointers are valid; `out` may equal either input.
-bool ee_ge_rect_and(const EeGeRectangle *r, const EeGeRectangle *other, EeGeRectangle *out);
-
-/// `GERectangle::RemoveIntersectingRectangle`: each piece goes to `push`; `existing` is the output vector's size
-/// before the call.
-///
-/// # Safety
-/// The pointers are valid; `push` may be called with `context`.
-void ee_ge_rect_remove_intersecting(const EeGeRectangle *r,
-                                    const EeGeRectangle *other,
-                                    size_t existing,
-                                    EeGePushRectangle push,
-                                    void *context);
-
-/// `GETerrainMesh::GetMeshZ`.
-///
-/// # Safety
-/// `view` describes a live mesh; the tile under the position exists.
-float ee_ge_terrain_z(const EeGeTerrainView *view, float x, float y);
-
-/// `GETerrainMesh::GetMeshNormal`.
-///
-/// # Safety
-/// As `ee_ge_terrain_z`; `out` is valid.
-void ee_ge_terrain_normal(const EeGeTerrainView *view, float x, float y, EeGeVector *out);
-
-/// `GETerrainMesh::InitializePlanes`: writes the front, back, left and right planes to `out[0..4]`.
-///
-/// # Safety
-/// `tile_rows` holds `tile_row_count` (at least one) rows; `out` is valid for four planes.
-void ee_ge_terrain_planes(const EeGeTmRow *tile_rows,
-                          unsigned long tile_row_count,
-                          EeGe3DPlane *out);
-
-/// `GETerrainMesh::GetClosestTile(point, x, y)`.
-///
-/// # Safety
-/// The pointers are valid; `view`'s planes are.
-void ee_ge_terrain_closest_tile_point(const EeGeTerrainView *view,
-                                      const EeGe3DPoint *point,
-                                      long *out_x,
-                                      long *out_y);
-
-/// `GETerrainMesh::GetClosestTile(line, x, y)`.
-///
-/// # Safety
-/// The pointers are valid; `view` describes a live mesh.
-void ee_ge_terrain_closest_tile_line(const EeGeTerrainView *view,
-                                     const EeGe3DLine *line,
-                                     long *out_x,
-                                     long *out_y);
-
-/// `GETerrainMesh::Intersects(line, distance)`: `distance` is written whenever the C++ wrote it (a triangle's plane
-/// met, hit or not).
-///
-/// # Safety
-/// The pointers are valid; `view` describes a live mesh.
-bool ee_ge_terrain_intersects(const EeGeTerrainView *view,
-                              const EeGe3DLine *line,
-                              float *distance);
-
-/// `GETerrainMesh::ComputeVertexNormal` before the quantization (the C++ stores `GetQuantizedVersion()` of `out`).
-///
-/// # Safety
-/// `point_rows` holds `point_row_count` live rows, the point exists and `out` is valid.
-void ee_ge_terrain_vertex_normal(const EeGeTmRow *point_rows,
-                                 unsigned long point_row_count,
-                                 unsigned long x,
-                                 unsigned long y,
-                                 EeGeVector *out);
-
-/// `GETerrainMesh::ComputeShorelines`: the tile's new shoreline bits for `SetWaterInfo`, or -1 to leave it alone.
-///
-/// # Safety
-/// `view` describes a live mesh and the tile exists.
-int32_t ee_ge_terrain_shoreline(const EeGeTerrainView *view,
-                                bool space_map,
-                                unsigned long x,
-                                unsigned long y);
-
-/// `GETerrainMesh::UpdateFogOfWar`: writes the visible points' visibility and the two shares; false (nothing
-/// written) when no tile row is visible.
-///
-/// # Safety
-/// `view` and `fog` describe a live mesh; the out pointers are valid.
-bool ee_ge_terrain_fog(const EeGeTerrainView *view,
-                       const EeGeTerrainFog *fog,
-                       float *out_water,
-                       float *out_space);
-
-/// `GETerrainMesh::Save`.
-///
-/// # Safety
-/// `io` is a live field stream; `view` and `point_rows` describe a live mesh.
-long ee_ge_terrain_save(const EeGeFieldIo *io,
-                        const EeGeTerrainView *view,
-                        unsigned long point_row_count,
-                        long width,
-                        long height,
-                        unsigned long fractal_seed);
-
-/// `GETerrainMesh::Load`'s map size (each read through the member's old value).
-///
-/// # Safety
-/// `io` is a live field stream; the pointers are valid.
-long ee_ge_terrain_load_size(const EeGeFieldIo *io, long *width, long *height);
-
-/// `GETerrainMesh::Load` after `CreateFlatMesh`: the tiles, the points and the fractal seed. `valid_sets[id]` is
-/// nonzero for a registered texture set.
-///
-/// # Safety
-/// `io` is a live field stream; `view` and `point_rows` describe a live, writable mesh; `valid_sets` holds 256
-/// bytes; `state` is valid.
-long ee_ge_terrain_load_body(const EeGeFieldIo *io,
-                             const EeGeTerrainView *view,
-                             unsigned long point_row_count,
-                             const uint8_t *valid_sets,
-                             EeGeTerrainLoad *state);
-
-/// One triangle of `GEPhysicalModel::Intersects(location, model, frame, line, ...)`; `distance` is written whenever
-/// the C++ wrote it (the triangle's plane was not parallel to the line).
-///
-/// # Safety
-/// The pointers are valid.
-bool ee_ge_physical_line_triangle(const EeGe3DLine *line,
-                                  const EeGe3DPoint *p1,
-                                  const EeGe3DPoint *p2,
-                                  const EeGe3DPoint *p3,
-                                  bool exact,
-                                  float *distance);
-
-/// `GEPhysicalModel.cpp`'s `ComputeTriangleBox`.
-///
-/// # Safety
-/// The pointers are valid.
-void ee_ge_physical_triangle_box(const EeGe3DPoint *p1,
-                                 const EeGe3DPoint *p2,
-                                 const EeGe3DPoint *p3,
-                                 EeGeBoundingBox *out);
 
 /// `EEFLine`'s constructor: `count` column offsets into `out`.
 ///

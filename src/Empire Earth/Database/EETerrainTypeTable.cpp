@@ -103,34 +103,35 @@ void EETerrainTypeTable::Unload()
 #include "ee/EEGlobalConstants.h"
 #include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
+#include "ee/EECombatFormulas.h"
 
 // FUNCTION: EXE 0x4dbe44
 // Returns the damage factor of an attack kind against a unit class (its family row), 0 when it cannot be attacked or a
 // player is missing; the base table unless exactly one player (player 0 aside) is human, then a twin by difficulty
 float EEToHitTable::GetAttackFactor(long inKind, EEUnitClass* inClass, unsigned long inPlayer, unsigned long inTargetPlayer)
 {
-    long theRow = inClass->mFamily;
-    float theResult = 0.0f;
-    if (inClass->CanBeAttacked()) {
+    EeCombatAttackFactorIn theIn = {};
+    theIn.attackable = inClass->CanBeAttacked();
+    if (theIn.attackable) {
         EEPlayer* thePlayer = gWorld.mPlayers[inPlayer];
         EEPlayer* theTarget = gWorld.mPlayers[inTargetPlayer];
-        if (thePlayer == NULL || theTarget == NULL)
-            return 0.0f;
-        // the scale by difficulty (gameoptions.yaml difficulties: dbworld difficulty_damage_scale F / F2 on easy and
-        // hard, none on medium) when exactly one side is "human" (IsHuman, not player 0; provisional name)
-        bool theHuman = thePlayer->IsHuman() && inPlayer != 0;
-        bool theTargetHuman = theTarget->IsHuman() && inTargetPlayer != 0;
-        float theFactor = gDamageTable[theRow][inKind];
-        if (theHuman == theTargetHuman)
-            return theFactor;
-        const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
-        unsigned long theDifficulty = gWorld.mGameOptions.mDifficulty;
-        if (theDifficulty >= theList.size())
-            return theFactor;
-        const EEDifficultyRule& theRule = theList[theDifficulty];
-        theResult = EERuleFloat(theTargetHuman ? theRule.mScaleHumanTarget : theRule.mScaleHumanAttacker) * theFactor;
+        theIn.players_present = thePlayer != NULL && theTarget != NULL;
+        if (theIn.players_present) {
+            // the scale by difficulty (gameoptions.yaml difficulties: dbworld difficulty_damage_scale F / F2 on easy
+            // and hard, none on medium) when exactly one side is "human" (IsHuman, not player 0; provisional name)
+            theIn.attacker_human = thePlayer->IsHuman() && inPlayer != 0;
+            theIn.target_human = theTarget->IsHuman() && inTargetPlayer != 0;
+            theIn.factor = gDamageTable[inClass->mFamily][inKind];
+            const std::vector<EEDifficultyRule>& theList = EEGetRules().mGameOptions.mDifficulties;
+            unsigned long theDifficulty = gWorld.mGameOptions.mDifficulty;
+            theIn.has_rule = theDifficulty < theList.size();
+            if (theIn.has_rule) {
+                theIn.scale_human_target = EERuleFloat(theList[theDifficulty].mScaleHumanTarget);
+                theIn.scale_human_attacker = EERuleFloat(theList[theDifficulty].mScaleHumanAttacker);
+            }
+        }
     }
-    return theResult;
+    return EECombatAttackFactor(theIn);
 }
 
 
@@ -151,13 +152,13 @@ unsigned long EEFamilyCount()
 
 // FUNCTION: EXE 0x4dbf11
 // Loads every row of 0x44 damage factors (percent to fraction; the original: up to 60 rows) and builds the two twin
-// tables scaled by world constant 0x59's two values; returns the last read status
-// (the base row is written one statement per column)
+// tables scaled by world constant 0x59's two values; returns the last read status (the rows: EECombatDamageRow)
 long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
 {
     unsigned long theCount = 0;
     unsigned long theRead = 0;
     EEDamageTableRecord theRecord;
+    std::vector<EEDamageTableRecord> theRecords;  // read whole, then one Rust row each
     if (gDamageTable != NULL || gDamageTableScaled1 != NULL || gDamageTableScaled2 != NULL)
         EETerrainTypeTable::ClearDamageTables();
     inFile->Open(kFileAccessRead);
@@ -174,81 +175,19 @@ long EETerrainTypeTable::LoadDamageTables(FSFileSpec* inFile)
             gDamageTableScaled1[i] = new float[0x44];
             theResult = inFile->Read(reinterpret_cast<unsigned char*>(&theRecord), sizeof(theRecord), theRead);
             gDamageTableColumnCount = 0x44;
-            float theScale = kHeightEpsilon;
-            gDamageTable[i][0] = theRecord.mDamage[0] * theScale;
-            gDamageTable[i][1] = theRecord.mDamage[1] * theScale;
-            gDamageTable[i][2] = theRecord.mDamage[2] * theScale;
-            gDamageTable[i][3] = theRecord.mDamage[3] * theScale;
-            gDamageTable[i][4] = theRecord.mDamage[4] * theScale;
-            gDamageTable[i][5] = theRecord.mDamage[5] * theScale;
-            gDamageTable[i][6] = theRecord.mDamage[6] * theScale;
-            gDamageTable[i][7] = theRecord.mDamage[7] * theScale;
-            gDamageTable[i][8] = theRecord.mDamage[8] * theScale;
-            gDamageTable[i][9] = theRecord.mDamage[9] * theScale;
-            gDamageTable[i][10] = theRecord.mDamage[10] * theScale;
-            gDamageTable[i][11] = theRecord.mDamage[11] * theScale;
-            gDamageTable[i][12] = theRecord.mDamage[12] * theScale;
-            gDamageTable[i][13] = theRecord.mDamage[13] * theScale;
-            gDamageTable[i][14] = theRecord.mDamage[14] * theScale;
-            gDamageTable[i][15] = theRecord.mDamage[15] * theScale;
-            gDamageTable[i][16] = theRecord.mDamage[16] * theScale;
-            gDamageTable[i][17] = theRecord.mDamage[17] * theScale;
-            gDamageTable[i][18] = theRecord.mDamage[18] * theScale;
-            gDamageTable[i][19] = theRecord.mDamage[19] * theScale;
-            gDamageTable[i][20] = theRecord.mDamage[20] * theScale;
-            gDamageTable[i][21] = theRecord.mDamage[21] * theScale;
-            gDamageTable[i][22] = theRecord.mDamage[22] * theScale;
-            gDamageTable[i][23] = theRecord.mDamage[23] * theScale;
-            gDamageTable[i][24] = theRecord.mDamage[24] * theScale;
-            gDamageTable[i][25] = theRecord.mDamage[25] * theScale;
-            gDamageTable[i][26] = theRecord.mDamage[26] * theScale;
-            gDamageTable[i][27] = theRecord.mDamage[27] * theScale;
-            gDamageTable[i][28] = theRecord.mDamage[28] * theScale;
-            gDamageTable[i][29] = theRecord.mDamage[29] * theScale;
-            gDamageTable[i][30] = theRecord.mDamage[30] * theScale;
-            gDamageTable[i][31] = theRecord.mDamage[31] * theScale;
-            gDamageTable[i][32] = theRecord.mDamage[32] * theScale;
-            gDamageTable[i][33] = theRecord.mDamage[33] * theScale;
-            gDamageTable[i][34] = theRecord.mDamage[34] * theScale;
-            gDamageTable[i][35] = theRecord.mDamage[35] * theScale;
-            gDamageTable[i][36] = theRecord.mDamage[36] * theScale;
-            gDamageTable[i][37] = theRecord.mDamage[37] * theScale;
-            gDamageTable[i][38] = theRecord.mDamage[38] * theScale;
-            gDamageTable[i][39] = theRecord.mDamage[39] * theScale;
-            gDamageTable[i][40] = theRecord.mDamage[40] * theScale;
-            gDamageTable[i][41] = theRecord.mDamage[41] * theScale;
-            gDamageTable[i][42] = theRecord.mDamage[42] * theScale;
-            gDamageTable[i][43] = theRecord.mDamage[43] * theScale;
-            gDamageTable[i][44] = theRecord.mDamage[44] * theScale;
-            gDamageTable[i][45] = theRecord.mDamage[45] * theScale;
-            gDamageTable[i][46] = theRecord.mDamage[46] * theScale;
-            gDamageTable[i][47] = theRecord.mDamage[47] * theScale;
-            gDamageTable[i][48] = theRecord.mDamage[48] * theScale;
-            gDamageTable[i][49] = theRecord.mDamage[49] * theScale;
-            gDamageTable[i][50] = theRecord.mDamage[50] * theScale;
-            gDamageTable[i][51] = theRecord.mDamage[51] * theScale;
-            gDamageTable[i][52] = theRecord.mDamage[52] * theScale;
-            gDamageTable[i][53] = theRecord.mDamage[53] * theScale;
-            gDamageTable[i][54] = theRecord.mDamage[54] * theScale;
-            gDamageTable[i][55] = theRecord.mDamage[55] * theScale;
-            gDamageTable[i][56] = theRecord.mDamage[56] * theScale;
-            gDamageTable[i][57] = theRecord.mDamage[57] * theScale;
-            gDamageTable[i][58] = theRecord.mDamage[58] * theScale;
-            gDamageTable[i][59] = theRecord.mDamage[59] * theScale;
-            gDamageTable[i][60] = theRecord.mDamage[60] * theScale;
-            gDamageTable[i][61] = theRecord.mDamage[61] * theScale;
-            gDamageTable[i][62] = theRecord.mDamage[62] * theScale;
-            gDamageTable[i][63] = theRecord.mDamage[63] * theScale;
-            gDamageTable[i][64] = theRecord.mDamage[64] * theScale;
-            gDamageTable[i][65] = theRecord.mDamage[65] * theScale;
-            gDamageTable[i][66] = theRecord.mDamage[66] * theScale;
-            gDamageTable[i][67] = theRecord.mDamage[67] * theScale;
+            theRecords.push_back(theRecord);
         }
+        EeCombatDamageRowIn theIn;
+        EeCombatDamageRowOut theOut;
+        theIn.scale = kHeightEpsilon;
+        theIn.twin1 = gWorldTable.GetFloatValue(kWorldDifficultyDamageScale);
+        theIn.twin2 = gWorldTable.GetFloatValue2(kWorldDifficultyDamageScale);
         for (i = 0; i < theCount; i++) {
-            for (long j = 0; j < 0x44; j++) {
-                gDamageTableScaled1[i][j] = gWorldTable.GetFloatValue(kWorldDifficultyDamageScale) * gDamageTable[i][j];
-                gDamageTableScaled2[i][j] = gWorldTable.GetFloatValue2(kWorldDifficultyDamageScale) * gDamageTable[i][j];
-            }
+            memcpy(theIn.percent, theRecords[i].mDamage, sizeof(theIn.percent));
+            EECombatDamageRow(theIn, theOut);
+            memcpy(gDamageTable[i], theOut.base, sizeof(theOut.base));
+            memcpy(gDamageTableScaled1[i], theOut.scaled1, sizeof(theOut.scaled1));
+            memcpy(gDamageTableScaled2[i], theOut.scaled2, sizeof(theOut.scaled2));
         }
     }
     inFile->Close();

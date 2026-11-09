@@ -42,6 +42,7 @@
 #include "ee/EEUCBuilding.h"
 #include "ee/EEUCBasicPriest.h"
 #include "ee/EEUCBuildingPriest.h"
+#include "ee/EECombatFormulas.h"
 
 void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float& outVolume, float& outPan,
                               float& outPitch, float inFactor);
@@ -133,20 +134,23 @@ void EEUCBuildingPriest::UpdateConversion(EEComplexUnit* inUnit)
         return;
     if (gPhysics->mGameTime - inUnit->mConversionStartTime < (unsigned long)this->mMinConversionTime)
         return;
-    long theTime = inUnit->mWorkTimer - (long)(gPhysics->mTickSeconds * -1000.0f);
-    if ((unsigned long)theTime >= 1000) {
-        float theResistance = theTarget->mStats->mConversionResistance;
-        if (theResistance == 1.0f && gCivPowersManager.HasPower(inUnit->GetPlayer(), kCivPowerAdaptation) &&
-            !inUnit->mUnitClass->IsCrusader() && inUnit->mUnitClass->mCategory != kUnitCategoryBuildingPriest &&
-            theTarget->mUnitClass->mUnitType == kUnitTypeTownCenter)
-            theResistance = 0.99f;
-        float theChance = inUnit->mStats->mConversionRate;
-        float theFactor = theTarget->mPlayer->mConversionFactor;
-        if (gPhysics->mRandom.Generate() <= (1.0f - theResistance) * theFactor * theChance &&
+    EeCombatConversionIn theIn;
+    theIn.work_timer = (int32_t)inUnit->mWorkTimer;
+    theIn.tick_seconds = gPhysics->mTickSeconds;
+    theIn.resistance = theTarget->mStats->mConversionResistance;
+    theIn.adaptation = theIn.resistance == 1.0f && gCivPowersManager.HasPower(inUnit->GetPlayer(), kCivPowerAdaptation) &&
+                       !inUnit->mUnitClass->IsCrusader() && inUnit->mUnitClass->mCategory != kUnitCategoryBuildingPriest &&
+                       theTarget->mUnitClass->mUnitType == kUnitTypeTownCenter;
+    theIn.rate = inUnit->mStats->mConversionRate;
+    theIn.factor = theTarget->mPlayer->mConversionFactor;
+    EeCombatConversionOut theOut = EECombatConversion(theIn);
+    long theTime = theOut.timer;
+    if (theOut.due) {
+        if (gPhysics->mRandom.Generate() <= theOut.threshold &&
             (theTarget->mTileNode == NULL || !theTarget->mComplexUnit->mIsDisabled || theTarget->mComplexUnit->IsProtected()))
             this->ConvertTarget(inUnit, theTarget);
         else
-            inUnit->SetWorkTimer(theTime - 1000);
+            inUnit->SetWorkTimer(theOut.miss_timer);
     } else
         inUnit->SetWorkTimer(theTime);
 }

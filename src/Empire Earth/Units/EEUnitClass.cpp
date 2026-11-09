@@ -63,6 +63,7 @@
 #include "ee/EEDatabaseTables.h"
 #include "ee/EERules.h"
 #include "ee/EERulesWorld.h"
+#include "ee/EECombatFormulas.h"
 #include "ee/EEGraphicEffect.h"
 #include "ee/EECivPowersManager.h"
 #include "ee/EEGameSound.h"
@@ -842,58 +843,37 @@ bool EEUnitClass::ComputeDamage(int inForm, EEComplexUnit* inUnit, EEUnit* inTar
                                 long inWeapon, float inFriendlyFactor, long& outAmount)
 {
     const EECombatRules& theRules = EEGetRules().mCombat;
-    float theHit;
-    if (inForm == kDamageDirect && !(inAttack > 0.0f)) {
-        theHit = 0.0f;
-    } else {
-        float theFactor = gWeaponToHitFactors[inTarget->mUnitClass->mWeapon][inWeapon];
-        theHit = gToHitTable.GetAttackFactor(inAmmo, inTarget->mUnitClass, inUnit->mPlayer->GetPlayerID(),
-                                             inTarget->mPlayer->GetPlayerID()) * theFactor;
+    EeCombatDamageIn theIn = {};
+    theIn.form = inForm;
+    theIn.attack = inAttack;
+    if (inForm != kDamageDirect || inAttack > 0.0f) {   // a direct hit without attack reads no factor
+        theIn.attack_factor = gToHitTable.GetAttackFactor(inAmmo, inTarget->mUnitClass, inUnit->mPlayer->GetPlayerID(),
+                                                          inTarget->mPlayer->GetPlayerID());
+        theIn.weapon_factor = gWeaponToHitFactors[inTarget->mUnitClass->mWeapon][inWeapon];
     }
-    if (inForm == kDamageTrample) {
-        float theDamage = inAttack;
-        if (theHit > 0.0f)
-            theDamage = theDamage - UMFloatToLong(inTarget->mStats->mArmor[inWeapon]);
-        if (!(theHit * theDamage > theRules.mTrampleThreshold))
-            return false;
-        outAmount = theRules.mTrampleDamage;
-        return true;
-    }
-    if (theHit <= 0.0f)
-        return false;
-    float theDamage = theHit * inAttack;
-    if (inForm == kDamageDirect) {
+    theIn.armor = inTarget->mStats->mArmor[inWeapon];
+    theIn.elevation = 1.0f;
+    theIn.same_player = inTarget->mPlayer == inUnit->mPlayer;
+    theIn.allied = inUnit->mPlayer->mEnemies[inTarget->mPlayer->GetPlayerID()] == 0;
+    theIn.herd = inUnit->mHerd != NULL;
+    theIn.friendly_factor = inFriendlyFactor;
+    theIn.minimum_damage = theRules.mMinimumDamage;
+    theIn.fanatic_factor = EERuleFloat(theRules.mFanaticFactor);
+    theIn.elevation_step = theRules.mElevationStep;
+    theIn.ally_factor = theRules.mAllyFactor;
+    theIn.herd_ally_factor = theRules.mHerdAllyFactor;
+    theIn.trample_damage = theRules.mTrampleDamage;
+    theIn.trample_threshold = theRules.mTrampleThreshold;
+    // the elevation and the fanatic only count for a damaging hit (as the original read them)
+    if (inForm != kDamageTrample && EECombatHitFactor(theIn) > 0.0f) {
+        theIn.elevation = this->GetElevationFactor(inUnit, inTarget->GetComplexUnit());
         EEComplexUnit* theFanatic = inUnit->mOwner != NULL ? inUnit->mOwner : inUnit;
-        if (theFanatic->IsCloaked())
-            theDamage = EERuleFloat(theRules.mFanaticFactor) * theDamage;
+        theIn.fanatic = inForm == kDamageDirect && theFanatic->IsCloaked();
     }
-    theDamage = theDamage - inTarget->mStats->mArmor[inWeapon];
-    float theModifier = this->GetElevationFactor(inUnit, inTarget->GetComplexUnit());
-    if (theModifier != 1.0f) {
-        float theStep = theRules.mElevationStep;
-        if (theModifier > 1.0f) {
-            theModifier = theModifier * theDamage;
-            if (theModifier >= theDamage + theStep)
-                theDamage = theModifier;
-            else
-                theDamage = theDamage + theStep;
-        } else if (theModifier < 1.0f) {
-            theModifier = theModifier * theDamage;
-            if (theModifier <= theDamage - theStep)
-                theDamage = theModifier;
-            else
-                theDamage = theDamage - theStep;
-        }
-    }
-    if (inForm == kDamageSplash && inTarget->mPlayer == inUnit->mPlayer)
-        theDamage = inFriendlyFactor * theDamage;
-    long theAmount = UMFloatToLong(theDamage);
-    if (theAmount < theRules.mMinimumDamage)
-        theAmount = theRules.mMinimumDamage;
-    if (inForm == kDamageDirect &&
-        (inTarget->mPlayer == inUnit->mPlayer || inUnit->mPlayer->mEnemies[inTarget->mPlayer->GetPlayerID()] == 0))
-        theAmount = UMCeil(theAmount * (inUnit->mHerd != NULL ? theRules.mHerdAllyFactor : theRules.mAllyFactor));
-    outAmount = theAmount;
+    EeCombatDamageOut theOut = EECombatDamage(theIn);
+    if (!theOut.hit)
+        return false;
+    outAmount = theOut.amount;
     return true;
 }
 
@@ -1170,22 +1150,19 @@ float EEUnitClass::GetElevationFactor(EEComplexUnit* inUnit, EEComplexUnit* inTa
     } else
         theOwnHeight = true;
     // which attackers and targets the height difference scales: combat.yaml's elevation categories
-    bool theIsLand = theRules.IsElevationAttacker(theCategory);
-    bool theIsTarget = theRules.IsElevationTarget(theTargetCategory);
-    float theResult;
-    if (theIsLand && theIsTarget && inTarget != NULL) {
-        float theDifference = (theOwnHeight ? inUnit->mPhysicalModel.GetLocation().GetZ() : inUnit->mHeight) -
-                              inTarget->mPhysicalModel.GetLocation().GetZ();
-        if (theDifference >= gWorldTable.GetFloatValue(kWorldHighGroundHeight) * k447ADC) {
-            float theBonus = inUnit->mPlayer->mHighGroundBonus;
-            theResult = theBonus + gWorldTable.GetFloatValue(kWorldHighGroundAttackFactor);
-        } else if (theDifference <= -(gWorldTable.GetFloatValue(kWorldLowGroundHeight) * k447ADC))
-            theResult = gWorldTable.GetFloatValue(kWorldLowGroundAttackFactor);
-        else
-            theResult = 1.0f;
-    } else
-        theResult = 1.0f;
-    return theResult;
+    EeCombatElevationIn theIn = {};
+    theIn.applies = theRules.IsElevationAttacker(theCategory) && theRules.IsElevationTarget(theTargetCategory) &&
+                    inTarget != NULL;
+    if (theIn.applies) {
+        theIn.own_z = theOwnHeight ? inUnit->mPhysicalModel.GetLocation().GetZ() : inUnit->mHeight;
+        theIn.target_z = inTarget->mPhysicalModel.GetLocation().GetZ();
+        theIn.high_height = gWorldTable.GetFloatValue(kWorldHighGroundHeight);
+        theIn.low_height = gWorldTable.GetFloatValue(kWorldLowGroundHeight);
+        theIn.high_bonus = inUnit->mPlayer->mHighGroundBonus;
+        theIn.high_factor = gWorldTable.GetFloatValue(kWorldHighGroundAttackFactor);
+        theIn.low_factor = gWorldTable.GetFloatValue(kWorldLowGroundAttackFactor);
+    }
+    return EECombatElevation(theIn);
 }
 
 // FUNCTION: EXE 0x63198b
@@ -4689,29 +4666,29 @@ void EEUnitClass::HealGarrison(EEComplexUnit* inUnit)
     EEUnitClassUpgrade* theStats = inUnit->mStats;
     if (theStats->mHealingPoints == 0 || inUnit->GetNumCargoUnits() == 0 || ::gWorld.mInCinematic)
         return;
-    long theTime = inUnit->mRegenerationTimer - gPhysics->mTickTimeMs;
+    EeCombatTimerIn theTimer = {(int32_t)inUnit->mRegenerationTimer, (int32_t)gPhysics->mTickTimeMs,
+                                (int32_t)EEGetRules().mCombat.mRegenerationInterval};
+    EeCombatTimerOut theTimerOut = EECombatTimer(theTimer);
     bool theHealed = false;
-    if (theTime <= 0) {
+    if (theTimerOut.due) {
         if (inUnit->GetHitPoints() > 0) {
             unsigned long theCount = inUnit->GetNumCargoUnits();
             for (unsigned long i = 0; i < theCount; i++) {
                 EEComplexUnit* theUnit = inUnit->GetCargo(i);
-                long theOldHitPoints = theUnit->GetHitPoints();
-                long theHitPoints = theStats->mHealingPoints + theOldHitPoints;
-                if (theHitPoints > theUnit->GetStats()->mMaxHitPoints)
-                    theHitPoints = theUnit->GetStats()->mMaxHitPoints;
-                if (theOldHitPoints > 0) {
-                    theUnit->SetHitPoints(theHitPoints);
+                EeCombatHealIn theHeal = {(int32_t)theUnit->GetHitPoints(), (int32_t)theStats->mHealingPoints,
+                                          (int32_t)theUnit->GetStats()->mMaxHitPoints};
+                EeCombatHealOut theHealOut = EECombatHeal(theHeal);
+                if (theHealOut.set) {
+                    theUnit->SetHitPoints(theHealOut.hit_points);
                     theHealed = true;
                 }
             }
         }
-        theTime = EEGetRules().mCombat.mRegenerationInterval;
         if (theHealed && inUnit->GetPlayer() == ::gWorld.GetCurrentPlayer() &&
             inUnit->GetPlayer()->mActiveGroup->Contains(inUnit))
             gUIManager->GetMainGameForm()->mGroups[0]->Reset();
     }
-    inUnit->SetRegenerationTimer(theTime);
+    inUnit->SetRegenerationTimer(theTimerOut.timer);
 }
 
 // FUNCTION: EXE 0x639d8a
@@ -4721,20 +4698,17 @@ void EEUnitClass::Regenerate(EEComplexUnit* inUnit)
     EEUnitClassUpgrade* theStats = inUnit->mStats;
     if (::gWorld.mInCinematic)
         return;
-    long theTime = inUnit->mRegenerationTimer - gPhysics->mTickTimeMs;
-    if (theTime <= 0) {
-        long theHitPoints = theStats->mRegeneration + inUnit->mHitPoints;
-        if (theHitPoints > theStats->mMaxHitPoints)
-            theHitPoints = theStats->mMaxHitPoints;
-        if (inUnit->mHitPoints > 0 && theHitPoints > 0) {
-            inUnit->SetHitPoints(theHitPoints);
-            if (inUnit->mPlayer == ::gWorld.GetCurrentPlayer() &&
-                inUnit->mPlayer->mActiveGroup->Contains(inUnit))
-                gUIManager->GetMainGameForm()->mGroups[0]->Reset();
-        }
-        theTime = EEGetRules().mCombat.mRegenerationInterval;
+    EeCombatRegenerateIn theIn = {(int32_t)inUnit->mRegenerationTimer, (int32_t)gPhysics->mTickTimeMs,
+                                  (int32_t)inUnit->mHitPoints, (int32_t)theStats->mRegeneration,
+                                  (int32_t)theStats->mMaxHitPoints, (int32_t)EEGetRules().mCombat.mRegenerationInterval};
+    EeCombatRegenerateOut theOut = EECombatRegenerate(theIn);
+    if (theOut.set) {
+        inUnit->SetHitPoints(theOut.hit_points);
+        if (inUnit->mPlayer == ::gWorld.GetCurrentPlayer() &&
+            inUnit->mPlayer->mActiveGroup->Contains(inUnit))
+            gUIManager->GetMainGameForm()->mGroups[0]->Reset();
     }
-    inUnit->SetRegenerationTimer(theTime);
+    inUnit->SetRegenerationTimer(theOut.timer);
 }
 
 // TEMPLATE: EXE 0x639e2d

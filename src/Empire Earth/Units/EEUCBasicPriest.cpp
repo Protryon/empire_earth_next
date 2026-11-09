@@ -39,6 +39,7 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EEUCAirplane.h"
 #include "ee/EEUCBasicPriest.h"
+#include "ee/EECombatFormulas.h"
 
 void EEComputeSoundParameters(float inVolume, const GE3DPoint& inLocation, float& outVolume, float& outPan,
                               float& outPitch, float inFactor);
@@ -51,10 +52,9 @@ static const float kBasicPriestSoundFactor = 4.0f;     // 0x446fe4 (the conversi
 // Returns the faith a conversion by a unit costs: the world table's entry 46, at most the unit's own power (0 if none)
 long EEGetConversionCost(EEComplexUnit* inUnit)
 {
-    long theCost = gWorldTable.GetLongValue(kWorldConversionFaithCost);
-    if (min(theCost, inUnit->mStats->mPower) > 0)
-        return min(theCost, inUnit->mStats->mPower);
-    return 0;
+    EeCombatConversionCostIn theIn = {(int32_t)gWorldTable.GetLongValue(kWorldConversionFaithCost),
+                                      (int32_t)inUnit->mStats->mPower};
+    return EECombatConversionCost(theIn);
 }
 
 // FUNCTION: EXE 0x60d59f
@@ -89,20 +89,23 @@ void EEUCBasicPriest::UpdateConversion(EEComplexUnit* inUnit)
         return;
     if (gPhysics->mGameTime - inUnit->mConversionStartTime < (unsigned long)this->mMinConversionTime)
         return;
-    long theTime = inUnit->mWorkTimer - (long)(gPhysics->mTickSeconds * -1000.0f);
-    if ((unsigned long)theTime >= 1000) {
-        float theResistance = theTarget->mStats->mConversionResistance;
-        if (theResistance == 1.0f && gCivPowersManager.HasPower(inUnit->GetPlayer(), kCivPowerAdaptation) &&
-            !inUnit->mUnitClass->IsCrusader() && inUnit->mUnitClass->mCategory != kUnitCategoryBuildingPriest &&
-            theTarget->mUnitClass->mUnitType == kUnitTypeTownCenter)
-            theResistance = 0.99f;
-        float theChance = inUnit->mStats->mConversionRate;
-        float theFactor = theTarget->mPlayer->mConversionFactor;
-        if (gPhysics->mRandom.Generate() <= (1.0f - theResistance) * theFactor * theChance &&
+    EeCombatConversionIn theIn;
+    theIn.work_timer = (int32_t)inUnit->mWorkTimer;
+    theIn.tick_seconds = gPhysics->mTickSeconds;
+    theIn.resistance = theTarget->mStats->mConversionResistance;
+    theIn.adaptation = theIn.resistance == 1.0f && gCivPowersManager.HasPower(inUnit->GetPlayer(), kCivPowerAdaptation) &&
+                       !inUnit->mUnitClass->IsCrusader() && inUnit->mUnitClass->mCategory != kUnitCategoryBuildingPriest &&
+                       theTarget->mUnitClass->mUnitType == kUnitTypeTownCenter;
+    theIn.rate = inUnit->mStats->mConversionRate;
+    theIn.factor = theTarget->mPlayer->mConversionFactor;
+    EeCombatConversionOut theOut = EECombatConversion(theIn);
+    long theTime = theOut.timer;
+    if (theOut.due) {
+        if (gPhysics->mRandom.Generate() <= theOut.threshold &&
             (theTarget->mTileNode == NULL || !theTarget->GetComplexUnit()->mIsDisabled || theTarget->GetComplexUnit()->IsProtected()))
             this->ConvertTarget(inUnit, theTarget);
         else
-            inUnit->SetWorkTimer(theTime - 1000);
+            inUnit->SetWorkTimer(theOut.miss_timer);
     } else
         inUnit->SetWorkTimer(theTime);
 }

@@ -20,7 +20,11 @@ events themselves (about 25 bytes each, some 35 million in the six games): for f
 ASGR is the graph searches' record (EEAIAStarGraphMachine::Run: the sub sector paths and the continental chains), in
 the same shape: inputs, the digest of the machine's questions to its goal, the outputs and the storage's lists. Its
 golden lines come from the C++ graph machine, storage and goals.
-`replay` covers the formations only.
+CB** are the combat and unit formulas' records (ee/EECombatFormulas.h: damage, attack factor, elevation, morale, hit
+points, healing, conversion, the ballistic pitch, the projectile arc, the reach and range tests, the damage rows): one
+per call, the input record's bytes and the output's. Their golden lines come from the C++ formulas (R5b.2).
+
+`replay` covers the formations and the combat formulas.
 """
 import argparse
 import concurrent.futures
@@ -136,8 +140,9 @@ def main():
         return 1
     files = [str(OUT / a.name / f"capture-{seed}.bin") for seed in seed_list]
     # this checkout's build/rust, as every cargo run of tools/rust_build.py
-    return rust_build.run_cargo(["run", "-q", "--release", "-p", "ee_formations", "--example", "formation_replay",
-                                 "--", *files])
+    codes = [rust_build.run_cargo(["run", "-q", "--release", "-p", crate, "--example", example, "--", *files])
+             for crate, example in (("ee_formations", "formation_replay"), ("ee_combat", "combat_replay"))]
+    return 1 if any(codes) else 0
 
 
 if __name__ == "__main__":
