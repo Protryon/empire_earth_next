@@ -85,80 +85,54 @@ inline BOOL EEIsStraightStep(long inFromX, long inFromY, long inX, long inY)
 /// NEAR: the original calls RTSMap::GetTile 0x2f85 out of line for the first tile (ours expands it) and keeps this in ebx
 // FUNCTION: EXE 0x40f53b
 // Returns a sea (inSea) or space walker's step cost: 10/14, x5 onto a blocker, +6 for a turn, x2 per blocked tile
-// within 1 (2 from epoch 9; x3 at far corners) when avoiding units, plus the slope or x2 in a narrow passage
+// within 1 (2 from epoch 9; x3 at far corners) when avoiding units, plus the slope or x2 in a narrow passage. Reads the
+// world map through a quiet view (ee/EEAIAStarView.h)
 long EEAIPathGoalModifierBase::GetStepCost(bool inSea, long inFromX, long inFromY, long inX, long inY, long inParentX,
                                        long inParentY)
 {
-    EEMap* theMap = gWorld.mMap;
-    EETile* theTile = theMap->GetTile(inX, inY);
+    EEAIAStarView theView(gWorld.mMap, true);
+    EEComplexUnit* theWalker = this->mGoal->mUnit;
     long theCost = inFromX == inX || inFromY == inY ? 10 : 14;
-    long theSlope = theTile->mAIValue;
+    long theSlope = theView.GetAIValue(inX, inY);
     bool theBlocked = false;
-    RTSTileUnitNode* theNode = theTile->mUnits;
-    long theRange = this->mGoal->mUnit->mFormationRank;
+    long theRange = theView.GetFormationRank(theWalker);
     long theMargin = 1;
 
-    for (; theNode != NULL; theNode = theNode->mNext) {
-        EEComplexUnit* theUnit = theNode->mUnit->mComplexUnit;
-        if (theUnit != NULL && (inSea ? this->IsSeaBlocker(theUnit) : this->IsLandBlocker(theUnit))) {
-            theCost *= 5;
-            break;
-        }
-    }
+    if (theView.HasStepBlocker(theWalker, inSea, inX, inY))
+        theCost *= 5;
     if (inX - inFromX != inFromX - inParentX || inY - inFromY != inFromY - inParentY)
         theCost += 6;
 
     if (this->mGoal->mAvoidUnits) {
-        if (this->mGoal->mUnit->mPlayer->mTechnologies->mCurrentEpoch >= kTechEpochAtomicWW1 && !this->mGoal->mIsBounded)
+        if (theView.GetEpoch(theWalker) >= kTechEpochAtomicWW1 && !this->mGoal->mIsBounded)
             theMargin = 2;
-        bool theEmpty = false;
-        std::vector<EEComplexUnit*>* theRegion = theMap->mUnitRegions->GetRegion(
-            U2DPoint<long>(inX / theMap->mUnitRegions->mRegionSize, inY / theMap->mUnitRegions->mRegionSize));
-        if (theRegion != NULL && theRegion->size() == 0) {
-            theRegion = theMap->mUnitRegions->GetRegion(U2DPoint<long>((inX - theMargin) / theMap->mUnitRegions->mRegionSize,
-                                                                       (inY - theMargin) / theMap->mUnitRegions->mRegionSize));
-            if (theRegion != NULL && theRegion->size() == 0) {
-                theRegion = theMap->mUnitRegions->GetRegion(U2DPoint<long>((inX + theMargin) / theMap->mUnitRegions->mRegionSize,
-                                                                           (inY + theMargin) / theMap->mUnitRegions->mRegionSize));
-                if (theRegion != NULL && theRegion->size() == 0) {
-                    theRegion = theMap->mUnitRegions->GetRegion(U2DPoint<long>((inX + theMargin) / theMap->mUnitRegions->mRegionSize,
-                                                                               (inY - theMargin) / theMap->mUnitRegions->mRegionSize));
-                    if (theRegion != NULL && theRegion->size() == 0) {
-                        theRegion = theMap->mUnitRegions->GetRegion(U2DPoint<long>((inX - theMargin) / theMap->mUnitRegions->mRegionSize,
-                                                                                   (inY + theMargin) / theMap->mUnitRegions->mRegionSize));
-                        if (theRegion != NULL && theRegion->size() == 0)
-                            theEmpty = true;
-                    }
-                }
-            }
-        }
+        // the five unit regions (the tile's, then its corners' at the margin) all present and empty
+        bool theEmpty = theView.GetUnitRegionState(inX, inY) == 0 &&
+                        theView.GetUnitRegionState(inX - theMargin, inY - theMargin) == 0 &&
+                        theView.GetUnitRegionState(inX + theMargin, inY + theMargin) == 0 &&
+                        theView.GetUnitRegionState(inX + theMargin, inY - theMargin) == 0 &&
+                        theView.GetUnitRegionState(inX - theMargin, inY + theMargin) == 0;
         if (!theEmpty) {
             for (long i = inX - theMargin; i <= inX + theMargin; i++) {
                 for (long j = inY - theMargin; j <= inY + theMargin; j++) {
                     if (i == inFromX && j == inFromY)
                         continue;
-                    EETile* theOther = theMap->GetTile(i, j);
-                    if (theOther == NULL)
+                    if (!theView.HasTile(i, j))
                         continue;
-                    for (theNode = theOther->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                        EEComplexUnit* theUnit = theNode->mUnit->mComplexUnit;
-                        if (theUnit == NULL || (!(inSea ? this->IsSeaBlocker(theUnit) : this->IsLandBlocker(theUnit))))
-                            continue;
-                        if (!this->mGoal->mIsBounded) {
-                            if (UMAbs(inX - i) > 1 && UMAbs(inY - j) > 1)
-                                theCost *= 3;
-                            else
-                                theCost *= 2;
-                        }
-                        break;
+                    if (!theView.HasStepBlocker(theWalker, inSea, i, j))
+                        continue;
+                    if (!this->mGoal->mIsBounded) {
+                        if (UMAbs(inX - i) > 1 && UMAbs(inY - j) > 1)
+                            theCost *= 3;
+                        else
+                            theCost *= 2;
                     }
                 }
             }
         }
     }
 
-    EEComplexUnit* theWalker = this->mGoal->mUnit;
-    if (theWalker->mFormationRank != 0 && !this->mGoal->mIsBounded) {
+    if (theRange != 0 && !this->mGoal->mIsBounded) {
         long theX = 0;
         long theY = 0;
         if (theSlope != 0) {
@@ -168,11 +142,12 @@ long EEAIPathGoalModifierBase::GetStepCost(bool inSea, long inFromX, long inFrom
         long theDirections[4] = { 4, 3, 1, 6 };
         for (long k = 0; k < 4 && !theBlocked; k++) {
             EEGetTileInDirection(inX, inY, &theX, &theY, theDirections[k], theRange);
-            EETile* theOther = theMap->GetTile(theX, theY);
-            if (theOther == NULL)
+            if (!theView.HasTile(theX, theY))
                 continue;
-            if (!theOther->mAIValue &&
-                (inSea ? theOther->mTerrainType == kTerrainDeepWater || theOther->mTerrainType == kTerrainShallowWater : theOther->mTerrainType == kTerrainSpace))
+            long theType;
+            if (!theView.GetAIValue(theX, theY) &&
+                (theType = theView.GetTerrain(theX, theY),
+                 inSea ? theType == kTerrainDeepWater || theType == kTerrainShallowWater : theType == kTerrainSpace))
                 theBlocked = false;
             else
                 theBlocked = true;
@@ -180,8 +155,7 @@ long EEAIPathGoalModifierBase::GetStepCost(bool inSea, long inFromX, long inFrom
         if (theBlocked)
             theCost *= 2;
     } else if (theSlope != 0) {
-        EEActiveGroup* theGroup = theWalker->mActiveGroup;
-        if ((theGroup == NULL || theGroup->GetNumUnits() <= 1) && !this->mGoal->mGoalBounds.Contains(inX, inY))
+        if (theView.IsAlone(theWalker) && !this->mGoal->mGoalBounds.Contains(inX, inY))
             theCost += UMAbs(theSlope);
     }
     return theCost;
@@ -191,75 +165,28 @@ long EEAIPathGoalModifierBase::GetStepCost(bool inSea, long inFromX, long inFrom
 // Returns whether the walker (inGoal's unit, else inBoundedGoal's) may enter a tile: not a map edge, terrain it
 // can move on, every unit there passable, and its water state agreeing with the continent manager's tile flag
 bool EEAIPathGoalModifierBase::IsPassable(EEAIAStarPathfindingGoalBase* inGoal, EEAIAStarBoundedPathGoal* inBoundedGoal,
-                                       EETile* inTile, long inX, long inY, bool inAtGoal)
+                                       long inX, long inY, bool inAtGoal)
 {
-    bool theResult;
+    EEAIAStarView theView(gWorld.GetMap(), true);
     EEComplexUnit* theUnit = inGoal != NULL ? inGoal->mUnit : inBoundedGoal->mUnit;
-    if (!gWorld.GetMap()->IsEdgeTile(inX, inY)) {
-        long theType = inTile->mTerrainType;
-        if (theUnit->GetUnitClass()->CanMoveOnTerrain(theUnit, theType)) {
-            theResult = true;
-            for (RTSTileUnitNode* theNode = inTile->mUnits; theNode != NULL; theNode = theNode->mNext)
-                if (!theNode->mUnit->IsPassableBy(theUnit)) {
-                    theResult = false;
-                    break;
-                }
-            if (theResult) {
-                long theFlag = gContinentManager.GetTileFlag(inX, inY);
-                if (theFlag != 0) {
-                    long theMode = theUnit->mWaterState;
-                    if (theMode != 0) {
-                        if (theMode == 2)
-                            theResult = theFlag >= 0;
-                        else if (theMode == 3)
-                            theResult = false;
-                    }
-                }
-            }
-        } else
-            theResult = false;
-    } else
-        theResult = false;
-    return theResult;
-}
-
-// Whether the class is a submerged naval unit or a sea animal (inline; IsSeaBlocker computes both as ints:
-// push 1; pop) (provisional name)
-inline bool EEIsCategory10Or1B(EEUnitClass* inClass)
-{
-    return inClass->mCategory == kUnitCategorySubmergedNaval || inClass->mCategory == kUnitCategorySeaAnimal;
-}
-
-// FUNCTION: EXE 0x40fa75
-// Returns whether a unit blocks the sea walker: stopped, collidable, sea-going, not the walker, outside its group
-// (a naval building with air traffic always counts), and submerged or not just like the walker
-bool EEAIPathGoalModifierBase::IsSeaBlocker(EEComplexUnit* inUnit)
-{
-    if (inUnit->mVelocity != 0.0f || inUnit == this->mGoal->mUnit)
+    if (theView.IsEdgeTile(inX, inY))
         return false;
-    EEUnitClass* theClass = inUnit->GetUnitClass();
-    if ((!(theClass->mDomains & kMovementSea)) || !theClass->mIsCollidable)
+    if (!theView.CanMoveOn(theUnit, theView.GetTerrain(inX, inY)))
         return false;
-    if (inUnit->mActiveGroup == NULL || inUnit->mActiveGroup != this->mGoal->mUnit->mActiveGroup ||
-        (theClass->mCategory == kUnitCategoryNavalBuilding && theClass->mAirTrafficType != 0)) {
-        if (EEIsCategory10Or1B(theClass) == EEIsCategory10Or1B(this->mGoal->mUnit->GetUnitClass()))
-            return true;
+    if (!theView.ArePassable(theUnit, inX, inY))
+        return false;
+    long theFlag = theView.GetTileFlag(inX, inY);
+    if (theFlag != 0) {
+        long theMode = theView.GetWaterState(theUnit);
+        if (theMode == 2)
+            return theFlag >= 0;
+        if (theMode == 3)
+            return false;
     }
-    return false;
+    return true;
 }
 
-// FUNCTION: EXE 0x40fb08
-// Returns whether a unit blocks the space walker: stopped, collidable, space-going, not the walker, outside its group
-bool EEAIPathGoalModifierBase::IsLandBlocker(EEComplexUnit* inUnit)
-{
-    if (inUnit->mVelocity != 0.0f || inUnit == this->mGoal->mUnit)
-        return false;
-    EEUnitClass* theClass = inUnit->GetUnitClass();
-    if ((theClass->mDomains & kMovementSpace) && theClass->mIsCollidable &&
-        (inUnit->mActiveGroup == NULL || inUnit->mActiveGroup != this->mGoal->mUnit->mActiveGroup))
-        return true;
-    return false;
-}
+// (0x40fa75 IsSeaBlocker and 0x40fb08 IsLandBlocker: EEAIAStarView::HasStepBlocker, with the walker as an argument)
 
 // FUNCTION: EXE 0x40fb57
 // Creates a bounded-goal modifier attached to the given bounded path goal
@@ -344,35 +271,24 @@ long EEAIBPGModifierEnemyIsAttackableByUnit::GetCost(long inFromX, long inFromY,
 // Returns whether the unit may enter a tile, as IsPassable does (the water-state test only for sea units)
 bool EEAIBPGModifierEnemyIsAttackableByUnit::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
 {
-    bool theResult;
-    if (!gWorld.GetMap()->IsEdgeTile(inX, inY)) {
-        long theType = inTile->mTerrainType;
-        if (this->mUnit->GetUnitClass()->CanMoveOnTerrain(this->mUnit, theType)) {
-            theResult = true;
-            for (RTSTileUnitNode* theNode = inTile->mUnits; theNode != NULL; theNode = theNode->mNext)
-                if (!theNode->mUnit->IsPassableBy(this->mUnit)) {
-                    theResult = false;
-                    break;
-                }
-            if (theResult) {
-                if (this->mUnit->GetUnitClass()->mDomains & kMovementSea) {
-                    long theFlag = gContinentManager.GetTileFlag(inX, inY);
-                    if (theFlag != 0) {
-                        long theMode = this->mUnit->mWaterState;
-                        if (theMode != 0) {
-                            if (theMode == 2)
-                                theResult = theFlag >= 0;
-                            else if (theMode == 3)
-                                theResult = false;
-                        }
-                    }
-                }
-            }
-        } else
-            theResult = false;
-    } else
-        theResult = false;
-    return theResult;
+    EEAIAStarView theView(gWorld.GetMap(), true);
+    if (theView.IsEdgeTile(inX, inY))
+        return false;
+    if (!theView.CanMoveOn(this->mUnit, theView.GetTerrain(inX, inY)))
+        return false;
+    if (!theView.ArePassable(this->mUnit, inX, inY))
+        return false;
+    if (theView.IsSeaGoing(this->mUnit)) {
+        long theFlag = theView.GetTileFlag(inX, inY);
+        if (theFlag != 0) {
+            long theMode = theView.GetWaterState(this->mUnit);
+            if (theMode == 2)
+                return theFlag >= 0;
+            if (theMode == 3)
+                return false;
+        }
+    }
+    return true;
 }
 
 // FUNCTION: EXE 0x40fdab
@@ -392,25 +308,12 @@ long EEAIBPGModifierWallsDoNotBlock::GetCost(long inFromX, long inFromY, long in
 // Returns whether the walker may enter a tile: not a map edge, terrain it can move on, every unit passable but walls
 bool EEAIBPGModifierWallsDoNotBlock::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
 {
-    bool theResult;
-    if (!gWorld.GetMap()->IsEdgeTile(inX, inY)) {
-        long theType = inTile->mTerrainType;
-        if (this->mBoundedGoal->mUnit->GetUnitClass()->CanMoveOnTerrain(this->mBoundedGoal->mUnit, theType)) {
-            theResult = true;
-            for (RTSTileUnitNode* theNode = inTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                if (theNode->mUnit->GetUnitClass()->mIsWall)
-                    continue;
-                EEComplexUnit* theWalker = this->mBoundedGoal->mUnit;
-                if (!theNode->mUnit->IsPassableBy(theWalker)) {
-                    theResult = false;
-                    break;
-                }
-            }
-        } else
-            theResult = false;
-    } else
-        theResult = false;
-    return theResult;
+    EEAIAStarView theView(gWorld.GetMap(), true);
+    if (theView.IsEdgeTile(inX, inY))
+        return false;
+    if (!theView.CanMoveOn(this->mBoundedGoal->mUnit, theView.GetTerrain(inX, inY)))
+        return false;
+    return theView.ArePassableExcept(this->mBoundedGoal->mUnit, inX, inY, EEAIAStarView::kSkipWalls);
 }
 
 // FUNCTION: EXE 0x40fe55
@@ -764,25 +667,13 @@ long EEAIGPGModifierComputerPlayerWallPather::GetCost(long inFromX, long inFromY
 // unit passable but trees
 bool EEAIGPGModifierComputerPlayerWallPather::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
 {
-    bool theResult;
-    if (!gWorld.GetMap()->IsEdgeTile(inX, inY)) {
-        long theType = inTile->mTerrainType;
-        if (theType == kTerrainShallowWater || this->mBoundedGoal->mUnit->GetUnitClass()->CanMoveOnTerrain(this->mBoundedGoal->mUnit, theType)) {
-            theResult = true;
-            for (RTSTileUnitNode* theNode = inTile->mUnits; theNode != NULL; theNode = theNode->mNext) {
-                if (theNode->mUnit->GetUnitClass()->mIsTree)
-                    continue;
-                EEComplexUnit* theWalker = this->mBoundedGoal->mUnit;
-                if (!theNode->mUnit->IsPassableBy(theWalker)) {
-                    theResult = false;
-                    break;
-                }
-            }
-        } else
-            theResult = false;
-    } else
-        theResult = false;
-    return theResult;
+    EEAIAStarView theView(gWorld.GetMap(), true);
+    if (theView.IsEdgeTile(inX, inY))
+        return false;
+    long theType = theView.GetTerrain(inX, inY);
+    if (theType != kTerrainShallowWater && !theView.CanMoveOn(this->mBoundedGoal->mUnit, theType))
+        return false;
+    return theView.ArePassableExcept(this->mBoundedGoal->mUnit, inX, inY, EEAIAStarView::kSkipTrees);
 }
 
 // FUNCTION: EXE 0x4108d6

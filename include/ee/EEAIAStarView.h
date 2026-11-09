@@ -5,10 +5,11 @@
 // view only reads. Off a goal's hot path it is the seam a search capture records (tools/sim_capture.py) and a goal
 // written elsewhere would query.
 //
-// What the view does not hide yet: the path goals' modifiers (EEAIPathGoalModifierBase and its subclasses) are
-// world-side policies here, asked through CanEnter / GetModifierCost as one query each; their own reads stay inside
-// them. The search set-up's reads (EEAIAStarPathfindingGoalBase::Prepare: the walker's own and blocked tiles) are not
-// per tile and stay with the goal.
+// The path goals' modifiers (EEAIPathGoalModifierBase and its subclasses) are asked through CanEnter /
+// GetModifierCost, one noted query each; a modifier reads the world through a quiet view of the world map (the
+// modifier queries below), whose answers are not noted: the modifier's answer is the noted fact. The search set-up's
+// reads (EEAIAStarPathfindingGoalBase::Prepare: the walker's own and blocked tiles) are not per tile and stay with the
+// goal.
 //
 // Requires ee/EETileCoordinate.h's U2DPoint<long>.
 #ifndef EE_EEAIASTARVIEW_H
@@ -47,7 +48,9 @@ struct EEAIAStarBlocker {
 
 class EEAIAStarView {
 public:
-    EEAIAStarView() : mMap(0) {}
+    EEAIAStarView() : mMap(0), mQuiet(false) {}
+    // a modifier's view: the given map, its queries not noted when inQuiet
+    EEAIAStarView(EEMap* inMap, bool inQuiet) : mMap(inMap), mQuiet(inQuiet) {}
     void SetMap(EEMap* inMap) { this->mMap = inMap; }
     // the queries the Rust goals make (ee_astar's EeAStarViewCallbacks over this view)
     EeAStarViewCallbacks Callbacks();
@@ -107,8 +110,28 @@ public:
     long GetModifierCost(EEAIPathGoalModifierBase* inModifier, long inFromX, long inFromY, long inX, long inY,
                          long inParentX, long inParentY);
 
+    // The modifiers' own reads (EEAIAStarBoundedPathGoalModifiers.cpp, EEEMStorm.cpp; asked of a quiet view)
+    // the first unit on the tile (with a complex unit) that blocks the walker's step: stopped, collidable, not the
+    // walker, outside its group; at sea (inSea) a sea-going unit (a naval building with air traffic in any group) as
+    // submerged as the walker, else a space-going one
+    bool HasStepBlocker(EEComplexUnit* inWalker, bool inSea, long inX, long inY);
+    // the unit region of the tile ((inX, inY) / the region size, truncated): -1 none, 0 empty, 1 with units
+    long GetUnitRegionState(long inX, long inY);
+    long GetEpoch(EEComplexUnit* inWalker);     // its player's current epoch
+    bool IsAlone(EEComplexUnit* inWalker);      // no active group, or one of at most one unit
+    long GetWaterState(EEComplexUnit* inWalker);
+    bool IsSeaGoing(EEComplexUnit* inWalker);   // its class's domains include the sea
+    // every unit on the tile IsPassableBy the walker, skipping walls (inSkip kSkipWalls) or trees (kSkipTrees)
+    enum { kSkipNone = 0, kSkipWalls = 1, kSkipTrees = 2 };
+    bool ArePassableExcept(EEComplexUnit* inWalker, long inX, long inY, long inSkip);
+    bool HasHill(long inX, long inY);           // the continent manager's hill at the tile
+    bool RandomAtMost(float inChance);          // the physics stream's next Generate() <= inChance (one draw)
+
 private:
+    long Note(long inQuery, long inX, long inY, long inAnswer, long inArg = 0, long inArg2 = 0);
+
     EEMap* mMap;
+    bool mQuiet;                            // a modifier's view: its answers are not noted
 };
 
 #endif

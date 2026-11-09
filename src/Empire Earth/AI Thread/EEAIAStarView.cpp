@@ -40,6 +40,8 @@
 #include "ee/EEAIAStarTerrainStorage.h"
 #include "ee/EEAIAStarPathAreaStorage.h"
 #include "ee/EEPlayer.h"
+#include "ee/EEPhysics.h"
+#include "ee/RTSRegionTable.h"
 #include "ee/EEAIArea.h"
 #include "ee/EEAIContinent.h"
 #include "ee/EEAIPathArea.h"
@@ -66,8 +68,10 @@ enum {
     kViewCanEnter, kViewModifierCost
 };
 
-static inline long Note(long inQuery, long inX, long inY, long inAnswer, long inArg = 0, long inArg2 = 0)
+long EEAIAStarView::Note(long inQuery, long inX, long inY, long inAnswer, long inArg, long inArg2)
 {
+    if (this->mQuiet)
+        return inAnswer;
     return EEAIAStarNote(kAStarEventView, inQuery, inX, inY, inArg, inArg2, inAnswer);
 }
 
@@ -376,6 +380,102 @@ long EEAIAStarView::GetModifierCost(EEAIPathGoalModifierBase* inModifier, long i
     long theCost = inModifier->GetCost(inFromX, inFromY, inX, inY, inParentX, inParentY);
     Note(kViewModifierCost, inX, inY, theCost, inFromX, inFromY);
     return Note(kViewModifierCost, inX, inY, theCost, inParentX, inParentY);
+}
+
+// The modifiers' reads (EEAIPathGoalModifierBase::IsSeaBlocker / IsLandBlocker 0xfa75 / 0xfb08 with the walker as an
+// argument; the rest moved from the modifiers' bodies unchanged)
+static inline bool EEAStarIsCategory10Or1B(EEUnitClass* inClass)
+{
+    return inClass->mCategory == kUnitCategorySubmergedNaval || inClass->mCategory == kUnitCategorySeaAnimal;
+}
+
+static bool EEAStarIsSeaBlocker(EEComplexUnit* inWalker, EEComplexUnit* inUnit)
+{
+    if (inUnit->mVelocity != 0.0f || inUnit == inWalker)
+        return false;
+    EEUnitClass* theClass = inUnit->GetUnitClass();
+    if ((!(theClass->mDomains & kMovementSea)) || !theClass->mIsCollidable)
+        return false;
+    if (inUnit->mActiveGroup == NULL || inUnit->mActiveGroup != inWalker->mActiveGroup ||
+        (theClass->mCategory == kUnitCategoryNavalBuilding && theClass->mAirTrafficType != 0)) {
+        if (EEAStarIsCategory10Or1B(theClass) == EEAStarIsCategory10Or1B(inWalker->GetUnitClass()))
+            return true;
+    }
+    return false;
+}
+
+static bool EEAStarIsLandBlocker(EEComplexUnit* inWalker, EEComplexUnit* inUnit)
+{
+    if (inUnit->mVelocity != 0.0f || inUnit == inWalker)
+        return false;
+    EEUnitClass* theClass = inUnit->GetUnitClass();
+    if ((theClass->mDomains & kMovementSpace) && theClass->mIsCollidable &&
+        (inUnit->mActiveGroup == NULL || inUnit->mActiveGroup != inWalker->mActiveGroup))
+        return true;
+    return false;
+}
+
+bool EEAIAStarView::HasStepBlocker(EEComplexUnit* inWalker, bool inSea, long inX, long inY)
+{
+    for (RTSTileUnitNode* theNode = this->mMap->GetTile(inX, inY)->mUnits; theNode != NULL; theNode = theNode->mNext) {
+        EEComplexUnit* theUnit = theNode->mUnit->mComplexUnit;
+        if (theUnit != NULL && (inSea ? EEAStarIsSeaBlocker(inWalker, theUnit) : EEAStarIsLandBlocker(inWalker, theUnit)))
+            return true;
+    }
+    return false;
+}
+
+long EEAIAStarView::GetUnitRegionState(long inX, long inY)
+{
+    std::vector<EEComplexUnit*>* theRegion = this->mMap->mUnitRegions->GetRegion(
+        U2DPoint<long>(inX / this->mMap->mUnitRegions->mRegionSize, inY / this->mMap->mUnitRegions->mRegionSize));
+    if (theRegion == NULL)
+        return -1;
+    return theRegion->size() == 0 ? 0 : 1;
+}
+
+long EEAIAStarView::GetEpoch(EEComplexUnit* inWalker)
+{
+    return inWalker->mPlayer->mTechnologies->mCurrentEpoch;
+}
+
+bool EEAIAStarView::IsAlone(EEComplexUnit* inWalker)
+{
+    EEActiveGroup* theGroup = inWalker->mActiveGroup;
+    return theGroup == NULL || theGroup->GetNumUnits() <= 1;
+}
+
+long EEAIAStarView::GetWaterState(EEComplexUnit* inWalker)
+{
+    return inWalker->mWaterState;
+}
+
+bool EEAIAStarView::IsSeaGoing(EEComplexUnit* inWalker)
+{
+    return (inWalker->GetUnitClass()->mDomains & kMovementSea) != 0;
+}
+
+bool EEAIAStarView::ArePassableExcept(EEComplexUnit* inWalker, long inX, long inY, long inSkip)
+{
+    for (RTSTileUnitNode* theNode = this->mMap->GetTile(inX, inY)->mUnits; theNode != NULL; theNode = theNode->mNext) {
+        if (inSkip == kSkipWalls && theNode->mUnit->GetUnitClass()->mIsWall)
+            continue;
+        if (inSkip == kSkipTrees && theNode->mUnit->GetUnitClass()->mIsTree)
+            continue;
+        if (!theNode->mUnit->IsPassableBy(inWalker))
+            return false;
+    }
+    return true;
+}
+
+bool EEAIAStarView::HasHill(long inX, long inY)
+{
+    return gContinentManager.GetHillAt(U2DPoint<long>(inX, inY)) != NULL;
+}
+
+bool EEAIAStarView::RandomAtMost(float inChance)
+{
+    return gPhysics->mRandom.Generate() <= inChance;
 }
 
 // The view's queries as the Rust goals' callbacks (ee_astar's EeAStarViewCallbacks)

@@ -344,16 +344,17 @@ bool EEAIBPGModifierStormShaper::CheckNode(EEAIAStarNode* inNode)
 long EEAIBPGModifierStormShaper::GetCost(long inFromX, long inFromY, long inX, long inY, long inParentX,
                                            long inParentY)
 {
-    EETile* theTile = gWorld.GetMap()->GetTile(inX, inY);
+    EEAIAStarView theView(gWorld.GetMap(), true);
     long theCost = 40;
-    if (theTile != NULL) {
+    if (theView.HasTile(inX, inY)) {
+        long theType = theView.GetTerrain(inX, inY);
         if (this->mSnow) {
-            if (theTile->mTerrainType == kTerrainCliff || gContinentManager.GetHillAt(U2DPoint<long>(inX, inY)) != NULL)
+            if (theType == kTerrainCliff || theView.HasHill(inX, inY))
                 theCost = 1;
-            else if (theTile->mTerrainType != kTerrainDeepWater)
+            else if (theType != kTerrainDeepWater)
                 theCost = 5;
         } else if (this->mRain) {
-            if (theTile->mTerrainType == kTerrainDeepWater || theTile->mTerrainType == kTerrainShallowWater)
+            if (theType == kTerrainDeepWater || theType == kTerrainShallowWater)
                 theCost = 1;
         }
     }
@@ -370,17 +371,18 @@ static const float kStormOuterChance = 0.83f;
 // distance
 bool EEAIBPGModifierStormShaper::CanEnter(EETile* inTile, long inX, long inY, bool inGoal)
 {
+    EEAIAStarView theView(gWorld.GetMap(), true);
     U2DPoint<long> thePoint(inX, inY);
     bool theResult = false;
-    if (inTile != NULL) {
+    if (theView.HasTile(inX, inY)) {
         if (this->mInner.Contains(thePoint))
             theResult = true;
         else if (this->mOuter.Contains(thePoint))
-            theResult = gPhysics->mRandom.Generate() <= kStormOuterChance;
+            theResult = theView.RandomAtMost(kStormOuterChance);
         else if (thePoint.DistanceToSquared(this->mBoundedGoal->mStartTile) <= this->mDistanceSquared)
-            theResult = gPhysics->mRandom.Generate() <= kStormNearChance;
+            theResult = theView.RandomAtMost(kStormNearChance);
         else
-            theResult = gPhysics->mRandom.Generate() <= kStormFarChance;
+            theResult = theView.RandomAtMost(kStormFarChance);
     }
     return theResult;
 }
