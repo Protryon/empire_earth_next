@@ -179,7 +179,7 @@ class EERandomMapTable {
 public:
     EERandomMapTable();                     // 0xda407
     virtual ~EERandomMapTable() {}
-    static long Load(FSFileSpec* inFile);   // 0xda47b (db\dbrandommap.dat)
+    // 0xda47b Load (db\dbrandommap.dat, every record dropped): removed (RUST_PLAN D9); the table stays empty
     static void Unload();                   // 0xda510
     // members from the ctor: longs 0, eighteen floats 0.0f; sizeof 0x60 (new site)
     long mL04;                              // +0x04
