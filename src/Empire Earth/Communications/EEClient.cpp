@@ -587,8 +587,8 @@ void EEClient::HandleLobbyInput(NEMessage* inMessage)
             thePlayer.mPing = theInfo->mPing;
             thePlayer.mLoadedType = theInfo->mLoadedType;
             thePlayer.mStartingCitizens = theInfo->mCitizenBonus;
-            thePlayer.mEngine = (unsigned long)theInfo->mEngine < kEECPEngineChoiceCount ? (unsigned long)theInfo->mEngine
-                                                                                    : kEECPEngineClassic;   // port
+            thePlayer.mEngine = (unsigned long)theInfo->mEngine < EECPEngineChoiceCount() ? (unsigned long)theInfo->mEngine
+                                                                                       : (unsigned long)kEECPChoiceClassic;   // port
             thePlayer.mB36 = theInfo->mB42;
             thePlayer.mIsReady = theInfo->mIsReady;
             thePlayer.mSlot = theInfo->mSlot;

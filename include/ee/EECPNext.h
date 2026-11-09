@@ -430,7 +430,8 @@ struct EECPNextState {
     std::vector<long> mHome;                // (transient) the start resources' unit ids, sorted (EECPNextUpdateHome)
     // the strategy (EECPNextLua.cpp; docs/AI_LUA_PLAN.md §3.2)
     EECPLuaState* mLua;                     // the script's Lua state (NULL until the first step)
-    std::string mScript;                    // the module it runs ("c++": the C++ test opening, TEST ONLY); "" not chosen
+    std::string mAI;                        // the AI's id (ee/EECPEngine.h: its manifest entry; saved from 0.253)
+    std::string mScript;                   // the module it runs ("c++": the C++ test opening, TEST ONLY); "" not chosen
     bool mStarted;                          // init ran (a new game) or the memory came back (a loaded game)
     bool mFailed;                           // the script did not load: the seat issues no orders
     bool mRestore;                          // a loaded game: mRestoreBytes go back into the state at the first step
@@ -455,8 +456,8 @@ long EECPNextClaimRangeOf(const EEComputerPlayer* inPlayer);
 void EECPNextTestStep(EEComputerPlayer* inPlayer, const EECPNextView& inView);
 
 // ---------------------------------------------------------------------------------------------------------------
-// The strategy (EECPNextLua.cpp; docs/AI_LUA_PLAN.md §3.2 "S2 gate as built"): the personality's Lua script
-// (aipersonalities.yaml next_script, Data/ai/<name>.lua) gets the view as a table and returns its orders, which the
+// The strategy (EECPNextLua.cpp; docs/AI_LUA_PLAN.md §3.2 "S2 gate as built"): the seat's AI's Lua script
+// (its entry in the AI manifest Data/ai/ais.json, ee/EECPEngine.h; Data/ai/<name>.lua) gets the view as a table and returns its orders, which the
 // verbs above carry out; their results are in the next step's view. TEST ONLY: EE_AI_NEXT_SCRIPT names the script per
 // player (a comma list by player id from player 1, as EE_AI_ENGINE); "c++" there runs the C++ test opening.
 void EECPNextStrategyStep(EEComputerPlayer* inPlayer, const EECPNextView& inView);

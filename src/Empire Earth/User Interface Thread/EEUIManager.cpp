@@ -283,20 +283,27 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
     UIControlsTable::MoveControlsHorizontally(kFormLobby, 62, 173, -kLobbyPlayerShrink, -kLobbyPlayerShrink);
     // port: the lobby's engine column (EELobbyControl kLobbyEngine*; ee/EECPEngine.h) where the ping column is (a
     // computer row has no ping), widened into the gap before the game options: the header a copy of the ping label
-    // (2507), per slot a combo box like the citizens combo (2629; its lines the strings Classic, Next, Random) and a
-    // label like the citizens label (2645), on the slot rows (the database's rows: 0.1043 + slot * 0.0391); moved
-    // left with the columns above (0.4282..0.5200 in the database's places)
+    // (2507), per slot a combo box like the citizens combo (2629; its lines the strings Classic and Random, then the
+    // AI manifest's names, which the lobby appends: EEUIELobbyEvents.cpp LobbyFillEngineBox) and a label like the
+    // citizens label (2645), on the slot rows (the database's rows: 0.1043 + slot * 0.0391); moved left with the
+    // columns above (0.4282..0.5200 in the database's places). The open list is as tall as its lines (about 0.034 of
+    // the height each in this lobby), up to 8; more scroll.
     {
         const float kLeft = 0.4282f - kLobbyPlayerShrink, kRight = 0.5200f - kLobbyPlayerShrink;
         const float kRowTop = 0.10430248f, kRowStep = 0.03911343f;
         const float kRowHeight = 0.02477184f;
+        const float kListLine = 0.034f;
+        const unsigned long kListLinesMax = 8;
+        unsigned long theLines = EECPEngineChoiceCount();
+        if (theLines > kListLinesMax)
+            theLines = kListLinesMax;
         UIControlsTable::AddControlLike(this, 2507, kLobbyEngineControlID, kLobbyEngineHeader, 0, kLeft, kRight,
                                         0.058670145f, 0.102998696f, kLobbyEngineHeaderString, 0, kLobbyEngineHelpString);
         for (long theSlot = 0; theSlot < 16; theSlot++) {
             float theTop = kRowTop + theSlot * kRowStep;
             UIControlsTable::AddControlLike(this, 2629, kLobbyEngineControlID + 1 + theSlot, kLobbyEngineCombo + theSlot, 1,
-                                            kLeft, kRight, theTop, theTop + 0.025f + kEECPEngineChoiceCount * 0.022f,
-                                            kLobbyEngineClassicString, kLobbyEngineClassicString + kEECPEngineChoiceCount - 1,
+                                            kLeft, kRight, theTop, theTop + 0.025f + theLines * kListLine,
+                                            kLobbyEngineClassicString, kLobbyEngineRandomString,
                                             kLobbyEngineHelpString);
             UIControlsTable::AddControlLike(this, 2645, kLobbyEngineControlID + 17 + theSlot, kLobbyEngineLabel + theSlot, 1,
                                             kLeft, kRight, theTop, theTop + kRowHeight, kLobbyEngineClassicString, 0,
