@@ -50,6 +50,10 @@ enum EECPNextReason {
     kNextReasonNoTarget,        // a group verb: no place to go (no enemy town seen, nothing left to explore)
     kNextReasonUnsafe,          // build: the site (or the way there from the town) is under an enemy tower or soldiers
                                 // seen there (EECPNextBuildUnsafe; docs/AI_RESEARCH.md §8.35)
+    kNextReasonUnexplored,      // build near a site not explored yet: a citizen walks there first (§8.36), the order
+                                // is to be given again once it is seen (the placement needs the tiles round it)
+    kNextReasonNoDropoff,       // gather (queued): fewer places by a finished drop site than gatherers wanted; the rest
+                                // wait (and help build the drop sites going up) until one stands (§8.36)
 };
 
 struct EECPNextResult {
@@ -84,6 +88,10 @@ struct EECPNextSite {           // a resource centre (EEComputerPlayer::mResourc
     long claimed;               // 1: active (gathered from)
     long has_drop;              // 1: a drop site (town centre, settlement; granary for food) at hand: within the rings
                                 //    build(settlement, site) places one in (kEECPPatchDropRange + 2), plus its half size
+    long ready[kNextResources]; // §8.36, by resource: 1 when one of its units of it has a finished drop site at hand
+                                // (EECPNextUnitDropReady: the finders send gatherers only there)
+    long drop[kNextResources];  // ... a drop site at hand, finished or going up (a centre may hold gold and iron: its
+                                // has_drop, from its first unit, said yes for the iron 6 tiles further)
     long has_tower;             // 1: one of the player's towers within 8 tiles
     long danger;                // the seen enemy strength within 12 tiles, plus 1 in a recent danger zone
     long patch;                 // 1: its food is a forage patch
@@ -114,6 +122,10 @@ const long kNextThreatRange = 9;            // tiles: seen enemy soldiers this n
 const long kNextThreatMs = 20000;           // ... remembered this long after they were last seen
 const long kNextTowerMargin = 3;            // tiles past a tower's range (the gatherers stand round the mine)
 const long kNextHomeRange = 20;             // tiles from the town centre: the start resources
+const long kNextDropReach = 3;              // tiles from a drop site's edge (about): a site's drop is at hand
+const long kNextDropSlack = 1;              // ... a resource unit's (EECPNextUnitDropReady, §8.36)
+const long kNextExploreMs = 90000;          // a walker sent to see a site is kept there this long at most (§8.36)
+const long kNextWoodSlack = 2;              // ... a tree's (the forest edge: the settlement stands a tile or two off)
 const long kNextPatchPlaces = 6;            // gatherers a forage patch holds in all, however many bushes (§8.35)
 const long kNextHuntRange = 24;             // tiles from the town centre: the game hunted at least (§8.35: hunters
                                             // 40+ tiles out); the claim range when it is larger (EECPNextHuntReach)
@@ -126,6 +138,19 @@ long EECPNextAssigned(EEComputerPlayer* inPlayer, EEUnit* inResource);
 // whether a resource unit has room for one more of the player's gatherers: the mining limit per unit and, for a forage
 // bush, kNextPatchPlaces over its whole patch (the resource centre holding it)
 bool EECPNextHasRoom(EEComputerPlayer* inPlayer, EEUnit* inResource);
+// a finished drop site for the resource at hand (docs/AI_RESEARCH.md §8.36, the owner: "build a settlement before using
+// a node"): a town centre, capitol or settlement (inFood: a granary too) whose centre lies within kNextDropReach tiles
+// plus half its size of the tile (as the view's has_drop, which also counts one going up)
+bool EECPNextDropReady(EEComputerPlayer* inPlayer, long inX, long inY, bool inFood, long inSlack = 0);
+// the same for a resource unit, kNextDropSlack tiles further (a mine or bush's own size; the gatherers stand round it)
+bool EECPNextUnitDropReady(EEComputerPlayer* inPlayer, EEUnit* inResource);
+// whether a citizen is the walker sent to see a site for its settlement (EECPNextState::mExplore; §8.36)
+bool EECPNextExploring(EEComputerPlayer* inPlayer, EEUnit* inUnit);
+// the player's finished drop sites (inFood: granaries too): x, y (the centre tile) and half the size, three longs each
+void EECPNextReadyDrops(EEComputerPlayer* inPlayer, bool inFood, std::vector<long>& outDrops);
+// the next engine's wood target (EECPResourceManager.cpp): a tree with a finished drop site at hand, the forest point
+// nearest the town centre first, else the one nearest each drop site; NULL: none
+EEUnit* EECPNextWoodTarget(EEComputerPlayer* inPlayer, long inCount, EEComplexUnit* inUnit);
 // whether a building at a tile would put its builders in harm's way: a seen enemy tower whose range covers the tile
 // or the straight way to it from the town centre, enemy soldiers seen within kNextThreatRange of it in the last
 // kNextThreatMs (away from the town), a danger zone (citizens hit there lately); 0: safe, else kNextBlocked*
@@ -276,6 +301,8 @@ struct EECPNextView {
     long wood_x, wood_y;        // the forest edge the wood gatherers go to (FindForestTarget; -1: none)
     long wood_distance;         // its distance from the town centre
     long wood_drop;             // 1: a drop site (town centre, settlement) within reach of it
+    long wood_ready;            // 1: some forest edge has a finished drop site at hand (§8.36: the wood gatherers go
+                                //    only there, EECPNextWoodTarget)
 };
 
 void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView);
@@ -457,6 +484,10 @@ struct EECPNextState {
     std::vector<EECPNextSeen> mSeen;        // (transient) the enemy units in sight this step
     // the gather safety (EECPNextView.cpp; saved from the state block's version 3)
     std::vector<EECPNextSpot> mThreats;     // enemy soldiers seen in the last kNextThreatMs (unit, player, x, y, time)
+    std::vector<EECPNextSpot> mExplore;     // §8.36: a site's settlement waits for its tiles to be seen (a building is
+                                            // placed only on tiles in sight): the walker (mUnit) sent there at mTime;
+                                            // AssignGatherers leaves it standing there (not saved: a loaded game sends
+                                            // a new one)
     long mThreatsTime;                      // game ms of the last scan into mThreats (its entries of that time: in sight)
     std::vector<long> mHome;                // (transient) the start resources' unit ids, sorted (EECPNextUpdateHome)
     // the strategy (EECPNextLua.cpp; docs/AI_LUA_PLAN.md §3.2)

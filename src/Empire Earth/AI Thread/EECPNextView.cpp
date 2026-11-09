@@ -55,7 +55,6 @@
 
 static const long kNextSiteDangerRange = 12;   // tiles: the seen enemy soldiers that count as a site's danger
 static const long kNextTowerRange = 8;          // tiles: a tower this near guards a site (EECPRMGuardSites)
-static const long kNextDropReach = 3;           // tiles from a drop site's edge (about): a site's drop is at hand
 static const long kNextHuntMax = 30;            // animals counted at most in the view's hunt
 
 static long EECPNextSqrt(long long inValue)     // the integer square root (no float in the view)
@@ -264,6 +263,62 @@ bool EECPNextHasRoom(EEComputerPlayer* inPlayer, EEUnit* inResource)
         if (theCenter->mUnits[u]->mUnitClass->mUnitType == kUnitTypeResForageBush)
             thePatch += EECPNextAssigned(inPlayer, theCenter->mUnits[u]);
     return thePatch < kNextPatchPlaces;
+}
+
+// the player's finished drop sites for a resource (town centres, capitols, settlements; for food granaries too): the
+// centre tile and half the size of each, three longs a drop site
+void EECPNextReadyDrops(EEComputerPlayer* inPlayer, bool inFood, std::vector<long>& outDrops)
+{
+    outDrops.clear();
+    for (EEUnit* theUnit = inPlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
+        long theType = theUnit->mUnitClass->mUnitType;
+        if (theType != kUnitTypeTownCenter && theType != kUnitTypeCapitol && theType != kUnitTypeSettlement
+            && !(inFood && theType == kUnitTypeGranary))
+            continue;
+        if (theUnit->mComplexUnit == NULL || !theUnit->mComplexUnit->mIsBuilt || !(theUnit->mHitPoints > 0)
+            || theUnit->mTile == NULL)
+            continue;
+        long theHalf = theUnit->mUnitClass->GetTileSize() / 2;
+        outDrops.push_back(theUnit->GetTileX() + theHalf);
+        outDrops.push_back(theUnit->GetTileY() + theHalf);
+        outDrops.push_back(theHalf);
+    }
+}
+
+static bool EECPNextDropIn(const std::vector<long>& inDrops, long inX, long inY, long inSlack = 0)
+{
+    for (unsigned long d = 0; d + 2 < inDrops.size(); d += 3) {
+        long theReach = kNextDropReach + inSlack + inDrops[d + 2];
+        if (EECPNextDistance2(inX, inY, inDrops[d], inDrops[d + 1]) <= (long long)theReach * theReach)
+            return true;
+    }
+    return false;
+}
+
+bool EECPNextExploring(EEComputerPlayer* inPlayer, EEUnit* inUnit)
+{
+    EECPNextState* theState = EECPNextGetState(inPlayer);
+    long theNow = (long)gPhysics->mGameTime;
+    for (unsigned long e = 0; e < theState->mExplore.size(); e++)
+        if (theState->mExplore[e].mUnit == (long)inUnit->mUnitID && theNow - theState->mExplore[e].mTime <= kNextExploreMs)
+            return true;
+    return false;
+}
+
+bool EECPNextDropReady(EEComputerPlayer* inPlayer, long inX, long inY, bool inFood, long inSlack)
+{
+    std::vector<long> theDrops;
+    EECPNextReadyDrops(inPlayer, inFood, theDrops);
+    return EECPNextDropIn(theDrops, inX, inY, inSlack);
+}
+
+bool EECPNextUnitDropReady(EEComputerPlayer* inPlayer, EEUnit* inResource)
+{
+    if (inResource == NULL || inResource->mTile == NULL)
+        return false;
+    std::vector<long> theDrops;
+    EECPNextReadyDrops(inPlayer, inResource->mResourceType == kResourceFood, theDrops);
+    return EECPNextDropIn(theDrops, inResource->GetTileX(), inResource->GetTileY(), kNextDropSlack);
 }
 
 long EECPNextSiteThreat(EEComputerPlayer* inPlayer, long inX, long inY, bool inNow, long* outKind)
@@ -614,6 +669,9 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
 
     // the resource centres
     long theLimit = inPlayer->mMiningLimit > 0 ? (long)inPlayer->mMiningLimit : 1;
+    std::vector<long> theReady, theReadyFood;   // the finished drop sites (§8.36)
+    EECPNextReadyDrops(inPlayer, false, theReady);
+    EECPNextReadyDrops(inPlayer, true, theReadyFood);
     for (unsigned long k = 0; k < inPlayer->GetNumResourceCenters(); k++) {
         EECPResourceCenter* theCenter = inPlayer->GetResourceCenter(k);
         EECPNextSite theSite;
@@ -668,6 +726,21 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
             EETile* theTile = static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)theSite.x,
                 (unsigned long)theSite.y));
             theSite.explored = theTile != NULL && theTile->IsVisibleTo(inPlayer) ? 1 : 0;
+        }
+        for (unsigned long u = 0; u < theCenter->mUnits.size(); u++) {   // §8.36: the drop sites by resource
+            EEUnit* theUnit = theCenter->mUnits[u];
+            long r = (long)theUnit->mResourceType - kResourceFood;
+            if (!EECPNextResourceLeft(theUnit) || r < 0 || r >= kNextResources)
+                continue;
+            long theUX = theUnit->GetTileX(), theUY = theUnit->GetTileY();
+            if (!theSite.ready[r] && EECPNextDropIn(r == 0 ? theReadyFood : theReady, theUX, theUY, kNextDropSlack))
+                theSite.ready[r] = 1;
+            const std::vector<EECPNextPlace>& theAny = r == 0 ? theFoodDrops : theDrops;
+            for (unsigned long d = 0; d < theAny.size() && !theSite.drop[r]; d++) {
+                long theReach = kNextDropReach + kNextDropSlack + theAny[d].mReach;
+                if (EECPNextDistance2(theUX, theUY, theAny[d].mX, theAny[d].mY) <= (long long)theReach * theReach)
+                    theSite.drop[r] = 1;
+            }
         }
         theSite.distance = theTown ? EECPNextSqrt(EECPNextDistance2(theSite.x, theSite.y, theTownX, theTownY)) : 0;
         const std::vector<EECPNextPlace>& theDropList = theSite.resource == 0 ? theFoodDrops : theDrops;
@@ -740,6 +813,7 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
     outView.wood_x = outView.wood_y = -1;
     outView.wood_distance = 0;
     outView.wood_drop = 0;
+    outView.wood_ready = 0;
     if (theTown) {
         for (unsigned long i = 0; i < theResources->mMines.size() && outView.hunt < kNextHuntMax; i++) {
             EEComplexUnit* theAnimal = theResources->mMines[i];
@@ -767,6 +841,7 @@ void EECPNextBuildView(EEComputerPlayer* inPlayer, EECPNextView& outView)
                     && theAttack->mTarget->GetUnitClass()->GetFamily() == kUnitFamilyAnimal))
                 outView.hunters++;
         }
+        outView.wood_ready = EECPNextWoodTarget(inPlayer, 0, NULL) != NULL ? 1 : 0;
         EEUnit* theTree = theResources->FindForestTarget(0, NULL);
         if (theTree != NULL && theTree->mTile != NULL) {
             outView.wood_x = theTree->GetTileX();

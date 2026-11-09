@@ -45,6 +45,10 @@
 #include "ee/EEAIContinentManager.h"
 #include "ee/EECPCivilizationManager.h"
 #include "ee/EECPUnitManager.h"
+#include "ee/EEUGLocation.h"
+#include "ee/EEUnitUtilities.h"
+#include "ee/EEUGBuildRepair.h"
+#include "ee/EEUnitAction.h"
 #include "ee/EECPUMGatherUnitsScreenBase.h"
 #include "ee/EECPBuildManager.h"
 #include "ee/EECPResourceManager.h"
@@ -210,6 +214,12 @@ static long EECPNextGap(long inX, long inY, long inSize, EEUnit* inUnit)
     return (std::max)(theDX, theDY);
 }
 
+static long long EECPNextDistance2Of(long inX, long inY, long inX2, long inY2)
+{
+    long long theDX = inX - inX2, theDY = inY - inY2;
+    return theDX * theDX + theDY * theDY;
+}
+
 // a drop site by its resource (§8.35, the owner: "settlements directly adjacent to all resource mines, not just randomly
 // 3 tiles away"): of the tiles in the rings 1..inLast round a tile where the class can be built (CanBuildAt keeps a
 // one-tile margin free, the gatherers' side), the one nearest the resource units (inUnits; the tile itself when
@@ -263,6 +273,34 @@ static bool EECPNextAdjacentSite(EEComputerPlayer* inPlayer, long inType, long i
 // Gathering and claims (EECPResourceManager: AssignGatherers, RebalanceGatherers, the finders and SendToGather carry
 // them out; UpdateWantedGatherers, EECPRMSplitByDemand, EECPRMActivateNeeded, SettlePatches and GuardSites never run)
 
+// the gatherer places by a finished drop site (§8.36): the claimed forage patches (kNextPatchPlaces each) or mines
+// (the mining limit a unit with some left) whose drop site stands; wood: kNextMaxCount when a forest edge has one
+static long EECPNextReadyPlaces(EEComputerPlayer* inPlayer, long inResource)
+{
+    if (inResource == 1)
+        return EECPNextWoodTarget(inPlayer, 0, NULL) != NULL ? kNextMaxCount : 0;
+    long theLimit = inPlayer->mMiningLimit > 0 ? (long)inPlayer->mMiningLimit : 1;
+    long thePlaces = 0;
+    for (unsigned long k = 0; k < inPlayer->GetNumResourceCenters(); k++) {
+        EECPResourceCenter* theCenter = inPlayer->GetResourceCenter(k);
+        if (!theCenter->mIsActive)
+            continue;
+        long theUnits = 0;
+        bool theReady = false;
+        for (unsigned long u = 0; u < theCenter->mUnits.size(); u++) {
+            EEUnit* theUnit = theCenter->mUnits[u];
+            if ((long)theUnit->mResourceType != kResourceFood + inResource || !(theUnit->mResourceAmount > 0)
+                || theUnit->mTile == NULL || (inResource == 0 && theUnit->mUnitClass->mUnitType != kUnitTypeResForageBush))
+                continue;
+            theUnits++;
+            theReady = theReady || EECPNextUnitDropReady(inPlayer, theUnit);
+        }
+        if (theReady)
+            thePlaces += inResource == 0 ? kNextPatchPlaces : theUnits * theLimit;
+    }
+    return thePlaces;
+}
+
 EECPNextResult EECPNextGather(EEComputerPlayer* inPlayer, long inResource, long inCount, long inPrefer)
 {
     if (inResource < 0 || inResource >= kNextResources || inCount < 0 || inCount > 1000
@@ -284,6 +322,12 @@ EECPNextResult EECPNextGather(EEComputerPlayer* inPlayer, long inResource, long 
         theState->mFoodPrefer = inPrefer;
     }
     theResources->mWantedGatherers[kResourceFood + inResource] = theWanted;
+    if (inCount > 0 && !(inResource == 0 && inPrefer == kNextPreferHunt)) {
+        long thePlaces = EECPNextReadyPlaces(inPlayer, inResource);
+        if (thePlaces < inCount)   // (the game for hunting has no drop site rule: the patches' places only)
+            return EECPNextReport(inPlayer, "gather", kNextQueued, kNextReasonNoDropoff, inCount,
+                "resource=%ld want=%ld prefer=%ld ready=%ld", inResource, inCount, inPrefer, thePlaces);
+    }
     return EECPNextReport(inPlayer, "gather", kNextDone, kNextReasonNone, inCount, "resource=%ld want=%ld prefer=%ld",
         inResource, inCount, inPrefer);
 }
@@ -359,11 +403,83 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
         // a settlement next to the resource (EECPNextAdjacentSite: the nearest free tile to the centre's units, §8.35),
         // anything else a little further out so that it does not stand on the gatherers' path
         if (inType == kUnitTypeSettlement || inType == kUnitTypeGranary) {
-            std::vector<EEUnit*> theUnits;
+            std::vector<EEUnit*> theUnits, theNoDrop;
             for (unsigned long u = 0; u < theCenter->mUnits.size(); u++)
-                if (theCenter->mUnits[u]->mResourceAmount > 0 && theCenter->mUnits[u]->mTile != NULL)
+                if (theCenter->mUnits[u]->mResourceAmount > 0 && theCenter->mUnits[u]->mTile != NULL) {
                     theUnits.push_back(theCenter->mUnits[u]);
+                    if (!EECPNextUnitDropReady(inPlayer, theCenter->mUnits[u]))
+                        theNoDrop.push_back(theCenter->mUnits[u]);
+                }
+            if (!theNoDrop.empty() && theNoDrop.size() < theUnits.size()) {
+                // (§8.36: by the units with no drop site yet: a centre's iron 6 tiles from its gold's settlement)
+                theUnits.swap(theNoDrop);
+                theX = theUnits[0]->GetTileX();
+                theY = theUnits[0]->GetTileY();
+            }
             theFound = EECPNextAdjacentSite(inPlayer, inType, theX, theY, kEECPPatchDropRange + 4, theUnits, theTile, theGap);
+            // §8.36: a site not explored yet has only far tiles known to be free (the settlement went 5-6 tiles off and
+            // its patch never had a drop at hand): the nearest citizen not building walks there first, and the order
+            // comes again once the site is seen
+            EETile* theSiteTile = gWorld.mMap != NULL
+                ? static_cast<EETile*>(gWorld.mMap->GetTile((unsigned long)theX, (unsigned long)theY)) : NULL;
+            // (a building goes only on tiles in sight now, EECanPlaceUnitOnTile: the walker stands there until the
+            // order comes again; once it is there the rings' result stands)
+            bool theArrived = false;
+            {
+                EECPNextState* theState = EECPNextGetState(inPlayer);
+                for (unsigned long e = 0; e < theState->mExplore.size(); e++) {
+                    EEUnit* theUnit = gWorld.GetUnit((unsigned long)theState->mExplore[e].mUnit);
+                    if (theState->mExplore[e].mX == theX && theState->mExplore[e].mY == theY && theUnit != NULL
+                        && theUnit->mHitPoints > 0 && theUnit->mTile != NULL
+                        && EECPNextDistance2Of(theUnit->GetTileX(), theUnit->GetTileY(), theX, theY) <= 9)
+                        theArrived = true;
+                }
+            }
+            if ((!theFound || theGap > 2) && !theArrived && theSiteTile != NULL) {
+                if (EECPNextBuildUnsafe(inPlayer, theX, theY) != kNextBlockedNone)
+                    return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonUnsafe, 0,
+                        "cls=%ld near=site arg=%ld x=%ld y=%ld (unexplored)", inType, inArg1, theX, theY);
+                // one walker a site: one sent here lately and alive (walking or standing there) is enough
+                EECPNextState* theState = EECPNextGetState(inPlayer);
+                long theNow = (long)gPhysics->mGameTime;
+                EEComplexUnit* theWalker = NULL;
+                for (long e = (long)theState->mExplore.size() - 1; e >= 0; e--) {
+                    EECPNextSpot& theSpot = theState->mExplore[e];
+                    EEUnit* theUnit = gWorld.GetUnit((unsigned long)theSpot.mUnit);
+                    if (theNow - theSpot.mTime > kNextExploreMs || theUnit == NULL || !(theUnit->mHitPoints > 0)
+                        || theUnit->mComplexUnit == NULL)
+                        theState->mExplore.erase(theState->mExplore.begin() + e);
+                    else if (theSpot.mX == theX && theSpot.mY == theY)
+                        theWalker = theUnit->mComplexUnit;
+                }
+                bool theNew = theWalker == NULL;
+                std::vector<EEComplexUnit*> theCitizens;
+                if (theNew)
+                    inPlayer->mCivilizationManager->mUnitManager->GetCitizens(theCitizens);
+                long long theBest = 0;
+                for (unsigned long c = 0; c < theCitizens.size(); c++) {
+                    EEComplexUnit* theUnit = theCitizens[c];
+                    if (!(theUnit->GetHitPoints() > 0) || theUnit->GetTileX() == -10000 || theUnit->mIsDetachedFromAI
+                        || dynamic_cast<EEUGBuildRepair*>(theUnit->GetLoadGoal()) != NULL
+                        || dynamic_cast<EEUGLocation*>(theUnit->GetLoadGoal()) != NULL)
+                        continue;
+                    long long theDX = theUnit->GetTileX() - theX, theDY = theUnit->GetTileY() - theY;
+                    if (theWalker == NULL || theDX * theDX + theDY * theDY < theBest) {
+                        theWalker = theUnit;
+                        theBest = theDX * theDX + theDY * theDY;
+                    }
+                }
+                if (theNew && theWalker != NULL) {
+                    theWalker->ClearGoalQueue(0);
+                    theWalker->SetGoal(new EEUGLocation((float)theX, (float)theY, 0.0f, false, true, false, 0.0f, false, false), 0, 0);
+                    theWalker->StartAction(kActionPrepareToMove);
+                    theWalker->mUnitClass->ActionChanged(theWalker);
+                    EECPNextSpot theSpot = { (long)inPlayer->mPlayerID, theX, theY, theNow, (long)theWalker->mUnitID };
+                    theState->mExplore.push_back(theSpot);
+                }
+                return EECPNextReport(inPlayer, "build", kNextQueued, kNextReasonUnexplored, theWalker != NULL ? 1 : 0,
+                    "cls=%ld near=site arg=%ld x=%ld y=%ld gap=%ld (explore)", inType, inArg1, theX, theY, theFound ? theGap : -1L);
+            }
         } else
             theFound = EECPNextRingSite(inPlayer, inType, theX, theY, 2, 7, theTile);
         // a settlement with no room in those rings (trees, cliffs, other buildings round a mine): the rings a little
@@ -405,15 +521,53 @@ EECPNextResult EECPNextBuild(EEComputerPlayer* inPlayer, long inType, long inNea
             theNearName = inNear == kNextNearSite ? "site>ring" : "town>ring";
         }
     }
-    if (!theFound || (theTile.mX == 0 && theTile.mY == 0))
+    if (!theFound || (theTile.mX == 0 && theTile.mY == 0)) {
+        if (gCPTraceOn && inType == kUnitTypeSettlement && inNear == kNextNearSite) {
+            // TEST ONLY (§8.36): why the rings round the site took no settlement: of the tiles 1..8 out, how many the
+            // footprint check refuses (units, terrain), how many lie off the town's land, on a choke point or a hill
+            EECPResourceCenter* theCenter = EECPNextSiteAt(inPlayer, inArg1);
+            long theX = -1, theY = -1;
+            if (theCenter != NULL && EECPNextSiteTile(theCenter, theX, theY)) {
+                long theSize = gUnitClassTable[inType]->GetTileSize() > 0 ? gUnitClassTable[inType]->GetTileSize() : 1;
+                unsigned short theContinent = gContinentManager.GetContinent(theBuild->mTownCenterTile, kAIPathLandMass);
+                long theTiles = 0, theBlocked = 0, theLand = 0, theChoke = 0, theHill = 0;
+                std::vector<EETileCoordinate> theRing;
+                for (long r = 1; r <= 8; r++) {
+                    theRing.clear();
+                    EEGetSquareRingTiles(theX - theSize / 2, theY - theSize / 2, r, theRing);
+                    for (unsigned long k = 0; k < theRing.size(); k++) {
+                        theTiles++;
+                        if (!EEPlayerBlockTakes(inPlayer, inType, theRing[k].mX - 1, theRing[k].mY - 1, theSize + 2, theSize + 2, 0))
+                            theBlocked++;
+                        else if (gContinentManager.GetContinent(theRing[k], kAIPathLandMass) != theContinent)
+                            theLand++;
+                        else if (gContinentManager.GetChokePointAt(theRing[k]) != NULL)
+                            theChoke++;
+                        else if (gContinentManager.GetHillAt(theRing[k]) != NULL)
+                            theHill++;
+                    }
+                }
+                EE_CP_TRACE(inPlayer, "build.nosite_why", "x=%ld y=%ld tiles=%ld blocked=%ld land=%ld choke=%ld hill=%ld", theX,
+                    theY, theTiles, theBlocked, theLand, theChoke, theHill);
+            }
+        }
         return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonNoSite, 0, "cls=%ld near=%s arg=%ld/%ld", inType,
             theNearName, inArg1, inArg2);
+    }
     // §8.35: never where the builders would walk under a seen enemy tower or into enemy soldiers seen there
     long theUnsafe = EECPNextBuildUnsafe(inPlayer, theTile.mX, theTile.mY);
     if (theUnsafe != kNextBlockedNone)
         return EECPNextReport(inPlayer, "build", kNextRefused, kNextReasonUnsafe, 0, "cls=%ld near=%s arg=%ld/%ld x=%ld y=%ld why=%ld",
             inType, theNearName, inArg1, inArg2, (long)theTile.mX, (long)theTile.mY, theUnsafe);
     bool theAfford = inPlayer->CanAfford(theNode, kUnitTypeCitizen, 1);
+    if (inNear == kNextNearSite) {   // (§8.36: the walker sent to see the site is free again; it is the nearest builder)
+        EECPNextState* theState = EECPNextGetState(inPlayer);
+        for (long e = (long)theState->mExplore.size() - 1; e >= 0; e--) {
+            long theDX = theState->mExplore[e].mX - theTile.mX, theDY = theState->mExplore[e].mY - theTile.mY;
+            if (theDX * theDX + theDY * theDY <= 100)
+                theState->mExplore.erase(theState->mExplore.begin() + e);
+        }
+    }
     theBuild->QueueBuildingAt(inType, theTile.mX, theTile.mY);
     return EECPNextReport(inPlayer, "build", kNextQueued, kNextReasonNone, 1, "cls=%ld near=%s arg=%ld/%ld x=%ld y=%ld gap=%ld afford=%d",
         inType, theNearName, inArg1, inArg2, (long)theTile.mX, (long)theTile.mY, theGap, theAfford ? 1 : 0);
