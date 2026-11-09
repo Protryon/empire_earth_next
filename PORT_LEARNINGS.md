@@ -11654,3 +11654,44 @@ screen.rs). `DX7HRTnLDisplay.cpp` is the plug-in entry (the PIM table, a validit
 - **The DX7Movie thread stays a C++ `TSThread`**, with the trampolines as the seam and the pl_mpeg, event and critical
   section objects C++; Rust owns the sound ring, which the mixer's device thread and the decoder share under C++'s
   `mSoundAccess`.
+
+## R6: the UI toolkit in Rust, first part (ee_ui, 2026-11-09)
+
+`UILayoutUtility.cpp` moved whole (its members forward from the new unit `User Interface/UITrampolines.cpp`,
+`tools/units.py` `UI_TRAMPOLINES`); `UISlider`'s arithmetic, a multi-line `UITextLabel`'s word wrapping (`ReadWord`,
+`ReadLine` deleted) and `UIForm`'s focus walk (`Tab`, `ShiftTab`, `CheckedRadioButton`) and control hit test moved
+as functions the C++ members forward to. The C++ classes keep every member, vtable and exported name, so the
+harness's hooks and `layout_gen.py`'s offsets are untouched (`UIForm` gained only a `friend`).
+
+- **The UCRT's `lrintf` is not the x87's.** NaN and values outside [-2^31, 2^31] give 0, and 2^31 itself gives
+  `LONG_MIN` (measured from the clang-cl build: `rect::float_to_long`). `UMFloor`/`UMFloorUnsigned` inherit it:
+  `UMFloor(-1e30)` is -1. `ee_dx7`'s `float_to_long` returns `i32::MIN` for these (the x87's value); whether its
+  inputs can be NaN or out of range was not checked here. glibc on x86-64 gives `LONG_MIN` (64-bit), arm64
+  saturates; `ee_ui` follows each system.
+- **Golden drivers over the real UI units.** A scratch TU `#include`s the unit after the STL headers and the engine
+  headers under `#define private public` / `#define protected public`, then supplies only what the case runs: the
+  `UIControl` ctor and `SetDirty`/`SetLocation`/`FireTriggerEvent` as trace lines, `GERhombus()`,
+  `GERectangle::Contains` (GEBitmap.cpp's body), `UString(const char*)` for the U2D key statics a unit's headers
+  define (without it the exe dies before `main`), the real `UWideString.cpp` and `ee_rust.lib` for `PlatMbs*`.
+  Objects are `calloc`ed (`UIForm`, `UIManager`) or constructed through their real ctor; `/FORCE:UNRESOLVED` keeps the
+  vtables' other slots. The same driver, recompiled over the forwarders and linked with the new `ee_rust.lib`, must
+  print the same file: that checks the C++ seam (offsets, host calls, argument order), not only the Rust.
+- **Host calls are virtual, so the record is re-read after each.** Rust works on the C++ object's own members (a
+  pinned record from `mThumbRectangle` on, offsets `static_assert`ed in the unit) through raw pointers, writes them
+  back before a host call (`ChangeRange`, `SetDirty`, `UIControl::SetLocation`) and reads them after:
+  `EEUIFSEESElevation::ChangeRange` reads the slider. Protected virtuals are reached through a derived view
+  (`UISliderAccess`), private members through a friend struct (`UIFormRust`).
+- **Text stays bytes stepped by the C runtime** until the D6 switch (UTF-8, decided as a later track). Every reading of
+  text is in `text.rs` (stepping, spaces, word and line ends), so the switch changes that module; `wrap.rs` takes an `Mbcs` (`PlatMbsInc`,
+  `PlatMbsNInc`, `PlatIsMbcSpace`, `PlatIsMbbLead` through `ee_plat_core`), so a double-byte code page wraps as the
+  C++ did; the tests use a single-byte page (the goldens' cp1252) and a Shift-JIS-shaped fake.
+  `GetMultiByteChar` reads signed chars, so 0xa0 is never a space. `ReadWord` stops after 256 characters but returns
+  257 when text follows, so the next line starts one character later: kept.
+- **A driver trap:** `printf("%d %lu", f->SetTabStop(s), f->mTabStop)` reads `mTabStop` first (MSVC ABI, arguments
+  right to left); the replay must print the value from before the call.
+- **Builds:** `build.py` recompiles every unit (about 11 minutes at `-j 3` with other builds running). A unit is checked
+  with `tools/clang_build.py --only NAME lle` in seconds; the drivers check behaviour; the full link comes last.
+- **Gates run for this part:** both Windows builds link 0/0 (EE-AOC, EE-SIM, the windowed-software test profile),
+  `rust_build.py gate`, the seeded sim oracle (seeds 2-7 identical to `ref`), `layout.json`'s records for UIForm,
+  UIManager, UISlider, UITextLabel and UILayoutUtility unchanged, and the harness's 34 UI symbols present in the map.
+  No tour or screenshot comparison was run here.

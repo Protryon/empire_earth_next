@@ -30,6 +30,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | R4.1 GX on the `wgpu` crate | Done (`ee_gx`); wgpu-native is gone |
 | R4.2 DX7 plug-in | Done (`ee_dx7`), a faithful port (D5) with C++ trampolines. C++ keeps the classes, object lifetimes, `Set3DMode`'s matrix composition, the PIM table and pl_mpeg |
 | **R4.3 Graphics Engine (17k)** | **Open.** May move with R5's renderer decoupling, as this plan allows |
+| **R6 LLE User Interface toolkit (14.4k)** | **Started** (`ee_ui`, branch `rust-r6-ui`): `UILayoutUtility` (whole unit), `UISlider`'s arithmetic, a multi-line `UITextLabel`'s word wrapping, `UIForm`'s focus walk (`Tab`, `ShiftTab`, `CheckedRadioButton`) and control hit test, each pinned by a golden trace of the real C++ unit and re-run over the forwarders. The C++ classes keep their members, vtables and exported names. Every reading of game text is in `ee_ui/src/text.rs` (still cp1252 bytes; D6's UTF-8 switch changes that module). Open: lists and combo boxes (`UIListBox.h`, a template the harness hooks), edit boxes, buttons, `UIControlsTable` (forms from the db), `UIManager`, drawing |
 
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
 trees), six seeded 45-minute sim traces equal to the pre-Rust reference, menu captures pixel-equal, a saved game loaded and
