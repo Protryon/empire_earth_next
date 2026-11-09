@@ -71,6 +71,7 @@
 #include "ee/EEGameOptions.h"
 #include "ee/EERules.h"
 #include "ee/EECPBehavior.h"
+#include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 // The existing civilization-loader helper declared in EEAResetAllPlayerInfo.h (0x2806e7).
 long EEApplyCivilizationFile(UString& ioName, EEPlayer* inPlayer);
@@ -161,6 +162,7 @@ EEComputerPlayer::EEComputerPlayer(const UWideString& inName, unsigned long inPl
     : EEPlayer(inName, inPlayerID)
 {
     this->mNextState = NULL;
+    this->mUnitsState = NULL;
     this->Init();
     this->mComputerPlayer = dynamic_cast<EEComputerPlayer*>(this);
 }
@@ -182,6 +184,7 @@ void EEComputerPlayer::SetCombatState(unsigned long inCombatState)
 EEComputerPlayer::EEComputerPlayer()
 {
     this->mNextState = NULL;
+    this->mUnitsState = NULL;
     this->Init();
     this->mComputerPlayer = dynamic_cast<EEComputerPlayer*>(this);
 }
@@ -202,6 +205,7 @@ EEComputerPlayer::~EEComputerPlayer()
     delete this->GetInteractionManager();
     DeleteVectorContents(this->mResourceCenters);
     EECPNextDeleteState(this);
+    EECPUnitsDelete(this);
 }
 
 // FUNCTION: EXE 0x42d1a5
@@ -562,6 +566,8 @@ void EEComputerPlayer::Virtual60()
 void EEComputerPlayer::UnitCompleted(EEComplexUnit* inUnit)
 {
     EEPlayer::UnitCompleted(inUnit);
+    if (this->mUnitsState != NULL)
+        EECPUnitsOnCompleted(this, inUnit);
     if (inUnit->mUnitClass->IsLandBuilding()) {
         unsigned long i, n;
         for (i = 0, n = this->mResourceCenters.size(); i < n; i++)
@@ -1378,11 +1384,13 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
     long theCategory = inUnit->mUnitClass->mCategory;
     EEPlayer::DamageTaken(inPlayer, inAmount, inUnit);
     this->mLastDamagedTime = gPhysics->mGameTime;
+    if (this->mUnitsState != NULL)
+        EECPUnitsOnDamage(this, inPlayer, inAmount, inUnit);   // an event for the script (ee/EECPNextUnits.h)
     if (inUnit->mUnitClass->IsLandBuilding())
         this->mBuildingDamaged = true;
     // the experiment "navalflee" (docs/AI_RESEARCH.md §8.27; the owner: units should leave a bombardment they cannot
     // answer, fishing boats should run): EECPResourceManager.cpp EECPRMNavalFlee
-    if (inPlayer > 0 && EECPNavalFleeOn(this) && !inUnit->mUnitClass->IsLandBuilding()
+    if (inPlayer > 0 && EECPNavalFleeOn(this) && !inUnit->mUnitClass->IsLandBuilding() && EECPUnitsReflexOn(this, "naval_flee")
         && inUnit->mComplexUnit != NULL && this->mCivilizationManager != NULL && this->mCivilizationManager->mResourceManager != NULL
         && (unsigned long)inPlayer < gWorld.mNumPlayers && gWorld.mPlayers[inPlayer] != NULL && !this->IsAlly(gWorld.mPlayers[inPlayer]))
         EECPRMNavalFlee(this->mCivilizationManager->mResourceManager, inUnit, inUnit->mComplexUnit->mLastAttacker);
@@ -1396,7 +1404,8 @@ void EEComputerPlayer::DamageTaken(long inPlayer, long inAmount, EEUnit* inUnit)
             && this->mCivilizationManager != NULL && this->mCivilizationManager->mResourceManager != NULL
             && (unsigned long)inPlayer < gWorld.mNumPlayers && gWorld.mPlayers[inPlayer] != NULL
             && !this->IsAlly(gWorld.mPlayers[inPlayer])
-            && (gWorld.mPlayers[inPlayer]->IsHuman() || EECPExperiment(this, "flee") || EECPMilitiaOn(this)))
+            && (gWorld.mPlayers[inPlayer]->IsHuman() || EECPExperiment(this, "flee") || EECPMilitiaOn(this))
+            && EECPUnitsReflexOn(this, "danger") && !EECPUnitsHolds(this, inUnit->mComplexUnit))
             EECPRMNoteDanger(this->mCivilizationManager->mResourceManager, inUnit, (unsigned long)inPlayer);
     }
 }
@@ -5015,6 +5024,8 @@ void EEComputerPlayer::RefreshTownGroups()
 // drop site is offered to every resource center
 void EEComputerPlayer::UnitsSwapped(std::vector<EEPUnitSwap>& ioSwaps)
 {
+    if (this->mUnitsState != NULL)
+        EECPUnitsOnSwapped(this, ioSwaps);   // the held set and the script's ids follow the new units
     this->mCombatManager->UnitsSwapped(ioSwaps);
     this->mCivilizationManager->UnitsSwapped(ioSwaps);
     for (std::vector<EEPUnitSwap>::iterator it = ioSwaps.begin(); it != ioSwaps.end(); it++) {
@@ -5815,6 +5826,8 @@ bool EEComputerPlayer::CanEnableManager(long inKind, long inResource)
 void EEComputerPlayer::UnitPlaced(EEComplexUnit* inUnit)
 {
     EEPlayer::UnitPlaced(inUnit);
+    if (this->mUnitsState != NULL)
+        EECPUnitsOnPlaced(this, inUnit);
     if (this->mActive) {
         this->mCivilizationManager->UnitAdded(inUnit);
         this->mCombatManager->UnitAdded(inUnit);
@@ -5828,6 +5841,8 @@ void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
 {
     EEPlayer::UnitTaken(inUnit, inSwapped);
     EEComplexUnit* theUnit = static_cast<EEComplexUnit*>(inUnit);
+    if (this->mUnitsState != NULL)
+        EECPUnitsOnTaken(this, theUnit, inSwapped);
     if (gCPTraceOn && !inSwapped)
         EECPTraceUnitLost(this, theUnit);
     if (gCPTraceOn && !inSwapped && this->mNextState != NULL)
@@ -5853,7 +5868,7 @@ void EEComputerPlayer::UnitTaken(RTSUnit* inUnit, bool inSwapped)
 void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit)
 {
     unsigned long theGoals = inUnit->mGoalQueues[0].mGoals.size();
-    if (inUnit->GetClass()->IsTransport()) {
+    if (inUnit->GetClass()->IsTransport() && !EECPUnitsHolds(this, inUnit)) {
         this->GetCivilizationManager()->GetResourceManager()->TransportIdle(inUnit);
         if (theGoals == 1 && inUnit->IsRepairable() && inUnit->GetNumCargoUnits() == 0)
             this->SendToNearestBase(inUnit);
@@ -5861,6 +5876,13 @@ void EEComputerPlayer::UnitGoalDone(EEComplexUnit* inUnit)
             inUnit->ClearGoalQueue(0);
     }
     theGoals = inUnit->mGoalQueues[0].mGoals.size();
+    if (this->mUnitsState != NULL && theGoals <= 1)
+        EECPUnitsOnGoalDone(this, inUnit);
+    if (EECPUnitsHolds(this, inUnit)) {   // the script's unit (ee/EECPNextUnits.h): no runner takes it back
+        if (theGoals <= 1 && inUnit->GetActiveGroup() != NULL)
+            inUnit->GetActiveGroup()->RemoveUnit(inUnit);
+        return;
+    }
     if (inUnit->GetIsDetachedFromAI() && theGoals <= 1 && !EECPNextHoldsUnit(this, inUnit)) {   // (a next group keeps its units)
         inUnit->mIsDetachedFromAI = false;
         this->GetCombatManager()->UnitAdded(inUnit);

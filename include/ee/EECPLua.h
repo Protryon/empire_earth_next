@@ -136,6 +136,10 @@ struct EECPLuaConfig {
     EECPLuaWrite mWrite = nullptr;               // nullptr: print discards
     void* mWriteContext = nullptr;
     bool mCheckMemory = false;                   // after each Init/Step, fail when the memory holds what cannot be saved
+    // called once while the state is set up, with the `ai` table on top of the stack: adds more functions to it
+    // (docs/AI_LUA_UNITS.md: the next engine's unit queries and commands); it must leave the stack as it found it
+    void (*mOpen)(lua_State* inL, void* inContext) = nullptr;
+    void* mOpenContext = nullptr;
 };
 enum { kEECPLuaHookStep = 1000 };
 
@@ -160,6 +164,9 @@ public:
     // developer console; the name is the chunk's name in error messages.
     bool Run(const char* inSource, const char* inName, EECPLuaValue& outResult);
 
+    // Another entry of the personality, if it has one: personality[inName](inArg, memory) with inBudget (0: the
+    // config's) -> its return value converted. outFound false: no such function (and true is returned).
+    bool CallOptional(const char* inName, const EECPLuaValue& inArg, EECPLuaValue& outResult, int64_t inBudget, bool& outFound);
     // The memory and the RNG state as bytes ("EELM", version 1, the RNG state as uint64 LE, the memory table as an
     // EECPLuaEncode value) / restored from them (a loaded game: LoadPersonality first, then RestoreMemory, no Init).
     bool SaveMemory(std::string& outBytes);
@@ -181,6 +188,10 @@ public:
     bool ReadModule(const char* inPath, std::string& outText);
     void* Allocate(void* inBlock, size_t inOld, size_t inNew);
     void OnHook(lua_State* inL);
+    // A C function's cost in instruction equivalents (docs/AI_LUA_UNITS.md §2.1): added to the call's count, which
+    // the budget bounds; over the budget it raises as the hook does
+    void Charge(lua_State* inL, int64_t inAmount);
+    void OpenExtension(lua_State* inL);   // the setup's call of mOpen
     bool mNoFile = false;           // this call: require found no module (or a bad name)
     bool mSyntax = false;           // this call: a chunk did not compile
     bool mAllocFailed = false;      // this call: the allocator refused a block

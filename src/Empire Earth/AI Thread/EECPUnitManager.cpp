@@ -60,6 +60,7 @@
 #include "ee/EEAIFOUnitsToKillScoringBase.h"
 #include "ee/EEAIFOSubGroupFilter.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 #include "ee/EETechTreeTechID.h"
 #include <EEAIFunctionObjects.h>
@@ -425,7 +426,7 @@ void EECPUnitManager::GetIdleCitizens(std::vector<EEComplexUnit*>& outUnits)
     this->GetCitizens(theUnits);
     unsigned long theCount = theUnits.size();
     for (; i < theCount; i++)
-        if (this->IsCitizenAvailable(theUnits[i]))
+        if (this->IsCitizenAvailable(theUnits[i]) && !EECPUnitsHolds(this->mPlayer, theUnits[i]))   // (a script's unit: ee/EECPNextUnits.h)
             outUnits.push_back(theUnits[i]);
 }
 

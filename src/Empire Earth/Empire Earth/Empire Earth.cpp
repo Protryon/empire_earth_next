@@ -859,9 +859,10 @@ static const float kWaterRippleAmplitude = 0.05f;
 // port: 251 adds the computer slots' engine, EEGameOptionsPlayer and EEPPlayerHelper, docs/AI_LUA_PLAN.md S0; 252 the
 // next engine's state and its script's memory after each computer player, EEPPlayerHelper, docs/AI_LUA_PLAN.md §3.2;
 // 253 the next engine's AI id after each computer player's engine, EEPPlayerHelper, and the lobby choices' new
-// numbering in EEGameOptionsPlayer, ee/EECPEngine.h)
+// numbering in EEGameOptionsPlayer, ee/EECPEngine.h; 254 the per-unit Lua interface's state after the next engine's,
+// EEPPlayerHelper, ee/EECPNextUnits.h)
 const unsigned long kSaveGameMajorVersion = 0;
-const unsigned long kSaveGameMinorVersion = 253;
+const unsigned long kSaveGameMinorVersion = 254;
 #include "lle/PIMModule.h"
 #include "lle/Input System.h"
 #include "ee/EEUserInterface.h"

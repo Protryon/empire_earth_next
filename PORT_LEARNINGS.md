@@ -1817,3 +1817,17 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   continent (`GetContinent(x, y, kAIPathLandMass)`) refuses every site: take the town's continent.
 - **Docks from `FindShoreSite`** use the shore of the largest water body nearest the town, which can be 60 tiles out
   while the town's own fish lie in other water by it.
+
+## The next computer player's per-unit Lua interface (2026-11-09, docs/AI_LUA_UNITS.md §11)
+
+- **Computer players have no slot of their own.** `RTSPlayer::mSlot` is `0xff` (`kSlotNone`) for every computer
+  player, and `EEWorld::GetPlayerBySlot` returns the first player with the slot asked for. A human's message run for
+  a computer player (`EEM*::Execute` finds its sender through the originating slot) has to give the player a slot
+  that no peer uses (`0xfd`) while it runs, and put `0xff` back.
+- **A building may start as a capitol.** The start town is not always a town centre (`b_capitol` in the open tree's
+  Small Hard games). Code looking for "the town" asks for both classes.
+- **`ai.tile` shows a continent only where the player has explored.** A test that places a fight towards the enemy
+  cannot check the far tiles' land mass (they are unexplored): it takes them on trust.
+- **The Python edits of a `-text` file must keep its line ends.** The repository's code is LF with `attr/-text`.
+  Python's text mode on Windows writes CR LF, and git then shows the whole file as changed: open with
+  `newline=''` both ways.

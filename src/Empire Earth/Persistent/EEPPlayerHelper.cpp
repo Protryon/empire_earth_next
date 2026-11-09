@@ -18,6 +18,7 @@
 #include "ee/EEPersistentTag.h"
 #include "ee/EECPEngine.h"
 #include "ee/EECPNext.h"
+#include "ee/EECPNextUnits.h"
 
 const UString EEPPlayerHelper::sPlayerCount("EEPPlayerHelper-PlayerCount");
 const UString EEPPlayerHelper::sPlayerNum("EEPPlayerHelper-PlayerNum");
@@ -176,6 +177,22 @@ long EEPPlayerHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVe
                                         theResult = kErrorFailed;
                                 }
                             }
+                            // port: from version 0.254 the per-unit Lua interface's state (ee/EECPNextUnits.h; a uint32
+                            // length, 0 for none, then the bytes)
+                            if (theResult == kErrorOK && theType == 1 && thePlayer->mComputerPlayer != NULL
+                                && (inMajorVersion > 0 || inMinorVersion >= 254)) {
+                                unsigned long theLength = 0;
+                                theResult = inFile.Read(theLength);
+                                if (theResult == kErrorOK && theLength > 0) {
+                                    std::string theBytes(theLength, ' ');
+                                    unsigned long theRead = 0;
+                                    theResult = theLength > (64u << 20) ? kErrorFailed
+                                        : inFile.Read(&theBytes[0], theLength, theRead);
+                                    if (theResult == kErrorOK && (theRead != theLength
+                                        || !EECPUnitsLoad(thePlayer->mComputerPlayer, theBytes)))
+                                        theResult = kErrorFailed;
+                                }
+                            }
                             if (theResult == kErrorOK)
                                 this->mPlayers.push_back(thePlayer);
                         }
@@ -269,6 +286,15 @@ long EEPPlayerHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVe
         if (theResult == kErrorOK && theType == 1) {   // port: the next engine's state (Load: from 0.252)
             std::string theBytes;
             EECPNextSaveState(thePlayer->mComputerPlayer, theBytes);   // a script's failure is logged; its state goes
+            unsigned long theLength = (unsigned long)theBytes.size();
+            theResult = outFile.Write(theLength);
+            unsigned long theWritten = 0;
+            if (theResult == kErrorOK && theLength > 0)
+                theResult = outFile.Write(theBytes.data(), theLength, theWritten);
+        }
+        if (theResult == kErrorOK && theType == 1) {   // port: the per-unit Lua interface's state (Load: from 0.254)
+            std::string theBytes;
+            EECPUnitsSave(thePlayer->mComputerPlayer, theBytes);
             unsigned long theLength = (unsigned long)theBytes.size();
             theResult = outFile.Write(theLength);
             unsigned long theWritten = 0;

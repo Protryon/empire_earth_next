@@ -49,6 +49,7 @@
 #include "ee/EEGameLog.h"
 #include "ee/EECPLua.h"
 #include "ee/EECPNext.h"
+#include "ee/EECPNextUnits.h"
 #include "ee/EECPEngine.h"
 #include "ee/EEImprovementIDs.h"
 #include "EEDataText.h"
@@ -730,6 +731,8 @@ static bool EECPNextOpen(EEComputerPlayer* inPlayer, EECPNextState* inState)
     theConfig.mWrite = EECPNextPrint;
     theConfig.mWriteContext = inPlayer;
     theConfig.mCheckMemory = true;   // a memory the save cannot hold fails the step that made it
+    theConfig.mOpen = EECPUnitsOpen;   // the per-unit queries and commands (ee/EECPNextUnits.h)
+    theConfig.mOpenContext = inPlayer;
     inState->mLua = new EECPLuaState(theConfig);
     if (!inState->mLua->LoadPersonality(inState->mScript.c_str())) {
         EECPNextError(inPlayer, "load", inState->mLua->LastStatus(), inState->mLua->LastError());

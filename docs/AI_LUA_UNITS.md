@@ -735,3 +735,79 @@ A script that does what the original managers do (AI_RESEARCH §2):
 **Effort:** L0-L3 (the primitives, with boom unchanged) take about 3-4 weeks. L4-L7 (the port and the deletions)
 take 6-9 weeks with sim rounds and two owner playtests. That is about 10-13 weeks in all, and the work can stop
 after any stage.
+
+## 11. Stage 1 as built (2026-11-09)
+
+Code:
+- `include/ee/EECPNextUnits.h`, `src/Empire Earth/AI Thread/EECPNextUnits.cpp`: the bindings, the held set, the
+  events, the enemy memory, the micro step, the save block;
+- the runtime (`ee/EECPLua.h`):
+  - `EECPLuaConfig::mOpen` adds functions to `ai` while the state is set up;
+  - `EECPLuaState::Charge` adds a C function's cost to the call's count (the budget aborts it as it aborts
+    instructions, and a `pcall` cannot swallow it);
+  - `CallOptional` runs another entry of the personality (`micro`) with its own budget.
+
+  luatest: 136 checks (11 new: the extension, charges against the budget, CallOptional).
+- the hooks, each a test of `mUnitsState` (NULL for the classic engine and for any seat whose Lua state is not open,
+  so the classic engine is untouched):
+  - `EEComputerPlayer` `DamageTaken`, `UnitPlaced`, `UnitCompleted`, `UnitTaken`, `UnitGoalDone`, `UnitsSwapped` →
+    events;
+  - `EEArtificialIntelligence::Update` → `EECPUnitsMicroTick` every physics tick.
+- the takeover:
+  - `EECPResourceManager::AddGatherer` (every list of the gatherer runner);
+  - `EECPUnitManager::GetIdleCitizens` (the builders);
+  - `EECPBuildManager::AssignBuilders` (a script's foundation gets no runner builder);
+  - `EEComputerPlayer::UnitGoalDone` (no runner takes a held unit back; the transport idling skips it);
+  - `EECPNextFreeSoldiers` and the view's free soldiers (the coarse groups never take a held unit);
+  - the danger-zone reflex skips held citizens;
+  - `ai.reflex` switches the naval flee and the danger zones (with the militia) off.
+- the save, version 0.254 (`EEPPlayerHelper`):
+  - after the next engine's block comes a `u32` length and the `EENU` block: the held set, the pending events, the
+    forwarding map, the enemy memory, the reflex switches and the micro timer;
+  - older saves load with an empty one.
+
+**What changed from the spec while building:**
+- **The order path** (§3.2). The computer player's own `mActiveGroup` holds the units while the message's `Execute`
+  runs. The player answers to slot `0xfd` meanwhile, because computer players have slot `0xff` ("none", shared by
+  all of them), which `GetPlayerBySlot` cannot tell apart. `EEMessage.cpp` is unchanged.
+- **Events** come from `ai.events()`, which hands over what was queued since the last call (step or micro), not from
+  `view.events`. The coarse view is untouched.
+- **The enemy memory** is updated once a game second from `EECPUnitsMicroTick`, not from the strategy step.
+- **`ai.stance(ids, n)`** takes the behaviour table's row: 0 scout, 1 stand_ground, 2 guard, 3 harass, 4 cautious,
+  5 aggressive (`dbunitbehavior.csv`).
+- **TEST ONLY, with `EE_AI_TEST_SPAWN=1`:** `ai.test_spawn(type, x, y, player)` (the cheat's `EEMHackANewUnit`) and
+  `ai.test_town(player)` (a town centre or capitol, fog ignored).
+
+**Built** (§2-§6): `me`, `time`, `players`, `map`, `units`, `unit`, `get`, `seen`, `memory`, `resources`, `tile`,
+`class`, `events`, `can_place`, `reach`, `strength`, `move`, `attack`, `attack_ground`, `gather`, `build` (returns the
+foundation's id, which the script holds), `repair`, `garrison`, `load`, `unload`, `train`, `research`, `stance`,
+`stop`, `explore`, `delete`, `take`, `release`, `reflex`; `micro(info, memory)` every 250 game ms with 300k.
+
+**Not built yet:**
+- `find_site`, `route` and `path_len`, the danger layers, `drop_site`, `shore`, `unexplored`;
+- `patrol`, `heal`, `wall` / `gate`, `rally`, `cancel`, `improve`, `formation`, `pack`, `cast`, `tribute` / `trade` /
+  `diplomacy`, `dropoff`, `farm`;
+- the per-step command limits are counted per game ms, so a step and a micro in the same tick share them.
+
+**Gates:**
+- **Boom unchanged.** sim_bench seeds 2-9 (Small, Hard, `--engine boom,classic`, 2700 game s, `--ai-scripts ai`,
+  open data): `ai_trace.py compare` against main's build gives identical traces for all 8 seeds (3738, 3589, 3674,
+  3632, 3371, 3464, 3382 and 3416 lines).
+- **The micro tests** (`tests/ai_units/`; `--ai-scripts tests/ai_units --env EE_AI_TEST_SPAWN=1 --env-vary
+  EE_AI_NEXT_SCRIPT=kite,nokite,raid`, seeds 2-7, 230 game s). They run, and two runs of each seed give identical
+  traces.
+  - **Raid** (6 clubmen at the idle human's town; 10 of its spearmen appear 20 s later): the raid retreats in all 6
+    seeds, 20-25 s after the start (seed 2 at 59 s), and all 6 raiders reach home every time.
+  - **Kite** (8 bowmen against 8 clubmen) at 120 s after the setup:
+
+    | 6 seeds, 48 bowmen against 48 clubmen | Bowmen lost | Bowmen hp lost | Clubmen still seen alive |
+    |---|---|---|---|
+    | kite (each micro step: 4 tiles away from a clubman within 3 tiles, then shoot again) | 2 | 410 | 28 |
+    | stand and shoot | 3 | 750 | 0 |
+
+    The bowmen start with about 4,750 hp in all.
+
+    Kiting works as an order loop (micro step, a forced move away, then the attack again). In this matchup it trades
+    killing for safety: bowmen out-shoot clubmen anyway, and the 1.5 s flee leaves them too little time to shoot. It
+    shows the API, not a tuned tactic.
+- **Builds:** `build.py --sim` and `--test-profile windowed-software` link 0/0; luatest 136 checks, 0 failed.

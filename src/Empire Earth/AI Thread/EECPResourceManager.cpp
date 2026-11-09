@@ -63,6 +63,7 @@
 #include "ee/EEUGAttackUnit.h"
 #include "ee/EECPResearchManager.h"
 #include "ee/EECPTrace.h"
+#include "ee/EECPNextUnits.h"
 #include "ee/EECPNext.h"
 
 const UString EECPResourceManager::sData("EECPResourceManager-Data");
@@ -295,6 +296,8 @@ void EECPResourceManager::RequestFerry(std::vector<EEComplexUnit*>& inUnits, EEU
 // Adds a unit to a resource's gatherer list (referencing it) unless it is already there
 void EECPResourceManager::AddGatherer(EEComplexUnit* inUnit, long inResource)
 {
+    if (EECPUnitsHolds(this->mManager->mPlayer, inUnit))
+        return;   // the script's unit (ee/EECPNextUnits.h): never on the runners' lists
     std::deque<EEComplexUnit*>::iterator theIt =
         std::find(this->mGatherers[inResource].begin(), this->mGatherers[inResource].end(), inUnit);
     if (theIt == this->mGatherers[inResource].end()) {
