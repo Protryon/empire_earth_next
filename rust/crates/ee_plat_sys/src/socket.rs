@@ -21,10 +21,15 @@ mod tests {
 
     static STARTUP: Once = Once::new();
 
-    fn startup() {
+    /// Started once; the guard keeps the socket tests one at a time. Socket handles are reused at once, so a test
+    /// that closes a handle twice (startup_is_counted_with_cleanup) could otherwise close another test's socket.
+    fn startup() -> std::sync::MutexGuard<'static, ()> {
+        static SERIAL: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let guard = SERIAL.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
         STARTUP.call_once(|| unsafe {
             assert_eq!(PlatSocketStartup(), 1);
         });
+        guard
     }
 
     fn loopback() -> PlatSockAddrIn {
@@ -46,7 +51,7 @@ mod tests {
 
     #[test]
     fn parse_and_format_ipv4() {
-        startup();
+        let _serial = startup();
         unsafe {
             assert_eq!(PlatSocketParseIPv4(c("127.0.0.1").as_ptr()), 0x7F00_0001u32.to_be());
             assert_eq!(PlatSocketParseIPv4(c("not an address").as_ptr()), PLAT_INADDR_NONE);
@@ -60,7 +65,7 @@ mod tests {
 
     #[test]
     fn host_name_and_resolve() {
-        startup();
+        let _serial = startup();
         unsafe {
             let mut name = [0u8; 256];
             assert_eq!(PlatSocketGetHostName(name.as_mut_ptr().cast(), 256), 1);
@@ -76,7 +81,7 @@ mod tests {
 
     #[test]
     fn stream_exchange_with_readiness_events() {
-        startup();
+        let _serial = startup();
         unsafe {
             let (listen, bound) = bound_listener();
             let accept_event = PlatEventCreate(1, 0);
@@ -127,7 +132,7 @@ mod tests {
 
     #[test]
     fn datagrams_and_blocking_mode() {
-        startup();
+        let _serial = startup();
         unsafe {
             let receiver = PlatSocketOpen(PLAT_SOCKET_DGRAM);
             let sender = PlatSocketOpen(PLAT_SOCKET_DGRAM);
@@ -162,7 +167,7 @@ mod tests {
 
     #[test]
     fn refused_connection_reports_econnrefused() {
-        startup();
+        let _serial = startup();
         unsafe {
             let (listen, bound) = bound_listener();
             PlatSocketClose(listen);
@@ -175,7 +180,7 @@ mod tests {
 
     #[test]
     fn wait_timeout_shutdown_and_options() {
-        startup();
+        let _serial = startup();
         unsafe {
             let listen = PlatSocketOpen(PLAT_SOCKET_STREAM);
             assert_eq!(PlatSocketSetReuseAddress(listen, 1), 1);
@@ -221,7 +226,7 @@ mod tests {
 
     #[test]
     fn refused_nonblocking_connect_is_except_with_the_reason_pending() {
-        startup();
+        let _serial = startup();
         unsafe {
             let (listen, bound) = bound_listener();
             PlatSocketClose(listen);
@@ -241,7 +246,7 @@ mod tests {
 
     #[test]
     fn a_blocking_wait_returns_when_data_arrives() {
-        startup();
+        let _serial = startup();
         unsafe {
             let (listen, bound) = bound_listener();
             let client = PlatSocketOpen(PLAT_SOCKET_STREAM);
@@ -265,7 +270,7 @@ mod tests {
 
     #[test]
     fn startup_is_counted_with_cleanup() {
-        startup();
+        let _serial = startup();
         unsafe {
             assert_eq!(PlatSocketStartup(), 1);
             assert_eq!(PlatSocketCleanup(), 1);

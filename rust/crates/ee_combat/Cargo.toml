@@ -1,0 +1,15 @@
+[package]
+name = "ee_combat"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The combat and unit formulas (docs/RUST_PLAN.md R5b.2) behind the C++ unit methods: damage, the attack factor's
+# difficulty scale, elevation, morale, hit points and healing, conversion, the ballistic pitch, the projectile arc,
+# the reach and range tests, the damage table rows. Plain data in and out; nothing reads the world.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+# the engine's float helpers (lrintf, the f64 square root, the UMCos/UMArcCos/UMArcTan tables), bit for bit
+ee_ge = { path = "../ee_ge" }

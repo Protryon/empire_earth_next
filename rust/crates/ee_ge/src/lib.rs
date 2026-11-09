@@ -2,7 +2,8 @@
 //! behind its C++ classes. So far: the math and geometry (`GE2DPoint`, `GE3DPoint`, `GEVector`, `GE3DLine`,
 //! `GE3DPlane`, `GETransformation`, `GEOrientation`, `GEQuaternion`, `GEBoundingBox`, `GERectangle`), the
 //! engine's table trigonometry (`UMath.cpp`) and `GETerrainMesh`'s height, normal, closest-tile and line queries, its vertex normals, shorelines, fog of war and
-//! file codec, and `GEPhysicalModel`'s per-triangle tests.
+//! file codec, `GEPhysicalModel`'s per-triangle tests, and `GEModel`'s `.cem` reader (both formats, the version-1
+//! conversion and the sub-models: `model_file.rs`, `legacy.rs`), writer (`model_save.rs`) and geometry (`model_geom.rs`).
 //!
 //! The simulation calls this math everywhere (unit positions, distances, orientations, bounding boxes), so it is
 //! deterministic code under RUST_PLAN 2.1: `f32` operations in the C++'s order, no fused multiply-add, `lrintf`
@@ -24,6 +25,12 @@ pub mod ffi;
 #[cfg(test)]
 mod golden;
 #[cfg(test)]
+mod golden_model;
+#[cfg(test)]
+mod golden_model_geom;
+#[cfg(test)]
+mod golden_model_save;
+#[cfg(test)]
 mod golden_physical;
 #[cfg(test)]
 mod golden_terrain;
@@ -31,7 +38,14 @@ mod golden_terrain;
 mod golden_terrain_mesh;
 pub mod io;
 /// cbindgen:ignore
+pub mod legacy;
+/// cbindgen:ignore
 pub mod line;
+pub mod model_ffi;
+pub mod model_file;
+pub mod model_geom;
+/// cbindgen:ignore
+pub mod model_save;
 /// cbindgen:ignore
 pub mod physical;
 /// cbindgen:ignore

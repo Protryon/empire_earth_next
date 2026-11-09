@@ -8,7 +8,6 @@ use std::ffi::{c_long, c_void};
 /// `kErrorOK`.
 pub(crate) const OK: c_long = 0;
 /// `kErrorFailed` (`LowLevelEngineCore.h`).
-#[cfg(test)]
 pub(crate) const FAILED: c_long = 9;
 
 /// The typed reads and writes of one `FSFile` (`FSFile::Read(T&)`, `FSFile::Write(const T&)`).
@@ -24,6 +23,14 @@ pub struct EeGeFieldIo {
     pub write_u16: unsafe extern "C" fn(file: *mut c_void, value: u16) -> c_long,
     pub write_u32: unsafe extern "C" fn(file: *mut c_void, value: u32) -> c_long,
     pub write_f32: unsafe extern "C" fn(file: *mut c_void, value: f32) -> c_long,
+    /// `Read(char*, length, read)`.
+    pub read_bytes: unsafe extern "C" fn(file: *mut c_void, out: *mut u8, length: u32, read: *mut u32) -> c_long,
+    /// `Write(const char*, length, written)`.
+    pub write_bytes: unsafe extern "C" fn(file: *mut c_void, data: *const u8, length: u32, written: *mut u32) -> c_long,
+    /// `FSFileSpec::GetPosition` (a plain `FSFile` has none: `kErrorFailed`).
+    pub get_position: unsafe extern "C" fn(file: *mut c_void, out: *mut c_long) -> c_long,
+    /// `FSFileSpec::SetPosition(offset, kFileOriginBegin, false)`.
+    pub set_position: unsafe extern "C" fn(file: *mut c_void, offset: c_long) -> c_long,
 }
 
 /// The Rust side of a field stream: what the codecs are written against, so that they test over a byte buffer.
@@ -36,6 +43,12 @@ pub trait FieldIo {
     fn write_u16(&mut self, value: u16) -> c_long;
     fn write_u32(&mut self, value: u32) -> c_long;
     fn write_f32(&mut self, value: f32) -> c_long;
+    /// `Read(char*, length, read)`: the result and the count the file reports.
+    fn read_bytes(&mut self, out: &mut [u8], read: &mut u32) -> c_long;
+    /// `Write(const char*, length, written)`.
+    fn write_bytes(&mut self, data: &[u8], written: &mut u32) -> c_long;
+    fn get_position(&mut self, out: &mut c_long) -> c_long;
+    fn set_position(&mut self, offset: c_long) -> c_long;
 
     /// `Read(long&)`: a 4-byte read through a 32-bit copy of the old value, stored back even when the read fails
     /// (`FSFile.h`).
@@ -87,10 +100,27 @@ impl FieldIo for CppIo {
         // SAFETY: as above
         unsafe { (self.0.write_f32)(self.0.file, value) }
     }
+    fn read_bytes(&mut self, out: &mut [u8], read: &mut u32) -> c_long {
+        // SAFETY: `out` is valid for its length
+        unsafe { (self.0.read_bytes)(self.0.file, out.as_mut_ptr(), out.len() as u32, read) }
+    }
+    fn write_bytes(&mut self, data: &[u8], written: &mut u32) -> c_long {
+        // SAFETY: `data` is valid for its length
+        unsafe { (self.0.write_bytes)(self.0.file, data.as_ptr(), data.len() as u32, written) }
+    }
+    fn get_position(&mut self, out: &mut c_long) -> c_long {
+        // SAFETY: as above
+        unsafe { (self.0.get_position)(self.0.file, out) }
+    }
+    fn set_position(&mut self, offset: c_long) -> c_long {
+        // SAFETY: as above
+        unsafe { (self.0.set_position)(self.0.file, offset) }
+    }
 }
 
 /// A little-endian byte buffer as a field stream, with `FSMemoryFile`'s rule: a read with fewer bytes left than it
-/// wants reads nothing and fails with `END_OF_FILE`; a write fails once the buffer holds `write_limit` bytes.
+/// wants reads nothing and fails with `END_OF_FILE`; a write goes at the position and fails when it would end past
+/// `write_limit`.
 #[cfg(test)]
 pub struct BufferIo {
     pub bytes: Vec<u8>,
@@ -119,11 +149,18 @@ impl BufferIo {
         Some(slice.try_into().unwrap())
     }
 
+    /// A write at the position (over what is there, then past the end), refused once it would end beyond
+    /// `write_limit`.
     fn put(&mut self, data: &[u8]) -> c_long {
-        if self.bytes.len() + data.len() > self.write_limit {
+        let end = self.position + data.len();
+        if end > self.write_limit {
             return FAILED;
         }
-        self.bytes.extend_from_slice(data);
+        if end > self.bytes.len() {
+            self.bytes.resize(end, 0);
+        }
+        self.bytes[self.position..end].copy_from_slice(data);
+        self.position = end;
         OK
     }
 }
@@ -165,6 +202,38 @@ impl FieldIo for BufferIo {
     }
     fn write_f32(&mut self, value: f32) -> c_long {
         self.put(&value.to_le_bytes())
+    }
+    fn read_bytes(&mut self, out: &mut [u8], read: &mut u32) -> c_long {
+        // FSMemoryFile: a read past the end reads nothing and reports 0
+        let end = self.position + out.len();
+        match self.bytes.get(self.position..end) {
+            Some(slice) => {
+                out.copy_from_slice(slice);
+                self.position = end;
+                *read = out.len() as u32;
+                OK
+            }
+            None => {
+                *read = 0;
+                END_OF_FILE
+            }
+        }
+    }
+    fn write_bytes(&mut self, data: &[u8], written: &mut u32) -> c_long {
+        let r = self.put(data);
+        *written = if r == OK { data.len() as u32 } else { 0 };
+        r
+    }
+    fn get_position(&mut self, out: &mut c_long) -> c_long {
+        *out = self.position as c_long;
+        OK
+    }
+    fn set_position(&mut self, offset: c_long) -> c_long {
+        if offset < 0 || offset as usize > self.bytes.len() {
+            return FAILED;
+        }
+        self.position = offset as usize;
+        OK
     }
 }
 

@@ -29,6 +29,7 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "rust/ee_rust.h"
 
 // FUNCTION: EXE 0x4adcd9
 // Creates a calamity class with no lifetime or class flags
@@ -87,17 +88,15 @@ void EECalamityClass::Initialize(EECalamityData* inData)
 // Ages the calamity (and its contagion helper, if given); returns 7 once its lifetime is over, else 0
 long EECalamityClass::UpdateTimeAlive(EECalamity* inCalamity, float inElapsedTime, long inHelperID)
 {
-    long theResult = 0;
-    float theTimeAlive = inCalamity->GetTimeAlive() + inElapsedTime;
+    // the age and the lifetime test: ee_tech calamity.rs (computed before the helper's update, as the C++ did)
+    EeCalamityAge theAge = ee_calamity_update_time_alive(inCalamity->GetTimeAlive(), inElapsedTime, this->mLifeTime);
     if (inHelperID != -1) {
         EEContagionHelper* theHelper = ::gWorld.GetContagionManager()->GetContagionHelper(inHelperID);
         if (theHelper != NULL)
             theHelper->Update(inElapsedTime);
     }
-    inCalamity->mTimeAlive = theTimeAlive;
-    if (theTimeAlive >= this->mLifeTime)
-        theResult = 7;
-    return theResult;
+    inCalamity->mTimeAlive = theAge.time_alive;
+    return theAge.done ? 7 : 0;
 }
 
 // FUNCTION: EXE 0x4adde9

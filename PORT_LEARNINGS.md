@@ -3206,6 +3206,152 @@ and `UIComboBox` (where the list opens, the popup and the capture, the mouse and
   draw, `UIControlsTable` (forms from the db), `UIManager` (form stack, event dispatch), every `DrawPolygons`/
   `DrawTextA`, the edit box's key dispatch and repeat timers.
 
+## R5b.2: the combat and unit formulas in Rust (ee_combat, branch rust-r5b-combat, 2026-11-09)
+
+`rust/crates/ee_combat` holds the per-unit formulas of `src/Empire Earth/Units`, `Physics Thread` and the unit
+utilities in `User Interface Thread/EEFOFindNewTargetNearOldTarget.cpp`. The C++ methods keep their signatures and
+their world access; each fills a plain record (`EeCombat*In`, `ee/EECombatFormulas.h`), calls Rust and acts on the
+result. Moved, with their callers:
+
+| Formula | C++ caller(s) | Tag |
+|---|---|---|
+| damage of a hit (direct, splash, trample) | `EEUnitClass::ComputeDamage` (ApplyHit, ApplyAreaDamage, `EEPhysicsModel`'s trample) | CBDM |
+| the attack factor's difficulty scale | `EEToHitTable::GetAttackFactor` (ComputeDamage; the AI, the UI target screens) | CBAF |
+| elevation factor | `EEUnitClass::GetElevationFactor` | CBEL |
+| morale | `EEComplexUnit::ApplyMorale` (TakeHit) | CBMO |
+| a hit's hit points, badly hurt; the damage effect threshold | `EEUnit::TakeHit` | CBTH, CBDE |
+| regeneration | `EEUnitClass::Regenerate` | CBRG |
+| garrison healing (timer, per unit), the heal goal (clock, heal) | `EEUnitClass::HealGarrison`, `EEUGHealUnit::Work` | CBTM, CBHL, CBHS |
+| heal range | `EEUGHealUnit::IsInRange` | CBHR |
+| conversion cost; the conversion clock and chance | `EEGetConversionCost`; both priests' `UpdateConversion` | CBCC, CBCV |
+| ballistic pitch | `EEGetBallisticPitch` (LaunchProjectile, the attack range checks) | CBBP |
+| a projectile's arc | `EEPMProjectile::Step0` | CBPA |
+| range to hit; contact, work and gather reach | `EEIsInRangeToHit`; `EECanReach`, `EEIsInWorkReach`, `EEIsInGatherReach` | CBRH, CBRC, CBRW, CBRT |
+| the damage table rows and their difficulty twins | `EETerrainTypeTable::LoadDamageTables` | CBDT |
+
+- **The gate is the capture, as for formations.** Every call appends its input record and its output
+  (`EECombatCapture`). The golden lines in `tools/sim_capture/golden_cpp.txt` were written from a build where the same
+  records went through C++ copies of the formulas (the commit before the switch; those copies were the original
+  arithmetic moved into the header, and the sim oracle stayed identical with them). `sim_capture.py replay` runs
+  `ee_combat`'s `combat_replay` over every record, byte for byte; `check` then gates the Rust build's own capture.
+- **The AI games never heal, regenerate or convert** (CBHL, CBHS, CBTM, CBRG, CBCV, CBHR were absent from the
+  six games, CBRH and CBCC in one each). As for formations, EE-SIM's capture sweep (`EECombatCaptureSweep`, every five
+  game minutes) calls those formulas over each player's newest 64 living units and their neighbours: real stats,
+  distances, timers and conversion factors, plus fixed variations (timers 0/tick/1000, full resistance with and
+  without adaptation, dead units). It reads the world only; the traces stay equal with it. The healing and
+  conversion paths themselves (which unit heals whom, the draw) are still not exercised by any game gate.
+- **What stays C++ and why.** The draws (`URandom::Generate` in the conversion attempt), the effects, events and
+  sounds, the target walks (`ApplyAreaDamage`'s tile loop), `GETransformation` in the arc, and the table storage:
+  `gDamageTable` and its twins are indexed directly by the AI (EECPASG*, EEHerd, EECPAttackSubGroup*), the messages and
+  the UI, which this branch does not touch; only the rows' arithmetic moved.
+- **Lazy inputs stay lazy.** The original read some inputs only on one branch: the attack factor not for a direct hit
+  without attack, the elevation and the fanatic flag only for a damaging hit (`ee_combat_hit_factor` lets the C++
+  decide that), the adaptation power only at full resistance, the projectile's own launch speed only when the
+  launcher's is zero, a crusader's heal range only for a crusader. Reading them eagerly would index
+  `gDamageTable` at a projectile's -1 ammo column or dereference a missing launcher class.
+- **Two C++ conversions to keep**: `(long)(tick_seconds * -1000.0f)` is a truncation (`ee_combat::truncate`, with
+  x86's indefinite value, not `as`), and `UMCeil` compares the rounded `long` with the float as a float.
+
+## R5b.2: the tech tree, the event effects and the calamities' age in Rust (ee_tech, branch rust-r5b-tech, 2026-11-09)
+
+`rust/crates/ee_tech` owns the decisions and the arithmetic of the tech tree (`src/Empire Earth/Tech Tree`), of the
+event effects (`Scenario Manager/EEEvent.cpp`) and the calamities' shared timing (`EECalamityClass::UpdateTimeAlive`).
+The C++ classes keep their members, vtables and object lifetimes; they fill plain views (`ee/EETechRust.h`: a node,
+the tree's epochs, an epoch's research counter, an effect's value/offset/factor) and apply what comes back, firing the
+events and refreshing the interface in the C++'s order.
+
+- **Moved:** a node's and an epoch's `GetIsAvailable`/`GetIsObsolete`, `SetPrerequisite`'s flags, `ResearchNode`'s and
+  the epoch's research decision and the research delay, `AddSOL`/`UpdateAvailability`, `EETechTree::Research`'s
+  epilogue, `GetCost` (a node's arithmetic, an epoch's scale), the per-class cost tables and prerequisite flags at
+  `Load`, `GetChecksum`, `DependsOn` and `SumCosts` (walks over callbacks into the C++ tree: the C++ is asked in the
+  C++'s order of calls, the costs are copied in and out so no Rust reference lives across a callback), both
+  `EEApplyEventEffect`s (now forwarders), which stat an attribute effect changes (`ee_tech_attribute`: the switch of
+  `ApplyEventAttribute` is on its operation), the maximum hit points, the hit point and flight time rescale
+  (`UMCeil`), the gather times, the population bonus, the terrain masks, `RunEffect`'s dispatch, and the calamity's
+  age. Kept C++: the effects that touch units, media, sounds, buttons and the interface; `ResearchToEpoch`, `Unlock`,
+  `ResearchAll` and the saved-game code (orchestration of member calls); every calamity class's own `Update`,
+  `Start`, `CanCastAt` and the contagion helpers.
+- **The C cast.** `(long)f` is `cvttss2si`: toward zero, `i32::MIN` for NaN or out of range. `ee_tech::ftol` keeps that
+  (`as i32` saturates); `UMCeil` is `lrintf` (ee_ge) plus one when below.
+- **The capture first** (`ee/EETechCapture.h`, `EE_SIM_CAPTURE`): research starts (`QueueResearch`), the tree's and the
+  nodes' research, prerequisites, epoch counters, every `GetCost` (7.8 million in the six oracle games) and `SumCosts`,
+  every effect with the upgrade's numeric fields and the player's before and after, every rescaled unit, calamity
+  creation, start and update, and a sweep of every player's tree every five game minutes (availability, obsolescence,
+  costs at three scales, `SumCosts`, the whole `DependsOn` closure, the checksum). Digests from the unmodified C++ are
+  in `tools/sim_capture/golden_cpp*.txt`; two captures of one build are identical and the capture leaves the six
+  traces equal to the reference.
+- **What the capture found.**
+  - An epoch's `mPrerequisiteFlags` is never set: uninitialized memory (two runs of one build differed there). Nothing
+    reads it (`SetPrerequisite` is only called on an epoch's nodes); the capture records 0 for epochs.
+  - `SumCosts` recurses through its own public entry; the capture records only the outermost call, so a walk inside
+    Rust gives the same records.
+  - The oracle's computer players never leave the first epochs (41 effect runs in a seed-2 game) and never cast a
+    calamity, even from a later start epoch with every cheat (`--profile late`, `space`: they stay in their start
+    epoch with almost no army). So the capture has three more profiles: `late` (3 AIs from the Middle Ages, cheats),
+    `space` (from the Atomic Age), and `calamity`: the oracle's game with `EE-SIM --calamities` (TEST ONLY), which
+    every five game minutes has each computer player cast an eighth of the calamity classes through
+    `EECalamityManager` (caster its first living unit, the next player's first unit or its tile the target). All 20
+    classes the game has (enums 3..26) start, update and end; 176 calamities, 166,320 updates in seeds 2-4.
+- **Gate:** `sim_capture.py check` equal to the C++ digests for the oracle's six seeds and the profiles' seeds (late
+  2-3, space 2-3, calamity 2-4); `sim_capture.py replay` (the Rust decisions recomputed from the C++ captures: TNRS,
+  TNPR, TSOL, the sweep's availability, closure and checksum, EVHP) found no difference before the C++ was replaced;
+  the sim oracle identical.
+- **Not ported (no oracle):** `CanCastAt` (only prophets and the interface ask it, and no captured game casts through
+  it), the calamity classes themselves (their `Update`s are world code), `GetUnitClassMediaMask`/`IsLatestEffect`.
+
+## R4.3, third part: GEModel's reader, writer and geometry (ee_ge model_file.rs, legacy.rs, model_save.rs, model_geom.rs, 2026-11-09)
+
+`GEModel::Load` (both `.cem` formats, the sub-models), the version-1 conversion (`ConvertLegacyModel`, so
+'GEModel Legacy.cpp' is gone), `GEModel::Save`'s chunk writers and `GEModel.cpp`'s geometry (`ComputeBoundingBoxes`,
+`ComputeBoundingVolumes`, `ComputeModelNormals`, `PrepareTransforms`, `RemoveModelScale`'s matrices, `SortTagPoints`'
+order, `Verify`'s test) are Rust. The model, its arrays (`GEVertexArray`/`GEPolygonArray` virtuals), the materials,
+the allocation (`AllocateInternalData`), the lifetimes and `GEModelManager` stay C++.
+
+- **Simulation reach.** `GEPhysicalModel::Intersects` (projectile hits, `EEUnitClass.cpp`) reads the loaded vertices,
+  so the reader feeds the simulation, but it does no float arithmetic: the bytes it stores are the bytes read. The
+  geometry's callers are the graphics thread, the UI and `Save`; its `f32` order is the C++'s anyway. The sim oracle
+  is identical.
+- **Decode, then store.** Rust reads the whole model into a plain `CemModel` through the field stream (now with
+  bytes and the position: `GERustFieldIO(FSFileSpec&)`), and `GEModel::StoreLoaded` allocates from the counts and
+  stores what was read. A load that fails keeps what the C++ had stored up to the failing field: every list in
+  `CemModel` is that prefix (vertices whole or not at all, a transform's or box's values one by one, a material's
+  values in the order the C++ set them). This matters: **a failing sub-model stays attached** (the parent ignores
+  sub-model results), its partial arrays included, and the file goes back to where that sub-model started, so a
+  file cut in its last sub-model loads "successfully". The assumption is that a failed read stores nothing, which
+  is `FSMemoryFile`'s rule; every model load reads from one (`Load` copies any other file first).
+- **The shared frames** (`ioTextures`, filled by `EEGraphicObject` for animations): a shared frame's vertices and tag
+  points are read into the *last* frame's arrays, and its arrays are the neighbour's (`AllocateInternalData` in frame
+  order). The reader records the target frame; the store writes there. An offset to a later shared frame read a
+  pointer the C++ had not set yet (never in the data).
+- **The header version was a global** (`sMajorVersion`/`sMinorVersion`, read by the legacy chunks and overwritten by
+  every sub-model's header). Nothing reads it after a sub-model, so it is a local now.
+- **`ConvertLegacyModel`'s quirks are kept:** the version-1 materials never get names, so the groups are named "" or
+  "player color"; a polygon listed twice in a group is placed twice (the second time past the polygon array's end, a
+  write the C++ made past its array and Rust drops); a vertex shared by two materials is copied into both. Reads past
+  an array's end (the C++'s undefined behaviour) give 0 in Rust.
+- **`Read(bool&)`** of a byte that is neither 0 nor 1 was undefined in the C++ (`!b` on a bool holding 2); Rust reads
+  the byte and tests it against 0.
+- **Golden driver** (scratch, `build/gemodel_golden`): the original 'GEModel Load.cpp', 'GEModel Legacy.cpp',
+  'GEModel Save.cpp' and `GEModel.cpp` text (`git archive` of the commit before) compiled with the driver against the
+  original headers (`EE_INCLUDE`), arrays of its own behind a fake `GERasterizer` (overrides generated from the
+  header's pure virtuals), the driver's own `GEModelManager` (GEModel's friend, so it reaches the private members),
+  `operator new` zeroing every allocation (so what the C++ leaves unset reads the same in both links), an
+  `FSMemoryFile` subclass refusing writes past a limit. Two snags: `FSMemoryFile(data, length, ...)` frees the buffer
+  it is given, and `FSFileSpec`'s constructor reads `gStartupDirectory` (the driver defines it). Each case prints the
+  result, the position and a digest of the whole model (every array; a frame's array shared with an earlier frame as
+  that frame's number). Corpus: 600 synthetic models (both formats, sub-models, strings with NULs, out-of-range
+  indices, quantized normals past the table) whole, shared and cut at random lengths, 8,186 cases; the 862 `.cem`
+  files of the binary tree whole, shared and cut, 45,402 cases; 500 in-memory models through the six geometry
+  steps; 1,079 loaded game models through them (sub-models included); 2,400 synthetic saves and the game models'
+  saves into limited files. Relinked over the forwarders, the driver printed identical files. The cargo tests replay
+  the synthetic sections (`golden_model*.rs`: the generator, the store, the C++'s loops and its digest re-stated).
+- **The driver hashes no out-of-range counter:** the original conversion's polygons listed twice land past the end
+  (counted by the driver's arrays), and Rust drops them before they reach the array; the stored state is the same.
+- Left: 'GEModel LOD.cpp' (`ComputeLODReduction`, the edge collapse) and 'GEModel Caching.cpp' (the vertex cache
+  optimiser): neither has a caller in the game, the tools or the data path. `GEModelManager` is a map and a lock
+  (lifetimes, kept C++). `GETexture::Load`'s description and grid planning, the managers, fonts, bitmaps and the rest
+  of `GETerrainMesh` were not reached.
+
 ## D9, the data side: the game reads only the open forms (branch rust-d9-data, 2026-11-09)
 
 The owner's decision D9 (docs/RUST_PLAN.md): glTF, PNG and the text db only at run time. This branch did the data side;

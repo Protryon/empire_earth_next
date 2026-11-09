@@ -159,9 +159,107 @@
 #include "ee/EERules.h"
 #include "ee/EECPTrace.h"
 #include "ee/EESimCapture.h"
+#include "ee/EEDatabaseTables.h"
+#include "ee/EECombatFormulas.h"
+#include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
+
+// TEST ONLY: the combat formulas' sweep of the simulation capture (ee/EECombatFormulas.h). The computer players'
+// games never regenerate, heal or convert, and seldom test the range to hit, so with EE_SIM_CAPTURE on this calls
+// those formulas (and the reach and damage effect tests) over each player's newest 64 living units and their
+// neighbours: real stats, distances and timers, plus fixed variations. It reads the world and writes nothing back.
+static void EECombatCaptureSweep()
+{
+    const EECombatRules& theRules = EEGetRules().mCombat;
+    int32_t theTick = (int32_t)gPhysics->mTickTimeMs;
+    for (unsigned long p = 1; p < gWorld.GetNumPlayers(); p++) {
+        EEPlayer* thePlayer = gWorld.GetPlayer(p);
+        if (thePlayer == NULL)
+            continue;
+        std::vector<EEComplexUnit*> theAll;
+        for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL; theUnit = static_cast<EEUnit*>(theUnit->mNext))
+            if (theUnit->mComplexUnit != NULL && theUnit->mHitPoints > 0 && theUnit->mStats != NULL)
+                theAll.push_back(theUnit->mComplexUnit);
+        size_t theFirst = theAll.size() > 64 ? theAll.size() - 64 : 0;
+        for (size_t i = theFirst; i + 1 < theAll.size(); i++) {
+            EEComplexUnit* a = theAll[i];
+            EEComplexUnit* b = theAll[i + 1];
+            EEUnitClassUpgrade* s = a->mStats;
+            EEUnitClassUpgrade* t = b->mStats;
+            int32_t theHitPoints = (int32_t)a->mHitPoints;
+            int32_t theMax = (int32_t)s->mMaxHitPoints;
+            const int32_t kTimers[] = {(int32_t)a->mRegenerationTimer, 0, theTick, 1000};
+            const int32_t kHits[] = {theHitPoints, 0, theMax, theMax / 3 + 1};
+            for (int32_t theTimer : kTimers) {
+                EeCombatTimerIn theT = {theTimer, theTick, (int32_t)theRules.mRegenerationInterval};
+                EECombatTimer(theT);
+                for (int32_t theHp : kHits) {
+                    EeCombatRegenerateIn theR = {theTimer, theTick, theHp, (int32_t)s->mRegeneration, theMax,
+                                                 (int32_t)theRules.mRegenerationInterval};
+                    EECombatRegenerate(theR);
+                    theR.regeneration = 3;
+                    EECombatRegenerate(theR);
+                }
+            }
+            for (int32_t theHp : kHits) {
+                EeCombatHealIn theH = {theHp, (int32_t)t->mHealingPoints, theMax};
+                EECombatHeal(theH);
+                theH.healing = 7;
+                EECombatHeal(theH);
+                EeCombatDamageEffectIn theE = {theHp, theHp - (int32_t)t->mMaxHitPoints / 4, theMax, 0.5f};
+                EECombatDamageEffect(theE);
+            }
+            const uint32_t kElapsed[] = {0, 900, 999, 1000};
+            for (uint32_t theElapsed : kElapsed) {
+                EeCombatHealStepIn theS = {theElapsed, theTick};
+                EECombatHealStep(theS);
+                theS.tick_ms = 0;
+                EECombatHealStep(theS);
+            }
+            EeCombatConversionCostIn theC = {(int32_t)gWorldTable.GetLongValue(kWorldConversionFaithCost), (int32_t)s->mPower};
+            EECombatConversionCost(theC);
+            const int32_t kWork[] = {(int32_t)a->mWorkTimer, 950, 999, -5};
+            for (int32_t theWork : kWork) {
+                for (int theAdaptation = 0; theAdaptation < 2; theAdaptation++) {
+                    EeCombatConversionIn theV = {theWork, gPhysics->mTickSeconds, t->mConversionResistance, theAdaptation,
+                                                 s->mConversionRate, b->mPlayer->mConversionFactor};
+                    EECombatConversion(theV);
+                    theV.resistance = 1.0f;
+                    theV.rate = 0.4f;
+                    EECombatConversion(theV);
+                }
+            }
+            float theDistance = a->DistanceSquaredTo(b);
+            EECombatWithinRange(theDistance, a->mUnitClass->mHealRange);
+            EECombatWithinRange(theDistance, s->mRange);
+            for (int theCrusader = 0; theCrusader < 2; theCrusader++) {
+                EeCombatRangeIn theG = {s->mRange, a->mUnitClass->mHealRange, theCrusader, theDistance,
+                                        b->mUnitClass->IsLandBuilding(), b->mUnitClass->mInnerCollisionSphere};
+                EECombatRange(theG);
+            }
+            for (int theFlags = 0; theFlags < 4; theFlags++) {
+                EeCombatReachIn theQ = {theDistance, a->mUnitClass->mInnerCollisionSphere,
+                                        b->mUnitClass->mInnerCollisionSphere, 0.0f, theFlags & 1, theFlags >> 1};
+                EECombatWorkReach(theQ);
+                EECombatGatherReach(theQ);
+            }
+            if (s->mUnitClass->mProjectileClass != NULL) {
+                GE3DPoint theFrom;
+                GE3DPoint theTo;
+                a->GetPosition(theFrom);
+                b->GetPosition(theTo);
+                for (int theHigh = 0; theHigh < 2; theHigh++) {
+                    EeCombatBallisticIn theB = {theFrom.GetX(), theFrom.GetY(), theFrom.GetZ(), theTo.GetX(), theTo.GetY(),
+                                                theTo.GetZ(), s->mLaunchSpeed,
+                                                s->mUnitClass->mProjectileClass->GetAcceleration(), theHigh};
+                    EECombatBallistic(theB);
+                }
+            }
+        }
+    }
+}
 
 
 namespace {
@@ -188,6 +286,7 @@ struct Options {
     std::string mCheats, mPersonality;
     std::string mEngine;                                 // --engine: the computer seats' engines ("" the lobby's: classic)
     long mPortOffset = -1;                              // -1: a free pair found at start
+    bool mCalamities = false;                            // --calamities (TEST ONLY; ee/EETechCapture.h)
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
     std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
@@ -581,11 +680,21 @@ void AfterTick()
                  theResult == 1 ? "victorious" : theResult == 2 ? "defeated" : "?", theTime, gPhysics->mNumTicksDone);
         }
     }
-    // TEST ONLY: the formation sweep of the simulation capture (ee/EEFormation.h), every five game minutes
+    // TEST ONLY: the formation and combat sweeps of the simulation capture (ee/EEFormation.h, above), every five game
+    // minutes
     static long sNextSweepMs = 300000;
     if (EESimCaptureRecord::Active() && theTime >= sNextSweepMs) {
         sNextSweepMs += 300000;
         EEFormationCaptureSweep();
+        EECombatCaptureSweep();
+        EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
+    }
+    // TEST ONLY: --calamities casts every calamity class in turn, every five game minutes (ee/EETechCapture.h)
+    static long sNextCastMs = 300000;
+    static long sCasts = 0;
+    if (sOptions.mCalamities && theTime >= sNextCastMs) {
+        sNextCastMs += 300000;
+        EETechCaptureCastCalamities(sCasts++);
     }
     if (theTime >= sNextSampleMs) {
         Sample s = TakeSample();
@@ -1233,6 +1342,8 @@ const char* kUsage =
     "  --dump-at MS=FILE      write the units' and players' state at the first tick at or after game ms MS (repeatable)\n"
     "  --dump-load FILE       with --load-save: the same of the loaded state (at its first tick, before it runs)\n"
     "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: a free pair from 35334 up)\n"
+    "  --calamities           TEST ONLY: every five game minutes the computer players cast the next eighth of the\n"
+    "                         calamity classes (the capture's calamity game; ee/EETechCapture.h)\n"
     "  --quiet                no progress on stderr\n";
 
 // a port offset whose TCP and UDP ports 33334/33335 are free now, from one the process id picks (the harness's
@@ -1423,6 +1534,8 @@ int EESimMain(int argc, char** argv)
             sOptions.mChecksumTrace = Absolute(value());
         else if (a == "--quiet")
             sOptions.mQuiet = true;
+        else if (a == "--calamities")
+            sOptions.mCalamities = true;
         else if (a == "--port-offset")
             sOptions.mPortOffset = atol(value().c_str());
         else if (a == "--autosave-ms")

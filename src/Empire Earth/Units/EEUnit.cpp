@@ -17,6 +17,7 @@
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/EECombatFormulas.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -748,12 +749,11 @@ void EEUnit::TakeHit(EEUnit* inAttacker, long inDamage, unsigned long inPlayerNu
             }
         }
     }
-    float theThreshold = (float)this->mStats->mMaxHitPoints * 0.1f;
-    if ((float)theHitPoints > theThreshold && (float)(theHitPoints - theDamage) <= theThreshold)
+    EeCombatHitPointsIn theHitIn = {(int32_t)theHitPoints, (int32_t)theDamage, (int32_t)this->mStats->mMaxHitPoints};
+    EeCombatHitPointsOut theHitOut = EECombatHitPoints(theHitIn);
+    if (theHitOut.badly_hurt)
         this->mUnitClass->BadlyHurt(this);
-    theHitPoints -= theDamage;
-    if (theHitPoints < 0)
-        theHitPoints = 0;
+    theHitPoints = theHitOut.hit_points;
     thePlayer->DamageTaken(inPlayerNumber, theDamage, this);
     if (this->mTileX != -10000) {
         if (inAttacker != NULL) {
@@ -779,9 +779,9 @@ void EEUnit::TakeHit(EEUnit* inAttacker, long inDamage, unsigned long inPlayerNu
     if (theHitPoints > 0) {
         EEGraphicEffect* theDamageEffect = this->mUnitClass->mDamageEffect;
         if (theDamageEffect != NULL && (this->mTileNode == NULL || this->mComplexUnit->mIsBuilt)) {
-            float theInverseHealth = 1.0f / (float)this->mStats->mMaxHitPoints;
-            if ((float)this->mHitPoints * theInverseHealth >= theDamageEffect->GetParam2() &&
-                theDamageEffect->mParam2 > (float)theHitPoints * theInverseHealth) {
+            EeCombatDamageEffectIn theEffectIn = {(int32_t)this->mHitPoints, (int32_t)theHitPoints,
+                                                  (int32_t)this->mStats->mMaxHitPoints, theDamageEffect->GetParam2()};
+            if (EECombatDamageEffect(theEffectIn)) {
                 if (this->mUnitClass->mCategory != kUnitCategoryGate)
                     gEffectManager->CreateUnitEffect(this, theDamageEffect, NULL, false, 0, 0);
                 else {

@@ -63,6 +63,7 @@
 #include "ee/EEPlayer.h"
 #include "ee/EEComputerPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/EECombatFormulas.h"
 #include "ee/EEMap.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
@@ -1524,32 +1525,19 @@ bool EEGetBallisticPitch(EEComplexUnit* inUnit, EEUnitClassUpgrade* inStats, con
                 float* outAngle)
 {
     EEUnitClass* theClass = inUnit->mUnitClass;
-    float theDistance = (float)sqrt((inFrom->GetX() - inTo->GetX()) * (inFrom->GetX() - inTo->GetX())
-                                    + (inFrom->GetY() - inTo->GetY()) * (inFrom->GetY() - inTo->GetY()));
-    float theSpeed = inStats->mLaunchSpeed;
-    float theA = -(inStats->mUnitClass->mProjectileClass->GetAcceleration() * (theDistance * theDistance)) / (theSpeed * theSpeed * 2.0f);
-    float theDiscriminant = theDistance * theDistance - (theA - (inTo->GetZ() - inFrom->GetZ())) * theA * 4.0f;
-    bool theResult;
-    float theAngle;
-    if (theDiscriminant >= 0.0f) {
-        float theRoot = (float)sqrt(theDiscriminant);
-        float theLow = UMArcTan((theRoot - theDistance) / (theA + theA));
-        float theHigh = UMArcTan((-theDistance - theRoot) / (theA + theA));
-        if (theLow > theHigh) {
-            float theSwap = theLow;
-            theLow = theHigh;
-            theHigh = theSwap;
-        }
-        theAngle = theHigh;
-        if (!theClass->mShootsHigh && (!inStats->mCanFireOverWalls || !inUnit->mIsFiringHigh || inUnit->mAnimation != 8))
-            theAngle = theLow;
-        theResult = true;
-    } else {
-        theResult = false;
-        theAngle = 0.7853982f;
-    }
-    *outAngle = theAngle;
-    return theResult;
+    EeCombatBallisticIn theIn;
+    theIn.from_x = inFrom->GetX();
+    theIn.from_y = inFrom->GetY();
+    theIn.from_z = inFrom->GetZ();
+    theIn.to_x = inTo->GetX();
+    theIn.to_y = inTo->GetY();
+    theIn.to_z = inTo->GetZ();
+    theIn.speed = inStats->mLaunchSpeed;
+    theIn.acceleration = inStats->mUnitClass->mProjectileClass->GetAcceleration();
+    theIn.high = theClass->mShootsHigh || (inStats->mCanFireOverWalls && inUnit->mIsFiringHigh && inUnit->mAnimation == 8);
+    EeCombatBallisticOut theOut = EECombatBallistic(theIn);
+    *outAngle = theOut.angle;
+    return theOut.reached != 0;
 }
 
 // FUNCTION: EXE 0x641bc9
@@ -3962,18 +3950,19 @@ void EEGetCornerTiles(long inCorners, long inX, long inY, long inSize, std::vect
 // Tells whether a unit can attack a target from where it stands (in range, not blocked)
 bool EEIsInRangeToHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 {
-    float theRange = UMSquare(inUnit->mStats->mRange);
     long theA = 0;
     long theB = 0;
     EEUnit* theC;
-    bool theResult;
-    if (inUnit->mUnitClass->IsCrusader())
-        theRange = UMSquare(inUnit->mUnitClass->mHealRange);
-    float theDistance = EEGetHitDistanceSquared(inUnit, inTarget, -10000.0f, -10000.0f);
-    if (!inTarget->mUnitClass->IsLandBuilding())
-        theResult = theDistance <= theRange;
-    else
-        theResult = -UMSquare(inTarget->mUnitClass->mInnerCollisionSphere * 0.5f) + theDistance <= theRange;
+    EeCombatRangeIn theIn = {};
+    theIn.range = inUnit->mStats->mRange;
+    theIn.crusader = inUnit->mUnitClass->IsCrusader();
+    if (theIn.crusader)
+        theIn.heal_range = inUnit->mUnitClass->mHealRange;
+    theIn.distance_squared = EEGetHitDistanceSquared(inUnit, inTarget, -10000.0f, -10000.0f);
+    theIn.building = inTarget->mUnitClass->IsLandBuilding();
+    if (theIn.building)
+        theIn.inner_sphere = inTarget->mUnitClass->mInnerCollisionSphere;
+    bool theResult = EECombatRange(theIn) != 0;
     if (!theResult)
         return theResult;
     theResult = !inUnit->IsOnOtherContinentThan(static_cast<EEComplexUnit*>(inTarget));
@@ -3986,8 +3975,8 @@ bool EEIsInRangeToHit(EEComplexUnit* inUnit, EEUnit* inTarget)
 // Tells whether two radii (plus a margin), scaled, reach across a squared distance
 bool EECanReach(float inDistanceSquared, float inRadius, float inOtherRadius, float inScale)
 {
-    float theReach = (kUUContactMargin * 0.05f + inRadius + inOtherRadius) * inScale;
-    return inDistanceSquared * 4.0f < theReach * theReach;
+    EeCombatReachIn theIn = {inDistanceSquared, inRadius, inOtherRadius, inScale, 0, 0};
+    return EECombatCanReach(theIn) != 0;
 }
 
 // FUNCTION: EXE 0x64734c
@@ -3995,39 +3984,20 @@ bool EECanReach(float inDistanceSquared, float inRadius, float inOtherRadius, fl
 bool EEIsInWorkReach(EEComplexUnit* inUnit, EEComplexUnit* inTarget)
 {
     EEUnitClass* theClass = inTarget->mUnitClass;
-    float theTargetRadius = theClass->mInnerCollisionSphere;
-    float theRadius = inUnit->mUnitClass->mInnerCollisionSphere;
-    if (theClass->mIsWall) {
-        theTargetRadius = 1.0f;
-    } else {
-        if (theClass->mUnitType == kUnitTypeRoboticFarm)
-            theTargetRadius = 2.0f;
-        else if (theTargetRadius < 1.0f)
-            theTargetRadius = 1.0f;
-    }
-    float theDistance = inUnit->DistanceSquaredTo(inTarget);
-    float theReach = (kUUContactMargin * 0.05f + theRadius + theTargetRadius) * kUUWorkReach;
-    if (theDistance * 4.0f < theReach * theReach)
-        return true;
-    return false;
+    EeCombatReachIn theIn = {0.0f, inUnit->mUnitClass->mInnerCollisionSphere, theClass->mInnerCollisionSphere, 0.0f,
+                             theClass->mIsWall, theClass->mUnitType == kUnitTypeRoboticFarm};
+    theIn.distance_squared = inUnit->DistanceSquaredTo(inTarget);
+    return EECombatWorkReach(theIn) != 0;
 }
 
 // FUNCTION: EXE 0x6473e0
 // Tells whether a unit at a squared distance reaches a target (gather and arrival test)
 bool EEIsInGatherReach(float inDistanceSquared, EEComplexUnit* inUnit, EEUnit* inTarget)
 {
-    float theRadius = inUnit->mUnitClass->mInnerCollisionSphere;
-    float theTargetRadius = inTarget->mUnitClass->mInnerCollisionSphere;
-    if (theTargetRadius < theRadius)
-        theTargetRadius = theRadius;
-    if (inTarget->mUnitClass->mIsTree)
-        theTargetRadius = 1.0f;
-    if (inUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen)
-        theRadius = 1.0f;
-    float theReach = (kUUContactMargin * 0.05f + theTargetRadius + theRadius) * kUUGatherReach;
-    if (inDistanceSquared * 4.0f < theReach * theReach)
-        return true;
-    return false;
+    EeCombatReachIn theIn = {inDistanceSquared, inUnit->mUnitClass->mInnerCollisionSphere,
+                             inTarget->mUnitClass->mInnerCollisionSphere, 0.0f, inTarget->mUnitClass->mIsTree,
+                             inUnit->mUnitClass->mCategory == kUnitCategoryNavalCitizen};
+    return EECombatGatherReach(theIn) != 0;
 }
 
 // FUNCTION: EXE 0x64745d

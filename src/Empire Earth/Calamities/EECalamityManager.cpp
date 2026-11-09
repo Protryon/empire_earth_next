@@ -50,6 +50,7 @@
 #include "ee/EEUnit.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
+#include "ee/EETechCapture.h"
 // FUNCTION: EXE 0x4adf97
 // Creates the calamity manager with no classes or active calamities
 EECalamityManager::EECalamityManager()
@@ -236,6 +237,8 @@ bool EECalamityManager::CreateGlobalCalamity(unsigned long inClassEnum, unsigned
             theResult = true;
         }
     }
+    if (EESimCaptureRecord::Active())   // TEST ONLY (ee/EETechCapture.h)
+        EECalamityCapture(0, inClassEnum, inCasterUnitID, 0, 0, 0, inPlayerNumber, theResult);
     return theResult;
 }
 
@@ -264,6 +267,8 @@ bool EECalamityManager::CreateLocationCalamity(unsigned long inClassEnum, unsign
             theResult = true;
         }
     }
+    if (EESimCaptureRecord::Active())   // TEST ONLY (ee/EETechCapture.h)
+        EECalamityCapture(1, inClassEnum, inCasterUnitID, 0, inX, inY, inPlayerNumber, theResult);
     return theResult;
 }
 
@@ -285,6 +290,8 @@ bool EECalamityManager::CreateUnitCalamity(unsigned long inClassEnum, unsigned l
             theResult = true;
         }
     }
+    if (EESimCaptureRecord::Active())   // TEST ONLY (ee/EETechCapture.h)
+        EECalamityCapture(2, inClassEnum, inCasterUnitID, inTargetUnitID, 0, 0, inPlayerNumber, theResult);
     return theResult;
 }
 
@@ -423,7 +430,16 @@ void EECalamityManager::Restore(unsigned long inMajorVersion, unsigned long inMi
 // Starts the calamity and keeps it active if it started; one that fails to start is deleted
 void EECalamityManager::AddCalamity(EECalamity* inCalamity)
 {
-    if (inCalamity->mClass->Start(inCalamity))
+    bool theStarted = inCalamity->mClass->Start(inCalamity);
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
+        EESimCaptureRecord theRecord(EECaptureTag("CALS"));
+        theRecord.I32(inCalamity->mClass->mClassEnum);
+        theRecord.U32(inCalamity->mPlayerNumber);
+        theRecord.F32(inCalamity->mTimeAlive);
+        theRecord.U32(theStarted ? 1 : 0);
+        theRecord.Commit();
+    }
+    if (theStarted)
         this->mCalamities.push_back(inCalamity);
     else
         delete inCalamity;  // releases its caster/target references and the media its ctor loaded
@@ -466,11 +482,25 @@ void EECalamityManager::Update(float inElapsedTime)
     for (unsigned long i = 1; i < gWorld.mNumPlayers; i++)
         gWorld.mPlayers[i]->mEarthquakeShaken = false;
     std::vector<EECalamity*>::iterator theIterator = this->mCalamities.begin();
-    while (theIterator != this->mCalamities.end())
-        if ((*theIterator)->mClass->Update(*theIterator, inElapsedTime) == 7)
+    while (theIterator != this->mCalamities.end()) {
+        float theBefore = (*theIterator)->mTimeAlive;
+        long theUpdate = (*theIterator)->mClass->Update(*theIterator, inElapsedTime);
+        if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
+            EESimCaptureRecord theRecord(EECaptureTag("CALU"));
+            theRecord.I32((*theIterator)->mClass->mClassEnum);
+            theRecord.U32((*theIterator)->mPlayerNumber);
+            theRecord.F32(theBefore);
+            theRecord.F32(inElapsedTime);
+            theRecord.F32((*theIterator)->mTimeAlive);
+            theRecord.F32((*theIterator)->mClass->mLifeTime);
+            theRecord.I32(theUpdate);
+            theRecord.Commit();
+        }
+        if (theUpdate == 7)
             theIterator = this->DestroyCalamity(theIterator);
         else
             ++theIterator;
+    }
 }
 
 // FUNCTION: EXE 0x4aeb83

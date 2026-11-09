@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <math.h>
 #include <typeinfo>
+#include "ee/EETechCapture.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GE2DPoint.h"
@@ -29,6 +30,7 @@
 
 #include "ee/EEPlayer.h"
 #include "ee/EEUnit.h"
+#include "ee/EECombatFormulas.h"
 #include "ee/RTSWorld.h"
 #include "ee/EEWorld.h"
 #include "ee/EEMap.h"
@@ -374,6 +376,24 @@ bool EEComplexUnit::AddGarrison(long inAmount, long inGarrisonPopulation)
 // FUNCTION: EXE 0x5f5f97
 // Queues and pays for a technology or unit at this building (front or back), honouring the hero limit
 void EEComplexUnit::QueueResearch(long inTechnology, bool inFront)
+{
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY: a research start (ee/EETechCapture.h)
+        EESimCaptureRecord theRecord(EECaptureTag("TQRS"));
+        theRecord.I32(this->GetPlayer()->mPlayerID);
+        theRecord.I32((long)this->mUnitID);
+        theRecord.I32(this->GetUnitClass()->GetUnitType());
+        theRecord.I32(inTechnology);
+        theRecord.U32(inFront ? 1 : 0);
+        theRecord.U32((unsigned int)this->mBuildQueue.size());
+        this->QueueResearchUncaptured(inTechnology, inFront);
+        theRecord.U32((unsigned int)this->mBuildQueue.size());
+        theRecord.Commit();
+        return;
+    }
+    this->QueueResearchUncaptured(inTechnology, inFront);
+}
+
+void EEComplexUnit::QueueResearchUncaptured(long inTechnology, bool inFront)
 {
     // the queue entry (technology, flag): an EEProductionEntry, mBuildQueue's 8-byte element (inferred)
     EETechTreeNode* theNode = this->GetPlayer()->GetTechTree()->Get(inTechnology);
@@ -2749,11 +2769,9 @@ bool EEComplexUnit::IsRepairable()
 // morale: 80% and 60% in the original)
 void EEComplexUnit::ApplyMorale(long inValue, long& outValue)
 {
-    outValue = inValue;
-    if (this->mPositiveMorale > 0)
-        outValue -= UMFloatToLong(inValue * EEGetRules().mCombat.mPositiveMorale);
-    if (this->mNegativeMorale > 0)
-        outValue += UMFloatToLong(inValue * EEGetRules().mCombat.mNegativeMorale);
+    EeCombatMoraleIn theIn = {(int32_t)inValue, (int32_t)this->mPositiveMorale, (int32_t)this->mNegativeMorale,
+                              EEGetRules().mCombat.mPositiveMorale, EEGetRules().mCombat.mNegativeMorale};
+    outValue = EECombatMorale(theIn);
 }
 
 // FUNCTION: EXE 0x5fbdd1

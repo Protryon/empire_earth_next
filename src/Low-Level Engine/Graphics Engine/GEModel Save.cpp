@@ -4,8 +4,9 @@
 // 0x1001e2fc..0x1001eb9f: GEModel::Save and its chunk writers (.cem "SSMF" version 2.0). A unit of its own: it has
 // no U2D key init chains (the other GEModel part files all do) and ends with its own UList pool registrations
 // (0x1001eb7b..0x1001eb9f) before GEModel.cpp's chains. The leading pool COMDATs (0x1001e2fc..0x1001e4e8) have no
-// source here.
+// source here. The chunk writers are Rust (rust/crates/ee_ge model_save.rs): Save gathers the model and hands it over.
 #include <windows.h>
+#include <vector>
 
 #include "lle/LowLevelEngineCore.h"
 #include "lle/UString.h"
@@ -22,14 +23,28 @@
 #include "lle/GEPolygonArray.h"
 #include "lle/GEMaterial.h"
 #include "lle/GEModel.h"
+#include "GERustMath.h"
+#include "GERustIO.h"
+
+// UString's bytes for Rust (its length, not up to a NUL: what UString::Save writes)
+static EeGeBytes GERustBytes(const UString& inString)
+{
+    EeGeBytes theBytes;
+    theBytes.data = reinterpret_cast<const uint8_t*>((const char*)inString);
+    theBytes.length = inString.GetLength();
+    return theBytes;
+}
 
 // FUNCTION: LLE 0x1001e4e8
 // Saves the model as .cem 2.0 (a top model first recomputes bounds, sorts tag points and removes scale),
-// then its sub-models; on a chunk error rewinds the file
+// then its sub-models; on a chunk error rewinds the file. The chunks are Rust's (ee_ge_model_save) over flat
+// copies of the arrays.
 long GEModel::Save(FSFileSpec& inFile)
 {
     long theResult;
     long thePosition;
+    unsigned long i;
+    unsigned long j;
     if (this->mParentModel == NULL) {
         this->ComputeBoundingVolumes();
         this->SortTagPoints();
@@ -39,12 +54,84 @@ long GEModel::Save(FSFileSpec& inFile)
     if (inFile.GetIsOpen()) {
         theResult = inFile.GetPosition(thePosition);
         if (theResult == kErrorOK) {
-            if ((theResult = this->SaveHeaderChunk(inFile)) == kErrorOK && (theResult = this->SaveCountsChunk(inFile)) == kErrorOK &&
-                (theResult = this->SaveMiscellaneousChunk(inFile)) == kErrorOK &&
-                (theResult = this->SavePolygonsChunk(inFile)) == kErrorOK &&
-                (theResult = this->SaveMaterialsChunk(inFile)) == kErrorOK &&
-                (theResult = this->SaveTagPointsChunk(inFile)) == kErrorOK && (theResult = this->SaveFrameChunk(inFile)) == kErrorOK) {
-                for (unsigned long i = 0; i < this->mSubModelCount; i++)
+            EeGeCemSave theView;
+            std::vector<uint32_t> theSizes(this->mLODCount);
+            std::vector<uint32_t> theIndices;
+            for (i = 0; i < this->mLODCount; i++) {
+                GEPolygonArray* theArray = this->mPolygonArrays[i];
+                theSizes[i] = (uint32_t)theArray->GetSize();
+                for (j = 0; j < theArray->GetSize(); j++) {
+                    theIndices.push_back((uint32_t)theArray->GetVertexIndex1(j));
+                    theIndices.push_back((uint32_t)theArray->GetVertexIndex2(j));
+                    theIndices.push_back((uint32_t)theArray->GetVertexIndex3(j));
+                }
+            }
+            std::vector<uint32_t> theRanges(this->mMaterialCount * this->mLODCount * 2 + 1);
+            std::vector<EeGeCemSaveMaterial> theMaterials(this->mMaterialCount);
+            for (i = 0; i < this->mMaterialCount; i++) {
+                GEMaterial* theMaterial = this->mMaterials[i];
+                EeGeCemSaveMaterial& theTarget = theMaterials[i];
+                theTarget.name = GERustBytes(theMaterial->GetName());
+                theTarget.texture_index = (uint32_t)theMaterial->GetTextureIndex();
+                theTarget.ranges = &theRanges[i * this->mLODCount * 2];
+                for (j = 0; j < this->mLODCount; j++) {
+                    theRanges[(i * this->mLODCount + j) * 2] = (uint32_t)theMaterial->GetPolygonStartingIndex(j);
+                    theRanges[(i * this->mLODCount + j) * 2 + 1] = (uint32_t)theMaterial->GetPolygonRangeLength(j);
+                }
+                theTarget.vertex_start = (uint32_t)theMaterial->GetVertexStartingIndex();
+                theTarget.vertex_length = (uint32_t)theMaterial->GetVertexRangeLength();
+                theTarget.texture_filename = GERustBytes(this->mTextureFilenames[i]);
+            }
+            std::vector<EeGeBytes> theNames(this->mTagPointCount + 1);
+            for (i = 0; i < this->mTagPointCount; i++)
+                theNames[i] = GERustBytes(this->mTagPointNames[i]);
+            std::vector<float> theVertices(this->mFrameCount * this->mVertexCount * 8 + 1);
+            std::vector<EeGeCemSaveFrame> theFrames(this->mFrameCount + 1);
+            for (i = 0; i < this->mFrameCount; i++) {
+                EeGeCemSaveFrame& theFrame = theFrames[i];
+                float* theValues = &theVertices[i * this->mVertexCount * 8];
+                GE3DPoint thePoint;
+                GEVector theNormal;
+                GETextureCoordinate theCoordinate;
+                for (j = 0; j < this->mVertexCount; j++) {
+                    this->mVertexArrays[i]->GetPoint(thePoint, j);
+                    this->mVertexArrays[i]->GetNormal(theNormal, j);
+                    this->mVertexArrays[i]->GetTextureCoordinate(theCoordinate, j);
+                    float* theVertex = theValues + j * 8;
+                    theVertex[0] = thePoint.GetX();
+                    theVertex[1] = thePoint.GetY();
+                    theVertex[2] = thePoint.GetZ();
+                    theVertex[3] = theNormal.GetX();
+                    theVertex[4] = theNormal.GetY();
+                    theVertex[5] = theNormal.GetZ();
+                    theVertex[6] = theCoordinate.GetU();
+                    theVertex[7] = theCoordinate.GetV();
+                }
+                theFrame.radius = this->mBoundingRadii[i];
+                theFrame.vertices = theValues;
+                theFrame.tag_points = this->mTagPointCount > 0 ? GERust(this->mFrameTagPoints[i][0]) : NULL;
+                theFrame.transform = *GERust(this->mInternalTransforms[i]);
+                theFrame.bbox[0] = *GERust(this->mBoundingBoxes[i].GetBottomLeftFront());
+                theFrame.bbox[1] = *GERust(this->mBoundingBoxes[i].GetTopRightBack());
+            }
+            theView.counts[0] = (uint32_t)this->mPolygonCount;
+            theView.counts[1] = (uint32_t)this->mVertexCount;
+            theView.counts[2] = (uint32_t)this->mTagPointCount;
+            theView.counts[3] = (uint32_t)this->mMaterialCount;
+            theView.counts[4] = (uint32_t)this->mFrameCount;
+            theView.counts[5] = (uint32_t)this->mSubModelCount;
+            theView.counts[6] = (uint32_t)this->mLODCount;
+            theView.name = GERustBytes(this->mName);
+            theView.center = *GERust(this->mCenterPoint);
+            theView.lod_sizes = theSizes.empty() ? NULL : &theSizes[0];
+            theView.lod_indices = theIndices.empty() ? NULL : &theIndices[0];
+            theView.materials = theMaterials.empty() ? NULL : &theMaterials[0];
+            theView.tag_point_names = &theNames[0];
+            theView.frames = &theFrames[0];
+            EeGeFieldIo theIO = GERustFieldIO(inFile);
+            theResult = ee_ge_model_save(&theIO, &theView);
+            if (theResult == kErrorOK) {
+                for (i = 0; i < this->mSubModelCount; i++)
                     this->mSubModels[i]->Save(inFile);
             } else
                 inFile.SetPosition(thePosition, kFileOriginBegin, false);
@@ -53,189 +140,6 @@ long GEModel::Save(FSFileSpec& inFile)
         theResult = kErrorNotOpen;
     if (theResult == kErrorNativeError)
         ESGetNativeError();
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001e5fb
-// Writes the "SSMF" tag and version 2.0; a short tag write still returns success
-long GEModel::SaveHeaderChunk(FSFileSpec& inFile)
-{
-    unsigned long theWritten;
-    long theResult = inFile.Write("SSMF", 4, theWritten);
-    if (theResult != kErrorOK || theWritten != 4)
-        return theResult;
-    theResult = inFile.Write((unsigned short)2);       // major version
-    if (theResult == kErrorOK)
-        theResult = inFile.Write((unsigned short)0);   // minor version
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001e651
-// Writes the polygon, vertex, tag point, material, frame, sub-model and LOD counts
-long GEModel::SaveCountsChunk(FSFileSpec& inFile)
-{
-    long theResult = inFile.Write(this->mPolygonCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Write(this->mVertexCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Write(this->mTagPointCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Write(this->mMaterialCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Write(this->mFrameCount);
-    if (theResult != kErrorOK)
-        return theResult;
-    theResult = inFile.Write(this->mSubModelCount);
-    if (theResult == kErrorOK)
-        theResult = inFile.Write(this->mLODCount);
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001e6ed
-// Writes the model name and centre point
-long GEModel::SaveMiscellaneousChunk(FSFileSpec& inFile)
-{
-    long theResult = this->mName.Save(inFile);
-    if (theResult == kErrorOK)
-        theResult = this->mCenterPoint.Save(inFile);
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001e716
-// Writes each LOD's polygon count and vertex indices; returns the first write error
-long GEModel::SavePolygonsChunk(FSFileSpec& inFile)
-{
-    long theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->mLODCount; i++) {
-        unsigned long theCount = this->mPolygonArrays[i]->GetSize();
-        theResult = inFile.Write(theCount);
-        if (theResult == kErrorOK) {
-            for (unsigned long j = 0; j < this->mPolygonArrays[i]->GetSize() && theResult == kErrorOK; j++) {
-                unsigned long theIndex1 = this->mPolygonArrays[i]->GetVertexIndex1(j);
-                theResult = inFile.Write(theIndex1);
-                if (theResult != kErrorOK)
-                    continue;
-                unsigned long theIndex2 = this->mPolygonArrays[i]->GetVertexIndex2(j);
-                theResult = inFile.Write(theIndex2);
-                if (theResult == kErrorOK) {
-                    unsigned long theIndex3 = this->mPolygonArrays[i]->GetVertexIndex3(j);
-                    theResult = inFile.Write(theIndex3);
-                }
-            }
-        }
-    }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001e83a
-// Writes each material's name, texture index, per-LOD polygon ranges, vertex range and texture file name
-long GEModel::SaveMaterialsChunk(FSFileSpec& inFile)
-{
-    long theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->mMaterialCount && theResult == kErrorOK; i++) {
-        theResult = this->mMaterials[i]->GetName().Save(inFile);
-        if (theResult != kErrorOK)
-            continue;
-        unsigned long theTextureIndex = this->mMaterials[i]->GetTextureIndex();
-        theResult = inFile.Write(theTextureIndex);
-        if (theResult != kErrorOK)
-            continue;
-        for (unsigned long j = 0; j < this->mLODCount && theResult == kErrorOK; j++) {
-            unsigned long theStart = this->mMaterials[i]->GetPolygonStartingIndex(j);
-            theResult = inFile.Write(theStart);
-            if (theResult == kErrorOK) {
-                unsigned long theLength = this->mMaterials[i]->GetPolygonRangeLength(j);
-                theResult = inFile.Write(theLength);
-            }
-        }
-        if (theResult != kErrorOK)
-            continue;
-        unsigned long theVertexStart = this->mMaterials[i]->GetVertexStartingIndex();
-        theResult = inFile.Write(theVertexStart);
-        if (theResult != kErrorOK)
-            continue;
-        unsigned long theVertexLength = this->mMaterials[i]->GetVertexRangeLength();
-        theResult = inFile.Write(theVertexLength);
-        if (theResult == kErrorOK)
-            theResult = this->mTextureFilenames[i].Save(inFile);
-    }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001e988
-// Writes the tag point names; returns the first write error
-long GEModel::SaveTagPointsChunk(FSFileSpec& inFile)
-{
-    long theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->mTagPointCount && theResult == kErrorOK; i++)
-        theResult = this->mTagPointNames[i].Save(inFile);
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001e9c2
-// Writes each frame's radius, vertices, tag points, transform and bounding box; returns the first write error
-long GEModel::SaveFrameChunk(FSFileSpec& inFile)
-{
-    long theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->mFrameCount; i++) {
-        theResult = inFile.Write(this->mBoundingRadii[i]);
-        if (theResult != kErrorOK)
-            break;
-        theResult = this->SaveVertexSubChunk(inFile, i);
-        if (theResult != kErrorOK)
-            break;
-        theResult = this->SaveTagPointsSubChunk(inFile, i);
-        if (theResult != kErrorOK)
-            break;
-        theResult = this->mInternalTransforms[i].Save(inFile);
-        if (theResult != kErrorOK)
-            break;
-        theResult = this->mBoundingBoxes[i].Save(inFile);
-        if (theResult != kErrorOK)
-            break;
-    }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001ea4e
-// Writes a frame's vertices (point, normal, texture coordinate); returns the first write error
-long GEModel::SaveVertexSubChunk(FSFileSpec& inFile, unsigned long inFrame)
-{
-    GEVector theNormal;
-    GE3DPoint thePoint;
-    GETextureCoordinate theCoordinate;
-    long theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->mVertexCount; i++) {
-        this->mVertexArrays[inFrame]->GetPoint(thePoint, i);
-        theResult = thePoint.Save(inFile);
-        if (theResult != kErrorOK)
-            break;
-        this->mVertexArrays[inFrame]->GetNormal(theNormal, i);
-        theResult = theNormal.Save(inFile);
-        if (theResult != kErrorOK)
-            break;
-        this->mVertexArrays[inFrame]->GetTextureCoordinate(theCoordinate, i);
-        theResult = theCoordinate.Save(inFile);
-        if (theResult != kErrorOK)
-            break;
-    }
-    return theResult;
-}
-
-// FUNCTION: LLE 0x1001eb0b
-// Writes a frame's tag point positions; returns the first write error
-long GEModel::SaveTagPointsSubChunk(FSFileSpec& inFile, unsigned long inFrame)
-{
-    long theResult = kErrorOK;
-    for (unsigned long i = 0; i < this->mTagPointCount; i++) {
-        theResult = this->mFrameTagPoints[inFrame][i].Save(inFile);
-        if (theResult != kErrorOK)
-            break;
-    }
     return theResult;
 }
 

@@ -30,6 +30,11 @@ use ee_rmap as _;
 use ee_formations as _;
 // the tile A* searches' storage and machine (ee_astar/src/ffi.rs), called by the C++ EEAIAStar* classes
 use ee_astar as _;
+// the combat and unit formulas (ee_combat/src/ffi.rs) the C++ unit methods call (ee/EECombatFormulas.h)
+use ee_combat as _;
+// the tech tree's research and prerequisites, the event effects' arithmetic, the calamities' timing (ee_tech/src/ffi.rs),
+// called by the C++ tech tree, EEEvent.cpp and the calamity classes
+use ee_tech as _;
 // the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency
 use ee_data as _;
 

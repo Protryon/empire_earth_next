@@ -7,8 +7,8 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui", "ee_won", "ee_astar"]
-extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui", "ee_won", "ee_astar"]
+include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech"]
+extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui", "ee_won", "ee_astar", "ee_combat", "ee_tech"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
@@ -30,6 +30,15 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 # ee_formations
 "Vec3" = "EeFormationVec3"
 "Rotation" = "EeFormationRotation"
+# ee_combat (its constants, unique in the shared header)
+"DAMAGE_DIRECT" = "EE_COMBAT_DAMAGE_DIRECT"
+"DAMAGE_SPLASH" = "EE_COMBAT_DAMAGE_SPLASH"
+"DAMAGE_TRAMPLE" = "EE_COMBAT_DAMAGE_TRAMPLE"
+"DAMAGE_COLUMNS" = "EE_COMBAT_DAMAGE_COLUMNS"
+"CONTACT_MARGIN" = "EE_COMBAT_CONTACT_MARGIN"
+"WORK_REACH" = "EE_COMBAT_WORK_REACH"
+"GATHER_REACH" = "EE_COMBAT_GATHER_REACH"
+"ELEVATION_SCALE" = "EE_COMBAT_ELEVATION_SCALE"
 # ee_astar
 "StorageKind" = "EeAStarStorageKind"
 "GridKind" = "EeAStarGridKind"
@@ -77,6 +86,7 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "NodeFields" = "EeSoundNodeFields"
 # ee_ge (the C++ classes GE2DPoint, GEVector, ... keep their names; the Rust mirrors are EeGe*)
 "Ge2DPoint" = "EeGe2DPoint"
+"CemModel" = "EeGeCemModel"
 "Ge3DPoint" = "EeGe3DPoint"
 "GeVector" = "EeGeVector"
 "Ge3DLine" = "EeGe3DLine"
