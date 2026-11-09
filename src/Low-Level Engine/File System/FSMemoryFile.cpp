@@ -1,5 +1,7 @@
 // C:\EEX\Low-Level Engine\File System\FSMemoryFile.cpp
 // Unit flags (docs/CALIBRATION.md "lle"): -O1 -G6 -MD -GR -DLOWLEVELENGINE_EXPORTS
+// The class forwards to Rust (rust/crates/ee_fs/src/memfile.rs): this file keeps the C++ surface (the FSFile
+// overloads, the stdio temporary file, the FSFile&-to-table glue).
 #include <windows.h>
 #include "platform/PlatFile.h"
 #include <stdio.h>
@@ -9,65 +11,85 @@
 #include "lle/UWideString.h"
 #include "lle/UString.h"
 #include "lle/FSMemoryFile.h"
-#include "lle/UDataCompression.h"
+#include "rust/ee_rust.h"
+#include "FSRustOps.h"
+
+static int32_t FileReadU32(void* inContext, uint32_t* ioValue)
+{
+    return (int32_t)static_cast<FSFile*>(inContext)->Read(*ioValue);
+}
+
+static int32_t FileReadBytes(void* inContext, uint8_t* outData, size_t inLength, uint32_t* outRead)
+{
+    unsigned long theRead = 0;
+    int32_t theResult = (int32_t)static_cast<FSFile*>(inContext)->Read(outData, (unsigned long)inLength, theRead);
+    *outRead = (uint32_t)theRead;
+    return theResult;
+}
+
+static int32_t FileWriteU32(void* inContext, uint32_t inValue)
+{
+    return (int32_t)static_cast<FSFile*>(inContext)->Write(inValue);
+}
+
+static int32_t FileWriteBytes(void* inContext, const uint8_t* inData, size_t inLength, uint32_t* outWritten)
+{
+    unsigned long theWritten = 0;
+    int32_t theResult = (int32_t)static_cast<FSFile*>(inContext)->Write(inData, (unsigned long)inLength, theWritten);
+    *outWritten = (uint32_t)theWritten;
+    return theResult;
+}
+
+void FSBuildFileOps(FSFile& inFile, EeFsFileOps& outOps)
+{
+    outOps.context = &inFile;
+    outOps.read_u32 = FileReadU32;
+    outOps.read_bytes = FileReadBytes;
+    outOps.write_u32 = FileWriteU32;
+    outOps.write_bytes = FileWriteBytes;
+}
 
 // FUNCTION: LLE 0x10009ec5
 // Creates an open, empty memory file with room for inBlockCount blocks, growing by blocks or by doubling
 FSMemoryFile::FSMemoryFile(unsigned long inBlockSize, bool inGrowByDoubling, unsigned long inBlockCount)
+    : mState(ee_fs_mem_new(inBlockSize, inGrowByDoubling, inBlockCount)), mOwnsState(true)
 {
     this->mTemporaryFileName = "";
-    if (inBlockSize == 0)
-        inBlockSize = 1;
-    this->mBlockSize = inBlockSize;
-    this->mGrowByDoubling = inGrowByDoubling;
-    this->mLimit = NULL;
-    this->mStart = NULL;
-    this->mAllocatedLength = 0;
-    this->mBuffer = NULL;
-    this->mEnd = NULL;
-    this->mCurrent = NULL;
-    this->IncreaseFileSize(inBlockSize * inBlockCount);
-    if (this->mBuffer)
-        this->mIsOpen = true;
 }
 
 // FUNCTION: LLE 0x10009f30
-// Creates an open memory file over the caller's buffer (which it then owns and frees)
+// Creates an open memory file holding the caller's buffer, which is copied and freed (the caller gave it up)
 FSMemoryFile::FSMemoryFile(unsigned char* inData, unsigned long inLength, unsigned long inBlockSize,
                            bool inGrowByDoubling)
+    : mState(ee_fs_mem_new_over(inData, inLength, inBlockSize, inGrowByDoubling)), mOwnsState(true)
 {
     this->mTemporaryFileName = "";
-    if (inBlockSize == 0)
-        inBlockSize = 1;
-    this->mIsOpen = true;
-    this->mBlockSize = inBlockSize;
-    this->mGrowByDoubling = inGrowByDoubling;
-    this->mAllocatedLength = inLength;
-    this->mLimit = inData + inLength;
-    this->mEnd = inData + inLength;
-    this->mBuffer = inData;
-    this->mStart = inData;
-    this->mCurrent = inData;
+    delete[] inData;
+}
+
+// Wraps a state made by Rust (an archive member, a chunk's payload); inOwns: the destructor frees it
+FSMemoryFile::FSMemoryFile(EeFsMemFile* inState, bool inOwns)
+    : mState(inState), mOwnsState(inOwns)
+{
+    this->mTemporaryFileName = "";
 }
 
 // FUNCTION: LLE 0x10009f91
 // Destroys the memory file, closing it and freeing its buffer
 FSMemoryFile::~FSMemoryFile()
 {
-    this->Close();
-    if (this->mBuffer)
-        delete[] this->mBuffer;
+    if (this->mOwnsState) {
+        this->Close();
+        ee_fs_mem_free(this->mState);
+    }
+    this->mState = NULL;
 }
 
 // FUNCTION: LLE 0x10009fbe
 // Marks the memory file closed and closes (deletes) its temporary disk copy
 long FSMemoryFile::Close()
 {
-    long theResult = kErrorOK;
-    if (this->mIsOpen)
-        this->mIsOpen = false;
-    else
-        theResult = kErrorNotOpen;
+    long theResult = ee_fs_mem_close(this->mState);
     if (!this->mStream)
         return theResult;
     fclose(this->mStream);
@@ -82,27 +104,7 @@ long FSMemoryFile::Close()
 // Shrinks the buffer to the written length and rewinds to the start; kErrorNotOpen when closed
 long FSMemoryFile::Compact()
 {
-    long theResult = kErrorOK;
-    if (this->mIsOpen) {
-        if (this->mBuffer) {
-            if (this->mLimit > this->mEnd) {
-                unsigned long theLength = this->mEnd - this->mStart;
-                unsigned char* theBuffer = new unsigned char[theLength];
-                this->mLimit = theBuffer + theLength;
-                this->mStart = theBuffer;
-                this->mCurrent = theBuffer;
-                this->mEnd = theBuffer + theLength;
-                memcpy(theBuffer, this->mBuffer, theLength);
-                delete[] this->mBuffer;
-                this->mBuffer = theBuffer;
-                this->mAllocatedLength = theLength;
-            } else
-                this->mCurrent = this->mStart;
-        } else
-            theResult = kErrorFailed;
-    } else
-        theResult = kErrorNotOpen;
-    return theResult;
+    return ee_fs_mem_compact(this->mState);
 }
 
 // FUNCTION: LLE 0x1000a05e
@@ -110,50 +112,16 @@ long FSMemoryFile::Compact()
 // (an incompressible result, error 0x16, keeps the data uncompressed and succeeds)
 long FSMemoryFile::Compress(unsigned long inLevel, unsigned long& outLength)
 {
-    unsigned long theLength;
-    unsigned long theCompressedLength;
-    UDataCompression* theCompressor;
-    unsigned char* theBuffer;
-    outLength = 0;
-    long theResult = this->Compact();
-    if (theResult == kErrorOK) {
-        theResult = this->GetLength(theLength);
-        if (theResult == kErrorOK) {
-            if (theLength > 12) {
-                theCompressor = new UDataCompression;
-                theBuffer = new unsigned char[theLength];
-                theResult = theCompressor->Compress(reinterpret_cast<const char*>(this->GetData()), theLength, reinterpret_cast<char*>(theBuffer), theLength,
-                                                    theCompressedLength, inLevel);
-                if (theResult == kErrorOK) {
-                    delete[] this->mBuffer;
-                    this->mBuffer = new unsigned char[theCompressedLength];
-                    this->mStart = this->mBuffer;
-                    this->mCurrent = this->mBuffer;
-                    this->mEnd = this->mBuffer + theCompressedLength;
-                    this->mLimit = this->mBuffer + theCompressedLength;
-                    this->mAllocatedLength = theCompressedLength;
-                    memcpy(this->mBuffer, theBuffer, theCompressedLength);
-                    this->Close();
-                    outLength = theCompressedLength;
-                    theResult = kErrorOK;
-                } else if (theResult == 0x16) {
-                    this->Close();
-                    this->GetLength(outLength);
-                    theResult = kErrorOK;
-                }
-                delete[] theBuffer;
-                delete theCompressor;
-            } else {
-                this->Close();
-                this->GetLength(outLength);
-            }
-        }
-    }
+    uint32_t theLength = 0;
+    long theResult = ee_fs_mem_compress(this->mState, (uint32_t)inLevel, &theLength);
+    outLength = theLength;
+    if (theResult == 0x15)
+        ESVERIFY_AT(NULL == "PKWARE implode() error!", 140);
     return theResult;
 }
 
 // FUNCTION: LLE 0x1000a176
-// Writes the contents to a disk file byte by byte; kErrorAlreadyExists if inFailIfExists and it exists
+// Writes the contents to a disk file; kErrorAlreadyExists if inFailIfExists and it exists
 long FSMemoryFile::Copy(const UString& inDestination, bool inFailIfExists, bool inKeepAttributes)
 {
     long theResult;
@@ -163,15 +131,13 @@ long FSMemoryFile::Copy(const UString& inDestination, bool inFailIfExists, bool 
     else if ((theFile = PlatFOpen(inDestination, "wb")) != NULL) {
         theResult = this->Compact();
         if (theResult == kErrorOK) {
-            this->mCurrent = this->mStart;
-            for (unsigned long i = 0; i < this->mAllocatedLength; i++) {
-                fwrite(this->mCurrent, 1, 1, theFile);
-                this->mCurrent++;
-            }
+            uint32_t theLength = ee_fs_mem_length(this->mState);
+            if (theLength > 0)
+                fwrite(this->GetData(), 1, theLength, theFile);
         }
     } else
         theResult = kErrorNativeError;
-    this->mCurrent = this->mStart;
+    ee_fs_mem_set_position(this->mState, 0, kFileOriginBegin);
     if (theFile)
         fclose(theFile);
     return theResult;
@@ -181,41 +147,9 @@ long FSMemoryFile::Copy(const UString& inDestination, bool inFailIfExists, bool 
 // Decompresses the contents in place when they are compressed and closes the file; outLength is the new length
 long FSMemoryFile::Decompress(unsigned long& outLength)
 {
-    unsigned long theDecompressedLength;
-    unsigned long theLength;
-    unsigned long theActualLength;
-    outLength = 0;
-    UDataCompression* theCompressor = new UDataCompression;
-    long theResult = this->GetLength(theLength);
-    if (theResult == kErrorOK) {
-        if (theCompressor->GetIsCompressed(reinterpret_cast<const char*>(this->GetData()), theLength)) {
-            theResult = theCompressor->GetDecompressedSize(reinterpret_cast<const char*>(this->GetData()), theLength, theDecompressedLength);
-            if (theResult == kErrorOK) {
-                unsigned char* theBuffer = new unsigned char[theDecompressedLength];
-                theResult = theCompressor->Decompress(reinterpret_cast<const char*>(this->GetData()), theLength, reinterpret_cast<char*>(theBuffer),
-                                                      theDecompressedLength, theActualLength);
-                if (theResult == kErrorOK) {
-                    theResult = theDecompressedLength != theActualLength ? kErrorFailed : kErrorOK;
-                    if (theResult == kErrorOK) {
-                        delete[] this->mBuffer;
-                        this->mEnd = theBuffer + theDecompressedLength;
-                        this->mLimit = theBuffer + theDecompressedLength;
-                        this->mAllocatedLength = theDecompressedLength;
-                        this->mBuffer = theBuffer;
-                        this->mStart = theBuffer;
-                        this->mCurrent = theBuffer;
-                        this->Close();
-                        outLength = theDecompressedLength;
-                        theResult = kErrorOK;
-                    } else
-                        delete[] theBuffer;
-                } else
-                    delete[] theBuffer;   // Fixed: the buffer leaked when decompression failed
-            }
-        } else
-            this->GetLength(outLength);
-    }
-    delete theCompressor;
+    uint32_t theLength = 0;
+    long theResult = ee_fs_mem_decompress(this->mState, &theLength);
+    outLength = theLength;
     return theResult;
 }
 
@@ -223,16 +157,7 @@ long FSMemoryFile::Decompress(unsigned long& outLength)
 // Frees the buffer and leaves the memory file empty and closed
 long FSMemoryFile::Delete()
 {
-    if (this->mBuffer)
-        delete[] this->mBuffer;
-    this->mBuffer = NULL;
-    this->mStart = NULL;
-    this->mCurrent = NULL;
-    this->mLimit = NULL;
-    this->mEnd = NULL;
-    this->mAllocatedLength = 0;
-    this->mIsOpen = false;
-    return kErrorOK;
+    return ee_fs_mem_delete(this->mState);
 }
 
 // FUNCTION: LLE 0x1000a343
@@ -243,29 +168,29 @@ long FSMemoryFile::FOpen(char* inMode)
     char theName[PLAT_MAX_PATH];
     char thePrefix[] = "EE_";
     bool theOpened = false;
-    long theResult;
-    this->mIsOpen = true;
+    long theResult = kErrorOK;
+    ee_fs_mem_set_open(this->mState, true);
     if (PlatGetTempDirectory(theDirectory, 256) && PlatCreateTempFile(theDirectory, thePrefix, theName)) {   // 256: _MAX_FNAME
         this->mTemporaryFileName = UWideString(theName);
         this->mStream = PlatFOpen(this->mTemporaryFileName, "w+b");
         if (this->mStream) {
             theResult = this->Compact();
             if (theResult == kErrorOK) {
-                this->mCurrent = this->mStart;
-                for (unsigned long i = 0; i < this->mAllocatedLength; i++) {
-                    fwrite(this->mCurrent, 1, 1, this->mStream);
-                    this->mCurrent++;
-                }
+                uint32_t theLength = ee_fs_mem_length(this->mState);
+                if (theLength > 0)
+                    fwrite(this->GetData(), 1, theLength, this->mStream);
+                // the C++ left the position at the end after writing the contents out
+                ee_fs_mem_set_position(this->mState, theLength, kFileOriginBegin);
             }
             fclose(this->mStream);
             this->mStream = PlatFOpen(this->mTemporaryFileName, inMode);
             if (this->mStream)
                 theOpened = true;
             else
-                this->mIsOpen = false;
+                ee_fs_mem_set_open(this->mState, false);
         } else {
             this->mTemporaryFileName = "";
-            this->mIsOpen = false;
+            ee_fs_mem_set_open(this->mState, false);
         }
     }
     if (!theOpened) {
@@ -279,7 +204,7 @@ long FSMemoryFile::FOpen(char* inMode)
 // Returns the written length
 long FSMemoryFile::GetLength(unsigned long& outLength) const
 {
-    outLength = this->mEnd - this->mStart;
+    outLength = ee_fs_mem_length(this->mState);
     return kErrorOK;
 }
 
@@ -287,111 +212,52 @@ long FSMemoryFile::GetLength(unsigned long& outLength) const
 // Returns the current position, or -1 when closed or empty
 long FSMemoryFile::GetPosition(long& outPosition) const
 {
-    if (this->mIsOpen && this->mBuffer)
-        outPosition = this->mCurrent - this->mStart;
-    else
-        outPosition = -1;
+    outPosition = ee_fs_mem_position(this->mState);
     return kErrorOK;
 }
 
-// FUNCTION: LLE 0x1000a492
-// Grows the buffer by inLength bytes, keeping the contents and position
-void FSMemoryFile::IncreaseFileSize(unsigned long inLength)
+const unsigned char* FSMemoryFile::GetData() const
 {
-    unsigned long theLength = this->mAllocatedLength + inLength;
-    unsigned char* theBuffer = new unsigned char[theLength];
-    // rebase by offsets: adding (new - old) to an old pointer is arithmetic across two allocations
-    this->mCurrent = theBuffer + (this->mCurrent - this->mStart);
-    this->mEnd = theBuffer + (this->mEnd - this->mStart);
-    this->mLimit = theBuffer + theLength;
-    this->mStart = theBuffer;
-    if (this->mBuffer) {
-        memcpy(theBuffer, this->mBuffer, this->mAllocatedLength);
-        delete[] this->mBuffer;
-    }
-    this->mAllocatedLength = theLength;
-    this->mBuffer = theBuffer;
+    return ee_fs_mem_data(this->mState);
+}
+
+long FSMemoryFile::Create()
+{
+    return this->GetData() ? kErrorOK : kErrorFailed;
 }
 
 // FUNCTION: LLE 0x1000a4e9
 // Replaces the contents with inLength bytes read from another file; on failure leaves it empty and closed
 long FSMemoryFile::Load(FSFile& inFile, unsigned long inLength)
 {
-    unsigned long theRead = 0;
-    long theResult;
-    if (this->mBuffer)
-        this->Delete();
-    this->mBuffer = new unsigned char[inLength];
-    if (this->mBuffer) {
-        theResult = inFile.Read(this->mBuffer, inLength, theRead);
-        if (theResult == kErrorOK) {
-            this->mStart = this->mBuffer;
-            this->mCurrent = this->mBuffer;
-            this->mIsOpen = true;
-            this->mAllocatedLength = inLength;
-            this->mEnd = this->mBuffer + inLength;
-            this->mLimit = this->mBuffer + inLength;
-        } else
-            this->Delete();
-    } else {
-        this->Delete();
-        theResult = kErrorFailed;
-    }
-    return theResult;
+    EeFsFileOps theOps;
+    FSBuildFileOps(inFile, theOps);
+    return ee_fs_mem_load(this->mState, &theOps, inLength);
 }
 
 // FUNCTION: LLE 0x1000a55c
 // Replaces the contents with a length-prefixed block read from another file
 long FSMemoryFile::Load(FSFile& inFile)
 {
-    unsigned long theLength = 0;
-    long theResult = inFile.Read(theLength);
-    if (theResult == kErrorOK)
-        theResult = this->Load(inFile, theLength);
-    return theResult;
+    EeFsFileOps theOps;
+    FSBuildFileOps(inFile, theOps);
+    return ee_fs_mem_load_prefixed(this->mState, &theOps);
 }
 
 // FUNCTION: LLE 0x1000a58b
 // Reopens the memory file at its start, allocating one block if it has no buffer
 long FSMemoryFile::Open(unsigned long inAccess)
 {
-    long theResult = kErrorOK;
-    if (!this->mIsOpen) {
-        if (this->mBuffer) {
-            this->mIsOpen = true;
-            this->SetPosition(0, kFileOriginBegin, false);
-        } else {
-            this->mAllocatedLength = 0;
-            this->mCurrent = NULL;
-            this->mStart = NULL;
-            this->mEnd = NULL;
-            this->mLimit = NULL;
-            this->IncreaseFileSize(this->mBlockSize);
-            if (this->mBuffer)
-                this->mIsOpen = true;
-            else
-                theResult = kErrorFailed;
-        }
-    }
-    return theResult;
+    return ee_fs_mem_open(this->mState);
 }
 
 // FUNCTION: LLE 0x1000a5de
 // Copies inLength bytes from the current position; kErrorEndOfFile (nothing read) if fewer are left
 long FSMemoryFile::Read(unsigned char* outData, unsigned long inLength, unsigned long& outRead)
 {
-    long theResult = kErrorNotOpen;
-    if (this->mBuffer) {
-        if (this->mCurrent + inLength <= this->mEnd) {
-            memcpy(outData, this->mCurrent, inLength);
-            this->mCurrent += inLength;
-            outRead = inLength;
-            theResult = kErrorOK;
-        } else {
-            outRead = 0;
-            theResult = kErrorEndOfFile;
-        }
-    }
+    uint32_t theRead = (uint32_t)outRead;
+    long theResult = ee_fs_mem_read(this->mState, outData, inLength, &theRead);
+    outRead = theRead;
     return theResult;
 }
 
@@ -468,81 +334,35 @@ long FSMemoryFile::Read(double& outValue)
 // Writes the first inLength bytes of the contents to another file
 long FSMemoryFile::Save(FSFile& outFile, unsigned long inLength)
 {
-    unsigned long theWritten;
-    return outFile.Write(this->GetData(), inLength, theWritten);
+    EeFsFileOps theOps;
+    FSBuildFileOps(outFile, theOps);
+    return ee_fs_mem_save(this->mState, &theOps, inLength);
 }
 
 // FUNCTION: LLE 0x1000a6ab
 // Writes the length, then the compacted contents to another file; returns only the second write's result
 long FSMemoryFile::Save(FSFile& outFile)
 {
-    unsigned long theLength = 0;
-    this->Compact();
-    this->GetLength(theLength);
-    outFile.Write(theLength);
-    return this->Save(outFile, theLength);
+    EeFsFileOps theOps;
+    FSBuildFileOps(outFile, theOps);
+    return ee_fs_mem_save_prefixed(this->mState, &theOps);
 }
 
 // FUNCTION: LLE 0x1000a6ec
 // Moves the position within the written data (from the end it counts backwards); never past the end
 long FSMemoryFile::SetPosition(long inOffset, unsigned long inOrigin, bool inExtend)
 {
-    long theResult = kErrorOK;
-    if (inOffset >= 0) {
-        switch (inOrigin) {
-        case kFileOriginCurrent:
-            if (this->mCurrent + inOffset <= this->mEnd) {
-                this->mCurrent += inOffset;
-                if (this->mCurrent > this->mEnd)
-                    this->mEnd = this->mCurrent;
-            } else
-                theResult = kErrorBeyondEnd;
-            break;
-        case kFileOriginEnd:
-            if (inOffset <= this->mEnd - this->mStart)
-                this->mCurrent = this->mEnd - inOffset;
-            else
-                theResult = kErrorBeyondEnd;
-            break;
-        case kFileOriginBegin:
-            if (inOffset <= this->mEnd - this->mStart) {
-                this->mCurrent = this->mStart + inOffset;
-                if (this->mCurrent > this->mEnd)
-                    this->mEnd = this->mCurrent;
-            } else
-                theResult = kErrorBeyondEnd;
-            break;
-        default:
-            theResult = kErrorFailed;
-            break;
-        }
-    } else
-        theResult = kErrorBeyondEnd;
-    return theResult;
+    return ee_fs_mem_set_position(this->mState, inOffset, inOrigin);
 }
 
 // FUNCTION: LLE 0x1000a754
 // Writes bytes at the current position, growing the buffer by a block or by doubling; kErrorNotOpen when closed
 long FSMemoryFile::Write(const unsigned char* inData, unsigned long inLength, unsigned long& outWritten)
 {
-    if (this->mBuffer == NULL || !this->mIsOpen) {
-        outWritten = 0;
-        return kErrorNotOpen;
-    }
-    if (this->mCurrent + inLength > this->mLimit) {
-        unsigned long theIncrease;
-        if (this->mGrowByDoubling)
-            theIncrease = this->mAllocatedLength < inLength ? inLength * 2 : this->mAllocatedLength;
-        else
-            theIncrease = this->mBlockSize < inLength ? this->mBlockSize + inLength : this->mBlockSize;
-        this->IncreaseFileSize(theIncrease);
-    }
-    memcpy(this->mCurrent, inData, inLength);
-    this->mCurrent += inLength;
-    if (this->mCurrent > this->mEnd)
-        this->mEnd = this->mCurrent;
-    outWritten = inLength;
-    return kErrorOK;
+    uint32_t theWritten = 0;
+    long theResult = ee_fs_mem_write(this->mState, inData, inLength, &theWritten);
+    outWritten = theWritten;
+    return theResult;
 }
 
 // FUNCTION: LLE 0x1000a7cc

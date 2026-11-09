@@ -3820,3 +3820,26 @@ are copied in and out of Rust at every step; the cost is small next to the gener
 - **All-valid test grids crash the C++.** A point off the map passes `AreAllMasked`'s clamped scan when every cell is
   valid, and then indexes `mHeights` out of range. The real maps' diamond corners are invalid, so this never happens
   in a game; `ee_rmap`'s golden test uses a one-tile invalid border as a real map has. A Rust index there would panic.
+
+## The File System in Rust (R3.5, ee_fs)
+
+- **FSMemoryFile's quirks are the golden file.** Reading ignores `mIsOpen`, writing checks it; `Compress` closes the file
+  on success but `Decompress` of plain data leaves it open; `Compact` rewinds even when it shrinks nothing; a failed
+  `Load` empties and closes. A scripted interpreter (`memfile.rs` tests, the same op language dumped once by a C++
+  driver from the real class) pins them; the golden driver, re-linked against the facades, reproduced its own output
+  byte for byte.
+- **`mIsOpen` of a memory file stays false in the C++ object**: the state lives in Rust and `FSFileSpec::~FSFileSpec`
+  must not call `FSFileSpec::Close` on a handle it does not have. The facade's destructor makes that true.
+- **`FSMemoryFile(inData, inLength, ...)` now copies** the caller's `new[]` buffer into Rust's and frees it at once: the
+  only callers hand their buffer over (`EEDataTextFile`, `GEOpenFormatsFile`), and the one copy is short against the
+  conversion that made the bytes.
+- **FSChunk's state is an embedded POD** (`EeFsChunk`, cbindgen emits the struct, `FSChunk.h` includes `rust/ee_rust.h`):
+  an implicit `FSChunk` copy (a `std::vector<FSChunk>` needs one to exist) still copies the fields, not a Rust pointer.
+- **The FAT and tag maps are BTreeMaps** with the C++ orders: FAT keys byte order (strcmp, unsigned), tags through
+  `PlatMbsCmp`; `std::map::insert` becomes `entry().or_insert` (an existing name keeps its entry).
+- **`ReadFAT` counts the name's `strlen + 5`, not the stored length**, and an empty name consumes one byte too many of
+  the table; kept, because the table's size bound is the only thing that ends the loop.
+- **`FSArchive`'s implicit copy shared the mapped view**; the explicit copy constructor clones the Rust tables and keeps
+  sharing the view (only closed archives are copied: `FSPath::AddArchive` closes them first).
+- **`FSMemoryFile::Save(file, n)` past the buffer**: C++ read out of bounds; Rust clamps. Likewise a chunk saved without
+  data reports `kErrorNotOpen` instead of crashing, and an archive entry outside the view fails with an empty file.
