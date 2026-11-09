@@ -19,6 +19,7 @@ ee_random = { path = "../ee_random" }
 ee_rmap = { path = "../ee_rmap" }
 ee_formations = { path = "../ee_formations" }
 ee_astar = { path = "../ee_astar" }
+ee_combat = { path = "../ee_combat" }
 ee_codec = { path = "../ee_codec" }
 ee_fs = { path = "../ee_fs" }
 ee_ge = { path = "../ee_ge" }
