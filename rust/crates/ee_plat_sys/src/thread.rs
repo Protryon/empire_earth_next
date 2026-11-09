@@ -256,8 +256,10 @@ mod tests {
             assert_eq!(PlatThreadGetPriority(t), PLAT_PRIORITY_BELOW_NORMAL);
             assert_eq!(PlatThreadWait(t, 0), PLAT_WAIT_TIMEOUT);
             assert_eq!(PlatThreadWait(t, 30), PLAT_WAIT_TIMEOUT);
+            // back to normal before it runs: a below-normal thread can starve for seconds on a loaded machine
+            assert_eq!(PlatThreadSetPriority(t, PLAT_PRIORITY_NORMAL), 1);
             assert_eq!(PlatThreadResume(t), 1);
-            assert_eq!(PlatThreadWait(t, 5000), 0);
+            assert_eq!(PlatThreadWait(t, 60_000), 0);
             assert_eq!(PlatThreadWait(t, 0), 0); // stays ended
             assert_eq!(PlatThreadGetExitCode(t, &mut code), 1);
             assert_eq!(code, 42);
