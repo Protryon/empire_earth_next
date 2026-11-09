@@ -1,4 +1,4 @@
--- The rush personality (aipersonalities.yaml next_script: rush; docs/AI_LUA_PLAN.md §4 and §5 "S4 as built").
+-- The rush personality (docs/AI_LUA_PLAN.md §4 and §5 "S4 as built").
 -- An early army from two barracks with no Prehistoric cap, a scout to find the target, raids on its gatherers and
 -- fishing boats away from its towers, waves at its town (one at once when it reaches a new epoch), production all the
 -- way. When the rush fails (two waves lost, or the target walled in towers and an army), it falls back to a boom: more
