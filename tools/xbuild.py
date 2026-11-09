@@ -55,7 +55,7 @@ PLATFORM_HEADERS = ROOT / "include"
 # rust_libs below)
 POSIX_IMPL = []
 WIN32_IMPL = []
-COMMON_IMPL = ["PlatFont.cpp"]   # src/Platform/Common: the same code on every system
+COMMON_IMPL = []                  # src/Platform/Common: the same code on every system
 WIN32_SYSLIBS = ["kernel32.lib", "user32.lib", "advapi32.lib", "ole32.lib", "winmm.lib", "ws2_32.lib",
                  "iphlpapi.lib", "shell32.lib", "gdi32.lib", "imm32.lib", "version.lib", "setupapi.lib",
                  "oleaut32.lib", "uuid.lib", "cfgmgr32.lib", "propsys.lib", "d3d12.lib", "dxgi.lib",
@@ -255,8 +255,7 @@ def cmd_test(a):
         sys.exit(f"{t.name}: {why}")
     srcs = [*platform_sources(t), ROOT / "tests" / "platform" / "plat_test.cpp"]
     libs = rust_libs(t)
-    exe = build_program(t, "plat_test", srcs, includes=[PLATFORM_HEADERS, ROOT / "src" / "ThirdParty" / "stb"],
-                        libs=libs)
+    exe = build_program(t, "plat_test", srcs, includes=[PLATFORM_HEADERS], libs=libs)
     print(f"built {exe}")
     if a.no_run:
         return 0
@@ -273,7 +272,7 @@ def cmd_luatest(a):
     srcs = [*platform_sources(t), ROOT / "src" / "Empire Earth" / "AI Thread" / "EECPLua.cpp",
             ROOT / "tests" / "platform" / "lua_test.cpp"]
     libs = rust_libs(t)
-    exe = build_program(t, "lua_test", srcs, includes=[PLATFORM_HEADERS, ROOT / "src" / "ThirdParty" / "stb"],
+    exe = build_program(t, "lua_test", srcs, includes=[PLATFORM_HEADERS],
                         libs=libs, c_sources=[ROOT / "src" / "ThirdParty" / "lua" / "ee_lua.c"])
     print(f"built {exe}")
     if a.no_run:
@@ -293,8 +292,9 @@ def cmd_fonttest(a):
     why = t.can_build()
     if why:
         sys.exit(f"{t.name}: {why}")
-    srcs = [ROOT / "src" / "Platform" / "Common" / "PlatFont.cpp", ROOT / "tests" / "platform" / "font_test.cpp"]
-    exe = build_program(t, "font_test", srcs, includes=[PLATFORM_HEADERS, ROOT / "src" / "ThirdParty" / "stb"])
+    # PlatFont is Rust (rust/crates/ee_plat_ui, in ee_rust); nothing else of the library pulls SDL in
+    srcs = [ROOT / "tests" / "platform" / "font_test.cpp"]
+    exe = build_program(t, "font_test", srcs, includes=[PLATFORM_HEADERS], libs=rust_libs(t))
     print(f"built {exe}")
     if a.no_run:
         return 0
@@ -332,7 +332,7 @@ def cmd_tcptest(a):
                       "-fdelayed-template-parsing", "-fno-strict-aliasing", "-fwrapv", "/GR", "-Wno-everything"]
         for src in [*game, *platform_sources(t)]:
             obj = out / (pathlib.Path(src).stem.replace(" ", "_") + ".obj")
-            flags = WIN_CXX + (game_flags if src in game else [f"/I{ROOT / 'src' / 'ThirdParty' / 'stb'}"])
+            flags = WIN_CXX + (game_flags if src in game else [])
             if src in TCP_ENGINE_UNITS:   # no exported inline members or vtables of the engine classes it does not link
                 flags = flags + ["/Zc:dllexportInlines-"]
             run([t.clang(), *flags, "/c", *[f"/I{i}" for i in inc], *[f"/D{d}" for d in unit_defs(src)],
@@ -351,7 +351,7 @@ def cmd_tcptest(a):
                 flags = ["-std=c++17", "-O0", "-g", *game_flags, f"-I{COMPAT}", *[f"-I{i}" for i in inc],
                          *[f"-D{d}" for d in unit_defs(src)]]
             else:
-                flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}", f"-I{ROOT / 'src' / 'ThirdParty' / 'stb'}"]
+                flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}"]
             run([t.clang(), *base, *flags, "-c", "-o", obj, src])
             objs.append(obj)
         run([t.clang(), *t.link_flags(), "-o", exe, *objs, *rust_libs(t), *(["-ldl"] if t.os == "linux" else [])])
@@ -389,7 +389,7 @@ def build_won_test(t, name, units):
                       "-Wno-everything"]
         for src in [*game, *platform_sources(t)]:
             obj = out / (pathlib.Path(src).stem.replace(" ", "_") + ".obj")
-            flags = WIN_CXX + (game_flags if src in game else [f"/I{ROOT / 'src' / 'ThirdParty' / 'stb'}"])
+            flags = WIN_CXX + (game_flags if src in game else [])
             run([t.clang(), *flags, "/c", *[f"/I{i}" for i in inc], *[f"/D{d}" for d in defs], f"/Fo{obj}", src],
                 env=env)
             objs.append(obj)
@@ -404,7 +404,7 @@ def build_won_test(t, name, units):
                 flags = ["-std=c++17", "-O0", "-g", *game_dialect_flags(t, True), "-fno-strict-aliasing", "-fwrapv",
                          "-w", f"-I{COMPAT}", *[f"-I{i}" for i in inc], *[f"-D{d}" for d in defs]]
             else:
-                flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}", f"-I{ROOT / 'src' / 'ThirdParty' / 'stb'}"]
+                flags = [*POSIX_CXX, f"-I{PLATFORM_HEADERS}"]
             run([t.clang(), *base, *flags, "-c", "-o", obj, src])
             objs.append(obj)
         run([t.clang(), *t.link_flags(), "-o", exe, *objs, *rust_libs(t),
@@ -559,17 +559,14 @@ def cmd_sdltest(a):
     if why:
         sys.exit(f"{t.name}: {why}")
     wgpu, wlib = wgpu_dir(t)
-    # the window layer on SDL3 (src/Platform/SDL) with the platform layer it uses; on Windows the Win32 key-state
-    # file (PlatInput.cpp) is the game's and stays out: the SDL file implements the same functions
-    srcs = [ROOT / "tools" / "sdl_test" / "sdl_test.cpp", ROOT / "src" / "Platform" / "SDL" / "PlatWindow.cpp",
-            ROOT / "src" / "Platform" / "Common" / "PlatFont.cpp",
-            ]
-    libs = [*sdl_libs(t), wlib]
+    # the window layer (rust/crates/ee_plat_sdl) with the platform layer it uses, all in the Rust library; it comes
+    # before SDL on the link line (it references SDL, and a POSIX link scans each archive once)
+    srcs = [ROOT / "tools" / "sdl_test" / "sdl_test.cpp"]
+    libs = [wlib, *sdl_libs(t)]
     if t.os == "linux":
         libs += ["-lm", "-ldl"]
     exe = build_program(t, "sdl_test", srcs,
-                        includes=[sdl_prefix(t) / "include", wgpu / "include", PLATFORM_HEADERS,
-                                  ROOT / "src" / "ThirdParty" / "stb"],
+                        includes=[sdl_prefix(t) / "include", wgpu / "include", PLATFORM_HEADERS],
                         libs=libs, defines=["SDL_MAIN_HANDLED"])
     print(f"built {exe}")
     if a.no_run:
@@ -657,7 +654,6 @@ def cmd_census(a):
     # the include path of the Windows build (verify.include_paths) minus the MSVC/SDK directories, with the compat
     # headers first; the platform layer's POSIX implementation replaces src/Platform/Win32 (compiled as units here)
     inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
-           ROOT / "src" / "ThirdParty" / "stb",
            *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS]]
     inc.append(rust_build.WGPU_HEADERS / "include")
     if (TC / "src" / f"SDL3-{SDL_VERSION}" / "include").exists():   # the window layer (src/Platform/SDL)
@@ -826,7 +822,7 @@ def icon_header(t):
         return
     gen.mkdir(parents=True, exist_ok=True)
     size, bgra = icon_bgra()
-    lines = [f"/* GENERATED by tools/xbuild.py from {GAME_ICON.relative_to(ROOT).as_posix()} (src/Platform/SDL/PlatWindow.cpp) */",
+    lines = [f"/* GENERATED by tools/xbuild.py from {GAME_ICON.relative_to(ROOT).as_posix()} (src/Platform/SDL/PlatWindowIcon.c) */",
              f"static const int kPlatIconSize = {size};", "static const unsigned char kPlatIconBGRA[] = {"]
     for k in range(0, len(bgra), 32):
         lines.append(",".join(str(b) for b in bgra[k:k + 32]) + ",")
@@ -942,8 +938,10 @@ def cmd_game(a):
             jobs.append(("platform", s, ""))
     # the image libraries' libjpeg is the engine's (as build.py links it); the image units go into an archive
     jobs = [j for j in jobs if not (j[0] == "exeimg" and units.rel_src(j[1]).parts[1] == "libjpeg")]
+    # the window icon's pixels (the generated gen/PlatIconData.h) handed to the Rust window layer at start-up
+    jobs.append(("platform", ROOT / "src" / "Platform" / "SDL" / "PlatWindowIcon.c", ""))
     inc = [COMPAT, ROOT / "include", ROOT / "src" / "ThirdParty" / "dmusic" / "include",
-           ROOT / "src" / "ThirdParty" / "stb", *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS],
+           *[ROOT / "src" / d for d in ee.EEX_INCLUDE_DIRS],
            wgpu / "include", sdl_prefix(t) / "include", font_arrays(t)]
     icon_header(t)   # gen/PlatIconData.h, beside the font arrays
     opt = ["-O1"] if not a.debug else ["-O0"]
@@ -982,7 +980,8 @@ def cmd_game(a):
     exe = out / GAME_NAME
     rsp = out / "link.rsp"
     rsp.write_text("".join(f'"{pathlib.Path(o).as_posix()}"\n' for o in [*first, *game]))
-    libs = [archive, *sdl_libs(t), wlib]
+    # the Rust library references SDL (the window layer), so it comes before SDL: a POSIX link scans each archive once
+    libs = [archive, wlib, *sdl_libs(t)]
     if t.os == "linux":
         libs += ["-ldl", "-lm", "-lpthread"]
     else:

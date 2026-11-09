@@ -20,13 +20,11 @@ PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 # units a module links besides its own: the platform layer's implementation (include/platform/, src/Platform/<os>/)
 # with the engine, the open model/texture formats (glTF, PNG: tools/eemodel) with the engine, and new game units that
 # have no address in the original (the db text loader, ...)
-# (PlatConfig, PlatPath, PlatString, PlatTime, PlatMessage, PlatSim, PlatFile, PlatThread and PlatSocket are Rust:
-# rust/crates/ee_plat_core and ee_plat_sys, linked through ee_rust)
+# (PlatConfig, PlatPath, PlatString, PlatTime, PlatMessage, PlatSim, PlatFile, PlatThread, PlatSocket, PlatWindow and
+# PlatFont are Rust: rust/crates/ee_plat_core, ee_plat_sys, ee_plat_ui and ee_plat_sdl, linked through ee_rust)
 PLATFORM_UNITS = [
-                  # the window, its events and input (SDL3; PORT.md step 4.3)
-                  "Platform/SDL/PlatWindow.cpp",
-                  # text (stb_truetype) with the fonts built in (PORT.md step 4.5)
-                  "Platform/Common/PlatFont.cpp", "Platform/Common/PlatFontData.c"]
+                  # the fonts built in (PORT.md step 4.5; the C compiler's #embed, PlatFont itself is Rust)
+                  "Platform/Common/PlatFontData.c"]
 OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormats.cpp",
                      "Low-Level Engine/Graphics Engine/GEOpenFormatsFile.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,

@@ -58,7 +58,7 @@ int PlatIsMbcDigit(unsigned int inCharacter);                                   
 int PlatIsMbbLead(unsigned int inByte);                                                   // _ismbblead: a lead byte
 
 // ---- Windows-1252 <-> wide characters (UTF-16 code units on Windows, UTF-32 elsewhere), on every system the same
-// table (src/Platform/Common/PlatFont.cpp; MultiByteToWideChar / WideCharToMultiByte with code page 1252; the five
+// table (rust/crates/ee_plat_ui, cp1252.rs; MultiByteToWideChar / WideCharToMultiByte with code page 1252; the five
 // bytes 1252 leaves undefined map to the C1 controls U+0081, U+008D, U+008F, U+0090, U+009D, so every byte
 // round-trips). A wide character outside the code page becomes '?' (a UTF-16 surrogate pair one '?').
 // Converts inLength units of inText (PLAT_TEXT_TERMINATED: up to its terminating zero; zeros inside a counted text

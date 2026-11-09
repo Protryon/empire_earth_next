@@ -1,0 +1,15 @@
+[package]
+name = "ee_plat_sdl"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The platform layer's window on SDL3 (docs/RUST_PLAN.md R1.4, decision D4): the thin layer of SDL calls and the
+# PlatWindow.h exports. Its logic and tests are in ee_plat_ui.
+# A crate of its own so that programs that take only text from ee_rust (plat_test, font_test, the WON tests) don't
+# pull in an object file that references SDL: the linker pulls whole objects, and codegen units cut across modules.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+ee_plat_ui = { path = "../ee_plat_ui" }
