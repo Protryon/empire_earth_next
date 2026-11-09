@@ -4,10 +4,13 @@
 //! Modules that only need their inputs as plain data are tested with golden values captured from the C++
 //! (each module's tests say how).
 
+pub mod filter;
 pub mod state;
 pub mod vertex;
 
 mod ffi;
+#[cfg(not(test))]
+mod filter_ffi;
 #[cfg(not(test))]
 pub mod gx;
 #[cfg(not(test))]

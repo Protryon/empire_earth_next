@@ -102,16 +102,6 @@ struct Dx7StdColorVertex {
   float tv;
 };
 
-/// `GXMATERIAL` (`rust/crates/ee_gx/src/abi.rs GxMaterial`): colours r,g,b,a of diffuse/ambient/specular/emissive, power.
-/// Only the white material of `SetShadingColorSource` is built here.
-struct GxMaterial {
-  float diffuse[4];
-  float ambient[4];
-  float specular[4];
-  float emissive[4];
-  float power;
-};
-
 /// `GXVIEWPORT`.
 struct EeDx7Viewport {
   unsigned long dwX;
@@ -773,16 +763,23 @@ void ee_dx7_poly_set_vertex_indices(EeDx7PolygonArray *p,
 
 uint32_t ee_dx7_poly_size_of(const EeDx7PolygonArray *p);
 
-extern long gx_device_set_render_state(void *device, uint32_t state, unsigned long value);
+/// The 32-bit path; pitches in pixels. `source_rect`/`destination_rect`: float pixels (see `Rect`).
+void ee_dx7_copy_with_filter_32(unsigned long format,
+                                const uint32_t *source,
+                                uint32_t source_pitch,
+                                uint32_t *destination,
+                                uint32_t destination_pitch,
+                                const float *source_rect,
+                                const float *destination_rect);
 
-extern long gx_device_set_stage_state(void *device,
-                                      unsigned long stage,
-                                      uint32_t state,
-                                      unsigned long value);
-
-extern long gx_device_set_texture(void *device, unsigned long stage, void *texture);
-
-extern long gx_device_set_material(void *device, const GxMaterial *material);
+/// The 16-bit path: as the 32-bit one (the original copy-pasted loop, words differ).
+void ee_dx7_copy_with_filter_16(unsigned long format,
+                                const uint16_t *source,
+                                uint32_t source_pitch,
+                                uint16_t *destination,
+                                uint32_t destination_pitch,
+                                const float *source_rect,
+                                const float *destination_rect);
 
 bool ee_dx7r_set_alpha_testing(void *device, unsigned long in_state, unsigned long current);
 

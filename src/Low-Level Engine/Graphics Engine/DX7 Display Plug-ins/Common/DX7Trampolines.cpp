@@ -5,6 +5,7 @@
 
 #include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
+#include "lle/Graphics Engine.h"
 #include "lle/GEColor.h"
 #include "lle/GEVector.h"
 #include "lle/GE3DPoint.h"
@@ -271,3 +272,16 @@ DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMinFilterMode);
 DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMagFilterMode);
 DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMipFilterMode);
 DX7_SAME_OFFSET(DX7RTextureStage, EeDx7TextureStageCache, mMipMapBias);
+
+// --- the pixel format helpers the Rust filter copy needs (the Graphics Engine's tables, R4.3) ----------------------------
+extern "C" {
+unsigned char ee_dx7cpp_unpack_red(unsigned long inFormat, unsigned long inColor) { return GEUnpackRed(inFormat, inColor); }
+unsigned char ee_dx7cpp_unpack_green(unsigned long inFormat, unsigned long inColor) { return GEUnpackGreen(inFormat, inColor); }
+unsigned char ee_dx7cpp_unpack_blue(unsigned long inFormat, unsigned long inColor) { return GEUnpackBlue(inFormat, inColor); }
+unsigned char ee_dx7cpp_unpack_alpha(unsigned long inFormat, unsigned long inColor) { return GEUnpackAlpha(inFormat, inColor); }
+unsigned long ee_dx7cpp_pack(unsigned long inFormat, int32_t inRed, int32_t inGreen, int32_t inBlue, int32_t inAlpha)
+{
+    return GEPackColor(inFormat, (unsigned long)(long)inRed, (unsigned long)(long)inGreen, (unsigned long)(long)inBlue,
+                       (unsigned long)(long)inAlpha);
+}
+}

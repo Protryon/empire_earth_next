@@ -4,28 +4,33 @@
 #![allow(non_snake_case)] // keep the C names
 #![allow(clippy::useless_conversion, clippy::unnecessary_cast, clippy::not_unsafe_ptr_arg_deref)] // c_ulong differs per target
 
-use core::ffi::{c_long, c_ulong, c_void};
+use core::ffi::{c_ulong, c_void};
 
 use crate::state::Device;
 
-/// `GXMATERIAL` (`rust/crates/ee_gx/src/abi.rs GxMaterial`): colours r,g,b,a of diffuse/ambient/specular/emissive, power.
-/// Only the white material of `SetShadingColorSource` is built here.
-#[repr(C)]
-struct GxMaterial {
-    diffuse: [f32; 4],
-    ambient: [f32; 4],
-    specular: [f32; 4],
-    emissive: [f32; 4],
-    power: f32,
+/// cbindgen:ignore
+mod sys {
+    use core::ffi::{c_long, c_ulong, c_void};
+
+    /// `GXMATERIAL` (`rust/crates/ee_gx/src/abi.rs GxMaterial`): colours of diffuse/ambient/specular/emissive, power.
+    #[repr(C)]
+    pub struct GxMaterial {
+        pub diffuse: [f32; 4],
+        pub ambient: [f32; 4],
+        pub specular: [f32; 4],
+        pub emissive: [f32; 4],
+        pub power: f32,
+    }
+
+    extern "C" {
+        pub fn gx_device_set_render_state(device: *mut c_void, state: u32, value: c_ulong) -> c_long;
+        pub fn gx_device_set_stage_state(device: *mut c_void, stage: c_ulong, state: u32, value: c_ulong) -> c_long;
+        pub fn gx_device_set_texture(device: *mut c_void, stage: c_ulong, texture: *mut c_void) -> c_long;
+        pub fn gx_device_set_material(device: *mut c_void, material: *const GxMaterial) -> c_long;
+    }
 }
 
-// cbindgen:ignore (the Rust side of ee_gx's own exports; this is not API)
-extern "C" {
-    fn gx_device_set_render_state(device: *mut c_void, state: u32, value: c_ulong) -> c_long;
-    fn gx_device_set_stage_state(device: *mut c_void, stage: c_ulong, state: u32, value: c_ulong) -> c_long;
-    fn gx_device_set_texture(device: *mut c_void, stage: c_ulong, texture: *mut c_void) -> c_long;
-    fn gx_device_set_material(device: *mut c_void, material: *const GxMaterial) -> c_long;
-}
+use sys::*;
 
 /// `GXDevice*`.
 #[derive(Clone, Copy)]
