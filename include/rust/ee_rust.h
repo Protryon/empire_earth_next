@@ -747,6 +747,33 @@ struct EeUiRect {
   float top;
 };
 
+/// `UISlider`'s members in their C++ order (the record starts at `mThumbRectangle`).
+struct EeUiSliderFields {
+  EeUiRect thumb;
+  EeUiRect copied_thumb;
+  /// `GEBitmap*`, C++'s (never touched here).
+  void *thumb_bitmap;
+  unsigned long style;
+  float pixels_per_unit;
+  float units_per_pixel;
+  long current;
+  unsigned long page_size;
+  long range;
+  long min_range;
+  long max_range;
+  long min_pixel;
+  long max_pixel;
+  long max_thumb_pixel;
+  long drag_offset;
+  bool is_dragging;
+};
+
+/// `GE2DPoint`: x, y.
+struct EeUiPoint {
+  float x;
+  float y;
+};
+
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
 struct EeDx7ModelInfo {
   uint32_t material_count;
@@ -2289,6 +2316,62 @@ void ee_ui_layout_calculate(const EeUiLayout *layout,
 
 /// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
 void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
+
+/// The constructor's track and thumb ([`slider::init`]).
+void ee_ui_slider_init(EeUiSliderFields *fields, const EeUiRect *rectangle, unsigned long style);
+
+/// `UISlider::ButtonUp`.
+void ee_ui_slider_button_up(void *slider,
+                            EeUiSliderFields *fields,
+                            const EeUiRect *rectangle,
+                            EeUiPoint mouse);
+
+/// `UISlider::DecrementByPageSize`.
+void ee_ui_slider_decrement_by_page_size(void *slider,
+                                         EeUiSliderFields *fields,
+                                         const EeUiRect *rectangle);
+
+/// `UISlider::IncrementByPageSize`.
+void ee_ui_slider_increment_by_page_size(void *slider,
+                                         EeUiSliderFields *fields,
+                                         const EeUiRect *rectangle);
+
+/// `UISlider::GetLocFromRange` (`out` keeps nothing: both coordinates are written).
+void ee_ui_slider_loc_from_range(const EeUiSliderFields *fields,
+                                 const EeUiRect *rectangle,
+                                 long value,
+                                 EeUiPoint *out);
+
+/// `UISlider::GetRangeFromLoc`.
+unsigned long ee_ui_slider_range_from_loc(const EeUiSliderFields *fields, EeUiPoint at);
+
+/// The middle of `UISlider::MouseLButtonDown`: a drag starts on the thumb.
+void ee_ui_slider_press(EeUiSliderFields *fields, EeUiPoint mouse);
+
+/// `UISlider::MouseMove`.
+void ee_ui_slider_mouse_move(void *slider,
+                             EeUiSliderFields *fields,
+                             const EeUiRect *rectangle,
+                             EeUiPoint at);
+
+/// `UISlider::SetCurrentRangeValue`.
+void ee_ui_slider_set_current_range_value(void *slider,
+                                          EeUiSliderFields *fields,
+                                          const EeUiRect *rectangle,
+                                          long value);
+
+/// `UISlider::SetLocation` -> the thumb's thickness (the C++ rescales the thumb bitmap with it).
+float ee_ui_slider_set_location(void *slider,
+                                EeUiSliderFields *fields,
+                                const EeUiRect *rectangle,
+                                EeUiPoint at);
+
+/// `UISlider::SetRange`.
+void ee_ui_slider_set_range(void *slider,
+                            EeUiSliderFields *fields,
+                            const EeUiRect *rectangle,
+                            unsigned long min,
+                            unsigned long max);
 
 }  // extern "C"
 

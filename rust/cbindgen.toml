@@ -67,3 +67,4 @@ include = ["ModelInfo", "MaterialInfo", "LightData"]
 "UiPoint" = "EeUiPoint"
 "Layout" = "EeUiLayout"
 "Edge" = "EeUiEdge"
+"SliderFields" = "EeUiSliderFields"

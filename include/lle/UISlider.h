@@ -1,7 +1,8 @@
 // C:\EEX\Low-Level Engine\User Interface\UISlider.h (RECONSTRUCTION). A thumb (the UI drag-bar bitmap) moving along
 // a horizontal (style 0) or vertical (style 1) track; the scroll bar's middle part. UISlider.cpp
 // (0x1007d139..0x1007db5b) holds the ctor and the out-of-line members; the inline members are emitted first by
-// UICheckBox.cpp (0x1005ef4b..0x1005f272, in declaration order). Vtable 0x10098ddc (UIControl's 34 slots, then
+// UICheckBox.cpp (0x1005ef4b..0x1005f272, in declaration order). The arithmetic members forward to Rust
+// (rust/crates/ee_ui/src/slider.rs): the members from mThumbRectangle on are its pinned record EeUiSliderFields. Vtable 0x10098ddc (UIControl's 34 slots, then
 // ButtonDown, ButtonUp, ChangeRange). Layout proven by the implicit copy ctor 0x1005efdc (sizeof 0xf8). Access
 // levels from the exports. Requires lle/UIControl.h (includes lle/GEBitmap.h:
 // the inline dtor dereferences the thumb bitmap).
