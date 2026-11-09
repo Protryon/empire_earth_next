@@ -9,7 +9,7 @@ local R = require("lib.rb_army")
 
 -- the rush: a small, iron-heavy town; Stone after the first waves
 local RUSH = {
-    citizens = {24, 55, 75},
+    citizens = {30, 60, 80},
     shares = {
         {wood = 14, stone = 0, gold = 4, iron = 30},
         {wood = 18, stone = 4, gold = 12, iron = 26},
@@ -76,12 +76,12 @@ local RUSH_ARMY = {
     rescout_ms = 300000,
     -- a wave: 6 soldiers in the Prehistoric, 10 later; more when the target was seen with more
     wave = function(view, memory, e)
-        local base = view.epoch == 0 and 6 or 10
+        local base = view.epoch == 0 and 10 or 14
         local seen = e.seen_army + e.towers * 2
         return math.max(base, seen + 2)
     end,
-    raid_size = 3,
-    raid_every = 150000,
+    raid_size = 4,
+    raid_every = 180000,
     raid_ok = function(view, memory, e)
         return true
     end,
@@ -156,6 +156,8 @@ function M.step(view, memory)
     if memory.mode == "boom" and view.threat_strength > view.army_strength then
         opts = {towers = (plan.towers[E.age(view)] or 0) + 1}
     end
+    opts = opts or {}
+    opts.reserve_less = R.floor_cost(view, memory, army)
     local saving, short = E.step(view, memory, plan, orders, opts)
     R.step(view, memory, army, orders, {saving = saving, short = short})
     return orders

@@ -23,7 +23,7 @@ local PLAN = {
     docks = {0, 2, 2},
     buildings = {
         {{type = "b_barracks", n = 1, citizens = 12}},
-        {{type = "b_barracks", n = 1}, {type = "b_archery_range", n = 1, citizens = 40}},
+        {{type = "b_barracks", n = 2, citizens = 40}, {type = "b_archery_range", n = 1, citizens = 30}},
         {{type = "b_barracks", n = 2}, {type = "b_archery_range", n = 1}, {type = "b_stable", n = 1},
          {type = "b_farm", n = 12}},
     },
@@ -57,7 +57,7 @@ local ARMY = {
         return math.min(want, view.population_cap // 3)
     end,
     scout_at = 150000,
-    rescout_ms = 480000,
+    rescout_ms = 240000,
     -- attack when clearly stronger than the target's army seen, with a real army
     wave = function(view, memory, e)
         local need = ({8, 14, 20})[E.age(view)]
@@ -91,6 +91,8 @@ function M.step(view, memory)
     if view.threat_strength > view.army_strength then
         opts = {towers = (PLAN.towers[E.age(view)] or 0) + 1}
     end
+    opts = opts or {}
+    opts.reserve_less = R.floor_cost(view, memory, ARMY)
     local saving, short = E.step(view, memory, PLAN, orders, opts)
     R.step(view, memory, ARMY, orders, {saving = saving, short = short})
     return orders
