@@ -107,6 +107,9 @@ struct EeFsMemFile;
 /// The arrays an output `EeRmapState` points into.
 struct EeRmapResult;
 
+/// The manager's state, owned by the C++ `SESoundManager` (created and destroyed with it).
+struct EeSoundManager;
+
 /// A `GEPolygonArray` of 16-bit triangle indices (`DrawIndexedPrimitive`'s WORD list).
 struct EeDx7PolygonArray;
 
@@ -732,6 +735,21 @@ struct EeDx7LightData {
   unsigned long light_type;
   float diffuse[3];
   float direction[3];
+};
+
+/// The data fields of an `SESMInstanceNode` (its reference count and free flag stay with the C++ object).
+struct EeSoundNodeFields {
+  uint32_t category;
+  uint32_t sample_id;
+  uint32_t max_instances;
+  uint32_t instance_id;
+  uint32_t instance_index;
+  uint32_t channel;
+  /// `SESample*`, null for a paused instance without a sample.
+  void *sample;
+  float volume;
+  float pan;
+  float pitch;
 };
 
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
@@ -2230,6 +2248,179 @@ EeRmapResult *ee_rmap_run(int32_t step,
 /// # Safety
 /// `result` must be null or a handle from `ee_rmap_run`, freed once.
 void ee_rmap_free(EeRmapResult *result);
+
+/// The constructor's state: categories each allowed every channel.
+EeSoundManager *ee_sound_create(uint32_t category_count, uint32_t channel_count);
+
+/// The destructor's part after the scavenger thread and the lock are gone; frees `m`.
+///
+/// # Safety
+/// `m` from `ee_sound_create`, not used afterwards.
+void ee_sound_destroy(EeSoundManager *m, void *ctx);
+
+/// # Safety
+/// As `with`.
+uint32_t ee_sound_set_category_percentage(EeSoundManager *m, uint32_t category, float percent);
+
+/// # Safety
+/// As `with`.
+int32_t ee_sound_set_category_priority(EeSoundManager *m, uint32_t category, uint32_t priority);
+
+/// # Safety
+/// As `with`.
+uint32_t ee_sound_available_channels(EeSoundManager *m);
+
+/// # Safety
+/// As `with`; `name` NUL-terminated.
+uint32_t ee_sound_load(EeSoundManager *m,
+                       void *ctx,
+                       const char *name,
+                       uint32_t category,
+                       uint32_t max_instances);
+
+/// `PlayAndReturnReferencedNode`.
+///
+/// # Safety
+/// As `with`.
+void *ee_sound_play(EeSoundManager *m,
+                    void *ctx,
+                    uint32_t sample_id,
+                    float volume,
+                    float pan,
+                    float pitch,
+                    bool looping);
+
+/// The playing, else paused, instance with the id (no reference added).
+///
+/// # Safety
+/// As `with`.
+void *ee_sound_find_instance(EeSoundManager *m, void *ctx, uint32_t instance_id);
+
+/// # Safety
+/// As `with`.
+bool ee_sound_is_looping(EeSoundManager *m, void *ctx, uint32_t instance_id);
+
+/// # Safety
+/// As `with`.
+bool ee_sound_is_playing(EeSoundManager *m, void *ctx, uint32_t instance_id);
+
+/// # Safety
+/// As `with`.
+float ee_sound_pan(EeSoundManager *m, void *ctx, uint32_t instance_id);
+
+/// # Safety
+/// As `with`.
+float ee_sound_pitch(EeSoundManager *m, void *ctx, uint32_t instance_id);
+
+/// `GetVolume2(id)`.
+///
+/// # Safety
+/// As `with`.
+float ee_sound_volume(EeSoundManager *m, void *ctx, uint32_t instance_id);
+
+/// # Safety
+/// As `with`.
+uint32_t ee_sound_sample_id(EeSoundManager *m, void *ctx, uint32_t instance_id);
+
+/// # Safety
+/// As `with`.
+uint32_t ee_sound_sample_rate(EeSoundManager *m, void *ctx, uint32_t instance_id);
+
+/// # Safety
+/// As `with`.
+int32_t ee_sound_time_left(EeSoundManager *m, void *ctx, uint32_t instance_id);
+
+/// # Safety
+/// As `with`.
+int32_t ee_sound_total_play_time(EeSoundManager *m, void *ctx, uint32_t sample_id);
+
+/// `SetVolume2(id)`.
+///
+/// # Safety
+/// As `with`.
+int32_t ee_sound_set_volume(EeSoundManager *m, void *ctx, uint32_t instance_id, float v);
+
+/// # Safety
+/// As `with`.
+int32_t ee_sound_set_pan(EeSoundManager *m, void *ctx, uint32_t instance_id, float v);
+
+/// # Safety
+/// As `with`.
+int32_t ee_sound_set_pitch(EeSoundManager *m, void *ctx, uint32_t instance_id, float v);
+
+/// # Safety
+/// As `with`.
+int32_t ee_sound_set_parameters(EeSoundManager *m,
+                                void *ctx,
+                                uint32_t instance_id,
+                                float volume,
+                                float pan,
+                                float pitch);
+
+/// # Safety
+/// As `with`.
+int32_t ee_sound_register_one_shot(EeSoundManager *m,
+                                   void *ctx,
+                                   uint32_t sample_id,
+                                   uint32_t instance_id);
+
+/// # Safety
+/// As `with`.
+int32_t ee_sound_stop(EeSoundManager *m, void *ctx, uint32_t instance_id, bool let_finish);
+
+/// # Safety
+/// As `with`.
+int32_t ee_sound_stop_all_one_shots(EeSoundManager *m, void *ctx);
+
+/// # Safety
+/// As `with`.
+int32_t ee_sound_unload(EeSoundManager *m, void *ctx, uint32_t sample_id);
+
+/// # Safety
+/// As `with`.
+void ee_sound_update_one_shots(EeSoundManager *m, void *ctx);
+
+/// One pass of the scavenger thread.
+///
+/// # Safety
+/// As `with`.
+void ee_sound_scavenge(EeSoundManager *m, void *ctx, bool muted);
+
+/// # Safety
+/// As `with`.
+int32_t ee_sound_set_max_channels(EeSoundManager *m, void *ctx, uint32_t count);
+
+/// # Safety
+/// `node` is a live node.
+bool ee_sound_node_is_looping(void *node);
+
+/// # Safety
+/// `node` is a live node.
+bool ee_sound_node_is_playing(void *node);
+
+/// # Safety
+/// `node` is a live node.
+float ee_sound_node_pan(void *node);
+
+/// # Safety
+/// `node` is a live node.
+float ee_sound_node_pitch(void *node);
+
+/// # Safety
+/// `node` is a live node.
+int32_t ee_sound_node_set_volume(void *node, float v);
+
+/// # Safety
+/// `node` is a live node.
+int32_t ee_sound_node_set_pan(void *node, float v);
+
+/// # Safety
+/// `node` is a live node.
+int32_t ee_sound_node_set_pitch(void *node, float v);
+
+/// # Safety
+/// `node` is a live node.
+int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
 
 }  // extern "C"
 

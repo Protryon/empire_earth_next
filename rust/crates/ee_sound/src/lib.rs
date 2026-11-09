@@ -13,6 +13,9 @@
 pub mod manager;
 pub mod msvc_sort;
 
+#[cfg(not(test))]
+pub mod ffi;
+
 #[cfg(test)]
 mod fake;
 #[cfg(test)]

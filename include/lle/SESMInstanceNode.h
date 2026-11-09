@@ -9,7 +9,6 @@ class SESample;
 
 class LLE_API SESMInstanceNode : public UReferenceCounter {   // proven sizeof 0x34 (??_E: index * 0x34)
     friend class SESoundManager;
-    friend struct SESMPausedOrder;          // SESoundManager.cpp sort predicate
 public:
     SESMInstanceNode();
     SESMInstanceNode(const SESMInstanceNode& inNode) {}

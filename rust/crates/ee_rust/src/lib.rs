@@ -15,6 +15,9 @@ use ee_mixer as _;
 #[cfg(not(test))] // its FFI imports the platform layer, absent from a test binary
 use ee_net_tcp as _;
 use ee_random as _;
+#[cfg(not(test))]
+// the sound manager behind SESoundManager.cpp: its FFI imports the C++ trampolines (ee_soundcpp_*)
+use ee_sound as _;
 // the random map generator's `extern "C"` API (ee_rmap/src/ffi.rs) reaches the staticlib through this dependency
 use ee_rmap as _;
 // the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency

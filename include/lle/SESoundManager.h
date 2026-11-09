@@ -15,28 +15,13 @@ class FSPath;
 class TSThread;
 class TSEvent;
 
-struct SESMSound {                          // proven sizeof 0x18 (mSounds: index * 0x18)
-    UString mName;                          // +0x00 (vector<SESMSound>::_Tidy 0x4e201 destroys a UString per element)
-    std::vector<SESMInstanceNode*>* mInstances; // +0x10 (0: free slot)
-    unsigned long mLoadCount;               // +0x14 (Load: 1 on first load, ++ on reload)
-};
+// The manager's bookkeeping and decisions (sounds, categories, channels, the paused queue, one-shot sounds, the
+// scavenger's choices) are Rust: rust/crates/ee_sound (docs/RUST_PLAN.md R3.6). This class keeps the C++ objects
+// (path, mixer, scavenger thread, events, lock, the node pool) and forwards under its lock as the original locked.
+struct EeSoundManager;
 
-struct SESMCategory {                       // (provisional name)
-    float mPercentage;                      // +0x00 (SetCategoryPercentage)
-    unsigned long mMaxInstances;            // +0x04
-    unsigned long mNumberOfInstances;       // +0x08
-    unsigned long mPriority;                // +0x0c
-};
-
-struct SESMOneShotSound {                   // proven sizeof 0xc (vector at +0x10); (provisional names)
-    SESample* mSample;                      // +0x00 (UpdateOneShotSounds: its mixer channel still playing?)
-    unsigned long mSampleID;                // +0x04 (Unload)
-    unsigned long mInstanceID;              // +0x08 (Stop)
-};
-
-class LLE_API SESoundManager {              // proven sizeof 0x98 (implicit copy ctor 0x4c54d)
+class LLE_API SESoundManager {              // the original: sizeof 0x98 (implicit copy ctor 0x4c54d)
     friend class SESMInstanceNode;          // LastDereference returns the node to sSoundsPool
-    friend struct SESMPausedOrder;          // Scavenger's sort predicate (SESoundManager.cpp)
 public:
     SESoundManager(FSPath* inPath, SEMixer* inMixer, unsigned long inCategoryCount, unsigned long inChannelCount);
     ~SESoundManager();
@@ -44,7 +29,7 @@ public:
     static void CleanupMemoryPoolAndDestroyCriticalSections();
     static void DumpMemoryPoolInfo();
     SESMInstanceNode* GetAndReferenceSoundInstance(unsigned long inInstanceID);
-    unsigned long GetAvailableChannels() const { return this->mAvailableChannels; }
+    unsigned long GetAvailableChannels() const;
     TSCriticalSection* GetCriticalSection() const { return this->mLock; }
     unsigned long GetHighestTimerDelay() const { return this->mMixer->GetHighestTimerDelay(); }
     unsigned long GetInstanceID(SESMInstanceNode* inNode);
@@ -93,63 +78,24 @@ public:
     long Stop(SESMInstanceNode* inNode, bool inImmediately);
     long StopAllOneShotSounds();
     long Unload(unsigned long inSampleID);
+    // the C++ side the Rust manager reaches (extern "C" ee_soundcpp_*, SESoundManager.cpp): a nested class, so
+    // that it shares this class's access to the node, the mixer and the members below
+    struct Rust;
 protected:
     static long CreateSoundPoolLock();
     static void DestroySoundInstance(SESMInstanceNode* inNode);
-    unsigned long GetCategoryPriority(unsigned long inCategory);
     static SESMInstanceNode* GetNewSoundInstance();
-    float GetVolume2(unsigned long inInstanceID);
-    float GetVolume2(SESMInstanceNode* inNode);
 private:
-    void AddInstanceToPausedQueue(SESMInstanceNode* inNode);
-    unsigned long AddNewSampleToPausedQueue(unsigned long inSampleID, float inVolume, float inPan, float inPitch,
-                                            SESMInstanceNode*& outNode);
-    void AddPrioritizedNodeToPausedQueue(SESMInstanceNode* inNode);
-    void DumpChannel(unsigned long inChannel);
-    unsigned long DumpLowerPrioritySample(unsigned long inPriority, bool inLooping);
-    unsigned long DumpNonPlayingChannels();
-    unsigned long GetCategory(unsigned long inSampleID);
-    unsigned long GetFreeChannel();
-    unsigned long GetMaxCategoryInstances(unsigned long inSampleID);
-    unsigned long GetMaxInstances(unsigned long inSampleID);
-    unsigned long GetNumberOfCategoryInstances(unsigned long inSampleID);
-    unsigned long GetNumberOfInstances(unsigned long inSampleID);
-    SESMInstanceNode* GetPausedInstance(unsigned long inInstanceID, unsigned long* outIndex);
-    SESMInstanceNode* GetPlayingInstance(unsigned long inInstanceID, unsigned long* outChannel);
-    unsigned long GetRandomOffset(SESample* inSample);
-    long GetTimeLeftInMilli(SESMInstanceNode* inNode);
-    long GetTotalPlayTimeInMilli(SESMInstanceNode* inNode);
-    unsigned long ReallyPlayIt(unsigned long inSampleID, unsigned long inChannel, float inVolume, float inPan,
-                               float inPitch, bool inLooping, SESMInstanceNode*& outNode);
-    unsigned long ReplaceCategoryInstance(unsigned long inSampleID);
-    unsigned long ReplaceNonLoopingInstance(unsigned long inSampleID);
     static unsigned long Scavenger(void* inManager);
-    long SetPan2(unsigned long inInstanceID, float inPan);
-    long SetPan2(SESMInstanceNode* inNode, float inPan);
-    long SetPitch2(unsigned long inInstanceID, float inPitch);
-    long SetPitch2(SESMInstanceNode* inNode, float inPitch);
-    long SetVolume2(unsigned long inInstanceID, float inVolume);
-    long SetVolume2(SESMInstanceNode* inNode, float inVolume);
-    void UpdateOneShotSounds();
 
-    URandom mRandom;                        // +0x00
-    std::vector<SESMOneShotSound> mOneShotSounds;   // +0x10
-    std::vector<SESMInstanceNode*> mChannels;       // +0x20 one per available channel (GetFreeChannel)
-    std::vector<SESMInstanceNode*> mPaused;         // +0x30
-    std::vector<SESMSound> mSounds;                 // +0x40
-    std::vector<SESMCategory*> mCategories;         // +0x50
-    std::map<unsigned long, SESMInstanceNode*> mPausedInstances;   // +0x60 instance ID -> paused node (GetPausedInstance)
-    FSPath* mPath;                          // +0x6c (referenced)
-    SEMixer* mMixer;                        // +0x70
-    TSThread* mScavengerThread;             // +0x74
-    TSEvent* mScavengerThreadFinishedEvent; // +0x78 (ctor ESVERIFY text)
-    TSEvent* mScavengerThreadExitEvent;     // +0x7c (ctor ESVERIFY text)
-    TSCriticalSection* mLock;               // +0x80 (GetCriticalSection)
-    unsigned long mCategoryCount;           // +0x84
-    unsigned long mAvailableChannels;       // +0x88 (GetAvailableChannels)
-    unsigned long mSoundCount;              // +0x8c (Load: mSounds.size())
-    unsigned long mNextInstanceID;          // +0x90
-    bool mIsMuted;                          // +0x94
+    EeSoundManager* mRust;                  // the bookkeeping (ee_sound), created and destroyed with this object
+    FSPath* mPath;                          // (referenced)
+    SEMixer* mMixer;
+    TSThread* mScavengerThread;
+    TSEvent* mScavengerThreadFinishedEvent; // (ctor ESVERIFY text)
+    TSEvent* mScavengerThreadExitEvent;     // (ctor ESVERIFY text)
+    TSCriticalSection* mLock;               // (GetCriticalSection)
+    bool mIsMuted;                          // read by the scavenger pass
 
     static UMemoryPool<SESMInstanceNode> sSoundsPool;   // 0x1012de90 (defined in SESoundManager.cpp)
 protected:
