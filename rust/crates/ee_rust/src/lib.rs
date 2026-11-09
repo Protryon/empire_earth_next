@@ -20,6 +20,9 @@ use ee_random as _;
 #[cfg(not(test))]
 // the sound manager behind SESoundManager.cpp: its FFI imports the C++ trampolines (ee_soundcpp_*)
 use ee_sound as _;
+// the UI toolkit's algorithms behind the C++ UI* classes (ee_ui); its FFI imports C++ host functions, absent from a
+// test binary
+use ee_ui as _;
 // the random map generator's `extern "C"` API (ee_rmap/src/ffi.rs) reaches the staticlib through this dependency
 use ee_rmap as _;
 // formations (ee_formations/src/ffi.rs): the geometry the formation classes call

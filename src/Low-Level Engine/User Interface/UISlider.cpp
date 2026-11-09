@@ -3,8 +3,15 @@
 //
 // 0x1007d139..0x1007db5b: the U2D key init chains, the ctor, then the out-of-line members in alphabetical order. The
 // header-inline members are emitted first by UICheckBox.cpp (0x1005ef4b..).
+//
+// The slider's arithmetic is Rust (rust/crates/ee_ui/src/slider.rs, docs/RUST_PLAN.md R6): the members below forward
+// to it with the object's own members from mThumbRectangle on as the pinned record EeUiSliderFields. What stays here
+// touches other objects: the base class, the thumb bitmap, the mouse capture, ChangeRange and drawing; the
+// ee_uicpp_slider_* functions are Rust's way back into the virtual members.
 #include <windows.h>
+#include <stddef.h>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -29,34 +36,71 @@
 #include "lle/UIManager.h"
 #include "lle/UISlider.h"
 
+// The slider seen from the Rust host calls: the protected members as public (a view of the same object, no data)
+struct UISliderAccess : UISlider {
+    using UISlider::ChangeRange;
+    EeUiSliderFields* Fields() { return reinterpret_cast<EeUiSliderFields*>(&this->mThumbRectangle); }
+    const EeUiRect* Rectangle() const { return reinterpret_cast<const EeUiRect*>(&this->mRectangle); }
+    static void CheckLayout()
+    {
+        // the record's offsets from mThumbRectangle (ee_ui/src/slider.rs SliderFields)
+#define EE_UI_SLIDER_FIELD(member, field)                                                                             \
+    static_assert(offsetof(UISliderAccess, member) - offsetof(UISliderAccess, mThumbRectangle) ==                    \
+                      offsetof(EeUiSliderFields, field),                                                              \
+                  "ee_ui/src/slider.rs")
+        EE_UI_SLIDER_FIELD(mCopiedThumbRectangle, copied_thumb);
+        EE_UI_SLIDER_FIELD(mThumbBitmap, thumb_bitmap);
+        EE_UI_SLIDER_FIELD(mSliderStyle, style);
+        EE_UI_SLIDER_FIELD(mPixelsPerUnit, pixels_per_unit);
+        EE_UI_SLIDER_FIELD(mUnitsPerPixel, units_per_pixel);
+        EE_UI_SLIDER_FIELD(mCurrentRangeValue, current);
+        EE_UI_SLIDER_FIELD(mPageSize, page_size);
+        EE_UI_SLIDER_FIELD(mRange, range);
+        EE_UI_SLIDER_FIELD(mMinRange, min_range);
+        EE_UI_SLIDER_FIELD(mMaxRange, max_range);
+        EE_UI_SLIDER_FIELD(mMinPixel, min_pixel);
+        EE_UI_SLIDER_FIELD(mMaxPixel, max_pixel);
+        EE_UI_SLIDER_FIELD(mMaxThumbPixel, max_thumb_pixel);
+        EE_UI_SLIDER_FIELD(mDragOffset, drag_offset);
+        EE_UI_SLIDER_FIELD(mIsDragging, is_dragging);
+#undef EE_UI_SLIDER_FIELD
+        static_assert(sizeof(UISliderAccess) - offsetof(UISliderAccess, mThumbRectangle) >= sizeof(EeUiSliderFields),
+                      "ee_ui/src/slider.rs");
+    }
+};
+
+static UISliderAccess* Access(UISlider* inSlider) { return static_cast<UISliderAccess*>(inSlider); }
+static const UISliderAccess* Access(const UISlider* inSlider) { return static_cast<const UISliderAccess*>(inSlider); }
+static EeUiPoint UIPoint(const GE2DPoint& inPoint) { return EeUiPoint{inPoint.GetX(), inPoint.GetY()}; }
+
+// The host calls of ee_ui/src/slider_ffi.rs
+extern "C" void ee_uicpp_slider_set_dirty(void* inSlider)
+{
+    static_cast<UISlider*>(inSlider)->SetDirty(true);
+}
+
+extern "C" void ee_uicpp_slider_change_range(void* inSlider, unsigned long inValue)
+{
+    Access(static_cast<UISlider*>(inSlider))->ChangeRange(inValue);
+}
+
+extern "C" void ee_uicpp_slider_base_set_location(void* inSlider, float inX, float inY)
+{
+    static_cast<UISlider*>(inSlider)->UIControl::SetLocation(GE2DPoint(inX, inY));
+}
+
 // FUNCTION: LLE 0x1007d259
 // Creates a horizontal (style 0) or vertical slider with a square thumb, an empty range and no page size
 UISlider::UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned long inSliderStyle, UIForm* inForm,
                    unsigned long inIndex, unsigned long inBorderThickness)
     : UIControl(kControlTypeSlider, inId, inRectangle, inForm, inIndex, inBorderThickness)
 {
-    this->mSliderStyle = inSliderStyle;
-    this->mIsDragging = false;
-    this->mCurrentRangeValue = 0;
-    this->mDragOffset = 0;
+    UISliderAccess::CheckLayout();
     this->mBorderType = 0;
-    float theThickness;
-    if (this->mSliderStyle == 0) {
-        theThickness = inRectangle.GetHeight();
-        this->mMinPixel = UMFloor(inRectangle.GetLeft());
-        // Fixed: lacked the + 1 that the vertical case and SetLocation add (the track was a pixel short)
-        this->mMaxPixel = UMFloor(inRectangle.GetRight()) + 1;
-    } else {
-        theThickness = inRectangle.GetWidth();
-        this->mMinPixel = UMFloor(inRectangle.GetTop());
-        this->mMaxPixel = UMFloor(this->mRectangle.GetBottom()) + 1;
-    }
-    this->mMaxThumbPixel = UMFloor(this->mMaxPixel - theThickness);
-    float theRight = this->mRectangle.GetLeft() + theThickness;
-    float theBottom = this->mRectangle.GetTop() + theThickness;
-    this->mThumbRectangle = GERectangle(this->mRectangle.GetLeft(), this->mRectangle.GetTop(), theRight, theBottom);
+    // Fixed (in the C++ before the move): the horizontal track lacked the + 1 the vertical case and SetLocation add
+    ee_ui_slider_init(Access(this)->Fields(), Access(this)->Rectangle(), inSliderStyle);
     this->mThumbBitmap = inForm->GetManager()->CreateBitmapForScaledControl(inForm->GetManager()->GetDragBarBitmap(),
-                                                                      this->mThumbRectangle);
+                                                                            this->mThumbRectangle);
     this->SetRange(0, 0);
     this->mPageSize = 0;
 }
@@ -65,23 +109,7 @@ UISlider::UISlider(unsigned long inId, const GERectangle& inRectangle, unsigned 
 // Ends a thumb drag, or pages toward a click on the track outside the thumb
 void UISlider::ButtonUp()
 {
-    if (this->mIsDragging) {
-        this->mIsDragging = false;
-        return;
-    }
-    if (!this->mRectangle.Contains(this->GetMouseLocation()))
-        return;
-    if (this->mSliderStyle == 1) {
-        if (this->GetMouseLocation().GetY() < this->mThumbRectangle.GetTop())
-            this->DecrementByPageSize();
-        else
-            this->IncrementByPageSize();
-    } else {
-        if (this->GetMouseLocation().GetX() < this->mThumbRectangle.GetLeft())
-            this->DecrementByPageSize();
-        else
-            this->IncrementByPageSize();
-    }
+    ee_ui_slider_button_up(this, Access(this)->Fields(), Access(this)->Rectangle(), UIPoint(this->GetMouseLocation()));
 }
 
 // FUNCTION: LLE 0x1007d468
@@ -105,11 +133,7 @@ long UISlider::CopyData()
 // Moves the value down by a page, stopping at the minimum
 void UISlider::DecrementByPageSize()
 {
-    long theValue = this->mCurrentRangeValue - this->mPageSize;
-    if (theValue <= this->mMinRange)
-        this->SetCurrentRangeValue(this->mMinRange);
-    else
-        this->SetCurrentRangeValue(theValue);
+    ee_ui_slider_decrement_by_page_size(this, Access(this)->Fields(), Access(this)->Rectangle());
 }
 
 // FUNCTION: LLE 0x1007d4cb
@@ -125,36 +149,24 @@ long UISlider::DrawPolygons()
 // Returns the thumb position for a value along the slider's axis
 void UISlider::GetLocFromRange(long inRangeValue, GE2DPoint& outLocation) const
 {
-    this->SetCurrentPoint(UMFloor((inRangeValue - this->mMinRange) * this->mPixelsPerUnit + this->mMinPixel), outLocation);
-    if (this->mSliderStyle == 0)
-        outLocation.SetY(this->mRectangle.GetTop());
-    else
-        outLocation.SetX(this->mRectangle.GetLeft());
+    EeUiPoint thePoint = UIPoint(outLocation);
+    ee_ui_slider_loc_from_range(const_cast<UISliderAccess*>(Access(this))->Fields(), Access(this)->Rectangle(),
+                                inRangeValue, &thePoint);
+    outLocation = GE2DPoint(thePoint.x, thePoint.y);
 }
 
 // FUNCTION: LLE 0x1007d588
 // Returns the value for a thumb position (exactly the minimum and maximum at the track ends)
 unsigned long UISlider::GetRangeFromLoc(const GE2DPoint& inLocation) const
 {
-    long thePoint = this->GetCurrentPoint(inLocation);
-    float theValue;
-    if (thePoint == this->mMaxThumbPixel)
-        theValue = this->mMaxRange;
-    else if (thePoint == this->mMinPixel)
-        theValue = this->mMinRange;
-    else
-        theValue = (thePoint - this->mMinPixel) * this->mUnitsPerPixel + this->mMinRange;
-    return UMFloor(theValue);
+    return ee_ui_slider_range_from_loc(const_cast<UISliderAccess*>(Access(this))->Fields(), UIPoint(inLocation));
 }
 
 // FUNCTION: LLE 0x1007d60b
 // Moves the value up by a page, stopping at the maximum
 void UISlider::IncrementByPageSize()
 {
-    if ((long)(this->mCurrentRangeValue + this->mPageSize) >= this->mMaxRange)
-        this->SetCurrentRangeValue(this->mMaxRange);
-    else
-        this->SetCurrentRangeValue(this->mCurrentRangeValue + this->mPageSize);
+    ee_ui_slider_increment_by_page_size(this, Access(this)->Fields(), Access(this)->Rectangle());
 }
 
 // FUNCTION: LLE 0x1007d62d
@@ -162,10 +174,7 @@ void UISlider::IncrementByPageSize()
 long UISlider::MouseLButtonDown()
 {
     this->CaptureMouse();
-    if (this->mThumbRectangle.Contains(this->GetMouseLocation())) {
-        this->mIsDragging = true;
-        this->mDragOffset = this->GetCurrentPoint(this->GetMouseLocation()) - this->GetCurrentPoint(this->mThumbRectangle.GetTopLeft());
-    }
+    ee_ui_slider_press(Access(this)->Fields(), UIPoint(this->GetMouseLocation()));
     this->ButtonDown();
     return kErrorOK;
 }
@@ -183,20 +192,7 @@ long UISlider::MouseLButtonUp()
 // Drags the thumb with the mouse within the track, updating the value; returns OK
 long UISlider::MouseMove(const GE2DPoint& inLocation)
 {
-    GE2DPoint theLocation = this->mThumbRectangle.GetTopLeft();
-    long thePoint = this->GetCurrentPoint(inLocation) - this->mDragOffset;
-    if (this->mIsDragging && this->mMaxThumbPixel >= this->mMinPixel) {
-        if (thePoint < this->mMinPixel)
-            thePoint = this->mMinPixel;
-        else if (thePoint > this->mMaxThumbPixel)
-            thePoint = this->mMaxThumbPixel;
-        this->SetCurrentPoint(thePoint, theLocation);
-        float theRight = theLocation.GetX() + this->mThumbRectangle.GetWidth();
-        float theBottom = theLocation.GetY() + this->mThumbRectangle.GetHeight();
-        this->mThumbRectangle = GERectangle(theLocation.GetX(), theLocation.GetY(), theRight, theBottom);
-        this->ChangeRange(this->GetRangeFromLoc(this->mThumbRectangle.GetTopLeft()));
-        this->SetDirty(true);
-    }
+    ee_ui_slider_mouse_move(this, Access(this)->Fields(), Access(this)->Rectangle(), UIPoint(inLocation));
     return kErrorOK;
 }
 
@@ -204,82 +200,25 @@ long UISlider::MouseMove(const GE2DPoint& inLocation)
 // Sets the value, clamped to the range, and moves the thumb to match
 void UISlider::SetCurrentRangeValue(long inValue)
 {
-    GE2DPoint theLocation = this->mThumbRectangle.GetTopLeft();
-    if (inValue < this->GetMinRange())
-        inValue = this->GetMinRange();
-    else if (inValue > this->GetMaxRange())
-        inValue = this->GetMaxRange();
-    if (this->GetCurrentRangeValue() == inValue)
-        return;
-    this->SetDirty(true);
-    this->ChangeRange(inValue);
-    if (this->GetCurrentRangeValue() == this->GetMinRange())
-        this->SetCurrentPoint(this->mMinPixel, theLocation);
-    else if (this->GetCurrentRangeValue() == this->GetMaxRange())
-        this->SetCurrentPoint(this->mMaxThumbPixel, theLocation);
-    else
-        this->GetLocFromRange(this->GetCurrentRangeValue(), theLocation);
-    float theRight = theLocation.GetX() + this->mThumbRectangle.GetWidth();
-    float theBottom = theLocation.GetY() + this->mThumbRectangle.GetHeight();
-    this->mThumbRectangle = GERectangle(theLocation.GetX(), theLocation.GetY(), theRight, theBottom);
+    ee_ui_slider_set_current_range_value(this, Access(this)->Fields(), Access(this)->Rectangle(), inValue);
 }
 
 // FUNCTION: LLE 0x1007d920
 // Moves the slider, recomputing its pixel range, thumb position and thumb scale
 void UISlider::SetLocation(const GE2DPoint& inLocation)
 {
-    GE2DPoint theLocation;
-    UIControl::SetLocation(inLocation);
-    float theThickness;
-    if (this->mSliderStyle == 0) {
-        theThickness = this->mRectangle.GetHeight();
-        this->mMinPixel = UMFloor(inLocation.GetX());
-        this->mMaxPixel = UMFloor(this->mRectangle.GetRight()) + 1;
-    } else {
-        theThickness = this->mRectangle.GetWidth();
-        this->mMinPixel = UMFloor(inLocation.GetY());
-        this->mMaxPixel = UMFloor(this->mRectangle.GetBottom()) + 1;
-    }
-    this->mMaxThumbPixel = UMFloor(this->mMaxPixel - theThickness);
-    long thePixelRange = this->mMaxThumbPixel - this->mMinPixel;
-    long theRange = this->mRange;
-    if (theRange != 0) {
-        this->mPixelsPerUnit = (float)thePixelRange / theRange;
-        this->mUnitsPerPixel = (float)theRange / thePixelRange;
-    } else {
-        this->mPixelsPerUnit = 0.0f;
-        this->mUnitsPerPixel = 0.0f;
-    }
-    this->GetLocFromRange(this->mCurrentRangeValue, theLocation);
-    float theRight = theLocation.GetX() + theThickness;
-    float theBottom = theLocation.GetY() + theThickness;
-    this->mThumbRectangle = GERectangle(theLocation.GetX(), theLocation.GetY(), theRight, theBottom);
+    float theThickness = ee_ui_slider_set_location(this, Access(this)->Fields(), Access(this)->Rectangle(),
+                                                   UIPoint(inLocation));
     GEBitmap* theDragBar = this->mForm->GetManager()->GetDragBarBitmap();
     this->mThumbBitmap->SetXYScale(theDragBar->GetXScale() * theThickness * 0.05f,
-                             theDragBar->GetYScale() * theThickness * 0.05f);
+                                   theDragBar->GetYScale() * theThickness * 0.05f);
 }
 
 // FUNCTION: LLE 0x1007dacb
 // Sets the value range, recomputing the pixel scale and clamping the current value
 void UISlider::SetRange(unsigned long inMin, unsigned long inMax)
 {
-    if (inMin == this->mMinRange && inMax == this->mMaxRange)
-        return;
-    long thePixelRange = this->mMaxThumbPixel - this->mMinPixel;
-    this->mMinRange = inMin;
-    this->mMaxRange = inMax;
-    this->mRange = inMax - inMin;
-    if (this->mRange != 0) {
-        this->mPixelsPerUnit = (float)thePixelRange / this->mRange;
-        this->mUnitsPerPixel = (float)this->mRange / thePixelRange;
-    } else {
-        this->mPixelsPerUnit = 0.0f;
-        this->mUnitsPerPixel = 0.0f;
-    }
-    if (this->mCurrentRangeValue < (long)inMin)
-        this->SetCurrentRangeValue(inMin);
-    else if (this->mCurrentRangeValue > (long)inMax)
-        this->SetCurrentRangeValue(inMax);
+    ee_ui_slider_set_range(this, Access(this)->Fields(), Access(this)->Rectangle(), inMin, inMax);
 }
 
 // Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)

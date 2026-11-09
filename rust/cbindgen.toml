@@ -7,8 +7,8 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge"]
-extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge"]
+include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui"]
+extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound", "ee_ge", "ee_ui"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
@@ -81,3 +81,9 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint"]
 "GeTmPoint" = "EeGeTmPoint"
 "GeTmRow" = "EeGeTmRow"
 "GeTerrainView" = "EeGeTerrainView"
+# ee_ui
+"UiRect" = "EeUiRect"
+"UiPoint" = "EeUiPoint"
+"Layout" = "EeUiLayout"
+"Edge" = "EeUiEdge"
+"SliderFields" = "EeUiSliderFields"

@@ -118,7 +118,6 @@
 75b7c 76f27 User Interface/UIGraph.cpp
 76f27 774b9 User Interface/UIHotKey.cpp
 774b9 77f75 User Interface/UIIMECandidate.cpp
-77f75 78251 User Interface/UILayoutUtility.cpp
 78251 785cd User Interface/UILBString.cpp
 785cd 78a70 User Interface/UILineGraph.cpp
 78a70 78c81 User Interface/UILRTiledBackground.cpp

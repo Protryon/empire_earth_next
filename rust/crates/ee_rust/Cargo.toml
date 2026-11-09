@@ -24,6 +24,7 @@ ee_ge = { path = "../ee_ge" }
 ee_gx = { path = "../ee_gx" }
 ee_dx7 = { path = "../ee_dx7" }
 ee_sound = { path = "../ee_sound" }
+ee_ui = { path = "../ee_ui" }
 ee_openformats = { path = "../ee_openformats" }
 ee_plat_ui = { path = "../ee_plat_ui" }
 ee_plat_sdl = { path = "../ee_plat_sdl" }

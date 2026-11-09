@@ -84,6 +84,35 @@ constexpr static const int32_t BEYOND_END = 10;
 
 constexpr static const int32_t END_OF_FILE = 18;
 
+/// `kControlTypeRadioButton`.
+constexpr static const unsigned long RADIO_BUTTON = 6;
+
+/// `kLayoutFromStart`: left/top + offset.
+constexpr static const unsigned long FROM_START = 0;
+
+/// `kLayoutAfterCenter`: centre + offset.
+constexpr static const unsigned long AFTER_CENTER = 1;
+
+/// `kLayoutBeforeCenter`: centre - offset.
+constexpr static const unsigned long BEFORE_CENTER = 2;
+
+/// `kLayoutFromEnd`: right/bottom - offset.
+constexpr static const unsigned long FROM_END = 3;
+
+/// `kLayoutProportional`: left/top + size x offset.
+constexpr static const unsigned long PROPORTIONAL = 4;
+
+/// `kLayoutFromStartEdge`: the left/top edge's own point + offset (a width or height).
+constexpr static const unsigned long FROM_START_EDGE = 5;
+
+/// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
+enum class EeUiEdge {
+  Left = 0,
+  Right = 1,
+  Top = 2,
+  Bottom = 3,
+};
+
 /// `FSArchive`'s tables.
 struct EeFsArchive;
 
@@ -837,6 +866,53 @@ using EeOfResolve = bool(*)(void *user, const uint8_t *uri, size_t uri_len, EeOf
 struct EeOfSlice {
   const uint8_t *ptr;
   size_t len;
+};
+
+/// `GE2DPoint`: x, y.
+struct EeUiPoint {
+  float x;
+  float y;
+};
+
+/// `UILayoutUtility`'s members in their C++ order (sizeof 0x20 where `unsigned long` is 32 bits).
+struct EeUiLayout {
+  float left_offset;
+  float right_offset;
+  float top_offset;
+  float bottom_offset;
+  unsigned long left_type;
+  unsigned long right_type;
+  unsigned long top_type;
+  unsigned long bottom_type;
+};
+
+/// `GERectangle`: the C++ member order, `mBottom` first.
+struct EeUiRect {
+  float bottom;
+  float left;
+  float right;
+  float top;
+};
+
+/// `UISlider`'s members in their C++ order (the record starts at `mThumbRectangle`).
+struct EeUiSliderFields {
+  EeUiRect thumb;
+  EeUiRect copied_thumb;
+  /// `GEBitmap*`, C++'s (never touched here).
+  void *thumb_bitmap;
+  unsigned long style;
+  float pixels_per_unit;
+  float units_per_pixel;
+  long current;
+  unsigned long page_size;
+  long range;
+  long min_range;
+  long max_range;
+  long min_pixel;
+  long max_pixel;
+  long max_thumb_pixel;
+  long drag_offset;
+  bool is_dragging;
 };
 
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
@@ -3034,6 +3110,90 @@ int32_t ee_sound_node_set_pitch(void *node, float v);
 /// # Safety
 /// `node` is a live node.
 int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
+
+/// `UIForm::CheckedRadioButton`.
+void ee_ui_form_checked_radio_button(void *form, long *index);
+
+/// `UIForm::Tab`.
+void ee_ui_form_tab(void *form, bool tabbing, unsigned long tab_stop);
+
+/// `UIForm::ShiftTab`.
+void ee_ui_form_shift_tab(void *form, bool tabbing, unsigned long tab_stop);
+
+/// `UIForm::UpdateMouseLocation`'s search -> whether a control was found, at `(*group, *entity)`.
+bool ee_ui_form_hit(void *form, EeUiPoint at, long *group, unsigned long *entity);
+
+/// `UILayoutUtility::UILayoutUtility`.
+void ee_ui_layout_init(EeUiLayout *layout);
+
+/// `UILayoutUtility::CalculateRectangle`. The parent is read whole before `out` is written (no caller passes the same
+/// rectangle twice).
+void ee_ui_layout_calculate(const EeUiLayout *layout,
+                            const EeUiRect *parent,
+                            EeUiRect *out,
+                            bool exclusive);
+
+/// `UILayoutUtility::OffsetLeft`/`OffsetRight`/`OffsetTop`/`OffsetBottom`.
+void ee_ui_layout_offset(EeUiLayout *layout, EeUiEdge edge, long amount, unsigned long size);
+
+/// The constructor's track and thumb ([`slider::init`]).
+void ee_ui_slider_init(EeUiSliderFields *fields, const EeUiRect *rectangle, unsigned long style);
+
+/// `UISlider::ButtonUp`.
+void ee_ui_slider_button_up(void *slider,
+                            EeUiSliderFields *fields,
+                            const EeUiRect *rectangle,
+                            EeUiPoint mouse);
+
+/// `UISlider::DecrementByPageSize`.
+void ee_ui_slider_decrement_by_page_size(void *slider,
+                                         EeUiSliderFields *fields,
+                                         const EeUiRect *rectangle);
+
+/// `UISlider::IncrementByPageSize`.
+void ee_ui_slider_increment_by_page_size(void *slider,
+                                         EeUiSliderFields *fields,
+                                         const EeUiRect *rectangle);
+
+/// `UISlider::GetLocFromRange` (`out` keeps nothing: both coordinates are written).
+void ee_ui_slider_loc_from_range(const EeUiSliderFields *fields,
+                                 const EeUiRect *rectangle,
+                                 long value,
+                                 EeUiPoint *out);
+
+/// `UISlider::GetRangeFromLoc`.
+unsigned long ee_ui_slider_range_from_loc(const EeUiSliderFields *fields, EeUiPoint at);
+
+/// The middle of `UISlider::MouseLButtonDown`: a drag starts on the thumb.
+void ee_ui_slider_press(EeUiSliderFields *fields, EeUiPoint mouse);
+
+/// `UISlider::MouseMove`.
+void ee_ui_slider_mouse_move(void *slider,
+                             EeUiSliderFields *fields,
+                             const EeUiRect *rectangle,
+                             EeUiPoint at);
+
+/// `UISlider::SetCurrentRangeValue`.
+void ee_ui_slider_set_current_range_value(void *slider,
+                                          EeUiSliderFields *fields,
+                                          const EeUiRect *rectangle,
+                                          long value);
+
+/// `UISlider::SetLocation` -> the thumb's thickness (the C++ rescales the thumb bitmap with it).
+float ee_ui_slider_set_location(void *slider,
+                                EeUiSliderFields *fields,
+                                const EeUiRect *rectangle,
+                                EeUiPoint at);
+
+/// `UISlider::SetRange`.
+void ee_ui_slider_set_range(void *slider,
+                            EeUiSliderFields *fields,
+                            const EeUiRect *rectangle,
+                            unsigned long min,
+                            unsigned long max);
+
+/// `UITextLabel::SetText`'s line loop: `text` (NUL-terminated) wrapped to `width`.
+void ee_ui_label_wrap(void *ctx, const char *text, float width);
 
 }  // extern "C"
 

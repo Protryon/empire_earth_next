@@ -10,6 +10,7 @@
 #include <mbstring.h>
 #include <algorithm>
 
+#include "rust/ee_rust.h"
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
 #include "lle/GESurface.h"
@@ -349,24 +350,60 @@ long UIForm::ChangeIMECompositionString(const UWideString& inString, const UStri
     return theResult;
 }
 
+// The form's focus walk (Tab, ShiftTab, CheckedRadioButton) and the control search of UpdateMouseLocation are Rust
+// (rust/crates/ee_ui/src/form.rs, docs/RUST_PLAN.md R6); these are its questions about the controls and groups, and
+// its way to SetTabStop (the controls' TabbedFrom/TabbedTo stay C++ virtuals).
+struct UIFormRust {
+    static UIControl* Control(void* inForm, long inIndex) { return static_cast<UIForm*>(inForm)->mControls[inIndex]; }
+    static long Count(void* inForm) { return static_cast<UIForm*>(inForm)->mControlCount; }
+    static bool ShownEnabled(void* inForm, long inIndex)
+    {
+        UIControl* theControl = UIFormRust::Control(inForm, inIndex);
+        return theControl->GetDisplayMode() == kDisplayModeShown &&
+               static_cast<UIForm*>(inForm)->GetEntityGroupById(theControl->GetId())->GetIsEnabled();
+    }
+    static UIEntityGroup* Group(void* inForm, long inGroup) { return static_cast<UIForm*>(inForm)->mEntityGroups[inGroup]; }
+    static long GroupCount(void* inForm) { return static_cast<UIForm*>(inForm)->mControlGroupCount; }
+    static UIControl* Entity(void* inForm, long inGroup, unsigned long inEntity)
+    {
+        return static_cast<UIControl*>(UIFormRust::Group(inForm, inGroup)->GetEntity(inEntity));
+    }
+};
+
+extern "C" long ee_uicpp_form_count(void* inForm) { return UIFormRust::Count(inForm); }
+extern "C" bool ee_uicpp_form_exists(void* inForm, long inIndex) { return UIFormRust::Control(inForm, inIndex) != NULL; }
+extern "C" unsigned long ee_uicpp_form_kind(void* inForm, long inIndex) { return UIFormRust::Control(inForm, inIndex)->GetType(); }
+extern "C" bool ee_uicpp_form_checked(void* inForm, long inIndex)
+{
+    return static_cast<UIRadioButton*>(UIFormRust::Control(inForm, inIndex))->GetIsChecked();
+}
+extern "C" bool ee_uicpp_form_shown_enabled(void* inForm, long inIndex) { return UIFormRust::ShownEnabled(inForm, inIndex); }
+extern "C" bool ee_uicpp_form_tabable(void* inForm, long inIndex) { return UIFormRust::Control(inForm, inIndex)->GetTabable(); }
+extern "C" bool ee_uicpp_form_set_tab_stop(void* inForm, unsigned long inIndex)
+{
+    return static_cast<UIForm*>(inForm)->SetTabStop(inIndex);
+}
+extern "C" long ee_uicpp_form_group_count(void* inForm) { return UIFormRust::GroupCount(inForm); }
+extern "C" bool ee_uicpp_form_group_enabled(void* inForm, long inGroup) { return UIFormRust::Group(inForm, inGroup)->GetIsEnabled(); }
+extern "C" unsigned long ee_uicpp_form_entity_count(void* inForm, long inGroup)
+{
+    return UIFormRust::Group(inForm, inGroup)->GetEntityCount();
+}
+extern "C" bool ee_uicpp_form_entity_hidden(void* inForm, long inGroup, unsigned long inEntity)
+{
+    return UIFormRust::Entity(inForm, inGroup, inEntity)->GetDisplayMode() == kDisplayModeHidden;
+}
+extern "C" EeUiRect ee_uicpp_form_entity_rect(void* inForm, long inGroup, unsigned long inEntity)
+{
+    const GERectangle& theRectangle = UIFormRust::Entity(inForm, inGroup, inEntity)->GetRectangle();
+    return EeUiRect{theRectangle.mBottom, theRectangle.mLeft, theRectangle.mRight, theRectangle.mTop};
+}
+
 // FUNCTION: LLE 0x100714f3
 // Moves a radio-button index to the checked button of its run of radio buttons (unchanged if it is checked)
 void UIForm::CheckedRadioButton(long& ioIndex)
 {
-    long i = ioIndex;
-    if (this->mControls[i]->GetType() != kControlTypeRadioButton || static_cast<UIRadioButton*>(this->mControls[i])->GetIsChecked())
-        return;
-    for (i--; i >= 0 && this->mControls[i] && this->mControls[i]->GetType() == kControlTypeRadioButton; i--)
-        if (static_cast<UIRadioButton*>(this->mControls[i])->GetIsChecked()) {
-            ioIndex = i;
-            break;
-        }
-    if (i != ioIndex)
-        for (i = ioIndex + 1; i < this->mControlCount && this->mControls[i] && this->mControls[i]->GetType() == kControlTypeRadioButton; i++)
-            if (static_cast<UIRadioButton*>(this->mControls[i])->GetIsChecked()) {
-                ioIndex = i;
-                break;
-            }
+    ee_ui_form_checked_radio_button(this, &ioIndex);
 }
 
 // FUNCTION: LLE 0x10071592
@@ -1446,78 +1483,14 @@ bool UIForm::SetTabStop(unsigned long inTabStop)
 // Moves the tab stop back to the previous shown, enabled, tabbable control, skipping radio-button runs, wrapping round
 void UIForm::ShiftTab()
 {
-    if (!this->mTabbingOn)
-        return;
-    unsigned long theTabStop = this->mTabStop;
-    long theIndex = theTabStop;
-    if (this->mControls[theIndex]->GetType() == kControlTypeRadioButton)
-        for (theIndex--; theIndex > 0 && this->mControls[theIndex] && this->mControls[theIndex]->GetType() == kControlTypeRadioButton; theIndex--)
-            ;
-    else
-        theIndex--;
-    while (true) {
-        if (theIndex < 0)
-            theIndex = this->mControlCount - 1;
-        if (theIndex == (long)theTabStop)
-            break;
-        UIControl* theControl = this->mControls[theIndex];
-        if (theControl != NULL) {
-            if (theControl->GetDisplayMode() == kDisplayModeShown && this->GetEntityGroupById(theControl->GetId())->GetIsEnabled()) {
-                this->CheckedRadioButton(theIndex);
-                if (theControl->GetTabable()) {
-                    this->SetTabStop(theIndex);
-                    break;
-                }
-            }
-            if (theControl->GetType() == kControlTypeRadioButton)
-                for (theIndex--; theIndex > 0 && this->mControls[theIndex] && this->mControls[theIndex]->GetType() == kControlTypeRadioButton;
-                     theIndex--)
-                    ;
-            else
-                theIndex--;
-        } else
-            theIndex--;
-    }
+    ee_ui_form_shift_tab(this, this->mTabbingOn, this->mTabStop);
 }
 
 // FUNCTION: LLE 0x1007395a
 // Moves the tab stop on to the next shown, enabled, tabbable control, skipping radio-button runs, wrapping round
 void UIForm::Tab()
 {
-    if (!this->mTabbingOn)
-        return;
-    long theTabStop = this->mTabStop;
-    long theIndex = theTabStop;
-    if (this->mControls[theIndex]->GetType() == kControlTypeRadioButton)
-        do
-            theIndex++;
-        while (theIndex < this->mControlCount && this->mControls[theIndex] && this->mControls[theIndex]->GetType() == kControlTypeRadioButton);
-    else
-        theIndex++;
-    while (true) {
-        if (theIndex == this->mControlCount)
-            theIndex = 0;
-        if (theIndex == theTabStop)
-            break;
-        UIControl* theControl = this->mControls[theIndex];
-        if (theControl == NULL)
-            theIndex++;
-        else {
-            if (theControl->GetDisplayMode() == kDisplayModeShown && this->GetEntityGroupById(theControl->GetId())->GetIsEnabled()) {
-                this->CheckedRadioButton(theIndex);
-                if (theControl->GetTabable()) {
-                    this->SetTabStop(theIndex);
-                    break;
-                }
-            }
-            if (theControl->GetType() == kControlTypeRadioButton)
-                do
-                    theIndex++;
-                while (theIndex < this->mControlCount && this->mControls[theIndex] && this->mControls[theIndex]->GetType() == kControlTypeRadioButton);
-            else
-                theIndex++;
-        }
-    }
+    ee_ui_form_tab(this, this->mTabbingOn, this->mTabStop);
 }
 
 // FUNCTION: LLE 0x10073a61
@@ -1702,22 +1675,14 @@ long UIForm::UpdateMouse()
 void UIForm::UpdateMouseLocation(const GE2DPoint& inLocation)
 {
     UIControl* theControl = NULL;
-    bool theFound = false;
     this->mMouseLocation = inLocation;
     if (this->mMouseCaptured && this->mMouseCaptured->GetRectangle().Contains(inLocation))
         theControl = this->mMouseCaptured;
     else {
-        for (long i = this->mControlGroupCount - 1; i >= 0 && !theFound; i--) {
-            UIEntityGroup* theGroup = this->mEntityGroups[i];
-            if (theGroup->GetIsEnabled())
-                for (unsigned long j = 0; j < theGroup->GetEntityCount() && !theFound; j++) {
-                    UIControl* theEntity = static_cast<UIControl*>(theGroup->GetEntity(j));
-                    if (theEntity->GetDisplayMode() != kDisplayModeHidden && theEntity->GetRectangle().Contains(inLocation)) {
-                        theControl = theEntity;
-                        theFound = true;
-                    }
-                }
-        }
+        long theGroup;
+        unsigned long theEntity;
+        if (ee_ui_form_hit(this, EeUiPoint{inLocation.GetX(), inLocation.GetY()}, &theGroup, &theEntity))
+            theControl = static_cast<UIControl*>(this->mEntityGroups[theGroup]->GetEntity(theEntity));
         if (this->mUseToolTips && this->GetHelpTextLabel() && this->mPopup == this->GetHelpTextLabel() &&
             this->GetHelpTextLabel()->GetRectangle().Contains(this->mMouseLocation)) {
             this->mHelpTextPoll->Stop();

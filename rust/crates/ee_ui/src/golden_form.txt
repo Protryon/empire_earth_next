@@ -1,0 +1,7749 @@
+form 0 count 7 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42800000 438c0000 43aa8000 41f00000
+control 1 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43220000 438c0000 439a8000 42f00000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43260000 00000000 42900000 42f00000
+control 3 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42a80000 42f00000 433f0000 42700000
+control 4 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 42d00000 43200000 43530000 42700000
+control 5 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42e20000 43700000 43938000 42b40000
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43190000 42a00000 43080000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 4
+radio 6 -> 6
+stop 2 tabbing 1
+tab
+  from 2
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 2
+  = 2
+tab
+  from 2
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+tab
+  from 2
+  to 4
+  = 4
+tab
+  from 4
+  to 6
+  = 6
+mouse 41800000 43030000
+  trigger 3f2 on 2
+  = 2
+mouse 43790000 42e40000
+  trigger 3f3 on 2
+  = -1
+mouse 43968000 41e80000
+  = -1
+mouse 42000000 42f40000
+  trigger 3f2 on 2
+  = 2
+mouse 438f8000 42c20000
+  trigger 3f3 on 2
+  trigger 3f2 on 5
+  = 5
+mouse 426a0000 42a80000
+  trigger 3f3 on 5
+  = -1
+capture 4
+mouse 43a48000 42080000
+  trigger 3f2 on 0
+  = 0
+mouse 439b4000 42fc0000
+  trigger 3f3 on 0
+  = -1
+mouse 42ee0000 42a60000
+  = -1
+mouse 430d0000 42980000
+  trigger 3f2 on 3
+  = 3
+form 1 count 11 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 431b0000 43700000 439f8000 42f00000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43080000 43200000 43480000 42f00000
+control 2 kind 6 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 431c0000 00000000 42300000 42f00000
+control 3 kind 6 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 431f0000 43200000 436e0000 42f00000
+control 4 kind 2 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 41a00000 438c0000 43ab8000 00000000
+control 5 kind 2 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42be0000 43700000 43840000 42700000
+control 6 null
+control 7 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 42c40000 43200000 436d0000 42700000
+control 8 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 43390000 43700000 43828000 43160000
+control 9 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ea0000 42200000 42aa0000 42b40000
+control 10 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43070000 42200000 429e0000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+radio 10 -> 10
+stop 9 tabbing 1
+tab
+  from 9
+  to 10
+  = 10
+shift-tab
+  from 10
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+set-stop 5
+  from 1
+  to 1
+  = 0 1
+mouse 439a0000 43160000
+  trigger 3f2 on 0
+  = 0
+mouse 43290000 42f40000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 423e0000 42c80000
+  trigger 3f3 on 1
+  trigger 3f2 on 9
+  = 9
+mouse 42b20000 00000000
+  trigger 3f3 on 9
+  = -1
+mouse 439d4000 3f800000
+  trigger 3f2 on 4
+  = 4
+mouse 42240000 43040000
+  trigger 3f3 on 4
+  trigger 3f2 on 10
+  = 10
+capture 8
+mouse 435d0000 42be0000
+  trigger 3f3 on 10
+  trigger 3f2 on 7
+  = 7
+mouse 432b0000 428a0000
+  = 7
+mouse 437d0000 431f0000
+  trigger 3f3 on 7
+  trigger 3f2 on 8
+  = 8
+mouse 42c60000 40c00000
+  trigger 3f3 on 8
+  = -1
+form 2 count 11 groups 3 1 0 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 421c0000 42200000 42800000 00000000
+control 1 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 42860000 43700000 438f8000 41f00000
+control 2 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42b40000 42200000 42800000 42700000
+control 3 null
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432d0000 43200000 434b0000 43160000
+control 5 kind 2 tab 1 mode 1 checked 0 group 2 shown-enabled 0 rect 429e0000 438c0000 43a60000 42700000
+control 6 kind 6 tab 1 mode 1 checked 0 group 2 shown-enabled 0 rect 42d80000 43200000 435e0000 42700000
+control 7 kind 6 tab 0 mode 1 checked 0 group 1 shown-enabled 0 rect 42fe0000 42a00000 43120000 42b40000
+control 8 kind 2 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 43470000 43200000 43660000 43160000
+control 9 kind 6 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 41b00000 00000000 41e80000 00000000
+control 10 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ca0000 42a00000 42c80000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+radio 10 -> 10
+stop 5 tabbing 1
+shift-tab
+  from 5
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 4
+  = 4
+tab
+  from 4
+  to 10
+  = 10
+tab
+  from 10
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 10
+  = 10
+mouse 425c0000 42980000
+  trigger 3f2 on 2
+  = 2
+mouse 43120000 42b40000
+  trigger 3f3 on 2
+  = -1
+mouse 43210000 43330000
+  = -1
+mouse 42e20000 42fe0000
+  = -1
+mouse 438b0000 42480000
+  = -1
+mouse 433f0000 43180000
+  trigger 3f2 on 4
+  = 4
+capture 7
+mouse 43420000 42d60000
+  trigger 3f3 on 4
+  = -1
+mouse 438f4000 42920000
+  = -1
+mouse 437b0000 42580000
+  = -1
+mouse 42180000 41500000
+  = -1
+form 3 count 10 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42980000 438c0000 43a50000 42700000
+control 1 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 41400000 43480000 43820000 00000000
+control 2 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43290000 00000000 428e0000 42f00000
+control 3 kind 2 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 43100000 43200000 434c0000 42f00000
+control 4 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 433e0000 43480000 437f0000 43160000
+control 5 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 429c0000 42f00000 43380000 42700000
+control 6 kind 2 tab 0 mode 1 checked 0 group 1 shown-enabled 1 rect 421c0000 43480000 438b0000 00000000
+control 7 kind 2 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 41c80000 43200000 43670000 00000000
+control 8 null
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d20000 42200000 42e80000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 9 -> 9
+stop 9 tabbing 1
+tab
+  from 9
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 5
+  = 5
+tab
+  from 5
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 5
+  = 5
+tab
+  from 5
+  to 9
+  = 9
+mouse 43790000 43370000
+  trigger 3f2 on 4
+  = 4
+mouse 42e20000 42cc0000
+  trigger 3f3 on 4
+  trigger 3f2 on 9
+  = 9
+mouse 41580000 40000000
+  trigger 3f3 on 9
+  = -1
+mouse 43070000 42960000
+  trigger 3f2 on 5
+  = 5
+mouse 43600000 41100000
+  trigger 3f3 on 5
+  trigger 3f2 on 1
+  = 1
+mouse 43a10000 42d20000
+  trigger 3f3 on 1
+  = -1
+capture 4
+mouse 43760000 43360000
+  trigger 3f2 on 4
+  = 4
+mouse 4399c000 42580000
+  trigger 3f3 on 4
+  = -1
+mouse 43a58000 42840000
+  = -1
+mouse 43290000 42780000
+  trigger 3f2 on 5
+  = 5
+form 4 count 4 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43280000 43480000 43710000 42f00000
+control 1 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42b60000 438c0000 43a78000 42700000
+control 2 null
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430b0000 00000000 42400000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 3 -> 3
+stop 0 tabbing 1
+shift-tab
+  from 0
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 1
+  = 1
+mouse 43968000 42a20000
+  trigger 3f2 on 1
+  = 1
+mouse 43470000 431b0000
+  trigger 3f3 on 1
+  = -1
+mouse 434f0000 43130000
+  trigger 3f2 on 0
+  = 0
+mouse 439c0000 426c0000
+  trigger 3f3 on 0
+  = -1
+mouse 43878000 42180000
+  = -1
+mouse 438a0000 42a00000
+  = -1
+capture -1
+mouse 42300000 42f60000
+  trigger 3f2 on 3
+  = 3
+mouse 43580000 432d0000
+  trigger 3f3 on 3
+  = -1
+mouse 42cd0000 42aa0000
+  = -1
+mouse 435a0000 42f00000
+  trigger 3f2 on 0
+  = 0
+form 5 count 5 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43190000 42200000 42a80000 42f00000
+control 1 kind 6 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 432a0000 438c0000 43b30000 43160000
+control 2 kind 2 tab 0 mode 1 checked 0 group 1 shown-enabled 1 rect 42280000 43480000 43680000 41f00000
+control 3 kind 6 tab 0 mode 0 checked 0 group 1 shown-enabled 0 rect 430e0000 42f00000 43120000 42f00000
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 428e0000 42200000 428a0000 41f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+stop 1 tabbing 0
+tab
+  = 1
+tab
+  = 1
+tab
+  = 1
+shift-tab
+  = 1
+shift-tab
+  = 1
+shift-tab
+  = 1
+tab
+  = 1
+shift-tab
+  = 1
+set-stop 1
+  from 1
+  to 1
+  = 1 1
+mouse 438d8000 432b0000
+  = -1
+mouse 42300000 42680000
+  trigger 3f2 on 4
+  = 4
+mouse 437e8000 42ce0000
+  trigger 3f3 on 4
+  = -1
+mouse 42340000 43150000
+  trigger 3f2 on 0
+  = 0
+mouse 43600000 42d60000
+  trigger 3f3 on 0
+  = -1
+mouse 43350000 42580000
+  = -1
+capture 4
+mouse 42c80000 42d20000
+  = -1
+mouse 435d0000 420c0000
+  trigger 3f2 on 2
+  = 2
+mouse 4382c000 41b80000
+  trigger 3f3 on 2
+  = -1
+mouse 430f0000 43080000
+  = -1
+form 6 count 7 groups 3 1 0 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43280000 42f00000 43320000 42f00000
+control 1 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42fe0000 42a00000 42d20000 42b40000
+control 2 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 42da0000 42a00000 43170000 42b40000
+control 3 kind 6 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 43270000 43700000 439d8000 43160000
+control 4 kind 3 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 42ca0000 42a00000 42fc0000 42b40000
+control 5 null
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 431b0000 43480000 43750000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 6 -> 6
+stop 3 tabbing 1
+tab
+  from 3
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 6
+  = 6
+tab
+  from 6
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 6
+  = 6
+set-stop 4
+  from 6
+  to 4
+  = 1 6
+mouse 42ba0000 42b60000
+  trigger 3f2 on 4
+  = 4
+mouse 42c20000 42ba0000
+  = 4
+mouse 42d40000 42f40000
+  trigger 3f3 on 4
+  = -1
+mouse 42ac0000 42b20000
+  = -1
+mouse 432d8000 bf800000
+  = -1
+mouse 43048000 42780000
+  = -1
+capture -1
+mouse 42ec0000 42580000
+  = -1
+mouse 42d80000 42d00000
+  = -1
+mouse 42d20000 42dc0000
+  trigger 3f2 on 1
+  = 1
+mouse 42ae0000 42b80000
+  trigger 3f3 on 1
+  trigger 3f2 on 4
+  = 4
+form 7 count 5 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ba0000 42200000 42ec0000 42700000
+control 1 kind 2 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 42cc0000 43700000 43908000 42700000
+control 2 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43240000 43700000 43910000 42f00000
+control 3 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 42dc0000 42a00000 42f00000 42b40000
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43100000 438c0000 43a18000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+stop 3 tabbing 1
+tab
+  from 3
+  to 4
+  = 4
+tab
+  from 4
+  to 0
+  = 0
+tab
+  from 0
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 4
+  = 4
+tab
+  from 4
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 0
+  = 0
+mouse 43908000 42f00000
+  trigger 3f2 on 4
+  = 4
+mouse 43408000 43650000
+  trigger 3f3 on 4
+  = -1
+mouse c0200000 42c80000
+  = -1
+mouse 429a0000 42ac0000
+  trigger 3f2 on 0
+  = 0
+mouse 42840000 42080000
+  trigger 3f3 on 0
+  = -1
+mouse 42480000 42ac0000
+  trigger 3f2 on 0
+  = 0
+capture 0
+mouse 437e0000 42f60000
+  trigger 3f3 on 0
+  = -1
+mouse 43828000 42b80000
+  = -1
+mouse 43890000 42b40000
+  = -1
+mouse 42120000 42d60000
+  = -1
+form 8 count 10 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41a80000 00000000 42860000 00000000
+control 1 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43060000 43700000 438a0000 42b40000
+control 2 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 433e0000 438c0000 43aa8000 43160000
+control 3 null
+control 4 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 431b0000 42a00000 43000000 42f00000
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43090000 42a00000 430d0000 42f00000
+control 6 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ac0000 43700000 43900000 42700000
+control 7 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42d60000 42200000 42c40000 42700000
+control 8 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43250000 43200000 43460000 43160000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432e0000 43700000 43928000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+stop 4 tabbing 1
+tab
+  from 4
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 1
+  = 1
+tab
+  from 1
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 5
+  = 5
+tab
+  from 5
+  to 6
+  = 6
+mouse 42a60000 43090000
+  trigger 3f2 on 5
+  = 5
+mouse 42ec0000 43080000
+  = 5
+mouse 43810000 42f80000
+  trigger 3f3 on 5
+  trigger 3f2 on 1
+  = 1
+mouse 43810000 43200000
+  trigger 3f3 on 1
+  trigger 3f2 on 9
+  = 9
+mouse 43968000 43150000
+  trigger 3f3 on 9
+  = -1
+mouse 43a28000 432f0000
+  trigger 3f2 on 2
+  = 2
+capture 5
+mouse 43150000 43130000
+  trigger 3f3 on 2
+  = -1
+mouse 43560000 42100000
+  = -1
+mouse 43830000 43410000
+  = -1
+mouse 42300000 41a00000
+  trigger 3f2 on 0
+  = 0
+form 9 count 12 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 421c0000 438c0000 439f0000 00000000
+control 1 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 42600000 43480000 43640000 41f00000
+control 2 kind 3 tab 1 mode 0 checked 0 group 2 shown-enabled 0 rect 43300000 42f00000 43120000 43160000
+control 3 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 431b0000 00000000 42680000 42f00000
+control 4 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42920000 42200000 42b20000 41f00000
+control 5 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 429c0000 43200000 434e0000 41f00000
+control 6 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 43020000 42f00000 43110000 42b40000
+control 7 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 429e0000 438c0000 43a30000 42700000
+control 8 null
+control 9 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 432d0000 42f00000 43320000 43160000
+control 10 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42fc0000 00000000 42800000 42b40000
+control 11 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43450000 42200000 42d40000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 6
+radio 9 -> 9
+radio 10 -> 10
+radio 11 -> 11
+stop 3 tabbing 1
+tab
+  from 3
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 11
+  = 11
+tab
+  from 11
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 11
+  = 11
+tab
+  from 11
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+set-stop 0
+  from 1
+  to 0
+  = 1 1
+mouse 43070000 43250000
+  trigger 3f2 on 9
+  = 9
+mouse 432d0000 42240000
+  trigger 3f3 on 9
+  = -1
+mouse 43630000 42040000
+  trigger 3f2 on 1
+  = 1
+mouse 42640000 430f0000
+  trigger 3f3 on 1
+  = -1
+mouse 42400000 42180000
+  trigger 3f2 on 4
+  = 4
+mouse 42640000 42e60000
+  trigger 3f3 on 4
+  trigger 3f2 on 10
+  = 10
+capture -1
+mouse 427c0000 43250000
+  trigger 3f3 on 10
+  trigger 3f2 on 11
+  = 11
+mouse 43120000 43230000
+  trigger 3f3 on 11
+  trigger 3f2 on 9
+  = 9
+mouse 42ba0000 42b60000
+  trigger 3f3 on 9
+  = -1
+mouse 438c8000 41300000
+  trigger 3f2 on 0
+  = 0
+form 10 count 8 groups 3 1 0 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42f40000 43200000 43430000 42b40000
+control 1 kind 2 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 432b0000 00000000 41c80000 43160000
+control 2 kind 3 tab 0 mode 1 checked 0 group 1 shown-enabled 0 rect 423c0000 43700000 439e8000 41f00000
+control 3 kind 2 tab 0 mode 1 checked 0 group 2 shown-enabled 1 rect 428e0000 43700000 43958000 41f00000
+control 4 kind 2 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 43040000 43700000 43930000 42b40000
+control 5 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 43230000 438c0000 43a78000 43160000
+control 6 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42d60000 42f00000 43370000 42b40000
+control 7 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433e0000 43200000 435f0000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+stop 0 tabbing 1
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 4
+  = 4
+tab
+  from 4
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 4
+  = 4
+tab
+  from 4
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 4
+  = 4
+mouse 43218000 435a0000
+  = -1
+mouse 432f0000 42d40000
+  trigger 3f2 on 0
+  = 0
+mouse 43170000 431e0000
+  trigger 3f3 on 0
+  = -1
+mouse 43a00000 43210000
+  = -1
+mouse 421a0000 42040000
+  = -1
+mouse 42220000 42d80000
+  = -1
+capture 6
+mouse 433d0000 42e60000
+  trigger 3f2 on 0
+  = 0
+mouse 43900000 41e80000
+  trigger 3f3 on 0
+  = -1
+mouse 43858000 42640000
+  trigger 3f2 on 3
+  = 3
+mouse 439e8000 423c0000
+  trigger 3f3 on 3
+  = -1
+form 11 count 7 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43310000 42200000 42d80000 43160000
+control 1 null
+control 2 kind 2 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 41e80000 00000000 426c0000 00000000
+control 3 kind 6 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 43410000 43480000 43640000 43160000
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43000000 43200000 433b0000 42b40000
+control 5 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42880000 42200000 42920000 41f00000
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43440000 42f00000 43180000 43160000
+radio 0 -> 0
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+stop 2 tabbing 1
+shift-tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 4
+  = 4
+tab
+  from 4
+  to 5
+  = 5
+tab
+  from 5
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 5
+  = 5
+tab
+  from 5
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 4
+  = 4
+mouse 43530000 430d0000
+  = -1
+mouse 438c4000 43250000
+  = -1
+mouse 41200000 40800000
+  = -1
+mouse 40f00000 42c40000
+  = -1
+mouse 43780000 433c0000
+  = -1
+mouse 43918000 42740000
+  = -1
+capture 2
+mouse 43550000 43200000
+  = -1
+mouse 43588000 42c00000
+  = -1
+mouse 43888000 43590000
+  = -1
+mouse 42940000 43250000
+  trigger 3f2 on 0
+  = 0
+form 12 count 2 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42140000 00000000 42240000 00000000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d00000 42f00000 431c0000 42700000
+radio 0 -> 0
+radio 1 -> 1
+stop 0 tabbing 1
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+mouse 4386c000 43360000
+  = -1
+mouse 43ad8000 430c0000
+  = -1
+mouse 430b0000 42ca0000
+  trigger 3f2 on 1
+  = 1
+mouse 42fb0000 41d00000
+  trigger 3f3 on 1
+  = -1
+mouse 41980000 41d80000
+  trigger 3f2 on 0
+  = 0
+mouse 42040000 41100000
+  = 0
+capture 0
+mouse 436c0000 42240000
+  trigger 3f3 on 0
+  = -1
+mouse 41b00000 41b80000
+  trigger 3f2 on 0
+  = 0
+mouse 41300000 42080000
+  = 0
+mouse 42ee0000 42740000
+  trigger 3f3 on 0
+  = -1
+form 13 count 10 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433b0000 438c0000 439a8000 43160000
+control 1 null
+control 2 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 43000000 438c0000 43a98000 42b40000
+control 3 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42cc0000 438c0000 43970000 42700000
+control 4 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43030000 438c0000 439b8000 42b40000
+control 5 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43080000 43200000 435b0000 42f00000
+control 6 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42820000 438c0000 43a80000 41f00000
+control 7 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43260000 00000000 424c0000 42f00000
+control 8 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 43040000 43200000 433d0000 42b40000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43090000 42a00000 431a0000 42f00000
+radio 0 -> 0
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+stop 0 tabbing 1
+shift-tab
+  from 0
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 6
+  = 6
+tab
+  from 6
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 4
+  = 4
+tab
+  from 4
+  to 6
+  = 6
+tab
+  from 6
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 6
+  = 6
+mouse 427e0000 434a0000
+  = -1
+mouse 42240000 42f80000
+  = -1
+mouse 4380c000 43010000
+  = -1
+mouse 43910000 42800000
+  trigger 3f2 on 3
+  = 3
+mouse 43918000 428c0000
+  = 3
+mouse 433a0000 42ee0000
+  trigger 3f3 on 3
+  trigger 3f2 on 8
+  = 8
+capture 6
+mouse 439b0000 43200000
+  trigger 3f3 on 8
+  = -1
+mouse 438e8000 42180000
+  trigger 3f2 on 6
+  = 6
+mouse 422c0000 431c0000
+  trigger 3f3 on 6
+  = -1
+mouse 43148000 42b40000
+  = -1
+form 14 count 12 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42300000 42a00000 42dc0000 41f00000
+control 1 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41200000 43700000 438f8000 00000000
+control 2 kind 6 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42a80000 43480000 43830000 42700000
+control 3 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ba0000 438c0000 43aa8000 42700000
+control 4 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43350000 43200000 434d0000 43160000
+control 5 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43060000 43480000 436a0000 42f00000
+control 6 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42e60000 42200000 42860000 42b40000
+control 7 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433d0000 42200000 42820000 43160000
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42e40000 43480000 43680000 42b40000
+control 9 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43280000 43200000 436e0000 43160000
+control 10 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 43120000 42200000 42900000 42f00000
+control 11 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42de0000 438c0000 43998000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+radio 10 -> 10
+radio 11 -> 11
+stop 8 tabbing 1
+tab
+  from 8
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 7
+  = 7
+tab
+  from 7
+  to 8
+  = 8
+tab
+  from 8
+  to 9
+  = 9
+tab
+  from 9
+  to 11
+  = 11
+shift-tab
+  from 11
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 7
+  = 7
+mouse 42cc0000 42300000
+  trigger 3f2 on 0
+  = 0
+mouse 423c0000 43110000
+  trigger 3f3 on 0
+  trigger 3f2 on 10
+  = 10
+mouse 425c0000 42b20000
+  trigger 3f3 on 10
+  = -1
+mouse 42680000 42ca0000
+  = -1
+mouse 433f0000 431f0000
+  trigger 3f2 on 4
+  = 4
+mouse 43970000 42aa0000
+  trigger 3f3 on 4
+  trigger 3f2 on 3
+  = 3
+capture 4
+mouse 41dc0000 3f800000
+  trigger 3f3 on 3
+  = -1
+mouse 42840000 43160000
+  = -1
+mouse 43850000 41100000
+  trigger 3f2 on 1
+  = 1
+mouse 43510000 42c60000
+  trigger 3f3 on 1
+  trigger 3f2 on 8
+  = 8
+form 15 count 9 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41b00000 438c0000 43998000 00000000
+control 1 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 43260000 43480000 43848000 43160000
+control 2 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 43340000 42a00000 43160000 43160000
+control 3 null
+control 4 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 428c0000 43480000 43870000 42700000
+control 5 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42fc0000 42f00000 43190000 42b40000
+control 6 kind 6 tab 0 mode 0 checked 1 group 0 shown-enabled 0 rect 43010000 43700000 43940000 42b40000
+control 7 kind 2 tab 0 mode 0 checked 0 group 0 shown-enabled 0 rect 43470000 00000000 42100000 43160000
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42da0000 42200000 42bc0000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+stop 7 tabbing 1
+shift-tab
+  from 7
+  to 0
+  = 0
+tab
+  from 0
+  to 8
+  = 8
+tab
+  from 8
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 0
+  = 0
+tab
+  from 0
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 0
+  = 0
+tab
+  from 0
+  to 8
+  = 8
+mouse 433a8000 42fe0000
+  = -1
+mouse 42480000 42da0000
+  trigger 3f2 on 8
+  = 8
+mouse 43820000 42d00000
+  trigger 3f3 on 8
+  = -1
+mouse 41e80000 432d0000
+  = -1
+mouse 438e0000 41b80000
+  = -1
+mouse 431d8000 42aa0000
+  = -1
+capture 6
+mouse 43400000 434a0000
+  = -1
+mouse 430e0000 42d00000
+  trigger 3f2 on 5
+  = 5
+mouse 43070000 41600000
+  trigger 3f3 on 5
+  = -1
+mouse 435b0000 42820000
+  = -1
+form 16 count 8 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c80000 42200000 42ea0000 42b40000
+control 1 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42800000 43700000 439f8000 41f00000
+control 2 kind 2 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 43050000 43480000 43730000 42b40000
+control 3 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42900000 42a00000 43120000 42700000
+control 4 null
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43270000 43480000 436a0000 43160000
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43310000 42200000 42960000 43160000
+control 7 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 420c0000 42f00000 431e0000 00000000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+stop 7 tabbing 1
+tab
+  from 7
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 6
+  = 6
+tab
+  from 6
+  to 7
+  = 7
+tab
+  from 7
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+mouse 43540000 43010000
+  trigger 3f2 on 2
+  = 2
+mouse 43520000 43200000
+  trigger 3f3 on 2
+  trigger 3f2 on 5
+  = 5
+mouse 431d0000 41a00000
+  trigger 3f3 on 5
+  trigger 3f2 on 7
+  = 7
+mouse 42e80000 42d60000
+  trigger 3f3 on 7
+  = -1
+mouse 425c0000 42c40000
+  trigger 3f2 on 0
+  = 0
+mouse 430b0000 41000000
+  trigger 3f3 on 0
+  trigger 3f2 on 7
+  = 7
+capture 3
+mouse 43980000 422c0000
+  trigger 3f3 on 7
+  trigger 3f2 on 1
+  = 1
+mouse 43860000 423c0000
+  = 1
+mouse 434c0000 430e0000
+  trigger 3f3 on 1
+  = -1
+mouse 421c0000 43300000
+  = -1
+form 17 count 9 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430b0000 00000000 429a0000 42f00000
+control 1 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43240000 438c0000 439a8000 43160000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43270000 42200000 42ae0000 43160000
+control 3 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 430f0000 43480000 43878000 42f00000
+control 4 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42440000 438c0000 439e0000 41f00000
+control 5 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42a60000 43700000 43828000 42700000
+control 6 null
+control 7 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42240000 42f00000 43470000 41f00000
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ea0000 42f00000 430f0000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 7 -> 7
+radio 8 -> 8
+stop 2 tabbing 1
+shift-tab
+  from 2
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+tab
+  from 2
+  to 4
+  = 4
+tab
+  from 4
+  to 7
+  = 7
+mouse 439d0000 421c0000
+  trigger 3f2 on 4
+  = 4
+mouse 41a00000 430c0000
+  trigger 3f3 on 4
+  = -1
+mouse 42780000 43210000
+  trigger 3f2 on 2
+  = 2
+mouse 43520000 42f40000
+  trigger 3f3 on 2
+  trigger 3f2 on 3
+  = 3
+mouse 43310000 41f00000
+  trigger 3f3 on 3
+  trigger 3f2 on 7
+  = 7
+mouse 42b20000 435a0000
+  trigger 3f3 on 7
+  = -1
+capture 4
+mouse 43368000 43380000
+  = -1
+mouse 43090000 42d20000
+  trigger 3f2 on 8
+  = 8
+mouse 429a0000 431a0000
+  trigger 3f3 on 8
+  trigger 3f2 on 2
+  = 2
+mouse 42a00000 43280000
+  trigger 3f3 on 2
+  = -1
+form 18 count 5 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43440000 42a00000 430c0000 43160000
+control 1 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42f40000 438c0000 439e0000 42b40000
+control 2 null
+control 3 kind 6 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 430a0000 43200000 43620000 42f00000
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43080000 43480000 437f0000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 3 -> 3
+radio 4 -> 4
+stop 3 tabbing 1
+tab
+  from 3
+  to 4
+  = 4
+tab
+  from 4
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 1
+  = 1
+tab
+  from 1
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+mouse 42de0000 43160000
+  trigger 3f2 on 0
+  = 0
+mouse 42a50000 41900000
+  trigger 3f3 on 0
+  = -1
+mouse 42cc0000 433b0000
+  trigger 3f2 on 0
+  = 0
+mouse 43a78000 423c0000
+  trigger 3f3 on 0
+  = -1
+mouse 42b70000 42ea0000
+  = -1
+mouse 42060000 43510000
+  = -1
+capture 0
+mouse 43968000 43240000
+  = -1
+mouse 43580000 42f60000
+  trigger 3f2 on 3
+  = 3
+mouse 43948000 42e80000
+  trigger 3f3 on 3
+  trigger 3f2 on 1
+  = 1
+mouse 435d0000 43060000
+  trigger 3f3 on 1
+  trigger 3f2 on 3
+  = 3
+form 19 count 8 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c40000 42200000 42a60000 42700000
+control 1 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42880000 43700000 439f8000 41f00000
+control 2 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 433b0000 42200000 42b20000 43160000
+control 3 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43080000 42200000 42c20000 42f00000
+control 4 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432d0000 00000000 42580000 43160000
+control 5 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 43110000 43480000 438b8000 42f00000
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d60000 438c0000 43a50000 42700000
+control 7 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c20000 43700000 43928000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+stop 6 tabbing 1
+shift-tab
+  from 6
+  to 3
+  = 3
+tab
+  from 3
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 7
+  = 7
+tab
+  from 7
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+mouse bf800000 431d0000
+  = -1
+mouse 43838000 43000000
+  = -1
+mouse 42c30000 42580000
+  = -1
+mouse 439d0000 42740000
+  trigger 3f2 on 1
+  = 1
+mouse 42240000 43330000
+  trigger 3f3 on 1
+  trigger 3f2 on 2
+  = 2
+mouse 436f0000 42900000
+  trigger 3f3 on 2
+  = -1
+capture 7
+mouse 432c0000 424c0000
+  = -1
+mouse 43a18000 42800000
+  trigger 3f2 on 6
+  = 6
+mouse 438f0000 42940000
+  trigger 3f3 on 6
+  trigger 3f2 on 7
+  = 7
+mouse 439d0000 42440000
+  trigger 3f3 on 7
+  trigger 3f2 on 1
+  = 1
+form 20 count 2 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43220000 438c0000 43990000 42f00000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42fe0000 00000000 41e00000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+stop 1 tabbing 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+mouse 41880000 42f00000
+  trigger 3f2 on 1
+  = 1
+mouse 438e0000 430f0000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 41e00000 42dc0000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 40800000 42dc0000
+  = 1
+mouse 438b8000 41980000
+  trigger 3f3 on 1
+  = -1
+mouse 41d40000 42fc0000
+  trigger 3f2 on 1
+  = 1
+capture 1
+mouse 43978000 431e0000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 42140000 41600000
+  trigger 3f3 on 0
+  = -1
+mouse 41e80000 42de0000
+  = -1
+mouse 41b00000 42c00000
+  trigger 3f2 on 1
+  = 1
+form 21 count 3 groups 3 1 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42da0000 00000000 42900000 42b40000
+control 1 kind 6 tab 1 mode 1 checked 0 group 2 shown-enabled 0 rect 43210000 42a00000 42ec0000 42f00000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43070000 438c0000 439d8000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+stop 2 tabbing 1
+shift-tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 2
+  = 2
+mouse 43958000 43070000
+  trigger 3f2 on 2
+  = 2
+mouse 41600000 42c80000
+  trigger 3f3 on 2
+  trigger 3f2 on 0
+  = 0
+mouse 42b70000 41f00000
+  trigger 3f3 on 0
+  = -1
+mouse 42d20000 430d0000
+  = -1
+mouse 43978000 43020000
+  trigger 3f2 on 2
+  = 2
+mouse bf800000 429a0000
+  trigger 3f3 on 2
+  = -1
+capture 1
+mouse 42d40000 43160000
+  trigger 3f2 on 1
+  = 1
+mouse 40800000 42d60000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 41c80000 42b20000
+  trigger 3f3 on 0
+  = -1
+mouse 42e20000 42f40000
+  trigger 3f2 on 1
+  = 1
+form 22 count 9 groups 3 1 0 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43030000 438c0000 43998000 42f00000
+control 1 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 428c0000 438c0000 43998000 42700000
+control 2 null
+control 3 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43290000 43200000 43530000 43160000
+control 4 kind 2 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 43010000 00000000 41d00000 42b40000
+control 5 kind 6 tab 0 mode 1 checked 0 group 1 shown-enabled 0 rect 43020000 43480000 43640000 42b40000
+control 6 kind 3 tab 1 mode 0 checked 0 group 2 shown-enabled 0 rect 429e0000 43700000 438e0000 41f00000
+control 7 kind 3 tab 0 mode 1 checked 0 group 1 shown-enabled 0 rect 423c0000 43700000 43868000 00000000
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42200000 00000000 42200000 00000000
+radio 0 -> 0
+radio 1 -> 1
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+stop 8 tabbing 0
+tab
+  = 8
+tab
+  = 8
+tab
+  = 8
+shift-tab
+  = 8
+tab
+  = 8
+shift-tab
+  = 8
+shift-tab
+  = 8
+tab
+  = 8
+mouse 43650000 42d40000
+  = -1
+mouse 43a10000 40c00000
+  = -1
+mouse 43540000 42d60000
+  = -1
+mouse 438d0000 428c0000
+  = -1
+mouse 43978000 427c0000
+  = -1
+mouse 43120000 434a0000
+  = -1
+capture 1
+mouse 40800000 42f20000
+  = -1
+mouse 40c00000 41800000
+  trigger 3f2 on 8
+  = 8
+mouse 43928000 42800000
+  trigger 3f3 on 8
+  trigger 3f2 on 1
+  = 1
+mouse bf800000 42080000
+  trigger 3f3 on 1
+  = -1
+form 23 count 4 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42400000 43700000 43918000 00000000
+control 1 null
+control 2 null
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43360000 42f00000 43270000 43160000
+radio 0 -> 0
+radio 3 -> 3
+stop 3 tabbing 1
+shift-tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+tab
+  from 0
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+mouse 433d8000 43270000
+  = -1
+mouse 43818000 41f00000
+  trigger 3f2 on 0
+  = 0
+mouse 434d0000 42be0000
+  trigger 3f3 on 0
+  = -1
+mouse 43500000 428e0000
+  = -1
+mouse 43770000 42300000
+  trigger 3f2 on 0
+  = 0
+mouse 41ac0000 42440000
+  trigger 3f3 on 0
+  = -1
+capture -1
+mouse 41e00000 42d40000
+  = -1
+mouse 438b8000 421c0000
+  trigger 3f2 on 0
+  = 0
+mouse 42840000 c0a00000
+  trigger 3f3 on 0
+  = -1
+mouse 43730000 41c00000
+  trigger 3f2 on 0
+  = 0
+form 24 count 6 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42e20000 43480000 43890000 42b40000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43460000 43700000 43888000 43160000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43350000 00000000 42140000 43160000
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41880000 42200000 42cc0000 00000000
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41e00000 42200000 42d20000 00000000
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 424c0000 43700000 43950000 41f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+stop 5 tabbing 1
+tab
+  from 5
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 5
+  = 5
+tab
+  from 5
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+mouse 40a00000 431d0000
+  trigger 3f2 on 2
+  = 2
+mouse 42970000 c1200000
+  trigger 3f3 on 2
+  = -1
+mouse 43690000 42b60000
+  trigger 3f2 on 0
+  = 0
+mouse 42400000 41800000
+  trigger 3f3 on 0
+  trigger 3f2 on 3
+  = 3
+mouse 42040000 43260000
+  trigger 3f3 on 3
+  trigger 3f2 on 2
+  = 2
+mouse 438c0000 42480000
+  trigger 3f3 on 2
+  trigger 3f2 on 5
+  = 5
+capture 4
+mouse 43888000 43380000
+  trigger 3f3 on 5
+  trigger 3f2 on 1
+  = 1
+mouse 40f00000 43630000
+  trigger 3f3 on 1
+  = -1
+mouse 42a00000 41a00000
+  trigger 3f2 on 4
+  = 4
+mouse 42a20000 41600000
+  = 4
+form 25 count 6 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42f60000 42f00000 43350000 42b40000
+control 1 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42940000 43480000 43660000 42700000
+control 2 null
+control 3 kind 6 tab 1 mode 0 checked 1 group 1 shown-enabled 0 rect 430d0000 438c0000 439e0000 42f00000
+control 4 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43290000 438c0000 43b38000 42f00000
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43040000 43700000 43838000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+stop 4 tabbing 1
+shift-tab
+  from 4
+  to 1
+  = 1
+tab
+  from 1
+  to 4
+  = 4
+tab
+  from 4
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 4
+  = 4
+tab
+  from 4
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 1
+  = 1
+tab
+  from 1
+  to 4
+  = 4
+mouse 42d40000 435e0000
+  = -1
+mouse 42c00000 41d80000
+  = -1
+mouse 43af0000 430a0000
+  trigger 3f2 on 4
+  = 4
+mouse 437a0000 42d40000
+  trigger 3f3 on 4
+  trigger 3f2 on 5
+  = 5
+mouse 434d0000 42920000
+  trigger 3f3 on 5
+  trigger 3f2 on 1
+  = 1
+mouse 43980000 432a0000
+  trigger 3f3 on 1
+  = -1
+capture 1
+mouse 43498000 43300000
+  = -1
+mouse 43078000 42820000
+  = -1
+mouse 438f8000 43080000
+  trigger 3f2 on 4
+  = 4
+mouse 43870000 42600000
+  trigger 3f3 on 4
+  = -1
+form 26 count 4 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430a0000 438c0000 43a18000 42b40000
+control 1 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43410000 43700000 438e0000 43160000
+control 2 kind 6 tab 1 mode 1 checked 1 group 2 shown-enabled 1 rect 42960000 00000000 429c0000 41f00000
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43440000 43700000 43940000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+stop 1 tabbing 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+mouse 43858000 433c0000
+  trigger 3f2 on 1
+  = 1
+mouse 438d0000 432e0000
+  = 1
+mouse 43988000 42ea0000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 43818000 433e0000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 438a0000 43400000
+  = 1
+mouse 43830000 433a0000
+  = 1
+capture 3
+mouse 43a00000 42d40000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 43800000 43330000
+  trigger 3f3 on 0
+  trigger 3f2 on 3
+  = 3
+mouse 43720000 433a0000
+  = 3
+mouse 439a8000 42d20000
+  trigger 3f3 on 3
+  trigger 3f2 on 0
+  = 0
+form 27 count 8 groups 3 1 0 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42080000 43200000 436c0000 00000000
+control 1 kind 6 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 41e00000 42f00000 43320000 00000000
+control 2 kind 3 tab 0 mode 0 checked 0 group 1 shown-enabled 0 rect 43360000 438c0000 43a48000 43160000
+control 3 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 43100000 00000000 41a80000 42f00000
+control 4 null
+control 5 null
+control 6 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42960000 43200000 43450000 42700000
+control 7 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43050000 42f00000 43320000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 6 -> 6
+radio 7 -> 7
+stop 7 tabbing 1
+shift-tab
+  from 7
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 7
+  = 7
+tab
+  from 7
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 7
+  = 7
+mouse 43260000 41d80000
+  trigger 3f2 on 0
+  = 0
+mouse 43420000 42880000
+  trigger 3f3 on 0
+  trigger 3f2 on 6
+  = 6
+mouse 43aa0000 422c0000
+  trigger 3f3 on 6
+  = -1
+mouse 432c0000 41400000
+  trigger 3f2 on 0
+  = 0
+mouse 43268000 42ae0000
+  trigger 3f3 on 0
+  = -1
+mouse 439d8000 43290000
+  = -1
+capture 6
+mouse 435f8000 41700000
+  trigger 3f2 on 0
+  = 0
+mouse 43030000 42ee0000
+  trigger 3f3 on 0
+  = -1
+mouse 43990000 435e0000
+  = -1
+mouse 437d8000 42f40000
+  = -1
+form 28 count 3 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ac0000 43480000 43730000 42700000
+control 1 null
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d80000 42a00000 43170000 42b40000
+radio 0 -> 0
+radio 2 -> 2
+stop 2 tabbing 1
+shift-tab
+  from 2
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+mouse 40000000 43520000
+  = -1
+mouse 42ba0000 42be0000
+  trigger 3f2 on 2
+  = 2
+mouse 43854000 43080000
+  trigger 3f3 on 2
+  = -1
+mouse 42e60000 42b20000
+  = -1
+mouse 42dc0000 42ba0000
+  trigger 3f2 on 2
+  = 2
+mouse 43470000 42920000
+  trigger 3f3 on 2
+  = -1
+capture 0
+mouse 43680000 42960000
+  trigger 3f2 on 0
+  = 0
+mouse 42bc0000 42b20000
+  trigger 3f3 on 0
+  = -1
+mouse 438d4000 42b00000
+  = -1
+mouse 41800000 c0400000
+  = -1
+form 29 count 11 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430c0000 43480000 43890000 42f00000
+control 1 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43230000 438c0000 43988000 42f00000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43200000 43480000 43600000 42f00000
+control 3 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430a0000 43700000 43888000 42b40000
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41d80000 42f00000 43240000 00000000
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42860000 00000000 429e0000 41f00000
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42960000 42a00000 42fe0000 42700000
+control 7 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42400000 43480000 437b0000 41f00000
+control 8 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43470000 43200000 43340000 43160000
+control 9 kind 6 tab 1 mode 0 checked 1 group 0 shown-enabled 0 rect 43230000 00000000 41c80000 43160000
+control 10 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42f80000 42f00000 431c0000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+radio 10 -> 10
+stop 2 tabbing 1
+tab
+  from 2
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+tab
+  from 2
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 2
+  = 2
+set-stop 5
+  from 2
+  to 5
+  = 1 2
+mouse 43480000 41e80000
+  = -1
+mouse 42960000 42de0000
+  = -1
+mouse 438b4000 434a0000
+  = -1
+mouse 4396c000 40800000
+  = -1
+mouse 4383c000 42cc0000
+  trigger 3f2 on 3
+  = 3
+mouse 43750000 43070000
+  trigger 3f3 on 3
+  trigger 3f2 on 0
+  = 0
+capture 9
+mouse 43990000 431e0000
+  trigger 3f3 on 0
+  = -1
+mouse 438b4000 42ae0000
+  = -1
+mouse 42880000 426c0000
+  trigger 3f2 on 5
+  = 5
+mouse 43720000 43020000
+  trigger 3f3 on 5
+  trigger 3f2 on 0
+  = 0
+form 30 count 12 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433f0000 43700000 43868000 43160000
+control 1 null
+control 2 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 42240000 42a00000 43070000 41f00000
+control 3 kind 2 tab 0 mode 1 checked 0 group 1 shown-enabled 0 rect 43000000 42f00000 43260000 42b40000
+control 4 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 43310000 42f00000 43450000 43160000
+control 5 kind 6 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 43290000 438c0000 439a8000 42f00000
+control 6 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432b0000 42200000 42c40000 43160000
+control 7 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ba0000 00000000 424c0000 42700000
+control 8 kind 3 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 42fa0000 43700000 438b8000 42b40000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42de0000 43480000 435d0000 42b40000
+control 10 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42340000 43200000 43450000 41f00000
+control 11 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43020000 43200000 43640000 42b40000
+radio 0 -> 0
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+radio 10 -> 10
+radio 11 -> 11
+stop 4 tabbing 1
+tab
+  from 4
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 0
+  = 0
+tab
+  from 0
+  to 6
+  = 6
+tab
+  from 6
+  to 7
+  = 7
+tab
+  from 7
+  to 9
+  = 9
+tab
+  from 9
+  to 10
+  = 10
+tab
+  from 10
+  to 11
+  = 11
+tab
+  from 11
+  to 0
+  = 0
+mouse 43710000 431e0000
+  trigger 3f2 on 0
+  = 0
+mouse 43440000 42e00000
+  trigger 3f3 on 0
+  trigger 3f2 on 11
+  = 11
+mouse 42d40000 42860000
+  trigger 3f3 on 11
+  = -1
+mouse 42440000 43210000
+  trigger 3f2 on 6
+  = 6
+mouse 43510000 42d20000
+  trigger 3f3 on 6
+  trigger 3f2 on 9
+  = 9
+mouse 438f8000 430b0000
+  trigger 3f3 on 9
+  = -1
+capture 6
+mouse 431e0000 43320000
+  = -1
+mouse 43640000 42e00000
+  trigger 3f2 on 11
+  = 11
+mouse 431b0000 43250000
+  trigger 3f3 on 11
+  = -1
+mouse 43858000 42b20000
+  = -1
+form 31 count 5 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42900000 438c0000 43aa8000 41f00000
+control 1 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42080000 438c0000 43988000 00000000
+control 2 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 43040000 42a00000 43080000 42b40000
+control 3 null
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432f0000 438c0000 439f0000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 4 -> 4
+stop 0 tabbing 1
+tab
+  from 0
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 4
+  = 4
+tab
+  from 4
+  to 0
+  = 0
+tab
+  from 0
+  to 4
+  = 4
+tab
+  from 4
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 0
+  = 0
+set-stop 3
+  from 0
+  to 0
+  = 0 0
+mouse 42a30000 43580000
+  = -1
+mouse 439b0000 42640000
+  trigger 3f2 on 0
+  = 0
+mouse 42f10000 42fe0000
+  trigger 3f3 on 0
+  trigger 3f2 on 2
+  = 2
+mouse 438f0000 431c0000
+  trigger 3f3 on 2
+  trigger 3f2 on 4
+  = 4
+mouse 438e0000 41e00000
+  trigger 3f3 on 4
+  = -1
+mouse 438c0000 41000000
+  = -1
+capture -1
+mouse 42ce0000 42c80000
+  trigger 3f2 on 2
+  = 2
+mouse 439b0000 432b0000
+  trigger 3f3 on 2
+  trigger 3f2 on 4
+  = 4
+mouse 43760000 43640000
+  trigger 3f3 on 4
+  = -1
+mouse 438e8000 41b00000
+  = -1
+form 32 count 5 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42960000 43200000 43660000 41f00000
+control 1 null
+control 2 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 42d40000 42a00000 42f00000 42b40000
+control 3 null
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41300000 438c0000 43b20000 00000000
+radio 0 -> 0
+radio 2 -> 2
+radio 4 -> 4
+stop 0 tabbing 1
+tab
+  from 0
+  to 4
+  = 4
+tab
+  from 4
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 4
+  = 4
+tab
+  from 4
+  to 0
+  = 0
+tab
+  from 0
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 0
+  = 0
+tab
+  from 0
+  to 4
+  = 4
+tab
+  from 4
+  to 0
+  = 0
+mouse 43490000 42980000
+  = -1
+mouse 43378000 430a0000
+  = -1
+mouse 40900000 432b0000
+  = -1
+mouse 43844000 429c0000
+  = -1
+mouse 42c40000 42b40000
+  = -1
+mouse 43310000 42080000
+  trigger 3f2 on 0
+  = 0
+capture 2
+mouse 42aa0000 42b80000
+  trigger 3f3 on 0
+  trigger 3f2 on 2
+  = 2
+mouse 42e60000 42be0000
+  = 2
+mouse 433e0000 41f00000
+  trigger 3f3 on 2
+  trigger 3f2 on 0
+  = 0
+mouse 439c8000 42ee0000
+  trigger 3f3 on 0
+  = -1
+form 33 count 3 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42dc0000 42a00000 42f80000 42b40000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42da0000 42200000 42b80000 42700000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42b80000 42200000 42de0000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+stop 1 tabbing 1
+tab
+  from 1
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+mouse 42840000 42b00000
+  trigger 3f2 on 1
+  = 1
+mouse 42d80000 42cc0000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 439a4000 42e60000
+  trigger 3f3 on 0
+  = -1
+mouse 42ee0000 42c60000
+  trigger 3f2 on 0
+  = 0
+mouse 42340000 42980000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 421c0000 42b60000
+  trigger 3f3 on 1
+  = -1
+capture 2
+mouse 42f50000 42a20000
+  = -1
+mouse 42440000 428c0000
+  trigger 3f2 on 2
+  = 2
+mouse 428a0000 42ba0000
+  trigger 3f3 on 2
+  trigger 3f2 on 1
+  = 1
+mouse 42700000 42b80000
+  trigger 3f3 on 1
+  trigger 3f2 on 2
+  = 2
+form 34 count 6 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ca0000 438c0000 43ad0000 42b40000
+control 1 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43300000 42a00000 42ec0000 43160000
+control 2 null
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43110000 43200000 43590000 42f00000
+control 4 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42000000 43700000 439a8000 00000000
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42820000 43200000 43410000 41f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+stop 3 tabbing 1
+shift-tab
+  from 3
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 5
+  = 5
+tab
+  from 5
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 5
+  = 5
+tab
+  from 5
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 3
+  = 3
+set-stop 1
+  from 3
+  to 1
+  = 1 3
+mouse 43768000 bf800000
+  = -1
+mouse 43580000 43000000
+  trigger 3f2 on 3
+  = 3
+mouse 41d00000 43540000
+  trigger 3f3 on 3
+  = -1
+mouse 42ce0000 432d0000
+  trigger 3f2 on 1
+  = 1
+mouse 43a58000 42c00000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 43ab0000 42bc0000
+  = 0
+capture 4
+mouse 42bb0000 42580000
+  trigger 3f3 on 0
+  = -1
+mouse 43288000 41d00000
+  = -1
+mouse 43210000 43040000
+  trigger 3f2 on 3
+  = 3
+mouse 435e8000 42c20000
+  trigger 3f3 on 3
+  = -1
+form 35 count 9 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c80000 438c0000 439b0000 42b40000
+control 1 kind 2 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 430f0000 43480000 437f0000 42f00000
+control 2 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43210000 00000000 42680000 43160000
+control 3 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 431d0000 42a00000 43120000 42f00000
+control 4 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432f0000 43480000 43898000 43160000
+control 5 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 432f0000 00000000 420c0000 43160000
+control 6 null
+control 7 kind 3 tab 0 mode 0 checked 0 group 2 shown-enabled 0 rect 43030000 42f00000 43180000 42f00000
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42aa0000 42200000 42bc0000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 7 -> 7
+radio 8 -> 8
+stop 5 tabbing 1
+shift-tab
+  from 5
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+mouse 41300000 432a0000
+  trigger 3f2 on 5
+  = 5
+mouse 41b80000 43210000
+  trigger 3f3 on 5
+  trigger 3f2 on 2
+  = 2
+mouse 41800000 43230000
+  trigger 3f3 on 2
+  trigger 3f2 on 5
+  = 5
+mouse 43878000 432d0000
+  trigger 3f3 on 5
+  trigger 3f2 on 4
+  = 4
+mouse 43150000 42f20000
+  trigger 3f3 on 4
+  = -1
+mouse 437b0000 43280000
+  trigger 3f2 on 4
+  = 4
+capture 7
+mouse 43550000 430b0000
+  trigger 3f3 on 4
+  trigger 3f2 on 1
+  = 1
+mouse 42f60000 42f00000
+  trigger 3f3 on 1
+  trigger 3f2 on 7
+  = 7
+mouse 42a50000 42f40000
+  trigger 3f3 on 7
+  trigger 3f2 on 3
+  = 3
+mouse 436b0000 431a0000
+  trigger 3f3 on 3
+  trigger 3f2 on 4
+  = 4
+form 36 count 4 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43150000 42200000 42ca0000 42f00000
+control 1 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41b80000 438c0000 43998000 00000000
+control 2 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43040000 42200000 42940000 42f00000
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43070000 43200000 434b0000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+stop 0 tabbing 1
+shift-tab
+  from 0
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+tab
+  from 2
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+set-stop 2
+  from 0
+  to 2
+  = 1 0
+mouse 43128000 42200000
+  = -1
+mouse 431a0000 c0e00000
+  = -1
+mouse 431e0000 432c0000
+  = -1
+mouse 438f8000 bf800000
+  = -1
+mouse 42640000 42f40000
+  trigger 3f2 on 0
+  = 0
+mouse 43230000 43000000
+  trigger 3f3 on 0
+  trigger 3f2 on 3
+  = 3
+capture 0
+mouse 42940000 42f20000
+  trigger 3f3 on 3
+  trigger 3f2 on 0
+  = 0
+mouse 437d0000 432d0000
+  trigger 3f3 on 0
+  = -1
+mouse 438b8000 41880000
+  = -1
+mouse 42980000 43160000
+  = -1
+form 37 count 10 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430f0000 43200000 434c0000 42f00000
+control 1 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42d80000 43700000 439e8000 42700000
+control 2 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42380000 438c0000 43a88000 00000000
+control 3 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42e20000 43480000 43890000 42b40000
+control 4 null
+control 5 null
+control 6 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c40000 43700000 439d0000 42700000
+control 7 kind 6 tab 1 mode 0 checked 1 group 0 shown-enabled 0 rect 43240000 42a00000 43160000 42f00000
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42f00000 42a00000 42fe0000 42b40000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430b0000 42200000 42b60000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+stop 0 tabbing 1
+shift-tab
+  from 0
+  to 9
+  = 9
+tab
+  from 9
+  to 0
+  = 0
+tab
+  from 0
+  to 6
+  = 6
+tab
+  from 6
+  to 8
+  = 8
+tab
+  from 8
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 6
+  = 6
+tab
+  from 6
+  to 8
+  = 8
+set-stop 7
+  from 8
+  to 7
+  = 1 8
+mouse 438a8000 43030000
+  = -1
+mouse 42f70000 42580000
+  = -1
+mouse 43068000 43020000
+  = -1
+mouse 42f80000 42c60000
+  trigger 3f2 on 8
+  = 8
+mouse 436e0000 42b80000
+  trigger 3f3 on 8
+  = -1
+mouse 43118000 c0400000
+  = -1
+capture 6
+mouse 43248000 42ec0000
+  = -1
+mouse 438a8000 428c0000
+  trigger 3f2 on 6
+  = 6
+mouse 439e0000 42ce0000
+  trigger 3f3 on 6
+  trigger 3f2 on 1
+  = 1
+mouse 43ab8000 430b0000
+  trigger 3f3 on 1
+  = -1
+form 38 count 2 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433a0000 00000000 429a0000 43160000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41b80000 42a00000 43050000 00000000
+radio 0 -> 0
+radio 1 -> 1
+stop 0 tabbing 1
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+set-stop 0
+  from 0
+  to 0
+  = 1 0
+mouse 42680000 432d0000
+  trigger 3f2 on 0
+  = 0
+mouse 420a0000 43030000
+  trigger 3f3 on 0
+  = -1
+mouse 42380000 43180000
+  trigger 3f2 on 0
+  = 0
+mouse 42a40000 bf800000
+  trigger 3f3 on 0
+  = -1
+mouse 42700000 43270000
+  trigger 3f2 on 0
+  = 0
+mouse 42f80000 41880000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+capture 0
+mouse 42e40000 41500000
+  = 1
+mouse 42840000 43360000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse bf800000 43190000
+  trigger 3f3 on 0
+  = -1
+mouse 42f20000 41000000
+  trigger 3f2 on 1
+  = 1
+form 39 count 12 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ce0000 43480000 436d0000 42700000
+control 1 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42da0000 438c0000 43a60000 42700000
+control 2 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42b80000 42f00000 431f0000 42700000
+control 3 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 43270000 42200000 42ea0000 43160000
+control 4 null
+control 5 kind 6 tab 1 mode 0 checked 1 group 1 shown-enabled 0 rect 430a0000 42f00000 43170000 42b40000
+control 6 kind 2 tab 0 mode 1 checked 0 group 1 shown-enabled 0 rect 424c0000 42200000 42bc0000 41f00000
+control 7 null
+control 8 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 423c0000 00000000 42100000 41f00000
+control 9 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 42480000 42f00000 43450000 41f00000
+control 10 kind 6 tab 0 mode 1 checked 0 group 1 shown-enabled 0 rect 43360000 43480000 437b0000 43160000
+control 11 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42980000 00000000 421c0000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 5 -> 5
+radio 6 -> 6
+radio 8 -> 8
+radio 9 -> 9
+radio 10 -> 10
+radio 11 -> 11
+stop 6 tabbing 0
+shift-tab
+  = 6
+tab
+  = 6
+shift-tab
+  = 6
+tab
+  = 6
+shift-tab
+  = 6
+shift-tab
+  = 6
+tab
+  = 6
+tab
+  = 6
+mouse 43090000 42bc0000
+  = -1
+mouse 43470000 42aa0000
+  = -1
+mouse 42260000 42c20000
+  = -1
+mouse 43060000 422c0000
+  = -1
+mouse 41f00000 420c0000
+  = -1
+mouse 43910000 43080000
+  = -1
+capture 10
+mouse 41840000 428a0000
+  trigger 3f2 on 11
+  = 11
+mouse 42760000 43640000
+  trigger 3f3 on 11
+  = -1
+mouse 434d0000 42c40000
+  trigger 3f2 on 0
+  = 0
+mouse 43950000 43620000
+  trigger 3f3 on 0
+  = -1
+form 40 count 9 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43060000 43200000 43430000 42b40000
+control 1 kind 6 tab 1 mode 0 checked 1 group 1 shown-enabled 0 rect 42900000 42a00000 42ec0000 41f00000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43230000 438c0000 439b0000 43160000
+control 3 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42d20000 42f00000 43220000 42b40000
+control 4 null
+control 5 null
+control 6 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43470000 42f00000 43120000 43160000
+control 7 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 43290000 43700000 43950000 42f00000
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42fa0000 42a00000 42d80000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+stop 7 tabbing 1
+shift-tab
+  from 7
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 2
+  = 2
+tab
+  from 2
+  to 6
+  = 6
+tab
+  from 6
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 8
+  = 8
+set-stop 4
+  from 8
+  to 8
+  = 0 8
+mouse 43170000 42ce0000
+  trigger 3f2 on 3
+  = 3
+mouse 42a40000 42800000
+  trigger 3f3 on 3
+  = -1
+mouse 437a8000 430c0000
+  trigger 3f2 on 7
+  = 7
+mouse 43308000 41a00000
+  trigger 3f3 on 7
+  = -1
+mouse 43010000 42c20000
+  trigger 3f2 on 3
+  = 3
+mouse 42ee0000 43420000
+  trigger 3f3 on 3
+  = -1
+capture 7
+mouse 42a30000 43640000
+  = -1
+mouse 432d0000 433b0000
+  = -1
+mouse 43210000 42b80000
+  trigger 3f2 on 0
+  = 0
+mouse 43140000 42d20000
+  trigger 3f3 on 0
+  trigger 3f2 on 3
+  = 3
+form 41 count 10 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42f20000 42200000 42dc0000 42b40000
+control 1 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 42180000 438c0000 43ac0000 00000000
+control 2 null
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43270000 42200000 42a40000 43160000
+control 4 kind 6 tab 0 mode 1 checked 1 group 0 shown-enabled 1 rect 42cc0000 00000000 42680000 42700000
+control 5 null
+control 6 null
+control 7 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 43150000 43480000 43850000 42f00000
+control 8 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433c0000 43480000 438a8000 43160000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42740000 42a00000 42d60000 41f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 3 -> 3
+radio 4 -> 4
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+stop 9 tabbing 1
+shift-tab
+  from 9
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 3
+  = 3
+tab
+  from 3
+  to 8
+  = 8
+tab
+  from 8
+  to 9
+  = 9
+tab
+  from 9
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+set-stop 9
+  from 1
+  to 9
+  = 1 1
+mouse 43720000 433b0000
+  trigger 3f2 on 8
+  = 8
+mouse 42c60000 42e40000
+  trigger 3f3 on 8
+  trigger 3f2 on 0
+  = 0
+mouse 41c40000 42b20000
+  trigger 3f3 on 0
+  trigger 3f2 on 4
+  = 4
+mouse 434d8000 42f20000
+  trigger 3f3 on 4
+  trigger 3f2 on 7
+  = 7
+mouse 42ba0000 42440000
+  trigger 3f3 on 7
+  trigger 3f2 on 9
+  = 9
+mouse 43aa8000 432c0000
+  trigger 3f3 on 9
+  = -1
+capture 8
+mouse 41b00000 42860000
+  trigger 3f2 on 4
+  = 4
+mouse 43960000 41200000
+  trigger 3f3 on 4
+  trigger 3f2 on 1
+  = 1
+mouse 436d0000 431b0000
+  trigger 3f3 on 1
+  trigger 3f2 on 8
+  = 8
+mouse 43548000 43290000
+  = 8
+form 42 count 5 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42380000 42a00000 430a0000 41f00000
+control 1 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43220000 42a00000 42e00000 42f00000
+control 2 null
+control 3 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42e20000 42200000 42ac0000 42b40000
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43200000 42a00000 42d20000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 3 -> 3
+radio 4 -> 4
+stop 3 tabbing 1
+shift-tab
+  from 3
+  to 1
+  = 1
+tab
+  from 1
+  to 3
+  = 3
+tab
+  from 3
+  to 4
+  = 4
+tab
+  from 4
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 3
+  = 3
+mouse 42d40000 431e0000
+  trigger 3f2 on 1
+  = 1
+mouse 427e0000 41100000
+  trigger 3f3 on 1
+  = -1
+mouse 42cc0000 43080000
+  trigger 3f2 on 1
+  = 1
+mouse 42ac0000 42380000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 42ee0000 42300000
+  = 0
+mouse 429e0000 430b0000
+  trigger 3f3 on 0
+  = -1
+capture 4
+mouse 42b20000 43150000
+  trigger 3f2 on 1
+  = 1
+mouse 432b0000 43140000
+  trigger 3f3 on 1
+  = -1
+mouse 43a70000 427c0000
+  = -1
+mouse 42a70000 43040000
+  trigger 3f2 on 1
+  = 1
+form 43 count 12 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c60000 43200000 434f0000 42700000
+control 1 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 42b20000 43480000 43840000 42700000
+control 2 kind 6 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 421c0000 43480000 437c0000 00000000
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42cc0000 43200000 436e0000 42b40000
+control 4 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 43230000 43480000 43888000 42f00000
+control 5 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430e0000 00000000 428e0000 42f00000
+control 6 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42240000 43480000 43740000 00000000
+control 7 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43250000 43200000 434e0000 43160000
+control 8 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43250000 43200000 433b0000 42f00000
+control 9 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 42a40000 43700000 43850000 42700000
+control 10 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42740000 00000000 429e0000 41f00000
+control 11 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42a40000 42a00000 42ec0000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+radio 10 -> 10
+radio 11 -> 11
+stop 6 tabbing 1
+shift-tab
+  from 6
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 11
+  = 11
+shift-tab
+  from 11
+  to 10
+  = 10
+tab
+  from 10
+  to 11
+  = 11
+tab
+  from 11
+  to 0
+  = 0
+tab
+  from 0
+  to 3
+  = 3
+mouse 42e60000 42800000
+  trigger 3f2 on 11
+  = 11
+mouse 43790000 430f0000
+  trigger 3f3 on 11
+  = -1
+mouse 43828000 42900000
+  = -1
+mouse 433f0000 426c0000
+  = -1
+mouse 436e0000 40400000
+  trigger 3f2 on 6
+  = 6
+mouse 43740000 42960000
+  trigger 3f3 on 6
+  = -1
+capture 8
+mouse 434a0000 42fa0000
+  = -1
+mouse 435a0000 42200000
+  trigger 3f2 on 6
+  = 6
+mouse 429e0000 426c0000
+  trigger 3f3 on 6
+  trigger 3f2 on 10
+  = 10
+mouse 42fb0000 43450000
+  trigger 3f3 on 10
+  = -1
+form 44 count 2 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432b0000 438c0000 43980000 43160000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430f0000 43200000 43540000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+stop 0 tabbing 1
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+mouse 433d0000 430e0000
+  trigger 3f2 on 1
+  = 1
+mouse 43988000 43230000
+  trigger 3f3 on 1
+  = -1
+mouse 438e0000 432c0000
+  = -1
+mouse 43980000 43260000
+  trigger 3f2 on 0
+  = 0
+mouse 438e0000 43200000
+  = 0
+mouse 43a78000 42a20000
+  trigger 3f3 on 0
+  = -1
+capture 1
+mouse 430d0000 42a40000
+  = -1
+mouse 433a0000 42f20000
+  trigger 3f2 on 1
+  = 1
+mouse 433c0000 430b0000
+  = 1
+mouse 422c0000 434e0000
+  trigger 3f3 on 1
+  = -1
+form 45 count 6 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43350000 00000000 42300000 43160000
+control 1 null
+control 2 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41200000 42a00000 42ce0000 00000000
+control 3 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42500000 43200000 43600000 41f00000
+control 4 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42580000 43700000 439a8000 41f00000
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42a80000 43700000 43958000 42700000
+radio 0 -> 0
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+stop 0 tabbing 1
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 2
+  = 2
+tab
+  from 2
+  to 5
+  = 5
+set-stop 3
+  from 5
+  to 3
+  = 1 5
+mouse 43340000 42300000
+  = -1
+mouse 434b0000 42080000
+  = -1
+mouse 41700000 431c0000
+  trigger 3f2 on 0
+  = 0
+mouse 41880000 41400000
+  trigger 3f3 on 0
+  = -1
+mouse 43790000 42a80000
+  trigger 3f2 on 5
+  = 5
+mouse 43700000 42a20000
+  = 5
+capture 3
+mouse 433f8000 42740000
+  trigger 3f3 on 5
+  = -1
+mouse 42340000 43330000
+  = -1
+mouse 43938000 42a60000
+  trigger 3f2 on 5
+  = 5
+mouse 42c00000 41100000
+  trigger 3f3 on 5
+  trigger 3f2 on 2
+  = 2
+form 46 count 7 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42600000 43200000 436d0000 41f00000
+control 1 null
+control 2 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 429e0000 43200000 43400000 41f00000
+control 3 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43000000 00000000 41e00000 42b40000
+control 4 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41e80000 42a00000 42d40000 00000000
+control 5 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 43200000 42200000 42b80000 43160000
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41a80000 43700000 43898000 00000000
+radio 0 -> 0
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+stop 4 tabbing 1
+shift-tab
+  from 4
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 4
+  = 4
+tab
+  from 4
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 4
+  = 4
+tab
+  from 4
+  to 6
+  = 6
+tab
+  from 6
+  to 0
+  = 0
+tab
+  from 0
+  to 4
+  = 4
+mouse 43998000 43250000
+  = -1
+mouse 42fe0000 42700000
+  = -1
+mouse 422c0000 431f0000
+  trigger 3f2 on 5
+  = 5
+mouse 41b80000 42d00000
+  trigger 3f3 on 5
+  = -1
+mouse 43278000 40000000
+  = -1
+mouse 43700000 41500000
+  trigger 3f2 on 6
+  = 6
+capture 4
+mouse 42520000 434a0000
+  trigger 3f3 on 6
+  = -1
+mouse 43230000 42200000
+  trigger 3f2 on 0
+  = 0
+mouse 43820000 41600000
+  trigger 3f3 on 0
+  trigger 3f2 on 6
+  = 6
+mouse 43888000 3f800000
+  = 6
+form 47 count 11 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43280000 42f00000 43270000 43160000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433d0000 42200000 42c80000 43160000
+control 2 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43060000 42f00000 43330000 42f00000
+control 3 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 431e0000 00000000 42820000 42f00000
+control 4 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43410000 43480000 43690000 43160000
+control 5 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43250000 42200000 42920000 43160000
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43020000 43480000 43820000 42b40000
+control 7 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 42900000 43200000 434a0000 41f00000
+control 8 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 431a0000 42200000 42980000 42f00000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42e00000 43480000 43878000 42b40000
+control 10 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43280000 42200000 42bc0000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 7
+radio 9 -> 9
+radio 10 -> 10
+stop 9 tabbing 1
+shift-tab
+  from 9
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 10
+  = 10
+shift-tab
+  from 10
+  to 9
+  = 9
+mouse 43700000 42ec0000
+  trigger 3f2 on 6
+  = 6
+mouse 437d0000 41700000
+  trigger 3f3 on 6
+  = -1
+mouse 42480000 431f0000
+  trigger 3f2 on 1
+  = 1
+mouse 41300000 43130000
+  trigger 3f3 on 1
+  trigger 3f2 on 3
+  = 3
+mouse 42f40000 43230000
+  trigger 3f3 on 3
+  trigger 3f2 on 0
+  = 0
+mouse 43728000 425c0000
+  trigger 3f3 on 0
+  = -1
+capture 4
+mouse 42480000 43060000
+  trigger 3f2 on 3
+  = 3
+mouse 42340000 43000000
+  = 3
+mouse 42860000 43250000
+  trigger 3f3 on 3
+  trigger 3f2 on 1
+  = 1
+mouse 41d00000 430a0000
+  trigger 3f3 on 1
+  trigger 3f2 on 3
+  = 3
+form 48 count 11 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42980000 43700000 43950000 42700000
+control 1 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43410000 43480000 43760000 43160000
+control 2 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c60000 43700000 43840000 42700000
+control 3 kind 6 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 426c0000 43700000 43838000 41f00000
+control 4 null
+control 5 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42080000 42f00000 433f0000 00000000
+control 6 kind 6 tab 0 mode 1 checked 0 group 2 shown-enabled 1 rect 43030000 42a00000 43180000 42b40000
+control 7 kind 6 tab 1 mode 1 checked 1 group 1 shown-enabled 1 rect 429e0000 438c0000 43a88000 42700000
+control 8 kind 6 tab 0 mode 0 checked 0 group 0 shown-enabled 0 rect 42440000 42200000 42980000 00000000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 431d0000 43480000 437e0000 42f00000
+control 10 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43310000 43480000 43810000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 5 -> 5
+radio 6 -> 7
+radio 7 -> 7
+radio 8 -> 7
+radio 9 -> 9
+radio 10 -> 10
+stop 8 tabbing 1
+tab
+  from 8
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+mouse 435b0000 42f40000
+  trigger 3f2 on 9
+  = 9
+mouse 43a40000 c0c00000
+  trigger 3f3 on 9
+  = -1
+mouse 42960000 40e00000
+  = -1
+mouse 41700000 433e0000
+  = -1
+mouse 43710000 42ba0000
+  trigger 3f2 on 2
+  = 2
+mouse 43850000 42920000
+  trigger 3f3 on 2
+  trigger 3f2 on 0
+  = 0
+capture 9
+mouse 439c8000 430f0000
+  trigger 3f3 on 0
+  = -1
+mouse 42120000 42f20000
+  = -1
+mouse 434f0000 431a0000
+  trigger 3f2 on 9
+  = 9
+mouse 428c0000 41600000
+  trigger 3f3 on 9
+  = -1
+form 49 count 4 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43080000 42a00000 42fe0000 42f00000
+control 1 kind 6 tab 1 mode 1 checked 1 group 1 shown-enabled 0 rect 41c00000 43480000 43880000 00000000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d20000 43480000 43710000 42b40000
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430c0000 43700000 439f8000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+stop 2 tabbing 1
+tab
+  from 2
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 2
+  = 2
+tab
+  from 2
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 2
+  = 2
+tab
+  from 2
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+mouse 43760000 42f40000
+  trigger 3f2 on 3
+  = 3
+mouse 43590000 42d00000
+  trigger 3f3 on 3
+  trigger 3f2 on 2
+  = 2
+mouse 43944000 428a0000
+  trigger 3f3 on 2
+  = -1
+mouse 43690000 42ce0000
+  trigger 3f2 on 2
+  = 2
+mouse 433b0000 432e0000
+  trigger 3f3 on 2
+  = -1
+mouse 42f60000 42f80000
+  trigger 3f2 on 0
+  = 0
+capture 1
+mouse 438b8000 43040000
+  trigger 3f3 on 0
+  trigger 3f2 on 3
+  = 3
+mouse 43958000 430d0000
+  trigger 3f3 on 3
+  = -1
+mouse 43848000 41600000
+  trigger 3f2 on 1
+  = 1
+mouse 43660000 40400000
+  = 1
+form 50 count 4 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43340000 42200000 42e80000 43160000
+control 1 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42640000 42200000 42be0000 41f00000
+control 2 null
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 422c0000 42200000 428a0000 41f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 3 -> 3
+stop 3 tabbing 1
+tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+set-stop 1
+  from 3
+  to 1
+  = 1 3
+mouse 42780000 41f80000
+  trigger 3f2 on 1
+  = 1
+mouse 436d8000 c0000000
+  trigger 3f3 on 1
+  = -1
+mouse 42c00000 432f0000
+  trigger 3f2 on 0
+  = 0
+mouse 42ff0000 43100000
+  trigger 3f3 on 0
+  = -1
+mouse 421e0000 42200000
+  = -1
+mouse 42440000 42400000
+  trigger 3f2 on 1
+  = 1
+capture 1
+mouse 421c0000 42240000
+  trigger 3f3 on 1
+  = -1
+mouse 41b80000 40e00000
+  = -1
+mouse 428f0000 43610000
+  = -1
+mouse 43898000 432c0000
+  = -1
+form 51 count 12 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42960000 42200000 42ca0000 42700000
+control 1 kind 6 tab 0 mode 1 checked 0 group 2 shown-enabled 1 rect 42340000 42f00000 432b0000 41f00000
+control 2 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 429a0000 438c0000 43a18000 41f00000
+control 3 kind 3 tab 1 mode 0 checked 0 group 2 shown-enabled 0 rect 42080000 42a00000 430d0000 00000000
+control 4 null
+control 5 kind 3 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 42380000 438c0000 43b00000 41f00000
+control 6 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 41a00000 43700000 43928000 00000000
+control 7 kind 2 tab 0 mode 1 checked 0 group 2 shown-enabled 1 rect 43350000 43480000 43890000 43160000
+control 8 kind 3 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 42d00000 43200000 43350000 42700000
+control 9 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42380000 43200000 436c0000 00000000
+control 10 null
+control 11 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ba0000 438c0000 43af0000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+radio 11 -> 11
+stop 11 tabbing 1
+shift-tab
+  from 11
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 6
+  = 6
+tab
+  from 6
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+mouse 43a50000 42100000
+  trigger 3f2 on 5
+  = 5
+mouse 43980000 42500000
+  trigger 3f3 on 5
+  trigger 3f2 on 2
+  = 2
+mouse 43300000 42960000
+  trigger 3f3 on 2
+  trigger 3f2 on 8
+  = 8
+mouse 439dc000 43650000
+  trigger 3f3 on 8
+  = -1
+mouse 43360000 42c60000
+  = -1
+mouse 43980000 42900000
+  trigger 3f2 on 2
+  = 2
+capture 1
+mouse 42cc0000 42800000
+  trigger 3f3 on 2
+  = -1
+mouse 432a0000 42a40000
+  trigger 3f2 on 8
+  = 8
+mouse 41b40000 43060000
+  trigger 3f3 on 8
+  = -1
+mouse 430a8000 42400000
+  = -1
+form 52 count 2 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42000000 42f00000 43100000 00000000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43090000 43700000 439e0000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+stop 1 tabbing 1
+tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+set-stop 1
+  from 1
+  to 1
+  = 1 1
+mouse 430a8000 42300000
+  = -1
+mouse 42d20000 42480000
+  = -1
+mouse 42fa0000 41500000
+  trigger 3f2 on 0
+  = 0
+mouse c0400000 43550000
+  trigger 3f3 on 0
+  = -1
+mouse 43888000 42fe0000
+  trigger 3f2 on 1
+  = 1
+mouse 42f60000 41b00000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+capture 1
+mouse 430a0000 41c80000
+  = 0
+mouse 43080000 40000000
+  = 0
+mouse 42f40000 40400000
+  = 0
+mouse 43110000 41800000
+  trigger 3f3 on 0
+  = -1
+form 53 count 8 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c80000 00000000 42100000 42b40000
+control 1 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42d40000 43700000 43970000 42700000
+control 2 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41e00000 438c0000 43a50000 00000000
+control 3 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42c60000 438c0000 439f0000 42700000
+control 4 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43230000 42200000 42de0000 42f00000
+control 5 kind 6 tab 0 mode 0 checked 1 group 1 shown-enabled 0 rect 420c0000 42a00000 431b0000 00000000
+control 6 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41900000 00000000 42300000 00000000
+control 7 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42be0000 43700000 43918000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+stop 4 tabbing 1
+tab
+  from 4
+  to 6
+  = 6
+tab
+  from 6
+  to 7
+  = 7
+tab
+  from 7
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 3
+  = 3
+tab
+  from 3
+  to 4
+  = 4
+tab
+  from 4
+  to 6
+  = 6
+tab
+  from 6
+  to 7
+  = 7
+mouse 42bc0000 431f0000
+  trigger 3f2 on 4
+  = 4
+mouse 42a60000 41c80000
+  trigger 3f3 on 4
+  = -1
+mouse 42100000 42b20000
+  = -1
+mouse 42e60000 42040000
+  = -1
+mouse 41880000 42c40000
+  trigger 3f2 on 0
+  = 0
+mouse 42800000 424c0000
+  trigger 3f3 on 0
+  = -1
+capture 7
+mouse 42be0000 42fe0000
+  trigger 3f2 on 4
+  = 4
+mouse 41980000 41900000
+  trigger 3f3 on 4
+  trigger 3f2 on 6
+  = 6
+mouse 43810000 42960000
+  trigger 3f3 on 6
+  trigger 3f2 on 7
+  = 7
+mouse 42d40000 43190000
+  trigger 3f3 on 7
+  trigger 3f2 on 4
+  = 4
+form 54 count 8 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42de0000 438c0000 43978000 42b40000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42900000 42a00000 42d60000 42700000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43450000 43700000 43938000 43160000
+control 3 kind 3 tab 0 mode 0 checked 0 group 0 shown-enabled 0 rect 43320000 43480000 43770000 43160000
+control 4 kind 6 tab 0 mode 0 checked 0 group 0 shown-enabled 0 rect 43010000 438c0000 43a28000 42b40000
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 423c0000 42200000 429c0000 41f00000
+control 6 null
+control 7 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43370000 43480000 437a0000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 7 -> 7
+stop 0 tabbing 1
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 7
+  = 7
+tab
+  from 7
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 5
+  = 5
+tab
+  from 5
+  to 7
+  = 7
+tab
+  from 7
+  to 0
+  = 0
+mouse 430d0000 43250000
+  = -1
+mouse 43620000 43290000
+  trigger 3f2 on 7
+  = 7
+mouse 43980000 42b40000
+  trigger 3f3 on 7
+  = -1
+mouse 43640000 43290000
+  trigger 3f2 on 7
+  = 7
+mouse 436f0000 43210000
+  = 7
+mouse 438c8000 42d00000
+  trigger 3f3 on 7
+  trigger 3f2 on 0
+  = 0
+capture 4
+mouse 42d80000 42860000
+  trigger 3f3 on 0
+  = -1
+mouse 438d8000 42cc0000
+  trigger 3f2 on 4
+  = 4
+mouse 435a0000 43200000
+  trigger 3f3 on 4
+  trigger 3f2 on 7
+  = 7
+mouse 43360000 43570000
+  trigger 3f3 on 7
+  = -1
+form 55 count 8 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41d00000 43700000 43828000 00000000
+control 1 kind 2 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42440000 43700000 43888000 00000000
+control 2 kind 6 tab 0 mode 1 checked 1 group 0 shown-enabled 1 rect 43260000 43480000 435c0000 42f00000
+control 3 kind 2 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 43400000 42200000 42960000 43160000
+control 4 kind 2 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42c20000 438c0000 43a00000 42700000
+control 5 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42180000 43200000 433e0000 00000000
+control 6 kind 2 tab 0 mode 1 checked 0 group 1 shown-enabled 1 rect 432d0000 438c0000 439f0000 43160000
+control 7 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 431d0000 43200000 436e0000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+stop 4 tabbing 1
+shift-tab
+  from 4
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 0
+  = 0
+tab
+  from 0
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 7
+  = 7
+tab
+  from 7
+  to 0
+  = 0
+mouse 425c0000 43310000
+  = -1
+mouse 43a08000 42b40000
+  = -1
+mouse 43740000 41100000
+  trigger 3f2 on 0
+  = 0
+mouse 439d0000 43150000
+  trigger 3f3 on 0
+  = -1
+mouse 43954000 41400000
+  = -1
+mouse 43938000 431d0000
+  trigger 3f2 on 6
+  = 6
+capture 1
+mouse 439d8000 431c0000
+  = 6
+mouse 43280000 420c0000
+  trigger 3f3 on 6
+  trigger 3f2 on 5
+  = 5
+mouse 43550000 42f60000
+  trigger 3f3 on 5
+  trigger 3f2 on 2
+  = 2
+mouse 42ae0000 431c0000
+  trigger 3f3 on 2
+  = -1
+form 56 count 9 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42440000 438c0000 43998000 41f00000
+control 1 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 431e0000 43700000 439c0000 42f00000
+control 2 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42b40000 42200000 42c20000 42700000
+control 3 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42960000 42f00000 43380000 42700000
+control 4 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43360000 42f00000 43320000 43160000
+control 5 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42fc0000 43480000 43860000 42b40000
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41f00000 438c0000 43b30000 00000000
+control 7 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42200000 42a00000 42cc0000 41f00000
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43330000 42f00000 432c0000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+stop 1 tabbing 0
+tab
+  = 1
+shift-tab
+  = 1
+tab
+  = 1
+shift-tab
+  = 1
+shift-tab
+  = 1
+shift-tab
+  = 1
+shift-tab
+  = 1
+shift-tab
+  = 1
+mouse 43aa8000 41e00000
+  trigger 3f2 on 6
+  = 6
+mouse 43960000 42140000
+  trigger 3f3 on 6
+  trigger 3f2 on 0
+  = 0
+mouse 43ae4000 41300000
+  trigger 3f3 on 0
+  trigger 3f2 on 6
+  = 6
+mouse 42a80000 42240000
+  trigger 3f3 on 6
+  = -1
+mouse 430d0000 426c0000
+  = -1
+mouse 43880000 43150000
+  trigger 3f2 on 1
+  = 1
+capture 3
+mouse 43840000 43110000
+  = 1
+mouse 42380000 42a60000
+  trigger 3f3 on 1
+  trigger 3f2 on 2
+  = 2
+mouse 42c00000 42140000
+  trigger 3f3 on 2
+  trigger 3f2 on 7
+  = 7
+mouse 43260000 43200000
+  trigger 3f3 on 7
+  trigger 3f2 on 8
+  = 8
+form 57 count 10 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42b40000 43480000 43830000 42700000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42080000 43700000 43868000 00000000
+control 2 kind 2 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 426c0000 42200000 428c0000 41f00000
+control 3 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42280000 42f00000 433a0000 41f00000
+control 4 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43050000 00000000 41f00000 42f00000
+control 5 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 41b00000 42200000 42b00000 00000000
+control 6 kind 3 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 429e0000 43480000 43800000 42700000
+control 7 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42900000 42a00000 43010000 42700000
+control 8 null
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ca0000 43480000 43888000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 9 -> 9
+stop 0 tabbing 1
+shift-tab
+  from 0
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 7
+  = 7
+tab
+  from 7
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 7
+  = 7
+tab
+  from 7
+  to 9
+  = 9
+tab
+  from 9
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+set-stop 6
+  from 0
+  to 6
+  = 1 0
+mouse 43278000 43110000
+  = -1
+mouse 43000000 428a0000
+  trigger 3f2 on 7
+  = 7
+mouse 43520000 42980000
+  trigger 3f3 on 7
+  trigger 3f2 on 6
+  = 6
+mouse 436c0000 428c0000
+  = 6
+mouse 42f80000 42080000
+  trigger 3f3 on 6
+  trigger 3f2 on 3
+  = 3
+mouse 43720000 42040000
+  trigger 3f3 on 3
+  trigger 3f2 on 1
+  = 1
+capture -1
+mouse 42e60000 433c0000
+  trigger 3f3 on 1
+  = -1
+mouse 42800000 424c0000
+  = -1
+mouse 43818000 42000000
+  trigger 3f2 on 1
+  = 1
+mouse 42980000 40000000
+  trigger 3f3 on 1
+  trigger 3f2 on 5
+  = 5
+form 58 count 7 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42880000 42200000 42920000 41f00000
+control 1 null
+control 2 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 428a0000 43200000 436a0000 41f00000
+control 3 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43300000 43700000 43950000 43160000
+control 4 kind 2 tab 0 mode 1 checked 0 group 1 shown-enabled 1 rect 43390000 42f00000 43210000 43160000
+control 5 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43030000 42f00000 432f0000 42b40000
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42f40000 43200000 436b0000 42b40000
+radio 0 -> 0
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+stop 3 tabbing 1
+tab
+  from 3
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 6
+  = 6
+tab
+  from 6
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 6
+  = 6
+tab
+  from 6
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 6
+  = 6
+mouse 42260000 42a40000
+  = -1
+mouse 41d00000 435d0000
+  = -1
+mouse 43010000 42e60000
+  trigger 3f2 on 5
+  = 5
+mouse 432d0000 42080000
+  trigger 3f3 on 5
+  trigger 3f2 on 2
+  = 2
+mouse 42ee0000 42b60000
+  trigger 3f3 on 2
+  = -1
+mouse 43940000 43260000
+  trigger 3f2 on 3
+  = 3
+capture -1
+mouse 42200000 42820000
+  trigger 3f3 on 3
+  trigger 3f2 on 0
+  = 0
+mouse 43050000 431f0000
+  trigger 3f3 on 0
+  trigger 3f2 on 4
+  = 4
+mouse 43a4c000 41c00000
+  trigger 3f3 on 4
+  = -1
+mouse 423c0000 42e00000
+  = -1
+form 59 count 2 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430b0000 42200000 42ec0000 42f00000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42280000 43480000 43848000 00000000
+radio 0 -> 0
+radio 1 -> 1
+stop 1 tabbing 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+mouse 437a0000 41e00000
+  trigger 3f2 on 1
+  = 1
+mouse 423a0000 43370000
+  trigger 3f3 on 1
+  = -1
+mouse 42680000 43030000
+  trigger 3f2 on 0
+  = 0
+mouse 42d90000 430f0000
+  trigger 3f3 on 0
+  = -1
+mouse 43830000 41d80000
+  trigger 3f2 on 1
+  = 1
+mouse 43520000 42100000
+  = 1
+capture 1
+mouse 436a0000 40e00000
+  = 1
+mouse 43930000 42da0000
+  trigger 3f3 on 1
+  = -1
+mouse 43320000 43000000
+  = -1
+mouse 436f0000 41880000
+  trigger 3f2 on 1
+  = 1
+form 60 count 5 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43010000 43700000 438a0000 42b40000
+control 1 kind 6 tab 0 mode 0 checked 0 group 1 shown-enabled 0 rect 42d00000 438c0000 439b8000 42700000
+control 2 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 430d0000 42200000 42c40000 42f00000
+control 3 kind 2 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42500000 42200000 42700000 41f00000
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433b0000 43700000 43858000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+stop 4 tabbing 1
+shift-tab
+  from 4
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 0
+  = 0
+tab
+  from 0
+  to 4
+  = 4
+tab
+  from 4
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 0
+  = 0
+tab
+  from 0
+  to 4
+  = 4
+mouse 42680000 430a0000
+  = -1
+mouse 43810000 42fc0000
+  trigger 3f2 on 0
+  = 0
+mouse 42300000 42100000
+  trigger 3f3 on 0
+  trigger 3f2 on 3
+  = 3
+mouse 439f8000 42a60000
+  trigger 3f3 on 3
+  = -1
+mouse 42880000 00000000
+  = -1
+mouse 43760000 42ce0000
+  trigger 3f2 on 0
+  = 0
+capture 0
+mouse 43808000 432e0000
+  trigger 3f3 on 0
+  trigger 3f2 on 4
+  = 4
+mouse 42280000 42380000
+  trigger 3f3 on 4
+  trigger 3f2 on 3
+  = 3
+mouse 42fb0000 42800000
+  trigger 3f3 on 3
+  = -1
+mouse 437a0000 43300000
+  trigger 3f2 on 4
+  = 4
+form 61 count 2 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43280000 43480000 437b0000 43160000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ce0000 42200000 42a20000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+stop 0 tabbing 1
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+set-stop 0
+  from 0
+  to 0
+  = 1 0
+mouse 42480000 42bc0000
+  trigger 3f2 on 1
+  = 1
+mouse 42a40000 42b80000
+  trigger 3f3 on 1
+  = -1
+mouse 438f0000 43600000
+  = -1
+mouse 42440000 42c60000
+  trigger 3f2 on 1
+  = 1
+mouse 437a0000 43220000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 427c0000 42c20000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+capture 1
+mouse 429a0000 42ce0000
+  = 1
+mouse 434d0000 43240000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 43660000 43230000
+  = 0
+mouse 436e0000 43150000
+  trigger 3f3 on 0
+  = -1
+form 62 count 10 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41600000 43480000 435c0000 00000000
+control 1 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42d40000 00000000 41b80000 42b40000
+control 2 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42920000 00000000 42780000 42700000
+control 3 null
+control 4 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43290000 42a00000 42ee0000 43160000
+control 5 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 432c0000 42f00000 43460000 43160000
+control 6 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43240000 43480000 43750000 43160000
+control 7 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43430000 43480000 437a0000 43160000
+control 8 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433b0000 42200000 428c0000 43160000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d20000 438c0000 43ad0000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+stop 9 tabbing 1
+shift-tab
+  from 9
+  to 8
+  = 8
+tab
+  from 8
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 8
+  = 8
+tab
+  from 8
+  to 9
+  = 9
+tab
+  from 9
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 7
+  = 7
+mouse 42600000 42940000
+  = -1
+mouse 430e0000 43230000
+  trigger 3f2 on 5
+  = 5
+mouse 435d0000 00000000
+  trigger 3f3 on 5
+  = -1
+mouse 43a08000 42ea0000
+  = -1
+mouse 43328000 43220000
+  trigger 3f2 on 5
+  = 5
+mouse 43980000 42a80000
+  trigger 3f3 on 5
+  trigger 3f2 on 9
+  = 9
+capture 1
+mouse c0200000 424c0000
+  trigger 3f3 on 9
+  = -1
+mouse 439c0000 42b40000
+  trigger 3f2 on 9
+  = 9
+mouse 435a0000 41500000
+  trigger 3f3 on 9
+  trigger 3f2 on 0
+  = 0
+mouse 43710000 43240000
+  trigger 3f3 on 0
+  trigger 3f2 on 6
+  = 6
+form 63 count 7 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43050000 42a00000 42e20000 42f00000
+control 1 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42960000 00000000 42280000 42700000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41e00000 43200000 43640000 00000000
+control 3 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ae0000 438c0000 439b0000 42700000
+control 4 null
+control 5 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c80000 43200000 43380000 42700000
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433b0000 42f00000 431c0000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 5 -> 5
+radio 6 -> 6
+stop 0 tabbing 1
+shift-tab
+  from 0
+  to 6
+  = 6
+tab
+  from 6
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 5
+  = 5
+tab
+  from 5
+  to 6
+  = 6
+tab
+  from 6
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 5
+  = 5
+mouse 43150000 c1200000
+  = -1
+mouse 42bc0000 42fa0000
+  trigger 3f2 on 0
+  = 0
+mouse 43650000 428a0000
+  trigger 3f3 on 0
+  = -1
+mouse 439dc000 43590000
+  = -1
+mouse 43020000 432a0000
+  trigger 3f2 on 6
+  = 6
+mouse 42d00000 42f20000
+  trigger 3f3 on 6
+  trigger 3f2 on 0
+  = 0
+capture 3
+mouse 43200000 42c20000
+  trigger 3f3 on 0
+  trigger 3f2 on 5
+  = 5
+mouse 41400000 428e0000
+  trigger 3f3 on 5
+  trigger 3f2 on 1
+  = 1
+mouse 43030000 433b0000
+  trigger 3f3 on 1
+  trigger 3f2 on 6
+  = 6
+mouse 43290000 42a80000
+  trigger 3f3 on 6
+  trigger 3f2 on 5
+  = 5
+form 64 count 2 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 431f0000 43700000 439e0000 42f00000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42cc0000 43480000 436e0000 42700000
+radio 0 -> 0
+radio 1 -> 1
+stop 0 tabbing 1
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+mouse 43968000 431e0000
+  trigger 3f2 on 0
+  = 0
+mouse 43168000 42c00000
+  trigger 3f3 on 0
+  = -1
+mouse 437c8000 42f00000
+  trigger 3f2 on 0
+  = 0
+mouse 43050000 43150000
+  trigger 3f3 on 0
+  = -1
+mouse 43470000 42980000
+  = -1
+mouse 43860000 431d0000
+  trigger 3f2 on 0
+  = 0
+capture 1
+mouse 43610000 42a00000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 42cc0000 42340000
+  trigger 3f3 on 1
+  = -1
+mouse 42a10000 430e0000
+  = -1
+mouse 438f8000 431e0000
+  trigger 3f2 on 0
+  = 0
+form 65 count 12 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42da0000 43480000 43858000 42700000
+control 1 kind 6 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 42f60000 43200000 434d0000 42b40000
+control 2 null
+control 3 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 429e0000 43700000 43840000 42700000
+control 4 kind 6 tab 1 mode 0 checked 0 group 2 shown-enabled 0 rect 43260000 43200000 43450000 42f00000
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42240000 43700000 43928000 41f00000
+control 6 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 41a80000 00000000 42740000 00000000
+control 7 kind 6 tab 1 mode 1 checked 1 group 2 shown-enabled 1 rect 43460000 42f00000 430d0000 43160000
+control 8 kind 3 tab 0 mode 1 checked 0 group 1 shown-enabled 1 rect 42d20000 42a00000 43020000 42b40000
+control 9 kind 6 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 42da0000 43700000 43838000 42b40000
+control 10 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43120000 42200000 42b40000 42f00000
+control 11 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42800000 43200000 43470000 41f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+radio 10 -> 10
+radio 11 -> 11
+stop 0 tabbing 1
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 3
+  = 3
+tab
+  from 3
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 3
+  = 3
+tab
+  from 3
+  to 5
+  = 5
+tab
+  from 5
+  to 7
+  = 7
+tab
+  from 7
+  to 9
+  = 9
+tab
+  from 9
+  to 11
+  = 11
+set-stop 6
+  from 11
+  to 6
+  = 1 11
+mouse 41100000 40800000
+  = -1
+mouse 43088000 42340000
+  = -1
+mouse 42810000 43150000
+  = -1
+mouse 43750000 42b60000
+  trigger 3f2 on 9
+  = 9
+mouse 42950000 c1200000
+  trigger 3f3 on 9
+  = -1
+mouse 436e0000 42c20000
+  trigger 3f2 on 0
+  = 0
+capture 1
+mouse 42bb0000 41000000
+  trigger 3f3 on 0
+  = -1
+mouse 42f60000 43220000
+  trigger 3f2 on 7
+  = 7
+mouse 438a8000 421c0000
+  trigger 3f3 on 7
+  trigger 3f2 on 5
+  = 5
+mouse 432c0000 42ce0000
+  trigger 3f3 on 5
+  trigger 3f2 on 1
+  = 1
+form 66 count 6 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43400000 43480000 43730000 43160000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d60000 42200000 429e0000 42b40000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42a60000 43700000 439c8000 42700000
+control 3 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430e0000 42200000 427c0000 42f00000
+control 4 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 427c0000 43200000 436a0000 41f00000
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d80000 42a00000 42d80000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+stop 5 tabbing 1
+shift-tab
+  from 5
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 3
+  = 3
+tab
+  from 3
+  to 4
+  = 4
+tab
+  from 4
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 4
+  = 4
+tab
+  from 4
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 4
+  = 4
+tab
+  from 4
+  to 5
+  = 5
+mouse 42380000 42f40000
+  trigger 3f2 on 3
+  = 3
+mouse 42500000 43090000
+  = 3
+mouse 435d0000 42480000
+  trigger 3f3 on 3
+  trigger 3f2 on 4
+  = 4
+mouse 42240000 43010000
+  trigger 3f3 on 4
+  trigger 3f2 on 3
+  = 3
+mouse 42640000 430c0000
+  = 3
+mouse 42380000 42f20000
+  = 3
+capture 1
+mouse 43760000 42960000
+  trigger 3f3 on 3
+  trigger 3f2 on 2
+  = 2
+mouse 426c0000 43010000
+  trigger 3f3 on 2
+  trigger 3f2 on 3
+  = 3
+mouse 42340000 42d20000
+  trigger 3f3 on 3
+  trigger 3f2 on 1
+  = 1
+mouse 436d0000 432e0000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+form 67 count 5 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41d00000 42200000 42a40000 00000000
+control 1 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 433e0000 42f00000 430c0000 43160000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43090000 00000000 422c0000 42b40000
+control 3 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42880000 438c0000 43a68000 41f00000
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42b40000 00000000 42400000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+stop 4 tabbing 1
+shift-tab
+  from 4
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 2
+  = 2
+tab
+  from 2
+  to 3
+  = 3
+tab
+  from 3
+  to 4
+  = 4
+tab
+  from 4
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 4
+  = 4
+tab
+  from 4
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+mouse 43040000 433f0000
+  = -1
+mouse 41900000 42820000
+  trigger 3f2 on 4
+  = 4
+mouse 42f80000 43350000
+  trigger 3f3 on 4
+  = -1
+mouse 42200000 42d40000
+  trigger 3f2 on 2
+  = 2
+mouse 42000000 42ac0000
+  trigger 3f3 on 2
+  trigger 3f2 on 4
+  = 4
+mouse 439dc000 41e80000
+  trigger 3f3 on 4
+  = -1
+capture 4
+mouse 42400000 428e0000
+  trigger 3f2 on 4
+  = 4
+mouse 41800000 42fc0000
+  trigger 3f3 on 4
+  trigger 3f2 on 2
+  = 2
+mouse 43040000 431c0000
+  trigger 3f3 on 2
+  = -1
+mouse 43990000 42080000
+  trigger 3f2 on 3
+  = 3
+form 68 count 9 groups 3 1 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ce0000 43200000 435e0000 42b40000
+control 1 kind 3 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 41500000 43200000 433f0000 00000000
+control 2 kind 2 tab 0 mode 1 checked 0 group 2 shown-enabled 0 rect 42f20000 438c0000 43a28000 42b40000
+control 3 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 41600000 43700000 43968000 00000000
+control 4 kind 2 tab 1 mode 0 checked 0 group 2 shown-enabled 0 rect 43030000 43200000 43340000 42b40000
+control 5 kind 2 tab 0 mode 1 checked 0 group 2 shown-enabled 0 rect 42e60000 43700000 43820000 42b40000
+control 6 null
+control 7 kind 6 tab 0 mode 1 checked 0 group 1 shown-enabled 1 rect 43030000 42f00000 43280000 42f00000
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d80000 438c0000 43a80000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 7 -> 7
+radio 8 -> 8
+stop 8 tabbing 1
+tab
+  from 8
+  to 0
+  = 0
+tab
+  from 0
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 8
+  = 8
+tab
+  from 8
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 0
+  = 0
+mouse 4398c000 42b40000
+  trigger 3f2 on 8
+  = 8
+mouse 431f0000 42000000
+  trigger 3f3 on 8
+  = -1
+mouse 43848000 40400000
+  trigger 3f2 on 3
+  = 3
+mouse 42930000 431e0000
+  trigger 3f3 on 3
+  = -1
+mouse 43998000 42ce0000
+  trigger 3f2 on 8
+  = 8
+mouse 43988000 42aa0000
+  = 8
+capture 1
+mouse 43780000 435d0000
+  trigger 3f3 on 8
+  = -1
+mouse 41dc0000 43040000
+  = -1
+mouse 430b8000 42f40000
+  trigger 3f2 on 7
+  = 7
+mouse 43a8c000 c0800000
+  trigger 3f3 on 7
+  = -1
+form 69 count 10 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 423c0000 43200000 43390000 41f00000
+control 1 kind 6 tab 0 mode 0 checked 1 group 1 shown-enabled 0 rect 431b0000 42a00000 431f0000 42f00000
+control 2 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43120000 00000000 42000000 42f00000
+control 3 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42880000 43200000 436d0000 41f00000
+control 4 kind 6 tab 0 mode 1 checked 0 group 1 shown-enabled 1 rect 43290000 43480000 43630000 43160000
+control 5 null
+control 6 null
+control 7 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 429c0000 42a00000 43190000 41f00000
+control 8 null
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432d0000 43480000 43828000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 7 -> 7
+radio 9 -> 9
+stop 1 tabbing 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+mouse 43218000 41800000
+  = -1
+mouse 43068000 43130000
+  = -1
+mouse 41500000 43260000
+  = -1
+mouse 438a0000 00000000
+  = -1
+mouse 43070000 430c0000
+  = -1
+mouse 42e60000 42fe0000
+  = -1
+capture -1
+mouse 43590000 42600000
+  trigger 3f2 on 3
+  = 3
+mouse 41580000 42140000
+  trigger 3f3 on 3
+  = -1
+mouse 43300000 42100000
+  trigger 3f2 on 3
+  = 3
+mouse 43540000 425c0000
+  = 3
+form 70 count 6 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430b0000 438c0000 43b08000 42b40000
+control 1 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 431e0000 42a00000 43180000 42f00000
+control 2 kind 6 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42ca0000 00000000 42300000 42b40000
+control 3 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43450000 42a00000 42e00000 43160000
+control 4 null
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42b20000 438c0000 43a30000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 1
+radio 3 -> 1
+radio 5 -> 5
+stop 5 tabbing 1
+tab
+  from 5
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 5
+  = 5
+tab
+  from 5
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 5
+  = 5
+tab
+  from 5
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 5
+  = 5
+mouse 43078000 42b60000
+  = -1
+mouse 41e00000 42c80000
+  = -1
+mouse 42b00000 430a0000
+  trigger 3f2 on 1
+  = 1
+mouse 43a28000 42860000
+  trigger 3f3 on 1
+  trigger 3f2 on 5
+  = 5
+mouse 43998000 43040000
+  trigger 3f3 on 5
+  trigger 3f2 on 0
+  = 0
+mouse 42b20000 430c0000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+capture 3
+mouse 43948000 42e40000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 42f40000 43130000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 43a30000 42de0000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 43708000 42700000
+  trigger 3f3 on 0
+  = -1
+form 71 count 6 groups 3 1 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42040000 43700000 439e8000 00000000
+control 1 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 41300000 43200000 436e0000 00000000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42280000 42f00000 431e0000 00000000
+control 3 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42480000 00000000 42680000 41f00000
+control 4 null
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41800000 43200000 43480000 00000000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 5 -> 5
+stop 0 tabbing 1
+shift-tab
+  from 0
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 5
+  = 5
+tab
+  from 5
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 3
+  = 3
+set-stop 5
+  from 3
+  to 5
+  = 1 3
+mouse 42d20000 42860000
+  = -1
+mouse 43990000 41f80000
+  trigger 3f2 on 0
+  = 0
+mouse 43730000 41300000
+  = 0
+mouse 00000000 42300000
+  trigger 3f3 on 0
+  trigger 3f2 on 3
+  = 3
+mouse 436e8000 42b60000
+  trigger 3f3 on 3
+  = -1
+mouse 43310000 41300000
+  trigger 3f2 on 5
+  = 5
+capture 1
+mouse 43350000 41300000
+  trigger 3f3 on 5
+  trigger 3f2 on 1
+  = 1
+mouse 42f80000 42140000
+  trigger 3f3 on 1
+  trigger 3f2 on 2
+  = 2
+mouse 433e0000 41880000
+  trigger 3f3 on 2
+  = -1
+mouse 40400000 42280000
+  trigger 3f2 on 3
+  = 3
+form 72 count 2 groups 3 1 0 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c80000 43700000 43950000 42b40000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43410000 42a00000 430c0000 43160000
+radio 0 -> 0
+radio 1 -> 1
+stop 0 tabbing 1
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+set-stop 0
+  from 0
+  to 0
+  = 1 0
+mouse 42aa0000 43150000
+  = -1
+mouse 438a0000 42c00000
+  trigger 3f2 on 0
+  = 0
+mouse 42f50000 433c0000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 43ac4000 43340000
+  trigger 3f3 on 1
+  = -1
+mouse 43790000 43110000
+  = -1
+mouse 42ae0000 433e0000
+  trigger 3f2 on 1
+  = 1
+capture 0
+mouse 438f0000 42c40000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 42ee0000 43290000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 43420000 42640000
+  trigger 3f3 on 1
+  = -1
+mouse 43648000 431a0000
+  = -1
+form 73 count 6 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43270000 42a00000 42d40000 43160000
+control 1 kind 6 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 41980000 00000000 42480000 00000000
+control 2 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42d80000 42f00000 43470000 42700000
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ca0000 43700000 43828000 42700000
+control 4 null
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 429c0000 00000000 41a80000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 5 -> 5
+stop 2 tabbing 0
+tab
+  = 2
+tab
+  = 2
+shift-tab
+  = 2
+shift-tab
+  = 2
+tab
+  = 2
+tab
+  = 2
+shift-tab
+  = 2
+tab
+  = 2
+mouse 42ba0000 43250000
+  trigger 3f2 on 0
+  = 0
+mouse 41800000 41700000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 41900000 426c0000
+  trigger 3f3 on 1
+  = -1
+mouse 42c60000 43280000
+  = -1
+mouse 43488000 434f0000
+  = -1
+mouse 43180000 42bc0000
+  trigger 3f2 on 2
+  = 2
+capture 3
+mouse 41c00000 41800000
+  trigger 3f3 on 2
+  trigger 3f2 on 1
+  = 1
+mouse 43750000 42b00000
+  trigger 3f3 on 1
+  trigger 3f2 on 3
+  = 3
+mouse 42bd0000 429a0000
+  trigger 3f3 on 3
+  = -1
+mouse 3fc00000 42c60000
+  = -1
+form 74 count 2 groups 3 1 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43190000 438c0000 43af8000 42f00000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42000000 42a00000 42f20000 00000000
+radio 0 -> 0
+radio 1 -> 1
+stop 1 tabbing 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+set-stop 1
+  from 1
+  to 1
+  = 1 1
+mouse 43980000 429e0000
+  = -1
+mouse 43998000 43180000
+  trigger 3f2 on 0
+  = 0
+mouse 42f00000 41a80000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 43998000 431a0000
+  trigger 3f3 on 1
+  = -1
+mouse 43940000 42f00000
+  trigger 3f2 on 0
+  = 0
+mouse 439e8000 43100000
+  = 0
+capture 1
+mouse 439f0000 430e0000
+  = 0
+mouse 42e40000 41900000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 43958000 43000000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 42da0000 40800000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+form 75 count 11 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 423c0000 00000000 41a00000 41f00000
+control 1 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433b0000 00000000 42300000 43160000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43120000 43200000 43410000 42f00000
+control 3 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43260000 42200000 42aa0000 42f00000
+control 4 null
+control 5 kind 6 tab 1 mode 0 checked 1 group 0 shown-enabled 0 rect 42cc0000 43480000 43790000 42b40000
+control 6 kind 6 tab 1 mode 0 checked 1 group 0 shown-enabled 0 rect 43270000 43480000 43740000 42f00000
+control 7 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 42ec0000 43200000 433e0000 42b40000
+control 8 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42e60000 43480000 436f0000 42b40000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42340000 42f00000 430f0000 00000000
+control 10 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432c0000 42f00000 433a0000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 7
+radio 9 -> 9
+radio 10 -> 10
+stop 5 tabbing 1
+tab
+  from 5
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 2
+  = 2
+tab
+  from 2
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+mouse 43330000 43030000
+  trigger 3f2 on 2
+  = 2
+mouse 43990000 43550000
+  trigger 3f3 on 2
+  = -1
+mouse 433b0000 43270000
+  = -1
+mouse 43630000 43100000
+  = -1
+mouse 429e0000 43270000
+  = -1
+mouse 43370000 42c00000
+  trigger 3f2 on 7
+  = 7
+capture 3
+mouse 41500000 42300000
+  trigger 3f3 on 7
+  trigger 3f2 on 0
+  = 0
+mouse 43380000 42e80000
+  trigger 3f3 on 0
+  trigger 3f2 on 7
+  = 7
+mouse 41cc0000 41800000
+  trigger 3f3 on 7
+  = -1
+mouse 43ab8000 41000000
+  = -1
+form 76 count 8 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43040000 42a00000 43110000 42b40000
+control 1 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433e0000 00000000 42900000 43160000
+control 2 kind 2 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 43210000 43480000 43780000 43160000
+control 3 kind 3 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 42fe0000 42200000 42900000 42b40000
+control 4 kind 2 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 43310000 43700000 43988000 43160000
+control 5 kind 3 tab 1 mode 0 checked 0 group 2 shown-enabled 0 rect 43440000 42f00000 43300000 43160000
+control 6 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43220000 42f00000 430e0000 42f00000
+control 7 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c80000 42a00000 42ce0000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+stop 4 tabbing 1
+shift-tab
+  from 4
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 2
+  = 2
+tab
+  from 2
+  to 3
+  = 3
+tab
+  from 3
+  to 4
+  = 4
+mouse 43650000 43180000
+  trigger 3f2 on 2
+  = 2
+mouse 434e8000 42e00000
+  trigger 3f3 on 2
+  = -1
+mouse 436d0000 428c0000
+  = -1
+mouse 43700000 43170000
+  trigger 3f2 on 2
+  = 2
+mouse 43410000 43090000
+  trigger 3f3 on 2
+  = -1
+mouse 42300000 432a0000
+  trigger 3f2 on 1
+  = 1
+capture 5
+mouse 430d0000 43040000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 43120000 43050000
+  trigger 3f3 on 0
+  = -1
+mouse 42f60000 42da0000
+  trigger 3f2 on 0
+  = 0
+mouse 42a60000 42ce0000
+  = 0
+form 77 count 11 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 422c0000 438c0000 43b28000 00000000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42640000 43700000 43978000 41f00000
+control 2 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43020000 42a00000 42f40000 42f00000
+control 3 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 41800000 43700000 43910000 00000000
+control 4 kind 6 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42200000 43700000 438b8000 41f00000
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41e80000 43480000 43840000 00000000
+control 6 kind 6 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42ce0000 438c0000 43b08000 42b40000
+control 7 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430a0000 43200000 433d0000 42f00000
+control 8 null
+control 9 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 43230000 43480000 43848000 42f00000
+control 10 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d80000 43480000 43878000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 3
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 9 -> 9
+radio 10 -> 10
+stop 9 tabbing 1
+shift-tab
+  from 9
+  to 7
+  = 7
+tab
+  from 7
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 5
+  = 5
+tab
+  from 5
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 5
+  = 5
+tab
+  from 5
+  to 7
+  = 7
+tab
+  from 7
+  to 9
+  = 9
+set-stop 3
+  from 9
+  to 3
+  = 1 9
+mouse 43578000 43410000
+  = -1
+mouse 43590000 00000000
+  trigger 3f2 on 5
+  = 5
+mouse 42e60000 40c00000
+  trigger 3f3 on 5
+  = -1
+mouse 43760000 41300000
+  trigger 3f2 on 3
+  = 3
+mouse 43abc000 430e0000
+  trigger 3f3 on 3
+  = -1
+mouse 42de0000 43020000
+  trigger 3f2 on 2
+  = 2
+capture 3
+mouse 43b08000 41200000
+  trigger 3f3 on 2
+  trigger 3f2 on 0
+  = 0
+mouse 43710000 41b80000
+  trigger 3f3 on 0
+  trigger 3f2 on 5
+  = 5
+mouse 43868000 41f80000
+  trigger 3f3 on 5
+  trigger 3f2 on 1
+  = 1
+mouse 43938000 bf800000
+  trigger 3f3 on 1
+  = -1
+form 78 count 3 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d80000 42f00000 43370000 42b40000
+control 1 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 43410000 42a00000 42d60000 43160000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43460000 42200000 427c0000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+stop 1 tabbing 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+mouse 43280000 42c80000
+  trigger 3f2 on 0
+  = 0
+mouse 43320000 42c40000
+  = 0
+mouse 432a0000 42d40000
+  = 0
+mouse 42f20000 42d80000
+  = 0
+mouse 43020000 42bc0000
+  = 0
+mouse 43040000 42d40000
+  = 0
+capture 1
+mouse 42b40000 432e0000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 42d80000 43210000
+  trigger 3f3 on 1
+  = -1
+mouse 42780000 43220000
+  trigger 3f2 on 2
+  = 2
+mouse 42ce0000 43280000
+  trigger 3f3 on 2
+  trigger 3f2 on 1
+  = 1
+form 79 count 4 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43050000 43480000 43828000 42b40000
+control 1 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43000000 438c0000 43a70000 42b40000
+control 2 kind 2 tab 0 mode 0 checked 0 group 1 shown-enabled 0 rect 43290000 43480000 437e0000 43160000
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d20000 43480000 43660000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+stop 2 tabbing 1
+shift-tab
+  from 2
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+mouse 43750000 43170000
+  = -1
+mouse 42780000 41e00000
+  = -1
+mouse 434d0000 42780000
+  trigger 3f2 on 3
+  = 3
+mouse 43550000 43260000
+  trigger 3f3 on 3
+  = -1
+mouse 43aa0000 432d0000
+  = -1
+mouse 43550000 42f20000
+  trigger 3f2 on 0
+  = 0
+capture 2
+mouse 43548000 3f800000
+  trigger 3f3 on 0
+  = -1
+mouse 43298000 42000000
+  = -1
+mouse 43610000 43000000
+  trigger 3f2 on 0
+  = 0
+mouse 42dc0000 430e0000
+  trigger 3f3 on 0
+  = -1
+form 80 count 10 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 427c0000 438c0000 43a10000 41f00000
+control 1 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 43170000 438c0000 43960000 42f00000
+control 2 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 43170000 42f00000 432b0000 42f00000
+control 3 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41d80000 43480000 435d0000 00000000
+control 4 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42cc0000 438c0000 43af8000 42b40000
+control 5 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41c00000 43700000 438f0000 00000000
+control 6 kind 2 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 42d20000 43700000 43840000 42b40000
+control 7 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 428c0000 43700000 43880000 42700000
+control 8 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 41a00000 43480000 438b0000 00000000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41e00000 42f00000 43110000 00000000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+stop 7 tabbing 1
+shift-tab
+  from 7
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 4
+  = 4
+tab
+  from 4
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 4
+  = 4
+tab
+  from 4
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 4
+  = 4
+tab
+  from 4
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 4
+  = 4
+mouse 43120000 43170000
+  trigger 3f2 on 2
+  = 2
+mouse 43860000 40a00000
+  trigger 3f3 on 2
+  trigger 3f2 on 5
+  = 5
+mouse 42c20000 c1100000
+  trigger 3f3 on 5
+  = -1
+mouse 438e0000 421c0000
+  trigger 3f2 on 0
+  = 0
+mouse 43828000 42ba0000
+  trigger 3f3 on 0
+  = -1
+mouse 438f8000 42fa0000
+  trigger 3f2 on 1
+  = 1
+capture 9
+mouse 43948000 42bc0000
+  trigger 3f3 on 1
+  trigger 3f2 on 4
+  = 4
+mouse 435e0000 41880000
+  trigger 3f3 on 4
+  trigger 3f2 on 8
+  = 8
+mouse 41880000 42900000
+  trigger 3f3 on 8
+  = -1
+mouse 433e0000 c0800000
+  = -1
+form 81 count 8 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43260000 42200000 42700000 42f00000
+control 1 kind 6 tab 0 mode 1 checked 0 group 1 shown-enabled 1 rect 42680000 42a00000 43100000 41f00000
+control 2 kind 2 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 42400000 42200000 42920000 41f00000
+control 3 null
+control 4 kind 2 tab 0 mode 0 checked 0 group 1 shown-enabled 0 rect 42640000 42200000 42a20000 41f00000
+control 5 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42b60000 42200000 42d60000 42700000
+control 6 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433c0000 43700000 43908000 43160000
+control 7 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 426c0000 438c0000 43a48000 41f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+stop 5 tabbing 1
+tab
+  from 5
+  to 6
+  = 6
+tab
+  from 6
+  to 7
+  = 7
+tab
+  from 7
+  to 0
+  = 0
+tab
+  from 0
+  to 5
+  = 5
+tab
+  from 5
+  to 6
+  = 6
+tab
+  from 6
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 5
+  = 5
+mouse 43410000 43380000
+  = -1
+mouse 42740000 43120000
+  = -1
+mouse 43930000 421c0000
+  trigger 3f2 on 7
+  = 7
+mouse 43750000 43170000
+  trigger 3f3 on 7
+  trigger 3f2 on 6
+  = 6
+mouse 43a04000 42540000
+  trigger 3f3 on 6
+  trigger 3f2 on 7
+  = 7
+mouse 43790000 43230000
+  trigger 3f3 on 7
+  trigger 3f2 on 6
+  = 6
+capture 5
+mouse 423c0000 421c0000
+  trigger 3f3 on 6
+  = -1
+mouse 42640000 431f0000
+  trigger 3f2 on 0
+  = 0
+mouse 42340000 422c0000
+  trigger 3f3 on 0
+  = -1
+mouse 40900000 c1100000
+  = -1
+form 82 count 10 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43220000 43480000 43640000 42f00000
+control 1 kind 6 tab 0 mode 1 checked 0 group 1 shown-enabled 1 rect 42340000 43200000 435b0000 41f00000
+control 2 null
+control 3 kind 2 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 429e0000 42200000 428e0000 41f00000
+control 4 kind 2 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 42a60000 43700000 438a8000 42700000
+control 5 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42c40000 42200000 42de0000 42700000
+control 6 kind 6 tab 1 mode 0 checked 0 group 2 shown-enabled 0 rect 423c0000 43200000 43560000 41f00000
+control 7 kind 3 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 42b60000 42200000 42900000 42700000
+control 8 kind 2 tab 0 mode 1 checked 0 group 2 shown-enabled 1 rect 42680000 00000000 423c0000 41f00000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42400000 438c0000 439f0000 41f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+stop 1 tabbing 1
+tab
+  from 1
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 0
+  = 0
+tab
+  from 0
+  to 3
+  = 3
+tab
+  from 3
+  to 4
+  = 4
+tab
+  from 4
+  to 5
+  = 5
+tab
+  from 5
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 4
+  = 4
+mouse 42400000 42780000
+  trigger 3f2 on 3
+  = 3
+mouse 42200000 42180000
+  = 3
+mouse 435b0000 431d0000
+  trigger 3f3 on 3
+  trigger 3f2 on 0
+  = 0
+mouse 43970000 41e80000
+  trigger 3f3 on 0
+  = -1
+mouse 42900000 42be0000
+  trigger 3f2 on 5
+  = 5
+mouse 42a20000 429e0000
+  = 5
+capture 3
+mouse 43a00000 43570000
+  trigger 3f3 on 5
+  = -1
+mouse 423a0000 43180000
+  = -1
+mouse 436f0000 429a0000
+  = -1
+mouse 43858000 42a80000
+  = -1
+form 83 count 6 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42540000 00000000 42960000 41f00000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43080000 42a00000 42d80000 42b40000
+control 2 kind 2 tab 0 mode 0 checked 0 group 0 shown-enabled 0 rect 43260000 43480000 43810000 42f00000
+control 3 kind 6 tab 1 mode 0 checked 1 group 0 shown-enabled 0 rect 431f0000 43700000 439c0000 42f00000
+control 4 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 43250000 43700000 43938000 42f00000
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43140000 43700000 439d0000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+stop 3 tabbing 1
+shift-tab
+  from 3
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 1
+  = 1
+tab
+  from 1
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 1
+  = 1
+tab
+  from 1
+  to 5
+  = 5
+mouse 42a60000 42da0000
+  trigger 3f2 on 1
+  = 1
+mouse 435a0000 43090000
+  trigger 3f3 on 1
+  = -1
+mouse 43948000 431a0000
+  = -1
+mouse 43450000 42c80000
+  = -1
+mouse 438f8000 430e0000
+  trigger 3f2 on 4
+  = 4
+mouse 42b00000 42d60000
+  trigger 3f3 on 4
+  trigger 3f2 on 1
+  = 1
+capture 4
+mouse 42950000 43390000
+  trigger 3f3 on 1
+  = -1
+mouse 43888000 430a0000
+  trigger 3f2 on 4
+  = 4
+mouse 42be0000 42b20000
+  trigger 3f3 on 4
+  = -1
+mouse 42940000 42480000
+  trigger 3f2 on 0
+  = 0
+form 84 count 10 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c80000 00000000 42300000 42700000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42fa0000 42a00000 42d80000 42b40000
+control 2 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 43030000 43200000 43440000 42b40000
+control 3 kind 6 tab 0 mode 0 checked 0 group 0 shown-enabled 0 rect 42200000 43200000 43610000 41f00000
+control 4 null
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42fc0000 43200000 43400000 42b40000
+control 6 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 42b20000 43700000 43968000 42700000
+control 7 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43340000 00000000 429e0000 43160000
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43010000 00000000 42200000 42b40000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43290000 42f00000 43200000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 2
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+stop 2 tabbing 1
+shift-tab
+  from 2
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+set-stop 7
+  from 0
+  to 7
+  = 1 0
+mouse 420c0000 42820000
+  trigger 3f2 on 0
+  = 0
+mouse 43550000 421c0000
+  trigger 3f3 on 0
+  = -1
+mouse 43360000 42140000
+  = -1
+mouse 43110000 431c0000
+  trigger 3f2 on 9
+  = 9
+mouse 43350000 42cc0000
+  trigger 3f3 on 9
+  trigger 3f2 on 2
+  = 2
+mouse 40000000 43150000
+  trigger 3f3 on 2
+  = -1
+capture 6
+mouse 42400000 42580000
+  = -1
+mouse 41cc0000 43080000
+  = -1
+mouse 41400000 43170000
+  trigger 3f2 on 7
+  = 7
+mouse 43230000 42e40000
+  trigger 3f3 on 7
+  trigger 3f2 on 2
+  = 2
+form 85 count 4 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43040000 43700000 439a0000 42b40000
+control 1 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43020000 42a00000 43190000 42b40000
+control 2 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 43040000 43480000 43710000 42b40000
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430f0000 42f00000 431f0000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+stop 2 tabbing 1
+shift-tab
+  from 2
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+tab
+  from 3
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 3
+  = 3
+mouse 43710000 42b40000
+  trigger 3f2 on 0
+  = 0
+mouse 43540000 42ce0000
+  trigger 3f3 on 0
+  trigger 3f2 on 2
+  = 2
+mouse 43058000 427c0000
+  trigger 3f3 on 2
+  = -1
+mouse 43010000 42ce0000
+  trigger 3f2 on 1
+  = 1
+mouse 43170000 430d0000
+  trigger 3f3 on 1
+  trigger 3f2 on 3
+  = 3
+mouse 430e0000 43070000
+  = 3
+capture 1
+mouse 42d20000 42b20000
+  trigger 3f3 on 3
+  = -1
+mouse 430b0000 42ee0000
+  trigger 3f2 on 1
+  = 1
+mouse 43000000 43100000
+  trigger 3f3 on 1
+  = -1
+mouse 4391c000 42bc0000
+  trigger 3f2 on 0
+  = 0
+form 86 count 10 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41e80000 42f00000 432d0000 00000000
+control 1 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43120000 438c0000 439c8000 42f00000
+control 2 kind 6 tab 0 mode 1 checked 1 group 0 shown-enabled 1 rect 42b00000 43700000 438b8000 42700000
+control 3 null
+control 4 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c80000 43700000 439c8000 42b40000
+control 5 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41e80000 43200000 43450000 00000000
+control 6 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42bc0000 438c0000 43a78000 42700000
+control 7 null
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432a0000 00000000 41c00000 43160000
+control 9 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42540000 42f00000 43310000 41f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 8 -> 8
+radio 9 -> 9
+stop 5 tabbing 1
+tab
+  from 5
+  to 8
+  = 8
+tab
+  from 8
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 6
+  = 6
+tab
+  from 6
+  to 8
+  = 8
+shift-tab
+  from 8
+  to 6
+  = 6
+tab
+  from 6
+  to 8
+  = 8
+tab
+  from 8
+  to 9
+  = 9
+set-stop 5
+  from 9
+  to 5
+  = 1 9
+mouse 43390000 43330000
+  = -1
+mouse 41600000 43250000
+  trigger 3f2 on 8
+  = 8
+mouse 43808000 42940000
+  trigger 3f3 on 8
+  trigger 3f2 on 2
+  = 2
+mouse 43808000 42b20000
+  trigger 3f3 on 2
+  = -1
+mouse 43a10000 428c0000
+  trigger 3f2 on 6
+  = 6
+mouse 439d0000 43070000
+  trigger 3f3 on 6
+  = -1
+capture 4
+mouse c0e00000 42f00000
+  = -1
+mouse 43818000 42a20000
+  trigger 3f2 on 2
+  = 2
+mouse 437d0000 42900000
+  = 2
+mouse 43230000 41f00000
+  trigger 3f3 on 2
+  trigger 3f2 on 9
+  = 9
+form 87 count 3 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ce0000 43200000 43490000 42700000
+control 1 kind 3 tab 0 mode 1 checked 0 group 1 shown-enabled 0 rect 42940000 43700000 43858000 42700000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42ba0000 43200000 436b0000 42700000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+stop 0 tabbing 1
+tab
+  from 0
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 0
+  = 0
+set-stop 2
+  from 0
+  to 2
+  = 1 0
+mouse 432e0000 42d00000
+  = -1
+mouse 43780000 42700000
+  = -1
+mouse 43310000 42ca0000
+  trigger 3f2 on 0
+  = 0
+mouse 43360000 42a60000
+  = 0
+mouse 437b0000 42780000
+  trigger 3f3 on 0
+  = -1
+mouse 43280000 42960000
+  trigger 3f2 on 0
+  = 0
+capture 2
+mouse 433d0000 428e0000
+  trigger 3f3 on 0
+  trigger 3f2 on 2
+  = 2
+mouse 42ff0000 00000000
+  trigger 3f3 on 2
+  = -1
+mouse 43810000 427c0000
+  = -1
+mouse 43670000 433c0000
+  = -1
+form 88 count 3 groups 3 1 0 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43080000 438c0000 43a48000 42f00000
+control 1 kind 2 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 41800000 43200000 43410000 00000000
+control 2 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 430f0000 42f00000 43100000 42f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+stop 1 tabbing 1
+tab
+  from 1
+  to 2
+  = 2
+tab
+  from 2
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 0
+  = 0
+set-stop 0
+  from 0
+  to 0
+  = 1 0
+mouse 41500000 40400000
+  = -1
+mouse 42ee0000 43050000
+  = -1
+mouse 431f0000 41700000
+  = -1
+mouse 42f20000 43030000
+  trigger 3f2 on 2
+  = 2
+mouse 439e0000 42ee0000
+  trigger 3f3 on 2
+  = -1
+mouse 43060000 43060000
+  trigger 3f2 on 2
+  = 2
+capture 1
+mouse 43aa8000 42880000
+  trigger 3f3 on 2
+  = -1
+mouse 43850000 43180000
+  = -1
+mouse 4391c000 43160000
+  = -1
+mouse 43370000 40400000
+  trigger 3f2 on 1
+  = 1
+form 89 count 2 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43230000 43200000 43370000 42f00000
+control 1 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43010000 42a00000 42ca0000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+stop 0 tabbing 1
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 0
+  = 0
+set-stop 1
+  from 0
+  to 1
+  = 1 0
+mouse 42a80000 42e20000
+  trigger 3f2 on 1
+  = 1
+mouse 42be0000 42e20000
+  = 1
+mouse 42ae0000 42be0000
+  = 1
+mouse 43280000 43000000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 42ac0000 42cc0000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 43250000 430d0000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+capture 1
+mouse 43668000 43350000
+  trigger 3f3 on 0
+  = -1
+mouse 43280000 430c0000
+  trigger 3f2 on 0
+  = 0
+mouse 42b20000 43010000
+  trigger 3f3 on 0
+  trigger 3f2 on 1
+  = 1
+mouse 43320000 43170000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+form 90 count 7 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43140000 42f00000 43110000 42f00000
+control 1 kind 2 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43160000 42200000 42e80000 42f00000
+control 2 kind 2 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 43230000 43480000 43820000 42f00000
+control 3 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42960000 43700000 43830000 42700000
+control 4 null
+control 5 null
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43210000 43480000 43790000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 6 -> 6
+stop 6 tabbing 0
+tab
+  = 6
+shift-tab
+  = 6
+tab
+  = 6
+tab
+  = 6
+tab
+  = 6
+shift-tab
+  = 6
+tab
+  = 6
+shift-tab
+  = 6
+mouse 43830000 428c0000
+  trigger 3f2 on 3
+  = 3
+mouse 43808000 42860000
+  = 3
+mouse 42f40000 430f0000
+  trigger 3f3 on 3
+  trigger 3f2 on 0
+  = 0
+mouse 437c8000 41400000
+  trigger 3f3 on 0
+  = -1
+mouse 434c0000 43040000
+  = -1
+mouse 42980000 430d0000
+  = -1
+capture -1
+mouse 41980000 435c0000
+  = -1
+mouse 43a94000 42a00000
+  = -1
+mouse 4385c000 434c0000
+  = -1
+mouse 4385c000 42a80000
+  = -1
+form 91 count 5 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41a80000 43480000 436c0000 00000000
+control 1 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42e60000 43700000 43908000 42b40000
+control 2 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 433f0000 43700000 439d8000 43160000
+control 3 kind 2 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 42d80000 438c0000 43b00000 42700000
+control 4 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432b0000 438c0000 439d8000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+stop 1 tabbing 1
+tab
+  from 1
+  to 2
+  = 2
+tab
+  from 2
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+tab
+  from 2
+  to 4
+  = 4
+mouse 43a18000 42960000
+  = -1
+mouse 43928000 43210000
+  trigger 3f2 on 2
+  = 2
+mouse 43854000 42e80000
+  trigger 3f3 on 2
+  = -1
+mouse 43928000 426c0000
+  = -1
+mouse 43888000 43360000
+  trigger 3f2 on 2
+  = 2
+mouse 439b0000 43220000
+  = 2
+capture 0
+mouse 43830000 42e40000
+  trigger 3f3 on 2
+  trigger 3f2 on 1
+  = 1
+mouse 43858000 43170000
+  trigger 3f3 on 1
+  trigger 3f2 on 2
+  = 2
+mouse 439a8000 43250000
+  = 2
+mouse 43970000 432d0000
+  = 2
+form 92 count 12 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432c0000 42f00000 432a0000 43160000
+control 1 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41400000 42200000 42e40000 00000000
+control 2 kind 3 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 42ac0000 43480000 43650000 42700000
+control 3 kind 6 tab 0 mode 0 checked 1 group 1 shown-enabled 0 rect 41600000 43700000 43968000 00000000
+control 4 kind 6 tab 1 mode 1 checked 1 group 1 shown-enabled 1 rect 43030000 00000000 42540000 42b40000
+control 5 kind 3 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 41d80000 43700000 438c8000 00000000
+control 6 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 432c0000 42f00000 43440000 43160000
+control 7 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 431a0000 42f00000 431a0000 42f00000
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42d00000 438c0000 43a00000 42b40000
+control 9 kind 3 tab 0 mode 0 checked 0 group 0 shown-enabled 0 rect 42e60000 43480000 435d0000 42b40000
+control 10 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42a00000 43480000 43750000 42700000
+control 11 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41a00000 42f00000 432f0000 00000000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+radio 10 -> 10
+radio 11 -> 11
+stop 1 tabbing 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 11
+  = 11
+tab
+  from 11
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 11
+  = 11
+tab
+  from 11
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+mouse 42a00000 00000000
+  trigger 3f2 on 1
+  = 1
+mouse 42400000 43040000
+  trigger 3f3 on 1
+  = -1
+mouse 43190000 c1200000
+  = -1
+mouse 42440000 42ea0000
+  trigger 3f2 on 4
+  = 4
+mouse 438c0000 42740000
+  trigger 3f3 on 4
+  = -1
+mouse 42f00000 43150000
+  trigger 3f2 on 7
+  = 7
+capture 7
+mouse 43480000 42d80000
+  trigger 3f3 on 7
+  = -1
+mouse 42ae0000 43430000
+  = -1
+mouse 43540000 43500000
+  = -1
+mouse 43520000 42be0000
+  = -1
+form 93 count 9 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41800000 43700000 439b8000 00000000
+control 1 kind 6 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42780000 42200000 42dc0000 41f00000
+control 2 kind 2 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 43070000 43480000 43818000 42f00000
+control 3 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42da0000 42f00000 43320000 42700000
+control 4 kind 6 tab 0 mode 0 checked 0 group 0 shown-enabled 0 rect 42d40000 42f00000 431e0000 42700000
+control 5 kind 6 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43380000 00000000 42820000 43160000
+control 6 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 424c0000 438c0000 43998000 41f00000
+control 7 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 423c0000 42f00000 43290000 00000000
+control 8 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41f80000 42f00000 43450000 00000000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+stop 7 tabbing 1
+tab
+  from 7
+  to 8
+  = 8
+tab
+  from 8
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 8
+  = 8
+tab
+  from 8
+  to 0
+  = 0
+tab
+  from 0
+  to 3
+  = 3
+shift-tab
+  from 3
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 8
+  = 8
+tab
+  from 8
+  to 0
+  = 0
+mouse 43050000 41c80000
+  trigger 3f2 on 7
+  = 7
+mouse 43378000 43460000
+  trigger 3f3 on 7
+  = -1
+mouse 43050000 00000000
+  trigger 3f2 on 7
+  = 7
+mouse 43050000 42940000
+  trigger 3f3 on 7
+  trigger 3f2 on 3
+  = 3
+mouse 420c0000 432a0000
+  trigger 3f3 on 3
+  = -1
+mouse 43998000 422c0000
+  trigger 3f2 on 6
+  = 6
+capture 0
+mouse 43498000 42f20000
+  trigger 3f3 on 6
+  trigger 3f2 on 2
+  = 2
+mouse 43950000 42100000
+  trigger 3f3 on 2
+  trigger 3f2 on 6
+  = 6
+mouse 42300000 43250000
+  trigger 3f3 on 6
+  = -1
+mouse 435a0000 42f80000
+  trigger 3f2 on 2
+  = 2
+form 94 count 12 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 426c0000 42a00000 43130000 41f00000
+control 1 kind 6 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 426c0000 42200000 42b80000 41f00000
+control 2 kind 6 tab 0 mode 1 checked 1 group 0 shown-enabled 1 rect 42fa0000 43700000 43990000 42b40000
+control 3 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42a80000 42a00000 430f0000 42700000
+control 4 kind 6 tab 0 mode 1 checked 1 group 1 shown-enabled 1 rect 42d00000 438c0000 43a58000 42700000
+control 5 kind 2 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 42dc0000 42200000 42700000 42b40000
+control 6 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 433e0000 43480000 436e0000 43160000
+control 7 kind 3 tab 0 mode 1 checked 0 group 2 shown-enabled 1 rect 43370000 43480000 435e0000 43160000
+control 8 kind 2 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 433b0000 43200000 43540000 43160000
+control 9 kind 6 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 430a0000 438c0000 43a88000 42b40000
+control 10 kind 3 tab 1 mode 0 checked 0 group 2 shown-enabled 0 rect 43250000 438c0000 439c8000 42f00000
+control 11 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42480000 43700000 43850000 41f00000
+radio 0 -> 0
+radio 1 -> 2
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+radio 8 -> 8
+radio 9 -> 9
+radio 10 -> 10
+radio 11 -> 11
+stop 10 tabbing 1
+tab
+  from 10
+  to 11
+  = 11
+shift-tab
+  from 11
+  to 9
+  = 9
+tab
+  from 9
+  to 11
+  = 11
+shift-tab
+  from 11
+  to 9
+  = 9
+shift-tab
+  from 9
+  to 8
+  = 8
+tab
+  from 8
+  to 9
+  = 9
+tab
+  from 9
+  to 11
+  = 11
+shift-tab
+  from 11
+  to 9
+  = 9
+mouse 42680000 42540000
+  trigger 3f2 on 1
+  = 1
+mouse 43ae4000 42b40000
+  trigger 3f3 on 1
+  = -1
+mouse 43770000 42200000
+  trigger 3f2 on 11
+  = 11
+mouse 42600000 42340000
+  trigger 3f3 on 11
+  trigger 3f2 on 1
+  = 1
+mouse 41a80000 42380000
+  trigger 3f3 on 1
+  = -1
+mouse 43880000 43440000
+  = -1
+capture 10
+mouse 435c8000 42f20000
+  = -1
+mouse 43798000 42f00000
+  trigger 3f2 on 2
+  = 2
+mouse 43968000 428c0000
+  trigger 3f3 on 2
+  trigger 3f2 on 4
+  = 4
+mouse 43160000 43460000
+  trigger 3f3 on 4
+  = -1
+form 95 count 7 groups 3 1 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43100000 42f00000 430f0000 42f00000
+control 1 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42ae0000 43700000 43908000 42700000
+control 2 kind 6 tab 1 mode 1 checked 1 group 0 shown-enabled 1 rect 43070000 42f00000 43470000 42f00000
+control 3 kind 3 tab 0 mode 0 checked 0 group 0 shown-enabled 0 rect 43400000 42200000 42ac0000 43160000
+control 4 kind 6 tab 1 mode 1 checked 1 group 2 shown-enabled 1 rect 41600000 438c0000 43a38000 00000000
+control 5 kind 2 tab 1 mode 1 checked 0 group 2 shown-enabled 1 rect 43250000 43700000 439a8000 43160000
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42e20000 43700000 43820000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+stop 6 tabbing 1
+shift-tab
+  from 6
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 4
+  = 4
+tab
+  from 4
+  to 5
+  = 5
+tab
+  from 5
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+mouse 428c0000 43230000
+  = -1
+mouse 438c0000 43460000
+  = -1
+mouse 42740000 43360000
+  = -1
+mouse 437b0000 42d40000
+  trigger 3f2 on 6
+  = 6
+mouse 439a8000 43200000
+  trigger 3f3 on 6
+  trigger 3f2 on 5
+  = 5
+mouse 43740000 42d00000
+  trigger 3f3 on 5
+  trigger 3f2 on 6
+  = 6
+capture 1
+mouse 42f60000 42f20000
+  trigger 3f3 on 6
+  trigger 3f2 on 0
+  = 0
+mouse 41fc0000 434a0000
+  trigger 3f3 on 0
+  = -1
+mouse 43790000 42b20000
+  = -1
+mouse 42740000 43200000
+  = -1
+form 96 count 6 groups 3 1 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42c80000 00000000 42740000 42700000
+control 1 kind 2 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 423c0000 438c0000 43a20000 41f00000
+control 2 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 1 rect 42cc0000 42a00000 43080000 42700000
+control 3 kind 2 tab 0 mode 1 checked 0 group 2 shown-enabled 0 rect 42800000 43200000 43340000 41f00000
+control 4 kind 2 tab 1 mode 1 checked 0 group 2 shown-enabled 0 rect 43400000 42a00000 43110000 43160000
+control 5 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43200000 42200000 42ca0000 43160000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+stop 5 tabbing 1
+shift-tab
+  from 5
+  to 2
+  = 2
+tab
+  from 2
+  to 5
+  = 5
+tab
+  from 5
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 2
+  = 2
+tab
+  from 2
+  to 5
+  = 5
+tab
+  from 5
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+mouse 43300000 42500000
+  = -1
+mouse 42a60000 431a0000
+  trigger 3f2 on 5
+  = 5
+mouse 438c8000 42040000
+  trigger 3f3 on 5
+  = -1
+mouse 43060000 43360000
+  = -1
+mouse 42840000 43210000
+  = -1
+mouse 42ae0000 42ba0000
+  trigger 3f2 on 2
+  = 2
+capture 3
+mouse 424a0000 42e20000
+  trigger 3f3 on 2
+  = -1
+mouse 42680000 42be0000
+  trigger 3f2 on 0
+  = 0
+mouse 43350000 425c0000
+  trigger 3f3 on 0
+  = -1
+mouse 42c00000 42820000
+  trigger 3f2 on 2
+  = 2
+form 97 count 7 groups 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43050000 438c0000 43a30000 42b40000
+control 1 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42200000 42a00000 42e40000 41f00000
+control 2 null
+control 3 kind 6 tab 1 mode 0 checked 0 group 0 shown-enabled 0 rect 43110000 43200000 435d0000 42f00000
+control 4 kind 3 tab 0 mode 1 checked 0 group 0 shown-enabled 1 rect 42ae0000 42200000 42e60000 42700000
+control 5 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 41200000 43480000 43600000 00000000
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42740000 43700000 43860000 41f00000
+radio 0 -> 0
+radio 1 -> 1
+radio 3 -> 3
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+stop 4 tabbing 1
+tab
+  from 4
+  to 5
+  = 5
+shift-tab
+  from 5
+  to 1
+  = 1
+shift-tab
+  from 1
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+tab
+  from 1
+  to 5
+  = 5
+tab
+  from 5
+  to 6
+  = 6
+tab
+  from 6
+  to 0
+  = 0
+tab
+  from 0
+  to 1
+  = 1
+set-stop 4
+  from 1
+  to 1
+  = 0 1
+mouse 432c0000 42f00000
+  = -1
+mouse 43410000 42fc0000
+  = -1
+mouse 43988000 42d40000
+  trigger 3f2 on 0
+  = 0
+mouse 43a14000 c1000000
+  trigger 3f3 on 0
+  = -1
+mouse 42d60000 42ae0000
+  trigger 3f2 on 4
+  = 4
+mouse 42c00000 42180000
+  trigger 3f3 on 4
+  trigger 3f2 on 1
+  = 1
+capture 4
+mouse 43958000 42ee0000
+  trigger 3f3 on 1
+  trigger 3f2 on 0
+  = 0
+mouse 42740000 42740000
+  trigger 3f3 on 0
+  trigger 3f2 on 4
+  = 4
+mouse 42200000 42a40000
+  = 4
+mouse 43480000 40800000
+  trigger 3f3 on 4
+  trigger 3f2 on 5
+  = 5
+form 98 count 7 groups 2 1 0
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 428c0000 00000000 42580000 41f00000
+control 1 kind 3 tab 1 mode 1 checked 0 group 1 shown-enabled 0 rect 430c0000 42f00000 43240000 42f00000
+control 2 kind 3 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43090000 438c0000 43a08000 42b40000
+control 3 kind 6 tab 1 mode 1 checked 1 group 1 shown-enabled 0 rect 429a0000 438c0000 439b8000 41f00000
+control 4 kind 3 tab 1 mode 0 checked 0 group 1 shown-enabled 0 rect 41900000 42a00000 42f20000 00000000
+control 5 null
+control 6 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42e80000 43700000 43888000 42b40000
+radio 0 -> 0
+radio 1 -> 1
+radio 2 -> 2
+radio 3 -> 3
+radio 4 -> 4
+radio 6 -> 6
+stop 2 tabbing 1
+shift-tab
+  from 2
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 6
+  = 6
+tab
+  from 6
+  to 0
+  = 0
+tab
+  from 0
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+shift-tab
+  from 0
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 2
+  = 2
+shift-tab
+  from 2
+  to 0
+  = 0
+mouse 42dc0000 41900000
+  = -1
+mouse 43670000 42960000
+  = -1
+mouse 43100000 43050000
+  = -1
+mouse 436f0000 42c40000
+  = -1
+mouse 43170000 43020000
+  = -1
+mouse 437d0000 42ce0000
+  trigger 3f2 on 6
+  = 6
+capture 0
+mouse 43220000 42f60000
+  trigger 3f3 on 6
+  = -1
+mouse 43a80000 42e60000
+  = -1
+mouse 43978000 42100000
+  = -1
+mouse 43a50000 43490000
+  = -1
+form 99 count 8 groups 2 1 1
+control 0 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 420c0000 42200000 42c20000 00000000
+control 1 null
+control 2 kind 6 tab 1 mode 1 checked 1 group 1 shown-enabled 1 rect 43240000 42f00000 433b0000 43160000
+control 3 null
+control 4 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 42300000 42200000 428c0000 00000000
+control 5 kind 3 tab 0 mode 1 checked 0 group 1 shown-enabled 1 rect 433c0000 42f00000 43230000 43160000
+control 6 kind 6 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 43420000 00000000 42400000 43160000
+control 7 kind 2 tab 1 mode 1 checked 0 group 0 shown-enabled 1 rect 432c0000 43700000 438b8000 43160000
+radio 0 -> 0
+radio 2 -> 2
+radio 4 -> 4
+radio 5 -> 5
+radio 6 -> 6
+radio 7 -> 7
+stop 0 tabbing 1
+shift-tab
+  from 0
+  to 7
+  = 7
+shift-tab
+  from 7
+  to 6
+  = 6
+shift-tab
+  from 6
+  to 4
+  = 4
+shift-tab
+  from 4
+  to 2
+  = 2
+tab
+  from 2
+  to 4
+  = 4
+tab
+  from 4
+  to 6
+  = 6
+tab
+  from 6
+  to 7
+  = 7
+tab
+  from 7
+  to 0
+  = 0
+set-stop 0
+  from 0
+  to 0
+  = 1 0
+mouse 42300000 43280000
+  trigger 3f2 on 6
+  = 6
+mouse 42640000 41c80000
+  trigger 3f3 on 6
+  trigger 3f2 on 0
+  = 0
+mouse 41000000 43310000
+  trigger 3f3 on 0
+  trigger 3f2 on 6
+  = 6
+mouse 42200000 40400000
+  trigger 3f3 on 6
+  trigger 3f2 on 0
+  = 0
+mouse 43030000 43300000
+  trigger 3f3 on 0
+  trigger 3f2 on 5
+  = 5
+mouse 421c0000 41900000
+  trigger 3f3 on 5
+  = -1
+capture 7
+mouse 42780000 41e00000
+  trigger 3f2 on 0
+  = 0
+mouse 425c0000 bf800000
+  trigger 3f3 on 0
+  = -1
+mouse 42840000 41e00000
+  trigger 3f2 on 0
+  = 0
+mouse 42340000 41880000
+  = 0
