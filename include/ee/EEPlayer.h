@@ -388,6 +388,11 @@ public:
     void SetScenEditorObsoleted(bool inValue, bool inRecurse);  // 0x1cfae9
     void SetObsolete(bool inValue, bool inKeepMedia);  // 0x1cfbfe
     void SetButton(unsigned long inButton); // 0x1cfc72
+    // the bodies of ResearchNode, SetPrerequisite and GetCost (the virtuals add the simulation capture's records:
+    // ee/EETechCapture.h)
+    long ResearchNodeUncaptured(EEComplexUnit* inUnit);
+    void SetPrerequisiteUncaptured(long inID);
+    long GetCostUncaptured(long inResource, long inUnitClass, float inScale);
     // 0x268dc6 (in EEUIFMGMainGroup.cpp after its first user ShowCommands, called out of line: defined there): the hot key
     // mU08->mHotKey, 0 out of range (provisional name)
     UIHotKey* GetHotKey();
@@ -457,6 +462,10 @@ public:
     void ResearchKind(long inKind, bool inEpochOnly); // 0x1ce8c5
     void ResearchSelf();                    // 0x1ce918
     long Research(long inID, EEComplexUnit* inUnit);   // 0x1ce930
+    long ResearchUncaptured(long inID, EEComplexUnit* inUnit);   // Research's body (ee/EETechCapture.h)
+    long GetCostUncaptured(long inResource, long inUnitClass, float inScale);   // GetCost's body (ee/EETechCapture.h)
+    void AddSOLUncaptured();                // AddSOL's body (ee/EETechCapture.h)
+    void UpdateAvailabilityUncaptured();    // UpdateAvailability's body (ee/EETechCapture.h)
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x1cea3e
     void UnloadMediaOfKind(long inKind);    // 0x1cea9a
     EETechTreeNode* Get(long inID);         // 0x1ceaeb (EETechTree::Get's lookup in one epoch; provisional name)
@@ -536,6 +545,8 @@ public:
     void AddResearchedID(long inID);        // 0x1cce9c
     void AddScenEditorObsoletedID(long inID);  // 0x1cceaf
     void Research(long inID, EEComplexUnit* inUnit);   // 0x1ccec2 (inUnit: the researching unit, passed on to EEEvent::Trigger)
+    void ResearchUncaptured(long inID, EEComplexUnit* inUnit);   // Research's body (ee/EETechCapture.h)
+    void SumCostsUncaptured(long inID, long inUnitClass, long* ioCosts);   // SumCosts' body (ee/EETechCapture.h)
     void ResearchToEpoch(long inEpoch);     // 0x1ccf5d
     long Save(unsigned long inMajorVersion, unsigned long inMinorVersion, FSFile& outFile);  // 0x1cd046
     void SetEpoch(long inEpoch);            // 0x1cd2a7

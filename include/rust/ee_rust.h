@@ -104,6 +104,22 @@ constexpr static const int32_t BEYOND_END = 10;
 
 constexpr static const int32_t END_OF_FILE = 18;
 
+/// `kTechNone`: no technology.
+constexpr static const int32_t TECH_NONE = 100000;
+
+/// `kPrerequisiteEpoch`: the epoch's bit of a node's prerequisite flags.
+constexpr static const uint8_t PREREQUISITE_EPOCH = 1;
+
+/// `kPrerequisiteAll`: every bit; the node becomes available.
+constexpr static const uint8_t PREREQUISITE_ALL = 31;
+
+/// `ResearchNode`'s results.
+constexpr static const int32_t RESULT_RESEARCHED = 0;
+
+constexpr static const int32_t RESULT_ALREADY = 2;
+
+constexpr static const int32_t RESULT_REFUSED = 9;
+
 /// `kControlTriggerEnterPressed`.
 constexpr static const unsigned long TRIGGER_ENTER_PRESSED = 1009;
 
@@ -191,6 +207,99 @@ enum class EeAStarSkip {
   None = 0,
   Walls = 1,
   Trees = 2,
+};
+
+/// What an attribute effect (`ApplyEventAttribute`, kind 2) changes. The player's attributes (23, 38, 39) apply once,
+/// the others to the upgrade of every unit class the effect names.
+enum class EeTechAttributeOp : uint32_t {
+  /// an attribute no case names: the result 9
+  Unknown = 0,
+  /// 22, 24, 25, 34, 35: nothing
+  Nothing,
+  /// 23: the population limit bonus ([`population_bonus`])
+  PopulationBonus,
+  /// 38: the tribute fee, set to the factor
+  TributeFee,
+  /// 39: the player's flag `mBB44`
+  PlayerFlag,
+  /// 1: attack (float; the class's integer attack as the base value)
+  Attack,
+  /// 2: reload time (integer)
+  ReloadTime,
+  /// 3: range (float, through `SetRange`)
+  Range,
+  /// 4: line of sight (float), the player's units of the type off the sight grid and back
+  LineOfSight,
+  /// 5: area effect (float)
+  AreaEffect,
+  /// 6: maximum hit points ([`max_hit_points`]), the living built units rescaled
+  MaxHitPoints,
+  /// 9: maximum velocity (float, through `SetMaxVelocity`)
+  MaxVelocity,
+  /// 10: flight time (integer), the flying units rescaled
+  FlightTime,
+  /// 11: leadership (float; the class's integer leadership as the base value)
+  Leadership,
+  /// 16..21: one armour (float; the class's integer armour as the base); `index` is the armour's slot
+  Armor,
+  /// 26..29, 31..33: one gather time ([`gather_time`]); `index` is the resource's slot
+  GatherTime,
+  /// 36: converts priests
+  ConvertsPriests,
+  /// 37: converts buildings
+  ConvertsBuildings,
+  /// 40: the area effect template, the living units' area effects rebuilt
+  AreaEffectTemplate,
+  /// 41: power regeneration (integer)
+  PowerRegeneration,
+  /// 42: a terrain type allowed or forbidden ([`terrain_mask`])
+  Terrain,
+  /// 43: regeneration (integer)
+  Regeneration,
+  /// 44: power (integer)
+  Power,
+  /// 45: the upgrade's name, the string `lrintf(value)`
+  Name,
+};
+
+/// `EEEvent::RunEffect`'s dispatch: which handler runs an effect of a kind.
+enum class EeTechEffectHandler : uint32_t {
+  /// a bad effect index, or an effect that does not run while a saved game loads: the result 9
+  Refused = 0,
+  /// an unknown kind: the result 3
+  UnknownKind,
+  /// the result 0 without a handler (kind 22; kind 19 while events are off or a saved game loads)
+  Nothing,
+  /// kind 7: `EEEventKind7` (an empty handler)
+  Kind7,
+  /// kind 2: `ApplyEventAttribute`
+  Attribute,
+  /// kind 8: `SetEventPrerequisite`
+  Prerequisite,
+  /// kind 9: `MakeEventTechnologyObsolete`
+  Obsolete,
+  /// kind 6: `SetEventUnitModel`
+  UnitModel,
+  /// kinds 12..14: `SetEventTechTreeMedia`
+  TechTreeMedia,
+  /// kind 10: `ResearchEventTechnology`
+  Research,
+  /// kind 1: `SetEventButton`
+  Button,
+  /// kind 11: `PlayEventSound`
+  Sound,
+  /// kinds 15..18, 20, 21: `SetEventUnitSound`
+  UnitSound,
+  /// kind 19: `ConvertEventUnits`
+  ConvertUnits,
+};
+
+/// What `EETechTree::Research` does after the epoch's `Research` returned `result`: an epoch id updates statistics
+/// series 0xc, a node that counts toward the next epoch adds to that epoch's counter.
+enum class EeTechTreeResearchAfter : uint32_t {
+  Nothing = 0,
+  EpochStatistics,
+  CountTowardNextEpoch,
 };
 
 /// Which edge `offset` moves (`OffsetLeft`, `OffsetRight`, `OffsetTop`, `OffsetBottom`).
@@ -1590,6 +1699,152 @@ struct EeOfSlice {
   size_t len;
 };
 
+/// The three ways an effect changes a value (`EEEventEffect::mValue`, `mOffset`, `mFactor`).
+struct EeTechEffectValues {
+  float value;
+  float offset;
+  float factor;
+};
+
+/// An attribute's operation and slot (the armour or gather time index; 0 otherwise).
+struct EeTechAttribute {
+  EeTechAttributeOp op;
+  int32_t index;
+};
+
+/// A node's (`EETechTreeNode`, or an epoch's) state as the logic reads it.
+struct EeTechNode {
+  int32_t id;
+  /// `mData->mKind` (3: repeatable, 4: a wonder, 5: never researched)
+  int32_t kind;
+  int32_t epoch;
+  int32_t obsolete_epoch;
+  int32_t research_delay;
+  int32_t prerequisites[4];
+  uint8_t prerequisite_flags;
+  bool researched;
+  /// `mIsObsolete` (the flag; [`node_is_obsolete`] adds the obsolete epoch)
+  bool obsolete;
+  bool available;
+  bool editor_obsoleted;
+  bool makes_unit;
+  bool counts_toward_epoch;
+  uint8_t pad;
+};
+
+/// The tree's epochs (`EETechTree`).
+struct EeTechTreeState {
+  int32_t current_epoch;
+  int32_t start_epoch;
+  int32_t end_epoch;
+  int32_t epochs_before_wonders;
+  /// `gEpochCount`: the ids below it are epochs (`EEIsEpochID`)
+  int32_t epoch_count;
+};
+
+/// What `SetPrerequisite` does to a node.
+struct EeTechPrerequisite {
+  /// the node's new prerequisite flags
+  uint8_t flags;
+  /// every prerequisite is met now: the node becomes available (the event hook, statistics series 0x16, the
+  /// interface)
+  bool becomes_available;
+};
+
+/// `EETechTreeNode::ResearchNode`'s decision (before its research delay counts down).
+struct EeTechResearch {
+  /// 0 researched, 2 already researched, 9 not possible
+  int32_t result;
+  /// mark it researched and fire its event (result 0)
+  bool research;
+};
+
+/// What `AddSOL` and `UpdateAvailability` do.
+struct EeTechEpochUpdate {
+  /// the counter after the call
+  int32_t current;
+  /// the epoch was considered at all (within the tree's end epoch, counting / the count reached)
+  bool considered;
+  /// the epoch becomes available (its event hook and the interface)
+  bool becomes_available;
+  uint8_t pad[2];
+};
+
+/// An epoch's research counter (`EETechTreeEpoch`: `mCurrentSOL` toward `mRequiredSOL`).
+struct EeTechEpochCounter {
+  int32_t required;
+  int32_t current;
+  /// `mIsCountingSOL`: off between a saved game's load and its applied state
+  bool counting;
+  bool available;
+  uint8_t pad[2];
+};
+
+/// The inputs of `EETechTreeNode::GetCost`. The C++ reads the world's factors only where the C++ read them (the
+/// unit-making fields only for a node that makes a unit).
+struct EeTechCostInput {
+  /// the node's cost in the resource for the unit class (its per-class table or its own)
+  int32_t cost;
+  float scale;
+  bool makes_unit;
+  /// a wonder's (kind 4) cost grows by `epoch_cost_factor` per epoch after its own (its epoch not 0)
+  bool wonder_epoch_scaled;
+  /// the game variant's cost set contains the unit class
+  bool in_cost_set;
+  /// the player has the unit class's upgrade (its cost scale applies)
+  bool has_upgrade;
+  /// the player's just-in-time manufacturing for a class with a rally point
+  bool jit;
+  uint8_t pad[3];
+  /// the tree's current epoch less the node's
+  int32_t epochs_since;
+  /// `kWorldUnitEpochCostFactor`
+  float epoch_cost_factor;
+  /// the game variant's cost set factor
+  float cost_set_factor;
+  /// the upgrade's cost scale
+  float cost_scale;
+  /// `kWorldJitManufacturingCostFactor` (or its deathmatch value)
+  float jit_factor;
+};
+
+/// One id of `EETechTree::GetChecksum`'s list (the nodes of every epoch, then the epochs).
+struct EeTechChecksumEntry {
+  int32_t id;
+  bool researched;
+  /// `GetIsObsolete()` (the virtual: a node's adds its obsolete epoch)
+  bool obsolete;
+  uint8_t pad[2];
+};
+
+/// The C++ tree for `DependsOn`: writes the four prerequisites of `id`'s node to `out`, false without a node.
+using EeTechPrerequisitesFn = bool(*)(void *ctx, int32_t id, int32_t *out);
+
+/// A node as `SumCosts` reads it (the C++ fills it; false without a node).
+struct EeTechSumNode {
+  int32_t id;
+  int32_t unit_class;
+  int32_t prerequisites[4];
+  bool available;
+  bool researched;
+  uint8_t pad[2];
+};
+
+/// The C++ tree for `SumCosts`.
+struct EeTechSumCostsCallbacks {
+  void *ctx;
+  bool (*node)(void *ctx, int32_t id, EeTechSumNode *out);
+  int32_t (*cost)(void *ctx, int32_t id, int32_t resource, int32_t unit_class);
+  int32_t (*class_technology)(void *ctx, int32_t unit_class);
+};
+
+/// `EECalamityClass::UpdateTimeAlive`'s arithmetic: the new age and whether the lifetime is over (the update's 7).
+struct EeCalamityAge {
+  float time_alive;
+  bool done;
+  uint8_t pad[3];
+};
+
 /// `GERectangle`: the C++ member order, `mBottom` first.
 struct EeUiRect {
   float bottom;
@@ -1984,6 +2239,9 @@ struct EeUiRadioFields {
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
 
 
+
+/// The bits of the four prerequisites (`kPrerequisitePrerequisite1..4`).
+constexpr static const uint8_t PREREQUISITE_BITS[4] = { 2, 4, 8, 16, };
 
 extern "C" {
 
@@ -4589,6 +4847,181 @@ int32_t ee_sound_node_set_pitch(void *node, float v);
 /// # Safety
 /// `node` is a live node.
 int32_t ee_sound_node_set_parameters(void *node, float volume, float pan, float pitch);
+
+/// `EEApplyEventEffect(float, float, EEEventEffect*)`.
+///
+/// # Safety
+/// `effect` must be valid for reads.
+float ee_tech_effect_f32(float value, float base, const EeTechEffectValues *effect);
+
+/// `EEApplyEventEffect(long, long, EEEventEffect*)`.
+///
+/// # Safety
+/// `effect` must be valid for reads.
+int32_t ee_tech_effect_i32(int32_t value, int32_t base, const EeTechEffectValues *effect);
+
+/// `ApplyEventGatherRate`'s new gather time.
+///
+/// # Safety
+/// `effect` must be valid for reads.
+int32_t ee_tech_gather_time(int32_t current, int32_t class_time, const EeTechEffectValues *effect);
+
+/// Attribute 6's new maximum hit points.
+///
+/// # Safety
+/// `effect` must be valid for reads.
+int32_t ee_tech_max_hit_points(int32_t class_hit_points,
+                               float variant_factor,
+                               uint32_t old_maximum,
+                               const EeTechEffectValues *effect);
+
+/// A unit's hit points or flight time in proportion to a new maximum (before the caller's cast).
+float ee_tech_rescale(int32_t value, uint32_t old_maximum, int32_t new_maximum);
+
+/// Attribute 23's new population limit bonus.
+///
+/// # Safety
+/// `effect` must be valid for reads.
+int32_t ee_tech_population_bonus(int32_t bonus, const EeTechEffectValues *effect);
+
+/// Attribute 42: the terrain type is one a mask has.
+bool ee_tech_terrain_type_valid(int32_t terrain);
+
+/// Attribute 42 and the pathfinding functor: a terrain type allowed or forbidden.
+uint32_t ee_tech_terrain_mask(uint32_t mask, int32_t terrain, bool allowed);
+
+/// What an attribute effect changes.
+EeTechAttribute ee_tech_attribute(int32_t attribute);
+
+/// Whether an attribute's operation applies to the player.
+bool ee_tech_attribute_is_player(int32_t attribute);
+
+/// `RunEffect`'s handler of an effect.
+EeTechEffectHandler ee_tech_effect_handler(bool known,
+                                           int32_t kind,
+                                           bool loading,
+                                           uint8_t run_on_load,
+                                           bool events_enabled);
+
+/// `EETechTreeNode::GetIsObsolete`.
+///
+/// # Safety
+/// `node` and `tree` must be valid for reads.
+bool ee_tech_node_is_obsolete(const EeTechNode *node, const EeTechTreeState *tree);
+
+/// `EETechTreeNode::GetIsAvailable`.
+///
+/// # Safety
+/// `node` and `tree` must be valid for reads.
+bool ee_tech_node_is_available(const EeTechNode *node, const EeTechTreeState *tree);
+
+/// `EETechTreeEpoch::GetIsAvailable`.
+///
+/// # Safety
+/// `epoch` must be valid for reads.
+bool ee_tech_epoch_is_available(const EeTechNode *epoch);
+
+/// A loaded node's prerequisite flags: the bits of its empty prerequisites.
+uint8_t ee_tech_initial_prerequisite_flags(int32_t p1, int32_t p2, int32_t p3, int32_t p4);
+
+/// `EETechTreeNode::SetPrerequisite`.
+///
+/// # Safety
+/// `node` must be valid for reads.
+EeTechPrerequisite ee_tech_set_prerequisite(const EeTechNode *node,
+                                            int32_t id,
+                                            int32_t epoch_count);
+
+/// `EETechTreeNode::ResearchNode`'s decision.
+///
+/// # Safety
+/// `node` must be valid for reads.
+EeTechResearch ee_tech_research_node(const EeTechNode *node);
+
+/// The research delay after a `ResearchNode`.
+int32_t ee_tech_research_delay_after(int32_t delay);
+
+/// `EETechTreeEpoch::Research` of the epoch itself.
+///
+/// # Safety
+/// `epoch` and `tree` must be valid for reads.
+EeTechResearch ee_tech_research_epoch(const EeTechNode *epoch, const EeTechTreeState *tree);
+
+/// `EETechTreeEpoch::AddSOL`.
+///
+/// # Safety
+/// `counter` and `tree` must be valid for reads.
+EeTechEpochUpdate ee_tech_add_sol(int32_t epoch_id,
+                                  const EeTechEpochCounter *counter,
+                                  const EeTechTreeState *tree);
+
+/// `EETechTreeEpoch::UpdateAvailability`.
+///
+/// # Safety
+/// `counter` and `tree` must be valid for reads.
+EeTechEpochUpdate ee_tech_update_availability(int32_t epoch_id,
+                                              const EeTechEpochCounter *counter,
+                                              const EeTechTreeState *tree);
+
+/// `EETechTree::Research`'s end; `counts_toward_epoch` is -1 without a node, else 0 or 1.
+EeTechTreeResearchAfter ee_tech_tree_research_after(int32_t id,
+                                                    int32_t result,
+                                                    int32_t epoch_count,
+                                                    int32_t counts_toward_epoch,
+                                                    int32_t next_epoch,
+                                                    int32_t epoch_slots);
+
+/// `EETechTreeNode::GetCost`.
+///
+/// # Safety
+/// `input` must be valid for reads.
+int32_t ee_tech_node_cost(const EeTechCostInput *input);
+
+/// `EETechTreeEpoch::GetCost`'s scale.
+float ee_tech_epoch_cost_scale(uint32_t epochs_advanced,
+                               float later_factor,
+                               float epoch_factor,
+                               float second_factor,
+                               float first_factor,
+                               float scale);
+
+/// `EETechTreeNode::Load`: the `k`th unit class's cost table into `out` (seven costs).
+///
+/// # Safety
+/// `costs` must be valid for 7 reads, `factors` for 4, `out` for 7 writes.
+void ee_tech_class_costs(const int32_t *costs, uint32_t k, const float *factors, int32_t *out);
+
+/// `EETechTree::GetChecksum`'s value over `count` entries.
+///
+/// # Safety
+/// `entries` must be valid for `count` reads (or `count` 0).
+uint32_t ee_tech_checksum(const EeTechChecksumEntry *entries, uint32_t count);
+
+/// `EETechTreeNode::DependsOn` of the node `own` with its prerequisites `p1..p4`.
+///
+/// # Safety
+/// `get` must be callable with `ctx` for the call's duration.
+bool ee_tech_depends_on(void *ctx,
+                        EeTechPrerequisitesFn get,
+                        int32_t own,
+                        int32_t p1,
+                        int32_t p2,
+                        int32_t p3,
+                        int32_t p4,
+                        int32_t id);
+
+/// `EETechTree::SumCosts`: adds to the seven `costs`.
+///
+/// # Safety
+/// `callbacks` must be valid for reads and its functions callable for the call's duration; `costs` valid for 7 reads
+/// and writes (not touched by the callbacks).
+void ee_tech_sum_costs(const EeTechSumCostsCallbacks *callbacks,
+                       int32_t id,
+                       int32_t unit_class,
+                       int32_t *costs);
+
+/// `EECalamityClass::UpdateTimeAlive`'s arithmetic.
+EeCalamityAge ee_calamity_update_time_alive(float time_alive, float elapsed, float lifetime);
 
 /// The constructor's part after `UIControl`'s ([`button::init`]).
 void ee_ui_button_init(EeUiButtonFields *fields, const EeUiRect *rect, unsigned long border);

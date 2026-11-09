@@ -161,6 +161,7 @@
 #include "ee/EESimCapture.h"
 #include "ee/EEDatabaseTables.h"
 #include "ee/EECombatFormulas.h"
+#include "ee/EETechCapture.h"
 #include "ee/EESaveGameFiles.h"
 #include "platform/PlatSim.h"
 #include "platform/PlatTime.h"
@@ -285,6 +286,7 @@ struct Options {
     std::string mCheats, mPersonality;
     std::string mEngine;                                 // --engine: the computer seats' engines ("" the lobby's: classic)
     long mPortOffset = -1;                              // -1: a free pair found at start
+    bool mCalamities = false;                            // --calamities (TEST ONLY; ee/EETechCapture.h)
     long mAutoSaveMs = 0;                                // the game's autosave period (0: none; the game's default 600000)
     std::vector<std::pair<long, std::string>> mSaves;    // --save-at MS=FILE, in game-ms order
     std::string mLoadSave;                               // --load-save FILE ("" a new game from the lobby)
@@ -685,6 +687,14 @@ void AfterTick()
         sNextSweepMs += 300000;
         EEFormationCaptureSweep();
         EECombatCaptureSweep();
+        EETechCaptureSweep();   // the tech trees' sweep (ee/EETechCapture.h)
+    }
+    // TEST ONLY: --calamities casts every calamity class in turn, every five game minutes (ee/EETechCapture.h)
+    static long sNextCastMs = 300000;
+    static long sCasts = 0;
+    if (sOptions.mCalamities && theTime >= sNextCastMs) {
+        sNextCastMs += 300000;
+        EETechCaptureCastCalamities(sCasts++);
     }
     if (theTime >= sNextSampleMs) {
         Sample s = TakeSample();
@@ -1332,6 +1342,8 @@ const char* kUsage =
     "  --dump-at MS=FILE      write the units' and players' state at the first tick at or after game ms MS (repeatable)\n"
     "  --dump-load FILE       with --load-save: the same of the loaded state (at its first tick, before it runs)\n"
     "  --port-offset N        move the game's TCP ports 33334/33335 by N (default: a free pair from 35334 up)\n"
+    "  --calamities           TEST ONLY: every five game minutes the computer players cast the next eighth of the\n"
+    "                         calamity classes (the capture's calamity game; ee/EETechCapture.h)\n"
     "  --quiet                no progress on stderr\n";
 
 // a port offset whose TCP and UDP ports 33334/33335 are free now, from one the process id picks (the harness's
@@ -1522,6 +1534,8 @@ int EESimMain(int argc, char** argv)
             sOptions.mChecksumTrace = Absolute(value());
         else if (a == "--quiet")
             sOptions.mQuiet = true;
+        else if (a == "--calamities")
+            sOptions.mCalamities = true;
         else if (a == "--port-offset")
             sOptions.mPortOffset = atol(value().c_str());
         else if (a == "--autosave-ms")

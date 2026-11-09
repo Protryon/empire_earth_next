@@ -61,6 +61,8 @@ EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS + UI_TRAMPOLINES,
                        "Empire Earth/Empire Earth/EESim.cpp",
                        # TEST ONLY: the simulation capture of the Rust leaves' gates (EE_SIM_CAPTURE; tools/sim_capture.py)
                        "Empire Earth/Empire Earth/EESimCapture.cpp",
+                       # TEST ONLY: the tech tree's, events' and calamities' capture records (ee/EETechCapture.h)
+                       "Empire Earth/Tech Tree/EETechCapture.cpp",
                        # TEST ONLY: the POSIX test driver's in-process UI fixture (EE_TEST_UI; tools/harness/posix_game.py)
                        "Empire Earth/Empire Earth/EETestFixture.cpp",
                        # the render phase's snapshot of the world (ee/EERenderSnapshot.h; RUST_PLAN R5a.3)

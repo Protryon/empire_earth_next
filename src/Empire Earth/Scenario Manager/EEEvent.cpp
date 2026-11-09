@@ -22,6 +22,8 @@
 #include "ee/EEGameVariant.h"
 #include "lle/UResourceFile.h"
 #include "ee/EEUnitSetManager.h"
+#include "ee/EETechCapture.h"
+#include "ee/EETechRust.h"
 
 class EEUnitSetFunctorModifyPathfindingBehavior : public EEUnitSetFunctor {
 public:
@@ -75,28 +77,16 @@ std::vector<std::unique_ptr<EEEvent>> EEEvent::sEvents;
 // Returns an event effect applied to a float stat: base + offset, value * factor + base, or the set value (else 0)
 float EEApplyEventEffect(float inValue, float inBase, EEEventEffect* inEffect)
 {
-    float theResult = 0.0f;
-    if (inEffect->mOffset != 0.0f)
-        theResult = inBase + inEffect->mOffset;
-    else if (inEffect->mFactor != 0.0f)
-        theResult = inValue * inEffect->mFactor + inBase;
-    else if (inEffect->mValue != 0.0f)
-        theResult = inEffect->mValue;
-    return theResult;
+    EeTechEffectValues theValues = EETechEffectView(inEffect);
+    return ee_tech_effect_f32(inValue, inBase, &theValues);
 }
 
 // FUNCTION: EXE 0x5ca5df
 // Returns an event effect applied to an integer stat: base + offset, value * factor + base, or the set value
 long EEApplyEventEffect(long inValue, long inBase, EEEventEffect* inEffect)
 {
-    long theResult = 0;
-    if (inEffect->mOffset != 0.0f)
-        theResult = (long)inEffect->mOffset + inBase;
-    else if (inEffect->mFactor != 0.0f)
-        theResult = (long)(inValue * inEffect->mFactor + 0.0001f) + inBase;
-    else if (inEffect->mValue != 0.0f)
-        theResult = (long)inEffect->mValue;
-    return theResult;
+    EeTechEffectValues theValues = EETechEffectView(inEffect);
+    return ee_tech_effect_i32((int32_t)inValue, (int32_t)inBase, &theValues);
 }
 
 // FUNCTION: EXE 0x5ca63b
@@ -204,60 +194,74 @@ long EEEventKind7(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* inPlaye
 // while loading a save unless the effect runs on load, 3 for an unknown kind
 long EEEvent::RunEffect(unsigned long inEffect, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit)
 {
+    if (EESimCaptureRecord::Active()) {   // TEST ONLY (ee/EETechCapture.h)
+        EESimCaptureRecord theRecord(EECaptureTag("EVRN"));
+        theRecord.U32(inEffect);
+        bool theKnown = inEffect < gEventEffects.size();
+        theRecord.I32(theKnown ? gEventEffects[inEffect].mKind : -1);
+        theRecord.I32(theKnown ? gEventEffects[inEffect].mAttribute : -1);
+        theRecord.I32(inPlayer != NULL ? inPlayer->mPlayerID : inPlayerIndex);
+        theRecord.I32(inID);
+        theRecord.I32(inUnit != NULL ? (long)inUnit->mUnitID : -1);
+        theRecord.U32((gLoadingSavedGame ? 1u : 0u) | (gEventsEnabled ? 2u : 0u));
+        long theResult = EEEvent::RunEffectUncaptured(inEffect, inPlayerIndex, inID, inPlayer, inUnit);
+        theRecord.I32(theResult);
+        theRecord.Commit();
+        return theResult;
+    }
+    return EEEvent::RunEffectUncaptured(inEffect, inPlayerIndex, inID, inPlayer, inUnit);
+}
+
+long EEEvent::RunEffectUncaptured(unsigned long inEffect, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit)
+{
     long theResult = 9;
     long thePlayerIndex = inPlayer != NULL ? inPlayer->mPlayerID : inPlayerIndex;
-    if (inEffect < gEventEffects.size() && (!gLoadingSavedGame || gEventEffects[inEffect].mRunOnLoad == 1)) {
-        switch (gEventEffects[inEffect].mKind) {
-        case 2:
-            theResult = ApplyEventAttribute(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
-            break;
-        case 8:
-            theResult = SetEventPrerequisite(&gEventEffects[inEffect], thePlayerIndex, inID, inPlayer);
-            break;
-        case 9:
-            theResult = MakeEventTechnologyObsolete(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
-            break;
-        case 6:
-            theResult = SetEventUnitModel(&gEventEffects[inEffect], thePlayerIndex, inID, inPlayer);
-            break;
-        case 12:
-        case 13:
-        case 14:
-            theResult = SetEventTechTreeMedia(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
-            break;
-        case 10:
-            theResult = ResearchEventTechnology(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
-            break;
-        case 1:
-            theResult = SetEventButton(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
-            break;
-        case 7:
-            theResult = EEEventKind7(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
-            break;
-        case 11:
-            theResult = PlayEventSound(&gEventEffects[inEffect]);
-            break;
-        case 15:
-        case 16:
-        case 17:
-        case 18:
-        case 20:
-        case 21:
-            theResult = SetEventUnitSound(&gEventEffects[inEffect], thePlayerIndex, inID, inPlayer);
-            break;
-        case 19:
-            if (gEventsEnabled && !gLoadingSavedGame)
-                theResult = ConvertEventUnits(&gEventEffects[inEffect], thePlayerIndex, inID, inUnit);
-            else
-                theResult = 0;
-            break;
-        case 22:
-            theResult = 0;
-            break;
-        default:
-            theResult = 3;
-            break;
-        }
+    bool theKnown = inEffect < gEventEffects.size();
+    // which handler runs the effect is the Rust tech logic's (ee_tech effect_handler)
+    switch (ee_tech_effect_handler(theKnown, theKnown ? (int32_t)gEventEffects[inEffect].mKind : 0, gLoadingSavedGame,
+                                   theKnown ? gEventEffects[inEffect].mRunOnLoad : 0, gEventsEnabled)) {
+    case EeTechEffectHandler::Refused:
+        theResult = 9;
+        break;
+    case EeTechEffectHandler::UnknownKind:
+        theResult = 3;
+        break;
+    case EeTechEffectHandler::Nothing:   // kind 22; kind 19 while it may not run
+        theResult = 0;
+        break;
+    case EeTechEffectHandler::Kind7:
+        theResult = EEEventKind7(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
+        break;
+    case EeTechEffectHandler::Attribute:
+        theResult = ApplyEventAttribute(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
+        break;
+    case EeTechEffectHandler::Prerequisite:
+        theResult = SetEventPrerequisite(&gEventEffects[inEffect], thePlayerIndex, inID, inPlayer);
+        break;
+    case EeTechEffectHandler::Obsolete:
+        theResult = MakeEventTechnologyObsolete(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
+        break;
+    case EeTechEffectHandler::UnitModel:
+        theResult = SetEventUnitModel(&gEventEffects[inEffect], thePlayerIndex, inID, inPlayer);
+        break;
+    case EeTechEffectHandler::TechTreeMedia:
+        theResult = SetEventTechTreeMedia(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
+        break;
+    case EeTechEffectHandler::Research:
+        theResult = ResearchEventTechnology(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
+        break;
+    case EeTechEffectHandler::Button:
+        theResult = SetEventButton(&gEventEffects[inEffect], thePlayerIndex, inPlayer);
+        break;
+    case EeTechEffectHandler::Sound:
+        theResult = PlayEventSound(&gEventEffects[inEffect]);
+        break;
+    case EeTechEffectHandler::UnitSound:
+        theResult = SetEventUnitSound(&gEventEffects[inEffect], thePlayerIndex, inID, inPlayer);
+        break;
+    case EeTechEffectHandler::ConvertUnits:
+        theResult = ConvertEventUnits(&gEventEffects[inEffect], thePlayerIndex, inID, inUnit);
+        break;
     }
     return theResult;
 }
@@ -464,12 +468,24 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
     std::vector<EEUnitClass*> theClasses;
     EEUnitClass* theClass = NULL;
     long theResult = 0;
+    bool theCapture = EESimCaptureRecord::Active();   // TEST ONLY (ee/EETechCapture.h)
+    EESimCaptureRecord theCallRecord(EECaptureTag("EVAT"));
+    if (theCapture) {
+        theCallRecord.U32(0);
+        theCallRecord.I32((long)(inEffect - &gEventEffects[0]));
+        theCallRecord.I32(inEffect->mAttribute);
+        theCallRecord.I32(inPlayerIndex);
+        EETechCapturePlayer(theCallRecord, thePlayer);
+    }
+    // which stat the attribute changes, and how, are the Rust tech logic's (ee_tech effects.rs); the members stay here
+    EeTechEffectValues theValues = EETechEffectView(inEffect);
+    EeTechAttribute theOp = ee_tech_attribute((int32_t)inEffect->mAttribute);
     if (thePlayer != NULL) {
-        if (inEffect->mAttribute == 23)
-            thePlayer->mPopulationLimitBonus += (long)inEffect->mOffset;
-        else if (inEffect->mAttribute == 38)
+        if (theOp.op == EeTechAttributeOp::PopulationBonus)
+            thePlayer->mPopulationLimitBonus = ee_tech_population_bonus((int32_t)thePlayer->mPopulationLimitBonus, &theValues);
+        else if (theOp.op == EeTechAttributeOp::TributeFee)
             thePlayer->mTributeFee = inEffect->mFactor;
-        else if (inEffect->mAttribute == 39)
+        else if (theOp.op == EeTechAttributeOp::PlayerFlag)
             thePlayer->mBB44 = true;
         else {
             if (inEffect->mUnitClass != -1) {
@@ -482,23 +498,30 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
         for (unsigned long i = 0; i < theClasses.size(); i++) {
             theClass = theClasses[i];
             EEUnitClassUpgrade* theUpgrade = thePlayer->mUnitClassUpgrades[theClass->GetUnitType()];
-            switch (inEffect->mAttribute) {
-            case 1:
-                theUpgrade->mAttack = EEApplyEventEffect((float)theClass->GetAttack(), theUpgrade->GetAttack(), inEffect);
+            EESimCaptureRecord theClassRecord(EECaptureTag("EVAT"));
+            if (theCapture) {
+                theClassRecord.U32(1);
+                theClassRecord.I32((long)(inEffect - &gEventEffects[0]));
+                theClassRecord.I32(theClass->GetUnitType());
+                EETechCaptureUpgrade(theClassRecord, theUpgrade);
+            }
+            switch (theOp.op) {
+            case EeTechAttributeOp::Attack:
+                theUpgrade->mAttack = ee_tech_effect_f32((float)theClass->GetAttack(), theUpgrade->GetAttack(), &theValues);
                 break;
-            case 2:
-                theUpgrade->mReloadTime = EEApplyEventEffect(theClass->mReloadTime, theUpgrade->mReloadTime, inEffect);
+            case EeTechAttributeOp::ReloadTime:
+                theUpgrade->mReloadTime = ee_tech_effect_i32((int32_t)theClass->mReloadTime, (int32_t)theUpgrade->mReloadTime, &theValues);
                 break;
-            case 3:
-                theUpgrade->SetRange(EEApplyEventEffect(theClass->mRange, theUpgrade->GetRange(), inEffect));
+            case EeTechAttributeOp::Range:
+                theUpgrade->SetRange(ee_tech_effect_f32(theClass->mRange, theUpgrade->GetRange(), &theValues));
                 break;
-            case 4: {
+            case EeTechAttributeOp::LineOfSight: {
                 for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL;
                      theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
                     if (theUnit->GetClass()->GetUnitType() == theClass->mUnitType)
                         theUnit->SightOffHere();
                 }
-                theUpgrade->mLineOfSight = EEApplyEventEffect(theClass->mLineOfSight, theUpgrade->GetLineOfSight(), inEffect);
+                theUpgrade->mLineOfSight = ee_tech_effect_f32(theClass->mLineOfSight, theUpgrade->GetLineOfSight(), &theValues);
                 for (EEUnit* theNext = thePlayer->mFirstUnit; theNext != NULL;
                      theNext = static_cast<EEUnit*>(theNext->mNext)) {
                     if (theNext->GetClass()->GetUnitType() == theClass->mUnitType)
@@ -506,23 +529,25 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                 }
                 break;
             }
-            case 5:
-                theUpgrade->mAreaEffect = EEApplyEventEffect(theClass->mAreaEffect, theUpgrade->mAreaEffect, inEffect);
+            case EeTechAttributeOp::AreaEffect:
+                theUpgrade->mAreaEffect = ee_tech_effect_f32(theClass->mAreaEffect, theUpgrade->mAreaEffect, &theValues);
                 break;
-            case 6: {
+            case EeTechAttributeOp::MaxHitPoints: {
                 unsigned long theOldMaximum = theUpgrade->mMaxHitPoints;
-                long theBaseMaximum = (long)((gGameVariants[gWorld.mGameOptions.GetVariant()]->GetFactor(
-                    theUpgrade->mUnitClass->mUnitType) + 1.0f) * theClass->mHitPoints);
-                long theMaximum = EEApplyEventEffect(theBaseMaximum, theOldMaximum, inEffect);
-                if (theMaximum <= 1) theMaximum = 1;
-                theUpgrade->mMaxHitPoints = theMaximum;
+                theUpgrade->mMaxHitPoints = ee_tech_max_hit_points((int32_t)theClass->mHitPoints,
+                    gGameVariants[gWorld.mGameOptions.GetVariant()]->GetFactor(theUpgrade->mUnitClass->mUnitType),
+                    (uint32_t)theOldMaximum, &theValues);
                 if (theOldMaximum != 0 && !gLoadingSavedGame) {
                     for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL;
                          theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
                         if (theUnit->GetClass()->GetUnitType() != theClass->mUnitType || !(theUnit->GetHitPoints() > 0) ||
                             (theUnit->GetComplexUnit() != NULL && theUnit->mComplexUnit->mIsBuilt != true))
                             continue;
-                        float theAmount = (float)UMCeil((float)theUnit->GetHitPoints() / theOldMaximum * theUpgrade->mMaxHitPoints);
+                        float theAmount = ee_tech_rescale((int32_t)theUnit->GetHitPoints(), (uint32_t)theOldMaximum,
+                                                          (int32_t)theUpgrade->mMaxHitPoints);
+                        if (theCapture)   // TEST ONLY (ee/EETechCapture.h)
+                            EETechCaptureRescale(0, theUnit->mUnitID, theUnit->GetHitPoints(), theOldMaximum,
+                                                 theUpgrade->mMaxHitPoints, theAmount);
                         if (theUnit->GetHitPoints() > 0)
                             theUnit->SetHitPoints((long)theAmount);
                     }
@@ -530,7 +555,11 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                         EEUnit* theUnit = static_cast<EEUnit*>(thePlayer->GetPendingUnit(j));
                         if (theUnit->mUnitClass->mUnitType != theClass->mUnitType || !(theUnit->GetHitPoints() > 0))
                             continue;
-                        float theAmount = (float)UMCeil((float)theUnit->GetHitPoints() / theOldMaximum * theUpgrade->mMaxHitPoints);
+                        float theAmount = ee_tech_rescale((int32_t)theUnit->GetHitPoints(), (uint32_t)theOldMaximum,
+                                                          (int32_t)theUpgrade->mMaxHitPoints);
+                        if (theCapture)   // TEST ONLY (ee/EETechCapture.h)
+                            EETechCaptureRescale(0, theUnit->mUnitID, theUnit->GetHitPoints(), theOldMaximum,
+                                                 theUpgrade->mMaxHitPoints, theAmount);
                         if (theUnit->GetHitPoints() > 0 &&
                             (theUnit->mComplexUnit == NULL || theUnit->mComplexUnit->mIsBuilt == true))
                             theUnit->SetHitPoints((long)theAmount);
@@ -538,19 +567,23 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                 }
                 break;
             }
-            case 9:
-                theUpgrade->SetMaxVelocity(EEApplyEventEffect(theClass->mMaxVelocity, theUpgrade->mMaxVelocity, inEffect));
+            case EeTechAttributeOp::MaxVelocity:
+                theUpgrade->SetMaxVelocity(ee_tech_effect_f32(theClass->mMaxVelocity, theUpgrade->mMaxVelocity, &theValues));
                 break;
-            case 10: {
+            case EeTechAttributeOp::FlightTime: {
                 unsigned long theOldMaximum = theUpgrade->mFlightTime;
-                theUpgrade->mFlightTime = EEApplyEventEffect(theClass->mFlightTime, theUpgrade->mFlightTime, inEffect);
+                theUpgrade->mFlightTime = ee_tech_effect_i32((int32_t)theClass->mFlightTime, (int32_t)theUpgrade->mFlightTime, &theValues);
                 if (theOldMaximum != 0 && !gLoadingSavedGame) {
                     for (EEUnit* theUnit = thePlayer->mFirstUnit; theUnit != NULL;
                          theUnit = static_cast<EEUnit*>(theUnit->mNext)) {
                         if (theUnit->mUnitClass->mUnitType != theClass->mUnitType || !(theUnit->GetHitPoints() > 0) ||
                             theUnit->mComplexUnit == NULL)
                             continue;
-                        float theAmount = (float)UMCeil((float)theUnit->mComplexUnit->mFlightTime / theOldMaximum * theUpgrade->mFlightTime);
+                        float theAmount = ee_tech_rescale((int32_t)theUnit->mComplexUnit->mFlightTime, (uint32_t)theOldMaximum,
+                                                          (int32_t)theUpgrade->mFlightTime);
+                        if (theCapture)   // TEST ONLY (ee/EETechCapture.h)
+                            EETechCaptureRescale(1, theUnit->mUnitID, theUnit->mComplexUnit->mFlightTime, theOldMaximum,
+                                                 theUpgrade->mFlightTime, theAmount);
                         long theValue = (long)theAmount;
                         if (theUnit->mComplexUnit->mFlightTime > 0)
                             theUnit->mComplexUnit->SetFlightTime(theValue);
@@ -560,7 +593,11 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                         if (theUnit->mUnitClass->mUnitType != theClass->mUnitType || !(theUnit->GetHitPoints() > 0) ||
                             theUnit->mComplexUnit == NULL)
                             continue;
-                        float theAmount = (float)UMCeil((float)theUnit->mComplexUnit->mFlightTime / theOldMaximum * theUpgrade->mFlightTime);
+                        float theAmount = ee_tech_rescale((int32_t)theUnit->mComplexUnit->mFlightTime, (uint32_t)theOldMaximum,
+                                                          (int32_t)theUpgrade->mFlightTime);
+                        if (theCapture)   // TEST ONLY (ee/EETechCapture.h)
+                            EETechCaptureRescale(1, theUnit->mUnitID, theUnit->mComplexUnit->mFlightTime, theOldMaximum,
+                                                 theUpgrade->mFlightTime, theAmount);
                         long theValue = (long)theAmount;
                         if (theUnit->mComplexUnit->mFlightTime > 0)
                             theUnit->mComplexUnit->SetFlightTime(theValue);
@@ -568,71 +605,36 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                 }
                 break;
             }
-            case 11:
-                theUpgrade->mLeadership = EEApplyEventEffect((float)theClass->mLeadership, theUpgrade->mLeadership, inEffect);
+            case EeTechAttributeOp::Leadership:
+                theUpgrade->mLeadership = ee_tech_effect_f32((float)theClass->mLeadership, theUpgrade->mLeadership, &theValues);
                 break;
-            case 16:
-                theUpgrade->mArmor[0] = EEApplyEventEffect((float)theClass->mArmor[0], theUpgrade->mArmor[0], inEffect);
+            case EeTechAttributeOp::Armor:
+                theUpgrade->mArmor[theOp.index] =
+                    ee_tech_effect_f32((float)theClass->mArmor[theOp.index], theUpgrade->mArmor[theOp.index], &theValues);
                 break;
-            case 17:
-                theUpgrade->mArmor[2] = EEApplyEventEffect((float)theClass->mArmor[2], theUpgrade->mArmor[2], inEffect);
+            case EeTechAttributeOp::Nothing:
                 break;
-            case 18:
-                theUpgrade->mArmor[1] = EEApplyEventEffect((float)theClass->mArmor[1], theUpgrade->mArmor[1], inEffect);
+            case EeTechAttributeOp::GatherTime:
+                ApplyEventGatherRate(inEffect, theOp.index, thePlayer, theClass, theUpgrade);
                 break;
-            case 19:
-                theUpgrade->mArmor[3] = EEApplyEventEffect((float)theClass->mArmor[3], theUpgrade->mArmor[3], inEffect);
-                break;
-            case 20:
-                theUpgrade->mArmor[5] = EEApplyEventEffect((float)theClass->mArmor[5], theUpgrade->mArmor[5], inEffect);
-                break;
-            case 21:
-                theUpgrade->mArmor[4] = EEApplyEventEffect((float)theClass->mArmor[4], theUpgrade->mArmor[4], inEffect);
-                break;
-            case 22: case 24: case 25: case 34: case 35:
-                break;
-            case 26:
-                ApplyEventGatherRate(inEffect, 0, thePlayer, theClass, theUpgrade);
-                break;
-            case 27:
-                ApplyEventGatherRate(inEffect, 1, thePlayer, theClass, theUpgrade);
-                break;
-            case 28:
-                ApplyEventGatherRate(inEffect, 2, thePlayer, theClass, theUpgrade);
-                break;
-            case 29:
-                ApplyEventGatherRate(inEffect, 3, thePlayer, theClass, theUpgrade);
-                break;
-            case 31:
-                ApplyEventGatherRate(inEffect, 4, thePlayer, theClass, theUpgrade);
-                break;
-            case 32:
-                ApplyEventGatherRate(inEffect, 5, thePlayer, theClass, theUpgrade);
-                break;
-            case 33:
-                ApplyEventGatherRate(inEffect, 6, thePlayer, theClass, theUpgrade);
-                break;
-            case 36:
+            case EeTechAttributeOp::ConvertsPriests:
                 theUpgrade->mConvertsPriests = true;
                 break;
-            case 37:
+            case EeTechAttributeOp::ConvertsBuildings:
                 theUpgrade->mConvertsBuildings = true;
                 break;
-            case 40:
+            case EeTechAttributeOp::AreaEffectTemplate:
                 theResult = SetEventAreaEffect(inEffect, inPlayerIndex, inPlayer, theClass, theUpgrade);
                 break;
-            case 41:
-                theUpgrade->mPowerRegeneration = EEApplyEventEffect(theClass->mPowerRegeneration, theUpgrade->mPowerRegeneration, inEffect);
+            case EeTechAttributeOp::PowerRegeneration:
+                theUpgrade->mPowerRegeneration =
+                    ee_tech_effect_i32((int32_t)theClass->mPowerRegeneration, (int32_t)theUpgrade->mPowerRegeneration, &theValues);
                 break;
-            case 42:
-                if (inEffect->mTerrainType >= 0 && inEffect->mTerrainType < 17) {
-                    if (theUpgrade != NULL) {
-                        if (inEffect->mValue == 0.0f) {
-                            if ((theUpgrade->mTerrainMask & (1UL << inEffect->mTerrainType)) != 0)
-                                theUpgrade->mTerrainMask &= ~(1UL << inEffect->mTerrainType);
-                        } else if ((theUpgrade->mTerrainMask & (1UL << inEffect->mTerrainType)) == 0)
-                            theUpgrade->mTerrainMask |= (1UL << inEffect->mTerrainType);
-                    }
+            case EeTechAttributeOp::Terrain:
+                if (ee_tech_terrain_type_valid((int32_t)inEffect->mTerrainType)) {
+                    if (theUpgrade != NULL)
+                        theUpgrade->mTerrainMask = ee_tech_terrain_mask((uint32_t)theUpgrade->mTerrainMask,
+                                                                        (int32_t)inEffect->mTerrainType, inEffect->mValue != 0.0f);
                     EEUnitSet* theSet = gUnitSetManager.GetSet(inEffect->mUnitSet);
                     if (theSet != NULL) {
                         EEUnitSetFunctorModifyPathfindingBehavior theFunctor(thePlayer, inEffect->mTerrainType, inEffect->mValue == 1.0f);
@@ -640,25 +642,36 @@ long ApplyEventAttribute(EEEventEffect* inEffect, long inPlayerIndex, EEPlayer* 
                     }
                 }
                 break;
-            case 43:
-                theUpgrade->mRegeneration = EEApplyEventEffect(theClass->mRegeneration, theUpgrade->mRegeneration, inEffect);
+            case EeTechAttributeOp::Regeneration:
+                theUpgrade->mRegeneration = ee_tech_effect_i32((int32_t)theClass->mRegeneration, (int32_t)theUpgrade->mRegeneration, &theValues);
                 break;
-            case 44:
-                theUpgrade->mPower = EEApplyEventEffect(theClass->mPower, theUpgrade->mPower, inEffect);
+            case EeTechAttributeOp::Power:
+                theUpgrade->mPower = ee_tech_effect_i32((int32_t)theClass->mPower, (int32_t)theUpgrade->mPower, &theValues);
                 break;
-            case 45: {
+            case EeTechAttributeOp::Name: {
                 UWideString theName;
                 gResource->GetString(UMFloatToLong(inEffect->mValue), theName);
                 theUpgrade->SetName(theName);
                 break;
             }
-            default:
+            default:   // an unknown attribute (and the player's, which build no class list)
                 theResult = 9;
                 break;
+            }
+            if (theCapture) {
+                theClassRecord.I32(theResult);
+                EETechCaptureUpgrade(theClassRecord, theUpgrade);
+                theClassRecord.Commit();
             }
         }
     } else
         theResult = 9;
+    if (theCapture) {
+        theCallRecord.U32((unsigned int)theClasses.size());
+        theCallRecord.I32(theResult);
+        EETechCapturePlayer(theCallRecord, thePlayer);
+        theCallRecord.Commit();
+    }
     return theResult;
 }
 
@@ -669,13 +682,8 @@ bool EEUnitSetFunctorModifyPathfindingBehavior::Execute(long inUnitType)
 {
     if ((unsigned long)inUnitType < EEUnitClassCount()) {
         EEUnitClassUpgrade* theUpgrade = this->mPlayer->GetUpgrade(inUnitType);
-        if (theUpgrade != NULL) {
-            if (this->mEnabled) {
-                if ((theUpgrade->mTerrainMask & (1UL << this->mType)) == 0)
-                    theUpgrade->mTerrainMask |= (1UL << this->mType);
-            } else if ((theUpgrade->mTerrainMask & (1UL << this->mType)) != 0)
-                theUpgrade->mTerrainMask &= ~(1UL << this->mType);
-        }
+        if (theUpgrade != NULL)
+            theUpgrade->mTerrainMask = ee_tech_terrain_mask((uint32_t)theUpgrade->mTerrainMask, (int32_t)this->mType, this->mEnabled);
     }
     return true;
 }
@@ -745,12 +753,9 @@ void ApplyEventGatherRate(EEEventEffect* inEffect, long inIndex, EEPlayer* inPla
 {
     if (inUpgrade == NULL)
         return;
-    if (inEffect->mOffset != 0.0f)
-        inUpgrade->mGatherTimes[inIndex] += (long)inEffect->mOffset;
-    else if (inEffect->mFactor != 0.0f)
-        inUpgrade->mGatherTimes[inIndex] += (long)(inClass->mGatherTimes[inIndex] * inEffect->mFactor);
-    else if (inEffect->mValue != 0.0f)
-        inUpgrade->mGatherTimes[inIndex] = (long)inEffect->mValue;
+    EeTechEffectValues theValues = EETechEffectView(inEffect);
+    inUpgrade->mGatherTimes[inIndex] =
+        ee_tech_gather_time((int32_t)inUpgrade->mGatherTimes[inIndex], (int32_t)inClass->mGatherTimes[inIndex], &theValues);
 }
 
 // TEMPLATE: EXE 0x5cb9e0

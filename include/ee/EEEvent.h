@@ -80,6 +80,8 @@ private:
     // 0x1ca7cf (cdecl; Trigger's per-effect call: the effect index, then Trigger's player index, id and players;
     // provisional name)
     static long RunEffect(unsigned long inEffect, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit);
+    // RunEffect's body (RunEffect adds the simulation capture's EVRN record: ee/EETechCapture.h)
+    static long RunEffectUncaptured(unsigned long inEffect, long inPlayerIndex, long inID, EEPlayer* inPlayer, EEComplexUnit* inUnit);
     int32_t* mEffects;                      // +0x04 the effect indices, 4 bytes each in the file (the dtor 0x1ca57c delete[]s it)
     unsigned long mNumEffects;              // +0x08 their count (LoadEvents: unsigned long)
     unsigned long mID;                      // +0x0c (LoadEvents: unsigned long)
