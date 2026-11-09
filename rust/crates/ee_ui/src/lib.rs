@@ -11,6 +11,7 @@ pub mod form;
 pub mod layout;
 pub mod list;
 pub mod rect;
+pub mod scrollbar;
 pub mod slider;
 pub mod text;
 pub mod wrap;
@@ -28,6 +29,9 @@ mod layout_ffi;
 // imports nothing: the list boxes' host calls come as a table from the C++ template; absent from a test binary
 #[cfg(not(test))]
 mod list_ffi;
+// imports the C++ scroll bar's host calls (UIScrollBar.cpp), absent from a test binary
+#[cfg(not(test))]
+mod scrollbar_ffi;
 // imports the C++ host functions (UISlider.cpp), absent from a test binary
 #[cfg(not(test))]
 mod slider_ffi;

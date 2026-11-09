@@ -15,6 +15,7 @@ class UIScrollButton;
 #define kScrollBarWidth 20.0f   // a #define: every user reads the one pooled literal (lle 0x1009916c, exe 0x43bff4 __real 20.0f; exe UIListBox::SetLocation 0x5ad1f2)
 
 class LLE_API UIScrollBar : public UIControl {
+    friend struct UIScrollBarRust;          // the Rust scroll bar logic's host calls (User Interface/UIScrollBar.cpp)
 public:
     UIScrollBar(unsigned long inId, const GE2DPoint& inLocation, float inLength, unsigned long inStyle, UIForm* inForm,
                 unsigned long inIndex, unsigned long inBorderThickness);

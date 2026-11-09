@@ -13,7 +13,7 @@ extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
 # seam records only C++ fills (referenced by no exported function)
-include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", "GeTmTile", "CheckFields", "RadioFields"]
+include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", "GeTmTile", "CheckFields", "RadioFields", "ScrollBarFields"]
 
 # ee_rmap's generic names, kept unique in the shared header
 [export.rename]
@@ -106,6 +106,9 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "UiColor" = "EeUiColor"
 "CheckFields" = "EeUiCheckFields"
 "RadioFields" = "EeUiRadioFields"
+"ScrollBarFields" = "EeUiScrollBarFields"
+"ScrollBarLayout" = "EeUiScrollBarLayout"
+"ScrollPart" = "EeUiScrollPart"
 # ee_won
 "Md5" = "EeWonMd5"
 "Blowfish" = "EeWonBlowfish"

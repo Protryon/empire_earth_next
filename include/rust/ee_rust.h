@@ -1279,6 +1279,24 @@ struct EeUiListRefs {
   const unsigned long *border;
 };
 
+/// The constructor's geometry for a bar at `at`, `length` long: the control's rectangle, the slider's and the
+/// increment button's location (the decrement button sits at `at`).
+struct EeUiScrollBarLayout {
+  EeUiRect rect;
+  EeUiRect slider;
+  EeUiPoint increment;
+};
+
+/// `UIScrollBar`'s members in their C++ order (from `mIncrementButton` on). The pointers are C++'s.
+struct EeUiScrollBarFields {
+  void *increment_button;
+  void *decrement_button;
+  void *slider;
+  bool increment_pressed;
+  bool decrement_pressed;
+  bool slider_pressed;
+};
+
 /// `UISlider`'s members in their C++ order (the record starts at `mThumbRectangle`).
 struct EeUiSliderFields {
   EeUiRect thumb;
@@ -4077,6 +4095,37 @@ void ee_ui_list_set_location(const EeUiListRefs *refs, EeUiPoint at);
 
 /// `UWSNoCaseAlphaSort::operator()`: `left` sorts before `right` with the case folded.
 bool ee_ui_text_less_no_case(const char *left, const char *right);
+
+/// The constructor's geometry ([`scrollbar::layout`]).
+EeUiScrollBarLayout ee_ui_scroll_bar_layout(EeUiPoint at, float length, unsigned long style);
+
+/// `UIScrollBar::MouseLButtonDown`.
+long ee_ui_scroll_bar_mouse_l_button_down(void *bar,
+                                          EeUiScrollBarFields *fields,
+                                          const EeUiRect *rect);
+
+/// `UIScrollBar::MouseLButtonUp`.
+long ee_ui_scroll_bar_mouse_l_button_up(void *bar,
+                                        EeUiScrollBarFields *fields,
+                                        const EeUiRect *rect);
+
+/// `UIScrollBar::MouseMove`.
+long ee_ui_scroll_bar_mouse_move(void *bar,
+                                 EeUiScrollBarFields *fields,
+                                 const EeUiRect *rect,
+                                 EeUiPoint at);
+
+/// `UIScrollBar::SetLocation`.
+void ee_ui_scroll_bar_set_location(void *bar,
+                                   EeUiScrollBarFields *fields,
+                                   const EeUiRect *rect,
+                                   EeUiPoint at);
+
+/// `UIScrollBar::IncrementBy`.
+void ee_ui_scroll_bar_increment_by(void *bar,
+                                   EeUiScrollBarFields *fields,
+                                   const EeUiRect *rect,
+                                   long amount);
 
 /// The constructor's track and thumb ([`slider::init`]).
 void ee_ui_slider_init(EeUiSliderFields *fields, const EeUiRect *rectangle, unsigned long style);

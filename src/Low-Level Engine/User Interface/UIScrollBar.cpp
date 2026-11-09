@@ -3,7 +3,15 @@
 //
 // 0x1007c901..0x1007d013: the U2D key init chains, the ctor, then the out-of-line members in alphabetical order. The
 // header-inline members are emitted first by UICheckBox.cpp (0x1005f3b0..).
+//
+// The bar's logic is Rust (rust/crates/ee_ui/src/scrollbar.rs, docs/RUST_PLAN.md R6): the constructor's layout, the
+// mouse routing to the part under it, SetLocation's layout and IncrementBy. The members below forward to it with the
+// object's members from mIncrementButton on as the pinned record EeUiScrollBarFields; the parts, the bitmaps and
+// drawing stay here, reached through the ee_uicpp_scroll_bar_* host calls.
 #include <windows.h>
+#include <stddef.h>
+
+#include "rust/ee_rust.h"
 
 #include "lle/LowLevelEngine.h"
 #include "lle/GEColor.h"
@@ -33,10 +41,117 @@
 #include "lle/UIScrollButton.h"
 #include "lle/UIScrollBar.h"
 
-// The arrow buttons' size, a literal here: UIScrollBar::SetLocation and the ctor keep it in an FP register across
-// two uses, which VC6 does for a literal (__real@4@4003a0.., 0x1009916c) but not for a named const float such as
-// kScrollBarWidth (provisional name).
-#define kScrollButtonSize 20.0f
+
+// --- the Rust scroll bar's view of the bar (ee_ui/src/scrollbar_ffi.rs) ---------------------------------------------
+
+struct UIScrollBarRust {
+    static UIScrollBar* Bar(void* inBar) { return static_cast<UIScrollBar*>(inBar); }
+    struct LayoutResult {
+        GERectangle mRectangle;
+        GERectangle mSlider;
+        GE2DPoint mIncrement;
+    };
+    static LayoutResult Layout(const GE2DPoint& inLocation, float inLength, unsigned long inStyle)
+    {
+        EeUiScrollBarLayout theLayout = ee_ui_scroll_bar_layout(EeUiPoint{inLocation.GetX(), inLocation.GetY()}, inLength, inStyle);
+        LayoutResult theResult;
+        theResult.mRectangle = GERectangle(theLayout.rect.left, theLayout.rect.top, theLayout.rect.right, theLayout.rect.bottom);
+        theResult.mSlider = GERectangle(theLayout.slider.left, theLayout.slider.top, theLayout.slider.right, theLayout.slider.bottom);
+        theResult.mIncrement = GE2DPoint(theLayout.increment.x, theLayout.increment.y);
+        return theResult;
+    }
+    static EeUiScrollBarFields* Fields(UIScrollBar* inBar)
+    {
+#define EE_UI_SCROLL_BAR_FIELD(member, field)                                                                         \
+    static_assert(offsetof(UIScrollBar, member) - offsetof(UIScrollBar, mIncrementButton) ==                          \
+                      offsetof(EeUiScrollBarFields, field),                                                           \
+                  "ee_ui/src/scrollbar.rs")
+        EE_UI_SCROLL_BAR_FIELD(mIncrementButton, increment_button);
+        EE_UI_SCROLL_BAR_FIELD(mDecrementButton, decrement_button);
+        EE_UI_SCROLL_BAR_FIELD(mSlider, slider);
+        EE_UI_SCROLL_BAR_FIELD(mIncrementPressed, increment_pressed);
+        EE_UI_SCROLL_BAR_FIELD(mDecrementPressed, decrement_pressed);
+        EE_UI_SCROLL_BAR_FIELD(mSliderPressed, slider_pressed);
+#undef EE_UI_SCROLL_BAR_FIELD
+        static_assert(sizeof(UIScrollBar) - offsetof(UIScrollBar, mIncrementButton) >= sizeof(EeUiScrollBarFields),
+                      "ee_ui/src/scrollbar.rs");
+        static_assert(sizeof(GERectangle) == sizeof(EeUiRect), "ee_ui/src/rect.rs");
+        return reinterpret_cast<EeUiScrollBarFields*>(&inBar->mIncrementButton);
+    }
+    static const EeUiRect* Rectangle(UIScrollBar* inBar) { return reinterpret_cast<const EeUiRect*>(&inBar->mRectangle); }
+    // the part (0 increment, 1 decrement, 2 slider) as the control the bar drives
+    static UIControl* Part(void* inBar, int inPart)
+    {
+        if (inPart == 0)
+            return Bar(inBar)->mIncrementButton;
+        if (inPart == 1)
+            return Bar(inBar)->mDecrementButton;
+        return Bar(inBar)->mSlider;
+    }
+    static long PartMouseDown(void* inBar, int inPart)
+    {
+        if (inPart == 2)
+            return Bar(inBar)->mSlider->MouseLButtonDown();
+        return (inPart == 0 ? Bar(inBar)->mIncrementButton : Bar(inBar)->mDecrementButton)->MouseLButtonDown();
+    }
+    static long PartMouseUp(void* inBar, int inPart)
+    {
+        if (inPart == 2)
+            return Bar(inBar)->mSlider->MouseLButtonUp();
+        return (inPart == 0 ? Bar(inBar)->mIncrementButton : Bar(inBar)->mDecrementButton)->MouseLButtonUp();
+    }
+    static UIScrollButton* Button(void* inBar, int inPart)
+    {
+        return inPart == 0 ? Bar(inBar)->mIncrementButton : Bar(inBar)->mDecrementButton;
+    }
+    static void CaptureMouse(void* inBar) { Bar(inBar)->CaptureMouse(); }
+    static UISlider* Slider(void* inBar) { return Bar(inBar)->mSlider; }
+    static long SliderMouseMove(void* inBar, float inX, float inY) { return Bar(inBar)->mSlider->MouseMove(GE2DPoint(inX, inY)); }
+    static void ButtonDown(void* inBar, int inPart) { Button(inBar, inPart)->ButtonDown(); }
+    static const GE2DPoint& MouseLocation(void* inBar) { return Bar(inBar)->GetMouseLocation(); }
+};
+
+static EeUiPoint ScrollBarPoint(const GE2DPoint& inPoint) { return EeUiPoint{inPoint.GetX(), inPoint.GetY()}; }
+#define EE_UI_SCROLL_BAR_ARGS this, UIScrollBarRust::Fields(this), UIScrollBarRust::Rectangle(this)
+
+// The host calls of ee_ui/src/scrollbar_ffi.rs
+extern "C" EeUiPoint ee_uicpp_scroll_bar_mouse_location(void* inBar)
+{
+    return ScrollBarPoint(UIScrollBarRust::MouseLocation(inBar));
+}
+extern "C" EeUiRect ee_uicpp_scroll_bar_part_rect(void* inBar, int inPart)
+{
+    const GERectangle& theRectangle = UIScrollBarRust::Part(inBar, inPart)->GetRectangle();
+    return EeUiRect{theRectangle.mBottom, theRectangle.mLeft, theRectangle.mRight, theRectangle.mTop};
+}
+extern "C" long ee_uicpp_scroll_bar_part_mouse_down(void* inBar, int inPart) { return UIScrollBarRust::PartMouseDown(inBar, inPart); }
+extern "C" long ee_uicpp_scroll_bar_part_mouse_up(void* inBar, int inPart) { return UIScrollBarRust::PartMouseUp(inBar, inPart); }
+extern "C" long ee_uicpp_scroll_bar_slider_mouse_move(void* inBar, float inX, float inY)
+{
+    return UIScrollBarRust::SliderMouseMove(inBar, inX, inY);
+}
+extern "C" void ee_uicpp_scroll_bar_button_down(void* inBar, int inPart) { UIScrollBarRust::ButtonDown(inBar, inPart); }
+extern "C" void ee_uicpp_scroll_bar_capture_mouse(void* inBar) { UIScrollBarRust::CaptureMouse(inBar); }
+extern "C" void ee_uicpp_scroll_bar_release_mouse(void* inBar) { UIScrollBarRust::Bar(inBar)->ReleaseCapturedMouse(); }
+extern "C" void ee_uicpp_scroll_bar_base_set_location(void* inBar, float inX, float inY)
+{
+    UIScrollBarRust::Bar(inBar)->UIControl::SetLocation(GE2DPoint(inX, inY));
+}
+extern "C" unsigned long ee_uicpp_scroll_bar_slider_style(void* inBar) { return UIScrollBarRust::Slider(inBar)->GetSliderStyle(); }
+extern "C" void ee_uicpp_scroll_bar_part_set_location(void* inBar, int inPart, float inX, float inY)
+{
+    UIScrollBarRust::Part(inBar, inPart)->SetLocation(GE2DPoint(inX, inY));
+}
+extern "C" void ee_uicpp_scroll_bar_slider_set_rectangle(void* inBar, const EeUiRect* inRectangle)
+{
+    UIScrollBarRust::Slider(inBar)->SetRectangle(
+        GERectangle(inRectangle->left, inRectangle->top, inRectangle->right, inRectangle->bottom));
+}
+extern "C" long ee_uicpp_scroll_bar_slider_value(void* inBar) { return UIScrollBarRust::Slider(inBar)->GetCurrentRangeValue(); }
+extern "C" void ee_uicpp_scroll_bar_set_slider_value(void* inBar, long inValue)
+{
+    UIScrollBarRust::Slider(inBar)->SetCurrentRangeValue(inValue);
+}
 
 // FUNCTION: LLE 0x1007ca21
 // Creates a vertical (style 1) or horizontal scroll bar: a slider between two arrow buttons
@@ -45,13 +160,9 @@
 UIScrollBar::UIScrollBar(unsigned long inId, const GE2DPoint& inLocation, float inLength, unsigned long inStyle,
                          UIForm* inForm, unsigned long inIndex, unsigned long inBorderThickness)
     : UIControl(kControlTypeScrollBar, inId,
-                GERectangle(inLocation, inStyle == 1 ? 19.0f : inLength - 1.0f,
-                            inStyle == 1 ? inLength - 1.0f : 19.0f),
-                inForm, inIndex, 0)
+                UIScrollBarRust::Layout(inLocation, inLength, inStyle).mRectangle, inForm, inIndex, 0)
 {
-    GERectangle theSliderRectangle;
-    GE2DPoint theSliderLocation(inLocation);
-    GE2DPoint theIncrementLocation(inLocation);
+    UIScrollBarRust::LayoutResult theLayout = UIScrollBarRust::Layout(inLocation, inLength, inStyle);
     GEBitmap* theDecrementNormal;
     GEBitmap* theDecrementPressed;
     GEBitmap* theIncrementNormal;
@@ -60,28 +171,20 @@ UIScrollBar::UIScrollBar(unsigned long inId, const GE2DPoint& inLocation, float 
     this->mDecrementPressed = false;
     this->mIncrementPressed = false;
     if (inStyle == 1) {
-        theSliderLocation.SetY(inLocation.GetY() + kScrollButtonSize);
-        theIncrementLocation.SetY(inLocation.GetY() + inLength - kScrollButtonSize);
         theIncrementNormal = this->mForm->GetManager()->GetSBBitmapDownNormal();
         theDecrementNormal = this->mForm->GetManager()->GetSBBitmapUpNormal();
         theIncrementPressed = this->mForm->GetManager()->GetSBBitmapDownPressed();
         theDecrementPressed = this->mForm->GetManager()->GetSBBitmapUpPressed();
     } else {
-        theSliderLocation.SetX(inLocation.GetX() + kScrollButtonSize);
-        theIncrementLocation.SetX(inLocation.GetX() + inLength - kScrollButtonSize);
         theIncrementNormal = this->mForm->GetManager()->GetSBBitmapRightNormal();
         theDecrementNormal = this->mForm->GetManager()->GetSBBitmapLeftNormal();
         theIncrementPressed = this->mForm->GetManager()->GetSBBitmapRightPressed();
         theDecrementPressed = this->mForm->GetManager()->GetSBBitmapLeftPressed();
     }
-    theSliderRectangle.SetTop(theSliderLocation.GetY());
-    theSliderRectangle.SetLeft(theSliderLocation.GetX());
-    theSliderRectangle.SetRight(theSliderLocation.GetX() + (inStyle == 1 ? kScrollButtonSize : inLength - 40.0f));
-    theSliderRectangle.SetBottom(theSliderLocation.GetY() + (inStyle == 1 ? inLength - 40.0f : kScrollButtonSize));
-    this->mSlider = new UISlider(this->GetId(), theSliderRectangle, inStyle, inForm, this->GetIndex(), inBorderThickness);
+    this->mSlider = new UISlider(this->GetId(), theLayout.mSlider, inStyle, inForm, this->GetIndex(), inBorderThickness);
     this->mDecrementButton = new UIScrollButton(this->GetId(), theDecrementNormal, theDecrementPressed, inLocation, inForm, this->mSlider,
                                           1, this->GetIndex());
-    this->mIncrementButton = new UIScrollButton(this->GetId(), theIncrementNormal, theIncrementPressed, theIncrementLocation,
+    this->mIncrementButton = new UIScrollButton(this->GetId(), theIncrementNormal, theIncrementPressed, theLayout.mIncrement,
                                           inForm, this->mSlider, 0, this->GetIndex());
 }
 
@@ -128,78 +231,35 @@ long UIScrollBar::DrawTextA()
 // Moves the slider value by an amount
 void UIScrollBar::IncrementBy(long inAmount)
 {
-    if (this->mSlider)
-        this->mSlider->SetCurrentRangeValue(this->mSlider->GetCurrentRangeValue() + inAmount);
+    ee_ui_scroll_bar_increment_by(EE_UI_SCROLL_BAR_ARGS, inAmount);
 }
 
 // FUNCTION: LLE 0x1007cd6e
 // Presses the part under the mouse (an arrow button, else the slider) and captures the mouse
 long UIScrollBar::MouseLButtonDown()
 {
-    long theResult;
-    if (this->mDecrementButton->GetRectangle().Contains(this->GetMouseLocation())) {
-        theResult = this->mDecrementButton->MouseLButtonDown();
-        this->mDecrementPressed = true;
-    } else if (this->mIncrementButton->GetRectangle().Contains(this->GetMouseLocation())) {
-        theResult = this->mIncrementButton->MouseLButtonDown();
-        this->mIncrementPressed = true;
-    } else {
-        theResult = this->mSlider->MouseLButtonDown();
-        this->mSliderPressed = true;
-    }
-    this->CaptureMouse();
-    return theResult;
+    return ee_ui_scroll_bar_mouse_l_button_down(EE_UI_SCROLL_BAR_ARGS);
 }
 
 // FUNCTION: LLE 0x1007cdf4
 // Releases the pressed part and the mouse capture
 long UIScrollBar::MouseLButtonUp()
 {
-    long theResult = kErrorOK;
-    if (this->mSliderPressed)
-        theResult = this->mSlider->MouseLButtonUp();
-    if (this->mIncrementPressed)
-        theResult = this->mIncrementButton->MouseLButtonUp();
-    if (this->mDecrementPressed)
-        theResult = this->mDecrementButton->MouseLButtonUp();
-    this->mSliderPressed = false;
-    this->mIncrementPressed = false;
-    this->mDecrementPressed = false;
-    this->ReleaseCapturedMouse();
-    return theResult;
+    return ee_ui_scroll_bar_mouse_l_button_up(EE_UI_SCROLL_BAR_ARGS);
 }
 
 // FUNCTION: LLE 0x1007ce5f
 // Drags the slider when held or under the mouse, and repeats a held arrow button while the mouse stays on it
 long UIScrollBar::MouseMove(const GE2DPoint& inLocation)
 {
-    long theResult = kErrorOK;
-    if (this->mSliderPressed || this->mSlider->GetRectangle().Contains(this->GetMouseLocation()))
-        theResult = this->mSlider->MouseMove(inLocation);
-    if (this->mIncrementPressed && this->mIncrementButton->GetRectangle().Contains(this->GetMouseLocation()))
-        this->mIncrementButton->ButtonDown();
-    if (this->mDecrementPressed && this->mDecrementButton->GetRectangle().Contains(this->GetMouseLocation()))
-        this->mDecrementButton->ButtonDown();
-    return theResult;
+    return ee_ui_scroll_bar_mouse_move(EE_UI_SCROLL_BAR_ARGS, ScrollBarPoint(inLocation));
 }
 
 // FUNCTION: LLE 0x1007cf07
 // Moves the scroll bar, laying out its arrow buttons and slider for its style
 void UIScrollBar::SetLocation(const GE2DPoint& inLocation)
 {
-    UIControl::SetLocation(inLocation);
-    if (this->mSlider->GetSliderStyle() == 1) {
-        this->mIncrementButton->SetLocation(GE2DPoint(inLocation.GetX(), this->mRectangle.GetBottom() - kScrollButtonSize));
-        this->mSlider->SetRectangle(GERectangle(GE2DPoint(inLocation.GetX(), inLocation.GetY() + kScrollButtonSize),
-                                          GE2DPoint(inLocation.GetX() + kScrollButtonSize - 1.0f,
-                                                    this->mRectangle.GetBottom() - kScrollButtonSize - 1.0f)));
-    } else {
-        this->mIncrementButton->SetLocation(GE2DPoint(this->mRectangle.GetRight() - kScrollButtonSize, inLocation.GetY()));
-        this->mSlider->SetRectangle(GERectangle(GE2DPoint(inLocation.GetX() + kScrollButtonSize, inLocation.GetY()),
-                                          GE2DPoint(this->mRectangle.GetRight() - kScrollButtonSize - 1.0f,
-                                                    inLocation.GetY() + kScrollButtonSize - 1.0f)));
-    }
-    this->mDecrementButton->SetLocation(inLocation);
+    ee_ui_scroll_bar_set_location(EE_UI_SCROLL_BAR_ARGS, ScrollBarPoint(inLocation));
 }
 
 // Compiler-generated: the U2D key init chains (names in analysis/lle/names.txt)
