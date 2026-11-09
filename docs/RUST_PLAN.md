@@ -42,6 +42,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | **R5a.4-R5a.6 handles, names, the RTS layer** | **Started** (branch `rust-r5a-handles`, C++ only, no behaviour change; sim oracle identical per commit). R5a.4: measured who holds unit pointers (PORT_LEARNINGS "R5a.4-R5a.6"); `EEUnitHandle<T>` (`ee/EEUnitHandle.h`) is the unit id resolved through a registry that lives from `RTSPlayer::InsertUnit` to `RTSUnit::FreeNode`, so a freed unit's handle is NULL, never a reborn slot; the AI's 14 stored unit pointers are handles. R5a.5: the simulation's address-named globals and functions named, `gU531CF0`/`CF4` folded into `EEPhysics`. R5a.6: the RTS objects import 26 game symbols (1 from Graphics Thread, `RTSMouse::EndFrame`); `RTSMouse`/`RTSUnit` moved to their own headers, RTS -> Graphics Thread include edges 3/12 (direct/transitive) -> 1/4. Open: the AI's 17 containers (address order), the UI/editor/camera holders (the registry needs a lock first), the A* goals (`rust-r5b-astar`), the Graphics Thread holders and names (`rust-r5a-snap`), RTSGraphics.cpp's game globals |
 
 
+
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
 trees), six seeded 45-minute sim traces equal to the pre-Rust reference, menu captures pixel-equal, a saved game loaded and
 played on. Linux: the game cross-compiles and links, but has not been run. macOS: Rust type-checks only; nothing was
