@@ -3104,7 +3104,6 @@ and the 15 s discovery timer (`RunAsTimer`). It does not reach: TCP between two 
 connect, accept, `SendMsgOp` / `RecvMsgOp` with 2-byte fields), peer auth, GetLocalAddr's join reply, the gone
 servers' ops (directory, routing, DB, HTTP's `RecvCRMsgOp`, FTP). Those are covered only by won_ops_test over loopback
 in one process.
-||||||| 5ffeba22
 
 ## R5b.1, continued: the path goals, their modifiers and the area fills in Rust (ee_astar, branch rust-r5b-astar2, 2026-11-09)
 
@@ -3155,7 +3154,6 @@ The order of "R5b.1: the tile A* searches in Rust" held: every tile goal's hooks
   incremental wrapper (objects newer than their include closure kept), then the full build after the merge of
   `rust`; the sim oracle identical on seeds 2-7 and `sim_capture.py check` PASS at every step; the ee_astar tests
   (37: 15 new for the modifiers, path goals and area fills, each pinning the order of the view queries).
-||||||| 5ffeba22
 
 ## R6: buttons, check boxes, radio buttons, scroll bars and combo boxes in Rust (ee_ui button.rs, scrollbar.rs, combo.rs, 2026-11-09)
 
@@ -3207,4 +3205,3 @@ and `UIComboBox` (where the list opens, the popup and the capture, the mouse and
 - **Still C++ in R6's toolkit:** `UITriStateCheckBox`, `UIBlinkingButton`'s fading, `UIScalableButton`'s three-part
   draw, `UIControlsTable` (forms from the db), `UIManager` (form stack, event dispatch), every `DrawPolygons`/
   `DrawTextA`, the edit box's key dispatch and repeat timers.
-||||||| 5ffeba22
