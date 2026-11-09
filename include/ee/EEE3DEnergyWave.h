@@ -31,6 +31,9 @@ public:
     float mPhase;                           // +0x7c 0..1 (saved)
     float mDrawPhase;                       // +0x80 (Virtual24 copies mPhase)
     float mHeights[4];                      // +0x84 the corners' (0 over a space tile)
+    // port (R5a.3; past the original object): its unit is a cloaked enemy of the current player, so the wave is not
+    // drawn. Queue takes it under the world's lock; DrawPass6 read the live unit and players for it
+    bool mDrawHidden;
 };
 
 #endif
