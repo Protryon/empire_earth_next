@@ -50,6 +50,11 @@
 #include "ee/EEPersistentTag.h"
 #include "ee/EEUnit.h"
 #include "ee/EESaveGameFiles.h"
+#include "lle/U2DSparseArray.h"
+#include "lle/U2DPolygon.h"
+#include "ee/EEAIArea.h"
+#include "ee/EEAIContinentManager.h"
+#include "ee/EEAIForest.h"
 #include <algorithm>
 #include <vector>
 
@@ -194,6 +199,74 @@ static void RestoreUnitOrder(const std::vector<unsigned long>& inChain, const st
     }
 }
 
+// port (save version 0.253): each forest's next renewal (EEUnit::RegrowForest), with its tiles. The continent manager
+// is not saved: a load builds its forests again from the map with no renewal due date, so the first tree cut in a
+// loaded game regrew its forest at once. Put back at the first tick to the rebuilt forest on each saved forest's tiles.
+static void SaveForests(FSFile& outFile)
+{
+    unsigned long theCount = 0;
+    for (size_t f = 0; f < gContinentManager.mForests.size(); f++)
+        if (gContinentManager.mForests[f] != NULL && gContinentManager.mForests[f]->mNextRenewal != 0)
+            theCount++;
+    long theResult = outFile.Write(theCount);
+    for (size_t f = 0; f < gContinentManager.mForests.size() && theResult == kErrorOK; f++) {
+        EEAIForest* theForest = gContinentManager.mForests[f];
+        if (theForest == NULL || theForest->mNextRenewal == 0)
+            continue;
+        std::vector<U2DPoint<long> > theTiles;
+        theForest->mTiles.BuildPointList(theTiles, 1);
+        theResult = outFile.Write(theForest->mNextRenewal);
+        if (theResult == kErrorOK)
+            theResult = outFile.Write((unsigned long)theTiles.size());
+        for (size_t t = 0; t < theTiles.size() && theResult == kErrorOK; t++) {
+            theResult = outFile.Write(theTiles[t].mX);
+            if (theResult == kErrorOK)
+                theResult = outFile.Write(theTiles[t].mY);
+        }
+    }
+}
+
+static long LoadForests(FSFile& inFile)
+{
+    std::vector<std::pair<unsigned long, std::vector<U2DPoint<long> > > > theForests;
+    unsigned long theCount = 0;
+    long theResult = inFile.Read(theCount);
+    for (unsigned long f = 0; f < theCount && theResult == kErrorOK; f++) {
+        unsigned long theRenewal = 0;
+        unsigned long theTiles = 0;
+        theResult = inFile.Read(theRenewal);
+        if (theResult == kErrorOK)
+            theResult = inFile.Read(theTiles);
+        std::vector<U2DPoint<long> > theList;
+        for (unsigned long t = 0; t < theTiles && theResult == kErrorOK; t++) {
+            U2DPoint<long> theTile;
+            theResult = inFile.Read(theTile.mX);
+            if (theResult == kErrorOK)
+                theResult = inFile.Read(theTile.mY);
+            theList.push_back(theTile);
+        }
+        theForests.push_back(std::make_pair(theRenewal, theList));
+    }
+    if (theResult == kErrorOK)
+        EEAfterLoad([theForests]() {
+            bool theSame = true;
+            for (size_t f = 0; f < theForests.size(); f++) {
+                std::vector<EEAIForest*> theDone;
+                for (size_t t = 0; t < theForests[f].second.size(); t++) {
+                    EEAIForest* theForest = gContinentManager.GetForestAt(theForests[f].second[t]);
+                    if (theForest == NULL || std::find(theDone.begin(), theDone.end(), theForest) != theDone.end())
+                        continue;
+                    theDone.push_back(theForest);
+                    theForest->mNextRenewal = theForests[f].first;
+                    theSame = theSame && (unsigned long)theForest->mTiles.Size() == theForests[f].second.size();
+                }
+            }
+            if (!theSame)
+                ESDebugOut("EEPWorldHelper: a rebuilt forest is not the saved one: its renewal is the saved forest's\n");
+        });
+    return theResult;
+}
+
 static long LoadUnitOrder(FSFile& inFile)
 {
     std::vector<unsigned long> theChain;
@@ -242,7 +315,8 @@ long EEPWorldHelper::Load(unsigned long inMajorVersion, unsigned long inMinorVer
     else
         inFile.Read(this->mUsingCarbon);
     if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.253): the units' order
-        LoadUnitOrder(inFile);
+        if (LoadUnitOrder(inFile) == kErrorOK)
+            LoadForests(inFile);
     EEUIECLEFormManager::Load(inMajorVersion, inMinorVersion, inFile);
     return gUIManager->mMainGameForm->Load(inMajorVersion, inMinorVersion, inFile);
 }
@@ -289,7 +363,10 @@ long EEPWorldHelper::Save(unsigned long inMajorVersion, unsigned long inMinorVer
     outFile.Write(this->mHerdIDCounter);
     outFile.Write(this->mUsingCarbon);
     if (EESaveHasLiveState(inMajorVersion, inMinorVersion))   // port (0.253): the units' order
+    {
         SaveUnitOrder(outFile);
+        SaveForests(outFile);
+    }
     EEUIECLEFormManager::Save(inMajorVersion, inMinorVersion, outFile);
     return gUIManager->mMainGameForm->Save(inMajorVersion, inMinorVersion, outFile);
 }
