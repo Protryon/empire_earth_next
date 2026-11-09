@@ -54,6 +54,7 @@
 #include "ee/EERenderObject.h"
 #include "ee/EEE3DStorm.h"
 #include "ee/EEE3DRain.h"
+#include "ee/EERenderSnapshot.h"
 
 // the unit's named float constants (.rdata 0x440be8..0x440bfc, in this order; reloaded at each use) (provisional names)
 static const float kRainFadeTime = 6500.0f;     // 0x440be8 (ms to full strength)
@@ -275,7 +276,7 @@ long EEE3DRain::DrawPass6()
         theTransformation.SetX(theDraw->mPosition.GetX());
         theTransformation.SetY(theDraw->mPosition.GetY());
         theTransformation.SetZ(theDraw->mPosition.GetZ());
-        theTransformation.SetOrientationYPR(gWorld.GetCameraYaw(), 0.0f, 0.0f);
+        theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw, 0.0f, 0.0f);
         this->mModel->SetGraphicsPostModelTransform(theTransformation);
         this->mModel->PrepareTransforms();
         bool theSorted = gOrthographicView;

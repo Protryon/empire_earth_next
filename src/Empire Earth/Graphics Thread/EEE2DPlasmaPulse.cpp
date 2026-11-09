@@ -43,6 +43,7 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEE2DPlasmaPulse.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EERenderSnapshot.h"
 
 // SYNTHETIC: EXE 0x4e56d0
 // SYNTHETIC: EXE 0x4e56da
@@ -150,7 +151,7 @@ long EEE2DPlasmaPulse::SetUp()
 // Draws the pulse as an additive fog-lit sprite at its snapshotted position; returns the draw result
 long EEE2DPlasmaPulse::DrawPass6()
 {
-    GETransformation theTransformation(gWorld.mTransformation);
+    GETransformation theTransformation(gRenderSnapshot.mCamera);
     GEModel* theModel = this->mModel;
     GEMaterial* theMaterial = theModel->GetMaterial(0);
     unsigned long theScreen = gScreenIndex;

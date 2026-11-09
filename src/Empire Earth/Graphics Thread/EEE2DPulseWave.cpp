@@ -40,6 +40,7 @@
 #include "ee/EEEffect2D.h"
 #include "ee/EEE2DPulseWave.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EERenderSnapshot.h"
 
 // SYNTHETIC: EXE 0x4e5c63
 // SYNTHETIC: EXE 0x4e5c6d
@@ -142,7 +143,7 @@ long EEE2DPulseWave::DrawPass6()
     theMaterial->SetTexture(this->mGraphicObject->mTextures[0], theScreen);
     float theScale = (this->mGraphicEffect->GetSize() - this->mGraphicEffect->GetStartSize()) * this->mDrawRadius
                      + this->mGraphicEffect->GetStartSize();
-    theTransformation.SetOrientationYPR(gWorld.GetCameraYaw(), 0.0f, 0.0f);
+    theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw, 0.0f, 0.0f);
     const GE3DPoint& thePosition = this->mPosition;
     theTransformation.SetPosition(thePosition.GetX(), thePosition.GetY(), thePosition.GetZ() + 0.2f);
     theTransformation.SetElement(3, 0, 0.0f);

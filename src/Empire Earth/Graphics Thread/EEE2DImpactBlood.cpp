@@ -41,6 +41,7 @@
 #include "lle/SESMInstanceNode.h"
 #include "ee/EEE2DImpact.h"
 #include "ee/EEE2DImpactBlood.h"
+#include "ee/EERenderSnapshot.h"
 
 // SYNTHETIC: EXE 0x4e1867
 // SYNTHETIC: EXE 0x4e1871
@@ -60,7 +61,7 @@ long EEE2DImpactBlood::DrawPass6()
 {
     long theResult = 0;
     if (gDrawBlood) {
-        GETransformation theTransformation(gWorld.mTransformation);
+        GETransformation theTransformation(gRenderSnapshot.mCamera);
         GEModel* theModel = this->mModel;
         GEMaterial* theMaterial = theModel->GetMaterial(0);
         unsigned long theScreen = gScreenIndex;
