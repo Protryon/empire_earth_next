@@ -988,6 +988,11 @@ static bool EECPRMFishInDanger(EECPResourceManager* inManager, EEUnit* inFish)
         && EECPRMResourceInDanger(inManager, inFish->GetTileX(), inFish->GetTileY());
 }
 
+// the next engine (docs/AI_RESEARCH.md §8.33): the fishing boats also leave alone the fish within this many tiles of an
+// armed enemy ship the player sees now (frigates sank about a third of the boom's losses, 36-40 boats a game, at fish
+// the 30-second danger zones had already forgotten)
+static const long kNextFishWarshipRange = 12;
+
 // FUNCTION: EXE 0x490819
 // Returns the nearest fish to a unit that is not crowded, preferring fish more than 8 tiles from every own dock
 EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
@@ -997,9 +1002,15 @@ EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
     EEUnit* theResult = NULL;
     std::sort(this->mFish.begin(), this->mFish.end(), EECPUnitTileDistanceLess(inUnit->GetTile()));
     EEGetPlayerUnitsOfType(kUnitTypeDock, this->GetManager()->GetPlayer()->GetPlayerID(), theUnits);
+    std::vector<long> theWarships;
+    bool theNext = EECPNextEngine(this->GetManager()->GetPlayer());
+    if (theNext)
+        EECPNextSeenWarships(this->GetManager()->GetPlayer(), theWarships);
     unsigned long i;
     for (i = 0; i < this->mFish.size() && theResult == NULL; i++) {
         EEComplexUnit* theUnit = this->mFish[i];
+        if (theNext && EECPNextNearTiles(theWarships, theUnit->GetTileX(), theUnit->GetTileY(), kNextFishWarshipRange))
+            continue;
         if (theUnit->GetResourceAmount() > 0 && gWorld.GetResourceUsers(theUnit) < theLimit && !EECPRMFishInDanger(this, theUnit)) {
             if (std::find_if(theUnits.begin(), theUnits.end(), EECPRMUnitWithin(theUnit->GetTile(), 64.0f)) == theUnits.end())
                 theResult = theUnit;
@@ -1010,6 +1021,8 @@ EEUnit* EECPResourceManager::FindFish(EEUnit* inUnit)
     unsigned long j;
     for (j = 0; j < this->mFish.size() && theResult == NULL; j++) {
         EEComplexUnit* theUnit = this->mFish[j];
+        if (theNext && EECPNextNearTiles(theWarships, theUnit->GetTileX(), theUnit->GetTileY(), kNextFishWarshipRange))
+            continue;
         if (theUnit->GetResourceAmount() > 0 && gWorld.GetResourceUsers(theUnit) < theLimit && !EECPRMFishInDanger(this, theUnit))
             theResult = theUnit;
     }

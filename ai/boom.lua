@@ -12,53 +12,65 @@ local A = require("lib.army")
 
 local PLAN = {
     {   -- Prehistoric
-        citizens = 28,          -- trained with no reserve on food up to here ...
-        citizens_max = 34,      -- ... and from the food above the reserve up to here
-        save_at = 26,           -- the citizens from which the next epoch is reserved ...
+        -- the owner's build order (2026-11-08): no soldiers before the Stone Age, all the food to citizens (about 18
+        -- on food, 5-10 wood, 4 iron, 2 gold, 2 stone), then the advance as soon as it is paid
+        citizens = 32,          -- trained with no reserve on food up to here ...
+        citizens_max = 36,      -- ... and from the food above the reserve up to here
+        save_at = 32,           -- the citizens from which the next epoch is reserved ...
         save_after = 18,        -- ... or from this many minutes into the epoch
         -- the gatherers on wood, stone, gold and iron: by what each lacks of the stock the plan spends soon
         -- (stock_targets: the reserve, the buildings, boats and soldiers to come, and `bank`), at least `floor` while
         -- it lacks anything (wood: always), at most `cap`
-        floor = {wood = 1, stone = 0, gold = 0, iron = 0},
-        cap = {wood = 6, stone = 3, gold = 3, iron = 6},
+        floor = {wood = 5, stone = 2, gold = 2, iron = 4},
+        cap = {wood = 10, stone = 2, gold = 2, iron = 4},
         bank = {wood = 400, stone = 0, gold = 250, iron = 300},   -- kept for the next epochs (Copper: gold, iron)
         food_share = 55,        -- percent of the citizens on food at least
+        food = 18,              -- citizens on food at least (the fishing boats come on top)
         patches = 3,            -- forage patches claimed at most
-        soldiers = 4,           -- the mobile defence when nothing threatens
-        soldiers_max = 18,      -- under a threat (S4: 12 held 4-5 soldiers against a rush of 19-29)
+        soldiers = 0,           -- the mobile defence when nothing threatens (none: the militia and the towers)
+        soldiers_max = 0,       -- under a threat
         towers = 3,
         settlements = 3,
         barracks = 1, ranges = 0,
+        barracks_at = 28,       -- citizens: the first barracks stands when the Stone Age's army is trained
         boats = 0, docks = 0,
         claim_max = 30,
     },
     {   -- Stone
+        -- first 20 soldiers (spearmen from two barracks, one defend group at home), then the citizens (18 food, 12
+        -- gold, 12-18 iron, 6 stone, 10-15 wood, the boats on top), then the Copper Age
         citizens = 64, citizens_max = 90, save_at = 60, save_after = 10,
-        floor = {wood = 4, stone = 0, gold = 2, iron = 2},
-        cap = {wood = 23, stone = 6, gold = 12, iron = 18},
+        floor = {wood = 10, stone = 6, gold = 12, iron = 12},
+        cap = {wood = 15, stone = 6, gold = 12, iron = 18},
         bank = {wood = 150, stone = 0, gold = 100, iron = 100},
-        food_share = 40,
+        food_share = 25,
+        food = 18,
         patches = 5,
-        soldiers = 8, soldiers_max = 30,
+        soldiers = 20, soldiers_max = 30,
+        army_first = true,      -- the citizens wait (at the last epoch's count) until the soldiers are trained
         towers = 7,
         settlements = 6,
-        barracks = 2, ranges = 2,
+        barracks = 2, ranges = 1,
+        barracks_at = 10,
         boats = 10, docks = 2,
         claim_max = 35,
     },
     {   -- Copper and later (S5 extends it)
+        -- the same, with 2-3 granaries of farms; 12-18 gold, 12-18 iron, 6 stone, 15-20 wood
         citizens = 90, citizens_max = 100, save_at = 95, save_after = 25,
-        floor = {wood = 8, stone = 1, gold = 4, iron = 4},
-        cap = {wood = 26, stone = 6, gold = 14, iron = 20},
+        floor = {wood = 15, stone = 6, gold = 12, iron = 12},
+        cap = {wood = 20, stone = 6, gold = 18, iron = 18},
         bank = {wood = 300, stone = 0, gold = 200, iron = 200},
-        food_share = 40,
+        food_share = 25,
+        food = 18,
         patches = 5,
-        soldiers = 16, soldiers_max = 40,
+        soldiers = 20, soldiers_max = 40,
+        barracks_at = 10,
         towers = 10,
         settlements = 7,
         barracks = 2, ranges = 2,
         boats = 10, docks = 2,
-        farms = 16, granaries = 2,
+        farms = 24, granaries = 3,
         claim_max = 45,
     },
 }
@@ -72,6 +84,9 @@ local FAR_REACH = 60            -- tiles: how far a mineral with no site in the 
 local SCOUT_AT = 90000          -- the first scout (a soldier) from here
 local SCOUTS = 3                -- scouts sent at most (a new one when the last was lost)
 local TOWER_STRENGTH = 4000     -- what a tower counts for against a threat (about three clubmen)
+local BOATS_LOST_MS = 300000   -- fishing boats sunk within this long ...
+local BOATS_LOST_MAX = 3        -- ... this many times: none are replaced until fewer are
+local ARMY_FIRST_MIN = 5        -- minutes into the epoch the citizens wait at most for the army_first soldiers
 local PER_GATHERER = 30         -- what one gatherer is counted on to bring in over the planning horizon (~6 min)
 
 local MINERALS = {"stone", "gold", "iron"}
@@ -112,7 +127,9 @@ local function going_up(entry)
     return entry ~= nil and entry.unfinished + entry.queued > 0
 end
 
--- the cheapest soldier each trainer makes now (by the sum of its cost)
+-- the soldier each trainer makes now: the first of PREFERRED it can make (the owner: "an army of spearmen waiting"),
+-- else the cheapest (by the sum of its cost)
+local PREFERRED = {inf04_phalanx = 1, inf02_spearman = 2}
 local function soldier_classes(view)
     local best = {}
     for _, c in ipairs(view.costs) do
@@ -120,8 +137,9 @@ local function soldier_classes(view)
             for _, k in ipairs(TRAINERS) do
                 if c.producer == k then
                     local s = V.sum(c.cost)
-                    if best[k] == nil or s < best[k].sum then
-                        best[k] = {type = c.type, sum = s, cost = c}
+                    local rank = PREFERRED[c.type] or 100
+                    if best[k] == nil or rank < best[k].rank or (rank == best[k].rank and s < best[k].sum) then
+                        best[k] = {type = c.type, sum = s, cost = c, rank = rank}
                     end
                 end
             end
@@ -185,16 +203,25 @@ local function stock_targets(view, plan, reserve, towers, soldiers_wanted)
     if plan.farms ~= nil then
         add("b_farm", math.min(plan.farms - V.total(V.buildings(view, "b_farm")), 3))
     end
-    -- the soldiers still wanted, at the cost of the cheapest barracks soldier
-    local best = nil
-    for _, c in ipairs(view.costs) do
-        if not c.building and c.military and c.producer == "b_barracks"
-                and (best == nil or V.sum(c.cost) < V.sum(best.cost)) then
-            best = c
+    -- the soldiers still wanted, at the cost of the soldiers trained (the cheapest of each trainer built, in turn)
+    if soldiers_wanted > view.army_count then
+        local kinds = {}
+        for _, k in ipairs(TRAINERS) do
+            local best = nil
+            for _, c in ipairs(view.costs) do
+                if not c.building and c.military and c.producer == k and c.producers > 0
+                        and (best == nil or V.sum(c.cost) < V.sum(best.cost)) then
+                    best = c
+                end
+            end
+            if best ~= nil then
+                kinds[#kinds + 1] = best.type
+            end
         end
-    end
-    if best ~= nil and soldiers_wanted > view.army_count then
-        add(best.type, soldiers_wanted - view.army_count)
+        local n = soldiers_wanted - view.army_count
+        for i, k in ipairs(kinds) do
+            add(k, (n + #kinds - i) // #kinds)
+        end
     end
     return t
 end
@@ -295,7 +322,21 @@ function M.step(view, memory)
         if e.kind == "no_site" and (e.type == "b_granary" or e.type == "b_farm") then
             memory.grow_claim = true
         end
+        if e.kind == "unit_lost" and string.find(e.type, "fishing_boat", 1, true) then
+            memory.boats_lost = memory.boats_lost or {}
+            for _ = 1, e.count do
+                memory.boats_lost[#memory.boats_lost + 1] = view.time
+            end
+        end
     end
+    -- the boats sunk in the last BOATS_LOST_MS (warships on the fishing waters: no new boats for them to sink)
+    local sunk = {}
+    for _, t in ipairs(memory.boats_lost or {}) do
+        if view.time - t < BOATS_LOST_MS then
+            sunk[#sunk + 1] = t
+        end
+    end
+    memory.boats_lost = sunk
     for _, k in ipairs(ai.keys(memory.bad_spots)) do
         if memory.bad_spots[k] <= view.time then
             memory.bad_spots[k] = nil
@@ -349,7 +390,9 @@ function M.step(view, memory)
         soldiers_wanted = plan.soldiers_max
     end
     local army_short = view.army_count < soldiers_wanted
-    local scramble = threatened and short_strength > 0   -- the reserve gives way to the army
+    -- the reserve gives way to the army under a threat it cannot hold, or with less than the light army (towers do not
+    -- stand in for an empty army: they cover only the land round them)
+    local scramble = threatened and plan.soldiers_max > 0 and (short_strength > 0 or view.army_count < plan.soldiers)
 
     -- saving for the next epoch: once the town has its citizens (or the epoch has run long) the reserve holds the
     -- advance's cost, and the advance is asked for only when it is paid. From the Stone Age the gold and iron are kept
@@ -372,16 +415,27 @@ function M.step(view, memory)
     if upgrade ~= nil and order("tower_upgrade", upgrade) then
         memory.tower_up_at = #orders
     end
+    -- a resource of the advance the army never spends from the reserve: one nearly paid (70%), or one with no site left
+    -- to gather it (a playtest: a raid's scramble spent the Copper Age's iron, 433 to 22, and the last safe iron mine ran
+    -- out: the Stone Age for the rest of the game)
+    local no_site = memory.no_site or {}
+    local function guarded(r)
+        return cost[r] > 0 and (view.stock[r] * 10 >= cost[r] * 7 or no_site[r] == true)
+    end
     local reserve, differs = {}, false
     for _, r in ipairs(V.resources) do
         local want = 0
-        if not last and not view.advancing and (saving or (age >= 2 and (r == "gold" or r == "iron"))) then
+        local kept = not last and not view.advancing and (saving or (age >= 2 and (r == "gold" or r == "iron")))
+        if kept then
             want = cost[r]
-            if missing > 0 and soldier_cost ~= nil then
-                want = math.max(want - missing * soldier_cost[r], 0)
+            if missing > 0 and soldier_cost ~= nil and soldier_cost[r] > 0 and not guarded(r) then
+                -- the missing light army is never locked out by the reserve: at most the stock less what it costs
+                -- (in steps of 100, so the reserve changes seldom)
+                local cap = (view.stock[r] - missing * soldier_cost[r]) // 100 * 100
+                want = math.max(math.min(want - missing * soldier_cost[r], cap), 0)
             end
         end
-        if scramble and r ~= "stone" then
+        if scramble and r ~= "stone" and not (kept and guarded(r)) then
             want = 0
         end
         reserve[r] = want
@@ -406,6 +460,19 @@ function M.step(view, memory)
     local cap = plan.citizens
     if planned >= cap and view.stock.food >= reserve.food + 100 then
         cap = plan.citizens_max
+    end
+    if plan.army_first then
+        -- the soldiers first: while the army and the soldiers coming are short of the plan, the citizens are only
+        -- replaced up to the last epoch's count (for ARMY_FIRST_MIN minutes at most)
+        local coming = 0
+        for _, c in ipairs(view.costs) do
+            if not c.building and c.military then
+                coming = coming + c.requested + c.in_production
+            end
+        end
+        if view.army_count + coming < plan.soldiers and in_epoch < ARMY_FIRST_MIN then
+            cap = math.min(cap, PLAN[age - 1].citizens)
+        end
     end
     if citizen and waiting == 0 and making < 2 * math.max(citizen.producers, 1) and planned < cap
             and view.population < view.population_cap then
@@ -445,12 +512,19 @@ function M.step(view, memory)
         if saving and view.stock.food >= reserve.food + 200 then
             share = share - 15
         end
-        local food_min = (land * share + 99) // 100
+        local food_min = math.min(math.max((land * share + 99) // 100, plan.food or 0), land)
+        -- food short of its minimum: the resource with the most gatherers beyond what its lack needs gives one up
+        -- (with the plan's floors larger than the town, iron gave way first while gold piled up past 1000)
+        local needed = {}
+        for _, r in ipairs({"wood", "stone", "gold", "iron"}) do
+            needed[r] = math.max(target[r] - view.stock[r], 0) // PER_GATHERER
+        end
         while others > 0 and land - others < food_min do
-            local big, big_n = nil, 0
+            local big, big_n = nil, nil
             for _, r in ipairs({"iron", "gold", "stone", "wood"}) do
-                if want[r] > big_n then
-                    big, big_n = r, want[r]
+                local spare = want[r] - needed[r]
+                if want[r] > 0 and (big_n == nil or spare > big_n) then
+                    big, big_n = r, spare
                 end
             end
             want[big] = want[big] - 1
@@ -470,8 +544,10 @@ function M.step(view, memory)
             order("claim_range", {verb = "claim_range", range = range + view.claim_range_step})
         end
         memory.grow_claim = nil
+        memory.no_site = {}
         for _, r in ipairs(MINERALS) do
             local places = claim_sites(view, order, keep, r, false, want[r], 3, range)
+            memory.no_site[r] = want[r] > 0 and places == 0   -- wanted, and no site the gatherers can reach
             if want[r] > places then
                 want.food = want.food + want[r] - places
                 want[r] = places
@@ -551,18 +627,24 @@ function M.step(view, memory)
 
         -- fishing: from the Stone Age's first minute, two docks and the boats (they pay for themselves in food)
         if plan.boats > 0 then
-            order("fish", {verb = "fish", boats = plan.boats, docks = plan.docks})
+            local boats = plan.boats
+            if #memory.boats_lost >= BOATS_LOST_MAX then
+                boats = math.min(boats, view.boats)   -- the boats left fish on; none are replaced for now
+            end
+            order("fish", {verb = "fish", boats = boats, docks = plan.docks})
         end
 
         -- the trainers: a barracks once the town has ten citizens, then an archery range, then the second of each as
         -- the town grows or a threat comes
         local barracks = V.buildings(view, "b_barracks")
         local ranges = V.buildings(view, "b_archery_range")
-        if view.citizens >= 10 and V.total(barracks) < 1 then
+        if view.citizens >= (plan.barracks_at or 10) and V.total(barracks) < 1 then
             order("barracks", {verb = "build", type = "b_barracks", near = "town"})
         elseif age >= 2 and V.cost(view, "b_archery_range") ~= nil and not going_up(barracks)
                 and not going_up(ranges) then
-            if V.total(ranges) < 1 then
+            if plan.army_first and V.total(barracks) < plan.barracks then
+                order("barracks", {verb = "build", type = "b_barracks", near = "town"})   -- the army's second barracks
+            elseif V.total(ranges) < 1 and plan.ranges > 0 then
                 order("range", {verb = "build", type = "b_archery_range", near = "town"})
             elseif (threatened or view.citizens >= 55) and V.total(barracks) < plan.barracks then
                 order("barracks", {verb = "build", type = "b_barracks", near = "town"})
