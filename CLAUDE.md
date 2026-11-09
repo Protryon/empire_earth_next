@@ -103,7 +103,7 @@ The db converter is `tools/eedata/eedata.py`. Run `-h` for the full list.
   - every value the game reads equals retail;
   - record sizes;
   - generated specs and headers current.
-- `cppgate`: the game's C++ text compiler over every table, plus content-dump parity.
+- `cppgate`: the game's text compiler (Rust, `rust/crates/ee_data`) through its C++ seam over every table, plus content-dump parity.
 - `specs` / `cppgen`: regenerate `specs.json` and the generated C++ headers (e.g. `include/ee/EEWorldConstants.h`).
 - `extra TEXTDIR OUT [--units N --effects --epoch --options --civ --rules-demo]`: test content past the old caps.
 - `export` / `import` / `install`: binary <-> text conversion.
@@ -125,8 +125,9 @@ Before merging or pushing any code change, all of these are required:
 3. `bash tools/gates.sh` (about 40 minutes, test profile; logs in `build/gates/`):
    - a tour on the binary tree and on the open tree: menus, settings tour, input check, 120 s of play. Pass:
      `STOP <windowed session complete> reached`;
-   - a seeded 2-AI Hard Small game to the time cap on both trees. Pass: outcome `time-cap` at PT ~13,700-14,500 with
-     both AI players alive (e.g. units `[0, 56, 39]`). Unit counts vary a little between runs.
+   - a seeded 2-AI Hard Small game to the time cap on both trees. Pass: outcome `time-cap` with both AI players alive
+     (e.g. units `[0, 28, 25]`). The PT at the cap is the harness's poll, not the game: one build gave 13,986 and
+     17,633 in two runs, so compare it only against the same build's spread.
 
 - Harness self test, no game, about 1 minute: `python -I tools/harness/selftest/selftest.py`. Run it after any
   change under `tools/harness/`.

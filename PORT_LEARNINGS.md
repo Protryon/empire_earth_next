@@ -1867,3 +1867,14 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   to the temporary folder (gigabytes), which this machine's disk could not hold (C: 0.5 GB free); nothing was ported
   or deleted there. The port is mechanical (cgltf's semantics are the risk: a hand parser or the gltf crate must
   reproduce its acceptance rules exactly) and waits for the gate to be runnable.
+
+## A shared CARGO_TARGET_DIR (R0-R3)
+
+Worktrees must not share a cargo target directory. Cargo hashes a path crate by its path relative to the workspace
+root, so the same crate in two worktrees gets one artifact name, and a checkout can then run or link what another
+checkout compiled: `xtask` checked another worktree's header, and a test run reported failures in code that was not the
+checkout's. `tools/rust_build.py` always uses this checkout's `build/rust`.
+
+The gate's PT at the time cap is timing, not game state: `main` (9cc83d51) gave PT 13,986 and 17,633 in two runs on one
+machine. The seeded EE-SIM trace is the check that a change left the simulation alone.
+

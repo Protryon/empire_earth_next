@@ -18,8 +18,9 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RUST = ROOT / "rust"
 TC = pathlib.Path(os.environ.get("EE_TOOLCHAIN", ROOT / "toolchain"))
-# CARGO_TARGET_DIR overrides it, so that the worktrees of one machine can share the third-party crates' build
-TARGET_DIR = pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "build" / "rust"))
+# Per checkout, always: cargo gives path crates the same hash in every worktree, so in a shared target directory a
+# checkout can run or link what another checkout built (PORT_LEARNINGS "A shared CARGO_TARGET_DIR")
+TARGET_DIR = ROOT / "build" / "rust"
 # the directory holding include/webgpu/{webgpu,wgpu}.h, which C++ includes
 WGPU_HEADERS = RUST / "vendor" / "wgpu-native"
 TRIPLES = {"windows-x86_64": "x86_64-pc-windows-msvc", "linux-x86_64": "x86_64-unknown-linux-gnu",
