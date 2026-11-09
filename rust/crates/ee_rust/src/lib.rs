@@ -7,6 +7,7 @@ use std::ffi::c_char;
 use wgpu_native as _;
 use ee_codec as _;
 use ee_net_tcp as _;
+use ee_mixer as _;
 use ee_random as _;
 
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.

@@ -227,6 +227,10 @@ name = "ee_codec"
 version = "0.1.0"
 
 [[package]]
+name = "ee_mixer"
+version = "0.1.0"
+
+[[package]]
 name = "ee_net_tcp"
 version = "0.1.0"
 dependencies = [
@@ -246,6 +250,7 @@ name = "ee_rust"
 version = "0.1.0"
 dependencies = [
  "ee_codec",
+ "ee_mixer",
  "ee_net_tcp",
  "ee_panic",
  "ee_random",

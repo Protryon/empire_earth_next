@@ -1774,3 +1774,16 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   none exist), `strcpy` into packet fields is bounded, `connect`'s failed-resolve socket and the search's sockets on
   failure are closed. Everything else, including the search thread's timing and the quirky result codes (`13`, a
   socket-open failure in `SendSingle` being `OK`) is carried over.
+
+## Rust R3: the mixer plug-in (2026-11-08)
+
+- **The mixer's math moved; the device and decoder stayed C++.** miniaudio's `ma_device`/`ma_decoder` structs are
+  version-specific and large, so `Mixer.cpp` keeps the miniaudio calls and `SESample` access; `ee_mixer` owns the
+  channels, the interpolation and the volumes. Golden values come from the real text of the former `Mixer.cpp`
+  (sliced into a throwaway tool), not a rewrite.
+- **Audio sources have their own lock.** C++ held the channel mutex (recursive `PlatMutex`) across the conductor's and
+  the movie's render callback; Rust's `Mutex` is not reentrant, so the sources sit behind a second lock the device
+  thread holds while calling them. `SetMusicSource(NULL)` still waits until the device thread is out of the old
+  source, which the conductor and `DX7Movie` rely on before freeing it.
+- **cbindgen writes `Option<alias>` literally** when the alias is a function pointer; a callback parameter must be
+  spelled inline as `Option<unsafe extern "C" fn(...)>` to become a nullable C function pointer.

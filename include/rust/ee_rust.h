@@ -138,6 +138,141 @@ bool ee_ue_decrypt_guid(const uint8_t *text,
                         EeCodecSink sink,
                         void *context);
 
+/// The device opened at `rate`.
+void ee_mixer_activated(uint32_t rate);
+
+/// The device closed.
+void ee_mixer_deactivated();
+
+bool ee_mixer_is_active();
+
+uint32_t ee_mixer_output_rate();
+
+int32_t ee_mixer_create_channels(uint32_t count);
+
+int32_t ee_mixer_destroy_channels();
+
+uint32_t ee_mixer_channel_count();
+
+uint32_t ee_mixer_maximum_channel_count();
+
+int32_t ee_mixer_is_channel_busy_playing(uint32_t channel);
+
+int32_t ee_mixer_play_channel(uint32_t channel);
+
+int32_t ee_mixer_stop_channel(uint32_t channel);
+
+int32_t ee_mixer_stop_all_channels();
+
+/// `SPIMSetChannelSample`.
+///
+/// # Safety
+/// `sample` is a live `SESample*` or NULL.
+int32_t ee_mixer_set_channel_sample(uint32_t channel, void *sample);
+
+/// `SPIMSetSampleLooping`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+void ee_mixer_set_sample_looping(void *sample, bool looping);
+
+/// `SPIMSetSamplePan`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+int32_t ee_mixer_set_sample_pan(void *sample, float pan);
+
+/// `SPIMSetSamplePitch`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+int32_t ee_mixer_set_sample_pitch(void *sample, float pitch);
+
+/// `SPIMSetSampleVolume`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+int32_t ee_mixer_set_sample_volume(void *sample, float volume);
+
+/// `SPIMGetSampleOffset`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+uint32_t ee_mixer_sample_offset(void *sample);
+
+/// `SPIMSetSampleOffset`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+int32_t ee_mixer_set_sample_offset(void *sample, uint32_t offset);
+
+/// `SPIMGetSamplePlayBackTime`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`; `total` and `remaining` for a write.
+int32_t ee_mixer_sample_play_back_time(void *sample, int32_t *total, int32_t *remaining);
+
+/// `SPIMDeleteWaveData`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+void ee_mixer_delete_wave_data(void *sample);
+
+float ee_mixer_volume();
+
+int32_t ee_mixer_set_volume(float volume);
+
+void ee_mixer_set_master_volume(float volume);
+
+void ee_mixer_set_muted(bool muted);
+
+/// `SPIMSetMusicSource`: `source` NULL clears; returns once the device thread is out of the old source.
+///
+/// # Safety
+/// `source` adds `count` stereo float frames at `frames`.
+void ee_mixer_set_music_source(void (*source)(void *context, float *frames, unsigned long count),
+                               void *context);
+
+/// `SPIMSetMovieSource`: as the music source.
+///
+/// # Safety
+/// As `ee_mixer_set_music_source`.
+void ee_mixer_set_movie_source(void (*source)(void *context, float *frames, unsigned long count),
+                               void *context);
+
+/// The device thread's callback: mixes `count` stereo frames.
+///
+/// # Safety
+/// `frames` is writable for `count * 2` floats.
+void ee_mixer_mix(float *frames, uint32_t count);
+
+/// `SPIMLoadWaveData`: a decoded sample from a file image and its interleaved PCM; NULL when empty. The caller stores
+/// the pointer in the sample (`SESample::SetData`).
+///
+/// # Safety
+/// `file` is valid for `file_size`, `pcm` for `pcm_length` floats.
+const void *ee_mixer_sample_create(const uint8_t *file,
+                                   uint32_t file_size,
+                                   const float *pcm,
+                                   size_t pcm_length,
+                                   uint32_t file_channels,
+                                   uint32_t rate);
+
+/// The sample's frame count, rate and file-frame size (`SPIMLoadWaveData`).
+///
+/// # Safety
+/// `data` is a pointer from `ee_mixer_sample_create`.
+void ee_mixer_sample_info(const void *data,
+                          uint32_t *frames,
+                          uint32_t *rate,
+                          uint32_t *frame_bytes);
+
+/// `SPIMDuplicateSample`'s reference on the shared wave data.
+///
+/// # Safety
+/// `data` is a pointer from `ee_mixer_sample_create`.
+void ee_mixer_sample_reference(const void *data);
+
 /// `NPIMActivate`.
 ///
 /// # Safety
