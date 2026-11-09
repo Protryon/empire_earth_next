@@ -399,19 +399,27 @@ function M.step(view, memory)
     if upgrade ~= nil and order("tower_upgrade", upgrade) then
         memory.tower_up_at = #orders
     end
+    -- a resource of the advance the army never spends from the reserve: one nearly paid (70%), or one with no site left
+    -- to gather it (a playtest: a raid's scramble spent the Copper Age's iron, 433 to 22, and the last safe iron mine ran
+    -- out: the Stone Age for the rest of the game)
+    local no_site = memory.no_site or {}
+    local function guarded(r)
+        return cost[r] > 0 and (view.stock[r] * 10 >= cost[r] * 7 or no_site[r] == true)
+    end
     local reserve, differs = {}, false
     for _, r in ipairs(V.resources) do
         local want = 0
-        if not last and not view.advancing and (saving or (age >= 2 and (r == "gold" or r == "iron"))) then
+        local kept = not last and not view.advancing and (saving or (age >= 2 and (r == "gold" or r == "iron")))
+        if kept then
             want = cost[r]
-            if missing > 0 and soldier_cost ~= nil and soldier_cost[r] > 0 then
+            if missing > 0 and soldier_cost ~= nil and soldier_cost[r] > 0 and not guarded(r) then
                 -- the missing light army is never locked out by the reserve: at most the stock less what it costs
                 -- (in steps of 100, so the reserve changes seldom)
                 local cap = (view.stock[r] - missing * soldier_cost[r]) // 100 * 100
                 want = math.max(math.min(want - missing * soldier_cost[r], cap), 0)
             end
         end
-        if scramble and r ~= "stone" then
+        if scramble and r ~= "stone" and not (kept and guarded(r)) then
             want = 0
         end
         reserve[r] = want
@@ -500,8 +508,10 @@ function M.step(view, memory)
             order("claim_range", {verb = "claim_range", range = range + view.claim_range_step})
         end
         memory.grow_claim = nil
+        memory.no_site = {}
         for _, r in ipairs(MINERALS) do
             local places = claim_sites(view, order, keep, r, false, want[r], 3, range)
+            memory.no_site[r] = want[r] > 0 and places == 0   -- wanted, and no site the gatherers can reach
             if want[r] > places then
                 want.food = want.food + want[r] - places
                 want[r] = places
