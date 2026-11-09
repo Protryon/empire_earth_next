@@ -9,6 +9,12 @@
 /// Version of the Rust library's C interface; bumped when a seam changes incompatibly.
 constexpr static const uint32_t EE_RUST_ABI_VERSION = 1;
 
+/// Receives output bytes (the forwarder copies them into a `UString`). Valid only during the call.
+using EeCodecSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
+using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
 extern "C" {
 
 /// Returns `EE_RUST_ABI_VERSION`.
@@ -20,6 +26,448 @@ uint32_t ee_rust_abi_version();
 /// `log` must be callable from any thread for the life of the process, with a NUL-terminated line valid during the
 /// call.
 void ee_rust_init(void (*log)(const char *line));
+
+/// `UDataCompression::Compress`.
+///
+/// # Safety
+/// `input` is valid for `input_length` bytes, `output` for `capacity` bytes, `out_length` for a write.
+int32_t ee_compress(const uint8_t *input,
+                    uint32_t input_length,
+                    uint8_t *output,
+                    uint32_t capacity,
+                    uint32_t *out_length,
+                    uint32_t level);
+
+/// `UDataCompression::Decompress`.
+///
+/// # Safety
+/// `input` is valid for `input_length` bytes, `output` for `capacity` bytes, `out_length` for a write.
+int32_t ee_decompress(const uint8_t *input,
+                      uint32_t input_length,
+                      uint8_t *output,
+                      uint32_t capacity,
+                      uint32_t *out_length);
+
+/// `UDataCompression::GetDecompressedSize`.
+///
+/// # Safety
+/// `input` is valid for `input_length` bytes, `out_size` for a write.
+int32_t ee_decompressed_size(const uint8_t *input, uint32_t input_length, uint32_t *out_size);
+
+/// `UDataCompression::GetIsCompressed`.
+///
+/// # Safety
+/// `input` is valid for `input_length` bytes.
+bool ee_is_compressed(const uint8_t *input, uint32_t input_length);
+
+/// `UEEncryptUString`. `capacity` is the input `UString`'s allocated size.
+///
+/// # Safety
+/// `text` is valid for `length` bytes; `sink` is called once.
+void ee_ue_encrypt_ustring(const uint8_t *text,
+                           size_t length,
+                           size_t capacity,
+                           EeCodecSink sink,
+                           void *context);
+
+/// `UEDecryptUString`. Returns whether the checksum matches.
+///
+/// # Safety
+/// `text` is valid for `length` bytes; `sink` is called once.
+bool ee_ue_decrypt_ustring(const uint8_t *text, size_t length, EeCodecSink sink, void *context);
+
+/// `UEEncryptAuthorizationCode`.
+///
+/// # Safety
+/// `code` is valid for `length` bytes; `sink` is called once.
+void ee_ue_encrypt_authorization_code(const uint8_t *code,
+                                      size_t length,
+                                      EeCodecSink sink,
+                                      void *context);
+
+/// `UEDecryptAuthorizationCode`.
+///
+/// # Safety
+/// `code` is valid for `length` bytes; `first` and `second` for a write.
+void ee_ue_decrypt_authorization_code(const uint8_t *code,
+                                      size_t length,
+                                      uint32_t *first,
+                                      uint32_t *second);
+
+/// `UEEncryptExpiration`.
+///
+/// # Safety
+/// `sink` is called once.
+void ee_ue_encrypt_expiration(uint32_t first, uint32_t second, EeCodecSink sink, void *context);
+
+/// `UEDecryptExpiration`. Returns whether the checksum matches.
+///
+/// # Safety
+/// `text` is valid for `length` bytes; `first` and `second` for a write.
+bool ee_ue_decrypt_expiration(const uint8_t *text,
+                              size_t length,
+                              uint32_t *first,
+                              uint32_t *second);
+
+/// `UEEncryptGUID`. `sink_guid` receives the padded GUID (written back into the caller's string), then `sink_out` the
+/// encrypted text.
+///
+/// # Safety
+/// `guid` is valid for `length` bytes; each sink is called once.
+void ee_ue_encrypt_guid(uint32_t value,
+                        const uint8_t *guid,
+                        size_t length,
+                        size_t capacity,
+                        uint32_t key,
+                        EeCodecSink sink_guid,
+                        void *context_guid,
+                        EeCodecSink sink_out,
+                        void *context_out);
+
+/// `UEDecryptGUID`: the GUID is appended to `prefix` (capped at `capacity`). Returns whether the checksum matches.
+///
+/// # Safety
+/// `text` is valid for `length` bytes, `prefix` for `prefix_length`, `value` for a write; `sink` is called once.
+bool ee_ue_decrypt_guid(const uint8_t *text,
+                        size_t length,
+                        uint32_t key,
+                        uint32_t *value,
+                        const uint8_t *prefix,
+                        size_t prefix_length,
+                        size_t capacity,
+                        EeCodecSink sink,
+                        void *context);
+
+/// The device opened at `rate`.
+void ee_mixer_activated(uint32_t rate);
+
+/// The device closed.
+void ee_mixer_deactivated();
+
+bool ee_mixer_is_active();
+
+uint32_t ee_mixer_output_rate();
+
+int32_t ee_mixer_create_channels(uint32_t count);
+
+int32_t ee_mixer_destroy_channels();
+
+uint32_t ee_mixer_channel_count();
+
+uint32_t ee_mixer_maximum_channel_count();
+
+int32_t ee_mixer_is_channel_busy_playing(uint32_t channel);
+
+int32_t ee_mixer_play_channel(uint32_t channel);
+
+int32_t ee_mixer_stop_channel(uint32_t channel);
+
+int32_t ee_mixer_stop_all_channels();
+
+/// `SPIMSetChannelSample`.
+///
+/// # Safety
+/// `sample` is a live `SESample*` or NULL.
+int32_t ee_mixer_set_channel_sample(uint32_t channel, void *sample);
+
+/// `SPIMSetSampleLooping`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+void ee_mixer_set_sample_looping(void *sample, bool looping);
+
+/// `SPIMSetSamplePan`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+int32_t ee_mixer_set_sample_pan(void *sample, float pan);
+
+/// `SPIMSetSamplePitch`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+int32_t ee_mixer_set_sample_pitch(void *sample, float pitch);
+
+/// `SPIMSetSampleVolume`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+int32_t ee_mixer_set_sample_volume(void *sample, float volume);
+
+/// `SPIMGetSampleOffset`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+uint32_t ee_mixer_sample_offset(void *sample);
+
+/// `SPIMSetSampleOffset`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+int32_t ee_mixer_set_sample_offset(void *sample, uint32_t offset);
+
+/// `SPIMGetSamplePlayBackTime`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`; `total` and `remaining` for a write.
+int32_t ee_mixer_sample_play_back_time(void *sample, int32_t *total, int32_t *remaining);
+
+/// `SPIMDeleteWaveData`.
+///
+/// # Safety
+/// `sample` is a live `SESample*`.
+void ee_mixer_delete_wave_data(void *sample);
+
+float ee_mixer_volume();
+
+int32_t ee_mixer_set_volume(float volume);
+
+void ee_mixer_set_master_volume(float volume);
+
+void ee_mixer_set_muted(bool muted);
+
+/// `SPIMSetMusicSource`: `source` NULL clears; returns once the device thread is out of the old source.
+///
+/// # Safety
+/// `source` adds `count` stereo float frames at `frames`.
+void ee_mixer_set_music_source(void (*source)(void *context, float *frames, unsigned long count),
+                               void *context);
+
+/// `SPIMSetMovieSource`: as the music source.
+///
+/// # Safety
+/// As `ee_mixer_set_music_source`.
+void ee_mixer_set_movie_source(void (*source)(void *context, float *frames, unsigned long count),
+                               void *context);
+
+/// The device thread's callback: mixes `count` stereo frames.
+///
+/// # Safety
+/// `frames` is writable for `count * 2` floats.
+void ee_mixer_mix(float *frames, uint32_t count);
+
+/// `SPIMLoadWaveData`: a decoded sample from a file image and its interleaved PCM; NULL when empty. The caller stores
+/// the pointer in the sample (`SESample::SetData`).
+///
+/// # Safety
+/// `file` is valid for `file_size`, `pcm` for `pcm_length` floats.
+const void *ee_mixer_sample_create(const uint8_t *file,
+                                   uint32_t file_size,
+                                   const float *pcm,
+                                   size_t pcm_length,
+                                   uint32_t file_channels,
+                                   uint32_t rate);
+
+/// The sample's frame count, rate and file-frame size (`SPIMLoadWaveData`).
+///
+/// # Safety
+/// `data` is a pointer from `ee_mixer_sample_create`.
+void ee_mixer_sample_info(const void *data,
+                          uint32_t *frames,
+                          uint32_t *rate,
+                          uint32_t *frame_bytes);
+
+/// `SPIMDuplicateSample`'s reference on the shared wave data.
+///
+/// # Safety
+/// `data` is a pointer from `ee_mixer_sample_create`.
+void ee_mixer_sample_reference(const void *data);
+
+/// `NPIMActivate`.
+///
+/// # Safety
+/// The platform layer is initialised.
+int32_t ee_tcp_activate();
+
+/// `NPIMDeactivate`.
+///
+/// # Safety
+/// As `ee_tcp_activate`.
+int32_t ee_tcp_deactivate();
+
+/// Whether the plug-in started (`PIMIsValid`).
+bool ee_tcp_is_valid();
+
+/// `NPIMGetStatus`.
+int32_t ee_tcp_get_status();
+
+/// `NPIMAccept`.
+///
+/// # Safety
+/// `server` and `connection` are valid handle slots.
+int32_t ee_tcp_accept(void **server, void **connection);
+
+/// `NPIMAcceptForXfer`.
+///
+/// # Safety
+/// As `ee_tcp_accept`.
+int32_t ee_tcp_accept_for_xfer(void **server, void **connection);
+
+/// `NPIMAllowNewConnections`.
+///
+/// # Safety
+/// `server` is a valid handle slot.
+void ee_tcp_allow_new_connections(void **server, bool allow);
+
+/// `NPIMCloseConnection`.
+///
+/// # Safety
+/// `connection` is a valid handle slot.
+int32_t ee_tcp_close_connection(void **connection);
+
+/// `NPIMCloseServer`.
+///
+/// # Safety
+/// `server` is a valid handle slot.
+int32_t ee_tcp_close_server(void **server);
+
+/// `NPIMConnect`. Strings are bytes (the shim strips `UString`s); `event` a `PlatEvent*`.
+///
+/// # Safety
+/// The strings are valid for their lengths; `connection` is a valid slot.
+int32_t ee_tcp_connect(const uint8_t *name,
+                       size_t name_length,
+                       const uint8_t *host,
+                       size_t host_length,
+                       const uint8_t *address,
+                       size_t address_length,
+                       int32_t kind,
+                       void *event,
+                       void **connection,
+                       uint32_t adapter);
+
+/// `NPIMConnectForXfer`. `host` is the client's game connection slot.
+///
+/// # Safety
+/// `host` points to a valid slot (its contents may be NULL); `connection` is a valid slot.
+int32_t ee_tcp_connect_for_xfer(void **host, int32_t mode, void *event, void **connection);
+
+/// `NPIMGetClientAddress`.
+///
+/// # Safety
+/// `server` is a valid slot; `sink` is called once with the text.
+int32_t ee_tcp_get_client_address(void **server, uint32_t index, EeTcpSink sink, void *context);
+
+/// `NPIMGetDetectedGame`. Returns 10 for an out-of-range index.
+///
+/// # Safety
+/// Each sink is called once.
+int32_t ee_tcp_get_detected_game(uint32_t index,
+                                 EeTcpSink sink_name,
+                                 void *context_name,
+                                 EeTcpSink sink_host,
+                                 void *context_host,
+                                 EeTcpSink sink_address,
+                                 void *context_address);
+
+/// `NPIMGetDetectedGameCount`.
+uint32_t ee_tcp_get_detected_game_count();
+
+/// `NPIMGetLocalAddress`: gives the address text.
+///
+/// # Safety
+/// `sink` is called once.
+void ee_tcp_get_local_address(uint32_t adapter, EeTcpSink sink, void *context);
+
+/// `NPIMEnumerateNetworkAdapters`: `sink` receives each description in turn; returns how many.
+///
+/// # Safety
+/// `sink` is called once per adapter.
+uint32_t ee_tcp_enumerate_adapters(EeTcpSink sink, void *context);
+
+/// `NPIMIsAlive`.
+///
+/// # Safety
+/// `connection` is a valid slot holding a live connection.
+bool ee_tcp_is_alive(void **connection);
+
+/// `NPIMPublish`. `flags`: bit 0 listening (stream), bit 1 datagram; events are `PlatEvent*`.
+///
+/// # Safety
+/// The strings are valid for their lengths; `server` is a valid slot.
+int32_t ee_tcp_publish(const uint8_t *name,
+                       size_t name_length,
+                       const uint8_t *address,
+                       size_t address_length,
+                       uint32_t flags,
+                       void *data_event,
+                       void *listen_event,
+                       void *accept_event,
+                       void **server,
+                       bool flag55,
+                       bool announce,
+                       uint32_t adapter);
+
+/// `NPIMReceive`.
+///
+/// # Safety
+/// `connection` is a valid slot, or NULL-holding; `buffer` is writable for `size`; `received` for a write.
+int32_t ee_tcp_receive(void **connection,
+                       uint32_t size,
+                       uint8_t *buffer,
+                       uint32_t *received);
+
+/// `NPIMReceiveFrom`.
+///
+/// # Safety
+/// `server` is a valid slot; `buffer` is writable for `size`; the out pointers for a write.
+int32_t ee_tcp_receive_from(void **server,
+                            uint32_t size,
+                            uint8_t *buffer,
+                            uint32_t *received,
+                            uint32_t *index);
+
+/// `NPIMResetClientConnection`.
+///
+/// # Safety
+/// `server` is a valid slot.
+void ee_tcp_reset_client_connection(void **server, uint32_t index);
+
+/// `NPIMResetXfer`.
+///
+/// # Safety
+/// `server` is a valid slot.
+void ee_tcp_reset_xfer(void **server);
+
+/// `NPIMSearchForGame`.
+///
+/// # Safety
+/// `name` is valid for `length` bytes.
+int32_t ee_tcp_search_for_game(const uint8_t *name, size_t length, bool start);
+
+/// `NPIMSend`.
+///
+/// # Safety
+/// `connection` is a valid slot; `data` is writable for `length`.
+int32_t ee_tcp_send(void **connection, uint8_t *data, uint32_t length);
+
+/// `NPIMSendSingle`.
+///
+/// # Safety
+/// `host` is valid for `host_length`; `data` for `length`.
+int32_t ee_tcp_send_single(const uint8_t *host,
+                           size_t host_length,
+                           uint32_t port,
+                           const uint8_t *data,
+                           uint32_t length);
+
+/// `NPIMSendTo`.
+///
+/// # Safety
+/// `server` is a valid slot; `data` is writable for `length`.
+int32_t ee_tcp_send_to(void **server, uint32_t index, uint8_t *data, uint32_t length);
+
+/// `NPIMXferReceive`.
+///
+/// # Safety
+/// `buffer` is writable for `size`; `received` for a write.
+int32_t ee_tcp_xfer_receive(uint32_t size, uint8_t *buffer, uint32_t *received);
+
+/// `NPIMXferSendTo`.
+///
+/// # Safety
+/// `server` is a valid slot; `data` for `length`.
+int32_t ee_tcp_xfer_send_to(void **server, uint32_t index, const uint8_t *data, uint32_t length);
 
 }  // extern "C"
 

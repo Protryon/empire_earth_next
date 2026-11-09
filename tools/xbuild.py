@@ -324,6 +324,7 @@ def cmd_tcptest(a):
     defs = ["EE_STATIC", "WIN32", "NDEBUG", "_WINDOWS"]
     # the engine units with the engine's module define (tools/ee.py MODULE_FLAGS "lle")
     unit_defs = lambda src: [*defs, *(["LOWLEVELENGINE_EXPORTS"] if src in TCP_ENGINE_UNITS else [])]
+    rust_lib = rust_build.ensure(t.name)   # the plug-in itself (rust/crates/ee_net_tcp)
     objs = []
     if t.os == "windows":
         env = windows_env()

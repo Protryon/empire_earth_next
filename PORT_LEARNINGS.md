@@ -1797,3 +1797,45 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **The POSIX C++ still here** (`PlatFile.cpp`, `PlatThread.cpp`, `PlatSocket.cpp`) reaches the moved code through
   `src/Platform/Posix/PlatPosixBridge.cpp` (`PlatPosix::ResolvePath`/`GameForm`, and the two C functions Rust calls to
   set the thread's last error), which goes away with R1.3.
+
+## Rust R3: compression and UEncryption (2026-11-08)
+
+- **cbindgen only exports functions from crates named in `[parse] extra_bindings`.** `parse_deps`/`include` make it
+  parse a dependency, and the "Take ... opaque" lines look like it worked, but functions outside the binding crate
+  are dropped silently (`should_generate_top_level_item`). Each crate with `#[no_mangle]` functions goes into both
+  `include` and `extra_bindings` in `rust/cbindgen.toml`.
+- **UEncryption's output depends on the `UString` buffer.** The padding `+=` never grows the string, so a string in an
+  exact-fit buffer (`UString("hi")`) stays unpadded and its decryption's checksum lookup misses (the checksum block is
+  read at padded length * 2 + 16). `UEDecryptUString` caps its text at 255 characters (a default-capacity `UString`).
+  Both quirks are kept (the forwarders pass the capacity); golden vectors pin them. A block with no hex digits read
+  uninitialised memory in C++; Rust reads 0, and scanning past the end of the input stops there.
+- **The DCL encoder and decoder are now Rust (`ee_codec`).** `Compress` of empty input gives a 4-byte stream, which
+  `explode` refuses (first read <= 4 bytes): the C++ quirk is preserved and a test pins it.
+
+## Rust R3: the TCP/IP plug-in (2026-11-08)
+
+- **`extern "C"` declarations in a dependency reach the header.** cbindgen copied the `extern "C"` block of
+  `ffi.rs` (the `PlatSocket*` imports) into `ee_rust.h`, which then conflicted with `platform/PlatSocket.h`, and it
+  exported every `pub const` of the crate as a C++ constant, colliding with Winsock macros (`SOCK_STREAM`, `AF_INET`).
+  Foreign blocks and internal modules carry `/// cbindgen:ignore`; only the entry points and the sink typedefs are in
+  the header. The plug-in's logic is generic over a `Host` trait (the real one is `ffi.rs`, compiled out of
+  `cargo test`, so tests link without the platform layer).
+- **`tcp_test` shares its ports with the game** (33334/33335). `EE_TCP_TEST_PORT_OFFSET` moves it (through
+  `gPlatSimPortOffset`) so it can run beside a live game or harness.
+- **Behaviour changes in the port**: the cipher loop has no 16-bit counter (by reading the C++, its 16-bit counter never ended the loop for datagrams above 32767 bytes;
+  not exercised), `strcpy` into packet fields is bounded, `connect`'s failed-resolve socket and the search's sockets on
+  failure are closed. Everything else, including the search thread's timing and the quirky result codes (`13`, a
+  socket-open failure in `SendSingle` being `OK`) is carried over.
+
+## Rust R3: the mixer plug-in (2026-11-08)
+
+- **The mixer's math moved; the device and decoder stayed C++.** miniaudio's `ma_device`/`ma_decoder` structs are
+  version-specific and large, so `Mixer.cpp` keeps the miniaudio calls and `SESample` access; `ee_mixer` owns the
+  channels, the interpolation and the volumes. Golden values come from the real text of the former `Mixer.cpp`
+  (sliced into a throwaway tool), not a rewrite.
+- **Audio sources have their own lock.** C++ held the channel mutex (recursive `PlatMutex`) across the conductor's and
+  the movie's render callback; Rust's `Mutex` is not reentrant, so the sources sit behind a second lock the device
+  thread holds while calling them. `SetMusicSource(NULL)` still waits until the device thread is out of the old
+  source, which the conductor and `DX7Movie` rely on before freeing it.
+- **cbindgen writes `Option<alias>` literally** when the alias is a function pointer; a callback parameter must be
+  spelled inline as `Option<unsafe extern "C" fn(...)>` to become a nullable C function pointer.
