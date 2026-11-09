@@ -168,10 +168,7 @@ bool AsyncOp::RunBlock(unsigned long timeout) {return this->Run(2,timeout)==WS_S
 // Returns the time left before the op times out; 0 for async runs or once the timeout has passed
 unsigned long AsyncOp::TimeLeft()
 {
-    if(this->mRunMode==OP_MODE_ASYNC) return 0;
-    unsigned long elapsed=WONTickCount()-this->mStartTime;
-    if(elapsed>=this->mTimeout) return 0;
-    return this->mTimeout-elapsed;
+    return ee_won_op_time_left(this->GetTiming());
 }
 }
 
@@ -179,11 +176,7 @@ unsigned long AsyncOp::TimeLeft()
 namespace WONAPI {
 DWORD AsyncOp::RealTimeLeft()
 {
-	int deltaTime = WONTickCount() - this->mStartTime;
-	if(deltaTime >= this->mTimeout)
-		return 0;
-	else
-		return this->mTimeout - deltaTime;
+	return ee_won_real_time_left(this->mStartTime, static_cast<uint32_t>(this->mTimeout));
 }
 }
 

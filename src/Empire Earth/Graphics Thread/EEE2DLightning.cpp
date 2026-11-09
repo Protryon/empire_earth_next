@@ -43,6 +43,7 @@
 #include "ee/EEGameSound.h"
 #include "ee/EEE2DLightning.h"
 #include "ee/EEEffectKindIDs.h"
+#include "ee/EERenderSnapshot.h"
 
 // SYNTHETIC: EXE 0x4e28be
 // SYNTHETIC: EXE 0x4e28c8
@@ -177,7 +178,7 @@ long EEE2DLightning::SetUp()
 // Draws the lightning as an additive fog-lit sprite only on frames 0 and 2 (a flicker); returns the draw result
 long EEE2DLightning::DrawPass6()
 {
-    GETransformation theTransformation(gWorld.mTransformation);
+    GETransformation theTransformation(gRenderSnapshot.mCamera);
     float theValue;
     float theScale = this->mGraphicEffect->mSize;
     long theResult = 0;

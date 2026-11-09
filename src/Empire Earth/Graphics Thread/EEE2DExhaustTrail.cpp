@@ -49,6 +49,7 @@
 const UString EEE2DExhaustTrail::sData("EEE2DExhaustTrail-Data");
 
 #include "ee/EEGamePreferences.h"
+#include "ee/EERenderSnapshot.h"
 // the trail sprite grows to seven times the effect height over the animation (0x43fb18, loaded through memory; Virtual14)
 static const float kExhaustTrailGrowth = 6.0f;
 
@@ -152,7 +153,7 @@ long EEE2DExhaustTrail::DrawPass5()
     else
         gRasterizer->SetAlphaTestingRefValue(0.0f, theScreen);
     theRotation.SetOrientationYPR(0.0f, 0.0f, this->mDrawAngle);
-    gWorld.mTransformation.Apply(theRotation, theTransformation);
+    gRenderSnapshot.mCamera.Apply(theRotation, theTransformation);
     gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
     gRasterizer->SetBlending(kBlendSrcAlpha, kBlendInvSrcAlpha, theScreen);
     SetPrelitLighting();

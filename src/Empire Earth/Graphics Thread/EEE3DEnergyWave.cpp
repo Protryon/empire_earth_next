@@ -104,6 +104,16 @@ long EEE3DEnergyWave::Queue(EEEffectQueue* inQueues)
     long theResult = EEEffect3D::Queue(inQueues);
     if (theResult == 0) {
         this->mDrawPhase = this->mPhase;
+        // port (R5a.3): DrawPass6's check of the live unit and players, taken here with the phase
+        EEComplexUnit* theUnit = this->mUnit->mComplexUnit;
+        bool theCloaked = theUnit->mIsCloakable ? theUnit->mIsCloaked : false;
+        this->mDrawHidden = false;
+        if (theCloaked) {
+            EEPlayer* thePlayer = theUnit->mPlayer;
+            EEPlayer* theCurrent = gWorld.GetCurrentPlayer();
+            if (thePlayer != theCurrent && theCurrent->mEnemies[thePlayer->mPlayerID] != 0)
+                this->mDrawHidden = true;
+        }
         GE3DPoint thePosition(this->mTransformation.GetX(), this->mTransformation.GetY(), this->mTransformation.GetZ());
         float* theHeight = this->mHeights;
         EEGraphicEffect* theEffect = this->mGraphicEffect;
@@ -144,14 +154,8 @@ long EEE3DEnergyWave::SetUp()
 // NEAR: gWorld.mPlayers[] (gWorld+0x74) is compared as an absolute address (verifier field map?)
 long EEE3DEnergyWave::DrawPass6()
 {
-    EEComplexUnit* theUnit = this->mUnit->mComplexUnit;
-    bool theCloaked = theUnit->mIsCloakable ? theUnit->mIsCloaked : false;
-    if (theCloaked) {
-        EEPlayer* thePlayer = theUnit->mPlayer;
-        EEPlayer* theCurrent = gWorld.GetCurrentPlayer();
-        if (thePlayer != theCurrent && theCurrent->mEnemies[thePlayer->mPlayerID] != 0)
-            return 0;
-    }
+    if (this->mDrawHidden)   // port: taken by Queue (R5a.3), not read from the live unit
+        return 0;
     GE3DPoint theCenter(this->mTransformation.GetX(), this->mTransformation.GetY(), this->mTransformation.GetZ());
     theCenter.SetZ(this->mGraphicEffect->GetParam5() + theCenter.GetZ());
     float theReference;

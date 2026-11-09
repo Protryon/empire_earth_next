@@ -46,6 +46,7 @@
 #include "lle/GEPolygonArray.h"
 #include "lle/GEQuaternion.h"
 #include "ee/EEWorld.h"
+#include "ee/EERenderSnapshot.h"
 
 // SYNTHETIC: EXE 0x50251d
 // SYNTHETIC: EXE 0x502527
@@ -540,7 +541,7 @@ void AddGlowSprite(const GE3DPoint& inPosition, const GEColor& inColor, float in
     }
     if (inAlphaReference < sEffectBatch.mAlphaReference)
         sEffectBatch.mAlphaReference = inAlphaReference;
-    theTransformation.SetOrientationYPR(gWorld.mCameraYaw, gWorld.mCameraPitch, inRotation);
+    theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw, gRenderSnapshot.mCameraPitch, inRotation);
     theTransformation.SetPosition(inPosition);
     theTransformation.SetElement(3, 0, 0.0f);
     theTransformation.SetElement(3, 1, 0.0f);
@@ -710,7 +711,7 @@ void AddBlendedSprite(const GE3DPoint& inPosition, const GEColor& inColor, float
     }
     if (inAlphaReference < sEffectGroundBatch.mAlphaReference)
         sEffectGroundBatch.mAlphaReference = inAlphaReference;
-    theTransformation.SetOrientationYPR(gWorld.GetCameraYaw(), gWorld.GetCameraPitch(), inRotation);
+    theTransformation.SetOrientationYPR(gRenderSnapshot.mCameraYaw, gRenderSnapshot.mCameraPitch, inRotation);
     theTransformation.SetPosition(inPosition);
     theTransformation.SetElement(3, 0, 0.0f);
     theTransformation.SetElement(3, 1, 0.0f);

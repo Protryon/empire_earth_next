@@ -52,9 +52,9 @@
 #include "ee/EEUIFMainGame.h"
 #include "ee/EEUIFScenarioEditor.h"
 #include "ee/EEROUnits.h"
+#include "ee/EERenderSnapshot.h"
 
 extern bool& gShowCollisionSpheres;          // 0x5318dc (the units' collision spheres are drawn; provisional name)
-extern bool& gInCinematic;                   // 0x5318e0 (no rings, bars or labels; provisional name)
 extern bool& gInterpolateFrames;             // 0x5308cf (the frames are interpolated; provisional name)
 extern long& gModelDetail;                   // 0x530898 (0: full opacity, 1: half, else opaque; provisional name)
 extern bool gUnitPanelActive;               // 0x5297a0 (EEROUserInterface.cpp)
@@ -792,9 +792,7 @@ void EEROUnits::DrawUnitModel(EERenderUnit* inUnit)
     theModel->SetGraphicsPostModelTransform(theTransformation);
     theModel->SetGraphicsScale(inUnit->mScale);
     theModel->PrepareTransforms();
-    EEUnit* theUnit;
-    if (inUnit->mUnitClassIndex == kUnitTypeRoboticFarm &&
-        ((theUnit = static_cast<EEUnit*>(gWorld.GetUnit(inUnit->mUnitId))) == NULL || theUnit->mHitPoints == 1))
+    if (inUnit->mSecondFullOpacity)   // port: taken by FillRenderLists (R5a.3), not read from the live unit
         theModel->SetOpacity(1.0f);
     else
         theModel->SetOpacity(inUnit->mOpacity);
@@ -1288,7 +1286,7 @@ void EEROUnits::RenderScene()
     long theCount = EERenderLists::sInstance.mGhostRecords.size();
     unsigned long theScreen = gScreenIndex;
     SetSceneFog();
-    if (!gInCinematic) {
+    if (!gRenderSnapshot.mInCinematic) {
         gU4E8F08.SetDepthRange(0.0f, 0.0f);
         gRasterizer->SetViewport(gU4E8F08, theScreen);
         gRasterizer->SetZBuffer(kZBufferTestOnly, theScreen);
@@ -1313,7 +1311,7 @@ void EEROUnits::RenderScene()
         theRecord = EERenderLists::sInstance.mGhostRecords[i];
         this->DrawPlacement(theRecord);
     }
-    if (!gInCinematic) {
+    if (!gRenderSnapshot.mInCinematic) {
         gRasterizer->SetShadingColorSource(1, gScreenIndex);
         this->DrawSelectionRings();
         gU4E8F08.SetDepthRange(0.0f, 0.0f);
@@ -1343,7 +1341,7 @@ void EEROUnits::FrameDone()
 {
     EEEffectQueue::iterator theIterator;
     std::deque<EEEffect*>::iterator theEffect;
-    if (!gInCinematic)
+    if (!gRenderSnapshot.mInCinematic)
         this->DrawLabels(EERenderLists::sInstance.mRenderUnits, EERenderLists::sInstance.mRenderUnitCount);
     for (theIterator = gEffectQueues[1].begin(); theIterator != gEffectQueues[1].end(); theIterator++) {
         for (theEffect = theIterator->second.begin(); theEffect != theIterator->second.end(); theEffect++)

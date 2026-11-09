@@ -17,27 +17,25 @@ WONStatus RecvCRMsgOp::Start()
     this->mMessage=NULL;
     return this->Continue();
 }
+static void AppendLineBytes(void* inBuffer, const uint8_t* inBytes, size_t inLength)
+{
+    static_cast<WriteBuffer*>(inBuffer)->AppendBytes(inBytes, static_cast<unsigned long>(inLength));
+}
 // FUNCTION: WON 0x006b59b0
-// Reads one byte at a time until CR-LF; stores the line (CR replaced by a NUL) as the message
-// and returns success, WS_TimedOut when time runs out, or the socket error
+// Reads one byte at a time until CR-LF (the loop is Rust's: ee_won ops::recv_line); stores the line (CR replaced by
+// a NUL) as the message and returns success, WS_TimedOut when time runs out, or the socket error
 WONStatus RecvCRMsgOp::Continue()
 {
-    for (;;) {
-        this->mSocket->WaitForRead(this->TimeLeft());
-        unsigned char aByte;
-        WONStatus aStatus=this->mSocket->Recv(&aByte,1,NULL);
-        if (aStatus==WS_Success) {
-            this->mBuffer.AppendByte(aByte);
-            if (aByte==10 && this->mBuffer.mLength>=2 && this->mBuffer.mData[this->mBuffer.mLength-2]==13) {
-                this->mBuffer.data()[this->mBuffer.mLength-2]=0;
-                this->mBuffer.SetSize(this->mBuffer.length()-1);
-                this->mMessage=this->mBuffer.ToByteBuffer(true);
-                return WS_Success;
-            }
-        } else if (aStatus==WS_TimedOut) {
-            if (this->TimeLeft()==0) return WS_TimedOut;
-        } else return aStatus;
+    int32_t aLast=this->mBuffer.mLength>0
+        ? static_cast<unsigned char>(this->mBuffer.mData[this->mBuffer.mLength-1]) : -1;
+    WONStatus aStatus=ee_won_op_recv_line(&this->mSocket->mCore,this->mSocket->mDataCrit.mCrit,aLast,
+                                          this->GetTiming(),AppendLineBytes,&this->mBuffer);
+    if (aStatus==WS_Success) {
+        this->mBuffer.data()[this->mBuffer.mLength-2]=0;
+        this->mBuffer.SetSize(this->mBuffer.length()-1);
+        this->mMessage=this->mBuffer.ToByteBuffer(true);
     }
+    return aStatus;
 }
 
 }

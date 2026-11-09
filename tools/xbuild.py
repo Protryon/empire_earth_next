@@ -4,7 +4,7 @@
   python -I tools/xbuild.py fonttest [--target T] [--no-run]                    text rasteriser test (PlatFont)
   python -I tools/xbuild.py luatest  [--target T] [--no-run]                    the computer player's Lua runtime (EECPLua)
   python -I tools/xbuild.py tcptest  [--target T] [--no-run]                    TCP/IP plug-in loopback (tools/tcp_test)
-  python -I tools/xbuild.py wontest  [--target T] [--no-run]                    WON wire format, crypto, sockets (tests/won)
+  python -I tools/xbuild.py wontest  [--target T] [--no-run] [PROGRAM ...]      WON wire format, crypto, sockets, ops (tests/won)
   python -I tools/xbuild.py sdl3     [--target T]                               SDL3 as a static library (CMake)
   python -I tools/xbuild.py sdltest  [--target T] [--no-run] [--frames N]       SDL3 window + GX presentation test
   python -I tools/xbuild.py census   [--target T] [--dialect ms|gnu] [-j N] [--only TEXT] [module ...]
@@ -373,7 +373,19 @@ WON_TESTS = {
                         *[WON_SRC / "WONCrypt" / f for f in ("Blowfish.cpp", "ElGamal.cpp", "MD5Digest.cpp")],
                         *[WON_SRC / "WONAuth" / f for f in ("AuthBase.cpp", "AuthPubKeyBlock.cpp")]],
     "won_socket_test": [WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
-                                                            "AsyncSocketInternet.cpp", "IPAddr.cpp", "NetStats.cpp")],
+                                                            "AsyncSocketInternet.cpp", "IPAddr.cpp")],
+    # the socket ops, BlockingSocket / QueueSocket, the async op machinery and WONAPICore's threads
+    "won_ops_test": [*[WON_SRC / "WONSocket" / f for f in ("AsyncSocket.cpp", "AsyncSocketDefaults.cpp",
+                                                         "AsyncSocketInternet.cpp", "IPAddr.cpp",
+                                                         "BlockingSocket.cpp", "QueueSocket.cpp", "SocketOps.cpp",
+                                                         "SocketOperationDispatch.cpp", "SocketRunHooks.cpp",
+                                                         "SocketOpsAccessors.cpp", "RecvCRMsgOp.cpp",
+                                                         "SocketThread.cpp")],
+                     *[WON_SRC / "WONCommon" / f for f in ("ReadBuffer.cpp", "WriteBuffer.cpp", "ByteBuffer.cpp",
+                                                         "AsyncOp.cpp", "AsyncOpMode.cpp", "AsyncOpContainer.cpp",
+                                                         "TimerThread.cpp", "Thread.cpp", "WONDebug.cpp",
+                                                         "WONStatus.cpp")],
+                     WON_SRC / "WONAPI.cpp"],
 }
 
 
@@ -424,6 +436,8 @@ def cmd_wontest(a):
         sys.exit(f"{t.name}: {why}")
     result = 0
     for name, units in WON_TESTS.items():
+        if a.programs and name not in a.programs:
+            continue
         exe = build_won_test(t, name, units)
         print(f"built {exe}")
         if not a.no_run:
@@ -1047,6 +1061,8 @@ def main():
             p.add_argument("--no-run", action="store_true")
         if name == "test":
             p.add_argument("--no-network", action="store_true")
+        if name == "wontest":
+            p.add_argument("programs", nargs="*", help="only these tests/won programs (default: all)")
         if name == "sdltest":
             p.add_argument("--frames", type=int, default=60)
         if name == "sdl3":

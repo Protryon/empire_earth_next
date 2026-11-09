@@ -87,6 +87,8 @@ EEE3DFarm::EEE3DFarm(EEUnit* inUnit, EEGraphicEffect* inGraphicEffect)
     this->mHasCrops = false;
     this->mDrawCrops = false;
     this->mDoppelganger = false;
+    this->mDrawOpacity = 1.0f;
+    this->mDrawShown = false;
     this->BuildGroundModels();
 }
 
@@ -106,6 +108,8 @@ EEE3DFarm::EEE3DFarm()
     this->mSwayA = 0;
     this->mSwayB = 0;
     this->mDoppelganger = false;
+    this->mDrawOpacity = 1.0f;
+    this->mDrawShown = false;
 }
 
 // FUNCTION: EXE 0x4ee775
@@ -541,6 +545,17 @@ long EEE3DFarm::Queue(EEEffectQueue* inQueues)
         GETexture* theTexture;
         theTexture = this->mGraphicEffect->mGraphicObject ? this->mGraphicEffect->mGraphicObject->mTextures[gScreenIndex] : NULL;
         inQueues[0][theTexture].push_back(this);
+        // port (R5a.3): DrawPass2's reads of the live unit, in its order (the opacity, the free camera's rebuild of
+        // a moved field after the copies above, then the drawn test), under the world's lock
+        Fn23CEE2(this->mUnit->mComplexUnit, false, this->mDrawOpacity);
+        if (gFreeCamera && this->HasMoved() && this->mUnit->GetTileX() != -10000 && this->mUnit->GetTileY() != -10000) {
+            this->PlaceArea();
+            this->SetUp();
+            if (this->mUnit->mComplexUnit->mIsBuilt)
+                this->BuildCrops();
+        }
+        this->mDrawShown = (this->mUnit->mHitPoints > 0 || !gFreeCamera) && this->mUnit->GetTileX() != -10000
+                           && this->mUnit->GetTileY() != -10000;
     } else
         theResult = 10;
     return theResult;
@@ -686,21 +701,15 @@ long EEE3DFarm::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
 }
 
 // FUNCTION: EXE 0x4f0ce2
-// Rebuilds a moved farm in free camera, then draws the ground (and the crops when shown) at the unit's opacity;
-// restores the render state and returns the last draw result
+// Draws the ground (and the crops when shown) at the unit's opacity; restores the render state and returns the last
+// draw result. Port (R5a.3): the original read the unit here and rebuilt a moved farm in free camera first; Queue
+// does both under the world's lock now (mDrawOpacity, mDrawShown)
 long EEE3DFarm::DrawPass2()
 {
     long theResult = 0;
     unsigned long theScreen = gScreenIndex;
-    float theOpacity;
-    Fn23CEE2(this->mUnit->mComplexUnit, false, theOpacity);
-    if (gFreeCamera && this->HasMoved() && this->mUnit->GetTileX() != -10000 && this->mUnit->GetTileY() != -10000) {
-        this->PlaceArea();
-        this->SetUp();
-        if (this->mUnit->mComplexUnit->mIsBuilt)
-            this->BuildCrops();
-    }
-    if ((this->mUnit->mHitPoints > 0 || !gFreeCamera) && this->mUnit->GetTileX() != -10000 && this->mUnit->GetTileY() != -10000) {
+    float theOpacity = this->mDrawOpacity;
+    if (this->mDrawShown) {
         unsigned long theSource;
         unsigned long theDestination;
         gRasterizer->GetBlending(theSource, theDestination, theScreen);
