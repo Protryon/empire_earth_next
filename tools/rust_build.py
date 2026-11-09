@@ -18,7 +18,8 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 RUST = ROOT / "rust"
 TC = pathlib.Path(os.environ.get("EE_TOOLCHAIN", ROOT / "toolchain"))
-TARGET_DIR = ROOT / "build" / "rust"
+# CARGO_TARGET_DIR overrides it, so that the worktrees of one machine can share the third-party crates' build
+TARGET_DIR = pathlib.Path(os.environ.get("CARGO_TARGET_DIR", ROOT / "build" / "rust"))
 # the directory holding include/webgpu/{webgpu,wgpu}.h, which C++ includes
 WGPU_HEADERS = RUST / "vendor" / "wgpu-native"
 TRIPLES = {"windows-x86_64": "x86_64-pc-windows-msvc", "linux-x86_64": "x86_64-unknown-linux-gnu",
@@ -81,10 +82,15 @@ def ensure(target=None):
     return lib_path(target)
 
 
+def fmt_packages():
+    """rustfmt's -p list: the workspace's own crates, not the vendored one."""
+    return [arg for crate in sorted(p.name for p in (RUST / "crates").iterdir() if p.is_dir()) for arg in ("-p", crate)]
+
+
 def gate():
     steps = [("test", ["test", "--workspace", "--exclude", "wgpu-native"]),
              ("clippy", ["clippy", "--workspace", "--exclude", "wgpu-native", "--no-deps", "--all-targets", "--", "-D", "warnings"]),
-             ("rustfmt", ["fmt", "--check", "-p", "ee_rust", "-p", "ee_panic", "-p", "xtask"]),
+             ("rustfmt", ["fmt", "--check", *fmt_packages()]),
              ("header", ["run", "-q", "-p", "xtask", "--", "cbindgen", "--check"])]
     for name, args in steps:
         print(f"== {name}", flush=True)
