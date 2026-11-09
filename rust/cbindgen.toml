@@ -109,6 +109,10 @@ include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields", "GeTmPoint", 
 "ScrollBarFields" = "EeUiScrollBarFields"
 "ScrollBarLayout" = "EeUiScrollBarLayout"
 "ScrollPart" = "EeUiScrollPart"
+"ComboFields" = "EeUiComboFields"
+"ComboRefs" = "EeUiComboRefs"
+"ComboPart" = "EeUiComboPart"
+"ComboKey" = "EeUiComboKey"
 # ee_won
 "Md5" = "EeWonMd5"
 "Blowfish" = "EeWonBlowfish"

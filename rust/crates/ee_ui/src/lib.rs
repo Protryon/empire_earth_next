@@ -6,6 +6,7 @@
 //! that a scratch driver printed from the real C++ unit (the module's tests say how).
 
 pub mod button;
+pub mod combo;
 pub mod edit;
 pub mod form;
 pub mod layout;
@@ -19,6 +20,9 @@ pub mod wrap;
 // imports the C++ buttons' host calls (UIButton.cpp and its subclasses' units), absent from a test binary
 #[cfg(not(test))]
 mod button_ffi;
+// imports the C++ combo box's host calls (UIComboBox.cpp), absent from a test binary
+#[cfg(not(test))]
+mod combo_ffi;
 // imports the C++ edit box's lines, measuring and scroll bar (UIEditBox.cpp), absent from a test binary
 #[cfg(not(test))]
 mod edit_ffi;

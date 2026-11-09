@@ -1164,6 +1164,29 @@ struct EeUiButtonRefs {
   void *ctx;
 };
 
+/// `UIComboBox`'s members in their C++ order (from `mTextBox` on). The pointer is C++'s.
+struct EeUiComboFields {
+  void *text_box;
+  unsigned long text_box_type;
+  unsigned long current_selection;
+  unsigned long max_list_box_height;
+  bool is_list_box_open;
+  bool released_once;
+  bool copied_list_box_open;
+  bool list_box_always_dirty;
+  bool copied_has_focus;
+};
+
+/// One combo box as Rust sees it: the C++ object, its record from `mTextBox` on, `mRectangle`, `mIndex`, and `ctx`,
+/// the C++ forwarder's context for a host call (`UpdateTranslatedKey`'s key; NULL otherwise).
+struct EeUiComboRefs {
+  void *combo;
+  EeUiComboFields *fields;
+  const EeUiRect *rect;
+  const unsigned long *index;
+  void *ctx;
+};
+
 /// `UIEditBox`'s members from `mCaretX` (+0x17c in the original) to `mSavedAlwaysDirty`, in order (offsets
 /// `static_assert`ed in `UIEditBox.cpp`).
 struct EeUiEditFields {
@@ -3895,6 +3918,78 @@ void ee_ui_radio_set_location(const EeUiButtonRefs *refs, EeUiPoint at);
 
 /// `UIRadioButton::SetText` (`ctx` as for the check box).
 void ee_ui_radio_set_text(const EeUiButtonRefs *refs, const char *s);
+
+/// The constructor's drop button ([`combo::drop_rect`]).
+EeUiRect ee_ui_combo_drop_rect(EeUiRect control, EeUiRect given);
+
+/// The constructor's text box ([`combo::text_rect`]).
+EeUiRect ee_ui_combo_text_rect(EeUiRect control, EeUiRect given, unsigned long drop_width);
+
+/// The constructor's list ([`combo::list_rect`]).
+EeUiRect ee_ui_combo_list_rect(EeUiRect control, float text_bottom, unsigned long max_height);
+
+/// `UIComboBox::AddString`.
+long ee_ui_combo_add_string(const EeUiComboRefs *refs);
+
+/// `UIComboBox::InsertLine` (`text` NUL-terminated).
+void ee_ui_combo_insert_line(const EeUiComboRefs *refs, const char *text, unsigned long i);
+
+/// `AppendLine` / `AppendStringArray`'s end: an open list reopens.
+void ee_ui_combo_reopen(const EeUiComboRefs *refs);
+
+/// `UIComboBox::ChangeSelection`.
+void ee_ui_combo_change_selection(const EeUiComboRefs *refs);
+
+/// `UIComboBox::ChangeWidth`.
+void ee_ui_combo_change_width(const EeUiComboRefs *refs, unsigned long width);
+
+/// `UIComboBox::CloseListBox`.
+void ee_ui_combo_close_list_box(const EeUiComboRefs *refs);
+
+/// `UIComboBox::CopyData`.
+long ee_ui_combo_copy_data(const EeUiComboRefs *refs);
+
+/// `UIComboBox::DeleteAllEntries`.
+void ee_ui_combo_delete_all_entries(const EeUiComboRefs *refs);
+
+/// `UIComboBox::DeleteLine`.
+void ee_ui_combo_delete_line(const EeUiComboRefs *refs, unsigned long line);
+
+/// `UIComboBox::HideControl`.
+void ee_ui_combo_hide_control(const EeUiComboRefs *refs);
+
+/// `UIComboBox::MouseLButtonDown`.
+long ee_ui_combo_mouse_l_button_down(const EeUiComboRefs *refs);
+
+/// `UIComboBox::MouseLButtonUp`.
+long ee_ui_combo_mouse_l_button_up(const EeUiComboRefs *refs);
+
+/// `UIComboBox::MouseMove`.
+long ee_ui_combo_mouse_move(const EeUiComboRefs *refs, EeUiPoint at);
+
+/// `UIComboBox::MouseWheelTurned`.
+long ee_ui_combo_mouse_wheel_turned(const EeUiComboRefs *refs, long delta);
+
+/// `UIComboBox::OpenListBox`.
+void ee_ui_combo_open_list_box(const EeUiComboRefs *refs);
+
+/// `UIComboBox::ProcessDown` and `ProcessUp`.
+void ee_ui_combo_process_arrow(const EeUiComboRefs *refs);
+
+/// `UIComboBox::SetCurrentSelection`.
+void ee_ui_combo_set_current_selection(const EeUiComboRefs *refs, unsigned long i);
+
+/// `UIComboBox::SetLocation`.
+void ee_ui_combo_set_location(const EeUiComboRefs *refs, EeUiPoint at);
+
+/// `UIComboBox::TabbedTo` (`to`) or `TabbedFrom`.
+void ee_ui_combo_tabbed(const EeUiComboRefs *refs, bool to);
+
+/// `UIComboBox::UpdateKeyboard`.
+long ee_ui_combo_update_keyboard(const EeUiComboRefs *refs);
+
+/// `UIComboBox::UpdateTranslatedKey` (`ctx`: the C++ key and repeat count).
+long ee_ui_combo_update_translated_key(const EeUiComboRefs *refs);
 
 /// `UIEditBox::AddChar` -> how many bytes of `text` a single-line box read.
 size_t ee_ui_edit_add_char(const EeUiEditRefs *refs, const char *text);
