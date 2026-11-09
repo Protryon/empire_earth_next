@@ -330,6 +330,26 @@ long UIControlsTable::AddControlLike(UIManager* inManager, long inTemplateID, lo
     return kErrorOK;
 }
 
+// port: see the header
+long UIControlsTable::MoveControlsHorizontally(long inFormID, long inFirstIndex, long inLastIndex, float inLeftDelta,
+                                               float inRightDelta)
+{
+    long theCount = 0;
+    for (size_t i = 0; i < UIControlsTable::sUIControlsArray.size(); i++) {
+        UIControlsTable* theTable = UIControlsTable::sUIControlsArray[i];
+        if (theTable == NULL || theTable->mFormID != inFormID || theTable->mFormIndex < inFirstIndex ||
+            theTable->mFormIndex > inLastIndex)
+            continue;
+        UILayoutUtility& theLayout = theTable->mLayout;
+        if (theLayout.GetLeftOffsetType() != kLayoutProportional || theLayout.GetRightOffsetType() != kLayoutProportional)
+            continue;
+        theLayout.SetLeft(kLayoutProportional, theLayout.GetLeftOffset() + inLeftDelta);
+        theLayout.SetRight(kLayoutProportional, theLayout.GetRightOffset() + inRightDelta);
+        theCount++;
+    }
+    return theCount;
+}
+
 // FUNCTION: LLE 0x10067fb4
 // Creates a bitmap control from the description's normal image (or none)
 UIControl* UIControlsTable::CreateBitmap(UIManager* inManager, const GERectangle& inRectangle)

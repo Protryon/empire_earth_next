@@ -272,12 +272,23 @@ EEUIManager::EEUIManager(GERasterizer* inRasterizer, unsigned long inNumberOfSur
         UIControlsTable::AddControlLike(this, c.mTemplate, kTextureResolutionControlID + 1 + (long)i, c.mIndex, c.mGroup,
                                         c.mL, c.mR, c.mT, theBottom, c.mBegin, c.mEnd, c.mHelp);
     }
+    // port: the lobby's player column narrower (the name combo boxes, form indices 30..45, and the name labels,
+    // 46..61: 0.0587..0.2532 -> ..0.2312) and the columns right of it moved left by as much (the team, citizens,
+    // bonus and ping headers 3..6; per slot the team button and label, the colour button and label, the citizens
+    // combo and label and the ping status, 62..173), so that the engine column below ends before the game options'
+    // frame (about 0.508) instead of under it
+    const float kLobbyPlayerShrink = 0.022f;
+    UIControlsTable::MoveControlsHorizontally(kFormLobby, 30, 61, 0.0f, -kLobbyPlayerShrink);
+    UIControlsTable::MoveControlsHorizontally(kFormLobby, 3, 6, -kLobbyPlayerShrink, -kLobbyPlayerShrink);
+    UIControlsTable::MoveControlsHorizontally(kFormLobby, 62, 173, -kLobbyPlayerShrink, -kLobbyPlayerShrink);
     // port: the lobby's engine column (EELobbyControl kLobbyEngine*; ee/EECPEngine.h) where the ping column is (a
     // computer row has no ping), widened into the gap before the game options: the header a copy of the ping label
     // (2507), per slot a combo box like the citizens combo (2629; its lines the strings Classic, Next, Random) and a
-    // label like the citizens label (2645), on the slot rows (the database's rows: 0.1043 + slot * 0.0391)
+    // label like the citizens label (2645), on the slot rows (the database's rows: 0.1043 + slot * 0.0391); moved
+    // left with the columns above (0.4282..0.5200 in the database's places)
     {
-        const float kLeft = 0.4282f, kRight = 0.5200f, kRowTop = 0.10430248f, kRowStep = 0.03911343f;
+        const float kLeft = 0.4282f - kLobbyPlayerShrink, kRight = 0.5200f - kLobbyPlayerShrink;
+        const float kRowTop = 0.10430248f, kRowStep = 0.03911343f;
         const float kRowHeight = 0.02477184f;
         UIControlsTable::AddControlLike(this, 2507, kLobbyEngineControlID, kLobbyEngineHeader, 0, kLeft, kRight,
                                         0.058670145f, 0.102998696f, kLobbyEngineHeaderString, 0, kLobbyEngineHelpString);
