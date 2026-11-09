@@ -158,14 +158,14 @@ pub const ALIGN_LEFT: u32 = 0;
 pub const ALIGN_CENTER: u32 = 1;
 pub const ALIGN_RIGHT: u32 = 2;
 
-/// `RECT`: `long`s (LP64: 8 bytes), pinned by the C++.
+/// `RECT`: Win32 `LONG`s, 32 bits on every system (`wintypes.h`), pinned by the C++.
 #[repr(C)]
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub struct TextRect {
-    pub left: c_long,
-    pub top: c_long,
-    pub right: c_long,
-    pub bottom: c_long,
+    pub left: i32,
+    pub top: i32,
+    pub right: i32,
+    pub bottom: i32,
 }
 
 /// One `GEText` and its font as plain data (`DX7DrawText`). `font` is a `PlatFont*`, null when the font has none.
@@ -235,10 +235,10 @@ pub fn text_bounds(h: &mut impl TextHost, info: &TextInfo, clip: Option<&TextRec
     let x = aligned_x(info, width as i32);
     let margin = height / 2 + 2;
     let mut bounds = TextRect {
-        left: (x as c_long) - margin,
-        top: (info.y as c_long) - 2,
-        right: (x as c_long) + width + margin,
-        bottom: (info.y as c_long) + height + 3,
+        left: ((x as c_long) - margin) as i32,
+        top: ((info.y as c_long) - 2) as i32,
+        right: ((x as c_long) + width + margin) as i32,
+        bottom: ((info.y as c_long) + height + 3) as i32,
     };
     if let Some(c) = clip {
         bounds.left = bounds.left.max(c.left);
@@ -268,10 +268,10 @@ pub fn text_draw(
     let draw_font = h.scaled(info.font, scale);
     let draw_clip: TextClip = match clip {
         Some(c) => [
-            (((c.left - origin_x) as f32 * scale).floor()) as i32,
-            (((c.top - origin_y) as f32 * scale).floor()) as i32,
-            (((c.right - origin_x) as f32 * scale).ceil()) as i32,
-            (((c.bottom - origin_y) as f32 * scale).ceil()) as i32,
+            (((c.left as c_long - origin_x) as f32 * scale).floor()) as i32,
+            (((c.top as c_long - origin_y) as f32 * scale).floor()) as i32,
+            (((c.right as c_long - origin_x) as f32 * scale).ceil()) as i32,
+            (((c.bottom as c_long - origin_y) as f32 * scale).ceil()) as i32,
         ],
         None => [0, 0, target_width, target_height],
     };

@@ -298,12 +298,12 @@ struct EeDx7TextInfo {
   float background[3];
 };
 
-/// `RECT`: `long`s (LP64: 8 bytes), pinned by the C++.
+/// `RECT`: Win32 `LONG`s, 32 bits on every system (`wintypes.h`), pinned by the C++.
 struct EeDx7TextRect {
-  long left;
-  long top;
-  long right;
-  long bottom;
+  int32_t left;
+  int32_t top;
+  int32_t right;
+  int32_t bottom;
 };
 
 /// `GXVERTEX`: position, normal, one texture coordinate.
