@@ -9,42 +9,46 @@ use crate::host::*;
 use crate::plugin::{Connection, Server, Tcp};
 
 /// cbindgen:ignore
-extern "C" {
-    fn PlatSocketStartup() -> c_int;
-    fn PlatSocketCleanup() -> c_int;
-    fn PlatSocketLastError() -> u32;
-    fn PlatSocketOpen(kind: c_int) -> Sock;
-    fn PlatSocketClose(socket: Sock) -> c_int;
-    fn PlatSocketBind(socket: Sock, address: *const SockAddr) -> c_int;
-    fn PlatSocketListen(socket: Sock, backlog: c_int) -> c_int;
-    fn PlatSocketAccept(socket: Sock, peer: *mut SockAddr) -> Sock;
-    fn PlatSocketConnect(socket: Sock, address: *const SockAddr) -> c_int;
-    fn PlatSocketGetName(socket: Sock, address: *mut SockAddr) -> c_int;
-    fn PlatSocketSetNonBlocking(socket: Sock, non_blocking: c_int) -> c_int;
-    fn PlatSocketSetBroadcast(socket: Sock, broadcast: c_int) -> c_int;
-    fn PlatSocketSend(socket: Sock, data: *const c_void, length: u32) -> i32;
-    fn PlatSocketRecv(socket: Sock, data: *mut c_void, length: u32) -> i32;
-    fn PlatSocketPeek(socket: Sock, data: *mut c_void, length: u32) -> i32;
-    fn PlatSocketSendTo(socket: Sock, data: *const c_void, length: u32, to: *const SockAddr) -> i32;
-    fn PlatSocketRecvFrom(socket: Sock, data: *mut c_void, length: u32, from: *mut SockAddr) -> i32;
-    fn PlatSocketSelectEvent(socket: Sock, event: *mut c_void, mask: u32) -> c_int;
-    fn PlatSocketGetHostName(name: *mut c_char, size: u32) -> c_int;
-    fn PlatSocketResolveIPv4(name: *const c_char, addresses: *mut u32, max: u32) -> u32;
-    fn PlatSocketReverseLookup(address: u32, name: *mut c_char, size: u32) -> c_int;
-    fn PlatSocketParseIPv4(text: *const c_char) -> u32;
-    fn PlatSocketFormatIPv4(address: u32, text: *mut c_char);
-    fn PlatSocketGetAdapters(adapters: *mut RawAdapter, max: u32) -> u32;
-    fn PlatSleep(milliseconds: u32);
-    // implemented by the C++ shim
-    fn ee_tcp_host_record_native_error(error: u32);
-    fn ee_tcp_host_native_error() -> u32;
-    fn ee_tcp_host_time_ms() -> u32;
-    fn ee_tcp_host_port_offset() -> i32;
+mod sys {
+    use super::*;
+    extern "C" {
+        pub(super) fn PlatSocketStartup() -> c_int;
+        pub(super) fn PlatSocketCleanup() -> c_int;
+        pub(super) fn PlatSocketLastError() -> u32;
+        pub(super) fn PlatSocketOpen(kind: c_int) -> Sock;
+        pub(super) fn PlatSocketClose(socket: Sock) -> c_int;
+        pub(super) fn PlatSocketBind(socket: Sock, address: *const SockAddr) -> c_int;
+        pub(super) fn PlatSocketListen(socket: Sock, backlog: c_int) -> c_int;
+        pub(super) fn PlatSocketAccept(socket: Sock, peer: *mut SockAddr) -> Sock;
+        pub(super) fn PlatSocketConnect(socket: Sock, address: *const SockAddr) -> c_int;
+        pub(super) fn PlatSocketGetName(socket: Sock, address: *mut SockAddr) -> c_int;
+        pub(super) fn PlatSocketSetNonBlocking(socket: Sock, non_blocking: c_int) -> c_int;
+        pub(super) fn PlatSocketSetBroadcast(socket: Sock, broadcast: c_int) -> c_int;
+        pub(super) fn PlatSocketSend(socket: Sock, data: *const c_void, length: u32) -> i32;
+        pub(super) fn PlatSocketRecv(socket: Sock, data: *mut c_void, length: u32) -> i32;
+        pub(super) fn PlatSocketPeek(socket: Sock, data: *mut c_void, length: u32) -> i32;
+        pub(super) fn PlatSocketSendTo(socket: Sock, data: *const c_void, length: u32, to: *const SockAddr) -> i32;
+        pub(super) fn PlatSocketRecvFrom(socket: Sock, data: *mut c_void, length: u32, from: *mut SockAddr) -> i32;
+        pub(super) fn PlatSocketSelectEvent(socket: Sock, event: *mut c_void, mask: u32) -> c_int;
+        pub(super) fn PlatSocketGetHostName(name: *mut c_char, size: u32) -> c_int;
+        pub(super) fn PlatSocketResolveIPv4(name: *const c_char, addresses: *mut u32, max: u32) -> u32;
+        pub(super) fn PlatSocketReverseLookup(address: u32, name: *mut c_char, size: u32) -> c_int;
+        pub(super) fn PlatSocketParseIPv4(text: *const c_char) -> u32;
+        pub(super) fn PlatSocketFormatIPv4(address: u32, text: *mut c_char);
+        pub(super) fn PlatSocketGetAdapters(adapters: *mut RawAdapter, max: u32) -> u32;
+        pub(super) fn PlatSleep(milliseconds: u32);
+        // implemented by the C++ shim
+        pub(super) fn ee_tcp_host_record_native_error(error: u32);
+        pub(super) fn ee_tcp_host_native_error() -> u32;
+        pub(super) fn ee_tcp_host_time_ms() -> u32;
+        pub(super) fn ee_tcp_host_port_offset() -> i32;
+    }
 }
+use sys::*;
 
 /// cbindgen:ignore
 #[repr(C)]
-struct RawAdapter {
+pub(crate) struct RawAdapter {
     description: [c_char; 132],
     address: u32,
     netmask: u32,
