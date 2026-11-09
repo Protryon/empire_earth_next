@@ -42,26 +42,6 @@ constexpr static const unsigned long CLIP_BOTTOM = 32;
 
 constexpr static const size_t LIGHT_SLOTS = 8;
 
-constexpr static const uint32_t ARCHIVE_IDENTIFIER = 1936941426;
-
-constexpr static const uint32_t ARCHIVE_VERSION = 1;
-
-constexpr static const uint32_t ARCHIVE_RESERVED = 0;
-
-constexpr static const int32_t OK = 0;
-
-constexpr static const int32_t NOT_SUSPENDED = 2;
-
-constexpr static const int32_t NOT_FOUND = 3;
-
-constexpr static const int32_t NOT_OPEN = 4;
-
-constexpr static const int32_t FAILED = 9;
-
-constexpr static const int32_t BEYOND_END = 10;
-
-constexpr static const int32_t END_OF_FILE = 18;
-
 constexpr static const int32_t OBJECT_STONE = 0;
 
 constexpr static const int32_t OBJECT_GOLD = 1;
@@ -90,6 +70,26 @@ constexpr static const float TWO_PI = 6.2831855;
 
 constexpr static const float HALF_PI = 1.5707964;
 
+constexpr static const uint32_t ARCHIVE_IDENTIFIER = 1936941426;
+
+constexpr static const uint32_t ARCHIVE_VERSION = 1;
+
+constexpr static const uint32_t ARCHIVE_RESERVED = 0;
+
+constexpr static const int32_t OK = 0;
+
+constexpr static const int32_t NOT_SUSPENDED = 2;
+
+constexpr static const int32_t NOT_FOUND = 3;
+
+constexpr static const int32_t NOT_OPEN = 4;
+
+constexpr static const int32_t FAILED = 9;
+
+constexpr static const int32_t BEYOND_END = 10;
+
+constexpr static const int32_t END_OF_FILE = 18;
+
 /// `FSArchive`'s tables.
 struct EeFsArchive;
 
@@ -109,6 +109,9 @@ struct EeRmapResult;
 
 /// A `GEPolygonArray` of 16-bit triangle indices (`DrawIndexedPrimitive`'s WORD list).
 struct EeDx7PolygonArray;
+
+/// A `GETransformation`'s rotation part.
+struct EeFormationRotation;
 
 /// The decoded sound waiting for the mixer (`mSound`, `mSoundRead`, `mSoundCount`, `mSoundPosition`, `mSoundStep`):
 /// interleaved stereo at the movie's rate. C++ calls it under `mSoundAccess`.
@@ -428,57 +431,48 @@ struct EeDx7LockOutcome {
   bool locked;
 };
 
-/// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
-/// return its `long`; `read_bytes`/`write_bytes` report the count through their last argument.
-struct EeFsFileOps {
-  void *context;
-  int32_t (*read_u32)(void *context, uint32_t *value);
-  int32_t (*read_bytes)(void *context, uint8_t *out, size_t length, uint32_t *read);
-  int32_t (*write_u32)(void *context, uint32_t value);
-  int32_t (*write_bytes)(void *context, const uint8_t *data, size_t length, uint32_t *written);
+/// `GEVector` / `GE3DPoint`: three floats.
+using EeFormationVec3 = float[3];
+
+/// An `EEFWedge`'s members.
+struct EeFormationWedge {
+  EeFormationVec3 left_arm;
+  EeFormationVec3 right_arm;
+  float spacing;
+  float row_depth;
+  uint32_t count;
 };
 
-/// `FSChunk`'s state, embedded in the C++ object (`mState`) so that a C++ copy copies it as before.
-/// `data` is the payload; the C++ destructor frees it through `ee_fs_chunk_free`.
-struct EeFsChunk {
-  EeFsMemFile *data;
-  int32_t tag;
-  uint32_t chunk_size;
-  uint32_t major;
-  uint32_t minor;
-  bool data_loaded;
-  bool header_loaded;
-  bool decompressed;
+/// The formation's frame: `mOrientation`'s rotation (rows of `GETransformation::mMatrix`; `Apply(GEVector)` reads
+/// nothing else), `mCenter` and `mHeading`.
+struct EeFormationFrame {
+  float orientation[3][3];
+  EeFormationVec3 center;
+  float heading;
 };
 
-/// Receives a NUL-terminated byte string, valid during the call. `context` is the caller's.
-using EeFsTextSink = void(*)(void *context, const char *text);
-
-/// Visits a FAT entry; `name` is valid during the call.
-using EeFsFatVisitor = void(*)(void *context,
-                               const char *name,
-                               int32_t start,
-                               int32_t end,
-                               int32_t length);
-
-/// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
-using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
-
-/// A byte buffer owned by Rust; free it with `ee_of_bytes_free`.
-struct EeOfBytes {
-  uint8_t *ptr;
-  size_t len;
+/// An `EEFLine`'s members besides its offsets.
+struct EeFormationLine {
+  int32_t count;
+  /// `inRows + 1`
+  int32_t rows;
+  float spacing;
+  float depth;
 };
 
-/// Reads an external file a glTF names (`uri`, its bytes, percent-decoded; relative to the .gltf). On success stores
-/// the bytes in `*out` with `ee_of_bytes_copy` and returns true; false when it cannot be found. `user` is the
-/// `resolve_user` given to `ee_of_gltf_to_cem`.
-using EeOfResolve = bool(*)(void *user, const uint8_t *uri, size_t uri_len, EeOfBytes *out);
+/// One slot: the position, the heading and the index of its unit in the input.
+struct EeFormationSlot {
+  EeFormationVec3 position;
+  float heading;
+  uint32_t unit;
+};
 
-/// A byte buffer the caller owns (one PNG frame).
-struct EeOfSlice {
-  const uint8_t *ptr;
-  size_t len;
+/// An `EEFCircle`'s members that `Place` reads.
+struct EeFormationCircle {
+  /// 0: the formation heading, 1: facing the centre, 2: facing out
+  int32_t mode;
+  float half_arc;
+  float min_radius;
 };
 
 /// `GERectangle`, as the generator reads it.
@@ -701,6 +695,59 @@ struct EeRmapState {
   uint32_t player_order_len;
 };
 
+/// The C++ glue's view of an `FSFile&` (built per call by `FSFileOps`). The callbacks take `FSFile` by `context` and
+/// return its `long`; `read_bytes`/`write_bytes` report the count through their last argument.
+struct EeFsFileOps {
+  void *context;
+  int32_t (*read_u32)(void *context, uint32_t *value);
+  int32_t (*read_bytes)(void *context, uint8_t *out, size_t length, uint32_t *read);
+  int32_t (*write_u32)(void *context, uint32_t value);
+  int32_t (*write_bytes)(void *context, const uint8_t *data, size_t length, uint32_t *written);
+};
+
+/// `FSChunk`'s state, embedded in the C++ object (`mState`) so that a C++ copy copies it as before.
+/// `data` is the payload; the C++ destructor frees it through `ee_fs_chunk_free`.
+struct EeFsChunk {
+  EeFsMemFile *data;
+  int32_t tag;
+  uint32_t chunk_size;
+  uint32_t major;
+  uint32_t minor;
+  bool data_loaded;
+  bool header_loaded;
+  bool decompressed;
+};
+
+/// Receives a NUL-terminated byte string, valid during the call. `context` is the caller's.
+using EeFsTextSink = void(*)(void *context, const char *text);
+
+/// Visits a FAT entry; `name` is valid during the call.
+using EeFsFatVisitor = void(*)(void *context,
+                               const char *name,
+                               int32_t start,
+                               int32_t end,
+                               int32_t length);
+
+/// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
+using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
+
+/// A byte buffer owned by Rust; free it with `ee_of_bytes_free`.
+struct EeOfBytes {
+  uint8_t *ptr;
+  size_t len;
+};
+
+/// Reads an external file a glTF names (`uri`, its bytes, percent-decoded; relative to the .gltf). On success stores
+/// the bytes in `*out` with `ee_of_bytes_copy` and returns true; false when it cannot be found. `user` is the
+/// `resolve_user` given to `ee_of_gltf_to_cem`.
+using EeOfResolve = bool(*)(void *user, const uint8_t *uri, size_t uri_len, EeOfBytes *out);
+
+/// A byte buffer the caller owns (one PNG frame).
+struct EeOfSlice {
+  const uint8_t *ptr;
+  size_t len;
+};
+
 /// A model as `DrawModelHierarchy` reads it (`GEModel`'s accessors, plain data).
 struct EeDx7ModelInfo {
   uint32_t material_count;
@@ -735,6 +782,8 @@ struct EeDx7LightData {
 };
 
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
+
+
 
 extern "C" {
 
@@ -1526,6 +1575,64 @@ int32_t ee_dx7s_text_lock(bool *locked);
 
 int32_t ee_dx7s_text_unlock(bool *locked);
 
+/// `EEFLine`'s constructor: `count` column offsets into `out`.
+///
+/// # Safety
+/// `out` must be valid for `count` writes.
+void ee_formation_line_offsets(float spacing, int32_t count, float *out);
+
+/// `EEFWedge`'s constructor.
+EeFormationWedge ee_formation_wedge_geometry(float spacing, float angle, uint32_t count);
+
+/// `EEFLine::Place` over `count` units' collision radii; returns the slots written to `out`.
+///
+/// # Safety
+/// `frame` and `line` must be valid; `offsets` valid for `line.count` reads; `radii` for `count` reads and `out` for
+/// `count` writes.
+uint32_t ee_formation_line_place(const EeFormationFrame *frame,
+                                 const EeFormationLine *line,
+                                 const float *offsets,
+                                 const float *radii,
+                                 uint32_t count,
+                                 EeFormationSlot *out);
+
+/// `EEFWedge::Place`, as `ee_formation_line_place`.
+///
+/// # Safety
+/// `frame` and `wedge` must be valid; `radii` valid for `count` reads and `out` for `count` writes.
+uint32_t ee_formation_wedge_place(const EeFormationFrame *frame,
+                                  const EeFormationWedge *wedge,
+                                  const float *radii,
+                                  uint32_t count,
+                                  EeFormationSlot *out);
+
+/// `EEFCircle::Place`, as `ee_formation_line_place` (0 slots for no units).
+///
+/// # Safety
+/// `frame` and `circle` must be valid; `radii` valid for `count` reads and `out` for `count` writes.
+uint32_t ee_formation_circle_place(const EeFormationFrame *frame,
+                                   const EeFormationCircle *circle,
+                                   const float *radii,
+                                   uint32_t count,
+                                   EeFormationSlot *out);
+
+/// Runs generator step `step` (0 player positions, 1 neutral positions, 2 land and water, 3 flat map, 4 height map,
+/// 5 filter, 6 shallows, 7 resources, 8 trees) on `input`, fills `output` and returns the handle that owns `output`'s
+/// arrays; null for an unknown step.
+///
+/// # Safety
+/// `input` must point to a state whose pointers hold the stated lengths; `output` must be writable. Free the handle
+/// with `ee_rmap_free`.
+EeRmapResult *ee_rmap_run(int32_t step,
+                          const EeRmapState *input,
+                          EeRmapState *output);
+
+/// Frees a result from `ee_rmap_run` (null: nothing).
+///
+/// # Safety
+/// `result` must be null or a handle from `ee_rmap_run`, freed once.
+void ee_rmap_free(EeRmapResult *result);
+
 /// Creates `FSMemoryFile(inBlockSize, inGrowByDoubling, inBlockCount)`.
 EeFsMemFile *ee_fs_mem_new(size_t block_size, bool grow_by_doubling, size_t block_count);
 
@@ -2213,23 +2320,6 @@ bool ee_of_png_to_sst(const EeOfSlice *frames,
                       size_t count,
                       EeOfBytes *out,
                       EeOfBytes *err);
-
-/// Runs generator step `step` (0 player positions, 1 neutral positions, 2 land and water, 3 flat map, 4 height map,
-/// 5 filter, 6 shallows, 7 resources, 8 trees) on `input`, fills `output` and returns the handle that owns `output`'s
-/// arrays; null for an unknown step.
-///
-/// # Safety
-/// `input` must point to a state whose pointers hold the stated lengths; `output` must be writable. Free the handle
-/// with `ee_rmap_free`.
-EeRmapResult *ee_rmap_run(int32_t step,
-                          const EeRmapState *input,
-                          EeRmapState *output);
-
-/// Frees a result from `ee_rmap_run` (null: nothing).
-///
-/// # Safety
-/// `result` must be null or a handle from `ee_rmap_run`, freed once.
-void ee_rmap_free(EeRmapResult *result);
 
 }  // extern "C"
 

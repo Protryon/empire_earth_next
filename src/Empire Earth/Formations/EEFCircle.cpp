@@ -54,11 +54,12 @@
 #include "ee/EEFormation.h"
 #include "ee/EEFCircle.h"
 #include "ee/EESimCapture.h"
+#include "rust/ee_rust.h"
+#include "ee/EEFormationRust.h"
 
 // .rdata 0x43f818.. (unit-local named constants, then the vtable 0x43f828)
 const float kEEFCircleF64 = 0.5f;
 const float kCircleMinRadius = 0.5f;
-const float kEEFCirclePlace = 0.5f;
 
 // FUNCTION: EXE 0x4dd160
 // Creates a ring formation with the given facing mode, spanning a full circle with a minimum radius of 0.5
@@ -87,53 +88,14 @@ EEFCircle::~EEFCircle()
 // heading, the centre or outward by mode; a lone unit stands at the centre
 void EEFCircle::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots)
 {
-    GETransformation theTransformation;
-    GEVector theOffset;
-    bool theRotated = false;
-    float theRadius = kEEFCirclePlace;
-    GEVector theTransformedOffset;
-    GE3DPoint thePosition;
-    unsigned long theFirst = outSlots.size();
+    unsigned long theFirst = outSlots.size();   // appends: no clear
     if (inUnits.size() == 0)
         return;
-    if (inUnits.size() > 1) {
-        thePosition = this->mCenter;
-        for (long i = inUnits.size() - 1; i >= 0; i--)
-            theRadius = max(inUnits[i]->mUnitClass->mOuterCollisionSphere, theRadius);
-        float theDistance = (float)inUnits.size() * theRadius * 0.159154937f;
-        theDistance = max(theDistance, this->mMinRadius);
-        float theAngle = this->mHalfArc / (float)inUnits.size();
-        theAngle += theAngle;
-        theTransformation.SetOrientationYPR(theAngle, 0.0f, 0.0f);
-        for (long j = inUnits.size() - 1; j >= 0; j--) {
-            if (theRotated)
-                theTransformation.Rotate(theAngle, 0.0f, 0.0f);
-            else
-                theRotated = true;
-            theOffset.SetY(theDistance);
-            theTransformation.Apply(theOffset, theTransformedOffset);
-            thePosition = this->mCenter;
-            thePosition += theTransformedOffset;
-            float theHeading;
-            switch (this->mMode) {
-            case 0: theHeading = this->mHeading; break;
-            case 1: theHeading = EEGetHeadingBetween(&thePosition, &this->mCenter); break;
-            case 2: theHeading = EEGetHeadingBetween(&this->mCenter, &thePosition); break;
-            default: theHeading = 0.0f; break;
-            }
-            EEFormationSlot theSlot;
-            theSlot.mPosition = thePosition;
-            theSlot.mUnit = inUnits[j];
-            theSlot.mHeading = theHeading;
-            outSlots.push_back(theSlot);
-        }
-    } else {
-        EEFormationSlot theSlot;
-        theSlot.mPosition = this->mCenter;
-        theSlot.mUnit = inUnits[0];
-        theSlot.mHeading = 0.0f;
-        outSlots.push_back(theSlot);
-    }
+    EEFormationRadii theRadii(this, inUnits);
+    EeFormationCircle theCircle = {this->mMode, this->mHalfArc, this->mMinRadius};
+    unsigned int theCount = ee_formation_circle_place(&theRadii.mFrame, &theCircle, theRadii.Radii(), theRadii.Count(),
+                                                      theRadii.Slots());
+    theRadii.Append(theCount, inUnits, outSlots);
     if (EESimCaptureRecord::Active()) {
         EESimCaptureRecord theRecord(0x49434d46);   // "FMCI"
         EEFormationCaptureBegin(theRecord, this);

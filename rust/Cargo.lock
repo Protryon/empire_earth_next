@@ -190,6 +190,13 @@ name = "ee_dx7"
 version = "0.1.0"
 
 [[package]]
+name = "ee_formations"
+version = "0.1.0"
+dependencies = [
+ "ee_rmap",
+]
+
+[[package]]
 name = "ee_fs"
 version = "0.1.0"
 dependencies = [
@@ -280,6 +287,7 @@ dependencies = [
  "ee_codec",
  "ee_data",
  "ee_dx7",
+ "ee_formations",
  "ee_fs",
  "ee_gx",
  "ee_mixer",

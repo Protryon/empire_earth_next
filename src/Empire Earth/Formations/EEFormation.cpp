@@ -62,6 +62,8 @@
 #include "ee/EEUnit.h"
 #include "ee/EEAreaUtilities.h"
 #include "ee/EESimCapture.h"
+#include "rust/ee_rust.h"
+#include "ee/EEFormationRust.h"
 
 // FUNCTION: EXE 0x4ddcc6
 // Creates the formation of a type: 0-3 short, long, loose, staggered line; 4-5 deep, shallow wedge;
@@ -107,6 +109,34 @@ void EEFormation::Arrange(EEGroup* inGroup, std::vector<EEFormationSlot>& outSlo
     for (long i = inGroup->GetNumUnits() - 1; i >= 0; i--)
         theUnits[i] = inGroup->GetUnit(i);
     this->Place(theUnits, outSlots);
+}
+
+EEFormationRadii::EEFormationRadii(const EEFormation* inFormation, std::vector<EEComplexUnit*>& inUnits)
+{
+    for (int i = 0; i < 3; i++)
+        for (int j = 0; j < 3; j++)
+            this->mFrame.orientation[i][j] = inFormation->mOrientation.mMatrix[i][j];
+    this->mFrame.center[0] = inFormation->mCenter.GetX();
+    this->mFrame.center[1] = inFormation->mCenter.GetY();
+    this->mFrame.center[2] = inFormation->mCenter.GetZ();
+    this->mFrame.heading = inFormation->mHeading;
+    this->mRadii.resize(inUnits.size());
+    for (size_t i = 0; i < inUnits.size(); i++)
+        this->mRadii[i] = inUnits[i]->mUnitClass->mOuterCollisionSphere;
+    this->mSlots.resize(inUnits.size());
+}
+
+void EEFormationRadii::Append(unsigned int inCount, std::vector<EEComplexUnit*>& inUnits,
+                              std::vector<EEFormationSlot>& outSlots)
+{
+    EEFormationSlot theSlot;
+    for (unsigned int i = 0; i < inCount; i++) {
+        const EeFormationSlot& theOut = this->mSlots[i];
+        theSlot.mPosition = GE3DPoint(theOut.position[0], theOut.position[1], theOut.position[2]);
+        theSlot.mUnit = inUnits[theOut.unit];
+        theSlot.mHeading = theOut.heading;
+        outSlots.push_back(theSlot);
+    }
 }
 
 void EEFormationCaptureBegin(EESimCaptureRecord& ioRecord, const EEFormation* inFormation)

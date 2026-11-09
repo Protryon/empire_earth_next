@@ -17,6 +17,8 @@ use ee_net_tcp as _;
 use ee_random as _;
 // the random map generator's `extern "C"` API (ee_rmap/src/ffi.rs) reaches the staticlib through this dependency
 use ee_rmap as _;
+// formations (ee_formations/src/ffi.rs): the geometry the formation classes call
+use ee_formations as _;
 // the data layer's `extern "C"` API (ee_data/src/ffi.rs) reaches the staticlib through this dependency
 use ee_data as _;
 

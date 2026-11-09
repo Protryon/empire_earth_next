@@ -52,26 +52,20 @@
 #include "ee/EEFormation.h"
 #include "ee/EEFWedge.h"
 #include "ee/EESimCapture.h"
+#include "rust/ee_rust.h"
+#include "ee/EEFormationRust.h"
 
-// NEAR: scheduling only (the init-list stores of +0x78/+0x80 sink below the six fldz stores in the original)
 // FUNCTION: EXE 0x4ddf3a
 // Creates a wedge formation: arms opening at inAngle with inSpacing between units, inCount units per
 // wedge, the gap to the next wedge capped by the arm geometry
 EEFWedge::EEFWedge(long inType, float inSpacing, float inAngle, unsigned long inCount)
     : EEFormation(inType), mSpacing(inSpacing), mCount(inCount)
 {
-    this->mRowDepth = inCount * inSpacing * 0.5f;
-    if (inAngle != 0.0f) {
-        float theLimit = inSpacing / UMTan(inAngle * 0.5f);
-        if (theLimit < this->mRowDepth)
-            this->mRowDepth = theLimit;
-    }
-    inAngle = inAngle * 0.5f;
-    float theX = UMCos(1.57079637f - inAngle) * inSpacing;
-    float theY = UMCos(inAngle) * inSpacing;
-    this->mLeftArm.mX = -theX;
-    this->mRightArm.mY = this->mLeftArm.mY = -theY;
-    this->mRightArm.mX = theX;
+    // the geometry is Rust (ee_formations)
+    EeFormationWedge theWedge = ee_formation_wedge_geometry(inSpacing, inAngle, (unsigned int)inCount);
+    this->mRowDepth = theWedge.row_depth;
+    this->mLeftArm = GEVector(theWedge.left_arm[0], theWedge.left_arm[1], theWedge.left_arm[2]);
+    this->mRightArm = GEVector(theWedge.right_arm[0], theWedge.right_arm[1], theWedge.right_arm[2]);
 }
 
 // Destroys the wedge formation (ICF-folded into ~EEFCircle 0xdd1be)
@@ -84,61 +78,21 @@ EEFWedge::~EEFWedge()
 // wedges behind; arms are scaled by the largest collision radius (NaN when every radius is 0)
 void EEFWedge::Place(std::vector<EEComplexUnit*>& inUnits, std::vector<EEFormationSlot>& outSlots)
 {
-    GE3DPoint theLeftPosition;
-    GE3DPoint theRightPosition;
-    GE3DPoint theCenter(this->mCenter);
-    GEVector theStep;
-    EEFormationSlot theSlot;
-    GEVector theTransformedStep;
-    GEVector theLeftStep;
-    GEVector theRightStep;
-    long theUnitCount = inUnits.size();
     outSlots.clear();
-    float theRadius = 0.0f;
-    for (long i = 0; i < theUnitCount; i++) {
-        theRadius = max(inUnits[i]->mUnitClass->mOuterCollisionSphere, theRadius);
-    }
-    // scale copies of the arms: scaling the members and dividing back left 0/0 = NaN arms after a call with
-    // no units (or radius 0), and let them drift by rounding on every call
-    GEVector theLeftArm(this->mLeftArm);
-    GEVector theRightArm(this->mRightArm);
-    theLeftArm.mX *= theRadius;
-    theLeftArm.mY *= theRadius;
-    theRightArm.mX *= theRadius;
-    theRightArm.mY *= theRadius;
-    this->mOrientation.Apply(theLeftArm, theLeftStep);
-    this->mOrientation.Apply(theRightArm, theRightStep);
-    long thePlaced = 1;
-    for (unsigned long j = 0; (long)j < theUnitCount; j++, thePlaced++) {
-        if (j % this->mCount == 0) {
-            if (thePlaced != 1) {
-                theStep = GEVector(0.0f, -(theRadius * this->mRowDepth), 0.0f);
-                this->mOrientation.Apply(theStep, theTransformedStep);
-                theCenter += theTransformedStep;
-            }
-            theSlot.mPosition = theCenter;
-            theSlot.mUnit = inUnits[j];
-            theSlot.mHeading = this->mHeading;
-            outSlots.push_back(theSlot);
-            theLeftPosition = theCenter;
-            theRightPosition = theCenter;
-        } else {
-            theLeftPosition += theLeftStep;
-            theRightPosition += theRightStep;
-            theSlot.mPosition = theLeftPosition;
-            theSlot.mUnit = inUnits[j];
-            theSlot.mHeading = this->mHeading;
-            outSlots.push_back(theSlot);
-            if (thePlaced < theUnitCount) {
-                j++;
-                thePlaced++;
-                theSlot.mPosition = theRightPosition;
-                theSlot.mUnit = inUnits[j];
-                theSlot.mHeading = this->mHeading;
-                outSlots.push_back(theSlot);
-            }
-        }
-    }
+    EEFormationRadii theRadii(this, inUnits);
+    EeFormationWedge theWedge;
+    theWedge.left_arm[0] = this->mLeftArm.mX;
+    theWedge.left_arm[1] = this->mLeftArm.mY;
+    theWedge.left_arm[2] = this->mLeftArm.mZ;
+    theWedge.right_arm[0] = this->mRightArm.mX;
+    theWedge.right_arm[1] = this->mRightArm.mY;
+    theWedge.right_arm[2] = this->mRightArm.mZ;
+    theWedge.spacing = this->mSpacing;
+    theWedge.row_depth = this->mRowDepth;
+    theWedge.count = (unsigned int)this->mCount;
+    unsigned int theCount = ee_formation_wedge_place(&theRadii.mFrame, &theWedge, theRadii.Radii(), theRadii.Count(),
+                                                     theRadii.Slots());
+    theRadii.Append(theCount, inUnits, outSlots);
     if (EESimCaptureRecord::Active()) {
         EESimCaptureRecord theRecord(0x47574d46);   // "FMWG"
         EEFormationCaptureBegin(theRecord, this);
