@@ -1,7 +1,7 @@
 // GEOpenFormats: the open forms of the game's models and textures (tools/eemodel; docs/MODEL_FORMATS.md) turned back
-// into the binary streams the loaders read. Portable C++ (no platform or engine headers): glTF 2.0 through cgltf,
-// PNG through stb_image. GEOpenFormatsFile.cpp is the game's seam: it serves a model's .gltf/.glb in place of its
-// .cem and a texture's .png in place of its .tga/.sst, as in-memory files.
+// into the binary streams the loaders read. The conversions are in Rust (rust/crates/ee_openformats). GEOpenFormatsFile.cpp
+// is the game's seam: it serves a model's .gltf/.glb in place of its .cem and a texture's .png in place of its
+// .tga/.sst, as in-memory files.
 #ifndef GE_OPENFORMATS_H
 #define GE_OPENFORMATS_H
 

@@ -1889,10 +1889,8 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **cppgate after the C++ compiler is gone** compares against the Python importer (independent) and against digests
   recorded from the C++ compiler (`tools/eedata/cppgate/golden_cpp.json`), which apply while the data's texts are the
   recorded ones. A data change requires re-recording against an independent reference, not the Rust compiler itself.
-- **R2 step 4 (GEOpenFormats in Rust) is not done:** the `eemodel.py cppgate` byte gate exports every model and texture
-  to the temporary folder (gigabytes), which this machine's disk could not hold (C: 0.5 GB free); nothing was ported
-  or deleted there. The port is mechanical (cgltf's semantics are the risk: a hand parser or the gltf crate must
-  reproduce its acceptance rules exactly) and waits for the gate to be runnable.
+- **R2 step 4 (GEOpenFormats in Rust):** done, crate `ee_openformats`; see the section "R2.4" below. The port had
+  waited for the byte gate to fit on the disk (`eemodel.py cppgate` now streams in bounded batches).
 
 ## A shared CARGO_TARGET_DIR (R0-R3)
 
@@ -3769,10 +3767,8 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **cppgate after the C++ compiler is gone** compares against the Python importer (independent) and against digests
   recorded from the C++ compiler (`tools/eedata/cppgate/golden_cpp.json`), which apply while the data's texts are the
   recorded ones. A data change requires re-recording against an independent reference, not the Rust compiler itself.
-- **R2 step 4 (GEOpenFormats in Rust) is not done:** the `eemodel.py cppgate` byte gate exports every model and texture
-  to the temporary folder (gigabytes), which this machine's disk could not hold (C: 0.5 GB free); nothing was ported
-  or deleted there. The port is mechanical (cgltf's semantics are the risk: a hand parser or the gltf crate must
-  reproduce its acceptance rules exactly) and waits for the gate to be runnable.
+- **R2 step 4 (GEOpenFormats in Rust):** done, crate `ee_openformats`; see the section "R2.4" below. The port had
+  waited for the byte gate to fit on the disk (`eemodel.py cppgate` now streams in bounded batches).
 
 ## A shared CARGO_TARGET_DIR (R0-R3)
 
@@ -5716,10 +5712,8 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
 - **cppgate after the C++ compiler is gone** compares against the Python importer (independent) and against digests
   recorded from the C++ compiler (`tools/eedata/cppgate/golden_cpp.json`), which apply while the data's texts are the
   recorded ones. A data change requires re-recording against an independent reference, not the Rust compiler itself.
-- **R2 step 4 (GEOpenFormats in Rust) is not done:** the `eemodel.py cppgate` byte gate exports every model and texture
-  to the temporary folder (gigabytes), which this machine's disk could not hold (C: 0.5 GB free); nothing was ported
-  or deleted there. The port is mechanical (cgltf's semantics are the risk: a hand parser or the gltf crate must
-  reproduce its acceptance rules exactly) and waits for the gate to be runnable.
+- **R2 step 4 (GEOpenFormats in Rust):** done, crate `ee_openformats`; see the section "R2.4" below. The port had
+  waited for the byte gate to fit on the disk (`eemodel.py cppgate` now streams in bounded batches).
 
 ## A shared CARGO_TARGET_DIR (R0-R3)
 
@@ -5783,3 +5777,35 @@ entry).
   included crate is exported too: internal constants are `pub(crate)` (a `GX_OK` export collided with `GX.h`'s macro).
 - **Line endings:** this repository stores files byte for byte (`* -text`); Windows Python text mode (`open` without
   `newline=''`) turned LF files to CRLF and produced whole-file diffs. Patch scripts open with `newline=''`.
+
+## R2.4: the open formats in Rust (crate ee_openformats, 2026-11-09)
+
+- **Hand ports of cgltf and stb_image, not the crates:** `cgltf.rs` walks jsmn's token stream key by key (`jsmn.rs` is
+  a literal port), `png.rs` is stb_image's inflate/chunk walk, because which edited file loads or refuses is the
+  behaviour under test. cgltf's C arithmetic is kept on purpose: `cgltf_json_to_int` of a non-number is -1, which a
+  pointer-index treats as absent (`(cgltf_size)-1 + 1 == 0`) while -2 becomes a huge reference that fixup refuses.
+  `atoi`/`atoll`/`atof` are the Windows CRT's prefix rules (saturating integers, hex floats, inf/nan). Material
+  and node extension objects keep the raw token range, and "extras" a string-typed value's text without the quotes.
+- **The byte gate cannot see the parser's configuration:** the first port read jsmn as non-strict and without parent
+  links (the code's `#ifdef` branches, the defines are 900 lines above) and still passed all 7150 cases, valid and
+  refused, because well-formed JSON tokenizes the same either way. A differential run of mutated files (C++ exe
+  against Rust, one process per case) found it within 600 mutants: `"count":"componentType":,` makes the comma return to
+  the value's parent, miscounts the object and cgltf refuses it. Fixed: strict and parent-linked, tests added; 2500
+  mutants then gave 0 differences, 4 C++ crashes on malformed files (out-of-bounds in the C), 0 Rust crashes. The
+  C++ is gone now, so a future parser change has only unit tests and the Python's verdicts to go by.
+- **stb_image's failure reason is a C string and sticky:** thread-local and only set when a step reports one, so a
+  corrupt deflate block of type 3 reports nothing new (and reports the previous failure, as the C does; the C++'s
+  `std::string(stbi_failure_reason())` on a null pointer has no equivalent, the message is then empty). An unknown
+  critical chunk's message starts with its type bytes, so a NUL in them shortens it to nothing. `stbi__skip` only moves
+  a pointer: past the end the reader just returns zeros.
+- **Why the earlier "failed a syntax check with no diagnostics":** `GEOpenFormats.cpp` needs `/std:c++17` (it uses
+  `<charconv>`/`from_chars`) and `-EHsc` (`// UNIT-FLAGS`). The real compile and `cppgate` pass both and it compiles
+  cleanly; a `-fsyntax-only` run without them fails ("no type named 'from_chars_result'"), with diagnostics unless the
+  tool swallows clang's stderr.
+- **cppgate after the C++:** `eemodel.py cppgate` builds the Rust `eemodel_gate` (rust/crates/ee_openformats) and
+  compares it with the Python converter (independent) and with the digests of the C++ (`tools/eemodel/cppgate/golden_cpp.json`,
+  subset 1 over tree-binary, 7150 cases; they include the refusal messages). The gate streams: a batch of cases
+  (at most 300 MB with estimated outputs) is written, converted, compared and deleted before the next.
+- **The Rust gate program ran on tree-binary; `sources.sources` defaults to the two installs:** use `--tree` to run
+  from a built tree. Cases are numbered in data order; change the data and the golden no longer applies (the gate
+  says so).

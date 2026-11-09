@@ -340,8 +340,10 @@ Gate: `tests/platform` and `xbuild.py wontest` on all three systems with the Rus
    `ee_data_compile(table, text, out)` and receives the same record bytes the C++ compiler gives.
    - Gates: `cppgate` (dump and byte parity) and `eedata.py check`.
    - Then the mod layer (MODDING_PLAN phase 3) is written in Rust from the start.
-4. **Open formats:** `GEOpenFormats` (glTF -> .cem bytes, PNG -> .sst) in Rust (the `gltf` and `png` crates),
-   replacing cgltf and stb_image. Gate: `eemodel.py cppgate`.
+4. **Open formats:** `GEOpenFormats` (glTF -> .cem bytes, PNG -> .sst) in Rust (crate `ee_openformats`: hand ports of
+   cgltf's and stb_image's readers, not the `gltf` and `png` crates, which accept and refuse differently), replacing
+   cgltf and stb_image. Gate: `eemodel.py cppgate` (Rust vs Python and the C++ golden digests; done, see PORT_LEARNINGS
+   "R2.4"; full-game gates not re-run).
 
 ### R3: engine services and plug-ins
 

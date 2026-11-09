@@ -454,8 +454,8 @@ State (2026-11-04):
    glTF structurally valid; 2792/2792 textures PNG -> game view equal; renders of the glTF match the game's transform
    composition.
 3. **The game reads them** (done, live gates pending): `GEOpenFormatsFile.cpp` serves a model's `.glb`/`.gltf` and a
-   texture's `.png` as the binary bytes the loaders already read (cgltf and stb_image vendored, C++ gate
-   `eemodel.py cppgate`). `eemodel.py install GAMEDIR` writes the open forms into a game copy.
+   texture's `.png` as the binary bytes the loaders already read (the conversion is Rust: `rust/crates/ee_openformats`,
+   gate `eemodel.py cppgate`). `eemodel.py install GAMEDIR` writes the open forms into a game copy.
 
 Next: the live gates (tour + an AI game on a copy with the installed open formats, screenshots against the binary
 data); then retire the binary readers' file paths from the game data (the converter keeps reading them); later, a

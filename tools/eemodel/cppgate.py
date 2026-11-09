@@ -1,6 +1,5 @@
-"""The C++ gate (eemodel.py cppgate): build tools/eemodel/cppgate/eemodel_gate.exe from the game's open-format
-loader (src/Low-Level Engine/Graphics Engine/GEOpenFormats.cpp with cgltf and stb_image, the build's compiler flags)
-and run it over
+"""The open-format gate (eemodel.py cppgate): build the game's converter (rust/crates/ee_openformats, the
+eemodel_gate program) and run it over
 
 * every model on the data path as eemodel exports it (.gltf + .bin), the same without the EE_model extension (what an
   editor that drops it leaves), and every 25th as .glb;
@@ -10,10 +9,18 @@ and run it over
 * every texture as PNG, and PNG variants an editor may write (grey 8/4-bit, grey+alpha, palette with tRNS, 16-bit,
   RGB with tRNS, interlaced, the ee:surface text, a bad ee:surface text and a truncated file: errors);
 
-The C++ result must equal the Python converter's (gltf.import_ + cem.write, sst.from_png + sst.write) byte for byte,
-or both must refuse. The cases go to a temporary folder outside the repository, deleted afterwards.
+The converter's result must equal the Python converter's (gltf.import_ + cem.write, sst.from_png + sst.write) byte for byte,
+or both must refuse (the Python is an independent implementation; the C++ is gone). A second, recorded reference:
+the digest of every case's result as the C++ gave it (golden_cpp.json, --golden; recorded for tree-binary at subset 1,
+valid while that tree and the case generator stay the same: re-record against the Python, never from the Rust alone).
+
+Streaming: the cases are exported to a temporary folder in batches of at most --limit-mb (default 300 MB, inputs and
+estimated outputs together); each batch is converted, compared and deleted before the next is written, so the
+whole set runs in a bounded temporary folder. --subset N takes every Nth model and every Nth texture; --tree reads a
+built tree's Data folder (.cem/.sst/.tga files) instead of the game installs.
 """
 import copy
+import hashlib
 import json
 import os
 import pathlib
@@ -38,27 +45,18 @@ GE = ROOT / 'src' / 'Low-Level Engine' / 'Graphics Engine'
 
 
 def build(out):
-    import clang_build
-    import verify
-    from ee import CLANG, LLD_LINK, lib_paths, RUNTIME_LIBS
-    out.mkdir(parents=True, exist_ok=True)
-    _, inc = verify.include_paths(None)
-    objs = []
-    for src in (GE / 'GEOpenFormats.cpp', ROOT / 'src' / 'ThirdParty' / 'cgltf' / 'cgltf.c',
-                ROOT / 'src' / 'ThirdParty' / 'stb_image' / 'stb_image.c', HERE / 'cppgate' / 'eemodel_gate.cpp'):
-        obj = out / (src.stem + '.obj')
-        lang = ['/std:c++17', '-EHsc'] if src.suffix == '.cpp' else []
-        cmd = [str(CLANG), *clang_build.CLANG_FLAGS, *lang, '-MT', '-O1', *verify.DEFINES.split(), f'/I{GE}',
-               f'/Fo{obj}', str(src)]
-        r = subprocess.run(cmd, env=dict(os.environ, INCLUDE=inc), capture_output=True, text=True)
-        if r.returncode:
-            sys.exit(f'{src.name}: {r.stdout}{r.stderr}')
-        objs.append(str(obj))
-    exe = out / 'eemodel_gate.exe'
-    r = subprocess.run([str(LLD_LINK), '/nologo', '/subsystem:console', '/machine:x86', f'/out:{exe}', *objs,
-                        *lib_paths(), *RUNTIME_LIBS], capture_output=True, text=True)
+    """The Rust converter's gate program (rust/crates/ee_openformats, src/bin/eemodel_gate.rs), built for the host. The
+    C++ loader it replaced is gone (docs/RUST_PLAN.md R2.4); the comparison is the Python converter and, for the
+    recorded data, the digests the C++ gave (golden_cpp.json)."""
+    from rust_build import TARGET_DIR
+    env = dict(os.environ, CARGO_TARGET_DIR=str(TARGET_DIR))
+    r = subprocess.run(['cargo', 'build', '-p', 'ee_openformats', '--bin', 'eemodel_gate', '--release', '--offline'],
+                       cwd=ROOT / 'rust', env=env, capture_output=True, text=True)
     if r.returncode:
-        sys.exit(f'link: {r.stdout}{r.stderr}')
+        sys.exit(f'cargo build: {r.stdout}{r.stderr}')
+    exe = pathlib.Path(TARGET_DIR) / 'release' / ('eemodel_gate' + ('.exe' if os.name == 'nt' else ''))
+    if not exe.is_file():
+        sys.exit(f'no {exe}')
     return exe
 
 
@@ -228,72 +226,116 @@ def _python_texture(folder, stem):
         return e
 
 
-def run(a):
-    t0 = time.time()
-    out = pathlib.Path(a.out or ROOT / 'build' / 'eemodel-cppgate').resolve()
-    exe = build(out)
-    srcs = sources.sources(a.game, a.base)
-    with tempfile.TemporaryDirectory(prefix='eemodel-') as tmp:
-        folder = pathlib.Path(tmp)
-        cases = []   # (kind, file, stem, group)
-        n = 0
-        for src in srcs:
-            for name in src.names('models\\'):
-                if not name.endswith('.cem'):
-                    continue
-                try:
-                    m = cem.read(src.read(name))
-                except cem.CemError:
-                    continue
-                n += 1
-                doc, binary = gltf.export(m)
-                stem = f'm{n:04d}'
-                _write_gltf(folder, stem, doc, binary)
-                cases.append(('model', stem + '.gltf', stem, 'models'))
-                core = copy.deepcopy(doc)
-                for nd in core['nodes']:
-                    nd.pop('extensions', None)
-                core.pop('extensionsUsed', None)
-                _write_gltf(folder, stem + '_core', core, binary)
-                cases.append(('model', stem + '_core.gltf', stem + '_core', 'models without EE_model'))
-                if n % 25 == 0:
-                    (folder / (stem + '_glb.glb')).write_bytes(gltf.glb(doc, binary))
-                    cases.append(('model', stem + '_glb.glb', stem + '_glb', 'models as .glb'))
-                exts = [x['extensions']['EE_model'] for x in doc['nodes'] if 'extensions' in x]
-                if n % 10 == 0 or any(len(e.get('radii', [])) > 1 or e.get('frameFixes') for e in exts):
-                    for suffix, (d, b) in model_edits(doc, binary).items():
-                        s = f'{stem}_{suffix}'
-                        _write_gltf(folder, s, d, b)
-                        cases.append(('model', s + '.gltf', s, 'edited models'))
-        t = 0
-        for src in srcs:
-            for name in src.names('textures\\'):
-                if not name.endswith(('.sst', '.tga')):
-                    continue
-                t += 1
-                tex = sst.read(src.read(name), name)
-                stem = f't{t:04d}'
-                for suffix, data in sst.to_png(tex):
-                    (folder / (stem + suffix)).write_bytes(data)
-                cases.append(('texture', stem + '.png', stem, 'textures'))
-                if t % 100 == 0:
-                    for suffix, data in png_variants(tex.frames[0]).items():
-                        s = f'{stem}_{suffix}'
-                        (folder / (s + '.png')).write_bytes(data)
-                        cases.append(('texture', s + '.png', s, 'PNG variants'))
-        (folder / 'cases.txt').write_bytes(''.join(f'{k} {f}\n' for k, f, _, _ in cases).encode())
-        print(f'--- {len(cases)} cases ({n} models, {t} textures); C++ conversion', flush=True)
-        r = subprocess.run([str(exe), str(folder)])
+def _digest(result):
+    data = result if isinstance(result, bytes) else b'E:' + result.encode('utf-8', 'surrogateescape')
+    return hashlib.sha256(data).hexdigest()[:12]
+
+
+def iter_cases(srcs, subset):
+    """Yield (kind, file, stem, group, {file name: bytes}, estimated output bytes) for every case, in a fixed order."""
+    n = 0
+    for src in srcs:
+        for name in src.names('models\\'):
+            if not name.endswith('.cem'):
+                continue
+            raw = src.read(name)
+            try:
+                m = cem.read(raw)
+            except cem.CemError:
+                continue
+            n += 1
+            if (n - 1) % subset:
+                continue
+            doc, binary = gltf.export(m)
+            stem = f'm{n:04d}'
+            est = len(raw) + 4096
+            yield ('model', stem + '.gltf', stem, 'models', _gltf_files(stem, doc, binary), est)
+            core = copy.deepcopy(doc)
+            for nd in core['nodes']:
+                nd.pop('extensions', None)
+            core.pop('extensionsUsed', None)
+            yield ('model', stem + '_core.gltf', stem + '_core', 'models without EE_model',
+                   _gltf_files(stem + '_core', core, binary), est)
+            if n % 25 == 0:
+                yield ('model', stem + '_glb.glb', stem + '_glb', 'models as .glb',
+                       {stem + '_glb.glb': gltf.glb(doc, binary)}, est)
+            exts = [x['extensions']['EE_model'] for x in doc['nodes'] if 'extensions' in x]
+            if n % 10 == 0 or any(len(e.get('radii', [])) > 1 or e.get('frameFixes') for e in exts):
+                for suffix, (d, b) in model_edits(doc, binary).items():
+                    s = f'{stem}_{suffix}'
+                    yield ('model', s + '.gltf', s, 'edited models', _gltf_files(s, d, b), est)
+    t = 0
+    for src in srcs:
+        for name in src.names('textures\\'):
+            if not name.endswith(('.sst', '.tga')):
+                continue
+            t += 1
+            if (t - 1) % subset:
+                continue
+            tex = sst.read(src.read(name), name)
+            stem = f't{t:04d}'
+            est = 64 + sum(f.width * f.height * f.channels + 32 for f in tex.frames)
+            files = {stem + suffix: data for suffix, data in sst.to_png(tex)}
+            yield ('texture', stem + '.png', stem, 'textures', files, est)
+            if t % 100 == 0:
+                for suffix, data in png_variants(tex.frames[0]).items():
+                    s = f'{stem}_{suffix}'
+                    yield ('texture', s + '.png', s, 'PNG variants', {s + '.png': data}, 4096)
+
+
+def _gltf_files(name, doc, binary):
+    d = dict(doc, buffers=[{'byteLength': len(binary), 'uri': name + '.bin'}])
+    return {name + '.gltf': gltf.dumps(d), name + '.bin': bytes(binary)}
+
+
+def _folder_size(folder):
+    return sum(e.stat().st_size for e in os.scandir(folder) if e.is_file())
+
+
+def _clear(folder):
+    for e in os.scandir(folder):
+        if e.is_file():
+            os.unlink(e.path)
+
+
+class Stream:
+    """Converts cases in bounded batches: flush() runs the converter on the batch, compares it and deletes it."""
+
+    def __init__(self, exe, folder, limit):
+        self.exe, self.folder, self.limit = exe, folder, limit
+        self.batch, self.used = [], 0
+        self.groups, self.bad = {}, 0
+        self.digests, self.peak, self.batches = [], 0, 0
+
+    def add(self, case):
+        kind, file, stem, group, files, est = case
+        cost = sum(len(v) for v in files.values()) + est
+        if self.batch and self.used + cost > self.limit:
+            self.flush()
+        for name, data in files.items():
+            (self.folder / name).write_bytes(data)
+        self.batch.append((kind, file, stem, group))
+        self.used += cost
+
+    def flush(self):
+        if not self.batch:
+            return
+        (self.folder / 'cases.txt').write_bytes(''.join(f'{k} {f}\n' for k, f, _, _ in self.batch).encode())
+        r = subprocess.run([str(self.exe), str(self.folder)], stdout=subprocess.DEVNULL)
         if r.returncode:
-            return 1
-        print('--- Python conversion and comparison', flush=True)
-        groups = {}
-        bad = 0
-        for kind, file, stem, group in cases:
-            want = _python_model(folder, file) if kind == 'model' else _python_texture(folder, stem)
-            o, e = folder / (stem + '.out'), folder / (stem + '.err')
-            got = o.read_bytes() if o.exists() else e.read_text(errors='replace') if e.exists() else None
-            g = groups.setdefault(group, [0, 0, 0])
+            sys.exit(f'the converter failed with exit status {r.returncode:#x}')
+        self.peak = max(self.peak, _folder_size(self.folder))
+        self.batches += 1
+        for kind, file, stem, group in self.batch:
+            want = _python_model(self.folder, file) if kind == 'model' else _python_texture(self.folder, stem)
+            o, e = self.folder / (stem + '.out'), self.folder / (stem + '.err')
+            if o.exists():
+                got = o.read_bytes()
+            elif e.exists():
+                got = e.read_text(encoding='utf-8', errors='surrogateescape')
+            else:
+                got = None
+            g = self.groups.setdefault(group, [0, 0, 0])
             if isinstance(want, bytes) and isinstance(got, bytes):
                 ok = want == got
                 g[1] += ok
@@ -301,12 +343,64 @@ def run(a):
                 ok = not isinstance(want, bytes) and isinstance(got, str)
                 g[2] += ok
             g[0] += 1
+            self.digests.append(_digest(got) if got is not None else 'none')
             if not ok:
-                bad += 1
-                if bad <= 20:
+                self.bad += 1
+                if self.bad <= 20:
                     show = lambda v: f'{len(v)} bytes' if isinstance(v, bytes) else f'error: {v}'
-                    print(f'  {file:28s} DIFFERS  Python {show(want)}  |  C++ {show(got)}')
-        for gname, (total, same, both) in groups.items():
-            print(f'  {gname:26s} {total:5} cases: {same} identical bytes, {both} refused by both')
+                    print(f'  {file:28s} DIFFERS  Python {show(want)}  |  converter {show(got)}')
+        _clear(self.folder)
+        self.batch, self.used = [], 0
+
+
+def tree_fingerprint(tree):
+    f = tree / 'open_data.json'
+    return hashlib.sha256(f.read_bytes()).hexdigest() if f.is_file() else None
+
+
+def run(a):
+    t0 = time.time()
+    out = pathlib.Path(a.out or ROOT / 'build' / 'eemodel-cppgate').resolve()
+    exe = pathlib.Path(a.exe) if a.exe else build(out)
+    if a.tree:
+        tree = pathlib.Path(a.tree).resolve()
+        srcs = [sources.Source(tree.name, folder=tree / 'Data')]
+        fingerprint = tree_fingerprint(tree)
+    else:
+        srcs = sources.sources(a.game, a.base)
+        fingerprint = None
+    subset = max(1, a.subset)
+    limit = int(a.limit_mb * 1_000_000)
+    print(f'--- streaming over {"all" if subset == 1 else f"every {subset}th"} model/texture, '
+          f'temporary folder capped at {a.limit_mb} MB', flush=True)
+    out.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='eemodel-', dir=out) as tmp:
+        stream = Stream(exe, pathlib.Path(tmp), limit)
+        for case in iter_cases(srcs, subset):
+            stream.add(case)
+        stream.flush()
+    for gname, (total, same, both) in stream.groups.items():
+        print(f'  {gname:26s} {total:5} cases: {same} identical bytes, {both} refused by both')
+    print(f'{sum(g[0] for g in stream.groups.values())} cases in {stream.batches} batches; '
+          f'peak temporary use {stream.peak / 1e6:.1f} MB')
+    bad = stream.bad
+    if a.record_golden:
+        pathlib.Path(a.record_golden).write_text(json.dumps(
+            {'tree': fingerprint, 'subset': subset, 'count': len(stream.digests),
+             'digests': ' '.join(stream.digests)}, indent=1) + '\n')
+        print(f'golden recorded: {a.record_golden} ({len(stream.digests)} digests)')
+    if a.golden:
+        g = json.loads(pathlib.Path(a.golden).read_text())
+        if g.get('subset') != subset or g.get('count') != len(stream.digests) or g.get('tree') != fingerprint:
+            print(f'golden NOT compared: it records subset {g.get("subset")}, {g.get("count")} cases, tree '
+                  f'{g.get("tree")}; this run is subset {subset}, {len(stream.digests)} cases, tree {fingerprint}')
+            bad += 1
+        else:
+            want = g['digests'].split(' ')
+            diffs = [i for i, (x, y) in enumerate(zip(want, stream.digests)) if x != y]
+            print(f'golden digests: {len(want) - len(diffs)}/{len(want)} equal')
+            bad += len(diffs)
+            for i in diffs[:20]:
+                print(f'  case #{i}: golden {want[i]}, got {stream.digests[i]}')
     print(f'{"PASS" if bad == 0 else f"FAIL ({bad} cases differ)"} ({time.time() - t0:.0f} s)')
     return 1 if bad else 0
