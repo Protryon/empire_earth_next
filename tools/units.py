@@ -2,7 +2,7 @@
 
 Units come from link/<module>/units.txt (in link order), or every .cpp of the module's source folder when the module
 has no unit list; each compiles with its module's flags (ee.MODULE_FLAGS) or its own `// UNIT-FLAGS:` line. Library
-code built from source (LIB_UNITS: dmusic, cgltf and stb_image for the engine, miniaudio for the mixer)
+code built from source (LIB_UNITS: dmusic for the engine, miniaudio for the mixer)
 is compiled with the modules that link it.
 """
 import pathlib
@@ -25,8 +25,7 @@ PART_OF = {m: "exe" for m in MODULES if m != "exe"}
 PLATFORM_UNITS = [
                   # the fonts built in (PORT.md step 4.5; the C compiler's #embed, PlatFont itself is Rust)
                   "Platform/Common/PlatFontData.c"]
-OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormats.cpp",
-                     "Low-Level Engine/Graphics Engine/GEOpenFormatsFile.cpp"]
+OPEN_FORMAT_UNITS = ["Low-Level Engine/Graphics Engine/GEOpenFormatsFile.cpp"]   # the converters are Rust (ee_openformats)
 # the DX7 renderer's C++ trampolines into Rust (ee_dx7, docs/RUST_PLAN.md R4.2): the classes' deleted bodies live there
 DX7_TRAMPOLINES = ["Low-Level Engine/Graphics Engine/DX7 Display Plug-ins/Common/DX7Trampolines.cpp"]
 EXTRA_UNITS = {"lle": PLATFORM_UNITS + OPEN_FORMAT_UNITS,
@@ -85,14 +84,13 @@ WON_NOT_LINKED = {"StringParserFormat.cpp", "GameSpySupport.cpp", "MSFileDialog.
 
 EXTRA_UNITS["won"] = _won_extra_units()
 LIB_UNITS = {"miniaudio": "ThirdParty/miniaudio/miniaudio.c", "pl_mpeg": "ThirdParty/pl_mpeg/pl_mpeg.c",
-             "cgltf": "ThirdParty/cgltf/cgltf.c", "stb_image": "ThirdParty/stb_image/stb_image.c",
              # Lua 5.4 for the computer player's strategy scripts (docs/AI_LUA_PLAN.md §3)
              "lua": "ThirdParty/lua/ee_lua.c"}
 # dmusic (DirectMusic reimplementation, src/ThirdParty/dmusic): every source (the POSIX thread file is empty on Windows)
 _DMUSIC = sorted(p for p in (ROOT / "src" / "ThirdParty" / "dmusic").rglob("*.c"))
 LIB_UNITS.update({"dmusic-" + p.relative_to(ROOT / "src" / "ThirdParty" / "dmusic").with_suffix("").as_posix()
                   .replace("/", "-"): p.relative_to(ROOT / "src").as_posix() for p in _DMUSIC})
-LIB_MEMBERS = {"mixer": ["miniaudio"], "dx7hrtnl": ["pl_mpeg"], "exe": ["lua"], "lle": ["cgltf", "stb_image"] + sorted(
+LIB_MEMBERS = {"mixer": ["miniaudio"], "dx7hrtnl": ["pl_mpeg"], "exe": ["lua"], "lle": sorted(
     n for n in LIB_UNITS if n.startswith("dmusic-"))}
 LANGUAGE_RC = pathlib.PurePosixPath("Empire Earth/Language/Language.rc")
 EXE_RC = ROOT / "src" / "Empire Earth" / "EE-AOC.rc"

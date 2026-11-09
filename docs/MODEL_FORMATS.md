@@ -223,11 +223,11 @@ levels, Targa footers, IDs, colour map and origin fields, the compressed flag.
 ## 6. The game reading the open forms (`GEOpenFormatsFile.cpp`)
 
 * `GEModelManager::LoadModel` looks up `<name>.cem` through `GEFindModelFile`: if `<name>.glb` or `<name>.gltf` is
-  on the data path, it is converted (`GEOpenFormats::GltfToCem`, cgltf) to the `.cem` bytes and served as an
+  on the data path, it is converted (`GEOpenFormats::GltfToCem`, Rust: `ee_openformats`) to the `.cem` bytes and served as an
   `FSMemoryFile` named `<name>.cem`; external buffers are looked up on the path next to the `.gltf`.
 * `GETextureManager::LoadTexture`, `ReloadTexture`, `RefreshAllTextures` look up `<name>.tga` / `<name>.sst`
   through `GEFindTextureFile`: if `<name>.png` is on the path, it and its `@<i>` frames are converted
-  (`GEOpenFormats::PngToSst`, stb_image) and served as `<name>.sst`; the texture is cached under the `.sst` name.
+  (`GEOpenFormats::PngToSst`, Rust) and served as `<name>.sst`; the texture is cached under the `.sst` name.
 * An open-format file anywhere on the path wins over the binary one. A file that does not convert stops the game with
   its message (`ESVerify`).
 
@@ -250,10 +250,14 @@ levels, Targa footers, IDs, colour map and origin fields, the compressed flag.
   the .gltf): identical pictures for static frames, the same picture up to sub-pixel differences for animated frames
   (TRS animation instead of the exact matrices).
 
-`cppgate` (about 12 minutes): the C++ loader (`GEOpenFormats.cpp`, built with the game's compiler flags, i686)
-converts 7394 cases; its bytes must equal the Python converter's, or both must refuse. Result: 866/866 models as
-exported, 866/866 without EE_model, 34/34 as `.glb`, 2539 edited models (TRS instead of matrices, `.NNN` names, no
-wrapper, broken EE_model data, animation-sampled transforms with STEP and LINEAR keys between frames: 1906 identical,
-633 refused by both: rotated wrappers, malformed `frameFixes`), 2792/2792 textures, 297 PNG variants (243 identical,
-54 refused by both: bad `ee:surface`, truncated files). C++ conversion time for all of it: models 76 s, textures 24 s
-(about 0.1 s per model on average, dominated by the biggest).
+`cppgate` (about 6 minutes, streaming: batches of at most `--limit-mb`, default 300 MB of temporary files): the game's
+converter (the Rust crate `rust/crates/ee_openformats`, its `eemodel_gate` program; the C++ loader `GEOpenFormats.cpp`
+with cgltf and stb_image was retired for it) converts every case; its bytes must equal the Python converter's
+(`gltf.import_`, `sst.from_png`), or both must refuse, and each case's digest must equal `cppgate/golden_cpp.json`
+(recorded from the unmodified C++). Over `build/open_data/tree-binary` (`--tree`, 861 models and 2551 textures): 861/861
+models as exported, 861/861 without EE_model, 34/34 as `.glb`, 2568 edited models (TRS instead of matrices, `.NNN` names,
+no wrapper, broken EE_model data, animation-sampled transforms with STEP and LINEAR keys between frames: 1929 identical,
+639 refused by both: rotated wrappers, malformed `frameFixes`), 2551/2551 textures, 275 PNG variants (225 identical, 50
+refused by both: bad `ee:surface`, truncated files); 7150 cases in 8 batches, peak temporary use 279 MB. `--subset N` runs
+every Nth model and texture. The recorded digests apply to that tree and the current case generator: after a change,
+re-record from a Python-gated run, never from the Rust converter alone.

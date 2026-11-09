@@ -1,6 +1,5 @@
-"""The C++ gate (eemodel.py cppgate): build tools/eemodel/cppgate/eemodel_gate.exe from the game's open-format
-loader (src/Low-Level Engine/Graphics Engine/GEOpenFormats.cpp with cgltf and stb_image, the build's compiler flags)
-and run it over
+"""The open-format gate (eemodel.py cppgate): build the game's converter (rust/crates/ee_openformats, the
+eemodel_gate program) and run it over
 
 * every model on the data path as eemodel exports it (.gltf + .bin), the same without the EE_model extension (what an
   editor that drops it leaves), and every 25th as .glb;
@@ -10,9 +9,10 @@ and run it over
 * every texture as PNG, and PNG variants an editor may write (grey 8/4-bit, grey+alpha, palette with tRNS, 16-bit,
   RGB with tRNS, interlaced, the ee:surface text, a bad ee:surface text and a truncated file: errors);
 
-The C++ result must equal the Python converter's (gltf.import_ + cem.write, sst.from_png + sst.write) byte for byte,
-or both must refuse. A second, recorded reference: the digest of every case's result as the C++ gave it
-(golden_cpp.json; see --golden).
+The converter's result must equal the Python converter's (gltf.import_ + cem.write, sst.from_png + sst.write) byte for byte,
+or both must refuse (the Python is an independent implementation; the C++ is gone). A second, recorded reference:
+the digest of every case's result as the C++ gave it (golden_cpp.json, --golden; recorded for tree-binary at subset 1,
+valid while that tree and the case generator stay the same: re-record against the Python, never from the Rust alone).
 
 Streaming: the cases are exported to a temporary folder in batches of at most --limit-mb (default 300 MB, inputs and
 estimated outputs together); each batch is converted, compared and deleted before the next is written, so the
@@ -45,27 +45,18 @@ GE = ROOT / 'src' / 'Low-Level Engine' / 'Graphics Engine'
 
 
 def build(out):
-    import clang_build
-    import verify
-    from ee import CLANG, LLD_LINK, lib_paths, RUNTIME_LIBS
-    out.mkdir(parents=True, exist_ok=True)
-    _, inc = verify.include_paths(None)
-    objs = []
-    for src in (GE / 'GEOpenFormats.cpp', ROOT / 'src' / 'ThirdParty' / 'cgltf' / 'cgltf.c',
-                ROOT / 'src' / 'ThirdParty' / 'stb_image' / 'stb_image.c', HERE / 'cppgate' / 'eemodel_gate.cpp'):
-        obj = out / (src.stem + '.obj')
-        lang = ['/std:c++17', '-EHsc'] if src.suffix == '.cpp' else []
-        cmd = [str(CLANG), *clang_build.CLANG_FLAGS, *lang, '-MT', '-O1', *verify.DEFINES.split(), f'/I{GE}',
-               f'/Fo{obj}', str(src)]
-        r = subprocess.run(cmd, env=dict(os.environ, INCLUDE=inc), capture_output=True, text=True)
-        if r.returncode:
-            sys.exit(f'{src.name}: {r.stdout}{r.stderr}')
-        objs.append(str(obj))
-    exe = out / 'eemodel_gate.exe'
-    r = subprocess.run([str(LLD_LINK), '/nologo', '/subsystem:console', '/machine:x64', f'/out:{exe}', *objs,
-                        *lib_paths(), *RUNTIME_LIBS], capture_output=True, text=True)
+    """The Rust converter's gate program (rust/crates/ee_openformats, src/bin/eemodel_gate.rs), built for the host. The
+    C++ loader it replaced is gone (docs/RUST_PLAN.md R2.4); the comparison is the Python converter and, for the
+    recorded data, the digests the C++ gave (golden_cpp.json)."""
+    from rust_build import TARGET_DIR
+    env = dict(os.environ, CARGO_TARGET_DIR=str(TARGET_DIR))
+    r = subprocess.run(['cargo', 'build', '-p', 'ee_openformats', '--bin', 'eemodel_gate', '--release', '--offline'],
+                       cwd=ROOT / 'rust', env=env, capture_output=True, text=True)
     if r.returncode:
-        sys.exit(f'link: {r.stdout}{r.stderr}')
+        sys.exit(f'cargo build: {r.stdout}{r.stderr}')
+    exe = pathlib.Path(TARGET_DIR) / 'release' / ('eemodel_gate' + ('.exe' if os.name == 'nt' else ''))
+    if not exe.is_file():
+        sys.exit(f'no {exe}')
     return exe
 
 

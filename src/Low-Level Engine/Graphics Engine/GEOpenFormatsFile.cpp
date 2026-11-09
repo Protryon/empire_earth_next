@@ -19,6 +19,70 @@
 #include "lle/FSPath.h"
 
 #include "GEOpenFormats.h"
+#include "rust/ee_rust.h"
+
+// GEOpenFormats::GltfToCem / PngToSst: the conversion lives in Rust (rust/crates/ee_openformats, ee_rust.h); these wrap
+// its buffers for the C++ callers here.
+namespace GEOpenFormats {
+
+static void TakeBytes(EeOfBytes& ioBytes, std::vector<unsigned char>& outData)
+{
+    outData.assign(ioBytes.ptr, ioBytes.ptr + ioBytes.len);
+    ee_of_bytes_free(ioBytes);
+}
+
+static void TakeError(EeOfBytes& ioBytes, std::string& outError)
+{
+    outError.assign((const char*)ioBytes.ptr, ioBytes.len);
+    ee_of_bytes_free(ioBytes);
+}
+
+struct ResolveContext {
+    ResolveFunc mResolve;
+    void* mUser;
+};
+
+static bool ResolveThunk(void* inUser, const uint8_t* inUri, size_t inLength, EeOfBytes* outBytes)
+{
+    const ResolveContext* theContext = static_cast<const ResolveContext*>(inUser);
+    std::vector<unsigned char> theData;
+    if (!theContext->mResolve(theContext->mUser, std::string((const char*)inUri, inLength), theData))
+        return false;
+    *outBytes = ee_of_bytes_copy(theData.empty() ? NULL : &theData[0], theData.size());
+    return true;
+}
+
+bool GltfToCem(const unsigned char* inData, unsigned long inLength, ResolveFunc inResolve, void* inUser,
+               std::vector<unsigned char>& outCem, std::string& outError)
+{
+    ResolveContext theContext = {inResolve, inUser};
+    EeOfBytes theOut, theError;
+    if (!ee_of_gltf_to_cem(inData, inLength, inResolve ? ResolveThunk : NULL, &theContext, &theOut, &theError)) {
+        TakeError(theError, outError);
+        return false;
+    }
+    TakeBytes(theOut, outCem);
+    return true;
+}
+
+bool PngToSst(const std::vector<std::vector<unsigned char> >& inFrames, std::vector<unsigned char>& outSst,
+              std::string& outError)
+{
+    std::vector<EeOfSlice> theFrames(inFrames.size());
+    for (size_t i = 0; i < inFrames.size(); i++) {
+        theFrames[i].ptr = inFrames[i].empty() ? NULL : &inFrames[i][0];
+        theFrames[i].len = inFrames[i].size();
+    }
+    EeOfBytes theOut, theError;
+    if (!ee_of_png_to_sst(theFrames.empty() ? NULL : &theFrames[0], theFrames.size(), &theOut, &theError)) {
+        TakeError(theError, outError);
+        return false;
+    }
+    TakeBytes(theOut, outSst);
+    return true;
+}
+
+}  // namespace GEOpenFormats
 
 // Reads a whole file -> its bytes; false when it cannot be read
 static bool GEReadWholeFile(FSFileSpec& inFile, std::vector<unsigned char>& outData)

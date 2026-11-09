@@ -13,8 +13,10 @@
   python -I tools/eemodel/eemodel.py install [--game DIR] [--base DIR] GAMEDIR
         write the open-format models and textures into GAMEDIR/Data (a COPY of the game; refuses the installs and
         the repository outside build/)
-  python -I tools/eemodel/eemodel.py cppgate [--out DIR]
-        build the C++ loaders' test (tools/eemodel/cppgate) and run it over every exported model and texture
+  python -I tools/eemodel/eemodel.py cppgate [--out DIR] [--tree DIR] [--subset N] [--limit-mb 300] [--golden FILE]
+        build the game's open-format converter (rust/crates/ee_openformats) and run it over every exported model and
+        texture in temporary batches of at most --limit-mb; byte parity with the Python converter and, with
+        --golden tools/eemodel/cppgate/golden_cpp.json, the digests the C++ loader recorded
 
 Game data is never written into the repository (outside build/). --game defaults to $EE_GAME_DIR, else the AoC
 install; --base to $EE_BASE_GAME_DIR, else the original game's install (the AoC exe searches its data second).
