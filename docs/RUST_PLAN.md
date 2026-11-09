@@ -33,6 +33,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | **R5b.1 A* pathfinding, continents, choke points** | **Open.** No plain-data seam yet: the goals read the live world tile by tile, lazily and with side effects, and walk the storage's lists (PORT_LEARNINGS "R5b.1"). The address-ordered set at `EEAIAStarPathAreaGoal.cpp:282` turned out order-independent |
 | **R4.3 Graphics Engine (17k)** | **In progress** (`ee_ge`): the math and geometry (points, vectors, lines, planes, transformations, quaternions, bounding boxes, rectangles) `UMath`'s table trigonometry and `GETerrainMesh`'s height, normal, closest-tile and line queries, bit-exact against the C++ (golden digests, the sim oracle). The header inlines and the file I/O stay C++. Open: the rest of `GETerrainMesh` (visible-terrain build, fog, water, load/save), `GEModel` load/save/LOD/caching, the managers, fonts, textures, the viewport |
 | **R6 LLE User Interface toolkit (14.4k)** | **Started** (`ee_ui`, branch `rust-r6-ui`): `UILayoutUtility` (whole unit), `UISlider`'s arithmetic, a multi-line `UITextLabel`'s word wrapping, `UIForm`'s focus walk (`Tab`, `ShiftTab`, `CheckedRadioButton`) and control hit test, each pinned by a golden trace of the real C++ unit and re-run over the forwarders. The C++ classes keep their members, vtables and exported names. Every reading of game text is in `ee_ui/src/text.rs` (still cp1252 bytes; D6's UTF-8 switch changes that module). Open: lists and combo boxes (`UIListBox.h`, a template the harness hooks), edit boxes, buttons, `UIControlsTable` (forms from the db), `UIManager`, drawing |
+| **R5a.4-R5a.6 handles, names, the RTS layer** | **Started** (branch `rust-r5a-handles`, C++ only, no behaviour change; sim oracle identical per commit). R5a.4: measured who holds unit pointers (PORT_LEARNINGS "R5a.4-R5a.6"); `EEUnitHandle<T>` (`ee/EEUnitHandle.h`) is the unit id resolved through a registry that lives from `RTSPlayer::InsertUnit` to `RTSUnit::FreeNode`, so a freed unit's handle is NULL, never a reborn slot; the AI's 14 stored unit pointers are handles. R5a.5: the simulation's address-named globals and functions named, `gU531CF0`/`CF4` folded into `EEPhysics`. R5a.6: the RTS objects import 26 game symbols (1 from Graphics Thread, `RTSMouse::EndFrame`); `RTSMouse`/`RTSUnit` moved to their own headers, RTS -> Graphics Thread include edges 3/12 (direct/transitive) -> 1/4. Open: the AI's 17 containers (address order), the UI/editor/camera holders (the registry needs a lock first), the A* goals (`rust-r5b-astar`), the Graphics Thread holders and names (`rust-r5a-snap`), RTSGraphics.cpp's game globals |
 
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
 trees), six seeded 45-minute sim traces equal to the pre-Rust reference, menu captures pixel-equal, a saved game loaded and
@@ -118,9 +119,12 @@ Lines include each module's headers. "Build module" is `tools/units.py`.
   - AI <-> Units (181/81 include edges);
   - Graphics Thread <-> Units (89/18) and Graphics Thread <-> Physics (64/8);
   - Physics <-> Units (47/72);
-  - RTS -> Graphics Thread (146): the base layer includes the game.
-- **Global state.** 224 `g*` names are declared in headers and ~459 are defined in `src`; ~30 are still
-  address-named (`gU4E8708`). The ones touched most:
+  - RTS -> Graphics Thread (146): the base layer includes the game. Measured by symbols (R5a.6), the RTS objects
+    import one Graphics Thread symbol, the RTS class's own `RTSMouse::EndFrame`; the edges were the RTS classes
+    declared in game headers.
+- **Global state.** 224 `g*` names are declared in headers and ~459 are defined in `src`; the
+  simulation's address-named ones are named since R5a.5 (`gU4E8708` is `gDamageTable`); the UI's, the editor's and the
+  renderer's are not yet. The ones touched most:
   - `gWorld`: 310 files in 23 modules;
   - `gPhysics`: 174;
   - `gUIManager`: 123;
