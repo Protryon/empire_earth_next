@@ -211,6 +211,11 @@ static void EECPNextViewValue(const EECPNextView& inView, const std::vector<EECP
         e.Set("has_tower", EECPLuaValue::Bool(s.has_tower != 0));
         e.Set("danger", EECPNextInt(s.danger));
         e.Set("patch", EECPLuaValue::Bool(s.patch != 0));
+        e.Set("holds", EECPNextResources(s.holds));
+        e.Set("explored", EECPLuaValue::Bool(s.explored != 0));
+        static const char* const kBlocked[5] = {"", "unexplored", "enemy_near", "danger", "area"};
+        if (s.blocked > 0 && s.blocked <= 4)   // why the gatherer finders would pass it over (nil: they would not)
+            e.Set("blocked", EECPLuaValue::Str(kBlocked[s.blocked]));
         theSites.Push(e);
     }
     v.Set("sites", theSites);

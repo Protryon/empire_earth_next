@@ -411,7 +411,7 @@ keyed `food`, `wood`, `stone`, `gold`, `iron`):
 | `stock`, `income` (last 60 s), `reserve`, `gatherers` (land), `wanted`, `next_epoch_cost` | per-resource maps |
 | `idle`, `citizens`, `boats`, `population`, `population_cap` | |
 | `town_x`, `town_y` (-1: no town centre), `claim_range`, `claim_range_min`, `claim_range_max`, `claim_range_step` | tiles (25, 45, 5 today) |
-| `sites[]` | `index` (its place in `sites`, what `claim`/`release`/`build near="site"` take; valid this step only), `resource` (name; nil when nothing is left), `units`, `amount`, `room`, `workers`, `x`, `y`, `distance`, `danger`; booleans `claimed`, `has_drop`, `has_tower`, `patch` |
+| `sites[]` | `index` (its place in `sites`, what `claim`/`release`/`build near="site"` take; valid this step only), `resource` (name; nil when nothing is left), `units`, `amount`, `room`, `workers`, `x`, `y`, `distance`, `danger`; booleans `claimed`, `has_drop`, `has_tower`, `patch`, `explored` (S3: the tile is visible to the player); `holds` (S3: the living units of each resource, a per-resource map: a centre may hold stone and gold); `blocked` (S3: why the classic gatherer finders would pass it over, `unexplored`, `enemy_near`, `danger` or `area`; nil when they would not) |
 | `buildings[]` | `type`, `finished`, `unfinished`, `queued`, `busy`, `queue` |
 | `soldiers[]` | `type`, `count`, `strength`; and `army_count`, `army_strength` |
 | `threats[]` | `player`, `count`, `strength`, `x`, `y`, `distance`; and `threat_strength` |
@@ -544,6 +544,127 @@ Hard should win by playing better first, with modifiers second.
 - **Shares grow with the town.** Wood, stone, gold and iron get their shares as the town grows, never at the cost
   of food.
 - **The building list is a whitelist with caps,** not desired counts.
+
+### 4.1 S3 as built (2026-11-08)
+
+Code: `ai/boom.lua` (the script; `lib/view.lua` unchanged), the personalities `balanced` and `wide` run it
+(`aipersonalities.yaml` `next_script: boom`; rules.py and EERules.cpp); the tactics changes below. Benchmarks in
+AI_RESEARCH.md §8.30.
+
+**The planner.** One plan table per epoch (Prehistoric, Stone, Copper and later) and one pass of the same planner
+every step; the claims, gatherers and buildings every 10 s, citizens, the reserve, the advance and soldiers every
+step. A `plan` line each minute and a `sites` line every five (`next.print` in the AI trace).
+
+| | Prehistoric | Stone | Copper and later (holding until S5) |
+|---|---|---|---|
+| Citizens: trained freely / from spare food | 28 / 34 | 64 / 90 | 90 / 100 |
+| Reserve the next epoch from | 26 citizens or 18 min | 60 citizens or 10 min (gold and iron from the start) | 95 citizens or 25 min |
+| Food share at least | 55 % | 40 % (25 % once the advance's food is paid) | 40 % |
+| Caps on wood / stone / gold / iron | 6 / 3 / 3 / 6 | 23 / 6 / 12 / 18 | 26 / 6 / 14 / 20 |
+| Bank (kept for the next epoch) | wood 400, gold 250, iron 300 | wood 150, gold 100, iron 100 | wood 300, gold 200, iron 200 |
+| Forage patches | 3 | 5 | 5 |
+| Soldiers (light / under a threat at most) | 4 / 12 | 8 / 24 | 16 / 40 |
+| Towers | 3 | 7 | 10 |
+| Settlements | 3 | 6 | 7 |
+| Trainers | 1 barracks | 2 barracks, 2 archery ranges | the same |
+| Fishing | none | 10 boats, 2 docks | the same |
+| Farms | | | a granary, 16 farms, a second granary from 8 |
+
+**What it does, in order.**
+- **Refusals.** An order refused for want of a site or producer is not repeated for a minute; a building refused at
+  a site passes that site over for five (the next settlement or tower goes to the next site).
+- **The threat:** enemy soldiers on the claimed land (the view's `threats`) of at least 2,500 strength (a lone scout
+  is left to the militia and the towers), remembered 90 s. The army wanted is the light army plus a third of the
+  largest army seen in the last five minutes, and under a threat as many more as it takes for the army and the
+  towers (4,000 each) to reach 1.5x the threat. When short under a threat the town scrambles: the reserve is off
+  (stone excepted) and soldiers are trained 3 at a time.
+- **The reserve and the advance.** The epoch is saved for once the town has its citizens or the epoch has run long:
+  the reserve is the advance's cost less what the missing light army costs (the light army comes first), and from
+  the Stone Age the Copper Age's gold and iron are reserved from the start. The advance is asked for only when it is
+  paid and the SOL is met; the SOL is met by building the cheapest building that counts and is not built yet (no
+  town centre, capitol, settlement, farm, granary or house).
+- **Citizens** are never held back: two at a time per town centre up to the plan, then from the food above the
+  reserve up to the plan's maximum ("food never wasted").
+- **Gatherers.** Wood, stone, gold and iron each get `ceil(lack / 30)` gatherers within the plan's floor and cap,
+  where the lack is the stock the plan will spend soon less the stock: the reserve, the next barracks and range,
+  two settlements, the docks, the next four boats, two towers, three farms, the soldiers still wanted, and the
+  bank. Stone is gathered only for towers (the start's 800 pay for four). If those leave food less than its share,
+  the largest give way one at a time. Food takes the rest (patches first, then hunting: the `patch` preference).
+- **Claims.** The food gatherers' forage patches inside the claim range (6 places each; the claim grows only when
+  none is left in it), and for each mineral the nearest open sites out to 60 tiles whose places hold its
+  gatherers (2-3 sites; a centre's `holds` counts, so a mixed stone-and-gold centre serves both). Every other claimed
+  patch or mine is released: the start-up (Regroup) claims sites 30-40 tiles out, and the classic finder takes
+  the farthest claimed site first. A mineral with no reachable site gets no gatherers: they would otherwise be moved
+  between resources every 10 s (seen in the first versions: 1,520 moves a game).
+- **Settlements** at the kept patches and mines with no drop site at hand, the nearest first, one at a time.
+- **Towers:** the first at the town (and a second under a threat), then at the kept sites without one, one at a
+  time.
+- **Fishing** from the Stone Age's first pass: `fish(10, 2)`.
+- **Trainers:** a barracks at 10 citizens; in the Stone Age an archery range, a second barracks at 55 citizens and
+  a second range at 65, either sooner under a threat. Soldiers: the cheapest of each trainer, two at a time.
+- **Copper and later:** a granary near the town (the claim grows 5 tiles whenever it finds no room, as the classic
+  ClaimExpand did), farms (FindSite takes the granary's plots) while the patches cannot hold the food gatherers, a
+  second granary from 8 farms; the Bronze Age is saved for from 95 citizens or 25 minutes.
+- **No attacks, no defend groups** (see the army side below).
+
+**Tactics changes (economy side).**
+- **The view's sites** (EECPNextView.cpp, EECPNextLua.cpp): `holds` (units per resource), `explored` and
+  `blocked`, the checks FindResourceTarget and FindFarm make in their order: not visible, an enemy near
+  (HasEnemyNear), a danger zone, another non-enemy player's area within 10 tiles.
+- **The finders** (EECPResourceManager.cpp): for the next engine, FindResourceTarget and FindFarm send gatherers to
+  a claimed site that is not visible. The next engine runs no explorers, and the larger mines 35-60 tiles out were
+  never seen, so never gathered from. The view lists every resource centre and the strategy claims the ones it
+  wants; walking there explores them. This is a small map-knowledge step past the fog (the original's Regroup
+  already builds centres from every resource on the map).
+- **HasEnemyNear** (EECPBuildManager.cpp): for the next engine only an enemy's armed units count, not gaia's or an
+  ally's.
+- **build(settlement, near=site)** (EECPNextTactics.cpp): with no room in the rings 2-5 round the resource, the rings
+  6-8, then the centre's own placement within 9 tiles (BuildSettlementFor's fallback).
+- Classic unchanged: every change is behind `EECPNextEngine`, and the classic traces are identical (§8.30).
+
+**What the army side must provide for the boom** (the defend/attack/raid/scout groups are not the boom's code):
+- `defend` does not work for a boom yet: the group is created with 0 units (`attack.group ... units=0`), its task
+  names the first enemy player (in EE-SIM player 1, the idle human), and nothing joins it later; a defend order a
+  minute builds up groups. The boom issues none; its soldiers stand where they were trained and fight what comes
+  into sight. Wanted: a defend group that takes the named idle soldiers and holds a point (the town, a worked site,
+  the threat's tile) and returns when the threat is gone, so the boom can meet raiders at its far mines.
+- `scout`: one cheap unit that explores the land round the town and the next mines (the boom now gathers from
+  claimed unseen sites; an explorer would make that fog-honest again and show the enemy's army for the
+  `seen_army` rule, which today only counts what reaches the town).
+- A rush-aware army mix: the boom's light army is 4-5 soldiers at 30-40 min against the aggressive classic's 19-29,
+  and it loses the mixed score to it (it survives: §8.30).
+
+**Results** (EE-SIM, Small, Medium, 2 AIs, no cheats, 2 hours; `--engine next,classic` and `classic,next`, seeds
+26-49, 48 games; details in AI_RESEARCH.md §8.30):
+
+| Measure (48 games) | Boom | Classic opponent | Owner's target |
+|---|---|---|---|
+| Stone Age (median) | 22.4 min, 47/48 reached, 42/48 by 25 | 25.0 | 20-26 |
+| Copper Age (median) | 52.7 min, 44/48 | 66.3 | 41-46 |
+| Copper after Stone (median) | 30.7 min (6/48 within 25, 20/48 within 30) | 41 | about 20 (gate: about 25) |
+| Defeated before the Copper Age | 2/48 (4 %) | 0 | gate: under 1 in 10 |
+| Defeated within 2 hours | 9/48 | 0 | |
+| Citizens at 30 / 60 min | 44 / 76.5 | 35 at 30, 53 at 40 | 50-62 / 85-94 |
+| Most on gold / iron / wood in the Stone Age | 10 / 11 / 14 | | at most 12 / 18; 10-23 |
+| Fishing boats from the Stone Age | 11 | | 8-10 |
+| Towers by 40 min | 6 | | 4-7 |
+
+Against the classic `aggressive` (the rush personality), 16 games (seeds 26-33, both seats): Stone 22.2, Copper
+56.8 (15/16), 1/16 defeated before the Copper Age, 2/16 within 2 hours. The mixed score goes to the classic AI
+(37-2 with 9 close; against aggressive 10-3 with 3 close): its army is 13-29 at 30-40 min against the boom's 4-5,
+and from the Copper Age on the boom's economy shrinks (no Bronze army plan yet). Classic unchanged: the classic
+engine's traces of seeds 2-5 (1800 game s) are identical before and after (1842, 1822, 1746 and 1807 lines). Twice
+the same seed: identical (seeds 26 and 27, 3600 game s: 4795 and 4733 lines).
+
+**Open after S3:**
+- **the gate's second item is not met:** Copper comes 30.7 min after Stone (median; 6/48 within 25). Food, gold and
+  iron each reach the Copper Age's cost about 20 min into the Stone Age, and iron is the last in 26 of 48 games. The
+  gold and iron gatherers are 5-7 on average, not 12 and 18: the open mines within 60 tiles hold one or two sites'
+  places (most mines in the view are `unexplored` or `enemy_near`). A higher Stone Age citizen target changed
+  nothing (the town does not reach it before the reserve starts at 10 min). Next levers: a scout, towers and
+  settlements that make the far mines safe, citizens at 30 min (44 against the owner's 50-62);
+- the army (above); the post-Copper hold (S5);
+- the owner playtest (the S3 gate's third item).
 
 ## 5. Stages
 

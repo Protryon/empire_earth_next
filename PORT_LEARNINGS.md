@@ -1586,6 +1586,29 @@ run time), the others are Windows CRT behaviour the POSIX layer did not provide 
   can report SOL missing in the Stone Age (the classic engine meets it through ResearchCheapest): a strategy that
   only saves the cost never advances. The view's `sol_missing` and the costs' `counts_toward_epoch` are there for it.
 
+## The boom script (S3, docs/AI_LUA_PLAN.md §4.1, 2026-11-08)
+
+- **The start-up claims far sites, and the finder takes the farthest.** Regroup activates resource centres 30-40
+  tiles out, and FindResourceTarget walks the claimed centres backwards (farthest first). A strategy that only
+  claims what it wants still sends its miners far: it has to release the rest.
+- **A resource centre can hold two minerals.** The view's `resource` is the one most units hold; the finders take any
+  unit of the resource they look for, so a stone-labelled centre feeds the gold miners. Releasing it "because stone
+  is not wanted" took the town's only gold (the view's `holds` now says what each holds).
+- **A resource nobody can reach makes gatherers wander.** Wanted gatherers with no reachable site (unseen, an enemy
+  near) are idle at each pass; AssignIdleGatherers puts them elsewhere and RebalanceGatherers moves them back: 1,520
+  moves in a game. The view's `blocked` gives the finders' reason, and the script asks only for what the sites hold.
+- **The next engine runs no explorers.** IsVisibleTo stays false on the larger mines 35-60 tiles out, so the finders
+  never sent anyone; for the next engine they now send gatherers to a claimed site not yet visible.
+- **`workers` (GetResourceUsers) is nearly always 0** in the view, even at worked sites: it counts the units at the
+  resource in that instant, not the ones assigned. Use `gatherers` per resource, not per-site workers. It also
+  inserts a 0 entry for an unknown unit (EEWorld::mResourceUsers), harmless but not a pure read.
+- **A granary needs room for its farm plots round the claimed land** (FindGranarySite); the classic engine's
+  ClaimExpand grew the claim when it had none, the next engine reports `no_site` and the script grows it. Farms come
+  from the granary's plots (FindSite for a farm finds an unbuilt farm foundation), so no granary means no farms.
+- **Defend groups from `defend` hold no units**: `attack.group ... units=0`, and their task names the first enemy
+  player (EE-SIM's idle human). The boom uses none.
+- **Python's `write_text` writes CR LF on Windows**: a patch script must pass `newline='\n'` (the repository is LF).
+
 ## The next computer player's Lua strategy (S2 gate, docs/AI_LUA_PLAN.md §3.2, 2026-11-08)
 
 - **Orders after the step play the same game as verbs inside it** only because the C++ test opening reads nothing

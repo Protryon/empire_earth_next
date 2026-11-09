@@ -82,6 +82,18 @@ struct EECPNextSite {           // a resource centre (EEComputerPlayer::mResourc
     long has_tower;             // 1: one of the player's towers within 8 tiles
     long danger;                // the seen enemy strength within 12 tiles, plus 1 in a recent danger zone
     long patch;                 // 1: its food is a forage patch
+    long explored;              // 1: its tile is visible to the player (EETile::IsVisibleTo)
+    long blocked;               // kNextBlocked*: why the classic gatherer finders would pass its first unit over
+    long holds[kNextResources]; // its living resource units of each resource (a centre may hold stone and gold: the
+                                // finders take any of its units of the resource they look for)
+};
+
+enum {                          // EECPNextSite::blocked
+    kNextBlockedNone = 0,
+    kNextBlockedUnexplored = 1, // not visible (the next engine's finders still send gatherers to a claimed site)
+    kNextBlockedEnemyNear = 2,  // an enemy unit near it (BuildManager::HasEnemyNear)
+    kNextBlockedDanger = 3,     // a recent danger zone (EECPRMResourceInDanger)
+    kNextBlockedArea = 4        // within 10 tiles of a non-enemy player's area (gaia, an ally)
 };
 
 struct EECPNextBuildings {      // the player's buildings of one type

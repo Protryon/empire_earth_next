@@ -313,6 +313,7 @@ EEAIPersonalityRules::EEAIPersonalityRules()
 {
     EEAIPersonalityRule theBalanced;
     theBalanced.mID = "balanced";
+    theBalanced.mNextScript = "boom";       // the next engine: the boom script (docs/AI_LUA_PLAN.md "S3 as built")
     EEAIPersonalityRule theTall;            // tech: saves for the next epoch early and hard
     theTall.mID = "tall";
     theTall.mEpochPressureStart = 0.15f;
@@ -325,6 +326,7 @@ EEAIPersonalityRules::EEAIPersonalityRules()
     theWide.mEpochPressureFull = 1.0f;
     theWide.mMaxCitizenShare = 0.8f;
     theWide.mStandingArmy = 0.15f;
+    theWide.mNextScript = "boom";
     EEAIPersonalityRule theAggressive;      // rush: a large standing army, a middling epoch pace
     theAggressive.mID = "aggressive";
     theAggressive.mEpochPressureStart = 0.4f;

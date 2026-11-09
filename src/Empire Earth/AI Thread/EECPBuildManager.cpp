@@ -574,6 +574,16 @@ bool EECPBuildManager::HasEnemyNear(long inX, long inY)
                 else
                     it++;
             }
+            // the next engine: only an enemy's armed units count, not gaia's (player 0, the wild animals) or an ally's
+            // (the original counts every armed unit that is not its own)
+            if (EECPNextEngine(this->mPlayer))
+                for (it = theUnits.begin(); it != theUnits.end();) {
+                    EEPlayer* theOwner = (*it)->mPlayer;
+                    if (theOwner == NULL || theOwner == gWorld.mPlayers[0] || this->mPlayer->IsAlly(theOwner))
+                        it = theUnits.erase(it);
+                    else
+                        it++;
+                }
             theCount = theUnits.size();
         }
     }
