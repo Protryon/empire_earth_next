@@ -887,6 +887,40 @@ struct EeGeScaleRemoval {
   float z;
 };
 
+/// One material for `ee_ge_model_save`: `ranges` holds the polygon start and length of each LOD.
+struct EeGeCemSaveMaterial {
+  EeGeBytes name;
+  uint32_t texture_index;
+  const uint32_t *ranges;
+  uint32_t vertex_start;
+  uint32_t vertex_length;
+  EeGeBytes texture_filename;
+};
+
+/// One frame for `ee_ge_model_save`: `vertices` holds per vertex the point, the normal and the texture coordinate
+/// (eight values).
+struct EeGeCemSaveFrame {
+  float radius;
+  const float *vertices;
+  const EeGe3DPoint *tag_points;
+  EeGeTransformation transform;
+  EeGe3DPoint bbox[2];
+};
+
+/// A model's own data for `ee_ge_model_save`. `counts`: polygons, vertices, tag points, materials, frames,
+/// sub-models, LODs; `lod_sizes` holds each LOD array's polygon count and `lod_indices` their indices one after
+/// the other; `materials`, `tag_point_names` and `frames` hold the counts' numbers of entries.
+struct EeGeCemSave {
+  uint32_t counts[7];
+  EeGeBytes name;
+  EeGe3DPoint center;
+  const uint32_t *lod_sizes;
+  const uint32_t *lod_indices;
+  const EeGeCemSaveMaterial *materials;
+  const EeGeBytes *tag_point_names;
+  const EeGeCemSaveFrame *frames;
+};
+
 /// `GEVector` / `GE3DPoint`: three floats.
 using EeFormationVec3 = float[3];
 
@@ -3012,6 +3046,13 @@ bool ee_ge_model_frame_is_sound(const EeGe3DPoint *points,
                                 size_t index_count,
                                 const uint32_t *ranges,
                                 size_t range_count);
+
+/// Writes a model's chunks (`GEModel::Save` from the header to the frames); the first failure's result.
+///
+/// # Safety
+/// `io` is a valid field stream and `model` a view as documented on [`EeGeCemSave`].
+long ee_ge_model_save(const EeGeFieldIo *io,
+                      const EeGeCemSave *model);
 
 /// `EEFLine`'s constructor: `count` column offsets into `out`.
 ///

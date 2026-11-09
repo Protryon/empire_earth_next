@@ -113,15 +113,6 @@ private:
     long AllocateInternalData(unsigned long inA, std::map<unsigned long, long>& ioTextures);   // 0x1001f080
     // Stores a model read by Rust (ee_ge_model_load) as the chunk readers did ('GEModel Load.cpp')
     long StoreLoaded(const EeGeCemModel* inModel, std::map<unsigned long, long>& ioTextures);
-    long SaveCountsChunk(FSFileSpec& inFile);       // 0x1001e651
-    long SaveFrameChunk(FSFileSpec& inFile);        // 0x1001e9c2
-    long SaveHeaderChunk(FSFileSpec& inFile);       // 0x1001e5fb
-    long SaveMaterialsChunk(FSFileSpec& inFile);    // 0x1001e83a
-    long SaveMiscellaneousChunk(FSFileSpec& inFile);   // 0x1001e6ed
-    long SavePolygonsChunk(FSFileSpec& inFile);     // 0x1001e716
-    long SaveTagPointsChunk(FSFileSpec& inFile);    // 0x1001e988
-    long SaveTagPointsSubChunk(FSFileSpec& inFile, unsigned long inFrame);   // 0x1001eb0b
-    long SaveVertexSubChunk(FSFileSpec& inFile, unsigned long inFrame);      // 0x1001ea4e
     void SetSubModel(GEModel* inModel, unsigned long inIndex);   // 0x10020166
 
     // 'GEModel Caching.cpp' types (defined there; mangled as GEModel::<name>)

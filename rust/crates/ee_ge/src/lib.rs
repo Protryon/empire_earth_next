@@ -29,6 +29,8 @@ mod golden_model;
 #[cfg(test)]
 mod golden_model_geom;
 #[cfg(test)]
+mod golden_model_save;
+#[cfg(test)]
 mod golden_physical;
 #[cfg(test)]
 mod golden_terrain;
@@ -42,6 +44,8 @@ pub mod line;
 pub mod model_ffi;
 pub mod model_file;
 pub mod model_geom;
+/// cbindgen:ignore
+pub mod model_save;
 /// cbindgen:ignore
 pub mod physical;
 /// cbindgen:ignore

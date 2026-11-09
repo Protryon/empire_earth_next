@@ -25,12 +25,10 @@ pub(crate) struct Gen {
 }
 
 impl Gen {
-    #[allow(dead_code)] // golden_model_save.rs
     pub fn new(seed: u32) -> Gen {
         Gen { s: seed, b: Vec::new() }
     }
     /// The next model's bytes.
-    #[allow(dead_code)]
     pub fn model_bytes(&mut self) -> Vec<u8> {
         self.b.clear();
         self.model(0);
