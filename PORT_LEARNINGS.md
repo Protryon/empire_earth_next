@@ -2188,3 +2188,72 @@ the plain-data seam RUST_PLAN R5b.1 asks for does not exist in this code yet.
   Rust port may use any deterministic order. `GetContinentFromID` is a plain array read. It is the only
   pointer-ordered container in the A*, continent and choke-point code; their other sets and sorts key on ids, serials
   and tiles.
+
+## R2: the data layer in Rust (ee_data, 2026-11-08)
+
+- **`std::from_chars` and `f32::from_str` agree.** The text compiler's floats moved to `f32::from_str` (correctly
+  rounded); `cppgate` compared C++ and Rust on a 12,074-string sweep (tables' float cells, subnormals, 7e-46 / 7.1e-46
+  halfway cases, exact-tie decimals) with identical bits and messages; from_chars' `result_out_of_range` and Rust's
+  inf/0 land in the same message through the C++'s own post-checks.
+- **`strchr` matches the NUL.** The C++ YAML subset's `strchr(" [,:-", s[i - 1])` and the plain-scalar check treat a
+  NUL byte as "in the set" (the terminator). The port keeps that (`strchr_set`), byte-level parity needs it.
+- **cbindgen writes a dependency's functions only from loose sources.** `parse_deps` follows the crate tree but
+  functions from any crate other than the binding crate are skipped ("not used"); xtask adds
+  `rust/crates/ee_data/src/ffi.rs` with `with_src` to get them into `include/rust/ee_rust.h`.
+- **A shared `CARGO_TARGET_DIR` hides worktrees' `cargo run` binaries.** Cargo's uplifted `target/debug/xtask.exe` is
+  whichever worktree linked it last; `env!("CARGO_MANIFEST_DIR")` then pointed at another worktree (`cbindgen` wrote the
+  r1-core header once from the r2-data worktree). Touch the crate or run with a private target dir before relying on it.
+- **Generated headers next to a staged unit must end in `.h`.** `verify.stage_source` copies a unit's sibling `*.h`
+  to `C:\EEX\` (or `EE_ORIG_SRC_ROOT`); a generated `.inl` was not found. Hence `EERulesGenDecode.h`.
+- **Rules live in Rust; the game keeps a C++ copy.** `EERules` holds a Rust handle (`ee_data_rules_*`); every rules
+  field, default and dump key is generated from `tools/eedata/rules_schema.json` (`rulesgen.py`); C++ reads a binary
+  snapshot after each change (`Refresh`). The dump formats `(long)float_bits` as signed like the Windows 32-bit `long`
+  (gate pins it); Rust's `RuleNumber::constant` truncates as x86's `cvttss2si` does (INT_MIN out of range).
+- **cppgate after the C++ compiler is gone** compares against the Python importer (independent) and against digests
+  recorded from the C++ compiler (`tools/eedata/cppgate/golden_cpp.json`), which apply while the data's texts are the
+  recorded ones. A data change requires re-recording against an independent reference, not the Rust compiler itself.
+- **R2 step 4 (GEOpenFormats in Rust) is not done:** the `eemodel.py cppgate` byte gate exports every model and texture
+  to the temporary folder (gigabytes), which this machine's disk could not hold (C: 0.5 GB free); nothing was ported
+  or deleted there. The port is mechanical (cgltf's semantics are the risk: a hand parser or the gltf crate must
+  reproduce its acceptance rules exactly) and waits for the gate to be runnable.
+
+## R3.6: the sound manager in Rust (ee_sound, 2026-11-09)
+
+`SESoundManager`'s bookkeeping and decisions moved; its objects did not. The instance nodes are pooled and
+intrusively reference counted and are held by units (`EEComplexUnit::mSound`), unit classes and effects; the samples
+are shared with the mixer plug-in. So C++ keeps the nodes, the samples, the pool, the path, the mixer, the scavenger
+thread, its events and the manager's lock; Rust (`rust/crates/ee_sound`) keeps the sound table, categories, channel
+table, paused queue and instance map, one-shot list and the manager's own `URandom`, and sees nodes and samples as
+opaque handles through a `Host` trait (C++ trampolines `ee_soundcpp_*` in `SESoundManager.cpp`, a nested
+`SESoundManager::Rust` so they share the class's friendships with the node and `SEMixer`).
+
+- **Reference counts change only through the host, in the C++ order.** The golden dumps print every reachable node's
+  count and the pool's live count after each step, so a missing or extra `Reference`/`Dereference` shows at once. The
+  test host asserts on any read or write of a node back in the pool or of a deleted sample.
+- **Locks:** the facade takes the C++ lock around each Rust call where the original took it. Three checks the
+  original made before the lock (the sample id in `PlayAndReturnReferencedNode`, `Unload`; `SetCategoryPercentage`,
+  `SetCategoryPriority`, `GetAvailableChannels` took none) read Rust state now and so run under the lock. The checks
+  on a null node or a none instance id stay before `this` is touched: EE-SIM has no sound manager
+  (`gSoundManager == NULL`) and still calls `gSoundManager->Stop(mSound, false)` with a null node.
+- **No reentrancy:** no trampoline reaches the manager; the FFI wrapper's `busy` flag aborts instead of aliasing if
+  one ever does.
+- **`std::sort` is not stable.** The scavenger sorts the paused queue by (category priority, node volume); equal
+  keys come out in MSVC's introsort order (insertion sort to 32 elements, a fat partition with Tukey's ninther above
+  40, heap sort after 1.5 log2 N divisions). `msvc_sort.rs` is that algorithm, pinned by 63 C++ permutations
+  including the heap path (`std::_Sort_unchecked` with a small budget). The Linux/macOS C++ builds used libstdc++ /
+  libc++ sorts, so their paused order already differed from Windows; Rust gives MSVC's everywhere.
+- **The golden driver** compiled the original `SESoundManager.cpp` (git HEAD) into one scratch TU with
+  `#define private public` (`_ALLOW_KEYWORD_MACROS` keeps the MSVC STL from refusing), link fakes for TSScheduler,
+  the events, `UString` and the plug-in's SPIM table, `/FORCE:UNRESOLVED` for the inline-only references, and
+  `FindFile`/`delete` of the file spec replaced by fakes. A clang-cl ASan build of the driver (`/fsanitize=address
+  /MD`, `-D_DISABLE_VECTOR_ANNOTATION -D_DISABLE_STRING_ANNOTATION`, `/NODEFAULTLIB:stl_asan.lib`) found two bugs in
+  the driver itself whose garbage had reached the golden file; every scenario is ASan-clean.
+- **The fake mixer must behave like the real one where it matters:** `ee_mixer_delete_wave_data` takes a sample off
+  its channel; without that, the destructor's `StopAllChannels` wrote into deleted samples.
+- **The C++ UB that Rust defines:** `GetTotalPlayTimeInMilli` with a sample id past the table read out of bounds
+  (Rust: 0); `GetTimeLeftInMilli` of a paused instance without a sample read through a null sample (Rust: 0); an
+  out-of-range category in `SetCategoryPercentage` wrote out of bounds (Rust: ignored); `Unload` erased
+  `map::end()` when a paused node was not in the instance map (Rust: no-op).
+- **Covered only by the goldens** (the harness cannot hear): which channel a sound gets, voice stealing by priority
+  and time left, category limits, paused looping sounds and their restart order, the random start offsets, one-shot
+  unloading, `SetMaxChannels`, the destructor's cleanup.

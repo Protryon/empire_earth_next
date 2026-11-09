@@ -7,13 +7,13 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations"]
-extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations"]
+include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound"]
+extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap", "ee_fs", "ee_dx7", "ee_openformats", "ee_formations", "ee_sound"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
 # seam records only C++ fills (referenced by no exported function)
-include = ["ModelInfo", "MaterialInfo", "LightData"]
+include = ["ModelInfo", "MaterialInfo", "LightData", "NodeFields"]
 
 # ee_rmap's generic names, kept unique in the shared header
 [export.rename]
@@ -65,3 +65,5 @@ include = ["ModelInfo", "MaterialInfo", "LightData"]
 "WindowParams" = "EeDx7WindowParams"
 "LightParams" = "EeDx7LightParams"
 "FrameStats" = "EeDx7FrameStats"
+# ee_sound
+"NodeFields" = "EeSoundNodeFields"

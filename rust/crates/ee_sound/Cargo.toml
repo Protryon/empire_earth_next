@@ -1,0 +1,13 @@
+[package]
+name = "ee_sound"
+version.workspace = true
+edition.workspace = true
+publish.workspace = true
+
+# The Sound Engine's sound manager (docs/RUST_PLAN.md R3.6): instance selection, priorities, voice limits, the
+# paused queue and the scavenger's decisions, behind the C++ SESoundManager facade.
+[lib]
+crate-type = ["rlib"]
+
+[dependencies]
+ee_random = { path = "../ee_random" }

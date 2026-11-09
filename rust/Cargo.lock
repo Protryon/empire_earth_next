@@ -300,6 +300,14 @@ dependencies = [
  "ee_plat_ui",
  "ee_random",
  "ee_rmap",
+ "ee_sound",
+]
+
+[[package]]
+name = "ee_sound"
+version = "0.1.0"
+dependencies = [
+ "ee_random",
 ]
 
 [[package]]

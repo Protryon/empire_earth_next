@@ -26,7 +26,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | R3.1-R3.3 mixer logic, compression, encryption, TCP | Done (`ee_mixer`, `ee_codec`, `ee_net_tcp`). miniaudio stays; no audio has been listened to through the Rust mixer |
 | R3.4 random maps | Done (`ee_rmap`), 2,088 of 2,088 maps equal to the C++ digests. The `.rmv` reader (`Unit10.cpp`) stays C++ |
 | R3.5 File System | Done (`ee_fs`) behind the C++ facades |
-| **R3.6 Sound Engine** | **Open.** `SESoundManager`'s nodes are held by simulation objects and shared between threads |
+| R3.6 Sound Engine | `SESoundManager`'s logic done (`ee_sound`): instance selection, limits, priorities, the paused queue, the scavenger's decisions, one-shots, random offsets; 142 C++ golden scenarios equal. C++ keeps the nodes (pool, reference counts), the samples, the thread, the events and the lock. `SEMixer`, `SECD`, `SEScore`, `SEConductor` and `Sound Engine.cpp` (plug-in table, MCI CD audio, dmusic) stay C++. No audio has been listened to |
 | R4.1 GX on the `wgpu` crate | Done (`ee_gx`); wgpu-native is gone |
 | R4.2 DX7 plug-in | Done (`ee_dx7`), a faithful port (D5) with C++ trampolines. C++ keeps the classes, object lifetimes, `Set3DMode`'s matrix composition, the PIM table and pl_mpeg |
 | **R4.3 Graphics Engine (17k)** | **Open.** May move with R5's renderer decoupling, as this plan allows |
