@@ -133,6 +133,8 @@ mod sys {
         unsafe extern "C" fn(*mut c_char, *mut c_char, *mut GxDeviceDesc, *mut c_void) -> c_long;
     pub type EnumModesCallback = unsafe extern "C" fn(*mut GxSurfaceDesc, *mut c_void) -> c_long;
     pub type EnumFormatsCallback = unsafe extern "C" fn(*mut GxPixelFormat, *mut c_void) -> c_long;
+    pub type EnumerateCallback =
+        unsafe extern "C" fn(*mut c_void, *mut c_char, *mut c_char, *mut c_void, *mut c_void) -> i32;
 
     extern "C" {
         pub fn gx_device_set_render_state(device: *mut c_void, state: u32, value: c_ulong) -> c_long;
@@ -157,6 +159,7 @@ mod sys {
         pub fn gx_device_set_light(device: *mut c_void, index: c_ulong, light: *const GxLight) -> c_long;
         pub fn gx_device_light_enable(device: *mut c_void, index: c_ulong, enable: i32) -> c_long;
 
+        pub fn gx_direct_draw_enumerate(callback: EnumerateCallback, context: *mut c_void) -> c_long;
         pub fn gx_direct_draw_create(out: *mut *mut c_void) -> c_long;
         pub fn gx_direct_draw_release(dd: *mut c_void) -> c_ulong;
         pub fn gx_direct_draw_query_interface(dd: *mut c_void, iid: u32, out: *mut *mut c_void) -> c_long;
@@ -574,4 +577,12 @@ impl Gx for RawGx {
     fn device_validate(&mut self, _d: H) -> (i32, u32) {
         (GX_OK, 1) // `GXDevice::ValidateDevice` in GX.cpp
     }
+}
+
+/// `GXDirectDrawEnumerateEx` (`GX.cpp`: the flags and GUID filter are not forwarded).
+pub(crate) unsafe fn direct_draw_enumerate(
+    callback: unsafe extern "C" fn(*mut c_void, *mut c_char, *mut c_char, *mut c_void, *mut c_void) -> i32,
+    context: *mut c_void,
+) -> i32 {
+    unsafe { gx_direct_draw_enumerate(callback, context) as i32 }
 }

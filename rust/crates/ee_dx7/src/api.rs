@@ -3,7 +3,6 @@
 //! functions of `ee_gx` (no wgpu in the test binary). Handles are the opaque pointers of the C++ `GX.h` shims
 //! (`GXSurface*`, `GXDevice*`, ...).
 #![allow(non_snake_case)]
-#![allow(dead_code)] // the crate adopts the rest of the contract file by file
 
 use core::ffi::{c_long, c_ulong, c_void};
 
@@ -39,7 +38,6 @@ pub(crate) const GXBLT_DONOTWAIT: u32 = 0x0800_0000;
 pub(crate) const GXBLT_KEYSRC: u32 = 0x0000_8000;
 pub(crate) const GXFLIP_NOVSYNC: u32 = 0x0000_0008;
 pub(crate) const GXFLIP_DONOTWAIT: u32 = 0x0000_0020;
-pub(crate) const GXCKEY_SRCBLT: u32 = 0x0000_0008;
 pub(crate) const GXLOCK_NOOVERWRITE: u32 = 0x0000_1000;
 pub(crate) const GXLOCK_WRITEONLY: u32 = 0x0000_0020;
 pub(crate) const GXLOCK_DISCARDCONTENTS: u32 = 0x0000_2000;
@@ -262,6 +260,7 @@ pub(crate) mod test_recorder {
         pub display_mode: SurfaceDesc,
         pub total_mem: u32,
         pub free_mem: u32,
+        pub dd_caps_3d: bool,
     }
 
     pub struct RecHost {
@@ -279,7 +278,7 @@ pub(crate) mod test_recorder {
 
     impl Recorder {
         pub fn pair() -> (Recorder, RecHost) {
-            let gx = Recorder { total_mem: 0x100_0000, free_mem: 0x80_0000, ..Default::default() };
+            let gx = Recorder { total_mem: 0x100_0000, free_mem: 0x80_0000, dd_caps_3d: true, ..Default::default() };
             let log = gx.log.clone();
             (gx, RecHost { log })
         }
@@ -438,7 +437,7 @@ pub(crate) mod test_recorder {
         fn dd_get_caps(&mut self, dd: H) -> (i32, Caps) {
             self.line(format!("dd_get_caps {}", hx(dd)));
             let r = self.result("get_caps");
-            (r, Caps { dwCaps: 1, dwFXCaps: self.result("fx_caps") as u32 })
+            (r, Caps { dwCaps: self.dd_caps_3d as u32, dwFXCaps: self.result("fx_caps") as u32 })
         }
         fn dd_enum_display_modes(&mut self, dd: H, f: &mut dyn FnMut(&SurfaceDesc)) -> i32 {
             self.line(format!("dd_enum_display_modes {}", hx(dd)));

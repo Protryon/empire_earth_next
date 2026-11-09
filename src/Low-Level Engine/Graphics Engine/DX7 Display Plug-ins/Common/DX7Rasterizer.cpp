@@ -18,6 +18,9 @@
 #include "dx7/DX7Movie.h"
 #include "rust/ee_rust.h"
 
+// The algorithms are in Rust (rust/crates/ee_dx7/src/raster.rs); this class keeps the members, the virtuals and the
+// engine objects, each method forwards or is an ee_dx7cpp_rast_* trampoline.
+
 // The U2D key init chains:
 // SYNTHETIC: DX7HR 0x100091aa
 // SYNTHETIC: DX7HR 0x100091b4
@@ -48,74 +51,49 @@
 // SYNTHETIC: DX7HR 0x100092f1
 // SYNTHETIC: DX7HR 0x100092fd
 
-// The rasterizer whose ActivateRasterizer is enumerating the DirectDraw devices (the callbacks add the screens to it)
-// and the D3D light indices in use, shared by every screen (provisional names).
-DX7Rasterizer* gEnumeratingRasterizer;
+// The D3D light indices in use, shared by every screen (provisional name).
 unsigned long gLightsInUse[8];
 
-// Owner decision (2026-10-23, CLAUDE.md rule 4): the three enumeration callbacks below and ActivateRasterizer were
-// built without global optimisation while the rest of the unit is -O1: memory-resident locals (`mov [ebp-4], eax`
-// then `cmp [ebp-4], 1`), the copies through a temporary for `?:`, `leave`, no jump threading; the ctor/dtor between
-// them and ActivateRenderingSurface after them are ordinary -O1. Without the pragma: 0x10009308 4.4, 0x1000934b 22.1,
-// 0x10009542 25.2, ActivateRasterizer 26.5; with it all four are exact.
-#pragma optimize("g", off)
+// Trampoline access to the protected members (the extern "C" hosts below).
+struct DX7RasterAccess : DX7Rasterizer {
+    using DX7Rasterizer::SetRenderTarget;
+    using DX7Rasterizer::Set3DMode;
+    void MakeActive() { GERasterizer::sActiveRasterizer = this; }
+    GERScreenState* State(unsigned long inScreen) { return this->mScreenStates[inScreen]; }
+    DX7RScreenState* DX7State(unsigned long inScreen) { return this->mDX7ScreenStates[inScreen]; }
+    void SetCullingUnknown() { this->mCulling = -16; }
+    long CallActivateTheScreen(unsigned long inScreen, GESurface* inPrimary, GESurface* inSecondary, GETextureManager* inManager, GEWindow* inWindow)
+        { return this->ActivateTheScreen(inScreen, inPrimary, inSecondary, inManager, inWindow); }
+};
 
-// Without /Og VC6 gives the locals frame slots in the order of a hash of their names (mod 16 buckets; later
-// declarations first within a bucket), so the names below were chosen to reproduce the original's frame layout
-// (provisional names, like every local name).
-// FUNCTION: DX7HR 0x10009308
-// Direct3D device enumeration callback: sets the flag and stops at the first hardware-rasterizing device
-GXRESULT CALLBACK DX7EnumDevicesCallback(LPSTR inDescription, LPSTR inName, GXDEVICEDESC* inCaps, LPVOID inContext)
+// What the Rust activation asks the C++ side for (the ee_dx7cpp_rast_* hosts below).
+struct DX7ActivateContext {
+    DX7RasterAccess* mRasterizer;
+    unsigned long mScreen;
+    GETextureManager* mManager;
+    GEWindow* mWindow;
+};
+
+// The light fields Rust's UpdateLight reads
+static EeDx7LightParams DX7LightParams(GELight& inLight)
 {
-    bool* theContext = (bool*)inContext;
-    HRESULT theResult = GXENUMRET_OK;
-    bool theFlag = (inCaps->dwDevCaps & GXDEVCAPS_HWRASTERIZATION) == GXDEVCAPS_HWRASTERIZATION;
-    if (theFlag) {
-        *theContext = true;
-        theResult = GXENUMRET_CANCEL;
-    }
-    return theResult;
+    EeDx7LightParams theParams;
+    theParams.location[0] = inLight.GetLocation().GetX();
+    theParams.location[1] = inLight.GetLocation().GetY();
+    theParams.location[2] = inLight.GetLocation().GetZ();
+    theParams.direction[0] = inLight.GetDirection().GetX();
+    theParams.direction[1] = inLight.GetDirection().GetY();
+    theParams.direction[2] = inLight.GetDirection().GetZ();
+    theParams.computed_color[0] = inLight.GetComputedColor().GetRed();
+    theParams.computed_color[1] = inLight.GetComputedColor().GetGreen();
+    theParams.computed_color[2] = inLight.GetComputedColor().GetBlue();
+    theParams.style = inLight.GetStyle();
+    theParams.attenuation[0] = inLight.GetAttenuation0();
+    theParams.attenuation[1] = inLight.GetAttenuation1();
+    theParams.attenuation[2] = inLight.GetAttenuation2();
+    theParams.range = inLight.GetRange();
+    return theParams;
 }
-
-// FUNCTION: DX7HR 0x10009542
-// DirectDraw enumeration callback (Windows 98/2000): creates a screen for each 3D-capable device, primary from the
-// monitor flags, and adds it when it has a hardware rasterizer (else deletes it)
-BOOL WINAPI DX7DirectDrawEnumerateExCallback(GUID* inGUID, LPSTR inDescription, LPSTR inName, LPVOID inContext,
-                                             void* inMonitor)
-{
-    unsigned long* theCounter = (unsigned long*)inContext;
-    DX7Screen* theScreen;
-    bool theIsAttached = (inGUID == NULL && inMonitor == NULL) || inMonitor != NULL ? TRUE : FALSE;
-    GXDirectDraw* theDDraw;
-    bool theIsPrimaryDevice;
-    HRESULT theStatus;
-    GXCAPS theCaps;
-    // GX reports one display, the primary one (the original asked the monitor for MONITORINFOF_PRIMARY)
-    theIsPrimaryDevice = inMonitor != NULL || inGUID == NULL;
-    (*theCounter)++;
-    theStatus = GXDirectDrawCreate(inGUID, &theDDraw);
-    if (theStatus == GX_OK) {
-        theCaps.dwSize = sizeof(theCaps);
-        theStatus = theDDraw->GetCaps(&theCaps, NULL);
-        if (theStatus == GX_OK) {
-            if ((theCaps.dwCaps & GXCAPS_3D) == GXCAPS_3D) {
-                theScreen = new DX7Screen(NULL, theDDraw, inDescription, theIsAttached, theIsPrimaryDevice);
-                if (gEnumeratingRasterizer->GetIsScreenValid(theScreen))
-                    gEnumeratingRasterizer->AddValidScreen(theScreen);
-                else
-                    delete theScreen;
-            } else
-                theDDraw->Release();
-        } else {
-            ESRecordNativeError(theStatus);
-            theDDraw->Release();
-        }
-    } else
-        ESRecordNativeError(theStatus);
-    return TRUE;
-}
-
-#pragma optimize("g", on)
 
 // FUNCTION: DX7HR 0x1000978b
 // Creates the DirectX 7 rasterizer with the given name and a dark blue debug colour
@@ -131,36 +109,12 @@ DX7Rasterizer::~DX7Rasterizer()
 {
 }
 
-#pragma optimize("g", off)
-
 // FUNCTION: DX7HR 0x100097d8
 // Enumerates the DirectDraw devices into screens (Ex enumeration on 98/2000) and makes this the active rasterizer
 long DX7Rasterizer::ActivateRasterizer()
 {
-    long theResult;
-    HRESULT theStatus = GX_OK;
-    unsigned long theNumberOfScreens = 0;
-    unsigned long theOSType = UGetOSType();
-    gEnumeratingRasterizer = this;
-    switch (theOSType) {
-    default:
-        theStatus = GXDirectDrawEnumerateEx(DX7DirectDrawEnumerateExCallback, &theNumberOfScreens,
-                                         GXENUM_ATTACHEDSECONDARYDEVICES | GXENUM_DETACHEDSECONDARYDEVICES |
-                                         GXENUM_NONDISPLAYDEVICES);
-        break;
-    }
-    gEnumeratingRasterizer = NULL;
-    if (theStatus == GX_OK) {
-        GERasterizer::sActiveRasterizer = this;
-        theResult = kErrorOK;
-    } else {
-        ESRecordNativeError(theStatus);
-        theResult = kErrorNativeError;
-    }
-    return theResult;
+    return ee_dx7r_activate_rasterizer(this);
 }
-
-#pragma optimize("g", on)
 
 // FUNCTION: DX7HR 0x10009876
 // Sets up a screen to render into an offscreen surface of the given size at the desktop depth, retrying with a
@@ -168,82 +122,8 @@ long DX7Rasterizer::ActivateRasterizer()
 long DX7Rasterizer::ActivateRenderingSurface(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
                                              unsigned long inWidth, unsigned long inHeight)
 {
-    GESurfaceDescription theDescription;
-    GESurface* theSurface = NULL;
-    long theResult;
-    GERScreenState* theState = this->mScreenStates[inScreen];
-    GEScreen* theScreen = theState->mScreen;
-    GEVideoMode theMode = theScreen->GetCurrentMode();
-    unsigned long theVideoModeIndex;
-    for (theVideoModeIndex = 0; theVideoModeIndex < theScreen->GetModeCount(); theVideoModeIndex++)
-        if (theScreen->GetMode(theVideoModeIndex).mBitCount == theMode.mBitCount)
-            break;
-    ESVERIFY_AT(theVideoModeIndex < theScreen->GetModeCount(), 390);
-    theMode = theScreen->GetMode(theVideoModeIndex);
-    theDescription.mIsTransparencyEnabled = false;
-    theDescription.mWidth = inWidth;
-    theDescription.mHeight = inHeight;
-    theDescription.mPixelFormat = theMode.mPixelFormat;
-    theDescription.mType = kSurfaceOffscreen;
-    theDescription.mPixelDepth = theMode.mBitCount;
-    theDescription.mSurfaceVolatility = 0;
-    theDescription.m14 = 0;
-    theDescription.mMipLevelCount = 0;
-    theDescription.mIs3DRenderable = true;
-    bool theActivated = false;
-    if (theScreen->CreateSurface(theDescription, &theSurface) == kErrorOK) {
-        theResult = this->ActivateTheScreen(inScreen, theSurface, theSurface, inManager, inWindow);
-        if (theResult == kErrorOK) {
-            theScreen->SetTextureManager(inManager);
-            inManager->SetScreen(theScreen);
-            theState->mPrimarySurface = theSurface;
-            theState->mTexture = NULL;
-            theState->mRenderTarget = NULL;
-            theState->mSecondarySurface = theSurface;
-            theState->mWindow = inWindow;
-            theState->mIsScreenActivated = true;
-            this->SetRenderTarget(theSurface, inScreen);
-            theSurface->Reference();
-            theActivated = true;
-        } else
-            theSurface->Dereference();
-    }
-    if (!theActivated) {
-        // the desktop depth failed: retry with a 16-bit mode
-        for (theVideoModeIndex = 0; theVideoModeIndex < theScreen->GetModeCount(); theVideoModeIndex++)
-            if (theScreen->GetMode(theVideoModeIndex).mBitCount == 16)
-                break;
-        ESVERIFY_AT(theVideoModeIndex < theScreen->GetModeCount(), 459);
-        theMode = theScreen->GetMode(theVideoModeIndex);
-        theDescription.mIsTransparencyEnabled = false;
-        theDescription.mWidth = inWidth;
-        theDescription.mHeight = inHeight;
-        theDescription.mPixelFormat = theMode.mPixelFormat;
-        theDescription.mType = kSurfaceOffscreen;
-        theDescription.mPixelDepth = theMode.mBitCount;
-        theDescription.mSurfaceVolatility = 0;
-        theDescription.m14 = 0;
-        theDescription.mMipLevelCount = 0;
-        theDescription.mIs3DRenderable = true;
-        theResult = theScreen->CreateSurface(theDescription, &theSurface);
-        if (theResult == kErrorOK) {
-            theResult = this->ActivateTheScreen(inScreen, theSurface, theSurface, inManager, inWindow);
-            if (theResult == kErrorOK) {
-                theScreen->SetTextureManager(inManager);
-                inManager->SetScreen(theScreen);
-                theState->mPrimarySurface = theSurface;
-                theState->mTexture = NULL;
-                theState->mRenderTarget = NULL;
-                theState->mSecondarySurface = theSurface;
-                theState->mWindow = inWindow;
-                theState->mIsScreenActivated = true;
-                this->SetRenderTarget(theSurface, inScreen);
-                theSurface->Reference();
-            } else
-                theSurface->Dereference();
-        }
-    }
-    return theResult;
+    DX7ActivateContext theContext = { static_cast<DX7RasterAccess*>(this), inScreen, inManager, inWindow };
+    return ee_dx7r_activate_rendering_surface(&theContext, inWidth, inHeight);
 }
 
 // FUNCTION: DX7HR 0x10009ab4
@@ -252,159 +132,8 @@ long DX7Rasterizer::ActivateRenderingSurface(unsigned long inScreen, GETextureMa
 long DX7Rasterizer::ActivateScreen(unsigned long inScreen, GETextureManager* inManager, GEWindow* inWindow,
                                    unsigned long inBackBuffers, bool inZBuffer, unsigned long inZBufferFormat)
 {
-    GESurfaceDescription theDescription;
-    bool theCreatedSecondary = false;
-    GESurface* thePrimary = NULL;
-    GESurface* theSecondary = NULL;
-    GESurface* theZBuffer = NULL;
-    long theResult;
-    GERScreenState* theState = this->mScreenStates[inScreen];
-    GEScreen* theScreen = theState->mScreen;
-    GEVideoMode theMode = theScreen->GetCurrentMode();
-    if (theScreen->GetIsFullScreen()) {
-        theDescription.mType = inBackBuffers > 0 ? 2 : 0;
-        theDescription.mSurfaceVolatility = 0;
-        theDescription.mMipLevelCount = 0;
-        theDescription.mIsTransparencyEnabled = false;
-        theDescription.mHeight = theMode.mHeight;
-        theDescription.mPixelFormat = theMode.mPixelFormat;
-        theDescription.mPixelDepth = theMode.mBitCount;
-        theDescription.mWidth = theMode.mWidth;
-        theDescription.m14 = inBackBuffers;
-        theDescription.mIs3DRenderable = true;
-        theResult = theScreen->CreateSurface(theDescription, &thePrimary);
-        if (inBackBuffers > 0)
-            theSecondary = thePrimary->GetAttachedSurface(0);
-        if (inZBuffer) {
-            theDescription.mIsTransparencyEnabled = false;
-            theDescription.mSurfaceVolatility = 0;
-            theDescription.m14 = 0;
-            theDescription.mMipLevelCount = 0;
-            theDescription.mHeight = theMode.mHeight;
-            theDescription.mWidth = theMode.mWidth;
-            theDescription.mType = kSurfaceZBuffer;
-            theDescription.mPixelFormat = inZBufferFormat;
-            theDescription.mIs3DRenderable = true;
-            theDescription.mPixelDepth = inZBufferFormat == kPixelFormatZ32 ? 32 : 16;
-            theScreen->CreateSurface(theDescription, &theZBuffer);
-            if (theSecondary != NULL)
-                theResult = theSecondary->AttachSurface(theZBuffer);
-            else
-                theResult = thePrimary->AttachSurface(theZBuffer);
-            theZBuffer->Dereference();
-        }
-    } else {
-        theDescription.mIsTransparencyEnabled = false;
-        theDescription.mWidth = theMode.mWidth;
-        theDescription.mHeight = theMode.mHeight;
-        theDescription.mPixelFormat = theMode.mPixelFormat;
-        theDescription.mPixelDepth = theMode.mBitCount;
-        theDescription.mType = kSurfacePrimary;
-        theDescription.mSurfaceVolatility = 0;
-        theDescription.m14 = 0;
-        theDescription.mMipLevelCount = 0;
-        theDescription.mIs3DRenderable = true;
-        theResult = theScreen->CreateSurface(theDescription, &thePrimary);
-        if (inBackBuffers == 1) {
-            theDescription.mIsTransparencyEnabled = false;
-            theDescription.mWidth = inWindow->mWidth;
-            theDescription.mHeight = inWindow->mHeight;
-            theDescription.mType = kSurfaceOffscreen;
-            theDescription.mPixelFormat = theMode.mPixelFormat;
-            theDescription.mPixelDepth = theMode.mBitCount;
-            theDescription.mSurfaceVolatility = 0;
-            theDescription.m14 = 0;
-            theDescription.mMipLevelCount = 0;
-            theDescription.mIs3DRenderable = true;
-            theResult = theScreen->CreateSurface(theDescription, &theSecondary);
-            theCreatedSecondary = true;
-        }
-        if (inZBuffer) {
-            if (theSecondary != NULL) {
-                theDescription.mIsTransparencyEnabled = false;
-                theDescription.mWidth = inWindow->mWidth;
-                theDescription.mHeight = inWindow->mHeight;
-                theDescription.mType = kSurfaceZBuffer;
-                theDescription.mPixelFormat = inZBufferFormat;
-                theDescription.mSurfaceVolatility = 0;
-                theDescription.m14 = 0;
-                theDescription.mMipLevelCount = 0;
-                theDescription.mIs3DRenderable = true;
-                theDescription.mPixelDepth = inZBufferFormat == kPixelFormatZ32 ? 32 : 16;
-                theScreen->CreateSurface(theDescription, &theZBuffer);
-                theResult = theSecondary->AttachSurface(theZBuffer);
-            } else {
-                theDescription.mIsTransparencyEnabled = false;
-                theDescription.mWidth = theMode.mWidth;
-                theDescription.mHeight = theMode.mHeight;
-                theDescription.mType = kSurfaceZBuffer;
-                theDescription.mPixelFormat = inZBufferFormat;
-                theDescription.mSurfaceVolatility = 0;
-                theDescription.m14 = 0;
-                theDescription.mMipLevelCount = 0;
-                theDescription.mIs3DRenderable = true;
-                theDescription.mPixelDepth = inZBufferFormat == kPixelFormatZ32 ? 32 : 16;
-                theScreen->CreateSurface(theDescription, &theZBuffer);
-                theResult = thePrimary->AttachSurface(theZBuffer);
-            }
-            theZBuffer->Dereference();
-        }
-    }
-    if (theResult == kErrorOK) {
-        theResult = this->ActivateTheScreen(inScreen, thePrimary, theSecondary, inManager, inWindow);
-        if (theResult == kErrorOK) {
-            theScreen->SetTextureManager(inManager);
-            inManager->SetScreen(theScreen);
-            theState->mPrimarySurface = thePrimary;
-            theState->mTexture = NULL;
-            theState->mRenderTarget = NULL;
-            theState->mSecondarySurface = theSecondary;
-            theState->mWindow = inWindow;
-            theState->mIsScreenActivated = true;
-            this->SetRenderTarget(theSecondary, inScreen);
-            theSecondary->Reference();
-            if (theCreatedSecondary)
-                theSecondary->Dereference();
-            this->mScreenStates[inScreen]->mAlphaTesting = -16;
-            this->SetAlphaTesting(0, inScreen);
-            this->mScreenStates[inScreen]->mAlphaTestingCompareState = -16;
-            this->SetAlphaTestingCompareState(0, inScreen);
-            this->mScreenStates[inScreen]->mAlphaTestingRefValue = 4294967296.0f;
-            this->SetAlphaTestingRefValue(0.0f, inScreen);
-            this->mScreenStates[inScreen]->mAntiAliasing = -16;
-            this->SetAntiAliasing(0, inScreen);
-            this->mScreenStates[inScreen]->mBlendSource = -16;
-            this->mScreenStates[inScreen]->mBlendDestination = -16;
-            this->SetBlending(1, 0, inScreen);
-            this->mScreenStates[inScreen]->mColorKeying = -16;
-            this->SetColorKeying(0, inScreen);
-            this->mCulling = -16;
-            this->SetCulling(0);
-            this->mScreenStates[inScreen]->mDithering = -16;
-            this->SetDithering(0, inScreen);
-            this->mScreenStates[inScreen]->mDrawStyle = -16;
-            this->SetDrawStyle(0, inScreen);
-            this->mScreenStates[inScreen]->mFogState = -16;
-            this->SetFog(0, inScreen);
-            this->mScreenStates[inScreen]->mLighting = -16;
-            this->SetLighting(0, inScreen);
-            this->mScreenStates[inScreen]->mProjectionMode = -16;
-            this->SetProjectionMode(1, inScreen);
-            this->mScreenStates[inScreen]->mShading = -16;
-            this->SetShading(1, inScreen);
-            this->mScreenStates[inScreen]->mShadingColorSource = -16;
-            this->SetShadingColorSource(1, inScreen);
-            this->mScreenStates[inScreen]->mSpecular = -16;
-            this->SetSpecular(0, inScreen);
-            this->mScreenStates[inScreen]->mZBuffer = -16;
-            this->SetZBuffer(0, inScreen);
-            this->mScreenStates[inScreen]->mZCompare = -16;
-            this->SetZCompare(0, inScreen);
-            this->mDX7ScreenStates[inScreen]->mIs3DMode = false;
-            this->Set3DMode(inScreen);
-        }
-    }
-    return theResult;
+    DX7ActivateContext theContext = { static_cast<DX7RasterAccess*>(this), inScreen, inManager, inWindow };
+    return ee_dx7r_activate_screen(&theContext, inWindow->mWidth, inWindow->mHeight, inBackBuffers, inZBuffer, inZBufferFormat);
 }
 
 // FUNCTION: DX7HR 0x10009fa2
@@ -413,99 +142,20 @@ long DX7Rasterizer::ActivateScreen(unsigned long inScreen, GETextureManager* inM
 long DX7Rasterizer::ActivateTheScreen(unsigned long inScreen, GESurface* inPrimary, GESurface* inSecondary,
                                       GETextureManager* inManager, GEWindow* inWindow)
 {
-    UString theDeviceName;
     DX7Surface* theTarget = dynamic_cast<DX7Surface*>(inSecondary);
-    GXDirect3D* theDirect3D = NULL;
-    GXDevice* theDevice = NULL;
-    long theResult;
-    HRESULT theError = static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw->QueryInterface(
-        GXIID_Direct3D7, (void**)&theDirect3D);
-    if (theError == GX_OK) {
-        theError = theDirect3D->CreateDevice(GXIID_HALDevice, *theTarget, &theDevice);
-        if (theError == GX_OK) {
-            this->mDX7ScreenStates[inScreen]->mDirect3D = theDirect3D;
-            this->mDX7ScreenStates[inScreen]->mDevice = theDevice;
-            this->mDX7ScreenStates[inScreen]->mViewport.dwX = 0;
-            this->mDX7ScreenStates[inScreen]->mViewport.dwY = 0;
-            this->mDX7ScreenStates[inScreen]->mViewport.dwWidth = theTarget->GetWidth();
-            this->mDX7ScreenStates[inScreen]->mViewport.dwHeight = theTarget->GetHeight();
-            this->mDX7ScreenStates[inScreen]->mViewport.dvMinZ = 0.0f;
-            this->mDX7ScreenStates[inScreen]->mViewport.dvMaxZ = 1.0f;
-            theDevice->SetViewport(&this->mDX7ScreenStates[inScreen]->mViewport);
-            theDevice->SetRenderState(GXRS_SPECULARENABLE, FALSE);
-            theDevice->SetRenderState(GXRS_EXTENTS, FALSE);
-            theDevice->SetRenderState(GXRS_CLIPPING, FALSE);
-            theDevice->SetRenderState(GXRS_NORMALIZENORMALS, TRUE);
-            theDevice->SetRenderState(GXRS_LOCALVIEWER, FALSE);
-            theDevice->SetRenderState(GXRS_FOGVERTEXMODE, GXFOG_LINEAR);
-            theDevice->SetRenderState(GXRS_SPECULARMATERIALSOURCE, GXMCS_MATERIAL);
-            theDevice->SetRenderState(GXRS_EMISSIVEMATERIALSOURCE, GXMCS_MATERIAL);
-            theResult = this->CreateVertexBuffers(inScreen);
-            if (theResult == kErrorOK) {
-                GXDEVICEIDENTIFIER theIdentifier;
-                memset(&theIdentifier, 0, sizeof(theIdentifier));
-                static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw->GetDeviceIdentifier(&theIdentifier, 0);
-                theDeviceName = theIdentifier.szDescription;
-                unsigned long theTotalMemory;
-                this->GetTotalVideoMemory(inScreen, theTotalMemory);
-                theDeviceName.ToUpper();
-                if (theDeviceName.Find("RAGE", 0) == theDeviceName.GetLength() ||
-                    theDeviceName.Find("PRO", 0) == theDeviceName.GetLength() || theTotalMemory > 0x800000)
-                    this->mDX7ScreenStates[inScreen]->mCanModulateTextureAlpha = true;
-                else
-                    this->mDX7ScreenStates[inScreen]->mCanModulateTextureAlpha = false;
-                if ((theIdentifier.dwVendorId == 0x1002 && theIdentifier.dwDeviceId == 0x5046) ||
-                    (theIdentifier.dwVendorId == 0x121a && theIdentifier.dwDeviceId == 9))
-                    this->mDX7ScreenStates[inScreen]->mDirtyRectangleSupport = false;
-                else
-                    this->mDX7ScreenStates[inScreen]->mDirtyRectangleSupport = true;
-                this->mDX7ScreenStates[inScreen]->mStage1ColorOperation = 1;
-                this->mDX7ScreenStates[inScreen]->mZEnable = 1;
-                this->mDX7ScreenStates[inScreen]->mZWriteEnable = true;
-                this->mDX7ScreenStates[inScreen]->mAlphaBlendEnable = true;
-                this->mDX7ScreenStates[inScreen]->mBlendSource = -16;
-                this->mDX7ScreenStates[inScreen]->mBlendDestination = -16;
-                this->mDX7ScreenStates[inScreen]->mStage.mTexture = NULL;
-                this->mDX7ScreenStates[inScreen]->mStage.mColorMode = 4;
-                this->mDX7ScreenStates[inScreen]->mStage.mAlphaMode = 4;
-                this->mDX7ScreenStates[inScreen]->mStage.mColorArgument1 = -1;
-                this->mDX7ScreenStates[inScreen]->mStage.mColorArgument2 = -1;
-                this->mDX7ScreenStates[inScreen]->mStage.mAlphaArgument1 = -1;
-                this->mDX7ScreenStates[inScreen]->mStage.mAlphaArgument2 = -1;
-                this->mDX7ScreenStates[inScreen]->mStage.mTextureAddressingMode = 3;
-                this->mDX7ScreenStates[inScreen]->mStage.mMinFilterMode = 3;
-                this->mDX7ScreenStates[inScreen]->mStage.mMagFilterMode = 3;
-                this->mDX7ScreenStates[inScreen]->mStage.mMipFilterMode = 3;
-                this->mDX7ScreenStates[inScreen]->mStage.mMipMapBias = FLT_MAX;
-                this->mDX7ScreenStates[inScreen]->GetDevice()->SetTextureStageState(0, GXTSS_TEXCOORDINDEX, 0);
-            }
-            return theResult;
-        }
-        // CreateDevice failed: release the GXDirect3D the query returned.
-        theDirect3D->Release();
-    }
-    theResult = kErrorNativeError;
-    ESRecordNativeError(theError);
-    return theResult;
+    return ee_dx7r_activate_the_screen(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]),
+                                       static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw,
+                                       (GXSurface*)*theTarget, theTarget->GetWidth(), theTarget->GetHeight(), false);
 }
 
 // FUNCTION: DX7HR 0x1000a581
 // Takes a free light slot (of 8), sets the light into it and enables it; returns 7 when all slots are in use
 long DX7Rasterizer::AddLight(GELight& inLight, unsigned long inScreen, unsigned long& outIndex)
 {
-    long theResult;
-    for (outIndex = 0; outIndex < 8; outIndex++)
-        if (gLightsInUse[outIndex] == 0)
-            break;
-    if (outIndex < 8) {
-        gLightsInUse[outIndex] = 1;
-        theResult = this->UpdateLight(outIndex, inLight, inScreen);
-        if (theResult == kErrorOK) {
-            if (this->mDX7ScreenStates[inScreen]->GetDevice()->LightEnable(outIndex, TRUE) != GX_OK)
-                theResult = kErrorNativeError;
-        }
-    } else
-        theResult = 7;
+    EeDx7LightParams theParams = DX7LightParams(inLight);
+    uint32_t theIndex = 0;
+    long theResult = ee_dx7r_add_light(this->mDX7ScreenStates[inScreen]->GetDevice(), gLightsInUse, &theParams, &theIndex);
+    outIndex = theIndex;
     return theResult;
 }
 
@@ -521,24 +171,8 @@ long DX7Rasterizer::AddValidScreen(GEScreen* inScreen)
 // Sets the render target and begins the scene, waiting while the device is still drawing; 9 when the surface is lost
 long DX7Rasterizer::BeginScene(GESurface* inTarget, unsigned long inScreen)
 {
-    long theResult = kErrorOK;
     this->SetRenderTarget(inTarget, inScreen);
-    HRESULT theError;
-    do {
-        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->BeginScene();
-        if (theError == GXERR_WASSTILLDRAWING)
-            PlatSleep(1);
-    } while (theError == GXERR_WASSTILLDRAWING);
-    if (theError != GX_OK) {
-        if (theError == GXERR_SURFACELOST) {
-            theResult = 9;
-            ESRecordNativeError(theError);
-        } else {
-            theResult = kErrorNativeError;
-            ESRecordNativeError(theError);
-        }
-    }
-    return theResult;
+    return ee_dx7r_begin_scene(this->mDX7ScreenStates[inScreen]->GetDevice());
 }
 
 // FUNCTION: DX7HR 0x1000a6af
@@ -560,54 +194,17 @@ bool DX7Rasterizer::CanDoCurrentState(GETexture* inTexture, unsigned long inScre
 // Fills a rectangle of the render target with a colour, waiting while the device is still drawing
 long DX7Rasterizer::Clear(const GEColor& inColor, const GERectangle& inRectangle, unsigned long inScreen)
 {
-    long theResult = kErrorOK;
-    GERectangle theRectangle;
-    theRectangle = inRectangle;
-    theRectangle.RoundToNearest();
-    GXRECT theRect;
-    theRect.x1 = UMFloorUnsigned(theRectangle.GetLeft());
-    theRect.x2 = UMFloorUnsigned(theRectangle.GetRight());
-    theRect.y1 = UMFloorUnsigned(theRectangle.GetTop());
-    theRect.y2 = UMFloorUnsigned(theRectangle.GetBottom());
-    HRESULT theError;
-    do {
-        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->Clear(1, &theRect, GXCLEAR_TARGET,
-                                                              GXRGB(inColor.GetRed(), inColor.GetGreen(),
-                                                                     inColor.GetBlue()), 0.0f, 0);
-        if (theError == GXERR_WASSTILLDRAWING)
-            PlatSleep(0);
-    } while (theError == GXERR_WASSTILLDRAWING);
-    if (theError != GX_OK) {
-        theResult = kErrorNativeError;
-        ESRecordNativeError(theError);
-    }
-    return theResult;
+    const float theRect[4] = { inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom() };
+    const float theRGB[3] = { inColor.GetRed(), inColor.GetGreen(), inColor.GetBlue() };
+    return ee_dx7r_clear(this->mDX7ScreenStates[inScreen]->GetDevice(), theRect, theRGB);
 }
 
 // FUNCTION: DX7HR 0x1000a861
 // Fills a rectangle of the Z-buffer with a depth value, waiting while the device is still drawing
 long DX7Rasterizer::ClearZBuffer(float inZ, const GERectangle& inRectangle, unsigned long inScreen)
 {
-    long theResult = kErrorOK;
-    GERectangle theRectangle;
-    theRectangle = inRectangle;
-    theRectangle.RoundToNearest();
-    GXRECT theRect;
-    theRect.x1 = UMFloorUnsigned(theRectangle.GetLeft());
-    theRect.x2 = UMFloorUnsigned(theRectangle.GetRight());
-    theRect.y1 = UMFloorUnsigned(theRectangle.GetTop());
-    theRect.y2 = UMFloorUnsigned(theRectangle.GetBottom());
-    HRESULT theError;
-    do {
-        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->Clear(1, &theRect, GXCLEAR_ZBUFFER, 0, inZ, 0);
-        if (theError == GXERR_WASSTILLDRAWING)
-            PlatSleep(0);
-    } while (theError == GXERR_WASSTILLDRAWING);
-    if (theError != GX_OK) {
-        theResult = kErrorNativeError;
-        ESRecordNativeError(theError);
-    }
-    return theResult;
+    const float theRect[4] = { inRectangle.GetLeft(), inRectangle.GetTop(), inRectangle.GetRight(), inRectangle.GetBottom() };
+    return ee_dx7r_clear_z(this->mDX7ScreenStates[inScreen]->GetDevice(), theRect, inZ);
 }
 
 // FUNCTION: DX7HR 0x1000a973
@@ -688,20 +285,7 @@ GEVertexArray* DX7Rasterizer::CreateVertexArray(unsigned long inType, unsigned l
 // Creates the screen's system-memory vertex buffer of 2,400 coloured vertices
 long DX7Rasterizer::CreateVertexBuffers(unsigned long inScreen)
 {
-    GXDirect3D* theDirect3D = this->mDX7ScreenStates[inScreen]->mDirect3D;
-    long theResult = kErrorOK;
-    GXVERTEXBUFFERDESC theDescription;
-    memset(&theDescription, 0, sizeof(theDescription));
-    theDescription.dwSize = sizeof(theDescription);
-    theDescription.dwCaps = GXVBCAPS_WRITEONLY | GXVBCAPS_SYSTEMMEMORY;
-    theDescription.dwFVF = GXFVF_XYZ | GXFVF_NORMAL | GXFVF_DIFFUSE | GXFVF_TEX1;
-    theDescription.dwNumVertices = 0x960;
-    HRESULT theError = theDirect3D->CreateVertexBuffer(&theDescription, &this->mDX7ScreenStates[inScreen]->mVertexBuffer, 0);
-    if (theError != GX_OK) {
-        theResult = kErrorNativeError;
-        ESRecordNativeError(theError);
-    }
-    return theResult;
+    return ee_dx7r_create_vertex_buffers(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), false);
 }
 
 long DX7Rasterizer::DemoteTexture(GETexture* inTexture)
@@ -748,23 +332,7 @@ void DX7Rasterizer::DestroyTextureHandle(GETexture* inTexture)
 // Ends the scene, waiting while the device is still drawing; 9 when the surface is lost
 long DX7Rasterizer::EndScene(unsigned long inScreen)
 {
-    long theResult = kErrorOK;
-    HRESULT theError;
-    do {
-        theError = this->mDX7ScreenStates[inScreen]->GetDevice()->EndScene();
-        if (theError == GXERR_WASSTILLDRAWING)
-            PlatSleep(1);
-    } while (theError == GXERR_WASSTILLDRAWING);
-    if (theError != GX_OK) {
-        if (theError == GXERR_SURFACELOST) {
-            theResult = 9;
-            ESRecordNativeError(theError);
-        } else {
-            theResult = kErrorNativeError;
-            ESRecordNativeError(theError);
-        }
-    }
-    return theResult;
+    return ee_dx7r_end_scene(this->mDX7ScreenStates[inScreen]->GetDevice());
 }
 
 // FUNCTION: DX7HR 0x1000ac18
@@ -800,36 +368,12 @@ bool DX7Rasterizer::GetDirtyRectangleSupport(unsigned long inScreen)
     return this->mDX7ScreenStates[inScreen]->mDirtyRectangleSupport;
 }
 
-// Built without /Og like the enumeration callbacks (memory-resident locals, the inlined operator GXDirectDraw*'s
-// temporary, `leave`): 27.3 without the pragma, exact with it.
-#pragma optimize("g", off)
-
 // FUNCTION: DX7HR 0x1000ac6d
 // Returns whether the screen's device has a hardware-rasterizing Direct3D device
 bool DX7Rasterizer::GetIsScreenValid(DX7Screen* inScreen)
 {
-    long theRetVal = 9;
-    GXDirect3D* theIDirect3D = NULL;
-    bool theIsValid = false;
-    HRESULT theHResult = ((GXDirectDraw*)*inScreen)->QueryInterface(GXIID_Direct3D7, (void**)&theIDirect3D);
-    if (theHResult == GX_OK) {
-        theHResult = theIDirect3D->EnumDevices(DX7EnumDevicesCallback, &theIsValid);
-        if (theHResult == GX_OK) {
-            if (theIsValid)
-                theRetVal = kErrorOK;
-        } else {
-            theRetVal = kErrorNativeError;
-            ESRecordNativeError(theHResult);
-        }
-        theIDirect3D->Release();
-    } else {
-        theRetVal = kErrorNativeError;
-        ESRecordNativeError(theHResult);
-    }
-    return theRetVal == kErrorOK;
+    return ee_dx7r_is_screen_valid((GXDirectDraw*)*inScreen, false);
 }
-
-#pragma optimize("g", on)
 
 // FUNCTION: DX7HR 0x1000ad17
 // Returns the total video memory of the screen
@@ -847,18 +391,13 @@ long DX7Rasterizer::GetTotalVideoMemory(unsigned long inScreen, unsigned long& o
 // Reads the screen's total and free video memory; 0xd when it cannot be read or is 0
 long DX7Rasterizer::GetVideoMemory(unsigned long inScreen, unsigned long& outTotal, unsigned long& outFree)
 {
-    unsigned long theTotal = 0;
-    unsigned long theFree = 0;
-    long theResult = 0xd;
-    GXSCAPS theCaps;
-    memset(&theCaps, 0, sizeof(theCaps));
-    theCaps.dwCaps = GXSCAPS_VIDEOMEMORY;
-    HRESULT theError = static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw->GetAvailableVidMem(
-        &theCaps, &theTotal, &theFree);
-    if (theError == GX_OK && theTotal > 0) {
+    uint32_t theTotal = 0;
+    uint32_t theFree = 0;
+    long theResult = ee_dx7r_get_video_memory(static_cast<DX7Screen*>(this->mDX7ScreenStates[inScreen]->mScreen)->mDirectDraw,
+                                              &theTotal, &theFree);
+    if (theResult == kErrorOK) {
         outTotal = theTotal;
         outFree = theFree;
-        theResult = kErrorOK;
     }
     return theResult;
 }
@@ -867,20 +406,8 @@ long DX7Rasterizer::GetVideoMemory(unsigned long inScreen, unsigned long& outTot
 // Locks room for the given number of vertices in the vertex buffer, discarding it when full; always returns success
 long DX7Rasterizer::LockVB(unsigned long inCount, unsigned long inScreen, GXVERTEX_STD_COLOR*& outVertices)
 {
-    unsigned long theFlags;
-    if (inCount <= 0x960 - this->mDX7ScreenStates[inScreen]->mVertexBufferPosition)
-        theFlags = GXLOCK_NOOVERWRITE | GXLOCK_WRITEONLY;
-    else {
-        this->mDX7ScreenStates[inScreen]->mVertexBufferPosition = 0;
-        theFlags = GXLOCK_DISCARDCONTENTS | GXLOCK_WRITEONLY;
-    }
-    HRESULT theError;
-    do {
-        theError = this->mDX7ScreenStates[inScreen]->mVertexBuffer->Lock(theFlags, reinterpret_cast<void**>(&outVertices), NULL);
-        if (outVertices == NULL || theError == GXERR_SURFACEBUSY)
-            PlatSleep(0);
-    } while ((outVertices == NULL && theError == GX_OK) || theError == GXERR_SURFACEBUSY);
-    return kErrorOK;
+    return ee_dx7r_lock_vb(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), inCount,
+                           reinterpret_cast<void**>(&outVertices));
 }
 
 long DX7Rasterizer::PromoteTexture(GETexture* inTexture)
@@ -892,46 +419,21 @@ long DX7Rasterizer::PromoteTexture(GETexture* inTexture)
 // Removes all 8 lights
 long DX7Rasterizer::RemoveAllLights(unsigned long inScreen)
 {
-    for (unsigned long i = 0; i < 8; i++)
-        this->RemoveLight(i, inScreen);
-    return kErrorOK;
+    return ee_dx7r_remove_all_lights(this->mDX7ScreenStates[inScreen]->GetDevice(), gLightsInUse);
 }
 
 // FUNCTION: DX7HR 0x1000ae5c
 // Disables a light and frees its slot; 9 when the slot was not in use
 long DX7Rasterizer::RemoveLight(unsigned long inIndex, unsigned long inScreen)
 {
-    long theResult = kErrorOK;
-    if (inIndex < 8 && gLightsInUse[inIndex] == 1) {
-        gLightsInUse[inIndex] = 0;
-        if (this->mDX7ScreenStates[inScreen]->GetDevice()->LightEnable(inIndex, FALSE) != GX_OK)
-            theResult = kErrorNativeError;
-    } else
-        theResult = 9;
-    return theResult;
+    return ee_dx7r_remove_light(this->mDX7ScreenStates[inScreen]->GetDevice(), gLightsInUse, inIndex);
 }
 
 // FUNCTION: DX7HR 0x1000aea4
 // Switches the screen to 2D drawing: identity world and view, a projection mapping pixels to the viewport
 long DX7Rasterizer::Set2DMode(unsigned long inScreen)
 {
-    GETransformation theTransformation;
-    if (!this->mDX7ScreenStates[inScreen]->mIs3DMode && !this->mDX7ScreenStates[inScreen]->mViewportChanged)
-        return kErrorOK;
-    GXMATRIX theMatrix;
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderState(GXRS_CLIPPING, TRUE);
-    this->ConvertToD3DMatrix(theTransformation, theMatrix);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(GXTS_WORLD, &theMatrix);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(GXTS_VIEW, &theMatrix);
-    theTransformation.SetElement(0, 0, 2.0f / (float)this->mDX7ScreenStates[inScreen]->mViewport.dwWidth);
-    theTransformation.SetElement(0, 3, -1.0f);
-    theTransformation.SetElement(1, 1, -2.0f / (float)this->mDX7ScreenStates[inScreen]->mViewport.dwHeight);
-    theTransformation.SetElement(1, 3, 1.0f);
-    this->ConvertToD3DMatrix(theTransformation, theMatrix);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(GXTS_PROJECTION, &theMatrix);
-    this->mDX7ScreenStates[inScreen]->mIs3DMode = false;
-    this->mDX7ScreenStates[inScreen]->mViewportChanged = false;
-    return kErrorOK;
+    return ee_dx7r_set_2d_mode(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]));
 }
 
 // FUNCTION: DX7HR 0x1000b072
@@ -939,25 +441,22 @@ long DX7Rasterizer::Set2DMode(unsigned long inScreen)
 long DX7Rasterizer::Set3DMode(unsigned long inScreen)
 {
     GETransformation theSwap;
-    if (this->mDX7ScreenStates[inScreen]->mIs3DMode && !this->mDX7ScreenStates[inScreen]->mViewportChanged)
-        return kErrorOK;
     GETransformation theView(false);
-    GXMATRIX theMatrix;
     theSwap.SetElement(1, 1, 0.0f);
     theSwap.SetElement(1, 2, 1.0f);
     theSwap.SetElement(2, 1, 1.0f);
     theSwap.SetElement(2, 2, 0.0f);
     theSwap.Apply(this->GetViewport(inScreen).GetCameraInverse(), theView);
-    this->ConvertToD3DMatrix(theView, theMatrix);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(GXTS_VIEW, &theMatrix);
-    if (this->mScreenStates[inScreen]->mProjectionMode == 1)
-        this->ConvertToD3DMatrix(this->GetViewport(inScreen).GetPerspectiveProjection(), theMatrix);
-    else
-        this->ConvertToD3DMatrix(this->GetViewport(inScreen).GetOrthographicProjection(), theMatrix);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetTransform(GXTS_PROJECTION, &theMatrix);
-    this->mDX7ScreenStates[inScreen]->mIs3DMode = true;
-    this->mDX7ScreenStates[inScreen]->mViewportChanged = false;
-    return kErrorOK;
+    const GETransformation& theProjection = this->mScreenStates[inScreen]->mProjectionMode == 1
+        ? this->GetViewport(inScreen).GetPerspectiveProjection() : this->GetViewport(inScreen).GetOrthographicProjection();
+    float theViewElements[16];
+    float theProjectionElements[16];
+    for (unsigned long r = 0; r < 4; r++)
+        for (unsigned long c = 0; c < 4; c++) {
+            theViewElements[r * 4 + c] = theView.GetElement(r, c);
+            theProjectionElements[r * 4 + c] = theProjection.GetElement(r, c);
+        }
+    return ee_dx7r_set_3d_mode(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), theViewElements, theProjectionElements);
 }
 
 // FUNCTION: DX7HR 0x1000b22b
@@ -1144,10 +643,8 @@ void DX7Rasterizer::SetRenderTarget(GESurface* inTarget, unsigned long inScreen)
         this->mScreenStates[inScreen]->mRenderTarget->Dereference();
     this->mScreenStates[inScreen]->mRenderTarget = inTarget;
     inTarget->Reference();
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetRenderTarget(*static_cast<DX7Surface*>(inTarget), 0);
-    this->mDX7ScreenStates[inScreen]->mViewport.dwWidth = inTarget->GetWidth();
-    this->mDX7ScreenStates[inScreen]->mViewport.dwHeight = inTarget->GetHeight();
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetViewport(&this->mDX7ScreenStates[inScreen]->mViewport);
+    ee_dx7r_set_render_target(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), (GXSurface*)*static_cast<DX7Surface*>(inTarget),
+                              inTarget->GetWidth(), inTarget->GetHeight());
 }
 
 // FUNCTION: DX7HR 0x1000bcb3
@@ -1215,17 +712,13 @@ void DX7Rasterizer::SetTexture(GETexture* inTexture, unsigned long inScreen)
 // Sets the viewport rectangle and depth range on the device and marks the 2D/3D transforms for refresh
 void DX7Rasterizer::SetViewport(const GEViewport& inViewport, unsigned long inScreen)
 {
-    GERectangle theRectangle;
     GERasterizer::SetViewport(inViewport, inScreen);
+    GERectangle theRectangle;
     theRectangle = inViewport.GetViewRectangle();
-    theRectangle.RoundToNearest();
-    this->mDX7ScreenStates[inScreen]->mViewport.dwX = UMFloorUnsigned(theRectangle.GetLeft());
-    this->mDX7ScreenStates[inScreen]->mViewport.dwY = UMFloorUnsigned(theRectangle.GetTop());
-    this->mDX7ScreenStates[inScreen]->mViewport.dwWidth = UMFloorUnsigned(theRectangle.GetWidth());
-    this->mDX7ScreenStates[inScreen]->mViewport.dwHeight = UMFloorUnsigned(theRectangle.GetHeight());
-    inViewport.GetDepthRange(this->mDX7ScreenStates[inScreen]->mViewport.dvMinZ, this->mDX7ScreenStates[inScreen]->mViewport.dvMaxZ);
-    this->mDX7ScreenStates[inScreen]->GetDevice()->SetViewport(&this->mDX7ScreenStates[inScreen]->mViewport);
-    this->mDX7ScreenStates[inScreen]->mViewportChanged = true;
+    const float theRect[4] = { theRectangle.GetLeft(), theRectangle.GetTop(), theRectangle.GetRight(), theRectangle.GetBottom() };
+    float theNear, theFar;
+    inViewport.GetDepthRange(theNear, theFar);
+    ee_dx7r_set_viewport(reinterpret_cast<EeDx7ScreenState*>(this->mDX7ScreenStates[inScreen]), theRect, theNear, theFar);
 }
 
 // FUNCTION: DX7HR 0x1000c839
@@ -1256,115 +749,155 @@ void DX7Rasterizer::SetZCompare(unsigned long inState, unsigned long inScreen)
 // frame, polygon and texture-change statistics
 long DX7Rasterizer::ShowScene(unsigned long inScreen)
 {
-    long theResult;
-    GE2DPoint theOrigin;
     GERScreenState* theState = this->mScreenStates[inScreen];
-    theState->m32C[0]++;
-    if (theState->m32C[0] == 12) {
-        const float kFramesInverse = 1.0f / 12.0f;
-        theState->mDrawnPolyAreaPerFrame = theState->mDrawnPolyArea * kFramesInverse;
-        theState->mDrawnPolysPerFrame = (float)theState->mDrawnPolyCount * kFramesInverse;
-        theState->mScenePolysPerFrame = (float)theState->m32C[1] * kFramesInverse;
-        theState->mTotalTextureChangesPerFrame = (float)theState->m32C[3] * kFramesInverse;
-        unsigned long theTime = TMGetTime();
-        float theElapsed = (float)(theTime - theState->m32C[2]);
-        if (theElapsed > 0.0f) {
-            theState->mDrawnPolyAreaPerSecond = theState->mDrawnPolyArea * 1000.0f / theElapsed;
-            theState->mDrawnPolysPerSecond = (float)theState->mDrawnPolyCount * 1000.0f / theElapsed;
-            theState->mFramesPerSecond = (float)theState->m32C[0] * 1000.0f / theElapsed;
-            theState->mScenePolysPerSecond = (float)theState->m32C[1] * 1000.0f / theElapsed;
-        } else {
-            theState->mDrawnPolyAreaPerSecond = 0.0f;
-            theState->mDrawnPolysPerSecond = 0.0f;
-            theState->mFramesPerSecond = 0.0f;
-            theState->mScenePolysPerSecond = 0.0f;
-        }
-        theState->m32C[2] = theTime;
-        theState->mDrawnPolyArea = 0.0f;
-        theState->mDrawnPolyCount = 0;
-        theState->m32C[0] = 0;
-        theState->m32C[1] = 0;
-        theState->m32C[3] = 0;
+    EeDx7FrameStats theStats;
+    theStats.frame_counter = theState->m32C[0];
+    theStats.scene_polys = theState->m32C[1];
+    theStats.last_time = theState->m32C[2];
+    theStats.texture_changes = theState->m32C[3];
+    theStats.drawn_poly_count = theState->mDrawnPolyCount;
+    theStats.drawn_poly_area = theState->mDrawnPolyArea;
+    theStats.area_per_frame = theState->mDrawnPolyAreaPerFrame;
+    theStats.area_per_second = theState->mDrawnPolyAreaPerSecond;
+    theStats.polys_per_frame = theState->mDrawnPolysPerFrame;
+    theStats.polys_per_second = theState->mDrawnPolysPerSecond;
+    theStats.frames_per_second = theState->mFramesPerSecond;
+    theStats.scene_polys_per_frame = theState->mScenePolysPerFrame;
+    theStats.scene_polys_per_second = theState->mScenePolysPerSecond;
+    theStats.texture_changes_per_frame = theState->mTotalTextureChangesPerFrame;
+    ee_dx7r_update_frame_stats(&theStats, theStats.frame_counter + 1 == 12 ? TMGetTime() : 0);   // the clock is read every 12 frames only
+    theState->m32C[0] = theStats.frame_counter;
+    theState->m32C[1] = theStats.scene_polys;
+    theState->m32C[2] = theStats.last_time;
+    theState->m32C[3] = theStats.texture_changes;
+    theState->mDrawnPolyCount = theStats.drawn_poly_count;
+    theState->mDrawnPolyArea = theStats.drawn_poly_area;
+    theState->mDrawnPolyAreaPerFrame = theStats.area_per_frame;
+    theState->mDrawnPolyAreaPerSecond = theStats.area_per_second;
+    theState->mDrawnPolysPerFrame = theStats.polys_per_frame;
+    theState->mDrawnPolysPerSecond = theStats.polys_per_second;
+    theState->mFramesPerSecond = theStats.frames_per_second;
+    theState->mScenePolysPerFrame = theStats.scene_polys_per_frame;
+    theState->mScenePolysPerSecond = theStats.scene_polys_per_second;
+    theState->mTotalTextureChangesPerFrame = theStats.texture_changes_per_frame;
+
+    GXSurface* thePrimary = *static_cast<DX7Surface*>(theState->mPrimarySurface);
+    GXSurface* theSecondary = NULL;
+    unsigned long theWidth = 0, theHeight = 0;
+    float theX = 0.0f, theY = 0.0f;
+    bool theFullScreen = theState->mScreen->GetIsFullScreen();
+    if (!theFullScreen) {
+        theSecondary = *static_cast<DX7Surface*>(theState->mSecondarySurface);
+        theWidth = theState->mSecondarySurface->GetWidth();
+        theHeight = theState->mSecondarySurface->GetHeight();
+        GE2DPoint theOrigin = theState->mWindow->GetClientOrigin();
+        theX = theOrigin.GetX();
+        theY = theOrigin.GetY();
     }
-    if (theState->mScreen->GetIsFullScreen())
-        theResult = theState->mPrimarySurface->Flip(theState->mWaitForVSync);
-    else {
-        GXSurface* thePrimary = *static_cast<DX7Surface*>(theState->mPrimarySurface);
-        GXSurface* theSecondary = *static_cast<DX7Surface*>(theState->mSecondarySurface);
-        RECT theSource;
-        theSource.left = 0;
-        theSource.top = 0;
-        theSource.right = theState->mSecondarySurface->GetWidth();
-        theSource.bottom = theState->mSecondarySurface->GetHeight();
-        theOrigin = theState->mWindow->GetClientOrigin();
-        RECT theDestination;
-        theDestination.left = UMFloatToLong(theOrigin.GetX());
-        theDestination.top = UMFloatToLong(theOrigin.GetY());
-        theDestination.right = theDestination.left + theSource.right;
-        theDestination.bottom = theDestination.top + theSource.bottom;
-        HRESULT theError;
-        do {
-            theError = thePrimary->Blt(&theDestination, theSecondary, &theSource, 0, NULL);
-            if (theError == GXERR_WASSTILLDRAWING)
-                PlatSleep(0);
-        } while (theError == GXERR_WASSTILLDRAWING);
-        if (theError == GX_OK)
-            theResult = kErrorOK;
-        else {
-            ESRecordNativeError(theError);
-            theResult = kErrorNativeError;
-        }
-    }
-    return theResult;
+    return ee_dx7r_show_scene(theFullScreen, thePrimary, theSecondary, theWidth, theHeight, theX, theY, theState->mPrimarySurface,
+                              theState->mWaitForVSync);
 }
 
 // FUNCTION: DX7HR 0x1000cbe5
 // Sends a light (point or directional, colour, attenuation, range) to its slot; 9 when the slot is not in use
 long DX7Rasterizer::UpdateLight(unsigned long inIndex, GELight& inLight, unsigned long inScreen)
 {
-    long theResult = kErrorOK;
-    if (inIndex < 8 && gLightsInUse[inIndex] == 1) {
-        GXLIGHT theLight;
-        memset(&theLight, 0, sizeof(theLight));
-        theLight.dvPosition.x = inLight.GetLocation().GetX();
-        theLight.dvPosition.y = inLight.GetLocation().GetY();
-        theLight.dvPosition.z = inLight.GetLocation().GetZ();
-        theLight.dvDirection.x = -inLight.GetDirection().GetX();
-        theLight.dltType = inLight.GetStyle() ? GXLIGHT_DIRECTIONAL : GXLIGHT_POINT;
-        theLight.dvDirection.y = -inLight.GetDirection().GetY();
-        theLight.dvDirection.z = -inLight.GetDirection().GetZ();
-        theLight.dcvDiffuse.r = inLight.GetComputedColor().GetRed();
-        theLight.dcvDiffuse.g = inLight.GetComputedColor().GetGreen();
-        theLight.dcvDiffuse.b = inLight.GetComputedColor().GetBlue();
-        theLight.dvAttenuation0 = inLight.GetAttenuation0();
-        theLight.dvAttenuation1 = inLight.GetAttenuation1();
-        theLight.dvAttenuation2 = inLight.GetAttenuation2();
-        theLight.dvRange = inLight.GetRange();
-        if (this->mDX7ScreenStates[inScreen]->GetDevice()->SetLight(inIndex, &theLight) != GX_OK)
-            theResult = kErrorNativeError;
-    } else
-        theResult = 9;
-    return theResult;
+    EeDx7LightParams theParams = DX7LightParams(inLight);
+    return ee_dx7r_update_light(this->mDX7ScreenStates[inScreen]->GetDevice(), gLightsInUse, inIndex, &theParams);
 }
 
 // FUNCTION: DX7HR 0x1000ccab
 // Unlocks the vertex buffer, waiting while it is busy
 long DX7Rasterizer::UnlockVB(unsigned long inScreen)
 {
-    long theResult;
-    HRESULT theError;
-    do {
-        theError = this->mDX7ScreenStates[inScreen]->mVertexBuffer->Unlock();
-        if (theError == GXERR_SURFACEBUSY)
-            PlatSleep(0);
-    } while (theError == GXERR_SURFACEBUSY);
-    if (theError == GX_OK)
-        theResult = kErrorOK;
-    else {
-        theResult = kErrorNativeError;
-        ESRecordNativeError(theError);
-    }
-    return theResult;
+    return ee_dx7r_unlock_vb(this->mDX7ScreenStates[inScreen]->mVertexBuffer);
+}
+
+// ---- the trampolines the Rust rasterizer calls
+extern "C" {
+bool ee_dx7cpp_rast_is_full_screen(DX7ActivateContext* c) { return c->mRasterizer->State(c->mScreen)->mScreen->GetIsFullScreen(); }
+void ee_dx7cpp_rast_current_mode(DX7ActivateContext* c, GEVideoMode* outMode) { *outMode = c->mRasterizer->State(c->mScreen)->mScreen->GetCurrentMode(); }
+unsigned long ee_dx7cpp_rast_mode_count(DX7ActivateContext* c) { return c->mRasterizer->State(c->mScreen)->mScreen->GetModeCount(); }
+void ee_dx7cpp_rast_mode(DX7ActivateContext* c, unsigned long inIndex, GEVideoMode* outMode) { *outMode = c->mRasterizer->State(c->mScreen)->mScreen->GetMode(inIndex); }
+int32_t ee_dx7cpp_rast_create_surface(DX7ActivateContext* c, GESurfaceDescription* inDescription, void** outSurface)
+{
+    return c->mRasterizer->State(c->mScreen)->mScreen->CreateSurface(*inDescription, reinterpret_cast<GESurface**>(outSurface));
+}
+void* ee_dx7cpp_rast_attached_surface(void* inSurface) { return static_cast<GESurface*>(inSurface)->GetAttachedSurface(0); }
+int32_t ee_dx7cpp_rast_attach_surface(void* inSurface, void* inAttached) { return static_cast<GESurface*>(inSurface)->AttachSurface(static_cast<GESurface*>(inAttached)); }
+void ee_dx7cpp_rast_dereference(void* inSurface) { static_cast<GESurface*>(inSurface)->Dereference(); }
+int32_t ee_dx7cpp_rast_activate_the_screen(DX7ActivateContext* c, void* inPrimary, void* inSecondary)
+{
+    return c->mRasterizer->CallActivateTheScreen(c->mScreen, static_cast<GESurface*>(inPrimary), static_cast<GESurface*>(inSecondary), c->mManager, c->mWindow);
+}
+void ee_dx7cpp_rast_commit_activation(DX7ActivateContext* c, void* inPrimary, void* inSecondary)
+{
+    GERScreenState* theState = c->mRasterizer->State(c->mScreen);
+    GEScreen* theScreen = theState->mScreen;
+    theScreen->SetTextureManager(c->mManager);
+    c->mManager->SetScreen(theScreen);
+    theState->mPrimarySurface = static_cast<GESurface*>(inPrimary);
+    theState->mTexture = NULL;
+    theState->mRenderTarget = NULL;
+    theState->mSecondarySurface = static_cast<GESurface*>(inSecondary);
+    theState->mWindow = c->mWindow;
+    theState->mIsScreenActivated = true;
+    c->mRasterizer->SetRenderTarget(static_cast<GESurface*>(inSecondary), c->mScreen);
+    static_cast<GESurface*>(inSecondary)->Reference();
+}
+void ee_dx7cpp_rast_apply_defaults(DX7ActivateContext* c)
+{
+    DX7RasterAccess* theRasterizer = c->mRasterizer;
+    unsigned long inScreen = c->mScreen;
+    GERScreenState* theState = theRasterizer->State(inScreen);
+    theState->mAlphaTesting = -16;
+    theRasterizer->SetAlphaTesting(0, inScreen);
+    theState->mAlphaTestingCompareState = -16;
+    theRasterizer->SetAlphaTestingCompareState(0, inScreen);
+    theState->mAlphaTestingRefValue = 4294967296.0f;
+    theRasterizer->SetAlphaTestingRefValue(0.0f, inScreen);
+    theState->mAntiAliasing = -16;
+    theRasterizer->SetAntiAliasing(0, inScreen);
+    theState->mBlendSource = -16;
+    theState->mBlendDestination = -16;
+    theRasterizer->SetBlending(1, 0, inScreen);
+    theState->mColorKeying = -16;
+    theRasterizer->SetColorKeying(0, inScreen);
+    theRasterizer->SetCullingUnknown();
+    theRasterizer->SetCulling(0);
+    theState->mDithering = -16;
+    theRasterizer->SetDithering(0, inScreen);
+    theState->mDrawStyle = -16;
+    theRasterizer->SetDrawStyle(0, inScreen);
+    theState->mFogState = -16;
+    theRasterizer->SetFog(0, inScreen);
+    theState->mLighting = -16;
+    theRasterizer->SetLighting(0, inScreen);
+    theState->mProjectionMode = -16;
+    theRasterizer->SetProjectionMode(1, inScreen);
+    theState->mShading = -16;
+    theRasterizer->SetShading(1, inScreen);
+    theState->mShadingColorSource = -16;
+    theRasterizer->SetShadingColorSource(1, inScreen);
+    theState->mSpecular = -16;
+    theRasterizer->SetSpecular(0, inScreen);
+    theState->mZBuffer = -16;
+    theRasterizer->SetZBuffer(0, inScreen);
+    theState->mZCompare = -16;
+    theRasterizer->SetZCompare(0, inScreen);
+    theRasterizer->DX7State(inScreen)->mIs3DMode = false;
+    theRasterizer->Set3DMode(inScreen);
+}
+void ee_dx7cpp_rast_verify(bool inOK, uint32_t inLine) { ESVERIFY_AT(inOK, inLine); }
+void* ee_dx7cpp_rast_new_screen(DX7Rasterizer*, void* inDirectDraw, const char* inName, bool inAttached, bool inPrimary)
+{
+    return static_cast<GEScreen*>(new DX7Screen(NULL, static_cast<GXDirectDraw*>(inDirectDraw), inName, inAttached, inPrimary));
+}
+bool ee_dx7cpp_rast_screen_is_valid(DX7Rasterizer* r, void* inScreen) { return r->GetIsScreenValid(static_cast<DX7Screen*>(static_cast<GEScreen*>(inScreen))); }
+void ee_dx7cpp_rast_add_valid_screen(DX7Rasterizer* r, void* inScreen) { r->AddValidScreen(static_cast<GEScreen*>(inScreen)); }
+void ee_dx7cpp_rast_delete_screen(void* inScreen) { delete static_cast<DX7Screen*>(static_cast<GEScreen*>(inScreen)); }
+void ee_dx7cpp_rast_set_active(DX7Rasterizer* r) { static_cast<DX7RasterAccess*>(r)->MakeActive(); }
+int32_t ee_dx7cpp_rast_flip(void* inPrimary, bool inWait) { return static_cast<GESurface*>(inPrimary)->Flip(inWait); }
 }
 
 // COMDATs this unit is the first (link order) to instantiate, then the template-static init chain head and atexit

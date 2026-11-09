@@ -5783,3 +5783,37 @@ entry).
   included crate is exported too: internal constants are `pub(crate)` (a `GX_OK` export collided with `GX.h`'s macro).
 - **Line endings:** this repository stores files byte for byte (`* -text`); Windows Python text mode (`open` without
   `newline=''`) turned LF files to CRLF and produced whole-file diffs. Patch scripts open with `newline=''`.
+
+### R4.2, the second half: surface, movie, T&L rasterizer, screen, rasterizer
+
+`DX7Surface.cpp`, `DX7Movie.cpp`, `DX7TnLRasterizer.cpp`, `DX7Screen.cpp` and the scene, clear, vertex-buffer, light,
+2D/3D and presentation parts of `DX7Rasterizer.cpp` are forwarders into `ee_dx7` (surface.rs, movie.rs, raster.rs,
+screen.rs). `DX7HRTnLDisplay.cpp` is the plug-in entry (the PIM table, a validity probe of three lines) and stays C++.
+
+- **The golden generators compile the real `.cpp` against a fake of `GX.h`.** A scratch TU `#include`s the real
+  DX7Surface/Screen/Rasterizer/TnLRasterizer unit and defines every `GX*` method (`GXSurface::Blt`, ...) as a line of
+  trace plus a result from a queue (`gx_fake.inc`); the Rust tests' recorder prints the same lines and the golden files
+  are those traces (`golden_surface.txt`, `golden_screen.txt`, `golden_raster.txt`). The engine classes the units touch
+  are stubbed only as far as the code under test needs (the `GERasterizer` ctor, `UString`, a fake vtable slot for
+  `GetIsFullScreen`, `RoundToNearest`, `Apply`); `/FORCE:UNRESOLVED` keeps the link for the code the case does not run.
+  Floats print as hex bits, so an exact bit difference fails the test. Bash heredocs with `'` in the body do not survive
+  the tool's quoting on Windows: write patch scripts and generators with the editor instead.
+- **`(long)float` vs `lrintf`.** Rust `as i32` saturates; the C++'s `cvttss2si` gives `INT_MIN` for NaN and out-of-range,
+  `trunc_to_long` is that (`DX7Surface`'s pixel rectangles). `UMFloor` and `UMFloorUnsigned` are `lrintf` then a decrement
+  when the rounded value is above the input, compared as a float; `GXRGB`'s `(unsigned long)(c * 255)` is a 64-bit
+  truncation (`as i64 as u32`).
+- **What `GX.cpp` answers itself:** `RestoreAllSurfaces`, `TestCooperativeLevel`, `GXDevice::EndScene`,
+  `GXVertexBuffer::Unlock`, `GXSurface::Restore` and `ValidateDevice` are constants; `RawGx` answers the same without a
+  `gx_*` call, and passes `NULL` or drops what the shim drops (`SetDisplayMode`'s rate and flags, the vertex buffer's
+  lock flags, the device kind of `CreateDevice`). The golden generators fake the methods above the shim, where those
+  arguments are still visible; the tests pin them, `RawGx` must then drop them.
+- **Rule: no Rust reference across a call into C++.** The FFI layers copy the pinned `DX7RScreenState` and the
+  descriptions in and out around the algorithm (they hold `&mut` only over GX, which is Rust), and hand the
+  movie its file name as an owned `Vec`.
+- **`gLightsInUse` stays `unsigned long`** (the DrawTerrain unit reads it; its mangled name must not change, and the
+  32/64-bit `unsigned long` means `c_ulong` in Rust, never `u32`).
+- **Files with CRLF:** `DX7Movie.cpp` is CRLF and `Common/*.cpp` next to it LF (the repository stores bytes as they
+  are): a replace script working on LF markers silently misses a CRLF file; check `"\r\n" in text` first.
+- **The DX7Movie thread stays a C++ `TSThread`**, with the trampolines as the seam and the pl_mpeg, event and critical
+  section objects C++; Rust owns the sound ring, which the mixer's device thread and the decoder share under C++'s
+  `mSoundAccess`.

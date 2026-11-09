@@ -19,6 +19,8 @@ constexpr static const int32_t CODE_FAILURE = 21;
 
 constexpr static const int32_t CODE_OUTPUT_TOO_SMALL = 22;
 
+constexpr static const size_t LIGHT_SLOTS = 8;
+
 constexpr static const uint32_t ARCHIVE_IDENTIFIER = 1936941426;
 
 constexpr static const uint32_t ARCHIVE_VERSION = 1;
@@ -202,6 +204,34 @@ struct EeDx7ScreenState {
   bool mAlphaBlendEnable;
   bool mCanModulateTextureAlpha;
   bool mDirtyRectangleSupport;
+};
+
+/// `GELight`'s fields as `UpdateLight` reads them.
+struct EeDx7LightParams {
+  float location[3];
+  float direction[3];
+  float computed_color[3];
+  uint32_t style;
+  float attenuation[3];
+  float range;
+};
+
+/// The statistics `ShowScene` keeps (`GERScreenState`): frames, polys, texture changes and the rates.
+struct EeDx7FrameStats {
+  uint32_t frame_counter;
+  uint32_t scene_polys;
+  uint32_t last_time;
+  uint32_t texture_changes;
+  uint32_t drawn_poly_count;
+  float drawn_poly_area;
+  float area_per_frame;
+  float area_per_second;
+  float polys_per_frame;
+  float polys_per_second;
+  float frames_per_second;
+  float scene_polys_per_frame;
+  float scene_polys_per_second;
+  float texture_changes_per_frame;
 };
 
 /// `sScreensCaptured` and `sFirstCaptureWasAttachedToDesktop`.
@@ -957,6 +987,75 @@ int32_t ee_dx7r_activate_the_screen(EeDx7ScreenState *state,
 int32_t ee_dx7r_create_vertex_buffers(EeDx7ScreenState *state, bool tnl);
 
 bool ee_dx7r_is_screen_valid(void *dd, bool tnl);
+
+int32_t ee_dx7r_begin_scene(void *device);
+
+int32_t ee_dx7r_end_scene(void *device);
+
+int32_t ee_dx7r_clear(void *device, const float *rect, const float *rgb);
+
+int32_t ee_dx7r_clear_z(void *device, const float *rect, float z);
+
+/// `LockVB`: `out` receives the vertex pointer; the result is always OK, as in the C++.
+int32_t ee_dx7r_lock_vb(EeDx7ScreenState *state, uint32_t count, void **out);
+
+int32_t ee_dx7r_unlock_vb(void *buffer);
+
+/// `in_use` is `gLightsInUse`, 8 slots.
+int32_t ee_dx7r_add_light(void *device,
+                          unsigned long *in_use,
+                          const EeDx7LightParams *params,
+                          uint32_t *out_index);
+
+int32_t ee_dx7r_update_light(void *device,
+                             const unsigned long *in_use,
+                             uint32_t index,
+                             const EeDx7LightParams *params);
+
+int32_t ee_dx7r_remove_light(void *device, unsigned long *in_use, uint32_t index);
+
+int32_t ee_dx7r_remove_all_lights(void *device, unsigned long *in_use);
+
+int32_t ee_dx7r_set_2d_mode(EeDx7ScreenState *state);
+
+/// `view`/`projection`: the engine transformations as 16 elements, row by row.
+int32_t ee_dx7r_set_3d_mode(EeDx7ScreenState *state, const float *view, const float *projection);
+
+void ee_dx7r_set_render_target(EeDx7ScreenState *state,
+                               void *target,
+                               uint32_t width,
+                               uint32_t height);
+
+void ee_dx7r_set_viewport(EeDx7ScreenState *state, const float *rect, float near, float far);
+
+void ee_dx7r_update_frame_stats(EeDx7FrameStats *stats, uint32_t time);
+
+/// `ShowScene`'s presentation; `primary_surface` is the primary's `GESurface*` for the flip.
+int32_t ee_dx7r_show_scene(bool full_screen,
+                           void *primary,
+                           void *secondary,
+                           uint32_t secondary_width,
+                           uint32_t secondary_height,
+                           float origin_x,
+                           float origin_y,
+                           void *primary_surface,
+                           bool wait);
+
+/// `ActivateScreen`: `context` is a `DX7ActivateContext*`.
+int32_t ee_dx7r_activate_screen(void *context,
+                                uint32_t window_width,
+                                uint32_t window_height,
+                                uint32_t back_buffers,
+                                bool z_buffer,
+                                uint32_t z_format);
+
+int32_t ee_dx7r_activate_rendering_surface(void *context, uint32_t width, uint32_t height);
+
+/// `DX7Rasterizer::ActivateRasterizer`.
+int32_t ee_dx7r_activate_rasterizer(void *rasterizer);
+
+/// `GetVideoMemory`.
+int32_t ee_dx7r_get_video_memory(void *dd, uint32_t *total, uint32_t *free);
 
 void ee_dx7sc_initialize(void *screen, void *dd);
 
