@@ -40,6 +40,7 @@
 #include "ee/EmpireEarth.h"
 #include "ee/EEStringIDs.h"
 #include "ee/EETechCapture.h"
+#include "ee/EETechRust.h"
 const UString EETechTree::sNumEpochs("EETechTree-NumEpochs");
 const UString EETechTree::sNumTechIDs("EETechTree-NumTechIDs");
 const UString EETechTree::sTechNodeID("EETechTree-TechNodeID");
@@ -328,20 +329,22 @@ void EETechTree::GetChecksum(ESChecksum& ioChecksum)
     bool theCurrentNodeIsResearched = false;
     bool theScenEditorObsoleted = false;
     this->GetNodeIDs(theIDs);
-    long theWeight = 15;   // the original's start weight (its epoch count; kept: the checksum's values)
     for (long i = 0; i < this->mEpochs.size(); i++) {
         long theID = this->mEpochs[i].mData->mID;
         theIDs.push_back(theID);
     }
-    for (std::vector<long>::iterator theIterator = theIDs.begin(); theIterator != theIDs.end(); theIterator++, theWeight++) {
+    // each id's state (an unknown id keeps the one before, as the C++ loop did); the weighted sum (from the original's
+    // weight 15) is ee_tech's checksum
+    std::vector<EeTechChecksumEntry> theEntries;
+    for (std::vector<long>::iterator theIterator = theIDs.begin(); theIterator != theIDs.end(); theIterator++) {
         ESVERIFY_AT(this->GetTechIDState(*theIterator, theCurrentNodeIsResearched, theCurrentNodeIsObsolete, theScenEditorObsoleted), 512);
-        long theState = 0;
-        if (theCurrentNodeIsResearched)
-            theState = 1;
-        if (theCurrentNodeIsObsolete)
-            theState += 2;
-        theChecksum += *theIterator * theState * theWeight;
+        EeTechChecksumEntry theEntry{};
+        theEntry.id = (int32_t)*theIterator;
+        theEntry.researched = theCurrentNodeIsResearched;
+        theEntry.obsolete = theCurrentNodeIsObsolete;
+        theEntries.push_back(theEntry);
     }
+    theChecksum = ee_tech_checksum(theEntries.empty() ? NULL : &theEntries[0], (uint32_t)theEntries.size());
     ioChecksum.AddChecksum("EETechTree", theChecksum);
 }
 
@@ -369,26 +372,48 @@ void EETechTree::SumCosts(long inID, long inUnitClass, long* ioCosts)
     this->SumCostsUncaptured(inID, inUnitClass, ioCosts);
 }
 
+// the tree for the Rust SumCosts (ee_tech sum_costs): a node, its cost, a unit class's technology
+static bool EETechTreeSumNode(void* inTree, int32_t inID, EeTechSumNode* outNode)
+{
+    EETechTreeNode* theNode = static_cast<EETechTree*>(inTree)->Get(inID);
+    if (theNode == NULL)
+        return false;
+    outNode->id = (int32_t)theNode->mData->mID;
+    outNode->unit_class = (int32_t)theNode->GetUnitClass(0);
+    outNode->prerequisites[0] = (int32_t)theNode->mData->mPrerequisite1;
+    outNode->prerequisites[1] = (int32_t)theNode->mData->mPrerequisite2;
+    outNode->prerequisites[2] = (int32_t)theNode->mData->mPrerequisite3;
+    outNode->prerequisites[3] = (int32_t)theNode->mData->mPrerequisite4;
+    outNode->available = theNode->GetIsAvailable();
+    outNode->researched = theNode->mIsResearched;
+    outNode->pad[0] = outNode->pad[1] = 0;
+    return true;
+}
+
+static int32_t EETechTreeSumCost(void* inTree, int32_t inID, int32_t inResource, int32_t inUnitClass)
+{
+    return (int32_t)static_cast<EETechTree*>(inTree)->Get(inID)->GetCost(inResource, inUnitClass, 1.0f);
+}
+
+static int32_t EETechTreeClassTechnology(void* inTree, int32_t inUnitClass)
+{
+    EEUnitClass* theClass = gUnitClassTable[inUnitClass];
+    return (int32_t)(theClass != NULL ? theClass->mTechnology : 100000);
+}
+
 void EETechTree::SumCostsUncaptured(long inID, long inUnitClass, long* ioCosts)
 {
-    while (inID >= kTechEpochPrehistoric && inID < kTechNone) {
-        EETechTreeNode* theNode = this->Get(inID);
-        if (!theNode->GetIsAvailable() || theNode->mIsResearched)
-            break;
-        for (unsigned long i = 2; i < 7; i++)
-            ioCosts[i] += theNode->GetCost(i, inUnitClass, 1.0f);
-        EEUnitClass* theClass = gUnitClassTable[theNode->GetUnitClass(0)];
-        EETechTreeNode* theUpgrade = this->Get(theClass != NULL ? theClass->mTechnology : 100000);
-        if (theUpgrade != NULL && theUpgrade->GetUnitClass(0) != 0) {
-            theClass = gUnitClassTable[theUpgrade->GetUnitClass(0)];
-            if ((theClass != NULL ? theClass->mTechnology : 100000) != inID)
-                this->SumCosts(theUpgrade->mData->mID, inUnitClass, ioCosts);
-        }
-        this->SumCosts(theNode->mData->mPrerequisite1, inUnitClass, ioCosts);
-        this->SumCosts(theNode->mData->mPrerequisite2, inUnitClass, ioCosts);
-        this->SumCosts(theNode->mData->mPrerequisite3, inUnitClass, ioCosts);
-        inID = theNode->mData->mPrerequisite4;
-    }
+    EeTechSumCostsCallbacks theCallbacks;
+    theCallbacks.ctx = this;
+    theCallbacks.node = EETechTreeSumNode;
+    theCallbacks.cost = EETechTreeSumCost;
+    theCallbacks.class_technology = EETechTreeClassTechnology;
+    int32_t theCosts[7];
+    for (long i = 0; i < 7; i++)
+        theCosts[i] = (int32_t)ioCosts[i];
+    ee_tech_sum_costs(&theCallbacks, (int32_t)inID, (int32_t)inUnitClass, theCosts);
+    for (long i = 0; i < 7; i++)
+        ioCosts[i] = theCosts[i];
 }
 
 // FUNCTION: EXE 0x5cc710
@@ -657,14 +682,22 @@ void EETechTree::ResearchUncaptured(long inID, EEComplexUnit* inUnit)
     if (!(theEpoch >= kTechEpochPrehistoric) || !(theEpoch < this->mEpochs.size()))
         return;
     long theResult = this->mEpochs[theEpoch].Research(inID, inUnit);
-    if (theResult != 2 && theResult != 0)
-        return;
-    if (EEIsEpochID(inID)) {
-        this->mPlayer->mSavedGroups.Reset(0xc, 1);
-    } else {
+    long theCounts = -1;   // the node's counts-toward-epoch flag for ee_tech (-1: no node)
+    if ((theResult == 2 || theResult == 0) && !EEIsEpochID(inID)) {
         EETechTreeNode* theNode = this->Get(inID);
-        if (theNode != NULL && theNode->mData->mCountsTowardEpoch && theNextEpoch >= 0 && theNextEpoch < this->mEpochs.size())
-            this->mEpochs[theNextEpoch].AddSOL();
+        if (theNode != NULL)
+            theCounts = theNode->mData->mCountsTowardEpoch ? 1 : 0;
+    }
+    switch (ee_tech_tree_research_after((int32_t)inID, (int32_t)theResult, (int32_t)gEpochCount, (int32_t)theCounts,
+                                        (int32_t)theNextEpoch, (int32_t)this->mEpochs.size())) {
+    case EeTechTreeResearchAfter::EpochStatistics:
+        this->mPlayer->mSavedGroups.Reset(0xc, 1);
+        break;
+    case EeTechTreeResearchAfter::CountTowardNextEpoch:
+        this->mEpochs[theNextEpoch].AddSOL();
+        break;
+    case EeTechTreeResearchAfter::Nothing:
+        break;
     }
 }
 

@@ -25,6 +25,7 @@
 #include "ee/EEButtonObject.h"
 #include "ee/EETechTreeRecord.h"
 #include "ee/EETechCapture.h"
+#include "ee/EETechRust.h"
 
 const UString EETechTreeEpoch::sEpochsCurrentSOL("EETechTreeEpoch-EpochsCurrentSOL");
 
@@ -77,22 +78,12 @@ long EETechTreeEpoch::GetCost(long inResource, long inUnitClass, float inScale)
 
 long EETechTreeEpoch::GetCostUncaptured(long inResource, long inUnitClass, float inScale)
 {
-    float theFactor;
-    long theResult;
+    // the scale by the epochs advanced in this game is the Rust tech logic's (ee_tech epoch_cost_scale)
+    EEGameVariant* theVariant = EEGameVariant::GetGameVariant(gWorld.mGameOptions.mVariant);
     unsigned long theEpochs = this->mTree->mCurrentEpoch - this->mTree->mStartEpoch;
-    if (theEpochs > 1) {
-        theResult = EETechTreeNode::GetCost(inResource, inUnitClass,
-            EEGameVariant::GetGameVariant(gWorld.mGameOptions.mVariant)->GetEpochCostFactor() * inScale);
-    } else if (theEpochs > 0) {
-        theFactor = EEGameVariant::GetGameVariant(gWorld.mGameOptions.mVariant)->mEpochCostFactor;
-        theResult = EETechTreeNode::GetCost(inResource, inUnitClass,
-            gWorld.GetGameVariant()->GetSecondEpochCostFactor() * (theFactor * inScale));
-    } else {
-        theFactor = gWorld.GetGameVariant()->mEpochCostFactor;
-        theResult = EETechTreeNode::GetCost(inResource, inUnitClass,
-            gWorld.GetGameVariant()->GetFirstEpochCostFactor() * (theFactor * inScale));
-    }
-    return theResult;
+    float theScale = ee_tech_epoch_cost_scale((uint32_t)theEpochs, theVariant->GetEpochCostFactor(),
+        theVariant->mEpochCostFactor, theVariant->GetSecondEpochCostFactor(), theVariant->GetFirstEpochCostFactor(), inScale);
+    return EETechTreeNode::GetCost(inResource, inUnitClass, theScale);
 }
 
 // FUNCTION: EXE 0x5ce0e7
@@ -232,7 +223,8 @@ void EETechTreeEpoch::GetNodeIDs(std::vector<long>& outIDs)
 // Tells whether the epoch can be researched: available, not obsolete, not researched
 bool EETechTreeEpoch::GetIsAvailable()
 {
-    return this->mIsAvailable && !this->GetIsObsolete() && !this->mIsResearched;
+    EeTechNode theEpoch = EETechNodeView(this);
+    return ee_tech_epoch_is_available(&theEpoch);
 }
 
 // FUNCTION: EXE 0x5ce494
@@ -261,10 +253,13 @@ void EETechTreeEpoch::AddSOL()
 
 void EETechTreeEpoch::AddSOLUncaptured()
 {
-    if (this->mTree == NULL || !(this->mData->mID <= this->mTree->mEndEpoch) || !this->mIsCountingSOL)
+    if (this->mTree == NULL)
         return;
-    ++this->mCurrentSOL;
-    if (!(this->mCurrentSOL >= this->mRequiredSOL) || this->mIsAvailable != false)
+    EeTechEpochCounter theCounter = EETechEpochCounterView(this);
+    EeTechTreeState theTree = EETechTreeView(this->mTree);
+    EeTechEpochUpdate theUpdate = ee_tech_add_sol((int32_t)this->mData->mID, &theCounter, &theTree);
+    this->mCurrentSOL = theUpdate.current;
+    if (!theUpdate.becomes_available)
         return;
     this->mIsAvailable = true;
     EEEvent::Trigger(kEventHookEpochAvailable, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
@@ -405,9 +400,14 @@ void EETechTreeEpoch::UpdateAvailability()
 void EETechTreeEpoch::UpdateAvailabilityUncaptured()
 {
     std::map<long, EETechTreeNode*>::const_iterator theNode;
-    if (this->mTree == NULL || !(this->mData->mID <= this->mTree->mEndEpoch) || !(this->mCurrentSOL >= this->mRequiredSOL))
+    if (this->mTree == NULL)
         return;
-    if (this->mIsAvailable == false) {
+    EeTechEpochCounter theCounter = EETechEpochCounterView(this);
+    EeTechTreeState theTree = EETechTreeView(this->mTree);
+    EeTechEpochUpdate theUpdate = ee_tech_update_availability((int32_t)this->mData->mID, &theCounter, &theTree);
+    if (!theUpdate.considered)
+        return;
+    if (theUpdate.becomes_available) {
         this->mIsAvailable = true;
         EEEvent::Trigger(kEventHookEpochAvailable, this->mTree->mPlayerIndex, this->mData->mID, this->mTree->mPlayer, NULL);
         this->mTree->UpdateInterface(false);
@@ -495,9 +495,14 @@ long EETechTreeEpoch::ResearchUncaptured(long inID, EEComplexUnit* inUnit)
             theResult = theNode->second->ResearchNode(inUnit);
         else
             theResult = 9;
-    } else if (this->mIsResearched) {
-        theResult = 2;
-    } else if (this->mIsAvailable && this->mData->mID <= this->mTree->mEndEpoch) {
+    } else {
+        // the epoch itself: ee_tech research_epoch decides (2 already, 0 research it, 9 not possible)
+        EeTechNode theEpoch = EETechNodeView(this);
+        EeTechTreeState theTree = EETechTreeView(this->mTree);
+        EeTechResearch theDecision = ee_tech_research_epoch(&theEpoch, &theTree);
+        theResult = theDecision.result;
+        if (!theDecision.research)
+            return theResult;
         this->mIsResearched = true;
         theNode = this->mNodes.begin();
         while (theNode != this->mNodes.end()) {
@@ -511,8 +516,6 @@ long EETechTreeEpoch::ResearchUncaptured(long inID, EEComplexUnit* inUnit)
         theResult = 0;
         this->mTree->OnResearched(this->mData->mID, NULL);
         this->CheckUnitMedia(this->mTree->GetPlayer());
-    } else {
-        theResult = 9;
     }
     return theResult;
 }
