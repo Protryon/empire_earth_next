@@ -69,10 +69,11 @@ local function train(view, memory, cfg, order, eco)
     end
 end
 
--- what the soldiers missing up to half the army wanted cost (the economy leaves it out of the epoch's reserve: the army
+-- what the soldiers missing up to half the army wanted (at most cfg.floor, default 10) cost (the economy leaves it out
+-- of the epoch's reserve: the army
 -- floor comes before the advance)
 function M.floor_cost(view, memory, cfg)
-    local missing = cfg.army(view, memory) // 2 - view.army_count - A.coming(view)
+    local missing = math.min(cfg.army(view, memory) // 2, cfg.floor or 10) - view.army_count - A.coming(view)
     local less = {}
     local best = nil
     for _, producer in ipairs(cfg.producers[E.age(view)] or {}) do
