@@ -244,6 +244,8 @@
 // TEMPLATE: LLE 0x10032a2b
 // TEMPLATE: LLE 0x10032a9a
 #define LLE_GETERRAINMESH_CPP
+// GetMeshZ, GetMeshNormal, GetClosestTile, InitializePlanes and Intersects(line) forward to Rust (rust/crates/ee_ge
+// terrain.rs; GERustTerrain.h): they read the rows in place through an EeGeTerrainView.
 #include <windows.h>
 #include <stdint.h>
 #include <float.h>
@@ -277,6 +279,8 @@
 #include "lle/GETextureSet.h"
 #include "lle/GEViewport.h"
 #include "lle/GETerrainMesh.h"
+#include "GERustMath.h"
+#include "GERustTerrain.h"
 
 const UString GETerrainMesh::sPlayableWidthID("GETerrainMesh-PlayableWidth");
 const UString GETerrainMesh::sPlayableHeightID("GETerrainMesh-PlayableHeight");
@@ -1327,53 +1331,16 @@ void GETerrainMesh::GenerateRightEdgePolygons(const GEViewport& inViewport, U2DP
 // Returns the terrain normal at a map position, interpolated bilinearly from the four surrounding points' normals
 void GETerrainMesh::GetMeshNormal(float inX, float inY, GEVector& outNormal) const
 {
-    unsigned long theX = UMFloorUnsigned(inX);
-    unsigned long theY = UMFloorUnsigned(inY);
-    float theFractionX = inX - theX;
-    float theFractionY = inY - theY;
-    GETMPointRow* theRow = &this->mPointRows[theY];
-    GETMPointRow* theNextRow = theRow + 1;
-    GEVector* the00 = theRow->mPoints[theX - theRow->mStart].mNormal;
-    GEVector* the10 = theRow->mPoints[theX - theRow->mStart + 1].mNormal;
-    GEVector* the01 = theNextRow->mPoints[theX - theNextRow->mStart].mNormal;
-    GEVector* the11 = theNextRow->mPoints[theX - theNextRow->mStart + 1].mNormal;
-    float theInverseX = 1.0f - theFractionX;
-    GEVector theBottom(the00->GetX() * theInverseX + the10->GetX() * theFractionX,
-                       the00->GetY() * theInverseX + the10->GetY() * theFractionX,
-                       the00->GetZ() * theInverseX + the10->GetZ() * theFractionX);
-    GEVector theTop(the01->GetX() * theInverseX + the11->GetX() * theFractionX,
-                    the01->GetY() * theInverseX + the11->GetY() * theFractionX,
-                    the01->GetZ() * theInverseX + the11->GetZ() * theFractionX);
-    outNormal.SetX(theBottom.GetX() * (1.0f - theFractionY) + theTop.GetX() * theFractionY);
-    outNormal.SetY(theBottom.GetY() * (1.0f - theFractionY) + theTop.GetY() * theFractionY);
-    outNormal.SetZ(theBottom.GetZ() * (1.0f - theFractionY) + theTop.GetZ() * theFractionY);
+    EeGeTerrainView theView = GERustTerrainView(*this);
+    ee_ge_terrain_normal(&theView, inX, inY, GERust(outNormal));
 }
 
 // FUNCTION: LLE 0x1002a185
 // Returns the terrain height at a map position, interpolated over the half of its tile (split along the 00-11 diagonal)
 float GETerrainMesh::GetMeshZ(float inX, float inY) const
 {
-    unsigned long theX = UMFloorUnsigned(inX);
-    unsigned long theY = UMFloorUnsigned(inY);
-    float theFractionX = inX - theX;
-    float theFractionY = inY - theY;
-    GETMPointRow* theRow = &this->mPointRows[theY];
-    float theInverseX = 1.0f - theFractionX;
-    float the00 = theRow->mPoints[theX - theRow->mStart].mZ;
-    float the10 = theRow->mPoints[theX - theRow->mStart + 1].mZ;
-    theRow++;
-    float the11 = theRow->mPoints[theX - theRow->mStart + 1].mZ;
-    float theA = the00 * theInverseX;
-    float theB = the11 * theFractionX;
-    float theDiagonal = theB + theA;
-    float theT;
-    if (theFractionY >= theFractionX) {
-        theT = (theFractionY - theFractionX) / theInverseX;
-        return (theRow->mPoints[theX - theRow->mStart].mZ * theInverseX + theB) * theT +
-               (1.0f - theT) * theDiagonal;
-    }
-    theT = theFractionY / theFractionX;
-    return (the10 * theFractionX + theA) * (1.0f - theT) + theT * theDiagonal;
+    EeGeTerrainView theView = GERustTerrainView(*this);
+    return ee_ge_terrain_z(&theView, inX, inY);
 }
 
 // FUNCTION: LLE 0x1002a277
@@ -1381,31 +1348,8 @@ float GETerrainMesh::GetMeshZ(float inX, float inY) const
 // the line meets height 0 (or to its start)
 void GETerrainMesh::GetClosestTile(const GE3DLine& inLine, long& outX, long& outY) const
 {
-    GE3DPoint thePoint;
-    float theT;
-    bool theFound = false;
-    if (inLine.Intersects(this->mLeftPlane, theT) && theT >= 0.0f && theT <= 1.0f) {
-        inLine.GetPointAt(theT, thePoint);
-        theFound = this->GetIsValidTile(UMFloorUnsigned(thePoint.GetX()), UMFloorUnsigned(thePoint.GetY()));
-    } else if (inLine.Intersects(this->mRightPlane, theT) && theT >= 0.0f && theT <= 1.0f) {
-        inLine.GetPointAt(theT, thePoint);
-        theFound = this->GetIsValidTile(UMFloorUnsigned(thePoint.GetX()), UMFloorUnsigned(thePoint.GetY()));
-    }
-    if (inLine.Intersects(this->mFrontPlane, theT) && theT >= 0.0f && theT <= 1.0f && !theFound) {
-        inLine.GetPointAt(theT, thePoint);
-        theFound = this->GetIsValidTile(UMFloorUnsigned(thePoint.GetX()), UMFloorUnsigned(thePoint.GetY()));
-    } else if (inLine.Intersects(this->mBackPlane, theT) && theT >= 0.0f && theT <= 1.0f && !theFound) {
-        inLine.GetPointAt(theT, thePoint);
-        theFound = this->GetIsValidTile(UMFloorUnsigned(thePoint.GetX()), UMFloorUnsigned(thePoint.GetY()));
-    }
-    if (theFound) {
-        outX = UMFloor(thePoint.GetX());
-        outY = UMFloor(thePoint.GetY());
-    } else {
-        if (!inLine.SolveForZ(0.0f, theT, thePoint))
-            thePoint = inLine.GetStart();
-        this->GetClosestTile(thePoint, outX, outY);
-    }
+    EeGeTerrainView theView = GERustTerrainView(*this);
+    ee_ge_terrain_closest_tile_line(&theView, GERust(inLine), &outX, &outY);
 }
 
 
@@ -1413,69 +1357,17 @@ void GETerrainMesh::GetClosestTile(const GE3DLine& inLine, long& outX, long& out
 // Returns the tile under a point, first moving a point outside the map onto the nearest edge planes, just inside
 void GETerrainMesh::GetClosestTile(const GE3DPoint& inPoint, long& outX, long& outY) const
 {
-    GE3DPoint thePoint = inPoint;
-    GE3DLine theLine;
-    float theT;
-    if (this->mLeftPlane.IsPointOnOrBelowPlane(thePoint)) {
-        theLine.Define(thePoint, this->mLeftPlane.GetNormal());
-        theLine.Intersects(this->mLeftPlane, theT);
-        theLine.GetPointAt(theT, thePoint);
-        thePoint.SetX(thePoint.GetX() + 0.001f);
-        thePoint.SetY(thePoint.GetY() + 0.001f);
-    } else if (this->mRightPlane.IsPointOnOrBelowPlane(thePoint)) {
-        theLine.Define(thePoint, this->mRightPlane.GetNormal());
-        theLine.Intersects(this->mRightPlane, theT);
-        theLine.GetPointAt(theT, thePoint);
-        thePoint.SetX(thePoint.GetX() - 0.001f);
-        thePoint.SetY(thePoint.GetY() - 0.001f);
-    }
-    if (this->mFrontPlane.IsPointOnOrBelowPlane(thePoint)) {
-        theLine.Define(thePoint, this->mFrontPlane.GetNormal());
-        theLine.Intersects(this->mFrontPlane, theT);
-        theLine.GetPointAt(theT, thePoint);
-        thePoint.SetX(thePoint.GetX() + 0.001f);
-        thePoint.SetY(thePoint.GetY() - 0.001f);
-    } else if (this->mBackPlane.IsPointOnOrBelowPlane(thePoint)) {
-        theLine.Define(thePoint, this->mBackPlane.GetNormal());
-        theLine.Intersects(this->mBackPlane, theT);
-        theLine.GetPointAt(theT, thePoint);
-        thePoint.SetX(thePoint.GetX() - 0.001f);
-        thePoint.SetY(thePoint.GetY() + 0.001f);
-    }
-    outX = UMFloor(thePoint.GetX());
-    outY = UMFloor(thePoint.GetY());
+    EeGeTerrainView theView = GERustTerrainView(*this);
+    ee_ge_terrain_closest_tile_point(&theView, GERust(inPoint), &outX, &outY);
 }
 
 // FUNCTION: LLE 0x1002a7aa
 // Defines the four vertical map-edge planes (front, back, left, right) from the first and last tile rows
 void GETerrainMesh::InitializePlanes()
 {
-    GE3DPoint thePoint;
-    GEVector theNormal;
-    thePoint.SetX((float)this->mTileRows[this->mTileRowCount - 1].mStart + 1.0f);
-    thePoint.SetY((float)this->mTileRowCount);
-    theNormal.SetY(-1.0f);
-    theNormal.SetX(1.0f);
-    theNormal.Normalize();
-    this->mFrontPlane.Define(thePoint, theNormal);
-    thePoint.SetX((float)this->mTileRows[0].mStart + 1.0f);
-    thePoint.SetY(0.0f);
-    theNormal.SetX(-1.0f);
-    theNormal.SetY(1.0f);
-    theNormal.Normalize();
-    this->mBackPlane.Define(thePoint, theNormal);
-    thePoint.SetX((float)this->mTileRows[0].mStart + 1.0f);
-    thePoint.SetY(0.0f);
-    theNormal.SetX(1.0f);
-    theNormal.SetY(1.0f);
-    theNormal.Normalize();
-    this->mLeftPlane.Define(thePoint, theNormal);
-    thePoint.SetX((float)this->mTileRows[this->mTileRowCount - 1].mStart + 1.0f);
-    thePoint.SetY((float)this->mTileRowCount);
-    theNormal.SetX(-1.0f);
-    theNormal.SetY(-1.0f);
-    theNormal.Normalize();
-    this->mRightPlane.Define(thePoint, theNormal);
+    // front, back, left, right: four contiguous members (GERustTerrain.h)
+    EeGeTerrainView theView = GERustTerrainView(*this);
+    ee_ge_terrain_planes(theView.tile_rows, this->mTileRowCount, GERust(this->mFrontPlane));
 }
 
 
@@ -1484,70 +1376,8 @@ void GETerrainMesh::InitializePlanes()
 // (outDistance = the line parameter of the first tile hit)
 bool GETerrainMesh::Intersects(const GE3DLine& inLine, float& outDistance) const
 {
-    GE3DLine theEdge(GE3DPoint(0.0f, 0.0f, 0.0f), GEVector(0.0f, 1.0f, 0.0f));
-    GE3DPoint theStart;
-    GE3DPoint theEnd;
-    bool theResult = false;
-    long theStartX;
-    long theStartY;
-    long theEndX;
-    long theEndY;
-    long theStepX;
-    long theStepY;
-    float theOffset;
-    long theX;
-    long theY;
-    long theDX;
-    long theDY;
-    float theT;
-    float theEdgeT;
-    theStart = inLine.GetStart();
-    theStartX = UMFloor(theStart.GetX());
-    theStartY = UMFloor(theStart.GetY());
-    inLine.GetPointAt(1.0f, theEnd);
-    theEndX = UMFloor(theEnd.GetX());
-    theEndY = UMFloor(theEnd.GetY());
-    theEndX -= theStartX;
-    if (theEndX < 0)
-        theEndX = -theEndX;
-    theEndY -= theStartY;
-    if (theEndY < 0)
-        theEndY = -theEndY;
-    if (inLine.GetDirection().GetX() >= 0.0f) {
-        theStepX = 1;
-        theOffset = 1.0f;
-    } else {
-        theStepX = -1;
-        theOffset = 0.0f;
-    }
-    if (inLine.GetDirection().GetY() >= 0.0f)
-        theStepY = 1;
-    else
-        theStepY = -1;
-    theX = theStartX;
-    theY = theStartY;
-    while (!this->DoesLineIntersectTile(inLine, theX, theY, outDistance)) {
-        theDX = theX - theStartX;
-        if (theDX < 0)
-            theDX = -theDX;
-        theDY = theY - theStartY;
-        if (theDY < 0)
-            theDY = -theDY;
-        if (theDX > theEndX || theDY > theEndY)
-            return theResult;
-        theStart.SetX((float)theX + theOffset);
-        theStart.SetY((float)theY);
-        theStart.SetZ(0.0f);
-        theEdge.SetStart(theStart);
-        if (inLine.IntersectsIn2D(theEdge, theT, theEdgeT) && theEdgeT >= -0.00001f &&
-            theEdgeT <= 1.0001f)
-            theX += theStepX;
-        else
-            theY += theStepY;
-    }
-    if (outDistance <= 1.0f)
-        theResult = true;
-    return theResult;
+    EeGeTerrainView theView = GERustTerrainView(*this);
+    return ee_ge_terrain_intersects(&theView, GERust(inLine), &outDistance);
 }
 
 // FUNCTION: LLE 0x1002ab5d
@@ -1739,87 +1569,7 @@ void GETerrainMesh::SetGlobalWaterState(unsigned long inWaterSetID, unsigned lon
     }
 }
 
-// FUNCTION: LLE 0x1002b232
-// Returns whether the line hits either triangle of a map tile, with outDistance the line parameter of the hit;
-// false off the map
-bool GETerrainMesh::DoesLineIntersectTile(const GE3DLine& inLine, unsigned long inX, unsigned long inY,
-                                          float& outDistance) const
-{
-    GE3DPlane thePlane;
-    GEVector theEdgeA;
-    GEVector theEdgeB;
-    GEVector theNormal;
-    GE3DPoint thePoint;
-    GE3DPoint theHit;
-    GE3DPoint theQ;
-    GE3DPoint theR;
-    GEVector theE1;
-    GEVector theE2;
-    bool theResult = false;
-    GETMPointRow& theRow = this->mPointRows[inY];
-    float theX = (float)inX;
-    float theY = (float)inY;
-    float theNextX;
-    float theNextY;
-    float theDeterminant;
-    float theInverse;
-    float theU;
-    unsigned long i;
-    if (!this->GetIsValidTile(inX, inY))
-        return theResult;
-    thePoint.SetX(theX);
-    thePoint.SetY(theY);
-    thePoint.SetZ(theRow.mPoints[inX - theRow.mStart].mZ);
-    theQ.SetX(theX);
-    theNextY = theY + 1.0f;
-    theQ.SetY(theNextY);
-    theQ.SetZ(this->mPointRows[inY + 1].mPoints[inX - this->mPointRows[inY + 1].mStart].mZ);
-    theNextX = theX + 1.0f;
-    theR.SetX(theNextX);
-    theR.SetY(theY);
-    theR.SetZ(theRow.mPoints[inX - theRow.mStart + 1].mZ);
-    for (i = 0; i < 2; i++) {
-        theEdgeA.SetX(thePoint.GetX() - theQ.GetX());
-        theEdgeA.SetY(thePoint.GetY() - theQ.GetY());
-        theEdgeA.SetZ(thePoint.GetZ() - theQ.GetZ());
-        theEdgeB.SetX(theQ.GetX() - theR.GetX());
-        theEdgeB.SetY(theQ.GetY() - theR.GetY());
-        theEdgeB.SetZ(theQ.GetZ() - theR.GetZ());
-        theEdgeB.CrossProduct(theEdgeA, theNormal);
-        thePlane.Define(thePoint, theNormal);
-        theResult = inLine.Intersects(thePlane, outDistance);
-        if (theResult) {
-            inLine.GetPointAt(outDistance, theHit);
-            theE1.SetX(theR.GetX() - theQ.GetX());
-            theE1.SetY(theR.GetY() - theQ.GetY());
-            theDeterminant = theE1.GetY() * (theHit.GetX() - thePoint.GetX()) -
-                             (theHit.GetY() - thePoint.GetY()) * theE1.GetX();
-            if (theDeterminant == 0.0f) {
-                if (thePoint.GetX() != theHit.GetX() || thePoint.GetY() != theHit.GetY() ||
-                    thePoint.GetZ() != theHit.GetZ())
-                    theResult = false;
-                if (theResult)
-                    return theResult;
-            } else {
-                theInverse = 1.0f / theDeterminant;
-                theE2.SetX(thePoint.GetX() - theQ.GetX());
-                theE2.SetY(thePoint.GetY() - theQ.GetY());
-                theU = (theE2.GetY() * (theHit.GetX() - thePoint.GetX()) - (theHit.GetY() - thePoint.GetY()) * theE2.GetX()) *
-                       theInverse;
-                if ((theE2.GetY() * theE1.GetX() - theE1.GetY() * theE2.GetX()) * theInverse >= 0.99999f &&
-                    theU >= -0.00001f && theU <= 1.0001f)
-                    return true;
-                theResult = false;
-            }
-        }
-        thePoint.SetY(theNextY);
-        thePoint.SetZ(theQ.GetZ());
-        theQ.SetX(theNextX);
-        theQ.SetY(theNextY);
-        theQ.SetZ(this->mPointRows[inY + 1].mPoints[inX - this->mPointRows[inY + 1].mStart + 1].mZ);
-    }
-    return theResult;
-}
+// (0x1002b232 DoesLineIntersectTile: Intersects(line)'s helper, in Rust)
 
 
 // FUNCTION: LLE 0x1002b507

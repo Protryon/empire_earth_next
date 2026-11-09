@@ -11705,3 +11705,23 @@ The value classes `GE2DPoint`, `GE3DPoint`, `GEVector`, `GE3DLine`, `GE3DPlane`,
   `GEBoundingBox`) declare `friend struct GERustLayout`, whose `static_assert`s pin size and offsets.
 - `tools/rmap_gate`: `rmap_dump --tables` printed `UMTables.h`'s digest; the tables are gone, the digest stays pinned in
   `um.rs`'s test. The tool's `UMath.cpp` and GE units forward to `ee_ge`, so `ee_rmap_gatelib` links it.
+
+### R4.3: GETerrainMesh's queries
+
+`GetMeshZ`, `GetMeshNormal`, both `GetClosestTile`s, `InitializePlanes` and `Intersects(line)` (with its helper
+`DoesLineIntersectTile`) are Rust (`ee_ge` terrain.rs). Units and the AI ask them for heights and tiles every tick.
+
+- **The mesh stays C++; the queries read it in place.** `EeGeTerrainView` is built per call from the class (the point
+  and tile rows, their count, a pointer to `mFrontPlane`: the four map-edge planes are contiguous members, which
+  `GERustTerrain.h` pins along with the row layouts; a separate friend, `GERustTerrainLayout`, because only
+  `GETerrainMesh.cpp` includes the mesh header).
+- **`unsigned long` and `long` stay `c_ulong`/`c_long`**: `mPoints[x - mStart]` wraps on each data model as the C++'s
+  does, and `UMFloorUnsigned`/`UMFloor` round through a `long` (`lrintf` 32 bits on Windows, 64 on LP64).
+- **A point is read only where the C++ reads it.** `GetMeshZ` reads the (x, y + 1) height only in its upper triangle and
+  `DoesLineIntersectTile` the (x + 1, y + 1) height only in its second pass; at the diamond's edge the other point may
+  not exist, and an eager read would index before the row.
+- **`Intersects(line)` writes its distance whenever a triangle's plane is met, hit or not**, through the reference it
+  shares with `DoesLineIntersectTile`; the C ABI writes the last value, or nothing.
+- The goldens (`golden_terrain.txt`) come from the original function text compiled alone (the unit drags in the
+  renderer) over diamond meshes built as `CreateFlatMesh` builds them, 44,004 cases; the same driver linked against the
+  forwarders and Rust printed the same file.

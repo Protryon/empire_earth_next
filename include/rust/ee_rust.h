@@ -533,6 +533,22 @@ struct EeGeRectangle {
 /// Receives one rectangle of a split.
 using EeGePushRectangle = void(*)(void *context, const EeGeRectangle *rectangle);
 
+/// `GETerrainMesh::GETMPointRow` and `GETMTileRow`: the first map column, the count, the items.
+struct EeGeTmRow {
+  unsigned long start;
+  unsigned long count;
+  const uint8_t *items;
+};
+
+/// What the queries read of a `GETerrainMesh`: its rows and its four map-edge planes (`mFrontPlane`, `mBackPlane`,
+/// `mLeftPlane`, `mRightPlane`, contiguous in the class).
+struct EeGeTerrainView {
+  const EeGeTmRow *point_rows;
+  const EeGeTmRow *tile_rows;
+  unsigned long tile_row_count;
+  const EeGe3DPlane *planes;
+};
+
 /// Receives text output (the shim copies it into a `UString`/`UWideString`). Valid only during the call.
 using EeTcpSink = void(*)(void *context, const uint8_t *bytes, size_t length);
 
@@ -804,6 +820,13 @@ struct EeDx7LightData {
   unsigned long light_type;
   float diffuse[3];
   float direction[3];
+};
+
+/// `GETerrainMesh::GETMPoint`: height, quantized normal (a pointer into the quantized-vector table), colour index.
+struct EeGeTmPoint {
+  float z;
+  const EeGeVector *normal;
+  uint8_t color_table_index;
 };
 
 constexpr static const EeDx7Transform IDENTITY = { { 1.0, 0.0, 0.0, 0.0, }, { 0.0, 1.0, 0.0, 0.0, }, { 0.0, 0.0, 1.0, 0.0, }, { 0.0, 0.0, 0.0, 1.0, }, };
@@ -2303,6 +2326,53 @@ void ee_ge_rect_remove_intersecting(const EeGeRectangle *r,
                                     size_t existing,
                                     EeGePushRectangle push,
                                     void *context);
+
+/// `GETerrainMesh::GetMeshZ`.
+///
+/// # Safety
+/// `view` describes a live mesh; the tile under the position exists.
+float ee_ge_terrain_z(const EeGeTerrainView *view, float x, float y);
+
+/// `GETerrainMesh::GetMeshNormal`.
+///
+/// # Safety
+/// As `ee_ge_terrain_z`; `out` is valid.
+void ee_ge_terrain_normal(const EeGeTerrainView *view, float x, float y, EeGeVector *out);
+
+/// `GETerrainMesh::InitializePlanes`: writes the front, back, left and right planes to `out[0..4]`.
+///
+/// # Safety
+/// `tile_rows` holds `tile_row_count` (at least one) rows; `out` is valid for four planes.
+void ee_ge_terrain_planes(const EeGeTmRow *tile_rows,
+                          unsigned long tile_row_count,
+                          EeGe3DPlane *out);
+
+/// `GETerrainMesh::GetClosestTile(point, x, y)`.
+///
+/// # Safety
+/// The pointers are valid; `view`'s planes are.
+void ee_ge_terrain_closest_tile_point(const EeGeTerrainView *view,
+                                      const EeGe3DPoint *point,
+                                      long *out_x,
+                                      long *out_y);
+
+/// `GETerrainMesh::GetClosestTile(line, x, y)`.
+///
+/// # Safety
+/// The pointers are valid; `view` describes a live mesh.
+void ee_ge_terrain_closest_tile_line(const EeGeTerrainView *view,
+                                     const EeGe3DLine *line,
+                                     long *out_x,
+                                     long *out_y);
+
+/// `GETerrainMesh::Intersects(line, distance)`: `distance` is written whenever the C++ wrote it (a triangle's plane
+/// met, hit or not).
+///
+/// # Safety
+/// The pointers are valid; `view` describes a live mesh.
+bool ee_ge_terrain_intersects(const EeGeTerrainView *view,
+                              const EeGe3DLine *line,
+                              float *distance);
 
 /// The device opened at `rate`.
 void ee_mixer_activated(uint32_t rate);

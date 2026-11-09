@@ -29,7 +29,7 @@ the chosen Rust path), PORT_LEARNINGS.md.
 | **R3.6 Sound Engine** | **Open.** `SESoundManager`'s nodes are held by simulation objects and shared between threads |
 | R4.1 GX on the `wgpu` crate | Done (`ee_gx`); wgpu-native is gone |
 | R4.2 DX7 plug-in | Done (`ee_dx7`), a faithful port (D5) with C++ trampolines. C++ keeps the classes, object lifetimes, `Set3DMode`'s matrix composition, the PIM table and pl_mpeg |
-| **R4.3 Graphics Engine (17k)** | **In progress** (`ee_ge`): the math and geometry (points, vectors, lines, planes, transformations, quaternions, bounding boxes, rectangles) and `UMath`'s table trigonometry, bit-exact against the C++ (golden digests, the sim oracle). The header inlines and the file I/O stay C++. Open: `GEModel` load/save/LOD/caching, `GETerrainMesh`, the managers, fonts, textures, the viewport |
+| **R4.3 Graphics Engine (17k)** | **In progress** (`ee_ge`): the math and geometry (points, vectors, lines, planes, transformations, quaternions, bounding boxes, rectangles) `UMath`'s table trigonometry and `GETerrainMesh`'s height, normal, closest-tile and line queries, bit-exact against the C++ (golden digests, the sim oracle). The header inlines and the file I/O stay C++. Open: the rest of `GETerrainMesh` (visible-terrain build, fog, water, load/save), `GEModel` load/save/LOD/caching, the managers, fonts, textures, the viewport |
 
 Checked on Windows at the end: link 0/0, the Rust gate, `eedata check` and `cppgate`, `gx_test`, `gates.sh` (tours and AI games on both
 trees), six seeded 45-minute sim traces equal to the pre-Rust reference, menu captures pixel-equal, a saved game loaded and

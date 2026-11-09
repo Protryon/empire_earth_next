@@ -1,7 +1,7 @@
 //! The Graphics Engine (`src/Low-Level Engine/Graphics Engine`, docs/RUST_PLAN.md R4.3), moving to Rust leaf by leaf
 //! behind its C++ classes. So far: the math and geometry (`GE2DPoint`, `GE3DPoint`, `GEVector`, `GE3DLine`,
-//! `GE3DPlane`, `GETransformation`, `GEOrientation`, `GEQuaternion`, `GEBoundingBox`, `GERectangle`) and the
-//! engine's table trigonometry (`UMath.cpp`).
+//! `GE3DPlane`, `GETransformation`, `GEOrientation`, `GEQuaternion`, `GEBoundingBox`, `GERectangle`), the
+//! engine's table trigonometry (`UMath.cpp`) and `GETerrainMesh`'s height, normal, closest-tile and line queries.
 //!
 //! The simulation calls this math everywhere (unit positions, distances, orientations, bounding boxes), so it is
 //! deterministic code under RUST_PLAN 2.1: `f32` operations in the C++'s order, no fused multiply-add, `lrintf`
@@ -22,10 +22,13 @@ pub mod bbox;
 pub mod ffi;
 #[cfg(test)]
 mod golden;
+#[cfg(test)]
+mod golden_terrain;
 /// cbindgen:ignore
 pub mod line;
 /// cbindgen:ignore
 pub mod point;
+pub mod terrain;
 /// cbindgen:ignore
 pub mod transform;
 pub mod types;

@@ -95,7 +95,7 @@ impl Rng {
     }
 }
 
-/// One section: the first cases as text, an FNV-1a digest of all outputs.
+/// One section: the first cases as text (six here, four in the terrain file), an FNV-1a digest of all outputs.
 pub(crate) struct Section {
     name: &'static str,
     count: usize,
@@ -117,6 +117,11 @@ impl Section {
             lines: String::new(),
             shown: 6,
         }
+    }
+
+    pub(crate) fn showing(mut self, shown: usize) -> Self {
+        self.shown = shown;
+        self
     }
 
     pub(crate) fn i(&mut self, v: f32) {

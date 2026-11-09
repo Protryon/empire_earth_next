@@ -4,8 +4,9 @@
 //! it writes an output, except where the C++ stores as it goes (`ee_ge_vector_cross`, `ee_ge_t_make_inverse`), which
 //! repeat the C++'s order of loads and stores.
 
-use std::ffi::c_void;
+use std::ffi::{c_long, c_ulong, c_void};
 
+use crate::terrain::{edge_planes, GeTerrainView, GeTmRow};
 use crate::transform::{make_inverse_raw, RotationOrder};
 use crate::types::{
     Ge2DPoint, Ge3DLine, Ge3DPlane, Ge3DPoint, GeBoundingBox, GeOrientation, GeQuaternion, GeRectangle,
@@ -819,5 +820,102 @@ pub unsafe extern "C" fn ee_ge_rect_remove_intersecting(
     unsafe {
         let (r, other) = (*r, *other);
         r.remove_intersecting(&other, existing, |piece| push(context, &piece));
+    }
+}
+
+// ---- GETerrainMesh's queries ----
+
+/// `GETerrainMesh::GetMeshZ`.
+///
+/// # Safety
+/// `view` describes a live mesh; the tile under the position exists.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_z(view: *const GeTerrainView, x: f32, y: f32) -> f32 {
+    // SAFETY: the function's contract
+    unsafe { (*view).mesh_z(x, y) }
+}
+
+/// `GETerrainMesh::GetMeshNormal`.
+///
+/// # Safety
+/// As `ee_ge_terrain_z`; `out` is valid.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_normal(view: *const GeTerrainView, x: f32, y: f32, out: *mut GeVector) {
+    // SAFETY: the function's contract
+    unsafe {
+        let n = (*view).mesh_normal(x, y);
+        *out = n;
+    }
+}
+
+/// `GETerrainMesh::InitializePlanes`: writes the front, back, left and right planes to `out[0..4]`.
+///
+/// # Safety
+/// `tile_rows` holds `tile_row_count` (at least one) rows; `out` is valid for four planes.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_planes(tile_rows: *const GeTmRow, tile_row_count: c_ulong, out: *mut Ge3DPlane) {
+    // SAFETY: the function's contract
+    unsafe {
+        let planes = edge_planes(tile_rows, tile_row_count);
+        std::ptr::copy_nonoverlapping(planes.as_ptr(), out, 4);
+    }
+}
+
+/// `GETerrainMesh::GetClosestTile(point, x, y)`.
+///
+/// # Safety
+/// The pointers are valid; `view`'s planes are.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_closest_tile_point(
+    view: *const GeTerrainView,
+    point: *const Ge3DPoint,
+    out_x: *mut c_long,
+    out_y: *mut c_long,
+) {
+    // SAFETY: the function's contract
+    unsafe {
+        let (x, y) = (*view).closest_tile_to_point(*point);
+        *out_x = x;
+        *out_y = y;
+    }
+}
+
+/// `GETerrainMesh::GetClosestTile(line, x, y)`.
+///
+/// # Safety
+/// The pointers are valid; `view` describes a live mesh.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_closest_tile_line(
+    view: *const GeTerrainView,
+    line: *const Ge3DLine,
+    out_x: *mut c_long,
+    out_y: *mut c_long,
+) {
+    // SAFETY: the function's contract
+    unsafe {
+        let line = *line;
+        let (x, y) = (*view).closest_tile_to_line(&line);
+        *out_x = x;
+        *out_y = y;
+    }
+}
+
+/// `GETerrainMesh::Intersects(line, distance)`: `distance` is written whenever the C++ wrote it (a triangle's plane
+/// met, hit or not).
+///
+/// # Safety
+/// The pointers are valid; `view` describes a live mesh.
+#[no_mangle]
+pub unsafe extern "C" fn ee_ge_terrain_intersects(
+    view: *const GeTerrainView,
+    line: *const Ge3DLine,
+    distance: *mut f32,
+) -> bool {
+    // SAFETY: the function's contract
+    unsafe {
+        let line = *line;
+        let (hit, d) = (*view).intersects(&line);
+        put(distance, d);
+        hit
     }
 }
