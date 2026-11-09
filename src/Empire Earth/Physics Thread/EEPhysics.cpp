@@ -479,6 +479,14 @@ void EEPhysics::Init()
     this->SetSpeed(this->mSpeed);
 }
 
+// port: the random seed a saved game was saved with, put back at the loaded game's first tick. The physics chunk is
+// read before the load has finished: rebuilding the players draws from the physics random numbers afterwards (the
+// computer players' favourite unit types as their epochs are entered again, herds, patrol points, the lobby's
+// player records), so the loaded game played on from another seed than the game that was saved (R5a.2, "load
+// equals continue"). Not saved state: a load sets it, the first tick spends it.
+static unsigned long sLoadedSeed = 0;
+static bool sLoadedSeedPending = false;
+
 // FUNCTION: EXE 0x552a4d
 // Reads the physics clocks, tick counters, timing averages and civ timer state from a saved game (the game-over
 // flag after version 0.0xce, the resource timer from 0xfa); returns the first read error
@@ -637,6 +645,10 @@ long EEPhysics::Load(unsigned long inMajorVersion, unsigned long inMinorVersion,
                 theResult = inFile.Read(this->mResourceTimerPending);
         }
     }
+    if (theResult == kErrorOK) {   // port: the loaded seed comes back at the first tick (sLoadedSeed)
+        sLoadedSeed = this->mRandom.GetSeed();
+        sLoadedSeedPending = true;
+    }
     return theResult;
 }
 
@@ -714,6 +726,10 @@ void EEPhysics::Idle()
 // NEAR: GetLongValue(0x5e) out of line and signed in the original (fild dword); TMGetTime hoisted into ebx
 void EEPhysics::Tick()
 {
+    if (sLoadedSeedPending) {   // port: a loaded game goes on from the saved seed (sLoadedSeed)
+        sLoadedSeedPending = false;
+        this->mRandom.SetSeed(sLoadedSeed);
+    }
     this->ReportStatistics();
     if (this->mTicksToProcess == 0) {
         this->DrainInput();
