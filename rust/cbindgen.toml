@@ -7,8 +7,21 @@ usize_is_size_t = true
 
 [parse]
 parse_deps = true
-include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data"]
-extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer"]
+include = ["ee_panic", "ee_rust", "ee_codec", "ee_net_tcp", "ee_mixer", "ee_data", "ee_rmap"]
+extra_bindings = ["ee_codec", "ee_net_tcp", "ee_mixer", "ee_rmap"]
 
 [export]
 item_types = ["functions", "constants", "structs", "enums", "typedefs", "opaque"]
+
+# ee_rmap's generic names, kept unique in the shared header
+[export.rename]
+"Point" = "EeRmapPoint"
+"Settings" = "EeRmapSettings"
+"Ring" = "EeRmapRing"
+"Rect" = "EeRmapRect"
+"Circle" = "EeRmapCircle"
+"Object" = "EeRmapObject"
+"Feature" = "EeRmapFeature"
+"ResourceKind" = "EeRmapResourceKind"
+"ResourceSlot" = "EeRmapResourceSlot"
+"SpacingRule" = "EeRmapSpacingRule"
